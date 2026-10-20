@@ -3974,15 +3974,15 @@ export const POJU_TERMS: readonly PojuTerm[] = [
   {
     ns: "bazi",
     slug: "tm_true_solar_time",
-    traditional: "真太陽時",
-    aliases: ["真太阳时"],
+    traditional: "出生地校准",
+    aliases: ["真太阳时", "True solar", "True Solar"],
     polarity: "neutral",
     term: {
-      zh: "曜准",
-      en: "Solar Precision",
-      es: "Sintonía Solar",
-      de: "Solare Einstimmung",
-      fr: "Syntonie Solaire",
+      zh: "出生地校准",
+      en: "Location adjust",
+      es: "Ajuste por ubicación",
+      de: "Standortanpassung",
+      fr: "Ajustement selon le lieu",
     },
     definition: {
       zh: "象征摆脱人造机械社会时钟后，个体真正校准于宇宙天体运转的绝对天文真实坐标与本真存在状态。",

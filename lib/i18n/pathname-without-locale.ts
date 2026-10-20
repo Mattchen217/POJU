@@ -67,6 +67,7 @@ const LEGAL_SEGMENTS = new Set([
   "terms",
   "refund",
   "cookies",
+  "contact",
 ]);
 
 export function isLegalRoute(pathname: string): boolean {
@@ -87,7 +88,7 @@ export function getActiveNavFromPathname(pathname: string): SiteNavActive | null
   return null;
 }
 
-export type LegalNavActive = "disclaimer" | "privacy" | "terms" | "refund" | "cookies";
+export type LegalNavActive = "disclaimer" | "privacy" | "terms" | "refund" | "cookies" | "contact";
 
 export function getActiveLegalNavFromPathname(pathname: string): LegalNavActive | null {
   const first = getFirstRouteSegment(pathname);

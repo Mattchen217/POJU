@@ -1341,8 +1341,8 @@
       "sending": "思考中…",
       "stop_generating": "停止",
       "generation_stopped": "已停止生成。",
-      "thinking_wait": "Pivot 正在思考…",
-      "replying_wait": "Pivot 正在回复…",
+      "thinking_wait": "Eastern OS 正在思考…",
+      "replying_wait": "Eastern OS 正在回复…",
       "edit_message": "编辑",
       "edit_message_title": "编辑消息",
       "edit_message_prompt": "修改你的消息。此条之后的对话将被删除，并从修改后的内容重新开始。",
@@ -1411,10 +1411,10 @@
       "context_summary_edit_chat": "在对话中补充",
       "profile_picker_in_chat_title": "为本会话关联档案",
       "profile_picker_in_chat_hint": "选择已保存档案或填写出生信息，数据仅保存在本机。",
-      "birth_flow_intro_title": "收集个性化信息，以便更深入地帮助你",
-      "birth_flow_intro_body": "为了更准确地理解你的处境，需要填写出生年月、时辰与性别，用于性格画像生成。\n\n请放心：这些信息只会保存在你的电脑上，不会上传到服务器。",
+      "birth_flow_intro_title": "本次决策会话的出生信息",
+      "birth_flow_intro_body": "为结构化本次决策会话，需要出生日期、时间与地点（如询问则含性别）。仅保存在本机——不上服务器。不是算命。",
       "birth_flow_privacy_badge": "仅保存在本机",
-      "birth_flow_intro_cta_hint": "请先阅读上方 Pivot 的说明，然后在此继续填写出生信息（仅保存在本机）。",
+      "birth_flow_intro_cta_hint": "请先阅读上方 Eastern OS 的说明，然后在此继续填写出生信息（仅保存在本机）。",
       "birth_flow_continue": "继续填写",
       "birth_flow_skip": "暂时跳过",
       "question_briefing": {
@@ -1764,8 +1764,8 @@
     "loading": "加载中…",
     "preparing": "正在准备档案…",
     "preparing_done": "正在进入会话…",
-    "welcome_title": "欢迎来到 Pivot。",
-    "welcome_desc": "Eastern OS 是你面对复杂人生决策时的思辨伙伴——以出生坐标校准出的基础结构支撑本次决策会话。请在下方提供基础时机信息以开始。",
+    "welcome_title": "欢迎来到 Eastern OS。",
+    "welcome_desc": "Eastern OS 是你卡住时的思考伙伴——主路径、备用与可重开的报告，以及同行的 30 天同线提醒（*同步提供*）。出生日期、时间与地点用于结构化**本次**决策会话——不是算命。",
     "list_title": "选择你的档案",
     "list_description": "选择已保存的档案，或添加新的性格画像。",
     "add_new_person": "添加新档案",
@@ -2109,13 +2109,13 @@
       "layers_em": "机制分层",
       "welcome": {
         "title": "欢迎来到 Eastern OS",
-        "body": "Eastern OS 以你的出生坐标校准出的基础结构，支撑本次决策对话。\n针对你现在卡住的地方，一步步帮你理清楚。",
+        "body": "Eastern OS 以你的出生坐标校准出的基础结构，支撑本次决策对话。针对你现在卡住的地方，一步步帮你理清楚。",
         "guide": "在下方写下你暂时定不了的那个困境，然后发送。发出第一个问题，决策会话就开始了。",
         "note": "请认真回答 Eastern OS 提出的问题，并核对它给出的内容；这对后面交出一份高质量、能落地的决策报告很关键。\n每次回复都会按当前需要做深度推理，所以可能要等一会儿——请耐心等待。",
-        "loading": "正在准备会话…"
+        "loading": "Eastern OS 正在准备…"
       },
       "hero_calendar": "历法对齐",
-      "hero_solar": "真太阳时偏移",
+      "hero_solar": "按出生地调整",
       "hero_term": "节气位置",
       "details_summary": "校准详情"
     },
@@ -2794,8 +2794,8 @@
   },
   "contact": {
     "meta": {
-      "title": "联系我们",
-      "description": "有问题或建议？通过以下方式联系 POJU 团队。"
+      "title": "联系我们 — Eastern OS",
+      "description": "关于 Eastern OS、PASS 或账户的问题？"
     }
   },
   "account": {

@@ -32,6 +32,7 @@ const LEGAL_NAV_ITEMS = [
   { href: "/terms", key: "terms" as const, label: "Terms" },
   { href: "/refund", key: "refund" as const, label: "Refund" },
   { href: "/cookies", key: "cookies" as const, label: "Cookies" },
+  { href: "/contact", key: "contact" as const, label: "Contact" },
 ];
 
 /**

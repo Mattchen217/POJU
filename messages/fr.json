@@ -809,8 +809,8 @@
       "delivery_interrupted_continuing": "Continuing delivery…",
       "stop_generating": "Arrêter",
       "generation_stopped": "Génération arrêtée.",
-      "thinking_wait": "POJU réfléchit…",
-      "replying_wait": "POJU rédige sa réponse…",
+      "thinking_wait": "Eastern OS réfléchit…",
+      "replying_wait": "Eastern OS rédige sa réponse…",
       "edit_message": "Modifier",
       "edit_message_title": "Modifier le message",
       "edit_message_prompt": "Modifiez votre message. Tout ce qui suit sera supprimé et la conversation reprendra à partir d'ici.",
@@ -841,10 +841,10 @@
       "context_summary_edit_chat": "Ajouter des détails dans le chat",
       "profile_picker_in_chat_title": "Associez un profil de naissance à cette session",
       "profile_picker_in_chat_hint": "Choisissez un profil enregistré ou ajoutez des informations de naissance. L'analyse reste sur cet appareil.",
-      "birth_flow_intro_title": "Informations personnelles pour un accompagnement plus approfondi",
-      "birth_flow_intro_body": "Pour mieux comprendre votre situation, j'ai besoin de la date, de l'heure et du sexe de naissance afin de créer un profil de personnalité.\n\nVos données sont enregistrées uniquement sur cet appareil, pas sur nos serveurs.",
+      "birth_flow_intro_title": "Infos de naissance pour cette session de décision",
+      "birth_flow_intro_body": "Pour structurer cette session de décision, il faut date, heure et lieu de naissance (et le genre si demandé). Uniquement sur cet appareil—pas sur nos serveurs. Pas de voyance.",
       "birth_flow_privacy_badge": "Enregistré uniquement en local sur votre appareil",
-      "birth_flow_intro_cta_hint": "Une fois le message de POJU ci-dessus lu, continuez ici pour saisir les informations de naissance (enregistrées uniquement sur cet appareil).",
+      "birth_flow_intro_cta_hint": "Quand tu as lu la note d’Eastern OS ci-dessus, continue ici pour saisir les infos de naissance (uniquement sur cet appareil).",
       "birth_flow_continue": "Continuer vers le formulaire",
       "birth_flow_skip": "Ignorer pour l'instant",
       "question_briefing": {
@@ -1254,8 +1254,8 @@
     "loading": "Chargement…",
     "preparing": "Préparation de votre thème…",
     "preparing_done": "Ouverture de la session…",
-    "welcome_title": "Bienvenue sur Pivot.",
-    "welcome_desc": "Eastern OS est votre partenaire de réflexion pour les décisions de vie complexes — ancré dans la structure de cas calibrée depuis vos coordonnées de naissance. Indiquez ci-dessous vos repères temporels de base pour commencer cette session.",
+    "welcome_title": "Bienvenue sur Eastern OS.",
+    "welcome_desc": "Eastern OS est ton partenaire de réflexion pour une décision bloquée—voie principale, secours et rapport à rouvrir, avec rappels 30 jours sur la même ligne *fournis ensemble*. Date, heure et lieu de naissance structurent **cette** session de décision—pas de voyance.",
     "list_title": "Choisissez votre base",
     "list_description": "Sélectionnez un profil enregistré ou ajoutez de nouvelles données de naissance.",
     "add_new_person": "Ajouter une personne",
@@ -1475,7 +1475,7 @@
       "calendar_alignment_em": "calendrier",
       "gregorian": "Grégorien",
       "true_solar_time": "Structure de session",
-      "true_solar_time_em": "TSV",
+      "true_solar_time_em": "session",
       "standard_time": "Standard",
       "true_solar": "Session",
       "longitude_correction": "Correction de longitude",
@@ -1565,10 +1565,10 @@
         "body": "Eastern OS s’appuie sur la structure de base calibrée à partir de tes coordonnées de naissance pour porter ce dialogue de décision. Sur ce qui te bloque maintenant, on clarifie étape par étape.",
         "guide": "Écris en bas le dilemme que tu n’arrives pas encore à trancher, puis envoie. Ta première question lance la session de décision.",
         "note": "Réponds avec soin aux questions d’Eastern OS et vérifie ce qu’il sort ; c’est crucial pour livrer ensuite un rapport de décision de qualité, actionnable.\nChaque réponse fait un raisonnement profond selon le besoin du moment, donc ça peut prendre un moment—merci d’attendre.",
-        "loading": "Préparation de votre session…"
+        "loading": "Eastern OS se prépare…"
       },
       "hero_calendar": "Calendrier",
-      "hero_solar": "Ajustement solaire vrai",
+      "hero_solar": "Ajustement selon le lieu",
       "hero_term": "Terme solaire",
       "details_summary": "Détails de calibration"
     },
@@ -2441,8 +2441,8 @@
   },
   "contact": {
     "meta": {
-      "title": "Contactez-nous",
-      "description": "Questions ou retours ? Contactez l'équipe POJU."
+      "title": "Contact — Eastern OS",
+      "description": "Questions sur Eastern OS, le PASS ou ton compte ?"
     }
   },
   "account": {

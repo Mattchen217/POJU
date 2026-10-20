@@ -1341,8 +1341,8 @@
       "sending": "Thinking...",
       "stop_generating": "Stop",
       "generation_stopped": "Generation stopped.",
-      "thinking_wait": "Pivot is thinking…",
-      "replying_wait": "Pivot is composing a reply…",
+      "thinking_wait": "Eastern OS is thinking…",
+      "replying_wait": "Eastern OS is composing a reply…",
       "edit_message": "Edit",
       "edit_message_title": "Edit message",
       "edit_message_prompt": "Change your message. Everything after it will be removed and the conversation will continue from here.",
@@ -1411,10 +1411,10 @@
       "context_summary_edit_chat": "Add details in chat",
       "profile_picker_in_chat_title": "Link a birth profile for this session",
       "profile_picker_in_chat_hint": "Choose a saved chart or add birth info. Analysis stays on this device.",
-      "birth_flow_intro_title": "Personal details for deeper guidance",
-      "birth_flow_intro_body": "To understand your situation more precisely, I need birth date, time, and gender for a personality profile.\n\nYour data is stored only on this device—not on our servers.",
+      "birth_flow_intro_title": "Birth details for this decision session",
+      "birth_flow_intro_body": "To structure this decision session, we need birth date, time, and place (and gender if asked). Saved only on this device—not on our servers. Not fortune-telling.",
       "birth_flow_privacy_badge": "Saved locally on your device only",
-      "birth_flow_intro_cta_hint": "When you've read POJU's message above, continue here to enter birth details (saved on this device only).",
+      "birth_flow_intro_cta_hint": "When you’ve read Eastern OS’s note above, continue here to enter birth details (saved on this device only).",
       "birth_flow_continue": "Continue to form",
       "birth_flow_skip": "Skip for now",
       "question_briefing": {
@@ -1764,8 +1764,8 @@
     "loading": "Loading…",
     "preparing": "Preparing your chart…",
     "preparing_done": "Opening your session…",
-    "welcome_title": "Welcome to Pivot.",
-    "welcome_desc": "Eastern OS is your thinking partner for complex life decisions — grounded in the case structure calibrated from your birth coordinates. Provide your foundational timing metrics below to begin this decision session.",
+    "welcome_title": "Welcome to Eastern OS.",
+    "welcome_desc": "Eastern OS is your thinking partner for a stuck decision—main path, backup, and a report you can reopen, with 30-day same-line reminders *provided together*. Birth date, time, and place structure **this** decision session—not fortune-telling.",
     "list_title": "Choose Your Foundation",
     "list_description": "Select a saved profile, or add new birth information.",
     "add_new_person": "Add new person",
@@ -2022,7 +2022,7 @@
       "calendar_alignment_em": "solar · lunar",
       "gregorian": "Gregorian",
       "true_solar_time": "Session structure",
-      "true_solar_time_em": "astronomy",
+      "true_solar_time_em": "session",
       "standard_time": "Standard",
       "true_solar": "Session",
       "longitude_correction": "Longitude correction",
@@ -2112,10 +2112,10 @@
         "body": "Eastern OS uses the baseline structure calibrated from your birth coordinates to support this decision dialogue. For where you’re stuck right now, we’ll work through it step by step.",
         "guide": "Type the dilemma you can’t settle yet below, then send. Your first question starts the decision session.",
         "note": "Answer Eastern OS’s questions carefully, and check what it puts out; that matters for a high-quality, actionable decision report later.\nEach reply runs deep reasoning for what’s needed now, so it can take a moment—please wait.",
-        "loading": "Preparing your session…"
+        "loading": "Eastern OS is getting ready…"
       },
       "hero_calendar": "Calendar lock",
-      "hero_solar": "True-solar adjust",
+      "hero_solar": "Location adjust",
       "hero_term": "Solar-term position",
       "details_summary": "Calibration details"
     },
@@ -2794,8 +2794,8 @@
   },
   "contact": {
     "meta": {
-      "title": "Contact Us",
-      "description": "Questions or feedback? Reach the POJU team below."
+      "title": "Contact — Eastern OS",
+      "description": "Questions about Eastern OS, PASS, or your account?"
     }
   },
   "account": {

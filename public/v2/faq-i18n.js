@@ -348,12 +348,12 @@ window.V2_FAQ_I18N = {
           {
             "id": "q1",
             "question": "Qu’est-ce qu’Eastern OS ?",
-            "answer": "Eastern OS est un <strong>dialogue multi-tours de décision</strong> pour un choix bloqué. En une course tu obtiens : le dialogue ; une <strong>voie principale</strong> et une <strong>de secours</strong> ; un <strong>rapport de décision</strong> rouvrable dans ce navigateur ; et des rappels quotidiens 30 jours sur la même ligne <em>fournis ensemble</em> (pas un achat séparé)."
+            "answer": "Eastern OS est un <strong>dialogue multi-tours de décision</strong> pour un choix bloqué. En une <strong>session</strong> tu obtiens : le dialogue ; une <strong>voie principale</strong> et une <strong>de secours</strong> ; un <strong>rapport de décision</strong> rouvrable dans ce navigateur ; et des rappels quotidiens 30 jours sur la même ligne <em>fournis ensemble</em> (pas un achat séparé)."
           },
           {
             "id": "q2",
             "question": "Que comprend 1 PASS ?",
-            "answer": "<strong>1 PASS</strong> = une course complète : dialogue multi-tours → voie principale + secours + rapport → rappels quotidiens 30 jours <em>fournis ensemble</em>. Prix d’un Pass unitaire : <strong>$19.99</strong> (une fois). Un abonnement accorde des PASS chaque mois au lieu d’acheter un par un—voir Forfaits & facturation."
+            "answer": "<strong>1 PASS</strong> = une <strong>session complète</strong> : dialogue multi-tours → voie principale + secours + rapport → rappels quotidiens 30 jours <em>fournis ensemble</em>. Prix d’un Pass unitaire : <strong>$19.99</strong> (une fois). Un abonnement accorde des PASS chaque mois au lieu d’acheter un par un—voir Forfaits & facturation."
           },
           {
             "id": "q3",
@@ -390,7 +390,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q7",
             "question": "Où est stocké mon dialogue ?",
-            "answer": "Dialogue et livrables vivent dans le <strong>stockage local de ce navigateur</strong> sur ton appareil. Le compte sert au <strong>solde PASS et à la facturation</strong>—pas une étagère cloud d’historique de chat."
+            "answer": "Dialogue et livrables vivent dans le <strong>stockage local de ce navigateur</strong> sur ton appareil. Le compte sert au <strong>solde PASS et à la facturation</strong>—pas une étagère cloud d’historique de <strong>conversation</strong>."
           },
           {
             "id": "q8",
@@ -399,8 +399,8 @@ window.V2_FAQ_I18N = {
           },
           {
             "id": "q9",
-            "question": "L’e-mail de reçu d’achat est-il une sauvegarde de mon chat ?",
-            "answer": "Non. Les reçus vont à l’e-mail du compte via le prestataire—c’est de la <strong>facturation</strong>, pas une sauvegarde du chat. Pour garder le dialogue, <strong>e-mail ou exporte le dialogue</strong> lui-même."
+            "question": "L’e-mail de reçu d’achat est-il une sauvegarde de ma <strong>conversation</strong> ?",
+            "answer": "Non. Les reçus vont à l’e-mail du compte via le prestataire—c’est de la <strong>facturation</strong>, pas une sauvegarde de la <strong>conversation</strong>. Pour garder le dialogue, <strong>e-mail ou exporte le dialogue</strong> lui-même."
           }
         ]
       },
@@ -432,7 +432,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q13",
             "question": "Puis-je utiliser un compte sur plusieurs appareils ?",
-            "answer": "Oui. Les appareils peuvent partager le <strong>solde PASS</strong>. Le dialogue de chaque appareil reste dans <strong>son propre navigateur local</strong>—tu partages les crédits, pas l’historique de chat. <span class='v2-faq-gold'>Garde tes identifiants en sécurité ; achats et usage sur le compte sont traités comme ceux du titulaire.</span>"
+            "answer": "Oui. Les appareils peuvent partager le <strong>solde PASS</strong>. Le dialogue de chaque appareil reste dans <strong>son propre navigateur local</strong>—tu partages les crédits, pas l’historique de <strong>conversation</strong>. <span class='v2-faq-gold'>Garde tes identifiants en sécurité ; achats et usage sur le compte sont traités comme ceux du titulaire.</span>"
           },
           {
             "id": "q14",

@@ -36,6 +36,7 @@ const LEGAL_NAV_ITEMS: { href: string; key: LegalNavActive; label: string }[] = 
   { href: "/terms", key: "terms", label: "Terms" },
   { href: "/refund", key: "refund", label: "Refund" },
   { href: "/cookies", key: "cookies", label: "Cookies" },
+  { href: "/contact", key: "contact", label: "Contact" },
 ];
 
 function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
