@@ -7,23 +7,31 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Eastern OS",
-  description: "Eastern OS Terms of Service — Version 1.0",
+  description: "Eastern OS Terms of Service — Version 1.1",
 };
 
 export default function TermsPage() {
   return (
     <LegalPageShell
-      version="Version 1.0 (first public launch baseline)"
+      version="Version 1.1"
       title="Terms of Service"
-      updated="Last updated: 2026-10-16"
+      updated="Last updated: 2026-10-20"
       intro={
         <>
           <p>
-            <strong>Governing Language:</strong> This agreement is formulated and executed exclusively in the English
-            language. Any localized translations provided elsewhere are for convenience only, and this English version
-            shall govern and prevail in all aspects of interpretation and dispute resolution.
+            <strong>Governing Language.</strong> These Terms of Service are written and intended to be
+            interpreted exclusively in the English language. Any translation provided elsewhere is for
+            convenience only. In the event of conflict or ambiguity,{" "}
+            <strong>this English version governs and prevails</strong>.
           </p>
         </>
+      }
+      footer={
+        <p>
+          <strong>PENDING COUNSEL REVIEW / 须真人律师确认</strong>
+          {" "}
+          — Counsel must review before relying on this as the live /terms page.
+        </p>
       }
     >
       <h2>Purpose of these Terms</h2>
@@ -77,7 +85,7 @@ export default function TermsPage() {
             </tr>
             <tr>
               <td><strong>Refund Policy</strong></td>
-              <td>When payments may be refunded (e.g., verified technical delivery failure) vs. not (e.g., dislike of AI framing; local data loss).</td>
+              <td>When payments may be refunded (e.g., unused purchased Buy Pass self-serve in PASS details per Refund §3.3; verified technical delivery failure via support) vs. not (e.g., dislike of AI framing; local data loss; subscription allotment via PASS details).</td>
             </tr>
             <tr>
               <td><strong>Cookie Settings</strong></td>
@@ -192,7 +200,7 @@ export default function TermsPage() {
       </ul>
       <p>When those rules change, we will update these Terms, Pricing, the Refund Policy, and related Privacy retention language as needed.</p>
       <h3>5.8 Family / Team plans — not offered</h3>
-      <p><strong>Family, Team, multi-seat, or organization-wide plans are not offered</strong> under this Version 1.0 launch baseline. Sharing account credentials to circumvent per-user commerce is prohibited (see §6).</p>
+      <p><strong>Family, Team, multi-seat, or organization-wide plans are not offered</strong> under this launch baseline. Sharing account credentials to circumvent per-user commerce is prohibited (see §6).</p>
       <h3>5.9 Promotions</h3>
       <p>New-user first-month +2 PASS (and any other promotions) apply only when active under then-current Pricing rules, eligibility criteria, and anti-abuse limits. Promotions may be modified or withdrawn prospectively.</p>
       <h2>6. Acceptable use</h2>
@@ -243,7 +251,7 @@ export default function TermsPage() {
       <h3>8.3 License you grant us</h3>
       <p>You grant us a worldwide, non-exclusive, royalty-free license to host, transmit, process, and display your inputs and related contextual payloads <strong>as needed to operate the Service</strong>—including transient transmission to AI / infrastructure providers—consistent with the Privacy Policy. This license is not a claim that we operate a permanent cloud chat archive.</p>
       <h3>8.4 Public-domain classical texts</h3>
-      <p>Classical historical texts referenced as cultural-analytical context (for example, historical editions of the <em>I Ching</em> / Book of Changes or other public-domain materials) belong to the public domain or their respective rights holders. We assert no ownership over classical public-domain texts themselves.</p>
+      <p>Classical historical texts referenced as cultural-analytical context (for example, historical editions of the *I Ching* / Book of Changes or other public-domain materials) belong to the public domain or their respective rights holders. We assert no ownership over classical public-domain texts themselves.</p>
       <h3>8.5 Feedback</h3>
       <p>If you send feedback or suggestions, you grant us a perpetual, irrevocable, royalty-free license to use them without restriction or attribution obligation, to the extent permitted by law.</p>
       <h2>9. User content &amp; browser-local data</h2>
@@ -290,7 +298,8 @@ export default function TermsPage() {
       <ul>
         <li>Verified <strong>technical delivery failures</strong> caused by platform / payment fulfillment errors (e.g., charge succeeded but PASS entitlement never issued; catastrophic generation pipeline failure preventing any dialogue delivery);</li>
         <li><strong>Duplicate</strong> identical charges for a single intended purchase;</li>
-        <li>Other categories expressly listed in the then-current Refund Policy (including any unused-PASS / time-window rules).</li>
+        <li>Unused <strong>purchased / one-time Buy Pass</strong> remaining on the ledger, refundable <strong>in product</strong> via PASS details (self-serve) while unused, as described in Refund Policy <strong>§3.3</strong> (selecting N unused purchased units means N full refunds of the related original payments, typically FIFO—not a single partial-amount refund of one combined charge; subscription allotment is <strong>not</strong> refundable that way—cancel per §5 / Refund §4);</li>
+        <li>Other categories expressly listed in the then-current Refund Policy.</li>
       </ul>
       <p><strong>Generally not eligible:</strong></p>
       <ul>
@@ -299,8 +308,8 @@ export default function TermsPage() {
         <li>Loss of <strong>browser-local</strong> chat / deliverables due to cache clear, Incognito, device switch, etc.;</li>
         <li>Mid-cycle subscription cancel seeking pro-rata refund solely for unused time / unused PASS (unless Refund Policy expressly allows).</li>
       </ul>
-      <p><strong>Provider rules:</strong> Where the Refund Policy and these Terms allow a refund, processing timing, method, and any fees or windows may also follow the <strong>payment provider’s then-current rules</strong>. Do not market or imply a universal “one-click refund” unless that feature is actually shipped at checkout.</p>
-      <p><strong>How to request:</strong> Contact <strong>support@easternos.com</strong> within any window stated in the Refund Policy, and include transaction / confirmation reference from your receipt, description of the failure, and relevant screenshots or error detail.</p>
+      <p><strong>Provider rules:</strong> Where the Refund Policy and these Terms allow a refund, processing timing, method, and any fees or windows may also follow the <strong>payment provider’s then-current rules</strong>. Do not market or imply a universal “one-click refund” for all refund types; describe the in-product unused purchased-PASS control only where the product shows it (Refund §3.3). Settlement timing follows the payment provider.</p>
+      <p><strong>How to request:</strong> For unused purchased Buy Pass, use the PASS-details self-serve control where shown (Refund §3.3). For other categories—or if self-serve is unavailable or fails—contact <strong>support@easternos.com</strong> within any window stated in the Refund Policy, and include transaction / confirmation reference from your receipt, description of the failure, and relevant screenshots or error detail.</p>
       <p>Chargebacks initiated without first contacting support may delay resolution; fraud / abuse chargebacks may result in account suspension.</p>
       <h2>12. Suspension &amp; termination</h2>
       <h3>12.1 By you</h3>
