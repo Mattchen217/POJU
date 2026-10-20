@@ -30,7 +30,10 @@ export function isMockProviderTransactionId(transactionId: string): boolean {
     isMockOrderId(id) ||
     id.startsWith("mock_txn_") ||
     id.startsWith("mock_creem_") ||
-    id.includes("__legacy")
+    id.includes("__legacy") ||
+    id.includes("__u") ||
+    // payment_records.id fallback (UUID) — never a live Creem transaction_id
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   );
 }
 

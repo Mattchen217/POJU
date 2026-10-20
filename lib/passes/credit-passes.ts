@@ -138,7 +138,8 @@ export async function creditPassesFromCheckout(params: {
       stripe_session_id: params.sessionId,
       stripe_payment_intent_id: params.paymentIntentId ?? null,
       plan_type: planName,
-      quantity: params.quantity,
+      // History amount = PASSes granted (first-month 7/20), not checkout line qty (1).
+      quantity: passesToAdd,
       amount_cents: params.amountCents ?? null,
       currency: params.currency ?? "usd",
       status: "completed",

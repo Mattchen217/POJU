@@ -3,7 +3,11 @@ import {
   isSupabaseAdminConfigured,
 } from "@/lib/auth/supabase";
 import { PLAN_PRICES_CENTS } from "@/lib/auth/pending-intent";
-import { refundCreemTransaction } from "@/lib/payments/creem-refund";
+import {
+  isMockProviderTransactionId,
+  refundCreemTransaction,
+} from "@/lib/payments/creem-refund";
+import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 
 export type FlexRefundUnit = {
   payment_record_id: string;
@@ -43,6 +47,42 @@ type PaymentRow = {
   status: string | null;
   created_at: string;
 };
+
+
+/** Mark a payment_record refunded; tolerate missing refund_* columns (migration lag). */
+async function markPaymentRecordRefunded(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  paymentRecordId: string,
+  refundId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const full = await admin
+    .from("payment_records")
+    .update({
+      status: "refunded",
+      refund_id: refundId,
+      refunded_at: now,
+    })
+    .eq("id", paymentRecordId);
+  if (!full.error) return;
+
+  console.error(
+    "[passes] refund mark full",
+    full.error.code ?? full.error.message,
+  );
+  // Migration 20261019 may not be applied yet — status-only still gates FIFO.
+  const statusOnly = await admin
+    .from("payment_records")
+    .update({ status: "refunded" })
+    .eq("id", paymentRecordId);
+  if (statusOnly.error) {
+    console.error(
+      "[passes] refund mark status",
+      statusOnly.error.code ?? statusOnly.error.message,
+    );
+    throw new Error("mark_refunded_failed");
+  }
+}
 
 /** Expand payment_records into Path A unit slots (1 PASS = 1 txn). */
 function expandFlexUnits(rows: PaymentRow[]): FlexRefundUnit[] {
@@ -148,6 +188,7 @@ export async function quoteFlexPassRefund(params: {
 /**
  * Path A: refund qty N unused purchased PASS via N× Creem full refunds (FIFO).
  * Debit ledger first; on provider failure restore ledger + clear refund marks.
+ * When gateway is off (or all units are mock txns), complete locally without live Creem HTTP.
  */
 export async function requestDodoFlexPassRefund(params: {
   userId: string;
@@ -209,18 +250,36 @@ export async function requestCreemFlexPassRefund(params: {
   let anyMock = false;
   const markedRecordIds = new Set<string>();
 
+  // Gateway off / mock txns: complete ledger locally — never call live Creem.
+  const mockMode =
+    !isPaymentGatewayEnabled() ||
+    units.every((u) => isMockProviderTransactionId(u.transaction_id));
+
   try {
     for (const unit of units) {
-      const provider = await refundCreemTransaction(unit.transaction_id);
-      if (!provider.ok || !provider.refund_id) {
-        throw new Error(provider.reason ?? "creem_refund_failed");
+      let refundId: string;
+      if (mockMode) {
+        anyMock = true;
+        // Local mock id; refundCreemTransaction also short-circuits when gateway off.
+        const provider = await refundCreemTransaction(unit.transaction_id);
+        if (!provider.ok || !provider.refund_id) {
+          refundId = `mock_creem_refund_${Date.now().toString(36)}_${unit.transaction_id.slice(-6)}`;
+        } else {
+          refundId = provider.refund_id;
+          if (provider.mock) anyMock = true;
+        }
+      } else {
+        const provider = await refundCreemTransaction(unit.transaction_id);
+        if (!provider.ok || !provider.refund_id) {
+          throw new Error(provider.reason ?? "creem_refund_failed");
+        }
+        if (provider.mock) anyMock = true;
+        refundId = provider.refund_id;
       }
-      if (provider.mock) anyMock = true;
-      refundIds.push(provider.refund_id);
+      refundIds.push(refundId);
 
       if (!markedRecordIds.has(unit.payment_record_id)) {
         markedRecordIds.add(unit.payment_record_id);
-        const now = new Date().toISOString();
         const { data: rec } = await admin
           .from("payment_records")
           .select("quantity, amount_cents")
@@ -229,18 +288,7 @@ export async function requestCreemFlexPassRefund(params: {
         const recQty = Math.max(1, Math.floor(rec?.quantity ?? 1));
         const unitsFromThis = units.filter((u) => u.payment_record_id === unit.payment_record_id);
         if (recQty <= unitsFromThis.length) {
-          const { error: markErr } = await admin
-            .from("payment_records")
-            .update({
-              status: "refunded",
-              refund_id: provider.refund_id,
-              refunded_at: now,
-            })
-            .eq("id", unit.payment_record_id);
-          if (markErr) {
-            console.error("[passes] refund mark", markErr.code ?? markErr.message);
-            throw new Error("mark_refunded_failed");
-          }
+          await markPaymentRecordRefunded(admin, unit.payment_record_id, refundId);
         } else {
           // Legacy multi-qty row: reduce remaining quantity/amount (Path A prefers qty=1 rows).
           const left = recQty - unitsFromThis.length;
@@ -262,7 +310,7 @@ export async function requestCreemFlexPassRefund(params: {
     }
   } catch (error) {
     console.error("[passes] refund provider", error instanceof Error ? error.message : "unknown");
-    // Restore ledger
+    // Live Creem failure: restore ledger. Mock mode: still restore so Confirm can retry cleanly.
     await admin
       .from("user_passes")
       .update({
@@ -273,11 +321,18 @@ export async function requestCreemFlexPassRefund(params: {
       .eq("user_id", params.userId);
     // Best-effort clear refund marks on records we touched this attempt
     for (const id of markedRecordIds) {
-      await admin
+      const cleared = await admin
         .from("payment_records")
         .update({ status: "completed", refund_id: null, refunded_at: null })
         .eq("id", id)
         .eq("status", "refunded");
+      if (cleared.error) {
+        await admin
+          .from("payment_records")
+          .update({ status: "completed" })
+          .eq("id", id)
+          .eq("status", "refunded");
+      }
     }
     return { ok: false, reason: "provider_refund_failed" };
   }

@@ -136,13 +136,15 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     }
   }
 
+  const quota = SUBSCRIPTION_MONTHLY_QUOTA[planType];
   const idempotencyKey = `inv_${invoice.id}`;
   const { error: payErr } = await admin.from("payment_records").insert({
     user_id: userId,
     stripe_session_id: idempotencyKey,
     stripe_payment_intent_id: invoicePaymentIntentId(invoice),
     plan_type: planType,
-    quantity: 1,
+    // History amount = monthly PASS top-up (5/15), not invoice line qty.
+    quantity: quota,
     amount_cents: invoice.amount_paid ?? null,
     currency: invoice.currency ?? "usd",
     status: "completed",
@@ -153,8 +155,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     console.error("[webhooks/stripe] renewal payment_records", payErr.code);
     throw payErr;
   }
-
-  const quota = SUBSCRIPTION_MONTHLY_QUOTA[planType];
   const { error: rpcErr } = await admin.rpc("topup_subscription_passes", {
     target_user_id: userId,
     monthly_quota: quota,

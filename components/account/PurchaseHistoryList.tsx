@@ -2,6 +2,11 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
+import {
+  SUBSCRIPTION_FIRST_GRANT,
+  SUBSCRIPTION_MONTHLY_QUOTA,
+} from "@/lib/passes/subscription-quotas";
+
 export type PurchaseRow = {
   id: string;
   plan_type: string;
@@ -15,6 +20,23 @@ export type PurchaseRow = {
   refund_id?: string | null;
   refunded_at?: string | null;
 };
+
+
+/** PASS amount for history column — fix legacy sub rows that stored checkout qty=1. */
+export function displayPassQuantity(row: PurchaseRow): number {
+  const qty = Math.max(0, Math.floor(row.quantity ?? 0));
+  if (row.plan_type === "flex_pass") return Math.max(1, qty || 1);
+  if (row.plan_type === "personal" || row.plan_type === "team") {
+    if (qty > 1) return qty;
+    const session = row.stripe_session_id ?? "";
+    // Renewals use inv_* idempotency keys; first checkout used mock_cs_ / cs_ / etc.
+    if (session.startsWith("inv_")) {
+      return SUBSCRIPTION_MONTHLY_QUOTA[row.plan_type];
+    }
+    return SUBSCRIPTION_FIRST_GRANT[row.plan_type];
+  }
+  return qty;
+}
 
 type Props = {
   purchases: PurchaseRow[];
@@ -82,7 +104,7 @@ export function PurchaseHistoryList({ purchases, loading = false }: Props) {
                       </div>
                     </td>
                     <td className="acct-table__muted">{formatWhen(row.created_at, locale)}</td>
-                    <td className="acct-table__accent acct-table__right">+{row.quantity} PASS</td>
+                    <td className="acct-table__accent acct-table__right">+{displayPassQuantity(row)} PASS</td>
                   </tr>
                 ))}
               </tbody>
