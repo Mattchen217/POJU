@@ -4,28 +4,21 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { WorkspaceDocVaultCard } from "@/components/workspace/WorkspaceDocVaultCard";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
-import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import {
-  DOC_VAULT_SECTION_ORDER,
+  DOC_VAULT_DELIVERY_SECTIONS,
   type DocVaultSection,
 } from "@/lib/workspace/doc-vault-types";
 
 import "@/styles/workspace-doc-vault.css";
 
 /**
- * Right-rail document vault — segmented archive of local artifacts.
- * Live generating/report expanders still overlay when POJU prepare is active.
- * Phase-4 regenerate + Stop always sit at the top of this drawer.
+ * Right-rail historical deliveries — three categories (baseline / decision / 30-day).
+ * Each category shows 5 rows; overflow scrolls inside the section list.
  */
 export function WorkspaceRightDocVault() {
   const t = useTranslations("workspace.docVault");
-  const tChat = useTranslations("poju.chat");
   const locale = useLocale();
   const vault = useWorkspaceDocVaultOptional();
-  const prepare = useWorkspacePojuPrepareOptional();
-
-  const controls = prepare?.deliveryRailControls ?? null;
-  // SoT 15: vault is delivered-doc library only — baseline lives in center / vault modal.
 
   const sectionLabel = (section: DocVaultSection): string => {
     switch (section) {
@@ -35,14 +28,6 @@ export function WorkspaceRightDocVault() {
         return t("type_delivery");
       case "reminders":
         return t("type_reminders");
-      case "atmos":
-        return t("section_atmos");
-      case "match":
-        return t("section_match");
-      case "syncro":
-        return t("section_syncro");
-      case "glyph":
-        return t("section_glyph");
       default:
         return section;
     }
@@ -57,42 +42,12 @@ export function WorkspaceRightDocVault() {
 
   return (
     <section className="workspace-doc-vault" aria-label={t("title")}>
-      <div
-        className="workspace-doc-vault__delivery-controls"
-        role="group"
-        aria-label={tChat("delivery_rail_controls_label")}
-      >
-        <button
-          type="button"
-          className="workspace-right-matrix__qa-regen"
-          disabled={!controls || !controls.canRegenerate || controls.regenerateBusy}
-          onClick={() => controls?.onRegenerate()}
-        >
-          {controls?.regenerateBusy
-            ? tChat("delivery_regenerating")
-            : tChat("delivery_regenerate")}
-        </button>
-        <button
-          type="button"
-          className="workspace-right-matrix__qa-regen workspace-right-matrix__qa-regen--stop"
-          disabled={!controls || !controls.canStop || controls.stopBusy}
-          onClick={() => controls?.onStop()}
-        >
-          {controls?.stopBusy ? tChat("delivery_stopping") : tChat("delivery_stop")}
-        </button>
-      </div>
-
       {loading && !hasAny ? (
         <p className="workspace-doc-vault__empty">{t("loading")}</p>
       ) : null}
 
-      {!loading && !hasAny ? (
-        <p className="workspace-doc-vault__empty">{t("empty")}</p>
-      ) : null}
-
-      {DOC_VAULT_SECTION_ORDER.map((section) => {
-        const items = grouped[section];
-        if (items.length === 0) return null;
+      {DOC_VAULT_DELIVERY_SECTIONS.map((section) => {
+        const items = grouped[section] ?? [];
         return (
           <div
             key={section}
@@ -104,16 +59,22 @@ export function WorkspaceRightDocVault() {
               <h3 className="workspace-doc-vault__section-title">{sectionLabel(section)}</h3>
               <span className="workspace-doc-vault__section-count">{items.length}</span>
             </header>
-            <div className="workspace-doc-vault__grid">
-              {items.map((item) => (
-                <WorkspaceDocVaultCard
-                  key={item.id}
-                  item={item}
-                  locale={locale}
-                  onOpen={() => openItem(item)}
-                />
-              ))}
-            </div>
+            {items.length === 0 ? (
+              <p className="workspace-doc-vault__section-empty">
+                {loading ? t("loading") : t("section_empty")}
+              </p>
+            ) : (
+              <div className="workspace-doc-vault__list" role="list">
+                {items.map((item) => (
+                  <WorkspaceDocVaultCard
+                    key={item.id}
+                    item={item}
+                    locale={locale}
+                    onOpen={() => openItem(item)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}

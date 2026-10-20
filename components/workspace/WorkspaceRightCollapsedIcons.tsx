@@ -4,9 +4,10 @@ import { useTranslations } from "next-intl";
 
 import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import {
+  A4PaperSheet,
   DeliveryBookGlyph,
   EnergyPortraitGlyph,
-  EnergyReportGlyph,
+  RemindersGlyph,
 } from "@/components/ui/A4PaperSheet";
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
@@ -20,14 +21,12 @@ type Props = {
 };
 
 /**
- * Collapsed right-rail: vertical glyph buttons (portrait / report / delivery).
- * Vault items light the same icons; no section labels or counts in the thin rail.
+ * Collapsed right-rail: folded A4 + inner glyph for the three delivery kinds.
+ * No regenerate / stop controls in the rail.
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
-  const tBook = useTranslations("workspace.deliveryBook");
   const tVaultType = useTranslations("workspace.docVault");
-  const tChat = useTranslations("poju.chat");
   const tAtmos = useTranslations("workspace.atmosRail");
   const tMatch = useTranslations("match.workspace");
   const vault = useWorkspaceDocVaultOptional();
@@ -57,7 +56,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
+            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
+              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
+            </A4PaperSheet>
           </span>
           {atmos.matrixUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
@@ -96,7 +97,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             }}
           >
             <span className="workspace-sidebar__icon" aria-hidden>
-              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
+              <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
+                <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
+              </A4PaperSheet>
             </span>
           </button>
         ) : null}
@@ -113,7 +116,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             }}
           >
             <span className="workspace-sidebar__icon" aria-hidden>
-              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
+              <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
+                <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
+              </A4PaperSheet>
             </span>
           </button>
         ) : null}
@@ -150,7 +155,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const matrixUnread = Boolean(prepare?.matrixUnread) || vaultMatrixUnread;
   const deliveryUnread = Boolean(prepare?.deliveryBookUnread) || vaultDeliveryUnread;
 
-  if (!hasMatrix && !deliveryReady && !remindersReady && !prepare) {
+  if (!hasMatrix && !deliveryReady && !remindersReady) {
     return null;
   }
 
@@ -169,16 +174,17 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
         <button
           type="button"
           className="workspace-right-collapsed-icons__btn"
-          aria-label={t("matrixIconLabel")}
-          data-tooltip={t("matrixIconLabel")}
+          aria-label={tVaultType("type_baseline")}
+          data-tooltip={tVaultType("type_baseline")}
           onClick={(e) => {
             e.stopPropagation();
-            // SoT 15: collapsed icon opens vault library (modal via card click), not rail reader
             openVaultSection("foundation");
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
+            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
+              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
+            </A4PaperSheet>
           </span>
           {baselineCount > 0 ? (
             <span className="workspace-right-collapsed-icons__count">{baselineCount}</span>
@@ -193,8 +199,8 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
         <button
           type="button"
           className="workspace-right-collapsed-icons__btn"
-          aria-label={tBook("icon_label")}
-          data-tooltip={tBook("icon_label")}
+          aria-label={tVaultType("type_delivery")}
+          data-tooltip={tVaultType("type_delivery")}
           onClick={(e) => {
             e.stopPropagation();
             if (prepare?.session?.main_delivery?.full_text || prepare?.session?.main_delivery_done) {
@@ -206,7 +212,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <DeliveryBookGlyph className="workspace-right-collapsed-icons__report" />
+            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
+              <DeliveryBookGlyph className="workspace-right-collapsed-icons__glyph" />
+            </A4PaperSheet>
           </span>
           {deliveryCount > 0 ? (
             <span className="workspace-right-collapsed-icons__count">{deliveryCount}</span>
@@ -229,7 +237,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
+            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
+              <RemindersGlyph className="workspace-right-collapsed-icons__glyph" />
+            </A4PaperSheet>
           </span>
           {remindersCount > 0 ? (
             <span className="workspace-right-collapsed-icons__count">{remindersCount}</span>
@@ -238,55 +248,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
         </button>
-      ) : null}
-
-      {prepare ? (
-        <>
-          <button
-            type="button"
-            className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--qa"
-            aria-label={tChat("delivery_regenerate")}
-            data-tooltip={tChat("delivery_regenerate")}
-            disabled={
-              !prepare.deliveryRailControls ||
-              !prepare.deliveryRailControls.canRegenerate ||
-              prepare.deliveryRailControls.regenerateBusy
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-              prepare.deliveryRailControls?.onRegenerate();
-            }}
-          >
-            <span
-              className="material-symbols-outlined workspace-right-collapsed-icons__qa-icon"
-              aria-hidden
-            >
-              replay
-            </span>
-          </button>
-          <button
-            type="button"
-            className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--stop"
-            aria-label={tChat("delivery_stop")}
-            data-tooltip={tChat("delivery_stop")}
-            disabled={
-              !prepare.deliveryRailControls ||
-              !prepare.deliveryRailControls.canStop ||
-              prepare.deliveryRailControls.stopBusy
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-              prepare.deliveryRailControls?.onStop();
-            }}
-          >
-            <span
-              className="material-symbols-outlined workspace-right-collapsed-icons__stop-icon"
-              aria-hidden
-            >
-              stop_circle
-            </span>
-          </button>
-        </>
       ) : null}
     </div>
   );

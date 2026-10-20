@@ -60,6 +60,41 @@
   gap: 4px;
 }
 
+/* Per-category list: 5 rows visible, overflow scrolls inside */
+.workspace-doc-vault__list {
+  --ws-doc-vault-row-h: 48px;
+  --ws-doc-vault-visible-rows: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(
+    var(--ws-doc-vault-visible-rows) * var(--ws-doc-vault-row-h) +
+      (var(--ws-doc-vault-visible-rows) - 1) * 4px
+  );
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(161, 161, 170, 0.45) transparent;
+  touch-action: pan-y;
+}
+
+.workspace-doc-vault__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.workspace-doc-vault__list::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.45);
+  border-radius: 999px;
+}
+
+.workspace-doc-vault__section-empty {
+  margin: 4px 4px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ws-text-muted, #71717a);
+}
+
 .workspace-doc-vault-card {
   position: relative;
   display: flex;

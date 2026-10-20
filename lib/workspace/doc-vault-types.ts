@@ -47,6 +47,16 @@ export const DOC_VAULT_SECTION_ORDER: DocVaultSection[] = [
   "glyph",
 ];
 
+/** Right-rail「历史交付」— three fixed categories only. */
+export const DOC_VAULT_DELIVERY_SECTIONS: DocVaultSection[] = [
+  "foundation",
+  "pivot",
+  "reminders",
+];
+
+/** Visible rows per category before inner scroll. */
+export const DOC_VAULT_SECTION_VISIBLE_ROWS = 5;
+
 export const DOC_VAULT_UPDATED_EVENT = "pojulife:doc-vault-updated";
 
 /** First entry after birth prepare — open baseline portrait as overlay (center stays welcome chat). */

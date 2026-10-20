@@ -83,8 +83,8 @@ export function EnergyPortraitGlyph({ className }: { className?: string }) {
 }
 
 /**
- * Personal energy analysis report mark — rounded document + fat text lines.
- * Color via currentColor (gold on paper cover; white in collapsed rail).
+ * Base energy analysis report mark — rounded document + text lines.
+ * (Not the vault「决策报告」/「30日提醒」marks.)
  */
 export function EnergyReportGlyph({ className }: { className?: string }) {
   return (
@@ -108,28 +108,78 @@ export function EnergyReportGlyph({ className }: { className?: string }) {
   );
 }
 
-/** Phase-4 delivery book — distinct from base energy report (open book). */
+/**
+ * Decision report (历史交付 · 决策报告) — sealed dossier + cross seal.
+ * Distinct from portrait rings and reminders calendar; reads at ~11px.
+ */
 export function DeliveryBookGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden className={className} fill="none">
+      {/* back leaf — depth */}
       <path
-        d="M4 5.5c2.2-1.2 4.6-1.2 6.5 0v13c-1.9-1.1-4.3-1.1-6.5 0V5.5Z"
+        d="M9 4.25h8.25A1.75 1.75 0 0 1 19 6v11.5"
         stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
+        strokeWidth="1.45"
+        strokeLinecap="round"
+        opacity="0.5"
       />
-      <path
-        d="M20 5.5c-2.2-1.2-4.6-1.2-6.5 0v13c1.9-1.1 4.3-1.1 6.5 0V5.5Z"
+      {/* front leaf */}
+      <rect
+        x="4.25"
+        y="5.25"
+        width="12.75"
+        height="14.5"
+        rx="1.75"
         stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
+        strokeWidth="1.6"
       />
+      {/* wax seal */}
+      <circle cx="10.6" cy="12.4" r="3.35" stroke="currentColor" strokeWidth="1.5" />
       <path
-        d="M10.5 5.5v13M13.5 5.5v13"
+        d="M8.85 12.4h3.5M10.6 10.65v3.5"
+        stroke="currentColor"
+        strokeWidth="1.45"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * 30-day reminders (历史交付 · 30日提醒) — calendar with day ticks.
+ * Distinct from portrait rings and decision-report seal.
+ */
+export function RemindersGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="none">
+      <rect
+        x="4.25"
+        y="6"
+        width="15.5"
+        height="13.75"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path d="M4.25 10.1h15.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M8.75 4v3.35M15.25 4v3.35"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinecap="round"
-        opacity="0.7"
+      />
+      {/* day marks — filled / hollow to suggest a schedule */}
+      <circle cx="8.35" cy="13.35" r="1.05" fill="currentColor" />
+      <circle cx="12" cy="13.35" r="1.05" fill="currentColor" />
+      <circle cx="15.65" cy="13.35" r="1.05" fill="currentColor" />
+      <circle cx="8.35" cy="16.85" r="1.05" fill="currentColor" />
+      <circle
+        cx="12"
+        cy="16.85"
+        r="1.05"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        fill="none"
       />
     </svg>
   );
