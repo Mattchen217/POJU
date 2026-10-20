@@ -83,7 +83,7 @@ export const MessageBubble = memo(function MessageBubble({
     return (
       <div className="pchat__msg pchat__msg--ai">
         <div className="pchat__panel">
-          <p className="pchat__welcome-title">Welcome to Pivot</p>
+          <p className="pchat__welcome-title">Welcome to Eastern OS</p>
           {paragraphs.map((p) => (
             <p key={p}>{p}</p>
           ))}

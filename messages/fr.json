@@ -71,15 +71,15 @@
       "subtitle": "Ce qui reste sur ton téléphone ou ton ordinateur—et ce que ce produit ne fait jamais.",
       "card1": {
         "title": "Reste sur cet appareil",
-        "content": "Ton chat et le rapport restent sur le téléphone ou l’ordinateur que tu utilises maintenant—dans ce navigateur seulement. Ils ne sont pas envoyés comme historique de chat dans notre cloud. Tu veux les effacer ? Vide les données de ce navigateur (ou ferme une fenêtre privée). Sur un autre téléphone, ordinateur ou navigateur, ces chats n’apparaissent pas—même avec le même compte. Un nouvel appareil, c’est une nouvelle copie locale—les anciens chats ne te suivent pas tout seuls ; tu ne les vois que sur l’appareil d’origine."
+        "content": "Ta conversation et le rapport restent sur le téléphone ou l’ordinateur que tu utilises maintenant—dans ce navigateur seulement. Ils ne sont pas envoyés comme historique de conversation dans notre cloud. Tu veux les effacer ? Vide les données de ce navigateur (ou ferme une fenêtre privée). Sur un autre téléphone, ordinateur ou navigateur, ces conversations n’apparaissent pas—même avec le même compte. Un nouvel appareil, c’est une nouvelle copie locale—les anciennes conversations ne te suivent pas toutes seules ; tu ne les vois que sur l’appareil d’origine."
       },
       "card2": {
-        "title": "Ton compte sert au PASS—pas à tes chats",
-        "content": "Te connecter sert surtout à acheter des PASS et voir ton solde et tes reçus. Cela ne veut pas dire que tes conversations sont sauvegardées dans le cloud du compte. Sur un autre appareil, tu verras ton PASS—mais pas les anciens chats du premier. Tu veux revoir ces chats ? Retourne sur le même appareil et le même navigateur—ton compte ne les synchronise pas. PASS et chats, ce sont deux choses ; n’attends pas un seul enregistrement cloud."
+        "title": "Ton compte sert au PASS—pas à tes conversations",
+        "content": "Te connecter sert surtout à acheter des PASS et voir ton solde et tes reçus. Cela ne veut pas dire que tes conversations sont sauvegardées dans le cloud du compte. Sur un autre appareil, tu verras ton PASS—mais pas les anciennes conversations du premier. Tu veux revoir ces conversations ? Retourne sur le même appareil et le même navigateur—ton compte ne les synchronise pas. PASS et conversations, ce sont deux choses ; n’attends pas un seul enregistrement cloud."
       },
       "card3": {
         "title": "Garde une copie si tu en veux une",
-        "content": "Tu as besoin de la conversation ou du rapport après avoir quitté ce navigateur ? Avant de vider les données ou de changer d’appareil, envoie-toi le rapport par e-mail, ou exporte une copie. Ainsi tu gardes quelque chose à rouvrir plus tard et à vérifier face au chemin clarifié. L’e-mail d’achat est un reçu—pas une sauvegarde du chat, et il ne restaure pas le dialogue. Si tu effaces la copie locale, on ne peut pas la ramener—alors emporte-en une ici d’abord ; n’attends pas d’avoir vidé les données ou changé d’appareil."
+        "content": "Tu as besoin de la conversation ou du rapport après avoir quitté ce navigateur ? Avant de vider les données ou de changer d’appareil, envoie-toi le rapport par e-mail, ou exporte une copie. Ainsi tu gardes quelque chose à rouvrir plus tard et à vérifier face au chemin clarifié. L’e-mail d’achat est un reçu—pas une sauvegarde de la conversation, et il ne restaure pas le dialogue. Si tu effaces la copie locale, on ne peut pas la ramener—alors emporte-en une ici d’abord ; n’attends pas d’avoir vidé les données ou changé d’appareil."
       },
       "card4": {
         "title": "Aide à décider—pas de voyance",
@@ -838,7 +838,7 @@
       "context_summary_hint": "Vérifiez les faits ci-dessous. Une fois confirmé, POJU lance une analyse approfondie et livre votre lecture complète.",
       "context_summary_confirm": "Confirmer et générer la lecture",
       "context_summary_confirming": "Génération de votre lecture…",
-      "context_summary_edit_chat": "Ajouter des détails dans le chat",
+      "context_summary_edit_chat": "Ajouter des détails dans la conversation",
       "profile_picker_in_chat_title": "Associez un profil de naissance à cette session",
       "profile_picker_in_chat_hint": "Choisissez un profil enregistré ou ajoutez des informations de naissance. L'analyse reste sur cet appareil.",
       "birth_flow_intro_title": "Infos de naissance pour cette session de décision",
@@ -915,7 +915,7 @@
       "ctx_paste": "Coller",
       "ctx_select_all": "Tout sélectionner",
       "unlock_report_modal_title": "Portrait personnel complet de caractère",
-      "unlock_report_modal_hint": "Vous pouvez rouvrir ce portrait complet depuis le chat à tout moment.",
+      "unlock_report_modal_hint": "Vous pouvez rouvrir ce portrait complet depuis la conversation à tout moment.",
       "unlock_report_gate_hint": "Veuillez lire votre analyse complète de portrait personnel de caractère. Après fermeture, POJU poursuivra avec votre question.",
       "unlock_report_close": "Fermer",
       "unlock_report_close_continue": "Fermer et continuer",
@@ -1099,7 +1099,7 @@
       "additional_note_placeholder": "Autre chose à savoir…",
       "add_and_continue": "Ajouter et continuer",
       "add_something": "Ajouter un élément oublié",
-      "back_to_conversation": "Retour au chat",
+      "back_to_conversation": "Retour à la conversation",
       "confirm_generate_analysis": "Confirmer et générer la lecture",
       "confirming": "Génération de votre lecture…",
       "note_about_processing": "Après confirmation, POJU lance une analyse approfondie sur cet appareil (étapes 8–9). Cela peut prendre une minute."
@@ -1311,13 +1311,13 @@
     "side_body": "",
     "side_body_returning": "",
     "side_privacy_title": "Confidentialité et sécurité",
-    "side_privacy_intro": "Le dialogue et les livrables restent dans ce navigateur sur ton appareil. Ton compte sert au solde PASS et à la facturation—pas une étagère cloud de l’historique de chat.",
+    "side_privacy_intro": "Le dialogue et les livrables restent dans ce navigateur sur ton appareil. Ton compte sert au solde PASS et à la facturation—pas une étagère cloud de l’historique de conversation.",
     "side_local_title": "Stocké dans ce navigateur",
     "side_local_body": "L’historique de session vit dans le stockage local ici. Tu peux l’effacer dans l’app à tout moment.",
     "side_wipe_title": "Cache / fenêtres privées",
     "side_wipe_body": "Vide le cache ou ferme une fenêtre privée, et cet enregistrement local disparaît.",
-    "side_isolation_title": "Les appareils ne synchronisent pas les chats",
-    "side_isolation_body": "Un autre navigateur ou appareil ne montrera pas les chats précédents—même avec le même compte. Le solde PASS suit toujours le compte.",
+    "side_isolation_title": "Les appareils ne synchronisent pas les conversations",
+    "side_isolation_body": "Un autre navigateur ou appareil ne montrera pas les conversations précédentes—même avec le même compte. Le solde PASS suit toujours le compte.",
     "gender": "Genre",
     "male": "Homme",
     "female": "Femme",
@@ -2657,7 +2657,7 @@
     "flexCtaLabel": "Acheter un Pass",
     "flexCtaLabelMany": "Acheter des Passes",
     "flexFeatures": [
-      "1 Pass = une course complète : dialogue → voie principale + secours + rapport → rappels 30 jours fournis ensemble.",
+      "1 Pass = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours fournis ensemble.",
       "Une seule fois. Pas de renouvellement auto.",
       "À utiliser quand tu veux—valable jusqu’à utilisation.",
       "Remboursement en un clic à tout moment"
@@ -2666,7 +2666,7 @@
     "personalPassCount": "Allocation fixe de 5 PASS / mois",
     "personalBonusFeature": "Nouveaux abonnés—premier mois seulement : +2 bonus (≈ $8,57 / Pass ce mois-là).",
     "personalFeatures": [
-      "1 Pass = une course complète : dialogue → voie principale + secours + rapport → rappels 30 jours fournis ensemble.",
+      "1 Pass = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours fournis ensemble.",
       "Allocation fixe de 5 PASS par mois.",
       "Se renouvelle chaque mois de facturation.",
       "Les crédits d’abonnement sont utilisés en premier.",
@@ -3004,7 +3004,7 @@
       "buyTitle": "Acheter un PASS"
     },
     "progress": {
-      "chat": "Chat",
+      "chat": "Conversation",
       "report": "Report",
       "day30": "30-day",
       "hide": "Hide progress"

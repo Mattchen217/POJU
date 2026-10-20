@@ -395,7 +395,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q8",
             "question": "Et si je change d’appareil, utilise la navigation privée ou vide le cache ?",
-            "answer": "Cette copie locale disparaît. Le même login <strong>ne</strong> synchronise <strong>pas</strong> les chats entre navigateurs ou appareils. Exporte ou e-mail le dialogue d’abord si tu veux le garder. Le solde PASS suit le compte."
+            "answer": "Cette copie locale disparaît. Le même login <strong>ne</strong> synchronise <strong>pas</strong> les conversations entre navigateurs ou appareils. Exporte ou e-mail le dialogue d’abord si tu veux le garder. Le solde PASS suit le compte."
           },
           {
             "id": "q9",
@@ -437,7 +437,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q14",
             "question": "Si je ferme la page pendant la génération, est-ce que je perds le PASS ?",
-            "answer": "En général non—la génération peut finir et revenir dans <strong>ce même navigateur</strong>. Si tu changes de navigateur ou d’appareil en cours de route, cette copie locale ne suivra pas (les chats ne se synchronisent pas). <strong>Nous ne pouvons pas pousser le rapport terminé dans un autre navigateur</strong>. Si un PASS a été débité et que tu as perdu l’accès pour faute technique, contacte <span class='v2-faq-gold'>support@easternos.com</span>—après vérification nous pouvons aider avec un <strong>crédit PASS</strong>, pas une re-livraison distante du rapport."
+            "answer": "En général non—la génération peut finir et revenir dans <strong>ce même navigateur</strong>. Si tu changes de navigateur ou d’appareil en cours de route, cette copie locale ne suivra pas (les conversations ne se synchronisent pas). <strong>Nous ne pouvons pas pousser le rapport terminé dans un autre navigateur</strong>. Si un PASS a été débité et que tu as perdu l’accès pour faute technique, contacte <span class='v2-faq-gold'>support@easternos.com</span>—après vérification nous pouvons aider avec un <strong>crédit PASS</strong>, pas une re-livraison distante du rapport."
           },
           {
             "id": "q15",

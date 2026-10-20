@@ -798,10 +798,9 @@ export function ChatPageClient() {
           >
             <div className="relative z-[1] mt-4 w-full max-w-2xl shrink-0 rounded-xl bg-white/[0.06] p-8 text-center shadow-[0_8px_34px_rgba(12,12,16,0.35)] backdrop-blur-xl sm:mt-8">
               <span className="material-symbols-outlined jewel-icon mb-2 block text-6xl leading-none sm:text-7xl">self_improvement</span>
-              <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to Pivot</h3>
+              <h3 className="mb-2 text-2xl font-semibold text-on-surface">Welcome to Eastern OS</h3>
               <p className="mx-auto mb-6 max-w-md text-base leading-relaxed text-on-surface-variant">
-                I am POJU, blending ancient Eastern wisdom with modern clarity. Ask specific questions for guidance, or simply share your
-                thoughts. Your privacy is sacred here.
+                Eastern OS uses the baseline structure calibrated from your birth coordinates to support this decision dialogue. For where you’re stuck right now, we’ll work through it step by step.
               </p>
               <p className="mt-6 text-xs text-on-surface-variant/80">Type below to begin, or tap the microphone to speak.</p>
             </div>
