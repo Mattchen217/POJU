@@ -8,6 +8,7 @@ import {
   normalizeEmail,
 } from "@/lib/auth/auth-helpers";
 import { assertLoginAttemptAllowed } from "@/lib/auth/auth-rate-limit";
+import { findAuthUserByEmail } from "@/lib/auth/find-user-by-email";
 import { clientIpFromRequest } from "@/lib/auth/otp-rate-limit";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
@@ -19,6 +20,8 @@ const BodySchema = z.object({
 
 /**
  * Email + password login. Writes Cookie session on success.
+ * Unconfirmed users are returned as `email_not_confirmed` even when Supabase
+ * only says "Invalid login credentials".
  */
 export async function POST(req: Request) {
   try {
@@ -62,11 +65,20 @@ export async function POST(req: Request) {
     });
 
     if (error || !data.user) {
-      console.error("[auth/login]", error?.name ?? "no_user");
-      return NextResponse.json(
-        { ok: false, error: mapAuthErrorCode(error?.message) },
-        { status: 401 },
+      const mapped = mapAuthErrorCode(
+        error?.message,
+        (error as { code?: string } | null)?.code,
       );
+      let code = mapped;
+      // Supabase often returns invalid_credentials for unconfirmed emails.
+      if (code === "invalid_credentials" || code === "auth_failed") {
+        const found = await findAuthUserByEmail(email);
+        if (found && !found.emailConfirmed) {
+          code = "email_not_confirmed";
+        }
+      }
+      console.error("[auth/login]", error?.name ?? "no_user", code);
+      return NextResponse.json({ ok: false, error: code }, { status: 401 });
     }
 
     return NextResponse.json({

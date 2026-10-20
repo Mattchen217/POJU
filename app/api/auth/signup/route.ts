@@ -7,8 +7,9 @@ import {
   mapAuthErrorCode,
   normalizeEmail,
 } from "@/lib/auth/auth-helpers";
+import { findAuthUserByEmail } from "@/lib/auth/find-user-by-email";
+import { createSupabaseAnonClient, isSupabaseConfigured } from "@/lib/auth/supabase";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
-import { isSupabaseConfigured } from "@/lib/auth/supabase";
 
 const BodySchema = z.object({
   email: EmailSchema,
@@ -18,6 +19,9 @@ const BodySchema = z.object({
 /**
  * Email + password signup. Supabase sends confirmation OTP/email per dashboard templates.
  * Session is not established until verify-signup (when confirm email is enabled).
+ *
+ * If the email is already registered but unconfirmed, resends the signup OTP and
+ * returns `needs_verification: true` so the client can collect the code on /signup.
  */
 export async function POST(req: Request) {
   try {
@@ -46,11 +50,40 @@ export async function POST(req: Request) {
     });
 
     if (error) {
-      console.error("[auth/signup]", error.name, error.message);
-      return NextResponse.json(
-        { ok: false, error: mapAuthErrorCode(error.message) },
-        { status: 400 },
+      const mapped = mapAuthErrorCode(
+        error.message,
+        (error as { code?: string }).code,
       );
+      console.error("[auth/signup]", error.name, error.message, mapped);
+
+      if (mapped === "email_taken") {
+        const found = await findAuthUserByEmail(email);
+        if (found && !found.emailConfirmed) {
+          const anon = createSupabaseAnonClient();
+          const { error: resendError } = await anon.auth.resend({
+            type: "signup",
+            email,
+          });
+          if (resendError) {
+            console.error("[auth/signup] resend", resendError.name, resendError.message);
+            const resendMapped = mapAuthErrorCode(
+              resendError.message,
+              (resendError as { code?: string }).code,
+            );
+            if (resendMapped === "rate_limited") {
+              return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+            }
+          }
+          return NextResponse.json({
+            ok: true,
+            needs_verification: true,
+            existing_unconfirmed: true,
+            email,
+          });
+        }
+      }
+
+      return NextResponse.json({ ok: false, error: mapped }, { status: 400 });
     }
 
     // When email confirm is on, session is null until OTP/link confirmed.

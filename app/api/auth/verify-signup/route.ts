@@ -17,6 +17,7 @@ const BodySchema = z.object({
 
 /**
  * Confirm signup with 6-digit email OTP (`type: "signup"`). Writes Cookie session.
+ * Used from /signup (inline OTP) and /verify (fallback for half-registered users).
  */
 export async function POST(req: Request) {
   try {
@@ -50,7 +51,12 @@ export async function POST(req: Request) {
     if (error || !data.user) {
       console.error("[auth/verify-signup]", error?.name ?? "no_user");
       return NextResponse.json(
-        { ok: false, error: mapAuthErrorCode(error?.message) || "invalid_code" },
+        {
+          ok: false,
+          error:
+            mapAuthErrorCode(error?.message, (error as { code?: string } | null)?.code) ||
+            "invalid_code",
+        },
         { status: 401 },
       );
     }
@@ -63,7 +69,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("[auth/verify-signup] unexpected", error instanceof Error ? error.name : "unknown");
+    console.error(
+      "[auth/verify-signup] unexpected",
+      error instanceof Error ? error.name : "unknown",
+    );
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }

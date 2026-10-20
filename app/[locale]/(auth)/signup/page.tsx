@@ -13,11 +13,22 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { safeNextPath } from "@/lib/auth/auth-helpers";
 
+/** Prefer full navigation when `next` carries a query (avoids i18n path+search 404s). */
+function goNext(router: ReturnType<typeof useRouter>, next: string) {
+  if (next.includes("?")) {
+    window.location.assign(next);
+    return;
+  }
+  router.replace(next);
+  router.refresh();
+}
+
 function SignupForm() {
   const t = useTranslations("auth.signup");
   const searchParams = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
   const next = safeNextPath(searchParams.get("next"), "/");
   useRedirectIfSignedIn(next);
@@ -34,36 +45,50 @@ function SignupForm() {
       }
     >
       <OAuthButtons nextPath={next} />
-      <AuthErrorText code={error} />
+      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm
         mode="signup"
         submitLabel={t("submit")}
         submittingLabel={t("submitting")}
-        onSubmit={async ({ email, password }) => {
+        onSendCode={async ({ email, password }) => {
+          setError(null);
+          setLastEmail(email);
+          const { ok, data } = await postAuthJson<{
+            needs_verification?: boolean;
+            existing_unconfirmed?: boolean;
+            email?: string;
+            error?: string;
+          }>("/api/auth/signup", { email, password });
+          if (!ok) {
+            // Confirmed duplicate — do not open OTP UI.
+            return { ok: false, error: data.error ?? "auth_failed" };
+          }
+          // Confirm-email off: session already established — finish without OTP.
+          if (data.needs_verification === false) {
+            goNext(router, next);
+            return { ok: true, skipOtp: true };
+          }
+          return { ok: true };
+        }}
+        onSubmit={async ({ email, token }) => {
           if (inFlight.current) return;
+          if (!token || token.length !== 6) {
+            setError("invalid_code");
+            return;
+          }
           inFlight.current = true;
           setError(null);
+          setLastEmail(email);
           try {
-            const { ok, data } = await postAuthJson<{
-              needs_verification?: boolean;
-              email?: string;
-              error?: string;
-            }>("/api/auth/signup", { email, password });
+            const { ok, data } = await postAuthJson("/api/auth/verify-signup", {
+              email,
+              token,
+            });
             if (!ok) {
-              setError(data.error ?? "auth_failed");
+              setError(data.error ?? "invalid_code");
               return;
             }
-            if (data.needs_verification !== false) {
-              const q = new URLSearchParams({
-                email,
-                mode: "signup",
-                next,
-              });
-              router.push(`/verify?${q.toString()}`);
-              return;
-            }
-            router.replace(next);
-            router.refresh();
+            goNext(router, next);
           } finally {
             inFlight.current = false;
           }

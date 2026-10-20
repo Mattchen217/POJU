@@ -51,17 +51,43 @@ export function requestOrigin(request: Request): string {
   }
 }
 
-/** Map Supabase AuthApiError-ish messages to short stable codes. */
-export function mapAuthErrorCode(message: string | undefined): string {
+/**
+ * Map Supabase AuthApiError-ish messages / codes to short stable codes.
+ * Pass both `error.message` and `error.code` when available.
+ */
+export function mapAuthErrorCode(message: string | undefined, code?: string | undefined): string {
+  const c = (code ?? "").toLowerCase().replace(/-/g, "_");
+  if (c === "email_not_confirmed" || c === "user_not_confirmed") return "email_not_confirmed";
+  if (c === "invalid_credentials" || c === "invalid_login_credentials") return "invalid_credentials";
+  if (c === "user_already_exists" || c === "email_exists" || c === "user_already_registered") {
+    return "email_taken";
+  }
+  if (c === "over_request_rate_limit" || c === "over_email_send_rate_limit") return "rate_limited";
+  if (c === "weak_password") return "weak_password";
+  if (c === "otp_expired" || c === "otp_disabled") return "invalid_code";
+
   const m = (message ?? "").toLowerCase();
   if (!m) return "auth_failed";
-  if (m.includes("invalid login") || m.includes("invalid credentials")) return "invalid_credentials";
-  if (m.includes("email not confirmed") || m.includes("not confirmed")) return "email_not_confirmed";
-  if (m.includes("user already") || m.includes("already registered")) return "email_taken";
+  if (m.includes("email not confirmed") || m.includes("not confirmed") || m.includes("confirm your email")) {
+    return "email_not_confirmed";
+  }
+  if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("invalid_credentials")) {
+    return "invalid_credentials";
+  }
+  if (
+    m.includes("user already") ||
+    m.includes("already registered") ||
+    m.includes("already been registered") ||
+    m.includes("email address is already")
+  ) {
+    return "email_taken";
+  }
   if (m.includes("password") && (m.includes("weak") || m.includes("least") || m.includes("short"))) {
     return "weak_password";
   }
-  if (m.includes("rate") || m.includes("too many")) return "rate_limited";
-  if (m.includes("expired") || m.includes("otp") || m.includes("token")) return "invalid_code";
+  if (m.includes("rate") || m.includes("too many") || m.includes("security purposes")) return "rate_limited";
+  if (m.includes("expired") || m.includes("otp") || m.includes("token") || m.includes("one-time")) {
+    return "invalid_code";
+  }
   return "auth_failed";
 }

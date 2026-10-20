@@ -37,6 +37,8 @@ function ResetForm() {
   );
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const inFlight = useRef(false);
 
   const {
@@ -93,24 +95,46 @@ function ResetForm() {
         >
           <label className="auth-field">
             <span>{tFields("password")}</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder={tFields("passwordPlaceholder")}
-              disabled={submitting}
-              {...register("password")}
-            />
+            <div className="auth-field__control">
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder={tFields("passwordPlaceholder")}
+                disabled={submitting}
+                {...register("password")}
+              />
+              <button
+                type="button"
+                className="auth-field__toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-pressed={showPassword}
+                aria-label={showPassword ? tFields("hidePassword") : tFields("showPassword")}
+              >
+                {showPassword ? tFields("hidePassword") : tFields("showPassword")}
+              </button>
+            </div>
             {errors.password ? <em>{tErr("weak_password")}</em> : null}
           </label>
           <PasswordStrengthHint password={password} />
           <label className="auth-field">
             <span>{tFields("confirmPassword")}</span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              disabled={submitting}
-              {...register("confirm")}
-            />
+            <div className="auth-field__control">
+              <input
+                type={showConfirm ? "text" : "password"}
+                autoComplete="new-password"
+                disabled={submitting}
+                {...register("confirm")}
+              />
+              <button
+                type="button"
+                className="auth-field__toggle"
+                onClick={() => setShowConfirm((v) => !v)}
+                aria-pressed={showConfirm}
+                aria-label={showConfirm ? tFields("hidePassword") : tFields("showPassword")}
+              >
+                {showConfirm ? tFields("hidePassword") : tFields("showPassword")}
+              </button>
+            </div>
             {errors.confirm ? <em>{tErr("password_mismatch")}</em> : null}
           </label>
           <button type="submit" className="auth-btn auth-btn--primary" disabled={submitting}>

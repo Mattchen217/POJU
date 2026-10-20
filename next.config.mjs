@@ -122,6 +122,16 @@ const nextConfig = {
         permanent: false,
       },
       {
+        source: "/register",
+        destination: "/signup",
+        permanent: false,
+      },
+      {
+        source: "/:locale(zh|es|fr)/register",
+        destination: "/:locale/signup",
+        permanent: false,
+      },
+      {
         source: "/oracle",
         destination: "/glyph",
         permanent: true,

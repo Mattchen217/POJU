@@ -13,11 +13,21 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { safeNextPath } from "@/lib/auth/auth-helpers";
 
+function goNext(router: ReturnType<typeof useRouter>, next: string) {
+  if (next.includes("?")) {
+    window.location.assign(next);
+    return;
+  }
+  router.replace(next);
+  router.refresh();
+}
+
 function LoginForm() {
   const t = useTranslations("auth.login");
   const searchParams = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState<string | null>(searchParams.get("error"));
+  const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
   const next = safeNextPath(searchParams.get("next"), "/");
   useRedirectIfSignedIn(next);
@@ -34,7 +44,7 @@ function LoginForm() {
       }
     >
       <OAuthButtons nextPath={next} />
-      <AuthErrorText code={error} />
+      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm
         mode="login"
         submitLabel={t("submit")}
@@ -43,14 +53,14 @@ function LoginForm() {
           if (inFlight.current) return;
           inFlight.current = true;
           setError(null);
+          setLastEmail(email);
           try {
             const { ok, data } = await postAuthJson("/api/auth/login", { email, password });
             if (!ok) {
               setError(data.error ?? "auth_failed");
               return;
             }
-            router.replace(next);
-            router.refresh();
+            goNext(router, next);
           } finally {
             inFlight.current = false;
           }
