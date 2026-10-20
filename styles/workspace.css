@@ -343,38 +343,12 @@
   color: rgba(255, 255, 255, 0.92);
 }
 
-/* Folded A4 shell + inner glyph — same motif as vault list cards */
-.workspace-right-collapsed-icons__sheet.a4-paper-sheet,
-.workspace-right-collapsed-icons__sheet {
-  width: 22px;
-  height: 28px;
-  aspect-ratio: auto !important;
-  --fold-size: 26%;
-  --fold-y: calc(var(--fold-size) * 210 / 297);
-}
-
-.workspace-right-collapsed-icons__sheet .a4-paper-sheet__paper {
-  border-radius: 2px 0 2px 2px !important;
-  border-width: 1px;
-  box-shadow:
-    0 0 0 1px rgba(242, 202, 80, 0.14),
-    0 4px 12px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.workspace-right-collapsed-icons__sheet .a4-paper-sheet__body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0;
-}
-
+/* Collapsed rail: glyph only (no A4 — paper shell is for open vault list cards) */
 .workspace-right-collapsed-icons__glyph {
-  width: 11px;
-  height: 11px;
+  width: 26px;
+  height: 26px;
   display: block;
-  color: var(--ws-gold, #f2ca50);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .workspace-right-collapsed-icons__spin {

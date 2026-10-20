@@ -75,7 +75,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q10",
             "question": "购买 Pass 和订阅有什么区别？",
-            "answer": "<strong>购买 Pass $19.99</strong> = 1 PASS，一次性、不自动续费、用完为止；退款按支付渠道规则办理。<br><strong>订阅包 $59.99 / 月</strong> = <strong>每月发放 5 PASS</strong>；<strong>新用户仅首月 +2</strong>（该月共 7）。<br>消耗顺序：先用<strong>结转额度</strong>，再<strong>订阅额度</strong>，最后<strong>买断 PASS</strong>。"
+            "answer": "<strong>购买 Pass $19.99</strong> = 1 PASS，一次性、不自动续费、用完为止；支持随时一键退款。<br><strong>订阅包 $59.99 / 月</strong> = <strong>每月发放 5 PASS</strong>；<strong>新用户仅首月 +2</strong>（该月共 7）。<br>消耗顺序：先用<strong>结转额度</strong>，再<strong>订阅额度</strong>，最后<strong>买断 PASS</strong>。"
           },
           {
             "id": "q11",
@@ -187,7 +187,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q10",
             "question": "What’s the difference between Buy Pass and Subscription?",
-            "answer": "<strong>Buy Pass $19.99</strong> = 1 PASS, one-time, no auto-renew, valid until used; refunds follow your payment provider’s rules.<br><strong>Subscription $59.99 / mo</strong> = <strong>5 PASS granted every month</strong>; <strong>new subscribers get +2 in the first month only</strong> (7 that month).<br>Spend order: any <strong>carryover</strong> first, then <strong>subscription</strong> credits, then <strong>purchased</strong> PASS."
+            "answer": "<strong>Buy Pass $19.99</strong> = 1 PASS, one-time, no auto-renew, valid until used; one-click refund anytime.<br><strong>Subscription $59.99 / mo</strong> = <strong>5 PASS granted every month</strong>; <strong>new subscribers get +2 in the first month only</strong> (7 that month).<br>Spend order: any <strong>carryover</strong> first, then <strong>subscription</strong> credits, then <strong>purchased</strong> PASS."
           },
           {
             "id": "q11",

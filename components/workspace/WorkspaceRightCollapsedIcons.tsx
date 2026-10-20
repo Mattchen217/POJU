@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 
 import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import {
-  A4PaperSheet,
   DeliveryBookGlyph,
   EnergyPortraitGlyph,
   RemindersGlyph,
@@ -20,9 +19,13 @@ type Props = {
   onOpenPanel: () => void;
 };
 
+function formatCount(n: number): string {
+  return `X${n}`;
+}
+
 /**
- * Collapsed right-rail: folded A4 + inner glyph for the three delivery kinds.
- * No regenerate / stop controls in the rail.
+ * Collapsed right-rail: large inner glyph only (no A4 shell — that stays in the open vault list).
+ * Count badge: white `X3` / `X5`.
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
@@ -56,9 +59,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
-              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
-            </A4PaperSheet>
+            <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
           </span>
           {atmos.matrixUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
@@ -97,9 +98,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             }}
           >
             <span className="workspace-sidebar__icon" aria-hidden>
-              <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
-                <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
-              </A4PaperSheet>
+              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
             </span>
           </button>
         ) : null}
@@ -116,9 +115,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             }}
           >
             <span className="workspace-sidebar__icon" aria-hidden>
-              <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
-                <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
-              </A4PaperSheet>
+              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
             </span>
           </button>
         ) : null}
@@ -182,12 +179,10 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
-              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
-            </A4PaperSheet>
+            <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
           </span>
           {baselineCount > 0 ? (
-            <span className="workspace-right-collapsed-icons__count">{baselineCount}</span>
+            <span className="workspace-right-collapsed-icons__count">{formatCount(baselineCount)}</span>
           ) : null}
           {matrixUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
@@ -212,12 +207,10 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
-              <DeliveryBookGlyph className="workspace-right-collapsed-icons__glyph" />
-            </A4PaperSheet>
+            <DeliveryBookGlyph className="workspace-right-collapsed-icons__glyph" />
           </span>
           {deliveryCount > 0 ? (
-            <span className="workspace-right-collapsed-icons__count">{deliveryCount}</span>
+            <span className="workspace-right-collapsed-icons__count">{formatCount(deliveryCount)}</span>
           ) : null}
           {deliveryUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
@@ -237,12 +230,10 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <A4PaperSheet mode="folded" className="workspace-right-collapsed-icons__sheet">
-              <RemindersGlyph className="workspace-right-collapsed-icons__glyph" />
-            </A4PaperSheet>
+            <RemindersGlyph className="workspace-right-collapsed-icons__glyph" />
           </span>
           {remindersCount > 0 ? (
-            <span className="workspace-right-collapsed-icons__count">{remindersCount}</span>
+            <span className="workspace-right-collapsed-icons__count">{formatCount(remindersCount)}</span>
           ) : null}
           {vaultRemindersUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
