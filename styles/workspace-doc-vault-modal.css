@@ -78,17 +78,22 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Baseline: compact close, gold fill for visibility */
+/* Baseline: compact close, gold fill; height matches 32px chrome icon buttons */
 .workspace-doc-vault-modal__close--primary {
+  box-sizing: border-box;
+  height: 32px;
   border: 1px solid rgba(242, 202, 80, 0.6);
   background: linear-gradient(180deg, #f0d78c 0%, #d4af37 55%, #b8922a 100%);
   color: #14110a;
   font-weight: 600;
   font-size: 0.72rem;
-  padding: 4px 9px;
+  padding: 0 10px;
   border-radius: 8px;
   box-shadow: 0 1px 6px rgba(212, 175, 55, 0.22);
-  line-height: 1.25;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .workspace-doc-vault-modal__close--primary:hover {
@@ -128,8 +133,8 @@
 
 .workspace-doc-vault-modal__header-actions {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
 }
 

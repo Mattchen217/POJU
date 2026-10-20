@@ -229,9 +229,6 @@ export function BaselinePortraitBook({
                 viewportRef={rightViewportRef}
               >
                 <header className="delivery-book-stage__page-chrome">
-                  <p className="delivery-book-stage__page-tag">
-                    【B{pageIndex + 1}】
-                  </p>
                   <h1 className="delivery-book-stage__page-title">{activeLabel}</h1>
                   <p className="delivery-book-stage__page-subtitle">{subtitle}</p>
                 </header>
