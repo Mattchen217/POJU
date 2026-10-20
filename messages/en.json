@@ -2107,7 +2107,7 @@
         "title": "Welcome to Eastern OS",
         "body": "Eastern OS uses the baseline structure calibrated from your birth coordinates to support this decision dialogue. For where you’re stuck right now, we’ll work through it step by step.",
         "guide": "Type the dilemma you can’t settle yet below, then send. Your first question starts the decision session.",
-        "note": "Each reply runs deep reasoning for what’s needed now, so it can take a moment—please wait. Answer Eastern OS’s questions carefully, and check what it puts out; that matters for a high-quality, actionable decision report later.",
+        "note": "Answer Eastern OS’s questions carefully, and check what it puts out; that matters for a high-quality, actionable decision report later.\nEach reply runs deep reasoning for what’s needed now, so it can take a moment—please wait.",
         "loading": "Preparing your session…"
       },
       "hero_calendar": "Calendar lock",

@@ -1564,7 +1564,7 @@
         "title": "Bienvenido a Eastern OS",
         "body": "Eastern OS usa la estructura base calibrada con tus coordenadas de nacimiento para sostener este diálogo de decisión. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso.",
         "guide": "Escribe abajo el dilema que aún no puedes decidir, luego envía. Tu primera pregunta abre la sesión de decisión.",
-        "note": "Cada respuesta hace un razonamiento profundo según lo que hace falta ahora, así que puede tardar un poco—espera con paciencia. Responde con cuidado las preguntas de Eastern OS y revisa lo que escribe; eso importa para entregar después un informe de decisión de alta calidad y ejecutable.",
+        "note": "Responde con cuidado las preguntas de Eastern OS y revisa lo que escribe; eso importa para entregar después un informe de decisión de alta calidad y ejecutable.\nCada respuesta hace un razonamiento profundo según lo que hace falta ahora, así que puede tardar un poco—espera con paciencia.",
         "loading": "Preparando tu sesión…"
       },
       "hero_calendar": "Calendario",

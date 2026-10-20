@@ -995,12 +995,13 @@
   --ws-text: #f5f5f7;
   --ws-text-secondary: #e8e8ed;
   --ws-text-muted: #c4c4cc;
-  /* History row ≈ subitem + stage timeline; viewport shows 6 rows max */
-  --ws-history-row-stack: calc(var(--ws-rail-row-h) + 24px);
+  /* History row ≈ subitem + stage timeline; + group label so 6 rows actually fit */
+  --ws-history-row-stack: calc(var(--ws-rail-row-h) + 40px);
+  --ws-history-group-h: 28px;
   --ws-history-visible-rows: 6;
   --ws-history-list-max-h: calc(
     var(--ws-history-visible-rows) * var(--ws-history-row-stack) +
-      (var(--ws-history-visible-rows) - 1) * 2px + 6px
+      (var(--ws-history-visible-rows) - 1) * 2px + var(--ws-history-group-h) + 8px
   );
   display: flex;
   flex-direction: column;
@@ -4261,7 +4262,7 @@ button.workspace-poju-card__title:hover {
 
 .workspace-sidebar__past-scroll {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   max-height: var(--ws-history-list-max-h);
   display: flex;
@@ -4272,9 +4273,9 @@ button.workspace-poju-card__title:hover {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
-  max-height: 100%;
+  max-height: var(--ws-history-list-max-h);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -5960,7 +5961,7 @@ button.workspace-poju-card__title:hover {
 }
 
 .workspace-sidebar__past-block {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
