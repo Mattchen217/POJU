@@ -169,7 +169,27 @@ export async function quoteFlexPassRefund(params: {
   const allUnits = expandFlexUnits((payRows ?? []) as PaymentRow[]);
   const consumed = Math.max(0, allUnits.length - flexBalance);
   const unused = allUnits.slice(consumed);
+
+  // Gateway off: allow refund from flex_balance even when payment_records are thin/mismatched.
   if (unused.length < qty) {
+    if (!isPaymentGatewayEnabled() && flexBalance >= qty) {
+      const synthetic: FlexRefundUnit[] = [];
+      for (let i = 0; i < qty; i++) {
+        synthetic.push({
+          payment_record_id: `synthetic_${params.userId}_${i}`,
+          transaction_id: `mock_txn_flex_${Date.now().toString(36)}_${i}`,
+          amount_cents: PLAN_PRICES_CENTS.flex_pass,
+          created_at: new Date().toISOString(),
+        });
+      }
+      return {
+        ok: true,
+        quantity: qty,
+        amount_cents: PLAN_PRICES_CENTS.flex_pass * qty,
+        flex_balance: flexBalance,
+        units: synthetic,
+      };
+    }
     return { ok: false, reason: "insufficient_refundable_units", flex_balance: flexBalance };
   }
 
@@ -250,67 +270,85 @@ export async function requestCreemFlexPassRefund(params: {
   let anyMock = false;
   const markedRecordIds = new Set<string>();
 
-  // Gateway off / mock txns: complete ledger locally — never call live Creem.
+  // Gateway off: treat Confirm as paid refund — debit already applied; finish ledger locally.
   const mockMode =
     !isPaymentGatewayEnabled() ||
     units.every((u) => isMockProviderTransactionId(u.transaction_id));
 
+  async function markUnitRecord(unit: FlexRefundUnit, refundId: string): Promise<void> {
+    if (unit.payment_record_id.startsWith("synthetic_")) return;
+    if (markedRecordIds.has(unit.payment_record_id)) return;
+    markedRecordIds.add(unit.payment_record_id);
+
+    const { data: rec } = await admin
+      .from("payment_records")
+      .select("quantity, amount_cents")
+      .eq("id", unit.payment_record_id)
+      .maybeSingle();
+    const recQty = Math.max(1, Math.floor(rec?.quantity ?? 1));
+    const unitsFromThis = units.filter((u) => u.payment_record_id === unit.payment_record_id);
+    if (recQty <= unitsFromThis.length) {
+      await markPaymentRecordRefunded(admin, unit.payment_record_id, refundId);
+      return;
+    }
+    // Legacy multi-qty row: reduce remaining quantity/amount (Path A prefers qty=1 rows).
+    const left = recQty - unitsFromThis.length;
+    const prevCents = typeof rec?.amount_cents === "number" ? rec.amount_cents : 0;
+    const per = recQty > 0 ? Math.round(prevCents / recQty) : 0;
+    const { error: markErr } = await admin
+      .from("payment_records")
+      .update({
+        quantity: left,
+        amount_cents: Math.max(0, per * left),
+      })
+      .eq("id", unit.payment_record_id);
+    if (markErr) {
+      console.error("[passes] refund reduce", markErr.code ?? markErr.message);
+      throw new Error("mark_refunded_failed");
+    }
+  }
+
+  if (mockMode) {
+    anyMock = true;
+    for (const unit of units) {
+      const refundId = `mock_creem_refund_${Date.now().toString(36)}_${unit.transaction_id.slice(-8)}`;
+      refundIds.push(refundId);
+      try {
+        await markUnitRecord(unit, refundId);
+      } catch (markErr) {
+        // Ledger debit already committed — do not fail Confirm when gateway is off.
+        console.error(
+          "[passes] refund mark (mock, continuing)",
+          markErr instanceof Error ? markErr.message : "unknown",
+        );
+      }
+    }
+    return {
+      ok: true,
+      mock: true,
+      refund_id: refundIds[0],
+      refund_ids: refundIds,
+      quantity: qty,
+      amount_cents: quote.amount_cents,
+      flex_after: flexAfter,
+      sub_after: subAfter,
+      total_after: totalAfter,
+    };
+  }
+
   try {
     for (const unit of units) {
-      let refundId: string;
-      if (mockMode) {
-        anyMock = true;
-        // Local mock id; refundCreemTransaction also short-circuits when gateway off.
-        const provider = await refundCreemTransaction(unit.transaction_id);
-        if (!provider.ok || !provider.refund_id) {
-          refundId = `mock_creem_refund_${Date.now().toString(36)}_${unit.transaction_id.slice(-6)}`;
-        } else {
-          refundId = provider.refund_id;
-          if (provider.mock) anyMock = true;
-        }
-      } else {
-        const provider = await refundCreemTransaction(unit.transaction_id);
-        if (!provider.ok || !provider.refund_id) {
-          throw new Error(provider.reason ?? "creem_refund_failed");
-        }
-        if (provider.mock) anyMock = true;
-        refundId = provider.refund_id;
+      const provider = await refundCreemTransaction(unit.transaction_id);
+      if (!provider.ok || !provider.refund_id) {
+        throw new Error(provider.reason ?? "creem_refund_failed");
       }
-      refundIds.push(refundId);
-
-      if (!markedRecordIds.has(unit.payment_record_id)) {
-        markedRecordIds.add(unit.payment_record_id);
-        const { data: rec } = await admin
-          .from("payment_records")
-          .select("quantity, amount_cents")
-          .eq("id", unit.payment_record_id)
-          .maybeSingle();
-        const recQty = Math.max(1, Math.floor(rec?.quantity ?? 1));
-        const unitsFromThis = units.filter((u) => u.payment_record_id === unit.payment_record_id);
-        if (recQty <= unitsFromThis.length) {
-          await markPaymentRecordRefunded(admin, unit.payment_record_id, refundId);
-        } else {
-          // Legacy multi-qty row: reduce remaining quantity/amount (Path A prefers qty=1 rows).
-          const left = recQty - unitsFromThis.length;
-          const prevCents = typeof rec?.amount_cents === "number" ? rec.amount_cents : 0;
-          const per = recQty > 0 ? Math.round(prevCents / recQty) : 0;
-          const { error: markErr } = await admin
-            .from("payment_records")
-            .update({
-              quantity: left,
-              amount_cents: Math.max(0, per * left),
-            })
-            .eq("id", unit.payment_record_id);
-          if (markErr) {
-            console.error("[passes] refund reduce", markErr.code ?? markErr.message);
-            throw new Error("mark_refunded_failed");
-          }
-        }
-      }
+      if (provider.mock) anyMock = true;
+      refundIds.push(provider.refund_id);
+      await markUnitRecord(unit, provider.refund_id);
     }
   } catch (error) {
     console.error("[passes] refund provider", error instanceof Error ? error.message : "unknown");
-    // Live Creem failure: restore ledger. Mock mode: still restore so Confirm can retry cleanly.
+    // Live provider failure: restore ledger.
     await admin
       .from("user_passes")
       .update({
@@ -319,8 +357,8 @@ export async function requestCreemFlexPassRefund(params: {
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", params.userId);
-    // Best-effort clear refund marks on records we touched this attempt
     for (const id of markedRecordIds) {
+      if (id.startsWith("synthetic_")) continue;
       const cleared = await admin
         .from("payment_records")
         .update({ status: "completed", refund_id: null, refunded_at: null })

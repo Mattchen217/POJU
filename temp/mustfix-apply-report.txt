@@ -1,0 +1,38 @@
+wrote public/v2/faq-i18n.js
+MF1+2+8 FAQ done
+wrote messages/en.json
+wrote messages/zh.json
+wrote messages/es.json
+wrote messages/fr.json
+MF5+6+7 messages JSON done
+wrote messages/en/contact.json
+wrote messages/zh/contact.json
+wrote messages/es/contact.json
+wrote messages/fr/contact.json
+MF9 contact done
+wrote public/v2-landing.html
+MF3+4+8+10 landing done
+OK   FAQ no bilingual paren
+OK   FAQ ZH P6 今晚与收尾
+OK   FAQ ZH no 出门仪式
+OK   FAQ ZH q9 购买
+OK   FAQ EN refund PASS details
+OK   FAQ no one-click refund anytime
+OK   passRow.balanceAria
+OK   passRow.buyAria
+OK   passRow chip PASS·
+OK   planPersonal Subscription
+OK   planFlex Buy Pass
+OK   planTeam hidden empty
+OK   birthForm no Pivot
+OK   birth no true solar expl1
+OK   contact no Token
+OK   contact no Monthly Pass
+OK   contact PASS billing
+OK   ES decisiones de alto riesgo
+OK   ES más ajustado
+OK   FR session complète
+OK   FR no course complète
+OK   FR bifurcations
+OK   hero hide CSS
+FAIL ZH role 创始人

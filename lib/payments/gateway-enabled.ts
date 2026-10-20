@@ -1,8 +1,9 @@
 /**
- * Flip to `true` when real Stripe Checkout is live.
+ * Flip to `true` when real Stripe / Creem Checkout is live.
  * While `false`:
  * - Pricing checkout returns mock session URLs (gateway placeholder)
  * - `/api/checkout/confirm` still credits Passes as if paid
+ * - Pass refund Confirm completes locally (debit flex + mark payment_records) without provider HTTP
  * - Product unlocks require Pass balance (buy/subscribe first) — not free auto-unlock
  */
 export const PAYMENT_GATEWAY_ENABLED = false;
