@@ -3683,3 +3683,374 @@
   max-height: 100%;
   min-height: 0;
 }
+
+/* ── Baseline portrait right-pane polish (match left TOC/meta family) ──
+ * Scoped under [data-baseline="1"] + .pcm--body-only so Pivot delivery
+ * report chrome/content is unchanged. Visual polish only — no copy cuts.
+ */
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__page-chrome {
+  margin-bottom: 20px;
+}
+
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__page-tag {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__page-title {
+  font-size: clamp(1.05rem, 1.55vw, 1.35rem);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__page-subtitle {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(228, 228, 231, 0.62);
+}
+
+.delivery-book-stage[data-baseline="1"] .baseline-portrait-book__page {
+  padding-bottom: 16px;
+}
+
+/* Body-only matrix: quieter type scale + hairline borders (B1–B5) */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only,
+.pcm--body-only.pcm--delivery-shell {
+  --pcm-card-pad: 0.75rem;
+  --pcm-section-gap: 1.1rem;
+  --pcm-gutter: 0.85rem;
+  --pcm-shell-line: rgba(255, 255, 255, 0.08);
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm__section,
+.pcm--body-only.pcm--delivery-shell .pcm__section {
+  gap: 1.1rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm__section-title,
+.pcm--body-only.pcm--delivery-shell .pcm__section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-type-xl,
+.pcm--body-only.pcm--delivery-shell .pcm-type-xl {
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-type-lg,
+.pcm--body-only.pcm--delivery-shell .pcm-type-lg {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-type-md,
+.pcm--body-only.pcm--delivery-shell .pcm-type-md {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-type-body-lg,
+.pcm--body-only.pcm--delivery-shell .pcm-type-body-lg {
+  font-size: 0.875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-type-body,
+.pcm--body-only.pcm--delivery-shell .pcm-type-body {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-label,
+.pcm--body-only.pcm--delivery-shell .pcm-label {
+  margin-bottom: 0.75rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-label--flush,
+.pcm--body-only.pcm--delivery-shell .pcm-label--flush {
+  margin-bottom: 0.55rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-label__dot,
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-label:not(:has(.pcm-label__dot))::before,
+.pcm--body-only.pcm--delivery-shell .pcm-label__dot,
+.pcm--body-only.pcm--delivery-shell .pcm-label:not(:has(.pcm-label__dot))::before {
+  width: 0.35rem;
+  height: 0.35rem;
+  box-shadow: 0 0 4px rgba(242, 202, 80, 0.45);
+}
+
+/* B1 summary chips */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip,
+.pcm--body-only.pcm--delivery-shell .pcm-hero-strip {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip__item,
+.pcm--body-only.pcm--delivery-shell .pcm-hero-strip__item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 8px 10px 7px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip__value,
+.pcm--body-only.pcm--delivery-shell .pcm-hero-strip__value {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip__label,
+.pcm--body-only.pcm--delivery-shell .pcm-hero-strip__label {
+  margin-top: 4px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+}
+
+/* B1 zodiac */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac,
+.pcm--body-only.pcm--delivery-shell .pcm-zodiac {
+  gap: 0.55rem;
+  margin-top: 10px;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac__art,
+.pcm--body-only.pcm--delivery-shell .pcm-zodiac__art {
+  width: 4.25rem;
+  height: 4.25rem;
+  border: 1px solid rgba(242, 202, 80, 0.45);
+  box-shadow: 0 0 8px rgba(242, 202, 80, 0.16);
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac__name,
+.pcm--body-only.pcm--delivery-shell .pcm-zodiac__name {
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac__pinyin,
+.pcm--body-only.pcm--delivery-shell .pcm-zodiac__pinyin {
+  font-size: 0.75rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac__year,
+.pcm--body-only.pcm--delivery-shell .pcm-zodiac__year {
+  font-size: 0.6875rem;
+  margin-top: 0.15rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac__caption,
+.pcm--body-only.pcm--delivery-shell .pcm-zodiac__caption {
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+}
+
+/* B1 calibration grid */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-calibration .pcm-cal,
+.pcm--body-only.pcm--delivery-shell .pcm-calibration .pcm-cal {
+  margin-top: 12px;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__cell,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__cell {
+  padding-bottom: 0.85rem;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm-cal__cell,
+.pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm-cal__cell {
+  padding-block: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 1024px) {
+  .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__cell,
+  .pcm--body-only.pcm--delivery-shell .pcm-cal__cell {
+    padding-inline: 0.75rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm-cal__cell,
+  .pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm-cal__cell {
+    padding-block: 0.25rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: none;
+  }
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__kicker,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__kicker {
+  min-height: 2rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__value,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__value {
+  font-size: clamp(0.9375rem, 1.4vw, 1.05rem);
+  font-weight: 650;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__value .pcm-cal__unit,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__value .pcm-cal__unit {
+  font-size: 0.75rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__sub,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__sub {
+  font-size: 0.8125rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__accent,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__accent {
+  font-size: 0.75rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__time-val,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__time-val {
+  font-size: clamp(0.9375rem, 1.4vw, 1.05rem);
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__time-label,
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__note,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__time-label,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__note {
+  font-size: 0.6875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__delta,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__delta {
+  border: 1px solid rgba(242, 202, 80, 0.18);
+  padding: 0.2rem 0.4rem;
+  font-size: 0.6875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-cal__foot,
+.pcm--body-only.pcm--delivery-shell .pcm-cal__foot {
+  padding-top: 0.5rem;
+  min-height: 1.4rem;
+}
+
+/* B2 energy / vitality / eq */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-vitality__title,
+.pcm--body-only.pcm--delivery-shell .pcm-vitality__title {
+  margin-bottom: 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-energy__rest .pcm-vitality__title,
+.pcm--body-only.pcm--delivery-shell .pcm-energy__rest .pcm-vitality__title {
+  margin-bottom: 0.65rem;
+  font-size: 1rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-vtrack,
+.pcm--body-only.pcm--delivery-shell .pcm-vtrack {
+  height: 0.45rem;
+  margin-bottom: 0.65rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-vtrack__pin,
+.pcm--body-only.pcm--delivery-shell .pcm-vtrack__pin {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1px solid #fff;
+  box-shadow: 0 0 6px rgba(242, 202, 80, 0.5);
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-vtrack__labels,
+.pcm--body-only.pcm--delivery-shell .pcm-vtrack__labels {
+  font-size: 0.6875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-eq__title,
+.pcm--body-only.pcm--delivery-shell .pcm-eq__title {
+  font-size: 0.875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-bar__name,
+.pcm--body-only.pcm--delivery-shell .pcm-bar__name {
+  font-size: 0.8125rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-bar__value,
+.pcm--body-only.pcm--delivery-shell .pcm-bar__value {
+  font-size: 0.75rem;
+}
+
+/* B2–B5 cards / chips / section dividers */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm-card,
+.pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm-card {
+  padding: 0.65rem 0;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-chip,
+.pcm--body-only.pcm--delivery-shell .pcm-chip {
+  padding: 0.15rem 0.4rem;
+  border-width: 1px;
+  font-size: 0.6875rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-chips,
+.pcm--body-only.pcm--delivery-shell .pcm-chips {
+  gap: 0.35rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm__grid-12 > *,
+.pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm__grid-12 > * {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  padding-block: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm__grid-12 > *,
+  .pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm__grid-12 > * {
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-bottom: none;
+    padding-block: 0.2rem;
+    padding-inline: 0.7rem;
+  }
+
+  .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm__section,
+  .pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm__section {
+    gap: 1rem;
+  }
+
+  .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-shell__panel .pcm__section > .pcm__grid-12 + .pcm__grid-12,
+  .pcm--body-only.pcm--delivery-shell .pcm-shell__panel .pcm__section > .pcm__grid-12 + .pcm__grid-12 {
+    padding-top: 1rem;
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-timeline-row__range,
+.pcm--body-only.pcm--delivery-shell .pcm-timeline-row__range {
+  font-size: 0.75rem;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-header-meta,
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm__header-meta,
+.pcm--body-only.pcm--delivery-shell .pcm__header-meta {
+  font-size: 0.75rem;
+}
