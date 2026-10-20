@@ -1,4 +1,4 @@
-﻿/* Vault document overlay — Buy-style portal (SoT 15): min(960px,94vw) × min(860px,92vh) */
+/* Vault document overlay — Buy-style portal (SoT 15): min(960px,94vw) × min(860px,92vh) */
 
 .workspace-doc-vault-modal__backdrop {
   position: fixed;
@@ -124,4 +124,21 @@
 
 .workspace-doc-vault-modal__reminders {
   min-height: 240px;
+}
+
+/* Baseline book: fill fixed sheet; scroll inside delivery right pane (not the modal body) */
+.workspace-doc-vault-modal__body:has(.delivery-book-stage[data-baseline="1"]) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 0;
+}
+
+.workspace-doc-vault-modal__body > .delivery-book-stage[data-baseline="1"] {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
 }
