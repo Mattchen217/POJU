@@ -9,6 +9,7 @@ import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
+import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
 import {
   forceReleaseDeliveryContinueLease,
@@ -441,11 +442,13 @@ export async function POST(req: Request) {
         );
       }
       const refId = sessionIdRaw || `pivot-delivery-${user.id}-${Date.now()}`;
+      const topicSrc =
+        isLooseAgentState(body.agent_v2) ? body.agent_v2.original_question : "";
       const consumed = await assertAndConsumePass({
         userId: user.id,
         product: "pivot",
         refId,
-        description: "Pivot full delivery",
+        description: passUsageTopicFromQuestion(topicSrc),
       });
       if (!consumed.ok) {
         return NextResponse.json(

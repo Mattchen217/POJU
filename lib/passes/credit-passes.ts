@@ -80,17 +80,16 @@ export async function creditPassesFromCheckout(params: {
         : PLAN_PRICES_CENTS.flex_pass;
 
     const sessionPrefix = params.sessionId;
+    // Prefix match covers single mock id and Path A unit suffixes (`__u0`…).
     const { data: existingUnits, error: existErr } = await admin
       .from("payment_records")
       .select("id, stripe_session_id")
       .eq("user_id", params.userId)
       .eq("plan_type", "flex_pass")
-      .or(
-        `stripe_session_id.eq.${sessionPrefix},stripe_session_id.like.${sessionPrefix}__u%`,
-      );
+      .like("stripe_session_id", `${sessionPrefix}%`);
 
     if (existErr) {
-      console.error("[passes] payment_records exist", existErr.code);
+      console.error("[passes] payment_records exist", existErr.code, existErr.message);
       return { ok: false, reason: "payment_record_failed" };
     }
     if ((existingUnits?.length ?? 0) >= units) {

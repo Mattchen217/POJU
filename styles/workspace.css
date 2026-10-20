@@ -1330,7 +1330,7 @@
   box-sizing: border-box;
   min-height: var(--ws-rail-row-h);
   padding: var(--ws-rail-row-pad-y) var(--ws-rail-row-pad-x);
-  border-radius: 0;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--ws-text-secondary);
@@ -1391,7 +1391,7 @@
   border-color: transparent;
   color: #f2ca50;
   box-shadow: none;
-  border-radius: 0;
+  border-radius: 10px;
 }
 
 .workspace-sidebar__item:focus-visible {
@@ -3212,12 +3212,12 @@
   outline-offset: 2px;
 }
 
-/* Desktop: uses | birth | title | timeline | menu — uniform column-gap; text cols minmax(0,*) */
+/* Desktop: uses | birth | title | timeline | menu — four equal content tracks, even gaps */
 .workspace-poju-card__row {
   display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr) minmax(0, 1.25fr) 8rem auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
   align-items: start;
-  column-gap: 16px;
+  column-gap: 20px;
   row-gap: 10px;
   width: 100%;
   min-width: 0;
@@ -3334,9 +3334,8 @@ button.workspace-poju-card__title:hover {
 }
 
 .workspace-poju-card__timeline-col {
-  width: 8rem;
-  min-width: 8rem;
-  max-width: 8rem;
+  min-width: 0;
+  max-width: 100%;
   overflow: visible;
 }
 
@@ -4207,7 +4206,7 @@ button.workspace-poju-card__title:hover {
 .workspace-sidebar__history-row.is-active .workspace-sidebar__subitem {
   background: var(--ws-rail-row-hover-bg);
   border-color: transparent;
-  border-radius: 0;
+  border-radius: 10px;
   color: #f2ca50;
   box-shadow: none;
 }
@@ -4232,6 +4231,7 @@ button.workspace-poju-card__title:hover {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  border-radius: 10px;
 }
 
 .workspace-sidebar__subitem--doc {
@@ -6259,6 +6259,7 @@ button.workspace-poju-card__title:hover {
   top: 0;
   bottom: 0;
   width: 2px;
+  border-radius: 10px 0 0 10px;
   background: var(--ws-rail-gold-strip);
   opacity: 0;
   pointer-events: none;

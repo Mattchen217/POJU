@@ -8,6 +8,8 @@ import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { listActivePojuSessionsForPicker } from "@/lib/cross-product/list-active-poju-sessions-for-picker";
 import { sessionListTopicLine } from "@/lib/poju/session-list-label";
 import { journeyStageFromHint } from "@/lib/poju/session-journey-stage";
+import { loadPOJUSession } from "@/lib/poju/session-manager";
+import { listStoredProfiles } from "@/lib/profile/stored-profiles-service";
 import { LOCAL_OWNER_CHANGED_EVENT } from "@/lib/storage/local-owner";
 
 export type WorkspaceProductId = "atmos" | "poju" | "match" | "syncro" | "glyph";
@@ -36,18 +38,44 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
         /* Live sessions are the source of truth — vault sync is best-effort only. */
         const sessions = await listActivePojuSessionsForPicker();
         if (gen !== refreshGenRef.current) return;
-        const rows: ArchiveSummary[] = sessions.slice(0, limit).map((s) => ({
-          archive_id: s.session_id,
-          type: "poju_session",
-          title: pojuHistoryTitle(s.original_question, locale),
-          product: "poju",
-          session_id: s.session_id,
-          created_at: s.last_interaction_at,
-          journey_stage: journeyStageFromHint(
-            s.current_state_hint,
-            Boolean(s.main_delivery_done),
-          ),
-        }));
+
+        const profiles = await listStoredProfiles().catch(() => []);
+        if (gen !== refreshGenRef.current) return;
+        const profileById = new Map(profiles.map((p) => [p.profile_id, p]));
+
+        const slice = sessions.slice(0, limit);
+        const rows: ArchiveSummary[] = await Promise.all(
+          slice.map(async (s) => {
+            let birthLabel = "";
+            try {
+              const state = await loadPOJUSession(s.session_id);
+              const pid =
+                state?.selected_stored_profile_id?.trim() ||
+                state?.agent_v2?.selected_profile_id?.trim() ||
+                "";
+              if (pid) {
+                const p = profileById.get(pid);
+                birthLabel = p?.display_name?.trim() || p?.birth_date?.trim() || "";
+              }
+            } catch {
+              /* index-only fallback */
+            }
+            return {
+              archive_id: s.session_id,
+              type: "poju_session" as const,
+              title: pojuHistoryTitle(s.original_question, locale),
+              product: "poju" as const,
+              session_id: s.session_id,
+              created_at: s.created_at || s.last_interaction_at,
+              journey_stage: journeyStageFromHint(
+                s.current_state_hint,
+                Boolean(s.main_delivery_done),
+              ),
+              birth_label: birthLabel || undefined,
+            };
+          }),
+        );
+        if (gen !== refreshGenRef.current) return;
         setItems(rows);
       } else {
         const rows = await listArchive({ product, limit });

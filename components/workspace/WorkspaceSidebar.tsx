@@ -151,6 +151,9 @@ function HistoryItemRow({
   const snippet = sessionSnippet(title);
   const timeLabel = formatSessionTime(row.created_at, locale);
   const createdLabel = formatArchiveCreatedAt(row.created_at, locale);
+  const birthLabel = row.birth_label?.trim() || "";
+  /** Top line: birth · HH:mm (creation time stays hour+minute only). */
+  const metaTop = birthLabel ? `${birthLabel} · ${timeLabel}` : timeLabel;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -214,13 +217,15 @@ function HistoryItemRow({
         className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
         aria-current={active ? "page" : undefined}
         onClick={onOpen}
-        title={`${snippet}\n${createdLabel}`}
+        title={[metaTop, snippet, createdLabel].filter(Boolean).join("\n")}
       >
         <span className="workspace-sidebar__icon" aria-hidden>
           <span className="material-symbols-outlined">chat_bubble</span>
         </span>
         <span className="workspace-sidebar__submeta">
-          <span className="workspace-sidebar__subtime">{timeLabel}</span>
+          <span className="workspace-sidebar__subtime" title={metaTop}>
+            {metaTop}
+          </span>
           <span className="workspace-sidebar__sublabel">{snippet}</span>
         </span>
       </button>

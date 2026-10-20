@@ -46,6 +46,8 @@ export interface ArchiveSummary {
   created_at: string;
   /** How+Get stage 1–5 current, or 6 = all complete (timeline). */
   journey_stage?: number;
+  /** Birth card label e.g. `1991-07-03 · 18:00 · M` for left-rail history. */
+  birth_label?: string;
 }
 
 export interface GlyphReadingArchiveData {

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { usePaywallPurchaseResume } from "@/components/passes/usePaywallPurchaseResume";
+import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { pivotPaywallCopy } from "@/lib/passes/pivot-paywall-copy";
 import "@/styles/pivot-first-pass-gate.css";
 
@@ -19,6 +20,8 @@ type Props = {
   phase: PivotFirstPassGatePhase;
   locale: string;
   sessionId: string;
+  /** Session topic for pass_usage.description */
+  sessionTopic?: string;
   onCloseNeedPass: () => void;
   onUnlockedAfterPurchase: (via: "payment" | "code") => void | Promise<void>;
 };
@@ -28,6 +31,7 @@ export function PivotFirstPassGateModal({
   phase,
   locale,
   sessionId,
+  sessionTopic,
   onCloseNeedPass,
   onUnlockedAfterPurchase,
 }: Props) {
@@ -38,7 +42,7 @@ export function PivotFirstPassGateModal({
   const unlockIntent = {
     product: "pivot" as const,
     refId: sessionId,
-    description: "Pivot full delivery unlock" as const,
+    description: passUsageTopicFromQuestion(sessionTopic),
   };
 
   const { openPurchase, closePurchase } = usePaywallPurchaseResume({

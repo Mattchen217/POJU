@@ -6,6 +6,7 @@ import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { usePaywallPurchaseResume } from "@/components/passes/usePaywallPurchaseResume";
 import { dispatchPassSpendToast } from "@/lib/passes/pass-client-events";
 import { pivotPaywallCopy } from "@/lib/passes/pivot-paywall-copy";
+import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
@@ -38,7 +39,7 @@ export function PojuPaywallInline({
   const unlockIntent = {
     product: "pivot" as const,
     refId: sessionId,
-    description: "Pivot full delivery unlock",
+    description: passUsageTopicFromQuestion(pendingQuestion),
   };
 
   const { openPurchase, closePurchase } = usePaywallPurchaseResume({

@@ -22,6 +22,7 @@ import {
   clearPendingPaywallUnlockIfMatch,
   takeCompletedPaywallUnlockIfMatch,
 } from "@/lib/passes/pending-paywall-unlock";
+import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
@@ -1617,7 +1618,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const completed = takeCompletedPaywallUnlockIfMatch({
       product: "pivot",
       refId: session.session_id,
-      description: "Pivot full delivery unlock",
+      description: passUsageTopicFromQuestion(
+        session.pending_question ?? session.original_question,
+      ),
     });
     if (!completed) return;
     setPassBuyOpen(false);
@@ -1717,7 +1720,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const spend = await unlockWithPass({
           product: "pivot",
           refId: baseSession.session_id,
-          description: "Pivot full delivery unlock",
+          description: passUsageTopicFromQuestion(
+            baseSession.pending_question ?? baseSession.original_question,
+          ),
         });
         const spinLeft = passGateMinSpinMs() - (Date.now() - gateStartedAt);
         if (spinLeft > 0) {
@@ -4114,6 +4119,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         phase={passGatePhase}
         locale={processLocale(session)}
         sessionId={session.session_id}
+        sessionTopic={session.pending_question ?? session.original_question}
         onCloseNeedPass={() => setPassGateOpen(false)}
         onUnlockedAfterPurchase={async () => {
           setPassGateOpen(false);
@@ -4135,7 +4141,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         unlockAfterPurchase={{
           product: "pivot",
           refId: session.session_id,
-          description: "Pivot full delivery unlock",
+          description: passUsageTopicFromQuestion(
+            session.pending_question ?? session.original_question,
+          ),
         }}
       />
       <PartnerBirthModal

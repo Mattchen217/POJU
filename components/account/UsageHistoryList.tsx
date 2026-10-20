@@ -2,6 +2,8 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
+import { isLegacyPassUsageDescription } from "@/lib/passes/pass-usage-label";
+
 export type UsageRow = {
   id: string;
   product: string;
@@ -43,6 +45,18 @@ function productLabel(product: string, t: (k: string) => string): string {
   return product;
 }
 
+/** e.g. 决策对话 · 我现在很迷茫… */
+function operationLabel(
+  row: UsageRow,
+  t: (k: string) => string,
+): { product: string; topic: string } {
+  const product = productLabel(row.product, t);
+  const raw = row.description?.trim() ?? "";
+  const topic =
+    !raw || isLegacyPassUsageDescription(raw) ? t("usageSessionUntitled") : raw;
+  return { product, topic };
+}
+
 export function UsageHistoryList({ usage, loading = false }: Props) {
   const t = useTranslations("account");
   const locale = useLocale();
@@ -67,21 +81,22 @@ export function UsageHistoryList({ usage, loading = false }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {usage.map((row) => (
-                  <tr key={row.id}>
-                    <td className="acct-table__muted">{formatWhen(row.created_at, locale)}</td>
-                    <td className="acct-table__accent">
-                      {productLabel(row.product, t)}
-                      {row.description ? (
-                        <span className="acct-table__muted"> · {row.description}</span>
-                      ) : null}
-                    </td>
-                    <td>{t("usageCostPass")}</td>
-                    <td>
-                      <span className="acct-table__ok">{t("usageSuccess")}</span>
-                    </td>
-                  </tr>
-                ))}
+                {usage.map((row) => {
+                  const op = operationLabel(row, t);
+                  return (
+                    <tr key={row.id}>
+                      <td className="acct-table__muted">{formatWhen(row.created_at, locale)}</td>
+                      <td className="acct-table__accent">
+                        {op.product}
+                        <span className="acct-table__muted"> · {op.topic}</span>
+                      </td>
+                      <td>{t("usageCostPass")}</td>
+                      <td>
+                        <span className="acct-table__ok">{t("usageSuccess")}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

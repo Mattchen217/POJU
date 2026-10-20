@@ -167,6 +167,11 @@ export function PassPurchaseModal({
         : { plan },
       locale,
     );
+    if (result.ok && result.credited) {
+      setBusy(null);
+      onClose();
+      return;
+    }
     if (!result.ok && !result.loginRequired) {
       setError(
         result.error === "already_on_plan" ? t("alreadyOnPlan") : t("checkoutFailed"),

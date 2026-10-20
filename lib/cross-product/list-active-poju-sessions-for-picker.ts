@@ -5,6 +5,8 @@ export type ActivePojuSessionPickerRow = {
   session_id: string;
   original_question: string;
   expires_at: string;
+  /** Session created_at (ISO) — for history “创建时间”. */
+  created_at: string;
   last_interaction_at: string;
   days_left: number;
   current_state_hint?: string;
@@ -31,11 +33,16 @@ export async function listActivePojuSessionsForPicker(): Promise<ActivePojuSessi
       row.last_interaction_at instanceof Date
         ? row.last_interaction_at.toISOString()
         : String(row.last_interaction_at);
+    const createdAt =
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : String(row.created_at || lastInteraction);
 
     out.push({
       session_id: row.session_id,
       original_question: row.original_question,
       expires_at: expiresAt.toISOString(),
+      created_at: createdAt,
       last_interaction_at: lastInteraction,
       days_left: daysLeft(expiresAt.toISOString()),
       current_state_hint: row.current_state_hint,
