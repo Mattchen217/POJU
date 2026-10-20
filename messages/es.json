@@ -19,15 +19,15 @@
     "match": "Match",
     "archive": "Archivo",
     "disclaimer": "Aviso legal",
-    "privacy": "Política de privacidad",
-    "terms": "Términos de servicio",
+    "privacy": "Privacidad",
+    "terms": "Términos",
     "contact": "Contacto",
     "mobileSheetTitle": "Menú",
     "mobileSheetClose": "Cerrar menú",
     "mobileNavPrimary": "Explorar",
     "mobileNavLegal": "Legal",
-    "refund": "Política de reembolso",
-    "cookies": "Política de cookies"
+    "refund": "Reembolso",
+    "cookies": "Cookies"
   },
   "language": {
     "short": "Idioma",
@@ -649,11 +649,11 @@
       "links": {
         "home": "Inicio",
         "disclaimer": "Aviso legal",
-        "privacy": "Política de privacidad",
-        "terms": "Términos de servicio",
+        "privacy": "Privacidad",
+        "terms": "Términos",
         "contact": "Contacto",
-        "refund": "Política de reembolso",
-        "cookies": "Política de cookies"
+        "refund": "Reembolso",
+        "cookies": "Cookies"
       },
       "copyright": "© 2026 Eastern OS. Todos los derechos reservados."
     }
