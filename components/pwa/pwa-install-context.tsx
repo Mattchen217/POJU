@@ -18,7 +18,17 @@ import {
   readEarlyDeferredInstallPrompt,
 } from "@/lib/pwa/early-before-install-prompt";
 import type { BeforeInstallPromptEvent, PwaInstallPersona } from "@/lib/pwa/types";
-import { PwaInstallGuideLayer, type PwaInstallGuideKind } from "@/components/pwa/pwa-install-guide-layer";
+import dynamic from "next/dynamic";
+import type { PwaInstallGuideKind } from "@/components/pwa/pwa-install-guide-layer";
+
+/** Guide modal only after user taps Install — keep out of home critical path. */
+const PwaInstallGuideLayer = dynamic(
+  () =>
+    import("@/components/pwa/pwa-install-guide-layer").then((m) => ({
+      default: m.PwaInstallGuideLayer,
+    })),
+  { ssr: false },
+);
 
 type PromptResult =
   | { outcome: "accepted" | "dismissed"; platform: string }
@@ -252,7 +262,7 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
   return (
     <PwaInstallContext.Provider value={value}>
       {children}
-      {clientReady ? (
+      {clientReady && installGuide ? (
         <PwaInstallGuideLayer kind={installGuide} onClose={closeInstallGuide} androidApkUrl={androidApkUrl} />
       ) : null}
     </PwaInstallContext.Provider>

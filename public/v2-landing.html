@@ -8,13 +8,29 @@
 <link rel="icon" type="image/png" href="/v2/EASTERN-OS-LOGO1.png"/>
 <link rel="shortcut icon" type="image/png" href="/v2/EASTERN-OS-LOGO1.png"/>
 <link rel="apple-touch-icon" href="/v2/apple-touch-icon.png"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&amp;display=swap" rel="stylesheet"/>
+<!-- LCP: preload brand marks before Tailwind / fonts -->
+<link rel="preload" href="/v2/EASTERN-OS-LOGO1.webp" as="image" type="image/webp" fetchpriority="high"/>
+<link rel="preload" href="/v2/EASTERN-OS-LOGO2.webp" as="image" type="image/webp" fetchpriority="high"/>
+<!-- Tailwind Play CDN deferred — critical nav/hero CSS is already inlined below -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Noto+Sans+SC:wght@400;600;700&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+<noscript>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Noto+Sans+SC:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+</noscript>
 <style>
+/* Critical above-the-fold utilities (bridge until deferred Tailwind runs) */
+body{margin:0;background:#000;color:#f1f5f9;font-family:Inter,system-ui,sans-serif}
+.flex{display:flex}.inline-flex{display:inline-flex}.hidden{display:none}.relative{position:relative}
+.items-center{align-items:center}.justify-center{justify-content:center}.flex-col{flex-direction:column}
+.text-center{text-align:center}.mx-auto{margin-left:auto;margin-right:auto}
+.max-w-7xl{max-width:80rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}
+.font-bold{font-weight:700}.font-semibold{font-weight:600}
+.overflow-hidden{overflow:hidden}.w-screen{width:100vw}
+
 .material-symbols-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   font-size: inherit;
@@ -82,12 +98,14 @@
           line-height: 1.5;
         }
         /* Never show energy/cosmic mock frames if reintroduced */
+        /* Legacy heavy PNG carousel frames — keep hidden until WebP slides ship */
         .v2-product-carousel img[src*="v2.png"],
         .v2-product-carousel img[src*="V2.png"],
         .v2-product-carousel img[src*="V3.png"],
         .v2-product-carousel img[src*="v3.png"],
         .v2-product-carousel img[src*="v4.png"],
-        .v2-product-carousel img[src*="V4.png"] {
+        .v2-product-carousel img[src*="V4.png"],
+        .v2-product-carousel img[src*="Gemini_Generated"] {
           display: none !important;
         }
 
@@ -1883,7 +1901,17 @@
 <canvas id="shader-canvas-ANIMATION_41"></canvas>
 <script>
 (function() {
+  // Defer WebGL starfield until after first paint — was blocking LCP on mobile.
+  function whenIdle(fn) {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(fn, { timeout: 1800 });
+    } else {
+      window.addEventListener('load', function () { setTimeout(fn, 0); }, { once: true });
+    }
+  }
+  whenIdle(function bootStarfield() {
   const canvas = document.getElementById('shader-canvas-ANIMATION_41');
+  if (!canvas) return;
 
   // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
   // This fires on initial layout and whenever the element is resized.
@@ -2006,6 +2034,7 @@ void main() {
     }
   });
   kick();
+  }); // whenIdle(bootStarfield)
 })();
 </script>
 </div>
@@ -2013,8 +2042,8 @@ void main() {
 <nav id="v2-topnav" aria-label="Primary">
 <div class="v2-topnav__inner">
 <a class="v2-topnav__brand" href="/" target="_top" aria-label="Eastern OS home">
-<img class="v2-topnav__logo1" alt="" src="/v2/EASTERN-OS-LOGO1.png" aria-hidden="true"/>
-<img class="v2-topnav__logo2" alt="Eastern OS" src="/v2/EASTERN-OS-LOGO2.png"/>
+<img class="v2-topnav__logo1" alt="" src="/v2/EASTERN-OS-LOGO1.webp" width="36" height="36" decoding="async" fetchpriority="high" aria-hidden="true"/>
+<img class="v2-topnav__logo2" alt="Eastern OS" src="/v2/EASTERN-OS-LOGO2.webp" width="140" height="28" decoding="async" fetchpriority="high"/>
 </a>
 <div class="v2-topnav__actions">
 <button type="button" id="v2-nav-install" class="hidden min-h-[44px] items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-slate-100 hover:text-primary transition-colors" aria-label="Install app" hidden>
@@ -2528,7 +2557,7 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 </section>
 <section class="bg-slate-50 dark:bg-slate-900/30 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.6s;" id="v2-methodology">
 <div class="absolute inset-0 z-0 opacity-20 dark:opacity-30 mix-blend-luminosity">
-<img alt="Command Center" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaCQBE0UvjK1px4fhSvnsNhY7NpfBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA"/>
+<img alt="" aria-hidden="true" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaCQBE0UvjK1px4fhSvnsNhY7NpfBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA" loading="lazy" decoding="async" fetchpriority="low"/>
 <div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-900"></div>
 </div>
 <div class="max-w-7xl mx-auto px-6 relative z-10">
@@ -2542,7 +2571,7 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <div class="flex min-h-0 flex-1 flex-col gap-2">
 <p class="v2-method-card-body text-slate-600 dark:text-slate-300 shrink-0" data-built="easternBody">Three thousand years of Eastern decision traditions—time cycles, systemic balance, how people actually choose under pressure. Not mysticism for show: a <span class="gold-gradient">structural</span> lens on forks, timing, and consequence.</p>
 <div class="v2-method-left-art">
-<img alt="" aria-hidden="true" class="pointer-events-none" src="/v2/daz.png"/>
+<img alt="" aria-hidden="true" class="pointer-events-none" src="/v2/daz.webp" loading="lazy" decoding="async" width="480" height="360" fetchpriority="low"/>
 </div>
 </div>
 </div>
@@ -2552,14 +2581,14 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <h4 class="v2-method-card-title text-primary shrink-0" data-built="modernTitle">Modern Research</h4>
 <p class="v2-method-card-body text-slate-600 dark:text-slate-300 shrink-0" data-built="modernBody">Cognitive science, decision psychology, and chronobiology as a check—not a costume. We keep what holds as pattern and drop what fails as empty ritual.</p>
 <div class="v2-method-card-art">
-<img alt="" aria-hidden="true" class="pointer-events-none" src="/v2/yhy.png"/>
+<img alt="" aria-hidden="true" class="pointer-events-none" src="/v2/yhy.webp" loading="lazy" decoding="async" width="480" height="360" fetchpriority="low"/>
 </div>
 </div>
 <div class="v2-glass-card v2-method-card relative flex min-h-0 flex-col bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden">
 <h4 class="v2-method-card-title text-primary shrink-0" data-built="aiTitle">Algorithmic Translation</h4>
 <p class="v2-method-card-body text-slate-600 dark:text-slate-300 shrink-0" data-built="aiBody">Structural signals from those models are cross-read with <em>your</em> case through a language engine—into paths, tradeoffs, and a report shaped around <em>this</em> decision—not a one-size fill-in form.</p>
 <div class="v2-method-card-art">
-<img alt="" aria-hidden="true" class="pointer-events-none" src="/v2/shu.png"/>
+<img alt="" aria-hidden="true" class="pointer-events-none" src="/v2/shu.webp" loading="lazy" decoding="async" width="480" height="360" fetchpriority="low"/>
 </div>
 </div>
 </div>
@@ -2807,8 +2836,8 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <div class="max-w-7xl mx-auto px-6">
 <div class="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 <a class="inline-flex items-end shrink-0 gap-2" href="/" target="_top" aria-label="Eastern OS home">
-<img alt="" class="h-8 w-auto object-contain sm:h-9" src="/v2/EASTERN-OS-LOGO1.png" aria-hidden="true"/>
-<img alt="Eastern OS" class="h-6 w-auto object-contain sm:h-7" src="/v2/EASTERN-OS-LOGO2.png"/>
+<img alt="" class="h-8 w-auto object-contain sm:h-9" src="/v2/EASTERN-OS-LOGO1.webp" width="36" height="36" loading="lazy" decoding="async" aria-hidden="true"/>
+<img alt="Eastern OS" class="h-6 w-auto object-contain sm:h-7" src="/v2/EASTERN-OS-LOGO2.webp" width="140" height="28" loading="lazy" decoding="async"/>
 </a>
 <nav class="flex flex-wrap items-center gap-x-6 gap-y-3" aria-label="Footer">
 <a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/terms" target="_top" data-footer-legal="terms">Terms</a>

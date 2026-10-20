@@ -32,6 +32,9 @@ export function V2WorkspaceLandingPage() {
       src="/v2-landing"
       title="Eastern OS — Cognitive Velocity"
       className="fixed inset-0 z-[1] h-[100dvh] w-screen border-0 bg-[#000000]"
+      // LCP is inside the frame — start network fetch immediately.
+      loading="eager"
+      referrerPolicy="same-origin"
     />
   );
 }

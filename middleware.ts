@@ -41,6 +41,7 @@ export const config = {
   matcher: [
     "/",
     "/(zh|es|fr)/:path*",
-    "/((?!api|_next|_vercel|v2-landing|oracle-test|oracle-fronts-preview|unsubscribe|ops|kv|.*\\..*).*)",
+    // Exclude static/metadata endpoints (robots, llms, sitemap, assets with extensions).
+    "/((?!api|_next|_vercel|v2-landing|oracle-test|oracle-fronts-preview|unsubscribe|ops|kv|robots\\.txt|llms\\.txt|sitemap\\.xml|.*\\..*).*)",
   ],
 };

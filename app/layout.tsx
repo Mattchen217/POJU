@@ -50,12 +50,12 @@ const notoSerifSC = Noto_Serif_SC({
   preload: false,
 });
 
-/** 移动端 / PWA：禁止手势缩放（与 manifest standalone 一致由同一文档加载） */
+/** Allow pinch-zoom for a11y / Lighthouse (maximum-scale >= 5). */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: "cover",
   themeColor: "#07091A",
 };
@@ -101,10 +101,24 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Eastern OS" />
         <link rel="apple-touch-icon" href="/v2/apple-touch-icon.png" />
         <meta name="theme-color" content="#000000" />
+        {/* Material Symbols: non-blocking (print→all) so icon CSS does not delay LCP */}
         <link
+          id="eos-material-symbols"
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          media="print"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var l=document.getElementById('eos-material-symbols');if(!l)return;var go=function(){l.media='all'};if(l.sheet)go();else l.addEventListener('load',go);})();`,
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          />
+        </noscript>
         {/* Before React: default V2 shell + avoid classic chrome flash on home */}
         <script
           dangerouslySetInnerHTML={{

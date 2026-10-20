@@ -1,0 +1,28 @@
+# Eastern OS
+
+> Eastern OS is a reflective decision-support product: multi-turn dialogue, a decision report you can reopen, and optional 30-day same-line reminders. We advise; you decide. Not medical, legal, financial, or fortune-telling advice. For adults 18+.
+
+Eastern OS (easternos.com) helps people get unstuck on consequential decisions using AI dialogue grounded in Eastern analytical models. Purchase uses PASS credits. Legal policy bodies are English; UI chrome is available in English, 中文, Español, and Français.
+
+## Product
+
+- [Home](https://www.easternos.com/): Marketing landing and entry
+- [Pivot dialogue](https://www.easternos.com/poju): Multi-turn decision dialogue (product route)
+- [Glyph](https://www.easternos.com/glyph): Short reflective draw
+- [Syncro](https://www.easternos.com/syncro): Rhythm / timing companion
+- [Match](https://www.easternos.com/match): Two-profile relationship lens
+- [Workspace app](https://www.easternos.com/app): Signed-in workbench
+
+## Legal
+
+- [Terms](https://www.easternos.com/terms): Terms of Service
+- [Privacy](https://www.easternos.com/privacy): Privacy Policy
+- [Refund](https://www.easternos.com/refund): Refund Policy
+- [Cookies](https://www.easternos.com/cookies): Cookie Policy
+- [Disclaimer](https://www.easternos.com/disclaimer): Product disclaimer
+- [Contact](https://www.easternos.com/contact): Support and legal contacts
+
+## Optional
+
+- [Sitemap](https://www.easternos.com/sitemap.xml): Machine-readable URL list
+- [Robots](https://www.easternos.com/robots.txt): Crawler rules
