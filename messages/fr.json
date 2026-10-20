@@ -2173,6 +2173,15 @@
         "step_2": "Select Add to Home Screen",
         "step_3": "Tap Install to confirm"
       },
+      "mac": {
+        "title": "Ajouter Eastern OS au Dock du Mac",
+        "subtitle": "C’est une action du menu Safari sur macOS — pas la feuille Partager en bas de l’iPhone.",
+        "step1": "Regardez la <strong>barre de menus macOS tout en haut de l’écran</strong> (pas l’en-tête de ce site). Choisissez <strong>Fichier → Ajouter au Dock</strong> (File → Add to Dock).",
+        "step2": "Ou cliquez sur le bouton <strong>Partager</strong> de la barre Safari (carré avec ↑), puis <strong>Ajouter au Dock</strong>.",
+        "step3": "Nommez l’app si vous voulez, puis cliquez sur <strong>Ajouter</strong>. Ouvrez ensuite depuis le Dock.",
+        "hint": "Nécessite macOS Sonoma 14 ou plus récent. Sur les versions plus anciennes, utilisez Chrome ou Edge et installez depuis la barre d’adresse.",
+        "later": "Plus tard"
+      },
       "chrome_required": {
         "title": "Utilisez Chrome pour installer",
         "subtitle_huawei": "{browser} ne prend pas en charge l'installation complète de l'app Eastern OS. Ouvrez cette page dans Chrome pour l'installer.",
@@ -2663,7 +2672,7 @@
       "Remboursement en un clic à tout moment"
     ],
     "allocation": "Allocation",
-    "personalPassCount": "Allocation fixe de 5 PASS / mois",
+    "personalPassCount": "5 PASS fixes / mois",
     "personalBonusFeature": "Nouveaux abonnés—premier mois seulement : +2 bonus (≈ $8,57 / Pass ce mois-là).",
     "personalFeatures": [
       "1 Pass = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours fournis ensemble.",
@@ -2836,7 +2845,7 @@
       "icon_label": "Livre de livraison",
       "toolbar_label": "Actions du livre",
       "toc_label": "Sommaire",
-      "cover_eyebrow": "Pivot · Rapport de décision énergétique",
+      "cover_eyebrow": "Eastern OS · Rapport de décision",
       "turn_hint": "Tourne la page pour commencer →",
       "pager_label": "Tourner la page",
       "page_of": "{current} / {total}",
@@ -2995,7 +3004,7 @@
       "settings": "Settings"
     },
     "passRow": {
-      "balance": "PASS·{n}",
+      "balance": "PASS · {n}",
       "buy": "Acheter",
       "buyShort": "+",
       "loginHint": "Log in to see PASS",

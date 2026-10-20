@@ -1,0 +1,3046 @@
+{
+  "common": {
+    "brandWordmark": "Eastern OS",
+    "brand": "Eastern OS",
+    "domain": "easternos.com",
+    "tagline": "Donde la IA se encuentra con mil años de sabiduría.",
+    "footerTagline": "Eastern OS offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
+    "copyright": "© 2026 Eastern OS. Todos los derechos reservados.",
+    "syncroFooterTagline": "Syncro es una herramienta de auto-conciencia. Toma lo que resuene. Las decisiones son tuyas.",
+    "openNavigationMenu": "Abrir menú de navegación",
+    "cancel": "Cancelar",
+    "deleteConfirmWarning": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar."
+  },
+  "nav": {
+    "home": "Inicio",
+    "poju": "Pivot",
+    "glyph": "Glyph",
+    "syncro": "Syncro",
+    "match": "Match",
+    "archive": "Archivo",
+    "disclaimer": "Aviso legal",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "contact": "Contacto",
+    "mobileSheetTitle": "Menú",
+    "mobileSheetClose": "Cerrar menú",
+    "mobileNavPrimary": "Explorar",
+    "mobileNavLegal": "Legal",
+    "refund": "Reembolso",
+    "cookies": "Cookies"
+  },
+  "language": {
+    "short": "Idioma",
+    "comingSoon": "Todos los idiomas activos",
+    "aria": "Idioma",
+    "mobileSection": "Idioma"
+  },
+  "home": {
+    "hero": {
+      "brand": "Eastern OS",
+      "headline": "Rompe con aquello que no te deja ir.",
+      "descLine1": "Tres mil años de marcos espacio-temporales orientales.",
+      "descLine2": "Reestructurado por la psicología cognitiva.",
+      "descLine3": "Sintetizado por inteligencia generativa — para tu claridad hoy.",
+      "trustLine": "Sin cuentas en la nube · Privacidad descentralizada · Pago por uso o Pase Mensual",
+      "ctaInstall": "Instálalo en el escritorio para una experiencia de App nativa",
+      "ctaAddDesktop": "Instálalo en el escritorio para una experiencia de App nativa",
+      "ctaInstallApp": "Instala la app para una experiencia nativa"
+    },
+    "cta": {
+      "startSession": "Inicia una sesión POJU · $9.99",
+      "tryGlyph": "Prueba Glyph · Gratis",
+      "yoursToDecide": "Sin cuenta · Sin suscripción · Tú decides"
+    },
+    "twoLanguages": {
+      "heading": "Donde dos lenguajes se encuentran.",
+      "line1": "Dos mil años de reflexión humana.",
+      "line2": "Traducción moderna por IA.",
+      "line3": "Una conversación que te ayuda a ver con claridad.",
+      "patternTitle": "PATRÓN",
+      "patternBody": "Observación antigua sobre lo que se repite.",
+      "directionTitle": "DIRECCIÓN",
+      "directionBody": "Psicología espacial sobre lo que notamos.",
+      "timingTitle": "TIEMPO",
+      "timingBody": "Ciclos que dan forma a la biología.",
+      "youTitle": "TÚ",
+      "youBody": "Tu contexto de nacimiento, tu momento, tu pregunta."
+    },
+    "promises": {
+      "heading": "Privacidad y límites. Sin rodeos.",
+      "subtitle": "Qué se queda en tu teléfono o computadora—y qué este producto nunca hace.",
+      "card1": {
+        "title": "Se queda en este dispositivo",
+        "content": "Tu chat y el informe se quedan en el teléfono o la computadora que estás usando ahora—solo en este navegador. No se suben como historial de chat a nuestra nube. ¿Quieres borrarlos? Limpia los datos de este navegador (o cierra una ventana privada). Usa otro teléfono, computadora o navegador, y esos chats no aparecen—aunque inicies sesión con la misma cuenta. Un dispositivo nuevo es una copia local nueva—los chats viejos no te siguen solos; solo los ves en el dispositivo original."
+      },
+      "card2": {
+        "title": "Tu cuenta es para el PASS—no para tus chats",
+        "content": "Iniciar sesión es sobre todo para comprar PASS y ver tu saldo y recibos. No significa que tus conversaciones se guarden en la nube de tu cuenta. Si abres Eastern OS en otro dispositivo, verás tu PASS—pero no los chats viejos del primero. ¿Quieres ver esos chats otra vez? Vuelve a ese mismo dispositivo y navegador—tu cuenta no los sincroniza. PASS y chats son cosas distintas; no esperes que sean un solo registro en la nube."
+      },
+      "card3": {
+        "title": "Quédate con una copia si la quieres",
+        "content": "¿Necesitas la conversación o el informe después de dejar este navegador? Antes de borrar datos o cambiar de dispositivo, envíate el informe por correo, o exporta una copia. Así guardas algo que puedes abrir después y contrastar con el camino que aclaraste. El correo de compra al pagar es un recibo—no un respaldo del chat, y no restaura el diálogo. Si borras la copia local, no podemos traerla de vuelta—así que llévate una aquí primero; no esperes a después de borrar datos o cambiar de dispositivo."
+      },
+      "card4": {
+        "title": "Ayuda para decidir—no adivinación",
+        "content": "Eastern OS mantiene un diálogo profundo de varios turnos alrededor de la decisión en la que estás atascado. Te ayudamos a aclarar tu situación y la pregunta de verdad, y luego te dejamos llevarte un informe de apoyo a la decisión que puedes volver a abrir—ruta principal, respaldo y razones que puedes contrastar con lo que dijiste. Eastern OS no es adivinación ni videncia imposible de verificar, no usa tácticas de miedo para crear pánico, y no hace juicios vacíos—Eastern OS solo ancla en ti y en tu problema central para entregar apoyo a la decisión."
+      },
+      "readMore": "Leer la arquitectura de privacidad completa →"
+    },
+    "finalCta": {
+      "heading": "Cuando la pregunta no te suelta.",
+      "subtitle": "Deja de leer. Empieza a atravesarla.",
+      "subline": "Deja de leer. Empieza a atravesarla.",
+      "primary": "Haz tu pregunta — $9.99",
+      "secondary": "O prueba Glyph gratis primero →",
+      "readyHeading": "¿Listo para comenzar?",
+      "readySubheading": "Cuatro portales hacia la velocidad cognitiva. Elige el vector que mejor se adapte a este momento.",
+      "poju": {
+        "title": "Inicializar Sesión POJU",
+        "sub": "$9.99 · Una Consulta Estratégica · 30 Días"
+      },
+      "glyph": {
+        "title": "Decodificar Matriz Glyph",
+        "sub": "$4.99 · Lectura Arquitectónica Sistémica"
+      },
+      "syncro": {
+        "title": "Activar Bucle Syncro",
+        "sub": "$4.99 · Matriz Espaciotemporal de 24 Horas"
+      },
+      "match": {
+        "title": "Inicializar Alineación de Match",
+        "sub": "$4.99 · Perfilado de Dinámica Relacional"
+      }
+    },
+    "products": {
+      "poju": {
+        "name": "Pivot",
+        "line1": "Navegación de transiciones específicas. 30 días de mentoría inmersiva y profunda para ofrecer estrategias claras y accionables que te guíen a través de tus puntos ciegos cognitivos.",
+        "line2": "",
+        "badge": "$9.99",
+        "cta": "Ir a Pivot →"
+      },
+      "glyph": {
+        "name": "Glyph",
+        "line1": "Anclaje de intención y resonancia arquetípica. Basado en marcos simbólicos clásicos de 100 imágenes, genera una tarjeta mediante dinámicas de partículas digitales, permitiendo que Glyph deconstruya profundamente tus temas centrales.",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "Ir a Glyph →"
+      },
+      "syncro": {
+        "name": "Syncro",
+        "line1": "Matriz de decisión espacio-temporal dinámica de 24 horas. Diseñada para una acción específica, evaluando los vientos a favor y la fricción potencial en 8 direcciones durante los próximos 12 ciclos temporales.",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "Ir a Syncro →"
+      },
+      "match": {
+        "name": "Match",
+        "line1": "Red sinérgica de matriz dual. Mapea de forma independiente dos perfiles temporales distintos para evaluar a fondo la alineación, los puntos de fricción y las dinámicas relacionales ante hitos colectivos.",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "Ir a Match →"
+      }
+    },
+    "meetsMoment": {
+      "heading": "Cuando El Discernimiento Encuentra Contextos Concretos.",
+      "subtitle": "Desplegando una perspectiva holística en tus puntos de inflexión reales.",
+      "card1": {
+        "title": "Frente a una Encrucijada Crítica",
+        "text": "Transiciones profesionales, rumbos en relaciones clave o reubicaciones estratégicas. Tras deliberar sin cesar, POJU cambia tus coordenadas cognitivas para vislumbrar el camino.",
+        "cta": "Ir a Pivot →"
+      },
+      "card2": {
+        "title": "Navegando por Incertidumbres Persistentes",
+        "text": "Enfrentando una complejidad innombrable. Sintiendo que fuerzas implícitas operan sin poder identificarlas. Deja que Glyph sea tu espejo arquetípico para decodificar señales estructurales bajo la superficie.",
+        "cta": "Ir a Glyph →"
+      },
+      "card3": {
+        "title": "Sincronizando con Tu Pulso Espacio-Temporal",
+        "text": "¿Cuándo avanzar para lograr avances? ¿Cuándo conservar energía y mitigar la fricción? Syncro mapea dinámicamente la matriz ambiental durante las próximas 24 horas en tiempo real.",
+        "cta": "Ir a Syncro →"
+      },
+      "card4": {
+        "title": "Evaluando Compromisos o Alianzas Estratégicas",
+        "text": "Ya sea estableciendo una relación de pareja duradera, una alianza comercial o estructurando un equipo clave. Esclarece la sinergia sistémica antes de la decisión final.",
+        "cta": "Ir a Match →"
+      }
+    },
+    "fourWays": {
+      "heading": "Cuatro Motores Especializados. Alineados Según Tu Necesidad.",
+      "subtitle": "Dimensiones analíticas diseñadas para distintos desafíos situacionales. Desde transiciones a largo plazo y resonancia instantánea hasta rutas espacio-temporales y sinergia de doble matriz — calibradas con precisión para tu contexto inmediato."
+    },
+    "built": {
+      "heading": "Nuestra Metodología. Por Qué Funciona.",
+      "intro": "Tres milenios de filosofía humana estructural, calibrados por la investigación interdisciplinaria contemporánea y traducidos mediante un motor de lenguaje avanzado. Diseñado para potenciar tus decisiones clave e iluminar los puntos ciegos cognitivos que no puedes navegar solo.",
+      "easternTitle": "Marcos Orientales",
+      "easternBody": "Durante tres mil años, las tradiciones filosóficas orientales han examinado los ciclos temporales y el equilibrio sistémico, analizando las elecciones, la dirección y los patrones intrínsecos que configuran el comportamiento.\n\nAlineación · Momento · Reestructuración · Claridad.\n\nEstas antiguas tradiciones están diseñadas para ayudarte a desentrañar la lógica interna y las rutas evolutivas. Son modelos cognitivos altamente estructurados, iterados a lo largo de decenas de generaciones.",
+      "modernTitle": "Investigación Moderna",
+      "modernBody": "Las regularidades empíricas observadas por las tradiciones antiguas encuentran ahora su validación y medición a través de la lente de la ciencia moderna.\n\nCiencia cognitiva en el encuadre de decisiones. Psicología arquetípica en la conciencia espacial. Cronobiología en los ritmos circadianos naturales. Economía del comportamiento en los sesgos cognitivos.\n\nUn marco conceptual probado durante milenios, ahora vuelto a examinar y verificado bajo el rigor de la investigación contemporánea.",
+      "aiTitle": "Traducción Algorítmica",
+      "aiBody": "Cosechamos los datos estructurales inherentes a estos antiguos sistemas de calendarios, los cruzamos con ideas del comportamiento contemporáneo y utilizamos un motor de lenguaje avanzado para traducirlos en comentarios claros y contextuales adaptados a tus consultas únicas.\n\nNo para reemplazar tu juicio. Para devolverte la agencia cognitiva.",
+      "summary": "Al conectar la sabiduría ancestral con la validación empírica, nuestro sistema sintetiza patrones de comportamiento complejos en información práctica para el autoconocimiento.",
+      "notice": "Nota: Estas herramientas están diseñadas exclusivamente para la autorreflexión y la exploración del crecimiento personal; ofrecen marcos temáticos solo como referencia y nunca como sustituto de un diagnóstico profesional o un pronóstico determinista.",
+      "closingHeading": "Esta es la esencia central de Eastern OS.",
+      "closingBody": "Las preguntas esenciales de la vida no merecen menos que tres milenios de reflexión filosófica, el rigor empírico de la ciencia moderna y la precisión de un motor lingüístico personalizado."
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: 2026-06-15",
+    "version": "Version 1.1"
+  },
+  "marketingSite": {
+    "common": {
+      "tagline": "Donde la IA se encuentra con mil años de sabiduría.",
+      "footer_disclaimer": "Eastern OS offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
+      "trust_line": "Sin cuenta · Sin suscripción · Tú decides",
+      "read_with_wink": "Léelo con una sonrisa. Los patrones reflejan, no predicen."
+    },
+    "nav": {
+      "poju": "Pivot",
+      "glyph": "Glyph",
+      "syncro": "Syncro",
+      "archive": "Archivo",
+      "match": "Match"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "Donde la IA se encuentra con mil años de sabiduría.",
+        "cta_primary": "Inicia una sesión POJU · $9.99",
+        "cta_secondary": "Prueba Glyph · Gratis"
+      },
+      "three_ways": {
+        "heading": "Tres formas de entrar. Una de salir.",
+        "poju": {
+          "tagline": "Para esa pregunta que no te suelta.",
+          "description": "Una sola conversación profunda, hasta verla con claridad."
+        },
+        "glyph": {
+          "tagline": "Un espejo de bolsillo.",
+          "description": "Sostén una pregunta. Saca un patrón. Lee un reflejo."
+        },
+        "syncro": {
+          "tagline": "Ve tus ritmos naturales.",
+          "description": "Actualizado cada dos horas, en tu teléfono."
+        },
+        "try_it": "Pruébalo →"
+      },
+      "two_languages": {
+        "heading": "Donde dos lenguajes se encuentran.",
+        "subtitles": [
+          "Dos mil años de reflexión humana.",
+          "Traducción moderna por IA.",
+          "Una conversación que te ayuda a ver con claridad."
+        ],
+        "pattern": {
+          "title": "PATRÓN",
+          "description": "Observación antigua sobre lo que se repite."
+        },
+        "direction": {
+          "title": "DIRECCIÓN",
+          "description": "Psicología espacial sobre lo que notamos."
+        },
+        "timing": {
+          "title": "TIEMPO",
+          "description": "Ciclos que dan forma a la biología."
+        },
+        "you": {
+          "title": "TÚ",
+          "description": "Tu contexto de nacimiento, tu momento, tu pregunta."
+        }
+      },
+      "promises": {
+        "heading": "Tres promesas que no rompemos.",
+        "never_stored": {
+          "title": "Nunca guardado",
+          "description": "Tus conversaciones viven cifradas en tu dispositivo. No las podemos leer. Nadie puede."
+        },
+        "never_required": {
+          "title": "Nunca requerido",
+          "description": "Sin cuenta. Sin login. Sin contraseña. Email solo si quieres un PDF."
+        },
+        "never_manipulative": {
+          "title": "Nunca manipulador",
+          "description": "Sin patrones oscuros. Sin urgencia falsa. Un solo precio: $9.99 cuando lo necesites."
+        },
+        "read_more": "Lee la arquitectura de privacidad completa →"
+      },
+      "final_cta": {
+        "heading": "Cuando la pregunta no te suelta.",
+        "subtitle": "Deja de leer. Empieza a atravesarla.",
+        "primary": "Haz tu pregunta — $9.99",
+        "secondary": "O prueba Glyph gratis primero →"
+      }
+    },
+    "poju": {
+      "hero": {
+        "brand_tag": "Eastern OS",
+        "heading": "A veces, leer no es suficiente.",
+        "description": "Ya has leído los libros, consultado a amigos y analizado cada matriz de pros y contras. Sin embargo, el dilema central se niega a soltarte.",
+        "tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
+        "cta_primary": "Inicializar sesión profunda",
+        "billing_notice": "Sesión profunda de 30 días sobre un tema concreto por $9.99 o usar cupón de experiencia"
+      },
+      "when_to_come": {
+        "heading": "Cuándo venir a Eastern OS.",
+        "stuck": {
+          "title": "Estás atrapado entre dos caminos",
+          "description": "Cambio de carrera. Decisión de relación. Dónde vivir."
+        },
+        "confused": {
+          "title": "Investigaste y estás más confundido",
+          "description": "Consejos contradictorios. Presión familiar. Reloj corriendo."
+        },
+        "repeating": {
+          "title": "Algo se repite y no sabes por qué",
+          "description": "El mismo tipo de relación. Los mismos bloqueos. Los mismos contratiempos."
+        },
+        "depth": {
+          "title": "Necesitas profundidad que tus amigos no pueden dar",
+          "description": "Nadie a tu alrededor tiene la distancia para ver con claridad."
+        },
+        "direction": {
+          "title": "Quieres dirección, no predicción",
+          "description": "\"¿Va a pasar X?\" pide un resultado fijo. \"¿Qué debo hacer?\" es Eastern OS."
+        }
+      },
+      "how_it_works": {
+        "heading": "Cómo funciona Eastern OS",
+        "subtitle": "No una sola respuesta — un ciclo continuo de avance.",
+        "steps": {
+          "1": {
+            "title": "Presenting Your Dilemma",
+            "description": "Share Your Current Dilemma. Present the specific challenge, confusion, or decision that is weighing on your mind right now."
+          },
+          "2": {
+            "title": "Deep Collaborative Dialogue",
+            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Eastern OS guides you to align the full context of your situation."
+          },
+          "3": {
+            "title": "Trajectory Profiling",
+            "description": "Dynamic Visual Trajectory Tracking. The system locks into your situation map, mapping and tracking your real-time state with custom metaphorical visual patterns."
+          },
+          "4": {
+            "title": "Core Structural Analysis",
+            "description": "Deep Core Structural Analysis. Leveraging the session structure from your coordinates and dialogue, the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
+          },
+          "5": {
+            "title": "Strategy & Actionable Deliverables",
+            "description": "Receive Your Synthesis Report & Guidance. Get a comprehensive breakthrough report containing deep behavioral analysis, strategic solutions, and actionable practical recommendations."
+          },
+          "6": {
+            "title": "Evolutionary Tracking",
+            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Eastern OS tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+          }
+        },
+        "footer": {
+          "title": "30-Day Single-Focus Sanctuary",
+          "description": "Real breakthroughs take time. For the specific challenge you present today, you unlock a dedicated 30-day coaching window. As your real-world situation unfolds or shifts, you can return to this dynamic dialogue at any time to log updates and refine your strategy. We are in this together, layer by layer."
+        }
+      },
+      "two_columns": {
+        "heading": "Dos columnas, una promesa.",
+        "included": {
+          "title": "Lo que incluye",
+          "items": [
+            "Profundidad ilimitada en una sola sesión",
+            "Plan de acción que puedes ejecutar mañana",
+            "Preguntas reflexivas para sentarte con ellas",
+            "30 días de acceso a la sesión"
+          ]
+        },
+        "not_included": {
+          "title": "Lo que no es",
+          "items": [
+            "No predice tu futuro",
+            "No reemplaza el consejo profesional",
+            "No toma decisiones por ti"
+          ]
+        },
+        "tagline": "Eastern OS es un compañero de pensamiento. Las decisiones siguen siendo tuyas.",
+        "cta": "Haz tu pregunta — $9.99",
+        "footnote": "Una pregunta · Profundidad ilimitada · Se borra al cerrar"
+      },
+      "pricing": {
+        "heading": "Precios",
+        "body": "Valor arquitectónico transparente diseñado para la velocidad de tus decisiones. Una sola consulta estratégica desbloquea una ventana de asesoramiento evolutivo de 30 días por $9.99, o está completamente cubierta por tus tokens de Pase Mensual. Regresa en cualquier momento dentro del horizonte de 30 días para registrar actualizaciones, perfeccionar tu ejecución e iterar con absoluta privacidad.",
+        "price": "$9.99",
+        "price_unit": "por sesión estratégica de 30 días · apto para Pase Mensual",
+        "features_heading": "Qué incluye",
+        "features": [
+          "Profundidad analítica ilimitada dentro de tu matriz de consulta seleccionada",
+          "Un mapa de ejecución altamente estructurado e inmediatamente accionable",
+          "Preguntas de reflexión personalizadas diseñadas para romper cuellos de botella cognitivos",
+          "Acceso persistente a la sesión durante 30 días protegido por completo en el entorno seguro de tu navegador"
+        ],
+        "cta": "Inicializar tu sesión estratégica",
+        "footnote": "Una consulta central · Profundidad sistémica ilimitada · Encriptado localmente dentro del entorno seguro de tu navegador"
+      },
+      "what_is": {
+        "title": "¿Qué es Eastern OS?",
+        "subtitle": "Núcleo de diálogo de decisión",
+        "body": "Eastern OS es un diálogo multiturno de decisión para una elección atascada. Las coordenadas de nacimiento estructuran esta sesión—no es adivinación. En una corrida completa obtienes: el diálogo; una ruta principal y un respaldo; un informe de decisión que puedes reabrir en este navegador; y recordatorios de 30 días en la misma línea proporcionados juntos. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso."
+      }
+    },
+    "glyph": {
+      "hero": {
+        "brand_tag": "Glyph",
+        "heading": "Un espejo portátil para tu intuición y el caos subconsciente.",
+        "description": "Ancla tu pregunta. Dibuja un símbolo. Decodifica la resonancia.",
+        "cta": "Iniciar extracción Glyph",
+        "billing_notice": "$4.99 por lectura o usar cupón de experiencia"
+      },
+      "five_winds": {
+        "heading": "Cinco vientos — cinco patrones arquetípicos",
+        "description": "Los cinco patrones son espejos, no predicciones. Cada uno describe una situación humana y te ayuda a enmarcar lo que ya está pasando.",
+        "divine_tailwind": {
+          "name": "Divine Tailwind",
+          "description": "La rara gracia del alineamiento total. Todo lo que necesitas ya viene hacia ti."
+        },
+        "fair_sky": {
+          "name": "Fair Sky",
+          "description": "Caminos despejados con apoyo gentil. La vía está abierta, pero aún tienes que caminarla."
+        },
+        "still_water": {
+          "name": "Still Water",
+          "description": "Tiempo de paciencia y quietud. Ni adelante, ni atrás. Siéntate con lo que es."
+        },
+        "crosswind": {
+          "name": "Crosswind",
+          "description": "Fuerzas en competencia te jalan. Esta no es señal de empujar más fuerte. Es señal de escuchar más cuidadosamente."
+        },
+        "eye_of_storm": {
+          "name": "Eye of Storm",
+          "description": "La quietud profunda en el centro de una tormenta. Cuando todo lo externo es turbulento, la claridad vive en el único lugar que nada puede alcanzar."
+        }
+      },
+      "when_to_come": {
+        "heading": "When to come to Glyph.",
+        "intro": "A light touch for the moments that don't need a 30-day conversation.",
+        "quick_read": {
+          "title": "You need a read, not a deep-dive",
+          "description": "One question, sixty seconds. For when Pivot is more than this moment asks for."
+        },
+        "circling": {
+          "title": "Something's circling and won't name itself",
+          "description": "A vague unease. A decision that won't settle. Hold it up to the mirror."
+        },
+        "fresh_angle": {
+          "title": "You want a fresh angle",
+          "description": "You've turned it over a dozen times. A new lens to break the loop."
+        },
+        "new_start": {
+          "title": "At the start of something",
+          "description": "A new project, a new chapter. Set an intention and read the wind."
+        }
+      },
+      "on_the_cards": {
+        "heading": "Sobre las cartas.",
+        "paragraphs": [
+          "Los cinco glyphs no son etiquetas de fortuna. No son \"buenas cartas\" o \"malas cartas.\"",
+          "Cada uno es una lente — una forma de leer este momento particular, para esta pregunta particular, sostenida por esta persona particular.",
+          "El mismo glyph puede significar cosas completamente diferentes en días diferentes, para personas diferentes, sobre preguntas diferentes.",
+          "Lo que recibes no es un veredicto. Es una perspectiva — y una invitación a mirar con más cuidado."
+        ]
+      },
+      "how_it_works": {
+        "heading": "Cómo funciona Glyph.",
+        "intro": "Sostén una pregunta, saca un patrón, lee el reflejo.",
+        "step_1": {
+          "title": "Sostén tu pregunta.",
+          "description": "Compáctala a 60 caracteres. La compresión inicia la respuesta."
+        },
+        "step_2": {
+          "title": "Saca tu patrón.",
+          "description": "Una de 100 formas arquetípicas, refinadas durante mil años."
+        },
+        "step_3": {
+          "title": "Lee tu reflejo.",
+          "description": "Una respuesta breve — basada en tradiciones de sabiduría y psicología moderna."
+        },
+        "rules": [
+          "Una pregunta por lectura. No preguntes muchas a la vez.",
+          "Espera 48 horas antes de preguntar lo mismo de nuevo. Las respuestas necesitan tiempo para asentarse.",
+          "Compacta tu pregunta a 60 caracteres. La compresión es el inicio de la respuesta."
+        ],
+        "session_reminder": "Una pregunta por sesión. Si la misma pregunta vuelve, espera 48 horas."
+      },
+      "final_cta": {
+        "heading": "Sostén una pregunta.",
+        "subtitle": "Lo que recibes no es un veredicto. Es una invitación a mirar con más cuidado.",
+        "cta": "Empezar Glyph",
+        "cta_subline": "Primera lectura gratis al día — $1.99"
+      },
+      "pricing": {
+        "heading": "Precios",
+        "body": "Arquitectura transparente diseñada para tu autonomía financiera. Cada sesión individual de Glyph cuesta $4.99, o está completamente cubierta por tu Pase Mensual. Los nuevos usuarios pueden reclamar un cupón de cortesía para realizar su primera consulta profunda sin compromisos previos.",
+        "price": "$4.99",
+        "price_unit": "por lectura individual · opciones de cupón disponibles",
+        "features_heading": "Qué incluye",
+        "features": [
+          "Exploración profunda de una sola matriz de consulta focalizada",
+          "Patrón arquetípico generado a través de una interfaz de partículas inmersiva",
+          "Reflexión cognitiva integral mapeada en tus datos de perfil",
+          "Entrega local segura e instantánea, preservada por completo en el entorno seguro de tu navegador"
+        ],
+        "cta": "Iniciar extracción Glyph",
+        "footnote": "Custodia de datos descentralizada, defendiendo tu absoluta soberanía de privacidad."
+      },
+      "what_is": {
+        "title": "¿Qué es Glyph?",
+        "subtitle": "Un espejo reflexivo breve",
+        "body": "Glyph es una lectura breve para cuando una sesión de decisión completa es más de lo que este momento pide. Une una metáfora clásica oriental con aquello en lo que estás atascado y desglosa cómo esa imagen habla de tu situación. No es una predicción: es un marco estructurado para verse con más claridad antes de elegir."
+      }
+    },
+    "syncro": {
+      "hero": {
+        "brand_tag": "Syncro",
+        "heading": "Mapea tus ritmos espaciotemporales en tiempo real.",
+        "description": "Basado en tu perfil cognitivo, Syncro modela cómo cada ventana cronobiológica de 2 horas y cada vector de 8 direcciones interactúan con tu impulso conductual. Sabe con precisión cuándo ejecutar a máxima velocidad, cuándo internalizar y dónde anclar tu enfoque.",
+        "tagline": "Un compañero dinámico en vivo para tu próximo ciclo de 24 horas.",
+        "cta": "Activar Sincronización de 24 Horas",
+        "billing_notice": "$4.99 por sincronización de 24 h o usar cupón de experiencia",
+        "qr_label": "easternos.com/syncro",
+        "sms_label": "Envíate el enlace",
+        "sms_button": "Envíame el enlace",
+        "sms_body": "Abre Syncro en tu móvil: __SYNCRO_URL__",
+        "phone_placeholder": "Número de teléfono"
+      },
+      "what_shows": {
+        "heading": "Lo que Syncro muestra.",
+        "intro": "Abre Syncro para una lectura rápida de este tramo del día — qué se enfatiza y qué conviene suavizar.",
+        "items_intro": "Cada dirección muestra:",
+        "items": [
+          "Current 2-hour pattern for each direction",
+          "Eight directions with what they suit",
+          "Where to lean in, where to slow down",
+          "Updates every two hours through your 24-hour window"
+        ],
+        "footnote": "Refreshes every two hours through your 24-hour window.",
+        "preview_label": "Vista previa",
+        "preview_placeholder": "Marcador de posición del mockup del teléfono — sustituir por una captura de Syncro cuando esté listo.",
+        "preview_mode_hint": "Toca Brújula / RA / Mapa abajo para cambiar de vista — igual que en la app instalada."
+      },
+      "use_cases": {
+        "heading": "Dónde encaja Syncro.",
+        "before_matters": {
+          "title": "Antes de que algo importe",
+          "description": "Cuando tienes una conversación, una decisión o una reunión por delante. Un chequeo breve antes de entrar."
+        },
+        "pace_off": {
+          "title": "Cuando el ritmo se siente raro",
+          "description": "Cuando empujas pero nada se mueve, o todo fluye pero sin foco. Un momento para recalibrar."
+        },
+        "daily_rhythm": {
+          "title": "Como ritmo diario",
+          "description": "Algunas personas abren Syncro como otros miran el tiempo — un pequeño ritual, una forma de notarse."
+        },
+        "traveling": {
+          "title": "Cuando viajas",
+          "description": "Entornos nuevos, tiempos nuevos. Una forma de mantenerse en tu propio ritmo estés donde estés."
+        },
+        "poju_companion": {
+          "title": "Entre sesiones de Eastern OS",
+          "description": "Usa Syncro entre conversaciones más profundas de Eastern OS para notar cómo evoluciona tu situación."
+        }
+      },
+      "what_it_is": {
+        "heading": "Lo que es. Lo que no es.",
+        "shows": {
+          "title": "Lo que muestra",
+          "items": [
+            "El patrón de ritmo del momento",
+            "Ocho direcciones con para qué sirven",
+            "Dónde inclinarte, dónde frenar"
+          ]
+        },
+        "isnt": {
+          "title": "Lo que no es",
+          "items": [
+            "Un predictor de eventos",
+            "Un prometedor de resultados",
+            "Un reemplazo de tu propio juicio"
+          ]
+        }
+      },
+      "pricing": {
+        "heading": "Precios",
+        "body": "Alineación espaciotemporal soberana diseñada para la velocidad de tu ejecución diaria. Un único bucle de Syncro de 24 horas cuesta $4.99, o se ejecuta sin problemas mediante tus tokens de Pase Mensual. Alinea tus vectores de ejecución con tu impulso cognitivo natural en tiempo real.",
+        "price": "$4.99",
+        "price_unit": "por ventana de sincronización de 24 horas · apto para Pase Mensual",
+        "features_heading": "Qué incluye",
+        "features": [
+          "Bucle de orientación de alta frecuencia de 24 horas optimizado para una directiva estratégica específica",
+          "Actualizaciones dinámicas calculadas cada dos horas, calibradas con precisión a tu ritmo cronobiológico",
+          "Modelo completo de alineación espaciotemporal de 8 vectores diseñado de forma nativa para móviles",
+          "Calibración sistémica profunda mapeada según tu perfil cognitivo personalizado"
+        ],
+        "cta": "Inicializar Sincronización Espaciotemporal en Móvil",
+        "footnote": "Bucle en tiempo real · Telemetría cronobiológica adaptativa · Optimizado para la ejecución sobre la marcha"
+      },
+      "how_it_works": {
+        "heading": "How Syncro works.",
+        "intro": "Four steps to a live 24-hour reading.",
+        "step_1_title": "Add or pick a bazi foundation",
+        "step_1_desc": "Birth date, time, and gender. Saved on your device for any future use.",
+        "step_2_title": "Describe what you're about to do",
+        "step_2_desc": "30–100 characters. The clearer, the better.",
+        "step_3_title": "Allow location & compass access",
+        "step_3_desc": "Your location stays on your device. Your phone's compass shows where each direction is.",
+        "step_4_title": "Hold your phone and turn",
+        "step_4_desc": "Each direction shows a short reflection for the current 2-hour period."
+      },
+      "five_currents": {
+        "heading": "The five currents",
+        "intro": "Each direction × hour combination is classified into one of five patterns:",
+        "footer": "These are reflective categories, not predictions.",
+        "items": [
+          {
+            "name": "Open Current · 顺势",
+            "desc": "Move with confidence."
+          },
+          {
+            "name": "Following Current · 应时",
+            "desc": "The way supports you, with effort."
+          },
+          {
+            "name": "Stillwater · 守静",
+            "desc": "Pause and observe."
+          },
+          {
+            "name": "Crosscurrent · 横阻",
+            "desc": "Reconsider this direction or moment."
+          },
+          {
+            "name": "Undertow · 险滞",
+            "desc": "Strong friction — choose another path."
+          }
+        ]
+      },
+      "why_mobile": {
+        "heading": "Why mobile only",
+        "body": "Syncro reads your phone's compass and (optionally) camera to align with real-world direction. This requires a mobile device. On desktop, we'll show you a QR code to open Syncro on your phone."
+      },
+      "what_is": {
+        "title": "¿Qué es Syncro?",
+        "subtitle": "Momento y dirección a 24 h",
+        "body": "Syncro es un mapa de 24 horas con contexto de ubicación para una tarea concreta. Con tu lugar actual y el contexto de la sesión, valora ocho direcciones por apoyo frente a fricción—Abierta, Favorable, Aguas quietas, Contracorriente, Resaca—para elegir cuándo y hacia dónde moverte. No es adivinación: timing y orientación para el próximo día de trabajo."
+      },
+      "pwa_guide": {
+        "title": "Abre easternos.com en el navegador de tu móvil o instala la app Eastern OS en tu teléfono.",
+        "subtitle": "Syncro solo funciona en el navegador móvil o como PWA instalada en la pantalla de inicio. Sigue los pasos para tu teléfono más abajo.",
+        "ios_browser_note": "Abre easternos.com/syncro solo en Safari — los demás navegadores del iPhone no pueden instalar la app.",
+        "android_browser_note": "Abre easternos.com/syncro solo en Chrome — los demás navegadores de Android no pueden instalar la app completa.",
+        "ios_step_4": "Sal de Safari y abre Eastern OS desde el icono de tu pantalla de inicio.",
+        "android_step_1": "Toca el botón Compartir en Chrome (o el menú ⋮ si Compartir está dentro).",
+        "android_step_2": "Elige Añadir a la pantalla de inicio o Instalar app.",
+        "android_step_3": "Toca Instalar o Añadir para confirmar.",
+        "android_step_4": "Sal de Chrome y abre Eastern OS desde el icono de tu pantalla de inicio.",
+        "close": "Entendido"
+      }
+    },
+    "footer": {
+      "disclaimers": {
+        "home": "Para autorreflexión y entretenimiento. Eastern OS ofrece perspectivas, no predicciones. Todas las decisiones son tuyas.",
+        "poju": "POJU es un compañero de pensamiento. Ofrece perspectivas, no profecías. Todas las decisiones son tuyas.",
+        "glyph": "Léelo con una sonrisa. Los patrones reflejan, no predicen. Todas las decisiones son tuyas.",
+        "syncro": "Syncro es una herramienta de auto-conciencia. Toma lo que resuene. Las decisiones son tuyas."
+      },
+      "links": {
+        "home": "Inicio",
+        "disclaimer": "Aviso legal",
+        "privacy": "Privacidad",
+        "terms": "Términos",
+        "contact": "Contacto",
+        "refund": "Reembolso",
+        "cookies": "Cookies"
+      },
+      "copyright": "© 2026 Eastern OS. Todos los derechos reservados."
+    }
+  },
+  "birthForm": {
+    "title": "Datos de nacimiento",
+    "subtitle": "Se usa una vez para estructurar tu diálogo de decisión.",
+    "year": "Año",
+    "month": "Mes",
+    "day": "Día",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "gender": "Género",
+    "genderMale": "Hombre",
+    "genderFemale": "Mujer",
+    "genderOther": "Otro",
+    "cityOptional": "Ciudad (opcional)",
+    "privacy": "Se guarda localmente en IndexedDB cifrado en este dispositivo. Puedes cambiarlo en ajustes de perfil.",
+    "submit": "Guardar datos de nacimiento",
+    "submitting": "Guardando…",
+    "done": "Datos de nacimiento guardados.",
+    "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+    "skip": "Omitir por ahora",
+    "skipConfirmTitle": "¿Continuar sin datos de nacimiento?",
+    "skipConfirmBody": "Sin datos de nacimiento usamos solo una estructura genérica de sesión. Puedes añadirlos en el perfil cuando quieras.",
+    "skipConfirmStay": "Volver al formulario",
+    "skipConfirmLeave": "Continuar sin datos",
+    "close": "Cerrar"
+  },
+  "profile": {
+    "birth_location": {
+      "title": "¿Lugar de nacimiento?",
+      "subtitle": "Fecha, hora y lugar de nacimiento — obligatorios para estructurar esta sesión—no es adivinación.",
+      "why_link": "¿Por qué importa el lugar de nacimiento?",
+      "explanation_1": "El lugar de nacimiento ayuda a Eastern OS a estructurar esta sesión de decisión con tus coordenadas—no es una carta de adivinación.",
+      "explanation_2": "La ubicación ancla la estructura de *este* diálogo.",
+      "explanation_example": "Ejemplo: la misma hora de reloj en ciudades distintas puede cambiar el contexto local—confirma la ciudad donde naciste.",
+      "skip_use_default": "I'm not sure — use defaults",
+      "default_note": "Defaults use timezone center longitude ({timezone}).",
+      "confirm_city": "Use this city",
+      "back": "Back to birth details",
+      "location_required_note": "Confirma tu ciudad de nacimiento o busca otra. Hace falta para estructurar esta sesión."
+    },
+    "upgrade": {
+      "title": "Añade ciudad de nacimiento para esta sesión",
+      "description": "Esta sesión empezó sin ciudad de nacimiento. Añádela para que la estructura del diálogo coincida con dónde naciste.",
+      "current_chart": "Current chart",
+      "using_default_warning": "Empezó sin ciudad de nacimiento — añádela para alinearla con tu lugar de nacimiento",
+      "upgrade_chart": "Guardar ciudad de nacimiento para esta sesión",
+      "keep_old_for_now": "Mantener la sesión actual por ahora",
+      "badge_precise": "✓ Lugar de nacimiento listo",
+      "badge_upgradeable": "Añadir ciudad de nacimiento",
+      "upgrading": "Updating…",
+      "upgrade_success": "Lugar de nacimiento guardado para la estructura de esta sesión.",
+      "hour_pillar_changed": "Estructura de sesión actualizada",
+      "hour_pillar_unchanged": "Estructura de sesión sin cambios",
+      "tst_diff_minutes": "Ajuste por ubicación: {minutes} minutos",
+      "base_analysis_regenerated": "Estructura de sesión actualizada con el lugar de nacimiento.",
+      "done": "Done",
+      "male": "Male",
+      "female": "Female",
+      "search_birth_city": "Busca tu ciudad de nacimiento"
+    }
+  },
+  "profile_selector": {
+    "loading": "Loading saved profiles…",
+    "list_title": "Choose a birth profile",
+    "list_description": "Pick someone you already saved, or add a new chart. Data stays on this device.",
+    "add_new": "Add new profile",
+    "confirm_delete": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar.",
+    "skip_for_now": "Skip for now",
+    "cancel": "Cancel",
+    "rel_self": "Self",
+    "rel_spouse": "Spouse",
+    "rel_child": "Child",
+    "rel_parent": "Parent",
+    "rel_sibling": "Sibling",
+    "rel_friend": "Friend",
+    "rel_other": "Other",
+    "male": "Male",
+    "female": "Female",
+    "other_gender": "Other",
+    "analyzed": "Base analysis cached",
+    "edit": "Rename",
+    "delete": "Delete",
+    "confirm_title": "Confirm this profile",
+    "confirm_description": "We will use this birth chart for the next step.",
+    "birth_date_label": "Birth date",
+    "birth_time_label": "Birth time",
+    "birth_location_label": "Location",
+    "gender_label": "Gender",
+    "confirm_reassure": "You can switch profiles later from this screen.",
+    "back_to_list": "Back",
+    "edit_this": "Edit label",
+    "confirm_and_continue": "Confirm and continue",
+    "create_title": "New profile",
+    "create_description": "Name this chart, then enter birth details.",
+    "display_name": "Display name",
+    "relationship": "Relationship",
+    "continue_to_birth": "Enter birth data",
+    "edit_meta_title": "Edit profile label",
+    "edit_meta_hint": "To change birth date/time, delete this entry and add a new profile.",
+    "save_meta": "Save",
+    "edit_meta_back": "Back",
+    "generate_base_analysis": "Generate saved base analysis (one-time)",
+    "generating_base_analysis": "Generating… this may take a few minutes.",
+    "base_analysis_ready": "Saved base analysis is already on this device.",
+    "base_analysis_error": "Could not generate",
+    "base_analysis_note": "Optional: run a one-time deep base reading for this chart. It is cached on this device and uses your OpenRouter key on the server.",
+    "view_analysis": "Ver análisis del perfil",
+    "birth_location_default": "Predeterminado (meridiano de la zona horaria)"
+  },
+  "poju": {
+    "branding": {
+      "navbar_tooltip": "Desbloqueo estratégico: rompe los bloqueos cognitivos y los dilemas vitales complejos.",
+      "hero_tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
+      "feature_definition": "Eastern OS es un diálogo multiturno de decisión para una elección atascada. Las coordenadas de nacimiento estructuran esta sesión—no es adivinación. En una corrida completa obtienes: el diálogo; una ruta principal y un respaldo; un informe de decisión que puedes reabrir en este navegador; y recordatorios de 30 días en la misma línea proporcionados juntos. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso."
+    },
+    "chat": {
+      "question_label": "Tu pregunta",
+      "archive_link": "Sesiones y archivo",
+      "input_placeholder": "Escribe el problema o dilema que estás enfrentando ahora",
+      "input_placeholder_with_options": "Lo de arriba no encaja — la situación real es…",
+      "input_placeholder_gate_pick": "Haz clic en tu opción…",
+      "input_placeholder_gate_supplement": "Escribe la información que quieres añadir…",
+      "reply_options_group_label": "Respuestas rápidas",
+      "reply_option_edit_label": "Editar y añadir detalle",
+      "send": "Enviar",
+      "sending": "Pensando…",
+      "turns": "Turnos",
+      "tokens": "Tokens",
+      "end_session": "Terminar sesión",
+      "ending": "Guardando…",
+      "end_confirm": "¿Marcar esta sesión como terminada? Aún puedes revisar el historial en Archivo en este dispositivo.",
+      "thinking_process_title": "Proceso de reflexión",
+      "thinking_waiting": "DeepSeek está razonando en OpenRouter (esfuerzo alto). El razonamiento completo aparecerá aquí cuando la respuesta esté lista.",
+      "thinking_step_1": "Leí tu mensaje junto con el contexto de esta sesión.",
+      "thinking_step_2": "Alineé la respuesta con las reglas de profundidad y seguridad de POJU. (Esto es un resumen breve, no la cadena de pensamiento cruda del modelo.)",
+      "thinking_step_3": "Redacté la respuesta que ves debajo.",
+      "situation_analysis_hint": "Step 8: deep situation analysis for this session. Results are cached per context fingerprint; change what you share and you can run again.",
+      "situation_analysis_have_cache": "This context version already has a cached analysis on this device.",
+      "situation_analysis_cache_hit": "Used cached situation analysis (same context fingerprint).",
+      "situation_analysis_new": "Generated new situation analysis and saved it to this session.",
+      "situation_analysis_run": "Run situation analysis",
+      "situation_analysis_running": "Running…",
+      "situation_analysis_force": "Regenerate (same context)",
+      "final_delivery_hint": "Step 9: after Step 8 cache exists, generate the long-form delivery in your language (same DeepSeek model as Steps 7–8). Requires OPENROUTER_API_KEY on the server.",
+      "final_delivery_run": "Final delivery",
+      "final_delivery_running": "Generating delivery…",
+      "final_delivery_done": "Final delivery saved to this session.",
+      "delivery_interrupted_body": "Delivery was interrupted due to temporary server congestion. Content already generated is kept below. Tap Continue to generate the remaining sections — we apologize for the inconvenience.",
+      "delivery_interrupted_continue": "Continue delivery",
+      "delivery_interrupted_continuing": "Continuing delivery…",
+      "stop_generating": "Detener",
+      "generation_stopped": "Generación detenida.",
+      "thinking_wait": "Eastern OS está pensando…",
+      "replying_wait": "Eastern OS está redactando la respuesta…",
+      "edit_message": "Editar",
+      "edit_message_title": "Editar mensaje",
+      "edit_message_prompt": "Cambia tu mensaje. Todo lo posterior se eliminará y la conversación continuará desde aquí.",
+      "thinking_process_full": "Ver el razonamiento completo",
+      "thinking_analyzing_chart": "DeepSeek está analizando tu perfil de base…",
+      "profile_save_failed": "No se pudo guardar tu perfil de nacimiento en este dispositivo. Prueba con otro navegador, desactiva el modo privado o libera espacio y vuelve a intentarlo.",
+      "profile_saved_chat_failed": "Tu perfil de nacimiento se guardó en este dispositivo, pero POJU no pudo enviar el mensaje de seguimiento. Revisa tu conexión y envía cualquier mensaje para continuar.",
+      "agent_phase_label": "Fase del agente",
+      "agent_phase_opening": "Apertura",
+      "agent_phase_greeting": "Saludo",
+      "agent_phase_awaiting_profile": "Esperando el perfil de nacimiento",
+      "agent_phase_collecting": "Recopilando contexto",
+      "agent_phase_confirm": "Confirmar resumen",
+      "understanding_gate_confirm": "Confirmar y continuar",
+      "understanding_gate_supplement": "Añadir y corregir",
+      "understanding_gate_group_label": "Confirmación de comprensión",
+      "delivery_confirm": "Confirmar y continuar",
+      "delivery_supplement": "Añadir y corregir",
+      "delivery_confirm_group_label": "Confirmación de entrega",
+      "segment2_regenerate_analysis": "Regenerar análisis",
+      "segment2_regenerate_group_label": "Regenerar análisis profundo",
+      "agent_phase_delivered": "Entregado",
+      "agent_phase_tracking": "Seguimiento",
+      "context_summary_title": "Confirma lo que entendimos",
+      "context_summary_hint": "Revisa los datos de abajo. Al confirmar, POJU realiza un análisis profundo y entrega tu lectura completa.",
+      "context_summary_confirm": "Confirmar y generar la lectura",
+      "context_summary_confirming": "Generando tu lectura…",
+      "context_summary_edit_chat": "Añadir detalles en el chat",
+      "profile_picker_in_chat_title": "Vincula un perfil de nacimiento a esta sesión",
+      "profile_picker_in_chat_hint": "Elige un perfil guardado o añade datos de nacimiento. El análisis permanece en este dispositivo.",
+      "birth_flow_intro_title": "Datos de nacimiento para esta sesión de decisión",
+      "birth_flow_intro_body": "Para estructurar esta sesión de decisión, necesitamos fecha, hora y lugar de nacimiento (y género si se pide). Solo en este dispositivo—no en nuestros servidores. No es adivinación.",
+      "birth_flow_privacy_badge": "Guardado solo localmente en tu dispositivo",
+      "birth_flow_intro_cta_hint": "Cuando hayas leído la nota de Eastern OS arriba, continúa aquí para introducir los datos de nacimiento (solo en este dispositivo).",
+      "birth_flow_continue": "Continuar al formulario",
+      "birth_flow_skip": "Omitir por ahora",
+      "question_briefing": {
+        "title": "Antes de empezar — cómo POJU trabaja contigo",
+        "intro": "Cuatro cosas que conviene saber antes de empezar:",
+        "item_one_title": "Una sola pregunta central cada vez",
+        "item_one_body": "POJU está aquí para ti, centrado en la única pregunta más importante que enfrentas ahora mismo. Cuéntale aquello que más deseas resolver: la profundidad nace del enfoque.",
+        "item_two_title": "Cuanto más concreto seas, mejor podrá POJU acompañarte",
+        "item_two_body": "Cuanto más claramente compartas tu situación, tus emociones y los detalles de lo que te inquieta, más ajustadas a ti serán las reflexiones y las direcciones que POJU te sugiera, en lugar de consejos genéricos.",
+        "item_three_title": "Una respuesta lenta significa que está pensando con cuidado para ti",
+        "item_three_body": "Cada respuesta implica un gran análisis. A veces POJU tarda un poco más en \"pensar\": no es un error del sistema, es POJU calculando con cuidado para ti. Ten paciencia con él.",
+        "item_four_title": "POJU pregunta paso a paso — no te apresures a la respuesta",
+        "item_four_body": "Para comprender de verdad tu situación y ofrecerte una solución que encaje solo contigo, POJU avanza en varias rondas de conversación, profundizando en cada una, en lugar de concluir de inmediato. Acompáñalo con paciencia en estas rondas: ese ida y vuelta es justo de donde sale el valor de tu plan final.",
+        "footer": "POJU ofrece autorreflexión y perspectiva para ayudarte a ver tu situación con más claridad y encontrar direcciones que valga la pena explorar. La decisión final siempre es tuya.",
+        "footer_label": "Decisión y responsabilidad",
+        "privacy_footer": "Tus conversaciones se guardan solo en tu navegador local (se borran al cambiar de navegador o usar modo incógnito). Para generar respuestas se envían por conexión segura a modelos de IA (que declaran no retener datos ni usarlos para entrenamiento). Consulta nuestra Política de Privacidad.",
+        "privacy_link": "[Leer la Política de Privacidad →]",
+        "confirm": "Entendido"
+      },
+      "birth_flow_analyzing_title": "Analizando tu perfil…",
+      "birth_flow_analysis_done_short": "Análisis completo",
+      "birth_flow_analysis_partial": "Guardado — el análisis se reintentará más tarde",
+      "birth_flow_step_received": "Datos de nacimiento recibidos y guardados en este dispositivo",
+      "birth_flow_step_analyzing": "Ejecutando el análisis del perfil de base",
+      "birth_flow_step_done": "Listo para continuar la conversación",
+      "dialog_ok": "Aceptar",
+      "dialog_cancel": "Cancelar",
+      "dialog_connection_error": "Problema de conexión. Inténtalo de nuevo.",
+      "infra_busy_retry": "Reintentar",
+      "dialog_provider_queue": "Aviso del sistema: Para garantizar la calidad de deducción de su informe de consulta profunda, POJU está realizando complejos cálculos de fusión de datos en segundo plano. El servidor se encuentra actualmente bajo una alta carga de trabajo y en cola de espera. Por favor, espere 1-2 minutos antes de volver a intentarlo. Lamentamos sinceramente las molestias ocasionadas.",
+      "dialog_create_session_error": "No se puede crear una nueva sesión en este momento. Inténtalo de nuevo.",
+      "session_list_new": "Nueva sesión",
+      "dialog_payment_redirect_failed": "No se pudo abrir la página de pago. Inténtalo de nuevo.",
+      "dialog_speech_unsupported": "La entrada de voz no es compatible con este navegador.",
+      "dialog_speech_denied": "Se denegó el acceso al micrófono. Permite el micrófono en los ajustes del navegador para usar la entrada de voz.",
+      "voice_input_start": "Iniciar entrada de voz",
+      "voice_input_stop": "Detener entrada de voz",
+      "voice_input_hold": "Mantén pulsado para hablar",
+      "voice_input_release": "Suelta para terminar",
+      "voice_input_empty_hint": "Por favor, comience a decir el contenido que desea introducir",
+      "voice_input_lang_only": "Solo español",
+      "dialog_delete_session": "¿Eliminar esta sesión?",
+      "dialog_delete_session_confirm": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar.",
+      "dialog_delete_session_bilingual": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar.",
+      "dialog_rename_session": "Editar el título de la sesión",
+      "dialog_rename_placeholder": "Título de la sesión",
+      "session_menu_label": "Opciones de la sesión",
+      "session_menu_rename": "Cambiar nombre",
+      "session_menu_delete": "Eliminar",
+      "sidebar_brand_name": "Pivot",
+      "sidebar_sessions_label": "Sesiones recientes",
+      "sidebar_session_active": "ACTIVA AHORA",
+      "active_session_title": "Reanudar la sesión de POJU",
+      "active_session_body": "Ya tienes una sesión de POJU activa en este dispositivo. Ábrela ahora o quédate en esta página.",
+      "active_session_open": "Abrir sesión",
+      "pipeline_busy": "Ejecutando el flujo de análisis…",
+      "advanced_pipeline": "Avanzado (pasos manuales)",
+      "message_action_copy": "Copiar mensaje",
+      "message_action_copied": "Copiado",
+      "message_action_read_aloud": "Leer en voz alta",
+      "message_action_stop_reading": "Detener lectura",
+      "attach_menu_label": "Adjuntar archivo",
+      "attach_menu_document": "Documento",
+      "attach_menu_image": "Imagen",
+      "attach_menu_pdf": "PDF",
+      "ctx_cut": "Cortar",
+      "ctx_copy": "Copiar",
+      "ctx_paste": "Pegar",
+      "ctx_select_all": "Seleccionar todo",
+      "unlock_report_modal_title": "Retrato personal completo de carácter",
+      "unlock_report_modal_hint": "Puedes volver a abrir este retrato completo desde el chat en cualquier momento.",
+      "unlock_report_gate_hint": "Lee primero tu análisis completo de retrato personal de carácter. Al cerrar, POJU continuará con tu pregunta.",
+      "unlock_report_close": "Cerrar",
+      "unlock_report_close_continue": "Cerrar y continuar",
+      "unlock_report_card_label": "Retrato de carácter",
+      "unlock_report_card_title": "Tu retrato personal completo está listo",
+      "unlock_report_view_full": "Ver informe completo",
+      "session_picker": {
+        "close": "Cerrar",
+        "new_poju": "+ New Pivot",
+        "price": "$9.99",
+        "existing_label": "Tus sesiones activas",
+        "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
+      },
+      "pass_required": "Se requiere 1 Pass para desbloquear la entrega completa. Por favor, compra un Pass en la página de precios o en tu cuenta y vuelve a intentarlo.",
+      "pass_login_required": "Se requiere 1 Pass para desbloquear la entrega completa. Por favor, compra un Pass en la página de precios o en tu cuenta y vuelve a intentarlo.",
+      "segment2_regenerate_question": "Regenerar pregunta",
+      "segment2_regen_question_group_label": "Regenerar pregunta de seguimiento",
+      "delivery_regenerate": "Regenerar libro de entrega",
+      "delivery_regenerating": "Regenerando libro de entrega…",
+      "delivery_regenerate_group_label": "Regenerar entrega Fase 4",
+      "delivery_stop": "Detener generación de entrega",
+      "delivery_stopping": "Deteniendo…",
+      "delivery_rail_controls_label": "Controles de entrega Fase 4",
+      "delivery_retry": "Reintentar libro de entrega",
+      "delivery_retry_group_label": "Reintentar entrega Fase 4",
+      "opening_understanding_retry": "Reintentar",
+      "opening_understanding_retry_group_label": "Reintentar turno de comprensión"
+    },
+    "expiry": {
+      "expires_in": "Quedan unos {days} días en la ventana de esta sesión.",
+      "extend_30": "Ampliar 30 días",
+      "extending": "Ampliando…",
+      "price": "$9.99",
+      "dialog_title_warning": "La sesión caduca pronto",
+      "dialog_title_expired": "Sesión caducada",
+      "dialog_body_warning": "A esta sesión le quedan {days} días. Cuando caduque, no podrás continuar esta conversación sobre el mismo tema. Para seguir hablando de esta cuestión tras la ventana de 30 días, paga {price} y amplíala otros 30 días.",
+      "dialog_body_expired": "Esta sesión ha caducado. Ya no puedes continuar esta conversación sobre el mismo tema. Paga {price} para ampliarla otros 30 días y retomar donde lo dejaste.",
+      "extend_30_paid": "Ampliar 30 días {price}",
+      "acknowledge": "Entendido",
+      "dont_remind": "No volver a recordármelo",
+      "redirecting_payment": "Redirigiendo al pago…"
+    },
+    "delivery": {
+      "badge": "Lectura POJU",
+      "intro": "Esto es lo que veo a partir de nuestra conversación:",
+      "reminder": "Quédate con lo que resuene; suelta lo demás. La decisión es tuya."
+    },
+    "companion": {
+      "frame_title": "Recordatorios diarios · 30 días",
+      "frame_sub": "Las celdas doradas son tu ventana. Hoy resalta. Abre un día listo para el campo, las orientaciones y el porqué.",
+      "need_chart": "Se necesita la carta para iniciar el acompañamiento.",
+      "preparing": "Preparando tu acompañamiento de 30 días…",
+      "retry": "Reintentar",
+      "open_day": "Abrir",
+      "day_pending": "Preparando",
+      "day_failed": "Falló — se reintentará",
+      "mail_opt_in": "Sincronizar recordatorios diarios a mi correo",
+      "email_placeholder": "you@example.com",
+      "day_title": "{date} · día {n}/30",
+      "close": "Cerrar",
+      "primary": "Principal",
+      "backup": "Respaldo",
+      "today_is": "Qué es hoy",
+      "suitable": "Qué favorece hoy",
+      "unsuitable": "Qué conviene frenar",
+      "suggestion": "Sugerencia",
+      "evidence": "Por qué hoy"
+    },
+    "actions": {
+      "title": "Lo que puedes hacer"
+    },
+    "action_card": {
+      "category_traditional": "Tradicional",
+      "category_decisive": "Acción",
+      "category_reflective": "Reflexión",
+      "timing_immediate": "Hoy",
+      "timing_this_week": "Esta semana",
+      "timing_this_month": "Este mes",
+      "timing_ongoing": "Continuo",
+      "why_this_action": "Por qué esta acción",
+      "mark_completed": "Lo hice",
+      "mark_modified": "Lo adapté",
+      "mark_skipped": "No lo hice",
+      "status_completed": "Hecho",
+      "status_modified": "Adaptado",
+      "status_skipped": "Omitido"
+    },
+    "message": {
+      "thinking": "POJU está pensando…"
+    },
+    "unqualified_escalation": {
+      "l1": "No capté bien tu última respuesta. ¿Puedes responder esa pregunta otra vez, un poco más claro?",
+      "l2": "Eastern OS se toma este trabajo en serio. Tus respuestas dan forma a la calidad del informe final — por favor responde de nuevo ese último punto.",
+      "l3": "Eastern OS se toma este trabajo en serio, y tus respuestas importan para el informe final. Si ahora no es buen momento, vuelve cuando puedas — estaré aquí.",
+      "l4": "Eastern OS se toma este trabajo en serio. Como no podemos continuar una conversación útil ahora, envía el ID de esta sesión ({sessionId}) a support@easternos.com. Eastern OS devolverá tu PASS en 7 días hábiles. Esta página se cerrará en 5 minutos y la entrada queda bloqueada. Gracias por tu comprensión.",
+      "countdown": "Esta sesión se cierra en {minutes}:{seconds}",
+      "locked_hint": "La entrada está bloqueada. Envía el ID de sesión a support@easternos.com para solicitar la devolución del PASS."
+    },
+    "archive_hint": {
+      "saved_title": "Tu plan de acción está guardado",
+      "saved_text": "Encuéntralo cuando quieras en Archive, en POJU. No enviamos avisos: vuelves cuando estés listo.",
+      "view_in_archive": "Ver en Archive"
+    },
+    "archive": {
+      "title": "Sesiones POJU",
+      "subtitle": "Las sesiones se guardan cifradas en este dispositivo.",
+      "back": "Volver a POJU",
+      "section_active": "Activas",
+      "section_paused": "En pausa",
+      "section_resolved": "Terminadas",
+      "section_archived": "Archivadas",
+      "continue": "Continuar",
+      "pause": "Pausar",
+      "restore": "Restaurar",
+      "delete_forever": "Borrar para siempre",
+      "delete_confirm": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar.",
+      "meta_expires": "Vence",
+      "meta_status": "Estado",
+      "restore_paid": "Continuar — $9.99"
+    },
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Inicia tu sesión"
+    },
+    "activity": {
+      "understanding": [
+        "POJU está analizando tu situación actual…",
+        "Identificando el conflicto central de tu sistema…",
+        "POJU está cargando tu mapa de diseño subyacente…",
+        "Relacionando este problema con tus patrones de conducta…"
+      ],
+      "deep_reckoning": [
+        "POJU está integrando tu perfil multidimensional completo…",
+        "Realizando un análisis profundo de variables estructuradas…",
+        "Razonando las rutas óptimas de ruptura sistémica…",
+        "Construyendo tu agenda de verificación personalizada…"
+      ],
+      "collecting": [
+        "POJU está depositando tu feedback real en el núcleo de datos…",
+        "Contrastando con tu modelo de tendencias conductuales…"
+      ],
+      "summarizing": [
+        "POJU está consolidando estructuralmente la información de varias rondas…",
+        "Revelando el núcleo del problema detrás de la superficie…"
+      ],
+      "delivering": [
+        "POJU está fusionando diseño y realidad en el informe final de ruptura…",
+        "Traduciendo el juicio estratégico en guía accionable y medible…"
+      ],
+      "tracking": [
+        "POJU está rastreando tu ejecución real y la desviación de datos…",
+        "Ajustando dinámicamente el ritmo de tu próximo impulso estratégico…"
+      ],
+      "degraded_delivering": [
+        "POJU está extrayendo la estrategia más viable con los datos actuales…"
+      ]
+    },
+    "tool_handoff": {
+      "banner_free": "Desde POJU · Gratis esta vez en tu sesión",
+      "banner_paid": "Desde POJU · Se aplica el precio estándar de la herramienta",
+      "return_banner": "Vuelve a Pivot con este resultado",
+      "return_footer": "Volver a Pivot · Continuar la conversación",
+      "returning": "Volviendo a POJU…",
+      "prefill_relationship": "Sobre tu relación con: {name}",
+      "tool_result_resume_user": "Ya volví de la herramienta — sigamos."
+    },
+    "topic_drift": {
+      "title": "Se detectó un tema diferente",
+      "start_new_session": "Abrir una nueva sesión de POJU",
+      "continue_current": "Continuar con el tema original"
+    },
+    "scope_mismatch": {
+      "body": "POJU está pensado para una persona concreta y un dilema o decisión específica, para ofrecer un camino accionable. Lo que enviaste no parece estar dentro de ese alcance. Describe tu situación con palabras; si prefieres no continuar, puedes solicitar un reembolso."
+    },
+    "summary_editor": {
+      "title": "Revisa tu información",
+      "description": "Revisa cada punto de abajo. Edita lo que no sea del todo correcto o añade lo que falte.",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "confirm_delete_item": "¿Quitar este elemento?",
+      "additional_note_placeholder": "Cualquier otra cosa que debamos saber…",
+      "add_and_continue": "Añadir y continuar",
+      "add_something": "Añadir algo que falte",
+      "back_to_conversation": "Volver al chat",
+      "confirm_generate_analysis": "Confirmar y generar la lectura",
+      "confirming": "Generando tu lectura…",
+      "note_about_processing": "Tras confirmar, POJU ejecuta un análisis profundo en este dispositivo (pasos 8–9). Esto puede tardar un minuto."
+    },
+    "refund_offer": {
+      "hint": "Si no es el momento de profundizar, puedes pedir un reembolso y volver cuando estés listo.",
+      "open_refund": "Solicitar reembolso",
+      "continue_chat": "Seguir conversando",
+      "modal_title": "Solicitar un reembolso",
+      "loading": "Cargando detalles del pago…",
+      "no_payment": "No hay registro de pago para esta sesión.",
+      "error_fallback": "No pudimos procesar tu reembolso automáticamente."
+    }
+  },
+  "archiveVault": {
+    "section_title": "Planes de acción guardados",
+    "title": "Your Archive",
+    "hero_intro": "Welcome to your private, encrypted Vault. All your journey records have been converted into local AES-encrypted data, tied exclusively to this active device.",
+    "hero_points": [
+      {
+        "icon": "lock",
+        "text": "Zero Cloud: No accounts. Our servers store absolutely zero data."
+      },
+      {
+        "icon": "alert",
+        "text": "Device-Locked: Switching phones, PCs, or browsers will result in an empty vault (no sync)."
+      },
+      {
+        "icon": "erase",
+        "text": "Aviso de borrado: borrar los datos del navegador, cerrar páginas visitadas en modo privado/incógnito o desinstalar la app (PWA) borrará permanentemente tus registros. No se pueden recuperar."
+      }
+    ],
+    "loading": "Cargando…",
+    "load_error": "No se pudo leer tu archivo local. Cierra y vuelve a abrir la app.",
+    "empty_all": "POJU records and action plans, Glyph readings, Syncro sessions, and Match analyses will appear here.",
+    "empty_poju": "After your POJU session delivery is complete and you receive your action plan, it will appear here.",
+    "empty_glyph": "Glyph readings will appear here.",
+    "empty_match": "Match analyses will appear here.",
+    "empty_syncro": "Syncro sessions will appear here.",
+    "filter_all": "Todo",
+    "syncro_mobile_only": "Syncro is mobile-only, so its records can only be viewed on a phone."
+  },
+  "archiveDetail": {
+    "title": "Plan de acción POJU",
+    "loading": "Cargando…",
+    "not_found": "No se encontró este registro en este dispositivo.",
+    "original_question_label": "Pregunta original",
+    "cat_traditional": "Ajuste tradicional",
+    "cat_decisive": "Acción decisiva",
+    "cat_reflective": "Reflexión",
+    "rationale_label": "Por qué encaja contigo",
+    "mark_done": "Lo hice",
+    "skip": "Omitir",
+    "done": "Hecho",
+    "skipped": "Omitido",
+    "modified": "Adaptado",
+    "back_to_session": "Volver a la conversación",
+    "back": "Atrás",
+    "delete": "Eliminar",
+    "confirm_delete": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar.",
+    "syncro_title": "Sesión Syncro",
+    "syncro_task_label": "Tu tarea",
+    "syncro_best_peak": "Pico más fuerte en tu campo de 24 h",
+    "syncro_open_live": "Abrir brújula en vivo",
+    "syncro_start_new": "Iniciar un nuevo Syncro",
+    "syncro_expired": "Esta ventana de 24 h ha terminado.",
+    "syncro_active_until": "Ventana activa hasta {date}",
+    "delivery_excerpt_label": "Extracto del análisis",
+    "poju_session_title": "Conversación POJU",
+    "poju_session_active_until": "Ventana activa — quedan {days} días en el selector",
+    "poju_session_no_messages": "Aún no hay mensajes — abre esta sesión para empezar.",
+    "poju_role_user": "Tú",
+    "poju_role_assistant": "Pivot",
+    "poju_session_continue": "Continuar este tema",
+    "poju_session_expired_body": "Esta sesión superó su ventana de 30 días. Para continuar, paga $9.99 y reábrela.",
+    "poju_session_pay_cta": "Continuar — $9.99",
+    "poju_session_paying": "Redirigiendo al pago…",
+    "poju_session_dismiss": "Entendido",
+    "poju_session_paused_hint": "Esta sesión está en pausa. Reanúdala primero desde el archivo POJU."
+  },
+  "glyph": {
+    "subtitle": "Lectura del oráculo en 60 segundos",
+    "description": "Saca un glifo para el momento en el que estás. Tu carta + la sabiduría clásica = claridad en 60 segundos.",
+    "start_free": "Saca tu primer glifo (gratis)",
+    "start_paid": "Saca un nuevo glifo — $1.99",
+    "starting_paid": "Iniciando…",
+    "loading": "Cargando…",
+    "back_to_home": "Volver a Glyph",
+    "about_glyph": "Sobre Glyph",
+    "your_question_label": "Tu pregunta",
+    "question_response_title": "Sobre tu pregunta",
+    "draw_missing_profile": "No hay perfil seleccionado. Elige tu carta natal primero.",
+    "back_to_prepare": "Volver a preparar",
+    "draw_stub_title": "Perfil listo — el sorteo viene en el paso 4",
+    "draw_stub_profile": "Perfil",
+    "draw_stub_type": "Sesión",
+    "draw_stub_hint": "El paso 4 añadirá la pregunta y la animación del sorteo aquí.",
+    "draw_stub_legacy_reading": "Abrir flujo de lectura anterior",
+    "profile_not_found": "Perfil no encontrado en este dispositivo.",
+    "reading_for_label": "Lectura para",
+    "input_title": "¿Qué tienes en mente?",
+    "input_hint": "Describe la situación o pregunta que sostienes ahora. 10–200 caracteres.",
+    "input_placeholder": "p. ej., Estoy entre dos ofertas de trabajo y necesito decidir…",
+    "draw_button": "Saca tu glifo",
+    "drawing_text": "Sacando tu glifo…",
+    "draw_sequence": {
+      "tap_to_reveal": "Toca la carta para revelarla",
+      "tap_for_reading": "Toca la carta para la lectura completa",
+      "close": "Cerrar"
+    },
+    "reading_loading": "Generando tu lectura…",
+    "reading_loading_hint": "Tejiendo tu carta con el glifo. Unos 3–5 minutos.",
+    "reading_failed": "La lectura falló",
+    "reading_retry": "Reintentar",
+    "reading_profile_not_ready": "El análisis de tu carta no está listo. Vuelve a preparar y espera a que termine.",
+    "reading_invalid_input": "No pudimos leer una pregunta clara. Intenta de nuevo con 10–200 caracteres.",
+    "back_to_glyph": "Volver a Glyph",
+    "reading_session_missing": "No se encontró la sesión. Vuelve a sacar un glifo.",
+    "section_classical": "Lo que dice este glifo",
+    "section_dual_view": "Dos perspectivas",
+    "view_bazi_title": "Desde tu carta",
+    "view_glyph_title": "Desde el glifo",
+    "section_meaning": "Para tu pregunta",
+    "section_hidden": "Lo que quizá no ves",
+    "section_moment": "Tu momento actual",
+    "section_exploration": "Una pequeña práctica",
+    "section_reflection": "Una pregunta para contemplar",
+    "explore_time_today": "Hoy",
+    "explore_time_tonight": "Esta noche",
+    "explore_time_24h": "En 24 horas",
+    "explore_time_week": "Esta semana",
+    "explore_solo": "En solitario",
+    "saved_to_archive": "Esta lectura se guardó en tu Archive",
+    "view_in_archive": "Ver en Archive",
+    "archive_detail_title": "Glyph: {name}",
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Primera vez gratis"
+    },
+    "delivery_chart_title": "Análisis completo de personalidad",
+    "term_mark_hint": "Pasa el cursor o toca un término subrayado como",
+    "term_mark_hint_sample": "Booster",
+    "term_mark_hint_suffix": "para una explicación en lenguaje sencillo.",
+    "term_mark_ack": "Entendido",
+    "reading_error_transient": "El servicio de lectura tuvo un fallo temporal. Pulsa Reintentar — tus datos de carta están guardados.",
+    "reading_error_timeout": "Esta lectura tardó demasiado. Inténtalo de nuevo en un momento.",
+    "reading_error_network": "Se perdió la conexión. Comprueba la red e inténtalo de nuevo.",
+    "reading_error_invalid_json": "El modelo devolvió una respuesta incompleta. Inténtalo de nuevo.",
+    "reading_error_unknown": "Algo falló de nuestro lado. Inténtalo de nuevo, o vuelve a Glyph y sortea otra vez."
+  },
+  "session_prep": {
+    "loading": "Cargando…",
+    "preparing": "Preparando tu carta…",
+    "preparing_done": "Abriendo tu sesión…",
+    "welcome_title": "Bienvenido a Eastern OS.",
+    "welcome_desc": "Eastern OS es tu compañero de pensamiento para una decisión atascada—ruta principal, respaldo e informe que puedes reabrir, con recordatorios de 30 días en la misma línea *proporcionados juntos*. Fecha, hora y lugar de nacimiento estructuran **esta** sesión de decisión—no es adivinación.",
+    "list_title": "Elige tu base",
+    "list_description": "Selecciona un perfil guardado o añade nuevos datos de nacimiento.",
+    "add_new_person": "Añadir persona",
+    "enter_new_info": "Introducir nueva información",
+    "male": "Hombre",
+    "female": "Mujer",
+    "ready": "Analizado",
+    "view_analysis": "Ver informe completo",
+    "delete": "Eliminar",
+    "rename": "Renombrar",
+    "rename_prompt": "Renombrar este perfil",
+    "rename_cancel": "Cancelar",
+    "rename_save": "Guardar",
+    "card_menu": "Acciones del perfil",
+    "created_at": "Creado {date}",
+    "confirm_delete": "Debido a la arquitectura de privacidad puramente local de Eastern OS, una vez confirmada la eliminación, este registro se borrará permanentemente y no se podrá recuperar.",
+    "refund_link": "No quiero compartir — reembolsar sesión",
+    "error_create_profile": "No se pudo guardar. Inténtalo de nuevo."
+  },
+  "refund": {
+    "title": "Reembolso de tu sesión",
+    "confirm_text": "Lo entendemos. Tu sesión será reembolsada y eliminada.",
+    "amount_label": "Importe",
+    "eta_label": "Plazo de reembolso",
+    "eta_value": "3-5 días hábiles",
+    "reassure": "Si cambias de opinión, siempre puedes iniciar una nueva sesión.",
+    "go_back": "Volver",
+    "confirm_refund": "Sí, reembolsar mi sesión",
+    "processing": "Procesando tu reembolso...",
+    "success_title": "Reembolso confirmado",
+    "success_message": "Se ha reembolsado {amount}. Aparecerá en tu cuenta en {days} días hábiles.",
+    "refund_id_label": "ID de reembolso",
+    "back_to_home": "Volver a POJU",
+    "error_title": "Reembolso fallido",
+    "error_message": "No pudimos procesar el reembolso automáticamente. Contáctanos.",
+    "retry": "Reintentar",
+    "contact_support": "Escribir a soporte"
+  },
+  "birth_picker": {
+    "title": "Tu información de nacimiento",
+    "description": "Fecha, hora y lugar de nacimiento — obligatorios para estructurar esta sesión—no es adivinación.",
+    "birth_date": "Fecha de nacimiento",
+    "birth_hour": "Hora de nacimiento",
+    "birth_datetime": "Fecha y hora de nacimiento",
+    "hour_hint": "¿No conoces la hora exacta? Elige tu mejor estimación.",
+    "shichen_preview": "Periodo tradicional · {period}",
+    "col_year": "Año",
+    "col_month": "Mes",
+    "col_day": "Día",
+    "col_hour": "Hora",
+    "col_minute": "Minuto",
+    "side_title": "Privacidad y seguridad",
+    "side_body": "",
+    "side_body_returning": "",
+    "side_privacy_title": "Privacidad y seguridad",
+    "side_privacy_intro": "El diálogo y los entregables quedan en este navegador en tu dispositivo. Tu cuenta es para el saldo PASS y la facturación—no un estante en la nube del historial de chat.",
+    "side_local_title": "Guardado en este navegador",
+    "side_local_body": "El historial de la sesión vive en el almacenamiento local aquí. Puedes borrarlo en la app cuando quieras.",
+    "side_wipe_title": "Caché / ventanas privadas",
+    "side_wipe_body": "Si borras la caché o cierras una ventana de incógnito, ese registro local desaparece.",
+    "side_isolation_title": "Los dispositivos no sincronizan chats",
+    "side_isolation_body": "Otro navegador o dispositivo no mostrará chats previos—aunque sea el mismo inicio de sesión. El saldo PASS sigue a la cuenta.",
+    "gender": "Género",
+    "male": "Hombre",
+    "female": "Mujer",
+    "timezone_label": "Tu zona horaria (detectada)",
+    "timezone_hint": "Solo para cálculo interno.",
+    "back_to_list": "Volver a la lista",
+    "continue": "Continuar",
+    "submit": "Continuar",
+    "form_section_title": "Abre el diálogo de decisión",
+    "form_prompt": "Ingresa o selecciona tu información básica",
+    "form_help": "Empieza un diálogo multiturno de decisión para **esta** decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
+    "birth_place": "Lugar de nacimiento",
+    "form_prompt_firstVisit": "Ingresa tu información básica",
+    "form_prompt_returning": "Ingresa o selecciona tu información básica",
+    "field_compliance": "**Fecha, hora y lugar de nacimiento — obligatorios** para estructurar esta sesión—**no es adivinación**."
+  },
+  "birth_confirm": {
+    "title": "Confirma tu información",
+    "description": "Verifica los datos. Al confirmar, POJU calculará tu carta y preparará la lectura.",
+    "date_label": "Fecha de nacimiento",
+    "hour_label": "Hora de nacimiento",
+    "gender_label": "Género",
+    "timezone_label": "Zona horaria",
+    "location_label": "Birth location",
+    "location_default": "Default (timezone center)",
+    "male": "Hombre",
+    "female": "Mujer",
+    "reassure_1": "Tus datos permanecen solo en este dispositivo, cifrados.",
+    "reassure_2": "Tras confirmar, la preparación tarda unos 2–5 minutos.",
+    "go_back": "Volver y editar",
+    "confirm_and_proceed": "Confirmar y comenzar",
+    "processing": "Preparando…"
+  },
+  "bazi": {
+    "gender": {
+      "qian": "Matriz natal Qián (乾造)",
+      "kun": "Matriz natal Kūn (坤造)"
+    },
+    "strength": {
+      "strong": "Abundante",
+      "weak": "Conservador",
+      "balanced": "Equilibrado"
+    },
+    "element": {
+      "wood": "Madera",
+      "fire": "Fuego",
+      "earth": "Tierra",
+      "metal": "Metal",
+      "water": "Agua"
+    },
+    "life_stage": {
+      "changsheng": "Emergencia",
+      "muyu": "Exposición",
+      "guandai": "Preparación",
+      "linguan": "Ascendencia",
+      "diwang": "Ápice",
+      "shuai": "Menguante",
+      "bing": "Fatiga",
+      "si": "Latencia",
+      "mu": "Preservación",
+      "jue": "Vacío",
+      "tai": "Incubación",
+      "yang": "Nutrición"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "Noble celestial (天乙贵人)",
+      "lu_shen": "Estrella de prosperidad (禄神)",
+      "fei_ren": "Hoja voladora (飞刃)",
+      "yang_ren": "Hoja de cabra (羊刃)",
+      "wen_chang": "Estrella literaria (文昌)",
+      "wen_chang_gui_ren": "Noble literario (文昌贵人)",
+      "tao_hua": "Flor de melocotón (桃花)",
+      "yi_ma": "Caballo viajero (驿马)",
+      "hua_gai": "Estrella dosel (华盖)",
+      "gu_chen": "Estrella solitaria (孤辰)",
+      "gua_su": "Estrella viuda (寡宿)",
+      "jin_yu": "Carroza dorada (金舆)",
+      "tian_de_gui_ren": "Virtud celestial (天德贵人)",
+      "tian_de_he": "Unión de virtud celestial (天德合)",
+      "yue_de_gui_ren": "Virtud mensual (月德贵人)",
+      "yue_de_he": "Unión de virtud mensual (月德合)",
+      "de_xiu_gui_ren": "Noble de virtud y gracia (德秀贵人)",
+      "fu_xing_gui_ren": "Noble estrella de fortuna (福星贵人)",
+      "tai_ji_gui_ren": "Noble Taiji (太极贵人)",
+      "guo_yin_gui_ren": "Noble sello nacional (国印贵人)",
+      "tian_chu_gui_ren": "Noble cocina celestial (天厨贵人)",
+      "jiang_xing": "Estrella general (将星)",
+      "jie_sha": "Demonio robador (劫煞)",
+      "wang_shen": "Espíritu perdido (亡神)",
+      "zai_sha": "Sha de desastre (灾煞)",
+      "tian_xi": "Alegría celestial (天喜)",
+      "tian_yi_medical": "Médico celestial (天医)",
+      "hong_luan": "Fénix rojo (红鸾)",
+      "pi_ma": "Luto de cáñamo (披麻)",
+      "sang_men": "Puerta fúnebre (丧门)",
+      "diao_ke": "Huésped de duelo (吊客)",
+      "gou_jiao_sha": "Sha de enredo (勾绞煞)",
+      "yuan_chen": "Espíritu primordial (元辰)",
+      "liu_xia": "Nube rosada (流霞)",
+      "xue_ren": "Hoja de sangre (血刃)",
+      "hong_yan_sha": "Encanto carmesí (红艳煞)",
+      "liu_xiu_ri": "Día de seis elegancias (六秀日)",
+      "jiu_chou_ri": "Día de nueve fealdades (九丑日)",
+      "kui_gang_ri": "Día Kui Gang (魁罡日)",
+      "shi_e_da_bai": "Diez abominaciones (十恶大败)",
+      "yin_cha_yang_cuo": "Desajuste yin-yang (阴差阳错)",
+      "gu_luan_sha": "Fénix solitario (孤鸾煞)",
+      "ba_zhuan_ri": "Día de ocho devociones (八专日)",
+      "shi_ling_ri": "Día de diez espíritus (十灵日)",
+      "jin_shen": "Espíritu dorado (金神)",
+      "tian_she_ri": "Día del perdón celestial (天赦日)",
+      "di_wang": "Red terrestre (地网)",
+      "ci_guan": "Salón literario (词馆)",
+      "zheng_xue_tang": "Academia verdadera (正学堂)",
+      "tong_zi_sha": "Espíritu infantil (童子煞)",
+      "kong_wang": "Vacío y nulidad (空亡)"
+    },
+    "yongshen_label": "Ancla",
+    "optimizing_vector": "Ancla:",
+    "pillar_slot": {
+      "year_stem": "Tallo del Año",
+      "year_branch": "Rama del Año",
+      "month_stem": "Tallo del Mes",
+      "month_branch": "Rama del Mes",
+      "day_stem": "Tallo del Día",
+      "day_branch": "Rama del Día",
+      "hour_stem": "Tallo de la Hora",
+      "hour_branch": "Rama de la Hora"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "Alineación Espaciotemporal",
+    "main_title": "Perfil base",
+    "main_description": "Estructura de caso para esta sesión",
+    "section_label": "Calibración de origen · estructura de caso",
+    "born": "NACIDO",
+    "coordinates": "COORDENADAS",
+    "matrix_id": "ID DE MATRIZ",
+    "element_map_title": "Mapa de Pilares Elementales",
+    "element_map_sep": ", ",
+    "blocks": {
+      "block_1": "Calibración de origen",
+      "block_2": "Mapa de estructura central",
+      "block_3": "Matriz temporal",
+      "block_4": "Marcadores de etapa",
+      "block_5": "Núcleo base",
+      "tablist_label": "Secciones del perfil",
+      "collapse_list": "Ocultar lista",
+      "close_portrait": "Cerrar perfil",
+      "prev_page": "Anterior",
+      "next_page": "Siguiente"
+    },
+    "card": {
+      "calendar_alignment": "Alineación Calendárica",
+      "calendar_alignment_em": "calendario",
+      "gregorian": "Gregoriano",
+      "true_solar_time": "Estructura de sesión",
+      "true_solar_time_em": "sesión",
+      "standard_time": "Estándar",
+      "true_solar": "Sesión",
+      "longitude_correction": "Corrección de longitud",
+      "eq_of_time": "EoT",
+      "solar_term": "Término Solar",
+      "solar_term_em": "jieqi",
+      "next_term": "Siguiente",
+      "elemental_signature": "Firma Elemental",
+      "elemental_signature_em": "wuxing",
+      "radar_matrix": "Radar Matrix",
+      "radar_matrix_em": "wuxing radar",
+      "pillars_em": "pilares",
+      "elemental_breakdown": "Desglose Elemental",
+      "day_master": "Núcleo",
+      "with_surplus": ", con ",
+      "surplus_and": " en exceso y ",
+      "deficit_period": " en déficit.",
+      "core_vitality": "Vitalidad Central",
+      "vitality_receptive": "Receptivo",
+      "vitality_balance": "Equilibrio Dinámico",
+      "vitality_dominant": "Dominante",
+      "elemental_equilibrium": "Equilibrio Elemental",
+      "surplus": "Excedente",
+      "dominant_vector": "Vector dominante",
+      "deficit": "Déficit",
+      "key_gap": "Brecha clave",
+      "macro_lifecycle": "Línea de etapa vital",
+      "macro_lifecycle_em": "dayun",
+      "timeline_matrix": "Matriz de Línea de Tiempo",
+      "dayun_you_are_here": "Estás aquí",
+      "structural_dynamics": "Dinámica Estructural",
+      "resonance_label": "RESONANCIA",
+      "tension_label": "TENSIÓN",
+      "reading_label": "LECTURA",
+      "annual_transit": "Tránsito Anual",
+      "transit_progress": "Progreso del Tránsito",
+      "fact_era": "Capa activa",
+      "fact_era_em": "lectura por etapa",
+      "fact_layer_age": "{age} años · capa vital (no década)",
+      "fact_year_pulse": "Tránsito",
+      "fact_year_pulse_em": "impulso anual",
+      "fact_year_pulse_hint": "Vínculos {bonds} · tensiones {tensions}",
+      "fact_year_month": "Mes {month}",
+      "fact_structure": "Vínculos estructurales",
+      "fact_structure_em": "mapa de conexiones internas",
+      "fact_bonds": "Vínculos",
+      "fact_tensions": "Tensiones",
+      "fact_balance": "Claves de equilibrio",
+      "fact_balance_em": "fuerza y ancla",
+      "fact_balance_status": "Estado cuerpo-uso",
+      "fact_anchor": "Ancla",
+      "fact_viz_xi": "Apoyo",
+      "fact_viz_ji": "Gasto",
+      "fact_extra_title": "Lectura ampliada",
+      "fact_extra_em": "era · signo · marcas · inicio",
+      "fact_dayun": "Era",
+      "fact_dayun_em": "fase de 10 años",
+      "fact_year_sign": "Animal del año",
+      "fact_year_sign_em": "señal de tono",
+      "fact_shensha": "Marcas estructurales",
+      "fact_shensha_em": "destacados del mapa",
+      "fact_shensha_count": "{count} destacados",
+      "fact_onset": "Inicio de fase",
+      "fact_onset_em": "abre el ciclo de crecimiento",
+      "fact_onset_age": "Comienza a los {age}",
+      "fact_onset_year": "Primer bloque de 10 años · {year}",
+      "birth_hour_period": "Hora de nacimiento",
+      "fact_empty_links": "Sin activación",
+      "your_sign_tag": "Tu Signo · 生肖",
+      "pillar_year": "Año",
+      "pillar_month": "Mes",
+      "pillar_day": "Día · Yo",
+      "pillar_hour": "Hora",
+      "narrative_loading": "Leyendo…",
+      "default_timezone": "Zona horaria predeterminada",
+      "strength_strong": "Dominante",
+      "strength_weak": "Núcleo Receptivo",
+      "strength_balanced": "Equilibrio Dinámico",
+      "colon": ": ",
+      "hidden_prefix": "Oculto",
+      "hidden_empty": "Oculto: —",
+      "lunar": "Lunar",
+      "layers_title": "Lectura en cuatro capas",
+      "layers_em": "capas de mecanismo",
+      "welcome": {
+        "title": "Bienvenido a Eastern OS",
+        "body": "Eastern OS usa la estructura base calibrada con tus coordenadas de nacimiento para sostener este diálogo de decisión. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso.",
+        "guide": "Escribe abajo el dilema que aún no puedes decidir, luego envía. Tu primera pregunta abre la sesión de decisión.",
+        "note": "Responde con cuidado las preguntas de Eastern OS y revisa lo que escribe; eso importa para entregar después un informe de decisión de alta calidad y ejecutable.\nCada respuesta hace un razonamiento profundo según lo que hace falta ahora, así que puede tardar un poco—espera con paciencia.",
+        "loading": "Eastern OS se está preparando…"
+      },
+      "hero_calendar": "Calendario",
+      "hero_solar": "Ajuste por ubicación",
+      "hero_term": "Término solar",
+      "details_summary": "Detalles de calibración"
+    },
+    "template": {
+      "season_transition": "Transición estacional en curso",
+      "zodiac_note": "Tu yo exterior — cómo te leen a primera vista.",
+      "lunar_prefix": "Lunar ",
+      "pattern_line": "Año del {zodiac} · Núcleo inclina a {day_master}",
+      "calendar_mid": "{year_pillar} · Núcleo inclina a {day_master}",
+      "annual_transit": "La energía {element} encuentra tu excedente de {dominant} mientras {deficit} sigue escaso — el impulso de este año subyace al vaivén que sientes ahora.",
+      "resonance_stem": "Capa de tallos {interaction} — dos impulsos se alinean en la superficie.",
+      "resonance_default": "{year_branch} ancla cómo te leen al principio — una referencia exterior estable.",
+      "tension_branch": "Capa de ramas {interaction} — tensión manejable entre voluntad interior y estructura exterior.",
+      "tension_default": "Excedente de {dominant} frente a déficit de {deficit} — un tirón vivo entre expansión y restricción.",
+      "reading_wood": "Construyes adaptándote, no forzando — tu ventaja es encontrar la apertura que otros pasan por alto bajo presión.",
+      "reading_default": "Te mueves ajustándote dentro de la estructura — lee el campo con claridad antes de actuar.",
+      "archetype_wood": "Eres una **Vid Receptiva** — adaptable, perceptivo, creciendo hacia la calidez, siempre buscando una estructura estable a la que trepar. La influencia fluye por resonancia, no por fuerza.",
+      "archetype_fire": "Eres una **Forja Radiante** — visible, catalítico, atraído por el impulso. Tu energía enciende el movimiento, pero necesita ritmo para no agotarse.",
+      "archetype_earth": "Eres un **Eje Enraizado** — estabilizador, paciente, sosteniendo el centro mientras otros giran. La confianza crece despacio y luego sostiene peso.",
+      "archetype_metal": "Eres un **Filoo de Precisión** — discerniente, estructurado, cortando el ruido hasta la línea esencial. La claridad es tu lenguaje nativo.",
+      "archetype_water": "Eres una **Corriente Profunda** — reflexivo, estratégico, moviéndote bajo la superficie. Lees patrones que otros no ven hasta el momento justo.",
+      "friction": "Tu visión interior de {element} está bajo **tensión estructural** activa de las demandas de {month_element} — excedente de {dominant} y déficit de {deficit} hacen que la elección se sienta tironeada en dos direcciones.",
+      "prompt": "Escribe abajo la decisión que estás sopesando y envíala: la trabajaremos desde la estructura de caso de esta sesión."
+    }
+  },
+  "chart_loader": {
+    "your_chart_title": "Tus cuatro pilares",
+    "male": "Hombre",
+    "female": "Mujer",
+    "pillar_year": "Año",
+    "pillar_month": "Mes",
+    "pillar_day": "Día (Yo)",
+    "pillar_hour": "Hora",
+    "day_master_label": "Núcleo",
+    "strength_label": "Fuerza",
+    "current_phase_label": "Fase actual (10 años)",
+    "hint_first_time": "Formando tu matriz energética. Permanece en esta pantalla.",
+    "hint_using_cache": "Cargando tu matriz energética...",
+    "done_message": "Listo. Entrando en tu sesión...",
+    "error_title": "Preparación fallida",
+    "error_message": "Algo salió mal al preparar tu lectura.",
+    "error_details": "Detalles técnicos",
+    "retry": "Reintentar",
+    "refund_instead": "Reembolsar en su lugar",
+    "error_network": "Se interrumpió la conexión. Permanezca en esta página e inténtelo de nuevo.",
+    "step_0": "Calibrando tu momento de nacimiento...",
+    "step_1": "Formando tus cuatro pilares...",
+    "step_2": "Analizando el maestro del día y los cinco elementos...",
+    "step_3": "Determinando tu patrón y elemento favorable...",
+    "step_4": "Mapeando fases de vida y ciclo actual...",
+    "step_5": "Leyendo estrellas auspiciosas y dinámicas...",
+    "step_6": "Comprendiendo tu fase energética actual...",
+    "step_7": "Componiendo tu lectura fundamental...",
+    "step_8": "Casi listo, un momento...",
+    "error_timeout": "El análisis tardó más de lo esperado. Quédate en esta página con una conexión estable y toca Reintentar: suele funcionar al segundo intento."
+  },
+  "portrait_loader": {
+    "hint_first_time": "Redactando tu informe completo de retrato de personalidad. El análisis profundo tarda unos 2–5 minutos — mantén esta pantalla abierta.",
+    "hint_using_cache": "Cargando tu informe de retrato guardado...",
+    "done_message": "Informe listo. Entrando en tu sesión...",
+    "step_0": "Conectando con el motor de lectura profunda...",
+    "step_1": "Extrayendo señales de personalidad en capas de tu estructura...",
+    "step_2": "Mapeando impulsos centrales y hábitos cotidianos...",
+    "step_3": "Identificando tirones internos recurrentes y puntos ciegos...",
+    "step_4": "Integrando temas de fase vital con lo que importa ahora...",
+    "step_5": "Redactando caminos de fortaleza y dónde sueles atascarte...",
+    "step_6": "Calibrando el tono para que el retrato resuene con claridad...",
+    "step_7": "Estructurando el retrato completo en secciones legibles...",
+    "step_8": "Tu informe está casi listo..."
+  },
+  "syncro": {
+    "loading": "Cargando…",
+    "subtitle": "Guía de dirección y momento en vivo",
+    "description": "Syncro te acompaña en tiempo real durante 24 horas. Sostén el teléfono como una brújula — encuentra la dirección y el momento abiertos para lo que vas a hacer.",
+    "feature_realtime": "En vivo, cada hora",
+    "feature_realtime_desc": "Tu campo energético cambia cada 2 horas. Syncro se recalibra contigo.",
+    "feature_directional": "8 direcciones, escaneadas por completo",
+    "feature_directional_desc": "Cada dirección se analiza para el momento en el que estás.",
+    "feature_vr": "Modo VR",
+    "feature_vr_desc": "Modo cámara para una lectura direccional en el mundo real.",
+    "start_free": "Empezar gratis (primera vez)",
+    "start_paid": "Iniciar una sesión — $4.99",
+    "free_note": "Tu primer Syncro es por nuestra cuenta.",
+    "paid_note": "$4.99 = 24 horas de guía en vivo para una tarea.",
+    "desktop_section_heading": "Usa Syncro en tu móvil",
+    "desktop_message_1": "Syncro necesita tu teléfono.",
+    "desktop_message_2": "Su núcleo lee direcciones a través del dispositivo — hace falta una brújula móvil.",
+    "open_on_mobile_hint": "Abre easternos.com en tu teléfono para usar Syncro.",
+    "not_supported_device": "Este dispositivo no admite los sensores de brújula que Syncro necesita.",
+    "payment_coming_soon": "El pago de Syncro llegará en el siguiente paso. La primera sesión sigue siendo gratis en un teléfono compatible.",
+    "back_to_home": "Volver a Syncro",
+    "background_stream": {
+      "aria_label": "Generación IA en segundo plano",
+      "title_running": "Generando horas restantes {step}/{total}",
+      "title_error": "Algunos lotes fallaron",
+      "title_done": "Generación en pausa",
+      "step": "Lote actual: {hours}",
+      "reasoning": "Razonamiento IA…",
+      "connecting": "Conectando con IA…",
+      "failed": "Error: {detail}",
+      "retry": "Reanudar horas restantes",
+      "footnote": "Cada lote usa su propia conexión (evita el límite de 5 min de Vercel). Mantén esta página abierta.",
+      "title_cloud": "Generación en la nube {done}/{total} (lote {step})",
+      "footnote_cloud": "En cola en el servidor — puedes salir de la app. Vuelve a abrir esta página para actualizar.",
+      "cloud_failed": "{count} lote(s) fallidos — toca el punto rojo para reintentar"
+    },
+    "recent_sessions": {
+      "heading": "Tus lecturas (24 h)",
+      "hint": "Toca para abrir la brújula. Cada tarea sigue disponible hasta que termine su ventana de 24 horas, incluso con los 12 períodos listos.",
+      "loading": "Cargando tus lecturas…",
+      "progress": "{done}/{total} períodos listos",
+      "status_complete": "12/12 listos · abrir brújula",
+      "expires": "Termina {when}",
+      "pwa_continue_label": "Continuar la última lectura",
+      "pwa_storage_hint": "Las lecturas se guardan en este dispositivo 24 h—puedes ir a Pivot y volver aquí.",
+      "start_new_link": "Nueva lectura",
+      "empty_pwa": "No hay lectura en curso. Tras tu primer Syncro, aparecerá aquí."
+    },
+    "your_task_label": "Tu tarea",
+    "computing": {
+      "step_1": "Calculando tu carta…",
+      "step_2": "Alineando con tu posición…",
+      "step_3": "Escaneando las 8 direcciones…",
+      "step_4": "Leyendo los próximos 12 periodos…",
+      "step_5": "Mapeando 96 combinaciones…",
+      "step_6": "Casi listo…",
+      "hint": "Calculando el campo para 24 h. Unos 60–90 segundos.",
+      "error_title": "Error en el cálculo",
+      "go_back": "Reintentar",
+      "missing_data": "Faltan tarea, perfil o ubicación. Empieza de nuevo desde Syncro.",
+      "profile_not_ready": "El análisis base no está listo. Vuelve a preparar.",
+      "compute_failed": "Error en el cálculo",
+      "hint_local": "Mapeando 96 combinaciones localmente. Verás los resultados en unos segundos; el texto de la IA se refina en segundo plano.",
+      "retry": "Reintentar",
+      "error_timeout": "El servidor tardó demasiado o devolvió una respuesta no válida. Revisa tu red y vuelve a intentarlo. Si sigue ocurriendo, puede que la API esté agotando el tiempo: inténtalo en un momento.",
+      "error": {
+        "network_title": "Problema de conexión",
+        "network_message": "No se pudo contactar con el servidor. Revisa tu red o VPN y vuelve a intentarlo.",
+        "timeout_title": "Se agotó el tiempo de la solicitud",
+        "timeout_message": "El servidor tardó demasiado o devolvió una respuesta no válida. Quédate en esta página con una conexión estable y toca Reintentar.",
+        "location_title": "Se requiere ubicación",
+        "location_message": "Syncro necesita tu posición actual. Vuelve atrás, define tu ubicación e inténtalo de nuevo.",
+        "generic_title": "Error de cálculo",
+        "generic_message": "Algo salió mal al construir tu matriz. Inténtalo de nuevo en un momento."
+      }
+    },
+    "main": {
+      "current_hour": "este periodo",
+      "why_this": "Por qué este flujo",
+      "detailed_label": "Leer más",
+      "rationale_label": "El razonamiento",
+      "collapse": "Contraer",
+      "enable_compass": "Activar brújula",
+      "enable_vr": "Abrir modo VR",
+      "exit_vr": "Salir del modo VR",
+      "not_supported": "Tu dispositivo no admite orientación",
+      "combination_not_found": "Sin lectura para esta combinación",
+      "session_not_found": "Sesión no encontrada.",
+      "task_response_title": "Para tu tarea",
+      "task_response_avoid": "Evitar"
+    },
+    "timer": {
+      "live_label": "En vivo",
+      "current_window_only": "Solo esta ventana",
+      "next_update_in": "Próxima actualización en",
+      "philosophy_line": "El flujo cambia cada 2 horas. Vuelve cuando abra el siguiente periodo."
+    },
+    "expired": {
+      "title": "Esta ventana Syncro ha cerrado.",
+      "message": "$4.99 cubren 24 horas. La tuya ha terminado.",
+      "cta": "Iniciar un nuevo Syncro"
+    },
+    "vr": {
+      "frame_label": "Vista de cámara en vivo",
+      "denied": "Acceso a la cámara denegado.",
+      "not_supported": "La cámara no está disponible en este navegador."
+    },
+    "location": {
+      "asking_title": "¿Permitir ubicación?",
+      "asking_message": "Syncro necesita tu ubicación actual para alinear las direcciones con la brújula real.",
+      "asking_privacy": "Solo para esta sesión. Nunca se guarda en nuestros servidores.",
+      "allow_location": "Permitir acceso a la ubicación",
+      "granted_message": "Ubicación recibida. Calculando tu campo…",
+      "denied_title": "Se requiere ubicación",
+      "denied_message": "Sin ubicación, Syncro no puede indicar la dirección. Permítela en los ajustes del navegador e inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "manual_title": "Elige tu ubicación",
+      "manual_description": "Busca y selecciona tu ciudad actual para una sincronización precisa.",
+      "city_search_placeholder": "Buscar ciudad (p. ej., Madrid, Nueva York, Tokio)",
+      "no_cities_found": "No se encontraron ciudades. Prueba con otra ortografía.",
+      "retry_geolocation": "Intentar detectar de nuevo",
+      "confirm_title": "¿Usar esta ubicación?",
+      "confirm_hint": "Syncro la usará para calcular el momento y la dirección con precisión.",
+      "confirm_use": "Usar esta ubicación",
+      "change_location": "Elegir otra ubicación",
+      "accuracy_warning": "La posición detectada es aproximada (~{meters} m). Considera buscar tu ciudad para mayor precisión.",
+      "search_manually": "Buscar ciudad manualmente"
+    },
+    "task": {
+      "back": "Volver a Syncro",
+      "title": "¿Qué momento necesitas encontrar?",
+      "subtitle": "Cuéntame lo que vas a hacer. Encontraré la mejor dirección y momento en las próximas 24 horas.",
+      "placeholder": "p. ej., «Mañana por la tarde me reúno con un cliente para cerrar un trato.»",
+      "min_chars": "al menos {min} caracteres",
+      "min_chars_remaining": "Añade {remaining} carácter(es) más para continuar",
+      "examples_title": "Buenos ejemplos:",
+      "example_1": "Mañana a las 10 tengo una entrevista de trabajo.",
+      "example_2": "Hoy debo tener una conversación difícil con mi pareja.",
+      "example_3": "Esta semana firmo un contrato comercial.",
+      "continue": "Continuar"
+    },
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Primera vez gratis"
+    },
+    "home": {
+      "cta_start": "Prueba Syncro gratis",
+      "desktop_modal": {
+        "title": "Abre Syncro en tu teléfono",
+        "description": "Syncro lee la brújula y la orientación de tu teléfono para alinearse con la dirección del mundo real. Esto requiere un dispositivo móvil.",
+        "step_1": "Abre la cámara en tu teléfono",
+        "step_2": "Escanea este código QR",
+        "step_3": "Toca el enlace para abrir Syncro en tu teléfono",
+        "why_mobile": "¿Por qué solo en móvil? Syncro necesita la brújula, la cámara y la ubicación precisa de tu teléfono, funciones que los ordenadores no tienen."
+      }
+    },
+    "payment_continue_without_checkout": "Continuar a Syncro →",
+    "existing_session": {
+      "title": "¿Continuar tu lectura?",
+      "valid_for_hours": "Válida {hours} horas más",
+      "continue": "Continuar esta lectura",
+      "start_new": "Empezar una nueva lectura"
+    },
+    "llm_progress": {
+      "in_progress": "Generando texto de IA {done}/{total}…",
+      "kv_missing": "Sincronización en la nube no disponible — generando la hora actual en el dispositivo…",
+      "context_missing": "No se pudieron iniciar los lotes de IA. Vuelve a ejecutar Syncro desde tu perfil.",
+      "all_failed": "Fallaron los 12 lotes horarios. Revisa los registros de la consola y la clave de la API.",
+      "complete": "Texto de IA completo",
+      "some_failed": "Fallaron {count} lote(s) horario(s)."
+    },
+    "preparing_live": {
+      "analyzing_title": "Análisis profundo en curso…",
+      "live_hour_hint": "◐ Generando la hora actual {hour} ({range}) · la brújula se abre al terminar",
+      "background_hint": "Las horas restantes se generan en la cola de la nube después de entrar en la brújula (puedes salir de la app: los resultados se actualizan al volver).",
+      "reasoning": "Razonando…",
+      "connecting": "Conectando…",
+      "ctx_missing": "No se pudo cargar el contexto del LLM",
+      "gen_failed": "Falló la generación: {error}",
+      "ctx_missing_suffix": " (falta el contexto)",
+      "save_failed": "No se pudieron guardar los resultados",
+      "retry": "Reintentar",
+      "retrying": "Reintentando ({current}/{max})",
+      "background_progress": "En segundo plano: {done}/12 horas completadas",
+      "patience_hint": "Un análisis preciso lleva tiempo: espera con paciencia. Esto suele tardar entre 1 y 3 minutos.",
+      "title": "Generando la lectura de {hour} (hora actual)…",
+      "hint": "La brújula se abre cuando esta hora esté lista. Las horas siguientes llegan una a una.",
+      "progress": "Generando ahora {hour} · {done}/{total} completadas"
+    },
+    "modes": {
+      "aria_label": "Modo de visualización de Syncro",
+      "compass": "Brújula",
+      "ar": "RA",
+      "map": "Mapa",
+      "view": "Mapa"
+    },
+    "hour": {
+      "aria_label": "Línea temporal de periodos horarios",
+      "now": "AHORA",
+      "legend": {
+        "now": "Ahora",
+        "done": "Lista",
+        "pending": "Pendiente",
+        "failed": "Fallida"
+      },
+      "retry_failed": "Toca para reintentar la generación"
+    },
+    "why_this_current": "Por qué esta corriente",
+    "generating": "Generando la lectura…",
+    "llm_copy_failed": "Falló el texto de IA para esta dirección. Prueba con una nueva lectura de Syncro.",
+    "why_modal": {
+      "close": "Cerrar"
+    },
+    "permission": {
+      "title": "Activar brújula y cámara",
+      "description": "Syncro necesita el movimiento y la orientación para la brújula en vivo, y acceso a la cámara para el modo RA. Los permisos se guardan en este dispositivo después de concederlos una vez.",
+      "not_location_hint": "Si iOS lo pregunta, elige Permitir para movimiento y orientación: no es lo mismo que el aviso de ubicación que viste antes.",
+      "settings_hint": "Si no aparece ningún aviso: Ajustes → Safari → Acceso a movimiento y orientación → Permitir para este sitio, y vuelve a tocar Activar.",
+      "use_map_instead": "O cambia al Mapa abajo: el Mapa funciona sin la rotación de la brújula.",
+      "unsupported": "Este dispositivo no admite la rotación de la brújula. Usa el modo Mapa.",
+      "enable": "Activar brújula y cámara",
+      "requesting": "Solicitando…",
+      "skip": "Continuar sin brújula",
+      "denied_alert": "Se denegó el permiso de la brújula. La brújula no rotará, pero las demás funciones siguen disponibles.",
+      "camera_denied": "Se denegó la cámara. El modo RA volverá a preguntar cuando lo abras.",
+      "skipped_notice": "La brújula está desactivada: actívala desde los ajustes de Syncro o recarga para permitir la rotación.",
+      "resume_title": "Continuar a Syncro",
+      "resume_description": "Toca una vez para activar la brújula y la RA en esta visita. Ya concediste el acceso en este dispositivo.",
+      "resume_enable": "Continuar"
+    },
+    "posture": {
+      "hold_flat_title": "Sostén el teléfono plano",
+      "hold_flat_desc": "Coloca el teléfono boca arriba, paralelo al suelo",
+      "hold_upright_title": "Sostén el teléfono en vertical",
+      "hold_upright_desc": "Sostén el teléfono verticalmente, de frente"
+    },
+    "compass": {
+      "permission_title": "Activar brújula",
+      "permission_description": "Syncro necesita la orientación de tu dispositivo para alinear las lecturas con la dirección hacia la que miras.",
+      "grant_access": "Conceder acceso",
+      "hold_phone_flat": "Sostén el teléfono plano, con la pantalla hacia arriba"
+    },
+    "ar": {
+      "permission_title": "Activar cámara",
+      "permission_description": "El modo RA superpone la dirección en vivo sobre la vista de tu cámara. Se requiere acceso a la cámara.",
+      "grant_access": "Permitir cámara",
+      "video_label": "Vista de cámara en vivo",
+      "hold_phone_upright": "Sostén el teléfono en vertical, de frente"
+    },
+    "levels": {
+      "open": "Corriente Abierta",
+      "following": "Corriente Favorable",
+      "still": "Aguas Quietas",
+      "cross": "Contracorriente",
+      "under": "Resaca"
+    },
+    "map": {
+      "tap_hint": "Toca una dirección del anillo para explorarla"
+    },
+    "progress": {
+      "aria_label": "Línea temporal de periodos horarios",
+      "manual_selection": "Viendo un periodo horario seleccionado (no la ventana en vivo).",
+      "state_past": "Periodo horario pasado",
+      "state_live": "Periodo horario en vivo",
+      "state_selected": "Periodo horario seleccionado",
+      "state_upcoming": "Periodo horario próximo"
+    },
+    "view": {
+      "you": "TÚ",
+      "recommended": "Mejor dirección ahora",
+      "grid_subtitle": "8 direcciones"
+    }
+  },
+  "match": {
+    "loading": "Cargando…",
+    "home": {
+      "brand_tag": "Match",
+      "heading": "Perfiles Duales. Un Órbita Compartida. Arquitectura Relacional Total.",
+      "description": "Match mapea dos marcos cognitivos independientes en una sola matriz unificada. Decodifica exactamente cómo se intersecan tus vectores de comportamiento, revelando la alineación estructural, la fricción sistémica y vías precisas y accionables hacia la coevolución.",
+      "cta": "Inicializar Alineación de Match",
+      "billing_notice": "$4.99 por alineación o usar cupón de experiencia",
+      "feature_two_charts_title": "Análisis de dos cartas",
+      "feature_two_charts_desc": "Lecturas individuales profundas de ambas personas, luego un análisis en capas de cómo se encuentran.",
+      "feature_any_relationship_title": "Cualquier tipo de relación",
+      "feature_any_relationship_desc": "Matrimonio, sociedad, familia, amistad, trabajo — descríbelo con tus palabras y lo leemos.",
+      "feature_5_sections_title": "Informe estructurado",
+      "feature_5_sections_desc": "5 secciones: cada uno, juntos, conclusión y recomendaciones claras y accionables.",
+      "how_label": "Cómo funciona Match",
+      "how_title": "De dos cartas a un camino claro — en 4 pasos.",
+      "how_step_1_title": "Elige la carta de la persona A",
+      "how_step_1_desc": "Elige un bazi de tu biblioteca o añade uno nuevo. Solo fecha, hora y género.",
+      "how_step_2_title": "Elige la carta de la persona B",
+      "how_step_2_desc": "Mismo flujo. La carta de B se guarda en tu biblioteca para más matches después.",
+      "how_step_3_title": "Describe la relación",
+      "how_step_3_desc": "Con tus palabras — actual, prevista o en duda. Cuanto más específico, más profunda la lectura.",
+      "how_step_4_title": "Lee tu informe completo",
+      "how_step_4_desc": "5 tarjetas expandibles. Guardado en tu Archive para volver cuando quieras dentro de tu acceso.",
+      "use_cases_title": "Para qué sirve Match",
+      "use_case_marriage_title": "Decisiones de matrimonio",
+      "use_case_marriage_desc": "¿Piensas en un compromiso largo? Mira qué dicen las cartas sobre la alineación a largo plazo.",
+      "use_case_partnership_title": "Sociedades de negocio",
+      "use_case_partnership_desc": "Evalúa cofundadores, socios o colaboradores clave antes de firmar.",
+      "use_case_family_title": "Dinámica familiar",
+      "use_case_family_desc": "Entiende relaciones familiares difíciles — padre, hijo, hermano, suegros.",
+      "use_case_hiring_title": "Contratación y equipos",
+      "use_case_hiring_desc": "Lee el encaje energético entre tú y una contratación clave o nuevo miembro del equipo.",
+      "use_case_relationship_title": "Relaciones existentes",
+      "use_case_relationship_desc": "¿Tensión con alguien? Mira qué es estructural y qué es superficial.",
+      "use_case_friendship_title": "Amistades cercanas",
+      "use_case_friendship_desc": "Por qué algunas amistades fluyen y otras se apagan — las cartas suelen tener la respuesta.",
+      "whatyouget_title": "Qué incluye tu informe",
+      "preview_a_title": "Sobre A",
+      "preview_a_desc": "Sus rasgos naturales, tendencias y lo que aportan a esta relación.",
+      "preview_b_title": "Sobre B",
+      "preview_b_desc": "La misma profundidad para la otra persona — sus patrones en este tipo de vínculo.",
+      "preview_combined_title": "Juntos",
+      "preview_combined_desc": "Interacciones de cinco elementos, dinámica de diez dioses, alineación temporal — análisis completo en capas.",
+      "preview_conclusion_title": "Conclusión",
+      "preview_conclusion_desc": "Nivel de compatibilidad global (1 de 5 niveles), más fortalezas y retos juntos.",
+      "preview_actions_title": "Qué hacer",
+      "preview_actions_desc": "4-6 recomendaciones concretas — comunicación, timing, límites, crecimiento.",
+      "per_reading": "por lectura completa",
+      "include_1": "Análisis bazi completo de ambas personas",
+      "include_2": "Mapa de interacción de cinco elementos y diez dioses",
+      "include_3": "Nivel de compatibilidad con razonamiento",
+      "include_4": "4-6 recomendaciones accionables",
+      "include_5": "Guardado en Archive — vuelve cuando quieras",
+      "first_free_emphasized": "Tu primer Match es gratis. No hace falta tarjeta.",
+      "pricing": {
+        "heading": "Precios",
+        "body": "Valor soberano y transparente para el análisis de relaciones. Cada sincronización completa de Match cuesta $4.99, o está totalmente desbloqueada mediante tus tokens de Pase Mensual. Mapea tus órbitas de comportamiento y decodifica las dinámicas conjuntas con absoluta privacidad de datos.",
+        "price": "$4.99",
+        "price_unit": "por sincronización completa · apto para Pase Mensual",
+        "features_heading": "Qué incluye",
+        "features": [
+          "Análisis completo de la matriz cognitiva y de personalidad de ambos perfiles",
+          "Mapeo de interacción de vectores de comportamiento y dinámica relacional",
+          "Calificación de alineación estructural con razonamiento algorítmico profundo",
+          "4–6 recomendaciones sistémicas e inmediatamente accionables para la coevolución",
+          "Asegurado permanentemente dentro del archivo seguro de tu navegador local"
+        ],
+        "cta": "Inicializar Alineación de Match",
+        "footnote": "Informe completo · 5 secciones analíticas · Preservado bajo la soberanía de privacidad local"
+      },
+      "faq_title": "Preguntas frecuentes",
+      "faq_q1": "¿Y si no sé la hora de nacimiento de la otra persona?",
+      "faq_a1": "Puedes hacer Match con hora aproximada — la precisión baja un poco pero el análisis central sigue siendo valioso. Usamos ventanas de 2 horas (horas chinas), así que incluso una estimación sirve.",
+      "faq_q2": "¿La otra persona tiene que saberlo o consentir?",
+      "faq_a2": "Match es para tu comprensión. La otra persona no tiene que participar. No les contactamos, no compartimos sus datos ni revelamos que hiciste la lectura. Su carta queda solo en tu dispositivo.",
+      "faq_q3": "¿Puedo hacer más de dos personas a la vez?",
+      "faq_a3": "Match se centra en dinámicas de dos personas — así la lectura sigue siendo profunda y clara. En situaciones complejas (p. ej. tú + pareja + padre), sugerimos Matches separados por relación.",
+      "faq_q4": "¿En qué se diferencia de POJU?",
+      "faq_a4": "POJU es una conversación profunda de 30 días sobre tu situación. Match es una lectura puntual de dos cartas sobre una relación concreta. Herramientas distintas — muchos usan ambas.",
+      "not_title": "What Match is not",
+      "not_items": [
+        "A predictor of relationship outcomes",
+        "A promise of compatibility results",
+        "A replacement for professional counseling"
+      ],
+      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours.",
+      "what_is": {
+        "title": "¿Qué es Match?",
+        "subtitle": "Marco de decisión para dos",
+        "body": "Match es una lectura enfocada de dos personas para una pregunta de relación. Compara cómo se encuentran dos perfiles en comunicación, colaboración o vida compartida—dónde resuenan y dónde crece la fricción—sin veredictos fatalistas de compatibilidad. Un marco de coaching para que ambos elijan pasos más claros juntos."
+      }
+    },
+    "subtitle": "Dos cartas. Una relación. Claridad real.",
+    "description": "Match entrelaza ambos charts bazi — el tuyo y el suyo — para mostrar cómo se alinean sus energías, dónde se apoyan, dónde chocan y qué hacer.",
+    "feature_two_charts": "Análisis de dos cartas",
+    "feature_two_charts_desc": "Lecturas individuales profundas de ambas personas, luego cómo se encuentran.",
+    "feature_relationship": "Cualquier relación",
+    "feature_relationship_desc": "Matrimonio, sociedad, amistad, familia — tú lo describes, nosotros lo leemos.",
+    "feature_report": "Informe completo",
+    "feature_report_desc": "5 secciones: cada persona, juntos, conclusión, recomendaciones accionables.",
+    "use_cases_title": "Para qué sirve Match",
+    "use_case_1": "Considerar matrimonio o un compromiso serio",
+    "use_case_2": "Evaluar una posible sociedad comercial",
+    "use_case_3": "Entender una dinámica familiar difícil",
+    "use_case_4": "Contrataciones o formación de equipos",
+    "start_free": "Hacer un Match gratis",
+    "start_paid": "Iniciar un Match — $4.99",
+    "free_note": "Tu primer Match va por nuestra cuenta.",
+    "paid_note": "$4.99 por una lectura completa de dos cartas.",
+    "payment_coming_soon": "El pago de Match llegará en una próxima versión. La primera lectura puede seguir siendo gratis.",
+    "back_to_home": "Volver a Match",
+    "step_indicator": "Paso {step} de {total}",
+    "select_a_title": "Persona A",
+    "select_a_subtitle": "Elige o añade la información bazi de la primera persona.",
+    "select_a_label": "Persona A",
+    "select_b_title": "Persona B",
+    "select_b_subtitle": "Elige o añade la información bazi de la segunda persona. Se guardará en tu biblioteca de perfiles.",
+    "select_b_label": "Persona B",
+    "cannot_match_self": "La persona B debe ser distinta de la persona A.",
+    "back_to_select_a": "Volver a la persona A",
+    "relationship": {
+      "step_indicator": "Paso {step} de {total}",
+      "title": "¿Cómo están conectados?",
+      "hint": "Describe la relación — actual, prevista o en duda. Sé concreto.",
+      "placeholder": "p. ej., «Mi socio de negocios desde hace 3 años. Queremos crecer pero ha habido tensión.»",
+      "min_chars": "al menos {min} caracteres",
+      "examples_title": "Buenos ejemplos:",
+      "example_1": "Mi prometida. Llevamos 2 años juntos y planeamos casarnos el año que viene.",
+      "example_2": "Un posible cofundador. Nos conocimos hace 3 meses.",
+      "example_3": "Mi hijo adulto. Ya no hablamos con facilidad.",
+      "example_4": "Un candidato que estoy considerando contratar como segundo al mando.",
+      "analyze_button": "Ejecutar el Match",
+      "language_hint": "Escribe en tu idioma — el informe volverá en el mismo idioma.",
+      "back": "Volver a la persona B",
+      "min_chars_remaining": "Añade {remaining} carácter(es) más para continuar",
+      "begin_match": "Empezar Match",
+      "checking": "Comprobando perfiles…",
+      "preparing_b": "Preparando el perfil de la Persona B…",
+      "starting": "Iniciando Match…"
+    },
+    "analyzing": {
+      "step_1": "Leyendo la carta de la persona A…",
+      "step_2": "Leyendo la carta de la persona B…",
+      "step_3": "Mapeando la dinámica de los cinco elementos…",
+      "step_4": "Analizando las interacciones de los diez dioses…",
+      "step_5": "Examinando la alineación temporal…",
+      "step_6": "Tejiendo el patrón de la relación…",
+      "step_7": "Casi listo…",
+      "hint": "Generando tu informe de compatibilidad completo. Unos 60–90 segundos.",
+      "error_title": "Análisis fallido",
+      "go_back": "Reintentar",
+      "missing_data": "Faltan datos de carta o relación. Empieza de nuevo desde Match.",
+      "profile_a_not_ready": "El análisis base de la persona A no está listo.",
+      "profile_b_not_ready": "El análisis base de la persona B no está listo.",
+      "profile_not_ready": "El análisis base no está listo. Completa la preparación primero.",
+      "same_profile": "Las personas A y B deben ser distintas.",
+      "analysis_failed": "El análisis Match falló. Inténtalo de nuevo.",
+      "error_timeout": "El análisis Match tardó demasiado o el servidor devolvió una respuesta no válida. Mantén esta página abierta con conexión estable y pulsa Reintentar: a menudo funciona a la segunda.",
+      "preview_level": "Compatibilidad local: {level} (puntuación {score}) — generando la narrativa…",
+      "preview_synergy": "Dinámica del sistema: {type} — generando narrativa…"
+    },
+    "report": {
+      "title": "Informe Match",
+      "compatibility_label": "Compatibilidad general",
+      "key_traits": "Rasgos clave",
+      "five_elements": "Dinámica de cinco elementos",
+      "timing_dynamic": "Alineación temporal",
+      "strengths": "Fortalezas",
+      "challenges": "Desafíos",
+      "question_response_title": "Sobre tu pregunta",
+      "timing": "Cuándo",
+      "saved_to_archive": "Guardado en tu Archive.",
+      "view_archive": "Ver en Archive",
+      "new_match": "Hacer otro Match",
+      "back_to_match": "Volver a Match",
+      "resonance_label": "Resonancia dinámica",
+      "preview_synergy": "Dinámica del sistema: {type} — generando la narrativa…",
+      "delivery_eyebrow": "Resonancia relacional",
+      "meta_synergy": "Sinergia",
+      "meta_resonance": "Resonancia",
+      "synergy_pattern_eyebrow": "Patrón de resonancia",
+      "question_lead": "Tu pregunta"
+    },
+    "result": {
+      "loading": "Cargando informe…",
+      "not_found": "Match no encontrado.",
+      "back_to_match": "Volver a Match"
+    },
+    "archive": {
+      "detail_title": "Lectura Match",
+      "relationship_label": "Relación descrita:",
+      "overall": "Global",
+      "top_actions": "Acciones principales",
+      "view_full_report": "Ver informe completo"
+    },
+    "begin": {
+      "start": "Empezar",
+      "free_first_time": "Primera vez gratis"
+    },
+    "select_first_person": "Elige o añade el perfil de la primera persona",
+    "select_second_person": "Elige o añade el perfil de la segunda persona — se guarda en tu biblioteca",
+    "workspace": {
+      "side_title": "Empezar Match",
+      "side_body": "Introduce los datos de nacimiento de las dos personas. Esta información nos permite calibrar con precisión tu energía única para una consulta personalizada de alta precisión.",
+      "side_body_returning": "Selecciona los datos de nacimiento de las dos personas, o introdúcelos de nuevo. Esta información nos permite calibrar con precisión tu energía única para una consulta personalizada de alta precisión.",
+      "submit": "Empezar MATCH",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "hint_a_with_history": "Match A: Introduce los datos de nacimiento de la persona A o elige un perfil guardado.",
+      "hint_b_with_history": "Match B: Introduce los datos de nacimiento de la persona B o elige un perfil guardado.",
+      "hint_a_new": "Match A: Introduce los datos de nacimiento de la persona A.",
+      "hint_b_new": "Match B: Introduce los datos de nacimiento de la persona B.",
+      "inquiry": {
+        "welcome_text": "Cuando dos personas inician una relación, colaboración o proyecto específico, sus hábitos de comunicación,\nlógica de decisión y ritmos internos interactúan profundamente. Con base en sus rasgos fundamentales, esta evaluación\nofrece un análisis objetivo y consejos de adaptación para lograr una cooperación de mayor calidad en metas compartidas.",
+        "guidance_text": "Describe a continuación el asunto o plan específico que enfrentarán juntos. Cuanto más detallada sea la\ndescripción, mejor podremos identificar fortalezas complementarias y prevenir posibles fricciones de comunicación.",
+        "placeholder_header": "Puedes preguntar así (selecciona o escribe directamente):",
+        "examples": {
+          "business": "Colaboración Comercial: 'Planeamos fundar una empresa o realizar una inversión juntos. ¿Cómo colaborar eficazmente en las decisiones y el reparto de tareas?'",
+          "relationship": "Relación a Largo Plazo: 'Consideramos el matrimonio o un compromiso duradero. ¿Qué aspectos debemos ajustar en la comunicación diaria y las decisiones familiares?'",
+          "specific_task": "Asunto Específico: 'Planeamos viajar juntos el próximo mes o asumir un proyecto. ¿Cómo evitar posibles desacuerdos?'"
+        },
+        "welcome_title": "Bienvenido a la Evaluación de Sinergia y Compatibilidad de Decisiones",
+        "input_placeholder": "Describe el asunto o pregunta concreta que enfrentarán juntos…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
+    }
+  },
+  "pwa": {
+    "disclaimer": {
+      "title": "Before you enter Eastern OS",
+      "para_1": "Eastern OS is designed as an installable app, not a regular website.",
+      "para_2": "This ensures reliable performance, your data stays on your device, and you get the full experience.",
+      "para_3": "By continuing, you acknowledge this and agree to install Eastern OS on your device.",
+      "agree": "I understand and agree",
+      "enter": "Enter Eastern OS"
+    },
+    "nav": {
+      "language": "Idioma",
+      "close": "Cerrar"
+    },
+    "install": {
+      "title": "Install Eastern OS to begin",
+      "subtitle": "Full features and reliable experience require installation on your home screen",
+      "after_install_tip": "Once installed, open Eastern OS from your home screen — never through Safari again.",
+      "want_explore": "Want to explore on desktop?",
+      "ios": {
+        "label": "On iPhone Safari",
+        "step_1": "Tap <strong>Share</strong> button below",
+        "step_2": "Select <strong>Add to Home Screen</strong>",
+        "step_3": "Tap <strong>Add</strong> to confirm"
+      },
+      "android": {
+        "label_manual": "On Android Chrome",
+        "install_button": "Install Eastern OS",
+        "one_tap_hint": "One tap to install — no app store needed",
+        "step_1": "Tap menu (3 dots) at top right",
+        "step_2": "Select Add to Home Screen",
+        "step_3": "Tap Install to confirm"
+      },
+      "chrome_required": {
+        "title": "Usa Chrome para instalar",
+        "subtitle_huawei": "{browser} no admite la instalación completa de la app de Eastern OS. Abre esta página en Chrome para instalarla.",
+        "step_1_title": "Instala Chrome",
+        "step_1_desc": "Descárgalo de tu tienda de apps si no lo tienes",
+        "step_2_title": "Abre easternos.com en Chrome",
+        "step_2_desc": "Copia el enlace de abajo y pégalo en la barra de direcciones de Chrome",
+        "step_3_title": "Toca «Instalar»",
+        "step_3_desc": "Chrome mostrará un botón de instalar: tócalo para añadir Eastern OS a tu pantalla de inicio",
+        "why_chrome": "Chrome admite la instalación completa de aplicaciones web progresivas (PWA). Otros navegadores quizá solo creen un acceso directo, que no ofrece la experiencia completa de Eastern OS.",
+        "copy_done": "¡Copiado!"
+      },
+      "open_in_safari": {
+        "title": "Ábrelo en Safari",
+        "subtitle": "iOS solo permite instalar Eastern OS a través de Safari. {browser} no puede completar la instalación.",
+        "label": "En el iPhone",
+        "step_1_title": "Copia este enlace",
+        "copied": "¡Copiado!",
+        "step_2_title": "Abre Safari",
+        "step_2_desc": "Pega el enlace en la barra de direcciones de Safari",
+        "step_3_title": "Instala desde Safari",
+        "step_3_desc": "Toca Compartir → Añadir a pantalla de inicio → Añadir",
+        "why_safari": "iOS reserva la función de instalación para Safari. Es una limitación de Apple, no de Eastern OS."
+      },
+      "open_in_chrome": {
+        "title": "Ábrelo en Chrome",
+        "subtitle": "{browser} no admite del todo la instalación de Eastern OS. Usa Chrome.",
+        "label": "En Android",
+        "step_1_title": "Copia este enlace",
+        "copied": "¡Copiado!",
+        "step_2_title": "Abre Chrome",
+        "step_2_desc": "Pega el enlace en la barra de direcciones de Chrome",
+        "step_3_title": "Instala desde Chrome",
+        "step_3_desc": "Toca el menú → Instalar Eastern OS → Instalar",
+        "why_chrome": "Chrome admite la instalación completa de PWA. Otros navegadores quizá solo creen un acceso directo."
+      }
+    },
+    "app_mode": {
+      "desktop_hint": "En el móvil, Eastern OS se centra en usar POJU, Glyph, Syncro y Match con una breve introducción. Para guías detalladas, política de privacidad, términos de servicio, política de reembolso, política de cookies y otra información legal, visita easternos.com desde un ordenador.",
+      "add_to_home_title": "Añadir a la pantalla de inicio",
+      "add_to_home_title_ios": "Añadir a la pantalla de inicio",
+      "add_to_home_desc": "Añade Eastern OS a la pantalla de inicio de tu teléfono para menos interrupciones y un acceso más rápido la próxima vez."
+    }
+  },
+  "cross_product": {
+    "match_to_poju": {
+      "title": "¿Quieres profundizar en esta relación?",
+      "description": "Match te muestra la estructura. POJU te ayuda a decidir qué hacer al respecto.",
+      "value_prop": "Hasta 30 días de análisis profundo en torno a esta relación concreta",
+      "button": "Abrir POJU",
+      "starting": "Iniciando…",
+      "payment_failed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+    },
+    "syncro_to_poju": {
+      "title": "¿Quieres pensar bien esta decisión?",
+      "description": "Syncro te dice cuándo. POJU te ayuda a decidir si hacerlo y cómo.",
+      "value_prop": "Hasta 30 días de acompañamiento profundo en torno a tu situación",
+      "button": "Abrir POJU"
+    },
+    "glyph_to_poju": {
+      "title": "¿Quieres desentrañar lo que esto reflejó?",
+      "description": "Glyph te ofreció una imagen. POJU te ayuda a entenderla y a actuar sobre ella.",
+      "value_prop": "Hasta 30 días de conversación profunda en torno a lo que estás procesando",
+      "button": "Abrir POJU",
+      "starting": "Iniciando…",
+      "payment_failed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+    },
+    "session_picker": {
+      "title": "¿Cómo quieres continuar?",
+      "subtitle": "Tienes sesiones de POJU en curso. Este nuevo análisis puede unirse a una de ellas o empezar de cero.",
+      "existing_sessions": "Añadir a una sesión existente",
+      "join_this": "Unirse a esta conversación",
+      "free": "Gratis",
+      "or": "O",
+      "start_new": "Iniciar una nueva sesión de POJU",
+      "start_new_subtitle": "Si es un tema aparte, dale su propia sesión",
+      "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
+    },
+    "from_tool_entry": {
+      "continuing_from": "Continuando desde {tool}",
+      "context_label": "Continuando este análisis",
+      "joining": "Añadiendo el resultado de tu herramienta a esta sesión…"
+    }
+  },
+  "tool_preview": {
+    "guide": {
+      "glyph": "Escribe la decisión que más te pesa — envíala abajo antes de sacar.",
+      "match": "Describe la pregunta sobre la relación que quieres resolver o plantear — escríbela abajo y envía.",
+      "syncro": "¿Qué necesitas hacer y dónde? Escríbelo abajo y envía."
+    }
+  },
+  "wait_ritual": {
+    "bazi": {
+      "value": "Lo que está por llegar es un mapa de ruta conductual trazado a partir de una matriz espacio-temporal de 3,000 años y la psicología moderna. Se lee como un espejo: las palabras tienen eco. Léelo despacio, en un momento de quietud; cada relectura te mostrará un reflejo diferente de ti mismo.",
+      "subtitle": "Estructurando tu sesión de decisión… Razonamiento profundo en curso—espera un momento (unos 5 minutos).",
+      "subtitle_cached": "Cargando tu perfil guardado. Un momento mientras se asienta…",
+      "steps": {
+        "0": "Calibrando tu momento de nacimiento…",
+        "1": "Trazando tu estructura de personalidad…",
+        "2": "Analizando tu naturaleza esencial y estructura energética…",
+        "3": "Determinando tu patrón de personalidad y energía clave…",
+        "4": "Mapeando tus fases de vida y ciclo actual…"
+      },
+      "finish": "Tu lectura ha tomado forma."
+    },
+    "bridge": {
+      "glyph": "Tu retrato de personalidad y estructura energética están listos. Ahora, entrelazando ese retrato con tu Glyph…",
+      "match": "Tu retrato de personalidad está listo. Ahora, uniendo tu retrato con el suyo para mapear cómo se encuentran sus caminos…"
+    },
+    "glyph": {
+      "value": "Lo que está por llegar es un espejo, pulido por una tradición reflexiva de 3,000 años y la psicología moderna. No te entrega una respuesta; te muestra tu momento presente. Vale la pena una segunda mirada, más pausada.",
+      "subtitle": "Entrelazando tu retrato con tu Glyph. Toma alrededor de 3–5 minutos.",
+      "steps": {
+        "0": "Leyendo la estación en la que te encuentras ahora…",
+        "1": "Escuchando el Glyph con el que conectaste…",
+        "2": "Entrelazando el Glyph con tu retrato…",
+        "3": "Dejando que el reflejo tome forma…"
+      },
+      "finish": "El reflejo es claro."
+    },
+    "match": {
+      "value": "Lo que está por llegar es un mapa energético — trazado a partir de 3,000 años de sabiduría relacional y psicología moderna — que muestra cómo se encuentran realmente dos personas. Léelo despacio; la verdadera claridad surge en la segunda lectura.",
+      "subtitle": "Mapeando cómo se encuentran sus dos energías. Toma alrededor de 3–5 minutos.",
+      "steps": {
+        "0": "Leyendo la naturaleza esencial del primer retrato…",
+        "1": "Leyendo la naturaleza esencial del segundo retrato…",
+        "2": "Rastreando cómo interactúan sus energías entre el apoyo y la fricción…",
+        "3": "Mapeando dónde se sincronizan sus fases de vida…",
+        "4": "Dibujando la forma de su conexión…"
+      },
+      "finish": "Su mapa de conexión está trazado."
+    },
+    "syncro": {
+      "value": "Lo que está por llegar es un mapa de sincronía temporal, calibrado desde un marco oriental de 3,000 años y la ciencia moderna de la decisión. No es un calendario genérico, sino las ventanas de oportunidad que se mueven con tu propósito. Leerlo bien te invita a alinearte con el presente.",
+      "subtitle": "Alineando el tiempo y la dirección para tu propósito. Toma alrededor de 1–2 minutos.",
+      "steps": {
+        "0": "Proyectando tu propósito en el campo espacio-temporal…",
+        "1": "Escaneando las ventanas de oportunidad para las próximas horas…",
+        "2": "Alineando las direcciones con cada ventana…",
+        "3": "Trayendo tus ventanas más fuertes al centro de atención…"
+      },
+      "finish": "Tus ventanas de oportunidad están alineadas."
+    },
+    "progress": {
+      "chart_ready": "Calibrando su momento de nacimiento y coordenadas espaciotemporales...",
+      "v2_compute": "Deduciendo su estructura de energía natal...",
+      "v2_compute_wait": "Calculando la matriz energética central y las correlaciones de aspectos multidimensionales...",
+      "v2_narrative": "Construyendo la estructura narrativa del informe...",
+      "v2_evidence": "Deduciendo la cadena de evidencia y los fundamentos subyacentes...",
+      "v2_translate": "Realizando la construcción semántica profunda de la matriz de deducción de alta dimensión...",
+      "v2_semantic_text": "Transformando las deducciones de alta dimensión en texto de interpretación exclusivo...",
+      "v2_final_audit": "Realizando la validación cruzada y auditoría final de la deducción...",
+      "streaming": "Realizando la validación cruzada y auditoría final de la deducción...",
+      "repair": "Realizando la validación cruzada y auditoría final de la deducción..."
+    },
+    "artifacts": {
+      "compute_done": "Análisis de la estructura energética multidimensional completado",
+      "narrative_done": "Contenido principal del informe completado",
+      "evidence_done": "Lógica y evidencia de deducción anotadas",
+      "translate_done": "Construcción semántica profunda completada"
+    }
+  },
+  "reading_ritual": {
+    "teaser": {
+      "poju": "Lo que sigue no es un horóscopo — es un plano que merece detenerse a leer.",
+      "glyph": "Lo que sigue no es una respuesta rápida — es un espejo al que volver.",
+      "match": "Lo que sigue no es una puntuación — es un mapa de cómo dos personas se encuentran.",
+      "syncro": "Lo que sigue no es elegir un día de suerte — es un mapa del momento para tu tarea."
+    },
+    "value_frame": {
+      "poju": "POJU no ofrece predicciones rápidas. Lo que llega es un plano conductual tejido con una matriz espacio-temporal de tres mil años y psicología moderna. Se lee como un espejo con eco — merece tu calma en los próximos 30 días; cada vez que vuelvas, te verás un poco distinto.",
+      "glyph": "Esto no es un horóscopo veloz. Tu lectura Glyph es un espejo preciso, forjado en una tradición simbólica milenaria y la psicología actual. Sus líneas piden pausa — léelas una vez por la forma, otra por lo que señalan en ti.",
+      "match": "Esto no es una puntuación de compatibilidad. Es un mapa energético de cómo dos personas se encuentran de verdad — desde un marco de tres mil años y psicología relacional moderna. Léelo despacio, juntos o en solitario; la comprensión aterriza en la segunda pasada.",
+      "syncro": "Esto no es un calendario de días afortunados. Es un mapa fino de cómo el tiempo y la dirección se mueven con tu tarea — lee las ventanas y siente cuál encaja con tu momento."
+    },
+    "gate": {
+      "title": {
+        "poju": "Antes de abrir tu lectura",
+        "glyph": "Antes de abrir tu Glyph",
+        "match": "Antes de abrir tu informe de compatibilidad",
+        "syncro": "Antes de abrir tu mapa del momento"
+      },
+      "items": {
+        "0": "Estoy en un lugar tranquilo, con unos minutos para mí.",
+        "1": "Leo con mente abierta y curiosa.",
+        "2": "Entiendo que las palabras son un preludio — la comprensión surge al leer."
+      },
+      "select_all": "Seleccionar todo",
+      "cta": "Entrar al espacio de alineación →",
+      "cta_waiting": "Alineando tu lectura…",
+      "skip": "Continuar sin el ritual"
+    },
+    "decoder": {
+      "poju": "Es una lectura densa y en capas — un poco de fricción intelectual y emocional en la primera pasada es normal, y forma parte del valor. Durante 30 días, toca cualquier línea que quieras desplegar y POJU la traducirá a lenguaje claro y a tu vida real.",
+      "others": "Esta lectura premia una segunda mirada — sus capas se abren con el tiempo. ¿Quieres que te la desglosen línea a línea, en lenguaje llano y aplicada a tu vida? Sigue en el diálogo profundo de POJU.",
+      "poju_hint": "Toca cualquier párrafo de tu informe para pedir a Pivot que lo despliegue.",
+      "dismiss": "Cerrar",
+      "ack": "Entendido"
+    }
+  },
+  "base_analysis_view": {
+    "eyebrow": "Estructura de la sesión de decisión",
+    "title": "Estructura de la sesión de decisión",
+    "rail_description": "Una lectura multidimensional de tu estructura energética, con ajustes que puedes poner en práctica.",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "not_found": "No se encontró ningún análisis guardado.",
+    "closing": "Esta es tu lectura de configuración energética. Cómo la uses depende de ti.",
+    "poju_cta_title": "Lleva este informe a POJU",
+    "poju_cta_description": "Tu lectura energética ya está en contexto — haz preguntas de seguimiento.",
+    "poju_cta_button": "Abrir POJU",
+    "sections": {
+      "section_1": "Personalidad y\nRasgos Internos",
+      "section_2": "Trabajo y\nLógica de Decisión",
+      "section_3": "Comunicación y\nColaboración",
+      "section_4": "Estado y\nCiclos de Desarrollo",
+      "section_5": "Ajustes y\nConsejos Prácticos",
+      "section_6": "Resumen y\nPlan de Acción",
+      "tablist_label": "Secciones del informe",
+      "prev_page": "Anterior",
+      "next_page": "Siguiente",
+      "close_report": "Cerrar informe"
+    }
+  },
+  "birth_form": {
+    "birth_location": "Lugar de nacimiento",
+    "search_city": "Buscar ciudad…",
+    "tap_to_enter_city": "Toca para introducir tu ciudad de nacimiento",
+    "searching": "Buscando…",
+    "cancel": "Cancelar",
+    "why_we_ask": "Por qué lo pedimos",
+    "why_explanation": "El lugar de nacimiento ayuda a Eastern OS a estructurar esta sesión de decisión con tus coordenadas—no es una carta de adivinación.",
+    "true_solar_offset": "Ajuste por ubicación: {offset}",
+    "confirm_continue": "Continuar con este lugar",
+    "location_required": "Selecciona o confirma tu ciudad de nacimiento.",
+    "confirm_privacy_note": "Tus datos se cifran y se guardan solo en tu dispositivo. Eastern OS no puede acceder a ellos."
+  },
+  "analysis_loader": {
+    "connecting": "Conectando…",
+    "reading_chart": "Leyendo tu perfil",
+    "complete": "Lectura completa",
+    "warming_up": "Preparando…",
+    "keep_screen_on": "Mantén esta pantalla encendida mientras se prepara la lectura"
+  },
+  "tool_suggestion": {
+    "label": "Sugerencia",
+    "free_in_session": "Gratis en esta sesión",
+    "accepted_continue": "Abriendo la herramienta — puedes volver aquí cuando quieras.",
+    "declined_continue": "Continuando la conversación…",
+    "match": {
+      "title": "Leed juntos esta relación",
+      "accept": "Abrir Match",
+      "decline": "Omitir · Continuar",
+      "needs_info": "Necesitarás su fecha, hora y lugar de nacimiento"
+    },
+    "syncro": {
+      "title": "Encuentra el momento adecuado para esto",
+      "accept": "Abrir Syncro",
+      "decline": "Omitir · Continuar"
+    },
+    "glyph": {
+      "title": "Míralo a través de una imagen",
+      "accept": "Sacar un Glyph",
+      "decline": "Omitir · Continuar"
+    }
+  },
+  "contact": {
+    "meta": {
+      "title": "Contacto — Eastern OS",
+      "description": "¿Preguntas sobre Eastern OS, PASS o tu cuenta?"
+    }
+  },
+  "account": {
+    "credentialsTitle": "Tu cuenta",
+    "credentialsSubtitle": "Gestiona tu perfil, Passes, suscripción e historial de compras.",
+    "identityNode": "Perfil",
+    "passAllocation": "Passes comprados",
+    "unitsAvailable": "Disponible",
+    "passTotalLabel": "Total restante",
+    "passTotalHint": "Comprados + suscripción",
+    "acquirePass": "Obtener PASS",
+    "subsystemStatus": "Suscripción",
+    "coreQuota": "Cuota del periodo",
+    "memberSince": "Miembro desde",
+    "passPurchaseCountLabel": "Compras",
+    "passPurchaseCount": "{n}",
+    "passUsedCountLabel": "Usados",
+    "passUsedCount": "{n}",
+    "passLastPurchaseLabel": "Última compra",
+    "passLastPurchaseNone": "Ninguna aún",
+    "passCardHint": "Válido hasta usarlo · 1 PASS = un diálogo completo · reembolsable si no se usó, según política.",
+    "subCardHint": "Suscripción: **5 PASS / mes**. Orden de consumo: primero créditos de arrastre (carryover), luego de suscripción, luego PASS comprados.",
+    "operationalLedger": "Registros de uso",
+    "acquisitionLog": "Registros de compra",
+    "financialProtocols": "Facturación y pagos",
+    "externalBilling": "External Billing",
+    "externalBillingHint": "Update payment methods via secure proxy.",
+    "invoiceRegistry": "Invoice Registry",
+    "invoiceRegistryHint": "Download receipts and invoices.",
+    "terminalActions": "Acciones de la cuenta",
+    "accountErasure": "Eliminar cuenta",
+    "initiateErasure": "Eliminar cuenta",
+    "terminateSession": "Terminate Session",
+    "signOut": "Sign out",
+    "viewDetails": "View details",
+    "passDetailTitle": "PASS details",
+    "subDetailTitle": "Subscription details",
+    "flexUsageTitle": "Registros de uso",
+    "subUsageTitle": "Subscription usage",
+    "subHistoryTitle": "Subscription history",
+    "requestRefund": "Reembolsar PASS",
+    "refundTitle": "Reembolsar PASS",
+    "refundQtyLabel": "Cantidad a reembolsar",
+    "refundQtyHint": "Máx. = PASS comprados restantes",
+    "refundQtyMinus": "Decrease refund quantity",
+    "refundQtyPlus": "Increase refund quantity",
+    "refundConfirm": "Confirmar reembolso",
+    "refundWorking": "Processing refund…",
+    "refundSuccess": "Refund completed",
+    "refundSuccessHint": "Your purchased Pass balance has been updated.",
+    "refundDone": "Done",
+    "refundNone": "No purchased Passes available to refund.",
+    "refundError": "Could not complete refund. Try again.",
+    "refundNeedsPurchase": "Complete a Pass purchase once to unlock refunds in billing.",
+    "changePlan": "Change plan",
+    "changePlanHint": "Plan switches take effect on your next renewal — this period stays on your current plan.",
+    "currentPlan": "Current",
+    "currentPlanLocked": "Current plan",
+    "pendingPlanBadge": "Next cycle",
+    "planChangeConfirmTitle": "Switch plan now?",
+    "planChangeConfirmBody": "Pay to switch from {current} to {plan} immediately. Unused Passes from {current} stay as prior-plan remaining; next month follows {plan}.",
+    "planChangeConfirmCta": "Pay & switch now",
+    "planChangeScheduledTitle": "Change scheduled",
+    "planChangeScheduledBody": "You’ll move to {plan} on {date}. Until then you stay on {current}.",
+    "planChangePendingBanner": "Scheduled: {plan} starts {date}",
+    "planChangeCancelPending": "Cancel scheduled change",
+    "planChangeError": "Could not start the plan change. Try again.",
+    "cancelSubscription": "Cancel subscription",
+    "autoRenewLabel": "Auto-renew",
+    "autoRenewOnHint": "On — subscription continues and renews.",
+    "autoRenewOffHint": "Off — subscription canceled; access lasts until period end.",
+    "autoRenewUnavailable": "No active subscription to manage.",
+    "autoRenewError": "Could not update subscription. Try again.",
+    "colTimestamp": "Hora",
+    "colOperation": "Operación",
+    "colCost": "Usado",
+    "colStatus": "Status",
+    "colTxnId": "Transaction ID",
+    "colDate": "Date",
+    "colAmount": "Amount",
+    "usageCostPass": "-1 PASS",
+    "usageSuccess": "SUCCESS",
+    "passBalance": "Pass comprado",
+    "passBalanceHint": "Passes que compraste — válidos hasta usarse; sin usar, reembolsables según política. **1 PASS** = un diálogo de decisión completo.",
+    "passTotalRemaining": "Total restante (comprados + suscripción): {total}",
+    "buyMorePasses": "Comprar más Passes",
+    "subscription": "Passes de suscripción",
+    "subPassHint": "Cuota del periodo (restante/total). ~30 días; no reembolsable — cancela cuando quieras. Se gasta antes que los comprados.",
+    "subscribeCta": "Suscribirse",
+    "planLabel": "Plan Tier",
+    "statusLabel": "Status",
+    "renewsOn": "Renews on",
+    "planPersonal": "Suscripción",
+    "planTeam": "",
+    "planNone": "None",
+    "planFlex": "Comprar Pass",
+    "statusActive": "Active",
+    "statusCanceled": "Canceled",
+    "statusNone": "No subscription",
+    "manageSubscription": "Gestionar suscripción",
+    "openingPortal": "Opening…",
+    "portalError": "Could not open billing portal. Complete a subscription checkout first.",
+    "purchaseHistory": "Historial de compras",
+    "purchaseEmpty": "Aún no hay registros de compra.",
+    "usageHistory": "Historial de uso",
+    "usageEmpty": "Aún no hay uso de Pass.",
+    "productAtmos": "Atmos",
+    "productPivot": "Diálogo de decisión",
+    "productMatch": "Match",
+    "productSyncro": "Syncro",
+    "productGlyph": "Glyph",
+    "loading": "Cargando cuenta…",
+    "loadError": "No se pudo cargar la cuenta.",
+    "retry": "Reintentar",
+    "checkoutWorking": "Confirmando el pago y acreditando Passes…",
+    "checkoutCredited": "Pago confirmado — Passes acreditados.",
+    "checkoutAlreadyCredited": "Los Passes de este checkout ya estaban acreditados.",
+    "checkoutCreditFailed": "No se pudieron acreditar Passes. Reintenta desde Pricing.",
+    "checkoutMissingSession": "Falta la sesión de checkout.",
+    "identity": "Identidad",
+    "emailMissing": "Email requerido",
+    "signedInVia": "Acceso con",
+    "providerEmail": "Email",
+    "providerGoogle": "Google",
+    "providerFacebook": "Facebook",
+    "providerX": "X",
+    "providerDiscord": "Discord",
+    "providerUnknown": "Desconocido",
+    "billing": "Facturación y facturas",
+    "billingHint": "Consulta facturas, métodos de pago y suscripción en el portal de Stripe.",
+    "manageBilling": "Gestionar facturación y facturas",
+    "billingUnavailable": "Completa un pago una vez para abrir el portal de facturación.",
+    "preferences": "Preferencias de email",
+    "preferencesHint": "Guardado en tu cuenta. El envío aún no está conectado.",
+    "notifyPassLow": "Avisarme cuando el saldo de Pass sea bajo",
+    "notifyMarketing": "Actualizaciones ocasionales del producto (opcional)",
+    "prefsSaved": "Preferencias guardadas.",
+    "prefsError": "No se pudieron guardar las preferencias.",
+    "dangerZone": "Zona de peligro",
+    "deleteAccount": "Eliminar cuenta",
+    "deleteHint": "Elimina permanentemente tu cuenta y el libro de PASS en el servidor. No se puede deshacer.",
+    "deleteConfirm": "¿Eliminar esta cuenta para siempre?",
+    "deleteConfirmCta": "Sí, eliminar para siempre",
+    "deleteCancel": "Cancelar",
+    "deleting": "Eliminando…",
+    "deleteError": "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
+    "currentPlanQuota": "{plan} · current quota",
+    "priorPlan": "Prior plan",
+    "priorPlanRemaining": "{plan} remaining: {n} PASS",
+    "subscriptionAvailable": "Available {n} PASS ({current} current + {prior} prior)",
+    "refundPrimaryCta": "Reembolsar {amount}",
+    "refundConfirmTitle": "¿Confirmar reembolso?",
+    "refundConfirmBody": "Esto reembolsa PASS comprados sin usar al método de pago original. Si no te quedan PASS suficientes, no podrás usar Eastern OS hasta comprar o suscribirte de nuevo. Los plazos siguen al proveedor de pago.",
+    "refundConfirmCta": "Confirmar reembolso",
+    "refundCancel": "Cancelar",
+    "productDecisionDialogue": "Diálogo de decisión",
+    "usageSessionUntitled": "Sesión sin título"
+  },
+  "passPurchase": {
+    "close": "Cerrar",
+    "eyebrow": "Se requiere Pass",
+    "titleInsufficient": "Necesitas un Pass para continuar",
+    "titleChoose": "Obtener Passes",
+    "titleFlexOnly": "Comprar Passes",
+    "titleSwitchPlan": "Cambiar de plan",
+    "spendOrder": "Orden de consumo: arrastre → suscripción → Passes comprados.",
+    "flexLab": "Comprar Pass",
+    "flexTitle": "Comprar Pass",
+    "flexBadge": "Sin ataduras · paga al usar",
+    "flexUnit": "/ Pass",
+    "flexCta": "Comprar Pass",
+    "quantity": "Cantidad",
+    "qtyOne": "{n} Pass",
+    "qtyMany": "{n} Passes",
+    "qtyMinus": "Reducir cantidad",
+    "qtyPlus": "Aumentar cantidad",
+    "subLab": "Suscribirse",
+    "subUnit": "/ mes",
+    "personalTitle": "Suscripción",
+    "personalBadge": "La más popular · desde ≈ $12 / Pass (~40% off)",
+    "personalBonus": "Bono por tiempo limitado: +2 Passes (7 el primer mes — solo $4.27 / Pass)",
+    "personalCta": "Suscribirse",
+    "teamTitle": "Plan Familiar / Equipo",
+    "teamBadge": "15 Passes / mes · periodo ~30 días",
+    "teamBonus": "Bono por tiempo limitado: +5 Passes (20 el primer mes)",
+    "teamCta": "Suscribir Equipo (obtener 20 Passes)",
+    "u3_title": "Una opción con más valor",
+    "u3_body": "Elegiste {n} Passes (${total}). La suscripción es $59.99 / mes con 5 PASS cada mes—los nuevos suscriptores reciben +2 el primer mes.",
+    "u3_upgrade": "Pasar a Suscripción",
+    "u3_keep": "Seguir con {n} Passes (${total})",
+    "u6_title": "¿Compra a granel? Mejor suscribirse",
+    "u6_body": "Elegiste {n} Passes (${total}). Suscripción $59.99 / mes con 5 PASS—desde ≈ $12 / Pass.",
+    "u6_upgrade": "Ver Suscripción",
+    "u6_keep": "Seguir con {n} Passes (${total})",
+    "adjustQty": "Ajustar cantidad",
+    "working": "Procesando…",
+    "checkoutFailed": "No se pudo iniciar el pago. Inténtalo de nuevo.",
+    "titleUpgradeOrBuy": "Buy Passes or upgrade to Team (20)",
+    "titleDowngradeOrBuy": "Buy Passes or switch to Personal (7)",
+    "upgradeHint": "Upgrade keeps your unused Personal Passes and adds the new Team grant immediately.",
+    "upgradeLab": "Upgrade",
+    "downgradeLab": "Switch plan",
+    "teamUpgradeCta": "Upgrade to Team (Get 20 Passes)",
+    "teamUpgradeBonus": "Immediate: +20 Passes now. Unused Personal Passes stay as prior remaining. Next month: 15 Passes.",
+    "personalSwitchCta": "Switch to Personal (Get 7 Passes)",
+    "personalSwitchBonus": "Immediate: +7 Passes now. Unused Team Passes stay as prior remaining. Next month: 5 Passes.",
+    "alreadyOnPlan": "Ya estás en este plan.",
+    "flexCtaTotalOne": "Comprar Pass · ${total}",
+    "flexCtaTotalMany": "Comprar {n} Passes · ${total}",
+    "dialogLabel": "Comprar Pass o suscribirse",
+    "dialogLabelInsufficient": "Se requiere Pass — comprar o suscribirse",
+    "flexCtaLabel": "Comprar Pass",
+    "flexCtaLabelMany": "Comprar Passes",
+    "flexFeatures": [
+      "1 Pass = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días proporcionados juntos.",
+      "Una sola vez. Sin renovación automática.",
+      "Úsalo cuando quieras—válido hasta usarlo.",
+      "Reembolso con un clic en cualquier momento"
+    ],
+    "allocation": "Asignación",
+    "personalPassCount": "5 PASS fijos / mes",
+    "personalBonusFeature": "Nuevos suscriptores—solo el primer mes: +2 de bonificación (≈ $8.57 / Pass ese mes).",
+    "personalFeatures": [
+      "1 Pass = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días proporcionados juntos.",
+      "Asignación fija de 5 PASS al mes.",
+      "Se refresca cada mes de facturación.",
+      "Orden de consumo: primero créditos de arrastre (carryover), luego de suscripción, luego PASS comprados.",
+      "Cancela cuando quieras—en un clic."
+    ],
+    "legalLinkTerms": "Términos",
+    "legalLinkRefund": "Reembolsos",
+    "legalLinkPrivacy": "Privacidad",
+    "legalLinkCookies": "Cookies"
+  },
+  "workspace": {
+    "tabs": {
+      "atmos": "Atmos",
+      "poju": "Pivot",
+      "match": "Match",
+      "syncro": "Syncro",
+      "glyph": "Glyph",
+      "archive": "Archivo",
+      "profile": "Perfil",
+      "legal": "Legal"
+    },
+    "blurb": {
+      "atmos": "",
+      "poju": "Marco de decisión estratégica",
+      "match": "Dinámica dual y alineación",
+      "syncro": "Ventana óptima de 24 h",
+      "glyph": "Matriz de patrones estructurales"
+    },
+    "passActive": "Pase: activo",
+    "passLabel": "Pase",
+    "passStatus": "Activo",
+    "menuOpen": "Abrir menú",
+    "menuTitle": "Menú del espacio de trabajo",
+    "menuClose": "Cerrar menú",
+    "legalTitle": "Legal y políticas",
+    "legalClose": "Cerrar",
+    "profileSlot": "Espacio de perfil",
+    "slotA": "Espacio A · Principal",
+    "slotB": "Espacio B · Secundario",
+    "guest": "Invitado",
+    "emailPlaceholder": "email@coming.soon",
+    "accountComingSoon": "Cuenta — próximamente",
+    "dilemmaLabel": "Contexto o dilema",
+    "dilemmaHint": "Las notas permanecen en este lienzo por ahora. Empezar abre el flujo existente de {product}.",
+    "atmos": {
+      "headline": "Siente el campo alrededor de este momento.",
+      "guidance": "Introduce tu carta natal y lee el clima energético que viene.",
+      "badge": "Próximamente",
+      "title": "Atmos",
+      "body": "Una lectura serena del clima energético a tu alrededor.",
+      "hero": {
+        "brandTag": "ATMOS",
+        "heading": "",
+        "description": "Cálculo local a nivel de día. Un pronóstico sereno del campo a tu alrededor — hoy y los próximos treinta días.",
+        "ctaPrimary": "Empezar Atmos",
+        "billingNotice": "$9.99 · pronóstico de hoy · pago único"
+      },
+      "forecastTitle": "Calendario de decisión y estado · 30 días",
+      "forecastSub": "",
+      "viewToday": "Ver el pronóstico de hoy",
+      "generating": "Escribiendo…",
+      "expandReading": "Abrir",
+      "comingCell": "Pronto",
+      "pendingLabel": "Pendiente",
+      "startParse": "Empezar",
+      "retry": "Reintentar",
+      "readingTitle": "Lectura del campo · {date}",
+      "weekdays": {
+        "sun": "Domingo",
+        "mon": "Lunes",
+        "tue": "Martes",
+        "wed": "Miércoles",
+        "thu": "Jueves",
+        "fri": "Viernes",
+        "sat": "Sábado"
+      }
+    },
+    "atmosRail": {
+      "matrixTitle": "Perfil base"
+    },
+    "poju": {
+      "headline": "Consulta estratégica profunda para encrucijadas vitales.",
+      "guidance": "Elige un perfil y describe tu dilema central abajo.",
+      "placeholder": "¿Qué punto muerto enfrentas? Sé concreto sobre la bifurcación…"
+    },
+    "match": {
+      "headline": "Dos cartas. Un campo de relación.",
+      "guidance": "Elige un espacio de perfil y empieza para seleccionar a ambas personas en el flujo Match.",
+      "placeholder": "Nota opcional sobre la pregunta de relación…"
+    },
+    "syncro": {
+      "headline": "Alinea tu espacio con este instante exacto.",
+      "guidance": "Elige un perfil y empieza Syncro para escanear dirección y timing.",
+      "placeholder": "Nota opcional sobre el espacio o la tarea a alinear…"
+    },
+    "glyph": {
+      "headline": "Una pregunta sincera. Una señal antigua.",
+      "guidance": "Elige un perfil y empieza Glyph para obtener tu lectura.",
+      "placeholder": "Nota opcional sobre la pregunta que traes al sorteo…"
+    },
+    "archive": {
+      "headline": "Tus lecturas pasadas, en este dispositivo.",
+      "guidance": "Abre el Archivo para ver informes y sesiones ya generados.",
+      "body": "El Archivo usa la bóveda existente — no se suben datos al servidor.",
+      "cta": "Abrir Archivo"
+    },
+    "profile": {
+      "headline": "Perfiles y cuenta.",
+      "guidance": "Gestiona cartas natales y tu cuenta iniciada aquí.",
+      "accountSection": "Cuenta",
+      "accountBody": "Inicia sesión para comprar Pases y sincronizar entre dispositivos.",
+      "slotsSection": "Espacios de carta",
+      "setupCta": "Crear o editar un perfil",
+      "loginCta": "Iniciar sesión",
+      "signupCta": "Registrarse",
+      "logout": "Cerrar sesión",
+      "loggingOut": "Cerrando sesión…",
+      "signedInAs": "Sesión iniciada como {email}",
+      "changePassword": "Cambiar contraseña",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "updatePassword": "Actualizar contraseña",
+      "updatingPassword": "Actualizando…",
+      "passwordUpdated": "Contraseña actualizada."
+    },
+    "language": {
+      "siteLabel": "Idioma",
+      "label": "Idioma"
+    },
+    "usageGuide": "Guía de uso",
+    "pojuRail": {
+      "matrixTitle": "Perfil base",
+      "baComputing": "Calculando tu base energética…",
+      "baWriting": "Escribiendo tu informe base…",
+      "baFinishing": "Finalizando tu informe base…",
+      "retryBa": "Reintentar",
+      "dismissError": "Descartar",
+      "collapsedRailLabel": "Archivo de documentos",
+      "matrixIconLabel": "Perfil base",
+      "reportIconLabel": "Informe de entrega",
+      "reportGeneratingIconLabel": "Generando informe de entrega"
+    },
+    "docVault": {
+      "title": "Entregas históricas",
+      "label": "Entregas históricas",
+      "collapsed_label": "Categorías de entrega",
+      "loading": "Cargando entregas…",
+      "empty": "Las entregas que generes aparecerán aquí.",
+      "section_empty": "Ninguna aún",
+      "section_foundation": "Base",
+      "section_pivot": "Pivot",
+      "section_atmos": "Atmos",
+      "section_match": "Match",
+      "section_syncro": "Syncro",
+      "section_glyph": "Glyph",
+      "type_baseline": "Retrato base personal",
+      "type_delivery": "Informe de decisión",
+      "type_reminders": "Recordatorios 30 días",
+      "open_baseline": "Abrir retrato base personal",
+      "created": "Creado",
+      "section_reminders": "Recordatorios 30 días",
+      "reminders_need_profile": "Abre este paquete tras el sello de entrega — se necesita la estructura del perfil."
+    },
+    "deliveryBook": {
+      "title": "Informe de decisión energética",
+      "description": "Un libro para tu decisión — portada, índice y un capítulo por página.",
+      "icon_label": "Libro de entrega",
+      "toolbar_label": "Acciones del libro",
+      "toc_label": "Contenido",
+      "cover_eyebrow": "Pivot · Informe de decisión energética",
+      "turn_hint": "Pasa la página para empezar →",
+      "pager_label": "Pasar página",
+      "page_of": "{current} / {total}",
+      "download": "Descargar texto",
+      "pdf_preview": "Vista PDF",
+      "read_mode": "Pasar página",
+      "pdf_preview_hint": "Diseño deep-space: un argumento + evidencia por página; glosario al final. Usa Imprimir / PDF para exportar.",
+      "print_pdf": "Imprimir / PDF",
+      "email": "Correo",
+      "email_hint": "Solo usamos esta dirección para enviar este informe. No se crea cuenta.",
+      "email_placeholder": "tu@ejemplo.com",
+      "email_send": "Enviar",
+      "email_sending": "Enviando…",
+      "email_sent": "Enviado. Revisa tu bandeja.",
+      "email_failed": "No se pudo enviar. Inténtalo más tarde.",
+      "email_invalid": "Introduce un correo válido.",
+      "prev_page": "Anterior",
+      "next_page": "Siguiente",
+      "close": "Cerrar libro",
+      "empty_page": "Esta página no tiene contenido.",
+      "writing_next_section": "Escribiendo la siguiente sección — espera un momento…"
+    },
+    "deliveryShelf": {
+      "shelf_label": "Páginas del informe",
+      "slots_hint": "{n} ranuras de página",
+      "long_wait_lead": "Entrega personalizada en curso: docenas de cálculos a partir de tu perfil base…",
+      "long_wait_leave": "El informe completo tarda unos 20-30 minutos.\nPuedes quedarte a ver el avance página a página, o salir y volver más tarde a los resultados finales.",
+      "writing_page": "Escribiendo la página {n}… espera",
+      "toc_thumb": "Contenido",
+      "open_page": "Abrir {title}",
+      "download_pdf": "Descargar PDF",
+      "email_report": "Enviarme este informe por correo",
+      "interrupted_body": "Generación en pausa. Las páginas listas se conservan — continúa cuando quieras.",
+      "interrupted_network_body": "Se interrumpió la conexión. Cuando se restablezca, toca Continuar desde donde lo dejaste — las páginas ya generadas se conservan.",
+      "interrupted_continue": "Continuar",
+      "interrupted_continuing": "Continuando…",
+      "network_issue_body": "Hay un problema de red. La generación puede seguir en segundo plano — al restaurar la conexión verás el progreso aquí.",
+      "writing_next_page": "Escribiendo la página {n}… espera",
+      "next_page": "Siguiente",
+      "prev_page": "Anterior",
+      "subject_label": "Identidad del sujeto",
+      "toc_nav_label": "Tabla de contenidos",
+      "privacy_label": "Seguridad de datos: ",
+      "privacy_body": "Este informe se procesa mediante tecnología de encriptación local. Eastern OS protege estrictamente su privacidad y nunca carga ni almacena sus conversaciones privadas o datos personales.",
+      "disclaimer_label": "Descargo de responsabilidad: ",
+      "disclaimer_body": "Este informe es una herramienta de coaching cognitivo y desarrollo personal que combina el pensamiento sistémico tradicional oriental con la ciencia del comportamiento moderna. Todo el contenido es solo para la autoconciencia y la toma de decisiones. No contiene adivinación ni predicciones deterministas, ni constituye asesoramiento médico, legal o de inversión.",
+      "privacy_line": "🔒 Seguridad de datos: Este informe se procesa mediante tecnología de encriptación local. Eastern OS protege estrictamente su privacidad y nunca carga ni almacena sus conversaciones privadas o datos personales.",
+      "disclaimer_line": "⚖️ Descargo de responsabilidad: Este informe es una herramienta de coaching cognitivo y desarrollo personal que combina el pensamiento sistémico tradicional oriental con la ciencia del comportamiento moderna. Todo el contenido es solo para la autoconciencia y la toma de decisiones. No contiene adivinación ni predicciones deterministas, ni constituye asesoramiento médico, legal o de inversión.",
+      "chrome_download": "Descargar",
+      "chrome_email": "Correo",
+      "tip_download": "Descargar al dispositivo",
+      "tip_email": "Enviar a mi correo",
+      "tip_prev": "Página anterior",
+      "tip_next": "Página siguiente",
+      "tip_listen": "Escuchar",
+      "tip_stop": "Detener",
+      "tip_speed": "Velocidad",
+      "tip_regen_audio": "Regenerar narración y reemplazar la caché local",
+      "email_no_account": "Inicia sesión primero con tu correo registrado",
+      "audio_label": "Narración de audio",
+      "audio_play": "Reproducir",
+      "audio_pause": "Detener",
+      "audio_seek": "Progreso",
+      "audio_speed": "Velocidad",
+      "audio_regen": "Rehacer",
+      "audio_generating": "Preparando narración…",
+      "audio_caching": "Guardando narración en el dispositivo…",
+      "audio_failed": "No se pudo preparar la narración. Pulsa play para reintentar.",
+      "audio_too_long": "Este informe es demasiado largo para narrarlo de una vez.",
+      "audio_unavailable": "La narración no está disponible temporalmente.",
+      "audio_pack_failed": "No se pudo preparar el audio del paquete. Reintenta."
+    },
+    "density": {
+      "newSession": "Nuevo diálogo",
+      "newProduct": "Nuevo {name}",
+      "newConfirmTitle": "¿Empezar de nuevo?",
+      "newConfirmBody": "¿Volver a la pantalla inicial de esta herramienta? Saldrás de la vista actual.",
+      "newConfirmOk": "Empezar de nuevo",
+      "newConfirmCancel": "Cancelar",
+      "pastSessions": "Diálogos anteriores ({count})",
+      "pastRecords": "Registros anteriores ({count})",
+      "collapseSidebar": "Cerrar barra lateral",
+      "expandSidebar": "Abrir barra lateral",
+      "collapseRightSidebar": "Cerrar panel derecho",
+      "expandRightSidebar": "Abrir panel derecho",
+      "rightDrawerIdle": "Elige un motor para ver estado del campo, metodología y registros recientes aquí.",
+      "historyMenu": "Acciones del registro",
+      "rename": "Renombrar",
+      "delete": "Eliminar",
+      "renamePrompt": "Renombrar este registro",
+      "deleteConfirm": "Por la arquitectura de privacidad local de Eastern OS, al confirmar la eliminación este registro se borrará de forma permanente y no se podrá recuperar.",
+      "backToNew": "Volver al nuevo diálogo",
+      "contextLabel": "Panel de contexto",
+      "statusEyebrow": "Estado del sistema",
+      "statusTitle": "Instantánea del campo",
+      "activeProfile": "Perfil activo",
+      "slotAShort": "Espacio A · Principal",
+      "solarTerm": "Término solar",
+      "solarTermValue": "Esperando Atmos",
+      "matrix": "Matriz espaciotemporal",
+      "matrixValue": "Reloj del dispositivo",
+      "methodEyebrow": "Metodología",
+      "historyEyebrow": "Historial rápido",
+      "historyTitle": "Reciente de este motor",
+      "historyEmpty": "Aún no hay informes guardados para esta herramienta.",
+      "historyEmptyShort": "Sin historial aún",
+      "historyLoading": "Cargando…",
+      "sessionOpening": "Abriendo diálogo…",
+      "viewReport": "Ver informe",
+      "openFullVault": "Abrir bóveda completa del Archivo →",
+      "untitled": "Informe sin título",
+      "privacyBadge": "Almacenamiento local · Sin nube en bruto",
+      "presetsLabel": "Presets de prompt",
+      "addSlot": "+ $9.99 Añadir espacio",
+      "addSlotSoon": "Espacios adicionales próximamente",
+      "presets": {
+        "career": {
+          "label": "Transición profesional",
+          "prompt": "Estoy en una encrucijada profesional y necesito una lectura estratégica clara sobre el momento, el apalancamiento y el camino más seguro."
+        },
+        "relationship": {
+          "label": "Encrucijada relacional",
+          "prompt": "Necesito claridad sobre un punto muerto en una relación: qué patrón estoy viviendo y qué movimiento recupera agencia sin abandono de sí."
+        },
+        "timing": {
+          "label": "Momento estratégico",
+          "prompt": "Ayúdame a leer la ventana de tiempo para una decisión de alto riesgo: qué empujar ahora, qué retener y qué señal vigilar."
+        }
+      },
+      "methodology": {
+        "poju": {
+          "title": "Por qué Pivot",
+          "body": "POJU acompaña una sola encrucijada vital con lógica de carta en capas y diálogo estructurado — no consejos genéricos. Convierte un punto muerto en una secuencia de decisión accionable hoy."
+        },
+        "match": {
+          "title": "Por qué Match",
+          "body": "Match superpone dos cartas como un solo campo relacional. Superficie fricción, complementariedad y timing para ver el vínculo como sistema — no como relato de culpa."
+        },
+        "syncro": {
+          "title": "Por qué Syncro",
+          "body": "Syncro une tu carta al lugar y a la hora. Muestra qué direcciones llevan energía workable ahora, para que el espacio sea instrumento táctico en vez de adivinanza."
+        },
+        "glyph": {
+          "title": "Por qué Glyph",
+          "body": "Glyph responde a una pregunta sincera con un signo arquetípico de un conjunto cerrado. Comprime la complejidad en una imagen resonante que puedes llevar al día."
+        }
+      }
+    },
+    "rail": {
+      "navLabel": "Workbench",
+      "searchSessions": "Buscar diálogos",
+      "searchPlaceholder": "Buscar diálogos…",
+      "pastSessionsShort": "Diálogos anteriores",
+      "today": "Today",
+      "earlier": "Earlier",
+      "settings": "Settings"
+    },
+    "passRow": {
+      "balance": "PASS · {n}",
+      "buy": "Comprar",
+      "buyShort": "+",
+      "loginHint": "Log in to see PASS",
+      "balanceAria": "Saldo PASS: {n}",
+      "buyAria": "Comprar PASS",
+      "buyTitle": "Comprar PASS"
+    },
+    "progress": {
+      "chat": "Chat",
+      "report": "Report",
+      "day30": "30-day",
+      "hide": "Hide progress"
+    },
+    "sessionOpen": {
+      "kicker": "Eastern OS",
+      "h1": "A veces leer no alcanza.",
+      "body": "Ya leíste los libros, hablaste con amigos y llenaste cada lista de pros y contras. El dilema sigue sin soltarte.",
+      "leadIn": "Empieza un diálogo multiturno de decisión para esta decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
+      "formSectionTitle": "Abre el diálogo de decisión",
+      "formPrompt": "Ingresa o selecciona tu información básica",
+      "formHelp": "Empieza un diálogo multiturno de decisión para **esta** decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
+      "cta": "Continuar"
+    },
+    "sessionStage": {
+      "aria": "Progreso de la sesión",
+      "stage1": "Nombra la decisión atascada",
+      "stage2": "Razonamiento profundo + primer corte",
+      "stage3": "Recoger los detalles",
+      "stage4": "Entregar el informe",
+      "stage5": "Recordatorios de 30 días proporcionados juntos"
+    }
+  },
+  "birthList": {
+    "totalUses": "Usos totales",
+    "decisionDialogues": "Diálogos de decisión",
+    "noSessionYet": "Aún no hay sesión",
+    "untitledSession": "Sesión sin título",
+    "created": "Creado {date}",
+    "recentRecord": "Registro reciente",
+    "stageProgress": "Progreso de etapa"
+  },
+  "portrait": {
+    "title": "Perfil base",
+    "close": "Cerrar",
+    "openFromVault": "Abrir perfil base",
+    "subtitle": "Estructura de caso para esta sesión"
+  }
+}

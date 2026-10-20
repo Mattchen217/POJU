@@ -874,7 +874,10 @@ export function buildDeliveryInteractiveHtml(
       .trim();
 
   const reportId =
-    (opts?.reportId || "").trim().replace(/^POJU-/i, "PIVOT-") || "PIVOT-LOCAL";
+    (opts?.reportId || "")
+      .trim()
+      .replace(/^POJU-/i, "EOS-")
+      .replace(/^PIVOT-/i, "EOS-") || "EOS-LOCAL";
   const reportDate = (opts?.reportDate || new Date().toISOString().slice(0, 10)).trim();
   const profileLine = (opts?.profileLine || "").trim();
 

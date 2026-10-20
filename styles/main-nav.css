@@ -117,6 +117,16 @@
   background: rgba(10, 8, 20, 0.72);
 }
 
+/* Legal chrome — same frosted capsule as V2 landing #v2-topnav */
+.main-nav-wrapper--legal .glass-nav {
+  background: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+}
+
 @media (max-width: 768px) {
   .main-nav {
     max-width: 100%;

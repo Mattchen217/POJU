@@ -1,0 +1,12 @@
+﻿=== en ===
+L5: Subscription credits use first.
+subCardHint: Subscription: **5 PASS / month**. Subscription credits use before purchased Passes.
+=== zh ===
+L5: 璁㈤槄棰濆害浼樺厛娑堣€?
+subCardHint: 璁㈤槄锛?*姣忔湀 5 PASS**銆傝闃呴搴︿紭鍏堜簬宸茶喘 Pass 娑堣€椼€?
+=== es ===
+L5: Los cr茅ditos de suscripci贸n se usan primero.
+subCardHint: Suscripci贸n: **5 PASS / mes**. Los cr茅ditos de suscripci贸n se usan antes que los comprados.
+=== fr ===
+L5: Les cr茅dits d鈥檃bonnement sont utilis茅s en premier.
+subCardHint: Abonnement : **5 PASS / mois**. Les cr茅dits d鈥檃bonnement avant les Passes achet茅s.

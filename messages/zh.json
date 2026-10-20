@@ -194,7 +194,7 @@
       "icon_label": "决策报告",
       "toolbar_label": "书籍操作",
       "toc_label": "目录",
-      "cover_eyebrow": "Pivot · 能量决策报告",
+      "cover_eyebrow": "Eastern OS · 决策报告",
       "turn_hint": "翻到下一页开始阅读 →",
       "pager_label": "翻页",
       "page_of": "{current} / {total}",
@@ -356,7 +356,7 @@
       "settings": "设置"
     },
     "passRow": {
-      "balance": "PASS·{n}",
+      "balance": "PASS · {n}",
       "buy": "购买",
       "buyShort": "+",
       "loginHint": "登录后查看 PASS",
@@ -2747,6 +2747,15 @@
         "step_1": "点击右上角菜单（3 个点）",
         "step_2": "选择「添加到主屏幕」",
         "step_3": "点击「安装」确认"
+      },
+      "mac": {
+        "title": "将 Eastern OS 添加到 Mac 程序坞",
+        "subtitle": "这是 Mac Safari 的菜单操作，不是 iPhone 底部的「分享」流程。",
+        "step1": "看向<strong>屏幕最顶端的 macOS 菜单栏</strong>（不是本站导航栏）。点选 <strong>文件 → 添加到程序坞</strong>（英文：File → Add to Dock）。",
+        "step2": "或点击 Safari <strong>工具栏</strong>上的<strong>分享</strong>按钮（方框带 ↑），再选 <strong>添加到程序坞</strong>。",
+        "step3": "可修改名称，然后点 <strong>添加</strong>。之后从程序坞打开 Eastern OS。",
+        "hint": "需要 macOS Sonoma 14 或更高版本。更旧的系统没有「添加到程序坞」。那时请改用 Chrome / Edge，从地址栏安装。",
+        "later": "稍后"
       },
       "chrome_required": {
         "title": "请使用 Chrome 安装",

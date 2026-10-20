@@ -29,7 +29,7 @@ const NAV_ITEMS: { href: string; key: SiteNavActive }[] = [
   { href: "/archive", key: "archive" },
 ];
 
-/** Existing legal routes only 鈥?center pill on legal pages (English-only). */
+/** Legal center pill labels stay English; chrome footer uses locale `nav.*`. */
 const LEGAL_NAV_ITEMS: { href: string; key: LegalNavActive; label: string }[] = [
   { href: "/disclaimer", key: "disclaimer", label: "Disclaimer" },
   { href: "/privacy", key: "privacy", label: "Privacy" },
@@ -55,7 +55,11 @@ function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
 
   return (
     <nav
-      className={cn("marketing-header main-nav-wrapper", homeHero && "main-nav-wrapper--home-hero")}
+      className={cn(
+        "marketing-header main-nav-wrapper",
+        homeHero && "main-nav-wrapper--home-hero",
+        legal && "main-nav-wrapper--legal",
+      )}
       aria-label={tNav("mobileSheetTitle")}
     >
       <div className="glass-nav pj-nav main-nav">
@@ -106,11 +110,9 @@ function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
               menu
             </span>
           </button>
-          {!legal ? (
-            <div className="hidden md:block">
-              <MarketingLanguageSwitcher />
-            </div>
-          ) : null}
+          <div className="hidden md:block">
+            <MarketingLanguageSwitcher />
+          </div>
         </div>
       </div>
 

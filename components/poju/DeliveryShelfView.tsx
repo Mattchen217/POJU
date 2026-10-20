@@ -11,7 +11,6 @@ import { useAuthUser } from "@/lib/auth/use-auth-user";
 import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
 import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
-import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 import "@/styles/delivery-shelf.css";
 import "@/styles/delivery-phase4-ritual.css";
@@ -125,7 +124,7 @@ export function DeliveryShelfView({
     return buildDeliveryInteractiveHtml(fullText, locale, {
       title: coverTitle,
       originalQuestion,
-      reportId: `PIVOT-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+      reportId: `EOS-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
       reportDate: new Date().toISOString().slice(0, 10),
       audioBase64: audio.base64,
       audioMime: audio.mime,
@@ -139,7 +138,7 @@ export function DeliveryShelfView({
       try {
         const html = await buildInteractiveHtml();
         downloadBlob(
-          `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
+          `eastern-os-decision-report-${new Date().toISOString().slice(0, 10)}.html`,
           html,
           "text/html;charset=utf-8",
         );
@@ -164,7 +163,6 @@ export function DeliveryShelfView({
     setEmailMsg(null);
     try {
       const html = await buildInteractiveHtml();
-      const plain = toCompliantPlainText(fullText, locale);
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -173,7 +171,7 @@ export function DeliveryShelfView({
           to,
           locale,
           title: coverTitle,
-          body_text: plain.slice(0, 80_000),
+          pack: "delivery",
           html_attachment: html.slice(0, 10_000_000),
         }),
       });

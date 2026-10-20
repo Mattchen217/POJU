@@ -1,0 +1,38 @@
+﻿---
+<ul class="v2-price-list" data-pricing-features="card1"></ul>
+---
+ text-base font-bold text-white font-mono tracking-tight"><span data-pricing-c="card2.price"></span><span data-pricing-c="card2.unit"></span></span>
+---
+<h3 class="text-base font-bold text-white" data-pricing-c="card2.title"></h3>
+---
+<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card2.badge"></p>
+---
+<span class="v2-price-meta__value" data-pricing-c="card2.passCount"></span>
+---
+<ul class="v2-price-list" data-pricing-features="card2"></ul>
+---
+<span class="v2-price-cta__title" data-pricing-c="card2.ctaTitle"></span>
+---
+<span class="v2-price-cta__price" data-pricing-c="card2.price"></span>
+---
+    "card2": {
+---
+        "璁㈤槄棰濆害浼樺厛娑堣€?,
+---
+    "card2": {
+---
+        "Subscription credits use first.",
+---
+    "card2": {
+---
+        "<strong>Orden de consumo:</strong> primero cr茅ditos de <strong>arrastre (carryover)</strong>, luego de <strong>suscripci贸n</strong>, luego PASS 
+---
+    "card2": {
+---
+        "<strong>Ordre de consommation :</strong> d鈥檃bord le <strong>report (carryover)</strong>, puis l鈥?strong>abonnement</strong>, puis les PASS <strong>achet茅s</strong>.",
+---
+              document.querySelectorAll('[data-pricing-features]').forEach((ul) => {
+---
+                const card = ul.getAttribute('data-pricing-features');
+---
+                const featured = card === 'card2';

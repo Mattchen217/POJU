@@ -12,7 +12,8 @@
 | Role | Service | Notes |
 |------|---------|-------|
 | Auth / JWT | Supabase Auth | Email OTP, `shouldCreateUser: true` |
-| OTP email | Resend via Supabase Custom SMTP | Host `smtp.resend.com`, port 465/587 |
+| OTP email | Resend via Supabase Custom SMTP | Host `smtp.resend.com`, port 465/587; From `verify@mail.easternos.com` |
+| App transactional | Resend API (`RESEND_API_KEY`) | Decision reports `reports@` · Companion `notify@` — see `docs/email-resend-from-addresses.md` |
 | Payments | Stripe Checkout | Flex = one-time; Personal/Team = subscription |
 
 ## Env
@@ -22,7 +23,15 @@ See `.env.example`:
 - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`
 - `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_SITE_URL`
-- `RESEND_*` (app email + SMTP credentials in Supabase dashboard)
+- `RESEND_API_KEY` + `RESEND_FROM_VERIFY` / `RESEND_FROM_REPORTS` / `RESEND_FROM_NOTIFY`
+
+### Supabase Dashboard (required for live OTP)
+
+1. Auth → Providers → Email → **Confirm email** on.
+2. Auth → SMTP → Custom SMTP → Resend (`smtp.resend.com`, user `resend`, password = API key).
+3. Sender: `Eastern OS Validation` / `verify@mail.easternos.com`.
+
+Do **not** build a parallel Next.js OTP store; signup/resend/verify stay on Supabase Auth.
 
 ## API
 

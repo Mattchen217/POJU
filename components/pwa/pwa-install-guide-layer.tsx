@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IosSafariInstallContent } from "@/components/pwa/ios-safari-install-content";
+import { MacSafariInstallContent } from "@/components/pwa/mac-safari-install-content";
 
 export type PwaInstallGuideKind =
   | "ios"
@@ -97,16 +98,8 @@ export function PwaInstallGuideLayer({ kind, onClose, androidApkUrl }: PwaInstal
       ) : null}
 
       {kind === "mac" ? (
-        <BottomSheet onClose={onClose}>
-          <h2 className="text-center text-lg font-semibold text-[#f4f0fa]">添加到程序坞</h2>
-          <p className="mt-2 text-center text-sm leading-relaxed text-[#cbc3d7]">
-            在 Safari 顶部菜单栏点选
-            <strong className="text-[#e9ddff]"> 文件 </strong>
-            （File）→
-            <strong className="text-[#e9ddff]"> 添加到程序坞 </strong>
-            （Add to Dock），即可像 App 一样固定本站。
-          </p>
-          <p className="mt-3 text-center text-xs text-white/45">若菜单为英文：File → Add to Dock</p>
+        <BottomSheet onClose={onClose} hideDefaultClose>
+          <MacSafariInstallContent onLater={onClose} />
         </BottomSheet>
       ) : null}
 

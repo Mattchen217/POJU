@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { PojuLogo } from "@/components/ui/poju-logo";
 
-/** Chrome legal row: short locale labels; always EN legal page bodies (default-locale routes). */
+/** Chrome legal row: short locale labels via `nav.*` (same keys as landing footer). */
 const LEGAL_LINKS = [
   { href: "/terms", key: "terms" as const },
   { href: "/refund", key: "refund" as const },
@@ -27,7 +27,7 @@ export function SiteFooter() {
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-text-secondary">
           {LEGAL_LINKS.map(({ href, key }) => (
-            <Link key={key} href={href} locale="en" className="hover:text-text-primary">
+            <Link key={key} href={href} className="hover:text-text-primary">
               {tNav(key)}
             </Link>
           ))}

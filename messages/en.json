@@ -194,7 +194,7 @@
       "icon_label": "Decision report",
       "toolbar_label": "Book actions",
       "toc_label": "Contents",
-      "cover_eyebrow": "Pivot · Energy decision report",
+      "cover_eyebrow": "Eastern OS · Decision report",
       "turn_hint": "Turn the page to begin →",
       "pager_label": "Page turn",
       "page_of": "{current} / {total}",
@@ -356,7 +356,7 @@
       "settings": "Settings"
     },
     "passRow": {
-      "balance": "PASS·{n}",
+      "balance": "PASS · {n}",
       "buy": "Buy",
       "buyShort": "+",
       "loginHint": "Log in to see PASS",
@@ -2747,6 +2747,15 @@
         "step_1": "Tap menu (3 dots) at top right",
         "step_2": "Select Add to Home Screen",
         "step_3": "Tap Install to confirm"
+      },
+      "mac": {
+        "title": "Add Eastern OS to your Mac Dock",
+        "subtitle": "This is a macOS Safari menu action — not the Share sheet at the bottom of an iPhone.",
+        "step1": "Look at the <strong>macOS menu bar at the very top of your screen</strong> (not this website’s header). Choose <strong>File → Add to Dock</strong>.",
+        "step2": "Or click the <strong>Share</strong> button in Safari’s toolbar (square with ↑), then choose <strong>Add to Dock</strong>.",
+        "step3": "Name the app if you like, then click <strong>Add</strong>. Open Eastern OS from the Dock afterward.",
+        "hint": "Requires macOS Sonoma 14 or later. Older macOS versions do not show Add to Dock. On those systems, use Chrome or Edge and install from the address bar.",
+        "later": "Later"
       },
       "chrome_required": {
         "title": "Use Chrome to install",

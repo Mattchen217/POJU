@@ -5,6 +5,8 @@
  */
 
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
+import { getResendFromNotify } from "@/lib/email/from-addresses";
+import { sendEmail, toBase64Utf8 } from "@/lib/email/resend-client";
 
 import { gateCompanionBatch } from "./batch-gate";
 import { generateCompanionDayPair, nextPendingDayIndexes } from "./batch-generate";
@@ -18,10 +20,6 @@ import {
   type CompanionJob,
 } from "./types";
 
-function toBase64Utf8(s: string): string {
-  return Buffer.from(s, "utf8").toString("base64");
-}
-
 async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolean> {
   const day = job.days[dayIndex];
   if (!day?.cards || !job.email?.trim()) return false;
@@ -33,6 +31,7 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
     dayIndex,
     cards: day.cards,
   });
+  const dayNum = String(dayIndex + 1).padStart(2, "0");
   const title = labels.title(day.date_key, dayIndex + 1);
   const body_text = [
     day.cards.today_is,
@@ -47,38 +46,22 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
     day.cards.suggestion,
   ].join("\n");
 
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    console.info("[companion] email mocked", job.email, day.date_key);
-    return true;
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL?.trim() || "noreply@easternos.com";
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [job.email],
-      subject: title,
-      html: `<p>${labels.emailIntro}</p>`,
-      text: body_text,
-      attachments: [
-        {
-          filename: `companion-${day.date_key}.html`,
-          content: toBase64Utf8(html_attachment),
-        },
-      ],
-    }),
+  const result = await sendEmail({
+    from: getResendFromNotify(),
+    to: job.email,
+    subject: title,
+    html: `<p>${labels.emailIntro}</p>`,
+    text: body_text,
+    attachments: [
+      {
+        filename: `eastern-os-reminder-day-${dayNum}-${day.date_key}.html`,
+        content: toBase64Utf8(html_attachment),
+      },
+    ],
+    logTag: "companion",
   });
-  if (!response.ok) {
-    console.error("[companion] resend", await response.text());
-    return false;
-  }
-  return true;
+
+  return result.ok;
 }
 
 /** Wipe one day's cards after browser push + optional email. */

@@ -1,3 +1,8 @@
+/**
+ * @deprecated Legacy POJU-era subjects for `/api/email/send` only.
+ * Do not use for Auth OTP, decision reports, or Companion reminders.
+ * Product mail uses `lib/email/resend-client` + role From addresses.
+ */
 export type EmailTemplateKey =
   | "poju_session_started"
   | "poju_action_plan"
@@ -16,6 +21,7 @@ type Template = {
   text: string;
 };
 
+/** @deprecated See file header — not product SoT. */
 export const EMAIL_TEMPLATES: Record<EmailTemplateKey, Template> = {
   poju_session_started: { subject: "POJU session started", text: "Your POJU session is now active for 30 days." },
   poju_action_plan: { subject: "Your POJU action plan", text: "Your Phase 4 action plan is ready." },

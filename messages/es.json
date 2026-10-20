@@ -2173,6 +2173,15 @@
         "step_2": "Select Add to Home Screen",
         "step_3": "Tap Install to confirm"
       },
+      "mac": {
+        "title": "Añadir Eastern OS al Dock del Mac",
+        "subtitle": "Es una acción del menú de Safari en macOS, no el panel Compartir de la parte inferior del iPhone.",
+        "step1": "Mira la <strong>barra de menús de macOS en la parte superior de la pantalla</strong> (no la cabecera de este sitio). Elige <strong>Archivo → Añadir al Dock</strong> (File → Add to Dock).",
+        "step2": "O pulsa el botón <strong>Compartir</strong> de la barra de Safari (cuadrado con ↑) y elige <strong>Añadir al Dock</strong>.",
+        "step3": "Pon un nombre si quieres y pulsa <strong>Añadir</strong>. Luego ábrelo desde el Dock.",
+        "hint": "Requiere macOS Sonoma 14 o posterior. En versiones anteriores no aparece Añadir al Dock; usa Chrome o Edge e instala desde la barra de direcciones.",
+        "later": "Más tarde"
+      },
       "chrome_required": {
         "title": "Usa Chrome para instalar",
         "subtitle_huawei": "{browser} no admite la instalación completa de la app de Eastern OS. Abre esta página en Chrome para instalarla.",
@@ -2663,7 +2672,7 @@
       "Reembolso con un clic en cualquier momento"
     ],
     "allocation": "Asignación",
-    "personalPassCount": "Asignación fija de 5 PASS / mes",
+    "personalPassCount": "5 PASS fijos / mes",
     "personalBonusFeature": "Nuevos suscriptores—solo el primer mes: +2 de bonificación (≈ $8.57 / Pass ese mes).",
     "personalFeatures": [
       "1 Pass = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días proporcionados juntos.",
@@ -2836,7 +2845,7 @@
       "icon_label": "Libro de entrega",
       "toolbar_label": "Acciones del libro",
       "toc_label": "Contenido",
-      "cover_eyebrow": "Pivot · Informe de decisión energética",
+      "cover_eyebrow": "Eastern OS · Informe de decisión",
       "turn_hint": "Pasa la página para empezar →",
       "pager_label": "Pasar página",
       "page_of": "{current} / {total}",
@@ -2995,7 +3004,7 @@
       "settings": "Settings"
     },
     "passRow": {
-      "balance": "PASS·{n}",
+      "balance": "PASS · {n}",
       "buy": "Comprar",
       "buyShort": "+",
       "loginHint": "Log in to see PASS",

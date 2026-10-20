@@ -1,0 +1,245 @@
+﻿============================================================ messages/en.json
+diff --git a/messages/en.json b/messages/en.json
+index 721c7144..43e9675e 100644
+--- a/messages/en.json
++++ b/messages/en.json
+@@ -356,7 +356,7 @@
+       "settings": "Settings"
+     },
+     "passRow": {
+-      "balance": "PASS路{n}",
++      "balance": "PASS 路 {n}",
+       "buy": "Buy",
+       "buyShort": "+",
+       "loginHint": "Log in to see PASS",
+@@ -2821,7 +2821,7 @@
+     "passLastPurchaseLabel": "Last purchase",
+     "passLastPurchaseNone": "None yet",
+     "passCardHint": "Valid until used 路 1 PASS = one full dialogue run 路 unused Passes refundable per policy.",
+-    "subCardHint": "Subscription: **5 PASS / month**. Subscription credits use before purchased Passes.",
++    "subCardHint": "Subscription: **5 PASS / month**. Spend order: any carryover first, then subscription credits, then purchased PASS.",
+     "operationalLedger": "Usage records",
+     "acquisitionLog": "Purchase records",
+     "financialProtocols": "Billing & payments",
+@@ -3022,7 +3022,7 @@
+       "1 Pass = one full run: dialogue 鈫?main path + backup + report 鈫?30-day same-line reminders provided together.",
+       "Fixed 5 PASS monthly allowance.",
+       "Refreshes each billing month.",
+-      "Subscription credits use first.",
++      "Spend order: any carryover first, then subscription credits, then purchased PASS.",
+       "Cancel anytime鈥攐ne click."
+     ],
+     "legalLinkTerms": "Terms",
+
+============================================================ messages/zh.json
+diff --git a/messages/zh.json b/messages/zh.json
+index 99664018..1104a0e9 100644
+--- a/messages/zh.json
++++ b/messages/zh.json
+@@ -356,7 +356,7 @@
+       "settings": "璁剧疆"
+     },
+     "passRow": {
+-      "balance": "PASS路{n}",
++      "balance": "PASS 路 {n}",
+       "buy": "璐拱",
+       "buyShort": "+",
+       "loginHint": "鐧诲綍鍚庢煡鐪?PASS",
+@@ -2821,7 +2821,7 @@
+     "passLastPurchaseLabel": "鏈€杩戣喘涔?,
+     "passLastPurchaseNone": "鏆傛棤",
+     "passCardHint": "鐢ㄥ畬鍓嶆湁鏁?路 1 PASS = 涓€娆″畬鏁村喅绛栧璇?路 鏈娇鐢ㄥ彲鎸夋斂绛栭€€娆俱€?,
+-    "subCardHint": "璁㈤槄锛?*姣忔湀 5 PASS**銆傝闃呴搴︿紭鍏堜簬宸茶喘 Pass 娑堣€椼€?,
++    "subCardHint": "璁㈤槄锛?*姣忔湀 5 PASS**銆傛秷鑰楅『搴忥細鍏堢敤缁撹浆棰濆害锛屽啀璁㈤槄棰濆害锛屾渶鍚庡凡璐拱 PASS銆?,
+     "operationalLedger": "浣跨敤璁板綍",
+     "acquisitionLog": "PASS 璐叆璁板綍",
+     "financialProtocols": "璐﹀崟涓庢敮浠?,
+@@ -3022,7 +3022,7 @@
+       "1 Pass = 涓€娆″畬鏁达細瀵硅瘽 鈫?涓昏矾寰?+ 澶囬€?+ 鎶ュ憡 鈫?30 澶╁悓绾挎彁閱掑悓姝ユ彁渚?,
+       "姣忔湀鍥哄畾 5 PASS 棰濆害銆?,
+       "鎸夎璐规湀鍒锋柊",
+-      "璁㈤槄棰濆害浼樺厛娑堣€?,
++      "娑堣€楅『搴忥細鍏堢敤缁撹浆棰濆害锛屽啀璁㈤槄棰濆害锛屾渶鍚庡凡璐拱 PASS銆?,
+       "鏀寔涓€閿彇娑堣闃?
+     ],
+     "legalLinkTerms": "鏉℃",
+
+============================================================ messages/es.json
+diff --git a/messages/es.json b/messages/es.json
+index feb5f998..472fadd0 100644
+--- a/messages/es.json
++++ b/messages/es.json
+@@ -2464,7 +2464,7 @@
+     "passLastPurchaseLabel": "脷ltima compra",
+     "passLastPurchaseNone": "Ninguna a煤n",
+     "passCardHint": "V谩lido hasta usarlo 路 1 PASS = un di谩logo completo 路 reembolsable si no se us贸, seg煤n pol铆tica.",
+-    "subCardHint": "Suscripci贸n: **5 PASS / mes**. Los cr茅ditos de suscripci贸n se usan antes que los comprados.",
++    "subCardHint": "Suscripci贸n: **5 PASS / mes**. Orden de consumo: primero cr茅ditos de arrastre (carryover), luego de suscripci贸n, luego PASS comprados.",
+     "operationalLedger": "Registros de uso",
+     "acquisitionLog": "Registros de compra",
+     "financialProtocols": "Facturaci贸n y pagos",
+@@ -2663,13 +2663,13 @@
+       "Reembolso con un clic en cualquier momento"
+     ],
+     "allocation": "Asignaci贸n",
+-    "personalPassCount": "Asignaci贸n fija de 5 PASS / mes",
++    "personalPassCount": "5 PASS fijos / mes",
+     "personalBonusFeature": "Nuevos suscriptores鈥攕olo el primer mes: +2 de bonificaci贸n (鈮?$8.57 / Pass ese mes).",
+     "personalFeatures": [
+       "1 Pass = una corrida completa: di谩logo 鈫?ruta principal + respaldo + informe 鈫?recordatorios de 30 d铆as proporcionados juntos.",
+       "Asignaci贸n fija de 5 PASS al mes.",
+       "Se refresca cada mes de facturaci贸n.",
+-      "Los cr茅ditos de suscripci贸n se usan primero.",
++      "Orden de consumo: primero cr茅ditos de arrastre (carryover), luego de suscripci贸n, luego PASS comprados.",
+       "Cancela cuando quieras鈥攅n un clic."
+     ],
+     "legalLinkTerms": "T茅rminos",
+@@ -2995,7 +2995,7 @@
+       "settings": "Settings"
+     },
+     "passRow": {
+-      "balance": "PASS路{n}",
++      "balance": "PASS 路 {n}",
+       "buy": "Comprar",
+       "buyShort": "+",
+       "loginHint": "Log in to see PASS",
+
+============================================================ messages/fr.json
+diff --git a/messages/fr.json b/messages/fr.json
+index 6c810344..af88c757 100644
+--- a/messages/fr.json
++++ b/messages/fr.json
+@@ -2464,7 +2464,7 @@
+     "passLastPurchaseLabel": "Dernier achat",
+     "passLastPurchaseNone": "Aucun encore",
+     "passCardHint": "Valable jusqu鈥櫭?utilisation 路 1 PASS = un dialogue complet 路 remboursable si non utilis茅, selon la politique.",
+-    "subCardHint": "Abonnement : **5 PASS / mois**. Les cr茅dits d鈥檃bonnement avant les Passes achet茅s.",
++    "subCardHint": "Abonnement : **5 PASS / mois**. Ordre de consommation : d鈥檃bord le report (carryover), puis l鈥檃bonnement, puis les PASS achet茅s.",
+     "operationalLedger": "Historique d鈥檜sage",
+     "acquisitionLog": "Historique d'achats",
+     "financialProtocols": "Facturation et paiements",
+@@ -2663,13 +2663,13 @@
+       "Remboursement en un clic 脿 tout moment"
+     ],
+     "allocation": "Allocation",
+-    "personalPassCount": "Allocation fixe de 5 PASS / mois",
++    "personalPassCount": "5 PASS fixes / mois",
+     "personalBonusFeature": "Nouveaux abonn茅s鈥攑remier mois seulement : +2 bonus (鈮?$8,57 / Pass ce mois-l脿).",
+     "personalFeatures": [
+       "1 Pass = une session compl猫te : dialogue 鈫?voie principale + secours + rapport 鈫?rappels 30 jours fournis ensemble.",
+       "Allocation fixe de 5 PASS par mois.",
+       "Se renouvelle chaque mois de facturation.",
+-      "Les cr茅dits d鈥檃bonnement sont utilis茅s en premier.",
++      "Ordre de consommation : d鈥檃bord le report (carryover), puis l鈥檃bonnement, puis les PASS achet茅s.",
+       "Annule 脿 tout moment鈥攅n un clic."
+     ],
+     "legalLinkTerms": "Conditions",
+@@ -2995,7 +2995,7 @@
+       "settings": "Settings"
+     },
+     "passRow": {
+-      "balance": "PASS路{n}",
++      "balance": "PASS 路 {n}",
+       "buy": "Acheter",
+       "buyShort": "+",
+       "loginHint": "Log in to see PASS",
+
+============================================================ public/v2-landing.html
+diff --git a/public/v2-landing.html b/public/v2-landing.html
+index 7427170a..3219efad 100644
+--- a/public/v2-landing.html
++++ b/public/v2-landing.html
+@@ -1084,13 +1084,15 @@
+             flex-shrink: 0;
+         }
+         .v2-price-meta__value {
++            flex: 1 1 auto;
++            min-width: 0;
+             font-size: 1.15rem;
+             font-weight: 700;
+-            line-height: 1.2;
++            line-height: 1.25;
+             color: #f2ca50;
+             text-align: right;
+-            white-space: nowrap;
+-            flex-shrink: 0;
++            white-space: normal;
++            overflow-wrap: anywhere;
+         }
+         .v2-price-qty {
+             display: inline-flex;
+@@ -4352,7 +4354,7 @@ const BUILT_COPY = {
+         "姣忔湀鍥哄畾 5 PASS 棰濆害銆?,
+         "鏂扮敤鎴烽鏈堥€?2 PASS锛堣鏈堝崟 Pass 浣庤嚦 鈮?$8.57锛?,
+         "鎸夎璐规湀鍒锋柊",
+-        "璁㈤槄棰濆害浼樺厛娑堣€?,
++        "娑堣€楅『搴忥細鍏堢敤缁撹浆棰濆害锛屽啀璁㈤槄棰濆害锛屾渶鍚庡凡璐拱 PASS銆?,
+         "鏀寔涓€閿彇娑堣闃?
+       ],
+       "cta": "璁㈤槄鍖?$59.99"
+@@ -4411,7 +4413,7 @@ const BUILT_COPY = {
+         "Fixed 5 PASS monthly allowance.",
+         "New subscribers鈥攆irst month only: +2 bonus (鈮?$8.57 / Pass that month).",
+         "Refreshes each billing month.",
+-        "Subscription credits use first.",
++        "Spend order: any carryover first, then subscription credits, then purchased PASS.",
+         "Cancel anytime鈥攐ne click."
+       ],
+       "cta": "Subscribe $59.99"
+@@ -4465,13 +4467,13 @@ const BUILT_COPY = {
+       "ctaTitle": "Suscribirse",
+       "price": "$59.99",
+       "unit": "/ mes",
+-      "passCount": "Asignaci贸n fija de 5 PASS / mes",
++      "passCount": "5 PASS fijos / mes",
+       "features": [
+         "<strong>1 Pass</strong> = una corrida completa: di谩logo 鈫?ruta principal + respaldo + informe 鈫?recordatorios de 30 d铆as <strong>proporcionados juntos</strong>.",
+         "Asignaci贸n fija de 5 PASS al mes.",
+         "<strong>Nuevos suscriptores鈥攕olo el primer mes:</strong> +2 de bonificaci贸n (desde 鈮?$8.57 / Pass ese mes).",
+         "Se refresca cada mes de facturaci贸n.",
+-        "<strong>Orden de consumo:</strong> primero cr茅ditos de <strong>arrastre (carryover)</strong>, luego de <strong>suscripci贸n</strong>, luego PASS <strong>comprados</strong>.",
++        "Orden de consumo: primero cr茅ditos de arrastre (carryover), luego de suscripci贸n, luego PASS comprados.",
+         "<strong>Cancela cuando quieras</strong>鈥攅n un clic."
+       ],
+       "cta": "Suscribirse $59.99"
+@@ -4524,13 +4526,13 @@ const BUILT_COPY = {
+       "ctaTitle": "S鈥檃bonner",
+       "price": "$59.99",
+       "unit": "/ mois",
+-      "passCount": "Allocation fixe de 5 PASS / mois",
++      "passCount": "5 PASS fixes / mois",
+       "features": [
+         "<strong>1 Pass</strong> = une session compl猫te : dialogue 鈫?voie principale + secours + rapport 鈫?rappels 30 jours <strong>fournis ensemble</strong>.",
+         "Allocation fixe de 5 PASS par mois.",
+         "<strong>Nouveaux abonn茅s鈥攑remier mois seulement :</strong> +2 bonus (d猫s 鈮?$8,57 / Pass ce mois-l脿).",
+         "Se renouvelle chaque mois de facturation.",
+-        "<strong>Ordre de consommation :</strong> d鈥檃bord le <strong>report (carryover)</strong>, puis l鈥?strong>abonnement</strong>, puis les PASS <strong>achet茅s</strong>.",
++        "Ordre de consommation : d鈥檃bord le report (carryover), puis l鈥檃bonnement, puis les PASS achet茅s.",
+         "<strong>Annule 脿 tout moment</strong>鈥攅n un clic."
+       ],
+       "cta": "S鈥檃bonner $59.99"
+@@ -4674,11 +4676,23 @@ const BUILT_COPY = {
+                 fr: { disclaimer: "Avertissement", contact: "Contact" },
+               };
+               const extra = extras[locale] || extras.en;
++              const loc = locale || currentLocale;
++              const withLocale = (path) => {
++                const p = String(path || "").replace(/^\/(zh|es|fr)(?=\/|$)/, "") || "/";
++                const normalized = p.startsWith("/") ? p : "/" + p;
++                return loc === "en" ? normalized : "/" + loc + normalized;
++              };
+               document.querySelectorAll("[data-footer-legal]").forEach((el) => {
+                 const key = el.getAttribute("data-footer-legal");
+                 if (!key) return;
+                 if (legal[key]) el.textContent = legal[key];
+                 else if (extra[key]) el.textContent = extra[key];
++                if (el.tagName === "A") el.setAttribute("href", withLocale("/" + key));
++              });
++              document.querySelectorAll("[data-pricing-legal]").forEach((el) => {
++                const key = el.getAttribute("data-pricing-legal");
++                if (!key || el.tagName !== "A") return;
++                el.setAttribute("href", withLocale("/" + key));
+               });
+             }
+ 
+

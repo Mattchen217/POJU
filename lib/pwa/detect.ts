@@ -36,13 +36,21 @@ export function isWindows(): boolean {
   return p === "Windows";
 }
 
-/** iPadOS 13+ may report as MacIntel with touch */
+/**
+ * iPadOS 13+ “Request Desktop Website” spoofs Macintosh + touch.
+ * Real Macs must NOT match — Safari on Mac often exposes touch APIs / maxTouchPoints,
+ * which previously routed Mac users to the iPhone “Share at bottom” install guide.
+ */
 function isIosLikeDevice(ua: string): boolean {
   if (/iPad|iPhone|iPod/i.test(ua)) return true;
-  if (typeof navigator !== "undefined" && navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
-    return true;
+  if (typeof navigator === "undefined" || typeof window === "undefined") return false;
+  if (navigator.platform !== "MacIntel" || navigator.maxTouchPoints <= 1) return false;
+  // iPad has coarse pointer / no hover; Mac trackpads report fine pointer + hover.
+  try {
+    return window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches;
+  } catch {
+    return false;
   }
-  return false;
 }
 
 export function getPwaInstallPersona(): PwaInstallPersona {
@@ -81,8 +89,5 @@ export function getPwaInstallPersona(): PwaInstallPersona {
 export function isMobileUserAgent(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
-  return (
-    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || isIosLikeDevice(ua);
 }

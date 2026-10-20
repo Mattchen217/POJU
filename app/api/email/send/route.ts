@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
+
+import { getResendFromNotify } from "@/lib/email/from-addresses";
+import { sendEmail } from "@/lib/email/resend-client";
 import { EMAIL_TEMPLATES, type EmailTemplateKey } from "@/lib/email/templates";
+
+/**
+ * @deprecated Internal / legacy template sender. Do not use for product Auth,
+ * decision-report, or Companion mail — those use dedicated From addresses.
+ * Templates still contain old POJU subjects; keep off user-facing paths.
+ */
 
 type SendEmailRequest = {
   to: string;
@@ -22,30 +31,23 @@ export async function POST(req: Request) {
   const picked = EMAIL_TEMPLATES[template];
   const html = `<div style="font-family:Arial,sans-serif"><h2>${picked.subject}</h2><p>${render(picked.text, body.variables)}</p></div>`;
 
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    return NextResponse.json({ ok: true, mocked: true, to, template });
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL?.trim() || "noreply@easternos.com";
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject: picked.subject,
-      html,
-    }),
+  const result = await sendEmail({
+    from: getResendFromNotify(),
+    to,
+    subject: picked.subject,
+    html,
+    logTag: "email-send-legacy",
   });
 
-  if (!response.ok) {
-    const err = await response.text();
-    return NextResponse.json({ error: "resend_failed", detail: err }, { status: 502 });
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: "resend_failed", detail: result.detail },
+      { status: 502 },
+    );
   }
-  const data = await response.json();
-  return NextResponse.json({ ok: true, mocked: false, id: data.id ?? null });
+  return NextResponse.json({
+    ok: true,
+    mocked: result.mocked === true,
+    id: result.mocked ? null : result.id,
+  });
 }

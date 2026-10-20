@@ -1084,13 +1084,15 @@
             flex-shrink: 0;
         }
         .v2-price-meta__value {
+            flex: 1 1 auto;
+            min-width: 0;
             font-size: 1.15rem;
             font-weight: 700;
-            line-height: 1.2;
+            line-height: 1.25;
             color: #f2ca50;
             text-align: right;
-            white-space: nowrap;
-            flex-shrink: 0;
+            white-space: normal;
+            overflow-wrap: anywhere;
         }
         .v2-price-qty {
             display: inline-flex;
@@ -3012,12 +3014,13 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                     'Tap Add to confirm.',
                   ],
                   iosHint: 'iOS only allows this from Safari — not Chrome or in-app browsers.',
-                  macTitle: 'Run Eastern OS like an app on Mac',
+                  macTitle: 'Add Eastern OS to your Mac Dock',
                   macSteps: [
-                    'Safari: File → Add to Dock.',
-                    'Chrome / Edge: click the Install icon in the address bar (↓), then Install.',
+                    'Use the macOS menu bar at the very top of the screen (not this site’s header): File → Add to Dock.',
+                    'Or click Share in Safari’s toolbar (square with ↑) → Add to Dock.',
+                    'Name it if you like, click Add, then open Eastern OS from the Dock.',
                   ],
-                  macHint: 'After installing, open Eastern OS from Dock — no browser chrome.',
+                  macHint: 'Requires macOS Sonoma 14+. Older Macs: use Chrome/Edge and install from the address bar. This is not the iPhone bottom Share sheet.',
                   winNeedBrowser: 'Please open this page in Chrome or Edge to install Eastern OS to your desktop in one tap.',
                   winTitle: 'Install Eastern OS on Windows',
                   winSteps: [
@@ -3056,12 +3059,13 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                     '点击「添加」确认。',
                   ],
                   iosHint: 'iOS 仅支持在 Safari 中完成安装，不支持 Chrome 或内置浏览器。',
-                  macTitle: '在 Mac 上像软件一样运行 Eastern OS',
+                  macTitle: '将 Eastern OS 添加到 Mac 程序坞',
                   macSteps: [
-                    'Safari：顶部菜单栏 → 文件 → 添加到 Dock。',
-                    'Chrome / Edge：点击地址栏右侧的安装图标（↓），再点安装。',
+                    '看向屏幕最顶端的 macOS 菜单栏（不是本站导航栏）：文件 → 添加到程序坞（File → Add to Dock）。',
+                    '或点 Safari 工具栏上的分享按钮（方框带 ↑）→ 添加到程序坞。',
+                    '可改名称后点「添加」，再从程序坞打开 Eastern OS。',
                   ],
-                  macHint: '安装后从 Dock 打开，即可获得接近原生 App 的体验。',
+                  macHint: '需要 macOS Sonoma 14+。更旧系统没有该菜单；请改用 Chrome/Edge 从地址栏安装。这不是 iPhone 底部的分享流程。',
                   winNeedBrowser: '请使用 Chrome 或 Edge 打开本页，即可一键安装到桌面。',
                   winTitle: '在 Windows 上安装 Eastern OS',
                   winSteps: [
@@ -3100,12 +3104,13 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                     'Toca Añadir para confirmar.',
                   ],
                   iosHint: 'En iOS solo Safari puede completar la instalación.',
-                  macTitle: 'Ejecuta Eastern OS como una app en Mac',
+                  macTitle: 'Añadir Eastern OS al Dock del Mac',
                   macSteps: [
-                    'Safari: Archivo → Añadir al Dock.',
-                    'Chrome / Edge: icono Instalar en la barra de direcciones (↓).',
+                    'Barra de menús de macOS arriba del todo (no la cabecera del sitio): Archivo → Añadir al Dock.',
+                    'O Compartir en la barra de Safari (cuadrado con ↑) → Añadir al Dock.',
+                    'Pon un nombre, pulsa Añadir y ábrelo desde el Dock.',
                   ],
-                  macHint: 'Después, ábrelo desde el Dock sin la interfaz del navegador.',
+                  macHint: 'Requiere macOS Sonoma 14+. En Macs antiguos usa Chrome/Edge. No es el panel Compartir del iPhone.',
                   winNeedBrowser: 'Abre esta página en Chrome o Edge para instalar Eastern OS en el escritorio.',
                   winTitle: 'Instalar Eastern OS en Windows',
                   winSteps: [
@@ -3144,12 +3149,13 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                     'Touchez Ajouter pour confirmer.',
                   ],
                   iosHint: 'Sous iOS, l’installation n’est possible que via Safari.',
-                  macTitle: 'Utilisez Eastern OS comme une app sur Mac',
+                  macTitle: 'Ajouter Eastern OS au Dock du Mac',
                   macSteps: [
-                    'Safari : Fichier → Ajouter au Dock.',
-                    'Chrome / Edge : icône Installer dans la barre d’adresse (↓).',
+                    'Barre de menus macOS tout en haut de l’écran (pas l’en-tête du site) : Fichier → Ajouter au Dock.',
+                    'Ou Partager dans la barre Safari (carré avec ↑) → Ajouter au Dock.',
+                    'Nommez, cliquez sur Ajouter, puis ouvrez depuis le Dock.',
                   ],
-                  macHint: 'Ouvrez ensuite depuis le Dock, sans barre du navigateur.',
+                  macHint: 'Nécessite macOS Sonoma 14+. Sur Mac plus ancien, utilisez Chrome/Edge. Ce n’est pas la feuille Partager de l’iPhone.',
                   winNeedBrowser: 'Ouvrez cette page dans Chrome ou Edge pour installer en un clic.',
                   winTitle: 'Installer Eastern OS sur Windows',
                   winSteps: [
@@ -4014,9 +4020,20 @@ const BUILT_COPY = {
 
             function detectOS() {
               const ua = (window.navigator.userAgent || '').toLowerCase();
-              if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-              if (/macintosh|mac os x/.test(ua) && !('ontouchend' in document)) return 'mac';
-              if (/macintosh|mac os x/.test(ua) && 'ontouchend' in document) return 'ios';
+              if (/iphone|ipod/.test(ua)) return 'ios';
+              if (/ipad/.test(ua)) return 'ios';
+              // iPadOS desktop spoof only — do NOT treat Mac Safari as iOS just because
+              // WebKit exposes ontouchend (that broke Mac install tips → iPhone Share steps).
+              if (/macintosh|mac os x/.test(ua)) {
+                var touchPoints = window.navigator.maxTouchPoints || 0;
+                var coarse = false;
+                try {
+                  coarse = window.matchMedia('(pointer: coarse)').matches
+                    || window.matchMedia('(hover: none)').matches;
+                } catch (_) { /* ignore */ }
+                if (touchPoints > 1 && coarse) return 'ios';
+                return 'mac';
+              }
               if (/android/.test(ua)) return 'android';
               if (/windows/.test(ua)) return 'windows';
               return 'other';
@@ -4182,7 +4199,10 @@ const BUILT_COPY = {
                 return;
               }
               if (os === 'mac') {
-                openInstallModal('mac');
+                var uaMac = window.navigator.userAgent || '';
+                var macSafari =
+                  /Safari/i.test(uaMac) && !/Chrome|Chromium|Edg|OPR|Brave/i.test(uaMac);
+                openInstallModal(macSafari ? 'mac' : 'windows');
                 return;
               }
               openInstallModal('windows');
@@ -4465,7 +4485,7 @@ const BUILT_COPY = {
       "ctaTitle": "Suscribirse",
       "price": "$59.99",
       "unit": "/ mes",
-      "passCount": "Asignación fija de 5 PASS / mes",
+      "passCount": "5 PASS fijos / mes",
       "features": [
         "<strong>1 Pass</strong> = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días <strong>proporcionados juntos</strong>.",
         "Asignación fija de 5 PASS al mes.",
@@ -4524,7 +4544,7 @@ const BUILT_COPY = {
       "ctaTitle": "S’abonner",
       "price": "$59.99",
       "unit": "/ mois",
-      "passCount": "Allocation fixe de 5 PASS / mois",
+      "passCount": "5 PASS fixes / mois",
       "features": [
         "<strong>1 Pass</strong> = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours <strong>fournis ensemble</strong>.",
         "Allocation fixe de 5 PASS par mois.",
@@ -4674,11 +4694,23 @@ const BUILT_COPY = {
                 fr: { disclaimer: "Avertissement", contact: "Contact" },
               };
               const extra = extras[locale] || extras.en;
+              const loc = locale || currentLocale;
+              const withLocale = (path) => {
+                const p = String(path || "").replace(/^\/(zh|es|fr)(?=\/|$)/, "") || "/";
+                const normalized = p.startsWith("/") ? p : "/" + p;
+                return loc === "en" ? normalized : "/" + loc + normalized;
+              };
               document.querySelectorAll("[data-footer-legal]").forEach((el) => {
                 const key = el.getAttribute("data-footer-legal");
                 if (!key) return;
                 if (legal[key]) el.textContent = legal[key];
                 else if (extra[key]) el.textContent = extra[key];
+                if (el.tagName === "A") el.setAttribute("href", withLocale("/" + key));
+              });
+              document.querySelectorAll("[data-pricing-legal]").forEach((el) => {
+                const key = el.getAttribute("data-pricing-legal");
+                if (!key || el.tagName !== "A") return;
+                el.setAttribute("href", withLocale("/" + key));
               });
             }
 

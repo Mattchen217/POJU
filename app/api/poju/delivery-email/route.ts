@@ -1,35 +1,33 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { getResendFromReports } from "@/lib/email/from-addresses";
+import { sendEmail, toBase64Utf8 } from "@/lib/email/resend-client";
+import {
+  getBaselinePackMailCopy,
+  getDecisionReportMailCopy,
+} from "@/lib/email/report-mail-copy";
+
 /**
- * User-initiated delivery-book email.
- * Body / HTML attachment provided by the client (from local session).
- * Resend retention should be short; we do not store the address server-side beyond the send.
+ * User-initiated decision-report / baseline email.
+ * Body = short fixed copy; substance = interactive HTML attachment only.
  */
 
 const BodySchema = z.object({
   to: z.string().email().max(320),
   title: z.string().min(1).max(500),
-  body_text: z.string().min(1).max(100_000),
+  /** @deprecated Ignored for delivery packs — report lives in the attachment. */
+  body_text: z.string().max(100_000).optional(),
   locale: z.string().max(16).optional(),
-  /** Interactive offline HTML (TOC + details); ~10MB for future audio embed. */
+  /** Interactive offline HTML (TOC + details); required for successful send. */
   html_attachment: z.string().max(10_000_000).optional(),
   /**
    * Pack chrome for email subject / attachment name.
    * baseline = Personal baseline profile (vault matrix pack).
-   * delivery (default) = Pivot decision report shelf.
+   * delivery (default) = Eastern OS decision report.
    */
   pack: z.enum(["baseline", "delivery"]).optional(),
 });
-
-function toHtmlParagraphs(text: string): string {
-  return text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p style="margin:0 0 12px;line-height:1.6">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`)
-    .join("\n");
-}
 
 function escapeHtml(s: string): string {
   return s
@@ -39,10 +37,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function toBase64Utf8(s: string): string {
-  return Buffer.from(s, "utf8").toString("base64");
-}
-
 export async function POST(req: Request) {
   const raw = (await req.json().catch(() => null)) as unknown;
   const parsed = BodySchema.safeParse(raw);
@@ -50,74 +44,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid_request" }, { status: 400 });
   }
 
-  const { to, title, body_text, locale, html_attachment, pack } = parsed.data;
-  const zh = (locale ?? "").startsWith("zh");
+  const { to, title, locale, html_attachment, pack } = parsed.data;
   const isBaseline = pack === "baseline";
-  // Baseline packs must never reuse Pivot / energy sale subject chrome.
-  const subject = isBaseline
-    ? zh
-      ? "个人基础画像"
-      : title.trim().slice(0, 120) || "Personal baseline profile"
-    : zh
-      ? `你的 Pivot 能量决策报告 · ${title.slice(0, 80)}`
-      : `Your Pivot energy decision report · ${title.slice(0, 80)}`;
-  const intro = zh
-    ? html_attachment
-      ? "附件是可离线打开的交互报告（目录可点、依据可展开）。用浏览器直接打开即可，无需登录。正文另附纯文本备份。"
-      : "以下是你在本机会话中生成的交付报告全文（纯文本）。请妥善保存。"
-    : html_attachment
-      ? "Attached is an interactive offline report (clickable TOC, expandable evidence). Open it in any browser — no sign-in. Plain text is included below as backup."
-      : "Below is the delivery report generated in your local session (plain text). Please keep a copy.";
+  const attachment = html_attachment?.trim() ?? "";
+
+  if (attachment.length < 100) {
+    return NextResponse.json({ ok: false, error: "attachment_required" }, { status: 400 });
+  }
+
+  const copy = isBaseline
+    ? getBaselinePackMailCopy(locale, title)
+    : getDecisionReportMailCopy(locale, title);
 
   const html = `<div style="font-family:Arial,sans-serif;color:#1a1525;max-width:720px">
   <h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(title)}</h1>
-  <p style="color:#666;font-size:13px;margin:0 0 20px">${escapeHtml(intro)}</p>
-  ${toHtmlParagraphs(body_text.slice(0, 40_000))}
-  <p style="color:#999;font-size:11px;margin-top:28px">${zh ? "本邮件由你主动请求发送；Eastern OS 不会因此建立账户。" : "Sent at your request; Eastern OS does not create an account from this email."}</p>
+  <p style="color:#444;font-size:14px;line-height:1.65;margin:0 0 20px">${copy.introHtml}</p>
+  <p style="color:#999;font-size:11px;margin-top:28px">${escapeHtml(copy.footerHtml)}</p>
 </div>`;
 
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    return NextResponse.json({ ok: true, mocked: true, to });
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL?.trim() || "noreply@easternos.com";
-  const attachments =
-    html_attachment && html_attachment.trim().length > 100
-      ? [
-          {
-            filename: isBaseline
-              ? `baseline-profile-${new Date().toISOString().slice(0, 10)}.html`
-              : `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
-            content: toBase64Utf8(html_attachment),
-          },
-        ]
-      : undefined;
-
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
+  const result = await sendEmail({
+    from: getResendFromReports(),
+    to,
+    subject: copy.subject,
+    html,
+    text: `${title}\n\n${copy.introText}\n\n${copy.footerText}`,
+    attachments: [
+      {
+        filename: copy.filename,
+        content: toBase64Utf8(attachment),
       },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject,
-        html,
-        text: `${title}\n\n${intro}\n\n${body_text}`,
-        ...(attachments ? { attachments } : {}),
-      }),
-    });
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("[delivery-email] resend_failed", err.slice(0, 200));
-      return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
-    }
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    console.error("[delivery-email] error", e instanceof Error ? e.message : e);
+    ],
+    logTag: "delivery-email",
+  });
+
+  if (!result.ok) {
     return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
   }
+
+  return NextResponse.json({ ok: true, mocked: result.mocked === true });
 }

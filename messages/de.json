@@ -2131,6 +2131,15 @@
         "step_2": "Select Add to Home Screen",
         "step_3": "Tap Install to confirm"
       },
+      "mac": {
+        "title": "Eastern OS zum Mac-Dock hinzufügen",
+        "subtitle": "Das ist ein macOS-Safari-Menübefehl — nicht das Teilen-Menü unten am iPhone.",
+        "step1": "Schau auf die <strong>macOS-Menüleiste ganz oben am Bildschirm</strong> (nicht die Website-Navigation). Wähle <strong>Ablage → Zum Dock hinzufügen</strong> (File → Add to Dock).",
+        "step2": "Oder tippe auf <strong>Teilen</strong> in der Safari-Symbolleiste (Quadrat mit ↑), dann <strong>Zum Dock hinzufügen</strong>.",
+        "step3": "Optional umbenennen, dann <strong>Hinzufügen</strong>. Danach aus dem Dock öffnen.",
+        "hint": "Erfordert macOS Sonoma 14 oder neuer. Ältere Systeme zeigen Zum Dock hinzufügen nicht — dann Chrome/Edge und Installation über die Adressleiste nutzen.",
+        "later": "Später"
+      },
       "chrome_required": {
         "title": "Zum Installieren Chrome verwenden",
         "subtitle_huawei": "{browser} unterstützt die vollständige Installation der Eastern OS-App nicht. Bitte öffne diese Seite in Chrome, um sie zu installieren.",
@@ -2789,7 +2798,7 @@
       "icon_label": "Lieferbuch",
       "toolbar_label": "Buchaktionen",
       "toc_label": "Inhalt",
-      "cover_eyebrow": "Pivot · Energie-Entscheidungsbericht",
+      "cover_eyebrow": "Eastern OS · Entscheidungsbericht",
       "turn_hint": "Seite umblättern zum Start →",
       "pager_label": "Umblättern",
       "page_of": "{current} / {total}",

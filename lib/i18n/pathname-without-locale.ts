@@ -60,7 +60,7 @@ export function isAuthRoute(pathname: string): boolean {
   );
 }
 
-/** Legal / policy pages (English-only chrome). */
+/** Legal / policy pages (English body copy; chrome footer follows UI locale). */
 const LEGAL_SEGMENTS = new Set([
   "disclaimer",
   "privacy",

@@ -1,0 +1,3048 @@
+{
+  "common": {
+    "brandWordmark": "Eastern OS",
+    "brand": "Eastern OS",
+    "domain": "easternos.com",
+    "tagline": "AI 与千年智慧的相遇。",
+    "footerTagline": "Eastern OS 提供视角，仅供自我反思使用。所有决定永远属于你。",
+    "copyright": "© 2026 Eastern OS. 版权所有。",
+    "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。",
+    "openNavigationMenu": "打开导航菜单",
+    "cancel": "取消",
+    "deleteConfirmWarning": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。"
+  },
+  "nav": {
+    "home": "首页",
+    "poju": "Pivot",
+    "glyph": "Glyph",
+    "syncro": "Syncro",
+    "match": "Match",
+    "archive": "存档",
+    "disclaimer": "免责声明",
+    "privacy": "隐私",
+    "terms": "条款",
+    "refund": "退款",
+    "cookies": "Cookies",
+    "contact": "联系我们",
+    "mobileSheetTitle": "菜单",
+    "mobileSheetClose": "关闭菜单",
+    "mobileNavPrimary": "浏览",
+    "mobileNavLegal": "法律与条款"
+  },
+  "language": {
+    "short": "语言",
+    "comingSoon": "多语言已启用",
+    "aria": "选择界面语言",
+    "mobileSection": "语言"
+  },
+  "workspace": {
+    "tabs": {
+      "atmos": "Atmos",
+      "poju": "Pivot",
+      "match": "Match",
+      "syncro": "Syncro",
+      "glyph": "Glyph",
+      "archive": "存档",
+      "profile": "档案",
+      "legal": "法律条款"
+    },
+    "blurb": {
+      "atmos": "",
+      "poju": "深度战略决策框架",
+      "match": "双人关系气场共振",
+      "syncro": "24小时最佳行动窗口",
+      "glyph": "系统结构矩阵拆解"
+    },
+    "passActive": "通行：有效",
+    "passLabel": "通行",
+    "passStatus": "有效",
+    "menuOpen": "打开菜单",
+    "menuTitle": "工作站菜单",
+    "menuClose": "关闭菜单",
+    "legalTitle": "法律与政策",
+    "legalClose": "关闭",
+    "profileSlot": "档案位",
+    "slotA": "卡槽 A · 主档案",
+    "slotB": "卡槽 B · 副档案",
+    "guest": "访客",
+    "emailPlaceholder": "email@coming.soon",
+    "accountComingSoon": "账号功能即将推出",
+    "dilemmaLabel": "情境或困局",
+    "dilemmaHint": "备注仅留在此画布。开始后进入既有的 {product} 流程。",
+    "atmos": {
+      "headline": "感知这一刻周围的场域。",
+      "guidance": "输入八字信息，然后阅读前方的能量天气。",
+      "badge": "即将推出",
+      "title": "Atmos",
+      "body": "平静地读取你周遭的能量天气。",
+      "hero": {
+        "brandTag": "ATMOS",
+        "heading": "",
+        "description": "本地算力到日。平静预报你周遭的场域——从今天起往后三十天。",
+        "ctaPrimary": "开始 Atmos",
+        "billingNotice": "$9.99 · 今日预报 · 一次性"
+      },
+      "forecastTitle": "30天决策与状态日历",
+      "forecastSub": "",
+      "viewToday": "查看今日预报",
+      "generating": "解析中…",
+      "expandReading": "展开",
+      "comingCell": "待开放",
+      "pendingLabel": "待解析",
+      "startParse": "开始解析",
+      "retry": "重试",
+      "readingTitle": "场域阅读 · {date}",
+      "weekdays": {
+        "sun": "星期日",
+        "mon": "星期一",
+        "tue": "星期二",
+        "wed": "星期三",
+        "thu": "星期四",
+        "fri": "星期五",
+        "sat": "星期六"
+      }
+    },
+    "atmosRail": {
+      "matrixTitle": "个人基础画像"
+    },
+    "poju": {
+      "headline": "人生十字路口的深度战略咨询。",
+      "guidance": "选择档案，并在下方写下你的核心困局。",
+      "placeholder": "你正面对怎样的僵局？请尽量具体描述那个分叉口…"
+    },
+    "match": {
+      "headline": "两张盘。一段关系场域。",
+      "guidance": "选择档案位，然后开始，在既有 Match 流程中选定双方。",
+      "placeholder": "可选：写下你想厘清的关系问题…"
+    },
+    "syncro": {
+      "headline": "让空间与这一刻对齐。",
+      "guidance": "选择档案，然后开始 Syncro，扫描方位与时机。",
+      "placeholder": "可选：写下你想对齐的空间或任务…"
+    },
+    "glyph": {
+      "headline": "一个真诚的问题。一个古老的征兆。",
+      "guidance": "选择档案，然后开始 Glyph 抽取你的启示。",
+      "placeholder": "可选：写下你带到抽取中的问题…"
+    },
+    "archive": {
+      "headline": "过往解读，留在这台设备上。",
+      "guidance": "打开存档库，浏览你已生成的报告与会话。",
+      "body": "存档沿用既有保险库 — 数据不会上传到服务器。",
+      "cta": "打开存档"
+    },
+    "profile": {
+      "headline": "档案与账号。",
+      "guidance": "在此管理生辰盘卡槽与已登录账号。",
+      "accountSection": "账号",
+      "accountBody": "登录后可购买 Pass，并在多设备间同步账号。",
+      "slotsSection": "命盘卡槽",
+      "setupCta": "创建或编辑档案",
+      "loginCta": "登录",
+      "signupCta": "注册",
+      "logout": "退出登录",
+      "loggingOut": "退出中…",
+      "signedInAs": "已登录：{email}",
+      "changePassword": "修改密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认密码",
+      "updatePassword": "更新密码",
+      "updatingPassword": "更新中…",
+      "passwordUpdated": "密码已更新。"
+    },
+    "language": {
+      "siteLabel": "语言",
+      "label": "语言"
+    },
+    "usageGuide": "使用说明",
+    "pojuRail": {
+      "matrixTitle": "个人基础画像",
+      "baComputing": "正在计算能量底座…",
+      "baWriting": "正在撰写底座报告…",
+      "baFinishing": "正在收尾底座报告…",
+      "retryBa": "重试",
+      "dismissError": "关闭",
+      "collapsedRailLabel": "历史交付",
+      "matrixIconLabel": "个人基础画像",
+      "reportIconLabel": "决策报告",
+      "reportGeneratingIconLabel": "决策报告生成中"
+    },
+    "docVault": {
+      "title": "历史交付",
+      "label": "历史交付",
+      "collapsed_label": "交付分类",
+      "loading": "正在加载交付…",
+      "empty": "生成的交付会出现在这里。",
+      "section_empty": "暂无",
+      "section_foundation": "基础信息",
+      "section_pivot": "Pivot",
+      "section_atmos": "Atmos",
+      "section_match": "Match",
+      "section_syncro": "Syncro",
+      "section_glyph": "Glyph",
+      "type_baseline": "个人基础画像",
+      "type_delivery": "决策报告",
+      "type_reminders": "30日提醒",
+      "open_baseline": "打开个人基础画像",
+      "created": "创建时间",
+      "section_reminders": "30日提醒",
+      "reminders_need_profile": "交付封印后可打开此包；30日提醒需要画像结构。"
+    },
+    "deliveryBook": {
+      "title": "能量决策报告",
+      "description": "一本决策之书——封面、目录，之后每章独占一页。",
+      "icon_label": "决策报告",
+      "toolbar_label": "书籍操作",
+      "toc_label": "目录",
+      "cover_eyebrow": "Pivot · 能量决策报告",
+      "turn_hint": "翻到下一页开始阅读 →",
+      "pager_label": "翻页",
+      "page_of": "{current} / {total}",
+      "download": "下载文本",
+      "pdf_preview": "PDF 预览",
+      "read_mode": "翻页阅读",
+      "pdf_preview_hint": "深空紫排版：一页一个论点+依据；文末为术语附录。可用「打印 / PDF」导出。",
+      "print_pdf": "打印 / PDF",
+      "email": "邮件发送",
+      "email_hint": "仅用于发送本报告，不会因此创建账户。",
+      "email_placeholder": "you@example.com",
+      "email_send": "发送",
+      "email_sending": "发送中…",
+      "email_sent": "已发送，请查收邮箱。",
+      "email_failed": "发送失败，请稍后再试。",
+      "email_invalid": "请输入有效邮箱。",
+      "prev_page": "上一页",
+      "next_page": "下一页",
+      "close": "合上书",
+      "empty_page": "本页暂无内容。",
+      "writing_next_section": "正在撰写下一部分内容，请稍等…"
+    },
+    "deliveryShelf": {
+      "shelf_label": "交付报告书页",
+      "slots_hint": "共 {n} 个书页槽位",
+      "long_wait_lead": "深度定制交付中：基于你的基础画像，进行数十次推演与破局测算…",
+      "long_wait_leave": "生成完整解读约需 20-30 分钟。\n你可以留在本页观看逐页推演，也可放心离开，稍后返回直接查阅最终结果。",
+      "writing_page": "正在撰写第 {n} 页...请稍后",
+      "toc_thumb": "目录",
+      "open_page": "打开 {title}",
+      "download_pdf": "下载这份报告的 PDF",
+      "email_report": "将这份交付报告发送到我的邮箱",
+      "interrupted_body": "生成中途暂停了（不是你的网络断了）。已写好的书页会保留——点「继续」从断点接着生成下一页。",
+      "interrupted_network_body": "生成中途暂停了（不是你的网络断了）。已写好的书页会保留——点「继续」从断点接着生成下一页。",
+      "interrupted_continue": "继续",
+      "interrupted_continuing": "继续中…",
+      "interrupted_fuse_body": "交付已因安全上限停止（超时或重试过多）。已写好的书页会保留——点「重新生成」发起全新交付。",
+      "interrupted_regenerate": "重新生成",
+      "interrupted_regenerating": "重新生成中…",
+      "network_issue_body": "暂时连不上状态接口。后台仍在生成——网络恢复后会自动刷新进度，无需点继续。",
+      "writing_next_page": "正在撰写第 {n} 页...请稍后",
+      "next_page": "下一页",
+      "prev_page": "上一页",
+      "subject_label": "主体身份",
+      "toc_nav_label": "目录导航",
+      "privacy_label": "数据安全：",
+      "privacy_body": "本报告基于本地加密技术处理，Eastern OS 严密保护您的隐私，绝不上传或留存您的私密对话与个人数据。",
+      "disclaimer_label": "免责声明：",
+      "disclaimer_body": "本报告为个人成长与认知辅导（Coaching）工具，融汇东方传统系统思考与现代行为科学。所有内容仅供自我觉察与决策参考，不包含任何算命、占卜或决定论式预测，亦不构成医疗诊断、法律咨询或投资决策建议。",
+      "privacy_line": "🔒 数据安全：本报告基于本地加密技术处理，Eastern OS 严密保护您的隐私，绝不上传或留存您的私密对话与个人数据。",
+      "disclaimer_line": "⚖️ 免责声明：本报告为个人成长与认知辅导（Coaching）工具，融汇东方传统系统思考与现代行为科学。所有内容仅供自我觉察与决策参考，不包含任何算命、占卜或决定论式预测，亦不构成医疗诊断、法律咨询或投资决策建议。",
+      "chrome_download": "下载",
+      "chrome_email": "发送",
+      "tip_download": "下载到本地",
+      "tip_email": "发送到我的邮箱",
+      "tip_prev": "上一页",
+      "tip_next": "下一页",
+      "tip_listen": "收听",
+      "tip_stop": "停止",
+      "tip_speed": "变速",
+      "tip_regen_audio": "重新生成朗读并替换本地缓存",
+      "email_no_account": "请先登录并使用注册邮箱",
+      "audio_label": "语音朗读",
+      "audio_play": "播放",
+      "audio_pause": "停止",
+      "audio_seek": "进度",
+      "audio_speed": "倍速",
+      "audio_regen": "重录",
+      "audio_generating": "正在生成朗读…",
+      "audio_caching": "正在写入本地缓存…",
+      "audio_failed": "朗读准备失败，请再点播放重试。",
+      "audio_too_long": "报告过长，无法一次生成朗读。",
+      "audio_unavailable": "朗读服务暂不可用。",
+      "audio_pack_failed": "打包音频失败，请重试。"
+    },
+    "density": {
+      "newSession": "新建对话",
+      "newProduct": "新建 {name}",
+      "newConfirmTitle": "开始新的内容？",
+      "newConfirmBody": "将返回该工具的起始页，并离开当前界面。确定继续？",
+      "newConfirmOk": "开始新的",
+      "newConfirmCancel": "取消",
+      "pastSessions": "历史对话 ({count})",
+      "pastRecords": "历史记录 ({count})",
+      "collapseSidebar": "收起侧边栏",
+      "expandSidebar": "打开侧边栏",
+      "collapseRightSidebar": "收起右侧栏",
+      "expandRightSidebar": "打开右侧栏",
+      "rightDrawerIdle": "选择一个引擎后，这里会显示场域状态、方法论与最近记录。",
+      "historyMenu": "记录操作",
+      "rename": "重命名",
+      "delete": "删除",
+      "renamePrompt": "重命名此记录",
+      "deleteConfirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "backToNew": "返回新建对话",
+      "contextLabel": "上下文面板",
+      "statusEyebrow": "系统状态",
+      "statusTitle": "场域快照",
+      "activeProfile": "当前档案",
+      "slotAShort": "卡槽 A · 主档案",
+      "solarTerm": "节气",
+      "solarTermValue": "等待 Atmos",
+      "matrix": "时空矩阵",
+      "matrixValue": "本机时钟",
+      "methodEyebrow": "方法论",
+      "historyEyebrow": "快捷历史",
+      "historyTitle": "本引擎最近记录",
+      "historyEmpty": "此工具尚无已保存报告。",
+      "historyEmptyShort": "暂无历史",
+      "historyLoading": "加载中…",
+      "sessionOpening": "正在打开对话…",
+      "viewReport": "查看报告",
+      "openFullVault": "打开完整存档库 →",
+      "untitled": "未命名报告",
+      "privacyBadge": "原始数据零上云 · 本地优先",
+      "presetsLabel": "提示预设",
+      "addSlot": "+ $9.99 增加卡槽",
+      "addSlotSoon": "额外卡槽即将推出",
+      "presets": {
+        "career": {
+          "label": "职业转折",
+          "prompt": "我正处在职业十字路口，需要一份关于时机、杠杆与更稳妥路径的清晰战略解读。"
+        },
+        "relationship": {
+          "label": "关系僵局",
+          "prompt": "我需要厘清一段关系僵局——我卡在什么模式里，怎样行动能恢复主动权而不自我放弃。"
+        },
+        "timing": {
+          "label": "战略时机",
+          "prompt": "请帮我读取一次高风险决策的时机窗口：此刻该推进什么、该按住什么、该盯住什么信号。"
+        }
+      },
+      "methodology": {
+        "poju": {
+          "title": "为何选 Pivot",
+          "body": "Pivot 用多层盘理与结构化对话陪伴单一人生十字路口——不是泛泛建议。它把僵局变成今天就能执行的决策序列。"
+        },
+        "match": {
+          "title": "为何选 Match",
+          "body": "Match 把两张盘叠成一段关系场域，呈现摩擦、互补与时机，让你把关系看成系统，而不是指责故事。"
+        },
+        "syncro": {
+          "title": "为何选 Syncro",
+          "body": "Syncro 把你的盘与空间、时辰绑定，指出此刻可借力的方位，让空间成为战术工具，而不是猜测。"
+        },
+        "glyph": {
+          "title": "为何选 Glyph",
+          "body": "Glyph 以封闭原型集回应一个真诚的问题，把复杂压成一张可带走的征兆图像，陪伴你过完这一天。"
+        }
+      }
+    },
+    "rail": {
+      "navLabel": "工作台",
+      "searchSessions": "搜索对话",
+      "searchPlaceholder": "搜索对话…",
+      "pastSessionsShort": "历史对话",
+      "today": "今天",
+      "earlier": "更早",
+      "settings": "设置"
+    },
+    "passRow": {
+      "balance": "PASS · {n}",
+      "buy": "购买",
+      "buyShort": "+",
+      "loginHint": "登录后查看 PASS",
+      "balanceAria": "PASS 余额：{n}",
+      "buyAria": "购买 PASS",
+      "buyTitle": "购买 PASS"
+    },
+    "progress": {
+      "chat": "对话",
+      "report": "报告",
+      "day30": "30 天",
+      "hide": "隐藏进度条"
+    },
+    "sessionOpen": {
+      "kicker": "Eastern OS",
+      "h1": "有时候，光靠读还不够。",
+      "body": "书也读了，朋友也问了，利弊表也列了。卡住的那个决定还是不放手。",
+      "leadIn": "为**这一次**卡住的决定，开启多轮决策对话。你会带走主路径、备用、还能再打开的报告，以及**同步提供**的 30 天同线提醒。我们给建议。决定权在你。",
+      "formSectionTitle": "开启决策对话",
+      "formPrompt": "请输入或选择基础信息",
+      "formHelp": "为**这一次**卡住的决定，开启多轮决策对话。你会带走主路径、备用、还能再打开的报告，以及**同步提供**的 30 天同线提醒。我们给建议。决定权在你。",
+      "cta": "继续"
+    },
+    "sessionStage": {
+      "aria": "会话进度",
+      "stage1": "说清卡住的决定",
+      "stage2": "深度推理与初稿",
+      "stage3": "收集细节",
+      "stage4": "交付报告",
+      "stage5": "同步提供 30 天提醒"
+    }
+  },
+  "home": {
+    "hero": {
+      "brand": "Eastern OS",
+      "headline": "破除那些将你禁锢的执念。",
+      "descLine1": "三千载东方时空框架。",
+      "descLine2": "认知心理学全新重塑。",
+      "descLine3": "生成式智能合成——助你重获今日清明。",
+      "trustLine": "无云端账户 · 去中心化隐私 · 按需购买或月包订阅",
+      "ctaAddDesktop": "安装到桌面，获得原生 App 级体验",
+      "ctaInstall": "安装到桌面，获得原生 App 级体验",
+      "ctaInstallApp": "安装应用，获得原生 App 级体验"
+    },
+    "fourWays": {
+      "heading": "四款专用引擎。对齐特定境遇。",
+      "subtitle": "针对不同的决策场景，提供最精准的分析透镜。从周期跨越、即时共振，到时空规划与双人协同，因你当下的诉求精准解构。"
+    },
+    "cta": {
+      "startSession": "开启 Pivot 对话 · $9.99",
+      "tryGlyph": "免费体验 Glyph",
+      "yoursToDecide": "无需账户 · 无需订阅 · 由你决定"
+    },
+    "twoLanguages": {
+      "heading": "两种语言的相遇。",
+      "line1": "两千年的人类沉思。",
+      "line2": "现代 AI 的翻译。",
+      "line3": "一次对话,帮你看得更清。",
+      "patternTitle": "图案",
+      "patternBody": "古人对反复出现之事的观察。",
+      "directionTitle": "方向",
+      "directionBody": "空间心理学,关乎我们看见什么。",
+      "timingTitle": "时机",
+      "timingBody": "塑造生命的节律周期。",
+      "youTitle": "你",
+      "youBody": "你的出生背景、当下、和问题。"
+    },
+    "built": {
+      "heading": "我们的底层架构。为什么它能生效。",
+      "intro": "三千年人类哲学的结构化沉淀，经当代跨学科研究校准，通过先进的语言引擎为你呈现。旨在赋能你的核心决策，帮助察觉独自难以看清的认知盲区。",
+      "easternTitle": "东方框架",
+      "easternBody": "三千载以来，东方哲学传统一直在审视时间周期与系统平衡——剖析关于抉择、方向，以及塑造行为的内在模式。\n\n定锚 · 势能 · 重塑 · 清明。\n\n这些古老传统旨在帮你梳理内在逻辑与发展路径。它们是历经数十代人经验迭代、高度结构化的思考模型。",
+      "modernTitle": "现代研究",
+      "modernBody": "古典经验所观察到的规律，正通过现代前沿科学逐步获得量化与印证。\n\n聚焦决策建模的认知科学。研究意识空间的原型心理学。揭示时间律动的昼夜生物学。剖析行为偏差的系统经济学。\n\n跨越千年的经典思维模型，如今在当代严谨的科学实证中被赋予全新的生命力。",
+      "aiTitle": "动态转译",
+      "aiBody": "我们将这些历法哲学沉淀的结构化数据，与现代行为科学的洞察进行深度融合，并借助先进的自然语言引擎——将其转化为契合你当下特定情境的启发性对话。\n\n我们的目标并非取代你的判断，而是将思维的主动权彻底还给你。",
+      "summary": "通过将古老智慧与实证验证相连接，我们的系统将复杂的行为模式转化为可落地的自我认知洞察。",
+      "notice": "注意：本工具专为自我反思与个人成长探索而设计——仅提供主题框架供参考，绝不能替代专业诊断或确定性的预测。",
+      "closingHeading": "这就是 Eastern OS 的意义。",
+      "closingBody": "那些值得被认真对待的人生课题，配得上跨越三千年的人类反思、现代跨学科研究的严谨，以及先进语言引擎的精准重构。"
+    },
+    "promises": {
+      "heading": "隐私与边界。说清楚。",
+      "subtitle": "什么留在你的手机或电脑上——以及这个产品绝不做什么。",
+      "card1": {
+        "title": "只留在你这台设备",
+        "content": "对话和报告只留在你正在用的这台手机或电脑上——而且只在当前这个浏览器里。它们不会当成聊天记录上传到我们的云端。想删掉？清掉这个浏览器的浏览数据（或关掉无痕／隐私窗口）就行。换一部手机、另一台电脑、或另一个浏览器，那些聊天不会跟着出现——就算用同一个账号登录也一样。换设备，就等于换了一份本地记录，旧对话不会自动跟过来，得回原设备才看得到。"
+      },
+      "card2": {
+        "title": "账号只管 PASS——不管聊天",
+        "content": "登录主要是为了让你购买 PASS、查看余额和收据。这不代表对话会存进账号的云端。所以你换一台设备打开 Eastern OS，还能看到 PASS——但看不到第一台设备上的旧聊天。想再看当时的对话？得回到当初那台设备、那个浏览器才行——账号本身不会把聊天同步过来。PASS 跟聊天，是两回事，别把它们当成同一份云端记录来期待。"
+      },
+      "card3": {
+        "title": "想留着，就先带走一份",
+        "content": "离开这个浏览器以后还想留着对话或报告？在清除浏览数据或换设备之前，通过邮件将报告发送给自己，或导出一份。这样以后还能打开、对照你当时理清的路径和理由。你付款时收到的邮件是购买收据——不是聊天备份，也带不回对话内容。本地这份删了，我们帮不了你找回——想留着，就先在这边带走一份，别等到清掉数据或换设备了再找。"
+      },
+      "card4": {
+        "title": "帮你做决定——不是算命",
+        "content": "Eastern OS 会围绕你卡住的那个决定进行多轮深度对话。帮你理清处境和真正的问题，然后让你带走一份还能再打开的决策支持报告——主路径、备用方案，以及能对照你说过的话来核对的理由。Eastern OS 不是无法验证的算命或占卜，不会用恐吓话术制造恐慌，也不会做无意义的判定——Eastern OS 只锚定你自身与核心问题，交付决策支持。"
+      },
+      "readMore": "阅读完整隐私架构 →"
+    },
+    "finalCta": {
+      "heading": "当问题挥之不去。",
+      "subtitle": "停止阅读。开始穿越它。",
+      "subline": "停止阅读。开始穿越它。",
+      "primary": "提出你的问题 — $9.99",
+      "secondary": "或者先免费试试 Glyph →",
+      "readyHeading": "准备好开始了吗？",
+      "readySubheading": "通往认知跃迁的四条主权路径。选择契合当下维度的演进入口。",
+      "poju": {
+        "title": "开启 Pivot 策略推演",
+        "sub": "$9.99 · 单项核心困惑 · 30天跟踪"
+      },
+      "glyph": {
+        "title": "破译 Glyph 符号矩阵",
+        "sub": "$4.99 · 系统性主权架构解析"
+      },
+      "syncro": {
+        "title": "激活 Syncro 时空律动",
+        "sub": "$4.99 · 24小时时空向量循环"
+      },
+      "match": {
+        "title": "初始化 Match 双人对齐",
+        "sub": "$4.99 · 双人关系动力学建模"
+      }
+    },
+    "products": {
+      "poju": {
+        "name": "Pivot",
+        "line1": "聚焦特定转型困境。30天沉浸式深度对话交互，提供清晰可操作的实际建议，陪你厘清复杂思路、走出核心盲区。",
+        "line2": "",
+        "badge": "$9.99",
+        "cta": "去 Pivot →"
+      },
+      "glyph": {
+        "name": "Glyph",
+        "line1": "意图锚定与原型共振。融入古典百维意象框架，在数字粒子流中随机映射象征卡片，由 Glyph 为你深度解构当下的核心课题。",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "去 Glyph →"
+      },
+      "syncro": {
+        "name": "Syncro",
+        "line1": "24小时动态时空决策矩阵。针对具体行动目标，精确剖析未来12个时辰内八个方位的环境利好向量与潜在阻碍，构建最优空间路径。",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "去 Syncro →"
+      },
+      "match": {
+        "name": "Match",
+        "line1": "双人矩阵协同网络。独立完整解构两个原生时间指标，深度评估双方在特定商业决策、合作或长远事务中的协同共鸣与应对策略。",
+        "line2": "",
+        "badge": "$4.99",
+        "cta": "去 Match →"
+      }
+    },
+    "meetsMoment": {
+      "heading": "当思想照进具体情境。",
+      "subtitle": "在真实的抉择交界处，为你展开全局视野。",
+      "card1": {
+        "title": "处于关键的十字路口",
+        "text": "职业转型、核心关系走向、或是生活环境的迁移。在你反复思量、原地打转之后，Pivot 为你切换一种全新的认知坐标去重新审视。",
+        "cta": "去 Pivot →"
+      },
+      "card2": {
+        "title": "面对盘旋心头的不确定性",
+        "text": "面对难以言明的情境。总觉得有些隐性因素在影响局面，却说不清道不明。让 Glyph 成为你的意象之镜，解析表象之下的结构信号。",
+        "cta": "去 Glyph →"
+      },
+      "card3": {
+        "title": "寻找专属的时空效能脉搏",
+        "text": "想精准掌握行动的内在节律。何时适合破局发力？何时应当蓄力规避？Syncro 动态绘制未来 24 小时的时空环境矩阵，与你实时共振。",
+        "cta": "去 Syncro →"
+      },
+      "card4": {
+        "title": "面对一段长远承诺或战略合作",
+        "text": "无论是深度伴侣关系的建立、商业同盟的签署，还是核心团队架构的锁定。在最终决定之前，看清两种固有系统如何深度协同。",
+        "cta": "去 Match →"
+      }
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: 2026-06-15",
+    "version": "Version 1.1"
+  },
+  "marketingSite": {
+    "common": {
+      "tagline": "AI 与千年智慧的相遇。",
+      "footer_disclaimer": "Eastern OS 提供视角，仅供自我反思使用。所有决定永远属于你。",
+      "trust_line": "无需账户 · 无需订阅 · 由你决定",
+      "read_with_wink": "带一丝玩味去读。这些图案是镜子，照见正在发生的事。"
+    },
+    "nav": {
+      "poju": "Pivot",
+      "glyph": "Glyph",
+      "syncro": "Syncro",
+      "archive": "存档",
+      "match": "Match"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "AI 与千年智慧的相遇。",
+        "cta_primary": "开启 Pivot 对话 · $9.99",
+        "cta_secondary": "免费体验 Glyph"
+      },
+      "three_ways": {
+        "heading": "三种入口。一种穿越。",
+        "poju": {
+          "tagline": "为那个挥之不去的问题。",
+          "description": "一次深入对话,直到你看清。"
+        },
+        "glyph": {
+          "tagline": "随身可得的一面镜子。",
+          "description": "握住问题。抽取图案。读一次反射。"
+        },
+        "syncro": {
+          "tagline": "看见你的自然节奏。",
+          "description": "每两小时更新一次,在你的手机上。"
+        },
+        "try_it": "试试看 →"
+      },
+      "two_languages": {
+        "heading": "两种语言的相遇。",
+        "subtitles": [
+          "两千年的人类沉思。",
+          "现代 AI 的翻译。",
+          "一次对话,帮你看得更清。"
+        ],
+        "pattern": {
+          "title": "图案",
+          "description": "古人对反复出现之事的观察。"
+        },
+        "direction": {
+          "title": "方向",
+          "description": "空间心理学,关乎我们看见什么。"
+        },
+        "timing": {
+          "title": "时机",
+          "description": "塑造生命的节律周期。"
+        },
+        "you": {
+          "title": "你",
+          "description": "你的出生背景、当下、和问题。"
+        }
+      },
+      "promises": {
+        "heading": "我们不会打破的三个承诺。",
+        "never_stored": {
+          "title": "从不存储",
+          "description": "你的对话以加密形式存在你的设备上。我们读不到。任何人都读不到。"
+        },
+        "never_required": {
+          "title": "从不强制",
+          "description": "无需账户。无需登录。无需密码。除非你想要 PDF,否则也不需要邮箱。"
+        },
+        "never_manipulative": {
+          "title": "从不操纵",
+          "description": "没有黑暗模式。没有虚假紧迫。一个价格:$9.99,在你需要时。"
+        },
+        "read_more": "阅读完整隐私架构 →"
+      },
+      "final_cta": {
+        "heading": "当问题挥之不去。",
+        "subtitle": "停止阅读。开始穿越它。",
+        "primary": "提出你的问题 — $9.99",
+        "secondary": "或者先免费试试 Glyph →"
+      }
+    },
+    "poju": {
+      "hero": {
+        "brand_tag": "Eastern OS",
+        "heading": "有时，仅仅看懂是不够的。",
+        "description": "你翻阅过书籍，咨询过挚友，权衡过每一项利弊得失。然而，那个核心困惑依然紧紧攫住你不放。",
+        "tagline": "解构宿命矩阵，直击破局要害。",
+        "cta_primary": "开启深度会话",
+        "billing_notice": "针对具体问题持续30天的深度会话 $9.99 或使用体验凭证"
+      },
+      "what_is": {
+        "title": "什么是 Eastern OS？",
+        "subtitle": "决策对话内核",
+        "body": "Eastern OS 是面向卡住抉择的多轮决策对话。以你的出生坐标结构化本次会话——不是算命。一次完整对话你会得到：对话本身；主路径与备用；可在本浏览器重开的决策报告；以及同行的 30 天同线提醒（同步提供）。针对你现在卡住的地方，一步步帮你理清楚。"
+      },
+      "when_to_come": {
+        "heading": "什么时候来 Eastern OS。",
+        "stuck": {
+          "title": "你卡在两条路之间",
+          "description": "职业转变。关系抉择。在哪里生活。"
+        },
+        "confused": {
+          "title": "你做了功课,反而更困惑",
+          "description": "建议相互冲突。家庭压力。时间在流逝。"
+        },
+        "repeating": {
+          "title": "某种模式不断重复,你不知道为什么",
+          "description": "同样类型的关系。同样的阻塞。同样的挫折。"
+        },
+        "depth": {
+          "title": "你需要朋友给不了的深度",
+          "description": "你身边没人能拉开距离看清楚。"
+        },
+        "direction": {
+          "title": "你想要方向，而不是固定答案",
+          "description": "\"X 会发生吗\" 在问固定结果。\"我该怎么做\" 是 Eastern OS。"
+        }
+      },
+      "how_it_works": {
+        "heading": "Eastern OS 如何运作",
+        "subtitle": "不是一个答案 — 而是一个持续的破局循环。",
+        "steps": {
+          "1": {
+            "title": "说出你卡住的地方",
+            "description": "提出当下最让你迷茫、焦虑或无法抉择的那个具体问题。"
+          },
+          "2": {
+            "title": "多轮深度对话",
+            "description": "在反思式对话里，Eastern OS 陪你把处境信息逐步对齐、理清核心。"
+          },
+          "3": {
+            "title": "处境对齐",
+            "description": "对话过程中持续对齐你的处境脉络，让主线始终清楚。"
+          },
+          "4": {
+            "title": "结构化这次抉择",
+            "description": "以出生坐标与对话语境结构化本次会话——不是算命——把卡住的选择变成可推进的路径。"
+          },
+          "5": {
+            "title": "报告与下一步",
+            "description": "得到决策报告：主路径、备用，以及可在本浏览器重开的行动建议。"
+          },
+          "6": {
+            "title": "30 天同线跟进",
+            "description": "你去实践时随时回来更新。Eastern OS 就这一题陪你最多 30 天。"
+          }
+        },
+        "footer": {
+          "title": "30 天单题守护",
+          "description": "深层卡住的事不是一次说完就结束。针对你提出的这一个核心问题，Eastern OS 提供最长 30 天的同线对话窗口。局势怎么变，你都可以回来更新；一步步陪你复盘到底。"
+        }
+      },
+      "two_columns": {
+        "heading": "两栏,一个承诺。",
+        "included": {
+          "title": "包含什么",
+          "items": [
+            "单次会话中无限的深度",
+            "明天就能开始的行动计划",
+            "可以静思的反思提示",
+            "30 天会话访问"
+          ]
+        },
+        "not_included": {
+          "title": "不是什么",
+          "items": [
+            "帮你理清方向、看清当下",
+            "不替代专业建议",
+            "不替你做决定"
+          ]
+        },
+        "tagline": "Eastern OS 是思考伙伴。决定永远是你的。",
+        "cta": "开始 Pivot 会话 — $9.99",
+        "footnote": "一个问题 · 无限深度 · 关闭即删除"
+      },
+      "pricing": {
+        "heading": "定价方案",
+        "body": "透明的决策计费架构，为主权自主而生。单次核心策略激发仅需 $9.99，即可开启一个 30 天的动态推演周期，亦可通过生态月包凭证直接兑换。在 30 天的时空窗口内，您可以随时返回记录进展、修正行动并持续迭代，全流程享有绝对的隐私保护。",
+        "price": "$9.99",
+        "price_unit": "每 30 天策略周期 · 支持月包凭证兑换",
+        "features_heading": "包含功能",
+        "features": [
+          "针对选定困惑矩阵的无限推演与对齐深度",
+          "高度结构化、次日即可转化的行动路线图",
+          "量身定制的反思触发机制，打破固有认知瓶颈",
+          "30天持久化会话访问权，完整留存于您的浏览器安全沙盒"
+        ],
+        "cta": "开启策略推演会话",
+        "footnote": "单项核心困惑 · 无限系统深度 · 本地沙盒加密留存"
+      }
+    },
+    "glyph": {
+      "hero": {
+        "brand_tag": "Glyph",
+        "heading": "一面映照直觉与潜意识的随身之镜。",
+        "description": "凝视困惑，抽取图腾，解码内心的回响。",
+        "cta": "开启 Glyph 抽取",
+        "billing_notice": "单次购买 $4.99 或使用体验凭证"
+      },
+      "what_is": {
+        "title": "什么是 Glyph？",
+        "subtitle": "快速映照",
+        "body": "Glyph 是一次短促的映照：当完整决策对话对这一刻来说太重时，用一则东方经典隐喻对齐你卡住的地方，再拆开这幅象与当下处境的关系。不是预测——而是帮你看清、再做选择的结构化提示。"
+      },
+      "five_winds": {
+        "heading": "五种风 — 五种原型图案",
+        "description": "这五种图案是镜子，照见正在发生的事。每一种都描述一种人类处境,帮你看清正在发生什么。",
+        "divine_tailwind": {
+          "name": "Divine Tailwind",
+          "description": "完全对齐的稀有恩典。你需要的一切已经在朝你而来。"
+        },
+        "fair_sky": {
+          "name": "Fair Sky",
+          "description": "通畅的路,带着温柔的支持。道路开放,但你仍要走过去。"
+        },
+        "still_water": {
+          "name": "Still Water",
+          "description": "耐心和静止的时候。既不向前,也不向后。与当下共处。"
+        },
+        "crosswind": {
+          "name": "Crosswind",
+          "description": "互相竞争的力量在拉扯你。这不是用力推的信号。这是更仔细地倾听的信号。"
+        },
+        "eye_of_storm": {
+          "name": "Eye of Storm",
+          "description": "暴风眼中心的深度静止。当外面一切都在动荡时,清晰住在那个无可触及的地方。"
+        }
+      },
+      "when_to_come": {
+        "heading": "何时来 Glyph。",
+        "intro": "轻触一下的时刻 — 不需要三十天的对话。",
+        "quick_read": {
+          "title": "你需要一次解读,不是深度对话",
+          "description": "一个问题,六十秒。当 Pivot 对这个时刻来说太重时。"
+        },
+        "circling": {
+          "title": "有什么在盘旋,却叫不出名字",
+          "description": "一种模糊的焦虑。一个无法落定的决定。把它举到镜子前。"
+        },
+        "fresh_angle": {
+          "title": "你想要一个新角度",
+          "description": "你已经翻来覆去想了很多遍。一个新的透镜来打破循环。"
+        },
+        "new_start": {
+          "title": "在新事物的起点",
+          "description": "一个新项目,一个新章节。设定一个意图,读一读风向。"
+        }
+      },
+      "on_the_cards": {
+        "heading": "关于图案。",
+        "paragraphs": [
+          "这五种 Glyph 不是固定标签。它们不是\"好牌\"或\"坏牌\"。",
+          "每一种都是一面透镜 — 一种阅读这个特定时刻、这个特定问题、由这个特定的人持有的方式。",
+          "同一个 Glyph 在不同的日子、对不同的人、关于不同的问题,可以意味着完全不同的东西。",
+          "你收到的不是判决。它是一个视角 — 一个邀请,让你更仔细地看。"
+        ]
+      },
+      "how_it_works": {
+        "heading": "Glyph 如何运作。",
+        "intro": "握住一个问题,抽取一个图案,读回反射。",
+        "step_1": {
+          "title": "握住你的问题。",
+          "description": "压缩到 60 个字符。压缩本身就是答案的开始。"
+        },
+        "step_2": {
+          "title": "抽取你的图案。",
+          "description": "100 种原型形态之一,经过千年提炼。"
+        },
+        "step_3": {
+          "title": "读你的反射。",
+          "description": "一份简短的回应 — 根植于智慧传统和现代心理学。"
+        },
+        "rules": [
+          "每次一个问题。不要一次问很多。",
+          "同一个问题,等 48 小时再问。答案需要时间沉淀。",
+          "把你的问题压缩到 60 个字符。压缩是答案的开始。"
+        ],
+        "session_reminder": "每次会话一个问题。若同一问题再次浮现,请等待 48 小时。"
+      },
+      "final_cta": {
+        "heading": "握住一个问题。",
+        "subtitle": "你收到的不是判决。它是邀请,让你更仔细地看。",
+        "cta": "开始 Glyph",
+        "cta_subline": "首次免费 · 之后 $4.99 / 次"
+      },
+      "pricing": {
+        "heading": "定价方案",
+        "body": "透明的计费架构，为主权自主而生。单次 Glyph 深度解析为 $4.99，亦可通过生态月包凭证完全抵扣。新用户可直接兑换免费体验券，开启首次探索而无需任何预付绑卡。",
+        "price": "$4.99",
+        "price_unit": "单次深度解析 · 支持体验券与月包兑换",
+        "features_heading": "包含功能",
+        "features": [
+          "针对单项核心困惑时空矩阵的深度探索",
+          "通过沉浸式粒子流体界面生成意象图腾",
+          "结合个人原型画像的深层认知心理反射",
+          "即时本地安全交付，完整留存于您的浏览器安全沙盒"
+        ],
+        "cta": "开启 Glyph 抽取",
+        "footnote": "去中心化数据托管，坚守绝对的隐私主权。"
+      }
+    },
+    "syncro": {
+      "hero": {
+        "brand_tag": "Syncro",
+        "heading": "实时映射你的时空律动。",
+        "description": "结合你的自主认知架构，Syncro 将每 2 小时的生物钟节律与 8 维空间方位向量进行动态建模。精准破译何时该全速推进、何时该沉淀内省，并在复杂的时空流动中锁定属于你的高效执行节点。",
+        "tagline": "未来 24 小时的动态共生时空随行指南。",
+        "cta": "激活 24 小时动态同步",
+        "billing_notice": "单次 24 小时节律同步 $4.99，或使用体验凭证",
+        "qr_label": "easternos.com/syncro",
+        "sms_label": "把链接发给自己",
+        "sms_button": "把链接发给我",
+        "sms_body": "在手机上打开 Syncro：__SYNCRO_URL__",
+        "phone_placeholder": "手机号码"
+      },
+      "what_is": {
+        "title": "什么是 Syncro？",
+        "subtitle": "24 小时时机与方位",
+        "body": "Syncro 是面向一件具体事务的、带位置语境的 24 小时地图。结合你当下所在地与会话情境，它在八个方位上标出顺势、应时、守静、横阻与险滞，帮你选择何时、朝哪边推进。不是择吉——是接下来一天怎么动更顺的时机与方位参考。"
+      },
+      "how_it_works": {
+        "heading": "Syncro 如何运作",
+        "intro": "四步获得一份实时 24 小时解读。",
+        "step_1_title": "添加或选择性格画像基础",
+        "step_1_desc": "出生日期、时辰与性别。保存在你的设备上，供日后使用。",
+        "step_2_title": "描述你即将要做的事",
+        "step_2_desc": "30–100 字。越具体越好。",
+        "step_3_title": "允许位置与指南针权限",
+        "step_3_desc": "位置信息留在你的设备上。手机指南针显示各方向所在。",
+        "step_4_title": "举起手机并转动",
+        "step_4_desc": "每个方向显示当前 2 小时时段的简短反思。"
+      },
+      "five_currents": {
+        "heading": "五流",
+        "intro": "每个方向 × 时辰组合归入五种模式之一：",
+        "footer": "这些是反思类别，不是定论。",
+        "items": [
+          {
+            "name": "Open Current · 顺势",
+            "desc": "可自信前行。"
+          },
+          {
+            "name": "Following Current · 应时",
+            "desc": "路在支持你，仍需努力。"
+          },
+          {
+            "name": "Stillwater · 守静",
+            "desc": "暂停观察。"
+          },
+          {
+            "name": "Crosscurrent · 横阻",
+            "desc": "重新考虑这个方向或时刻。"
+          },
+          {
+            "name": "Undertow · 险滞",
+            "desc": "阻力很强——另择路径。"
+          }
+        ]
+      },
+      "why_mobile": {
+        "heading": "为什么仅限手机",
+        "body": "Syncro 读取手机指南针（可选摄像头）以与现实方向对齐。这需要移动设备。在桌面上，我们会显示二维码，方便你在手机上打开 Syncro。"
+      },
+      "what_shows": {
+        "heading": "Syncro 显示什么。",
+        "intro": "打开 Syncro,快速读一读这段日程里什么被强调、什么适合放一放。",
+        "items_intro": "每个方向显示:",
+        "items": [
+          "每个方向当前 2 小时时段的模式",
+          "八个方向各自适合什么",
+          "哪里该投入，哪里该慢下来",
+          "24 小时窗口内每两小时更新"
+        ],
+        "footnote": "在你的 24 小时窗口内每两小时刷新。",
+        "preview_label": "预览",
+        "preview_placeholder": "手机示意图占位符 — 准备好后可替换为 Syncro 截图。",
+        "preview_mode_hint": "点击底部切换罗盘 / AR / 地图 — 与安装后的应用相同。"
+      },
+      "use_cases": {
+        "heading": "Syncro 适合放在哪里。",
+        "before_matters": {
+          "title": "在重要时刻之前",
+          "description": "当你即将面对一场对话、一个决定或一场会议。在走进去之前,快速和自己对一下表。"
+        },
+        "pace_off": {
+          "title": "当节奏感觉不对",
+          "description": "当你用力推却动不了,或一切顺滑却抓不住重点。给自己一个重新校准的瞬间。"
+        },
+        "daily_rhythm": {
+          "title": "作为日常节奏",
+          "description": "有人会像看天气一样打开 Syncro —— 一个小仪式,一种留意自己的方式。"
+        },
+        "traveling": {
+          "title": "当你在外出行",
+          "description": "新的环境、新的时间表。一种让自己无论在哪儿都能踩在自己节奏上的方式。"
+        },
+        "poju_companion": {
+          "title": "在 Eastern OS 深谈之间",
+          "description": "在两次 Eastern OS 深谈之间用 Syncro，留意处境如何慢慢变化。"
+        }
+      },
+      "what_it_is": {
+        "heading": "它是什么。它不是什么。",
+        "shows": {
+          "title": "它显示什么",
+          "items": [
+            "当下的节奏图案",
+            "八个方向以及它们适合什么",
+            "哪里该投入,哪里该慢下来"
+          ]
+        },
+        "isnt": {
+          "title": "它不是什么",
+          "items": [
+            "对结果的保证",
+            "结果的承诺者",
+            "你自己判断的替代品"
+          ]
+        }
+      },
+      "pricing": {
+        "heading": "定价方案",
+        "body": "专为日常执行周期打造的主权时空对齐架构。单次 24 小时 Syncro 律动循环仅需 $4.99，亦可通过生态月包凭证完全抵扣。实时校准你的执行向量，使其与内在的认知动量完美共振。",
+        "price": "$4.99",
+        "price_unit": "单次 24 小时同步窗口 · 支持月包凭证兑换",
+        "features_heading": "包含功能",
+        "features": [
+          "针对特定战略目标的 24 小时高频动态随行执行指南",
+          "每两小时精密计算一次、完美契合您生物节律的动态更新",
+          "原生于移动端架构的完整八维时空方位向量对齐模型",
+          "与您个人独一无二的底层核心认知架构进行深度系统级校准"
+        ],
+        "cta": "初始化移动端时空同步",
+        "footnote": "实时闭环推演 · 动态生物节律测算 · 专为移动端高频执行优化"
+      },
+      "pwa_guide": {
+        "title": "请在手机浏览器中打开 easternos.com 或在手机上安装 Eastern OS 的应用。",
+        "subtitle": "Syncro 只能在手机浏览器或通过安装到主屏幕的 PWA 应用使用。请根据你的手机，按下方步骤操作。",
+        "ios_browser_note": "请仅用 Safari 打开 easternos.com/syncro —— iPhone 上其他浏览器无法完成安装。",
+        "android_browser_note": "请仅用 Chrome 打开 easternos.com/syncro —— Android 上其他浏览器无法安装完整应用。",
+        "ios_step_4": "退出 Safari，从主屏幕的 Eastern OS 图标进入。",
+        "android_step_1": "在 Chrome 中点击分享按钮（或在菜单 ⋮ 里找到分享）。",
+        "android_step_2": "选择「添加到主屏幕」或「安装应用」。",
+        "android_step_3": "点击「安装」或「添加」确认。",
+        "android_step_4": "退出 Chrome，从主屏幕的 Eastern OS 图标进入。",
+        "close": "知道了"
+      }
+    },
+    "footer": {
+      "disclaimers": {
+        "home": "Eastern OS 用于自我反思与启发。我们提供洞察与视角。所有决定都由你自己做出。",
+        "poju": "Pivot 是思考伙伴。它提供视角，不是断言。所有决定都由你自己做出。",
+        "glyph": "带一丝玩味去读。这些图案是镜子，照见正在发生的事。所有决定都由你自己做出。",
+        "syncro": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
+      },
+      "links": {
+        "home": "首页",
+        "disclaimer": "免责声明",
+        "privacy": "隐私",
+        "terms": "条款",
+        "refund": "退款",
+        "cookies": "Cookies",
+        "contact": "联系我们"
+      },
+      "copyright": "© 2026 Eastern OS. 版权所有。"
+    }
+  },
+  "birthForm": {
+    "title": "出生信息",
+    "subtitle": "仅用于结构化本次决策对话。",
+    "year": "年",
+    "month": "月",
+    "day": "日",
+    "hour": "时",
+    "minute": "分",
+    "gender": "性别",
+    "genderMale": "男",
+    "genderFemale": "女",
+    "genderOther": "其他",
+    "cityOptional": "出生地（可选）",
+    "privacy": "在本设备以加密 IndexedDB 本地保存。可随时在资料设置中修改。",
+    "submit": "保存出生信息",
+    "submitting": "保存中…",
+    "done": "出生信息已保存。",
+    "errorGeneric": "出错了，请重试。",
+    "skip": "暂时跳过",
+    "skipConfirmTitle": "不填写出生资料继续？",
+    "skipConfirmBody": "不填出生信息时仅用通用会话结构。可随时在个人资料中补上。",
+    "skipConfirmStay": "返回填写",
+    "skipConfirmLeave": "不填资料继续",
+    "close": "关闭"
+  },
+  "profile": {
+    "birth_location": {
+      "title": "出生地？",
+      "subtitle": "出生日期、时间与地点——必填，用于结构化本次会话——不是算命。",
+      "why_link": "为什么需要出生地？",
+      "explanation_1": "出生地用于按你的坐标结构化本次决策会话——不是算命盘。",
+      "explanation_2": "地点锚定的是**这场**对话的会话结构。",
+      "explanation_example": "例如：同一钟表时间在不同城市对应不同本地语境——请确认你真实的出生城市。",
+      "skip_use_default": "我不确定 — 用默认值",
+      "default_note": "默认会按时区中央经度（{timezone}）计算，适用于大多数情况。",
+      "location_required_note": "请确认出生城市，或搜索其他城市。用于结构化本次会话。",
+      "confirm_city": "使用此城市",
+      "back": "返回出生信息"
+    },
+    "upgrade": {
+      "title": "补充出生城市以完善本次会话",
+      "description": "本次会话未填写出生城市。补上后，对话结构会更贴合你的出生地。",
+      "current_chart": "当前性格画像",
+      "using_default_warning": "未填写出生城市 — 补上后更贴合你的出生地",
+      "search_birth_city": "搜索你的出生城市",
+      "upgrade_chart": "保存出生城市用于本次会话",
+      "keep_old_for_now": "暂时保持当前会话",
+      "badge_precise": "✓ 已设出生地",
+      "badge_upgradeable": "补充出生城市",
+      "upgrading": "更新中…",
+      "upgrade_success": "出生地已保存，用于本次会话结构。",
+      "hour_pillar_changed": "会话结构已更新",
+      "hour_pillar_unchanged": "会话结构未变",
+      "tst_diff_minutes": "已按出生地调整：{minutes} 分钟",
+      "base_analysis_regenerated": "已按出生地刷新会话结构。",
+      "done": "完成",
+      "male": "男",
+      "female": "女"
+    }
+  },
+  "profile_selector": {
+    "loading": "正在加载已保存的性格画像…",
+    "list_title": "选择性格画像档案",
+    "list_description": "选择已保存的档案，或新增一条。数据仅保存在本机。",
+    "add_new": "新增档案",
+    "confirm_delete": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+    "skip_for_now": "暂时跳过",
+    "cancel": "取消",
+    "rel_self": "本人",
+    "rel_spouse": "配偶",
+    "rel_child": "子女",
+    "rel_parent": "父母",
+    "rel_sibling": "兄弟姐妹",
+    "rel_friend": "朋友",
+    "rel_other": "其他",
+    "male": "男",
+    "female": "女",
+    "other_gender": "其他",
+    "analyzed": "已缓存核心性格分析",
+    "view_analysis": "查看性格画像分析",
+    "edit": "改名",
+    "delete": "删除",
+    "confirm_title": "确认使用该档案",
+    "confirm_description": "下一步将使用这份出生信息进行计算。",
+    "birth_date_label": "出生日期",
+    "birth_time_label": "出生时间",
+    "birth_location_label": "地点",
+    "birth_location_default": "默认（时区中央经度）",
+    "gender_label": "性别",
+    "confirm_reassure": "之后仍可在此界面切换档案。",
+    "back_to_list": "返回",
+    "edit_this": "编辑称呼",
+    "confirm_and_continue": "确认并继续",
+    "create_title": "新建档案",
+    "create_description": "先填写称呼与关系，再输入出生信息。",
+    "display_name": "显示名称",
+    "relationship": "关系",
+    "continue_to_birth": "填写出生资料",
+    "edit_meta_title": "编辑档案称呼",
+    "edit_meta_hint": "若要修改出生日期/时辰，请删除本条后重新添加。",
+    "save_meta": "保存",
+    "edit_meta_back": "返回",
+    "generate_base_analysis": "生成并缓存核心性格分析（仅一次）",
+    "generating_base_analysis": "正在生成… 可能需要数分钟。",
+    "base_analysis_ready": "核心性格分析已保存在本机。",
+    "base_analysis_error": "生成失败",
+    "base_analysis_note": "可选：为本档案生成一次深度「核心性格分析」，结果永久缓存在本机；模型调用在服务端使用已配置的 OpenRouter。"
+  },
+  "cross_product": {
+    "match_to_poju": {
+      "title": "想更深入聊这段关系？",
+      "description": "Match 帮你看清结构，Pivot 帮你想清楚接下来怎么做。",
+      "value_prop": "围绕这段关系，最多 30 天的深度分析",
+      "button": "打开 Pivot",
+      "starting": "正在启动…",
+      "payment_failed": "无法启动支付，请稍后重试。"
+    },
+    "syncro_to_poju": {
+      "title": "想把这件事想透？",
+      "description": "Syncro 告诉你时机，Pivot 帮你想清要不要做、怎么做。",
+      "value_prop": "围绕你的处境，最多 30 天的深度对话",
+      "button": "打开 Pivot"
+    },
+    "glyph_to_poju": {
+      "title": "想拆开这次卦象在说什么？",
+      "description": "Glyph 给了一幅象，Pivot 帮你想清含义与行动。",
+      "value_prop": "围绕你正在面对的事，最多 30 天的深度对话",
+      "button": "打开 Pivot",
+      "starting": "正在启动…",
+      "payment_failed": "无法启动支付，请稍后重试。"
+    },
+    "session_picker": {
+      "title": "你想怎么继续？",
+      "subtitle": "你已有进行中的 Pivot 会话。可以把这次分析并入其中，或另开新会话。",
+      "existing_sessions": "并入已有会话",
+      "join_this": "加入这场对话",
+      "free": "免费",
+      "or": "或",
+      "start_new": "开启新的 Pivot 会话",
+      "start_new_subtitle": "若是另一个话题，建议单独开一场",
+      "days_left": "剩余 {count} 天"
+    },
+    "from_tool_entry": {
+      "continuing_from": "来自 {tool} 的延续",
+      "context_label": "延续这次分析",
+      "joining": "正在把工具结果加入本会话…"
+    }
+  },
+  "tool_preview": {
+    "guide": {
+      "glyph": "写下你此刻最想问清的那一件事，在下方输入并发送后再抽签。",
+      "match": "写下你想解决或询问的这段关系里的具体问题，在下方输入并发送。",
+      "syncro": "写下你要办的事和所在位置，在下方输入并发送。"
+    }
+  },
+  "reading_ritual": {
+    "teaser": {
+      "poju": "接下来的不是运势，是一份值得静心细读的蓝图。",
+      "glyph": "接下来的不是快占，是一面值得反复回看的镜子。",
+      "match": "接下来的不是分数，是两人如何相遇的能量地图。",
+      "syncro": "接下来的不是择吉日，是与你任务同频的时机地图。"
+    },
+    "value_frame": {
+      "poju": "Pivot 不生产快餐式的预言。你即将收到的，是一份融合 3000 年东方时空矩阵与现代心理学的深度行为蓝图。它像一面带回音的镜子——值得你在接下来的 30 天里，在安静的时刻反复阅读、对齐。每看一次，都会照见不同的自己。",
+      "glyph": "这不是一句快占。你的 Glyph 解读，是从三千年象征传统与现代心理学中敲出的一面精准之镜。它的字句值得停留——先读轮廓，再读它在你心里指向什么。",
+      "match": "这不是一个契合分数。它是一张两人如何真正相遇的能量地图——源自三千年框架与现代关系心理学。慢慢读，一起或独自；洞见往往在第二遍落下。",
+      "syncro": "这不是幸运日历。这是一张时间与方向如何随你的任务流动的细粒度地图——先读窗口，再感受哪一个贴合你此刻。"
+    },
+    "gate": {
+      "title": {
+        "poju": "在开启你的报告之前",
+        "glyph": "在开启你的 Glyph 之前",
+        "match": "在开启你的合盘报告之前",
+        "syncro": "在开启你的时机地图之前"
+      },
+      "items": {
+        "0": "我此刻在一个安静、不被打扰的空间，留出了几分钟给自己。",
+        "1": "我带着开放、好奇的心态来读。",
+        "2": "我明白文字只是引子——洞见会在我阅读时浮现。"
+      },
+      "select_all": "全选",
+      "cta": "进入深度对齐空间 →",
+      "cta_waiting": "正在为你对齐…",
+      "skip": "跳过仪式，直接继续"
+    },
+    "decoder": {
+      "poju": "这是一份多维度的深度报告，信息量很大——初次阅读带来一点智力与情感上的冲击，是非常自然的，这正是它的价值所在。接下来的 30 天里，敲击任何一段你想读透的文字，Pivot 会为你做白话破译，并落到你真实的生活场景里。",
+      "others": "这份报告值得反复看，它的层次会随时间展开。想让人逐句给你讲透、并落到你的生活里？在 Pivot 的深度对话中继续。",
+      "poju_hint": "点击报告中任意段落，请 Pivot 为你白话破译。",
+      "dismiss": "关闭",
+      "ack": "我知道了"
+    }
+  },
+  "wait_ritual": {
+    "bazi": {
+      "value": "你即将收到的，是一份结合 3000 年东方体系与现代心理学的深度行为蓝图。它更像一面镜子，其中的文字带有回音，值得你在安静的时候反复阅读、对齐。每一次看，你都会照见不同的自己。",
+      "subtitle": "正在结构化本次决策会话…深度推理进行中，请稍候（约 5 分钟）。",
+      "subtitle_cached": "正在载入已保存的性格画像，请稍候……",
+      "steps": {
+        "0": "校准你的出生时刻……",
+        "1": "勾勒你的性格画像结构……",
+        "2": "分析核心特质与能量结构……",
+        "3": "确定你的性格模式与关键能量……",
+        "4": "梳理人生阶段与当前周期……"
+      },
+      "finish": "你的解读已成形。"
+    },
+    "bridge": {
+      "glyph": "已完成你的性格画像与能量结构的完整分析。接下来，将把这份性格画像与你的 Glyph 交织，为你映照这面镜子……",
+      "match": "已完成你的性格画像的完整分析。接下来，将把你的性格画像与对方的能量场合参，描绘你们如何相遇……"
+    },
+    "glyph": {
+      "value": "你即将收到的，是一面由 3000 年东方反思传统与现代心理学共同擦亮的镜子——它照见的不是答案，而是此刻的你。值得你慢下来，读第二遍。",
+      "subtitle": "正在将你的性格画像与你的 Glyph 交织，约需 3–5 分钟。",
+      "steps": {
+        "0": "读取你此刻所处的阶段……",
+        "1": "聆听你触发的这个 Glyph……",
+        "2": "将 Glyph 与你的性格画像交织……",
+        "3": "让这面镜子缓缓显形……"
+      },
+      "finish": "这面镜子已清晰。"
+    },
+    "match": {
+      "value": "你即将收到的，是一张由 3000 年东方关系智慧与现代心理学绘成的能量地图，照见两个人如何真正相遇。慢慢读，真正的洞见会在第二遍浮现。",
+      "subtitle": "正在描绘你们两股能量如何相遇，约需 3–5 分钟。",
+      "steps": {
+        "0": "读取第一份性格画像的核心特质……",
+        "1": "读取第二份性格画像的核心特质……",
+        "2": "梳理你们能量之间的生助与摩擦……",
+        "3": "定位你们人生阶段的同频之处……",
+        "4": "勾勒你们关系的形状……"
+      },
+      "finish": "你们的能量地图已绘成。"
+    },
+    "syncro": {
+      "value": "你即将收到的，是一份由 3000 年东方体系与现代决策科学校准的时机地图——它不给你一份谁都通用的好日子清单，而给你与你这件事同频的时机窗口。读懂它，需要你与当下对齐。",
+      "subtitle": "正在为你这件事对齐时机与方位，约需 1–2 分钟。",
+      "steps": {
+        "0": "将你的任务投射到时空场中……",
+        "1": "扫描接下来各时段的窗口……",
+        "2": "为每个窗口对齐方位……",
+        "3": "让最适合你的窗口浮现……"
+      },
+      "finish": "你的时机窗口已对齐。"
+    },
+    "progress": {
+      "chart_ready": "正在校准您的出生时刻与时空坐标…",
+      "v2_compute": "正在推演您的原生能量结构…",
+      "v2_compute_wait": "正在计算核心能量矩阵与多维相位关联…",
+      "v2_narrative": "正在构建报告叙事主干…",
+      "v2_evidence": "正在推演证据链与底层依据…",
+      "v2_translate": "正在将高维推演矩阵进行深度语义构建…",
+      "v2_semantic_text": "正在将高维推演转化为专属解读文本…",
+      "v2_final_audit": "正在进行交叉校验与推演终审…",
+      "streaming": "正在进行交叉校验与推演终审…",
+      "repair": "正在进行交叉校验与推演终审…"
+    },
+    "artifacts": {
+      "compute_done": "多维度能量结构分析已完成",
+      "narrative_done": "报告主干内容已完成",
+      "evidence_done": "逻辑与推演依据已标注",
+      "translate_done": "深度语义构建已完成"
+    }
+  },
+  "poju": {
+    "branding": {
+      "navbar_tooltip": "策略破局：打破认知死角与复杂的人生困局。",
+      "hero_tagline": "解构宿命矩阵，直击破局要害。",
+      "feature_definition": "Eastern OS 是面向卡住抉择的多轮决策对话。以你的出生坐标结构化本次会话——不是算命。一次完整对话你会得到：对话本身；主路径与备用；可在本浏览器重开的决策报告；以及同行的 30 天同线提醒（同步提供）。针对你现在卡住的地方，一步步帮你理清楚。"
+    },
+    "begin": {
+      "start": "开始",
+      "free_first_time": "开始会话"
+    },
+    "activity": {
+      "understanding": [
+        "Pivot 正在解析你当前的物理困境…",
+        "正在锁定你当前系统的核心冲突点…",
+        "Pivot 正在调取你的底层设计图谱…",
+        "正在推演该问题与你自身行为倾向的映射关系…"
+      ],
+      "deep_reckoning": [
+        "Pivot 正在整合你的全量多维特征数据…",
+        "正在进行深度的结构化变量测算…",
+        "正在推演系统性破局的最优解路径…",
+        "正在为你量身定制专属的现实验证议程…"
+      ],
+      "collecting": [
+        "Pivot 正在将你的现实反馈沉淀进核心数据蓄水池…",
+        "正在对照你的底层行为倾向模型进行交叉比对…"
+      ],
+      "summarizing": [
+        "Pivot 正在对多轮交互的信息进行全局结构化收拢…",
+        "正在为你梳理隐藏在现象背后的核心病灶总览…"
+      ],
+      "delivering": [
+        "Pivot 正在将底层设计与现实细节融为一体，生成终极破局报告…",
+        "正在将战略判断转化为可量化、高可操的行动指南…"
+      ],
+      "tracking": [
+        "Pivot 正在追踪你的现实执行反馈与数据偏差…",
+        "正在动态为你调整下一步的策略推进节奏…"
+      ],
+      "degraded_delivering": [
+        "Pivot 正在基于当前有限的数据锚点，为你提取最大可行性策略…"
+      ]
+    },
+    "tool_handoff": {
+      "banner_free": "来自 Pivot · 本次 Session 内免费",
+      "banner_paid": "来自 Pivot · 按工具常规定价",
+      "return_banner": "带着这份结果回到 Pivot",
+      "return_footer": "回到 Pivot · 继续对话",
+      "returning": "正在返回 Pivot…",
+      "prefill_relationship": "关于你与 {name} 的关系",
+      "tool_result_resume_user": "我从工具回来了，我们继续聊。"
+    },
+    "chat": {
+      "question_label": "你的问题",
+      "archive_link": "会话与归档",
+      "input_placeholder": "请写下你此刻遇到的问题或困境",
+      "input_placeholder_with_options": "以上描述的不准确，实际情况是…",
+      "input_placeholder_gate_pick": "请点击您的选项…",
+      "input_placeholder_gate_supplement": "请输入要补充的信息…",
+      "reply_options_group_label": "快捷回复",
+      "reply_option_edit_label": "在这条基础上补充",
+      "send": "发送",
+      "sending": "思考中…",
+      "stop_generating": "停止",
+      "generation_stopped": "已停止生成。",
+      "thinking_wait": "Eastern OS 正在思考…",
+      "replying_wait": "Eastern OS 正在回复…",
+      "edit_message": "编辑",
+      "edit_message_title": "编辑消息",
+      "edit_message_prompt": "修改你的消息。此条之后的对话将被删除，并从修改后的内容重新开始。",
+      "turns": "轮次",
+      "tokens": "用量",
+      "end_session": "结束会话",
+      "ending": "保存中…",
+      "end_confirm": "将本会话标记为已结束？你仍可在「归档」中查看本设备上的历史会话。",
+      "thinking_process_title": "思考过程",
+      "thinking_process_full": "查看完整思考",
+      "thinking_analyzing_chart": "DeepSeek 正在分析你的核心性格画像…",
+      "profile_save_failed": "无法在本机保存档案。可换浏览器、关闭无痕模式或清理存储空间后重试。",
+      "profile_saved_chat_failed": "档案已保存在本机，但自动回复未成功。请检查网络后随便发一条消息继续对话。",
+      "thinking_waiting": "DeepSeek 正在通过 OpenRouter 进行深度推理，回复完成后将在此显示完整思考过程。",
+      "thinking_step_1": "结合本会话上下文阅读你的这条消息。",
+      "thinking_step_2": "在 Pivot 的深度与安全规则下对齐回复。（这是简要说明，不是模型的原始思维链。）",
+      "thinking_step_3": "生成下方展示的正文。",
+      "situation_analysis_hint": "Step 8：针对本会话的困境深度分析。按「语境指纹」缓存在本机；你补充的事实变化后可再次生成。",
+      "situation_analysis_have_cache": "当前语境版本已有缓存分析。",
+      "situation_analysis_cache_hit": "已使用本轮语境的缓存困境分析。",
+      "situation_analysis_new": "已生成新的困境分析并写入本会话。",
+      "situation_analysis_run": "生成困境分析",
+      "situation_analysis_running": "生成中…",
+      "situation_analysis_force": "强制重算（同语境）",
+      "final_delivery_hint": "Step 9：在已有 Step 8 语境缓存后，按你的对话语言生成长文主交付与行动卡（与 Step 7/8 相同 DeepSeek 模型）。服务端需配置 OPENROUTER_API_KEY。",
+      "final_delivery_run": "最终交付",
+      "final_delivery_running": "正在生成主交付…",
+      "final_delivery_done": "主交付已写入本会话。",
+      "delivery_interrupted_body": "由于服务器暂时拥挤，本次交付被中断了。已生成的内容会保留在下方。请点击继续，生成后续内容——给你造成的不便，我们深表歉意。",
+      "delivery_interrupted_continue": "继续交付",
+      "delivery_interrupted_continuing": "正在继续交付…",
+      "pass_required": "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。",
+      "pass_login_required": "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。",
+      "agent_phase_label": "Agent 阶段",
+      "agent_phase_opening": "开场",
+      "agent_phase_greeting": "问候",
+      "agent_phase_awaiting_profile": "等待档案",
+      "agent_phase_collecting": "收集语境",
+      "agent_phase_confirm": "确认摘要",
+      "understanding_gate_confirm": "确认并继续",
+      "understanding_gate_supplement": "补充并修正",
+      "understanding_gate_group_label": "理解确认",
+      "delivery_confirm": "确认并继续",
+      "delivery_supplement": "补充并修正",
+      "delivery_confirm_group_label": "交付确认",
+      "segment2_regenerate_analysis": "重新生成分析",
+      "segment2_regenerate_group_label": "重新生成深度分析",
+      "segment2_regenerate_question": "重新生成提问",
+      "segment2_regen_question_group_label": "重新生成承上启下提问",
+      "delivery_regenerate": "重新生成交付书",
+      "delivery_regenerating": "正在重新生成交付书…",
+      "delivery_regenerate_group_label": "重新生成第四阶段交付",
+      "delivery_stop": "停止交付生成",
+      "delivery_stopping": "正在停止…",
+      "delivery_rail_controls_label": "第四阶段交付控制",
+      "delivery_retry": "重新生成交付书",
+      "delivery_retry_group_label": "重试第四阶段交付",
+      "opening_understanding_retry": "点击重试",
+      "opening_understanding_retry_group_label": "重试理解对话",
+      "agent_phase_delivered": "已交付",
+      "agent_phase_tracking": "跟进",
+      "context_summary_title": "请确认我们理解的事实",
+      "context_summary_hint": "核对下列信息。确认后 Pivot 将进行深度分析并生成长文交付。",
+      "context_summary_confirm": "确认并生成交付",
+      "context_summary_confirming": "正在生成交付…",
+      "context_summary_edit_chat": "在对话中补充",
+      "profile_picker_in_chat_title": "为本会话关联档案",
+      "profile_picker_in_chat_hint": "选择已保存档案或填写出生信息，数据仅保存在本机。",
+      "birth_flow_intro_title": "本次决策会话的出生信息",
+      "birth_flow_intro_body": "为结构化本次决策会话，需要出生日期、时间与地点（如询问则含性别）。仅保存在本机——不上服务器。不是算命。",
+      "birth_flow_privacy_badge": "仅保存在本机",
+      "birth_flow_intro_cta_hint": "请先阅读上方 Eastern OS 的说明，然后在此继续填写出生信息（仅保存在本机）。",
+      "birth_flow_continue": "继续填写",
+      "birth_flow_skip": "暂时跳过",
+      "question_briefing": {
+        "title": "开始之前，先了解 Pivot 怎么陪你",
+        "intro": "在我们开始前，有四件事想先和你说清楚：",
+        "item_one_title": "一次，只专注一个核心问题",
+        "item_one_body": "Pivot 是为你个人、针对你当下最核心的那一个问题而来。请把你最想理清的那件事告诉它——聚焦一件，才能走得深。",
+        "item_two_title": "你说得越具体，Pivot 越能贴着你",
+        "item_two_body": "你的处境、感受、纠结的细节说得越清楚，Pivot 给你的反思和行动方向就越贴合你，而不是泛泛而谈。",
+        "item_three_title": "回复慢一点，是因为它在认真为你计算",
+        "item_three_body": "Pivot 每一次回应，背后都是大量的分析与推演。所以有时它会「想」得久一些——这不是系统故障，而是它正在为你认真计算。请给它一点耐心。",
+        "item_four_title": "Pivot 会一步步问，别急着要答案",
+        "item_four_body": "为了真正理解你的处境、给出只对你成立的方案，Pivot 会分几轮和你对话、逐步深入，而不是一上来就下结论。请耐心陪它走完这几轮——这些问答，恰恰是最终方案含金量的来源。",
+        "footer_label": "决定权与责任",
+        "footer": "POJU 提供的是自我反思与参考视角，帮助你把问题看得更清、找到可尝试的方向，最终的决定始终在你手中。",
+        "privacy_footer": "你的对话只保存在你的浏览器本地（换浏览器或无痕模式将清除）；为生成回应会通过安全连接发送给 AI 模型（其声明不留存、不用于训练）。详见隐私政策。",
+        "privacy_link": "[阅读隐私政策 →]",
+        "confirm": "我知道了"
+      },
+      "birth_flow_analyzing_title": "正在分析性格画像…",
+      "birth_flow_analysis_done_short": "分析完成",
+      "birth_flow_analysis_partial": "已保存，分析将稍后重试",
+      "birth_flow_step_received": "已收到并保存在本机的出生信息",
+      "birth_flow_step_analyzing": "正在进行核心性格分析",
+      "birth_flow_step_done": "可以继续在对话中补充细节",
+      "dialog_ok": "确定",
+      "dialog_cancel": "取消",
+      "dialog_connection_error": "连接异常，请稍后重试。",
+      "infra_busy_retry": "重试",
+      "dialog_provider_queue": "系统提示：为了保障深度咨询报告的推演质量，POJU正在进行复杂的后台数据融合计算。当前服务器正处于高负载排队中，请您稍候 1-2 分钟后重试发送。给您带来的不便敬请谅解。",
+      "dialog_create_session_error": "暂时无法创建新会话，请稍后重试。",
+      "session_list_new": "新会话",
+      "dialog_payment_redirect_failed": "无法打开支付页面，请稍后再试。",
+      "dialog_speech_unsupported": "当前浏览器不支持语音输入。",
+      "dialog_speech_denied": "未获得麦克风权限。请在浏览器设置中允许麦克风后再试。",
+      "voice_input_start": "开始语音输入",
+      "voice_input_stop": "停止语音输入",
+      "voice_input_hold": "按住说话",
+      "voice_input_release": "松开结束",
+      "voice_input_empty_hint": "请开始说出您需要输入的内容",
+      "voice_input_lang_only": "仅支持中文",
+      "dialog_delete_session": "确定删除此会话？",
+      "dialog_delete_session_confirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "dialog_delete_session_bilingual": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "dialog_rename_session": "编辑会话标题",
+      "dialog_rename_placeholder": "会话标题",
+      "session_menu_label": "会话选项",
+      "session_menu_rename": "重命名",
+      "session_menu_delete": "删除",
+      "sidebar_brand_name": "Pivot",
+      "sidebar_sessions_label": "最近会话",
+      "sidebar_session_active": "当前会话",
+      "active_session_title": "继续已有会话",
+      "active_session_body": "本设备上已有一个进行中的 Pivot 会话。现在打开，或留在当前页面。",
+      "active_session_open": "打开会话",
+      "pipeline_busy": "正在运行分析流水线…",
+      "advanced_pipeline": "高级（手动步骤）",
+      "message_action_copy": "复制",
+      "message_action_copied": "已复制",
+      "message_action_read_aloud": "朗读",
+      "message_action_stop_reading": "停止朗读",
+      "attach_menu_label": "添加附件",
+      "attach_menu_document": "添加文档",
+      "attach_menu_image": "添加图片",
+      "attach_menu_pdf": "添加 PDF",
+      "ctx_cut": "剪切",
+      "ctx_copy": "复制",
+      "ctx_paste": "粘贴",
+      "ctx_select_all": "全选",
+      "unlock_report_modal_title": "个人能量分析报告",
+      "unlock_report_modal_hint": "可随时在聊天记录中再次打开个人能量分析报告。",
+      "unlock_report_gate_hint": "请阅读您的个人能量分析报告。关闭后，Pivot 将继续针对您的问题对话。",
+      "unlock_report_close": "关闭",
+      "unlock_report_close_continue": "关闭并继续对话",
+      "unlock_report_card_label": "个人能量分析报告",
+      "unlock_report_card_title": "您的个人能量分析报告已就绪",
+      "unlock_report_view_full": "查看完整报告",
+      "session_picker": {
+        "close": "关闭",
+        "new_poju": "+ New Pivot",
+        "price": "$9.99",
+        "existing_label": "进行中的会话",
+        "days_left": "剩余 {count} 天"
+      }
+    },
+    "topic_drift": {
+      "title": "检测到话题转换",
+      "start_new_session": "开启新 Session 聊这个",
+      "continue_current": "回到原话题"
+    },
+    "scope_mismatch": {
+      "body": "POJU 面向特定的人、一件具体的问题或困境，帮助你找到可落地的破局方向。当前内容看不出属于可服务范围。请用文字重新描述你的情况；若暂时不适合继续，可申请退款。"
+    },
+    "refund_offer": {
+      "hint": "如果暂时不适合深入聊，可以申请退款，准备好再回来。",
+      "open_refund": "申请退款",
+      "continue_chat": "继续聊",
+      "modal_title": "申请退款",
+      "loading": "正在加载支付信息…",
+      "no_payment": "未找到本 Session 的支付记录。",
+      "error_fallback": "无法自动处理退款，请联系我们。"
+    },
+    "unqualified_escalation": {
+      "l1": "我没太理解你刚才的回复。请就刚才那一问再认真说一次，好吗？",
+      "l2": "Eastern OS 是一份需要认真对待的工作。你的回复会直接影响最终交付报告的质量——请就刚才那一点再回复一次。",
+      "l3": "Eastern OS 是一份需要认真对待的工作，你的回复对最终交付报告至关重要。如果此刻不方便，可以稍后再来——我会一直在这里等你。",
+      "l4": "Eastern OS 是一份需要认真对待的工作。鉴于目前无法继续有效对话，请将本次会话编号（{sessionId}）发送至 support@easternos.com。Eastern OS 将在 7 个工作日内退回你的 PASS。此页面将在 5 分钟后关闭，输入已锁定。谢谢理解。",
+      "countdown": "本会话将在 {minutes}:{seconds} 后关闭",
+      "locked_hint": "输入已锁定。请将会话编号发送至 support@easternos.com 以申请退回 PASS。"
+    },
+    "archive_hint": {
+      "saved_title": "行动建议已存入 Archive",
+      "saved_text": "随时在 Archive 的 POJU 分类中查看。我们不会推送提醒——你准备好了再回来即可。",
+      "view_in_archive": "在 Archive 中查看"
+    },
+    "summary_editor": {
+      "title": "请核对信息",
+      "description": "以下是我们目前理解的内容。如有不准之处请修改，或补充遗漏。",
+      "save": "保存",
+      "cancel": "取消",
+      "confirm_delete_item": "删除此项？",
+      "additional_note_placeholder": "还有需要补充的…",
+      "add_and_continue": "添加并继续",
+      "add_something": "补充遗漏信息",
+      "back_to_conversation": "返回对话",
+      "confirm_generate_analysis": "确认并生成交付",
+      "confirming": "正在生成交付…",
+      "note_about_processing": "确认后 Pivot 将在本机进行深度分析（Step 8–9），可能需要一两分钟。"
+    },
+    "expiry": {
+      "expires_in": "本会话窗口还剩约 {days} 天。",
+      "extend_30": "延长 30 天",
+      "extending": "延长中…",
+      "price": "$9.99",
+      "dialog_title_warning": "会话即将到期",
+      "dialog_title_expired": "会话已到期",
+      "dialog_body_warning": "本会话还剩 {days} 天到期。到期后将无法就此问题继续对话。若想在 30 天窗口结束后继续讨论同一问题，需支付 {price} 延长 30 天。",
+      "dialog_body_expired": "本会话已到期，无法就此问题继续对话。支付 {price} 可延长 30 天并继续之前的讨论。",
+      "extend_30_paid": "延长 30 天 {price}",
+      "acknowledge": "我知道了",
+      "dont_remind": "不再提醒",
+      "redirecting_payment": "正在跳转支付…"
+    },
+    "delivery": {
+      "badge": "Pivot 交付书",
+      "intro": "封面 · 目录 · 七部分正文 · 附录——基于真算脊柱与你亲口确认的事实。",
+      "reminder": "这是一次性交付。地图已交到你手里，接下来靠你自己走。"
+    },
+    "companion": {
+      "frame_title": "30 日每日提醒",
+      "frame_sub": "金色格是陪伴窗；今日高亮。已就绪的日子可点开：今日场域、宜忌、建议与依据。",
+      "need_chart": "需要命盘数据才能开启陪伴窗。",
+      "preparing": "正在准备 30 日陪伴…",
+      "retry": "重试",
+      "open_day": "打开",
+      "day_pending": "准备中",
+      "day_failed": "失败 · 将重试",
+      "mail_opt_in": "每日提醒同步发送到我的邮箱",
+      "email_placeholder": "you@example.com",
+      "day_title": "{date} · 第 {n}/30 日",
+      "close": "关闭",
+      "primary": "主路径",
+      "backup": "辅路径",
+      "today_is": "今天是什么",
+      "suitable": "今天适合",
+      "unsuitable": "今天不宜",
+      "suggestion": "建议",
+      "evidence": "今日依据"
+    },
+    "actions": {
+      "title": "你可以做的"
+    },
+    "action_card": {
+      "category_traditional": "传统建议",
+      "category_decisive": "行动",
+      "category_reflective": "反思",
+      "timing_immediate": "今天",
+      "timing_this_week": "本周",
+      "timing_this_month": "本月",
+      "timing_ongoing": "持续",
+      "why_this_action": "为什么这条建议",
+      "mark_completed": "我做了",
+      "mark_modified": "我调整过",
+      "mark_skipped": "我没做",
+      "status_completed": "已完成",
+      "status_modified": "已调整",
+      "status_skipped": "已跳过"
+    },
+    "message": {
+      "thinking": "Pivot 正在思考…"
+    },
+    "archive": {
+      "title": "Pivot 会话",
+      "subtitle": "会话以加密形式保存在本设备。",
+      "back": "返回 Pivot",
+      "section_active": "进行中",
+      "section_paused": "已暂停",
+      "section_resolved": "已结束",
+      "section_archived": "已归档",
+      "continue": "继续",
+      "pause": "暂停",
+      "restore": "恢复",
+      "restore_paid": "继续会话 — $9.99",
+      "delete_forever": "永久删除",
+      "delete_confirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "meta_expires": "到期",
+      "meta_status": "状态"
+    }
+  },
+  "archiveVault": {
+    "section_title": "已保存的行动建议",
+    "title": "你的 Archive",
+    "hero_intro": "这里是您的本地加密档案馆。您的所有探索记录已自动转化为本地 AES 加密数据，完全锁存在这台设备上。",
+    "hero_points": [
+      {
+        "icon": "lock",
+        "text": "绝对隐私：没有账户系统，我们的服务器不存储任何数据。"
+      },
+      {
+        "icon": "alert",
+        "text": "切勿跨端：更换手机、电脑或换个浏览器，将无法看到旧记录。"
+      },
+      {
+        "icon": "erase",
+        "text": "清理即失：清空浏览器数据、关闭隐私模式访问的网页、卸载应用（PWA）会导致数据被物理擦除，无法找回。"
+      }
+    ],
+    "loading": "加载中…",
+    "load_error": "无法读取本机 Archive，请关闭并重新打开应用后再试。",
+    "empty_all": "POJU 的记录和行动建议、Glyph 解读、Syncro 会话与 Match 分析会显示在这里。",
+    "empty_poju": "完成 Pivot 会话交付、收到行动建议后，会显示在这里。",
+    "empty_glyph": "Glyph 解读记录会显示在这里。",
+    "empty_match": "Match 分析记录会显示在这里。",
+    "empty_syncro": "Syncro 会话会显示在这里。",
+    "filter_all": "全部",
+    "syncro_mobile_only": "Syncro 只能在手机上使用，因此相关记录也只有在手机上才能查看。"
+  },
+  "archiveDetail": {
+    "title": "POJU 行动建议",
+    "loading": "加载中…",
+    "not_found": "本设备上未找到该记录。",
+    "original_question_label": "原始问题",
+    "delivery_excerpt_label": "分析摘要",
+    "cat_traditional": "传统调整",
+    "cat_decisive": "果断行动",
+    "cat_reflective": "反思练习",
+    "rationale_label": "分析依据",
+    "mark_done": "已完成",
+    "skip": "跳过",
+    "done": "已完成",
+    "skipped": "已跳过",
+    "modified": "已调整",
+    "back_to_session": "回到完整对话",
+    "back": "返回",
+    "delete": "删除",
+    "confirm_delete": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+    "syncro_title": "Syncro 会话",
+    "syncro_task_label": "你的任务",
+    "syncro_best_peak": "24 小时场中最强峰值",
+    "syncro_open_live": "打开实时罗盘",
+    "syncro_start_new": "开始新的 Syncro",
+    "syncro_expired": "这次 24 小时窗口已结束。",
+    "syncro_active_until": "实时窗口有效至 {date}",
+    "poju_session_title": "Pivot 对话",
+    "poju_session_active_until": "会话窗口内 — 开始页选择器还剩 {days} 天",
+    "poju_session_no_messages": "暂无消息 — 继续此话题即可开始对话。",
+    "poju_role_user": "你",
+    "poju_role_assistant": "Pivot",
+    "poju_session_continue": "继续此话题",
+    "poju_session_expired_body": "此会话已满 30 天。如需继续此会话，请支付 $9.99 重新开启。",
+    "poju_session_pay_cta": "继续会话 — $9.99",
+    "poju_session_paying": "跳转支付…",
+    "poju_session_dismiss": "我知道了",
+    "poju_session_paused_hint": "此会话已暂停，请先在 Pivot 会话归档页恢复。"
+  },
+  "glyph": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "首次免费"
+    },
+    "subtitle": "60 秒隐喻指引",
+    "description": "为你当下的处境抽取一个 Glyph。性格画像 + 古典智慧 = 60 秒清明。",
+    "start_free": "抽取你的第一个 Glyph（免费）",
+    "start_paid": "再抽一支 — $4.99",
+    "starting_paid": "正在开始…",
+    "loading": "加载中…",
+    "back_to_home": "返回 Glyph",
+    "about_glyph": "了解 Glyph",
+    "your_question_label": "你的问题",
+    "question_response_title": "关于你的问题",
+    "draw_missing_profile": "未选择档案，请先选择或添加性格画像。",
+    "back_to_prepare": "返回准备页",
+    "draw_stub_title": "档案已就绪 — 下一步抽 Glyph",
+    "draw_stub_profile": "档案",
+    "draw_stub_type": "类型",
+    "draw_stub_hint": "在此输入你的问题，然后抽一支 Glyph。",
+    "draw_stub_legacy_reading": "进入旧版解读",
+    "profile_not_found": "本设备上未找到该档案。",
+    "reading_for_label": "为",
+    "input_title": "你现在心里在想什么？",
+    "input_hint": "描述你正面对的处境、困境或问题。10–200 字。",
+    "input_placeholder": "例如：我现在在两个工作 offer 之间犹豫……",
+    "draw_button": "抽取你的 Glyph",
+    "drawing_text": "正在抽取 Glyph……",
+    "draw_sequence": {
+      "tap_to_reveal": "点击卡牌翻面",
+      "tap_for_reading": "点击卡牌查看完整解读",
+      "close": "关闭"
+    },
+    "reading_loading": "正在为你推演……",
+    "reading_loading_hint": "结合你的画像与隐喻，大约 3–5 分钟。",
+    "delivery_chart_title": "完整性格分析",
+    "term_mark_hint": "将鼠标移到带虚线下划线的术语上，或轻点",
+    "term_mark_hint_sample": "助元",
+    "term_mark_hint_suffix": "，即可阅读白话解释。",
+    "term_mark_ack": "我知道了",
+    "reading_failed": "解读失败",
+    "reading_retry": "重试",
+    "reading_error_transient": "解读服务暂时异常，请点「重试」——你的性格画像已保存。",
+    "reading_error_timeout": "本次解读耗时过长，请稍后再试。",
+    "reading_error_network": "网络连接中断，请检查网络后重试。",
+    "reading_error_invalid_json": "模型返回不完整，请重试。",
+    "reading_error_unknown": "出了点问题，请重试；或返回 Glyph 重新抽签。",
+    "reading_profile_not_ready": "性格画像分析尚未就绪。请返回准备页，等待档案生成完成。",
+    "reading_invalid_input": "未能从你的描述中读出明确问题。请用 10–200 字具体描述处境后重试。",
+    "back_to_glyph": "返回 Glyph",
+    "reading_session_missing": "未找到本次解读记录，请从 Glyph 重新开始。",
+    "section_classical": "这个 Glyph 说什么",
+    "section_dual_view": "双视角分析",
+    "view_bazi_title": "从你的性格画像看",
+    "view_glyph_title": "从 Glyph 的角度看",
+    "section_meaning": "针对你的问题",
+    "section_hidden": "你可能没看到的",
+    "section_moment": "你当下的时机",
+    "section_exploration": "一个小练习",
+    "section_reflection": "一个值得深思的问题",
+    "explore_time_today": "今天",
+    "explore_time_tonight": "今晚",
+    "explore_time_24h": "24 小时内",
+    "explore_time_week": "本周",
+    "explore_solo": "独自",
+    "saved_to_archive": "本次解读已存入你的 Archive",
+    "view_in_archive": "在 Archive 中查看",
+    "archive_detail_title": "Glyph：{name}"
+  },
+  "session_prep": {
+    "loading": "加载中…",
+    "preparing": "正在准备档案…",
+    "preparing_done": "正在进入会话…",
+    "welcome_title": "欢迎来到 Eastern OS。",
+    "welcome_desc": "Eastern OS 是你卡住时的思考伙伴——主路径、备用与可重开的报告，以及同行的 30 天同线提醒（*同步提供*）。出生日期、时间与地点用于结构化**本次**决策会话——不是算命。",
+    "list_title": "选择你的档案",
+    "list_description": "选择已保存的档案，或添加新的性格画像。",
+    "add_new_person": "添加新档案",
+    "enter_new_info": "输入新信息",
+    "male": "男",
+    "female": "女",
+    "ready": "已分析",
+    "view_analysis": "查看完整报告",
+    "delete": "删除",
+    "rename": "重命名",
+    "rename_prompt": "重命名此档案",
+    "rename_cancel": "取消",
+    "rename_save": "保存",
+    "card_menu": "档案操作",
+    "created_at": "创建时间：{date}",
+    "confirm_delete": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+    "refund_link": "我不想分享 — 退款",
+    "error_create_profile": "保存失败，请重试。"
+  },
+  "base_analysis_view": {
+    "eyebrow": "决策会话结构",
+    "title": "决策会话结构",
+    "rail_description": "基于先天能量结构的多维解读，落到可执行的调适与行动建议。",
+    "close": "关闭",
+    "loading": "正在加载…",
+    "not_found": "未找到已保存的分析。",
+    "closing": "这是你的能量配置读数。怎么用它，取决于你自己。",
+    "poju_cta_title": "带着这份报告进入 POJU",
+    "poju_cta_description": "你的能量配置已在上下文中，可直接追问、深聊。",
+    "poju_cta_button": "打开 Pivot",
+    "sections": {
+      "section_1": "性格与\n内在特质",
+      "section_2": "工作与\n决策逻辑",
+      "section_3": "沟通与\n人际协同",
+      "section_4": "状态与\n发展周期",
+      "section_5": "调适与\n行为建议",
+      "section_6": "提炼与\n行动指南",
+      "tablist_label": "报告段落",
+      "prev_page": "上一页",
+      "next_page": "下一页",
+      "close_report": "关闭报告"
+    }
+  },
+  "refund": {
+    "title": "退款",
+    "confirm_text": "我们理解。你的会话将被退款并删除。",
+    "amount_label": "金额",
+    "eta_label": "退款到账",
+    "eta_value": "3-5 个工作日",
+    "reassure": "如果你改变主意，随时可以重新开始一个新会话。",
+    "go_back": "返回",
+    "confirm_refund": "是的，退款",
+    "processing": "正在处理退款...",
+    "success_title": "退款已确认",
+    "success_message": "{amount} 已经退款。预计 {days} 个工作日内到账。",
+    "refund_id_label": "退款 ID",
+    "back_to_home": "返回 Pivot",
+    "error_title": "退款失败",
+    "error_message": "无法自动处理退款，请联系客服。",
+    "retry": "重试",
+    "contact_support": "邮件联系"
+  },
+  "birth_form": {
+    "birth_location": "出生地点",
+    "search_city": "搜索城市…",
+    "tap_to_enter_city": "点击输入出生城市",
+    "searching": "搜索中…",
+    "cancel": "取消",
+    "why_we_ask": "为什么需要？",
+    "why_explanation": "出生地用于按你的坐标结构化本次决策会话——不是算命盘。",
+    "true_solar_offset": "按出生地调整：{offset}",
+    "confirm_continue": "使用此地点继续",
+    "location_required": "请选择或确认你的出生城市。",
+    "confirm_privacy_note": "你的数据只会加密后保存在本地设备，Eastern OS 不会也无法获取，请放心使用。"
+  },
+  "birth_picker": {
+    "title": "你的出生信息",
+    "description": "出生日期、时间与地点——必填，用于结构化本次会话——不是算命。",
+    "birth_date": "出生日期",
+    "birth_hour": "出生时间",
+    "birth_datetime": "出生日期与时间",
+    "hour_hint": "不知道准确时间？选最接近的估计。",
+    "shichen_preview": "对应时辰 · {period}",
+    "col_year": "年",
+    "col_month": "月",
+    "col_day": "日",
+    "col_hour": "时",
+    "col_minute": "分",
+    "side_title": "隐私与安全",
+    "side_body": "",
+    "side_body_returning": "",
+    "side_privacy_title": "隐私与安全",
+    "side_privacy_intro": "对话与交付物留在你设备上的当前浏览器。账号只管 PASS 余额与账单——不是聊天历史的云端货架。",
+    "side_local_title": "存在当前浏览器",
+    "side_local_body": "本场使用记录在本地存储。可随时在应用内清除。",
+    "side_wipe_title": "缓存 / 无痕窗口",
+    "side_wipe_body": "清缓存或关闭无痕窗口，这份本地记录就没了。",
+    "side_isolation_title": "设备之间不同步聊天",
+    "side_isolation_body": "换浏览器或换设备看不到以前的聊天——即使同一登录。PASS 余额仍跟账户走。",
+    "gender": "性别",
+    "male": "男",
+    "female": "女",
+    "timezone_label": "你的时区（自动识别）",
+    "timezone_hint": "仅用于内部精确计算。",
+    "back_to_list": "返回列表",
+    "continue": "继续",
+    "submit": "继续",
+    "form_section_title": "开启决策对话",
+    "form_prompt": "请输入或选择基础信息",
+    "form_help": "为**这一次**卡住的决定，开启多轮决策对话。你会带走主路径、备用、还能再打开的报告，以及**同步提供**的 30 天同线提醒。我们给建议。决定权在你。",
+    "birth_place": "出生地点",
+    "form_prompt_firstVisit": "请输入基础信息",
+    "form_prompt_returning": "请输入或选择基础信息",
+    "field_compliance": "**出生日期、时间与地点——必填**，用于结构化本次会话——**不是算命**。"
+  },
+  "birth_confirm": {
+    "title": "确认你的信息",
+    "description": "请核对以下信息。确认后，Eastern OS 会立即排盘并准备你的解读。",
+    "date_label": "出生日期",
+    "hour_label": "出生时辰",
+    "gender_label": "性别",
+    "timezone_label": "时区",
+    "location_label": "出生地",
+    "location_default": "默认（时区中央经度）",
+    "male": "男",
+    "female": "女",
+    "reassure_1": "你的数据只保存在本设备，已加密。",
+    "reassure_2": "确认后，准备过程约 2–5 分钟。",
+    "go_back": "返回修改",
+    "confirm_and_proceed": "确认并开始",
+    "processing": "准备中…"
+  },
+  "bazi": {
+    "gender": {
+      "qian": "男",
+      "kun": "女"
+    },
+    "strength": {
+      "strong": "充沛",
+      "weak": "需养",
+      "balanced": "均势"
+    },
+    "element": {
+      "wood": "木",
+      "fire": "火",
+      "earth": "土",
+      "metal": "金",
+      "water": "水"
+    },
+    "life_stage": {
+      "changsheng": "萌发",
+      "muyu": "展露",
+      "guandai": "束装",
+      "linguan": "执掌",
+      "diwang": "登峰",
+      "shuai": "内敛",
+      "bing": "疲态",
+      "si": "蛰伏",
+      "mu": "秘藏",
+      "jue": "归零",
+      "tai": "孕育",
+      "yang": "颐养"
+    },
+    "shensha": {
+      "tian_yi_gui_ren": "天乙贵人",
+      "lu_shen": "禄神",
+      "fei_ren": "飞刃",
+      "yang_ren": "羊刃",
+      "wen_chang": "文昌",
+      "wen_chang_gui_ren": "文昌贵人",
+      "tao_hua": "桃花",
+      "yi_ma": "驿马",
+      "hua_gai": "华盖",
+      "gu_chen": "孤辰",
+      "gua_su": "寡宿",
+      "jin_yu": "金舆",
+      "tian_de_gui_ren": "天德贵人",
+      "tian_de_he": "天德合",
+      "yue_de_gui_ren": "月德贵人",
+      "yue_de_he": "月德合",
+      "de_xiu_gui_ren": "德秀贵人",
+      "fu_xing_gui_ren": "福星贵人",
+      "tai_ji_gui_ren": "太极贵人",
+      "guo_yin_gui_ren": "国印贵人",
+      "tian_chu_gui_ren": "天厨贵人",
+      "jiang_xing": "将星",
+      "jie_sha": "劫煞",
+      "wang_shen": "亡神",
+      "zai_sha": "灾煞",
+      "tian_xi": "天喜",
+      "tian_yi_medical": "天医",
+      "hong_luan": "红鸾",
+      "pi_ma": "披麻",
+      "sang_men": "丧门",
+      "diao_ke": "吊客",
+      "gou_jiao_sha": "勾绞煞",
+      "yuan_chen": "元辰",
+      "liu_xia": "流霞",
+      "xue_ren": "血刃",
+      "hong_yan_sha": "红艳煞",
+      "liu_xiu_ri": "六秀日",
+      "jiu_chou_ri": "九丑日",
+      "kui_gang_ri": "魁罡日",
+      "shi_e_da_bai": "十恶大败",
+      "yin_cha_yang_cuo": "阴差阳错",
+      "gu_luan_sha": "孤鸾煞",
+      "ba_zhuan_ri": "八专日",
+      "shi_ling_ri": "十灵日",
+      "jin_shen": "金神",
+      "tian_she_ri": "天赦日",
+      "di_wang": "地网",
+      "ci_guan": "词馆",
+      "zheng_xue_tang": "正学堂",
+      "tong_zi_sha": "童子煞",
+      "kong_wang": "空亡"
+    },
+    "yongshen_label": "锚元",
+    "optimizing_vector": "锚元 · Anchor:",
+    "pillar_slot": {
+      "year_stem": "根基层",
+      "year_branch": "根基层",
+      "month_stem": "外场层",
+      "month_branch": "外场层",
+      "day_stem": "本我层",
+      "day_branch": "本我层",
+      "hour_stem": "远景层",
+      "hour_branch": "远景层"
+    }
+  },
+  "poju_matrix": {
+    "eyebrow": "时空对齐",
+    "main_title": "个人基础画像",
+    "main_description": "本次决策会话的基础坐标",
+    "section_label": "原初时空校准 · 会话坐标",
+    "born": "生于",
+    "coordinates": "坐标",
+    "matrix_id": "矩阵 ID",
+    "element_map_title": "五行结构分布",
+    "element_map_sep": "，",
+    "blocks": {
+      "block_1": "原初时空校准",
+      "block_2": "核心结构图谱",
+      "block_3": "时间轨迹矩阵",
+      "block_4": "阶段状态标记",
+      "block_5": "四维底层内核",
+      "tablist_label": "画像板块",
+      "collapse_list": "收起列表",
+      "close_portrait": "关闭画像",
+      "prev_page": "上一页",
+      "next_page": "下一页"
+    },
+    "card": {
+      "calendar_alignment": "历法对齐",
+      "calendar_alignment_em": "公历 · 农历",
+      "gregorian": "公历",
+      "true_solar_time": "会话结构",
+      "true_solar_time_em": "天文精密",
+      "standard_time": "标准时",
+      "true_solar": "会话",
+      "longitude_correction": "经度修正",
+      "eq_of_time": "时差",
+      "solar_term": "节气交接",
+      "solar_term_em": "非遗 · 天文",
+      "next_term": "下一节气",
+      "elemental_signature": "五行结构谱",
+      "elemental_signature_em": "五行",
+      "radar_matrix": "五行雷达",
+      "radar_matrix_em": "雷达矩阵",
+      "pillars_em": "分层读数",
+      "elemental_breakdown": "五行分布",
+      "day_master": "本元",
+      "with_surplus": "，结构以",
+      "surplus_and": "偏盛、",
+      "deficit_period": "偏薄。",
+      "core_vitality": "核心活力",
+      "vitality_receptive": "偏弱",
+      "vitality_balance": "平衡",
+      "vitality_dominant": "偏强",
+      "elemental_equilibrium": "五行均衡",
+      "surplus": "盈余",
+      "dominant_vector": "主导向量",
+      "deficit": "不足",
+      "key_gap": "关键缺口",
+      "macro_lifecycle": "生命阶段线",
+      "macro_lifecycle_em": "时间线",
+      "timeline_matrix": "时间线矩阵",
+      "dayun_you_are_here": "您在这里",
+      "structural_dynamics": "结构动力学",
+      "resonance_label": "RESONANCE",
+      "tension_label": "TENSION",
+      "reading_label": "READING",
+      "annual_transit": "本年动能",
+      "transit_progress": "年度进度",
+      "fact_era": "当前激活层",
+      "fact_era_em": "年龄主读",
+      "fact_layer_age": "{age}岁 · 人生层主读（非大运）",
+      "fact_year_pulse": "岁环",
+      "fact_year_pulse_em": "年度动能",
+      "fact_year_pulse_hint": "联接 {bonds} · 张力 {tensions}",
+      "fact_year_month": "第 {month} 月",
+      "fact_structure": "结构联接",
+      "fact_structure_em": "内在联结图谱",
+      "fact_bonds": "联接",
+      "fact_tensions": "张力",
+      "fact_balance": "调衡要点",
+      "fact_balance_em": "强弱与锚点",
+      "fact_balance_status": "体用状态",
+      "fact_anchor": "锚元",
+      "fact_viz_xi": "助益",
+      "fact_viz_ji": "耗损",
+      "fact_extra_title": "扩展读数",
+      "fact_extra_em": "纪元·岁相·标记·起点",
+      "fact_dayun": "纪元",
+      "fact_dayun_em": "十年阶段",
+      "fact_year_sign": "年度属相",
+      "fact_year_sign_em": "气质信号",
+      "fact_shensha": "结构标记",
+      "fact_shensha_em": "盘面亮点",
+      "fact_shensha_count": "{count} 项亮点",
+      "fact_onset": "阶段起点",
+      "fact_onset_em": "成长周期开启",
+      "fact_onset_age": "{age} 岁开始",
+      "fact_onset_year": "首个十年段 · {year}",
+      "birth_hour_period": "出生时辰",
+      "fact_empty_links": "静守本盘",
+      "your_sign_tag": "你的生肖 · Your Sign",
+      "pillar_year": "根基层",
+      "pillar_month": "外场层",
+      "pillar_day": "本我层",
+      "pillar_hour": "远景层",
+      "narrative_loading": "读取中…",
+      "default_timezone": "默认时区",
+      "strength_strong": "偏强",
+      "strength_weak": "偏弱",
+      "strength_balanced": "随境调整型",
+      "colon": "：",
+      "hidden_prefix": "蕴元",
+      "hidden_empty": "蕴元: —",
+      "lunar": "农历",
+      "layers_title": "四层人格读数",
+      "layers_em": "机制分层",
+      "welcome": {
+        "title": "欢迎来到 Eastern OS",
+        "body": "Eastern OS 以你的出生坐标校准出的基础结构，支撑本次决策对话。针对你现在卡住的地方，一步步帮你理清楚。",
+        "guide": "在下方写下你暂时定不了的那个困境，然后发送。发出第一个问题，决策会话就开始了。",
+        "note": "请认真回答 Eastern OS 提出的问题，并核对它给出的内容；这对后面交出一份高质量、能落地的决策报告很关键。\n每次回复都会按当前需要做深度推理，所以可能要等一会儿——请耐心等待。",
+        "loading": "Eastern OS 正在准备…"
+      },
+      "hero_calendar": "历法对齐",
+      "hero_solar": "按出生地调整",
+      "hero_term": "节气位置",
+      "details_summary": "校准详情"
+    },
+    "template": {
+      "season_transition": "节气交接中",
+      "zodiac_note": "你的外在姿态 — 他人如何第一眼读你。",
+      "lunar_prefix": "农历",
+      "pattern_line": "{zodiac}年 · 本元偏 {day_master}",
+      "calendar_mid": "{year_pillar} · 本元偏 {day_master}",
+      "annual_transit": "{element}势点燃你的{dominant}盈余，而{deficit}仍偏薄——这股年度势能，正是你当下反复权衡的底层能量背景。",
+      "resonance_stem": "表层驱动力出现协同 — {interaction}。",
+      "resonance_default": "{year_branch}锚定你的外在姿态 — 他人读你的第一参照。",
+      "tension_branch": "内在结构出现可工作的张力 — {interaction}。",
+      "tension_default": "{dominant}偏盛而{deficit}偏薄 — 扩张与约束之间的拉扯正在作用。",
+      "reading_wood": "你更擅长顺势找缝，而非硬推 —— 压力下的突破口，往往是你的优势。",
+      "reading_default": "你更擅长在结构内调整，而非正面硬碰 —— 把局势读清楚，再动。",
+      "archetype_wood": "你是**柔韧之藤**——感知敏锐、顺势生长，总在寻找可攀附的结构；影响力来自共鸣，而非强推。",
+      "archetype_fire": "你是**明焰之炉**——外显、催化、带动势头的能量；需要节奏感，才不会燃尽自己。",
+      "archetype_earth": "你是**定轴承托**——稳住中心、耐心承载；信任慢热，但一旦建立就扛得住重量。",
+      "archetype_metal": "你是**精锋锐刃**——辨识力强、结构清晰，擅长从噪音里切出关键线；清晰是你的母语。",
+      "archetype_water": "你是**深润之流**——内省、策略、在表面之下潜行；你读到的模式，往往在关键时刻才显现。",
+      "friction": "你的{element}性内在愿景，正与{month_element}气形成**结构张力** —— {dominant}盈余、{deficit}不足，让选择像在被两股力量同时拉扯。",
+      "prompt": "把你此刻最纠结、定不下来的决策问题写在下方对话框并发送——我们会结合本次会话的基础坐标，一步步拆开。"
+    }
+  },
+  "chart_loader": {
+    "your_chart_title": "你的性格结构",
+    "male": "男",
+    "female": "女",
+    "pillar_year": "年柱",
+    "pillar_month": "月柱",
+    "pillar_day": "核心日(本命)",
+    "pillar_hour": "时柱",
+    "day_master_label": "核心特质",
+    "strength_label": "强弱",
+    "current_phase_label": "当前人生阶段",
+    "hint_first_time": "正在为你排布能量矩阵，请稍候...",
+    "hint_using_cache": "正在读取你的能量矩阵...",
+    "done_message": "已就绪，即将进入对话...",
+    "error_title": "准备失败",
+    "error_message": "推演过程中出现了问题。",
+    "error_details": "技术细节",
+    "retry": "重试",
+    "refund_instead": "退款返回",
+    "error_network": "网络连接中断。请保持在本页、确认网络稳定后点「重试」。分析约需 2–5 分钟，请勿切换应用。",
+    "error_timeout": "分析耗时超出预期。请保持在本页、网络稳定后点「重试」——通常第二次会成功。",
+    "step_0": "正在校准你的出生时刻...",
+    "step_1": "排定性格结构...",
+    "step_2": "解析核心特质与能量结构...",
+    "step_3": "判断性格模式与关键能量...",
+    "step_4": "推算人生阶段走势...",
+    "step_5": "梳理性格特征...",
+    "step_6": "考察当前能量阶段...",
+    "step_7": "整理核心性格画像...",
+    "step_8": "即将完成，请稍候..."
+  },
+  "portrait_loader": {
+    "hint_first_time": "正在撰写你的完整性格画像报告，深度分析约需 2–5 分钟，请保持页面在前台...",
+    "hint_using_cache": "正在载入已保存的性格画像报告...",
+    "done_message": "报告已就绪，即将进入对话...",
+    "step_0": "正在连接深度解读引擎...",
+    "step_1": "从你的结构中提取多层性格线索...",
+    "step_2": "梳理核心驱动力与日常行为惯性...",
+    "step_3": "辨识反复出现的内在拉扯与盲点...",
+    "step_4": "整合人生阶段主题与当前核心议题...",
+    "step_5": "撰写优势路径与容易卡住的时刻...",
+    "step_6": "校准叙事语气，让表述更易共鸣...",
+    "step_7": "编排完整画像的章节与层次...",
+    "step_8": "报告即将就绪，请稍候..."
+  },
+  "analysis_loader": {
+    "connecting": "正在连接…",
+    "reading_chart": "正在解读你的性格画像",
+    "complete": "解读完成",
+    "warming_up": "准备中…",
+    "keep_screen_on": "解读期间请保持此页面在前台"
+  },
+  "syncro": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "首次免费"
+    },
+    "home": {
+      "cta_start": "免费试 Syncro",
+      "desktop_modal": {
+        "title": "请在手机上打开 Syncro",
+        "description": "Syncro 需要你手机的罗盘和方向感应器来对接真实世界方位。这必须在移动设备上。",
+        "step_1": "打开手机相机",
+        "step_2": "扫描这个二维码",
+        "step_3": "点击链接在手机上打开 Syncro",
+        "why_mobile": "为什么仅限手机？Syncro 需要罗盘、摄像头和精准定位——这些桌面没有。"
+      }
+    },
+    "loading": "加载中…",
+    "subtitle": "实时方位与时机指引",
+    "description": "Syncro 是你未来 24 小时的实时陪伴。把手机当作罗盘——找到当下最适合你这件事的方位与时机。",
+    "feature_realtime": "每个时辰实时更新",
+    "feature_realtime_desc": "能量场每 2 小时一变，Syncro 与你同步重新分析。",
+    "feature_directional": "八方位全方位扫描",
+    "feature_directional_desc": "为当下时辰扫描所有方位的能量状态。",
+    "feature_vr": "VR 实景模式",
+    "feature_vr_desc": "开启摄像头，在真实世界中接收方位指引。",
+    "start_free": "免费体验（首次）",
+    "start_paid": "开始一次会话 — $4.99",
+    "free_note": "首次 Syncro 由我们赠送。",
+    "paid_note": "$4.99 = 一件事 24 小时实时方位指引。",
+    "desktop_section_heading": "在手机上使用 Syncro",
+    "desktop_message_1": "Syncro 需要你的手机。",
+    "desktop_message_2": "它的核心是通过设备读取方位——这需要移动罗盘。",
+    "open_on_mobile_hint": "请在手机上打开 easternos.com 使用 Syncro。",
+    "not_supported_device": "此设备不支持 Syncro 所需的罗盘传感器。请换用手机或浏览器重试。",
+    "payment_coming_soon": "付费结账尚未接入，暂时跳过支付直接进入 Syncro。",
+    "payment_continue_without_checkout": "继续进入 Syncro →",
+    "back_to_home": "返回 Syncro",
+    "existing_session": {
+      "title": "继续上次的解读？",
+      "valid_for_hours": "还剩 {hours} 小时有效",
+      "continue": "继续这次解读",
+      "start_new": "改为开始新的解读"
+    },
+    "background_stream": {
+      "aria_label": "后台 AI 生成进度",
+      "title_running": "正在生成剩余时辰 {step}/{total}",
+      "title_error": "部分时辰生成失败",
+      "title_done": "生成已暂停",
+      "step": "当前批次：{hours}",
+      "reasoning": "AI 深度推理中…",
+      "connecting": "正在连接 AI…",
+      "failed": "失败：{detail}",
+      "retry": "继续生成剩余时辰",
+      "footnote": "每批单独连接，避免 Vercel 5 分钟总超时。请保持本页在前台。",
+      "title_cloud": "云端生成中 {done}/{total} 时辰（批次 {step}）",
+      "footnote_cloud": "已提交云端队列，可切换 App 或锁屏。回来打开本页会自动刷新；24 小时内有效。",
+      "cloud_failed": "{count} 个时辰批次失败，可点进度条红点重试"
+    },
+    "recent_sessions": {
+      "heading": "24 小时内的解读",
+      "hint": "点击进入罗盘。每条任务在创建后 24 小时内都可查看——12 个时辰全部生成完成后也不会提前消失。",
+      "loading": "正在加载你的解读…",
+      "progress": "已就绪 {done}/{total} 时辰",
+      "status_complete": "12/12 已就绪 · 打开罗盘",
+      "expires": "剩余 {when}",
+      "pwa_continue_label": "继续上次解读",
+      "pwa_storage_hint": "解读保存在本机（24 小时内有效），切换 POJU 等功能后再回来仍可继续。",
+      "start_new_link": "开始全新解读",
+      "empty_pwa": "暂无进行中的解读。完成一次计算后，会出现在上方。"
+    },
+    "your_task_label": "你的任务",
+    "computing": {
+      "step_1": "正在排布你的性格画像…",
+      "step_2": "正在对齐你当前的位置…",
+      "step_3": "正在扫描八个方位…",
+      "step_4": "正在读取接下来十二个时辰…",
+      "step_5": "正在映射 96 个时空组合…",
+      "step_6": "即将完成…",
+      "hint": "正在分析未来 24 小时的能量场，约需 60–90 秒。",
+      "hint_local": "正在本地映射 96 个时空组合，几秒内即可查看；AI 文案将在后台陆续生成。",
+      "error_title": "分析失败",
+      "go_back": "返回 Syncro",
+      "retry": "重试",
+      "missing_data": "缺少任务、档案或位置信息，请从 Syncro 重新开始。",
+      "profile_not_ready": "性格画像分析尚未就绪，请返回准备页等待 base analysis 完成。",
+      "compute_failed": "分析失败",
+      "error_timeout": "服务器响应超时或格式异常（手机端常见）。请检查网络后重试；若反复出现，可能是计算耗时过长，请稍后再试。",
+      "error": {
+        "network_title": "网络连接失败",
+        "network_message": "无法连接服务器。请检查网络或 VPN 后重试。",
+        "timeout_title": "请求超时",
+        "timeout_message": "服务器响应过慢或格式异常。请保持在本页、网络稳定后点「重试」。",
+        "location_title": "需要位置信息",
+        "location_message": "Syncro 需要你的当前位置。请返回上一步设置位置后再试。",
+        "generic_title": "分析失败",
+        "generic_message": "生成矩阵时出现问题，请稍后再试。"
+      }
+    },
+    "llm_progress": {
+      "in_progress": "AI 文案生成中 {done}/{total}…",
+      "kv_missing": "云端进度未同步，正在本机生成当前时辰…",
+      "complete": "AI 文案已全部生成",
+      "some_failed": "有 {count} 个时辰批次未成功。",
+      "context_missing": "无法启动 AI 批次，请从档案重新走一遍 Syncro 分析。",
+      "all_failed": "12 个时辰批次均失败，请查看控制台日志与 API 配置。"
+    },
+    "preparing_live": {
+      "analyzing_title": "正在深度分析中…",
+      "live_hour_hint": "◐ 正在生成当前时辰 {hour}（{range}）· 完成后进入罗盘",
+      "background_hint": "其余时辰在进入罗盘后由云端队列生成（可离开 App，回来自动刷新）",
+      "reasoning": "深度推理中…",
+      "connecting": "正在连接…",
+      "ctx_missing": "无法加载 LLM 上下文",
+      "gen_failed": "生成失败：{error}",
+      "ctx_missing_suffix": "（上下文缺失）",
+      "save_failed": "保存结果失败",
+      "retry": "重试",
+      "retrying": "正在重试（{current}/{max}）",
+      "background_progress": "后台已完成 {done}/12 时辰",
+      "patience_hint": "准确分析需要时间，请耐心等待，大约需要 1–3 分钟",
+      "title": "正在生成当前时辰「{hour}」解读…",
+      "hint": "当前时辰完成后才会进入罗盘；其余时辰将按顺序逐个生成。",
+      "progress": "正在生成 {hour} · 已完成 {done}/{total}"
+    },
+    "modes": {
+      "aria_label": "Syncro 显示模式",
+      "compass": "罗盘",
+      "ar": "AR",
+      "map": "地图",
+      "view": "地图"
+    },
+    "hour": {
+      "aria_label": "时辰时间轴",
+      "now": "当前",
+      "legend": {
+        "now": "当前",
+        "done": "已生成",
+        "pending": "未生成",
+        "failed": "生成失败"
+      },
+      "retry_failed": "点击重新生成"
+    },
+    "why_this_current": "为何此时",
+    "generating": "正在生成解读…",
+    "llm_copy_failed": "该方位 AI 文案生成失败，请重新分析 Syncro。",
+    "why_modal": {
+      "close": "关闭"
+    },
+    "permission": {
+      "title": "开启罗盘与摄像头",
+      "description": "Syncro 需要「运动与方向」权限驱动实时罗盘，并需要摄像头用于 AR 模式。允许一次后会保存在本设备，下次无需重复授权。",
+      "not_location_hint": "若系统弹窗，请选择允许「运动与方向」——与先前看到的「定位」权限不是同一个。",
+      "settings_hint": "若没有弹窗：设置 → Safari → 运动与方向访问 → 允许此网站，再点一次「开启」。",
+      "use_map_instead": "也可先点底部「地图」模式——无需罗盘也能查看八个方位。",
+      "unsupported": "此设备不支持罗盘旋转，请使用底部的「地图」模式。",
+      "enable": "开启罗盘与摄像头",
+      "requesting": "请求中…",
+      "skip": "暂不开启",
+      "denied_alert": "罗盘权限被拒绝。罗盘不会旋转，但其他功能仍可使用。",
+      "camera_denied": "摄像头被拒绝。进入 AR 模式时会再次询问。",
+      "skipped_notice": "罗盘未开启，方位不会随手机转动。可刷新页面重新授权。",
+      "resume_title": "继续进入 Syncro",
+      "resume_description": "点一下即可在本页激活罗盘与 AR。你已在此设备上允许过相关权限。",
+      "resume_enable": "继续"
+    },
+    "posture": {
+      "hold_flat_title": "请将手机平放",
+      "hold_flat_desc": "手机屏幕朝上，与地面平行",
+      "hold_upright_title": "请竖立手机",
+      "hold_upright_desc": "手机垂直竖起，正面朝向你"
+    },
+    "compass": {
+      "permission_title": "开启罗盘",
+      "permission_description": "Syncro 需要设备方向传感器，才能根据你面向的方位给出解读。",
+      "grant_access": "允许访问",
+      "hold_phone_flat": "请将手机平放，屏幕朝上"
+    },
+    "ar": {
+      "permission_title": "开启摄像头",
+      "permission_description": "AR 模式在实时画面上叠加方位解读，需要摄像头权限。",
+      "grant_access": "允许摄像头",
+      "video_label": "实时摄像头画面",
+      "hold_phone_upright": "请将手机竖立，正对前方"
+    },
+    "levels": {
+      "open": "顺势",
+      "following": "应时",
+      "still": "守静",
+      "cross": "逆流",
+      "under": "暗涌"
+    },
+    "map": {
+      "tap_hint": "点击圆环上的方位以查看解读"
+    },
+    "progress": {
+      "aria_label": "时辰时间轴",
+      "manual_selection": "正在查看所选时辰（非当前实时窗口）。",
+      "state_past": "已过的时辰",
+      "state_live": "当前时辰",
+      "state_selected": "已选时辰",
+      "state_upcoming": "即将到来的时辰"
+    },
+    "view": {
+      "you": "你",
+      "recommended": "此刻最佳方位",
+      "grid_subtitle": "八个方位"
+    },
+    "main": {
+      "current_hour": "本时辰",
+      "why_this": "为什么是这个流",
+      "detailed_label": "深读",
+      "rationale_label": "分析依据",
+      "collapse": "收起",
+      "enable_compass": "开启罗盘",
+      "enable_vr": "开启 VR 模式",
+      "exit_vr": "退出 VR 模式",
+      "not_supported": "你的设备不支持方向感应",
+      "combination_not_found": "此组合无指引",
+      "session_not_found": "找不到会话。",
+      "task_response_title": "为你这件事的直答",
+      "task_response_avoid": "宜避开"
+    },
+    "timer": {
+      "live_label": "实时",
+      "current_window_only": "仅限本时辰",
+      "next_update_in": "距下次更新",
+      "philosophy_line": "能量场每两个时辰一变，下一时辰开始时再来。"
+    },
+    "expired": {
+      "title": "这次 Syncro 窗口已结束。",
+      "message": "$4.99 覆盖 24 小时陪伴，你的窗口已到期。",
+      "cta": "开始新的 Syncro"
+    },
+    "vr": {
+      "frame_label": "实景摄像头",
+      "denied": "无法访问摄像头。",
+      "not_supported": "此浏览器不支持摄像头。"
+    },
+    "location": {
+      "asking_title": "正在获取你的位置…",
+      "asking_message": "Syncro 需要你的位置来校准方位与本地语境。",
+      "asking_privacy": "仅本次使用，从不上传到我们的服务器。",
+      "allow_location": "允许定位",
+      "granted_message": "已获取位置，正在为你分析…",
+      "manual_title": "选择你的位置",
+      "manual_description": "搜索并选择你当前所在城市，以获得准确的时辰。",
+      "city_search_placeholder": "搜索城市（如：北京、纽约、东京）",
+      "no_cities_found": "未找到城市，请换个拼写试试。",
+      "retry_geolocation": "再次尝试自动定位",
+      "confirm_title": "使用这个位置？",
+      "confirm_hint": "Syncro 将据此计算准确的时辰与方位。",
+      "confirm_use": "使用此位置",
+      "change_location": "换一个位置",
+      "accuracy_warning": "定位精度较低（约 {meters} 米）。建议手动搜索你的城市以提高准确度。",
+      "denied_title": "无法获取定位",
+      "denied_message": "没有位置信息，Syncro 无法精确计算时辰。请允许定位，或手动搜索你的城市。",
+      "retry": "重试",
+      "search_manually": "手动搜索城市"
+    },
+    "task": {
+      "back": "返回 Syncro",
+      "title": "你要找的是哪一刻？",
+      "subtitle": "告诉我你即将要做的事。我会在未来 24 小时内找到最适合你的方位和时机。",
+      "placeholder": "例如：「明天下午我要见客户谈一笔生意」",
+      "min_chars": "至少 {min} 字",
+      "min_chars_remaining": "还需 {remaining} 字才能继续",
+      "examples_title": "好的例子：",
+      "example_1": "明天上午 10 点要去面试",
+      "example_2": "今天我得跟伴侣进行一次困难的对话",
+      "example_3": "这周要签一份商业合同",
+      "continue": "继续"
+    }
+  },
+  "match": {
+    "begin": {
+      "start": "开始",
+      "free_first_time": "首次免费"
+    },
+    "loading": "加载中…",
+    "home": {
+      "brand_tag": "Match",
+      "heading": "双重矩阵。同频轨道。洞悉关系的底层架构。",
+      "description": "Match 将两个独立的认知架构融入同一个统一矩阵中。精准解构你们的行为向量如何交织——揭示深层的结构性共振、系统性摩擦，并为您提供清晰、可落地的双人共生演进路径。",
+      "cta": "初始化双人对齐推演",
+      "billing_notice": "单次对齐推演 $4.99，或使用体验凭证",
+      "what_is": {
+        "title": "什么是 Match？",
+        "subtitle": "双人决策框架",
+        "body": "Match 是针对一个关系问题的双人对照阅读。它比较两份档案在沟通、合作或共同生活上如何相遇——哪里同频、哪里易摩擦——不做宿命式合不合打分。这是教练式框架，帮双方把下一步想清楚、一起选。"
+      },
+      "feature_two_charts_title": "双盘深度解读",
+      "feature_two_charts_desc": "深度解读两个人各自的性格画像，再分层分析你们如何相遇。",
+      "feature_any_relationship_title": "任何关系类型",
+      "feature_any_relationship_desc": "婚姻、合伙、家庭、朋友、职场——用你自己的话描述，我们来读懂。",
+      "feature_5_sections_title": "结构化报告",
+      "feature_5_sections_desc": "5 大模块：各自分析、合盘解读、结论判断、清晰可落地的行动建议。",
+      "how_label": "Match 工作方式",
+      "how_title": "从两个性格画像到一条清晰路径——只需 4 步。",
+      "how_step_1_title": "选择对象 A",
+      "how_step_1_desc": "从你的档案库中选择，或添加一个新性格画像。只需年月日时辰性别。",
+      "how_step_2_title": "选择对象 B",
+      "how_step_2_desc": "同样流程。B 的性格画像会保存在你的档案库，方便后续再做匹配。",
+      "how_step_3_title": "描述这段关系",
+      "how_step_3_desc": "用你自己的话——现有的、即将发生的、或正在考虑的。越具体，解读越深。",
+      "how_step_4_title": "阅读完整报告",
+      "how_step_4_desc": "5 张可展开卡片。自动保存到 Archive，在你的访问期内随时回看。",
+      "use_cases_title": "Match 适合的场景",
+      "use_case_marriage_title": "婚姻决策",
+      "use_case_marriage_desc": "考虑长久承诺？看看性格画像对长期契合的判断。",
+      "use_case_partnership_title": "生意合伙",
+      "use_case_partnership_desc": "评估联合创始人、生意伙伴或关键合作者，签约前先看清。",
+      "use_case_family_title": "家庭动力",
+      "use_case_family_desc": "理解困难的家庭关系——父母、子女、兄弟姐妹、姻亲。",
+      "use_case_hiring_title": "招聘与团队",
+      "use_case_hiring_desc": "看清你与关键员工或新团队成员之间的能量适配。",
+      "use_case_relationship_title": "现有关系",
+      "use_case_relationship_desc": "和某人陷入张力？看哪些是结构性的、哪些只是表面。",
+      "use_case_friendship_title": "深厚友谊",
+      "use_case_friendship_desc": "为什么有些友谊顺畅、有些渐行渐远——性格画像常常给出答案。",
+      "whatyouget_title": "报告里有什么",
+      "preview_a_title": "关于 A",
+      "preview_a_desc": "分析主体 A 的核心元素特质、情感沟通倾向，以及在二元系统中所展现的初始行为模式。",
+      "preview_b_title": "关于 B",
+      "preview_b_desc": "深度剖析主体 B 的原生能量特质，以及 TA 在此类关系互动中容易触发的特定心理与行为模式。",
+      "preview_combined_title": "动态共振",
+      "preview_combined_desc": "解码两个独立时空蓝图交织时的系统动力学，分析双方在思维、情感及生活阶段上的同频与摩擦。",
+      "preview_conclusion_title": "系统对齐结论",
+      "preview_conclusion_desc": "基于五行极性测算出的双人系统协同架构（归纳为 5 种建设性与摩擦性共振模型之一），揭示双方共同面对的系统性优势与结构性挑战。",
+      "preview_actions_title": "该怎么做",
+      "preview_actions_desc": "提供 4-6 条具体可落地的关系经营建议，涵盖核心沟通机制、时机共振、边界确立与共同成长路径。",
+      "per_reading": "/ 一次完整解读",
+      "include_1": "两人完整性格画像分析",
+      "include_2": "能量结构与关系动力互动图谱",
+      "include_3": "带推演依据的契合度等级",
+      "include_4": "4-6 条可执行行动建议",
+      "include_5": "自动存入 Archive，随时回看",
+      "first_free_emphasized": "首次 Match 免费。无需绑定信用卡。",
+      "pricing": {
+        "heading": "定价方案",
+        "body": "为主权自主打造的透明关系解构计费。单次完整的 Match 双人对齐推演为 $4.99，亦可通过生态月包凭证完全抵扣。在绝对的隐私主权下，精准映射你们的行为轨迹，解码深度互动动力学。",
+        "price": "$4.99",
+        "price_unit": "单次对齐推演 · 支持月包凭证兑换",
+        "features_heading": "包含功能",
+        "features": [
+          "双人完整的认知与人格矩阵深度剖析",
+          "行为向量与关系动力学的交互映射模型",
+          "深度算法推演下的结构性共振评级与逻辑论证",
+          "4–6 项高行动力、促进双人演进的系统性解法建议",
+          "安全沉淀于本地浏览器沙盒档案库，支持持久化调阅"
+        ],
+        "cta": "初始化双人对齐推演",
+        "footnote": "完整深度报告 · 5 大分析维度 · 坚守本地隐私主权"
+      },
+      "faq_title": "常见问题",
+      "faq_q1": "如果不知道对方的出生时辰怎么办？",
+      "faq_a1": "可以使用大致时辰运行 Match——精度略降但核心分析依然有价值。我们使用 2 小时为一个时辰（中国传统时辰段），即使估算也能用。",
+      "faq_q2": "需要对方知道或同意吗？",
+      "faq_a2": "Match 是为了你自己看清。对方不需要参与。我们不会联系 TA、不会分享 TA 的数据、也不会暴露你做过这次解读。TA 的性格画像只保存在你的设备上。",
+      "faq_q3": "可以一次匹配两人以上吗？",
+      "faq_a3": "目前 Match 专注双人动力——这样解读才能保持深度和清晰。对于复杂情境（如你+配偶+父母），建议分别运行多次 Match，清晰地映射每段关系。",
+      "faq_q4": "Match 跟 POJU 有什么区别？",
+      "faq_a4": "Pivot 是关于你处境的 30 天深度对话。Match 是关于特定关系的一次性双盘解读。不同工具，不同需求——很多用户两个都用。",
+      "not_title": "Match 不是什么",
+      "not_items": [
+        "对关系结果的保证",
+        "契合度结果的承诺",
+        "专业咨询的替代品"
+      ],
+      "not_footer": "Match 提供洞察与视角。你怎么做，完全由你决定。"
+    },
+    "subtitle": "两个性格画像，一段关系，真正看清。",
+    "description": "Match 将两个性格画像编织在一起——你的和对方的——揭示你们能量如何对接、何处相互成就、何处碰撞，以及该怎么做。",
+    "feature_two_charts": "双盘解读",
+    "feature_two_charts_desc": "深度解读两个人的性格画像，再看他们如何相遇。",
+    "feature_relationship": "任何关系",
+    "feature_relationship_desc": "婚姻、合伙、朋友、家庭——你描述，我们解读。",
+    "feature_report": "完整报告",
+    "feature_report_desc": "5 段结构：各自分析、合盘解读、结论、可落地的建议。",
+    "use_cases_title": "Match 适合的场景",
+    "use_case_1": "考虑结婚或重大承诺",
+    "use_case_2": "评估潜在的合伙关系",
+    "use_case_3": "理解一段困难的家庭关系",
+    "use_case_4": "招聘决策或团队组合",
+    "start_free": "免费体验 Match",
+    "start_paid": "开始一次 Match — $4.99",
+    "free_note": "首次 Match 由我们赠送。",
+    "paid_note": "$4.99 = 完整双盘解读。",
+    "payment_coming_soon": "付费 Match 结账将在后续步骤接入。首次仍可免费体验。",
+    "back_to_home": "返回 Match",
+    "step_indicator": "第 {step} / {total} 步",
+    "select_a_title": "对象 A",
+    "select_a_subtitle": "选择或添加第一个人的性格画像信息。",
+    "select_first_person": "选择或添加第一个人的性格画像",
+    "select_a_label": "对象 A",
+    "select_b_title": "对象 B",
+    "select_b_subtitle": "选择或添加第二个人的性格画像信息。会自动保存到你的档案库。",
+    "select_second_person": "选择或添加第二个人的性格画像（会保存到档案库）",
+    "select_b_label": "对象 B",
+    "cannot_match_self": "对象 B 不能与对象 A 相同。",
+    "back_to_select_a": "返回对象 A",
+    "relationship": {
+      "step_indicator": "第 {step} / {total} 步",
+      "title": "他们是什么关系？",
+      "hint": "描述这段关系——现有的、即将发生的、或正在考虑的。请具体。",
+      "placeholder": "例如：「合作 3 年的生意伙伴。我们考虑扩大规模，但彼此之间有了张力。」",
+      "min_chars": "至少 {min} 字",
+      "min_chars_remaining": "还需 {remaining} 字才能继续",
+      "examples_title": "好的例子：",
+      "example_1": "未婚妻。我们交往 2 年，打算明年结婚。",
+      "example_2": "一个潜在的联合创始人。我们 3 个月前认识。",
+      "example_3": "我成年的儿子。我们已经没法好好说话了。",
+      "example_4": "一个我正在考虑录用为副手的候选人。",
+      "analyze_button": "开始 Match",
+      "begin_match": "开始 Match",
+      "checking": "正在检查档案…",
+      "preparing_b": "正在准备对象 B…",
+      "starting": "正在启动 Match…",
+      "language_hint": "请用你自己的语言书写——报告会用同样的语言返回。",
+      "back": "返回对象 B"
+    },
+    "analyzing": {
+      "step_1": "正在解读对象 A 的性格画像…",
+      "step_2": "正在解读对象 B 的性格画像…",
+      "step_3": "本地计算六维契合度矩阵…",
+      "step_4": "分析互动关系…",
+      "step_5": "考察人生阶段协同…",
+      "step_6": "编织你们的关系结构…",
+      "step_7": "即将完成…",
+      "hint": "Match 真正进行分析与撰写报告文案，约需 60–90 秒。",
+      "preview_synergy": "系统动力学：{type} — 正在生成报告…",
+      "preview_level": "本地契合度：{level}（{score} 分）— 正在生成报告…",
+      "error_title": "分析失败",
+      "go_back": "重试",
+      "missing_data": "缺少档案或关系描述，请从 Match 重新开始。",
+      "profile_a_not_ready": "对象 A 的性格画像分析尚未就绪，请返回准备页等待 base analysis。",
+      "profile_b_not_ready": "对象 B 的性格画像分析尚未就绪，请返回准备页等待 base analysis。",
+      "profile_not_ready": "性格画像分析尚未就绪，请先完成档案准备。",
+      "same_profile": "对象 A 与 B 不能相同。",
+      "analysis_failed": "Match 分析失败，请重试。",
+      "error_timeout": "Match 分析超时或服务器返回了无效响应。请保持本页打开、网络稳定后点「重试」——第二次通常能成功。"
+    },
+    "report": {
+      "title": "合盘报告",
+      "delivery_eyebrow": "关系共振",
+      "meta_synergy": "协同",
+      "meta_resonance": "共振",
+      "synergy_pattern_eyebrow": "共振模式",
+      "question_lead": "你的问题",
+      "resonance_label": "动态共振",
+      "preview_synergy": "系统动力学：{type} — 正在生成报告…",
+      "key_traits": "关键特质",
+      "five_elements": "能量互动",
+      "timing_dynamic": "人生阶段协同",
+      "strengths": "优势",
+      "challenges": "挑战",
+      "question_response_title": "关于你的问题",
+      "timing": "时机",
+      "saved_to_archive": "已保存到你的 Archive。",
+      "view_archive": "在 Archive 中查看",
+      "new_match": "再做一次 Match",
+      "back_to_match": "返回 Match"
+    },
+    "result": {
+      "loading": "加载报告中…",
+      "not_found": "未找到该 Match。",
+      "back_to_match": "返回 Match"
+    },
+    "archive": {
+      "detail_title": "合盘解读",
+      "relationship_label": "关系描述：",
+      "overall": "总体",
+      "top_actions": "重点行动",
+      "view_full_report": "查看完整报告"
+    },
+    "workspace": {
+      "side_title": "开始Match",
+      "side_body": "请输入2个人的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
+      "side_body_returning": "请选择2个人的出生信息或重新输入。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
+      "submit": "开始 MATCH",
+      "slot_a": "Match A",
+      "slot_b": "Match B",
+      "hint_a_with_history": "Match A：请输入用户A的出生信息或选择一个历史记录。",
+      "hint_b_with_history": "Match B：请输入用户B的出生信息或选择一个历史记录。",
+      "hint_a_new": "Match A：请输入用户A的出生信息。",
+      "hint_b_new": "Match B：请输入用户B的出生信息。",
+      "inquiry": {
+        "welcome_text": "当两个人共同开启一段关系、一项合作或某件具体事务时，双方的沟通习惯、\n决策逻辑与内在节奏都会产生深层的碰撞。本评估基于双方的底层特质，为你提供\n客观的协同分析与风险调适建议，帮助你们在共同的目标中实现更高质量的配合。",
+        "guidance_text": "请在下方写下你们计划共同面对或执行的具体事项。\n越具体的场景描述，越能帮你们厘清潜在的互补优势与沟通避坑点。",
+        "placeholder_header": "你可以这样提问（请选择或直接输入）：",
+        "examples": {
+          "business": "商业合作：“我们准备合伙开一家公司/做一项投资，在决策和分工上该如何高效配合？”",
+          "relationship": "长期关系：“我们正考虑步入婚姻/建立长期关系，在日常沟通与家庭决策中有哪些需要调适的点？”",
+          "specific_task": "具体事项：“我们计划下个月共同出行/承接一个项目，如何避开可能出现的意见分歧？”"
+        },
+        "welcome_title": "欢迎进入双人协同与决策契合度评估",
+        "input_placeholder": "写下你们共同面对的具体事项或问题…"
+      },
+      "portrait_a": "Match A {title}",
+      "portrait_b": "Match B {title}"
+    }
+  },
+  "tool_suggestion": {
+    "label": "建议",
+    "free_in_session": "本次 Session 免费",
+    "accepted_continue": "正在打开工具 — 随时可回到这里继续聊。",
+    "declined_continue": "继续当前对话…",
+    "match": {
+      "title": "一起读这段关系",
+      "accept": "打开 Match",
+      "decline": "跳过 · 继续聊",
+      "needs_info": "需要对方的出生日期、时辰与地点"
+    },
+    "syncro": {
+      "title": "为这件事找合适时机",
+      "accept": "打开 Syncro",
+      "decline": "跳过 · 继续聊"
+    },
+    "glyph": {
+      "title": "借一个意象来看",
+      "accept": "抽一支 Glyph",
+      "decline": "跳过 · 继续聊"
+    }
+  },
+  "pwa": {
+    "disclaimer": {
+      "title": "进入 Eastern OS 之前",
+      "para_1": "Eastern OS 设计为可安装应用，而非普通网站。",
+      "para_2": "这确保了稳定的性能、数据保留在你的设备上，以及完整的体验。",
+      "para_3": "继续即表示你已了解，并同意将 Eastern OS 安装到你的设备。",
+      "agree": "我已了解并同意",
+      "enter": "进入 Eastern OS"
+    },
+    "nav": {
+      "language": "语言",
+      "close": "关闭"
+    },
+    "install": {
+      "title": "安装 Eastern OS 后开始使用",
+      "subtitle": "完整功能和稳定体验需要将应用安装到主屏幕",
+      "after_install_tip": "安装后，从主屏幕的 Eastern OS 图标进入，不再通过浏览器。",
+      "want_explore": "想在电脑上探索？",
+      "ios": {
+        "label": "iPhone Safari",
+        "step_1": "点击底部的 <strong>分享</strong> 按钮",
+        "step_2": "选择 <strong>添加到主屏幕</strong>",
+        "step_3": "点击 <strong>添加</strong> 确认"
+      },
+      "android": {
+        "label_manual": "Android Chrome",
+        "install_button": "安装 Eastern OS",
+        "one_tap_hint": "一键安装 — 无需应用商店",
+        "step_1": "点击右上角菜单（3 个点）",
+        "step_2": "选择「添加到主屏幕」",
+        "step_3": "点击「安装」确认"
+      },
+      "chrome_required": {
+        "title": "请使用 Chrome 安装",
+        "subtitle_huawei": "{browser} 不支持 Eastern OS 的完整应用安装，请用 Chrome 打开此页面安装。",
+        "step_1_title": "安装 Chrome",
+        "step_1_desc": "如果还没有，从应用商店下载",
+        "step_2_title": "在 Chrome 中打开 easternos.com",
+        "step_2_desc": "复制下方链接，粘贴到 Chrome 地址栏",
+        "step_3_title": "点击「安装」",
+        "step_3_desc": "Chrome 会显示安装按钮，点击即可将 Eastern OS 添加到桌面",
+        "why_chrome": "Chrome 完整支持 PWA 应用安装。其他浏览器可能只会创建快捷方式，无法提供完整的 Eastern OS 体验。",
+        "copy_done": "已复制"
+      },
+      "open_in_safari": {
+        "title": "请用 Safari 打开",
+        "subtitle": "iOS 只支持通过 Safari 安装 Eastern OS，{browser} 无法完成安装。",
+        "label": "在 iPhone 上",
+        "step_1_title": "复制链接",
+        "copied": "已复制",
+        "step_2_title": "打开 Safari",
+        "step_2_desc": "将链接粘贴到 Safari 地址栏",
+        "step_3_title": "在 Safari 中安装",
+        "step_3_desc": "点击分享 → 添加到主屏幕 → 添加",
+        "why_safari": "iOS 将安装功能保留给 Safari，这是 Apple 的限制，不是 Eastern OS 的问题。"
+      },
+      "open_in_chrome": {
+        "title": "请用 Chrome 打开",
+        "subtitle": "{browser} 不完整支持安装 Eastern OS，请使用 Chrome。",
+        "label": "在 Android 上",
+        "step_1_title": "复制链接",
+        "copied": "已复制",
+        "step_2_title": "打开 Chrome",
+        "step_2_desc": "将链接粘贴到 Chrome 地址栏",
+        "step_3_title": "在 Chrome 中安装",
+        "step_3_desc": "点击菜单 → 安装 Eastern OS → 安装",
+        "why_chrome": "Chrome 支持完整的 PWA 安装。其他浏览器可能只创建快捷方式。"
+      }
+    },
+    "app_mode": {
+      "desktop_hint": "手机端 Eastern OS 专注于 POJU、Glyph、Syncro、Match 的使用入口与简要说明。详细的功能介绍、隐私政策、用户协议、退款政策、Cookie 政策及其他法律信息，请使用电脑访问 easternos.com 查看。",
+      "add_to_home_title": "添加到主屏幕",
+      "add_to_home_title_ios": "添加到主屏幕",
+      "add_to_home_desc": "将 Eastern OS 添加到手机桌面，减少干扰，方便下次快速打开。"
+    }
+  },
+  "contact": {
+    "meta": {
+      "title": "联系我们 — Eastern OS",
+      "description": "关于 Eastern OS、PASS 或账户的问题？"
+    }
+  },
+  "account": {
+    "credentialsTitle": "个人管理",
+    "credentialsSubtitle": "管理登录身份、Pass、订阅与购买记录。",
+    "identityNode": "个人资料",
+    "passAllocation": "已购 Pass",
+    "unitsAvailable": "可用额度",
+    "passTotalLabel": "合计剩余",
+    "passTotalHint": "购买 + 订阅",
+    "acquirePass": "获取 PASS",
+    "subsystemStatus": "订阅",
+    "coreQuota": "本期额度",
+    "currentPlanQuota": "{plan} · 当前订阅额度",
+    "priorPlan": "原订阅",
+    "priorPlanRemaining": "{plan} 剩余 {n} PASS",
+    "subscriptionAvailable": "可用 {n} PASS（当前 {current} + 原剩余 {prior}）",
+    "memberSince": "加入时间",
+    "passPurchaseCountLabel": "购买次数",
+    "passPurchaseCount": "{n}",
+    "passUsedCountLabel": "已使用",
+    "passUsedCount": "{n}",
+    "passLastPurchaseLabel": "最近购买",
+    "passLastPurchaseNone": "暂无",
+    "passCardHint": "用完前有效 · 1 PASS = 一次完整决策对话 · 未使用可按政策退款。",
+    "subCardHint": "订阅：**每月 5 PASS**。消耗顺序：先用结转额度，再订阅额度，最后已购买 PASS。",
+    "operationalLedger": "使用记录",
+    "acquisitionLog": "PASS 购入记录",
+    "financialProtocols": "账单与支付",
+    "externalBilling": "外部账单",
+    "externalBillingHint": "通过安全代理更新支付方式。",
+    "invoiceRegistry": "发票登记",
+    "invoiceRegistryHint": "下载收据与发票。",
+    "terminalActions": "账户操作",
+    "accountErasure": "删除账户",
+    "initiateErasure": "删除账户",
+    "terminateSession": "结束会话",
+    "signOut": "退出登录",
+    "viewDetails": "查看详细信息",
+    "passDetailTitle": "PASS 详情",
+    "subDetailTitle": "订阅详情",
+    "flexUsageTitle": "PASS 使用记录",
+    "subUsageTitle": "订阅消耗记录",
+    "subHistoryTitle": "订阅记录",
+    "requestRefund": "一键退 PASS",
+    "refundTitle": "退 PASS",
+    "refundQtyLabel": "退款数量",
+    "refundQtyHint": "上限 = 已购买 Pass 剩余数量",
+    "refundQtyMinus": "减少退款数量",
+    "refundQtyPlus": "增加退款数量",
+    "refundConfirm": "确认退款",
+    "refundWorking": "退款处理中…",
+    "refundSuccess": "退款已完成",
+    "refundSuccessHint": "已购买 Pass 余额已更新。",
+    "refundDone": "完成",
+    "refundNone": "没有可退款的已购买 Pass。",
+    "refundError": "退款失败，请重试。",
+    "refundNeedsPurchase": "完成一次购买后，可在账单门户申请退款。",
+    "changePlan": "切换订阅方案",
+    "changePlanHint": "切换方案将在下个续订周期生效，本期仍使用当前方案与额度。",
+    "currentPlan": "当前方案",
+    "currentPlanLocked": "当前方案",
+    "pendingPlanBadge": "下周期",
+    "planChangeConfirmTitle": "确认立即切换？",
+    "planChangeConfirmBody": "支付成功后立即从 {current} 切换到 {plan}。{current} 未用完的 Pass 会保留为原订阅剩余；下月按 {plan} 额度发放。",
+    "planChangeConfirmCta": "支付并立即切换",
+    "planChangeScheduledTitle": "已预约切换",
+    "planChangeScheduledBody": "将在 {date} 切换到 {plan}。在此之前仍使用 {current}。",
+    "planChangePendingBanner": "已预约：{date} 起使用 {plan}",
+    "planChangeCancelPending": "取消预约切换",
+    "planChangeError": "无法开始切换，请重试。",
+    "cancelSubscription": "取消订阅",
+    "autoRenewLabel": "自动续订",
+    "autoRenewOnHint": "开 — 持续订阅并自动续费。",
+    "autoRenewOffHint": "关 — 已取消订阅；本期额度用至周期结束。",
+    "autoRenewUnavailable": "暂无订阅可管理。",
+    "autoRenewError": "无法更新订阅，请重试。",
+    "colTimestamp": "时间",
+    "colOperation": "操作",
+    "colCost": "消耗",
+    "colStatus": "状态",
+    "colTxnId": "交易 ID",
+    "colDate": "日期",
+    "colAmount": "数量",
+    "usageCostPass": "-1 PASS",
+    "usageSuccess": "SUCCESS",
+    "passBalance": "已购买 Pass",
+    "passBalanceHint": "你购买的 Pass — 用完前有效；未使用可按政策退款。**1 PASS** 开启一次完整决策对话。",
+    "passTotalRemaining": "合计剩余（购买 + 订阅）：{total}",
+    "buyMorePasses": "购买更多 Pass",
+    "subscription": "订阅 Pass",
+    "subPassHint": "本期额度（剩余/总额）。约 30 天有效；不可退款，可取消订阅。优先于已购买 Pass 消耗。",
+    "subscribeCta": "订阅",
+    "planLabel": "方案层级",
+    "statusLabel": "状态",
+    "renewsOn": "续订周期",
+    "planPersonal": "订阅",
+    "planTeam": "",
+    "planNone": "无",
+    "planFlex": "购买 Pass",
+    "statusActive": "生效中",
+    "statusCanceled": "已取消",
+    "statusNone": "未订阅",
+    "manageSubscription": "管理订阅",
+    "openingPortal": "打开中…",
+    "portalError": "无法打开账单门户。请先完成一次订阅结账。",
+    "purchaseHistory": "购买记录",
+    "purchaseEmpty": "暂无购买记录。",
+    "usageHistory": "使用记录",
+    "usageEmpty": "暂无 Pass 使用记录。",
+    "productAtmos": "Atmos",
+    "productPivot": "决策对话",
+    "productMatch": "Match",
+    "productSyncro": "Syncro",
+    "productGlyph": "Glyph",
+    "loading": "加载账户…",
+    "loadError": "无法加载账户数据。",
+    "retry": "重试",
+    "checkoutWorking": "正在确认支付并入账 Pass…",
+    "checkoutCredited": "支付已确认 — Pass 已到账。",
+    "checkoutAlreadyCredited": "该笔结账的 Pass 已入账。",
+    "checkoutCreditFailed": "入账失败。请从定价页重试。",
+    "checkoutMissingSession": "缺少结账会话。",
+    "identity": "身份",
+    "emailMissing": "需要邮箱",
+    "signedInVia": "登录方式",
+    "providerEmail": "邮箱",
+    "providerGoogle": "Google",
+    "providerFacebook": "Facebook",
+    "providerX": "X",
+    "providerDiscord": "Discord",
+    "providerUnknown": "未知",
+    "billing": "账单与发票",
+    "billingHint": "在 Stripe 客户门户查看发票、支付方式与订阅详情。",
+    "manageBilling": "管理账单与发票",
+    "billingUnavailable": "完成一次付费结账后即可打开账单门户。",
+    "preferences": "邮件偏好",
+    "preferencesHint": "仅保存在账户中；发送任务尚未接入。",
+    "notifyPassLow": "Pass 余额不足时通知我",
+    "notifyMarketing": "偶尔接收产品更新（可选）",
+    "prefsSaved": "偏好已保存。",
+    "prefsError": "无法保存偏好。",
+    "dangerZone": "危险操作",
+    "deleteAccount": "删除账户",
+    "deleteHint": "将永久删除你的账户及服务端 PASS 账本。此操作不可撤销。",
+    "deleteConfirm": "确认永久删除此账户？",
+    "deleteConfirmCta": "是，永久删除",
+    "deleteCancel": "取消",
+    "deleting": "删除中…",
+    "deleteError": "无法删除账户，请重试。",
+    "refundPrimaryCta": "确认退款 {amount}",
+    "refundConfirmTitle": "确认退款？",
+    "refundConfirmBody": "此操作将未使用的已购买 PASS退回原支付方式。若剩余 PASS 不足，将无法使用本站功能，需再次购买或订阅。到账时间按支付渠道规则。",
+    "refundConfirmCta": "确认退款",
+    "refundCancel": "取消",
+    "productDecisionDialogue": "决策对话",
+    "usageSessionUntitled": "未命名会话"
+  },
+  "passPurchase": {
+    "close": "关闭",
+    "eyebrow": "需要 Pass",
+    "titleInsufficient": "继续使用需要 Pass",
+    "titleChoose": "获取 Pass",
+    "titleFlexOnly": "购买 Pass",
+    "titleSwitchPlan": "切换订阅方案",
+    "spendOrder": "消耗顺序：结转额度 → 订阅额度 → 已购买 Pass。",
+    "titleUpgradeOrBuy": "单独购买 Pass，或升级到团队包（20）",
+    "titleDowngradeOrBuy": "单独购买 Pass，或切换到个人包（7）",
+    "upgradeHint": "升级后立刻到账新额度；原个人包未用完的 Pass 会保留为「原订阅剩余」。",
+    "upgradeLab": "升级订阅",
+    "downgradeLab": "切换方案",
+    "teamUpgradeCta": "升级到团队包（领 20 个 Pass）",
+    "teamUpgradeBonus": "立刻到账 20 Pass；原个人包剩余会保留。下月按团队包 15 Pass 发放。",
+    "personalSwitchCta": "切换到个人包（领 7 个 Pass）",
+    "personalSwitchBonus": "立刻到账 7 Pass；原团队包剩余会保留。下月按个人包 5 Pass 发放。",
+    "alreadyOnPlan": "你已经在此方案上。",
+    "flexLab": "购买 Pass",
+    "flexTitle": "购买 Pass",
+    "flexBadge": "零绑定 · 按需购买",
+    "flexUnit": "/ Pass",
+    "flexCta": "购买 Pass",
+    "quantity": "数量",
+    "qtyOne": "{n} Pass",
+    "qtyMany": "{n} Pass",
+    "qtyMinus": "减少数量",
+    "qtyPlus": "增加数量",
+    "subLab": "订阅",
+    "subUnit": "/ 月",
+    "personalTitle": "订阅包",
+    "personalBadge": "最受欢迎 · 每 Pass 低至 ≈ $12（约 4 折）",
+    "personalBonus": "限时加送 +2 Passes（首月共 7 个 — 仅 $4.27 / Pass）",
+    "personalCta": "订阅",
+    "teamTitle": "家庭 / 团队包",
+    "teamBadge": "15 Passes / 月 · 约 30 天周期",
+    "teamBonus": "限时加送 +5 Passes（首月共 20 个）",
+    "teamCta": "订阅团队包（领 20 个 Pass）",
+    "u3_title": "为你发现更合适的方案",
+    "u3_body": "你当前选择了 {n} 个 Pass（总计 ${total}）。推荐升级为订阅包：只需 $59.99 /月，每月 5 PASS，新用户首月再送 2 PASS。",
+    "u3_upgrade": "升级为订阅包",
+    "u3_keep": "仍购买 {n} 个 Pass (${total})",
+    "u6_title": "批量购买？订阅更划算",
+    "u6_body": "你当前选择了 {n} 个 Pass（总计 ${total}）。订阅包 $59.99 /月，每月 5 PASS，单 Pass 低至 ≈ $12。",
+    "u6_upgrade": "查看订阅包",
+    "u6_keep": "仍购买 {n} 个 Pass (${total})",
+    "adjustQty": "调整数量",
+    "working": "处理中…",
+    "checkoutFailed": "无法开始结账，请重试。",
+    "flexCtaTotalOne": "购买 Pass · ${total}",
+    "flexCtaTotalMany": "购买 {n} Pass · ${total}",
+    "dialogLabel": "购买 Pass 或订阅",
+    "dialogLabelInsufficient": "需要 Pass — 购买或订阅",
+    "flexCtaLabel": "购买 Pass",
+    "flexCtaLabelMany": "购买 Pass",
+    "flexFeatures": [
+      "1 Pass = 一次完整：对话 → 主路径 + 备选 + 报告 → 30 天同线提醒同步提供",
+      "一次性，不自动续费",
+      "额度随买随用，用完为止",
+      "支持随时一键退款"
+    ],
+    "allocation": "额度",
+    "personalPassCount": "每月固定 5 PASS 额度",
+    "personalBonusFeature": "新用户首月 +2 PASS（该月单 Pass 低至 ≈ $8.57）",
+    "personalFeatures": [
+      "1 Pass = 一次完整：对话 → 主路径 + 备选 + 报告 → 30 天同线提醒同步提供",
+      "每月固定 5 PASS 额度。",
+      "按计费月刷新",
+      "消耗顺序：先用结转额度，再订阅额度，最后已购买 PASS。",
+      "支持一键取消订阅"
+    ],
+    "legalLinkTerms": "条款",
+    "legalLinkRefund": "退款",
+    "legalLinkPrivacy": "隐私",
+    "legalLinkCookies": "Cookies"
+  },
+  "birthList": {
+    "totalUses": "总使用次数",
+    "decisionDialogues": "决策对话",
+    "noSessionYet": "暂无会话",
+    "untitledSession": "未命名会话",
+    "created": "创建时间：{date}",
+    "recentRecord": "最近记录",
+    "stageProgress": "阶段进度"
+  },
+  "portrait": {
+    "title": "个人基础画像",
+    "close": "关闭",
+    "openFromVault": "打开基础画像",
+    "subtitle": "本次决策会话的基础坐标"
+  }
+}

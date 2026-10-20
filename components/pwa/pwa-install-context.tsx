@@ -163,12 +163,13 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    /** 卸载 PWA 后浏览器常延迟数秒才再次派发 beforeinstallprompt；桌面端多等一会 */
+    /** 卸载 PWA 后浏览器常延迟数秒才再次派发 beforeinstallprompt；桌面 / Android Chrome 多等一会 */
     const bipWaitMs =
       persona === "win_chromium" ||
       persona === "linux_chromium" ||
       persona === "desktop_chromium" ||
-      persona === "mac_chromium"
+      persona === "mac_chromium" ||
+      persona === "android"
         ? 12_000
         : 4500;
 
