@@ -1,7 +1,7 @@
 # Resend From addresses (Eastern OS)
 
 Production domain: **`mail.easternos.com`** (verified in Resend).  
-App sends use `RESEND_API_KEY` via `lib/email/resend-client.ts`.  
+App sends use the official **`resend`** Node SDK (`resend@^6`) via `lib/email/resend-client.ts` + `RESEND_API_KEY`.  
 Auth OTP is **not** sent by the Next app — Supabase Auth → Custom SMTP → Resend.
 
 ## Three roles

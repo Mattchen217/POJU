@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getResendFromReports } from "@/lib/email/from-addresses";
-import { sendEmail, toBase64Utf8 } from "@/lib/email/resend-client";
+import { sendEmail } from "@/lib/email/resend-client";
 import {
   getBaselinePackMailCopy,
   getDecisionReportMailCopy,
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     attachments: [
       {
         filename: copy.filename,
-        content: toBase64Utf8(attachment),
+        content: attachment,
       },
     ],
     logTag: "delivery-email",

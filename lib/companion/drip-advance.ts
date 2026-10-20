@@ -6,7 +6,7 @@
 
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
 import { getResendFromNotify } from "@/lib/email/from-addresses";
-import { sendEmail, toBase64Utf8 } from "@/lib/email/resend-client";
+import { sendEmail } from "@/lib/email/resend-client";
 
 import { gateCompanionBatch } from "./batch-gate";
 import { generateCompanionDayPair, nextPendingDayIndexes } from "./batch-generate";
@@ -55,7 +55,7 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
     attachments: [
       {
         filename: `eastern-os-reminder-day-${dayNum}-${day.date_key}.html`,
-        content: toBase64Utf8(html_attachment),
+        content: html_attachment,
       },
     ],
     logTag: "companion",

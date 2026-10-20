@@ -1,11 +1,16 @@
 /**
- * Single Resend send path (fetch). All product email must go through here.
+ * Single Resend send path via official `resend` SDK.
+ * All product email must go through here.
  */
+
+import { Resend } from "resend";
 
 export type ResendAttachment = {
   filename: string;
-  /** Base64 content (Resend API). */
-  content: string;
+  /** UTF-8 string or already-base64 string; Buffer preferred for binary. */
+  content: string | Buffer;
+  /** When true, `content` is treated as base64 (API legacy callers). */
+  contentIsBase64?: boolean;
 };
 
 export type SendEmailParams = {
@@ -24,16 +29,25 @@ export type SendEmailResult =
   | { ok: true; mocked: false; id: string | null }
   | { ok: false; error: "missing_api_key" | "resend_failed" | "network_error"; detail?: string };
 
+let client: Resend | null = null;
+
 export function isResendConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim());
+}
+
+export function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY?.trim();
+  if (!key) return null;
+  if (!client) client = new Resend(key);
+  return client;
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
   const tag = params.logTag ?? "email";
   const toList = Array.isArray(params.to) ? params.to : [params.to];
-  const key = process.env.RESEND_API_KEY?.trim();
+  const resend = getResend();
 
-  if (!key) {
+  if (!resend) {
     console.info(`[${tag}] resend mocked`, {
       to: toList.map((t) => t.replace(/(.{2}).+(@.+)/, "$1***$2")),
       subject: params.subject.slice(0, 80),
@@ -44,36 +58,42 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: params.from,
-        to: toList,
-        subject: params.subject,
-        html: params.html,
-        ...(params.text != null ? { text: params.text } : {}),
-        ...(params.attachments?.length ? { attachments: params.attachments } : {}),
-      }),
+    const attachments = params.attachments?.map((a) => {
+      const content =
+        typeof a.content === "string" && a.contentIsBase64
+          ? Buffer.from(a.content, "base64")
+          : typeof a.content === "string"
+            ? Buffer.from(a.content, "utf8")
+            : a.content;
+      return {
+        filename: a.filename,
+        content,
+      };
     });
 
-    if (!response.ok) {
-      const detail = (await response.text()).slice(0, 200);
+    const { data, error } = await resend.emails.send({
+      from: params.from,
+      to: toList,
+      subject: params.subject,
+      html: params.html,
+      ...(params.text != null ? { text: params.text } : {}),
+      ...(attachments?.length ? { attachments } : {}),
+    });
+
+    if (error) {
+      const detail = [error.name, error.message].filter(Boolean).join(": ").slice(0, 200);
       console.error(`[${tag}] resend_failed`, detail);
       return { ok: false, error: "resend_failed", detail };
     }
 
-    const data = (await response.json().catch(() => ({}))) as { id?: string };
-    return { ok: true, mocked: false, id: data.id ?? null };
+    return { ok: true, mocked: false, id: data?.id ?? null };
   } catch (e) {
     console.error(`[${tag}] network_error`, e instanceof Error ? e.message : "unknown");
     return { ok: false, error: "network_error" };
   }
 }
 
+/** @deprecated Prefer passing UTF-8 string/Buffer to `sendEmail` attachments. Kept for callers that already base64-encode. */
 export function toBase64Utf8(s: string): string {
   return Buffer.from(s, "utf8").toString("base64");
 }
