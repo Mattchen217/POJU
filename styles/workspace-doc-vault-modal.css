@@ -1,4 +1,5 @@
-/* Vault document overlay — Buy-style portal (SoT 15): min(960px,94vw) × min(860px,92vh) */
+/* Vault document overlay — Buy-style portal (SoT 15).
+ * Frame size: --ws-doc-reader-* (defined in delivery-book-stage.css). */
 
 .workspace-doc-vault-modal__backdrop {
   position: fixed;
@@ -14,8 +15,8 @@
 
 .workspace-doc-vault-modal__sheet {
   position: relative;
-  width: min(960px, 94vw);
-  height: min(860px, 92vh);
+  width: var(--ws-doc-reader-w, min(960px, 94vw));
+  height: var(--ws-doc-reader-h, min(860px, 92vh));
   max-width: 94vw;
   max-height: 92vh;
   display: flex;

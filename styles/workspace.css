@@ -2098,7 +2098,8 @@
   box-sizing: border-box;
 }
 
-/* Phase-4 delivery book: full center width (overrides chat reading column) */
+/* Phase-4 delivery book: use full center column as stage; book itself
+ * locks to --ws-doc-reader-* (same frame as baseline portrait). */
 .workspace-poju-opening .pchat--workspace .pchat__messages:has(> .pchat__center-slot) {
   max-width: none !important;
   width: 100% !important;

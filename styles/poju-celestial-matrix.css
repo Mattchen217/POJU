@@ -3662,14 +3662,14 @@
   overflow: hidden;
 }
 
-/* Center-timeline embed: lock to vault document frame (SoT 15) - same WxH family as delivery reader */
+/* Center-timeline embed: lock to vault document frame (SoT 15) — same WxH as phase-4 delivery */
 .poju-matrix-bubble--baseline-book {
-  width: 100%;
+  width: var(--ws-doc-reader-w, min(960px, 94vw));
   max-width: 100%;
-  /* Match .workspace-doc-vault-modal__sheet: min(960px,94vw) × min(860px,92vh) */
-  height: min(860px, 92vh);
-  max-height: min(860px, 92vh);
+  height: var(--ws-doc-reader-h, min(860px, 92vh));
+  max-height: var(--ws-doc-reader-h, min(860px, 92vh));
   min-height: 0;
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -744,8 +744,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
-  const questionBriefingEnabled =
-    isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
   const deliveryConfirmPending =
@@ -1631,14 +1629,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     void handlePreviewUnlock("payment");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.session_id]);
-
-  async function handleQuestionBriefingDismiss() {
-    const base = sessionRef.current;
-    if (base.question_briefing_dismissed) return;
-    const updated: POJUSessionState = { ...base, question_briefing_dismissed: true };
-    onSessionUpdate(updated);
-    await savePOJUSession(updated);
-  }
 
   async function handlePojuSend(text: string) {
     if ((composerLocked || confirmationGateInputLock) && !expired) return;
@@ -4061,9 +4051,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         onEditMessage={(id, content) => void handleEditUserMessage(id, content)}
         editDisabled={streaming}
         editLabel={t("edit_message")}
-        questionBriefingEnabled={questionBriefingEnabled}
-        questionBriefingDismissed={Boolean(session.question_briefing_dismissed)}
-        onQuestionBriefingDismiss={() => void handleQuestionBriefingDismiss()}
         onClose={workspaceOpening ? undefined : () => router.push("/poju")}
         brandName={t("sidebar_brand_name")}
         brandTooltip={tBrand("navbar_tooltip")}

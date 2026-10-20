@@ -1,5 +1,11 @@
 /* Phase-4 dual-pane delivery book — Eastern OS gold/black (workspace tokens) */
 
+/* Shared reader frame (SoT 15): baseline portrait + phase-4 delivery + vault sheet */
+:root {
+  --ws-doc-reader-w: min(960px, 94vw);
+  --ws-doc-reader-h: min(860px, 92vh);
+}
+
 .delivery-book-stage {
   /* Equal gutters on all sides — larger inset = smaller card */
   --delivery-inset: 64px;

@@ -32,7 +32,6 @@ import {
   SessionSidebarDialog,
   type SessionSidebarDialogState,
 } from "@/components/poju/SessionSidebarDialog";
-import { QuestionBriefingDialog } from "@/components/poju/QuestionBriefingDialog";
 import { DeliveryChromeTipButton } from "@/components/poju/DeliveryChromeIconBtn";
 import { prefersHoldToTalkVoice } from "@/lib/poju/use-speech-input";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
@@ -205,10 +204,6 @@ export interface PojuChatProps {
   initialScrollPosition?: "top" | "bottom";
   /** Fired once the pending-reply UI (slots + text) has painted — parent may dismiss activity. */
   onActivityRenderReady?: () => void;
-  /** Preview phase: first composer focus shows question briefing before typing. */
-  questionBriefingEnabled?: boolean;
-  questionBriefingDismissed?: boolean;
-  onQuestionBriefingDismiss?: () => void;
   /**
    * `composer-only` — input bar only (no sidebar / header / messages).
    * `workspace` — center-column chat: messages + composer, no sidebar / header / page chrome.
@@ -306,9 +301,6 @@ export default function PojuChat(props: PojuChatProps) {
     paywallOverlay,
     initialScrollPosition = "bottom",
     onActivityRenderReady,
-    questionBriefingEnabled = false,
-    questionBriefingDismissed = false,
-    onQuestionBriefingDismiss,
   } = props;
 
   /** Full lock (jobs / escalation) vs free-text-only lock (confirmation gates; chips stay live). */
@@ -319,7 +311,6 @@ export default function PojuChat(props: PojuChatProps) {
   const hideShellChrome = composerOnly || workspaceChrome;
 
   const [input, setInput] = useState("");
-  const [questionBriefingOpen, setQuestionBriefingOpen] = useState(false);
   const textareaValue = composerText ?? input;
   const setTextareaValue = onComposerTextChange ?? setInput;
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -436,10 +427,6 @@ export default function PojuChat(props: PojuChatProps) {
     };
   }, [currentSessionId]);
 
-  useEffect(() => {
-    setQuestionBriefingOpen(false);
-  }, [currentSessionId]);
-
   /* Lock document scroll — only .pchat__scroll may scroll (iOS Safari rubber-band). */
   useEffect(() => {
     if (hideShellChrome) return;
@@ -504,33 +491,6 @@ export default function PojuChat(props: PojuChatProps) {
     if (!voiceActive) return;
     requestAnimationFrame(() => focusComposerCaretEnd());
   }, [textareaValue, voiceActive, focusComposerCaretEnd]);
-
-  function shouldGateQuestionBriefing(): boolean {
-    return (
-      questionBriefingEnabled && !questionBriefingDismissed && !freeTextLocked
-    );
-  }
-
-  function handleComposerPointerDown(e: React.PointerEvent<HTMLTextAreaElement>) {
-    if (!shouldGateQuestionBriefing()) return;
-    e.preventDefault();
-    setQuestionBriefingOpen(true);
-  }
-
-  function handleComposerFocus(e: React.FocusEvent<HTMLTextAreaElement>) {
-    if (!shouldGateQuestionBriefing()) return;
-    if (questionBriefingOpen) return;
-    e.target.blur();
-    setQuestionBriefingOpen(true);
-  }
-
-  function handleQuestionBriefingConfirm() {
-    onQuestionBriefingDismiss?.();
-    setQuestionBriefingOpen(false);
-    requestAnimationFrame(() => {
-      taRef.current?.focus();
-    });
-  }
 
   const lastMessageAnchorKey = useMemo(() => {
     const last = messages[messages.length - 1];
@@ -1295,8 +1255,6 @@ export default function PojuChat(props: PojuChatProps) {
                 }
                 value={textareaValue}
                 disabled={isStreaming || freeTextLocked}
-                onPointerDown={handleComposerPointerDown}
-                onFocus={handleComposerFocus}
                 onChange={(e) => setTextareaValue(e.target.value)}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -1461,10 +1419,6 @@ export default function PojuChat(props: PojuChatProps) {
         ) : null}
 
         {editDialog ? <EditMessageDialog open {...editDialog} /> : null}
-        <QuestionBriefingDialog
-          open={questionBriefingOpen}
-          onConfirm={handleQuestionBriefingConfirm}
-        />
       </main>
     </div>
   );
