@@ -184,6 +184,11 @@ export interface PojuChatProps {
    * Suppresses chat bubbles + pending activity overlays.
    */
   centerSlot?: ReactNode;
+  /**
+   * Independent document above the chat transcript (baseline portrait).
+   * Does not hide messages — use centerSlot when the book should own the center alone.
+   */
+  documentSlot?: ReactNode;
   brandName?: string;
   brandTooltip?: string;
   sessionsLabel?: string;
@@ -289,6 +294,7 @@ export default function PojuChat(props: PojuChatProps) {
     composerInputDisabled,
     hideComposer = false,
     centerSlot,
+    documentSlot,
     brandName = "Pivot",
     brandTooltip,
     sessionsLabel = "Recent Sessions",
@@ -1035,7 +1041,11 @@ export default function PojuChat(props: PojuChatProps) {
             {centerSlot ? (
               <div className="pchat__center-slot">{centerSlot}</div>
             ) : (
-            messages.map((m) => (
+              <>
+            {documentSlot ? (
+              <div className="pchat__doc-reader">{documentSlot}</div>
+            ) : null}
+            {messages.map((m) => (
               <div key={m.id}>
                 <div
                   data-msg-id={m.id}
@@ -1084,7 +1094,8 @@ export default function PojuChat(props: PojuChatProps) {
                   </div>
                 ) : null}
               </div>
-            ))
+            ))}
+              </>
             )}
 
             {inlineNotice ? (
@@ -1123,7 +1134,11 @@ export default function PojuChat(props: PojuChatProps) {
             {centerSlot ? (
               <div className="pchat__center-slot">{centerSlot}</div>
             ) : (
-            messages.map((m) => (
+              <>
+            {documentSlot ? (
+              <div className="pchat__doc-reader">{documentSlot}</div>
+            ) : null}
+            {messages.map((m) => (
               <div key={m.id}>
                 <div
                   data-msg-id={m.id}
@@ -1172,7 +1187,8 @@ export default function PojuChat(props: PojuChatProps) {
                   </div>
                 ) : null}
               </div>
-            ))
+            ))}
+              </>
             )}
 
             {inlineNotice ? (

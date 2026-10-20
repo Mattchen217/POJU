@@ -3267,6 +3267,34 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   });
 
   const prepareShelfOpenRequest = workspacePrepare?.deliveryShelfOpenRequest ?? 0;
+
+  /** Baseline portrait — independent of chat list; same reader frame as phase-4 delivery. */
+  const baselineDocumentNode = useMemo(() => {
+    if (deliveryPageActive) return null;
+    let payload = session.matrix_payload ?? null;
+    if (!payload) {
+      for (const m of visibleMessages) {
+        if (isEnergyMatrixMessage(m) && m.meta?.matrix_payload) {
+          payload = m.meta.matrix_payload;
+          break;
+        }
+      }
+    }
+    if (!payload) return null;
+    return (
+      <BaselinePortraitBook
+        payload={payload}
+        locale={locale}
+        suppressNarrative
+      />
+    );
+  }, [
+    deliveryPageActive,
+    session.matrix_payload,
+    visibleMessages,
+    locale,
+  ]);
+
   const deliveryShelfNode = useMemo(() => {
     if (!deliveryPageActive) return null;
     const complete =
@@ -3372,16 +3400,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ]);
 
   const pojuMessages = useMemo(() => {
-    // Delivery page: empty transcript ? book owns the center.
+    // Delivery page: empty transcript — book owns the center.
     if (deliveryPageActive) return [];
-    const list = visibleMessages.map((m) => ({
-      id: m.client_id ?? m.timestamp,
-      role: m.role as "user" | "assistant",
-      content: m.content,
-      editable: m.role === "user" && !m.is_rejected,
-      // Call B agenda+??: do not yank scroll while user is still reading Call A.
-      suppressScrollAnchor: Boolean(m.meta?.segment2_bridge_question),
-    }));
+    const list = visibleMessages
+      // Baseline lives in documentSlot — keep it out of the chat transcript.
+      .filter((m) => !isEnergyMatrixMessage(m))
+      .map((m) => ({
+        id: m.client_id ?? m.timestamp,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        editable: m.role === "user" && !m.is_rejected,
+        // Call B agenda: do not yank scroll while user is still reading Call A.
+        suppressScrollAnchor: Boolean(m.meta?.segment2_bridge_question),
+      }));
     if (paintPendingUser) {
       const already = list.some(
         (m) =>
@@ -3418,7 +3449,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const footers: Record<string, ReactNode> = {};
       const followUps: Record<string, ReactNode> = {};
       const followUpActions: Record<string, string> = {};
-      let energyMatrixRendered = false;
       const lastAssistantMid = [...visibleMessages]
         .reverse()
         .find((m) => m.role === "assistant" && !m.is_rejected);
@@ -3428,20 +3458,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       for (const m of visibleMessages) {
         const mid = m.client_id ?? m.timestamp;
-      if (isEnergyMatrixMessage(m) && m.meta?.matrix_payload) {
-        if (energyMatrixRendered) continue;
-        energyMatrixRendered = true;
-        bareIds.add(mid);
-        slots[mid] = (
-          <div className="poju-matrix-bubble poju-matrix-bubble--baseline-book">
-            <BaselinePortraitBook
-              payload={m.meta.matrix_payload}
-              locale={locale}
-              suppressNarrative
-            />
-          </div>
-        );
-      }
+      // energy_matrix → documentSlot (BaselinePortraitBook), not a chat bubble
+      if (isEnergyMatrixMessage(m)) continue;
       if (isMatrixWelcomeMessage(m)) {
         const payload = m.meta?.matrix_payload ?? session.matrix_payload;
         if (payload) {
@@ -3941,6 +3959,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         composerInputDisabled={confirmationGateInputLock}
         hideComposer={hideComposer}
         centerSlot={deliveryShelfNode}
+        documentSlot={baselineDocumentNode}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
         messageFooters={messageFooters}

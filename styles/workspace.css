@@ -2109,6 +2109,13 @@
   padding: 0 !important;
 }
 
+/* Baseline documentSlot: same full-center stage so reader width matches delivery */
+.workspace-poju-opening .pchat--workspace .pchat__messages:has(> .pchat__doc-reader):not(:has(> .pchat__center-slot)) {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
 .workspace-poju-opening .pchat--workspace .pchat__inputbar {
   position: absolute;
   left: 0;

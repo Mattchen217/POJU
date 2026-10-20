@@ -110,12 +110,14 @@
  * to 个人基础画像 in the center column.
  */
 .pchat__center-slot .delivery-phase4-stream-enter > .delivery-book-stage {
+  --delivery-inset: 0;
   width: var(--ws-doc-reader-w, min(960px, 94vw));
   max-width: 100%;
   height: var(--ws-doc-reader-h, min(860px, 92vh));
   max-height: 100%;
   flex: 0 1 auto;
   min-height: 0;
+  padding: 0;
 }
 
 .pchat__center-slot .delivery-phase4-stream-enter > .poju-companion-frame {

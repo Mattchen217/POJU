@@ -136,7 +136,11 @@
   min-height: 0;
 }
 
-.workspace-doc-vault-modal__body > .delivery-book-stage[data-baseline="1"] {
+.workspace-doc-vault-modal__body > .delivery-book-stage[data-baseline="1"],
+.workspace-doc-vault-modal__body > .delivery-book-stage,
+.workspace-doc-vault-modal__body .delivery-book-stage {
+  --delivery-inset: 0;
+  padding: 0;
   flex: 1 1 auto;
   width: 100%;
   height: 100%;

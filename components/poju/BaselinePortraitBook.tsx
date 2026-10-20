@@ -15,6 +15,7 @@ import {
   BASELINE_MATRIX_BLOCKS,
   type BaselineMatrixBlockId,
 } from "@/components/poju/PojuEnergyMatrix";
+import { PojuLogo } from "@/components/ui/poju-logo";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { normalizeMatrixLocale, tMatrix } from "@/lib/poju/poju-matrix-i18n";
@@ -114,25 +115,11 @@ export function BaselinePortraitBook({
         >
           <div className="delivery-book-stage__chrome-left" aria-hidden />
           <div className="delivery-book-stage__chrome-center">
-            <a
-              href="/"
+            <PojuLogo
               className="delivery-book-stage__header-logo-link"
-              aria-label="Eastern OS home"
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.assign("/");
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                className="delivery-book-stage__header-logo"
-                src="/v2/LOGO.png"
-                alt=""
-                width={72}
-                height={16}
-                decoding="async"
-              />
-            </a>
+              size="sidebar"
+              hardNavigate
+            />
           </div>
           <div className="delivery-book-stage__chrome-right" aria-hidden />
         </header>
