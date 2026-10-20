@@ -282,7 +282,7 @@
         "billing_notice": "Session approfondie de 30 jours sur une question précise pour 9,99 $ ou utiliser un bon d'expérience"
       },
       "when_to_come": {
-        "heading": "Quand venir vers POJU.",
+        "heading": "Quand venir vers Eastern OS.",
         "stuck": {
           "title": "Vous êtes coincé entre deux chemins",
           "description": "Changement de carrière. Décision de relation. Où vivre."
@@ -301,7 +301,7 @@
         },
         "direction": {
           "title": "Vous voulez une direction, pas une prédiction",
-          "description": "\"Est-ce que X va arriver\" demande un résultat fixe. \"Que devrais-je faire\" est POJU."
+          "description": "\"Est-ce que X va arriver\" demande un résultat fixe. \"Que devrais-je faire\" est Eastern OS."
         }
       },
       "how_it_works": {
@@ -377,9 +377,9 @@
         "footnote": "Une question centrale · Profondeur systémique illimitée · Chiffré localement dans le bac à sable de votre navigateur"
       },
       "what_is": {
-        "title": "Qu'est-ce que POJU ?",
-        "subtitle": "Noyau de décision stratégique",
-        "body": "Pivot (Strategic Nexus Unlock) est un partenaire conversationnel de stratégie cognitive à haute cognition conçu pour déconstruire les dilemes de vie complexes. Ancré dans l'architecture systémique de la théorie orientale des cinq éléments (Wu Xing) et du I Ching, POJU traduit plus de 3 000 ans de logique relationnelle en un modèle analytique moderne et avancé. En calibrant vos coordonnées géographiques exactes et le temps solaire vrai, le système calcule votre matrice astro-chronologique personnalisée. Face à un goulot d'étranglement stratégique majeur, POJU sert de tableau de bord d'aide à la décision, croisant votre profil élémentaire unique avec votre contexte réel immédiat. Chaque session fournit une cartographie approfondie de votre élan comportemental, des vecteurs tactiques précis pour briser les impasses et des ajustements environnementaux exploitables. Le tout est soutenu par une boucle de suivi continu de 30 jours, facilitant un calibrage dynamique et un retour d'expérience systémique à mesure que votre situation évolue."
+        "title": "Qu’est-ce qu’Eastern OS ?",
+        "subtitle": "Noyau de dialogue de décision",
+        "body": "Eastern OS est un dialogue multi-tours de décision pour un choix bloqué. Les coordonnées de naissance structurent cette session—pas de voyance. En une session complète tu obtiens : le dialogue ; une voie principale et une de secours ; un rapport de décision à rouvrir dans ce navigateur ; et des rappels 30 jours sur la même ligne fournis ensemble. Sur ce qui te bloque maintenant, on clarifie étape par étape."
       }
     },
     "glyph": {
@@ -770,7 +770,7 @@
     "branding": {
       "navbar_tooltip": "Déblocage stratégique : brisez les impasses cognitives et les dilemmes de vie complexes.",
       "hero_tagline": "Déconstruisez votre matrice. Brisez l'impasse.",
-      "feature_definition": "Pivot (Strategic Nexus Unlock) est un partenaire conversationnel de stratégie cognitive à haute cognition conçu pour déconstruire les dilemes de vie complexes. Ancré dans l'architecture systémique de la théorie orientale des cinq éléments (Wu Xing) et du I Ching, POJU traduit plus de 3 000 ans de logique relationnelle en un modèle analytique moderne et avancé. En calibrant vos coordonnées géographiques exactes et le temps solaire vrai, le système calcule votre matrice astro-chronologique personnalisée. Face à un goulot d'étranglement stratégique majeur, POJU sert de tableau de bord d'aide à la décision, croisant votre profil élémentaire unique avec votre contexte réel immédiat. Chaque session fournit une cartographie approfondie de votre élan comportemental, des vecteurs tactiques précis pour briser les impasses et des ajustements environnementaux exploitables. Le tout est soutenu par une boucle de suivi continu de 30 jours, facilitant un calibrage dynamique et un retour d'expérience systémique à mesure que votre situation évolue."
+      "feature_definition": "Eastern OS est un dialogue multi-tours de décision pour un choix bloqué. Les coordonnées de naissance structurent cette session—pas de voyance. En une session complète tu obtiens : le dialogue ; une voie principale et une de secours ; un rapport de décision à rouvrir dans ce navigateur ; et des rappels 30 jours sur la même ligne fournis ensemble. Sur ce qui te bloque maintenant, on clarifie étape par étape."
     },
     "chat": {
       "question_label": "Votre question",

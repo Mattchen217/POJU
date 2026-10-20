@@ -241,7 +241,7 @@ export function LabOpsBirthForm({
             ) : null}
           </div>
         )}
-        <p className="mt-1 text-[11px] text-[#71717a]">须选具体城市（真太阳时要用经纬度），不能空。</p>
+        <p className="mt-1 text-[11px] text-[#71717a]">须选具体城市（需经纬度以校准出生地），不能空。</p>
       </div>
 
       <div>

@@ -282,7 +282,7 @@
         "billing_notice": "Sesión profunda de 30 días sobre un tema concreto por $9.99 o usar cupón de experiencia"
       },
       "when_to_come": {
-        "heading": "Cuándo venir a POJU.",
+        "heading": "Cuándo venir a Eastern OS.",
         "stuck": {
           "title": "Estás atrapado entre dos caminos",
           "description": "Cambio de carrera. Decisión de relación. Dónde vivir."
@@ -301,7 +301,7 @@
         },
         "direction": {
           "title": "Quieres dirección, no predicción",
-          "description": "\"¿Va a pasar X?\" pide un resultado fijo. \"¿Qué debo hacer?\" es POJU."
+          "description": "\"¿Va a pasar X?\" pide un resultado fijo. \"¿Qué debo hacer?\" es Eastern OS."
         }
       },
       "how_it_works": {
@@ -377,9 +377,9 @@
         "footnote": "Una consulta central · Profundidad sistémica ilimitada · Encriptado localmente dentro del entorno seguro de tu navegador"
       },
       "what_is": {
-        "title": "¿Qué es POJU?",
-        "subtitle": "Núcleo de estrategia cognitiva",
-        "body": "Pivot (Strategic Nexus Unlock) es un socio conversacional de estrategia cognitiva diseñado para deconstruir dilemas complejos de la vida. Basado en la arquitectura sistémica de la Teoría de los Cinco Elementos (Wu Xing) y el I Ching, POJU traduce más de 3,000 años de lógica relacional en un modelo analítico moderno y avanzado. Al calibrar tus coordenadas geográficas exactas y el tiempo solar verdadero, el sistema calcula tu matriz astro-cronológica personalizada. Al enfrentarte a un cuello de botella estratégico central, POJU actúa como tu panel de inteligencia de decisiones, cruzando tu perfil elemental único con tu contexto real inmediato. Cada sesión ofrece un mapeo profundo del impulso conductual, vectores tácticos precisos para romper puntos muertos y ajustes ambientales accionables. Todo esto respaldado por un bucle de seguimiento continuo de 30 días, facilitando una calibración dinámica y retroalimentación sistémica a medida que evoluciona tu situación."
+        "title": "¿Qué es Eastern OS?",
+        "subtitle": "Núcleo de diálogo de decisión",
+        "body": "Eastern OS es un diálogo multiturno de decisión para una elección atascada. Las coordenadas de nacimiento estructuran esta sesión—no es adivinación. En una corrida completa obtienes: el diálogo; una ruta principal y un respaldo; un informe de decisión que puedes reabrir en este navegador; y recordatorios de 30 días en la misma línea proporcionados juntos. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso."
       }
     },
     "glyph": {
@@ -770,7 +770,7 @@
     "branding": {
       "navbar_tooltip": "Desbloqueo estratégico: rompe los bloqueos cognitivos y los dilemas vitales complejos.",
       "hero_tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
-      "feature_definition": "Pivot (Strategic Nexus Unlock) es un socio conversacional de estrategia cognitiva diseñado para deconstruir dilemas complejos de la vida. Basado en la arquitectura sistémica de la Teoría de los Cinco Elementos (Wu Xing) y el I Ching, POJU traduce más de 3,000 años de lógica relacional en un modelo analítico moderno y avanzado. Al calibrar tus coordenadas geográficas exactas y el tiempo solar verdadero, el sistema calcula tu matriz astro-cronológica personalizada. Al enfrentarte a un cuello de botella estratégico central, POJU actúa como tu panel de inteligencia de decisiones, cruzando tu perfil elemental único con tu contexto real inmediato. Cada sesión ofrece un mapeo profundo del impulso conductual, vectores tácticos precisos para romper puntos muertos y ajustes ambientales accionables. Todo esto respaldado por un bucle de seguimiento continuo de 30 días, facilitando una calibración dinámica y retroalimentación sistémica a medida que evoluciona tu situación."
+      "feature_definition": "Eastern OS es un diálogo multiturno de decisión para una elección atascada. Las coordenadas de nacimiento estructuran esta sesión—no es adivinación. En una corrida completa obtienes: el diálogo; una ruta principal y un respaldo; un informe de decisión que puedes reabrir en este navegador; y recordatorios de 30 días en la misma línea proporcionados juntos. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso."
     },
     "chat": {
       "question_label": "Tu pregunta",

@@ -636,12 +636,12 @@
         "billing_notice": "30-day deep session on a specific question for $9.99 or use experience voucher"
       },
       "what_is": {
-        "title": "What is Pivot?",
-        "subtitle": "Strategic Decision Core",
-        "body": "Pivot (Strategic Nexus Unlock) is a high-cognition, conversational cognitive partner engineered to deconstruct complex life dilemmas. Grounded in the systemic architecture of Eastern Five Elements Theory (Wu Xing) and the I Ching, POJU translates over 3,000 years of relational logic into an advanced modern analytical model. By calibrating your precise geographic coordinates and true solar time, the system computes your personalized astro-chronological matrix. When confronting a core strategic bottleneck, POJU serves as your decision-intelligence dashboard—cross-referencing your unique elemental profile with your immediate real-world context. Every session delivers deep behavioral momentum mapping, precise tactical vectors to break deadlocks, and actionable environmental adjustments. This is backed by a 30-day continuous support loop, facilitating dynamic calibration and systemic feedback as your situation evolves."
+        "title": "What is Eastern OS?",
+        "subtitle": "Decision dialogue core",
+        "body": "Eastern OS is a multi-turn decision dialogue for a stuck choice. Birth coordinates structure this session—not fortune-telling. In one full run you get: the dialogue; a main path and a backup; a decision report you can reopen in this browser; and 30-day same-line reminders provided together. For where you are stuck right now, we work through it step by step."
       },
       "when_to_come": {
-        "heading": "When to come to Pivot.",
+        "heading": "When to come to Eastern OS.",
         "stuck": {
           "title": "You're stuck between two paths",
           "description": "Career change. Relationship decision. Where to live."
@@ -660,7 +660,7 @@
         },
         "direction": {
           "title": "You want direction, not fixed answers",
-          "description": "\"Will X happen\" asks for a fixed outcome. \"What should I do\" is Pivot."
+          "description": "\"Will X happen\" asks for a fixed outcome. \"What should I do\" is Eastern OS."
         }
       },
       "how_it_works": {
@@ -1280,7 +1280,7 @@
     "branding": {
       "navbar_tooltip": "Strategic Unlock: Break through cognitive gridlocks and complex life dilemmas.",
       "hero_tagline": "Deconstruct your matrix. Break the gridlock.",
-      "feature_definition": "Pivot (Strategic Nexus Unlock) is a high-cognition, conversational cognitive partner engineered to deconstruct complex life dilemmas. Grounded in the systemic architecture of Eastern Five Elements Theory (Wu Xing) and the I Ching, POJU translates over 3,000 years of relational logic into an advanced modern analytical model. By calibrating your precise geographic coordinates and true solar time, the system computes your personalized astro-chronological matrix. When confronting a core strategic bottleneck, POJU serves as your decision-intelligence dashboard—cross-referencing your unique elemental profile with your immediate real-world context. Every session delivers deep behavioral momentum mapping, precise tactical vectors to break deadlocks, and actionable environmental adjustments. This is backed by a 30-day continuous support loop, facilitating dynamic calibration and systemic feedback as your situation evolves."
+      "feature_definition": "Eastern OS is a multi-turn decision dialogue for a stuck choice. Birth coordinates structure this session—not fortune-telling. In one full run you get: the dialogue; a main path and a backup; a decision report you can reopen in this browser; and 30-day same-line reminders provided together. For where you are stuck right now, we work through it step by step."
     },
     "begin": {
       "start": "Begin",
@@ -2433,7 +2433,7 @@
     },
     "location": {
       "asking_title": "Detecting your location...",
-      "asking_message": "Syncro uses your location for precise true solar time and direction.",
+      "asking_message": "Syncro uses your location to align directions with local context.",
       "asking_privacy": "Used only for this session. Never stored on our servers.",
       "allow_location": "Allow location access",
       "granted_message": "Location received. Casting your field...",

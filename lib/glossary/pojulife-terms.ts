@@ -3975,7 +3975,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "tm_true_solar_time",
     traditional: "出生地校准",
-    aliases: ["真太阳时", "True solar", "True Solar"],
+    aliases: [],
     polarity: "neutral",
     term: {
       zh: "出生地校准",
