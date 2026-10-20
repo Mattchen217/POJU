@@ -2464,7 +2464,7 @@
     "passLastPurchaseLabel": "Última compra",
     "passLastPurchaseNone": "Ninguna aún",
     "passCardHint": "Válido hasta usarlo · 1 PASS = un diálogo completo · reembolsable si no se usó, según política.",
-    "subCardHint": "Suscripción: **5 PASS / mes**. Los créditos de suscripción se usan antes que los comprados.",
+    "subCardHint": "Suscripción: **5 PASS / mes**. Orden de consumo: primero créditos de arrastre (carryover), luego de suscripción, luego PASS comprados.",
     "operationalLedger": "Registros de uso",
     "acquisitionLog": "Registros de compra",
     "financialProtocols": "Facturación y pagos",
@@ -2669,7 +2669,7 @@
       "1 Pass = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días proporcionados juntos.",
       "Asignación fija de 5 PASS al mes.",
       "Se refresca cada mes de facturación.",
-      "Los créditos de suscripción se usan primero.",
+      "Orden de consumo: primero créditos de arrastre (carryover), luego de suscripción, luego PASS comprados.",
       "Cancela cuando quieras—en un clic."
     ],
     "legalLinkTerms": "Términos",

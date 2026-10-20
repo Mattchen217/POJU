@@ -2821,7 +2821,7 @@
     "passLastPurchaseLabel": "最近购买",
     "passLastPurchaseNone": "暂无",
     "passCardHint": "用完前有效 · 1 PASS = 一次完整决策对话 · 未使用可按政策退款。",
-    "subCardHint": "订阅：**每月 5 PASS**。订阅额度优先于已购 Pass 消耗。",
+    "subCardHint": "订阅：**每月 5 PASS**。消耗顺序：先用结转额度，再订阅额度，最后已购买 PASS。",
     "operationalLedger": "使用记录",
     "acquisitionLog": "PASS 购入记录",
     "financialProtocols": "账单与支付",
@@ -3022,7 +3022,7 @@
       "1 Pass = 一次完整：对话 → 主路径 + 备选 + 报告 → 30 天同线提醒同步提供",
       "每月固定 5 PASS 额度。",
       "按计费月刷新",
-      "订阅额度优先消耗",
+      "消耗顺序：先用结转额度，再订阅额度，最后已购买 PASS。",
       "支持一键取消订阅"
     ],
     "legalLinkTerms": "条款",

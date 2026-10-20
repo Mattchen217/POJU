@@ -2464,7 +2464,7 @@
     "passLastPurchaseLabel": "Dernier achat",
     "passLastPurchaseNone": "Aucun encore",
     "passCardHint": "Valable jusqu’à utilisation · 1 PASS = un dialogue complet · remboursable si non utilisé, selon la politique.",
-    "subCardHint": "Abonnement : **5 PASS / mois**. Les crédits d’abonnement avant les Passes achetés.",
+    "subCardHint": "Abonnement : **5 PASS / mois**. Ordre de consommation : d’abord le report (carryover), puis l’abonnement, puis les PASS achetés.",
     "operationalLedger": "Historique d’usage",
     "acquisitionLog": "Historique d'achats",
     "financialProtocols": "Facturation et paiements",
@@ -2669,7 +2669,7 @@
       "1 Pass = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours fournis ensemble.",
       "Allocation fixe de 5 PASS par mois.",
       "Se renouvelle chaque mois de facturation.",
-      "Les crédits d’abonnement sont utilisés en premier.",
+      "Ordre de consommation : d’abord le report (carryover), puis l’abonnement, puis les PASS achetés.",
       "Annule à tout moment—en un clic."
     ],
     "legalLinkTerms": "Conditions",

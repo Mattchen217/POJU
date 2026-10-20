@@ -2821,7 +2821,7 @@
     "passLastPurchaseLabel": "Last purchase",
     "passLastPurchaseNone": "None yet",
     "passCardHint": "Valid until used · 1 PASS = one full dialogue run · unused Passes refundable per policy.",
-    "subCardHint": "Subscription: **5 PASS / month**. Subscription credits use before purchased Passes.",
+    "subCardHint": "Subscription: **5 PASS / month**. Spend order: any carryover first, then subscription credits, then purchased PASS.",
     "operationalLedger": "Usage records",
     "acquisitionLog": "Purchase records",
     "financialProtocols": "Billing & payments",
@@ -3022,7 +3022,7 @@
       "1 Pass = one full run: dialogue → main path + backup + report → 30-day same-line reminders provided together.",
       "Fixed 5 PASS monthly allowance.",
       "Refreshes each billing month.",
-      "Subscription credits use first.",
+      "Spend order: any carryover first, then subscription credits, then purchased PASS.",
       "Cancel anytime—one click."
     ],
     "legalLinkTerms": "Terms",
