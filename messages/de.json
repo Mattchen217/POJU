@@ -270,7 +270,7 @@
     },
     "poju": {
       "hero": {
-        "brand_tag": "Pivot",
+        "brand_tag": "Eastern OS",
         "heading": "Manchmal ist Lesen nicht genug.",
         "description": "Sie haben die Bücher gelesen, Freunde konsultiert und jede Pro-und-Contra-Matrix abgewogen. Dennoch lässt Sie das Kern-Dilemma nicht los.",
         "tagline": "Dekonstruiere deine Matrix. Durchbrich die Sackgasse.",
@@ -301,7 +301,7 @@
         }
       },
       "how_it_works": {
-        "heading": "Wie POJU funktioniert",
+        "heading": "So funktioniert Eastern OS",
         "subtitle": "Nicht eine einzelne Antwort — eine kontinuierliche Durchbruchschleife.",
         "steps": {
           "1": {
@@ -310,15 +310,15 @@
           },
           "2": {
             "title": "Deep Collaborative Dialogue",
-            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Pivot guides you to align the full context of your situation."
+            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Eastern OS guides you to align the full context of your situation."
           },
           "3": {
             "title": "Trajectory Profiling",
-            "description": "Dynamic Visual Trajectory Tracking. The system locks into your personal energetic blueprint, mapping and tracking your real-time state with custom metaphorical visual patterns."
+            "description": "Dynamic Visual Trajectory Tracking. The system locks into your situation map, mapping and tracking your real-time state with custom metaphorical visual patterns."
           },
           "4": {
             "title": "Core Structural Analysis",
-            "description": "Deep Core Structural Analysis. Leveraging the algorithmic matrix of the I Ching and Five Elements (Wu Xing), the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
+            "description": "Deep Core Structural Analysis. Leveraging the session structure from your coordinates and dialogue, the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
           },
           "5": {
             "title": "Strategy & Actionable Deliverables",
@@ -326,7 +326,7 @@
           },
           "6": {
             "title": "Evolutionary Tracking",
-            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Pivot tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Eastern OS tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
           }
         },
         "footer": {
@@ -353,7 +353,7 @@
             "Trifft keine Entscheidungen für dich"
           ]
         },
-        "tagline": "Pivot ist ein Denkpartner. Die Entscheidungen bleiben bei dir.",
+        "tagline": "Eastern OS ist ein Denkpartner. Die Entscheidungen bleiben bei dir.",
         "cta": "Stell deine Frage — $9.99",
         "footnote": "Eine Frage · Unbegrenzte Tiefe · Wird beim Schließen gelöscht"
       },
@@ -373,9 +373,9 @@
         "footnote": "Eine Kernanfrage · Unbegrenzte systemische Tiefe · Lokal in Ihrer Browser-Sandbox verschlüsselt"
       },
       "what_is": {
-        "title": "Was ist POJU?",
-        "subtitle": "Strategischer Entscheidungskern",
-        "body": "Pivot (Strategic Nexus Unlock) ist ein hochkognitiver, dialogorientierter kognitiver Strategiepartner, der entwickelt wurde, um komplexe Lebensdilemmas zu dekonstruieren. Basierend auf der systemischen Architektur der östlichen Fünf-Elemente-Theorie (Wu Xing) und dem I Ging übersetzt POJU über 3.000 Jahre Beziehungslogik in ein fortschrittliches, modernes Analysemodell. Durch die präzise Kalibrierung Ihrer geografischen Koordinaten und der wahren Sonnenzeit berechnet das System Ihre personalisierte astro-chronologische Matrix. Wenn Sie vor einem zentralen strategischen Engpass stehen, fungiert POJU als Ihr Dashboard für Entscheidungsintelligenz, das Ihr einzigartiges elementares Profil mit Ihrem unmittelbaren realen Kontext abgleicht. Jede Sitzung bietet eine detaillierte Analyse Ihrer Verhaltensdynamik, präzise taktische Vektoren zur Überwindung von Blockaden und umsetzbare Pläne zur Anpassung Ihres Umfelds. Unterstützt wird dies durch eine 30-tägige kontinuierliche Begleitschleife, die eine dynamische Kalibrierung und systemisches Feedback ermöglicht, während sich Ihre Situation weiterentwickelt."
+        "title": "Was ist Eastern OS?",
+        "subtitle": "Entscheidungsdialog-Kern",
+        "body": "Eastern OS ist ein mehrstufiger Entscheidungsdialog für eine feststeckende Wahl. Geburtskoordinaten strukturieren diese Sitzung—kein Wahrsagen. In einem vollständigen Durchlauf erhältst du: den Dialog; einen Haupt- und einen Alternativweg; einen Entscheidungsbericht, den du in diesem Browser erneut öffnen kannst; und 30-Tage-Erinnerungen auf derselben Linie. Genau dort, wo du gerade feststeckst, klären wir Schritt für Schritt."
       }
     },
     "glyph": {
@@ -536,8 +536,8 @@
           "description": "Neue Orte, neue Zeiten. Ein Weg, in deinem eigenen Rhythmus zu bleiben, wo du auch bist."
         },
         "poju_companion": {
-          "title": "Als POJU-Begleiter",
-          "description": "Nutze Syncro zwischen POJU-Sitzungen, um zu bemerken, wie sich deine Lage zwischen tieferen Gesprächen entwickelt."
+          "title": "Zwischen Eastern-OS-Sitzungen",
+          "description": "Nutze Syncro zwischen tieferen Eastern-OS-Gesprächen, um zu sehen, wie sich deine Lage entwickelt."
         }
       },
       "what_it_is": {
@@ -684,14 +684,14 @@
       "title": "Birth location?",
       "subtitle": "For precise chart calculation, tell us your birth city",
       "why_link": "Why birth location matters?",
-      "explanation_1": "Eastern OS uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
-      "explanation_2": "True solar time depends on the longitude of birth location.",
-      "explanation_example": "Example: Urumqi uses Beijing time, but true solar time differs by 2 hours.",
+      "explanation_1": "Der Geburtsort hilft Eastern OS, diese Entscheidungssitzung aus deinen Koordinaten zu strukturieren—keine Wahrsagekarte.",
+      "explanation_2": "Standort präzisiert, wie diese Sitzung deinen Zeit- und Ortskontext einordnet.",
+      "explanation_example": "Beispiel: Derselbe Uhrzeitstempel kann je nach Ort unterschiedlich eingeordnet werden—deshalb zählt der Geburtsort.",
       "skip_use_default": "I'm not sure — use defaults",
       "default_note": "Defaults use timezone center longitude ({timezone}).",
       "confirm_city": "Use this city",
       "back": "Back to birth details",
-      "location_required_note": "Bestätige deinen Geburtsort oder suche einen anderen. Eastern OS verwendet die wahre Sonnenzeit für eine genaue Stundensäule."
+      "location_required_note": "Bestätige deinen Geburtsort oder suche einen anderen. Eastern OS nutzt den Ort, um diese Sitzung präzise einzuordnen."
     },
     "upgrade": {
       "title": "Update for precise calculations",
@@ -766,7 +766,7 @@
     "branding": {
       "navbar_tooltip": "Strategischer Durchbruch: Durchbreche kognitive Sackgassen und komplexe Lebensdilemmas.",
       "hero_tagline": "Dekonstruiere deine Matrix. Durchbrich die Sackgasse.",
-      "feature_definition": "Pivot (Strategic Nexus Unlock) ist ein hochkognitiver, dialogorientierter kognitiver Strategiepartner, der entwickelt wurde, um komplexe Lebensdilemmas zu dekonstruieren. Basierend auf der systemischen Architektur der östlichen Fünf-Elemente-Theorie (Wu Xing) und dem I Ging übersetzt POJU über 3.000 Jahre Beziehungslogik in ein fortschrittliches, modernes Analysemodell. Durch die präzise Kalibrierung Ihrer geografischen Koordinaten und der wahren Sonnenzeit berechnet das System Ihre personalisierte astro-chronologische Matrix. Wenn Sie vor einem zentralen strategischen Engpass stehen, fungiert POJU als Ihr Dashboard für Entscheidungsintelligenz, das Ihr einzigartiges elementares Profil mit Ihrem unmittelbaren realen Kontext abgleicht. Jede Sitzung bietet eine detaillierte Analyse Ihrer Verhaltensdynamik, präzise taktische Vektoren zur Überwindung von Blockaden und umsetzbare Pläne zur Anpassung Ihres Umfelds. Unterstützt wird dies durch eine 30-tägige kontinuierliche Begleitschleife, die eine dynamische Kalibrierung und systemisches Feedback ermöglicht, während sich Ihre Situation weiterentwickelt."
+      "feature_definition": "Eastern OS ist ein mehrstufiger Entscheidungsdialog für eine feststeckende Wahl. Geburtskoordinaten strukturieren diese Sitzung—kein Wahrsagen. In einem vollständigen Durchlauf erhältst du: den Dialog; einen Haupt- und einen Alternativweg; einen Entscheidungsbericht, den du in diesem Browser erneut öffnen kannst; und 30-Tage-Erinnerungen auf derselben Linie. Genau dort, wo du gerade feststeckst, klären wir Schritt für Schritt."
     },
     "chat": {
       "question_label": "Deine Frage",
@@ -2362,7 +2362,7 @@
     "searching": "Wird gesucht…",
     "cancel": "Abbrechen",
     "why_we_ask": "Warum wir danach fragen",
-    "why_explanation": "Eastern OS verwendet für die Genauigkeit die wahre Sonnenzeit. Der Sonnenhöchststand hängt von der Längengrad-Position ab – dein Geburtsort sichert die korrekte Stundensäule.",
+    "why_explanation": "Der Geburtsort hilft Eastern OS, diese Entscheidungssitzung aus deinen Koordinaten zu strukturieren—keine Wahrsagekarte.",
     "true_solar_offset": "Wahre Sonnenzeit-Abweichung: {offset}",
     "confirm_continue": "Mit diesem Ort fortfahren",
     "location_required": "Bitte wähle oder bestätige deinen Geburtsort.",

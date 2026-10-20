@@ -274,7 +274,7 @@
     },
     "poju": {
       "hero": {
-        "brand_tag": "Pivot",
+        "brand_tag": "Eastern OS",
         "heading": "Parfois, lire ne suffit pas.",
         "description": "Vous avez lu les livres, consulté vos amis et pesé le pour et le contre. Pourtant, le dilemme central refuse de vous lâcher.",
         "tagline": "Déconstruisez votre matrice. Brisez l'impasse.",
@@ -305,7 +305,7 @@
         }
       },
       "how_it_works": {
-        "heading": "Comment POJU fonctionne",
+        "heading": "Comment Eastern OS fonctionne",
         "subtitle": "Pas une seule réponse — une boucle de percée continue.",
         "steps": {
           "1": {
@@ -314,15 +314,15 @@
           },
           "2": {
             "title": "Deep Collaborative Dialogue",
-            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Pivot guides you to align the full context of your situation."
+            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Eastern OS guides you to align the full context of your situation."
           },
           "3": {
             "title": "Trajectory Profiling",
-            "description": "Dynamic Visual Trajectory Tracking. The system locks into your personal energetic blueprint, mapping and tracking your real-time state with custom metaphorical visual patterns."
+            "description": "Dynamic Visual Trajectory Tracking. The system locks into your situation map, mapping and tracking your real-time state with custom metaphorical visual patterns."
           },
           "4": {
             "title": "Core Structural Analysis",
-            "description": "Deep Core Structural Analysis. Leveraging the algorithmic matrix of the I Ching and Five Elements (Wu Xing), the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
+            "description": "Deep Core Structural Analysis. Leveraging the session structure from your coordinates and dialogue, the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
           },
           "5": {
             "title": "Strategy & Actionable Deliverables",
@@ -330,7 +330,7 @@
           },
           "6": {
             "title": "Evolutionary Tracking",
-            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Pivot tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Eastern OS tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
           }
         },
         "footer": {
@@ -357,7 +357,7 @@
             "Ne prend pas de décisions à votre place"
           ]
         },
-        "tagline": "POJU est un partenaire de réflexion. Les décisions restent les vôtres.",
+        "tagline": "Eastern OS est un partenaire de réflexion. Les décisions restent les vôtres.",
         "cta": "Posez votre question — $9.99",
         "footnote": "Une question · Profondeur illimitée · S'efface à la fermeture"
       },
@@ -488,8 +488,8 @@
       },
       "what_is": {
         "title": "Qu'est-ce que Glyph ?",
-        "subtitle": "Le miroir métaphorique",
-        "body": "Glyph est un outil de réflexion archétypale enraciné dans la taxonomie situationnelle des 64 hexagrammes du Yi King et dans la matrice énergétique des Cinq Éléments. Après avoir cartographié votre schéma spatio-temporel fondamental, Glyph utilise une matrice de chaos aléatoire — alignée sur le principe psychologique de la synchronicité — via une interface immersive d'explosion de particules, afin d'accorder votre état subconscient à l'une des 100 métaphores situationnelles classiques issues des textes philosophiques orientaux. Une architecture LLM profonde déconstruit ensuite le lien entre la métaphore et votre profil personnel. Glyph évite rigoureusement toute prévision déterministe ; il agit plutôt comme un miroir cognitif structuré qui transforme le chaos intérieur en une conscience de soi claire et actionnable."
+        "subtitle": "Un miroir réflexif court",
+        "body": "Glyph est un tirage réflexif court quand une session de décision complète est trop pour l’instant. Il associe une métaphore classique orientale à ce qui te bloque, puis déplie comment cette image croise ta situation. Pas une prédiction—un cadre structuré pour y voir plus clair avant de choisir."
       }
     },
     "syncro": {
@@ -540,8 +540,8 @@
           "description": "Nouveaux lieux, nouveaux timings. Une façon de rester ancré·e dans votre propre rythme, où que vous soyez."
         },
         "poju_companion": {
-          "title": "Comme compagnon POJU",
-          "description": "Utilisez Syncro entre les sessions POJU pour voir comment votre situation évolue entre des conversations plus profondes."
+          "title": "Entre les sessions Eastern OS",
+          "description": "Utilise Syncro entre des conversations Eastern OS plus profondes pour voir comment ta situation évolue."
         }
       },
       "what_it_is": {
@@ -623,8 +623,8 @@
       },
       "what_is": {
         "title": "Qu'est-ce que Syncro ?",
-        "subtitle": "La carte d'efficacité",
-        "body": "Syncro est une matrice d'efficacité spatio-temporelle fondée sur la logique directionnelle du Yi King et le cadre des Cinq Éléments. En analysant l'alignement énergétique entre votre profil personnel et une tâche à venir, Syncro trace une carte d'efficacité complète pour les 24 prochaines heures. Sur 8 directions de l'espace, elle décode la résonance et la friction de l'environnement et les classe en cinq courants essentiels : Courant Ouvert (avancez avec confiance), Courant Porteur (la voie vous soutient, avec effort), Eaux Calmes (faites une pause et observez), Contre-courant (reconsidérez cette direction ou ce moment) et Ressac (forte friction — il est recommandé de changer de voie). Telle une carte météo spatio-temporelle de haute précision, Syncro aide à optimiser le moment et l'orientation des entreprises importantes afin de réduire la friction de l'environnement."
+        "subtitle": "Timing et direction sur 24 h",
+        "body": "Syncro est une carte 24 h ancrée sur le lieu pour une tâche concrète. Avec ta position et le contexte de session, elle note huit directions selon soutien vs friction—Ouvert, Porteur, Eaux calmes, Contre-courant, Ressac—pour choisir quand et vers où avancer. Pas de voyance: timing et orientation pour la journée à venir."
       },
       "pwa_guide": {
         "title": "Ouvrez easternos.com dans le navigateur de votre téléphone, ou installez l'application Eastern OS.",
@@ -2001,8 +2001,8 @@
       "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours.",
       "what_is": {
         "title": "Qu'est-ce que Match ?",
-        "subtitle": "La matrice relationnelle",
-        "body": "Match est une matrice d'analyse relationnelle fondée sur la polarité élémentaire orientale et l'équilibre structurel du Yin-Yang. Rejetant résolument les verdicts de compatibilité fatalistes et la voyance, Match explore en profondeur la subtile interaction systémique entre deux schémas spatio-temporels indépendants. Appliquée à des dynamiques relationnelles concrètes — styles de communication essentiels, partenariats professionnels ou cohabitation domestique de longue durée —, Match cartographie les zones de résonance mutuelle et les nœuds de friction potentiels. Elle fonctionne comme un cadre d'accompagnement rationnel conçu pour offrir des outils d'empathie mutuelle, permettant aux deux parties de bâtir un alignement structurel durable et constructif."
+        "subtitle": "Cadre de décision à deux",
+        "body": "Match est une lecture à deux, ciblée sur une question relationnelle. Elle compare comment deux profils se croisent en communication, partenariat ou vie partagée—où ça résonne, où la friction monte—sans scores fatalistes de compatibilité. Un cadre de coaching pour choisir ensemble des prochaines étapes plus claires."
       }
     },
     "subtitle": "Deux charts. Une relation. Une vraie clarté.",

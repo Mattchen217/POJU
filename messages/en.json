@@ -628,7 +628,7 @@
     },
     "poju": {
       "hero": {
-        "brand_tag": "Pivot",
+        "brand_tag": "Eastern OS",
         "heading": "Sometimes reading isn't enough.",
         "description": "You have read the books, consulted friends, and mapped out every pros-and-cons matrix. Yet, the core dilemma refuses to release its grip.",
         "tagline": "Deconstruct your matrix. Break the gridlock.",
@@ -664,37 +664,37 @@
         }
       },
       "how_it_works": {
-        "heading": "How Pivot works",
+        "heading": "How Eastern OS works",
         "subtitle": "Not a single answer — a continuous breakthrough loop.",
         "steps": {
           "1": {
-            "title": "Presenting Your Dilemma",
-            "description": "Share Your Current Dilemma. Present the specific challenge, confusion, or decision that is weighing on your mind right now."
+            "title": "Share where you’re stuck",
+            "description": "Name the specific dilemma or decision weighing on you right now."
           },
           "2": {
-            "title": "Deep Collaborative Dialogue",
-            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Pivot guides you to align the full context of your situation."
+            "title": "Deep multi-turn dialogue",
+            "description": "Work through a reflective conversation as Eastern OS helps you align the full context of your situation."
           },
           "3": {
-            "title": "Trajectory Profiling",
-            "description": "Dynamic Visual Trajectory Tracking. The system locks into your personal energetic blueprint, mapping and tracking your real-time state with custom metaphorical visual patterns."
+            "title": "Situation mapping",
+            "description": "Eastern OS keeps a running map of your situation as the dialogue unfolds—so the thread stays clear."
           },
           "4": {
-            "title": "Core Structural Analysis",
-            "description": "Deep Core Structural Analysis. Leveraging the algorithmic matrix of the I Ching and Five Elements (Wu Xing), the system performs deep chronological calculation and systemic analysis, seamlessly cross-referencing your personal spatiotemporal blueprint with the full context of your real-world challenge."
+            "title": "Structure the choice",
+            "description": "Birth coordinates and dialogue context structure this session—not fortune-telling—so the stuck choice becomes workable."
           },
           "5": {
-            "title": "Strategy & Actionable Deliverables",
-            "description": "Receive Your Synthesis Report & Guidance. Get a comprehensive breakthrough report containing deep behavioral analysis, strategic solutions, and actionable practical recommendations."
+            "title": "Report & next moves",
+            "description": "Receive a decision report with a main path, a backup, and actions you can reopen in this browser."
           },
           "6": {
-            "title": "Evolutionary Tracking",
-            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Pivot tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+            "title": "30-day same-line follow-up",
+            "description": "As you try the path, return with updates. Eastern OS stays with the same question for up to 30 days."
           }
         },
         "footer": {
-          "title": "30-Day Single-Focus Sanctuary",
-          "description": "Real breakthroughs take time. For the specific challenge you present today, you unlock a dedicated 30-day coaching window. As your real-world situation unfolds or shifts, you can return to this dynamic dialogue at any time to log updates and refine your strategy. We are in this together, layer by layer."
+          "title": "30-day single-question window",
+          "description": "Real clarity takes time. For the one challenge you bring today, you get a dedicated 30-day dialogue window. As things shift, come back to update and refine. Same line, step by step."
         }
       },
       "two_columns": {
@@ -716,7 +716,7 @@
             "Does not make decisions for you"
           ]
         },
-        "tagline": "Pivot is a thinking partner. The decisions remain yours.",
+        "tagline": "Eastern OS is a thinking partner. The decisions remain yours.",
         "cta": "Start a Pivot session — $9.99",
         "footnote": "One question · Unlimited depth · Deletes when you close"
       },
@@ -746,8 +746,8 @@
       },
       "what_is": {
         "title": "What is Glyph?",
-        "subtitle": "The Metaphorical Mirror",
-        "body": "Glyph is an archetypal reflection tool rooted in the I Ching's 64-hexagram situational taxonomy and the Five Elements energy matrix. After mapping your foundational spatiotemporal blueprint, Glyph utilizes a random chaos matrix—aligned with the psychological principle of Synchronicity—via an immersive particle-explosion interface to align your subconscious state with one of 100 classical situational metaphors from Eastern philosophical texts. A deep LLM architecture then seamlessly deconstructs the connection between the metaphor and your personal profile. Glyph strictly avoids deterministic forecasting; instead, it serves as a structured cognitive mirror to transform internal chaos into clear, actionable self-awareness."
+        "subtitle": "A quick reflective mirror",
+        "body": "Glyph is a short reflective draw for moments when a full decision session is more than you need. It pairs one classical Eastern metaphor with where you are stuck, then unpacks how that image meets your situation. Not a prediction—a structured prompt for clearer self-awareness before you choose."
       },
       "five_winds": {
         "heading": "Five winds — five archetypal patterns",
@@ -862,8 +862,8 @@
       },
       "what_is": {
         "title": "What is Syncro?",
-        "subtitle": "The Efficiency Map",
-        "body": "Syncro is a spatiotemporal efficiency matrix based on the directional logic of the I Ching and the Five Elements framework. By analyzing the energetic alignment between your personal profile and an upcoming task, Syncro charts a comprehensive efficiency map for the next 24 hours. Across 8 spatial directions, it decodes environmental resonance and friction, classifying them into Five Core Currents: Open Current (Move with confidence), Following Current (The way supports you, with effort), Stillwater (Pause and observe), Crosscurrent (Reconsider this direction or moment), and Undertow (Strong friction — recommended to adjust paths). Functioning as a high-precision spatiotemporal weather map, Syncro helps optimize the timing and orientation of crucial endeavors to minimize environmental friction."
+        "subtitle": "24-hour timing & direction",
+        "body": "Syncro is a location-aware 24-hour map for one concrete task. Using your current place and session context, it rates eight directions by support vs friction—Open, Following, Stillwater, Crosscurrent, Undertow—so you can choose when and which way to move. Not fortune-telling: timing and orientation for the next day of work."
       },
       "how_it_works": {
         "heading": "How Syncro works.",
@@ -942,8 +942,8 @@
           "description": "New environments, new timing. A way to stay grounded in your own rhythm wherever you are."
         },
         "poju_companion": {
-          "title": "As a Pivot companion",
-          "description": "Use Syncro between Pivot sessions to notice how your situation evolves between deeper conversations."
+          "title": "Between Eastern OS sessions",
+          "description": "Use Syncro between deeper Eastern OS conversations to notice how your situation evolves."
         }
       },
       "what_it_is": {
@@ -2480,8 +2480,8 @@
       "billing_notice": "$4.99 per alignment or use experience voucher",
       "what_is": {
         "title": "What is Match?",
-        "subtitle": "The Relational Matrix",
-        "body": "Match is an analytical relational matrix grounded in Eastern elemental polarity and Yin-Yang structural balancing. Resolutely rejecting fatalistic compatibility verdicts and fortune-telling, Match deep-dives into the subtle systemic interplay between two independent spatiotemporal blueprints. Applied to specific real-world relationship dynamics—such as core communication styles, professional partnerships, or long-term domestic cooperation—Match maps out mutual resonance zones and potential friction nodes. It operates as a rational coaching framework designed to provide tools for mutual empathy, enabling both parties to build sustainable, constructive structural alignment."
+        "subtitle": "Two-person decision frame",
+        "body": "Match is a focused two-person read for one relationship question. It compares how two profiles meet on communication, partnership, or shared life—where you resonate and where friction builds—without fatalistic compatibility scores. A coaching frame so both sides can choose clearer next steps together."
       },
       "feature_two_charts_title": "Two-Chart Analysis",
       "feature_two_charts_desc": "Deep individual readings of both people, then a layered analysis of how you meet.",
