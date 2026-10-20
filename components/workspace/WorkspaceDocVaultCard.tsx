@@ -2,6 +2,7 @@
 
 import { A4PaperSheet, DeliveryBookGlyph, EnergyPortraitGlyph, EnergyReportGlyph } from "@/components/ui/A4PaperSheet";
 import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
+import { useTranslations } from "next-intl";
 import type { DocVaultItem, DocVaultKind } from "@/lib/workspace/doc-vault-types";
 
 function GlyphForKind({ kind }: { kind: DocVaultKind }) {
@@ -10,6 +11,9 @@ function GlyphForKind({ kind }: { kind: DocVaultKind }) {
   }
   if (kind === "pivot_delivery") {
     return <DeliveryBookGlyph className="workspace-doc-vault-card__glyph" />;
+  }
+  if (kind === "pivot_reminders") {
+    return <EnergyReportGlyph className="workspace-doc-vault-card__glyph" />;
   }
   return <EnergyReportGlyph className="workspace-doc-vault-card__glyph" />;
 }
@@ -27,11 +31,22 @@ function formatDateYmd(iso: string): string {
   }
 }
 
-/** Secondary line: user identity + created date (ellipsis; full string on hover). */
-function subtitleForItem(item: DocVaultItem): { short: string; full: string } {
-  const user = item.subjectLabel.trim();
+/** Expanded row: birth (baseline) or title snippet + Created time (SoT 15). */
+function subtitleForItem(
+  item: DocVaultItem,
+  createdLabel: string,
+): { short: string; full: string } {
+  const birthOrSubject = item.subjectLabel.trim();
   const date = formatDateYmd(item.createdAt);
-  const parts = [user, date].filter(Boolean);
+  const created = date ? `${createdLabel} ${date}` : "";
+  if (item.kind === "energy_matrix") {
+    const parts = [birthOrSubject || item.title, created].filter(Boolean);
+    const full = parts.join(" · ");
+    return { short: full, full };
+  }
+  // Delivery / 30-day: title snippet + Created (SoT 15)
+  const titleBit = item.title.trim() || birthOrSubject;
+  const parts = [titleBit, created].filter(Boolean);
   const full = parts.join(" · ");
   return { short: full, full };
 }
@@ -46,7 +61,8 @@ type Props = {
 /** List-row document entry: folded icon + title + user/date + unread. */
 export function WorkspaceDocVaultCard({ item, locale, onOpen }: Props) {
   void locale;
-  const sub = subtitleForItem(item);
+  const t = useTranslations("workspace.docVault");
+  const sub = subtitleForItem(item, t("created"));
   const ariaBits = [item.title, sub.full, item.unread ? "unread" : ""].filter(Boolean);
 
   return (

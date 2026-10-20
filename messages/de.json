@@ -1408,25 +1408,25 @@
   },
   "poju_matrix": {
     "eyebrow": "Raumzeitliche Ausrichtung",
-    "main_title": "Persönliches Energieprofil",
-    "main_description": "Eine systemische Dekonstruktion Ihrer Geburtsarchitektur, berechnet über raumzeitliche und geografische Koordinaten, entwickelt für fortgeschrittene strategische Entscheidungen.",
-    "section_label": "Natales Raumzeit-Profil · Präzisionskalibrierung",
+    "main_title": "Personal baseline profile",
+    "main_description": "Case structure for this decision session",
+    "section_label": "Origin calibration · case structure",
     "born": "GEBOREN",
     "coordinates": "KOORDINATEN",
     "matrix_id": "MATRIX-ID",
     "element_map_title": "Elementare Säulenzuordnung",
     "element_map_sep": ", ",
     "blocks": {
-      "block_1": "Raumzeit-Kalibrierung",
-      "block_2": "Kern-Energie-Profil",
-      "block_3": "Zeit-Trajektorie-Matrix",
-      "block_4": "Phasen-Status-Marker",
-      "block_5": "4D-Innerer Kern",
-      "tablist_label": "Profilbereiche",
-      "collapse_list": "Liste einklappen",
-      "close_portrait": "Porträt schließen",
-      "prev_page": "Zurück",
-      "next_page": "Weiter"
+      "block_1": "Origin calibration",
+      "block_2": "Core structure map",
+      "block_3": "Time matrix",
+      "block_4": "Stage markers",
+      "block_5": "Foundation core",
+      "tablist_label": "Profile sections",
+      "collapse_list": "Collapse list",
+      "close_portrait": "Close profile",
+      "prev_page": "Previous",
+      "next_page": "Next"
     },
     "card": {
       "calendar_alignment": "Kalenderabgleich",
@@ -1519,11 +1519,15 @@
       "layers_title": "Vier-Schichten-Lesung",
       "layers_em": "Mechanismus-Schichten",
       "welcome": {
-        "title": "Willkommen bei Pivot",
-        "intro": "POJU verbindet dreitausend Jahre östlicher Zeit-Weisheit mit moderner Methode—\nklare Orientierung für die Blockade vor dir, abgestimmt auf deine Energiestruktur.",
-        "cta": "Schreibe unten das Dilemma, das du noch nicht entscheiden kannst, und sende es.\nIch lese es an deiner Matrix und wir gehen es Schritt für Schritt durch.",
-        "loading": "POJU bereitet sich vor…"
-      }
+        "title": "Welcome to Eastern OS",
+        "intro": "Eastern OS grounds your decision dialogue in the case structure calibrated from your birth coordinates.\nClear guidance for the stuck place you are facing now.",
+        "cta": "Write the dilemma you cannot settle yet in the box below, then send.\nYour first question opens the decision session.",
+        "loading": "Preparing your session…"
+      },
+      "hero_calendar": "Kalender",
+      "hero_solar": "Wahre-Sonnenzeit",
+      "hero_term": "Solarterm",
+      "details_summary": "Kalibrierungsdetails"
     },
     "template": {
       "season_transition": "Jahreszeitenübergang im Gange",
@@ -1544,7 +1548,7 @@
       "archetype_metal": "Du bist eine **Präzisionskante** — unterscheidend, strukturiert, schneidest durch Lärm zur wesentlichen Linie. Klarheit ist deine Muttersprache.",
       "archetype_water": "Du bist eine **Tiefe Strömung** — reflektierend, strategisch, bewegst dich unter der Oberfläche. Du liest Muster, die andere erst im richtigen Moment sehen.",
       "friction": "Deine innere {element}-Vision steht unter aktiver **struktureller Spannung** durch {month_element}-Anforderungen — {dominant}-Überschuss und {deficit}-Defizit lassen die Wahl in zwei Richtungen gezogen wirken.",
-      "prompt": "Erzähl mir die Frage oder das Dilemma, das du gerade abwägst — schreib es unten und sende es ab, dann arbeiten wir es gemeinsam anhand deiner Matrix durch."
+      "prompt": "Schreib die Entscheidung, die dich beschäftigt, unten hinein und sende sie — wir gehen sie anhand der Fallstruktur dieser Sitzung durch."
     }
   },
   "chart_loader": {
@@ -2745,16 +2749,16 @@
     },
     "usageGuide": "Nutzungsanleitung",
     "pojuRail": {
-      "matrixTitle": "Persönliche Energiekarte",
+      "matrixTitle": "Personal baseline profile",
       "baComputing": "Energiebasis wird berechnet…",
       "baWriting": "Basisbericht wird geschrieben…",
       "baFinishing": "Basisbericht wird abgeschlossen…",
       "retryBa": "Erneut",
       "dismissError": "Schließen",
-      "collapsedRailLabel": "Energie-Kurzbefehle",
-      "matrixIconLabel": "Persönliche Energiekarte",
-      "reportIconLabel": "Energieanalyse-Bericht",
-      "reportGeneratingIconLabel": "Energieanalyse-Bericht wird erzeugt"
+      "collapsedRailLabel": "Document vault",
+      "matrixIconLabel": "Personal baseline profile",
+      "reportIconLabel": "Delivery report",
+      "reportGeneratingIconLabel": "Delivery report generating"
     },
     "docVault": {
       "title": "History",
@@ -2767,7 +2771,14 @@
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",
-      "section_glyph": "Glyph"
+      "section_glyph": "Glyph",
+      "type_baseline": "Baseline profile",
+      "type_delivery": "Delivery report",
+      "type_reminders": "30-day reminders",
+      "open_baseline": "Open baseline profile",
+      "created": "Created",
+      "section_reminders": "30-Tage-Erinnerungen",
+      "reminders_need_profile": "Nach der Delivery-Siegelung öffnen — Profilstruktur für den 30-Tage-Rahmen nötig."
     },
     "deliveryBook": {
       "title": "Energie-Entscheidungsbericht",
@@ -2909,5 +2920,11 @@
       "day30": "30-day",
       "hide": "Hide progress"
     }
+  },
+  "portrait": {
+    "title": "Personal baseline profile",
+    "close": "Close profile",
+    "openFromVault": "Open baseline profile",
+    "subtitle": "Case structure for this decision session"
   }
 }

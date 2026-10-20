@@ -69,6 +69,7 @@ export function countDocVaultUnreadBySection(): Record<DocVaultSection, number> 
   const counts: Record<DocVaultSection, number> = {
     foundation: 0,
     pivot: 0,
+    reminders: 0,
     atmos: 0,
     match: 0,
     syncro: 0,

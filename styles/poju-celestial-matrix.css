@@ -3481,3 +3481,98 @@
     animation: none;
   }
 }
+
+/* Tab1 conclusion-first (SoT 15 §5.2) */
+.pcm-hero-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.pcm-hero-strip__item {
+  border: 1px solid rgba(242, 202, 80, 0.18);
+  border-radius: 12px;
+  padding: 12px 12px 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pcm-hero-strip__value {
+  font-size: 1.15rem;
+  font-weight: 650;
+  color: #f4f4f5;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+
+.pcm-hero-strip__label {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: rgba(161, 161, 170, 0.95);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pcm-zodiac--compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.pcm-zodiac--compact .pcm-zodiac__art {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.pcm-zodiac--compact .pcm-zodiac__art-img {
+  width: 48px !important;
+  height: 48px !important;
+}
+
+.pcm-zodiac--compact .pcm-zodiac__name {
+  font-size: 0.95rem;
+}
+
+.pcm-zodiac--compact .pcm-zodiac__pinyin,
+.pcm-zodiac--compact .pcm-zodiac__year,
+.pcm-zodiac--compact .pcm-zodiac__caption {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.pcm-cal-details {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0 12px 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.pcm-cal-details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(242, 202, 80, 0.92);
+}
+
+.pcm-cal-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pcm-cal-details[open] > summary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 10px;
+}
+
+@media (max-width: 720px) {
+  .pcm-hero-strip {
+    grid-template-columns: 1fr;
+  }
+}

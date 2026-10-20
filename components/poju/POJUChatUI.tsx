@@ -3446,7 +3446,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             <PojuEnergyMatrix
               payload={m.meta.matrix_payload}
               locale={locale}
-              compact
               suppressNarrative
             />
           </div>

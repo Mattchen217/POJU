@@ -62,7 +62,7 @@ type Props = {
   /** Controlled content panel open state (parent can force-collapse). */
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
-  /** Override folded-cover / page title (e.g. Match A 个人能量画像). */
+  /** Override folded-cover / page title (e.g. Match A baseline profile). */
   coverTitle?: string;
   /** Override unread badge (defaults to POJU prepare matrixUnread). */
   unread?: boolean;
@@ -1013,14 +1013,6 @@ export function PojuEnergyMatrix({
     }, RAIL_PAPER_MORPH_MS);
   }
 
-  const activeBlockIndex = MATRIX_BLOCKS.findIndex((b) => b.id === activeBlock);
-  const prevBlock =
-    activeBlockIndex > 0 ? MATRIX_BLOCKS[activeBlockIndex - 1] : null;
-  const nextBlock =
-    activeBlockIndex >= 0 && activeBlockIndex < MATRIX_BLOCKS.length - 1
-      ? MATRIX_BLOCKS[activeBlockIndex + 1]
-      : null;
-
   const metaRow = (
     <div className="pcm__header-meta pcm__header-meta--inline">
       {subjectPrefix ? (
@@ -1039,7 +1031,7 @@ export function PojuEnergyMatrix({
 
   return (
     <div
-      className={`pcm pcm--tabbed${compact ? " pcm--compact pcm--embedded" : ""}${
+      className={`pcm pcm--tabbed pcm--delivery-shell${compact ? " pcm--compact pcm--embedded" : ""}${
         hideChrome ? " pcm--rail" : ""
       }`}
       data-locale={matrixLocale}
@@ -1142,23 +1134,55 @@ export function PojuEnergyMatrix({
           >
             {metaRow}
             {activeBlock === "calibration" ? (
-        /* ── 1. Zodiac + Calibration ── */
-        <section className="pcm__section">
-          <div className="pcm__grid-12">
-            <div className="pcm-card pcm-card--center pcm-zodiac pcm__span-3">
-              <div className="pcm-zodiac__art">
-                {zodiacIcon ? (
-                  <Image
-                    src={zodiacIcon}
-                    alt=""
-                    width={96}
-                    height={96}
-                    className="pcm-zodiac__art-img"
-                  />
-                ) : (
-                  <span className="pcm-zodiac__name">{display.zodiac.han}</span>
-                )}
+        /* ── 1. Conclusion-first calibration (SoT 15) ── */
+        <section className="pcm__section pcm-calibration pcm-calibration--conclusion-first">
+          <div className="pcm-hero-strip" aria-label={tm("blocks.block_1")}>
+            <div className="pcm-hero-strip__item">
+              <div className="pcm-hero-strip__value">
+                {display.calendar.gregorian}
+                {display.calendar.lunar ? (
+                  <span className="pcm-cal__unit"> · {display.calendar.lunar}</span>
+                ) : null}
               </div>
+              <div className="pcm-hero-strip__label">{tc("hero_calendar")}</div>
+            </div>
+            <div className="pcm-hero-strip__item">
+              <div className="pcm-hero-strip__value">
+                {tst && tst.diff_minutes !== 0
+                  ? `${tst.diff_minutes > 0 ? "+" : "−"}${Math.abs(Number(tst.diff_minutes.toFixed(1)))}m`
+                  : tst
+                    ? "0m"
+                    : "—"}
+              </div>
+              <div className="pcm-hero-strip__label">{tc("hero_solar")}</div>
+            </div>
+            <div className="pcm-hero-strip__item">
+              <div className="pcm-hero-strip__value">
+                {isZh ? display.solar_term.name : display.solar_term.name_en}
+                <span className="pcm-cal__unit">
+                  {" "}
+                  {display.solar_term.progress_pct}%
+                </span>
+              </div>
+              <div className="pcm-hero-strip__label">{tc("hero_term")}</div>
+            </div>
+          </div>
+
+          <div className="pcm-zodiac pcm-zodiac--compact">
+            <div className="pcm-zodiac__art">
+              {zodiacIcon ? (
+                <Image
+                  src={zodiacIcon}
+                  alt=""
+                  width={48}
+                  height={48}
+                  className="pcm-zodiac__art-img"
+                />
+              ) : (
+                <span className="pcm-zodiac__name">{display.zodiac.han}</span>
+              )}
+            </div>
+            <div>
               <div className="pcm-zodiac__name">
                 {zdSlug ? (
                   <SoftTermHover
@@ -1173,14 +1197,13 @@ export function PojuEnergyMatrix({
                 )}
               </div>
               <div className="pcm-zodiac__pinyin">{display.zodiac.pinyin}</div>
-              <div className="pcm-zodiac__year">
-                {user_profile.birth.year}
-                {isZh ? "年" : ""}
-              </div>
               <p className="pcm-zodiac__caption">{tc("your_sign_tag")}</p>
             </div>
+          </div>
 
-            <div className="pcm-card pcm-cal pcm__span-9">
+          <details className="pcm-cal-details">
+            <summary>{tc("details_summary")}</summary>
+            <div className="pcm-card pcm-cal">
               <div className="pcm-label pcm-label--gold">{tm("section_label")}</div>
               <div className="pcm-cal__grid">
                 <div className="pcm-cal__cell">
@@ -1309,7 +1332,7 @@ export function PojuEnergyMatrix({
                 </div>
               </div>
             </div>
-          </div>
+          </details>
         </section>
             ) : null}
 
@@ -2060,20 +2083,7 @@ export function PojuEnergyMatrix({
         </section>
             ) : null}
             <div className="pcm-shell__footer">
-              <div className="pcm-shell__footer-slot pcm-shell__footer-slot--start">
-                {prevBlock ? (
-                  <button
-                    type="button"
-                    className="pcm-shell__nav pcm-shell__nav--prev"
-                    onClick={() => selectBlock(prevBlock.id)}
-                  >
-                    <span className="pcm-shell__nav-icon" aria-hidden>
-                      ‹
-                    </span>
-                    {tm("blocks.prev_page")}
-                  </button>
-                ) : null}
-              </div>
+              <div className="pcm-shell__footer-slot pcm-shell__footer-slot--start" />
               <button
                 type="button"
                 className="pcm-shell__collapse"
@@ -2086,20 +2096,7 @@ export function PojuEnergyMatrix({
                   ▴
                 </span>
               </button>
-              <div className="pcm-shell__footer-slot pcm-shell__footer-slot--end">
-                {nextBlock ? (
-                  <button
-                    type="button"
-                    className="pcm-shell__nav pcm-shell__nav--next"
-                    onClick={() => selectBlock(nextBlock.id)}
-                  >
-                    {tm("blocks.next_page")}
-                    <span className="pcm-shell__nav-icon" aria-hidden>
-                      ›
-                    </span>
-                  </button>
-                ) : null}
-              </div>
+              <div className="pcm-shell__footer-slot pcm-shell__footer-slot--end" />
             </div>
           </div>
           ) : null}

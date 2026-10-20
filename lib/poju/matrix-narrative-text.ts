@@ -29,8 +29,8 @@ export function getMatrixSynopsisPlainText(
     display.synopsis.friction,
     display.synopsis.prompt ||
       (zh
-        ? "请把你此刻最纠结、迟迟定不下来的问题或困境写在下方对话框并发送——我会结合你的能量结构，陪你一步步拆开。"
-        : "Tell me the question or dilemma you're weighing right now — type it in the box below and send, and we'll work through it together from your matrix."),
+        ? "把你此刻最纠结、定不下来的决策问题写在下方对话框并发送——我们会结合本次会话的基础坐标，一步步拆开。"
+        : "Tell me the decision question you're weighing — type it below and send. We'll work through it from this session's case structure."),
   ].filter(Boolean);
   return parts.join("\n\n");
 }

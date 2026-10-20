@@ -3,6 +3,7 @@
 export type DocVaultSection =
   | "foundation"
   | "pivot"
+  | "reminders"
   | "atmos"
   | "match"
   | "syncro"
@@ -12,6 +13,7 @@ export type DocVaultKind =
   | "energy_matrix"
   | "energy_report"
   | "pivot_delivery"
+  | "pivot_reminders"
   | "match_report"
   | "syncro_task"
   | "glyph_reading"
@@ -21,6 +23,7 @@ export type DocVaultOpenTarget =
   | { type: "profile_matrix"; profileId: string }
   | { type: "profile_report"; profileId: string }
   | { type: "pivot_delivery"; sessionId: string }
+  | { type: "pivot_reminders"; sessionId: string }
   | { type: "archive"; archiveId: string; product: "match" | "syncro" | "glyph" };
 
 export type DocVaultItem = {
@@ -37,6 +40,7 @@ export type DocVaultItem = {
 export const DOC_VAULT_SECTION_ORDER: DocVaultSection[] = [
   "foundation",
   "pivot",
+  "reminders",
   "atmos",
   "match",
   "syncro",

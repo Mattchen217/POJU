@@ -37,6 +37,7 @@ import {
 import { WorkspaceGlyphRightPanel } from "@/components/workspace/WorkspaceGlyphRightPanel";
 import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
 import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
+import { WorkspaceDocVaultModal } from "@/components/workspace/WorkspaceDocVaultModal";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
 import { WorkspaceStarfieldGate } from "@/components/workspace/WorkspaceStarfieldLayer";
@@ -186,7 +187,7 @@ function GlyphRightRailGate({
   return null;
 }
 
-/** Wire doc-vault card clicks → tab switch + open artifact. */
+/** Wire doc-vault card clicks → overlay modal (SoT 15). Center timeline untouched. */
 function DocVaultOpenBinder({
   selectArchive,
   setTab,
@@ -196,41 +197,24 @@ function DocVaultOpenBinder({
   setTab: (tab: WorkspaceTab) => void;
   openRight: () => void;
 }) {
-  const locale = useLocale();
+  void setTab;
   const vault = useWorkspaceDocVaultOptional();
   const setOpenHandlers = vault?.setOpenHandlers;
-  const prepare = useWorkspacePojuPrepareOptional();
-  const resumeRef = useRef(prepare?.resumeSession);
-  const openProfileRef = useRef(prepare?.openProfileArtifact);
-  const openShelfRef = useRef(prepare?.requestOpenDeliveryShelf);
-  resumeRef.current = prepare?.resumeSession;
-  openProfileRef.current = prepare?.openProfileArtifact;
-  openShelfRef.current = prepare?.requestOpenDeliveryShelf;
+  const [modalItem, setModalItem] = useState<DocVaultItem | null>(null);
 
   useEffect(() => {
     if (!setOpenHandlers) return;
     setOpenHandlers({
       openItem: async (item: DocVaultItem) => {
         const target = item.openTarget;
-        if (target.type === "profile_matrix") {
-          setTab("poju");
-          openRight();
-          await openProfileRef.current?.(target.profileId, locale, "matrix");
-          return;
-        }
-        if (target.type === "profile_report") {
-          setTab("poju");
-          openRight();
-          await openProfileRef.current?.(target.profileId, locale, "report");
-          return;
-        }
-        if (target.type === "pivot_delivery") {
-          selectArchive("poju", target.sessionId);
-          openRight();
-          const ok = await resumeRef.current?.(target.sessionId, locale);
-          if (ok) {
-            openShelfRef.current?.();
-          }
+        // Baseline / delivery / report → modal only (0 PASS). Do not swap center to doc mode.
+        if (
+          target.type === "profile_matrix" ||
+          target.type === "profile_report" ||
+          target.type === "pivot_delivery" ||
+          target.type === "pivot_reminders"
+        ) {
+          setModalItem(item);
           return;
         }
         if (target.type === "archive") {
@@ -240,9 +224,11 @@ function DocVaultOpenBinder({
       },
     });
     return () => setOpenHandlers(null);
-  }, [setOpenHandlers, locale, selectArchive, setTab, openRight]);
+  }, [setOpenHandlers, selectArchive, openRight]);
 
-  return null;
+  return (
+    <WorkspaceDocVaultModal item={modalItem} onClose={() => setModalItem(null)} />
+  );
 }
 
 function AtmosRightRailGate({

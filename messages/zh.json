@@ -156,16 +156,16 @@
     },
     "usageGuide": "使用说明",
     "pojuRail": {
-      "matrixTitle": "个人能量图",
+      "matrixTitle": "个人基础画像",
       "baComputing": "正在计算能量底座…",
       "baWriting": "正在撰写底座报告…",
       "baFinishing": "正在收尾底座报告…",
       "retryBa": "重试",
       "dismissError": "关闭",
-      "collapsedRailLabel": "个人能量快捷入口",
-      "matrixIconLabel": "个人能量画像",
-      "reportIconLabel": "个人能量分析报告",
-      "reportGeneratingIconLabel": "个人能量分析报告生成中"
+      "collapsedRailLabel": "文档库",
+      "matrixIconLabel": "个人基础画像",
+      "reportIconLabel": "交付报告",
+      "reportGeneratingIconLabel": "交付报告生成中"
     },
     "docVault": {
       "title": "历史文档",
@@ -178,7 +178,14 @@
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",
-      "section_glyph": "Glyph"
+      "section_glyph": "Glyph",
+      "type_baseline": "基础画像",
+      "type_delivery": "交付报告",
+      "type_reminders": "30日提醒",
+      "open_baseline": "打开基础画像",
+      "created": "创建时间",
+      "section_reminders": "30日提醒",
+      "reminders_need_profile": "交付封印后可打开此包；30日提醒需要画像结构。"
     },
     "deliveryBook": {
       "title": "能量决策报告",
@@ -1754,7 +1761,7 @@
     "preparing": "正在准备档案…",
     "preparing_done": "正在进入会话…",
     "welcome_title": "欢迎来到 Pivot。",
-    "welcome_desc": "Pivot 是你应对复杂人生转型的思考伙伴——融合了来自历史悠久的《易经》的实用策略智慧与《五行》的平衡原则。为了校准你的个人能量矩阵，请在下方提供你的基础时间指标。",
+    "welcome_desc": "Eastern OS 是你面对复杂人生决策时的思辨伙伴——以出生坐标校准出的基础结构支撑本次决策会话。请在下方提供基础时机信息以开始。",
     "list_title": "选择你的档案",
     "list_description": "选择已保存的档案，或添加新的性格画像。",
     "add_new_person": "添加新档案",
@@ -1986,9 +1993,9 @@
   },
   "poju_matrix": {
     "eyebrow": "时空对齐",
-    "main_title": "个人能量画像",
-    "main_description": "基于地理经纬与历法时空坐标的先天架构系统解构，用于高阶系统化决策。",
-    "section_label": "原初时空特征 · 精密校准",
+    "main_title": "个人基础画像",
+    "main_description": "本次决策会话的基础坐标",
+    "section_label": "原初时空校准 · 会话坐标",
     "born": "生于",
     "coordinates": "坐标",
     "matrix_id": "矩阵 ID",
@@ -1996,7 +2003,7 @@
     "element_map_sep": "，",
     "blocks": {
       "block_1": "原初时空校准",
-      "block_2": "核心能量图谱",
+      "block_2": "核心结构图谱",
       "block_3": "时间轨迹矩阵",
       "block_4": "阶段状态标记",
       "block_5": "四维底层内核",
@@ -2085,7 +2092,7 @@
       "pillar_month": "外场层",
       "pillar_day": "本我层",
       "pillar_hour": "远景层",
-      "narrative_loading": "Pivot 正在读取…",
+      "narrative_loading": "读取中…",
       "default_timezone": "默认时区",
       "strength_strong": "偏强",
       "strength_weak": "偏弱",
@@ -2097,11 +2104,15 @@
       "layers_title": "四层人格读数",
       "layers_em": "机制分层",
       "welcome": {
-        "title": "欢迎来到 Pivot",
-        "intro": "Pivot 融汇三千年东方时空智慧与现代科学方法，围绕你此刻真实面对的问题与困境，\n给出可落地的破局路径——不是空泛运势，而是对齐你能量结构的清晰指引。",
-        "cta": "请在下方写下你现在最纠结、迟迟难定的那件事或处境，\n然后发送——我会结合你的能量结构，陪你一步步拆开。",
-        "loading": "Pivot 正在准备…"
-      }
+        "title": "欢迎来到 Eastern OS",
+        "intro": "Eastern OS 以你的出生坐标校准出的基础结构，支撑本次决策对话。\n针对你此刻卡住的地方，给出清晰指引。",
+        "cta": "在下方写下暂时无法定夺的困境，然后发送。\n第一个问题将开启决策会话。",
+        "loading": "正在准备会话…"
+      },
+      "hero_calendar": "历法对齐",
+      "hero_solar": "真太阳时偏移",
+      "hero_term": "节气位置",
+      "details_summary": "校准详情"
     },
     "template": {
       "season_transition": "节气交接中",
@@ -2122,7 +2133,7 @@
       "archetype_metal": "你是**精锋锐刃**——辨识力强、结构清晰，擅长从噪音里切出关键线；清晰是你的母语。",
       "archetype_water": "你是**深润之流**——内省、策略、在表面之下潜行；你读到的模式，往往在关键时刻才显现。",
       "friction": "你的{element}性内在愿景，正与{month_element}气形成**结构张力** —— {dominant}盈余、{deficit}不足，让选择像在被两股力量同时拉扯。",
-      "prompt": "请把你此刻最纠结、迟迟定不下来的问题或困境写在下方对话框并发送——我会结合你的能量结构，陪你一步步拆开。"
+      "prompt": "把你此刻最纠结、定不下来的决策问题写在下方对话框并发送——我们会结合本次会话的基础坐标，一步步拆开。"
     }
   },
   "chart_loader": {
@@ -3021,5 +3032,11 @@
     "created": "创建时间：{date}",
     "recentRecord": "最近记录",
     "stageProgress": "阶段进度"
+  },
+  "portrait": {
+    "title": "个人基础画像",
+    "close": "关闭画像",
+    "openFromVault": "打开基础画像",
+    "subtitle": "本次决策会话的基础坐标"
   }
 }

@@ -3157,12 +3157,12 @@
   outline-offset: 2px;
 }
 
-/* Desktop: uses | birth | title | timeline | menu — equal gutters; tops share one band */
+/* Desktop: uses | birth | title | timeline | menu — uniform column-gap; text cols minmax(0,*) */
 .workspace-poju-card__row {
   display: grid;
-  grid-template-columns: auto minmax(10rem, 1fr) minmax(8rem, 1fr) 8rem auto;
+  grid-template-columns: 4.5rem minmax(0, 1fr) minmax(0, 1.25fr) 8rem auto;
   align-items: start;
-  column-gap: 12px;
+  column-gap: 16px;
   row-gap: 10px;
   width: 100%;
   min-width: 0;
@@ -3175,10 +3175,13 @@
   justify-content: flex-start;
   gap: 4px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .workspace-poju-card__uses {
-  min-width: 4.25rem;
+  min-width: 0;
+  overflow: visible;
 }
 
 /* Shared TOP band: same line-height / visual weight across columns */
@@ -3218,8 +3221,15 @@
 
 
 
+.workspace-poju-card__identity {
+  min-width: 0;
+}
+
 .workspace-poju-card__birth {
+  display: block; /* override __top flex so ellipsis works */
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3227,12 +3237,23 @@
 
 .workspace-poju-card__created {
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+  max-width: 100%;
 }
 
+.workspace-poju-card__title-col {
+  min-width: 0;
+}
+
+/* Recent-record title: must beat __top {display:flex} or ellipsis never fires */
 .workspace-poju-card__title {
+  display: block;
   border: none;
   background: transparent;
   text-align: left;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3241,7 +3262,11 @@
 }
 
 button.workspace-poju-card__title {
+  display: block;
   cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 button.workspace-poju-card__title:hover {
@@ -3255,8 +3280,9 @@ button.workspace-poju-card__title:hover {
 
 .workspace-poju-card__timeline-col {
   width: 8rem;
-  min-width: 7rem;
-  max-width: 9rem;
+  min-width: 8rem;
+  max-width: 8rem;
+  overflow: visible;
 }
 
 .workspace-poju-card__timeline {

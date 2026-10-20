@@ -2,7 +2,6 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
-import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { WorkspaceDocVaultCard } from "@/components/workspace/WorkspaceDocVaultCard";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
@@ -26,15 +25,16 @@ export function WorkspaceRightDocVault() {
   const prepare = useWorkspacePojuPrepareOptional();
 
   const controls = prepare?.deliveryRailControls ?? null;
-  const showLiveMatrix =
-    Boolean(prepare?.matrixPayload) && Boolean(prepare?.matrixExpanded);
+  // SoT 15: vault is delivered-doc library only — baseline lives in center / vault modal.
 
   const sectionLabel = (section: DocVaultSection): string => {
     switch (section) {
       case "foundation":
-        return t("section_foundation");
+        return t("type_baseline");
       case "pivot":
-        return t("section_pivot");
+        return t("type_delivery");
+      case "reminders":
+        return t("type_reminders");
       case "atmos":
         return t("section_atmos");
       case "match":
@@ -81,20 +81,6 @@ export function WorkspaceRightDocVault() {
           {controls?.stopBusy ? tChat("delivery_stopping") : tChat("delivery_stop")}
         </button>
       </div>
-
-      {showLiveMatrix && prepare?.matrixPayload ? (
-        <div className="workspace-doc-vault__live">
-          <PojuEnergyMatrix
-            payload={prepare.matrixPayload}
-            locale={locale}
-            compact
-            suppressNarrative
-            hideChrome
-            expanded
-            onExpandedChange={(v) => prepare.setMatrixExpanded(v)}
-          />
-        </div>
-      ) : null}
 
       {loading && !hasAny ? (
         <p className="workspace-doc-vault__empty">{t("loading")}</p>

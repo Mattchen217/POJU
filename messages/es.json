@@ -1255,7 +1255,7 @@
     "preparing": "Preparando tu carta…",
     "preparing_done": "Abriendo tu sesión…",
     "welcome_title": "Bienvenido a Pivot.",
-    "welcome_desc": "POJU es tu compañero de reflexión para navegar por las complejas transiciones de la vida, integrando la sabiduría estratégica y práctica de las tradiciones atemporales del I-Ching y los principios de equilibrio de los Cinco Elementos. Para calibrar tu matriz de energía personal, por favor proporciona tus métricas de tiempo fundamentales a continuación.",
+    "welcome_desc": "Eastern OS es tu socio de pensamiento para decisiones vitales complejas — basado en la estructura de caso calibrada desde tus coordenadas de nacimiento. Proporciona abajo tus datos de tiempo fundacionales para comenzar esta sesión.",
     "list_title": "Elige tu base",
     "list_description": "Selecciona un perfil guardado o añade nuevos datos de nacimiento.",
     "add_new_person": "Añadir persona",
@@ -1450,23 +1450,23 @@
   },
   "poju_matrix": {
     "eyebrow": "Alineación Espaciotemporal",
-    "main_title": "Perfil energético personal",
-    "main_description": "Una deconstrucción sistémica de tu arquitectura natal calculada a través de coordenadas espaciotemporales y geográficas, diseñada para la toma de decisiones estratégicas avanzadas.",
-    "section_label": "Perfil Espaciotemporal Natal · Calibración de Precisión",
+    "main_title": "Perfil base",
+    "main_description": "Estructura de caso para esta sesión",
+    "section_label": "Calibración de origen · estructura de caso",
     "born": "NACIDO",
     "coordinates": "COORDENADAS",
     "matrix_id": "ID DE MATRIZ",
     "element_map_title": "Mapa de Pilares Elementales",
     "element_map_sep": ", ",
     "blocks": {
-      "block_1": "Calibración Espaciotemporal",
-      "block_2": "Perfil Energético",
-      "block_3": "Matriz de Trayectoria",
-      "block_4": "Marcadores de Estado",
-      "block_5": "Núcleo Interno 4D",
+      "block_1": "Calibración de origen",
+      "block_2": "Mapa de estructura central",
+      "block_3": "Matriz temporal",
+      "block_4": "Marcadores de etapa",
+      "block_5": "Núcleo base",
       "tablist_label": "Secciones del perfil",
       "collapse_list": "Ocultar lista",
-      "close_portrait": "Cerrar retrato",
+      "close_portrait": "Cerrar perfil",
       "prev_page": "Anterior",
       "next_page": "Siguiente"
     },
@@ -1549,7 +1549,7 @@
       "pillar_month": "Mes",
       "pillar_day": "Día · Yo",
       "pillar_hour": "Hora",
-      "narrative_loading": "POJU está leyendo…",
+      "narrative_loading": "Leyendo…",
       "default_timezone": "Zona horaria predeterminada",
       "strength_strong": "Dominante",
       "strength_weak": "Núcleo Receptivo",
@@ -1561,11 +1561,15 @@
       "layers_title": "Lectura en cuatro capas",
       "layers_em": "capas de mecanismo",
       "welcome": {
-        "title": "Bienvenido a Pivot",
-        "intro": "POJU une tres milenios de sabiduría temporal oriental con el método científico moderno—\nguía clara para el bloqueo que enfrentas ahora, alineada con tu estructura energética.",
-        "cta": "Escribe abajo el dilema que aún no puedes decidir y envíalo.\nLo leeré junto a tu matriz y lo desglosaremos paso a paso.",
-        "loading": "POJU se está preparando…"
-      }
+        "title": "Bienvenido a Eastern OS",
+        "intro": "Eastern OS basa el diálogo de decisión en la estructura de caso calibrada desde tus coordenadas de nacimiento.\nGuía clara para el bloqueo que enfrentas ahora.",
+        "cta": "Escribe abajo el dilema que aún no puedes decidir y envíalo.\nTu primera pregunta abre la sesión de decisión.",
+        "loading": "Preparando tu sesión…"
+      },
+      "hero_calendar": "Calendario",
+      "hero_solar": "Ajuste solar verdadero",
+      "hero_term": "Término solar",
+      "details_summary": "Detalles de calibración"
     },
     "template": {
       "season_transition": "Transición estacional en curso",
@@ -1586,7 +1590,7 @@
       "archetype_metal": "Eres un **Filoo de Precisión** — discerniente, estructurado, cortando el ruido hasta la línea esencial. La claridad es tu lenguaje nativo.",
       "archetype_water": "Eres una **Corriente Profunda** — reflexivo, estratégico, moviéndote bajo la superficie. Lees patrones que otros no ven hasta el momento justo.",
       "friction": "Tu visión interior de {element} está bajo **tensión estructural** activa de las demandas de {month_element} — excedente de {dominant} y déficit de {deficit} hacen que la elección se sienta tironeada en dos direcciones.",
-      "prompt": "Cuéntame la pregunta o el dilema que estás sopesando ahora — escríbelo abajo y envíalo, y lo trabajaremos juntos desde tu matriz."
+      "prompt": "Escribe abajo la decisión que estás sopesando y envíala: la trabajaremos desde la estructura de caso de esta sesión."
     }
   },
   "chart_loader": {
@@ -2792,16 +2796,16 @@
     },
     "usageGuide": "Guía de uso",
     "pojuRail": {
-      "matrixTitle": "Carta de energía personal",
+      "matrixTitle": "Perfil base",
       "baComputing": "Calculando tu base energética…",
       "baWriting": "Escribiendo tu informe base…",
       "baFinishing": "Finalizando tu informe base…",
       "retryBa": "Reintentar",
       "dismissError": "Descartar",
-      "collapsedRailLabel": "Accesos de energía personal",
-      "matrixIconLabel": "Carta de energía personal",
-      "reportIconLabel": "Informe de análisis energético",
-      "reportGeneratingIconLabel": "Generando informe de análisis energético"
+      "collapsedRailLabel": "Archivo de documentos",
+      "matrixIconLabel": "Perfil base",
+      "reportIconLabel": "Informe de entrega",
+      "reportGeneratingIconLabel": "Generando informe de entrega"
     },
     "docVault": {
       "title": "Historial",
@@ -2814,7 +2818,14 @@
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",
-      "section_glyph": "Glyph"
+      "section_glyph": "Glyph",
+      "type_baseline": "Perfil base",
+      "type_delivery": "Informe de entrega",
+      "type_reminders": "Recordatorios 30 días",
+      "open_baseline": "Abrir perfil base",
+      "created": "Creado",
+      "section_reminders": "Recordatorios 30 días",
+      "reminders_need_profile": "Abre este paquete tras el sello de entrega — se necesita la estructura del perfil."
     },
     "deliveryBook": {
       "title": "Informe de decisión energética",
@@ -3019,5 +3030,11 @@
     "created": "Creado {date}",
     "recentRecord": "Registro reciente",
     "stageProgress": "Progreso de etapa"
+  },
+  "portrait": {
+    "title": "Perfil base",
+    "close": "Cerrar perfil",
+    "openFromVault": "Abrir perfil base",
+    "subtitle": "Estructura de caso para esta sesión"
   }
 }

@@ -1,11 +1,15 @@
 /**
  * Workspace confirm → prepare: local matrix calc (ensureProfileMatrixList),
- * session bind, welcome only (energy chart lives in the right rail).
+ * session bind, baseline bubble in center timeline + welcome below (SoT 15).
  */
 
 import { seedMatrixWelcomeMessage, dedupeWelcomeMessages } from "@/lib/poju/chat-bootstrap";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { bindPreviewProfileToSession } from "@/lib/poju/preview-unlock";
+import {
+  bindPreviewProfileToSession,
+  upsertEnergyMatrixMessage,
+  dedupePreviewMatrixMessages,
+} from "@/lib/poju/preview-unlock";
 import { resolveProfileMatrixPayload } from "@/lib/poju/resolve-matrix-preview";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -19,7 +23,7 @@ export type WorkspacePrepareResult = {
 
 /**
  * Create/bind a POJU session, run local matrix calculation (or reuse cached matrix_list),
- * persist list, and seed matrix welcome — without injecting the energy-matrix chat bubble.
+ * persist list, inject baseline profile into center timeline (0 PASS), then seed welcome.
  */
 export async function finalizeWorkspacePrepare(
   profileId: string,
@@ -59,12 +63,14 @@ export async function finalizeWorkspacePrepare(
   const rowAfter = await getStoredProfile(profileId);
   const fromStorage = Boolean(rowAfter?.matrix_list);
 
+  // SoT 15: center timeline hosts baseline (delivery-report shell) then welcome.
+  // Viewing/generating baseline = 0 PASS (local true-calc; no billable read).
   session = {
     ...session,
     matrix_payload: matrixPayload,
-    // Do not upsert energy_matrix message — chart renders in the workspace right rail.
-    messages: session.messages.filter((m) => m.meta?.kind !== "energy_matrix"),
+    messages: upsertEnergyMatrixMessage(session.messages, matrixPayload, locale),
   };
+  session = dedupePreviewMatrixMessages(session);
   session = seedMatrixWelcomeMessage(session, locale);
   session = dedupeWelcomeMessages(session);
 

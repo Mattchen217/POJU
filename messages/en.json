@@ -156,16 +156,16 @@
     },
     "usageGuide": "Usage guide",
     "pojuRail": {
-      "matrixTitle": "Personal energy chart",
+      "matrixTitle": "Personal baseline profile",
       "baComputing": "Computing your energy base…",
       "baWriting": "Writing your base report…",
       "baFinishing": "Finishing your base report…",
       "retryBa": "Retry",
       "dismissError": "Dismiss",
-      "collapsedRailLabel": "Personal energy shortcuts",
-      "matrixIconLabel": "Personal energy chart",
-      "reportIconLabel": "Energy analysis report",
-      "reportGeneratingIconLabel": "Energy analysis report generating"
+      "collapsedRailLabel": "Document vault",
+      "matrixIconLabel": "Personal baseline profile",
+      "reportIconLabel": "Delivery report",
+      "reportGeneratingIconLabel": "Delivery report generating"
     },
     "docVault": {
       "title": "History",
@@ -178,7 +178,14 @@
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",
-      "section_glyph": "Glyph"
+      "section_glyph": "Glyph",
+      "type_baseline": "Baseline profile",
+      "type_delivery": "Delivery report",
+      "type_reminders": "30-day reminders",
+      "open_baseline": "Open baseline profile",
+      "created": "Created",
+      "section_reminders": "30-day reminders",
+      "reminders_need_profile": "Open this pack after delivery seals — profile structure is required for the 30-day frame."
     },
     "deliveryBook": {
       "title": "Energy decision report",
@@ -1754,7 +1761,7 @@
     "preparing": "Preparing your chart…",
     "preparing_done": "Opening your session…",
     "welcome_title": "Welcome to Pivot.",
-    "welcome_desc": "Pivot is your thinking partner for navigating life's complex transitions — integrating actionable strategic wisdom from the timeless traditions of the I-Ching and the balancing principles of the Five Elements. To calibrate your personal energy matrix, please provide your foundational timing metrics below.",
+    "welcome_desc": "Eastern OS is your thinking partner for complex life decisions — grounded in the case structure calibrated from your birth coordinates. Provide your foundational timing metrics below to begin this decision session.",
     "list_title": "Choose Your Foundation",
     "list_description": "Select a saved profile, or add new birth information.",
     "add_new_person": "Add new person",
@@ -1986,23 +1993,23 @@
   },
   "poju_matrix": {
     "eyebrow": "Spatiotemporal Alignment",
-    "main_title": "Personal Energy Profile",
-    "main_description": "A systemic deconstruction of your natal architecture computed via spatiotemporal and geographic coordinates, engineered for advanced strategic decision-making.",
-    "section_label": "Natal Spatiotemporal Profile · Precision Calibration",
+    "main_title": "Personal baseline profile",
+    "main_description": "Case structure for this decision session",
+    "section_label": "Origin calibration · case structure",
     "born": "BORN",
     "coordinates": "COORDINATES",
     "matrix_id": "MATRIX ID",
     "element_map_title": "Elemental Pillar Map",
     "element_map_sep": ", ",
     "blocks": {
-      "block_1": "Space-Time Calibration",
-      "block_2": "Core Energy Profile",
-      "block_3": "Time Trajectory Matrix",
-      "block_4": "Stage Status Markers",
-      "block_5": "4D Inner Core",
+      "block_1": "Origin calibration",
+      "block_2": "Core structure map",
+      "block_3": "Time matrix",
+      "block_4": "Stage markers",
+      "block_5": "Foundation core",
       "tablist_label": "Profile sections",
       "collapse_list": "Collapse list",
-      "close_portrait": "Close portrait",
+      "close_portrait": "Close profile",
       "prev_page": "Previous",
       "next_page": "Next"
     },
@@ -2085,7 +2092,7 @@
       "pillar_month": "Outer field",
       "pillar_day": "Core self",
       "pillar_hour": "Horizon",
-      "narrative_loading": "Pivot is reading…",
+      "narrative_loading": "Reading…",
       "default_timezone": "Default timezone",
       "strength_strong": "Dominant",
       "strength_weak": "Receptive Core",
@@ -2097,11 +2104,15 @@
       "layers_title": "Four-layer readout",
       "layers_em": "mechanism layers",
       "welcome": {
-        "title": "Welcome to Pivot",
-        "intro": "Pivot weaves three millennia of Eastern temporal wisdom with modern scientific method—\nclear guidance for the stuck place you're facing now, aligned to your energy structure.",
-        "cta": "Write the dilemma you can't settle yet in the box below, then send.\nI'll read it against your matrix and walk through it with you, step by step.",
-        "loading": "Pivot is getting ready…"
-      }
+        "title": "Welcome to Eastern OS",
+        "intro": "Eastern OS grounds your decision dialogue in the case structure calibrated from your birth coordinates.\nClear guidance for the stuck place you are facing now.",
+        "cta": "Write the dilemma you cannot settle yet in the box below, then send.\nYour first question opens the decision session.",
+        "loading": "Preparing your session…"
+      },
+      "hero_calendar": "Calendar lock",
+      "hero_solar": "True-solar adjust",
+      "hero_term": "Solar-term position",
+      "details_summary": "Calibration details"
     },
     "template": {
       "season_transition": "Season transition in progress",
@@ -2122,7 +2133,7 @@
       "archetype_metal": "You are a **Precision Edge** — discerning, structured, cutting through noise to the essential line. Clarity is your native language.",
       "archetype_water": "You are a **Deep Current** — reflective, strategic, moving beneath the surface. You read patterns others miss until the moment is right.",
       "friction": "Your inner {element} vision sits under active **structural tension** from {month_element} demands — {dominant} surplus and {deficit} deficit make the choice feel pulled two ways at once.",
-      "prompt": "Tell me the question or dilemma you're weighing right now — type it in the box below and send, and we'll work through it together from your matrix."
+      "prompt": "Tell me the decision question you're weighing — type it below and send. We'll work through it from this session's case structure."
     }
   },
   "chart_loader": {
@@ -3021,5 +3032,11 @@
     "created": "Created {date}",
     "recentRecord": "Recent record",
     "stageProgress": "Stage progress"
+  },
+  "portrait": {
+    "title": "Personal baseline profile",
+    "close": "Close profile",
+    "openFromVault": "Open baseline profile",
+    "subtitle": "Case structure for this decision session"
   }
 }

@@ -28,6 +28,10 @@ function deliveryDocId(sessionId: string): string {
   return `delivery:${sessionId}`;
 }
 
+function remindersDocId(sessionId: string): string {
+  return `reminders:${sessionId}`;
+}
+
 function archiveDocId(archiveId: string): string {
   return `archive:${archiveId}`;
 }
@@ -60,7 +64,7 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
       id: mid,
       section: "foundation",
       kind: "energy_matrix",
-      title: zh ? "个人能量画像" : "Personal energy chart",
+      title: zh ? "基础画像" : "Baseline profile",
       subjectLabel: subject,
       createdAt: created,
       unread: isDocVaultUnread(mid),
@@ -105,11 +109,31 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
       id,
       section: "pivot",
       kind: "pivot_delivery",
-      title: question || (zh ? "破局交付报告" : "Breakthrough delivery"),
+      title: question || (zh ? "交付报告" : "Delivery report"),
       subjectLabel: subject || (zh ? "未知主体" : "Unknown subject"),
       createdAt: deliveredAt,
       unread: isDocVaultUnread(id),
       openTarget: { type: "pivot_delivery", sessionId: sid },
+    });
+
+    // SoT 15: 30-day reminders pack rides the same delivered session (companion drip).
+    const rid = remindersDocId(sid);
+    const remindTitle = question
+      ? zh
+        ? `30日提醒 · ${question}`
+        : `30-day · ${question}`
+      : zh
+        ? "30日提醒"
+        : "30-day reminders";
+    items.push({
+      id: rid,
+      section: "reminders",
+      kind: "pivot_reminders",
+      title: remindTitle,
+      subjectLabel: subject || (zh ? "未知主体" : "Unknown subject"),
+      createdAt: deliveredAt,
+      unread: isDocVaultUnread(rid),
+      openTarget: { type: "pivot_reminders", sessionId: sid },
     });
   }
 
@@ -187,6 +211,7 @@ export function groupDocVaultBySection(
   const groups: Record<DocVaultSection, DocVaultItem[]> = {
     foundation: [],
     pivot: [],
+    reminders: [],
     atmos: [],
     match: [],
     syncro: [],
@@ -205,6 +230,7 @@ export function countDocVaultBySection(
   return {
     foundation: groups.foundation.length,
     pivot: groups.pivot.length,
+    reminders: groups.reminders.length,
     atmos: groups.atmos.length,
     match: groups.match.length,
     syncro: groups.syncro.length,
@@ -217,5 +243,6 @@ export const DocVaultIds = {
   matrix: matrixDocId,
   report: reportDocId,
   delivery: deliveryDocId,
+  reminders: remindersDocId,
   archive: archiveDocId,
 };

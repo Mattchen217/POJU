@@ -6,6 +6,7 @@ import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import {
   DeliveryBookGlyph,
   EnergyPortraitGlyph,
+  EnergyReportGlyph,
 } from "@/components/ui/A4PaperSheet";
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
@@ -25,6 +26,7 @@ type Props = {
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
   const tBook = useTranslations("workspace.deliveryBook");
+  const tVaultType = useTranslations("workspace.docVault");
   const tChat = useTranslations("poju.chat");
   const tAtmos = useTranslations("workspace.atmosRail");
   const tMatch = useTranslations("match.workspace");
@@ -128,6 +130,13 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const vaultDeliveryUnread = vaultItems.some(
     (i) => i.kind === "pivot_delivery" && isDocVaultUnread(i.id),
   );
+  const baselineCount = vaultItems.filter((i) => i.kind === "energy_matrix").length;
+  const deliveryCount = vaultItems.filter((i) => i.kind === "pivot_delivery").length;
+  const remindersCount = vaultItems.filter((i) => i.kind === "pivot_reminders").length;
+  const hasVaultReminders = remindersCount > 0;
+  const vaultRemindersUnread = vaultItems.some(
+    (i) => i.kind === "pivot_reminders" && isDocVaultUnread(i.id),
+  );
 
   const hasMatrix = Boolean(prepare?.matrixPayload) || hasVaultMatrix;
   const deliveryReady =
@@ -136,11 +145,12 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
         prepare?.session?.main_delivery_done ||
         prepare?.session?.pending_delivery_job_id,
     ) || hasVaultDelivery;
+  const remindersReady = hasVaultReminders;
 
   const matrixUnread = Boolean(prepare?.matrixUnread) || vaultMatrixUnread;
   const deliveryUnread = Boolean(prepare?.deliveryBookUnread) || vaultDeliveryUnread;
 
-  if (!hasMatrix && !deliveryReady && !prepare) {
+  if (!hasMatrix && !deliveryReady && !remindersReady && !prepare) {
     return null;
   }
 
@@ -163,19 +173,16 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           data-tooltip={t("matrixIconLabel")}
           onClick={(e) => {
             e.stopPropagation();
-            if (prepare?.matrixPayload) {
-              prepare.setReportExpanded(false);
-              prepare.setDeliveryBookExpanded(false);
-              prepare.setMatrixExpanded(true);
-              onOpenPanel();
-            } else {
-              openVaultSection("foundation");
-            }
+            // SoT 15: collapsed icon opens vault library (modal via card click), not rail reader
+            openVaultSection("foundation");
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
             <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
           </span>
+          {baselineCount > 0 ? (
+            <span className="workspace-right-collapsed-icons__count">{baselineCount}</span>
+          ) : null}
           {matrixUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
@@ -201,7 +208,33 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           <span className="workspace-sidebar__icon" aria-hidden>
             <DeliveryBookGlyph className="workspace-right-collapsed-icons__report" />
           </span>
+          {deliveryCount > 0 ? (
+            <span className="workspace-right-collapsed-icons__count">{deliveryCount}</span>
+          ) : null}
           {deliveryUnread ? (
+            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+          ) : null}
+        </button>
+      ) : null}
+
+      {remindersReady ? (
+        <button
+          type="button"
+          className="workspace-right-collapsed-icons__btn"
+          aria-label={tVaultType("type_reminders")}
+          data-tooltip={tVaultType("type_reminders")}
+          onClick={(e) => {
+            e.stopPropagation();
+            openVaultSection("reminders");
+          }}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
+          </span>
+          {remindersCount > 0 ? (
+            <span className="workspace-right-collapsed-icons__count">{remindersCount}</span>
+          ) : null}
+          {vaultRemindersUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
         </button>
