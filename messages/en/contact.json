@@ -1,46 +1,46 @@
 {
   "meta": {
     "title": "Contact — Eastern OS",
-    "description": "Connect with Eastern OS — Version 1.1",
+    "description": "Questions about Eastern OS, PASS, or your account?",
     "version": "Version 1.1",
-    "pageTitle": "Connect with Eastern OS"
+    "pageTitle": "Contact Eastern OS"
   },
   "intro": {
-    "p1": "We monitor our communication nodes continuously. Eastern OS is an independent, sovereign operation—real human creators and engineers respond to your inquiries as rapidly as possible.",
-    "p2": "To help us route your request to the correct terminal and assist you faster, please choose the appropriate contact node below."
+    "p1": "We read every message. Real people on the Eastern OS team reply as soon as we can.",
+    "p2": "Pick the topic below so we can route you faster."
   },
-  "footer": "Language Notice: While this interface is localized for your convenience, our core engineering and support team operates primarily in English and Chinese. You are welcome to write to us in your native language—we deploy high-fidelity AI translation matrices to process and fulfill global support tickets.",
+  "footer": "This page is localized for convenience. Support is strongest in English and Chinese—you’re welcome to write in your language; we use translation tools when needed.",
   "billing": {
-    "title": "1. Billing, Subscriptions & Token Support",
-    "body": "For active session issues, payment anomalies, standalone token validation, or inquiries regarding your Monthly Pass subscription:",
+    "title": "1. Billing, PASS & subscriptions",
+    "body": "For payment issues, PASS balance questions, Buy Pass, or Subscription:",
     "emailLabel": "Email:",
-    "responseLabel": "Response Framework:",
-    "response": "Typically within 24 hours on standard business days.",
-    "note": "Note: If you are requesting a technical refund, please explicitly include your formal Transaction ID received from our Merchant of Record (Dodo Payments)."
+    "responseLabel": "Response:",
+    "response": "Usually within 24 hours on business days.",
+    "note": "For a refund request, include your payment Transaction ID from checkout."
   },
   "subscription": {
-    "title": "2. Subscription Autonomy (Self-Service)",
-    "bodyBefore": "Looking to cancel your Monthly Pass automated renewal? You do not need to wait for an email response. You can instantly revoke your next billing cycle with a single click by utilizing the",
-    "manageLink": "\"Manage Subscription\"",
-    "bodyAfter": "link inside your localized dashboard canvas."
+    "title": "2. Cancel subscription (self-serve)",
+    "bodyBefore": "To stop Subscription auto-renew, you don’t need to email us. Use",
+    "manageLink": "Manage subscription",
+    "bodyAfter": "in your account."
   },
   "privacy": {
-    "title": "3. Data Sovereignty & Privacy Registry",
-    "body": "For cryptographic architecture questions, local cache (IndexedDB) rectification, or requests to purge your subscription email from our secure billing relay:",
+    "title": "3. Privacy & data",
+    "body": "For privacy questions, local browser data, or requests about your account email on billing:",
     "emailLabel": "Email:",
-    "responseLabel": "Response Framework:",
-    "response": "Typically answered within 48 hours."
+    "responseLabel": "Response:",
+    "response": "Usually within 48 hours."
   },
   "legal": {
-    "title": "4. Legal, Regulatory & Institutional",
-    "body": "For jurisdictional legal matters, copyright coordination, or formal physical address verification requests:",
+    "title": "4. Legal",
+    "body": "For legal, copyright, or formal verification requests:",
     "emailLabel": "Email:",
-    "responseLabel": "Response Framework:",
-    "response": "Typically answered within 5 business days."
+    "responseLabel": "Response:",
+    "response": "Usually within 5 business days."
   },
   "beforeWrite": {
-    "title": "💡 Before You Write to Us",
-    "body": "A substantial number of operational anomalies and feature clarifications are instantly resolved within our unified documentation stacks. We highly recommend reviewing these before dispatching an email:",
+    "title": "Before you write",
+    "body": "Many answers are already in:",
     "terms": "Terms of Service (v1.2)",
     "termsDesc": "Commercial engagement boundaries",
     "privacy": "Privacy Policy (v1.1)",

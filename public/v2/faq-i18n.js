@@ -22,7 +22,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q3",
             "question": "决策报告里有什么？",
-            "answer": "封面与目录之后：<strong>六页</strong>正文（另有附录）。<br><strong>P1 · 核心直答</strong> — 主路径 + 备用，以及更建议哪条。<br><strong>P2 · 归因剖析</strong> — 你为什么卡住。<br><strong>P3 · 破局策略</strong> — 主轨（及较简辅轨）上可执行的做法。<br><strong>P4 · 东方谋略</strong> — 同一案的东方看法与调法。<br><strong>P5 · 风险预警</strong> — 红灯，以及何时切辅。<br><strong>P6 · 出门仪式</strong> — 今晚、近阶清单、观察信号。<br>关键句可展开 <strong>依据与推理</strong>。报告在<strong>当前浏览器本地</strong>；要带走请导出或邮件发出。"
+            "answer": "封面与目录之后：<strong>六页</strong>正文（另有附录）。<br><strong>P1 · 核心直答</strong> — 主路径 + 备用，以及更建议哪条。<br><strong>P2 · 归因剖析</strong> — 你为什么卡住。<br><strong>P3 · 破局策略</strong> — 主轨（及较简辅轨）上可执行的做法。<br><strong>P4 · 东方谋略</strong> — 同一案的东方看法与调法。<br><strong>P5 · 风险预警</strong> — 红灯，以及何时切辅。<br><strong>P6 · 今晚与收尾</strong> — 今晚、近阶清单、观察信号。<br>关键句可展开 <strong>依据与推理</strong>。报告在<strong>当前浏览器本地</strong>；要带走请导出或邮件发出。"
           }
         ]
       },
@@ -63,7 +63,7 @@ window.V2_FAQ_I18N = {
           },
           {
             "id": "q9",
-            "question": "购票/账单收据邮件是聊天备份吗？",
+            "question": "购买/账单收据邮件是聊天备份吗？",
             "answer": "不是。收据走账户邮箱与支付网关——那是<strong>账单</strong>，不是聊天备份。要留对话，请<strong>邮件或导出对话本身</strong>。"
           }
         ]
@@ -75,7 +75,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q10",
             "question": "购买 Pass 和订阅有什么区别？",
-            "answer": "<strong>购买 Pass $19.99</strong> = 1 PASS，一次性、不自动续费、用完为止；支持随时一键退款。<br><strong>订阅包 $59.99 / 月</strong> = <strong>每月发放 5 PASS</strong>；<strong>新用户仅首月 +2</strong>（该月共 7）。<br>消耗顺序：先用<strong>结转额度</strong>，再<strong>订阅额度</strong>，最后<strong>买断 PASS</strong>。"
+            "answer": "<strong>购买 Pass $19.99</strong> = 1 PASS，一次性、不自动续费、用完为止；<strong>未使用的已购买 Pass 可在 PASS 详情申请退款</strong>（到账时间按支付渠道规则）。<br><strong>订阅包 $59.99 / 月</strong> = <strong>每月发放 5 PASS</strong>；<strong>新用户仅首月 +2</strong>（该月共 7）。<br>消耗顺序：先用<strong>结转额度</strong>，再<strong>订阅额度</strong>，最后<strong>买断 PASS</strong>。"
           },
           {
             "id": "q11",
@@ -134,7 +134,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q3",
             "question": "What’s in the decision report?",
-            "answer": "After cover and contents: <strong>six pages</strong> (plus an appendix).<br><strong>P1 · Core Answer（核心直答）</strong> — main path + backup, and which to prefer.<br><strong>P2 · Root Analysis（归因剖析）</strong> — why you’re stuck.<br><strong>P3 · Breakthrough Strategy（破局策略）</strong> — practical moves on the main (and simpler backup) track.<br><strong>P4 · Eastern Stratagem（东方谋略）</strong> — Eastern read of the same case.<br><strong>P5 · Risk Guard（风险预警）</strong> — red lights and when to switch tracks.<br><strong>P6 · Tonight & Close（出门仪式）</strong> — tonight, near-term checklist, watch signals.<br>Key lines can open <strong>Evidence & reasoning（依据与推理）</strong>. Lives in <strong>this browser</strong>; export or email to take it with you."
+            "answer": "After cover and contents: <strong>six pages</strong> (plus an appendix).<br><strong>P1 · Core Answer</strong> — main path + backup, and which to prefer.<br><strong>P2 · Root Analysis</strong> — why you’re stuck.<br><strong>P3 · Breakthrough Strategy</strong> — practical moves on the main (and simpler backup) track.<br><strong>P4 · Eastern Stratagem</strong> — Eastern read of the same case.<br><strong>P5 · Risk Guard</strong> — red lights and when to switch tracks.<br><strong>P6 · Tonight & Close</strong> — tonight, near-term checklist, watch signals.<br>Key lines can open <strong>Evidence & reasoning</strong>. Lives in <strong>this browser</strong>; export or email to take it with you."
           }
         ]
       },
@@ -187,7 +187,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q10",
             "question": "What’s the difference between Buy Pass and Subscription?",
-            "answer": "<strong>Buy Pass $19.99</strong> = 1 PASS, one-time, no auto-renew, valid until used; one-click refund anytime.<br><strong>Subscription $59.99 / mo</strong> = <strong>5 PASS granted every month</strong>; <strong>new subscribers get +2 in the first month only</strong> (7 that month).<br>Spend order: any <strong>carryover</strong> first, then <strong>subscription</strong> credits, then <strong>purchased</strong> PASS."
+            "answer": "<strong>Buy Pass $19.99</strong> = 1 PASS, one-time, no auto-renew, valid until used; <strong>unused purchased Passes can be refunded in PASS details</strong> (timing follows your payment provider).<br><strong>Subscription $59.99 / mo</strong> = <strong>5 PASS granted every month</strong>; <strong>new subscribers get +2 in the first month only</strong> (7 that month).<br>Spend order: any <strong>carryover</strong> first, then <strong>subscription</strong> credits, then <strong>purchased</strong> PASS."
           },
           {
             "id": "q11",
@@ -246,7 +246,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q3",
             "question": "¿Qué hay en el informe de decisión?",
-            "answer": "Tras portada e índice: <strong>seis páginas</strong> (plus un apéndice).<br><strong>P1 · Core Answer（核心直答）</strong> — ruta principal + respaldo, y cuál preferir.<br><strong>P2 · Root Analysis（归因剖析）</strong> — por qué estás atascado.<br><strong>P3 · Breakthrough Strategy（破局策略）</strong> — movimientos prácticos en la vía principal (y respaldo más simple).<br><strong>P4 · Eastern Stratagem（东方谋略）</strong> — lectura oriental del mismo caso.<br><strong>P5 · Risk Guard（风险预警）</strong> — luces rojas y cuándo cambiar de vía.<br><strong>P6 · Tonight & Close（出门仪式）</strong> — esta noche, checklist corto plazo, señales a vigilar.<br>Líneas clave pueden abrir <strong>Evidence & reasoning（依据与推理）</strong>. Vive en <strong>este navegador</strong>; exporta o envía por correo para llevártelo."
+            "answer": "Tras portada e índice: <strong>seis páginas</strong> (más un apéndice).<br><strong>P1 · Respuesta central</strong> — ruta principal + respaldo, y cuál preferir.<br><strong>P2 · Análisis de raíz</strong> — por qué estás atascado.<br><strong>P3 · Estrategia de avance</strong> — movimientos prácticos en la vía principal (y respaldo más simple).<br><strong>P4 · Estrategia oriental</strong> — lectura oriental del mismo caso.<br><strong>P5 · Alerta de riesgo</strong> — luces rojas y cuándo cambiar de vía.<br><strong>P6 · Esta noche y cierre</strong> — esta noche, checklist a corto plazo, señales a vigilar.<br>Líneas clave pueden abrir <strong>Evidencia y razonamiento</strong>. Vive en <strong>este navegador</strong>; exporta o envía por correo para llevártelo."
           }
         ]
       },
@@ -299,7 +299,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q10",
             "question": "¿Cuál es la diferencia entre Comprar Pass y Suscripción?",
-            "answer": "<strong>Comprar Pass $19.99</strong> = 1 PASS, una sola vez, sin auto-renovación, válido hasta usarlo; los reembolsos siguen las reglas de tu proveedor de pago.<br><strong>Suscripción $59.99 / mes</strong> = <strong>5 PASS otorgados cada mes</strong>; <strong>nuevos suscriptores solo el primer mes +2</strong> (7 ese mes).<br>Orden de consumo: primero <strong>arrastre (carryover)</strong>, luego créditos de <strong>suscripción</strong>, luego PASS <strong>comprados</strong>."
+            "answer": "<strong>Comprar Pass $19.99</strong> = 1 PASS, una sola vez, sin auto-renovación, válido hasta usarlo; <strong>los Pass comprados sin usar se pueden reembolsar en detalles de PASS</strong> (los plazos siguen a tu proveedor de pago).<br><strong>Suscripción $59.99 / mes</strong> = <strong>5 PASS otorgados cada mes</strong>; <strong>nuevos suscriptores reciben +2 solo el primer mes</strong> (7 ese mes).<br>Orden de consumo: primero cualquier <strong>arrastre</strong>, luego créditos de <strong>suscripción</strong>, luego PASS <strong>comprados</strong>."
           },
           {
             "id": "q11",
@@ -358,7 +358,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q3",
             "question": "Que contient le rapport de décision ?",
-            "answer": "Après couverture et sommaire : <strong>six pages</strong> (plus une annexe).<br><strong>P1 · Core Answer（核心直答）</strong> — voie principale + secours, et laquelle préférer.<br><strong>P2 · Root Analysis（归因剖析）</strong> — pourquoi tu es bloqué.<br><strong>P3 · Breakthrough Strategy（破局策略）</strong> — gestes pratiques sur la voie principale (et secours plus simple).<br><strong>P4 · Eastern Stratagem（东方谋略）</strong> — lecture orientale du même cas.<br><strong>P5 · Risk Guard（风险预警）</strong> — feux rouges et quand changer de voie.<br><strong>P6 · Tonight & Close（出门仪式）</strong> — ce soir, checklist court terme, signaux à surveiller.<br>Des lignes clés peuvent ouvrir <strong>Evidence & reasoning（依据与推理）</strong>. Vit dans <strong>ce navigateur</strong> ; exporte ou e-mail pour l’emporter."
+            "answer": "Après couverture et sommaire : <strong>six pages</strong> (plus une annexe).<br><strong>P1 · Réponse centrale</strong> — voie principale + secours, et laquelle préférer.<br><strong>P2 · Analyse des causes</strong> — pourquoi tu es bloqué.<br><strong>P3 · Stratégie de percée</strong> — gestes pratiques sur la voie principale (et secours plus simple).<br><strong>P4 · Stratagème oriental</strong> — lecture orientale du même cas.<br><strong>P5 · Garde des risques</strong> — feux rouges et quand changer de voie.<br><strong>P6 · Ce soir et clôture</strong> — ce soir, checklist court terme, signaux à surveiller.<br>Des lignes clés peuvent ouvrir <strong>Preuves et raisonnement</strong>. Vit dans <strong>ce navigateur</strong> ; exporte ou e-mail pour l’emporter."
           }
         ]
       },
@@ -411,7 +411,7 @@ window.V2_FAQ_I18N = {
           {
             "id": "q10",
             "question": "Quelle différence entre Acheter un Pass et Abonnement ?",
-            "answer": "<strong>Acheter un Pass $19.99</strong> = 1 PASS, une fois, sans renouvellement auto, valable jusqu’à utilisation ; remboursements selon les règles de votre prestataire.<br><strong>Abonnement $59.99 / mois</strong> = <strong>5 PASS accordés chaque mois</strong> ; <strong>nouveaux abonnés +2 le premier mois seulement</strong> (7 ce mois-là).<br>Ordre de consommation : d’abord le <strong>report (carryover)</strong>, puis l’<strong>abonnement</strong>, puis les PASS <strong>achetés</strong>."
+            "answer": "<strong>Acheter un Pass $19.99</strong> = 1 PASS, une fois, sans renouvellement auto, valable jusqu’à utilisation ; <strong>les Pass achetés non utilisés peuvent être remboursés dans les détails PASS</strong> (délais selon ton prestataire de paiement).<br><strong>Abonnement $59.99 / mois</strong> = <strong>5 PASS accordés chaque mois</strong> ; <strong>nouveaux abonnés : +2 le premier mois seulement</strong> (7 ce mois-là).<br>Ordre de consommation : d’abord tout <strong>report</strong>, puis crédits d’<strong>abonnement</strong>, puis PASS <strong>achetés</strong>."
           },
           {
             "id": "q11",

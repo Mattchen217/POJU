@@ -20,7 +20,36 @@
   font-size: inherit;
   line-height: 1;
 }
-</style>
+
+        /* Must-fix 10: hide energy/cosmic overlay chrome on hero product-preview mocks */
+        .v2-hero-preview [data-energy-overlay],
+        .v2-hero-preview .energy-overlay,
+        .v2-hero-mock-energy,
+        .v2-preview-label-energy,
+        #v2-hero-preview .personal-energy-profile,
+        #v2-hero-preview .daily-cosmic-resonance,
+        [data-preview-label="Decision dialogue preview"],
+        [data-preview-label="Decision report preview"] {
+          display: none !important;
+        }
+        /* Crop baked-in energy/cosmic title bands on carousel mock frames (top chrome) */
+        #v2-hero .v2-hero-visual img,
+        #v2-hero .v2-preview-frame img,
+        #v2-hero .v2-mock-frame img,
+        .v2-hero-carousel img,
+        .v2-product-preview img,
+        [data-hero-mock] img {
+          object-fit: cover;
+          object-position: center 28%;
+          /* pull crop upward enough to hide typical top title bars on v2/v3/v4 mocks */
+        }
+        /* If mock frames use background-image slides */
+        .v2-hero-slide[data-mock="energy"],
+        .v2-hero-slide[data-mock="cosmic"] {
+          display: none !important;
+        }
+
+        </style>
 <script>
       tailwind.config = {
         darkMode: "class",
@@ -3293,31 +3322,31 @@ const TEAM_AVATARS = [
                 team: [
                   {
                     name: 'Max C.',
-                    role: 'Founder & CEO',
+                    role: '创始人兼首席执行官',
                     quote:
                       '在人生的各个关键节点——无论是战略方向、职业重组还是人际协同，真正的挑战在于缺乏全局视角。我们打造 Eastern OS，正是为了提供一套动态的「个人决策导航系统」，用严密的结构与清晰度，让每一次重大抉择都有据可依。',
                   },
                   {
                     name: 'Arthur M.',
-                    role: 'Chief Systems Architect',
+                    role: '首席系统架构师',
                     quote:
                       '当你纠结于复杂的抉择时，含糊不清或情绪化的建议帮助有限。我们以严密的工程精度打造 Eastern OS 的内核，将情境中的关键因素转化为结构化决策模型，在你面临难题时提供更清晰、可对照的参考。',
                   },
                   {
                     name: 'Marcus T.',
-                    role: 'Lead Algorithmic Data Engineer',
+                    role: '首席算法与数据工程师',
                     quote:
                       '许多挫折并非来自能力不足，而是源于节奏与时机没对齐。Eastern OS 把时机、取舍与后果收成可对照的结构输入，帮你校准决策节奏与节点——用更清楚的信号，而不是凭感觉硬闯。',
                   },
                   {
                     name: 'Elena S.',
-                    role: 'Head of Decision Strategy',
+                    role: '决策策略负责人',
                     quote:
                       '在看不清前方风险时做出重大改变是极其吃力的。Eastern OS 推演不同路径下的局势演变，交付具体的行动预案，让你在重大转折时选项更清楚、判断更稳。',
                   },
                   {
                     name: 'Maya C.',
-                    role: 'Principal Product & UX Lead',
+                    role: '产品与体验负责人',
                     quote:
                       '面对高密度的抉择时，繁琐的工具只会增加无谓的认知消耗。我们把 Eastern OS 打造成一个极沉静的暗色个人控制台，过滤一切视觉噪点与信息冗余，让用户在极简的交互中快速恢复专注与掌控感。',
                   },
@@ -3518,7 +3547,7 @@ const BUILT_COPY = {
     "aiTitle": "Traducción algorítmica",
     "aiBody": "Señales estructurales de esos modelos se cruzan con <em>tu</em> caso vía un motor de lenguaje—en rutas, trade-offs y un informe moldeado alrededor de <em>esta</em> decisión—no un formulario único para todos.",
     "summary": "Esto es un <span class=\"gold-gradient\">modelo de decisión estructurado</span>—estructura oriental, pasos explícitos, método repetible. <span class=\"gold-gradient\">No</span> es adivinación. <span class=\"gold-gradient\">No</span> es divinación. <span class=\"gold-gradient\">No</span> es predicción del destino.",
-    "notice": "Hecho para llamadas de alto riesgo que aún te pertenecen. Nosotros aconsejamos; tú decides. No es consejo médico, legal ni financiero—ni una promesa de resultado vital.",
+    "notice": "Hecho para decisiones de alto riesgo que aún te pertenecen. Nosotros aconsejamos; tú decides. No es consejo médico, legal ni financiero—ni una promesa de resultado vital.",
     "closingHeading": "Esta es la esencia central de Eastern OS.",
     "closingBody": "Las preguntas esenciales de la vida no merecen menos que tres milenios de reflexión filosófica, el rigor empírico de la ciencia moderna y la precisión de un motor lingüístico personalizado."
   },
@@ -3526,7 +3555,7 @@ const BUILT_COPY = {
     "heading": "Notre <span class=\"gold-gradient\">méthodologie</span>. Pourquoi ça marche.",
     "intro": "Environ <span class=\"gold-gradient\">trois millénaires</span> de sagesse orientale de décision—timing, arbitrages, conséquences—reliés à la recherche contemporaine et à un moteur de langage qui transforme la structure en un dialogue multi-tours utilisable.",
     "easternTitle": "Cadres orientaux",
-    "easternBody": "Trois mille ans de traditions orientales de décision—cycles temporels, équilibre systémique, comment les gens choisissent sous pression. Pas de mysticisme de vitrine : une lentille <span class=\"gold-gradient\">structurelle</span> sur les forks, le timing et les conséquences.",
+    "easternBody": "Trois mille ans de traditions orientales de décision—cycles temporels, équilibre systémique, comment les gens choisissent sous pression. Pas de mysticisme de vitrine : une lentille <span class=\"gold-gradient\">structurelle</span> sur les bifurcations, le tempo et les conséquences.",
     "modernTitle": "Recherche moderne",
     "modernBody": "Sciences cognitives, psychologie de la décision et chronobiologie comme contrôle—pas comme costume. On garde ce qui tient comme motif ; on jette ce qui échoue comme rituel vide.",
     "aiTitle": "Traduction algorithmique",
@@ -3645,7 +3674,7 @@ const BUILT_COPY = {
                   "stage3.title": "Recoger los detalles",
                   "stage3.you": "Completa los seguimientos (salta lo que no aplique).",
                   "stage3.we": "Integramos tus respuestas al caso.",
-                  "stage3.youGet": "Un brief más tenso—detalle suficiente para probar rutas reales.",
+                  "stage3.youGet": "Un brief más ajustado—detalle suficiente para probar rutas reales.",
                   "stage4.label": "Paso 4",
                   "stage4.title": "Entregar el informe",
                   "stage4.we": "Te damos una <strong>ruta principal</strong>, un <strong>respaldo</strong> y un informe de decisión que puedes reabrir.",
@@ -3758,11 +3787,11 @@ const BUILT_COPY = {
                 "h2": "<span class=\"gold-gradient\">Confidentialité</span> & <span class=\"gold-gradient\">limites</span>. Franc.",
                 "sub": "Ce qui reste sur ton téléphone ou ton ordinateur—et ce que ce produit ne fait jamais.",
                 "c1.title": "Reste sur cet appareil",
-                "c1.body": "Ton chat et le rapport restent <strong>sur le téléphone ou l’ordinateur que tu utilises maintenant</strong>—dans ce navigateur seulement. Ils ne sont pas envoyés comme historique de chat dans notre cloud. Tu veux les effacer ? Vide les données de ce navigateur (ou ferme une fenêtre privée). Sur un autre téléphone, ordinateur ou navigateur, ces chats n’apparaissent pas—même avec le même compte. Un nouvel appareil, c’est une nouvelle copie locale—les anciens chats ne te suivent pas tout seuls ; tu ne les vois que sur l’appareil d’origine.",
-                "c2.title": "Ton compte sert au PASS—pas à tes chats",
-                "c2.body": "Te connecter sert surtout à <strong>acheter des PASS et voir ton solde et tes reçus</strong>. Cela ne veut <strong>pas</strong> dire que tes conversations sont sauvegardées dans le cloud du compte. Sur un autre appareil, tu verras ton PASS—mais pas les anciens chats du premier. Tu veux revoir ces chats ? Retourne sur le même appareil et le même navigateur—ton compte ne les synchronise pas. PASS et chats, ce sont deux choses ; n’attends pas un seul enregistrement cloud.",
+                "c1.body": "Ta conversation et le rapport restent <strong>sur le téléphone ou l’ordinateur que tu utilises maintenant</strong>—dans ce navigateur seulement. Ils ne sont pas envoyés comme historique de conversation dans notre cloud. Tu veux les effacer ? Vide les données de ce navigateur (ou ferme une fenêtre privée). Sur un autre téléphone, ordinateur ou navigateur, ces conversations n’apparaissent pas—même avec le même compte. Un nouvel appareil, c’est une nouvelle copie locale—les anciennes conversations ne te suivent pas tout seuls ; tu ne les vois que sur l’appareil d’origine.",
+                "c2.title": "Ton compte sert au PASS—pas à tes conversations",
+                "c2.body": "Te connecter sert surtout à <strong>acheter des PASS et voir ton solde et tes reçus</strong>. Cela ne veut <strong>pas</strong> dire que tes conversations sont sauvegardées dans le cloud du compte. Sur un autre appareil, tu verras ton PASS—mais pas les anciennes conversations du premier. Tu veux revoir ces conversations ? Retourne sur le même appareil et le même navigateur—ton compte ne les synchronise pas. PASS et conversations, ce sont deux choses ; n’attends pas un seul enregistrement cloud.",
                 "c3.title": "Garde une copie si tu en veux une",
-                "c3.body": "Tu as besoin de la conversation ou du rapport après avoir quitté ce navigateur ? Avant de vider les données ou de changer d’appareil, <strong>envoie-toi le rapport par e-mail, ou exporte une copie</strong>. Ainsi tu gardes quelque chose à rouvrir plus tard et à vérifier face au chemin clarifié. L’e-mail d’achat est un <strong>reçu</strong>—pas une sauvegarde du chat, et il ne restaure pas le dialogue. Si tu effaces la copie locale, on ne peut pas la ramener—alors emporte-en une ici d’abord ; n’attends pas d’avoir vidé les données ou changé d’appareil.",
+                "c3.body": "Tu as besoin de la conversation ou du rapport après avoir quitté ce navigateur ? Avant de vider les données ou de changer d’appareil, <strong>envoie-toi le rapport par e-mail, ou exporte une copie</strong>. Ainsi tu gardes quelque chose à rouvrir plus tard et à vérifier face au chemin clarifié. L’e-mail d’achat est un <strong>reçu</strong>—pas une sauvegarde de la conversation, et il ne restaure pas le dialogue. Si tu effaces la copie locale, on ne peut pas la ramener—alors emporte-en une ici d’abord ; n’attends pas d’avoir vidé les données ou changé d’appareil.",
                 "c4.title": "Aide à décider—pas de voyance",
                 "c4.body": "Eastern OS mène un <strong>dialogue profond multi-tours</strong> autour de la décision où tu es bloqué. On t’aide à clarifier ta situation et la vraie question, puis on <strong>te laisse repartir avec un rapport d’aide à la décision</strong> que tu peux rouvrir—voie principale, secours et raisons que tu peux vérifier face à ce que tu as dit. Eastern OS n’est pas de la voyance ou de la divination invérifiable, n’utilise pas de tactiques de peur pour créer la panique, et ne porte pas de jugements vides—Eastern OS ancre seulement toi et ton problème central pour livrer une aide à la décision.",
                 "readMore": "Lire l’architecture de confidentialité complète →",
@@ -4259,7 +4288,7 @@ const BUILT_COPY = {
         "<strong>1 Pass</strong> = 一次完整：对话 → 主/备+报告 → 30 天同线提醒<strong>同步提供</strong>",
         "一次性，不自动续费",
         "额度随买随用，永久有效，用完为止",
-        "支持随时一键退款"
+        "<strong>未使用的一次性 Pass 可在 PASS 详情申请退款。</strong> 到账时间按支付渠道规则。"
       ],
       "cta": "购买 Pass $19.99",
       "qty": "{n} Pass",
@@ -4318,7 +4347,7 @@ const BUILT_COPY = {
         "<strong>1 Pass</strong> = one full run: dialogue → main path + backup + report → 30-day same-line reminders <strong>provided together</strong>.",
         "One-time. No auto-renew.",
         "Use anytime—valid until used.",
-        "One-click refund anytime"
+        "<strong>Unused one-time Passes can be refunded in PASS details.</strong> Timing follows your payment provider."
       ],
       "cta": "Buy Pass $19.99",
       "qty": "{n} Pass|{n} Passes",
@@ -4378,7 +4407,7 @@ const BUILT_COPY = {
         "<strong>1 Pass</strong> = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días <strong>proporcionados juntos</strong>.",
         "Una sola vez. <strong>Sin renovación automática.</strong>",
         "Úsalo cuando quieras—<strong>válido hasta usarlo</strong>.",
-        "Reembolso con un clic en cualquier momento"
+        "<strong>Los Pass de una sola compra sin usar se pueden reembolsar en detalles de PASS.</strong> Los plazos siguen a tu proveedor de pago."
       ],
       "cta": "Comprar Pass $19.99",
       "qty": "{n} Pass|{n} Passes",
@@ -4426,7 +4455,7 @@ const BUILT_COPY = {
               fr: {
     "header": {
       "title": "Tarifs <span class=\"gold-gradient\">clairs</span>. À toi de choisir.",
-      "subtitle": "<strong>1 Pass</strong> = une course complète Eastern OS : dialogue → voie principale + secours + rapport → rappels 30 jours sur la même ligne <strong>fournis ensemble</strong>. Achète une fois—ou abonne-toi au mois."
+      "subtitle": "<strong>1 Pass</strong> = une session complète Eastern OS : dialogue → voie principale + secours + rapport → rappels 30 jours sur la même ligne <strong>fournis ensemble</strong>. Achète une fois—ou abonne-toi au mois."
     },
     "card1": {
       "badge": "Sans engagement · à l’usage",
@@ -4434,10 +4463,10 @@ const BUILT_COPY = {
       "price": "$19.99",
       "unit": "/ Pass",
       "features": [
-        "<strong>1 Pass</strong> = une course complète : dialogue → voie principale + secours + rapport → rappels 30 jours <strong>fournis ensemble</strong>.",
+        "<strong>1 Pass</strong> = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours <strong>fournis ensemble</strong>.",
         "Une seule fois. <strong>Pas de renouvellement auto.</strong>",
         "À utiliser quand tu veux—<strong>valable jusqu’à utilisation</strong>.",
-        "Remboursement en un clic à tout moment"
+        "<strong>Les Pass ponctuels non utilisés peuvent être remboursés dans les détails PASS.</strong> Les délais suivent ton prestataire de paiement."
       ],
       "cta": "Acheter un Pass $19.99",
       "qty": "{n} Pass|{n} Passes",
@@ -4451,7 +4480,7 @@ const BUILT_COPY = {
       "unit": "/ mois",
       "passCount": "Allocation fixe de 5 PASS / mois",
       "features": [
-        "<strong>1 Pass</strong> = une course complète : dialogue → voie principale + secours + rapport → rappels 30 jours <strong>fournis ensemble</strong>.",
+        "<strong>1 Pass</strong> = une session complète : dialogue → voie principale + secours + rapport → rappels 30 jours <strong>fournis ensemble</strong>.",
         "Allocation fixe de 5 PASS par mois.",
         "<strong>Nouveaux abonnés—premier mois seulement :</strong> +2 bonus (dès ≈ $8,57 / Pass ce mois-là).",
         "Se renouvelle chaque mois de facturation.",

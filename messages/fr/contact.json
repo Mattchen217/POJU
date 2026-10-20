@@ -1,54 +1,54 @@
 {
   "meta": {
     "title": "Contact — Eastern OS",
-    "description": "Contactez Eastern OS — Version 1.1",
+    "description": "Questions sur Eastern OS, le PASS ou ton compte ?",
     "version": "Version 1.1",
-    "pageTitle": "Contactez Eastern OS"
+    "pageTitle": "Contacter Eastern OS"
   },
   "intro": {
-    "p1": "Nous surveillons en continu nos nœuds de communication. Eastern OS est une opération indépendante et souveraine — de vrais créateurs et ingénieurs répondent à vos demandes aussi rapidement que possible.",
-    "p2": "Pour orienter votre demande vers le bon terminal et vous aider plus vite, veuillez choisir le nœud de contact approprié ci-dessous."
+    "p1": "Nous lisons chaque message. De vraies personnes de l’équipe Eastern OS répondent dès que possible.",
+    "p2": "Choisis le sujet ci-dessous pour un acheminement plus rapide."
   },
-  "footer": "Avis linguistique : bien que cette interface soit localisée pour votre confort, notre équipe principale d'ingénierie et de support opère surtout en anglais et en chinois. Vous pouvez nous écrire dans votre langue maternelle — nous utilisons des matrices de traduction IA haute fidélité pour traiter et exécuter les tickets de support mondiaux.",
+  "footer": "Cette page est localisée pour le confort. Le support est le plus solide en anglais et en chinois—tu peux écrire dans ta langue ; nous utilisons la traduction si besoin.",
   "billing": {
-    "title": "1. Facturation, abonnements et support tokens",
-    "body": "Pour les problèmes de session active, anomalies de paiement, validation de tokens unitaires ou questions concernant votre abonnement Monthly Pass :",
+    "title": "1. Facturation, PASS et abonnements",
+    "body": "Problèmes de paiement, solde PASS, Acheter un Pass ou Abonnement :",
     "emailLabel": "E-mail :",
-    "responseLabel": "Cadre de réponse :",
+    "responseLabel": "Réponse :",
     "response": "En général sous 24 heures les jours ouvrables.",
-    "note": "Note : si vous demandez un remboursement technique, veuillez inclure explicitement votre identifiant de transaction formel reçu de notre Merchant of Record (Dodo Payments)."
+    "note": "Pour un remboursement, inclus l’identifiant de transaction du paiement."
   },
   "subscription": {
-    "title": "2. Autonomie d'abonnement (libre-service)",
-    "bodyBefore": "Vous souhaitez annuler le renouvellement automatique de votre Monthly Pass ? Inutile d'attendre une réponse par e-mail. Vous pouvez révoquer instantanément votre prochain cycle de facturation en un clic via le lien",
-    "manageLink": "« Manage Subscription »",
-    "bodyAfter": "dans votre tableau de bord localisé."
+    "title": "2. Annuler l’abonnement (en libre-service)",
+    "bodyBefore": "Pour arrêter le renouvellement auto de l’Abonnement, pas besoin d’écrire. Utilise",
+    "manageLink": "Gérer l’abonnement",
+    "bodyAfter": "dans ton compte."
   },
   "privacy": {
-    "title": "3. Souveraineté des données et registre de confidentialité",
-    "body": "Pour les questions d'architecture cryptographique, la rectification du cache local (IndexedDB) ou les demandes de suppression de votre e-mail d'abonnement de notre relais de facturation sécurisé :",
+    "title": "3. Confidentialité et données",
+    "body": "Questions de confidentialité, données locales du navigateur ou e-mail de facturation :",
     "emailLabel": "E-mail :",
-    "responseLabel": "Cadre de réponse :",
-    "response": "En général répondu sous 48 heures."
+    "responseLabel": "Réponse :",
+    "response": "En général sous 48 heures."
   },
   "legal": {
-    "title": "4. Juridique, réglementaire et institutionnel",
-    "body": "Pour les questions juridictionnelles, la coordination des droits d'auteur ou les demandes formelles de vérification d'adresse physique :",
+    "title": "4. Juridique",
+    "body": "Demandes juridiques, copyright ou vérification formelle :",
     "emailLabel": "E-mail :",
-    "responseLabel": "Cadre de réponse :",
-    "response": "En général répondu sous 5 jours ouvrables."
+    "responseLabel": "Réponse :",
+    "response": "En général sous 5 jours ouvrables."
   },
   "beforeWrite": {
-    "title": "💡 Avant de nous écrire",
-    "body": "Un nombre important d'anomalies opérationnelles et de clarifications fonctionnelles se résolvent instantanément dans notre documentation unifiée. Nous recommandons vivement de la consulter avant d'envoyer un e-mail :",
-    "terms": "Terms of Service (v1.2)",
-    "termsDesc": "Limites d'engagement commercial (texte en anglais)",
-    "privacy": "Privacy Policy (v1.1)",
-    "privacyDesc": "Chiffrement local et protocoles de données (texte en anglais)",
-    "disclaimer": "Disclaimer & Limitation of Liability (v1.1)",
-    "disclaimerDesc": "Portée des réflexions algorithmiques IA (texte en anglais)",
-    "refund": "Refund Policy (v1.1)",
-    "refundDesc": "Paramètres techniques de remboursement (texte en anglais)"
+    "title": "Avant d’écrire",
+    "body": "Beaucoup de réponses sont déjà ici :",
+    "terms": "Conditions d’utilisation (v1.2)",
+    "termsDesc": "Limites de l’engagement commercial",
+    "privacy": "Politique de confidentialité (v1.1)",
+    "privacyDesc": "Chiffrement local et protocoles de données",
+    "disclaimer": "Avertissement et limitation de responsabilité (v1.1)",
+    "disclaimerDesc": "Portée des réflexions algorithmiques d’IA",
+    "refund": "Politique de remboursement (v1.1)",
+    "refundDesc": "Paramètres d’annulation de transaction"
   },
   "crisis": {
     "title": "🚨 Protocole urgent de soutien en crise",

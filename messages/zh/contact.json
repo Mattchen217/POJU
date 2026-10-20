@@ -1,54 +1,54 @@
 {
   "meta": {
     "title": "联系我们 — Eastern OS",
-    "description": "联系 Eastern OS — 版本 1.1",
-    "version": "版本 1.1",
+    "description": "关于 Eastern OS、PASS 或账户的问题？",
+    "version": "Version 1.1",
     "pageTitle": "联系 Eastern OS"
   },
   "intro": {
-    "p1": "我们持续监控各通信节点。Eastern OS 是一项独立、自主运营的项目——真实的人类创作者与工程师会尽快回复您的咨询。",
-    "p2": "为将您的请求路由至正确的处理终端并更快协助您，请选择下方对应的联系节点。"
+    "p1": "我们会阅读每封来信。Eastern OS 团队由真人尽快回复。",
+    "p2": "请选择下方主题，方便我们更快转给对应同事。"
   },
-  "footer": "语言说明：本界面已为您本地化展示，但核心工程与支持团队主要使用英语和中文工作。您可以使用母语写信给我们——我们部署高精度 AI 翻译矩阵来处理并履行全球支持工单。",
+  "footer": "本页为方便阅读做了本地化。支持以英文、中文最稳——也可用你的语言写信；需要时我们会借助翻译工具。",
   "billing": {
-    "title": "1. 账单、订阅与 Token 支持",
-    "body": "适用于活跃会话问题、支付异常、单次 Token 验证，或关于 Monthly Pass 月度订阅的咨询：",
+    "title": "1. 账单、PASS 与订阅",
+    "body": "支付问题、PASS 余额、购买 Pass 或订阅相关：",
     "emailLabel": "邮箱：",
-    "responseLabel": "响应机制：",
+    "responseLabel": "回复：",
     "response": "通常在工作日 24 小时内回复。",
-    "note": "说明：若您申请技术性退款，请务必附上从我们的 Merchant of Record（Dodo Payments）收到的正式 Transaction ID。"
+    "note": "申请退款请附上结账时的支付 Transaction ID。"
   },
   "subscription": {
-    "title": "2. 订阅自主管理（自助服务）",
-    "bodyBefore": "想要取消 Monthly Pass 自动续费？无需等待邮件回复。您可在本地化仪表盘画布中，通过",
-    "manageLink": "「Manage Subscription（管理订阅）」",
-    "bodyAfter": "链接一键撤销下一计费周期。"
+    "title": "2. 取消订阅（自助）",
+    "bodyBefore": "要停止订阅自动续费，不必等邮件。请在账户里使用",
+    "manageLink": "管理订阅",
+    "bodyAfter": "。"
   },
   "privacy": {
-    "title": "3. 数据主权与隐私登记",
-    "body": "适用于密码学架构问题、本地缓存（IndexedDB）修正，或请求从安全账单中继中清除您的订阅邮箱：",
+    "title": "3. 隐私与数据",
+    "body": "隐私问题、浏览器本地数据，或账单相关邮箱请求：",
     "emailLabel": "邮箱：",
-    "responseLabel": "响应机制：",
+    "responseLabel": "回复：",
     "response": "通常在 48 小时内回复。"
   },
   "legal": {
-    "title": "4. 法律、监管与机构事务",
-    "body": "适用于司法管辖法律事务、版权协调，或正式实体地址验证请求：",
+    "title": "4. 法律事务",
+    "body": "法律、版权或正式核验请求：",
     "emailLabel": "邮箱：",
-    "responseLabel": "响应机制：",
+    "responseLabel": "回复：",
     "response": "通常在 5 个工作日内回复。"
   },
   "beforeWrite": {
-    "title": "💡 写信之前",
-    "body": "大量运营异常与功能说明可在统一文档栈中即时解决。我们强烈建议在发送邮件前先查阅以下内容：",
-    "terms": "Terms of Service（服务条款 v1.2）",
-    "termsDesc": "商业参与边界（英文正文）",
-    "privacy": "Privacy Policy（隐私政策 v1.1）",
-    "privacyDesc": "本地加密与数据协议（英文正文）",
-    "disclaimer": "Disclaimer & Limitation of Liability（免责声明 v1.1）",
-    "disclaimerDesc": "AI 算法性反思的范围（英文正文）",
-    "refund": "Refund Policy（退款政策 v1.1）",
-    "refundDesc": "技术交易撤销参数（英文正文）"
+    "title": "写信之前",
+    "body": "许多问题可在下列页面先找到答案：",
+    "terms": "服务条款 (v1.2)",
+    "termsDesc": "商业合作边界",
+    "privacy": "隐私政策 (v1.1)",
+    "privacyDesc": "本地加密与数据协议",
+    "disclaimer": "免责声明与责任限制 (v1.1)",
+    "disclaimerDesc": "AI 算法输出的范围",
+    "refund": "退款政策 (v1.1)",
+    "refundDesc": "交易冲正参数"
   },
   "crisis": {
     "title": "🚨 紧急危机支持协议",
