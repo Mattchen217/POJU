@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
-import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
+import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
@@ -294,6 +294,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
           body_text: baselinePack.bodyText,
           locale,
           html_attachment: html,
+          pack: "baseline",
         }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
@@ -395,11 +396,10 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
             </p>
           ) : null}
           {matrixPayload && !loading ? (
-            <PojuEnergyMatrix
+            <BaselinePortraitBook
               payload={matrixPayload}
               locale={locale}
               suppressNarrative
-              expanded
             />
           ) : null}
           {deliveryText && deliverySessionId && !loading ? (

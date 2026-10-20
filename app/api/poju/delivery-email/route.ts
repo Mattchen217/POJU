@@ -14,6 +14,12 @@ const BodySchema = z.object({
   locale: z.string().max(16).optional(),
   /** Interactive offline HTML (TOC + details); ~10MB for future audio embed. */
   html_attachment: z.string().max(10_000_000).optional(),
+  /**
+   * Pack chrome for email subject / attachment name.
+   * baseline = Personal baseline profile (vault matrix pack).
+   * delivery (default) = Pivot decision report shelf.
+   */
+  pack: z.enum(["baseline", "delivery"]).optional(),
 });
 
 function toHtmlParagraphs(text: string): string {
@@ -44,11 +50,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid_request" }, { status: 400 });
   }
 
-  const { to, title, body_text, locale, html_attachment } = parsed.data;
+  const { to, title, body_text, locale, html_attachment, pack } = parsed.data;
   const zh = (locale ?? "").startsWith("zh");
-  const subject = zh
-    ? `你的 Pivot 能量决策报告 · ${title.slice(0, 80)}`
-    : `Your Pivot energy decision report · ${title.slice(0, 80)}`;
+  const isBaseline = pack === "baseline";
+  // Baseline packs must never reuse Pivot / energy sale subject chrome.
+  const subject = isBaseline
+    ? zh
+      ? "个人基础画像"
+      : title.trim().slice(0, 120) || "Personal baseline profile"
+    : zh
+      ? `你的 Pivot 能量决策报告 · ${title.slice(0, 80)}`
+      : `Your Pivot energy decision report · ${title.slice(0, 80)}`;
   const intro = zh
     ? html_attachment
       ? "附件是可离线打开的交互报告（目录可点、依据可展开）。用浏览器直接打开即可，无需登录。正文另附纯文本备份。"
@@ -74,7 +86,9 @@ export async function POST(req: Request) {
     html_attachment && html_attachment.trim().length > 100
       ? [
           {
-            filename: `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
+            filename: isBaseline
+              ? `baseline-profile-${new Date().toISOString().slice(0, 10)}.html`
+              : `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
             content: toBase64Utf8(html_attachment),
           },
         ]

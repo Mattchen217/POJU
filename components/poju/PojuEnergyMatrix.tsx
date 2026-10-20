@@ -66,9 +66,15 @@ type Props = {
   coverTitle?: string;
   /** Override unread badge (defaults to POJU prepare matrixUnread). */
   unread?: boolean;
+  /** Render only active page body — parent supplies DeliveryBookStage chrome. */
+  bodyOnly?: boolean;
+  /** Controlled block when bodyOnly (B1–B5). */
+  activeBlockId?: MatrixBlockId;
 };
 
-const MATRIX_BLOCKS = [
+
+
+export const BASELINE_MATRIX_BLOCKS = [
   { id: "calibration", labelKey: "block_1" },
   { id: "energy", labelKey: "block_2" },
   { id: "trajectory", labelKey: "block_3" },
@@ -76,7 +82,11 @@ const MATRIX_BLOCKS = [
   { id: "core", labelKey: "block_5" },
 ] as const;
 
-type MatrixBlockId = (typeof MATRIX_BLOCKS)[number]["id"];
+/** @deprecated use BASELINE_MATRIX_BLOCKS */
+const MATRIX_BLOCKS = BASELINE_MATRIX_BLOCKS;
+
+export type BaselineMatrixBlockId = (typeof BASELINE_MATRIX_BLOCKS)[number]["id"];
+type MatrixBlockId = BaselineMatrixBlockId;
 
 function MaybeRailPaper({
   enabled,
@@ -829,6 +839,8 @@ export function PojuEnergyMatrix({
   suppressNarrative = false,
   subjectPrefix,
   hideChrome = false,
+  bodyOnly = false,
+  activeBlockId,
   expanded,
   onExpandedChange,
   coverTitle,
@@ -925,8 +937,11 @@ export function PojuEnergyMatrix({
   const zdSlug = zodiacHanToSlug(display.zodiac.han);
   const emptyLinks = tc("fact_empty_links");
   const [activeBlock, setActiveBlock] = useState<MatrixBlockId>("calibration");
+  const resolvedActiveBlock: MatrixBlockId = bodyOnly && activeBlockId ? activeBlockId : activeBlock;
+
+
   const [panelOpenUncontrolled, setPanelOpenUncontrolled] = useState(true);
-  const panelOpen = expanded ?? panelOpenUncontrolled;
+  const panelOpen = bodyOnly ? true : (expanded ?? panelOpenUncontrolled);
   const matrixLocale = normalizeMatrixLocale(locale);
   const [railSheetMode, setRailSheetMode] = useState<A4PaperSheetMode>(() =>
     hideChrome ? (panelOpen ? "flat" : "folded") : "flat",
@@ -1031,7 +1046,7 @@ export function PojuEnergyMatrix({
 
   return (
     <div
-      className={`pcm pcm--tabbed pcm--delivery-shell${compact ? " pcm--compact pcm--embedded" : ""}${
+      className={`pcm pcm--tabbed pcm--delivery-shell${bodyOnly ? " pcm--body-only" : ""}${compact ? " pcm--compact pcm--embedded" : ""}${
         hideChrome ? " pcm--rail" : ""
       }`}
       data-locale={matrixLocale}
@@ -1039,7 +1054,7 @@ export function PojuEnergyMatrix({
       <div className="pcm__stars" aria-hidden />
       <div className="pcm__wrap">
         <MaybeRailPaper
-          enabled={Boolean(hideChrome)}
+          enabled={Boolean(hideChrome) && !bodyOnly}
           mode={railSheetMode}
           unread={showMatrixUnread}
           cover={
@@ -1065,6 +1080,7 @@ export function PojuEnergyMatrix({
             hideChrome ? " pcm-stage--in-paper" : ""
           }`}
         >
+        {!bodyOnly ? (
         <div className="pcm-navframe">
           <div className="pcm-navframe__title-row">
             <h1 className="pcm-navframe__title">{matrixTitle}</h1>
@@ -1123,19 +1139,22 @@ export function PojuEnergyMatrix({
             })}
           </nav>
         </div>
+        ) : null}
+
 
         <div className={`pcm-shell${panelOpen ? "" : " is-collapsed"}`}>
           {panelOpen ? (
           <div
             className="pcm-shell__panel"
             role="tabpanel"
-            id={`pcm-panel-${activeBlock}`}
-            aria-labelledby={`pcm-tab-${activeBlock}`}
+            id={`pcm-panel-${resolvedActiveBlock}`}
+            aria-labelledby={`pcm-tab-${resolvedActiveBlock}`}
           >
             {metaRow}
-            {activeBlock === "calibration" ? (
-        /* ── 1. Conclusion-first calibration (SoT 15) ── */
-        <section className="pcm__section pcm-calibration pcm-calibration--conclusion-first">
+            {resolvedActiveBlock === "calibration" ? (
+        /* ── 1. Origin calibration — full body (SoT 15 B1) ── */
+        <section className="pcm__section pcm-calibration">
+          {/* Additive summary chips — never instead of full blocks */}
           <div className="pcm-hero-strip" aria-label={tm("blocks.block_1")}>
             <div className="pcm-hero-strip__item">
               <div className="pcm-hero-strip__value">
@@ -1168,175 +1187,174 @@ export function PojuEnergyMatrix({
             </div>
           </div>
 
-          <div className="pcm-zodiac pcm-zodiac--compact">
+          <div className="pcm-zodiac">
             <div className="pcm-zodiac__art">
               {zodiacIcon ? (
                 <Image
                   src={zodiacIcon}
                   alt=""
-                  width={48}
-                  height={48}
+                  width={96}
+                  height={96}
                   className="pcm-zodiac__art-img"
                 />
               ) : (
                 <span className="pcm-zodiac__name">{display.zodiac.han}</span>
               )}
             </div>
-            <div>
-              <div className="pcm-zodiac__name">
-                {zdSlug ? (
-                  <SoftTermHover
-                    slug={zdSlug}
-                    locale={locale}
-                    fallback={isZh ? display.zodiac.han : display.zodiac.en}
-                  />
-                ) : isZh ? (
-                  display.zodiac.han
-                ) : (
-                  display.zodiac.en
-                )}
-              </div>
-              <div className="pcm-zodiac__pinyin">{display.zodiac.pinyin}</div>
-              <p className="pcm-zodiac__caption">{tc("your_sign_tag")}</p>
+            <div className="pcm-zodiac__name">
+              {zdSlug ? (
+                <SoftTermHover
+                  slug={zdSlug}
+                  locale={locale}
+                  fallback={isZh ? display.zodiac.han : display.zodiac.en}
+                />
+              ) : isZh ? (
+                display.zodiac.han
+              ) : (
+                display.zodiac.en
+              )}
             </div>
+            <div className="pcm-zodiac__pinyin">{display.zodiac.pinyin}</div>
+            <div className="pcm-zodiac__year">
+              {user_profile.birth.year}
+              {isZh ? "年" : ""}
+            </div>
+            <p className="pcm-zodiac__caption">{tc("your_sign_tag")}</p>
           </div>
 
-          <details className="pcm-cal-details">
-            <summary>{tc("details_summary")}</summary>
-            <div className="pcm-card pcm-cal">
-              <div className="pcm-label pcm-label--gold">{tm("section_label")}</div>
-              <div className="pcm-cal__grid">
-                <div className="pcm-cal__cell">
-                  <div className="pcm-cal__kicker">
-                    {tc("calendar_alignment")} · {tc("calendar_alignment_em")}
+          <div className="pcm-card pcm-cal">
+            <div className="pcm-label pcm-label--gold">{tc("details_summary")}</div>
+            <div className="pcm-cal__grid">
+              <div className="pcm-cal__cell">
+                <div className="pcm-cal__kicker">
+                  {tc("calendar_alignment")} · {tc("calendar_alignment_em")}
+                </div>
+                <div className="pcm-cal__body">
+                  <div className="pcm-cal__value">
+                    {display.calendar.gregorian}{" "}
+                    <span className="pcm-cal__unit">{tc("gregorian")}</span>
                   </div>
-                  <div className="pcm-cal__body">
-                    <div className="pcm-cal__value">
-                      {display.calendar.gregorian}{" "}
-                      <span className="pcm-cal__unit">{tc("gregorian")}</span>
-                    </div>
-                    {display.calendar.lunar ? (
-                      <div className="pcm-cal__sub">{display.calendar.lunar}</div>
-                    ) : null}
-                  </div>
-                  <div className="pcm-cal__foot">
-                    <div className="pcm-cal__accent">
-                      {display.calendar.headline}
-                      {genderLabel ? ` ${genderLabel}` : ""}
-                    </div>
+                  {display.calendar.lunar ? (
+                    <div className="pcm-cal__sub">{display.calendar.lunar}</div>
+                  ) : null}
+                </div>
+                <div className="pcm-cal__foot">
+                  <div className="pcm-cal__accent">
+                    {display.calendar.headline}
+                    {genderLabel ? ` ${genderLabel}` : ""}
                   </div>
                 </div>
+              </div>
 
-                <div className="pcm-cal__cell">
-                  <div className="pcm-cal__kicker">
-                    <SoftTermHover slug="tm_true_solar_time" locale={locale} />
-                    {" · "}
-                    {tc("true_solar_time_em")}
-                  </div>
-                  <div className="pcm-cal__body">
-                    {tst ? (
-                      <>
-                        <div className="pcm-cal__times">
-                          <div>
-                            <div className="pcm-cal__time-val">
-                              {tst.original_time}
-                            </div>
-                            <div className="pcm-cal__time-label">
-                              {tc("standard_time")}
-                            </div>
-                          </div>
-                          <div className="pcm-cal__arrow">→</div>
-                          <div>
-                            <div className="pcm-cal__time-val pcm-cal__time-val--dim">
-                              {tst.true_solar_time}
-                            </div>
-                            <div className="pcm-cal__time-label">
-                              <SoftTermHover
-                                slug="tm_true_solar_time"
-                                locale={locale}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        {tst.diff_minutes !== 0 ? (
-                          <div className="pcm-cal__delta">
-                            {tst.diff_minutes > 0 ? "+" : "−"}
-                            {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
-                          </div>
-                        ) : null}
-                        <div className="pcm-cal__note">
-                          {tc("longitude_correction")} ·{" "}
-                          {tst.longitude_diff_minutes ?? tst.diff_minutes}m
-                          {tst.eq_of_time_minutes != null
-                            ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
-                            : null}
-                          {tst.longitude != null
-                            ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
-                            : null}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="pcm-cal__value">—</div>
-                    )}
-                  </div>
-                  <div className="pcm-cal__foot">
-                    {(() => {
-                      const hp = user_profile.birth.hour_period;
-                      const info = hp ? HOUR_PERIOD_INFO[hp] : null;
-                      if (!info) return <div className="pcm-cal__accent pcm-cal__accent--spacer" aria-hidden="true" />;
-                      const label = isZh ? info.chinese_name : info.en_label;
-                      return (
-                        <div className="pcm-cal__accent">
-                          {tc("birth_hour_period")} · {label}
-                        </div>
-                      );
-                    })()}
-                  </div>
+              <div className="pcm-cal__cell">
+                <div className="pcm-cal__kicker">
+                  <SoftTermHover slug="tm_true_solar_time" locale={locale} />
+                  {" · "}
+                  {tc("true_solar_time_em")}
                 </div>
+                <div className="pcm-cal__body">
+                  {tst ? (
+                    <>
+                      <div className="pcm-cal__times">
+                        <div>
+                          <div className="pcm-cal__time-val">
+                            {tst.original_time}
+                          </div>
+                          <div className="pcm-cal__time-label">
+                            {tc("standard_time")}
+                          </div>
+                        </div>
+                        <div className="pcm-cal__arrow">→</div>
+                        <div>
+                          <div className="pcm-cal__time-val pcm-cal__time-val--dim">
+                            {tst.true_solar_time}
+                          </div>
+                          <div className="pcm-cal__time-label">
+                            <SoftTermHover
+                              slug="tm_true_solar_time"
+                              locale={locale}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {tst.diff_minutes !== 0 ? (
+                        <div className="pcm-cal__delta">
+                          {tst.diff_minutes > 0 ? "+" : "−"}
+                          {Math.abs(Number(tst.diff_minutes.toFixed(2)))}m
+                        </div>
+                      ) : null}
+                      <div className="pcm-cal__note">
+                        {tc("longitude_correction")} ·{" "}
+                        {tst.longitude_diff_minutes ?? tst.diff_minutes}m
+                        {tst.eq_of_time_minutes != null
+                          ? ` · ${tc("eq_of_time")} ${tst.eq_of_time_minutes > 0 ? "+" : ""}${tst.eq_of_time_minutes}m`
+                          : null}
+                        {tst.longitude != null
+                          ? ` · ${Math.abs(tst.longitude).toFixed(2)}°${tst.longitude >= 0 ? "E" : "W"}`
+                          : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pcm-cal__value">—</div>
+                  )}
+                </div>
+                <div className="pcm-cal__foot">
+                  {(() => {
+                    const hp = user_profile.birth.hour_period;
+                    const info = hp ? HOUR_PERIOD_INFO[hp] : null;
+                    if (!info) return <div className="pcm-cal__accent pcm-cal__accent--spacer" aria-hidden="true" />;
+                    const label = isZh ? info.chinese_name : info.en_label;
+                    return (
+                      <div className="pcm-cal__accent">
+                        {tc("birth_hour_period")} · {label}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
 
-                <div className="pcm-cal__cell">
-                  <div className="pcm-cal__kicker">
-                    {tc("solar_term")} · {tc("solar_term_em")}
-                  </div>
-                  <div className="pcm-cal__body">
-                    <div className="pcm-cal__value">
+              <div className="pcm-cal__cell">
+                <div className="pcm-cal__kicker">
+                  {tc("solar_term")} · {tc("solar_term_em")}
+                </div>
+                <div className="pcm-cal__body">
+                  <div className="pcm-cal__value">
+                    {isZh
+                      ? display.solar_term.name
+                      : display.solar_term.name_en}{" "}
+                    <span className="pcm-cal__unit">
                       {isZh
-                        ? display.solar_term.name
-                        : display.solar_term.name_en}{" "}
-                      <span className="pcm-cal__unit">
-                        {isZh
-                          ? display.solar_term.name_en
-                          : display.solar_term.name}
-                      </span>
-                    </div>
-                    <div className="pcm-cal__sub">{display.solar_term.season}</div>
-                    <div className="pcm-term__head pcm-term__head--inline">
-                      <span>{tc("solar_term")}</span>
-                      <span>
-                        {tc("next_term")}: {display.solar_term.next_name}
-                      </span>
-                    </div>
+                        ? display.solar_term.name_en
+                        : display.solar_term.name}
+                    </span>
                   </div>
-                  <div className="pcm-cal__foot">
-                    <div className="pcm-term__track">
-                      <div
-                        className="pcm-term__fill"
-                        style={
-                          {
-                            "--pcm-term-pct": `${display.solar_term.progress_pct}%`,
-                          } as CSSProperties
-                        }
-                      />
-                    </div>
+                  <div className="pcm-cal__sub">{display.solar_term.season}</div>
+                  <div className="pcm-term__head pcm-term__head--inline">
+                    <span>{tc("solar_term")}</span>
+                    <span>
+                      {tc("next_term")}: {display.solar_term.next_name}
+                    </span>
+                  </div>
+                </div>
+                <div className="pcm-cal__foot">
+                  <div className="pcm-term__track">
+                    <div
+                      className="pcm-term__fill"
+                      style={
+                        {
+                          "--pcm-term-pct": `${display.solar_term.progress_pct}%`,
+                        } as CSSProperties
+                      }
+                    />
                   </div>
                 </div>
               </div>
             </div>
-          </details>
+          </div>
         </section>
             ) : null}
 
-            {activeBlock === "energy" ? (
+            {resolvedActiveBlock === "energy" ? (
         /* ── 2. Radar full-width → bars | vitality+eq ── */
         <section className="pcm__section pcm-energy">
           <div className="pcm-card pcm-radar pcm-energy__radar">
@@ -1496,7 +1514,7 @@ export function PojuEnergyMatrix({
         </section>
             ) : null}
 
-            {activeBlock === "trajectory" ? (
+            {resolvedActiveBlock === "trajectory" ? (
         /* ── 3. Timeline + 2×2 facts ── */
         <section className="pcm__section">
           <div className="pcm__grid-12">
@@ -1803,7 +1821,7 @@ export function PojuEnergyMatrix({
         </section>
             ) : null}
 
-            {activeBlock === "markers" ? (
+            {resolvedActiveBlock === "markers" ? (
         /* ── 4. Extended fact panels ── */
         <section className="pcm__section">
           <div className="pcm-label pcm-label--gold">
@@ -1988,7 +2006,7 @@ export function PojuEnergyMatrix({
         </section>
             ) : null}
 
-            {activeBlock === "core" ? (
+            {resolvedActiveBlock === "core" ? (
         /* ── 5. Four pillars ── */
         <section className="pcm__section">
           <div className="pcm-label pcm-label--white">
@@ -2082,6 +2100,7 @@ export function PojuEnergyMatrix({
           </div>
         </section>
             ) : null}
+                        {!bodyOnly ? (
             <div className="pcm-shell__footer">
               <div className="pcm-shell__footer-slot pcm-shell__footer-slot--start" />
               <button
@@ -2098,6 +2117,7 @@ export function PojuEnergyMatrix({
               </button>
               <div className="pcm-shell__footer-slot pcm-shell__footer-slot--end" />
             </div>
+            ) : null}
           </div>
           ) : null}
         </div>

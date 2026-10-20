@@ -163,6 +163,7 @@ import {
 } from "@/lib/poju/expiry-reminder";
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
+import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
@@ -3442,8 +3443,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         energyMatrixRendered = true;
         bareIds.add(mid);
         slots[mid] = (
-          <div className="poju-matrix-bubble">
-            <PojuEnergyMatrix
+          <div className="poju-matrix-bubble poju-matrix-bubble--baseline-book">
+            <BaselinePortraitBook
               payload={m.meta.matrix_payload}
               locale={locale}
               suppressNarrative

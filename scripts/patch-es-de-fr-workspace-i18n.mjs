@@ -98,7 +98,7 @@ const WORKSPACE = {
         sat: "Sábado",
       },
     },
-    atmosRail: { matrixTitle: "Carta de energía personal" },
+    atmosRail: { matrixTitle: "Perfil base" },
     poju: {
       headline: "Consulta estratégica profunda para encrucijadas vitales.",
       guidance: "Elige un perfil y describe tu dilema central abajo.",
@@ -360,7 +360,7 @@ const WORKSPACE = {
         sat: "Samstag",
       },
     },
-    atmosRail: { matrixTitle: "Persönliche Energiekarte" },
+    atmosRail: { matrixTitle: "Personal baseline profile" },
     poju: {
       headline: "Tiefe strategische Beratung an Lebenskreuzungen.",
       guidance: "Wähle ein Profil und nenne unten dein Kerndilemma.",
@@ -622,7 +622,7 @@ const WORKSPACE = {
         sat: "Samedi",
       },
     },
-    atmosRail: { matrixTitle: "Carte d'énergie personnelle" },
+    atmosRail: { matrixTitle: "Profil de base" },
     poju: {
       headline: "Conseil stratégique profond aux carrefours de vie.",
       guidance: "Choisis un profil et énonce ton dilemme central ci-dessous.",

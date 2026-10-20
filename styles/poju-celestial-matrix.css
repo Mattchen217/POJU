@@ -3576,3 +3576,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Baseline portrait inside DeliveryBookStage right pane */
+.pcm--body-only {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+.pcm--body-only .pcm__stars,
+.pcm--body-only .pcm-navframe,
+.pcm--body-only .pcm-shell__footer {
+  display: none !important;
+}
+.pcm--body-only .pcm__wrap,
+.pcm--body-only .pcm-stage,
+.pcm--body-only .pcm-shell,
+.pcm--body-only .pcm-shell__panel {
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+.pcm--body-only .pcm-shell.is-collapsed {
+  display: block !important;
+}
+.baseline-portrait-book__page {
+  padding-bottom: 24px;
+}
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__product-title {
+  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+  line-height: 1.35;
+}
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__product-title > span:first-child {
+  display: block;
+  color: #f5e6c8;
+}
+/* B1: ensure calibration details card is always visible (not empty collapse) */
+.pcm-calibration .pcm-cal {
+  margin-top: 18px;
+}
+.pcm-calibration .pcm-zodiac {
+  margin-top: 16px;
+  text-align: center;
+}
