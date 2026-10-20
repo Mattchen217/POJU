@@ -273,14 +273,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 12px;
   background: transparent;
   color: rgba(255, 255, 255, 0.88);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
+  overflow: visible;
 }
 
 .workspace-right-collapsed-icons__btn--qa {
@@ -330,25 +331,25 @@
 }
 
 .workspace-right-collapsed-icons__portrait {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   display: block;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--ws-gold, #f2ca50);
 }
 
 .workspace-right-collapsed-icons__report {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   display: block;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--ws-gold, #f2ca50);
 }
 
-/* Collapsed rail: glyph only (no A4 — paper shell is for open vault list cards) */
+/* Collapsed rail: larger gold glyph only (no A4 — paper shell is for open vault list) */
 .workspace-right-collapsed-icons__glyph {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   display: block;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--ws-gold, #f2ca50);
 }
 
 .workspace-right-collapsed-icons__spin {

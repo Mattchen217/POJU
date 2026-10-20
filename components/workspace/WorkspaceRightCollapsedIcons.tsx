@@ -20,7 +20,7 @@ type Props = {
 };
 
 function formatCount(n: number): string {
-  return `X${n}`;
+  return `x ${n}`;
 }
 
 /**
