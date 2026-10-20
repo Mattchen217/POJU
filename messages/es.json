@@ -3033,7 +3033,7 @@
   },
   "portrait": {
     "title": "Perfil base",
-    "close": "Cerrar perfil",
+    "close": "Cerrar y empezar el chat",
     "openFromVault": "Abrir perfil base",
     "subtitle": "Estructura de caso para esta sesión"
   }

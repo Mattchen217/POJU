@@ -3035,7 +3035,7 @@
   },
   "portrait": {
     "title": "个人基础画像",
-    "close": "关闭画像",
+    "close": "关闭，开始对话",
     "openFromVault": "打开基础画像",
     "subtitle": "本次决策会话的基础坐标"
   }

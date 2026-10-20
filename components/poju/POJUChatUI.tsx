@@ -163,7 +163,6 @@ import {
 } from "@/lib/poju/expiry-reminder";
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
-import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
@@ -3268,33 +3267,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   const prepareShelfOpenRequest = workspacePrepare?.deliveryShelfOpenRequest ?? 0;
 
-  /** Baseline portrait — independent of chat list; same reader frame as phase-4 delivery. */
-  const baselineDocumentNode = useMemo(() => {
-    if (deliveryPageActive) return null;
-    let payload = session.matrix_payload ?? null;
-    if (!payload) {
-      for (const m of visibleMessages) {
-        if (isEnergyMatrixMessage(m) && m.meta?.matrix_payload) {
-          payload = m.meta.matrix_payload;
-          break;
-        }
-      }
-    }
-    if (!payload) return null;
-    return (
-      <BaselinePortraitBook
-        payload={payload}
-        locale={locale}
-        suppressNarrative
-      />
-    );
-  }, [
-    deliveryPageActive,
-    session.matrix_payload,
-    visibleMessages,
-    locale,
-  ]);
-
   const deliveryShelfNode = useMemo(() => {
     if (!deliveryPageActive) return null;
     const complete =
@@ -3403,7 +3375,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     // Delivery page: empty transcript — book owns the center.
     if (deliveryPageActive) return [];
     const list = visibleMessages
-      // Baseline lives in documentSlot — keep it out of the chat transcript.
+      // Baseline opens as vault modal on first entry — never a center chat bubble.
       .filter((m) => !isEnergyMatrixMessage(m))
       .map((m) => ({
         id: m.client_id ?? m.timestamp,
@@ -3458,7 +3430,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       for (const m of visibleMessages) {
         const mid = m.client_id ?? m.timestamp;
-      // energy_matrix → documentSlot (BaselinePortraitBook), not a chat bubble
+      // energy_matrix → vault modal only (not center transcript)
       if (isEnergyMatrixMessage(m)) continue;
       if (isMatrixWelcomeMessage(m)) {
         const payload = m.meta?.matrix_payload ?? session.matrix_payload;
@@ -3959,7 +3931,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         composerInputDisabled={confirmationGateInputLock}
         hideComposer={hideComposer}
         centerSlot={deliveryShelfNode}
-        documentSlot={baselineDocumentNode}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
         messageFooters={messageFooters}

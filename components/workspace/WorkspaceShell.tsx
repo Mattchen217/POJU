@@ -36,7 +36,13 @@ import {
 } from "@/components/workspace/WorkspaceDocVaultContext";
 import { WorkspaceGlyphRightPanel } from "@/components/workspace/WorkspaceGlyphRightPanel";
 import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
-import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
+import { DocVaultIds } from "@/lib/workspace/doc-vault-index";
+import { markDocVaultRead } from "@/lib/workspace/doc-vault-unread";
+import {
+  BASELINE_AUTO_OPEN_EVENT,
+  type BaselineAutoOpenDetail,
+  type DocVaultItem,
+} from "@/lib/workspace/doc-vault-types";
 import { WorkspaceDocVaultModal } from "@/components/workspace/WorkspaceDocVaultModal";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
@@ -225,6 +231,30 @@ function DocVaultOpenBinder({
     });
     return () => setOpenHandlers(null);
   }, [setOpenHandlers, selectArchive, openRight]);
+
+  /** After birth prepare: popup baseline over center welcome (does not replace chat). */
+  useEffect(() => {
+    const onAutoOpen = (event: Event) => {
+      const profileId = (event as CustomEvent<BaselineAutoOpenDetail>).detail?.profileId?.trim();
+      if (!profileId) return;
+      const id = DocVaultIds.matrix(profileId);
+      const fromIndex = vault?.items.find((i) => i.id === id);
+      const item: DocVaultItem = fromIndex ?? {
+        id,
+        section: "foundation",
+        kind: "energy_matrix",
+        title: "Baseline profile",
+        subjectLabel: "",
+        createdAt: new Date().toISOString(),
+        unread: true,
+        openTarget: { type: "profile_matrix", profileId },
+      };
+      markDocVaultRead(item.id);
+      setModalItem(item);
+    };
+    window.addEventListener(BASELINE_AUTO_OPEN_EVENT, onAutoOpen);
+    return () => window.removeEventListener(BASELINE_AUTO_OPEN_EVENT, onAutoOpen);
+  }, [vault?.items]);
 
   return (
     <WorkspaceDocVaultModal item={modalItem} onClose={() => setModalItem(null)} />

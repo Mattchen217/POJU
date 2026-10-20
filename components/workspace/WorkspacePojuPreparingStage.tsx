@@ -20,6 +20,12 @@ import {
   waitRemainingMinSpline,
 } from "@/lib/poju/preparing-spline-timing";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { DocVaultIds } from "@/lib/workspace/doc-vault-index";
+import { markDocVaultUnread } from "@/lib/workspace/doc-vault-unread";
+import {
+  notifyDocVaultUpdated,
+  requestBaselineAutoOpen,
+} from "@/lib/workspace/doc-vault-types";
 
 const EXIT_MS = 700;
 
@@ -73,10 +79,14 @@ export function WorkspacePojuPreparingStage() {
         setPhase("exiting");
         /* Open rail as prepare fades out — avoids resizing the Spline canvas mid-scene. */
         openRight();
+        markDocVaultUnread(DocVaultIds.matrix(profileId), "foundation");
+        notifyDocVaultUpdated();
         await new Promise((r) => setTimeout(r, EXIT_MS));
         if (ac.signal.aborted) return;
         setShowFlash(false);
         setPhase("chat");
+        /* Center already has welcome; popup covers it until user closes → vault keeps the doc. */
+        requestBaselineAutoOpen(profileId);
       } catch (e) {
         if (ac.signal.aborted) return;
         if (e instanceof DOMException && e.name === "AbortError") return;
