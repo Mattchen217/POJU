@@ -162,6 +162,33 @@
   white-space: nowrap;
 }
 
+/* Baseline: birth on top-left of copy; created time bottom-right — no repeated title */
+.workspace-doc-vault-card--baseline {
+  align-items: flex-start;
+}
+
+.workspace-doc-vault-card--baseline .workspace-doc-vault-card__thumb {
+  margin-top: 2px;
+}
+
+.workspace-doc-vault-card--baseline .workspace-doc-vault-card__copy {
+  gap: 4px;
+}
+
+.workspace-doc-vault-card--baseline .workspace-doc-vault-card__title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.workspace-doc-vault-card__meta {
+  align-self: flex-end;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ws-text-muted, #71717a);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Unread on folded thumb (gold Eastern OS cue) */
 .workspace-doc-vault-card__unread.archive-unread-dot,
 .workspace-doc-vault-card__unread {

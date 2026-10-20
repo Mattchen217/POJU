@@ -56,7 +56,10 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
   const profileById = new Map(profiles.map((p) => [p.profile_id, p]));
 
   for (const summary of profiles) {
-    const subject = profileSubjectLabel(summary.display_name, summary.birth_date);
+    // Birth line for list cards — display_name already encodes date · time · gender.
+    const subject =
+      summary.display_name.trim() ||
+      profileSubjectLabel(summary.display_name, summary.birth_date);
     const created = summary.created_at;
 
     const mid = matrixDocId(summary.profile_id);

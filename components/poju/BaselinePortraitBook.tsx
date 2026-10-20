@@ -6,7 +6,14 @@
  * Delivery (Pivot P1–P7) stays on DeliveryBookStage + DeliveryShelfView unchanged.
  */
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
@@ -53,6 +60,7 @@ export function BaselinePortraitBook({
   const [pageIndex, setPageIndex] = useState(0);
   const pageCount = BASELINE_MATRIX_BLOCKS.length;
   const activeBlock = BASELINE_MATRIX_BLOCKS[pageIndex]?.id ?? "calibration";
+  const rightViewportRef = useRef<HTMLDivElement | null>(null);
 
   const setPage = useCallback(
     (next: number) => {
@@ -63,6 +71,13 @@ export function BaselinePortraitBook({
 
   const goPrev = useCallback(() => setPage(pageIndex - 1), [pageIndex, setPage]);
   const goNext = useCallback(() => setPage(pageIndex + 1), [pageIndex, setPage]);
+
+  /** Page turn → right pane starts at the top. */
+  useLayoutEffect(() => {
+    const el = rightViewportRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+  }, [pageIndex]);
 
   const title = coverTitle?.trim() || tPortrait("title") || tMatrix(locale, "main_title");
   const subtitle = tPortrait("subtitle") || tMatrix(locale, "main_description");
@@ -211,6 +226,7 @@ export function BaselinePortraitBook({
               <WorkspaceScrollArea
                 className="delivery-book-stage__right-scroll"
                 fixedThumbPx={48}
+                viewportRef={rightViewportRef}
               >
                 <header className="delivery-book-stage__page-chrome">
                   <p className="delivery-book-stage__page-tag">

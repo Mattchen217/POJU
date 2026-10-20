@@ -18,6 +18,21 @@ function GlyphForKind({ kind }: { kind: DocVaultKind }) {
   return <EnergyReportGlyph className="workspace-doc-vault-card__glyph" />;
 }
 
+function formatCreatedAt(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  } catch {
+    return "";
+  }
+}
+
 function formatDateYmd(iso: string): string {
   try {
     const d = new Date(iso);
@@ -31,7 +46,7 @@ function formatDateYmd(iso: string): string {
   }
 }
 
-/** Expanded row: birth (baseline) or title snippet + Created time (SoT 15). */
+/** Expanded row for non-baseline kinds: title snippet + Created date. */
 function subtitleForItem(
   item: DocVaultItem,
   createdLabel: string,
@@ -39,12 +54,6 @@ function subtitleForItem(
   const birthOrSubject = item.subjectLabel.trim();
   const date = formatDateYmd(item.createdAt);
   const created = date ? `${createdLabel} ${date}` : "";
-  if (item.kind === "energy_matrix") {
-    const parts = [birthOrSubject || item.title, created].filter(Boolean);
-    const full = parts.join(" · ");
-    return { short: full, full };
-  }
-  // Delivery / 30-day: title snippet + Created (SoT 15)
   const titleBit = item.title.trim() || birthOrSubject;
   const parts = [titleBit, created].filter(Boolean);
   const full = parts.join(" · ");
@@ -62,13 +71,20 @@ type Props = {
 export function WorkspaceDocVaultCard({ item, locale, onOpen }: Props) {
   void locale;
   const t = useTranslations("workspace.docVault");
-  const sub = subtitleForItem(item, t("created"));
-  const ariaBits = [item.title, sub.full, item.unread ? "unread" : ""].filter(Boolean);
+  const isBaseline = item.kind === "energy_matrix";
+  const birthLine = item.subjectLabel.trim() || item.title.trim();
+  const createdAt = formatCreatedAt(item.createdAt);
+  const sub = isBaseline ? null : subtitleForItem(item, t("created"));
+  const ariaBits = isBaseline
+    ? [birthLine, createdAt, item.unread ? "unread" : ""].filter(Boolean)
+    : [item.title, sub?.full, item.unread ? "unread" : ""].filter(Boolean);
 
   return (
     <button
       type="button"
-      className={`workspace-doc-vault-card${item.unread ? " is-unread" : ""}`}
+      className={`workspace-doc-vault-card${isBaseline ? " workspace-doc-vault-card--baseline" : ""}${
+        item.unread ? " is-unread" : ""
+      }`}
       onClick={onOpen}
       aria-label={ariaBits.join(". ")}
     >
@@ -82,16 +98,29 @@ export function WorkspaceDocVaultCard({ item, locale, onOpen }: Props) {
           <ArchiveUnreadDot className="workspace-doc-vault-card__unread" />
         ) : null}
       </span>
-      <span className="workspace-doc-vault-card__copy">
-        <span className="workspace-doc-vault-card__title" title={item.title}>
-          {item.title}
-        </span>
-        {sub.short ? (
-          <span className="workspace-doc-vault-card__sub" title={sub.full}>
-            {sub.short}
+      {isBaseline ? (
+        <span className="workspace-doc-vault-card__copy">
+          <span className="workspace-doc-vault-card__title" title={birthLine}>
+            {birthLine}
           </span>
-        ) : null}
-      </span>
+          {createdAt ? (
+            <span className="workspace-doc-vault-card__meta" title={createdAt}>
+              {createdAt}
+            </span>
+          ) : null}
+        </span>
+      ) : (
+        <span className="workspace-doc-vault-card__copy">
+          <span className="workspace-doc-vault-card__title" title={item.title}>
+            {item.title}
+          </span>
+          {sub?.short ? (
+            <span className="workspace-doc-vault-card__sub" title={sub.full}>
+              {sub.short}
+            </span>
+          ) : null}
+        </span>
+      )}
     </button>
   );
 }

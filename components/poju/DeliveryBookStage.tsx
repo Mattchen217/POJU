@@ -257,7 +257,7 @@ export function DeliveryBookStage({
   }, []);
 
   /** Page turn → right pane starts at the top. */
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = rightViewportRef.current;
     if (!el) return;
     el.scrollTop = 0;
