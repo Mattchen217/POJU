@@ -3186,10 +3186,10 @@
   outline-offset: 2px;
 }
 
-/* Desktop: uses | birth | title | timeline | menu — four equal content tracks, even gaps */
+/* Desktop: birth | title | timeline | uses | menu — equal gaps; uses stays compact */
 .workspace-poju-card__row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) max-content auto;
   align-items: start;
   column-gap: 20px;
   row-gap: 10px;
@@ -3209,8 +3209,21 @@
 }
 
 .workspace-poju-card__uses {
+  width: max-content;
+  max-width: 4.75rem;
   min-width: 0;
+  align-items: center;
   overflow: visible;
+}
+
+.workspace-poju-card__uses .workspace-poju-card__top {
+  width: auto;
+  justify-content: center;
+}
+
+.workspace-poju-card__uses-label {
+  text-align: center;
+  max-width: 4.75rem;
 }
 
 /* Shared TOP band: same line-height / visual weight across columns */
@@ -3351,14 +3364,11 @@ button.workspace-poju-card__title:hover {
 
 @media (max-width: 720px) {
   .workspace-poju-card__row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) max-content auto;
     grid-template-areas:
-      "uses identity menu"
+      "identity uses menu"
       "title title timeline";
-  }
-
-  .workspace-poju-card__uses {
-    grid-area: uses;
+    column-gap: 16px;
   }
 
   .workspace-poju-card__identity {
@@ -3377,6 +3387,11 @@ button.workspace-poju-card__title:hover {
     min-width: 7rem;
     max-width: 9rem;
     justify-self: end;
+  }
+
+  .workspace-poju-card__uses {
+    grid-area: uses;
+    max-width: 4.75rem;
   }
 
   .workspace-poju-card__menu {

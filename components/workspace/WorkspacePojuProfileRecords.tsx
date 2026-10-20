@@ -472,18 +472,6 @@ export function WorkspacePojuProfileRecords({
                 }}
               >
                 <div className="workspace-poju-card__row">
-                  <div
-                    className="workspace-poju-card__col workspace-poju-card__uses"
-                    title={tBirth("decisionDialogues")}
-                  >
-                    <span className="workspace-poju-card__top workspace-poju-card__uses-count">
-                      {totalUses}
-                    </span>
-                    <span className="workspace-poju-card__bottom workspace-poju-card__uses-label">
-                      {tBirth("totalUses")}
-                    </span>
-                  </div>
-
                   <div className="workspace-poju-card__col workspace-poju-card__identity">
                     <span className="workspace-poju-card__top workspace-poju-card__birth" title={birthTitle}>
                       {birthTitle}
@@ -529,6 +517,18 @@ export function WorkspacePojuProfileRecords({
                     </div>
                     <span className="workspace-poju-card__bottom workspace-poju-card__chrome-label">
                       {tBirth("stageProgress")}
+                    </span>
+                  </div>
+
+                  <div
+                    className="workspace-poju-card__col workspace-poju-card__uses"
+                    title={tBirth("decisionDialogues")}
+                  >
+                    <span className="workspace-poju-card__top workspace-poju-card__uses-count">
+                      {totalUses}
+                    </span>
+                    <span className="workspace-poju-card__bottom workspace-poju-card__uses-label">
+                      {tBirth("totalUses")}
                     </span>
                   </div>
 
