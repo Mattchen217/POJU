@@ -3035,7 +3035,7 @@
   },
   "portrait": {
     "title": "Personal baseline profile",
-    "close": "Close & start chat",
+    "close": "Close",
     "openFromVault": "Open baseline profile",
     "subtitle": "Case structure for this decision session"
   }

@@ -3640,6 +3640,26 @@
   box-sizing: border-box;
 }
 
+/* Baseline left rail: no privacy foot; TOC shows all 5 titles without scroll */
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__toc {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__toc-list {
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__toc-item {
+  padding: 8px 8px;
+}
+
+.delivery-book-stage[data-baseline="1"] .delivery-book-stage__left-foot {
+  display: none;
+}
+
 .delivery-book-stage[data-baseline="1"] .delivery-book-stage__shell,
 .delivery-book-stage[data-baseline="1"] .delivery-book-stage__card {
   flex: 1 1 auto;

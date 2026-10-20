@@ -1,10 +1,11 @@
 /* Phase-4 dual-pane delivery book — Eastern OS gold/black (workspace tokens) */
 
-/* Shared reader frame (SoT 15): baseline portrait + phase-4 delivery + vault sheet.
- * Height: enough for left TOC to show 5 page titles fully — not near-fullscreen. */
+/* Shared reader frame (SoT 15): baseline portrait + phase-4 delivery + vault sheet. */
 :root {
   --ws-doc-reader-w: min(960px, 94vw);
   --ws-doc-reader-h: min(640px, 76vh);
+  /* Baseline modal alone — taller so 5 TOC titles + content breathe */
+  --ws-baseline-reader-h: min(780px, 88vh);
   /* Left title/TOC rail — keep compact so right content gets the width */
   --ws-doc-toc-w: minmax(188px, 228px);
 }

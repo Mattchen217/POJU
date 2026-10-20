@@ -36,10 +36,6 @@ export type BaselinePortraitBookProps = {
   className?: string;
 };
 
-function keepEasternOsTogether(text: string): string {
-  return text.replace(/Eastern OS/g, "Eastern\u00a0OS");
-}
-
 export function BaselinePortraitBook({
   payload,
   locale,
@@ -174,87 +170,41 @@ export function BaselinePortraitBook({
                   <span className="delivery-book-stage__toc-head-rule" aria-hidden />
                   {tShelf("toc_thumb")}
                 </div>
-                <WorkspaceScrollArea
-                  className="delivery-book-stage__toc-scroll"
-                  fixedThumbPx={48}
-                >
-                  <ol className="delivery-book-stage__toc-list">
-                    {BASELINE_MATRIX_BLOCKS.map((block, i) => {
-                      const activeHere = block.id === activeBlock;
-                      const label = tm(`blocks.${block.labelKey}`);
-                      return (
-                        <li key={block.id}>
-                          <button
-                            type="button"
-                            className={
-                              activeHere
-                                ? "delivery-book-stage__toc-item delivery-book-stage__toc-item--active"
-                                : "delivery-book-stage__toc-item delivery-book-stage__toc-item--ready"
-                            }
-                            onClick={() => setPage(i)}
-                            aria-label={label}
-                            aria-current={activeHere ? "page" : undefined}
-                          >
-                            <span className="delivery-book-stage__toc-num">
-                              {String(i + 1).padStart(2, "0")}
+                {/* No scroll — all 5 baseline page titles stay visible */}
+                <ol className="delivery-book-stage__toc-list">
+                  {BASELINE_MATRIX_BLOCKS.map((block, i) => {
+                    const activeHere = block.id === activeBlock;
+                    const label = tm(`blocks.${block.labelKey}`);
+                    return (
+                      <li key={block.id}>
+                        <button
+                          type="button"
+                          className={
+                            activeHere
+                              ? "delivery-book-stage__toc-item delivery-book-stage__toc-item--active"
+                              : "delivery-book-stage__toc-item delivery-book-stage__toc-item--ready"
+                          }
+                          onClick={() => setPage(i)}
+                          aria-label={label}
+                          aria-current={activeHere ? "page" : undefined}
+                        >
+                          <span className="delivery-book-stage__toc-num">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <span className="delivery-book-stage__toc-text">
+                            <span className="delivery-book-stage__toc-tag">
+                              B{i + 1}
                             </span>
-                            <span className="delivery-book-stage__toc-text">
-                              <span className="delivery-book-stage__toc-tag">
-                                B{i + 1}
-                              </span>
-                              <span className="delivery-book-stage__toc-title">
-                                {label}
-                              </span>
+                            <span className="delivery-book-stage__toc-title">
+                              {label}
                             </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </WorkspaceScrollArea>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
               </nav>
-
-              <div className="delivery-book-stage__left-foot">
-                <WorkspaceScrollArea
-                  className="delivery-book-stage__left-foot-scroll"
-                  fixedThumbPx={48}
-                >
-                  <div className="delivery-book-stage__left-foot-inner">
-                    <div className="delivery-book-stage__left-foot-row">
-                      <span
-                        className="material-symbols-outlined delivery-book-stage__left-foot-icon"
-                        aria-hidden
-                      >
-                        lock
-                      </span>
-                      <p className="delivery-book-stage__left-foot-copy">
-                        <span className="delivery-book-stage__left-foot-label">
-                          {tShelf("privacy_label")}
-                        </span>
-                        <span className="delivery-book-stage__left-foot-body">
-                          {keepEasternOsTogether(tShelf("privacy_body"))}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="delivery-book-stage__left-foot-row">
-                      <span
-                        className="material-symbols-outlined delivery-book-stage__left-foot-icon"
-                        aria-hidden
-                      >
-                        balance
-                      </span>
-                      <p className="delivery-book-stage__left-foot-copy">
-                        <span className="delivery-book-stage__left-foot-label">
-                          {tShelf("disclaimer_label")}
-                        </span>
-                        <span className="delivery-book-stage__left-foot-body">
-                          {keepEasternOsTogether(tShelf("disclaimer_body"))}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </WorkspaceScrollArea>
-              </div>
             </aside>
 
             <section className="delivery-book-stage__right">

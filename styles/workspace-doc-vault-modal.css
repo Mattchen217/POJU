@@ -78,19 +78,29 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Baseline: same size as default close, gold fill for visibility */
+/* Baseline: compact close, gold fill for visibility */
 .workspace-doc-vault-modal__close--primary {
-  border: 1px solid rgba(242, 202, 80, 0.65);
+  border: 1px solid rgba(242, 202, 80, 0.6);
   background: linear-gradient(180deg, #f0d78c 0%, #d4af37 55%, #b8922a 100%);
   color: #14110a;
-  font-weight: 650;
-  box-shadow: 0 2px 10px rgba(212, 175, 55, 0.28);
+  font-weight: 600;
+  font-size: 0.72rem;
+  padding: 4px 9px;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(212, 175, 55, 0.22);
+  line-height: 1.25;
 }
 
 .workspace-doc-vault-modal__close--primary:hover {
   background: linear-gradient(180deg, #f7e4a8 0%, #e0c04a 55%, #c9a227 100%);
-  border-color: rgba(242, 202, 80, 0.9);
+  border-color: rgba(242, 202, 80, 0.85);
   color: #0d0b07;
+}
+
+/* Baseline portrait sheet — taller than shared delivery reader frame */
+.workspace-doc-vault-modal__sheet:has([data-baseline="1"]) {
+  height: var(--ws-baseline-reader-h, min(780px, 88vh));
+  max-height: 88vh;
 }
 
 .workspace-doc-vault-modal__body {
