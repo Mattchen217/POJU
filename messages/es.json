@@ -1502,7 +1502,7 @@
       "dominant_vector": "Vector dominante",
       "deficit": "Déficit",
       "key_gap": "Brecha clave",
-      "macro_lifecycle": "Campo Macro-Ciclo de Vida",
+      "macro_lifecycle": "Línea de etapa vital",
       "macro_lifecycle_em": "dayun",
       "timeline_matrix": "Matriz de Línea de Tiempo",
       "dayun_you_are_here": "Estás aquí",
@@ -1535,7 +1535,7 @@
       "fact_dayun_em": "fase de 10 años",
       "fact_year_sign": "Animal del año",
       "fact_year_sign_em": "señal de tono",
-      "fact_shensha": "Marcas de energía",
+      "fact_shensha": "Marcas estructurales",
       "fact_shensha_em": "destacados del mapa",
       "fact_shensha_count": "{count} destacados",
       "fact_onset": "Inicio de fase",
@@ -1562,8 +1562,9 @@
       "layers_em": "capas de mecanismo",
       "welcome": {
         "title": "Bienvenido a Eastern OS",
-        "intro": "Eastern OS basa el diálogo de decisión en la estructura de caso calibrada desde tus coordenadas de nacimiento.\nGuía clara para el bloqueo que enfrentas ahora.",
-        "cta": "Escribe abajo el dilema que aún no puedes decidir y envíalo.\nTu primera pregunta abre la sesión de decisión.",
+        "body": "Eastern OS usa la estructura base calibrada con tus coordenadas de nacimiento para sostener este diálogo de decisión. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso.",
+        "guide": "Escribe abajo el dilema que aún no puedes decidir, luego envía. Tu primera pregunta abre la sesión de decisión.",
+        "note": "Cada respuesta hace un razonamiento profundo según lo que hace falta ahora, así que puede tardar un poco—espera con paciencia. Responde con cuidado las preguntas de Eastern OS y revisa lo que escribe; eso importa para entregar después un informe de decisión de alta calidad y ejecutable.",
         "loading": "Preparando tu sesión…"
       },
       "hero_calendar": "Calendario",
@@ -2859,7 +2860,7 @@
     "deliveryShelf": {
       "shelf_label": "Páginas del informe",
       "slots_hint": "{n} ranuras de página",
-      "long_wait_lead": "Entrega personalizada en curso: docenas de cálculos a partir de tu perfil energético…",
+      "long_wait_lead": "Entrega personalizada en curso: docenas de cálculos a partir de tu perfil base…",
       "long_wait_leave": "El informe completo tarda unos 20-30 minutos.\nPuedes quedarte a ver el avance página a página, o salir y volver más tarde a los resultados finales.",
       "writing_page": "Escribiendo la página {n}… espera",
       "toc_thumb": "Contenido",

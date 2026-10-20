@@ -1,0 +1,39 @@
+=== zh.json ===
+106:      "matrixTitle": "个人基础画像"
+159:      "matrixTitle": "个人基础画像",
+166:      "matrixIconLabel": "个人基础画像",
+222:      "long_wait_lead": "深度定制交付中：基于你的基础画像，进行数十次推演与破局测算…",
+1996:    "main_title": "个人基础画像",
+2002:    "element_map_title": "五行结构分布",
+2006:      "block_2": "核心结构图谱",
+2029:      "elemental_signature": "五行结构谱",
+2030:      "elemental_signature_em": "五行",
+2036:      "with_surplus": "，结构以",
+2048:      "macro_lifecycle": "生命阶段线",
+2049:      "macro_lifecycle_em": "时间线",
+2081:      "fact_shensha": "结构标记",
+2082:      "fact_shensha_em": "盘面亮点",
+2083:      "fact_shensha_count": "{count} 项亮点",
+
+=== en.json ===
+106:      "matrixTitle": "Personal baseline profile"
+159:      "matrixTitle": "Personal baseline profile",
+166:      "matrixIconLabel": "Personal baseline profile",
+222:      "long_wait_lead": "Deeply customized delivery in progress: dozens of simulations from your baseline profile…",
+1996:    "main_title": "Personal baseline profile",
+2002:    "element_map_title": "Elemental Pillar Map",
+2006:      "block_2": "Core structure map",
+2029:      "elemental_signature": "Elemental Signature",
+2030:      "elemental_signature_em": "wuxing",
+2036:      "with_surplus": ", with ",
+2048:      "macro_lifecycle": "Life-phase line",
+2049:      "macro_lifecycle_em": "timeline",
+2081:      "fact_shensha": "Structure markers",
+2082:      "fact_shensha_em": "chart highlights",
+2083:      "fact_shensha_count": "{count} highlights",
+
+=== shensha-i18n-map.json ===
+276:    "fortune_buffer": {
+290:          "label": "余量缓冲",
+462:    "social_magnetism": {
+476:          "label": "社交感应",

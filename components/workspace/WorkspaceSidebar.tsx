@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useAppDialog } from "@/components/ui/app-dialog";
@@ -260,9 +268,11 @@ function HistoryItemRow({
   );
 }
 
-/** Custom left-rail scrollbar for past sessions only. */
+/** Custom left-rail scrollbar for past sessions only (scroll stays inside history). */
 function PastSessionsScroll({ children }: { children: ReactNode }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startY: number; startScroll: number } | null>(null);
   const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false });
 
   const syncThumb = useCallback(() => {
@@ -270,7 +280,7 @@ function PastSessionsScroll({ children }: { children: ReactNode }) {
     if (!el) return;
     const { scrollTop, scrollHeight, clientHeight } = el;
     const overflow = scrollHeight - clientHeight;
-    if (overflow <= 4) {
+    if (overflow <= 4 || clientHeight <= 0) {
       setThumb({ top: 0, height: 0, visible: false });
       return;
     }
@@ -295,16 +305,84 @@ function PastSessionsScroll({ children }: { children: ReactNode }) {
     };
   }, [syncThumb, children]);
 
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      const el = viewportRef.current;
+      if (!drag || !el) return;
+      const overflow = el.scrollHeight - el.clientHeight;
+      if (overflow <= 4) return;
+      const trackH = el.clientHeight;
+      const thumbH = thumb.height || 14;
+      const maxTop = Math.max(0, trackH - thumbH);
+      if (maxTop <= 0) return;
+      const deltaY = e.clientY - drag.startY;
+      el.scrollTop = Math.min(
+        overflow,
+        Math.max(0, drag.startScroll + (deltaY / maxTop) * overflow),
+      );
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      document.body.style.removeProperty("user-select");
+      document.body.style.removeProperty("cursor");
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onUp);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onUp);
+    };
+  }, [thumb.height]);
+
+  function startThumbDrag(e: ReactPointerEvent) {
+    const el = viewportRef.current;
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragRef.current = { startY: e.clientY, startScroll: el.scrollTop };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
+  }
+
+  function onRailPointerDown(e: ReactPointerEvent) {
+    const el = viewportRef.current;
+    const rail = railRef.current;
+    if (!el || !rail) return;
+    if ((e.target as HTMLElement).closest(".workspace-sidebar__past-thumb")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = rail.getBoundingClientRect();
+    const overflow = el.scrollHeight - el.clientHeight;
+    if (overflow <= 4) return;
+    const thumbH = thumb.height || 14;
+    const y = e.clientY - rect.top - thumbH / 2;
+    const maxTop = Math.max(0, rect.height - thumbH);
+    const ratio = maxTop <= 0 ? 0 : Math.min(1, Math.max(0, y / maxTop));
+    el.scrollTop = ratio * overflow;
+    dragRef.current = { startY: e.clientY, startScroll: el.scrollTop };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
+  }
+
   return (
     <div className="workspace-sidebar__past-scroll">
       <div ref={viewportRef} className="workspace-sidebar__past-list">
         {children}
       </div>
       {thumb.visible ? (
-        <div className="workspace-sidebar__past-rail" aria-hidden>
+        <div
+          ref={railRef}
+          className="workspace-sidebar__past-rail"
+          aria-hidden
+          onPointerDown={onRailPointerDown}
+        >
           <div
             className="workspace-sidebar__past-thumb"
             style={{ height: thumb.height, transform: `translateY(${thumb.top}px)` }}
+            onPointerDown={startThumbDrag}
           />
         </div>
       ) : null}

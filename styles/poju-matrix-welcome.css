@@ -23,7 +23,7 @@
   background: rgba(224, 226, 232, 0.16);
 }
 
-/* Gold metal glyph only — no disc (same language as chat .pchat__ai-avatar) */
+/* Atmos concentric-dot avatar — same motif as chat bubbles, larger on welcome */
 .pmw__mark {
   display: flex;
   align-items: center;
@@ -37,9 +37,10 @@
   box-shadow: none;
 }
 
+/* Bubble avatar: 2.5rem; welcome: 4rem (larger, same AtmosThinkingAvatar) */
 .pmw__mark-avatar.pchat__ai-avatar {
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 4rem;
+  height: 4rem;
 }
 
 .pmw__mark--pulse .pmw__mark-avatar {
@@ -79,11 +80,11 @@
 }
 
 /*
- * Copy width = list column (≈100%). Former max-width:40rem (~640px) forced each
+ * Copy width = list column (100%). Former max-width:40rem (~640px) forced each
  * authored \n line to wrap again → 4 visual lines. Keep i18n's two-line breaks.
  */
-.pmw__intro,
-.pmw__cta {
+.pmw__body,
+.pmw__guide {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
@@ -106,19 +107,36 @@
   letter-spacing: normal;
 }
 
-.pmw__intro {
+.pmw__body {
   margin-bottom: 1.35rem;
   color: rgba(232, 228, 244, 0.92);
 }
 
-.pmw__cta {
+.pmw__guide {
   padding: 0;
+  margin-bottom: 1.15rem;
   font-weight: 500;
   color: #fff;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.pmw__note {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--pj-font-sans);
+  font-size: clamp(0.8125rem, 0.9vw + 0.55rem, 0.9375rem);
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: normal;
+  text-align: center;
+  color: rgba(208, 197, 175, 0.78);
+  hyphens: none;
 }
 
 .pmw__loading {
@@ -133,9 +151,18 @@
     margin-top: 2rem;
   }
 
-  .pmw__intro,
-  .pmw__cta {
+  .pmw__mark-avatar.pchat__ai-avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .pmw__body,
+  .pmw__guide {
     font-size: clamp(1.05rem, 3.6vw, 1.2rem);
     line-height: 1.6;
+  }
+
+  .pmw__note {
+    font-size: clamp(0.75rem, 2.8vw, 0.875rem);
   }
 }

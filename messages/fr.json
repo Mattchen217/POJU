@@ -1502,7 +1502,7 @@
       "dominant_vector": "Vecteur dominant",
       "deficit": "Déficit",
       "key_gap": "Lacune clé",
-      "macro_lifecycle": "Champ Macro-Cycle de Vie",
+      "macro_lifecycle": "Ligne de phase de vie",
       "macro_lifecycle_em": "dayun",
       "timeline_matrix": "Matrice Chronologique",
       "dayun_you_are_here": "Vous êtes ici",
@@ -1535,7 +1535,7 @@
       "fact_dayun_em": "phase de 10 ans",
       "fact_year_sign": "Animal de l'année",
       "fact_year_sign_em": "signal de ton",
-      "fact_shensha": "Marqueurs d'énergie",
+      "fact_shensha": "Marqueurs de structure",
       "fact_shensha_em": "points forts du thème",
       "fact_shensha_count": "{count} points forts",
       "fact_onset": "Début de phase",
@@ -1562,8 +1562,9 @@
       "layers_em": "couches de mécanisme",
       "welcome": {
         "title": "Bienvenue sur Eastern OS",
-        "intro": "Eastern OS ancre le dialogue de décision dans la structure de cas calibrée depuis vos coordonnées de naissance.\nGuidance claire pour le blocage que vous vivez.",
-        "cta": "Écrivez ci-dessous le dilemme que vous n'arrivez pas à trancher, puis envoyez.\nVotre première question ouvre la session de décision.",
+        "body": "Eastern OS s’appuie sur la structure de base calibrée à partir de tes coordonnées de naissance pour porter ce dialogue de décision. Sur ce qui te bloque maintenant, on clarifie étape par étape.",
+        "guide": "Écris en bas le dilemme que tu n’arrives pas encore à trancher, puis envoie. Ta première question lance la session de décision.",
+        "note": "Chaque réponse fait un raisonnement profond selon le besoin du moment, donc ça peut prendre un moment—merci d’attendre. Réponds avec soin aux questions d’Eastern OS et vérifie ce qu’il sort ; c’est crucial pour livrer ensuite un rapport de décision de qualité, actionnable.",
         "loading": "Préparation de votre session…"
       },
       "hero_calendar": "Calendrier",
@@ -2859,7 +2860,7 @@
     "deliveryShelf": {
       "shelf_label": "Pages du rapport de livraison",
       "slots_hint": "{n} emplacements de page",
-      "long_wait_lead": "Livraison personnalisée en cours : dizaines de simulations à partir de votre profil énergétique…",
+      "long_wait_lead": "Livraison personnalisée en cours : dizaines de simulations à partir de votre profil de base…",
       "long_wait_leave": "L'analyse complète prend environ 20 à 30 minutes.\nRestez pour suivre la progression page par page, ou quittez et revenez plus tard pour le résultat final.",
       "writing_page": "Rédaction de la page {n}… patiente",
       "toc_thumb": "Sommaire",

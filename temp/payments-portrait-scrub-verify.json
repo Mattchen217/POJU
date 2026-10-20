@@ -1,0 +1,25 @@
+{
+  "source": "D:\\\\POJU\\\\pojulife (Windows dirty, no push)",
+  "zh": {
+    "matrixTitle": "个人基础画像",
+    "main_title": "个人基础画像",
+    "block_2": "核心结构图谱",
+    "elemental_signature": "五行结构谱",
+    "fact_shensha": "结构标记",
+    "macro_lifecycle": "生命阶段线",
+    "element_map_title": "五行结构分布",
+    "long_wait": "深度定制交付中：基于你的基础画像，进行数十次推演与破局测算…"
+  },
+  "en": {
+    "matrixTitle": "Personal baseline profile",
+    "main_title": "Personal baseline profile",
+    "elemental_signature": "Elemental Signature",
+    "fact_shensha": "Structure markers",
+    "macro_lifecycle": "Life-phase line",
+    "long_wait": "Deeply customized delivery in progress: dozens of simulations from your baseline profile…"
+  },
+  "shensha": {
+    "fortune_buffer_zh": "余量缓冲",
+    "social_magnetism_zh": "社交感应"
+  }
+}

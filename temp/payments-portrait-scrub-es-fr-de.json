@@ -1,0 +1,50 @@
+{
+  "source": "D:\\\\POJU\\\\pojulife (Windows dirty, no push)",
+  "note": "ES/FR/DE macro_lifecycle + shensha labels aligned this pass to parallel ZH/EN should-fix",
+  "es": {
+    "matrixTitle": "Perfil base",
+    "main_title": "Perfil base",
+    "block_2": "Mapa de estructura central",
+    "elemental_signature": "Firma Elemental",
+    "fact_shensha": "Marcas estructurales",
+    "macro_lifecycle": "Línea de etapa vital",
+    "long_wait_lead": "Entrega personalizada en curso: docenas de cálculos a partir de tu perfil base…"
+  },
+  "fr": {
+    "matrixTitle": "Profil de base",
+    "main_title": "Profil de base",
+    "block_2": "Carte de structure centrale",
+    "elemental_signature": "Signature Élémentaire",
+    "fact_shensha": "Marqueurs de structure",
+    "macro_lifecycle": "Ligne de phase de vie",
+    "long_wait_lead": "Livraison personnalisée en cours : dizaines de simulations à partir de votre profil de base…"
+  },
+  "de": {
+    "matrixTitle": "Personal baseline profile",
+    "main_title": "Personal baseline profile",
+    "block_2": "Core structure map",
+    "elemental_signature": "Elementare Signatur",
+    "fact_shensha": "Strukturmarker",
+    "macro_lifecycle": "Lebensphasenlinie",
+    "long_wait_lead": "Tief personalisierte Lieferung läuft: Dutzende Simulationen aus deinem Basisprofil…"
+  },
+  "shensha": {
+    "fortune_buffer": {
+      "zh": "余量缓冲",
+      "es": "Amortiguador de remanente",
+      "fr": "Tampon de marge",
+      "de": "Restpuffer"
+    },
+    "social_magnetism": {
+      "zh": "社交感应",
+      "es": "Sensibilidad social",
+      "fr": "Sensibilité sociale",
+      "de": "Soziale Wahrnehmung"
+    }
+  },
+  "chrome_sale_scan": {
+    "es": [],
+    "fr": [],
+    "de": []
+  }
+}

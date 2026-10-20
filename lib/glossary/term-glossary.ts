@@ -528,7 +528,7 @@ const LEGACY_TERM_GLOSSARY: GlossaryConcept[] = [
     surface: "replace",
     forbidden_variants: ["桃花", "Peach Blossom", "Tao Hua", "咸池", "红艳", "Romance Star"],
     ...sg(
-      "interpersonal energy", "情感能量 / 社交磁场", "energía interpersonal", "énergie interpersonnelle", "zwischenmenschliche Energie",
+      "interpersonal energy", "情感能量 / 社交感应", "energía interpersonal", "énergie interpersonnelle", "zwischenmenschliche Energie",
       "A psychological configuration that boosts personal charisma, social attractiveness, and relational receptivity.",
       "一种提升个人魅力、社交吸引力与人际接纳度的心理配置。",
       "Una configuración psicológica que potencia el carisma personal y la atracción social.",

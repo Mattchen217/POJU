@@ -287,19 +287,19 @@
           "gloss": "Ease and downside cushioning"
         },
         "zh": {
-          "label": "福气缓冲",
+          "label": "余量缓冲",
           "gloss": "顺遂与下行风险的缓冲垫"
         },
         "es": {
-          "label": "Amortiguador de Fortuna",
+          "label": "Amortiguador de remanente",
           "gloss": "Holgura y colchón ante caídas"
         },
         "de": {
-          "label": "Glückspuffer",
+          "label": "Restpuffer",
           "gloss": "Leichtigkeit und Abfederung von Risiken"
         },
         "fr": {
-          "label": "Tampon de Fortune",
+          "label": "Tampon de marge",
           "gloss": "Aisance et amortissement des risques"
         }
       }
@@ -473,19 +473,19 @@
           "gloss": "Charm, popularity and network pull"
         },
         "zh": {
-          "label": "社交磁场",
+          "label": "社交感应",
           "gloss": "魅力、人气与人脉吸引力"
         },
         "es": {
-          "label": "Magnetismo Social",
+          "label": "Sensibilidad social",
           "gloss": "Encanto, popularidad y atracción de red"
         },
         "de": {
-          "label": "Soziale Anziehungskraft",
+          "label": "Soziale Wahrnehmung",
           "gloss": "Charme, Beliebtheit und Netzwerk-Sog"
         },
         "fr": {
-          "label": "Magnétisme Social",
+          "label": "Sensibilité sociale",
           "gloss": "Charme, popularité et attraction de réseau"
         }
       }

@@ -219,7 +219,7 @@
     "deliveryShelf": {
       "shelf_label": "Delivery report pages",
       "slots_hint": "{n} page slots",
-      "long_wait_lead": "Deeply customized delivery in progress: dozens of simulations from your energy profile…",
+      "long_wait_lead": "Deeply customized delivery in progress: dozens of simulations from your baseline profile…",
       "long_wait_leave": "Full analysis takes about 20–30 minutes.\nStay to watch page-by-page progress, or leave and return later for the final results.",
       "writing_page": "Writing page {n}… please wait",
       "toc_thumb": "Contents",
@@ -2045,7 +2045,7 @@
       "dominant_vector": "Dominant vector",
       "deficit": "Deficit",
       "key_gap": "Key gap",
-      "macro_lifecycle": "Life-phase field",
+      "macro_lifecycle": "Life-phase line",
       "macro_lifecycle_em": "timeline",
       "timeline_matrix": "Timeline Matrix",
       "dayun_you_are_here": "You are here",
@@ -2078,7 +2078,7 @@
       "fact_dayun_em": "10-year phase",
       "fact_year_sign": "Year animal",
       "fact_year_sign_em": "tone signal",
-      "fact_shensha": "Energy markers",
+      "fact_shensha": "Structure markers",
       "fact_shensha_em": "chart highlights",
       "fact_shensha_count": "{count} highlights",
       "fact_onset": "Phase onset",
@@ -2105,8 +2105,9 @@
       "layers_em": "mechanism layers",
       "welcome": {
         "title": "Welcome to Eastern OS",
-        "intro": "Eastern OS grounds your decision dialogue in the case structure calibrated from your birth coordinates.\nClear guidance for the stuck place you are facing now.",
-        "cta": "Write the dilemma you cannot settle yet in the box below, then send.\nYour first question opens the decision session.",
+        "body": "Eastern OS uses the baseline structure calibrated from your birth coordinates to support this decision dialogue. For where you’re stuck right now, we’ll work through it step by step.",
+        "guide": "Type the dilemma you can’t settle yet below, then send. Your first question starts the decision session.",
+        "note": "Each reply runs deep reasoning for what’s needed now, so it can take a moment—please wait. Answer Eastern OS’s questions carefully, and check what it puts out; that matters for a high-quality, actionable decision report later.",
         "loading": "Preparing your session…"
       },
       "hero_calendar": "Calendar lock",
