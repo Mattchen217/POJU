@@ -435,17 +435,6 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
             </div>
           ) : null}
         </div>
-        {item.kind === "energy_matrix" ? (
-          <footer className="workspace-doc-vault-modal__footer">
-            <button
-              type="button"
-              className="workspace-doc-vault-modal__close workspace-doc-vault-modal__close--primary workspace-doc-vault-modal__close--footer"
-              onClick={onClose}
-            >
-              {tPortrait("close")}
-            </button>
-          </footer>
-        ) : null}
       </div>
     </div>,
     document.body,
