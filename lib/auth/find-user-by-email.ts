@@ -10,9 +10,32 @@ export type AuthUserEmailLookup = {
   emailConfirmed: boolean;
 };
 
+type AdminUserRow = {
+  id: string;
+  email?: string | null;
+  email_confirmed_at?: string | null;
+};
+
+function toLookup(user: AdminUserRow, email: string): AuthUserEmailLookup {
+  return {
+    id: user.id,
+    email: user.email ?? email,
+    emailConfirmed: Boolean(user.email_confirmed_at),
+  };
+}
+
+function matchEmail(users: AdminUserRow[] | undefined, email: string): AdminUserRow | null {
+  if (!users?.length) return null;
+  return users.find((u) => normalizeEmail(u.email ?? "") === email) ?? null;
+}
+
 /**
- * Admin lookup by email (GoTrue `?email=` filter). Used to distinguish
- * unconfirmed accounts from bad passwords when login returns invalid_credentials.
+ * Admin lookup by email. Used to distinguish unconfirmed accounts from
+ * bad passwords / hard "already registered" when Auth only returns a generic error.
+ *
+ * Important: GoTrue's `?email=` filter is not reliable on all versions — when the
+ * response is OK but the first row is a different user, we must fall through to a
+ * scanned `listUsers` match instead of treating the account as missing.
  */
 export async function findAuthUserByEmail(
   emailRaw: string,
@@ -33,31 +56,31 @@ export async function findAuthUserByEmail(
       },
       cache: "no-store",
     });
-    if (!res.ok) {
-      // Fallback: list a page and match (small projects / older GoTrue).
-      const admin = createSupabaseAdminClient();
-      const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-      if (error || !data?.users) return null;
-      const user = data.users.find((u) => normalizeEmail(u.email ?? "") === email);
-      if (!user) return null;
-      return {
-        id: user.id,
-        email: user.email ?? email,
-        emailConfirmed: Boolean(user.email_confirmed_at),
+
+    if (res.ok) {
+      const json = (await res.json()) as {
+        users?: AdminUserRow[];
+        user?: AdminUserRow;
       };
+      const candidates = Array.isArray(json.users)
+        ? json.users
+        : json.user
+          ? [json.user]
+          : [];
+      const matched = matchEmail(candidates, email);
+      if (matched?.id) return toLookup(matched, email);
+      // Filter ignored / empty — do not trust users[0]; scan below.
     }
-    const json = (await res.json()) as {
-      users?: Array<{ id: string; email?: string; email_confirmed_at?: string | null }>;
-      user?: { id: string; email?: string; email_confirmed_at?: string | null };
-    };
-    const user = json.users?.[0] ?? json.user ?? null;
-    if (!user?.id) return null;
-    if (user.email && normalizeEmail(user.email) !== email) return null;
-    return {
-      id: user.id,
-      email: user.email ?? email,
-      emailConfirmed: Boolean(user.email_confirmed_at),
-    };
+
+    const admin = createSupabaseAdminClient();
+    for (let page = 1; page <= 10; page += 1) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+      if (error || !data?.users?.length) break;
+      const matched = matchEmail(data.users as AdminUserRow[], email);
+      if (matched?.id) return toLookup(matched, email);
+      if (data.users.length < 200) break;
+    }
+    return null;
   } catch {
     return null;
   }

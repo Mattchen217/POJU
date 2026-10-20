@@ -46,7 +46,7 @@ export function AuthErrorText({ code, className, email, nextPath }: Props) {
   return (
     <div className={["auth-error", className].filter(Boolean).join(" ")} role="alert">
       <p className="auth-error__text">{t(key)}</p>
-      {key === "email_not_confirmed" ? (
+      {key === "email_not_confirmed" || key === "email_taken" ? (
         <p className="auth-error__cta">
           <Link href={verifyHref}>{t("finishVerifyCta")}</Link>
         </p>

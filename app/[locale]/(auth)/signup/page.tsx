@@ -56,17 +56,24 @@ function SignupForm() {
           const { ok, data } = await postAuthJson<{
             needs_verification?: boolean;
             existing_unconfirmed?: boolean;
+            email_send_warning?: boolean;
             email?: string;
             error?: string;
           }>("/api/auth/signup", { email, password });
           if (!ok) {
-            // Confirmed duplicate — do not open OTP UI.
+            // Confirmed duplicate / hard failure — do not open OTP UI.
+            // Surface on card so email_taken / send_failed get the verify CTA.
+            setError(data.error ?? "auth_failed");
             return { ok: false, error: data.error ?? "auth_failed" };
           }
           // Confirm-email off: session already established — finish without OTP.
           if (data.needs_verification === false) {
             goNext(router, next);
             return { ok: true, skipOtp: true };
+          }
+          // Unconfirmed resume path may still fail SMTP — open OTP but surface send hint.
+          if (data.email_send_warning) {
+            setError("send_failed");
           }
           return { ok: true };
         }}

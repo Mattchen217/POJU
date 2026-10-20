@@ -8,7 +8,8 @@ import {
   normalizeEmail,
 } from "@/lib/auth/auth-helpers";
 import { findAuthUserByEmail } from "@/lib/auth/find-user-by-email";
-import { createSupabaseAnonClient, isSupabaseConfigured } from "@/lib/auth/supabase";
+import { jsonNeedsVerification, resendSignupOtp } from "@/lib/auth/resume-unconfirmed-signup";
+import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 
 const BodySchema = z.object({
@@ -20,8 +21,9 @@ const BodySchema = z.object({
  * Email + password signup. Supabase sends confirmation OTP/email per dashboard templates.
  * Session is not established until verify-signup (when confirm email is enabled).
  *
- * If the email is already registered but unconfirmed, resends the signup OTP and
- * returns `needs_verification: true` so the client can collect the code on /signup.
+ * Common failure mode: `signUp` creates an unconfirmed user, then Custom SMTP fails.
+ * Retry would normally return `email_taken` and block login — we detect unconfirmed
+ * accounts (and empty-identity “fake” duplicates) and resume verification instead.
  */
 export async function POST(req: Request) {
   try {
@@ -56,34 +58,42 @@ export async function POST(req: Request) {
       );
       console.error("[auth/signup]", error.name, error.message, mapped);
 
+      // signUp often creates the row before SMTP delivery fails — recover.
+      const found = await findAuthUserByEmail(email);
+      if (found && !found.emailConfirmed) {
+        return jsonNeedsVerification(email, { existingUnconfirmed: true });
+      }
+
       if (mapped === "email_taken") {
-        const found = await findAuthUserByEmail(email);
-        if (found && !found.emailConfirmed) {
-          const anon = createSupabaseAnonClient();
-          const { error: resendError } = await anon.auth.resend({
-            type: "signup",
-            email,
-          });
-          if (resendError) {
-            console.error("[auth/signup] resend", resendError.name, resendError.message);
-            const resendMapped = mapAuthErrorCode(
-              resendError.message,
-              (resendError as { code?: string }).code,
-            );
-            if (resendMapped === "rate_limited") {
-              return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
-            }
-          }
-          return NextResponse.json({
-            ok: true,
-            needs_verification: true,
-            existing_unconfirmed: true,
-            email,
+        if (found?.emailConfirmed) {
+          return NextResponse.json({ ok: false, error: "email_taken" }, { status: 400 });
+        }
+        // Lookup missed (or race): still try resend so half-registered users can continue.
+        const resend = await resendSignupOtp(email);
+        if (resend === "rate_limited") {
+          return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+        }
+        if (resend === "ok") {
+          return jsonNeedsVerification(email, {
+            existingUnconfirmed: true,
+            resend: "ok",
           });
         }
+        return NextResponse.json({ ok: false, error: "email_taken" }, { status: 400 });
       }
 
       return NextResponse.json({ ok: false, error: mapped }, { status: 400 });
+    }
+
+    // Supabase anti-enumeration: existing email may return a user with empty identities
+    // and no session — no email is sent unless we explicitly resend.
+    const identities = data.user?.identities ?? [];
+    if (data.user && identities.length === 0 && !data.session) {
+      const found = await findAuthUserByEmail(email);
+      if (found?.emailConfirmed) {
+        return NextResponse.json({ ok: false, error: "email_taken" }, { status: 400 });
+      }
+      return jsonNeedsVerification(email, { existingUnconfirmed: true });
     }
 
     // When email confirm is on, session is null until OTP/link confirmed.

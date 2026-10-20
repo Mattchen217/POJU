@@ -24,8 +24,9 @@ function VerifyForm() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [resendLeft, setResendLeft] = useState(mode === "signup" ? 60 : 0);
+  const [resendLeft, setResendLeft] = useState(0);
   const inFlight = useRef(false);
+  const autoSent = useRef(false);
 
   useEffect(() => {
     if (emailParam) setEmail(emailParam);
@@ -68,6 +69,20 @@ function VerifyForm() {
     }
     setResendLeft(60);
   }
+
+  // Half-registered users arriving from login/signup errors need a fresh OTP.
+  useEffect(() => {
+    if (mode !== "signup" || !emailParam || autoSent.current) return;
+    autoSent.current = true;
+    void (async () => {
+      const { ok, data } = await postAuthJson("/api/auth/resend-signup", { email: emailParam });
+      if (!ok) {
+        setError(data.error ?? "send_failed");
+        return;
+      }
+      setResendLeft(60);
+    })();
+  }, [mode, emailParam]);
 
   return (
     <AuthCard

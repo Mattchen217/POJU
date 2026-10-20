@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { EmailSchema, normalizeEmail } from "@/lib/auth/auth-helpers";
 import { assertOtpSendAllowed, clientIpFromRequest } from "@/lib/auth/otp-rate-limit";
-import { createSupabaseAnonClient, isSupabaseConfigured } from "@/lib/auth/supabase";
+import { resendSignupOtp } from "@/lib/auth/resume-unconfirmed-signup";
+import { isSupabaseConfigured } from "@/lib/auth/supabase";
 
 const BodySchema = z.object({
   email: EmailSchema,
@@ -40,17 +41,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, mocked: true });
     }
 
-    const supabase = createSupabaseAnonClient();
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-    });
-
-    if (error) {
-      // Avoid leaking whether the email exists / already confirmed.
-      console.error("[auth/resend-signup]", error.name, error.message);
+    const result = await resendSignupOtp(email);
+    if (result === "rate_limited") {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited", retry_after_sec: 60 },
+        { status: 429 },
+      );
     }
-
+    // Avoid leaking whether the email exists / already confirmed.
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[auth/resend-signup] unexpected", error instanceof Error ? error.name : "unknown");

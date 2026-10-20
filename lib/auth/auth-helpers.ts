@@ -68,6 +68,17 @@ export function mapAuthErrorCode(message: string | undefined, code?: string | un
 
   const m = (message ?? "").toLowerCase();
   if (!m) return "auth_failed";
+  if (
+    m.includes("error sending") ||
+    m.includes("sending confirmation") ||
+    m.includes("confirmation email") ||
+    m.includes("unable to send") ||
+    m.includes("error_sending") ||
+    (c === "unexpected_failure" &&
+      (m.includes("send") || m.includes("email") || m.includes("smtp")))
+  ) {
+    return "send_failed";
+  }
   if (m.includes("email not confirmed") || m.includes("not confirmed") || m.includes("confirm your email")) {
     return "email_not_confirmed";
   }
