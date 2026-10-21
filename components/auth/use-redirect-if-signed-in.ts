@@ -5,7 +5,6 @@ import { useLocale } from "next-intl";
 
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
-import { getUserWithTransientRetry } from "@/lib/auth/get-user-with-retry";
 import {
   localizeHref,
   parseUiLocale,
@@ -68,8 +67,10 @@ function isEmailConfirmed(user: {
  * (client session vs cookie mismatch), do not hard-nav again — stops the
  * login↔/app↔login jump loop.
  *
- * Only auto-leave on a confirmed getUser() or a real SIGNED_IN event —
- * not INITIAL_SESSION / TOKEN_REFRESHED (those caused login flash → home).
+ * Already-signed-in users are handled by middleware before paint.
+ * Client only leaves on a real SIGNED_IN (OAuth / password / OTP just completed) —
+ * not INITIAL_SESSION, TOKEN_REFRESHED, or a mount-time getUser() (those caused
+ * login page flash → /app → bounce back to login).
  * Unconfirmed email sessions must stay on signup so the OTP modal can finish.
  */
 export function useRedirectIfSignedIn(
@@ -100,17 +101,6 @@ export function useRedirectIfSignedIn(
       }
       window.location.replace(target);
     };
-
-    void getUserWithTransientRetry(supabase)
-      .then(({ data }) => {
-        if (!data.user) return;
-        // Half-registered users must finish email OTP on /signup — do not bounce.
-        if (!isEmailConfirmed(data.user)) return;
-        go();
-      })
-      .catch(() => {
-        /* transient auth fetch exhausted - stay on auth page */
-      });
 
     const {
       data: { subscription },

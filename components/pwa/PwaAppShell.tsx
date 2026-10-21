@@ -5,13 +5,19 @@ import { usePathname } from "next/navigation";
 
 import { PWABottomNav } from "@/components/pwa/PWABottomNav";
 import { PwaStandaloneWorkspaceRedirect } from "@/components/pwa/PwaStandaloneWorkspaceRedirect";
-import { isHomeRoute, isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-locale";
+import {
+  isAuthRoute,
+  isHomeRoute,
+  isWorkspaceAppRoute,
+} from "@/lib/i18n/pathname-without-locale";
 import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
 
 export function PwaAppShell({ children }: { children: ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);
   const pathname = usePathname();
-  const hideBottomNav = isWorkspaceAppRoute(pathname) || isHomeRoute(pathname);
+  // Auth pages have their own shell — bottom nav flashing in causes a visible jump.
+  const hideBottomNav =
+    isWorkspaceAppRoute(pathname) || isHomeRoute(pathname) || isAuthRoute(pathname);
 
   useEffect(() => {
     function syncFromDom() {
