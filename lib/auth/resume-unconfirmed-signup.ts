@@ -21,7 +21,7 @@ async function syncSignupLangMetadata(email: string, lang?: AuthLocale): Promise
   if (!found) return;
   const admin = createSupabaseAdminClient();
   const { error } = await admin.auth.admin.updateUserById(found.id, {
-    user_metadata: { lang },
+    user_metadata: { lang, locale: lang },
   });
   if (error) {
     console.error("[auth/resend-signup-otp] metadata", error.name, error.message);

@@ -40,8 +40,9 @@ Put this in the **Subject** field only (not in Body):
 
 ### Confirm sign up — Body
 
-Use a Token card with `user-select: all` for easy copy. Email HTML cannot run JS — no “copy button” script is needed.  
-App OTP inputs use `autocomplete="one-time-code"` so iOS/Android can offer keyboard autofill from Mail.
+- Show `{{ .Token }}` only (no “Confirm email address” link as primary CTA).
+- Branch on `{{ .Data.lang }}` (`zh` \| `en` \| `es` \| `fr`). App also sets `locale` as an alias.
+- **Do not** promise “double-click / long-press to copy” in the email — most clients (Gmail etc.) strip `user-select` and block clipboard JS. Users select the digits manually, or use mobile keyboard autofill on the website (`autocomplete="one-time-code"`).
 
 Until Confirm email + SMTP + Token template are live, signup “send code” will not match the in-app OTP UI.
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { EmailSchema, normalizeEmail } from "@/lib/auth/auth-helpers";
-import { AuthLocaleSchema, normalizeAuthLocale } from "@/lib/auth/auth-locale";
+import { AuthLocaleSchema, resolveAuthLocale } from "@/lib/auth/auth-locale";
 import { assertOtpSendAllowed, clientIpFromRequest } from "@/lib/auth/otp-rate-limit";
 import { resendSignupOtp } from "@/lib/auth/resume-unconfirmed-signup";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     const email = normalizeEmail(parsed.data.email);
-    const lang = parsed.data.locale ? normalizeAuthLocale(parsed.data.locale) : undefined;
+    const lang = resolveAuthLocale(req, parsed.data.locale);
     const ip = clientIpFromRequest(req);
     const rate = await assertOtpSendAllowed(email, ip);
     if (!rate.ok) {

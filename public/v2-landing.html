@@ -3932,13 +3932,21 @@ const BUILT_COPY = {
               zh: '中文',
             };
             const UI_LOCALE_STORAGE_KEY = 'poju-marketing-locale';
+
+            function persistUiLocale(code) {
+              try { rootWin.localStorage.setItem(UI_LOCALE_STORAGE_KEY, code); } catch (_) {}
+              try {
+                const maxAge = 60 * 60 * 24 * 365;
+                rootWin.document.cookie = 'NEXT_LOCALE=' + encodeURIComponent(code) + '; Path=/; Max-Age=' + maxAge + '; SameSite=Lax';
+                rootWin.document.cookie = 'poju-marketing-locale=' + encodeURIComponent(code) + '; Path=/; Max-Age=' + maxAge + '; SameSite=Lax';
+              } catch (_) {}
+            }
+
             const rootWin = window.top || window;
             const path = rootWin.location.pathname || '/';
             const match = path.match(/^\/(zh|es|fr)(\/|$)/);
             const currentLocale = match ? match[1] : 'en';
-            try {
-              rootWin.localStorage.setItem(UI_LOCALE_STORAGE_KEY, currentLocale);
-            } catch (_) { /* private mode */ }
+            persistUiLocale(currentLocale);
 
             /** Keep workspace/app links on the landing locale (next-intl as-needed). */
             function localizeAppPath(href) {
@@ -3952,9 +3960,19 @@ const BUILT_COPY = {
               if (url.origin !== rootWin.location.origin) return raw;
               let p = url.pathname || '/';
               p = p.replace(/^\/(zh|es|fr)(?=\/|$)/, '') || '/';
-              if (!(p === '/app' || p.startsWith('/app/'))) return raw;
+              // Keep next-intl locale on app + auth routes (as-needed prefix).
+              const localize =
+                p === '/' ||
+                p === '/app' || p.startsWith('/app/') ||
+                p === '/login' || p.startsWith('/login/') ||
+                p === '/signup' || p.startsWith('/signup/') ||
+                p === '/verify' || p.startsWith('/verify/') ||
+                p === '/forgot-password' || p.startsWith('/forgot-password/') ||
+                p === '/update-password' || p.startsWith('/update-password/') ||
+                p === '/classic' || p.startsWith('/classic/');
+              if (!localize) return raw;
               const localized =
-                currentLocale === 'en' ? p : '/' + currentLocale + p;
+                currentLocale === 'en' ? p : '/' + currentLocale + (p === '/' ? '' : p);
               return localized + url.search + url.hash;
             }
 
@@ -4785,6 +4803,46 @@ const BUILT_COPY = {
                 invalidCode: '验证码无效或已过期，请重试。',
                 checkoutFailed: '无法启动支付，请重试。',
                 placeholder: 'you@example.com'
+              },
+              es: {
+                emailTitle: 'Continuar con el correo',
+                emailSubtitle: 'Te enviaremos un código de 6 dígitos. Sin contraseña.',
+                emailLabel: 'Correo',
+                sendCode: 'Enviar código de verificación',
+                sending: 'Enviando…',
+                otpTitle: 'Introduce el código',
+                otpSubtitle: 'Código enviado a {email}',
+                otpLabel: 'Código de 6 dígitos',
+                verifyContinue: 'Verificar y continuar',
+                verifying: 'Verificando…',
+                changeEmail: 'Cambiar correo',
+                resend: 'Reenviar código',
+                invalidEmail: 'Introduce un correo válido.',
+                sendFailed: 'No se pudo enviar el código. Inténtalo de nuevo.',
+                rateLimited: 'Espera antes de pedir otro código.',
+                invalidCode: 'Código inválido o caducado. Inténtalo de nuevo.',
+                checkoutFailed: 'No se pudo iniciar el pago. Inténtalo de nuevo.',
+                placeholder: 'you@example.com'
+              },
+              fr: {
+                emailTitle: 'Continuer avec l’e-mail',
+                emailSubtitle: 'Nous enverrons un code à 6 chiffres. Sans mot de passe.',
+                emailLabel: 'E-mail',
+                sendCode: 'Envoyer le code de vérification',
+                sending: 'Envoi…',
+                otpTitle: 'Saisir le code',
+                otpSubtitle: 'Code envoyé à {email}',
+                otpLabel: 'Code à 6 chiffres',
+                verifyContinue: 'Vérifier et continuer',
+                verifying: 'Vérification…',
+                changeEmail: 'Changer d’e-mail',
+                resend: 'Renvoyer le code',
+                invalidEmail: 'Entrez une adresse e-mail valide.',
+                sendFailed: 'Impossible d’envoyer le code. Réessayez.',
+                rateLimited: 'Veuillez patienter avant de demander un autre code.',
+                invalidCode: 'Code invalide ou expiré. Réessayez.',
+                checkoutFailed: 'Impossible de démarrer le paiement. Réessayez.',
+                placeholder: 'you@example.com'
               }
             };
 
@@ -4899,8 +4957,9 @@ const BUILT_COPY = {
             }
 
             function goAuthLogin(nextPath) {
-              const next = nextPath || '/';
-              const url = '/login?next=' + encodeURIComponent(next);
+              const home = currentLocale === 'en' ? '/' : '/' + currentLocale;
+              const next = localizeAppPath(nextPath || home);
+              const url = localizeAppPath('/login') + '?next=' + encodeURIComponent(next);
               (window.top || window).location.href = url;
             }
 
@@ -5300,9 +5359,7 @@ const BUILT_COPY = {
                   setOpen(false);
                   return;
                 }
-                try {
-                  rootWin.localStorage.setItem(UI_LOCALE_STORAGE_KEY, code);
-                } catch (_) { /* private mode */ }
+                persistUiLocale(code);
                 const params = new URLSearchParams(rootWin.location.search);
                 params.set('ui', 'workspace');
                 const qs = params.toString();

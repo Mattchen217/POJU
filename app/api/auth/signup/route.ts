@@ -7,7 +7,7 @@ import {
   mapAuthErrorCode,
   normalizeEmail,
 } from "@/lib/auth/auth-helpers";
-import { AuthLocaleSchema, normalizeAuthLocale } from "@/lib/auth/auth-locale";
+import { AuthLocaleSchema, resolveAuthLocale } from "@/lib/auth/auth-locale";
 import { findAuthUserByEmail } from "@/lib/auth/find-user-by-email";
 import { jsonNeedsVerification } from "@/lib/auth/resume-unconfirmed-signup";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
     const email = normalizeEmail(parsed.data.email);
     const password = parsed.data.password;
-    const lang = normalizeAuthLocale(parsed.data.locale);
+    const lang = resolveAuthLocale(req, parsed.data.locale);
 
     if (!isSupabaseConfigured()) {
       return NextResponse.json({
@@ -53,7 +53,8 @@ export async function POST(req: Request) {
       email,
       password,
       options: {
-        data: { lang },
+        // Template reads {{ .Data.lang }} (and .locale as fallback alias).
+        data: { lang, locale: lang },
       },
     });
 
