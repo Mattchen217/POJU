@@ -57,12 +57,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <PwaInstallProvider>
       <OAuthCodeCatcher />
       {children}
-      {/* Home is an iframe landing — skip chrome that steals main-thread time */}
+      {/* Home is an iframe landing — skip non-essential chrome only */}
       {onHome ? null : <ScrollToTopButton />}
       {onHome ? null : <PwaTabbar />}
-      {onHome || accepted !== false ? null : (
+      {/* Gate entire site (incl. home iframe): block until we know + require accept */}
+      {accepted === null ? (
+        <div className="fixed inset-0 z-[500] bg-black" aria-hidden />
+      ) : null}
+      {accepted === false ? (
         <DisclaimerModal onAccepted={() => setAccepted(true)} />
-      )}
+      ) : null}
     </PwaInstallProvider>
   );
 }
