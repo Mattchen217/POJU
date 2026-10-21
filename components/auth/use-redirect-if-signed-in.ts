@@ -41,6 +41,21 @@ function isMarketingHome(path: string, locale: UiLocaleCode): boolean {
   return p === "/" || p === `/${locale}`;
 }
 
+type RedirectIfSignedInOptions = {
+  /**
+   * When false, stay on the auth page (e.g. signup OTP modal is open).
+   * Default true.
+   */
+  enabled?: boolean;
+};
+
+function isEmailConfirmed(user: {
+  email_confirmed_at?: string | null;
+  confirmed_at?: string | null;
+}): boolean {
+  return Boolean(user.email_confirmed_at || user.confirmed_at);
+}
+
 /**
  * If a Cookie session already exists (e.g. OAuth finished in another window,
  * or callback set cookies but the UI stayed on /login), leave auth pages.
@@ -55,11 +70,17 @@ function isMarketingHome(path: string, locale: UiLocaleCode): boolean {
  *
  * Only auto-leave on a confirmed getUser() or a real SIGNED_IN event —
  * not INITIAL_SESSION / TOKEN_REFRESHED (those caused login flash → home).
+ * Unconfirmed email sessions must stay on signup so the OTP modal can finish.
  */
-export function useRedirectIfSignedIn(nextPath: string): void {
+export function useRedirectIfSignedIn(
+  nextPath: string,
+  options?: RedirectIfSignedInOptions,
+): void {
   const locale = useLocale();
+  const enabled = options?.enabled !== false;
 
   useEffect(() => {
+    if (!enabled) return;
     if (!isSupabaseConfigured()) return;
     if (recentlyBounced()) return;
 
@@ -82,7 +103,10 @@ export function useRedirectIfSignedIn(nextPath: string): void {
 
     void getUserWithTransientRetry(supabase)
       .then(({ data }) => {
-        if (data.user) go();
+        if (!data.user) return;
+        // Half-registered users must finish email OTP on /signup — do not bounce.
+        if (!isEmailConfirmed(data.user)) return;
+        go();
       })
       .catch(() => {
         /* transient auth fetch exhausted - stay on auth page */
@@ -91,7 +115,8 @@ export function useRedirectIfSignedIn(nextPath: string): void {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) return;
+      if (!session?.user) return;
+      if (!isEmailConfirmed(session.user)) return;
       // Do not redirect on INITIAL_SESSION / TOKEN_REFRESHED — that bounced
       // users back to the landing page on the first click into /login.
       if (event === "SIGNED_IN") {
@@ -103,5 +128,5 @@ export function useRedirectIfSignedIn(nextPath: string): void {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [nextPath, locale]);
+  }, [nextPath, locale, enabled]);
 }

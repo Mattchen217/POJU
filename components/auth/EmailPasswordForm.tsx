@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,6 +37,8 @@ type Props = {
   }) => Promise<{ ok: boolean; error?: string }>;
   /** Login submit, or signup OTP verify (called automatically when 6 digits entered). */
   onSubmit: (values: EmailPasswordValues) => Promise<void>;
+  /** Fires when the signup OTP modal opens/closes — parent can pause auto-redirect. */
+  onOtpOpenChange?: (open: boolean) => void;
 };
 
 const ERROR_CODES = [
@@ -89,6 +92,7 @@ export function EmailPasswordForm({
   disabled,
   onSendCode,
   onSubmit,
+  onOtpOpenChange,
 }: Props) {
   const t = useTranslations("auth.fields");
   const tErr = useTranslations("auth.errors");
@@ -101,6 +105,21 @@ export function EmailPasswordForm({
   const [sendError, setSendError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    onOtpOpenChange?.(otpOpen);
+  }, [otpOpen, onOtpOpenChange]);
+
+  function closeOtpModal() {
+    setOtpOpen(false);
+    setOtp("");
+    setSendError(null);
+  }
 
   const {
     register,
@@ -267,56 +286,61 @@ export function EmailPasswordForm({
         )}
       </form>
 
-      {signupNeedsCode && otpOpen ? (
-        <div
-          className="auth-otp-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="auth-otp-modal-title"
-        >
-          <div className="auth-otp-modal__panel">
-            <h2 id="auth-otp-modal-title" className="auth-otp-modal__title">
-              {tSignup("otpModalTitle")}
-            </h2>
-            <p className="auth-otp-modal__hint">{tSignup("otpModalHint")}</p>
-            <OtpCodeInput
-              value={otp}
-              onChange={setOtp}
-              disabled={busy}
-              onComplete={(code) => void verifyOtp(code)}
-            />
-            {submitting ? <p className="auth-otp-modal__status">{tSignup("verifying")}</p> : null}
-            {sendError ? (
-              <em className="auth-inline-error">
-                {tErr(isKnownError(sendError) ? sendError : "invalid_code")}
-              </em>
-            ) : null}
-            <div className="auth-otp-modal__actions">
-              <button
-                type="button"
-                className="auth-btn auth-btn--ghost"
-                disabled={busy || resendLeft > 0}
-                onClick={() => void sendCode()}
-              >
-                {tSignup("resendCode")}
-                {resendLeft > 0 ? ` (${resendLeft}s)` : ""}
-              </button>
-              <button
-                type="button"
-                className="auth-btn auth-btn--ghost"
-                disabled={busy}
-                onClick={() => {
-                  setOtpOpen(false);
-                  setOtp("");
-                  setSendError(null);
-                }}
-              >
-                {tSignup("otpModalClose")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {signupNeedsCode && otpOpen && portalReady
+        ? createPortal(
+            <div
+              className="auth-otp-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-otp-modal-title"
+              onMouseDown={(e) => {
+                // Backdrop click must not hit the AuthCard "登录" link underneath.
+                if (e.target === e.currentTarget) e.preventDefault();
+              }}
+            >
+              <div className="auth-otp-modal__panel">
+                <h2 id="auth-otp-modal-title" className="auth-otp-modal__title">
+                  {tSignup("otpModalTitle")}
+                </h2>
+                <p className="auth-otp-modal__hint">{tSignup("otpModalHint")}</p>
+                <OtpCodeInput
+                  value={otp}
+                  onChange={setOtp}
+                  disabled={busy}
+                  onComplete={(code) => void verifyOtp(code)}
+                />
+                {submitting ? (
+                  <p className="auth-otp-modal__status">{tSignup("verifying")}</p>
+                ) : null}
+                {sendError ? (
+                  <em className="auth-inline-error">
+                    {tErr(isKnownError(sendError) ? sendError : "invalid_code")}
+                  </em>
+                ) : null}
+                <div className="auth-otp-modal__actions">
+                  <button
+                    type="button"
+                    className="auth-btn auth-btn--ghost"
+                    disabled={busy || resendLeft > 0}
+                    onClick={() => void sendCode()}
+                  >
+                    {tSignup("resendCode")}
+                    {resendLeft > 0 ? ` (${resendLeft}s)` : ""}
+                  </button>
+                  <button
+                    type="button"
+                    className="auth-btn auth-btn--ghost"
+                    disabled={busy}
+                    onClick={closeOtpModal}
+                  >
+                    {tSignup("otpModalClose")}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

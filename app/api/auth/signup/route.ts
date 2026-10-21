@@ -89,6 +89,9 @@ export async function POST(req: Request) {
       return jsonNeedsVerification(email, { existingUnconfirmed: true, lang });
     }
 
+    // Never leave a Cookie session after signUp. A session here (Confirm email
+    // off, or race) makes the signup page's useRedirectIfSignedIn fire SIGNED_IN
+    // and bounce the user to /app → /login, closing the OTP modal immediately.
     if (data.session) {
       await supabase.auth.signOut();
       console.error(
@@ -99,6 +102,9 @@ export async function POST(req: Request) {
         { status: 503 },
       );
     }
+
+    // Belt-and-suspenders: clear any partial auth cookies write from signUp.
+    await supabase.auth.signOut();
 
     return NextResponse.json({
       ok: true,

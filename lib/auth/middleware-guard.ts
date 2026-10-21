@@ -112,9 +112,16 @@ export function applyAuthRouteGuard(
     return redirect;
   }
 
-  // Already signed in → leave login/signup (OAuth may set cookies without a client nav)
+  // Already signed in → leave login/signup (OAuth may set cookies without a client nav).
+  // Unconfirmed email must stay on /signup (or /login) to finish OTP — bouncing them
+  // to /app then back to /login closes the verification modal immediately.
+  const emailConfirmed = Boolean(
+    user?.email_confirmed_at ||
+      (user as { confirmed_at?: string | null } | null)?.confirmed_at,
+  );
   if (
     user &&
+    emailConfirmed &&
     !userNeedsEmail(user) &&
     (pathNoLocale === "/login" ||
       pathNoLocale === "/signup" ||

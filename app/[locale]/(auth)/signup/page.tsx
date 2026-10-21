@@ -30,9 +30,12 @@ function SignupForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [lastEmail, setLastEmail] = useState("");
+  const [otpOpen, setOtpOpen] = useState(false);
   const inFlight = useRef(false);
   const next = safeNextPath(searchParams.get("next"), "/app");
-  useRedirectIfSignedIn(next);
+  // Pause auto-leave while OTP modal is open — a leftover signup session used
+  // to fire SIGNED_IN and bounce → /app → /login, closing the modal instantly.
+  useRedirectIfSignedIn(next, { enabled: !otpOpen });
 
   return (
     <AuthCard
@@ -51,6 +54,7 @@ function SignupForm() {
         mode="signup"
         submitLabel={t("submit")}
         submittingLabel={t("submitting")}
+        onOtpOpenChange={setOtpOpen}
         onSendCode={async ({ email, password }) => {
           setError(null);
           setLastEmail(email);
