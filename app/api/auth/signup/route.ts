@@ -87,12 +87,22 @@ export async function POST(req: Request) {
       return jsonNeedsVerification(email, { existingUnconfirmed: true });
     }
 
-    // When email confirm is on, session is null until OTP/link confirmed.
-    const needsVerification = !data.session;
+    // Product requires email OTP before any session. If Supabase "Confirm email"
+    // is off, signUp returns a session immediately — strip it and refuse login.
+    if (data.session) {
+      await supabase.auth.signOut();
+      console.error(
+        "[auth/signup] session returned on signUp — enable Confirm email in Supabase Auth",
+      );
+      return NextResponse.json(
+        { ok: false, error: "confirm_email_required", email },
+        { status: 503 },
+      );
+    }
 
     return NextResponse.json({
       ok: true,
-      needs_verification: needsVerification,
+      needs_verification: true,
       email,
       user: data.user
         ? { id: data.user.id, email: data.user.email ?? email }

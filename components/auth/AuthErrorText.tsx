@@ -33,6 +33,7 @@ export function AuthErrorText({ code, className, email, nextPath }: Props) {
     "auth_failed",
     "server_error",
     "send_failed",
+    "confirm_email_required",
     "checkout_failed",
   ] as const;
   const key = (known as readonly string[]).includes(code) ? code : "auth_failed";

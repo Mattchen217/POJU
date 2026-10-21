@@ -28,14 +28,31 @@ type Props = {
   submitLabel: string;
   submittingLabel: string;
   disabled?: boolean;
-  /** Signup: create user / (re)send OTP. Return error code on failure. */
+  /** Signup: create user / (re)send OTP. Never logs the user in. */
   onSendCode?: (values: {
     email: string;
     password: string;
     confirm?: string;
-  }) => Promise<{ ok: boolean; error?: string; skipOtp?: boolean }>;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  /** Login submit, or signup OTP verify (called automatically when 6 digits entered). */
   onSubmit: (values: EmailPasswordValues) => Promise<void>;
 };
+
+const ERROR_CODES = [
+  "invalid_payload",
+  "invalid_email",
+  "invalid_credentials",
+  "email_not_confirmed",
+  "email_taken",
+  "weak_password",
+  "password_mismatch",
+  "rate_limited",
+  "invalid_code",
+  "auth_failed",
+  "server_error",
+  "send_failed",
+  "confirm_email_required",
+] as const;
 
 function PasswordVisibilityToggle({
   visible,
@@ -61,6 +78,10 @@ function PasswordVisibilityToggle({
   );
 }
 
+function isKnownError(code: string): code is (typeof ERROR_CODES)[number] {
+  return (ERROR_CODES as readonly string[]).includes(code);
+}
+
 export function EmailPasswordForm({
   mode,
   submitLabel,
@@ -74,7 +95,7 @@ export function EmailPasswordForm({
   const tSignup = useTranslations("auth.signup");
   const [submitting, setSubmitting] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
+  const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState("");
   const [resendLeft, setResendLeft] = useState(0);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -94,6 +115,8 @@ export function EmailPasswordForm({
   });
 
   const password = watch("password") ?? "";
+  const signupNeedsCode = mode === "signup" && Boolean(onSendCode);
+  const busy = submitting || sendingCode || Boolean(disabled);
 
   useEffect(() => {
     if (resendLeft <= 0) return;
@@ -103,10 +126,7 @@ export function EmailPasswordForm({
 
   async function sendCode() {
     if (!onSendCode || sendingCode || submitting || disabled || resendLeft > 0) return;
-    const fields =
-      mode === "signup"
-        ? (["email", "password", "confirm"] as const)
-        : (["email", "password"] as const);
+    const fields = ["email", "password", "confirm"] as const;
     const valid = await trigger(fields as unknown as (keyof z.infer<typeof schema>)[]);
     if (!valid) return;
     const values = getValues();
@@ -122,11 +142,7 @@ export function EmailPasswordForm({
         setSendError(result.error ?? "send_failed");
         return;
       }
-      if (result.skipOtp) {
-        // Session already established (confirm-email off) — parent navigates away.
-        return;
-      }
-      setCodeSent(true);
+      setOtpOpen(true);
       setOtp("");
       setResendLeft(60);
     } finally {
@@ -134,108 +150,148 @@ export function EmailPasswordForm({
     }
   }
 
-  const busy = submitting || sendingCode || Boolean(disabled);
-  const signupNeedsCode = mode === "signup" && Boolean(onSendCode);
+  async function verifyOtp(token: string) {
+    if (!signupNeedsCode || submitting || token.length !== 6) return;
+    const values = getValues();
+    setSubmitting(true);
+    setSendError(null);
+    try {
+      await onSubmit({ ...values, token });
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "invalid_code";
+      setSendError(isKnownError(code) ? code : "invalid_code");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <form
-      className="auth-form"
-      onSubmit={handleSubmit(async (values) => {
-        if (busy) return;
-        if (signupNeedsCode) {
-          if (!codeSent) {
-            setSendError("code_required");
+    <>
+      <form
+        className="auth-form"
+        onSubmit={handleSubmit(async (values) => {
+          if (busy) return;
+          if (signupNeedsCode) {
+            // Signup completes via OTP modal only — never via this submit.
+            void sendCode();
             return;
           }
-          if (otp.length !== 6) {
-            setSendError("invalid_code");
-            return;
+          setSubmitting(true);
+          setSendError(null);
+          try {
+            await onSubmit(values);
+          } finally {
+            setSubmitting(false);
           }
-        }
-        setSubmitting(true);
-        setSendError(null);
-        try {
-          await onSubmit({
-            ...values,
-            token: signupNeedsCode ? otp : undefined,
-          });
-        } finally {
-          setSubmitting(false);
-        }
-      })}
-      noValidate
-    >
-      <label className="auth-field">
-        <span>{t("email")}</span>
-        <input
-          type="email"
-          autoComplete="email"
-          placeholder={t("emailPlaceholder")}
-          disabled={busy || (signupNeedsCode && codeSent)}
-          {...register("email")}
-        />
-        {errors.email ? <em>{tErr("invalid_email")}</em> : null}
-      </label>
-
-      <label className="auth-field">
-        <span>{t("password")}</span>
-        <div className="auth-field__control">
+        })}
+        noValidate
+      >
+        <label className="auth-field">
+          <span>{t("email")}</span>
           <input
-            type={showPassword ? "text" : "password"}
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            placeholder={t("passwordPlaceholder")}
-            disabled={busy || (signupNeedsCode && codeSent)}
-            {...register("password")}
+            type="email"
+            autoComplete="email"
+            placeholder={t("emailPlaceholder")}
+            disabled={busy}
+            {...register("email")}
           />
-          <PasswordVisibilityToggle
-            visible={showPassword}
-            onToggle={() => setShowPassword((v) => !v)}
-            showLabel={t("showPassword")}
-            hideLabel={t("hidePassword")}
-          />
-        </div>
-        {errors.password ? <em>{tErr("weak_password")}</em> : null}
-      </label>
+          {errors.email ? <em>{tErr("invalid_email")}</em> : null}
+        </label>
 
-      {mode === "signup" ? (
-        <>
-          <PasswordStrengthHint password={password} />
-          <label className="auth-field">
-            <span>{t("confirmPassword")}</span>
-            <div className="auth-field__control">
-              <input
-                type={showConfirm ? "text" : "password"}
-                autoComplete="new-password"
-                disabled={busy || (signupNeedsCode && codeSent)}
-                {...register("confirm", { required: true })}
-              />
-              <PasswordVisibilityToggle
-                visible={showConfirm}
-                onToggle={() => setShowConfirm((v) => !v)}
-                showLabel={t("showPassword")}
-                hideLabel={t("hidePassword")}
-              />
-            </div>
-            {errors.confirm ? <em>{tErr("password_mismatch")}</em> : null}
-          </label>
-        </>
-      ) : null}
+        <label className="auth-field">
+          <span>{t("password")}</span>
+          <div className="auth-field__control">
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              placeholder={t("passwordPlaceholder")}
+              disabled={busy}
+              {...register("password")}
+            />
+            <PasswordVisibilityToggle
+              visible={showPassword}
+              onToggle={() => setShowPassword((v) => !v)}
+              showLabel={t("showPassword")}
+              hideLabel={t("hidePassword")}
+            />
+          </div>
+          {errors.password ? <em>{tErr("weak_password")}</em> : null}
+        </label>
 
-      {signupNeedsCode ? (
-        <div className="auth-verify-block">
-          {!codeSent ? (
+        {mode === "signup" ? (
+          <>
+            <PasswordStrengthHint password={password} />
+            <label className="auth-field">
+              <span>{t("confirmPassword")}</span>
+              <div className="auth-field__control">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  autoComplete="new-password"
+                  disabled={busy}
+                  {...register("confirm", { required: true })}
+                />
+                <PasswordVisibilityToggle
+                  visible={showConfirm}
+                  onToggle={() => setShowConfirm((v) => !v)}
+                  showLabel={t("showPassword")}
+                  hideLabel={t("hidePassword")}
+                />
+              </div>
+              {errors.confirm ? <em>{tErr("password_mismatch")}</em> : null}
+            </label>
+          </>
+        ) : null}
+
+        {signupNeedsCode ? (
+          <div className="auth-verify-block">
             <button
               type="button"
-              className="auth-btn auth-btn--secondary"
+              className="auth-btn auth-btn--primary"
               disabled={busy || resendLeft > 0}
               onClick={() => void sendCode()}
             >
               {sendingCode ? tSignup("sendingCode") : tSignup("sendCode")}
             </button>
-          ) : (
-            <>
-              <p className="auth-verify-block__hint">{tSignup("codeSentHint")}</p>
-              <OtpCodeInput value={otp} onChange={setOtp} disabled={busy} />
+            {sendError && !otpOpen ? (
+              <em className="auth-inline-error">
+                {sendError === "code_required"
+                  ? tSignup("codeRequired")
+                  : tErr(isKnownError(sendError) ? sendError : "send_failed")}
+              </em>
+            ) : null}
+          </div>
+        ) : (
+          <button type="submit" className="auth-btn auth-btn--primary" disabled={busy}>
+            {submitting ? submittingLabel : submitLabel}
+          </button>
+        )}
+      </form>
+
+      {signupNeedsCode && otpOpen ? (
+        <div
+          className="auth-otp-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-otp-modal-title"
+        >
+          <div className="auth-otp-modal__panel">
+            <h2 id="auth-otp-modal-title" className="auth-otp-modal__title">
+              {tSignup("otpModalTitle")}
+            </h2>
+            <p className="auth-otp-modal__hint">{tSignup("otpModalHint")}</p>
+            <OtpCodeInput
+              value={otp}
+              onChange={setOtp}
+              disabled={busy}
+              onComplete={(code) => void verifyOtp(code)}
+            />
+            {submitting ? <p className="auth-otp-modal__status">{tSignup("verifying")}</p> : null}
+            {sendError ? (
+              <em className="auth-inline-error">
+                {tErr(isKnownError(sendError) ? sendError : "invalid_code")}
+              </em>
+            ) : null}
+            <div className="auth-otp-modal__actions">
               <button
                 type="button"
                 className="auth-btn auth-btn--ghost"
@@ -245,44 +301,22 @@ export function EmailPasswordForm({
                 {tSignup("resendCode")}
                 {resendLeft > 0 ? ` (${resendLeft}s)` : ""}
               </button>
-            </>
-          )}
-          {sendError ? (
-            <em className="auth-inline-error">
-              {sendError === "code_required"
-                ? tSignup("codeRequired")
-                : tErr(
-                    (
-                      [
-                        "invalid_payload",
-                        "invalid_email",
-                        "invalid_credentials",
-                        "email_not_confirmed",
-                        "email_taken",
-                        "weak_password",
-                        "password_mismatch",
-                        "rate_limited",
-                        "invalid_code",
-                        "auth_failed",
-                        "server_error",
-                        "send_failed",
-                      ] as const
-                    ).includes(sendError as never)
-                      ? (sendError as "send_failed")
-                      : "send_failed",
-                  )}
-            </em>
-          ) : null}
+              <button
+                type="button"
+                className="auth-btn auth-btn--ghost"
+                disabled={busy}
+                onClick={() => {
+                  setOtpOpen(false);
+                  setOtp("");
+                  setSendError(null);
+                }}
+              >
+                {tSignup("otpModalClose")}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
-
-      <button
-        type="submit"
-        className="auth-btn auth-btn--primary"
-        disabled={busy || (signupNeedsCode && (!codeSent || otp.length !== 6))}
-      >
-        {submitting ? submittingLabel : submitLabel}
-      </button>
-    </form>
+    </>
   );
 }
