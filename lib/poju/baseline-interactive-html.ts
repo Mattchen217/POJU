@@ -1058,7 +1058,8 @@ function renderCorePage(payload: PojuMatrixPayload, locale: string): string {
 </section>`;
 }
 
-function renderPageBody(
+/** B1–B5 page body HTML (no chrome). Used by fill-baseline + offline export. */
+export function renderBaselinePageBody(
   blockId: (typeof BASELINE_EXPORT_BLOCKS)[number]["id"],
   payload: PojuMatrixPayload,
   locale: string,
@@ -1081,143 +1082,16 @@ function renderPageBody(
 
 /**
  * Offline HTML = delivery-book card shell + five baseline matrix pages (B1–B5).
+ * Delegates to blank-template fill (HTML-first deliverables).
  */
 export function buildBaselineInteractiveHtml(
   payload: PojuMatrixPayload,
   locale: string,
   opts?: BuildBaselineInteractiveHtmlOptions,
 ): string {
-  const zh = normalizeMatrixLocale(locale) === "zh";
-  const coverTitle =
-    opts?.title?.trim() || tMatrix(locale, "main_title");
-  const subtitle =
-    opts?.subtitle?.trim() || tMatrix(locale, "main_description");
-  const bornLine = formatBornLine(payload);
-  const placeLine = opts?.profileLine?.trim() || formatPlaceLine(payload, locale);
-  const subject = (opts?.subjectLabel || "").trim();
-
-  const tocHead = zh ? "目录" : "Contents";
-  const privacy = zh
-    ? "本文件保存在你的设备上；打开无需登录。"
-    : "This file stays on your device; no sign-in required.";
-  const disclaimer = zh
-    ? "内容供决策参考，不构成医疗、法律或投资建议。"
-    : "For decision support only — not medical, legal, or investment advice.";
-  const readingHint = zh
-    ? "点目录切换章节（B1–B5）。"
-    : "Use the TOC to switch pages (B1–B5).";
-
-  const tocButtons = BASELINE_EXPORT_BLOCKS.map((block, i) => {
-    const label = tMatrix(locale, `blocks.${block.labelKey}`);
-    const num = String(i + 1).padStart(2, "0");
-    const stateClass =
-      i === 0
-        ? " delivery-book-stage__toc-item--active is-active"
-        : " delivery-book-stage__toc-item--ready";
-    return `<li><button type="button" class="delivery-book-stage__toc-item${stateClass}" data-slot="${escapeHtml(block.id)}"><span class="delivery-book-stage__toc-num">${num}</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">B${i + 1}</span><span class="delivery-book-stage__toc-title">${escapeHtml(label)}</span></span></button></li>`;
-  }).join("\n");
-
-  const panes = BASELINE_EXPORT_BLOCKS.map((block, pageIndex) => {
-    const label = tMatrix(locale, `blocks.${block.labelKey}`);
-    const active = pageIndex === 0;
-    const activeClass = active ? " is-active" : "";
-    const hidden = active ? "" : " hidden";
-    return `<section class="delivery-book-stage__pane${activeClass}" data-slot-pane="${escapeHtml(block.id)}" id="pane-${escapeHtml(block.id)}" aria-label="${escapeHtml(label)}"${hidden}>
-  <h1 class="delivery-book-stage__page-title">${escapeHtml(label)}</h1>
-  <p class="delivery-book-stage__page-subtitle">${escapeHtml(subtitle)}</p>
-  ${renderPageBody(block.id, payload, locale)}
-</section>`;
-  }).join("\n");
-
-  const metaBorn = bornLine
-    ? `<p class="delivery-book-stage__meta-question" title="${escapeHtml(`${tMatrix(locale, "born")} ${bornLine}`)}">${escapeHtml(tMatrix(locale, "born"))} ${escapeHtml(bornLine)}</p>`
-    : subject
-      ? `<p class="delivery-book-stage__meta-question" title="${escapeHtml(subject)}">${escapeHtml(subject)}</p>`
-      : "";
-
-  return `<!DOCTYPE html>
-<html lang="${langAttr(locale)}">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="color-scheme" content="dark"/>
-<title>${escapeHtml(coverTitle)}</title>
-<style>${CARD_CSS}</style>
-</head>
-<body>
-<div class="delivery-book-stage" data-locale="${zh ? "zh" : locale.slice(0, 2)}" data-baseline="1">
-  <div class="delivery-book-stage__shell">
-    <header class="delivery-book-stage__chrome delivery-book-stage__chrome--header" aria-label="Eastern OS">
-      <div class="delivery-book-stage__chrome-left" aria-hidden="true"></div>
-      <div class="delivery-book-stage__chrome-center">
-        <span class="delivery-book-stage__header-logo-text">Eastern OS</span>
-      </div>
-      <div class="delivery-book-stage__chrome-right" aria-hidden="true"></div>
-    </header>
-    <div class="delivery-book-stage__card" role="region" aria-label="${escapeHtml(coverTitle)}">
-      <div class="delivery-book-stage__panes">
-        <aside class="delivery-book-stage__left">
-          <div class="delivery-book-stage__brand">
-            <h1 class="delivery-book-stage__product-title">
-              <span>${escapeHtml(coverTitle)}</span>
-              <span class="delivery-book-stage__product-title-line3">${escapeHtml(subtitle)}</span>
-            </h1>
-          </div>
-          <div class="delivery-book-stage__meta-card">
-            ${metaBorn}
-            <div class="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">
-              ${
-                placeLine
-                  ? `<span class="delivery-book-stage__meta-cell"><span class="delivery-book-stage__meta-icon" aria-hidden="true">◎</span><span class="delivery-book-stage__meta-text">${escapeHtml(placeLine)}</span></span>`
-                  : ""
-              }
-              <span class="delivery-book-stage__meta-cell">
-                <span class="delivery-book-stage__meta-icon" aria-hidden="true">文</span>
-                <span class="delivery-book-stage__meta-text">${escapeHtml(localeDisplay(locale))}</span>
-              </span>
-            </div>
-            ${
-              subject && bornLine
-                ? `<div class="delivery-book-stage__meta-row"><span class="delivery-book-stage__meta-cell"><span class="delivery-book-stage__meta-text">${escapeHtml(subject)}</span></span></div>`
-                : ""
-            }
-          </div>
-          <nav class="delivery-book-stage__toc" aria-label="${escapeHtml(tocHead)}">
-            <div class="delivery-book-stage__toc-head">
-              <span class="delivery-book-stage__toc-head-rule" aria-hidden="true"></span>
-              ${escapeHtml(tocHead)}
-            </div>
-            <ol class="delivery-book-stage__toc-list">
-              ${tocButtons}
-            </ol>
-          </nav>
-          <div class="delivery-book-stage__left-foot">
-            <p>${escapeHtml(readingHint)}</p>
-            <p>${escapeHtml(privacy)}</p>
-            <p>${escapeHtml(disclaimer)}</p>
-          </div>
-        </aside>
-        <section class="delivery-book-stage__right">
-          ${panes}
-        </section>
-      </div>
-    </div>
-    <footer class="delivery-book-stage__chrome delivery-book-stage__chrome--footer" role="navigation" aria-label="Pager">
-      <div class="delivery-book-stage__chrome-left" aria-hidden="true"></div>
-      <div class="delivery-book-stage__chrome-center"></div>
-      <div class="delivery-book-stage__chrome-right">
-        <div class="delivery-book-stage__pager">
-          <button type="button" class="delivery-book-stage__icon-btn" id="dib-prev" aria-label="${zh ? "上一章" : "Previous"}">‹</button>
-          <span class="delivery-book-stage__pager-pos" id="dib-page-label">1 / ${BASELINE_EXPORT_BLOCKS.length}</span>
-          <button type="button" class="delivery-book-stage__icon-btn" id="dib-next" aria-label="${zh ? "下一章" : "Next"}">›</button>
-        </div>
-      </div>
-    </footer>
-  </div>
-</div>
-<script>${CARD_JS}</script>
-</body>
-</html>`;
+  // Lazy require avoids circular init with fill-baseline → this module.
+  const { fillBaselineProfileHtml } = require("@/lib/deliverables/fill-baseline") as typeof import("@/lib/deliverables/fill-baseline");
+  return fillBaselineProfileHtml(payload, locale, opts);
 }
 
 /** Plain-text email body companion (synopsis), for mail APIs that need text. */

@@ -3292,6 +3292,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             null
           }
           openReaderRequest={prepareShelfOpenRequest}
+          filledHtml={session.deliverable_html?.delivery}
           interrupted={
             Boolean(deliveryInterruptedJobId) &&
             !deliveryContinueBusy &&
@@ -3321,6 +3322,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.agent_v2?.selected_profile_id,
     session.selected_stored_profile_id,
     session.pending_delivery_job_id,
+    session.deliverable_html?.delivery,
     prepareShelfOpenRequest,
     deliveryInterruptedJobId,
     deliveryInterruptReason,
@@ -3459,6 +3461,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
               null
             }
             openReaderRequest={prepareShelfOpenRequest}
+            filledHtml={session.deliverable_html?.delivery}
           />
         );
         followUps[mid] = (

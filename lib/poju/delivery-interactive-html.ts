@@ -847,11 +847,122 @@ const CARD_JS = `
 })();
 `;
 
+export type DeliveryPageBodyContext = {
+  locale: string;
+  evidenceLabel: string;
+  evidenceTerms: ReturnType<typeof collectDeliveryEvidenceTerms>;
+  appendixCopy: ReturnType<typeof deliveryAppendixCopy>;
+  pageIndex: number;
+};
+
+/** Inner body HTML for one delivery book page (structs + modules + appendix glossary). */
+export function renderDeliveryPageBodyHtml(
+  page: { id: string; title: string; body: string; dualLayer: boolean },
+  ctx: DeliveryPageBodyContext,
+): string {
+  const { locale, evidenceLabel, evidenceTerms, appendixCopy, pageIndex } = ctx;
+  const zh = locale.startsWith("zh");
+  const structHtml = renderStructWidgetsHtml(page.body);
+  const modules = buildDeliveryBookModules({
+    pageTitle: page.title,
+    body: stripPojuStructFences(page.body),
+    dualLayer: page.dualLayer,
+    pageIndex,
+  });
+  const pageTitleDisplay = stripPartPrefix(page.title);
+  const isAppendix = page.id === "appendix";
+  const hideEmptyAppendix =
+    isAppendix &&
+    evidenceTerms.length > 0 &&
+    modules.every((m) => isDeliveryAppendixEmptyPlaceholder(m.body));
+
+  const modsHtml = hideEmptyAppendix
+    ? ""
+    : modules
+        .map((mod) => {
+          const modTitle = stripPartPrefix(mod.title);
+          const hideTitle =
+            Boolean(pageTitleDisplay) &&
+            modTitle.trim() === pageTitleDisplay.trim();
+          const head = hideTitle
+            ? ""
+            : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(modTitle)}</h2></header>`;
+          const bodyHtml = mod.body.trim()
+            ? `<div class="delivery-book-stage__section-body poju-delivery-v2__body"><div class="poju-delivery-v2__prose">${bodyBlockHtml(mod.body, locale)}</div></div>`
+            : "";
+          const evidenceHtml = mod.evidence.trim()
+            ? `<div class="evidence-block delivery-book-stage__evidence">
+  <button type="button" class="evidence-block__toggle" aria-expanded="false">
+    <span class="evidence-block__chevron" aria-hidden="true">▸</span>
+    <span class="evidence-block__label">${escapeHtml(evidenceLabel)}</span>
+  </button>
+  <div class="evidence-block__panel" role="region" hidden>
+    <div class="poju-delivery-v2__evidence-body">
+      <div class="poju-delivery-v2__prose">${renderDeliveryEvidenceMarkedHtml(mod.evidence, locale, { bracketSoft: false })}</div>
+    </div>
+  </div>
+</div>`
+            : "";
+          return `<article class="delivery-book-stage__module">${head}<div class="delivery-book-stage__section-card">${bodyHtml}${evidenceHtml}</div></article>`;
+        })
+        .join("\n");
+
+  const glossaryHtml =
+    isAppendix && evidenceTerms.length > 0
+      ? `<article class="delivery-book-stage__module is-last">
+  ${
+    hideEmptyAppendix
+      ? ""
+      : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(appendixCopy.goldTerms)}</h2></header>`
+  }
+  <div class="delivery-book-stage__section-card">
+    <p class="delivery-book-stage__term-lead">${escapeHtml(appendixCopy.evidenceGlossaryLead)}</p>
+    <table class="delivery-book-stage__term-table">
+      <thead>
+        <tr>
+          <th scope="col">${escapeHtml(appendixCopy.termCol)}</th>
+          <th scope="col">${escapeHtml(appendixCopy.glossCol)}</th>
+        </tr>
+      </thead>
+      <tbody>
+      ${evidenceTerms
+        .map(
+          (t) =>
+            `<tr><th scope="row" class="delivery-book-stage__term-table-term">${escapeHtml(formatEvidenceTermLabel(t))}</th><td class="delivery-book-stage__term-table-gloss">${escapeHtml(t.gloss || "—")}</td></tr>`,
+        )
+        .join("\n")}
+      </tbody>
+    </table>
+  </div>
+</article>`
+      : "";
+
+  const inner =
+    modsHtml || glossaryHtml
+      ? `${modsHtml}${glossaryHtml}`
+      : `<div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`;
+  return `${structHtml}<div class="delivery-book-stage__modules">${inner}</div>`;
+}
+
+export { tocLabelForPage, escapeHtml as escapeDeliveryHtml, langAttr as deliveryLangAttr, localeDisplay as deliveryLocaleDisplay };
+
 /**
  * Offline HTML = the same fixed delivery card (shell + dual panes + dock).
  * Chapters switch inside the card; page does not reflow into a long document.
+ * Prefer fillDecisionReportHtml when chrome comes from the blank template.
  */
 export function buildDeliveryInteractiveHtml(
+  fullText: string,
+  locale: string,
+  opts?: BuildDeliveryInteractiveHtmlOptions,
+): string {
+  // Lazy import avoids circular init with fill-delivery → this module.
+  const { fillDecisionReportHtml } = require("@/lib/deliverables/fill-delivery") as typeof import("@/lib/deliverables/fill-delivery");
+  return fillDecisionReportHtml(fullText, locale, opts);
+}
+
+/** Legacy assembler kept for reference / emergency fallback (unused). */
+export function buildDeliveryInteractiveHtmlLegacy(
   fullText: string,
   locale: string,
   opts?: BuildDeliveryInteractiveHtmlOptions,
@@ -909,92 +1020,20 @@ export function buildDeliveryInteractiveHtml(
 
   const panes = prosePages
     .map((page, pageIndex) => {
-      const structHtml = renderStructWidgetsHtml(page.body);
-      const modules = buildDeliveryBookModules({
-        pageTitle: page.title,
-        body: stripPojuStructFences(page.body),
-        dualLayer: page.dualLayer,
+      const pageTitleDisplay = stripPartPrefix(page.title);
+      const bodyInner = renderDeliveryPageBodyHtml(page, {
+        locale,
+        evidenceLabel,
+        evidenceTerms,
+        appendixCopy,
         pageIndex,
       });
-      const pageTitleDisplay = stripPartPrefix(page.title);
-      const isAppendix = page.id === "appendix";
-      const hideEmptyAppendix =
-        isAppendix &&
-        evidenceTerms.length > 0 &&
-        modules.every((m) => isDeliveryAppendixEmptyPlaceholder(m.body));
-
-      const modsHtml = hideEmptyAppendix
-        ? ""
-        : modules
-            .map((mod) => {
-              const modTitle = stripPartPrefix(mod.title);
-              const hideTitle =
-                Boolean(pageTitleDisplay) &&
-                modTitle.trim() === pageTitleDisplay.trim();
-              const head = hideTitle
-                ? ""
-                : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(modTitle)}</h2></header>`;
-              const bodyHtml = mod.body.trim()
-                ? `<div class="delivery-book-stage__section-body poju-delivery-v2__body"><div class="poju-delivery-v2__prose">${bodyBlockHtml(mod.body, locale)}</div></div>`
-                : "";
-              const evidenceHtml = mod.evidence.trim()
-                ? `<div class="evidence-block delivery-book-stage__evidence">
-  <button type="button" class="evidence-block__toggle" aria-expanded="false">
-    <span class="evidence-block__chevron" aria-hidden="true">▸</span>
-    <span class="evidence-block__label">${escapeHtml(evidenceLabel)}</span>
-  </button>
-  <div class="evidence-block__panel" role="region" hidden>
-    <div class="poju-delivery-v2__evidence-body">
-      <div class="poju-delivery-v2__prose">${renderDeliveryEvidenceMarkedHtml(mod.evidence, locale, { bracketSoft: false })}</div>
-    </div>
-  </div>
-</div>`
-                : "";
-              return `<article class="delivery-book-stage__module">${head}<div class="delivery-book-stage__section-card">${bodyHtml}${evidenceHtml}</div></article>`;
-            })
-            .join("\n");
-
-      const glossaryHtml =
-        isAppendix && evidenceTerms.length > 0
-          ? `<article class="delivery-book-stage__module is-last">
-  ${
-    hideEmptyAppendix
-      ? ""
-      : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(appendixCopy.goldTerms)}</h2></header>`
-  }
-  <div class="delivery-book-stage__section-card">
-    <p class="delivery-book-stage__term-lead">${escapeHtml(appendixCopy.evidenceGlossaryLead)}</p>
-    <table class="delivery-book-stage__term-table">
-      <thead>
-        <tr>
-          <th scope="col">${escapeHtml(appendixCopy.termCol)}</th>
-          <th scope="col">${escapeHtml(appendixCopy.glossCol)}</th>
-        </tr>
-      </thead>
-      <tbody>
-      ${evidenceTerms
-        .map(
-          (t) =>
-            `<tr><th scope="row" class="delivery-book-stage__term-table-term">${escapeHtml(formatEvidenceTermLabel(t))}</th><td class="delivery-book-stage__term-table-gloss">${escapeHtml(t.gloss || "—")}</td></tr>`,
-        )
-        .join("\n")}
-      </tbody>
-    </table>
-  </div>
-</article>`
-          : "";
-
       const active = pageIndex === 0;
       const activeClass = active ? " is-active" : "";
       const hidden = active ? "" : " hidden";
-      const inner =
-        modsHtml || glossaryHtml
-          ? `${modsHtml}${glossaryHtml}`
-          : `<div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`;
       return `<section class="delivery-book-stage__pane${activeClass}" data-slot-pane="${escapeHtml(page.id)}" id="pane-${escapeHtml(page.id)}" aria-label="${escapeHtml(pageTitleDisplay)}"${hidden}>
   ${pageTitleDisplay ? `<h1 class="delivery-book-stage__page-title">${escapeHtml(pageTitleDisplay)}</h1>` : ""}
-  ${structHtml}
-  <div class="delivery-book-stage__modules">${inner}</div>
+  ${bodyInner}
 </section>`;
     })
     .join("\n");

@@ -120,6 +120,9 @@ export const CompanionJobSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   purged_at: z.string().nullable().optional(),
+  /** Filled reminders-30d HTML (template slots); refreshed on locale mismatch. */
+  filled_html: z.string().optional(),
+  filled_html_locale: z.string().optional(),
 });
 
 export type CompanionJob = z.infer<typeof CompanionJobSchema>;

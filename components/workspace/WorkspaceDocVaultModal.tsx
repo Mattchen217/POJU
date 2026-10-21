@@ -4,18 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 
+import { DeliverableHtmlFrame } from "@/components/deliverables/DeliverableHtmlFrame";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
-import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
+import { getCompanionJobBySession } from "@/lib/companion";
 import {
-  buildBaselineExportPlainText,
-  buildBaselineInteractiveHtml,
-} from "@/lib/poju/baseline-interactive-html";
+  ensureDeliveryFilledHtml,
+  ensureRemindersFilledHtml,
+  fillBaselineProfileHtml,
+} from "@/lib/deliverables";
+import { buildBaselineExportPlainText } from "@/lib/poju/baseline-interactive-html";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { loadPOJUSession } from "@/lib/poju/session-manager";
+import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
 
@@ -53,11 +56,14 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   const { email: accountEmail, ready: authReady } = useAuthUser();
   const [mounted, setMounted] = useState(false);
   const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(null);
+  const [baselineHtml, setBaselineHtml] = useState<string | null>(null);
   const [deliveryText, setDeliveryText] = useState<string | null>(null);
+  const [deliveryHtml, setDeliveryHtml] = useState<string | null>(null);
   const [deliverySessionId, setDeliverySessionId] = useState<string | null>(null);
   const [deliveryQuestion, setDeliveryQuestion] = useState<string | null>(null);
   const [deliveryProfileId, setDeliveryProfileId] = useState<string | null>(null);
   const [remindersSessionId, setRemindersSessionId] = useState<string | null>(null);
+  const [remindersHtml, setRemindersHtml] = useState<string | null>(null);
   const [remindersText, setRemindersText] = useState<string | null>(null);
   const [remindersProfileId, setRemindersProfileId] = useState<string | null>(null);
   const [remindersQuestion, setRemindersQuestion] = useState<string | null>(null);
@@ -77,9 +83,12 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   useEffect(() => {
     if (!item) {
       setMatrixPayload(null);
+      setBaselineHtml(null);
       setDeliveryText(null);
+      setDeliveryHtml(null);
       setDeliverySessionId(null);
       setRemindersSessionId(null);
+      setRemindersHtml(null);
       setRemindersText(null);
       setRemindersStructured(null);
       setError(null);
@@ -91,8 +100,11 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       setLoading(true);
       setError(null);
       setMatrixPayload(null);
+      setBaselineHtml(null);
       setDeliveryText(null);
+      setDeliveryHtml(null);
       setRemindersSessionId(null);
+      setRemindersHtml(null);
       setRemindersText(null);
       setRemindersStructured(null);
       setActionMsg(null);
@@ -107,23 +119,45 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
           const payload = buildMatrixPayloadFromProfile(target.profileId, profile.user_profile, {
             locale,
           });
-          if (!cancelled) setMatrixPayload(payload);
+          const html = fillBaselineProfileHtml(payload, locale, {
+            title: tPortrait("title"),
+            subtitle: tPortrait("subtitle"),
+            subjectLabel: item.subjectLabel?.trim() || "",
+          });
+          if (!cancelled) {
+            setMatrixPayload(payload);
+            setBaselineHtml(html);
+          }
           return;
         }
         if (target.type === "pivot_delivery") {
           const session = await loadPOJUSession(target.sessionId);
           const text = session?.main_delivery?.full_text?.trim() || "";
-          if (!text) {
+          if (!text || !session) {
             if (!cancelled) setError("Delivery not found");
             return;
           }
+          const question = session.original_question?.trim() || "";
+          const filled = ensureDeliveryFilledHtml(session, text, locale, {
+            originalQuestion: question,
+            reportId: `EOS-${session.session_id.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+            reportDate: new Date().toISOString().slice(0, 10),
+          });
+          if (filled.session !== session) {
+            try {
+              await savePOJUSession(filled.session);
+            } catch {
+              /* vault open still shows html */
+            }
+          }
           if (!cancelled) {
             setDeliveryText(text);
+            setDeliveryHtml(filled.html);
             setDeliverySessionId(target.sessionId);
-            setDeliveryQuestion(session?.original_question?.trim() || null);
+            setDeliveryQuestion(question || null);
             setDeliveryProfileId(
-              session?.agent_v2?.selected_profile_id ??
-                session?.selected_stored_profile_id ??
+              session.agent_v2?.selected_profile_id ??
+                session.selected_stored_profile_id ??
                 null,
             );
           }
@@ -136,11 +170,40 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
             return;
           }
           const text = session.main_delivery?.full_text?.trim() || "";
-          const structured =
-            session.matrix_payload?.structured ??
-            null;
+          let structured = session.matrix_payload?.structured ?? null;
+          let html = "";
+          const job = await getCompanionJobBySession(target.sessionId);
+          if (job) {
+            const filled = ensureRemindersFilledHtml(session, job, locale);
+            html = filled.html;
+            if (filled.session !== session) {
+              try {
+                await savePOJUSession(filled.session);
+              } catch {
+                /* ignore */
+              }
+            }
+          } else if (session.deliverable_html?.reminders?.trim()) {
+            html = session.deliverable_html.reminders;
+          }
+          if (!structured) {
+            const pid =
+              session.agent_v2?.selected_profile_id ??
+              session.selected_stored_profile_id ??
+              null;
+            if (pid) {
+              const profile = await getStoredProfile(pid);
+              if (profile?.user_profile) {
+                const payload = buildMatrixPayloadFromProfile(pid, profile.user_profile, {
+                  locale,
+                });
+                structured = payload.structured;
+              }
+            }
+          }
           if (!cancelled) {
             setRemindersSessionId(target.sessionId);
+            setRemindersHtml(html || null);
             setRemindersText(text || " ");
             setRemindersQuestion(session.original_question?.trim() || null);
             setRemindersProfileId(
@@ -149,22 +212,6 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
                 null,
             );
             setRemindersStructured(structured);
-            if (!structured) {
-              // Try rebuild from stored profile so companion frame can seal.
-              const pid =
-                session.agent_v2?.selected_profile_id ??
-                session.selected_stored_profile_id ??
-                null;
-              if (pid) {
-                const profile = await getStoredProfile(pid);
-                if (profile?.user_profile) {
-                  const payload = buildMatrixPayloadFromProfile(pid, profile.user_profile, {
-                    locale,
-                  });
-                  if (!cancelled) setRemindersStructured(payload.structured);
-                }
-              }
-            }
           }
           return;
         }
@@ -178,7 +225,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [item, locale]);
+  }, [item, locale, tPortrait]);
 
   useEffect(() => {
     if (!item) return;
@@ -190,19 +237,15 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   }, [item, onClose]);
 
   const baselinePack = useMemo(() => {
-    if (!matrixPayload) return null;
+    if (!matrixPayload || !baselineHtml) return null;
     return {
       title: tPortrait("title"),
       subtitle: tPortrait("subtitle"),
       subjectLabel: item?.subjectLabel?.trim() || "",
       bodyText: buildBaselineExportPlainText(matrixPayload, locale),
-      html: buildBaselineInteractiveHtml(matrixPayload, locale, {
-        title: tPortrait("title"),
-        subtitle: tPortrait("subtitle"),
-        subjectLabel: item?.subjectLabel?.trim() || "",
-      }),
+      html: baselineHtml,
     };
-  }, [matrixPayload, locale, tPortrait, item?.subjectLabel]);
+  }, [matrixPayload, baselineHtml, locale, tPortrait, item?.subjectLabel]);
 
   const handleBaselineDownload = () => {
     if (!baselinePack) return;
@@ -275,7 +318,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       ? tPortrait("subtitle")
       : item.subjectLabel || undefined;
 
-  const showBaselineActions = Boolean(matrixPayload) && !loading && item.kind === "energy_matrix";
+  const showBaselineActions = Boolean(baselineHtml) && !loading && item.kind === "energy_matrix";
 
   return createPortal(
     <div
@@ -347,39 +390,45 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
               {error}
             </p>
           ) : null}
-          {matrixPayload && !loading ? (
-            <BaselinePortraitBook
-              payload={matrixPayload}
-              locale={locale}
-              suppressNarrative
-            />
+          {baselineHtml && !loading ? (
+            <DeliverableHtmlFrame html={baselineHtml} title={title} />
           ) : null}
-          {deliveryText && deliverySessionId && !loading ? (
+          {deliverySessionId && !loading && (deliveryHtml || deliveryText) ? (
             <DeliveryShelfView
-              fullText={deliveryText}
+              fullText={deliveryText || " "}
               locale={locale}
               sessionId={deliverySessionId}
               complete
               originalQuestion={deliveryQuestion ?? undefined}
               profileId={deliveryProfileId}
+              filledHtml={deliveryHtml ?? undefined}
             />
           ) : null}
-          {remindersSessionId && remindersText && !loading ? (
+          {remindersSessionId && !loading ? (
             <div className="workspace-doc-vault-modal__reminders">
-              <PojuCompanionFrame
-                sessionId={remindersSessionId}
-                fullText={remindersText}
-                structured={remindersStructured}
-                originalQuestion={remindersQuestion ?? undefined}
-                ready={Boolean(remindersStructured)}
-                profileId={remindersProfileId}
-                initialEmail={accountEmail ?? null}
-              />
-              {!remindersStructured ? (
-                <p className="workspace-doc-vault-modal__status">
-                  {tVault("reminders_need_profile")}
-                </p>
-              ) : null}
+              {remindersHtml ? (
+                <DeliverableHtmlFrame
+                  html={remindersHtml}
+                  title={tVault("type_reminders")}
+                />
+              ) : (
+                <>
+                  <PojuCompanionFrame
+                    sessionId={remindersSessionId}
+                    fullText={remindersText || " "}
+                    structured={remindersStructured}
+                    originalQuestion={remindersQuestion ?? undefined}
+                    ready={Boolean(remindersStructured)}
+                    profileId={remindersProfileId}
+                    initialEmail={accountEmail ?? null}
+                  />
+                  {!remindersStructured ? (
+                    <p className="workspace-doc-vault-modal__status">
+                      {tVault("reminders_need_profile")}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
           ) : null}
         </div>

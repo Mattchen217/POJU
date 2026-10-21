@@ -1,16 +1,21 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { DeliverableHtmlFrame } from "@/components/deliverables/DeliverableHtmlFrame";
 import { DeliveryBookStage } from "@/components/poju/DeliveryBookStage";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
-import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
+import {
+  ensureDeliveryFilledHtml,
+  fillDecisionReportHtml,
+} from "@/lib/deliverables";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
 import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
+import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 
 import "@/styles/delivery-shelf.css";
 import "@/styles/delivery-phase4-ritual.css";
@@ -51,6 +56,8 @@ type Props = {
   complete: boolean;
   originalQuestion?: string;
   profileId?: string | null;
+  /** When set, render via iframe and hide DeliveryBookStage. */
+  filledHtml?: string;
   /** When bumped, open book at last-read prose page (from rail icon). */
   openReaderRequest?: number;
   interrupted?: boolean;
@@ -88,6 +95,7 @@ export function DeliveryShelfView({
   complete,
   originalQuestion = "",
   profileId = null,
+  filledHtml,
   openReaderRequest = 0,
   interrupted = false,
   interruptReason = null,
@@ -105,6 +113,40 @@ export function DeliveryShelfView({
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
   const [packBusy, setPackBusy] = useState(false);
+  const [backfilledHtml, setBackfilledHtml] = useState<string | null>(null);
+  const packCacheRef = useRef<string | null>(null);
+
+  /** Old sessions: fill blank template once and persist. */
+  useEffect(() => {
+    if (filledHtml?.trim() || !complete || !fullText.trim()) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const session = await loadPOJUSession(sessionId);
+        if (!session || cancelled) return;
+        const filled = ensureDeliveryFilledHtml(session, fullText, locale, {
+          title: undefined,
+          originalQuestion,
+          reportId: `EOS-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+          reportDate: new Date().toISOString().slice(0, 10),
+        });
+        if (cancelled) return;
+        setBackfilledHtml(filled.html);
+        if (filled.session !== session) {
+          try {
+            await savePOJUSession(filled.session);
+          } catch {
+            /* viewer still works */
+          }
+        }
+      } catch (e) {
+        console.warn("[delivery] backfill html failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [filledHtml, complete, fullText, locale, sessionId, originalQuestion]);
 
   const coverTitle = useMemo(() => {
     const slots = buildDeliveryShelfSlots(fullText, { locale, complete });
@@ -119,16 +161,51 @@ export function DeliveryShelfView({
     [sessionId],
   );
 
-  const buildInteractiveHtml = async () => {
-    const audio = await ensureDeliveryAudio({ sessionId, fullText, locale });
-    return buildDeliveryInteractiveHtml(fullText, locale, {
+  const packOpts = useMemo(
+    () => ({
       title: coverTitle,
       originalQuestion,
       reportId: `EOS-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
       reportDate: new Date().toISOString().slice(0, 10),
+    }),
+    [coverTitle, originalQuestion, sessionId],
+  );
+
+  const resolvePackHtml = async (): Promise<string> => {
+    if (packCacheRef.current) return packCacheRef.current;
+
+    const audio = await ensureDeliveryAudio({ sessionId, fullText, locale });
+    const opts = {
+      ...packOpts,
       audioBase64: audio.base64,
       audioMime: audio.mime,
-    });
+    };
+
+    let session =
+      prepare?.session?.session_id === sessionId
+        ? prepare.session
+        : await loadPOJUSession(sessionId);
+    if (session) {
+      // Force refill with audio even if bag exists (audio embed for pack).
+      const cleared = {
+        ...session,
+        deliverable_html: session.deliverable_html
+          ? { ...session.deliverable_html, delivery: undefined }
+          : undefined,
+      };
+      const filled = ensureDeliveryFilledHtml(cleared, fullText, locale, opts);
+      packCacheRef.current = filled.html;
+      try {
+        await savePOJUSession(filled.session);
+      } catch {
+        /* still return html */
+      }
+      return filled.html;
+    }
+
+    const html = fillDecisionReportHtml(fullText, locale, opts);
+    packCacheRef.current = html;
+    return html;
   };
 
   const handleDownloadHtml = () => {
@@ -136,7 +213,7 @@ export function DeliveryShelfView({
       setPackBusy(true);
       setEmailMsg(null);
       try {
-        const html = await buildInteractiveHtml();
+        const html = await resolvePackHtml();
         downloadBlob(
           `eastern-os-decision-report-${new Date().toISOString().slice(0, 10)}.html`,
           html,
@@ -162,7 +239,7 @@ export function DeliveryShelfView({
     setPackBusy(true);
     setEmailMsg(null);
     try {
-      const html = await buildInteractiveHtml();
+      const html = await resolvePackHtml();
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -253,22 +330,36 @@ export function DeliveryShelfView({
       </div>
     ) : null;
 
+  const resolvedFilledHtml = filledHtml?.trim() || backfilledHtml?.trim() || "";
+  const useFilled = Boolean(resolvedFilledHtml);
+
   return (
     <>
-      <DeliveryBookStage
-        fullText={fullText}
-        locale={locale}
-        sessionId={sessionId}
-        complete={complete}
-        originalQuestion={originalQuestion}
-        profileId={profileId}
-        jumpRequest={openReaderRequest}
-        initialProseIndex={readDeliveryShelfLastPage(sessionId)}
-        onProseIndexChange={handleProseIndexChange}
-        chromeLeft={chromeLeft}
-        networkSlot={networkSlot}
-        interruptedSlot={interruptedSlot}
-      />
+      {useFilled ? (
+        <div className="delivery-shelf delivery-shelf--filled-html">
+          {chromeLeft ? (
+            <div className="delivery-shelf__filled-chrome">{chromeLeft}</div>
+          ) : null}
+          {networkSlot}
+          {interruptedSlot}
+          <DeliverableHtmlFrame html={resolvedFilledHtml} title={coverTitle} />
+        </div>
+      ) : (
+        <DeliveryBookStage
+          fullText={fullText}
+          locale={locale}
+          sessionId={sessionId}
+          complete={complete}
+          originalQuestion={originalQuestion}
+          profileId={profileId}
+          jumpRequest={openReaderRequest}
+          initialProseIndex={readDeliveryShelfLastPage(sessionId)}
+          onProseIndexChange={handleProseIndexChange}
+          chromeLeft={chromeLeft}
+          networkSlot={networkSlot}
+          interruptedSlot={interruptedSlot}
+        />
+      )}
       {complete ? (
         <PojuCompanionFrame
           sessionId={sessionId}

@@ -828,6 +828,23 @@ export function applyFinalDeliveryResultToSession(
     );
   }
 
+  // HTML-first: fill decision-report template into session bag (no audio embed here).
+  try {
+    const { ensureDeliveryFilledHtml } =
+      require("@/lib/deliverables/persist") as typeof import("@/lib/deliverables/persist");
+    const question =
+      next.agent_v2?.original_question?.trim() ||
+      next.original_question?.trim() ||
+      "";
+    next = ensureDeliveryFilledHtml(next, result.full_text, deliveryLang || locale, {
+      originalQuestion: question,
+      reportId: `EOS-${next.session_id.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+      reportDate: new Date().toISOString().slice(0, 10),
+    }).session;
+  } catch (e) {
+    console.warn("[final-delivery] ensureDeliveryFilledHtml failed", e);
+  }
+
   return next;
 }
 

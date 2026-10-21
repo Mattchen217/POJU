@@ -3,6 +3,7 @@
  * session bind, baseline bubble in center timeline + welcome below (SoT 15).
  */
 
+import { ensureBaselineFilledHtml } from "@/lib/deliverables/persist";
 import { seedMatrixWelcomeMessage, dedupeWelcomeMessages } from "@/lib/poju/chat-bootstrap";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
@@ -73,6 +74,8 @@ export async function finalizeWorkspacePrepare(
   session = dedupePreviewMatrixMessages(session);
   session = seedMatrixWelcomeMessage(session, locale);
   session = dedupeWelcomeMessages(session);
+  // HTML-first: fill baseline template into session bag before save.
+  session = ensureBaselineFilledHtml(session, matrixPayload, locale).session;
 
   await savePOJUSession(session);
 

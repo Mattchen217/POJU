@@ -1,5 +1,29 @@
 /* Phase-4 center delivery shelf — black paper cards */
 
+.delivery-shelf--filled-html {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.delivery-shelf__filled-chrome {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  gap: 8px;
+}
+
+.delivery-shelf--filled-html .deliverable-html-frame {
+  flex: 1 1 auto;
+  min-height: 360px;
+  height: 100%;
+}
+
 .delivery-shelf {
   width: 100%;
   max-width: 1040px;

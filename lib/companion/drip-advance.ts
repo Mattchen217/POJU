@@ -186,6 +186,31 @@ export async function runCompanionBatchGateOnJob(
   };
   job.batch_status = gate.passed ? "ready" : "failed";
   job.updated_at = new Date().toISOString();
+  if (gate.passed) {
+    try {
+      const { fillReminders30dHtml } =
+        require("@/lib/deliverables/fill-reminders") as typeof import("@/lib/deliverables/fill-reminders");
+      const loc = job.brief.locale;
+      job.filled_html = fillReminders30dHtml(job, loc);
+      job.filled_html_locale = loc;
+      // Best-effort: also stash on session bag when session is loadable.
+      try {
+        const { loadPOJUSession, savePOJUSession } =
+          require("@/lib/poju/session-manager") as typeof import("@/lib/poju/session-manager");
+        const { ensureRemindersFilledHtml } =
+          require("@/lib/deliverables/persist") as typeof import("@/lib/deliverables/persist");
+        const session = await loadPOJUSession(job.session_id);
+        if (session) {
+          const { session: next } = ensureRemindersFilledHtml(session, job, loc);
+          await savePOJUSession(next);
+        }
+      } catch (inner) {
+        console.warn("[companion] session reminders html persist skipped", inner);
+      }
+    } catch (e) {
+      console.warn("[companion] fillReminders30dHtml failed", e);
+    }
+  }
   await saveCompanionJob(job);
   return job;
 }

@@ -157,6 +157,24 @@
   min-height: 240px;
 }
 
+.workspace-doc-vault-modal__body:has(.deliverable-html-frame) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 0;
+}
+
+.deliverable-html-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 0;
+  background: #0b0815;
+}
+
 /* Baseline book: fill fixed sheet; scroll inside delivery right pane (not the modal body) */
 .workspace-doc-vault-modal__body:has(.delivery-book-stage[data-baseline="1"]) {
   overflow: hidden;
