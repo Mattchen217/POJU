@@ -3486,12 +3486,47 @@
   }
 }
 
-/* Tab1 conclusion-first (SoT 15 §5.2) */
+/* Tab1 conclusion-first (SoT 15 §5.2) — left zodiac column + right stacked chips */
+.pcm-calibration__top {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, 0.95fr) minmax(0, 1.65fr);
+  gap: 12px;
+  align-items: stretch;
+  margin: 0 0 14px;
+}
+
+.pcm-calibration__top .pcm-zodiac {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 14px 12px 12px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  box-sizing: border-box;
+  min-height: 100%;
+}
+
+.pcm-calibration__top .pcm-hero-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+  height: 100%;
+}
+
 .pcm-hero-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
-  margin: 0 0 14px;
+  margin: 0;
+  min-width: 0;
 }
 
 .pcm-hero-strip__item {
@@ -3576,7 +3611,7 @@
 }
 
 @media (max-width: 720px) {
-  .pcm-hero-strip {
+  .pcm-calibration__top {
     grid-template-columns: 1fr;
   }
 }
@@ -3625,10 +3660,6 @@
 /* B1: ensure calibration details card is always visible (not empty collapse) */
 .pcm-calibration .pcm-cal {
   margin-top: 18px;
-}
-.pcm-calibration .pcm-zodiac {
-  margin-top: 16px;
-  text-align: center;
 }
 
 /* ── Baseline portrait frame lock (same fixed shell as Stage-4 delivery book) ──
@@ -3817,19 +3848,26 @@
   box-shadow: 0 0 4px rgba(242, 202, 80, 0.45);
 }
 
-/* B1 summary chips — taller cards so values aren’t cramped */
+/* B1 top row — left zodiac rail + right stacked chips */
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-calibration__top,
+.pcm--body-only.pcm--delivery-shell .pcm-calibration__top {
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
 .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip,
 .pcm--body-only.pcm--delivery-shell .pcm-hero-strip {
   gap: 10px;
-  margin-bottom: 14px;
+  margin: 0;
 }
 
 .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip__item,
 .pcm--body-only.pcm--delivery-shell .pcm-hero-strip__item {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  min-height: 4.75rem;
-  padding: 14px 12px 12px;
+  min-height: 0;
+  flex: 1 1 0;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.02);
   display: flex;
   flex-direction: column;
@@ -3852,17 +3890,11 @@
   letter-spacing: 0.05em;
 }
 
-/* B1 zodiac — avatar centered above sign name */
-.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac,
-.pcm--body-only.pcm--delivery-shell .pcm-zodiac {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  gap: 0.45rem;
-  margin: 14px auto 4px;
-  text-align: center;
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-calibration__top .pcm-zodiac,
+.pcm--body-only.pcm--delivery-shell .pcm-calibration__top .pcm-zodiac {
+  width: auto;
+  margin: 0;
+  gap: 0.4rem;
 }
 
 .delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-zodiac__art,
@@ -3900,6 +3932,12 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
+}
+
+.delivery-book-stage[data-baseline="1"] .pcm--body-only .pcm-hero-strip,
+.pcm--body-only.pcm--delivery-shell .pcm-hero-strip {
+  height: 100%;
+  align-content: stretch;
 }
 
 /* B1 calibration grid */

@@ -1154,72 +1154,74 @@ export function PojuEnergyMatrix({
             {resolvedActiveBlock === "calibration" ? (
         /* ── 1. Origin calibration — full body (SoT 15 B1) ── */
         <section className="pcm__section pcm-calibration">
-          {/* Additive summary chips — never instead of full blocks */}
-          <div className="pcm-hero-strip" aria-label={tm("blocks.block_1")}>
-            <div className="pcm-hero-strip__item">
-              <div className="pcm-hero-strip__value">
-                {display.calendar.gregorian}
-                {display.calendar.lunar ? (
-                  <span className="pcm-cal__unit"> · {display.calendar.lunar}</span>
-                ) : null}
+          {/* Left: vertical zodiac · Right: stacked summary chips */}
+          <div className="pcm-calibration__top" aria-label={tm("blocks.block_1")}>
+            <div className="pcm-zodiac">
+              <div className="pcm-zodiac__art">
+                {zodiacIcon ? (
+                  <Image
+                    src={zodiacIcon}
+                    alt=""
+                    width={96}
+                    height={96}
+                    className="pcm-zodiac__art-img"
+                  />
+                ) : (
+                  <span className="pcm-zodiac__name">{display.zodiac.han}</span>
+                )}
               </div>
-              <div className="pcm-hero-strip__label">{tc("hero_calendar")}</div>
-            </div>
-            <div className="pcm-hero-strip__item">
-              <div className="pcm-hero-strip__value">
-                {tst && tst.diff_minutes !== 0
-                  ? `${tst.diff_minutes > 0 ? "+" : "−"}${Math.abs(Number(tst.diff_minutes.toFixed(1)))}m`
-                  : tst
-                    ? "0m"
-                    : "—"}
+              <div className="pcm-zodiac__name">
+                {zdSlug ? (
+                  <SoftTermHover
+                    slug={zdSlug}
+                    locale={locale}
+                    fallback={isZh ? display.zodiac.han : display.zodiac.en}
+                  />
+                ) : isZh ? (
+                  display.zodiac.han
+                ) : (
+                  display.zodiac.en
+                )}
               </div>
-              <div className="pcm-hero-strip__label">{tc("hero_solar")}</div>
-            </div>
-            <div className="pcm-hero-strip__item">
-              <div className="pcm-hero-strip__value">
-                {isZh ? display.solar_term.name : display.solar_term.name_en}
-                <span className="pcm-cal__unit">
-                  {" "}
-                  {display.solar_term.progress_pct}%
-                </span>
+              <div className="pcm-zodiac__pinyin">{display.zodiac.pinyin}</div>
+              <div className="pcm-zodiac__year">
+                {user_profile.birth.year}
+                {isZh ? "年" : ""}
               </div>
-              <div className="pcm-hero-strip__label">{tc("hero_term")}</div>
+              <p className="pcm-zodiac__caption">{tc("your_sign_tag")}</p>
             </div>
-          </div>
 
-          <div className="pcm-zodiac">
-            <div className="pcm-zodiac__art">
-              {zodiacIcon ? (
-                <Image
-                  src={zodiacIcon}
-                  alt=""
-                  width={96}
-                  height={96}
-                  className="pcm-zodiac__art-img"
-                />
-              ) : (
-                <span className="pcm-zodiac__name">{display.zodiac.han}</span>
-              )}
+            <div className="pcm-hero-strip">
+              <div className="pcm-hero-strip__item">
+                <div className="pcm-hero-strip__value">
+                  {display.calendar.gregorian}
+                  {display.calendar.lunar ? (
+                    <span className="pcm-cal__unit"> · {display.calendar.lunar}</span>
+                  ) : null}
+                </div>
+                <div className="pcm-hero-strip__label">{tc("hero_calendar")}</div>
+              </div>
+              <div className="pcm-hero-strip__item">
+                <div className="pcm-hero-strip__value">
+                  {tst && tst.diff_minutes !== 0
+                    ? `${tst.diff_minutes > 0 ? "+" : "−"}${Math.abs(Number(tst.diff_minutes.toFixed(1)))}m`
+                    : tst
+                      ? "0m"
+                      : "—"}
+                </div>
+                <div className="pcm-hero-strip__label">{tc("hero_solar")}</div>
+              </div>
+              <div className="pcm-hero-strip__item">
+                <div className="pcm-hero-strip__value">
+                  {isZh ? display.solar_term.name : display.solar_term.name_en}
+                  <span className="pcm-cal__unit">
+                    {" "}
+                    {display.solar_term.progress_pct}%
+                  </span>
+                </div>
+                <div className="pcm-hero-strip__label">{tc("hero_term")}</div>
+              </div>
             </div>
-            <div className="pcm-zodiac__name">
-              {zdSlug ? (
-                <SoftTermHover
-                  slug={zdSlug}
-                  locale={locale}
-                  fallback={isZh ? display.zodiac.han : display.zodiac.en}
-                />
-              ) : isZh ? (
-                display.zodiac.han
-              ) : (
-                display.zodiac.en
-              )}
-            </div>
-            <div className="pcm-zodiac__pinyin">{display.zodiac.pinyin}</div>
-            <div className="pcm-zodiac__year">
-              {user_profile.birth.year}
-              {isZh ? "年" : ""}
-            </div>
-            <p className="pcm-zodiac__caption">{tc("your_sign_tag")}</p>
           </div>
 
           <div className="pcm-card pcm-cal">
