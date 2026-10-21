@@ -62,6 +62,24 @@ const nextConfig = {
     }
     return config;
   },
+  async headers() {
+    const immutableYear = "public, max-age=31536000, immutable";
+    const staticWeek = "public, max-age=604800, stale-while-revalidate=86400";
+    return [
+      {
+        source: "/v2/:path*",
+        headers: [{ key: "Cache-Control", value: staticWeek }],
+      },
+      {
+        source: "/vendor/:path*",
+        headers: [{ key: "Cache-Control", value: immutableYear }],
+      },
+      {
+        source: "/spline/:path*",
+        headers: [{ key: "Cache-Control", value: staticWeek }],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

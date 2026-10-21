@@ -101,10 +101,24 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Eastern OS" />
         <link rel="apple-touch-icon" href="/v2/apple-touch-icon.png" />
         <meta name="theme-color" content="#000000" />
+        {/* Non-blocking icon font — variable axis range was heavy + render-blocking */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          media="print"
+          id="eos-material-symbols"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var l=document.getElementById('eos-material-symbols');if(!l)return;var go=function(){l.media='all'};if(l.addEventListener)l.addEventListener('load',go);else go();setTimeout(go,0);})();`,
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+          />
+        </noscript>
         {/* Before React: default V2 shell + avoid classic chrome flash on home */}
         <script
           dangerouslySetInnerHTML={{
