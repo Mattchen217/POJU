@@ -9,12 +9,12 @@ import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
 import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
+import {
+  buildBaselineExportPlainText,
+  buildBaselineInteractiveHtml,
+} from "@/lib/poju/baseline-interactive-html";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import {
-  getMatrixSynopsisPlainText,
-  resolveMatrixDisplay,
-} from "@/lib/poju/matrix-narrative-text";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
@@ -37,59 +37,6 @@ function downloadBlob(filename: string, content: string, mime: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/** Offline HTML pack for baseline profile (align DeliveryShelf export chrome). */
-function buildBaselineExportHtml(input: {
-  title: string;
-  subtitle: string;
-  meta: string;
-  bodyText: string;
-  locale: string;
-}): string {
-  const zh = input.locale.startsWith("zh");
-  const paras = input.bodyText
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map(
-      (p) =>
-        `<p style="margin:0 0 14px;line-height:1.65">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`,
-    )
-    .join("\n");
-  return `<!DOCTYPE html>
-<html lang="${zh ? "zh-CN" : "en"}">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${escapeHtml(input.title)}</title>
-<style>
-  body{margin:0;font-family:Georgia,"Songti SC",serif;background:#0a0a12;color:#e8e6df}
-  .wrap{max-width:720px;margin:0 auto;padding:32px 20px 48px}
-  h1{font-size:1.45rem;margin:0 0 6px;color:#f2ca50}
-  .sub{margin:0 0 4px;color:rgba(232,230,223,.72);font-size:.92rem}
-  .meta{margin:0 0 22px;color:rgba(161,161,170,.9);font-size:.78rem}
-  hr{border:none;border-top:1px solid rgba(242,202,80,.22);margin:0 0 22px}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>${escapeHtml(input.title)}</h1>
-  <p class="sub">${escapeHtml(input.subtitle)}</p>
-  ${input.meta ? `<p class="meta">${escapeHtml(input.meta)}</p>` : ""}
-  <hr/>
-  ${paras}
-</div>
-</body>
-</html>`;
 }
 
 /**
@@ -244,13 +191,16 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
 
   const baselinePack = useMemo(() => {
     if (!matrixPayload) return null;
-    const display = resolveMatrixDisplay(matrixPayload, locale);
-    const bodyText = getMatrixSynopsisPlainText(display, locale);
     return {
       title: tPortrait("title"),
       subtitle: tPortrait("subtitle"),
-      meta: item?.subjectLabel?.trim() || "",
-      bodyText,
+      subjectLabel: item?.subjectLabel?.trim() || "",
+      bodyText: buildBaselineExportPlainText(matrixPayload, locale),
+      html: buildBaselineInteractiveHtml(matrixPayload, locale, {
+        title: tPortrait("title"),
+        subtitle: tPortrait("subtitle"),
+        subjectLabel: item?.subjectLabel?.trim() || "",
+      }),
     };
   }, [matrixPayload, locale, tPortrait, item?.subjectLabel]);
 
@@ -259,10 +209,9 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     setPackBusy(true);
     setActionMsg(null);
     try {
-      const html = buildBaselineExportHtml({ ...baselinePack, locale });
       downloadBlob(
         `baseline-profile-${new Date().toISOString().slice(0, 10)}.html`,
-        html,
+        baselinePack.html,
         "text/html;charset=utf-8",
       );
     } catch (e) {
@@ -284,7 +233,6 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     setEmailBusy(true);
     setActionMsg(null);
     try {
-      const html = buildBaselineExportHtml({ ...baselinePack, locale });
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -293,7 +241,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
           title: baselinePack.title,
           body_text: baselinePack.bodyText,
           locale,
-          html_attachment: html,
+          html_attachment: baselinePack.html,
           pack: "baseline",
         }),
       });
