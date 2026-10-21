@@ -8,19 +8,9 @@ import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { useRedirectIfSignedIn } from "@/components/auth/use-redirect-if-signed-in";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
-import { safeNextPath } from "@/lib/auth/auth-helpers";
-
-/** Prefer full navigation when `next` carries a query (avoids i18n path+search 404s). */
-function goNext(router: ReturnType<typeof useRouter>, next: string) {
-  if (next.includes("?")) {
-    window.location.assign(next);
-    return;
-  }
-  router.replace(next);
-  router.refresh();
-}
+import { navigateAfterAuth, safeNextPath } from "@/lib/auth/auth-helpers";
 
 type Props = {
   initialNext?: string | null;
@@ -29,12 +19,12 @@ type Props = {
 export function SignupForm({ initialNext = null }: Props) {
   const t = useTranslations("auth.signup");
   const locale = useLocale();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [lastEmail, setLastEmail] = useState("");
   const [otpOpen, setOtpOpen] = useState(false);
   const inFlight = useRef(false);
-  const next = safeNextPath(initialNext, "/app");
+  // Default landing. Start CTA passes next=/app (localized) via query string.
+  const next = safeNextPath(initialNext, "/");
   // Pause auto-leave while OTP modal is open — a leftover signup session used
   // to fire SIGNED_IN and bounce → /app → /login, closing the modal instantly.
   useRedirectIfSignedIn(next, { enabled: !otpOpen });
@@ -94,7 +84,7 @@ export function SignupForm({ initialNext = null }: Props) {
               setError(data.error ?? "invalid_code");
               throw new Error(data.error ?? "invalid_code");
             }
-            goNext(router, next);
+            navigateAfterAuth(next);
           } finally {
             inFlight.current = false;
           }

@@ -4965,9 +4965,9 @@ const BUILT_COPY = {
             }
 
             function goAuthLogin(nextPath) {
-              // Default next = /app (not marketing home). next=/ would make
-              // useRedirectIfSignedIn bounce login → landing on the first click.
-              const next = localizeAppPath(nextPath || '/app');
+              // Login button → return to landing after auth.
+              // Start / checkout pass next=/app (or /app?tab=…) explicitly.
+              const next = localizeAppPath(nextPath != null ? nextPath : '/');
               const url = localizeAppPath('/login') + '?next=' + encodeURIComponent(next);
               (window.top || window).location.href = url;
             }

@@ -24,6 +24,15 @@ export function safeNextPath(raw: string | null | undefined, fallback = "/"): st
   return next.slice(0, 512) || fallback;
 }
 
+/**
+ * Hard-navigate after auth. `next` may already include a locale prefix (`/zh/app`);
+ * next-intl's `router.replace` would double-prefix → `/zh/zh/app` → custom 404.
+ */
+export function navigateAfterAuth(next: string, fallback = "/"): void {
+  if (typeof window === "undefined") return;
+  window.location.assign(safeNextPath(next, fallback));
+}
+
 export function siteOrigin(): string {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||

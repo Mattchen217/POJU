@@ -9,7 +9,7 @@ import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { OtpCodeInput } from "@/components/auth/OtpCodeInput";
 import { Link, useRouter } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
-import { safeNextPath } from "@/lib/auth/auth-helpers";
+import { navigateAfterAuth, safeNextPath } from "@/lib/auth/auth-helpers";
 
 function VerifyForm() {
   const t = useTranslations("auth.verify");
@@ -51,8 +51,8 @@ function VerifyForm() {
         setError(data.error ?? "invalid_code");
         return;
       }
-      router.replace(next);
-      router.refresh();
+      // Hard nav — next may already be locale-prefixed (/zh/app).
+      navigateAfterAuth(next);
     } finally {
       inFlight.current = false;
       setSubmitting(false);

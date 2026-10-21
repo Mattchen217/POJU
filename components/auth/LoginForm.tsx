@@ -8,18 +8,9 @@ import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { useRedirectIfSignedIn } from "@/components/auth/use-redirect-if-signed-in";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
-import { safeNextPath } from "@/lib/auth/auth-helpers";
-
-function goNext(router: ReturnType<typeof useRouter>, next: string) {
-  if (next.includes("?")) {
-    window.location.assign(next);
-    return;
-  }
-  router.replace(next);
-  router.refresh();
-}
+import { navigateAfterAuth, safeNextPath } from "@/lib/auth/auth-helpers";
 
 type Props = {
   initialNext?: string | null;
@@ -28,13 +19,11 @@ type Props = {
 
 export function LoginForm({ initialNext = null, initialError = null }: Props) {
   const t = useTranslations("auth.login");
-  const router = useRouter();
   const [error, setError] = useState<string | null>(initialError);
   const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
-  // Prefer /app after login — next=/ (marketing home) caused a flash-back from
-  // useRedirectIfSignedIn when a session already existed.
-  const next = safeNextPath(initialNext, "/app");
+  // Default home (landing). Start CTA / middleware pass next=/app (or /zh/app).
+  const next = safeNextPath(initialNext, "/");
   useRedirectIfSignedIn(next);
 
   return (
@@ -65,7 +54,7 @@ export function LoginForm({ initialNext = null, initialError = null }: Props) {
               setError(data.error ?? "auth_failed");
               return;
             }
-            goNext(router, next);
+            navigateAfterAuth(next);
           } finally {
             inFlight.current = false;
           }

@@ -34,12 +34,6 @@ function markBounce(): void {
   }
 }
 
-/** Marketing home paths — never use these as post-login bounce targets from /login. */
-function isMarketingHome(path: string, locale: UiLocaleCode): boolean {
-  const p = (path.split("?")[0] || "/").replace(/\/$/, "") || "/";
-  return p === "/" || p === `/${locale}`;
-}
-
 type RedirectIfSignedInOptions = {
   /**
    * When false, stay on the auth page (e.g. signup OTP modal is open).
@@ -59,19 +53,18 @@ function isEmailConfirmed(user: {
  * If a Cookie session already exists (e.g. OAuth finished in another window,
  * or callback set cookies but the UI stayed on /login), leave auth pages.
  *
- * Uses hard navigation + localizeHref so `next=/app` from an older link still
- * lands on `/{locale}/app` when the auth page itself is localized — and so
- * `next=/zh/app` is not double-prefixed by next-intl's router.
+ * Uses hard navigation + localizeHref so `next=/app` still lands on
+ * `/{locale}/app`, and `next=/zh/app` is not double-prefixed.
  *
  * Bounce guard: if middleware kicks us back to /login within a few seconds
  * (client session vs cookie mismatch), do not hard-nav again — stops the
  * login↔/app↔login jump loop.
  *
  * Already-signed-in users are handled by middleware before paint.
- * Client only leaves on a real SIGNED_IN (OAuth / password / OTP just completed) —
- * not INITIAL_SESSION, TOKEN_REFRESHED, or a mount-time getUser() (those caused
- * login page flash → /app → bounce back to login).
+ * Client only leaves on a real SIGNED_IN (OAuth / password / OTP just completed).
  * Unconfirmed email sessions must stay on signup so the OTP modal can finish.
+ *
+ * Login from marketing may set next=/ or /zh (landing). Start CTA sets next=/app.
  */
 export function useRedirectIfSignedIn(
   nextPath: string,
@@ -94,12 +87,8 @@ export function useRedirectIfSignedIn(
       if (cancelled) return;
       if (recentlyBounced()) return;
       markBounce();
-      let target = localizeHref(nextPath, uiLocale);
-      // Stale session + next=/ (landing) looked like “login opens then snaps back”.
-      if (isMarketingHome(target, uiLocale)) {
-        target = localizeHref("/app", uiLocale);
-      }
-      window.location.replace(target);
+      // Honor next as-is (landing `/`/`/zh` or workspace `/app`/`/zh/app`).
+      window.location.replace(localizeHref(nextPath, uiLocale));
     };
 
     const {
