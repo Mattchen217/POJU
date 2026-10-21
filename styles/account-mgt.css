@@ -996,11 +996,17 @@ a.acct-text-link:hover {
   color: var(--acct-dim);
 }
 
+.acct-pw__control {
+  position: relative;
+  width: 100%;
+  max-width: 20rem;
+}
+
 .acct-pw input {
   width: 100%;
   max-width: 20rem;
   box-sizing: border-box;
-  padding: 0.55rem 0.7rem;
+  padding: 0.55rem 3.4rem 0.55rem 0.7rem;
   border-radius: 0.4rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: var(--acct-surface-low);
@@ -1008,8 +1014,38 @@ a.acct-text-link:hover {
   font-size: 0.875rem;
 }
 
+.acct-pw__control input {
+  max-width: none;
+}
+
 .acct-pw input:focus {
   outline: 2px solid rgba(242, 202, 80, 0.45);
+  outline-offset: 1px;
+}
+
+.acct-pw__toggle {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--acct-dim);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+  border-radius: 0.3rem;
+}
+
+.acct-pw__toggle:hover {
+  color: #f2ca50;
+}
+
+.acct-pw__toggle:focus-visible {
+  outline: 2px solid rgba(242, 202, 80, 0.55);
   outline-offset: 1px;
 }
 

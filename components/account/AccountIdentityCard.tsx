@@ -87,10 +87,12 @@ export function AccountIdentityCard({
   const t = useTranslations("account");
   const tProfile = useTranslations("workspace.profile");
   const locale = useLocale();
+  const tAuthFields = useTranslations("auth.fields");
   const [error, setError] = useState<string | null>(null);
   const [pw, setPw] = useState({ current: "", password: "", confirm: "" });
   const [pwBusy, setPwBusy] = useState(false);
   const [pwDone, setPwDone] = useState(false);
+  const [reveal, setReveal] = useState({ current: false, password: false, confirm: false });
   const showPassword = hasPasswordIdentity(user);
   const providers = loginProviders(user);
   const avatar = avatarUrl(user);
@@ -179,30 +181,69 @@ export function AccountIdentityCard({
                     .finally(() => setPwBusy(false));
                 }}
               >
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder={tProfile("currentPassword")}
-                  value={pw.current}
-                  onChange={(ev) => setPw((s) => ({ ...s, current: ev.target.value }))}
-                  disabled={pwBusy}
-                />
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={tProfile("newPassword")}
-                  value={pw.password}
-                  onChange={(ev) => setPw((s) => ({ ...s, password: ev.target.value }))}
-                  disabled={pwBusy}
-                />
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={tProfile("confirmPassword")}
-                  value={pw.confirm}
-                  onChange={(ev) => setPw((s) => ({ ...s, confirm: ev.target.value }))}
-                  disabled={pwBusy}
-                />
+                <div className="acct-pw__control">
+                  <input
+                    type={reveal.current ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder={tProfile("currentPassword")}
+                    value={pw.current}
+                    onChange={(ev) => setPw((s) => ({ ...s, current: ev.target.value }))}
+                    disabled={pwBusy}
+                  />
+                  <button
+                    type="button"
+                    className="acct-pw__toggle"
+                    onClick={() => setReveal((s) => ({ ...s, current: !s.current }))}
+                    aria-pressed={reveal.current}
+                    aria-label={
+                      reveal.current ? tAuthFields("hidePassword") : tAuthFields("showPassword")
+                    }
+                  >
+                    {reveal.current ? tAuthFields("hidePassword") : tAuthFields("showPassword")}
+                  </button>
+                </div>
+                <div className="acct-pw__control">
+                  <input
+                    type={reveal.password ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder={tProfile("newPassword")}
+                    value={pw.password}
+                    onChange={(ev) => setPw((s) => ({ ...s, password: ev.target.value }))}
+                    disabled={pwBusy}
+                  />
+                  <button
+                    type="button"
+                    className="acct-pw__toggle"
+                    onClick={() => setReveal((s) => ({ ...s, password: !s.password }))}
+                    aria-pressed={reveal.password}
+                    aria-label={
+                      reveal.password ? tAuthFields("hidePassword") : tAuthFields("showPassword")
+                    }
+                  >
+                    {reveal.password ? tAuthFields("hidePassword") : tAuthFields("showPassword")}
+                  </button>
+                </div>
+                <div className="acct-pw__control">
+                  <input
+                    type={reveal.confirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder={tProfile("confirmPassword")}
+                    value={pw.confirm}
+                    onChange={(ev) => setPw((s) => ({ ...s, confirm: ev.target.value }))}
+                    disabled={pwBusy}
+                  />
+                  <button
+                    type="button"
+                    className="acct-pw__toggle"
+                    onClick={() => setReveal((s) => ({ ...s, confirm: !s.confirm }))}
+                    aria-pressed={reveal.confirm}
+                    aria-label={
+                      reveal.confirm ? tAuthFields("hidePassword") : tAuthFields("showPassword")
+                    }
+                  >
+                    {reveal.confirm ? tAuthFields("hidePassword") : tAuthFields("showPassword")}
+                  </button>
+                </div>
                 <button type="submit" className="acct-btn acct-btn--quiet self-start" disabled={pwBusy}>
                   {pwBusy ? tProfile("updatingPassword") : tProfile("updatePassword")}
                 </button>
