@@ -51,7 +51,11 @@ export async function POST(req: Request) {
     // Avoid leaking whether the email exists / already confirmed.
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[auth/resend-signup] unexpected", error instanceof Error ? error.name : "unknown");
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+    console.error(
+      "[auth/resend-signup] unexpected",
+      error instanceof Error ? `${error.name}: ${error.message}` : "unknown",
+    );
+    // Prefer send_failed over opaque server_error so the verify UI can retry.
+    return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
   }
 }

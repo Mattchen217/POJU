@@ -8,7 +8,7 @@ import {
   normalizeEmail,
 } from "@/lib/auth/auth-helpers";
 import { findAuthUserByEmail } from "@/lib/auth/find-user-by-email";
-import { jsonNeedsVerification, resendSignupOtp } from "@/lib/auth/resume-unconfirmed-signup";
+import { jsonNeedsVerification } from "@/lib/auth/resume-unconfirmed-signup";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 
@@ -65,21 +65,12 @@ export async function POST(req: Request) {
       }
 
       if (mapped === "email_taken") {
+        // Only hard-block when admin confirms the account is already verified.
         if (found?.emailConfirmed) {
           return NextResponse.json({ ok: false, error: "email_taken" }, { status: 400 });
         }
-        // Lookup missed (or race): still try resend so half-registered users can continue.
-        const resend = await resendSignupOtp(email);
-        if (resend === "rate_limited") {
-          return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
-        }
-        if (resend === "ok") {
-          return jsonNeedsVerification(email, {
-            existingUnconfirmed: true,
-            resend: "ok",
-          });
-        }
-        return NextResponse.json({ ok: false, error: "email_taken" }, { status: 400 });
+        // Unconfirmed or lookup missed — resume OTP (resend may warn if SMTP fails).
+        return jsonNeedsVerification(email, { existingUnconfirmed: true });
       }
 
       return NextResponse.json({ ok: false, error: mapped }, { status: 400 });

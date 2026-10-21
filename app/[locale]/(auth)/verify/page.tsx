@@ -77,7 +77,9 @@ function VerifyForm() {
     void (async () => {
       const { ok, data } = await postAuthJson("/api/auth/resend-signup", { email: emailParam });
       if (!ok) {
-        setError(data.error ?? "send_failed");
+        // Keep the OTP form usable — user can tap Resend after fixing mail/rate limits.
+        const code = data.error === "server_error" ? "send_failed" : (data.error ?? "send_failed");
+        setError(code);
         return;
       }
       setResendLeft(60);
