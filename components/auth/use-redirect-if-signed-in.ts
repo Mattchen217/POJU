@@ -35,6 +35,12 @@ function markBounce(): void {
   }
 }
 
+/** Marketing home paths — never use these as post-login bounce targets from /login. */
+function isMarketingHome(path: string, locale: UiLocaleCode): boolean {
+  const p = (path.split("?")[0] || "/").replace(/\/$/, "") || "/";
+  return p === "/" || p === `/${locale}`;
+}
+
 /**
  * If a Cookie session already exists (e.g. OAuth finished in another window,
  * or callback set cookies but the UI stayed on /login), leave auth pages.
@@ -46,6 +52,9 @@ function markBounce(): void {
  * Bounce guard: if middleware kicks us back to /login within a few seconds
  * (client session vs cookie mismatch), do not hard-nav again — stops the
  * login↔/app↔login jump loop.
+ *
+ * Only auto-leave on a confirmed getUser() or a real SIGNED_IN event —
+ * not INITIAL_SESSION / TOKEN_REFRESHED (those caused login flash → home).
  */
 export function useRedirectIfSignedIn(nextPath: string): void {
   const locale = useLocale();
@@ -63,7 +72,11 @@ export function useRedirectIfSignedIn(nextPath: string): void {
       if (cancelled) return;
       if (recentlyBounced()) return;
       markBounce();
-      const target = localizeHref(nextPath, uiLocale);
+      let target = localizeHref(nextPath, uiLocale);
+      // Stale session + next=/ (landing) looked like “login opens then snaps back”.
+      if (isMarketingHome(target, uiLocale)) {
+        target = localizeHref("/app", uiLocale);
+      }
       window.location.replace(target);
     };
 
@@ -79,7 +92,9 @@ export function useRedirectIfSignedIn(nextPath: string): void {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) return;
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+      // Do not redirect on INITIAL_SESSION / TOKEN_REFRESHED — that bounced
+      // users back to the landing page on the first click into /login.
+      if (event === "SIGNED_IN") {
         go();
       }
     });

@@ -4957,8 +4957,9 @@ const BUILT_COPY = {
             }
 
             function goAuthLogin(nextPath) {
-              const home = currentLocale === 'en' ? '/' : '/' + currentLocale;
-              const next = localizeAppPath(nextPath || home);
+              // Default next = /app (not marketing home). next=/ would make
+              // useRedirectIfSignedIn bounce login → landing on the first click.
+              const next = localizeAppPath(nextPath || '/app');
               const url = localizeAppPath('/login') + '?next=' + encodeURIComponent(next);
               (window.top || window).location.href = url;
             }
@@ -5269,7 +5270,7 @@ const BUILT_COPY = {
                   goLocalizedApp('/app?tab=profile');
                   return;
                 }
-                goAuthLogin('/');
+                goAuthLogin();
               });
             }
 

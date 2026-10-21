@@ -29,7 +29,9 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(searchParams.get("error"));
   const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
-  const next = safeNextPath(searchParams.get("next"), "/");
+  // Prefer /app after login — next=/ (marketing home) caused a flash-back from
+  // useRedirectIfSignedIn when a session already existed.
+  const next = safeNextPath(searchParams.get("next"), "/app");
   useRedirectIfSignedIn(next);
 
   return (

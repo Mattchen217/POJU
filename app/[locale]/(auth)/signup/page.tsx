@@ -31,7 +31,7 @@ function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
-  const next = safeNextPath(searchParams.get("next"), "/");
+  const next = safeNextPath(searchParams.get("next"), "/app");
   useRedirectIfSignedIn(next);
 
   return (
