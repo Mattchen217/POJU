@@ -12,31 +12,15 @@ export const metadata: Metadata = {
 
 /**
  * Public home = V2 workspace landing (iframe → /v2-landing).
- * Classic marketing home remains at `/classic` until retired.
+ * Do not preload iframe assets here — the parent document never "uses" them,
+ * which triggers unused-preload warnings and confuses Lighthouse.
+ * Logo preloads live inside public/v2-landing.html where the <img> tags are.
  */
 export default function LandingPage() {
   return (
-    <>
-      {/* Document preload — metadata.other is not always emitted as <link>; keep explicit. */}
-      <link rel="preload" href="/v2-landing" as="document" />
-      <link
-        rel="preload"
-        href="/v2/EASTERN-OS-LOGO1.webp"
-        as="image"
-        type="image/webp"
-        fetchPriority="high"
-      />
-      <link
-        rel="preload"
-        href="/v2/EASTERN-OS-LOGO2.webp"
-        as="image"
-        type="image/webp"
-        fetchPriority="high"
-      />
-      <Suspense fallback={<div className="min-h-screen bg-[#000000]" />}>
-        <HomeClientChrome />
-        <V2WorkspaceLandingPage />
-      </Suspense>
-    </>
+    <Suspense fallback={<div className="min-h-screen bg-[#000000]" />}>
+      <HomeClientChrome />
+      <V2WorkspaceLandingPage />
+    </Suspense>
   );
 }

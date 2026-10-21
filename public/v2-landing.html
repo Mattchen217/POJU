@@ -8,12 +8,11 @@
 <link rel="icon" type="image/png" href="/v2/EASTERN-OS-LOGO1.png"/>
 <link rel="shortcut icon" type="image/png" href="/v2/EASTERN-OS-LOGO1.png"/>
 <link rel="apple-touch-icon" href="/v2/apple-touch-icon.png"/>
-<!-- Tailwind must load synchronously: the whole page is utility-class CSS.
-     Deferring the Play CDN left dark text on dark bg until JS ran (broken LCP paint). -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<!-- Built Tailwind utilities (pnpm build:v2-landing). Do not load the Tailwind Play CDN. -->
+<link rel="stylesheet" href="/v2/v2-landing.css"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<!-- LCP: preload brand marks (WebP) -->
+<!-- Preload only assets this document paints immediately (nav logos). -->
 <link rel="preload" href="/v2/EASTERN-OS-LOGO1.webp" as="image" type="image/webp" fetchpriority="high"/>
 <link rel="preload" href="/v2/EASTERN-OS-LOGO2.webp" as="image" type="image/webp" fetchpriority="high"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
@@ -100,42 +99,6 @@
 
 
         </style>
-<script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#D4AF37", // Metallic Gold from the logo
-              "background-light": "#f8fafc",
-              "background-dark": "#000000",
-            },
-            fontFamily: {
-              display: ["Inter", "Noto Sans SC", "system-ui", "sans-serif"],
-              sans: ["Inter", "Noto Sans SC", "system-ui", "sans-serif"],
-            },
-            borderRadius: {
-              DEFAULT: "0.5rem",
-            },
-            animation: {
-              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'float': 'float 6s ease-in-out infinite',
-              'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
-            },
-            keyframes: {
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-20px)' },
-              },
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
-            }
-          },
-        },
-      };
-    </script>
 <style>
         .gold-gradient {
             background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
@@ -2982,7 +2945,8 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                 if (started) return;
                 started = true;
                 try {
-                  const { Application } = await import('https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js');
+                  // Same-origin full build/ tree (pnpm build:v2-landing / predev / prebuild).
+                  const { Application } = await import('/vendor/splinetool-runtime/runtime.js');
                   const app = new Application(canvas);
                   await app.load('/spline/atmos.splinecode');
                   try { app.setZoom(ZOOM); } catch (_) {}
