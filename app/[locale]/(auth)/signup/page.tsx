@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
@@ -25,6 +25,7 @@ function goNext(router: ReturnType<typeof useRouter>, next: string) {
 
 function SignupForm() {
   const t = useTranslations("auth.signup");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,7 @@ function SignupForm() {
             email_send_warning?: boolean;
             email?: string;
             error?: string;
-          }>("/api/auth/signup", { email, password });
+          }>("/api/auth/signup", { email, password, locale });
           if (!ok) {
             setError(data.error ?? "auth_failed");
             return { ok: false, error: data.error ?? "auth_failed" };

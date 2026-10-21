@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
@@ -15,6 +15,7 @@ function VerifyForm() {
   const t = useTranslations("auth.verify");
   const tLogin = useTranslations("auth.login");
   const tFields = useTranslations("auth.fields");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
   const emailParam = searchParams.get("email")?.trim().toLowerCase() ?? "";
@@ -62,7 +63,9 @@ function VerifyForm() {
     if (!email || resendLeft > 0 || inFlight.current) return;
     setError(null);
     const path = mode === "signup" ? "/api/auth/resend-signup" : "/api/auth/otp/send";
-    const { ok, data } = await postAuthJson(path, { email });
+    const body =
+      mode === "signup" ? { email, locale } : { email };
+    const { ok, data } = await postAuthJson(path, body);
     if (!ok) {
       setError(data.error ?? "send_failed");
       return;
@@ -75,7 +78,10 @@ function VerifyForm() {
     if (mode !== "signup" || !emailParam || autoSent.current) return;
     autoSent.current = true;
     void (async () => {
-      const { ok, data } = await postAuthJson("/api/auth/resend-signup", { email: emailParam });
+      const { ok, data } = await postAuthJson("/api/auth/resend-signup", {
+        email: emailParam,
+        locale,
+      });
       if (!ok) {
         // Keep the OTP form usable — user can tap Resend after fixing mail/rate limits.
         const code = data.error === "server_error" ? "send_failed" : (data.error ?? "send_failed");
@@ -84,7 +90,7 @@ function VerifyForm() {
       }
       setResendLeft(60);
     })();
-  }, [mode, emailParam]);
+  }, [mode, emailParam, locale]);
 
   return (
     <AuthCard

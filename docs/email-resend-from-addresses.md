@@ -24,10 +24,26 @@ Do **not** use `noreply@easternos.com`, `readings@`, or `checkin@` for these thr
    - Password: Resend API key (or Resend SMTP credential)
    - Sender name: `Eastern OS Validation`
    - Sender email: `verify@mail.easternos.com`
-3. Optional: customize OTP HTML under Auth → Email Templates (still from `verify@`).
+3. Auth → Email Templates → **Confirm sign up**:
+   - Do **not** use the default “click Confirm email address” link as the primary CTA.
+   - Show the **6-digit** `{{ .Token }}` (app verifies with `verifyOtp` type `signup`).
+   - App writes `user_metadata.lang` (`zh` \| `en` \| `es` \| `fr`) on signup/resend — branch copy with Go templates on `{{ .Data.lang }}`.
 4. App routes stay Supabase `signUp` / `resend` / `verifyOtp` — **no** parallel OTP table in Next.
 
-Until Confirm email + SMTP are live, signup “send code” will fail regardless of `reports@` / `notify@` app config.
+### Confirm sign up — Subject (multilingual)
+
+Put this in the **Subject** field only (not in Body):
+
+```text
+{{ if eq .Data.lang "zh" }}验证您的 Eastern OS 邮箱{{ else if eq .Data.lang "es" }}Verifique su correo para Eastern OS{{ else if eq .Data.lang "fr" }}Vérifiez votre e-mail pour Eastern OS{{ else }}Verify your email for Eastern OS{{ end }}
+```
+
+### Confirm sign up — Body
+
+Use a Token card with `user-select: all` for easy copy. Email HTML cannot run JS — no “copy button” script is needed.  
+App OTP inputs use `autocomplete="one-time-code"` so iOS/Android can offer keyboard autofill from Mail.
+
+Until Confirm email + SMTP + Token template are live, signup “send code” will not match the in-app OTP UI.
 
 ## Decision report mail shape
 
