@@ -221,8 +221,16 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
   if (phase === "idle") {
     return (
       <div className="workspace-product-stack workspace-poju-stack">
-        <div className="workspace-product-hero workspace-poju-hero">
-          <PojuProductHero copy={heroCopy} hideActions />
+        <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
+          <PojuProductHero
+            copy={heroCopy}
+            hideActions
+            workspaceMotion="spline-constellation"
+            scene="/spline/atmoswork.splinecode"
+            initialZoom={1.15}
+            hideStarrySky
+            hideVignette
+          />
         </div>
         <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__cluster">
@@ -260,8 +268,16 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
             birthFading ? " is-fade-out" : ""
           }`}
         >
-          <div className="workspace-product-hero workspace-poju-hero">
-            <PojuProductHero copy={heroCopy} hideActions />
+          <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
+            <PojuProductHero
+              copy={heroCopy}
+              hideActions
+              workspaceMotion="spline-constellation"
+              scene="/spline/atmoswork.splinecode"
+              initialZoom={1.15}
+              hideStarrySky
+              hideVignette
+            />
           </div>
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">

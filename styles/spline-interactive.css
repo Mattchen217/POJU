@@ -17,5 +17,20 @@
   max-width: 100% !important;
   max-height: 100% !important;
   display: block;
-  background: transparent !important;
+  background: #07080a !important;
+}
+
+/*
+ * Hide the default 300×150 WebGL plate until Application.setSize has taken effect.
+ * Otherwise headed Chrome GPU composites a solid white band over the hero.
+ */
+.spline-interactive-scene:not(.spline-interactive-scene--static):not(
+    .spline-interactive-scene--sized
+  )
+  > canvas {
+  opacity: 0;
+}
+
+.spline-interactive-scene--sized > canvas {
+  opacity: 1;
 }

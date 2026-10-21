@@ -1735,22 +1735,107 @@
   overflow: hidden;
 }
 
-.workspace-atmos-hero .poju-hero-spline {
-  left: 50%;
-  top: 50%;
-  width: 100%;
+/*
+ * Layered Atmos hero (Z-stack, not vertical bands):
+ *  z0 — Atmos Spline (/spline/atmoswork.splinecode — moving blue light)
+ *  z1 — star canvas (clearRect → transparent; glow shows through)
+ */
+/*
+ * Workspace Atmos hero plate — soft/transparent so shell starfield reads through.
+ * Full-bleed L/R: cancel canvas-viewport horizontal padding on the hero only.
+ */
+.workspace-shell__canvas-viewport:has(.workspace-atmos-hero) .workspace-atmos-hero,
+.workspace-shell__canvas--dense
+  .workspace-shell__canvas-viewport:has(.workspace-atmos-hero)
+  .workspace-atmos-hero {
+  --atmos-bleed-l: max(16px, var(--ws-inset-left, 0px));
+  --atmos-bleed-r: max(16px, var(--ws-inset-right, 0px));
+  margin-left: calc(-1 * var(--atmos-bleed-l));
+  margin-right: calc(-1 * var(--atmos-bleed-r));
+  width: calc(100% + var(--atmos-bleed-l) + var(--atmos-bleed-r));
   max-width: none;
-  height: min(46vh, 400px);
-  min-height: 0;
-  /* Stretch sides only — keep vertical scale at 1 so height stays put */
-  transform: translate(-50%, -50%) scaleX(1.28);
-  transform-origin: center center;
-  opacity: 1;
 }
 
-.workspace-atmos-hero .poju-hero-spline canvas {
+.workspace-shell__canvas--dense
+  .workspace-shell__canvas-viewport:has(.workspace-atmos-hero)
+  .workspace-atmos-hero {
+  --atmos-bleed-l: max(28px, var(--ws-inset-left, 0px));
+  --atmos-bleed-r: max(28px, var(--ws-inset-right, 0px));
+}
+
+.workspace-product-hero.workspace-atmos-hero .product-hero__bg,
+.workspace-poju-hero.workspace-atmos-hero .product-hero__bg,
+.workspace-atmos-hero .product-hero__bg {
+  background: radial-gradient(
+    ellipse 85% 65% at 50% 42%,
+    rgba(20, 24, 32, 0.22) 0%,
+    rgba(7, 8, 10, 0.08) 65%,
+    transparent 100%
+  ) !important;
+}
+
+.workspace-atmos-hero .product-hero__shell {
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.workspace-atmos-hero .poju-hero-spline,
+.workspace-atmos-hero .poju-hero-spline--under-sky {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  min-height: 0;
+  z-index: 0;
+  transform: none;
+  opacity: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Larger Atmos grid cells: scale the scene up inside the hero band */
+.workspace-atmos-hero .poju-hero-spline--atmos-glow {
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%) scale(1.45);
+  transform-origin: center center;
+}
+
+.workspace-atmos-hero .poju-hero-spline canvas,
+.workspace-atmos-hero .poju-hero-spline--under-sky canvas {
   width: 100% !important;
   height: 100% !important;
+  background: transparent !important;
+  mix-blend-mode: normal !important;
+}
+
+/* atmoswork: blue walker — mid brightness (rolled back from 4.2) */
+.workspace-product-hero.workspace-atmos-hero .poju-hero-spline--atmos-glow canvas,
+.workspace-atmos-hero .poju-hero-spline--atmos-glow canvas {
+  background: transparent !important;
+  mix-blend-mode: screen !important;
+  filter: brightness(2.6) contrast(1.4) saturate(2.4) !important;
+}
+
+.workspace-atmos-hero .poju-hero-constellation--over-spline {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 1;
+  background: transparent !important;
+  pointer-events: none;
+}
+
+.workspace-atmos-hero .poju-hero-constellation--over-spline canvas {
+  background: transparent !important;
 }
 
 /* —— Product stack: hero + form (outer layout only) —— */
@@ -1911,7 +1996,7 @@
   }
 }
 
-/* Preparing Spline confined to center canvas (not full-viewport fixed) */
+/* Preparing stage confined to center canvas (not full-viewport fixed) */
 .workspace-poju-preparing-stage {
   position: absolute;
   inset: 0;
@@ -1919,6 +2004,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background: transparent;
 }
 
 .workspace-poju-preparing-stage--exit {
@@ -1935,13 +2021,77 @@
 }
 
 /*
- * Preparing Spline — fill the center column only.
- * No CSS scale/translate on the scene root (breaks Spline canvas → subject flies to a corner).
- * Clear color is transparent; purple ambient wash is muted on the shell while preparing.
+ * Avatar prepare wait — shell starfield stays visible behind a large thinking mark.
+ * (Replaces Analyzing-scene Spline for the ~10s gate.)
  */
-.workspace-shell:has(.workspace-poju-preparing) {
-  /* Keep near-black stage + stars; drop purple radials that read as the scene “plate”. */
+.workspace-shell:has(.workspace-poju-preparing--avatar) {
+  /* Keep near-black stage + stars; drop purple radials that read as a plate. */
   background: linear-gradient(180deg, #0a0810 0%, #07060c 45%, #05040a 100%);
+}
+
+.workspace-prepare-avatar-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 3vh, 1.75rem);
+  padding: 24px;
+  pointer-events: none;
+}
+
+.workspace-prepare-avatar.pchat__ai-avatar,
+.workspace-prepare-avatar {
+  display: block !important;
+  width: min(52vmin, 280px) !important;
+  height: min(52vmin, 280px) !important;
+  flex-shrink: 0;
+  /* Slightly quieter than chat avatar — less glare on full-screen wait. */
+  opacity: 0.82;
+  filter: brightness(0.88) saturate(0.92);
+}
+
+.workspace-prepare-avatar .atmos-dot {
+  opacity: 0.72;
+}
+
+.workspace-prepare-avatar .atmos-avatar-svg.is-thinking .atmos-dot.is-lit {
+  opacity: 0.9;
+  filter:
+    drop-shadow(0 0 1px rgba(245, 215, 142, 0.45))
+    drop-shadow(0 0 2.5px rgba(191, 149, 63, 0.28));
+}
+
+.workspace-prepare-avatar-stage__status {
+  margin: 0;
+  max-width: 20rem;
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: rgba(232, 201, 110, 0.48);
+}
+
+.workspace-prepare-avatar-stage__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.workspace-poju-preparing--avatar .wait-fx {
+  position: absolute !important;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.workspace-poju-preparing--avatar .wait-fx--breath {
+  display: none !important;
 }
 
 .workspace-poju-preparing.preparing-spline-page {

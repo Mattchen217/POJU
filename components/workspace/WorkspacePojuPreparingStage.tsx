@@ -4,16 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { clsx } from "clsx";
 
+import { AtmosThinkingAvatar } from "@/components/poju/AtmosThinkingAvatar";
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
-import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import { WaitFxLayer } from "@/components/wait-ritual/WaitFxLayer";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
 import type { StoredProfileData } from "@/lib/db/poju-db";
-import {
-  WORKSPACE_PREPARING_ANALYZING_ZOOM,
-  configureWorkspacePreparingSpline,
-} from "@/lib/poju/configure-workspace-preparing-spline";
 import { finalizeWorkspacePrepare } from "@/lib/poju/finalize-workspace-prepare";
 import {
   PREVIEW_MATRIX_MIN_PREP_MS,
@@ -30,8 +25,8 @@ import {
 const EXIT_MS = 700;
 
 /**
- * Center-only preparing: Spline + local matrix calc → open right rail with chart →
- * flash/fade out → hand off to chat shell.
+ * Center preparing: shell starfield + large Atmos thinking avatar → flash → chat.
+ * Replaces the old Analyzing-scene Spline wait.
  */
 export function WorkspacePojuPreparingStage() {
   const locale = useLocale();
@@ -77,7 +72,6 @@ export function WorkspacePojuPreparingStage() {
 
         setShowFlash(true);
         setPhase("exiting");
-        /* Open rail as prepare fades out — avoids resizing the Spline canvas mid-scene. */
         openRight();
         markDocVaultUnread(DocVaultIds.matrix(profileId), "foundation");
         notifyDocVaultUpdated();
@@ -85,7 +79,6 @@ export function WorkspacePojuPreparingStage() {
         if (ac.signal.aborted) return;
         setShowFlash(false);
         setPhase("chat");
-        /* Center already has welcome; popup covers it until user closes → vault keeps the doc. */
         requestBaselineAutoOpen(profileId);
       } catch (e) {
         if (ac.signal.aborted) return;
@@ -117,19 +110,16 @@ export function WorkspacePojuPreparingStage() {
     <div
       className={clsx(
         "workspace-poju-preparing-stage",
+        "workspace-poju-preparing",
+        "workspace-poju-preparing--avatar",
         exiting && "workspace-poju-preparing-stage--exit",
       )}
     >
-      <PreparingSplineShell
-        blockInteraction
-        eagerSpline
-        className="workspace-poju-preparing"
-        sceneZoom={WORKSPACE_PREPARING_ANALYZING_ZOOM}
-        onSplineLoad={configureWorkspacePreparingSpline}
-      >
-        {/* No purple breath vignette — Spline is transparent; Classic WaitFx tint looked like a purple plate. */}
-        <WaitFxLayer glowColor="rgba(255,255,255,0.35)" showBreath={false} showFlash={showFlash} />
-        {error && profile ? (
+      {/* Shell WorkspaceStarfieldLayer already paints the landing/workspace sky. */}
+      <WaitFxLayer glowColor="rgba(255,255,255,0.35)" showBreath={false} showFlash={showFlash} />
+
+      {error && profile ? (
+        <div className="workspace-prepare-avatar-stage__overlay">
           <ChartReadingLoader
             profile={profile}
             currentStep="error"
@@ -144,22 +134,13 @@ export function WorkspacePojuPreparingStage() {
             locale={locale}
             variant="matrix"
           />
-        ) : profile ? (
-          <ChartReadingLoader
-            profile={profile}
-            currentStep="analyzing"
-            error={null}
-            onRetry={() => {}}
-            onRefund={() => {}}
-            locale={locale}
-            variant="matrix"
-          />
-        ) : (
-          <PreparingStatusOverlay>
-            <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
-          </PreparingStatusOverlay>
-        )}
-      </PreparingSplineShell>
+        </div>
+      ) : (
+        <div className="workspace-prepare-avatar-stage" aria-busy="true" aria-live="polite">
+          <AtmosThinkingAvatar thinking className="workspace-prepare-avatar" />
+          <p className="workspace-prepare-avatar-stage__status">{tPrep("preparing")}</p>
+        </div>
+      )}
     </div>
   );
 }

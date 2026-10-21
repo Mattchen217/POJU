@@ -4,17 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { clsx } from "clsx";
 
+import { AtmosThinkingAvatar } from "@/components/poju/AtmosThinkingAvatar";
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
-import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import { WaitFxLayer } from "@/components/wait-ritual/WaitFxLayer";
 import { useWorkspaceAtmosPrepare } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { finalizeAtmosPrepare } from "@/lib/atmos/finalize-atmos-prepare";
-import {
-  WORKSPACE_PREPARING_ANALYZING_ZOOM,
-  configureWorkspacePreparingSpline,
-} from "@/lib/poju/configure-workspace-preparing-spline";
 import {
   PREVIEW_MATRIX_MIN_PREP_MS,
   waitRemainingMinSpline,
@@ -23,7 +18,7 @@ import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 
 const EXIT_MS = 700;
 
-/** Center preparing for Atmos: Spline + matrix → open right rail → forecast. */
+/** Center preparing for Atmos: shell starfield + large thinking avatar → forecast. */
 export function WorkspaceAtmosPreparingStage() {
   const locale = useLocale();
   const tPrep = useTranslations("session_prep");
@@ -99,18 +94,15 @@ export function WorkspaceAtmosPreparingStage() {
     <div
       className={clsx(
         "workspace-poju-preparing-stage",
+        "workspace-poju-preparing",
+        "workspace-poju-preparing--avatar",
         exiting && "workspace-poju-preparing-stage--exit",
       )}
     >
-      <PreparingSplineShell
-        blockInteraction
-        eagerSpline
-        className="workspace-poju-preparing"
-        sceneZoom={WORKSPACE_PREPARING_ANALYZING_ZOOM}
-        onSplineLoad={configureWorkspacePreparingSpline}
-      >
-        <WaitFxLayer glowColor="rgba(255,255,255,0.35)" showBreath={false} showFlash={showFlash} />
-        {error && profile ? (
+      <WaitFxLayer glowColor="rgba(255,255,255,0.35)" showBreath={false} showFlash={showFlash} />
+
+      {error && profile ? (
+        <div className="workspace-prepare-avatar-stage__overlay">
           <ChartReadingLoader
             profile={profile}
             currentStep="error"
@@ -125,22 +117,13 @@ export function WorkspaceAtmosPreparingStage() {
             locale={locale}
             variant="matrix"
           />
-        ) : profile ? (
-          <ChartReadingLoader
-            profile={profile}
-            currentStep="analyzing"
-            error={null}
-            onRetry={() => {}}
-            onRefund={() => {}}
-            locale={locale}
-            variant="matrix"
-          />
-        ) : (
-          <PreparingStatusOverlay>
-            <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
-          </PreparingStatusOverlay>
-        )}
-      </PreparingSplineShell>
+        </div>
+      ) : (
+        <div className="workspace-prepare-avatar-stage" aria-busy="true" aria-live="polite">
+          <AtmosThinkingAvatar thinking className="workspace-prepare-avatar" />
+          <p className="workspace-prepare-avatar-stage__status">{tPrep("preparing")}</p>
+        </div>
+      )}
     </div>
   );
 }

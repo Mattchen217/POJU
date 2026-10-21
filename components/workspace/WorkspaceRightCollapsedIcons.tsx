@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 
-import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import {
   DeliveryBookGlyph,
   EnergyPortraitGlyph,
@@ -12,7 +11,6 @@ import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/Workspa
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
 import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { isDocVaultUnread } from "@/lib/workspace/doc-vault-unread";
 
 type Props = {
   visible: boolean;
@@ -25,7 +23,7 @@ function formatCount(n: number): string {
 
 /**
  * Collapsed right-rail: large inner glyph only (no A4 shell — that stays in the open vault list).
- * Count badge: white `X3` / `X5`.
+ * Count badge: white `X3` / `X5`. No unread red dots on rail icons.
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
@@ -61,9 +59,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           <span className="workspace-sidebar__icon" aria-hidden>
             <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
           </span>
-          {atmos.matrixUnread ? (
-            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
-          ) : null}
         </button>
       </div>
     );
@@ -126,19 +121,10 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const vaultItems = vault?.items ?? [];
   const hasVaultMatrix = vaultItems.some((i) => i.kind === "energy_matrix");
   const hasVaultDelivery = vaultItems.some((i) => i.kind === "pivot_delivery");
-  const vaultMatrixUnread = vaultItems.some(
-    (i) => i.kind === "energy_matrix" && isDocVaultUnread(i.id),
-  );
-  const vaultDeliveryUnread = vaultItems.some(
-    (i) => i.kind === "pivot_delivery" && isDocVaultUnread(i.id),
-  );
   const baselineCount = vaultItems.filter((i) => i.kind === "energy_matrix").length;
   const deliveryCount = vaultItems.filter((i) => i.kind === "pivot_delivery").length;
   const remindersCount = vaultItems.filter((i) => i.kind === "pivot_reminders").length;
   const hasVaultReminders = remindersCount > 0;
-  const vaultRemindersUnread = vaultItems.some(
-    (i) => i.kind === "pivot_reminders" && isDocVaultUnread(i.id),
-  );
 
   const hasMatrix = Boolean(prepare?.matrixPayload) || hasVaultMatrix;
   const deliveryReady =
@@ -148,9 +134,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
         prepare?.session?.pending_delivery_job_id,
     ) || hasVaultDelivery;
   const remindersReady = hasVaultReminders;
-
-  const matrixUnread = Boolean(prepare?.matrixUnread) || vaultMatrixUnread;
-  const deliveryUnread = Boolean(prepare?.deliveryBookUnread) || vaultDeliveryUnread;
 
   if (!hasMatrix && !deliveryReady && !remindersReady) {
     return null;
@@ -184,9 +167,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           {baselineCount > 0 ? (
             <span className="workspace-right-collapsed-icons__count">{formatCount(baselineCount)}</span>
           ) : null}
-          {matrixUnread ? (
-            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
-          ) : null}
         </button>
       ) : null}
 
@@ -212,9 +192,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           {deliveryCount > 0 ? (
             <span className="workspace-right-collapsed-icons__count">{formatCount(deliveryCount)}</span>
           ) : null}
-          {deliveryUnread ? (
-            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
-          ) : null}
         </button>
       ) : null}
 
@@ -234,9 +211,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           </span>
           {remindersCount > 0 ? (
             <span className="workspace-right-collapsed-icons__count">{formatCount(remindersCount)}</span>
-          ) : null}
-          {vaultRemindersUnread ? (
-            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
         </button>
       ) : null}

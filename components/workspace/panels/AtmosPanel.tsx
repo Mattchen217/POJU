@@ -60,7 +60,11 @@ export function AtmosPanel() {
           <PojuProductHero
             copy={heroCopy}
             hideActions
-            /* Workspace idle: 2D constellation (landing-style). Heavy Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
+            workspaceMotion="spline-constellation"
+            scene="/spline/atmoswork.splinecode"
+            initialZoom={1.15}
+            hideStarrySky
+            hideVignette
           />
         </div>
         <div className="workspace-product-below workspace-poju-below">
@@ -102,10 +106,14 @@ export function AtmosPanel() {
         >
           <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
             <PojuProductHero
-            copy={heroCopy}
-            hideActions
-            /* Workspace idle: 2D constellation (landing-style). Heavy Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
-          />
+              copy={heroCopy}
+              hideActions
+              workspaceMotion="spline-constellation"
+              scene="/spline/atmoswork.splinecode"
+              initialZoom={1.15}
+              hideStarrySky
+              hideVignette
+            />
           </div>
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">

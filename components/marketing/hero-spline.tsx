@@ -17,6 +17,8 @@ type HeroSplineProps = {
   renderOnDemand?: boolean;
   /** Workspace: keep the scene loaded; do not dispose after a few seconds idle. */
   keepAlive?: boolean;
+  /** Full-res for Atmos idle grid; marketing cards stay half-res by default. */
+  renderScale?: number;
 };
 
 const DEFAULT_SCENE = "/animations/XYscene.splinecode";
@@ -29,6 +31,7 @@ export function HeroSpline({
   pointerFollow = true,
   renderOnDemand = true,
   keepAlive = false,
+  renderScale,
 }: HeroSplineProps) {
   const splineBlocked = useSplineBlocked();
   if (splineBlocked) {
@@ -43,6 +46,7 @@ export function HeroSpline({
       pointerFollow={pointerFollow}
       renderOnDemand={keepAlive ? false : renderOnDemand}
       keepAlive={keepAlive}
+      renderScale={renderScale}
       onLoad={onLoad}
     />
   );

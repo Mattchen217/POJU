@@ -13,8 +13,7 @@ import { applySplineZoom } from "@/lib/spline/apply-spline-zoom";
 import {
   applySplineHostSize,
   applySplineTransparentBackground,
-  ensureCanvasBackingStore,
-  ensureSplineCanvasAlpha,
+  isSplineCanvasSized,
   isSplineHostUsable,
   pinSplineCanvasInHost,
   readSplineHostSize,
@@ -149,11 +148,50 @@ export function SplineInteractiveScene({
       applySplineZoom(app, zoom);
     }
     const root = rootRef.current;
-    const { w: rw, h: rh } = readSplineHostSize(root);
-    applySplineHostSize(app, rw, rh, scale);
-    applySplineTransparentBackground(app, canvasRef.current);
     const canvas = canvasRef.current;
-    if (canvas) pinSplineCanvasInHost(canvas);
+    if (canvas) {
+      (canvas as HTMLCanvasElement & { __splineApp?: Application }).__splineApp = app;
+    }
+    const syncSizeAndClear = () => {
+      const { w: rw, h: rh } = readSplineHostSize(root);
+      applySplineHostSize(app, rw, rh, scale, canvasRef.current);
+      // Force renderer path when setSize alone leaves the 300×150 default buffer.
+      try {
+        const runtime = app as unknown as {
+          _renderer?: { setSize?: (w: number, h: number, updateStyle?: boolean) => void; setPixelRatio?: (n: number) => void };
+          _resize?: (force?: boolean) => void;
+          _viewportWidth?: number;
+          _viewportHeight?: number;
+        };
+        const factor = scale > 0 && scale < 1 ? scale : 1;
+        const tw = Math.max(1, Math.floor(rw * factor));
+        const th = Math.max(1, Math.floor(rh * factor));
+        runtime._viewportWidth = tw;
+        runtime._viewportHeight = th;
+        if (typeof runtime._resize === "function") runtime._resize(true);
+        else runtime._renderer?.setSize?.(tw, th, false);
+      } catch {
+        // private API — best effort
+      }
+      applySplineTransparentBackground(app, canvasRef.current);
+      if (canvasRef.current) pinSplineCanvasInHost(canvasRef.current);
+      // Reveal only after WebGL buffer leaves the 300×150 default (avoids white plate).
+      if (rootRef.current && isSplineCanvasSized(canvasRef.current, rw, rh, scale)) {
+        rootRef.current.classList.add("spline-interactive-scene--sized");
+      }
+    };
+    syncSizeAndClear();
+    // Renderer may finish init a frame or two after load — keep forcing size briefly.
+    let tries = 0;
+    const pump = () => {
+      syncSizeAndClear();
+      tries += 1;
+      const { w: rw, h: rh } = readSplineHostSize(root);
+      if (!isSplineCanvasSized(canvasRef.current, rw, rh, scale) && tries < 60) {
+        requestAnimationFrame(pump);
+      }
+    };
+    requestAnimationFrame(pump);
     loaded?.(app, rootRef.current);
     setSceneReady(true);
   }, []);
@@ -176,7 +214,6 @@ export function SplineInteractiveScene({
       const { w, h } = readSplineHostSize(root);
       if (!isSplineHostUsable(w, h)) return;
       booting = true;
-      ensureCanvasBackingStore(canvas, w, h);
 
       void (async () => {
         const { Application } = await import("@splinetool/runtime");
@@ -189,11 +226,13 @@ export function SplineInteractiveScene({
           booting = false;
           return;
         }
-        ensureCanvasBackingStore(canvas, w2, h2);
-        ensureSplineCanvasAlpha(canvas);
+        // Let Spline create the GL context (it already requests alpha:true).
+        // Pre-calling getContext here previously left a stuck 300×150 buffer.
         pinSplineCanvasInHost(canvas);
+        root.classList.remove("spline-interactive-scene--sized");
         const app = new Application(canvas);
-        applySplineHostSize(app, w2, h2, optsRef.current.renderScale);
+        // setSize is a no-op until renderer exists (after load).
+        applySplineHostSize(app, w2, h2, optsRef.current.renderScale, canvas);
         applySplineTransparentBackground(app, canvas);
         inflightRef.current = app;
         try {
@@ -230,7 +269,8 @@ export function SplineInteractiveScene({
       }
       const app = appRef.current;
       if (app) {
-        applySplineHostSize(app, w, h, optsRef.current.renderScale);
+        applySplineHostSize(app, w, h, optsRef.current.renderScale, canvas);
+        applySplineTransparentBackground(app, canvas);
         if (!document.hidden) {
           resumeSplineRuntime(app, { continuous: continuousRef.current });
         }
@@ -261,7 +301,7 @@ export function SplineInteractiveScene({
         return;
       }
       applySplineZoom(app, initialZoom);
-      applySplineHostSize(app, w, h, renderScale);
+      applySplineHostSize(app, w, h, renderScale, canvasRef.current);
       applySplineTransparentBackground(app, canvasRef.current);
       if (canvasRef.current) pinSplineCanvasInHost(canvasRef.current);
     };

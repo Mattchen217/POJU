@@ -33,35 +33,61 @@ export function PojuProductHero({
   initialZoom = 0.62,
   hideStarrySky = false,
   hideVignette = false,
+  workspaceMotion = "constellation",
 }: {
   copy: PojuProductHeroCopy;
   /** Workspace center: no CTA / billing strip */
   hideActions?: boolean;
-  /** Spline scene URL — Atmos workspace uses `/spline/atmoswork.splinecode` */
+  /** Spline scene URL — Atmos workspace uses `/spline/atmoswork.splinecode` (moving blue light) */
   scene?: string;
   initialZoom?: number;
   hideStarrySky?: boolean;
   hideVignette?: boolean;
+  /**
+   * Workspace idle background:
+   * - constellation — light 2D stars (default for POJU/Glyph/Match)
+   * - spline — product Spline only
+   * - spline-constellation — original Atmos Spline grid + transparent star canvas on top
+   */
+  workspaceMotion?: "constellation" | "spline" | "spline-constellation";
 }) {
-  // Workspace idle: landing-style 2D constellation (stars + meteors) instead of
-  // Spline — same look, far less GPU than keepAlive WebGL. Marketing keeps Spline.
-  const workspaceSky = hideActions;
+  const useConstellationOnly = hideActions && workspaceMotion === "constellation";
+  const useWorkspaceSpline =
+    hideActions &&
+    (workspaceMotion === "spline" || workspaceMotion === "spline-constellation");
+  const useSkyOverSpline =
+    hideActions && workspaceMotion === "spline-constellation";
 
   return (
     <ProductMarketingHero
       theme="poju"
-      hideStarrySky={hideStarrySky || workspaceSky}
+      hideStarrySky={hideStarrySky || useConstellationOnly || useSkyOverSpline}
       hideVignette={hideVignette}
       background={
-        workspaceSky ? (
+        useConstellationOnly ? (
           <HeroConstellation className="poju-hero-constellation" />
+        ) : useSkyOverSpline ? (
+          <>
+            {/* Bottom: Atmos moving blue light (atmoswork). Top: transparent stars. */}
+            <HeroSpline
+              scene={scene}
+              initialZoom={initialZoom}
+              className="poju-hero-spline poju-hero-spline--under-sky poju-hero-spline--atmos-glow"
+              keepAlive
+              renderOnDemand={false}
+              pointerFollow={false}
+              renderScale={1}
+            />
+            <HeroConstellation className="poju-hero-constellation poju-hero-constellation--over-spline" />
+          </>
         ) : (
           <HeroSpline
             scene={scene}
             initialZoom={initialZoom}
             className="poju-hero-spline"
-            keepAlive={false}
-            renderOnDemand
+            keepAlive={useWorkspaceSpline}
+            renderOnDemand={!useWorkspaceSpline}
+            pointerFollow={!useWorkspaceSpline}
           />
         )
       }
