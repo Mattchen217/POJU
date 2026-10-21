@@ -2799,7 +2799,8 @@
       "confirmPassword": "Confirmar contraseña",
       "updatePassword": "Actualizar contraseña",
       "updatingPassword": "Actualizando…",
-      "passwordUpdated": "Contraseña actualizada."
+      "passwordUpdated": "Contraseña actualizada.",
+      "currentPassword": "Contraseña actual"
     },
     "language": {
       "siteLabel": "Idioma",

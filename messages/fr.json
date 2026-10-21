@@ -2799,7 +2799,8 @@
       "confirmPassword": "Confirmer le mot de passe",
       "updatePassword": "Mettre à jour le mot de passe",
       "updatingPassword": "Mise à jour…",
-      "passwordUpdated": "Mot de passe mis à jour."
+      "passwordUpdated": "Mot de passe mis à jour.",
+      "currentPassword": "Mot de passe actuel"
     },
     "language": {
       "siteLabel": "Langue",

@@ -10,7 +10,8 @@ import { useTranslations } from "next-intl";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { PasswordStrengthHint } from "@/components/auth/PasswordStrengthHint";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
+import { navigateAfterAuth } from "@/lib/auth/auth-helpers";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 
 const schema = z
@@ -30,7 +31,6 @@ function ResetForm() {
   const tFields = useTranslations("auth.fields");
   const tErr = useTranslations("auth.errors");
   const searchParams = useSearchParams();
-  const router = useRouter();
   const linkError = searchParams.get("error");
   const [error, setError] = useState<string | null>(
     linkError === "link_expired" || linkError === "oauth_failed" ? linkError : null,
@@ -83,9 +83,7 @@ function ResetForm() {
                 return;
               }
               setDone(true);
-              window.setTimeout(() => {
-                router.replace("/login");
-              }, 1200);
+              window.setTimeout(() => navigateAfterAuth("/login"), 1200);
             } finally {
               inFlight.current = false;
               setSubmitting(false);

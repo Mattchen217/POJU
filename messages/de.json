@@ -2752,7 +2752,8 @@
       "confirmPassword": "Passwort bestätigen",
       "updatePassword": "Passwort aktualisieren",
       "updatingPassword": "Aktualisieren…",
-      "passwordUpdated": "Passwort aktualisiert."
+      "passwordUpdated": "Passwort aktualisiert.",
+      "currentPassword": "Aktuelles Passwort"
     },
     "language": {
       "siteLabel": "Website-Sprache",

@@ -88,7 +88,7 @@ export function AccountIdentityCard({
   const tProfile = useTranslations("workspace.profile");
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
-  const [pw, setPw] = useState({ password: "", confirm: "" });
+  const [pw, setPw] = useState({ current: "", password: "", confirm: "" });
   const [pwBusy, setPwBusy] = useState(false);
   const [pwDone, setPwDone] = useState(false);
   const showPassword = hasPasswordIdentity(user);
@@ -152,6 +152,10 @@ export function AccountIdentityCard({
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (pwBusy) return;
+                  if (!pw.current.trim()) {
+                    setError("invalid_credentials");
+                    return;
+                  }
                   if (pw.password.length < 8 || pw.password !== pw.confirm) {
                     setError(pw.password !== pw.confirm ? "password_mismatch" : "weak_password");
                     return;
@@ -159,6 +163,8 @@ export function AccountIdentityCard({
                   setPwBusy(true);
                   setError(null);
                   void postAuthJson("/api/auth/update-password", {
+                    currentPassword: pw.current,
+                    requireCurrent: true,
                     password: pw.password,
                     confirm: pw.confirm,
                   })
@@ -168,11 +174,19 @@ export function AccountIdentityCard({
                         return;
                       }
                       setPwDone(true);
-                      setPw({ password: "", confirm: "" });
+                      setPw({ current: "", password: "", confirm: "" });
                     })
                     .finally(() => setPwBusy(false));
                 }}
               >
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder={tProfile("currentPassword")}
+                  value={pw.current}
+                  onChange={(ev) => setPw((s) => ({ ...s, current: ev.target.value }))}
+                  disabled={pwBusy}
+                />
                 <input
                   type="password"
                   autoComplete="new-password"

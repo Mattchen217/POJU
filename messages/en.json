@@ -148,7 +148,8 @@
       "confirmPassword": "Confirm password",
       "updatePassword": "Update password",
       "updatingPassword": "Updating…",
-      "passwordUpdated": "Password updated."
+      "passwordUpdated": "Password updated.",
+      "currentPassword": "Current password"
     },
     "language": {
       "siteLabel": "Language",
