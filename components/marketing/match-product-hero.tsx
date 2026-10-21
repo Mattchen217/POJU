@@ -1,3 +1,4 @@
+import { HeroConstellation } from "@/components/marketing/HeroConstellation";
 import { MatchSplineScene } from "@/components/match/MatchSplineScene";
 import { DsGradientTitle } from "@/components/ds/primitives";
 import {
@@ -35,8 +36,20 @@ export function MatchProductHero({
   return (
     <ProductMarketingHero
       theme="match"
-      backgroundClassName="product-hero__bg--match"
-      background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} keepAlive={hideActions} />}
+      hideStarrySky={hideActions}
+      backgroundClassName={hideActions ? undefined : "product-hero__bg--match"}
+      background={
+        hideActions ? (
+          <HeroConstellation className="poju-hero-constellation" />
+        ) : (
+          <MatchSplineScene
+            variant="hero"
+            className="match-hero-spline"
+            pointerFollow={false}
+            keepAlive={false}
+          />
+        )
+      }
     >
       <ProductHeroContent>
         <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>

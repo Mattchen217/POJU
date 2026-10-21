@@ -1,3 +1,4 @@
+import { HeroConstellation } from "@/components/marketing/HeroConstellation";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 import { DsGradientTitle } from "@/components/ds/primitives";
 import {
@@ -42,19 +43,27 @@ export function PojuProductHero({
   hideStarrySky?: boolean;
   hideVignette?: boolean;
 }) {
+  // Workspace idle: landing-style 2D constellation (stars + meteors) instead of
+  // Spline — same look, far less GPU than keepAlive WebGL. Marketing keeps Spline.
+  const workspaceSky = hideActions;
+
   return (
     <ProductMarketingHero
       theme="poju"
-      hideStarrySky={hideStarrySky || hideActions}
+      hideStarrySky={hideStarrySky || workspaceSky}
       hideVignette={hideVignette}
       background={
-        <HeroSpline
-          scene={scene}
-          initialZoom={initialZoom}
-          className="poju-hero-spline"
-          keepAlive={hideActions}
-          renderOnDemand={!hideActions}
-        />
+        workspaceSky ? (
+          <HeroConstellation className="poju-hero-constellation" />
+        ) : (
+          <HeroSpline
+            scene={scene}
+            initialZoom={initialZoom}
+            className="poju-hero-spline"
+            keepAlive={false}
+            renderOnDemand
+          />
+        )
       }
     >
       <ProductHeroContent>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { HeroConstellation } from "@/components/marketing/HeroConstellation";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 import { DsGradientTitle } from "@/components/ds/primitives";
 
@@ -40,15 +41,20 @@ export function OracleProductHero({
   return (
     <ProductMarketingHero
       theme="glyph"
+      hideStarrySky={hideActions}
       background={
-        <HeroSpline
-          scene="/animations/BAOZHAscene.splinecode"
-          initialZoom={0.66}
-          className="glyph-hero-spline"
-          pointerFollow
-          keepAlive={hideActions}
-          renderOnDemand={!hideActions}
-        />
+        hideActions ? (
+          <HeroConstellation className="poju-hero-constellation" />
+        ) : (
+          <HeroSpline
+            scene="/animations/BAOZHAscene.splinecode"
+            initialZoom={0.66}
+            className="glyph-hero-spline"
+            pointerFollow
+            keepAlive={false}
+            renderOnDemand
+          />
+        )
       }
     >
       <ProductHeroContent>

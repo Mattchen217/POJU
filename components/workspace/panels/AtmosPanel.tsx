@@ -60,7 +60,7 @@ export function AtmosPanel() {
           <PojuProductHero
             copy={heroCopy}
             hideActions
-            /* Unified Eastern OS home: Pivot meditating turn (SoT 08). Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
+            /* Workspace idle: 2D constellation (landing-style). Heavy Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
           />
         </div>
         <div className="workspace-product-below workspace-poju-below">
@@ -104,7 +104,7 @@ export function AtmosPanel() {
             <PojuProductHero
             copy={heroCopy}
             hideActions
-            /* Unified Eastern OS home: Pivot meditating turn (SoT 08). Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
+            /* Workspace idle: 2D constellation (landing-style). Heavy Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
           />
           </div>
           <div className="workspace-product-below workspace-poju-below">

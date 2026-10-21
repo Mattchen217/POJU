@@ -1595,6 +1595,26 @@
   height: 100%;
   transform: none;
   overflow: hidden;
+  /* Dark plate under 2D constellation / spline (avoids light-gray empty hero). */
+  background: radial-gradient(ellipse 85% 65% at 50% 42%, #141820 0%, #07080a 72%);
+}
+
+/* Landing-style canvas sky — fill the workspace hero band */
+.workspace-product-hero .hero-constellation,
+.workspace-poju-hero .hero-constellation,
+.workspace-product-hero .poju-hero-constellation,
+.workspace-poju-hero .poju-hero-constellation {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.workspace-product-hero .hero-constellation canvas,
+.workspace-poju-hero .hero-constellation canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Match marketing hero uses a breakout band — flatten to POJU workspace frame */
