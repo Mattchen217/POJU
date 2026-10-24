@@ -31,18 +31,73 @@ const localeNames: Record<AppLocale, string> = {
 /** Product locales (same set as `i18n/routing.ts`). Expanding locales later still uses this path. */
 export const PRODUCT_LOCALES: readonly AppLocale[] = ["en", "es", "zh", "fr"] as const;
 
+/** Chinese language names — product 4 + common out-of-range (→ unsupported notice). */
 const ZH_LANG_TOKEN =
-  "中文|英文|英语|西班牙语|西语|法语|法文|日语|日文|日本語|韩语|韩文|한국어|德语|德文|葡萄牙语|意大利语|俄语|阿拉伯语";
+  "中文|简体中文|繁体中文|汉语|普通话|国语|英文|英语|英式英语|美式英语|西班牙语|西语|西班牙文|法语|法文|法式|日语|日文|日本語|韩语|韩文|한국어|德语|德文|葡萄牙语|意大利语|俄语|阿拉伯语";
 
+/** Chinese imperative verbs after 用/改用/换成… */
+const ZH_SWITCH_VERB = "回复|回答|输出|交流|对话|说|讲|聊|写";
+
+/**
+ * Latin language-name capture (1–3 words). Includes product locales + common
+ * unsupported names so "reply in Japanese" still classifies as unsupported.
+ */
+const LAT_LANG =
+  "simplified\\s+chinese|traditional\\s+chinese|mexican\\s+spanish|mandarin|chinese|english|spanish|french|francais|français|espanol|español|espagnol|ingles|inglés|anglais|chino|chinois|chino\\s+mandarin|japanese|korean|german|deutsch|portuguese|italian|russian|arabic|japones|japonés|aleman|alemán|coreano|portugues|português|italiano|ruso|arabe|árabe";
+
+/**
+ * Explicit "switch / reply in X" commands only — not "can you speak German?".
+ * Product 4: en / es / fr / zh. Matched token → mapToLocale; unknown → unsupported.
+ */
 const switchPatterns: RegExp[] = [
-  /please (?:respond|reply|answer) in ([\w\-]+)/i,
-  /answer in ([\w\-]+)/i,
-  /reply in ([\w\-]+)/i,
-  /respond in ([\w\-]+)/i,
-  new RegExp(`用(${ZH_LANG_TOKEN})(?:回复|回答|交流|对话)?`),
+  // —— English ——
+  new RegExp(
+    `please\\s+(?:respond|reply|answer|speak|write|talk|output|chat)\\s+in\\s+(${LAT_LANG})`,
+    "i",
+  ),
+  new RegExp(
+    `(?:respond|reply|answer|speak|write|talk|output|chat)\\s+in\\s+(${LAT_LANG})(?:\\s+please)?`,
+    "i",
+  ),
+  new RegExp(`(?:use|using)\\s+(${LAT_LANG})(?:\\s+(?:please|from\\s+now\\s+on))?`, "i"),
+  new RegExp(`switch\\s+(?:to|into)\\s+(${LAT_LANG})`, "i"),
+  new RegExp(`change\\s+(?:to|into|over\\s+to)\\s+(${LAT_LANG})`, "i"),
+  new RegExp(`(?:from\\s+now\\s+on[,]?\\s+)?in\\s+(${LAT_LANG})\\s+please`, "i"),
+
+  // —— Chinese ——
+  // Require 用/改用/换成… before the language name — avoids「你会说德语吗」false hits.
+  new RegExp(
+    `请?(?:用|改用|换成|改成|切换到|切到)(${ZH_LANG_TOKEN})(?:${ZH_SWITCH_VERB})?(?:我|吧|啊|哦)?`,
+  ),
+  new RegExp(`请?(?:用|改用)(${ZH_LANG_TOKEN})(?:来)?(?:${ZH_SWITCH_VERB})`),
+  new RegExp(`(?:回复|回答|输出)(?:用|成)(${ZH_LANG_TOKEN})`),
   new RegExp(`改用(${ZH_LANG_TOKEN})`),
-  /switch to ([\w\-]+)/i,
-  /(?:^|\s)(?:in|en)\s+(Spanish|Chinese|French|English|Japanese|Korean|German|Portuguese|Italian|Russian|Arabic|español|chino|francés|inglés|japonés|alemán)(?:\s|$|[,.!?])/i,
+
+  // —— Spanish ——
+  new RegExp(
+    `(?:por\\s+favor[,]?\\s+)?(?:responde|contesta|habla|escribe|responde me|contéstame|contestame)\\s+en\\s+(${LAT_LANG})`,
+    "i",
+  ),
+  new RegExp(
+    `(?:responde|contesta|habla|escribe|responder|contestar)\\s+en\\s+(${LAT_LANG})(?:\\s+por\\s+favor)?`,
+    "i",
+  ),
+  new RegExp(`(?:cambia|cambiar|pásate|pasate)\\s+a\\s+(${LAT_LANG})`, "i"),
+  new RegExp(`(?:usa|utiliza)\\s+(?:el\\s+)?(${LAT_LANG})`, "i"),
+  new RegExp(`en\\s+(${LAT_LANG})\\s+por\\s+favor`, "i"),
+
+  // —— French ——
+  new RegExp(
+    `(?:s['']il\\s+(?:te|vous)\\s+pla[iî]t[,]?\\s+)?(?:réponds|reponds|répondre|parle|écris|ecris|écrivez|ecrivez)\\s+en\\s+(${LAT_LANG})`,
+    "i",
+  ),
+  new RegExp(
+    `(?:réponds|reponds|répondre|parle|écris|ecris)\\s+en\\s+(${LAT_LANG})(?:\\s+s['']il\\s+(?:te|vous)\\s+pla[iî]t)?`,
+    "i",
+  ),
+  new RegExp(`(?:passe|passer|bascule|basculer)\\s+en\\s+(${LAT_LANG})`, "i"),
+  new RegExp(`(?:utilise|utiliser)\\s+(?:le\\s+)?(${LAT_LANG})`, "i"),
+  new RegExp(`en\\s+(${LAT_LANG})\\s+s['']il\\s+(?:te|vous)\\s+pla[iî]t`, "i"),
 ];
 
 export type LanguageSwitchRequest =
@@ -218,35 +273,63 @@ export function getLanguageDirective(
   };
 }
 
+/** Strip accents / collapse spaces for locale token matching. */
+function normalizeLangToken(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 function mapToLocale(text: string): AppLocale | null {
   const raw = text.trim();
-  const t = raw.toLowerCase();
+  const t = normalizeLangToken(raw);
 
   const zhTokens: Record<string, AppLocale> = {
     中文: "zh",
+    简体中文: "zh",
+    繁体中文: "zh",
+    汉语: "zh",
+    普通话: "zh",
+    国语: "zh",
     英文: "en",
     英语: "en",
+    英式英语: "en",
+    美式英语: "en",
     西班牙语: "es",
     西语: "es",
+    西班牙文: "es",
     法语: "fr",
     法文: "fr",
+    法式: "fr",
   };
   if (raw in zhTokens) return zhTokens[raw as keyof typeof zhTokens];
 
   const map: Record<string, AppLocale> = {
     english: "en",
-    inglés: "en",
+    ingles: "en",
+    anglais: "en",
     en: "en",
     spanish: "es",
-    español: "es",
+    espanol: "es",
+    espagnol: "es",
     es: "es",
     mexican: "es",
+    "mexican spanish": "es",
     chinese: "zh",
     mandarin: "zh",
+    "simplified chinese": "zh",
+    "traditional chinese": "zh",
+    "chino mandarin": "zh",
+    chino: "zh",
+    chinois: "zh",
     zh: "zh",
     french: "fr",
-    français: "fr",
-    francés: "fr",
+    francais: "fr",
+    frances: "fr",
     fr: "fr",
   };
 

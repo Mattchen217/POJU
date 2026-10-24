@@ -62,23 +62,75 @@ assert(
   detectLanguage("What was that?") === "en",
 );
 
-assert(
-  "classify: reply in Spanish → supported es",
-  classifyLanguageSwitchRequest("please reply in Spanish").kind === "supported" &&
-    (classifyLanguageSwitchRequest("please reply in Spanish") as { locale: string }).locale === "es",
-);
-assert(
-  "classify: 用日语回复 → unsupported",
-  classifyLanguageSwitchRequest("请用日语回复我").kind === "unsupported",
-);
-assert(
-  "classify: reply in Japanese → unsupported",
-  classifyLanguageSwitchRequest("please respond in Japanese").kind === "unsupported",
-);
-assert(
-  "classify: reply in German → unsupported (not a product locale)",
-  classifyLanguageSwitchRequest("please reply in German").kind === "unsupported",
-);
+function expectSupported(input: string, locale: string): void {
+  const r = classifyLanguageSwitchRequest(input);
+  assert(
+    `classify supported: ${JSON.stringify(input)} → ${locale}`,
+    r.kind === "supported" && r.kind === "supported" && r.locale === locale,
+  );
+}
+
+function expectUnsupported(input: string): void {
+  assert(
+    `classify unsupported: ${JSON.stringify(input)}`,
+    classifyLanguageSwitchRequest(input).kind === "unsupported",
+  );
+}
+
+function expectNone(input: string): void {
+  assert(
+    `classify none: ${JSON.stringify(input)}`,
+    classifyLanguageSwitchRequest(input).kind === "none",
+  );
+}
+
+// —— Product 4: zh ——
+expectSupported("请用中文回复我", "zh");
+expectSupported("用中文回答", "zh");
+expectSupported("用中文输出", "zh");
+expectSupported("换成中文", "zh");
+expectSupported("请用简体中文说", "zh");
+expectSupported("reply in Chinese", "zh");
+expectSupported("please write in Mandarin", "zh");
+expectSupported("in Chinese please", "zh");
+
+// —— Product 4: en ——
+expectSupported("请用英文回复", "en");
+expectSupported("用英语回答我", "en");
+expectSupported("改用英文输出", "en");
+expectSupported("please reply in English", "en");
+expectSupported("speak in English", "en");
+expectSupported("switch to English", "en");
+expectSupported("responde en inglés", "en");
+expectSupported("réponds en anglais", "en");
+
+// —— Product 4: es ——
+expectSupported("请用西班牙语回复", "es");
+expectSupported("用西语回答", "es");
+expectSupported("please reply in Spanish", "es");
+expectSupported("responde en español", "es");
+expectSupported("contesta en español por favor", "es");
+expectSupported("cambia a español", "es");
+expectSupported("en español por favor", "es");
+
+// —— Product 4: fr ——
+expectSupported("请用法语回复我", "fr");
+expectSupported("用法文输出", "fr");
+expectSupported("please answer in French", "fr");
+expectSupported("réponds en français", "fr");
+expectSupported("parle en français", "fr");
+expectSupported("en français s'il te plaît", "fr");
+
+// —— Out of range ——
+expectUnsupported("请用日语回复我");
+expectUnsupported("please respond in Japanese");
+expectUnsupported("please reply in German");
+expectUnsupported("用韩语回答");
+
+// —— Not a switch command (model handles) ——
+expectNone("你会说德语吗");
+expectNone("how is my career?");
+expectNone("Do you speak Japanese?");
 
 if (failures.length) {
   console.error(`\n${failures.length} check(s) failed.`);

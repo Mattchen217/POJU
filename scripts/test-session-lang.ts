@@ -104,6 +104,21 @@ assert.equal(
   (classifyLanguageSwitchRequest("please reply in Spanish") as { locale: string }).locale,
   "es",
 );
+assert.equal(classifyLanguageSwitchRequest("用中文输出").kind, "supported");
+assert.equal(
+  (classifyLanguageSwitchRequest("用中文输出") as { locale: string }).locale,
+  "zh",
+);
+assert.equal(classifyLanguageSwitchRequest("用法语回答我").kind, "supported");
+assert.equal(
+  (classifyLanguageSwitchRequest("用法语回答我") as { locale: string }).locale,
+  "fr",
+);
+assert.equal(classifyLanguageSwitchRequest("responde en español").kind, "supported");
+assert.equal(
+  (classifyLanguageSwitchRequest("responde en español") as { locale: string }).locale,
+  "es",
+);
 assert.equal(
   classifyLanguageSwitchRequest("请用日语回复我").kind,
   "unsupported",
@@ -113,6 +128,7 @@ assert.equal(
   "unsupported",
 );
 assert.equal(classifyLanguageSwitchRequest("how is my career?").kind, "none");
+assert.equal(classifyLanguageSwitchRequest("你会说德语吗").kind, "none");
 
 assert.equal(
   findFirstSubstantiveUserLocale([
