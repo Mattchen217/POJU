@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { writeStoredUiLocale } from "@/lib/i18n/ui-locale-preference";
 import {
-  buildChatLocaleSwitchAppHref,
   buildChatLocaleSwitchHref,
   clearPendingLangSwitch,
   readPendingLangSwitch,
@@ -1804,7 +1803,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    // In-range language: switch website locale, stay on this session, resume the turn.
+    // In-range language: stay on this chat URL, hard-refresh into the new locale, resume turn.
+    // Never soft-nav through workspace idle home — same pattern as the language switcher.
     if (langSwitch.kind === "supported" && langSwitch.locale !== uiLocale) {
       const nowIso = new Date().toISOString();
       const clientId = safeRandomUUID();
@@ -1837,7 +1837,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         ],
         locked_output_locale: langSwitch.locale,
       };
-      // Pending + storage first so remount can hydrate even if save races.
       writePendingLangSwitch({
         sessionId: sid,
         message: userMessage,
@@ -1854,35 +1853,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       writeStoredUiLocale(langSwitch.locale);
       writeLastPojuWorkspaceSessionId(sid);
       onSessionUpdate(withUser);
-      // Fire-and-forget IDB — do not block locale navigation on paint/flushSync.
-      void savePOJUSession(withUser).catch(() => undefined);
-
-      const appHref = buildChatLocaleSwitchAppHref(sid);
-      const hardHref = buildChatLocaleSwitchHref(langSwitch.locale, sid);
-      // Soft next-intl replace (SPA) — much faster than full document reload.
-      // Hard fallback if soft nav does not land on /{locale}/app?session= quickly.
-      try {
-        router.replace(appHref, { locale: langSwitch.locale });
-      } catch {
-        window.location.assign(hardHref);
-        return;
-      }
-      window.setTimeout(() => {
-        const path = window.location.pathname;
-        const q = new URLSearchParams(window.location.search);
-        const onApp =
-          path === "/app" ||
-          path.endsWith("/app") ||
-          /\/app\/?$/.test(path);
-        const sessionOk = q.get("session") === sid;
-        const localeOk =
-          langSwitch.locale === "en"
-            ? !/^\/(zh|es|fr)(\/|$)/.test(path)
-            : path.startsWith(`/${langSwitch.locale}/`);
-        if (!(onApp && sessionOk && localeOk)) {
-          window.location.assign(hardHref);
-        }
-      }, 900);
+      // Persist before reload so hydrate opens the same chat with the user turn intact.
+      await savePOJUSession(withUser).catch(() => undefined);
+      window.location.assign(buildChatLocaleSwitchHref(langSwitch.locale, sid));
       return;
     }
 

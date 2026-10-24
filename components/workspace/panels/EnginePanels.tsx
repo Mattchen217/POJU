@@ -30,6 +30,7 @@ import {
   patchMatchPreviewSession,
 } from "@/lib/match/match-preview-session";
 import { isMatchPreviewSession } from "@/lib/match/match-preview-unlock";
+import { readPendingLangSwitch } from "@/lib/poju/pending-lang-switch";
 import { POJU_WORKSPACE_UNLOCK_RITUAL_KEY } from "@/lib/poju/preview-unlock";
 
 const PRESET_KEYS = ["career", "relationship", "timing"] as const;
@@ -138,20 +139,27 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
 
   const [hasProfiles, setHasProfiles] = useState(false);
 
-  /* Avoid flashing birth home while Stripe return resumes unlock pipeline. */
+  /* Avoid flashing birth home while Stripe return / mid-chat locale switch resumes. */
   const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      return Boolean(sessionStorage.getItem(POJU_WORKSPACE_UNLOCK_RITUAL_KEY)?.trim());
+      if (sessionStorage.getItem(POJU_WORKSPACE_UNLOCK_RITUAL_KEY)?.trim()) return true;
+      if (readPendingLangSwitch()) return true;
+      if (new URLSearchParams(window.location.search).get("session")?.trim()) return true;
     } catch {
-      return false;
+      /* private mode */
     }
+    return false;
   });
 
-  /** URL already has session= — never mount the 100k-particle hero before IndexedDB hydrate. */
+  /** session= or pending lang-switch — never mount the hero before chat hydrate. */
   useLayoutEffect(() => {
-    const sid = new URLSearchParams(window.location.search).get("session")?.trim();
-    if (sid) setUnlockResumeGate(true);
+    try {
+      const sid = new URLSearchParams(window.location.search).get("session")?.trim();
+      if (sid || readPendingLangSwitch()) setUnlockResumeGate(true);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -162,7 +170,7 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
     if (!unlockResumeGate) return;
     const timer = window.setTimeout(() => {
       const sid = new URLSearchParams(window.location.search).get("session")?.trim();
-      if (sid) return;
+      if (sid || readPendingLangSwitch()) return;
       setUnlockResumeGate(false);
     }, 5000);
     return () => window.clearTimeout(timer);
