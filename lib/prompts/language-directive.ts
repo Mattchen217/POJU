@@ -31,60 +31,177 @@ const localeNames: Record<AppLocale, string> = {
 /** Product locales (same set as `i18n/routing.ts`). Expanding locales later still uses this path. */
 export const PRODUCT_LOCALES: readonly AppLocale[] = ["en", "es", "zh", "fr"] as const;
 
-/** Chinese language names — product 4 + common out-of-range (→ unsupported notice). */
-const ZH_LANG_TOKEN =
-  "中文|简体中文|繁体中文|汉语|普通话|国语|英文|英语|英式英语|美式英语|西班牙语|西语|西班牙文|法语|法文|法式|日语|日文|日本語|韩语|韩文|한국어|德语|德文|葡萄牙语|意大利语|俄语|阿拉伯语";
-
-/** Chinese imperative verbs after 用/改用/换成… */
-const ZH_SWITCH_VERB = "回复|回答|输出|交流|对话|说|讲|聊|写";
-
 /**
- * Latin language-name capture (1–3 words). Includes product locales + common
- * unsupported names so "reply in Japanese" still classifies as unsupported.
+ * Chinese language names.
+ * Product 4 → mapToLocale; others → unsupported notice when used in a switch command.
  */
-const LAT_LANG =
-  "simplified\\s+chinese|traditional\\s+chinese|mexican\\s+spanish|mandarin|chinese|english|spanish|french|francais|français|espanol|español|espagnol|ingles|inglés|anglais|chino|chinois|chino\\s+mandarin|japanese|korean|german|deutsch|portuguese|italian|russian|arabic|japones|japonés|aleman|alemán|coreano|portugues|português|italiano|ruso|arabe|árabe";
+const ZH_LANG_TOKEN = [
+  // product 4
+  "中文",
+  "简体中文",
+  "繁体中文",
+  "汉语",
+  "普通话",
+  "国语",
+  "英文",
+  "英语",
+  "英式英语",
+  "美式英语",
+  "西班牙语",
+  "西语",
+  "西班牙文",
+  "法语",
+  "法文",
+  "法式",
+  // out-of-range (keep expanding here when users ask in Chinese)
+  "日语",
+  "日文",
+  "日本語",
+  "韩语",
+  "韩文",
+  "한국어",
+  "德语",
+  "德文",
+  "葡萄牙语",
+  "意大利语",
+  "俄语",
+  "阿拉伯语",
+  "荷兰语",
+  "泰语",
+  "越南语",
+  "印地语",
+  "印尼语",
+  "土耳其语",
+  "波兰语",
+  "瑞典语",
+  "希腊语",
+  "希伯来语",
+].join("|");
+
+/** Output verbs that may follow 用X… in a switch command. */
+const ZH_SWITCH_VERB = "回复|回答|输出|交流|对话|说|讲|聊|写|沟通";
 
 /**
- * Explicit "switch / reply in X" commands only — not "can you speak German?".
- * Product 4: en / es / fr / zh. Matched token → mapToLocale; unknown → unsupported.
+ * Latin language-name capture (product 4 + common out-of-range).
+ * Keep product aliases first; unsupported names must stay listed so commands classify.
+ */
+const LAT_LANG = [
+  "simplified\\s+chinese",
+  "traditional\\s+chinese",
+  "mexican\\s+spanish",
+  "mandarin",
+  "chinese",
+  "english",
+  "spanish",
+  "french",
+  "francais",
+  "français",
+  "espanol",
+  "español",
+  "espagnol",
+  "ingles",
+  "inglés",
+  "anglais",
+  "chino",
+  "chinois",
+  "chino\\s+mandarin",
+  "frances",
+  "francés",
+  // out-of-range
+  "japanese",
+  "korean",
+  "german",
+  "deutsch",
+  "portuguese",
+  "italian",
+  "russian",
+  "arabic",
+  "dutch",
+  "nederlands",
+  "thai",
+  "vietnamese",
+  "hindi",
+  "indonesian",
+  "turkish",
+  "polish",
+  "swedish",
+  "greek",
+  "hebrew",
+  "japones",
+  "japonés",
+  "aleman",
+  "alemán",
+  "coreano",
+  "portugues",
+  "português",
+  "portugués",
+  "italiano",
+  "ruso",
+  "arabe",
+  "árabe",
+  "neerlandes",
+  "neerlandés",
+  "allemand",
+  "japonais",
+  "coréen",
+  "coreen",
+  "néerlandais",
+  "neerlandais",
+].join("|");
+
+/** EN output verbs in "… in <lang>" switch commands. */
+const EN_OUT_VERB = "respond|reply|answer|speak|write|talk|output|chat|continue";
+
+/**
+ * Explicit switch / reply-in-X commands only.
+ * Capability questions ("can you speak…", "你会说…吗") must NOT match — leave to the model.
+ * Matched language token → mapToLocale; listed but unmapped → unsupported; no match → none.
  */
 const switchPatterns: RegExp[] = [
-  // —— English ——
+  // —— English: imperative / soft-imperative switch ——
   new RegExp(
-    `please\\s+(?:respond|reply|answer|speak|write|talk|output|chat)\\s+in\\s+(${LAT_LANG})`,
+    `(?:please\\s+)?(?:${EN_OUT_VERB})\\s+in\\s+(${LAT_LANG})(?:\\s+please)?`,
     "i",
   ),
   new RegExp(
-    `(?:respond|reply|answer|speak|write|talk|output|chat)\\s+in\\s+(${LAT_LANG})(?:\\s+please)?`,
+    `(?:could|can|would)\\s+you\\s+(?:please\\s+)?(?:${EN_OUT_VERB})\\s+in\\s+(${LAT_LANG})`,
     "i",
   ),
-  new RegExp(`(?:use|using)\\s+(${LAT_LANG})(?:\\s+(?:please|from\\s+now\\s+on))?`, "i"),
-  new RegExp(`switch\\s+(?:to|into)\\s+(${LAT_LANG})`, "i"),
-  new RegExp(`change\\s+(?:to|into|over\\s+to)\\s+(${LAT_LANG})`, "i"),
+  new RegExp(
+    `(?:i\\s+want\\s+you\\s+to|i'?d\\s+like\\s+you\\s+to)\\s+(?:${EN_OUT_VERB})\\s+in\\s+(${LAT_LANG})`,
+    "i",
+  ),
+  new RegExp(`(?:use|using)\\s+(${LAT_LANG})(?:\\s+(?:please|from\\s+now\\s+on|only))?`, "i"),
+  new RegExp(`(?:switch|change)\\s+(?:to|into|over\\s+to)\\s+(${LAT_LANG})`, "i"),
   new RegExp(`(?:from\\s+now\\s+on[,]?\\s+)?in\\s+(${LAT_LANG})\\s+please`, "i"),
+  new RegExp(`prefer\\s+(${LAT_LANG})(?:\\s+(?:please|from\\s+now\\s+on))?`, "i"),
 
-  // —— Chinese ——
-  // Require 用/改用/换成… before the language name — avoids「你会说德语吗」false hits.
+  // —— Chinese: 用/改用/换成… before language (not「你会说X吗」) ——
   new RegExp(
-    `请?(?:用|改用|换成|改成|切换到|切到)(${ZH_LANG_TOKEN})(?:${ZH_SWITCH_VERB})?(?:我|吧|啊|哦)?`,
+    `请?(?:用|改用|换成|改成|切换到|切到|转为|转成)(${ZH_LANG_TOKEN})(?:来)?(?:${ZH_SWITCH_VERB})?(?:我|吧|啊|哦|呀)?`,
   ),
-  new RegExp(`请?(?:用|改用)(${ZH_LANG_TOKEN})(?:来)?(?:${ZH_SWITCH_VERB})`),
-  new RegExp(`(?:回复|回答|输出)(?:用|成)(${ZH_LANG_TOKEN})`),
-  new RegExp(`改用(${ZH_LANG_TOKEN})`),
+  new RegExp(`(?:麻烦|拜托)?请?(?:用|改用)(${ZH_LANG_TOKEN})(?:来)?(?:${ZH_SWITCH_VERB})`),
+  new RegExp(`(?:回复|回答|输出|交流|对话)(?:用|成)(${ZH_LANG_TOKEN})`),
+  new RegExp(`以后(?:请)?用(${ZH_LANG_TOKEN})(?:${ZH_SWITCH_VERB})?`),
+  new RegExp(`(?:请)?改用(${ZH_LANG_TOKEN})`),
 
   // —— Spanish ——
   new RegExp(
-    `(?:por\\s+favor[,]?\\s+)?(?:responde|contesta|habla|escribe|responde me|contéstame|contestame)\\s+en\\s+(${LAT_LANG})`,
+    `(?:por\\s+favor[,]?\\s+)?(?:responde|contesta|habla|escribe|contéstame|contestame|respóndeme|respondeme)\\s+en\\s+(${LAT_LANG})`,
+    "i",
+  ),
+  new RegExp(
+    `(?:puedes|puede|podr[ií]as|quisiera\\s+que)\\s+(?:por\\s+favor\\s+)?(?:responder|contestar|hablar|escribir)\\s+en\\s+(${LAT_LANG})`,
     "i",
   ),
   new RegExp(
     `(?:responde|contesta|habla|escribe|responder|contestar)\\s+en\\s+(${LAT_LANG})(?:\\s+por\\s+favor)?`,
     "i",
   ),
-  new RegExp(`(?:cambia|cambiar|pásate|pasate)\\s+a\\s+(${LAT_LANG})`, "i"),
-  new RegExp(`(?:usa|utiliza)\\s+(?:el\\s+)?(${LAT_LANG})`, "i"),
+  new RegExp(`(?:cambia|cambiar|pásate|pasate|pásame|pasame)\\s+a\\s+(?:el\\s+)?(${LAT_LANG})`, "i"),
+  new RegExp(`(?:usa|utiliza|quiero)\\s+(?:el\\s+)?(${LAT_LANG})`, "i"),
   new RegExp(`en\\s+(${LAT_LANG})\\s+por\\s+favor`, "i"),
+  new RegExp(`prefiero\\s+(?:el\\s+)?(${LAT_LANG})`, "i"),
 
   // —— French ——
   new RegExp(
@@ -92,12 +209,17 @@ const switchPatterns: RegExp[] = [
     "i",
   ),
   new RegExp(
+    `(?:peux-tu|pouvez-vous|pourrais-tu|pourriez-vous)\\s+(?:s['']il\\s+(?:te|vous)\\s+pla[iî]t\\s+)?(?:répondre|parler|écrire|ecrire)\\s+en\\s+(${LAT_LANG})`,
+    "i",
+  ),
+  new RegExp(
     `(?:réponds|reponds|répondre|parle|écris|ecris)\\s+en\\s+(${LAT_LANG})(?:\\s+s['']il\\s+(?:te|vous)\\s+pla[iî]t)?`,
     "i",
   ),
-  new RegExp(`(?:passe|passer|bascule|basculer)\\s+en\\s+(${LAT_LANG})`, "i"),
-  new RegExp(`(?:utilise|utiliser)\\s+(?:le\\s+)?(${LAT_LANG})`, "i"),
+  new RegExp(`(?:passe|passer|bascule|basculer|change|changer)\\s+en\\s+(${LAT_LANG})`, "i"),
+  new RegExp(`(?:utilise|utiliser|je\\s+veux)\\s+(?:le\\s+)?(${LAT_LANG})`, "i"),
   new RegExp(`en\\s+(${LAT_LANG})\\s+s['']il\\s+(?:te|vous)\\s+pla[iî]t`, "i"),
+  new RegExp(`je\\s+pr[eé]f[eè]re\\s+(?:le\\s+)?(${LAT_LANG})`, "i"),
 ];
 
 export type LanguageSwitchRequest =
@@ -309,16 +431,19 @@ function mapToLocale(text: string): AppLocale | null {
   if (raw in zhTokens) return zhTokens[raw as keyof typeof zhTokens];
 
   const map: Record<string, AppLocale> = {
+    // en
     english: "en",
     ingles: "en",
     anglais: "en",
     en: "en",
+    // es
     spanish: "es",
     espanol: "es",
     espagnol: "es",
     es: "es",
     mexican: "es",
     "mexican spanish": "es",
+    // zh
     chinese: "zh",
     mandarin: "zh",
     "simplified chinese": "zh",
@@ -327,12 +452,14 @@ function mapToLocale(text: string): AppLocale | null {
     chino: "zh",
     chinois: "zh",
     zh: "zh",
+    // fr
     french: "fr",
     francais: "fr",
     frances: "fr",
     fr: "fr",
   };
 
+  // Unlisted tokens (japanese, german, …) stay null → unsupported when a switch pattern hits.
   return map[t] ?? null;
 }
 
