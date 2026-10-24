@@ -47,6 +47,10 @@ export type BuildDeliveryInteractiveHtmlOptions = DeliveryInteractiveHtmlMeta & 
   audioBase64?: string;
   /** MIME for embedded audio (default audio/mpeg). */
   audioMime?: string;
+  /** When true, hide gold Close (vault/shelf modal owns Close). */
+  embed?: boolean;
+  /** Close button label (file mode). */
+  closeLabel?: string;
 };
 
 function escapeHtml(s: string): string {

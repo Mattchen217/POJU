@@ -57,11 +57,12 @@ function wrapIntl(
   messages: AbstractIntlMessages,
   child: ReactElement,
 ): ReactElement {
-  return createElement(
-    NextIntlClientProvider,
-    { locale, messages },
-    child,
-  );
+  // next-intl types require `children` on props (not only as createElement’s 3rd arg).
+  return createElement(NextIntlClientProvider, {
+    locale,
+    messages,
+    children: child,
+  });
 }
 
 async function renderAndSettle(root: Root, node: ReactElement): Promise<void> {

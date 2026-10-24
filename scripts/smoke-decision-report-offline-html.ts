@@ -11,7 +11,7 @@ import {
   buildDeliveryInteractiveHtml,
   decisionReportOfflineFilename,
   getDecisionReportBlankTemplate,
-} from "@/lib/poju/delivery-interactive-html";
+} from "@/lib/poju/decision-report-offline-html";
 
 const SAMPLE = `# 关于「是否该跳槽」的能量决策报告
 
@@ -35,7 +35,10 @@ const SAMPLE = `# 关于「是否该跳槽」的能量决策报告
 
 async function main() {
   const blank = getDecisionReportBlankTemplate();
-  if (!blank.includes("{{SLOT_PANES}}") || !blank.includes("delivery-book-stage")) {
+  if (
+    (!blank.includes("{{SLOT_PANES}}") && !blank.includes("{{SLOT_BODY_COVER}}")) ||
+    !blank.includes("delivery-book-stage")
+  ) {
     throw new Error("blank template missing chrome/slots");
   }
   const openBlank = buildDecisionReportBlankOpenHtml("zh", {
