@@ -46,6 +46,22 @@ type PrepareState = {
   /** Increment to ask center shelf to open reader at lastReadPageIndex. */
   deliveryShelfOpenRequest: number;
   /**
+   * Live decision-report stream for vault iframe progressive fill (SoT16 path C).
+   * Null when not generating / no open session delivery.
+   */
+  liveDelivery: {
+    sessionId: string;
+    fullText: string;
+    complete: boolean;
+    interrupted: boolean;
+    interruptReason: string | null;
+    interruptAction: "continue" | "regenerate";
+    interruptBusy: boolean;
+    networkIssue: boolean;
+    originalQuestion?: string;
+    profileId?: string | null;
+  } | null;
+  /**
    * Always-on Phase-4 controls in the right rail (regenerate from scratch + Stop).
    * Hosted by POJUChatUI whenever a session is open.
    */
@@ -77,6 +93,9 @@ type PrepareApi = PrepareState & {
   setDeliveryBookExpanded: (expanded: boolean) => void;
   /** Right-rail icon: focus center shelf and reopen last read page. */
   requestOpenDeliveryShelf: () => void;
+  setLiveDelivery: (
+    live: PrepareState["liveDelivery"],
+  ) => void;
   setDeliveryRailControls: (
     controls: {
       regenerateBusy: boolean;
@@ -122,6 +141,7 @@ const INITIAL: PrepareState = {
   reportUnread: false,
   deliveryBookUnread: false,
   deliveryShelfOpenRequest: 0,
+  liveDelivery: null,
   deliveryRailControls: null,
   error: null,
   unlockRitualActive: false,
@@ -221,6 +241,11 @@ export function WorkspacePojuPrepareProvider({
       deliveryShelfOpenRequest: s.deliveryShelfOpenRequest + 1,
     }));
   }, []);
+
+  const setLiveDelivery = useCallback((liveDelivery: PrepareState["liveDelivery"]) => {
+    setState((s) => ({ ...s, liveDelivery }));
+  }, []);
+
 
   const setDeliveryRailControls = useCallback(
     (
@@ -444,6 +469,7 @@ export function WorkspacePojuPrepareProvider({
       setReportExpanded,
       setDeliveryBookExpanded,
       requestOpenDeliveryShelf,
+      setLiveDelivery,
       setDeliveryRailControls,
       setError,
       startUnlockRitual,
@@ -466,6 +492,7 @@ export function WorkspacePojuPrepareProvider({
       setReportExpanded,
       setDeliveryBookExpanded,
       requestOpenDeliveryShelf,
+      setLiveDelivery,
       setDeliveryRailControls,
       setError,
       startUnlockRitual,

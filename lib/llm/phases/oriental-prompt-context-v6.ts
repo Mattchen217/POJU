@@ -137,7 +137,7 @@ export async function buildPhaseTurnContextV6(
   input: PhaseLLMInput,
   taskBlock: string,
 ): Promise<string> {
-  // Session lock / first substantive sample wins over request locale (website UI).
+  // Output language ≡ website UI locale (single SSOT).
   const outLoc = resolvePivotSessionLang(input.session, input.locale);
   const uiLocale = parseAppLocale(input.locale);
 

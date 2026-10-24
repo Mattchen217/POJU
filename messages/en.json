@@ -269,7 +269,8 @@
       "audio_failed": "Could not prepare narration. Tap play to retry.",
       "audio_too_long": "This report is too long to narrate in one pass.",
       "audio_unavailable": "Narration is temporarily unavailable.",
-      "audio_pack_failed": "Could not prepare audio for this package. Please retry."
+      "audio_pack_failed": "Could not prepare audio for this package. Please retry.",
+      "export_live_pending": "Download/email paused until live book export matches the vault popup. Lookalike offline packs are not shipped."
     },
     "density": {
       "newSession": "New dialogue",

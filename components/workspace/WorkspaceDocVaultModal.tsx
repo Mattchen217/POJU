@@ -1,24 +1,23 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useMessages, useTranslations } from "next-intl";
+import {
+  BASELINE_LIVE_EXPORT_VISUAL_PASS,
+  captureBaselinePortraitLiveHtml,
+} from "@/lib/poju/baseline-portrait-live-export";
+// SoT16 §12: lookalike buildBaselineProfileOfflineHtml must NOT be served as download/email.
 
-import { DeliverableHtmlFrame } from "@/components/deliverables/DeliverableHtmlFrame";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
+import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
-import { getCompanionJobBySession } from "@/lib/companion";
-import {
-  ensureDeliveryFilledHtml,
-  ensureRemindersFilledHtml,
-  fillBaselineProfileHtml,
-} from "@/lib/deliverables";
-import { buildBaselineExportPlainText } from "@/lib/poju/baseline-interactive-html";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
-import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { loadPOJUSession } from "@/lib/poju/session-manager";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
 
@@ -32,16 +31,6 @@ type Props = {
   onClose: () => void;
 };
 
-function downloadBlob(filename: string, content: string, mime: string) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 /**
  * Vault read overlay (SoT 15): Buy-style portal.
  * Opening = 0 PASS. Close does not touch center session timeline.
@@ -54,16 +43,15 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   const tBook = useTranslations("workspace.deliveryBook");
   const locale = useLocale();
   const { email: accountEmail, ready: authReady } = useAuthUser();
+  const prepare = useWorkspacePojuPrepareOptional();
+  const liveDelivery = prepare?.liveDelivery ?? null;
   const [mounted, setMounted] = useState(false);
   const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(null);
-  const [baselineHtml, setBaselineHtml] = useState<string | null>(null);
   const [deliveryText, setDeliveryText] = useState<string | null>(null);
-  const [deliveryHtml, setDeliveryHtml] = useState<string | null>(null);
   const [deliverySessionId, setDeliverySessionId] = useState<string | null>(null);
   const [deliveryQuestion, setDeliveryQuestion] = useState<string | null>(null);
   const [deliveryProfileId, setDeliveryProfileId] = useState<string | null>(null);
   const [remindersSessionId, setRemindersSessionId] = useState<string | null>(null);
-  const [remindersHtml, setRemindersHtml] = useState<string | null>(null);
   const [remindersText, setRemindersText] = useState<string | null>(null);
   const [remindersProfileId, setRemindersProfileId] = useState<string | null>(null);
   const [remindersQuestion, setRemindersQuestion] = useState<string | null>(null);
@@ -72,8 +60,6 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   >(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailBusy, setEmailBusy] = useState(false);
-  const [packBusy, setPackBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,12 +69,9 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   useEffect(() => {
     if (!item) {
       setMatrixPayload(null);
-      setBaselineHtml(null);
       setDeliveryText(null);
-      setDeliveryHtml(null);
       setDeliverySessionId(null);
       setRemindersSessionId(null);
-      setRemindersHtml(null);
       setRemindersText(null);
       setRemindersStructured(null);
       setError(null);
@@ -100,11 +83,8 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       setLoading(true);
       setError(null);
       setMatrixPayload(null);
-      setBaselineHtml(null);
       setDeliveryText(null);
-      setDeliveryHtml(null);
       setRemindersSessionId(null);
-      setRemindersHtml(null);
       setRemindersText(null);
       setRemindersStructured(null);
       setActionMsg(null);
@@ -119,47 +99,24 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
           const payload = buildMatrixPayloadFromProfile(target.profileId, profile.user_profile, {
             locale,
           });
-          const html = fillBaselineProfileHtml(payload, locale, {
-            title: tPortrait("title"),
-            subtitle: tPortrait("subtitle"),
-            subjectLabel: item.subjectLabel?.trim() || "",
-          });
-          if (!cancelled) {
-            setMatrixPayload(payload);
-            setBaselineHtml(html);
-          }
+          if (!cancelled) setMatrixPayload(payload);
           return;
         }
         if (target.type === "pivot_delivery") {
           const session = await loadPOJUSession(target.sessionId);
           const text = session?.main_delivery?.full_text?.trim() || "";
-          if (!text || !session) {
-            if (!cancelled) setError("Delivery not found");
-            return;
-          }
-          const question = session.original_question?.trim() || "";
-          const filled = ensureDeliveryFilledHtml(session, text, locale, {
-            originalQuestion: question,
-            reportId: `EOS-${session.session_id.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
-            reportDate: new Date().toISOString().slice(0, 10),
-          });
-          if (filled.session !== session) {
-            try {
-              await savePOJUSession(filled.session);
-            } catch {
-              /* vault open still shows html */
-            }
-          }
+          // SoT16: allow empty text while live progressive fill streams via liveDelivery.
           if (!cancelled) {
-            setDeliveryText(text);
-            setDeliveryHtml(filled.html);
+            setDeliveryText(text || null);
             setDeliverySessionId(target.sessionId);
-            setDeliveryQuestion(question || null);
+            setDeliveryQuestion(session?.original_question?.trim() || null);
             setDeliveryProfileId(
-              session.agent_v2?.selected_profile_id ??
-                session.selected_stored_profile_id ??
+              session?.agent_v2?.selected_profile_id ??
+                session?.selected_stored_profile_id ??
                 null,
             );
+            if (!text && !session) setError("Delivery not found");
+            else setError(null);
           }
           return;
         }
@@ -170,40 +127,11 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
             return;
           }
           const text = session.main_delivery?.full_text?.trim() || "";
-          let structured = session.matrix_payload?.structured ?? null;
-          let html = "";
-          const job = await getCompanionJobBySession(target.sessionId);
-          if (job) {
-            const filled = ensureRemindersFilledHtml(session, job, locale);
-            html = filled.html;
-            if (filled.session !== session) {
-              try {
-                await savePOJUSession(filled.session);
-              } catch {
-                /* ignore */
-              }
-            }
-          } else if (session.deliverable_html?.reminders?.trim()) {
-            html = session.deliverable_html.reminders;
-          }
-          if (!structured) {
-            const pid =
-              session.agent_v2?.selected_profile_id ??
-              session.selected_stored_profile_id ??
-              null;
-            if (pid) {
-              const profile = await getStoredProfile(pid);
-              if (profile?.user_profile) {
-                const payload = buildMatrixPayloadFromProfile(pid, profile.user_profile, {
-                  locale,
-                });
-                structured = payload.structured;
-              }
-            }
-          }
+          const structured =
+            session.matrix_payload?.structured ??
+            null;
           if (!cancelled) {
             setRemindersSessionId(target.sessionId);
-            setRemindersHtml(html || null);
             setRemindersText(text || " ");
             setRemindersQuestion(session.original_question?.trim() || null);
             setRemindersProfileId(
@@ -212,6 +140,22 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
                 null,
             );
             setRemindersStructured(structured);
+            if (!structured) {
+              // Try rebuild from stored profile so companion frame can seal.
+              const pid =
+                session.agent_v2?.selected_profile_id ??
+                session.selected_stored_profile_id ??
+                null;
+              if (pid) {
+                const profile = await getStoredProfile(pid);
+                if (profile?.user_profile) {
+                  const payload = buildMatrixPayloadFromProfile(pid, profile.user_profile, {
+                    locale,
+                  });
+                  if (!cancelled) setRemindersStructured(payload.structured);
+                }
+              }
+            }
           }
           return;
         }
@@ -225,7 +169,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [item, locale, tPortrait]);
+  }, [item, locale]);
 
   useEffect(() => {
     if (!item) return;
@@ -236,55 +180,94 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [item, onClose]);
 
-  const baselinePack = useMemo(() => {
-    if (!matrixPayload || !baselineHtml) return null;
-    return {
-      title: tPortrait("title"),
-      subtitle: tPortrait("subtitle"),
-      subjectLabel: item?.subjectLabel?.trim() || "",
-      bodyText: buildBaselineExportPlainText(matrixPayload, locale),
-      html: baselineHtml,
-    };
-  }, [matrixPayload, baselineHtml, locale, tPortrait, item?.subjectLabel]);
+  /**
+   * SoT16 §13: download/email follow BASELINE_LIVE_EXPORT_VISUAL_PASS.
+   * When true, createRoot captureBaselinePortraitLiveHtml only — never lookalike offline pack.
+   * Re-close flag to false if visual FAIL vs vault popup.
+   */
+  const messages = useMessages();
+  const baselineExportUnlocked = BASELINE_LIVE_EXPORT_VISUAL_PASS;
+  const baselineExportLockMsg = useMemo(() => {
+    try {
+      return tShelf("export_live_pending");
+    } catch {
+      return locale.startsWith("zh")
+        ? "下载/邮件暂不可用：须等真实书本导出（与弹窗一致）通过验收。不会提供仿制离线包。"
+        : "Download/email paused until live book export matches the vault popup. Lookalike offline packs are not shipped.";
+    }
+  }, [tShelf, locale]);
+
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const runLiveBaselineExport = async (): Promise<string | null> => {
+    if (!matrixPayload) return null;
+    const result = await captureBaselinePortraitLiveHtml({
+      payload: matrixPayload,
+      locale,
+      messages,
+      subjectLabel: item?.subjectLabel?.trim() || undefined,
+      coverTitle: tPortrait("title"),
+    });
+    return result.html;
+  };
 
   const handleBaselineDownload = () => {
-    if (!baselinePack) return;
-    setPackBusy(true);
-    setActionMsg(null);
-    try {
-      downloadBlob(
-        `baseline-profile-${new Date().toISOString().slice(0, 10)}.html`,
-        baselinePack.html,
-        "text/html;charset=utf-8",
-      );
-    } catch (e) {
-      console.warn("[vault-modal] baseline download failed", e);
-      setActionMsg(tShelf("audio_pack_failed"));
-    } finally {
-      setPackBusy(false);
+    if (!baselineExportUnlocked) {
+      setActionMsg(baselineExportLockMsg);
+      return;
     }
+    if (!matrixPayload || exportBusy) return;
+    setExportBusy(true);
+    setActionMsg(null);
+    void (async () => {
+      try {
+        const html = await runLiveBaselineExport();
+        if (!html) throw new Error("empty live export");
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const d = new Date();
+        const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        a.download = `eastern-os-baseline-profile-live-${stamp}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.warn("[vault-modal] live baseline export failed", e);
+        setActionMsg(baselineExportLockMsg);
+      } finally {
+        setExportBusy(false);
+      }
+    })();
   };
 
   const handleBaselineEmail = async () => {
-    if (!baselinePack) return;
+    if (!baselineExportUnlocked) {
+      setActionMsg(baselineExportLockMsg);
+      return;
+    }
+    if (!matrixPayload || exportBusy) return;
     const to = accountEmail?.trim() ?? "";
     if (!authReady) return;
     if (!to || !to.includes("@")) {
       setActionMsg(tShelf("email_no_account"));
       return;
     }
-    setEmailBusy(true);
+    setExportBusy(true);
     setActionMsg(null);
     try {
+      const html = await runLiveBaselineExport();
+      if (!html) throw new Error("empty live export");
+      const title = tPortrait("title");
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to,
-          title: baselinePack.title,
-          body_text: baselinePack.bodyText,
+          title,
+          body_text: title,
           locale,
-          html_attachment: baselinePack.html,
+          html_attachment: html,
           pack: "baseline",
         }),
       });
@@ -295,10 +278,10 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       }
       setActionMsg(tBook("email_sent"));
     } catch (e) {
-      console.warn("[vault-modal] baseline email failed", e);
-      setActionMsg(tShelf("audio_pack_failed"));
+      console.warn("[vault-modal] live baseline email failed", e);
+      setActionMsg(baselineExportLockMsg);
     } finally {
-      setEmailBusy(false);
+      setExportBusy(false);
     }
   };
 
@@ -318,7 +301,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       ? tPortrait("subtitle")
       : item.subjectLabel || undefined;
 
-  const showBaselineActions = Boolean(baselineHtml) && !loading && item.kind === "energy_matrix";
+  const showBaselineActions = Boolean(matrixPayload) && !loading && item.kind === "energy_matrix";
 
   return createPortal(
     <div
@@ -349,23 +332,30 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
                 <DeliveryChromeIconBtn
                   src={DOWNLOAD_ICON}
                   label={tShelf("tip_download")}
-                  tip={packBusy ? tShelf("audio_generating") : tShelf("tip_download")}
-                  disabled={packBusy}
+                  tip={
+                    baselineExportUnlocked
+                      ? tShelf("tip_download")
+                      : baselineExportLockMsg
+                  }
+                  disabled={!baselineExportUnlocked || exportBusy}
                   onClick={handleBaselineDownload}
                 />
                 <DeliveryChromeIconBtn
                   src={EMAIL_ICON}
                   label={tShelf("tip_email")}
-                  tip={packBusy ? tShelf("audio_generating") : tShelf("tip_email")}
-                  disabled={emailBusy || packBusy || !authReady}
-                  aria-busy={emailBusy || packBusy || undefined}
+                  tip={
+                    baselineExportUnlocked
+                      ? tShelf("tip_email")
+                      : baselineExportLockMsg
+                  }
+                  disabled={!baselineExportUnlocked || exportBusy || !authReady}
+                  aria-busy={exportBusy || undefined}
                   onClick={() => void handleBaselineEmail()}
                 />
-                {actionMsg ? (
-                  <span className="workspace-doc-vault-modal__action-msg" role="status">
-                    {actionMsg}
-                  </span>
-                ) : null}
+                <span className="workspace-doc-vault-modal__action-msg" role="status">
+                  {actionMsg ??
+                    (baselineExportUnlocked ? null : baselineExportLockMsg)}
+                </span>
               </div>
             ) : null}
             <button
@@ -390,45 +380,84 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
               {error}
             </p>
           ) : null}
-          {baselineHtml && !loading ? (
-            <DeliverableHtmlFrame html={baselineHtml} title={title} />
-          ) : null}
-          {deliverySessionId && !loading && (deliveryHtml || deliveryText) ? (
-            <DeliveryShelfView
-              fullText={deliveryText || " "}
+          {matrixPayload && !loading ? (
+            <BaselinePortraitBook
+              payload={matrixPayload}
               locale={locale}
-              sessionId={deliverySessionId}
-              complete
-              originalQuestion={deliveryQuestion ?? undefined}
-              profileId={deliveryProfileId}
-              filledHtml={deliveryHtml ?? undefined}
+              suppressNarrative
             />
           ) : null}
-          {remindersSessionId && !loading ? (
+          {deliverySessionId &&
+          (liveDelivery?.sessionId === deliverySessionId ? true : !loading) &&
+          (liveDelivery?.sessionId === deliverySessionId ||
+            deliveryText ||
+            (liveDelivery && liveDelivery.sessionId === deliverySessionId)) ? (
+            <DeliveryShelfView
+              fullText={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.fullText
+                  : (deliveryText ?? "")
+              }
+              locale={locale}
+              sessionId={deliverySessionId}
+              complete={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.complete
+                  : true
+              }
+              originalQuestion={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.originalQuestion
+                  : (deliveryQuestion ?? undefined)
+              }
+              profileId={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.profileId
+                  : deliveryProfileId
+              }
+              interrupted={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.interrupted
+                  : false
+              }
+              interruptReason={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.interruptReason
+                  : null
+              }
+              interruptAction={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.interruptAction
+                  : "continue"
+              }
+              interruptBusy={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.interruptBusy
+                  : false
+              }
+              networkIssue={
+                liveDelivery?.sessionId === deliverySessionId
+                  ? liveDelivery.networkIssue
+                  : false
+              }
+            />
+          ) : null}
+          {remindersSessionId && remindersText && !loading ? (
             <div className="workspace-doc-vault-modal__reminders">
-              {remindersHtml ? (
-                <DeliverableHtmlFrame
-                  html={remindersHtml}
-                  title={tVault("type_reminders")}
-                />
-              ) : (
-                <>
-                  <PojuCompanionFrame
-                    sessionId={remindersSessionId}
-                    fullText={remindersText || " "}
-                    structured={remindersStructured}
-                    originalQuestion={remindersQuestion ?? undefined}
-                    ready={Boolean(remindersStructured)}
-                    profileId={remindersProfileId}
-                    initialEmail={accountEmail ?? null}
-                  />
-                  {!remindersStructured ? (
-                    <p className="workspace-doc-vault-modal__status">
-                      {tVault("reminders_need_profile")}
-                    </p>
-                  ) : null}
-                </>
-              )}
+              <PojuCompanionFrame
+                sessionId={remindersSessionId}
+                fullText={remindersText}
+                structured={remindersStructured}
+                originalQuestion={remindersQuestion ?? undefined}
+                ready={Boolean(remindersStructured)}
+                profileId={remindersProfileId}
+                initialEmail={accountEmail ?? null}
+              />
+              {!remindersStructured ? (
+                <p className="workspace-doc-vault-modal__status">
+                  {tVault("reminders_need_profile")}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { requestDeliveryAutoOpen } from "@/lib/workspace/doc-vault-types";
+
 import { useTranslations } from "next-intl";
 
 import {
@@ -178,9 +180,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           data-tooltip={tVaultType("type_delivery")}
           onClick={(e) => {
             e.stopPropagation();
-            if (prepare?.session?.main_delivery?.full_text || prepare?.session?.main_delivery_done) {
-              prepare.requestOpenDeliveryShelf();
-              onOpenPanel();
+            const sid = prepare?.session?.session_id?.trim();
+            if (sid) {
+              requestDeliveryAutoOpen(sid);
             } else {
               openVaultSection("pivot");
             }

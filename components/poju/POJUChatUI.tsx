@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
 import { QuietGpuGuard } from "@/components/spline/QuietGpuGuard";
@@ -56,9 +56,13 @@ import { createStoredProfile, getStoredProfile } from "@/lib/profile/stored-prof
 import { PartnerBirthModal } from "@/components/poju/PartnerBirthModal";
 import type { BirthInfo } from "@/lib/profile/types";
 import {
-  detectSessionLangFromSample,
   resolvePivotSessionLang,
 } from "@/lib/poju/session-lang";
+import {
+  classifyLanguageSwitchRequest,
+  parseAppLocale,
+  type AppLocale,
+} from "@/lib/prompts/language-directive";
 import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
 import {
   applySegment2PollSuccess,
@@ -165,7 +169,7 @@ import {
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
-import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
+import { requestDeliveryAutoOpen } from "@/lib/workspace/doc-vault-types";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
 import { LLMCallDebugPanel } from "@/components/poju/LLMCallDebugPanel";
@@ -234,6 +238,45 @@ const PROVIDER_QUEUE_SILENT_RETRY_MS = 5000;
 /** Silent auto-retries before showing the user-facing infra retry button. */
 const MAX_SILENT_INFRA_RETRIES = 3;
 
+/** After in-range "reply in X", switch website locale then resume the turn. */
+const PIVOT_PENDING_LANG_SWITCH_KEY = "pivot-pending-lang-switch";
+
+type PendingLangSwitch = {
+  sessionId: string;
+  message: string;
+  targetLocale: AppLocale;
+  attachment: ComposerAttachment | null;
+};
+
+function readPendingLangSwitch(): PendingLangSwitch | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PIVOT_PENDING_LANG_SWITCH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingLangSwitch;
+    if (!parsed?.sessionId || !parsed?.message || !parsed?.targetLocale) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePendingLangSwitch(pending: PendingLangSwitch): void {
+  try {
+    sessionStorage.setItem(PIVOT_PENDING_LANG_SWITCH_KEY, JSON.stringify(pending));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function clearPendingLangSwitch(): void {
+  try {
+    sessionStorage.removeItem(PIVOT_PENDING_LANG_SWITCH_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -253,6 +296,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const tBrand = useTranslations("poju.branding");
   const tEscalation = useTranslations("poju.unqualified_escalation");
   const dialog = useAppDialog();
+  const pathname = usePathname();
   const workspacePrepare = useWorkspacePojuPrepareOptional();
   const [input, setInput] = useState("");
   /** After confirm-gate "supplement": guide free-text entry until next send. */
@@ -348,7 +392,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   // (avoids empty book if a stale marker lingers). Explicit deliveryRitual / pages do.
 
   /** Center is the delivery book page ? chat transcript is hidden. */
-  const deliveryPageActive = shelfActive;
+  const deliveryPageActive = false; // SoT16: center = chat only; deliverables via vault popup
 
   const deliveryFullText = useMemo(() => {
     const streamed = streamedDeliveryMarkdown?.trim() || "";
@@ -363,6 +407,74 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
     return "";
   }, [streamedDeliveryMarkdown, session.main_delivery?.full_text, session.messages]);
+
+  // SoT16 path C: push live stream into vault iframe; auto-open popup (center stays chat).
+  useEffect(() => {
+    const setLive = workspacePrepare?.setLiveDelivery;
+    if (!setLive) return;
+    if (!shelfActive) {
+      setLive(null);
+      return;
+    }
+    setLive({
+      sessionId: session.session_id,
+      fullText: deliveryFullText,
+      complete:
+        Boolean(session.main_delivery_done) &&
+        !deliveryInterruptedJobId &&
+        !session.pending_delivery_job_id?.trim(),
+      interrupted: Boolean(deliveryInterruptedJobId),
+      interruptReason: deliveryInterruptReason,
+      interruptAction: /job_(time|continue)_budget/i.test(deliveryInterruptReason ?? "")
+        ? "regenerate"
+        : "continue",
+      interruptBusy: deliveryContinueBusy || sending || finalBusy,
+      networkIssue: deliveryNetworkIssue,
+      originalQuestion: session.original_question,
+      profileId:
+        session.agent_v2?.selected_profile_id ??
+        session.selected_stored_profile_id ??
+        null,
+    });
+  }, [
+    workspacePrepare?.setLiveDelivery,
+    shelfActive,
+    session.session_id,
+    deliveryFullText,
+    session.main_delivery_done,
+    session.pending_delivery_job_id,
+    session.original_question,
+    session.agent_v2?.selected_profile_id,
+    session.selected_stored_profile_id,
+    deliveryInterruptedJobId,
+    deliveryInterruptReason,
+    deliveryContinueBusy,
+    sending,
+    finalBusy,
+    deliveryNetworkIssue,
+  ]);
+
+  useEffect(() => {
+    if (!shelfActive) return;
+    // Auto-open for live generation / interrupt only — cold open of a finished
+    // report stays vault-rail (center remains chat).
+    const live =
+      Boolean(streamedDeliveryMarkdown?.trim()) ||
+      Boolean(deliveryInterruptedJobId) ||
+      Boolean(session.pending_delivery_job_id?.trim()) ||
+      (deliveryRitual === "shelf" && !session.main_delivery_done);
+    if (!live && session.main_delivery_done) return;
+    requestDeliveryAutoOpen(session.session_id);
+  }, [
+    shelfActive,
+    session.session_id,
+    session.main_delivery_done,
+    session.pending_delivery_job_id,
+    streamedDeliveryMarkdown,
+    deliveryInterruptedJobId,
+    deliveryRitual,
+  ]);
+
 
   /** Session switch: enter delivery page if this session already has a book; else restore chat. */
   useEffect(() => {
@@ -455,6 +567,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   );
   const openingInitRef = useRef(false);
   const releasePendingInitRef = useRef<string | null>(null);
+  /** Resume LLM turn once after website locale auto-switch. */
+  const langSwitchResumeRef = useRef<string | null>(null);
   const toolResumeInitRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const documentFileRef = useRef<HTMLInputElement | null>(null);
@@ -752,8 +866,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   /** Confirmation gates: free-text locked; chips stay pickable until next phase. */
   const confirmationGateInputLock = understandingGatePending || deliveryConfirmPending;
   /** Pivot process copy (gates / delivery confirm) ? follows locked session language, not website UI. */
+  /** Output language ≡ website UI locale (single SSOT). */
   const sessionLang = resolvePivotSessionLang(session, locale);
-  /** Resolve process language from latest session (async handlers must not use website UI locale). */
   const processLocale = useCallback(
     (s?: POJUSessionState) => resolvePivotSessionLang(s ?? sessionRef.current, locale),
     [locale],
@@ -953,6 +1067,32 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe / migrate welcome when messages change
   }, [session.session_id, session.messages, session.matrix_payload, locale]);
+
+  // In-range language request → website locale switched → resume turn in new locale.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sending || pipelineBusy) return;
+    const pending = readPendingLangSwitch();
+    if (!pending || pending.sessionId !== session.session_id) return;
+    if (parseAppLocale(locale) !== pending.targetLocale) return;
+    const resumeKey = `${pending.sessionId}::${pending.targetLocale}::${pending.message}`;
+    if (langSwitchResumeRef.current === resumeKey) return;
+    langSwitchResumeRef.current = resumeKey;
+    clearPendingLangSwitch();
+
+    const live = sessionRef.current;
+    void (async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      await runUserTurn(live, pending.message, {
+        rollbackSession: live,
+        typed: pending.message,
+        attachment: pending.attachment,
+      });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per locale-switch resume
+  }, [session.session_id, locale, sending, pipelineBusy]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1654,6 +1794,94 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
 
     const savedComposerAttachment = composerAttachment;
+    const uiLocale = parseAppLocale(locale);
+    const langSwitch = classifyLanguageSwitchRequest(userMessage);
+
+    // Out-of-range language: notice only — keep website language, skip LLM.
+    if (langSwitch.kind === "unsupported") {
+      const nowIso = new Date().toISOString();
+      const clientId = safeRandomUUID();
+      flushSync(() => {
+        setInput("");
+        setComposerAttachment(null);
+        setPaintPendingUser({ id: clientId, content: userMessage });
+      });
+      await yieldToBrowserPaint();
+      const notice: POJUMessage = {
+        role: "assistant",
+        content: pivotChatCopy(uiLocale).unsupported_language_notice,
+        timestamp: new Date().toISOString(),
+        client_id: safeRandomUUID(),
+        meta: { kind: "unsupported_language_notice" },
+      };
+      const withNotice: POJUSessionState = {
+        ...baseSession,
+        messages: [
+          ...baseSession.messages,
+          {
+            role: "user",
+            content: userMessage,
+            timestamp: nowIso,
+            client_id: clientId,
+          },
+          notice,
+        ],
+        locked_output_locale: uiLocale,
+        last_interaction_at: notice.timestamp,
+      };
+      onSessionUpdate(withNotice);
+      await savePOJUSession(withNotice);
+      scrollChatToBottom("smooth");
+      return;
+    }
+
+    // In-range language: auto-switch website locale first, then resume turn under that locale.
+    if (langSwitch.kind === "supported" && langSwitch.locale !== uiLocale) {
+      const nowIso = new Date().toISOString();
+      const clientId = safeRandomUUID();
+      flushSync(() => {
+        setInput("");
+        setComposerAttachment(null);
+        setPaintPendingUser({ id: clientId, content: userMessage });
+      });
+      await yieldToBrowserPaint();
+      const withUser: POJUSessionState = {
+        ...baseSession,
+        messages: [
+          ...baseSession.messages,
+          {
+            role: "user",
+            content: userMessage,
+            timestamp: nowIso,
+            client_id: clientId,
+            meta: savedComposerAttachment
+              ? {
+                  attachment_preview: {
+                    name: savedComposerAttachment.name,
+                    kind: savedComposerAttachment.kind,
+                    mime: savedComposerAttachment.mime,
+                    data_url:
+                      savedComposerAttachment.kind === "image"
+                        ? savedComposerAttachment.data_url
+                        : undefined,
+                  },
+                }
+              : undefined,
+          },
+        ],
+        locked_output_locale: langSwitch.locale,
+      };
+      onSessionUpdate(withUser);
+      await savePOJUSession(withUser);
+      writePendingLangSwitch({
+        sessionId: withUser.session_id,
+        message: userMessage,
+        targetLocale: langSwitch.locale,
+        attachment: savedComposerAttachment,
+      });
+      router.replace(pathname, { locale: langSwitch.locale });
+      return;
+    }
 
     if (isPreviewSession(baseSession)) {
       const topic = topicFromFirstUserMessage(userMessage);
@@ -1695,10 +1923,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             ? topic
             : baseSession.original_question,
         messages: [...baseSession.messages, optimisticUser],
-        locked_output_locale:
-          baseSession.locked_output_locale ??
-          detectSessionLangFromSample(userMessage) ??
-          undefined,
+        locked_output_locale: parseAppLocale(locale),
       };
       // Session write after paint ? may hitch, but bubble is already on screen.
       onSessionUpdate(withPending);
@@ -1800,10 +2025,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const withUser: POJUSessionState = {
       ...baseSession,
       messages: [...baseSession.messages, optimisticUser],
-      locked_output_locale:
-        baseSession.locked_output_locale ??
-        detectSessionLangFromSample(userMessage) ??
-        undefined,
+      locked_output_locale: parseAppLocale(locale),
     };
     onSessionUpdate(withUser);
     void savePOJUSession(withUser).catch(() => undefined);
@@ -3273,64 +3495,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const prepareShelfOpenRequest = workspacePrepare?.deliveryShelfOpenRequest ?? 0;
 
   const deliveryShelfNode = useMemo(() => {
-    if (!deliveryPageActive) return null;
-    const complete =
-      Boolean(session.main_delivery_done) &&
-      !deliveryInterruptedJobId &&
-      !session.pending_delivery_job_id?.trim();
-    return (
-      <div className="delivery-phase4-stream-enter">
-        <DeliveryShelfView
-          fullText={deliveryFullText}
-          locale={locale}
-          sessionId={session.session_id}
-          complete={complete}
-          originalQuestion={session.original_question}
-          profileId={
-            session.agent_v2?.selected_profile_id ??
-            session.selected_stored_profile_id ??
-            null
-          }
-          openReaderRequest={prepareShelfOpenRequest}
-          filledHtml={session.deliverable_html?.delivery}
-          interrupted={
-            Boolean(deliveryInterruptedJobId) &&
-            !deliveryContinueBusy &&
-            !sending &&
-            !finalBusy
-          }
-          interruptReason={deliveryInterruptReason}
-          interruptAction={
-            /job_(time|continue)_budget/i.test(deliveryInterruptReason ?? "")
-              ? "regenerate"
-              : "continue"
-          }
-          interruptBusy={deliveryContinueBusy || sending || finalBusy}
-          onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
-          onRegenerateInterrupted={() => void handleFinalDelivery()}
-          networkIssue={deliveryNetworkIssue}
-        />
-      </div>
-    );
-  }, [
-    deliveryPageActive,
-    deliveryFullText,
-    locale,
-    session.session_id,
-    session.main_delivery_done,
-    session.original_question,
-    session.agent_v2?.selected_profile_id,
-    session.selected_stored_profile_id,
-    session.pending_delivery_job_id,
-    session.deliverable_html?.delivery,
-    prepareShelfOpenRequest,
-    deliveryInterruptedJobId,
-    deliveryInterruptReason,
-    deliveryContinueBusy,
-    finalBusy,
-    sending,
-    deliveryNetworkIssue,
-  ]);
+    // SoT16: center = chat only; decision report opens via vault auto-open + liveDelivery.
+    return null;
+  }, []);
 
   useEffect(() => {
     const setControls = workspacePrepare?.setDeliveryRailControls;
@@ -3447,23 +3614,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
       }
       if (m.meta?.contains_delivery) {
-        bareIds.add(mid);
-        slots[mid] = (
-          <DeliveryShelfView
-            fullText={m.content}
-            locale={locale}
-            sessionId={session.session_id}
-            complete
-            originalQuestion={session.original_question}
-            profileId={
-              session.agent_v2?.selected_profile_id ??
-              session.selected_stored_profile_id ??
-              null
-            }
-            openReaderRequest={prepareShelfOpenRequest}
-            filledHtml={session.deliverable_html?.delivery}
-          />
-        );
+        // SoT16: book is vault-popup only; keep regenerate affordance on the message.
         followUps[mid] = (
           <>
             {followUps[mid]}

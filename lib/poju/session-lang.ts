@@ -1,16 +1,17 @@
 /**
- * Pivot session language SSOT (`locked_output_locale`).
+ * Pivot session language SSOT — output ≡ website UI locale.
  *
- * Website UI locale (nav / settings / marketing) stays independent.
- * Chat bubbles, understanding/delivery gate copy, delivery book, and
- * translate-on/off all read this lock once the first substantive user
- * message establishes it.
+ * Product rule (stable for any future locale expansion):
+ * 1. Model output always follows the current website language.
+ * 2. In-range "reply in Spanish" → client auto-switches website locale, then hard-locks.
+ * 3. Out-of-range "reply in Japanese" → notice only; do not switch; keep website language.
  *
- * HARD RULE: never persist the website UI locale as the lock just because
- * detection missed a turn — that permanently poisons EN-site + ZH-chat sessions.
+ * `locked_output_locale` is kept in sync with the website locale for persistence /
+ * diagnostics; it must never diverge from the UI locale as a second output track.
  */
 
 import {
+  classifyLanguageSwitchRequest,
   detectExplicitLanguageSwitch,
   detectLanguage,
   parseAppLocale,
@@ -18,9 +19,9 @@ import {
 } from "@/lib/prompts/language-directive";
 import type { POJUSessionState } from "@/lib/poju/types";
 
-/** Min CJK characters to lock session language from a Chinese-dominant sample. */
+/** Min CJK characters to treat a sample as language-detectable (diagnostics / legacy). */
 export const SESSION_LANG_MIN_CJK = 10;
-/** Min whitespace-separated tokens to lock from a Latin-script sample. */
+/** Min whitespace-separated tokens for Latin-script samples (diagnostics / legacy). */
 export const SESSION_LANG_MIN_LATIN_WORDS = 10;
 
 const SYSTEMISH =
@@ -35,7 +36,7 @@ export function isSubstantiveLanguageSample(text: string): boolean {
   return words.length >= SESSION_LANG_MIN_LATIN_WORDS;
 }
 
-/** Detect language only when the sample is long enough to lock confidently. */
+/** Detect language only when the sample is long enough (diagnostics / legacy helpers). */
 export function detectSessionLangFromSample(text: string): AppLocale | null {
   if (!isSubstantiveLanguageSample(text)) return null;
   return detectLanguage(text.trim());
@@ -46,7 +47,7 @@ type SessionLangSource = Pick<
   "locked_output_locale" | "messages" | "original_question"
 >;
 
-/** Chronological first substantive user sample — design SSOT for first-input lock. */
+/** Chronological first substantive user sample — kept for tests / migration diagnostics. */
 export function findFirstSubstantiveUserLocale(
   messages: SessionLangSource["messages"] | null | undefined,
 ): AppLocale | null {
@@ -60,36 +61,19 @@ export function findFirstSubstantiveUserLocale(
 
 /**
  * Process language for Pivot chat / gates / delivery.
- * Prefer persisted lock; reclaim UI-poisoned locks; else first substantive; else UI.
+ * Always ≡ website UI locale (single SSOT).
  */
 export function resolvePivotSessionLang(
-  session: SessionLangSource | null | undefined,
+  _session: SessionLangSource | null | undefined,
   uiLocale: string,
 ): AppLocale {
-  const ui = parseAppLocale(uiLocale);
-  const first = findFirstSubstantiveUserLocale(session?.messages);
-  const oq = session?.original_question?.trim()
-    ? detectSessionLangFromSample(session.original_question)
-    : null;
-  const firstOrOq = first ?? oq;
-
-  if (session?.locked_output_locale) {
-    const locked = parseAppLocale(session.locked_output_locale);
-    // UI-poisoned lock: stored website locale without a matching substantive sample.
-    if (firstOrOq && locked === ui && locked !== firstOrOq) {
-      return firstOrOq;
-    }
-    return locked;
-  }
-
-  if (firstOrOq) return firstOrOq;
-  return ui;
+  return parseAppLocale(uiLocale);
 }
 
 /**
- * Resolve this turn's output locale and the next value to persist as lock.
- * Priority: explicit switch → reclaim/existing lock → first substantive → UI (output only).
- * `nextLocked` is undefined when we only fell back to UI — never persist UI-only.
+ * Resolve this turn's output locale and the value to persist as lock.
+ * Always ≡ website UI locale. Supported "reply in X" is applied by switching
+ * the website language first (client); by the time we run, uiLocale is already new.
  */
 export function nextLockedOutputLocale(input: {
   locked?: AppLocale | null;
@@ -97,31 +81,13 @@ export function nextLockedOutputLocale(input: {
   uiLocale: AppLocale;
   messages?: SessionLangSource["messages"] | null;
   original_question?: string | null;
-}): { outputLocale: AppLocale; nextLocked: AppLocale | undefined } {
-  const explicit = detectExplicitLanguageSwitch(input.userInput);
-  if (explicit) {
-    return { outputLocale: explicit, nextLocked: explicit };
-  }
-
-  const first =
-    findFirstSubstantiveUserLocale(input.messages) ??
-    (input.original_question
-      ? detectSessionLangFromSample(input.original_question)
-      : null) ??
-    (input.userInput ? detectSessionLangFromSample(input.userInput) : null);
-
-  if (input.locked) {
-    const locked = parseAppLocale(input.locked);
-    // Reclaim UI-poisoned lock toward first substantive sample.
-    if (first && locked === input.uiLocale && locked !== first) {
-      return { outputLocale: first, nextLocked: first };
-    }
-    return { outputLocale: locked, nextLocked: locked };
-  }
-
-  if (first) {
-    return { outputLocale: first, nextLocked: first };
-  }
-
-  return { outputLocale: input.uiLocale, nextLocked: undefined };
+}): { outputLocale: AppLocale; nextLocked: AppLocale } {
+  void input.locked;
+  void input.userInput;
+  void input.messages;
+  void input.original_question;
+  return { outputLocale: input.uiLocale, nextLocked: input.uiLocale };
 }
+
+/** Re-export for callers that only need the supported-locale detector. */
+export { detectExplicitLanguageSwitch, classifyLanguageSwitchRequest };

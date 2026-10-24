@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="eastern-os-export" content="createRoot-BaselinePortraitBook-PREVIEW-STUB"/>
+<title>Eastern OS — baseline live export preview (generate via vault download)</title>
+<style>
+  body{font:14px/1.5 system-ui,sans-serif;max-width:42rem;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
+  code{background:#f3f0ea;padding:.1em .35em;border-radius:3px}
+  ol{padding-left:1.25rem}
+  .warn{border-left:4px solid #c45;padding:.75rem 1rem;background:#fff5f5;margin:1.5rem 0}
+  .ok{border-left:4px solid #2a7;padding:.75rem 1rem;background:#f3fff8;margin:1.5rem 0}
+</style>
+</head>
+<body>
+<h1>Baseline live export — preview stub (SoT16 §13)</h1>
+<div class="warn">
+  <strong>This file is NOT the filled book.</strong>
+  The real self-running HTML is produced only by vault → Download
+  (<code>captureBaselinePortraitLiveHtml</code> / createRoot of live <code>BaselinePortraitBook</code>).
+  Do not treat synopsis or blank-template lookalikes as the download artifact.
+</div>
+<div class="ok">
+  <strong>How Max generates / verifies (short English, CN-friendly):</strong>
+  <ol>
+    <li>Dev server on, open the app (local).</li>
+    <li>Open Doc vault → open Baseline (能量底册 / baseline portrait).</li>
+    <li>Confirm popup = live <code>BaselinePortraitBook</code> (pages filled, not iframe).</li>
+    <li>Click Download (unlocked when <code>BASELINE_LIVE_EXPORT_VISUAL_PASS=true</code>).</li>
+    <li>Save as <code>eastern-os-baseline-profile-live-YYYY-MM-DD.html</code>.</li>
+    <li>Optionally copy/rename that file to
+      <code>temp/eastern-os-baseline-profile-live-export-preview.html</code> to replace this stub.</li>
+    <li>Open the downloaded HTML offline (double-click). Check: same book as vault popup
+      (createRoot export, pager works, not blank template).</li>
+    <li>If FAIL vs popup → set <code>BASELINE_LIVE_EXPORT_VISUAL_PASS=false</code> again (re-close gate).</li>
+  </ol>
+</div>
+<p>Gate file: <code>lib/poju/baseline-portrait-live-export.ts</code> → <code>BASELINE_LIVE_EXPORT_VISUAL_PASS</code>.</p>
+<p>Download path: <code>WorkspaceDocVaultModal</code> → <code>runLiveBaselineExport</code> → <code>captureBaselinePortraitLiveHtml</code> only.</p>
+</body>
+</html>

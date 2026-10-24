@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   assert("task A in turnContext only", turnA.includes("Task A") && !sys1a.includes("Task A"));
   assert("task B in turnContext only", turnB.includes("Task B"));
   assert("different tasks → different turnContext", turnA !== turnB);
-  assert("turnContext has language lock", turnA.includes("Respond **ONLY** in"));
+  assert("turnContext has language lock", turnA.includes("WEBSITE LOCK"));
   assert("turnContext has date context", turnA.includes("今天的实际日期") || turnA.includes("Today's actual date"));
 
   const stableA = stableJsonStringify({ b: 2, a: 1, nested: { z: 1, a: 0 } });

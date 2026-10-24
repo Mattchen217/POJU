@@ -35,6 +35,8 @@ type PivotChatCopyPack = {
   summary_or_deliverable_failed: string;
   summary_done_deliverable_failed: string;
   unlock_failed_retry: string;
+  /** User asked for a language outside the product set (en/es/fr/zh). */
+  unsupported_language_notice: string;
 };
 
 const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
@@ -68,6 +70,8 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     summary_or_deliverable_failed:
       "汇总或交付未能完成。若书页已显示，请点「继续」；否则用侧栏重新生成交付书。",
     unlock_failed_retry: "解锁失败，请重试",
+    unsupported_language_notice:
+      "目前只针对四种语言（English、Español、Français、中文）做了适配，后续会逐步增加其他语言，请耐心等待…",
   },
   en: {
     parallel_analysis_in_progress:
@@ -102,6 +106,8 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     summary_or_deliverable_failed:
       "Summary or delivery didn't finish. If pages are on screen, tap Continue; otherwise regenerate delivery from the rail.",
     unlock_failed_retry: "Unlock failed, please try again.",
+    unsupported_language_notice:
+      "We currently support four languages only (English, Español, Français, and 中文). More languages will be added gradually — thank you for your patience.",
   },
   es: {
     parallel_analysis_in_progress:
@@ -138,6 +144,8 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     summary_done_deliverable_failed:
       "El resumen se completó, pero la entrega se detuvo antes de la primera página. Usa Regenerar entrega en la barra lateral. Si falla otra vez, envía el reason del log rojo [final-delivery-STOP].",
     unlock_failed_retry: "Error al desbloquear, por favor vuelve a intentarlo.",
+    unsupported_language_notice:
+      "Por ahora solo adaptamos cuatro idiomas (English, Español, Français y 中文). Iremos añadiendo más poco a poco — gracias por tu paciencia.",
   },
   fr: {
     parallel_analysis_in_progress:
@@ -174,6 +182,8 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     summary_done_deliverable_failed:
       "La synthèse est terminée, mais la livraison s'est arrêtée avant la première page. Utilisez Régénérer le livrable. En cas d'échec, envoyez le reason du log rouge [final-delivery-STOP].",
     unlock_failed_retry: "Échec du déverrouillage, veuillez réessayer.",
+    unsupported_language_notice:
+      "Pour l'instant, seules quatre langues sont prises en charge (English, Español, Français et 中文). D'autres langues seront ajoutées progressivement — merci de votre patience.",
   },
   de: {
     parallel_analysis_in_progress:
@@ -210,6 +220,8 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     summary_done_deliverable_failed:
       "Die Zusammenfassung ist fertig, aber die Lieferung stoppte vor der ersten Seite. Nutze «Lieferung neu erzeugen». Bei erneutem Fehler sende den reason aus dem roten [final-delivery-STOP]-Log.",
     unlock_failed_retry: "Freischalten fehlgeschlagen, bitte erneut versuchen.",
+    unsupported_language_notice:
+      "Derzeit unterstützen wir nur vier Sprachen (English, Español, Français und 中文). Weitere Sprachen folgen nach und nach — danke für deine Geduld.",
   },
 };
 

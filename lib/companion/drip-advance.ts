@@ -10,7 +10,7 @@ import { sendEmail } from "@/lib/email/resend-client";
 
 import { gateCompanionBatch } from "./batch-gate";
 import { generateCompanionDayPair, nextPendingDayIndexes } from "./batch-generate";
-import { buildCompanionDayHtml } from "./day-html";
+import { buildReminderDayOfflineHtml, reminderDayOfflineFilename } from "./reminder-day-offline-html";
 import { formatDateKey } from "./date-keys";
 import { normalizeCompanionLocale, companionUiLabels } from "./locale-voice";
 import { saveCompanionJob } from "./job-store";
@@ -26,10 +26,11 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
 
   const locale = normalizeCompanionLocale(job.brief.locale);
   const labels = companionUiLabels(locale);
-  const html_attachment = buildCompanionDayHtml({
+  const html_attachment = buildReminderDayOfflineHtml({
     job,
     dayIndex,
     cards: day.cards,
+    opts: { embed: false },
   });
   const dayNum = String(dayIndex + 1).padStart(2, "0");
   const title = labels.title(day.date_key, dayIndex + 1);
@@ -54,7 +55,7 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
     text: body_text,
     attachments: [
       {
-        filename: `eastern-os-reminder-day-${dayNum}-${day.date_key}.html`,
+        filename: reminderDayOfflineFilename(dayIndex + 1, day.date_key),
         content: html_attachment,
       },
     ],

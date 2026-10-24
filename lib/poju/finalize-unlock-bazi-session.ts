@@ -1,5 +1,4 @@
 import { createReportMessage } from "@/lib/poju/preview-unlock";
-import { detectSessionLangFromSample } from "@/lib/poju/session-lang";
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 
 export function hasUnlockReportMessage(session: POJUSessionState): boolean {
@@ -90,14 +89,13 @@ export function prepareUnlockReleaseSession(
     timestamp: new Date().toISOString(),
   };
 
-  const lockFromQuestion = detectSessionLangFromSample(q);
-
   return {
     ...session,
     pending_question: undefined,
     original_question: q || session.original_question,
     messages: [...messages, userMsg],
-    locked_output_locale: session.locked_output_locale ?? lockFromQuestion ?? undefined,
+    // Output language ≡ website locale at resolve time — do not lock from question text.
+    locked_output_locale: session.locked_output_locale,
     agent_v2: session.agent_v2
       ? {
           ...session.agent_v2,

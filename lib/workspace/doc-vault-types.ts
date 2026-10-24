@@ -79,3 +79,19 @@ export function requestBaselineAutoOpen(profileId: string): void {
     }),
   );
 }
+
+/** Chat confirm / generation start — open decision report popup (center stays chat). */
+export const DELIVERY_AUTO_OPEN_EVENT = "pojulife:delivery-auto-open";
+
+export type DeliveryAutoOpenDetail = { sessionId: string };
+
+export function requestDeliveryAutoOpen(sessionId: string): void {
+  if (typeof window === "undefined") return;
+  const id = sessionId.trim();
+  if (!id) return;
+  window.dispatchEvent(
+    new CustomEvent<DeliveryAutoOpenDetail>(DELIVERY_AUTO_OPEN_EVENT, {
+      detail: { sessionId: id },
+    }),
+  );
+}

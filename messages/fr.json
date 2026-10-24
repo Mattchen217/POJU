@@ -2917,7 +2917,8 @@
       "audio_failed": "Échec de la narration. Appuyez sur lecture pour réessayer.",
       "audio_too_long": "Ce rapport est trop long pour une narration unique.",
       "audio_unavailable": "Narration temporairement indisponible.",
-      "audio_pack_failed": "Échec de l’audio du paquet. Réessayez."
+      "audio_pack_failed": "Échec de l’audio du paquet. Réessayez.",
+      "export_live_pending": "Téléchargement/e-mail en pause jusqu'à ce que l'export live corresponde au popup. Aucun pack imitant n'est fourni."
     },
     "density": {
       "newSession": "Nouveau dialogue",

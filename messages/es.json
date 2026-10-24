@@ -2917,7 +2917,8 @@
       "audio_failed": "No se pudo preparar la narración. Pulsa play para reintentar.",
       "audio_too_long": "Este informe es demasiado largo para narrarlo de una vez.",
       "audio_unavailable": "La narración no está disponible temporalmente.",
-      "audio_pack_failed": "No se pudo preparar el audio del paquete. Reintenta."
+      "audio_pack_failed": "No se pudo preparar el audio del paquete. Reintenta.",
+      "export_live_pending": "Descarga/correo pausados hasta que la exportación en vivo coincida con el popup. No se envían paquetes imitados."
     },
     "density": {
       "newSession": "Nuevo diálogo",

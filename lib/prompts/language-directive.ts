@@ -28,15 +28,27 @@ const localeNames: Record<AppLocale, string> = {
   fr: "French — eloquent, slightly philosophical",
 };
 
+/** Product locales (same set as `i18n/routing.ts`). Expanding locales later still uses this path. */
+export const PRODUCT_LOCALES: readonly AppLocale[] = ["en", "es", "zh", "fr"] as const;
+
+const ZH_LANG_TOKEN =
+  "中文|英文|英语|西班牙语|西语|法语|法文|日语|日文|日本語|韩语|韩文|한국어|德语|德文|葡萄牙语|意大利语|俄语|阿拉伯语";
+
 const switchPatterns: RegExp[] = [
-  /please respond in (\w+)/i,
-  /answer in (\w+)/i,
-  /reply in (\w+)/i,
-  /用(中文|英文|西班牙语|法语)(?:回复|回答)/,
-  /改用(中文|英文|西班牙语|法语)/,
-  /switch to (\w+)/i,
-  /(?:^|\s)(?:in|en)\s+(Spanish|Chinese|French|English|español|chino|francés|inglés)(?:\s|$|[,.!?])/i,
+  /please (?:respond|reply|answer) in ([\w\-]+)/i,
+  /answer in ([\w\-]+)/i,
+  /reply in ([\w\-]+)/i,
+  /respond in ([\w\-]+)/i,
+  new RegExp(`用(${ZH_LANG_TOKEN})(?:回复|回答|交流|对话)?`),
+  new RegExp(`改用(${ZH_LANG_TOKEN})`),
+  /switch to ([\w\-]+)/i,
+  /(?:^|\s)(?:in|en)\s+(Spanish|Chinese|French|English|Japanese|Korean|German|Portuguese|Italian|Russian|Arabic|español|chino|francés|inglés|japonés|alemán)(?:\s|$|[,.!?])/i,
 ];
+
+export type LanguageSwitchRequest =
+  | { kind: "none" }
+  | { kind: "supported"; locale: AppLocale }
+  | { kind: "unsupported"; requestedLabel: string };
 
 /** Escape literal for RegExp word-boundary match. */
 function wb(word: string): RegExp {
@@ -213,9 +225,11 @@ function mapToLocale(text: string): AppLocale | null {
   const zhTokens: Record<string, AppLocale> = {
     中文: "zh",
     英文: "en",
+    英语: "en",
     西班牙语: "es",
+    西语: "es",
     法语: "fr",
-    德语: "en",
+    法文: "fr",
   };
   if (raw in zhTokens) return zhTokens[raw as keyof typeof zhTokens];
 
@@ -234,13 +248,29 @@ function mapToLocale(text: string): AppLocale | null {
     français: "fr",
     francés: "fr",
     fr: "fr",
-    german: "en",
-    deutsch: "en",
-    alemán: "en",
-    de: "en",
   };
 
   return map[t] ?? null;
+}
+
+/**
+ * Classify an explicit "reply in X" request.
+ * - supported → product locale (client should switch website language first)
+ * - unsupported → outside product set (show notice; keep current website language)
+ */
+export function classifyLanguageSwitchRequest(
+  userInput?: string,
+): LanguageSwitchRequest {
+  if (!userInput?.trim()) return { kind: "none" };
+  for (const pattern of switchPatterns) {
+    const match = userInput.match(pattern);
+    if (match?.[1]) {
+      const mapped = mapToLocale(match[1]);
+      if (mapped) return { kind: "supported", locale: mapped };
+      return { kind: "unsupported", requestedLabel: match[1].trim() };
+    }
+  }
+  return { kind: "none" };
 }
 
 /**
@@ -297,65 +327,16 @@ ${buildDirective(language, "priority_1")}`,
   };
 }
 
-/**
- * POJU chat: reply language follows the user's messages, not the UI locale.
- * Bazi / matrix reports use UI locale separately.
- */
-/** CJK (Chinese / Japanese kana / Korean hangul) in user text → zh output. */
-const CJK_PATTERN =
-  /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
-
-function inferLocaleFromUserMessages(input: {
-  userInput?: string;
-  conversationHistory?: Array<{ role: string; content: string }>;
-}): AppLocale | null {
-  const texts: string[] = [];
-  if (input.userInput?.trim() && input.userInput.trim() !== "__OPENING__") {
-    texts.push(input.userInput.trim());
-  }
-  for (const msg of [...(input.conversationHistory ?? [])].reverse()) {
-    if (msg.role !== "user" && msg.role !== "User") continue;
-    const t = msg.content.trim();
-    if (t && !texts.includes(t)) texts.push(t);
-  }
-
-  for (const text of texts) {
-    // Defer to session-lang substantive rules (imported lazily-free via length heuristic
-    // mirrored here to avoid circular deps with session-lang).
-    const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
-    const words = text.split(/\s+/).filter(Boolean).length;
-    const substantive = cjk >= 10 || words >= 10;
-    if (!substantive) continue;
-
-    if (CJK_PATTERN.test(text)) return "zh";
-    for (const pattern of switchPatterns) {
-      const match = text.match(pattern);
-      if (match?.[1]) {
-        const mapped = mapToLocale(match[1]);
-        if (mapped) return mapped;
-      }
-    }
-    return detectLanguage(text);
-  }
-  return null;
-}
-
-/** Explicit in-message language switch (e.g. "please respond in Chinese"). */
+/** Explicit in-message switch to a **product** locale (e.g. "please respond in Chinese"). */
 export function detectExplicitLanguageSwitch(userInput?: string): AppLocale | null {
-  if (!userInput?.trim()) return null;
-  for (const pattern of switchPatterns) {
-    const match = userInput.match(pattern);
-    if (match?.[1]) {
-      const mapped = mapToLocale(match[1]);
-      if (mapped) return mapped;
-    }
-  }
-  return null;
+  const classified = classifyLanguageSwitchRequest(userInput);
+  return classified.kind === "supported" ? classified.locale : null;
 }
 
 /**
- * Session output locale: explicit switch → locked → substantive user text → UI.
- * Once `locked` is set, later messages cannot drift language (except explicit switch).
+ * Pivot output locale ≡ website UI locale.
+ * Supported "reply in X" is handled by auto-switching the website language first;
+ * this resolver never follows message language or a divergent session lock.
  */
 export function resolvePojuSessionOutputLocale(input: {
   locked?: AppLocale;
@@ -363,90 +344,36 @@ export function resolvePojuSessionOutputLocale(input: {
   userInput?: string;
   conversationHistory?: Array<{ role: string; content: string }>;
 }): AppLocale {
-  const explicitSwitch = detectExplicitLanguageSwitch(input.userInput);
-  if (explicitSwitch) return explicitSwitch;
-
-  if (input.locked) return input.locked;
-
-  const fromMessages = inferLocaleFromUserMessages({
-    userInput: input.userInput,
-    conversationHistory: input.conversationHistory,
-  });
-  if (fromMessages) return fromMessages;
-
+  void input.locked;
+  void input.userInput;
+  void input.conversationHistory;
   return input.uiLocale;
 }
 
+/**
+ * Pivot chat: output language ≡ website language only (Strict Language Constraint).
+ * Context may be ZH/EN/mixed; never mirror it. Expanding product locales later still uses this path.
+ */
 export function getPojuChatLanguageDirective(
   input: LanguageDirectiveInput,
 ): LanguageDirectiveOutput {
-  const uiLocale = input.locale;
-
-  if (input.forcedOutputLocale) {
-    const outputLocale = input.forcedOutputLocale;
-    const language = localeNames[outputLocale];
-    return {
-      outputLanguage: language,
-      outputLocale,
-      directive: `
-# Pivot OUTPUT LANGUAGE — SESSION LOCK (absolute)
-
-Session delivery language is locked to **${language}** (${outputLocale}).
-
-Rules (override every other cue):
-- Write **every** user-visible field (\`response\`, \`options[]\`, narrative, summaries) **only** in **${language}**.
-- Structured fields that users will hear back (core_dilemma / desired_direction text) must also be in **${language}**.
-- Ignore website UI locale (${localeNames[uiLocale]}).
-- Ignore the language of system/task instructions (they may be Chinese/English).
-- Do **not** mirror English just because prior assistant bubbles or debug text were English.
-- Do **not** switch languages mid-session unless the user explicitly asks (e.g. "reply in English").
-${buildDirective(language, "priority_1")}`,
-    };
-  }
-  const userTexts = [
-    ...(input.conversationHistory ?? [])
-      .filter((m) => m.role === "user" || m.role === "User")
-      .map((m) => m.content)
-      .reverse(),
-    ...(input.userInput && input.userInput !== "__OPENING__" ? [input.userInput] : []),
-  ].filter((t) => t.trim().length > 0);
-
-  let outputLocale: AppLocale = uiLocale;
-
-  for (const text of userTexts) {
-    for (const pattern of switchPatterns) {
-      const match = text.match(pattern);
-      if (match?.[1]) {
-        const mapped = mapToLocale(match[1]);
-        if (mapped) {
-          outputLocale = mapped;
-          break;
-        }
-      }
-    }
-    if (outputLocale !== uiLocale) break;
-
-    if (text.length >= 3) {
-      outputLocale = detectLanguage(text);
-      break;
-    }
-  }
-
+  const outputLocale = input.forcedOutputLocale ?? input.locale;
   const language = localeNames[outputLocale];
   return {
     outputLanguage: language,
     outputLocale,
     directive: `
-# Pivot OUTPUT LANGUAGE (message-driven · HARD LOCK)
+# Pivot OUTPUT LANGUAGE — WEBSITE LOCK (absolute)
 
-Respond **ONLY** in **${language}**.
-Ignore the language of these system/task instructions — they may be Chinese; your \`response\` must still be **${language}** only.
+The website language is **${language}** (${outputLocale}).
+Output language ≡ website language. There is no second language track.
 
-Write **every** user-visible sentence in this reply in **${language}**:
-- Match the language of the user's question and recent messages (English question → English reply).
-- The website UI locale is ${localeNames[uiLocale]} — use that only if the user has not written in a clear language yet.
-- Never switch to German/French/Spanish unless the user's messages clearly use that language (not a single English word like "was").
-- You may read stored profile / base-analysis JSON in any language; express insights for the user in **${language}**.
+STRICT RULES (override every other cue):
+- Write **every** user-visible field (\`response\`, \`options[]\`, narrative, summaries, CTA copy) **only** in **${language}**.
+- Structured fields users will hear back (core_dilemma / desired_direction / agenda text) must also be in **${language}**.
+- Context (system/task prompts, profile, base_analysis, 命盘, prior bubbles) may be Chinese, English, or mixed — **understand** them, **never mirror** them.
+- Do **not** mix languages in one reply. Do **not** leave Chinese terms untranslated when the website language is not Chinese (brand names below are the only English exceptions).
+- Do **not** switch output language because the user wrote in another language. Website language changes are handled by the product UI; you only follow the website language above.
 ${buildDirective(language, "priority_1")}`,
   };
 }

@@ -1,9 +1,10 @@
 /**
- * POJU language detection regression — English "was" must not drift to German.
+ * POJU language detection + website-lock directive regression.
  *
  *   pnpm exec tsx scripts/test-poju-language-detect.ts
  */
 import {
+  classifyLanguageSwitchRequest,
   detectAppLocaleFromText,
   detectLanguage,
   getPojuChatLanguageDirective,
@@ -31,22 +32,52 @@ const pojuDir = getPojuChatLanguageDirective({
   conversationHistory: [],
 });
 assert(
-  'getPojuChatLanguageDirective: English output for "I was…"',
-  pojuDir.outputLanguage.includes("English"),
+  'getPojuChatLanguageDirective: English output for website en',
+  pojuDir.outputLanguage.includes("English") && pojuDir.outputLocale === "en",
 );
 assert(
-  "directive contains ONLY-in-English lock",
-  pojuDir.directive.includes("Respond **ONLY**") && pojuDir.directive.includes("English"),
+  "directive contains website lock",
+  pojuDir.directive.includes("WEBSITE LOCK") && pojuDir.directive.includes("English"),
 );
 
-assert("German with diacritics → en (locale removed)", detectLanguage("Ich bin sehr müde und danke.") === "en");
+// ZH user text must NOT override EN website language
+const zhOnEn = getPojuChatLanguageDirective({
+  locale: "en",
+  userInput: "我和合伙人闹翻了怎么办，已经冷战三个月了",
+  conversationHistory: [],
+  forcedOutputLocale: "en",
+});
 assert(
-  "German without diacritics (≥2 hits) → en (locale removed)",
+  "ZH message on EN website → still English output",
+  zhOnEn.outputLocale === "en" && zhOnEn.directive.includes("English"),
+);
+
+assert("German with diacritics → en (content detect)", detectLanguage("Ich bin sehr müde und danke.") === "en");
+assert(
+  "German without diacritics (≥2 hits) → en (content detect)",
   detectLanguage("Hallo bitte danke") === "en",
 );
 assert(
   'single ambiguous "was" alone → en',
   detectLanguage("What was that?") === "en",
+);
+
+assert(
+  "classify: reply in Spanish → supported es",
+  classifyLanguageSwitchRequest("please reply in Spanish").kind === "supported" &&
+    (classifyLanguageSwitchRequest("please reply in Spanish") as { locale: string }).locale === "es",
+);
+assert(
+  "classify: 用日语回复 → unsupported",
+  classifyLanguageSwitchRequest("请用日语回复我").kind === "unsupported",
+);
+assert(
+  "classify: reply in Japanese → unsupported",
+  classifyLanguageSwitchRequest("please respond in Japanese").kind === "unsupported",
+);
+assert(
+  "classify: reply in German → unsupported (not a product locale)",
+  classifyLanguageSwitchRequest("please reply in German").kind === "unsupported",
 );
 
 if (failures.length) {

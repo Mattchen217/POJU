@@ -34,21 +34,21 @@ function main(): void {
   assert("你好 not substantive", !isSubstantiveBreakthroughQuestion("你好"));
   assert("real question substantive", isSubstantiveBreakthroughQuestion("卡了三年想转行但不敢"));
 
-  console.log("\n=== Fix 2 · message language priority ===\n");
+  console.log("\n=== Fix 2 · website language lock ===\n");
   const lang = read("lib/prompts/language-directive.ts");
-  assert("inferLocaleFromUserMessages CJK", lang.includes("CJK_PATTERN"));
-  assert("resolve order: messages before locked", /fromMessages[\s\S]*if \(input\.locked\)/.test(lang));
+  assert("website lock directive", lang.includes("WEBSITE LOCK"));
+  assert("classifyLanguageSwitchRequest exists", lang.includes("classifyLanguageSwitchRequest"));
   const agent = read("lib/poju/agent.ts");
-  assert("agent no auto-lock from first message", !agent.includes("locked: undefined"));
-  assert("agent persist explicit switch only", agent.includes("explicitLanguageSwitch ?? sessionBase.locked_output_locale"));
+  assert("agent handles unsupported language notice", agent.includes("unsupported_language_notice"));
+  assert("agent uses classifyLanguageSwitchRequest", agent.includes("classifyLanguageSwitchRequest"));
   assert(
-    "zh message wins over en UI lock",
+    "zh message on en UI still en (website lock)",
     resolvePojuSessionOutputLocale({
-      locked: "en",
+      locked: "zh",
       uiLocale: "en",
       userInput: "我和合伙人闹翻了怎么办",
       conversationHistory: [],
-    }) === "zh",
+    }) === "en",
   );
   assert(
     "en message on en UI",

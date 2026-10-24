@@ -75,7 +75,7 @@ import {
   recordToLLMContextUpdates,
 } from "@/lib/poju/context-extractor";
 import {
-  detectExplicitLanguageSwitch,
+  classifyLanguageSwitchRequest,
   parseAppLocale,
 } from "@/lib/prompts/language-directive";
 import { nextLockedOutputLocale } from "@/lib/poju/session-lang";
@@ -829,8 +829,29 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     };
   }
 
-  const explicitLanguageSwitch = detectExplicitLanguageSwitch(userMessage);
   const uiLocale = parseAppLocale(locale);
+  const langSwitch = classifyLanguageSwitchRequest(
+    isSystemMessage || isOpeningSignal ? undefined : userMessage,
+  );
+
+  // Out-of-range language request: fixed notice, keep website language, skip LLM.
+  if (langSwitch.kind === "unsupported") {
+    const notice: POJUMessage = {
+      role: "assistant",
+      content: pivotChatCopy(uiLocale).unsupported_language_notice,
+      timestamp: new Date().toISOString(),
+      client_id: safeRandomUUID(),
+      meta: { kind: "unsupported_language_notice" },
+    };
+    return withSessionProfileFlags({
+      ...sessionBase,
+      messages: [...messagesWithUser, notice],
+      locked_output_locale: uiLocale,
+      last_interaction_at: notice.timestamp,
+    });
+  }
+
+  // Output ≡ website language. Supported switch is applied by the client via site locale change first.
   const { outputLocale: sessionOutputLocale, nextLocked } = nextLockedOutputLocale({
     locked: sessionBase.locked_output_locale,
     userInput: userMessage,
@@ -838,13 +859,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     messages: messagesWithUser,
     original_question: sessionBase.original_question,
   });
-  // Persist only a real lock (explicit / first substantive / reclaim) — never UI fallback.
-  const persistLocked =
-    explicitLanguageSwitch ?? nextLocked ?? sessionBase.locked_output_locale ?? undefined;
+  const persistLocked = nextLocked;
 
   sessionForLlm = {
     ...sessionForLlm,
-    locked_output_locale: persistLocked ?? sessionOutputLocale,
+    locked_output_locale: persistLocked,
   };
 
   if (userMessage.trim() === DYAD_CONTINUE_SYSTEM) {

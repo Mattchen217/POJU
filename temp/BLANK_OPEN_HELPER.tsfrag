@@ -1,0 +1,77 @@
+
+/**
+ * Path C: open popup on blank chrome (slots empty / generating), then progressive fill
+ * by re-calling buildDeliveryInteractiveHtml as fullText grows.
+ */
+export function buildDecisionReportBlankOpenHtml(
+  locale: string,
+  opts?: BuildDeliveryInteractiveHtmlOptions,
+): string {
+  const zh = locale.startsWith("zh");
+  const coverTitle =
+    opts?.title?.trim() || (zh ? "能量决策报告" : "Energy Decision Report");
+  const closeLabel = opts?.closeLabel?.trim() || (zh ? "关闭" : "Close");
+  const tocHead = zh ? "目录" : "Contents";
+  const generating = zh ? "正在生成…" : "Generating…";
+  const readingHint = zh
+    ? "生成开始后章节会逐页填入同一份离线 HTML。"
+    : "Chapters fill this same offline HTML as generation progresses.";
+  const privacy = zh
+    ? "本文件保存在你的设备上；打开无需登录。"
+    : "This file stays on your device; no sign-in required.";
+  const disclaimer = zh
+    ? "内容供决策参考，不构成医疗、法律或投资建议。"
+    : "For decision support only — not medical, legal, or investment advice.";
+  const reportId = (opts?.reportId || "EOS-LOCAL").trim() || "EOS-LOCAL";
+  const reportDate = (opts?.reportDate || new Date().toISOString().slice(0, 10)).trim();
+  const question = (opts?.originalQuestion || "").trim();
+  const metaQuestion = question
+    ? `<p class="delivery-book-stage__meta-question" title="${escapeHtml(question)}">${escapeHtml(question)}</p>`
+    : "";
+  const metaCard = [
+    metaQuestion,
+    `<div class="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">`,
+    `<span class="delivery-book-stage__meta-cell"><span class="delivery-book-stage__meta-icon" aria-hidden="true">\u25a1</span><span class="delivery-book-stage__meta-text">${escapeHtml(reportDate)}</span></span>`,
+    `</div>`,
+    `<div class="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">`,
+    `<span class="delivery-book-stage__meta-cell"><span class="delivery-book-stage__meta-icon" aria-hidden="true">#</span><span class="delivery-book-stage__meta-text delivery-book-stage__meta-text--mono">${escapeHtml(reportId)}</span></span>`,
+    `<span class="delivery-book-stage__meta-cell"><span class="delivery-book-stage__meta-icon" aria-hidden="true">\u25ce</span><span class="delivery-book-stage__meta-text">${escapeHtml(localeDisplay(locale))}</span></span>`,
+    `</div>`,
+  ].join("\n");
+  const panes = `<section class="delivery-book-stage__pane is-active" data-slot-pane="generating" id="pane-generating" aria-label="${escapeHtml(generating)}">
+  <h1 class="delivery-book-stage__page-title">${escapeHtml(generating)}</h1>
+  <div class="delivery-book-stage__modules"><div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(readingHint)}</p></div></div>
+</section>`;
+  const leftFoot = `<p>${escapeHtml(readingHint)}</p><p>${escapeHtml(privacy)}</p><p>${escapeHtml(disclaimer)}</p>`;
+  return fillSlots(DECISION_REPORT_BLANK_TEMPLATE, {
+    SLOT_LANG: langAttr(locale),
+    SLOT_LOCALE_SHORT: zh ? "zh" : locale.slice(0, 2) || "en",
+    SLOT_DOC_TITLE: escapeHtml(coverTitle),
+    SLOT_EMBED: opts?.embed ? "1" : "0",
+    SLOT_CLOSE_LABEL: escapeHtml(closeLabel),
+    SLOT_CARD_ARIA: escapeHtml(coverTitle),
+    SLOT_META_CARD: metaCard,
+    SLOT_TOC_ARIA: escapeHtml(tocHead),
+    SLOT_TOC_HEAD: escapeHtml(tocHead),
+    SLOT_TOC_ITEMS: "",
+    SLOT_LEFT_FOOT: leftFoot,
+    SLOT_PANES: panes,
+    SLOT_AUDIO_BLOCK: `<div class="delivery-book-stage__audio" id="dib-audio-mount" hidden aria-hidden="true"></div>`,
+    SLOT_FOOTER_ARIA: zh ? "翻页" : "Pages",
+    SLOT_PREV_LABEL: zh ? "上一页" : "Previous",
+    SLOT_NEXT_LABEL: zh ? "下一页" : "Next",
+    SLOT_PAGE_LABEL: "…",
+  });
+}
+
+/** Progressive srcDoc: blank chrome when empty, else filled template from current fullText. */
+export function buildDecisionReportProgressiveHtml(
+  fullText: string,
+  locale: string,
+  opts?: BuildDeliveryInteractiveHtmlOptions,
+): string {
+  if (!(fullText || "").trim()) {
+    return buildDecisionReportBlankOpenHtml(locale, opts);
+  }
+  return buildDeliveryInteractiveHtml(fullText, locale, opts);
+}

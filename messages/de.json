@@ -2868,7 +2868,8 @@
       "audio_failed": "Narration fehlgeschlagen. Erneut mit Play versuchen.",
       "audio_too_long": "Dieser Bericht ist zu lang für eine Narration.",
       "audio_unavailable": "Narration vorübergehend nicht verfügbar.",
-      "audio_pack_failed": "Audio für das Paket fehlgeschlagen. Bitte erneut versuchen."
+      "audio_pack_failed": "Audio für das Paket fehlgeschlagen. Bitte erneut versuchen.",
+      "export_live_pending": "Download/E-Mail pausiert, bis der Live-Export dem Popup entspricht. Keine Lookalike-Pakete."
     },
     "density": {
       "newSession": "Neue Sitzung",

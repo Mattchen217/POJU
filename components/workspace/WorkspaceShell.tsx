@@ -40,7 +40,9 @@ import { DocVaultIds } from "@/lib/workspace/doc-vault-index";
 import { markDocVaultRead } from "@/lib/workspace/doc-vault-unread";
 import {
   BASELINE_AUTO_OPEN_EVENT,
+  DELIVERY_AUTO_OPEN_EVENT,
   type BaselineAutoOpenDetail,
+  type DeliveryAutoOpenDetail,
   type DocVaultItem,
 } from "@/lib/workspace/doc-vault-types";
 import { WorkspaceDocVaultModal } from "@/components/workspace/WorkspaceDocVaultModal";
@@ -254,6 +256,30 @@ function DocVaultOpenBinder({
     };
     window.addEventListener(BASELINE_AUTO_OPEN_EVENT, onAutoOpen);
     return () => window.removeEventListener(BASELINE_AUTO_OPEN_EVENT, onAutoOpen);
+  }, [vault?.items]);
+
+  /** SoT16: decision report opens as vault popup; center stays chat. */
+  useEffect(() => {
+    const onDeliveryOpen = (event: Event) => {
+      const sessionId = (event as CustomEvent<DeliveryAutoOpenDetail>).detail?.sessionId?.trim();
+      if (!sessionId) return;
+      const id = DocVaultIds.delivery(sessionId);
+      const fromIndex = vault?.items.find((i) => i.id === id);
+      const item: DocVaultItem = fromIndex ?? {
+        id,
+        section: "pivot",
+        kind: "pivot_delivery",
+        title: "Decision report",
+        subjectLabel: "",
+        createdAt: new Date().toISOString(),
+        unread: true,
+        openTarget: { type: "pivot_delivery", sessionId },
+      };
+      markDocVaultRead(item.id);
+      setModalItem(item);
+    };
+    window.addEventListener(DELIVERY_AUTO_OPEN_EVENT, onDeliveryOpen);
+    return () => window.removeEventListener(DELIVERY_AUTO_OPEN_EVENT, onDeliveryOpen);
   }, [vault?.items]);
 
   return (
