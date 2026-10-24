@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
+import { getPathnameWithoutLocale } from "@/lib/i18n/pathname-without-locale";
+import { writeStoredUiLocale } from "@/lib/i18n/ui-locale-preference";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
 import { QuietGpuGuard } from "@/components/spline/QuietGpuGuard";
@@ -277,6 +280,44 @@ function clearPendingLangSwitch(): void {
   }
 }
 
+/**
+ * In-chat locale switch must stay on the same conversation.
+ * Workspace chat lives at `/app?tab=poju&session=` — a bare pathname replace
+ * drops the query and lands on the workspace home (bad UX).
+ * Match WorkspaceLanguageSwitcher: hard nav + preserve tab/session.
+ */
+function buildChatLocaleSwitchHref(targetLocale: AppLocale, sessionId: string): string {
+  const livePath =
+    typeof window !== "undefined"
+      ? getPathnameWithoutLocale(window.location.pathname)
+      : "/app";
+  const path = livePath || "/app";
+  const sid = sessionId.trim();
+
+  let hrefPath = path;
+  let qs = "";
+
+  if (path === "/app" || path.startsWith("/app/")) {
+    hrefPath = "/app";
+    const q = new URLSearchParams();
+    q.set("tab", "poju");
+    if (sid) q.set("session", sid);
+    qs = `?${q.toString()}`;
+  } else if (path.startsWith("/poju/session/")) {
+    hrefPath = path;
+  } else if (sid) {
+    // Unknown shell → land back in workspace chat for this session.
+    hrefPath = "/app";
+    qs = `?tab=poju&session=${encodeURIComponent(sid)}`;
+  }
+
+  const localized =
+    targetLocale === routing.defaultLocale
+      ? hrefPath
+      : `/${targetLocale}${hrefPath === "/" ? "" : hrefPath}`;
+  return `${localized}${qs}`;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -296,7 +337,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const tBrand = useTranslations("poju.branding");
   const tEscalation = useTranslations("poju.unqualified_escalation");
   const dialog = useAppDialog();
-  const pathname = usePathname();
   const workspacePrepare = useWorkspacePojuPrepareOptional();
   const [input, setInput] = useState("");
   /** After confirm-gate "supplement": guide free-text entry until next send. */
@@ -1879,7 +1919,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         targetLocale: langSwitch.locale,
         attachment: savedComposerAttachment,
       });
-      router.replace(pathname, { locale: langSwitch.locale });
+      // Persist + hard nav so /app keeps ?tab=poju&session=… across locale remount.
+      writeStoredUiLocale(langSwitch.locale);
+      window.location.assign(
+        buildChatLocaleSwitchHref(langSwitch.locale, withUser.session_id),
+      );
       return;
     }
 
