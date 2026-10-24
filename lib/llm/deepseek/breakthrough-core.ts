@@ -719,7 +719,7 @@ ${dyadBlock}
 ${landingKindsHint}
 
 【任务 · Call B】
-你是 Pivot(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备六页原料,不定稿报告)。
+你是 Eastern OS(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备六页原料,不定稿报告)。
 综合第1段靶心 + 全维度真算 + 骨架 needs_validation(全覆盖) → investigation_agenda(3–6项,serves_page 分布) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
 
   return { system, user };

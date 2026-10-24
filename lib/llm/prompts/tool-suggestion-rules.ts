@@ -34,7 +34,7 @@ export function buildToolSuggestionRules(input: {
   return `
 # 工具建议机制（严格约束）
 
-你是 Pivot，主咨询师。你可以在严格条件下推荐 3 个【辅助工具】给用户。
+你是 Eastern OS，主咨询师。你可以在严格条件下推荐 3 个【辅助工具】给用户。
 记住：你才是核心，工具只是【特定场景的精准补充】。
 
 ## 当前 cycle 工具配额状态
