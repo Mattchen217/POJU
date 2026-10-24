@@ -65,6 +65,9 @@ import {
   readLastPojuWorkspaceSessionId,
   writeLastPojuWorkspaceSessionId,
 } from "@/lib/poju/workspace-last-session";
+import { readPendingLangSwitch } from "@/lib/poju/pending-lang-switch";
+import { getPathnameWithoutLocale } from "@/lib/i18n/pathname-without-locale";
+import { parseAppLocale } from "@/lib/prompts/language-directive";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { subscribeLocalOwnerKey } from "@/lib/storage/local-owner";
 
@@ -402,7 +405,8 @@ function readAppQueryFromWindow(): {
 
 /** True while the browser URL is still the workspace shell (`/app` or `/{locale}/app`). */
 function isWorkspaceAppPathname(pathname = typeof window !== "undefined" ? window.location.pathname : ""): boolean {
-  return pathname === "/app" || /^\/(zh|es|de|fr)\/app\/?$/.test(pathname);
+  const bare = getPathnameWithoutLocale(pathname || "/");
+  return bare === "/app" || bare.startsWith("/app/");
 }
 
 function buildAppQueryString(
@@ -476,22 +480,29 @@ function PojuSessionPersistence({
     syncRef.current(sessionId);
   }, [phase, sessionId, tab]);
 
-  // One-shot hydrate when user is on POJU and idle (refresh / cold enter).
+  // One-shot hydrate when user is on POJU and idle (refresh / cold enter / locale switch).
   useEffect(() => {
     if (!resumeSession || tab !== "poju") return;
     if (phase !== "idle") return;
     if (!isWorkspaceAppPathname()) return;
 
     const urlSession = readAppQueryFromWindow().session?.trim() || sessionFromUrl?.trim() || null;
-    // Only resume when URL already has session= — do not yank to last delivery
-    // on locale remount / prepare screen without an explicit session in the URL.
-    const target = urlSession || null;
+    // Mid-chat language switch: pending marker is authoritative if URL lost ?session=.
+    const pending = readPendingLangSwitch();
+    const pendingSession =
+      pending && parseAppLocale(pending.targetLocale) === parseAppLocale(locale)
+        ? pending.sessionId.trim()
+        : "";
+    const target = urlSession || pendingSession || null;
     if (!target) return;
 
     const key = `idle:${target}`;
     if (hydrateKeyRef.current === key) return;
     hydrateKeyRef.current = key;
 
+    writeLastPojuWorkspaceSessionId(target);
+    // Put session in the address bar immediately (pending may have restored it).
+    if (readAppQueryFromWindow().session !== target) syncRef.current(target);
     void resumeSession(target, locale).then((ok) => {
       // Left workspace (logo → landing) or left POJU tab — never yank URL back.
       if (!mountedRef.current) return;

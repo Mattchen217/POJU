@@ -4,9 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
-import { getPathnameWithoutLocale } from "@/lib/i18n/pathname-without-locale";
 import { writeStoredUiLocale } from "@/lib/i18n/ui-locale-preference";
+import {
+  buildChatLocaleSwitchAppHref,
+  buildChatLocaleSwitchHref,
+  clearPendingLangSwitch,
+  readPendingLangSwitch,
+  writePendingLangSwitch,
+} from "@/lib/poju/pending-lang-switch";
+import { writeLastPojuWorkspaceSessionId } from "@/lib/poju/workspace-last-session";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
 import { QuietGpuGuard } from "@/components/spline/QuietGpuGuard";
@@ -240,83 +246,6 @@ type TurnErrorRestore = {
 const PROVIDER_QUEUE_SILENT_RETRY_MS = 5000;
 /** Silent auto-retries before showing the user-facing infra retry button. */
 const MAX_SILENT_INFRA_RETRIES = 3;
-
-/** After in-range "reply in X", switch website locale then resume the turn. */
-const PIVOT_PENDING_LANG_SWITCH_KEY = "pivot-pending-lang-switch";
-
-type PendingLangSwitch = {
-  sessionId: string;
-  message: string;
-  targetLocale: AppLocale;
-  attachment: ComposerAttachment | null;
-};
-
-function readPendingLangSwitch(): PendingLangSwitch | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(PIVOT_PENDING_LANG_SWITCH_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PendingLangSwitch;
-    if (!parsed?.sessionId || !parsed?.message || !parsed?.targetLocale) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writePendingLangSwitch(pending: PendingLangSwitch): void {
-  try {
-    sessionStorage.setItem(PIVOT_PENDING_LANG_SWITCH_KEY, JSON.stringify(pending));
-  } catch {
-    /* ignore quota */
-  }
-}
-
-function clearPendingLangSwitch(): void {
-  try {
-    sessionStorage.removeItem(PIVOT_PENDING_LANG_SWITCH_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
-/**
- * In-chat locale switch must stay on the same conversation.
- * Workspace chat lives at `/app?tab=poju&session=` — a bare pathname replace
- * drops the query and lands on the workspace home (bad UX).
- * Match WorkspaceLanguageSwitcher: hard nav + preserve tab/session.
- */
-function buildChatLocaleSwitchHref(targetLocale: AppLocale, sessionId: string): string {
-  const livePath =
-    typeof window !== "undefined"
-      ? getPathnameWithoutLocale(window.location.pathname)
-      : "/app";
-  const path = livePath || "/app";
-  const sid = sessionId.trim();
-
-  let hrefPath = path;
-  let qs = "";
-
-  if (path === "/app" || path.startsWith("/app/")) {
-    hrefPath = "/app";
-    const q = new URLSearchParams();
-    q.set("tab", "poju");
-    if (sid) q.set("session", sid);
-    qs = `?${q.toString()}`;
-  } else if (path.startsWith("/poju/session/")) {
-    hrefPath = path;
-  } else if (sid) {
-    // Unknown shell → land back in workspace chat for this session.
-    hrefPath = "/app";
-    qs = `?tab=poju&session=${encodeURIComponent(sid)}`;
-  }
-
-  const localized =
-    targetLocale === routing.defaultLocale
-      ? hrefPath
-      : `/${targetLocale}${hrefPath === "/" ? "" : hrefPath}`;
-  return `${localized}${qs}`;
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -1128,7 +1057,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await runUserTurn(live, pending.message, {
         rollbackSession: live,
         typed: pending.message,
-        attachment: pending.attachment,
+        attachment: (pending.attachment as ComposerAttachment | null) ?? null,
       });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per locale-switch resume
@@ -1875,16 +1804,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    // In-range language: auto-switch website locale first, then resume turn under that locale.
+    // In-range language: switch website locale, stay on this session, resume the turn.
     if (langSwitch.kind === "supported" && langSwitch.locale !== uiLocale) {
       const nowIso = new Date().toISOString();
       const clientId = safeRandomUUID();
-      flushSync(() => {
-        setInput("");
-        setComposerAttachment(null);
-        setPaintPendingUser({ id: clientId, content: userMessage });
-      });
-      await yieldToBrowserPaint();
+      const sid = baseSession.session_id;
+      setInput("");
+      setComposerAttachment(null);
       const withUser: POJUSessionState = {
         ...baseSession,
         messages: [
@@ -1911,19 +1837,52 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         ],
         locked_output_locale: langSwitch.locale,
       };
-      onSessionUpdate(withUser);
-      await savePOJUSession(withUser);
+      // Pending + storage first so remount can hydrate even if save races.
       writePendingLangSwitch({
-        sessionId: withUser.session_id,
+        sessionId: sid,
         message: userMessage,
         targetLocale: langSwitch.locale,
-        attachment: savedComposerAttachment,
+        attachment: savedComposerAttachment
+          ? {
+              name: savedComposerAttachment.name,
+              kind: savedComposerAttachment.kind,
+              mime: savedComposerAttachment.mime,
+              data_url: savedComposerAttachment.data_url,
+            }
+          : null,
       });
-      // Persist + hard nav so /app keeps ?tab=poju&session=… across locale remount.
       writeStoredUiLocale(langSwitch.locale);
-      window.location.assign(
-        buildChatLocaleSwitchHref(langSwitch.locale, withUser.session_id),
-      );
+      writeLastPojuWorkspaceSessionId(sid);
+      onSessionUpdate(withUser);
+      // Fire-and-forget IDB — do not block locale navigation on paint/flushSync.
+      void savePOJUSession(withUser).catch(() => undefined);
+
+      const appHref = buildChatLocaleSwitchAppHref(sid);
+      const hardHref = buildChatLocaleSwitchHref(langSwitch.locale, sid);
+      // Soft next-intl replace (SPA) — much faster than full document reload.
+      // Hard fallback if soft nav does not land on /{locale}/app?session= quickly.
+      try {
+        router.replace(appHref, { locale: langSwitch.locale });
+      } catch {
+        window.location.assign(hardHref);
+        return;
+      }
+      window.setTimeout(() => {
+        const path = window.location.pathname;
+        const q = new URLSearchParams(window.location.search);
+        const onApp =
+          path === "/app" ||
+          path.endsWith("/app") ||
+          /\/app\/?$/.test(path);
+        const sessionOk = q.get("session") === sid;
+        const localeOk =
+          langSwitch.locale === "en"
+            ? !/^\/(zh|es|fr)(\/|$)/.test(path)
+            : path.startsWith(`/${langSwitch.locale}/`);
+        if (!(onApp && sessionOk && localeOk)) {
+          window.location.assign(hardHref);
+        }
+      }, 900);
       return;
     }
 
