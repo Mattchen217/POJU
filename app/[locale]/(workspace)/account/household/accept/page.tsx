@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function HouseholdAcceptPage() {
+function HouseholdAcceptInner() {
   const locale = useLocale();
   const zh = locale.toLowerCase().startsWith("zh");
   const params = useSearchParams();
@@ -74,5 +74,19 @@ export default function HouseholdAcceptPage() {
               : null}
       </p>
     </main>
+  );
+}
+
+export default function HouseholdAcceptPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-md px-4 py-16 text-[#94a3b8]" aria-hidden>
+          …
+        </main>
+      }
+    >
+      <HouseholdAcceptInner />
+    </Suspense>
   );
 }
