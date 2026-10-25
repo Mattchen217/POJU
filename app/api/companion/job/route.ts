@@ -111,6 +111,19 @@ export async function POST(req: Request) {
       job = await deliverCompanionDayZero(job);
     }
 
+    // Kick event-driven 15-pair fill (Inngest). No-op if EVENT_KEY unset.
+    if (process.env.INNGEST_EVENT_KEY?.trim()) {
+      try {
+        const { inngest } = await import("@/lib/inngest/client");
+        await inngest.send({
+          name: "poju/companion.fill",
+          data: { job_id: job.id, session_id: job.session_id },
+        });
+      } catch (e) {
+        console.warn("[api/companion/job] companion.fill send failed", e);
+      }
+    }
+
     return NextResponse.json({ job: publicJob(job), existing: false });
   } catch (e) {
     console.error("[api/companion/job POST]", e);

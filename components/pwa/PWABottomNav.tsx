@@ -17,9 +17,6 @@ import "@/styles/pwa-nav.css";
 
 const TABS = [
   { id: "poju" as const, name: "POJU", path: "/poju", workspaceTab: "poju" as WorkspaceTab },
-  { id: "glyph" as const, name: "Glyph", path: "/glyph", workspaceTab: "glyph" as WorkspaceTab },
-  { id: "match" as const, name: "Match", path: "/match", workspaceTab: "match" as WorkspaceTab },
-  { id: "syncro" as const, name: "Syncro", path: "/syncro", workspaceTab: "syncro" as WorkspaceTab },
   { id: "archive" as const, name: "Archive", path: "/archive", workspaceTab: "archive" as WorkspaceTab },
 ];
 

@@ -1,7 +1,7 @@
 import type { SignData, GlyphLevel, UserInput, DrawResult } from "@/types/oracle";
-import signsData from "@/lib/glyph/data/signs.json";
 
-const ALL_SIGNS = signsData as SignData[];
+/** Glyph sign pool is quarantined with the Glyph tree. Draw helpers stay typed and return no signs. */
+const ALL_SIGNS: SignData[] = [];
 
 const GLYPH_LEVELS: GlyphLevel[] = [
   "divine_tailwind",

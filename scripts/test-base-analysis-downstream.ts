@@ -11,7 +11,6 @@ import {
 } from "@/lib/llm/prompts/base-analysis-context";
 import { buildProfileContextSection } from "@/lib/llm/prompts/oriental-counselor-base";
 import { parseProfileForMatrix, wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
-import { calculateSyncroMatrix } from "@/lib/syncro/calculate-matrix";
 import { shunshiParamsFromBirthInfo } from "@/lib/profile/birth-info-utils";
 import type { BirthInfo, UserProfile } from "@/lib/profile/types";
 
@@ -120,20 +119,6 @@ function main() {
 
   const parsedLegacy = parseProfileForMatrix(wrapProfileForMatrix(profile, legacyBundle));
   console.log("legacy yongShen:", parsedLegacy.yongShen, "(expected 水 from content JSON)");
-
-  console.log("\n=== Syncro calculateSyncroMatrix yong shen ===");
-  const { matrix } = calculateSyncroMatrix({
-    profile: {
-      user_profile: profile,
-      base_analysis: { structured, content: {} },
-    },
-    taskDescription: "明天开会",
-    startTime: new Date("2024-06-15T12:00:00+08:00"),
-    userTimezone: "Asia/Shanghai",
-    userLongitude: 113.2644,
-    userLatitude: 23.1291,
-  });
-  console.log("matrix cells:", Object.keys(matrix).length, "(expected 96)");
   console.log("\nAll downstream checks printed.");
 }
 

@@ -25,19 +25,7 @@
     "app/api/poju/matrix-narrative/route.ts": {
       "maxDuration": 60
     },
-    "app/api/syncro/compute_local/route.ts": {
-      "maxDuration": 60
-    },
-    "app/api/syncro/llm_batch/route.ts": {
-      "maxDuration": 120
-    },
-    "app/api/syncro/compute/route.ts": {
-      "maxDuration": 60
-    },
     "app/api/oracle/full-reading/route.ts": {
-      "maxDuration": 300
-    },
-    "app/api/match/analyze/route.ts": {
       "maxDuration": 300
     },
     "app/api/ops/delivery-lab/[lab_id]/run/route.ts": {

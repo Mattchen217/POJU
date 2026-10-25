@@ -19,11 +19,11 @@ import {
   auditDeepStringFields,
 } from "@/lib/llm/services/delivery-audit-regen";
 import { encodeTermMarker, plainByTermId } from "@/lib/llm/sanitize/compliance-terms";
-import type { ResonanceMatrix } from "@/lib/match/calculate-compatibility";
+import type { ResonanceMatrix } from "@/lib/compatibility/calculate-compatibility";
 import type { MatrixCell } from "@/lib/syncro/calculate-matrix";
 
 function assert(name: string, ok: boolean, detail = ""): void {
-  console.log(`  [${ok ? "PASS" : "FAIL"}] ${name}${detail ? ` — ${detail}` : ""}`);
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${name}${detail ? ` �?${detail}` : ""}`);
   if (!ok) process.exitCode = 1;
 }
 
@@ -97,11 +97,11 @@ const chartB = makeProfile({ year: "庚午", month: "壬子", day: "丁酉", hou
 // --- shared module ---
 const singleClosed = buildSingleProfileRelationClosedSet(chartA, { questionText: "跳槽时机" });
 assert("single allowlist non-empty", singleClosed.auditAllowlist.length > 0);
-assert("single inventory has 本盘动态关系", singleClosed.inventoryBlock.includes("本盘动态关系"));
-assert("discipline block present", singleClosed.disciplineBlock.includes("算全 · 不写全"));
+assert("single inventory has 本盘动态关�?, singleClosed.inventoryBlock.includes("本盘动态关�?));
+assert("discipline block present", singleClosed.disciplineBlock.includes("算全 · 不写�?));
 
 const matchClosed = buildMatchRelationClosedSet(chartA, chartB, "我们感情还能走下去吗");
-assert("match block has 双人今年动态", matchClosed.matchRelationBlock.includes("双人今年动态"));
+assert("match block has 双人今年动�?, matchClosed.matchRelationBlock.includes("双人今年动�?));
 assert("match allowlist includes cross ids", matchClosed.auditAllowlist.some((r) => r.id.startsWith("cross_")));
 
 const cross = computeCrossProfileBranchRelations(chartA, chartB);
@@ -111,10 +111,10 @@ assert("cross-profile relations computed", cross.length > 0, `count=${cross.leng
 const glyphPrompt = buildGlyphReadingPrompt({
   profile: null,
   base_analysis: { structured: chartA },
-  question: "感情里该坚持还是放手？",
+  question: "感情里该坚持还是放手�?,
   glyph: {
     id: 42,
-    name: "测试签",
+    name: "测试�?,
     wind_category: "Fair Sky",
     classical_text: "签文原文",
     modern_translation: "internal only",
@@ -122,8 +122,8 @@ const glyphPrompt = buildGlyphReadingPrompt({
   },
   locale: "zh",
 });
-assert("glyph system injects closed-set guard", glyphPrompt.system.includes("只有上面这几个"));
-assert("glyph system injects discipline", glyphPrompt.system.includes("算全 · 不写全"));
+assert("glyph system injects closed-set guard", glyphPrompt.system.includes("只有上面这几�?));
+assert("glyph system injects discipline", glyphPrompt.system.includes("算全 · 不写�?));
 
 // --- Syncro prompt ---
 const syncroPrompt = buildSyncroPrompt({
@@ -134,8 +134,8 @@ const syncroPrompt = buildSyncroPrompt({
   locale: "zh",
   matrix: { zi__N: stubMatrixCell() },
 });
-assert("syncro system injects closed-set", syncroPrompt.system.includes("本盘动态关系"));
-assert("syncro system injects discipline", syncroPrompt.system.includes("算全 · 不写全"));
+assert("syncro system injects closed-set", syncroPrompt.system.includes("本盘动态关�?));
+assert("syncro system injects discipline", syncroPrompt.system.includes("算全 · 不写�?));
 
 // --- Match prompt ---
 const matchPrompt = buildMatchPrompt({
@@ -143,22 +143,22 @@ const matchPrompt = buildMatchPrompt({
   b_profile: null,
   a_base_analysis: { structured: chartA },
   b_base_analysis: { structured: chartB },
-  relationship_description: "我们还能复合吗",
+  relationship_description: "我们还能复合�?,
   locale: "zh",
   compatibilityMatrix: stubResonanceMatrix(),
 });
-assert("match system injects Match 动态关系闭集", matchPrompt.system.includes("Match 动态关系闭集"));
-assert("match system injects 双人今年动态", matchPrompt.system.includes("双人今年动态"));
+assert("match system injects Match 动态关系闭�?, matchPrompt.system.includes("Match 动态关系闭�?));
+assert("match system injects 双人今年动�?, matchPrompt.system.includes("双人今年动�?));
 
 // --- audit: allowed vs invented (all three products) ---
 const chongRel =
-  singleClosed.auditAllowlist.find((r) => r.id === "chong_午_子") ?? singleClosed.auditAllowlist[0]!;
+  singleClosed.auditAllowlist.find((r) => r.id === "chong_午_�?) ?? singleClosed.auditAllowlist[0]!;
 const allowedMarker = encodeTermMarker(
   chongRel.id,
   RELATION_KIND_SOFT.chong.zh,
   plainByTermId(chongRel.id, "zh") ?? chongRel.han,
 );
-const allowedCopy = `叙事里${allowedMarker}可作为背景张力。`;
+const allowedCopy = `叙事�?{allowedMarker}可作为背景张力。`;
 
 for (const product of ["glyph", "syncro", "match"] as const) {
   const relations = product === "match" ? matchClosed.auditAllowlist : singleClosed.auditAllowlist;
@@ -171,13 +171,13 @@ for (const product of ["glyph", "syncro", "match"] as const) {
     !okViolations.some((v) => v.label.startsWith("relation_")),
   );
 
-  const invented = "命盘里寅巳相刑需要经营。";
+  const invented = "命盘里寅巳相刑需要经营�?;
   const badViolations = auditDeepStringFields(invented, "zh", product, {
     structured: chartA,
     relations,
   });
   assert(
-    `${product} invented relation not blocked (Block 62 — UI marks, no audit regen)`,
+    `${product} invented relation not blocked (Block 62 �?UI marks, no audit regen)`,
     !badViolations.some((v) => v.label.startsWith("relation_")),
   );
 }

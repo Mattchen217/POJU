@@ -1,6 +1,6 @@
 import { Solar } from "lunar-typescript";
 
-import type { EarthlyBranch, HeavenlyStem } from "@/lib/match/data/stems-branches";
+import type { EarthlyBranch, HeavenlyStem } from "@/lib/calendar/data/stems-branches";
 
 export type LiuNianGanzhi = {
   stem: HeavenlyStem;

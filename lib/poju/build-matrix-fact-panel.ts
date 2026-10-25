@@ -16,7 +16,7 @@ import {
 import {
   calculateTenGod,
   type HeavenlyStem,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 import {
   getBranchInfo,
   getStemInfo,

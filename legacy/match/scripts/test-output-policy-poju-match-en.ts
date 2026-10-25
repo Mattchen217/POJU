@@ -1,5 +1,5 @@
 /**
- * Live EN verification — POJU + Match (feng shui whitewash + marriage term translation).
+ * Live EN verification �?POJU + Match (feng shui whitewash + marriage term translation).
  * Run: pnpm tsx scripts/test-output-policy-poju-match-en.ts
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -36,7 +36,7 @@ function verify(label: string, text: string): boolean {
   const marriage = violations.filter((v) => v.category === "marriage_chart_term");
   const supernatural = violations.filter((v) => v.category === "supernatural_promise");
   const hasWuxing =
-    /\b(wood|fire|earth|metal|water)\b/i.test(lower) || /金|木|水|火|土/.test(text);
+    /\b(wood|fire|earth|metal|water)\b/i.test(lower) || /金|木|水|火|�?.test(text);
   const hasIChing = /\bi ching\b/i.test(lower) || /易经/.test(text);
   const hasProduct = /\b(?:poju|match)\b/i.test(lower);
   const hasEnvPsych = ENV_PSYCH_SIGNAL.test(lower);
@@ -44,7 +44,7 @@ function verify(label: string, text: string): boolean {
   const rawSupernatural = SUPERNATURAL_RAW.test(text);
 
   console.log(`\n${"=".repeat(72)}`);
-  console.log(`=== ${label} — FULL OUTPUT ===`);
+  console.log(`=== ${label} �?FULL OUTPUT ===`);
   console.log("=".repeat(72));
   console.log(text);
   console.log(`\n--- Audit (${label}) ---`);
@@ -52,7 +52,7 @@ function verify(label: string, text: string): boolean {
   console.log(`  supernatural_promise: ${supernatural.length}`);
   if (marriage.length || supernatural.length) {
     for (const v of [...marriage, ...supernatural]) {
-      console.log(`    [${v.category}] ${v.label}: …${v.snippet}…`);
+      console.log(`    [${v.category}] ${v.label}: �?{v.snippet}…`);
     }
   }
   console.log(`  spatial method retained: ${hasSpatialMethod ? "ok" : "weak"}`);
@@ -135,7 +135,7 @@ async function runPoju(): Promise<string> {
 async function runMatch(): Promise<string> {
   const { calculateProfile } = await import("@/lib/calculations");
   const { buildMatchPrompt } = await import("@/lib/llm/prompts/match-deepseek-prompt");
-  const { calculateCompatibilityMatrix } = await import("@/lib/match/calculate-compatibility");
+  const { calculateCompatibilityMatrix } = await import("@/lib/compatibility/calculate-compatibility");
   const { wrapProfileForMatrix } = await import("@/lib/match/parse-profile-for-matrix");
   const { callLLM } = await import("@/lib/llm/router");
   const profileA = await calculateProfile({
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
     console.error("OPENROUTER_API_KEY required");
     process.exit(1);
   }
-  console.log("Running POJU + Match EN live verification…");
+  console.log("Running POJU + Match EN live verification�?);
   const pojuText = await runPoju();
   saveOutput("policy-poju-en", pojuText);
   const matchText = await runMatch();

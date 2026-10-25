@@ -1,7 +1,7 @@
 import adaptations from "@/lib/calculations/data/element-adaptations.json";
 import rules from "@/lib/calculations/data/directions-rules.json";
 import type { FiveElement } from "@/lib/calculations/types";
-import type { WuXing } from "@/lib/syncro/wuxing-utils";
+import type { WuXing } from "@/lib/calendar/wuxing-utils";
 
 import { fiveElementToWuXing, toFiveElement, wuXingToFiveElement } from "./element-token";
 

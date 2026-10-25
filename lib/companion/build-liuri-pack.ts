@@ -7,7 +7,7 @@ import {
   type AtmosEngineSnapshot,
 } from "@/lib/atmos/build-atmos-engine-snapshot";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
-import { zonedLocalToUtc } from "@/lib/syncro/true-solar-time";
+import { zonedLocalToUtc } from "@/lib/calendar/true-solar-time";
 
 import { addDaysKey, parseDateKey } from "./date-keys";
 import { COMPANION_WINDOW_DAYS } from "./types";

@@ -13,7 +13,7 @@ import {
   calculateTenGod,
   type HeavenlyStem,
   type TenGod,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 
 /** 投入形态 / 权益处境词族（整类 · 非本案原句）。 */
 const SITUATIONAL_PATH_RE =

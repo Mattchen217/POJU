@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { isPwaStandalone } from "@/lib/pwa/detect";
 import { getPathnameWithoutLocale } from "@/lib/i18n/pathname-without-locale";
-import { detectDeviceCapability } from "@/lib/syncro/device-capability";
+import { detectDeviceCapability } from "@/lib/device/device-capability";
 import {
   getWorkspaceHref,
   type WorkspaceTab,
@@ -13,10 +13,11 @@ import {
 /** Classic marketing product roots → workspace (mobile/tablet installed PWA only). */
 const CLASSIC_PRODUCT_ROOT_TO_TAB: Record<string, WorkspaceTab> = {
   "/poju": "poju",
-  "/glyph": "glyph",
-  "/oracle": "glyph",
-  "/syncro": "syncro",
-  "/match": "match",
+  // Glyph / Syncro / Match quarantined under legacy/ — bounce old URLs to POJU.
+  "/glyph": "poju",
+  "/oracle": "poju",
+  "/syncro": "poju",
+  "/match": "poju",
 };
 
 /**

@@ -10,7 +10,7 @@ import {
   isHomeRoute,
   isWorkspaceAppRoute,
 } from "@/lib/i18n/pathname-without-locale";
-import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
+import { detectDeviceCapability, isAppMode } from "@/lib/device/device-capability";
 
 export function PwaAppShell({ children }: { children: ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);

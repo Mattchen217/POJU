@@ -1,5 +1,5 @@
 /**
- * Live EN output samples — POJU / Glyph / Syncro / Match production paths.
+ * Live EN output samples �?POJU / Glyph / Syncro / Match production paths.
  * Run: pnpm tsx scripts/test-output-policy-live-en.ts
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -62,7 +62,7 @@ async function runSyncro(): Promise<void> {
   }));
   const result = await generateSyncroHoursAdvice({
     session_id: `policy-syncro-${Date.now()}`,
-    hours: [{ hour_id: "wu", hour_label: "Wu", hour_range: "11:00–13:00", cells }],
+    hours: [{ hour_id: "wu", hour_label: "Wu", hour_range: "11:00�?3:00", cells }],
     task_description: "prepare a calm pitch for a salary review with my manager tomorrow",
     profile_summary: JSON.stringify({
       core_nature: "Metal-like structure",
@@ -103,14 +103,14 @@ async function runGlyph(): Promise<void> {
         life_cycle: { theme: "consolidation" },
       },
       display_text:
-        "Core nature resonates with Wood — flexibility and growth. Life cycle theme: consolidation.",
+        "Core nature resonates with Wood �?flexibility and growth. Life cycle theme: consolidation.",
     },
   });
   const r = result.reading;
   const blob = [
     r.wind_category_blurb,
     r.classical_voice,
-    r.命理双视角?.命理看此事,
+    r.命理双视�?.命理看此�?
     r.meaning_for_question,
   ]
     .filter(Boolean)
@@ -121,7 +121,7 @@ async function runGlyph(): Promise<void> {
 async function runMatch(): Promise<void> {
   const { calculateProfile } = await import("@/lib/calculations");
   const { buildMatchPrompt } = await import("@/lib/llm/prompts/match-deepseek-prompt");
-  const { calculateCompatibilityMatrix } = await import("@/lib/match/calculate-compatibility");
+  const { calculateCompatibilityMatrix } = await import("@/lib/compatibility/calculate-compatibility");
   const { wrapProfileForMatrix } = await import("@/lib/match/parse-profile-for-matrix");
   const { callLLM } = await import("@/lib/llm/router");
   const profileA = await calculateProfile({
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
     console.error("OPENROUTER_API_KEY required");
     process.exit(1);
   }
-  console.log("Running EN production-path samples (may take several minutes)…");
+  console.log("Running EN production-path samples (may take several minutes)�?);
   await runPoju();
   await runGlyph();
   await runSyncro();

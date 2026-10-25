@@ -23,7 +23,7 @@ import {
   STEMS,
   type HeavenlyStem,
   type WuXing,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 import type { QuestionCategory } from "@/lib/poju/agent-state";
 import {
   TOPIC_CALC_DEFAULT_PALACES,

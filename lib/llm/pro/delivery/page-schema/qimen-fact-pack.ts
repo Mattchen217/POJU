@@ -18,7 +18,7 @@ import {
   STEM_TO_WUXING,
   getWuXingRelation,
   type WuXing,
-} from "@/lib/syncro/wuxing-utils";
+} from "@/lib/calendar/wuxing-utils";
 
 export const DELIVERY_QIMEN_FACT_PACK_HEADER = "【奇门锁盘·交付起局】";
 

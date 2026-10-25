@@ -8,7 +8,7 @@ import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
 import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
-import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/match/data/stems-branches";
+import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/calendar/data/stems-branches";
 import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
 import type { RelationKind } from "@/lib/calculations/relation-engine";
 import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";

@@ -121,7 +121,7 @@ export function OracleFlow({ showIntro = true }: OracleFlowProps) {
   return (
     <>
       <Link
-        href="/glyph"
+        href="/poju"
         className="fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-[200] inline-flex h-11 min-w-[2.75rem] items-center justify-center rounded-full border border-white/25 bg-black/55 px-3 text-sm font-semibold text-white shadow-lg backdrop-blur-md transition hover:bg-white/10"
         aria-label="关闭并返回 Glyph 介绍页"
       >

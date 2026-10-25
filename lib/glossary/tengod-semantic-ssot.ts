@@ -4,7 +4,7 @@
  */
 
 import { CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
-import type { TenGod } from "@/lib/match/data/stems-branches";
+import type { TenGod } from "@/lib/calendar/data/stems-branches";
 
 export type TenGodSemanticRow = {
   id: TenGod;

@@ -5,11 +5,13 @@ import { markArchiveRead } from "@/lib/archive/archive-unread";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { loadPojuSessionVault, syncPojuSessionVaultArchive } from "@/lib/archive/poju-session-vault";
-import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
-import { CURRENT_LEVELS, type CurrentLevel } from "@/lib/syncro/current-system";
-import type { MatchReport } from "@/lib/match/types";
-import { normalizeMatchArchiveSynergyType } from "@/lib/match/synergy-normalize";
-import type { SyncroMatrix } from "@/lib/syncro/types";
+import {
+  normalizeMatchArchiveSynergyType,
+  scoreForCurrentLevel,
+  type GlyphReadingContent,
+  type MatchReport,
+  type SyncroMatrix,
+} from "@/lib/archive/legacy-product-types";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { POJUAction } from "@/lib/poju/types";
 import type { SignData } from "@/types/oracle";
@@ -89,13 +91,6 @@ export interface MatchArchiveData {
     b_summary: string;
     top_actions: string[];
   };
-}
-
-function scoreForCurrentLevel(level: string): number {
-  if (level in CURRENT_LEVELS) {
-    return CURRENT_LEVELS[level as CurrentLevel].score;
-  }
-  return 0;
 }
 
 function formatSyncroArchiveTitle(task: string, locale: string, now: Date): string {
@@ -387,7 +382,7 @@ export async function saveMatchToArchive(input: {
       top_actions: (input.report.recommendations?.actions ?? [])
         .slice(0, 3)
         .map((a) => a.title)
-        .filter(Boolean),
+        .filter((t): t is string => typeof t === "string" && t.length > 0),
     },
   };
 

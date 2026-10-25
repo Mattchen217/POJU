@@ -18,7 +18,7 @@ import {
   calculateTenGod,
   type EarthlyBranch,
   type HeavenlyStem,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 
 const PILLAR_ZH = { year: "年柱", month: "月柱", day: "日柱", hour: "时柱" } as const;
 const BRANCH_POS = { year: "年支", month: "月支", day: "日支", hour: "时支" } as const;

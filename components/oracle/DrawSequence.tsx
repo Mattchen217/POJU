@@ -72,7 +72,7 @@ export function DrawSequence({
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-[#0B0815] to-black px-6 text-center">
         <p className="mb-6 max-w-md text-white/80">{drawError}</p>
         <Link
-          href="/glyph"
+          href="/poju"
           className="rounded-full border border-white/20 px-6 py-2 text-sm text-white/80 hover:bg-white/10"
         >
           {tGlyph("back_to_glyph")}

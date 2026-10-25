@@ -56,7 +56,7 @@ import {
   metaphorBlacklistForLocale,
 } from "@/lib/llm/compliance/banned-terms";
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
-import { BRANCHES, STEMS } from "@/lib/match/data/stems-branches";
+import { BRANCHES, STEMS } from "@/lib/calendar/data/stems-branches";
 import {
   allShenshaHanSurfaces,
   normalizeShenshaLocale,

@@ -1,5 +1,5 @@
 /**
- * Step D — Match prompt modularization verification + sample dump.
+ * Step D �?Match prompt modularization verification + sample dump.
  *
  *   pnpm exec tsx scripts/test-match-prompt-step-d.ts
  */
@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 
 import { calculateProfile } from "@/lib/calculations";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 import {
   MATCH_BAZI_HEPAN_IDENTITY,
   MATCH_HEPAN_METHOD,
@@ -49,20 +49,20 @@ async function main(): Promise<void> {
   assert("method 六冲", MATCH_HEPAN_METHOD.includes("六冲"));
   assert("method 六合", MATCH_HEPAN_METHOD.includes("六合"));
   assert("method 大运同频", MATCH_HEPAN_METHOD.includes("大运同频"));
-  assert("method 配偶星", MATCH_HEPAN_METHOD.includes("配偶星"));
+  assert("method 配偶�?, MATCH_HEPAN_METHOD.includes("配偶�?));
 
   assert("framework full_resonance", MATCH_RELATIONSHIP_FRAMEWORK.includes("full_resonance"));
   assert("framework 权重 30%", MATCH_RELATIONSHIP_FRAMEWORK.includes("30%"));
   assert("framework 天作之合", MATCH_RELATIONSHIP_FRAMEWORK.includes("天作之合"));
 
-  assert("branding 5 段卡片", MATCH_OUTPUT_BRANDING.includes("5 段"));
-  assert("branding 禁 POJU/Glyph/Syncro", MATCH_OUTPUT_BRANDING.includes("POJU"));
+  assert("branding 5 段卡�?, MATCH_OUTPUT_BRANDING.includes("5 �?));
+  assert("branding �?POJU/Glyph/Syncro", MATCH_OUTPUT_BRANDING.includes("POJU"));
   assert("branding combined 十神", MATCH_OUTPUT_BRANDING.includes("combined"));
 
   assert("deepseek uses match-base identity", deep.includes("MATCH_BAZI_HEPAN_IDENTITY"));
   assert("deepseek uses stitchPromptSections", deep.includes("stitchPromptSections"));
   assert("deepseek uses compatibilityMatrix", deep.includes("compatibilityMatrix"));
-  assert("deepseek injects computed matrix", deep.includes("已计算的契合度矩阵"));
+  assert("deepseek injects computed matrix", deep.includes("已计算的契合度矩�?));
 
   const birthA: BirthInfo = {
     year: 1988,
@@ -90,17 +90,17 @@ async function main(): Promise<void> {
       base_analysis: {
         content: {
           bazi: {
-            day_stem: "戊",
-            day_branch: "午",
-            year_stem: "戊",
-            year_branch: "辰",
-            month_stem: "己",
-            month_branch: "未",
-            hour_stem: "壬",
-            hour_branch: "子",
+            day_stem: "�?,
+            day_branch: "�?,
+            year_stem: "�?,
+            year_branch: "�?,
+            month_stem: "�?,
+            month_branch: "�?,
+            hour_stem: "�?,
+            hour_branch: "�?,
           },
           gender: "M",
-          yong_shen: { primary_element: "火" },
+          yong_shen: { primary_element: "�? },
         },
       },
     },
@@ -108,17 +108,17 @@ async function main(): Promise<void> {
       base_analysis: {
         content: {
           bazi: {
-            day_stem: "庚",
-            day_branch: "申",
-            year_stem: "庚",
-            year_branch: "午",
-            month_stem: "丙",
-            month_branch: "戌",
-            hour_stem: "甲",
-            hour_branch: "子",
+            day_stem: "�?,
+            day_branch: "�?,
+            year_stem: "�?,
+            year_branch: "�?,
+            month_stem: "�?,
+            month_branch: "�?,
+            hour_stem: "�?,
+            hour_branch: "�?,
           },
           gender: "F",
-          yong_shen: { primary_element: "水" },
+          yong_shen: { primary_element: "�? },
         },
       },
     },
@@ -127,17 +127,17 @@ async function main(): Promise<void> {
   const { system, user, detected_language } = buildMatchPrompt({
     a_profile: aProfile,
     a_base_analysis: {
-      day_master: { stem: "戊", element: "土" },
-      current_major_luck: { theme: "七杀运，压力与突破" },
-      useful_god: { primary: "火" },
+      day_master: { stem: "�?, element: "�? },
+      current_major_luck: { theme: "七杀运，压力与突�? },
+      useful_god: { primary: "�? },
     },
     b_profile: bProfile,
     b_base_analysis: {
-      day_master: { stem: "庚", element: "金" },
-      current_major_luck: { theme: "食神运，表达与创造" },
-      useful_god: { primary: "水" },
+      day_master: { stem: "�?, element: "�? },
+      current_major_luck: { theme: "食神运，表达与创�? },
+      useful_god: { primary: "�? },
     },
-    relationship_description: "我们在考虑结婚，交往两年，家人对彩礼和定居城市有分歧，想知道长期是否契合。",
+    relationship_description: "我们在考虑结婚，交往两年，家人对彩礼和定居城市有分歧，想知道长期是否契合�?,
     compatibilityMatrix: sampleMatrix,
     locale: "en",
   });
@@ -152,10 +152,10 @@ async function main(): Promise<void> {
   assert("system NO POJU monolith", !system.includes("精通中国传统智慧的东方破局顾问"));
 
   const sample = [
-    "========== MATCH STEP D — SYSTEM (head) ==========",
+    "========== MATCH STEP D �?SYSTEM (head) ==========",
     system.slice(0, 3200),
     "\n...[middle omitted]...\n",
-    "========== MATCH STEP D — SYSTEM (tail: JSON schema) ==========",
+    "========== MATCH STEP D �?SYSTEM (tail: JSON schema) ==========",
     system.slice(-2800),
     "\n========== USER PROMPT ==========\n",
     user,

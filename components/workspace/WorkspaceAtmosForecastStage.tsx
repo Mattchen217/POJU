@@ -15,7 +15,7 @@ import {
 import { buildAtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
 import { fetchAtmosEntitlement } from "@/lib/passes/unlock-with-pass";
-import { zonedLocalToUtc } from "@/lib/syncro/true-solar-time";
+import { zonedLocalToUtc } from "@/lib/calendar/true-solar-time";
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");

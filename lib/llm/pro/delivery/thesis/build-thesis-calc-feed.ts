@@ -20,7 +20,7 @@ import {
   calculateTenGod,
   STEMS,
   type HeavenlyStem,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 import type { QuestionCategory } from "@/lib/poju/agent-state";
 import type {
   ChecklistItemStatus,

@@ -5,7 +5,7 @@ import {
   buildPlainspeakVoiceSections,
   PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS,
 } from "@/lib/llm/prompts/plainspeak-voice";
-import { ORIENTAL_SHARED_GUARDRAILS } from "@/lib/llm/prompts/glyph-guanyin-base";
+import { ORIENTAL_SHARED_GUARDRAILS } from "@/lib/llm/prompts/oriental-shared-guardrails";
 import { READING_LAYOUT_CONTRACT } from "@/lib/llm/prompts/reading-layout";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";

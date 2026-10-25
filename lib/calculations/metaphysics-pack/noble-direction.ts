@@ -1,9 +1,9 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { Direction8, FiveElement } from "@/lib/calculations/types";
-import { TIAN_YI_GUI_REN } from "@/lib/match/data/shensha";
-import type { EarthlyBranch, HeavenlyStem } from "@/lib/match/data/stems-branches";
+import { TIAN_YI_GUI_REN } from "@/lib/calendar/data/shensha";
+import type { EarthlyBranch, HeavenlyStem } from "@/lib/calendar/data/stems-branches";
 import adaptations from "@/lib/calculations/data/element-adaptations.json";
-import { BRANCH_TO_WUXING } from "@/lib/syncro/wuxing-utils";
+import { BRANCH_TO_WUXING } from "@/lib/calendar/wuxing-utils";
 
 import { wuXingToFiveElement } from "./element-token";
 

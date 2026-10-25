@@ -13,36 +13,6 @@ const PRODUCT_STYLES = [
     glowColor: "rgba(139,92,246,0.45)",
     badgeColor: "#fcd34d",
   },
-  {
-    href: "/glyph",
-    kind: "glyph",
-    productKey: "glyph" as const,
-    cardGradient:
-      "linear-gradient(118deg, rgba(235,120,55,0.45) 0%, transparent 18%), linear-gradient(145deg, #050505 0%, #0b0806 40%, #0f0c0a 100%)",
-    ringStyle: "linear-gradient(135deg, rgba(251,191,36,0.5), rgba(217,70,239,0.55))",
-    glowColor: "rgba(251,191,36,0.32)",
-    badgeColor: "#7dd3fc",
-  },
-  {
-    href: "/syncro",
-    kind: "syncro",
-    productKey: "syncro" as const,
-    cardGradient:
-      "linear-gradient(120deg, rgba(50,200,195,0.4) 0%, transparent 18%), linear-gradient(145deg, #050708 0%, #081012 40%, #0a1416 100%)",
-    ringStyle: "linear-gradient(135deg, rgba(34,211,238,0.6), rgba(30,58,138,0.7))",
-    glowColor: "rgba(34,211,238,0.4)",
-    badgeColor: "#7dd3fc",
-  },
-  {
-    href: "/match",
-    kind: "match",
-    productKey: "match" as const,
-    cardGradient:
-      "linear-gradient(118deg, rgba(244,114,182,0.42) 0%, transparent 18%), linear-gradient(145deg, #080506 0%, #10080c 40%, #140a10 100%)",
-    ringStyle: "linear-gradient(135deg, rgba(244,114,182,0.6), rgba(157,23,77,0.7))",
-    glowColor: "rgba(244,114,182,0.4)",
-    badgeColor: "#7dd3fc",
-  },
 ] as const;
 
 /** Classic (V1) marketing home copy — kept for `/classic` until the tree is retired. */
@@ -84,9 +54,6 @@ export async function buildClassicHomeCopy(): Promise<DsHomeCopy> {
       cards: (
         [
           { key: "card1" as const, href: "/poju", imageSrc: "/animations/S1.jpg", accent: "violet" as const },
-          { key: "card2" as const, href: "/glyph", imageSrc: "/animations/S2.jpg", accent: "magenta" as const },
-          { key: "card3" as const, href: "/syncro", imageSrc: "/animations/S3.jpg", accent: "blue" as const },
-          { key: "card4" as const, href: "/match", imageSrc: "/animations/S4.jpg", accent: "fuchsia" as const },
         ] as const
       ).map(({ key, href, imageSrc, accent }) => ({
         href,
@@ -122,24 +89,6 @@ export async function buildClassicHomeCopy(): Promise<DsHomeCopy> {
           title: tHome("finalCta.poju.title"),
           sub: tHome("finalCta.poju.sub"),
           variant: "gold" as const,
-        },
-        {
-          href: "/glyph",
-          title: tHome("finalCta.glyph.title"),
-          sub: tHome("finalCta.glyph.sub"),
-          variant: "violet" as const,
-        },
-        {
-          href: "/syncro",
-          title: tHome("finalCta.syncro.title"),
-          sub: tHome("finalCta.syncro.sub"),
-          variant: "cyan" as const,
-        },
-        {
-          href: "/match",
-          title: tHome("finalCta.match.title"),
-          sub: tHome("finalCta.match.sub"),
-          variant: "rose" as const,
         },
       ],
     },

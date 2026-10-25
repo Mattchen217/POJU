@@ -4,8 +4,8 @@
  */
 
 import { LIFE_STAGE_HAN } from "@/lib/calculations/chang-sheng";
-import type { TenGod } from "@/lib/match/data/stems-branches";
-import { BRANCHES, STEMS } from "@/lib/match/data/stems-branches";
+import type { TenGod } from "@/lib/calendar/data/stems-branches";
+import { BRANCHES, STEMS } from "@/lib/calendar/data/stems-branches";
 
 /** A1 — engine-computed 神煞 (bazi-shensha-local). */
 export const CLOSED_SHEN_SHA = [

@@ -5,14 +5,13 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 import { PojuSessionPickerModal } from "@/components/poju/PojuSessionPickerModal";
-import { checkGlyphUsage } from "@/lib/glyph/storage";
 import {
   listActivePojuSessionsForPicker,
   type ActivePojuSessionPickerRow,
 } from "@/lib/cross-product/list-active-poju-sessions-for-picker";
+import { isFirstTimeFree, type SyncroProduct } from "@/lib/device/device-usage";
 import { redirectToPojuPayment } from "@/lib/poju/start-poju-payment";
 import { runPOJUV4SessionMaintenance } from "@/lib/poju/v4-lifecycle";
-import { isFirstTimeFree, type SyncroProduct } from "@/lib/syncro/device-usage";
 
 import "@/styles/pwa-product-begin.css";
 
@@ -60,13 +59,8 @@ export function BeginButton({
       }
 
       try {
-        if (productId === "glyph") {
-          const usage = await checkGlyphUsage();
-          if (!cancelled) setCanUseFree(usage.can_use_free);
-        } else {
-          const free = await isFirstTimeFree(productId as SyncroProduct);
-          if (!cancelled) setCanUseFree(free);
-        }
+        const free = await isFirstTimeFree(productId as SyncroProduct);
+        if (!cancelled) setCanUseFree(free);
       } catch {
         if (!cancelled) setCanUseFree(false);
       } finally {

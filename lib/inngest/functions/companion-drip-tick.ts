@@ -1,6 +1,6 @@
 /**
  * Hourly tick: deliver due days for batch-ready jobs, then wipe that day.
- * Does not generate — generation is companion-batch-fill.
+ * Does not generate — generation is companion-batch-fill (event-driven).
  */
 
 import { deliverDueCompanionDay } from "@/lib/companion/drip-advance";
@@ -12,6 +12,7 @@ export const companionDripTick = inngest.createFunction(
   {
     id: "companion-drip-tick",
     retries: 1,
+    concurrency: { limit: 1 },
     triggers: [{ cron: "0 * * * *" }],
   },
   async ({ step }) => {

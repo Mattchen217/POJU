@@ -3,33 +3,17 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { MatchProductHero } from "@/components/marketing/match-product-hero";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
-import { MatchDeliveryView } from "@/components/match/MatchDeliveryView";
-import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BeginButton, type BeginProductId } from "@/components/pwa/BeginButton";
 import { WorkspaceContextPanel } from "@/components/workspace/WorkspaceContextPanel";
-import { WorkspaceMatchBirthSideCopy } from "@/components/workspace/WorkspaceMatchBirthSideCopy";
-import { WorkspaceMatchGeneratingStage } from "@/components/workspace/WorkspaceMatchGeneratingStage";
-import { WorkspaceMatchInquiryForm } from "@/components/workspace/WorkspaceMatchInquiryForm";
-import { useWorkspaceMatchPrepare } from "@/components/workspace/WorkspaceMatchPrepareContext";
-import { WorkspaceMatchWarmupStage } from "@/components/workspace/WorkspaceMatchWarmupStage";
 import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirthHost";
 import { WorkspacePojuBirthSideCopy } from "@/components/workspace/WorkspacePojuBirthSideCopy";
 import { WorkspacePojuChatStage } from "@/components/workspace/WorkspacePojuChatStage";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePojuPreparingStage";
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
-import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
-import { WorkspaceUsageGuideLink } from "@/components/workspace/WorkspaceUsageGuideLink";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import { useWorkspaceProductHistory } from "@/components/workspace/use-workspace-product-history";
-import {
-  ensureMatchPreviewSession,
-  loadMatchPreviewSession,
-  patchMatchPreviewSession,
-} from "@/lib/match/match-preview-session";
-import { isMatchPreviewSession } from "@/lib/match/match-preview-unlock";
 import { readPendingLangSwitch } from "@/lib/poju/pending-lang-switch";
 import { POJU_WORKSPACE_UNLOCK_RITUAL_KEY } from "@/lib/poju/preview-unlock";
 
@@ -311,176 +295,6 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
           <WorkspacePojuPreparingStage />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  const t = useTranslations("match.home");
-  const locale = useLocale();
-  const [hasProfiles, setHasProfiles] = useState(false);
-  const match = useWorkspaceMatchPrepare();
-
-  useEffect(() => {
-    if (match.phase !== "paywall") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") match.setPhase("inquiry");
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [match.phase, match.setPhase]);
-
-  const heroCopy = {
-    brandTag: t("brand_tag"),
-    heading: t("heading"),
-    description: t("description"),
-    cta: t("cta"),
-    billingNotice: t("billing_notice"),
-  };
-
-  function handleBirthConfirmed(profileId: string) {
-    if (match.collectingSlot === "a") {
-      match.setProfileA(profileId);
-      match.setCollectingSlot("b");
-      return;
-    }
-    if (profileId === match.profileIdA) {
-      return;
-    }
-    match.setProfileB(profileId);
-    match.beginWarmup();
-  }
-
-  function handleInquirySubmit(relationshipOverride?: string) {
-    const q = (relationshipOverride ?? match.relationship).trim();
-    if (q.length < 10 || !match.profileIdA || !match.profileIdB) return;
-
-    match.setRelationship(q);
-
-    try {
-      sessionStorage.setItem("match_relationship", q);
-      sessionStorage.setItem("match_a_profile_id", match.profileIdA);
-      sessionStorage.setItem("match_b_profile_id", match.profileIdB);
-    } catch {
-      /* private mode */
-    }
-
-    const preview = ensureMatchPreviewSession({
-      a_profile_id: match.profileIdA,
-      b_profile_id: match.profileIdB,
-      locale,
-    });
-    match.setPreviewId(preview.preview_id);
-    patchMatchPreviewSession({
-      pending_question: q,
-      unlock_status: preview.unlock_status === "unlocked" ? "unlocked" : "preview",
-    });
-
-    const next = loadMatchPreviewSession();
-    if (next && isMatchPreviewSession(next)) {
-      match.setPhase("paywall");
-      return;
-    }
-    match.setPhase("generating");
-  }
-
-  async function handleUnlocked() {
-    const q = match.relationship.trim();
-    patchMatchPreviewSession({
-      unlock_status: "unlocked",
-      pending_question: q,
-    });
-    try {
-      sessionStorage.setItem("match_relationship", q);
-    } catch {
-      /* private mode */
-    }
-    match.setPhase("generating");
-  }
-
-  if (match.phase === "warmup") {
-    return (
-      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack">
-        <WorkspaceMatchWarmupStage />
-      </div>
-    );
-  }
-
-  if (match.phase === "inquiry" || match.phase === "paywall") {
-    return (
-      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack workspace-match-stack--inquiry">
-        <WorkspaceMatchInquiryForm
-          onClarified={(relationshipDescription) => handleInquirySubmit(relationshipDescription)}
-          submitBusy={match.phase === "paywall"}
-        />
-        {match.phase === "paywall" && match.previewId ? (
-          <div
-            className="workspace-match-paywall-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="workspace-match-paywall-title"
-          >
-            <button
-              type="button"
-              className="workspace-match-paywall-modal__backdrop"
-              aria-label="Close"
-              onClick={() => match.setPhase("inquiry")}
-            />
-            <div className="workspace-match-paywall-modal__panel" id="workspace-match-paywall-title">
-              <ToolPaywallInline
-                product="match"
-                previewId={match.previewId}
-                locale={locale}
-                pendingQuestion={match.relationship.trim()}
-                onUnlocked={() => void handleUnlocked()}
-              />
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (match.phase === "generating") {
-    return (
-      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack">
-        <WorkspaceMatchGeneratingStage />
-      </div>
-    );
-  }
-
-  if (match.phase === "delivery" && match.matchSession) {
-    return (
-      <div className="workspace-product-stack workspace-poju-stack workspace-match-stack workspace-match-stack--delivery">
-        <WorkspaceScrollArea className="workspace-match-delivery" fixedThumbPx={52}>
-          <MatchDeliveryView session={match.matchSession} locale={locale} variant="live" />
-        </WorkspaceScrollArea>
-      </div>
-    );
-  }
-
-  /* Stage 1 — Match A then Match B birth entry */
-  return (
-    <div className="workspace-product-stack workspace-poju-stack">
-      <div className="workspace-product-hero">
-        <MatchProductHero copy={heroCopy} hideActions />
-      </div>
-      <div className="workspace-product-below workspace-poju-below">
-        <div className="workspace-poju-below__cluster">
-          <div className="workspace-poju-below__unit">
-            <WorkspaceMatchBirthSideCopy hasProfiles={hasProfiles} />
-            <WorkspacePojuBirthHost
-                key={match.collectingSlot}
-                usageProduct="match"
-                matchCollectingSlot={match.collectingSlot}
-                excludeProfileId={match.collectingSlot === "b" ? match.profileIdA : null}
-                onHasProfilesChange={setHasProfiles}
-                onPrepareStart={handleBirthConfirmed}
-              />
-          </div>
-          <WorkspaceUsageGuideLink />
-        </div>
-      </div>
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   type LiuRiGanzhi,
   type LiuYueGanzhi,
 } from "@/lib/calculations/liuri";
-import type { EarthlyBranch, HeavenlyStem } from "@/lib/match/data/stems-branches";
+import type { EarthlyBranch, HeavenlyStem } from "@/lib/calendar/data/stems-branches";
 
 export type LuckCycleGanzhi = {
   stem: HeavenlyStem;

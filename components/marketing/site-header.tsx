@@ -43,15 +43,6 @@ export function SiteHeader() {
             <Link href="/poju" className={`${cls("poju")} pointer-events-auto inline-flex h-12 items-center leading-none`}>
               {tNav("poju")}
             </Link>
-            <Link href="/glyph" className={`${cls("glyph")} pointer-events-auto inline-flex h-12 items-center leading-none`}>
-              {tNav("glyph")}
-            </Link>
-            <Link href="/syncro" className={`${cls("syncro")} pointer-events-auto inline-flex h-12 items-center leading-none`}>
-              {tNav("syncro")}
-            </Link>
-            <Link href="/match" className={`${cls("match")} pointer-events-auto inline-flex h-12 items-center leading-none`}>
-              {tNav("match")}
-            </Link>
           </nav>
 
           <div className="absolute right-3 top-1/2 z-[2000] flex h-12 -translate-y-1/2 items-center justify-end sm:right-4">
@@ -72,15 +63,6 @@ export function SiteHeader() {
           <nav className="flex items-center justify-center gap-10 text-[14px] font-medium tracking-wide text-zinc-300">
             <Link href="/poju" className={cls("poju")}>
               {tNav("poju")}
-            </Link>
-            <Link href="/glyph" className={cls("glyph")}>
-              {tNav("glyph")}
-            </Link>
-            <Link href="/syncro" className={cls("syncro")}>
-              {tNav("syncro")}
-            </Link>
-            <Link href="/match" className={cls("match")}>
-              {tNav("match")}
             </Link>
             <Link href="/archive" className={cls("archive")}>
               <ArchiveNavLabel label={tNav("archive")} showDot={hasUnreadArchive} />

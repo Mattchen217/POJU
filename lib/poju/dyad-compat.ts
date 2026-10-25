@@ -8,7 +8,7 @@ import {
   calculateCompatibilityMatrix,
   type ResonanceMatrix,
   type SynergyType,
-} from "@/lib/match/calculate-compatibility";
+} from "@/lib/compatibility/calculate-compatibility";
 import {
   extractMatchRelationMechanismAnchors,
   formatRelationMechanismAnchorsForPrompt,

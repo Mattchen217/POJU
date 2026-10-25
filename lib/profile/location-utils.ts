@@ -1,4 +1,4 @@
-import { getTimezoneOffsetMinutes } from "@/lib/syncro/true-solar-time";
+import { getTimezoneOffsetMinutes } from "@/lib/calendar/true-solar-time";
 
 /** IANA timezone → standard meridian (°E). Fallback uses offset at birth date. */
 const TZ_CENTER_LONGITUDE: Record<string, number> = {

@@ -10,7 +10,7 @@ import {
   calculateTrueSolarTime,
   getZonedCalendarParts,
   zonedLocalToUtc,
-} from "@/lib/syncro/true-solar-time";
+} from "@/lib/calendar/true-solar-time";
 import type { BirthInfo, TstMeta, UserProfile } from "@/lib/profile/types";
 
 function pad2(n: number): string {

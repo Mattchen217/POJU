@@ -2,9 +2,15 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
 import { companionBatchFill } from "@/lib/inngest/functions/companion-batch-fill";
 import { companionDripTick } from "@/lib/inngest/functions/companion-drip-tick";
-import { syncroGenerateBatch } from "@/lib/inngest/functions/syncro-generate-batch";
+import { pojuFinalDeliveryContinue } from "@/lib/inngest/functions/poju-final-delivery-continue";
+import { pojuFinalDeliveryTask } from "@/lib/inngest/functions/poju-final-delivery-task";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [syncroGenerateBatch, companionBatchFill, companionDripTick],
+  functions: [
+    pojuFinalDeliveryContinue,
+    pojuFinalDeliveryTask,
+    companionBatchFill,
+    companionDripTick,
+  ],
 });

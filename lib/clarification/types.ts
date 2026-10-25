@@ -25,6 +25,14 @@ export type ClarificationTurnResult = {
   summary_for_confirm?: string;
 };
 
-/** Birth + gender facts for Match A / Match B (clarification context). */
-export type { MatchPersonFacts } from "@/lib/match/clarification/match-person-facts";
+/** Birth + gender facts for Match A / Match B (clarification context). Inlined so archive/clarification does not import the quarantined Match tree. */
+export type MatchPersonFacts = {
+  label: "Match A" | "Match B";
+  year: number;
+  month: number;
+  day: number;
+  /** Clock-ish hour 0–23 when known. */
+  hour?: number;
+  gender: "M" | "F" | "X";
+};
 

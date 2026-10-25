@@ -9,9 +9,6 @@ import { isHomeRoute, isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-lo
 const tabs = [
   { href: "/app?tab=atmos", label: "⌂" },
   { href: "/app?tab=poju", label: "POJU" },
-  { href: "/app?tab=glyph", label: "Glyph" },
-  { href: "/app?tab=syncro", label: "Syncro" },
-  { href: "/app?tab=match", label: "Match" },
   { href: "/archive", label: "✦" },
 ];
 

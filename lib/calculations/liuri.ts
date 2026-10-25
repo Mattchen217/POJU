@@ -5,8 +5,8 @@
 
 import { Solar } from "lunar-typescript";
 
-import type { EarthlyBranch, HeavenlyStem } from "@/lib/match/data/stems-branches";
-import { getZonedCalendarParts } from "@/lib/syncro/true-solar-time";
+import type { EarthlyBranch, HeavenlyStem } from "@/lib/calendar/data/stems-branches";
+import { getZonedCalendarParts } from "@/lib/calendar/true-solar-time";
 
 export type LiuRiGanzhi = {
   stem: HeavenlyStem;

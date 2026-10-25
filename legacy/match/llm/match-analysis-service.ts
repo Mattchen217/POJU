@@ -25,7 +25,7 @@ import {
 } from "@/lib/llm/services/delivery-audit-regen";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { polishDeepStringFields } from "@/lib/llm/sanitize/delivery-grammar-polish";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import { wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import type { MatchReport, SynergyType } from "@/lib/match/types";

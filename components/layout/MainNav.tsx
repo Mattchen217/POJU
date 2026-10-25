@@ -23,9 +23,6 @@ import { cn } from "@/lib/utils/classnames";
 
 const NAV_ITEMS: { href: string; key: SiteNavActive }[] = [
   { href: "/poju", key: "poju" },
-  { href: "/glyph", key: "glyph" },
-  { href: "/match", key: "match" },
-  { href: "/syncro", key: "syncro" },
   { href: "/archive", key: "archive" },
 ];
 

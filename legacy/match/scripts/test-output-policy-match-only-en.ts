@@ -22,7 +22,7 @@ async function main() {
   loadEnvLocal();
   const { calculateProfile } = await import("@/lib/calculations");
   const { buildMatchPrompt } = await import("@/lib/llm/prompts/match-deepseek-prompt");
-  const { calculateCompatibilityMatrix } = await import("@/lib/match/calculate-compatibility");
+  const { calculateCompatibilityMatrix } = await import("@/lib/compatibility/calculate-compatibility");
   const { wrapProfileForMatrix } = await import("@/lib/match/parse-profile-for-matrix");
   const { callLLM } = await import("@/lib/llm/router");
   const profileA = await calculateProfile({

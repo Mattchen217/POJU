@@ -119,11 +119,20 @@ async function jobStatusResponse(job: PojuXhighJob) {
   });
 }
 
-function scheduleFinalDeliveryJob(job_id: string, session_id: string): void {
+async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Promise<void> {
+  const { shouldDispatchContinueViaInngest, publishContinueViaInngest } = await import(
+    "@/lib/poju/delivery-continue-dispatch"
+  );
+  if (shouldDispatchContinueViaInngest()) {
+    const published = await publishContinueViaInngest(job_id, "finalize");
+    if (published === "published") return;
+    console.warn("[final-delivery] Inngest start failed — falling back to after()", {
+      job_id,
+    });
+  }
   after(async () => {
     try {
-      // Runs first incomplete stage, then self-schedules the rest via /continue.
-      // Lock is released when assemble completes or a stage fails 鈥?not here.
+      // Runs first incomplete stage, then self-schedules the rest via continue hops.
       await runFinalDeliveryJob(job_id);
     } catch (e) {
       console.error("[final-delivery] background job failed:", e);
@@ -290,21 +299,51 @@ export async function POST(req: Request) {
         step: "user Continue",
         detail: `resume ${resumeStage}`,
       });
-      after(async () => {
-        try {
-          const { runFinalDeliveryStage } = await import(
-            "@/lib/poju/final-delivery-stage-runner"
-          );
-          await runFinalDeliveryStage(
-            job.job_id,
-            resumeStage as "finalize" | "segments" | "assemble",
-            { lease_token: acquired.token },
-          );
-        } catch (e) {
-          console.error("[final-delivery] continue_interrupted after failed:", e);
-          await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);
+      {
+        const { shouldDispatchContinueViaInngest, publishContinueViaInngest } = await import(
+          "@/lib/poju/delivery-continue-dispatch"
+        );
+        if (shouldDispatchContinueViaInngest()) {
+          // Lease already held — release so Inngest hop can re-acquire cleanly.
+          await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
+          const published = await publishContinueViaInngest(job.job_id, resumeStage);
+          if (published !== "published") {
+            after(async () => {
+              try {
+                const { runFinalDeliveryStage } = await import(
+                  "@/lib/poju/final-delivery-stage-runner"
+                );
+                const again = await tryAcquireDeliveryContinueLease(job.job_id, resumeStage);
+                if (!again.ok) return;
+                await runFinalDeliveryStage(
+                  job.job_id,
+                  resumeStage as "finalize" | "segments" | "assemble",
+                  { lease_token: again.token },
+                );
+              } catch (e) {
+                console.error("[final-delivery] continue_interrupted after failed:", e);
+                await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);
+              }
+            });
+          }
+        } else {
+          after(async () => {
+            try {
+              const { runFinalDeliveryStage } = await import(
+                "@/lib/poju/final-delivery-stage-runner"
+              );
+              await runFinalDeliveryStage(
+                job.job_id,
+                resumeStage as "finalize" | "segments" | "assemble",
+                { lease_token: acquired.token },
+              );
+            } catch (e) {
+              console.error("[final-delivery] continue_interrupted after failed:", e);
+              await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);
+            }
+          });
         }
-      });
+      }
       return NextResponse.json({
         ok: true,
         job_id: job.job_id,
@@ -513,7 +552,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "job_create_failed" }, { status: 500 });
     }
 
-    scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
+    await scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
     logDeliveryStep({
       job_id: job.job_id,
       level: "ok",

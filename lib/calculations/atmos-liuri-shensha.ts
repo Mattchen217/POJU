@@ -9,8 +9,8 @@ import {
   TIAN_YI_GUI_REN,
   WEN_CHANG,
   YI_MA_MAP,
-} from "@/lib/match/data/shensha";
-import type { EarthlyBranch, HeavenlyStem } from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/shensha";
+import type { EarthlyBranch, HeavenlyStem } from "@/lib/calendar/data/stems-branches";
 
 export type AtmosShenShaCueCode = "ask_help" | "movement" | "deep_work";
 

@@ -5,7 +5,7 @@
  */
 
 import { getLifeStage } from "@/lib/calculations/chang-sheng";
-import { TIAN_YI_GUI_REN, WEN_CHANG, checkAllShenSha } from "@/lib/match/data/shensha";
+import { TIAN_YI_GUI_REN, WEN_CHANG, checkAllShenSha } from "@/lib/calendar/data/shensha";
 
 export const SHENSHA_I18N_KEY: Record<string, string> = {
   天乙贵人: "bazi.shensha.tian_yi_gui_ren",

@@ -1,5 +1,5 @@
 /**
- * Match v5.1 Step 6 — end-to-end (local matrix + optional --live LLM).
+ * Match v5.1 Step 6 �?end-to-end (local matrix + optional --live LLM).
  *
  *   pnpm test:match-step6
  *   pnpm test:match-step6:live
@@ -9,10 +9,10 @@ import { resolve } from "node:path";
 
 import { generateMatchAnalysis } from "@/lib/llm/services/match-analysis-service";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 import { calculateDayMasterInteraction } from "@/lib/match/calculations/day-master-interaction";
 import { buildMatchPrompt } from "@/lib/llm/prompts/match-deepseek-prompt";
-import { BRANCHES, STEMS, type WuXing } from "@/lib/match/data/stems-branches";
+import { BRANCHES, STEMS, type WuXing } from "@/lib/calendar/data/stems-branches";
 import { splitPillar } from "@/lib/poju/chart-loader-display";
 import type { UserProfile } from "@/lib/profile/types";
 import type { SynergyType } from "@/lib/match/types";
@@ -44,12 +44,12 @@ function loadEnvLocal(): void {
 
 function assert(name: string, ok: boolean, detail = ""): void {
   const mark = ok ? "PASS" : "FAIL";
-  console.log(`  [${mark}] ${name}${detail ? ` — ${detail}` : ""}`);
+  console.log(`  [${mark}] ${name}${detail ? ` �?${detail}` : ""}`);
   if (!ok) failures.push(name);
 }
 
 function wuxingDistributionFromProfile(profile: UserProfile): Record<WuXing, number> {
-  const dist: Record<WuXing, number> = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+  const dist: Record<WuXing, number> = { �? 0, �? 0, �? 0, �? 0, �? 0 };
   for (const p of [
     profile.bazi.yearPillar,
     profile.bazi.monthPillar,
@@ -122,44 +122,44 @@ function testProfile(partial: Partial<UserProfile> & Pick<UserProfile, "id" | "b
 
 const classicalAContent: BaseAnalysisContent = {
     bazi: {
-      year_stem: "丁", year_branch: "巳",
-      month_stem: "癸", month_branch: "丑",
-      day_stem: "乙", day_branch: "子",
-      hour_stem: "戊", hour_branch: "寅",
+      year_stem: "�?, year_branch: "�?,
+      month_stem: "�?, month_branch: "�?,
+      day_stem: "�?, day_branch: "�?,
+      hour_stem: "�?, hour_branch: "�?,
     },
     gender: "M",
-    yong_shen: { primary_element: "水" },
-    wuxing_distribution: { '木': 2, '火': 1, '土': 2, '金': 0, '水': 2 },
-    da_yun: { current: { stem: "辛", branch: "亥", is_favorable: true } },
+    yong_shen: { primary_element: "�? },
+    wuxing_distribution: { '�?: 2, '�?: 1, '�?: 2, '�?: 0, '�?: 2 },
+    da_yun: { current: { stem: "�?, branch: "�?, is_favorable: true } },
 };
 const classicalA = wrapProfile(
   testProfile({
     id: "m6-a1",
     birth: { year: 1985, month: 12, day: 15, hour_period: "yin", gender: "M", timezone: "Asia/Shanghai" },
     bazi: { yearPillar: "丁巳", monthPillar: "癸丑", dayPillar: "乙子", hourPillar: "戊寅" },
-    diagnosis: { dayMaster: "乙木", favorableElements: ["水"], challengingElements: [], patternSummary: "test" },
+    diagnosis: { dayMaster: "乙木", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
   }),
   classicalAContent,
 );
 
 const classicalBContent: BaseAnalysisContent = {
     bazi: {
-      year_stem: "戊", year_branch: "午",
-      month_stem: "甲", month_branch: "寅",
-      day_stem: "庚", day_branch: "丑",
-      hour_stem: "丁", hour_branch: "亥",
+      year_stem: "�?, year_branch: "�?,
+      month_stem: "�?, month_branch: "�?,
+      day_stem: "�?, day_branch: "�?,
+      hour_stem: "�?, hour_branch: "�?,
     },
     gender: "F",
-    yong_shen: { primary_element: "木" },
-    wuxing_distribution: { '木': 2, '火': 2, '土': 2, '金': 1, '水': 1 },
-    da_yun: { current: { stem: "丁", branch: "巳", is_favorable: true } },
+    yong_shen: { primary_element: "�? },
+    wuxing_distribution: { '�?: 2, '�?: 2, '�?: 2, '�?: 1, '�?: 1 },
+    da_yun: { current: { stem: "�?, branch: "�?, is_favorable: true } },
 };
 const classicalB = wrapProfile(
   testProfile({
     id: "m6-b1",
     birth: { year: 1988, month: 2, day: 22, hour_period: "wei", gender: "F", timezone: "Asia/Shanghai" },
     bazi: { yearPillar: "戊午", monthPillar: "甲寅", dayPillar: "庚丑", hourPillar: "丁亥" },
-    diagnosis: { dayMaster: "庚金", favorableElements: ["木"], challengingElements: [], patternSummary: "test" },
+    diagnosis: { dayMaster: "庚金", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
   }),
   classicalBContent,
 );
@@ -168,68 +168,68 @@ const clashA = wrapProfile(testProfile({
   id: "m6-a2",
   birth: { year: 1984, month: 8, day: 10, hour_period: "si", gender: "M", timezone: "Asia/Shanghai" },
   bazi: { yearPillar: "癸亥", monthPillar: "丙辰", dayPillar: "甲子", hourPillar: "丙寅" },
-  diagnosis: { dayMaster: "甲木", favorableElements: ["水"], challengingElements: [], patternSummary: "test" },
+  diagnosis: { dayMaster: "甲木", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
 }), {
   bazi: {
-    year_stem: "癸", year_branch: "亥",
-    month_stem: "丙", month_branch: "辰",
-    day_stem: "甲", day_branch: "子",
-    hour_stem: "丙", hour_branch: "寅",
+    year_stem: "�?, year_branch: "�?,
+    month_stem: "�?, month_branch: "�?,
+    day_stem: "�?, day_branch: "�?,
+    hour_stem: "�?, hour_branch: "�?,
   },
   gender: "M",
-  yong_shen: { primary_element: "水" },
-  wuxing_distribution: { '木': 2, '火': 2, '土': 1, '金': 0, '水': 3 },
+  yong_shen: { primary_element: "�? },
+  wuxing_distribution: { '�?: 2, '�?: 2, '�?: 1, '�?: 0, '�?: 3 },
 });
 
 const clashB = wrapProfile(testProfile({
   id: "m6-b2",
   birth: { year: 1990, month: 6, day: 15, hour_period: "wu", gender: "F", timezone: "Asia/Shanghai" },
   bazi: { yearPillar: "甲戌", monthPillar: "丙寅", dayPillar: "庚午", hourPillar: "辛巳" },
-  diagnosis: { dayMaster: "庚金", favorableElements: ["土"], challengingElements: [], patternSummary: "test" },
+  diagnosis: { dayMaster: "庚金", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
 }), {
   bazi: {
-    year_stem: "甲", year_branch: "戌",
-    month_stem: "丙", month_branch: "寅",
-    day_stem: "庚", day_branch: "午",
-    hour_stem: "辛", hour_branch: "巳",
+    year_stem: "�?, year_branch: "�?,
+    month_stem: "�?, month_branch: "�?,
+    day_stem: "�?, day_branch: "�?,
+    hour_stem: "�?, hour_branch: "�?,
   },
   gender: "F",
-  yong_shen: { primary_element: "土" },
-  wuxing_distribution: { '木': 2, '火': 3, '土': 1, '金': 2, '水': 0 },
+  yong_shen: { primary_element: "�? },
+  wuxing_distribution: { '�?: 2, '�?: 3, '�?: 1, '�?: 2, '�?: 0 },
 });
 
 const neutralA = wrapProfile(testProfile({
   id: "m6-a3",
   birth: { year: 1987, month: 4, day: 8, hour_period: "si", gender: "M", timezone: "Asia/Shanghai" },
   bazi: { yearPillar: "丁卯", monthPillar: "甲辰", dayPillar: "丁酉", hourPillar: "乙巳" },
-  diagnosis: { dayMaster: "丁火", favorableElements: ["木"], challengingElements: [], patternSummary: "test" },
+  diagnosis: { dayMaster: "丁火", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
 }), {
   bazi: {
-    year_stem: "丁", year_branch: "卯",
-    month_stem: "甲", month_branch: "辰",
-    day_stem: "丁", day_branch: "酉",
-    hour_stem: "乙", hour_branch: "巳",
+    year_stem: "�?, year_branch: "�?,
+    month_stem: "�?, month_branch: "�?,
+    day_stem: "�?, day_branch: "�?,
+    hour_stem: "�?, hour_branch: "�?,
   },
   gender: "M",
-  yong_shen: { primary_element: "木" },
-  wuxing_distribution: { '木': 2, '火': 2, '土': 1, '金': 1, '水': 0 },
+  yong_shen: { primary_element: "�? },
+  wuxing_distribution: { '�?: 2, '�?: 2, '�?: 1, '�?: 1, '�?: 0 },
 });
 
 const neutralB = wrapProfile(testProfile({
   id: "m6-b3",
   birth: { year: 1989, month: 11, day: 22, hour_period: "shen", gender: "F", timezone: "Asia/Shanghai" },
   bazi: { yearPillar: "己巳", monthPillar: "乙亥", dayPillar: "壬寅", hourPillar: "庚申" },
-  diagnosis: { dayMaster: "壬水", favorableElements: ["火"], challengingElements: [], patternSummary: "test" },
+  diagnosis: { dayMaster: "壬水", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
 }), {
   bazi: {
-    year_stem: "己", year_branch: "巳",
-    month_stem: "乙", month_branch: "亥",
-    day_stem: "壬", day_branch: "寅",
-    hour_stem: "庚", hour_branch: "申",
+    year_stem: "�?, year_branch: "�?,
+    month_stem: "�?, month_branch: "�?,
+    day_stem: "�?, day_branch: "�?,
+    hour_stem: "�?, hour_branch: "�?,
   },
   gender: "F",
-  yong_shen: { primary_element: "火" },
-  wuxing_distribution: { '木': 1, '火': 1, '土': 1, '金': 2, '水': 2 },
+  yong_shen: { primary_element: "�? },
+  wuxing_distribution: { '�?: 1, '�?: 1, '�?: 1, '�?: 2, '�?: 2 },
 });
 
 type Report = {
@@ -242,7 +242,7 @@ type Report = {
 async function runLocal(report: Report): Promise<void> {
   console.log("\n=== Match v5.1 Step 6: local validations ===\n");
 
-  // Scenario 1 — classical harmony
+  // Scenario 1 �?classical harmony
   const c1 = calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB });
   assert("S1 tianhe", c1.day_master_interaction.type === "tianhe", c1.day_master_interaction.type);
   assert("S1 day_branch_he", c1.branch_interactions.day_branch_he);
@@ -253,7 +253,7 @@ async function runLocal(report: Report): Promise<void> {
   );
   assert("S1 marriage_palace_bond", c1.key_insights.strengths.includes("marriage_palace_bond"));
 
-  // Scenario 2 — clash
+  // Scenario 2 �?clash
   const c2 = calculateCompatibilityMatrix({ profileA: clashA, profileB: clashB });
   assert("S2 tianchong", c2.day_master_interaction.type === "tianchong");
   assert("S2 day_branch_chong", c2.branch_interactions.day_branch_chong);
@@ -264,8 +264,8 @@ async function runLocal(report: Report): Promise<void> {
   );
   assert("S2 marriage_palace_clash", c2.key_insights.challenges.includes("marriage_palace_clash"));
 
-  // Scenario 3 — 丁壬合, neutral / effort
-  assert("S3 丁壬合", calculateDayMasterInteraction("丁", "壬").type === "tianhe");
+  // Scenario 3 �?丁壬�? neutral / effort
+  assert("S3 丁壬�?, calculateDayMasterInteraction("�?, "�?).type === "tianhe");
   const c3 = calculateCompatibilityMatrix({ profileA: neutralA, profileB: neutralB });
   assert(
     "S3 level mid",
@@ -273,7 +273,7 @@ async function runLocal(report: Report): Promise<void> {
     `${c3.synergy_type} score=${c3.resonance_index}`,
   );
 
-  // Scenario 6 — determinism (3 runs)
+  // Scenario 6 �?determinism (3 runs)
   const scores = [0, 1, 2].map(() =>
     calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB }).resonance_index,
   );
@@ -283,7 +283,7 @@ async function runLocal(report: Report): Promise<void> {
   );
   assert("S6 deterministic level", levels.every((l) => l === levels[0]));
 
-  // Scenario 7 — local compute speed
+  // Scenario 7 �?local compute speed
   const t0 = performance.now();
   for (let i = 0; i < 100; i++) {
     calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB });
@@ -291,7 +291,7 @@ async function runLocal(report: Report): Promise<void> {
   const avgMs = (performance.now() - t0) / 100;
   assert("S7 local avg <50ms", avgMs < 50, `${avgMs.toFixed(2)}ms`);
 
-  // Scenario 5 — language detection (no LLM)
+  // Scenario 5 �?language detection (no LLM)
   const m = calculateCompatibilityMatrix({ profileA: classicalA, profileB: classicalB });
   const zhP = buildMatchPrompt({
     a_profile: classicalA.user_profile,
@@ -307,7 +307,7 @@ async function runLocal(report: Report): Promise<void> {
     a_base_analysis: classicalA.base_analysis.content,
     b_profile: classicalB.user_profile,
     b_base_analysis: classicalB.base_analysis.content,
-    relationship_description: "My business partner of 3 years — considering expansion",
+    relationship_description: "My business partner of 3 years �?considering expansion",
     locale: "zh",
     compatibilityMatrix: m,
   });
@@ -438,7 +438,7 @@ async function runLive(report: Report): Promise<void> {
     "S2_clash",
     clashA,
     clashB,
-    "We've been arguing more lately about money and where to live — is this a bad match?",
+    "We've been arguing more lately about money and where to live �?is this a bad match?",
     "en",
     ["dynamic_tension", "structural_undertow"],
   );
@@ -447,7 +447,7 @@ async function runLive(report: Report): Promise<void> {
     "S5_zh",
     classicalA,
     classicalB,
-    "我和未婚妻交往三年了，家里催婚，想知道八字上是否适合长期在一起。",
+    "我和未婚妻交往三年了，家里催婚，想知道八字上是否适合长期在一起�?,
     "en",
     undefined,
   );
@@ -475,7 +475,7 @@ async function main(): Promise<void> {
   if (LIVE) {
     await runLive(report);
   } else {
-    console.log("\n  (Skip live — run: pnpm test:match-step6:live)");
+    console.log("\n  (Skip live �?run: pnpm test:match-step6:live)");
   }
 
   mkdirSync(resolve(ROOT, ".data"), { recursive: true });
@@ -486,7 +486,7 @@ async function main(): Promise<void> {
     console.error("\n  FAILED:", failures.join(", "));
     process.exit(1);
   }
-  console.log("\n  Match Step 6 — all checks passed.");
+  console.log("\n  Match Step 6 �?all checks passed.");
 }
 
 main().catch((e) => {

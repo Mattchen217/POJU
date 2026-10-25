@@ -1,10 +1,11 @@
 import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
-import type { GlyphDrawSessionPayload } from "@/lib/glyph/glyph-draw-session";
-import { resolveGlyphQuestion } from "@/lib/glyph/glyph-preview-unlock";
-import type { MatchPreviewSession } from "@/lib/match/match-preview-session";
-import { resolveMatchQuestion } from "@/lib/match/match-preview-unlock";
 import type { ToolName } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+
+type QuarantinedToolSession = {
+  question?: string;
+  pending_question?: string;
+};
 
 export type ToolUnlockContext = {
   product: ToolName;
@@ -13,7 +14,7 @@ export type ToolUnlockContext = {
   userProfile: UserProfile;
   userProfileB?: UserProfile;
   locale: string;
-  toolSession: GlyphDrawSessionPayload | MatchPreviewSession;
+  toolSession: QuarantinedToolSession;
 };
 
 export type ToolUnlockBaseResult = {
@@ -27,10 +28,10 @@ export type ToolUnlockBaseResult = {
 };
 
 function resolveToolQuestion(ctx: ToolUnlockContext): string {
-  if (ctx.product === "match") {
-    return resolveMatchQuestion(ctx.toolSession as MatchPreviewSession);
-  }
-  return resolveGlyphQuestion(ctx.toolSession as GlyphDrawSessionPayload);
+  const pending = ctx.toolSession.pending_question?.trim();
+  if (pending) return pending;
+  if (ctx.product === "match") return "";
+  return ctx.toolSession.question?.trim() || "";
 }
 
 /** Release intercepted question + resolve depth① cache (glyph/match). Syncro skips depth①. */

@@ -25,32 +25,19 @@ export function ensureV2DefaultShellMigrated(): void {
   }
 }
 
-export type WorkspaceTab =
-  | "atmos"
-  | "poju"
-  | "match"
-  | "syncro"
-  | "glyph"
-  | "archive"
-  | "profile";
+export type WorkspaceTab = "atmos" | "poju" | "archive" | "profile";
 
-export const WORKSPACE_ENGINE_TABS = ["atmos", "poju", "match", "syncro", "glyph"] as const;
+export const WORKSPACE_ENGINE_TABS = ["atmos", "poju"] as const;
 
 export const WORKSPACE_TAB_LABELS: Record<WorkspaceTab, string> = {
   atmos: "Atmos",
   poju: "POJU",
-  match: "Match",
-  syncro: "Syncro",
-  glyph: "Glyph",
   archive: "Archive",
   profile: "Profile",
 };
 
 const PRODUCT_TO_TAB: Record<string, WorkspaceTab> = {
   poju: "poju",
-  glyph: "glyph",
-  syncro: "syncro",
-  match: "match",
 };
 
 export function parseUiShellValue(raw: string | null | undefined): UiShellMode | null {
@@ -127,15 +114,7 @@ export function isWorkspaceShell(mode?: UiShellMode): boolean {
 
 export function parseWorkspaceTab(raw: string | null | undefined): WorkspaceTab {
   const v = (raw ?? "").trim().toLowerCase();
-  if (
-    v === "atmos" ||
-    v === "poju" ||
-    v === "match" ||
-    v === "syncro" ||
-    v === "glyph" ||
-    v === "archive" ||
-    v === "profile"
-  ) {
+  if (v === "atmos" || v === "poju" || v === "archive" || v === "profile") {
     return v;
   }
   return "poju";

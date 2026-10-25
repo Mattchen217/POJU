@@ -3,7 +3,7 @@
  * @see docs/Match_Calculation_Engine.md Step 5
  */
 
-import type { ResonanceMatrix } from "@/lib/match/calculate-compatibility";
+import type { ResonanceMatrix } from "@/lib/compatibility/calculate-compatibility";
 import { buildMatchCorePromptSections } from "@/lib/llm/prompts/match-base";
 import {
   buildCurrentDateContext,

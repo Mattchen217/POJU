@@ -7,7 +7,7 @@
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { resolveCurrentDaYunStep } from "@/lib/base-analysis/core-judgments";
-import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/match/data/stems-branches";
+import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/calendar/data/stems-branches";
 
 export type DayunStance = "favor" | "caution" | "mixed" | "unknown";
 

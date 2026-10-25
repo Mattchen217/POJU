@@ -1,8 +1,10 @@
-import { GlyphMarketingPage, glyphMarketingMetadata } from "@/components/marketing/glyph-marketing-page";
-
-/** Legacy URL — same full marketing page as `/glyph` (next.config redirects here). */
-export const metadata = glyphMarketingMetadata;
-
 export default function OraclePage() {
-  return <GlyphMarketingPage />;
+  return (
+    <main className="mx-auto max-w-xl px-6 py-16 text-white/80">
+      <h1 className="text-xl font-semibold text-white">Glyph is offline</h1>
+      <p className="mt-3 text-sm leading-relaxed">
+        This page used to open Glyph. Eastern OS (POJU) is still available.
+      </p>
+    </main>
+  );
 }

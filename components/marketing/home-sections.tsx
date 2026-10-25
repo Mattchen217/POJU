@@ -18,8 +18,6 @@ export function HomeSections() {
             <p className="text-xs font-semibold tracking-[0.12em] text-text-primary">POJU</p>
             <div className="poju-inner-nav-links">
               <span>POJU</span>
-              <span>SYNCRO</span>
-              <span>GLYPH</span>
               <span>ARCHIVE</span>
             </div>
             <span className="rounded-full border border-purple-vivid/35 bg-purple-primary/25 px-3 py-1 text-[10px] text-text-primary">
@@ -42,7 +40,7 @@ export function HomeSections() {
                 <CtaButton href="/chat?token=ui-preview" className="min-w-[220px]">
                   Ask your question
                 </CtaButton>
-                <CtaButton href="/syncro" variant="secondary" className="border-white/20">
+                <CtaButton href="/poju" variant="secondary" className="border-white/20">
                   Learn More
                 </CtaButton>
               </div>
@@ -71,30 +69,6 @@ export function HomeSections() {
               </div>
               <p className="poju-path-body">Align your life with wisdom-driven structure.</p>
               <p className="poju-path-link">Learn More →</p>
-              <span className="poju-path-core" />
-            </article>
-            <article className="poju-path-card syncro">
-              <div className="relative z-10 flex items-center gap-2">
-                <span className="poju-path-dot">◎</span>
-                <div>
-                  <h3 className="poju-path-title">SYNCRO</h3>
-                  <p className="poju-path-caption">Energy field map</p>
-                </div>
-              </div>
-              <p className="poju-path-body">Enter spatial timing and directional resonance.</p>
-              <p className="poju-path-link !text-cyan-300">Start Here →</p>
-              <span className="poju-path-core" />
-            </article>
-            <article className="poju-path-card oracle">
-              <div className="relative z-10 flex items-center gap-2">
-                <span className="poju-path-dot">◇</span>
-                <div>
-                  <h3 className="poju-path-title">GLYPH</h3>
-                  <p className="poju-path-caption">A 60-second mirror</p>
-                </div>
-              </div>
-              <p className="poju-path-body">Draw one pattern and read your reflection with calm precision.</p>
-              <p className="poju-path-link !text-pink-300">Start Here →</p>
               <span className="poju-path-core" />
             </article>
           </div>

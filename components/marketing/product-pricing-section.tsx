@@ -3,9 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { DsGlassCard } from "@/components/ds/primitives";
-import { GlyphPrepareCta } from "@/components/glyph/GlyphPrepareCta";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import { SyncroPricingCta } from "@/components/marketing/syncro-pricing-cta";
 import { PojuSessionStarter } from "@/components/poju/poju-session-starter";
 
 export type ProductPricingId = "poju" | "glyph" | "syncro" | "match";
@@ -55,10 +53,6 @@ export function ProductPricingSection({ product, matchCtaLabel, onMatchStart }: 
       <div className="mt-8 flex flex-col items-center gap-3">
         {product === "poju" ? (
           <PojuSessionStarter className={POJU_CTA_CLASS}>{ctaLabel}</PojuSessionStarter>
-        ) : product === "glyph" ? (
-          <GlyphPrepareCta variant="final" />
-        ) : product === "syncro" ? (
-          <SyncroPricingCta label={ctaLabel ?? t("pricing.cta")} className="mt-0" />
         ) : (
           <button type="button" onClick={onMatchStart} className={MATCH_CTA_CLASS}>
             {ctaLabel}

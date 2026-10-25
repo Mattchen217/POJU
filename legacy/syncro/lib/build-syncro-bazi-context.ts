@@ -1,7 +1,13 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { calculateCurrentYearGanZhi } from "@/lib/llm/prompts/oriental-counselor-base";
-import { BRANCH_TO_WUXING, STEM_TO_WUXING, type WuXing } from "@/lib/syncro/wuxing-utils";
+import {
+  elementTokenToWuXing,
+  elementsToWuXingList,
+} from "@/lib/calendar/element-token";
+import { BRANCH_TO_WUXING, STEM_TO_WUXING, type WuXing } from "@/lib/calendar/wuxing-utils";
+
+export { elementTokenToWuXing, elementsToWuXingList } from "@/lib/calendar/element-token";
 
 export interface SyncroBaziContext {
   day_master: string;
@@ -26,40 +32,8 @@ const TIMING_RELEVANT_SHEN_SHA = new Set([
   "亡神",
 ]);
 
-const ELEMENT_TO_WUXING: Record<string, WuXing> = {
-  木: "木",
-  火: "火",
-  土: "土",
-  金: "金",
-  水: "水",
-  wood: "木",
-  fire: "火",
-  earth: "土",
-  metal: "金",
-  water: "水",
-};
-
 export function isTimingRelevantShenSha(name: string): boolean {
   return TIMING_RELEVANT_SHEN_SHA.has(name);
-}
-
-export function elementTokenToWuXing(token: string): WuXing | undefined {
-  const trimmed = token.trim();
-  if (STEM_TO_WUXING[trimmed]) return STEM_TO_WUXING[trimmed];
-  const lower = trimmed.toLowerCase();
-  if (ELEMENT_TO_WUXING[lower]) return ELEMENT_TO_WUXING[lower];
-  if (ELEMENT_TO_WUXING[trimmed]) return ELEMENT_TO_WUXING[trimmed];
-  return undefined;
-}
-
-export function elementsToWuXingList(tokens?: string[]): WuXing[] {
-  if (!tokens?.length) return [];
-  const out: WuXing[] = [];
-  for (const token of tokens) {
-    const wx = elementTokenToWuXing(token);
-    if (wx && !out.includes(wx)) out.push(wx);
-  }
-  return out;
 }
 
 function estimateWuxingStrength(structured: ProfileStructured): Record<string, number> | undefined {

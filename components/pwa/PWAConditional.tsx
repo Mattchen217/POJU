@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
+import { detectDeviceCapability, isAppMode } from "@/lib/device/device-capability";
 
 /**
  * `useIsPwaMode` reports “app mode” (installed PWA OR mobile/tablet browser),

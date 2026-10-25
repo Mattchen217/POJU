@@ -131,15 +131,6 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
                   <MobileNavLink href={mapProductHrefForShell("/poju", shell)} onNavigate={onClose}>
                     {t("poju")}
                   </MobileNavLink>
-                  <MobileNavLink href={mapProductHrefForShell("/glyph", shell)} onNavigate={onClose}>
-                    {t("glyph")}
-                  </MobileNavLink>
-                  <MobileNavLink href={mapProductHrefForShell("/match", shell)} onNavigate={onClose}>
-                    {t("match")}
-                  </MobileNavLink>
-                  <MobileNavLink href={mapProductHrefForShell("/syncro", shell)} onNavigate={onClose}>
-                    {t("syncro")}
-                  </MobileNavLink>
                   <MobileNavLink href={mapProductHrefForShell("/archive", shell)} onNavigate={onClose}>
                     <ArchiveNavLabel label={t("archive")} showDot={hasUnreadArchive} />
                   </MobileNavLink>

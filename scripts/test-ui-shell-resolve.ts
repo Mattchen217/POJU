@@ -18,12 +18,12 @@ assert(parseUiShellValue("workspace") === "workspace", "parse workspace");
 assert(parseUiShellValue("classic") === "classic", "parse classic");
 assert(parseUiShellValue("app") === "workspace", "parse app alias");
 assert(mapProductHrefForShell("/poju", "workspace") === "/app?tab=poju", "remap poju");
-assert(mapProductHrefForShell("/match", "workspace") === "/app?tab=match", "remap match");
+assert(mapProductHrefForShell("/match", "workspace") === "/match", "match no longer remapped");
 assert(mapProductHrefForShell("/poju", "classic") === "/poju", "classic unchanged");
 assert(getWorkspaceHref("atmos") === "/app?tab=atmos", "atmos href");
 assert(mapProductHrefForShell("/archive", "workspace") === "/archive", "archive stays vault");
-assert(parseWorkspaceTab("glyph") === "glyph", "tab glyph");
-assert(parseWorkspaceTab("x") === "atmos", "tab default atmos");
+assert(parseWorkspaceTab("glyph") === "poju", "quarantined tab → poju");
+assert(parseWorkspaceTab("x") === "poju", "tab default poju");
 
 {
   const prev = process.env.NEXT_PUBLIC_UI_SHELL;

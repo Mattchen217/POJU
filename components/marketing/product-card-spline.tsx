@@ -1,6 +1,5 @@
 "use client";
 
-import { MatchCardSpline } from "@/components/marketing/MatchCardSpline";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 import { ProductCardSplineFrame } from "@/components/marketing/ProductCardSplineFrame";
 
@@ -32,11 +31,6 @@ const CARD_SPLINES: Partial<Record<string, CardSplineConfig>> = {
     initialZoom: 0.48,
     innerClassName: CARD_SPLINE_INNER,
   },
-  match: {
-    scene: "",
-    initialZoom: 0,
-    innerClassName: "match-card-spline-shell",
-  },
 };
 
 type ProductCardSplineProps = {
@@ -50,16 +44,12 @@ export function ProductCardSpline({ kind }: ProductCardSplineProps) {
 
   return (
     <ProductCardSplineFrame cardKey={kind} className={cfg.frameClassName} innerClassName={cfg.innerClassName}>
-      {kind === "match" ? (
-        <MatchCardSpline />
-      ) : (
-        <HeroSpline
-          scene={cfg.scene}
-          initialZoom={cfg.initialZoom}
-          pointerFollow={cfg.pointerFollow ?? false}
-          className="h-full w-full min-h-0 min-w-0"
-        />
-      )}
+      <HeroSpline
+        scene={cfg.scene}
+        initialZoom={cfg.initialZoom}
+        pointerFollow={cfg.pointerFollow ?? false}
+        className="h-full w-full min-h-0 min-w-0"
+      />
     </ProductCardSplineFrame>
   );
 }

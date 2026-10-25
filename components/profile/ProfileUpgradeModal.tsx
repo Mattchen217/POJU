@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { CitySearchBox, type CitySearchSelection } from "@/components/syncro/CitySearchBox";
+import { BirthCitySearchInput } from "@/components/forms/BirthCitySearchInput";
+import type { CitySuggestion } from "@/lib/location/nominatim-city-search";
 import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import {
@@ -21,7 +22,7 @@ export function ProfileUpgradeModal({ profile, onClose, onUpgraded }: ProfileUpg
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const [selectedCity, setSelectedCity] = useState<CitySearchSelection | null>(null);
+  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(null);
   const [upgrading, setUpgrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ProfileUpgradeResult | null>(null);
@@ -45,8 +46,8 @@ export function ProfileUpgradeModal({ profile, onClose, onUpgraded }: ProfileUpg
     try {
       const upgradeResult = await upgradeProfileWithLocation(profile.profile_id, {
         name: selectedCity.name,
-        longitude: selectedCity.lng,
-        latitude: selectedCity.lat,
+        longitude: selectedCity.longitude,
+        latitude: selectedCity.latitude,
         timezone: profile.timezone,
         use_defaults: false,
       });
@@ -108,13 +109,13 @@ export function ProfileUpgradeModal({ profile, onClose, onUpgraded }: ProfileUpg
           </div>
         ) : (
           <>
-            <CitySearchBox onSelect={setSelectedCity} />
+            <BirthCitySearchInput value={selectedCity} onChange={setSelectedCity} />
 
             {selectedCity ? (
               <div className="selected-city-preview">
                 <span className="selected-city-name">{selectedCity.name}</span>
                 <span className="selected-city-coords">
-                  {selectedCity.lat.toFixed(2)}, {selectedCity.lng.toFixed(2)}
+                  {selectedCity.latitude.toFixed(2)}, {selectedCity.longitude.toFixed(2)}
                 </span>
               </div>
             ) : null}

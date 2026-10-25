@@ -5,7 +5,7 @@
  */
 
 import type { CitySuggestion } from "@/lib/location/nominatim-city-search";
-import type { CitySearchResult } from "@/lib/syncro/nominatim-search";
+import type { CitySearchResult } from "@/lib/location/city-search-result";
 
 const FETCH_MS = 8_000;
 const NOMINATIM_UA = "pojulife/1.0 (https://easternos.com; birth-location)";

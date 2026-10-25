@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/A4PaperSheet";
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
-import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 
 type Props = {
@@ -31,11 +30,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
   const tVaultType = useTranslations("workspace.docVault");
   const tAtmos = useTranslations("workspace.atmosRail");
-  const tMatch = useTranslations("match.workspace");
   const vault = useWorkspaceDocVaultOptional();
   const prepare = useWorkspacePojuPrepareOptional();
   const atmos = useWorkspaceAtmosPrepareOptional();
-  const match = useWorkspaceMatchPrepareOptional();
 
   if (!visible) return null;
 
@@ -62,60 +59,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
           </span>
         </button>
-      </div>
-    );
-  }
-
-  const matchActive =
-    match &&
-    (match.phase === "inquiry" ||
-      match.phase === "paywall" ||
-      match.phase === "generating" ||
-      match.phase === "delivery") &&
-    (Boolean(match.matrixPayloadA) || Boolean(match.matrixPayloadB));
-
-  if (matchActive && match) {
-    const hasA = Boolean(match.matrixPayloadA);
-    const hasB = Boolean(match.matrixPayloadB);
-
-    if (!hasA && !hasB) return null;
-
-    return (
-      <div className="workspace-right-collapsed-icons" role="toolbar" aria-label={t("collapsedRailLabel")}>
-        {hasA ? (
-          <button
-            type="button"
-            className="workspace-right-collapsed-icons__btn"
-            aria-label={tMatch("portrait_a", { title: t("matrixIconLabel") })}
-            data-tooltip={tMatch("portrait_a", { title: t("matrixIconLabel") })}
-            onClick={(e) => {
-              e.stopPropagation();
-              match.setMatrixExpandedA(true);
-              onOpenPanel();
-            }}
-          >
-            <span className="workspace-sidebar__icon" aria-hidden>
-              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
-            </span>
-          </button>
-        ) : null}
-        {hasB ? (
-          <button
-            type="button"
-            className="workspace-right-collapsed-icons__btn"
-            aria-label={tMatch("portrait_b", { title: t("matrixIconLabel") })}
-            data-tooltip={tMatch("portrait_b", { title: t("matrixIconLabel") })}
-            onClick={(e) => {
-              e.stopPropagation();
-              match.setMatrixExpandedB(true);
-              onOpenPanel();
-            }}
-          >
-            <span className="workspace-sidebar__icon" aria-hidden>
-              <EnergyPortraitGlyph className="workspace-right-collapsed-icons__glyph" />
-            </span>
-          </button>
-        ) : null}
       </div>
     );
   }

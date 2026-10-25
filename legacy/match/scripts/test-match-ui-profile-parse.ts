@@ -4,7 +4,7 @@
  */
 
 import { calculateProfile } from "@/lib/calculations";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 import { parseProfileForMatrix, wrapProfileForMatrix } from "@/lib/match/parse-profile-for-matrix";
 import type { BirthInfo } from "@/lib/profile/types";
 
@@ -39,16 +39,16 @@ async function main() {
 
   assert(parsedA.stems.day.length === 1, "A day stem");
   assert(parsedB.stems.day.length === 1, "B day stem");
-  assert(parsedA.stems.day !== "甲", "A should not fall back to 甲");
-  assert(parsedB.stems.day !== "甲", "B should not fall back to 甲");
+  assert(parsedA.stems.day !== "�?, "A should not fall back to �?);
+  assert(parsedB.stems.day !== "�?, "B should not fall back to �?);
 
   const matrix = calculateCompatibilityMatrix({
     profileA: wrapProfileForMatrix(profileA, {
-      命主基础: { 用神忌神: { 用神: "水" } },
+      命主基础: { 用神忌神: { 用神: "�? } },
       当前大运详解: { 干支: "辛亥" },
     }),
     profileB: wrapProfileForMatrix(profileB, {
-      命主基础: { 用神忌神: { 用神: "木" } },
+      命主基础: { 用神忌神: { 用神: "�? } },
       当前大运详解: { 干支: "丁巳" },
     }),
   });
@@ -56,7 +56,7 @@ async function main() {
   console.log("A 日主:", parsedA.stems.day + parsedA.branches.day);
   console.log("B 日主:", parsedB.stems.day + parsedB.branches.day);
   console.log("Matrix type:", matrix.synergy_type, "index:", matrix.resonance_index);
-  console.log("\nMatch UI profile parse — OK");
+  console.log("\nMatch UI profile parse �?OK");
 }
 
 main().catch((e) => {

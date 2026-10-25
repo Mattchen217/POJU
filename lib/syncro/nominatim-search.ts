@@ -1,10 +1,6 @@
-export type CitySearchResult = {
-  id: number;
-  name: string;
-  lat: number;
-  lng: number;
-  type?: string;
-};
+import type { CitySearchResult } from "@/lib/location/city-search-result";
+
+export type { CitySearchResult };
 
 type NominatimRow = {
   place_id: number;

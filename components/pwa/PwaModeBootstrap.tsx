@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
+import { detectDeviceCapability, isAppMode } from "@/lib/device/device-capability";
 
 /**
  * Injects `pwa-mode` on `<html>` and `data-os` / `data-browser` for global CSS.

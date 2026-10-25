@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
-import { GlyphArchiveDetail } from "@/components/archive/glyph-archive-detail";
-import { MatchArchiveDetail } from "@/components/archive/match-archive-detail";
 import { PojuSessionArchiveDetail } from "@/components/archive/poju-session-archive-detail";
-import { SyncroArchiveDetail } from "@/components/archive/syncro-archive-detail";
 import { AppDialogProvider, useAppDialog } from "@/components/ui/app-dialog";
 import {
   deleteArchiveItem,
@@ -40,7 +37,6 @@ export function ArchiveDetailClient(props: Props) {
 function ArchiveDetailClientInner({ archiveId }: Props) {
   const t = useTranslations("archiveDetail");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
   const router = useRouter();
   const { confirm } = useAppDialog();
   const [pojuVaultData, setPojuVaultData] = useState<POJUSessionVaultData | null>(null);
@@ -141,16 +137,38 @@ function ArchiveDetailClientInner({ archiveId }: Props) {
   if (loading) {
     return <p className="py-8 text-sm text-[#cbc3d7]/70">{t("loading")}</p>;
   }
-  if (matchData) {
-    return <MatchArchiveDetail archiveId={archiveId} data={matchData} locale={locale} />;
-  }
-
-  if (glyphData) {
-    return <GlyphArchiveDetail archiveId={archiveId} data={glyphData} />;
-  }
-
-  if (syncroData) {
-    return <SyncroArchiveDetail archiveId={archiveId} data={syncroData} locale={locale} />;
+  if (matchData || glyphData || syncroData) {
+    const title = matchData
+      ? matchData.relationship_description
+      : glyphData
+        ? glyphData.glyph_display_name || glyphData.question
+        : (syncroData?.task_description ?? "");
+    const body = matchData
+      ? matchData.summary.overall_summary
+      : glyphData
+        ? glyphData.question
+        : syncroData?.best_combination
+          ? `${syncroData.best_combination.hour_period} · ${syncroData.best_combination.direction}`
+          : "";
+    return (
+      <div className="archive-detail-page mx-auto max-w-2xl">
+        <Link href="/archive" className="text-sm text-violet-300 hover:text-white">
+          ← {t("back")}
+        </Link>
+        <h1 className="mt-4 font-['Manrope'] text-2xl font-bold text-[#d0bcff]">{title}</h1>
+        {body ? <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-[#e7e0ed]">{body}</p> : null}
+        <p className="mt-6 text-sm text-[#958ea0]">
+          This saved reading is still in your archive. The Glyph, Match, and Syncro viewers are offline.
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          className="danger mt-6 rounded-lg border border-red-400/30 px-5 py-2 text-sm text-red-300 hover:bg-red-500/10"
+        >
+          {t("delete")}
+        </button>
+      </div>
+    );
   }
 
   if (pojuVaultData) {

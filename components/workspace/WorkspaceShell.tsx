@@ -17,24 +17,12 @@ import {
   useWorkspaceAtmosPrepareOptional,
   useWorkspaceAtmosRightRailWide,
 } from "@/components/workspace/WorkspaceAtmosPrepareContext";
-import {
-  WorkspaceGlyphPrepareProvider,
-  useWorkspaceGlyphPrepareOptional,
-  useWorkspaceGlyphRightRailWide,
-} from "@/components/workspace/WorkspaceGlyphPrepareContext";
-import {
-  WorkspaceMatchPrepareProvider,
-  useWorkspaceMatchPrepareOptional,
-  useWorkspaceMatchRightRailWide,
-} from "@/components/workspace/WorkspaceMatchPrepareContext";
-import { WorkspaceMatchRightPanel } from "@/components/workspace/WorkspaceMatchRightPanel";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
 import { WorkspaceRightDocVault } from "@/components/workspace/WorkspaceRightDocVault";
 import {
   WorkspaceDocVaultProvider,
   useWorkspaceDocVaultOptional,
 } from "@/components/workspace/WorkspaceDocVaultContext";
-import { WorkspaceGlyphRightPanel } from "@/components/workspace/WorkspaceGlyphRightPanel";
 import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
 import { DocVaultIds } from "@/lib/workspace/doc-vault-index";
 import { markDocVaultRead } from "@/lib/workspace/doc-vault-unread";
@@ -51,12 +39,7 @@ import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/
 import { WorkspaceStarfieldGate } from "@/components/workspace/WorkspaceStarfieldLayer";
 import { isWorkspaceRailInteractiveTarget } from "@/components/workspace/workspace-rail-click";
 import { AtmosPanel } from "@/components/workspace/panels/AtmosPanel";
-import { GlyphPanel } from "@/components/workspace/panels/GlyphPanel";
-import { SyncroPanel } from "@/components/workspace/panels/SyncroPanel";
-import {
-  MatchPanel,
-  PojuPanel,
-} from "@/components/workspace/panels/EnginePanels";
+import { PojuPanel } from "@/components/workspace/panels/EnginePanels";
 import { ProfilePanel } from "@/components/workspace/panels/ProfilePanel";
 import { type WorkspaceProductId } from "@/components/workspace/use-workspace-product-history";
 import { markWorkspaceEntered, parseWorkspaceTab, type WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
@@ -75,14 +58,8 @@ type Props = {
   initialTab: WorkspaceTab;
 };
 
-function isEngineProduct(tab: WorkspaceTab): tab is WorkspaceProductId {
-  return (
-    tab === "atmos" ||
-    tab === "poju" ||
-    tab === "match" ||
-    tab === "syncro" ||
-    tab === "glyph"
-  );
+function isEngineProduct(tab: WorkspaceTab): tab is "atmos" | "poju" {
+  return tab === "atmos" || tab === "poju";
 }
 
 function RightDrawerContext({
@@ -94,28 +71,10 @@ function RightDrawerContext({
   archiveId: string | null;
   onOpenArchive: (product: WorkspaceProductId, id: string) => void;
 }) {
-  // Cross-product document vault is the persistent right-rail content.
-  // Match/Atmos/Glyph live generate UIs remain available when those tabs need them.
-  if (tab === "match") {
-    return (
-      <>
-        <WorkspaceMatchRightPanel />
-        <WorkspaceRightDocVault />
-      </>
-    );
-  }
   if (tab === "atmos") {
     return (
       <>
         <WorkspaceAtmosRightPanel />
-        <WorkspaceRightDocVault />
-      </>
-    );
-  }
-  if (tab === "glyph") {
-    return (
-      <>
-        <WorkspaceGlyphRightPanel />
         <WorkspaceRightDocVault />
       </>
     );
@@ -136,7 +95,7 @@ function PojuRightRailGate({
 
   useEffect(() => {
     if (tab !== "poju") {
-      if (tab !== "match" && tab !== "atmos" && tab !== "glyph") {
+      if (tab !== "atmos") {
         try {
           setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
         } catch {
@@ -145,51 +104,6 @@ function PojuRightRailGate({
       }
       return;
     }
-    if (phase === "idle" || phase === "handoff") {
-      setRightOpen(false);
-    }
-  }, [tab, phase, setRightOpen]);
-
-  return null;
-}
-
-/** Opens Match right rail after warmup matrices are ready. Never resets on tab leave. */
-function MatchRightRailGate({
-  tab,
-  setRightOpen,
-}: {
-  tab: WorkspaceTab;
-  setRightOpen: (open: boolean) => void;
-}) {
-  const match = useWorkspaceMatchPrepareOptional();
-  const phase = match?.phase ?? "entry";
-  const hasMatrices = Boolean(match?.matrixPayloadA || match?.matrixPayloadB);
-
-  useEffect(() => {
-    if (tab !== "match") return;
-    if (phase === "entry" || phase === "warmup" || !hasMatrices) {
-      setRightOpen(false);
-      return;
-    }
-    setRightOpen(true);
-  }, [tab, phase, hasMatrices, setRightOpen]);
-
-  return null;
-}
-
-/** Keeps Glyph right rail closed while birth entry is idle. */
-function GlyphRightRailGate({
-  tab,
-  setRightOpen,
-}: {
-  tab: WorkspaceTab;
-  setRightOpen: (open: boolean) => void;
-}) {
-  const prepare = useWorkspaceGlyphPrepareOptional();
-  const phase = prepare?.phase ?? "idle";
-
-  useEffect(() => {
-    if (tab !== "glyph") return;
     if (phase === "idle" || phase === "handoff") {
       setRightOpen(false);
     }
@@ -321,10 +235,8 @@ function WorkspaceShellSurface({
   children: ReactNode;
 }) {
   const pojuWide = useWorkspaceRightRailWide();
-  const matchWide = useWorkspaceMatchRightRailWide();
   const atmosWide = useWorkspaceAtmosRightRailWide();
-  const glyphWide = useWorkspaceGlyphRightRailWide();
-  const rightWide = pojuWide || matchWide || atmosWide || glyphWide;
+  const rightWide = pojuWide || atmosWide;
   return (
     <div
       className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
@@ -352,10 +264,8 @@ function WorkspaceRightDrawerHost({
   onOpenArchive: (product: WorkspaceProductId, id: string) => void;
 }) {
   const pojuWide = useWorkspaceRightRailWide();
-  const matchWide = useWorkspaceMatchRightRailWide();
   const atmosWide = useWorkspaceAtmosRightRailWide();
-  const glyphWide = useWorkspaceGlyphRightRailWide();
-  const rightWide = pojuWide || matchWide || atmosWide || glyphWide;
+  const rightWide = pojuWide || atmosWide;
   return (
     <WorkspaceRightDrawer open={rightOpen} wide={rightWide} onOpen={onOpen} onClose={onClose}>
       <RightDrawerContext tab={tab} archiveId={archiveId} onOpenArchive={onOpenArchive} />
@@ -530,21 +440,6 @@ function PojuSessionPersistence({
   return null;
 }
 
-function MatchPrepareResetBinder({
-  resetRef,
-}: {
-  resetRef: { current: (() => void) | null };
-}) {
-  const match = useWorkspaceMatchPrepareOptional();
-  useEffect(() => {
-    resetRef.current = match?.resetMatch ?? null;
-    return () => {
-      resetRef.current = null;
-    };
-  }, [match, match?.resetMatch, resetRef]);
-  return null;
-}
-
 function AtmosPrepareResetBinder({
   resetRef,
 }: {
@@ -582,7 +477,6 @@ export function WorkspaceShell({ initialTab }: Props) {
   const [rightOpen, setRightOpen] = useState(false);
   const pojuPrepareResetRef = useRef<(() => void) | null>(null);
   const pojuResumeSessionRef = useRef<((sessionId: string) => Promise<boolean>) | null>(null);
-  const matchPrepareResetRef = useRef<(() => void) | null>(null);
   const atmosPrepareResetRef = useRef<(() => void) | null>(null);
   /** Live product tab — prefer over lagging useSearchParams after replaceState. */
   const tabRef = useRef(tab);
@@ -765,9 +659,6 @@ export function WorkspaceShell({ initialTab }: Props) {
       }
       setTab(next);
       setArchiveId(null);
-      if (next === "match") {
-        matchPrepareResetRef.current?.();
-      }
       if (next === "atmos") {
         atmosPrepareResetRef.current?.();
       }
@@ -785,8 +676,14 @@ export function WorkspaceShell({ initialTab }: Props) {
         void pojuResumeSessionRef.current?.(id);
         return;
       }
-      syncUrl(product, id, null);
-      setTab(product);
+      if (product !== "atmos") {
+        syncUrl("poju", null, null);
+        setTab("poju");
+        setArchiveId(null);
+        return;
+      }
+      syncUrl("atmos", id, null);
+      setTab("atmos");
       setArchiveId(id);
     },
     [syncUrl],
@@ -807,12 +704,6 @@ export function WorkspaceShell({ initialTab }: Props) {
         return <AtmosPanel />;
       case "poju":
         return <PojuPanel onOpenArchive={(id) => selectArchive("poju", id)} />;
-      case "match":
-        return <MatchPanel onOpenArchive={(id) => selectArchive("match", id)} />;
-      case "syncro":
-        return <SyncroPanel />;
-      case "glyph":
-        return <GlyphPanel />;
       case "profile":
         return <ProfilePanel />;
       default:
@@ -825,8 +716,6 @@ export function WorkspaceShell({ initialTab }: Props) {
       <WorkspaceDocVaultProvider>
       <WorkspacePojuPrepareProvider openRight={openRight}>
         <WorkspaceAtmosPrepareProvider openRight={openRight}>
-        <WorkspaceMatchPrepareProvider openRight={openRight}>
-        <WorkspaceGlyphPrepareProvider openRight={openRight}>
         <DocVaultOpenBinder
           selectArchive={selectArchive}
           setTab={setTab}
@@ -841,12 +730,9 @@ export function WorkspaceShell({ initialTab }: Props) {
           sessionFromUrl={sessionFromUrl}
           syncPojuSessionUrl={syncPojuSessionUrl}
         />
-        <MatchPrepareResetBinder resetRef={matchPrepareResetRef} />
         <AtmosPrepareResetBinder resetRef={atmosPrepareResetRef} />
         <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <AtmosRightRailGate tab={tab} setRightOpen={setRightOpen} />
-        <MatchRightRailGate tab={tab} setRightOpen={setRightOpen} />
-        <GlyphRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
         <WorkspaceStarfieldGate />
         <div className="workspace-shell__sky" aria-hidden />
@@ -933,8 +819,6 @@ export function WorkspaceShell({ initialTab }: Props) {
           onSelectProfile={() => selectTab("profile")}
         />
         </WorkspaceShellSurface>
-        </WorkspaceGlyphPrepareProvider>
-        </WorkspaceMatchPrepareProvider>
         </WorkspaceAtmosPrepareProvider>
       </WorkspacePojuPrepareProvider>
       </WorkspaceDocVaultProvider>

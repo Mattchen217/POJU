@@ -2,14 +2,16 @@ import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
-import type { GlyphReadingContent } from "@/lib/llm/services/glyph-reading-service";
-import type { MatchSession } from "@/lib/match/types";
+import type {
+  GlyphReadingContent,
+  MatchSession,
+  SyncroSession,
+} from "@/lib/archive/legacy-product-types";
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
-import type { SyncroSession } from "@/lib/syncro/types";
 import type { SignData } from "@/types/oracle";
 
-function trimText(value: string, max: number): string {
-  const t = value.trim();
+function trimText(value: string | undefined | null, max: number): string {
+  const t = (value ?? "").trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max - 1)}…`;
 }

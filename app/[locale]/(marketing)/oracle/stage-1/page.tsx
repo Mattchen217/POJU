@@ -525,7 +525,7 @@ function OracleStageOneContent() {
         <span className="text-[11px] font-semibold tracking-wide">{shell === "dark" ? "Light" : "Dark"}</span>
       </button>
       <Link
-        href="/glyph"
+        href="/poju"
         className={skin.close}
         aria-label="关闭并返回 Glyph 介绍页"
       >
@@ -728,7 +728,7 @@ function OracleStageOneContent() {
       ) : null}
 
       <Link
-        href="/glyph"
+        href="/poju"
         className={skin.backLink}
       >
         ← Back to Glyph

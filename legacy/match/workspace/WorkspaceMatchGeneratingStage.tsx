@@ -13,7 +13,7 @@ import {
   hasBaseAnalysisPayload,
   normalizeBaseAnalysisInput,
 } from "@/lib/llm/prompts/base-analysis-context";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 import { createMatchSession, loadMatchSession } from "@/lib/match/match-session";
 import {
   clearMatchPreviewSession,
@@ -35,7 +35,7 @@ import { recordUsage } from "@/lib/syncro/device-usage";
 type GenPhase = "init" | "base-a" | "base-b" | "analyzing" | "error";
 
 /**
- * Stage 4 â€” center uses original Match wait (matchdongxiao);
+ * Stage 4 â€?center uses original Match wait (matchdongxiao);
  * A/B base reports release to the rail after stream (or forced 10s for cached).
  */
 export function WorkspaceMatchGeneratingStage() {
@@ -94,7 +94,7 @@ export function WorkspaceMatchGeneratingStage() {
     [setReportAStatus, setReportAText, setReportBStatus, setReportBText],
   );
 
-  /** Cached Layer-1: hold the rail anim â‰¥ 10s then mark ready (no report paper). */
+  /** Cached Layer-1: hold the rail anim â‰?10s then mark ready (no report paper). */
   const releaseRailReady = useCallback(
     async (slot: "a" | "b", wasCached: boolean) => {
       if (wasCached) {

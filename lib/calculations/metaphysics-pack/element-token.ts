@@ -1,6 +1,6 @@
 import type { FiveElement } from "@/lib/calculations/types";
-import { elementTokenToWuXing } from "@/lib/syncro/build-syncro-bazi-context";
-import type { WuXing } from "@/lib/syncro/wuxing-utils";
+import { elementTokenToWuXing } from "@/lib/calendar/element-token";
+import type { WuXing } from "@/lib/calendar/wuxing-utils";
 
 const WUXING_TO_FIVE: Record<WuXing, FiveElement> = {
   木: "wood",

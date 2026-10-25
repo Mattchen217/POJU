@@ -16,7 +16,7 @@ import {
   recommendationsTitleCountMismatch,
   recommendationsTitleHasHardcodedCount,
 } from "@/lib/match/recommendations-title-guard";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 import type { UserProfile } from "@/lib/profile/types";
 
 const ROOT = resolve(__dirname, "..");
@@ -45,7 +45,7 @@ function loadEnvLocal(): void {
 
 function assert(name: string, ok: boolean, detail = ""): void {
   const mark = ok ? "PASS" : "FAIL";
-  console.log(`  [${mark}] ${name}${detail ? ` — ${detail}` : ""}`);
+  console.log(`  [${mark}] ${name}${detail ? ` �?${detail}` : ""}`);
   if (!ok) failures.push(name);
 }
 
@@ -63,24 +63,24 @@ const profileA = {
     id: "rec-title-a",
     birth: { year: 1985, month: 12, day: 15, hour_period: "yin", gender: "M", timezone: "Asia/Shanghai" },
     bazi: { yearPillar: "丁巳", monthPillar: "癸丑", dayPillar: "乙子", hourPillar: "戊寅" },
-    diagnosis: { dayMaster: "乙木", favorableElements: ["水"], challengingElements: [], patternSummary: "test" },
+    diagnosis: { dayMaster: "乙木", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
   }),
   base_analysis: {
     content: {
       bazi: {
-        year_stem: "丁",
-        year_branch: "巳",
-        month_stem: "癸",
-        month_branch: "丑",
-        day_stem: "乙",
-        day_branch: "子",
-        hour_stem: "戊",
-        hour_branch: "寅",
+        year_stem: "�?,
+        year_branch: "�?,
+        month_stem: "�?,
+        month_branch: "�?,
+        day_stem: "�?,
+        day_branch: "�?,
+        hour_stem: "�?,
+        hour_branch: "�?,
       },
       gender: "M" as const,
-      yong_shen: { primary_element: "水" as const },
-      wuxing_distribution: { 木: 2, 火: 1, 土: 2, 金: 0, 水: 2 },
-      da_yun: { current: { stem: "辛", branch: "亥", is_favorable: true } },
+      yong_shen: { primary_element: "�? as const },
+      wuxing_distribution: { �? 2, �? 1, �? 2, �? 0, �? 2 },
+      da_yun: { current: { stem: "�?, branch: "�?, is_favorable: true } },
     },
   },
 };
@@ -90,24 +90,24 @@ const profileB = {
     id: "rec-title-b",
     birth: { year: 1988, month: 2, day: 22, hour_period: "wei", gender: "F", timezone: "Asia/Shanghai" },
     bazi: { yearPillar: "戊午", monthPillar: "甲寅", dayPillar: "庚丑", hourPillar: "丁亥" },
-    diagnosis: { dayMaster: "庚金", favorableElements: ["木"], challengingElements: [], patternSummary: "test" },
+    diagnosis: { dayMaster: "庚金", favorableElements: ["�?], challengingElements: [], patternSummary: "test" },
   }),
   base_analysis: {
     content: {
       bazi: {
-        year_stem: "戊",
-        year_branch: "午",
-        month_stem: "甲",
-        month_branch: "寅",
-        day_stem: "庚",
-        day_branch: "丑",
-        hour_stem: "丁",
-        hour_branch: "亥",
+        year_stem: "�?,
+        year_branch: "�?,
+        month_stem: "�?,
+        month_branch: "�?,
+        day_stem: "�?,
+        day_branch: "�?,
+        hour_stem: "�?,
+        hour_branch: "�?,
       },
       gender: "F" as const,
-      yong_shen: { primary_element: "木" as const },
-      wuxing_distribution: { 木: 2, 火: 2, 土: 2, 金: 1, 水: 1 },
-      da_yun: { current: { stem: "丁", branch: "巳", is_favorable: true } },
+      yong_shen: { primary_element: "�? as const },
+      wuxing_distribution: { �? 2, �? 2, �? 2, �? 1, �? 1 },
+      da_yun: { current: { stem: "�?, branch: "�?, is_favorable: true } },
     },
   },
 };
@@ -132,7 +132,7 @@ function runUnitTests(): void {
 function runPromptChecks(): void {
   console.log("\n=== prompt rule presence ===\n");
 
-  const ruleSnippet = "recommendations.title 禁止写死步骤数";
+  const ruleSnippet = "recommendations.title 禁止写死步骤�?;
   assert("match-base branding rule", MATCH_OUTPUT_BRANDING.includes(ruleSnippet));
   assert("match-base actions.length rule", MATCH_OUTPUT_BRANDING.includes("actions 数组实际长度"));
 
@@ -151,7 +151,7 @@ function runPromptChecks(): void {
     locale: "en",
   });
   assert("deepseek recommendations section rule", system.includes(ruleSnippet));
-  assert("deepseek key rules #9", system.includes("若提及数量必须 === actions.length"));
+  assert("deepseek key rules #9", system.includes("若提及数量必�?=== actions.length"));
 }
 
 async function runLiveCheck(): Promise<void> {
@@ -159,7 +159,7 @@ async function runLiveCheck(): Promise<void> {
   loadEnvLocal();
 
   if (!isOpenRouterConfigured()) {
-    console.log("  SKIP live — OPENROUTER_API_KEY not set");
+    console.log("  SKIP live �?OPENROUTER_API_KEY not set");
     return;
   }
 

@@ -1,14 +1,15 @@
 /**
  * Phase-4 stage handoff dispatcher.
  *
- * Vercel returns HTTP 508 INFINITE_LOOP_DETECTED when a /continue invoke
- * self-fetches /continue (mark→mark hops especially). QStash publishes from
- * outside the deployment so the next hop is a fresh root request — not a
- * nested self-call. Direct fetch remains for local/dev and as a fallback.
+ * Preference: Inngest (when INNGEST_EVENT_KEY is set) → QStash → direct fetch.
+ * Vercel returns HTTP 508 when a /continue invoke self-fetches /continue;
+ * Inngest/QStash publish from outside so the next hop is a fresh root request.
  */
 
 import { hasLiveDeliveryContinueForStage } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { deliveryContinueFetchAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { inngest } from "@/lib/inngest/client";
+import type { DeliveryPipelineStage } from "@/lib/poju/final-delivery-stage-runner";
 
 export type ContinuePostResult =
   | "accepted"
@@ -33,12 +34,55 @@ function qstashToken(): string | null {
   return t || null;
 }
 
-/** Prefer QStash on Vercel (or when explicitly forced) to avoid 508 self-fetch loops. */
+/** Prefer Inngest when event key is present (unless explicitly disabled). */
+export function shouldDispatchContinueViaInngest(): boolean {
+  if (!process.env.INNGEST_EVENT_KEY?.trim()) return false;
+  if (process.env.DELIVERY_CONTINUE_VIA_INNGEST?.trim() === "0") return false;
+  if (process.env.DELIVERY_CONTINUE_VIA_INNGEST?.trim() === "1") return true;
+  return true;
+}
+
+/** Prefer QStash on Vercel when Inngest is off (or when explicitly forced). */
 export function shouldDispatchContinueViaQStash(): boolean {
+  if (shouldDispatchContinueViaInngest()) return false;
   if (!qstashToken()) return false;
   if (process.env.DELIVERY_CONTINUE_VIA_QSTASH?.trim() === "1") return true;
   if (process.env.DELIVERY_CONTINUE_VIA_QSTASH?.trim() === "0") return false;
   return process.env.VERCEL === "1";
+}
+
+export async function publishContinueViaInngest(
+  job_id: string,
+  stage: string,
+): Promise<"published" | "failed"> {
+  try {
+    await inngest.send({
+      name: "poju/final-delivery.continue",
+      data: { job_id, stage: stage as DeliveryPipelineStage },
+    });
+    console.info("[final-delivery] Inngest continue published", { job_id, stage });
+    return "published";
+  } catch (e) {
+    console.warn("[final-delivery] Inngest continue publish failed", { job_id, stage, e });
+    return "failed";
+  }
+}
+
+export async function publishTaskViaInngest(
+  job_id: string,
+  task_id: string,
+): Promise<"published" | "failed"> {
+  try {
+    await inngest.send({
+      name: "poju/final-delivery.task",
+      data: { job_id, task_id },
+    });
+    console.info("[final-delivery] Inngest task published", { job_id, task_id });
+    return "published";
+  } catch (e) {
+    console.warn("[final-delivery] Inngest task publish failed", { job_id, task_id, e });
+    return "failed";
+  }
 }
 
 async function waitForContinueAck(
@@ -173,15 +217,31 @@ export async function postDeliveryContinueDirect(
 }
 
 /**
- * Schedule the next /continue hop.
- * On Vercel with QSTASH_TOKEN: always QStash (avoids 508).
- * Otherwise direct fetch; on 508, fall back to QStash when token exists.
+ * Schedule the next continue hop.
+ * Prefer Inngest → QStash → direct fetch (508 → QStash/Inngest if available).
  */
 export async function dispatchDeliveryContinue(
   job_id: string,
   stage: string,
   secret: string,
 ): Promise<ContinuePostResult> {
+  if (shouldDispatchContinueViaInngest()) {
+    const published = await publishContinueViaInngest(job_id, stage);
+    if (published === "published") {
+      // Inngest is async; ACK appears when the function acquires the lease.
+      if (await waitForContinueAck(job_id, stage, 45_000)) return "accepted";
+      console.warn("[final-delivery] Inngest published; ACK slow — assuming accepted", {
+        job_id,
+        stage,
+      });
+      return "accepted";
+    }
+    console.warn("[final-delivery] Inngest continue failed — falling through", {
+      job_id,
+      stage,
+    });
+  }
+
   const origin = continueOrigin();
   if (!origin) {
     console.error("[final-delivery] continue origin missing", { job_id, stage });
@@ -191,10 +251,7 @@ export async function dispatchDeliveryContinue(
   const viaQStash = async (): Promise<ContinuePostResult> => {
     const published = await publishContinueViaQStash(job_id, stage, secret, origin);
     if (published !== "published") return "rejected";
-    // QStash is async — ACK/lease proves the destination accepted.
     if (await waitForContinueAck(job_id, stage, 45_000)) return "accepted";
-    // Published to QStash — treat as accepted even if ACK is slow; status stale
-    // + heartbeat owns failure if the hop never starts. Avoid false STOP.
     console.warn("[final-delivery] QStash published; ACK slow — assuming accepted", {
       job_id,
       stage,
@@ -208,13 +265,17 @@ export async function dispatchDeliveryContinue(
 
   const direct = await postDeliveryContinueDirect(job_id, stage, secret, origin);
   if (direct === "loop_blocked") {
+    if (shouldDispatchContinueViaInngest()) {
+      const pub = await publishContinueViaInngest(job_id, stage);
+      if (pub === "published") return "accepted";
+    }
     if (qstashToken()) {
       console.info("[final-delivery] 508 → falling back to QStash", { job_id, stage });
       return viaQStash();
     }
     console.error(
       "[final-delivery] continue blocked by Vercel 508 (INFINITE_LOOP_DETECTED). " +
-        "Set QSTASH_TOKEN so stage hops publish via Upstash QStash instead of self-fetch.",
+        "Set INNGEST_EVENT_KEY (preferred) or QSTASH_TOKEN so stage hops are not self-fetch.",
       { job_id, stage },
     );
     return "loop_blocked";
@@ -223,14 +284,18 @@ export async function dispatchDeliveryContinue(
 }
 
 /**
- * Publish one atomic delivery task worker (`/final-delivery/task`).
- * Prefer QStash on Vercel; direct fetch for local/dev.
+ * Publish one atomic delivery task worker.
+ * Prefer Inngest → QStash → direct fetch for local/dev.
  */
 export async function publishDeliveryTask(
   job_id: string,
   task_id: string,
   secret: string,
 ): Promise<"published" | "failed"> {
+  if (shouldDispatchContinueViaInngest()) {
+    return publishTaskViaInngest(job_id, task_id);
+  }
+
   const origin = continueOrigin();
   if (!origin) {
     console.error("[final-delivery] task origin missing", { job_id, task_id });
@@ -295,9 +360,8 @@ export async function publishDeliveryTask(
 }
 
 /**
- * Delayed /continue for dispatch safety sweep (dead-worker recovery).
- * Does not bump hop by itself — caller must not use scheduleDeliveryStageContinue's hop path.
- * Uses QStash `Upstash-Delay` when available; otherwise no-op on local (workers drive).
+ * Delayed continue for dispatch safety sweep (dead-worker recovery).
+ * Prefer Inngest future `ts`; else QStash Upstash-Delay; else skip locally.
  */
 export async function publishDeliveryContinueDelayed(
   job_id: string,
@@ -305,17 +369,36 @@ export async function publishDeliveryContinueDelayed(
   secret: string,
   delaySec: number,
 ): Promise<"published" | "failed" | "skipped"> {
+  const delay = Math.max(15, Math.min(600, Math.floor(delaySec)));
+
+  if (shouldDispatchContinueViaInngest()) {
+    try {
+      await inngest.send({
+        name: "poju/final-delivery.continue",
+        data: { job_id, stage: stage as DeliveryPipelineStage },
+        ts: Date.now() + delay * 1000,
+      });
+      console.info("[final-delivery] delayed Inngest continue published", {
+        job_id,
+        stage,
+        delay_s: delay,
+      });
+      return "published";
+    } catch (e) {
+      console.warn("[final-delivery] delayed Inngest continue failed", { job_id, stage, e });
+      return "failed";
+    }
+  }
+
   const origin = continueOrigin();
   if (!origin) return "failed";
   const token = qstashToken();
   if (!token || !shouldDispatchContinueViaQStash()) {
-    // Local/dev: workers republish next tasks directly; no delayed continue needed.
     return "skipped";
   }
 
   const destination = `${origin}/api/poju/final-delivery/continue`;
   const publishUrl = `https://qstash.upstash.io/v2/publish/${destination}`;
-  const delay = Math.max(15, Math.min(600, Math.floor(delaySec)));
 
   try {
     const res = await fetch(publishUrl, {

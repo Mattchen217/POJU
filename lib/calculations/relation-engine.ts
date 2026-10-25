@@ -15,13 +15,13 @@ import {
   isLiuHe,
   isXing,
   SAN_HE,
-} from "@/lib/match/data/branch-relations";
+} from "@/lib/calendar/data/branch-relations";
 import {
   calculateTenGod,
   type EarthlyBranch,
   type HeavenlyStem,
   type TenGod,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 
 export type RelationSource = "natal" | "dayun" | "liunian" | "liuyue" | "liuri" | "cross";
 export type RelationKind =

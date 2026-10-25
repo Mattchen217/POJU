@@ -8,7 +8,7 @@ import { inferPatternHeuristic } from "@/lib/calculations/pattern-heuristic";
 import {
   calculateTenGod,
   type HeavenlyStem,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 
 const STEM_CHARS = new Set("甲乙丙丁戊己庚辛壬癸");
 

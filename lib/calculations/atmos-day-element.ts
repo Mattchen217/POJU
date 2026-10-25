@@ -11,7 +11,7 @@ import {
   type HeavenlyStem,
   type TenGod,
   type WuXing,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 
 export type DayElementHelp = "helps" | "drains" | "mixed" | "neutral";
 

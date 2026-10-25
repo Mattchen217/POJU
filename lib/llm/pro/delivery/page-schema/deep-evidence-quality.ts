@@ -21,7 +21,7 @@ import {
   calculateTenGod,
   type EarthlyBranch,
   type HeavenlyStem,
-} from "@/lib/match/data/stems-branches";
+} from "@/lib/calendar/data/stems-branches";
 import {
   type CategoryTokenSets,
 } from "./anchor-category-tally";

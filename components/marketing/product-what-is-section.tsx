@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 
 import { DsBand } from "@/components/ds/primitives";
 import { ProductWhatIsCardGlow } from "@/components/marketing/product-what-is-card-glow";
-import { SyncroWhatIsLightBeam } from "@/components/marketing/syncro-what-is-light-beam";
 import pojuWhatIsBg from "@/assets/images/POJU.png";
 import glyphWhatIsBg from "@/assets/images/glyph.png";
 import syncroWhatIsBg from "@/assets/images/syncro.png";
@@ -51,7 +50,6 @@ export function ProductWhatIsSection({ product }: { product: ProductWhatIsId }) 
               <span className="product-what-is__vignette" aria-hidden />
             </div>
             {glow ? <ProductWhatIsCardGlow originY={glow.originY} /> : null}
-            {product === "syncro" ? <SyncroWhatIsLightBeam /> : null}
             {product === "poju" ? (
               <span className="product-what-is__orbit" aria-hidden>
                 <span className="product-what-is__orbit-dot" />

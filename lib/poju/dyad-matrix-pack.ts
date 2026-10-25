@@ -2,8 +2,8 @@
  * Locked ResonanceMatrix closed-set for Stage2+ / delivery (dyad path).
  */
 
-import type { ResonanceMatrix } from "@/lib/match/calculate-compatibility";
-import { calculateCompatibilityMatrix } from "@/lib/match/calculate-compatibility";
+import type { ResonanceMatrix } from "@/lib/compatibility/calculate-compatibility";
+import { calculateCompatibilityMatrix } from "@/lib/compatibility/calculate-compatibility";
 
 export type DyadMatrixPack = {
   schema_version: 1;
