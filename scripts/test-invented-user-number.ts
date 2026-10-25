@@ -126,7 +126,7 @@ assert.ok(en.includes("Invented numbers ban (#11"));
 
 // --- body prompt mounts #11 ---
 const { system, user } = buildV3BodyPrompt({
-  key: "direct_answer",
+  key: "decision_brief",
   locale: "zh",
   core_conclusion: "宜守硬门槛",
   judgment_lock: "path=primary",
@@ -142,13 +142,13 @@ assert.ok(
 );
 
 // --- polish avoidance ---
-const avoid = buildBodyGateAvoidanceBlockForPolish("direct_answer");
+const avoid = buildBodyGateAvoidanceBlockForPolish("decision_brief");
 assert.ok(avoid.includes(P1_INVENTED_NUMBER_RULE_ID) || avoid.includes("#11"));
 assert.ok(avoid.includes(INVENTED_USER_NUMBER_RULE_ID) || avoid.includes("#11"));
 
 // --- gate fails invented numbers on P1 (substance_only too) ---
 const inventPage = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "先缓冲",
   page_subtitle: "观察再定",
   core_judgment: "先留出三个月观察期，再谈全职。",
@@ -162,7 +162,7 @@ const inventPage = {
 } as unknown as DeliveryPageData;
 
 const failSub = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: inventPage,
   reality_blob: "对方已拒兼职；必须全职。未谈年薪数字。",
   surface: "substance_only",
@@ -171,7 +171,7 @@ assert.ok(failSub && failSub.passed === false);
 assert.equal(failSub!.failed_rule, P1_INVENTED_NUMBER_RULE_ID);
 
 const failFull = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: inventPage,
   reality_blob: "",
   surface: "full",
@@ -181,7 +181,7 @@ assert.equal(failFull!.failed_rule, P1_INVENTED_NUMBER_RULE_ID);
 
 // --- gate passes when reality lists the amounts ---
 const allowedPage = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "半年缓冲内守门槛",
   page_subtitle: "主全职 vs 辅顾问",
   core_judgment: "按你说的半年缓冲守全职硬门槛。",
@@ -200,7 +200,7 @@ const allowedPage = {
 } as unknown as DeliveryPageData;
 
 const pass = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: allowedPage,
   reality_blob: "积蓄：半年缓冲；对方已拒兼职；必须全职。",
   surface: "substance_only",
@@ -209,7 +209,7 @@ assert.equal(pass, null);
 
 // P3 money invent still hard-fails via shared #11 rule
 const p3Invent = {
-  page: "science_action",
+  page: "execution_guidance",
   page_title: "打法",
   page_subtitle: "主辅",
   primary_toolkit: {
@@ -226,7 +226,7 @@ const p3Invent = {
   backup_toolkit: { title: "辅", angles: [] },
 } as unknown as DeliveryPageData;
 const p3Fail = gateBodyCategoryB({
-  key: "science_action",
+  key: "execution_guidance",
   page_schema: p3Invent,
   reality_blob: "对方已拒兼职",
   surface: "substance_only",

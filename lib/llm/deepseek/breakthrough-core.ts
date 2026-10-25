@@ -316,38 +316,40 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
 
 每条议程须能答:「对齐了这条,会怎样帮助解决他的问题 / 靠近期望?」答不上=删。
 
-# 六页备料 vs 六页定稿（逻辑 · 必懂）
-第2段 Call A + 第3段 collecting + 第4段 synthesis 共同服务六页交付;**不是**现在写报告。
-| 页 | 谁定稿 | 本步(Call B)干什么 |
-|---|---|---|
-| P1 直答 | synthesis | 不对 P1 生成 agenda;只收能让 synthesis Responsible 收敛主辅的现实 |
-| P2 论证 | 交付 fill | multi_dim + energy_structure 已由 Call A 产出;Call B 不重复真算 |
-| P3 科学药方 | synthesis → 交付 | modern_action_frames(hypothesis) 的 needs_validation → agenda(serves_page=science_action) |
-| P4 东方药方 | 交付 | energy_retune_frame 的 needs_validation → agenda(serves_page=metaphysics_action 或 risk_guard) |
-| P5 熔断 | 交付 | path_costs/负向 self_check/行动刹车现实 → agenda(serves_page=risk_guard) |
-| P6 收束 | 交付 | rhythm/近7日可投入 → agenda(serves_page=signals_close) |
+# 九模块备料 vs 议程条数（逻辑 · 必懂 · 硬）
+第2段 Call A + 第3段 collecting + 第4段 synthesis 共同服务 **v1 九模块决策报告**;**不是**现在写报告。
+**九模块 ≠ 九问**：报告有 9 个内容模块,议程只要 **5–6 项**(上限 6)。【禁止】「一模块一条 agenda」凑数——用户会觉得啰嗦。
+
+| 模块 id（主落地 serves_page） | Call B 干什么 |
+|---|---|
+| decision_brief | **禁止**生成 agenda |
+| situation_analysis / personal_decision_patterns / bottleneck_analysis | 合并 needs_validation 进锐问;主落其一即可 |
+| strategic_options / recommended_strategy / execution_guidance | modern_action 等假设能否落地 → 主落其一(优先 execution_guidance 或 recommended_strategy) |
+| self_regulation | energy_retune 等 → 可主落本模块;可与验证类合并 |
+| validation_review | 风险/节奏/近阶约束 → 主落本模块 |
 **主辅 / action_plan 只 synthesis 产出**; Call B 【禁止】问「你选主还是辅」「最终定哪条」。
 
-Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthesis 能收敛、交付六页能扎根——不是为填页而凑问。
+Call B 议程 = 把骨架 needs_validation **合并倒成**最少对齐项,让 synthesis 能收敛、九模块能扎根——不是为填满九模块而凑问。
 
-# needs_validation 全覆盖（硬）
+# needs_validation 覆盖（硬 · 可合并）
 扫描 key_crossroads、每条 modern_action_frame、energy_retune_frame 的 needs_validation:
-- 每一块至少对应 **1 条** investigation_agenda(相近可合并,但不可整块遗漏)。
-- key_crossroads.needs_validation 若含**多个独立分句/问句**,每一片须各有 agenda 落点(可合并近义,不可整片跳过)。
-- modern_action 有 N 条假设 → **须 N 条** agenda 分别锚不同假设(frame_kind=modern_action + supports 含该假设方向关键词);禁止多条 agenda 挤占同一假设槽位。
-- energy_retune 有 needs_validation → **必须 1 条** frame_kind=energy_retune 的 agenda(勿并入「时间精力」就省略;时间可另开 signals_close)。
+- 每一块须有 agenda **落点**(可多块合并进同一条 agenda 的 label/collection_goal,不可整块遗漏)。
+- key_crossroads.needs_validation 多独立分句 → 可合并近义;不可整片跳过。
+- modern_action 有 N 条假设 → 优先各有落点;若 N 大导致超 6 条,合并近义假设到同一 agenda(supports 写清合并了哪些方向关键词)。
+- energy_retune 有 needs_validation → 须有落点(可并入 self_regulation 或 validation_review 的一条,勿用「时间精力」偷换掉调频对齐)。
 
-# 议程数量（硬 · 宁少而锐）
-- **目标 4–5 项**;仅当二元案+多假设确实无法合并时才用满 6 项。
-- 禁止为凑 serves_page 或凑维度而堆重复问法;合并近义后再落笔。
+# 议程数量（硬 · 宁少而锐 · 用户耐心）
+- **目标 5–6 项**;默认 **5**;仅二元案+多假设确实无法合并时才用满 **6**。
+- 【禁止】7 项及以上;【禁止】为凑九模块覆盖或凑 serves_page 拆重复问法。
 - 超出 6 项由代码裁剪——堆项不会加分,只会丢项。
 
-# serves_page 分布（硬 · 备六页料）
-3–6 项 agenda 须覆盖:
-- ≥1 项 serves_page=science_action(验证 modern_action 假设能否落地)
-- 案含关系/感情/合作/家人反对: ≥1 项 serves_page=risk_guard 或 metaphysics_action
-- 案含时间/节奏/近阶约束: ≥1 项 serves_page=signals_close,或 collection_goal 明确近7日可投入节奏
-禁止全部为 science_action;禁止 serves_page 指向 direct_answer / foundation(诊断页不靠议程凑)。
+# serves_page 分布（硬 · 在 5–6 条内做分布,不加条）
+闭集(九模块 id):
+situation_analysis | personal_decision_patterns | bottleneck_analysis | strategic_options | recommended_strategy | execution_guidance | self_regulation | validation_review
+- ≥1 项主落 execution_guidance **或** recommended_strategy **或** strategic_options(可执行/路径相关现实)
+- 案含关系/感情/合作/家人反对: ≥1 项主落 validation_review **或** self_regulation(可把双方底线写进同一条 collection_goal)
+- 案含时间/节奏/近阶约束: 写入某条 collection_goal,或主落 validation_review
+禁止全部主落同一模块;【禁止】serves_page=decision_brief / appendix / direct_answer / foundation(旧六页诊断 id 勿用)。
 
 # 事实源(必须同时用 · 勿另起炉灶真算)
 1. 第1段理解门(问题/情况/期望)— 解题靶心。
@@ -357,7 +359,7 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
 不要重写分析、不要复述命盘、不要重新真算。
 
 # 产出
-1. investigation_agenda（**优先 4–5 项**,上限 6;宁少而锐）
+1. investigation_agenda（**目标 5–6 项**,默认 5,上限 6;宁少而锐;禁止为九模块凑九问）
 2. first_question（一条给用户看的消息）
 3. options（2–3 个字符串，帮答 first_question）
 
@@ -373,15 +375,15 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
   若 frame_kind 是 modern_action，supports 里【写清它对应哪条假设行动方向的意思】(用那条方向的关键词)——
   代码以 supports 内容锚定。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
 - **工程路由字段**(下游要用,但【不是】你提问的理由;先想清解题意义,再填):
-  - serves_page："science_action" | "metaphysics_action" | "risk_guard" | "signals_close"
-    ——这条对齐信息最终会主要支撑哪类落地内容(科学药方/东方药方/节奏/避坑)。【禁止】为诊断页(direct_answer/foundation)生成议程。
+  - serves_page：九模块 id 之一（见上表闭集）。每条只标 **一个主落地模块**;该答可同时喂相邻模块(在 collection_goal 写清)。
+    【禁止】decision_brief / appendix / 旧六页 id(direct_answer|foundation|science_action|metaphysics_action|risk_guard|signals_close)。
   - serves_path："primary" | "backup" | "both"(本段仍不定主辅,可预标供下游)。
   - role："fill"(补齐才能落地) / "calibrate"(可能改变走法判断) / "personalize"(让方案贴他的真实约束)。
   - **collection_goal（对齐验收尺 · 给第3阶段判"够没够"）**：一句话说清
     「对齐到什么程度，就够判断/够落地【解决他的问题、靠近期望】」——用解题语言,不用「够写某报告页」。
     · 【信息层目标】要拿到什么;【不是下钻指令】(禁追到与解题无关的技术/流程细节)——粒度 = 解题真正需要的【最少信息】。
     · 【要能被"用户给不出"满足】:给不出时允许"确认到'当前处于X阶段、暂无此数据'即算够"——不逼没有的答案。
-- 自检(按顺序):①对解题/期望有没有用?②对应哪个多维侧面或哪条骨架?③工程上会落到哪类落地内容? ①答不上=删。
+- 自检(按顺序):①对解题/期望有没有用?②对应哪个多维侧面或哪条骨架?③工程上主落哪个九模块? ①答不上=删。④是否在硬凑一模块一问?是=合并。
 - 优先收集能【验证/推翻】结构假设的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
 - 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role, collection_goal }。
@@ -719,8 +721,8 @@ ${dyadBlock}
 ${landingKindsHint}
 
 【任务 · Call B】
-你是 Eastern OS(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备六页原料,不定稿报告)。
-综合第1段靶心 + 全维度真算 + 骨架 needs_validation(全覆盖) → investigation_agenda(3–6项,serves_page 分布) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
+你是 Eastern OS(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备九模块原料,不定稿报告;**议程只要 5–6 问,禁止一模块一问**)。
+综合第1段靶心 + 全维度真算 + 骨架 needs_validation(可合并覆盖) → investigation_agenda(5–6项,默认5,上限6;serves_page=九模块 id) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
 
   return { system, user };
 }
@@ -1122,7 +1124,7 @@ function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | n
       frame_kind: "modern_action",
       frame_index: i + 1,
       supports: d.direction,
-      serves_page: "science_action",
+      serves_page: "execution_guidance",
       serves_path: i === 0 ? "primary" : i === 1 ? "backup" : "both",
       role: "fill",
     });
@@ -1134,7 +1136,7 @@ function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | n
       label: "待补关键信息",
       critical: false,
       status: "unexplored",
-      serves_page: "science_action",
+      serves_page: "execution_guidance",
       serves_path: "both",
       role: "fill",
     });

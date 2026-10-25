@@ -36,7 +36,7 @@ export interface AgendaItem {
   supports?: string;
   /** 用户对这一项收集到的答案(collecting 满足时写入;汇总段/交付读取)。 */
   captured_answer?: string;
-  /** L3: 这条议程服务第4段哪一页（对齐 report-blueprint 的 page id，如 "science_action"）。 */
+  /** L3: 这条议程服务第4段哪一页（对齐 report-blueprint 的 page id，如 "execution_guidance"）。 */
   serves_page?: string;
   /** L3: 服务主路径 / 辅路径 / 两者。 */
   serves_path?: AgendaServesPath;
@@ -56,10 +56,53 @@ export interface AgendaItem {
   unqualified_streak?: number;
 }
 
+/** v1 九模块议程主落地闭集（禁止 decision_brief / appendix）。 */
+export const V1_AGENDA_SERVES_PAGE_IDS = [
+  "situation_analysis",
+  "personal_decision_patterns",
+  "bottleneck_analysis",
+  "strategic_options",
+  "recommended_strategy",
+  "execution_guidance",
+  "self_regulation",
+  "validation_review",
+] as const;
+
+export type V1AgendaServesPageId = (typeof V1_AGENDA_SERVES_PAGE_IDS)[number];
+
+/** 旧六页 / 别名 → 九模块主落地。 */
+const LEGACY_SERVES_PAGE_TO_V1: Record<string, V1AgendaServesPageId> = {
+  direct_answer: "situation_analysis", // should not appear; normalize away
+  foundation: "bottleneck_analysis",
+  science_action: "execution_guidance",
+  metaphysics_action: "self_regulation",
+  risk_guard: "validation_review",
+  signals_close: "validation_review",
+  decision_brief: "situation_analysis",
+  appendix: "validation_review",
+};
+
+/**
+ * Normalize LLM / legacy serves_page to a v1 module id.
+ * Unknown strings pass through trimmed (downstream may still map via toDeliverySegmentKey).
+ */
+export function normalizeServesPage(raw: string | undefined | null): string | undefined {
+  if (!raw || typeof raw !== "string") return undefined;
+  const t = raw.trim();
+  if (!t) return undefined;
+  if ((V1_AGENDA_SERVES_PAGE_IDS as readonly string[]).includes(t)) return t;
+  const mapped = LEGACY_SERVES_PAGE_TO_V1[t];
+  if (mapped) return mapped;
+  return t;
+}
+
+/** Re-export blueprint bridge: v1 module → 现网六页出稿 key. */
+export { toDeliverySegmentKey } from "@/lib/poju/report-blueprint";
+
 /**
  * Resolve L3 page anchors from LLM JSON.
- * serves_page: explicit wins; else derive from frame_kind
- * (modern_action→science_action, energy_retune→metaphysics_action).
+ * serves_page: explicit wins (normalized to v1); else derive from frame_kind
+ * (modern_action→execution_guidance, energy_retune→self_regulation).
  */
 export function resolveAgendaPageAnchors(
   o: Record<string, unknown>,
@@ -71,11 +114,13 @@ export function resolveAgendaPageAnchors(
       : undefined;
   const derivedPage =
     frame_kind === "modern_action"
-      ? "science_action"
+      ? "execution_guidance"
       : frame_kind === "energy_retune"
-        ? "metaphysics_action"
-        : undefined;
-  const serves_page = explicitPage ?? derivedPage;
+        ? "self_regulation"
+        : frame_kind === "key_crossroads"
+          ? "bottleneck_analysis"
+          : undefined;
+  const serves_page = normalizeServesPage(explicitPage ?? derivedPage);
   const sp = o.serves_path;
   const serves_path: AgendaServesPath | undefined =
     sp === "primary" || sp === "backup" || sp === "both" ? sp : undefined;
@@ -107,7 +152,7 @@ export function parseAgendaFrameKind(raw: unknown): AgendaFrameKind | undefined 
   if (t === "action" || t === "modern_action_frame" || t.includes("action") || t.includes("行动")) {
     return "modern_action";
   }
-  if (t === "retune" || t === "energy" || t === "metaphysics_action" || t === "energy_base" || t === "direct_answer" || t.includes("retune") || t.includes("调频") || t.includes("能量") || t.includes("玄学")) {
+  if (t === "retune" || t === "energy" || t === "self_regulation" || t === "energy_base" || t === "decision_brief" || t.includes("retune") || t.includes("调频") || t.includes("能量") || t.includes("玄学")) {
     return "energy_retune";
   }
   return undefined;
@@ -359,11 +404,13 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
         : {}),
     });
   }
-  if (items.length < 3 || items.length > 6) return null;
-  if (!items.some((a) => a.critical)) {
-    items[0] = { ...items[0], critical: true };
+  // Product: target 5–6, hard cap 6. Min 3 kept for salvage / short paths.
+  if (items.length < 3) return null;
+  const capped = items.length > 6 ? items.slice(0, 6) : items;
+  if (!capped.some((a) => a.critical)) {
+    capped[0] = { ...capped[0], critical: true };
   }
-  return items;
+  return capped;
 }
 
 export function applyAgendaStatusUpdates(

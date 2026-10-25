@@ -407,12 +407,12 @@ async function executeV3(
 
   if (def.kind === "assemble") {
     const pages: DeliverySegmentKey[] = [
-      "direct_answer",
-      "foundation",
-      "science_action",
-      "metaphysics_action",
-      "risk_guard",
-      "signals_close",
+      "decision_brief",
+      "situation_analysis",
+      "execution_guidance",
+      "self_regulation",
+      "validation_risk",
+      "validation_close",
     ];
     const lines: string[] = ["# Delivery Lab v3 preview", ""];
     for (const k of pages) {
@@ -530,8 +530,8 @@ async function executeV3(
         delivery_day_key: deliveryDayKey,
         timezone,
         output_locale: companionLocale,
-        p1_page: "direct_answer",
-        p3_page: "science_action",
+        p1_page: "decision_brief",
+        p3_page: "execution_guidance",
         primary_means: brief.primary.means_excerpts.length,
         backup_means: brief.backup.means_excerpts.length,
         liuri_days: liuri_pack.length,
@@ -1075,7 +1075,7 @@ async function executeV3(
     };
     const feed = pageFeedFlags(page, "judgment", pathFeedOpts);
     let scienceMeansJudgment = "";
-    if (feed.science_means && page === "science_action") {
+    if (feed.science_means && page === "execution_guidance") {
       const { buildScienceMeansFeedBlock } = await import(
         "@/lib/llm/pro/delivery/science-means-feed"
       );
@@ -1091,7 +1091,7 @@ async function executeV3(
       scienceMeansJudgment = opts.science_means_feed?.trim() || "";
     }
     if (
-      page === "science_action" &&
+      page === "execution_guidance" &&
       feed.science_means &&
       !/【P3 科学手段候选菜单/.test(scienceMeansJudgment)
     ) {
@@ -1122,7 +1122,7 @@ async function executeV3(
     // P4 批断：Fact-pack 已含锁盘；不灌 fill 向 eastern_calc（派工多维/Q·E/处方污染）。
     // moat 用 forJudgment 薄菜单（无收集事实）。
     let metaphysicsMoatJudgment = "";
-    if (feed.metaphysics_moat && page === "metaphysics_action") {
+    if (feed.metaphysics_moat && page === "self_regulation") {
       const { buildMetaphysicsMoatFeedBlock } = await import(
         "@/lib/llm/pro/delivery/metaphysics-moat-feed"
       );
@@ -1153,7 +1153,7 @@ async function executeV3(
           ? `## 本盘 Fact-pack\n${rawFactPack.slice(0, 4_000)}`
           : "",
         // 批断不灌 fill 派工全文；锁盘已在 Fact-pack。正文步仍用 eastern_calc_slice。
-        page === "metaphysics_action" && def.kind === "content_judgment"
+        page === "self_regulation" && def.kind === "content_judgment"
           ? ""
           : feed.qimen
             ? opts.eastern_calc_slice
@@ -1398,7 +1398,7 @@ async function executeV3(
     }
     if (escapeArmedBody) setV3Escape(art, "body", false);
     let bodyPage = body.page;
-    if (page === "signals_close") {
+    if (page === "validation_close") {
       const { stampP6WatchSignals, positiveSelfCheckSeed } = await import(
         "@/lib/llm/pro/delivery/p6-watch-signals"
       );
@@ -1557,7 +1557,7 @@ async function executeV3(
 
   if (def.kind === "body_polish") {
     const isThinP6Prose = (page: DeliveryPageData | undefined): boolean => {
-      if (page !== undefined && page.page !== "signals_close") return false;
+      if (page !== undefined && page.page !== "validation_close") return false;
       const p = page as
         | {
             identity_before?: string;
@@ -1580,7 +1580,7 @@ async function executeV3(
     const liveBody = art.page_schema as DeliveryPageData | undefined;
     // 从 judgment 重跑后正文已换骨架，但旧润色快照可能仍是 tonight/next_7_days/close。
     if (
-      page === "signals_close" &&
+      page === "validation_close" &&
       isThinP6Prose(draft) &&
       liveBody &&
       !isThinP6Prose(liveBody)
@@ -1598,7 +1598,7 @@ async function executeV3(
         error: "missing_body_for_polish",
       };
     }
-    if (page === "signals_close") {
+    if (page === "validation_close") {
       const { stampP6WatchSignals, positiveSelfCheckSeed } = await import(
         "@/lib/llm/pro/delivery/p6-watch-signals"
       );
@@ -1610,7 +1610,7 @@ async function executeV3(
       draft = stampP6WatchSignals(draft, positiveSelfCheckSeed(core));
       art.page_schema_pre_polish = structuredClone(draft);
       const liveForWatch = art.page_schema as DeliveryPageData | undefined;
-      if (liveForWatch?.page === "signals_close") {
+      if (liveForWatch?.page === "validation_close") {
         art.page_schema = stampP6WatchSignals(
           liveForWatch,
           positiveSelfCheckSeed(core),
@@ -1796,7 +1796,7 @@ async function executeV3(
     }
     if (escapeArmedPolish) setV3Escape(art, "polish", false);
     let polishedPage = polished.page;
-    if (page === "signals_close") {
+    if (page === "validation_close") {
       const { stampP6WatchSignals, positiveSelfCheckSeed } = await import(
         "@/lib/llm/pro/delivery/p6-watch-signals"
       );

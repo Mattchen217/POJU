@@ -77,7 +77,7 @@ assert.ok(TEMPLATE_VOICE_DUTY_LINE.includes("#9"));
 
 // --- body prompt mounts #9 ---
 const { system, user } = buildV3BodyPrompt({
-  key: "direct_answer",
+  key: "decision_brief",
   locale: "zh",
   core_conclusion: "宜守硬门槛",
   judgment_lock: "path=primary",
@@ -94,12 +94,12 @@ assert.ok(
 assert.ok(user.includes("期望钉死") || user.includes("围期望") || user.includes("#9"));
 
 // --- polish avoidance ---
-const avoid = buildBodyGateAvoidanceBlockForPolish("direct_answer");
+const avoid = buildBodyGateAvoidanceBlockForPolish("decision_brief");
 assert.ok(avoid.includes(TEMPLATE_VOICE_RULE_ID));
 
 // --- gate fails wallpaper on P1 ---
 const wallpaperPage = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "Your Energy Structure",
   page_subtitle: "Energy Retune Plan",
   core_judgment: "Hold this mantra when energy is leaking.",
@@ -113,7 +113,7 @@ const wallpaperPage = {
 } as unknown as DeliveryPageData;
 
 const fail = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: wallpaperPage,
   surface: "full",
 });
@@ -122,7 +122,7 @@ assert.equal(fail!.failed_rule, TEMPLATE_VOICE_RULE_ID);
 
 // --- gate passes case-specific (no wallpaper) ---
 const cleanPage = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "Why the full-time boundary sticks",
   page_subtitle: "Main path vs backup advisor path",
   core_judgment:
@@ -144,7 +144,7 @@ const cleanPage = {
 } as unknown as DeliveryPageData;
 
 const pass = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: cleanPage,
   surface: "full",
 });
@@ -152,7 +152,7 @@ assert.equal(pass, null);
 
 // substance_only should NOT fire wallpaper (deferred to polish full)
 const deferred = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: wallpaperPage,
   surface: "substance_only",
 });

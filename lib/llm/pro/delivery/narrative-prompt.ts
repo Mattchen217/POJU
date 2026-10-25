@@ -23,11 +23,11 @@ export function buildDeliveryNarrativePrompt(
   });
 
   const keys = Object.keys(conclusions);
-  const primaryKey = keys[0] ?? "direct_answer";
+  const primaryKey = keys[0] ?? "decision_brief";
   const heading = DELIVERY_SECTION_HEADINGS[primaryKey as DeliverySegmentKey]?.zh ?? primaryKey;
   const isThirtyDay = primaryKey === "thirty_day";
   const isRxPage =
-    primaryKey === "science_action" || primaryKey === "metaphysics_action";
+    primaryKey === "execution_guidance" || primaryKey === "self_regulation";
 
   const thirtyDayJsonHint = isThirtyDay
     ? `,"thirty_day_table":{"weeks":[{"week":1,"phase_label":"第一周：…","science":["具体可做的一步"],"alignment":["推荐方位：正北 / 正西 / 西北"]},{"week":2,"phase_label":"第二周：…","science":["…"],"alignment":["高频时段：夜间 21:00–01:00"]},{"week":3,"phase_label":"第三周：…","science":["…"],"alignment":["开运色彩/视觉锚点：深蓝、黑色"]},{"week":4,"phase_label":"第四周：…","science":["…"],"alignment":["协同人群：具备平静与适应力的伙伴"]}]}`
@@ -42,7 +42,7 @@ export function buildDeliveryNarrativePrompt(
     : `- 【字段】arguments 每项只要 "body";不要 "evidence"(依据另一步写)。`;
 
   const rxPageRules =
-    primaryKey === "science_action"
+    primaryKey === "execution_guidance"
       ? `
 # 本页专规 · 科学药方(每项=策略+手段)
 - 整份报告只有**一条主路径+一条辅路径**;本页只写「怎样用科学杠杆走主路 / 何时切辅」——【禁止】再推销一遍主路径口号(换皮复读)。
@@ -50,7 +50,7 @@ export function buildDeliveryNarrativePrompt(
 - strategy:该维「该怎么决策/守什么」;methods:该维「用什么杠杆动手」(节奏、授权边界、试点机制、健康红线等)——手段≠合同/话术剧本。
 - 每项 strategy/methods 各约 40–120 字;两项信息不得互相抄成同一段。
 `
-      : primaryKey === "metaphysics_action"
+      : primaryKey === "self_regulation"
         ? `
 # 本页专规 · 东方行动方案(每项=策略+行动 · 先真算后包装 · 禁复读 P3)
 - 锚定用户【问题+期望】;从 metaphysics_pack + 多维**先长出**状态层补泻(节奏/气质优先),色/向仅次要,再合规包装措辞。

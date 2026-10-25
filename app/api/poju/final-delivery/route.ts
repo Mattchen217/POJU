@@ -8,7 +8,8 @@ import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
-import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
+import { isPassEnforceEnabled } from "@/lib/passes/consume-pass";
+import { consumePassSmart } from "@/lib/passes/consume-pass-smart";
 import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
 import {
@@ -175,6 +176,8 @@ export async function POST(req: Request) {
       partner_bazi?: unknown;
       pivot_chart_path?: unknown;
       dyad_matrix_pack?: unknown;
+      joint_decision?: unknown;
+      joint_pass_ref?: unknown;
     };
 
     if (body.continue_interrupted === true) {
@@ -472,6 +475,12 @@ export async function POST(req: Request) {
     }
 
     const skipPass = regenerate;
+    const jointPassRef =
+      typeof body.joint_pass_ref === "string" && body.joint_pass_ref.startsWith("joint:")
+        ? body.joint_pass_ref.trim()
+        : null;
+    const isJointDecision =
+      body.joint_decision === true || Boolean(jointPassRef);
     if (!skipPass && isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
       const user = await getServerUser();
       if (!user?.id) {
@@ -480,10 +489,14 @@ export async function POST(req: Request) {
           { status: 401 },
         );
       }
-      const refId = sessionIdRaw || `pivot-delivery-${user.id}-${Date.now()}`;
+      // Joint already charged at accept — reuse joint:{id}:a|b for idempotency.
+      const refId =
+        jointPassRef ||
+        sessionIdRaw ||
+        `pivot-delivery-${user.id}-${Date.now()}`;
       const topicSrc =
         isLooseAgentState(body.agent_v2) ? body.agent_v2.original_question : "";
-      const consumed = await assertAndConsumePass({
+      const consumed = await consumePassSmart({
         userId: user.id,
         product: "pivot",
         refId,
@@ -537,6 +550,8 @@ export async function POST(req: Request) {
         body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
           ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
           : null,
+      joint_decision: isJointDecision,
+      joint_pass_ref: jointPassRef,
     };
 
     const job = await createXhighJob({

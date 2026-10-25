@@ -88,7 +88,7 @@ ${wall}
   assert("reflowParagraphList preserves body chars", reflowedBody.join("") === bodyBlock);
 
   const sections = parseDeliveryContent(deliverySample);
-  const analysisBody = sections.find((s) => s.type === "foundation")?.body ?? "";
+  const analysisBody = sections.find((s) => s.type === "situation_analysis")?.body ?? "";
   assert("parse-delivery finds foundation section", analysisBody.length >= 2, `body=${analysisBody.length}`);
   assert(
     "parse-delivery keeps wall text",

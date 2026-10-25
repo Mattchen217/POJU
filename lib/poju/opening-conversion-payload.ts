@@ -204,7 +204,7 @@ function agendaFromActionFrames(record: Record<string, unknown>): AgendaItem[] |
       frame_kind: "modern_action",
       frame_index: i + 1,
       supports: typeof row.direction === "string" ? row.direction : "",
-      serves_page: "science_action",
+      serves_page: "execution_guidance",
       serves_path: i === 0 ? "primary" : i === 1 ? "backup" : "both",
       role: "fill",
     });
@@ -216,7 +216,7 @@ function agendaFromActionFrames(record: Record<string, unknown>): AgendaItem[] |
       label: "待补关键信息",
       critical: false,
       status: "unexplored",
-      serves_page: "science_action",
+      serves_page: "execution_guidance",
       serves_path: "both",
       role: "fill",
     });

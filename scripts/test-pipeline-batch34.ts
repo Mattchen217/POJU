@@ -100,7 +100,7 @@ const structured: ProfileStructured = {
 // --- Deep evidence prompt has Layer A/B, not static-only ---
 {
   const sets = buildCategoryTokenSetsFromStructured(structured);
-  const { system, user } = buildDeepEvidencePrompt("foundation", {
+  const { system, user } = buildDeepEvidencePrompt("situation_analysis", {
     locale: "zh",
     core_conclusion: "测试结论",
     structured_inventory: "## 闭集\n- 十神: 食神",
@@ -117,7 +117,7 @@ const structured: ProfileStructured = {
 }
 
 {
-  const { system } = buildDeepEvidencePrompt("metaphysics_action", {
+  const { system } = buildDeepEvidencePrompt("self_regulation", {
     locale: "zh",
     core_conclusion: "测试结论",
   });
@@ -127,10 +127,10 @@ const structured: ProfileStructured = {
 
 // --- Parse + align ---
 {
-  const spec = deepEvidenceUnitSpec("foundation");
+  const spec = deepEvidenceUnitSpec("situation_analysis");
   assert.equal(spec.min, 4);
   const raw = {
-    page: "foundation",
+    page: "situation_analysis",
     units: Array.from({ length: 4 }, (_, i) => ({
       path: `why_cards[${i}]`,
       chart_anchors: i === 0 ? ["食神", "身弱"] : [["正官", "正印", "七杀", "偏财"][i - 1]!],
@@ -140,19 +140,19 @@ const structured: ProfileStructured = {
           : `⟦w:${["正官", "正印", "七杀", "偏财"][i - 1]}⟧ 对本案形成结构压力，直接影响决策节奏。恢复窗口被占时需分开承重说明，避免硬扛空转。`,
     })),
   };
-  const plan = parseDeepEvidencePlan("foundation", raw);
+  const plan = parseDeepEvidencePlan("situation_analysis", raw);
   assert.ok(plan);
   assert.equal(plan!.units.length, 4);
   const lock = formatDeepEvidencePlanForCompress(plan!);
   assert.ok(lock.includes("已锁定深度依据"));
 
-  const q = assessDeepEvidenceQuality("foundation", plan!);
+  const q = assessDeepEvidenceQuality("situation_analysis", plan!);
   assert.equal(q.ok, true, q.ok ? "" : q.reason);
   const summary = summarizeDeepEvidenceQuality(plan!);
   assert.ok(summary.avg_clauses >= 2);
 
-  const shallow = assessDeepEvidenceQuality("foundation", {
-    page: "foundation",
+  const shallow = assessDeepEvidenceQuality("situation_analysis", {
+    page: "situation_analysis",
     units: [
       {
         path: "why_cards[0]",
@@ -180,7 +180,7 @@ const structured: ProfileStructured = {
   console.log("ok deep-evidence quality gates");
 
   const page: P2Page = {
-    page: "foundation",
+    page: "situation_analysis",
     page_title: "测",
     page_subtitle: "",
     dashboard: [{ key: "body", label: "身", score: 50 }],
@@ -192,22 +192,22 @@ const structured: ProfileStructured = {
     ],
     evidence: [],
   };
-  const aligned = alignDeepEvidenceToPage("foundation", page, plan!);
-  assert.ok(aligned.page.page === "foundation");
-  if (aligned.page.page === "foundation") {
+  const aligned = alignDeepEvidenceToPage("situation_analysis", page, plan!);
+  assert.ok(aligned.page.page === "situation_analysis");
+  if (aligned.page.page === "situation_analysis") {
     assert.deepEqual(aligned.page.why_cards[0]!.chart_anchors, ["食神", "身弱"]);
   }
-  const tree = evidenceTreeFromAligned("foundation", aligned.evidenceByBodyIndex);
+  const tree = evidenceTreeFromAligned("situation_analysis", aligned.evidenceByBodyIndex);
   assert.equal(tree.foundation?.length, 4);
   assert.ok(tree.foundation?.[0]?.evidence?.includes("⟦w:食神⟧"));
-  const narr = pageSchemaToArgumentTree("foundation", aligned.page);
+  const narr = pageSchemaToArgumentTree("situation_analysis", aligned.page);
   assert.equal(narr.foundation?.length, 4);
   console.log("ok deep-evidence parse + align");
 }
 
 // --- Compress fill prompt ---
 {
-  const { system, user } = buildPageSchemaFillPrompt("foundation", {
+  const { system, user } = buildPageSchemaFillPrompt("situation_analysis", {
     locale: "zh",
     core_conclusion: "x",
     fill_mode: "compress",
@@ -228,7 +228,7 @@ const structured: ProfileStructured = {
 }
 
 {
-  const { user } = buildPageSchemaFillPrompt("metaphysics_action", {
+  const { user } = buildPageSchemaFillPrompt("self_regulation", {
     locale: "zh",
     core_conclusion: "x",
     fill_mode: "compress",
@@ -250,7 +250,7 @@ const structured: ProfileStructured = {
   assert.ok(tally.priorAnchors.length >= 2);
   assert.ok(inv.length > 0);
   const aq = assessUnitAnchorQuality({
-    pageKey: "science_action",
+    pageKey: "execution_guidance",
     units: [{ path: "angles[0]", anchors: ["正官", "七杀"] }],
     priorAnchors: tally.priorAnchors,
     inventoryTokens: inv,

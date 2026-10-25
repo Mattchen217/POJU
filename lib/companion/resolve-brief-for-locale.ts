@@ -24,7 +24,7 @@ export type ResolveCompanionBriefResult =
   | { ok: true; brief: CompanionBrief; source: CompanionBriefSource }
   | { ok: false; reason: "companion_brief_locale_missing"; detail: string };
 
-function pageArt(lab: DeliveryLabSession, page: "direct_answer" | "science_action") {
+function pageArt(lab: DeliveryLabSession, page: "decision_brief" | "execution_guidance") {
   return lab.artifacts.by_page[page] as
     | {
         page_schema?: unknown;
@@ -47,8 +47,8 @@ export function resolveCompanionBriefForLabLocale(
   sealedBrief?: CompanionBrief | null,
 ): ResolveCompanionBriefResult {
   const locale = normalizeCompanionLocale(localeRaw);
-  const p1Art = pageArt(lab, "direct_answer");
-  const p3Art = pageArt(lab, "science_action");
+  const p1Art = pageArt(lab, "decision_brief");
+  const p3Art = pageArt(lab, "execution_guidance");
 
   let p1 = asPage(p1Art?.page_schema_by_locale?.[locale]);
   let p3 = asPage(p3Art?.page_schema_by_locale?.[locale]);
@@ -91,8 +91,8 @@ export function resolveCompanionBriefForLabLocale(
       originalQuestion:
         sealedBrief?.original_question || lab.source.original_question,
       pageSchemas: {
-        direct_answer: p1,
-        ...(p3 ? { science_action: p3 } : {}),
+        decision_brief: p1,
+        ...(p3 ? { execution_guidance: p3 } : {}),
       },
     });
     return { ok: true, brief: { ...brief, locale }, source };

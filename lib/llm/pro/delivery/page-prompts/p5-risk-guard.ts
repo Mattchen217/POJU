@@ -7,7 +7,7 @@
 
 import { titleRules } from "./shared";
 
-export const PAGE_KEY = "risk_guard" as const;
+export const PAGE_KEY = "validation_risk" as const;
 export const PAGE_LABEL = "P5 · 风险预警";
 
 export const FINALIZE_DUTY = `# 本段职责 · risk_guard（P5 风险预警 · 执行 P3/P4 的结构刹车）
@@ -58,7 +58,7 @@ export function buildFillDuty(tagZh: string): string {
 - 压缩模式:chart_anchors 原样复制锁定表;narrative **零命理专名**(锁定词也不进正文);仍须点名执行面。
 
 # 必填槽
-- page="risk_guard": page_title, page_subtitle。
+- page="validation_risk": page_title, page_subtitle。
 - **条数钉死（与深度依据 6 路 1:1）**：red_lights[2]、traps[1]、switch_to_backup=1、protection_rules[2]。
 - 每条 RiskItem 必含: situation, then_do, watch, forbid, **narrative**, **chart_anchors**。
 - **不要**写 boundary_script;不要写近7日清单/金句/身份对照(那是 P6)。

@@ -111,7 +111,7 @@ goodPrior[1]!.evidence =
   "时干己土克值符遁干壬水。己土为忌神土。壬水为用神水。客克主。主方受制。对照当前流年局势主方受制。";
 
 const missingPolarityPlan: DeepEvidencePlan = {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: [
     {
       path: "dimensions[0]",
@@ -134,7 +134,7 @@ const missingPolarityPlan: DeepEvidencePlan = {
   ],
 };
 
-const qMissing = assessDeepEvidenceQuality("metaphysics_action", missingPolarityPlan, {
+const qMissing = assessDeepEvidenceQuality("self_regulation", missingPolarityPlan, {
   eastern_calc_slice: "【奇门锁盘】值使:開\n【十神语义】食神",
   metaphysics_moat_feed: "用神: 水\n忌神: 火\npack_polarity: yong:水",
 });
@@ -145,7 +145,7 @@ assert.ok(
 );
 
 const okPlan: DeepEvidencePlan = {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: goodPrior,
 };
 assert.ok(unitMentionsMoatClass(okPlan.units[0]!, "polarity"));
@@ -167,7 +167,7 @@ assert.equal(
   "qimen host-guest evidence must count as timing",
 );
 
-const qOk = assessDeepEvidenceQuality("metaphysics_action", okPlan, {
+const qOk = assessDeepEvidenceQuality("self_regulation", okPlan, {
   eastern_calc_slice: "timing_ripeness: 未熟\n【十神语义】食神",
   metaphysics_moat_feed: "用神: 水\n忌神: 火\npack_polarity: yong:水\n【奇门锁盘】值使:開",
 });
@@ -176,9 +176,9 @@ assert.equal(qOk.ok, true, JSON.stringify(qOk));
 const personalityEv =
   "年柱天干丁火为偏印。日主己土受丁火相生。地支卯藏乙木。乙木生丁火。日主身强。丁火偏印为忌神。偏印透干主导命局思维模式。";
 const qPers = assessDeepEvidenceQuality(
-  "metaphysics_action",
+  "self_regulation",
   {
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[0]",

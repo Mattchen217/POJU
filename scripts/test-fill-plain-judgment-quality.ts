@@ -27,7 +27,7 @@ import { hasFillEmptyShell } from "@/lib/llm/pro/delivery/page-schema/situation-
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "science_action",
+    page: "execution_guidance",
     units: [
       {
         path: "primary_toolkit.angles[0]",

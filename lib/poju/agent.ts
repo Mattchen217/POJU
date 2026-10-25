@@ -1111,6 +1111,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       scopeSignal: llmResponse.scope_signal,
       dyadOfferStatus: workingSession.dyad_offer_status,
       dyadHit,
+      jointDecision: workingSession.joint_decision === true,
     })
   ) {
     const gate = buildDyadGateTurn(sessionOutputLocale);

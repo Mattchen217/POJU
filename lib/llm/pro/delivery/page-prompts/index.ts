@@ -1,17 +1,5 @@
 /**
- * 交付页提示词索引 · P1–P6 各一份独立文件
- *
- * 改人设/任务/目标 → 打开对应 pN-*.ts，不要往 shared.ts 塞页专属规则。
- *
- * | 页 | 文件 |
- * |----|------|
- * | P1 核心直答 | p1-direct-answer.ts |
- * | P2 归因剖析 | p2-foundation.ts |
- * | P3 破局策略 | p3-science-action.ts |
- * | P4 东方谋略 | p4-metaphysics-action.ts |
- * | P5 风险预警 | p5-risk-guard.ts |
- * | P6 出门仪式 | p6-signals-close.ts |
- * | 共用底盘 | shared.ts |
+ * 交付页提示词索引 · v1 十段（复用旧 p1–p6 文件 + 别名）
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -39,21 +27,30 @@ type PagePromptModule = {
 };
 
 const BY_KEY: Record<DeliverySegmentKey, PagePromptModule> = {
-  direct_answer: p1,
-  foundation: p2,
-  science_action: p3,
-  metaphysics_action: p4,
-  risk_guard: p5,
-  signals_close: p6,
-  thirty_day: thirtyDay,
+  decision_brief: p1 as PagePromptModule,
+  situation_analysis: p2 as PagePromptModule,
+  personal_decision_patterns: p2 as PagePromptModule,
+  bottleneck_analysis: p2 as PagePromptModule,
+  strategic_options: p3 as PagePromptModule,
+  recommended_strategy: p1 as PagePromptModule,
+  execution_guidance: p3 as PagePromptModule,
+  self_regulation: p4 as PagePromptModule,
+  validation_risk: p5 as PagePromptModule,
+  validation_close: p6 as PagePromptModule,
+  // legacy
+  direct_answer: p1 as PagePromptModule,
+  foundation: p2 as PagePromptModule,
+  science_action: p3 as PagePromptModule,
+  metaphysics_action: p4 as PagePromptModule,
+  risk_guard: p5 as PagePromptModule,
+  signals_close: p6 as PagePromptModule,
+  thirty_day: thirtyDay as PagePromptModule,
 };
 
-/** Finalize：只返回指定页的职责块 */
 export function finalizeDutyForKey(key: DeliverySegmentKey): string {
   return BY_KEY[key]?.FINALIZE_DUTY ?? `# 本段职责 · ${key}\n只产出本段双钥匙;勿写其他页任务。`;
 }
 
-/** Fill：只返回指定页的 L2 任务块 */
 export function fillDutyForKey(
   key: DeliverySegmentKey,
   tagZh: string,
@@ -63,7 +60,6 @@ export function fillDutyForKey(
   return mod ? mod.buildFillDuty(tagZh, opts) : "";
 }
 
-/** Fact-pack assign：按页写清本步 vs fill 分层（主调模型；闸门只验同一尺） */
 export function assignDutyForKey(
   key: DeliverySegmentKey,
   tagZh: string,
@@ -73,12 +69,15 @@ export function assignDutyForKey(
   return `# 本页派工任务 · 【${tagZh}】\n只写本盘结构主张 + 事实档短摘录；本页用户可见正文留给 fill。`;
 }
 
-/** 便于人工浏览：列出全部活跃页标签与文件对应关系 */
 export const ACTIVE_PAGE_PROMPT_FILES = [
-  { key: "direct_answer", label: p1.PAGE_LABEL, file: "p1-direct-answer.ts" },
-  { key: "foundation", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
-  { key: "science_action", label: p3.PAGE_LABEL, file: "p3-science-action.ts" },
-  { key: "metaphysics_action", label: p4.PAGE_LABEL, file: "p4-metaphysics-action.ts" },
-  { key: "risk_guard", label: p5.PAGE_LABEL, file: "p5-risk-guard.ts" },
-  { key: "signals_close", label: p6.PAGE_LABEL, file: "p6-signals-close.ts" },
+  { key: "decision_brief", label: p1.PAGE_LABEL, file: "p1-direct-answer.ts" },
+  { key: "situation_analysis", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
+  { key: "personal_decision_patterns", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
+  { key: "bottleneck_analysis", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
+  { key: "strategic_options", label: p3.PAGE_LABEL, file: "p3-science-action.ts" },
+  { key: "recommended_strategy", label: p1.PAGE_LABEL, file: "p1-direct-answer.ts" },
+  { key: "execution_guidance", label: p3.PAGE_LABEL, file: "p3-science-action.ts" },
+  { key: "self_regulation", label: p4.PAGE_LABEL, file: "p4-metaphysics-action.ts" },
+  { key: "validation_risk", label: p5.PAGE_LABEL, file: "p5-risk-guard.ts" },
+  { key: "validation_close", label: p6.PAGE_LABEL, file: "p6-signals-close.ts" },
 ] as const;

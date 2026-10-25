@@ -29,9 +29,19 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 import { remapP4DimensionNameForCompliance } from "@/lib/llm/pro/delivery/page-schema/p4-compliance-dim-names";
 import { deliverySlotUiCopy } from "@/lib/llm/pro/delivery/delivery-slot-ui-copy";
+import { splitDualEvidence } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
 
 function slotUiCopy(locale: string) {
   return deliverySlotUiCopy(locale);
+}
+
+function dualEvidenceSectionTitles(locale: string): { meta: string; sci: string } {
+  const l = locale.toLowerCase();
+  if (l.startsWith("zh")) return { meta: "命理依据", sci: "科学依据" };
+  if (l.startsWith("es")) return { meta: "Base metafísica", sci: "Base científica" };
+  if (l.startsWith("fr")) return { meta: "Fondement métaphysique", sci: "Fondement scientifique" };
+  if (l.startsWith("de")) return { meta: "Metaphysische Basis", sci: "Wissenschaftliche Basis" };
+  return { meta: "Metaphysics basis", sci: "Science basis" };
 }
 
 /** One module = existing book chrome (dot title + glass section-card). */
@@ -79,9 +89,7 @@ function SlotCard({
             className="delivery-book-stage__evidence"
           >
             <div className="poju-delivery-v2__evidence-body">
-              <div className="poju-delivery-v2__prose">
-                <p>{judgmentPlain(ev)}</p>
-              </div>
+              <DualEvidenceBody text={ev} locale={locale} />
             </div>
           </EvidenceBlock>
         ) : null}
@@ -94,6 +102,36 @@ function judgmentPlain(text: string): string {
   return text
     .replace(/⟦w:([^⟧]+)⟧/g, "$1")
     .replace(/⟦(?:t|词):[^|⟧]*\|([^⟧]+)⟧/g, "$1");
+}
+
+/** Folded evidence: fixed two subsections (命理 / 科学). */
+function DualEvidenceBody({ text, locale }: { text: string; locale: string }) {
+  const dual = splitDualEvidence(text);
+  const titles = dualEvidenceSectionTitles(locale);
+  const hasSplit = Boolean(dual.metaphysics_evidence || dual.science_evidence);
+  if (!hasSplit) {
+    return (
+      <div className="poju-delivery-v2__prose">
+        <p>{judgmentPlain(text)}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="poju-delivery-v2__prose dps-dual-evidence">
+      {dual.metaphysics_evidence ? (
+        <section className="dps-dual-evidence__section">
+          <h3 className="dps-dual-evidence__h">{titles.meta}</h3>
+          <p>{judgmentPlain(dual.metaphysics_evidence)}</p>
+        </section>
+      ) : null}
+      {dual.science_evidence ? (
+        <section className="dps-dual-evidence__section">
+          <h3 className="dps-dual-evidence__h">{titles.sci}</h3>
+          <p>{judgmentPlain(dual.science_evidence)}</p>
+        </section>
+      ) : null}
+    </div>
+  );
 }
 
 function Gloss({ text, locale }: { text: unknown; locale: string }) {
@@ -640,7 +678,7 @@ function PageSlotsInner({
   const copy = slotUiCopy(locale);
 
   switch (page.page) {
-    case "direct_answer":
+    case "decision_brief":
       return (
         <P1PageSlots
           page={page}
@@ -648,7 +686,10 @@ function PageSlotsInner({
           copy={copy}
         />
       );
-    case "foundation": {
+    case "situation_analysis":
+    case "personal_decision_patterns":
+    case "bottleneck_analysis":
+    case "situation_analysis": {
       let idx = 0;
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p2">
@@ -682,7 +723,106 @@ function PageSlotsInner({
         </div>
       );
     }
-    case "science_action": {
+    case "strategic_options": {
+      return (
+        <div className="delivery-book-stage__modules dps-page dps-page--options">
+          {page.options.map((opt, i) => (
+            <SlotCard
+              key={opt.name}
+              title={opt.name}
+              locale={locale}
+              evidence={evAt(slotEvidence, i)}
+              evidenceLabel={copy.evidenceFor(opt.name)}
+              isLast={i === page.options.length - 1}
+            >
+              <div className="delivery-book-stage__rx-parts">
+                <p>
+                  <Gloss text={opt.summary} locale={locale} />
+                </p>
+                <Field label="Upside / 收益">
+                  <p>
+                    <Gloss text={opt.upside} locale={locale} />
+                  </p>
+                </Field>
+                <Field label="Cost / 成本">
+                  <p>
+                    <Gloss text={opt.cost} locale={locale} />
+                  </p>
+                </Field>
+                <Field label="Risk / 风险">
+                  <p>
+                    <Gloss text={opt.risk} locale={locale} />
+                  </p>
+                </Field>
+                <Field label="Reversibility / 可逆">
+                  <p>
+                    <Gloss text={opt.reversibility} locale={locale} />
+                  </p>
+                </Field>
+              </div>
+            </SlotCard>
+          ))}
+        </div>
+      );
+    }
+    case "recommended_strategy": {
+      return (
+        <div className="delivery-book-stage__modules dps-page dps-page--strategy">
+          <SlotCard
+            title={copy.coreJudgment}
+            locale={locale}
+            evidence={evAt(slotEvidence, 0)}
+            evidenceLabel={copy.evidenceFor(copy.coreJudgment)}
+          >
+            <p>
+              <Gloss text={page.core_judgment} locale={locale} />
+            </p>
+          </SlotCard>
+          <SlotCard
+            title={page.primary.name}
+            locale={locale}
+            evidence={evAt(slotEvidence, 1)}
+            evidenceLabel={copy.evidenceFor(page.primary.name)}
+          >
+            <p>
+              <Gloss text={page.primary.why} locale={locale} />
+            </p>
+            {page.primary.when ? (
+              <p>
+                <Gloss text={page.primary.when} locale={locale} />
+              </p>
+            ) : null}
+            {page.primary.exit ? (
+              <p>
+                <Gloss text={page.primary.exit} locale={locale} />
+              </p>
+            ) : null}
+          </SlotCard>
+          <SlotCard
+            title={page.backup.name}
+            locale={locale}
+            evidence={evAt(slotEvidence, 2)}
+            evidenceLabel={copy.evidenceFor(page.backup.name)}
+            isLast
+          >
+            <p>
+              <Gloss text={page.backup.why} locale={locale} />
+            </p>
+            {page.backup.when ? (
+              <p>
+                <Gloss text={page.backup.when} locale={locale} />
+              </p>
+            ) : null}
+            {page.backup.exit ? (
+              <p>
+                <Gloss text={page.backup.exit} locale={locale} />
+              </p>
+            ) : null}
+          </SlotCard>
+        </div>
+      );
+    }
+    case "execution_guidance": {
       let idx = 0;
       const openingEv = page.opening?.trim() ? evAt(slotEvidence, idx++) : "";
       const primaryAngles = page.primary_toolkit.angles;
@@ -741,7 +881,7 @@ function PageSlotsInner({
         </div>
       );
     }
-    case "metaphysics_action": {
+    case "self_regulation": {
       let idx = 0;
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p4">
@@ -803,7 +943,7 @@ function PageSlotsInner({
           </SlotCard>
         </div>
       );
-    case "risk_guard": {
+    case "validation_risk": {
       /** Evidence order matches pageSchemaToArgumentBodies: red… · traps… · switch · protection… */
       let riskEvIdx = 0;
       const nextRiskEv = () => evAt(slotEvidence, riskEvIdx++);
@@ -892,7 +1032,7 @@ function PageSlotsInner({
         </div>
       );
     }
-    case "signals_close": {
+    case "validation_close": {
       const day7Rows = page.day7_micro_actions
         .map((x) => coerceDay7Item(x))
         .filter((x): x is Day7Item => Boolean(x));

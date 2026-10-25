@@ -56,7 +56,7 @@ function collectCompressProseSlots(
   push(strField(candidate, "page_subtitle", "page_subtitle"));
 
   switch (pageKey) {
-    case "direct_answer": {
+    case "decision_brief": {
       push(strField(candidate, "core_judgment", "core_judgment"));
       for (const role of ["primary", "backup"] as const) {
         const t = candidate[role];
@@ -71,7 +71,7 @@ function collectCompressProseSlots(
       }
       break;
     }
-    case "foundation": {
+    case "situation_analysis": {
       const cards = Array.isArray(candidate.why_cards) ? candidate.why_cards : [];
       cards.forEach((c, i) => {
         if (!c || typeof c !== "object") return;
@@ -82,7 +82,7 @@ function collectCompressProseSlots(
       });
       break;
     }
-    case "science_action": {
+    case "execution_guidance": {
       push(strField(candidate, "opening", "opening"));
       push(strField(candidate, "alert", "alert"));
       for (const role of ["primary_toolkit", "backup_toolkit"] as const) {
@@ -112,7 +112,7 @@ function collectCompressProseSlots(
       }
       break;
     }
-    case "metaphysics_action": {
+    case "self_regulation": {
       push(strField(candidate, "question_anchor", "question_anchor"));
       push(strField(candidate, "desired_outcome", "desired_outcome"));
       const dims = Array.isArray(candidate.dimensions) ? candidate.dimensions : [];
@@ -136,7 +136,7 @@ function collectCompressProseSlots(
       });
       break;
     }
-    case "risk_guard": {
+    case "validation_risk": {
       const bags: Array<[string, unknown]> = [
         ["red_lights", candidate.red_lights],
         ["traps", candidate.traps],
@@ -160,7 +160,7 @@ function collectCompressProseSlots(
       }
       break;
     }
-    case "signals_close": {
+    case "validation_close": {
       for (const f of [
         "identity_before",
         "identity_after",

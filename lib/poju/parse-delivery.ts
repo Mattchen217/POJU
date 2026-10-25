@@ -79,7 +79,7 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
       lower,
     )
   ) {
-    return "direct_answer";
+    return "decision_brief";
   }
   if (
     /归因剖析|归因诊断|你的底座|为什么卡|foundation|root diagnosis|why you.?re stuck|能量底座|核心洞察|core energy|key insights|天赋潜能|行为驱动力|十神|talent blueprint|core strengths|life cycles|macro cycle|第二部分|Part II\b/i.test(
@@ -93,14 +93,14 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
       lower,
     )
   ) {
-    return "science_action";
+    return "execution_guidance";
   }
   if (
     /东方谋略|自我调频|隐性借势|隐形借势|东方药方|东方行动|玄学药方|环境调频|eastern path|eastern stratagem|implicit leverage|metaphysics|retune|第四部分|Part IV\b/i.test(
       lower,
     )
   ) {
-    return "metaphysics_action";
+    return "self_regulation";
   }
   if (/30\s*天|能量推进|双轨节奏|action roadmap|thirty.?day|30-day/i.test(lower)) {
     return "thirty_day";
@@ -110,19 +110,19 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
       lower,
     )
   ) {
-    return "risk_guard";
+    return "validation_risk";
   }
   if (
     /出门仪式|今晚就开始|行动建议|行动指引|突破信号|正向信号|收尾|action guide|breakthrough signals|tonight.?close|signals.?close|第六部分|Part VI\b|第七部分|Part VII\b/i.test(
       lower,
     )
   ) {
-    return "signals_close";
+    return "validation_close";
   }
 
   // Legacy book headings → current keys
   if (/序言|preface|关于这份报告/i.test(lower)) {
-    return "direct_answer";
+    return "decision_brief";
   }
   if (/能量结构|energy structure/i.test(lower)) {
     return "foundation";
@@ -134,10 +134,10 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "foundation";
   }
   if (/觉察|awareness/i.test(lower)) {
-    return "risk_guard";
+    return "validation_risk";
   }
   if (/结语|epilogue|独立走/i.test(lower)) {
-    return "signals_close";
+    return "validation_close";
   }
   if (/能量决策报告|energy decision report/i.test(t)) {
     return "cover";
@@ -219,10 +219,10 @@ export function parseDeliverySections(fullText: string): {
   const sections = parseDeliveryContent(fullText);
   const by = (k: DeliverySectionType) => sections.find((s) => s.type === k)?.body ?? "";
   return {
-    opening: by("direct_answer"),
+    opening: by("decision_brief"),
     analysis: by("foundation"),
     conclusion: by("foundation"),
-    whatToDo: by("science_action") || by("metaphysics_action"),
-    comingBack: by("thirty_day") || by("risk_guard") || by("signals_close"),
+    whatToDo: by("execution_guidance") || by("self_regulation"),
+    comingBack: by("thirty_day") || by("validation_risk") || by("validation_close"),
   };
 }

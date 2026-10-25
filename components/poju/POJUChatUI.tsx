@@ -4010,6 +4010,33 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             workspaceOpening ? "workspace-poju-opening__stage" : "poju-chat-shell__main"
           }
         >
+      {session.joint_decision ? (
+        <div
+          role="status"
+          style={{
+            margin: "0 0 8px",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(196,165,116,0.35)",
+            background: "rgba(196,165,116,0.08)",
+            color: "#e8eaed",
+            fontSize: 13,
+            lineHeight: 1.45,
+          }}
+        >
+          <p style={{ margin: "0 0 4px", color: "#c4a574", fontWeight: 600 }}>
+            {locale.startsWith("zh") ? "共同决策 · 共同问题（只读）" : "Joint decision · shared question (read-only)"}
+          </p>
+          <p style={{ margin: 0, color: "#cbd5e1" }}>
+            {session.original_question?.trim() || "—"}
+          </p>
+          <p style={{ margin: "6px 0 0", color: "#94a3b8", fontSize: 12 }}>
+            {locale.startsWith("zh")
+              ? "可澄清你本人的期望；对方看不到本会话与报告。"
+              : "You can clarify your own expectations. Your partner cannot see this chat or report."}
+          </p>
+        </div>
+      ) : null}
       {escalationLocked && escalationWipeRemainingMs != null ? (
         <div
           role="status"

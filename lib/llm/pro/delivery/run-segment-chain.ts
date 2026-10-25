@@ -165,12 +165,12 @@ function phaseBudgetExhausted(
 
 /** Keys that need a longer fill client abort (thinking + fat JSON). */
 export const SEGMENT_HEAVY_FILL_KEYS = new Set<DeliverySegmentKey>([
-  "direct_answer", // thick core_logic dual-track JSON
+  "decision_brief", // thick core_logic dual-track JSON
   "foundation", // 4–5 why_cards + essence thickness
-  "science_action", // 3+3 angles fat JSON
-  "metaphysics_action",
-  "risk_guard",
-  "signals_close", // identity + tonight + day7×4 fat JSON
+  "execution_guidance", // 3+3 angles fat JSON
+  "self_regulation",
+  "validation_risk",
+  "validation_close", // identity + tonight + day7×4 fat JSON
 ]);
 
 export type DeliverySegmentReady = {
@@ -269,7 +269,7 @@ export function segmentAdmitMinMs(
   key: DeliverySegmentKey,
   phase: SegmentChainPhase = "start",
 ): number {
-  if (key === "direct_answer") {
+  if (key === "decision_brief") {
     // P1 fill is heavy (dual-track JSON + high thinking) — admit ≥ client ceiling.
     if (phase === "evidence_done") return SEGMENT_HEAVY_MIN_INVOKE_MS;
     return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
@@ -494,7 +494,7 @@ export async function advanceSegmentChain(input: {
       ok: false,
       reason: "segment_missing_key",
       tokens_used: 0,
-      progress: { key: "direct_answer", phase: "start", tokens_used: 0 },
+      progress: { key: "decision_brief", phase: "start", tokens_used: 0 },
     };
   }
 
@@ -541,7 +541,7 @@ export async function advanceSegmentChain(input: {
       // P4: ActionBrief is fill-only (formatP3MeansBriefForP4Retune). Do not feed
       // P5-format brief into assign/write — that would pollute structural lock.
       action_brief_block:
-        key !== "metaphysics_action" && input.action_brief
+        key !== "self_regulation" && input.action_brief
           ? formatP5ActionBriefForPrompt(input.action_brief)
           : undefined,
     };

@@ -112,8 +112,8 @@ assert(DELIVERY_FINALIZE_TASK.includes("零命理词"), "narrative ban in finali
 assert(DELIVERY_FINALIZE_TASK.includes("命运红线"), "finalize core bans fate lexicon");
 assert(DELIVERY_FINALIZE_TASK.includes("指定段") || DELIVERY_FINALIZE_TASK.includes("本次指定段"), "finalize scopes to requested segment");
 {
-  const p4 = finalizeDutyForKey("metaphysics_action");
-  const p6 = finalizeDutyForKey("signals_close");
+  const p4 = finalizeDutyForKey("self_regulation");
+  const p6 = finalizeDutyForKey("validation_close");
   assert(p4.includes("东方行动"), "P4 finalize duty is eastern action");
   assert(!p4.includes("带走三样"), "P4 must not include P6 takeaways recipe");
   assert(!p4.includes("近7日微清单"), "P4 must not include P6 day7 recipe");
@@ -122,7 +122,7 @@ assert(DELIVERY_FINALIZE_TASK.includes("指定段") || DELIVERY_FINALIZE_TASK.in
   assert(!p6.includes("色/向/时"), "P6 finalize duty must not teach P4 eastern dims");
 }
 assert(FINALIZE_GROUPS.length === DELIVERY_TASKS.length, "finalize groups match write tasks");
-assert(FINALIZE_GROUPS.some((g) => g.paths.includes("science_action") && g.paths.length === 1), "science_action alone in finalize");
+assert(FINALIZE_GROUPS.some((g) => g.paths.includes("execution_guidance") && g.paths.length === 1), "science_action alone in finalize");
 assert(nextDeliveryStage(null) === "finalize", "pipeline starts at finalize");
 assert(nextDeliveryStage("finalize") === "segments", "finalize → segments");
 assert(nextDeliveryStage("segments") === "assemble", "segments → assemble");
@@ -238,14 +238,14 @@ assert(deliveryFanoutConcurrency("finalize") <= 6, "finalize wave within concurr
         { evidence: "marked-3" },
       ],
     },
-    ["foundation"],
+    ["situation_analysis"],
   );
   assert((fromPrompt.foundation?.length ?? 0) === 3, "prompt-format arguments → foundation");
   assert(fromPrompt.foundation?.[0]?.evidence === "marked-1", "prompt-format evidence text");
   // Defensive: keyed wrapper + legacy alias still accepted.
   const keyed = asMarkArgumentTree(
     { energy_base: { arguments: [{ evidence: "ok" }] } },
-    ["foundation"],
+    ["situation_analysis"],
   );
   assert((keyed.foundation?.length ?? 0) === 1, "legacy energy_base → foundation fallback parse");
 }
@@ -875,7 +875,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   const pages = buildDeliveryBookPages(md);
   assert(pages[0]?.id === "cover", "book starts with cover");
   assert(pages.some((p) => p.id === "toc"), "book has toc");
-  assert(pages.some((p) => p.id === "direct_answer"), "book has direct_answer");
+  assert(pages.some((p) => p.id === "decision_brief"), "book has direct_answer");
   assert(pages[pages.length - 1]?.id === "appendix", "appendix last");
   assert(pages.length === 5, "rail pages = center H2/cover sections (5)");
 }

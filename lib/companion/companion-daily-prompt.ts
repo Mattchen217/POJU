@@ -16,7 +16,11 @@ import {
   normalizeCompanionLocale,
   type CompanionLocale,
 } from "./locale-voice";
-import type { CompanionBrief } from "./types";
+import { COMPANION_WINDOW_DAYS, type CompanionBrief } from "./types";
+import {
+  buildDailyAnchorSeeds,
+  dailyAnchorClosedSetPromptBlock,
+} from "./pregen-daily-anchors";
 
 function claimLead(claim: string, max = 480): string {
   const t = claim.trim();
@@ -216,6 +220,13 @@ export function buildCompanionPairUser(input: {
       locale,
       locale === "zh" ? `第${d.dayIndex + 1}日` : `day ${d.dayIndex + 1}`,
     );
+    const anchorSeed = buildDailyAnchorSeeds({
+      brief: input.brief,
+      days: COMPANION_WINDOW_DAYS,
+    })[d.dayIndex];
+    const anchorRail = anchorSeed
+      ? dailyAnchorClosedSetPromptBlock(anchorSeed, locale)
+      : "";
     const ten =
       digest.ten_god_han && digest.ten_god_slug
         ? locale === "zh"
@@ -231,6 +242,7 @@ export function buildCompanionPairUser(input: {
       `(${locale === "zh" ? "禁冲刺" : "block_sprint"}=${digest.block_sprint ? (locale === "zh" ? "是" : "yes") : locale === "zh" ? "否" : "no"}; window_phase=${digest.window_phase})`,
       ten,
       hard,
+      anchorRail,
     ]
       .filter(Boolean)
       .join("\n");

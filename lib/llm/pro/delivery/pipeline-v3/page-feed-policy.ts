@@ -125,7 +125,7 @@ export function pageFeedFlags(
   };
 
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       // P1 批断：solo 只要八字松紧真算；dyad 另灌合盘闭集供二元关系批断。
       // 不灌 collecting 原文（兼职/股权/话语权堆叠会诱回写「权责」）。
       // P1 正文：可灌 reality，供 when/事实同向。
@@ -138,17 +138,36 @@ export function pageFeedFlags(
         });
       }
       return { ...BASE };
-    case "foundation":
-      // P2：八字归因 +（批断/正文）处境对照；不灌奇门；Q/E 由 surface 带。
+    case "situation_analysis":
+    case "personal_decision_patterns":
+    case "bottleneck_analysis":
+      // 处境/模式/障碍：八字归因 + 处境对照；不灌奇门。
       return withDyadJudgment({
         ...BASE,
         foundation_surface: true,
         question_expectation: false,
         dyad_relation_structure: false,
-        // 批断仍可薄对照 surface；完整 collecting 留给正文 surface 翻译
         reality: phase === "body",
       });
-    case "science_action":
+    case "strategic_options":
+    case "recommended_strategy":
+      // 选项比较 / 主策略：科学菜单 + 主辅 hint（正文）；批断不灌 collecting 全文。
+      if (phase === "judgment") {
+        return withDyadJudgment({
+          ...BASE,
+          science_means: true,
+          reality: false,
+          question_expectation: false,
+          dyad_relation_structure: false,
+          primary_backup_hint: false,
+        });
+      }
+      return {
+        ...BASE,
+        science_means: true,
+        primary_backup_hint: true,
+      };
+    case "execution_guidance":
       // P3 批断：结构根 + 派工表（结构轴 ref）；不灌 collecting/Q·E（兼职/股权/话语权诱回写）。
       // P3 正文：菜单完整（含收集事实）+ reality + 主辅 hint。
       if (phase === "judgment") {
@@ -166,7 +185,7 @@ export function pageFeedFlags(
         science_means: true,
         primary_backup_hint: true,
       };
-    case "metaphysics_action":
+    case "self_regulation":
       // P4 批断：Fact-pack 锁盘 + moat 结构候选；不灌 Q·E/收集全文。
       // P4 正文：奇门+精简 moat+主辅取向锚；**不灌** Q/E、collecting、inventory、**eastern_calc 派工全文**
       if (phase === "judgment") {
@@ -193,13 +212,13 @@ export function pageFeedFlags(
         // inventory 对正文 means 帮助有限且增负；批断已吃过闭集
         structured_inventory: false,
       };
-    case "risk_guard":
+    case "validation_risk":
       return withDyadJudgment({
         ...BASE,
         risk_fuse: true,
         upstream_action_excerpt: true,
       });
-    case "signals_close":
+    case "validation_close":
       return withDyadJudgment({
         ...BASE,
         close_ritual: true,

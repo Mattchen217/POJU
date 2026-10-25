@@ -174,7 +174,7 @@ assert.equal(menuSlugs.has("丁巳"), false, "natal bare pillar must not enter n
 
 const map = preallocateChartPrimaries({
   thesis,
-  pages: ["foundation", "science_action", "metaphysics_action", "risk_guard", "signals_close"],
+  pages: ["situation_analysis", "execution_guidance", "self_regulation", "validation_risk", "validation_close"],
 });
 assert.equal(map.pool_source, "thesis_menu");
 assert.ok(map.deep_slots_allocated > 0, "allocated some");

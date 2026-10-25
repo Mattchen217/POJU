@@ -45,7 +45,7 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
         { body: "takeaways seal", evidence: "" },
       ],
     },
-    ["signals_close"],
+    ["validation_close"],
   );
   assert.equal(input.signals_close?.arguments.length, 2);
 }
@@ -53,7 +53,7 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
 {
   const notes: string[] = [];
   const page = {
-    page: "risk_guard",
+    page: "validation_risk",
     page_title: "守住基本盘",
     page_subtitle: "执行刹车",
     red_lights: [],
@@ -63,14 +63,14 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
   } as Record<string, unknown>;
   // narrative-like string field via page_title path — 护身 should auto-repair
   page.page_title = "别把护身当赌注";
-  const r = repairCompressPageJargon("risk_guard", page, notes, null);
+  const r = repairCompressPageJargon("validation_risk", page, notes, null);
   assert.equal(r.ok, true, `jargon should repair 护身: ${notes.join(",")}`);
   assert.ok(String(page.page_title).includes("护持") || !String(page.page_title).includes("护身"));
 }
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "science_action",
+    page: "execution_guidance",
     units: [
       {
         path: "primary_toolkit.angles[0]",
@@ -91,7 +91,7 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "foundation",
+    page: "situation_analysis",
     units: [
       {
         path: "why_cards[0]",
@@ -115,7 +115,7 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[0]",
@@ -145,7 +145,7 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[0]",
@@ -171,26 +171,26 @@ const chainSrc = readFileSync(
 assert.ok(!chainSrc.includes("runNarrativeTask("));
 assert.ok(chainSrc.includes("refuse_narrative_fallback"));
 assert.ok(chainSrc.includes("missing_page_schema_refuse_ready"));
-assert.ok(chainSrc.includes('"foundation", // 4–5 why_cards'));
-assert.ok(chainSrc.includes('"science_action", // 3+3 angles'));
+assert.ok(chainSrc.includes('"situation_analysis", // 4–5 why_cards'));
+assert.ok(chainSrc.includes('"execution_guidance", // 3+3 angles'));
 assert.ok(chainSrc.includes("foundation_surface_feed"));
 assert.ok(chainSrc.includes("science_means_feed"));
 assert.ok(chainSrc.includes("metaphysics_moat_feed"));
 assert.ok(chainSrc.includes("risk_fuse_feed"));
 assert.ok(chainSrc.includes("close_ritual_feed"));
-assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("foundation"));
-assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("science_action"));
-assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("metaphysics_action"));
-assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("risk_guard"));
-assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("signals_close"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("situation_analysis"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("execution_guidance"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("self_regulation"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("validation_risk"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("validation_close"));
 
 const deepSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-schema/deep-evidence-call.ts"),
   "utf8",
 );
-assert.ok(deepSrc.includes('"foundation", // 4–5 why_cards'));
+assert.ok(deepSrc.includes('"situation_analysis", // 4–5 why_cards'));
 assert.ok(deepSrc.includes("P3：按锁定 path"));
-assert.ok(deepSrc.includes('"signals_close"'));
+assert.ok(deepSrc.includes('"validation_close"'));
 
 {
   const feed = buildFoundationSurfaceFeedBlock(

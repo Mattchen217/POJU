@@ -28,6 +28,10 @@ import {
 import { inferP4MoatEligibleTypes } from "./p4-means-gate";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
 import {
+  gateDualEvidenceParts,
+  normalizeUnitDualEvidence,
+} from "./dual-evidence";
+import {
   DEFAULT_PRIMARY_REUSE_CAP,
   validatePrimaryReuseCap,
 } from "./preallocate-chart-primaries";
@@ -877,10 +881,24 @@ export function assessDeepEvidenceUnitDepth(
   u: Pick<DeepEvidenceUnit, "path" | "evidence" | "chart_anchors"> & {
     calc_cite?: string | null;
     unit_claim?: string | null;
+    metaphysics_evidence?: string;
+    science_evidence?: string;
   },
 ): string | null {
-  const ev = (u.evidence ?? "").trim();
+  const dual = normalizeUnitDualEvidence({
+    evidence: u.evidence,
+    metaphysics_evidence: u.metaphysics_evidence,
+    science_evidence: u.science_evidence,
+  });
+  const ev = (dual.evidence || u.evidence || "").trim();
   const plainJudgment = u.chart_anchors.length === 0;
+  // v1 双轨：非 plain 批断须有命理+本案绑定科学（缺段 / 科学无绑定 → fail）
+  if (!plainJudgment) {
+    const dualGate = gateDualEvidenceParts(dual, { requireScience: true });
+    if (!dualGate.ok) {
+      return `deep_evidence_${dualGate.reason}:${u.path}`;
+    }
+  }
   if (ev.length < MIN_EVIDENCE_CHARS) {
     return `deep_evidence_too_short:${u.path}`;
   }
@@ -1290,7 +1308,7 @@ export function assessDeepEvidenceQuality(
     notes.push(hit ? "deep_evidence_topic_soft_hit" : "deep_evidence_topic_soft_miss");
   }
 
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const eligible = inferP4MoatEligibleTypes(
       [opts?.eastern_calc_slice, opts?.metaphysics_moat_feed]
         .map((s) => (s ?? "").trim())

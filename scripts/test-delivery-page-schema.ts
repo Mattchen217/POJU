@@ -29,7 +29,7 @@ const P1_BACKUP_LOGIC =
 // --- sanitize: truncate long judgment, no structural fail ---
 {
   const long = "判".repeat(400);
-  const r = sanitizePageJson("direct_answer", {
+  const r = sanitizePageJson("decision_brief", {
     page_title: "先谈边界再谈冲锋",
     page_subtitle: "主轨攻坚 vs 辅轨止损",
     core_judgment: long,
@@ -53,8 +53,8 @@ const P1_BACKUP_LOGIC =
   });
   assert.equal(r.ok, true, r.ok ? "" : r.reason);
   if (r.ok) {
-    assert.ok(r.page.page === "direct_answer");
-    if (r.page.page === "direct_answer") {
+    assert.ok(r.page.page === "decision_brief");
+    if (r.page.page === "decision_brief") {
       assert.ok(r.page.core_judgment.length <= 220);
       assert.equal(r.page.primary.dims.mind, "high");
       assert.equal(r.page.primary.dims.body, "mid");
@@ -69,7 +69,7 @@ const P1_BACKUP_LOGIC =
 
 // --- P1 quality gates: thin / placeholder / empty anchors refuse ---
 {
-  const thin = sanitizePageJson("direct_answer", {
+  const thin = sanitizePageJson("decision_brief", {
     page_title: "先谈边界再谈冲锋",
     page_subtitle: "主轨攻坚 vs 辅轨止损",
     core_judgment: "先谈边界。",
@@ -91,7 +91,7 @@ const P1_BACKUP_LOGIC =
   assert.equal(thin.ok, false);
   if (!thin.ok) assert.equal(thin.reason, "p1_core_logic_too_thin");
 
-  const dash = sanitizePageJson("direct_answer", {
+  const dash = sanitizePageJson("decision_brief", {
     page_title: "先谈边界再谈冲锋",
     page_subtitle: "主轨攻坚 vs 辅轨止损",
     core_judgment: "先谈边界。",
@@ -113,7 +113,7 @@ const P1_BACKUP_LOGIC =
   assert.equal(dash.ok, false);
   if (!dash.ok) assert.equal(dash.reason, "p1_track_placeholder");
 
-  const noAnchor = sanitizePageJson("direct_answer", {
+  const noAnchor = sanitizePageJson("decision_brief", {
     page_title: "先谈边界再谈冲锋",
     page_subtitle: "主轨攻坚 vs 辅轨止损",
     core_judgment: "先谈边界。",
@@ -139,7 +139,7 @@ const P1_BACKUP_LOGIC =
 
 // --- sanitize: missing backup → structural ---
 {
-  const r = sanitizePageJson("direct_answer", {
+  const r = sanitizePageJson("decision_brief", {
     core_judgment: "stay",
     primary: { name: "主", core_logic: "打法一段", why: "w", when: "t" },
   });
@@ -150,7 +150,7 @@ const P1_BACKUP_LOGIC =
 
 // --- sanitize: missing core_logic → structural ---
 {
-  const r = sanitizePageJson("direct_answer", {
+  const r = sanitizePageJson("decision_brief", {
     core_judgment: "stay",
     primary: { name: "主", why: "w", when: "t" },
     backup: { name: "辅", core_logic: "辅打法", why: "w", when: "t" },
@@ -178,7 +178,7 @@ const P1_BACKUP_LOGIC =
     means: [`${name} corresponding action`],
     chart_anchors: ["用神·水", "食伤显"],
   });
-  const r = sanitizePageJson("science_action", {
+  const r = sanitizePageJson("execution_guidance", {
     page_title: "科学杠杆工具箱",
     page_subtitle: "主轨手段 vs 辅轨止损",
     primary_toolkit: {
@@ -191,7 +191,7 @@ const P1_BACKUP_LOGIC =
     },
   });
   assert.equal(r.ok, true);
-  if (r.ok && r.page.page === "science_action") {
+  if (r.ok && r.page.page === "execution_guidance") {
     assert.equal(r.page.primary_toolkit.angles[0]!.means.length, 1);
   }
   console.log("ok sanitize P3 means count flexible");
@@ -199,7 +199,7 @@ const P1_BACKUP_LOGIC =
 
 // --- P3 angles: legacy single strategy upgrades then fails min(3) ---
 {
-  const r = sanitizePageJson("science_action", {
+  const r = sanitizePageJson("execution_guidance", {
     primary_toolkit: {
       title: "主",
       strategy: "边界",
@@ -226,7 +226,7 @@ const P1_BACKUP_LOGIC =
     hard_metrics: [`${name} done when X`],
     chart_anchors: ["用神·水", "官杀显"],
   });
-  const r = sanitizePageJson("science_action", {
+  const r = sanitizePageJson("execution_guidance", {
     page_title: "科学杠杆工具箱",
     page_subtitle: "主轨手段 vs 辅轨止损",
     primary_toolkit: {
@@ -239,7 +239,7 @@ const P1_BACKUP_LOGIC =
     },
   });
   assert.equal(r.ok, true);
-  if (r.ok && r.page.page === "science_action") {
+  if (r.ok && r.page.page === "execution_guidance") {
     assert.equal(r.page.primary_toolkit.angles.length, 3);
     assert.ok(r.page.primary_toolkit.angles[0]!.strategy.length > 20);
   }
@@ -281,24 +281,24 @@ const P1_BACKUP_LOGIC =
 // --- wave gate ---
 {
   const all = [
-    task("direct_answer"),
-    task("foundation"),
-    task("science_action"),
-    task("metaphysics_action"),
+    task("decision_brief"),
+    task("situation_analysis"),
+    task("execution_guidance"),
+    task("self_regulation"),
     task("thirty_day"),
-    task("risk_guard"),
-    task("signals_close"),
+    task("validation_risk"),
+    task("validation_close"),
   ];
   const none = filterTasksToCurrentWave(all, new Set());
   assert.deepEqual(
     none.map((t) => t.paths[0]).sort(),
-    ["direct_answer", "foundation", "metaphysics_action", "science_action"].sort(),
+    ["decision_brief", "situation_analysis", "self_regulation", "execution_guidance"].sort(),
   );
 
   const bootOnly = prioritizeBootstrapSegmentTasks(none);
   assert.deepEqual(
     bootOnly.map((t) => t.paths[0]),
-    ["direct_answer"],
+    ["decision_brief"],
     "bootstrap-first clamps wave to P1 until ready",
   );
   assert.deepEqual(
@@ -307,65 +307,65 @@ const P1_BACKUP_LOGIC =
     "no bootstrap → leave gated list unchanged",
   );
 
-  const afterP1 = filterTasksToCurrentWave(all.slice(1), new Set(["direct_answer"]));
+  const afterP1 = filterTasksToCurrentWave(all.slice(1), new Set(["decision_brief"]));
   assert.deepEqual(
     afterP1.map((t) => t.paths[0]).sort(),
-    ["foundation", "metaphysics_action", "science_action"].sort(),
+    ["situation_analysis", "self_regulation", "execution_guidance"].sort(),
   );
 
   const afterContent = filterTasksToCurrentWave(all.slice(4), new Set([
-    "direct_answer",
-    "foundation",
-    "science_action",
-    "metaphysics_action",
+    "decision_brief",
+    "situation_analysis",
+    "execution_guidance",
+    "self_regulation",
   ]));
   assert.deepEqual(
     afterContent.map((t) => t.paths[0]).sort(),
-    ["risk_guard", "signals_close"].sort(),
+    ["validation_risk", "validation_close"].sort(),
   );
   assert.ok(!afterContent.some((t) => t.paths[0] === "thirty_day"));
 
   // P5/P6 unlock without waiting on P2 foundation (ActionBrief deps only).
   const withoutP2 = filterTasksToCurrentWave(all.slice(4), new Set([
-    "direct_answer",
-    "science_action",
-    "metaphysics_action",
+    "decision_brief",
+    "execution_guidance",
+    "self_regulation",
   ]));
   assert.deepEqual(
     withoutP2.map((t) => t.paths[0]).sort(),
-    ["risk_guard", "signals_close"].sort(),
+    ["validation_risk", "validation_close"].sort(),
     "Wave B does not wait on foundation",
   );
   // P1+P3 unlock Wave B even without P4 (fuse feed can brake on P3 alone).
   const withoutP4 = filterTasksToCurrentWave(all.slice(4), new Set([
-    "direct_answer",
-    "foundation",
-    "science_action",
+    "decision_brief",
+    "situation_analysis",
+    "execution_guidance",
   ]));
   assert.deepEqual(
     withoutP4.map((t) => t.paths[0]).sort(),
-    ["risk_guard", "signals_close"].sort(),
+    ["validation_risk", "validation_close"].sort(),
     "Wave B unlocks without P4",
   );
   const stillBlocked = filterTasksToCurrentWave(all.slice(4), new Set([
-    "direct_answer",
-    "foundation",
+    "decision_brief",
+    "situation_analysis",
   ]));
   assert.deepEqual(stillBlocked.map((t) => t.paths[0]), [], "missing P3 still blocks Wave B");
 
   const unlockA = unlockedKeysThroughWave("A");
-  assert.ok(unlockA.has("foundation"));
-  assert.ok(!unlockA.has("risk_guard"));
+  assert.ok(unlockA.has("situation_analysis"));
+  assert.ok(!unlockA.has("validation_risk"));
   assert.ok(!unlockA.has("thirty_day"));
   const unlockB = unlockedKeysThroughWave("B");
-  assert.ok(unlockB.has("signals_close"));
-  assert.ok(unlockB.has("risk_guard"));
+  assert.ok(unlockB.has("validation_close"));
+  assert.ok(unlockB.has("validation_risk"));
   console.log("ok wave gate");
 }
 
 // --- sanitize P6 close requires day7_micro_actions (≥4) ---
 {
-  const r = sanitizePageJson("signals_close", {
+  const r = sanitizePageJson("validation_close", {
     identity_before: "before",
     identity_after: "after",
     quote: "quote",
@@ -378,7 +378,7 @@ const P1_BACKUP_LOGIC =
 
 // --- sanitize P6 close: full fields required (no soft thicken / string invent) ---
 {
-  const full = sanitizePageJson("signals_close", {
+  const full = sanitizePageJson("validation_close", {
     page_title: "出门仪式与近阶清单",
     page_subtitle: "身份切换 · 今晚闭环 · 近7日",
     identity_before: "一线救火者",
@@ -400,13 +400,13 @@ const P1_BACKUP_LOGIC =
     takeaways: ["守决策不硬扛", "本周只推进可勾选近阶", "红灯切辅"],
   });
   assert.equal(full.ok, true, "full P6 close passes");
-  if (full.ok && full.page.page === "signals_close") {
+  if (full.ok && full.page.page === "validation_close") {
     assert.equal(full.page.day7_micro_actions.length, 4);
     assert.ok(full.page.day7_micro_actions[0]!.action.includes("睡眠"));
     assert.ok(full.page.identity_shift.length > 0);
   }
 
-  const stringOnly = sanitizePageJson("signals_close", {
+  const stringOnly = sanitizePageJson("validation_close", {
     page_title: "出门仪式与近阶清单",
     page_subtitle: "身份切换 · 今晚闭环 · 近7日",
     identity_before: "一线救火者",
@@ -429,7 +429,7 @@ const P1_BACKUP_LOGIC =
     );
   }
 
-  const thin = sanitizePageJson("signals_close", {
+  const thin = sanitizePageJson("validation_close", {
     identity_before: "a",
     identity_after: "b",
     quote: "c",
@@ -444,12 +444,12 @@ const P1_BACKUP_LOGIC =
 // --- page chrome: title/subtitle required (fallback to tag) ---
 {
   for (const key of [
-    "direct_answer",
-    "foundation",
-    "science_action",
-    "metaphysics_action",
-    "risk_guard",
-    "signals_close",
+    "decision_brief",
+    "situation_analysis",
+    "execution_guidance",
+    "self_regulation",
+    "validation_risk",
+    "validation_close",
   ] as const) {
     const mock = DELIVERY_PAGE_SCHEMA_MOCK_V1.pages[key];
     assert.ok(mock);
@@ -460,7 +460,7 @@ const P1_BACKUP_LOGIC =
       assert.ok("page_subtitle" in r.page);
     }
   }
-  const bare = sanitizePageJson("direct_answer", {
+  const bare = sanitizePageJson("decision_brief", {
     core_judgment: "先谈边界再谈冲锋。",
     primary: {
       name: "在位重谈边界",
@@ -492,7 +492,7 @@ const P1_BACKUP_LOGIC =
 
 // --- sanitize: fake dashboard 0 · 来自仪表盘 → null ---
 {
-  const r = sanitizePageJson("foundation", {
+  const r = sanitizePageJson("situation_analysis", {
     page_title: "结构卡点",
     page_subtitle: "剥表象",
     dashboard: [
@@ -532,7 +532,7 @@ const P1_BACKUP_LOGIC =
     ],
   });
   assert.equal(r.ok, true);
-  if (r.ok && r.page.page === "foundation") {
+  if (r.ok && r.page.page === "situation_analysis") {
     assert.equal(r.page.dashboard[0]?.score, null);
     assert.equal(r.page.dashboard[1]?.score, null);
     assert.equal(r.page.dashboard[2]?.score, 42);
@@ -543,7 +543,7 @@ const P1_BACKUP_LOGIC =
 
 // --- sanitize: scrub English prompt leaks + X% placeholders ---
 {
-  const r = sanitizePageJson("science_action", {
+  const r = sanitizePageJson("execution_guidance", {
     page_title: "科学杠杆工具箱",
     page_subtitle: "主轨手段 vs 辅轨止损",
     opening: "Lead with risk and cost, not health complaints.",
@@ -598,7 +598,7 @@ const P1_BACKUP_LOGIC =
     },
   });
   assert.equal(r.ok, true);
-  if (r.ok && r.page.page === "science_action") {
+  if (r.ok && r.page.page === "execution_guidance") {
     assert.equal(r.page.opening, undefined);
     assert.equal(r.page.alert, undefined);
     const means0 = r.page.primary_toolkit.angles[0]?.means ?? [];
@@ -612,7 +612,7 @@ const P1_BACKUP_LOGIC =
 
 // --- P4: case-anchored dims + gateway name/prose scrub ---
 {
-  const r = sanitizePageJson("metaphysics_action", {
+  const r = sanitizePageJson("self_regulation", {
     page_title: "东方场域杠杆与用神调频",
     page_subtitle: "色/向/时与风水避忌",
     question_anchor: "这份工作还要不要硬扛一线？",
@@ -641,7 +641,7 @@ const P1_BACKUP_LOGIC =
     ],
   });
   assert.equal(r.ok, true);
-  if (r.ok && r.page.page === "metaphysics_action") {
+  if (r.ok && r.page.page === "self_regulation") {
     assert.ok(!/用神|风水|东方场域|东方维/.test(r.page.page_title), r.page.page_title);
     assert.ok(!/色\s*[\/、]\s*向|风水/.test(r.page.page_subtitle), r.page.page_subtitle);
     assert.equal(r.page.dimensions[0]?.name, "视觉心理 · 权威气场与色彩阻尼");

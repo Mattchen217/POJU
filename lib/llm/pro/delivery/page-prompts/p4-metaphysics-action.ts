@@ -21,7 +21,7 @@ import {
   P4_MIN_STRATEGY_SENTENCES,
 } from "@/lib/llm/pro/delivery/page-schema/p4-means-gate";
 
-export const PAGE_KEY = "metaphysics_action" as const;
+export const PAGE_KEY = "self_regulation" as const;
 export const PAGE_LABEL = "P4 · 东方谋略";
 
 /**
@@ -112,7 +112,7 @@ P3 写「怎么处项目/对方/协议」（明战术）；**P4 写「局怎么�
 - ❌ 手段答不出「本维批断如何证明」。
 
 # 必填槽
-page="metaphysics_action"：page_title, page_subtitle, question_anchor, desired_outcome, dimensions（=锁定表条数）。
+page="self_regulation"：page_title, page_subtitle, question_anchor, desired_outcome, dimensions（=锁定表条数）。
 每维：name + strategy + means≥${P4_MIN_MEANS_PER_DIM} + chart_anchors。
 
 ${titleRules(tagZh, "点出本案东方谋略主题（局势/意象/仪轨）", "副题点暗锦囊维，禁空泛「自我成长」")}`;

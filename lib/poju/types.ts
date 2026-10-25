@@ -249,6 +249,12 @@ export interface POJUSessionState {
   charts_locked_at?: string | null;
   /** Dyad 路径：完整 ResonanceMatrix 闭集包（Stage2+ / 交付）。 */
   dyad_matrix_pack?: import("./dyad-matrix-pack").DyadMatrixPack | null;
+  /** Duo joint decision id (server). When set, skip partner collect chips; question is shared. */
+  joint_decision_id?: string | null;
+  /** True when this session was seeded from a joint decision accept. */
+  joint_decision?: boolean;
+  /** Idempotent pass_usage ref already charged at joint accept (`joint:{id}:a|b`). */
+  joint_pass_ref?: string | null;
   /** IndexedDB archive row id for the main-delivery action plan (改进 3). */
   action_plan_archive_id?: string | null;
   tokens_used: number;

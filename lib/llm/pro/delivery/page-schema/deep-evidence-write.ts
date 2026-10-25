@@ -102,7 +102,7 @@ unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}$
     .join("\n\n");
 
   const moatHint =
-    key === "metaphysics_action"
+    key === "self_regulation"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换/主客受制；polarity=用忌补泄/身强弱；archetype=十神角色定位）。禁止空喊「纪元」无机制。
 - **polarity 硬**：moat_class=polarity 时，evidence 必须以用神/忌神/喜神/身强弱/通关为主轴展开本卡 unit_claim；禁止改写成纯奇门主客或纯运岁半合顶替意象柱。**忌成势+通关卡（极性2）须写满**：忌神五行成势一句 + 通关未立/泄·生·制关口一句 + 对用神或喜神受制/未得力一句，合计 ≥3 句命理；禁止两句标签就停，也禁止只写「通关未立」孤句后接处境白话。
 - **timing 硬**：moat_class=timing 且 claim/cite 含客克主/主克客时，必须写清谁克谁；**奇门 timing 须写满**：局名（claim 已点则保留）+ **值使门与落宫（claim 已点开门/落宫则必须写出，禁止只留陰遁一局）** + 时干克遁干/客主受制 + ≥3 句命理——禁止只写「忌神克用神」两句顶替奇门盘；**禁止灌另一维大运/流年干支清单凑字**（本卡 claim/cite 未点运岁则 evidence 不得出现「大运壬寅/流年丙午」）。运岁卡写大运流年+合冲地支对，并点明近窗/未熟/气口（禁空喊「气候交织」无窗）。
@@ -113,10 +113,10 @@ unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}$
 - 【奇门禁灌运岁 · 硬】本卡 claim/cite 未点大运/流年时，evidence 禁止写入「当前大运XX / 流年YY」清单（那是另一张运岁 timing 卡的料）。
 - 【合冲摘录 · 硬】calc_cite 或 unit_claim 里的半合/相冲/相刑/相害（如寅午半合），evidence 必须点同一对地支关系，禁止「半合助忌」无地支对，禁止只写「引动午火 / 火势更旺」却漏半合本身；禁止另起主张∪摘录未锁的相刑/合冲。
 - **给 fill 留料（硬）**：evidence 须写出「本盘为何只能这样谋局/调气」的结构关系；禁止处境决策白话与话语权/技术输出等职场尾巴。`
-      : key === "foundation"
+      : key === "situation_analysis"
         ? `- why_cards：evidence **只展开本卡 unit_claim 这一条关系**。主张与摘录已由派工锁定，禁止另起一条合冲刑害半合，禁止另起一套十神故事。
 - mechanism_tag 固定 surface_why。禁止把问题、期望、处境、职业、话语权写进 evidence。`
-        : key === "science_action"
+        : key === "execution_guidance"
           ? factPack
             ? `- angle 单元：evidence **只展开本卡 unit_claim 的命理结构**（用喜忌/合冲/大运流年/藏干本气）。means_candidate_ref 只供后续 fill 回溯，禁止写进 evidence。
 - 神煞只作盘上落点名，且必须本卡 unit_claim 已点名；禁止「贵人相助/和解/照命/化解凶性/宜主动运用」能力说明书。
@@ -125,7 +125,7 @@ unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}$
 - mechanism_tag 用 science_angle。禁止主张外合冲与主张外神煞。`
             : `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
 - mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`
-          : key === "risk_guard"
+          : key === "validation_risk"
             ? `- 风险单元：依据须支撑熔断/切换处置链；mechanism_tag 用 fuse。`
             : `- 收束单元：依据须支撑仪式/身份落地；mechanism_tag 用 ritual。`;
 
@@ -171,15 +171,15 @@ ${moatHint}
       "chart_anchors": [],
       "evidence": "<命理批断：≥3句且写满主张；无标记；只证本卡 unit_claim；生克方向落在闭集表；材料里有的相关藏干/用喜忌/身强弱/通关要写进>",
       "mechanism_tag": "${
-        key === "science_action"
+        key === "execution_guidance"
           ? "science_angle"
-          : key === "foundation"
+          : key === "situation_analysis"
             ? "surface_why"
-            : key === "metaphysics_action"
+            : key === "self_regulation"
               ? "window_switch"
-              : key === "risk_guard"
+              : key === "validation_risk"
                 ? "fuse"
-                : key === "signals_close"
+                : key === "validation_close"
                   ? "ritual"
                   : "science_angle"
       }"
@@ -219,7 +219,7 @@ ${moatHint}
 - units 条数必须 = ${chunk.length}；path / chart_anchors 必须与锁定表一致（anchors 原样回传）。`,
   ].join("\n\n");
 
-  const judgmentOnly = Boolean(factPack) && key === "foundation";
+  const judgmentOnly = Boolean(factPack) && key === "situation_analysis";
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
   ];
@@ -246,19 +246,19 @@ ${moatHint}
   if (!judgmentOnly && opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
-  if (!judgmentOnly && key === "foundation" && opts.foundation_surface_feed?.trim()) {
+  if (!judgmentOnly && key === "situation_analysis" && opts.foundation_surface_feed?.trim()) {
     userParts.push(opts.foundation_surface_feed.trim());
   }
-  if (!factPack && key === "science_action" && opts.science_means_feed?.trim()) {
+  if (!factPack && key === "execution_guidance" && opts.science_means_feed?.trim()) {
     userParts.push(opts.science_means_feed.trim());
   }
-  if (!factPack && key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+  if (!factPack && key === "self_regulation" && opts.metaphysics_moat_feed?.trim()) {
     userParts.push(opts.metaphysics_moat_feed.trim());
   }
-  if (!factPack && key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+  if (!factPack && key === "validation_risk" && opts.risk_fuse_feed?.trim()) {
     userParts.push(opts.risk_fuse_feed.trim());
   }
-  if (!factPack && key === "signals_close" && opts.close_ritual_feed?.trim()) {
+  if (!factPack && key === "validation_close" && opts.close_ritual_feed?.trim()) {
     userParts.push(opts.close_ritual_feed.trim());
   }
   userParts.push(
@@ -358,7 +358,7 @@ export function polishWriteChunkUnits(
   const out: DeepEvidenceUnit[] = [];
   /** Intimacy/partnership friction weld only on foundation (Lab science/P5 cite「关系」盲焊债). */
   const allowFrictionWeld =
-    opts?.pageKey == null || opts.pageKey === "foundation";
+    opts?.pageKey == null || opts.pageKey === "situation_analysis";
   for (let i = 0; i < units.length; i++) {
     const u = units[i]!;
     const locked = chunk[i]!;

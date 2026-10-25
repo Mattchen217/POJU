@@ -198,17 +198,20 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
 
 function pageRoleLock(key: DeliverySegmentKey): string {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return "页角色锁：一主一辅取舍直答；禁改写成执行清单或气场仪轨。";
-    case "foundation":
+    case "situation_analysis":
+  case "personal_decision_patterns":
+  case "bottleneck_analysis":
+  case "situation_analysis":
       return "页角色锁：归因译手；essence 只解释为何卡，禁怎么办收束。";
-    case "science_action":
+    case "execution_guidance":
       return "页角色锁：协议/清单/里程碑主语；禁改成气场仪轨。";
-    case "metaphysics_action":
+    case "self_regulation":
       return "页角色锁：局/气/时方/结界主语；禁改成 P3 工具或职场教练腔。";
-    case "risk_guard":
+    case "validation_risk":
       return "页角色锁：护栏指回上游；禁另起第三份药方。";
-    case "signals_close":
+    case "validation_close":
       return "页角色锁：身份对照+金句+本周对照信号+今晚一事+近7日微清单+带走三样；禁四周甘特；禁压成三散文槽；对照信号禁写成新动作或切辅叙事。";
     default:
       return "";
@@ -217,8 +220,8 @@ function pageRoleLock(key: DeliverySegmentKey): string {
 
 function thickenContract(key: DeliverySegmentKey): string {
   switch (key) {
-    case "science_action":
-    case "metaphysics_action":
+    case "execution_guidance":
+    case "self_regulation":
       return [
         `- **本页正文步故意写短** → 润色必须加厚：strategy 2–4 个完整句、相对草稿明显加长；means 每条扩成 1–2 个完整句。`,
         `- **means 字数硬门槛（中译中尤易漏）**：每条 means 相对草稿须 visibly 加长（约多出半句到一句「为何此刻/场面效果」）；机检约 ≥1.15× 字数。禁只改个别词（视线↔目光、直冲↔正对）交差。`,
@@ -226,25 +229,28 @@ function thickenContract(key: DeliverySegmentKey): string {
         `- 禁止电报式同义改写交差。`,
         `- 不增删 angles/dimensions/means 条数；不改动作指向与事实门槛。`,
       ].join("\n");
-    case "direct_answer":
+    case "decision_brief":
       return [
         `- 正文步已要求 core_logic 四段成篇。润色默认=合规清表面 + 目标语言；**已完整则保持信息量，禁止为凑厚度灌水**。`,
         `- 仅当某段仍是电报体/半句时，才补成完整可读句。`,
         `- 不改 primary/backup 取舍轴与 when 事实方向；不发明缓冲月数。`,
       ].join("\n");
-    case "foundation":
+    case "situation_analysis":
+  case "personal_decision_patterns":
+  case "bottleneck_analysis":
+  case "situation_analysis":
       return [
         `- 正文步已要求 essence 写成完整机制段。润色默认=合规清表面 + 目标语言；**已完整可读则保持信息量，禁止为凑厚度灌水或近义拉长**。`,
         `- 「能量画像」是允许的扎根用语，不是命理专名；不要改成「能量状态」一类近义交差。`,
         `- 仅当某条 surface/essence 仍是半句或目录壳时，才补成完整句（essence 仍只解释为何卡、禁怎么办）。`,
         `- 不增删 why_cards 条数。`,
       ].join("\n");
-    case "risk_guard":
+    case "validation_risk":
       return [
         `- 本页产品要短而具体。润色默认=合规 + 目标语言；草稿已是完整句则保量，禁灌成执行长文。`,
         `- 仅电报体才补成完整句；不增删条数；须仍指回上游动作。`,
       ].join("\n");
-    case "signals_close":
+    case "validation_close":
       return [
         `- 身份对照 / 金句用法 / watch_signals×3–5 / 今晚闭环 / day7 四条 / 带走三样保持完整可读短句；草稿已完整则保量。`,
         `- 仅半句空喊才补句；禁新开四周计划。`,
@@ -265,10 +271,10 @@ function polishSelfCheck(
     locale === "es"
       ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；**首次** mapa de fuerzas / cuadro energético 必须带短同位语（无则废稿），第二次起可短词；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
       : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。；#9禁 energy structure/retune/leak/mantra/surface-sting/fortune opener「your current state is」墙纸（改本案期望+收集事实决策备忘）。`;
-  if (key === "science_action" || key === "metaphysics_action") {
+  if (key === "execution_guidance" || key === "self_regulation") {
     return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+watch_signals×3–5+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；对照信号只观察；锚槽原样照抄闭集；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
   }
   return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
@@ -408,20 +414,20 @@ export function gateBodyPolishThickness(input: {
           passed: false as const,
           failed_rule: "gate_polish_thin_synonym",
           detail:
-            input.key === "science_action" || input.key === "metaphysics_action"
+            input.key === "execution_guidance" || input.key === "self_regulation"
               ? "润色过薄：仍是同义换词/单句骨架。须明显加长为完整可读句；禁只改个别词交差——回改后重跑（不覆盖已过闸正文）。"
               : "润色抽瘦或仍是半句骨架。草稿已完整可读则保持信息量；仅电报体才补句——回改后重跑（不覆盖已过闸正文）。",
           notes: more.slice(0, 8),
         } satisfies ContentGateVerdict)
       : null;
 
-  if (input.key === "science_action" || input.key === "metaphysics_action") {
+  if (input.key === "execution_guidance" || input.key === "self_regulation") {
     const draftAngles =
-      input.key === "science_action"
+      input.key === "execution_guidance"
         ? listToolkitAngles(input.draft)
         : listDimAngles(input.draft);
     const polishedAngles =
-      input.key === "science_action"
+      input.key === "execution_guidance"
         ? listToolkitAngles(input.polished)
         : listDimAngles(input.polished);
     for (let i = 0; i < polishedAngles.length; i++) {
@@ -456,7 +462,7 @@ export function gateBodyPolishThickness(input: {
     return fail(notes);
   }
 
-  if (input.key === "direct_answer") {
+  if (input.key === "decision_brief") {
     const d = input.draft as {
       primary?: { core_logic?: string };
       backup?: { core_logic?: string };
@@ -479,7 +485,7 @@ export function gateBodyPolishThickness(input: {
     return fail(notes);
   }
 
-  if (input.key === "foundation") {
+  if (input.key === "situation_analysis") {
     const dCards =
       (input.draft as { why_cards?: Array<{ essence?: string; surface?: string }> })
         .why_cards ?? [];
@@ -503,7 +509,7 @@ export function gateBodyPolishThickness(input: {
     return fail(notes);
   }
 
-  if (input.key === "risk_guard") {
+  if (input.key === "validation_risk") {
     const dN = p5Narratives(input.draft);
     const pN = p5Narratives(input.polished);
     for (let i = 0; i < pN.length; i++) {
@@ -521,7 +527,7 @@ export function gateBodyPolishThickness(input: {
     return fail(notes);
   }
 
-  if (input.key === "signals_close") {
+  if (input.key === "validation_close") {
     const d = input.draft as {
       identity_before?: string;
       identity_after?: string;
@@ -629,8 +635,8 @@ function buildPolishPrompts(input: {
           input.prior_gate_fail.failed_rule
             ? `- rule: ${input.prior_gate_fail.failed_rule}`
             : "",
-          input.key !== "science_action" &&
-          input.key !== "metaphysics_action" &&
+          input.key !== "execution_guidance" &&
+          input.key !== "self_regulation" &&
           input.prior_gate_fail.failed_rule === "gate_polish_thin_synonym"
             ? `- detail: 上轮厚度尺已按页更正。本页草稿已完整则保量，禁止为旧「须加长」指令灌水；按现行厚度合同清表面并出目标语言。`
             : input.prior_gate_fail.detail
@@ -704,13 +710,13 @@ export function stampChartAnchorsFromDraft(
   const __scrubInventedPct = (p: DeliveryPageData): DeliveryPageData =>
     scrubInventedPercentPlaceholdersInTree(p).value;
 
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     const d = draft as {
       primary_toolkit?: { angles?: AngleLike[] };
       backup_toolkit?: { angles?: AngleLike[] };
     };
     const p = polished as {
-      page: "science_action";
+      page: "execution_guidance";
       primary_toolkit?: { title?: string; angles?: AngleLike[] };
       backup_toolkit?: { title?: string; angles?: AngleLike[] };
     };
@@ -737,7 +743,7 @@ export function stampChartAnchorsFromDraft(
     } as DeliveryPageData);
   }
 
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const d = draft as { dimensions?: AngleLike[] };
     const p = polished as { dimensions?: AngleLike[] };
     if (!Array.isArray(p.dimensions)) return __scrubInventedPct(polished);
@@ -753,7 +759,7 @@ export function stampChartAnchorsFromDraft(
     } as DeliveryPageData);
   }
 
-  if (key === "foundation") {
+  if (key === "situation_analysis") {
     const d = draft as {
       why_cards?: Array<{ chart_anchors?: string[] }>;
     };
@@ -773,7 +779,7 @@ export function stampChartAnchorsFromDraft(
     } as DeliveryPageData);
   }
 
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     const d = draft as {
       identity_shift_anchors?: string[];
       tonight_anchors?: string[];
@@ -807,7 +813,7 @@ export function stampChartAnchorsFromDraft(
     } as DeliveryPageData);
   }
 
-  if (key === "direct_answer") {
+  if (key === "decision_brief") {
     const d = draft as {
       primary?: { chart_anchors?: string[] };
       backup?: { chart_anchors?: string[] };

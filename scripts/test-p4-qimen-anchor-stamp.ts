@@ -37,7 +37,7 @@ assert.equal(anchorsServeMoatClass(["陰遁一局"], "timing"), true);
 assert.equal(anchorsServeMoatClass(["食神"], "timing"), false);
 
 const plan: DeepEvidencePlan = {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: [
     {
       path: "dimensions[0]",
@@ -59,7 +59,7 @@ const page: Record<string, unknown> = {
     },
   ],
 };
-const notes = stampPageChartAnchorsFromDeepPlan("metaphysics_action", page, plan);
+const notes = stampPageChartAnchorsFromDeepPlan("self_regulation", page, plan);
 assert.ok(
   notes.some((n) => n.startsWith("enriched_chart_anchors_with_qimen")),
   `enrich notes: ${notes.join(";")}`,

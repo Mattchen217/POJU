@@ -127,9 +127,14 @@ export function extractCompanionBrief(input: {
   pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): CompanionBrief {
-  const p1 = findPage(input.pageSchemas, "direct_answer", input.fullText);
-  const p3 = findPage(input.pageSchemas, "science_action", input.fullText);
-  if (!p1 || p1.page !== "direct_answer") {
+  const p1 =
+    findPage(input.pageSchemas, "decision_brief", input.fullText) ??
+    findPage(input.pageSchemas, "recommended_strategy", input.fullText);
+  const p3 = findPage(input.pageSchemas, "execution_guidance", input.fullText);
+  if (
+    !p1 ||
+    (p1.page !== "decision_brief" && p1.page !== "recommended_strategy")
+  ) {
     throw new Error("companion_brief_missing_p1");
   }
   const p1r = p1 as unknown as Record<string, unknown>;
@@ -138,7 +143,7 @@ export function extractCompanionBrief(input: {
   if (!primary || !backup) {
     throw new Error("companion_brief_missing_tracks");
   }
-  if (p3 && p3.page === "science_action") {
+  if (p3 && p3.page === "execution_guidance") {
     const p3r = p3 as unknown as Record<string, unknown>;
     primary = mergeP3Means(primary, asRecord(p3r.primary_toolkit));
     backup = mergeP3Means(backup, asRecord(p3r.backup_toolkit));

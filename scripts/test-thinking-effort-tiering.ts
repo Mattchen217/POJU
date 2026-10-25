@@ -22,17 +22,17 @@ import {
 import { SYNTHESIS_MAX_TOKENS } from "../lib/poju/xhigh-job-runner";
 
 assert.equal(SEGMENT_LIGHT_FILL_KEYS.size, 0);
-assert.equal(segmentFillThinkingEffort("direct_answer"), "high");
-assert.equal(segmentFillThinkingEffort("foundation"), "high");
-assert.equal(segmentFillThinkingEffort("science_action"), "high");
-assert.equal(segmentFillThinkingEffort("metaphysics_action"), "high");
+assert.equal(segmentFillThinkingEffort("decision_brief"), "high");
+assert.equal(segmentFillThinkingEffort("situation_analysis"), "high");
+assert.equal(segmentFillThinkingEffort("execution_guidance"), "high");
+assert.equal(segmentFillThinkingEffort("self_regulation"), "high");
 assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 270_000);
 assert.equal(SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS, 270_000);
-assert.equal(segmentAdmitMinMs("direct_answer"), 40_000);
-assert.equal(segmentAdmitMinMs("foundation"), 270_000);
-assert.equal(segmentAdmitMinMs("foundation", "evidence_done"), 270_000);
-assert.equal(segmentAdmitMinMs("risk_guard"), 270_000);
-assert.equal(segmentAdmitMinMs("risk_guard", "narrative_done"), 90_000);
+assert.equal(segmentAdmitMinMs("decision_brief"), 40_000);
+assert.equal(segmentAdmitMinMs("situation_analysis"), 270_000);
+assert.equal(segmentAdmitMinMs("situation_analysis", "evidence_done"), 270_000);
+assert.equal(segmentAdmitMinMs("validation_risk"), 270_000);
+assert.equal(segmentAdmitMinMs("validation_risk", "narrative_done"), 90_000);
 assert.equal(PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, 20_000);
 assert.equal(PAGE_SCHEMA_FILL_MAX_TOKENS, 20_000);
 assert.equal(DELIVERY_FINALIZE_MAX_TOKENS_XHIGH, 20_000);
@@ -84,7 +84,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
 {
   const notes: string[] = [];
   const candidate = {
-    page: "foundation",
+    page: "situation_analysis",
     page_title: "测",
     page_subtitle: "",
     why_cards: [
@@ -96,7 +96,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
       },
     ],
   };
-  const r = repairCompressPageJargon("foundation", candidate, notes);
+  const r = repairCompressPageJargon("situation_analysis", candidate, notes);
   assert.equal(r.ok, true);
   assert.ok(
     String((candidate.why_cards[0] as { essence: string }).essence).includes("关键补给") ||
@@ -108,9 +108,9 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
 
 {
   const r = sanitizePageJson(
-    "foundation",
+    "situation_analysis",
     {
-      page: "foundation",
+      page: "situation_analysis",
       page_title: "测标题足够长一些",
       page_subtitle: "副题对齐目录",
       dashboard: [
@@ -153,7 +153,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
   assert.equal(r.ok, true, (r as { reason?: string }).reason ?? "sanitize fail");
   if (r.ok) {
     assert.ok(r.notes.some((n) => n.includes("compress_body_jargon_auto_repaired")));
-    const essence = r.page.page === "foundation" ? r.page.why_cards[0]!.essence : "";
+    const essence = r.page.page === "situation_analysis" ? r.page.why_cards[0]!.essence : "";
     assert.ok(!essence.includes("用神"));
   }
   console.log("ok sanitize compress fillMode jargon path");
@@ -162,7 +162,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
 // --- compress off-lock: unmapped lock-external fails; mapped terms auto-repair ---
 {
   const plan = {
-    page: "foundation" as const,
+    page: "situation_analysis" as const,
     units: [
       {
         path: "why_cards[0]",
@@ -172,9 +172,9 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
     ],
   };
   const off = sanitizePageJson(
-    "foundation",
+    "situation_analysis",
     {
-      page: "foundation",
+      page: "situation_analysis",
       page_title: "测标题足够长一些",
       page_subtitle: "副题",
       dashboard: [
@@ -227,7 +227,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
 
 {
   const plan = {
-    page: "foundation" as const,
+    page: "situation_analysis" as const,
     units: [
       {
         path: "why_cards[0]",
@@ -237,9 +237,9 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
     ],
   };
   const repaired = sanitizePageJson(
-    "foundation",
+    "situation_analysis",
     {
-      page: "foundation",
+      page: "situation_analysis",
       page_title: "测标题足够长一些",
       page_subtitle: "副题",
       dashboard: [
@@ -295,7 +295,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
           n.includes("compress_body_off_lock_auto_repaired:年支"),
       ),
     );
-    const essence = repaired.page.page === "foundation" ? repaired.page.why_cards[0]!.essence : "";
+    const essence = repaired.page.page === "situation_analysis" ? repaired.page.why_cards[0]!.essence : "";
     assert.ok(!essence.includes("大运"));
     assert.ok(!essence.includes("年支"));
   }
@@ -304,7 +304,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
 
 {
   const plan = {
-    page: "foundation" as const,
+    page: "situation_analysis" as const,
     units: [
       {
         path: "why_cards[0]",
@@ -315,9 +315,9 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
   };
   // Pure vernacular body — no closed 专名 → pass even with plan
   const ok = sanitizePageJson(
-    "foundation",
+    "situation_analysis",
     {
-      page: "foundation",
+      page: "situation_analysis",
       page_title: "测标题足够长一些",
       page_subtitle: "副题",
       dashboard: [

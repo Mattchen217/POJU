@@ -53,7 +53,7 @@ assert.equal(
       {
         slug: LIUZHAN_CROSS_PAGE_FIXTURE.slug,
         role: LIUZHAN_CROSS_PAGE_FIXTURE.role_p3,
-        page: "science_action",
+        page: "execution_guidance",
       },
     ],
   });
@@ -87,14 +87,14 @@ assert.equal(
         dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
         inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l311,
         role: "产品化输出",
-        page: "science_action",
+        page: "execution_guidance",
       },
       {
         slug: "流展辅",
         dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
         inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l357,
         role: "技术从容输出",
-        page: "metaphysics_action",
+        page: "self_regulation",
       },
     ],
   });
@@ -124,7 +124,7 @@ assert.equal(
         dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
         inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l357,
         role: "技术从容输出",
-        page: "science_action",
+        page: "execution_guidance",
       },
     ],
   });
@@ -148,7 +148,7 @@ assert.equal(
           dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
           inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l357,
           role: "技术从容输出",
-          page: "science_action",
+          page: "execution_guidance",
         },
       ],
     }),
@@ -176,14 +176,14 @@ assert.equal(
         dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
         inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_distinct_a,
         role: "产品标准化交付",
-        page: "science_action",
+        page: "execution_guidance",
       },
       {
         slug: "伤官",
         dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
         inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_distinct_b,
         role: "合作话语权",
-        page: "metaphysics_action",
+        page: "self_regulation",
       },
     ],
   });
@@ -316,7 +316,7 @@ assert.equal(
       {
         slug: LIUZHAN_CROSS_PAGE_FIXTURE.slug,
         role: LIUZHAN_CROSS_PAGE_FIXTURE.role_p3,
-        page: "science_action",
+        page: "execution_guidance",
       },
     ],
   });
@@ -330,7 +330,7 @@ assert.equal(
         {
           slug: LIUZHAN_CROSS_PAGE_FIXTURE.slug,
           role: LIUZHAN_CROSS_PAGE_FIXTURE.role_p3,
-          page: "science_action",
+          page: "execution_guidance",
         },
       ],
     }),

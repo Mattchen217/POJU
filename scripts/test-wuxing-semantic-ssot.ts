@@ -155,7 +155,7 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
       ],
     };
     const stampNotes = stampP4MeansTypesFromDeepPlan(root, {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         { path: "dimensions[0]", moat_class: "polarity" },
         { path: "dimensions[1]", moat_class: "timing" },
@@ -270,7 +270,7 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
 }
 
 {
-  const bad = sanitizePageJson("metaphysics_action", {
+  const bad = sanitizePageJson("self_regulation", {
     page_title: "场域调频",
     page_subtitle: "测试",
     question_anchor: "要不要换跑道",
@@ -300,7 +300,7 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
 }
 
 {
-  const good = sanitizePageJson("metaphysics_action", {
+  const good = sanitizePageJson("self_regulation", {
     page_title: "场域调频",
     page_subtitle: "测试",
     question_anchor: "要不要换跑道",
@@ -349,7 +349,7 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
     "【十神语义 SSOT】伤官：表达锐度",
   ].join("\n");
   const rhythmOnly = sanitizePageJson(
-    "metaphysics_action",
+    "self_regulation",
     {
       page_title: "场域调频标题够长",
       page_subtitle: "测试副题",

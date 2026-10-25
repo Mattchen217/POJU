@@ -6,7 +6,8 @@ import {
   createSupabaseAdminClient,
   isSupabaseAdminConfigured,
 } from "@/lib/auth/supabase";
-import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
+import { isPassEnforceEnabled } from "@/lib/passes/consume-pass";
+import { consumePassSmart } from "@/lib/passes/consume-pass-smart";
 import { isPassProduct, type PassProduct } from "@/lib/passes/types";
 
 export const runtime = "nodejs";
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const consumed = await assertAndConsumePass({
+    const consumed = await consumePassSmart({
       userId: user.id,
       product,
       refId: parsed.data.ref_id,

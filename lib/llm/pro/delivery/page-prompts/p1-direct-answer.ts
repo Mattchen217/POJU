@@ -7,7 +7,7 @@
 
 import { titleRules } from "./shared";
 
-export const PAGE_KEY = "direct_answer" as const;
+export const PAGE_KEY = "decision_brief" as const;
 export const PAGE_LABEL = "P1 · 核心直答";
 
 /** Finalize · 本段职责 */
@@ -47,7 +47,7 @@ export function buildFillDuty(tagZh: string): string {
 **删依据自检**:core_logic 中「为何对本案成立」一段删掉 chart_anchors 后应垮——禁止通用鸡汤。
 
 # 必填槽
-- page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。
+- page="decision_brief", page_title, page_subtitle, core_judgment, primary, backup。
 - primary/backup 各含: role, name(**贴本案·禁** Primary path/Backup path 英文占位), **core_logic**(必填), why(**禁**「—」), when(**禁**「—」), **chart_anchors≥1**(承重真词), strategic_goal可选, leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
 - **core_logic 必须写厚**(约380–560字,上限720),**空行分成 3–4 短段**,禁止一两句电报——sanitize 会因过薄打回:
   ①路是什么(角色怎么换、你留什么/放手什么——叙事层,不是步骤表)

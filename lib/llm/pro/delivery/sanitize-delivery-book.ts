@@ -121,7 +121,7 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
       t,
     )
   ) {
-    return "direct_answer";
+    return "decision_brief";
   }
   if (
     /你的底座|为什么卡|foundation|why you.?re stuck|能量底座|核心洞察|core energy|key insights|天赋潜能|行为驱动力|先天潜能|十神|talent blueprint|behavioral drivers|处境|核心优势|状态调频|天赋助力|神煞|能量阶段|core strengths|energy alignment|抉择|个人周期|宏观周期|战略窗口|life cycles|strategic windows|第二部分|Part II\b/i.test(
@@ -133,12 +133,12 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
   if (
     /科学药方|行为策略|行动指南|科学实操|现代行动|behavioral strategy|scientific path|action plan|第三部分|Part III\b/i.test(t)
   ) {
-    return "science_action";
+    return "execution_guidance";
   }
   if (
     /东方药方|玄学药方|环境调频|玄学实操|空间·色彩|eastern path|environmental tuning|调频|retune|第四部分|Part IV\b/i.test(t)
   ) {
-    return "metaphysics_action";
+    return "self_regulation";
   }
   if (/30\s*天|能量推进|双轨|节奏|action roadmap|第五部分|Part V\b/i.test(t)) {
     return "thirty_day";
@@ -148,14 +148,14 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
       t,
     )
   ) {
-    return "risk_guard";
+    return "validation_risk";
   }
   if (
     /突破信号|正向信号|收尾|结语|breakthrough signals|epilogue|独立走|第七部分|Part VII\b|第九部分|Part IX\b/i.test(
       t,
     )
   ) {
-    return "signals_close";
+    return "validation_close";
   }
   for (const k of DELIVERY_SEGMENT_KEYS) {
     if (lower.includes(k)) return k;
@@ -222,7 +222,7 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
     const dropEvidence =
       key != null && DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
     let polished = polishArgumentPairs(withoutStructs, locale, dropEvidence);
-    if (key === "signals_close") {
+    if (key === "validation_close") {
       polished = stripReturnHooks(polished);
     }
 

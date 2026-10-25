@@ -88,7 +88,7 @@ export function validateNarrativeShape(input: {
     if (!narrativeArgumentCountOk(n, { min })) {
       return { ok: false, reason: `narrative_too_few_args:${k}:${n}` };
     }
-    if (k === "science_action" || k === "metaphysics_action") {
+    if (k === "execution_guidance" || k === "self_regulation") {
       const args = input.argBodies?.[k] ?? [];
       for (let i = 0; i < args.length; i++) {
         if (!rxArgumentHasStrategyAndMethods(args[i]!)) {

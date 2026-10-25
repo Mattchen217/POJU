@@ -29,12 +29,18 @@ export async function createPOJUSession(input: {
   original_question: string;
   /** When set, Step 8 can load Step 7 `base_analysis` from this `stored_profiles` row. */
   selected_stored_profile_id?: string | null;
+  /** Joint decision: use server-issued pivot session id so pass_ref stays aligned. */
+  session_id?: string | null;
 }): Promise<string> {
   const db = getPojuDb();
   const deviceId = getPojuDeviceId();
   const ownerKey = await resolveLocalOwnerKey();
   const now = new Date();
-  const sessionId = safeRandomUUID();
+  const override =
+    typeof input.session_id === "string" && input.session_id.trim().length >= 8
+      ? input.session_id.trim()
+      : null;
+  const sessionId = override ?? safeRandomUUID();
   const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS);
 
   const storedId =

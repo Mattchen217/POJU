@@ -40,7 +40,7 @@ import {
 import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 
 const emptyPlan: DeepEvidencePlan = {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: [
     {
       path: "dimensions[0]",
@@ -61,11 +61,11 @@ const emptyPlan: DeepEvidencePlan = {
   ],
 };
 
-assert.equal(allowEmptyChartAnchorsOnFill("foundation", emptyPlan), true);
-assert.equal(allowEmptyChartAnchorsOnFill("metaphysics_action", emptyPlan), false);
-assert.equal(allowEmptyChartAnchorsOnFill("science_action", emptyPlan), false);
-assert.equal(allowEmptyChartAnchorsOnFill("risk_guard", emptyPlan), false);
-assert.equal(allowEmptyChartAnchorsOnFill("signals_close", emptyPlan), false);
+assert.equal(allowEmptyChartAnchorsOnFill("situation_analysis", emptyPlan), true);
+assert.equal(allowEmptyChartAnchorsOnFill("self_regulation", emptyPlan), false);
+assert.equal(allowEmptyChartAnchorsOnFill("execution_guidance", emptyPlan), false);
+assert.equal(allowEmptyChartAnchorsOnFill("validation_risk", emptyPlan), false);
+assert.equal(allowEmptyChartAnchorsOnFill("validation_close", emptyPlan), false);
 
 const extracted = extractChartStructureAnchorsFromProse(
   "己土日主身强，大运壬寅用神水透干，流年丙午忌神火土成势，食神受制",
@@ -84,32 +84,32 @@ const p4Page: Record<string, unknown> = {
   ],
 };
 const stampNotes = stampPageChartAnchorsFromDeepPlan(
-  "metaphysics_action",
+  "self_regulation",
   p4Page,
   emptyPlan,
 );
 assert.ok(stampNotes.some((n) => n.startsWith("stamped_chart_anchors_from_judgment")));
-const units = collectPageAnchorUnits("metaphysics_action", p4Page);
+const units = collectPageAnchorUnits("self_regulation", p4Page);
 assert.ok(units.every((u) => u.anchors.length >= 1), JSON.stringify(units));
 
 const emptyFail = assessUnitAnchorQuality({
-  pageKey: "metaphysics_action",
+  pageKey: "self_regulation",
   units: [
     { path: "dimensions[0]", anchors: [] },
     { path: "dimensions[1]", anchors: [] },
   ],
-  allowEmptyAnchors: allowEmptyChartAnchorsOnFill("metaphysics_action", emptyPlan),
+  allowEmptyAnchors: allowEmptyChartAnchorsOnFill("self_regulation", emptyPlan),
 });
 assert.equal(emptyFail.structuralFail, true);
 assert.equal(emptyFail.reason, "all_content_units_missing_chart_anchors");
 
 const foundationOk = assessUnitAnchorQuality({
-  pageKey: "foundation",
+  pageKey: "situation_analysis",
   units: [
     { path: "why_cards[0]", anchors: [] },
     { path: "why_cards[1]", anchors: [] },
   ],
-  allowEmptyAnchors: allowEmptyChartAnchorsOnFill("foundation", {
+  allowEmptyAnchors: allowEmptyChartAnchorsOnFill("situation_analysis", {
     units: [{ chart_anchors: [] }, { chart_anchors: [] }],
   }),
 });
@@ -188,7 +188,7 @@ for (const d of stripLab.dimensions) {
 }
 const stampRoot = { dimensions: stripLab.dimensions };
 stampP4MeansTypesFromDeepPlan(stampRoot, {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: [
     { path: "dimensions[0]", moat_class: "polarity" },
     { path: "dimensions[1]", moat_class: "timing" },
@@ -365,13 +365,13 @@ assert.equal(
 {
   const brief = extractP5ActionBrief({
     p1: {
-      page: "direct_answer",
+      page: "decision_brief",
       primary: { name: "兼职试水", when: "now", chart_anchors: [] },
       backup: { name: "全职硬法律网", when: "if", chart_anchors: [] },
       core_judgment: "先兼职",
     } as never,
     p3: {
-      page: "science_action",
+      page: "execution_guidance",
       primary_toolkit: {
         angles: [
           {
@@ -457,7 +457,7 @@ assert.equal(
 {
   const locked = applyPreferBindingLocks(
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -550,8 +550,8 @@ assert.equal(
     [],
   );
   // Slice: timing+archetype only (no yong: line) → dim0 timing, not polarity.
-  const planned = planDeepEvidenceSlots("metaphysics_action", {
-    key: "metaphysics_action",
+  const planned = planDeepEvidenceSlots("self_regulation", {
+    key: "self_regulation",
     eastern_calc_slice:
       "timing_ripeness: 未熟\n【十神语义 SSOT】食神、正印\n【大运语义】壬寅转折",
     metaphysics_moat_feed: block,
@@ -571,7 +571,7 @@ assert.equal(
   );
   const locked = applyPreferBindingLocks(
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -600,7 +600,7 @@ assert.equal(
   // Means seed must NOT soft-fill over hang
   const noMeansFill = applyPreferBindingLocks(
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",

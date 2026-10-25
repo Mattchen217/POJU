@@ -43,7 +43,7 @@ assert.match(block, /十神类：已用 6 次/);
 assert.match(block, /关系类：已用 0 次/);
 assert.match(block, /不凑数/);
 
-const { system, user } = buildPageSchemaFillPrompt("science_action", {
+const { system, user } = buildPageSchemaFillPrompt("execution_guidance", {
   locale: "zh",
   core_conclusion: "test",
   prior_chart_anchors: used,
@@ -53,7 +53,7 @@ assert.ok(!system.includes("已用锚点类目分布"), "tally must not enter st
 assert.match(user, /已用锚点类目分布/);
 
 const aq = assessUnitAnchorQuality({
-  pageKey: "science_action",
+  pageKey: "execution_guidance",
   units: [{ path: "angles[0]", anchors: ["正官", "七杀"] }],
   priorAnchors: ["正官", "七杀"],
   inventoryTokens: tally.inventoryTokens,

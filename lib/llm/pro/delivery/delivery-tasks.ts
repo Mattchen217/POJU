@@ -87,7 +87,7 @@ export function deliveryFinalizeEffort(
 ): "high" | "xhigh" {
   if (
     paths.length === 1 &&
-    (paths[0] === "science_action" || paths[0] === "metaphysics_action")
+    (paths[0] === "execution_guidance" || paths[0] === "self_regulation")
   ) {
     return "xhigh";
   }

@@ -39,7 +39,7 @@ const lead = deliveryEvidenceLeadLabel("zh");
   const cov = countEvidenceCoverage(
     tree,
     { science_action: [{ body: "", evidence: "only-first" }] },
-    "science_action",
+    "execution_guidance",
   );
   assert.equal(cov.bodies, 2);
   assert.equal(cov.evidences, 1);
@@ -128,7 +128,7 @@ ${lead}
       { body: "", evidence: "" },
     ],
   };
-  const cov = countEvidenceCoverage(narrative, evidence, "signals_close");
+  const cov = countEvidenceCoverage(narrative, evidence, "validation_close");
   assert.equal(cov.bodies, 6, "6 content slots need evidence (not 8)");
   assert.equal(cov.evidences, 6);
   assert.deepEqual(cov.missingIndexes, []);
@@ -140,7 +140,7 @@ ${lead}
         i === 6 ? { body: "", evidence: "" } : e,
       ),
     },
-    "signals_close",
+    "validation_close",
   );
   assert.deepEqual(gapOnDay7.missingIndexes, [6], "day7[3] empty is a real gap");
 }

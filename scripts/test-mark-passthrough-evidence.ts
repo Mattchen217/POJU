@@ -34,13 +34,13 @@ const packPartial = {
   },
 };
 
-const fromPack = asMarkArgumentTree(packPartial, ["foundation"]);
+const fromPack = asMarkArgumentTree(packPartial, ["situation_analysis"]);
 assert.equal(fromPack.foundation?.length, 2);
 assert.ok((fromPack.foundation?.[0]?.evidence ?? "").length > 40);
 
 const merged = mergeEncodeMarkArgPartials(
   raw,
-  ["foundation"],
+  ["situation_analysis"],
   [packPartial as unknown as DeliveryArgumentTree],
   "zh",
 );
@@ -50,7 +50,7 @@ assert.match(merged.foundation?.[0]?.evidence ?? "", /丑未皆土/);
 assert.match(merged.foundation?.[1]?.evidence ?? "", /午丑相害/);
 
 // Empty / wrong-shape partials must fall back to raw 批断 (never wipe).
-const wiped = mergeEncodeMarkArgPartials(raw, ["foundation"], [{} as DeliveryArgumentTree], "zh");
+const wiped = mergeEncodeMarkArgPartials(raw, ["situation_analysis"], [{} as DeliveryArgumentTree], "zh");
 assert.match(wiped.foundation?.[0]?.evidence ?? "", /丑未皆土/);
 
 console.log("ok mark-passthrough-evidence");

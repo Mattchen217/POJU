@@ -10,13 +10,17 @@ import {
 
 const PANES = [
   { id: "cover", num: "01", tag: "P0", toc: "SLOT_TOC_COVER", body: "SLOT_BODY_COVER" },
-  { id: "direct_answer", num: "02", tag: "P1", toc: "SLOT_TOC_DIRECT_ANSWER", body: "SLOT_BODY_DIRECT_ANSWER" },
-  { id: "foundation", num: "03", tag: "P2", toc: "SLOT_TOC_FOUNDATION", body: "SLOT_BODY_FOUNDATION" },
-  { id: "science_action", num: "04", tag: "P3", toc: "SLOT_TOC_SCIENCE_ACTION", body: "SLOT_BODY_SCIENCE_ACTION" },
-  { id: "metaphysics_action", num: "05", tag: "P4", toc: "SLOT_TOC_METAPHYSICS_ACTION", body: "SLOT_BODY_METAPHYSICS_ACTION" },
-  { id: "risk_guard", num: "06", tag: "P5", toc: "SLOT_TOC_RISK_GUARD", body: "SLOT_BODY_RISK_GUARD" },
-  { id: "signals_close", num: "07", tag: "P6", toc: "SLOT_TOC_SIGNALS_CLOSE", body: "SLOT_BODY_SIGNALS_CLOSE" },
-  { id: "appendix", num: "08", tag: "P7", toc: "SLOT_TOC_APPENDIX", body: "SLOT_BODY_APPENDIX" },
+  { id: "decision_brief", num: "02", tag: "01", toc: "SLOT_TOC_DECISION_BRIEF", body: "SLOT_BODY_DECISION_BRIEF" },
+  { id: "situation_analysis", num: "03", tag: "02", toc: "SLOT_TOC_SITUATION", body: "SLOT_BODY_SITUATION" },
+  { id: "personal_decision_patterns", num: "04", tag: "03", toc: "SLOT_TOC_PATTERNS", body: "SLOT_BODY_PATTERNS" },
+  { id: "bottleneck_analysis", num: "05", tag: "04", toc: "SLOT_TOC_BOTTLENECK", body: "SLOT_BODY_BOTTLENECK" },
+  { id: "strategic_options", num: "06", tag: "05", toc: "SLOT_TOC_OPTIONS", body: "SLOT_BODY_OPTIONS" },
+  { id: "recommended_strategy", num: "07", tag: "06", toc: "SLOT_TOC_STRATEGY", body: "SLOT_BODY_STRATEGY" },
+  { id: "execution_guidance", num: "08", tag: "07", toc: "SLOT_TOC_EXECUTION", body: "SLOT_BODY_EXECUTION" },
+  { id: "self_regulation", num: "09", tag: "08", toc: "SLOT_TOC_SELF_REG", body: "SLOT_BODY_SELF_REG" },
+  { id: "validation_risk", num: "10", tag: "09a", toc: "SLOT_TOC_VALIDATION_RISK", body: "SLOT_BODY_VALIDATION_RISK" },
+  { id: "validation_close", num: "11", tag: "09b", toc: "SLOT_TOC_VALIDATION_CLOSE", body: "SLOT_BODY_VALIDATION_CLOSE" },
+  { id: "appendix", num: "12", tag: "A", toc: "SLOT_TOC_APPENDIX", body: "SLOT_BODY_APPENDIX" },
 ] as const;
 
 function tocItem(

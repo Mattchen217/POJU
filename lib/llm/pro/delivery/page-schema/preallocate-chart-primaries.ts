@@ -44,11 +44,11 @@ export function isNonLoadBearingChartSlug(slug: string): boolean {
 
 /** Pages that run deep-evidence assign in parallel Wave A (+ Wave B after unlock). */
 export const PREALLOC_DEEP_PAGES: readonly DeliverySegmentKey[] = [
-  "foundation",
-  "science_action",
-  "metaphysics_action",
-  "risk_guard",
-  "signals_close",
+  "situation_analysis",
+  "execution_guidance",
+  "self_regulation",
+  "validation_risk",
+  "validation_close",
 ] as const;
 
 export type ChartPrimaryPreallocMap = {
@@ -170,7 +170,7 @@ function planSlotShells(
   forcedCount?: number,
 ): PlannedAssignSlot[] {
   const spec = deepEvidenceUnitSpec(key);
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const eligible = inferP4MoatEligibleTypes(eastern_calc_slice);
     const count =
       forcedCount ?? resolveDeepEvidenceUnitCount(key, eligible.size);

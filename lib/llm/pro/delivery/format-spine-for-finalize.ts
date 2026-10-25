@@ -127,7 +127,7 @@ export function buildEasternCalcSliceForFill(
   if (plan) {
     return [
       formatPagePlanSliceForPrompt(
-        "metaphysics_action",
+        "self_regulation",
         plan,
         core,
         questionExpectation,
@@ -195,7 +195,7 @@ export function buildRiskCalcSliceForFill(
 ): string {
   if (plan) {
     const base = formatPagePlanSliceForPrompt(
-      "risk_guard",
+      "validation_risk",
       plan,
       core,
       questionExpectation,
@@ -395,7 +395,7 @@ export function formatSpineSliceForSegment(
   const backupFrame = core.backup_path ?? core.modern_action_frames[1];
 
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return (
         `situation_conclusion:\n${core.situation_conclusion}\n\n` +
         `key_crossroads:\n` +
@@ -457,7 +457,7 @@ export function formatSpineSliceForSegment(
         `禁止逐月预测、禁止吉凶运势语、禁生肖。` +
         `「养根」类主隐喻全报告只在此页用一次。勿与 direct_answer 结论头重复铺陈。`
       );
-    case "science_action":
+    case "execution_guidance":
       return (
         `primary_path(主路径):\n` +
         `${
@@ -488,7 +488,7 @@ export function formatSpineSliceForSegment(
         `禁先造通用动作再贴标签;禁合同/话术剧本;禁半套。` +
         `自检:删掉 chart_anchors/bazi_basis 后若谁都适用→重写。`
       );
-    case "metaphysics_action":
+    case "self_regulation":
       return (
         `【锚定】用户【问题+期望】。本页=东方谋略暗锦囊(八字知己+奇门知局→局势·意象·仪轨),不是科学职场方案,也不是玄学报幕。\n\n` +
         `${dimsDump}\n\n` +
@@ -524,7 +524,7 @@ export function formatSpineSliceForSegment(
         `【禁】把 science_action 谈判逐字稿搬进周表(周表只排节奏与动作类型)。` +
         `勿按天细拆、勿让模型吐 ASCII 甘特(结构由代码侧生成时再接)。`
       );
-    case "risk_guard":
+    case "validation_risk":
       return (
         `【页定位】执行主路径时的结构刹车(fill 阶段会吃 P3/P4 Action Brief);本切片只供命理熔断料,勿另立与药方脱节的行动课。\n\n` +
         `primary chart_anchors: ${(primaryFrame?.chart_anchors ?? []).join("、") || "(无)"}\n` +
@@ -535,7 +535,7 @@ export function formatSpineSliceForSegment(
         `下游 fill 须 situation→then_do→watch→forbid + 单元 chart_anchors。` +
         `自检:删依据后还成立→重写。`
       );
-    case "signals_close": {
+    case "validation_close": {
       const { positive } = splitSelfCheckSignals(core.self_check_signals ?? []);
       return (
         `self_check_signals(正向信号优先):\n${positive.map((s) => `- ${s}`).join("\n") || "(无)"}\n\n` +

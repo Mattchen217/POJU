@@ -1,5 +1,5 @@
 /**
- * P4 metaphysics_action · 东方谋略约束帧（局势·意象·仪轨）。
+ * P4 self_regulation · 东方谋略约束帧（局势·意象·仪轨）。
  *
  * Spec: `.cursor/docs/P4-东方谋略-规格锁.md`
  * 铁律「禁正例照抄」：只给方向 + 禁区 + 本盘真算料；禁止整句 means 范文。
@@ -385,7 +385,7 @@ export function buildMetaphysicsAssignPathHints(
 }
 
 /**
- * Build P4 constraint frame + eligibility for deep/fill (metaphysics_action).
+ * Build P4 constraint frame + eligibility for deep/fill (self_regulation).
  * 禁正例：不提供可抄 means 句；fill 按本维批断 + 下列真算/方向自写。
  */
 export function buildMetaphysicsMoatFeedBlock(

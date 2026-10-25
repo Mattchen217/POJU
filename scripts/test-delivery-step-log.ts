@@ -8,8 +8,8 @@ import {
   logDeliveryStep,
 } from "../lib/llm/pro/delivery/delivery-step-log";
 
-assert.equal(deliveryPageLabel("science_action"), "P3");
-assert.equal(deliveryPageLabel("metaphysics_action"), "P4");
+assert.equal(deliveryPageLabel("execution_guidance"), "P3");
+assert.equal(deliveryPageLabel("self_regulation"), "P4");
 
 const lines: string[] = [];
 const origInfo = console.info;

@@ -55,8 +55,8 @@ assert.equal(
   "deep_evidence_shallow:why_cards[3]",
 );
 
-const planFail = assessDeepEvidenceQuality("foundation", {
-  page: "foundation",
+const planFail = assessDeepEvidenceQuality("situation_analysis", {
+  page: "situation_analysis",
   units: [
     {
       path: "why_cards[1]",
@@ -90,7 +90,7 @@ const chunk: DeepEvidenceAssignmentUnit[] = [
   },
 ];
 const { system } = buildDeepEvidenceWriteChunkPrompt(
-  "foundation",
+  "situation_analysis",
   {
     locale: "zh",
     core_conclusion: "测",
@@ -373,7 +373,7 @@ assert.equal(
 );
 
 const { system: factSystem } = buildDeepEvidenceWriteChunkPrompt(
-  "foundation",
+  "situation_analysis",
   {
     locale: "zh",
     core_conclusion: "测",
@@ -397,7 +397,7 @@ assert.match(factSystem, /≥3 句/);
 assert.match(factSystem, /承重深度/);
 assert.doesNotMatch(factSystem, /真词用/);
 const { user: factUser } = buildDeepEvidenceWriteChunkPrompt(
-  "foundation",
+  "situation_analysis",
   {
     locale: "zh",
     core_conclusion: "测",
@@ -420,7 +420,7 @@ assert.doesNotMatch(factUser, /处境材料不应出现/);
 assert.match(factUser, /本盘事实档/);
 assert.match(factUser, /丑未相冲/);
 const { user: factUserWithCalc } = buildDeepEvidenceWriteChunkPrompt(
-  "foundation",
+  "situation_analysis",
   {
     locale: "zh",
     core_conclusion: "测",
@@ -442,7 +442,7 @@ assert.match(factUserWithCalc, /大运壬寅/);
 
 // P3 fact-pack write: no means menu; strip 贵人能力 / claim-external stars.
 const { system: p3Sys, user: p3User } = buildDeepEvidenceWriteChunkPrompt(
-  "science_action",
+  "execution_guidance",
   {
     locale: "zh",
     core_conclusion: "测",

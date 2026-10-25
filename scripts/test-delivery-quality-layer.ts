@@ -141,7 +141,7 @@ function testRoadmapAndGantt() {
 }
 
 function testEnergyBaseStructs() {
-  const md = buildSegmentStructureMarkdown("foundation", "zh", core);
+  const md = buildSegmentStructureMarkdown("situation_analysis", "zh", core);
   const payloads = parsePojuStructPayloads(md);
   assert.ok(payloads.some((p) => p.kind === "energy_dashboard"));
   assert.ok(payloads.some((p) => p.kind === "three_phase_roadmap"));

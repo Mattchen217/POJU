@@ -29,7 +29,7 @@ import {
 } from "@/lib/llm/pro/delivery/metaphysics-moat-feed";
 
 /** P6 批断 path 钉死（与 deepEvidenceUnitSpec / 正文出门槽对齐）。 */
-const SIGNALS_CLOSE_JUDGMENT_PATHS = deepEvidenceUnitSpec("signals_close")
+const SIGNALS_CLOSE_JUDGMENT_PATHS = deepEvidenceUnitSpec("validation_close")
   .paths as readonly string[];
 import { scrubJudgmentPrescriptionClosers } from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
 import {
@@ -78,7 +78,7 @@ user 里本页 duty 含 **角色 · 目标 · 禁忌 · 数据来源 · 硬约�
 
 function pageDutyBlock(key: DeliverySegmentKey): string {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return [
         `## 本页 duty · direct_answer（P1 批断）`,
         `【本页角色】主辅真算根写手——只写结构取舍根（松紧/承压/切辅窗口），不写生活路径处方。`,
@@ -97,7 +97,10 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- backup：切辅的**结构信号**（岁运冲突缓解、用神得扶更稳、切辅窗口未开/近窗）——停在信号词，**禁**「需待/须待…方…」半祈使；禁闭集外干支菜单，禁未来奇门门象现编。`,
         `- chart_anchors 每条 ≥1；三条主轴勿完全同骨架（backup 勿整段复读 core 的岁运句）。`,
       ].join("\n");
-    case "foundation":
+    case "situation_analysis":
+  case "personal_decision_patterns":
+  case "bottleneck_analysis":
+  case "situation_analysis":
       return [
         `## 本页 duty · foundation（P2 批断）`,
         `【本页角色】归因机制写手——从**本盘八字结构+岁运**推出「本题为何卡」，禁止从处境倒推圆盘。`,
@@ -121,7 +124,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- 用忌精度对齐 yong_stance（大运扶用时禁「用神弱」，写岁运冲突下承压）；chart_anchors≥1 且贴本轴；不要 means_candidate_ref。`,
         `- 干支相克只写「克」；闭集未列之「合/合化/合破」一律禁现编。`,
       ].join("\n");
-    case "science_action":
+    case "execution_guidance":
       return [
         `## 本页 duty · science_action（P3 批断）`,
         `【本页角色】科学执行的结构根写手——证明后文动作「为何必须针对此人」，不是策略本身。`,
@@ -134,7 +137,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【数据来源】总纲 + Fact-pack + **科学手段派工菜单**；六条 ref 不重复；**不灌 collecting / 奇门 / moat**。`,
         `【硬约束】恰好 6 条；path=primary_toolkit.angles[0..2]+backup_toolkit.angles[0..2]；六维轴各异；chart_anchors≥1。`,
       ].join("\n");
-    case "metaphysics_action":
+    case "self_regulation":
       return [
         `## 本页 duty · metaphysics_action（P4 批断）`,
         `【本页角色】奇门+八字双核结构根写手——写局/气/气口张力，不写协议与仪轨处方。`,
@@ -156,7 +159,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【数据来源】总纲 + Fact-pack（含锁盘）+ **moat 结构候选（批断版·无 Q/E/收集）**；六条 ref 不重复；**不灌 fill 派工全文、不灌 collecting、不灌 P3 科学菜单**。`,
         `【硬约束】恰好 6 条 path=dimensions[0..5]；moat 按派工 timing|polarity|archetype 轮转；收束停在气口偏静/主客胶着/用弱忌旺/窗口收窄/制衡位弱（死门承重时才可写场域虚高/气口易被压）；chart_anchors≥1 且闭集整抄；死门仅在值使=死门或值符落死门宫时承重。`,
       ].join("\n");
-    case "risk_guard":
+    case "validation_risk":
       return [
         `## 本页 duty · risk_guard（P5 批断）`,
         `【本页角色】翻车结构根写手。`,
@@ -165,7 +168,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【数据来源】总纲/Fact-pack + 上游主辅结构。`,
         `【硬约束】纯机制；禁手段清单。`,
       ].join("\n");
-    case "signals_close":
+    case "validation_close":
       return [
         `## 本页 duty · signals_close（P6 批断）`,
         `【本页角色】出门槽近窗结构根写手。`,
@@ -222,11 +225,11 @@ function coercePlan(
       const meansRaw = String(row.means_candidate_ref ?? "").trim();
       // P1/P2：忽略手段标签，避免喂下游「处方」联想。
       const means_candidate_ref =
-        key === "foundation" || key === "direct_answer" || !meansRaw
+        key === "situation_analysis" || key === "decision_brief" || !meansRaw
           ? undefined
           : meansRaw;
       // P3+：软裁攻守祈使/投入节奏收束（类别）；P1 批断允许宜守，不经此裁。
-      const scrubClosers = key !== "direct_answer" && key !== "foundation";
+      const scrubClosers = key !== "decision_brief" && key !== "situation_analysis";
       const claimOut = scrubClosers
         ? scrubJudgmentPrescriptionClosers(unit_claim || evidence.slice(0, 80))
         : unit_claim || evidence.slice(0, 80);
@@ -248,7 +251,7 @@ function coercePlan(
     })
     .filter(Boolean) as DeepEvidencePlan["units"];
   // P3：path 钉死主辅 angles；means_candidate_ref 按 path 下标钉死结构轴闭集（禁模型现编工具名）。
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     const remapped = units.slice(0, SCIENCE_ASSIGN_PATHS.length).map((u, i) => ({
       ...u,
       path: SCIENCE_ASSIGN_PATHS[i]!,
@@ -258,7 +261,7 @@ function coercePlan(
     return { page: key, units: remapped };
   }
   // P4：path/ref/moat 按派工表钉死（禁自造「泄秀节律者/运岁近窗未熟」等人设标签当 ref）。
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const remapped = units
       .slice(0, METAPHYSICS_JUDGMENT_PATHS.length)
       .map((u, i) => ({
@@ -271,7 +274,7 @@ function coercePlan(
     return { page: key, units: remapped };
   }
   // P6：path 钉死出门槽（禁 dimensions[i] 漂移，否则依据折层挂不到正文）。
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     const remapped = units
       .slice(0, SIGNALS_CLOSE_JUDGMENT_PATHS.length)
       .map((u, i) => ({
@@ -283,7 +286,7 @@ function coercePlan(
   }
   const minUnits = Math.max(1, bounds.min);
   if (units.length < minUnits) return null;
-  if (key === "direct_answer") {
+  if (key === "decision_brief") {
     const paths = new Set(units.map((u) => u.path));
     if (
       !paths.has("core_judgment") ||
@@ -297,11 +300,11 @@ function coercePlan(
 }
 
 function jsonShapeHint(key: DeliverySegmentKey): string {
-  if (key === "direct_answer") {
+  if (key === "decision_brief") {
     return [
       `## 输出 JSON 形状（P1：恰好 3 条）`,
       `{`,
-      `  "page": "direct_answer",`,
+      `  "page": "decision_brief",`,
       `  "units": [`,
       `    {`,
       `      "path": "core_judgment",`,
@@ -328,7 +331,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `}`,
     ].join("\n");
   }
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     const unitLines = SCIENCE_ASSIGN_PATHS.map((p, i) =>
       [
         `    {`,
@@ -344,7 +347,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
     return [
       `## 输出 JSON 形状（P3：恰好 6 条 · path+ref 钉死）`,
       `{`,
-      `  "page": "science_action",`,
+      `  "page": "execution_guidance",`,
       `  "units": [`,
       unitLines,
       `  ]`,
@@ -352,7 +355,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `means_candidate_ref 必须逐字用上表六值（代码亦会按 path 钉死）；禁另造「资源链路评估」等后缀。`,
     ].join("\n");
   }
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const unitLines = METAPHYSICS_JUDGMENT_PATHS.map((p, i) =>
       [
         `    {`,
@@ -369,7 +372,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
     return [
       `## 输出 JSON 形状（P4：恰好 6 条 · path+ref+moat 钉死）`,
       `{`,
-      `  "page": "metaphysics_action",`,
+      `  "page": "self_regulation",`,
       `  "units": [`,
       unitLines,
       `  ]`,
@@ -377,7 +380,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `means_candidate_ref 必须逐字用上表六值（时机/极性/角色候选N）；禁另造「泄秀节律者/运岁近窗未熟」等人设标签。`,
     ].join("\n");
   }
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     const unitLines = SIGNALS_CLOSE_JUDGMENT_PATHS.map((p, i) =>
       [
         `    {`,
@@ -392,7 +395,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
     return [
       `## 输出 JSON 形状（P6：恰好 6 条 · path 钉死出门槽）`,
       `{`,
-      `  "page": "signals_close",`,
+      `  "page": "validation_close",`,
       `  "units": [`,
       unitLines,
       `  ]`,
@@ -402,19 +405,19 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
   }
   const moatLine = "";
   const meansLine =
-    key === "foundation"
+    key === "situation_analysis"
       ? ""
       : `      "means_candidate_ref": "可选：回溯菜单的短结构标签（非生活处方）",`;
   const anchorHint =
-    key === "foundation"
+    key === "situation_analysis"
       ? `      "chart_anchors": ["闭集短标签≥1·须贴本条主轴"],`
       : `      "chart_anchors": [],`;
   const claimHint =
-    key === "foundation"
+    key === "situation_analysis"
       ? `      "unit_claim": "结构张力一句（主语=用忌/岁运/宫位/十神显隐；禁话语权·股权·兼职等处境词；官杀藏→制衡位不显）",`
       : `      "unit_claim": "本盘结构主张一句（禁祈使/禁手段）",`;
   const evidenceHint =
-    key === "foundation"
+    key === "situation_analysis"
       ? `      "evidence": "≥2句机制链·停在承压/隐伏/制衡位弱（删光话语权·股权·兼职后机制须仍完整）",`
       : `      "evidence": "≥2句纯机制链（禁处方、禁冥想调候、禁必损必成）",`;
   return [
@@ -468,7 +471,7 @@ export async function runContentJudgmentGenerate(input: {
   let scrubbedFeed = scrubJudgmentFeedPrescriptions(input.user_feed);
   // 防御：Lab/上游漏装派工菜单时，批断枪自补结构派工（禁空菜单现编 ref）
   if (
-    input.key === "science_action" &&
+    input.key === "execution_guidance" &&
     !/【P3 科学手段候选菜单/.test(scrubbedFeed)
   ) {
     scrubbedFeed = [
@@ -480,19 +483,19 @@ export async function runContentJudgmentGenerate(input: {
   }
   // P3/P4 批断：禁把 Lab 整段议题原文（含兼职/股权/话语权）当 core_conclusion 灌进枪口
   const coreBlock =
-    input.key === "science_action"
+    input.key === "execution_guidance"
       ? [
           "## core_conclusion",
           "围绕本案合伙/资源议题写六维结构根（格局十神 · 宫位 · 财官显隐 · 印比 · 用忌 · 岁运）。",
           "禁回写处境词族：试水/全职/兼职/股权/话语权/权责/名分/稳定收入——官杀藏只写「制衡位不显」。",
         ].join("\n")
-      : input.key === "metaphysics_action"
+      : input.key === "self_regulation"
         ? [
             "## core_conclusion",
             "围绕本案合伙/资源议题写东方谋略结构根（奇门门宫主客 · 用忌 · 岁运窗口 · 十神站位张力）。",
             "禁回写处境词族：试水/全职/兼职/股权/话语权/权力分配/模糊条款/名分/权益——收束停在气口/场域虚高/用弱忌旺/窗口收窄。",
           ].join("\n")
-      : input.key === "foundation"
+      : input.key === "situation_analysis"
         ? [
             "## core_conclusion",
             "围绕四轴写结构根（用忌岁运 · 宫位冲害 · 财官显隐 · 食伤印比）。议题只定方向，不粘贴收集原文。",
@@ -510,29 +513,29 @@ export async function runContentJudgmentGenerate(input: {
     input.acceptance_corrective?.trim() || "",
     jsonShapeHint(input.key),
     `units 条数建议 ${bounds.min}–${bounds.max}` +
-      (input.key === "direct_answer"
+      (input.key === "decision_brief"
         ? `；path 钉死 core_judgment / primary / backup。`
-        : input.key === "science_action"
+        : input.key === "execution_guidance"
           ? `；path 钉死 primary_toolkit/backup_toolkit.angles[0..2]。`
-          : input.key === "foundation"
+          : input.key === "situation_analysis"
             ? `；恰好 4 条；path 钉死 dimensions[0..3]；禁奇门轴。`
-            : input.key === "signals_close"
+            : input.key === "validation_close"
               ? `；恰好 6 条；path 钉死 identity_shift / tonight / day7_micro_actions[0..3]。`
               : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
-    input.key === "direct_answer"
+    input.key === "decision_brief"
       ? `P1 额外自检：①三条 path 钉死？②claim/evidence 删光投入形态/现职收入/名分/话语权/权责后机制是否仍完整（残留=废稿）？③有无「用神弱」字面（大运扶用时应写承压）或「结构匹配/需待」收束？④有无攻守宜X或「可避免/需缓释/可保」半祈使？⑤有无奇门门宫承重或闭集外干支？⑥三条是否同骨架复读？⑦chart_anchors 是否每条≥1？任一条否=整页重写。`
       : "",
-    input.key === "foundation"
+    input.key === "situation_analysis"
       ? `P2 额外自检：①恰好4轴且无奇门？②岁运泄用/克用是否只在 dim0 主因（dim2/3 禁复读同一火克金句）？③用忌对齐 yong_stance？④chart_anchors≥1贴轴？⑤搜「话语权|权责|股权|兼职|全力投入|契约宫」→须为零？⑥无攻守祈使/若贸然投入？⑦删掉收集现象句后机制是否仍停在张力词？⑧搜「稳定|不稳|摇荡|克合|合局被破|冲破合|关系动荡」→须为零（宫位轴只用白名单三收束）？⑨财星显/大运正官已点名的同条是否误写隐伏/官不透/制衡位不显？⑩搜「午火七杀|午火正官|午火泄用神」→须为零（火日主官杀为水；火对金写克不写泄）？任一条否=整页重写。`
       : "",
-    input.key === "science_action"
+    input.key === "execution_guidance"
       ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异（格局十神/宫位/财官/印比/用忌/岁运）？③搜「话语权|股权|兼职|全职|试水|稳定收入|权责」→须为零？④有无宜X/更符合/投入形态处方收束？⑤means_candidate_ref 是否均抄自派工表 ref=（禁自造工具名）？⑥chart_anchors 每条≥1？任一条否=整页重写。`
       : "",
-    input.key === "metaphysics_action"
+    input.key === "self_regulation"
       ? `P4 额外自检：①六 path+ref+moat 钉死？②仪轨/露锋/加大投入/若强行推进？③处境尾巴？④透藏假藏或透干当令并列？⑤calc_cite 纯结构？⑥枭印夺食等套话？⑦合冲刑害是否闭集**全称**原词（禁「半合与六合」糊墙、禁闭集外午午半合、禁午未合火）？⑧干+十神是否与日主/Fact-pack 一致（禁正偏印互串）？⑨chart_anchors 是否整段照抄闭集（禁「忌神fire」类半截自造）？⑩休门局是否误写「场域虚高」（死门承重才可）？任一条否=整页重写。`
       : "",
-    input.key === "signals_close"
+    input.key === "validation_close"
       ? `P6 额外自检：①六 path 钉死且无金句/对照信号/带走 unit？②claim 主语是否仅为用忌/岁运/宫位/十神（若删掉收集里的生活实验名后 claim 垮掉=倒贴正文菜单=废稿）？③六条主轴互异（禁多条共用同一配偶宫冲骨架，禁多条同写火克金→资源偏苛）？④evidence 删光处境夹层/心理对白后机制是否仍停在承压/窗口收窄/资源偏苛？⑤chart_anchors 是否整段照抄题型锚（禁半截用忌英标）？⑥无手段清单/甘特/祈使？任一条否=整页重写。`
       : "",
   ]

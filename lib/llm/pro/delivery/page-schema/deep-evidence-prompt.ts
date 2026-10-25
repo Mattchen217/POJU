@@ -36,8 +36,15 @@ export type DeepEvidenceUnit = {
   /** Stable path hint (why_cards[0], primary_toolkit.angles[0], …). */
   path: string;
   chart_anchors: string[];
-  /** Professional evidence with ⟦w:真词⟧ slots — not user vernacular. */
+  /**
+   * Legacy combined evidence string (may embed 【命理】/【科学】).
+   * Prefer metaphysics_evidence + science_evidence; keep `evidence` for mark/compat.
+   */
   evidence: string;
+  /** v1 双轨 · 命理机制（含 ⟦w:真词⟧）。 */
+  metaphysics_evidence?: string;
+  /** v1 双轨 · 科学机制（本案绑定，无伪科学融合）。 */
+  science_evidence?: string;
   /**
    * P4 only: Call0-assigned moat class for this unit.
    * Must survive write→compress so fill emits matching means types.
@@ -66,7 +73,7 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
   note: string;
 } {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       // Runtime skips deep-evidence for transition P1; spec kept for ClaimPlan alignment only.
       return {
         min: 3,
@@ -74,14 +81,44 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
         paths: ["core_judgment", "primary", "backup"],
         note: "P1 transition: deep-evidence skipped at runtime; anchors internal-only",
       };
-    case "foundation":
+    case "situation_analysis":
+    case "situation_analysis":
       return {
         min: 4,
         max: 5,
         paths: ["why_cards[0]", "why_cards[1]", "why_cards[2]", "why_cards[3]", "why_cards[4]"],
         note: "why_cards 每卡一单元；默认 4，确有第五条归因可写 5。末卡收束诊断。",
       };
-    case "science_action":
+    case "personal_decision_patterns":
+      return {
+        min: 1,
+        max: 3,
+        paths: ["why_cards[0]", "why_cards[1]", "why_cards[2]"],
+        note: "模式短卡 1–3；每卡一单元。",
+      };
+    case "bottleneck_analysis":
+      return {
+        min: 1,
+        max: 3,
+        paths: ["why_cards[0]", "why_cards[1]", "why_cards[2]"],
+        note: "障碍卡 1–3；每卡一单元。",
+      };
+    case "strategic_options":
+      return {
+        min: 2,
+        max: 4,
+        paths: ["options[0]", "options[1]", "options[2]", "options[3]"],
+        note: "每选项一单元；2–4 条。",
+      };
+    case "recommended_strategy":
+      return {
+        min: 3,
+        max: 3,
+        paths: ["core_judgment", "primary", "backup"],
+        note: "主策略三槽：判断+主+辅。",
+      };
+    case "execution_guidance":
+    case "execution_guidance":
       return {
         min: 6,
         max: 6,
@@ -93,9 +130,9 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
           "backup_toolkit.angles[1]",
           "backup_toolkit.angles[2]",
         ],
-        note: "主辅各 3 个 angle；path 与【P3 科学手段候选菜单】维序对齐；不要写 opening/alert 单元",
+        note: "主辅各 3 个 angle；path 与科学手段候选菜单维序对齐；不要写 opening/alert 单元",
       };
-    case "metaphysics_action":
+    case "self_regulation":
       return {
         min: 2,
         max: 6,
@@ -109,7 +146,7 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
         ],
         note: "dimensions 有关尽给(2–6)；units 条数=维度条数",
       };
-    case "risk_guard":
+    case "validation_risk":
       return {
         min: 6,
         max: 6,
@@ -123,7 +160,7 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
         ],
         note: "红灯2 + 坑1 + 切辅1 + 防护2",
       };
-    case "signals_close":
+    case "validation_close":
       return {
         min: 6,
         max: 6,
@@ -221,7 +258,7 @@ export function buildDeepEvidencePrompt(
   const layerB = formatLayerBInventoryMenu(opts.category_token_sets);
 
   const p4MoatBlock =
-    key === "metaphysics_action"
+    key === "self_regulation"
       ? `# P4 护城河覆盖（硬优先）
 - units 优先挂本案真算实有的三类：大运窗口(timing) / 用忌补泄(polarity) / 十神角色(archetype)。
 - **timing 须写机制**：多久/转折/切换/窗口——禁止仅用「纪元/岁环」氛围词撑场。
@@ -230,29 +267,41 @@ export function buildDeepEvidencePrompt(
 - 跨 unit 锚点类别宜分散；禁止整页复用同一岁运/耗类锚。`
       : "";
 
+  const dualEvidenceDuty =
+    key === "decision_brief"
+      ? ""
+      : `# v1 双轨依据（硬 · 结构化双字段）
+- 每个 unit **必须**写两个字段（勿只靠文内标签凑合）：
+  - metaphysics_evidence：≥两句命理机制链，含 ⟦w:真词⟧，删掉后主张须垮
+  - science_evidence：≥一句本案绑定的现代机制（决策/行为/认知/概率等），须点名落到用户事实或本 unit 行动；禁止空术语；禁止「科学验证了八字」
+- 命理承重；科学加固可执行/可验证，不单独撑起「谁都适用」的主路径。
+- 另写 evidence = metaphysics_evidence + "\\n" + science_evidence（兼容下游 mark）；槽 ⟦w:⟧ 只出现在 metaphysics_evidence。
+- 若模型仍输出旧式「【命理】…【科学】…」单字段，下游会拆分，但新稿请直接用双字段。`;
+
   const system = [
-    `# 你是谁\n你是交付页【深度依据推理】专员。只做一件事：为本页每个内容单元选闭集锚点并写专业命理依据。`,
+    `# 你是谁\n你是交付页【深度依据推理】专员。为本页每个内容单元锁闭集锚点，并写**双轨**专业依据（命理 + 科学）。`,
     POJU_KNOWLEDGE_ROOTS,
     `# 本步边界（硬）
 - 【不是】用户可见白话正文；正文由下一步「压缩」专员写。
-- 【是】锁 chart_anchors + 写带 ⟦w:真词⟧ 的专业依据。
+- 【是】锁 chart_anchors + 写带 ⟦w:真词⟧ 的【命理】段 + 本案绑定的【科学】段。
 - 真词必须来自下方闭集分类菜单 / 完整闭集；禁止编造清单外词。
 - 每个 unit ≥1 个 chart_anchors、≥1 个 ⟦w:⟧；禁软译替代真词。
 - chart_anchors 必须全部进 ⟦w:⟧；**槽外连接语禁止再裸写其它命理专名**（下游压缩会当可抄真源）。
 - 【供源≠润德】正印/供源只写「资源/能力补给、谁在供知识或结构」；月德/润德只写「关系场是否托住、柔和着陆」——禁止两词共用「有个稳定外部力量在支持你」套话。
-- **扎实**：每条 evidence 至少两句机制链（因→果 / 结构→对本案题的作用），禁止单句标签。
-- **贴题**：每条 evidence 必须能支撑本 unit 的 path 主题 + 本页 core_conclusion；写完自检「删掉这条依据，正文还能成立吗？」——若能，重写。
+- **扎实**：【命理】至少两句机制链；【科学】至少一句本案机制；禁止单句标签。
+- **贴题**：每条 evidence 必须能支撑本 unit 的 path 主题 + 本页 core_conclusion；写完自检「删掉【命理】后正文还能成立吗？」——若能，重写命理段。
 - **全面**：跨 unit 锚点类别勿高度复用；优先覆盖菜单里与本案相关的不同类目。
 - 【五行关系链】wuxing_relations 写成通顺自然语言；禁止【元素】动词【元素】模板；每句最多 2 元素 + 1 关系。
 - 【thesis】引用 inference_zh 展开，禁止粘贴 conclusion_zh 原文。
 - 不写 primary_path/backup_path 决策口号以外的执行步骤清单（那是正文页的事）。
 - 输出严格 JSON，无 markdown 围栏。`,
+    dualEvidenceDuty,
     p4MoatBlock,
     `# 输出形状
 {
   "page": "${key}",
   "units": [
-    { "path": "${spec.paths[0] ?? "unit[0]"}", "chart_anchors": ["真词"], "evidence": "⟦w:真词⟧ …（≥两句机制）" }
+    { "path": "${spec.paths[0] ?? "unit[0]"}", "chart_anchors": ["真词"], "metaphysics_evidence": "⟦w:真词⟧ …（≥两句）", "science_evidence": "…（本案机制≥一句）", "evidence": "⟦w:真词⟧ …\\n…" }
   ]
 }
 - units 长度必须在 ${spec.min}–${spec.max}；path 优先用给定路径名。
@@ -270,25 +319,27 @@ export function buildDeepEvidencePrompt(
   }
   if (
     feed.foundation_surface &&
-    key === "foundation" &&
+    (key === "situation_analysis" ||
+      key === "personal_decision_patterns" ||
+      key === "bottleneck_analysis") &&
     opts.foundation_surface_feed?.trim()
   ) {
     userParts.push(opts.foundation_surface_feed.trim());
   }
-  if (feed.science_means && key === "science_action" && opts.science_means_feed?.trim()) {
+  if (feed.science_means && key === "execution_guidance" && opts.science_means_feed?.trim()) {
     userParts.push(opts.science_means_feed.trim());
   }
   if (
     feed.metaphysics_moat &&
-    key === "metaphysics_action" &&
+    key === "self_regulation" &&
     opts.metaphysics_moat_feed?.trim()
   ) {
     userParts.push(opts.metaphysics_moat_feed.trim());
   }
-  if (feed.risk_fuse && key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+  if (feed.risk_fuse && key === "validation_risk" && opts.risk_fuse_feed?.trim()) {
     userParts.push(opts.risk_fuse_feed.trim());
   }
-  if (feed.close_ritual && key === "signals_close" && opts.close_ritual_feed?.trim()) {
+  if (feed.close_ritual && key === "validation_close" && opts.close_ritual_feed?.trim()) {
     userParts.push(opts.close_ritual_feed.trim());
   }
   if (opts.bazi_basis?.length) {

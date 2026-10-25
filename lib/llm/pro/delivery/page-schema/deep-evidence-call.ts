@@ -43,6 +43,7 @@ import {
   type DeepEvidenceAssignmentUnit,
 } from "./deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "./deep-evidence-write";
+import { normalizeUnitDualEvidence } from "./dual-evidence";
 
 export type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
 export type { DeepEvidenceAssignment, DeepEvidenceAssignmentUnit } from "./deep-evidence-assign";
@@ -93,11 +94,11 @@ export type DeepEvidenceWriteResult =
 
 /** Pages that use assign + parallel write (avoid monolithic xhigh timeout). */
 const CHUNKED_DEEP_EVIDENCE_KEYS = new Set<DeliverySegmentKey>([
-  "foundation", // 4–5 why_cards — avoid mono xhigh starve
-  "metaphysics_action",
-  "risk_guard",
-  "science_action",
-  "signals_close", // identity + tonight + day7×4
+  "situation_analysis", // 4–5 why_cards — avoid mono xhigh starve
+  "self_regulation",
+  "validation_risk",
+  "execution_guidance",
+  "validation_close", // identity + tonight + day7×4
 ]);
 
 /** Keep in sync with DELIVERY_DISPATCH_WRITE_CHUNK_SIZE (1 unit / xhigh write). */
@@ -114,15 +115,31 @@ function parseUnit(raw: unknown, fallbackPath: string): DeepEvidenceUnit | null 
   const chart_anchors = Array.isArray(anchorsRaw)
     ? anchorsRaw.map((x) => String(x).trim()).filter(Boolean).slice(0, 8)
     : [];
-  const evidence =
+  const metaphysics_evidence =
+    typeof o.metaphysics_evidence === "string" ? o.metaphysics_evidence.trim() : "";
+  const science_evidence =
+    typeof o.science_evidence === "string" ? o.science_evidence.trim() : "";
+  const evidenceRaw =
     typeof o.evidence === "string"
       ? o.evidence.trim()
       : typeof o.professional_evidence === "string"
         ? o.professional_evidence.trim()
         : "";
+  const dual = normalizeUnitDualEvidence({
+    evidence: evidenceRaw,
+    metaphysics_evidence,
+    science_evidence,
+  });
+  const evidence = dual.evidence;
   if (!evidence || chart_anchors.length < 1) return null;
-  if (!/⟦w:/.test(evidence)) return null;
-  return { path, chart_anchors, evidence };
+  if (!/⟦w:/.test(dual.metaphysics_evidence || evidence)) return null;
+  return {
+    path,
+    chart_anchors,
+    evidence,
+    metaphysics_evidence: dual.metaphysics_evidence,
+    science_evidence: dual.science_evidence,
+  };
 }
 
 export function parseDeepEvidencePlan(
@@ -614,8 +631,8 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
   const plainJudgment =
     plan.units.length > 0 && plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
   if (plainJudgment) {
-    const isScience = plan.page === "science_action";
-    const isP4 = plan.page === "metaphysics_action";
+    const isScience = plan.page === "execution_guidance";
+    const isP4 = plan.page === "self_regulation";
     const n = plan.units.length;
     const lines = [
       isScience
@@ -700,7 +717,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     "【正文生成规则 · 硬 · 首枪】",
     "- strategy / means / surface / essence 等**用户可见白话：零命理专名**（锁定表里的词也不许进正文）。",
     "- 仅 JSON 字段 `chart_anchors` 原样复制下方「锁定允许表」。",
-    plan.page === "metaphysics_action"
+    plan.page === "self_regulation"
       ? "- strategy 从 unit_claim+批断长出（一句挂主辅后禁写合同/条款/股权/技术方案等工具词）；means 按【P4 约束帧】自写并回溯 means_candidate_ref 标签（禁把主辅/问题里的工具词抄进正文）。"
       : "- strategy 必须从该单元 unit_claim + professional_evidence 长出；means 必须能回溯 means_candidate_ref（可压缩改写菜单候选）。",
     "- 专业依据若含阶段/柱支概念，正文用平替语，禁止照抄真词。",
@@ -719,7 +736,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     );
   });
   const moatLocks = plan.units.filter((u) => u.moat_class);
-  if (plan.page === "metaphysics_action" && moatLocks.length > 0) {
+  if (plan.page === "self_regulation" && moatLocks.length > 0) {
     lines.push(
       "【护城河 means 锁（硬·整页必须兑现）】",
       "每个标了 moat_class 的 dimensions[i]：strategy+means 必须写出该类机制；means 用 JSON `{text,type}`，type 与 moat_class 一致。",
@@ -748,11 +765,11 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
   });
   lines.push(
     "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；正文零专名；禁止引入新真词主承重；strategy 对齐 unit_claim；means 回溯 means_candidate_ref。",
-    plan.page === "metaphysics_action"
+    plan.page === "self_regulation"
       ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯本维批断与【P4 约束帧】真算/方向（禁正例照抄）；禁把主辅/问题里的合同·股权·条款·技术方案抄进正文；禁 P3 执行腔/物化补泻；缺一类=废稿。"
-      : plan.page === "foundation"
+      : plan.page === "situation_analysis"
         ? "P2：按锁定 path 写 why_cards；surface 和 essence 都只翻译该条批断，禁止把处境原句填进 surface；末卡收束「因此主辅成立」。"
-        : plan.page === "science_action"
+        : plan.page === "execution_guidance"
           ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯 means_candidate_ref /【P3 科学手段候选菜单】；禁合同剧本/东方色向清单。"
           : "",
   );
@@ -782,7 +799,8 @@ export function alignDeepEvidenceToPage(
   };
 
   switch (page.page) {
-    case "direct_answer": {
+    case "decision_brief":
+  case "decision_brief": {
       const u0 = takeUnit(["core_judgment"], 0);
       const u1 = takeUnit(["primary"], 1);
       const u2 = takeUnit(["backup"], 2);
@@ -792,14 +810,16 @@ export function alignDeepEvidenceToPage(
       if (u2) evidenceByBodyIndex[2] = u2.evidence;
       break;
     }
-    case "foundation": {
+    case "situation_analysis":
+  case "situation_analysis": {
       for (let i = 0; i < bodies.length; i++) {
         const u = takeUnit([`why_cards[${i}]`], i);
         if (u) evidenceByBodyIndex[i] = u.evidence;
       }
       break;
     }
-    case "science_action": {
+    case "execution_guidance":
+  case "execution_guidance": {
       let bi = 0;
       if (page.opening?.trim()) {
         const u = takeUnit(["primary_toolkit.angles[0]"], 0);
@@ -818,14 +838,16 @@ export function alignDeepEvidenceToPage(
       }
       break;
     }
-    case "metaphysics_action": {
+    case "self_regulation":
+  case "self_regulation": {
       for (let i = 0; i < bodies.length; i++) {
         const u = takeUnit([`dimensions[${i}]`], i);
         if (u) evidenceByBodyIndex[i] = u.evidence;
       }
       break;
     }
-    case "risk_guard": {
+    case "validation_risk":
+  case "validation_risk": {
       const paths = [
         ...page.red_lights.map((_, i) => `red_lights[${i}]`),
         ...page.traps.map((_, i) => `traps[${i}]`),
@@ -838,7 +860,8 @@ export function alignDeepEvidenceToPage(
       });
       break;
     }
-    case "signals_close": {
+    case "validation_close":
+  case "validation_close": {
       const id = takeUnit(["identity_shift", "identity"], 0);
       if (id) evidenceByBodyIndex[0] = id.evidence;
       // Quote + takeaways are ritual seals — no dedicated deep unit; do NOT reuse identity/tonight.
@@ -862,7 +885,7 @@ export function alignDeepEvidenceToPage(
 
   // Fill gaps from leftover units — never reuse already-applied units; never backfill P6 seals.
   const sealSkip =
-    page.page === "signals_close"
+    page.page === "validation_close"
       ? signalsCloseSealBodyIndexes(evidenceByBodyIndex.length)
       : null;
   const consumedEvidence = new Set(
@@ -899,7 +922,8 @@ function applyAnchorsByPageType(
     (anchorsPerBody[i] ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 8);
 
   switch (clone.page) {
-    case "direct_answer": {
+    case "decision_brief":
+  case "decision_brief": {
       const j = at(0);
       const p = at(1);
       const b = at(2);
@@ -908,14 +932,16 @@ function applyAnchorsByPageType(
       if (b.length) clone.backup.chart_anchors = b;
       break;
     }
-    case "foundation": {
+    case "situation_analysis":
+  case "situation_analysis": {
       clone.why_cards.forEach((c, idx) => {
         const a = at(idx);
         if (a.length) c.chart_anchors = a;
       });
       break;
     }
-    case "science_action": {
+    case "execution_guidance":
+  case "execution_guidance": {
       let idx = 0;
       if (clone.opening?.trim()) idx += 1;
       for (const angle of clone.primary_toolkit.angles) {
@@ -930,14 +956,16 @@ function applyAnchorsByPageType(
       }
       break;
     }
-    case "metaphysics_action": {
+    case "self_regulation":
+  case "self_regulation": {
       clone.dimensions.forEach((d, idx) => {
         const a = at(idx);
         if (a.length) d.chart_anchors = a;
       });
       break;
     }
-    case "risk_guard": {
+    case "validation_risk":
+  case "validation_risk": {
       let idx = 0;
       for (const r of clone.red_lights) {
         const a = at(idx++);
@@ -957,7 +985,8 @@ function applyAnchorsByPageType(
       }
       break;
     }
-    case "signals_close": {
+    case "validation_close":
+  case "validation_close": {
       const id = at(0);
       if (id.length) clone.identity_shift_anchors = id;
       const tonight = at(2);

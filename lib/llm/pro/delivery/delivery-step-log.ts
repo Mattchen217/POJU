@@ -72,17 +72,17 @@ export function logDeliveryStep(input: DeliveryStepLogInput): void {
 /** Map segment key → P# label for spine logs. */
 export function deliveryPageLabel(key: string | null | undefined): string {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return "P1";
     case "foundation":
       return "P2";
-    case "science_action":
+    case "execution_guidance":
       return "P3";
-    case "metaphysics_action":
+    case "self_regulation":
       return "P4";
-    case "risk_guard":
+    case "validation_risk":
       return "P5";
-    case "signals_close":
+    case "validation_close":
       return "P6";
     default:
       return key?.trim() || "?";

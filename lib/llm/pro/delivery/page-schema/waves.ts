@@ -10,17 +10,21 @@ import type { DeliverySegmentKey } from "../delivery-schema";
 
 export type DeliveryWaveId = "A" | "B";
 
-/** Content pages vs closing pages — Wave B unlocks on P1+P3+P4. */
+/** Content pages vs closing pages — Wave B unlocks on brief + execution + self_regulation. */
 export const DELIVERY_CONTENT_PAGE_KEYS: readonly DeliverySegmentKey[] = [
-  "direct_answer",
-  "foundation",
-  "science_action",
-  "metaphysics_action",
+  "decision_brief",
+  "situation_analysis",
+  "personal_decision_patterns",
+  "bottleneck_analysis",
+  "strategic_options",
+  "recommended_strategy",
+  "execution_guidance",
+  "self_regulation",
 ] as const;
 
 export const DELIVERY_CLOSING_PAGE_KEYS: readonly DeliverySegmentKey[] = [
-  "risk_guard",
-  "signals_close",
+  "validation_risk",
+  "validation_close",
 ] as const;
 
 export const DELIVERY_WAVES: Record<
@@ -71,9 +75,9 @@ export function unlockedKeysThroughWave(
  * P5 注意事项 / P6 出门动作须能指回 P4 东方谋略手段；缺 P4 不开 Wave B.
  */
 export const ACTION_BRIEF_UPSTREAM_KEYS: readonly DeliverySegmentKey[] = [
-  "direct_answer",
-  "science_action",
-  "metaphysics_action",
+  "decision_brief",
+  "execution_guidance",
+  "self_regulation",
 ] as const;
 
 /** Formerly P4 soft-enrichment; P4 is now a hard Wave B gate. Kept empty for API compat. */

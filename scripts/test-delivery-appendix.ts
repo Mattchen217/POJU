@@ -30,7 +30,7 @@ const structured = {
 } as unknown as ProfileStructured;
 
 const p1 = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "直答",
   page_subtitle: "副题",
   core_judgment: "宜走托底授权轨，暂缓亲自长驻海外。",

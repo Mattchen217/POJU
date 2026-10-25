@@ -182,17 +182,17 @@ assert.ok(DYAD_PATH_SYSTEM_PREFIX.includes("Eastern OS"));
 assert.ok(DYAD_PATH_SYSTEM_PREFIX.includes("三人及以上") || EASTERN_OS_PERSONA.includes("三人及以上"));
 
 assert.equal(
-  pageFeedFlags("direct_answer", "judgment", { pivot_chart_path: "solo" })
+  pageFeedFlags("decision_brief", "judgment", { pivot_chart_path: "solo" })
     .dyad_relation_structure,
   false,
 );
 assert.equal(
-  pageFeedFlags("direct_answer", "judgment", { pivot_chart_path: "dyad" })
+  pageFeedFlags("decision_brief", "judgment", { pivot_chart_path: "dyad" })
     .dyad_relation_structure,
   true,
 );
 assert.equal(
-  pageFeedFlags("foundation", "judgment", { pivot_chart_path: "dyad" })
+  pageFeedFlags("situation_analysis", "judgment", { pivot_chart_path: "dyad" })
     .dyad_relation_structure,
   true,
 );

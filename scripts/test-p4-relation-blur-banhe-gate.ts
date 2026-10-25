@@ -9,7 +9,7 @@ import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-
 
 function p4Plan(evidence: string, claim = "岁运张力承重"): DeepEvidencePlan {
   return {
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[3]",
@@ -25,7 +25,7 @@ function p4Plan(evidence: string, claim = "岁运张力承重"): DeepEvidencePla
 
 function run(evidence: string) {
   return gateJudgmentCategoryB({
-    key: "metaphysics_action",
+    key: "self_regulation",
     deep_evidence_plan: p4Plan(evidence),
   });
 }

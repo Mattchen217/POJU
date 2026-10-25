@@ -80,7 +80,7 @@ assert.equal(CROSS_PAGE_PRIMARY_ANCHOR_JACCARD, 0.72);
   ];
   // P6 write#18-like: all unit anchors ⊆ prior, but page Jaccard vs prior ≈ 0.4
   const soft = assessUnitAnchorQuality({
-    pageKey: "signals_close",
+    pageKey: "validation_close",
     units: [
       { path: "identity_shift", anchors: ["土"] },
       { path: "tonight", anchors: ["水"] },
@@ -102,7 +102,7 @@ assert.equal(CROSS_PAGE_PRIMARY_ANCHOR_JACCARD, 0.72);
   );
 
   const hard = assessUnitAnchorQuality({
-    pageKey: "signals_close",
+    pageKey: "validation_close",
     units: [
       { path: "a", anchors: ["日主乙庚相合合化金"] },
       { path: "b", anchors: ["比肩"] },

@@ -14,7 +14,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
   unlocked_through_wave: "done",
   pages: {
     direct_answer: {
-      page: "direct_answer",
+      page: "decision_brief",
       page_title: "Dual-track decision board",
       page_subtitle: "Primary push vs safe stop-loss adjudication",
       core_judgment:
@@ -46,7 +46,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
       evidence: [],
     },
     foundation: {
-      page: "foundation",
+      page: "situation_analysis",
       page_title: "Structural stuck points & deep lesions",
       page_subtitle: "Strip surface myths; lock the real resistance",
       dashboard: [
@@ -91,7 +91,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
       evidence: [],
     },
     science_action: {
-      page: "science_action",
+      page: "execution_guidance",
       page_title: "Workplace playbook & means",
       page_subtitle: "Reusable strategy and concrete steps",
       opening: "Start from scope math, not feelings.",
@@ -186,7 +186,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
       evidence: [],
     },
     metaphysics_action: {
-      page: "metaphysics_action",
+      page: "self_regulation",
       page_title: "Field retune & environmental levers",
       page_subtitle: "Asymmetric leverage, avoid nodes, counter-intuitive field moves",
       question_anchor:
@@ -340,7 +340,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
       evidence: [],
     },
     risk_guard: {
-      page: "risk_guard",
+      page: "validation_risk",
       page_title: "Tripwires & backup switch",
       page_subtitle: "Bottom lines and when to flip tracks",
       red_lights: [
@@ -406,7 +406,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
       evidence: [],
     },
     signals_close: {
-      page: "signals_close",
+      page: "validation_close",
       page_title: "Tonight one move & week-one list",
       page_subtitle: "Identity shift, steadying line, tonight loop, 7-day cards",
       identity_before: "The firefighter always on the front line",

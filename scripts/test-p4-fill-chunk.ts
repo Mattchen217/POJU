@@ -16,7 +16,7 @@ import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-
 import type { BreakthroughCore } from "../lib/poju/agent-state";
 
 const plan: DeepEvidencePlan = {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: Array.from({ length: 6 }, (_, i) => ({
     path: `dimensions[${i}]`,
     chart_anchors: [] as string[],
@@ -29,9 +29,9 @@ const plan: DeepEvidencePlan = {
   })),
 };
 
-assert.equal(shouldChunkP4CompressFill("metaphysics_action", "compress", plan), true);
-assert.equal(shouldChunkP4CompressFill("metaphysics_action", "full", plan), false);
-assert.equal(shouldChunkP4CompressFill("science_action", "compress", plan), false);
+assert.equal(shouldChunkP4CompressFill("self_regulation", "compress", plan), true);
+assert.equal(shouldChunkP4CompressFill("self_regulation", "full", plan), false);
+assert.equal(shouldChunkP4CompressFill("execution_guidance", "compress", plan), false);
 
 const chunks = buildP4FillChunks(plan);
 assert.equal(chunks.length, Math.ceil(6 / P4_FILL_CHUNK_SIZE));
@@ -40,7 +40,7 @@ assert.equal(chunks[0]![0]!.path, "dimensions[0]");
 
 const sliced = sliceDeepEvidencePlanForFillChunk(plan, chunks[0]!);
 assert.equal(sliced.units.length, 2);
-assert.equal(sliced.page, "metaphysics_action");
+assert.equal(sliced.page, "self_regulation");
 
 const hint = formatP4FillChunkUserHint({
   index: 0,

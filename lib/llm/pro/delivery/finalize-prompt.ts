@@ -68,12 +68,12 @@ export function buildDeliveryFinalizePrompt(input: {
     paths?.length
       ? paths.map((k) => finalizeDutyForKey(k)).join("\n\n")
       : [
-          "direct_answer",
+          "decision_brief",
           "foundation",
-          "science_action",
-          "metaphysics_action",
-          "risk_guard",
-          "signals_close",
+          "execution_guidance",
+          "self_regulation",
+          "validation_risk",
+          "validation_close",
         ]
           .map((k) => finalizeDutyForKey(k as DeliverySegmentKey))
           .join("\n\n");

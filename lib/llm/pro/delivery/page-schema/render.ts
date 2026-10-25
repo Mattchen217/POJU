@@ -63,7 +63,7 @@ function formatRiskItem(r: RiskItem): string {
 /** Slot fields → labeled markdown bodies for evidence targeting (1 unit = 1 evidence). */
 export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgument[] {
   switch (page.page) {
-    case "direct_answer": {
+    case "decision_brief": {
       const trackBody = (
         label: string,
         t: typeof page.primary,
@@ -85,14 +85,14 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
         trackBody("辅路径", page.backup),
       ];
     }
-    case "foundation":
+    case "situation_analysis":
       return page.why_cards.map((c) =>
         withAnchors(
           `### ${c.title}\n\n**表象:** ${c.surface}\n\n**本质:** ${c.essence}`,
           c.chart_anchors,
         ),
       );
-    case "science_action": {
+    case "execution_guidance": {
       const angleBody = (
         trackTitle: string,
         label: string,
@@ -120,7 +120,7 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
       }
       return out;
     }
-    case "metaphysics_action": {
+    case "self_regulation": {
       /** question_anchor / desired_outcome stay in page_schema for fill grounding — not evidence slots / user page. */
       return page.dimensions.map((a) =>
         withAnchors(
@@ -138,7 +138,7 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
           body: `### 近7日 checklist\n\n${page.day7_checklist.map((x) => `- ${x}`).join("\n")}`,
         },
       ];
-    case "risk_guard": {
+    case "validation_risk": {
       /** One RiskItem = one evidence slot (no 4-bucket merge). */
       const out: DeliveryArgument[] = [];
       page.red_lights.forEach((x, i) => {
@@ -164,7 +164,7 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
       });
       return out;
     }
-    case "signals_close":
+    case "validation_close":
       return [
         withAnchors(
           `### 身份重塑\n\n**之前:** ${page.identity_before}\n\n**之后:** ${page.identity_after}\n\n` +
@@ -211,7 +211,7 @@ export function isSignalsCloseSealBodyIndex(
   bodyCount: number,
   index: number,
 ): boolean {
-  return key === "signals_close" && signalsCloseSealBodyIndexes(bodyCount).has(index);
+  return key === "validation_close" && signalsCloseSealBodyIndexes(bodyCount).has(index);
 }
 
 export function pageSchemaToArgumentTree(

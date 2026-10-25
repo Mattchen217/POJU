@@ -356,8 +356,8 @@ for (const fix of loadFixtures()) {
     essence: `${essence}${pad}`,
     chart_anchors: [anchor],
   });
-  const sanitized = sanitizePageJson("foundation", {
-    page: "foundation",
+  const sanitized = sanitizePageJson("situation_analysis", {
+    page: "situation_analysis",
     page_title: "卡点诊断：专业输出与关系张力",
     page_subtitle: "剥开焦虑表象，看清结构如何落到你侧",
     dashboard: [
@@ -431,8 +431,8 @@ for (const fix of loadFixtures()) {
     hard_metrics: [] as string[],
   });
 
-  const scienceSan = sanitizePageJson("science_action", {
-    page: "science_action",
+  const scienceSan = sanitizePageJson("execution_guidance", {
+    page: "execution_guidance",
     page_title: "渐进试水与果断休整：双轨破局策略",
     page_subtitle: "先修复睡眠，小步验证咨询副业，争取关系观察期",
     primary_toolkit: {
@@ -544,8 +544,8 @@ for (const fix of loadFixtures()) {
   }
 
   // Hollow page of identical shells must fail (not gate-pass)
-  const hollow = sanitizePageJson("science_action", {
-    page: "science_action",
+  const hollow = sanitizePageJson("execution_guidance", {
+    page: "execution_guidance",
     page_title: "空壳双轨",
     page_subtitle: "不应过闸",
     primary_toolkit: {
@@ -589,7 +589,7 @@ for (const fix of loadFixtures()) {
     "当男友或家人再次用「稳定」给你施压时，试着用专业价值去回应：“我正在把大厂经验变成咨询方案。这不是乱来，是把积累变现。”";
   assert.ok(isFullDialogueScriptProse(p4DirtyMean));
   const p4Plan = {
-    page: "metaphysics_action" as const,
+    page: "self_regulation" as const,
     units: [
       {
         path: "dimensions[0]",
@@ -626,9 +626,9 @@ for (const fix of loadFixtures()) {
     ],
   };
   const p4San = sanitizePageJson(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       page_title: "暗锦囊：以静制动",
       page_subtitle: "催促场中守成",
       question_anchor: "前同事拉我入伙，想全职，我只想兼职试水。",
@@ -685,7 +685,7 @@ for (const fix of loadFixtures()) {
     true,
     p4San.ok ? "" : `${p4San.reason} :: ${p4San.notes.join(" | ")}`,
   );
-  if (p4San.ok && p4San.page.page === "metaphysics_action") {
+  if (p4San.ok && p4San.page.page === "self_regulation") {
     const blob = p4San.page.dimensions
       .map((d) => `${d.strategy}\n${d.means.join("\n")}`)
       .join("\n");
@@ -814,7 +814,7 @@ for (const fix of loadFixtures()) {
       },
     ],
     ["男友"],
-    { pageKey: "science_action" },
+    { pageKey: "execution_guidance" },
   );
   assert.equal(polishedScience.fail_reason, null, polishedScience.fail_reason ?? "");
   assert.ok(

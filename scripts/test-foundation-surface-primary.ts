@@ -261,8 +261,8 @@ const menu: ThesisAssignMenuItem[] = [
     ],
     { desired_outcome: "先以兼职方式试水合作，保住现有稳定收入" },
   );
-  const planned = planDeepEvidenceSlots("foundation", {
-    key: "foundation",
+  const planned = planDeepEvidenceSlots("situation_analysis", {
+    key: "situation_analysis",
     chart_thesis: thesis,
     foundation_surface_feed: feed,
     assign_path_hints: buildFoundationAssignPathHints(

@@ -259,9 +259,9 @@ export function gateJudgmentCategoryB(input: {
 
   const situationalKeys: DeliverySegmentKey[] = [
     "foundation",
-    "direct_answer",
-    "science_action",
-    "metaphysics_action",
+    "decision_brief",
+    "execution_guidance",
+    "self_regulation",
   ];
 
   if (situationalKeys.includes(input.key)) {
@@ -277,7 +277,7 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        (input.key === "foundation" || input.key === "direct_answer") &&
+        ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") || input.key === "decision_brief") &&
         MATCH_CLOSE_RE.test(blob)
       ) {
         return {
@@ -288,34 +288,34 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        (input.key === "foundation" || input.key === "direct_answer") &&
+        ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") || input.key === "decision_brief") &&
         QIMEN_AXIS_RE.test(blob)
       ) {
         return {
           passed: false,
           failed_rule:
-            input.key === "foundation"
+            (input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation")
               ? "gate_p2_qimen_axis"
               : "gate_p1_qimen_axis",
           detail:
-            input.key === "foundation"
+            (input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation")
               ? "P2 归因禁奇门门宫承重轴（知局归 P4）。回改喂料/duty 后重跑批断枪。"
               : "P1 主辅根禁奇门门宫承重（本页不喂锁盘；知局归 P4）。回改 duty 后重跑批断枪。",
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
       if (
-        (input.key === "foundation" ||
-          input.key === "direct_answer" ||
-          input.key === "metaphysics_action") &&
+        ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") ||
+          input.key === "decision_brief" ||
+          input.key === "self_regulation") &&
         RELATION_INVENTED_KEHE_RE.test(blob)
       ) {
         return {
           passed: false,
           failed_rule:
-            input.key === "foundation"
+            (input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation")
               ? "gate_p2_relation_invented_kehe"
-              : input.key === "direct_answer"
+              : input.key === "decision_brief"
                 ? "gate_p1_relation_invented_kehe"
                 : "gate_p4_relation_invented_kehe",
           detail: `批断 units[${i}] 含「克合」——相克不得写成合。只写「克」或抄闭集已列合冲原词。回改 duty 后重跑批断枪。`,
@@ -323,13 +323,13 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        (input.key === "foundation" || input.key === "direct_answer") &&
+        ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") || input.key === "decision_brief") &&
         RELATION_HE_BROKEN_OVERCLAIM_RE.test(blob)
       ) {
         return {
           passed: false,
           failed_rule:
-            input.key === "foundation"
+            (input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation")
               ? "gate_p2_relation_he_broken_overclaim"
               : "gate_p1_relation_he_broken_overclaim",
           detail: `批断 units[${i}] 外推「合局被破/冲破合」。冲与半合可并列写张力，禁写成合已破定论。回改后重跑批断枪。`,
@@ -337,20 +337,20 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        (input.key === "foundation" || input.key === "direct_answer") &&
+        ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") || input.key === "decision_brief") &&
         JUDGMENT_OUTCOME_PROPHECY_RE.test(blob)
       ) {
         return {
           passed: false,
           failed_rule:
-            input.key === "foundation"
+            (input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation")
               ? "gate_p2_judgment_outcome_prophecy"
               : "gate_p1_judgment_outcome_prophecy",
           detail: `批断 units[${i}] 含局势结果态（动荡/摇荡/稳定性下降/必裂）。停在承压偏高/窗口收窄后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
-      if (input.key === "foundation" && P2_JUDGMENT_WENDING_STEM_RE.test(blob)) {
+      if ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") && P2_JUDGMENT_WENDING_STEM_RE.test(blob)) {
         return {
           passed: false,
           failed_rule: "gate_p2_judgment_wending_stem",
@@ -359,7 +359,7 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        input.key === "foundation" &&
+        (input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") &&
         input.day_master_stem &&
         unitHasFireDmShaOnFireBranch(blob, input.day_master_stem)
       ) {
@@ -370,7 +370,7 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
-      if (input.key === "foundation" && unitHasFireDrainMetalYong(blob)) {
+      if ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") && unitHasFireDrainMetalYong(blob)) {
         return {
           passed: false,
           failed_rule: "gate_p2_huo_xie_jin",
@@ -378,7 +378,7 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
-      if (input.key === "foundation" && unitHasXianYinContradiction(blob)) {
+      if ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation") && unitHasXianYinContradiction(blob)) {
         return {
           passed: false,
           failed_rule: "gate_p2_xian_yin_contradiction",
@@ -387,7 +387,7 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        input.key === "metaphysics_action" &&
+        input.key === "self_regulation" &&
         P4_JUDGMENT_HALF_IMPERATIVE_RE.test(blob)
       ) {
         return {
@@ -398,7 +398,7 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        input.key === "metaphysics_action" &&
+        input.key === "self_regulation" &&
         P4_TENGOD_FORMULA_BAN_RE.test(blob)
       ) {
         return {
@@ -409,7 +409,7 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        input.key === "metaphysics_action" &&
+        input.key === "self_regulation" &&
         P4_RELATION_FALSE_FIRE_HE_RE.test(blob)
       ) {
         return {
@@ -420,7 +420,7 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       if (
-        input.key === "metaphysics_action" &&
+        input.key === "self_regulation" &&
         P4_TONGGUAN_FALSE_WEITOU_RE.test(blob)
       ) {
         return {
@@ -433,7 +433,7 @@ export function gateJudgmentCategoryB(input: {
     }
   }
 
-  if (input.key === "science_action") {
+  if (input.key === "execution_guidance") {
     const seenRefs = new Set<string>();
     for (let i = 0; i < plan.units.length; i++) {
       const u = plan.units[i]!;
@@ -466,7 +466,7 @@ export function gateJudgmentCategoryB(input: {
     }
   }
 
-  if (input.key === "metaphysics_action") {
+  if (input.key === "self_regulation") {
     const seenRefs = new Set<string>();
     for (let i = 0; i < plan.units.length; i++) {
       const u = plan.units[i]!;
@@ -564,11 +564,11 @@ export function gateJudgmentCategoryB(input: {
     }
   }
 
-  if (input.key === "foundation" && plan.units.length !== 4) {
+  if (input.key === "situation_analysis" && plan.units.length !== 4) {
     notes.push(`warn_p2_unit_count:${plan.units.length}_expect_4`);
   }
 
-  if (input.key === "foundation") {
+  if ((input.key === "situation_analysis" || input.key === "personal_decision_patterns" || input.key === "bottleneck_analysis" || input.key === "foundation")) {
     const yongHits = plan.units.filter((u) =>
       YONG_DRAIN_REPEAT_RE.test(unitText(u)),
     ).length;

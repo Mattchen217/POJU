@@ -17,7 +17,7 @@ import {
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 
 const thin = {
-  page: "signals_close",
+  page: "validation_close",
   page_title: "出门收束",
   page_subtitle: "不另开药方",
   tonight: "今晚发邀约",
@@ -26,7 +26,7 @@ const thin = {
   dimensions: [],
 };
 assert.equal(
-  coercePageSchemaLoose("signals_close", thin),
+  coercePageSchemaLoose("validation_close", thin),
   null,
   "thin three-prose shape must coerce-fail",
 );
@@ -38,7 +38,7 @@ const day7 = (i: number) => ({
   chart_anchors: [] as string[],
 });
 const full = {
-  page: "signals_close",
+  page: "validation_close",
   page_title: "出门仪式：先松再选",
   page_subtitle: "身份切换 + 今晚一事 + 近7日勾选",
   identity_before: "被倒计时推着走的犹豫方",
@@ -60,9 +60,9 @@ const full = {
   takeaways: ["今晚只空时间", "近7日只记信号", "别用逃一个决定替代另一个"],
   evidence: [],
 };
-const coerced = coercePageSchemaLoose("signals_close", full);
+const coerced = coercePageSchemaLoose("validation_close", full);
 assert.ok(coerced, "full skeleton must coerce");
-assert.equal((coerced as { page: string }).page, "signals_close");
+assert.equal((coerced as { page: string }).page, "validation_close");
 assert.equal(
   (coerced as { day7_micro_actions: unknown[] }).day7_micro_actions.length,
   4,
@@ -73,7 +73,7 @@ assert.equal(
 );
 
 const thinGate = gateBodyCategoryB({
-  key: "signals_close",
+  key: "validation_close",
   page_schema: thin as never,
   surface: "substance_only",
 });
@@ -81,13 +81,13 @@ assert.ok(thinGate && !thinGate.passed, "thin shape must fail category gate");
 assert.equal(thinGate?.failed_rule, "gate_p6_body_skeleton_incomplete");
 
 const fullGate = gateBodyCategoryB({
-  key: "signals_close",
+  key: "validation_close",
   page_schema: coerced,
   surface: "substance_only",
 });
 assert.equal(fullGate, null, "full skeleton substance gate passes");
 
-const spec = deepEvidenceUnitSpec("signals_close");
+const spec = deepEvidenceUnitSpec("validation_close");
 assert.deepEqual(spec.paths, [
   "identity_shift",
   "tonight",
@@ -98,7 +98,7 @@ assert.deepEqual(spec.paths, [
 ]);
 
 const plan: DeepEvidencePlan = {
-  page: "signals_close",
+  page: "validation_close",
   units: spec.paths.map((path) => ({
     path,
     unit_claim: "近窗承压偏高",
@@ -107,7 +107,7 @@ const plan: DeepEvidencePlan = {
     chart_anchors: [],
   })),
 };
-const lock = formatJudgmentLockForBody(plan, "signals_close");
+const lock = formatJudgmentLockForBody(plan, "validation_close");
 assert.ok(lock.includes("identity_shift"), lock);
 assert.ok(lock.includes("禁止压成三散文槽"), lock);
 assert.ok(lock.includes("day7_micro_actions[3]"), lock);
@@ -123,7 +123,7 @@ const polishedMutated = {
   ).map((row) => ({ ...row, chart_anchors: ["被润色改掉"] })),
 };
 const stamped = stampChartAnchorsFromDraft(
-  "signals_close",
+  "validation_close",
   polishedMutated as never,
   coerced,
 ) as {

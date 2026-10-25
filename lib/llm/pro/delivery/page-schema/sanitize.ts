@@ -864,7 +864,7 @@ export function sanitizePageJson(
   let candidate: Record<string, unknown>;
 
   switch (key) {
-    case "direct_answer": {
+    case "decision_brief": {
       const trackOpts = { require_thick_core_logic: true, require_anchors: true };
       const primary = sanitizeTrack(
         root.primary ?? root.main ?? root.track_a,
@@ -900,7 +900,7 @@ export function sanitizePageJson(
       }
       if (String(root.core_judgment ?? "").length > 220) truncated = true;
       candidate = {
-        page: "direct_answer",
+        page: "decision_brief",
         core_judgment: judgment,
         primary,
         backup,
@@ -908,7 +908,7 @@ export function sanitizePageJson(
       };
       break;
     }
-    case "foundation": {
+    case "situation_analysis": {
       const sve = asObj(root.surface_vs_essence) ?? asObj(root.surface_vs_core) ?? {};
       const pageSurface = clip(sve.surface ?? root.surface, 280);
       const pageEssence = clip(sve.essence ?? sve.core ?? root.essence, 480);
@@ -1092,14 +1092,14 @@ export function sanitizePageJson(
         return { ok: false, structural: true, reason: "why_card_essence_too_thin", notes };
       }
       candidate = {
-        page: "foundation",
+        page: "situation_analysis",
         dashboard,
         why_cards: why_cards.slice(0, 5),
         evidence: sanitizeEvidence(root.evidence),
       };
       break;
     }
-    case "science_action": {
+    case "execution_guidance": {
       const primary_toolkit = sanitizeToolkit(
         root.primary_toolkit ?? root.primary ?? root.main_toolkit,
         "primary",
@@ -1130,7 +1130,7 @@ export function sanitizePageJson(
         };
       }
       candidate = {
-        page: "science_action",
+        page: "execution_guidance",
         opening: scrubPromptLeakText(clipOpt(root.opening ?? root.intro, 200), notes),
         primary_toolkit,
         backup_toolkit,
@@ -1284,7 +1284,7 @@ export function sanitizePageJson(
       }
       break;
     }
-    case "metaphysics_action": {
+    case "self_regulation": {
       // Soft-repair first (keep partnership scene means), then stamp assign moat types
       // onto surviving dims so type coverage is not lost when means are stringified.
       const leverage: string[] = [];
@@ -1465,7 +1465,7 @@ export function sanitizePageJson(
         const stampRootEarly = { dimensions: dimensionsCompliant };
         notes.push(
           ...stampPageChartAnchorsFromDeepPlan(
-            "metaphysics_action",
+            "self_regulation",
             stampRootEarly,
             opts.deepEvidencePlan,
           ),
@@ -1534,7 +1534,7 @@ export function sanitizePageJson(
         },
       );
       candidate = {
-        page: "metaphysics_action",
+        page: "self_regulation",
         question_anchor,
         desired_outcome,
         dimensions: dimensionsCompliant,
@@ -1574,7 +1574,7 @@ export function sanitizePageJson(
       };
       break;
     }
-    case "risk_guard": {
+    case "validation_risk": {
       const red_lights = arrRiskItems(root.red_lights ?? root.red_flags, 2, 200);
       const traps = arrRiskItems(root.traps ?? root.pitfalls, 1, 200);
       const protection_rules = arrRiskItems(
@@ -1612,7 +1612,7 @@ export function sanitizePageJson(
         notes.push("risk_items_missing_narrative");
       }
       candidate = {
-        page: "risk_guard",
+        page: "validation_risk",
         red_lights,
         traps,
         switch_to_backup,
@@ -1621,7 +1621,7 @@ export function sanitizePageJson(
       };
       break;
     }
-    case "signals_close": {
+    case "validation_close": {
       const identity_before = clip(root.identity_before ?? root.before, 120);
       const identity_after = clip(root.identity_after ?? root.after, 120);
       const identity_shift = clip(
@@ -1709,7 +1709,7 @@ export function sanitizePageJson(
         return { ok: false, structural: true, reason: "takeaways_incomplete", notes };
       }
       candidate = {
-        page: "signals_close",
+        page: "validation_close",
         identity_before,
         identity_after,
         identity_shift,
@@ -1735,7 +1735,7 @@ export function sanitizePageJson(
   }
 
   attachPageChrome(key, root, candidate);
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const t0 = String(candidate.page_title ?? "");
     const s0 = String(candidate.page_subtitle ?? "");
     const t1 = scrubP4UserVisibleProse(t0);

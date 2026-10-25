@@ -7,7 +7,7 @@
 
 import { titleRules } from "./shared";
 
-export const PAGE_KEY = "foundation" as const;
+export const PAGE_KEY = "situation_analysis" as const;
 export const PAGE_LABEL = "P2 · 归因剖析";
 
 export const FINALIZE_DUTY = `# 本段职责 · foundation（P2 归因剖析）

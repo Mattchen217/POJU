@@ -12,8 +12,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
   version: DELIVERY_PAGE_SCHEMA_VERSION,
   unlocked_through_wave: "done",
   pages: {
-    direct_answer: {
-      page: "direct_answer",
+    decision_brief: {
+      page: "decision_brief",
       page_title: "主辅双轨决策盘",
       page_subtitle: "首选攻坚轨与安全止损轨的推演决策",
       core_judgment:
@@ -46,8 +46,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       },
       evidence: [],
     },
-    foundation: {
-      page: "foundation",
+    situation_analysis: {
+      page: "situation_analysis",
       page_title: "结构卡点与深层病灶",
       page_subtitle: "剥离表象误区，锁定导致停滞的真实阻力",
       dashboard: [
@@ -88,8 +88,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       ],
       evidence: [],
     },
-    science_action: {
-      page: "science_action",
+    execution_guidance: {
+      page: "execution_guidance",
       page_title: "职场博弈与可落实行动",
       page_subtitle: "可直接复用的硬核策略与步骤",
       opening: "先用范围数学说话，不要用情绪开战。",
@@ -185,8 +185,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       alert: "这里只要可改写开口，不要写完整律师/HR 剧本。",
       evidence: [],
     },
-    metaphysics_action: {
-      page: "metaphysics_action",
+    self_regulation: {
+      page: "self_regulation",
       page_title: "环境心理与非对称调频杠杆",
       page_subtitle: "视觉 / 空间 / 节律 / 精力 — 可落地的场域与节奏杠杆",
       question_anchor:
@@ -299,8 +299,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       day7_checklist: ["取舍邮件已发", "赞助回复已记", "三晚睡眠底板恢复"],
       evidence: [],
     },
-    risk_guard: {
-      page: "risk_guard",
+    validation_risk: {
+      page: "validation_risk",
       page_title: "熔断红线与退路开关",
       page_subtitle: "设定底线边界，明确主辅方案的切换触发点",
       red_lights: [
@@ -365,8 +365,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       ],
       evidence: [],
     },
-    signals_close: {
-      page: "signals_close",
+    validation_close: {
+      page: "validation_close",
       page_title: "今晚一件事与首周清单",
       page_subtitle: "身份重塑、定心金句、即刻闭环与近 7 日 Checklist",
       identity_before: "总是冲在一线的救火者",
@@ -426,12 +426,12 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
   DeliverySegmentKey,
   string[]
 > = {
-  direct_answer: [
+  decision_brief: [
     "判定层：在需养结构下硬冲一线会放大身体债；直接退居二线又丢掉你仅有的结果话语权。中间态是结构允许的最小代价路径。",
     "主方案依据：你在这种需养状态里，本来就容易被框架和淬炼带来的高压任务拖住；潮涌供源若再绑死一线冲锋，血压与睡眠会继续给范围买单。把结果权留在后方、冲锋授权出去，才对得上这盘能量。",
     "辅方案依据：当赞助沉默或身体连续触线，继续证明只会消耗昭德式的场面分。退路要体面：收缩责任边界，用战绩夹换下一站，而不是再开硬刚。",
   ],
-  foundation: [
+  situation_analysis: [
     "多表象分卡：职场二选一、身体报警、深夜清不掉——各来自收集，互不换皮。",
     "每卡先钉真实表象，再写对该表象的本质分析。",
     "最后一张收束到因此主辅成立。",
@@ -440,7 +440,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
     "阻力维：深夜打断使休息无法复利，与仪表盘身体分相互印证。",
     "信号维：身体指标落后于心智，是该先改结构而非再加鸡血的信号。",
   ],
-  science_action: [
+  execution_guidance: [
     "开口短句只服务主路取舍，不替代合同。",
     "主·边界谈判：二选一邮件把催促变成可勾选边界。",
     "主·授权副手：结果权留后方，一线冲锋授权出去。",
@@ -450,7 +450,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
     "辅·现金缓冲：公开动作前的硬指标。",
     "警戒：禁止长专业代做剧本。",
   ],
-  metaphysics_action: [
+  self_regulation: [
     "问题/期望锚定：本页服务这件事情，不挂主辅轨。",
     "视觉心理：权威气场与色彩阻尼，稳住输出感而非硬冲。",
     "空间心理：高适配侧工位/开口；避耗尽朝向硬谈。",
@@ -466,7 +466,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
     "第4周复核 P1 辅路 when。",
     "近7日清单是第1–2周的可勾选切片。",
   ],
-  risk_guard: [
+  validation_risk: [
     "红灯1：赞助沉默对齐睡眠回流，不是泛泛「你累了」。",
     "红灯2：深夜消息回流时硬谈必须停机。",
     "特有坑：情绪再辩却不发框架。",
@@ -474,13 +474,25 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
     "防护1：无书面取舍不接 ownership。",
     "防护2：睡眠底板不可烧。",
   ],
-  signals_close: [
+  validation_close: [
     "身份对照：从一线救火到守决策授权；shift 须对准本案主路。",
     "金句+用法：定心，不做追踪钩子。",
     "今晚闭环：半页分工稿，做成什么样与为何今晚写清。",
     "近7日条目卡可追溯 Action Brief，不是四周表。",
     "带走三样：决策 / 杠杆 / 熔断各一行。",
   ],
+  personal_decision_patterns: [],
+  bottleneck_analysis: [],
+  strategic_options: [],
+  recommended_strategy: [],
+  // legacy aliases
+  direct_answer: [],
+  foundation: [],
+  science_action: [],
+  metaphysics_action: [],
+  risk_guard: [],
+  signals_close: [],
+
 };
 
 export function mockPageForPreview(

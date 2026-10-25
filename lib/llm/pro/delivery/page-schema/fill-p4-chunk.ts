@@ -17,7 +17,7 @@ export function shouldChunkP4CompressFill(
   plan: DeepEvidencePlan | null | undefined,
 ): boolean {
   return (
-    key === "metaphysics_action" &&
+    key === "self_regulation" &&
     (fill_mode ?? "full") === "compress" &&
     (plan?.units.length ?? 0) >= 4
   );

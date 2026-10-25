@@ -19,30 +19,30 @@ import { PAGE_LABEL as P6_LABEL } from "@/lib/llm/pro/delivery/page-prompts/p6-s
 
 {
   const dag = buildInitialDeliveryDispatchDag("job-test");
-  const p3 = dag.tasks[pageAssignId("science_action")];
-  const p4 = dag.tasks[pageAssignId("metaphysics_action")];
-  const p2 = dag.tasks[pageAssignId("foundation")];
-  assert.ok(p3?.deps.includes(pageReadyId("direct_answer")), "P3 assign waits P1");
-  assert.ok(p4?.deps.includes(pageReadyId("direct_answer")), "P4 assign waits P1");
-  assert.ok(!p2?.deps.includes(pageReadyId("direct_answer")), "P2 does not wait P1");
+  const p3 = dag.tasks[pageAssignId("execution_guidance")];
+  const p4 = dag.tasks[pageAssignId("self_regulation")];
+  const p2 = dag.tasks[pageAssignId("situation_analysis")];
+  assert.ok(p3?.deps.includes(pageReadyId("decision_brief")), "P3 assign waits P1");
+  assert.ok(p4?.deps.includes(pageReadyId("decision_brief")), "P4 assign waits P1");
+  assert.ok(!p2?.deps.includes(pageReadyId("decision_brief")), "P2 does not wait P1");
 }
 
 {
-  const ready = new Set<"direct_answer" | "foundation">(["foundation"]);
+  const ready = new Set<"decision_brief" | "situation_analysis">(["situation_analysis"]);
   const wave = filterTasksToCurrentWave(
     [
-      { paths: ["science_action"] as const },
-      { paths: ["foundation"] as const },
+      { paths: ["execution_guidance"] as const },
+      { paths: ["situation_analysis"] as const },
     ],
     ready as Set<import("@/lib/llm/pro/delivery/delivery-schema").DeliverySegmentKey>,
   );
   assert.deepEqual(
     wave.map((t) => t.paths[0]),
-    ["foundation"],
+    ["situation_analysis"],
   );
-  ready.add("direct_answer");
+  ready.add("decision_brief");
   const wave2 = filterTasksToCurrentWave(
-    [{ paths: ["science_action"] as const }],
+    [{ paths: ["execution_guidance"] as const }],
     ready as Set<import("@/lib/llm/pro/delivery/delivery-schema").DeliverySegmentKey>,
   );
   assert.equal(wave2.length, 1);

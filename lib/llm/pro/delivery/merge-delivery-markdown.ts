@@ -116,7 +116,11 @@ export function mergeDeliveryToMarkdown(
       const scanMd = encodePageScanMarkdown(pageStructs.scan, locale);
       if (scanMd) parts.push(scanMd);
     }
-    if (k === "thirty_day" && pageStructs?.gantt && pageStructs.gantt.weeks.length >= 4) {
+    if (
+      (k as string) === "thirty_day" &&
+      pageStructs?.gantt &&
+      pageStructs.gantt.weeks.length >= 4
+    ) {
       const ganttMd = encodeThirtyDayGanttMarkdown(pageStructs.gantt, locale);
       if (ganttMd) parts.push(ganttMd);
     }

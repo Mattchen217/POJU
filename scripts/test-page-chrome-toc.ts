@@ -6,13 +6,13 @@ import assert from "node:assert/strict";
 import { isTagOnlyOrEmptyPageTitle } from "../lib/llm/pro/delivery/delivery-schema";
 import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 
-assert.equal(isTagOnlyOrEmptyPageTitle("metaphysics_action", ""), true);
-assert.equal(isTagOnlyOrEmptyPageTitle("metaphysics_action", "自我调频"), true);
-assert.equal(isTagOnlyOrEmptyPageTitle("metaphysics_action", "Self Retune"), true);
-assert.equal(isTagOnlyOrEmptyPageTitle("metaphysics_action", "东方谋略"), true);
-assert.equal(isTagOnlyOrEmptyPageTitle("metaphysics_action", "Eastern Stratagem"), true);
+assert.equal(isTagOnlyOrEmptyPageTitle("self_regulation", ""), true);
+assert.equal(isTagOnlyOrEmptyPageTitle("self_regulation", "自我调频"), true);
+assert.equal(isTagOnlyOrEmptyPageTitle("self_regulation", "Self Retune"), true);
+assert.equal(isTagOnlyOrEmptyPageTitle("self_regulation", "东方谋略"), true);
+assert.equal(isTagOnlyOrEmptyPageTitle("self_regulation", "Eastern Stratagem"), true);
 assert.equal(
-  isTagOnlyOrEmptyPageTitle("metaphysics_action", "阶段窗口里的侧向破局"),
+  isTagOnlyOrEmptyPageTitle("self_regulation", "阶段窗口里的侧向破局"),
   false,
 );
 
@@ -35,8 +35,8 @@ const baseDim = {
 };
 
 for (const tagTitle of ["东方谋略", "自我调频"] as const) {
-  const bad = sanitizePageJson("metaphysics_action", {
-    page: "metaphysics_action",
+  const bad = sanitizePageJson("self_regulation", {
+    page: "self_regulation",
     page_title: tagTitle,
     page_subtitle: "副题有了",
     question_anchor: "合伙",
@@ -54,8 +54,8 @@ for (const tagTitle of ["东方谋略", "自我调频"] as const) {
 }
 
 {
-  const badSub = sanitizePageJson("metaphysics_action", {
-    page: "metaphysics_action",
+  const badSub = sanitizePageJson("self_regulation", {
+    page: "self_regulation",
     page_title: "阶段窗口里的侧向破局",
     page_subtitle: "",
     question_anchor: "合伙",

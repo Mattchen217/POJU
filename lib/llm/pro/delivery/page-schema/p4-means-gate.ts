@@ -1168,7 +1168,7 @@ export function stampP4MeansTypesFromDeepPlan(
 ): string[] {
   const notes: string[] = [];
   if (!plan?.units?.length) return notes;
-  if (plan.page && plan.page !== "metaphysics_action") return notes;
+  if (plan.page && plan.page !== "self_regulation") return notes;
 
   const locks = new Map<number, P4MoatMeansType>();
   for (const u of plan.units) {

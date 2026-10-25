@@ -206,7 +206,7 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
 {
   // Lab#16: 「让对方不得不重视」不得整维作废；sanitize 应保留站位维.
   const plan = {
-    page: "metaphysics_action" as const,
+    page: "self_regulation" as const,
     units: [
       {
         path: "dimensions[0]",
@@ -243,9 +243,9 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
     ],
   };
   const out = sanitizePageJson(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       page_title: "兼职入局暗锦囊",
       page_subtitle: "以静制动",
       question_anchor: "前同事拉我全职入伙，我只想兼职试水。",
@@ -361,7 +361,7 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
 {
   // Lab#14 category: P4 partnership 局势 means must not be thinned by P3 science soft-repair.
   const plan = {
-    page: "metaphysics_action" as const,
+    page: "self_regulation" as const,
     units: [
       {
         path: "dimensions[0]",
@@ -398,7 +398,7 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
     ],
   };
   const raw = {
-    page: "metaphysics_action",
+    page: "self_regulation",
     page_title: "暗锦囊：以静制动",
     page_subtitle: "催促场中守成",
     question_anchor: "前同事拉我入伙，想全职，我只想兼职试水。",
@@ -443,7 +443,7 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
       },
     ],
   };
-  const out = sanitizePageJson("metaphysics_action", raw, {
+  const out = sanitizePageJson("self_regulation", raw, {
     fillMode: "compress",
     deepEvidencePlan: plan,
     eastern_calc_slice:
@@ -554,7 +554,7 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
   // Strip→thin must surface as tool family, not means_thin (Lab #34).
   {
     const page = {
-      page: "metaphysics_action",
+      page: "self_regulation",
       page_title: "t",
       page_subtitle: "s",
       question_anchor: "q",
@@ -602,10 +602,10 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
       field_matrix: [],
       evidence: [],
     };
-    const out = sanitizePageJson("metaphysics_action", page, {
+    const out = sanitizePageJson("self_regulation", page, {
       eastern_calc_slice: "奇门锁盘 客克主 用神水 忌神火 食神 值使",
       deepEvidencePlan: {
-        page: "metaphysics_action",
+        page: "self_regulation",
         units: page.dimensions.map((d, i) => ({
           path: `dimensions[${i}]`,
           chart_anchors: d.chart_anchors,

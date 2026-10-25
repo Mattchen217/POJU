@@ -17,12 +17,16 @@ import {
 } from "./types";
 
 const WAVE_A_DEEP: readonly DeliverySegmentKey[] = [
-  "foundation",
-  "science_action",
-  "metaphysics_action",
+  "situation_analysis",
+  "personal_decision_patterns",
+  "bottleneck_analysis",
+  "strategic_options",
+  "recommended_strategy",
+  "execution_guidance",
+  "self_regulation",
 ];
 
-const WAVE_B_DEEP: readonly DeliverySegmentKey[] = ["risk_guard", "signals_close"];
+const WAVE_B_DEEP: readonly DeliverySegmentKey[] = ["validation_risk", "validation_close"];
 
 function task(
   partial: Omit<DeliveryDispatchTask, "attempts" | "updated_at" | "status"> & {
@@ -103,17 +107,17 @@ export function buildInitialDeliveryDispatchDag(job_id: string): DeliveryDispatc
   });
 
   // P1: fill → ready (no deep / mark). Fill waits only on its own spine.
-  tasks[pageFillId("direct_answer")] = task({
-    id: pageFillId("direct_answer"),
+  tasks[pageFillId("decision_brief")] = task({
+    id: pageFillId("decision_brief"),
     kind: "p1_fill",
-    key: "direct_answer",
-    deps: [pageFinalizeId("direct_answer")],
+    key: "decision_brief",
+    deps: [pageFinalizeId("decision_brief")],
   });
-  tasks[pageReadyId("direct_answer")] = task({
-    id: pageReadyId("direct_answer"),
+  tasks[pageReadyId("decision_brief")] = task({
+    id: pageReadyId("decision_brief"),
     kind: "ready",
-    key: "direct_answer",
-    deps: [pageFillId("direct_answer")],
+    key: "decision_brief",
+    deps: [pageFillId("decision_brief")],
   });
 
   for (const key of WAVE_A_DEEP) {
@@ -125,9 +129,9 @@ export function buildInitialDeliveryDispatchDag(job_id: string): DeliveryDispatc
     kind: "wave_b_gate",
     // P5/P6 need P4 东方谋略 means in ActionBrief — wait P1+P3+P4 ready.
     deps: [
-      pageReadyId("direct_answer"),
-      pageReadyId("science_action"),
-      pageReadyId("metaphysics_action"),
+      pageReadyId("decision_brief"),
+      pageReadyId("execution_guidance"),
+      pageReadyId("self_regulation"),
     ],
   });
 
@@ -159,14 +163,17 @@ function addDeepPageSkeleton(
 ): void {
   const status = locked ? "locked" : "pending";
   const spine = pageFinalizeId(key);
-  // P3 waits P1; P4 waits P1+P3 — 东方谋略挂 P3 执行面（与 filterTasksToCurrentWave 同尺）。
   const deps: string[] = locked ? [spine, WAVE_B_GATE_ID] : [spine];
-  if (!locked && key === "science_action") {
-    deps.push(pageReadyId("direct_answer"));
+  if (!locked && (key === "strategic_options" || key === "recommended_strategy")) {
+    deps.push(pageReadyId("decision_brief"));
   }
-  if (!locked && key === "metaphysics_action") {
-    deps.push(pageReadyId("direct_answer"));
-    deps.push(pageReadyId("science_action"));
+  if (!locked && key === "execution_guidance") {
+    deps.push(pageReadyId("decision_brief"));
+    deps.push(pageReadyId("recommended_strategy"));
+  }
+  if (!locked && key === "self_regulation") {
+    deps.push(pageReadyId("decision_brief"));
+    deps.push(pageReadyId("execution_guidance"));
   }
   tasks[pageAssignId(key)] = task({
     id: pageAssignId(key),

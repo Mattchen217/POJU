@@ -120,7 +120,7 @@ function baseStructured(over: Partial<ProfileStructured> = {}): ProfileStructure
       role: "输出",
       dimension_id: f.dimension_id,
       inference_zh: f.inference_l311,
-      page: "science_action",
+      page: "execution_guidance",
       path: "a",
     },
     {
@@ -128,7 +128,7 @@ function baseStructured(over: Partial<ProfileStructured> = {}): ProfileStructure
       role: "底蕴",
       dimension_id: f.dimension_id,
       inference_zh: f.inference_l357,
-      page: "metaphysics_action",
+      page: "self_regulation",
       path: "b",
     },
   ];
@@ -172,10 +172,10 @@ function baseStructured(over: Partial<ProfileStructured> = {}): ProfileStructure
 {
   // Unit soft cap / dynamic bounds
   assert.ok(PAGE_EVIDENCE_UNIT_SOFT_CAP >= 6);
-  const b = pageEvidenceUnitBounds("foundation");
+  const b = pageEvidenceUnitBounds("situation_analysis");
   assert.ok(b.max <= PAGE_EVIDENCE_UNIT_SOFT_CAP);
-  assert.equal(clampEvidenceUnitCount("foundation", 99), b.max);
-  assert.equal(clampEvidenceUnitCount("foundation", 1), b.min);
+  assert.equal(clampEvidenceUnitCount("situation_analysis", 99), b.max);
+  assert.equal(clampEvidenceUnitCount("situation_analysis", 1), b.min);
 }
 
 console.log("test-chart-thesis-acceptance: ok");

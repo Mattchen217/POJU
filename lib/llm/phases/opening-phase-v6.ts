@@ -300,15 +300,20 @@ function buildOpeningDyadFeedBlockV6(input: PhaseLLMInput): string {
     dyad_compat_summary: session.dyad_compat_summary,
     pivot_chart_path: session.pivot_chart_path,
     dyad_matrix_pack: session.dyad_matrix_pack,
+    joint_decision: session.joint_decision === true,
   });
   const fallback = formatDyadCompatForPrompt(session.dyad_compat_summary ?? null, {
     partner_bazi: session.partner_bazi ?? session.dyad_compat_summary?.partner_bazi,
   });
+  const jointHint =
+    session.joint_decision === true
+      ? "共同决策：共同问题已锁定；可澄清本侧期望与边界；禁索要/复述对方出生原文与对方私聊；对方盘仅作联合依据。"
+      : "本回合若是续开：承接原问题与期望澄清；可用结构锚轻校准边界表述，禁止合盘专章、禁止再问对方出生信息；path=solo / partner_bazi=absent 时禁止暗示还在等对方盘或再出收集芯片。";
   return [
     `# 二元收盘结果（代码已结案 · 勿再索要对方生辰）`,
     `path=${session.pivot_chart_path ?? "unset"}`,
     structure.trim() || fallback,
-    "本回合若是续开：承接原问题与期望澄清；可用结构锚轻校准边界表述，禁止合盘专章、禁止再问对方出生信息；path=solo / partner_bazi=absent 时禁止暗示还在等对方盘或再出收集芯片。",
+    jointHint,
   ].join("\n");
 }
 

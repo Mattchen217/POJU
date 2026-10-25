@@ -1,0 +1,351 @@
+﻿> **SUPERSEDED / 归档**：产品口径见仓库 `.cursor/docs/v1-决策交付-产品边界.md`。本文仅历史对照，勿当 SSOT。
+# Pivot · 六页交付验收标准（用户价值尺子）
+
+> **地位**：交付报告质量的 **Canonical 验收标准**。  
+> 每次改交付提示词 / 出报告 / 评测交付内容，**必须用本文件衡量是否达标**——是否用户花钱想带走的东西。  
+> 与《pivot-全站用户可见输出与五段设计规范》分工：彼文管**怎么说话、怎么算、怎么喂数、五段流程**；本文管**交付写完后值不值钱、护城河在不在**。  
+> **结构（2026-09）**：正文 **6 页**（P1–P6）+ 附录；`thirty_day` 已退役；近阶并入 P6 收束页。  
+> **派工承重尺**：`DeliveryPagePlan` 从 synthesis 脊柱 deterministic 派工——每页 `must_use` 料必须在对应页兑现；删依据后该页应垮；未选中闭集不硬塞全 pack。
+
+最后更新：2026-10-13  
+改版依据：六页派工表 · 薄喂去双喂 · **题材分工（P2=译批断；P3+=可执行正文）** · P1 锚定 P3/P4 · **Solo/Dyad 双路径**
+
+### Solo / Dyad 路径验收（冒烟矩阵）
+
+| 场景 | path | Stage2 喂料 | 交付 judgment | 禁区 |
+|------|------|-------------|---------------|------|
+| 二元题 × 收对方盘 | `dyad` | 你盘 + matrix pack + 问题 + 期望 | 每页先**二元关系批断**再正文 | 禁 Match 专章墙；药方仍你侧 |
+| 二元题 × 跳过 | `solo` | 主盘 + 问题 + 期望 | 现网单人批断 | 禁臆造对方命理 |
+| 非二元 | `solo` | 同上 | 同上 | — |
+| 三人及以上题 | 拒识引导 | 不进伪多元真算 | — | Eastern OS 能力边界 |
+
+- 用户可见自称：**Eastern OS**（勿对用户称 Pivot）  
+- page-feed：`path===dyad` 时 P1–P6 judgment 开 `dyad_relation_structure`（含 matrix 切片）  
+- Companion：仍单人流日；dyad Brief 可带 `relation_boundary` 栏杆  
+
+### 基线快照（2026-08-13 · 命脉修复开工前）
+
+对照最新实出报告（海外开拓 / 远程操盘案）：
+
+| 项 | 基线 | 本轮目标 |
+|---|---|---|
+| ① 答案 | 已过（主路径清楚） | 保持 |
+| ② 独有理由 | 偶发（P2 缺段 + 路线图错位） | Gate1 + Content1 |
+| ③ 策略 | 偶发（P3 曾 1 段；偏话术；删依据仍弱） | Gate1 + Content2 |
+| ④ 自检 | 大体已过 | 保持 |
+| 依据层 | 未过（金字贴死 / 制杀·火局泄木 / 需养回声） | Gate2 |
+| ②③④ 提示词·算料 | 已落代码 | 不重复造；只补硬闸与出货兑现 |
+
+---
+
+## 0. 一句话
+
+用户带走的应是：
+
+> **一份基于我独有命理、告诉我该往哪走 · 怎么走 · 怎么验证的决策方案**
+
+不是：
+
+> 一份关于我性格运势的分析报告 + 谁都能给的通用建议
+
+**护城河落点**：不在 P2「分析你是谁」，而在 **P3/P4「怎么办」——当这个怎么办从命理结构推导、只对他成立时**。药方独有才是护城河；诊断独有只是可信基础设施。
+
+---
+
+## 1. 用户该带走什么（四点尺子 · 按重要性）
+
+带着真实困境（接不接海外 / 去不去创业 / 离不离婚）、花了钱的用户，该带走：
+
+| # | 带走什么 | 反面（不达标） |
+|---|---|---|
+| ① | **一个清晰的答案**：「以你的情况，我建议走这条，为什么」 | 几条平列选项让他自己挑 |
+| ② | **只属于他的理由**：扎在他独有的命理结构上 | 朋友 / 顾问 / GPT 都能复述的泛建议 |
+| ③ | **可动手的达成策略与手段**：科学一套 + 东方一套，各自都有**策略+手段**；骨架从命理长出，不替做纯专业执行 | 合同条款 / 完整话术脚本 / 背调流程代做；或「科学只有策略、东方只有手段」半套 |
+| ④ | **自检信号 + 回来的路**：走出去能对照验证 | 只有鸡汤收尾、无可观察信号 |
+
+四条**全部**成立 → 交付达标。缺任一条 → 未达标（尤其缺 ① 或 ③ 且无命理扎根时，整份报告失败）。
+
+---
+
+## 2. 全报告通用铁律（每页共用）
+
+### 2.1 删依据自检（护城河尺 · 最高优先级）
+
+对每一条策略 / 调频建议 / 节奏安排 / 避坑提醒：
+
+```text
+删掉这条的命理依据（bazi_basis / 折叠「依据与推理」），它还成立吗？
+→ 若照样成立（谁都适用）＝没扎命理 → 重写
+→ 若不成立（离开他的结构讲不通）＝扎住了 → 通过
+```
+
+呼应底座纪律：「删掉依据结论还站得住 = 泛泛而谈」。
+
+### 2.2 生长顺序（诊断与药方都适用）
+
+```text
+① 锁承重锚 chart_anchors / bazi_basis（来自第2段多维、pack、Synthesis 主辅锚）
+② 写用户可见正文（必须能被已锁锚支撑；删锚后谁都适用 → 废稿）
+③ 依据层只解释已锁锚（Evidence 不得另编盘外故事）
+```
+
+**禁止**：先造通用动作 / 通用风水 / 通用注意事项 → 再事后贴命理注脚。  
+**禁止**：用「前几个真词糊一句」的 stub 依据顶替真实 Evidence。
+
+双层用法（现有结构，不叠新注脚）：
+
+| 层 | 字段 | 职责 |
+|---|---|---|
+| 承重锚 | `chart_anchors` + `bazi_basis`（页级）；单元 `chart_anchors`（ClaimPlan） | 先于正文锁定；full 模式禁止空数组 |
+| 策略 / 结论正文 | `core_conclusion` → Fill body | 白话决策策略 / 论证 / 节奏（零裸命理词） |
+| 命理依据 | Evidence → 折叠依据层 | **只证已锁锚**；每内容单元一条（P5=每条 RiskItem） |
+
+### 2.3 给什么 · 不给什么（药方页硬判据 · P3/P4 对称）
+
+P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs 手段）。每页都必须是「策略 + 手段」成套。
+
+| 页 | 策略 ✅ | 手段 ✅ | 不给 ❌ |
+|---|---|---|---|
+| **P3 科学药方** | 边界 / 发力 / 易栽 / 主辅切换 | 资源精力配比、沟通协作原则、节奏杠杆、一层第一步示意 | 合同/话术剧本/专业代做；只有策略没有手段 |
+| **P4 东方药方** | 锚定问题+期望：色/向/时/大运年窗/用神补避等多维东方行动；手段以节奏/气质为主，色向次要 | 状态层补泻（缓冲/规划/发声/闭环/止损等）+ 次要色/向符号 | 复读 P3；通用风水吉凶；**五行物化**（缺水=水边/绿植、缺火=晒太阳等）；只有手段清单没有策略 |
+| 两边共用 | 基于命理、只对他成立 | 可对照动手的杠杆 | 「注意休息 / 别熬夜 / 多沟通」等谁都适用的空话 |
+
+### 2.4 表达与合规（与全站 Canonical 对齐）
+
+- 正文：行为 / 精力 / 决策白话 + 受控映射；禁裸命理专名报幕。  
+- 依据层：闭集 `⟦t:slug|软译|语境⟧`；渲染走 `GlossaryText` → `RichReadingText`。  
+- 不报具体日期点位；时机 = 阶段趋势 + 条件成熟。  
+- 禁命运定论、伪医疗、吉凶风水属相字面。  
+- 跨页：「养根 / 小森林 / 宜守向内」主隐喻全报告 ≤1 次（只许落在 foundation）。
+
+### 2.5 二元关系 / 合盘取舍（感情 · 合作 · 人际）
+
+**产品边界（Stage-1 dyad 修订）**
+
+| 产品 | 答什么 | 不答什么 |
+|------|--------|----------|
+| **Pivot 交付** | 以【用户主盘】为主锚；可选吃短 `dyad_compat_summary` 作关系结构锚；围期望给主辅/边界/刹车 | 独立 Match 全页翻版、双 thesis、无对方盘却断言对方命理 |
+| **Match** | 完整双人契合 / 张力 / 合盘机制报告 | 替用户做破局主辅方案 |
+
+**对方怎么写**
+
+- ✅ `partner_bazi=absent`：主盘型人 + 第3段可观察行为/权力位/底线；药方在你侧  
+- ✅ `partner_bazi=present`：可用 page-feed `dyad_relation_structure`（synergy/resonance/keys）校准边界；禁另开合盘专章  
+- ❌ 禁止无对方盘断言对方日主/运势/合盘分数  
+
+**「找什么样的人 / 和谁合作」**
+
+- ✅ 从用户主盘推结构型人 + 现实校准；有摘要则 1–2 条机制锚  
+- ❌ 禁止写成对方八字终审；完整「合不合」仍可 CTA Match  
+
+**「我们合不合」问法**
+
+- 尚无对方盘：可点明补生辰或去 Match；本报告仍收敛【你侧】怎么走  
+- 已有摘要：用结构锚服务期望，不复述契合度墙  
+
+**第3段二元必收（有对方盘也不免）**
+
+1. 对方角色与权力位  
+2. 对方近期可观察行为或态度  
+3. 你在关系中的硬底线或不可逆成本  
+
+缺仍脑补对方事实 → 该页/该案不通过。
+
+**验收勾选（二元案加测）**
+
+- [ ] 主路径是用户可执行轨，不是「对方该改成什么样」  
+- [ ] 无对方盘却出现对方八字/运势断言 → **整份不通过**  
+- [ ] 交付未写成合盘专题；Match CTA（若问合不合）存在且不过度抢戏  
+
+---
+
+## 3. 逐页达标标准（P1–P6 + 附录）
+
+结构以信息密度为准。每页必须完成该页信息维；**决策向页（P2–P5）必须命理扎根**。
+
+| 页 | 键 | 用户带走 | 达标判据 | 主要上游料 |
+|---|---|---|---|---|
+| **P1** | `direct_answer` | ① 清晰答案 | 正面直答 + 主辅对照；`core_logic` 厚写；**动态主副标题贴本案**；**不**挂依据层 | `situation_conclusion` + `primary_path` + desired_outcome |
+| **P2** | `foundation` | ② 为什么卡（可信桥） | **多表象对症**：opening/收集多个真实表象 → 每卡 surface+essence；末卡「因此主辅成立」；删依据垮掉；**禁止**执行步骤/月路线图 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 + 收集表象 |
+| **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles 钉死 3+3**；每维=策略+手段+依据；口径写入 strategy/means（**无独立 exact_script 槽**）；禁长剧本/另立新目标 | `primary/backup` + frames + 收集证据 |
+| **P4** | `metaphysics_action` | ③ **东方谋略**（护城河·暗锦囊） | 锚定**问题+期望**；双核（八字+奇门锁盘）；正文三柱=局势交锋·意象调频·行为仪轨；每维=策略+手段+依据；**禁复读 P3 工具**；删双核真算不成立；奇门失败不降级 | `metaphysics_pack` + `energy_retune_frame` + multi_dim + **奇门 Fact-pack（Step1）** + 问题/期望 |
+| **P5** | `risk_guard` | ③ 执行刹车 | **盯住 P3/P4 行动**：用户动手时结构特有红灯/坑/切辅/防护；每条=出现→该做→注意→禁做且能指回 Brief 手段；删依据处置链垮掉；禁另立议程 KPI | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 + **P5ActionBrief(P3/P4)** |
+| **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 为何切换 + 金句用法 + **今晚闭环** + **近7日条目卡≥4** + **带走三样**；禁止四周表；禁止追踪钩子；禁第三次药方复读 | Action Brief + `self_check` 正向 |
+| **附录** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
+
+**已退役**：独立页 `thirty_day`（四周甘特）。旧会话可渲染；新交付不得再要求四周表作为价值交付。
+
+**P2 与护城河**：P2 不是产品命脉，但是药方的**可信基础设施**。验收时 P2 必须扎实，价值兑现仍以 P3/P4 为主。
+
+---
+
+## 4. 算料接线标准（没有料，改要求是空的）
+
+交付 finalize **必须吃到**重构后的算料（改版②）。缺料时允许降级丰富度，**不允许**放弃「从命理生长」原则。
+
+| 料 | 必须进哪些页 | 缺失时 |
+|---|---|---|
+| `multi_dimension_reckoning` | P2、P3、P5（风险极性相关子集） | P3 退回主辅 + 脊柱锚推策略；P5 用忌神/盲区/path_costs 撑「执行药方时」的熔断；仍禁止先造通用动作 |
+| `action_plan`（synthesis） | P1/P3 展开、P6 近阶清单 | 用 `primary/backup` + frames 兜底 |
+| `metaphysics_pack` | P4、P5 忌神 | P4 另须奇门 Fact-pack；奇门缺失/失败 → **重试后 fail**，禁止半套冒充东方谋略页 |
+| `primary_path` / `backup_path` | P1、P3、P6 近阶 | 读 `modern_action_frames`（P4 **不**再挂主辅轨） |
+| `current_da_yun_cycle`（逻辑字段） | P2 周期论证（一句即可） | 用 `timing_ripeness` + rhythm；**禁止**再造四周表 |
+| `covered_agenda` | P3 一层示意、现实校准 | 不编造人名/项目/数字 |
+
+代码锚点：
+
+- 切片清单：`lib/llm/pro/delivery/delivery-schema.ts` → `SEGMENT_COMPUTED_INPUTS`
+- dump：`lib/llm/pro/delivery/format-spine-for-finalize.ts`
+- 生成因果：`finalize-prompt.ts` / `narrative-prompt.ts`
+- 页职责 SSOT：`lib/poju/report-blueprint.ts`
+
+---
+
+## 5. 单次交付验收清单（出报告后逐项勾）
+
+### 5.1 用户价值（必过）
+
+- [ ] **① 答案**：P1 有明确主路径建议，不是菜单式多选  
+- [ ] **② 独有理由**：P2/P3 依据层有真实盘面锚；删依据后关键判断垮掉  
+- [ ] **③ 策略可动手**：P3/P4 各有**策略+手段**成套；P3 主辅各 **angles≥3**；P4 **东方维**（色/向/时/大运年窗/用神补避等）挂 dimensions；P3 无合同/话术剧本；P4 **不复读 P3**、非只有环境清单  
+- [ ] **③b 非机制译（P3+）**：P3/P4/P5/P6 正文是可执行内容，**不是**批断互耗/生克链的白话复述；删「合力/调节力/过载」类结构隐喻后若只剩空话 → 不合格（P2 除外：P2 正文=批断白话）  
+- [ ] **页眉标题**：每页有贴本案的 `page_title`（非空泛「深度分析」）；固定标签正确；TOC 用固定标签
+- [ ] **④ 自检**：P6 有今晚闭环 + 近7日条目卡≥4 + 带走三样；无回来追踪钩子  
+
+### 5.2 护城河（决策向页必过）
+
+- [ ] **P3**：科学策略+手段能对应到多维/主辅与真实处境；每轨≥3 互补维；生长顺序 = 先批断扎根，再长手段/示意（正文题材≠机制译）  
+- [ ] **P4**：东方多维行动按相关真算维展开；**反物化**；**护城河维优先**（timing/polarity/archetype；rhythm/mindset 仅辅助不可整页唯一）；色向不得单独定义补泻；删依据不成立；零科学职场手段复读；**禁止 narrative 降级出货**
+- [ ] **P4 语义同源**：生成与校验同读 `wuxing-semantic-ssot`；虚/旺双向；生克句须对上本盘 calc
+- [ ] **P5**：执行 P3/P4 时的结构刹车；坑是结构特有且能指回 Brief 手段；非通用注意事项、非另立议程
+- [ ] **P6**：近阶动作可追溯 Action Brief / P3·P4 means；不是空壳四周表  
+- [ ] 以上任一条：删 `bazi_basis` / 依据折叠后仍「谁都适用」→ **该页不通过**  
+- [ ] **半套即失败**：P3 只有策略没有手段，或 P4 只有手段没有策略 → **不通过**  
+- [ ] **P1 锚定**：P3/P4 主辅名与最终 P1 一致；禁止用早期 breakthrough 顶替未 ready 的 P1
+### 5.3 工程与表达（必过）
+
+- [ ] 六页正文 + 附录齐全；跨页去重（养根类隐喻 ≤1）  
+- [ ] 正文零裸命理专名；依据层闭集打标正确  
+- [ ] 渲染走 Glossary / RichReading；落库过 audit  
+- [ ] 无命运定论、伪医疗、吉凶风水属相字面  
+- [ ] **P2 无完整路线图**（近阶清单归 P6；P2 至多一句阶段定位）  
+- [ ] **无空心决策页**：P2/P3/P4 等内容段 `arguments` ≥2（见下节硬闸）  
+- [ ] **依据层可读**：无相邻金字贴死、无槽外命理短词/四字格、无软译回声  
+- [ ] **无独立 thirty_day 新调度**
+
+任一项「用户价值」或「护城河」失败 → **整份交付不达标**，不得以「文笔好 / 页数齐」放过。
+
+---
+
+## 5A. 工程硬闸（服务用户价值 · 不是另立标准）
+
+硬闸保证「出得齐、依据读得懂」——否则护城河提示词写了对也验不准。
+
+| 闸 | 条件 | 失败表现 | 代码锚点 |
+|---|---|---|---|
+| **段数** | 内容段 `arguments.length ≥ 2`；拒收单对象多 `"body"` 键 | 速览多条、正文 1 段 | `narrative-shape-gate.ts` → `narrative-evidence-call.ts` |
+| **段级重试** | 形状失败最多 `max(HARD_MAX, 3)` 次；**不**开全局 `DELIVERY_ENABLE_RETRIES` | 偶发空心页 | 同上 |
+| **页级承重锚** | full 模式 Finalize：`chart_anchors` 与 `bazi_basis` 均非空 | 空锚仍出正文 | `validateDeliveryComputed` / `finalize-call.ts` |
+| **Synthesis 主辅锚** | `primary/backup.chart_anchors.length ≥ 2` | 主辅与第2段脱节 | `synthesis-task.ts` |
+| **Evidence 覆盖** | 每个正文论点非空 evidence；禁止 stub 糊句 | 缺槽仍上线 / 假依据 | `run-segment-chain` + `assembleDeliveryEvidence` |
+| **P5 逐条依据** | 每条 RiskItem = 一个 argument/依据槽 | 4 桶合并共用一条 | `page-schema/render.ts` |
+| **相邻金字** | 两槽之间必须有汉字白话 | `岁环纪元``时脉登峰` 贴死 | `hasAdjacentWordSlotsWithoutVernacular` |
+| **槽外禁短词** | 连接白话禁 `制杀`/`泄木`/…；四字格含 `火局泄木` 等 | 依据像残词墙 | `findConnectiveShortJargonOutsideSlots` / 四字格表 |
+| **软译回声** | encode 后剥 `⟦t:…|需养|…⟧需养` | 需养需养 | `stripSoftGlossEchoAfterMarkers` |
+
+冒烟：`tsx scripts/test-delivery-narrative-arg-gate.ts`、`tsx scripts/test-delivery-mark-adjacent-gold.ts`。
+
+### 5.2 Schema 驱动 + 波次 DAG（page_schema_v1）
+
+| 项 | 条件 | 失败表现 | 锚点 |
+|---|---|---|---|
+| **槽位观感** | 页眉=固定标签+动态主副标题；P1 厚 core_logic；P3 多策略维；P4 东方维；P5 熔断；P6 出门仪式（身份理由+今晚闭环+条目卡+带走三样） | 空泛标题；薄 Why/When；P4 软科学复读；四周表复活；P6 只有一行标签 | `page-schema/*` + `DeliveryBookStage` |
+| **渐进解锁** | Bootstrap P1 → Wave A（P1–P4）→ Wave B（P5∥P6）；未亮页为 Skeleton；**无 page_schema 不上架**；**禁止 narrative 降级** | 整页 Spinner 傻等 / 散文「核心速览」冒充 P5 | `waves.ts` + shelf + Slim Pipeline |
+| **宽入严出** | sanitize 截断不重试；仅结构破坏 LLM 重试 ≤2 | 字数差狂刷 | `sanitize.ts` / `fill-call.ts` |
+| **Action Brief** | Wave C 只吃代码提取 brief（含 `source_anchors`）；日志 `P5ActionBrief loaded` | P2–P4 全文灌进收束页 | `action-extractor.ts` / stage-runner |
+| **禁抢跑** | 无 P5/P6 先于 Wave B 完成 | 近阶空壳或与药方脱节 | `filterTasksToCurrentWave` |
+| **300s 软墙** | 波次边界 `/continue` 可恢复；不因单次 300s 杀整单 | 中途 STOP 无续跑 | `final-delivery-stage-runner.ts` |
+
+冒烟：`tsx scripts/test-delivery-page-schema.ts`。槽位形状 SSOT：`.cursor/docs/pivot-交付页Schema与UI槽位.md`。
+
+同案真跑勾选（观感 + 结构 + 命脉）：
+
+- [ ] P1 主辅加厚卡可见 core_logic；P1 无依据层  
+- [ ] P3 策略维+短句；P5 熔断；P6 今晚闭环 + 近7日条目卡≥4 + 带走三样  
+- [ ] 非散文墙；波次渐进亮起；**无 thirty_day 新页**  
+- [ ] sanitize 截断不无谓重试；Wave C 只吃 Action Brief（日志可证）  
+- [ ] 无 Wave C 抢跑；soft-wall continue 可恢复  
+- [ ] 删依据后决策向页不成立；无背景复读；仪表盘真分未造假
+
+---
+
+## 6. 三盘对照（改提示词 / 大改交付后必跑）
+
+选三个**差异大**的困境盘（如职场 / 创业 / 感情，且命理结构明显不同），各出一份报告：
+
+| 对照项 | 通过条件 |
+|---|---|
+| 药方不雷同 | 三盘 P3/P4/P5 策略与坑明显不同（不是换皮同一段） |
+| 删依据不成立 | 每盘决策向页抽查：去掉命理依据后策略垮掉 |
+| 无替做执行 | 无合同条款 / 完整话术 / 专业流程代做 |
+| 无通用模板 | P4 非通用风水、非五行物件处方；P5 非「别熬夜」；P6 近阶非空壳四周表 |
+| P2 不被破坏 | 仍按收集多表象对症论证「为什么卡」，与 P1 结论头不重复灌水；禁单一表象压扁 |
+
+三盘对照失败 → 回滚或重修对应页提示词，不得标「改版完成」。
+
+---
+
+## 7. 改交付时的纪律
+
+1. **先接料、后改要求**（②→③→④ 顺序不可倒）。无多维 / action_plan 却要求「从多维生长」= 空转。  
+2. **用现有双层**（`core_conclusion` + `bazi_basis`），不叠「Profile basis」类事后注脚。  
+3. **交付向规则只进交付层**（finalize / narrative / evidence / 该阶段 taskBlock）；禁止灌进 `POJU_IDENTITY*` 或无门控控制面（见《提示词按阶段隔离》）。  
+4. **评测口径以本文为准**；文风 / 闭集 / 五段流程仍服从全站 Canonical。  
+
+---
+
+## 8. 相关文件
+
+| 文档 / 代码 | 关系 |
+|---|---|
+| `.cursor/docs/pivot-全站用户可见输出与五段设计规范.md` | 全站可见语 + 五段 + 双层机制 |
+| `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` | 交付规则不得污染对话阶段 |
+| `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` | 正文白话与映射 |
+| `.cursor/docs/pivot-交付页Schema与UI槽位.md` | P1–P6 JSON 槽位 + 波次 DAG |
+| `lib/llm/pro/delivery/*` | 现行六页正文流水线 |
+| `lib/llm/pro/delivery/page-schema/*` | page_schema_v1 填槽 / sanitize / extractor |
+| `lib/llm/pro/delivery/page-plan/*` | 六页派工表 `DeliveryPagePlan`（must_use/forbid） |
+| `lib/poju/final-delivery-stage-runner.ts` | PagePlan → finalize 薄喂 → Wave A/B fill |
+| `lib/llm/deepseek/calc-relevance-plan.ts` | 第2段 Call A0 相关性规划 |
+| `lib/poju/report-blueprint.ts` | 页职责与 chart_inputs |
+
+---
+
+## 10. 交付链路（派工后 · DAG 不变）
+
+```text
+synthesis 主辅收敛
+  → buildDeliveryPagePlan(core, agent_v2)   # 代码一次
+  → finalize: 6 key 并行（每 key 只看 plan 切片）
+  → bootstrap: P1 单独
+  → Wave A: P2∥P4 随时; P3 等 P1
+  → extractP5ActionBrief（代码）
+  → Wave B: P5∥P6
+  → assemble 成书
+```
+
+**薄喂原则**：finalize 与 fill 不重复整包 `multi_dim` / `metaphysics_pack_full`；pack 全量仅 P4；P2 只吃 dashboard 三真分；P5/P6 各吃 self_check 半集。
+
+**第2段（Wave-0）**：segment1 → **Call A0** `calc_relevance_plan` → 代码 slice + compact 索引兜底 → Call A-dims ∥ A-spine（不再整份 structured JSON）。
+
+---
+
+## 9. 最短判词（给评审人）
+
+打开一份交付，只问三句：
+
+1. **他带走的是「该往哪走的决策方案」，还是「关于他的分析文章」？**  
+2. **删掉命理依据，P3/P4/P6 还成立吗？**（成立 = 失败）  
+3. **有没有替他做了律师 / HR / 顾问才会做的执行剧本？**（有 = 失败）
+
+三句过 → 才是用户花钱想要的东西。

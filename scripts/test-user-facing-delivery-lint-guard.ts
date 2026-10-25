@@ -42,7 +42,7 @@ const finalize = buildDeliveryFinalizePrompt({
   agent_v2: agent,
   locale: "zh",
   delivery_mode: "full",
-  paths: ["foundation"],
+  paths: ["situation_analysis"],
 });
 assert.ok(finalize.system.includes("用户可见表达契约"));
 assert.ok(finalize.system.includes("Folded Technical") || finalize.system.includes("双层职责"));

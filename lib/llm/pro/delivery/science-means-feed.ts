@@ -14,7 +14,7 @@ import {
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
 
-/** Keep in sync with deepEvidenceUnitSpec("science_action").paths */
+/** Keep in sync with deepEvidenceUnitSpec("execution_guidance").paths */
 export const SCIENCE_ASSIGN_PATHS = [
   "primary_toolkit.angles[0]",
   "primary_toolkit.angles[1]",

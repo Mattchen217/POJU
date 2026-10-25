@@ -220,7 +220,7 @@ const baseDim = {
 
 {
   const plan: DeepEvidencePlan = {
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[0]",
@@ -243,7 +243,7 @@ const baseDim = {
     ],
   };
   const notes = stampPageChartAnchorsFromDeepPlan(
-    "metaphysics_action",
+    "self_regulation",
     page,
     plan,
   );

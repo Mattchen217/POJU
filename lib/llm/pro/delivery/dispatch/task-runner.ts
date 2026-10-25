@@ -104,6 +104,7 @@ function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
     dyad_compat_summary: input.dyad_compat_summary,
     pivot_chart_path: input.pivot_chart_path,
     dyad_matrix_pack: input.dyad_matrix_pack,
+    joint_decision: input.joint_decision === true,
   });
 }
 
@@ -558,7 +559,7 @@ async function runFill(
     prog ??
     ({
       key,
-      phase: key === "direct_answer" ? "start" : "evidence_done",
+      phase: key === "decision_brief" ? "start" : "evidence_done",
       tokens_used: 0,
     } satisfies SegmentChainProgress);
 
@@ -574,16 +575,16 @@ async function runFill(
   if (!r.ok) return { ok: false, reason: r.reason };
   if (r.progress.phase !== "narrative_done" && r.progress.phase !== "mark_done") {
     // P1 transition may land on mark_done without mark LLM.
-    if (!r.progress.page_schema && key !== "direct_answer") {
+    if (!r.progress.page_schema && key !== "decision_brief") {
       return { ok: false, reason: `fill_incomplete_phase:${r.progress.phase}` };
     }
   }
-  if (!r.progress.page_schema && key === "direct_answer" && r.progress.phase === "start") {
+  if (!r.progress.page_schema && key === "decision_brief" && r.progress.phase === "start") {
     return { ok: false, reason: "p1_fill_incomplete" };
   }
 
   // Deep pages: expand mark.cN fan-out once evidence tree exists (narrative_done).
-  if (key !== "direct_answer" && r.progress.phase === "narrative_done") {
+  if (key !== "decision_brief" && r.progress.phase === "narrative_done") {
     const markChunks = countMarkArgChunksForPaths(r.progress.evidence ?? {}, [key]);
     let dag = await loadDeliveryDispatchDag(job_id);
     if (dag) {
@@ -769,7 +770,7 @@ async function runWaveBGate(job_id: string): Promise<DispatchTaskRunResult> {
   await saveDeliveryDispatchDag(next);
   return {
     ok: true,
-    result: { type: "gate", unlocked: ["risk_guard", "signals_close"] },
+    result: { type: "gate", unlocked: ["validation_risk", "validation_close"] },
   };
 }
 

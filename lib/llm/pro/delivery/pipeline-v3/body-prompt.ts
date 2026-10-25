@@ -60,10 +60,10 @@ ${inventedPartnerChartPromptBlock("zh")}
 
 function pageDutyBlock(key: DeliverySegmentKey): string {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return [
-        `## 本页 duty · direct_answer（P1）`,
-        `【本页角色】交付报告「核心直答」主笔——只给取舍结论与双轨叙事，不铺长论证、不写执行清单。`,
+        `## 本页 duty · direct_answer（P1 · v1=decision_brief 决策简报）`,
+        `【本页角色】交付报告「决策简报」主笔——两分钟给出真问题、主判断、推荐方向与最近一步；不铺长论证、不写执行清单。`,
         `【本页目标】让用户读完立刻知道：此刻最该走哪条路、为何对本案成立、何时必须切到辅路；整报告只有一主一辅。`,
         `【表达气场】冷静、决断、贴本案；像顾问当面拍板，不鸡汤、不恐吓、不空喊「你要相信自己」。`,
         `【本页禁忌】`,
@@ -90,17 +90,18 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- **#9 期望钉死（硬）**：开篇（core_judgment/主辅 name·why）须点名用户陈述的期望；至少一处引用收集事实（角色/期限/对方行为）；决策备忘口气非能量手册。`,
         `- 自检（类别）：可见字段是否零「岁运/用喜忌/十神/合冲/奇门」报幕整类？数字是否均能指回喂料（#11）？solo/absent 是否零对方日主/大运/合盘分数（#13）？backup 删掉批断 backup 后是否垮？`,
       ].join("\n");
+    case "situation_analysis":
     case "foundation":
       return [
-        `## 本页 duty · foundation（P2）`,
-        `【本页角色】交付报告「归因译手」——把冻结批断译成用户可读的为何卡，不给兵法与执行处方。`,
-        `【本页目标】让用户读完明白：本题卡点的**结构由头**是什么（议题以本案问题/期望/处境为准，不预设题材）；每张卡像报告段落，不像目录一行；读完应有「原来是这些东西在卡我」的清晰感。`,
+        `## 本页 duty · situation_analysis（处境与问题诊断）`,
+        `【本页角色】「处境与障碍」译手——把冻结批断译成：问题结构、与本题相关的决策模式、优先障碍。不给执行处方。`,
+        `【本页目标】读完明白：①表层 vs 深层问题；②这类决策上为何易卡（模式非泛人格）；③最值得先解的障碍。每张卡像报告段落；有「原来是这些在卡我」的清晰感。`,
         `【表达气场】沉稳、解释性、有厚度；对照处境但不抄原句；零鸡汤口号、零祈使收尾。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=结构张力归因白话（非怎么办处方、非执行清单）`,
         TEMPLATE_VOICE_DUTY_LINE,
-        `  · 可见层命理专名（含宫位/合冲字面/岁运报幕/奇门局与门星名/十神用忌）；怎么办/警示祈使收尾整类（「你需要/应主动/宜守/需要警惕…」等换壳仍禁）；题头抄形状示意；一行电报式目录壳；duty 或正文预设固定生活题材。`,
-        `【数据来源】「本页原始批断」units（按 path 一一译）+ 处境材料仅对照；议题锚点取自本案问题/期望，不由 duty 预设；表象与本质必须从批断长出，禁编造材料没有的事件数字（#11 · 具体量须来自收集）。`,
+        `  · 可见层命理专名（含宫位/合冲字面/岁运报幕/奇门局与门星名/十神用忌）；怎么办/警示祈使收尾整类；题头抄形状示意；一行电报式目录壳；预设固定生活题材；泛泛全盘性格报告；把命理写成已证实心理测量。`,
+        `【数据来源】「本页原始批断」units（按 path 一一译）+ 处境/收集材料对照；表象与本质从批断长出，禁编造材料没有的事件数字。`,
         `【硬约束】`,
         `- why_cards 条数=批断 units；字段 title/surface/essence/chart_anchors；禁改 dimensions。`,
         `- essence≈120–200字（3–5句机制白话）；删掉批断后 essence 须垮；**只解释为何卡**——停在结构张力（窗口收窄/推进易胶着/制衡位弱/链路隐伏）；**禁**「需要…约定/厘清/挖掘」及任何怎么办收束；亦禁错失恐吓收束。`,
@@ -116,78 +117,101 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- chart_anchors 可含闭集真词；真词勿粘进 essence。`,
         `- 自检（类别）：可见字段是否零「宫位/合冲/岁运柱位/奇门门星/十神用忌」报幕整类？句末是否滑成怎么办/错失恐吓？是 → 改写成结构张力收束。`,
       ].join("\n");
-    case "science_action":
+    case "personal_decision_patterns":
       return [
-        `## 本页 duty · science_action（P3）`,
-        `【本页角色】交付报告「科学执行」主笔——把主辅落成可动手的策略与手段，主语是协议/里程碑/清单，不是气场仪轨。`,
-        `【本页目标】让用户今晚就能动手：主轨三条角 + 辅轨三条角，每条有策略由头与可出示动作；至少一条主轨 means 含「今晚可出示交付物」。`,
-        `【表达气场】说清楚、说准确即可：strategy 一句本案由头 + 打法指向；means 写清可核对动作。**不加厚、不铺读感**——完整句/语气/locale 由下游润色步负责。禁空喊口号与半文言电报。`,
+        `## 本页 duty · personal_decision_patterns（个人决策模式）`,
+        `【角色】解释用户在本题上如何判断/反应（非泛人格）。`,
+        `【目标】1–3 短卡：模式 + 可纠正假设；区分事实/行为证据/命理解释。`,
+        `【禁忌】全盘性格报告；把命理写成已证实心理测量；怎么办处方。`,
+        `【硬约束】why_cards 1–3；essence 停在模式机制；chart_anchors 可含真词勿粘可见层。`,
+      ].join("\n");
+    case "bottleneck_analysis":
+      return [
+        `## 本页 duty · bottleneck_analysis（核心障碍）`,
+        `【角色】识别最值得优先处理的 1–3 个障碍。`,
+        `【目标】成因/维持机制/相互影响；可控 vs 暂不可控；解除哪个最可能改局面。不复读处境章。`,
+        `【禁忌】执行处方；复读 situation 全文；泛泛列十个问题。`,
+        `【硬约束】why_cards 1–3；每卡一障碍；删批断须垮。`,
+      ].join("\n");
+    case "strategic_options":
+      return [
+        `## 本页 duty · strategic_options（战略选项比较）`,
+        `【角色】让用户看清 2–4 条现实路径的代价，而非只接受单一答案。`,
+        `【目标】每选项：收益/成本/风险/可逆性；成立前提与失效条件。可含维持现状/小试验。`,
+        `【禁忌】编造第四条假路；写成执行任务表；奇门仪轨。`,
+        `【硬约束】options 2–4；每项须能指回批断或收集事实；科学轨=决策/经济/概率权衡。`,
+      ].join("\n");
+    case "recommended_strategy":
+      return [
+        `## 本页 duty · recommended_strategy（主策略与备选）`,
+        `【角色】有理由有边界的主路径 + 切换/退出条件——付费核心。`,
+        `【目标】主路径理由；备选与何时切换；前提/依赖；应放弃什么；停止触发。`,
+        `【禁忌】第二份执行清单；与 decision_brief 拧轴；辅轨另编第三套故事。`,
+        `【硬约束】core_judgment + primary + backup；从 synthesis/批断长出；命理轨承重主路径。`,
+      ].join("\n");
+    case "execution_guidance":
+      return [
+        `## 本页 duty · science_action（P3 · v1=战略选项+主策略+执行原则）`,
+        `【本页角色】「策略与执行」主笔——对外做事：路径比较感 + 主辅策略 + 执行原则与可立即采取的示例动作。主语=协议/里程碑/清单/验证实验，不是气场仪轨。`,
+        `【本页目标】带走：为何选这条主路、辅路何时切；现阶段优先验证/推进什么；可立刻做的动作与完成标准；推进/调整/停止条件。**禁止**固定 30 天/按周任务表（一次性产品无跟踪）。主轨三条角 + 辅轨三条角；≥1 主轨 means 含今晚可出示交付物或低成本验证。`,
+        `【表达气场】说清楚、说准确：strategy=本案由头+打法；means=可核对动作或执行原则。禁空喊与半文言。读感加厚归润色。`,
         `【本页禁忌】`,
-        `  · **换壳同禁**：允许轴=协议/里程碑/清单可出示动作；半投入换皮/发明截止点仍算犯`,
+        `  · **换壳同禁**：允许轴=协议/里程碑/清单/低成本验证；半投入换皮/发明截止点/四周甘特仍算犯`,
         TEMPLATE_VOICE_DUTY_LINE,
-        `  · **事实/门槛（硬 · 正文步闸）**：对方已拒兼职时路径闭集——**主轨允许**：全职门槛下护底线/显性贡献/书面权益；**主轨禁止**：兼职试水/阶段性非全职当默认。**辅轨允许**：婉拒、按次/按小时顾问计费（可写保住现职）、另寻；**辅轨禁止**：「项目制/半职深度参与+保留现职」换皮（把顾问写成未计费半职核心参与）。时长/节律只许收集已给量（如半年）；禁自造前N月/两周内/明天内/每半月/列出N位；禁编造未收集成熟期/cliff（写「按书面约定的成熟与兑现节点」）。`,
-        `  · **可见专名（尽量；硬闸在润色后）**：尽量零十神/用忌/干支岁运/合冲/宫位与引号、X%；真词进 chart_anchors。润色会清表面类。`,
-        `  · 把批断译成 means；冥想正例；替对方写心理剧本；辅轨换皮复读主轨。`,
-        `【数据来源】P1 主辅 + 冻结批断（只扎根）+ 科学菜单 + 收集；**收集硬对齐高于 frames**。`,
+        `  · **事实/门槛（硬 · 正文步闸）**：对方已拒兼职时路径闭集——**主轨允许**：全职门槛下护底线/显性贡献/书面权益；**主轨禁止**：兼职试水/阶段性非全职当默认。**辅轨允许**：婉拒、按次/按小时顾问计费（可写保住现职）、另寻；**辅轨禁止**：「项目制/半职深度参与+保留现职」换皮。时长只许收集已给量；禁自造前N月/两周内等 cliff。`,
+        `  · **可见专名（尽量）**：零十神/用忌/干支岁运/合冲/宫位；真词进 chart_anchors。`,
+        `  · 把批断译成 means；冥想正例；替对方写心理剧本；辅轨换皮复读主轨；「增强行动力」空建议。`,
+        `【数据来源】P1 主辅 + 冻结批断 + 科学菜单 + 收集；**收集硬对齐高于 frames**。现代学科用于权衡与执行设计，不宣称验证八字。`,
         `【硬约束】`,
         `- primary/backup 各 3 angle；每角=name+strategy+means(1–6)+chart_anchors。`,
-        `- strategy 须有一句删「能量画像」由头会垮的本案锚；means 回溯菜单/事实；≥1 主轨 means 含今晚可出示交付物。`,
-        `- 本步北星=真·准·可执行·贴收集；**读感加厚归润色**，正文勿为「写厚」发明截止点或半投入换皮。（职责分界：交付v3-分步职责与合格尺-SSOT）`,
+        `- strategy 须有一句删「能量画像」由头会垮的本案锚；means 回溯菜单/事实；≥1 主轨 means 含今晚可出示交付物或低成本验证。`,
+        `- 本步北星=真·准·可执行·贴收集；禁为「写厚」发明截止点。`,
       ].join("\n");
-    case "metaphysics_action":
-      // 实验口吻 2026-10：易经时位决策语（可回退玄学暗锦囊腔）。引擎仍八字+奇门；维名「行为仪轨」机闸未改。
+    case "self_regulation":
+      // v1=self_regulation；引擎仍八字+奇门；对己调频，非第二份 P3
       return [
-        `## 本页 duty · metaphysics_action（P4）`,
-        `【角色】易经时位决策主笔。主语=时位/进退/场域/节奏，不是协议、清单、职场教练，也不是起卦解签。`,
-        `【目标】means 读成「此刻该慢一点、换个位子看、先别硬推」的**大白话决策动作**；删奇门+用忌锚后全文须垮。读感归 body_polish。`,
+        `## 本页 duty · metaphysics_action（P4 · v1=self_regulation 自我调频）`,
+        `【角色】**对己**调频主笔——执行中如何维持判断力、节奏与行动能力。主语=身心/节奏/场域/进退，不是协议清单，也不是起卦解签。`,
+        `【目标】means 读成压力下如何识别冲动/拖延、何时暂停重大决定、如何用可重复调节稳住自己；可含本案时位/意象/轻仪轨（须个性化）。删奇门+用忌锚后全文须垮。`,
         ``,
-        `【口吻（硬）】易经感=时位进退的**现代决策白话**（像跟聪明人说话），**不是**半文言电报。`,
-        `  · 允许意思：窗口还没熟就先别冲、对方虚高就先旁观、气太燥就先收一收、别抢主导坐侧边——用完整口语句写出来。`,
-        `  · **禁**贴《易经》原文/卦名/爻辞；**禁**起卦开方与吉凶断语；**禁**符咒物化/消灾腔。`,
+        `【与 P3 分界（硬）】本页不是第二份策略与执行。挪到 P3 应违和。禁复读合同/股权/里程碑/交付物词族。`,
+        ``,
+        `【口吻】时位进退的**现代决策白话**，不是半文言电报。`,
+        `  · 允许：窗口未熟先别冲、对方虚高先旁观、气太燥先收——完整口语句。`,
+        `  · **禁**卦名爻辞/吉凶断语/符咒物化；**禁**声称五行气场确定改结果；**禁**跨案养生三联（深呼吸/温凉饮/背靠实墙换壳同禁）。`,
         TEMPLATE_VOICE_DUTY_LINE,
-        `  · **禁半文言电报（整类）**：name/strategy/means **一律**禁四字格串（借静收燥/同气并现/热候未落定/涵养再发/侧翼内守/内守侧翼…）；strategy≥2 完整句；每条 means≥1 完整句且说明「做什么 + 为什么此刻这样做」。`,
-        `  · **维名也是可见层（硬）**：后缀用白话局势感（两边胶着/窗口收窄/先坐侧边），**禁**主客/门宫/遁局原名，**禁**把约束帧取向四字格当维名尾巴。`,
+        `  · **禁半文言电报**：strategy≥2 完整句；means≥1 完整句且「做什么+为何此刻」。维名白话（两边胶着/窗口收窄）；禁主客/门宫原名。`,
         ``,
-        `【允许轴 · 北星】先定维柱，只在该轴写 means，再用批断证明「只对此人」。dimensions 按批断 path 顺序一一对应。`,
-        `  · 局势…：strategy=把敌虚实+攻守+近窗讲清楚（口语）；means=择时差/换场域观局（回溯本案时方种子），写满「什么时候/坐哪边/先不干什么」。`,
-        `  · 意象调频…：strategy=能量画像偏软/外界催促偏燥（口语）；means=本案色气或冷热收势（回溯种子）；**禁**跨案养生模板整类（深呼吸/深呼两口/缓慢呼吸/温凉饮/背靠实墙——换壳同禁）。`,
-        `  · 行为仪轨…（恰好1 · 日用处事）：means=本案时或方 + 空间/体态收势；写成每天能照做的决策纪律，不是民俗仪式口号；同上养生三联换壳仍废。`,
-        `  · 站位借势…：means=**只**写落座方位 / 体态 / 拖回本案时窗；strategy 可说「别硬抢主位、先坐侧边看」——仍须完整口语句；维名勿写内守侧翼类电报。`,
-        `意图只用间接节奏差（无引号、无可照念稿）。`,
-        ``,
-        `【硬门槛】对方已钉死投入形态时：只写窗口未熟就别跟虚高出手/先旁观/先收住底线；禁止把已被拒形态写成过渡路径。`,
-        ``,
-        `【离开允许轴 → 改回右列】means 主语若离开身位·时位·场域·色气·节奏收势 → 整句改回允许轴。半否定句（写了禁类词再加「不」）不算合格。`,
-        `  · **P3·权责词族同禁（整类 · 硬）**：可见层禁谈条件/权益/股权/话语权/技术细节·路径/项目节点/交付物等权责词——改写为「几点见/坐哪边/先不硬推」时位白话；半否定句（不谈条件）仍废。`,
-        ``,
-        `【形状】dimensions=批断条数；维名≥1局势、≥1意象、恰好1行为仪轨；维名白话零专名。三问：局势因局动作 / 意象气场 / 仪轨时方收势且不像第二份P3、不像卦辞墙、不像半文言电报。`,
+        `【允许轴】dimensions 按批断 path 一一对应：局势/进退观局；意象调频（色气冷热收势）；行为仪轨恰好1（时方+体态收势）；可写情绪驱动识别/信息限制/重大决定前暂停（行为科学口径，非临床）。`,
+        `【硬门槛】对方已钉死投入形态时：未熟别跟虚高/先旁观/先收底线；禁止把已被拒形态写成过渡路径。`,
+        `【形状】dimensions=批断条数；≥1 局势感、≥1 意象、恰好1 仪轨向；不像第二份P3、不像卦辞墙。`,
       ].join("\n");
-    case "risk_guard":
+    case "validation_risk":
       return [
-        `## 本页 duty · risk_guard（P5）`,
-        `【本页角色】交付报告「执行护栏」写手——点出翻车坑与防法，指回 P3/P4 已给的动作。`,
-        `【本页目标】让用户知道：走主辅时最容易踩哪几类坑、如何回指已有手段防住；读完有护栏感，不是新开第三份药方。`,
+        `## 本页 duty · risk_guard（P5 · v1=validation_review 风险与验证）`,
+        `【本页角色】风险与验证写手——翻车坑、红灯、退出条件；指回 P3/P4 已给动作。`,
+        `【本页目标】走主辅时最易踩哪类坑、何信号说明原判断可能错、何时切辅/停止；不是第三份药方。大变口径=新购 PASS，非回访改旧报告。`,
         `【表达气场】清醒、警示但不恐吓；短而具体。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=指回已给 P3/P4 动作的坑与防法；另起第三份药方墙仍算犯`,
         TEMPLATE_VOICE_DUTY_LINE,
         `  · 另起无关新手段墙；恐吓预测；四周甘特；可见层命理专名；四桶并一条糊弄。`,
         `【数据来源】上游 P1 主辅 + P3/P4 正文与批断（及 Action Brief）；本页批断写「哪条结构易翻车」。`,
-        `【硬约束】red_lights / traps / switch_to_backup / protection 分槽写清；逐条可回溯上游已给动作（Brief 未就绪则只写过耗/开口失控/假进展/切辅/边界/反复翻弄，禁另开新日程墙）。时长/天数只保留收集已给量，禁自造「连续N天」熔断阈值。四桶勿塌成同一条停法。读感加厚归 body_polish。`,
+        `【硬约束】red_lights / traps / switch_to_backup / protection 分槽写清；逐条可回溯上游已给动作。时长只保留收集已给量。四桶勿塌成同一条停法。`,
       ].join("\n");
-    case "signals_close":
+    case "validation_close":
       return [
-        `## 本页 duty · signals_close（P6）`,
-        `【本页角色】交付报告「出门仪式」写手——身份对照 + 金句 + 本周对照信号 + 今晚一事 + 近7日微清单 + 带走三样。`,
-        `【本页目标】用户合上报告后知道：从何身份切到何身份、本周对照哪几条信号、今晚先做什么、近一周勾哪四条、带走哪三句；有仪式感收束，不是再开四周计划表。`,
+        `## 本页 duty · signals_close（P6 · v1=validation_review 行动收束）`,
+        `【本页角色】行动收束写手——身份对照 + 金句 + 可观察信号 + 今晚一事 + 近阶微清单 + 带走三样。一次性收尾，无回来追踪钩子。`,
+        `【本页目标】对照哪些信号、今晚先做什么、近阶勾哪几条、带走哪三句；不是四周计划表，也不是任务催办。`,
         `【表达气场】沉稳收束、可执行、不多开新药方。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=摘自上游与本页批断扎根的出门动作/信号；四周甘特/第三份完整药方仍算犯`,
         TEMPLATE_VOICE_DUTY_LINE,
-        `  · 四周甘特；第三次完整药方；可见层命理专名；与批断/上游脱节的空喊励志；对照信号写成新动作清单或复读 P5 切辅叙事。`,
-        `  · **收集精力边界不同向（整类）**：喂料「收集事实 / 精力近阶茎」里用户已钉的本周第一步，day7 或今晚须至少一条同向承接；禁只跟 rhythm 观察/对话/做选择而静默丢掉。`,
-        `【数据来源】上游 P1–P5 已成立结论与动作 + 本页批断（近窗结构根）+ 出门菜单 self_check 正向；收集只供时限/精力边界同向。`,
-        `【硬约束】身份对照三槽 + 金句用法 + watch_signals 恰好3–5条（只观察对照，不新开动作）+ 今晚闭环三槽 + day7 恰好4条（action/why/done_when）+ takeaways 恰好3句必填实质；删掉本页批断后正文须垮；禁把正文压成「今晚/近7日/收束」三散文槽；Brief 未就绪时 day7 勿空喊切辅（熔断留给 takeaways）；读感加厚归 body_polish。`,
+        `  · 四周甘特；第三次完整药方；可见层命理专名；空喊励志；对照信号写成新动作清单或复读 P5 切辅叙事。`,
+        `  · **收集精力边界不同向**：用户已钉的本周第一步，day7 或今晚须至少一条同向承接。`,
+        `【数据来源】上游 P1–P5 + 本页批断 + 出门菜单；收集只供时限/精力边界同向。`,
+        `【硬约束】身份对照三槽 + 金句 + watch_signals 恰好3–5（只观察）+ 今晚闭环 + day7 恰好4 + takeaways 恰好3；删批断后须垮；禁四周甘特腔。`,
       ].join("\n");
     default:
       return "";
@@ -196,11 +220,11 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
 
 function pageShapeHint(key: DeliverySegmentKey): string {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return [
         `输出形状（必须遵守字段名）：`,
         `{`,
-        `  "page": "direct_answer",`,
+        `  "page": "decision_brief",`,
         `  "page_title": "贴本案的主标题（含具体取舍，禁空泛）",`,
         `  "page_subtitle": "贴本案的副题（写清主轨名 vs 辅轨名的实质对比；禁「点明攻坚轨 vs 止损轨」模板句）",`,
         `  "core_judgment": "一句正面直答（含主辅取舍）",`,
@@ -228,24 +252,55 @@ function pageShapeHint(key: DeliverySegmentKey): string {
         `禁止输出 dimensions[] 当作 P1 正文。`,
         `自检：①core_logic 四段且够厚？②可见字段零命理专名（含流月/喜神/金水报幕）？③缓冲月数等数字均能指回喂料？④when/路与 collecting 已给事实同向？⑤backup 删掉批断 backup 后是否垮（禁另编更保守第三轨）？任一条否=整页重写。`,
       ].join("\n");
+    case "situation_analysis":
     case "foundation":
       return [
         `输出形状（why_cards 条数 = 批断 units；字段值须自写，禁把本段示意字面抄进可见层）：`,
         `{`,
-        `  "page": "foundation",`,
+        `  "page": "situation_analysis",`,
         `  "page_title": "…",`,
         `  "page_subtitle": "…",`,
         `  "why_cards": [`,
         `    { "title":"…", "surface":"…", "essence":"…", "chart_anchors":["…"] }`,
         `  ]`,
         `}`,
-        `硬自检：条数=批断；surface≈80–140字、essence≈120–200字；题头非元指令；可见层禁「宫位」（含合作宫位）/月令时支日支/合冲字面/岁运报幕/奇门门星/十神用忌；禁祈使与「拿捏得当」类收尾；真词只在 chart_anchors。`,
+        `硬自检：条数=批断（通常 4）；surface≈80–140字、essence≈120–200字；可见层零命理专名；真词只在 chart_anchors。`,
       ].join("\n");
-    case "science_action":
+    case "personal_decision_patterns":
+      return [
+        `输出形状：`,
+        `{ "page":"personal_decision_patterns", "page_title":"…", "page_subtitle":"…",`,
+        `  "why_cards":[ { "title":"…", "surface":"…", "essence":"…", "chart_anchors":[] } ] }`,
+        `硬自检：1–3 卡；模式+可纠正假设；禁泛人格报告；禁怎么办处方。`,
+      ].join("\n");
+    case "bottleneck_analysis":
+      return [
+        `输出形状：`,
+        `{ "page":"bottleneck_analysis", "page_title":"…", "page_subtitle":"…",`,
+        `  "why_cards":[ { "title":"…", "surface":"…", "essence":"…", "chart_anchors":[] } ] }`,
+        `硬自检：1–3 障碍卡；不复读处境章；禁执行处方。`,
+      ].join("\n");
+    case "strategic_options":
+      return [
+        `输出形状：`,
+        `{ "page":"strategic_options", "page_title":"…", "page_subtitle":"…",`,
+        `  "options":[ { "name":"…", "summary":"…", "upside":"…", "cost":"…", "risk":"…", "reversibility":"…", "chart_anchors":[] } ] }`,
+        `硬自检：2–4 选项；禁编造假路；禁任务表。`,
+      ].join("\n");
+    case "recommended_strategy":
+      return [
+        `输出形状：`,
+        `{ "page":"recommended_strategy", "page_title":"…", "page_subtitle":"…",`,
+        `  "core_judgment":"…",`,
+        `  "primary":{ "name":"…", "why":"…", "when":"…", "exit":"…", "chart_anchors":[] },`,
+        `  "backup":{ "name":"…", "why":"…", "when":"…", "exit":"…", "chart_anchors":[] } }`,
+        `硬自检：主辅与 brief 同轴；有前提/退出；禁第二份执行清单。`,
+      ].join("\n");
+    case "execution_guidance":
       return [
         `输出形状（字段名钉死）：`,
         `{`,
-        `  "page": "science_action",`,
+        `  "page": "execution_guidance",`,
         `  "page_title": "贴本案科学打法名",`,
         `  "page_subtitle": "贴主辅节奏与可落实行动（零专名）",`,
         `  "primary_toolkit": {`,
@@ -264,11 +319,11 @@ function pageShapeHint(key: DeliverySegmentKey): string {
         `主辅各恰好 3 个 angles；禁止 dimensions[]。`,
         `硬自检：事实/门槛对齐；手段可回溯；不加厚；读感/专名清理由润色。`,
       ].join("\n");
-    case "metaphysics_action":
+    case "self_regulation":
       return [
         `输出形状（dimensions 条数 = 批断 units 条数，通常 6；下面仅示意结构，勿只输出 3 条）：`,
         `{`,
-        `  "page": "metaphysics_action",`,
+        `  "page": "self_regulation",`,
         `  "page_title": "贴本案时位进退的谋略名（禁空壳三柱名；禁卦名当标题）",`,
         `  "page_subtitle": "点时位松紧+意象涵养+日用收势（零专名；禁贴卦辞）",`,
         `  "dimensions": [`,
@@ -282,13 +337,13 @@ function pageShapeHint(key: DeliverySegmentKey): string {
         `}`,
         `硬自检：条数=批断；三柱维名；means 在允许轴；无卦辞墙；硬门槛下勿写已被拒投入形态作过渡；删批断须垮。`,
       ].join("\n");
-    case "risk_guard":
-      return `输出：{ "page":"risk_guard", "page_title":"...", "page_subtitle":"...", "red_lights":[{ "name":"...", "narrative":"..." }], "traps":[{ "name":"...", "narrative":"..." }], "switch_to_backup":{ "name":"...", "narrative":"..." }, "protection":[{ "name":"...", "narrative":"..." }] }`;
-    case "signals_close":
+    case "validation_risk":
+      return `输出：{ "page":"validation_risk", "page_title":"...", "page_subtitle":"...", "red_lights":[{ "name":"...", "narrative":"..." }], "traps":[{ "name":"...", "narrative":"..." }], "switch_to_backup":{ "name":"...", "narrative":"..." }, "protection":[{ "name":"...", "narrative":"..." }] }`;
+    case "validation_close":
       return [
         `输出形状（字段名钉死 · 对齐产品 skeleton；禁止压成 tonight/next_7_days/close 三散文槽）：`,
         `{`,
-        `  "page": "signals_close",`,
+        `  "page": "validation_close",`,
         `  "page_title": "贴本案出门仪式短名",`,
         `  "page_subtitle": "点清身份切换+今晚一事+近7日勾选（零专名）",`,
         `  "identity_before": "旧身份一句（本案具体）",`,
@@ -330,7 +385,7 @@ export function buildV3BodyPrompt(input: {
 }): { system: string; user: string } {
   // P4：Lab core_conclusion 常粘贴含「兼职试水」的原题 → 换中性骨架，防 priming
   const coreConclusion =
-    input.key === "metaphysics_action"
+    input.key === "self_regulation"
       ? "【Lab】围绕本案合伙场域虚高推力与硬门槛下的藏隐气口、出手节奏展开本页论证骨架（勿复述生活路径词）。"
       : input.core_conclusion?.trim() || "";
   const user = [
@@ -355,8 +410,8 @@ export function formatJudgmentLockForBody(
   if (!plan?.units?.length) return "";
   // P6：旧样本若落 dimensions[i]，喂正文前钉死出门槽 path（B 装配，不改机制文）。
   const p6Paths =
-    pageKey === "signals_close"
-      ? deepEvidenceUnitSpec("signals_close").paths
+    pageKey === "validation_close"
+      ? deepEvidenceUnitSpec("validation_close").paths
       : null;
   const units = p6Paths
     ? plan.units.slice(0, p6Paths.length).map((u, i) => ({
@@ -368,15 +423,15 @@ export function formatJudgmentLockForBody(
   const cardName =
     pageKey === "foundation"
       ? "why_cards"
-      : pageKey === "science_action"
+      : pageKey === "execution_guidance"
         ? "angles（主辅 toolkit）"
-        : pageKey === "signals_close"
+        : pageKey === "validation_close"
           ? "出门槽（identity_shift / tonight / day7×4；金句与带走三样为封印不挂依据）"
-          : pageKey === "risk_guard"
+          : pageKey === "validation_risk"
             ? "护栏四桶"
             : "dimensions";
   const header =
-    pageKey === "signals_close"
+    pageKey === "validation_close"
       ? `（共 ${n} 条批断 · 正文须用对应 path 扎根身份切换/今晚/近7日四条；禁止压成三散文槽；禁止压缩合并）\n`
       : `（共 ${n} 条 · 正文 ${cardName} 必须恰好 ${n} 条，按 path 一一对齐，禁止压缩合并）\n`;
   return (

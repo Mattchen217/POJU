@@ -50,14 +50,13 @@ assert(pageSchemaFillMaxAttempts("skeleton") === 1, "skeleton attempts=1 (one LL
 assert(pageSchemaFillMaxAttempts("mock") === 1, "mock attempts=1 (one LLM per invoke)");
 
 for (const key of DELIVERY_SEGMENT_KEYS) {
-  if (key === "thirty_day") continue;
   const sk = fillShapeSkeletonForKey(key);
   assert(sk, `skeleton missing for ${key}`);
   const blob = JSON.stringify(sk);
   assert(!/two-month|两个月|深蓝|东南/.test(blob), `skeleton narrative leak: ${key}`);
 }
 
-const skPrompt = buildPageSchemaFillPrompt("metaphysics_action", {
+const skPrompt = buildPageSchemaFillPrompt("self_regulation", {
   locale: "zh",
   core_conclusion: "test",
   shape_mode: "skeleton",
@@ -73,7 +72,7 @@ assert(/形状锚/.test(skPrompt.system), "skeleton header");
 assert(/本案硬约束/.test(skPrompt.user), "reality on user");
 assert(skPrompt.system.length < 80_000, "skeleton system not huge");
 
-const mockPrompt = buildPageSchemaFillPrompt("science_action", {
+const mockPrompt = buildPageSchemaFillPrompt("execution_guidance", {
   locale: "en",
   core_conclusion: "test",
   shape_mode: "mock",
@@ -97,7 +96,7 @@ const conflicts = noteAgendaMonthConflicts("先攒2个月现金缓冲", months);
 assert(conflicts.some((n) => n.includes("2")), "conflict note for invented 2 months");
 
 // Prompt size table (Gate A budget smoke)
-const keys = ["direct_answer", "foundation", "science_action", "metaphysics_action"] as const;
+const keys = ["decision_brief", "situation_analysis", "execution_guidance", "self_regulation"] as const;
 console.log("\n[fill prompt size · skeleton vs mock]");
 for (const key of keys) {
   const a = buildPageSchemaFillPrompt(key, {

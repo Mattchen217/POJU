@@ -97,7 +97,7 @@ function thinThesis(): ChartThesis {
 {
   const map = preallocateChartPrimaries({
     thesis: richThesis(),
-    pages: ["foundation", "science_action", "metaphysics_action"],
+    pages: ["situation_analysis", "execution_guidance", "self_regulation"],
   });
   assert.equal(map.pool_source, "thesis_menu");
   assert.equal(map.reuse_cap >= 2, true);
@@ -113,7 +113,7 @@ function thinThesis(): ChartThesis {
   const thesis = thinThesis();
   const map = preallocateChartPrimaries({
     thesis,
-    pages: ["foundation", "science_action", "metaphysics_action", "risk_guard"],
+    pages: ["situation_analysis", "execution_guidance", "self_regulation", "validation_risk"],
   });
   assert.equal(map.pool_source, "thesis_menu");
   const check = validatePrimaryReuseCap(map.all_primaries, { cap: map.reuse_cap });

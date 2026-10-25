@@ -62,7 +62,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
   Record<DeliverySegmentKey, Record<string, unknown>>
 > = {
   direct_answer: {
-    page: "direct_answer",
+    page: "decision_brief",
     page_title: "",
     page_subtitle: "",
     core_judgment: "",
@@ -71,7 +71,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     evidence: [],
   },
   foundation: {
-    page: "foundation",
+    page: "situation_analysis",
     page_title: "",
     page_subtitle: "",
     dashboard: [
@@ -83,7 +83,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     evidence: [],
   },
   science_action: {
-    page: "science_action",
+    page: "execution_guidance",
     page_title: "",
     page_subtitle: "",
     primary_toolkit: emptyToolkit("primary"),
@@ -91,7 +91,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     evidence: [],
   },
   metaphysics_action: {
-    page: "metaphysics_action",
+    page: "self_regulation",
     page_title: "",
     page_subtitle: "",
     question_anchor: "",
@@ -103,7 +103,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     evidence: [],
   },
   risk_guard: {
-    page: "risk_guard",
+    page: "validation_risk",
     page_title: "",
     page_subtitle: "",
     red_lights: [emptyRisk(), emptyRisk()],
@@ -113,7 +113,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     evidence: [],
   },
   signals_close: {
-    page: "signals_close",
+    page: "validation_close",
     page_title: "",
     page_subtitle: "",
     identity_before: "",

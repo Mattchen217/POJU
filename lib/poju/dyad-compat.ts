@@ -189,6 +189,15 @@ export function shouldOfferDyadGate(status: DyadOfferStatus | undefined | null):
   return status == null || status === "none";
 }
 
+/** Joint decision sessions already injected partner birth — never re-offer collect/skip. */
+export function shouldOfferDyadGateForSession(session: {
+  joint_decision?: boolean | null;
+  dyad_offer_status?: DyadOfferStatus | null;
+}): boolean {
+  if (session.joint_decision) return false;
+  return shouldOfferDyadGate(session.dyad_offer_status);
+}
+
 /**
  * Stage-1 dyad chips decision (S1-D-2).
  * Intentionally ignores understanding_sufficient: rich Case C prompts often
@@ -201,7 +210,10 @@ export function shouldPresentDyadGate(input: {
   scopeSignal?: string | null;
   dyadOfferStatus?: DyadOfferStatus | null;
   dyadHit: boolean;
+  /** Joint decision already has partner birth — never show collect/skip chips. */
+  jointDecision?: boolean | null;
 }): boolean {
+  if (input.jointDecision) return false;
   return (
     input.openingTurn &&
     !input.understandingGenerationFailed &&
@@ -422,8 +434,13 @@ export function resolveDyadRelationStructureFeed(input: {
   dyad_compat_summary?: DyadCompatSummary | null;
   pivot_chart_path?: PivotChartPath | null;
   dyad_matrix_pack?: DyadMatrixPack | null;
+  /** Duo joint decision: shared question, self-stance report. */
+  joint_decision?: boolean | null;
 }): string {
   if (!hasSessionDyadSignal(input) && input.pivot_chart_path !== "dyad") return "";
+  const jointBlock = input.joint_decision
+    ? "joint_decision=true · 共同问题已锁定；报告以本侧立场与期望为主，对方盘仅作联合分析依据；禁复述对方私聊；期望不同则结论可不同。"
+    : "";
   const summaryBlock = formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
     partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
   });
@@ -435,9 +452,9 @@ export function resolveDyadRelationStructureFeed(input: {
     const matrixBlock = formatDyadMatrixPackForPrompt(input.dyad_matrix_pack, {
       mode: "compact",
     });
-    return [summaryBlock, matrixBlock].filter(Boolean).join("\n\n");
+    return [jointBlock, summaryBlock, matrixBlock].filter(Boolean).join("\n\n");
   }
-  return summaryBlock;
+  return [jointBlock, summaryBlock].filter(Boolean).join("\n\n");
 }
 
 /**

@@ -34,7 +34,7 @@ assert("9 slots (cover+toc+6+appendix)", slots.length === DELIVERY_SHELF_SLOT_CO
 assert("shelf count is 9", DELIVERY_SHELF_SLOT_COUNT === 9);
 assert("cover ready", slots[0]?.kind === "ready" && slots[0].slotId === "cover");
 assert("toc ready", slots[1]?.kind === "ready");
-assert("direct_answer ready", slots[2]?.kind === "ready" && slots[2].slotId === "direct_answer");
+assert("direct_answer ready", slots[2]?.kind === "ready" && slots[2].slotId === "decision_brief");
 assert("waiting on next", slots[3]?.kind === "waiting" && slots[3].pageNumber === 2);
 assert("direct_answer is prose page 1", slots[2]?.kind === "ready" && slots[2].pageNumber === 1);
 
@@ -56,7 +56,7 @@ assert("direct_answer is prose page 1", slots[2]?.kind === "ready" && slots[2].p
     };
   }
   const seq = sequentialDeliveryProseReady(gapped);
-  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "direct_answer");
+  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "decision_brief");
   const gap = nextSequentialProseGap(gapped);
   assert("gap is next sequential", gap?.pageNumber === 2);
 }
@@ -71,7 +71,7 @@ assert(
 );
 assert(
   "empty prose starts waiting on direct_answer",
-  empty[2]?.kind === "waiting" && empty[2].slotId === "direct_answer" && empty[2].pageNumber === 1,
+  empty[2]?.kind === "waiting" && empty[2].slotId === "decision_brief" && empty[2].pageNumber === 1,
 );
 
 const baseSplit = splitShelfTitle("对你问题的回答");

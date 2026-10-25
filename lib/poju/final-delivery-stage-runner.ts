@@ -183,6 +183,7 @@ function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
     dyad_compat_summary: input.dyad_compat_summary,
     pivot_chart_path: input.pivot_chart_path,
     dyad_matrix_pack: input.dyad_matrix_pack,
+    joint_decision: input.joint_decision === true,
   });
 }
 
@@ -527,10 +528,10 @@ async function executeFanoutTask(
   const page_plan = resolveDeliveryPagePlan(input);
   const question_expectation = resolveQuestionExpectation(input);
   const dyad_relation_structure = resolveDyadRelationStructure(input);
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     p3_body_excerpt = await loadP3BodyExcerptForP4Moat(job_id);
   }
-  if (key === "risk_guard" || key === "signals_close") {
+  if (key === "validation_risk" || key === "validation_close") {
     action_brief = await loadUpstreamActionBrief(job_id);
     console.info("[final-delivery-stage] P5ActionBrief loaded", {
       job_id,
@@ -541,9 +542,9 @@ async function executeFanoutTask(
     });
   }
   if (
-    key === "science_action" ||
-    key === "risk_guard" ||
-    key === "signals_close"
+    key === "execution_guidance" ||
+    key === "validation_risk" ||
+    key === "validation_close"
   ) {
     primary_backup_hint = await loadPrimaryBackupHint(job_id);
     // P3 only runs after P1 — hint should come from P1 page. Synthesis fallback for resume edge cases.
@@ -574,7 +575,7 @@ async function executeFanoutTask(
     });
   }
   let science_means_feed = "";
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     const { buildScienceMeansFeedBlock } = await import(
       "@/lib/llm/pro/delivery/science-means-feed"
     );
@@ -590,12 +591,12 @@ async function executeFanoutTask(
   }
   let metaphysics_moat_feed = "";
   const preallocForP4 =
-    key === "metaphysics_action"
+    key === "self_regulation"
       ? await (
           await import("@/lib/llm/pro/delivery/dispatch/task-store")
         ).loadChartPrimaryPrealloc(job_id)
       : null;
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
     );
@@ -611,7 +612,7 @@ async function executeFanoutTask(
     ).block;
   }
   let risk_fuse_feed = "";
-  if (key === "risk_guard") {
+  if (key === "validation_risk") {
     const { buildRiskFuseFeedBlock } = await import(
       "@/lib/llm/pro/delivery/risk-fuse-feed"
     );
@@ -627,7 +628,7 @@ async function executeFanoutTask(
     );
   }
   let close_ritual_feed = "";
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     const { buildCloseRitualFeedBlock } = await import(
       "@/lib/llm/pro/delivery/close-ritual-feed"
     );
@@ -646,7 +647,7 @@ async function executeFanoutTask(
     const { formatPagePlanSliceForPrompt } = await import(
       "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt"
     );
-    if (key !== "metaphysics_action" && key !== "risk_guard") {
+    if (key !== "self_regulation" && key !== "validation_risk") {
       page_plan_slice = formatPagePlanSliceForPrompt(
         key,
         page_plan,
@@ -655,7 +656,7 @@ async function executeFanoutTask(
       );
     }
   }
-  if (key === "metaphysics_action" && input.breakthrough_core) {
+  if (key === "self_regulation" && input.breakthrough_core) {
     const { buildEasternCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
@@ -675,7 +676,7 @@ async function executeFanoutTask(
       eastern_calc_slice = `${eastern_calc_slice}\n\n${qimenText}`;
     }
   }
-  if (key === "risk_guard" && input.breakthrough_core) {
+  if (key === "validation_risk" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );

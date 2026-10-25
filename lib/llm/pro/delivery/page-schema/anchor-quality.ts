@@ -71,7 +71,7 @@ export function allowEmptyChartAnchorsOnFill(
     | null
     | undefined,
 ): boolean {
-  if (pageKey !== "foundation") return false;
+  if (pageKey !== "situation_analysis") return false;
   if (!plan?.units?.length) return false;
   return plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
 }
@@ -265,14 +265,14 @@ export function stampPageChartAnchorsFromDeepPlan(
 ): string[] {
   const notes: string[] = [];
   if (!plan?.units?.length) return notes;
-  if (pageKey === "foundation" || pageKey === "direct_answer") return notes;
+  if (pageKey === "situation_analysis" || pageKey === "decision_brief") return notes;
 
   const byPath = new Map(plan.units.map((u) => [u.path, u]));
   const unitAt = (path: string, fallbackIdx: number): DeepEvidenceUnit | undefined =>
     byPath.get(path) ?? plan.units[fallbackIdx];
 
   switch (pageKey) {
-    case "science_action": {
+    case "execution_guidance": {
       for (const role of ["primary_toolkit", "backup_toolkit"] as const) {
         const tk = page[role];
         if (!tk || typeof tk !== "object") continue;
@@ -292,7 +292,7 @@ export function stampPageChartAnchorsFromDeepPlan(
       }
       break;
     }
-    case "metaphysics_action": {
+    case "self_regulation": {
       const dims = Array.isArray(page.dimensions) ? page.dimensions : [];
       dims.forEach((d, i) => {
         if (!d || typeof d !== "object") return;
@@ -306,7 +306,7 @@ export function stampPageChartAnchorsFromDeepPlan(
       });
       break;
     }
-    case "risk_guard": {
+    case "validation_risk": {
       const bags: Array<[string, unknown]> = [
         ["red_lights", page.red_lights],
         ["traps", page.traps],
@@ -337,7 +337,7 @@ export function stampPageChartAnchorsFromDeepPlan(
       }
       break;
     }
-    case "signals_close": {
+    case "validation_close": {
       const idAnch = page.identity_shift_anchors;
       if (Array.isArray(idAnch) && idAnch.length === 0) {
         const u = unitAt("identity_shift", 0);
@@ -395,7 +395,7 @@ export function collectPageAnchorUnits(
   };
 
   switch (pageKey) {
-    case "direct_answer": {
+    case "decision_brief": {
       for (const role of ["primary", "backup"] as const) {
         const t = page[role];
         const o = t && typeof t === "object" ? (t as Record<string, unknown>) : {};
@@ -403,7 +403,7 @@ export function collectPageAnchorUnits(
       }
       break;
     }
-    case "foundation": {
+    case "situation_analysis": {
       const cards = Array.isArray(page.why_cards) ? page.why_cards : [];
       cards.forEach((c, i) => {
         const o = c && typeof c === "object" ? (c as Record<string, unknown>) : {};
@@ -411,7 +411,7 @@ export function collectPageAnchorUnits(
       });
       break;
     }
-    case "science_action": {
+    case "execution_guidance": {
       for (const role of ["primary_toolkit", "backup_toolkit"] as const) {
         const tk = page[role];
         const o = tk && typeof tk === "object" ? (tk as Record<string, unknown>) : {};
@@ -423,7 +423,7 @@ export function collectPageAnchorUnits(
       }
       break;
     }
-    case "metaphysics_action": {
+    case "self_regulation": {
       const dims = Array.isArray(page.dimensions) ? page.dimensions : [];
       dims.forEach((d, i) => {
         const o = d && typeof d === "object" ? (d as Record<string, unknown>) : {};
@@ -431,7 +431,7 @@ export function collectPageAnchorUnits(
       });
       break;
     }
-    case "risk_guard": {
+    case "validation_risk": {
       const bags: Array<[string, unknown]> = [
         ["red_lights", page.red_lights],
         ["traps", page.traps],
@@ -453,7 +453,7 @@ export function collectPageAnchorUnits(
       }
       break;
     }
-    case "signals_close": {
+    case "validation_close": {
       push("identity_shift", page.identity_shift_anchors);
       push("tonight", page.tonight_anchors);
       const day7 = Array.isArray(page.day7_micro_actions) ? page.day7_micro_actions : [];
@@ -489,12 +489,12 @@ export function assessUnitAnchorQuality(input: {
   const { pageKey, units } = input;
 
   if (
-    pageKey !== "direct_answer" &&
-    pageKey !== "foundation" &&
-    pageKey !== "science_action" &&
-    pageKey !== "metaphysics_action" &&
-    pageKey !== "risk_guard" &&
-    pageKey !== "signals_close"
+    pageKey !== "decision_brief" &&
+    pageKey !== "situation_analysis" &&
+    pageKey !== "execution_guidance" &&
+    pageKey !== "self_regulation" &&
+    pageKey !== "validation_risk" &&
+    pageKey !== "validation_close"
   ) {
     return { notes, structuralFail: false };
   }

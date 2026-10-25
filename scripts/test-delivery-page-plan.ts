@@ -146,8 +146,8 @@ relAgent.question_category = "relationship";
   const { negative, positive } = splitSelfCheckSignals(core.self_check_signals ?? []);
   assert.ok(negative.some((s) => s.includes("失眠")));
   assert.ok(positive.some((s) => s.includes("连续两周")));
-  const p5 = formatPagePlanSliceForPrompt("risk_guard", buildDeliveryPagePlan({ core, agent_v2: careerAgent }), core);
-  const p6 = formatPagePlanSliceForPrompt("signals_close", buildDeliveryPagePlan({ core, agent_v2: careerAgent }), core);
+  const p5 = formatPagePlanSliceForPrompt("validation_risk", buildDeliveryPagePlan({ core, agent_v2: careerAgent }), core);
+  const p6 = formatPagePlanSliceForPrompt("validation_close", buildDeliveryPagePlan({ core, agent_v2: careerAgent }), core);
   assert.ok(p5.includes("self_check(负向)"));
   assert.ok(!p5.includes("连续两周"));
   assert.ok(p6.includes("self_check(正向)"));
@@ -158,15 +158,15 @@ relAgent.question_category = "relationship";
 // --- thin finalize spine: plan slice vs legacy full dump ---
 {
   const plan = buildDeliveryPagePlan({ core, agent_v2: careerAgent });
-  const p1Plan = formatSpineSliceForSegment(core, "direct_answer", { pagePlan: plan });
-  const p1Legacy = formatSpineSliceForSegment(core, "direct_answer");
+  const p1Plan = formatSpineSliceForSegment(core, "decision_brief", { pagePlan: plan });
+  const p1Legacy = formatSpineSliceForSegment(core, "decision_brief");
   assert.ok(p1Plan.includes("action_plan"));
   assert.ok(!p1Plan.includes("multi_dimension_reckoning"));
   assert.ok(!p1Legacy.includes("multi_dimension_reckoning"));
-  const p4Plan = formatSpineSliceForSegment(core, "metaphysics_action", { pagePlan: plan });
+  const p4Plan = formatSpineSliceForSegment(core, "self_regulation", { pagePlan: plan });
   assert.ok(p4Plan.includes("metaphysics_pack"));
   assert.ok(p4Plan.includes("preferred_dirs") || p4Plan.includes("favorable_hours"));
-  const p2Plan = formatSpineSliceForSegment(core, "foundation", { pagePlan: plan });
+  const p2Plan = formatSpineSliceForSegment(core, "situation_analysis", { pagePlan: plan });
   assert.ok(p2Plan.includes("multi_dimension_reckoning"));
   assert.ok(!p2Plan.includes("preferred_dirs"));
   console.log("ok finalize thin spine per page plan");
@@ -191,12 +191,12 @@ relAgent.question_category = "relationship";
 {
   const hints = buildDashboardScoreHintsForFill(core);
   assert.ok(hints.includes("output_capacity="));
-  const { user } = buildPageSchemaFillPrompt("foundation", {
+  const { user } = buildPageSchemaFillPrompt("situation_analysis", {
     locale: "zh",
     core_conclusion: "test",
     dashboard_score_hints: hints,
     page_plan_slice: formatPagePlanSliceForPrompt(
-      "foundation",
+      "situation_analysis",
       buildDeliveryPagePlan({ core, agent_v2: careerAgent }),
       core,
     ),
@@ -215,7 +215,7 @@ relAgent.question_category = "relationship";
     agent_v2: careerAgent,
     locale: "zh",
     delivery_mode: "full",
-    paths: ["direct_answer"],
+    paths: ["decision_brief"],
     page_plan: plan,
   });
   assert.ok(system.includes("六页派工表"));
@@ -319,7 +319,7 @@ relAgent.question_category = "relationship";
 // --- fill gets structured inventory ---
 {
   const inv = buildStructuredInstanceInventory(structured, { questionCategory: "career" });
-  const { user } = buildPageSchemaFillPrompt("metaphysics_action", {
+  const { user } = buildPageSchemaFillPrompt("self_regulation", {
     locale: "zh",
     core_conclusion: "test",
     structured_inventory: inv,

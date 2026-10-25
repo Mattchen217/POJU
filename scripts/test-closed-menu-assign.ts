@@ -184,8 +184,8 @@ const thesis: ChartThesis = {
 }
 
 {
-  const planned = planDeepEvidenceSlots("foundation", {
-    key: "foundation",
+  const planned = planDeepEvidenceSlots("situation_analysis", {
+    key: "situation_analysis",
     chart_thesis: thesis,
     foundation_surface_feed: `表象候选1: a
 表象候选2: b
@@ -204,7 +204,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   assert.ok(planned.every((p) => p.locked_signals?.[0]?.slug === p.prefer_primary));
 
   const { system, user } = buildDeepEvidenceAssignPrompt(
-    "foundation",
+    "situation_analysis",
     {
       locale: "zh",
       core_conclusion: "主辅可立",
@@ -223,7 +223,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
 
   // Model invents wrong slug — parse force-overwrites
   const raw = {
-    page: "foundation",
+    page: "situation_analysis",
     units: planned.map((p) => ({
       path: p.path,
       unit_claim: p.prefer_claim ?? "结构主张足够长",
@@ -243,7 +243,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
       signal_count_rationale: "1个——派工表锁定",
     })),
   };
-  const parsed = parseDeepEvidenceAssignment("foundation", raw, planned);
+  const parsed = parseDeepEvidenceAssignment("situation_analysis", raw, planned);
   assert.ok(parsed);
   for (let i = 0; i < planned.length; i++) {
     const lockedSlug = planned[i]!.locked_signals![0]!.slug;
@@ -257,7 +257,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
 
   // Missing inference → fail
   const bad = {
-    page: "foundation",
+    page: "situation_analysis",
     units: [
       {
         path: planned[0]!.path,
@@ -282,7 +282,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   const failOut = { reason: "" };
   // Need enough units for min — pad with good units
   const padded = {
-    page: "foundation",
+    page: "situation_analysis",
     units: planned.map((p, idx) =>
       idx === 0
         ? bad.units[0]!
@@ -307,7 +307,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
     ),
   };
   const missed = parseDeepEvidenceAssignment(
-    "foundation",
+    "situation_analysis",
     padded,
     planned,
     undefined,
@@ -342,7 +342,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   assert.equal(ASSIGN_FREE_SELECT_MAX_TOKENS, 20_000);
   assert.equal(PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, 270_000);
 
-  const sciencePaths = deepEvidenceUnitSpec("science_action").paths;
+  const sciencePaths = deepEvidenceUnitSpec("execution_guidance").paths;
   assert.equal(sciencePaths.length, 6);
 
   const sciAlloc = preallocateClosedMenuSignals({ thesis, paths: sciencePaths });
@@ -352,15 +352,15 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
     assert.equal(new Set(slugs).size, 6, "science primaries unique");
   }
 
-  const plannedSci = planDeepEvidenceSlots("science_action", {
-    key: "science_action",
+  const plannedSci = planDeepEvidenceSlots("execution_guidance", {
+    key: "execution_guidance",
     chart_thesis: thesis,
     science_means_feed: "科学维1\n科学维2\n科学维3\n科学维4\n科学维5\n科学维6",
   });
   assert.ok(isClosedMenuAssign(plannedSci), "science+thesis → closed menu");
 
   const { system: sciSys } = buildDeepEvidenceAssignPrompt(
-    "science_action",
+    "execution_guidance",
     {
       locale: "zh",
       core_conclusion: "主辅可立",
@@ -372,7 +372,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   assert.ok(sciSys.includes("closed-menu") || sciSys.includes("已由代码锁死"));
 
   const rawSci = {
-    page: "science_action",
+    page: "execution_guidance",
     units: plannedSci.map((p) => ({
       path: p.path,
       unit_claim: p.prefer_claim ?? "本维须证明结构主张足够长",
@@ -392,7 +392,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
       signal_count_rationale: "1个——派工表锁定",
     })),
   };
-  const parsedSci = parseDeepEvidenceAssignment("science_action", rawSci, plannedSci);
+  const parsedSci = parseDeepEvidenceAssignment("execution_guidance", rawSci, plannedSci);
   assert.ok(parsedSci);
   for (let i = 0; i < plannedSci.length; i++) {
     assert.equal(
@@ -423,7 +423,7 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   // Cross-page: avoid prior primaries; thin menus may share leftovers but
   // Jaccard vs foundation must clear the write gate (0.72).
   {
-    const foundPaths = deepEvidenceUnitSpec("foundation").paths;
+    const foundPaths = deepEvidenceUnitSpec("situation_analysis").paths;
     const foundAlloc = preallocateClosedMenuSignals({
       thesis,
       paths: foundPaths,
@@ -462,8 +462,8 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
       `avoided science must clear cross-page gate; notes=${cross.ok ? cross.notes : cross.notes}`,
     );
 
-    const plannedSciPrior = planDeepEvidenceSlots("science_action", {
-      key: "science_action",
+    const plannedSciPrior = planDeepEvidenceSlots("execution_guidance", {
+      key: "execution_guidance",
       chart_thesis: thesis,
       prior_chart_anchors: foundSlugs,
       science_means_feed: "科学维1\n科学维2\n科学维3\n科学维4\n科学维5\n科学维6",

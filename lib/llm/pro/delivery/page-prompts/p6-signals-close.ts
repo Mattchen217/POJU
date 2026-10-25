@@ -6,7 +6,7 @@
 
 import { titleRules } from "./shared";
 
-export const PAGE_KEY = "signals_close" as const;
+export const PAGE_KEY = "validation_close" as const;
 export const PAGE_LABEL = "P6 · 出门仪式（今晚就开始）";
 
 export const FINALIZE_DUTY = `# 本段职责 · signals_close（P6 出门仪式 · 今晚就开始）
@@ -53,7 +53,7 @@ export function buildFillDuty(tagZh: string): string {
 禁再开科学/东方新药方(那是 P3/P4);禁再写红灯熔断墙(那是 P5)。
 
 # 必填槽
-- page="signals_close": page_title, page_subtitle,
+- page="validation_close": page_title, page_subtitle,
   identity_before, identity_after, **identity_shift**(为何切换对本案成立;不复述 core_logic),
   quote(≤120可背), **quote_use**(摇摆时怎么用),
   immediate_action, **tonight_done_looks_like**, **tonight_why**,

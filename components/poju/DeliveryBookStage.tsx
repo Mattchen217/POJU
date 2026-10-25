@@ -157,7 +157,7 @@ function resolveChromeTitles(
   if (isTagOnlyOrEmptyPageTitle(slotId, title)) title = "";
 
   // Legacy / failed-fill repair: P4 often shipped with empty chrome → TOC only showed 自我调频
-  if (schema?.page === "metaphysics_action") {
+  if (schema?.page === "self_regulation") {
     if (!title) {
       const dim0 =
         Array.isArray(schema.dimensions) && schema.dimensions[0]
@@ -230,7 +230,7 @@ export function DeliveryBookStage({
   const proseReady = useMemo(() => sequentialDeliveryProseReady(slots), [slots]);
 
   const bootstrapReady = Boolean(
-    readyById.get("cover") && readyById.get("toc") && readyById.get("direct_answer"),
+    readyById.get("cover") && readyById.get("toc") && readyById.get("decision_brief"),
   );
 
   /** Next prose gap in order (may already have later pages buffered). */
@@ -441,13 +441,13 @@ export function DeliveryBookStage({
 
     // P2 foundation only — never surface the energy dashboard on other shelf pages.
     const fromBody =
-      active.slotId === "foundation"
+      active.slotId === "situation_analysis"
         ? (payloads.find((p) => p.kind === "energy_dashboard") as
             | EnergyDashboardStruct
             | undefined)
         : undefined;
     const dashboard =
-      active.slotId !== "foundation"
+      active.slotId !== "situation_analysis"
         ? null
         : fromBody && fromBody.source !== "empty"
           ? fromBody
@@ -736,7 +736,7 @@ export function DeliveryBookStage({
                 ) : null}
                 {!activePageSchema &&
                 structWidgets.dashboard &&
-                active?.slotId === "foundation" ? (
+                active?.slotId === "situation_analysis" ? (
                   <article className="delivery-book-stage__module delivery-book-stage__module--widget">
                     <div className="delivery-book-stage__section-card">
                       <DeliveryEnergyDashboard data={structWidgets.dashboard} />

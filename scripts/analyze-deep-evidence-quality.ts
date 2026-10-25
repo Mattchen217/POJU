@@ -27,7 +27,7 @@ function loadPlan(path: string): DeepEvidencePlan {
 }
 
 const shallowFixture: DeepEvidencePlan = {
-  page: "foundation",
+  page: "situation_analysis",
   units: Array.from({ length: 4 }, (_, i) => ({
     path: `why_cards[${i}]`,
     chart_anchors: ["食神"],
@@ -36,7 +36,7 @@ const shallowFixture: DeepEvidencePlan = {
 };
 
 const solidFixture: DeepEvidencePlan = {
-  page: "foundation",
+  page: "situation_analysis",
   units: [
     {
       path: "why_cards[0]",
@@ -70,7 +70,7 @@ const IDENTICAL_WHY =
   "当前你正处于纪元岁环的阶段，结构上⟦w:用神⟧需养优先；等待环境对你更有利的时机再图进取。同时⟦w:忌神⟧耗元过旺时更要侧向流动，不孤注一掷。";
 
 const p4IdenticalEchoFixture: DeepEvidencePlan = {
-  page: "metaphysics_action",
+  page: "self_regulation",
   units: [
     {
       path: "dimensions[0]",

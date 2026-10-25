@@ -9,6 +9,12 @@ export type {
   CompanionTrackBrief,
 } from "./types";
 export { extractCompanionBrief, meansFocusForDay } from "./extract-companion-brief";
+export {
+  buildDailyAnchorSeeds,
+  dailyAnchorClosedSetPromptBlock,
+  DAILY_ANCHOR_SOURCE_PAGES,
+} from "./pregen-daily-anchors";
+export type { DailyAnchorSeed, DailyAnchorSourcePage } from "./pregen-daily-anchors";
 export { buildLiuriPack } from "./build-liuri-pack";
 export { createCompanionJob } from "./create-companion-job";
 export {

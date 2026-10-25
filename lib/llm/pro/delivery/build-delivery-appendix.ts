@@ -58,7 +58,7 @@ export function formatAppendixTimingBlock(
 function asP1Page(page: unknown): P1Page | null {
   if (!page || typeof page !== "object") return null;
   const p = page as { page?: string };
-  if (p.page !== "direct_answer") return null;
+  if (p.page !== "decision_brief") return null;
   return page as P1Page;
 }
 

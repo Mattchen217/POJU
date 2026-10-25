@@ -91,7 +91,7 @@ function makeStructured(): ProfileStructured {
 
 {
   const empty = assessUnitAnchorQuality({
-    pageKey: "science_action",
+    pageKey: "execution_guidance",
     units: [
       { path: "a", anchors: [] },
       { path: "b", anchors: [] },
@@ -100,7 +100,7 @@ function makeStructured(): ProfileStructured {
   assert.equal(empty.structuralFail, true);
 
   const plainOk = assessUnitAnchorQuality({
-    pageKey: "foundation",
+    pageKey: "situation_analysis",
     units: [
       { path: "why_cards[0]", anchors: [] },
       { path: "why_cards[1]", anchors: [] },
@@ -111,7 +111,7 @@ function makeStructured(): ProfileStructured {
   assert.ok(plainOk.notes.includes("plain_judgment_empty_chart_anchors"));
 
   const partial = assessUnitAnchorQuality({
-    pageKey: "science_action",
+    pageKey: "execution_guidance",
     units: [
       { path: "a", anchors: ["用神·水"] },
       { path: "b", anchors: [] },
@@ -120,7 +120,7 @@ function makeStructured(): ProfileStructured {
   assert.equal(partial.structuralFail, false);
   assert.ok(partial.notes.some((n) => n.includes("unit_missing_chart_anchors")));
 
-  const units = collectPageAnchorUnits("science_action", {
+  const units = collectPageAnchorUnits("execution_guidance", {
     primary_toolkit: {
       angles: [{ chart_anchors: ["用神·水"] }, { chart_anchors: [] }],
     },

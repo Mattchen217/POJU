@@ -1,37 +1,47 @@
 /**
- * POJU Phase 4 delivery book · dual-key SSOT for **6** prose pages
- * (P1–P4, P5=risk, P6=close). Cover / TOC / appendix are merge-time.
- * `thirty_day` remains a legacy key for old sessions only — not in active shelf.
+ * POJU Phase 4 delivery book · v1 **10** prose segment keys
+ * (9 content modules; validation_review = validation_risk + validation_close).
+ * Cover / TOC / appendix are merge-time. `thirty_day` + old 6 keys = legacy read aliases.
  *
- * Aligns with lib/poju/report-blueprint.ts (content pages; appendix separate).
+ * Aligns with lib/poju/report-blueprint.ts.
  */
 
 import { composeRxArgumentBody } from "@/lib/llm/pro/delivery/rx-argument-shape";
+import {
+  LEGACY_SIX_TO_V1,
+  V1_DELIVERY_SEGMENT_KEYS,
+  canonicalizeDeliverySegmentKey,
+  type DeliverySegmentKey as AliasDeliverySegmentKey,
+  type LegacyDeliverySegmentKey,
+  type V1DeliverySegmentKey,
+} from "@/lib/llm/pro/delivery/segment-key-alias";
 
-export type DeliverySegmentKey =
-  | "direct_answer"
-  | "foundation"
-  | "science_action"
-  | "metaphysics_action"
-  | "thirty_day"
-  | "risk_guard"
-  | "signals_close";
+export type { V1DeliverySegmentKey, LegacyDeliverySegmentKey };
+export type DeliverySegmentKey = AliasDeliverySegmentKey;
 
-/** Active shelf / fill order (6 pages). Legacy `thirty_day` excluded. */
-export const DELIVERY_SEGMENT_KEYS: readonly DeliverySegmentKey[] = [
-  "direct_answer",
-  "foundation",
-  "science_action",
-  "metaphysics_action",
-  "risk_guard",
-  "signals_close",
-] as const;
+/** Active shelf / fill order (v1 ten segments). Legacy `thirty_day` excluded. */
+export const DELIVERY_SEGMENT_KEYS: readonly V1DeliverySegmentKey[] = [
+  ...V1_DELIVERY_SEGMENT_KEYS,
+];
 
 /**
  * Transition sections: plain narrative only — no per-argument evidence / mark.
- * P1 direct_answer: product hangs no 依据层 on UI; skip evidence+mark LLM.
+ * decision_brief: product hangs no 依据层 on UI; skip evidence+mark LLM.
  */
-export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>(["direct_answer"]);
+export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>(["decision_brief"]);
+
+/**
+ * v1 双轨依据 · 科学段。
+ * 见 `.cursor/docs/v1-决策交付-产品边界.md` §3。
+ */
+export interface ScienceEvidenceUnit {
+  /** 机制短名（闭集选科，非空术语堆砌）。 */
+  mechanism?: string;
+  /** 对应本案哪条事实/行动。 */
+  tied_to_case?: string;
+  /** 可见说明文（折叠依据 B 段）。 */
+  prose?: string;
+}
 
 /** Dual-key for one delivery section. */
 export interface DeliverySegmentComputed {
@@ -43,15 +53,94 @@ export interface DeliverySegmentComputed {
    * 本页承重闭集真词(先于正文锁定)。full 模式须非空；与 bazi_basis 对齐或为其超集。
    */
   chart_anchors: readonly string[];
+  /**
+   * v1 双轨 · A 命理依据说明。
+   */
+  metaphysics_evidence?: string;
+  /**
+   * v1 双轨 · B 科学依据。
+   */
+  science_evidence?: string | readonly ScienceEvidenceUnit[];
 }
 
-export type DeliveryComputed = Record<DeliverySegmentKey, DeliverySegmentComputed>;
+export type DeliveryComputed = Record<V1DeliverySegmentKey, DeliverySegmentComputed> &
+  Partial<Record<LegacyDeliverySegmentKey, DeliverySegmentComputed>>;
 
 /**
  * Per-segment chart/spine inputs (field-name checklist for finalize / Layer2-B).
- * Aligns with report-blueprint chart_inputs; foundation is “按论证需要放,不硬凑”.
  */
 export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string[]> = {
+  decision_brief: [
+    "situation_conclusion",
+    "key_crossroads",
+    "primary_path",
+    "desired_outcome",
+  ],
+  situation_analysis: [
+    "energy_structure",
+    "element_scores",
+    "four_pillars_ten_gods",
+    "multi_dimension_reckoning",
+    "original_question",
+    "desired_outcome",
+  ],
+  personal_decision_patterns: [
+    "energy_structure",
+    "four_pillars_ten_gods",
+    "shen_sha_life_stage",
+    "multi_dimension_reckoning",
+  ],
+  bottleneck_analysis: [
+    "energy_structure",
+    "current_da_yun_cycle",
+    "multi_dimension_reckoning",
+    "key_crossroads",
+    "blind_spots",
+  ],
+  strategic_options: [
+    "primary_path",
+    "backup_path",
+    "multi_dimension_reckoning",
+    "modern_action_frames",
+    "key_crossroads",
+  ],
+  recommended_strategy: [
+    "primary_path",
+    "backup_path",
+    "action_plan",
+    "path_costs",
+    "multi_dimension_reckoning",
+  ],
+  execution_guidance: [
+    "primary_path",
+    "backup_path",
+    "action_plan",
+    "multi_dimension_reckoning",
+    "modern_action_frames",
+  ],
+  self_regulation: [
+    "metaphysics_pack",
+    "energy_retune_frame",
+    "multi_dimension_reckoning",
+    "desired_outcome",
+  ],
+  validation_risk: [
+    "self_check_signals",
+    "ji_shen",
+    "blind_spots",
+    "path_costs",
+    "multi_dimension_reckoning",
+    "desired_outcome",
+    "action_brief_p3_p4",
+  ],
+  validation_close: [
+    "self_check_signals",
+    "action_plan",
+    "rhythm_frame",
+    "action_brief_p3_p4",
+    "primary_path_chart_anchors",
+    "backup_path_chart_anchors",
+  ],
   direct_answer: [
     "situation_conclusion",
     "key_crossroads",
@@ -99,46 +188,107 @@ export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string
   ],
 };
 
+type PageTag = { zh: string; en: string; es: string; de: string; fr: string; partNo: string };
+
+const TAG_DECISION_BRIEF: PageTag = {
+  zh: "决策简报",
+  en: "Decision Brief",
+  es: "Brief de decisión",
+  de: "Decision Brief",
+  fr: "Brief de décision",
+  partNo: "1",
+};
+const TAG_SITUATION: PageTag = {
+  zh: "处境诊断",
+  en: "Situation Analysis",
+  es: "Análisis de situación",
+  de: "Situation Analysis",
+  fr: "Analyse de situation",
+  partNo: "2",
+};
+const TAG_PATTERNS: PageTag = {
+  zh: "决策模式",
+  en: "Decision Patterns",
+  es: "Patrones de decisión",
+  de: "Decision Patterns",
+  fr: "Schémas de décision",
+  partNo: "3",
+};
+const TAG_BOTTLENECK: PageTag = {
+  zh: "核心障碍",
+  en: "Bottleneck Analysis",
+  es: "Análisis de cuellos",
+  de: "Bottleneck Analysis",
+  fr: "Goulots d'étranglement",
+  partNo: "4",
+};
+const TAG_OPTIONS: PageTag = {
+  zh: "战略选项",
+  en: "Strategic Options",
+  es: "Opciones estratégicas",
+  de: "Strategic Options",
+  fr: "Options stratégiques",
+  partNo: "5",
+};
+const TAG_STRATEGY: PageTag = {
+  zh: "主策略",
+  en: "Recommended Strategy",
+  es: "Estrategia recomendada",
+  de: "Recommended Strategy",
+  fr: "Stratégie recommandée",
+  partNo: "6",
+};
+const TAG_EXECUTION: PageTag = {
+  zh: "执行原则",
+  en: "Execution Guidance",
+  es: "Guía de ejecución",
+  de: "Execution Guidance",
+  fr: "Principes d'exécution",
+  partNo: "7",
+};
+const TAG_SELF_REG: PageTag = {
+  zh: "自我调频",
+  en: "Self-Regulation",
+  es: "Autorregulación",
+  de: "Self-Regulation",
+  fr: "Autorégulation",
+  partNo: "8",
+};
+const TAG_RISK: PageTag = {
+  zh: "风险与验证",
+  en: "Risk & Validation",
+  es: "Riesgo y validación",
+  de: "Risk & Validation",
+  fr: "Risque et validation",
+  partNo: "9a",
+};
+const TAG_CLOSE: PageTag = {
+  zh: "行动收束",
+  en: "Signals & Close",
+  es: "Señales y cierre",
+  de: "Signals & Close",
+  fr: "Signaux et clôture",
+  partNo: "9b",
+};
+
 /**
  * Fixed UI tags (chrome) — never generated by the model.
- * Dynamic page_title / page_subtitle live on page_schema JSON.
  */
-export const DELIVERY_PAGE_TAGS: Record<
-  DeliverySegmentKey,
-  { zh: string; en: string; es: string; de: string; fr: string; partNo: string }
-> = {
-  direct_answer: {
-    zh: "核心直答",
-    en: "Core Answer",
-    es: "Respuesta Central",
-    de: "Core Answer",
-    fr: "Réponse Centrale",
-    partNo: "1",
-  },
-  foundation: {
-    zh: "归因剖析",
-    en: "Root Analysis",
-    es: "Análisis causal",
-    de: "Root Analysis",
-    fr: "Analyse causale",
-    partNo: "2",
-  },
-  science_action: {
-    zh: "破局策略",
-    en: "Breakthrough Strategy",
-    es: "Estrategia de ruptura",
-    de: "Breakthrough Strategy",
-    fr: "Stratégie de rupture",
-    partNo: "3",
-  },
-  metaphysics_action: {
-    zh: "东方谋略",
-    en: "Eastern Stratagem",
-    es: "Estrategia oriental",
-    de: "Östliche Strategie",
-    fr: "Stratagème oriental",
-    partNo: "4",
-  },
+export const DELIVERY_PAGE_TAGS: Record<DeliverySegmentKey, PageTag> = {
+  decision_brief: TAG_DECISION_BRIEF,
+  situation_analysis: TAG_SITUATION,
+  personal_decision_patterns: TAG_PATTERNS,
+  bottleneck_analysis: TAG_BOTTLENECK,
+  strategic_options: TAG_OPTIONS,
+  recommended_strategy: TAG_STRATEGY,
+  execution_guidance: TAG_EXECUTION,
+  self_regulation: TAG_SELF_REG,
+  validation_risk: TAG_RISK,
+  validation_close: TAG_CLOSE,
+  direct_answer: TAG_DECISION_BRIEF,
+  foundation: { ...TAG_SITUATION, zh: "处境与障碍", en: "Situation & Bottlenecks", partNo: "2" },
+  science_action: { ...TAG_EXECUTION, zh: "策略与执行", en: "Strategy & Execution", partNo: "3" },
+  metaphysics_action: TAG_SELF_REG,
   thirty_day: {
     zh: "30日计划",
     en: "30-Day Plan",
@@ -147,22 +297,8 @@ export const DELIVERY_PAGE_TAGS: Record<
     fr: "Plan 30 Jours",
     partNo: "—",
   },
-  risk_guard: {
-    zh: "风险预警",
-    en: "Risk Guard",
-    es: "Alerta de Riesgo",
-    de: "Risk Guard",
-    fr: "Alerte Risque",
-    partNo: "5",
-  },
-  signals_close: {
-    zh: "出门仪式",
-    en: "Tonight & Close",
-    es: "Ritual de partida",
-    de: "Tonight & Close",
-    fr: "Rituel de départ",
-    partNo: "6",
-  },
+  risk_guard: TAG_RISK,
+  signals_close: TAG_CLOSE,
 };
 
 /** True when title is empty or just repeats the fixed TOC tag (敷衍 → TOC collapses). */
@@ -176,23 +312,53 @@ export function isTagOnlyOrEmptyPageTitle(
   if (!tags) return false;
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
   const n = norm(t);
-  const aliases =
-    key === "metaphysics_action"
-      ? ["自我调频", "Self Retune", "Autoajuste", "Auto-réglage", "东方谋略", "Eastern Stratagem"]
-      : [];
-  return [...[tags.zh, tags.en, tags.es, tags.de, tags.fr], ...aliases].some(
-    (x) => norm(x) === n,
-  );
+  const aliases: string[] = [
+    tags.zh,
+    tags.en,
+    tags.es,
+    tags.de,
+    tags.fr,
+    "自我调频",
+    "Self Retune",
+    "Self-Regulation",
+    "东方谋略",
+    "Eastern Stratagem",
+    "核心直答",
+    "Core Answer",
+    "决策简报",
+    "Decision Brief",
+    "归因剖析",
+    "Root Analysis",
+    "处境与障碍",
+    "破局策略",
+    "Breakthrough Strategy",
+    "策略与执行",
+    "风险预警",
+    "Risk Guard",
+    "出门仪式",
+    "Tonight & Close",
+    "行动收束",
+  ];
+  return aliases.some((x) => norm(x) === n);
 }
 
 /**
  * Fallback section headings (markdown / legacy shelf).
- * Prefer DELIVERY_PAGE_TAGS for TOC; prefer page_schema page_title for H1.
  */
 export const DELIVERY_SECTION_HEADINGS: Record<
   DeliverySegmentKey,
   { zh: string; en: string; es: string; de: string; fr: string; partNo: string }
 > = {
+  decision_brief: { ...DELIVERY_PAGE_TAGS.decision_brief },
+  situation_analysis: { ...DELIVERY_PAGE_TAGS.situation_analysis },
+  personal_decision_patterns: { ...DELIVERY_PAGE_TAGS.personal_decision_patterns },
+  bottleneck_analysis: { ...DELIVERY_PAGE_TAGS.bottleneck_analysis },
+  strategic_options: { ...DELIVERY_PAGE_TAGS.strategic_options },
+  recommended_strategy: { ...DELIVERY_PAGE_TAGS.recommended_strategy },
+  execution_guidance: { ...DELIVERY_PAGE_TAGS.execution_guidance },
+  self_regulation: { ...DELIVERY_PAGE_TAGS.self_regulation },
+  validation_risk: { ...DELIVERY_PAGE_TAGS.validation_risk },
+  validation_close: { ...DELIVERY_PAGE_TAGS.validation_close },
   direct_answer: { ...DELIVERY_PAGE_TAGS.direct_answer },
   foundation: { ...DELIVERY_PAGE_TAGS.foundation },
   science_action: { ...DELIVERY_PAGE_TAGS.science_action },
@@ -210,56 +376,61 @@ export const DELIVERY_SECTION_HEADINGS: Record<
 };
 
 /**
- * Legacy A–F letter keys + old 9-segment book keys → current page keys.
+ * Legacy A–F letter keys + old 6/9-segment book keys → current v1 page keys.
  * Used when reading old sessions / LLM aliases.
  */
 export const LEGACY_SEGMENT_TO_CURRENT: Record<string, DeliverySegmentKey> = {
-  // 9→7 merge: 旧4段分析页 → foundation(P2)
-  energy_base: "foundation",
-  talent_map: "foundation",
-  spirit_gifts: "foundation",
-  macro_cycle: "foundation",
-  // Old Phase-4 book keys → 合并后落点
-  preface: "direct_answer",
-  energy: "foundation",
-  situation: "foundation",
-  crossroads: "foundation",
-  action: "science_action",
-  retune: "metaphysics_action",
+  // v1 six→ten
+  ...LEGACY_SIX_TO_V1,
+  // 9→7 merge leftovers → situation_analysis
+  energy_base: "situation_analysis",
+  talent_map: "situation_analysis",
+  spirit_gifts: "situation_analysis",
+  macro_cycle: "situation_analysis",
+  // Old Phase-4 book keys
+  preface: "decision_brief",
+  energy: "situation_analysis",
+  situation: "situation_analysis",
+  crossroads: "situation_analysis",
+  action: "execution_guidance",
+  retune: "self_regulation",
   rhythm: "thirty_day",
-  awareness: "risk_guard",
-  epilogue: "signals_close",
+  awareness: "validation_risk",
+  epilogue: "validation_close",
   // Legacy A–F
-  A: "foundation",
-  B: "foundation",
-  C: "science_action",
-  D: "metaphysics_action",
+  A: "situation_analysis",
+  B: "situation_analysis",
+  C: "execution_guidance",
+  D: "self_regulation",
   E: "thirty_day",
-  F: "risk_guard",
+  F: "validation_risk",
 };
 
 /** @deprecated Prefer LEGACY_SEGMENT_TO_CURRENT — kept for letter-only callers. */
 export const LEGACY_LETTER_TO_SEGMENT: Record<string, DeliverySegmentKey> = {
-  A: "foundation",
-  B: "foundation",
-  C: "science_action",
-  D: "metaphysics_action",
+  A: "situation_analysis",
+  B: "situation_analysis",
+  C: "execution_guidance",
+  D: "self_regulation",
   E: "thirty_day",
-  F: "risk_guard",
+  F: "validation_risk",
 };
 
 /** First prose page — unlocks streamed book chrome (replaces old preface gate). */
-export const DELIVERY_BOOTSTRAP_SEGMENT: DeliverySegmentKey = "direct_answer";
+export const DELIVERY_BOOTSTRAP_SEGMENT: DeliverySegmentKey = "decision_brief";
 
 /** Last prose page — stream-complete marker (replaces old epilogue). */
-export const DELIVERY_CLOSING_SEGMENT: DeliverySegmentKey = "signals_close";
+export const DELIVERY_CLOSING_SEGMENT: DeliverySegmentKey = "validation_close";
 
 export function resolveDeliverySegmentKey(raw: string): DeliverySegmentKey | null {
   const k = raw.trim();
   if ((DELIVERY_SEGMENT_KEYS as readonly string[]).includes(k)) {
-    return k as DeliverySegmentKey;
+    return k as V1DeliverySegmentKey;
   }
-  return LEGACY_SEGMENT_TO_CURRENT[k] ?? LEGACY_SEGMENT_TO_CURRENT[k.toUpperCase()] ?? null;
+  if (k === "thirty_day") return "thirty_day";
+  const mapped = LEGACY_SEGMENT_TO_CURRENT[k] ?? LEGACY_SEGMENT_TO_CURRENT[k.toUpperCase()];
+  if (mapped) return mapped;
+  return canonicalizeDeliverySegmentKey(k);
 }
 
 function isSegment(x: unknown): x is DeliverySegmentComputed {

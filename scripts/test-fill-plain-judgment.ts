@@ -18,7 +18,7 @@ import { repairCompressPageJargon } from "@/lib/llm/pro/delivery/page-schema/com
 
 const core =
   "只想先兼职试水看看情况，不太敢直接把现在的稳定收入断了，也不知道我能有多大的话语权，股权也没有明确说";
-const { user } = buildPageSchemaFillPrompt("foundation", {
+const { user } = buildPageSchemaFillPrompt("situation_analysis", {
   locale: "zh",
   core_conclusion: core,
   fill_mode: "compress",
@@ -34,7 +34,7 @@ assert.match(user, /已锁定命理批断/);
 
 {
   // P3: plain_judgment flag is ignored — always normal compress (menus + 主辅).
-  const { user: p3user, system: p3sys } = buildPageSchemaFillPrompt("science_action", {
+  const { user: p3user, system: p3sys } = buildPageSchemaFillPrompt("execution_guidance", {
     locale: "zh",
     core_conclusion: core,
     fill_mode: "compress",
@@ -56,7 +56,7 @@ assert.match(user, /已锁定命理批断/);
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "science_action",
+    page: "execution_guidance",
     units: [
       {
         path: "primary_toolkit.angles[0]",
@@ -82,7 +82,7 @@ assert.equal(hasFillWellnessScript("进行静坐、深呼吸"), true);
 
 const agenda = `${core}\n如何开口谈兼职`;
 const badSoft = {
-  page: "foundation",
+  page: "situation_analysis",
   page_title: "合伙纠结的底层结构卡点",
   page_subtitle: "从机制看卡点",
   why_cards: [
@@ -98,7 +98,7 @@ const badSoft = {
     { title: "e", surface: "x", essence: "y".repeat(70) },
   ],
 };
-const failSoft = sanitizePageJson("foundation", badSoft, {
+const failSoft = sanitizePageJson("situation_analysis", badSoft, {
   plainJudgmentFill: true,
   situationMaterial: agenda,
 });
@@ -108,7 +108,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
 {
   const notes: string[] = [];
   const page = {
-    page: "science_action",
+    page: "execution_guidance",
     page_title: "加压通关",
     page_subtitle: "从批断来",
     primary_toolkit: {
@@ -124,7 +124,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
     },
     backup_toolkit: { role: "backup", title: "辅", angles: [] },
   };
-  const jargon = repairCompressPageJargon("science_action", page, notes);
+  const jargon = repairCompressPageJargon("execution_guidance", page, notes);
   assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
   assert.doesNotMatch((page.primary_toolkit.angles[0].means as string[])[0], /生水/);
 }
@@ -133,7 +133,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
   // Soft-gloss must never be the plain target (地支→深层根基, not 【潜元】).
   const notes: string[] = [];
   const page = {
-    page: "science_action",
+    page: "execution_guidance",
     page_title: "加压通关",
     page_subtitle: "从批断来",
     primary_toolkit: {
@@ -149,7 +149,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
     },
     backup_toolkit: { role: "backup", title: "辅", angles: [] },
   };
-  const jargon = repairCompressPageJargon("science_action", page, notes);
+  const jargon = repairCompressPageJargon("execution_guidance", page, notes);
   assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
   const strategy = page.primary_toolkit.angles[0].strategy as string;
   const means0 = (page.primary_toolkit.angles[0].means as string[])[0]!;
@@ -161,7 +161,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
 
 {
   const goodPlan = {
-    page: "science_action" as const,
+    page: "execution_guidance" as const,
     units: [
       {
         path: "primary_toolkit.angles[0]",
@@ -197,7 +197,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
   };
 
   const goodP3 = {
-    page: "science_action",
+    page: "execution_guidance",
     page_title: "加压通关·疏导加固",
     page_subtitle: "六条结构杠杆从批断译出",
     primary_toolkit: {
@@ -246,7 +246,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
       ],
     },
   };
-  const passP3 = sanitizePageJson("science_action", goodP3, {
+  const passP3 = sanitizePageJson("execution_guidance", goodP3, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
     deepEvidencePlan: goodPlan,
@@ -271,14 +271,14 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
       ],
     },
   };
-  const passExec = sanitizePageJson("science_action", execPartTime, {
+  const passExec = sanitizePageJson("execution_guidance", execPartTime, {
     plainJudgmentFill: false,
     deepEvidencePlan: goodPlan,
     fillMode: "compress",
   });
   assert.equal(passExec.ok, true, passExec.ok ? "" : passExec.reason);
 
-  const failPlainDecision = sanitizePageJson("science_action", execPartTime, {
+  const failPlainDecision = sanitizePageJson("execution_guidance", execPartTime, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
     deepEvidencePlan: goodPlan,
@@ -308,7 +308,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
       ],
     },
   };
-  const failLife = sanitizePageJson("science_action", badLife, {
+  const failLife = sanitizePageJson("execution_guidance", badLife, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
     deepEvidencePlan: goodPlan,
@@ -339,7 +339,7 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
       ],
     },
   };
-  const failShell = sanitizePageJson("science_action", shellP3, {
+  const failShell = sanitizePageJson("execution_guidance", shellP3, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
     deepEvidencePlan: goodPlan,

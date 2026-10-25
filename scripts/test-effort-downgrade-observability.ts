@@ -23,7 +23,7 @@ import {
   try {
     logEffortDowngrade({
       call_site: "deep_evidence",
-      key: "risk_guard",
+      key: "validation_risk",
       from_effort: "xhigh",
       to_effort: "high",
       reason: "timeout",

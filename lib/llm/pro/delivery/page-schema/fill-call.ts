@@ -270,7 +270,7 @@ async function runP4CompressFillOneChunk(
   }
 
   const mergedRoot = {
-    page: "metaphysics_action",
+    page: "self_regulation",
     page_title: chrome.page_title,
     page_subtitle: chrome.page_subtitle,
     question_anchor: chrome.question_anchor,
@@ -438,7 +438,7 @@ async function runPageSchemaFillOnce(input: {
   }
   // Chunk hint is appended after fill-prompt — re-scrub P4 user so tool stems
   // in hints cannot re-prime restatement (Lab #34).
-  if (input.key === "metaphysics_action") {
+  if (input.key === "self_regulation") {
     userBase = scrubP4FillAnchorFeed(userBase);
   }
 
@@ -545,7 +545,7 @@ async function runPageSchemaFillOnce(input: {
           continue;
         }
         const page = {
-          page: "metaphysics_action",
+          page: "self_regulation",
           page_title: String(o.page_title ?? ""),
           page_subtitle: String(o.page_subtitle ?? ""),
           question_anchor: String(o.question_anchor ?? ""),
@@ -571,7 +571,7 @@ async function runPageSchemaFillOnce(input: {
       }
 
       const foundationAgendaMaterial =
-        input.key === "foundation"
+        input.key === "situation_analysis"
           ? [
               input.foundation_surface_feed,
               input.question_expectation,
@@ -583,13 +583,13 @@ async function runPageSchemaFillOnce(input: {
           : "";
       const sanitized = sanitizePageJson(input.key, root, {
         allowedDashboardScores:
-          input.key === "foundation"
+          input.key === "situation_analysis"
             ? parseAllowedDashboardScoresFromHints(input.dashboard_score_hints)
             : undefined,
         eastern_calc_slice:
-          input.key === "metaphysics_action" ? input.eastern_calc_slice : undefined,
+          input.key === "self_regulation" ? input.eastern_calc_slice : undefined,
         p3_body_excerpt:
-          input.key === "metaphysics_action" ? input.p3_body_excerpt ?? null : undefined,
+          input.key === "self_regulation" ? input.p3_body_excerpt ?? null : undefined,
         // Layer C · unit echo soft; hard gate = write Jaccard SSOT
         priorAnchors: anchorTally.priorAnchors,
         categoryTokenSets: input.category_token_sets ?? undefined,
@@ -599,14 +599,14 @@ async function runPageSchemaFillOnce(input: {
         // Always pass plan when present — moat type stamp is code SSOT (not compress-only).
         deepEvidencePlan: input.deep_evidence_plan ?? null,
         situationMaterial:
-          input.key === "foundation"
+          input.key === "situation_analysis"
             ? plainJudgment
               ? foundationAgendaMaterial
               : input.foundation_surface_feed
             : undefined,
-        plainJudgmentFill: input.key === "foundation" && plainJudgment,
+        plainJudgmentFill: input.key === "situation_analysis" && plainJudgment,
         closeRitualFeed:
-          input.key === "signals_close" ? input.close_ritual_feed ?? null : undefined,
+          input.key === "validation_close" ? input.close_ritual_feed ?? null : undefined,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;

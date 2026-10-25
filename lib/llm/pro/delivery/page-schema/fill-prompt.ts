@@ -150,7 +150,7 @@ export function buildPageSchemaFillPrompt(
   const isCompress = opts.fill_mode === "compress";
   const plainJudgment = opts.plain_judgment === true;
   /** P2 only：只译批断；剥处境/菜单噪声。P3+ 永不走这条（见 fill-call plainJudgment 收窄）。 */
-  const foundationTranslateOnly = plainJudgment && key === "foundation";
+  const foundationTranslateOnly = plainJudgment && key === "situation_analysis";
   const feed = pageFeedFlags(
     key,
     "body",
@@ -185,6 +185,7 @@ export function buildPageSchemaFillPrompt(
 - **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止品牌自造术语与【术语壳】。
 - chart_anchors 留空（覆盖 L1「先有 anchors」——本步不锁词）。不要把批断里的词抄进正文。
 - 每个内容单元只译对应那一条 professional_evidence（path / 顺序对齐）；禁止张冠李戴。
+- 若依据含【命理】【科学】两段：压缩/正文须都能被两段支撑；可见正文勿报「命理/科学」栏目名，但删掉命理段后主张须垮。
 - surface/essence 都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
 - 禁止另写谈判剧本 / 职场教练案。
 - 禁止行动处方腔（「因此你需要…」「这解释了为何你…」等）代替机制翻译。
@@ -208,7 +209,7 @@ export function buildPageSchemaFillPrompt(
 - 删掉批断/依据后正文不得变成谁都适用的鸡汤。正文零命理词。
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
-  key === "metaphysics_action"
+  key === "self_regulation"
     ? `- **P4 护城河兑现（硬）**：dimensions **恰好等于锁定表 units 条数、顺序对齐**（禁自增维）；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
 - **域自检**：means 必须是「局/气/我的身心与场域」。若主体是文档/交付/书面化/谈判/股权/兼职试水流程/不可替代性证明 → 废稿（P3 换皮）。若整页像「注意沟通细节」HR 课 → 废稿。
 - **主辅只锚一句**：strategy 最多一句挂主路径；其后禁止复读兼职/全职/试水期/话语权——改写为气口/结界/攻守/藏隐。
@@ -232,20 +233,20 @@ ${
     const core = opts.core_conclusion.trim() || "(空)";
     userParts.push(
       `## 本页 core_conclusion(finalize)\n${
-        key === "metaphysics_action" ? scrubP4FillAnchorFeed(core) : core
+        key === "self_regulation" ? scrubP4FillAnchorFeed(core) : core
       }`,
     );
   }
   if (feed.reality && !foundationTranslateOnly && opts.reality_constraints?.trim()) {
     const rc = opts.reality_constraints.trim();
     userParts.push(
-      key === "metaphysics_action"
+      key === "self_regulation"
         ? `## 现实约束(路径锚 · 工具词已剥)\n${scrubP4FillAnchorFeed(rc)}`
         : rc,
     );
   }
   if (
-    key === "foundation" &&
+    key === "situation_analysis" &&
     opts.foundation_surface_feed?.trim() &&
     !foundationTranslateOnly
   ) {
@@ -254,14 +255,14 @@ ${
       : opts.foundation_surface_feed.trim();
     userParts.push(feed);
   }
-  if (key === "science_action" && opts.science_means_feed?.trim()) {
+  if (key === "execution_guidance" && opts.science_means_feed?.trim()) {
     // P3: means menu is load-bearing growth source (even step-1). Soft-scrub jargon only.
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.science_means_feed.trim()).text
       : opts.science_means_feed.trim();
     userParts.push(feed);
   }
-  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+  if (key === "self_regulation" && opts.metaphysics_moat_feed?.trim()) {
     let feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.metaphysics_moat_feed.trim()).text
       : opts.metaphysics_moat_feed.trim();
@@ -269,13 +270,13 @@ ${
     feed = scrubP4FillAnchorFeed(feed);
     userParts.push(feed);
   }
-  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+  if (key === "validation_risk" && opts.risk_fuse_feed?.trim()) {
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.risk_fuse_feed.trim()).text
       : opts.risk_fuse_feed.trim();
     userParts.push(feed);
   }
-  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+  if (key === "validation_close" && opts.close_ritual_feed?.trim()) {
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.close_ritual_feed.trim()).text
       : opts.close_ritual_feed.trim();
@@ -283,7 +284,7 @@ ${
   }
   if (
     feed.question_expectation &&
-    key === "foundation" &&
+    key === "situation_analysis" &&
     opts.question_expectation?.trim() &&
     !foundationTranslateOnly
   ) {
@@ -293,7 +294,7 @@ ${
   }
   if (
     feed.question_expectation &&
-    key === "science_action" &&
+    key === "execution_guidance" &&
     opts.question_expectation?.trim()
   ) {
     userParts.push(
@@ -315,7 +316,7 @@ ${
   // Dashboard hints: full fill only (compress must not burn tokens on retired chrome).
   if (
     !isCompress &&
-    key === "foundation" &&
+    key === "situation_analysis" &&
     opts.dashboard_score_hints?.trim()
   ) {
     userParts.push(
@@ -325,16 +326,16 @@ ${
   // Primary/backup hint: P3 / P4 / P5 / P6 — 正文须锚定 P1 主辅（铁律）。
   if (
     feed.primary_backup_hint &&
-    (key === "science_action" ||
-      key === "metaphysics_action" ||
-      key === "risk_guard" ||
-      key === "signals_close") &&
+    (key === "execution_guidance" ||
+      key === "self_regulation" ||
+      key === "validation_risk" ||
+      key === "validation_close") &&
     opts.primary_backup_hint?.trim()
   ) {
     let hint = isCompress
       ? scrubMingliJargonOutsideSlots(opts.primary_backup_hint.trim()).text
       : opts.primary_backup_hint.trim();
-    if (key === "metaphysics_action") {
+    if (key === "self_regulation") {
       hint = scrubP4FillAnchorFeed(hint);
       userParts.push(
         `## 主辅对照(路径锚 · 工具词已剥 · 禁抄回 strategy/means)\n${hint}`,
@@ -345,7 +346,7 @@ ${
   }
   if (
     feed.question_expectation &&
-    key === "metaphysics_action" &&
+    key === "self_regulation" &&
     opts.question_expectation?.trim()
   ) {
     userParts.push(
@@ -354,7 +355,7 @@ ${
   }
   if (
     feed.question_expectation &&
-    key === "risk_guard" &&
+    key === "validation_risk" &&
     opts.question_expectation?.trim()
   ) {
     userParts.push(
@@ -363,7 +364,7 @@ ${
   }
   if (
     feed.question_expectation &&
-    key === "signals_close" &&
+    key === "validation_close" &&
     opts.question_expectation?.trim()
   ) {
     userParts.push(
@@ -373,14 +374,14 @@ ${
   if (
     feed.qimen &&
     !isCompress &&
-    key === "metaphysics_action" &&
+    key === "self_regulation" &&
     opts.eastern_calc_slice?.trim()
   ) {
     userParts.push(
       `## 本地真算料(先东方谋略维:奇门局势/用忌意象/十神站位;仪轨∈节奏/场域/身心类别;禁编造数字/宫门)\n${opts.eastern_calc_slice.trim()}`,
     );
   }
-  if (!isCompress && key === "risk_guard" && opts.risk_calc_slice?.trim()) {
+  if (!isCompress && key === "validation_risk" && opts.risk_calc_slice?.trim()) {
     userParts.push(
       `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
     );
@@ -398,22 +399,22 @@ ${
   }
   if (
     feed.upstream_action_excerpt &&
-    (key === "risk_guard" || key === "signals_close") &&
+    (key === "validation_risk" || key === "validation_close") &&
     opts.action_brief
   ) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
   }
-  if (key === "metaphysics_action" && opts.action_brief) {
+  if (key === "self_regulation" && opts.action_brief) {
     userParts.push(formatP3MeansBriefForP4Retune(opts.action_brief));
   }
-  if (key === "risk_guard") {
+  if (key === "validation_risk") {
     userParts.push(
       "## 叙事约束（先算后写）\n每条 RiskItem：①先写 chart_anchors(≥1,可继承 Brief.source_anchors/忌神盲区) → ②再 narrative；" +
         "narrative 须点明【P5 熔断候选菜单】中哪条执行面（做 X 时若出现 Y…）；" +
         "禁止「出现：/该做：」标签句；禁止指望后端拼接四点；禁止编造议程未确认的时限 KPI；禁止与 P3/P4 脱节另开行动课。",
     );
   }
-  if (key === "signals_close" && opts.action_brief) {
+  if (key === "validation_close" && opts.action_brief) {
     userParts.push(
       "## 近阶约束\nimmediate_action=今晚一件事;tonight_done_looks_like=做成什么样;tonight_why=为何今晚;" +
         "day7_micro_actions=从【P6 出门候选菜单】近阶茎抽恰好4条{action,why,done_when}(禁止四周表/按天甘特/P3行动逐字复读);" +
@@ -421,7 +422,7 @@ ${
         "takeaways=决策/本周杠杆/熔断各一行；identity_shift 须写清为何切换对本案成立。",
     );
   }
-  if (key === "signals_close" && opts.week_summary) {
+  if (key === "validation_close" && opts.week_summary) {
     userParts.push(formatP5WeekSummaryForPrompt(opts.week_summary));
   }
   // Layer A · soft category tally (user message only — prefix-cache safe)
@@ -441,7 +442,7 @@ ${
 
   let user = userParts.join("\n\n");
   // P4: last-pass de-prime — any residual tool stems in user feeds teach restatement.
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     user = scrubP4FillAnchorFeed(user);
   }
 

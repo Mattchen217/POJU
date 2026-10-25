@@ -56,6 +56,7 @@ export function labAsJobInput(lab: DeliveryLabSession) {
     dyad_compat_summary: lab.source.dyad_compat_summary ?? null,
     pivot_chart_path: lab.source.pivot_chart_path ?? null,
     dyad_matrix_pack: lab.source.dyad_matrix_pack ?? null,
+    joint_decision: lab.source.joint_decision === true,
   };
 }
 
@@ -81,12 +82,12 @@ function priorAnchorsFromLab(
   key: DeliverySegmentKey,
 ): string[] {
   const priorPages: DeliverySegmentKey[] = [
-    "foundation",
-    "science_action",
-    "metaphysics_action",
-    "direct_answer",
-    "risk_guard",
-    "signals_close",
+    "situation_analysis",
+    "execution_guidance",
+    "self_regulation",
+    "decision_brief",
+    "validation_risk",
+    "validation_close",
   ];
   const out: string[] = [];
   for (const p of priorPages) {
@@ -128,7 +129,7 @@ export async function buildLabPromptOpts(
       : null;
 
   let foundation_surface_feed = "";
-  if (key === "foundation") {
+  if (key === "situation_analysis") {
     const { buildFoundationSurfaceFeedBlock } = await import(
       "@/lib/llm/pro/delivery/foundation-surface-feed"
     );
@@ -140,7 +141,7 @@ export async function buildLabPromptOpts(
 
   let science_means_feed = "";
   let science_means_judgment_feed = "";
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     const { buildScienceMeansFeedBlock } = await import(
       "@/lib/llm/pro/delivery/science-means-feed"
     );
@@ -161,7 +162,7 @@ export async function buildLabPromptOpts(
 
   let metaphysics_moat_feed = "";
   let metaphysics_moat_judgment_feed = "";
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
     );
@@ -194,7 +195,7 @@ export async function buildLabPromptOpts(
   }
 
   let risk_fuse_feed = "";
-  if (key === "risk_guard" && input.breakthrough_core) {
+  if (key === "validation_risk" && input.breakthrough_core) {
     const { buildRiskFuseFeedBlock } = await import(
       "@/lib/llm/pro/delivery/risk-fuse-feed"
     );
@@ -210,7 +211,7 @@ export async function buildLabPromptOpts(
   }
 
   let close_ritual_feed = "";
-  if (key === "signals_close" && input.breakthrough_core) {
+  if (key === "validation_close" && input.breakthrough_core) {
     const { buildCloseRitualFeedBlock } = await import(
       "@/lib/llm/pro/delivery/close-ritual-feed"
     );
@@ -232,7 +233,7 @@ export async function buildLabPromptOpts(
     const { formatPagePlanSliceForPrompt } = await import(
       "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt"
     );
-    if (key !== "metaphysics_action" && key !== "risk_guard") {
+    if (key !== "self_regulation" && key !== "validation_risk") {
       page_plan_slice = formatPagePlanSliceForPrompt(
         key,
         page_plan,
@@ -241,7 +242,7 @@ export async function buildLabPromptOpts(
       );
     }
   }
-  if (key === "metaphysics_action" && input.breakthrough_core) {
+  if (key === "self_regulation" && input.breakthrough_core) {
     const { buildEasternCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
@@ -264,7 +265,7 @@ export async function buildLabPromptOpts(
       eastern_calc_slice = `${eastern_calc_slice}\n\n${qimenText}`;
     }
   }
-  if (key === "risk_guard" && input.breakthrough_core) {
+  if (key === "validation_risk" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
@@ -311,12 +312,16 @@ export async function buildLabPromptOpts(
   }
 
   const fin = labSyntheticFinalize(lab);
-  const seg = fin[key];
+  const seg = fin[key] ?? {
+    core_conclusion: "",
+    bazi_basis: [] as string[],
+    chart_anchors: [] as string[],
+  };
 
   const p3_body_excerpt =
-    key === "metaphysics_action"
+    key === "self_regulation"
       ? String(
-          (lab.artifacts.by_page.science_action?.page_schema as { opening?: string } | undefined)
+          (lab.artifacts.by_page.execution_guidance?.page_schema as { opening?: string } | undefined)
             ?.opening ?? "",
         ).slice(0, 1200) || undefined
       : undefined;
@@ -324,12 +329,12 @@ export async function buildLabPromptOpts(
   // P4 fill: same ActionBrief SSOT as production (P1+P3 means; no P4 self).
   let action_brief: import("@/lib/llm/pro/delivery/page-schema/types").P5ActionBrief | null =
     null;
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const { extractP5ActionBrief } = await import(
       "@/lib/llm/pro/delivery/page-schema/action-extractor"
     );
-    const p1 = lab.artifacts.by_page.direct_answer?.page_schema;
-    const p3 = lab.artifacts.by_page.science_action?.page_schema;
+    const p1 = lab.artifacts.by_page.decision_brief?.page_schema;
+    const p3 = lab.artifacts.by_page.execution_guidance?.page_schema;
     if (p1 || p3) {
       try {
         action_brief = extractP5ActionBrief({
@@ -344,8 +349,8 @@ export async function buildLabPromptOpts(
   }
 
   let primary_backup_hint: string | undefined;
-  if (key === "science_action" || key === "metaphysics_action") {
-    const p1Schema = lab.artifacts.by_page.direct_answer?.page_schema as
+  if (key === "execution_guidance" || key === "self_regulation") {
+    const p1Schema = lab.artifacts.by_page.decision_brief?.page_schema as
       | import("@/lib/llm/pro/delivery/page-schema/types").P1Page
       | undefined;
     if (p1Schema?.primary?.name || p1Schema?.backup?.name) {
@@ -370,6 +375,7 @@ export async function buildLabPromptOpts(
       dyad_compat_summary: lab.source.dyad_compat_summary,
       pivot_chart_path: lab.source.pivot_chart_path,
       dyad_matrix_pack: lab.source.dyad_matrix_pack,
+      joint_decision: lab.source.joint_decision === true,
     }) || undefined;
 
   const opts: DeepEvidencePromptOpts = {

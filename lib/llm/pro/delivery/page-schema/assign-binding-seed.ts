@@ -263,15 +263,15 @@ export function feedForAssignKey(
   },
 ): string | null {
   switch (key) {
-    case "foundation":
+    case "situation_analysis":
       return opts.foundation_surface_feed ?? null;
-    case "science_action":
+    case "execution_guidance":
       return opts.science_means_feed ?? null;
-    case "metaphysics_action":
+    case "self_regulation":
       return opts.metaphysics_moat_feed ?? null;
-    case "risk_guard":
+    case "validation_risk":
       return opts.risk_fuse_feed ?? null;
-    case "signals_close":
+    case "validation_close":
       return opts.close_ritual_feed ?? null;
     default:
       return null;

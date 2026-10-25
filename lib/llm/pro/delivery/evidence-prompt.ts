@@ -33,7 +33,7 @@ export function buildDeliveryEvidencePrompt(
   _locale: string,
 ): { system: string; user: string } {
   const keys = Object.keys(segments);
-  const primaryKey = keys[0] ?? "direct_answer";
+  const primaryKey = keys[0] ?? "decision_brief";
   const expectedArgs = segments[primaryKey]?.arguments.length ?? 0;
 
   const system = `# 你是谁

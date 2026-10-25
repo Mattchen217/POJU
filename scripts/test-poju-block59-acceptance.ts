@@ -78,15 +78,15 @@ function main(): void {
 依据乙。
 `;
   const fallbackSections = parseDeliveryContentFallback(sixSample);
-  assert("fallback parses foundation section", fallbackSections[0]?.type === "foundation");
+  assert("fallback parses foundation section", fallbackSections[0]?.type === "situation_analysis");
   assert("fallback has body", (fallbackSections[0]?.body.length ?? 0) >= 4);
 
   const noMarker = parseDeliveryContent(sixSample);
   assert("parseDeliveryContent returns book sections", noMarker.length >= 2);
   assert(
     "legacy A→foundation and C→science_action",
-    noMarker.some((s) => s.type === "foundation") &&
-      noMarker.some((s) => s.type === "science_action"),
+    noMarker.some((s) => s.type === "situation_analysis") &&
+      noMarker.some((s) => s.type === "execution_guidance"),
   );
 
   console.log("\n=== Fix 3 · soft labels without ganzhi ===\n");

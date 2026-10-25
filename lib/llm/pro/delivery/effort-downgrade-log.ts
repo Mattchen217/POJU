@@ -11,7 +11,7 @@ export type EffortDowngradeEvent = {
   session_id?: string;
   /** Which pipeline call degraded, e.g. "deep_evidence", "segment2_multi_dim", "compress_fill". */
   call_site: string;
-  /** Page/segment key if applicable (e.g. "risk_guard", "metaphysics_action"). */
+  /** Page/segment key if applicable (e.g. "validation_risk", "self_regulation"). */
   key?: string;
   from_effort: "xhigh" | "high";
   /**

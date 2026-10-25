@@ -4,8 +4,10 @@ import {
 } from "@/lib/auth/supabase";
 import { PLAN_PRICES_CENTS } from "@/lib/auth/pending-intent";
 import { SUBSCRIPTION_FIRST_GRANT } from "@/lib/passes/consume-pass";
+import { createOrRefreshDuoHousehold } from "@/lib/passes/household";
+import { DUO_FIRST_GRANT } from "@/lib/passes/household-types";
 
-export type CreditPlanType = "flex_pass" | "personal" | "team";
+export type CreditPlanType = "flex_pass" | "personal" | "team" | "duo";
 
 export type CreditPassesResult = {
   ok: boolean;
@@ -47,20 +49,30 @@ export async function creditPassesFromCheckout(params: {
   }
 
   const planType =
-    params.planType === "personal_plan"
-      ? "personal"
+    params.planType === "personal_plan" || params.planType === "duo_plan"
+      ? params.planType === "duo_plan"
+        ? "duo"
+        : "personal"
       : params.planType === "team_plan"
         ? "team"
         : params.planType;
 
   let passesToAdd = 0;
+  /** Ledger still uses personal|team; duo maps to personal + household. */
   let planName: "personal" | "team" | null = null;
+  let createDuoHousehold = false;
 
   if (planType === "flex_pass") {
     passesToAdd = Math.max(1, params.quantity);
+  } else if (planType === "duo") {
+    passesToAdd = SUBSCRIPTION_FIRST_GRANT.duo ?? DUO_FIRST_GRANT;
+    planName = "personal";
+    createDuoHousehold = true;
   } else if (planType === "personal") {
+    // Marketed as duo subscription — always attach household seats.
     passesToAdd = SUBSCRIPTION_FIRST_GRANT.personal;
     planName = "personal";
+    createDuoHousehold = true;
   } else if (planType === "team") {
     passesToAdd = SUBSCRIPTION_FIRST_GRANT.team;
     planName = "team";
@@ -198,6 +210,20 @@ export async function creditPassesFromCheckout(params: {
       updates.stripe_subscription_id = params.subscriptionId;
     }
     await admin.from("user_passes").update(updates).eq("user_id", params.userId);
+
+    if (createDuoHousehold) {
+      const shared =
+        typeof credited?.sub_after === "number" ? credited.sub_after : passesToAdd;
+      const hh = await createOrRefreshDuoHousehold({
+        seatAUserId: params.userId,
+        sharedBalance: shared,
+        stripeSubscriptionId: params.subscriptionId ?? null,
+        currentPeriodEnd: periodEnd,
+      });
+      if (!hh.ok) {
+        console.warn("[passes] duo household", hh.reason);
+      }
+    }
 
     return {
       ok: true,

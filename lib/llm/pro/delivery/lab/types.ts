@@ -57,6 +57,7 @@ export type LabSource = {
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
+  joint_decision?: boolean | null;
 };
 
 export type LabArtifacts = {
@@ -225,7 +226,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       kind: "assign",
       uses_llm: true,
       accept:
-        page === "foundation"
+        page === "situation_analysis"
           ? "五张卡各一句本盘结构主张 + 事实档短摘录，不锁词。主张须含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等结构记号；五卡切入互不相同。生活决策白话（兼职/股权/开口谈）属 fill，不进派工。摘录宜与主张同柱同层（主张写支本气则勿只贴天干行）。用户原句、盘外生克，不放行。"
           : "每张卡一句本盘结构主张 + 事实档/真算短摘录，不锁词。生活手段白话与处境/议题结论白话属后续 fill，不进派工主张。执行处方、白话结论摘录、或六张同一句，不放行。",
     },
@@ -248,14 +249,14 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
     {
       step_key: `${page}.fill`,
       label:
-        page === "foundation"
+        page === "situation_analysis"
           ? `${short} 正文 · 只翻译批断`
           : `${short} 正文 · 可执行（批断扎根）`,
       page,
       kind: "fill",
       uses_llm: true,
       accept:
-        page === "foundation"
+        page === "situation_analysis"
           ? "表象和本质都是上一步批断的白话翻译，零命理词。表象不是问答原句。删掉批断后正文不能独自成立。"
           : "正文体裁=可执行策略/行动/调频/熔断/出门（非批断机制译）；零命理词；须对齐主辅与候选菜单；批断只扎根。删批断后不得变成谁都适用的鸡汤。",
     },
@@ -292,19 +293,19 @@ export const LAB_STEP_DEFS: readonly LabStepDef[] = [
     uses_llm: false,
     accept: "合格是本盘事实档：日主天干、四柱、用喜忌、藏干、合冲都在。滤完的词表复本不算通过。",
   },
-  ...deepInspect("foundation", "P2"),
+  ...deepInspect("situation_analysis", "P2"),
   {
     step_key: "direct_answer.fill",
     label: "P1 正文 · 直答",
-    page: "direct_answer",
+    page: "decision_brief",
     kind: "fill",
     uses_llm: true,
     accept: "正面回答问题。若没有先写的批断，不要挂依据。正文零命理词。须在 P3/P4 deep 之前 ready（主辅锚定）。",
   },
-  ...deepInspect("science_action", "P3"),
-  ...deepInspect("metaphysics_action", "P4"),
-  ...deepInspect("risk_guard", "P5"),
-  ...deepInspect("signals_close", "P6"),
+  ...deepInspect("execution_guidance", "P3"),
+  ...deepInspect("self_regulation", "P4"),
+  ...deepInspect("validation_risk", "P5"),
+  ...deepInspect("validation_close", "P6"),
   {
     step_key: "book.assemble",
     label: "Assemble · 预览拼书",

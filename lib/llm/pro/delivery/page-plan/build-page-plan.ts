@@ -51,13 +51,13 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
   );
 
   const pages = {
-    direct_answer: entry(
-      "direct_answer",
+    decision_brief: entry(
+      "decision_brief",
       "正面直答：该不该/怎么走 + 一句主路径 + 一句为什么",
       ["situation_conclusion", "key_crossroads", "primary_path", "action_plan", "question_expectation"],
       ["multi_dim_all", "metaphysics_pack_full", "东方/科学药方展开"],
     ),
-    foundation: entry(
+    situation_analysis: entry(
       "foundation",
       "多表象对症论证（收集菜单→why_cards），收束到主辅成立",
       [
@@ -70,8 +70,8 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
       ],
       ["metaphysics_pack_full", "执行步骤", "复读P1结论头", "编造生活剧情"],
     ),
-    science_action: entry(
-      "science_action",
+    execution_guidance: entry(
+      "execution_guidance",
       "科学破局策略+手段，从主辅与多维/手段菜单生长",
       [
         "primary_path",
@@ -84,8 +84,8 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
       ],
       ["metaphysics_pack_full", "东方色向清单", "复读P1口号", "合同话术长剧本"],
     ),
-    metaphysics_action: entry(
-      "metaphysics_action",
+    self_regulation: entry(
+      "self_regulation",
       "锚定问题+期望的东方多维行动；pack 东方维唯此页全量",
       [
         "question_expectation",
@@ -96,8 +96,32 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
       ["主辅双轨", "复读P3科学手段", "物化补泻"],
       p4Indices,
     ),
-    risk_guard: entry(
-      "risk_guard",
+    personal_decision_patterns: entry(
+      "personal_decision_patterns",
+      "本题相关决策模式与可纠正假设",
+      ["energy_structure", "multi_dim_filtered", "question_expectation"],
+      ["泛人格报告", "怎么办处方"],
+    ),
+    bottleneck_analysis: entry(
+      "bottleneck_analysis",
+      "优先 1–3 障碍与维持机制",
+      ["energy_structure", "key_crossroads", "multi_dim_filtered", "self_check_negative"],
+      ["复读处境", "执行处方"],
+    ),
+    strategic_options: entry(
+      "strategic_options",
+      "2–4 现实选项比较（收益/成本/风险/可逆）",
+      ["primary_path", "backup_path", "modern_action_frames", "key_crossroads"],
+      ["编造假路", "任务表"],
+    ),
+    recommended_strategy: entry(
+      "recommended_strategy",
+      "主策略+备选+前提+退出",
+      ["primary_path", "backup_path", "action_plan", "situation_conclusion"],
+      ["第二份执行清单", "拧轴"],
+    ),
+    validation_risk: entry(
+      "validation_risk",
       "盯住 P3/P4 手段的结构红灯与熔断",
       [
         "multi_dim_risk",
@@ -111,8 +135,8 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
       ["metaphysics_pack_full", "新开药方", "无关KPI"],
       p5Indices,
     ),
-    signals_close: entry(
-      "signals_close",
+    validation_close: entry(
+      "validation_close",
       "近阶节奏与微行动，不复读第三套药方",
       [
         "self_check_positive",
@@ -125,7 +149,21 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
       ["第三套药方", "四周表", "逐字复读P3"],
     ),
     thirty_day: entry("thirty_day", "(legacy)", [], []),
-  } satisfies Record<DeliverySegmentKey, DeliveryPagePlanEntry>;
+    // legacy aliases → same entries as remapped v1 keys
+    direct_answer: null as unknown as DeliveryPagePlanEntry,
+    foundation: null as unknown as DeliveryPagePlanEntry,
+    science_action: null as unknown as DeliveryPagePlanEntry,
+    metaphysics_action: null as unknown as DeliveryPagePlanEntry,
+    risk_guard: null as unknown as DeliveryPagePlanEntry,
+    signals_close: null as unknown as DeliveryPagePlanEntry,
+  };
+
+  pages.direct_answer = pages.decision_brief;
+  pages.foundation = pages.situation_analysis;
+  pages.science_action = pages.execution_guidance;
+  pages.metaphysics_action = pages.self_regulation;
+  pages.risk_guard = pages.validation_risk;
+  pages.signals_close = pages.validation_close;
 
   // Attach self_check split hints for downstream formatters (unused in entry type but logged in tests)
   void selfNeg;
@@ -137,7 +175,10 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
     }
   }
 
-  return { version: "delivery_page_plan_v1", pages };
+  return {
+    version: "delivery_page_plan_v1",
+    pages: pages as Record<DeliverySegmentKey, DeliveryPagePlanEntry>,
+  };
 }
 
 export function getPagePlanEntry(

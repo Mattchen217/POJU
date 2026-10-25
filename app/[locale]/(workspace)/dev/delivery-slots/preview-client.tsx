@@ -21,7 +21,7 @@ import "@/styles/delivery-slots-preview.css";
 
 export function DeliverySlotsPreviewClient() {
   const locale = useLocale();
-  const [key, setKey] = useState<DeliverySegmentKey>("direct_answer");
+  const [key, setKey] = useState<DeliverySegmentKey>("decision_brief");
   const [showEvidence, setShowEvidence] = useState(true);
 
   const page = useMemo(() => mockPageForPreview(key, "zh"), [key]);

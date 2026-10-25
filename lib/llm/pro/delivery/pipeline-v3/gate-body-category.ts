@@ -192,9 +192,12 @@ function visibleProseForTemplateGate(
   page: DeliveryPageData,
 ): string {
   switch (key) {
-    case "direct_answer":
+    case "decision_brief":
       return p1VisibleBlob(page);
-    case "foundation": {
+    case "situation_analysis":
+  case "personal_decision_patterns":
+  case "bottleneck_analysis":
+  case "situation_analysis": {
       const p = page as {
         page_title?: string;
         page_subtitle?: string;
@@ -208,13 +211,13 @@ function visibleProseForTemplateGate(
         .map((x) => String(x ?? ""))
         .join("\n");
     }
-    case "science_action":
+    case "execution_guidance":
       return p3VisibleBlob(page);
-    case "metaphysics_action":
+    case "self_regulation":
       return p4VisibleBlob(page);
-    case "risk_guard":
+    case "validation_risk":
       return p5VisibleBlob(page);
-    case "signals_close":
+    case "validation_close":
       return p6VisibleBlob(page);
     default:
       return JSON.stringify(page);
@@ -249,7 +252,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     "- `gate_body_invented_user_absent_number`（#11）：禁用户未提供的具体量（缓冲月/$/%/年龄/工时等）；收集已给量与 chart_anchors 真算除外。",
     "- `gate_body_invented_partner_chart_on_solo`（#13）：path=solo / partner_bazi=absent 禁臆造对方日主/大运/合盘分数/对方八字；边界禁令句允许。",
   ];
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     return [
       ...common,
       "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
@@ -262,7 +265,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- 页角色锁：主语=协议/清单/里程碑；禁改成气场仪轨页。",
     ].join("\n");
   }
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     return [
       ...common,
       "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星/主客；禁两五行并写与「X旺」。",
@@ -277,7 +280,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- 页角色锁：主语=局/气/时方/结界；禁译成 P3 合同腔或 HR 教练腔（各语言同禁）。",
     ].join("\n");
   }
-  if (key === "direct_answer") {
+  if (key === "decision_brief") {
     return [
       ...common,
       "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 零命理专名。",
@@ -287,7 +290,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- 草稿 core_logic 已四段成篇则保量；仅电报体才补句。",
     ].join("\n");
   }
-  if (key === "foundation") {
+  if (key === "situation_analysis") {
     return [
       ...common,
       "- `gate_p2_body_visible_jargon`：surface/essence 零专名。",
@@ -296,7 +299,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- 草稿已完整机制段则保量，禁灌水；仅半句/目录壳才补句。禁把 essence 写成处方。",
     ].join("\n");
   }
-  if (key === "risk_guard") {
+  if (key === "validation_risk") {
     return [
       ...common,
       "- 可见层零命理专名；真词只留 anchors。",
@@ -305,7 +308,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- 短而具体的完整句即可；草稿已完整则保量。",
     ].join("\n");
   }
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     return [
       ...common,
       "- 可见层零命理专名。",
@@ -566,7 +569,7 @@ export function gateBodyCategoryB(input: {
     if (tw) return tw;
   }
 
-  if (input.key === "direct_answer") {
+  if (input.key === "decision_brief") {
     const visible = p1VisibleBlob(input.page_schema);
     // #11 invented user-absent numbers = 事实/门槛 → substance_only 也硬拦
     const inventHit = findInventedUserAbsentNumber(visible, reality);
@@ -596,7 +599,7 @@ export function gateBodyCategoryB(input: {
     return null;
   }
 
-  if (input.key === "science_action") {
+  if (input.key === "execution_guidance") {
     const visible = p3VisibleBlob(input.page_schema);
     // —— 事实/门槛（正文步也硬拦；非抽奖表面）——
     if (INVENTED_SCHEDULE_RE.test(visible)) {
@@ -699,7 +702,7 @@ export function gateBodyCategoryB(input: {
     return null;
   }
 
-  if (input.key === "metaphysics_action") {
+  if (input.key === "self_regulation") {
     const visible = p4VisibleBlob(input.page_schema);
     // —— 事实/门槛（正文步也硬拦）——
     const partTimeRejected =
@@ -795,7 +798,7 @@ export function gateBodyCategoryB(input: {
     return null;
   }
 
-  if (input.key === "risk_guard") {
+  if (input.key === "validation_risk") {
     const visible = p5VisibleBlob(input.page_schema);
     if (INVENTED_SCHEDULE_RE.test(visible)) {
       const hit = visible.match(INVENTED_SCHEDULE_RE)?.[0] ?? "";
@@ -822,7 +825,7 @@ export function gateBodyCategoryB(input: {
     return null;
   }
 
-  if (input.key === "signals_close") {
+  if (input.key === "validation_close") {
     const page = input.page_schema as {
       identity_before?: string;
       identity_after?: string;
@@ -904,7 +907,7 @@ export function gateBodyCategoryB(input: {
     return null;
   }
 
-  if (input.key !== "foundation") return null;
+  if (input.key !== "situation_analysis") return null;
 
   if (surface === "substance_only") {
     // 怎么办收束属页角色硬伤，正文步仍拦；专名表面 defer 润色

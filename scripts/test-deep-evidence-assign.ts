@@ -60,10 +60,10 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 }
 
 {
-  const n = resolveDeepEvidenceUnitCount("metaphysics_action", 2);
+  const n = resolveDeepEvidenceUnitCount("self_regulation", 2);
   assert.ok(n >= 3 && n <= 6);
   const planned = planDeepEvidenceSlots(
-    "metaphysics_action",
+    "self_regulation",
     "yong: 水\npack_polarity: yong=水 ji=火\ncurrent_da_yun_cycle: 甲子\ntiming_ripeness: 中\n【十神语义】正印",
   );
   assert.ok(planned.length >= 2);
@@ -72,7 +72,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 }
 
 {
-  const p5 = planDeepEvidenceSlots("risk_guard");
+  const p5 = planDeepEvidenceSlots("validation_risk");
   assert.equal(p5.length, 6);
   assert.equal(p5[0]!.path, "red_lights[0]");
   assert.equal(p5[3]!.path, "switch_to_backup");
@@ -95,9 +95,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   // Missing binding fields → null
   assert.equal(
     parseDeepEvidenceAssignment(
-      "metaphysics_action",
+      "self_regulation",
       {
-        page: "metaphysics_action",
+        page: "self_regulation",
         units: [
           { path: "dimensions[0]", chart_anchors: ["用神"] },
           { path: "dimensions[1]", chart_anchors: ["正印"] },
@@ -109,9 +109,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   );
 
   const parsed = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -145,9 +145,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     { path: "dimensions[1]", moat_class: "timing" as const },
   ];
   const bad = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -187,9 +187,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     "moat_anchor_mismatch:dimensions[1]:timing",
   );
   const good = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -215,7 +215,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 
 {
   const dump = formatDeepEvidencePlanForCompress({
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[0]",
@@ -256,9 +256,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     { path: "dimensions[2]", moat_class: "archetype" as const },
   ];
   const cloned = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -290,9 +290,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(validateAssignmentMoatAnchors(cloned!)?.startsWith("moat_anchor_mismatch"));
   // Fix timing anchors but keep clone reuse
   const reused = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -328,9 +328,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(validateAssignmentAnchorDiversity(reused!)?.startsWith("anchor_reuse_jaccard"));
 
   const diverse = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: [
         {
           path: "dimensions[0]",
@@ -434,8 +434,8 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(parsedHints[0]!.prefer_cite);
   assert.ok(parsedHints[0]!.prefer_claim);
 
-  const planned = planDeepEvidenceSlots("science_action", {
-    key: "science_action",
+  const planned = planDeepEvidenceSlots("execution_guidance", {
+    key: "execution_guidance",
     science_means_feed: feed,
   });
   assert.equal(planned.length, 6);
@@ -452,9 +452,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   // Signals already carry unique prefer_primary → parse projects diverse anchors;
   // lock still thickens thin cite/claim/ref.
   const clonedAssign = parseDeepEvidenceAssignment(
-    "science_action",
+    "execution_guidance",
     {
-      page: "science_action",
+      page: "execution_guidance",
       units: planned.map((p) => ({
         path: p.path,
         chart_anchors: ["食神", "偏财"],
@@ -564,8 +564,8 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   );
   assert.ok(p2feed.includes("处境材料"));
   assert.ok(!p2feed.includes("派工绑定建议表"));
-  const p2plan = planDeepEvidenceSlots("foundation", {
-    key: "foundation",
+  const p2plan = planDeepEvidenceSlots("situation_analysis", {
+    key: "situation_analysis",
     foundation_surface_feed: p2feed,
     assign_path_hints: buildFoundationAssignPathHints(candidates, 5),
   });
@@ -587,7 +587,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(anxietyHint, "anxiety surface seeded");
   const wrongLocked = applyPreferBindingLocks(
     {
-      page: "foundation",
+      page: "situation_analysis",
       units: [
         {
           path: anxietyHint!.path,
@@ -646,8 +646,8 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   const { block, eligible } = buildMetaphysicsMoatFeedBlock(coreP4, []);
   assert.ok(eligible.length >= 2);
   assert.ok(block.includes("派工绑定建议表"));
-  const p4plan = planDeepEvidenceSlots("metaphysics_action", {
-    key: "metaphysics_action",
+  const p4plan = planDeepEvidenceSlots("self_regulation", {
+    key: "self_regulation",
     eastern_calc_slice: block,
     metaphysics_moat_feed: block,
   });
@@ -665,9 +665,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     }
   }
   const thin = parseDeepEvidenceAssignment(
-    "metaphysics_action",
+    "self_regulation",
     {
-      page: "metaphysics_action",
+      page: "self_regulation",
       units: p4plan.map((p) => ({
         path: p.path,
         chart_anchors: p.prefer_primary ? [p.prefer_primary] : ["用神水"],
@@ -704,8 +704,8 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 
   const riskFeed = buildRiskFuseFeedBlock(null, brief, []);
   assert.ok(riskFeed.includes("派工绑定建议表"));
-  const riskPlan = planDeepEvidenceSlots("risk_guard", {
-    key: "risk_guard",
+  const riskPlan = planDeepEvidenceSlots("validation_risk", {
+    key: "validation_risk",
     risk_fuse_feed: riskFeed,
   });
   assert.equal(riskPlan.length, 6);
@@ -714,17 +714,17 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 
   const closeFeed = buildCloseRitualFeedBlock(null, brief, []);
   assert.ok(closeFeed.includes("派工绑定建议表"));
-  const closePlan = planDeepEvidenceSlots("signals_close", {
-    key: "signals_close",
+  const closePlan = planDeepEvidenceSlots("validation_close", {
+    key: "validation_close",
     close_ritual_feed: closeFeed,
   });
   assert.equal(closePlan.length, 6);
   assert.ok(closePlan.every((p) => p.prefer_candidate_ref), "P6 refs");
 
   const thinClose = parseDeepEvidenceAssignment(
-    "signals_close",
+    "validation_close",
     {
-      page: "signals_close",
+      page: "validation_close",
       units: closePlan.map((p) => ({
         path: p.path,
         chart_anchors: ["食神"],
@@ -877,7 +877,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 {
   // softRepairAssignmentAnchorDiversity: identical single-anchor sets → diversify without LLM
   const colliding = {
-    page: "foundation" as const,
+    page: "situation_analysis" as const,
     units: [
       {
         path: "why_cards[0]",
@@ -966,7 +966,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   );
   const locked = applyPreferBindingLocks(
     {
-      page: "risk_guard",
+      page: "validation_risk",
       units: [
         {
           path: "red_lights[0]",
@@ -1001,9 +1001,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     `cite soft-filled: ${locked.units[0]!.calc_cite}`,
   );
   const riskParsed = parseDeepEvidenceAssignment(
-    "risk_guard",
+    "validation_risk",
     {
-      page: "risk_guard",
+      page: "validation_risk",
       units: [
         {
           path: "red_lights[0]",
@@ -1060,7 +1060,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 
   const repaired = softRepairDeepEvidencePlanPrimaryReuse(
     {
-      page: "signals_close",
+      page: "validation_close",
       units: [
         {
           path: "identity_shift",
@@ -1105,7 +1105,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 {
   const overCap = softRepairDeepEvidencePlanPrimaryReuse(
     {
-      page: "signals_close",
+      page: "validation_close",
       units: [
         {
           path: "day7_micro_actions[1]",

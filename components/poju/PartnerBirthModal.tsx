@@ -9,30 +9,44 @@ type Props = {
   busy?: boolean;
   onSubmit: (info: BirthInfo) => void;
   onCancel: () => void;
+  /** Override copy (e.g. joint self-authorization). */
+  title?: string;
+  intro?: string;
 };
 
 /**
  * Stage-1 dyad: reuse workspace birth form (same Y-M-D-H-M wheel as product entry).
  * Not a new picker — only a thin overlay + partner-facing intro.
  */
-export function PartnerBirthModal({ open, locale, busy = false, onSubmit, onCancel }: Props) {
+export function PartnerBirthModal({
+  open,
+  locale,
+  busy = false,
+  onSubmit,
+  onCancel,
+  title,
+  intro,
+}: Props) {
   if (!open) return null;
+
+  const aria =
+    title ??
+    (locale.startsWith("zh") ? "补充对方的出生信息" : "Add their birth details");
+  const body =
+    intro ??
+    (locale.startsWith("zh")
+      ? "补充对方的出生信息（用于关系结构校准，不是独立合盘报告）。"
+      : "Add their birth details (for relationship-structure calibration — not a full Match report).");
 
   return (
     <div
       className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-3 sm:items-center"
       role="dialog"
       aria-modal="true"
-      aria-label={
-        locale.startsWith("zh") ? "补充对方的出生信息" : "Add their birth details"
-      }
+      aria-label={aria}
     >
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-xl border border-white/10 bg-[#0f1418] p-3 shadow-xl">
-        <p className="mb-2 px-1 text-sm text-[#cbd5e1]">
-          {locale.startsWith("zh")
-            ? "补充对方的出生信息（用于关系结构校准，不是独立合盘报告）。"
-            : "Add their birth details (for relationship-structure calibration — not a full Match report)."}
-        </p>
+        <p className="mb-2 px-1 text-sm text-[#cbd5e1]">{body}</p>
         {busy ? (
           <p className="px-1 py-6 text-center text-sm text-[#94a3b8]">…</p>
         ) : (

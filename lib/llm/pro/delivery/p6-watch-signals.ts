@@ -46,7 +46,7 @@ export function stampP6WatchSignals(
   page: DeliveryPageData,
   seed: readonly string[],
 ): DeliveryPageData {
-  if (page.page !== "signals_close") return page;
+  if (page.page !== "validation_close") return page;
   const existing = normalizeWatchSignalsList(
     (page as { watch_signals?: unknown }).watch_signals,
   );

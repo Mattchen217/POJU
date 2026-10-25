@@ -136,7 +136,7 @@ assert.ok(en.includes("Invented partner chart ban (#13"));
 
 // --- body prompt mounts #13 ---
 const { system, user } = buildV3BodyPrompt({
-  key: "direct_answer",
+  key: "decision_brief",
   locale: "zh",
   core_conclusion: "宜守硬门槛",
   judgment_lock: "path=primary",
@@ -152,12 +152,12 @@ assert.ok(
 );
 
 // --- polish avoidance ---
-const avoid = buildBodyGateAvoidanceBlockForPolish("direct_answer");
+const avoid = buildBodyGateAvoidanceBlockForPolish("decision_brief");
 assert.ok(avoid.includes(INVENTED_PARTNER_CHART_RULE_ID) || avoid.includes("#13"));
 
 // --- gate fails invent-on-solo ---
 const inventPage = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "先守你侧",
   page_subtitle: "solo 路径",
   core_judgment: "对方日主丙火，合盘分数 80，先结婚再谈门。",
@@ -171,7 +171,7 @@ const inventPage = {
 } as unknown as DeliveryPageData;
 
 const failSolo = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: inventPage,
   reality_blob: "对方已拒兼职；用户已 skip 对方盘。",
   surface: "substance_only",
@@ -183,7 +183,7 @@ assert.equal(failSolo!.failed_rule, INVENTED_PARTNER_CHART_RULE_ID);
 
 // --- gate allows same prose on dyad (gate off) ---
 const allowDyad = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: inventPage,
   reality_blob: "dyad_compat_summary present",
   surface: "substance_only",
@@ -198,7 +198,7 @@ assert.equal(
 
 // --- gate allows absent boundary copy on solo ---
 const boundaryPage = {
-  page: "direct_answer",
+  page: "decision_brief",
   page_title: "solo 继续",
   page_subtitle: "无对方盘",
   core_judgment:
@@ -218,7 +218,7 @@ const boundaryPage = {
 } as unknown as DeliveryPageData;
 
 const passBoundary = gateBodyCategoryB({
-  key: "direct_answer",
+  key: "decision_brief",
   page_schema: boundaryPage,
   reality_blob: "对方已拒兼职；用户 skip 对方盘。",
   surface: "substance_only",

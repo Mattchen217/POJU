@@ -46,18 +46,18 @@ export function gateContentPhaseA(input: {
     return {
       passed: false,
       failed_rule:
-        input.key === "direct_answer"
+        input.key === "decision_brief"
           ? "gate_p1_missing_judgment"
           : "gate_missing_judgment",
       detail:
-        input.key === "direct_answer"
+        input.key === "decision_brief"
           ? "P1 须先有主辅真算批断（core_judgment/primary/backup）。回改批断枪后重跑。"
           : "有依据页缺原始批断。回改内容步批断枪。",
       notes,
     };
   }
   notes.push(`judgment_units:${plan.units.length}`);
-  if (input.key === "direct_answer") {
+  if (input.key === "decision_brief") {
     notes.push("p1_judgment:internal_only_no_ui_fold");
   }
   const title = String(
@@ -66,7 +66,7 @@ export function gateContentPhaseA(input: {
   if (!title) {
     notes.push("warn_empty_page_title");
   }
-  if (input.key === "direct_answer") {
+  if (input.key === "decision_brief") {
     const p1 = page as {
       core_judgment?: unknown;
       primary?: { name?: unknown; core_logic?: unknown };

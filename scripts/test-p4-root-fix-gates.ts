@@ -213,7 +213,7 @@ const baseDim = {
 // Ten-god enrich for archetype
 {
   const plan: DeepEvidencePlan = {
-    page: "metaphysics_action",
+    page: "self_regulation",
     units: [
       {
         path: "dimensions[0]",
@@ -235,7 +235,7 @@ const baseDim = {
       },
     ],
   };
-  const notes = stampPageChartAnchorsFromDeepPlan("metaphysics_action", page, plan);
+  const notes = stampPageChartAnchorsFromDeepPlan("self_regulation", page, plan);
   assert.ok(
     notes.some((n) => n.startsWith("enriched_chart_anchors_with_ten_god")),
     notes.join(";"),

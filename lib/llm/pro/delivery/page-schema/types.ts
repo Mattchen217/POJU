@@ -35,6 +35,10 @@ export const EvidenceSlotSchema = z.object({
   field_path: NonEmpty,
   markers: z.array(NonEmpty).max(8).default([]),
   gloss: z.string().trim().max(280).optional(),
+  /** v1 双轨 · 命理机制（可选；与 unit 级字段对齐）。 */
+  metaphysics_evidence: z.string().trim().max(1200).optional(),
+  /** v1 双轨 · 科学机制（本案绑定）。 */
+  science_evidence: z.string().trim().max(1200).optional(),
 });
 export type EvidenceSlot = z.infer<typeof EvidenceSlotSchema>;
 
@@ -65,7 +69,7 @@ export const DecisionTrackSchema = z.object({
 export type DecisionTrack = z.infer<typeof DecisionTrackSchema>;
 
 export const P1PageSchema = z.object({
-  page: z.literal("direct_answer"),
+  page: z.literal("decision_brief"),
   ...PageChromeFieldsSchema.shape,
   core_judgment: NonEmpty.max(220),
   primary: DecisionTrackSchema,
@@ -125,14 +129,78 @@ export type ActionAngle = z.infer<typeof ActionAngleSchema>;
  * Each why_card = one collecting surface + its essence (not one page-level pair).
  */
 export const P2PageSchema = z.object({
-  page: z.literal("foundation"),
+  page: z.literal("situation_analysis"),
   ...PageChromeFieldsSchema.shape,
   dashboard: z.array(DashboardMetricSchema).min(1).max(8),
   /** Fill targets 4–5; schema floor 2 keeps older sessions readable. */
   why_cards: z.array(WhyCardSchema).min(2).max(5),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });
+
 export type P2Page = z.infer<typeof P2PageSchema>;
+
+/** Patterns · short cards (reuses why_card shape, fewer cards). */
+export const PatternsPageSchema = z.object({
+  page: z.literal("personal_decision_patterns"),
+  ...PageChromeFieldsSchema.shape,
+  dashboard: z.array(DashboardMetricSchema).max(4).default([]),
+  why_cards: z.array(WhyCardSchema).min(1).max(3),
+  evidence: z.array(EvidenceSlotSchema).max(12).default([]),
+});
+export type PatternsPage = z.infer<typeof PatternsPageSchema>;
+
+/** Bottleneck · 1–3 obstacle cards. */
+export const BottleneckPageSchema = z.object({
+  page: z.literal("bottleneck_analysis"),
+  ...PageChromeFieldsSchema.shape,
+  dashboard: z.array(DashboardMetricSchema).max(4).default([]),
+  why_cards: z.array(WhyCardSchema).min(1).max(3),
+  evidence: z.array(EvidenceSlotSchema).max(12).default([]),
+});
+export type BottleneckPage = z.infer<typeof BottleneckPageSchema>;
+
+export const StrategicOptionSchema = z.object({
+  name: NonEmpty.max(80),
+  summary: NonEmpty.max(320),
+  upside: NonEmpty.max(240),
+  cost: NonEmpty.max(240),
+  risk: NonEmpty.max(240),
+  reversibility: NonEmpty.max(160),
+  chart_anchors: ChartAnchorsFieldSchema,
+});
+export type StrategicOption = z.infer<typeof StrategicOptionSchema>;
+
+export const StrategicOptionsPageSchema = z.object({
+  page: z.literal("strategic_options"),
+  ...PageChromeFieldsSchema.shape,
+  options: z.array(StrategicOptionSchema).min(2).max(4),
+  evidence: z.array(EvidenceSlotSchema).max(16).default([]),
+});
+export type StrategicOptionsPage = z.infer<typeof StrategicOptionsPageSchema>;
+
+/** Recommended strategy · thickened brief (reuse P1 fields via angles optional). */
+export const RecommendedStrategyPageSchema = z.object({
+  page: z.literal("recommended_strategy"),
+  ...PageChromeFieldsSchema.shape,
+  core_judgment: NonEmpty.max(400),
+  primary: z.object({
+    name: NonEmpty.max(100),
+    why: NonEmpty.max(400),
+    when: NonEmpty.max(280).optional(),
+    exit: NonEmpty.max(280).optional(),
+    chart_anchors: ChartAnchorsFieldSchema,
+  }),
+  backup: z.object({
+    name: NonEmpty.max(100),
+    why: NonEmpty.max(400),
+    when: NonEmpty.max(280).optional(),
+    exit: NonEmpty.max(280).optional(),
+    chart_anchors: ChartAnchorsFieldSchema,
+  }),
+  evidence: z.array(EvidenceSlotSchema).max(16).default([]),
+});
+export type RecommendedStrategyPage = z.infer<typeof RecommendedStrategyPageSchema>;
+
 
 /** P3 track: 1 primary + 1 backup; each has ≥3 complementary strategy dims (angles). */
 export const ToolkitTrackSchema = z.object({
@@ -143,7 +211,7 @@ export const ToolkitTrackSchema = z.object({
 export type ToolkitTrack = z.infer<typeof ToolkitTrackSchema>;
 
 export const P3PageSchema = z.object({
-  page: z.literal("science_action"),
+  page: z.literal("execution_guidance"),
   ...PageChromeFieldsSchema.shape,
   opening: z.string().trim().max(200).optional(),
   primary_toolkit: ToolkitTrackSchema,
@@ -165,7 +233,7 @@ export const FieldMatrixCellSchema = z.object({
  * Dimensions = relevant local-calc dims — never restate P3 workplace SOPs.
  */
 export const P4PageSchema = z.object({
-  page: z.literal("metaphysics_action"),
+  page: z.literal("self_regulation"),
   ...PageChromeFieldsSchema.shape,
   /** User's question / matter this page serves (echo, not a new answer). */
   question_anchor: NonEmpty.max(280),
@@ -235,7 +303,7 @@ export type RiskItem = z.infer<typeof RiskItemSchema>;
 
 /** Active shelf P5 · risk / circuit breakers (key still `risk_guard`). */
 export const P6PageSchema = z.object({
-  page: z.literal("risk_guard"),
+  page: z.literal("validation_risk"),
   ...PageChromeFieldsSchema.shape,
   red_lights: z.array(RiskItemSchema).min(2).max(2),
   traps: z.array(RiskItemSchema).min(1).max(1),
@@ -266,7 +334,7 @@ export type Day7Item = z.infer<typeof Day7ItemSchema>;
 
 /** Active shelf P6 · close + near-term actions (key still `signals_close`). */
 export const P7PageSchema = z.object({
-  page: z.literal("signals_close"),
+  page: z.literal("validation_close"),
   ...PageChromeFieldsSchema.shape,
   identity_before: NonEmpty.max(120),
   identity_after: NonEmpty.max(120),
@@ -294,6 +362,17 @@ export const P7PageSchema = z.object({
 export type P7Page = z.infer<typeof P7PageSchema>;
 
 export const DeliveryPageSchemaByKey = {
+  decision_brief: P1PageSchema,
+  situation_analysis: P2PageSchema,
+  personal_decision_patterns: PatternsPageSchema,
+  bottleneck_analysis: BottleneckPageSchema,
+  strategic_options: StrategicOptionsPageSchema,
+  recommended_strategy: RecommendedStrategyPageSchema,
+  execution_guidance: P3PageSchema,
+  self_regulation: P4PageSchema,
+  validation_risk: P6PageSchema,
+  validation_close: P7PageSchema,
+  // legacy aliases (old sessions / transitional fills)
   direct_answer: P1PageSchema,
   foundation: P2PageSchema,
   science_action: P3PageSchema,
@@ -308,6 +387,10 @@ export type DeliveryPageSchemaKey = keyof typeof DeliveryPageSchemaByKey;
 export const DeliveryPageUnionSchema = z.discriminatedUnion("page", [
   P1PageSchema,
   P2PageSchema,
+  PatternsPageSchema,
+  BottleneckPageSchema,
+  StrategicOptionsPageSchema,
+  RecommendedStrategyPageSchema,
   P3PageSchema,
   P4PageSchema,
   P5PageSchema,
@@ -319,6 +402,17 @@ export type DeliveryPageData = z.infer<typeof DeliveryPageUnionSchema>;
 export const DeliveryReportPagesV1Schema = z.object({
   version: z.literal(DELIVERY_PAGE_SCHEMA_VERSION),
   pages: z.object({
+    decision_brief: P1PageSchema.optional(),
+    situation_analysis: P2PageSchema.optional(),
+    personal_decision_patterns: PatternsPageSchema.optional(),
+    bottleneck_analysis: BottleneckPageSchema.optional(),
+    strategic_options: StrategicOptionsPageSchema.optional(),
+    recommended_strategy: RecommendedStrategyPageSchema.optional(),
+    execution_guidance: P3PageSchema.optional(),
+    self_regulation: P4PageSchema.optional(),
+    validation_risk: P6PageSchema.optional(),
+    validation_close: P7PageSchema.optional(),
+    // legacy
     direct_answer: P1PageSchema.optional(),
     foundation: P2PageSchema.optional(),
     science_action: P3PageSchema.optional(),

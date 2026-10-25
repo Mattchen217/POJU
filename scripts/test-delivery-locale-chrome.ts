@@ -81,7 +81,7 @@ More evidence.
   assert(`${loc} sanitize keeps evidence text`, cleaned.includes("Gold evidence"));
 
   const pages = buildDeliveryBookPages(cleaned);
-  const sit = pages.find((p) => p.id === "foundation");
+  const sit = pages.find((p) => p.id === "situation_analysis");
   assert(`${loc} foundation dualLayer`, sit?.dualLayer === true);
   const mods = buildDeliveryBookModules({
     pageTitle: sit!.title,

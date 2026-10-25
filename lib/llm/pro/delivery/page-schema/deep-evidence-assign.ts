@@ -126,11 +126,11 @@ export {
 
 /** Deep pages that must use D1 closed-menu assign (no free-select). */
 export const CLOSED_MENU_DEEP_ASSIGN_KEYS = new Set<DeliverySegmentKey>([
-  "foundation",
-  "science_action",
-  "metaphysics_action",
-  "risk_guard",
-  "signals_close",
+  "situation_analysis",
+  "execution_guidance",
+  "self_regulation",
+  "validation_risk",
+  "validation_close",
 ]);
 
 /** Assign ceilings — same delivery SSOT (do not lower; models ignore soft targets). */
@@ -587,7 +587,7 @@ export function seedPlannedBindings(
       preallocPrimary || acceptPrimary(hint?.prefer_primary) || undefined;
     let fromSurfaceRematch = false;
 
-    if (opts.key === "foundation" && thesis?.dimensions?.length) {
+    if (opts.key === "situation_analysis" && thesis?.dimensions?.length) {
       const surface = `${hint?.prefer_cite ?? ""}\n${hint?.prefer_claim ?? ""}`;
       const menu = buildThesisAssignMenu(thesis);
       const suggested = acceptPrimary(
@@ -1311,7 +1311,7 @@ export function resolveDeepEvidenceUnitCount(
   eligibleSize: number,
 ): number {
   const spec = deepEvidenceUnitSpec(key);
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const target = Math.max(spec.min, Math.min(spec.max, Math.max(3, eligibleSize * 2)));
     return target;
   }
@@ -1379,7 +1379,7 @@ export function buildDeepEvidenceAssignPrompt(
         (p.allowed_signals?.length ?? 0) >= 2 && !(p.locked_signals?.length),
     );
   const factPackOpen = planned.length > 0 && planned.every((p) => p.fact_pack_mode);
-  const foundationDiscover = factPackOpen && key === "foundation";
+  const foundationDiscover = factPackOpen && key === "situation_analysis";
   if (foundationDiscover) {
     const inventory = opts.thesis_structured
       ? buildFoundationRelationInventory(opts.thesis_structured)
@@ -1468,7 +1468,7 @@ ${pageDuty}
     if (opts.eastern_calc_slice?.trim()) {
       userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
     }
-    if (key === "risk_guard" && opts.risk_calc_slice?.trim()) {
+    if (key === "validation_risk" && opts.risk_calc_slice?.trim()) {
       userParts.push(`## 熔断算料\n${opts.risk_calc_slice.trim()}`);
     }
     if (opts.question_expectation?.trim()) {
@@ -1623,23 +1623,23 @@ ${buildAssignNecessarySignalsFewShotBlock()}
   if (opts.question_expectation?.trim()) {
     userParts.push(`## 问题与期望\n${opts.question_expectation.trim()}`);
   }
-  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+  if (key === "situation_analysis" && opts.foundation_surface_feed?.trim()) {
     userParts.push(opts.foundation_surface_feed.trim());
   }
-  if (key === "science_action" && opts.science_means_feed?.trim()) {
+  if (key === "execution_guidance" && opts.science_means_feed?.trim()) {
     userParts.push(opts.science_means_feed.trim());
   }
-  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+  if (key === "self_regulation" && opts.metaphysics_moat_feed?.trim()) {
     userParts.push(opts.metaphysics_moat_feed.trim());
   }
-  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+  if (key === "validation_risk" && opts.risk_fuse_feed?.trim()) {
     userParts.push(opts.risk_fuse_feed.trim());
   }
-  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+  if (key === "validation_close" && opts.close_ritual_feed?.trim()) {
     userParts.push(opts.close_ritual_feed.trim());
   }
   if (
-    (key === "risk_guard" || key === "signals_close") &&
+    (key === "validation_risk" || key === "validation_close") &&
     opts.action_brief_block?.trim()
   ) {
     userParts.push(opts.action_brief_block.trim());
@@ -1730,7 +1730,7 @@ function softPolishClosedMenuAssignment(
   const thinClaimLead = /^此表象说明结构上[：:]\s*/;
   const norm = (s: string) => s.replace(/\s+/g, "");
   /** Intimacy/partnership template weld: foundation only (Lab science/P4/P5 cite「关系」盲焊债). */
-  const allowFrictionWeld = pageKey === "foundation" || pageKey == null;
+  const allowFrictionWeld = pageKey === "situation_analysis" || pageKey == null;
 
   const units = assignment.units.map((u) => {
     const slot = byPath.get(u.path);
@@ -1759,7 +1759,7 @@ function softPolishClosedMenuAssignment(
       claim = preferClaim.slice(0, 120);
     }
     // P4/P3: strip stance/means tails (宜以客位进取开创…) after ban-seed scrub.
-    if (pageKey === "metaphysics_action" || pageKey === "science_action") {
+    if (pageKey === "self_regulation" || pageKey === "execution_guidance") {
       const meansStripped = softStripMeansLayerFromClaim(claim);
       if (
         meansStripped !== claim &&
@@ -1836,7 +1836,7 @@ function softPolishClosedMenuAssignment(
     const surfaceBlob = `${cite}\n${claim}\n${slot?.prefer_cite ?? ""}\n${preferClaim ?? ""}`;
     const pathAllowsWeld =
       allowFrictionWeld &&
-      (pageKey === "foundation" || u.path.startsWith("why_cards"));
+      (pageKey === "situation_analysis" || u.path.startsWith("why_cards"));
     const weldRelationship =
       pathAllowsWeld &&
       isRelationshipFrictionSurface(surfaceBlob, knownParties);
@@ -2350,7 +2350,7 @@ export function planDeepEvidenceSlots(
 
   const spec = deepEvidenceUnitSpec(key);
   let base: PlannedAssignSlot[];
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     // Eligible must union eastern slice + moat feed: feed carries 用神/忌神 lines
     // that slice-only infer often misses → polarity dropped from locked table.
     const eligible = inferP4MoatEligibleTypes(
@@ -2385,7 +2385,7 @@ export function planDeepEvidenceSlots(
     }));
   }
   let seeded = seedPlannedBindings(base, opts);
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     seeded = realignP4PreferBindingsToMoat(seeded, opts.metaphysics_moat_feed);
   }
   if (opts.chart_fact_pack?.trim()) {
@@ -2402,10 +2402,10 @@ export function planDeepEvidenceSlots(
       // claim_seed) so hanging unit_claim can soft-fill; keep prefer_candidate_ref.
       prefer_cite: undefined,
       prefer_claim:
-        key === "metaphysics_action" ? slot.prefer_claim : undefined,
+        key === "self_regulation" ? slot.prefer_claim : undefined,
       prefer_primary: undefined,
       prefer_candidate_ref:
-        key === "foundation"
+        key === "situation_analysis"
           ? `归因${i + 1}`
           : slot.prefer_candidate_ref,
     }));
@@ -2495,13 +2495,13 @@ export function applyClosedMenuLocks(
     thesis,
     paths: planned.map((p) => p.path),
     last_path_prefer_dims:
-      key === "foundation" ? FOUNDATION_LAST_CARD_PREFER_DIMS : undefined,
+      key === "situation_analysis" ? FOUNDATION_LAST_CARD_PREFER_DIMS : undefined,
     avoid_primaries: crossPage?.avoid_primaries,
     prefer_by_path: crossPage?.prefer_by_path
       ? { ...crossPage.prefer_by_path }
       : undefined,
     moat_by_path:
-      key === "metaphysics_action"
+      key === "self_regulation"
         ? Object.fromEntries(
             planned.map((p) => [p.path, p.moat_class ?? null] as const),
           )
@@ -2524,13 +2524,13 @@ export function applyClosedMenuLocks(
 
 /**
  * D1: foundation closed-menu locks (last card prefers cycle/strength).
- * @deprecated prefer applyClosedMenuLocks(planned, thesis, "foundation")
+ * @deprecated prefer applyClosedMenuLocks(planned, thesis, "situation_analysis")
  */
 export function applyFoundationClosedMenuLocks(
   planned: readonly PlannedAssignSlot[],
   thesis: ChartThesis | null | undefined,
 ): { planned: PlannedAssignSlot[]; fail_reason?: string } {
-  return applyClosedMenuLocks(planned, thesis, "foundation");
+  return applyClosedMenuLocks(planned, thesis, "situation_analysis");
 }
 
 /** True when every planned unit is closed to this chart (quota lock or range). */
@@ -2613,7 +2613,7 @@ export async function runDeepEvidenceAssignCall(input: {
     }
   }
   const foundationSelect =
-    input.key === "foundation" && planned.every((p) => p.fact_pack_mode);
+    input.key === "situation_analysis" && planned.every((p) => p.fact_pack_mode);
   let relationInventory: FoundationRelation[] = [];
   if (foundationSelect) {
     const structured = input.opts.thesis_structured;
@@ -2775,7 +2775,7 @@ export async function runDeepEvidenceAssignCall(input: {
               picks: [] as Array<{ path: string; id: string; claim: string; cite: string }>,
             };
         const draft: DeepEvidenceAssignment = {
-          page: "foundation",
+          page: "situation_analysis",
           units: bound.picks.map((pick, i) => ({
             path: pick.path,
             chart_anchors: [],
@@ -2886,7 +2886,7 @@ export async function runDeepEvidenceAssignCall(input: {
               .map((u) => u.path),
           });
         }
-        if (input.key === "metaphysics_action") {
+        if (input.key === "self_regulation") {
           const hang = assignmentFact.units.find((u) =>
             isHangingUnitClaim(u.unit_claim ?? ""),
           );
@@ -2937,7 +2937,7 @@ export async function runDeepEvidenceAssignCall(input: {
         }
         return { ok: true, assignment: assignmentFact, tokens_used };
       }
-      if (input.key === "metaphysics_action") {
+      if (input.key === "self_regulation") {
         const hang = locked.units.find((u) => isHangingUnitClaim(u.unit_claim ?? ""));
         if (hang) {
           lastReason = `unit_claim_truncated:${hang.path}`;

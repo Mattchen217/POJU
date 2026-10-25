@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { getServerUser, createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
+import {
+  findHouseholdForUser,
+  householdIsFull,
+  householdPeerUserId,
+} from "@/lib/passes/household";
 
 export const runtime = "nodejs";
 
@@ -97,6 +102,9 @@ export async function GET() {
         ? passes.pass_balance
         : flex + sub + carryover;
 
+    const household = await findHouseholdForUser(user.id);
+    const peer = household ? householdPeerUserId(household, user.id) : null;
+
     return NextResponse.json({
       ok: true,
       email: user.email ?? null,
@@ -126,6 +134,17 @@ export async function GET() {
         carryover_source_plan: carryoverSource,
         available_subscription_passes: sub + carryover,
       },
+      household: household
+        ? {
+            id: household.id,
+            status: household.status,
+            shared_sub_balance: household.shared_sub_balance,
+            quota: household.quota,
+            peer_bound: Boolean(peer),
+            can_joint: householdIsFull(household) && household.shared_sub_balance >= 2,
+            role: household.seat_a_user_id === user.id ? "seat_a" : "seat_b",
+          }
+        : null,
       purchases: purchasesRes.data ?? [],
       usage: usageRes.data ?? [],
       atmos_entitlements: atmosRes.data ?? [],

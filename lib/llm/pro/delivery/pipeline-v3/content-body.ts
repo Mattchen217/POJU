@@ -108,7 +108,7 @@ export function coercePageSchemaLoose(
   const page_title = String(root.page_title ?? "").trim();
   const page_subtitle = String(root.page_subtitle ?? "").trim();
 
-  if (key === "direct_answer") {
+  if (key === "decision_brief") {
     const primary = coerceTrack(root.primary, "primary");
     const backup = coerceTrack(root.backup, "backup");
     const core_judgment = String(
@@ -117,7 +117,7 @@ export function coercePageSchemaLoose(
     // Wrong shape (dimensions prose) → fail coerce so Lab sees transport-level miss.
     if (!primary || !backup || !core_judgment) return null;
     return {
-      page: "direct_answer",
+      page: "decision_brief",
       page_title,
       page_subtitle,
       core_judgment,
@@ -127,7 +127,7 @@ export function coercePageSchemaLoose(
     } as unknown as DeliveryPageData;
   }
 
-  if (key === "foundation") {
+  if (key === "situation_analysis") {
     const cardsRaw = Array.isArray(root.why_cards)
       ? root.why_cards
       : Array.isArray(root.dimensions)
@@ -153,7 +153,7 @@ export function coercePageSchemaLoose(
       .filter(Boolean);
     if (why_cards.length < 1) return null;
     return {
-      page: "foundation",
+      page: "situation_analysis",
       page_title,
       page_subtitle,
       why_cards,
@@ -161,7 +161,7 @@ export function coercePageSchemaLoose(
     } as unknown as DeliveryPageData;
   }
 
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     const identity_before = String(
       root.identity_before ?? root.before ?? "",
     ).trim();
@@ -248,7 +248,7 @@ export function coercePageSchemaLoose(
       return null;
     }
     return {
-      page: "signals_close",
+      page: "validation_close",
       page_title,
       page_subtitle,
       identity_before,
@@ -342,7 +342,7 @@ export async function runContentBodyGenerate(input: {
       ? input.dyad_relation_structure.trim()
       : "",
     // P4 正文：奇门已在 Fact-pack + moat；禁再灌 eastern_calc（fill 派工全文含 Q·E/多维「用兼职节奏」等 priming）
-    feed.qimen && input.key !== "metaphysics_action"
+    feed.qimen && input.key !== "self_regulation"
       ? input.eastern_calc_slice
       : "",
     feed.reality ? input.reality_constraints : "",
@@ -365,14 +365,14 @@ export async function runContentBodyGenerate(input: {
     .join("\n\n");
 
   // 共享包剥未授权块。P4 正文禁跑 judgment 处方 scrub：会把允许轴「宜守」改成「承压偏高」，并污染取向锚。
-  if (input.key !== "metaphysics_action") {
+  if (input.key !== "self_regulation") {
     feedParts = scrubJudgmentFeedPrescriptions(feedParts);
   }
   if (!feed.qimen) {
     feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
   }
   // P4 正文：组装后再剥试水/权责 priming（duty 不枚举这些词教模型写否定句）
-  if (input.key === "metaphysics_action") {
+  if (input.key === "self_regulation") {
     feedParts = scrubP4BodyFeedPriming(feedParts);
   }
   const userFeed = [

@@ -61,6 +61,7 @@ function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
     dyad_compat_summary: input.dyad_compat_summary,
     pivot_chart_path: input.pivot_chart_path,
     dyad_matrix_pack: input.dyad_matrix_pack,
+    joint_decision: input.joint_decision === true,
   });
 }
 
@@ -105,12 +106,12 @@ export async function loadSegmentDispatchContext(
   const week_summary = await loadUpstreamWeekSummary(job_id);
   let primary_backup_hint = await loadPrimaryBackupHint(
     job_id,
-    key === "science_action" || key === "metaphysics_action" ? key : "default",
+    key === "execution_guidance" || key === "self_regulation" ? key : "default",
   );
   // P3/P4: hard-require final P1 page_schema. Never silent-fallback to breakthrough_core
   // (that caused P3/P4 to drift from the P1 the user actually sees).
   if (
-    (key === "science_action" || key === "metaphysics_action") &&
+    (key === "execution_guidance" || key === "self_regulation") &&
     !primary_backup_hint.trim()
   ) {
     return null;
@@ -123,12 +124,12 @@ export async function loadSegmentDispatchContext(
   }
   // P4 fill only: prefer P1+P3 ActionBrief. Missing brief is OK for assign/write
   // (DAG already waits science_action ready); fill prompt warns if steps empty.
-  if (key === "metaphysics_action") {
+  if (key === "self_regulation") {
     const p3Brief = await loadP3ActionBriefForP4(job_id);
     if (p3Brief) action_brief = p3Brief;
   }
   const p3_body_excerpt =
-    key === "metaphysics_action" ? await loadP3BodyExcerptForP4Moat(job_id) : "";
+    key === "self_regulation" ? await loadP3BodyExcerptForP4Moat(job_id) : "";
 
   let foundation_surface_feed = "";
   if (key === "foundation") {
@@ -149,7 +150,7 @@ export async function loadSegmentDispatchContext(
 
   let science_means_feed = "";
   let science_means_judgment_feed = "";
-  if (key === "science_action") {
+  if (key === "execution_guidance") {
     const { buildScienceMeansFeedBlock } = await import(
       "@/lib/llm/pro/delivery/science-means-feed"
     );
@@ -172,8 +173,8 @@ export async function loadSegmentDispatchContext(
   let metaphysics_moat_feed = "";
   let metaphysics_moat_judgment_feed = "";
   const preallocForP4 =
-    key === "metaphysics_action" ? await loadChartPrimaryPrealloc(job_id) : null;
-  if (key === "metaphysics_action") {
+    key === "self_regulation" ? await loadChartPrimaryPrealloc(job_id) : null;
+  if (key === "self_regulation") {
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
     );
@@ -199,7 +200,7 @@ export async function loadSegmentDispatchContext(
   }
 
   let risk_fuse_feed = "";
-  if (key === "risk_guard") {
+  if (key === "validation_risk") {
     const { buildRiskFuseFeedBlock } = await import(
       "@/lib/llm/pro/delivery/risk-fuse-feed"
     );
@@ -216,7 +217,7 @@ export async function loadSegmentDispatchContext(
   }
 
   let close_ritual_feed = "";
-  if (key === "signals_close") {
+  if (key === "validation_close") {
     const { buildCloseRitualFeedBlock } = await import(
       "@/lib/llm/pro/delivery/close-ritual-feed"
     );
@@ -239,7 +240,7 @@ export async function loadSegmentDispatchContext(
     const { formatPagePlanSliceForPrompt } = await import(
       "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt"
     );
-    if (key !== "metaphysics_action" && key !== "risk_guard") {
+    if (key !== "self_regulation" && key !== "validation_risk") {
       page_plan_slice = formatPagePlanSliceForPrompt(
         key,
         page_plan,
@@ -248,7 +249,7 @@ export async function loadSegmentDispatchContext(
       );
     }
   }
-  if (key === "metaphysics_action" && input.breakthrough_core) {
+  if (key === "self_regulation" && input.breakthrough_core) {
     const { buildEasternCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
@@ -268,7 +269,7 @@ export async function loadSegmentDispatchContext(
       eastern_calc_slice = `${eastern_calc_slice}\n\n${qimenText}`;
     }
   }
-  if (key === "risk_guard" && input.breakthrough_core) {
+  if (key === "validation_risk" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
@@ -344,7 +345,7 @@ export async function loadSegmentDispatchContext(
 
   const seg = fin.value[key];
   let action_brief_block: string | undefined;
-  if (key === "risk_guard" && action_brief) {
+  if (key === "validation_risk" && action_brief) {
     const { formatP5ActionBriefForPrompt } = await import(
       "@/lib/llm/pro/delivery/page-schema/action-extractor"
     );

@@ -29,54 +29,54 @@ assert(
     "direct_answer|foundation|science_action|metaphysics_action|risk_guard|signals_close",
   "6-key order (thirty_day retired)",
 );
-assert(DELIVERY_BOOTSTRAP_SEGMENT === "direct_answer", "bootstrap = direct_answer");
-assert(DELIVERY_CLOSING_SEGMENT === "signals_close", "closing = signals_close");
-assert(DELIVERY_TRANSITION_KEYS.has("direct_answer"), "P1 skips evidence/mark");
+assert(DELIVERY_BOOTSTRAP_SEGMENT === "decision_brief", "bootstrap = direct_answer");
+assert(DELIVERY_CLOSING_SEGMENT === "validation_close", "closing = signals_close");
+assert(DELIVERY_TRANSITION_KEYS.has("decision_brief"), "P1 skips evidence/mark");
 assert(DELIVERY_TRANSITION_KEYS.size === 1, "only P1 is transition");
 
-assert(resolveDeliverySegmentKey("preface") === "direct_answer", "legacy preface → direct_answer");
-assert(resolveDeliverySegmentKey("energy_base") === "foundation", "legacy energy_base → foundation");
-assert(resolveDeliverySegmentKey("talent_map") === "foundation", "legacy talent_map → foundation");
-assert(resolveDeliverySegmentKey("spirit_gifts") === "foundation", "legacy spirit_gifts → foundation");
-assert(resolveDeliverySegmentKey("macro_cycle") === "foundation", "legacy macro_cycle → foundation");
-assert(resolveDeliverySegmentKey("action") === "science_action", "legacy action");
-assert(resolveDeliverySegmentKey("epilogue") === "signals_close", "legacy epilogue");
-assert(LEGACY_SEGMENT_TO_CURRENT.A === "foundation", "letter A → foundation");
-assert(LEGACY_SEGMENT_TO_CURRENT.D === "metaphysics_action", "letter D");
+assert(resolveDeliverySegmentKey("preface") === "decision_brief", "legacy preface → direct_answer");
+assert(resolveDeliverySegmentKey("energy_base") === "situation_analysis", "legacy energy_base → foundation");
+assert(resolveDeliverySegmentKey("talent_map") === "situation_analysis", "legacy talent_map → foundation");
+assert(resolveDeliverySegmentKey("spirit_gifts") === "situation_analysis", "legacy spirit_gifts → foundation");
+assert(resolveDeliverySegmentKey("macro_cycle") === "situation_analysis", "legacy macro_cycle → foundation");
+assert(resolveDeliverySegmentKey("action") === "execution_guidance", "legacy action");
+assert(resolveDeliverySegmentKey("epilogue") === "validation_close", "legacy epilogue");
+assert(LEGACY_SEGMENT_TO_CURRENT.A === "situation_analysis", "letter A → foundation");
+assert(LEGACY_SEGMENT_TO_CURRENT.D === "self_regulation", "letter D");
 
-assert(guessDeliverySegmentKey("核心直答") === "direct_answer", "guess P1 tag");
-assert(guessDeliverySegmentKey("对你问题的回答") === "direct_answer", "guess P1 legacy");
-assert(guessDeliverySegmentKey("归因剖析") === "foundation", "guess P2 tag");
-assert(guessDeliverySegmentKey("归因诊断") === "foundation", "guess P2 legacy tag");
-assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "foundation", "guess P2 legacy");
-assert(guessDeliverySegmentKey("破局策略") === "science_action", "guess science tag");
-assert(guessDeliverySegmentKey("显性操盘") === "science_action", "guess science legacy tag");
-assert(guessDeliverySegmentKey("东方谋略") === "metaphysics_action", "guess eastern stratagem tag");
-assert(guessDeliverySegmentKey("自我调频") === "metaphysics_action", "guess eastern legacy tag");
-assert(guessDeliverySegmentKey("隐性借势") === "metaphysics_action", "guess eastern legacy alias");
-assert(guessDeliverySegmentKey("风险预警") === "risk_guard", "guess P5 tag");
-assert(guessDeliverySegmentKey("行动建议") === "signals_close", "guess P6 tag");
-assert(guessDeliverySegmentKey("行动指引") === "signals_close", "guess P6 legacy tag");
+assert(guessDeliverySegmentKey("核心直答") === "decision_brief", "guess P1 tag");
+assert(guessDeliverySegmentKey("对你问题的回答") === "decision_brief", "guess P1 legacy");
+assert(guessDeliverySegmentKey("归因剖析") === "situation_analysis", "guess P2 tag");
+assert(guessDeliverySegmentKey("归因诊断") === "situation_analysis", "guess P2 legacy tag");
+assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "situation_analysis", "guess P2 legacy");
+assert(guessDeliverySegmentKey("破局策略") === "execution_guidance", "guess science tag");
+assert(guessDeliverySegmentKey("显性操盘") === "execution_guidance", "guess science legacy tag");
+assert(guessDeliverySegmentKey("东方谋略") === "self_regulation", "guess eastern stratagem tag");
+assert(guessDeliverySegmentKey("自我调频") === "self_regulation", "guess eastern legacy tag");
+assert(guessDeliverySegmentKey("隐性借势") === "self_regulation", "guess eastern legacy alias");
+assert(guessDeliverySegmentKey("风险预警") === "validation_risk", "guess P5 tag");
+assert(guessDeliverySegmentKey("行动建议") === "validation_close", "guess P6 tag");
+assert(guessDeliverySegmentKey("行动指引") === "validation_close", "guess P6 legacy tag");
 assert(
-  guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "metaphysics_action",
+  guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "self_regulation",
   "guess metaphysics",
 );
 assert(
-  guessDeliverySegmentKey("科学药方：策略与手段") === "science_action",
+  guessDeliverySegmentKey("科学药方：策略与手段") === "execution_guidance",
   "guess science Rx",
 );
 assert(
-  guessDeliverySegmentKey("东方药方：策略与手段") === "metaphysics_action",
+  guessDeliverySegmentKey("东方药方：策略与手段") === "self_regulation",
   "guess eastern Rx",
 );
-assert(guessDeliverySegmentKey("能量底座与核心洞察") === "foundation", "legacy P1 heading → foundation");
-assert(guessDeliverySegmentKey("能量底座与黄金直答") === "direct_answer", "legacy direct-answer heading");
-assert(guessDeliverySegmentKey("关于这份报告") === "direct_answer", "legacy preface heading");
+assert(guessDeliverySegmentKey("能量底座与核心洞察") === "situation_analysis", "legacy P1 heading → foundation");
+assert(guessDeliverySegmentKey("能量底座与黄金直答") === "decision_brief", "legacy direct-answer heading");
+assert(guessDeliverySegmentKey("关于这份报告") === "decision_brief", "legacy preface heading");
 
 assert(
-  DELIVERY_SHELF_SLOT_IDS.includes("direct_answer") &&
-    DELIVERY_SHELF_SLOT_IDS.includes("foundation") &&
-    DELIVERY_SHELF_SLOT_IDS.includes("signals_close") &&
+  DELIVERY_SHELF_SLOT_IDS.includes("decision_brief") &&
+    DELIVERY_SHELF_SLOT_IDS.includes("situation_analysis") &&
+    DELIVERY_SHELF_SLOT_IDS.includes("validation_close") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("thirty_day") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("energy_base") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("preface"),
@@ -152,21 +152,21 @@ const dashHints = buildDashboardScoreHintsForFill(core);
 assert(dashHints.includes("output_capacity="), "dashboard hints from pack");
 assert(dashHints.includes("score=null"), "dashboard hints ban invent");
 
-const sliceP1 = formatSpineSliceForSegment(core, "direct_answer");
+const sliceP1 = formatSpineSliceForSegment(core, "decision_brief");
 assert(sliceP1.includes("desired_outcome"), "P1 slice has desired_outcome slot");
-const sliceP1WithQ = formatSpineSliceForSegment(core, "direct_answer", {
+const sliceP1WithQ = formatSpineSliceForSegment(core, "decision_brief", {
   questionExpectation: "六个月内守住结果权且睡眠回升",
 });
 assert(sliceP1WithQ.includes("六个月内守住结果权"), "P1 injects questionExpectation");
 
-const sliceP2 = formatSpineSliceForSegment(core, "foundation");
+const sliceP2 = formatSpineSliceForSegment(core, "situation_analysis");
 assert(sliceP2.includes("dashboard"), "P2 slice has dashboard");
 assert(sliceP2.includes("逐月"), "P2 no monthly forecast rule");
 assert(sliceP2.includes("论证"), "P2 argument rule");
 assert(sliceP2.includes("multi_dimension_reckoning"), "P2 slice has multi_dimension_reckoning");
 assert(sliceP2.includes("十神格局"), "P2 slice dumps dimension labels");
 
-const sliceP3 = formatSpineSliceForSegment(core, "science_action");
+const sliceP3 = formatSpineSliceForSegment(core, "execution_guidance");
 assert(sliceP3.includes("multi_dimension_reckoning"), "P3 slice has multi_dimension_reckoning");
 assert(sliceP3.includes("action_plan"), "P3 slice has action_plan");
 assert(sliceP3.includes("用专业输出换边界"), "P3 action_plan primary present");
@@ -184,7 +184,7 @@ assert(sliceP5.includes("action_plan"), "P5 slice has action_plan");
 assert(sliceP5.includes("current_da_yun_cycle"), "P5 slice has current_da_yun_cycle");
 assert(sliceP5.includes("平均切"), "P5 bans average 4-week split");
 
-const sliceP4 = formatSpineSliceForSegment(core, "metaphysics_action");
+const sliceP4 = formatSpineSliceForSegment(core, "self_regulation");
 assert(
   sliceP4.includes("东方谋略") ||
     sliceP4.includes("局势") ||
@@ -197,7 +197,7 @@ assert(
 assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs") || sliceP4.includes("metaphysics_pack"), "P4 has pack");
 assert(sliceP4.includes("禁"), "P4 compliance cue");
 
-const sliceRisk = formatSpineSliceForSegment(core, "risk_guard");
+const sliceRisk = formatSpineSliceForSegment(core, "validation_risk");
 assert(sliceRisk.includes("特有"), "risk_guard structure-specific pitfall cue");
 assert(
   sliceRisk.includes("chart_anchors") || sliceRisk.includes("命理扎根"),
@@ -216,7 +216,7 @@ assert(
   "action_plan before candidate frames",
 );
 
-const sliceClose = formatSpineSliceForSegment(core, "signals_close");
+const sliceClose = formatSpineSliceForSegment(core, "validation_close");
 assert(sliceClose.includes("禁止") && sliceClose.includes("钩子"), "close no return hook");
 
 console.log("delivery schema Layer2 smoke OK");

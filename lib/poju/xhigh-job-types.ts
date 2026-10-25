@@ -60,6 +60,9 @@ export type FinalDeliveryJobInput = {
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
   pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
+  /** Duo joint: micro-copy + skip second charge via joint_pass_ref. */
+  joint_decision?: boolean | null;
+  joint_pass_ref?: string | null;
 };
 
 /** 汇总段(第4段)输入:多维真算 + 收集现实 → 收敛。 */
