@@ -7,6 +7,10 @@ import type { Provider } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 
+type BindInviteResolve =
+  | { ok: true; url: string }
+  | { ok: false; error: string };
+
 type Props = {
   nextPath?: string;
   disabled?: boolean;
@@ -16,9 +20,30 @@ type Props = {
    * Pass "" while the invite is still loading.
    */
   bindInviteAbsoluteUrl?: string | null;
+  /** Called on OAuth click in bind mode — always fetches a fresh invite when needed. */
+  resolveBindInvite?: () => Promise<BindInviteResolve>;
+  inviteError?: string | null;
 };
 
 type OAuthProviderId = "google" | "facebook" | "twitter" | "discord";
+
+function bindInviteErrorText(
+  tAccount: ReturnType<typeof useTranslations<"account">>,
+  code: string,
+): string {
+  switch (code) {
+    case "already_full":
+      return tAccount("bindSeatFull");
+    case "no_duo_household":
+    case "no_subscription":
+      return tAccount("bindSeatNoSub");
+    case "only_seat_a_can_invite":
+    case "only_seat_a_can_bind":
+      return tAccount("bindSeatNotOwner");
+    default:
+      return tAccount("bindSeatFailed");
+  }
+}
 
 const PROVIDERS: Array<{
   id: OAuthProviderId;
@@ -151,6 +176,8 @@ export function OAuthButtons({
   nextPath = "/",
   disabled = false,
   bindInviteAbsoluteUrl = null,
+  resolveBindInvite,
+  inviteError = null,
 }: Props) {
   const t = useTranslations("auth.oauth");
   const tErr = useTranslations("auth.errors");
@@ -158,22 +185,40 @@ export function OAuthButtons({
   const configured = isSupabaseConfigured();
   const [error, setError] = useState<string | null>(null);
   const [bindNote, setBindNote] = useState<string | null>(null);
+  const [bindUrlShown, setBindUrlShown] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<OAuthProviderId | null>(null);
   const isBindInvite = bindInviteAbsoluteUrl !== null && bindInviteAbsoluteUrl !== undefined;
 
-  async function copyBindInvite() {
+  async function handleBindInviteClick() {
     setError(null);
-    setBindNote(null);
-    const url = (bindInviteAbsoluteUrl ?? "").trim();
+    setBindNote(tAccount("bindSeatInvitePreparing"));
+    setBindUrlShown(null);
+
+    // Always refresh invite on click — prefetch may have failed silently.
+    let url = "";
+    if (resolveBindInvite) {
+      const result = await resolveBindInvite();
+      if (!result.ok) {
+        setBindNote(null);
+        setError(result.error);
+        return;
+      }
+      url = result.url.trim();
+    } else {
+      url = (bindInviteAbsoluteUrl ?? "").trim();
+    }
     if (!url.includes("token=")) {
-      setBindNote(tAccount("bindSeatInvitePreparing"));
+      setBindNote(null);
+      setError(inviteError ?? "invite_failed");
       return;
     }
+
+    setBindUrlShown(url);
     try {
       await navigator.clipboard.writeText(url);
       setBindNote(tAccount("bindSeatLinkCopied"));
     } catch {
-      setBindNote(url);
+      setBindNote(tAccount("bindSeatLinkCopyManual"));
     }
   }
 
@@ -184,8 +229,11 @@ export function OAuthButtons({
     // Bind seat: never switch this browser session to the partner account.
     if (isBindInvite) {
       setBusyId(provider.id);
-      await copyBindInvite();
-      setBusyId(null);
+      try {
+        await handleBindInviteClick();
+      } finally {
+        setBusyId(null);
+      }
       return;
     }
 
@@ -266,6 +314,28 @@ export function OAuthButtons({
       {bindNote ? (
         <p className="auth-hint" role="status">
           {bindNote}
+        </p>
+      ) : null}
+      {bindUrlShown ? (
+        <div className="auth-bind-invite-url">
+          <input
+            type="text"
+            className="auth-input"
+            readOnly
+            value={bindUrlShown}
+            aria-label={tAccount("bindSeatCopyLink")}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+        </div>
+      ) : null}
+      {inviteError && !bindUrlShown && isBindInvite ? (
+        <p className="auth-error" role="alert">
+          {bindInviteErrorText(tAccount, inviteError)}
+        </p>
+      ) : null}
+      {error && error !== "oauth_failed" && error !== "oauth_redirect_blocked" ? (
+        <p className="auth-error" role="alert">
+          {bindInviteErrorText(tAccount, error)}
         </p>
       ) : null}
       {error === "oauth_failed" ? (

@@ -21,6 +21,10 @@ export type LoginBindSeatOpts = {
    * Never causes OAuth into the current browser.
    */
   bindInviteAbsoluteUrl: string;
+  inviteError?: string | null;
+  resolveBindInvite: () => Promise<
+    { ok: true; url: string } | { ok: false; error: string }
+  >;
   onBound: () => void;
   onCancel: () => void;
   /** Switch to signup form (same overlay) — mirrors login page footer link. */
@@ -67,6 +71,8 @@ export function LoginForm({
       <OAuthButtons
         nextPath={next}
         bindInviteAbsoluteUrl={bindSeat ? bindSeat.bindInviteAbsoluteUrl : null}
+        resolveBindInvite={bindSeat?.resolveBindInvite}
+        inviteError={bindSeat?.inviteError}
       />
       <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm

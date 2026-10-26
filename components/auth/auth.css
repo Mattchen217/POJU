@@ -19,6 +19,15 @@
   color: rgba(230, 230, 230, 0.72);
 }
 
+.auth-bind-invite-url {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.auth-bind-invite-url .auth-input {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
 .bind-seat-auth-shell {
   position: fixed;
   inset: 0;

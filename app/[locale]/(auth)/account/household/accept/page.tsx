@@ -10,8 +10,8 @@ import { Link } from "@/i18n/navigation";
 import "@/components/auth/auth.css";
 
 /**
- * Partner accepts a seat invite after OAuth/login redirect.
- * Styled like site auth pages (auth-shell) — not the workspace chrome.
+ * Partner accepts a seat invite after OAuth/login.
+ * If not signed in → redirect to login (with next back here) so Google etc. work.
  */
 function HouseholdAcceptInner() {
   const t = useTranslations("account");
@@ -24,7 +24,6 @@ function HouseholdAcceptInner() {
 
   useEffect(() => {
     if (!token) {
-      // Never leave users on a broken empty page — back to account.
       router.replace(`/${locale}/account`);
       return;
     }
@@ -43,6 +42,11 @@ function HouseholdAcceptInner() {
           error?: string;
         };
         if (cancelled) return;
+        if (res.status === 401 || data.error === "unauthorized") {
+          const next = `/${locale}/account/household/accept?token=${encodeURIComponent(token)}`;
+          router.replace(`/${locale}/login?next=${encodeURIComponent(next)}`);
+          return;
+        }
         if (!res.ok || !data.ok) {
           setStatus("err");
           setError(data.error ?? "accept_failed");

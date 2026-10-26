@@ -457,6 +457,7 @@ export async function createSeatInvite(params: {
   if (row.seat_a_user_id !== params.actorUserId) {
     return { ok: false, reason: "only_seat_a_can_invite" };
   }
+  // Seat B already filled — cannot mint invite unless caller cleared via replace.
   if (row.seat_b_user_id) return { ok: false, reason: "already_full" };
 
   const token = safeRandomUUID().replace(/-/g, "");
@@ -469,7 +470,8 @@ export async function createSeatInvite(params: {
       seat_invite_expires_at: expires,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", params.householdId);
+    .eq("id", params.householdId)
+    .is("seat_b_user_id", null);
   if (error) {
     console.error("[household] seat invite", error.code ?? error.message);
     return { ok: false, reason: "invite_failed" };

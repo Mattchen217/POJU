@@ -18,6 +18,10 @@ export type SignupBindSeatOpts = {
   replace?: boolean;
   /** Absolute invite URL for OAuth bind (copy-only). */
   bindInviteAbsoluteUrl: string;
+  inviteError?: string | null;
+  resolveBindInvite: () => Promise<
+    { ok: true; url: string } | { ok: false; error: string }
+  >;
   onBound: () => void;
   onCancel: () => void;
   onGoLogin: () => void;
@@ -59,6 +63,8 @@ export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
       <OAuthButtons
         nextPath={next}
         bindInviteAbsoluteUrl={bindSeat ? bindSeat.bindInviteAbsoluteUrl : null}
+        resolveBindInvite={bindSeat?.resolveBindInvite}
+        inviteError={bindSeat?.inviteError}
       />
       <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm
