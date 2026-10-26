@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { BirthInfoConfirmDialog } from "@/components/poju/BirthInfoConfirmDialog";
+import {
+  BirthInfoConfirmDialog,
+  type BirthConfirmMode,
+} from "@/components/poju/BirthInfoConfirmDialog";
 import { WorkspaceBirthInfoPicker } from "@/components/workspace/WorkspaceBirthInfoPicker";
 import { WorkspacePojuProfileRecords, getWorkspaceProfileCardTitle } from "@/components/workspace/WorkspacePojuProfileRecords";
 import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
 import {
   createStoredProfile,
   deleteStoredProfile,
+  getStoredProfile,
   listStoredProfiles,
   recordProfileUsage,
   renameStoredProfile,
@@ -61,13 +65,46 @@ export function WorkspacePojuBirthHost({
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [mode, setMode] = useState<"list" | "new">("new");
 
+  const tConfirm = useTranslations("birth_confirm");
   const [pendingBirthInfo, setPendingBirthInfo] = useState<BirthInfo | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [latestByProfileId, setLatestByProfileId] = useState<Map<string, BirthRecordLatestSession>>(() => new Map());
+  const [duoSubscribed, setDuoSubscribed] = useState(false);
+  const [canJoint, setCanJoint] = useState(false);
+  const [peerBound, setPeerBound] = useState(false);
+  const [jointQuestionOpen, setJointQuestionOpen] = useState(false);
+  const [jointBirth, setJointBirth] = useState<BirthInfo | null>(null);
+  const [jointQuestion, setJointQuestion] = useState("");
+  const [jointBusy, setJointBusy] = useState(false);
 
   const visibleProfiles = profiles.filter((p) => p.profile_id !== excludeProfileId);
+  const showJointOption = !isMatchFrame && usageProduct === "poju";
+
+  useEffect(() => {
+    if (!showJointOption) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/household/me", { credentials: "same-origin" });
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          can_joint?: boolean;
+          household?: { peer_bound?: boolean } | null;
+        };
+        if (cancelled || !data.ok) return;
+        setDuoSubscribed(Boolean(data.household));
+        setCanJoint(Boolean(data.can_joint));
+        setPeerBound(Boolean(data.household?.peer_bound));
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showJointOption, showConfirm]);
 
 
   useEffect(() => {
@@ -161,7 +198,14 @@ export function WorkspacePojuBirthHost({
     setPendingBirthInfo(null);
   }
 
-  async function handleConfirmAndContinue() {
+  async function resolveConfirmBirth(): Promise<BirthInfo | null> {
+    if (pendingBirthInfo) return pendingBirthInfo;
+    if (!selectedProfileId) return null;
+    const stored = await getStoredProfile(selectedProfileId);
+    return (stored?.birth_info as BirthInfo | undefined) ?? null;
+  }
+
+  async function handleConfirmSolo() {
     if (selectedProfileId) {
       try {
         await recordProfileUsage(selectedProfileId, usageProduct);
@@ -196,6 +240,81 @@ export function WorkspacePojuBirthHost({
       console.error("[workspace-poju] Create profile failed:", err);
       alert(t("error_create_profile"));
       setCreating(false);
+    }
+  }
+
+  async function handleConfirmMode(mode: BirthConfirmMode) {
+    if (mode === "solo") {
+      await handleConfirmSolo();
+      return;
+    }
+    if (!duoSubscribed) return;
+    if (!peerBound) {
+      alert(tConfirm("joint_need_bind"));
+      return;
+    }
+    if (!canJoint) {
+      alert(tConfirm("joint_need_balance"));
+      return;
+    }
+    setCreating(true);
+    try {
+      const birth = await resolveConfirmBirth();
+      if (!birth) {
+        alert(t("error_create_profile"));
+        return;
+      }
+      if (pendingBirthInfo) {
+        const result = await createStoredProfile({ birth_info: pendingBirthInfo });
+        markPendingBaseAnalysisProfile(result.profile_id);
+        await recordProfileUsage(result.profile_id, usageProduct);
+        await refreshProfiles();
+      } else if (selectedProfileId) {
+        await recordProfileUsage(selectedProfileId, usageProduct);
+      }
+      setJointBirth(birth);
+      setJointQuestion("");
+      setShowConfirm(false);
+      setSelectedProfileId(null);
+      setPendingBirthInfo(null);
+      setJointQuestionOpen(true);
+    } catch (err) {
+      console.error("[workspace-poju] Joint prepare failed:", err);
+      alert(t("error_create_profile"));
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function submitJointInvite() {
+    if (!jointBirth || jointQuestion.trim().length < 4) return;
+    setJointBusy(true);
+    try {
+      const res = await fetch("/api/joint/create", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shared_question: jointQuestion.trim(),
+          birth: jointBirth,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !data.ok) {
+        alert(data.error ?? tConfirm("joint_need_balance"));
+        return;
+      }
+      alert(tConfirm("joint_invite_sent"));
+      setJointQuestionOpen(false);
+      setJointBirth(null);
+      setJointQuestion("");
+    } catch {
+      alert("network_error");
+    } finally {
+      setJointBusy(false);
     }
   }
 
@@ -257,10 +376,62 @@ export function WorkspacePojuBirthHost({
               ? (profiles.find((p) => p.profile_id === selectedProfileId) ?? null)
               : null
           }
-          onConfirm={() => void handleConfirmAndContinue()}
+          onConfirmMode={(mode) => void handleConfirmMode(mode)}
           onCancel={handleConfirmCancel}
           processing={creating}
+          showJointOption={showJointOption}
+          jointEnabled={duoSubscribed}
         />
+      ) : null}
+
+      {jointQuestionOpen && jointBirth ? (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !jointBusy) {
+              setJointQuestionOpen(false);
+              setJointBirth(null);
+            }
+          }}
+        >
+          <div className="confirm-dialog">
+            <div className="confirm-dialog__header">
+              <h2>{tConfirm("joint_question_title")}</h2>
+              <button
+                type="button"
+                className="confirm-dialog__back-link"
+                disabled={jointBusy}
+                onClick={() => {
+                  setJointQuestionOpen(false);
+                  setJointBirth(null);
+                }}
+              >
+                {tConfirm("go_back")}
+              </button>
+            </div>
+            <p className="description">{tConfirm("joint_question_hint")}</p>
+            <textarea
+              className="confirm-joint-question"
+              rows={4}
+              value={jointQuestion}
+              disabled={jointBusy}
+              placeholder={tConfirm("joint_question_placeholder")}
+              onChange={(e) => setJointQuestion(e.target.value)}
+            />
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="primary"
+                disabled={jointBusy || jointQuestion.trim().length < 4}
+                onClick={() => void submitJointInvite()}
+              >
+                {jointBusy ? tConfirm("processing") : tConfirm("joint_send_invite")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

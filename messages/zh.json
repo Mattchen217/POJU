@@ -1898,6 +1898,16 @@
     "reassure_2": "确认后，准备过程约 2–5 分钟。",
     "go_back": "返回修改",
     "confirm_and_proceed": "确认并开始",
+    "start_solo": "开始单人决策",
+    "start_joint": "开启共同决策（双人）",
+    "joint_tooltip": "双人共同决策：你们约定同一个问题，各自用授权的出生信息独立完成分析与报告，互不可见聊天与报告。需先订阅双人方案，并绑定恰好 2 个账号后，方可在这两席之间发起（共扣 2 PASS，双方各 1）。",
+    "joint_question_title": "共同问题",
+    "joint_question_hint": "对方接受邀请后，双方各自进入独立咨询。对方看不到你的聊天与报告。",
+    "joint_question_placeholder": "写下你们共同面对的问题或困境…",
+    "joint_send_invite": "向绑定账号发出邀请",
+    "joint_need_bind": "你已订阅双人方案，但仍需绑定第二账号后才能发起共同决策。请到账户页生成邀请链接。",
+    "joint_need_balance": "家庭共享额度不足（共同决策需 2 PASS）。",
+    "joint_invite_sent": "已向绑定账号发出共同决策邀请。对方接受并授权出生信息后，双方各自进入独立咨询。",
     "processing": "准备中…"
   },
   "bazi": {

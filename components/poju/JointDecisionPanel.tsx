@@ -38,9 +38,18 @@ type Props = {
   className?: string;
   /** When set, open accept flow for this joint id. */
   initialAcceptJointId?: string | null;
+  /**
+   * Account page: bind/invites only — primary create is on birth confirm.
+   * Default true for backward compat elsewhere.
+   */
+  showCreate?: boolean;
 };
 
-export function JointDecisionPanel({ className, initialAcceptJointId }: Props) {
+export function JointDecisionPanel({
+  className,
+  initialAcceptJointId,
+  showCreate = true,
+}: Props) {
   const locale = useLocale();
   const router = useRouter();
   const zh = locale.toLowerCase().startsWith("zh");
@@ -233,54 +242,62 @@ export function JointDecisionPanel({ className, initialAcceptJointId }: Props) {
 
         {error ? <p className="joint-decision-panel__error">{error}</p> : null}
 
-        {canJoint ? (
-          mode === "create" ? (
-            <div className="joint-decision-panel__form">
-              <label>
-                {zh ? "共同问题 / 困境" : "Shared question"}
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  rows={3}
-                  disabled={busy}
-                />
-              </label>
-              <div className="joint-decision-panel__actions">
-                <button
-                  type="button"
-                  disabled={busy || question.trim().length < 4}
-                  onClick={() => setMode("birth_create")}
-                >
-                  {zh ? "下一步：授权出生信息并发起" : "Next: authorize birth & invite"}
-                </button>
-                <button type="button" disabled={busy} onClick={() => setMode("idle")}>
-                  {zh ? "取消" : "Cancel"}
-                </button>
+        {showCreate ? (
+          canJoint ? (
+            mode === "create" ? (
+              <div className="joint-decision-panel__form">
+                <label>
+                  {zh ? "共同问题 / 困境" : "Shared question"}
+                  <textarea
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    rows={3}
+                    disabled={busy}
+                  />
+                </label>
+                <div className="joint-decision-panel__actions">
+                  <button
+                    type="button"
+                    disabled={busy || question.trim().length < 4}
+                    onClick={() => setMode("birth_create")}
+                  >
+                    {zh ? "下一步：授权出生信息并发起" : "Next: authorize birth & invite"}
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => setMode("idle")}>
+                    {zh ? "取消" : "Cancel"}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <button
+                type="button"
+                className="joint-decision-panel__cta"
+                disabled={busy}
+                onClick={() => setMode("create")}
+              >
+                {zh ? "发起共同决策" : "Start joint decision"}
+              </button>
+            )
           ) : (
             <button
               type="button"
               className="joint-decision-panel__cta"
-              disabled={busy}
-              onClick={() => setMode("create")}
+              disabled
+              title={
+                zh
+                  ? "需双人订阅且已绑定第二账号"
+                  : "Requires Duo subscription with both seats bound"
+              }
             >
-              {zh ? "发起共同决策" : "Start joint decision"}
+              {zh ? "发起共同决策（需满席）" : "Start joint decision (seats required)"}
             </button>
           )
         ) : (
-          <button
-            type="button"
-            className="joint-decision-panel__cta"
-            disabled
-            title={
-              zh
-                ? "需双人订阅且已绑定第二账号"
-                : "Requires Duo subscription with both seats bound"
-            }
-          >
-            {zh ? "发起共同决策（需满席）" : "Start joint decision (seats required)"}
-          </button>
+          <p className="joint-decision-panel__hint">
+            {zh
+              ? "发起共同决策：在新建会话确认出生信息后选择「开启共同决策（双人）」。"
+              : "To start a joint decision: confirm birth on a new session, then choose “Start joint decision (Duo)”."}
+          </p>
         )}
 
         {pendingJoints.length > 0 ? (

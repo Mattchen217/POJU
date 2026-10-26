@@ -1307,6 +1307,16 @@
     "reassure_2": "Nach Bestätigung dauert die Vorbereitung ca. 2–5 Minuten.",
     "go_back": "Zurück & bearbeiten",
     "confirm_and_proceed": "Bestätigen & starten",
+    "start_solo": "Einzelentscheidung starten",
+    "start_joint": "Gemeinsame Entscheidung (Duo)",
+    "joint_tooltip": "Gemeinsame Entscheidung: eine geteilte Frage; jede Person analysiert mit autorisierten Geburtsdaten und erhält den eigenen Bericht. Chats privat. Duo-Abo und genau 2 verbundene Konten erforderlich (2 PASS — je 1).",
+    "joint_question_title": "Gemeinsame Frage",
+    "joint_question_hint": "Nach Annahme erhält jede Person eine eigene Sitzung.",
+    "joint_question_placeholder": "Beschreibe die gemeinsame Entscheidung oder das Dilemma…",
+    "joint_send_invite": "Verbundenen Partner einladen",
+    "joint_need_bind": "Duo aktiv — noch zweites Konto unter Konto verknüpfen.",
+    "joint_need_balance": "Familien-Pool zu niedrig (2 PASS nötig).",
+    "joint_invite_sent": "Einladung gesendet. Nach Annahme öffnet jede Person die eigene Sitzung.",
     "processing": "Wird vorbereitet…"
   },
   "bazi": {

@@ -1898,6 +1898,16 @@
     "reassure_2": "Once confirmed, this takes about 2–5 minutes to prepare.",
     "go_back": "Go back & edit",
     "confirm_and_proceed": "Confirm & Begin",
+    "start_solo": "Start solo decision",
+    "start_joint": "Start joint decision (Duo)",
+    "joint_tooltip": "Joint decision: you share one question; each person runs their own analysis with authorized birth details and gets their own report. Chats and reports stay private. Requires a Duo subscription and exactly two bound accounts before you can start between those seats (uses 2 PASS — 1 each).",
+    "joint_question_title": "Shared question",
+    "joint_question_hint": "After your partner accepts, you each get an independent session. They cannot see your chat or report.",
+    "joint_question_placeholder": "Write the decision or dilemma you share…",
+    "joint_send_invite": "Invite bound partner",
+    "joint_need_bind": "You have Duo, but still need to bind a second account. Open Account to create an invite link.",
+    "joint_need_balance": "Household pool too low (joint needs 2 PASS).",
+    "joint_invite_sent": "Invite sent. After your partner accepts and authorizes birth details, you each open an independent session.",
     "processing": "Preparing…"
   },
   "bazi": {

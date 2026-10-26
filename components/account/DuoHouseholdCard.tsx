@@ -95,8 +95,8 @@ export function DuoHouseholdCard() {
           >
             {zh ? "查看双人订阅" : "View Duo subscription"}
           </button>
-          <div className="mt-4 opacity-50 pointer-events-none" aria-disabled>
-            <JointDecisionPanel />
+          <div className="mt-4">
+            <JointDecisionPanel showCreate={false} />
           </div>
           <PassPurchaseModal
             open={buyOpen}
@@ -140,7 +140,7 @@ export function DuoHouseholdCard() {
           {msg ? <p className="mt-2 text-xs text-[#94a3b8]">{msg}</p> : null}
 
           <div className="mt-4">
-            <JointDecisionPanel />
+            <JointDecisionPanel showCreate={false} />
           </div>
         </>
       )}

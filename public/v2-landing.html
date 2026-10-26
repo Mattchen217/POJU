@@ -802,6 +802,13 @@
             gap: 2rem;
             min-height: 0;
         }
+        #eos-scenarios-grid .eos-scenario-badge {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: #D4AF37;
+            white-space: nowrap;
+        }
         @media (min-width: 1024px) {
             #eos-scenarios-grid {
                 align-items: stretch;
@@ -2456,13 +2463,14 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <div id="eos-scenario-forks-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full lg:col-span-1" data-eos-scenario="forks">
 <div class="eos-scenario-forks-copy">
 <div class="flex justify-between items-center mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="M9.5 12h5"/><path d="M12 9.5v5"/></svg>
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6.55" cy="6.75" r="2.55" fill="currentColor"/><path d="M2.55 18.85c.3-3.85 1.85-5.75 4-5.75 1.45 0 2.7.9 3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/><circle cx="17.45" cy="6.75" r="2.55" fill="currentColor"/><path d="M21.45 18.85c-.3-3.85-1.85-5.75-4-5.75-1.45 0-2.7.9-3.55 2.55" stroke="currentColor" stroke-width="2.35" stroke-linecap="round"/></svg>
 </div>
+<span class="eos-scenario-badge" data-eos-scenario-badge>双人决策</span>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Life-changing decisions</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>The cost of waiting keeps adding up.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 min-h-0 overflow-hidden text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Big life decisions don’t get clearer when you sleep on them—they get heavier. Whether to stay or leave, start over or hold your ground—the uncertainty eats your time and attention every day you don’t choose. Name the decision. Lock what “good” looks like on the other side. Leave with a clear primary path and a backup you can live with. The final call stays yours.</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>共同决策</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>同一个难题，两个人发愁，各自找解法。</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 min-h-0 overflow-hidden text-sm md:text-base leading-relaxed" data-eos-scenario-desc>面对共同关心的重大决定，最好的沟通是先厘清各自的真实诉求。支持两人针对同一问题同时发起独立决策流程，各自在无干扰的环境下梳理顾虑与期望。最终各自获取一份专属的理性建议，帮助双方在对等尊重中找到最优共识。</p>
 </div>
 <div class="eos-scenario-forks-deco" id="eos-scenario-forks-deco" aria-hidden="true">
 <canvas id="eos-scenario-forks-deco-canvas"></canvas>
@@ -2472,43 +2480,47 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 flex-1" id="eos-scenarios-right-grid">
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="crossroads">
 <div class="flex justify-between items-center mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v7l5 3 5-3V4"/><path d="M12 14v6"/><circle cx="12" cy="4" r="1.2" fill="currentColor" stroke="none"/></svg>
 </div>
+<span class="eos-scenario-badge" data-eos-scenario-badge>单人决策</span>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Major crossroads</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Every path looks right. None feels safe.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>You’ve weighed the pros and cons until the page went blank—and you’re still stuck. We lock what “good” means <em>for you</em>, compare the options side by side, and leave you a clear main path plus one backup. Not more opinions. A path you can actually walk.</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>重大抉择</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>拖下去，代价一直涨。几条路都像对，没有一条踏实。</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>人生大事不会越拖越清楚——只会越拖越重。利弊列到空白，你还是卡住。我们帮你钉住「好」对你到底是什么，把选项并排放上比较，留下清晰主路线和一条备用。不是再多一条意见，是一条真能走的路。</p>
 </div>
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="career">
 <div class="flex justify-between items-center mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-5 3 3 5-7"/><path d="M16 5h3v3"/></svg>
 </div>
+<span class="eos-scenario-badge" data-eos-scenario-badge>单人决策</span>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Career decisions</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Take the offer, stay or leave, or change direction?</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Career decisions punish waiting too long—and jumping too soon. We aim the whole session at <em>this</em> move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Leave with a next step you’ve pressure-tested—not another vague matrix.</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>职业发展</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>接 offer、留下或走，还是换方向？</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>职业决定既怕拖太久，也罚跳太早。整场对准这一步：你想要什么、怕失去什么、「好到能动手」长什么样。带走你压测过的下一步——不再是一张空泛矩阵，带你走向更高层次的自己。</p>
 </div>
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="relationship">
 <div class="flex justify-between items-center mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="3.5"/><circle cx="15" cy="12" r="3.5"/></svg>
 </div>
+<span class="eos-scenario-badge" data-eos-scenario-badge>单人决策</span>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Relationship fit</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Everyone’s pulling. You’re stuck in the middle.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Partners, family, teams—each side has a story, and none of them is your whole answer. We map the tension without blame or fortune-telling: where you align, where you clash, and what you’re actually deciding. See it clearly. Keep the call.</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>关系契合</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>两边都在拉，卡住的是你。</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>伴侣、家人、团队——每边都有说法，却没有一边是你完整的答案。我们把张力画清，不甩锅、不算命：哪里合拍、哪里冲突，你真正在决定什么。看清了，决定仍在你，重塑全新的思维系统。</p>
 </div>
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="timing">
 <div class="flex justify-between items-center mb-6">
-<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<div class="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.5"/></svg>
 </div>
+<span class="eos-scenario-badge" data-eos-scenario-badge>单人决策</span>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Timing &amp; next steps</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Push, wait, or watch—generic “good timing” doesn’t help.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list for <em>your</em> situation, not a vague sense that “the moment is right.”</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>关键时机</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>该推、该等、该盯——泛泛「时机好」没用。</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>时机只有钉在这一次决定上才有用。分清现在该推什么、先放什么、接下来盯什么——带走贴合你的情况的短清单，不是空泛觉得「时机到了」。设定清晰目标，把梦想一步步变成现实。</p>
 </div>
 </div>
 </div>
@@ -3169,15 +3181,15 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                 career_trajectory: 'Career decisions',
                 relational_synergy: 'Relationship fit',
                 timing_pace: 'Timing & next steps',
-                life_architecture: 'Life-changing decisions',
+                life_architecture: 'Joint decision',
               },
               zh: {
                 header: '为真正让你付出代价的决定而建',
                 strategic_choices: '重大抉择',
-                career_trajectory: '职业决定',
+                career_trajectory: '职业发展',
                 relational_synergy: '关系契合',
-                timing_pace: '时机与下一步',
-                life_architecture: '改变人生的决定',
+                timing_pace: '关键时机',
+                life_architecture: '共同决策',
               },
               es: {
                 header: 'Hecho para las decisiones que de verdad te cuestan',
@@ -3185,7 +3197,7 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                 career_trajectory: 'Decisiones de carrera',
                 relational_synergy: 'Encaje en relaciones',
                 timing_pace: 'Timing y siguientes pasos',
-                life_architecture: 'Decisiones que cambian la vida',
+                life_architecture: 'Decisión conjunta',
               },
               fr: {
                 header: 'Conçu pour les décisions qui te coûtent vraiment',
@@ -3193,7 +3205,7 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                 career_trajectory: 'Décisions de carrière',
                 relational_synergy: 'Ajustement relationnel',
                 timing_pace: 'Timing et prochaines étapes',
-                life_architecture: 'Décisions qui changent la vie',
+                life_architecture: 'Décision à deux',
               },
             };
 
@@ -3230,9 +3242,10 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                     descHtml: 'Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list for <em>your</em> situation, not a vague sense that “the moment is right.”',
                   },
                   forks: {
-                    title: 'Life-changing decisions',
-                    tagline: 'The cost of waiting keeps adding up.',
-                    desc: 'Big life decisions don’t get clearer when you sleep on them—they get heavier. Whether to stay or leave, start over or hold your ground—the uncertainty eats your time and attention every day you don’t choose. Name the decision. Lock what “good” looks like on the other side. Leave with a clear primary path and a backup you can live with. The final call stays yours.',
+                    title: 'Joint decision',
+                    tagline: 'One hard problem. Two people stuck. Each finds their own way through.',
+                    desc: 'When a major decision concerns you both, the best communication starts by clarifying what each of you actually wants. Two people can run independent decision flows on the same question—each sorting fears and expectations without interference. Each walks away with their own clear recommendation, so you can meet as equals and find the consensus that holds.',
+                    badge: 'Duo decision',
                   },
                 },
               },
@@ -3245,30 +3258,33 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                 items: {
                   crossroads: {
                     title: '重大抉择',
-                    tagline: '几条路都像对，没有一条踏实。',
-                    desc: '利弊列到空白，你还是卡住。我们帮你钉住「好」对你到底是什么，把选项并排放上比较，留下清晰主路和一条备用。不是再多一堆意见。是一条真能走的路。',
+                    tagline: '拖下去，代价一直涨。几条路都像对，没有一条踏实。',
+                    desc: '人生大事不会越拖越清楚——只会越拖越重。利弊列到空白，你还是卡住。我们帮你钉住「好」对你到底是什么，把选项并排放上比较，留下清晰主路线和一条备用。不是再多一条意见，是一条真能走的路。',
+                    badge: '单人决策',
                   },
                   career: {
-                    title: '职业决定',
-                    tagline: '接 offer、留下或走、还是换方向？',
-                    desc: '职业决定既罚拖太久，也罚跳太早。整场对准这一步：你想要什么、怕失去什么、「好到能动手」长什么样。带走你压测过的下一步——不是再一张空泛矩阵。',
-                    descHtml: '职业决定既罚拖太久，也罚跳太早。整场对准<strong>这一步</strong>：你想要什么、怕失去什么、「好到能动手」长什么样。带走你压测过的下一步——不是再一张空泛矩阵。',
+                    title: '职业发展',
+                    tagline: '接 offer、留下或走，还是换方向？',
+                    desc: '职业决定既怕拖太久，也罚跳太早。整场对准这一步：你想要什么、怕失去什么、「好到能动手」长什么样。带走你压测过的下一步——不再是一张空泛矩阵，带你走向更高层次的自己。',
+                    badge: '单人决策',
                   },
                   relationship: {
                     title: '关系契合',
                     tagline: '两边都在拉，卡住的是你。',
-                    desc: '伴侣、家人、团队——每边都有说法，却没有一边是你完整的答案。我们把张力画清，不甩锅、不算命：哪里合拍、哪里冲突、你真正在决定什么。看清了，决定仍在你。',
+                    desc: '伴侣、家人、团队——每边都有说法，却没有一边是你完整的答案。我们把张力画清，不甩锅、不算命：哪里合拍、哪里冲突，你真正在决定什么。看清了，决定仍在你，重塑全新的思维系统。',
+                    badge: '单人决策',
                   },
                   timing: {
-                    title: '时机与下一步',
+                    title: '关键时机',
                     tagline: '该推、该等、该盯——泛泛「时机好」没用。',
-                    desc: '时机只有钉在这一次决定上才有用。分清现在该推什么、先放什么、接下来盯什么——带走贴合你的情况的短清单，不是空泛觉得「时机到了」。',
-                    descHtml: '时机只有钉在<strong>这一次</strong>决定上才有用。分清现在该推什么、先放什么、接下来盯什么——带走贴合<strong>你的情况</strong>的短清单，不是空泛觉得「时机到了」。',
+                    desc: '时机只有钉在这一次决定上才有用。分清现在该推什么、先放什么、接下来盯什么——带走贴合你的情况的短清单，不是空泛觉得「时机到了」。设定清晰目标，把梦想一步步变成现实。',
+                    badge: '单人决策',
                   },
                   forks: {
-                    title: '改变人生的决定',
-                    tagline: '拖下去，代价一直在涨。',
-                    desc: '人生大事不会越拖越清楚——只会越拖越重。留下还是离开、重来还是再撑——不选的每一天，不确定性都在吃掉你的时间和注意力。把决定说清楚。钉住另一边「好」长什么样。带走清晰主路径和一条你过得下去的备用。最终决定仍在你。',
+                    title: '共同决策',
+                    tagline: '同一个难题，两个人发愁，各自找解法。',
+                    desc: '面对共同关心的重大决定，最好的沟通是先厘清各自的真实诉求。支持两人针对同一问题同时发起独立决策流程，各自在无干扰的环境下梳理顾虑与期望。最终各自获取一份专属的理性建议，帮助双方在对等尊重中找到最优共识。',
+                    badge: '双人决策',
                   },
                 },
               },
@@ -3303,9 +3319,10 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                       "descHtml": "El timing solo importa cuando está atado a <em>esta</em> decisión. Ordena qué empujar ahora, qué aparcar y qué vigilar después—y sal con una lista corta para <em>tu</em> situación, no con una sensación vaga de que “el momento es ahora”."
                     },
                     "forks": {
-                      "title": "Decisiones que cambian la vida",
-                      "tagline": "El costo de esperar no para de subir.",
-                      "desc": "Las grandes decisiones de vida no se aclaran al dormirlas: se vuelven más pesadas. Quedarte o irte, empezar de cero o aguantar—la incertidumbre te come tiempo y atención cada día que no eliges. Nombra la decisión. Define cómo se ve “bien” al otro lado. Sal con una ruta principal clara y un respaldo con el que puedas vivir. La decisión final sigue siendo tuya."
+                      "title": "Decisión conjunta",
+                      "tagline": "Un mismo problema. Dos personas atascadas. Cada una busca su solución.",
+                      "desc": "Ante una decisión importante que os importa a ambos, la mejor comunicación empieza por aclarar lo que cada uno realmente quiere. Dos personas pueden lanzar flujos de decisión independientes sobre la misma pregunta—cada una ordenando temores y expectativas sin interferencias. Cada una se lleva su propia recomendación clara, para encontrarse de igual a igual y hallar el consenso que sostiene.",
+                      "badge": "Decisión a dos"
                     }
                   }
                 }
@@ -3341,9 +3358,10 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
                       "descHtml": "Le timing ne compte que s’il est lié à <em>cette</em> décision. Trie ce qu’il faut pousser maintenant, ce qu’il faut garer, ce qu’il faut surveiller ensuite—puis pars avec une courte liste pour <em>ta</em> situation, pas une vague impression que « le moment est venu »."
                     },
                     "forks": {
-                      "title": "Décisions qui changent la vie",
-                      "tagline": "Le coût d’attendre ne cesse d’augmenter.",
-                      "desc": "Les grandes décisions de vie ne s’éclaircissent pas en dormant dessus—elles s’alourdissent. Rester ou partir, recommencer ou tenir bon—l’incertitude mange ton temps et ton attention chaque jour sans choix. Nomme la décision. Verrouille à quoi ressemble « bien » de l’autre côté. Pars avec une voie principale claire et une de secours vivable. La décision finale reste la tienne."
+                      "title": "Décision à deux",
+                      "tagline": "Un même problème. Deux personnes bloquées. Chacun cherche sa voie.",
+                      "desc": "Face à une décision majeure qui vous concerne tous les deux, la meilleure communication commence par clarifier ce que chacun veut vraiment. Deux personnes peuvent lancer des flux de décision indépendants sur la même question—chacun rangeant peurs et attentes sans interférence. Chacun repart avec sa propre recommandation claire, pour se retrouver d’égal à égal et trouver le consensus qui tient.",
+                      "badge": "Décision duo"
                     }
                   }
                 }
@@ -4322,8 +4340,17 @@ const BUILT_COPY = {
               const titleEl = card.querySelector('[data-eos-scenario-title]');
               const taglineEl = card.querySelector('[data-eos-scenario-tagline]');
               const descEl = card.querySelector('[data-eos-scenario-desc]');
+              const badgeEl = card.querySelector('[data-eos-scenario-badge]');
               if (titleEl) titleEl.textContent = item.title;
               if (taglineEl) taglineEl.textContent = item.tagline || '';
+              if (badgeEl) {
+                if (item.badge) {
+                  badgeEl.textContent = item.badge;
+                  badgeEl.hidden = false;
+                } else {
+                  badgeEl.hidden = true;
+                }
+              }
               if (descEl) {
                 if (item.descHtml) {
                   descEl.innerHTML = item.descHtml;

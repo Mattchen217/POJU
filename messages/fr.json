@@ -1349,6 +1349,16 @@
     "reassure_2": "Après confirmation, comptez 2 à 5 minutes de préparation.",
     "go_back": "Retour modifier",
     "confirm_and_proceed": "Confirmer et commencer",
+    "start_solo": "Décision solo",
+    "start_joint": "Décision commune (duo)",
+    "joint_tooltip": "Décision commune : une question partagée ; chacun analyse avec ses données de naissance autorisées et reçoit son propre rapport. Les chats restent privés. Abonnement Duo et 2 comptes liés requis (2 PASS — 1 chacun).",
+    "joint_question_title": "Question partagée",
+    "joint_question_hint": "Après acceptation, chacun a sa propre session.",
+    "joint_question_placeholder": "Écrivez la décision ou le dilemme partagé…",
+    "joint_send_invite": "Inviter le partenaire lié",
+    "joint_need_bind": "Duo actif — liez encore un second compte dans Compte.",
+    "joint_need_balance": "Pool familial insuffisant (2 PASS requis).",
+    "joint_invite_sent": "Invitation envoyée. Après acceptation, chacun ouvre sa session.",
     "processing": "Préparation…"
   },
   "bazi": {

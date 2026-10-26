@@ -11,12 +11,21 @@ import {
 import type { BirthInfo } from "@/lib/profile/types";
 import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 
+export type BirthConfirmMode = "solo" | "joint";
+
 export interface BirthInfoConfirmDialogProps {
   birthInfo?: BirthInfo | null;
   existingProfile?: StoredProfileSummary | null;
-  onConfirm: () => void;
+  /** @deprecated Prefer onConfirmMode — kept for Match / legacy callers. */
+  onConfirm?: () => void;
+  /** Solo vs joint. When set, replaces single onConfirm CTA. */
+  onConfirmMode?: (mode: BirthConfirmMode) => void;
   onCancel: () => void;
   processing?: boolean;
+  /** Show joint CTA (workspace Pivot). Match / Syncro should pass false. */
+  showJointOption?: boolean;
+  /** Duo subscribed (household exists) — joint CTA clickable; else gray. */
+  jointEnabled?: boolean;
 }
 
 function birthInfoToDisplay(birth: BirthInfo): BirthInfoDisplayRow {
@@ -38,8 +47,11 @@ export function BirthInfoConfirmDialog({
   birthInfo,
   existingProfile,
   onConfirm,
+  onConfirmMode,
   onCancel,
   processing = false,
+  showJointOption = false,
+  jointEnabled = false,
 }: BirthInfoConfirmDialogProps) {
   const t = useTranslations("birth_confirm");
   const titleId = useId();
@@ -63,22 +75,20 @@ export function BirthInfoConfirmDialog({
     panelRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (existingProfile) {
-      console.log("[profile-card] read birth_location:", {
-        profile_id: existingProfile.profile_id,
-        birth_location_name: existingProfile.birth_location_name,
-        birth_location_use_defaults: existingProfile.birth_location_use_defaults,
-      });
-    }
-    if (birthInfo?.birth_location) {
-      console.log("[profile-card] read birth_location:", birthInfo.birth_location);
-    }
-  }, [birthInfo, existingProfile]);
-
   if (!displayData) return null;
 
   const timeDisplay = formatBirthTimeDisplay(displayData);
+  const dual = showJointOption && typeof onConfirmMode === "function";
+
+  function startSolo() {
+    if (onConfirmMode) onConfirmMode("solo");
+    else onConfirm?.();
+  }
+
+  function startJoint() {
+    if (!jointEnabled || processing) return;
+    onConfirmMode?.("joint");
+  }
 
   return (
     <div
@@ -91,7 +101,17 @@ export function BirthInfoConfirmDialog({
       }}
     >
       <div className="confirm-dialog" ref={panelRef} tabIndex={-1}>
-        <h2 id={titleId}>{t("title")}</h2>
+        <div className="confirm-dialog__header">
+          <h2 id={titleId}>{t("title")}</h2>
+          <button
+            type="button"
+            className="confirm-dialog__back-link"
+            onClick={onCancel}
+            disabled={processing}
+          >
+            {t("go_back")}
+          </button>
+        </div>
 
         {existingProfile ? (
           <p className="confirm-existing-name">{existingProfile.display_name}</p>
@@ -136,14 +156,48 @@ export function BirthInfoConfirmDialog({
           </div>
         </div>
 
-        <div className="dialog-actions">
-          <button type="button" onClick={onCancel} disabled={processing} className="secondary">
-            {t("go_back")}
-          </button>
-          <button type="button" onClick={onConfirm} disabled={processing} className="primary">
-            {processing ? t("processing") : t("confirm_and_proceed")}
-          </button>
-        </div>
+        {dual ? (
+          <div className="dialog-actions dialog-actions--stack">
+            <button
+              type="button"
+              onClick={startSolo}
+              disabled={processing}
+              className="primary"
+            >
+              {processing ? t("processing") : t("start_solo")}
+            </button>
+            <div className="confirm-joint-wrap">
+              <button
+                type="button"
+                onClick={startJoint}
+                disabled={processing || !jointEnabled}
+                className={
+                  jointEnabled
+                    ? "primary confirm-joint-btn"
+                    : "confirm-joint-btn confirm-joint-btn--disabled"
+                }
+                aria-disabled={!jointEnabled}
+                aria-describedby={`${titleId}-joint-tip`}
+              >
+                {t("start_joint")}
+              </button>
+              <div id={`${titleId}-joint-tip`} className="confirm-joint-tooltip" role="tooltip">
+                {t("joint_tooltip")}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="dialog-actions">
+            <button
+              type="button"
+              onClick={startSolo}
+              disabled={processing}
+              className="primary"
+            >
+              {processing ? t("processing") : t("confirm_and_proceed")}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

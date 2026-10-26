@@ -612,6 +612,44 @@
   width: 100%;
 }
 
+.confirm-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.confirm-dialog__header h2 {
+  color: #f2ca50;
+  margin: 0;
+  font-size: 1.25rem;
+  flex: 1;
+}
+
+.confirm-dialog__back-link {
+  flex-shrink: 0;
+  margin: 2px 0 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.confirm-dialog__back-link:hover:not(:disabled) {
+  color: #e0e2e8;
+}
+
+.confirm-dialog__back-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .confirm-dialog h2 {
   color: #f2ca50;
   margin-bottom: 12px;
@@ -761,6 +799,72 @@
 .dialog-actions .primary:hover:not(:disabled) {
   background: #e8c56f;
   box-shadow: 0 0 20px rgba(242, 202, 80, 0.35);
+}
+
+.dialog-actions--stack {
+  flex-direction: column;
+}
+
+.dialog-actions--stack > .primary,
+.dialog-actions--stack .confirm-joint-btn {
+  width: 100%;
+}
+
+.confirm-joint-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.confirm-joint-btn--disabled {
+  background: #1a1f24 !important;
+  color: #64748b !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+.confirm-joint-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 2;
+  padding: 10px 12px;
+  border: 1px solid rgba(242, 202, 80, 0.28);
+  background: #12181e;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.confirm-joint-wrap:hover .confirm-joint-tooltip,
+.confirm-joint-wrap:focus-within .confirm-joint-tooltip {
+  display: block;
+}
+
+.confirm-joint-question {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e0e2e8;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 96px;
+}
+
+.confirm-joint-question:focus {
+  outline: none;
+  border-color: rgba(242, 202, 80, 0.45);
 }
 
 .refund-page {
