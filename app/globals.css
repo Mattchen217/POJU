@@ -29,6 +29,9 @@
   --font-primary: var(--pj-font-sans);
   --font-verse: var(--pj-font-verse);
   --font-logo-zh: var(--pj-font-serif-cjk);
+  /* Fallback if design tokens load late — keep modals rounded site-wide */
+  --eos-modal-radius: 20px;
+  --eos-modal-control-radius: 12px;
 }
 
 html,

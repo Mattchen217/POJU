@@ -7,25 +7,38 @@ import { HeroInlineBold } from "@/components/marketing/product-marketing-hero";
 type Props = {
   /** Tip switches firstVisit vs returning when saved birth profiles exist. */
   hasBirthHistory?: boolean;
+  /**
+   * Sidebar entry: solo vs joint share this birth page but different titles
+   * (other copy / motion to be swapped later).
+   */
+  entryMode?: "solo" | "joint";
 };
 
 /** Left-rail: form chrome (title/tip/help) above Privacy & security.
  *  Birth list/picker stays on the right column (BirthHost) -- no chrome there.
  */
-export function WorkspacePojuBirthSideCopy({ hasBirthHistory = false }: Props) {
+export function WorkspacePojuBirthSideCopy({
+  hasBirthHistory = false,
+  entryMode = "solo",
+}: Props) {
   const t = useTranslations("birth_picker");
   const locale = useLocale();
   const localeKey = locale.split("-")[0] || "en";
+  const sectionTitle =
+    entryMode === "joint"
+      ? t("form_section_title_joint")
+      : t("form_section_title_solo");
 
   return (
     <aside
       className="workspace-poju-copy"
       data-locale={localeKey}
+      data-entry-mode={entryMode}
       aria-label={t("side_privacy_title")}
     >
       <div className="workspace-poju-copy__inner">
         <div className="workspace-poju-birth-chrome">
-          <h3 className="workspace-poju-birth-chrome__title">{t("form_section_title")}</h3>
+          <h3 className="workspace-poju-birth-chrome__title">{sectionTitle}</h3>
           <p className="workspace-poju-birth-chrome__tip">
             {hasBirthHistory ? t("form_prompt_returning") : t("form_prompt_firstVisit")}
           </p>

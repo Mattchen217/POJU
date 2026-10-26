@@ -24,8 +24,6 @@ type Props = {
   pinnedHint?: string;
   /** Latest decision-dialogue session per profile_id (rail-aligned titles + stage). */
   latestByProfileId?: Map<string, BirthRecordLatestSession>;
-  /** Open linked past session (same path as left-rail). */
-  onOpenSession?: (sessionId: string) => void;
 };
 
 type RenameDialogState = {
@@ -392,7 +390,6 @@ export function WorkspacePojuProfileRecords({
   onDelete,
   pinnedHint,
   latestByProfileId,
-  onOpenSession,
 }: Props) {
   const t = useTranslations("session_prep");
   const tBirth = useTranslations("birthList");
@@ -455,8 +452,6 @@ export function WorkspacePojuProfileRecords({
               : latest.hasRealTitle
                 ? latest.displayTitle
                 : tBirth("untitledSession");
-            const canOpenSession = Boolean(latest?.sessionId && onOpenSession);
-
             return (
               <div
                 key={p.profile_id}
@@ -482,26 +477,12 @@ export function WorkspacePojuProfileRecords({
                   </div>
 
                   <div className="workspace-poju-card__col workspace-poju-card__title-col">
-                    {canOpenSession ? (
-                      <button
-                        type="button"
-                        className={`workspace-poju-card__top workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
-                        title={titleText}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenSession?.(latest!.sessionId);
-                        }}
-                      >
-                        {titleText}
-                      </button>
-                    ) : (
-                      <span
-                        className={`workspace-poju-card__top workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
-                        title={titleText}
-                      >
-                        {titleText}
-                      </span>
-                    )}
+                    <span
+                      className={`workspace-poju-card__top workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
+                      title={titleText}
+                    >
+                      {titleText}
+                    </span>
                     <span className="workspace-poju-card__bottom workspace-poju-card__chrome-label">
                       {tBirth("recentRecord")}
                     </span>

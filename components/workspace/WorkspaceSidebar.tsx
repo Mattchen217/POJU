@@ -430,6 +430,12 @@ export function WorkspaceSidebar({
   const [joints, setJoints] = useState<JointDecisionPublicView[]>([]);
   const [jointsReady, setJointsReady] = useState(false);
   const [activeJointId, setActiveJointId] = useState<string | null>(null);
+  /** Only one history panel open at a time; null = both collapsed. */
+  const [historyOpen, setHistoryOpen] = useState<"joint" | "solo" | null>("solo");
+
+  function toggleHistory(which: "joint" | "solo") {
+    setHistoryOpen((prev) => (prev === which ? null : which));
+  }
 
   const refreshJoints = useCallback(async () => {
     try {
@@ -515,6 +521,7 @@ export function WorkspaceSidebar({
 
   function openJointRow(id: string) {
     setActiveJointId(id);
+    setHistoryOpen("joint");
     requestJointOpen(id);
   }
 
@@ -542,6 +549,7 @@ export function WorkspaceSidebar({
             active={activeHistoryId === row.archive_id || activeHistoryId === row.session_id}
             onOpen={() => {
               setActiveJointId(null);
+              setHistoryOpen("solo");
               requestJointEntryMode("solo");
               onSelectArchive("poju", row.session_id || row.archive_id);
             }}
@@ -595,31 +603,52 @@ export function WorkspaceSidebar({
           </button>
         )}
 
+        <div className="workspace-sidebar__divider" role="separator" />
+
         {/* Joint decision CTA + history */}
         <button
           type="button"
-          className="workspace-sidebar__item workspace-sidebar__item--solo"
+          className="workspace-sidebar__item workspace-sidebar__item--solo workspace-sidebar__item--cta"
           data-tooltip={tJoint("cta_new")}
           onClick={() => void requestNewJoint()}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <span className="material-symbols-outlined">group_add</span>
+            <span className="material-symbols-outlined">add</span>
           </span>
           <span className="workspace-sidebar__label">{tJoint("cta_new")}</span>
         </button>
 
         <div className="workspace-sidebar__past-block workspace-sidebar__past-block--joint">
           {!collapsed ? (
-            <p className="workspace-sidebar__section-label">
+            <button
+              type="button"
+              className="workspace-sidebar__section-label workspace-sidebar__section-label--toggle"
+              aria-expanded={historyOpen === "joint"}
+              aria-label={tJoint("history_toggle")}
+              onClick={() => toggleHistory("joint")}
+            >
               <span className="workspace-sidebar__section-label-icon" aria-hidden>
-                <span className="material-symbols-outlined">diversity_3</span>
+                <span className="material-symbols-outlined">history</span>
               </span>
               <span>
                 {tJoint("history_label", { count: jointsReady ? joints.length : 0 })}
               </span>
-            </p>
-          ) : null}
-          {!collapsed ? (
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="workspace-sidebar__item workspace-sidebar__item--solo"
+              data-tooltip={tJoint("history_label", { count: joints.length })}
+              aria-label={tJoint("history_label", { count: joints.length })}
+              aria-expanded={historyOpen === "joint"}
+              onClick={() => toggleHistory("joint")}
+            >
+              <span className="workspace-sidebar__icon" aria-hidden>
+                <span className="material-symbols-outlined">history</span>
+              </span>
+            </button>
+          )}
+          {!collapsed && historyOpen === "joint" ? (
             <PastSessionsScroll>
               {!jointsReady ? (
                 <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>
@@ -641,7 +670,7 @@ export function WorkspaceSidebar({
                       title={j.shared_question}
                     >
                       <span className="workspace-sidebar__icon" aria-hidden>
-                        <span className="material-symbols-outlined">forum</span>
+                        <span className="material-symbols-outlined">chat_bubble</span>
                         {j.unread ? (
                           <span className="workspace-sidebar__unread-dot" aria-hidden />
                         ) : null}
@@ -669,10 +698,12 @@ export function WorkspaceSidebar({
           ) : null}
         </div>
 
+        <div className="workspace-sidebar__divider" role="separator" />
+
         {/* Solo decision CTA + history */}
         <button
           type="button"
-          className={`workspace-sidebar__item workspace-sidebar__item--solo${
+          className={`workspace-sidebar__item workspace-sidebar__item--solo workspace-sidebar__item--cta${
             alreadyOnNewHome && activeJointId == null ? " is-active" : ""
           }`}
           aria-current={alreadyOnNewHome && activeJointId == null ? "page" : undefined}
@@ -687,25 +718,33 @@ export function WorkspaceSidebar({
 
         <div className="workspace-sidebar__past-block">
           {!collapsed ? (
-            <p className="workspace-sidebar__section-label">
+            <button
+              type="button"
+              className="workspace-sidebar__section-label workspace-sidebar__section-label--toggle"
+              aria-expanded={historyOpen === "solo"}
+              aria-label={tJoint("history_toggle")}
+              onClick={() => toggleHistory("solo")}
+            >
               <span className="workspace-sidebar__section-label-icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
               </span>
               <span>{tJoint("solo_history", { count: historyReady ? items.length : 0 })}</span>
-            </p>
+            </button>
           ) : (
             <button
               type="button"
               className="workspace-sidebar__item workspace-sidebar__item--solo"
-              data-tooltip={tRail("pastSessionsShort")}
-              aria-label={tRail("pastSessionsShort")}
+              data-tooltip={tJoint("solo_history", { count: items.length })}
+              aria-label={tJoint("solo_history", { count: items.length })}
+              aria-expanded={historyOpen === "solo"}
+              onClick={() => toggleHistory("solo")}
             >
               <span className="workspace-sidebar__icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
               </span>
             </button>
           )}
-          {!collapsed ? (
+          {!collapsed && historyOpen === "solo" ? (
             <PastSessionsScroll>
               {!historyReady ? (
                 <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>

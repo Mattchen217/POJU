@@ -24,6 +24,9 @@
   --pj-radius-xl: 20px;
   --pj-radius-2xl: 24px;   /* glass cards */
   --pj-radius-pill: 999px;
+  /* Site-wide modal / dialog shells + inner controls */
+  --eos-modal-radius: var(--pj-radius-xl);
+  --eos-modal-control-radius: var(--pj-radius-md);
 
   /* ===== Semantic aliases ===== */
   --space-1: var(--pj-space-1);

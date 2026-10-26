@@ -42,8 +42,6 @@ type Props = {
    * with a pinned slot tip that switches A/B copy.
    */
   matchCollectingSlot?: "a" | "b";
-  /** Open linked past decision-dialogue session (rail path). */
-  onOpenSession?: (sessionId: string) => void;
   /**
    * When true: birth → confirm with partner account + question → create joint invite
    * (no solo prepare). Used from sidebar “发起双人共同决策”.
@@ -63,7 +61,6 @@ export function WorkspacePojuBirthHost({
   usageProduct = "poju",
   excludeProfileId = null,
   matchCollectingSlot,
-  onOpenSession,
   jointInitiate = false,
   onJointCreated,
 }: Props) {
@@ -367,7 +364,6 @@ export function WorkspacePojuBirthHost({
               onDelete={(id) => void handleDeleteProfile(id)}
               pinnedHint={matchPinnedHint}
               latestByProfileId={latestByProfileId}
-              onOpenSession={onOpenSession}
             />
           </div>
         ) : (

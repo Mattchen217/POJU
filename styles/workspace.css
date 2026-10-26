@@ -36,9 +36,9 @@
   --ws-dock-row-height: 52px;
   --ws-dock-edge-gap: 2px;
   /* Unified left-rail icon slot + interactive row height (New/history baseline) */
-  --ws-rail-icon-size: 26px;
-  --ws-rail-row-h: 40px;
-  --ws-rail-row-pad-y: 7px;
+  --ws-rail-icon-size: 18px;
+  --ws-rail-row-h: 36px;
+  --ws-rail-row-pad-y: 6px;
   --ws-rail-row-pad-x: 12px;
   --ws-frame-chrome: linear-gradient(
     155deg,
@@ -1007,7 +1007,7 @@
   /* History row ≈ subitem + stage timeline; + group label so 6 rows actually fit */
   --ws-history-row-stack: calc(var(--ws-rail-row-h) + 40px);
   --ws-history-group-h: 28px;
-  --ws-history-visible-rows: 6;
+  --ws-history-visible-rows: 5;
   --ws-history-list-max-h: calc(
     var(--ws-history-visible-rows) * var(--ws-history-row-stack) +
       (var(--ws-history-visible-rows) - 1) * 2px + var(--ws-history-group-h) + 8px
@@ -1375,6 +1375,27 @@
   color: var(--ws-text);
 }
 
+.workspace-sidebar__section-label--toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.workspace-sidebar__section-label--toggle:hover {
+  background: var(--ws-rail-row-hover-bg);
+  color: var(--ws-text);
+  border-radius: 10px;
+}
+
+.workspace-sidebar__section-label--toggle[aria-expanded="true"] {
+  color: var(--ws-text);
+}
+
 /* Active/selected: charcoal + metallic gold left strip (see ::before below) */
 .workspace-sidebar__item[aria-current="page"],
 .workspace-sidebar__item.is-active {
@@ -1383,6 +1404,30 @@
   color: #f2ca50;
   box-shadow: none;
   border-radius: 10px;
+}
+
+/* New-session CTAs: joint + solo identical — same fill + always-on gold strip */
+.workspace-sidebar__item.workspace-sidebar__item--cta,
+.workspace-sidebar__item.workspace-sidebar__item--cta.is-active,
+.workspace-sidebar__item.workspace-sidebar__item--cta[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: var(--ws-text-secondary);
+  box-shadow: none;
+}
+
+.workspace-sidebar__item.workspace-sidebar__item--cta::before,
+.workspace-sidebar__item.workspace-sidebar__item--cta.is-active::before,
+.workspace-sidebar__item.workspace-sidebar__item--cta[aria-current="page"]::before,
+.workspace-sidebar__item.workspace-sidebar__item--cta:hover::before {
+  opacity: 1;
+}
+
+.workspace-sidebar__item.workspace-sidebar__item--cta:hover,
+.workspace-sidebar__item.workspace-sidebar__item--cta.is-active:hover,
+.workspace-sidebar__item.workspace-sidebar__item--cta[aria-current="page"]:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--ws-text);
 }
 
 .workspace-sidebar__item:focus-visible {
@@ -3490,6 +3535,7 @@
   /* keep TOP-band size/weight/color from .workspace-poju-card__top */
 }
 
+/* Legacy: recent-session title is display-only (no open-session link). */
 button.workspace-poju-card__title {
   display: block;
   cursor: pointer;
@@ -3686,7 +3732,7 @@ button.workspace-poju-card__title:hover {
   box-sizing: border-box;
   padding: 0;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--eos-modal-radius, 20px);
   border: 1px solid rgba(242, 202, 80, 0.4);
   background: #0b0f12;
   box-shadow:
@@ -3741,7 +3787,7 @@ button.workspace-poju-card__title:hover {
   margin-top: 14px;
   box-sizing: border-box;
   border: 1px solid rgba(153, 144, 124, 0.5);
-  border-radius: 4px;
+  border-radius: var(--eos-modal-control-radius, 12px);
   padding: 11px 12px;
   background: #0b0f12;
   color: #fff;
@@ -3766,7 +3812,7 @@ button.workspace-poju-card__title:hover {
 
 .workspace-poju-rename-dialog__cancel,
 .workspace-poju-rename-dialog__confirm {
-  border-radius: 4px;
+  border-radius: var(--eos-modal-control-radius, 12px);
   padding: 8px 16px;
   font-size: 12px;
   font-weight: 600;
@@ -5368,7 +5414,7 @@ button.workspace-poju-card__title:hover {
   width: min(100%, 440px);
   max-height: min(88vh, 720px);
   overflow: auto;
-  border-radius: 20px;
+  border-radius: var(--eos-modal-radius, 20px);
   border: 1px solid rgba(212, 175, 55, 0.28);
   background: linear-gradient(180deg, rgba(28, 23, 53, 0.98) 0%, rgba(11, 8, 21, 0.98) 100%);
   box-shadow:
@@ -5781,7 +5827,7 @@ button.workspace-poju-card__title:hover {
   width: min(440px, 100%);
   max-height: min(80vh, 640px);
   overflow: auto;
-  border-radius: 16px;
+  border-radius: var(--eos-modal-radius, 20px);
   background: rgba(20, 16, 41, 0.96);
   border: 1px solid rgba(212, 175, 55, 0.28);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
@@ -6176,6 +6222,13 @@ button.workspace-poju-card__title:hover {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Joint rows have no stage timeline — cap visible list to ~5 compact rows */
+.workspace-sidebar__past-block--joint {
+  --ws-history-list-max-h: calc(
+    5 * var(--ws-rail-row-h) + 4 * 2px + 8px
+  );
 }
 
 /* History scrolls inside past-list only — never the whole left rail */

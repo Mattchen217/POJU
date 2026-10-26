@@ -290,12 +290,14 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
         <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__cluster">
             <div className="workspace-poju-below__unit">
-              <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+              <WorkspacePojuBirthSideCopy
+                hasBirthHistory={hasProfiles}
+                entryMode={entryMode}
+              />
               <WorkspacePojuBirthHost
                   jointInitiate={entryMode === "joint"}
                   onPrepareStart={startPrepare}
                   onHasProfilesChange={setHasProfiles}
-                  onOpenSession={onOpenArchive}
                   onJointCreated={() => {
                     requestJointEntryMode("solo");
                     setEntryMode("solo");
@@ -342,12 +344,14 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">
               <div className="workspace-poju-below__unit">
-                <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+                <WorkspacePojuBirthSideCopy
+                  hasBirthHistory={hasProfiles}
+                  entryMode={entryMode}
+                />
                 <WorkspacePojuBirthHost
                       jointInitiate={entryMode === "joint"}
                       onPrepareStart={startPrepare}
                       onHasProfilesChange={setHasProfiles}
-                      onOpenSession={onOpenArchive}
                       onJointCreated={() => {
                         requestJointEntryMode("solo");
                         setEntryMode("solo");

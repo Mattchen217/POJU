@@ -18,7 +18,7 @@
   max-width: 48rem;
   max-height: min(90vh, 920px);
   overflow: auto;
-  border-radius: 20px;
+  border-radius: var(--eos-modal-radius, 20px);
   padding: 28px 22px 20px;
   color: #e4e4e7;
   border: 1px solid rgba(242, 202, 80, 0.22);
