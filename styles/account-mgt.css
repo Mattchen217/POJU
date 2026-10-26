@@ -251,9 +251,13 @@
 }
 
 .acct-bound-seats {
-  margin-top: 1rem;
-  padding: 0.85rem 0.15rem 0.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 0.25rem;
+  padding: 0.85rem 0 0.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.acct-bound-seats--in-card {
+  width: 100%;
 }
 
 .acct-bound-seats__title {
@@ -283,9 +287,32 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.22);
+}
+
+.acct-bound-seats__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.acct-bound-seats__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.acct-bound-seats__add-btn {
+  flex-shrink: 0;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .acct-bound-seats__label {

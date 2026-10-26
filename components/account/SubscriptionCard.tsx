@@ -241,39 +241,50 @@ export function SubscriptionCard({
               )}
             </div>
           </div>
-        </div>
 
-        {hasSub ? (
-          <div className="acct-bound-seats" onClick={(e) => e.stopPropagation()}>
-            <p className="acct-bound-seats__title">{t("boundAccountsTitle")}</p>
-            <p className="acct-bound-seats__note">{t("boundAccountsNote")}</p>
-            <ul className="acct-bound-seats__list">
-              {seats.map((seat, i) => (
-                <li key={seat.role} className="acct-bound-seats__item">
-                  <span className="acct-bound-seats__label">
-                    {t("boundAccountSlot", { n: i + 1 })}
-                    {seat.is_you ? ` · ${t("boundAccountYou")}` : ""}
-                  </span>
-                  <span
-                    className={`acct-bound-seats__email${seat.email ? "" : " is-empty"}`}
-                  >
-                    {seat.email?.trim() || t("boundAccountEmpty")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {canBindSeat ? (
-              <button
-                type="button"
-                className="acct-text-link acct-bound-seats__add"
-                disabled={loading}
-                onClick={() => setBindOpen(true)}
-              >
-                {t("addBoundAccount")}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+          {hasSub ? (
+            <div
+              className="acct-bound-seats acct-bound-seats--in-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="acct-bound-seats__title">{t("boundAccountsTitle")}</p>
+              <p className="acct-bound-seats__note">{t("boundAccountsNote")}</p>
+              <ul className="acct-bound-seats__list">
+                {seats.map((seat, i) => {
+                  const empty = !seat.email?.trim();
+                  const showAdd = empty && canBindSeat && seat.role === "seat_b";
+                  return (
+                    <li key={seat.role} className="acct-bound-seats__item">
+                      <div className="acct-bound-seats__row">
+                        <div className="acct-bound-seats__main">
+                          <span className="acct-bound-seats__label">
+                            {t("boundAccountSlot", { n: i + 1 })}
+                            {seat.is_you ? ` · ${t("boundAccountYou")}` : ""}
+                          </span>
+                          <span
+                            className={`acct-bound-seats__email${empty ? " is-empty" : ""}`}
+                          >
+                            {empty ? t("boundAccountEmpty") : seat.email}
+                          </span>
+                        </div>
+                        {showAdd ? (
+                          <button
+                            type="button"
+                            className="acct-btn acct-btn--gold acct-bound-seats__add-btn"
+                            disabled={loading}
+                            onClick={() => setBindOpen(true)}
+                          >
+                            {t("addBoundAccount")}
+                          </button>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </div>
 
         <div className="acct-strip__foot">
           <button

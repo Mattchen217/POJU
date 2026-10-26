@@ -167,8 +167,74 @@ export async function listHouseholdSeatsForViewer(
   ];
 }
 
+async function attachSeatB(params: {
+  householdId: string;
+  actorUserId: string;
+  partnerUserId: string;
+}): Promise<
+  | { ok: true; household: HouseholdRow }
+  | { ok: false; reason: string }
+> {
+  if (params.partnerUserId === params.actorUserId) {
+    return { ok: false, reason: "cannot_bind_self" };
+  }
+  const other = await findHouseholdForUser(params.partnerUserId);
+  if (other) return { ok: false, reason: "already_in_household" };
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("pass_households")
+    .update({
+      seat_b_user_id: params.partnerUserId,
+      status: "active",
+      seat_invite_token: null,
+      seat_invite_email: null,
+      seat_invite_expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.householdId)
+    .is("seat_b_user_id", null)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("[household] attach seat b", error?.code ?? error?.message);
+    return { ok: false, reason: "bind_failed" };
+  }
+  return { ok: true, household: data as HouseholdRow };
+}
+
+/** Bind partner user id onto seat B (caller must be seat A). */
+export async function bindSeatByUserId(params: {
+  actorUserId: string;
+  partnerUserId: string;
+}): Promise<
+  | { ok: true; household: HouseholdRow; partner_user_id: string }
+  | { ok: false; reason: string }
+> {
+  const ensured = await ensureHouseholdForActiveSubscriber(params.actorUserId);
+  const hh = ensured.household;
+  if (!hh) return { ok: false, reason: "no_subscription" };
+  if (hh.seat_a_user_id !== params.actorUserId) {
+    return { ok: false, reason: "only_seat_a_can_bind" };
+  }
+  if (hh.seat_b_user_id) return { ok: false, reason: "already_full" };
+
+  const attached = await attachSeatB({
+    householdId: hh.id,
+    actorUserId: params.actorUserId,
+    partnerUserId: params.partnerUserId,
+  });
+  if (!attached.ok) return attached;
+  return {
+    ok: true,
+    household: attached.household,
+    partner_user_id: params.partnerUserId,
+  };
+}
+
 /**
- * Seat A binds seat B by email+password (login existing or create new).
+ * Seat A binds seat B by email+password (existing account login).
  * Does not switch the caller's session.
  */
 export async function bindSeatByCredentials(params: {
@@ -196,70 +262,72 @@ export async function bindSeatByCredentials(params: {
   }
   if (hh.seat_b_user_id) return { ok: false, reason: "already_full" };
 
-  const admin = createSupabaseAdminClient();
-  let partnerId: string | null = null;
-  let created = false;
-
-  // 1) Try existing account password (ephemeral client — no cookie session).
   const anon = createSupabaseAnonClient();
   const signedIn = await anon.auth.signInWithPassword({ email, password });
-  if (signedIn.data.user?.id) {
-    partnerId = signedIn.data.user.id;
-    await anon.auth.signOut().catch(() => undefined);
-  } else {
-    await anon.auth.signOut().catch(() => undefined);
-    // 2) Create new account (confirmed) then bind.
-    const { data: createdUser, error: createErr } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-    if (createErr || !createdUser.user?.id) {
-      const msg = (createErr?.message ?? "").toLowerCase();
-      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
-        return { ok: false, reason: "invalid_credentials" };
+  const partnerId = signedIn.data.user?.id ?? null;
+  await anon.auth.signOut().catch(() => undefined);
+
+  if (!partnerId) {
+    if (signedIn.error) {
+      const msg = (signedIn.error.message ?? "").toLowerCase();
+      if (msg.includes("confirm") || msg.includes("not confirmed")) {
+        return { ok: false, reason: "email_not_confirmed" };
       }
-      console.error("[household] bind createUser", createErr?.message);
-      return { ok: false, reason: "create_user_failed" };
     }
-    partnerId = createdUser.user.id;
-    created = true;
+    return { ok: false, reason: "invalid_credentials" };
   }
 
-  if (!partnerId) return { ok: false, reason: "partner_missing" };
-  if (partnerId === params.actorUserId) {
-    return { ok: false, reason: "cannot_bind_self" };
-  }
-
-  const other = await findHouseholdForUser(partnerId);
-  if (other) return { ok: false, reason: "already_in_household" };
-
-  const { data, error } = await admin
-    .from("pass_households")
-    .update({
-      seat_b_user_id: partnerId,
-      status: "active",
-      seat_invite_token: null,
-      seat_invite_email: null,
-      seat_invite_expires_at: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", hh.id)
-    .eq("status", "pending_partner")
-    .is("seat_b_user_id", null)
-    .select("*")
-    .maybeSingle();
-
-  if (error || !data) {
-    console.error("[household] bind seat", error?.code ?? error?.message);
-    return { ok: false, reason: "bind_failed" };
-  }
+  const attached = await attachSeatB({
+    householdId: hh.id,
+    actorUserId: params.actorUserId,
+    partnerUserId: partnerId,
+  });
+  if (!attached.ok) return attached;
   return {
     ok: true,
-    household: data as HouseholdRow,
+    household: attached.household,
     partner_user_id: partnerId,
-    created,
+    created: false,
   };
+}
+
+/**
+ * After partner signup OTP (ephemeral anon verify — no cookie session switch).
+ */
+export async function bindSeatAfterSignupOtp(params: {
+  actorUserId: string;
+  email: string;
+  token: string;
+}): Promise<
+  | { ok: true; household: HouseholdRow; partner_user_id: string }
+  | { ok: false; reason: string }
+> {
+  if (!isSupabaseAdminConfigured()) {
+    return { ok: false, reason: "admin_unconfigured" };
+  }
+  const email = params.email.trim().toLowerCase();
+  const token = params.token.trim();
+  if (!email || token.length !== 6) {
+    return { ok: false, reason: "invalid_code" };
+  }
+
+  const anon = createSupabaseAnonClient();
+  const verified = await anon.auth.verifyOtp({
+    email,
+    token,
+    type: "signup",
+  });
+  const partnerId = verified.data.user?.id ?? null;
+  await anon.auth.signOut().catch(() => undefined);
+
+  if (!partnerId) {
+    return { ok: false, reason: "invalid_code" };
+  }
+
+  return bindSeatByUserId({
+    actorUserId: params.actorUserId,
+    partnerUserId: partnerId,
+  });
 }
 
 /** Create household when duo subscription credits; seat A = subscriber. */

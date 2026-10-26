@@ -4,7 +4,7 @@ import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import {
   createSeatInvite,
-  findHouseholdForUser,
+  ensureHouseholdForActiveSubscriber,
 } from "@/lib/passes/household";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
     const body = (await req.json().catch(() => ({}))) as { email?: string };
-    const hh = await findHouseholdForUser(user.id);
+    const { household: hh } = await ensureHouseholdForActiveSubscriber(user.id);
     if (!hh) {
       return NextResponse.json({ ok: false, error: "no_duo_household" }, { status: 400 });
     }

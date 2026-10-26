@@ -895,6 +895,50 @@
   font-size: 13px;
 }
 
+.bind-seat-dialog {
+  max-width: 440px;
+  max-height: min(92vh, 720px);
+  overflow-y: auto;
+}
+
+.bind-seat-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.bind-seat-tabs button {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bind-seat-tabs button.is-active {
+  background: rgba(242, 202, 80, 0.12);
+  color: #f2ca50;
+}
+
+.bind-seat-oauth-note {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+.bind-seat-invite-row {
+  margin-bottom: 12px;
+}
+
+.bind-seat-auth {
+  margin-top: 4px;
+}
+
 .refund-page {
   min-height: 100vh;
   background: #0a0a0f;
