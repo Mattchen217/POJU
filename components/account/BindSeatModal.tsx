@@ -13,6 +13,8 @@ import "@/components/auth/auth.css";
 
 type Props = {
   open: boolean;
+  /** Replace existing seat B with a new account. */
+  replace?: boolean;
   onClose: () => void;
   onBound: () => void;
 };
@@ -20,11 +22,11 @@ type Props = {
 type Mode = "login" | "signup";
 
 /**
- * Bind seat B with the same login/signup UX (OAuth + email/password + OTP).
+ * Bind / replace seat B with the same login/signup UX (OAuth + email/password + OTP).
  * Email paths bind without switching the current session.
  * OAuth uses invite accept URL (open in private window if needed).
  */
-export function BindSeatModal({ open, onClose, onBound }: Props) {
+export function BindSeatModal({ open, replace = false, onClose, onBound }: Props) {
   const t = useTranslations("account");
   const tLogin = useTranslations("auth.login");
   const tSignup = useTranslations("auth.signup");
@@ -50,7 +52,7 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ replace }),
     });
     const data = (await res.json().catch(() => ({}))) as {
       ok?: boolean;
@@ -74,7 +76,7 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
     setInvitePath(path);
     setInviteToken(token || null);
     return { path, token: token || null };
-  }, [locale]);
+  }, [locale, replace]);
 
   useEffect(() => {
     if (!open) {
@@ -99,8 +101,10 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
           const data = (await res.json().catch(() => ({}))) as {
             ok?: boolean;
             household?: { peer_bound?: boolean } | null;
+            seats?: Array<{ role: string; email: string | null }>;
           };
-          if (data.ok && data.household?.peer_bound) {
+          const seatB = data.seats?.find((s) => s.role === "seat_b");
+          if (data.ok && data.household?.peer_bound && seatB?.email) {
             stopPoll();
             onBound();
             onClose();
@@ -136,7 +140,7 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
       className="confirm-dialog-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={t("bindSeatTitle")}
+      aria-label={replace ? t("changeBoundAccountTitle") : t("bindSeatTitle")}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           stopPoll();
@@ -146,7 +150,7 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
     >
       <div className="confirm-dialog bind-seat-dialog" tabIndex={-1}>
         <div className="confirm-dialog__header">
-          <h2>{t("bindSeatTitle")}</h2>
+          <h2>{replace ? t("changeBoundAccountTitle") : t("bindSeatTitle")}</h2>
           <button
             type="button"
             className="confirm-dialog__back-link"
@@ -159,7 +163,9 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
           </button>
         </div>
 
-        <p className="description">{t("bindSeatHintFull")}</p>
+        <p className="description">
+          {replace ? t("changeBoundAccountHint") : t("bindSeatHintFull")}
+        </p>
 
         <div className="bind-seat-tabs" role="tablist">
           <button
@@ -213,6 +219,7 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
                   const { ok, data } = await postAuthJson("/api/household/bind-seat", {
                     email,
                     password,
+                    replace,
                   });
                   if (!ok) {
                     setError(data.error ?? "auth_failed");
@@ -258,6 +265,7 @@ export function BindSeatModal({ open, onClose, onBound }: Props) {
                   const { ok, data } = await postAuthJson("/api/household/bind-seat-verify", {
                     email,
                     token,
+                    replace,
                   });
                   if (!ok) {
                     setError(data.error ?? "invalid_code");

@@ -310,7 +310,14 @@
 
 .acct-bound-seats__add-btn {
   flex-shrink: 0;
-  padding: 0.45rem 0.75rem;
+  padding: 0.5rem 0.9rem !important;
+  font-size: 0.8125rem !important;
+  white-space: nowrap;
+  min-height: 2.25rem;
+}
+
+.acct-bound-seats__action-link {
+  flex-shrink: 0;
   font-size: 0.8125rem;
   white-space: nowrap;
 }

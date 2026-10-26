@@ -18,6 +18,7 @@ export const runtime = "nodejs";
 const BodySchema = z.object({
   email: EmailSchema,
   token: OtpTokenSchema,
+  replace: z.boolean().optional(),
 });
 
 /**
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
       actorUserId: user.id,
       email: normalizeEmail(parsed.data.email),
       token: parsed.data.token,
+      replace: parsed.data.replace === true,
     });
 
     if (!result.ok) {

@@ -18,6 +18,7 @@ export const runtime = "nodejs";
 const BodySchema = z.object({
   email: EmailSchema,
   password: PasswordSchema,
+  replace: z.boolean().optional(),
 });
 
 /**
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
       actorUserId: user.id,
       email: normalizeEmail(parsed.data.email),
       password: parsed.data.password,
+      replace: parsed.data.replace === true,
     });
 
     if (!result.ok) {

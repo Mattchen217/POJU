@@ -190,7 +190,9 @@ export async function GET() {
             peer_bound: false,
             can_joint: false,
             role: null,
-            can_bind_seat: false,
+            // Subscribed but household row missing — still allow UI bind CTA;
+            // bind/invite APIs will ensure household.
+            can_bind_seat: Boolean(subStatus === "active" || subPlan),
             seats,
           },
       purchases: purchasesRes.data ?? [],

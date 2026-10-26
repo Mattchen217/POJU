@@ -171,6 +171,8 @@ async function attachSeatB(params: {
   householdId: string;
   actorUserId: string;
   partnerUserId: string;
+  /** Overwrite existing seat B. */
+  replace?: boolean;
 }): Promise<
   | { ok: true; household: HouseholdRow }
   | { ok: false; reason: string }
@@ -179,10 +181,12 @@ async function attachSeatB(params: {
     return { ok: false, reason: "cannot_bind_self" };
   }
   const other = await findHouseholdForUser(params.partnerUserId);
-  if (other) return { ok: false, reason: "already_in_household" };
+  if (other && other.id !== params.householdId) {
+    return { ok: false, reason: "already_in_household" };
+  }
 
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("pass_households")
     .update({
       seat_b_user_id: params.partnerUserId,
@@ -193,9 +197,13 @@ async function attachSeatB(params: {
       updated_at: new Date().toISOString(),
     })
     .eq("id", params.householdId)
-    .is("seat_b_user_id", null)
-    .select("*")
-    .maybeSingle();
+    .eq("seat_a_user_id", params.actorUserId);
+
+  if (!params.replace) {
+    query = query.is("seat_b_user_id", null);
+  }
+
+  const { data, error } = await query.select("*").maybeSingle();
 
   if (error || !data) {
     console.error("[household] attach seat b", error?.code ?? error?.message);
@@ -208,6 +216,7 @@ async function attachSeatB(params: {
 export async function bindSeatByUserId(params: {
   actorUserId: string;
   partnerUserId: string;
+  replace?: boolean;
 }): Promise<
   | { ok: true; household: HouseholdRow; partner_user_id: string }
   | { ok: false; reason: string }
@@ -218,12 +227,15 @@ export async function bindSeatByUserId(params: {
   if (hh.seat_a_user_id !== params.actorUserId) {
     return { ok: false, reason: "only_seat_a_can_bind" };
   }
-  if (hh.seat_b_user_id) return { ok: false, reason: "already_full" };
+  if (hh.seat_b_user_id && !params.replace) {
+    return { ok: false, reason: "already_full" };
+  }
 
   const attached = await attachSeatB({
     householdId: hh.id,
     actorUserId: params.actorUserId,
     partnerUserId: params.partnerUserId,
+    replace: params.replace === true,
   });
   if (!attached.ok) return attached;
   return {
@@ -241,6 +253,7 @@ export async function bindSeatByCredentials(params: {
   actorUserId: string;
   email: string;
   password: string;
+  replace?: boolean;
 }): Promise<
   | { ok: true; household: HouseholdRow; partner_user_id: string; created: boolean }
   | { ok: false; reason: string }
@@ -260,7 +273,9 @@ export async function bindSeatByCredentials(params: {
   if (hh.seat_a_user_id !== params.actorUserId) {
     return { ok: false, reason: "only_seat_a_can_bind" };
   }
-  if (hh.seat_b_user_id) return { ok: false, reason: "already_full" };
+  if (hh.seat_b_user_id && !params.replace) {
+    return { ok: false, reason: "already_full" };
+  }
 
   const anon = createSupabaseAnonClient();
   const signedIn = await anon.auth.signInWithPassword({ email, password });
@@ -281,6 +296,7 @@ export async function bindSeatByCredentials(params: {
     householdId: hh.id,
     actorUserId: params.actorUserId,
     partnerUserId: partnerId,
+    replace: params.replace === true,
   });
   if (!attached.ok) return attached;
   return {
@@ -298,6 +314,7 @@ export async function bindSeatAfterSignupOtp(params: {
   actorUserId: string;
   email: string;
   token: string;
+  replace?: boolean;
 }): Promise<
   | { ok: true; household: HouseholdRow; partner_user_id: string }
   | { ok: false; reason: string }
@@ -327,7 +344,45 @@ export async function bindSeatAfterSignupOtp(params: {
   return bindSeatByUserId({
     actorUserId: params.actorUserId,
     partnerUserId: partnerId,
+    replace: params.replace === true,
   });
+}
+
+/** Seat A clears seat B so a new partner can be invited/bound. */
+export async function clearSeatBForReplace(params: {
+  actorUserId: string;
+}): Promise<{ ok: true; household: HouseholdRow } | { ok: false; reason: string }> {
+  if (!isSupabaseAdminConfigured()) {
+    return { ok: false, reason: "admin_unconfigured" };
+  }
+  const ensured = await ensureHouseholdForActiveSubscriber(params.actorUserId);
+  const hh = ensured.household;
+  if (!hh) return { ok: false, reason: "no_subscription" };
+  if (hh.seat_a_user_id !== params.actorUserId) {
+    return { ok: false, reason: "only_seat_a_can_bind" };
+  }
+  if (!hh.seat_b_user_id) {
+    return { ok: true, household: hh };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("pass_households")
+    .update({
+      seat_b_user_id: null,
+      status: "pending_partner",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", hh.id)
+    .eq("seat_a_user_id", params.actorUserId)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("[household] clear seat b", error?.code ?? error?.message);
+    return { ok: false, reason: "clear_failed" };
+  }
+  return { ok: true, household: data as HouseholdRow };
 }
 
 /** Create household when duo subscription credits; seat A = subscriber. */

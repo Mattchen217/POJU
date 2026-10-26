@@ -66,13 +66,15 @@ export function SubscriptionCard({
   onAccountChanged,
   loading = false,
   boundSeats = null,
-  canBindSeat = false,
+  canBindSeat: _canBindSeat = false,
 }: Props) {
+  void _canBindSeat;
   const t = useTranslations("account");
   const locale = useLocale();
   const [detailOpen, setDetailOpen] = useState(false);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
   const [bindOpen, setBindOpen] = useState(false);
+  const [bindReplace, setBindReplace] = useState(false);
 
   const seats: BoundSeatSlot[] =
     boundSeats && boundSeats.length >= 2
@@ -252,7 +254,8 @@ export function SubscriptionCard({
               <ul className="acct-bound-seats__list">
                 {seats.map((seat, i) => {
                   const empty = !seat.email?.trim();
-                  const showAdd = empty && canBindSeat && seat.role === "seat_b";
+                  const isSeat2 = seat.role === "seat_b" || i === 1;
+                  const showSeat2Action = hasSub && !loading && isSeat2;
                   return (
                     <li key={seat.role} className="acct-bound-seats__item">
                       <div className="acct-bound-seats__row">
@@ -267,14 +270,17 @@ export function SubscriptionCard({
                             {empty ? t("boundAccountEmpty") : seat.email}
                           </span>
                         </div>
-                        {showAdd ? (
+                        {showSeat2Action ? (
                           <button
                             type="button"
-                            className="acct-btn acct-btn--gold acct-bound-seats__add-btn"
-                            disabled={loading}
-                            onClick={() => setBindOpen(true)}
+                            className="acct-text-link acct-bound-seats__action-link"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBindReplace(!empty);
+                              setBindOpen(true);
+                            }}
                           >
-                            {t("addBoundAccount")}
+                            {empty ? t("bindAccountLink") : t("changeBoundAccount")}
                           </button>
                         ) : null}
                       </div>
@@ -339,6 +345,7 @@ export function SubscriptionCard({
 
       <BindSeatModal
         open={bindOpen}
+        replace={bindReplace}
         onClose={() => setBindOpen(false)}
         onBound={onAccountChanged}
       />

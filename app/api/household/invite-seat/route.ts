@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import {
+  clearSeatBForReplace,
   createSeatInvite,
   ensureHouseholdForActiveSubscriber,
 } from "@/lib/passes/household";
@@ -19,10 +20,20 @@ export async function POST(req: Request) {
     if (!user?.id) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
-    const body = (await req.json().catch(() => ({}))) as { email?: string };
-    const { household: hh } = await ensureHouseholdForActiveSubscriber(user.id);
+    const body = (await req.json().catch(() => ({}))) as {
+      email?: string;
+      replace?: boolean;
+    };
+    let { household: hh } = await ensureHouseholdForActiveSubscriber(user.id);
     if (!hh) {
       return NextResponse.json({ ok: false, error: "no_duo_household" }, { status: 400 });
+    }
+    if (body.replace === true && hh.seat_b_user_id) {
+      const cleared = await clearSeatBForReplace({ actorUserId: user.id });
+      if (!cleared.ok) {
+        return NextResponse.json({ ok: false, error: cleared.reason }, { status: 400 });
+      }
+      hh = cleared.household;
     }
     const result = await createSeatInvite({
       householdId: hh.id,
