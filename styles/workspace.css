@@ -1430,6 +1430,43 @@
   color: var(--ws-text);
 }
 
+/* CTA hover explain panel — portaled to body, above all chrome */
+.workspace-sidebar-cta-hint {
+  position: fixed;
+  z-index: 10000;
+  width: min(300px, calc(100vw - 24px));
+  max-height: min(280px, calc(100vh - 24px));
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: var(--eos-modal-control-radius, 12px);
+  border: 1px solid rgba(242, 202, 80, 0.35);
+  background: rgba(11, 15, 18, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    0 0 24px rgba(242, 202, 80, 0.08);
+  color: #e0e2e8;
+  pointer-events: none;
+}
+
+.workspace-sidebar-cta-hint__title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f2ca50;
+}
+
+.workspace-sidebar-cta-hint__body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(224, 226, 232, 0.92);
+  white-space: pre-line;
+}
+
 .workspace-sidebar__item:focus-visible {
   outline: 2px solid var(--ws-gold);
   outline-offset: 2px;

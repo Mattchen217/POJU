@@ -3,12 +3,15 @@
 import {
   useCallback,
   useEffect,
+  useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useAppDialog } from "@/components/ui/app-dialog";
@@ -106,6 +109,104 @@ type Props = {
   /** When false, brand row is rendered outside (desktop chrome). Default true. */
   showBrand?: boolean;
 };
+
+/** Hover tip for joint/solo CTAs — portaled above the page so sidebar overflow cannot clip it. */
+function SidebarCtaHintButton({
+  className,
+  label,
+  hintTitle,
+  hintBody,
+  ariaCurrent,
+  onClick,
+}: {
+  className: string;
+  label: string;
+  hintTitle: string;
+  hintBody: string;
+  ariaCurrent?: "page" | undefined;
+  onClick: () => void;
+}) {
+  const tipId = useId();
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const place = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const gap = 10;
+    const tipW = 300;
+    let left = r.right + gap;
+    if (left + tipW > window.innerWidth - 12) {
+      left = Math.max(12, r.left - tipW - gap);
+    }
+    let top = r.top;
+    const maxTop = window.innerHeight - 12;
+    // Clamp after measuring approx height via CSS max-height
+    if (top + 220 > maxTop) top = Math.max(12, maxTop - 220);
+    setCoords({ top, left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    place();
+    const onScroll = () => place();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [open, place]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        className={className}
+        aria-current={ariaCurrent}
+        aria-describedby={open ? tipId : undefined}
+        onClick={onClick}
+        onMouseEnter={() => {
+          place();
+          setOpen(true);
+        }}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => {
+          place();
+          setOpen(true);
+        }}
+        onBlur={() => setOpen(false)}
+      >
+        <span className="workspace-sidebar__icon" aria-hidden>
+          <span className="material-symbols-outlined">add</span>
+        </span>
+        <span className="workspace-sidebar__label">{label}</span>
+      </button>
+      {mounted && open && coords
+        ? createPortal(
+            <div
+              id={tipId}
+              role="tooltip"
+              className="workspace-sidebar-cta-hint"
+              style={{ top: coords.top, left: coords.left }}
+            >
+              <p className="workspace-sidebar-cta-hint__title">{hintTitle}</p>
+              <p className="workspace-sidebar-cta-hint__body">{hintBody}</p>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
 
 /** Brand lockup + optional dock toggle 鈥?used in desktop chrome or mobile sidebar. */
 export function WorkspaceSidebarBrand({
@@ -606,17 +707,13 @@ export function WorkspaceSidebar({
         <div className="workspace-sidebar__divider" role="separator" />
 
         {/* Joint decision CTA + history */}
-        <button
-          type="button"
+        <SidebarCtaHintButton
           className="workspace-sidebar__item workspace-sidebar__item--solo workspace-sidebar__item--cta"
-          data-tooltip={tJoint("cta_new")}
+          label={tJoint("cta_new")}
+          hintTitle={tJoint("cta_joint_hint_title")}
+          hintBody={tJoint("cta_joint_hint_body")}
           onClick={() => void requestNewJoint()}
-        >
-          <span className="workspace-sidebar__icon" aria-hidden>
-            <span className="material-symbols-outlined">add</span>
-          </span>
-          <span className="workspace-sidebar__label">{tJoint("cta_new")}</span>
-        </button>
+        />
 
         <div className="workspace-sidebar__past-block workspace-sidebar__past-block--joint">
           {!collapsed ? (
@@ -701,20 +798,16 @@ export function WorkspaceSidebar({
         <div className="workspace-sidebar__divider" role="separator" />
 
         {/* Solo decision CTA + history */}
-        <button
-          type="button"
+        <SidebarCtaHintButton
           className={`workspace-sidebar__item workspace-sidebar__item--solo workspace-sidebar__item--cta${
             alreadyOnNewHome && activeJointId == null ? " is-active" : ""
           }`}
-          aria-current={alreadyOnNewHome && activeJointId == null ? "page" : undefined}
-          data-tooltip={tJoint("cta_solo")}
+          ariaCurrent={alreadyOnNewHome && activeJointId == null ? "page" : undefined}
+          label={tJoint("cta_solo")}
+          hintTitle={tJoint("cta_solo_hint_title")}
+          hintBody={tJoint("cta_solo_hint_body")}
           onClick={() => void requestNewSolo()}
-        >
-          <span className="workspace-sidebar__icon" aria-hidden>
-            <span className="material-symbols-outlined">add</span>
-          </span>
-          <span className="workspace-sidebar__label">{tJoint("cta_solo")}</span>
-        </button>
+        />
 
         <div className="workspace-sidebar__past-block">
           {!collapsed ? (
