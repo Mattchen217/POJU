@@ -9,6 +9,8 @@ type ProductMarketingHeroProps = {
   children: ReactNode;
   /** Spline / 能量球 / Match 动效 — 保留项目现有动效，不用 DS energyField */
   background?: ReactNode;
+  /** Between motion bg and copy (e.g. workspace hero character art). */
+  midground?: ReactNode;
   className?: string;
   shellClassName?: string;
   layout?: "centered" | "split";
@@ -25,6 +27,7 @@ type ProductMarketingHeroProps = {
 export function ProductMarketingHero({
   children,
   background,
+  midground,
   className,
   shellClassName,
   layout = "centered",
@@ -51,6 +54,12 @@ export function ProductMarketingHero({
         {hideStarrySky ? null : <ProductHeroStarrySky />}
 
         {hideVignette ? null : <div className="product-hero__vignette" aria-hidden />}
+
+        {midground ? (
+          <div className="product-hero__midground" aria-hidden>
+            {midground}
+          </div>
+        ) : null}
 
         <div
           className={cn(

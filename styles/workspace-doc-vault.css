@@ -244,11 +244,11 @@
 }
 
 
-/* Collapsed vault: plain white “X 14” at icon top-right, no badge circle */
+/* Collapsed vault: count at NE (~45°) of the glyph */
 .workspace-right-collapsed-icons__count {
   position: absolute;
   top: 2px;
-  right: 0;
+  right: 2px;
   min-width: 0;
   height: auto;
   padding: 0;
@@ -263,4 +263,5 @@
   letter-spacing: 0.02em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
   white-space: nowrap;
+  z-index: 1;
 }

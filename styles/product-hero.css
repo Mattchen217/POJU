@@ -248,9 +248,17 @@
   }
 }
 
+.product-hero__midground {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
 .product-hero__stage {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   margin-inline: auto;
   display: flex;
   width: 100%;

@@ -200,12 +200,13 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
     return () => window.clearTimeout(timer);
   }, [unlockResumeGate]);
 
+  const isJointEntry = entryMode === "joint";
   const heroCopy = {
-    brandTag: t("kicker"),
-    heading: t("h1"),
-    description: t("body"),
-    // v2.6: Lead-in moved to Form help — do not render in hero
-    tagline: "", // Hook omitted (Max default off)
+    brandTag: isJointEntry ? t("h1_joint") : t("h1_solo"),
+    heading: isJointEntry ? t("body_joint") : t("body_solo"),
+    description: isJointEntry ? t("lead_joint") : t("lead_solo"),
+    leadIn: "",
+    tagline: "",
     ctaPrimary: "",
     billingNotice: "",
   };
@@ -276,7 +277,9 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
   if (phase === "idle") {
     return (
       <div className="workspace-product-stack workspace-poju-stack">
-        <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
+        <div
+          className={`workspace-product-hero workspace-poju-hero workspace-atmos-hero workspace-poju-hero--${entryMode}`}
+        >
           <PojuProductHero
             copy={heroCopy}
             hideActions
@@ -330,7 +333,9 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
             birthFading ? " is-fade-out" : ""
           }`}
         >
-          <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
+          <div
+            className={`workspace-product-hero workspace-poju-hero workspace-atmos-hero workspace-poju-hero--${entryMode}`}
+          >
             <PojuProductHero
               copy={heroCopy}
               hideActions

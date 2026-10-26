@@ -483,7 +483,10 @@ export function toPublicView(
       ? joint.birth_snapshot_a
       : joint.birth_snapshot_b
     : null;
-  const unread = isInitiator ? Boolean(joint.unread_a) : Boolean(joint.unread_b);
+  // Invitee pending invite is always unread until they open/agree (DB flag + status fallback).
+  const unread = isInitiator
+    ? Boolean(joint.unread_a)
+    : Boolean(joint.unread_b) || joint.status === "invited";
   const myCharged = isInitiator
     ? Boolean(joint.pass_ref_a)
     : Boolean(joint.pass_ref_b);

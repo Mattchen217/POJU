@@ -589,32 +589,38 @@ export function WorkspaceSidebar({
   const todayItems = useMemo(() => filtered.filter((r) => isToday(r.created_at)), [filtered]);
   const earlierItems = useMemo(() => filtered.filter((r) => !isToday(r.created_at)), [filtered]);
 
+  /** Confirm leave only while in chat; workbench solo↔joint switch is silent. */
+  const inPojuChat = activeTab === "poju" && prepare?.phase === "chat";
+
   const alreadyOnNewHome =
     activeTab === "poju" &&
     !activeArchiveId &&
     (prepare?.phase ?? "idle") === "idle";
 
+  const jointEntryModeSolo = alreadyOnNewHome && activeJointId == null;
+  const hasJointUnread = joints.some((j) => j.unread);
+
   async function requestNewSolo() {
-    if (alreadyOnNewHome && activeJointId == null) {
-      requestJointEntryMode("solo");
-      return;
+    if (inPojuChat) {
+      const ok = await confirm(tJoint("soloNewConfirmBody"), tJoint("soloNewConfirmTitle"), {
+        confirmLabel: t("newConfirmOk"),
+        cancelLabel: t("newConfirmCancel"),
+      });
+      if (!ok) return;
     }
-    const ok = await confirm(t("newConfirmBody"), t("newConfirmTitle"), {
-      confirmLabel: t("newConfirmOk"),
-      cancelLabel: t("newConfirmCancel"),
-    });
-    if (!ok) return;
     setActiveJointId(null);
     requestJointEntryMode("solo");
     onSelectNew("poju");
   }
 
   async function requestNewJoint() {
-    const ok = await confirm(tJoint("newConfirmBody"), tJoint("newConfirmTitle"), {
-      confirmLabel: t("newConfirmOk"),
-      cancelLabel: t("newConfirmCancel"),
-    });
-    if (!ok) return;
+    if (inPojuChat) {
+      const ok = await confirm(tJoint("newConfirmBody"), tJoint("newConfirmTitle"), {
+        confirmLabel: t("newConfirmOk"),
+        cancelLabel: t("newConfirmCancel"),
+      });
+      if (!ok) return;
+    }
     setActiveJointId(null);
     requestJointEntryMode("joint");
     onSelectNew("poju");
@@ -726,6 +732,9 @@ export function WorkspaceSidebar({
             >
               <span className="workspace-sidebar__section-label-icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
+                {hasJointUnread ? (
+                  <span className="workspace-sidebar__unread-dot" aria-hidden />
+                ) : null}
               </span>
               <span>
                 {tJoint("history_label", { count: jointsReady ? joints.length : 0 })}
@@ -742,6 +751,9 @@ export function WorkspaceSidebar({
             >
               <span className="workspace-sidebar__icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
+                {hasJointUnread ? (
+                  <span className="workspace-sidebar__unread-dot" aria-hidden />
+                ) : null}
               </span>
             </button>
           )}
@@ -800,9 +812,9 @@ export function WorkspaceSidebar({
         {/* Solo decision CTA + history */}
         <SidebarCtaHintButton
           className={`workspace-sidebar__item workspace-sidebar__item--solo workspace-sidebar__item--cta${
-            alreadyOnNewHome && activeJointId == null ? " is-active" : ""
+            jointEntryModeSolo ? " is-active" : ""
           }`}
-          ariaCurrent={alreadyOnNewHome && activeJointId == null ? "page" : undefined}
+          ariaCurrent={jointEntryModeSolo ? "page" : undefined}
           label={tJoint("cta_solo")}
           hintTitle={tJoint("cta_solo_hint_title")}
           hintBody={tJoint("cta_solo_hint_body")}

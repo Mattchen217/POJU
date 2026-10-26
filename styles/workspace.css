@@ -213,6 +213,10 @@
 }
 
 .workspace-shell__right-drawer.is-collapsed {
+  width: var(--ws-sidebar-collapsed);
+  min-width: var(--ws-sidebar-collapsed);
+  max-width: var(--ws-sidebar-collapsed);
+  box-sizing: border-box;
   overflow: visible;
 }
 
@@ -254,13 +258,16 @@
   padding-top: 8px;
 }
 
-/* Collapsed right rail: energy matrix + report icons (left-rail icon style) */
+/* Collapsed right rail: fit inside same 64px as left collapsed; glyphs readable but not wider than rail */
 .workspace-right-collapsed-icons {
   display: none;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0 16px;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 4px 0 12px;
   flex-shrink: 0;
 }
 
@@ -273,15 +280,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
+  max-width: calc(100% - 8px);
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: transparent;
   color: rgba(255, 255, 255, 0.88);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   overflow: visible;
+  box-sizing: border-box;
 }
 
 .workspace-right-collapsed-icons__btn--qa {
@@ -293,12 +302,12 @@
 }
 
 .workspace-right-collapsed-icons__qa-icon {
-  font-size: 22px !important;
+  font-size: 24px !important;
   color: var(--ws-gold, #f2ca50);
 }
 
 .workspace-right-collapsed-icons__stop-icon {
-  font-size: 22px !important;
+  font-size: 24px !important;
   color: rgba(255, 180, 168, 0.95);
 }
 
@@ -308,48 +317,39 @@
 }
 
 .workspace-right-collapsed-icons__unread {
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   width: 8px;
   height: 8px;
   z-index: 2;
 }
 
+/* Beat left-rail .workspace-sidebar__icon / svg (18px); keep under collapsed rail width */
 .workspace-right-collapsed-icons__btn .workspace-sidebar__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.workspace-right-collapsed-icons__btn .workspace-sidebar__icon svg,
+.workspace-right-collapsed-icons__glyph,
+.workspace-right-collapsed-icons__portrait,
+.workspace-right-collapsed-icons__report {
+  display: block;
+  width: 28px;
+  height: 28px;
+  color: var(--ws-gold, #f2ca50);
 }
 
 .workspace-right-collapsed-icons__btn .material-symbols-outlined {
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: block;
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-}
-
-.workspace-right-collapsed-icons__portrait {
-  width: 30px;
-  height: 30px;
-  display: block;
-  color: var(--ws-gold, #f2ca50);
-}
-
-.workspace-right-collapsed-icons__report {
-  width: 30px;
-  height: 30px;
-  display: block;
-  color: var(--ws-gold, #f2ca50);
-}
-
-/* Collapsed rail: larger gold glyph only (no A4 — paper shell is for open vault list) */
-.workspace-right-collapsed-icons__glyph {
-  width: 30px;
-  height: 30px;
-  display: block;
-  color: var(--ws-gold, #f2ca50);
 }
 
 .workspace-right-collapsed-icons__spin {
@@ -1340,10 +1340,18 @@
   border-radius: 50%;
   background: #ef4444;
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
+  opacity: 1;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .workspace-sidebar__history-row.is-unread .workspace-sidebar__sublabel {
   font-weight: 600;
+}
+
+.workspace-sidebar__history-row.is-unread .workspace-sidebar__subitem--doc .workspace-sidebar__icon {
+  opacity: 1;
+  overflow: visible;
 }
 
 .workspace-sidebar__icon .material-symbols-outlined {
@@ -1672,6 +1680,12 @@
   transform: translateZ(0);
 }
 
+/* Mode kicker above gold H1 (「单人/双人决策对话」) */
+.workspace-poju-hero .product-hero__brand-tag {
+  letter-spacing: 0.12em;
+  text-transform: none;
+}
+
 .workspace-product-hero .product-hero,
 .workspace-poju-hero .product-hero {
   overflow: hidden;
@@ -1795,18 +1809,19 @@
   background: radial-gradient(ellipse 70% 60% at 50% 50%, transparent 28%, rgba(5, 4, 10, 0.35) 100%);
 }
 
-/* Headline — larger & bolder; POJU stays one line, others may wrap */
+/* Headline — fit center stage between rails; allow wrap (EN overflows with nowrap) */
 .workspace-product-hero .ds-gradient-title,
 .workspace-poju-hero .ds-gradient-title {
-  font-size: clamp(1.75rem, 4.2vw, 3.15rem);
+  font-size: clamp(1.4rem, 2.9vw, 2.25rem);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.25;
   letter-spacing: -0.02em;
   text-wrap: balance;
-}
-
-.workspace-poju-hero .ds-gradient-title {
-  white-space: nowrap;
+  white-space: normal;
+  max-width: min(92vw, 40rem);
+  margin-inline: auto;
+  padding-inline: 8px;
+  overflow-wrap: break-word;
 }
 
 .workspace-product-hero .product-hero__description,
@@ -1915,12 +1930,18 @@
   mix-blend-mode: normal !important;
 }
 
-/* atmoswork: blue walker — mid brightness (rolled back from 4.2) */
+/* atmoswork walker — mid brightness (rolled back from 4.2) */
 .workspace-product-hero.workspace-atmos-hero .poju-hero-spline--atmos-glow canvas,
 .workspace-atmos-hero .poju-hero-spline--atmos-glow canvas {
   background: transparent !important;
   mix-blend-mode: screen !important;
   filter: brightness(2.6) contrast(1.4) saturate(2.4) !important;
+}
+
+/* Solo decision: shift cyan walker toward soft jade green */
+.workspace-poju-hero--solo.workspace-atmos-hero .poju-hero-spline--atmos-glow canvas,
+.workspace-product-hero.workspace-poju-hero--solo .poju-hero-spline--atmos-glow canvas {
+  filter: brightness(2.55) contrast(1.38) saturate(2.15) hue-rotate(-48deg) !important;
 }
 
 .workspace-atmos-hero .poju-hero-constellation--over-spline {
@@ -6141,6 +6162,7 @@ button.workspace-poju-card__title:hover {
 }
 
 .workspace-sidebar__section-label-icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6149,6 +6171,7 @@ button.workspace-poju-card__title:hover {
   height: var(--ws-rail-icon-size);
   color: inherit;
   opacity: 0.95;
+  overflow: visible;
 }
 
 .workspace-sidebar__section-label-icon .material-symbols-outlined {

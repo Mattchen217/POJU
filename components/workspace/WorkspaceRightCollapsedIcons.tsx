@@ -19,12 +19,12 @@ type Props = {
 };
 
 function formatCount(n: number): string {
-  return `x ${n}`;
+  return String(n);
 }
 
 /**
  * Collapsed right-rail: large inner glyph only (no A4 shell — that stays in the open vault list).
- * Count badge: white `X3` / `X5`. No unread red dots on rail icons.
+ * Count badge: white numeral only. No unread red dots on rail icons.
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");

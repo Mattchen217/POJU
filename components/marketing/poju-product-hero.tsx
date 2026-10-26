@@ -93,7 +93,9 @@ export function PojuProductHero({
       }
     >
       <ProductHeroContent>
-        <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>
+        {copy.brandTag ? (
+          <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>
+        ) : null}
         <DsGradientTitle from="#d4af37" to="#e8c56f">
           {copy.heading}
         </DsGradientTitle>
