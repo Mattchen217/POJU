@@ -867,6 +867,34 @@
   border-color: rgba(242, 202, 80, 0.45);
 }
 
+.bind-seat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.bind-seat-field input {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.72);
+  color: #e0e2e8;
+  font-size: 14px;
+}
+
+.bind-seat-field input:focus {
+  outline: none;
+  border-color: rgba(242, 202, 80, 0.45);
+}
+
+.bind-seat-error {
+  margin: 0 0 8px;
+  color: #f87171;
+  font-size: 13px;
+}
+
 .refund-page {
   min-height: 100vh;
   background: #0a0a0f;

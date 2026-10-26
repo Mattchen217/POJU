@@ -4,6 +4,7 @@ import { useState, type MouseEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { AccountBuySheet } from "@/components/account/AccountBuySheet";
+import { BindSeatModal } from "@/components/account/BindSeatModal";
 import type { PurchaseRow } from "@/components/account/PurchaseHistoryList";
 import { SubscriptionDetailSheet } from "@/components/account/SubscriptionDetailSheet";
 import type { UsageRow } from "@/components/account/UsageHistoryList";
@@ -20,12 +21,22 @@ type Subscription = {
   carryover_source_plan?: "personal" | "team" | null;
 };
 
+export type BoundSeatSlot = {
+  role: "seat_a" | "seat_b";
+  user_id: string | null;
+  email: string | null;
+  is_you: boolean;
+};
+
 type Props = {
   subscription: Subscription;
   purchases: PurchaseRow[];
   usage: UsageRow[];
   onAccountChanged: () => void;
   loading?: boolean;
+  /** Two subscription seats (emails); seat_b may be empty. */
+  boundSeats?: BoundSeatSlot[] | null;
+  canBindSeat?: boolean;
 };
 
 function formatPeriodEnd(iso: string | null, locale: string): string {
@@ -54,11 +65,22 @@ export function SubscriptionCard({
   usage,
   onAccountChanged,
   loading = false,
+  boundSeats = null,
+  canBindSeat = false,
 }: Props) {
   const t = useTranslations("account");
   const locale = useLocale();
   const [detailOpen, setDetailOpen] = useState(false);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const [bindOpen, setBindOpen] = useState(false);
+
+  const seats: BoundSeatSlot[] =
+    boundSeats && boundSeats.length >= 2
+      ? boundSeats.slice(0, 2)
+      : [
+          { role: "seat_a", user_id: null, email: null, is_you: false },
+          { role: "seat_b", user_id: null, email: null, is_you: false },
+        ];
 
   const planLabel =
     subscription.plan === "personal"
@@ -221,6 +243,38 @@ export function SubscriptionCard({
           </div>
         </div>
 
+        {hasSub ? (
+          <div className="acct-bound-seats" onClick={(e) => e.stopPropagation()}>
+            <p className="acct-bound-seats__title">{t("boundAccountsTitle")}</p>
+            <p className="acct-bound-seats__note">{t("boundAccountsNote")}</p>
+            <ul className="acct-bound-seats__list">
+              {seats.map((seat, i) => (
+                <li key={seat.role} className="acct-bound-seats__item">
+                  <span className="acct-bound-seats__label">
+                    {t("boundAccountSlot", { n: i + 1 })}
+                    {seat.is_you ? ` · ${t("boundAccountYou")}` : ""}
+                  </span>
+                  <span
+                    className={`acct-bound-seats__email${seat.email ? "" : " is-empty"}`}
+                  >
+                    {seat.email?.trim() || t("boundAccountEmpty")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {canBindSeat ? (
+              <button
+                type="button"
+                className="acct-text-link acct-bound-seats__add"
+                disabled={loading}
+                onClick={() => setBindOpen(true)}
+              >
+                {t("addBoundAccount")}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="acct-strip__foot">
           <button
             type="button"
@@ -270,6 +324,12 @@ export function SubscriptionCard({
         }
         periodEnd={subscription.current_period_end}
         onPlanScheduled={onAccountChanged}
+      />
+
+      <BindSeatModal
+        open={bindOpen}
+        onClose={() => setBindOpen(false)}
+        onBound={onAccountChanged}
       />
     </>
   );

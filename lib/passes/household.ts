@@ -4,6 +4,7 @@
 
 import {
   createSupabaseAdminClient,
+  createSupabaseAnonClient,
   isSupabaseAdminConfigured,
 } from "@/lib/auth/supabase";
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
@@ -13,6 +14,13 @@ import {
   SEAT_INVITE_TTL_MS,
   type HouseholdRow,
 } from "@/lib/passes/household-types";
+
+export type HouseholdSeatPublic = {
+  role: "seat_a" | "seat_b";
+  user_id: string | null;
+  email: string | null;
+  is_you: boolean;
+};
 
 function asHousehold(row: Record<string, unknown> | null): HouseholdRow | null {
   if (!row || typeof row.id !== "string") return null;
@@ -71,7 +79,7 @@ export async function ensureHouseholdForActiveSubscriber(
   const { data: passes } = await admin
     .from("user_passes")
     .select(
-      "subscription_status, subscription_plan, sub_balance, sub_carryover, stripe_subscription_id, current_period_end",
+      "subscription_status, subscription_plan, sub_balance, sub_quota, sub_carryover, stripe_subscription_id, current_period_end",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -101,10 +109,15 @@ export async function ensureHouseholdForActiveSubscriber(
   const sub = typeof passes?.sub_balance === "number" ? passes.sub_balance : 0;
   const carry =
     typeof passes?.sub_carryover === "number" ? passes.sub_carryover : 0;
+  const planQuota =
+    typeof passes?.sub_quota === "number" && passes.sub_quota > 0
+      ? passes.sub_quota
+      : DUO_MONTHLY_QUOTA;
   const shared = Math.max(0, sub + carry);
   const created = await createOrRefreshDuoHousehold({
     seatAUserId: userId,
     sharedBalance: shared,
+    quota: planQuota,
     stripeSubscriptionId:
       typeof passes?.stripe_subscription_id === "string"
         ? passes.stripe_subscription_id
@@ -120,10 +133,140 @@ export async function ensureHouseholdForActiveSubscriber(
   return { household: created.household, subscriptionActive: true };
 }
 
+async function emailForUserId(userId: string): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user?.email) return null;
+  return data.user.email;
+}
+
+/** Two seat slots for UI — always length 2; empty seat has null email. */
+export async function listHouseholdSeatsForViewer(
+  hh: HouseholdRow,
+  viewerUserId: string,
+): Promise<HouseholdSeatPublic[]> {
+  const aEmail = hh.seat_a_user_id
+    ? await emailForUserId(hh.seat_a_user_id)
+    : null;
+  const bEmail = hh.seat_b_user_id
+    ? await emailForUserId(hh.seat_b_user_id)
+    : null;
+  return [
+    {
+      role: "seat_a",
+      user_id: hh.seat_a_user_id,
+      email: aEmail,
+      is_you: hh.seat_a_user_id === viewerUserId,
+    },
+    {
+      role: "seat_b",
+      user_id: hh.seat_b_user_id,
+      email: bEmail,
+      is_you: hh.seat_b_user_id === viewerUserId,
+    },
+  ];
+}
+
+/**
+ * Seat A binds seat B by email+password (login existing or create new).
+ * Does not switch the caller's session.
+ */
+export async function bindSeatByCredentials(params: {
+  actorUserId: string;
+  email: string;
+  password: string;
+}): Promise<
+  | { ok: true; household: HouseholdRow; partner_user_id: string; created: boolean }
+  | { ok: false; reason: string }
+> {
+  if (!isSupabaseAdminConfigured()) {
+    return { ok: false, reason: "admin_unconfigured" };
+  }
+  const email = params.email.trim().toLowerCase();
+  const password = params.password;
+  if (!email || password.length < 8) {
+    return { ok: false, reason: "invalid_credentials" };
+  }
+
+  const ensured = await ensureHouseholdForActiveSubscriber(params.actorUserId);
+  const hh = ensured.household;
+  if (!hh) return { ok: false, reason: "no_subscription" };
+  if (hh.seat_a_user_id !== params.actorUserId) {
+    return { ok: false, reason: "only_seat_a_can_bind" };
+  }
+  if (hh.seat_b_user_id) return { ok: false, reason: "already_full" };
+
+  const admin = createSupabaseAdminClient();
+  let partnerId: string | null = null;
+  let created = false;
+
+  // 1) Try existing account password (ephemeral client — no cookie session).
+  const anon = createSupabaseAnonClient();
+  const signedIn = await anon.auth.signInWithPassword({ email, password });
+  if (signedIn.data.user?.id) {
+    partnerId = signedIn.data.user.id;
+    await anon.auth.signOut().catch(() => undefined);
+  } else {
+    await anon.auth.signOut().catch(() => undefined);
+    // 2) Create new account (confirmed) then bind.
+    const { data: createdUser, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (createErr || !createdUser.user?.id) {
+      const msg = (createErr?.message ?? "").toLowerCase();
+      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+        return { ok: false, reason: "invalid_credentials" };
+      }
+      console.error("[household] bind createUser", createErr?.message);
+      return { ok: false, reason: "create_user_failed" };
+    }
+    partnerId = createdUser.user.id;
+    created = true;
+  }
+
+  if (!partnerId) return { ok: false, reason: "partner_missing" };
+  if (partnerId === params.actorUserId) {
+    return { ok: false, reason: "cannot_bind_self" };
+  }
+
+  const other = await findHouseholdForUser(partnerId);
+  if (other) return { ok: false, reason: "already_in_household" };
+
+  const { data, error } = await admin
+    .from("pass_households")
+    .update({
+      seat_b_user_id: partnerId,
+      status: "active",
+      seat_invite_token: null,
+      seat_invite_email: null,
+      seat_invite_expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", hh.id)
+    .eq("status", "pending_partner")
+    .is("seat_b_user_id", null)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("[household] bind seat", error?.code ?? error?.message);
+    return { ok: false, reason: "bind_failed" };
+  }
+  return {
+    ok: true,
+    household: data as HouseholdRow,
+    partner_user_id: partnerId,
+    created,
+  };
+}
+
 /** Create household when duo subscription credits; seat A = subscriber. */
 export async function createOrRefreshDuoHousehold(params: {
   seatAUserId: string;
   sharedBalance: number;
+  quota?: number;
   stripeSubscriptionId?: string | null;
   currentPeriodEnd?: string | null;
 }): Promise<{ ok: true; household: HouseholdRow } | { ok: false; reason: string }> {
@@ -131,13 +274,17 @@ export async function createOrRefreshDuoHousehold(params: {
     return { ok: false, reason: "admin_unconfigured" };
   }
   const admin = createSupabaseAdminClient();
+  const quota =
+    typeof params.quota === "number" && params.quota > 0
+      ? params.quota
+      : DUO_MONTHLY_QUOTA;
   const existing = await findHouseholdForUser(params.seatAUserId);
   if (existing && existing.seat_a_user_id === params.seatAUserId) {
     const { data, error } = await admin
       .from("pass_households")
       .update({
         shared_sub_balance: Math.max(0, params.sharedBalance),
-        quota: DUO_MONTHLY_QUOTA,
+        quota,
         stripe_subscription_id: params.stripeSubscriptionId ?? existing.stripe_subscription_id,
         current_period_end: params.currentPeriodEnd ?? existing.current_period_end,
         status: existing.seat_b_user_id ? "active" : "pending_partner",
@@ -161,7 +308,7 @@ export async function createOrRefreshDuoHousehold(params: {
       seat_a_user_id: params.seatAUserId,
       seat_b_user_id: null,
       shared_sub_balance: Math.max(0, params.sharedBalance || DUO_FIRST_GRANT),
-      quota: DUO_MONTHLY_QUOTA,
+      quota,
       stripe_subscription_id: params.stripeSubscriptionId ?? null,
       current_period_end: params.currentPeriodEnd ?? null,
     })

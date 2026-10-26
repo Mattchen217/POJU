@@ -8,9 +8,11 @@ import { BillingInvoicesCard } from "@/components/account/BillingInvoicesCard";
 import { PASSES_CREDITED_EVENT } from "@/lib/passes/pass-client-events";
 import { DangerZoneCard } from "@/components/account/DangerZoneCard";
 import { PassBalanceCard } from "@/components/account/PassBalanceCard";
-import { DuoHouseholdCard } from "@/components/account/DuoHouseholdCard";
 import { PurchaseHistoryList, type PurchaseRow } from "@/components/account/PurchaseHistoryList";
-import { SubscriptionCard } from "@/components/account/SubscriptionCard";
+import {
+  SubscriptionCard,
+  type BoundSeatSlot,
+} from "@/components/account/SubscriptionCard";
 import { UsageHistoryList, type UsageRow } from "@/components/account/UsageHistoryList";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
@@ -40,6 +42,10 @@ type AccountSummary = {
   };
   purchases?: PurchaseRow[];
   usage?: UsageRow[];
+  household?: {
+    can_bind_seat?: boolean;
+    seats?: BoundSeatSlot[];
+  } | null;
   error?: string;
 };
 
@@ -155,7 +161,6 @@ export function ProfilePanel() {
               }
               onAccountChanged={loadSummary}
             />
-            <DuoHouseholdCard />
             <SubscriptionCard
               loading={dataLoading}
               subscription={{
@@ -175,6 +180,8 @@ export function ProfilePanel() {
               purchases={summary?.purchases ?? []}
               usage={summary?.usage ?? []}
               onAccountChanged={loadSummary}
+              boundSeats={summary?.household?.seats ?? null}
+              canBindSeat={Boolean(summary?.household?.can_bind_seat)}
             />
             <UsageHistoryList loading={dataLoading} usage={summary?.usage ?? []} />
             <PurchaseHistoryList loading={dataLoading} purchases={summary?.purchases ?? []} />

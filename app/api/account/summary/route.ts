@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { getServerUser, createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import {
-  findHouseholdForUser,
+  ensureHouseholdForActiveSubscriber,
   householdIsFull,
   householdPeerUserId,
+  listHouseholdSeatsForViewer,
 } from "@/lib/passes/household";
 
 export const runtime = "nodejs";
@@ -102,8 +103,40 @@ export async function GET() {
         ? passes.pass_balance
         : flex + sub + carryover;
 
-    const household = await findHouseholdForUser(user.id);
+    const { household } = await ensureHouseholdForActiveSubscriber(user.id);
     const peer = household ? householdPeerUserId(household, user.id) : null;
+    const seats = household
+      ? await listHouseholdSeatsForViewer(household, user.id)
+      : [
+          {
+            role: "seat_a" as const,
+            user_id: user.id,
+            email: user.email ?? null,
+            is_you: true,
+          },
+          {
+            role: "seat_b" as const,
+            user_id: null,
+            email: null,
+            is_you: false,
+          },
+        ];
+
+    // Bound seats share subscription pool; flex stays personal (not in remaining).
+    const subRemaining = household ? household.shared_sub_balance : sub;
+    const subQuotaShown = household ? household.quota : quota;
+    const ownerPlan = passes?.subscription_plan === "personal" || passes?.subscription_plan === "team"
+      ? passes.subscription_plan
+      : null;
+    // Seat B inherits household subscription display even without their own plan row.
+    const subStatus = household
+      ? passes?.subscription_status === "active" || household.status === "active"
+        ? "active"
+        : passes?.subscription_status ?? "active"
+      : passes?.subscription_status ?? "none";
+    const subPlan = ownerPlan ?? (household ? "personal" : null);
+    const periodEnd =
+      passes?.current_period_end ?? household?.current_period_end ?? null;
 
     return NextResponse.json({
       ok: true,
@@ -114,25 +147,27 @@ export async function GET() {
       display_name: profile?.display_name ?? null,
       pass_balance: total,
       flex_balance: flex,
-      sub_balance: sub,
-      sub_quota: quota,
-      sub_carryover: carryover,
-      carryover_source_plan: carryoverSource,
+      sub_balance: subRemaining,
+      sub_quota: subQuotaShown,
+      sub_carryover: household ? 0 : carryover,
+      carryover_source_plan: household ? null : carryoverSource,
       subscription: {
-        status: passes?.subscription_status ?? "none",
-        plan: passes?.subscription_plan ?? null,
+        status: subStatus,
+        plan: subPlan,
         pending_plan:
           passes?.pending_subscription_plan === "personal" ||
           passes?.pending_subscription_plan === "team"
             ? passes.pending_subscription_plan
             : null,
-        current_period_end: passes?.current_period_end ?? null,
+        current_period_end: periodEnd,
         stripe_subscription_id: passes?.stripe_subscription_id ?? null,
-        remaining: sub,
-        quota,
-        carryover,
-        carryover_source_plan: carryoverSource,
-        available_subscription_passes: sub + carryover,
+        remaining: subRemaining,
+        quota: subQuotaShown,
+        carryover: household ? 0 : carryover,
+        carryover_source_plan: household ? null : carryoverSource,
+        available_subscription_passes: household
+          ? subRemaining
+          : sub + carryover,
       },
       household: household
         ? {
@@ -143,8 +178,21 @@ export async function GET() {
             peer_bound: Boolean(peer),
             can_joint: householdIsFull(household) && household.shared_sub_balance >= 2,
             role: household.seat_a_user_id === user.id ? "seat_a" : "seat_b",
+            can_bind_seat:
+              household.seat_a_user_id === user.id && !household.seat_b_user_id,
+            seats,
           }
-        : null,
+        : {
+            id: null,
+            status: null,
+            shared_sub_balance: 0,
+            quota: 0,
+            peer_bound: false,
+            can_joint: false,
+            role: null,
+            can_bind_seat: false,
+            seats,
+          },
       purchases: purchasesRes.data ?? [],
       usage: usageRes.data ?? [],
       atmos_entitlements: atmosRes.data ?? [],
