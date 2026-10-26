@@ -1335,6 +1335,8 @@
     "reassure_2": "Tras confirmar, la preparación tarda unos 2–5 minutos.",
     "go_back": "Volver y editar",
     "confirm_and_proceed": "Confirmar y abrir diálogo individual",
+    "confirm_and_open_joint": "Confirmar y abrir diálogo conjunto (consume 1 PASS)",
+    "joint_open_title": "Confirma tus datos",
     "start_solo": "Decisión individual",
     "start_joint": "Decisión conjunta (dúo)",
     "joint_tooltip": "Decisión conjunta: una pregunta compartida; cada uno analiza con su nacimiento autorizado y obtiene su propio informe. Chats privados. Requiere suscripción Duo y 2 cuentas vinculadas (2 PASS — 1 cada uno).",

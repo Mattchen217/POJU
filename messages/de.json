@@ -1291,6 +1291,8 @@
     "reassure_2": "Nach Bestätigung dauert die Vorbereitung ca. 2–5 Minuten.",
     "go_back": "Zurück & bearbeiten",
     "confirm_and_proceed": "Bestätigen & starten",
+    "confirm_and_open_joint": "Bestätigen & Dialog zu zweit starten (1 PASS)",
+    "joint_open_title": "Daten bestätigen",
     "start_solo": "Einzelentscheidung starten",
     "start_joint": "Gemeinsame Entscheidung (Duo)",
     "joint_tooltip": "Gemeinsame Entscheidung: eine geteilte Frage; jede Person analysiert mit autorisierten Geburtsdaten und erhält den eigenen Bericht. Chats privat. Duo-Abo und genau 2 verbundene Konten erforderlich (2 PASS — je 1).",

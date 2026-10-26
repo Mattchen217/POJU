@@ -1890,6 +1890,8 @@
     "reassure_2": "Once confirmed, this takes about 2–5 minutes to prepare.",
     "go_back": "Go back & edit",
     "confirm_and_proceed": "Confirm & start solo decision dialogue",
+    "confirm_and_open_joint": "Confirm & start joint decision dialogue (uses 1 PASS)",
+    "joint_open_title": "Confirm your details",
     "start_solo": "Start solo decision",
     "start_joint": "Start joint decision (Duo)",
     "joint_confirm_title": "Confirm & start joint decision",
@@ -1951,6 +1953,9 @@
     "err_invalid_email": "Enter a valid email account",
     "err_question_too_short": "Shared question needs at least 4 characters",
     "err_invite_expired": "Invite expired",
+    "err_birth_required": "Birth details incomplete — choose or enter again",
+    "err_not_invitee": "You are not the invitee for this joint decision",
+    "err_agree_failed": "Could not accept the invite — try again shortly",
     "err_generic": "Something went wrong — try again"
   },
   "bazi": {

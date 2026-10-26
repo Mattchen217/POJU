@@ -1890,9 +1890,11 @@
     "reassure_2": "确认后，准备过程约 2–5 分钟。",
     "go_back": "返回修改",
     "confirm_and_proceed": "确认并开启单人决策对话",
+    "confirm_and_open_joint": "确认并开启双人决策对话（消耗 1 PASS）",
+    "joint_open_title": "确认你的信息",
     "start_solo": "开始单人决策",
     "start_joint": "开启共同决策（双人）",
-    "joint_confirm_title": "确认并发起共同决策",
+    "joint_confirm_title": "确认并发起双人决策",
     "partner_account_label": "对方账号（邮箱）",
     "partner_account_placeholder": "对方的注册邮箱",
     "partner_account_bound_hint": "已预填绑定席账号，可改为其他已注册用户。",
@@ -1951,6 +1953,9 @@
     "err_invalid_email": "请输入有效邮箱账号",
     "err_question_too_short": "共同问题至少 4 个字符",
     "err_invite_expired": "邀请已过期",
+    "err_birth_required": "出生信息不完整，请重新选择或输入",
+    "err_not_invitee": "你不是本次双人决策的受邀方",
+    "err_agree_failed": "同意邀请失败，请稍后重试",
     "err_generic": "操作失败，请重试"
   },
   "bazi": {

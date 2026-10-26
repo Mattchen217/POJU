@@ -189,11 +189,22 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
     setBusy(true);
     try {
       if (joint.role === "invitee" && joint.status === "invited") {
+        const birthPayload = {
+          year: args.birth.year,
+          month: args.birth.month,
+          day: args.birth.day,
+          hour_period: args.birth.hour_period,
+          hour: args.birth.hour,
+          minute: args.birth.minute,
+          gender: args.birth.gender,
+          timezone: args.birth.timezone,
+          birth_location: args.birth.birth_location,
+        };
         const res = await fetch("/api/joint/agree", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ joint_id: jointId, birth: args.birth }),
+          body: JSON.stringify({ joint_id: jointId, birth: birthPayload }),
         });
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
@@ -201,6 +212,7 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
           joint?: JointDecisionPublicView;
         };
         if (!res.ok || !data.ok) {
+          console.error("[joint-open] agree failed", res.status, data.error);
           await alert(mapJointError(data.error, t), t("title"));
           return;
         }
@@ -547,7 +559,17 @@ function mapJointError(
       return t("waiting_partner");
     case "invite_expired":
       return t("err_invite_expired");
+    case "invitee_birth_required":
+    case "birth_required":
+      return t("err_birth_required");
+    case "not_invitee":
+      return t("err_not_invitee");
+    case "agree_failed":
+      return t("err_agree_failed");
+    case "joint_not_found":
+      return t("load_failed");
     default:
+      if (code?.startsWith("bad_status:")) return t("err_generic");
       return t("err_generic");
   }
 }

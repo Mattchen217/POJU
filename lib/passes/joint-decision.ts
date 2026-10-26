@@ -28,16 +28,62 @@ function asJoint(row: Record<string, unknown> | null): JointDecisionRow | null {
   return row as unknown as JointDecisionRow;
 }
 
-function isBirthInfo(v: unknown): v is BirthInfo {
-  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+function coerceGender(v: unknown): "M" | "F" | null {
+  if (v === "M" || v === "F") return v;
+  if (v === "male" || v === "Male") return "M";
+  if (v === "female" || v === "Female") return "F";
+  return null;
+}
+
+/** Accept stored/client birth payloads (numbers may arrive as strings). */
+function coerceBirthInfo(v: unknown): BirthInfo | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
   const o = v as Record<string, unknown>;
-  return (
-    typeof o.year === "number" &&
-    typeof o.month === "number" &&
-    typeof o.day === "number" &&
-    (o.gender === "M" || o.gender === "F") &&
-    typeof o.timezone === "string"
-  );
+  const year = Number(o.year);
+  const month = Number(o.month);
+  const day = Number(o.day);
+  const gender = coerceGender(o.gender);
+  const timezone = typeof o.timezone === "string" ? o.timezone.trim() : "";
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day) ||
+    !gender ||
+    !timezone
+  ) {
+    return null;
+  }
+  const hour_period =
+    typeof o.hour_period === "string" && o.hour_period
+      ? (o.hour_period as BirthInfo["hour_period"])
+      : "wu";
+  const out: BirthInfo = {
+    year,
+    month,
+    day,
+    hour_period,
+    gender,
+    timezone,
+  };
+  if (typeof o.hour === "number" || typeof o.hour === "string") {
+    const h = Number(o.hour);
+    if (Number.isFinite(h)) out.hour = h;
+  }
+  if (typeof o.minute === "number" || typeof o.minute === "string") {
+    const m = Number(o.minute);
+    if (Number.isFinite(m)) out.minute = m;
+  }
+  if (o.birth_location && typeof o.birth_location === "object") {
+    out.birth_location = o.birth_location as BirthInfo["birth_location"];
+  }
+  if (o.tst_meta && typeof o.tst_meta === "object") {
+    out.tst_meta = o.tst_meta as BirthInfo["tst_meta"];
+  }
+  return out;
+}
+
+function isBirthInfo(v: unknown): v is BirthInfo {
+  return coerceBirthInfo(v) != null;
 }
 
 async function emailForUserId(userId: string): Promise<string | null> {
@@ -92,7 +138,8 @@ export async function createJointInvite(params: {
   }
   const q = params.sharedQuestion.trim();
   if (q.length < 4) return { ok: false, reason: "question_too_short" };
-  if (!isBirthInfo(params.initiatorBirth)) {
+  const initiatorBirth = coerceBirthInfo(params.initiatorBirth);
+  if (!initiatorBirth) {
     return { ok: false, reason: "initiator_birth_required" };
   }
 
@@ -134,7 +181,7 @@ export async function createJointInvite(params: {
       invitee_email: inviteeEmail,
       shared_question: q,
       status: "invited",
-      birth_snapshot_a: params.initiatorBirth,
+      birth_snapshot_a: initiatorBirth,
       birth_snapshot_b: null,
       unread_a: false,
       unread_b: true,
@@ -167,7 +214,8 @@ export async function agreeJointInvite(params: {
   if (!isSupabaseAdminConfigured()) {
     return { ok: false, reason: "admin_unconfigured" };
   }
-  if (!isBirthInfo(params.inviteeBirth)) {
+  const inviteeBirth = coerceBirthInfo(params.inviteeBirth);
+  if (!inviteeBirth) {
     return { ok: false, reason: "invitee_birth_required" };
   }
 
@@ -206,7 +254,7 @@ export async function agreeJointInvite(params: {
     .from("joint_decision_sessions")
     .update({
       status: "partner_ready" as JointStatus,
-      birth_snapshot_b: params.inviteeBirth,
+      birth_snapshot_b: inviteeBirth,
       accepted_at: new Date().toISOString(),
       unread_a: true,
       unread_b: false,
@@ -218,7 +266,7 @@ export async function agreeJointInvite(params: {
     .maybeSingle();
 
   if (error || !updated) {
-    console.error("[joint] agree update", error?.code ?? error?.message);
+    console.error("[joint] agree update", error?.code ?? error?.message, error?.details);
     return { ok: false, reason: "agree_failed" };
   }
   return {

@@ -218,6 +218,7 @@ export function WorkspacePojuBirthHost({
 
   async function handleConfirmSolo() {
     if (selectedProfileId) {
+      setCreating(true);
       try {
         const birth = await resolveConfirmBirth();
         if (!birth) {
@@ -230,17 +231,22 @@ export function WorkspacePojuBirthHost({
           markPendingBaseAnalysisProfile(selectedProfileId);
         }
         const profileId = selectedProfileId;
+        if (onBirthConfirmed) {
+          await onBirthConfirmed({ profileId, birth });
+          setShowConfirm(false);
+          setSelectedProfileId(null);
+          await refreshProfiles();
+          return;
+        }
         setShowConfirm(false);
         setSelectedProfileId(null);
         await refreshProfiles();
-        if (onBirthConfirmed) {
-          await onBirthConfirmed({ profileId, birth });
-          return;
-        }
         onPrepareStart?.(profileId);
       } catch (err) {
         console.error("[workspace-poju] Select profile failed:", err);
         await alert(t("error_create_profile"));
+      } finally {
+        setCreating(false);
       }
       return;
     }
@@ -252,18 +258,21 @@ export function WorkspacePojuBirthHost({
       const result = await createStoredProfile({ birth_info: birth });
       markPendingBaseAnalysisProfile(result.profile_id);
       await recordProfileUsage(result.profile_id, usageProduct);
-      setShowConfirm(false);
-      setPendingBirthInfo(null);
-      setCreating(false);
-      await refreshProfiles();
       if (onBirthConfirmed) {
         await onBirthConfirmed({ profileId: result.profile_id, birth });
+        setShowConfirm(false);
+        setPendingBirthInfo(null);
+        await refreshProfiles();
         return;
       }
+      setShowConfirm(false);
+      setPendingBirthInfo(null);
+      await refreshProfiles();
       onPrepareStart?.(result.profile_id);
     } catch (err) {
       console.error("[workspace-poju] Create profile failed:", err);
       await alert(t("error_create_profile"));
+    } finally {
       setCreating(false);
     }
   }
@@ -409,6 +418,7 @@ export function WorkspacePojuBirthHost({
               : null
           }
           jointInitiate={jointInitiate}
+          jointOpen={Boolean(onBirthConfirmed)}
           partnerEmailPrefill={partnerPrefill}
           partnerUserIdPrefill={partnerUserIdPrefill}
           onConfirm={jointInitiate ? undefined : () => void handleConfirmSolo()}

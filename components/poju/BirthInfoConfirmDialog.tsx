@@ -36,6 +36,11 @@ export interface BirthInfoConfirmDialogProps {
    * shows partner email + shared question; single confirm CTA.
    */
   jointInitiate?: boolean;
+  /**
+   * Invitee open / start own side: same info layout as solo, but CTA is
+   * “确认并开启双人决策对话（消耗 1 PASS）”.
+   */
+  jointOpen?: boolean;
   /** Prefill partner email (bound Duo seat). */
   partnerEmailPrefill?: string;
   partnerUserIdPrefill?: string | null;
@@ -69,6 +74,7 @@ export function BirthInfoConfirmDialog({
   onCancel,
   processing = false,
   jointInitiate = false,
+  jointOpen = false,
   partnerEmailPrefill = "",
   partnerUserIdPrefill = null,
 }: BirthInfoConfirmDialogProps) {
@@ -139,7 +145,7 @@ export function BirthInfoConfirmDialog({
       <div className="confirm-dialog" ref={panelRef} tabIndex={-1}>
         <div className="confirm-dialog__header">
           <h2 id={titleId}>
-            {jointInitiate ? t("joint_confirm_title") : t("title")}
+            {jointInitiate ? t("joint_confirm_title") : jointOpen ? t("joint_open_title") : t("title")}
           </h2>
           <button
             type="button"
@@ -241,7 +247,11 @@ export function BirthInfoConfirmDialog({
               disabled={processing}
               className="primary"
             >
-              {processing ? t("processing") : t("confirm_and_proceed")}
+              {processing
+                ? t("processing")
+                : jointOpen
+                  ? t("confirm_and_open_joint")
+                  : t("confirm_and_proceed")}
             </button>
           </div>
         )}
