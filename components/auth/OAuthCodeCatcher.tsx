@@ -23,6 +23,20 @@ export function OAuthCodeCatcher() {
         path === "/fr";
       if (!isHome) return;
 
+      const bindInvite = url.searchParams.get("bind_seat_invite")?.trim();
+      if (bindInvite) {
+        const bindTarget = new URL(
+          "/api/household/bind-oauth/callback",
+          window.location.origin,
+        );
+        bindTarget.searchParams.set("code", code);
+        bindTarget.searchParams.set("invite", bindInvite);
+        const oauthErr = url.searchParams.get("error");
+        if (oauthErr) bindTarget.searchParams.set("error", oauthErr);
+        window.location.replace(bindTarget.toString());
+        return;
+      }
+
       const target = new URL("/api/auth/callback", window.location.origin);
       url.searchParams.forEach((value, key) => {
         target.searchParams.set(key, value);

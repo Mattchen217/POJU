@@ -323,6 +323,14 @@
   min-height: 2.25rem;
 }
 
+.acct-bound-seats__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 .acct-bound-seats__action-link {
   flex-shrink: 0;
   font-size: 0.8125rem;

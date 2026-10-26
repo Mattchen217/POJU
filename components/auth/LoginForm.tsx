@@ -23,7 +23,7 @@ export type LoginBindSeatOpts = {
   bindInviteAbsoluteUrl: string;
   inviteError?: string | null;
   resolveBindInvite: () => Promise<
-    { ok: true; url: string } | { ok: false; error: string }
+    { ok: true; url: string; token: string } | { ok: false; error: string }
   >;
   onBound: () => void;
   onCancel: () => void;
@@ -118,6 +118,7 @@ export function LoginForm({
         bindInviteAbsoluteUrl={bindSeat ? bindSeat.bindInviteAbsoluteUrl : null}
         resolveBindInvite={bindSeat?.resolveBindInvite}
         inviteError={bindSeat?.inviteError}
+        onBindOAuthSuccess={bindSeat?.onBound}
       />
       {bindHouseholdError ? (
         <p className="auth-error" role="alert">

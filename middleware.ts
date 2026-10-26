@@ -19,9 +19,18 @@ export default async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const oauthCode = url.searchParams.get("code");
 
-  // OAuth PKCE can land on Site URL (/?code=…) — finish via server callback
-  // (sets auth cookies) then redirect to next.
+  // OAuth PKCE can land on Site URL (/?code=…) — finish via server callback.
   if (oauthCode && isLocaleHomePath(url.pathname)) {
+    const bindInvite = url.searchParams.get("bind_seat_invite")?.trim();
+    // Seat-B bind OAuth: exchange + bind without writing partner cookies.
+    if (bindInvite) {
+      const bindTarget = new URL("/api/household/bind-oauth/callback", url.origin);
+      bindTarget.searchParams.set("code", oauthCode);
+      bindTarget.searchParams.set("invite", bindInvite);
+      const oauthErr = url.searchParams.get("error");
+      if (oauthErr) bindTarget.searchParams.set("error", oauthErr);
+      return NextResponse.redirect(bindTarget);
+    }
     const target = new URL("/api/auth/callback", url.origin);
     url.searchParams.forEach((value, key) => {
       target.searchParams.set(key, value);

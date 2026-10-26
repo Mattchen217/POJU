@@ -20,7 +20,7 @@ export type SignupBindSeatOpts = {
   bindInviteAbsoluteUrl: string;
   inviteError?: string | null;
   resolveBindInvite: () => Promise<
-    { ok: true; url: string } | { ok: false; error: string }
+    { ok: true; url: string; token: string } | { ok: false; error: string }
   >;
   onBound: () => void;
   onCancel: () => void;
@@ -65,6 +65,7 @@ export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
         bindInviteAbsoluteUrl={bindSeat ? bindSeat.bindInviteAbsoluteUrl : null}
         resolveBindInvite={bindSeat?.resolveBindInvite}
         inviteError={bindSeat?.inviteError}
+        onBindOAuthSuccess={bindSeat?.onBound}
       />
       <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm

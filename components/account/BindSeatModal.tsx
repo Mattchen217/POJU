@@ -30,7 +30,7 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const resolveBindInvite = useCallback(async (): Promise<
-    { ok: true; url: string } | { ok: false; error: string }
+    { ok: true; url: string; token: string } | { ok: false; error: string }
   > => {
     const result = await fetchSeatInviteAbsoluteUrl({ locale, replace });
     if (!result.ok) {
@@ -40,7 +40,7 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
     }
     setInviteAbsoluteUrl(result.absoluteUrl);
     setInviteError(null);
-    return { ok: true, url: result.absoluteUrl };
+    return { ok: true, url: result.absoluteUrl, token: result.token };
   }, [locale, replace]);
 
   useEffect(() => {

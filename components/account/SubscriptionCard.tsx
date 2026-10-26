@@ -93,6 +93,31 @@ export function SubscriptionCard({
   const [subscribeOpen, setSubscribeOpen] = useState(false);
   const [bindOpen, setBindOpen] = useState(false);
   const [bindReplace, setBindReplace] = useState(false);
+  const [unbinding, setUnbinding] = useState(false);
+  const [unbindError, setUnbindError] = useState<string | null>(null);
+
+  async function unbindSeat2() {
+    if (unbinding) return;
+    if (!window.confirm(t("unbindAccountConfirm"))) return;
+    setUnbinding(true);
+    setUnbindError(null);
+    try {
+      const res = await fetch("/api/household/unbind-seat", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setUnbindError(data.error ?? "unbind_failed");
+        return;
+      }
+      onAccountChanged();
+    } catch {
+      setUnbindError("network_error");
+    } finally {
+      setUnbinding(false);
+    }
+  }
 
   const seats: BoundSeatSlot[] =
     boundSeats && boundSeats.length >= 2
@@ -274,6 +299,11 @@ export function SubscriptionCard({
                   {ensureErrorLabel(ensureError)}
                 </p>
               ) : null}
+              {unbindError ? (
+                <p className="acct-bound-seats__err" role="alert">
+                  {t("unbindAccountFailed")}
+                </p>
+              ) : null}
               <ul className="acct-bound-seats__list">
                 {seats.map((seat, i) => {
                   const empty = !seat.email?.trim();
@@ -295,17 +325,33 @@ export function SubscriptionCard({
                           </span>
                         </div>
                         {showSeat2Action ? (
-                          <button
-                            type="button"
-                            className="acct-text-link acct-bound-seats__action-link"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setBindReplace(!empty);
-                              setBindOpen(true);
-                            }}
-                          >
-                            {empty ? t("bindAccountLink") : t("changeBoundAccount")}
-                          </button>
+                          <div className="acct-bound-seats__actions">
+                            <button
+                              type="button"
+                              className="acct-text-link acct-bound-seats__action-link"
+                              disabled={unbinding}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setBindReplace(!empty);
+                                setBindOpen(true);
+                              }}
+                            >
+                              {empty ? t("bindAccountLink") : t("changeBoundAccount")}
+                            </button>
+                            {!empty ? (
+                              <button
+                                type="button"
+                                className="acct-text-link acct-bound-seats__action-link"
+                                disabled={unbinding}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void unbindSeat2();
+                                }}
+                              >
+                                {unbinding ? t("unbindAccountWorking") : t("unbindAccount")}
+                              </button>
+                            ) : null}
+                          </div>
                         ) : null}
                       </div>
                     </li>

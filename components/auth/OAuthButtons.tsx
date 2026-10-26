@@ -1,28 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Provider } from "@supabase/supabase-js";
 
+import { isOAuthBindMessage } from "@/lib/auth/oauth-bind";
+import { openCenteredOAuthPopup } from "@/lib/auth/oauth-popup";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 
 type BindInviteResolve =
-  | { ok: true; url: string }
+  | { ok: true; url: string; token: string }
   | { ok: false; error: string };
 
 type Props = {
   nextPath?: string;
   disabled?: boolean;
   /**
-   * Bind-seat overlay: keep the same OAuth chrome, but never OAuth into this
-   * browser (that would switch seat A → partner). Copy the invite URL instead.
-   * Pass "" while the invite is still loading.
+   * Bind-seat overlay: same OAuth buttons; popup OAuth binds seat 2 without
+   * switching the opener session.
    */
   bindInviteAbsoluteUrl?: string | null;
-  /** Called on OAuth click in bind mode — always fetches a fresh invite when needed. */
+  /** Fresh invite token for bind-oauth callback. */
   resolveBindInvite?: () => Promise<BindInviteResolve>;
   inviteError?: string | null;
+  /** After partner OAuth bind succeeds in the popup. */
+  onBindOAuthSuccess?: () => void;
 };
 
 type OAuthProviderId = "google" | "facebook" | "twitter" | "discord";
@@ -185,6 +188,7 @@ export function OAuthButtons({
   bindInviteAbsoluteUrl = null,
   resolveBindInvite,
   inviteError = null,
+  onBindOAuthSuccess,
 }: Props) {
   const t = useTranslations("auth.oauth");
   const tErr = useTranslations("auth.errors");
@@ -192,40 +196,102 @@ export function OAuthButtons({
   const configured = isSupabaseConfigured();
   const [error, setError] = useState<string | null>(null);
   const [bindNote, setBindNote] = useState<string | null>(null);
-  const [bindUrlShown, setBindUrlShown] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<OAuthProviderId | null>(null);
   const isBindInvite = bindInviteAbsoluteUrl !== null && bindInviteAbsoluteUrl !== undefined;
+  const onBindSuccessRef = useRef(onBindOAuthSuccess);
+  onBindSuccessRef.current = onBindOAuthSuccess;
 
-  async function handleBindInviteClick() {
-    setError(null);
-    setBindNote(tAccount("bindSeatInvitePreparing"));
-    setBindUrlShown(null);
-
-    // Always refresh invite on click — prefetch may have failed silently.
-    let url = "";
-    if (resolveBindInvite) {
-      const result = await resolveBindInvite();
-      if (!result.ok) {
-        setBindNote(null);
-        setError(result.error);
+  useEffect(() => {
+    if (!isBindInvite) return;
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      if (!isOAuthBindMessage(event.data)) return;
+      if (event.data.status === "ok") {
+        setBindNote(tAccount("bindSeatOAuthOk"));
+        setError(null);
+        onBindSuccessRef.current?.();
         return;
       }
-      url = result.url.trim();
-    } else {
-      url = (bindInviteAbsoluteUrl ?? "").trim();
-    }
-    if (!url.includes("token=")) {
+      setError(event.data.error ?? "oauth_failed");
       setBindNote(null);
-      setError(inviteError ?? "invite_failed");
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [isBindInvite, tAccount]);
+
+  /** Seat-B bind: real IdP popup; callback binds without writing partner cookies. */
+  async function signInWithBind(provider: (typeof PROVIDERS)[number]) {
+    if (!configured) {
+      setError("supabase_not_configured");
+      return;
+    }
+    // Open popup under the click gesture before any await (avoids blocker).
+    const popup = openCenteredOAuthPopup("about:blank");
+    if (!popup) {
+      setError("oauth_popup_blocked");
       return;
     }
 
-    setBindUrlShown(url);
+    setBusyId(provider.id);
+    setBindNote(tAccount("bindSeatOAuthStarting"));
     try {
-      await navigator.clipboard.writeText(url);
-      setBindNote(tAccount("bindSeatLinkCopied"));
-    } catch {
-      setBindNote(tAccount("bindSeatLinkCopyManual"));
+      if (!resolveBindInvite) {
+        popup.close();
+        setError(inviteError ?? "invite_failed");
+        return;
+      }
+      const invite = await resolveBindInvite();
+      if (!invite.ok || !invite.token) {
+        popup.close();
+        setError(invite.ok ? "invite_failed" : invite.error);
+        setBindNote(null);
+        return;
+      }
+
+      const site = window.location.origin;
+      // Land on Site URL with invite marker so allowlisted origins work locally.
+      const redirectTo = `${site}/?bind_seat_invite=${encodeURIComponent(invite.token)}`;
+
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: provider.supabase,
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (oauthError || !data.url) {
+        console.error(`[oauth-bind/${provider.id}]`, oauthError?.name, oauthError?.message);
+        popup.close();
+        setError("oauth_failed");
+        setBindNote(null);
+        return;
+      }
+      if (!redirectToMatchesOrigin(data.url, site)) {
+        console.error(
+          `[oauth-bind/${provider.id}] redirect_to rejected — add ${redirectTo} to Supabase Redirect URLs`,
+          { expected: site, authorizeUrl: data.url },
+        );
+        popup.close();
+        setError("oauth_redirect_blocked");
+        setBindNote(null);
+        return;
+      }
+      popup.location.assign(data.url);
+    } catch (err) {
+      console.error(
+        `[oauth-bind/${provider.id}] unexpected`,
+        err instanceof Error ? err.name : "unknown",
+      );
+      try {
+        popup.close();
+      } catch {
+        /* ignore */
+      }
+      setError("oauth_failed");
+      setBindNote(null);
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -233,14 +299,8 @@ export function OAuthButtons({
     setError(null);
     setBindNote(null);
 
-    // Bind seat: never switch this browser session to the partner account.
     if (isBindInvite) {
-      setBusyId(provider.id);
-      try {
-        await handleBindInviteClick();
-      } finally {
-        setBusyId(null);
-      }
+      await signInWithBind(provider);
       return;
     }
 
@@ -277,12 +337,10 @@ export function OAuthButtons({
         setBusyId(null);
         return;
       }
-      // Local debug: confirm we are not about to leave localhost
       if (isLocalDevHost(window.location.hostname)) {
         console.info(`[oauth/${provider.id}] redirectTo`, redirectTo);
       }
       window.location.assign(data.url);
-      // Browser navigates away to the IdP; keep busy until then.
     } catch (err) {
       console.error(`[oauth/${provider.id}] unexpected`, err instanceof Error ? err.name : "unknown");
       setError("oauth_failed");
@@ -299,8 +357,8 @@ export function OAuthButtons({
             key={provider.id}
             type="button"
             className="auth-btn auth-btn--secondary auth-btn--oauth"
-            disabled={disabled || busyId !== null || (!configured && !isBindInvite)}
-            title={!configured && !isBindInvite ? t("supabaseMissing") : undefined}
+            disabled={disabled || busyId !== null || !configured}
+            title={!configured ? t("supabaseMissing") : undefined}
             onClick={() => void signInWith(provider)}
           >
             <ProviderLogo id={provider.id} className="auth-oauth__logo" />
@@ -308,7 +366,7 @@ export function OAuthButtons({
           </button>
         );
       })}
-      {!configured && !isBindInvite ? (
+      {!configured ? (
         <p className="auth-error" role="status">
           {t("supabaseMissing")}
         </p>
@@ -323,24 +381,20 @@ export function OAuthButtons({
           {bindNote}
         </p>
       ) : null}
-      {bindUrlShown ? (
-        <div className="auth-bind-invite-url">
-          <input
-            type="text"
-            className="auth-input"
-            readOnly
-            value={bindUrlShown}
-            aria-label={tAccount("bindSeatCopyLink")}
-            onFocus={(e) => e.currentTarget.select()}
-          />
-        </div>
-      ) : null}
-      {inviteError && !bindUrlShown && isBindInvite ? (
+      {inviteError && isBindInvite && !error ? (
         <p className="auth-error" role="alert">
           {bindInviteErrorText(tAccount, inviteError)}
         </p>
       ) : null}
-      {error && error !== "oauth_failed" && error !== "oauth_redirect_blocked" ? (
+      {error === "oauth_popup_blocked" ? (
+        <p className="auth-error" role="alert">
+          {tAccount("bindSeatOAuthPopupBlocked")}
+        </p>
+      ) : null}
+      {error &&
+      error !== "oauth_failed" &&
+      error !== "oauth_redirect_blocked" &&
+      error !== "oauth_popup_blocked" ? (
         <p className="auth-error" role="alert">
           {bindInviteErrorText(tAccount, error)}
         </p>
