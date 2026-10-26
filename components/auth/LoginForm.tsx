@@ -16,8 +16,11 @@ export type LoginBindSeatOpts = {
   title: string;
   subtitle?: string;
   replace?: boolean;
-  /** Only enable OAuth when this includes a seat invite token. */
-  oauthNextPath: string;
+  /**
+   * Absolute invite URL for OAuth bind (copy-only). Empty string while loading.
+   * Never causes OAuth into the current browser.
+   */
+  bindInviteAbsoluteUrl: string;
   onBound: () => void;
   onCancel: () => void;
   /** Switch to signup form (same overlay) — mirrors login page footer link. */
@@ -41,7 +44,6 @@ export function LoginForm({
   const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
   const next = safeNextPath(initialNext, "/");
-  const oauthNext = bindSeat?.oauthNextPath ?? next;
   useRedirectIfSignedIn(next, { enabled: !bindSeat });
 
   return (
@@ -62,10 +64,11 @@ export function LoginForm({
         </p>
       }
     >
-      {bindSeat && !oauthNext.includes("token=") ? null : (
-        <OAuthButtons nextPath={oauthNext} />
-      )}
-      <AuthErrorText code={error} email={lastEmail} nextPath={oauthNext} />
+      <OAuthButtons
+        nextPath={next}
+        bindInviteAbsoluteUrl={bindSeat ? bindSeat.bindInviteAbsoluteUrl : null}
+      />
+      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm
         mode="login"
         submitLabel={t("submit")}
@@ -100,16 +103,24 @@ export function LoginForm({
           }
         }}
       />
-      {!bindSeat ? (
-        <div className="auth-links-row">
-          <Link href="/forgot-password" className="auth-btn auth-btn--ghost">
-            {t("forgot")}
-          </Link>
-          <Link href="/verify" className="auth-btn auth-btn--ghost">
-            {t("otpEntry")}
-          </Link>
-        </div>
-      ) : null}
+      <div className="auth-links-row">
+        <Link
+          href="/forgot-password"
+          className="auth-btn auth-btn--ghost"
+          target={bindSeat ? "_blank" : undefined}
+          rel={bindSeat ? "noreferrer" : undefined}
+        >
+          {t("forgot")}
+        </Link>
+        <Link
+          href="/verify"
+          className="auth-btn auth-btn--ghost"
+          target={bindSeat ? "_blank" : undefined}
+          rel={bindSeat ? "noreferrer" : undefined}
+        >
+          {t("otpEntry")}
+        </Link>
+      </div>
     </AuthCard>
   );
 }

@@ -10,6 +10,12 @@ import { isSupabaseConfigured } from "@/lib/auth/supabase";
 type Props = {
   nextPath?: string;
   disabled?: boolean;
+  /**
+   * Bind-seat overlay: keep the same OAuth chrome, but never OAuth into this
+   * browser (that would switch seat A → partner). Copy the invite URL instead.
+   * Pass "" while the invite is still loading.
+   */
+  bindInviteAbsoluteUrl?: string | null;
 };
 
 type OAuthProviderId = "google" | "facebook" | "twitter" | "discord";
@@ -141,15 +147,48 @@ function redirectToMatchesOrigin(authorizeUrl: string, origin: string): boolean 
  * and production stays on easternos.com. Refuse to navigate if Supabase swapped
  * redirect_to for Site URL (that jump is what sends local logins to production).
  */
-export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
+export function OAuthButtons({
+  nextPath = "/",
+  disabled = false,
+  bindInviteAbsoluteUrl = null,
+}: Props) {
   const t = useTranslations("auth.oauth");
   const tErr = useTranslations("auth.errors");
+  const tAccount = useTranslations("account");
   const configured = isSupabaseConfigured();
   const [error, setError] = useState<string | null>(null);
+  const [bindNote, setBindNote] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<OAuthProviderId | null>(null);
+  const isBindInvite = bindInviteAbsoluteUrl !== null && bindInviteAbsoluteUrl !== undefined;
+
+  async function copyBindInvite() {
+    setError(null);
+    setBindNote(null);
+    const url = (bindInviteAbsoluteUrl ?? "").trim();
+    if (!url.includes("token=")) {
+      setBindNote(tAccount("bindSeatInvitePreparing"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setBindNote(tAccount("bindSeatLinkCopied"));
+    } catch {
+      setBindNote(url);
+    }
+  }
 
   async function signInWith(provider: (typeof PROVIDERS)[number]) {
     setError(null);
+    setBindNote(null);
+
+    // Bind seat: never switch this browser session to the partner account.
+    if (isBindInvite) {
+      setBusyId(provider.id);
+      await copyBindInvite();
+      setBusyId(null);
+      return;
+    }
+
     if (!configured) {
       setError("supabase_not_configured");
       return;
@@ -205,8 +244,8 @@ export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
             key={provider.id}
             type="button"
             className="auth-btn auth-btn--secondary auth-btn--oauth"
-            disabled={disabled || busyId !== null || !configured}
-            title={!configured ? t("supabaseMissing") : undefined}
+            disabled={disabled || busyId !== null || (!configured && !isBindInvite)}
+            title={!configured && !isBindInvite ? t("supabaseMissing") : undefined}
             onClick={() => void signInWith(provider)}
           >
             <ProviderLogo id={provider.id} className="auth-oauth__logo" />
@@ -214,7 +253,21 @@ export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
           </button>
         );
       })}
-      {!configured ? <p className="auth-error" role="status">{t("supabaseMissing")}</p> : null}
+      {!configured && !isBindInvite ? (
+        <p className="auth-error" role="status">
+          {t("supabaseMissing")}
+        </p>
+      ) : null}
+      {isBindInvite ? (
+        <p className="auth-hint" role="note">
+          {tAccount("bindSeatOAuthNote")}
+        </p>
+      ) : null}
+      {bindNote ? (
+        <p className="auth-hint" role="status">
+          {bindNote}
+        </p>
+      ) : null}
       {error === "oauth_failed" ? (
         <p className="auth-error" role="alert">
           {tErr("oauth_failed")}

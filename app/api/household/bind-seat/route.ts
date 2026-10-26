@@ -58,10 +58,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: result.reason }, { status });
     }
 
+    // Re-read cookie user — bind must never have switched the session.
+    const still = await getServerUser();
+    if (!still?.id || still.id !== user.id) {
+      console.error("[api/household/bind-seat] session drifted after bind — refusing");
+      return NextResponse.json({ ok: false, error: "session_drift" }, { status: 500 });
+    }
+
     const seats = await listHouseholdSeatsForViewer(result.household, user.id);
     return NextResponse.json({
       ok: true,
       created: result.created,
+      actor_user_id: user.id,
+      partner_user_id: result.partner_user_id,
       seats,
       household: {
         id: result.household.id,

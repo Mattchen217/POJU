@@ -4,7 +4,6 @@
 
 import {
   createSupabaseAdminClient,
-  createSupabaseAnonClient,
   isSupabaseAdminConfigured,
 } from "@/lib/auth/supabase";
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
@@ -14,6 +13,10 @@ import {
   SEAT_INVITE_TTL_MS,
   type HouseholdRow,
 } from "@/lib/passes/household-types";
+import {
+  verifyPartnerPasswordNoSession,
+  verifyPartnerSignupOtpNoSession,
+} from "@/lib/passes/partner-credential-check";
 
 export type HouseholdSeatPublic = {
   role: "seat_a" | "seat_b";
@@ -277,20 +280,12 @@ export async function bindSeatByCredentials(params: {
     return { ok: false, reason: "already_full" };
   }
 
-  const anon = createSupabaseAnonClient();
-  const signedIn = await anon.auth.signInWithPassword({ email, password });
-  const partnerId = signedIn.data.user?.id ?? null;
-  await anon.auth.signOut().catch(() => undefined);
-
-  if (!partnerId) {
-    if (signedIn.error) {
-      const msg = (signedIn.error.message ?? "").toLowerCase();
-      if (msg.includes("confirm") || msg.includes("not confirmed")) {
-        return { ok: false, reason: "email_not_confirmed" };
-      }
-    }
-    return { ok: false, reason: "invalid_credentials" };
+  // Raw GoTrue password check only — never write Cookie session for partner.
+  const verified = await verifyPartnerPasswordNoSession({ email, password });
+  if (!verified.ok) {
+    return { ok: false, reason: verified.reason === "unconfigured" ? "admin_unconfigured" : verified.reason };
   }
+  const partnerId = verified.userId;
 
   const attached = await attachSeatB({
     householdId: hh.id,
@@ -328,22 +323,18 @@ export async function bindSeatAfterSignupOtp(params: {
     return { ok: false, reason: "invalid_code" };
   }
 
-  const anon = createSupabaseAnonClient();
-  const verified = await anon.auth.verifyOtp({
-    email,
-    token,
-    type: "signup",
-  });
-  const partnerId = verified.data.user?.id ?? null;
-  await anon.auth.signOut().catch(() => undefined);
-
-  if (!partnerId) {
-    return { ok: false, reason: "invalid_code" };
+  // Raw GoTrue OTP verify — discard tokens; seat A cookies must not change.
+  const verified = await verifyPartnerSignupOtpNoSession({ email, token });
+  if (!verified.ok) {
+    return {
+      ok: false,
+      reason: verified.reason === "unconfigured" ? "admin_unconfigured" : verified.reason,
+    };
   }
 
   return bindSeatByUserId({
     actorUserId: params.actorUserId,
-    partnerUserId: partnerId,
+    partnerUserId: verified.userId,
     replace: params.replace === true,
   });
 }

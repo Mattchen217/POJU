@@ -12,6 +12,13 @@
   cursor: pointer;
 }
 
+.auth-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(230, 230, 230, 0.72);
+}
+
 .bind-seat-auth-shell {
   position: fixed;
   inset: 0;

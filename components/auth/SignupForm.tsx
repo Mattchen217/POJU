@@ -16,7 +16,8 @@ export type SignupBindSeatOpts = {
   title: string;
   subtitle?: string;
   replace?: boolean;
-  oauthNextPath: string;
+  /** Absolute invite URL for OAuth bind (copy-only). */
+  bindInviteAbsoluteUrl: string;
   onBound: () => void;
   onCancel: () => void;
   onGoLogin: () => void;
@@ -35,7 +36,6 @@ export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
   const [otpOpen, setOtpOpen] = useState(false);
   const inFlight = useRef(false);
   const next = safeNextPath(initialNext, "/");
-  const oauthNext = bindSeat?.oauthNextPath ?? next;
   useRedirectIfSignedIn(next, { enabled: !bindSeat && !otpOpen });
 
   return (
@@ -56,10 +56,11 @@ export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
         </p>
       }
     >
-      {bindSeat && !oauthNext.includes("token=") ? null : (
-        <OAuthButtons nextPath={oauthNext} />
-      )}
-      <AuthErrorText code={error} email={lastEmail} nextPath={oauthNext} />
+      <OAuthButtons
+        nextPath={next}
+        bindInviteAbsoluteUrl={bindSeat ? bindSeat.bindInviteAbsoluteUrl : null}
+      />
+      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
       <EmailPasswordForm
         mode="signup"
         submitLabel={t("submit")}
@@ -68,12 +69,16 @@ export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
         onSendCode={async ({ email, password }) => {
           setError(null);
           setLastEmail(email);
+          // Bind path: anon-only signup — never /api/auth/signup (that uses cookie client + signOut).
+          const endpoint = bindSeat
+            ? "/api/household/bind-seat-signup"
+            : "/api/auth/signup";
           const { ok, data } = await postAuthJson<{
             needs_verification?: boolean;
             email_send_warning?: boolean;
             email?: string;
             error?: string;
-          }>("/api/auth/signup", { email, password, locale });
+          }>(endpoint, { email, password, locale });
           if (!ok) {
             setError(data.error ?? "auth_failed");
             return { ok: false, error: data.error ?? "auth_failed" };

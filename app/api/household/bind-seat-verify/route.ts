@@ -51,8 +51,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: result.reason }, { status: 400 });
     }
 
+    const still = await getServerUser();
+    if (!still?.id || still.id !== user.id) {
+      console.error("[api/household/bind-seat-verify] session drifted after bind — refusing");
+      return NextResponse.json({ ok: false, error: "session_drift" }, { status: 500 });
+    }
+
     const seats = await listHouseholdSeatsForViewer(result.household, user.id);
-    return NextResponse.json({ ok: true, seats });
+    return NextResponse.json({
+      ok: true,
+      actor_user_id: user.id,
+      partner_user_id: result.partner_user_id,
+      seats,
+    });
   } catch (e) {
     console.error("[api/household/bind-seat-verify]", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });

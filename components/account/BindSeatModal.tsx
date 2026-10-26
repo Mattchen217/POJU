@@ -18,15 +18,15 @@ type Props = {
 type View = "login" | "signup";
 
 /**
- * Full-site login/signup card for binding seat B — same LoginForm / SignupForm,
- * only the title changes. No custom tabs.
+ * Same LoginForm / SignupForm as the site auth pages — title/subtitle only differ.
+ * Binding fills seat 2; the current browser session must stay on seat A.
  */
 export function BindSeatModal({ open, replace = false, onClose, onBound }: Props) {
   const t = useTranslations("account");
   const locale = useLocale();
   const [view, setView] = useState<View>("login");
-  /** Empty until invite token is ready — never send OAuth to accept without token. */
-  const [oauthNext, setOauthNext] = useState("");
+  /** Absolute invite URL for OAuth copy; "" until ready. */
+  const [inviteAbsoluteUrl, setInviteAbsoluteUrl] = useState("");
 
   const ensureInvite = useCallback(async () => {
     const res = await fetch("/api/household/invite-seat", {
@@ -46,13 +46,15 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
       : data.token
         ? `/${locale}/account/household/accept?token=${encodeURIComponent(data.token)}`
         : null;
-    if (path && path.includes("token=")) setOauthNext(path);
+    if (path && path.includes("token=")) {
+      setInviteAbsoluteUrl(`${window.location.origin}${path}`);
+    }
   }, [locale, replace]);
 
   useEffect(() => {
     if (!open) return;
     setView("login");
-    setOauthNext("");
+    setInviteAbsoluteUrl("");
     void ensureInvite();
   }, [open, ensureInvite]);
 
@@ -75,7 +77,7 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
               title,
               subtitle,
               replace,
-              oauthNextPath: oauthNext,
+              bindInviteAbsoluteUrl: inviteAbsoluteUrl,
               onBound: finish,
               onCancel: onClose,
               onGoSignup: () => setView("signup"),
@@ -87,7 +89,7 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
               title,
               subtitle,
               replace,
-              oauthNextPath: oauthNext,
+              bindInviteAbsoluteUrl: inviteAbsoluteUrl,
               onBound: finish,
               onCancel: onClose,
               onGoLogin: () => setView("login"),
