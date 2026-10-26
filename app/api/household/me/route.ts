@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import {
-  findHouseholdForUser,
+  ensureHouseholdForActiveSubscriber,
   householdIsFull,
   householdPeerUserId,
 } from "@/lib/passes/household";
@@ -19,10 +19,20 @@ export async function GET() {
     if (!user?.id) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
-    const hh = await findHouseholdForUser(user.id);
+
+    const { household: hh, subscriptionActive } =
+      await ensureHouseholdForActiveSubscriber(user.id);
+
     if (!hh) {
-      return NextResponse.json({ ok: true, household: null, can_joint: false });
+      return NextResponse.json({
+        ok: true,
+        household: null,
+        can_joint: false,
+        subscription_active: subscriptionActive,
+        joint_enabled: subscriptionActive,
+      });
     }
+
     const peer = householdPeerUserId(hh, user.id);
     return NextResponse.json({
       ok: true,
@@ -37,6 +47,9 @@ export async function GET() {
         current_period_end: hh.current_period_end,
       },
       can_joint: householdIsFull(hh) && hh.shared_sub_balance >= 2,
+      subscription_active: true,
+      /** Lit CTA when subscribed (household exists or was just backfilled). */
+      joint_enabled: true,
     });
   } catch (e) {
     console.error("[api/household/me]", e instanceof Error ? e.message : e);

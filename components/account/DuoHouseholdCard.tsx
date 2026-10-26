@@ -9,6 +9,8 @@ import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 type HouseholdPayload = {
   ok?: boolean;
   can_joint?: boolean;
+  joint_enabled?: boolean;
+  subscription_active?: boolean;
   household: {
     id: string;
     status: string;
@@ -84,17 +86,23 @@ export function DuoHouseholdCard() {
       {!hh ? (
         <>
           <p className="mt-1 text-sm text-[#94a3b8]">
-            {zh
-              ? "共同决策仅双人订阅可用。订阅后绑定第二账号，双方各扣 1 PASS。"
-              : "Joint decisions require Duo. Bind a second account after subscribe — 1 PASS each."}
+            {data?.subscription_active || data?.joint_enabled
+              ? zh
+                ? "订阅已生效，正在准备双人席位…请刷新。若仍无，请联系支持。"
+                : "Subscription is active; preparing Duo seats… refresh. Contact support if this persists."
+              : zh
+                ? "共同决策需订阅后可用。订阅并绑定第二账号后，双方各扣 1 PASS。"
+                : "Joint decisions need a subscription. Bind a second account after subscribe — 1 PASS each."}
           </p>
-          <button
-            type="button"
-            className="mt-3 rounded bg-[#c4a574]/20 px-3 py-2 text-sm text-[#f5f0e8]"
-            onClick={() => setBuyOpen(true)}
-          >
-            {zh ? "查看双人订阅" : "View Duo subscription"}
-          </button>
+          {!(data?.subscription_active || data?.joint_enabled) ? (
+            <button
+              type="button"
+              className="mt-3 rounded bg-[#c4a574]/20 px-3 py-2 text-sm text-[#f5f0e8]"
+              onClick={() => setBuyOpen(true)}
+            >
+              {zh ? "查看双人订阅" : "View Duo subscription"}
+            </button>
+          ) : null}
           <div className="mt-4">
             <JointDecisionPanel showCreate={false} />
           </div>

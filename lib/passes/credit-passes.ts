@@ -76,6 +76,8 @@ export async function creditPassesFromCheckout(params: {
   } else if (planType === "team") {
     passesToAdd = SUBSCRIPTION_FIRST_GRANT.team;
     planName = "team";
+    // Team also unlocks joint decision — attach household seats.
+    createDuoHousehold = true;
   } else {
     return { ok: false, reason: "invalid_plan" };
   }

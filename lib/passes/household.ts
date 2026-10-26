@@ -53,6 +53,73 @@ export function householdPeerUserId(
   return null;
 }
 
+/**
+ * Backfill: active Personal/Team/Duo subscriber without a household row
+ * still gets a duo household so joint CTA can light up and seats can bind.
+ */
+export async function ensureHouseholdForActiveSubscriber(
+  userId: string,
+): Promise<{
+  household: HouseholdRow | null;
+  subscriptionActive: boolean;
+}> {
+  if (!isSupabaseAdminConfigured()) {
+    return { household: null, subscriptionActive: false };
+  }
+  const existing = await findHouseholdForUser(userId);
+  const admin = createSupabaseAdminClient();
+  const { data: passes } = await admin
+    .from("user_passes")
+    .select(
+      "subscription_status, subscription_plan, sub_balance, sub_carryover, stripe_subscription_id, current_period_end",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const plan =
+    passes?.subscription_plan === "personal" || passes?.subscription_plan === "team"
+      ? passes.subscription_plan
+      : null;
+  const status = typeof passes?.subscription_status === "string"
+    ? passes.subscription_status
+    : "none";
+  const subscriptionActive =
+    status === "active" ||
+    Boolean(plan) ||
+    Boolean(
+      typeof passes?.stripe_subscription_id === "string" &&
+        passes.stripe_subscription_id.trim(),
+    );
+
+  if (existing) {
+    return { household: existing, subscriptionActive: true };
+  }
+  if (!subscriptionActive) {
+    return { household: null, subscriptionActive: false };
+  }
+
+  const sub = typeof passes?.sub_balance === "number" ? passes.sub_balance : 0;
+  const carry =
+    typeof passes?.sub_carryover === "number" ? passes.sub_carryover : 0;
+  const shared = Math.max(0, sub + carry);
+  const created = await createOrRefreshDuoHousehold({
+    seatAUserId: userId,
+    sharedBalance: shared,
+    stripeSubscriptionId:
+      typeof passes?.stripe_subscription_id === "string"
+        ? passes.stripe_subscription_id
+        : null,
+    currentPeriodEnd:
+      typeof passes?.current_period_end === "string"
+        ? passes.current_period_end
+        : null,
+  });
+  if (!created.ok) {
+    return { household: null, subscriptionActive: true };
+  }
+  return { household: created.household, subscriptionActive: true };
+}
+
 /** Create household when duo subscription credits; seat A = subscriber. */
 export async function createOrRefreshDuoHousehold(params: {
   seatAUserId: string;

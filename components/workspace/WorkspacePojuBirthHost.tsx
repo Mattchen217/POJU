@@ -91,10 +91,15 @@ export function WorkspacePojuBirthHost({
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
           can_joint?: boolean;
+          joint_enabled?: boolean;
+          subscription_active?: boolean;
           household?: { peer_bound?: boolean } | null;
         };
         if (cancelled || !data.ok) return;
-        setDuoSubscribed(Boolean(data.household));
+        // Active subscription → lit joint CTA (household backfilled server-side).
+        setDuoSubscribed(
+          Boolean(data.joint_enabled ?? data.subscription_active ?? data.household),
+        );
         setCanJoint(Boolean(data.can_joint));
         setPeerBound(Boolean(data.household?.peer_bound));
       } catch {
