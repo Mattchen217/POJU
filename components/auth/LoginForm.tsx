@@ -12,33 +12,57 @@ import { Link } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { navigateAfterAuth, safeNextPath } from "@/lib/auth/auth-helpers";
 
+export type LoginBindSeatOpts = {
+  title: string;
+  subtitle?: string;
+  replace?: boolean;
+  oauthNextPath: string;
+  onBound: () => void;
+  onCancel: () => void;
+  /** Switch to signup form (same overlay) — mirrors login page footer link. */
+  onGoSignup: () => void;
+};
+
 type Props = {
   initialNext?: string | null;
   initialError?: string | null;
+  /** Reuse this login card for household seat bind (title override + bind APIs). */
+  bindSeat?: LoginBindSeatOpts | null;
 };
 
-export function LoginForm({ initialNext = null, initialError = null }: Props) {
+export function LoginForm({
+  initialNext = null,
+  initialError = null,
+  bindSeat = null,
+}: Props) {
   const t = useTranslations("auth.login");
   const [error, setError] = useState<string | null>(initialError);
   const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
-  // Default home (landing). Start CTA / middleware pass next=/app (or /zh/app).
   const next = safeNextPath(initialNext, "/");
-  useRedirectIfSignedIn(next);
+  const oauthNext = bindSeat?.oauthNextPath ?? next;
+  useRedirectIfSignedIn(next, { enabled: !bindSeat });
 
   return (
     <AuthCard
-      title={t("title")}
-      subtitle={t("subtitle")}
+      title={bindSeat?.title ?? t("title")}
+      subtitle={bindSeat?.subtitle ?? t("subtitle")}
+      onClose={bindSeat?.onCancel}
       footer={
         <p>
           {t("noAccount")}{" "}
-          <Link href={`/signup?next=${encodeURIComponent(next)}`}>{t("goSignup")}</Link>
+          {bindSeat ? (
+            <button type="button" className="auth-inline-link" onClick={bindSeat.onGoSignup}>
+              {t("goSignup")}
+            </button>
+          ) : (
+            <Link href={`/signup?next=${encodeURIComponent(next)}`}>{t("goSignup")}</Link>
+          )}
         </p>
       }
     >
-      <OAuthButtons nextPath={next} />
-      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
+      <OAuthButtons nextPath={oauthNext} />
+      <AuthErrorText code={error} email={lastEmail} nextPath={oauthNext} />
       <EmailPasswordForm
         mode="login"
         submitLabel={t("submit")}
@@ -49,6 +73,19 @@ export function LoginForm({ initialNext = null, initialError = null }: Props) {
           setError(null);
           setLastEmail(email);
           try {
+            if (bindSeat) {
+              const { ok, data } = await postAuthJson("/api/household/bind-seat", {
+                email,
+                password,
+                replace: bindSeat.replace === true,
+              });
+              if (!ok) {
+                setError(data.error ?? "auth_failed");
+                return;
+              }
+              bindSeat.onBound();
+              return;
+            }
             const { ok, data } = await postAuthJson("/api/auth/login", { email, password });
             if (!ok) {
               setError(data.error ?? "auth_failed");
@@ -60,14 +97,16 @@ export function LoginForm({ initialNext = null, initialError = null }: Props) {
           }
         }}
       />
-      <div className="auth-links-row">
-        <Link href="/forgot-password" className="auth-btn auth-btn--ghost">
-          {t("forgot")}
-        </Link>
-        <Link href="/verify" className="auth-btn auth-btn--ghost">
-          {t("otpEntry")}
-        </Link>
-      </div>
+      {!bindSeat ? (
+        <div className="auth-links-row">
+          <Link href="/forgot-password" className="auth-btn auth-btn--ghost">
+            {t("forgot")}
+          </Link>
+          <Link href="/verify" className="auth-btn auth-btn--ghost">
+            {t("otpEntry")}
+          </Link>
+        </div>
+      ) : null}
     </AuthCard>
   );
 }

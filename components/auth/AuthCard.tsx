@@ -13,6 +13,8 @@ type Props = {
   /** Close control — defaults to home. */
   showClose?: boolean;
   closeHref?: string;
+  /** When set, close is a button (e.g. bind-seat overlay) instead of a link. */
+  onClose?: () => void;
 };
 
 export function AuthCard({
@@ -22,6 +24,7 @@ export function AuthCard({
   footer,
   showClose = true,
   closeHref = "/",
+  onClose,
 }: Props) {
   const t = useTranslations("auth.brand");
   const closeLabel = t("close");
@@ -29,9 +32,21 @@ export function AuthCard({
   return (
     <div className="auth-card">
       {showClose ? (
-        <Link href={closeHref} className="auth-card__close" aria-label={closeLabel} title={closeLabel}>
-          <span aria-hidden="true">×</span>
-        </Link>
+        onClose ? (
+          <button
+            type="button"
+            className="auth-card__close"
+            aria-label={closeLabel}
+            title={closeLabel}
+            onClick={onClose}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        ) : (
+          <Link href={closeHref} className="auth-card__close" aria-label={closeLabel} title={closeLabel}>
+            <span aria-hidden="true">×</span>
+          </Link>
+        )
       ) : null}
       <div className="auth-card__brand">
         <Link href="/" className="auth-card__logo" aria-label="Eastern OS home">

@@ -12,36 +12,52 @@ import { Link } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { navigateAfterAuth, safeNextPath } from "@/lib/auth/auth-helpers";
 
-type Props = {
-  initialNext?: string | null;
+export type SignupBindSeatOpts = {
+  title: string;
+  subtitle?: string;
+  replace?: boolean;
+  oauthNextPath: string;
+  onBound: () => void;
+  onCancel: () => void;
+  onGoLogin: () => void;
 };
 
-export function SignupForm({ initialNext = null }: Props) {
+type Props = {
+  initialNext?: string | null;
+  bindSeat?: SignupBindSeatOpts | null;
+};
+
+export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
   const t = useTranslations("auth.signup");
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [lastEmail, setLastEmail] = useState("");
   const [otpOpen, setOtpOpen] = useState(false);
   const inFlight = useRef(false);
-  // Default landing. Start CTA passes next=/app (localized) via query string.
   const next = safeNextPath(initialNext, "/");
-  // Pause auto-leave while OTP modal is open — a leftover signup session used
-  // to fire SIGNED_IN and bounce → /app → /login, closing the modal instantly.
-  useRedirectIfSignedIn(next, { enabled: !otpOpen });
+  const oauthNext = bindSeat?.oauthNextPath ?? next;
+  useRedirectIfSignedIn(next, { enabled: !bindSeat && !otpOpen });
 
   return (
     <AuthCard
-      title={t("title")}
-      subtitle={t("subtitle")}
+      title={bindSeat?.title ?? t("title")}
+      subtitle={bindSeat?.subtitle ?? t("subtitle")}
+      onClose={bindSeat?.onCancel}
       footer={
         <p>
           {t("hasAccount")}{" "}
-          <Link href={`/login?next=${encodeURIComponent(next)}`}>{t("goLogin")}</Link>
+          {bindSeat ? (
+            <button type="button" className="auth-inline-link" onClick={bindSeat.onGoLogin}>
+              {t("goLogin")}
+            </button>
+          ) : (
+            <Link href={`/login?next=${encodeURIComponent(next)}`}>{t("goLogin")}</Link>
+          )}
         </p>
       }
     >
-      <OAuthButtons nextPath={next} />
-      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
+      <OAuthButtons nextPath={oauthNext} />
+      <AuthErrorText code={error} email={lastEmail} nextPath={oauthNext} />
       <EmailPasswordForm
         mode="signup"
         submitLabel={t("submit")}
@@ -60,7 +76,6 @@ export function SignupForm({ initialNext = null }: Props) {
             setError(data.error ?? "auth_failed");
             return { ok: false, error: data.error ?? "auth_failed" };
           }
-          // Never enter the app from send-code alone — OTP modal verifies next.
           if (data.email_send_warning) {
             setError("send_failed");
           }
@@ -76,6 +91,19 @@ export function SignupForm({ initialNext = null }: Props) {
           setError(null);
           setLastEmail(email);
           try {
+            if (bindSeat) {
+              const { ok, data } = await postAuthJson("/api/household/bind-seat-verify", {
+                email,
+                token,
+                replace: bindSeat.replace === true,
+              });
+              if (!ok) {
+                setError(data.error ?? "invalid_code");
+                throw new Error(data.error ?? "invalid_code");
+              }
+              bindSeat.onBound();
+              return;
+            }
             const { ok, data } = await postAuthJson("/api/auth/verify-signup", {
               email,
               token,
