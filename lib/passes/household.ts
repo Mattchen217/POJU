@@ -64,28 +64,103 @@ export function householdPeerUserId(
   return null;
 }
 
+export type EnsureHouseholdResult = {
+  household: HouseholdRow | null;
+  subscriptionActive: boolean;
+  /**
+   * Why household is missing when caller expected one.
+   * Never use "no_subscription" when subscriptionActive is true.
+   */
+  reason?:
+    | "admin_unconfigured"
+    | "no_subscription"
+    | "create_failed"
+    | "update_failed"
+    | "household_schema_missing"
+    | "lookup_failed";
+};
+
+function isMissingRelationError(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false;
+  const code = err.code ?? "";
+  const msg = (err.message ?? "").toLowerCase();
+  return (
+    code === "42P01" ||
+    code === "PGRST205" ||
+    msg.includes("does not exist") ||
+    msg.includes("could not find the table")
+  );
+}
+
 /**
- * Backfill: active Personal/Team/Duo subscriber without a household row
+ * Backfill: active Personal/Team subscriber without a household row
  * still gets a duo household so joint CTA can light up and seats can bind.
+ * Subscription UI reads user_passes; bind/invite require this household row —
+ * keep them aligned.
  */
 export async function ensureHouseholdForActiveSubscriber(
   userId: string,
-): Promise<{
-  household: HouseholdRow | null;
-  subscriptionActive: boolean;
-}> {
+): Promise<EnsureHouseholdResult> {
   if (!isSupabaseAdminConfigured()) {
-    return { household: null, subscriptionActive: false };
+    return {
+      household: null,
+      subscriptionActive: false,
+      reason: "admin_unconfigured",
+    };
   }
-  const existing = await findHouseholdForUser(userId);
+
   const admin = createSupabaseAdminClient();
-  const { data: passes } = await admin
+  const existingLookup = await admin
+    .from("pass_households")
+    .select("*")
+    .eq("seat_a_user_id", userId)
+    .in("status", ["pending_partner", "active"])
+    .maybeSingle();
+
+  if (existingLookup.error && isMissingRelationError(existingLookup.error)) {
+    console.error(
+      "[household] ensure schema missing",
+      existingLookup.error.code,
+      existingLookup.error.message,
+    );
+    return {
+      household: null,
+      subscriptionActive: false,
+      reason: "household_schema_missing",
+    };
+  }
+
+  let existing = asHousehold(
+    (existingLookup.data as Record<string, unknown> | null) ?? null,
+  );
+  if (!existing) {
+    const asB = await admin
+      .from("pass_households")
+      .select("*")
+      .eq("seat_b_user_id", userId)
+      .in("status", ["pending_partner", "active"])
+      .maybeSingle();
+    if (asB.error && isMissingRelationError(asB.error)) {
+      return {
+        household: null,
+        subscriptionActive: false,
+        reason: "household_schema_missing",
+      };
+    }
+    existing = asHousehold((asB.data as Record<string, unknown> | null) ?? null);
+  }
+
+  const { data: passes, error: passesErr } = await admin
     .from("user_passes")
     .select(
       "subscription_status, subscription_plan, sub_balance, sub_quota, sub_carryover, stripe_subscription_id, current_period_end",
     )
     .eq("user_id", userId)
     .maybeSingle();
+
+  if (passesErr) {
+    console.error("[household] ensure passes", passesErr.code, passesErr.message);
+  }
 
   const plan =
     passes?.subscription_plan === "personal" || passes?.subscription_plan === "team"
@@ -106,7 +181,7 @@ export async function ensureHouseholdForActiveSubscriber(
     return { household: existing, subscriptionActive: true };
   }
   if (!subscriptionActive) {
-    return { household: null, subscriptionActive: false };
+    return { household: null, subscriptionActive: false, reason: "no_subscription" };
   }
 
   const sub = typeof passes?.sub_balance === "number" ? passes.sub_balance : 0;
@@ -131,7 +206,22 @@ export async function ensureHouseholdForActiveSubscriber(
         : null,
   });
   if (!created.ok) {
-    return { household: null, subscriptionActive: true };
+    // Race: another request created the row — re-read.
+    const raced = await findHouseholdForUser(userId);
+    if (raced) {
+      return { household: raced, subscriptionActive: true };
+    }
+    console.error("[household] ensure create failed", created.reason);
+    return {
+      household: null,
+      subscriptionActive: true,
+      reason:
+        created.reason === "household_schema_missing"
+          ? "household_schema_missing"
+          : created.reason === "update_failed"
+            ? "update_failed"
+            : "create_failed",
+    };
   }
   return { household: created.household, subscriptionActive: true };
 }
@@ -226,7 +316,15 @@ export async function bindSeatByUserId(params: {
 > {
   const ensured = await ensureHouseholdForActiveSubscriber(params.actorUserId);
   const hh = ensured.household;
-  if (!hh) return { ok: false, reason: "no_subscription" };
+  if (!hh) {
+    return {
+      ok: false,
+      reason:
+        ensured.reason === "no_subscription" || !ensured.subscriptionActive
+          ? "no_subscription"
+          : (ensured.reason ?? "create_failed"),
+    };
+  }
   if (hh.seat_a_user_id !== params.actorUserId) {
     return { ok: false, reason: "only_seat_a_can_bind" };
   }
@@ -272,7 +370,15 @@ export async function bindSeatByCredentials(params: {
 
   const ensured = await ensureHouseholdForActiveSubscriber(params.actorUserId);
   const hh = ensured.household;
-  if (!hh) return { ok: false, reason: "no_subscription" };
+  if (!hh) {
+    return {
+      ok: false,
+      reason:
+        ensured.reason === "no_subscription" || !ensured.subscriptionActive
+          ? "no_subscription"
+          : (ensured.reason ?? "create_failed"),
+    };
+  }
   if (hh.seat_a_user_id !== params.actorUserId) {
     return { ok: false, reason: "only_seat_a_can_bind" };
   }
@@ -430,6 +536,16 @@ export async function createOrRefreshDuoHousehold(params: {
     .single();
   if (error || !data) {
     console.error("[household] create", error?.code ?? error?.message);
+    if (isMissingRelationError(error)) {
+      return { ok: false, reason: "household_schema_missing" };
+    }
+    // Unique seat_a race — caller should re-fetch.
+    if (error?.code === "23505") {
+      const again = await findHouseholdForUser(params.seatAUserId);
+      if (again && again.seat_a_user_id === params.seatAUserId) {
+        return { ok: true, household: again };
+      }
+    }
     return { ok: false, reason: "create_failed" };
   }
   return { ok: true, household: data as HouseholdRow };

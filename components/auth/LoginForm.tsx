@@ -44,11 +44,56 @@ export function LoginForm({
   bindSeat = null,
 }: Props) {
   const t = useTranslations("auth.login");
+  const tAccount = useTranslations("account");
   const [error, setError] = useState<string | null>(initialError);
   const [lastEmail, setLastEmail] = useState("");
   const inFlight = useRef(false);
   const next = safeNextPath(initialNext, "/");
   useRedirectIfSignedIn(next, { enabled: !bindSeat });
+
+  const bindHouseholdError =
+    bindSeat &&
+    error &&
+    [
+      "no_subscription",
+      "already_full",
+      "only_seat_a_can_bind",
+      "only_seat_a_can_invite",
+      "create_failed",
+      "update_failed",
+      "household_schema_missing",
+      "admin_unconfigured",
+      "cannot_bind_self",
+      "already_in_household",
+      "session_drift",
+    ].includes(error)
+      ? error
+      : null;
+
+  function bindErrorLabel(code: string): string {
+    switch (code) {
+      case "no_subscription":
+        return tAccount("bindSeatNoSub");
+      case "already_full":
+        return tAccount("bindSeatFull");
+      case "only_seat_a_can_bind":
+      case "only_seat_a_can_invite":
+        return tAccount("bindSeatNotOwner");
+      case "cannot_bind_self":
+        return tAccount("bindSeatSelf");
+      case "already_in_household":
+        return tAccount("bindSeatTaken");
+      case "household_schema_missing":
+        return tAccount("bindSeatSchemaMissing");
+      case "admin_unconfigured":
+        return tAccount("bindSeatAdminMissing");
+      case "create_failed":
+      case "update_failed":
+        return tAccount("bindSeatHouseholdInitFailed");
+      default:
+        return tAccount("bindSeatFailed");
+    }
+  }
 
   return (
     <AuthCard
@@ -74,7 +119,13 @@ export function LoginForm({
         resolveBindInvite={bindSeat?.resolveBindInvite}
         inviteError={bindSeat?.inviteError}
       />
-      <AuthErrorText code={error} email={lastEmail} nextPath={next} />
+      {bindHouseholdError ? (
+        <p className="auth-error" role="alert">
+          {bindErrorLabel(bindHouseholdError)}
+        </p>
+      ) : (
+        <AuthErrorText code={error} email={lastEmail} nextPath={next} />
+      )}
       <EmailPasswordForm
         mode="login"
         submitLabel={t("submit")}

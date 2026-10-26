@@ -37,6 +37,8 @@ type Props = {
   /** Two subscription seats (emails); seat_b may be empty. */
   boundSeats?: BoundSeatSlot[] | null;
   canBindSeat?: boolean;
+  /** When household row failed to init while subscription is active. */
+  ensureError?: string | null;
 };
 
 function formatPeriodEnd(iso: string | null, locale: string): string {
@@ -66,10 +68,26 @@ export function SubscriptionCard({
   onAccountChanged,
   loading = false,
   boundSeats = null,
-  canBindSeat: _canBindSeat = false,
+  canBindSeat = false,
+  ensureError = null,
 }: Props) {
-  void _canBindSeat;
   const t = useTranslations("account");
+
+  function ensureErrorLabel(code: string): string {
+    switch (code) {
+      case "household_schema_missing":
+        return t("bindSeatSchemaMissing");
+      case "admin_unconfigured":
+        return t("bindSeatAdminMissing");
+      case "create_failed":
+      case "update_failed":
+        return t("bindSeatHouseholdInitFailed");
+      case "no_subscription":
+        return t("bindSeatNoSub");
+      default:
+        return t("bindSeatHouseholdInitFailed");
+    }
+  }
   const locale = useLocale();
   const [detailOpen, setDetailOpen] = useState(false);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
@@ -251,11 +269,17 @@ export function SubscriptionCard({
             >
               <p className="acct-bound-seats__title">{t("boundAccountsTitle")}</p>
               <p className="acct-bound-seats__note">{t("boundAccountsNote")}</p>
+              {ensureError ? (
+                <p className="acct-bound-seats__err" role="alert">
+                  {ensureErrorLabel(ensureError)}
+                </p>
+              ) : null}
               <ul className="acct-bound-seats__list">
                 {seats.map((seat, i) => {
                   const empty = !seat.email?.trim();
                   const isSeat2 = seat.role === "seat_b" || i === 1;
-                  const showSeat2Action = hasSub && !loading && isSeat2;
+                  const showSeat2Action =
+                    hasSub && !loading && isSeat2 && canBindSeat;
                   return (
                     <li key={seat.role} className="acct-bound-seats__item">
                       <div className="acct-bound-seats__row">

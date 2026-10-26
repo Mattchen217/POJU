@@ -34,12 +34,19 @@ function bindInviteErrorText(
   switch (code) {
     case "already_full":
       return tAccount("bindSeatFull");
-    case "no_duo_household":
     case "no_subscription":
       return tAccount("bindSeatNoSub");
     case "only_seat_a_can_invite":
     case "only_seat_a_can_bind":
       return tAccount("bindSeatNotOwner");
+    case "household_schema_missing":
+      return tAccount("bindSeatSchemaMissing");
+    case "admin_unconfigured":
+      return tAccount("bindSeatAdminMissing");
+    case "create_failed":
+    case "update_failed":
+    case "no_duo_household":
+      return tAccount("bindSeatHouseholdInitFailed");
     default:
       return tAccount("bindSeatFailed");
   }

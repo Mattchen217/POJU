@@ -45,6 +45,7 @@ type AccountSummary = {
   household?: {
     can_bind_seat?: boolean;
     seats?: BoundSeatSlot[];
+    ensure_error?: string | null;
   } | null;
   error?: string;
 };
@@ -182,6 +183,7 @@ export function ProfilePanel() {
               onAccountChanged={loadSummary}
               boundSeats={summary?.household?.seats ?? null}
               canBindSeat={Boolean(summary?.household?.can_bind_seat)}
+              ensureError={summary?.household?.ensure_error ?? null}
             />
             <UsageHistoryList loading={dataLoading} usage={summary?.usage ?? []} />
             <PurchaseHistoryList loading={dataLoading} purchases={summary?.purchases ?? []} />

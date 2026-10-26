@@ -103,7 +103,8 @@ export async function GET() {
         ? passes.pass_balance
         : flex + sub + carryover;
 
-    const { household } = await ensureHouseholdForActiveSubscriber(user.id);
+    const ensured = await ensureHouseholdForActiveSubscriber(user.id);
+    const household = ensured.household;
     const peer = household ? householdPeerUserId(household, user.id) : null;
     const seats = household
       ? await listHouseholdSeatsForViewer(household, user.id)
@@ -128,15 +129,22 @@ export async function GET() {
     const ownerPlan = passes?.subscription_plan === "personal" || passes?.subscription_plan === "team"
       ? passes.subscription_plan
       : null;
-    // Seat B inherits household subscription display even without their own plan row.
+    // Prefer ledger subscription fields; household does not invent "active".
+    const ledgerActive =
+      passes?.subscription_status === "active" || Boolean(ownerPlan);
     const subStatus = household
-      ? passes?.subscription_status === "active" || household.status === "active"
+      ? ledgerActive || household.status === "active"
         ? "active"
         : passes?.subscription_status ?? "active"
       : passes?.subscription_status ?? "none";
-    const subPlan = ownerPlan ?? (household ? "personal" : null);
+    const subPlan = ownerPlan ?? (household ? ("personal" as const) : null);
     const periodEnd =
       passes?.current_period_end ?? household?.current_period_end ?? null;
+    const isSeatA = household ? household.seat_a_user_id === user.id : true;
+    // Show bind CTA when seat A (or subscribed with household still bootstrapping).
+    const canManageSeat2 = household
+      ? isSeatA
+      : Boolean(ledgerActive && ensured.reason !== "household_schema_missing");
 
     return NextResponse.json({
       ok: true,
@@ -145,7 +153,11 @@ export async function GET() {
       notify_pass_low: profile?.notify_pass_low ?? true,
       notify_marketing: profile?.notify_marketing ?? false,
       display_name: profile?.display_name ?? null,
-      pass_balance: total,
+      // Prefer sum of buckets when pass_balance is stale 0 with positive sub.
+      pass_balance:
+        total > 0
+          ? total
+          : flex + (household ? household.shared_sub_balance : sub) + (household ? 0 : carryover),
       flex_balance: flex,
       sub_balance: subRemaining,
       sub_quota: subQuotaShown,
@@ -178,9 +190,9 @@ export async function GET() {
             peer_bound: Boolean(peer),
             can_joint: householdIsFull(household) && household.shared_sub_balance >= 2,
             role: household.seat_a_user_id === user.id ? "seat_a" : "seat_b",
-            can_bind_seat:
-              household.seat_a_user_id === user.id && !household.seat_b_user_id,
+            can_bind_seat: canManageSeat2,
             seats,
+            ensure_error: null as string | null,
           }
         : {
             id: null,
@@ -190,10 +202,10 @@ export async function GET() {
             peer_bound: false,
             can_joint: false,
             role: null,
-            // Subscribed but household row missing — still allow UI bind CTA;
-            // bind/invite APIs will ensure household.
-            can_bind_seat: Boolean(subStatus === "active" || subPlan),
+            can_bind_seat: canManageSeat2,
             seats,
+            ensure_error: (ensured.reason ??
+              (ledgerActive ? "create_failed" : "no_subscription")) as string | null,
           },
       purchases: purchasesRes.data ?? [],
       usage: usageRes.data ?? [],

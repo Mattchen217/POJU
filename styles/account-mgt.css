@@ -267,6 +267,13 @@
   color: var(--acct-fg, #f5f0e8);
 }
 
+.acct-bound-seats__err {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #f07178;
+}
+
 .acct-bound-seats__note {
   margin: 0 0 0.75rem;
   font-size: 0.75rem;

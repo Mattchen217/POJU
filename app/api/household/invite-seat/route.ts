@@ -24,10 +24,35 @@ export async function POST(req: Request) {
       email?: string;
       replace?: boolean;
     };
-    let { household: hh } = await ensureHouseholdForActiveSubscriber(user.id);
+
+    const ensured = await ensureHouseholdForActiveSubscriber(user.id);
+    let hh = ensured.household;
+
     if (!hh) {
-      return NextResponse.json({ ok: false, error: "no_duo_household" }, { status: 400 });
+      // Prefer concrete infra reasons over a false "need subscribe".
+      const infra = [
+        "household_schema_missing",
+        "admin_unconfigured",
+        "create_failed",
+        "update_failed",
+        "lookup_failed",
+      ];
+      if (ensured.reason && infra.includes(ensured.reason)) {
+        return NextResponse.json({ ok: false, error: ensured.reason }, { status: 500 });
+      }
+      if (!ensured.subscriptionActive || ensured.reason === "no_subscription") {
+        return NextResponse.json({ ok: false, error: "no_subscription" }, { status: 400 });
+      }
+      return NextResponse.json(
+        { ok: false, error: ensured.reason ?? "create_failed" },
+        { status: 500 },
+      );
     }
+
+    if (hh.seat_a_user_id !== user.id) {
+      return NextResponse.json({ ok: false, error: "only_seat_a_can_invite" }, { status: 403 });
+    }
+
     if (body.replace === true && hh.seat_b_user_id) {
       const cleared = await clearSeatBForReplace({ actorUserId: user.id });
       if (!cleared.ok) {
@@ -35,6 +60,7 @@ export async function POST(req: Request) {
       }
       hh = cleared.household;
     }
+
     const result = await createSeatInvite({
       householdId: hh.id,
       actorUserId: user.id,
