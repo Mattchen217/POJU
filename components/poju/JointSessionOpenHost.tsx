@@ -62,20 +62,36 @@ type ChargeResult =
 
 type Props = {
   jointId: string;
+  /** Sidebar row — show invite modal immediately without waiting for GET. */
+  initialJoint?: JointDecisionPublicView | null;
   onClose: () => void;
   /** After successful hydrate into chat. */
   onEnteredChat?: (sessionId: string) => void;
 };
 
-export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props) {
+function initialPhase(preview: JointDecisionPublicView | null | undefined): Phase {
+  if (!preview) return "loading";
+  if (preview.role === "invitee" && preview.status === "invited") return "agree";
+  if (preview.waiting_for_partner) return "waiting";
+  return "loading";
+}
+
+export function JointSessionOpenHost({
+  jointId,
+  initialJoint = null,
+  onClose,
+  onEnteredChat,
+}: Props) {
   const locale = useLocale();
   const t = useTranslations("joint_flow");
   const tPrep = useTranslations("session_prep");
   const { alert } = useAppDialog();
   const prepare = useWorkspacePojuPrepare();
 
-  const [phase, setPhase] = useState<Phase>("loading");
-  const [joint, setJoint] = useState<JointDecisionPublicView | null>(null);
+  const [phase, setPhase] = useState<Phase>(() => initialPhase(initialJoint));
+  const [joint, setJoint] = useState<JointDecisionPublicView | null>(
+    () => initialJoint ?? null,
+  );
   const [busy, setBusy] = useState(false);
   const [blockedMsg, setBlockedMsg] = useState<string | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
@@ -106,10 +122,14 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      // Invite modal already painted from sidebar preview — refresh quietly in background.
+      const paintedInvite =
+        initialJoint?.role === "invitee" && initialJoint.status === "invited";
+
       const data = await loadJoint();
       if (cancelled || !data?.joint) return;
       const j = data.joint;
-      notifyJointListUpdated();
+      setJoint(j);
 
       if (j.waiting_for_partner) {
         setPhase("waiting");
@@ -118,7 +138,13 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
 
       if (j.role === "invitee" && j.status === "invited") {
         setPhase("agree");
+        // Defer list refresh so it doesn't compete with first paint.
+        window.setTimeout(() => notifyJointListUpdated(), 0);
         return;
+      }
+
+      if (paintedInvite) {
+        // Preview said invited but server says otherwise — continue normal routing below.
       }
 
       // Partner ready or running — if already charged, resume seed session

@@ -86,12 +86,19 @@ function isBirthInfo(v: unknown): v is BirthInfo {
   return coerceBirthInfo(v) != null;
 }
 
+/** Short-lived process cache — Auth Admin getUserById is often the slow hop. */
+const emailByUserIdCache = new Map<string, { email: string | null; at: number }>();
+const EMAIL_CACHE_TTL_MS = 5 * 60 * 1000;
+
 async function emailForUserId(userId: string): Promise<string | null> {
-  if (!isSupabaseAdminConfigured()) return null;
+  if (!userId || !isSupabaseAdminConfigured()) return null;
+  const hit = emailByUserIdCache.get(userId);
+  if (hit && Date.now() - hit.at < EMAIL_CACHE_TTL_MS) return hit.email;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.auth.admin.getUserById(userId);
-  if (error || !data.user?.email) return null;
-  return data.user.email;
+  const email = error || !data.user?.email ? null : data.user.email;
+  emailByUserIdCache.set(userId, { email, at: Date.now() });
+  return email;
 }
 
 export async function lookupJointPartner(params: {

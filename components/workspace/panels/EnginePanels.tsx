@@ -15,6 +15,7 @@ import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePoj
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import { useWorkspaceProductHistory } from "@/components/workspace/use-workspace-product-history";
+import type { JointDecisionPublicView } from "@/lib/passes/household-types";
 import {
   JOINT_ENTRY_MODE_EVENT,
   JOINT_OPEN_EVENT,
@@ -133,19 +134,25 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
   const [hasProfiles, setHasProfiles] = useState(false);
   const [entryMode, setEntryMode] = useState<JointEntryMode>("solo");
   const [openJointId, setOpenJointId] = useState<string | null>(null);
+  const [openJointPreview, setOpenJointPreview] = useState<JointDecisionPublicView | null>(
+    null,
+  );
 
   useEffect(() => {
     function onEntry(e: Event) {
       const mode = (e as CustomEvent<JointEntryModeDetail>).detail?.mode;
       if (mode === "solo" || mode === "joint") {
         setOpenJointId(null);
+        setOpenJointPreview(null);
         setEntryMode(mode);
       }
     }
     function onOpen(e: Event) {
-      const id = (e as CustomEvent<JointOpenDetail>).detail?.jointId?.trim();
+      const detail = (e as CustomEvent<JointOpenDetail>).detail;
+      const id = detail?.jointId?.trim();
       if (!id) return;
       setEntryMode("solo");
+      setOpenJointPreview(detail.preview ?? null);
       setOpenJointId(id);
       resetPrepare();
     }
@@ -233,12 +240,15 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
         {/* Stay mounted through portrait close so charge tip can fire. */}
         <JointSessionOpenHost
           jointId={openJointId}
+          initialJoint={openJointPreview}
           onClose={() => {
             setOpenJointId(null);
+            setOpenJointPreview(null);
             requestJointEntryMode("solo");
           }}
           onEnteredChat={() => {
             setOpenJointId(null);
+            setOpenJointPreview(null);
           }}
         />
       </div>

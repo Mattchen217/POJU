@@ -1,5 +1,7 @@
 /** Client events for joint-decision sidebar / open host. */
 
+import type { JointDecisionPublicView } from "@/lib/passes/household-types";
+
 export const JOINT_LIST_UPDATED_EVENT = "pojulife:joint-list-updated";
 
 export const JOINT_ENTRY_MODE_EVENT = "pojulife:joint-entry-mode";
@@ -15,7 +17,11 @@ export type JointEntryMode = "solo" | "joint";
 
 export type JointEntryModeDetail = { mode: JointEntryMode };
 
-export type JointOpenDetail = { jointId: string };
+export type JointOpenDetail = {
+  jointId: string;
+  /** Sidebar row already has enough data to paint invite modal immediately. */
+  preview?: JointDecisionPublicView | null;
+};
 
 export function notifyJointListUpdated(): void {
   if (typeof window === "undefined") return;
@@ -29,12 +35,17 @@ export function requestJointEntryMode(mode: JointEntryMode): void {
   );
 }
 
-export function requestJointOpen(jointId: string): void {
+export function requestJointOpen(
+  jointId: string,
+  preview?: JointDecisionPublicView | null,
+): void {
   if (typeof window === "undefined") return;
   const id = jointId.trim();
   if (!id) return;
   window.dispatchEvent(
-    new CustomEvent<JointOpenDetail>(JOINT_OPEN_EVENT, { detail: { jointId: id } }),
+    new CustomEvent<JointOpenDetail>(JOINT_OPEN_EVENT, {
+      detail: { jointId: id, preview: preview ?? null },
+    }),
   );
 }
 

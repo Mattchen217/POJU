@@ -626,10 +626,10 @@ export function WorkspaceSidebar({
     onSelectNew("poju");
   }
 
-  function openJointRow(id: string) {
-    setActiveJointId(id);
+  function openJointRow(j: JointDecisionPublicView) {
+    setActiveJointId(j.id);
     setHistoryOpen("joint");
-    requestJointOpen(id);
+    requestJointOpen(j.id, j);
   }
 
 
@@ -775,7 +775,7 @@ export function WorkspaceSidebar({
                       type="button"
                       className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
                       aria-current={activeJointId === j.id ? "page" : undefined}
-                      onClick={() => openJointRow(j.id)}
+                      onClick={() => openJointRow(j)}
                       title={j.shared_question}
                     >
                       <span className="workspace-sidebar__icon" aria-hidden>
