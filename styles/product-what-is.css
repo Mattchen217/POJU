@@ -79,6 +79,15 @@
     align-items: center;
     gap: clamp(36px, 5vw, 56px);
   }
+
+  .product-what-is__grid--copy-only {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 40rem;
+  }
+}
+
+.product-what-is--copy-only .product-what-is__copy {
+  text-align: left;
 }
 
 .product-what-is__media-wrap {
