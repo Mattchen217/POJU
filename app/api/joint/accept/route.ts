@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
-import { acceptJointInvite } from "@/lib/passes/joint-decision";
+import { agreeJointInvite } from "@/lib/passes/joint-decision";
 import type { BirthInfo } from "@/lib/profile/types";
 
 export const runtime = "nodejs";
 
+/** Legacy: agree only (charge via /start). Prefer POST /api/joint/agree. */
 export async function POST(req: Request) {
   try {
     if (!isSupabaseConfigured()) {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     if (!body.birth) {
       return NextResponse.json({ ok: false, error: "birth_required" }, { status: 400 });
     }
-    const result = await acceptJointInvite({
+    const result = await agreeJointInvite({
       jointId,
       inviteeUserId: user.id,
       inviteeBirth: body.birth,
@@ -35,11 +36,7 @@ export async function POST(req: Request) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.reason }, { status: 400 });
     }
-    return NextResponse.json({
-      ok: true,
-      joint: result.joint,
-      seed: result.seed,
-    });
+    return NextResponse.json({ ok: true, joint: result.joint });
   } catch (e) {
     console.error("[api/joint/accept]", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });

@@ -40,8 +40,8 @@ export async function consumePassSmart(params: {
           via: "household",
         };
       }
-      // If household insufficient and not a joint ref, fall through to user buckets.
-      if (isJointRef || hhResult.reason === "rpc_error") {
+      // Joint and solo: fall through to personal flex when shared pool is empty.
+      if (hhResult.reason === "rpc_error") {
         return {
           ok: false,
           reason: hhResult.reason ?? "insufficient_balance",

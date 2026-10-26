@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
+import { JointSessionOpenHost } from "@/components/poju/JointSessionOpenHost";
 import { BeginButton, type BeginProductId } from "@/components/pwa/BeginButton";
 import { WorkspaceContextPanel } from "@/components/workspace/WorkspaceContextPanel";
 import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirthHost";
@@ -14,6 +15,14 @@ import { WorkspacePojuPreparingStage } from "@/components/workspace/WorkspacePoj
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
 import { useWorkspaceUnlockRitualResume } from "@/components/workspace/useWorkspaceUnlockRitualResume";
 import { useWorkspaceProductHistory } from "@/components/workspace/use-workspace-product-history";
+import {
+  JOINT_ENTRY_MODE_EVENT,
+  JOINT_OPEN_EVENT,
+  type JointEntryMode,
+  type JointEntryModeDetail,
+  type JointOpenDetail,
+  requestJointEntryMode,
+} from "@/lib/poju/joint-client-events";
 import { readPendingLangSwitch } from "@/lib/poju/pending-lang-switch";
 import { POJU_WORKSPACE_UNLOCK_RITUAL_KEY } from "@/lib/poju/preview-unlock";
 
@@ -116,12 +125,43 @@ export function EnginePanel({ productId, price, onOpenArchive }: Props) {
 export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
   const t = useTranslations("workspace.sessionOpen");
   const locale = useLocale();
-  const { phase, startPrepare, setPhase, resumingSessionId, session } =
+  const { phase, startPrepare, setPhase, resumingSessionId, session, resetPrepare } =
     useWorkspacePojuPrepare();
   useWorkspaceUnlockRitualResume(locale);
   const tDensity = useTranslations("workspace.density");
 
   const [hasProfiles, setHasProfiles] = useState(false);
+  const [entryMode, setEntryMode] = useState<JointEntryMode>("solo");
+  const [openJointId, setOpenJointId] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onEntry(e: Event) {
+      const mode = (e as CustomEvent<JointEntryModeDetail>).detail?.mode;
+      if (mode === "solo" || mode === "joint") {
+        setOpenJointId(null);
+        setEntryMode(mode);
+      }
+    }
+    function onOpen(e: Event) {
+      const id = (e as CustomEvent<JointOpenDetail>).detail?.jointId?.trim();
+      if (!id) return;
+      setEntryMode("solo");
+      setOpenJointId(id);
+      resetPrepare();
+    }
+    window.addEventListener(JOINT_ENTRY_MODE_EVENT, onEntry);
+    window.addEventListener(JOINT_OPEN_EVENT, onOpen);
+    return () => {
+      window.removeEventListener(JOINT_ENTRY_MODE_EVENT, onEntry);
+      window.removeEventListener(JOINT_OPEN_EVENT, onOpen);
+    };
+  }, [resetPrepare]);
+
+  useEffect(() => {
+    if (phase === "chat" && session?.session_id) {
+      setOpenJointId(null);
+    }
+  }, [phase, session?.session_id]);
 
   /* Avoid flashing birth home while Stripe return / mid-chat locale switch resumes. */
   const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
@@ -181,6 +221,29 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
     return () => window.clearTimeout(timer);
   }, [phase, setPhase]);
 
+  if (openJointId) {
+    return (
+      <div className="workspace-poju-stack workspace-poju-stack--joint">
+        {phase === "chat" && session ? (
+          <div className="workspace-poju-chat-layer">
+            <WorkspacePojuChatStage />
+          </div>
+        ) : null}
+        {/* Stay mounted through portrait close so charge tip can fire. */}
+        <JointSessionOpenHost
+          jointId={openJointId}
+          onClose={() => {
+            setOpenJointId(null);
+            requestJointEntryMode("solo");
+          }}
+          onEnteredChat={() => {
+            setOpenJointId(null);
+          }}
+        />
+      </div>
+    );
+  }
+
   if (phase === "chat" || (phase === "idle" && unlockResumeGate)) {
     const showResumeSpinner = Boolean(resumingSessionId);
 
@@ -229,9 +292,14 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
             <div className="workspace-poju-below__unit">
               <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
               <WorkspacePojuBirthHost
+                  jointInitiate={entryMode === "joint"}
                   onPrepareStart={startPrepare}
                   onHasProfilesChange={setHasProfiles}
                   onOpenSession={onOpenArchive}
+                  onJointCreated={() => {
+                    requestJointEntryMode("solo");
+                    setEntryMode("solo");
+                  }}
                 />
             </div>
           </div>
@@ -276,9 +344,14 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
               <div className="workspace-poju-below__unit">
                 <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
                 <WorkspacePojuBirthHost
+                      jointInitiate={entryMode === "joint"}
                       onPrepareStart={startPrepare}
                       onHasProfilesChange={setHasProfiles}
                       onOpenSession={onOpenArchive}
+                      onJointCreated={() => {
+                        requestJointEntryMode("solo");
+                        setEntryMode("solo");
+                      }}
                   />
               </div>
             </div>

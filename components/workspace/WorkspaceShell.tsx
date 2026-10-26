@@ -200,7 +200,18 @@ function DocVaultOpenBinder({
   }, [vault?.items]);
 
   return (
-    <WorkspaceDocVaultModal item={modalItem} onClose={() => setModalItem(null)} />
+    <WorkspaceDocVaultModal
+      item={modalItem}
+      onClose={() => {
+        const wasBaseline = modalItem?.kind === "energy_matrix";
+        setModalItem(null);
+        if (wasBaseline) {
+          void import("@/lib/poju/joint-client-events").then((m) => {
+            m.notifyJointPortraitClosed();
+          });
+        }
+      }}
+    />
   );
 }
 

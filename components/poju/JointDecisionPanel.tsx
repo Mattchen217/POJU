@@ -9,7 +9,9 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 
 import { PartnerBirthModal } from "@/components/poju/PartnerBirthModal";
+import { useAppDialog } from "@/components/ui/app-dialog";
 import { hydrateJointSessionFromSeed } from "@/lib/poju/hydrate-joint-session";
+import { notifyJointListUpdated } from "@/lib/poju/joint-client-events";
 import type { BirthInfo } from "@/lib/profile/types";
 import type { JointDecisionPublicView } from "@/lib/passes/household-types";
 import type { JointSessionSeed } from "@/lib/passes/joint-decision";
@@ -52,6 +54,7 @@ export function JointDecisionPanel({
 }: Props) {
   const locale = useLocale();
   const router = useRouter();
+  const { alert } = useAppDialog();
   const zh = locale.toLowerCase().startsWith("zh");
   const [hh, setHh] = useState<HouseholdMe | null>(null);
   const [mode, setMode] = useState<Mode>("idle");
@@ -137,10 +140,11 @@ export function JointDecisionPanel({
       setMode("idle");
       setQuestion("");
       await refresh();
-      alert(
+      notifyJointListUpdated();
+      await alert(
         zh
-          ? "已向绑定账号发出共同决策邀请。对方接受并授权出生信息后，双方各自进入独立咨询。"
-          : "Invite sent to your bound partner. After they accept and authorize birth details, you each get an independent session.",
+          ? "已发出共同决策邀请。对方同意并提交出生信息后，双方可各自开启对话。"
+          : "Invite sent. After your partner agrees and submits birth details, you can each open your own session.",
       );
     } catch {
       setError("network_error");

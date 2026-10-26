@@ -19,6 +19,8 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as {
       shared_question?: string;
       birth?: BirthInfo;
+      partner_email?: string;
+      partner_user_id?: string;
     };
     const q = typeof body.shared_question === "string" ? body.shared_question : "";
     if (!body.birth) {
@@ -26,8 +28,11 @@ export async function POST(req: Request) {
     }
     const result = await createJointInvite({
       initiatorUserId: user.id,
+      initiatorEmail: user.email,
       sharedQuestion: q,
       initiatorBirth: body.birth,
+      partnerEmail: typeof body.partner_email === "string" ? body.partner_email : null,
+      partnerUserId: typeof body.partner_user_id === "string" ? body.partner_user_id : null,
     });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.reason }, { status: 400 });

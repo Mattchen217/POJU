@@ -5,8 +5,9 @@ import { useLocale, useTranslations } from "next-intl";
 
 import {
   BirthInfoConfirmDialog,
-  type BirthConfirmMode,
+  type JointConfirmPayload,
 } from "@/components/poju/BirthInfoConfirmDialog";
+import { useAppDialog } from "@/components/ui/app-dialog";
 import { WorkspaceBirthInfoPicker } from "@/components/workspace/WorkspaceBirthInfoPicker";
 import { WorkspacePojuProfileRecords, getWorkspaceProfileCardTitle } from "@/components/workspace/WorkspacePojuProfileRecords";
 import { markPendingBaseAnalysisProfile } from "@/lib/profile/pending-base-analysis";
@@ -24,6 +25,7 @@ import {
   mapLatestPojuSessionByProfileId,
   type BirthRecordLatestSession,
 } from "@/lib/profile/birth-record-latest-session";
+import { notifyJointListUpdated } from "@/lib/poju/joint-client-events";
 
 import "@/styles/session-prep.css";
 
@@ -42,6 +44,13 @@ type Props = {
   matchCollectingSlot?: "a" | "b";
   /** Open linked past decision-dialogue session (rail path). */
   onOpenSession?: (sessionId: string) => void;
+  /**
+   * When true: birth → confirm with partner account + question → create joint invite
+   * (no solo prepare). Used from sidebar “发起双人共同决策”.
+   */
+  jointInitiate?: boolean;
+  /** After joint invite created successfully. */
+  onJointCreated?: () => void;
 };
 
 /**
@@ -55,53 +64,45 @@ export function WorkspacePojuBirthHost({
   excludeProfileId = null,
   matchCollectingSlot,
   onOpenSession,
+  jointInitiate = false,
+  onJointCreated,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations("session_prep");
   const tMatchWs = useTranslations("match.workspace");
+  const tConfirm = useTranslations("birth_confirm");
+  const tJoint = useTranslations("joint_flow");
+  const { alert } = useAppDialog();
   const isMatchFrame = matchCollectingSlot === "a" || matchCollectingSlot === "b";
 
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
   const [mode, setMode] = useState<"list" | "new">("new");
 
-  const tConfirm = useTranslations("birth_confirm");
   const [pendingBirthInfo, setPendingBirthInfo] = useState<BirthInfo | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [latestByProfileId, setLatestByProfileId] = useState<Map<string, BirthRecordLatestSession>>(() => new Map());
-  const [duoSubscribed, setDuoSubscribed] = useState(false);
-  const [canJoint, setCanJoint] = useState(false);
-  const [peerBound, setPeerBound] = useState(false);
-  const [jointQuestionOpen, setJointQuestionOpen] = useState(false);
-  const [jointBirth, setJointBirth] = useState<BirthInfo | null>(null);
-  const [jointQuestion, setJointQuestion] = useState("");
-  const [jointBusy, setJointBusy] = useState(false);
+  const [partnerPrefill, setPartnerPrefill] = useState("");
+  const [partnerUserIdPrefill, setPartnerUserIdPrefill] = useState<string | null>(null);
 
   const visibleProfiles = profiles.filter((p) => p.profile_id !== excludeProfileId);
-  const showJointOption = !isMatchFrame && usageProduct === "poju";
 
   useEffect(() => {
-    if (!showJointOption) return;
+    if (!jointInitiate) return;
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch("/api/household/me", { credentials: "same-origin" });
+        const res = await fetch("/api/joint/bound-peer", { credentials: "same-origin" });
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
-          can_joint?: boolean;
-          joint_enabled?: boolean;
-          subscription_active?: boolean;
-          household?: { peer_bound?: boolean } | null;
+          peer_email?: string | null;
+          peer_user_id?: string | null;
         };
         if (cancelled || !data.ok) return;
-        // Active subscription → lit joint CTA (household backfilled server-side).
-        setDuoSubscribed(
-          Boolean(data.joint_enabled ?? data.subscription_active ?? data.household),
-        );
-        setCanJoint(Boolean(data.can_joint));
-        setPeerBound(Boolean(data.household?.peer_bound));
+        if (data.peer_email) setPartnerPrefill(data.peer_email);
+        if (data.peer_user_id) setPartnerUserIdPrefill(data.peer_user_id);
       } catch {
         /* ignore */
       }
@@ -109,8 +110,7 @@ export function WorkspacePojuBirthHost({
     return () => {
       cancelled = true;
     };
-  }, [showJointOption, showConfirm]);
-
+  }, [jointInitiate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -225,7 +225,7 @@ export function WorkspacePojuBirthHost({
         onPrepareStart?.(profileId);
       } catch (err) {
         console.error("[workspace-poju] Select profile failed:", err);
-        alert(t("error_create_profile"));
+        await alert(t("error_create_profile"));
       }
       return;
     }
@@ -243,32 +243,48 @@ export function WorkspacePojuBirthHost({
       onPrepareStart?.(result.profile_id);
     } catch (err) {
       console.error("[workspace-poju] Create profile failed:", err);
-      alert(t("error_create_profile"));
+      await alert(t("error_create_profile"));
       setCreating(false);
     }
   }
 
-  async function handleConfirmMode(mode: BirthConfirmMode) {
-    if (mode === "solo") {
-      await handleConfirmSolo();
-      return;
-    }
-    if (!duoSubscribed) return;
-    if (!peerBound) {
-      alert(tConfirm("joint_need_bind"));
-      return;
-    }
-    if (!canJoint) {
-      alert(tConfirm("joint_need_balance"));
-      return;
-    }
+  async function handleConfirmJoint(payload: JointConfirmPayload) {
     setCreating(true);
     try {
       const birth = await resolveConfirmBirth();
       if (!birth) {
-        alert(t("error_create_profile"));
+        await alert(t("error_create_profile"));
         return;
       }
+
+      // Soft client validation
+      const email = payload.partnerEmail.trim();
+      if (!payload.partnerUserId) {
+        if (!email.includes("@")) {
+          await alert(tJoint("err_invalid_email"), tConfirm("joint_confirm_title"));
+          return;
+        }
+        const look = await fetch("/api/joint/lookup-partner", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ partner_email: email }),
+        });
+        const lookData = (await look.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+          user_id?: string;
+        };
+        if (!look.ok || !lookData.ok) {
+          await alert(
+            mapCreateError(lookData.error, tJoint),
+            tConfirm("joint_confirm_title"),
+          );
+          return;
+        }
+        payload = { ...payload, partnerUserId: lookData.user_id ?? null };
+      }
+
       if (pendingBirthInfo) {
         const result = await createStoredProfile({ birth_info: pendingBirthInfo });
         markPendingBaseAnalysisProfile(result.profile_id);
@@ -277,31 +293,16 @@ export function WorkspacePojuBirthHost({
       } else if (selectedProfileId) {
         await recordProfileUsage(selectedProfileId, usageProduct);
       }
-      setJointBirth(birth);
-      setJointQuestion("");
-      setShowConfirm(false);
-      setSelectedProfileId(null);
-      setPendingBirthInfo(null);
-      setJointQuestionOpen(true);
-    } catch (err) {
-      console.error("[workspace-poju] Joint prepare failed:", err);
-      alert(t("error_create_profile"));
-    } finally {
-      setCreating(false);
-    }
-  }
 
-  async function submitJointInvite() {
-    if (!jointBirth || jointQuestion.trim().length < 4) return;
-    setJointBusy(true);
-    try {
       const res = await fetch("/api/joint/create", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          shared_question: jointQuestion.trim(),
-          birth: jointBirth,
+          shared_question: payload.sharedQuestion,
+          birth,
+          partner_email: payload.partnerEmail,
+          partner_user_id: payload.partnerUserId ?? undefined,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -309,17 +310,24 @@ export function WorkspacePojuBirthHost({
         error?: string;
       };
       if (!res.ok || !data.ok) {
-        alert(data.error ?? tConfirm("joint_need_balance"));
+        await alert(
+          mapCreateError(data.error, tJoint),
+          tConfirm("joint_confirm_title"),
+        );
         return;
       }
-      alert(tConfirm("joint_invite_sent"));
-      setJointQuestionOpen(false);
-      setJointBirth(null);
-      setJointQuestion("");
-    } catch {
-      alert("network_error");
+
+      setShowConfirm(false);
+      setSelectedProfileId(null);
+      setPendingBirthInfo(null);
+      notifyJointListUpdated();
+      await alert(tJoint("invite_sent_waiting"), tConfirm("joint_confirm_title"));
+      onJointCreated?.();
+    } catch (err) {
+      console.error("[workspace-poju] Joint create failed:", err);
+      await alert(tJoint("network_error"), tConfirm("joint_confirm_title"));
     } finally {
-      setJointBusy(false);
+      setCreating(false);
     }
   }
 
@@ -381,63 +389,35 @@ export function WorkspacePojuBirthHost({
               ? (profiles.find((p) => p.profile_id === selectedProfileId) ?? null)
               : null
           }
-          onConfirmMode={(mode) => void handleConfirmMode(mode)}
+          jointInitiate={jointInitiate}
+          partnerEmailPrefill={partnerPrefill}
+          partnerUserIdPrefill={partnerUserIdPrefill}
+          onConfirm={jointInitiate ? undefined : () => void handleConfirmSolo()}
+          onConfirmJoint={
+            jointInitiate ? (payload) => void handleConfirmJoint(payload) : undefined
+          }
           onCancel={handleConfirmCancel}
           processing={creating}
-          showJointOption={showJointOption}
-          jointEnabled={duoSubscribed}
         />
-      ) : null}
-
-      {jointQuestionOpen && jointBirth ? (
-        <div
-          className="confirm-dialog-overlay"
-          role="dialog"
-          aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !jointBusy) {
-              setJointQuestionOpen(false);
-              setJointBirth(null);
-            }
-          }}
-        >
-          <div className="confirm-dialog">
-            <div className="confirm-dialog__header">
-              <h2>{tConfirm("joint_question_title")}</h2>
-              <button
-                type="button"
-                className="confirm-dialog__back-link"
-                disabled={jointBusy}
-                onClick={() => {
-                  setJointQuestionOpen(false);
-                  setJointBirth(null);
-                }}
-              >
-                {tConfirm("go_back")}
-              </button>
-            </div>
-            <p className="description">{tConfirm("joint_question_hint")}</p>
-            <textarea
-              className="confirm-joint-question"
-              rows={4}
-              value={jointQuestion}
-              disabled={jointBusy}
-              placeholder={tConfirm("joint_question_placeholder")}
-              onChange={(e) => setJointQuestion(e.target.value)}
-            />
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="primary"
-                disabled={jointBusy || jointQuestion.trim().length < 4}
-                onClick={() => void submitJointInvite()}
-              >
-                {jointBusy ? tConfirm("processing") : tConfirm("joint_send_invite")}
-              </button>
-            </div>
-          </div>
-        </div>
       ) : null}
     </div>
   );
+}
+
+function mapCreateError(
+  code: string | undefined,
+  t: ReturnType<typeof useTranslations<"joint_flow">>,
+): string {
+  switch (code) {
+    case "partner_not_registered":
+      return t("err_partner_not_registered");
+    case "cannot_invite_self":
+      return t("err_cannot_invite_self");
+    case "invalid_email":
+      return t("err_invalid_email");
+    case "question_too_short":
+      return t("err_question_too_short");
+    default:
+      return t("err_generic");
+  }
 }

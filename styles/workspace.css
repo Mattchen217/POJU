@@ -1328,6 +1328,22 @@
   opacity: 0.95;
   color: inherit;
   line-height: 1;
+  position: relative;
+}
+
+.workspace-sidebar__unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
+}
+
+.workspace-sidebar__history-row.is-unread .workspace-sidebar__sublabel {
+  font-weight: 600;
 }
 
 .workspace-sidebar__icon .material-symbols-outlined {

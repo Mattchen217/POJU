@@ -35,6 +35,12 @@ import {
   deletePojuSessionHistory,
   renamePojuSessionHistory,
 } from "@/lib/archive/poju-session-vault";
+import type { JointDecisionPublicView } from "@/lib/passes/household-types";
+import {
+  JOINT_LIST_UPDATED_EVENT,
+  requestJointEntryMode,
+  requestJointOpen,
+} from "@/lib/poju/joint-client-events";
 import type { WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
 
 
@@ -411,6 +417,7 @@ export function WorkspaceSidebar({
   const tWs = useTranslations("workspace");
   const tRail = useTranslations("workspace.rail");
   const tProfile = useTranslations("workspace.profile");
+  const tJoint = useTranslations("joint_flow");
   const { confirm } = useAppDialog();
   const router = useRouter();
   const { user, email, ready } = useAuthUser();
@@ -420,7 +427,39 @@ export function WorkspaceSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const [joints, setJoints] = useState<JointDecisionPublicView[]>([]);
+  const [jointsReady, setJointsReady] = useState(false);
+  const [activeJointId, setActiveJointId] = useState<string | null>(null);
 
+  const refreshJoints = useCallback(async () => {
+    try {
+      const res = await fetch("/api/joint/list", { credentials: "same-origin" });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        joints?: JointDecisionPublicView[];
+      };
+      if (data.ok && Array.isArray(data.joints)) {
+        setJoints(data.joints);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setJointsReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshJoints();
+    function onUpdated() {
+      void refreshJoints();
+    }
+    window.addEventListener(JOINT_LIST_UPDATED_EVENT, onUpdated);
+    window.addEventListener("focus", onUpdated);
+    return () => {
+      window.removeEventListener(JOINT_LIST_UPDATED_EVENT, onUpdated);
+      window.removeEventListener("focus", onUpdated);
+    };
+  }, [refreshJoints]);
 
   useEffect(() => {
     if (searchOpen && !collapsed) searchRef.current?.focus();
@@ -448,14 +487,35 @@ export function WorkspaceSidebar({
     !activeArchiveId &&
     (prepare?.phase ?? "idle") === "idle";
 
-  async function requestNew() {
-    if (alreadyOnNewHome) return;
+  async function requestNewSolo() {
+    if (alreadyOnNewHome && activeJointId == null) {
+      requestJointEntryMode("solo");
+      return;
+    }
     const ok = await confirm(t("newConfirmBody"), t("newConfirmTitle"), {
       confirmLabel: t("newConfirmOk"),
       cancelLabel: t("newConfirmCancel"),
     });
     if (!ok) return;
+    setActiveJointId(null);
+    requestJointEntryMode("solo");
     onSelectNew("poju");
+  }
+
+  async function requestNewJoint() {
+    const ok = await confirm(tJoint("newConfirmBody"), tJoint("newConfirmTitle"), {
+      confirmLabel: t("newConfirmOk"),
+      cancelLabel: t("newConfirmCancel"),
+    });
+    if (!ok) return;
+    setActiveJointId(null);
+    requestJointEntryMode("joint");
+    onSelectNew("poju");
+  }
+
+  function openJointRow(id: string) {
+    setActiveJointId(id);
+    requestJointOpen(id);
   }
 
 
@@ -480,7 +540,11 @@ export function WorkspaceSidebar({
             key={row.archive_id}
             row={row}
             active={activeHistoryId === row.archive_id || activeHistoryId === row.session_id}
-            onOpen={() => onSelectArchive("poju", row.session_id || row.archive_id)}
+            onOpen={() => {
+              setActiveJointId(null);
+              requestJointEntryMode("solo");
+              onSelectArchive("poju", row.session_id || row.archive_id);
+            }}
             onChanged={() => void refresh()}
             onRemoved={removeLocal}
             onDeletedActive={() => onSelectNew("poju")}
@@ -531,30 +595,103 @@ export function WorkspaceSidebar({
           </button>
         )}
 
-        {/* New dialogue */}
+        {/* Joint decision CTA + history */}
+        <button
+          type="button"
+          className="workspace-sidebar__item workspace-sidebar__item--solo"
+          data-tooltip={tJoint("cta_new")}
+          onClick={() => void requestNewJoint()}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">group_add</span>
+          </span>
+          <span className="workspace-sidebar__label">{tJoint("cta_new")}</span>
+        </button>
+
+        <div className="workspace-sidebar__past-block workspace-sidebar__past-block--joint">
+          {!collapsed ? (
+            <p className="workspace-sidebar__section-label">
+              <span className="workspace-sidebar__section-label-icon" aria-hidden>
+                <span className="material-symbols-outlined">diversity_3</span>
+              </span>
+              <span>
+                {tJoint("history_label", { count: jointsReady ? joints.length : 0 })}
+              </span>
+            </p>
+          ) : null}
+          {!collapsed ? (
+            <PastSessionsScroll>
+              {!jointsReady ? (
+                <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>
+              ) : joints.length === 0 ? (
+                <p className="workspace-sidebar__subempty">{tJoint("history_empty")}</p>
+              ) : (
+                joints.map((j) => (
+                  <div
+                    key={j.id}
+                    className={`workspace-sidebar__history-row${
+                      activeJointId === j.id ? " is-active" : ""
+                    }${j.unread ? " is-unread" : ""}`}
+                  >
+                    <button
+                      type="button"
+                      className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
+                      aria-current={activeJointId === j.id ? "page" : undefined}
+                      onClick={() => openJointRow(j.id)}
+                      title={j.shared_question}
+                    >
+                      <span className="workspace-sidebar__icon" aria-hidden>
+                        <span className="material-symbols-outlined">forum</span>
+                        {j.unread ? (
+                          <span className="workspace-sidebar__unread-dot" aria-hidden />
+                        ) : null}
+                      </span>
+                      <span className="workspace-sidebar__submeta">
+                        <span className="workspace-sidebar__subtime">
+                          {j.waiting_for_partner
+                            ? tJoint("status_waiting")
+                            : j.my_charged
+                              ? tJoint("status_running")
+                              : j.partner_ready
+                                ? tJoint("status_ready")
+                                : tJoint("status_invited")}
+                          {j.peer_label ? ` · ${j.peer_label}` : ""}
+                        </span>
+                        <span className="workspace-sidebar__sublabel">
+                          {j.shared_question}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                ))
+              )}
+            </PastSessionsScroll>
+          ) : null}
+        </div>
+
+        {/* Solo decision CTA + history */}
         <button
           type="button"
           className={`workspace-sidebar__item workspace-sidebar__item--solo${
-            alreadyOnNewHome ? " is-active" : ""
+            alreadyOnNewHome && activeJointId == null ? " is-active" : ""
           }`}
-          aria-current={alreadyOnNewHome ? "page" : undefined}
-          data-tooltip={t("newSession")}
-          onClick={() => void requestNew()}
+          aria-current={alreadyOnNewHome && activeJointId == null ? "page" : undefined}
+          data-tooltip={tJoint("cta_solo")}
+          onClick={() => void requestNewSolo()}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
             <span className="material-symbols-outlined">add</span>
           </span>
-          <span className="workspace-sidebar__label">{t("newSession")}</span>
+          <span className="workspace-sidebar__label">{tJoint("cta_solo")}</span>
         </button>
 
-        {/* Past sessions */}
         <div className="workspace-sidebar__past-block">
           {!collapsed ? (
             <p className="workspace-sidebar__section-label">
               <span className="workspace-sidebar__section-label-icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
               </span>
-              <span>{t("pastSessions", { count: historyReady ? items.length : 0 })}</span>
+              <span>{tJoint("solo_history", { count: historyReady ? items.length : 0 })}</span>
             </p>
           ) : (
             <button

@@ -848,9 +848,27 @@
   display: block;
 }
 
+.confirm-joint-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+
+.confirm-joint-field__label {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.confirm-joint-field__hint {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.confirm-joint-account,
 .confirm-joint-question {
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 0;
@@ -858,13 +876,32 @@
   color: #e0e2e8;
   font-size: 14px;
   line-height: 1.5;
-  resize: vertical;
-  min-height: 96px;
 }
 
+.confirm-joint-question {
+  resize: vertical;
+  min-height: 96px;
+  margin-bottom: 16px;
+}
+
+.confirm-joint-account:focus,
 .confirm-joint-question:focus {
   outline: none;
   border-color: rgba(242, 202, 80, 0.45);
+}
+
+.joint-open-host {
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.joint-open-host__question {
+  margin: 12px 0;
+  padding: 12px;
+  border-left: 2px solid rgba(242, 202, 80, 0.45);
+  color: #e0e2e8;
+  white-space: pre-wrap;
 }
 
 .bind-seat-field {

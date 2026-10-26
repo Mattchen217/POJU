@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   formatBirthLocationLabel,
@@ -13,6 +13,13 @@ import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service
 
 export type BirthConfirmMode = "solo" | "joint";
 
+export type JointConfirmPayload = {
+  partnerEmail: string;
+  sharedQuestion: string;
+  /** Pre-resolved bound seat — skips email lookup when set. */
+  partnerUserId?: string | null;
+};
+
 export interface BirthInfoConfirmDialogProps {
   birthInfo?: BirthInfo | null;
   existingProfile?: StoredProfileSummary | null;
@@ -20,11 +27,21 @@ export interface BirthInfoConfirmDialogProps {
   onConfirm?: () => void;
   /** Solo vs joint. When set, replaces single onConfirm CTA. */
   onConfirmMode?: (mode: BirthConfirmMode) => void;
+  /** Joint-initiate confirm: partner account + question required. */
+  onConfirmJoint?: (payload: JointConfirmPayload) => void;
   onCancel: () => void;
   processing?: boolean;
-  /** Show joint CTA (workspace Pivot). Match / Syncro should pass false. */
+  /**
+   * When true, dialog is for initiating a joint decision:
+   * shows partner email + shared question; single confirm CTA.
+   */
+  jointInitiate?: boolean;
+  /** Prefill partner email (bound Duo seat). */
+  partnerEmailPrefill?: string;
+  partnerUserIdPrefill?: string | null;
+  /** @deprecated Dual CTA removed from solo confirm; kept for API compat. */
   showJointOption?: boolean;
-  /** Duo subscribed (household exists) — joint CTA clickable; else gray. */
+  /** @deprecated */
   jointEnabled?: boolean;
 }
 
@@ -48,14 +65,23 @@ export function BirthInfoConfirmDialog({
   existingProfile,
   onConfirm,
   onConfirmMode,
+  onConfirmJoint,
   onCancel,
   processing = false,
-  showJointOption = false,
-  jointEnabled = false,
+  jointInitiate = false,
+  partnerEmailPrefill = "",
+  partnerUserIdPrefill = null,
 }: BirthInfoConfirmDialogProps) {
   const t = useTranslations("birth_confirm");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const [partnerEmail, setPartnerEmail] = useState(partnerEmailPrefill);
+  const [sharedQuestion, setSharedQuestion] = useState("");
+  const [partnerUserId] = useState(partnerUserIdPrefill);
+
+  useEffect(() => {
+    setPartnerEmail(partnerEmailPrefill);
+  }, [partnerEmailPrefill]);
 
   const displayData: BirthInfoDisplayRow | null = birthInfo
     ? birthInfoToDisplay(birthInfo)
@@ -78,17 +104,27 @@ export function BirthInfoConfirmDialog({
   if (!displayData) return null;
 
   const timeDisplay = formatBirthTimeDisplay(displayData);
-  const dual = showJointOption && typeof onConfirmMode === "function";
+  const prefilledBound =
+    Boolean(partnerUserIdPrefill) &&
+    partnerEmail.trim().toLowerCase() === partnerEmailPrefill.trim().toLowerCase();
 
   function startSolo() {
     if (onConfirmMode) onConfirmMode("solo");
     else onConfirm?.();
   }
 
-  function startJoint() {
-    if (!jointEnabled || processing) return;
-    onConfirmMode?.("joint");
+  function startJointConfirm() {
+    if (!onConfirmJoint || processing) return;
+    onConfirmJoint({
+      partnerEmail: partnerEmail.trim(),
+      sharedQuestion: sharedQuestion.trim(),
+      partnerUserId: prefilledBound ? partnerUserId : null,
+    });
   }
+
+  const jointReady =
+    sharedQuestion.trim().length >= 4 &&
+    (prefilledBound || partnerEmail.trim().includes("@"));
 
   return (
     <div
@@ -102,7 +138,9 @@ export function BirthInfoConfirmDialog({
     >
       <div className="confirm-dialog" ref={panelRef} tabIndex={-1}>
         <div className="confirm-dialog__header">
-          <h2 id={titleId}>{t("title")}</h2>
+          <h2 id={titleId}>
+            {jointInitiate ? t("joint_confirm_title") : t("title")}
+          </h2>
           <button
             type="button"
             className="confirm-dialog__back-link"
@@ -156,36 +194,45 @@ export function BirthInfoConfirmDialog({
           </div>
         </div>
 
-        {dual ? (
-          <div className="dialog-actions dialog-actions--stack">
-            <button
-              type="button"
-              onClick={startSolo}
-              disabled={processing}
-              className="primary"
-            >
-              {processing ? t("processing") : t("start_solo")}
-            </button>
-            <div className="confirm-joint-wrap">
+        {jointInitiate ? (
+          <>
+            <label className="confirm-joint-field">
+              <span className="confirm-joint-field__label">{t("partner_account_label")}</span>
+              <input
+                type="email"
+                className="confirm-joint-account"
+                value={partnerEmail}
+                disabled={processing}
+                placeholder={t("partner_account_placeholder")}
+                autoComplete="email"
+                onChange={(e) => setPartnerEmail(e.target.value)}
+              />
+              {partnerEmailPrefill ? (
+                <span className="confirm-joint-field__hint">{t("partner_account_bound_hint")}</span>
+              ) : null}
+            </label>
+            <label className="confirm-joint-field">
+              <span className="confirm-joint-field__label">{t("joint_question_title")}</span>
+              <textarea
+                className="confirm-joint-question"
+                rows={3}
+                value={sharedQuestion}
+                disabled={processing}
+                placeholder={t("joint_question_placeholder")}
+                onChange={(e) => setSharedQuestion(e.target.value)}
+              />
+            </label>
+            <div className="dialog-actions">
               <button
                 type="button"
-                onClick={startJoint}
-                disabled={processing || !jointEnabled}
-                className={
-                  jointEnabled
-                    ? "primary confirm-joint-btn"
-                    : "confirm-joint-btn confirm-joint-btn--disabled"
-                }
-                aria-disabled={!jointEnabled}
-                aria-describedby={`${titleId}-joint-tip`}
+                onClick={startJointConfirm}
+                disabled={processing || !jointReady}
+                className="primary"
               >
-                {t("start_joint")}
+                {processing ? t("processing") : t("joint_send_invite")}
               </button>
-              <div id={`${titleId}-joint-tip`} className="confirm-joint-tooltip" role="tooltip">
-                {t("joint_tooltip")}
-              </div>
             </div>
-          </div>
+          </>
         ) : (
           <div className="dialog-actions">
             <button
