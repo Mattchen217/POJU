@@ -56,7 +56,9 @@ export function SignupForm({ initialNext = null, bindSeat = null }: Props) {
         </p>
       }
     >
-      <OAuthButtons nextPath={oauthNext} />
+      {bindSeat && !oauthNext.includes("token=") ? null : (
+        <OAuthButtons nextPath={oauthNext} />
+      )}
       <AuthErrorText code={error} email={lastEmail} nextPath={oauthNext} />
       <EmailPasswordForm
         mode="signup"

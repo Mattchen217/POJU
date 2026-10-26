@@ -16,6 +16,7 @@ export type LoginBindSeatOpts = {
   title: string;
   subtitle?: string;
   replace?: boolean;
+  /** Only enable OAuth when this includes a seat invite token. */
   oauthNextPath: string;
   onBound: () => void;
   onCancel: () => void;
@@ -61,7 +62,9 @@ export function LoginForm({
         </p>
       }
     >
-      <OAuthButtons nextPath={oauthNext} />
+      {bindSeat && !oauthNext.includes("token=") ? null : (
+        <OAuthButtons nextPath={oauthNext} />
+      )}
       <AuthErrorText code={error} email={lastEmail} nextPath={oauthNext} />
       <EmailPasswordForm
         mode="login"

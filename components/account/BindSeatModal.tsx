@@ -25,7 +25,8 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
   const t = useTranslations("account");
   const locale = useLocale();
   const [view, setView] = useState<View>("login");
-  const [oauthNext, setOauthNext] = useState(`/${locale}/account/household/accept`);
+  /** Empty until invite token is ready — never send OAuth to accept without token. */
+  const [oauthNext, setOauthNext] = useState("");
 
   const ensureInvite = useCallback(async () => {
     const res = await fetch("/api/household/invite-seat", {
@@ -45,12 +46,13 @@ export function BindSeatModal({ open, replace = false, onClose, onBound }: Props
       : data.token
         ? `/${locale}/account/household/accept?token=${encodeURIComponent(data.token)}`
         : null;
-    if (path) setOauthNext(path);
+    if (path && path.includes("token=")) setOauthNext(path);
   }, [locale, replace]);
 
   useEffect(() => {
     if (!open) return;
     setView("login");
+    setOauthNext("");
     void ensureInvite();
   }, [open, ensureInvite]);
 
