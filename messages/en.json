@@ -643,11 +643,6 @@
         "cta_primary": "Initialize Deep Session",
         "billing_notice": "30-day deep session on a specific question for $9.99 or use experience voucher"
       },
-      "what_is": {
-        "title": "What is Eastern OS?",
-        "subtitle": "Decision dialogue core",
-        "body": "Eastern OS is a multi-turn decision dialogue for a stuck choice. Birth coordinates structure this session—not fortune-telling. In one full run you get: the dialogue; a main path and a backup; a decision report you can reopen in this browser; and 30-day same-line reminders provided together. For where you are stuck right now, we work through it step by step."
-      },
       "when_to_come": {
         "heading": "When to come to Eastern OS.",
         "stuck": {
@@ -751,11 +746,6 @@
         "description": "Anchor your inquiry. Draw a symbol. Decode the resonance.",
         "cta": "Start a Glyph draw",
         "billing_notice": "$4.99 per reading or use experience voucher"
-      },
-      "what_is": {
-        "title": "What is Glyph?",
-        "subtitle": "A quick reflective mirror",
-        "body": "Glyph is a short reflective draw for moments when a full decision session is more than you need. It pairs one classical Eastern metaphor with where you are stuck, then unpacks how that image meets your situation. Not a prediction—a structured prompt for clearer self-awareness before you choose."
       },
       "five_winds": {
         "heading": "Five winds — five archetypal patterns",
@@ -867,11 +857,6 @@
         "sms_button": "Text me the link",
         "sms_body": "Open Syncro on your phone: __SYNCRO_URL__",
         "phone_placeholder": "Phone number"
-      },
-      "what_is": {
-        "title": "What is Syncro?",
-        "subtitle": "24-hour timing & direction",
-        "body": "Syncro is a location-aware 24-hour map for one concrete task. Using your current place and session context, it rates eight directions by support vs friction—Open, Following, Stillwater, Crosscurrent, Undertow—so you can choose when and which way to move. Not fortune-telling: timing and orientation for the next day of work."
       },
       "how_it_works": {
         "heading": "How Syncro works.",
@@ -1287,8 +1272,7 @@
   "poju": {
     "branding": {
       "navbar_tooltip": "Strategic Unlock: Break through cognitive gridlocks and complex life dilemmas.",
-      "hero_tagline": "Deconstruct your matrix. Break the gridlock.",
-      "feature_definition": "Eastern OS is a multi-turn decision dialogue for a stuck choice. Birth coordinates structure this session—not fortune-telling. In one full run you get: the dialogue; a main path and a backup; a decision report you can reopen in this browser; and 30-day same-line reminders provided together. For where you are stuck right now, we work through it step by step."
+      "hero_tagline": "Deconstruct your matrix. Break the gridlock."
     },
     "begin": {
       "start": "Begin",
@@ -1946,7 +1930,7 @@
     "peer_fallback": "partner",
     "agree": "Agree & continue",
     "back": "Back",
-    "birth_hint": "Choose or add birth details for this joint decision",
+    "birth_hint": "Choose or add birth details for this joint decision dialogue",
     "charged_sub": "1 subscription PASS deducted",
     "charged_flex": "1 purchased PASS deducted",
     "already_charged": "PASS already deducted for this session",
@@ -2549,11 +2533,6 @@
       "description": "Match maps two independent cognitive frameworks into a single unified matrix. Decode exactly how your behavioral vectors intersect—revealing structural alignment, systemic friction, and precise, actionable pathways toward co-evolution.",
       "cta": "Initialize Match Alignment",
       "billing_notice": "$4.99 per alignment or use experience voucher",
-      "what_is": {
-        "title": "What is Match?",
-        "subtitle": "Two-person decision frame",
-        "body": "Match is a focused two-person read for one relationship question. It compares how two profiles meet on communication, partnership, or shared life—where you resonate and where friction builds—without fatalistic compatibility scores. A coaching frame so both sides can choose clearer next steps together."
-      },
       "feature_two_charts_title": "Two-Chart Analysis",
       "feature_two_charts_desc": "Deep individual readings of both people, then a layered analysis of how you meet.",
       "feature_any_relationship_title": "Any Relationship Type",

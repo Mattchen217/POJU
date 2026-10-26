@@ -15,7 +15,6 @@ import {
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
-import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
 import { cn } from "@/lib/utils/classnames";
 import { WindCardWithParticles, type WindCardParticleKey } from "@/components/oracle/wind-cards";
@@ -173,8 +172,6 @@ export async function GlyphMarketingPage() {
       <AppModeDesktopHint />
 
       <MarketingPageSections>
-        <ProductWhatIsSection product="glyph" />
-
         <NotPWA>
           <MarketingSection id="when-to-glyph" title={t("when_to_come.heading")} padding="lg">
             <p className="marketing-section-intro mx-auto max-w-2xl text-center">{t("when_to_come.intro")}</p>

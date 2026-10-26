@@ -34,7 +34,6 @@ import {
   MarketingPageLayout,
   MarketingPageSections,
 } from "@/components/marketing/marketing-page-layout";
-import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { PojuToolHandoffBanner } from "@/components/poju/PojuToolHandoffBanner";
 import { useRouter } from "@/i18n/navigation";
 import { usePojuToolHandoff } from "@/lib/poju/use-poju-tool-handoff";
@@ -115,8 +114,6 @@ export function MatchHomePage() {
       <AppModeDesktopHint />
 
       <MarketingPageSections>
-        <ProductWhatIsSection product="match" />
-
         <NotPWA>
           <DsBand>
             <div className="ds-grid-auto-240">

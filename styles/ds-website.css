@@ -727,11 +727,6 @@
   right: -2px;
 }
 
-/* What is band — same width as other page-stack bands */
-.ds-what-is-band {
-  width: 100%;
-}
-
 /* Glyph wind rows (glyph.jsx) */
 .ds-wind-card-row {
   display: flex;

@@ -44,11 +44,19 @@ type Props = {
   matchCollectingSlot?: "a" | "b";
   /**
    * When true: birth → confirm with partner account + question → create joint invite
-   * (no solo prepare). Used from sidebar “发起双人共同决策”.
+   * (no solo prepare). Used from sidebar “发起双人决策对话”.
    */
   jointInitiate?: boolean;
   /** After joint invite created successfully. */
   onJointCreated?: () => void;
+  /**
+   * Invitee accept / joint open: same homepage list+form, but after solo-style confirm
+   * call this instead of onPrepareStart (caller runs agree + prepare).
+   */
+  onBirthConfirmed?: (args: {
+    profileId: string;
+    birth: BirthInfo;
+  }) => void | Promise<void>;
 };
 
 /**
@@ -63,6 +71,7 @@ export function WorkspacePojuBirthHost({
   matchCollectingSlot,
   jointInitiate = false,
   onJointCreated,
+  onBirthConfirmed,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations("session_prep");
@@ -210,6 +219,11 @@ export function WorkspacePojuBirthHost({
   async function handleConfirmSolo() {
     if (selectedProfileId) {
       try {
+        const birth = await resolveConfirmBirth();
+        if (!birth) {
+          await alert(t("error_create_profile"));
+          return;
+        }
         await recordProfileUsage(selectedProfileId, usageProduct);
         const selected = profiles.find((p) => p.profile_id === selectedProfileId);
         if (selected && !selected.has_base_analysis) {
@@ -219,6 +233,10 @@ export function WorkspacePojuBirthHost({
         setShowConfirm(false);
         setSelectedProfileId(null);
         await refreshProfiles();
+        if (onBirthConfirmed) {
+          await onBirthConfirmed({ profileId, birth });
+          return;
+        }
         onPrepareStart?.(profileId);
       } catch (err) {
         console.error("[workspace-poju] Select profile failed:", err);
@@ -230,13 +248,18 @@ export function WorkspacePojuBirthHost({
     if (!pendingBirthInfo) return;
     setCreating(true);
     try {
-      const result = await createStoredProfile({ birth_info: pendingBirthInfo });
+      const birth = pendingBirthInfo;
+      const result = await createStoredProfile({ birth_info: birth });
       markPendingBaseAnalysisProfile(result.profile_id);
       await recordProfileUsage(result.profile_id, usageProduct);
       setShowConfirm(false);
       setPendingBirthInfo(null);
       setCreating(false);
       await refreshProfiles();
+      if (onBirthConfirmed) {
+        await onBirthConfirmed({ profileId: result.profile_id, birth });
+        return;
+      }
       onPrepareStart?.(result.profile_id);
     } catch (err) {
       console.error("[workspace-poju] Create profile failed:", err);

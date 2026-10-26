@@ -643,11 +643,6 @@
         "cta_primary": "开启深度会话",
         "billing_notice": "针对具体问题持续30天的深度会话 $9.99 或使用体验凭证"
       },
-      "what_is": {
-        "title": "什么是 Eastern OS？",
-        "subtitle": "决策对话内核",
-        "body": "Eastern OS 是面向卡住抉择的多轮决策对话。以你的出生坐标结构化本次会话——不是算命。一次完整对话你会得到：对话本身；主路径与备用；可在本浏览器重开的决策报告；以及同行的 30 天同线提醒（同步提供）。针对你现在卡住的地方，一步步帮你理清楚。"
-      },
       "when_to_come": {
         "heading": "什么时候来 Eastern OS。",
         "stuck": {
@@ -751,11 +746,6 @@
         "description": "凝视困惑，抽取图腾，解码内心的回响。",
         "cta": "开启 Glyph 抽取",
         "billing_notice": "单次购买 $4.99 或使用体验凭证"
-      },
-      "what_is": {
-        "title": "什么是 Glyph？",
-        "subtitle": "快速映照",
-        "body": "Glyph 是一次短促的映照：当完整决策对话对这一刻来说太重时，用一则东方经典隐喻对齐你卡住的地方，再拆开这幅象与当下处境的关系。不是预测——而是帮你看清、再做选择的结构化提示。"
       },
       "five_winds": {
         "heading": "五种风 — 五种原型图案",
@@ -867,11 +857,6 @@
         "sms_button": "把链接发给我",
         "sms_body": "在手机上打开 Syncro：__SYNCRO_URL__",
         "phone_placeholder": "手机号码"
-      },
-      "what_is": {
-        "title": "什么是 Syncro？",
-        "subtitle": "24 小时时机与方位",
-        "body": "Syncro 是面向一件具体事务的、带位置语境的 24 小时地图。结合你当下所在地与会话情境，它在八个方位上标出顺势、应时、守静、横阻与险滞，帮你选择何时、朝哪边推进。不是择吉——是接下来一天怎么动更顺的时机与方位参考。"
       },
       "how_it_works": {
         "heading": "Syncro 如何运作",
@@ -1287,8 +1272,7 @@
   "poju": {
     "branding": {
       "navbar_tooltip": "策略破局：打破认知死角与复杂的人生困局。",
-      "hero_tagline": "解构宿命矩阵，直击破局要害。",
-      "feature_definition": "Eastern OS 是面向卡住抉择的多轮决策对话。以你的出生坐标结构化本次会话——不是算命。一次完整对话你会得到：对话本身；主路径与备用；可在本浏览器重开的决策报告；以及同行的 30 天同线提醒（同步提供）。针对你现在卡住的地方，一步步帮你理清楚。"
+      "hero_tagline": "解构宿命矩阵，直击破局要害。"
     },
     "begin": {
       "start": "开始",
@@ -1923,7 +1907,7 @@
     "processing": "准备中…"
   },
   "joint_flow": {
-    "title": "共同决策",
+    "title": "双人决策",
     "cta_new": "发起双人决策对话",
     "cta_solo": "新建单人决策对话",
     "cta_joint_hint_title": "双人决策对话",
@@ -1933,20 +1917,20 @@
     "history_label": "双人决策历史 ({count})",
     "solo_history": "单人决策历史 ({count})",
     "history_toggle": "展开或收起历史",
-    "history_empty": "暂无共同决策",
+    "history_empty": "暂无双人决策",
     "soloNewConfirmTitle": "新建单人决策对话？",
     "soloNewConfirmBody": "将离开当前对话并开始新的单人决策。当前记录可在侧栏「单人决策历史」中找回。",
     "newConfirmTitle": "发起双人决策对话？",
     "newConfirmBody": "将离开当前对话并开始新的双人决策。当前记录可在侧栏「双人决策历史」中找回。",
     "loading": "加载中…",
     "waiting_partner": "已发起，正在等待对方同意并提交出生信息。",
-    "partner_agreed_tip": "关联账号已输入基础信息并同意开启共同决策。",
-    "invite_title": "共同决策邀请",
-    "invite_body": "是否接受与 {account} 的共同决策邀请？",
+    "partner_agreed_tip": "关联账号已输入基础信息并同意开启双人决策。",
+    "invite_title": "双人决策邀请",
+    "invite_body": "是否接受与 {account} 的双人决策邀请？",
     "peer_fallback": "对方",
     "agree": "同意并继续",
     "back": "返回",
-    "birth_hint": "请选择或新增本次共同决策使用的出生信息",
+    "birth_hint": "请选择或新增本次双人决策使用的出生信息",
     "charged_sub": "已扣除订阅份额 1 PASS",
     "charged_flex": "已扣除购买份额 1 PASS",
     "already_charged": "本次对话 PASS 已扣除",
@@ -1954,12 +1938,12 @@
     "blocked_insufficient": "PASS 不足，无法开启本次对话，请获取 PASS 后点击重新开始本次对话",
     "retry_start": "重新开始本次对话",
     "buy_pass": "获取 PASS",
-    "invite_sent_waiting": "已发起共同决策，等待对方同意。可在侧栏双人决策历史中查看。",
+    "invite_sent_waiting": "已发起双人决策，等待对方同意。可在侧栏双人决策历史中查看。",
     "status_waiting": "等待对方",
     "status_invited": "待同意",
     "status_ready": "可开启",
     "status_running": "进行中",
-    "load_failed": "无法加载共同决策",
+    "load_failed": "无法加载双人决策",
     "network_error": "网络异常，请重试",
     "prepare_failed": "准备失败，请重试",
     "err_partner_not_registered": "对方不是本站注册用户，或账号输入有误",
@@ -2549,11 +2533,6 @@
       "description": "Match 将两个独立的认知架构融入同一个统一矩阵中。精准解构你们的行为向量如何交织——揭示深层的结构性共振、系统性摩擦，并为您提供清晰、可落地的双人共生演进路径。",
       "cta": "初始化双人对齐推演",
       "billing_notice": "单次对齐推演 $4.99，或使用体验凭证",
-      "what_is": {
-        "title": "什么是 Match？",
-        "subtitle": "双人决策框架",
-        "body": "Match 是针对一个关系问题的双人对照阅读。它比较两份档案在沟通、合作或共同生活上如何相遇——哪里同频、哪里易摩擦——不做宿命式合不合打分。这是教练式框架，帮双方把下一步想清楚、一起选。"
-      },
       "feature_two_charts_title": "双盘深度解读",
       "feature_two_charts_desc": "深度解读两个人各自的性格画像，再分层分析你们如何相遇。",
       "feature_any_relationship_title": "任何关系类型",

@@ -8,12 +8,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
-import {
-  BirthInfoConfirmDialog,
-} from "@/components/poju/BirthInfoConfirmDialog";
 import { useAppDialog } from "@/components/ui/app-dialog";
-import { WorkspaceBirthInfoPicker } from "@/components/workspace/WorkspaceBirthInfoPicker";
-import { WorkspacePojuProfileRecords } from "@/components/workspace/WorkspacePojuProfileRecords";
+import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirthHost";
+import { WorkspacePojuBirthSideCopy } from "@/components/workspace/WorkspacePojuBirthSideCopy";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { hydrateJointSessionFromSeed } from "@/lib/poju/hydrate-joint-session";
 import {
@@ -35,8 +32,6 @@ import {
   createStoredProfile,
   getStoredProfile,
   listStoredProfiles,
-  recordProfileUsage,
-  type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
 import {
@@ -54,9 +49,7 @@ type Phase =
   | "loading"
   | "waiting"
   | "agree"
-  | "birth_list"
-  | "birth_new"
-  | "birth_confirm"
+  | "birth_pick"
   | "preparing"
   | "awaiting_tip"
   | "blocked"
@@ -83,16 +76,15 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [joint, setJoint] = useState<JointDecisionPublicView | null>(null);
-  const [profiles, setProfiles] = useState<StoredProfileSummary[]>([]);
-  const [pendingBirth, setPendingBirth] = useState<BirthInfo | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [blockedMsg, setBlockedMsg] = useState<string | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
-  const [selfBirth, setSelfBirth] = useState<BirthInfo | null>(null);
+  const [hasBirthProfiles, setHasBirthProfiles] = useState(false);
   const chargeRef = useRef<ChargeResult>({ status: "pending" });
   const tipShownRef = useRef(false);
   const startedAtRef = useRef(0);
+  /** Last birth used for prepare/charge — needed for PASS retry. */
+  const lastBirthRef = useRef<BirthInfo | null>(null);
 
   const loadJoint = useCallback(async () => {
     const res = await fetch(`/api/joint/${jointId}`, { credentials: "same-origin" });
@@ -151,28 +143,22 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
         await alert(t("partner_agreed_tip"), t("title"));
         const birth = j.self_birth_for_my_session;
         if (birth) {
-          setSelfBirth(birth);
           setPhase("preparing");
           void runPrepareAndCharge(birth);
           return;
         }
-        const list = await listStoredProfiles();
-        setProfiles(list);
-        setPhase(list.length > 0 ? "birth_list" : "birth_new");
+        setPhase("birth_pick");
         return;
       }
 
       if (j.role === "invitee" && j.partner_ready && !j.my_charged) {
         const birth = j.self_birth_for_my_session;
         if (birth) {
-          setSelfBirth(birth);
           setPhase("preparing");
           void runPrepareAndCharge(birth);
           return;
         }
-        const list = await listStoredProfiles();
-        setProfiles(list);
-        setPhase(list.length > 0 ? "birth_list" : "birth_new");
+        setPhase("birth_pick");
         return;
       }
 
@@ -193,38 +179,21 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
     return null;
   }
 
-  async function resolveBirth(): Promise<BirthInfo | null> {
-    if (pendingBirth) return pendingBirth;
-    if (!selectedProfileId) return null;
-    const stored = await getStoredProfile(selectedProfileId);
-    return (stored?.birth_info as BirthInfo | undefined) ?? null;
-  }
-
   async function handleAgreeContinue() {
-    const list = await listStoredProfiles();
-    setProfiles(list);
-    setPhase(list.length > 0 ? "birth_list" : "birth_new");
+    setPhase("birth_pick");
   }
 
-  async function submitAgreeAndBirth() {
-    const birth = await resolveBirth();
-    if (!birth || !joint) return;
+  /** Homepage birth list confirmed → agree (if needed) then prepare/charge. */
+  async function handleBirthConfirmed(args: { profileId: string; birth: BirthInfo }) {
+    if (!joint) return;
     setBusy(true);
     try {
-      if (pendingBirth) {
-        const created = await createStoredProfile({ birth_info: pendingBirth });
-        markPendingBaseAnalysisProfile(created.profile_id);
-        await recordProfileUsage(created.profile_id, "poju");
-      } else if (selectedProfileId) {
-        await recordProfileUsage(selectedProfileId, "poju");
-      }
-
       if (joint.role === "invitee" && joint.status === "invited") {
         const res = await fetch("/api/joint/agree", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ joint_id: jointId, birth }),
+          body: JSON.stringify({ joint_id: jointId, birth: args.birth }),
         });
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
@@ -239,9 +208,8 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
         notifyJointListUpdated();
       }
 
-      setSelfBirth(birth);
       setPhase("preparing");
-      void runPrepareAndCharge(birth);
+      void runPrepareAndCharge(args.birth);
     } catch {
       await alert(t("network_error"), t("title"));
     } finally {
@@ -250,6 +218,7 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
   }
 
   async function runPrepareAndCharge(birth: BirthInfo) {
+    lastBirthRef.current = birth;
     startedAtRef.current = Date.now();
     tipShownRef.current = false;
     chargeRef.current = { status: "pending" };
@@ -391,16 +360,14 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
   }, [alert, t, onClose, onEnteredChat]);
 
   async function handleRetry() {
-    if (!selfBirth && !(await resolveBirth())) {
-      setPhase("birth_list");
+    const birth = lastBirthRef.current;
+    if (!birth) {
+      setPhase("birth_pick");
       return;
     }
-    const birth = selfBirth ?? (await resolveBirth());
-    if (!birth) return;
     setBlockedMsg(null);
     setBuyOpen(false);
     setPhase("preparing");
-    setSelfBirth(birth);
     // Prefer retry-start endpoint
     tipShownRef.current = false;
     chargeRef.current = { status: "pending" };
@@ -502,51 +469,23 @@ export function JointSessionOpenHost({ jointId, onClose, onEnteredChat }: Props)
     );
   }
 
-  if (phase === "birth_list" || phase === "birth_new" || phase === "birth_confirm") {
+  if (phase === "birth_pick") {
     return (
-      <div className="workspace-poju-birth-column joint-open-host">
-        {phase === "birth_list" ? (
-          <div className="birth-info-picker birth-info-picker--workspace workspace-poju-records-frame">
-            <WorkspacePojuProfileRecords
-              profiles={profiles}
-              onSelect={(summary) => {
-                setSelectedProfileId(summary.profile_id);
-                setPendingBirth(null);
-                setPhase("birth_confirm");
-              }}
-              onAddNew={() => setPhase("birth_new")}
-              onRename={() => undefined}
-              onDelete={() => undefined}
-              pinnedHint={t("birth_hint")}
-            />
+      <div className="workspace-product-stack workspace-poju-stack joint-open-host">
+        <div className="workspace-product-below workspace-poju-below">
+          <div className="workspace-poju-below__cluster">
+            <div className="workspace-poju-below__unit" aria-busy={busy || undefined}>
+              <WorkspacePojuBirthSideCopy
+                hasBirthHistory={hasBirthProfiles}
+                entryMode="joint"
+              />
+              <WorkspacePojuBirthHost
+                onHasProfilesChange={setHasBirthProfiles}
+                onBirthConfirmed={(args) => void handleBirthConfirmed(args)}
+              />
+            </div>
           </div>
-        ) : null}
-        {phase === "birth_new" ? (
-          <WorkspaceBirthInfoPicker
-            locale={locale}
-            onSubmit={(info) => {
-              setPendingBirth(info);
-              setSelectedProfileId(null);
-              setPhase("birth_confirm");
-            }}
-            onCancel={profiles.length > 0 ? () => setPhase("birth_list") : onClose}
-          />
-        ) : null}
-        {phase === "birth_confirm" ? (
-          <BirthInfoConfirmDialog
-            birthInfo={pendingBirth}
-            existingProfile={
-              selectedProfileId
-                ? (profiles.find((p) => p.profile_id === selectedProfileId) ?? null)
-                : null
-            }
-            onConfirm={() => void submitAgreeAndBirth()}
-            onCancel={() =>
-              setPhase(profiles.length > 0 ? "birth_list" : "birth_new")
-            }
-            processing={busy}
-          />
-        ) : null}
+        </div>
       </div>
     );
   }

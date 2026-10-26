@@ -375,11 +375,6 @@
         ],
         "cta": "Inicializar tu sesión estratégica",
         "footnote": "Una consulta central · Profundidad sistémica ilimitada · Encriptado localmente dentro del entorno seguro de tu navegador"
-      },
-      "what_is": {
-        "title": "¿Qué es Eastern OS?",
-        "subtitle": "Núcleo de diálogo de decisión",
-        "body": "Eastern OS es un diálogo multiturno de decisión para una elección atascada. Las coordenadas de nacimiento estructuran esta sesión—no es adivinación. En una corrida completa obtienes: el diálogo; una ruta principal y un respaldo; un informe de decisión que puedes reabrir en este navegador; y recordatorios de 30 días en la misma línea proporcionados juntos. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso."
       }
     },
     "glyph": {
@@ -485,11 +480,6 @@
         ],
         "cta": "Iniciar extracción Glyph",
         "footnote": "Custodia de datos descentralizada, defendiendo tu absoluta soberanía de privacidad."
-      },
-      "what_is": {
-        "title": "¿Qué es Glyph?",
-        "subtitle": "Un espejo reflexivo breve",
-        "body": "Glyph es una lectura breve para cuando una sesión de decisión completa es más de lo que este momento pide. Une una metáfora clásica oriental con aquello en lo que estás atascado y desglosa cómo esa imagen habla de tu situación. No es una predicción: es un marco estructurado para verse con más claridad antes de elegir."
       }
     },
     "syncro": {
@@ -620,11 +610,6 @@
       "why_mobile": {
         "heading": "Why mobile only",
         "body": "Syncro reads your phone's compass and (optionally) camera to align with real-world direction. This requires a mobile device. On desktop, we'll show you a QR code to open Syncro on your phone."
-      },
-      "what_is": {
-        "title": "¿Qué es Syncro?",
-        "subtitle": "Momento y dirección a 24 h",
-        "body": "Syncro es un mapa de 24 horas con contexto de ubicación para una tarea concreta. Con tu lugar actual y el contexto de la sesión, valora ocho direcciones por apoyo frente a fricción—Abierta, Favorable, Aguas quietas, Contracorriente, Resaca—para elegir cuándo y hacia dónde moverte. No es adivinación: timing y orientación para el próximo día de trabajo."
       },
       "pwa_guide": {
         "title": "Abre easternos.com en el navegador de tu móvil o instala la app Eastern OS en tu teléfono.",
@@ -769,8 +754,7 @@
   "poju": {
     "branding": {
       "navbar_tooltip": "Desbloqueo estratégico: rompe los bloqueos cognitivos y los dilemas vitales complejos.",
-      "hero_tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
-      "feature_definition": "Eastern OS es un diálogo multiturno de decisión para una elección atascada. Las coordenadas de nacimiento estructuran esta sesión—no es adivinación. En una corrida completa obtienes: el diálogo; una ruta principal y un respaldo; un informe de decisión que puedes reabrir en este navegador; y recordatorios de 30 días en la misma línea proporcionados juntos. Sobre lo que te tiene atorado ahora, lo vamos a aclarar paso a paso."
+      "hero_tagline": "Deconstruye tu matriz. Rompe el bloqueo."
     },
     "chat": {
       "question_label": "Tu pregunta",
@@ -1386,12 +1370,12 @@
     "loading": "Cargando…",
     "waiting_partner": "Invitación enviada. Esperando que el partner acepte y envíe nacimiento.",
     "partner_agreed_tip": "Tu partner aceptó y envió datos de nacimiento.",
-    "invite_title": "Invitación conjunta",
-    "invite_body": "¿Aceptar la invitación de {account}?",
+    "invite_title": "Invitación a decisión conjunta",
+    "invite_body": "¿Aceptar la invitación de decisión conjunta de {account}?",
     "peer_fallback": "partner",
     "agree": "Aceptar y continuar",
     "back": "Volver",
-    "birth_hint": "Elige o añade nacimiento para esta decisión conjunta",
+    "birth_hint": "Elige o añade nacimiento para este diálogo de decisión conjunta",
     "charged_sub": "1 PASS de suscripción deducido",
     "charged_flex": "1 PASS comprado deducido",
     "already_charged": "PASS ya deducido para esta sesión",
@@ -2061,12 +2045,7 @@
         "A promise of compatibility results",
         "A replacement for professional counseling"
       ],
-      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours.",
-      "what_is": {
-        "title": "¿Qué es Match?",
-        "subtitle": "Marco de decisión para dos",
-        "body": "Match es una lectura enfocada de dos personas para una pregunta de relación. Compara cómo se encuentran dos perfiles en comunicación, colaboración o vida compartida—dónde resuenan y dónde crece la fricción—sin veredictos fatalistas de compatibilidad. Un marco de coaching para que ambos elijan pasos más claros juntos."
-      }
+      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours."
     },
     "subtitle": "Dos cartas. Una relación. Claridad real.",
     "description": "Match entrelaza ambos charts bazi — el tuyo y el suyo — para mostrar cómo se alinean sus energías, dónde se apoyan, dónde chocan y qué hacer.",

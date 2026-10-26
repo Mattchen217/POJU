@@ -375,11 +375,6 @@
         ],
         "cta": "Initialiser votre session stratégique",
         "footnote": "Une question centrale · Profondeur systémique illimitée · Chiffré localement dans le bac à sable de votre navigateur"
-      },
-      "what_is": {
-        "title": "Qu’est-ce qu’Eastern OS ?",
-        "subtitle": "Noyau de dialogue de décision",
-        "body": "Eastern OS est un dialogue multi-tours de décision pour un choix bloqué. Les coordonnées de naissance structurent cette session—pas de voyance. En une session complète tu obtiens : le dialogue ; une voie principale et une de secours ; un rapport de décision à rouvrir dans ce navigateur ; et des rappels 30 jours sur la même ligne fournis ensemble. Sur ce qui te bloque maintenant, on clarifie étape par étape."
       }
     },
     "glyph": {
@@ -485,11 +480,6 @@
         ],
         "cta": "Lancer un tirage Glyph",
         "footnote": "Garde des données décentralisée, préservant votre souveraineté absolue en matière de confidentialité."
-      },
-      "what_is": {
-        "title": "Qu'est-ce que Glyph ?",
-        "subtitle": "Un miroir réflexif court",
-        "body": "Glyph est un tirage réflexif court quand une session de décision complète est trop pour l’instant. Il associe une métaphore classique orientale à ce qui te bloque, puis déplie comment cette image croise ta situation. Pas une prédiction—un cadre structuré pour y voir plus clair avant de choisir."
       }
     },
     "syncro": {
@@ -620,11 +610,6 @@
       "why_mobile": {
         "heading": "Why mobile only",
         "body": "Syncro reads your phone's compass and (optionally) camera to align with real-world direction. This requires a mobile device. On desktop, we'll show you a QR code to open Syncro on your phone."
-      },
-      "what_is": {
-        "title": "Qu'est-ce que Syncro ?",
-        "subtitle": "Timing et direction sur 24 h",
-        "body": "Syncro est une carte 24 h ancrée sur le lieu pour une tâche concrète. Avec ta position et le contexte de session, elle note huit directions selon soutien vs friction—Ouvert, Porteur, Eaux calmes, Contre-courant, Ressac—pour choisir quand et vers où avancer. Pas de voyance: timing et orientation pour la journée à venir."
       },
       "pwa_guide": {
         "title": "Ouvrez easternos.com dans le navigateur de votre téléphone, ou installez l'application Eastern OS.",
@@ -769,8 +754,7 @@
   "poju": {
     "branding": {
       "navbar_tooltip": "Déblocage stratégique : brisez les impasses cognitives et les dilemmes de vie complexes.",
-      "hero_tagline": "Déconstruisez votre matrice. Brisez l'impasse.",
-      "feature_definition": "Eastern OS est un dialogue multi-tours de décision pour un choix bloqué. Les coordonnées de naissance structurent cette session—pas de voyance. En une session complète tu obtiens : le dialogue ; une voie principale et une de secours ; un rapport de décision à rouvrir dans ce navigateur ; et des rappels 30 jours sur la même ligne fournis ensemble. Sur ce qui te bloque maintenant, on clarifie étape par étape."
+      "hero_tagline": "Déconstruisez votre matrice. Brisez l'impasse."
     },
     "chat": {
       "question_label": "Votre question",
@@ -2061,12 +2045,7 @@
         "A promise of compatibility results",
         "A replacement for professional counseling"
       ],
-      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours.",
-      "what_is": {
-        "title": "Qu'est-ce que Match ?",
-        "subtitle": "Cadre de décision à deux",
-        "body": "Match est une lecture à deux, ciblée sur une question relationnelle. Elle compare comment deux profils se croisent en communication, partenariat ou vie partagée—où ça résonne, où la friction monte—sans scores fatalistes de compatibilité. Un cadre de coaching pour choisir ensemble des prochaines étapes plus claires."
-      }
+      "not_footer": "Match offers perspectives, not predictions. What you do with them is entirely yours."
     },
     "subtitle": "Deux charts. Une relation. Une vraie clarté.",
     "description": "Match tisse les deux charts bazi — le vôtre et le leur — pour révéler comment vos énergies s'alignent, où vous vous soutenez, où vous heurtez et quoi faire.",

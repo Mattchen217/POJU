@@ -10,7 +10,6 @@ import {
 } from "@/components/marketing/marketing-page-layout";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { ProductPricingSection } from "@/components/marketing/product-pricing-section";
-import { ProductWhatIsSection } from "@/components/marketing/product-what-is-section";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { NotPWA } from "@/components/pwa/PWAConditional";
 import { AppModeDesktopHint } from "@/components/pwa/AppModeDesktopHint";
@@ -54,8 +53,6 @@ export default async function PojuProductPage() {
       <AppModeDesktopHint />
 
       <MarketingPageSections>
-        <ProductWhatIsSection product="poju" />
-
         <NotPWA>
           <MarketingSection id="when-to-poju" title={t("when_to_come.heading")} padding="lg">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
