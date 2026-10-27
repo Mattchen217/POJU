@@ -222,10 +222,14 @@ assert(resolveDecisionPage("01")?.pageId === "01", "page id resolves");
 assert(resolveDecisionPage("self_regulation")?.segment === "C", "调频 → 06-C");
 assert(primaryShelfKeyForPage("06") === "execution_guidance", "06 primary shelf key");
 assert(shelfKeysForPage("06").includes("self_regulation"), "06 still has the regulation paper");
-assert(shelfKeysForPage("07").length === 0, "07 has no shelf slot");
+assert(shelfKeysForPage("07").length === 0, "07 has no internal paper");
 assert(DELIVERY_SHELF_SLOT_IDS[0] === "cover", "shelf still starts at cover");
-assert(DELIVERY_SHELF_SLOT_IDS.includes("decision_brief"), "shelf still uses v1 keys");
-assert(!(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("01"), "shelf is not renumbered");
+assert(DELIVERY_SHELF_SLOT_IDS[2] === "01", "shelf face is 01");
+assert(
+  !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("decision_brief") &&
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("07"),
+  "default shelf is not the ten v1 papers and omits 07",
+);
 
 for (const pageId of ["01", "02", "05", "06", "08"] as const satisfies readonly DecisionPageId[]) {
   console.log(summarize(sliceForPage(pageId, packs)));

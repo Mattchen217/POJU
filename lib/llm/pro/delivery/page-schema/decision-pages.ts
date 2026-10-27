@@ -1,7 +1,7 @@
 /**
  * 决策报告 01–08 页骨架。段号与 PageFeedMatrix 段级 allowlist 对齐。
  *
- * 这是内容页职责表，不替换运行时 `DeliveryPageSchemaByKey` 的填槽 zod。
+ * 这是内容页职责表，也是书架脸的读路径。生成填槽 zod 仍按内部键；脸级包装在 `shelf-face-schema.ts`。
  * 双轨挂在页上（指针 / A+B+C / 折叠 / 现实偏重 / 附录），不嵌进每一句。
  * 07 题相关才进入阅读序。03 固定包尾附录。
  */

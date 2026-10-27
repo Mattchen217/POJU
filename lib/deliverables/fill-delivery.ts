@@ -139,7 +139,10 @@ export function buildDeliverySlotMap(
     SLOT_AUDIO_HTML: audioHtml,
   };
 
-  // Prefer shelf mapping (typed slots + overflow into empties).
+  // HTML panes stay on v1 keys (decision-report template). Read those
+  // chapters from the H2 split. The in-app shelf has already folded them
+  // onto 01–08, so a shelf-id lookup would miss every body.
+  const pageBySourceId = new Map(pages.map((page) => [page.id, page]));
   const readyById = new Map<
     DeliveryShelfSlotId,
     Extract<ReturnType<typeof buildDeliveryShelfSlots>[number], { kind: "ready" }>
@@ -149,8 +152,9 @@ export function buildDeliverySlotMap(
   }
 
   DECISION_REPORT_SLOT_IDS.forEach((id, pageIndex) => {
+    const source = pageBySourceId.get(id);
     const ready = readyById.get(id as DeliveryShelfSlotId);
-    const page = ready?.page;
+    const page = source ?? ready?.page;
     const tocLabel = page
       ? tocLabelForPage(page.id, page.title, locale)
       : defaultTocLabel(id, locale);

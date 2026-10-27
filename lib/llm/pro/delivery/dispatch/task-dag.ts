@@ -8,6 +8,8 @@ import {
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { shelfKeysForPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import { chunkPaths } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidenceAssignment } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import {
@@ -26,7 +28,13 @@ const WAVE_A_DEEP: readonly DeliverySegmentKey[] = [
   "self_regulation",
 ];
 
+/** Internals of shelf face 08. The reader sees one 08, not two papers. */
 const WAVE_B_DEEP: readonly DeliverySegmentKey[] = ["validation_risk", "validation_close"];
+
+/** Dispatch keys that fill one shelf face. 07 and 03 have no generator key. */
+export function shelfFaceDispatchKeys(pageId: DecisionPageId): readonly string[] {
+  return shelfKeysForPage(pageId);
+}
 
 function task(
   partial: Omit<DeliveryDispatchTask, "attempts" | "updated_at" | "status"> & {

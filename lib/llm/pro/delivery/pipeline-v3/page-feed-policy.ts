@@ -2,7 +2,9 @@
  * Pipeline v3 · 页级喂料白名单（薄喂 · 防污染）。
  * 内容喂料真源见 page-feed-matrix.ts。sliceForPage 已按页裁切。
  * 八字 / 紫微整包不进页级 user 消息：有 chart 或 ziwei 时改为 `formatPageSliceFeed`。
- * 本旗标表仍开关奇门、菜单、处境、现实块。出稿 key 仍是 v1。
+ * 本旗标表仍开关奇门、菜单、处境、现实块。
+ * 传入 01–08 时先落到该页主内部键。06 的主旗标是近步；06-C 仍用 self_regulation。
+ * 08 的主旗标是风险；收束仍用 validation_close。
  *
  * 目的不是「去掉某种真算」，而是：每页、每步只收**该职责需要的数据源**。
  * 无关块进 prompt = 增负 + 错轴（例：P1 批断灌 collecting 原文 → 回写「权责/兼职」）。
@@ -12,6 +14,11 @@
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { DECISION_PAGE_IDS, type DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import {
+  primaryShelfKeyForPage,
+  shelfKeysForPage,
+} from "@/lib/llm/pro/delivery/decision-page-bridge";
 import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 export type PageFeedPhase = "judgment" | "body";
@@ -113,7 +120,57 @@ export function resolvePageFeedPathOpts(input: {
  * @param phase judgment=批断枪；body=正文枪。同页两枪允许集可不同。
  * @param pathOpts solo|dyad — dyad 时 judgment 强制开 dyad_relation_structure
  */
+function isContentPageId(value: string): value is DecisionPageId {
+  return (DECISION_PAGE_IDS as readonly string[]).includes(value);
+}
+
+function segmentForFeedKey(key: DeliverySegmentKey | DecisionPageId): DeliverySegmentKey | null {
+  if (isContentPageId(key)) {
+    const primary = primaryShelfKeyForPage(key);
+    if (!primary || primary === "appendix") return null;
+    return primary as DeliverySegmentKey;
+  }
+  return key;
+}
+
 export function pageFeedFlags(
+  key: DeliverySegmentKey | DecisionPageId,
+  phase: PageFeedPhase = "body",
+  pathOpts?: PageFeedPathOpts,
+): PageFeedFlags {
+  const segmentKey = segmentForFeedKey(key);
+  if (!segmentKey) {
+    return {
+      ...BASE,
+      thesis_factpack: false,
+      science_means: false,
+      metaphysics_moat: false,
+      foundation_surface: false,
+      risk_fuse: false,
+      close_ritual: false,
+      structured_inventory: false,
+    };
+  }
+  return pageFeedFlagsForSegment(segmentKey, phase, pathOpts);
+}
+
+/** 一页书架脸下每个内部键的喂料旗标。06 含近步和 06-C，08 含风险和收束。 */
+export function shelfFaceFeed(
+  pageId: DecisionPageId,
+  phase: PageFeedPhase = "body",
+  pathOpts?: PageFeedPathOpts,
+): { key: string; flags: PageFeedFlags }[] {
+  const keys = shelfKeysForPage(pageId);
+  if (keys.length === 0) {
+    return [{ key: pageId, flags: pageFeedFlags(pageId, phase, pathOpts) }];
+  }
+  return keys.map((key) => ({
+    key,
+    flags: pageFeedFlags(key as DeliverySegmentKey, phase, pathOpts),
+  }));
+}
+
+function pageFeedFlagsForSegment(
   key: DeliverySegmentKey,
   phase: PageFeedPhase = "body",
   pathOpts?: PageFeedPathOpts,

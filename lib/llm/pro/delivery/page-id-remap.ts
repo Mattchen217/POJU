@@ -1,8 +1,9 @@
 /**
  * 旧出稿 key / 九模块 / pageSchema / fill duty → 内容 SoT pageId。
  *
- * 运行时 `resolveDeliverySegmentKey` 仍返回 v1 键，本表不替换那条读路径。
- * 页结构真源是 DecisionPageId（2026-10-27），九模块不再单独当页结构真源。
+ * `resolveDeliverySegmentKey("01"|"02"|"04"|"05"|"06"|"08")` 落到该页主 v1 键。
+ * 07 与 03 没有内部键，返回 null。生成 JSON 的 page 字段仍是 v1 键。
+ * 页结构真源是 DecisionPageId（2026-10-27）。书架脸与这条读路径共用 01–08。
  *
  * 旧字母 A–F 是 Phase-4 书键，不是新双轨段 A/B/C。
  */

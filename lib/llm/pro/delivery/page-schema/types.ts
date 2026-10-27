@@ -3,7 +3,7 @@
  * — slot-fill + UI shape until W2.
  * Keys = DeliverySegmentKey (delivery-schema.ts). Wide-in / sanitize-out.
  * Content page ids live in page-feed-matrix.ts and decision-pages.ts.
- * This file does not switch slot names. The shelf still reads these v1 keys.
+ * Generation JSON stays on these v1 keys. The reader shelf folds them onto 01–08.
  */
 
 import { z } from "zod";

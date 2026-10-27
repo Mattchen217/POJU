@@ -1,16 +1,13 @@
 /**
- * 01–08 与现网书架的加法桥。
+ * 01–08 是书架脸。内部出稿键仍是 v1，折进这些脸：
+ * - 书架槽：`deliveryShelfSlotIds`（cover、toc、01、02、04、05、06、题相关 07、08、03）
+ * - 脸级 zod：`shelf-face-schema.ts`。生成槽 `DeliveryPageSchemaByKey` 仍按内部键
+ * - `resolveDeliverySegmentKey("06")` 落到 execution_guidance。07 与 03 没有内部键
+ * - duty 仍按内部键写。书架上 06 是一页，08 是一页
+ * - `pageFeedFlags("06")` 用近步旗标；`shelfFaceFeed("06")` 同时给出 06-C
+ * - DAG 任务 id 仍是内部键。`shelfFaceDispatchKeys` 把它们收成一页
  *
- * 内容页读 `DECISION_PAGE_SCHEMAS`。现网这些路径仍用 v1 键，本文件不改它们的顺序：
- * - 书架槽：`DELIVERY_SHELF_SLOT_IDS`（cover、toc、十段、appendix）
- * - 填槽 zod：`DeliveryPageSchemaByKey`
- * - 出稿读键：`resolveDeliverySegmentKey`
- * - 提示词 duty：`page-prompts` 的 BY_KEY（主张硬度已对齐内容锁；JSON 形状仍是 v1）
- * - v3 喂料旗标：`pageFeedFlags` 仍开关奇门 / 菜单 / 处境。八字与紫微整包改走 `formatPageSliceFeed`
- * - DAG / 九模块蓝图
- *
- * 07 没有书架槽。06 的主槽仍是 execution_guidance，self_regulation 仍是单独一纸，内容归 06-C。
- * 08 的主槽是 validation_risk，validation_close 仍单独占一纸。
+ * 07 没有内部纸，有题目才出现在书架上。
  */
 
 import {

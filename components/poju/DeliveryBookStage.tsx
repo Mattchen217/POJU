@@ -30,20 +30,22 @@ import {
 } from "@/lib/spline/spline-runtime-registry";
 import {
   buildDeliveryShelfSlots,
-  DELIVERY_SHELF_SLOT_IDS,
+  deliveryShelfSlotIds,
   isDeliveryProseShelfSlot,
   nextSequentialProseGap,
   sequentialDeliveryProseReady,
   type DeliveryShelfSlotId,
   type DeliveryShelfSlotState,
 } from "@/lib/poju/delivery-shelf-slots";
+import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import {
   collectDeliveryEvidenceTerms,
   formatEvidenceTermLabel,
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
-import { type DeliverySegmentKey, isTagOnlyOrEmptyPageTitle } from "@/lib/llm/pro/delivery/delivery-schema";
+import { isTagOnlyOrEmptyPageTitle } from "@/lib/llm/pro/delivery/delivery-schema";
 import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import {
@@ -63,7 +65,6 @@ import {
 import {
   deliveryAppendixCopy,
   deliveryEvidenceLabelPlain,
-  deliveryPageTag,
   deliveryRxMethodsLabel,
   deliveryRxStrategyLabel,
 } from "@/lib/llm/pro/delivery/delivery-locale";
@@ -97,6 +98,8 @@ export type DeliveryBookStageProps = {
   /** Optional slot below the book (interrupted / network). */
   interruptedSlot?: ReactNode;
   networkSlot?: ReactNode;
+  /** 换场 / 迁移 / 合伙 / 亲密 / joint 才把 07 插进书架。 */
+  topic?: string | null;
 };
 
 function isProseSlot(id: DeliveryShelfSlotId): boolean {
@@ -133,16 +136,17 @@ function keepEasternOsTogether(text: string): string {
 }
 
 function tocFixedTag(slotId: DeliveryShelfSlotId, locale: string): string {
-  if (slotId === "appendix") {
+  if (slotId === "03") {
     return deliveryAppendixCopy(locale).heading;
   }
   if (slotId === "cover" || slotId === "toc") return "";
-  return deliveryPageTag(slotId as DeliverySegmentKey, locale);
+  const face = DECISION_PAGE_SCHEMAS[slotId as DecisionPageId];
+  return face?.title ?? slotId;
 }
 
 /** Fixed tag + model page_title / page_subtitle for TOC rows (with legacy chrome repair). */
 function resolveChromeTitles(
-  slotId: DeliverySegmentKey,
+  slotId: string,
   schema: DeliveryPageData | null,
 ): { title: string; subtitle: string } {
   let title =
@@ -154,7 +158,18 @@ function resolveChromeTitles(
       ? stripShapeExampleChrome(schema.page_subtitle)
       : "";
 
-  if (isTagOnlyOrEmptyPageTitle(slotId, title)) title = "";
+  const pageKey = schema && typeof schema.page === "string" ? schema.page : slotId;
+  if (
+    (pageKey === "decision_brief" ||
+      pageKey === "situation_analysis" ||
+      pageKey === "execution_guidance" ||
+      pageKey === "self_regulation" ||
+      pageKey === "validation_risk" ||
+      pageKey === "validation_close") &&
+    isTagOnlyOrEmptyPageTitle(pageKey, title)
+  ) {
+    title = "";
+  }
 
   // Legacy / failed-fill repair: P4 often shipped with empty chrome → TOC only showed 自我调频
   if (schema?.page === "self_regulation") {
@@ -188,11 +203,11 @@ function tocChromeForSlot(
   body: string | undefined,
 ): { tag: string; title: string; subtitle: string } {
   const tag = tocFixedTag(slotId, locale);
-  if (!body || slotId === "appendix" || slotId === "cover" || slotId === "toc") {
+  if (!body || slotId === "03" || slotId === "cover" || slotId === "toc") {
     return { tag, title: "", subtitle: "" };
   }
   const schema = extractPageSchemaFromMarkdown(body);
-  const { title, subtitle } = resolveChromeTitles(slotId as DeliverySegmentKey, schema);
+  const { title, subtitle } = resolveChromeTitles(slotId, schema);
   return { tag, title, subtitle };
 }
 
@@ -210,13 +225,14 @@ export function DeliveryBookStage({
   chromeLeft = null,
   interruptedSlot,
   networkSlot,
+  topic = null,
 }: DeliveryBookStageProps) {
   const t = useTranslations("workspace.deliveryShelf");
   const zh = locale.startsWith("zh");
 
   const slots = useMemo(
-    () => buildDeliveryShelfSlots(fullText, { locale, complete }),
-    [fullText, locale, complete],
+    () => buildDeliveryShelfSlots(fullText, { locale, complete, topic }),
+    [fullText, locale, complete, topic],
   );
 
   const readyById = useMemo(() => {
@@ -230,7 +246,7 @@ export function DeliveryBookStage({
   const proseReady = useMemo(() => sequentialDeliveryProseReady(slots), [slots]);
 
   const bootstrapReady = Boolean(
-    readyById.get("cover") && readyById.get("toc") && readyById.get("decision_brief"),
+    readyById.get("cover") && readyById.get("toc") && readyById.get("01"),
   );
 
   /** Next prose gap in order (may already have later pages buffered). */
@@ -394,21 +410,27 @@ export function DeliveryBookStage({
   }, [active?.page.body]);
 
   const pageChrome = useMemo(() => {
-    if (!active || active.slotId === "appendix" || active.slotId === "cover" || active.slotId === "toc") {
+    if (!active || active.slotId === "03" || active.slotId === "cover" || active.slotId === "toc") {
       return { tag: "", title: pageTitleDisplay, subtitle: "" };
     }
-    const key = active.slotId as DeliverySegmentKey;
-    const tag = deliveryPageTag(key, locale);
-    const resolved = resolveChromeTitles(key, activePageSchema);
-    const fromShelf =
-      pageTitleDisplay && !isTagOnlyOrEmptyPageTitle(key, pageTitleDisplay)
-        ? pageTitleDisplay
-        : "";
+    const tag = tocFixedTag(active.slotId, locale);
+    const resolved = resolveChromeTitles(active.slotId, activePageSchema);
+    const schemaPage =
+      activePageSchema && typeof activePageSchema.page === "string" ? activePageSchema.page : "";
+    const tagOnly =
+      (schemaPage === "decision_brief" ||
+        schemaPage === "situation_analysis" ||
+        schemaPage === "execution_guidance" ||
+        schemaPage === "self_regulation" ||
+        schemaPage === "validation_risk" ||
+        schemaPage === "validation_close") &&
+      isTagOnlyOrEmptyPageTitle(schemaPage, pageTitleDisplay);
+    const fromShelf = pageTitleDisplay && !tagOnly ? pageTitleDisplay : "";
     const title = resolved.title || fromShelf || tag;
     return { tag, title, subtitle: resolved.subtitle };
   }, [active, activePageSchema, locale, pageTitleDisplay]);
 
-  const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
+  const tocItems = deliveryShelfSlotIds(topic).filter(isProseSlot);
 
   const structWidgets = useMemo(() => {
     if (!active) {
@@ -429,7 +451,7 @@ export function DeliveryBookStage({
     const skipScan =
       active.slotId === "cover" ||
       active.slotId === "toc" ||
-      active.slotId === "appendix";
+      active.slotId === "03";
     const scanFromStruct = payloads.find((p) => p.kind === "page_scan_card");
     const scan =
       skipScan || !scanFromStruct
@@ -441,13 +463,13 @@ export function DeliveryBookStage({
 
     // P2 foundation only — never surface the energy dashboard on other shelf pages.
     const fromBody =
-      active.slotId === "situation_analysis"
+      active.slotId === "02"
         ? (payloads.find((p) => p.kind === "energy_dashboard") as
             | EnergyDashboardStruct
             | undefined)
         : undefined;
     const dashboard =
-      active.slotId !== "situation_analysis"
+      active.slotId !== "02"
         ? null
         : fromBody && fromBody.source !== "empty"
           ? fromBody
@@ -492,7 +514,7 @@ export function DeliveryBookStage({
   );
   const appendixCopy = useMemo(() => deliveryAppendixCopy(locale), [locale]);
   const showAppendixGlossary =
-    active?.slotId === "appendix" && evidenceTerms.length > 0;
+    active?.slotId === "03" && evidenceTerms.length > 0;
   const hideAppendixEmptyBody =
     showAppendixGlossary &&
     modules.every((m) => isDeliveryAppendixEmptyPlaceholder(m.body));
@@ -736,7 +758,7 @@ export function DeliveryBookStage({
                 ) : null}
                 {!activePageSchema &&
                 structWidgets.dashboard &&
-                active?.slotId === "situation_analysis" ? (
+                active?.slotId === "02" ? (
                   <article className="delivery-book-stage__module delivery-book-stage__module--widget">
                     <div className="delivery-book-stage__section-card">
                       <DeliveryEnergyDashboard data={structWidgets.dashboard} />

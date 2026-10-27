@@ -5,7 +5,7 @@
  * 页结构真源与本文件对齐。切片实现在 `slice-for-page.ts`：
  * 只抄该页并集里有值的短键，缺值就省略，不把整包灌进一页。
  *
- * 运行时书架、填槽 zod、duty、DAG 仍走 v1 十段。读 01–08 走 `decision-page-bridge.ts`。
+ * 书架脸是 01–08。内部出稿键仍折进这些脸。读路径走 `decision-page-bridge.ts`。
  */
 
 export const DECISION_PAGE_IDS = ["01", "02", "03", "04", "05", "06", "07", "08"] as const;
