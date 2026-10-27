@@ -1,11 +1,12 @@
 /**
  * Decision-report case batch. Legacy pipeline only.
  * Non-LLM Lab steps: bootstrap → thesis → prealloc.
- * Model fill is recorded as not_run when OpenRouter is absent.
+ * With OPENROUTER_API_KEY, full-fills 01/02/05/06 and writes each page under fills/.
+ * Saved fills are never reused. A紫微 throw is recorded and the case continues.
  *
  *   NODE_ENV=development pnpm batch:decision-cases
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getBaziChart } from "shunshi-bazi-core";
 
@@ -17,7 +18,10 @@ import type { DeliveryLabSession } from "../lib/llm/pro/delivery/lab/types";
 import { DECISION_PAGE_SCHEMAS } from "../lib/llm/pro/delivery/page-schema/decision-pages";
 import { buildChartFactPack } from "../lib/llm/pro/delivery/page-schema/chart-fact-pack";
 import { replayObservedP0Shapes } from "../lib/llm/pro/delivery/page-schema/p0-fill-shape-replay";
-import { runPageSchemaFill } from "../lib/llm/pro/delivery/page-schema/fill-call";
+import {
+  runPageSchemaFill,
+  type PageSchemaFillResult,
+} from "../lib/llm/pro/delivery/page-schema/fill-call";
 import type { DeliveryComputed } from "../lib/llm/pro/delivery/delivery-schema";
 import { resolveDeliveryPipeline } from "../lib/llm/pro/delivery/pipeline-v3/flag";
 import {
@@ -34,7 +38,7 @@ import {
 import { hourToHourPeriod, shunshiParamsFromBirthInfo } from "../lib/profile/birth-info-utils";
 import type { BirthInfo, UserProfile } from "../lib/profile/types";
 import { getStemInfo } from "../lib/poju/bazi-matrix-mappings";
-import { buildZiweiFactPack } from "../lib/ziwei/fact-pack";
+import { buildZiweiFactPack, type ZiweiFactPack } from "../lib/ziwei/fact-pack";
 import { DECISION_CASES, type DecisionCaseSpec } from "./decision-case-matrix";
 
 const AS_OF = "2026-10-27";
@@ -207,6 +211,19 @@ async function labGates(spec: DecisionCaseSpec, structured: unknown): Promise<{
   return { lab_id: lab.lab_id, gates };
 }
 
+const LIVE_FILL_KEYS = [
+  "decision_brief",
+  "situation_analysis",
+  "recommended_strategy",
+  "execution_guidance",
+] as const;
+
+const FILL_DIR = path.join(OUT_DIR, "fills");
+
+function fillPath(caseId: string, key: string): string {
+  return path.join(FILL_DIR, `${caseId}.${key}.json`);
+}
+
 async function modelFillGates(
   spec: DecisionCaseSpec,
   chartText: string,
@@ -221,30 +238,90 @@ async function modelFillGates(
       },
     ];
   }
+  mkdirSync(FILL_DIR, { recursive: true });
   const gates: GateRow[] = [];
-  for (const key of ["situation_analysis", "execution_guidance"] as const) {
+  for (const key of LIVE_FILL_KEYS) {
+    const file = fillPath(spec.id, key);
+    // Saved fills are never a skip. Each live run overwrites the file.
     const filled = await runPageSchemaFill({
       key,
       finalize: {} as DeliveryComputed,
       locale: "zh",
       chart_fact_pack: chartText,
       topic,
-      question_expectation: `${spec.question}\n${spec.expect}`,
+      question_expectation: `${spec.question}\n${spec.expect}\n${spec.detail}`,
       fill_mode: "full",
       deep_evidence_plan: null,
       thinking_effort: "high",
     });
+    const stored = persistableFill(filled);
+    writeFileSync(
+      file,
+      `${JSON.stringify(
+        {
+          case_id: spec.id,
+          key,
+          ok: stored.ok,
+          reason: stored.reason,
+          attempts: stored.attempts,
+          sanitize_notes: stored.notes,
+          page: stored.page,
+          raw_text: stored.raw.slice(0, 12_000),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const rel = path.relative(OUT_DIR, file);
     gates.push({
       step: `model.fill.${key}`,
-      passed: filled.ok,
-      detail: filled.ok ? `attempts=${filled.attempts}` : filled.reason,
+      passed: stored.ok,
+      detail: stored.ok ? `attempts=${stored.attempts} file=${rel}` : `${stored.reason} file=${rel}`,
     });
-    if (!filled.ok) break;
   }
   return gates;
 }
 
-function runCase(spec: DecisionCaseSpec, structured: ReturnType<typeof chartFor>["structured"], pack: ReturnType<typeof chartFor>["pack"], ziwei: ReturnType<typeof buildZiweiFactPack>): Omit<CaseResult, "lab_id" | "gates"> & { gaps: string[] } {
+function persistableFill(filled: PageSchemaFillResult): {
+  ok: boolean;
+  reason: string | null;
+  page: unknown;
+  notes: string[];
+  attempts: number;
+  raw: string;
+} {
+  const raw = filled.last_raw_text ?? "";
+  if (filled.ok && filled.needs_more_fill_chunks !== true) {
+    return {
+      ok: true,
+      reason: null,
+      page: filled.page,
+      notes: [],
+      attempts: filled.attempts,
+      raw,
+    };
+  }
+  if (filled.ok) {
+    return {
+      ok: false,
+      reason: "needs_more_fill_chunks",
+      page: null,
+      notes: [],
+      attempts: filled.attempts,
+      raw,
+    };
+  }
+  return {
+    ok: false,
+    reason: filled.reason,
+    page: null,
+    notes: filled.sanitize_notes ?? [],
+    attempts: filled.attempts,
+    raw,
+  };
+}
+
+function runCase(spec: DecisionCaseSpec, structured: ReturnType<typeof chartFor>["structured"], pack: ReturnType<typeof chartFor>["pack"], ziwei: ZiweiFactPack | null): Omit<CaseResult, "lab_id" | "gates"> & { gaps: string[] } {
   const topic = deliveryTopicFromSignals({
     topic: spec.topic,
     question: spec.question,
@@ -319,8 +396,9 @@ function runCase(spec: DecisionCaseSpec, structured: ReturnType<typeof chartFor>
 
   if (produced.some((text) => textHitsScareRedline(text))) gaps.push("scare");
 
-  const ming = ziwei.topicPalace;
-  abstracts.chart = `日主 ${structured.day_master} · 命宫 ${ming.palace} ${ming.majorStars.join("、")}`;
+  abstracts.chart = ziwei
+    ? `日主 ${structured.day_master} · 命宫 ${ziwei.topicPalace.palace} ${ziwei.topicPalace.majorStars.join("、")}`
+    : `日主 ${structured.day_master} · 紫微未成盘`;
 
   let verdict: CaseResult["verdict"] = "PARTIAL";
   let reason = "结构闸过了。模型正文没跑，硬度、05 成句、06 成稿未检。";
@@ -357,6 +435,13 @@ function writeReport(results: CaseResult[], pipeline: string) {
       "",
       result.gaps.length ? `缺口：${result.gaps.join("; ")}` : "结构缺口：无",
       "",
+      "## 活填",
+      "",
+      ...LIVE_FILL_KEYS.map((key) => {
+        const rel = path.relative(OUT_DIR, fillPath(result.id, key));
+        return existsSync(fillPath(result.id, key)) ? `- ${rel}` : `- ${rel}（本跑未写）`;
+      }),
+      "",
       `lab ${result.lab_id ?? "—"}`,
       "",
     ].join("\n");
@@ -365,7 +450,7 @@ function writeReport(results: CaseResult[], pipeline: string) {
   const lines = [
     "# 案例批跑 2026-10-27",
     "",
-    `管线：${pipeline}。模型 fill：${results.some((result) => result.gates.some((gate) => gate.step.startsWith("model.fill") && gate.passed !== "not_run")) ? "已调用" : "未调用（无 OPENROUTER_API_KEY）。下表是结构与清洗，不是成稿。"}`,
+    `管线：${pipeline}。模型 fill：${results.some((result) => result.gates.some((gate) => gate.step.startsWith("model.fill") && gate.passed !== "not_run")) ? "已调用 decision_brief / situation_analysis / recommended_strategy / execution_guidance，稿在 fills/。" : "未调用（无 OPENROUTER_API_KEY）。下表是结构与清洗，不是成稿。有钥匙时会覆盖写入这四页。"}`,
     "",
     "| 案 | 判定 | 原因 |",
     "|----|------|------|",
@@ -387,7 +472,15 @@ async function main() {
   for (const spec of DECISION_CASES) {
     const birth = birthOf(spec);
     const { structured, pack } = chartFor(birth);
-    const ziwei = buildZiweiFactPack(birth, { asOf: AS_OF });
+    let ziwei: ZiweiFactPack | null = null;
+    let ziweiGate: GateRow;
+    try {
+      ziwei = buildZiweiFactPack(birth, { asOf: AS_OF });
+      ziweiGate = { step: "ziwei", passed: true, detail: ziwei.topicPalace.palace };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      ziweiGate = { step: "ziwei", passed: false, detail: message };
+    }
     const structural = runCase(spec, structured, pack, ziwei);
     const lab = await labGates(spec, structured);
     const replay = replayObservedP0Shapes(pack.text);
@@ -420,14 +513,14 @@ async function main() {
     if (gaps.length) {
       verdict = "FAIL";
       reason = gaps.join("; ");
-    } else if (spec.role === "thin") {
-      verdict = "PARTIAL";
-      reason = modelRan
-        ? "Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。"
-        : "Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。模型正文未跑。";
     } else if (modelFail.length) {
       verdict = "FAIL";
       reason = modelFail.map((gate) => `${gate.step} ${gate.detail}`).join(" | ");
+    } else if (spec.role === "thin") {
+      verdict = "PARTIAL";
+      reason = modelRan
+        ? "Thin。07 按 joint 插入，otherChart 省略。结构、清洗和本页 fill 过了。"
+        : "Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。模型正文未跑。";
     } else if (!modelRan) {
       verdict = "PASS";
       reason = "结构与清洗过了。OPENROUTER 未设置，模型正文未跑。";
@@ -435,12 +528,15 @@ async function main() {
       verdict = "PASS";
       reason = "结构、清洗和本页 fill 过了。成稿硬度仍等人审。";
     }
+    if (ziweiGate.passed === false && verdict !== "FAIL") {
+      reason = `${reason} 紫微未成盘：${ziweiGate.detail}`;
+    }
     results.push({
       ...structural,
       verdict,
       reason,
       gaps,
-      gates: [...lab.gates, ...replayGates, ...modelGates],
+      gates: [ziweiGate, ...lab.gates, ...replayGates, ...modelGates],
       lab_id: lab.lab_id,
     });
     console.log(`${spec.id} ${verdict} topic=${structural.topic ?? "-"} shelf=${structural.shelf.join(",")}`);

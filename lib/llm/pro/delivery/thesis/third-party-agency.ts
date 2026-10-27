@@ -151,7 +151,12 @@ export function isThirdPartyInTopicFrameOnly(
       "g",
     ),
     new RegExp(`跟${p}一起`, "g"),
+    new RegExp(`(?:和|同)${p}一起`, "g"),
     new RegExp(`与${p}(?:合作|创业|共事|一起)`, "g"),
+    // Joint co-decision: the other side is the frame, not a mind we rewrite.
+    new RegExp(`${p}(?:的)?盘(?:没有|未|没|不)?(?:接入|在场|给到|进入)?`, "g"),
+    new RegExp(`(?:没有|未接入)${p}(?:的)?盘`, "g"),
+    new RegExp(`不替${p}(?:做主|做决定|决定|拿主意)`, "g"),
     new RegExp(`${p}的(?:盘子|项目|公司|团队|局|安排)`, "g"),
     // Agenda label / cite topic:「对方对兼职的反应」「伙伴的态度」
     new RegExp(`${p}对[^。；\n]{0,24}的(?:反应|态度|接受度|依赖)`, "g"),
@@ -320,6 +325,9 @@ export function softRepairThirdPartyAgencyProse(
     }
     if (/话语权|从属|加入|主导/.test(blob)) {
       return "结构上你更易处于配合而非主导";
+    }
+    if (/一起拍板|一起决定|一起做(?:这个)?决定|共同决定|共同拍板|对方盘|没有接入|不替对方/.test(blob)) {
+      return "另一侧的盘不在这份材料里，你先写清自己能不能一起拍板的条件。";
     }
     if (
       /男友|女友|伴侣|配偶|夫妻|关系|亲密|恋爱|婚姻/.test(blob) ||

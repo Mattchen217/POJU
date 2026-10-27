@@ -8,9 +8,10 @@ PASS · 结构与清洗过了。OPENROUTER 未设置，模型正文未跑。
 
 ## 闸
 
+- ziwei: true · 命宫
 - bootstrap: true · 盘 structured + 问题就绪
 - thesis.gen: true · dims=6 as_of=2026-10-27
-- prealloc: true · day_master=癸水 pack_chars=770 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T12:58:20.964Z
+- prealloc: true · day_master=癸水 pack_chars=770 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T13:48:39.628Z
 - sanitize.02: true · 日主癸水 | 用神：土 | 喜神：木 | 忌神：水、金 | 当前大运：己亥（35岁起）
 - sanitize.06: true · 当前大运：己亥（35岁起）
 - model.fill: not_run · OPENROUTER_API_KEY unset
@@ -28,4 +29,11 @@ PASS · 结构与清洗过了。OPENROUTER 未设置，模型正文未跑。
 
 结构缺口：无
 
-lab lab_mvqoyg0t_df2446b5
+## 活填
+
+- fills/s35-resign-venture.decision_brief.json（本跑未写）
+- fills/s35-resign-venture.situation_analysis.json（本跑未写）
+- fills/s35-resign-venture.recommended_strategy.json（本跑未写）
+- fills/s35-resign-venture.execution_guidance.json（本跑未写）
+
+lab lab_mvqqr58m_e8ccd478

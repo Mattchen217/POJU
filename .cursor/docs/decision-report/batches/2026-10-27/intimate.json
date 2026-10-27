@@ -30,6 +30,11 @@
   "gaps": [],
   "gates": [
     {
+      "step": "ziwei",
+      "passed": true,
+      "detail": "命宫"
+    },
+    {
       "step": "bootstrap",
       "passed": true,
       "detail": "盘 structured + 问题就绪"
@@ -42,7 +47,7 @@
     {
       "step": "prealloc",
       "passed": true,
-      "detail": "day_master=辛金 pack_chars=712 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T12:58:21.027Z"
+      "detail": "day_master=辛金 pack_chars=712 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T13:48:39.680Z"
     },
     {
       "step": "sanitize.02",
@@ -60,5 +65,5 @@
       "detail": "OPENROUTER_API_KEY unset"
     }
   ],
-  "lab_id": "lab_mvqoyg2q_60aa8324"
+  "lab_id": "lab_mvqqr5a7_bd277f8a"
 }
