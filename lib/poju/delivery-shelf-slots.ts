@@ -11,6 +11,9 @@ import {
   readingOrderForTopic,
   resolveDecisionPage,
 } from "@/lib/llm/pro/delivery/decision-page-bridge";
+import { composePage07Markdown } from "@/lib/llm/pro/delivery/page-07-face";
+import { shelfFaceForHeading } from "@/lib/llm/pro/delivery/shelf-face-map";
+import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import {
   deliveryAppendixCopy,
   deliveryCoverCopy,
@@ -64,11 +67,33 @@ export function deliveryProsePageNumber(
   return 0;
 }
 
+function asShelfFace(id: string | null): DeliveryShelfSlotId | null {
+  if (
+    id === "cover" ||
+    id === "toc" ||
+    id === "01" ||
+    id === "02" ||
+    id === "03" ||
+    id === "04" ||
+    id === "05" ||
+    id === "06" ||
+    id === "07" ||
+    id === "08"
+  ) {
+    return id;
+  }
+  return null;
+}
+
 function shelfFaceForSourceId(id: string): DeliveryShelfSlotId | null {
   if (id === "cover" || id === "toc") return id;
   if (id === "appendix") return "03";
   const route = resolveDecisionPage(id);
-  return route?.pageId ?? null;
+  return asShelfFace(route?.pageId ?? null);
+}
+
+function shelfFaceForPage(page: DeliveryBookPage): DeliveryShelfSlotId | null {
+  return shelfFaceForSourceId(page.id) ?? asShelfFace(shelfFaceForHeading(page.title));
 }
 
 export type DeliveryShelfSlotState =
@@ -130,9 +155,10 @@ function mergeShelfBodies(pages: readonly DeliveryBookPage[]): string {
 
 export function buildDeliveryShelfSlots(
   fullText: string | null | undefined,
-  opts: { locale: string; complete?: boolean; topic?: string | null },
+  opts: { locale: string; complete?: boolean; topic?: string | null; question?: string | null },
 ): DeliveryShelfSlotState[] {
-  const order = deliveryShelfSlotIds(opts.topic);
+  const topic = deliveryTopicFromSignals({ topic: opts.topic, question: opts.question });
+  const order = deliveryShelfSlotIds(topic);
   const pages = fullText?.trim() ? buildDeliveryBookPages(fullText) : [];
   const slots: DeliveryShelfSlotState[] = order.map((slotId) => ({
     kind: "empty" as const,
@@ -140,14 +166,10 @@ export function buildDeliveryShelfSlots(
     pageNumber: deliveryProsePageNumber(slotId, order),
   }));
   const buckets = new Map<DeliveryShelfSlotId, DeliveryBookPage[]>();
-  const unmapped: DeliveryBookPage[] = [];
 
   for (const page of pages) {
-    const face = shelfFaceForSourceId(page.id);
-    if (!face || !order.includes(face)) {
-      if (page.id !== "cover" && page.id !== "toc") unmapped.push(page);
-      continue;
-    }
+    const face = shelfFaceForPage(page);
+    if (!face || !order.includes(face)) continue;
     const list = buckets.get(face) ?? [];
     list.push(page);
     buckets.set(face, list);
@@ -174,20 +196,23 @@ export function buildDeliveryShelfSlots(
     };
   }
 
-  for (const page of unmapped) {
-    const idx = slots.findIndex((slot) => slot.kind === "empty" && isDeliveryProseShelfSlot(slot.slotId));
-    if (idx < 0) break;
-    const slotId = order[idx]!;
-    slots[idx] = {
-      kind: "ready",
-      slotId,
-      pageNumber: deliveryProsePageNumber(slotId, order),
-      page: {
-        ...page,
-        id: slotId,
-        title: proseShelfTitle(slotId, page.body ?? "", opts.locale),
-      },
-    };
+  const page07 = composePage07Markdown({ topic, question: opts.question });
+  if (page07 && order.includes("07")) {
+    const idx = order.indexOf("07");
+    const current = slots[idx];
+    if (current && current.kind !== "ready") {
+      slots[idx] = {
+        kind: "ready",
+        slotId: "07",
+        pageNumber: deliveryProsePageNumber("07", order),
+        page: {
+          id: "07",
+          title: proseShelfTitle("07", page07, opts.locale),
+          body: page07,
+          dualLayer: true,
+        },
+      };
+    }
   }
 
   const readyCount = slots.filter((s) => s.kind === "ready").length;

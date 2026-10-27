@@ -1,27 +1,36 @@
 /**
- * Blank decision-report deliverable HTML (8 fixed panes).
- * Mirrors templates/deliverables/decision-report.template.html
+ * Blank decision-report deliverable HTML.
+ * Chapter order matches the shelf: cover, 01, 02, 04, 05, 06, (07), 08, 03.
+ * 07 is inserted only when the topic gate is open.
+ * Mirrors the default (no 07) pane list in templates/deliverables/decision-report.template.html.
+ * SoT16 baseline-profile is a different template and is not built here.
  */
 
 import {
   BOOK_SHELL_CSS,
   BOOK_SHELL_JS,
 } from "@/lib/deliverables/shared-book-assets";
+import { readingOrderForTopic } from "@/lib/llm/pro/delivery/decision-page-bridge";
 
-const PANES = [
-  { id: "cover", num: "01", tag: "P0", toc: "SLOT_TOC_COVER", body: "SLOT_BODY_COVER" },
-  { id: "decision_brief", num: "02", tag: "01", toc: "SLOT_TOC_DECISION_BRIEF", body: "SLOT_BODY_DECISION_BRIEF" },
-  { id: "situation_analysis", num: "03", tag: "02", toc: "SLOT_TOC_SITUATION", body: "SLOT_BODY_SITUATION" },
-  { id: "personal_decision_patterns", num: "04", tag: "03", toc: "SLOT_TOC_PATTERNS", body: "SLOT_BODY_PATTERNS" },
-  { id: "bottleneck_analysis", num: "05", tag: "04", toc: "SLOT_TOC_BOTTLENECK", body: "SLOT_BODY_BOTTLENECK" },
-  { id: "strategic_options", num: "06", tag: "05", toc: "SLOT_TOC_OPTIONS", body: "SLOT_BODY_OPTIONS" },
-  { id: "recommended_strategy", num: "07", tag: "06", toc: "SLOT_TOC_STRATEGY", body: "SLOT_BODY_STRATEGY" },
-  { id: "execution_guidance", num: "08", tag: "07", toc: "SLOT_TOC_EXECUTION", body: "SLOT_BODY_EXECUTION" },
-  { id: "self_regulation", num: "09", tag: "08", toc: "SLOT_TOC_SELF_REG", body: "SLOT_BODY_SELF_REG" },
-  { id: "validation_risk", num: "10", tag: "09a", toc: "SLOT_TOC_VALIDATION_RISK", body: "SLOT_BODY_VALIDATION_RISK" },
-  { id: "validation_close", num: "11", tag: "09b", toc: "SLOT_TOC_VALIDATION_CLOSE", body: "SLOT_BODY_VALIDATION_CLOSE" },
-  { id: "appendix", num: "12", tag: "A", toc: "SLOT_TOC_APPENDIX", body: "SLOT_BODY_APPENDIX" },
-] as const;
+export type DecisionReportPane = {
+  id: string;
+  num: string;
+  tag: string;
+  toc: string;
+  body: string;
+};
+
+export function decisionReportPanes(topic?: string | null): DecisionReportPane[] {
+  return ["cover", ...readingOrderForTopic(topic)].map((id, index) => {
+    const num = String(index + 1).padStart(2, "0");
+    if (id === "cover") {
+      return { id, num, tag: "P0", toc: "SLOT_TOC_COVER", body: "SLOT_BODY_COVER" };
+    }
+    return { id, num, tag: id, toc: `SLOT_TOC_${id}`, body: `SLOT_BODY_${id}` };
+  });
+}
+
+const DEFAULT_PANES = decisionReportPanes(null);
 
 function tocItem(
   id: string,
@@ -51,7 +60,13 @@ function pane(
 </section>`;
 }
 
-export const DECISION_REPORT_TEMPLATE = `<!DOCTYPE html>
+export function renderDecisionReportTemplate(topic?: string | null): string {
+  const panes = topic == null || topic === "" ? DEFAULT_PANES : decisionReportPanes(topic);
+  return renderDecisionReportHtml(panes);
+}
+
+function renderDecisionReportHtml(panes: readonly DecisionReportPane[]): string {
+  return `<!DOCTYPE html>
 <html lang="{{SLOT_LOCALE}}">
 <head>
 <meta charset="utf-8"/>
@@ -108,7 +123,7 @@ ${BOOK_SHELL_CSS}
               Contents
             </div>
             <ol class="delivery-book-stage__toc-list">
-              ${PANES.map((p, i) => tocItem(p.id, p.num, p.tag, p.toc, i === 0)).join("\n              ")}
+              ${panes.map((p, i) => tocItem(p.id, p.num, p.tag, p.toc, i === 0)).join("\n              ")}
             </ol>
           </nav>
           <div class="delivery-book-stage__left-foot">
@@ -118,7 +133,7 @@ ${BOOK_SHELL_CSS}
           </div>
         </aside>
         <section class="delivery-book-stage__right">
-          ${PANES.map((p, i) =>
+          ${panes.map((p, i) =>
             pane(
               p.id,
               p.toc,
@@ -152,3 +167,7 @@ ${BOOK_SHELL_JS}
 </body>
 </html>
 `;
+}
+
+/** Default pack: 07 omitted. */
+export const DECISION_REPORT_TEMPLATE = renderDecisionReportTemplate(null);

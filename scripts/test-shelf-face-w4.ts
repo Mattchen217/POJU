@@ -70,7 +70,11 @@ assert(
   "topic shelf order",
   emptyTopic.map((slot) => slot.slotId).join(",") === "cover,toc,01,02,04,05,06,07,08,03",
 );
-assert("gated 07 waits empty", emptyTopic.find((slot) => slot.slotId === "07")?.kind === "waiting");
+assert(
+  "gated 07 is the schema face",
+  emptyTopic.find((slot) => slot.slotId === "07")?.kind === "ready" &&
+    bodyReady(emptyTopic, "07").includes("场域与关系"),
+);
 
 const md = `# 封面
 
@@ -162,8 +166,8 @@ assert(
   !retired.some((slot) => (slot.slotId as string) === "thirty_day"),
 );
 assert(
-  "retired key fills the next empty face",
-  bodyReady(retired, "02").includes("RETIRED_CANARY"),
+  "retired key does not take a face",
+  !retired.some((slot) => slot.kind === "ready" && slot.page.body.includes("RETIRED_CANARY")),
 );
 
 function bodyReady(
@@ -207,8 +211,8 @@ assert(
 );
 
 const htmlSlots = buildDeliverySlotMap(md, "zh");
-assert("html pane still receives the brief", htmlSlots.SLOT_BODY_DECISION_BRIEF?.includes("BRIEF_CANARY") === true);
-assert("html pane still receives 06-C source", htmlSlots.SLOT_BODY_SELF_REGULATION?.includes("RETUNE_CANARY") === true);
+assert("html pane still receives the brief", htmlSlots.SLOT_BODY_01?.includes("BRIEF_CANARY") === true);
+assert("html pane 06 keeps 06-C", htmlSlots.SLOT_BODY_06?.includes("RETUNE_CANARY") === true);
 
 console.log("\n========================================\n");
 if (failures.length) {

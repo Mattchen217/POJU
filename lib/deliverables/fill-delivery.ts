@@ -6,16 +6,16 @@ import {
   assertSkeletonUnchanged,
   fillDeliverableHtml,
 } from "@/lib/deliverables/fill-html";
-import { DECISION_REPORT_TEMPLATE } from "@/lib/deliverables/templates/decision-report";
+import {
+  decisionReportPanes,
+  renderDecisionReportTemplate,
+} from "@/lib/deliverables/templates/decision-report";
 import {
   deliveryAppendixCopy,
   deliveryEvidenceLabelPlain,
-  deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
-import {
-  DELIVERY_SEGMENT_KEYS,
-  type DeliverySegmentKey,
-} from "@/lib/llm/pro/delivery/delivery-schema";
+import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
+import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import { collectDeliveryEvidenceTerms } from "@/lib/poju/collect-delivery-evidence-terms";
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
@@ -31,14 +31,14 @@ import {
   type DeliveryShelfSlotId,
 } from "@/lib/poju/delivery-shelf-slots";
 
-/** Fixed panes in decision-report.template (no TOC pane). */
-export const DECISION_REPORT_SLOT_IDS = [
-  "cover",
-  ...DELIVERY_SEGMENT_KEYS,
-  "appendix",
-] as const;
+/** Default download chapters. 07 is absent until decisionReportSlotIds(topic) inserts it. */
+export const DECISION_REPORT_SLOT_IDS = decisionReportPanes(null).map((pane) => pane.id);
 
-export type DecisionReportSlotId = (typeof DECISION_REPORT_SLOT_IDS)[number];
+export function decisionReportSlotIds(topic?: string | null): readonly string[] {
+  return decisionReportPanes(topic).map((pane) => pane.id);
+}
+
+export type DecisionReportSlotId = string;
 
 function bodySlotKey(id: DecisionReportSlotId): string {
   return `SLOT_BODY_${id.toUpperCase()}`;
@@ -66,11 +66,9 @@ function defaultTocLabel(id: DecisionReportSlotId, locale: string): string {
     if (b.startsWith("fr")) return "Couverture";
     return "Cover";
   }
-  if (id === "appendix") return deliveryAppendixCopy(locale).heading;
-  if ((DELIVERY_SEGMENT_KEYS as readonly string[]).includes(id)) {
-    return deliverySectionHeading(id as DeliverySegmentKey, locale);
-  }
-  return id;
+  if (id === "03" || id === "appendix") return deliveryAppendixCopy(locale).heading;
+  const face = DECISION_PAGE_SCHEMAS[id as "01"];
+  return face?.title ?? id;
 }
 
 export function buildDeliverySlotMap(
@@ -79,8 +77,15 @@ export function buildDeliverySlotMap(
   opts?: BuildDeliveryInteractiveHtmlOptions,
 ): Record<string, string> {
   const zh = locale.startsWith("zh");
+  const topic = deliveryTopicFromSignals({ topic: opts?.topic, question: opts?.originalQuestion });
   const pages = buildDeliveryBookPages(fullText);
-  const shelf = buildDeliveryShelfSlots(fullText, { locale, complete: true });
+  const shelf = buildDeliveryShelfSlots(fullText, {
+    locale,
+    complete: true,
+    topic,
+    question: opts?.originalQuestion,
+  });
+  const slotIds = decisionReportSlotIds(topic);
   const evidenceLabel = deliveryEvidenceLabelPlain(locale);
   const evidenceTerms = collectDeliveryEvidenceTerms(fullText, locale);
   const appendixCopy = deliveryAppendixCopy(locale);
@@ -134,15 +139,11 @@ export function buildDeliverySlotMap(
     SLOT_READING_HINT: escapeDeliveryHtml(readingHint),
     SLOT_PRIVACY: escapeDeliveryHtml(privacy),
     SLOT_DISCLAIMER: escapeDeliveryHtml(disclaimer),
-    SLOT_PAGE_LABEL: `1 / ${DECISION_REPORT_SLOT_IDS.length}`,
+    SLOT_PAGE_LABEL: `1 / ${slotIds.length}`,
     SLOT_GLOSSARY_JSON: "[]",
     SLOT_AUDIO_HTML: audioHtml,
   };
 
-  // HTML panes stay on v1 keys (decision-report template). Read those
-  // chapters from the H2 split. The in-app shelf has already folded them
-  // onto 01–08, so a shelf-id lookup would miss every body.
-  const pageBySourceId = new Map(pages.map((page) => [page.id, page]));
   const readyById = new Map<
     DeliveryShelfSlotId,
     Extract<ReturnType<typeof buildDeliveryShelfSlots>[number], { kind: "ready" }>
@@ -151,10 +152,9 @@ export function buildDeliverySlotMap(
     if (s.kind === "ready") readyById.set(s.slotId, s);
   }
 
-  DECISION_REPORT_SLOT_IDS.forEach((id, pageIndex) => {
-    const source = pageBySourceId.get(id);
+  slotIds.forEach((id, pageIndex) => {
     const ready = readyById.get(id as DeliveryShelfSlotId);
-    const page = source ?? ready?.page;
+    const page = ready?.page;
     const tocLabel = page
       ? tocLabelForPage(page.id, page.title, locale)
       : defaultTocLabel(id, locale);
@@ -189,8 +189,10 @@ export function fillDecisionReportHtml(
   locale: string,
   opts?: BuildDeliveryInteractiveHtmlOptions,
 ): string {
+  const topic = deliveryTopicFromSignals({ topic: opts?.topic, question: opts?.originalQuestion });
+  const template = renderDecisionReportTemplate(topic);
   const slots = buildDeliverySlotMap(fullText, locale, opts);
-  const html = fillDeliverableHtml(DECISION_REPORT_TEMPLATE, slots);
-  maybeAssertSkeleton(DECISION_REPORT_TEMPLATE, html);
+  const html = fillDeliverableHtml(template, slots);
+  maybeAssertSkeleton(template, html);
   return html;
 }

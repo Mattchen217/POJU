@@ -7,7 +7,7 @@
  * - `pageFeedFlags("06")` 用近步旗标；`shelfFaceFeed("06")` 同时给出 06-C
  * - DAG 任务 id 仍是内部键。`shelfFaceDispatchKeys` 把它们收成一页
  *
- * 07 没有内部纸，有题目才出现在书架上。
+ * 07 没有内部纸，也没有 DAG 任务。题目打开时，读路径用页骨架写一页。
  */
 
 import {

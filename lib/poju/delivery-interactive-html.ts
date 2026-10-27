@@ -40,6 +40,8 @@ export type DeliveryInteractiveHtmlMeta = {
   reportDate?: string;
   /** Cover / document title override. */
   title?: string;
+  /** Shelf topic. Opens HTML pane 07 only when the topic gate matches. */
+  topic?: string | null;
 };
 
 export type BuildDeliveryInteractiveHtmlOptions = DeliveryInteractiveHtmlMeta & {

@@ -231,8 +231,8 @@ export function DeliveryBookStage({
   const zh = locale.startsWith("zh");
 
   const slots = useMemo(
-    () => buildDeliveryShelfSlots(fullText, { locale, complete, topic }),
-    [fullText, locale, complete, topic],
+    () => buildDeliveryShelfSlots(fullText, { locale, complete, topic, question: originalQuestion }),
+    [fullText, locale, complete, topic, originalQuestion],
   );
 
   const readyById = useMemo(() => {

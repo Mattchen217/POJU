@@ -11,6 +11,7 @@ import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
+import { groupDeliverySectionsByFace } from "@/lib/llm/pro/delivery/shelf-face-map";
 import { DELIVERY_V2_EVIDENCE_LABEL_RE } from "@/lib/poju/delivery-report-v2-split";
 import {
   splitProseWithH3,
@@ -112,11 +113,16 @@ export function DeliverySectionBodyV2({
 export function DeliveryReportV2({
   fullText,
   locale,
+  topic = null,
+  question = null,
 }: {
   fullText: string;
   locale: string;
+  /** 换场 / 迁移 / 合伙 / 亲密 / joint，或由 deliveryTopicFromSignals 收好的题。 */
+  topic?: string | null;
+  question?: string | null;
 }) {
-  const sections = splitSections(fullText);
+  const sections = groupDeliverySectionsByFace(splitSections(fullText), { topic, question });
 
   return (
     <div className="poju-delivery-v2">

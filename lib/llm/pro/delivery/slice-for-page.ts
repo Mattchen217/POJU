@@ -484,6 +484,45 @@ export function page07Applies(topic?: string | null): boolean {
   return PAGE07_TOPICS.has(topic.trim());
 }
 
+export type DeliveryShelfTopicSignals = {
+  /** Already-classified topic code, when the caller has one. */
+  topic?: string | null;
+  /** User question. A known 07 stem inside it opens the gate. */
+  question?: string | null;
+  pivotChartPath?: "solo" | "dyad" | null;
+  partnerBazi?: "present" | "absent" | null;
+  /** Joint decision session. Opens 07 as `joint` when the question has no finer stem. */
+  joint?: boolean | null;
+};
+
+/** Longest known 07 stem inside the text. Palace names such as 官禄 do not match. */
+export function matchPage07Topic(text?: string | null): string | null {
+  const raw = text?.trim();
+  if (!raw) return null;
+  if (PAGE07_TOPICS.has(raw)) return raw;
+  const stems = [...PAGE07_TOPICS].sort((a, b) => b.length - a.length);
+  for (const stem of stems) {
+    if (raw.includes(stem)) return stem;
+  }
+  return null;
+}
+
+/**
+ * Live shelf topic. Question stems win, then a joint/dyad signal, then an explicit topic.
+ * `general` / `官禄` / `career` stay closed unless a 07 stem or joint signal is also present.
+ */
+export function deliveryTopicFromSignals(input: DeliveryShelfTopicSignals): string | null {
+  const fromQuestion = matchPage07Topic(input.question);
+  if (fromQuestion) return fromQuestion;
+  const fromTopic = matchPage07Topic(input.topic);
+  if (fromTopic) return fromTopic;
+  if (input.joint || input.pivotChartPath === "dyad" || input.partnerBazi === "present") {
+    return "joint";
+  }
+  const explicit = input.topic?.trim();
+  return explicit || null;
+}
+
 /** 主叙事阅读序，07 按题插入，03 固定在包尾。 */
 export function readingOrderForTopic(topic?: string | null): DecisionPageId[] {
   const order: DecisionPageId[] = ["01", "02", "04", "05", "06"];
