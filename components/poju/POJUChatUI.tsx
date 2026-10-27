@@ -1099,12 +1099,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
 
     const cleared = prepareUnlockReleaseSession(sessionRef.current, pending);
-    const jointHoldMs = cleared.joint_decision ? 3000 : 0;
     void (async () => {
-      // Joint (initiator + invitee): toast first, then user bubble + thinking + model.
-      if (jointHoldMs > 0) {
-        await new Promise((r) => setTimeout(r, jointHoldMs));
-      }
+      // Joint + solo: paint question + thinking immediately. PASS tip is a parallel
+      // 3s overlay (already dispatched) — never gate the model send on that timer.
       onSessionUpdate(cleared);
       await savePOJUSession(cleared);
       await new Promise<void>((resolve) => {

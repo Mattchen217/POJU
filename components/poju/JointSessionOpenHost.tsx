@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Joint open: agree → birth → 10s avatar prep (same as solo) → portrait + PASS charge
- * in parallel → close portrait → 3s PASS toast (or tip under welcome + retry) →
- * only then unlock + auto-send shared question into stage 1.
+ * Joint open (initiator = invitee):
+ * 10s wait page = work window: PASS charge + baseline portrait generate in parallel.
+ * At 10s → open portrait immediately. On close → immediate PASS tip (or insufficient
+ * copy) + paint question + model thinking + send. No idle gap after close.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -121,6 +122,9 @@ export function JointSessionOpenHost({
   /** Last birth used for prepare/charge — needed for PASS retry. */
   const lastBirthRef = useRef<BirthInfo | null>(null);
   const previewSessionIdRef = useRef<string | null>(null);
+  /** Pre-hydrate during 10s / portrait so close → tip + send is instant. */
+  const hydratedSessionIdRef = useRef<string | null>(null);
+  const hydratePromiseRef = useRef<Promise<string> | null>(null);
 
   const loadJoint = useCallback(async () => {
     const res = await fetch(`/api/joint/${jointId}`, { credentials: "same-origin" });
@@ -281,6 +285,9 @@ export function JointSessionOpenHost({
   }
 
   function beginCharge() {
+    if (chargeRef.current.status === "ok" || chargeRef.current.status === "fail") {
+      return;
+    }
     chargeRef.current = { status: "pending" };
     void (async () => {
       try {
@@ -300,7 +307,6 @@ export function JointSessionOpenHost({
             status: "fail",
             reason: data.error ?? "charge_failed",
           };
-          // Portrait already closed → show gate under welcome (initiator + invitee).
           if (tipShownRef.current && !stage1StartedRef.current) {
             stage1StartedRef.current = true;
             await injectPassGateUnderWelcome(chargeRef.current.reason);
@@ -313,7 +319,10 @@ export function JointSessionOpenHost({
           already_charged: Boolean(data.already_charged),
           seed: data.seed,
         };
-        // Portrait already closed while charge was in flight → tip + stage1 now.
+        // Warm hydrate while still on wait page / portrait (close must be instant).
+        if (matrixPayloadRef.current && lastBirthRef.current) {
+          void ensureHydratedSession(chargeRef.current);
+        }
         if (tipShownRef.current && !stage1StartedRef.current) {
           stage1StartedRef.current = true;
           try {
@@ -336,13 +345,39 @@ export function JointSessionOpenHost({
   }
 
   async function waitForCharge(): Promise<ChargeResult> {
-    for (let i = 0; i < 80 && chargeRef.current.status === "pending"; i++) {
-      await new Promise((r) => setTimeout(r, 250));
+    // Charge starts at T=0 of the 10s page — should already be settled on close.
+    for (let i = 0; i < 40 && chargeRef.current.status === "pending"; i++) {
+      await new Promise((r) => setTimeout(r, 100));
     }
     return chargeRef.current;
   }
 
-  /** 10s avatar prep (no PASS / no model) → flash → preview chat + portrait + charge. */
+  function ensureHydratedSession(
+    final: Extract<ChargeResult, { status: "ok" }>,
+  ): Promise<string> {
+    if (hydratedSessionIdRef.current) {
+      return Promise.resolve(hydratedSessionIdRef.current);
+    }
+    if (hydratePromiseRef.current) return hydratePromiseRef.current;
+    const birth = lastBirthRef.current;
+    if (!birth) {
+      return Promise.reject(new Error("self_birth_missing"));
+    }
+    const p = hydrateJointSessionFromSeed(final.seed, birth, {
+      matrixPayload: matrixPayloadRef.current,
+      locale,
+    }).then(({ session_id }) => {
+      hydratedSessionIdRef.current = session_id;
+      return session_id;
+    });
+    hydratePromiseRef.current = p;
+    return p;
+  }
+
+  /**
+   * 10s wait = work window: PASS deduct + baseline portrait in parallel.
+   * Then open portrait immediately; stage1 fires on close with no idle gap.
+   */
   async function runPrepareThenPortrait(birth: BirthInfo) {
     lastBirthRef.current = birth;
     startedAtRef.current = Date.now();
@@ -352,6 +387,8 @@ export function JointSessionOpenHost({
     setPrepError(null);
     matrixPayloadRef.current = null;
     previewSessionIdRef.current = null;
+    hydratedSessionIdRef.current = null;
+    hydratePromiseRef.current = null;
 
     let profileId: string;
     try {
@@ -371,8 +408,10 @@ export function JointSessionOpenHost({
     prepare.setPhase("preparing");
     setPhase("preparing");
 
+    // PASS charge starts with the 10s page — not after it.
+    beginCharge();
+
     try {
-      // Compute baseline portrait during the 10s anim — not after it.
       const [result] = await Promise.all([
         finalizeWorkspacePrepare(profileId, locale),
         waitRemainingMinSpline(startedAtRef.current, PREVIEW_MATRIX_MIN_PREP_MS),
@@ -391,7 +430,6 @@ export function JointSessionOpenHost({
         unlock_status: "preview" as const,
       };
 
-      // Warm prepare context first so chat + vault modal paint without a second load.
       prepare.setMatrixPayload(result.matrixPayload);
       prepare.setSession(jointSession);
       prepare.openRight();
@@ -399,11 +437,16 @@ export function JointSessionOpenHost({
       notifyDocVaultUpdated();
       void savePOJUSession(jointSession);
 
-      beginCharge();
+      // Charge usually done by now — hydrate while user reads the portrait.
+      // Read via spread so CF doesn't stick on the earlier `{ status: "pending" }` assign.
+      const charged = { ...chargeRef.current } as ChargeResult;
+      if (charged.status === "ok") {
+        void ensureHydratedSession(charged);
+      }
+
       markAwaitJointPortraitClose(jointId);
       prepare.setPhase("chat");
       setPhase("awaiting_tip");
-      // Open immediately with precomputed payload — no post-wait spinner.
       requestBaselineAutoOpen(profileId, result.matrixPayload);
     } catch (e) {
       console.error("[joint-open]", e);
@@ -416,29 +459,18 @@ export function JointSessionOpenHost({
   }
 
   async function enterStage1AfterCharge(final: Extract<ChargeResult, { status: "ok" }>) {
-    const birth = lastBirthRef.current;
-    if (!birth) {
-      setBlockedMsg(t("err_birth_required"));
-      setPhase("pass_blocked");
-      return;
-    }
-    const { session_id } = await hydrateJointSessionFromSeed(final.seed, birth, {
-      matrixPayload: matrixPayloadRef.current,
-      locale,
-    });
-    // Same for initiator + invitee: 3s PASS tip, then chat paints question + thinking + model.
+    // Toast first — visible while hydrate/resume finish (usually already done).
     dispatchPassSpendToast({ amount: 1, locale });
+    const session_id = await ensureHydratedSession(final);
     markReleasePendingQuestion(session_id);
     await prepare.resumeSession(session_id, locale);
-    // Bump session so release effect re-runs even if session_id was seen before.
     const live = prepare.session;
     if (live?.session_id === session_id) {
       prepare.setSession({ ...live });
     }
     notifyJointListUpdated();
     setPhase("done");
-    // Keep host mounted (done → empty) — do not onClose(); clearing openJointId
-    // remounts chat and aborts the 3s tip → auto-send pipeline for both roles.
+    // Keep host mounted — clearing openJointId remounts chat mid tip/send.
     onEnteredChat?.(session_id);
   }
 
@@ -514,6 +546,8 @@ export function JointSessionOpenHost({
     tipShownRef.current = false;
     stage1StartedRef.current = false;
     chargeRef.current = { status: "pending" };
+    hydratedSessionIdRef.current = null;
+    hydratePromiseRef.current = null;
     setPhase("preparing");
     prepare.setPhase("preparing");
     try {
