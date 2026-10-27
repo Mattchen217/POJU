@@ -675,6 +675,9 @@ async function executeV3(
         sessionId: session_id,
         /** Lab 用人审看推理链：high；质量不过硬停 dump，不自动续跑。 */
         thinking_effort: "high",
+        closedHints:
+          (sealed as { anchor_closed_hints?: import("@/lib/companion/pregen-daily-anchors").DailyAnchorClosedHints })
+            .anchor_closed_hints ?? null,
       });
       for (const slot of pair.generated) {
         // Lab keeps draft cards even when pair_gate fails (for dump / 人审).
@@ -908,6 +911,9 @@ async function executeV3(
         locale: companionLocale,
         sessionId: session_id,
         thinking_effort: "high",
+        closedHints:
+          (sealed as { anchor_closed_hints?: import("@/lib/companion/pregen-daily-anchors").DailyAnchorClosedHints })
+            .anchor_closed_hints ?? null,
       });
       for (const slot of pair.generated) {
         // Only count as filled when gate passed; still keep draft for dump when failed.

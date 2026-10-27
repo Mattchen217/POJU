@@ -792,6 +792,86 @@ function sanitizeEvidence(raw: unknown): unknown[] {
       field_path: clip(o.field_path ?? o.path ?? "body", 80) || "body",
       markers: arrClip(o.markers ?? o.tags, 8, 40),
       gloss: clipOpt(o.gloss, 280),
+      metaphysics_evidence: clipOpt(o.metaphysics_evidence, 1200),
+      science_evidence: clipOpt(o.science_evidence, 1200),
+    };
+  });
+}
+
+/** Shared why_cards sanitizer for situation / patterns / bottleneck. */
+function sanitizeWhyCardsLoose(
+  root: Record<string, unknown>,
+  notes: string[],
+  opts: { maxCards: number; minCards: number; pageLabel: string },
+):
+  | { ok: true; why_cards: Array<{ title: string; surface: string; essence: string; chart_anchors: string[] }> }
+  | { ok: false; reason: string } {
+  const whySrc = Array.isArray(root.why_cards)
+    ? root.why_cards
+    : Array.isArray(root.cards)
+      ? root.cards
+      : [];
+  let why_cards = whySrc.slice(0, opts.maxCards).map((item, i) => {
+    const o = asObj(item) ?? {};
+    const title = clip(o.title ?? o.heading, 80) || `${opts.pageLabel}${i + 1}`;
+    const surface = clip(o.surface ?? o.symptom, 280);
+    const essence = clip(o.essence ?? o.body ?? o.text ?? o.content, 480);
+    const chart_anchors = parseChartAnchors(
+      o.chart_anchors ?? o.anchors ?? o.bazi_basis,
+    );
+    return { title, surface, essence, chart_anchors };
+  });
+  why_cards = why_cards
+    .map((c) => {
+      const before = c.essence.trim();
+      const after = softRepairThirdPartyAgencyProse(before, []);
+      if (after !== before) {
+        notes.push(`soft_repair_third_party_essence:${c.title.slice(0, 24)}`);
+      }
+      return { ...c, essence: after };
+    })
+    .filter((c) => Boolean(c.surface && c.essence && c.essence !== "—"));
+  if (why_cards.length < opts.minCards) {
+    return { ok: false, reason: `why_cards_lt_${opts.minCards}` };
+  }
+  const dirtyEssence = why_cards.find((c) =>
+    detectKnownThirdPartyAgency(c.essence, []),
+  );
+  if (dirtyEssence) {
+    return { ok: false, reason: "third_party_agency_in_essence" };
+  }
+  const thinEssence = why_cards.find((c) => c.essence.trim().length < 40);
+  if (thinEssence) {
+    notes.push(
+      `thin_essence:${thinEssence.title.slice(0, 24)}:len=${thinEssence.essence.trim().length}`,
+    );
+    return { ok: false, reason: "why_card_essence_too_thin" };
+  }
+  return { ok: true, why_cards: why_cards.slice(0, opts.maxCards) };
+}
+
+function sanitizeDashboardLoose(
+  root: Record<string, unknown>,
+  notes: string[],
+  allowed: readonly number[] | null | undefined,
+  maxItems: number,
+): Array<{ key: string; label: string; score: number | null; note: string | undefined }> {
+  const dashRaw = Array.isArray(root.dashboard) ? root.dashboard : [];
+  return dashRaw.slice(0, maxItems).map((item, i) => {
+    const o = asObj(item) ?? {};
+    const key = clip(o.key ?? `m${i}`, 40) || `m${i}`;
+    const cleaned = sanitizeDashboardMetric(
+      numOrNull(o.score ?? o.value),
+      clipOpt(o.note, 160),
+      notes,
+      allowed,
+    );
+    const rawLabel = clip(o.label ?? o.name ?? o.key, 60) || `Metric ${i + 1}`;
+    return {
+      key,
+      label: localizeDashboardLabel(key, rawLabel, cleaned.note),
+      score: cleaned.score,
+      note: cleaned.note,
     };
   });
 }
@@ -1091,10 +1171,166 @@ export function sanitizePageJson(
         );
         return { ok: false, structural: true, reason: "why_card_essence_too_thin", notes };
       }
+      const confirmed_facts = arrClip(
+        root.confirmed_facts ?? root.facts ?? root.confirmed,
+        8,
+        240,
+      );
+      const open_assumptions = arrClip(
+        root.open_assumptions ?? root.assumptions ?? root.hypotheses,
+        8,
+        240,
+      );
+      const info_gaps = arrClip(
+        root.info_gaps ?? root.gaps ?? root.missing_info,
+        8,
+        240,
+      );
       candidate = {
         page: "situation_analysis",
         dashboard,
         why_cards: why_cards.slice(0, 5),
+        confirmed_facts,
+        open_assumptions,
+        info_gaps,
+        evidence: sanitizeEvidence(root.evidence),
+      };
+      break;
+    }
+    case "personal_decision_patterns": {
+      const dashboard = sanitizeDashboardLoose(
+        root,
+        notes,
+        opts?.allowedDashboardScores,
+        4,
+      );
+      const cards = sanitizeWhyCardsLoose(root, notes, {
+        maxCards: 3,
+        minCards: 1,
+        pageLabel: "模式",
+      });
+      if (!cards.ok) {
+        return { ok: false, structural: true, reason: cards.reason, notes };
+      }
+      candidate = {
+        page: "personal_decision_patterns",
+        dashboard,
+        why_cards: cards.why_cards,
+        evidence: sanitizeEvidence(root.evidence),
+      };
+      break;
+    }
+    case "bottleneck_analysis": {
+      const dashboard = sanitizeDashboardLoose(
+        root,
+        notes,
+        opts?.allowedDashboardScores,
+        4,
+      );
+      const cards = sanitizeWhyCardsLoose(root, notes, {
+        maxCards: 3,
+        minCards: 1,
+        pageLabel: "障碍",
+      });
+      if (!cards.ok) {
+        return { ok: false, structural: true, reason: cards.reason, notes };
+      }
+      candidate = {
+        page: "bottleneck_analysis",
+        dashboard,
+        why_cards: cards.why_cards,
+        evidence: sanitizeEvidence(root.evidence),
+      };
+      break;
+    }
+    case "strategic_options": {
+      const optSrc = Array.isArray(root.options) ? root.options : [];
+      const options = optSrc.slice(0, 4).map((item, i) => {
+        const o = asObj(item) ?? {};
+        return {
+          name: clip(o.name ?? o.title ?? o.label, 80) || `选项${i + 1}`,
+          summary: clip(o.summary ?? o.body ?? o.text, 320),
+          upside: clip(o.upside ?? o.benefit ?? o.gain, 240),
+          cost: clip(o.cost ?? o.price ?? o.downside, 240),
+          risk: clip(o.risk ?? o.hazard, 240),
+          reversibility: clip(o.reversibility ?? o.reversible ?? o.exit_cost, 160),
+          chart_anchors: parseChartAnchors(
+            o.chart_anchors ?? o.anchors ?? o.bazi_basis,
+          ),
+        };
+      }).filter(
+        (o) =>
+          Boolean(o.name && o.summary && o.upside && o.cost && o.risk && o.reversibility),
+      );
+      if (options.length < 2) {
+        return { ok: false, structural: true, reason: "options_lt_2", notes };
+      }
+      candidate = {
+        page: "strategic_options",
+        options,
+        evidence: sanitizeEvidence(root.evidence),
+      };
+      break;
+    }
+    case "recommended_strategy": {
+      const judgment = clip(root.core_judgment ?? root.judgment ?? root.answer, 400);
+      if (!judgment) {
+        return { ok: false, structural: true, reason: "missing_core_judgment", notes };
+      }
+      const sanitizeStrategyTrack = (
+        raw: unknown,
+        role: "primary" | "backup",
+      ): Record<string, unknown> | null => {
+        const o = asObj(raw);
+        if (!o) {
+          notes.push(`missing_${role}_strategy`);
+          return null;
+        }
+        const name = clip(o.name ?? o.title ?? o.label, 100);
+        const why = clip(o.why ?? o.reason ?? o.rationale, 400);
+        if (!name || !why) {
+          notes.push(`${role}_missing_name_or_why`);
+          return null;
+        }
+        const exit = clip(o.exit ?? o.stop ?? o.quit_when, 280);
+        if (!exit) {
+          notes.push(`${role}_missing_exit`);
+          return null;
+        }
+        return {
+          name,
+          why,
+          when: clipOpt(o.when ?? o.condition ?? o.if, 280),
+          exit,
+          chart_anchors: parseChartAnchors(
+            o.chart_anchors ?? o.anchors ?? o.bazi_basis,
+          ),
+        };
+      };
+      const primary = sanitizeStrategyTrack(
+        root.primary ?? root.main ?? root.track_a,
+        "primary",
+      );
+      const backup = sanitizeStrategyTrack(
+        root.backup ?? root.aux ?? root.track_b,
+        "backup",
+      );
+      if (!primary || !backup) {
+        const exitMiss = notes.some((n) => n.includes("missing_exit"));
+        return {
+          ok: false,
+          structural: true,
+          reason: exitMiss
+            ? "strategy_missing_exit"
+            : "missing_primary_or_backup_strategy",
+          notes,
+        };
+      }
+      candidate = {
+        page: "recommended_strategy",
+        core_judgment: judgment,
+        primary,
+        backup,
         evidence: sanitizeEvidence(root.evidence),
       };
       break;

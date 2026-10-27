@@ -1,5 +1,5 @@
 /**
- * Layer 2 smoke — 6-page DeliverySegmentKey + metaphysics_pack on BreakthroughCore.
+ * Layer 2 smoke — v1 10-segment DeliverySegmentKey + metaphysics_pack on BreakthroughCore.
  * Run: pnpm exec tsx scripts/test-delivery-schema-layer2.ts
  */
 import {
@@ -18,16 +18,16 @@ import { makeTestBreakthroughCore } from "../lib/poju/test-breakthrough-core-fix
 import { buildMetaphysicsPack, type ProfileStructured } from "../lib/calculations";
 import { guessDeliverySegmentKey } from "../lib/poju/parse-delivery";
 import { DELIVERY_SHELF_SLOT_IDS } from "../lib/poju/delivery-shelf-slots";
+import { V1_DELIVERY_SEGMENT_KEYS } from "../lib/llm/pro/delivery/segment-key-alias";
 
 function assert(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
 }
 
-assert(DELIVERY_SEGMENT_KEYS.length === 6, "exactly 6 active segment keys");
+assert(DELIVERY_SEGMENT_KEYS.length === 10, "exactly 10 active segment keys");
 assert(
-  DELIVERY_SEGMENT_KEYS.join("|") ===
-    "direct_answer|foundation|science_action|metaphysics_action|risk_guard|signals_close",
-  "6-key order (thirty_day retired)",
+  DELIVERY_SEGMENT_KEYS.join("|") === V1_DELIVERY_SEGMENT_KEYS.join("|"),
+  "10-key order matches V1_DELIVERY_SEGMENT_KEYS",
 );
 assert(DELIVERY_BOOTSTRAP_SEGMENT === "decision_brief", "bootstrap = direct_answer");
 assert(DELIVERY_CLOSING_SEGMENT === "validation_close", "closing = signals_close");
@@ -80,7 +80,7 @@ assert(
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("thirty_day") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("energy_base") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("preface"),
-  "shelf slots use 6 active keys",
+  "shelf slots use 10 active keys",
 );
 
 const filled = fillMissingDeliverySegments({});
@@ -96,12 +96,12 @@ assert(validated.ok === false, "soft missing others");
 if (validated.ok !== false) throw new Error("expected soft fail");
 assert(validated.partial != null, "has partial");
 assert(
-  Boolean(validated.partial?.foundation?.core_conclusion.includes("继续")),
-  "legacy energy_base maps to foundation",
+  Boolean(validated.partial?.situation_analysis?.core_conclusion.includes("继续")),
+  "legacy energy_base maps to situation_analysis",
 );
 assert(
-  Boolean(validated.partial?.direct_answer?.core_conclusion.includes("直答")),
-  "legacy preface maps to direct_answer",
+  Boolean(validated.partial?.decision_brief?.core_conclusion.includes("直答")),
+  "legacy preface maps to decision_brief",
 );
 
 const structured: ProfileStructured = {

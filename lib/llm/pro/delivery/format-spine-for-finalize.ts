@@ -420,6 +420,7 @@ export function formatSpineSliceForSegment(
         `【直答铁律】只给结论头:正面回答 original_question(该不该/是否/何时=阶段趋势+条件成熟,不报日期)+ 一句主路径「我最建议你走这条」+ 一句为什么。不铺论证(论证归 foundation)。` +
         `chart_anchors/bazi_basis 须继承主辅承重锚(≥1)。禁止空锚定稿。`
       );
+    case "situation_analysis":
     case "foundation":
       return (
         `energy_structure:\n${

@@ -86,7 +86,7 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
       lower,
     )
   ) {
-    return "foundation";
+    return "situation_analysis";
   }
   if (
     /破局策略|显性操盘|科学药方|行为策略|scientific path|explicit playbook|science action|第三部分|Part III\b/i.test(
@@ -125,13 +125,13 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "decision_brief";
   }
   if (/能量结构|energy structure/i.test(lower)) {
-    return "foundation";
+    return "situation_analysis";
   }
   if (/处境|situation/i.test(lower)) {
-    return "foundation";
+    return "situation_analysis";
   }
   if (/抉择|crossroad/i.test(lower)) {
-    return "foundation";
+    return "situation_analysis";
   }
   if (/觉察|awareness/i.test(lower)) {
     return "validation_risk";

@@ -34,19 +34,22 @@ export const CompanionBriefSchema = z.object({
 export type CompanionBrief = z.infer<typeof CompanionBriefSchema>;
 
 /**
- * v2 日提醒：宏观四段 + 依据折层（锚定用户问题与 P1 主辅战略，不轮转 P3 具体 means）。
+ * v1 决策锚五槽（SSOT §5.4）· 字段名兼容既有存储：
+ * today_is=今日主题句 · suitable=适合关注 · suggestion=今天可以做 ·
+ * unsuitable=今天需要避免 · evidence=今日锚点（决策原则；可选含传统视角标注）。
+ * 流日能量降为可选背景，不作主叙事。
  */
 export const CompanionDayCardsSchema = z.object({
-  /** 今天是什么 — 今日场域/气口（白话） */
+  /** 今日主题句 — 贴合策略视角，非空口号 */
   today_is: z.string().min(1),
-  /** 今天适合做什么 — 对着本题主辅边界的宜（宏观） */
+  /** 适合关注 — 行动/信息类型 */
   suitable: z.string().min(1),
-  /** 今天不适合做什么 — 宜按住的冲动（宏观） */
+  /** 今天需要避免 — 与本题风险边界相关 */
   unsuitable: z.string().min(1),
-  /** 建议 — 一条总拿捏（态度/时机/边界，非具体作业步骤） */
+  /** 今天可以做 — 类型化建议（非强制任务勾选） */
   suggestion: z.string().min(1),
   /**
-   * 依据批断：可含 ⟦t:闭集真词⟧ 金字 + 大白话连接；证明今日提醒有流日根。
+   * 今日锚点 — 一条可记住的决策原则；可含可选传统视角标注（⟦t:…⟧），非流日能量主文。
    */
   evidence: z.string().min(1),
 });
@@ -123,6 +126,17 @@ export const CompanionJobSchema = z.object({
   /** Filled reminders-30d HTML (template slots); refreshed on locale mismatch. */
   filled_html: z.string().optional(),
   filled_html_locale: z.string().optional(),
+  /**
+   * Seal-time closed-set hints from report pages 06/07/08/09 for Daily Anchor.
+   * Used by buildDailyAnchorSeeds so pair fills do not fall back to brief-only slices.
+   */
+  anchor_closed_hints: z
+    .object({
+      execute: z.array(z.string()).max(16).default([]),
+      regulate: z.array(z.string()).max(16).default([]),
+      validate: z.array(z.string()).max(16).default([]),
+    })
+    .optional(),
 });
 
 export type CompanionJob = z.infer<typeof CompanionJobSchema>;

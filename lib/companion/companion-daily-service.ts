@@ -231,6 +231,7 @@ export async function generateCompanionDayPairCards(input: {
   sessionId: string;
   thinking_effort?: ReasoningEffort;
   priorFingerprints?: string[];
+  closedHints?: import("./pregen-daily-anchors").DailyAnchorClosedHints | null;
 }): Promise<GenerateCompanionPairCardsResult> {
   const locale = normalizeCompanionLocale(input.locale);
   const feeds = input.days.slice(0, 2);
@@ -243,6 +244,7 @@ export async function generateCompanionDayPairCards(input: {
     locale,
     days: feeds,
     priorFingerprints: input.priorFingerprints,
+    closedHints: input.closedHints,
   });
 
   const thinking_effort: ReasoningEffort = input.thinking_effort ?? "medium";

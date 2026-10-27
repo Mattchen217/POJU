@@ -208,7 +208,11 @@ export async function createJointInvite(params: {
   };
 }
 
-/** Invitee agrees and submits birth → partner_ready (initiator can start alone). */
+/**
+ * Invitee agrees + submits birth → partner_ready.
+ * From this moment either side may start independently: peer PASS / stage1
+ * is NOT required for the other side to charge and open their own dialogue.
+ */
 export async function agreeJointInvite(params: {
   jointId: string;
   inviteeUserId: string;
@@ -296,7 +300,11 @@ export type JointStartResult =
     }
   | { ok: false; reason: string };
 
-/** Charge 1 PASS for current user and return dyad seed. Idempotent via pass_ref. */
+/**
+ * Charge 1 PASS for *this* user only and return dyad seed. Idempotent via pass_ref.
+ * Does not wait for the peer to buy/deduct PASS or enter stage1 — once both
+ * birth snapshots exist (agree done / entered 10s prepare), either side may call this.
+ */
 export async function startJointSide(params: {
   jointId: string;
   userId: string;
@@ -317,7 +325,8 @@ export async function startJointSide(params: {
   const isInvitee = joint.invitee_user_id === params.userId;
   if (!isInitiator && !isInvitee) return { ok: false, reason: "forbidden" };
 
-  // Initiator may start only after partner agreed + birth.
+  // Only gate: invitee must have agreed + birth (status leaves invited).
+  // Peer pass_ref / stage1 must never block this side.
   if (isInitiator && joint.status === "invited") {
     return { ok: false, reason: "waiting_for_partner" };
   }

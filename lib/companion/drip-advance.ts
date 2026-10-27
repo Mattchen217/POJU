@@ -126,6 +126,7 @@ export async function fillCompanionJobPair(
       locale: job.brief.locale,
       sessionId: job.session_id,
       thinking_effort: "medium",
+      closedHints: job.anchor_closed_hints ?? null,
     });
 
     const now = new Date().toISOString();

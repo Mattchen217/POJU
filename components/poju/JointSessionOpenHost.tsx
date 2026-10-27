@@ -193,7 +193,8 @@ export function JointSessionOpenHost({
         }
       }
 
-      // Initiator + invitee share the same prepare → portrait → PASS → stage1 path.
+      // Either side may enter 10s → chat once both births exist (partner_ready).
+      // Peer unpaid / not in stage1 must not block this side.
       if (
         (j.role === "initiator" && j.partner_ready && !j.my_charged) ||
         (j.role === "invitee" &&
@@ -270,9 +271,11 @@ export function JointSessionOpenHost({
           return;
         }
         if (data.joint) setJoint(data.joint);
+        // Agree+birth committed → peer may start immediately (even if we later fail PASS).
         notifyJointListUpdated();
       }
 
+      // Entering 10s wait = agreed + birth done for this side.
       setPhase("preparing");
       void runPrepareThenPortrait(args.birth);
     } catch {

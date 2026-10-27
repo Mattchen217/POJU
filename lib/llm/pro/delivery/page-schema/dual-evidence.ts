@@ -14,6 +14,22 @@ export type DualEvidenceParts = {
 const META_MARK = /【命理】/;
 const SCI_MARK = /【科学】/;
 
+/** Impersonation / pseudo-fusion phrases (A claiming science proof of bazi, etc.). */
+const PSEUDO_FUSION_RE =
+  /科学验证了八字|八字证明了|科学证明了八字|八字已被科学|命理证明了.*心理|科学证实了.*命理|用科学证明八字/;
+
+/** Science track that sounds like metaphysics verdict. */
+const SCI_AS_META_RE =
+  /日主|用神|忌神|十神|大运|流年|格局|神煞|奇门|玄空|五行生克定/;
+
+/** Metaphysics track that claims clinical/scientific proof. */
+const META_AS_SCI_RE =
+  /临床诊断|科学证明|实证研究证实|已被科学验证|心理学测量证实/;
+
+/** Soft case-binding heuristic for science track (must mention case-ish tokens). */
+const CASE_BIND_RE =
+  /你|本案|对方|关系|工作|收入|期限|收集|事实|选项|路径|协议|实验|验证|推进|停止|切换|窗口|决策|风险|成本|收益/;
+
 /** Split legacy combined evidence into dual parts. */
 export function splitDualEvidence(raw: string | null | undefined): DualEvidenceParts {
   const s = (raw ?? "").trim();
@@ -80,10 +96,6 @@ export function normalizeUnitDualEvidence<
   return { ...unit, ...dual };
 }
 
-/** Soft case-binding heuristic for science track (must mention case-ish tokens). */
-const CASE_BIND_RE =
-  /你|本案|对方|关系|工作|收入|期限|收集|事实|选项|路径|协议|实验|验证|推进|停止|切换|窗口|决策|风险|成本|收益/;
-
 export type DualEvidenceGateResult =
   | { ok: true }
   | { ok: false; reason: string };
@@ -104,6 +116,16 @@ export function gateDualEvidenceParts(
       return { ok: false, reason: "dual_science_unbound" };
     }
   }
+  const fused = `${parts.metaphysics_evidence}\n${parts.science_evidence}`;
+  if (PSEUDO_FUSION_RE.test(fused)) {
+    return { ok: false, reason: "dual_pseudo_fusion" };
+  }
+  if (parts.science_evidence && SCI_AS_META_RE.test(parts.science_evidence)) {
+    return { ok: false, reason: "dual_science_impersonates_meta" };
+  }
+  if (META_AS_SCI_RE.test(parts.metaphysics_evidence)) {
+    return { ok: false, reason: "dual_meta_impersonates_science" };
+  }
   // Metaphysics that would still apply to anyone after stripping chart terms → weak
   const stripped = parts.metaphysics_evidence
     .replace(/⟦w:[^⟧]*⟧/g, "")
@@ -116,4 +138,27 @@ export function gateDualEvidenceParts(
     }
   }
   return { ok: true };
+}
+
+/** Keys that hang dual-track evidence folds (01 / appendix exempt). */
+export const DUAL_EVIDENCE_SEGMENT_KEYS = new Set<string>([
+  "situation_analysis",
+  "personal_decision_patterns",
+  "bottleneck_analysis",
+  "strategic_options",
+  "recommended_strategy",
+  "execution_guidance",
+  "self_regulation",
+  "validation_risk",
+  "validation_close",
+  // legacy twins
+  "foundation",
+  "science_action",
+  "metaphysics_action",
+  "risk_guard",
+  "signals_close",
+]);
+
+export function segmentHangsDualEvidence(key: string): boolean {
+  return DUAL_EVIDENCE_SEGMENT_KEYS.has(key);
 }

@@ -113,11 +113,11 @@ export function companionUiLabels(locale: CompanionLocale): CompanionUiLabels {
   switch (locale) {
     case "en":
       return {
-        today: "What today is",
-        suitable: "Favors today",
-        unsuitable: "Hold back today",
-        suggestion: "Suggestion",
-        evidence: "Why today",
+        today: "Today's theme",
+        suitable: "Worth attending to",
+        unsuitable: "Worth avoiding today",
+        suggestion: "You can do today",
+        evidence: "Today's decision anchor",
         title: (dateKey, dayN) => `Eastern OS · Daily reminder · ${dateKey} (day ${dayN}/30)`,
         anchor: (p, b) => `Anchored primary: ${p} · backup: ${b}`,
         emailIntro: "Attached is today's Eastern OS reminder — open in a browser.",
@@ -155,17 +155,17 @@ export function companionUiLabels(locale: CompanionLocale): CompanionUiLabels {
       };
     default:
       return {
-        today: "今天是什么",
-        suitable: "今天适合",
-        unsuitable: "今天不宜",
-        suggestion: "建议",
-        evidence: "今日依据",
+        today: "今日主题",
+        suitable: "适合关注",
+        unsuitable: "今天需要避免",
+        suggestion: "今天可以做",
+        evidence: "今日锚点",
         title: (dateKey, dayN) => `Eastern OS · 每日提醒 · ${dateKey}（第 ${dayN}/30 日）`,
         anchor: (p, b) => `锚定主：${p} · 辅：${b}`,
         emailIntro: "附件是今日 Eastern OS 提醒页，请用浏览器打开。",
-        favorsPrefix: "适合：",
-        holdPrefix: "不宜：",
-        suggestionPrefix: "建议：",
+        favorsPrefix: "适合关注：",
+        holdPrefix: "需要避免：",
+        suggestionPrefix: "可以做：",
       };
   }
 }

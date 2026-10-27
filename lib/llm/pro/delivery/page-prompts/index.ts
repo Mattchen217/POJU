@@ -1,5 +1,5 @@
 /**
- * 交付页提示词索引 · v1 十段（复用旧 p1–p6 文件 + 别名）
+ * 交付页提示词索引 · v1 十段（03–06 独立 duty；01/02/07–09 复用既有文件）
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -9,6 +9,10 @@ import * as p3 from "./p3-science-action";
 import * as p4 from "./p4-metaphysics-action";
 import * as p5 from "./p5-risk-guard";
 import * as p6 from "./p6-signals-close";
+import * as pPatterns from "./p-patterns";
+import * as pBottleneck from "./p-bottleneck";
+import * as pOptions from "./p-options";
+import * as pStrategy from "./p-strategy";
 import * as thirtyDay from "./thirty-day-legacy";
 
 export {
@@ -29,10 +33,10 @@ type PagePromptModule = {
 const BY_KEY: Record<DeliverySegmentKey, PagePromptModule> = {
   decision_brief: p1 as PagePromptModule,
   situation_analysis: p2 as PagePromptModule,
-  personal_decision_patterns: p2 as PagePromptModule,
-  bottleneck_analysis: p2 as PagePromptModule,
-  strategic_options: p3 as PagePromptModule,
-  recommended_strategy: p1 as PagePromptModule,
+  personal_decision_patterns: pPatterns as PagePromptModule,
+  bottleneck_analysis: pBottleneck as PagePromptModule,
+  strategic_options: pOptions as PagePromptModule,
+  recommended_strategy: pStrategy as PagePromptModule,
   execution_guidance: p3 as PagePromptModule,
   self_regulation: p4 as PagePromptModule,
   validation_risk: p5 as PagePromptModule,
@@ -72,10 +76,10 @@ export function assignDutyForKey(
 export const ACTIVE_PAGE_PROMPT_FILES = [
   { key: "decision_brief", label: p1.PAGE_LABEL, file: "p1-direct-answer.ts" },
   { key: "situation_analysis", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
-  { key: "personal_decision_patterns", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
-  { key: "bottleneck_analysis", label: p2.PAGE_LABEL, file: "p2-foundation.ts" },
-  { key: "strategic_options", label: p3.PAGE_LABEL, file: "p3-science-action.ts" },
-  { key: "recommended_strategy", label: p1.PAGE_LABEL, file: "p1-direct-answer.ts" },
+  { key: "personal_decision_patterns", label: pPatterns.PAGE_LABEL, file: "p-patterns.ts" },
+  { key: "bottleneck_analysis", label: pBottleneck.PAGE_LABEL, file: "p-bottleneck.ts" },
+  { key: "strategic_options", label: pOptions.PAGE_LABEL, file: "p-options.ts" },
+  { key: "recommended_strategy", label: pStrategy.PAGE_LABEL, file: "p-strategy.ts" },
   { key: "execution_guidance", label: p3.PAGE_LABEL, file: "p3-science-action.ts" },
   { key: "self_regulation", label: p4.PAGE_LABEL, file: "p4-metaphysics-action.ts" },
   { key: "validation_risk", label: p5.PAGE_LABEL, file: "p5-risk-guard.ts" },

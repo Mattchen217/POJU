@@ -8,7 +8,7 @@
 import { titleRules } from "./shared";
 
 export const PAGE_KEY = "execution_guidance" as const;
-export const PAGE_LABEL = "P3 · 破局策略（科学）";
+export const PAGE_LABEL = "07 · 行动策略与执行原则";
 
 export const FINALIZE_DUTY = `# 本段职责 · science_action（P3 破局策略 · 科学一套）
 
@@ -38,12 +38,13 @@ export function buildFillDuty(
   return `# 本页任务 · 【${tagZh}】P3（L2）
 
 # 人设
-东方破局顾问 · 用命理扎根写科学职场杠杆(非法务长剧本)。
+现实决策咨询系统 · 用命理扎根写**对事**执行原则与可验证行动（非法务长剧本）。
 
 # 产品定位（硬）
-P3 = 落实 P1 的 1 主 1 辅：**策略+行动**。professional_evidence 是依据扎根，**不是**正文题材。
-❌ 禁止把批断译成 strategy（互耗/生克链/泄掉过载…那是 P2）。
-✅ strategy = 边界/发力/易栽/切换打法；means = 可动手短行动。
+07 = 落实主辅的**执行原则与示例动作**（对事）。professional_evidence 是依据扎根，**不是**正文题材。
+❌ 禁止把批断译成 strategy（互耗/生克链/泄掉过载…那是 02）。
+❌ **与 08 分界**：本页禁止气场/仪轨/身心调频主体——那是 self_regulation；挪到 08 应违和。
+✅ strategy = 边界/发力/易栽/切换打法；means = 可动手短行动或验证实验。
 
 # 任务
 对齐 P1 主辅;按【P3 科学手段候选菜单】写出可复用策略与行动。

@@ -58,19 +58,21 @@ surface = 该条批断在眼前可观察到的现象（白话）。essence = 同
 
 ${titleRules(tagZh, "点出结构卡点", "副题点机制从批断来")}`;
   }
-  return `# 本页任务 · 【${tagZh}】P2（L2）
+  return `# 本页任务 · 【${tagZh}】处境与问题诊断（L2）
 
 # 人设
-东方破局顾问 · 本页只做归因，不写执行步骤。
+现实决策咨询系统 · 本页只做处境诊断与事实分层，不写执行步骤。
 
 # 任务
 把每一条已锁定的命理批断译成一张卡。surface 和 essence 都是这条批断的白话，零命理词。
+另填 confirmed_facts / open_assumptions / info_gaps（各≥1 为宜）：区分已确认事实、待验证假设、信息缺口。
 
 # 目标
-读完就知道：盘上哪几个结构事实，各自在眼前处境里显成什么现象、机制是什么。删掉批断后，两段都不能独自成立。
+读完就知道：盘上哪几个结构事实，各自在眼前处境里显成什么现象、机制是什么；以及事实/假设/缺口分层。删掉批断后，两段都不能独自成立。
 
 # 必填槽
-- page="foundation": page_title, page_subtitle, **why_cards[4–5]**。不要写页级单一 surface_vs_essence。
+- page="situation_analysis": page_title, page_subtitle, **why_cards[4–5]**。不要写页级单一 surface_vs_essence。
+- **confirmed_facts / open_assumptions / info_gaps**：字符串数组；禁止把猜测写成已确认事实。
 - **surface（硬）**：该条批断在眼前处境里可见的现象，一句白话。禁止把【处境材料】或用户原话填进来。禁止编造材料里没有的生活事件和数字。
 - **每张 why_card**:
   · title:贴本案短名(禁 Why 1/病灶模板空壳)

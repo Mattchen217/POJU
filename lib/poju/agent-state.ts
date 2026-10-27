@@ -582,8 +582,11 @@ export interface POJUAgentState {
 export const MIN_COLLECTING_USER_TURNS = 3;
 /** Strong skip-ahead — minimum user turns. */
 export const PUSH_MIN_TURNS = 2;
-/** Strong skip-ahead — minimum agenda coverage ratio. */
-export const PUSH_GATE = 0.6;
+/**
+ * Strong skip-ahead — minimum agenda coverage ratio.
+ * Raised from 0.6 → 0.85 so hard-push cannot skip most reality alignment.
+ */
+export const PUSH_GATE = 0.85;
 /** Overall agenda coverage required for normal confirmation. */
 export const AGENDA_COVERED_GATE = 1;
 /** @deprecated Display only — no longer used as delivery gate. */

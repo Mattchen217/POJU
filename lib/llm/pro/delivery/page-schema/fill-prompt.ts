@@ -47,6 +47,10 @@ import {
   resolvePageFeedPathOpts,
 } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
+import {
+  hangsDualEvidenceForSegment,
+  scienceDisciplinesForSegment,
+} from "@/lib/poju/report-blueprint";
 
 export type PageSchemaFillPromptOpts = {
   locale: string;
@@ -193,10 +197,23 @@ export function buildPageSchemaFillPrompt(
 - 删掉该条批断后，对应正文不得独自成立。`
       : null;
 
+  const disciplines = scienceDisciplinesForSegment(key);
+  const dualHang = hangsDualEvidenceForSegment(key);
+  const scienceSelectBlock =
+    !foundationTranslateOnly && dualHang && disciplines.length > 0
+      ? `# 本页科学轨选科闭集（硬 · 1–3 科 · 禁八科全开）
+优先学科：${disciplines.join("、")}。
+科学依据（science_evidence）只从上述学科点名本案机制；禁止堆砌未列学科术语；禁止「科学验证八字」。`
+      : !foundationTranslateOnly && dualHang
+        ? `# 本页挂双轨依据（硬）
+evidence / unit 须含 metaphysics_evidence + science_evidence；科学段须绑定本案事实或行动；禁止伪融合。`
+        : "";
+
   const system = [
     foundationTranslateOnly ? DELIVERY_FILL_L1_PLAIN_JUDGMENT : DELIVERY_FILL_L1_IDENTITY,
     foundationTranslateOnly ? "" : POJU_KNOWLEDGE_ROOTS,
     expressionContract,
+    scienceSelectBlock,
     fillDutyForKey(key, tag, { plain_judgment: foundationTranslateOnly }),
     plainModeBlock ??
       (isCompress

@@ -134,6 +134,10 @@ export const P2PageSchema = z.object({
   dashboard: z.array(DashboardMetricSchema).min(1).max(8),
   /** Fill targets 4–5; schema floor 2 keeps older sessions readable. */
   why_cards: z.array(WhyCardSchema).min(2).max(5),
+  /** v1 §4.02 · 已确认事实 / 待验证假设 / 信息缺口（宽入；旧会话可空）。 */
+  confirmed_facts: z.array(NonEmpty.max(240)).max(8).default([]),
+  open_assumptions: z.array(NonEmpty.max(240)).max(8).default([]),
+  info_gaps: z.array(NonEmpty.max(240)).max(8).default([]),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });
 
@@ -187,14 +191,15 @@ export const RecommendedStrategyPageSchema = z.object({
     name: NonEmpty.max(100),
     why: NonEmpty.max(400),
     when: NonEmpty.max(280).optional(),
-    exit: NonEmpty.max(280).optional(),
+    /** v1 · 停止/退出/切换触发（必填）。 */
+    exit: NonEmpty.max(280),
     chart_anchors: ChartAnchorsFieldSchema,
   }),
   backup: z.object({
     name: NonEmpty.max(100),
     why: NonEmpty.max(400),
     when: NonEmpty.max(280).optional(),
-    exit: NonEmpty.max(280).optional(),
+    exit: NonEmpty.max(280),
     chart_anchors: ChartAnchorsFieldSchema,
   }),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),

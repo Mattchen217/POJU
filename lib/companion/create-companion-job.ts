@@ -16,6 +16,7 @@ import type {
 } from "@/lib/poju/dyad-compat";
 
 import { extractCompanionBrief } from "./extract-companion-brief";
+import { buildDailyAnchorClosedHints } from "./pregen-daily-anchors";
 import {
   COMPANION_WINDOW_DAYS,
   CompanionJobSchema,
@@ -86,6 +87,8 @@ export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob
     });
   }
 
+  const anchor_closed_hints = buildDailyAnchorClosedHints(input.pageSchemas);
+
   return CompanionJobSchema.parse({
     id: randomUUID(),
     session_id: input.sessionId,
@@ -96,6 +99,7 @@ export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob
     delivery_day_key: deliveryDayKey,
     ends_day_key: addDaysKey(deliveryDayKey, COMPANION_WINDOW_DAYS - 1),
     brief,
+    anchor_closed_hints,
     liuri_pack,
     days,
     batch_status: "pending",

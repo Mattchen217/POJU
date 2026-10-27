@@ -614,6 +614,20 @@ export function computeCollectingPullback(input: {
   return !isAgendaSatisfied(agenda);
 }
 
+/** Covered items need bindable prose (not label-only) for science-track case binding. */
+const MIN_CAPTURED_ANSWER_CHARS = 12;
+
+export function coveredAgendaBindableCount(agenda: AgendaItem[]): {
+  covered: number;
+  withProse: number;
+} {
+  const covered = agenda.filter((a) => a.status === "covered");
+  const withProse = covered.filter(
+    (a) => (a.captured_answer?.trim().length ?? 0) >= MIN_CAPTURED_ANSWER_CHARS,
+  );
+  return { covered: covered.length, withProse: withProse.length };
+}
+
 export function canTransitionToConfirmation(input: {
   agent: POJUAgentState;
   userTurns: number;
@@ -622,11 +636,27 @@ export function canTransitionToConfirmation(input: {
   const { agent, userTurns, userMessage } = input;
   const agenda = agent.investigation_agenda ?? [];
   const { coveredRatio } = evaluateAgendaCoverage(agenda);
+  const { covered, withProse } = coveredAgendaBindableCount(agenda);
+  /** At least half of covered items (min 1 when any covered) must carry prose. */
+  const proseOk =
+    covered === 0 || withProse >= Math.max(1, Math.ceil(covered * 0.5));
 
   if (userHardPushed(userMessage) && userTurns >= PUSH_MIN_TURNS && coveredRatio >= PUSH_GATE) {
+    if (!proseOk) {
+      return {
+        allowed: false,
+        reason: `Hard-push blocked: only ${withProse}/${covered} covered agenda answers have bindable prose`,
+      };
+    }
     return { allowed: true, reason: "User explicitly skipped ahead" };
   }
   if (userTurns >= MIN_COLLECTING_USER_TURNS && isAgendaSatisfied(agenda)) {
+    if (!proseOk) {
+      return {
+        allowed: false,
+        reason: `Agenda marked covered but only ${withProse}/${covered} answers have bindable prose (≥${MIN_CAPTURED_ANSWER_CHARS} chars)`,
+      };
+    }
     return {
       allowed: true,
       reason: `Agenda satisfied (${Math.round(coveredRatio * 100)}%, ${userTurns} turns)`,

@@ -29,7 +29,10 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 import { remapP4DimensionNameForCompliance } from "@/lib/llm/pro/delivery/page-schema/p4-compliance-dim-names";
 import { deliverySlotUiCopy } from "@/lib/llm/pro/delivery/delivery-slot-ui-copy";
-import { splitDualEvidence } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
+import {
+  composeDualEvidence,
+  splitDualEvidence,
+} from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
 
 function slotUiCopy(locale: string) {
   return deliverySlotUiCopy(locale);
@@ -104,27 +107,45 @@ function judgmentPlain(text: string): string {
     .replace(/⟦(?:t|词):[^|⟧]*\|([^⟧]+)⟧/g, "$1");
 }
 
-/** Folded evidence: fixed two subsections (命理 / 科学). */
-function DualEvidenceBody({ text, locale }: { text: string; locale: string }) {
-  const dual = splitDualEvidence(text);
+/** Folded evidence: fixed two subsections (命理 / 科学). Prefer structured fields. */
+function DualEvidenceBody({
+  text,
+  locale,
+  metaphysics,
+  science,
+}: {
+  text?: string;
+  locale: string;
+  metaphysics?: string;
+  science?: string;
+}) {
+  const structuredM = (metaphysics ?? "").trim();
+  const structuredS = (science ?? "").trim();
+  const dual =
+    structuredM || structuredS
+      ? composeDualEvidence(structuredM, structuredS)
+      : splitDualEvidence(text);
   const titles = dualEvidenceSectionTitles(locale);
-  const hasSplit = Boolean(dual.metaphysics_evidence || dual.science_evidence);
-  if (!hasSplit) {
+  const hasMeta = Boolean(dual.metaphysics_evidence);
+  const hasSci = Boolean(dual.science_evidence);
+  if (!hasMeta && !hasSci) {
+    const fallback = (text ?? "").trim();
+    if (!fallback) return null;
     return (
       <div className="poju-delivery-v2__prose">
-        <p>{judgmentPlain(text)}</p>
+        <p>{judgmentPlain(fallback)}</p>
       </div>
     );
   }
   return (
     <div className="poju-delivery-v2__prose dps-dual-evidence">
-      {dual.metaphysics_evidence ? (
+      {hasMeta ? (
         <section className="dps-dual-evidence__section">
           <h3 className="dps-dual-evidence__h">{titles.meta}</h3>
           <p>{judgmentPlain(dual.metaphysics_evidence)}</p>
         </section>
       ) : null}
-      {dual.science_evidence ? (
+      {hasSci ? (
         <section className="dps-dual-evidence__section">
           <h3 className="dps-dual-evidence__h">{titles.sci}</h3>
           <p>{judgmentPlain(dual.science_evidence)}</p>
@@ -206,7 +227,9 @@ function RiskItemBlock({
           toggleIcon="play"
           className="delivery-book-stage__evidence dps-risk-item__evidence"
         >
-          <p>{judgmentPlain(ev)}</p>
+          <div className="poju-delivery-v2__evidence-body">
+            <DualEvidenceBody text={ev} locale={locale} />
+          </div>
         </EvidenceBlock>
       ) : null}
     </div>
@@ -688,12 +711,38 @@ function PageSlotsInner({
       );
     case "situation_analysis":
     case "personal_decision_patterns":
-    case "bottleneck_analysis":
-    case "situation_analysis": {
+    case "bottleneck_analysis": {
       let idx = 0;
+      const sit =
+        page.page === "situation_analysis" ? page : null;
+      const facts = sit?.confirmed_facts?.filter(Boolean) ?? [];
+      const assumptions = sit?.open_assumptions?.filter(Boolean) ?? [];
+      const gaps = sit?.info_gaps?.filter(Boolean) ?? [];
+      const hasLayers = facts.length + assumptions.length + gaps.length > 0;
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p2">
           <p className="dps-p2-bridge-note">{copy.bridgeNote}</p>
+          {hasLayers ? (
+            <SlotCard title={locale.startsWith("zh") ? "事实 · 假设 · 缺口" : "Facts · assumptions · gaps"} locale={locale}>
+              <div className="delivery-book-stage__rx-parts">
+                {facts.length ? (
+                  <Field label={locale.startsWith("zh") ? "已确认事实" : "Confirmed facts"}>
+                    <ul>{facts.map((f) => <li key={f}><Gloss text={f} locale={locale} /></li>)}</ul>
+                  </Field>
+                ) : null}
+                {assumptions.length ? (
+                  <Field label={locale.startsWith("zh") ? "待验证假设" : "Open assumptions"}>
+                    <ul>{assumptions.map((f) => <li key={f}><Gloss text={f} locale={locale} /></li>)}</ul>
+                  </Field>
+                ) : null}
+                {gaps.length ? (
+                  <Field label={locale.startsWith("zh") ? "信息缺口" : "Info gaps"}>
+                    <ul>{gaps.map((f) => <li key={f}><Gloss text={f} locale={locale} /></li>)}</ul>
+                  </Field>
+                ) : null}
+              </div>
+            </SlotCard>
+          ) : null}
           {page.why_cards.map((c, i) => {
             const evidence = evAt(slotEvidence, idx++);
             return (

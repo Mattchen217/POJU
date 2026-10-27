@@ -1,9 +1,9 @@
 /**
  * Fixed shelf order for Phase-4 center delivery papers.
- * cover → toc → 6 segments → appendix.
+ * cover → toc → v1 十段 prose → appendix.
  *
  * User-facing page numbers (corner wait / pager) count only prose:
- * P1 direct_answer = 1 … 附录 = 7. Cover + TOC are not pages.
+ * decision_brief = 1 … validation_close … 附录. Cover + TOC are not pages.
  */
 
 import {
@@ -38,7 +38,7 @@ export function isDeliveryProseShelfSlot(id: DeliveryShelfSlotId): boolean {
   return id !== "cover" && id !== "toc";
 }
 
-/** 1–7 for direct_answer…appendix; 0 for cover/toc (not user-facing pages). */
+/** 1…N for decision_brief…appendix; 0 for cover/toc (not user-facing pages). */
 export function deliveryProsePageNumber(slotId: DeliveryShelfSlotId): number {
   if (!isDeliveryProseShelfSlot(slotId)) return 0;
   let n = 0;

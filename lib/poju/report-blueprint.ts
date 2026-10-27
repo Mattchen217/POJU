@@ -1,7 +1,8 @@
 /**
  * Eastern OS 报告蓝图 · 全链路单一事实源(SSOT)。
  * v1：**9 内容模块 + 附录**（见 `.cursor/docs/v1-决策交付-产品边界.md`）。
- * 过渡期 `delivery_segments` 仍指向现网六页出稿 key（见迁移映射）。
+ * 出稿 `delivery_segments` 已切 v1 十段 key（见迁移映射）；承重链路（fill sanitize /
+ * 独立 duty / 双轨必填）按落地计划接通中。
  * 【1→4 阶段都 import 这里】——第2段真算据此确认主方向撑得起报告；
  * 2.1议程据此问「缺什么现实料」（议程 5–6 问，≠ 一模块一问）；第4段据此路由。
  * 改模块结构只改这一处，全链自动对齐。
@@ -23,7 +24,10 @@ export type BlueprintPathRole =
   | "closing" // 收尾
   | "appendix";
 
-/** 现网六页出稿 key（过渡期 delivery 仍用这些）。 */
+/**
+ * 蓝图页上曾用的出稿段 key（含 foundation 等 legacy）。
+ * 现行出稿 SSOT = segment-key-alias V1_DELIVERY_SEGMENT_KEYS。
+ */
 export type LegacyDeliverySegmentKey =
   | "decision_brief"
   | "foundation"
@@ -64,8 +68,7 @@ export interface ReportPage {
   /** 主辅角色。 */
   path_role: BlueprintPathRole;
   /**
-   * 过渡期对应的现网交付段 key（Layer2 / fill 仍读旧 key）。
-   * 见 `.cursor/docs/v1-九模块与现网六页-迁移映射.md`。
+   * 出稿段 key（v1 十段；见迁移映射）。Layer2 / fill 按此路由。
    */
   delivery_segments: readonly string[];
   /** 是否挂折叠双轨依据（命理 + 科学）。decision_brief / appendix = false。 */
@@ -339,4 +342,44 @@ export function toDeliverySegmentKey(moduleId: string): string | undefined {
     "appendix",
   ]);
   return legacy.has(moduleId) ? moduleId : undefined;
+}
+
+/** 出稿 segment key → 科学轨优先学科（1–3；禁八科全开）。 */
+export function scienceDisciplinesForSegment(
+  segmentKey: string,
+): readonly string[] {
+  const page = getBlueprintPage(segmentKey);
+  if (page?.science_disciplines?.length) return page.science_disciplines;
+  // validation_review splits into two keys — both hang dual evidence
+  if (
+    segmentKey === "validation_risk" ||
+    segmentKey === "validation_close" ||
+    segmentKey === "risk_guard" ||
+    segmentKey === "signals_close"
+  ) {
+    const vr = getBlueprintPage("validation_review");
+    return vr?.science_disciplines ?? [];
+  }
+  return [];
+}
+
+export function hangsDualEvidenceForSegment(segmentKey: string): boolean {
+  if (
+    segmentKey === "decision_brief" ||
+    segmentKey === "direct_answer" ||
+    segmentKey === "appendix"
+  ) {
+    return false;
+  }
+  const page = getBlueprintPage(segmentKey);
+  if (page) return page.hangs_dual_evidence;
+  if (
+    segmentKey === "validation_risk" ||
+    segmentKey === "validation_close" ||
+    segmentKey === "risk_guard" ||
+    segmentKey === "signals_close"
+  ) {
+    return true;
+  }
+  return false;
 }

@@ -95,6 +95,7 @@ export async function generateCompanionDayPair(input: {
   locale: string;
   sessionId: string;
   thinking_effort?: ReasoningEffort;
+  closedHints?: import("./pregen-daily-anchors").DailyAnchorClosedHints | null;
 }): Promise<GenerateCompanionPairResult> {
   const locale = normalizeCompanionLocale(input.locale);
   const brief: CompanionBrief = { ...input.brief, locale };
@@ -149,6 +150,7 @@ export async function generateCompanionDayPair(input: {
     sessionId: input.sessionId,
     thinking_effort: input.thinking_effort,
     priorFingerprints: priors,
+    closedHints: input.closedHints,
   });
 
   const generated: CompanionDaySlot[] = [...missing];

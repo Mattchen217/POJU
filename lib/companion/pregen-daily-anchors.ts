@@ -44,34 +44,53 @@ function pushUnique(out: string[], s: string | undefined | null, max = 8): void 
   out.push(t.slice(0, 200));
 }
 
-function hintsFromPages(
+export type DailyAnchorClosedHints = Record<
+  DailyAnchorSeed["lens"],
+  string[]
+>;
+
+/** Seal-time: pull closed-set strings from 06/07/08/09 (+ brief) page schemas. */
+export function buildDailyAnchorClosedHints(
   pages: Partial<Record<string, DeliveryPageData>> | undefined,
-): Record<DailyAnchorSeed["lens"], string[]> {
+): DailyAnchorClosedHints {
   const execute: string[] = [];
   const regulate: string[] = [];
   const validate: string[] = [];
-  const exec = pages?.execution_guidance;
+  if (!pages) return { execute, regulate, validate };
+  const exec = pages.execution_guidance;
   if (exec && exec.page === "execution_guidance") {
     for (const a of exec.primary_toolkit.angles) {
       for (const m of a.means) pushUnique(execute, m);
     }
   }
-  const self = pages?.self_regulation;
+  const self = pages.self_regulation;
   if (self && self.page === "self_regulation") {
     for (const d of self.dimensions) {
       pushUnique(regulate, d.strategy);
       for (const m of d.means) pushUnique(regulate, m);
     }
   }
-  const risk = pages?.validation_risk;
+  const risk = pages.validation_risk;
   if (risk && risk.page === "validation_risk") {
     for (const r of risk.red_lights) pushUnique(validate, r.situation);
     pushUnique(validate, risk.switch_to_backup.situation);
   }
-  const close = pages?.validation_close;
+  const close = pages.validation_close;
   if (close && close.page === "validation_close") {
     pushUnique(validate, close.immediate_action);
     for (const w of close.watch_signals) pushUnique(validate, w);
+  }
+  const strat = pages.recommended_strategy;
+  if (strat && strat.page === "recommended_strategy") {
+    pushUnique(execute, strat.primary.why);
+    pushUnique(execute, strat.primary.exit);
+    pushUnique(validate, strat.backup.exit);
+    pushUnique(validate, strat.backup.when);
+  }
+  const briefPage = pages.decision_brief;
+  if (briefPage && briefPage.page === "decision_brief") {
+    pushUnique(execute, briefPage.primary.why);
+    pushUnique(validate, briefPage.backup.when);
   }
   return { execute, regulate, validate };
 }
@@ -83,6 +102,8 @@ function hintsFromPages(
 export function buildDailyAnchorSeeds(input: {
   brief: CompanionBrief;
   pageSchemas?: Partial<Record<string, DeliveryPageData>>;
+  /** Prefer sealed hints (from job) over re-parsing pageSchemas. */
+  closedHints?: DailyAnchorClosedHints | null;
   /** Cap ≤ COMPANION_WINDOW_DAYS. */
   days?: number;
 }): DailyAnchorSeed[] {
@@ -90,7 +111,13 @@ export function buildDailyAnchorSeeds(input: {
     Math.max(1, input.days ?? COMPANION_WINDOW_DAYS),
     COMPANION_WINDOW_DAYS,
   );
-  const byLens = hintsFromPages(input.pageSchemas);
+  const byLens =
+    input.closedHints &&
+    (input.closedHints.execute.length > 0 ||
+      input.closedHints.regulate.length > 0 ||
+      input.closedHints.validate.length > 0)
+      ? input.closedHints
+      : buildDailyAnchorClosedHints(input.pageSchemas);
   const seeds: DailyAnchorSeed[] = [];
   for (let i = 0; i < n; i++) {
     const lens = LENS_ROTATION[i % LENS_ROTATION.length]!;
