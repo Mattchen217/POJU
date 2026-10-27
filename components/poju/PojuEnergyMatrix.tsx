@@ -70,6 +70,12 @@ type Props = {
   bodyOnly?: boolean;
   /** Controlled block when bodyOnly (B1–B5). */
   activeBlockId?: MatrixBlockId;
+  /**
+   * Offscreen/live-export only: disable ECharts animation so canvas snapshot
+   * captures the finished series (cyan polygon + area), not mid-tween dots.
+   * Live vault popup leaves this unset (default animation).
+   */
+  staticCharts?: boolean;
 };
 
 
@@ -714,9 +720,11 @@ function FactOnsetRail({
 function RadarChart({
   scores,
   locale,
+  staticCharts = false,
 }: {
   scores: PojuMatrixPayload["wuxing_scores"];
   locale: string;
+  staticCharts?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -737,6 +745,7 @@ function RadarChart({
       const max = Math.max(...scores.map((s) => s.count), 4);
       const uiFont = resolveSiteUiFontFamily();
       chart.setOption({
+        animation: !staticCharts,
         backgroundColor: "transparent",
         radar: {
           center: ["50%", "50%"],
@@ -827,7 +836,7 @@ function RadarChart({
       ro?.disconnect();
       chart?.dispose();
     };
-  }, [scores, locale]);
+  }, [scores, locale, staticCharts]);
 
   return <div className="pcm-radar__canvas" ref={ref} aria-hidden />;
 }
@@ -845,6 +854,7 @@ export function PojuEnergyMatrix({
   onExpandedChange,
   coverTitle,
   unread,
+  staticCharts = false,
 }: Props) {
   const { structured, user_profile, wuxing_scores, strength } = payload;
   const shenshaLocale = normalizeShenshaLocale(locale);
@@ -1364,7 +1374,7 @@ export function PojuEnergyMatrix({
               {tc("radar_matrix")} · {tc("radar_matrix_em")}
             </div>
             <div className="pcm-radar__chart">
-              <RadarChart scores={wuxing_scores} locale={locale} />
+              <RadarChart scores={wuxing_scores} locale={locale} staticCharts={staticCharts} />
             </div>
           </div>
 

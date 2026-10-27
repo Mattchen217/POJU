@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useMessages, useTranslations } from "next-intl";
 import {
+  BASELINE_LIVE_EXPORT_CAPTURE_IMPLEMENTED,
   BASELINE_LIVE_EXPORT_VISUAL_PASS,
   captureBaselinePortraitLiveHtml,
 } from "@/lib/poju/baseline-portrait-live-export";
@@ -180,22 +181,30 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [item, onClose]);
 
-  /**
-   * SoT16 §13: download/email follow BASELINE_LIVE_EXPORT_VISUAL_PASS.
-   * When true, createRoot captureBaselinePortraitLiveHtml only — never lookalike offline pack.
-   * Re-close flag to false if visual FAIL vs vault popup.
+    /**
+   * SoT16 §13: createRoot capture is implemented. VISUAL_PASS stays false until Max accepts
+   * the live export vs vault popup. For local Max verify we unlock download/email whenever
+   * CAPTURE_IMPLEMENTED is true — still ONLY captureBaselinePortraitLiveHtml (never lookalike).
+   * Product messaging: verify-only banner while VISUAL_PASS is false. No push / no PASS flip.
    */
   const messages = useMessages();
-  const baselineExportUnlocked = BASELINE_LIVE_EXPORT_VISUAL_PASS;
+  const baselineVisualPass = BASELINE_LIVE_EXPORT_VISUAL_PASS;
+  const baselineExportUnlocked = BASELINE_LIVE_EXPORT_CAPTURE_IMPLEMENTED;
   const baselineExportLockMsg = useMemo(() => {
     try {
       return tShelf("export_live_pending");
     } catch {
       return locale.startsWith("zh")
-        ? "下载/邮件暂不可用：须等真实书本导出（与弹窗一致）通过验收。不会提供仿制离线包。"
+        ? "下载/邮件暂不可用：需等真实书本导出与弹窗一致，通过验收。不提供仿制离线包。"
         : "Download/email paused until live book export matches the vault popup. Lookalike offline packs are not shipped.";
     }
   }, [tShelf, locale]);
+  const baselineVerifyOnlyMsg = useMemo(() => {
+    if (baselineVisualPass) return null;
+    return locale.startsWith("zh")
+      ? "本地验收导出（createRoot 真实书本）。视觉门闸仍为未通过 — 非产品正式开放。"
+      : "Local verify export (createRoot live book). Visual gate still CLOSED — not product PASS.";
+  }, [baselineVisualPass, locale]);
 
   const [exportBusy, setExportBusy] = useState(false);
 
@@ -334,7 +343,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
                   label={tShelf("tip_download")}
                   tip={
                     baselineExportUnlocked
-                      ? tShelf("tip_download")
+                      ? (baselineVerifyOnlyMsg ?? tShelf("tip_download"))
                       : baselineExportLockMsg
                   }
                   disabled={!baselineExportUnlocked || exportBusy}
@@ -345,7 +354,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
                   label={tShelf("tip_email")}
                   tip={
                     baselineExportUnlocked
-                      ? tShelf("tip_email")
+                      ? (baselineVerifyOnlyMsg ?? tShelf("tip_email"))
                       : baselineExportLockMsg
                   }
                   disabled={!baselineExportUnlocked || exportBusy || !authReady}
@@ -354,7 +363,9 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
                 />
                 <span className="workspace-doc-vault-modal__action-msg" role="status">
                   {actionMsg ??
-                    (baselineExportUnlocked ? null : baselineExportLockMsg)}
+                    (baselineExportUnlocked
+                      ? baselineVerifyOnlyMsg
+                      : baselineExportLockMsg)}
                 </span>
               </div>
             ) : null}

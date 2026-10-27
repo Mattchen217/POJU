@@ -199,13 +199,12 @@ export async function createJointInvite(params: {
     .select("*")
     .single();
   if (error || !data) {
-    console.error("[joint] create", error?.code ?? error?.message);
+    console.error("[joint] create", error?.code ?? error?.message, error?.message);
     return { ok: false, reason: "create_failed" };
   }
-  const joint = data as JointDecisionRow;
   return {
     ok: true,
-    joint: await toPublicViewAsync(joint, params.initiatorUserId),
+    joint: await toPublicViewAsync(data as JointDecisionRow, params.initiatorUserId),
   };
 }
 
@@ -257,15 +256,16 @@ export async function agreeJointInvite(params: {
     return { ok: false, reason: "invite_expired" };
   }
 
+  const nowIso = new Date().toISOString();
   const { data: updated, error } = await admin
     .from("joint_decision_sessions")
     .update({
-      status: "partner_ready" as JointStatus,
       birth_snapshot_b: inviteeBirth,
-      accepted_at: new Date().toISOString(),
+      accepted_at: nowIso,
+      updated_at: nowIso,
+      status: "partner_ready" as JointStatus,
       unread_a: true,
       unread_b: false,
-      updated_at: new Date().toISOString(),
     })
     .eq("id", joint.id)
     .in("status", ["invited", "accepted"])
@@ -273,7 +273,11 @@ export async function agreeJointInvite(params: {
     .maybeSingle();
 
   if (error || !updated) {
-    console.error("[joint] agree update", error?.code ?? error?.message, error?.details);
+    console.error(
+      "[joint] agree update",
+      error?.code ?? "no_row",
+      error?.message ?? null,
+    );
     return { ok: false, reason: "agree_failed" };
   }
   return {

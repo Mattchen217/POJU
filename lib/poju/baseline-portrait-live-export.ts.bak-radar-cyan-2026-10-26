@@ -1,0 +1,901 @@
+"use client";
+
+/**
+ * SoT16 §11 preferred path: offscreen createRoot mount of live BaselinePortraitBook /
+ * PojuEnergyMatrix (bodyOnly per B1–B5), inline real CSS, serialize to one self-contained HTML.
+ * Vault popup stays on live React (no lookalike iframe).
+ *
+ * SoT16 §12: download/email stay disabled until this export passes visual acceptance vs f3c087f.
+ * Do not fall back to buildBaselineProfileOfflineHtml lookalike for final acceptance.
+ *
+ * SoT16 §14: offline pack must include full B1–B5 DOM + layout CSS that does not depend on
+ * Tailwind utilities / vault modal host. Gate stays CLOSED until Max re-verifies.
+ *
+ * Oct-22 FAIL fixes (gate still CLOSED): fixed vault-modal frame (not full-page), embed
+ * Material Symbols (+ live @font-face) with no Google CDN, inline pager mask-image icons.
+ */
+
+import { createElement, type ReactElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+
+import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
+import {
+  BASELINE_MATRIX_BLOCKS,
+  PojuEnergyMatrix,
+  type BaselineMatrixBlockId,
+} from "@/components/poju/PojuEnergyMatrix";
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import { BASELINE_PORTRAIT_LIVE_EXPORT_CSS } from "@/lib/poju/baseline-portrait-live-export-css";
+
+export type CaptureBaselinePortraitLiveHtmlOptions = {
+  payload: PojuMatrixPayload;
+  locale: string;
+  messages: AbstractIntlMessages;
+  subjectLabel?: string;
+  coverTitle?: string;
+  /** Width of offscreen mount (px). */
+  mountWidth?: number;
+};
+
+export type CaptureBaselinePortraitLiveHtmlResult = {
+  html: string;
+  filename: string;
+  paneCount: number;
+  cssChars: number;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function waitFrames(n = 2): Promise<void> {
+  for (let i = 0; i < n; i++) {
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  }
+}
+
+function wrapIntl(
+  locale: string,
+  messages: AbstractIntlMessages,
+  child: ReactElement,
+): ReactElement {
+  // next-intl types require `children` on props (not only as createElement’s 3rd arg).
+  return createElement(NextIntlClientProvider, {
+    locale,
+    messages,
+    children: child,
+  });
+}
+
+async function renderAndSettle(root: Root, node: ReactElement): Promise<void> {
+  root.render(node);
+  await waitFrames(3);
+  await sleep(80);
+}
+
+/**
+ * Wait until a pane mount has real matrix body (not empty / logo-only stub).
+ * PojuEnergyMatrix bodyOnly paints `.pcm` sections per block.
+ */
+async function waitForPaneReady(
+  host: HTMLElement,
+  blockId: string,
+  timeoutMs = 4000,
+): Promise<HTMLElement> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const mount = host.querySelector(
+      ".baseline-live-export-pane-mount",
+    ) as HTMLElement | null;
+    if (mount) {
+      const pcm = mount.querySelector(".pcm");
+      const section = mount.querySelector(
+        ".pcm__section, .pcm-shell__panel, .pcm-calibration, .pcm-energy, .pcm-pillars, .pcm-facts-extra",
+      );
+      const textLen = (mount.textContent || "").replace(/\s+/g, " ").trim().length;
+      if (pcm && section && textLen > 40) {
+        await waitFrames(2);
+        return mount;
+      }
+    }
+    await sleep(50);
+    await waitFrames(1);
+  }
+  throw new Error(
+    `live export: pane not ready for block ${blockId} (no painted .pcm body)`,
+  );
+}
+
+/**
+ * Wait until BaselinePortraitBook shell has TOC + right page body (full book chrome).
+ */
+async function waitForBookShellReady(
+  host: HTMLElement,
+  timeoutMs = 4000,
+): Promise<HTMLElement> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const stage = host.querySelector(".delivery-book-stage") as HTMLElement | null;
+    if (stage) {
+      const tocItems = stage.querySelectorAll(".delivery-book-stage__toc-item");
+      const slots =
+        stage.querySelector(".baseline-portrait-book__page") ||
+        stage.querySelector(".delivery-book-stage__page-slots");
+      const pcm = stage.querySelector(".pcm");
+      const pager = stage.querySelector(".delivery-book-stage__pager-pos");
+      if (
+        tocItems.length >= BASELINE_MATRIX_BLOCKS.length &&
+        slots &&
+        pcm &&
+        pager
+      ) {
+        await waitFrames(2);
+        return stage;
+      }
+    }
+    await sleep(50);
+    await waitFrames(1);
+  }
+  throw new Error(
+    "live export: BaselinePortraitBook shell not fully ready (TOC/pcm/pager)",
+  );
+}
+
+
+/**
+ * B2 Wuxing radar is ECharts canvas (renderer: "canvas"). innerHTML/outerHTML
+ * never carries pixels — and dynamic import often finishes AFTER waitForPaneReady
+ * (text-only readiness). Wait for a painted canvas, then swap to inline PNG <img>.
+ */
+async function waitForRadarCanvasReady(
+  host: HTMLElement,
+  blockId: string,
+  timeoutMs = 8000,
+): Promise<void> {
+  if (blockId !== "energy") return;
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const wrap = host.querySelector(".pcm-radar__canvas") as HTMLElement | null;
+    const canvas = wrap?.querySelector("canvas") as HTMLCanvasElement | null;
+    if (canvas && canvas.width > 8 && canvas.height > 8) {
+      await waitFrames(3);
+      await sleep(120);
+      let painted = false;
+      try {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          for (let i = 3; i < data.length; i += 32) {
+            if (data[i] > 0) {
+              painted = true;
+              break;
+            }
+          }
+        }
+      } catch {
+        // Cross-origin / protected canvas — still attempt toDataURL later.
+        painted = true;
+      }
+      if (painted) return;
+    }
+    await sleep(50);
+    await waitFrames(1);
+  }
+  throw new Error(
+    `live export: Wuxing radar canvas not painted for block ${blockId}`,
+  );
+}
+
+/**
+ * Replace every ECharts (or other) <canvas> under root with an inline PNG <img>
+ * so file:// serialize keeps the visual. Prefer replacing the whole .pcm-radar__canvas
+ * host contents (ECharts may leave helper canvases/divs).
+ */
+function snapshotCanvasesToImages(rootEl: HTMLElement): void {
+  const radarHosts = Array.from(
+    rootEl.querySelectorAll<HTMLElement>(".pcm-radar__canvas"),
+  );
+  for (const host of radarHosts) {
+    const canvas = host.querySelector("canvas") as HTMLCanvasElement | null;
+    if (!canvas) continue;
+    let dataUrl = "";
+    try {
+      dataUrl = canvas.toDataURL("image/png");
+    } catch {
+      continue;
+    }
+    if (!dataUrl || dataUrl.length < 64) continue;
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    img.className = "pcm-radar__snapshot";
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.display = "block";
+    img.style.objectFit = "contain";
+    host.innerHTML = "";
+    host.appendChild(img);
+  }
+
+  // Any remaining non-radar canvases (e.g. timeline) — swap in place.
+  const leftover = Array.from(rootEl.querySelectorAll("canvas"));
+  for (const canvas of leftover) {
+    let dataUrl = "";
+    try {
+      dataUrl = canvas.toDataURL("image/png");
+    } catch {
+      continue;
+    }
+    if (!dataUrl || dataUrl.length < 64) continue;
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    const w = canvas.style.width || (canvas.width ? `${canvas.width}px` : "100%");
+    const h = canvas.style.height || (canvas.height ? `${canvas.height}px` : "100%");
+    img.style.cssText = `width:${w};height:${h};display:block;max-width:100%;object-fit:contain;`;
+    canvas.replaceWith(img);
+  }
+}
+
+function baselinePortraitLiveFilename(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `eastern-os-baseline-profile-live-${y}-${m}-${day}.html`;
+}
+
+/** Collect same-origin stylesheet rules that style the book / matrix. */
+export function collectLiveBookCssFromDocument(): string {
+  const chunks: string[] = [];
+  const re =
+    /delivery-book-stage|\.pcm\b|pcm--|workspace-scroll|material-symbols|poju-logo|baseline-portrait/i;
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of Array.from(rules)) {
+      const text = rule.cssText;
+      // Drop broken empty declarations from browser cssText expansion
+      if (/:\s*;/.test(text)) continue;
+      if (re.test(text)) chunks.push(text);
+    }
+  }
+  return chunks.join("\n");
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
+
+async function fetchAsDataUrl(href: string): Promise<string | null> {
+  try {
+    const url = new URL(href, window.location.href);
+    // Same-origin preferred; also allow inlining fonts.gstatic when present in live CSS
+    // so offline pack does not keep a network font URL.
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    return await blobToDataUrl(await res.blob());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Inline <img src> and CSS mask-image urls (DeliveryChromeIconBtn uses mask, not <img>).
+ * Page-turn prev/next would otherwise be empty offline (url("/v2/shangicon.svg")).
+ */
+async function inlineSameOriginAssets(rootEl: HTMLElement): Promise<void> {
+  const imgs = Array.from(rootEl.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map(async (img) => {
+      const src = img.currentSrc || img.getAttribute("src") || "";
+      if (!src || src.startsWith("data:")) return;
+      try {
+        const url = new URL(src, window.location.origin);
+        if (url.origin !== window.location.origin) return;
+        const dataUrl = await fetchAsDataUrl(url.toString());
+        if (!dataUrl) return;
+        img.setAttribute("src", dataUrl);
+        img.removeAttribute("srcset");
+      } catch {
+        /* keep original src */
+      }
+    }),
+  );
+
+  const maskEls = Array.from(
+    rootEl.querySelectorAll<HTMLElement>(".delivery-book-stage__icon-glyph, [style*='mask-image'], [style*='maskImage']"),
+  );
+  await Promise.all(
+    maskEls.map(async (el) => {
+      const styleAttr = el.getAttribute("style") || "";
+      const computedMask =
+        el.style.getPropertyValue("mask-image") ||
+        el.style.getPropertyValue("-webkit-mask-image") ||
+        "";
+      const fromAttr = /(?:-webkit-)?mask-image\s*:\s*url\(\s*(['"]?)([^)'"]+)\1\s*\)/i.exec(
+        styleAttr,
+      );
+      const rawUrl =
+        (fromAttr && fromAttr[2]) ||
+        (/url\(\s*(['"]?)([^)'"]+)\1\s*\)/i.exec(computedMask || "") ||
+          [])[2] ||
+        "";
+      if (!rawUrl || rawUrl.startsWith("data:")) return;
+      const dataUrl = await fetchAsDataUrl(rawUrl);
+      if (!dataUrl) return;
+      el.style.setProperty("mask-image", `url("${dataUrl}")`);
+      el.style.setProperty("-webkit-mask-image", `url("${dataUrl}")`);
+      // Keep attribute in sync for serialize (clone.outerHTML reads attribute in some paths)
+      const cleaned = styleAttr
+        .replace(/(?:-webkit-)?mask-image\s*:\s*url\(\s*(['"]?)([^)'"]+)\1\s*\)\s*;?/gi, "")
+        .trim()
+        .replace(/;\s*;/g, ";");
+      const next = `${cleaned}${cleaned && !cleaned.endsWith(";") ? ";" : ""}mask-image: url("${dataUrl}"); -webkit-mask-image: url("${dataUrl}");`;
+      el.setAttribute("style", next.replace(/^;/, ""));
+    }),
+  );
+}
+
+/** Known pager icon paths — inject if serialize still has empty glyphs. */
+const OFFLINE_PAGER_ICON_PATHS = {
+  prev: "/v2/shangicon.svg",
+  next: "/v2/xiaicon.svg",
+} as const;
+
+async function ensurePagerIconMasks(rootEl: HTMLElement): Promise<void> {
+  const pager = rootEl.querySelector(".delivery-book-stage__pager");
+  if (!pager) return;
+  const buttons = Array.from(pager.querySelectorAll("button"));
+  const prevBtn = buttons[0];
+  const nextBtn = buttons[1];
+  const pairs: Array<[Element | undefined, string]> = [
+    [prevBtn, OFFLINE_PAGER_ICON_PATHS.prev],
+    [nextBtn, OFFLINE_PAGER_ICON_PATHS.next],
+  ];
+  for (const [btn, path] of pairs) {
+    if (!btn) continue;
+    let glyph = btn.querySelector<HTMLElement>(".delivery-book-stage__icon-glyph");
+    if (!glyph) {
+      glyph = document.createElement("span");
+      glyph.className = "delivery-book-stage__icon-glyph";
+      glyph.setAttribute("aria-hidden", "true");
+      btn.appendChild(glyph);
+    }
+    const styleAttr = glyph.getAttribute("style") || "";
+    if (styleAttr.includes("data:") || (glyph.style.maskImage || "").includes("data:")) {
+      continue;
+    }
+    const dataUrl = await fetchAsDataUrl(path);
+    if (!dataUrl) continue;
+    glyph.style.setProperty("mask-image", `url("${dataUrl}")`);
+    glyph.style.setProperty("-webkit-mask-image", `url("${dataUrl}")`);
+    glyph.setAttribute(
+      "style",
+      `mask-image: url("${dataUrl}"); -webkit-mask-image: url("${dataUrl}");`,
+    );
+  }
+}
+
+/**
+ * Collect @font-face from the live document and rewrite src urls to data: so file://
+ * needs no CDN. Covers next/font (Inter/Geist/Noto) + Material Symbols when loaded.
+ */
+async function collectInlinedFontFacesCss(): Promise<string> {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  const rewriteSrc = async (cssText: string): Promise<string> => {
+    const re = /url\(\s*(['"]?)([^)'"]+)\1\s*\)/g;
+    let result = cssText;
+    const matches = Array.from(cssText.matchAll(re));
+    for (const m of matches) {
+      const href = m[2];
+      if (!href || href.startsWith("data:")) continue;
+      const dataUrl = await fetchAsDataUrl(href);
+      if (!dataUrl) continue;
+      result = result.split(m[0]).join(`url("${dataUrl}")`);
+    }
+    return result;
+  };
+
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of Array.from(rules)) {
+      if (rule instanceof CSSFontFaceRule) {
+        const key = rule.cssText.slice(0, 120);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(await rewriteSrc(rule.cssText));
+      }
+    }
+  }
+
+  // Guaranteed Material Symbols offline face from same-origin public/fonts (no Google link).
+  const localMs = await fetchAsDataUrl("/fonts/material-symbols-outlined.woff2");
+  if (localMs) {
+    out.push(`@font-face{
+  font-family:'Material Symbols Outlined';
+  font-style:normal;
+  font-weight:400;
+  font-display:block;
+  src:url("${localMs}") format('woff2');
+}`);
+  }
+
+  out.push(`.material-symbols-outlined{
+  font-family:'Material Symbols Outlined';
+  font-weight:normal;
+  font-style:normal;
+  font-size:24px;
+  line-height:1;
+  letter-spacing:normal;
+  text-transform:none;
+  display:inline-block;
+  white-space:nowrap;
+  word-wrap:normal;
+  direction:ltr;
+  -webkit-font-feature-settings:'liga';
+  -webkit-font-smoothing:antialiased;
+  font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+}`);
+
+  return out.join("\n");
+}
+
+/**
+ * PojuLogo / next/image emit width/height + Tailwind h-[Npx] classes.
+ * Offline pack does not include Tailwind → intrinsic 711×711 / 1134×198 logos
+ * explode into a blurry splash and crush the book chrome. Force sizes inline.
+ */
+function normalizeOfflineImages(rootEl: HTMLElement): void {
+  rootEl
+    .querySelectorAll<HTMLImageElement>(
+      ".delivery-book-stage__header-logo-link img, a.delivery-book-stage__header-logo-link img",
+    )
+    .forEach((img) => {
+      img.removeAttribute("width");
+      img.removeAttribute("height");
+      img.style.height = "18px";
+      img.style.width = "auto";
+      img.style.maxHeight = "22px";
+      img.style.objectFit = "contain";
+      img.style.display = "block";
+    });
+
+  rootEl.querySelectorAll<HTMLImageElement>("img[data-nimg]").forEach((img) => {
+    // Already handled header logos above; clamp any other next/image without pcm CSS.
+    if (img.closest(".delivery-book-stage__header-logo-link")) return;
+    if (img.classList.contains("pcm-zodiac__art-img")) return;
+    const cls = img.getAttribute("class") || "";
+    if (/h-\[(\d+)px\]/.test(cls)) {
+      const h = RegExp.$1;
+      img.style.height = `${h}px`;
+      img.style.width = "auto";
+      img.style.objectFit = "contain";
+      img.removeAttribute("width");
+      img.removeAttribute("height");
+    }
+  });
+}
+
+function stripReactNoise(html: string): string {
+  return html
+    .replace(/\s+data-reactroot(?:="")?/g, "")
+    .replace(/\s+style=""/g, "");
+}
+
+function buildPagerScript(pageCount: number): string {
+  return `(function(){
+  var root=document.querySelector('[data-baseline-live-export="1"]');
+  if(!root) return;
+  var panes=Array.prototype.slice.call(root.querySelectorAll('[data-export-page]'));
+  var tocBtns=Array.prototype.slice.call(root.querySelectorAll('[data-export-toc]'));
+  var prev=root.querySelector('[data-export-prev]');
+  var next=root.querySelector('[data-export-next]');
+  var pos=root.querySelector('[data-export-pos]');
+  var i=0;
+  var n=${pageCount};
+  function show(idx){
+    i=Math.max(0,Math.min(n-1,idx));
+    panes.forEach(function(p,k){ if(k===i) p.removeAttribute('hidden'); else p.setAttribute('hidden',''); });
+    tocBtns.forEach(function(b,k){
+      var on=k===i;
+      b.classList.toggle('delivery-book-stage__toc-item--active', on);
+      b.classList.toggle('delivery-book-stage__toc-item--ready', !on);
+      if(on) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+    });
+    var titleEl=root.querySelector('.delivery-book-stage__page-title');
+    var tocTitle=tocBtns[i] && tocBtns[i].querySelector('.delivery-book-stage__toc-title');
+    if(titleEl && tocTitle) titleEl.textContent=tocTitle.textContent || titleEl.textContent;
+    if(pos) pos.textContent=(i+1)+' / '+n;
+    if(prev) prev.disabled=i<=0;
+    if(next) next.disabled=i>=n-1;
+    var vp=root.querySelector('.delivery-book-stage__right-scroll .workspace-scroll__viewport, .delivery-book-stage__right-scroll');
+    if(vp) vp.scrollTop=0;
+  }
+  tocBtns.forEach(function(b,k){ b.addEventListener('click', function(){ show(k); }); });
+  if(prev) prev.addEventListener('click', function(){ show(i-1); });
+  if(next) next.addEventListener('click', function(){ show(i+1); });
+  show(0);
+})();`;
+}
+
+/**
+ * Standalone file:// CSS — must NOT rely on Tailwind utilities or vault modal host.
+ * Root cause of Max FAIL 2026-10-21: header logo imgs used h-[22px]/h-[17px] only;
+ * without Tailwind they rendered at intrinsic 711×711 / 1134×198 → blurry logo splash + pager.
+ */
+/**
+ * Standalone file:// CSS — hard-fixed vault sheet size (no vw/vh growth).
+ * Vault truth (delivery-book-stage.css / workspace-doc-vault-modal.css):
+ *   --ws-doc-reader-w locked large = 960px
+ *   --ws-baseline-reader-h locked large = 780px
+ * Offline frame uses those px only; tiny viewports may scale() down.
+ */
+function buildOfflineExportLayoutCss(): string {
+  return `
+/* ==== offline createRoot export layout (SoT16 §14 / Oct-26 fixed-px frame) ==== */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  height: 100%;
+  background: #0B0815;
+  overflow: auto;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 24px 16px;
+  font-family: var(--font-primary, Inter, system-ui, -apple-system, "Segoe UI", "Noto Sans SC", sans-serif);
+}
+/* Hard-fixed popup frame — vault locked sheet 960×780 (large-window caps), never grows with viewport */
+.baseline-live-export-frame {
+  --ws-doc-reader-w: 960px;
+  --ws-doc-reader-h: 640px;
+  --ws-baseline-reader-h: 780px;
+  width: 960px;
+  height: 780px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+  transform-origin: center center;
+}
+/* Tiny windows only: shrink visually; intrinsic sheet stays 960×780 */
+@media (max-width: 991px), (max-height: 827px) {
+  .baseline-live-export-frame {
+    transform: scale(min(1, calc((100vw - 32px) / 960), calc((100vh - 48px) / 780)));
+  }
+}
+.baseline-live-export-frame > .delivery-book-stage,
+.delivery-book-stage {
+  --delivery-inset: 0 !important;
+  padding: 12px !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  animation: none !important;
+}
+.delivery-book-stage__shell {
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.delivery-book-stage__card {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+.delivery-book-stage__panes {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+.baseline-live-export-root { height:100%; }
+.baseline-live-export-pane[hidden] { display:none !important; }
+/* ECharts radar canvas → PNG <img> after snapshotCanvasesToImages */
+.pcm-radar__canvas img.pcm-radar__snapshot,
+.pcm-radar__canvas .pcm-radar__snapshot {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  object-fit: contain !important;
+  max-width: 100%;
+}
+/* Pager icons are mask-glyphs (not <img>); keep both paths sized */
+.delivery-book-stage__icon-btn img,
+.delivery-book-stage__icon-glyph {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.delivery-book-stage__icon-btn img {
+  filter: invert(86%) sepia(18%) saturate(600%) hue-rotate(6deg) brightness(95%);
+}
+.delivery-book-stage__icon-glyph {
+  background: #ffffff;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+.delivery-book-stage__icon-btn:hover:not(:disabled) .delivery-book-stage__icon-glyph {
+  background: var(--ws-gold, #f2ca50);
+}
+/* PojuLogo: replace missing Tailwind h-[22px] / h-[17px] */
+.delivery-book-stage__header-logo-link {
+  display: inline-flex !important;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  line-height: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.delivery-book-stage__header-logo-link img {
+  display: block !important;
+  height: 18px !important;
+  width: auto !important;
+  max-height: 22px !important;
+  object-fit: contain !important;
+}
+/* Avoid Chromium backdrop-filter + overflow clip veil over card body */
+.delivery-book-stage__card,
+.delivery-book-stage__card * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+`.trim();
+}
+
+function assembleDocument(opts: {
+  locale: string;
+  title: string;
+  shellHtml: string;
+  css: string;
+  pageCount: number;
+  fontCss?: string;
+}): string {
+  const lang = opts.locale.slice(0, 2) || "en";
+  const css =
+    buildOfflineExportLayoutCss() +
+    "\n" +
+    (opts.fontCss ? opts.fontCss + "\n" : "") +
+    (opts.css || BASELINE_PORTRAIT_LIVE_EXPORT_CSS);
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="dark"/>
+<meta name="eastern-os-deliverable" content="baseline-profile-live"/>
+<meta name="eastern-os-export" content="createRoot-BaselinePortraitBook"/>
+<title>${opts.title.replace(/</g, "&lt;")}</title>
+<style>
+${css}
+</style>
+</head>
+<body>
+<div class="baseline-live-export-frame">
+${opts.shellHtml}
+</div>
+<script>
+${buildPagerScript(opts.pageCount)}
+</script>
+</body>
+</html>`;
+}
+
+/**
+ * Preferred §11 capture. Throws on failure — callers must not fall back to lookalike pack.
+ */
+export async function captureBaselinePortraitLiveHtml(
+  opts: CaptureBaselinePortraitLiveHtmlOptions,
+): Promise<CaptureBaselinePortraitLiveHtmlResult> {
+  if (typeof document === "undefined") {
+    throw new Error("captureBaselinePortraitLiveHtml requires a browser document");
+  }
+
+  const width = opts.mountWidth ?? 1100;
+  const host = document.createElement("div");
+  host.setAttribute("data-baseline-live-export-host", "1");
+  host.style.cssText = `position:fixed;left:-12000px;top:0;width:${width}px;height:800px;opacity:0;pointer-events:none;overflow:hidden;z-index:-1;`;
+  document.body.appendChild(host);
+
+  const root = createRoot(host);
+  const paneHtml: string[] = [];
+
+  try {
+    for (const block of BASELINE_MATRIX_BLOCKS) {
+      const pane = createElement(
+        "div",
+        {
+          className: "baseline-live-export-pane-mount",
+          "data-block": block.id,
+        },
+        createElement(PojuEnergyMatrix, {
+          payload: opts.payload,
+          locale: opts.locale,
+          suppressNarrative: true,
+          bodyOnly: true,
+          activeBlockId: block.id as BaselineMatrixBlockId,
+          coverTitle: opts.coverTitle,
+          expanded: true,
+        }),
+      );
+      await renderAndSettle(root, wrapIntl(opts.locale, opts.messages, pane));
+      const mount = await waitForPaneReady(host, block.id);
+      await waitForRadarCanvasReady(host, block.id);
+      snapshotCanvasesToImages(mount);
+      await inlineSameOriginAssets(mount);
+      normalizeOfflineImages(mount);
+      const html = mount.innerHTML.trim();
+      if (!html || !html.includes("pcm")) {
+        throw new Error(`live export pane empty/incomplete for block ${block.id}`);
+      }
+      if (
+        block.id === "energy" &&
+        !html.includes("pcm-radar__snapshot") &&
+        !/data:image\/png;base64,[A-Za-z0-9+/=]{64,}/.test(html)
+      ) {
+        throw new Error(
+          "live export: B2 energy pane missing Wuxing radar PNG snapshot (canvas not serialized)",
+        );
+      }
+      paneHtml.push(html);
+    }
+
+    const book = createElement(BaselinePortraitBook, {
+      payload: opts.payload,
+      locale: opts.locale,
+      suppressNarrative: true,
+      coverTitle: opts.coverTitle,
+    });
+    await renderAndSettle(root, wrapIntl(opts.locale, opts.messages, book));
+    const stage = await waitForBookShellReady(host);
+    // Shell may mount energy page briefly — snapshot any live canvases before clone.
+    await waitForRadarCanvasReady(host, "energy", 2500).catch(() => undefined);
+    snapshotCanvasesToImages(stage);
+    await inlineSameOriginAssets(stage);
+    await ensurePagerIconMasks(stage);
+    normalizeOfflineImages(stage);
+
+    const clone = stage.cloneNode(true) as HTMLElement;
+    clone.setAttribute("data-baseline-live-export", "1");
+
+    // Replace single live page body with all captured panes (full B1–B5 offline).
+    const slots =
+      clone.querySelector(".baseline-portrait-book__page") ||
+      clone.querySelector(".delivery-book-stage__page-slots");
+    if (!slots) {
+      throw new Error("live export: page slots not found in shell");
+    }
+    slots.innerHTML = paneHtml
+      .map(
+        (html, idx) =>
+          `<div class="baseline-live-export-pane" data-export-page="${idx}"${idx === 0 ? "" : " hidden"}>${html}</div>`,
+      )
+      .join("");
+
+    // Rewire TOC buttons for offline vanilla pager.
+    const tocBtns = Array.from(
+      clone.querySelectorAll(".delivery-book-stage__toc-item"),
+    );
+    tocBtns.forEach((btn, idx) => {
+      btn.setAttribute("data-export-toc", String(idx));
+      btn.removeAttribute("onclick");
+    });
+    if (tocBtns.length < BASELINE_MATRIX_BLOCKS.length) {
+      throw new Error(
+        `live export: TOC count ${tocBtns.length} < ${BASELINE_MATRIX_BLOCKS.length}`,
+      );
+    }
+
+    // Rewire pager buttons.
+    const pager = clone.querySelector(".delivery-book-stage__pager");
+    if (pager) {
+      const buttons = Array.from(pager.querySelectorAll("button"));
+      if (buttons[0]) buttons[0].setAttribute("data-export-prev", "1");
+      if (buttons[1]) buttons[1].setAttribute("data-export-next", "1");
+      const pos = pager.querySelector(".delivery-book-stage__pager-pos");
+      if (pos) pos.setAttribute("data-export-pos", "1");
+    }
+
+    // Drop Next.js link navigation from logo for offline file.
+    clone.querySelectorAll("a[href]").forEach((a) => {
+      a.setAttribute("href", "#");
+      a.removeAttribute("onclick");
+    });
+
+    normalizeOfflineImages(clone);
+
+    const liveCss = collectLiveBookCssFromDocument();
+    const fontCss = await collectInlinedFontFacesCss();
+    const css =
+      BASELINE_PORTRAIT_LIVE_EXPORT_CSS +
+      (liveCss ? `\n/* ==== document.styleSheets (live) ==== */\n${liveCss}\n` : "");
+
+    const title =
+      opts.coverTitle?.trim() ||
+      (opts.locale.startsWith("zh") ? "个人基础画像" : "Personal baseline portrait");
+
+    const html = assembleDocument({
+      locale: opts.locale,
+      title,
+      shellHtml: stripReactNoise(clone.outerHTML),
+      css,
+      fontCss,
+      pageCount: BASELINE_MATRIX_BLOCKS.length,
+    });
+
+    if (!html.includes("data-baseline-live-export")) {
+      throw new Error("live export assemble failed");
+    }
+    if (paneHtml.length !== BASELINE_MATRIX_BLOCKS.length) {
+      throw new Error("live export pane count mismatch");
+    }
+    // Sanity: offline pack must carry all five pane markers + TOC tags.
+    for (let i = 0; i < BASELINE_MATRIX_BLOCKS.length; i++) {
+      if (!html.includes(`data-export-page="${i}"`)) {
+        throw new Error(`live export missing data-export-page=${i}`);
+      }
+    }
+    if (!html.includes("delivery-book-stage__toc") || !html.includes(">B1<")) {
+      throw new Error("live export missing TOC / B1 marker");
+    }
+
+    return {
+      html,
+      filename: baselinePortraitLiveFilename(),
+      paneCount: paneHtml.length,
+      cssChars: css.length,
+    };
+  } finally {
+    try {
+      root.unmount();
+    } catch {
+      /* ignore */
+    }
+    host.remove();
+  }
+}
+
+/** True when §11 capture is implemented; UI still gated by §12 visual pass flag. */
+export const BASELINE_LIVE_EXPORT_CAPTURE_IMPLEMENTED = true;
+
+/**
+ * SoT16 §13/§14 gate — CLOSED after Max FAIL (logo splash offline).
+ * true = vault download/email use createRoot captureBaselinePortraitLiveHtml.
+ * Keep false until Max re-verifies full B1–B5 offline vs vault popup.
+ */
+export const BASELINE_LIVE_EXPORT_VISUAL_PASS = false;

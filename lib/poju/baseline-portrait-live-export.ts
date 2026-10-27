@@ -10,6 +10,9 @@
  *
  * SoT16 §14: offline pack must include full B1–B5 DOM + layout CSS that does not depend on
  * Tailwind utilities / vault modal host. Gate stays CLOSED until Max re-verifies.
+ *
+ * Oct-22 FAIL fixes (gate still CLOSED): fixed vault-modal frame (not full-page), embed
+ * Material Symbols (+ live @font-face) with no Google CDN, inline pager mask-image icons.
  */
 
 import { createElement, type ReactElement } from "react";
@@ -139,6 +142,201 @@ async function waitForBookShellReady(
   );
 }
 
+
+/**
+ * True when canvas has non-trivial cyan/teal series stroke/fill (#00eefc family),
+ * not just yellow symbol dots + grid. Mid-animation frames often leave only a
+ * tiny cyan blob near center — reject those.
+ */
+function canvasHasCyanRadarSeries(canvas: HTMLCanvasElement): boolean | null {
+  try {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    const { width, height } = canvas;
+    if (width < 8 || height < 8) return false;
+    const { data } = ctx.getImageData(0, 0, width, height);
+    const cx = width / 2;
+    const cy = height / 2;
+    // Ignore a small center disc (animation origin).
+    const centerR2 = Math.pow(Math.min(width, height) * 0.08, 2);
+    let cyanHits = 0;
+    // Sample every ~4px stride for speed.
+    const stride = 4;
+    for (let y = 0; y < height; y += stride) {
+      for (let x = 0; x < width; x += stride) {
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy < centerR2) continue;
+        const i = (y * width + x) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const a = data[i + 3];
+        if (a < 40) continue;
+        // #00eefc and translucent areaStyle (cyan/teal family).
+        const isCyan =
+          b > 140 &&
+          g > 120 &&
+          r < 120 &&
+          g + 40 > r &&
+          b + 20 > r &&
+          b >= g - 40;
+        if (isCyan) cyanHits += 1;
+      }
+    }
+    // Need a connected polygon footprint, not a speck.
+    return cyanHits >= 18;
+  } catch {
+    // Tainted canvas — cannot sample; caller may still use finished event.
+    return null;
+  }
+}
+
+async function waitForEchartsFinished(
+  wrap: HTMLElement,
+  timeoutMs: number,
+): Promise<boolean> {
+  try {
+    const echarts = await import("echarts");
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      const inst = echarts.getInstanceByDom(wrap) as
+        | {
+            on?: (ev: string, cb: () => void) => void;
+            off?: (ev: string, cb: () => void) => void;
+            isDisposed?: () => boolean;
+          }
+        | undefined;
+      if (inst && !inst.isDisposed?.()) {
+        await new Promise<void>((resolve) => {
+          let done = false;
+          const finish = () => {
+            if (done) return;
+            done = true;
+            try {
+              inst.off?.("finished", finish);
+            } catch {
+              /* ignore */
+            }
+            resolve();
+          };
+          try {
+            inst.on?.("finished", finish);
+          } catch {
+            finish();
+            return;
+          }
+          // Already idle charts may not re-fire; also resolve after short grace.
+          window.setTimeout(finish, 400);
+        });
+        return true;
+      }
+      await sleep(40);
+      await waitFrames(1);
+    }
+  } catch {
+    /* dynamic import / no instance */
+  }
+  return false;
+}
+
+/**
+ * B2 Wuxing radar is ECharts canvas (renderer: "canvas"). innerHTML/outerHTML
+ * never carries pixels — and dynamic import often finishes AFTER waitForPaneReady
+ * (text-only readiness). Wait until series line+area are painted (not mid-animation),
+ * then swap to inline PNG <img>.
+ */
+async function waitForRadarCanvasReady(
+  host: HTMLElement,
+  blockId: string,
+  timeoutMs = 8000,
+): Promise<void> {
+  if (blockId !== "energy") return;
+  const started = Date.now();
+  let sawFinished = false;
+  while (Date.now() - started < timeoutMs) {
+    const wrap = host.querySelector(".pcm-radar__canvas") as HTMLElement | null;
+    const canvas = wrap?.querySelector("canvas") as HTMLCanvasElement | null;
+    if (wrap && canvas && canvas.width > 8 && canvas.height > 8) {
+      if (!sawFinished) {
+        const remaining = Math.max(200, timeoutMs - (Date.now() - started));
+        sawFinished = await waitForEchartsFinished(wrap, Math.min(1200, remaining));
+      }
+      await waitFrames(2);
+      const cyan = canvasHasCyanRadarSeries(canvas);
+      if (cyan === true) {
+        await waitFrames(1);
+        return;
+      }
+      if (cyan === null && sawFinished) {
+        // Cannot sample pixels; finished event is best signal with staticCharts.
+        await waitFrames(2);
+        await sleep(80);
+        return;
+      }
+      // painted but no cyan yet — animation / late series; keep waiting
+    }
+    await sleep(50);
+    await waitFrames(1);
+  }
+  throw new Error(
+    `live export: Wuxing radar canvas series (cyan polygon) not ready for block ${blockId}`,
+  );
+}
+
+/**
+ * Replace every ECharts (or other) <canvas> under root with an inline PNG <img>
+ * so file:// serialize keeps the visual. Prefer replacing the whole .pcm-radar__canvas
+ * host contents (ECharts may leave helper canvases/divs).
+ */
+function snapshotCanvasesToImages(rootEl: HTMLElement): void {
+  const radarHosts = Array.from(
+    rootEl.querySelectorAll<HTMLElement>(".pcm-radar__canvas"),
+  );
+  for (const host of radarHosts) {
+    const canvas = host.querySelector("canvas") as HTMLCanvasElement | null;
+    if (!canvas) continue;
+    let dataUrl = "";
+    try {
+      dataUrl = canvas.toDataURL("image/png");
+    } catch {
+      continue;
+    }
+    if (!dataUrl || dataUrl.length < 64) continue;
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    img.className = "pcm-radar__snapshot";
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.display = "block";
+    img.style.objectFit = "contain";
+    host.innerHTML = "";
+    host.appendChild(img);
+  }
+
+  // Any remaining non-radar canvases (e.g. timeline) — swap in place.
+  const leftover = Array.from(rootEl.querySelectorAll("canvas"));
+  for (const canvas of leftover) {
+    let dataUrl = "";
+    try {
+      dataUrl = canvas.toDataURL("image/png");
+    } catch {
+      continue;
+    }
+    if (!dataUrl || dataUrl.length < 64) continue;
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    const w = canvas.style.width || (canvas.width ? `${canvas.width}px` : "100%");
+    const h = canvas.style.height || (canvas.height ? `${canvas.height}px` : "100%");
+    img.style.cssText = `width:${w};height:${h};display:block;max-width:100%;object-fit:contain;`;
+    canvas.replaceWith(img);
+  }
+}
+
 function baselinePortraitLiveFilename(d = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -168,6 +366,32 @@ export function collectLiveBookCssFromDocument(): string {
   return chunks.join("\n");
 }
 
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
+
+async function fetchAsDataUrl(href: string): Promise<string | null> {
+  try {
+    const url = new URL(href, window.location.href);
+    // Same-origin preferred; also allow inlining fonts.gstatic when present in live CSS
+    // so offline pack does not keep a network font URL.
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    return await blobToDataUrl(await res.blob());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Inline <img src> and CSS mask-image urls (DeliveryChromeIconBtn uses mask, not <img>).
+ * Page-turn prev/next would otherwise be empty offline (url("/v2/shangicon.svg")).
+ */
 async function inlineSameOriginAssets(rootEl: HTMLElement): Promise<void> {
   const imgs = Array.from(rootEl.querySelectorAll("img"));
   await Promise.all(
@@ -177,15 +401,8 @@ async function inlineSameOriginAssets(rootEl: HTMLElement): Promise<void> {
       try {
         const url = new URL(src, window.location.origin);
         if (url.origin !== window.location.origin) return;
-        const res = await fetch(url.toString());
-        if (!res.ok) return;
-        const blob = await res.blob();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const fr = new FileReader();
-          fr.onload = () => resolve(String(fr.result));
-          fr.onerror = () => reject(fr.error);
-          fr.readAsDataURL(blob);
-        });
+        const dataUrl = await fetchAsDataUrl(url.toString());
+        if (!dataUrl) return;
         img.setAttribute("src", dataUrl);
         img.removeAttribute("srcset");
       } catch {
@@ -193,6 +410,150 @@ async function inlineSameOriginAssets(rootEl: HTMLElement): Promise<void> {
       }
     }),
   );
+
+  const maskEls = Array.from(
+    rootEl.querySelectorAll<HTMLElement>(".delivery-book-stage__icon-glyph, [style*='mask-image'], [style*='maskImage']"),
+  );
+  await Promise.all(
+    maskEls.map(async (el) => {
+      const styleAttr = el.getAttribute("style") || "";
+      const computedMask =
+        el.style.getPropertyValue("mask-image") ||
+        el.style.getPropertyValue("-webkit-mask-image") ||
+        "";
+      const fromAttr = /(?:-webkit-)?mask-image\s*:\s*url\(\s*(['"]?)([^)'"]+)\1\s*\)/i.exec(
+        styleAttr,
+      );
+      const rawUrl =
+        (fromAttr && fromAttr[2]) ||
+        (/url\(\s*(['"]?)([^)'"]+)\1\s*\)/i.exec(computedMask || "") ||
+          [])[2] ||
+        "";
+      if (!rawUrl || rawUrl.startsWith("data:")) return;
+      const dataUrl = await fetchAsDataUrl(rawUrl);
+      if (!dataUrl) return;
+      el.style.setProperty("mask-image", `url("${dataUrl}")`);
+      el.style.setProperty("-webkit-mask-image", `url("${dataUrl}")`);
+      // Keep attribute in sync for serialize (clone.outerHTML reads attribute in some paths)
+      const cleaned = styleAttr
+        .replace(/(?:-webkit-)?mask-image\s*:\s*url\(\s*(['"]?)([^)'"]+)\1\s*\)\s*;?/gi, "")
+        .trim()
+        .replace(/;\s*;/g, ";");
+      const next = `${cleaned}${cleaned && !cleaned.endsWith(";") ? ";" : ""}mask-image: url("${dataUrl}"); -webkit-mask-image: url("${dataUrl}");`;
+      el.setAttribute("style", next.replace(/^;/, ""));
+    }),
+  );
+}
+
+/** Known pager icon paths — inject if serialize still has empty glyphs. */
+const OFFLINE_PAGER_ICON_PATHS = {
+  prev: "/v2/shangicon.svg",
+  next: "/v2/xiaicon.svg",
+} as const;
+
+async function ensurePagerIconMasks(rootEl: HTMLElement): Promise<void> {
+  const pager = rootEl.querySelector(".delivery-book-stage__pager");
+  if (!pager) return;
+  const buttons = Array.from(pager.querySelectorAll("button"));
+  const prevBtn = buttons[0];
+  const nextBtn = buttons[1];
+  const pairs: Array<[Element | undefined, string]> = [
+    [prevBtn, OFFLINE_PAGER_ICON_PATHS.prev],
+    [nextBtn, OFFLINE_PAGER_ICON_PATHS.next],
+  ];
+  for (const [btn, path] of pairs) {
+    if (!btn) continue;
+    let glyph = btn.querySelector<HTMLElement>(".delivery-book-stage__icon-glyph");
+    if (!glyph) {
+      glyph = document.createElement("span");
+      glyph.className = "delivery-book-stage__icon-glyph";
+      glyph.setAttribute("aria-hidden", "true");
+      btn.appendChild(glyph);
+    }
+    const styleAttr = glyph.getAttribute("style") || "";
+    if (styleAttr.includes("data:") || (glyph.style.maskImage || "").includes("data:")) {
+      continue;
+    }
+    const dataUrl = await fetchAsDataUrl(path);
+    if (!dataUrl) continue;
+    glyph.style.setProperty("mask-image", `url("${dataUrl}")`);
+    glyph.style.setProperty("-webkit-mask-image", `url("${dataUrl}")`);
+    glyph.setAttribute(
+      "style",
+      `mask-image: url("${dataUrl}"); -webkit-mask-image: url("${dataUrl}");`,
+    );
+  }
+}
+
+/**
+ * Collect @font-face from the live document and rewrite src urls to data: so file://
+ * needs no CDN. Covers next/font (Inter/Geist/Noto) + Material Symbols when loaded.
+ */
+async function collectInlinedFontFacesCss(): Promise<string> {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  const rewriteSrc = async (cssText: string): Promise<string> => {
+    const re = /url\(\s*(['"]?)([^)'"]+)\1\s*\)/g;
+    let result = cssText;
+    const matches = Array.from(cssText.matchAll(re));
+    for (const m of matches) {
+      const href = m[2];
+      if (!href || href.startsWith("data:")) continue;
+      const dataUrl = await fetchAsDataUrl(href);
+      if (!dataUrl) continue;
+      result = result.split(m[0]).join(`url("${dataUrl}")`);
+    }
+    return result;
+  };
+
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of Array.from(rules)) {
+      if (rule instanceof CSSFontFaceRule) {
+        const key = rule.cssText.slice(0, 120);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(await rewriteSrc(rule.cssText));
+      }
+    }
+  }
+
+  // Guaranteed Material Symbols offline face from same-origin public/fonts (no Google link).
+  const localMs = await fetchAsDataUrl("/fonts/material-symbols-outlined.woff2");
+  if (localMs) {
+    out.push(`@font-face{
+  font-family:'Material Symbols Outlined';
+  font-style:normal;
+  font-weight:400;
+  font-display:block;
+  src:url("${localMs}") format('woff2');
+}`);
+  }
+
+  out.push(`.material-symbols-outlined{
+  font-family:'Material Symbols Outlined';
+  font-weight:normal;
+  font-style:normal;
+  font-size:24px;
+  line-height:1;
+  letter-spacing:normal;
+  text-transform:none;
+  display:inline-block;
+  white-space:nowrap;
+  word-wrap:normal;
+  direction:ltr;
+  -webkit-font-feature-settings:'liga';
+  -webkit-font-smoothing:antialiased;
+  font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+}`);
+
+  return out.join("\n");
 }
 
 /**
@@ -278,18 +639,63 @@ function buildPagerScript(pageCount: number): string {
  * Root cause of Max FAIL 2026-10-21: header logo imgs used h-[22px]/h-[17px] only;
  * without Tailwind they rendered at intrinsic 711×711 / 1134×198 → blurry logo splash + pager.
  */
+/**
+ * Standalone file:// CSS — hard-fixed vault sheet size (no vw/vh growth).
+ * Vault truth (delivery-book-stage.css / workspace-doc-vault-modal.css):
+ *   --ws-doc-reader-w locked large = 960px
+ *   --ws-baseline-reader-h locked large = 780px
+ * Offline frame uses those px only; tiny viewports may scale() down.
+ */
 function buildOfflineExportLayoutCss(): string {
   return `
-/* ==== offline createRoot export layout (SoT16 §14) ==== */
-html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0B0815; }
+/* ==== offline createRoot export layout (SoT16 §14 / Oct-26 fixed-px frame) ==== */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  height: 100%;
+  background: #0B0815;
+  overflow: auto;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 24px 16px;
+  font-family: var(--font-primary, Inter, system-ui, -apple-system, "Segoe UI", "Noto Sans SC", sans-serif);
+}
+/* Hard-fixed popup frame — vault locked sheet 960×780 (large-window caps), never grows with viewport */
+.baseline-live-export-frame {
+  --ws-doc-reader-w: 960px;
+  --ws-doc-reader-h: 640px;
+  --ws-baseline-reader-h: 780px;
+  width: 960px;
+  height: 780px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+  transform-origin: center center;
+}
+/* Tiny windows only: shrink visually; intrinsic sheet stays 960×780 */
+@media (max-width: 991px), (max-height: 827px) {
+  .baseline-live-export-frame {
+    transform: scale(min(1, calc((100vw - 32px) / 960), calc((100vh - 48px) / 780)));
+  }
+}
+.baseline-live-export-frame > .delivery-book-stage,
 .delivery-book-stage {
   --delivery-inset: 0 !important;
   padding: 12px !important;
-  height: 100% !important;
   width: 100% !important;
+  height: 100% !important;
   max-width: none !important;
   max-height: none !important;
   min-height: 0 !important;
+  margin: 0 !important;
   box-sizing: border-box;
   animation: none !important;
 }
@@ -312,7 +718,37 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0B08
 }
 .baseline-live-export-root { height:100%; }
 .baseline-live-export-pane[hidden] { display:none !important; }
-.delivery-book-stage__icon-btn img { width:18px; height:18px; display:block; filter: invert(86%) sepia(18%) saturate(600%) hue-rotate(6deg) brightness(95%); }
+/* ECharts radar canvas → PNG <img> after snapshotCanvasesToImages */
+.pcm-radar__canvas img.pcm-radar__snapshot,
+.pcm-radar__canvas .pcm-radar__snapshot {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  object-fit: contain !important;
+  max-width: 100%;
+}
+/* Pager icons are mask-glyphs (not <img>); keep both paths sized */
+.delivery-book-stage__icon-btn img,
+.delivery-book-stage__icon-glyph {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.delivery-book-stage__icon-btn img {
+  filter: invert(86%) sepia(18%) saturate(600%) hue-rotate(6deg) brightness(95%);
+}
+.delivery-book-stage__icon-glyph {
+  background: #ffffff;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+.delivery-book-stage__icon-btn:hover:not(:disabled) .delivery-book-stage__icon-glyph {
+  background: var(--ws-gold, #f2ca50);
+}
 /* PojuLogo: replace missing Tailwind h-[22px] / h-[17px] */
 .delivery-book-stage__header-logo-link {
   display: inline-flex !important;
@@ -345,11 +781,13 @@ function assembleDocument(opts: {
   shellHtml: string;
   css: string;
   pageCount: number;
+  fontCss?: string;
 }): string {
   const lang = opts.locale.slice(0, 2) || "en";
   const css =
     buildOfflineExportLayoutCss() +
     "\n" +
+    (opts.fontCss ? opts.fontCss + "\n" : "") +
     (opts.css || BASELINE_PORTRAIT_LIVE_EXPORT_CSS);
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -360,13 +798,14 @@ function assembleDocument(opts: {
 <meta name="eastern-os-deliverable" content="baseline-profile-live"/>
 <meta name="eastern-os-export" content="createRoot-BaselinePortraitBook"/>
 <title>${opts.title.replace(/</g, "&lt;")}</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"/>
 <style>
 ${css}
 </style>
 </head>
 <body>
+<div class="baseline-live-export-frame">
 ${opts.shellHtml}
+</div>
 <script>
 ${buildPagerScript(opts.pageCount)}
 </script>
@@ -409,15 +848,27 @@ export async function captureBaselinePortraitLiveHtml(
           activeBlockId: block.id as BaselineMatrixBlockId,
           coverTitle: opts.coverTitle,
           expanded: true,
+          staticCharts: true,
         }),
       );
       await renderAndSettle(root, wrapIntl(opts.locale, opts.messages, pane));
       const mount = await waitForPaneReady(host, block.id);
+      await waitForRadarCanvasReady(host, block.id);
+      snapshotCanvasesToImages(mount);
       await inlineSameOriginAssets(mount);
       normalizeOfflineImages(mount);
       const html = mount.innerHTML.trim();
       if (!html || !html.includes("pcm")) {
         throw new Error(`live export pane empty/incomplete for block ${block.id}`);
+      }
+      if (
+        block.id === "energy" &&
+        !html.includes("pcm-radar__snapshot") &&
+        !/data:image\/png;base64,[A-Za-z0-9+/=]{64,}/.test(html)
+      ) {
+        throw new Error(
+          "live export: B2 energy pane missing Wuxing radar PNG snapshot (canvas not serialized)",
+        );
       }
       paneHtml.push(html);
     }
@@ -430,7 +881,11 @@ export async function captureBaselinePortraitLiveHtml(
     });
     await renderAndSettle(root, wrapIntl(opts.locale, opts.messages, book));
     const stage = await waitForBookShellReady(host);
+    // Shell may mount energy page briefly — snapshot any live canvases before clone.
+    await waitForRadarCanvasReady(host, "energy", 2500).catch(() => undefined);
+    snapshotCanvasesToImages(stage);
     await inlineSameOriginAssets(stage);
+    await ensurePagerIconMasks(stage);
     normalizeOfflineImages(stage);
 
     const clone = stage.cloneNode(true) as HTMLElement;
@@ -483,6 +938,7 @@ export async function captureBaselinePortraitLiveHtml(
     normalizeOfflineImages(clone);
 
     const liveCss = collectLiveBookCssFromDocument();
+    const fontCss = await collectInlinedFontFacesCss();
     const css =
       BASELINE_PORTRAIT_LIVE_EXPORT_CSS +
       (liveCss ? `\n/* ==== document.styleSheets (live) ==== */\n${liveCss}\n` : "");
@@ -496,6 +952,7 @@ export async function captureBaselinePortraitLiveHtml(
       title,
       shellHtml: stripReactNoise(clone.outerHTML),
       css,
+      fontCss,
       pageCount: BASELINE_MATRIX_BLOCKS.length,
     });
 
