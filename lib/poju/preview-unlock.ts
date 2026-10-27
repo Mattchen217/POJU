@@ -97,6 +97,17 @@ export function createPaywallMessage(): POJUMessage {
   };
 }
 
+/** Joint: PASS tip under welcome + retry CTA (no LLM). */
+export function createJointPassGateMessage(content: string): POJUMessage {
+  return {
+    role: "assistant",
+    content,
+    timestamp: new Date().toISOString(),
+    client_id: `joint-pass-gate-${Date.now()}`,
+    meta: { kind: "joint_pass_gate" },
+  };
+}
+
 export function createReportMessage(input: {
   reportText: string;
   profileId: string;

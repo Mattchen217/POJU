@@ -177,6 +177,7 @@ import {
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
+import { requestJointPassRetry } from "@/lib/poju/joint-client-events";
 import { requestDeliveryAutoOpen } from "@/lib/workspace/doc-vault-types";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
@@ -264,6 +265,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const tActivity = useTranslations("poju.activity");
   const tBrand = useTranslations("poju.branding");
   const tEscalation = useTranslations("poju.unqualified_escalation");
+  const tJoint = useTranslations("joint_flow");
   const dialog = useAppDialog();
   const workspacePrepare = useWorkspacePojuPrepareOptional();
   const [input, setInput] = useState("");
@@ -826,6 +828,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const hasUserMessage = visibleMessages.some((m) => m.role === "user");
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
+  /** Joint: no free chat / model until PASS charged (preview shell + welcome only). */
+  const jointAwaitingPass =
+    Boolean(session.joint_decision) && session.unlock_status === "preview";
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
   const deliveryConfirmPending =
@@ -844,6 +849,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const composerLocked =
     expired ||
     previewComposerBlocked ||
+    jointAwaitingPass ||
     unlockBusy ||
     segment2PipelineLock ||
     Boolean(segment2JobId) ||
@@ -3629,6 +3635,44 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           />
         );
       }
+      if (m.meta?.kind === "joint_pass_gate") {
+        bareIds.add(mid);
+        slots[mid] = (
+          <div
+            role="status"
+            style={{
+              margin: "8px 0 0",
+              padding: "12px 14px",
+              borderRadius: 8,
+              border: "1px solid rgba(242, 202, 80, 0.35)",
+              background: "rgba(11, 15, 18, 0.72)",
+              color: "#e8eaed",
+              fontSize: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            <p style={{ margin: "0 0 10px" }}>{m.content || tJoint("blocked_insufficient")}</p>
+            <button
+              type="button"
+              className="primary"
+              style={{
+                appearance: "none",
+                border: "1px solid rgba(242, 202, 80, 0.55)",
+                background: "transparent",
+                color: "var(--ws-gold, #f2ca50)",
+                borderRadius: 6,
+                padding: "8px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+              onClick={() => requestJointPassRetry()}
+            >
+              {tJoint("retry_start")}
+            </button>
+          </div>
+        );
+      }
       if (m.meta?.suggest_refund && m.role === "assistant") {
         followUps[mid] = (
           <RefundOfferAction sessionId={session.session_id} variant="message" />
@@ -3765,6 +3809,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     sending,
     onInfraBusyRetry,
     prepareShelfOpenRequest,
+    tJoint,
   ]);
 
   const activeComposerOptions = useMemo(() => {

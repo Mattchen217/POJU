@@ -101,7 +101,7 @@ export interface POJUMessage {
   /** Stage-1 dyad collect/skip gate pending on this assistant turn. */
   dyad_gate_pending?: boolean;
   /** Collecting escalation — show refund entry (user-initiated). */
-  kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch" | "unsupported_language_notice";
+  kind?: "energy_matrix" | "paywall" | "joint_pass_gate" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch" | "unsupported_language_notice";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */
     matrix_welcome?: boolean;
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;

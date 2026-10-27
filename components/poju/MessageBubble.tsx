@@ -65,6 +65,9 @@ export const MessageBubble = memo(function MessageBubble({
   if (message.role === "assistant" && message.meta?.kind === "paywall") {
     return null;
   }
+  if (message.role === "assistant" && message.meta?.kind === "joint_pass_gate") {
+    return null;
+  }
   if (message.role === "assistant" && message.meta?.kind === "report") {
     return (
       <div className="pchat__msg pchat__msg--ai">

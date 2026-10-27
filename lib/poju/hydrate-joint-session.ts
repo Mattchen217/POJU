@@ -1,13 +1,20 @@
 /**
  * Client: turn joint seed into a local POJU session (dyad, partner present).
+ * Call only after PASS charge succeeds — sets unlocked + pending shared question.
  */
 
+import {
+  dedupeWelcomeMessages,
+  seedMatrixWelcomeMessage,
+} from "@/lib/poju/chat-bootstrap";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import {
   buildDyadCompatSummary,
   dyadCollectedPatch,
 } from "@/lib/poju/dyad-compat";
 import { buildDyadMatrixPack } from "@/lib/poju/dyad-matrix-pack";
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+import type { POJUSessionState } from "@/lib/poju/types";
 import type { JointSessionSeed } from "@/lib/passes/joint-decision";
 import type { BirthInfo } from "@/lib/profile/types";
 import {
@@ -22,10 +29,16 @@ import {
 export async function hydrateJointSessionFromSeed(
   seed: JointSessionSeed,
   selfBirth: BirthInfo,
+  opts?: { matrixPayload?: PojuMatrixPayload | null; locale?: string },
 ): Promise<{ session_id: string }> {
   const selfCreated = await createStoredProfile({ birth_info: selfBirth });
   const existing = await loadPOJUSession(seed.pivot_session_id);
-  if (existing?.joint_decision && existing.joint_decision_id === seed.joint_id) {
+  if (
+    existing?.joint_decision &&
+    existing.joint_decision_id === seed.joint_id &&
+    existing.unlock_status === "unlocked" &&
+    existing.joint_pass_ref
+  ) {
     return { session_id: existing.session_id };
   }
   const sessionId = await createPOJUSession({
@@ -50,7 +63,8 @@ export async function hydrateJointSessionFromSeed(
     base_analysis: partner.base_analysis,
   };
 
-  const next = {
+  const matrixPayload = opts?.matrixPayload ?? state.matrix_payload ?? null;
+  let next: POJUSessionState = {
     ...state,
     ...dyadCollectedPatch({
       partner_profile_id: partnerCreated.profile_id,
@@ -63,12 +77,21 @@ export async function hydrateJointSessionFromSeed(
     original_question: seed.shared_question,
     pending_question: seed.shared_question,
     joint_decision_id: seed.joint_id,
-    joint_decision: true as const,
+    joint_decision: true,
     joint_pass_ref: seed.pass_ref,
-    unlock_status: "unlocked" as const,
-    unlock_via: "payment" as const,
-    dyad_offer_status: "collected" as const,
+    unlock_status: "unlocked",
+    unlock_via: "payment",
+    dyad_offer_status: "collected",
+    matrix_payload: matrixPayload ?? state.matrix_payload,
+    // Strip any pre-charge gate tip; stage1 starts from welcome + pending question.
+    messages: state.messages.filter((m) => m.meta?.kind !== "joint_pass_gate"),
   };
+
+  if (matrixPayload && opts?.locale) {
+    next = { ...next, matrix_payload: matrixPayload };
+    next = seedMatrixWelcomeMessage(next, opts.locale);
+    next = dedupeWelcomeMessages(next);
+  }
 
   await savePOJUSession(next);
   return { session_id: next.session_id };

@@ -10,6 +10,9 @@ export const JOINT_OPEN_EVENT = "pojulife:joint-open";
 
 export const JOINT_PORTRAIT_CLOSED_EVENT = "pojulife:joint-portrait-closed";
 
+/** Chat paywall tip under welcome — retry joint PASS charge. */
+export const JOINT_PASS_RETRY_EVENT = "pojulife:joint-pass-retry";
+
 /** sessionStorage: set while waiting for baseline portrait close during joint start. */
 export const JOINT_AWAIT_PORTRAIT_KEY = "pojulife:joint-await-portrait";
 
@@ -84,4 +87,9 @@ export function notifyJointPortraitClosed(): void {
   window.dispatchEvent(
     new CustomEvent(JOINT_PORTRAIT_CLOSED_EVENT, { detail: { jointId } }),
   );
+}
+
+export function requestJointPassRetry(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(JOINT_PASS_RETRY_EVENT));
 }
