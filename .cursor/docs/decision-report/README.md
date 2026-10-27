@@ -8,7 +8,8 @@
 | [PageFeedMatrix-2026-10-27.md](./PageFeedMatrix-2026-10-27.md) | 字段代号与每页 allowlist |
 | [旧键映射-2026-10-27.md](./旧键映射-2026-10-27.md) | 九模块 / P1–P6 / duty / schema → pageId |
 | [ZiweiFactPack-2026-10-27.md](./ZiweiFactPack-2026-10-27.md) | 紫微结构包 · iztro MIT · 不接批断 |
+| [切片与八页桥-2026-10-27.md](./切片与八页桥-2026-10-27.md) | `sliceForPage` 省略规则 · 01–08 职责表 · 书架仍走 v1 |
 
-代码：`lib/llm/pro/delivery/page-feed-matrix.ts` · `page-id-remap.ts` · `rule-card.ts` · `lib/ziwei/`。
+代码：`lib/llm/pro/delivery/page-feed-matrix.ts` · `slice-for-page.ts` · `page-schema/decision-pages.ts` · `decision-page-bridge.ts` · `page-id-remap.ts` · `rule-card.ts` · `lib/ziwei/`。
 
-`DELIVERY_PIPELINE` 默认保持关闭。完整切片器、弹层 UI、提示词硬度仍不在本锁的实现范围。
+`DELIVERY_PIPELINE` 默认保持关闭。切片已按页裁切。弹层 UI、提示词硬度、把切片灌进模型调用仍不在本锁的实现范围。运行时书架仍是 v1 十段。

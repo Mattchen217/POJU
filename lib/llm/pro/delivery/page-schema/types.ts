@@ -2,7 +2,8 @@
  * Delivery report page schemas (runtime v1 keys; legacy thirty_day kept for old sessions)
  * — slot-fill + UI shape until W2.
  * Keys = DeliverySegmentKey (delivery-schema.ts). Wide-in / sanitize-out.
- * Content page ids live in page-feed-matrix.ts. This file does not switch slot names.
+ * Content page ids live in page-feed-matrix.ts and decision-pages.ts.
+ * This file does not switch slot names. The shelf still reads these v1 keys.
  */
 
 import { z } from "zod";

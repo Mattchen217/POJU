@@ -110,9 +110,13 @@ assert(younger.daxian.palace === "命宫" && younger.daxian.startAge === 3, "201
 assert(younger.daxian.liunian.heavenlyStem + younger.daxian.liunian.earthlyBranch === "己丑", "2010 己丑");
 
 const slice = sliceForPage("02", { zfp: first });
-assert(slice.zfpOmitted === false, "pack keeps zfp slots");
-assert(slice.slice.zfp?.topicPalace === null, "stub does not copy topicPalace");
-assert(slice.slice.zfp?.sihua === null, "stub does not copy sihua");
-assert(!JSON.stringify(slice.slice).includes("紫微"), "slice stays empty of star names");
+assert(slice.zfpOmitted === false, "pack keeps zfp");
+const topic = slice.slice.zfp?.topicPalace;
+assert(typeof topic === "object" && topic.majorStars.includes("紫微"), "02 copies 命宫主星");
+assert(JSON.stringify(slice.slice.zfp?.sihua).includes("天同"), "02 copies sihua");
+assert(!JSON.stringify(slice.slice).includes("破军"), "02 omits mingShen");
+assert(!JSON.stringify(slice.slice).includes("木三局"), "02 omits 五行局");
+assert(!JSON.stringify(slice).includes('"palaces"'), "palaces index is not a slice field");
+assert(!JSON.stringify(slice).includes('"source"'), "source stays off the slice");
 
 console.log("ziwei-fact-pack W1 ok");

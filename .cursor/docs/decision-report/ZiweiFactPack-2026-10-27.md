@@ -48,4 +48,4 @@ ZFP 短名就是包的顶层键，与 `FEED.ZFP` 一致。
 
 ## 还不做
 
-`sliceForPage` 收到这份包仍只留空槽。提示词、恐吓闸、joint 他盘、`DELIVERY_PIPELINE` 默认都不在这里改。
+`sliceForPage` 会按页抄允许的宫、四化、大限或命身，不抄 `palaces` / `source`。提示词、恐吓闸、joint 他盘、`DELIVERY_PIPELINE` 默认都不在这里改。

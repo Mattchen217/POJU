@@ -82,19 +82,20 @@ assert(
 assert(PAGE_SEGMENT_ALLOWLISTS["03"].find((s) => s.id === "B")?.facts === "optional", "03-B skippable");
 
 const omitted = sliceForPage("02");
-assert(omitted.zfpOmitted === true, "missing zfp omits keys");
+assert(omitted.zfpOmitted === true, "missing zfp omits the group");
 assert(!("zfp" in omitted.slice), "zfp key absent");
-assert(omitted.slice.cfp.dayMaster === null, "cfp slot empty");
-assert(omitted.slice.sci === null, "02 sci slot present and empty");
-assert(omitted.slice.user.Q === null && omitted.slice.user.detail === null, "02 user slots");
+assert(!("cfp" in omitted.slice), "empty cfp group omitted");
+assert(!("user" in omitted.slice), "empty user group omitted");
+assert(!("sci" in omitted.slice), "sci omitted when hooks are missing");
 
 const stable = sliceForPage("03", {
   zfp: {},
   cfp: { dayMaster: "甲木" },
 });
-assert(stable.zfpOmitted === false, "empty zfp object keeps slots");
-assert(stable.slice.zfp?.mingShen === null, "03 zfp slot empty");
-assert(stable.slice.cfp.dayMaster === null, "stub ignores pack values");
+assert(stable.zfpOmitted === true, "empty zfp object omits the group");
+assert(!("zfp" in stable.slice), "empty zfp does not keep null slots");
+assert(stable.slice.cfp?.dayMaster === "甲木", "explicit dayMaster is kept");
+assert(stable.slice.cfp?.yongJi === undefined, "sibling cfp keys stay omitted");
 assert(stable.slice.sci === undefined, "03 has no sci slot");
 
 const keys = new Set(LEGACY_PAGE_REMAP.map((row) => row.legacyKey));

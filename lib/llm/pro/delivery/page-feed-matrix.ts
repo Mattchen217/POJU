@@ -1,12 +1,11 @@
 /**
- * PageFeedMatrix · 决策报告按页喂料骨架（内容 SoT 2026-10-27）。
+ * PageFeedMatrix · 决策报告按页喂料（内容 SoT 2026-10-27）。
  *
  * 锁：`.cursor/docs/decision-report/PageFeedMatrix-2026-10-27.md`
- * 页结构真源与本文件对齐。运行时出稿 key 仍走 v1 十段，直到 W2 改 schema/UI。
+ * 页结构真源与本文件对齐。切片实现在 `slice-for-page.ts`：
+ * 只抄该页并集里有值的短键，缺值就省略，不把整包灌进一页。
  *
- * `sliceForPage` 仍只返回 allowlist 元数据 + 空切片形状（填槽属 W2）。
- * 可把 `ZiweiFactPack` 放进 `packs.zfp`；本函数不读取星名。
- * `packs.zfp == null` 时省略 ZFP 键，禁止用空话注水补宫。
+ * 运行时书架、填槽 zod、duty、DAG 仍走 v1 十段。读 01–08 走 `decision-page-bridge.ts`。
  */
 
 export const DECISION_PAGE_IDS = ["01", "02", "03", "04", "05", "06", "07", "08"] as const;
@@ -395,88 +394,20 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
   ],
 };
 
-/** W0 入参。值可缺；本函数不消费具体真算。 */
-export type PageFeedPacks = {
-  cfp?: Partial<Record<CfpShortKey, unknown>> | null;
-  /**
-   * 省略或 null = 紫微未稳。切片不带 ZFP 键。
-   * 传入 `ZiweiFactPack`（键名即 ZFP 短名）或空对象时，仍只留空槽，不填星。
-   */
-  zfp?: Partial<Record<ZfpShortKey, unknown>> | null;
-  user?: Partial<Record<UserShortKey, unknown>> | null;
-  sci?: { hooks?: unknown } | null;
-};
-
-export type PageSliceShape = {
-  cfp: Partial<Record<CfpShortKey, null>>;
-  zfp?: Partial<Record<ZfpShortKey, null>>;
-  user: Partial<Record<UserShortKey, null>>;
-  sci?: null;
-};
-
-export type PageSliceStub = {
-  pageId: DecisionPageId;
-  allowlist: PageUnionAllowlist;
-  segments: readonly SegmentAllowlist[];
-  /** 空形状。W2 才按 allowlist 填 packs。 */
-  slice: PageSliceShape;
-  zfpOmitted: boolean;
-};
-
-const SHORT_KEY: Record<FeedFieldCode, string> = {
-  [C.dayMaster]: "dayMaster",
-  [C.yongJi]: "yongJi",
-  [C.shishenHit]: "shishenHit",
-  [C.dayunNow]: "dayunNow",
-  [C.pathTags]: "pathTags",
-  [C.conflictAnchors]: "conflictAnchors",
-  [Z.topicPalace]: "topicPalace",
-  [Z.sihua]: "sihua",
-  [Z.daxian]: "daxian",
-  [Z.mingShen]: "mingShen",
-  [Z.otherChart]: "otherChart",
-  [U.Q]: "Q",
-  [U.expect]: "expect",
-  [U.detail]: "detail",
-  [S.hooks]: "hooks",
-};
-
-function nullSlots<K extends string>(keys: readonly K[]): Partial<Record<K, null>> {
-  const out: Partial<Record<K, null>> = {};
-  for (const key of keys) out[key] = null;
-  return out;
-}
-
-function isDecisionPageId(value: string): value is DecisionPageId {
-  return (DECISION_PAGE_IDS as readonly string[]).includes(value);
-}
-
-/**
- * W0 stub。返回该页并集元数据，以及按并集排好的空槽。
- * packs 里的真算值一律不写入 slice。
- * `packs.zfp == null`（含省略）时去掉 zfp，避免未稳紫微被写成空宫注水。
- */
-export function sliceForPage(pageId: DecisionPageId, packs?: PageFeedPacks): PageSliceStub {
-  if (!isDecisionPageId(pageId)) {
-    throw new Error(`sliceForPage: unknown pageId ${pageId}`);
-  }
-  const allowlist = PAGE_UNION_ALLOWLISTS[pageId];
-  const zfpOmitted = packs?.zfp == null;
-  const slice: PageSliceShape = {
-    cfp: nullSlots(allowlist.cfp.map((code) => SHORT_KEY[code] as CfpShortKey)),
-    user: nullSlots(allowlist.user.map((code) => SHORT_KEY[code] as UserShortKey)),
-  };
-  if (!zfpOmitted) {
-    slice.zfp = nullSlots(allowlist.zfp.map((code) => SHORT_KEY[code] as ZfpShortKey));
-  }
-  if (allowlist.sci !== false) {
-    slice.sci = null;
-  }
-  return {
-    pageId,
-    allowlist,
-    segments: PAGE_SEGMENT_ALLOWLISTS[pageId],
-    slice,
-    zfpOmitted,
-  };
-}
+export {
+  page07Applies,
+  readingOrderForTopic,
+  sliceDumpKeys,
+  sliceFieldCodes,
+  sliceForPage,
+  sliceStaysInAllowlist,
+  type CfpShortInput,
+  type PageFeedPacks,
+  type PageSlice,
+  type PageSliceResult,
+  type PageSliceStub,
+  type SlicedDaxian,
+  type SlicedMingShen,
+  type SlicedSihuaHit,
+  type SlicedTopicPalace,
+} from "@/lib/llm/pro/delivery/slice-for-page";

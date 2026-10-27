@@ -4,6 +4,9 @@
  *
  * User-facing page numbers (corner wait / pager) count only prose:
  * decision_brief = 1 … validation_close … 附录. Cover + TOC are not pages.
+ *
+ * 内容页 01–08 从 decision-page-bridge 读。本文件的槽位顺序不改。
+ * 07 没有槽。06 仍分 execution_guidance 与 self_regulation 两纸。
  */
 
 import {
@@ -212,3 +215,10 @@ export function splitShelfTitle(title: string): { primary: string; secondary?: s
 }
 
 export { defaultTitleForSlot };
+
+export {
+  primaryShelfKeyForPage,
+  readingOrderForTopic,
+  resolveDecisionPage,
+  shelfKeysForPage,
+} from "@/lib/llm/pro/delivery/decision-page-bridge";
