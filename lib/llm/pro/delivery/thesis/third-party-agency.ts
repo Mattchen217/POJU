@@ -326,9 +326,8 @@ export function softRepairThirdPartyAgencyProse(
     if (/话语权|从属|加入|主导/.test(blob)) {
       return "结构上你更易处于配合而非主导";
     }
-    if (/一起拍板|一起决定|一起做(?:这个)?决定|共同决定|共同拍板|对方盘|没有接入|不替对方/.test(blob)) {
-      return "另一侧的盘不在这份材料里，你先写清自己能不能一起拍板的条件。";
-    }
+    const counterpart = counterpartConditionReplacement(blob);
+    if (counterpart) return counterpart;
     if (
       /男友|女友|伴侣|配偶|夫妻|关系|亲密|恋爱|婚姻/.test(blob) ||
       knownParties.some((p) => /男友|女友|伴侣|配偶|老公|老婆/.test(p))
@@ -370,6 +369,23 @@ export function softRepairThirdPartyAgencyProse(
     out = replacementFor(t);
   }
   return out || "你在本盘结构下承受该表象对应的约束与压力";
+}
+
+/**
+ * Leftover counterpart agency (对方同意 / 说服对方 / 一起拍板) becomes the
+ * querent's own conditions. Not a science shell — stripping it would drop the angle.
+ */
+const QUERENT_COUNTERPART_CONDITION =
+  "另一侧的盘不在这份材料里，你先写清自己能不能一起拍板的时间、底线和范围。";
+
+function counterpartConditionReplacement(blob: string): string | null {
+  if (
+    !/对方|他方/.test(blob) &&
+    !/一起拍板|一起决定|一起做(?:这个)?决定|共同决定|共同拍板|没有接入|不替对方/.test(blob)
+  ) {
+    return null;
+  }
+  return QUERENT_COUNTERPART_CONDITION;
 }
 
 /** Soft-repair shells that must not become user-facing strategy/means. */
@@ -603,13 +619,20 @@ export function softRepairScienceAngleUserProse(
     }
   }
   // Fail only on empty / known shells / collapse left a stub — not on short-but-valid strategies.
+  // Counterpart consent that collapsed to a shell is re-filled as the querent's own conditions.
   if (!s || isScienceSoftRepairShell(s)) {
-    notes.push(`${tag}_science_strategy_collapsed_to_shell`);
-    return {
-      strategy: s || "",
-      means: [],
-      fail_reason: "science_strategy_collapsed_to_shell",
-    };
+    const kept = counterpartConditionReplacement(original);
+    if (kept) {
+      notes.push(`repaired_counterpart_strategy_after_shell:${tag}`);
+      s = kept;
+    } else {
+      notes.push(`${tag}_science_strategy_collapsed_to_shell`);
+      return {
+        strategy: s || "",
+        means: [],
+        fail_reason: "science_strategy_collapsed_to_shell",
+      };
+    }
   }
   if (ranDialogueCollapse && s.length < 40) {
     notes.push(`${tag}_science_strategy_collapsed_to_shell`);
@@ -663,6 +686,12 @@ export function softRepairScienceAngleUserProse(
       detectKnownThirdPartyAgency(m, []) ||
       hasResidualIntimacyAnaphoraAgency(m, { force: intimacyCtx })
     ) {
+      const kept = counterpartConditionReplacement(before);
+      if (kept && !outMeans.includes(kept)) {
+        notes.push(`repaired_counterpart_mean_after_shell:${tag}_${i}`);
+        outMeans.push(kept);
+        continue;
+      }
       notes.push(`drop_science_shell_or_agency_mean:${tag}_${i}`);
       continue;
     }

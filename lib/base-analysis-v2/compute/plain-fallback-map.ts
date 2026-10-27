@@ -145,6 +145,8 @@ export const PLAIN_FALLBACK_BODY_SINGLES: Readonly<Record<string, string>> = {
   用忌: "有益与干扰",
   // 五行/金木水火土：交付规范允许原字直出，不打标、不平替（译员与读者都能懂）
   八字: "先天配置",
+  // Column label. Visible body says the portrait, not the column name.
+  命理: "能量画像",
   护身: "护持感",
   ...SOFT_GLOSS_TO_VERNACULAR,
 };

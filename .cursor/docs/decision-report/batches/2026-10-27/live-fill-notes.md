@@ -4,15 +4,19 @@ Grok 盒上的原始日志不在这台机器。下面只记已落地的行为和
 
 ## joint 06
 
-上一枪（tip `54f36295`）四案 solo 的 02+06 清洗过了。`joint-thin` 的 06 停在：
+`54f36295` 上四案 solo 的 02+06 过了。`f23dded3` 有钥匙的重跑里，四案 solo 的 01+02+05+06 仍过。`joint-thin` 的 06 仍停在：
 
 `missing_primary_or_backup_toolkit:soft_repair_third_party_strategy:primary_toolkit_angle_0`
 
-原始模型句没有进仓库。失败形态是：共同决定里的「对方」被当成施事，软修写成科学壳，壳被剥掉，主工具包第 0 角作废。
+清洗备注里，主轨 0/2 和辅轨 0/1/2 都有 `soft_repair_third_party_strategy`。手段被剥空后是 `primary_toolkit_angle_0_science_means_empty_after_soft_repair`，接着 `primary_toolkit_angles_lt_3`。活稿写了「让对方同意 / 说服对方」这一类施事，题面框单元测盖不住。
 
-这一枪把共同决定收成题面框：对方的盘未接入、和对方一起、不替对方做主。框内原句留下。框外仍写「让对方同意」，但整句属于一起拍板时，改写成求问者自己的条件，且这句话不进科学壳表，避免再被剥掉。纯「说服对方」且没有共同决定框，仍然塌成壳并作废。
+现在：题面框仍保留原句。剩下的对方施事改写成求问者自己的时间、底线和范围，不进科学壳。壳被剥光时，只要原句是对方施事，就补回这句条件，不把这一角丢掉。纯科学壳、没有对方的空页仍然作废。06 的任务也写明：strategy 和 means 只写求问者自己的条件。
 
-`otherChart` 仍省略。薄壳只标 Thin。
+`otherChart` 仍省略。06 和 02 都过清洗之后，薄壳只标 Thin。
+
+## joint 02
+
+同一枪 02 停在 `compress_body_mingli:命理`，位置 `why_cards[0].essence`，attempts=2。干支和用神会自动平替，裸「命理」之前直接失败。现在「命理」平替成「能量画像」。02 任务不再把栏目名「命理」写成要出现在正文里的词。
 
 ## 真太阳时
 

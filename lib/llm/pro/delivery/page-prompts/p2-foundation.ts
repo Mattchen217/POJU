@@ -42,7 +42,7 @@ user 侧「已锁定命理批断」按单元顺序对应 why_cards[0]…[4]。�
 
 # 目标
 surface = 该条批断在眼前可观察到的现象（白话）。essence = 同一条批断的机制链（白话）。删掉 professional_evidence 后，surface 与 essence 都不能独自成立。
-同页双轨写在 why_cards 里：surface 承担命理理由的白话，essence 里要有科学机制，并收到同一个决定上。不要另开一页，也不要在正文里报栏目名。
+同页双轨写在 why_cards 里：surface 写结构理由的白话，essence 里要有科学机制，并收到同一个决定上。不要另开一页。正文不要写出「命理」这个栏目名。
 02-D 写在每张 why_card.chart_anchors：从本页切片取短锚，至少 1 条、至多 6 条。禁止空数组。紫微没进本页切片时只留八字短锚。不要把全盘、十二宫或对方盘读进锚。短锚不要抄进 surface / essence。
 
 # 必填槽
@@ -66,12 +66,12 @@ ${titleRules(tagZh, "点出结构卡点", "副题点机制从批断来")}`;
 现实决策咨询系统 · 本页只做处境诊断与事实分层，不写执行步骤。
 
 # 任务
-把每一条已锁定的命理批断译成一张卡。surface 和 essence 都是这条批断的白话，零命理词。
+把每一条已锁定的批断译成一张卡。surface 和 essence 都是这条批断的白话。正文不要写出「命理」这个栏目名，也不要写命理专名。
 另填 confirmed_facts / open_assumptions / info_gaps（各≥1 为宜）：区分已确认事实、待验证假设、信息缺口。
 
 # 目标
 读完就知道：盘上哪几个结构事实，各自在眼前处境里显成什么现象、机制是什么；以及事实/假设/缺口分层。删掉批断后，两段都不能独自成立。
-同页双轨写在 why_cards 里：命理理由、科学机制、汇合都要出现，可以分在 surface 与 essence，不要另开一页。若另写 evidence，命理机制进 metaphysics_evidence，科学机制进 science_evidence。
+同页双轨写在 why_cards 里：结构理由的白话、科学机制、汇合都要出现，可以分在 surface 与 essence，不要另开一页。正文不要写出「命理」这个栏目名。若另写 evidence，结构机制进 metaphysics_evidence，科学机制进 science_evidence。
 02-D 写在每张 why_card.chart_anchors：从本页切片取短锚，至少 1 条、至多 6 条。禁止空数组。紫微没进本页切片时只留八字短锚，不把全盘读进正文。短锚不要抄进 surface / essence。
 
 # 必填槽
