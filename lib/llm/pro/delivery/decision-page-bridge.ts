@@ -5,8 +5,8 @@
  * - 书架槽：`DELIVERY_SHELF_SLOT_IDS`（cover、toc、十段、appendix）
  * - 填槽 zod：`DeliveryPageSchemaByKey`
  * - 出稿读键：`resolveDeliverySegmentKey`
- * - 提示词 duty：`page-prompts` 的 BY_KEY
- * - v3 喂料旗标：`pageFeedFlags`（模型调用仍走这张表，不走 slice）
+ * - 提示词 duty：`page-prompts` 的 BY_KEY（主张硬度已对齐内容锁；JSON 形状仍是 v1）
+ * - v3 喂料旗标：`pageFeedFlags` 仍开关奇门 / 菜单 / 处境。八字与紫微整包改走 `formatPageSliceFeed`
  * - DAG / 九模块蓝图
  *
  * 07 没有书架槽。06 的主槽仍是 execution_guidance，self_regulation 仍是单独一纸，内容归 06-C。

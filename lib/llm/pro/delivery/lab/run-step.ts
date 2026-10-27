@@ -1016,10 +1016,14 @@ async function executeKind(
     const pageArt = ensurePage(lab, page);
     const plan = pageArt.plan as DeepEvidencePlan | undefined;
     const finalize = labSyntheticFinalize(lab);
+    const preallocFill = lab.artifacts.prealloc as
+      | { chart_fact_pack?: string }
+      | undefined;
     const filled = await runPageSchemaFill({
       key: page,
       finalize,
       locale: lab.source.locale || "zh",
+      chart_fact_pack: preallocFill?.chart_fact_pack,
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       thinking_effort: "high",

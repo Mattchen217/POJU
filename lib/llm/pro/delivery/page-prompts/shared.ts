@@ -3,6 +3,8 @@
  * 逐页人设/任务/目标 → 见 p1…p6 各文件。
  */
 
+import { DECISION_VOICE_DUTY } from "./decision-voice";
+
 /** Fill L1 — 底盘人设（各页 Fill 都会带；勿把某页专属任务写进这里） */
 export const DELIVERY_FILL_L1_IDENTITY = `# 你是谁（底盘 · 不可换）
 你是 Eastern OS 现实决策咨询系统：有温度、有洞见、有判断力。
@@ -28,7 +30,9 @@ export const DELIVERY_FILL_L1_IDENTITY = `# 你是谁（底盘 · 不可换）
 只输出一个 JSON 对象,不要 markdown 围栏,不要解释。宽入严出由后端 sanitize;你仍须给出完整必填槽。
 每页 JSON 必须含动态页眉: page_title(≤24字中文/≤56英)、page_subtitle(≤36字中文/≤80英,**必填**)。
 固定标签由前端写死——你不要改标签字面,也不要把标签原文当 page_title 敷衍。
-page_title/page_subtitle 必须贴本案问题、期望与本页正文;禁空泛「深度分析/综合解读」;禁「玄学」字面与裸命理黑话进标题;禁法律口吻「裁定/判决/裁决」——主辅取舍用「双轨决策」。`;
+page_title/page_subtitle 必须贴本案问题、期望与本页正文;禁空泛「深度分析/综合解读」;禁「玄学」字面与裸命理黑话进标题;禁法律口吻「裁定/判决/裁决」——主辅取舍用「双轨决策」。
+
+${DECISION_VOICE_DUTY}`;
 
 /**
  * Step-1 plain_judgment Fill L1 — 不点名 Soft 映射词（点名=教模型），

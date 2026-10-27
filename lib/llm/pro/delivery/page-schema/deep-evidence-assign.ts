@@ -16,6 +16,7 @@ import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 import { inferP4MoatEligibleTypes, anchorsServeMoatClass } from "./p4-means-gate";
 export { anchorsServeMoatClass } from "./p4-means-gate";
 import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
+import { appendPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import {
   normalizeNear7DayStem,
   stripMonthBandDayPrefix,
@@ -1434,7 +1435,7 @@ export function buildDeepEvidenceAssignPrompt(
 ${pageDuty}
 
 # 共用形状（硬）
-读【本盘事实档】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
+读【本页切片】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
 - unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张；写到结构关系为止（运岁未熟/用忌失衡/十神透干/客克主主方受制等），**禁止**主张尾巴接「不宜冒进」「易思虑」「宜等待」「宜以客位进取开创」「宜进取开创」等执行/攻守嘱咐白话；**禁止**把【处境材料】/问题期望里的议题结论或生活表象贴进主张尾巴。
 - calc_cite：**原样连续**摘自事实档或真算料（整行或行内连续片段，可截断）。禁止改写拼接多字段；禁止白话结论与「宜等待/暗示…」处方腔；禁止把 unit_claim 整句当摘录；**禁止**把手段菜单/派工 refr 里的职场白话当摘录。
 - **unit_claim 与 calc_cite 必须不同**：主张是解释，摘录是材料里的另一段短原文。
@@ -1462,8 +1463,15 @@ ${pageDuty}
       `## 本页\n固定标签【${tag}】 · key=${key}`,
       `## 派工表（只锁 path；主张与摘录由你写）\n${planLines}`,
     ];
-    if (opts.chart_fact_pack?.trim()) {
-      userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
+    const openSliceFed = appendPageSliceFeed(userParts, {
+      key,
+      chartText: opts.chart_fact_pack,
+      ziwei: opts.ziwei_fact_pack,
+      question: opts.question_expectation,
+      topic: opts.topic,
+    });
+    if (!openSliceFed && opts.structured_inventory?.trim()) {
+      userParts.push(`【闭集】\n${opts.structured_inventory.trim()}`);
     }
     if (opts.eastern_calc_slice?.trim()) {
       userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
@@ -1611,9 +1619,13 @@ ${buildAssignNecessarySignalsFewShotBlock()}
       ? `## 派工表（locked_signals 已锁死 slug+维；你只填解释）\n${planLines}`
       : `## 派工表（锁死 path / moat / prefer_* 四元组；你填锚+绑定）\n${planLines}`,
   ];
-  if (opts.chart_fact_pack?.trim()) {
-    userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
-  }
+  const pageSliceFed = appendPageSliceFeed(userParts, {
+    key,
+    chartText: opts.chart_fact_pack,
+    ziwei: opts.ziwei_fact_pack,
+    question: opts.question_expectation,
+    topic: opts.topic,
+  });
   if (opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
   }
@@ -1644,7 +1656,7 @@ ${buildAssignNecessarySignalsFewShotBlock()}
   ) {
     userParts.push(opts.action_brief_block.trim());
   }
-  if (opts.structured_inventory?.trim()) {
+  if (!pageSliceFed && opts.structured_inventory?.trim()) {
     if (closed) {
       userParts.push(
         `【闭集·对照用·不得入 slug】\n${opts.structured_inventory.trim()}`,

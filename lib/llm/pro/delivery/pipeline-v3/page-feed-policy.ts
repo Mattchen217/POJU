@@ -1,7 +1,8 @@
 /**
  * Pipeline v3 · 页级喂料白名单（薄喂 · 防污染）。
- * 内容喂料真源见 page-feed-matrix.ts。sliceForPage 已按页裁切，但本旗标表仍是模型调用的喂料开关。
- * 出稿 key 仍是 v1。不要在这里改成把整包 ChartFactPack / ZiweiFactPack 灌进一页。
+ * 内容喂料真源见 page-feed-matrix.ts。sliceForPage 已按页裁切。
+ * 八字 / 紫微整包不进页级 user 消息：有 chart 或 ziwei 时改为 `formatPageSliceFeed`。
+ * 本旗标表仍开关奇门、菜单、处境、现实块。出稿 key 仍是 v1。
  *
  * 目的不是「去掉某种真算」，而是：每页、每步只收**该职责需要的数据源**。
  * 无关块进 prompt = 增负 + 错轴（例：P1 批断灌 collecting 原文 → 回写「权责/兼职」）。

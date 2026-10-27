@@ -25,6 +25,7 @@ import {
   formatP5WeekSummaryForPrompt,
 } from "./action-extractor";
 import { legacyFillFewShotForKey } from "./fill-shape-legacy-fewshot";
+import { appendPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import {
   resolveDeliveryFillShapeMode,
   type DeliveryFillShapeMode,
@@ -104,6 +105,10 @@ export type PageSchemaFillPromptOpts = {
    * Complements multi_dim / page_plan slices — user-side only.
    */
   structured_inventory?: string;
+  /** Local chart text. The page call reads the slice, not this whole string. */
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   /**
    * Batch 3: "compress" = vernacular rewrite from locked deep evidence (no new reckoning).
    * Default "full" keeps legacy single-shot fill (transition / fallback).
@@ -403,7 +408,19 @@ ${
       `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
     );
   }
-  if (feed.structured_inventory && !isCompress && opts.structured_inventory?.trim()) {
+  const pageSliceFed = appendPageSliceFeed(userParts, {
+    key,
+    chartText: opts.chart_fact_pack,
+    ziwei: opts.ziwei_fact_pack,
+    question: opts.question_expectation,
+    topic: opts.topic,
+  });
+  if (
+    feed.structured_inventory &&
+    !isCompress &&
+    !pageSliceFed &&
+    opts.structured_inventory?.trim()
+  ) {
     userParts.push(
       `【完整原始命盘闭集 · 与上面的多维真算摘要互为补充,如果本页主题需要摘要里没覆盖到的角度(比如具体某一步大运、某个神煞),可以直接从这里取,禁止编造闭集外的词】\n${opts.structured_inventory.trim()}`,
     );

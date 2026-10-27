@@ -12,4 +12,4 @@
 
 代码：`lib/llm/pro/delivery/page-feed-matrix.ts` · `slice-for-page.ts` · `page-schema/decision-pages.ts` · `decision-page-bridge.ts` · `page-id-remap.ts` · `rule-card.ts` · `lib/ziwei/`。
 
-`DELIVERY_PIPELINE` 默认保持关闭。切片已按页裁切。弹层 UI、提示词硬度、把切片灌进模型调用仍不在本锁的实现范围。运行时书架仍是 v1 十段。
+`DELIVERY_PIPELINE` 默认保持关闭。页级模型调用读 `formatPageSliceFeed`。主张硬度与恐吓闸已接上。运行时书架、填槽 zod、弹层仍是 v1 十段。§3.5 双轨删段自检等人审，本波不签。

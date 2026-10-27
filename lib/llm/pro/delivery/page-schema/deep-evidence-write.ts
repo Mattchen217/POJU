@@ -21,6 +21,7 @@ import {
   softRepairWriteEvidenceProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
+import { appendPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import {
   allBranchPairKeys,
   assessDeepEvidenceUnitDepth,
@@ -138,13 +139,13 @@ unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}$
 
   const system = factPack
     ? [
-        `# 你是谁\n你是交付页【深度依据·专写】专员。按【本盘事实档】为每张卡写完整命理批断。`,
+        `# 你是谁\n你是交付页【深度依据·专写】专员。按【本页切片】为每张卡写完整命理批断。`,
         POJU_KNOWLEDGE_ROOTS,
         JUDGMENT_CYCLE_BLOCK,
         `# 本步边界（硬）
 - 【不是】用户可见白话；【是】本盘命理批断原文。依据槽将原样展示这段批断。
 - 只写本卡 unit_claim 所需要的命理展开。需要几个结构词写几个，不设上限，也禁止注水。事实档与本地真算料里与本卡有关的结构都要能进批断，禁止为省事只写一句空壳。
-- 允许日主、用神、喜神、忌神、藏干、四柱、得令得地、大运流年，只要指的是【本盘事实档】或【本地真算料】。
+- 允许日主、用神、喜神、忌神、藏干、四柱、得令得地、大运流年，只要指的是【本页切片】或【本地真算料】。
 - 直接写命理句子。禁止任何标记：不要 ⟦w:⟧、不要 ⟦t:⟧、不要 ⟦词:⟧、不要自造术语、不要软译。
 - 禁止：档里没有的干支、没算过的神煞、永禁词。
 - 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍；也不要因为材料多就改写处境叙事。
@@ -228,7 +229,13 @@ ${moatHint}
   }
   userParts.push(factPack ? `## 本 chunk 主张\n${lockLines}` : `## 本 chunk 锁定表\n${lockLines}`);
   if (factPack && opts.chart_fact_pack?.trim()) {
-    userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
+    appendPageSliceFeed(userParts, {
+      key,
+      chartText: opts.chart_fact_pack,
+      ziwei: opts.ziwei_fact_pack,
+      question: judgmentOnly ? null : opts.question_expectation,
+      topic: opts.topic,
+    });
   }
   // 铁律 15：承重真算不砍。处境/问答可拿掉（易粘成白话）；本地真算料保留以撑深度。
   if (opts.eastern_calc_slice?.trim()) {

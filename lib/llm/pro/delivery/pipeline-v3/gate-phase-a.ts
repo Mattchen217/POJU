@@ -8,6 +8,7 @@ import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-e
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
+import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 
 export type ContentGateVerdict = {
   passed: boolean;
@@ -38,6 +39,15 @@ export function gateContentPhaseA(input: {
       passed: false,
       failed_rule: "gate_missing_page_schema",
       detail: "内容步未产出可预览正文 JSON。回改提示词/喂料后重跑内容步。",
+      notes,
+    };
+  }
+  const scare = scareRedlineSnippet(JSON.stringify(page));
+  if (scare) {
+    return {
+      passed: false,
+      failed_rule: "scare_redline",
+      detail: `恐吓红线命中「${scare}」。改成带条件的明确主推后重跑本步。`,
       notes,
     };
   }

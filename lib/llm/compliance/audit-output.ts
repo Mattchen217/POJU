@@ -254,7 +254,7 @@ const ZH_DIVINATION_REGEX = /起卦|卦象|抽签|求签|解签|占卜/g;
  * 决策报告恐吓 / 逼迫红线（内容 SoT 2026-10-27）。
  * 允许带条件的明确主推（更宜 / 条件是 / 仅在）。那些词不在本表。
  * 预测句（必将 / 一定会）仍走 ZH_PREDICTION_PATTERNS，不在这里放宽。
- * W3 才把本表接进 detectOutputPolicyViolations；W0 只更新词表并提供检查函数。
+ * 命中走 detectOutputPolicyViolations → 交付闸失败，并进入既有重写提示。
  */
 export const SCARE_REDLINE_PHRASES_ZH = ["必散", "必死", "大祸", "不听就败", "付费消灾"] as const;
 
@@ -304,10 +304,22 @@ function scareRegexHits(regex: RegExp, text: string): boolean {
   return hit;
 }
 
-/** 词表检查。未接入交付闸门。 */
+/** 词表检查。交付闸与 detectOutputPolicyViolations 用同一套正则。 */
 export function textHitsScareRedline(text: string): boolean {
   if (!text?.trim()) return false;
   return scareRegexHits(ZH_FEAR_REGEX, text) || scareRegexHits(EN_FEAR_REGEX, text) || scareRegexHits(ES_FEAR_REGEX, text);
+}
+
+/** 命中的那一截。没有命中返回 null。明确主推词干单独出现不会命中。 */
+export function scareRedlineSnippet(text: string): string | null {
+  if (!text?.trim()) return null;
+  for (const regex of [ZH_FEAR_REGEX, EN_FEAR_REGEX, ES_FEAR_REGEX]) {
+    regex.lastIndex = 0;
+    const match = regex.exec(text);
+    regex.lastIndex = 0;
+    if (match?.[0]) return match[0].slice(0, 48);
+  }
+  return null;
 }
 
 const ZH_BRANCHES = "子丑寅卯辰巳午未申酉戌亥";
@@ -366,6 +378,15 @@ export function detectOutputPolicyViolations(
   if (!text?.trim()) return [];
 
   const violations: OutputPolicyViolation[] = [];
+
+  const scare = scareRedlineSnippet(text);
+  if (scare) {
+    violations.push({
+      category: "fear_mongering",
+      label: "scare_redline",
+      snippet: scare,
+    });
+  }
 
   if (locale.startsWith("zh")) {
     for (const [regex, label] of ZH_COMPLIANCE_REDLINE) {

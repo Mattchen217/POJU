@@ -5,6 +5,7 @@
  */
 
 import { callLLM } from "@/lib/llm/router";
+import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliveryComputed, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
@@ -127,6 +128,10 @@ export async function runPageSchemaFill(input: {
   category_token_sets?: CategoryTokenSets | null;
   /** Full chart closed-set (buildStructuredInstanceInventory text). */
   structured_inventory?: string;
+  /** Local chart text. Prompt receives the page slice, not the whole pack. */
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   /** Batch 3 compress mode + locked deep evidence. */
   fill_mode?: "full" | "compress";
   deep_evidence_plan?: DeepEvidencePlan | null;
@@ -374,6 +379,9 @@ async function runPageSchemaFillOnce(input: {
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
   structured_inventory?: string;
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   fill_mode?: "full" | "compress";
   deep_evidence_plan?: DeepEvidencePlan | null;
   p3_body_excerpt?: string;
@@ -418,6 +426,9 @@ async function runPageSchemaFillOnce(input: {
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
     structured_inventory: input.structured_inventory,
+    chart_fact_pack: input.chart_fact_pack,
+    ziwei_fact_pack: input.ziwei_fact_pack,
+    topic: input.topic,
     fill_mode,
     deep_evidence_lock: deepLock,
     plain_judgment: plainJudgment,
@@ -493,6 +504,15 @@ async function runPageSchemaFillOnce(input: {
       const text = result.content?.trim() ?? "";
       lastRawText = text;
       const hitLength = result.meta.finish_reason === "length";
+      const scare = scareRedlineSnippet(text);
+      if (scare) {
+        lastReason = "scare_redline";
+        console.warn("[delivery/page-schema-fill] scare_redline", {
+          key: input.key,
+          snippet: scare,
+        });
+        break;
+      }
       // No bonus beyond 1+1 phase budget — length truncate counts as a failed admit.
       if (!text) {
         lastReason = "empty_response";
