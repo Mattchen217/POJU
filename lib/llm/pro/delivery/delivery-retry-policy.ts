@@ -14,6 +14,7 @@
  */
 
 import { OPENROUTER_MAX_ATTEMPTS } from "@/lib/llm/openrouter-retry";
+import { productionDeliveryUsesV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 
 /** Canonical generation budget: 1 primary + 1 corrective. Never 3+. */
 export const DELIVERY_GEN_ATTEMPTS_MAX = 2;
@@ -82,6 +83,29 @@ export function isDeliveryJobWallExceeded(
   now_ms: number = Date.now(),
 ): boolean {
   return Number.isFinite(created_at) && now_ms - created_at > DELIVERY_JOB_MAX_WALL_MS;
+}
+
+/**
+ * v3 books are one model call per worker (judgment, body, polish, evidence_soft
+ * across ten papers). The legacy 40m wall trips on the status poll before that
+ * book can assemble. Explicit legacy rollback keeps the 40m cap.
+ */
+export const PRODUCTION_V3_JOB_MAX_WALL_MS = 120 * 60_000;
+
+export function activeDeliveryJobMaxWallMs(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  return productionDeliveryUsesV3(env)
+    ? PRODUCTION_V3_JOB_MAX_WALL_MS
+    : DELIVERY_JOB_MAX_WALL_MS;
+}
+
+export function isActiveDeliveryJobWallExceeded(
+  created_at: number,
+  now_ms: number = Date.now(),
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return Number.isFinite(created_at) && now_ms - created_at > activeDeliveryJobMaxWallMs(env);
 }
 
 export function isDeliveryJobContinueHopExceeded(hops: number): boolean {

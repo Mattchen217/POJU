@@ -10,8 +10,9 @@ import type { DeliverySegmentReady } from "@/lib/llm/pro/delivery/run-segment-ch
 import {
   DELIVERY_JOB_MAX_CONTINUE_HOPS,
   DELIVERY_JOB_MAX_WALL_MS,
+  activeDeliveryJobMaxWallMs,
   isDeliveryJobContinueHopExceeded,
-  isDeliveryJobWallExceeded,
+  isActiveDeliveryJobWallExceeded,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   currentDeliveryDeployGeneration,
@@ -24,6 +25,7 @@ import {
   setXhighJobContent,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
+import { isProductionV3ClosedFailure } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 import { isFinalDeliveryJobInput, isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
@@ -36,7 +38,7 @@ export const dynamic = "force-dynamic";
  * When segment:ready pages already exist, always pause for Continue — never wipe the book.
  */
 const STALE_RUNNING_MS = 45_000;
-/** Align status poll abandon with job-level fuse (40m), not the old 90m soft wall. */
+/** Legacy 40m name kept for the fuse test. Live jobs use activeDeliveryJobMaxWallMs (v3 = 120m). */
 const MAX_JOB_AGE_MS = DELIVERY_JOB_MAX_WALL_MS;
 
 const STAGE_PROGRESS_ZH: Record<string, string> = {
@@ -199,7 +201,8 @@ export async function GET(req: NextRequest) {
   // Absolute wall-clock / continue-hop fuse even with a live heartbeat.
   if (job.status === "running" || job.status === "pending") {
     const continueHops = await loadDeliveryJobContinueHops(job.job_id).catch(() => 0);
-    const wallTripped = isDeliveryJobWallExceeded(job.created_at) || age_ms > MAX_JOB_AGE_MS;
+    const wallMax = Math.max(MAX_JOB_AGE_MS, activeDeliveryJobMaxWallMs());
+    const wallTripped = isActiveDeliveryJobWallExceeded(job.created_at) || age_ms > wallMax;
     const hopTripped = isDeliveryJobContinueHopExceeded(continueHops);
     if (wallTripped || hopTripped) {
       const reason = hopTripped
@@ -207,7 +210,7 @@ export async function GET(req: NextRequest) {
         : "job_time_budget_exhausted";
       const errorMsg = hopTripped
         ? `STOP: delivery exceeded max continue hops (${continueHops}/${DELIVERY_JOB_MAX_CONTINUE_HOPS}) — tap Regenerate for a new report`
-        : `STOP: delivery exceeded max wall duration (${DELIVERY_JOB_MAX_WALL_MS / 60_000}m) — tap Regenerate for a new report`;
+        : `STOP: delivery exceeded max wall duration (${wallMax / 60_000}m) — tap Regenerate for a new report`;
       const stopped = await stopDeadJob(
         job.job_id,
         session_id,
@@ -347,16 +350,21 @@ export async function GET(req: NextRequest) {
     const streamed_segments = streamedSegmentsFromReady(ready);
     const hasReady = streamed_segments.length > 0;
     const userCancelled = job.failure_reason === "user_cancelled";
+    const v3Closed = isProductionV3ClosedFailure(job.failure_reason);
     // Heal sticky hard-fail so user Continue can re-arm the same job.
     // Never heal user Stop — client cleared pending and must not auto-resume.
+    // Never heal v3_step_failed — that close must not resume onto the legacy DAG.
     let retryable =
       !userCancelled &&
+      !v3Closed &&
       (job.retryable === true || job.failure_reason === "interrupted" || hasReady);
     let interrupted =
       !userCancelled &&
+      !v3Closed &&
       (hasReady || (retryable && job.failure_reason === "interrupted"));
     if (
       !userCancelled &&
+      !v3Closed &&
       hasReady &&
       !(job.retryable === true || job.failure_reason === "interrupted")
     ) {

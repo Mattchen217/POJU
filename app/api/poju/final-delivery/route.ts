@@ -18,6 +18,7 @@ import {
   resetDeliverySegmentTransportFailCounts,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { logDeliveryStep } from "@/lib/llm/pro/delivery/delivery-step-log";
+import { isProductionV3ClosedFailure } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 import {
   acquireXhighSessionLock,
   createXhighJob,
@@ -223,6 +224,7 @@ export async function POST(req: Request) {
       const readyCount = (await loadAllDeliverySegmentReady(job.job_id).catch(() => [])).length;
       const resumable =
         job.status === "failed" &&
+        !isProductionV3ClosedFailure(job.failure_reason) &&
         (job.retryable === true ||
           job.failure_reason === "interrupted" ||
           readyCount > 0);

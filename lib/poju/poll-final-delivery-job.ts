@@ -7,12 +7,16 @@ import {
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { isDeliveryBudgetExhaustedReason } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  isDeliveryBudgetExhaustedReason,
+  PRODUCTION_V3_JOB_MAX_WALL_MS,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { isProductionV3ClosedFailure } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Match server job-level wall (40m). */
-export const FINAL_DELIVERY_POLL_MAX_MS = 40 * 60_000;
+/** Match the production v3 job wall. A legacy rollback still ends earlier via the status API. */
+export const FINAL_DELIVERY_POLL_MAX_MS = PRODUCTION_V3_JOB_MAX_WALL_MS;
 
 /**
  * Client auto-resume for soft interrupts only (lease blips).
@@ -394,19 +398,21 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         const failReason = String(data.reason ?? "");
         const errText = detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`;
         // Budget / wall / quality stops — surface Continue to user; never auto-resume thrash.
+        const hardClose =
+          failReason === "superseded_by_deploy" || isProductionV3ClosedFailure(failReason);
         if (
           failReason === "job_abandoned" ||
-          failReason === "superseded_by_deploy" ||
+          hardClose ||
           isDeliveryBudgetExhaustedReason(failReason) ||
           isDeliveryBudgetExhaustedReason(errText)
         ) {
           return {
             ok: false,
             job_id: input.job_id,
-            retryable: failReason === "superseded_by_deploy" ? false : interrupted ? true : (data.retryable ?? true),
+            retryable: hardClose ? false : interrupted ? true : (data.retryable ?? true),
             reason: (failReason || "interrupted") as PojuXhighJobFailureReason,
             error: errText,
-            interrupted: failReason === "superseded_by_deploy" ? false : interrupted || undefined,
+            interrupted: hardClose ? false : interrupted || undefined,
             streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
           };
         }
