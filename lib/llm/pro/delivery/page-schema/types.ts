@@ -1,7 +1,8 @@
 /**
- * Delivery report page schemas (active P1–P6; legacy thirty_day kept for old sessions)
- * — SSOT for JSON slot-fill + UI.
+ * Delivery report page schemas (runtime v1 keys; legacy thirty_day kept for old sessions)
+ * — slot-fill + UI shape until W2.
  * Keys = DeliverySegmentKey (delivery-schema.ts). Wide-in / sanitize-out.
+ * Content page ids live in page-feed-matrix.ts. This file does not switch slot names.
  */
 
 import { z } from "zod";

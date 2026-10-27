@@ -3,7 +3,9 @@
  * (9 content modules; validation_review = validation_risk + validation_close).
  * Cover / TOC / appendix are merge-time. `thirty_day` + old 6 keys = legacy read aliases.
  *
- * Aligns with lib/poju/report-blueprint.ts.
+ * Runtime shelf still follows lib/poju/report-blueprint.ts.
+ * Content page structure (2026-10-27) is DecisionPageId in page-feed-matrix.ts.
+ * Old keys map through page-id-remap.ts and stay readable here.
  */
 
 import { composeRxArgumentBody } from "@/lib/llm/pro/delivery/rx-argument-shape";

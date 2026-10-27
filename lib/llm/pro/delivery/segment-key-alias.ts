@@ -1,6 +1,8 @@
 /**
  * v1 九模块出稿 key · legacy 六页别名。
- * SSOT 出稿列表见 delivery-schema DELIVERY_SEGMENT_KEYS。
+ * 运行时出稿列表见 delivery-schema DELIVERY_SEGMENT_KEYS。
+ * 内容页结构真源（2026-10-27）是 page-feed-matrix 的 DecisionPageId；
+ * 旧键映射见 page-id-remap.ts。本文件继续把旧会话读成 v1 键，不改读路径。
  */
 
 /** Active prose pages (v1). appendix / thirty_day handled elsewhere. */

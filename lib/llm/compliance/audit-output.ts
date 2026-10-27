@@ -250,9 +250,65 @@ const EN_DIVINATION_REGEX =
   /\b(?:hexagram casting|cast a hexagram|divination board|oracle compass|draw a lot|fortune telling)\b/gi;
 const ZH_DIVINATION_REGEX = /起卦|卦象|抽签|求签|解签|占卜/g;
 
-const EN_FEAR_REGEX =
-  /\b(?:pay\s+(?:to|for)\s+(?:avoid|prevent|ward off)|unless you pay|disaster unless)\b/gi;
-const ZH_FEAR_REGEX = /付费消灾|不(?:做|化解).{0,12}(?:灾难|大祸|破财)|否则.{0,8}(?:大凶|灾祸)/g;
+/**
+ * 决策报告恐吓 / 逼迫红线（内容 SoT 2026-10-27）。
+ * 允许带条件的明确主推（更宜 / 条件是 / 仅在）。那些词不在本表。
+ * 预测句（必将 / 一定会）仍走 ZH_PREDICTION_PATTERNS，不在这里放宽。
+ * W3 才把本表接进 detectOutputPolicyViolations；W0 只更新词表并提供检查函数。
+ */
+export const SCARE_REDLINE_PHRASES_ZH = ["必散", "必死", "大祸", "不听就败", "付费消灾"] as const;
+
+export const SCARE_REDLINE_PHRASES_EN = [
+  "must break up",
+  "you will die",
+  "will certainly die",
+  "great calamity",
+  "if you don't listen, you fail",
+  "if you don't listen you will fail",
+  "doomed if you refuse",
+] as const;
+
+export const SCARE_REDLINE_PHRASES_ES = [
+  "se van a separar sí o sí",
+  "vas a morir",
+  "gran calamidad",
+  "si no escuchas, fracasas",
+  "si no haces caso, fracasas",
+] as const;
+
+/** 明确主推的允许词干。不是生成菜单，恐吓扫描不得把它们当成命中。 */
+export const CLEAR_RECOMMENDATION_ALLOWED_STEMS = ["更宜", "条件是", "仅在", "prefer", "only if"] as const;
+
+const ZH_FEAR_STRUCTURAL = "不(?:做|化解).{0,12}(?:灾难|大祸|破财)|否则.{0,8}(?:大凶|灾祸)";
+const EN_FEAR_STRUCTURAL =
+  "\\b(?:pay\\s+(?:to|for)\\s+(?:avoid|prevent|ward off)|unless you pay|disaster unless)\\b";
+
+function escapeScarePhrase(phrase: string): string {
+  return phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export const ZH_FEAR_REGEX = new RegExp(
+  [...SCARE_REDLINE_PHRASES_ZH.map(escapeScarePhrase), ZH_FEAR_STRUCTURAL].join("|"),
+  "g",
+);
+export const EN_FEAR_REGEX = new RegExp(
+  [...SCARE_REDLINE_PHRASES_EN.map(escapeScarePhrase), EN_FEAR_STRUCTURAL].join("|"),
+  "gi",
+);
+export const ES_FEAR_REGEX = new RegExp(SCARE_REDLINE_PHRASES_ES.map(escapeScarePhrase).join("|"), "gi");
+
+function scareRegexHits(regex: RegExp, text: string): boolean {
+  regex.lastIndex = 0;
+  const hit = regex.test(text);
+  regex.lastIndex = 0;
+  return hit;
+}
+
+/** 词表检查。未接入交付闸门。 */
+export function textHitsScareRedline(text: string): boolean {
+  if (!text?.trim()) return false;
+  return scareRegexHits(ZH_FEAR_REGEX, text) || scareRegexHits(EN_FEAR_REGEX, text) || scareRegexHits(ES_FEAR_REGEX, text);
+}
 
 const ZH_BRANCHES = "子丑寅卯辰巳午未申酉戌亥";
 const ZH_WUXING = "金木水火土";

@@ -1,11 +1,14 @@
 /**
- * Eastern OS 报告蓝图 · 全链路单一事实源(SSOT)。
- * v1：**9 内容模块 + 附录**（见 `.cursor/docs/v1-决策交付-产品边界.md`）。
- * 出稿 `delivery_segments` 已切 v1 十段 key（见迁移映射）；承重链路（fill sanitize /
- * 独立 duty / 双轨必填）按落地计划接通中。
+ * Eastern OS 报告蓝图 · 运行时模块表（兼容到 W2）。
+ * 内容页结构真源已改为 2026-10-27 pageId：
+ * `.cursor/docs/decision-report/` + `lib/llm/pro/delivery/page-feed-matrix.ts`。
+ * 九模块仍是出稿 / 议程路由用的运行时 id，不再单独代表页结构。
+ * 旧键 → pageId 见 `page-id-remap.ts`。
+ * v1 产品边界背景：`.cursor/docs/v1-决策交付-产品边界.md`。
+ * 出稿 `delivery_segments` 仍是 v1 十段 key；本表数据不在 W0 改写。
  * 【1→4 阶段都 import 这里】——第2段真算据此确认主方向撑得起报告；
  * 2.1议程据此问「缺什么现实料」（议程 5–6 问，≠ 一模块一问）；第4段据此路由。
- * 改模块结构只改这一处，全链自动对齐。
+ * 运行时模块路由仍集中在本表。内容页序改 `.cursor/docs/decision-report/`，不要只改这里。
  *
  * 无外部依赖，可被任何阶段安全 import（不产生循环）。
  */

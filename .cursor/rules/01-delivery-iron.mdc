@@ -7,6 +7,8 @@ alwaysApply: true
 
 改 `lib/llm/pro/delivery/**`、Lab、assign/write/fill/mark、闸门、交付提示词前必守。
 
+**内容页结构（2026-10-27 已锁 · W0）**：主叙事 `01/02/04/05/06/08`，`07` 题相关才出，附录 `03` 在包尾。真源 `.cursor/docs/decision-report/` + `lib/llm/pro/delivery/page-feed-matrix.ts`。九模块与 P1–P6 仍是运行时出稿 key，不再是页结构唯一真源；旧键见 `page-id-remap.ts`。禁止把 `DELIVERY_PIPELINE` 默认改成 v3。紫微 FactPack、切片器与弹层、提示词硬度分别留给后续波次。
+
 **v3 三步链路（新）**：`.cursor/docs/交付报告-三步链路-架构.md` · `DELIVERY_PIPELINE=v3_three_step`。  
 内容生成不加质量闸 → **验收闸（A）只判不改**；**确定性装配（B）可盖回** path/ref/moat/锚点等代码可算对的槽 → 依据合规翻译。禁止 **C**（soft-strip / 模板妆合格）。v3 在 `pipeline-v3/**` + `lab/run-step-v3` **greenfield**，禁止在旧 assign/fill soft-strip 上继续打补丁。细则：`交付报告-三步链路-架构.md`「改输出的三条界」。
 
