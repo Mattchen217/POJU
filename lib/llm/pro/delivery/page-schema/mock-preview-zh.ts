@@ -86,6 +86,18 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
+      confirmed_facts: [
+        "老板重结果、形式可谈",
+        "手下有可培养副手",
+        "睡眠与血压已出现报警信号",
+      ],
+      open_assumptions: [
+        "副手两周内能撑起现场闭环",
+        "远程操盘不会被解读为卸责",
+      ],
+      info_gaps: [
+        "半年窗口内赞助对驻场硬要求的真实底线",
+      ],
       evidence: [],
     },
     execution_guidance: {

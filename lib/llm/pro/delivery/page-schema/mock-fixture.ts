@@ -88,6 +88,18 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
           chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
+      confirmed_facts: [
+        "Sponsor cares about results; form is negotiable",
+        "A trainable deputy is available",
+        "Sleep and blood pressure already show alarm signals",
+      ],
+      open_assumptions: [
+        "Deputy can hold the floor within two weeks",
+        "Remote command will not be read as abdication",
+      ],
+      info_gaps: [
+        "True hard-line on on-site presence across the half-year window",
+      ],
       evidence: [],
     },
     science_action: {

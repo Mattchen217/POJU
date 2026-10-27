@@ -190,6 +190,9 @@ const structured: ProfileStructured = {
       { title: "c", surface: "s3", essence: "e3", chart_anchors: [] },
       { title: "d", surface: "s4", essence: "e4", chart_anchors: [] },
     ],
+    confirmed_facts: [],
+    open_assumptions: [],
+    info_gaps: [],
     evidence: [],
   };
   const aligned = alignDeepEvidenceToPage("situation_analysis", page, plan!);
