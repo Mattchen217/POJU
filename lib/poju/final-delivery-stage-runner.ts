@@ -64,10 +64,10 @@ import {
   DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS,
   DELIVERY_SEGMENT_SOFT_HOP_MAX,
   DELIVERY_JOB_MAX_CONTINUE_HOPS,
-  DELIVERY_JOB_MAX_WALL_MS,
   isDeliveryBudgetExhaustedReason,
+  isActiveDeliveryJobWallExceeded,
+  activeDeliveryJobMaxWallMs,
   isDeliveryJobContinueHopExceeded,
-  isDeliveryJobWallExceeded,
   isDeliverySegmentTransportRetryable,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
@@ -113,6 +113,15 @@ import {
 } from "@/lib/poju/xhigh-job-types";
 import { resolveDyadRelationStructureFeed } from "@/lib/poju/dyad-compat";
 import { dispatchDeliveryContinue, publishDeliveryTask } from "@/lib/poju/delivery-continue-dispatch";
+import { productionDeliveryUsesV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
+import {
+  ensureProductionV3Lab,
+  failProductionV3Job,
+  persistProductionV3Book,
+  PRODUCTION_V3_TASK_ID,
+  productionV3HardBlock,
+  productionV3LeaseHeld,
+} from "@/lib/llm/pro/delivery/pipeline-v3/production-run";
 import {
   assembleIsOk,
   buildInitialDeliveryDispatchDag,
@@ -213,12 +222,13 @@ async function tripDeliveryJobFuseIfNeeded(
   const hops = opts?.bump_continue_hop
     ? await bumpDeliveryJobContinueHop(job_id)
     : await loadDeliveryJobContinueHops(job_id);
-  const wall = isDeliveryJobWallExceeded(created_at);
+  const wallMax = activeDeliveryJobMaxWallMs();
+  const wall = isActiveDeliveryJobWallExceeded(created_at);
   const hopCap = isDeliveryJobContinueHopExceeded(hops);
   if (!wall && !hopCap) return "ok";
 
   const reason = wall
-    ? `job_time_budget_exhausted:age_ms=${Date.now() - created_at}:max_ms=${DELIVERY_JOB_MAX_WALL_MS}`
+    ? `job_time_budget_exhausted:age_ms=${Date.now() - created_at}:max_ms=${wallMax}`
     : `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`;
   console.error("[final-delivery-STOP] job-level fuse tripped", {
     job_id,
@@ -226,7 +236,7 @@ async function tripDeliveryJobFuseIfNeeded(
     reason,
     created_at,
     continue_hops: hops,
-    wall_ms: DELIVERY_JOB_MAX_WALL_MS,
+    wall_ms: wallMax,
     hop_max: DELIVERY_JOB_MAX_CONTINUE_HOPS,
   });
   await failStage(job_id, session_id, stage, reason, {
@@ -874,9 +884,98 @@ async function executeFanoutTask(
 }
 
 /**
+ * v3 segments parent. Does not run a model. Publishes one `v3.step` worker
+ * and parks without burning the continue-hop fuse (same shape as the DAG park).
+ * When the book checkpoint exists, returns merged so assemble can build the shelf.
+ */
+async function progressProductionV3Segments(
+  job_id: string,
+  input: FinalDeliveryJobInput,
+  leaseToken: string,
+  leaseHandedOff: { value: boolean },
+  stopHeartbeat: () => void,
+  created_at: number,
+  cancelSignal: AbortSignal | undefined,
+  parkForWorkers: (why: string) => Promise<"scheduled">,
+): Promise<"merged" | "scheduled" | "failed"> {
+  if (cancelSignal?.aborted) {
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    return "failed";
+  }
+
+  const fuse = await tripDeliveryJobFuseIfNeeded(
+    job_id,
+    input.session_id,
+    "segments",
+    created_at,
+    { bump_continue_hop: false },
+  );
+  if (fuse === "tripped") {
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    return "failed";
+  }
+
+  const segs = await loadDeliveryStageCheckpoint(job_id, "segments");
+  if (segs) return "merged";
+
+  const lab = await ensureProductionV3Lab(job_id, input);
+  const blocked = productionV3HardBlock(lab);
+  if (blocked) {
+    await failProductionV3Job({
+      job_id,
+      session_id: input.session_id,
+      reason: blocked,
+    });
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    leaseHandedOff.value = true;
+    return "failed";
+  }
+
+  if (lab.steps["book.assemble"]?.status === "approved") {
+    const saved = await persistProductionV3Book(job_id, lab, input.locale);
+    if (!saved.ok) {
+      await failProductionV3Job({
+        job_id,
+        session_id: input.session_id,
+        reason: saved.reason,
+      });
+      stopHeartbeat();
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+      leaseHandedOff.value = true;
+      return "failed";
+    }
+    return "merged";
+  }
+
+  if (await productionV3LeaseHeld(job_id)) {
+    return parkForWorkers("v3_worker_inflight");
+  }
+
+  const secret = continueSecret(job_id);
+  const published = await publishDeliveryTask(job_id, PRODUCTION_V3_TASK_ID, secret);
+  if (published !== "published") {
+    await failProductionV3Job({
+      job_id,
+      session_id: input.session_id,
+      reason: "v3_worker_publish_failed",
+    });
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    leaseHandedOff.value = true;
+    return "failed";
+  }
+  console.info("[final-delivery-stage] v3 worker published", { job_id });
+  return parkForWorkers("v3_step_published");
+}
+
+/**
  * Segments stage — DAG dispatch (no in-invoke multi-page Promise.all).
  * Scheduler publishes workers; workers drive the next schedule tick.
  * Do NOT /continue-poll while idle_waiting — that burned hop fuse (18) before P1 ready.
+ * Production default skips this and uses progressProductionV3Segments.
  */
 async function progressDispatchSegments(
   job_id: string,
@@ -915,6 +1014,19 @@ async function progressDispatchSegments(
     });
     return "scheduled";
   };
+
+  if (productionDeliveryUsesV3()) {
+    return progressProductionV3Segments(
+      job_id,
+      input,
+      leaseToken,
+      leaseHandedOff,
+      stopHeartbeat,
+      created_at,
+      cancelSignal,
+      parkForWorkers,
+    );
+  }
 
   if (cancelSignal?.aborted) {
     stopHeartbeat();
@@ -1093,6 +1205,22 @@ async function progressFanoutStage(
   }
 
   if (stage === "finalize") {
+    if (productionDeliveryUsesV3()) {
+      // v3 thesis/prealloc run inside the v3 worker. Do not build the legacy spine DAG.
+      await updateXhighJobStatus(job_id, "running", {
+        current_stage: "segments",
+        accumulated_content: `v3_skip_finalize:${Date.now()}`,
+      });
+      stopHeartbeat();
+      const posted = await scheduleDeliveryStageContinue(job_id, "segments", {
+        session_id: input.session_id,
+        lease_token: leaseToken,
+        created_at,
+      });
+      if (posted === "scheduled") leaseHandedOff.value = true;
+      console.info("[final-delivery-stage] v3 skip finalize spines", { job_id });
+      return posted === "scheduled" ? "scheduled" : "failed";
+    }
     // Six spines are independent. DAG stagger-publishes one invoke each.
     // This parent invoke must not run a model or wait page-by-page.
     await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));

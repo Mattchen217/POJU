@@ -21,6 +21,11 @@ import {
 } from "@/lib/poju/delivery-continue-dispatch";
 import { verifyDeliveryContinueSecret } from "@/lib/poju/final-delivery-stage-runner";
 import {
+  isProductionV3Task,
+  runProductionV3Task,
+  settleProductionV3Task,
+} from "@/lib/llm/pro/delivery/pipeline-v3/production-run";
+import {
   failXhighJob,
   getXhighJob,
   releaseXhighSessionLock,
@@ -132,6 +137,7 @@ export async function POST(req: Request) {
       // Abort LLM slightly after DELIVERY_SINGLE_CALL_TIMEOUT_MS so the stream
       // client_timeout fires first (logged); this is a safety net before Vercel 300s SIGKILL.
       const taskAbort = new AbortController();
+      let leaseReleased = false;
       const prekillMs = DELIVERY_SINGLE_CALL_TIMEOUT_MS + 5_000;
       const prekillTimer = setTimeout(() => {
         console.warn("[final-delivery/task] pre-kill abort — before Vercel 300s", {
@@ -143,6 +149,23 @@ export async function POST(req: Request) {
       }, prekillMs);
 
       try {
+        if (isProductionV3Task(task_id)) {
+          const outcome = await runProductionV3Task({ job_id, jobInput });
+          clearTimeout(prekillTimer);
+          clearInterval(heartbeat);
+          await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
+          leaseReleased = true;
+          await settleProductionV3Task({
+            job_id,
+            session_id: jobInput.session_id,
+            outcome,
+            republish: () => publishDeliveryTask(job_id, task_id, continueSecret(job_id)),
+            wakeSegments: () =>
+              dispatchDeliveryContinue(job_id, "segments", continueSecret(job_id)),
+          });
+          return;
+        }
+
         const result = await executeDeliveryDispatchTask({
           job_id,
           task_id,
@@ -180,7 +203,9 @@ export async function POST(req: Request) {
       } finally {
         clearTimeout(prekillTimer);
         clearInterval(heartbeat);
-        await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
+        if (!leaseReleased) {
+          await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
+        }
       }
     });
 

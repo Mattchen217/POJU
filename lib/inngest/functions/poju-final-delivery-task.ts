@@ -29,6 +29,11 @@ import {
   setXhighJobContent,
 } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
+import {
+  isProductionV3Task,
+  runProductionV3Task,
+  settleProductionV3Task,
+} from "@/lib/llm/pro/delivery/pipeline-v3/production-run";
 
 function continueSecret(job_id: string): string {
   const seed =
@@ -98,6 +103,7 @@ export const pojuFinalDeliveryTask = inngest.createFunction(
       await setXhighJobContent(job_id, `dispatch_task:${task_id}:start`).catch(() => undefined);
 
       const taskAbort = new AbortController();
+      let leaseReleased = false;
       const prekillMs = DELIVERY_SINGLE_CALL_TIMEOUT_MS + 5_000;
       const prekillTimer = setTimeout(() => {
         console.warn("[inngest/poju-final-delivery-task] pre-kill abort", {
@@ -109,6 +115,23 @@ export const pojuFinalDeliveryTask = inngest.createFunction(
       }, prekillMs);
 
       try {
+        if (isProductionV3Task(task_id)) {
+          const outcome = await runProductionV3Task({ job_id, jobInput });
+          clearTimeout(prekillTimer);
+          clearInterval(heartbeat);
+          await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
+          leaseReleased = true;
+          await settleProductionV3Task({
+            job_id,
+            session_id: jobInput.session_id,
+            outcome,
+            republish: () => publishDeliveryTask(job_id, task_id, continueSecret(job_id)),
+            wakeSegments: () =>
+              dispatchDeliveryContinue(job_id, "segments", continueSecret(job_id)),
+          });
+          return { ok: outcome.ok, next: outcome.ok ? outcome.next : outcome.reason };
+        }
+
         await executeDeliveryDispatchTask({
           job_id,
           task_id,
@@ -160,7 +183,9 @@ export const pojuFinalDeliveryTask = inngest.createFunction(
       } finally {
         clearTimeout(prekillTimer);
         clearInterval(heartbeat);
-        await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
+        if (!leaseReleased) {
+          await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
+        }
       }
     });
   },
