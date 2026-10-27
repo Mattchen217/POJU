@@ -151,7 +151,12 @@ export function isThirdPartyInTopicFrameOnly(
       "g",
     ),
     new RegExp(`跟${p}一起`, "g"),
+    new RegExp(`(?:和|同)${p}一起`, "g"),
     new RegExp(`与${p}(?:合作|创业|共事|一起)`, "g"),
+    // Joint co-decision: the other side is the frame, not a mind we rewrite.
+    new RegExp(`${p}(?:的)?盘(?:没有|未|没|不)?(?:接入|在场|给到|进入)?`, "g"),
+    new RegExp(`(?:没有|未接入)${p}(?:的)?盘`, "g"),
+    new RegExp(`不替${p}(?:做主|做决定|决定|拿主意)`, "g"),
     new RegExp(`${p}的(?:盘子|项目|公司|团队|局|安排)`, "g"),
     // Agenda label / cite topic:「对方对兼职的反应」「伙伴的态度」
     new RegExp(`${p}对[^。；\n]{0,24}的(?:反应|态度|接受度|依赖)`, "g"),
@@ -306,7 +311,11 @@ export function softRepairThirdPartyAgencyProse(
   knownParties: readonly string[] = [],
 ): string {
   const t = text.trim();
-  if (!t || !detectKnownThirdPartyAgency(t, knownParties)) return t;
+  if (!t) return t;
+  const narrowed = cleanDoubledPunct(stripJointChartStamp(dropCounterpartAgencyClauses(t)));
+  if (narrowed && !detectKnownThirdPartyAgency(narrowed, knownParties)) return narrowed;
+  const base = narrowed || t;
+  if (!detectKnownThirdPartyAgency(base, knownParties)) return cleanDoubledPunct(base);
 
   const replacementFor = (blob: string): string => {
     if (isPartnershipRejectionSurface(blob)) {
@@ -331,7 +340,7 @@ export function softRepairThirdPartyAgencyProse(
   };
 
   // Drop / rewrite sentences that still have agency.
-  let out = t
+  let out = base
     .split(/([。；;！？\n]+)/)
     .map((seg) => {
       if (!seg || /^[。；;！？\n]+$/.test(seg)) return seg;
@@ -359,9 +368,71 @@ export function softRepairThirdPartyAgencyProse(
     .trim();
 
   if (detectKnownThirdPartyAgency(out, knownParties)) {
-    out = replacementFor(t);
+    out = replacementFor(base);
   }
-  return out || "你在本盘结构下承受该表象对应的约束与压力";
+  return cleanDoubledPunct(stripJointChartStamp(out)) || "你在本盘结构下承受该表象对应的约束与压力";
+}
+
+/** The missing-chart stamp. It must not be pasted onto solo pages or whole means. */
+export const JOINT_CHART_STAMP =
+  "另一侧的盘不在这份材料里，你先写清自己能不能一起拍板的时间、底线和范围。";
+
+export function textHasJointChartStamp(text: string): boolean {
+  return (text ?? "").includes("另一侧的盘不在这份材料里");
+}
+
+function cleanDoubledPunct(text: string): string {
+  return text
+    .replace(/[。．]{2,}/g, "。")
+    .replace(/。\s*。/g, "。")
+    .replace(/，{2,}/g, "，")
+    .replace(/，\s*。/g, "。")
+    .replace(/^[，,、\s]+/, "")
+    .replace(/[，,、]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function stripJointChartStamp(text: string): string {
+  return text.replace(/另一侧的盘不在这份材料里[^。！？；\n]*/g, "");
+}
+
+/**
+ * Drop only a counterpart-consent clause (让对方同意 / 说服对方).
+ * Topic frames and querent leverage (让对方看到 / 无法绕开) stay.
+ */
+function dropCounterpartAgencyClauses(text: string): string {
+  const parts = text.split(/([。；;！？\n，,、]+)/);
+  let out = "";
+  for (let i = 0; i < parts.length; i++) {
+    const seg = parts[i] ?? "";
+    if (!seg) continue;
+    if (/^[。；;！？\n，,、]+$/.test(seg)) {
+      if (out && !/[。；;！？\n，,、]$/.test(out)) out += seg;
+      continue;
+    }
+    if (isCounterpartAgencyClause(seg)) continue;
+    out += seg;
+    const punct = parts[i + 1];
+    if (punct && /^[。；;！？\n，,、]+$/.test(punct)) {
+      out += punct;
+      i += 1;
+    }
+  }
+  return out;
+}
+
+function isCounterpartAgencyClause(seg: string): boolean {
+  const t = seg.trim();
+  if (!t) return false;
+  if (/对方盘|他方盘|没有接入|未接入|不替对方/.test(t)) return false;
+  if (/让(?:对方|他方)(?:不得不|看到|看见|承认|无法)/.test(t)) return false;
+  if (isThirdPartyInTopicFrameOnly(t, "对方") && isThirdPartyInTopicFrameOnly(t, "他方")) {
+    return false;
+  }
+  return /(?:说服|请求|逼|催|等待|等着|取得)(?:对方|他方)|让(?:对方|他方)(?:同意|点头|答应|做主|表态|接受)|(?:对方|他方)(?:立即|马上|先)?(?:同意|点头|答应|做主|表态)/.test(
+    t,
+  );
 }
 
 /** Soft-repair shells that must not become user-facing strategy/means. */
@@ -594,8 +665,9 @@ export function softRepairScienceAngleUserProse(
       notes.push(`strip_science_soft_repair_shell_sentence:${tag}`);
     }
   }
+  s = cleanDoubledPunct(stripJointChartStamp(s));
   // Fail only on empty / known shells / collapse left a stub — not on short-but-valid strategies.
-  if (!s || isScienceSoftRepairShell(s)) {
+  if (!s || isScienceSoftRepairShell(s) || textHasJointChartStamp(s)) {
     notes.push(`${tag}_science_strategy_collapsed_to_shell`);
     return {
       strategy: s || "",
@@ -648,9 +720,10 @@ export function softRepairScienceAngleUserProse(
     if (m !== beforeAna) {
       notes.push(`soft_repair_intimacy_anaphora_means:${tag}_${i}`);
     }
-    m = stripEmbeddedScienceSoftRepairShells(m);
+    m = cleanDoubledPunct(stripJointChartStamp(stripEmbeddedScienceSoftRepairShells(m)));
     if (
       !m ||
+      textHasJointChartStamp(m) ||
       isScienceSoftRepairShell(m) ||
       detectKnownThirdPartyAgency(m, []) ||
       hasResidualIntimacyAnaphoraAgency(m, { force: intimacyCtx })

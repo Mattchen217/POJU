@@ -1,3 +1,4 @@
+<!-- Default decision-report pack. Order: cover, 01, 02, 04, 05, 06, 08, 03. Page 07 is omitted here and inserted by renderDecisionReportTemplate when the topic gate opens. Not the SoT16 baseline profile. -->
 <!DOCTYPE html>
 <html lang="{{SLOT_LOCALE}}">
 <head>
@@ -239,13 +240,13 @@ html, body {
             </div>
             <ol class="delivery-book-stage__toc-list">
               <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--active is-active" data-slot="cover"><span class="delivery-book-stage__toc-num">01</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P0</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_COVER}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="direct_answer"><span class="delivery-book-stage__toc-num">02</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P1</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_DIRECT_ANSWER}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="foundation"><span class="delivery-book-stage__toc-num">03</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P2</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_FOUNDATION}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="science_action"><span class="delivery-book-stage__toc-num">04</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P3</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_SCIENCE_ACTION}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="metaphysics_action"><span class="delivery-book-stage__toc-num">05</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P4</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_METAPHYSICS_ACTION}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="risk_guard"><span class="delivery-book-stage__toc-num">06</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P5</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_RISK_GUARD}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="signals_close"><span class="delivery-book-stage__toc-num">07</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P6</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_SIGNALS_CLOSE}}</span></span></button></li>
-              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="appendix"><span class="delivery-book-stage__toc-num">08</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">P7</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_APPENDIX}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="01"><span class="delivery-book-stage__toc-num">02</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">01</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_01}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="02"><span class="delivery-book-stage__toc-num">03</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">02</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_02}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="04"><span class="delivery-book-stage__toc-num">04</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">04</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_04}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="05"><span class="delivery-book-stage__toc-num">05</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">05</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_05}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="06"><span class="delivery-book-stage__toc-num">06</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">06</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_06}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="08"><span class="delivery-book-stage__toc-num">07</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">08</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_08}}</span></span></button></li>
+              <li><button type="button" class="delivery-book-stage__toc-item delivery-book-stage__toc-item--ready" data-slot="03"><span class="delivery-book-stage__toc-num">08</span><span class="delivery-book-stage__toc-text"><span class="delivery-book-stage__toc-tag">03</span><span class="delivery-book-stage__toc-title">{{SLOT_TOC_03}}</span></span></button></li>
             </ol>
           </nav>
           <div class="delivery-book-stage__left-foot">
@@ -260,33 +261,33 @@ html, body {
   <div class="delivery-audio" data-slot-name="SLOT_AUDIO_HTML">{{SLOT_AUDIO_HTML}}</div>
   <div class="deliverable-slot" data-slot-name="SLOT_BODY_COVER">{{SLOT_BODY_COVER}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="direct_answer" id="pane-direct_answer" aria-label="{{SLOT_TOC_DIRECT_ANSWER}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_DIRECT_ANSWER}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_DIRECT_ANSWER">{{SLOT_BODY_DIRECT_ANSWER}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="01" id="pane-01" aria-label="{{SLOT_TOC_01}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_01}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_01">{{SLOT_BODY_01}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="foundation" id="pane-foundation" aria-label="{{SLOT_TOC_FOUNDATION}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_FOUNDATION}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_FOUNDATION">{{SLOT_BODY_FOUNDATION}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="02" id="pane-02" aria-label="{{SLOT_TOC_02}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_02}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_02">{{SLOT_BODY_02}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="science_action" id="pane-science_action" aria-label="{{SLOT_TOC_SCIENCE_ACTION}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_SCIENCE_ACTION}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_SCIENCE_ACTION">{{SLOT_BODY_SCIENCE_ACTION}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="04" id="pane-04" aria-label="{{SLOT_TOC_04}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_04}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_04">{{SLOT_BODY_04}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="metaphysics_action" id="pane-metaphysics_action" aria-label="{{SLOT_TOC_METAPHYSICS_ACTION}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_METAPHYSICS_ACTION}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_METAPHYSICS_ACTION">{{SLOT_BODY_METAPHYSICS_ACTION}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="05" id="pane-05" aria-label="{{SLOT_TOC_05}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_05}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_05">{{SLOT_BODY_05}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="risk_guard" id="pane-risk_guard" aria-label="{{SLOT_TOC_RISK_GUARD}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_RISK_GUARD}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_RISK_GUARD">{{SLOT_BODY_RISK_GUARD}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="06" id="pane-06" aria-label="{{SLOT_TOC_06}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_06}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_06">{{SLOT_BODY_06}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="signals_close" id="pane-signals_close" aria-label="{{SLOT_TOC_SIGNALS_CLOSE}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_SIGNALS_CLOSE}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_SIGNALS_CLOSE">{{SLOT_BODY_SIGNALS_CLOSE}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="08" id="pane-08" aria-label="{{SLOT_TOC_08}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_08}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_08">{{SLOT_BODY_08}}</div>
 </section>
-          <section class="delivery-book-stage__pane" data-slot-pane="appendix" id="pane-appendix" aria-label="{{SLOT_TOC_APPENDIX}}" hidden>
-  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_APPENDIX}}</h1>
-  <div class="deliverable-slot" data-slot-name="SLOT_BODY_APPENDIX">{{SLOT_BODY_APPENDIX}}</div>
+          <section class="delivery-book-stage__pane" data-slot-pane="03" id="pane-03" aria-label="{{SLOT_TOC_03}}" hidden>
+  <h1 class="delivery-book-stage__page-title">{{SLOT_TOC_03}}</h1>
+  <div class="deliverable-slot" data-slot-name="SLOT_BODY_03">{{SLOT_BODY_03}}</div>
 </section>
         </section>
       </div>

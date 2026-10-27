@@ -15,6 +15,7 @@ import {
   INVENTED_PARTNER_CHART_DUTY_LINE,
   inventedPartnerChartPromptBlock,
 } from "@/lib/llm/pro/delivery/pipeline-v3/invented-partner-chart";
+import { DECISION_VOICE_DUTY } from "@/lib/llm/pro/delivery/page-prompts/decision-voice";
 
 const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 · 内容步①正文）。
 只输出 JSON，不要 markdown。
@@ -52,6 +53,8 @@ const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 ·
 - **禁逐字开口稿（整类 · 硬）**：strategy / means 禁任何引号字符与可照念心里稿；意图只用间接节奏差（慢半拍/拖到气口）。
 - **读感/译出**：完整句加厚与目标语言出稿由下游 **body_polish** 负责；本步北星=真·准·页定位（表面专名尽量避，硬清可 defer 润色）。
 质量靠「本页目标 + 允许轴 + 真算/批断」一次写合格——**不要**靠枚举禁词自查交差。
+
+${DECISION_VOICE_DUTY}
 
 ${templateVoicePromptBlock("zh")}
 ${inventedUserNumberPromptBlock("zh")}
@@ -101,7 +104,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `  · **换壳同禁**：允许轴=结构张力归因白话（非怎么办处方、非执行清单）`,
         TEMPLATE_VOICE_DUTY_LINE,
         `  · 可见层命理专名（含宫位/合冲字面/岁运报幕/奇门局与门星名/十神用忌）；怎么办/警示祈使收尾整类；题头抄形状示意；一行电报式目录壳；预设固定生活题材；泛泛全盘性格报告；把命理写成已证实心理测量。`,
-        `【数据来源】「本页原始批断」units（按 path 一一译）+ 处境/收集材料对照；表象与本质从批断长出，禁编造材料没有的事件数字。`,
+        `【数据来源】「本页原始批断」units（按 path 一一译）+ 本页切片里的短锚 + 处境/收集材料对照。02-D 可核对锚大约六行以内。表象与本质从批断长出，禁编造材料没有的事件数字。`,
         `【硬约束】`,
         `- why_cards 条数=批断 units；字段 title/surface/essence/chart_anchors；禁改 dimensions。`,
         `- essence≈120–200字（3–5句机制白话）；删掉批断后 essence 须垮；**只解释为何卡**——停在结构张力（窗口收窄/推进易胶着/制衡位弱/链路隐伏）；**禁**「需要…约定/厘清/挖掘」及任何怎么办收束；亦禁错失恐吓收束。`,
@@ -139,7 +142,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【角色】让用户看清 2–4 条现实路径的代价，而非只接受单一答案。`,
         `【目标】每选项：收益/成本/风险/可逆性；成立前提与失效条件。可含维持现状/小试验。`,
         `【禁忌】编造第四条假路；写成执行任务表；奇门仪轨。`,
-        `【硬约束】options 2–4；每项须能指回批断或收集事实；科学轨=决策/经济/概率权衡。`,
+        `【硬约束】options 2–4；每项须能指回批断或收集事实；其中必须写明何时切轨或停止；科学轨=决策/经济/概率权衡。`,
       ].join("\n");
     case "recommended_strategy":
       return [
@@ -153,7 +156,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
       return [
         `## 本页 duty · science_action（P3 · v1=战略选项+主策略+执行原则）`,
         `【本页角色】「策略与执行」主笔——对外做事：路径比较感 + 主辅策略 + 执行原则与可立即采取的示例动作。主语=协议/里程碑/清单/验证实验，不是气场仪轨。`,
-        `【本页目标】带走：为何选这条主路、辅路何时切；现阶段优先验证/推进什么；可立刻做的动作与完成标准；推进/调整/停止条件。**禁止**固定 30 天/按周任务表（一次性产品无跟踪）。主轨三条角 + 辅轨三条角；≥1 主轨 means 含今晚可出示交付物或低成本验证。`,
+        `【本页目标】带走：为何选这条主路、辅路何时切；近步原则和做成什么样；推进/调整/停止条件。手段是动作类型加完成样貌，不是可勾选作业。**禁止**固定 30 天/按周任务表。主轨三条角 + 辅轨三条角；≥1 主轨 means 含今晚可出示的完成样貌或低成本验证。`,
         `【表达气场】说清楚、说准确：strategy=本案由头+打法；means=可核对动作或执行原则。禁空喊与半文言。读感加厚归润色。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=协议/里程碑/清单/低成本验证；半投入换皮/发明截止点/四周甘特仍算犯`,
@@ -171,7 +174,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
       // v1=self_regulation；引擎仍八字+奇门；对己调频，非第二份 P3
       return [
         `## 本页 duty · metaphysics_action（P4 · v1=self_regulation 自我调频）`,
-        `【角色】**对己**调频主笔——执行中如何维持判断力、节奏与行动能力。主语=身心/节奏/场域/进退，不是协议清单，也不是起卦解签。`,
+        `【角色】**对己**调频主笔（内容页 06-C）——执行中如何维持判断力、节奏与行动能力。主语=身心/节奏/场域/进退，不是协议清单，不是可勾选作业，也不是起卦解签。`,
         `【目标】means 读成压力下如何识别冲动/拖延、何时暂停重大决定、如何用可重复调节稳住自己；可含本案时位/意象/轻仪轨（须个性化）。删奇门+用忌锚后全文须垮。`,
         ``,
         `【与 P3 分界（硬）】本页不是第二份策略与执行。挪到 P3 应违和。禁复读合同/股权/里程碑/交付物词族。`,

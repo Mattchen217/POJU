@@ -13,7 +13,10 @@ import {
   ensureDeliveryFilledHtml,
   fillDecisionReportHtml,
 } from "@/lib/deliverables";
+import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
+import type { PartnerBaziPresence } from "@/lib/poju/dyad-compat";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 
@@ -110,6 +113,12 @@ export function DeliveryShelfView({
   const { email: accountEmail, ready: authReady } = useAuthUser();
   const prepare = useWorkspacePojuPrepareOptional();
 
+  const [pathSignals, setPathSignals] = useState<{
+    pivotChartPath: PivotChartPath | null;
+    partnerBazi: PartnerBaziPresence | null;
+    joint: boolean;
+    question: string;
+  } | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
   const [packBusy, setPackBusy] = useState(false);
@@ -118,15 +127,29 @@ export function DeliveryShelfView({
 
   /** Old sessions: fill blank template once and persist. */
   useEffect(() => {
-    if (filledHtml?.trim() || !complete || !fullText.trim()) return;
     let cancelled = false;
     void (async () => {
       try {
         const session = await loadPOJUSession(sessionId);
         if (!session || cancelled) return;
+        const signals = {
+          pivotChartPath: session.pivot_chart_path ?? null,
+          partnerBazi: session.partner_bazi ?? null,
+          joint: session.joint_decision === true || Boolean(session.joint_decision_id),
+          question: session.agent_v2?.original_question ?? "",
+        };
+        setPathSignals(signals);
+        if (filledHtml?.trim() || !complete || !fullText.trim()) return;
+        const shelfTopic = deliveryTopicFromSignals({
+          question: originalQuestion || signals.question,
+          pivotChartPath: signals.pivotChartPath,
+          partnerBazi: signals.partnerBazi,
+          joint: signals.joint,
+        });
         const filled = ensureDeliveryFilledHtml(session, fullText, locale, {
           title: undefined,
           originalQuestion,
+          topic: shelfTopic,
           reportId: `EOS-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
           reportDate: new Date().toISOString().slice(0, 10),
         });
@@ -148,11 +171,26 @@ export function DeliveryShelfView({
     };
   }, [filledHtml, complete, fullText, locale, sessionId, originalQuestion]);
 
+  const prepareSession = prepare?.session?.session_id === sessionId ? prepare.session : null;
+  const topic = useMemo(
+    () =>
+      deliveryTopicFromSignals({
+        question: originalQuestion || pathSignals?.question || prepareSession?.agent_v2?.original_question,
+        pivotChartPath: pathSignals?.pivotChartPath ?? prepareSession?.pivot_chart_path,
+        partnerBazi: pathSignals?.partnerBazi ?? prepareSession?.partner_bazi,
+        joint:
+          pathSignals?.joint ||
+          prepareSession?.joint_decision === true ||
+          Boolean(prepareSession?.joint_decision_id),
+      }),
+    [originalQuestion, pathSignals, prepareSession],
+  );
+
   const coverTitle = useMemo(() => {
-    const slots = buildDeliveryShelfSlots(fullText, { locale, complete });
+    const slots = buildDeliveryShelfSlots(fullText, { locale, complete, topic, question: originalQuestion });
     const cover = slots.find((s) => s.kind === "ready" && s.slotId === "cover");
     return cover && cover.kind === "ready" ? cover.page.title : tBook("title");
-  }, [fullText, locale, complete, tBook]);
+  }, [fullText, locale, complete, topic, originalQuestion, tBook]);
 
   const handleProseIndexChange = useCallback(
     (index: number) => {
@@ -165,10 +203,11 @@ export function DeliveryShelfView({
     () => ({
       title: coverTitle,
       originalQuestion,
+      topic,
       reportId: `EOS-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
       reportDate: new Date().toISOString().slice(0, 10),
     }),
-    [coverTitle, originalQuestion, sessionId],
+    [coverTitle, originalQuestion, topic, sessionId],
   );
 
   const resolvePackHtml = async (): Promise<string> => {
@@ -350,6 +389,7 @@ export function DeliveryShelfView({
           locale={locale}
           sessionId={sessionId}
           complete={complete}
+          topic={topic}
           originalQuestion={originalQuestion}
           profileId={profileId}
           jumpRequest={openReaderRequest}

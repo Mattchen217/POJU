@@ -60,9 +60,11 @@ export function getTimezoneOffsetMinutes(timezone: string, date: Date): number {
     for (const part of parts) {
       if (part.type !== "literal") dateParts[part.type] = part.value;
     }
+    // ICU h24 writes midnight as "24". `T24:` is an invalid ISO time and becomes NaN.
+    const hour = normalizeIcuHourToken(dateParts.hour);
 
     const tzDate = new Date(
-      `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:${dateParts.second}Z`,
+      `${dateParts.year}-${dateParts.month}-${dateParts.day}T${hour}:${dateParts.minute}:${dateParts.second}Z`,
     );
 
     return (tzDate.getTime() - date.getTime()) / (1000 * 60);
@@ -86,6 +88,12 @@ export function getDayOfYear(date: Date): number {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/** ICU h24 midnight token. "24" is 00:00 on the reported civil day, not a 25th hour. */
+export function normalizeIcuHourToken(hour: string | undefined): string {
+  if (!hour || hour === "24") return "00";
+  return hour;
 }
 
 export type ZonedCalendarParts = {
@@ -129,7 +137,7 @@ export function getZonedCalendarParts(date: Date, timeZone: string): ZonedCalend
       year: parseInt(parts.year ?? "1970", 10),
       month: parseInt(parts.month ?? "1", 10),
       day: parseInt(parts.day ?? "1", 10),
-      hour: parseInt(parts.hour ?? "0", 10),
+      hour: parseInt(normalizeIcuHourToken(parts.hour), 10),
       minute: parseInt(parts.minute ?? "0", 10),
       second: parseInt(parts.second ?? "0", 10),
     };

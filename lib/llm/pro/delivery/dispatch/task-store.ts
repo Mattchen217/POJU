@@ -9,6 +9,7 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { preallocHasQimen } from "@/lib/llm/pro/delivery/page-schema/qimen-fact-pack";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
+import { equateDeliveryDispatchDag } from "./task-dag";
 import type { DeliveryDispatchDag, DeliveryDispatchTask } from "./types";
 
 export function deliveryDispatchDagKey(job_id: string): string {
@@ -25,7 +26,7 @@ export async function loadDeliveryDispatchDag(
   const raw = await kv.get<DeliveryDispatchDag>(deliveryDispatchDagKey(job_id));
   if (!raw || typeof raw !== "object") return null;
   if (raw.version !== 1 || !raw.tasks) return null;
-  return raw;
+  return equateDeliveryDispatchDag(raw);
 }
 
 export async function saveDeliveryDispatchDag(dag: DeliveryDispatchDag): Promise<void> {

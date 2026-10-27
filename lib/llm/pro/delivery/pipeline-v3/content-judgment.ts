@@ -38,6 +38,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { EASTERN_OS_PERSONA_BOUNDARY_LINE } from "@/lib/llm/prompts/eastern-os-persona";
+import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import { DYAD_JUDGMENT_EXTRA } from "@/lib/llm/prompts/pivot-path-dyad";
 import { SOLO_JUDGMENT_EXTRA } from "@/lib/llm/prompts/pivot-path-solo";
 import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
@@ -590,6 +591,15 @@ export async function runContentJudgmentGenerate(input: {
           empty: true,
         }),
         tokens_used,
+        call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
+      };
+    }
+    if (scareRedlineSnippet(text)) {
+      return {
+        ok: false,
+        reason: "scare_redline",
+        tokens_used,
+        last_raw_text: text.slice(0, 12_000),
         call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
       };
     }

@@ -15,6 +15,7 @@ import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 import { formatAnchorCategoryUsageForPrompt, type CategoryTokenSets } from "./anchor-category-tally";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
+import { appendPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 
 /** Write→Fill mechanism shaping tag (locked after write). */
 export const DEEP_EVIDENCE_MECHANISM_TAGS = [
@@ -219,6 +220,9 @@ export type DeepEvidencePromptOpts = {
   prealloc_term_groups?: Readonly<Record<string, readonly string[]>>;
   /** This person's local-calc record. When set, assign does not lock a slug menu. */
   chart_fact_pack?: string;
+  /** Optional. Page slice omits zfp when this is absent. */
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   chart_fact_ganzhi?: readonly string[];
   chart_fact_shen_sha?: readonly string[];
   /** Sparse merge: max units for this page. */
@@ -371,7 +375,14 @@ export function buildDeepEvidencePrompt(
   }
   userParts.push(layerA);
   userParts.push(layerB);
-  if (feed.structured_inventory && opts.structured_inventory?.trim()) {
+  const pageSliceFed = appendPageSliceFeed(userParts, {
+    key,
+    chartText: opts.chart_fact_pack,
+    ziwei: opts.ziwei_fact_pack,
+    question: opts.question_expectation,
+    topic: opts.topic,
+  });
+  if (feed.structured_inventory && opts.structured_inventory?.trim() && !pageSliceFed) {
     userParts.push(
       `【完整原始命盘闭集 · 与分类菜单互为补充；禁编造闭集外词】\n${opts.structured_inventory.trim()}`,
     );

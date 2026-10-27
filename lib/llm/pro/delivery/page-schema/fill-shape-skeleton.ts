@@ -142,6 +142,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     page_subtitle: "",
     primary_toolkit: emptyToolkit("primary"),
     backup_toolkit: emptyToolkit("backup"),
+    self_retune: { title: "", body: "" },
     evidence: [],
   },
   self_regulation: {
@@ -216,6 +217,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     page_subtitle: "",
     primary_toolkit: emptyToolkit("primary"),
     backup_toolkit: emptyToolkit("backup"),
+    self_retune: { title: "", body: "" },
     evidence: [],
   },
   metaphysics_action: {

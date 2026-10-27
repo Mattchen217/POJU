@@ -30,11 +30,11 @@ Hello.
 `;
 
 const slots = buildDeliveryShelfSlots(md, { locale: "zh", complete: false });
-assert("9 slots (cover+toc+6+appendix)", slots.length === DELIVERY_SHELF_SLOT_COUNT);
+assert("9 slots (cover+toc+01-08 without 07+appendix 03)", slots.length === DELIVERY_SHELF_SLOT_COUNT);
 assert("shelf count is 9", DELIVERY_SHELF_SLOT_COUNT === 9);
 assert("cover ready", slots[0]?.kind === "ready" && slots[0].slotId === "cover");
 assert("toc ready", slots[1]?.kind === "ready");
-assert("direct_answer ready", slots[2]?.kind === "ready" && slots[2].slotId === "decision_brief");
+assert("page 01 ready", slots[2]?.kind === "ready" && slots[2].slotId === "01");
 assert("waiting on next", slots[3]?.kind === "waiting" && slots[3].pageNumber === 2);
 assert("direct_answer is prose page 1", slots[2]?.kind === "ready" && slots[2].pageNumber === 1);
 
@@ -56,7 +56,7 @@ assert("direct_answer is prose page 1", slots[2]?.kind === "ready" && slots[2].p
     };
   }
   const seq = sequentialDeliveryProseReady(gapped);
-  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "decision_brief");
+  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "01");
   const gap = nextSequentialProseGap(gapped);
   assert("gap is next sequential", gap?.pageNumber === 2);
 }
@@ -70,8 +70,8 @@ assert(
   empty[0]?.kind === "empty" && empty[0].slotId === "cover" && empty[0].pageNumber === 0,
 );
 assert(
-  "empty prose starts waiting on direct_answer",
-  empty[2]?.kind === "waiting" && empty[2].slotId === "decision_brief" && empty[2].pageNumber === 1,
+  "empty prose starts waiting on 01",
+  empty[2]?.kind === "waiting" && empty[2].slotId === "01" && empty[2].pageNumber === 1,
 );
 
 const baseSplit = splitShelfTitle("对你问题的回答");

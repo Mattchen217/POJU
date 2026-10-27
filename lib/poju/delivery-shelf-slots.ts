@@ -1,19 +1,24 @@
 /**
- * Fixed shelf order for Phase-4 center delivery papers.
- * cover → toc → v1 十段 prose → appendix.
+ * Reader shelf. cover → toc → 01 → 02 → 04 → 05 → 06 → (07) → 08 → 03.
  *
- * User-facing page numbers (corner wait / pager) count only prose:
- * decision_brief = 1 … validation_close … 附录. Cover + TOC are not pages.
+ * 07 is inserted only when the topic is 换场 / 迁移 / 合伙 / 亲密 / joint.
+ * Cover and TOC are not prose pages. 03 is the package-end appendix.
+ * Internal generators still use v1 segment keys; those papers fold onto these faces.
  */
 
+import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
 import {
-  DELIVERY_SEGMENT_KEYS,
-  type DeliverySegmentKey,
-} from "@/lib/llm/pro/delivery/delivery-schema";
+  readingOrderForTopic,
+  resolveDecisionPage,
+} from "@/lib/llm/pro/delivery/decision-page-bridge";
+import { composePage07Markdown } from "@/lib/llm/pro/delivery/page-07-face";
+import { remapRowForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import { shelfFaceForHeading } from "@/lib/llm/pro/delivery/shelf-face-map";
+import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
+import { guessDeliverySegmentKey } from "@/lib/poju/parse-delivery";
 import {
   deliveryAppendixCopy,
   deliveryCoverCopy,
-  deliveryPageTag,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   buildDeliveryBookPages,
@@ -22,32 +27,84 @@ import {
 import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
 import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
 
+/** Default reader order. 07 is absent until a topic asks for it. */
 export const DELIVERY_SHELF_SLOT_IDS = [
   "cover",
   "toc",
-  ...DELIVERY_SEGMENT_KEYS,
-  "appendix",
+  "01",
+  "02",
+  "04",
+  "05",
+  "06",
+  "08",
+  "03",
 ] as const;
 
-export type DeliveryShelfSlotId = (typeof DELIVERY_SHELF_SLOT_IDS)[number];
+export type DeliveryShelfSlotId = (typeof DELIVERY_SHELF_SLOT_IDS)[number] | "07";
 
 export const DELIVERY_SHELF_SLOT_COUNT = DELIVERY_SHELF_SLOT_IDS.length;
+
+/** Shelf order for this topic. 07 sits between 06 and 08 only when the topic gate opens. */
+export function deliveryShelfSlotIds(topic?: string | null): readonly DeliveryShelfSlotId[] {
+  return ["cover", "toc", ...readingOrderForTopic(topic)];
+}
 
 /** Prose pages shown to the reader — excludes cover + TOC. */
 export function isDeliveryProseShelfSlot(id: DeliveryShelfSlotId): boolean {
   return id !== "cover" && id !== "toc";
 }
 
-/** 1…N for decision_brief…appendix; 0 for cover/toc (not user-facing pages). */
-export function deliveryProsePageNumber(slotId: DeliveryShelfSlotId): number {
+/** 1…N along the active shelf. 0 for cover/toc, or when the id is not on this shelf. */
+export function deliveryProsePageNumber(
+  slotId: DeliveryShelfSlotId,
+  order: readonly DeliveryShelfSlotId[] = DELIVERY_SHELF_SLOT_IDS,
+): number {
   if (!isDeliveryProseShelfSlot(slotId)) return 0;
   let n = 0;
-  for (const id of DELIVERY_SHELF_SLOT_IDS) {
+  for (const id of order) {
     if (!isDeliveryProseShelfSlot(id)) continue;
     n += 1;
     if (id === slotId) return n;
   }
   return 0;
+}
+
+function asShelfFace(id: string | null): DeliveryShelfSlotId | null {
+  if (
+    id === "cover" ||
+    id === "toc" ||
+    id === "01" ||
+    id === "02" ||
+    id === "03" ||
+    id === "04" ||
+    id === "05" ||
+    id === "06" ||
+    id === "07" ||
+    id === "08"
+  ) {
+    return id;
+  }
+  return null;
+}
+
+function shelfFaceForSourceId(id: string): DeliveryShelfSlotId | null {
+  if (id === "cover" || id === "toc") return id;
+  if (id === "appendix") return "03";
+  const route = resolveDecisionPage(id);
+  return asShelfFace(route?.pageId ?? null);
+}
+
+function shelfFaceForPage(page: DeliveryBookPage): DeliveryShelfSlotId | null {
+  return shelfFaceForSourceId(page.id) ?? asShelfFace(shelfFaceForHeading(page.title));
+}
+
+function alsoFeedFaces(page: DeliveryBookPage): DeliveryShelfSlotId[] {
+  const key = remapRowForLegacyKey(page.id) ? page.id : guessDeliverySegmentKey(page.title);
+  const feeds = key ? remapRowForLegacyKey(key)?.alsoFeeds ?? [] : [];
+  return feeds.flatMap((id) => {
+    const face = asShelfFace(id);
+    return face ? [face] : [];
+  });
 }
 
 export type DeliveryShelfSlotState =
@@ -70,8 +127,9 @@ function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
     return "Cover";
   }
   if (id === "toc") return deliveryCoverCopy(locale).tocTitle;
-  if (id === "appendix") return deliveryAppendixCopy(locale).heading;
-  return deliveryPageTag(id as DeliverySegmentKey, locale);
+  if (id === "03") return deliveryAppendixCopy(locale).heading;
+  const face = DECISION_PAGE_SCHEMAS[id as "01"];
+  return face?.title ?? id;
 }
 
 function proseShelfTitle(
@@ -79,7 +137,7 @@ function proseShelfTitle(
   body: string,
   locale: string,
 ): string {
-  if (!isDeliveryProseShelfSlot(slotId) || slotId === "appendix") {
+  if (!isDeliveryProseShelfSlot(slotId) || slotId === "03") {
     return defaultTitleForSlot(slotId, locale);
   }
   const schema = extractPageSchemaFromMarkdown(body);
@@ -95,45 +153,88 @@ function proseShelfTitle(
  * Waiting occupies the first empty slot.
  * pageNumber = user-facing prose index (1–7), not cover/toc.
  */
+function mergeShelfBodies(pages: readonly DeliveryBookPage[]): string {
+  if (pages.length === 1) return pages[0]?.body ?? "";
+  return pages
+    .map((page) => {
+      const heading = page.title.trim();
+      return heading ? `## ${heading}\n\n${page.body}` : page.body;
+    })
+    .filter((part) => part.trim())
+    .join("\n\n");
+}
+
 export function buildDeliveryShelfSlots(
   fullText: string | null | undefined,
-  opts: { locale: string; complete?: boolean },
+  opts: { locale: string; complete?: boolean; topic?: string | null; question?: string | null },
 ): DeliveryShelfSlotState[] {
+  const topic = deliveryTopicFromSignals({ topic: opts.topic, question: opts.question });
+  const order = deliveryShelfSlotIds(topic);
   const pages = fullText?.trim() ? buildDeliveryBookPages(fullText) : [];
-  const slots: DeliveryShelfSlotState[] = DELIVERY_SHELF_SLOT_IDS.map((slotId) => ({
+  const slots: DeliveryShelfSlotState[] = order.map((slotId) => ({
     kind: "empty" as const,
     slotId,
-    pageNumber: deliveryProsePageNumber(slotId),
+    pageNumber: deliveryProsePageNumber(slotId, order),
   }));
+  const buckets = new Map<DeliveryShelfSlotId, DeliveryBookPage[]>();
 
-  const usedSlot = new Set<number>();
+  for (const page of pages) {
+    const face = shelfFaceForPage(page);
+    if (face && order.includes(face)) {
+      const list = buckets.get(face) ?? [];
+      list.push(page);
+      buckets.set(face, list);
+    }
+    for (const extra of alsoFeedFaces(page)) {
+      if (extra === face || !order.includes(extra)) continue;
+      const list = buckets.get(extra) ?? [];
+      list.push(page);
+      buckets.set(extra, list);
+    }
+  }
 
-  for (const p of pages) {
-    const typedIdx = DELIVERY_SHELF_SLOT_IDS.indexOf(p.id as DeliveryShelfSlotId);
-    let idx =
-      typedIdx >= 0 && !usedSlot.has(typedIdx)
-        ? typedIdx
-        : slots.findIndex((s, i) => s.kind === "empty" && !usedSlot.has(i));
-    if (idx < 0) break;
-    usedSlot.add(idx);
-    const slotId = DELIVERY_SHELF_SLOT_IDS[idx]!;
-    slots[idx] = {
+  for (let i = 0; i < slots.length; i++) {
+    const slotId = order[i]!;
+    const grouped = buckets.get(slotId);
+    if (!grouped?.length) continue;
+    const body = mergeShelfBodies(grouped);
+    const dualLayer = grouped.some((page) => page.dualLayer);
+    slots[i] = {
       kind: "ready",
       slotId,
-      pageNumber: deliveryProsePageNumber(slotId),
+      pageNumber: deliveryProsePageNumber(slotId, order),
       page: {
-        ...p,
         id: slotId,
-        // Prefer dynamic page_title from schema; TOC chrome uses deliveryPageTag separately.
         title: isDeliveryProseShelfSlot(slotId)
-          ? proseShelfTitle(slotId, p.body ?? "", opts.locale)
-          : p.title || defaultTitleForSlot(slotId, opts.locale),
+          ? proseShelfTitle(slotId, body, opts.locale)
+          : grouped[0]?.title || defaultTitleForSlot(slotId, opts.locale),
+        body,
+        dualLayer,
       },
     };
   }
 
+  const page07 = composePage07Markdown({ topic, question: opts.question });
+  if (page07 && order.includes("07")) {
+    const idx = order.indexOf("07");
+    const current = slots[idx];
+    if (current && current.kind !== "ready") {
+      slots[idx] = {
+        kind: "ready",
+        slotId: "07",
+        pageNumber: deliveryProsePageNumber("07", order),
+        page: {
+          id: "07",
+          title: proseShelfTitle("07", page07, opts.locale),
+          body: page07,
+          dualLayer: true,
+        },
+      };
+    }
+  }
+
   const readyCount = slots.filter((s) => s.kind === "ready").length;
-  if (!opts.complete && readyCount < DELIVERY_SHELF_SLOT_COUNT) {
+  if (!opts.complete && readyCount < order.length) {
     // Progressive unlock: all remaining empty prose slots show as waiting skeleton
     // (not a single blank spinner). Cover/toc stay empty until written.
     for (let i = 0; i < slots.length; i++) {
@@ -143,7 +244,7 @@ export function buildDeliveryShelfSlots(
       slots[i] = {
         kind: "waiting",
         slotId: s.slotId,
-        pageNumber: deliveryProsePageNumber(s.slotId),
+        pageNumber: deliveryProsePageNumber(s.slotId, order),
       };
     }
   }
@@ -158,19 +259,11 @@ export function buildDeliveryShelfSlots(
 export function sequentialDeliveryProseReady(
   slots: DeliveryShelfSlotState[],
 ): Extract<DeliveryShelfSlotState, { kind: "ready" }>[] {
-  const readyById = new Map<
-    DeliveryShelfSlotId,
-    Extract<DeliveryShelfSlotState, { kind: "ready" }>
-  >();
-  for (const s of slots) {
-    if (s.kind === "ready") readyById.set(s.slotId, s);
-  }
   const out: Extract<DeliveryShelfSlotState, { kind: "ready" }>[] = [];
-  for (const id of DELIVERY_SHELF_SLOT_IDS) {
-    if (!isDeliveryProseShelfSlot(id)) continue;
-    const hit = readyById.get(id);
-    if (!hit) break;
-    out.push(hit);
+  for (const slot of slots) {
+    if (!isDeliveryProseShelfSlot(slot.slotId)) continue;
+    if (slot.kind !== "ready") break;
+    out.push(slot);
   }
   return out;
 }
@@ -179,13 +272,10 @@ export function sequentialDeliveryProseReady(
 export function nextSequentialProseGap(
   slots: DeliveryShelfSlotState[],
 ): { slotId: DeliveryShelfSlotId; pageNumber: number } | null {
-  const readyIds = new Set(
-    slots.filter((s) => s.kind === "ready").map((s) => s.slotId),
-  );
-  for (const id of DELIVERY_SHELF_SLOT_IDS) {
-    if (!isDeliveryProseShelfSlot(id)) continue;
-    if (!readyIds.has(id)) {
-      return { slotId: id, pageNumber: deliveryProsePageNumber(id) };
+  for (const slot of slots) {
+    if (!isDeliveryProseShelfSlot(slot.slotId)) continue;
+    if (slot.kind !== "ready") {
+      return { slotId: slot.slotId, pageNumber: slot.pageNumber };
     }
   }
   return null;
@@ -212,3 +302,10 @@ export function splitShelfTitle(title: string): { primary: string; secondary?: s
 }
 
 export { defaultTitleForSlot };
+
+export {
+  primaryShelfKeyForPage,
+  readingOrderForTopic,
+  resolveDecisionPage,
+  shelfKeysForPage,
+} from "@/lib/llm/pro/delivery/decision-page-bridge";

@@ -23,6 +23,9 @@ import {
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { scrubJudgmentFeedPrescriptions, scrubP4BodyFeedPriming, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
+import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
+import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 
 export type ContentBodyOk = {
   ok: true;
@@ -315,6 +318,9 @@ export async function runContentBodyGenerate(input: {
   /** Thesis / fact-pack — required grounding for P1 dual-track (UI hides 依据). */
   chart_thesis_block?: string;
   chart_fact_pack?: string;
+  /** Optional. Omitted from the page slice when absent. */
+  ziwei_fact_pack?: ZiweiFactPack | null;
+  topic?: string | null;
   /** ≥2 after Lab transport stall → provider escape. */
   dispatch_attempt?: number;
   /** Attempt-2 acceptance corrective (category rule/detail). */
@@ -327,13 +333,20 @@ export async function runContentBodyGenerate(input: {
     pivot_chart_path: input.pivot_chart_path,
     partner_bazi: input.partner_bazi,
   });
+  const pageSlice = feed.thesis_factpack
+    ? formatPageSliceFeed({
+        key: input.key,
+        chartText: input.chart_fact_pack,
+        ziwei: input.ziwei_fact_pack,
+        question: input.question_expectation,
+        topic: input.topic,
+      })
+    : null;
   let feedParts = [
     feed.thesis_factpack && input.chart_thesis_block?.trim()
       ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
       : "",
-    feed.thesis_factpack && input.chart_fact_pack?.trim()
-      ? `## 本盘 Fact-pack（闭集真算）\n${input.chart_fact_pack.trim().slice(0, 4_000)}`
-      : "",
+    pageSlice ?? "",
     feed.primary_backup_hint && input.primary_backup_hint?.trim()
       ? input.primary_backup_hint.trim()
       : "",
@@ -351,7 +364,7 @@ export async function runContentBodyGenerate(input: {
     feed.metaphysics_moat ? input.metaphysics_moat_feed : "",
     feed.risk_fuse ? input.risk_fuse_feed : "",
     feed.close_ritual ? input.close_ritual_feed : "",
-    feed.structured_inventory
+    feed.structured_inventory && !pageSlice
       ? input.structured_inventory?.slice(0, 6_000)
       : "",
     feed.upstream_action_excerpt && input.action_brief
@@ -419,6 +432,23 @@ export async function runContentBodyGenerate(input: {
     tokens_used += result.meta.tokens_used;
     const finish = result.meta.finish_reason ?? null;
     const text = result.content?.trim() ?? "";
+    const scare = scareRedlineSnippet(text);
+    if (scare) {
+      return {
+        ok: false,
+        reason: "scare_redline",
+        tokens_used,
+        last_raw_text: text.slice(0, 12_000),
+        call_trace: buildLabCallTrace({
+          phase: "content_body_v3",
+          system,
+          user,
+          user_feed: userFeed,
+          raw_text: text,
+          result,
+        }),
+      };
+    }
     const baseTrace = {
       phase: "content_body_v3",
       system,

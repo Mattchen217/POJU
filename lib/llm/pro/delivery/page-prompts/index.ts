@@ -1,8 +1,14 @@
 /**
- * 交付页提示词索引 · v1 十段（03–06 独立 duty；01/02/07–09 复用既有文件）
+ * 交付页提示词索引 · v1 十段（03–06 独立 duty；01/02/07–09 复用既有文件）。
+ * 文案硬度不在 W0 改写。内容页只通过 contentPageForFillDuty 对齐 pageId。
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  contentPageIdForLegacyKey,
+  FILL_DUTY_FILE_REMAP,
+} from "@/lib/llm/pro/delivery/page-id-remap";
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import * as p1 from "./p1-direct-answer";
 import * as p2 from "./p2-foundation";
 import * as p3 from "./p3-science-action";
@@ -72,6 +78,13 @@ export function assignDutyForKey(
   if (mod?.buildAssignDuty) return mod.buildAssignDuty(tagZh);
   return `# 本页派工任务 · 【${tagZh}】\n只写本盘结构主张 + 事实档短摘录；本页用户可见正文留给 fill。`;
 }
+
+/** 运行时 duty 键对应的内容页。thirty_day 为 null。不改 duty 正文。 */
+export function contentPageForFillDuty(key: DeliverySegmentKey): DecisionPageId | null {
+  return contentPageIdForLegacyKey(key);
+}
+
+export { FILL_DUTY_FILE_REMAP };
 
 export const ACTIVE_PAGE_PROMPT_FILES = [
   { key: "decision_brief", label: p1.PAGE_LABEL, file: "p1-direct-answer.ts" },

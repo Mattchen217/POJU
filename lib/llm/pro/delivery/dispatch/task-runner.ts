@@ -158,6 +158,9 @@ async function runChainPhase(opts: {
     prior_chart_anchors: ctx.prior_chart_anchors,
     category_token_sets: ctx.category_token_sets,
     structured_inventory: ctx.promptOpts.structured_inventory,
+    chart_fact_pack: ctx.promptOpts.chart_fact_pack,
+    ziwei_fact_pack: ctx.promptOpts.ziwei_fact_pack,
+    topic: ctx.promptOpts.topic,
   });
   if (!chain.ok) {
     await saveDeliverySegmentProgress(opts.job_id, chain.progress);

@@ -16,6 +16,7 @@ import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirst
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
+import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import type { POJUAction } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 import { cn } from "@/lib/utils/classnames";
@@ -86,6 +87,13 @@ export function MainDeliveryView({
   const renderMode = resolveDeliveryRenderMode(searchParams);
   const sections = parseDeliveryContent(fullText);
   const prepare = useWorkspacePojuPrepareOptional();
+  const session = prepare?.session;
+  const shelfTopic = deliveryTopicFromSignals({
+    question: session?.agent_v2?.original_question,
+    pivotChartPath: session?.pivot_chart_path,
+    partnerBazi: session?.partner_bazi,
+    joint: session?.joint_decision === true || Boolean(session?.joint_decision_id),
+  });
   const showCompanion =
     companionReady && !waitingNextPart && Boolean(fullText.trim());
 
@@ -113,7 +121,12 @@ export function MainDeliveryView({
       {renderMode === "debug" ? (
         <DeliveryReportV2Debug fullText={fullText} />
       ) : renderMode === "v2" ? (
-        <DeliveryReportV2 fullText={fullText} locale={locale} />
+        <DeliveryReportV2
+          fullText={fullText}
+          locale={locale}
+          topic={shelfTopic}
+          question={session?.agent_v2?.original_question}
+        />
       ) : (
         sections.map((section) => (
           <DeliverySectionView key={section.type} section={section} locale={locale} />

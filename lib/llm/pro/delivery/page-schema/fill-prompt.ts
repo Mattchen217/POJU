@@ -9,6 +9,7 @@
  * fill-shape-legacy-fewshot when DELIVERY_FILL_SHAPE_MODE=mock.
  */
 
+import { resolveCanonicalDeliveryPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
@@ -25,6 +26,7 @@ import {
   formatP5WeekSummaryForPrompt,
 } from "./action-extractor";
 import { legacyFillFewShotForKey } from "./fill-shape-legacy-fewshot";
+import { appendPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import {
   resolveDeliveryFillShapeMode,
   type DeliveryFillShapeMode,
@@ -104,6 +106,10 @@ export type PageSchemaFillPromptOpts = {
    * Complements multi_dim / page_plan slices — user-side only.
    */
   structured_inventory?: string;
+  /** Local chart text. The page call reads the slice, not this whole string. */
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   /**
    * Batch 3: "compress" = vernacular rewrite from locked deep evidence (no new reckoning).
    * Default "full" keeps legacy single-shot fill (transition / fallback).
@@ -127,8 +133,15 @@ function buildShapeAnchorBlock(
   if (mode === "skeleton") {
     const skeleton = fillShapeSkeletonForKey(key);
     if (!skeleton) return "";
+    const shapeNote =
+      key === "situation_analysis"
+        ? "why_cards 每张 chart_anchors 取本页切片短锚，1–6 条，禁止空数组。双轨写在 surface / essence，短锚不要抄进正文。正文不要写出「命理」这个栏目名。\n"
+        : key === "execution_guidance"
+          ? "primary_toolkit 与 backup_toolkit 必须是对象，禁止字符串。angles 写在对象内。每个 angle.chart_anchors 至少 1 条本页切片短锚。正文是原则和完成样貌，不是勾选清单。strategy 和 means 只写求问者自己的核对步骤，禁止让对方同意或说服对方，禁止用缺盘声明替换整段。self_retune 是 06-C，必填，写执行时怎么稳住自己的节奏。\n"
+          : "";
     return (
       `\n# 形状锚 JSON(字段必填·空串须全部换成本案料·禁止把空串当正文)\n` +
+      shapeNote +
       "```json\n" +
       `${JSON.stringify(skeleton, null, 2)}\n` +
       "```\n"
@@ -187,7 +200,7 @@ export function buildPageSchemaFillPrompt(
 - user 侧「已锁定命理批断」是唯一出处。本步只把它译成大白话页内字段。
 - 禁止重写批断，禁止另起一段与批断无关的故事，禁止重新真算。
 - **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止品牌自造术语与【术语壳】。
-- chart_anchors 留空（覆盖 L1「先有 anchors」——本步不锁词）。不要把批断里的词抄进正文。
+- chart_anchors 写本页切片短锚（每张 1–6 条，禁止空数组）。不要把这些短锚或批断原词抄进正文。
 - 每个内容单元只译对应那一条 professional_evidence（path / 顺序对齐）；禁止张冠李戴。
 - 若依据含【命理】【科学】两段：压缩/正文须都能被两段支撑；可见正文勿报「命理/科学」栏目名，但删掉命理段后主张须垮。
 - surface/essence 都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
@@ -403,7 +416,19 @@ ${
       `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
     );
   }
-  if (feed.structured_inventory && !isCompress && opts.structured_inventory?.trim()) {
+  const pageSliceFed = appendPageSliceFeed(userParts, {
+    key,
+    chartText: opts.chart_fact_pack,
+    ziwei: opts.ziwei_fact_pack,
+    question: opts.question_expectation,
+    topic: opts.topic,
+  });
+  if (
+    feed.structured_inventory &&
+    !isCompress &&
+    !pageSliceFed &&
+    opts.structured_inventory?.trim()
+  ) {
     userParts.push(
       `【完整原始命盘闭集 · 与上面的多维真算摘要互为补充,如果本页主题需要摘要里没覆盖到的角度(比如具体某一步大运、某个神煞),可以直接从这里取,禁止编造闭集外的词】\n${opts.structured_inventory.trim()}`,
     );
@@ -453,8 +478,9 @@ ${
       isCompress ? scrubMingliJargonOutsideSlots(tallyBlock).text : tallyBlock,
     );
   }
+  const faceId = resolveCanonicalDeliveryPage(key) ?? key;
   userParts.push(
-    `## 输出\n只输出本页 JSON。顶层必须含 "page":"${key}", "page_title", "page_subtitle"。不要包在段键里。`,
+    `## 输出\n只输出本页 JSON。顶层 "page" 写脸 id "${faceId}"，并带 "paper":"${key}"。page_title、page_subtitle 必有。不要包在段键里。`,
   );
 
   let user = userParts.join("\n\n");

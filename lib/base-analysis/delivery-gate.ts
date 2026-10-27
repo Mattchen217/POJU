@@ -155,7 +155,9 @@ export function isBaseAnalysisGateFailure(violations: ComplianceViolation[]): bo
       v.label === "payment_leak:chained_soft_replace" ||
       // 依据块 0 锚点 = 结论悬空 = 假装有依据；单行 repair 救不了，整篇重生成。
       v.label === "evidence_zero_anchor" ||
-      v.label === "evidence_block_missing",
+      v.label === "evidence_block_missing" ||
+      v.label.includes("scare_redline") ||
+      v.label.startsWith("fear_mongering"),
   );
 }
 

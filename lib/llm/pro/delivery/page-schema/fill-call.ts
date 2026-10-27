@@ -5,6 +5,7 @@
  */
 
 import { callLLM } from "@/lib/llm/router";
+import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliveryComputed, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
@@ -23,6 +24,11 @@ import {
 import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import { allowEmptyChartAnchorsOnFill } from "./anchor-quality";
+import { contentPageIdForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import {
+  chartFactPackFromText,
+  pageSliceAnchorLines,
+} from "@/lib/llm/pro/delivery/slice-for-page";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { mergeInventoryTokens } from "./layer-b-inventory-menu";
 import {
@@ -127,6 +133,10 @@ export async function runPageSchemaFill(input: {
   category_token_sets?: CategoryTokenSets | null;
   /** Full chart closed-set (buildStructuredInstanceInventory text). */
   structured_inventory?: string;
+  /** Local chart text. Prompt receives the page slice, not the whole pack. */
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   /** Batch 3 compress mode + locked deep evidence. */
   fill_mode?: "full" | "compress";
   deep_evidence_plan?: DeepEvidencePlan | null;
@@ -374,6 +384,9 @@ async function runPageSchemaFillOnce(input: {
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
   structured_inventory?: string;
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   fill_mode?: "full" | "compress";
   deep_evidence_plan?: DeepEvidencePlan | null;
   p3_body_excerpt?: string;
@@ -418,11 +431,26 @@ async function runPageSchemaFillOnce(input: {
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
     structured_inventory: input.structured_inventory,
+    chart_fact_pack: input.chart_fact_pack,
+    ziwei_fact_pack: input.ziwei_fact_pack,
+    topic: input.topic,
     fill_mode,
     deep_evidence_lock: deepLock,
     plain_judgment: plainJudgment,
     shape_mode: shapeMode,
   };
+  const face = contentPageIdForLegacyKey(input.key);
+  const chartText = input.chart_fact_pack?.trim() ?? "";
+  const sliceAnchorLines =
+    (input.key === "situation_analysis" || input.key === "execution_guidance") &&
+    (face === "02" || face === "06") &&
+    (chartText || input.ziwei_fact_pack)
+      ? pageSliceAnchorLines(face, {
+          chart: chartText ? chartFactPackFromText(chartText) : null,
+          zfp: input.ziwei_fact_pack,
+          topic: input.topic ?? null,
+        })
+      : [];
   const anchorTally = tallyAnchorCategoryUsage(
     input.prior_chart_anchors ?? [],
     input.category_token_sets,
@@ -493,6 +521,15 @@ async function runPageSchemaFillOnce(input: {
       const text = result.content?.trim() ?? "";
       lastRawText = text;
       const hitLength = result.meta.finish_reason === "length";
+      const scare = scareRedlineSnippet(text);
+      if (scare) {
+        lastReason = "scare_redline";
+        console.warn("[delivery/page-schema-fill] scare_redline", {
+          key: input.key,
+          snippet: scare,
+        });
+        break;
+      }
       // No bonus beyond 1+1 phase budget — length truncate counts as a failed admit.
       if (!text) {
         lastReason = "empty_response";
@@ -596,6 +633,7 @@ async function runPageSchemaFillOnce(input: {
         inventoryTokens:
           inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
         fillMode: fill_mode,
+        requireSelfRetune: input.key === "execution_guidance",
         // Always pass plan when present — moat type stamp is code SSOT (not compress-only).
         deepEvidencePlan: input.deep_evidence_plan ?? null,
         situationMaterial:
@@ -607,6 +645,7 @@ async function runPageSchemaFillOnce(input: {
         plainJudgmentFill: input.key === "situation_analysis" && plainJudgment,
         closeRitualFeed:
           input.key === "validation_close" ? input.close_ritual_feed ?? null : undefined,
+        sliceAnchorLines,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;

@@ -31,7 +31,8 @@ export function buildFillDuty(tagZh: string): string {
 
 # 任务
 输出 core_judgment + primary + backup。
-primary/backup 各含: name, why, when(可选), **exit 必填**（停止/切换/退出触发）, chart_anchors≥1。
+primary/backup 各含: name, why, when(可选), **exit 必填**（切轨/停止/退出触发）, chart_anchors≥1。
+没有切轨或停止条件 = 本页不合格。不要把退出写成第二份作业清单。
 与 decision_brief 同轴，禁止另编第三套故事。
 
 # 目标

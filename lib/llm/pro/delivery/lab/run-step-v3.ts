@@ -46,6 +46,7 @@ import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/c
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
+import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
@@ -1152,12 +1153,17 @@ async function executeV3(
     } else if (feed.metaphysics_moat) {
       metaphysicsMoatJudgment = opts.metaphysics_moat_feed?.trim() || "";
     }
+    const pageSlice = feed.thesis_factpack
+      ? formatPageSliceFeed({
+          key: page,
+          chartText: rawFactPack,
+          question: opts.question_expectation,
+        })
+      : null;
     let feedParts = scrubJudgmentFeedPrescriptions(
       [
         feed.thesis_factpack ? opts.chart_thesis_block : "",
-        feed.thesis_factpack && rawFactPack
-          ? `## 本盘 Fact-pack\n${rawFactPack.slice(0, 4_000)}`
-          : "",
+        pageSlice ?? "",
         // 批断不灌 fill 派工全文；锁盘已在 Fact-pack。正文步仍用 eastern_calc_slice。
         page === "self_regulation" && def.kind === "content_judgment"
           ? ""
@@ -1174,7 +1180,7 @@ async function executeV3(
         feed.dyad_relation_structure && opts.dyad_relation_structure?.trim()
           ? opts.dyad_relation_structure.trim()
           : "",
-        feed.structured_inventory
+        feed.structured_inventory && !pageSlice
           ? opts.structured_inventory?.slice(0, 6_000)
           : "",
       ]
@@ -1229,9 +1235,12 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: judged.reason,
-          detail: escapeArmed
-            ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
-            : "运输/JSON 失败 — 非质量闸。可重跑本枪。",
+          detail:
+            judged.reason === "scare_redline"
+              ? "恐吓红线命中。改成带条件的明确主推后重跑本步。"
+              : escapeArmed
+                ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
+                : "运输/JSON 失败 — 非质量闸。可重跑本枪。",
         },
         output_to_next_stage: null,
         tokens_used: judged.tokens_used,
@@ -1392,9 +1401,12 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: body.reason,
-          detail: escapeArmedBody
-            ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
-            : "运输/JSON 失败 — 非质量闸。",
+          detail:
+            body.reason === "scare_redline"
+              ? "恐吓红线命中。改成带条件的明确主推后重跑本步。"
+              : escapeArmedBody
+                ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
+                : "运输/JSON 失败 — 非质量闸。",
         },
         output_to_next_stage: null,
         tokens_used: body.tokens_used,

@@ -487,6 +487,10 @@ export async function advanceSegmentChain(input: {
   category_token_sets?: import("./page-schema/anchor-category-tally").CategoryTokenSets | null;
   /** Full structured inventory text for fill (complements sliced multi_dim). */
   structured_inventory?: string;
+  /** Local chart text. Assign / write / fill read the page slice, not the whole pack. */
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -536,6 +540,9 @@ export async function advanceSegmentChain(input: {
       risk_fuse_feed: input.risk_fuse_feed,
       close_ritual_feed: input.close_ritual_feed,
       structured_inventory: input.structured_inventory,
+      chart_fact_pack: input.chart_fact_pack,
+      ziwei_fact_pack: input.ziwei_fact_pack,
+      topic: input.topic,
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
       // P4: ActionBrief is fill-only (formatP3MeansBriefForP4Retune). Do not feed
@@ -598,6 +605,9 @@ export async function advanceSegmentChain(input: {
         risk_fuse_feed: deepInput.risk_fuse_feed,
         close_ritual_feed: deepInput.close_ritual_feed,
         structured_inventory: deepInput.structured_inventory,
+        chart_fact_pack: deepInput.chart_fact_pack,
+        ziwei_fact_pack: deepInput.ziwei_fact_pack,
+        topic: deepInput.topic,
         prior_chart_anchors: deepInput.prior_chart_anchors,
         category_token_sets: deepInput.category_token_sets,
         action_brief_block: deepInput.action_brief_block,
@@ -901,6 +911,9 @@ export async function advanceSegmentChain(input: {
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
       structured_inventory: input.structured_inventory,
+      chart_fact_pack: input.chart_fact_pack,
+      ziwei_fact_pack: input.ziwei_fact_pack,
+      topic: input.topic,
       fill_mode: hasPlan ? "compress" : "full",
       deep_evidence_plan: progress.deep_evidence_plan ?? null,
       fill_partial: progress.fill_partial ?? null,

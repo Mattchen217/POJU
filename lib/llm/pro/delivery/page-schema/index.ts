@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./decision-pages";
 export * from "./sanitize";
 export * from "./action-extractor";
 export * from "./waves";

@@ -417,7 +417,9 @@ const { user: factUser } = buildDeepEvidenceWriteChunkPrompt(
 );
 assert.doesNotMatch(factUser, /想兼职试水/);
 assert.doesNotMatch(factUser, /处境材料不应出现/);
-assert.match(factUser, /本盘事实档/);
+assert.match(factUser, /本页切片/);
+assert.match(factUser, /用神：水/);
+assert.doesNotMatch(factUser, /身强/);
 assert.match(factUser, /丑未相冲/);
 const { user: factUserWithCalc } = buildDeepEvidenceWriteChunkPrompt(
   "situation_analysis",

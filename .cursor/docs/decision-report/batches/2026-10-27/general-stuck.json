@@ -1,0 +1,66 @@
+{
+  "id": "general-stuck",
+  "title": "一般卡住的决定",
+  "role": "required",
+  "verdict": "PASS",
+  "reason": "结构与清洗过了。OPENROUTER 未设置，模型正文未跑。",
+  "topic": "general",
+  "shelf": [
+    "01",
+    "02",
+    "04",
+    "05",
+    "06",
+    "08",
+    "03"
+  ],
+  "abstracts": {
+    "01": "zfp topicPalace,daxian · cfp yongJi,dayunNow,pathTags,conflictAnchors · palace 命宫",
+    "02": "zfp topicPalace,sihua,daxian · cfp dayMaster,yongJi,dayunNow · palace 命宫",
+    "04": "zfp sihua,daxian · cfp yongJi,dayunNow",
+    "05": "zfp topicPalace,sihua,daxian · cfp yongJi,dayunNow,pathTags,conflictAnchors · palace 命宫",
+    "06": "zfp daxian · cfp dayunNow",
+    "08": "zfp sihua · cfp dayunNow",
+    "03": "zfp topicPalace,sihua,daxian,mingShen · cfp dayMaster,yongJi,dayunNow · palace 命宫",
+    "chart": "日主 丙火 · 命宫 命宫 紫微、天相"
+  },
+  "gaps": [],
+  "gates": [
+    {
+      "step": "ziwei",
+      "passed": true,
+      "detail": "命宫"
+    },
+    {
+      "step": "bootstrap",
+      "passed": true,
+      "detail": "盘 structured + 问题就绪"
+    },
+    {
+      "step": "thesis.gen",
+      "passed": true,
+      "detail": "dims=6 as_of=2026-10-27"
+    },
+    {
+      "step": "prealloc",
+      "passed": true,
+      "detail": "day_master=丙火 pack_chars=753 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T13:48:39.762Z"
+    },
+    {
+      "step": "sanitize.02",
+      "passed": true,
+      "detail": "日主丙火 | 用神：土 | 喜神：金 | 忌神：木、火 | 当前大运：辛巳（33岁起）"
+    },
+    {
+      "step": "sanitize.06",
+      "passed": true,
+      "detail": "当前大运：辛巳（33岁起）"
+    },
+    {
+      "step": "model.fill",
+      "passed": "not_run",
+      "detail": "OPENROUTER_API_KEY unset"
+    }
+  ],
+  "lab_id": "lab_mvqqr5ch_9c0e3de8"
+}

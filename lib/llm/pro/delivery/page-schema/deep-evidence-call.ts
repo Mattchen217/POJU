@@ -185,6 +185,9 @@ type DeepEvidenceCallInput = {
   risk_fuse_feed?: string;
   close_ritual_feed?: string;
   structured_inventory?: string;
+  chart_fact_pack?: string;
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  topic?: string | null;
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
   /** Job prealloc reserved primaries (pool for reuse soft-repair). */
@@ -211,6 +214,9 @@ function buildPromptOpts(input: DeepEvidenceCallInput): DeepEvidencePromptOpts {
     risk_fuse_feed: input.risk_fuse_feed,
     close_ritual_feed: input.close_ritual_feed,
     structured_inventory: input.structured_inventory,
+    chart_fact_pack: input.chart_fact_pack,
+    ziwei_fact_pack: input.ziwei_fact_pack,
+    topic: input.topic,
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
     action_brief_block: input.action_brief_block,

@@ -32,6 +32,7 @@ export function buildFillDuty(tagZh: string): string {
 # 任务
 输出 options 2–4。每项: name, summary, upside, cost, risk, reversibility, chart_anchors。
 可含「维持现状」「小试验」「暂缓」。须能指回批断或收集事实。
+必须有一条写清何时切轨或停止。没有停止条件的选项表不合格。
 
 # 目标
 删掉命理锚后比较应失差异化；科学段写清权衡维度与不确定性，禁空喊。

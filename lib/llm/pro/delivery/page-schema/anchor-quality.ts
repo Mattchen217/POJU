@@ -255,6 +255,49 @@ function ensureAnchorsOnObject(
 }
 
 /**
+ * Full fill has no deep plan, so judgment stamp never runs.
+ * Copy this page's slice short anchors into units that are still empty.
+ * 02 cards and 06 angles only. Does not replace anchors the model already wrote.
+ */
+export function stampEmptyUnitAnchorsFromSlice(
+  pageKey: string,
+  page: Record<string, unknown>,
+  lines: readonly string[],
+): string[] {
+  const seed = lines.map((line) => line.trim()).filter(Boolean).slice(0, 6);
+  if (seed.length === 0) return [];
+  const notes: string[] = [];
+  const fill = (obj: Record<string, unknown>, path: string) => {
+    const current = Array.isArray(obj.chart_anchors)
+      ? obj.chart_anchors.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+    if (current.length > 0) return;
+    obj.chart_anchors = [...seed];
+    notes.push(`stamped_slice_anchors:${path}`);
+  };
+  if (pageKey === "situation_analysis") {
+    const cards = Array.isArray(page.why_cards) ? page.why_cards : [];
+    cards.forEach((card, index) => {
+      if (!card || typeof card !== "object") return;
+      fill(card as Record<string, unknown>, `why_cards[${index}]`);
+    });
+  }
+  if (pageKey === "execution_guidance") {
+    for (const role of ["primary_toolkit", "backup_toolkit"] as const) {
+      const toolkit = page[role];
+      if (!toolkit || typeof toolkit !== "object") continue;
+      const angles = (toolkit as Record<string, unknown>).angles;
+      if (!Array.isArray(angles)) continue;
+      angles.forEach((angle, index) => {
+        if (!angle || typeof angle !== "object") return;
+        fill(angle as Record<string, unknown>, `${role}.angles[${index}]`);
+      });
+    }
+  }
+  return notes;
+}
+
+/**
  * Deterministic fill: copy structure tokens from deep-plan judgment into empty
  * body chart_anchors (P3+). Foundation keeps empty (plain translate).
  */

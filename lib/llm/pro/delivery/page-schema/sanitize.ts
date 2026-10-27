@@ -4,6 +4,7 @@
  * Structural failure (missing required tracks) is signaled for retry.
  */
 
+import { resolveCanonicalDeliveryPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import type { DeliverySegmentKey } from "../delivery-schema";
 import { isTagOnlyOrEmptyPageTitle } from "../delivery-schema";
 export { isTagOnlyOrEmptyPageTitle } from "../delivery-schema";
@@ -29,6 +30,7 @@ import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
   hygienizeChartAnchorsRawLayer,
+  stampEmptyUnitAnchorsFromSlice,
   stampPageChartAnchorsFromDeepPlan,
 } from "./anchor-quality";
 import {
@@ -61,6 +63,7 @@ import {
   isFullDialogueScriptProse,
   softRepairScienceAngleUserProse,
   softRepairThirdPartyAgencyProse,
+  textHasJointChartStamp,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
 /**
@@ -730,16 +733,43 @@ function sanitizeAnglesList(
   return angles.slice(0, maxKeep);
 }
 
+/** String toolkit names are wide-in. Angles may sit on the page root. */
+function coerceToolkitInput(
+  raw: unknown,
+  rootAngles: unknown,
+): Record<string, unknown> | null {
+  if (typeof raw === "string") {
+    const name = raw.trim();
+    if (!name) return null;
+    return {
+      title: name,
+      name,
+      angles: Array.isArray(rootAngles) ? rootAngles : [],
+    };
+  }
+  const obj = asObj(raw);
+  if (!obj) return null;
+  const hasAngles =
+    Array.isArray(obj.angles) || Array.isArray(obj.strategies) || Array.isArray(obj.paths);
+  if (!hasAngles && Array.isArray(rootAngles)) {
+    return { ...obj, angles: rootAngles };
+  }
+  return obj;
+}
+
 function sanitizeToolkit(
   raw: unknown,
   role: TrackRole,
   notes: string[],
+  rootAngles?: unknown,
 ): Record<string, unknown> | null {
-  const o = asObj(raw);
+  const promotedFromString = typeof raw === "string" && raw.trim().length > 0;
+  const o = coerceToolkitInput(raw, rootAngles);
   if (!o) {
     notes.push(`missing_${role}_toolkit`);
     return null;
   }
+  if (promotedFromString) notes.push(`promoted_string_toolkit:${role}`);
   const angles = sanitizeAnglesList(
     o.angles ?? o.strategies ?? o.paths,
     o,
@@ -904,6 +934,32 @@ function attachPageChrome(
   candidate.page_subtitle = subtitle;
 }
 
+function sanitizeSelfRetune(
+  root: Record<string, unknown>,
+  notes: string[],
+  require: boolean,
+): { title: string; body: string } | null {
+  const raw = root.self_retune ?? root.retune ?? root.regulation;
+  let title = "";
+  let body = "";
+  if (typeof raw === "string") {
+    body = raw.trim();
+  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    title = clip(o.title ?? o.name ?? o.label, 80);
+    const bodyRaw = o.body ?? o.text ?? o.strategy ?? o.principle;
+    body = typeof bodyRaw === "string" ? bodyRaw.trim() : "";
+  }
+  const fail = (): null => {
+    if (require) notes.push("missing_06c_self_retune");
+    return null;
+  };
+  if (!body) return fail();
+  body = softRepairThirdPartyAgencyProse(body, []).replace(/[。．]{2,}/g, "。").trim();
+  if (!body || body.length < 24 || textHasJointChartStamp(body)) return fail();
+  return { title: title || "自我调频", body: clip(body, 480) };
+}
+
 /**
  * Coerce loose LLM JSON into a shape ready for Zod safeParse.
  * Returns structural failure if required tracks/fields cannot be recovered.
@@ -932,6 +988,13 @@ export function sanitizePageJson(
     plainJudgmentFill?: boolean;
     /** P6: close ritual menu (+ optional) for day7 traceability. */
     closeRitualFeed?: string | null;
+    /**
+     * Page-scoped short anchors (02-D / 06 dayun). Stamp only into empty units.
+     * Absent → no slice stamp, so older callers keep their own anchors.
+     */
+    sliceAnchorLines?: readonly string[] | null;
+    /** Live 06 fill: execution_guidance must carry 06-C self_retune. */
+    requireSelfRetune?: boolean;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -1340,11 +1403,13 @@ export function sanitizePageJson(
         root.primary_toolkit ?? root.primary ?? root.main_toolkit,
         "primary",
         notes,
+        root.angles,
       );
       const backup_toolkit = sanitizeToolkit(
         root.backup_toolkit ?? root.backup ?? root.aux_toolkit,
         "backup",
         notes,
+        root.backup_angles ?? root.angles,
       );
       if (!primary_toolkit || !backup_toolkit) {
         const tip =
@@ -1365,11 +1430,21 @@ export function sanitizePageJson(
           notes,
         };
       }
+      const selfRetune = sanitizeSelfRetune(root, notes, Boolean(opts?.requireSelfRetune));
+      if (opts?.requireSelfRetune && !selfRetune) {
+        return {
+          ok: false,
+          structural: true,
+          reason: "missing_06c_self_retune",
+          notes,
+        };
+      }
       candidate = {
         page: "execution_guidance",
         opening: scrubPromptLeakText(clipOpt(root.opening ?? root.intro, 200), notes),
         primary_toolkit,
         backup_toolkit,
+        ...(selfRetune ? { self_retune: selfRetune } : {}),
         // alert retired — medical disclaimer / generic caution no longer on user page
         evidence: sanitizeEvidence(root.evidence),
       };
@@ -1971,6 +2046,11 @@ export function sanitizePageJson(
   }
 
   attachPageChrome(key, root, candidate);
+  const faceId = resolveCanonicalDeliveryPage(key);
+  if (faceId) {
+    candidate.face = faceId;
+    candidate.paper = key;
+  }
   if (key === "self_regulation") {
     const t0 = String(candidate.page_title ?? "");
     const s0 = String(candidate.page_subtitle ?? "");
@@ -2010,6 +2090,11 @@ export function sanitizePageJson(
     const plan = opts?.deepEvidencePlan;
     if (plan) {
       notes.push(...stampPageChartAnchorsFromDeepPlan(key, candidate, plan));
+    }
+    if (opts?.sliceAnchorLines?.length) {
+      notes.push(
+        ...stampEmptyUnitAnchorsFromSlice(key, candidate, opts.sliceAnchorLines),
+      );
     }
     const units = collectPageAnchorUnits(key, candidate);
     const aq = assessUnitAnchorQuality({

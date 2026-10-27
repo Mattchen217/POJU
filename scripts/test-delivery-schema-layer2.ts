@@ -73,14 +73,23 @@ assert(guessDeliverySegmentKey("能量底座与核心洞察") === "situation_ana
 assert(guessDeliverySegmentKey("能量底座与黄金直答") === "decision_brief", "legacy direct-answer heading");
 assert(guessDeliverySegmentKey("关于这份报告") === "decision_brief", "legacy preface heading");
 
+assert(resolveDeliverySegmentKey("01") === "decision_brief", "face 01 → decision_brief");
+assert(resolveDeliverySegmentKey("06") === "execution_guidance", "face 06 → execution_guidance");
+assert(resolveDeliverySegmentKey("08") === "validation_risk", "face 08 → validation_risk");
+assert(resolveDeliverySegmentKey("07") === null, "face 07 has no segment");
+assert(resolveDeliverySegmentKey("03") === null, "face 03 has no segment");
 assert(
-  DELIVERY_SHELF_SLOT_IDS.includes("decision_brief") &&
-    DELIVERY_SHELF_SLOT_IDS.includes("situation_analysis") &&
-    DELIVERY_SHELF_SLOT_IDS.includes("validation_close") &&
+  DELIVERY_SHELF_SLOT_IDS.includes("01") &&
+    DELIVERY_SHELF_SLOT_IDS.includes("02") &&
+    DELIVERY_SHELF_SLOT_IDS.includes("08") &&
+    DELIVERY_SHELF_SLOT_IDS.includes("03") &&
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("decision_brief") &&
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("validation_close") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("thirty_day") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("energy_base") &&
-    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("preface"),
-  "shelf slots use 10 active keys",
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("preface") &&
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("07"),
+  "shelf faces are 01-08; 07 stays off the default order",
 );
 
 const filled = fillMissingDeliverySegments({});
