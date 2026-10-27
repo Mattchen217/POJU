@@ -3,9 +3,9 @@
  * (9 content modules; validation_review = validation_risk + validation_close).
  * Cover / TOC / appendix are merge-time. `thirty_day` + old 6 keys = legacy read aliases.
  *
- * Reader shelf faces are 01–08 in lib/poju/delivery-shelf-slots.ts.
- * These ten keys stay the generator order. Content page ids are DecisionPageId.
- * Old keys map through page-id-remap.ts and stay readable here.
+ * Reader shelf faces are 01–08. Those face ids are the canonical page ids.
+ * These ten keys stay paper aliases and the generator order.
+ * `resolveCanonicalDeliveryPage` is the face. `resolveDeliverySegmentKey` is the primary paper alias.
  */
 
 import { composeRxArgumentBody } from "@/lib/llm/pro/delivery/rx-argument-shape";
@@ -424,7 +424,7 @@ export const DELIVERY_BOOTSTRAP_SEGMENT: DeliverySegmentKey = "decision_brief";
 /** Last prose page — stream-complete marker (replaces old epilogue). */
 export const DELIVERY_CLOSING_SEGMENT: DeliverySegmentKey = "validation_close";
 
-/** Shelf face → the internal generator that still fills that face. 07 and 03 have no segment. */
+/** Face id → primary paper alias. 07 and 03 have no paper. */
 const CONTENT_PAGE_TO_SEGMENT: Record<string, V1DeliverySegmentKey> = {
   "01": "decision_brief",
   "02": "situation_analysis",
@@ -434,6 +434,9 @@ const CONTENT_PAGE_TO_SEGMENT: Record<string, V1DeliverySegmentKey> = {
   "08": "validation_risk",
 };
 
+export { resolveCanonicalDeliveryPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
+
+/** Paper alias for a face id, a v1 key, or an older alias. The face itself is `resolveCanonicalDeliveryPage`. */
 export function resolveDeliverySegmentKey(raw: string): DeliverySegmentKey | null {
   const k = raw.trim();
   const fromPage = CONTENT_PAGE_TO_SEGMENT[k];

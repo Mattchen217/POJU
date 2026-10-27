@@ -1,13 +1,12 @@
 /**
- * 01–08 是书架脸。内部出稿键仍是 v1，折进这些脸：
+ * 01–08 是页 id 真源。v1 出稿键是薄别名，折进这些脸：
  * - 书架槽：`deliveryShelfSlotIds`（cover、toc、01、02、04、05、06、题相关 07、08、03）
- * - 脸级 zod：`shelf-face-schema.ts`。生成槽 `DeliveryPageSchemaByKey` 仍按内部键
- * - `resolveDeliverySegmentKey("06")` 落到 execution_guidance。07 与 03 没有内部键
- * - duty 仍按内部键写。书架上 06 是一页，08 是一页
+ * - 脸级 zod：`shelf-face-schema.ts`。填槽纸的 `page` 仍是别名，`face` 是脸 id
+ * - `resolveCanonicalDeliveryPage` 返回脸。`resolveDeliverySegmentKey("06")` 仍落到主纸别名
+ * - DAG 任务 id 以脸为干。折进来的纸在脸后面带别名
  * - `pageFeedFlags("06")` 用近步旗标；`shelfFaceFeed("06")` 同时给出 06-C
- * - DAG 任务 id 仍是内部键。`shelfFaceDispatchKeys` 把它们收成一页
  *
- * 07 没有内部纸，也没有 DAG 任务。题目打开时，读路径用页骨架写一页。
+ * 07 没有 DAG 任务。题目打开时，写路径是 `slice:07`（切片 + A–C + 用户问题）。
  */
 
 import {
@@ -67,6 +66,38 @@ export function shelfKeysForPage(pageId: DecisionPageId): readonly string[] {
 
 export function primaryShelfKeyForPage(pageId: DecisionPageId): string | null {
   return PRIMARY_SHELF_KEY[pageId];
+}
+
+/** Face id. V1 keys, legacy aliases, and face ids all land here. Retired keys return null. */
+export function canonicalFaceId(raw: string | null | undefined): DecisionPageId | null {
+  return resolveDecisionPage(raw)?.pageId ?? null;
+}
+
+export const resolveCanonicalDeliveryPage = canonicalFaceId;
+
+/**
+ * DAG id stem. The primary paper of a face is the face id.
+ * A folded paper keeps its alias after the face: `06.self_regulation`.
+ */
+export function canonicalDispatchStem(raw: string): string {
+  const key = raw.trim();
+  const route = resolveDecisionPage(key);
+  if (!route) return key;
+  const paper = route.pageId === key ? route.primaryShelfKey : key;
+  if (!paper || paper === route.primaryShelfKey) return route.pageId;
+  return `${route.pageId}.${paper}`;
+}
+
+/** Old `p.decision_brief.fill` and new `p.01.fill` name the same task. */
+export function equateDispatchTaskId(id: string): string {
+  if (id === "finalize.assemble" || id === "wave_b.gate" || id === "assemble") return id;
+  const finalized = /^finalize\.(.+)$/.exec(id);
+  if (finalized) return `finalize.${canonicalDispatchStem(finalized[1] ?? id)}`;
+  const step =
+    "assign|write\\.c\\d+|write\\.merge|fill|mark(?:\\.c\\d+|\\.merge)?|ready";
+  const matched = new RegExp(`^p\\.(.+)\\.(${step})$`).exec(id);
+  if (!matched) return id;
+  return `p.${canonicalDispatchStem(matched[1] ?? id)}.${matched[2]}`;
 }
 
 function asPageId(value: string): DecisionPageId | null {

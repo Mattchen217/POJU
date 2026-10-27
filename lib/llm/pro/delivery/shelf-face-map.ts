@@ -4,6 +4,7 @@
  */
 
 import { readingOrderForTopic, resolveDecisionPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
+import { remapRowForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
 import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import { composePage07Markdown } from "@/lib/llm/pro/delivery/page-07-face";
 import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
@@ -55,6 +56,14 @@ export function groupDeliverySectionsByFace(
     const list = buckets.get(face) ?? [];
     list.push(section);
     buckets.set(face, list);
+    const guessed = guessDeliverySegmentKey(title);
+    const feeds = guessed ? remapRowForLegacyKey(guessed)?.alsoFeeds ?? [] : [];
+    for (const feed of feeds) {
+      if (feed === face) continue;
+      const extra = buckets.get(feed) ?? [];
+      extra.push(section);
+      buckets.set(feed, extra);
+    }
   });
 
   const merge = (id: string, parts: readonly { title: string; body: string }[]): ShelfFaceSection => {

@@ -2,6 +2,7 @@
  * Phase-4 dispatch DAG — one atomic LLM (or merge) unit per independent worker invoke.
  */
 
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { DeliveryArgumentTree, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidenceAssignment } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
@@ -32,8 +33,10 @@ export type DeliveryDispatchTaskKind =
 export type DeliveryDispatchTask = {
   id: string;
   kind: DeliveryDispatchTaskKind;
-  /** Page key when applicable. */
+  /** Paper alias when applicable. Face id is `face`. */
   key?: DeliverySegmentKey;
+  /** Canonical shelf face. Absent on gates and assemble. */
+  face?: DecisionPageId;
   /** 0-based write chunk index. */
   chunk_index?: number;
   deps: string[];

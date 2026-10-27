@@ -149,7 +149,7 @@ assert("download 06", slots.SLOT_BODY_06?.includes("RETUNE_CANARY") === true);
 assert("download 07", slots.SLOT_BODY_07?.includes("场域与关系") === true);
 assert("download without topic has no 07 slot key", buildDeliverySlotMap(md, "zh").SLOT_BODY_07 === undefined);
 
-assert("07 write entry is the schema", PAGE07_WRITE_ENTRY === "schema:07");
+assert("07 write entry is the slice compose", PAGE07_WRITE_ENTRY === "slice:07");
 assert("07 composer is silent without a topic", composePage07Markdown({ topic: "general" }) === null);
 assert("07 still has no DAG task", shelfFaceDispatchKeys("07").length === 0);
 assert("pipeline default stays legacy", resolveDeliveryPipeline({ ...process.env, DELIVERY_PIPELINE: "" }) === "legacy");

@@ -3,11 +3,13 @@
  * — slot-fill + UI shape until W2.
  * Keys = DeliverySegmentKey (delivery-schema.ts). Wide-in / sanitize-out.
  * Content page ids live in page-feed-matrix.ts and decision-pages.ts.
- * Generation JSON stays on these v1 keys. The reader shelf folds them onto 01–08.
+ * `page` is the paper alias so two papers on one face stay distinct.
+ * `face` is the canonical 01–08 id. New fills stamp both.
  */
 
 import { z } from "zod";
 import { DELIVERY_SEGMENT_KEYS, type DeliverySegmentKey } from "../delivery-schema";
+import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
 
 export const DELIVERY_PAGE_SCHEMA_VERSION = "page_schema_v1" as const;
 
@@ -29,6 +31,10 @@ export const PageChromeFieldsSchema = z.object({
   page_title: NonEmpty.max(56),
   /** Dynamic subtitle; empty string allowed when model omits. */
   page_subtitle: z.string().trim().max(80).default(""),
+  /** Canonical shelf face. Absent on legacy payloads. */
+  face: z.enum(DECISION_PAGE_IDS).optional(),
+  /** Paper alias that matches `page` after admit. */
+  paper: z.string().trim().min(1).optional(),
 });
 export type PageChromeFields = z.infer<typeof PageChromeFieldsSchema>;
 

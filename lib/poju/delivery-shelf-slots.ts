@@ -12,8 +12,10 @@ import {
   resolveDecisionPage,
 } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import { composePage07Markdown } from "@/lib/llm/pro/delivery/page-07-face";
+import { remapRowForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
 import { shelfFaceForHeading } from "@/lib/llm/pro/delivery/shelf-face-map";
 import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
+import { guessDeliverySegmentKey } from "@/lib/poju/parse-delivery";
 import {
   deliveryAppendixCopy,
   deliveryCoverCopy,
@@ -96,6 +98,15 @@ function shelfFaceForPage(page: DeliveryBookPage): DeliveryShelfSlotId | null {
   return shelfFaceForSourceId(page.id) ?? asShelfFace(shelfFaceForHeading(page.title));
 }
 
+function alsoFeedFaces(page: DeliveryBookPage): DeliveryShelfSlotId[] {
+  const key = remapRowForLegacyKey(page.id) ? page.id : guessDeliverySegmentKey(page.title);
+  const feeds = key ? remapRowForLegacyKey(key)?.alsoFeeds ?? [] : [];
+  return feeds.flatMap((id) => {
+    const face = asShelfFace(id);
+    return face ? [face] : [];
+  });
+}
+
 export type DeliveryShelfSlotState =
   | { kind: "empty"; slotId: DeliveryShelfSlotId; pageNumber: number }
   | { kind: "waiting"; slotId: DeliveryShelfSlotId; pageNumber: number }
@@ -169,10 +180,17 @@ export function buildDeliveryShelfSlots(
 
   for (const page of pages) {
     const face = shelfFaceForPage(page);
-    if (!face || !order.includes(face)) continue;
-    const list = buckets.get(face) ?? [];
-    list.push(page);
-    buckets.set(face, list);
+    if (face && order.includes(face)) {
+      const list = buckets.get(face) ?? [];
+      list.push(page);
+      buckets.set(face, list);
+    }
+    for (const extra of alsoFeedFaces(page)) {
+      if (extra === face || !order.includes(extra)) continue;
+      const list = buckets.get(extra) ?? [];
+      list.push(page);
+      buckets.set(extra, list);
+    }
   }
 
   for (let i = 0; i < slots.length; i++) {

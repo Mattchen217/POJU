@@ -9,7 +9,12 @@ import {
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
-import { shelfKeysForPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
+import {
+  canonicalDispatchStem,
+  canonicalFaceId,
+  equateDispatchTaskId,
+  shelfKeysForPage,
+} from "@/lib/llm/pro/delivery/decision-page-bridge";
 import { chunkPaths } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidenceAssignment } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import {
@@ -41,8 +46,10 @@ function task(
     status?: DeliveryDispatchTask["status"];
   },
 ): DeliveryDispatchTask {
+  const face = partial.key ? canonicalFaceId(partial.key) ?? undefined : undefined;
   return {
     ...partial,
+    face,
     status: partial.status ?? "pending",
     attempts: 0,
     updated_at: Date.now(),
@@ -50,41 +57,61 @@ function task(
 }
 
 export function pageFinalizeId(key: DeliverySegmentKey): string {
-  return `finalize.${key}`;
+  return `finalize.${canonicalDispatchStem(key)}`;
 }
 
 export const FINALIZE_ASSEMBLE_ID = "finalize.assemble";
 
 export function pageAssignId(key: DeliverySegmentKey): string {
-  return `p.${key}.assign`;
+  return `p.${canonicalDispatchStem(key)}.assign`;
 }
 
 export function pageWriteChunkId(key: DeliverySegmentKey, i: number): string {
-  return `p.${key}.write.c${i}`;
+  return `p.${canonicalDispatchStem(key)}.write.c${i}`;
 }
 
 export function pageWriteMergeId(key: DeliverySegmentKey): string {
-  return `p.${key}.write.merge`;
+  return `p.${canonicalDispatchStem(key)}.write.merge`;
 }
 
 export function pageFillId(key: DeliverySegmentKey): string {
-  return `p.${key}.fill`;
+  return `p.${canonicalDispatchStem(key)}.fill`;
 }
 
 export function pageMarkId(key: DeliverySegmentKey): string {
-  return `p.${key}.mark`;
+  return `p.${canonicalDispatchStem(key)}.mark`;
 }
 
 export function pageMarkChunkId(key: DeliverySegmentKey, i: number): string {
-  return `p.${key}.mark.c${i}`;
+  return `p.${canonicalDispatchStem(key)}.mark.c${i}`;
 }
 
 export function pageMarkMergeId(key: DeliverySegmentKey): string {
-  return `p.${key}.mark.merge`;
+  return `p.${canonicalDispatchStem(key)}.mark.merge`;
 }
 
 export function pageReadyId(key: DeliverySegmentKey): string {
-  return `p.${key}.ready`;
+  return `p.${canonicalDispatchStem(key)}.ready`;
+}
+
+export { equateDispatchTaskId };
+
+/** Stored jobs may still name tasks with v1 keys. Read them as face ids. */
+export function equateDeliveryDispatchDag(dag: DeliveryDispatchDag): DeliveryDispatchDag {
+  let changed = false;
+  const tasks: Record<string, DeliveryDispatchTask> = {};
+  for (const [id, item] of Object.entries(dag.tasks)) {
+    const nextId = equateDispatchTaskId(id);
+    const deps = item.deps.map((dep) => equateDispatchTaskId(dep));
+    const face = item.face ?? (item.key ? canonicalFaceId(item.key) ?? undefined : undefined);
+    if (nextId !== id || item.id !== nextId || deps.some((dep, index) => dep !== item.deps[index])) {
+      changed = true;
+    }
+    if (face !== item.face) changed = true;
+    tasks[nextId] = { ...item, id: nextId, deps, face };
+  }
+  if (!changed) return dag;
+  return { ...dag, tasks, updated_at: Date.now() };
 }
 
 export const WAVE_B_GATE_ID = "wave_b.gate";

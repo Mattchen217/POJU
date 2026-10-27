@@ -2,7 +2,7 @@
  * Eastern OS 报告蓝图 · 运行时模块表（兼容到 W2）。
  * 内容页结构真源已改为 2026-10-27 pageId：
  * `.cursor/docs/decision-report/` + `lib/llm/pro/delivery/page-feed-matrix.ts`。
- * 九模块仍是出稿 / 议程路由用的运行时 id，不再单独代表页结构。
+ * 九模块仍是出稿纸的别名。脸序真源是 `CANONICAL_FACE_BLUEPRINT`。
  * 旧键 → pageId 见 `page-id-remap.ts`。
  * v1 产品边界背景：`.cursor/docs/v1-决策交付-产品边界.md`。
  * 出稿 `delivery_segments` 仍是 v1 十段 key；本表数据不在 W0 改写。
@@ -10,8 +10,12 @@
  * 2.1议程据此问「缺什么现实料」（议程 5–6 问，≠ 一模块一问）；第4段据此路由。
  * 运行时模块路由仍集中在本表。内容页序改 `.cursor/docs/decision-report/`，不要只改这里。
  *
- * 无外部依赖，可被任何阶段安全 import（不产生循环）。
+ * 脸序在 `CANONICAL_FACE_BLUEPRINT`。模块表仍可单独 import。
  */
+
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { remapRowForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
 
 /** 这一页需要哪种输入。 */
 export type BlueprintInputRole =
@@ -305,6 +309,29 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   },
 ] as const;
 
+const FACE_READING_ORDER = ["01", "02", "04", "05", "06", "07", "08", "03"] as const;
+
+export type CanonicalFaceBlueprint = {
+  faceId: DecisionPageId;
+  title: string;
+  /** Modules whose primary page is this face. */
+  modules: readonly ReportPage[];
+  /** Modules that also land a block on this face. */
+  alsoFeeds: readonly ReportPage[];
+};
+
+/** Face order is the blueprint source of truth. Module rows are the papers on that face. */
+export const CANONICAL_FACE_BLUEPRINT: readonly CanonicalFaceBlueprint[] = FACE_READING_ORDER.map(
+  (faceId) => ({
+    faceId,
+    title: DECISION_PAGE_SCHEMAS[faceId].title,
+    modules: REPORT_BLUEPRINT.filter((page) => remapRowForLegacyKey(page.id)?.pageId === faceId),
+    alsoFeeds: REPORT_BLUEPRINT.filter((page) =>
+      remapRowForLegacyKey(page.id)?.alsoFeeds.includes(faceId),
+    ),
+  }),
+);
+
 /** 需要议程收集的模块（Call B 只为这些生成 agenda；且总数仍 5–6，非一模块一问）。 */
 export const BLUEPRINT_PAGES_NEEDING_REALITY: readonly ReportPage[] =
   REPORT_BLUEPRINT.filter((p) => p.input_role === "needs_reality");
@@ -324,10 +351,14 @@ export const BLUEPRINT_AGENDA_FORBIDDEN_PAGES = new Set<string>([
 export function getBlueprintPage(id: string): ReportPage | undefined {
   const byId = REPORT_BLUEPRINT.find((p) => p.id === id);
   if (byId) return byId;
-  // Legacy six-page key → first v1 module that routes delivery_segments there
-  return REPORT_BLUEPRINT.find((p) =>
+  const bySegment = REPORT_BLUEPRINT.find((p) =>
     (p.delivery_segments as readonly string[]).includes(id),
   );
+  if (bySegment) return bySegment;
+  if ((FACE_READING_ORDER as readonly string[]).includes(id)) {
+    return CANONICAL_FACE_BLUEPRINT.find((row) => row.faceId === id)?.modules[0];
+  }
+  return undefined;
 }
 
 /** 九模块 id → 现网出稿主 key（取 delivery_segments[0]）。 */

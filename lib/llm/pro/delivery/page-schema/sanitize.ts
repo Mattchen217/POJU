@@ -4,6 +4,7 @@
  * Structural failure (missing required tracks) is signaled for retry.
  */
 
+import { resolveCanonicalDeliveryPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import type { DeliverySegmentKey } from "../delivery-schema";
 import { isTagOnlyOrEmptyPageTitle } from "../delivery-schema";
 export { isTagOnlyOrEmptyPageTitle } from "../delivery-schema";
@@ -1971,6 +1972,11 @@ export function sanitizePageJson(
   }
 
   attachPageChrome(key, root, candidate);
+  const faceId = resolveCanonicalDeliveryPage(key);
+  if (faceId) {
+    candidate.face = faceId;
+    candidate.paper = key;
+  }
   if (key === "self_regulation") {
     const t0 = String(candidate.page_title ?? "");
     const s0 = String(candidate.page_subtitle ?? "");

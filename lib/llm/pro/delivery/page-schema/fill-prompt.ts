@@ -9,6 +9,7 @@
  * fill-shape-legacy-fewshot when DELIVERY_FILL_SHAPE_MODE=mock.
  */
 
+import { resolveCanonicalDeliveryPage } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
@@ -470,8 +471,9 @@ ${
       isCompress ? scrubMingliJargonOutsideSlots(tallyBlock).text : tallyBlock,
     );
   }
+  const faceId = resolveCanonicalDeliveryPage(key) ?? key;
   userParts.push(
-    `## 输出\n只输出本页 JSON。顶层必须含 "page":"${key}", "page_title", "page_subtitle"。不要包在段键里。`,
+    `## 输出\n只输出本页 JSON。顶层 "page" 写脸 id "${faceId}"，并带 "paper":"${key}"。page_title、page_subtitle 必有。不要包在段键里。`,
   );
 
   let user = userParts.join("\n\n");

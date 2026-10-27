@@ -35,6 +35,7 @@
     "test:scare-gate-w3": "tsx scripts/test-scare-gate-w3.ts",
     "test:shelf-face-w4": "tsx scripts/test-shelf-face-w4.ts",
     "test:shelf-surface-w5": "tsx scripts/test-shelf-surface-w5.ts",
+    "test:shelf-surface-w6": "tsx scripts/test-shelf-surface-w6.ts",
     "test:syncro-qimen-map": "tsx scripts/test-syncro-qimen-direction-map.ts",
     "test:syncro-step3": "tsx scripts/test-syncro-step3-wuxing-task.ts",
     "test:syncro-step4": "tsx scripts/test-syncro-step4-calculate-score.ts",

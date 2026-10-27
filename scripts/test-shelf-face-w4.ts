@@ -7,7 +7,7 @@
  * 3. general / null / 官禄 / career omit 07.
  * 4. Empty report waits on 01. 07 is absent unless the topic opens it, then it waits empty.
  * 5. 科学药方 + 东方谋略 fold into one 06. 风险预警 + 行动指引 fold into one 08.
- *    决策模式 stays on 02 and is not copied onto 04. 主策略 stays on 05.
+ *    决策模式 stays on 02 and also lands on 04. 主策略 stays on 05 and also lands on 01.
  *    附录 is 03 at the package end.
  * 6. resolveDeliverySegmentKey: 06 → execution_guidance, 08 → validation_risk, 07 and 03 → null.
  * 7. DELIVERY_PIPELINE default stays legacy.
@@ -127,9 +127,9 @@ const bodyOf = (id: string) => {
   return slot?.kind === "ready" ? slot.page.body : "";
 };
 assert("01 keeps the brief", bodyOf("01").includes("BRIEF_CANARY"));
-assert("01 does not take the strategy", !bodyOf("01").includes("STRATEGY_CANARY"));
+assert("01 alsoFeeds the strategy", bodyOf("01").includes("STRATEGY_CANARY"));
 assert("02 keeps the pattern", bodyOf("02").includes("PATTERN_CANARY"));
-assert("04 does not copy the pattern", !bodyOf("04").includes("PATTERN_CANARY"));
+assert("04 alsoFeeds the pattern", bodyOf("04").includes("PATTERN_CANARY"));
 assert("05 keeps the strategy", bodyOf("05").includes("STRATEGY_CANARY"));
 assert(
   "06 is one face",

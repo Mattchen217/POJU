@@ -1,0 +1,50 @@
+/* Live vault only. Out of flow so the baseline book box stays the download frame. */
+
+.workspace-doc-vault-modal__body:has(.baseline-ziwei-lens) {
+  position: relative;
+}
+
+.baseline-ziwei-lens {
+  position: absolute;
+  z-index: 4;
+  top: 76px;
+  right: 16px;
+  width: min(240px, 32vw);
+  max-height: min(320px, 42%);
+  overflow: auto;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(242, 202, 80, 0.45);
+  border-radius: 10px;
+  background: rgba(13, 11, 7, 0.92);
+  color: rgba(247, 228, 168, 0.92);
+  pointer-events: auto;
+}
+
+.baseline-ziwei-lens__title {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.baseline-ziwei-lens__list {
+  margin: 0;
+}
+
+.baseline-ziwei-lens__row {
+  display: grid;
+  grid-template-columns: 4.5em 1fr;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.baseline-ziwei-lens__row dt {
+  margin: 0;
+  color: rgba(242, 202, 80, 0.8);
+}
+
+.baseline-ziwei-lens__row dd {
+  margin: 0;
+}

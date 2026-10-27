@@ -14,6 +14,7 @@ import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
 import { BaselinePortraitBook } from "@/components/poju/BaselinePortraitBook";
+import { BaselineZiweiLens } from "@/components/poju/BaselineZiweiLens";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
@@ -414,6 +415,9 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
               locale={locale}
               suppressNarrative
             />
+          ) : null}
+          {matrixPayload && !loading && item?.kind === "energy_matrix" ? (
+            <BaselineZiweiLens birth={matrixPayload.user_profile.birth} locale={locale} />
           ) : null}
           {deliverySessionId &&
           (liveDelivery?.sessionId === deliverySessionId ? true : !loading) &&
