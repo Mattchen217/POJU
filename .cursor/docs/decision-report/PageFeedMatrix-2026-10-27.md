@@ -30,7 +30,7 @@
 | User.detail | dialogue | 细节/约束 |
 | Sci.hooks | prompt | 本案机制 hook 键（禁空术语） |
 
-ZFP.* 在紫微未稳时可以不出现。代码不实现 ZiweiFactPack。
+ZFP.* 在紫微未稳时可以不出现。结构包见 [ZiweiFactPack-2026-10-27.md](./ZiweiFactPack-2026-10-27.md)。`sliceForPage` 仍不把星名写入切片。
 
 ## 主叙事切片（段级）
 

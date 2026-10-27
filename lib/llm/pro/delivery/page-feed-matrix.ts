@@ -4,9 +4,9 @@
  * 锁：`.cursor/docs/decision-report/PageFeedMatrix-2026-10-27.md`
  * 页结构真源与本文件对齐。运行时出稿 key 仍走 v1 十段，直到 W2 改 schema/UI。
  *
- * `sliceForPage` 在 W0 只返回 allowlist 元数据 + 空切片形状。
- * 不读 ChartFactPack，不读紫微（ZiweiFactPack 属 W1），不裁剪真实盘面。
- * 紫微未稳时省略 ZFP 键，禁止用空话注水补宫。
+ * `sliceForPage` 仍只返回 allowlist 元数据 + 空切片形状（填槽属 W2）。
+ * 可把 `ZiweiFactPack` 放进 `packs.zfp`；本函数不读取星名。
+ * `packs.zfp == null` 时省略 ZFP 键，禁止用空话注水补宫。
  */
 
 export const DECISION_PAGE_IDS = ["01", "02", "03", "04", "05", "06", "07", "08"] as const;
@@ -400,7 +400,7 @@ export type PageFeedPacks = {
   cfp?: Partial<Record<CfpShortKey, unknown>> | null;
   /**
    * 省略或 null = 紫微未稳。切片不带 ZFP 键。
-   * 空对象 = 盘在，但 W0 仍只留空槽，不填星。
+   * 传入 `ZiweiFactPack`（键名即 ZFP 短名）或空对象时，仍只留空槽，不填星。
    */
   zfp?: Partial<Record<ZfpShortKey, unknown>> | null;
   user?: Partial<Record<UserShortKey, unknown>> | null;
