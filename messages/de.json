@@ -2937,6 +2937,9 @@
     "partner_agreed_title": "Gemeinsamen Dialog starten",
     "partner_agreed_cta": "Gemeinsamen Dialog starten (1 PASS)",
     "partner_agreed_tip": "Partner hat Basisdaten gesendet und zugestimmt. Hier starten?",
-    "birth_hint": "Basisdaten für diese gemeinsame Entscheidung wählen oder neu eingeben"
+    "birth_hint": "Basisdaten für diese gemeinsame Entscheidung wählen oder neu eingeben",
+    "open_birth_brand": "Gemeinsamer Entscheidungsdialog",
+    "open_birth_heading": "Basisdaten eingeben, um den gemeinsamen Dialog zu starten",
+    "open_birth_lead": "Gespeichertes Profil wählen oder neue Basisdaten hinzufügen, dann bestätigen."
   }
 }

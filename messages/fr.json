@@ -1401,7 +1401,10 @@
     "err_generic": "Échec — réessayez",
     "decision_history": "Historique des dialogues de décision ({count})",
     "partner_agreed_title": "Ouvrir le dialogue à deux",
-    "partner_agreed_cta": "Ouvrir le dialogue à deux (1 PASS)"
+    "partner_agreed_cta": "Ouvrir le dialogue à deux (1 PASS)",
+    "open_birth_brand": "Dialogue à deux",
+    "open_birth_heading": "Saisissez les informations de base pour ouvrir le dialogue à deux",
+    "open_birth_lead": "Choisissez un profil enregistré ou ajoutez des infos de base, puis confirmez."
   },
   "bazi": {
     "gender": {

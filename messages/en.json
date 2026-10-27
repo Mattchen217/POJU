@@ -1959,7 +1959,10 @@
     "err_generic": "Something went wrong — try again",
     "partner_agreed_title": "Start joint decision dialogue",
     "partner_agreed_cta": "Start joint decision dialogue (uses 1 PASS)",
-    "decision_history": "Decision dialogue history ({count})"
+    "decision_history": "Decision dialogue history ({count})",
+    "open_birth_brand": "Joint decision dialogue",
+    "open_birth_heading": "Enter basic information to start the joint decision dialogue",
+    "open_birth_lead": "Choose a saved profile or add new basic information, then confirm to continue."
   },
   "bazi": {
     "gender": {

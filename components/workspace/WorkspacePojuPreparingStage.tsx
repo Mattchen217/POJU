@@ -67,19 +67,20 @@ export function WorkspacePojuPreparingStage() {
         ]);
         if (ac.signal.aborted) return;
 
+        // Matrix/baseline already computed during the wait — open book with payload, no reload.
         setMatrixPayload(result.matrixPayload);
         setSession(result.session);
-
-        setShowFlash(true);
-        setPhase("exiting");
         openRight();
         markDocVaultUnread(DocVaultIds.matrix(profileId), "foundation");
         notifyDocVaultUpdated();
+
+        setShowFlash(true);
+        setPhase("exiting");
         await new Promise((r) => setTimeout(r, EXIT_MS));
         if (ac.signal.aborted) return;
         setShowFlash(false);
         setPhase("chat");
-        requestBaselineAutoOpen(profileId);
+        requestBaselineAutoOpen(profileId, result.matrixPayload);
       } catch (e) {
         if (ac.signal.aborted) return;
         if (e instanceof DOMException && e.name === "AbortError") return;

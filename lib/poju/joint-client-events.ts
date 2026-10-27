@@ -52,16 +52,23 @@ export function requestJointOpen(
   );
 }
 
+/** In-memory mirror — survives React effect cleanups that must not wipe sessionStorage. */
+let awaitPortraitJointId: string | null = null;
+
 export function markAwaitJointPortraitClose(jointId: string): void {
   if (typeof window === "undefined") return;
+  const id = jointId.trim();
+  if (!id) return;
+  awaitPortraitJointId = id;
   try {
-    sessionStorage.setItem(JOINT_AWAIT_PORTRAIT_KEY, jointId);
+    sessionStorage.setItem(JOINT_AWAIT_PORTRAIT_KEY, id);
   } catch {
     /* private mode */
   }
 }
 
 export function clearAwaitJointPortraitClose(): void {
+  awaitPortraitJointId = null;
   if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(JOINT_AWAIT_PORTRAIT_KEY);
@@ -71,6 +78,7 @@ export function clearAwaitJointPortraitClose(): void {
 }
 
 export function readAwaitJointPortraitClose(): string | null {
+  if (awaitPortraitJointId) return awaitPortraitJointId;
   if (typeof window === "undefined") return null;
   try {
     return sessionStorage.getItem(JOINT_AWAIT_PORTRAIT_KEY);
@@ -82,8 +90,9 @@ export function readAwaitJointPortraitClose(): string | null {
 export function notifyJointPortraitClosed(): void {
   if (typeof window === "undefined") return;
   const jointId = readAwaitJointPortraitClose();
-  if (!jointId) return;
+  // Always clear; still fire when id known so PASS tip + stage1 can run.
   clearAwaitJointPortraitClose();
+  if (!jointId) return;
   window.dispatchEvent(
     new CustomEvent(JOINT_PORTRAIT_CLOSED_EVENT, { detail: { jointId } }),
   );

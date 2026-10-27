@@ -154,19 +154,23 @@ function DocVaultOpenBinder({
   /** After birth prepare: popup baseline over center welcome (does not replace chat). */
   useEffect(() => {
     const onAutoOpen = (event: Event) => {
-      const profileId = (event as CustomEvent<BaselineAutoOpenDetail>).detail?.profileId?.trim();
+      const detail = (event as CustomEvent<BaselineAutoOpenDetail>).detail;
+      const profileId = detail?.profileId?.trim();
       if (!profileId) return;
       const id = DocVaultIds.matrix(profileId);
       const fromIndex = vault?.items.find((i) => i.id === id);
-      const item: DocVaultItem = fromIndex ?? {
-        id,
-        section: "foundation",
-        kind: "energy_matrix",
-        title: "Baseline profile",
-        subjectLabel: "",
-        createdAt: new Date().toISOString(),
-        unread: true,
-        openTarget: { type: "profile_matrix", profileId },
+      const item: DocVaultItem = {
+        ...(fromIndex ?? {
+          id,
+          section: "foundation",
+          kind: "energy_matrix",
+          title: "Baseline profile",
+          subjectLabel: "",
+          createdAt: new Date().toISOString(),
+          unread: true,
+          openTarget: { type: "profile_matrix", profileId },
+        }),
+        matrixPayload: detail?.matrixPayload ?? fromIndex?.matrixPayload ?? null,
       };
       markDocVaultRead(item.id);
       setModalItem(item);

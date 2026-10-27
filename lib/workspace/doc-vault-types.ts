@@ -1,5 +1,7 @@
 /** Cross-product right-rail document vault — index types (Phase A). */
 
+import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
+
 export type DocVaultSection =
   | "foundation"
   | "pivot"
@@ -35,6 +37,8 @@ export type DocVaultItem = {
   createdAt: string;
   unread: boolean;
   openTarget: DocVaultOpenTarget;
+  /** Precomputed during prepare wait — open baseline without a second load spin. */
+  matrixPayload?: PojuMatrixPayload | null;
 };
 
 export const DOC_VAULT_SECTION_ORDER: DocVaultSection[] = [
@@ -62,20 +66,27 @@ export const DOC_VAULT_UPDATED_EVENT = "pojulife:doc-vault-updated";
 /** First entry after birth prepare — open baseline portrait as overlay (center stays welcome chat). */
 export const BASELINE_AUTO_OPEN_EVENT = "pojulife:baseline-auto-open";
 
-export type BaselineAutoOpenDetail = { profileId: string };
+export type BaselineAutoOpenDetail = {
+  profileId: string;
+  /** When set (after prepare), modal paints immediately — no post-wait reload. */
+  matrixPayload?: PojuMatrixPayload | null;
+};
 
 export function notifyDocVaultUpdated(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(DOC_VAULT_UPDATED_EVENT));
 }
 
-export function requestBaselineAutoOpen(profileId: string): void {
+export function requestBaselineAutoOpen(
+  profileId: string,
+  matrixPayload?: PojuMatrixPayload | null,
+): void {
   if (typeof window === "undefined") return;
   const id = profileId.trim();
   if (!id) return;
   window.dispatchEvent(
     new CustomEvent<BaselineAutoOpenDetail>(BASELINE_AUTO_OPEN_EVENT, {
-      detail: { profileId: id },
+      detail: { profileId: id, matrixPayload: matrixPayload ?? null },
     }),
   );
 }

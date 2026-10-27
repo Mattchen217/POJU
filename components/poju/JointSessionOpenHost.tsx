@@ -26,7 +26,6 @@ import {
   JOINT_PORTRAIT_CLOSED_EVENT,
   markAwaitJointPortraitClose,
   notifyJointListUpdated,
-  clearAwaitJointPortraitClose,
 } from "@/lib/poju/joint-client-events";
 import {
   PREVIEW_MATRIX_MIN_PREP_MS,
@@ -56,8 +55,6 @@ import {
 } from "@/lib/workspace/doc-vault-types";
 
 import "@/styles/session-prep.css";
-
-const EXIT_MS = 700;
 
 type Phase =
   | "loading"
@@ -102,7 +99,6 @@ export function JointSessionOpenHost({
   const tPrep = useTranslations("session_prep");
   const { alert, confirm } = useAppDialog();
   const prepare = useWorkspacePojuPrepare();
-  const tOpen = useTranslations("workspace.sessionOpen");
 
   const [phase, setPhase] = useState<Phase>(() => initialPhase(initialJoint));
   const [joint, setJoint] = useState<JointDecisionPublicView | null>(
@@ -114,7 +110,6 @@ export function JointSessionOpenHost({
   const [hasBirthProfiles, setHasBirthProfiles] = useState(false);
   const [prepProfile, setPrepProfile] = useState<StoredProfileData | null>(null);
   const [prepError, setPrepError] = useState<string | null>(null);
-  const [showFlash, setShowFlash] = useState(false);
   const chargeRef = useRef<ChargeResult>({ status: "pending" });
   const tipShownRef = useRef(false);
   const startedAtRef = useRef(0);
@@ -331,7 +326,6 @@ export function JointSessionOpenHost({
     tipShownRef.current = false;
     chargeRef.current = { status: "pending" };
     setPrepError(null);
-    setShowFlash(false);
     matrixPayloadRef.current = null;
     previewSessionIdRef.current = null;
 
@@ -354,6 +348,7 @@ export function JointSessionOpenHost({
     setPhase("preparing");
 
     try {
+      // Compute baseline portrait during the 10s anim — not after it.
       const [result] = await Promise.all([
         finalizeWorkspacePrepare(profileId, locale),
         waitRemainingMinSpline(startedAtRef.current, PREVIEW_MATRIX_MIN_PREP_MS),
@@ -362,44 +357,30 @@ export function JointSessionOpenHost({
       matrixPayloadRef.current = result.matrixPayload;
       previewSessionIdRef.current = result.session.session_id;
 
-      // Same exit flash as solo preparing stage — still no model / no unlock.
-      setShowFlash(true);
-      setPhase("exiting");
-      prepare.setPhase("exiting");
+      const jointSession = {
+        ...result.session,
+        joint_decision_id: jointId,
+        joint_decision: true as const,
+        original_question:
+          joint?.shared_question?.trim() || result.session.original_question || "",
+        pending_question: undefined,
+        unlock_status: "preview" as const,
+      };
+
+      // Warm prepare context first so chat + vault modal paint without a second load.
+      prepare.setMatrixPayload(result.matrixPayload);
+      prepare.setSession(jointSession);
       prepare.openRight();
       markDocVaultUnread(DocVaultIds.matrix(profileId), "foundation");
       notifyDocVaultUpdated();
-      await new Promise((r) => setTimeout(r, EXIT_MS));
-      setShowFlash(false);
+      void savePOJUSession(jointSession);
 
-      // Preview chat only (unlock_status=preview). Shared question not sent to model yet.
-      prepare.setMatrixPayload(result.matrixPayload);
-      prepare.setSession({
-        ...result.session,
-        // Keep preview; mark as joint shell for header copy without unlocking stage1.
-        joint_decision_id: jointId,
-        joint_decision: true,
-        original_question:
-          joint?.shared_question?.trim() || result.session.original_question || "",
-        pending_question: undefined,
-        unlock_status: "preview",
-      });
-      await savePOJUSession({
-        ...result.session,
-        joint_decision_id: jointId,
-        joint_decision: true,
-        original_question:
-          joint?.shared_question?.trim() || result.session.original_question || "",
-        pending_question: undefined,
-        unlock_status: "preview",
-      });
-
-      // Charge in parallel with personal baseline portrait (same as designed).
       beginCharge();
       markAwaitJointPortraitClose(jointId);
       prepare.setPhase("chat");
       setPhase("awaiting_tip");
-      requestBaselineAutoOpen(profileId);
+      // Open immediately with precomputed payload — no post-wait spinner.
+      requestBaselineAutoOpen(profileId, result.matrixPayload);
     } catch (e) {
       console.error("[joint-open]", e);
       const msg = e instanceof Error ? e.message : t("prepare_failed");
@@ -421,10 +402,8 @@ export function JointSessionOpenHost({
       matrixPayload: matrixPayloadRef.current,
       locale,
     });
-    if (!final.already_charged) {
-      dispatchPassSpendToast({ amount: 1, locale });
-    }
-    // Auto-send shared question only after PASS — same flag as solo unlock.
+    // 3s PASS tip; chat release waits the same window then paints user + thinking + model.
+    dispatchPassSpendToast({ amount: 1, locale });
     sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, session_id);
     await prepare.resumeSession(session_id, locale);
     notifyJointListUpdated();
@@ -484,7 +463,8 @@ export function JointSessionOpenHost({
     window.addEventListener(JOINT_PORTRAIT_CLOSED_EVENT, onPortraitClosed);
     return () => {
       window.removeEventListener(JOINT_PORTRAIT_CLOSED_EVENT, onPortraitClosed);
-      clearAwaitJointPortraitClose();
+      // Do NOT clearAwaitJointPortraitClose here — effect re-runs must not wipe
+      // the mark before the user closes the baseline portrait.
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stable per joint open
   }, [jointId, locale, t, onClose, onEnteredChat]);
@@ -624,10 +604,11 @@ export function JointSessionOpenHost({
   }
 
   if (phase === "birth_pick") {
+    // Distinct from homepage joint marketing hero — step prompt only.
     const heroCopy = {
-      brandTag: tOpen("h1_joint"),
-      heading: tOpen("body_joint"),
-      description: tOpen("lead_joint"),
+      brandTag: t("open_birth_brand"),
+      heading: t("open_birth_heading"),
+      description: t("open_birth_lead"),
       leadIn: "",
       tagline: "",
       ctaPrimary: "",
@@ -676,11 +657,7 @@ export function JointSessionOpenHost({
           exiting && "workspace-poju-preparing-stage--exit",
         )}
       >
-        <WaitFxLayer
-          glowColor="rgba(255,255,255,0.35)"
-          showBreath={false}
-          showFlash={showFlash}
-        />
+        <WaitFxLayer glowColor="rgba(255,255,255,0.35)" showBreath={false} showFlash={false} />
         {prepError && prepProfile ? (
           <div className="workspace-prepare-avatar-stage__overlay">
             <ChartReadingLoader

@@ -81,9 +81,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     }
     let cancelled = false;
     void (async () => {
-      setLoading(true);
       setError(null);
-      setMatrixPayload(null);
       setDeliveryText(null);
       setRemindersSessionId(null);
       setRemindersText(null);
@@ -92,6 +90,23 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       try {
         const target = item.openTarget;
         if (target.type === "profile_matrix" || target.type === "profile_report") {
+          // Prefer payload computed during the 10s prepare wait — paint book immediately.
+          const preloaded =
+            item.matrixPayload &&
+            item.matrixPayload.profile_id === target.profileId
+              ? item.matrixPayload
+              : prepare?.matrixPayload?.profile_id === target.profileId
+                ? prepare.matrixPayload
+                : null;
+          if (preloaded) {
+            if (!cancelled) {
+              setMatrixPayload(preloaded);
+              setLoading(false);
+            }
+            return;
+          }
+          setLoading(true);
+          setMatrixPayload(null);
           const profile = await getStoredProfile(target.profileId);
           if (!profile?.user_profile) {
             if (!cancelled) setError("Profile not found");
@@ -103,6 +118,8 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
           if (!cancelled) setMatrixPayload(payload);
           return;
         }
+        setLoading(true);
+        setMatrixPayload(null);
         if (target.type === "pivot_delivery") {
           const session = await loadPOJUSession(target.sessionId);
           const text = session?.main_delivery?.full_text?.trim() || "";
@@ -170,7 +187,7 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [item, locale]);
+  }, [item, locale, prepare?.matrixPayload]);
 
   useEffect(() => {
     if (!item) return;

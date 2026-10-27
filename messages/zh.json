@@ -1959,7 +1959,10 @@
     "err_generic": "操作失败，请重试",
     "partner_agreed_title": "开启双人决策对话",
     "partner_agreed_cta": "开启双人决策对话（将消耗 1 PASS）",
-    "decision_history": "决策对话历史 ({count})"
+    "decision_history": "决策对话历史 ({count})",
+    "open_birth_brand": "双人决策对话",
+    "open_birth_heading": "请输入基础信息，开启双人决策对话",
+    "open_birth_lead": "选择已保存档案或新增一份基础信息，确认后进入准备与对话。"
   },
   "bazi": {
     "gender": {

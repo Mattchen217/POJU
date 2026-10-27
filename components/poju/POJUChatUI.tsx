@@ -1097,13 +1097,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
 
     const cleared = prepareUnlockReleaseSession(sessionRef.current, pending);
-    onSessionUpdate(cleared);
-    void savePOJUSession(cleared).then(async () => {
+    const jointHoldMs = cleared.joint_decision ? 3000 : 0;
+    void (async () => {
+      // Joint: PassSpendToast first (3s), then paint user + thinking avatar and call model.
+      if (jointHoldMs > 0) {
+        await new Promise((r) => setTimeout(r, jointHoldMs));
+      }
+      onSessionUpdate(cleared);
+      await savePOJUSession(cleared);
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
       void runUserTurn(cleared, pending);
-    });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per unlock return
   }, [
     session.session_id,

@@ -1401,7 +1401,10 @@
     "err_generic": "Algo falló — reintenta",
     "decision_history": "Historial de diálogos de decisión ({count})",
     "partner_agreed_title": "Abrir diálogo conjunto",
-    "partner_agreed_cta": "Abrir diálogo conjunto (consume 1 PASS)"
+    "partner_agreed_cta": "Abrir diálogo conjunto (consume 1 PASS)",
+    "open_birth_brand": "Diálogo conjunto",
+    "open_birth_heading": "Introduce la información básica para abrir el diálogo conjunto",
+    "open_birth_lead": "Elige un perfil guardado o añade información básica y confirma para continuar."
   },
   "bazi": {
     "gender": {
