@@ -63,6 +63,7 @@ import {
   isFullDialogueScriptProse,
   softRepairScienceAngleUserProse,
   softRepairThirdPartyAgencyProse,
+  textHasJointChartStamp,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
 /**
@@ -933,6 +934,32 @@ function attachPageChrome(
   candidate.page_subtitle = subtitle;
 }
 
+function sanitizeSelfRetune(
+  root: Record<string, unknown>,
+  notes: string[],
+  require: boolean,
+): { title: string; body: string } | null {
+  const raw = root.self_retune ?? root.retune ?? root.regulation;
+  let title = "";
+  let body = "";
+  if (typeof raw === "string") {
+    body = raw.trim();
+  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    title = clip(o.title ?? o.name ?? o.label, 80);
+    const bodyRaw = o.body ?? o.text ?? o.strategy ?? o.principle;
+    body = typeof bodyRaw === "string" ? bodyRaw.trim() : "";
+  }
+  const fail = (): null => {
+    if (require) notes.push("missing_06c_self_retune");
+    return null;
+  };
+  if (!body) return fail();
+  body = softRepairThirdPartyAgencyProse(body, []).replace(/[。．]{2,}/g, "。").trim();
+  if (!body || body.length < 24 || textHasJointChartStamp(body)) return fail();
+  return { title: title || "自我调频", body: clip(body, 480) };
+}
+
 /**
  * Coerce loose LLM JSON into a shape ready for Zod safeParse.
  * Returns structural failure if required tracks/fields cannot be recovered.
@@ -966,6 +993,8 @@ export function sanitizePageJson(
      * Absent → no slice stamp, so older callers keep their own anchors.
      */
     sliceAnchorLines?: readonly string[] | null;
+    /** Live 06 fill: execution_guidance must carry 06-C self_retune. */
+    requireSelfRetune?: boolean;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -1401,11 +1430,21 @@ export function sanitizePageJson(
           notes,
         };
       }
+      const selfRetune = sanitizeSelfRetune(root, notes, Boolean(opts?.requireSelfRetune));
+      if (opts?.requireSelfRetune && !selfRetune) {
+        return {
+          ok: false,
+          structural: true,
+          reason: "missing_06c_self_retune",
+          notes,
+        };
+      }
       candidate = {
         page: "execution_guidance",
         opening: scrubPromptLeakText(clipOpt(root.opening ?? root.intro, 200), notes),
         primary_toolkit,
         backup_toolkit,
+        ...(selfRetune ? { self_retune: selfRetune } : {}),
         // alert retired — medical disclaimer / generic caution no longer on user page
         evidence: sanitizeEvidence(root.evidence),
       };

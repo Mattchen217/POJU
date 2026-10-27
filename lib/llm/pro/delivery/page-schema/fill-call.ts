@@ -633,6 +633,7 @@ async function runPageSchemaFillOnce(input: {
         inventoryTokens:
           inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
         fillMode: fill_mode,
+        requireSelfRetune: input.key === "execution_guidance",
         // Always pass plan when present — moat type stamp is code SSOT (not compress-only).
         deepEvidencePlan: input.deep_evidence_plan ?? null,
         situationMaterial:

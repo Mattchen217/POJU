@@ -10,7 +10,11 @@ Grok 盒上的原始日志不在这台机器。下面只记已落地的行为和
 
 清洗备注里，主轨 0/2 和辅轨 0/1/2 都有 `soft_repair_third_party_strategy`。手段被剥空后是 `primary_toolkit_angle_0_science_means_empty_after_soft_repair`，接着 `primary_toolkit_angles_lt_3`。活稿写了「让对方同意 / 说服对方」这一类施事，题面框单元测盖不住。
 
-现在：题面框仍保留原句。剩下的对方施事改写成求问者自己的时间、底线和范围，不进科学壳。壳被剥光时，只要原句是对方施事，就补回这句条件，不把这一角丢掉。纯科学壳、没有对方的空页仍然作废。06 的任务也写明：strategy 和 means 只写求问者自己的条件。
+`c4f88eba` 把缺盘声明整句贴进了非 joint 页，也把 joint 06 的手段换成了同一句。离职、迁移、一般决定不得出现「另一侧的盘不在这份材料里」。软修只删「让对方同意 / 说服对方」这种从句，留下原来的核对步骤，不再整段替换。连续句号收成一个。
+
+## 06-C
+
+这一批只填了 `execution_guidance`，五案都没有自我调频。活填现在要求 `self_retune`（title + body）：执行这一步时你自己的节奏和停手线。缺了就是 `missing_06c_self_retune`。不是勾选清单，也不是缺盘声明。
 
 `otherChart` 仍省略。06 和 02 都过清洗之后，薄壳只标 Thin。
 

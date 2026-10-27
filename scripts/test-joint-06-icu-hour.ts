@@ -17,8 +17,11 @@ import {
 import {
   detectKnownThirdPartyAgency,
   isScienceSoftRepairShell,
+  JOINT_CHART_STAMP,
   SCIENCE_QUERENT_OPENING_HINT,
   softRepairScienceAngleUserProse,
+  softRepairThirdPartyAgencyProse,
+  textHasJointChartStamp,
 } from "../lib/llm/pro/delivery/thesis/third-party-agency";
 import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 import { buildFillDuty as buildP2 } from "../lib/llm/pro/delivery/page-prompts/p2-foundation";
@@ -131,8 +134,9 @@ const residue = softRepairScienceAngleUserProse(
   "joint_residue",
 );
 assert.equal(residue.fail_reason, null, residueNotes.join(" | "));
-assert.ok(!residue.strategy.includes("对方"), residue.strategy);
+assert.ok(residue.strategy.includes("对方盘没有接入"), residue.strategy);
 assert.ok(!residue.strategy.includes("让对方"), residue.strategy);
+assert.ok(!textHasJointChartStamp(residue.strategy), residue.strategy);
 assert.ok(!isScienceSoftRepairShell(residue.strategy), residue.strategy);
 
 const pureNotes: string[] = [];
@@ -142,10 +146,9 @@ const pure = softRepairScienceAngleUserProse(
   pureNotes,
   "pure_agency",
 );
-assert.equal(pure.fail_reason, null, pureNotes.join(" | "));
-assert.ok(!/对方|说服/.test(pure.strategy), pure.strategy);
-assert.ok(pure.means.length >= 1);
-assert.ok(!pure.means.some((mean) => /对方|说服/.test(mean)));
+assert.equal(pure.fail_reason, "science_strategy_collapsed_to_shell");
+assert.ok(!textHasJointChartStamp(pure.strategy));
+assert.ok(!textHasJointChartStamp(pure.means.join("")));
 
 assert.equal(normalizeIcuHourToken("24"), "00");
 assert.equal(normalizeIcuHourToken("06"), "06");
@@ -200,9 +203,12 @@ const consentPage = sanitizePageJson("execution_guidance", {
     title: "先写你这一侧的拍板条件",
     angles: [
       angle(
-        "对方同意",
-        "这一步先让对方同意，再决定要不要一起走。",
-        ["让对方同意后再做。", "说服对方接受这个决定。"],
+        "核对步骤",
+        "先写下你能投入的时段，再决定要不要一起走，不要让对方同意才算数。",
+        [
+          "先写下你能投入的三个时段，让对方同意后再做。",
+          "把不能空窗的天数写成一条底线，说服对方接受这个决定。",
+        ],
         "当前大运：庚午",
       ),
       angle(
@@ -268,8 +274,59 @@ if (consentPage.ok) {
   ].join("\n");
   assert.equal(detectKnownThirdPartyAgency(blob, ["对方"]), null);
   assert.ok(!/让对方|说服对方/.test(blob), blob);
+  assert.ok(!textHasJointChartStamp(blob), blob);
+  assert.ok(page.primary_toolkit.angles[0]!.means.some((mean) => mean.includes("三个时段")), blob);
+  assert.ok(page.primary_toolkit.angles[0]!.means.some((mean) => mean.includes("底线")), blob);
   assert.equal(page.primary_toolkit.angles.length, 3);
 }
+
+const resign = softRepairScienceAngleUserProse(
+  "先把三个月能核对的收入底线写下来，不要说服对方留下。",
+  ["先写下三个月能核对的收入底线，不要说服对方留下。"],
+  [],
+  "resign",
+);
+assert.equal(resign.fail_reason, null, resign.strategy);
+assert.ok(resign.strategy.includes("收入底线"), resign.strategy);
+assert.ok(resign.means[0]?.includes("收入底线"));
+assert.ok(!textHasJointChartStamp(`${resign.strategy}\n${resign.means.join("\n")}`));
+
+const migration = softRepairScienceAngleUserProse(
+  "把搬迁日期和能接受的空窗写下来。。",
+  ["把搬迁日期和能接受的空窗写下来，让对方同意后再订票。"],
+  [],
+  "migration",
+);
+assert.equal(migration.fail_reason, null);
+assert.ok(migration.means[0]?.includes("搬迁日期"), migration.means.join(" | "));
+assert.ok(!migration.means[0]?.includes("让对方"));
+assert.ok(!textHasJointChartStamp(migration.means.join("\n")));
+assert.ok(!migration.strategy.includes("。。"), migration.strategy);
+
+const punct = softRepairThirdPartyAgencyProse("先写你的底线。。再核对这一周。", []);
+assert.equal(punct, "先写你的底线。再核对这一周。");
+assert.ok(!punct.includes(JOINT_CHART_STAMP));
+
+const general = softRepairScienceAngleUserProse(
+  "先写下这一周你自己能完成的一件事。另一侧的盘不在这份材料里，你先写清自己能不能一起拍板的时间、底线和范围。",
+  ["把停手线写成一个日期。。不要让对方同意才继续。"],
+  [],
+  "general",
+);
+assert.equal(general.fail_reason, null, general.strategy);
+assert.ok(general.strategy.includes("这一周"), general.strategy);
+assert.ok(!textHasJointChartStamp(general.strategy), general.strategy);
+assert.ok(general.means[0]?.includes("停手线"), general.means.join(" | "));
+assert.ok(!general.means[0]?.includes("让对方"));
+assert.ok(!general.means[0]?.includes("。。"));
+assert.ok(!textHasJointChartStamp(general.means.join("\n")));
+
+const leverage = softRepairThirdPartyAgencyProse(
+  "技术方案让对方无法绕开。用稳定输出让对方不得不重视你的价值。",
+  [],
+);
+assert.ok(leverage.includes("无法绕开"), leverage);
+assert.ok(!textHasJointChartStamp(leverage), leverage);
 
 const shellOnly = softRepairScienceAngleUserProse(
   SCIENCE_QUERENT_OPENING_HINT,
@@ -317,6 +374,58 @@ assert.ok(p2.includes("不要写出「命理」"));
 assert.ok(p2plain.includes("不要写出「命理」"));
 const p3 = buildP3("执行");
 assert.ok(p3.includes("让对方同意 / 说服对方"));
+assert.ok(p3.includes("self_retune"));
+assert.ok(p3.includes("06-C"));
 assert.ok(p3.includes("必须是对象"));
+
+const RETUNE = {
+  title: "自己的节奏",
+  body: "做这一步时先守住你自己的停手线：时间到了就停，不把没写完当成必须继续。",
+};
+const withRetune = sanitizePageJson(
+  "execution_guidance",
+  {
+    page: "execution_guidance",
+    page_title: "落地时稳住自己的节奏",
+    page_subtitle: "近步原则和完成样貌",
+    self_retune: RETUNE,
+    primary_toolkit: consentPage.ok
+      ? (consentPage.page as { primary_toolkit: unknown }).primary_toolkit
+      : null,
+    backup_toolkit: consentPage.ok
+      ? (consentPage.page as { backup_toolkit: unknown }).backup_toolkit
+      : null,
+    evidence: [],
+  },
+  { requireSelfRetune: true },
+);
+assert.equal(
+  withRetune.ok,
+  true,
+  withRetune.ok ? "" : `${withRetune.reason} :: ${withRetune.notes.join(" | ")}`,
+);
+if (withRetune.ok) {
+  const retune = (withRetune.page as { self_retune?: { body: string } }).self_retune;
+  assert.ok(retune?.body.includes("停手线"), retune?.body ?? "");
+  assert.ok(!textHasJointChartStamp(retune?.body ?? ""));
+}
+const missingRetune = sanitizePageJson(
+  "execution_guidance",
+  {
+    page: "execution_guidance",
+    page_title: "落地时稳住自己的节奏",
+    page_subtitle: "近步原则和完成样貌",
+    primary_toolkit: consentPage.ok
+      ? (consentPage.page as { primary_toolkit: unknown }).primary_toolkit
+      : null,
+    backup_toolkit: consentPage.ok
+      ? (consentPage.page as { backup_toolkit: unknown }).backup_toolkit
+      : null,
+    evidence: [],
+  },
+  { requireSelfRetune: true },
+);
+assert.equal(missingRetune.ok, false);
+if (!missingRetune.ok) assert.equal(missingRetune.reason, "missing_06c_self_retune");
 
 console.log("joint 06 frame + ICU hour 24 ok");

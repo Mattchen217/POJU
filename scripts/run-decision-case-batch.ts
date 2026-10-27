@@ -450,7 +450,7 @@ function writeReport(results: CaseResult[], pipeline: string) {
   const lines = [
     "# 案例批跑 2026-10-27",
     "",
-    `管线：${pipeline}。模型 fill：${results.some((result) => result.gates.some((gate) => gate.step.startsWith("model.fill") && gate.passed !== "not_run")) ? "已调用 decision_brief / situation_analysis / recommended_strategy / execution_guidance，稿在 fills/。" : "未调用（无 OPENROUTER_API_KEY）。下表是结构与清洗，不是成稿。有钥匙时会覆盖写入这四页。"}`,
+    `管线：${pipeline}。模型 fill：${results.some((result) => result.gates.some((gate) => gate.step.startsWith("model.fill") && gate.passed !== "not_run")) ? "已调用 decision_brief / situation_analysis / recommended_strategy / execution_guidance，稿在 fills/。06-C 在 execution_guidance.self_retune。" : "未调用（无 OPENROUTER_API_KEY）。下表是结构与清洗，不是成稿。有钥匙时会覆盖写入这四页，06 的 execution_guidance 必须带 self_retune。"}`,
     "",
     "| 案 | 判定 | 原因 |",
     "|----|------|------|",

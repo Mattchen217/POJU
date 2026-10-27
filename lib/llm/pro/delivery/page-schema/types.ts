@@ -229,6 +229,13 @@ export const P3PageSchema = z.object({
   opening: z.string().trim().max(200).optional(),
   primary_toolkit: ToolkitTrackSchema,
   backup_toolkit: ToolkitTrackSchema,
+  /** 06-C · querent pace while executing. Optional for older fixtures; live fill requires it. */
+  self_retune: z
+    .object({
+      title: NonEmpty.max(80),
+      body: NonEmpty.max(480),
+    })
+    .optional(),
   alert: z.string().trim().max(240).optional(),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });

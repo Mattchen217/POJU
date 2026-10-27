@@ -137,7 +137,7 @@ function buildShapeAnchorBlock(
       key === "situation_analysis"
         ? "why_cards 每张 chart_anchors 取本页切片短锚，1–6 条，禁止空数组。双轨写在 surface / essence，短锚不要抄进正文。正文不要写出「命理」这个栏目名。\n"
         : key === "execution_guidance"
-          ? "primary_toolkit 与 backup_toolkit 必须是对象，禁止字符串。angles 写在对象内。每个 angle.chart_anchors 至少 1 条本页切片短锚。正文是原则和完成样貌，不是勾选清单。strategy 和 means 只写求问者自己的条件，禁止让对方同意或说服对方。\n"
+          ? "primary_toolkit 与 backup_toolkit 必须是对象，禁止字符串。angles 写在对象内。每个 angle.chart_anchors 至少 1 条本页切片短锚。正文是原则和完成样貌，不是勾选清单。strategy 和 means 只写求问者自己的核对步骤，禁止让对方同意或说服对方，禁止用缺盘声明替换整段。self_retune 是 06-C，必填，写执行时怎么稳住自己的节奏。\n"
           : "";
     return (
       `\n# 形状锚 JSON(字段必填·空串须全部换成本案料·禁止把空串当正文)\n` +
