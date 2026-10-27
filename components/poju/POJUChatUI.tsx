@@ -200,6 +200,7 @@ import {
   isEnergyMatrixMessage,
   isPreviewSession,
   POJU_RELEASE_PENDING_QUESTION_FLAG,
+  readReleasePendingGen,
 } from "@/lib/poju/preview-unlock";
 import {
   getUnlockReportMessage,
@@ -1070,9 +1071,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (releasePendingInitRef.current === session.session_id) return;
     const flag = sessionStorage.getItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
     if (flag !== session.session_id) return;
+    const gen = readReleasePendingGen() ?? session.session_id;
+    if (releasePendingInitRef.current === gen) return;
     if (sending || pipelineBusy) return;
 
     const workspaceParallel =
@@ -1088,18 +1090,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     // a real dialogue reply already followed (avoids double runUserTurn).
     const alreadySent = hasDialogueReplyForPendingQuestion(session, pending);
     if (alreadySent) {
-      releasePendingInitRef.current = session.session_id;
+      releasePendingInitRef.current = gen;
       sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
       return;
     }
 
-    releasePendingInitRef.current = session.session_id;
+    releasePendingInitRef.current = gen;
     sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
 
     const cleared = prepareUnlockReleaseSession(sessionRef.current, pending);
     const jointHoldMs = cleared.joint_decision ? 3000 : 0;
     void (async () => {
-      // Joint: PassSpendToast first (3s), then paint user + thinking avatar and call model.
+      // Joint (initiator + invitee): toast first, then user bubble + thinking + model.
       if (jointHoldMs > 0) {
         await new Promise((r) => setTimeout(r, jointHoldMs));
       }

@@ -176,6 +176,29 @@ export const POJU_WORKSPACE_UNLOCK_RITUAL_KEY = "poju_workspace_unlock_ritual";
 export const POJU_RUN_UNLOCK_FLAG = "poju_run_unlock";
 /** After unlock bazi prep, chat auto-sends the intercepted user question. */
 export const POJU_RELEASE_PENDING_QUESTION_FLAG = "poju_release_pending_question";
+/** Bumps so a new joint PASS tip can re-trigger release even for the same session_id. */
+export const POJU_RELEASE_PENDING_GEN_KEY = "poju_release_pending_gen";
+
+export function markReleasePendingQuestion(sessionId: string): void {
+  if (typeof window === "undefined") return;
+  const id = sessionId.trim();
+  if (!id) return;
+  try {
+    sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, id);
+    sessionStorage.setItem(POJU_RELEASE_PENDING_GEN_KEY, `${id}::${Date.now()}`);
+  } catch {
+    /* private mode */
+  }
+}
+
+export function readReleasePendingGen(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(POJU_RELEASE_PENDING_GEN_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export function needsUnlockBaziPreparation(session: POJUSessionState): boolean {
   if (session.unlock_status !== "unlocked") return false;

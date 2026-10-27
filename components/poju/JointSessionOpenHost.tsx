@@ -34,7 +34,7 @@ import {
 import { finalizeWorkspacePrepare } from "@/lib/poju/finalize-workspace-prepare";
 import {
   createJointPassGateMessage,
-  POJU_RELEASE_PENDING_QUESTION_FLAG,
+  markReleasePendingQuestion,
 } from "@/lib/poju/preview-unlock";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { dispatchPassSpendToast } from "@/lib/passes/pass-client-events";
@@ -112,6 +112,8 @@ export function JointSessionOpenHost({
   const [prepError, setPrepError] = useState<string | null>(null);
   const chargeRef = useRef<ChargeResult>({ status: "pending" });
   const tipShownRef = useRef(false);
+  /** Prevent double enterStage1 (portrait-close vs charge-resolve race). Same for initiator + invitee. */
+  const stage1StartedRef = useRef(false);
   const startedAtRef = useRef(0);
   const matrixPayloadRef = useRef<Awaited<
     ReturnType<typeof finalizeWorkspacePrepare>
@@ -163,45 +165,45 @@ export function JointSessionOpenHost({
         // Preview said invited but server says otherwise — continue normal routing.
       }
 
-      // Already charged — resume stage1 (skip portrait/tip).
+      // Already charged — resume stage1 (toast + auto-send same as fresh open).
       if (j.my_charged && data.seed) {
         try {
           const self = j.self_birth_for_my_session ?? (await inferSelfBirth());
           if (!self) throw new Error("self_birth_missing");
-          const { session_id } = await hydrateJointSessionFromSeed(data.seed, self, {
-            locale,
+          lastBirthRef.current = self;
+          stage1StartedRef.current = true;
+          tipShownRef.current = true;
+          await enterStage1AfterCharge({
+            status: "ok",
+            charged_from: "flex",
+            already_charged: true,
+            seed: data.seed,
           });
-          sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, session_id);
-          await prepare.resumeSession(session_id, locale);
-          onEnteredChat?.(session_id);
-          setPhase("done");
-          onClose();
           return;
         } catch {
+          stage1StartedRef.current = false;
+          tipShownRef.current = false;
           /* fall through to start flow */
         }
       }
 
-      if (j.role === "initiator" && j.partner_ready) {
-        const start = await confirm(t("partner_agreed_tip"), t("partner_agreed_title"), {
-          confirmLabel: t("partner_agreed_cta"),
-          cancelLabel: t("back"),
-        });
-        if (!start) {
-          onClose();
-          return;
+      // Initiator + invitee share the same prepare → portrait → PASS → stage1 path.
+      if (
+        (j.role === "initiator" && j.partner_ready && !j.my_charged) ||
+        (j.role === "invitee" &&
+          (j.partner_ready || j.status === "accepted" || j.status === "partner_ready") &&
+          !j.my_charged)
+      ) {
+        if (j.role === "initiator") {
+          const start = await confirm(t("partner_agreed_tip"), t("partner_agreed_title"), {
+            confirmLabel: t("partner_agreed_cta"),
+            cancelLabel: t("back"),
+          });
+          if (!start) {
+            onClose();
+            return;
+          }
         }
-        const birth = j.self_birth_for_my_session;
-        if (birth) {
-          setPhase("preparing");
-          void runPrepareThenPortrait(birth);
-          return;
-        }
-        setPhase("birth_pick");
-        return;
-      }
-
-      if (j.role === "invitee" && (j.partner_ready || j.status === "accepted") && !j.my_charged) {
         const birth = j.self_birth_for_my_session;
         if (birth) {
           setPhase("preparing");
@@ -298,6 +300,11 @@ export function JointSessionOpenHost({
             status: "fail",
             reason: data.error ?? "charge_failed",
           };
+          // Portrait already closed → show gate under welcome (initiator + invitee).
+          if (tipShownRef.current && !stage1StartedRef.current) {
+            stage1StartedRef.current = true;
+            await injectPassGateUnderWelcome(chargeRef.current.reason);
+          }
           return;
         }
         chargeRef.current = {
@@ -306,8 +313,24 @@ export function JointSessionOpenHost({
           already_charged: Boolean(data.already_charged),
           seed: data.seed,
         };
+        // Portrait already closed while charge was in flight → tip + stage1 now.
+        if (tipShownRef.current && !stage1StartedRef.current) {
+          stage1StartedRef.current = true;
+          try {
+            await enterStage1AfterCharge(chargeRef.current);
+          } catch (e) {
+            console.error("[joint-open] enter stage1 after charge", e);
+            stage1StartedRef.current = false;
+            setBlockedMsg(t("prepare_failed"));
+            setPhase("pass_blocked");
+          }
+        }
       } catch {
         chargeRef.current = { status: "fail", reason: "network_error" };
+        if (tipShownRef.current && !stage1StartedRef.current) {
+          stage1StartedRef.current = true;
+          await injectPassGateUnderWelcome("network_error");
+        }
       }
     })();
   }
@@ -324,6 +347,7 @@ export function JointSessionOpenHost({
     lastBirthRef.current = birth;
     startedAtRef.current = Date.now();
     tipShownRef.current = false;
+    stage1StartedRef.current = false;
     chargeRef.current = { status: "pending" };
     setPrepError(null);
     matrixPayloadRef.current = null;
@@ -402,14 +426,20 @@ export function JointSessionOpenHost({
       matrixPayload: matrixPayloadRef.current,
       locale,
     });
-    // 3s PASS tip; chat release waits the same window then paints user + thinking + model.
+    // Same for initiator + invitee: 3s PASS tip, then chat paints question + thinking + model.
     dispatchPassSpendToast({ amount: 1, locale });
-    sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, session_id);
+    markReleasePendingQuestion(session_id);
     await prepare.resumeSession(session_id, locale);
+    // Bump session so release effect re-runs even if session_id was seen before.
+    const live = prepare.session;
+    if (live?.session_id === session_id) {
+      prepare.setSession({ ...live });
+    }
     notifyJointListUpdated();
-    onEnteredChat?.(session_id);
     setPhase("done");
-    onClose();
+    // Keep host mounted (done → empty) — do not onClose(); clearing openJointId
+    // remounts chat and aborts the 3s tip → auto-send pipeline for both roles.
+    onEnteredChat?.(session_id);
   }
 
   async function injectPassGateUnderWelcome(reason: string) {
@@ -442,20 +472,24 @@ export function JointSessionOpenHost({
 
   useEffect(() => {
     function onPortraitClosed() {
-      if (tipShownRef.current) return;
       tipShownRef.current = true;
       void (async () => {
+        if (stage1StartedRef.current) return;
         const final = await waitForCharge();
+        if (stage1StartedRef.current) return;
         if (final.status === "ok") {
+          stage1StartedRef.current = true;
           try {
             await enterStage1AfterCharge(final);
           } catch (e) {
             console.error("[joint-open] enter stage1", e);
+            stage1StartedRef.current = false;
             setBlockedMsg(t("prepare_failed"));
             setPhase("pass_blocked");
           }
           return;
         }
+        stage1StartedRef.current = true;
         const reason = final.status === "fail" ? final.reason : "insufficient_pass";
         await injectPassGateUnderWelcome(reason);
       })();
@@ -478,6 +512,7 @@ export function JointSessionOpenHost({
     setBlockedMsg(null);
     setBuyOpen(false);
     tipShownRef.current = false;
+    stage1StartedRef.current = false;
     chargeRef.current = { status: "pending" };
     setPhase("preparing");
     prepare.setPhase("preparing");
@@ -503,7 +538,15 @@ export function JointSessionOpenHost({
         already_charged: Boolean(data.already_charged),
         seed: data.seed,
       };
-      await enterStage1AfterCharge(chargeRef.current);
+      stage1StartedRef.current = true;
+      tipShownRef.current = true;
+      try {
+        await enterStage1AfterCharge(chargeRef.current);
+      } catch (e) {
+        console.error("[joint-open] retry enter stage1", e);
+        stage1StartedRef.current = false;
+        await injectPassGateUnderWelcome("charge_failed");
+      }
     } catch {
       await injectPassGateUnderWelcome("network_error");
     }

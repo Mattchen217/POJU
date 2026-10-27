@@ -17,6 +17,7 @@ import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { JointSessionSeed } from "@/lib/passes/joint-decision";
 import type { BirthInfo } from "@/lib/profile/types";
+import { hasDialogueReplyForPendingQuestion } from "@/lib/poju/finalize-unlock-bazi-session";
 import {
   createStoredProfile,
   getStoredProfile,
@@ -39,6 +40,17 @@ export async function hydrateJointSessionFromSeed(
     existing.unlock_status === "unlocked" &&
     existing.joint_pass_ref
   ) {
+    // Re-arm shared question when charge already ok but tip/auto-send never ran
+    // (initiator + invitee). Skip if model already replied to that question.
+    const q = seed.shared_question.trim();
+    if (q && !hasDialogueReplyForPendingQuestion(existing, q)) {
+      const patched: POJUSessionState = {
+        ...existing,
+        original_question: existing.original_question?.trim() || q,
+        pending_question: existing.pending_question?.trim() || q,
+      };
+      await savePOJUSession(patched);
+    }
     return { session_id: existing.session_id };
   }
   const sessionId = await createPOJUSession({

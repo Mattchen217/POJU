@@ -164,11 +164,10 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
     };
   }, [resetPrepare]);
 
-  useEffect(() => {
-    if (phase === "chat" && session?.session_id) {
-      setOpenJointId(null);
-    }
-  }, [phase, session?.session_id]);
+  // Do NOT clear openJointId when phase→chat: joint preview + PASS tip + auto-send
+  // all run with phase=chat; clearing remounts chat and drops JointSessionOpenHost
+  // (same for initiator + invitee). History / solo entry already clears via
+  // requestJointEntryMode; new joint via JOINT_OPEN.
 
   /* Avoid flashing birth home while Stripe return / mid-chat locale switch resumes. */
   const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
@@ -247,7 +246,8 @@ export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => vo
             requestJointEntryMode("solo");
           }}
           onEnteredChat={() => {
-            setOpenJointId(null);
+            // Keep openJointId: host stays mounted (phase done → null UI) so the
+            // chat layer is not remounted mid 3s PASS tip / auto-send.
             setOpenJointPreview(null);
           }}
         />
