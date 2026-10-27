@@ -26,14 +26,32 @@ import {
 /**
  * Create local pivot session from joint seed.
  * `selfBirth` = this user's authorized birth (same as submitted on create/accept).
+ *
+ * Prefer `reuseSessionId` (preview chat from the 10s prepare) so stage1 upgrades
+ * in place — avoids resumeSession wiping chat (looks like a full page refresh).
  */
 export async function hydrateJointSessionFromSeed(
   seed: JointSessionSeed,
   selfBirth: BirthInfo,
-  opts?: { matrixPayload?: PojuMatrixPayload | null; locale?: string },
+  opts?: {
+    matrixPayload?: PojuMatrixPayload | null;
+    locale?: string;
+    /** Upgrade this preview session instead of creating a second id. */
+    reuseSessionId?: string | null;
+    /** Profile already created during prepare — skip a second create. */
+    selfProfileId?: string | null;
+  },
 ): Promise<{ session_id: string }> {
-  const selfCreated = await createStoredProfile({ birth_info: selfBirth });
-  const existing = await loadPOJUSession(seed.pivot_session_id);
+  const reuseId = opts?.reuseSessionId?.trim() || "";
+  const targetSessionId = reuseId || seed.pivot_session_id;
+
+  let selfProfileId = opts?.selfProfileId?.trim() || "";
+  if (!selfProfileId) {
+    const selfCreated = await createStoredProfile({ birth_info: selfBirth });
+    selfProfileId = selfCreated.profile_id;
+  }
+
+  const existing = await loadPOJUSession(targetSessionId);
   if (
     existing?.joint_decision &&
     existing.joint_decision_id === seed.joint_id &&
@@ -53,17 +71,21 @@ export async function hydrateJointSessionFromSeed(
     }
     return { session_id: existing.session_id };
   }
-  const sessionId = await createPOJUSession({
-    payment_id: seed.pass_ref,
-    original_question: seed.shared_question,
-    selected_stored_profile_id: selfCreated.profile_id,
-    session_id: seed.pivot_session_id,
-  });
-  const state = await loadPOJUSession(sessionId);
+
+  let state = existing;
+  if (!state) {
+    const sessionId = await createPOJUSession({
+      payment_id: seed.pass_ref,
+      original_question: seed.shared_question,
+      selected_stored_profile_id: selfProfileId,
+      session_id: targetSessionId,
+    });
+    state = await loadPOJUSession(sessionId);
+  }
   if (!state) throw new Error("joint_hydrate_failed");
 
   const partnerCreated = await createStoredProfile({ birth_info: seed.partner_birth });
-  const self = await getStoredProfile(selfCreated.profile_id);
+  const self = await getStoredProfile(selfProfileId);
   const partner = await getStoredProfile(partnerCreated.profile_id);
   if (!self?.user_profile || !partner?.user_profile) {
     throw new Error("joint_profiles_missing");
@@ -83,7 +105,7 @@ export async function hydrateJointSessionFromSeed(
       summary: buildDyadCompatSummary({ profileA, profileB }),
       matrix_pack: buildDyadMatrixPack({ profileA, profileB }),
     }),
-    selected_stored_profile_id: selfCreated.profile_id,
+    selected_stored_profile_id: selfProfileId,
     has_profile: true,
     birth_submitted_in_session: true,
     original_question: seed.shared_question,

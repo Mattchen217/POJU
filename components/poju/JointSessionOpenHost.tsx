@@ -280,16 +280,21 @@ export function JointSessionOpenHost({
     }
   }
 
+  const CHARGE_FETCH_MS = 12_000;
+
   function beginCharge() {
     if (chargeRef.current.status === "ok" || chargeRef.current.status === "fail") {
       return;
     }
     chargeRef.current = { status: "pending" };
     void (async () => {
+      const ac = new AbortController();
+      const timer = window.setTimeout(() => ac.abort(), CHARGE_FETCH_MS);
       try {
         const res = await fetch(`/api/joint/${jointId}/start`, {
           method: "POST",
           credentials: "same-origin",
+          signal: ac.signal,
         });
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
@@ -315,7 +320,7 @@ export function JointSessionOpenHost({
           already_charged: Boolean(data.already_charged),
           seed: data.seed,
         };
-        // Warm hydrate while still on wait page / portrait (close must be instant).
+        // Warm hydrate during wait/portrait when matrix already ready.
         if (matrixPayloadRef.current && lastBirthRef.current) {
           void ensureHydratedSession(chargeRef.current);
         }
@@ -330,22 +335,28 @@ export function JointSessionOpenHost({
             setPhase("pass_blocked");
           }
         }
-      } catch {
-        chargeRef.current = { status: "fail", reason: "network_error" };
+      } catch (e) {
+        const aborted = e instanceof DOMException && e.name === "AbortError";
+        chargeRef.current = {
+          status: "fail",
+          reason: aborted ? "charge_failed" : "network_error",
+        };
         if (tipShownRef.current && !stage1StartedRef.current) {
           stage1StartedRef.current = true;
-          await injectPassGateUnderWelcome("network_error");
+          await injectPassGateUnderWelcome(chargeRef.current.reason);
         }
+      } finally {
+        window.clearTimeout(timer);
       }
     })();
   }
 
   async function waitForCharge(): Promise<ChargeResult> {
-    // Charge starts at T=0 of the 10s page — should already be settled on close.
-    for (let i = 0; i < 40 && chargeRef.current.status === "pending"; i++) {
+    // Charge starts at T=0; by portrait close it must already be settled.
+    for (let i = 0; i < 50 && chargeRef.current.status === "pending"; i++) {
       await new Promise((r) => setTimeout(r, 100));
     }
-    return chargeRef.current;
+    return { ...chargeRef.current } as ChargeResult;
   }
 
   function ensureHydratedSession(
@@ -362,6 +373,8 @@ export function JointSessionOpenHost({
     const p = hydrateJointSessionFromSeed(final.seed, birth, {
       matrixPayload: matrixPayloadRef.current,
       locale,
+      reuseSessionId: previewSessionIdRef.current,
+      selfProfileId: prepare.profileId,
     }).then(({ session_id }) => {
       hydratedSessionIdRef.current = session_id;
       return session_id;
@@ -371,8 +384,8 @@ export function JointSessionOpenHost({
   }
 
   /**
-   * 10s wait = work window: PASS deduct + baseline portrait in parallel.
-   * Then open portrait immediately; stage1 fires on close with no idle gap.
+   * 10s wait = forced work window: PASS charge + baseline portrait (+ hydrate).
+   * Portrait opens only after that work is ready — close must be instant tip/send.
    */
   async function runPrepareThenPortrait(birth: BirthInfo) {
     lastBirthRef.current = birth;
@@ -431,13 +444,12 @@ export function JointSessionOpenHost({
       prepare.openRight();
       markDocVaultUnread(DocVaultIds.matrix(profileId), "foundation");
       notifyDocVaultUpdated();
-      void savePOJUSession(jointSession);
+      await savePOJUSession(jointSession);
 
-      // Charge usually done by now — hydrate while user reads the portrait.
-      // Read via spread so CF doesn't stick on the earlier `{ status: "pending" }` assign.
-      const charged = { ...chargeRef.current } as ChargeResult;
+      // Finish charge + hydrate inside the wait window before opening portrait.
+      const charged = await waitForCharge();
       if (charged.status === "ok") {
-        void ensureHydratedSession(charged);
+        await ensureHydratedSession(charged);
       }
 
       markAwaitJointPortraitClose(jointId);
@@ -455,18 +467,25 @@ export function JointSessionOpenHost({
   }
 
   async function enterStage1AfterCharge(final: Extract<ChargeResult, { status: "ok" }>) {
-    // Toast first — visible while hydrate/resume finish (usually already done).
+    // Tip first — never gate UI on hydrate/resume.
     dispatchPassSpendToast({ amount: 1, locale });
     const session_id = await ensureHydratedSession(final);
     markReleasePendingQuestion(session_id);
-    await prepare.resumeSession(session_id, locale);
-    const live = prepare.session;
-    if (live?.session_id === session_id) {
+
+    // In-place upgrade — do NOT resumeSession (it nulls session → chat unmount =
+    // the "page refreshed" flash users reported).
+    const live =
+      (await loadPOJUSession(session_id)) ??
+      (prepare.session?.session_id === session_id ? prepare.session : null);
+    if (live) {
+      prepare.setMatrixPayload(matrixPayloadRef.current ?? live.matrix_payload ?? null);
       prepare.setSession({ ...live });
+      prepare.setPhase("chat");
+      prepare.openRight();
     }
+
     notifyJointListUpdated();
     setPhase("done");
-    // Keep host mounted — clearing openJointId remounts chat mid tip/send.
     onEnteredChat?.(session_id);
   }
 
@@ -503,6 +522,7 @@ export function JointSessionOpenHost({
       tipShownRef.current = true;
       void (async () => {
         if (stage1StartedRef.current) return;
+        // Charge + hydrate finished during the 10s window — close must not idle-wait.
         const final = await waitForCharge();
         if (stage1StartedRef.current) return;
         if (final.status === "ok") {
@@ -518,7 +538,8 @@ export function JointSessionOpenHost({
           return;
         }
         stage1StartedRef.current = true;
-        const reason = final.status === "fail" ? final.reason : "insufficient_pass";
+        const reason =
+          final.status === "fail" ? final.reason : "insufficient_pass";
         await injectPassGateUnderWelcome(reason);
       })();
     }
