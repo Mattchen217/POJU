@@ -9,6 +9,8 @@
 | [旧键映射-2026-10-27.md](./旧键映射-2026-10-27.md) | 九模块 / P1–P6 / duty / schema → pageId |
 | [ZiweiFactPack-2026-10-27.md](./ZiweiFactPack-2026-10-27.md) | 紫微结构包 · iztro MIT · 不接批断 |
 | [切片与八页桥-2026-10-27.md](./切片与八页桥-2026-10-27.md) | `sliceForPage` 省略规则 · 01–08 职责表 · 书架脸已是 01–08 |
+| [案例矩阵-2026-10-27.md](./案例矩阵-2026-10-27.md) | 五案固定出生与问题 · 活闸 · 人审顺序 |
+| [batches/2026-10-27/README.md](./batches/2026-10-27/README.md) | 批跑判定。模型 fill 未调用 |
 
 代码：`lib/llm/pro/delivery/page-feed-matrix.ts` · `slice-for-page.ts` · `page-schema/decision-pages.ts` · `decision-page-bridge.ts` · `page-id-remap.ts` · `rule-card.ts` · `lib/ziwei/`。
 
