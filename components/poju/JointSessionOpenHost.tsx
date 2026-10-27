@@ -60,7 +60,6 @@ import "@/styles/session-prep.css";
 type Phase =
   | "loading"
   | "waiting"
-  | "agree"
   | "birth_pick"
   | "preparing"
   | "exiting"
@@ -84,7 +83,8 @@ type Props = {
 
 function initialPhase(preview: JointDecisionPublicView | null | undefined): Phase {
   if (!preview) return "loading";
-  if (preview.role === "invitee" && preview.status === "invited") return "agree";
+  // Invitee pending: skip confirm modal — go straight to birth hero with invite details.
+  if (preview.role === "invitee" && preview.status === "invited") return "birth_pick";
   if (preview.waiting_for_partner) return "waiting";
   return "loading";
 }
@@ -160,7 +160,7 @@ export function JointSessionOpenHost({
       }
 
       if (j.role === "invitee" && j.status === "invited") {
-        setPhase("agree");
+        setPhase("birth_pick");
         window.setTimeout(() => notifyJointListUpdated(), 0);
         return;
       }
@@ -233,10 +233,6 @@ export function JointSessionOpenHost({
       return (full?.birth_info as BirthInfo | undefined) ?? null;
     }
     return null;
-  }
-
-  async function handleAgreeContinue() {
-    setPhase("birth_pick");
   }
 
   async function handleBirthConfirmed(args: { profileId: string; birth: BirthInfo }) {
@@ -656,30 +652,6 @@ export function JointSessionOpenHost({
     );
   }
 
-  if (phase === "agree" && joint) {
-    return (
-      <div className="confirm-dialog-overlay" role="dialog" aria-modal="true">
-        <div className="confirm-dialog">
-          <div className="confirm-dialog__header">
-            <h2>{t("invite_title")}</h2>
-            <button type="button" className="confirm-dialog__back-link" onClick={onClose}>
-              {t("back")}
-            </button>
-          </div>
-          <p className="description">
-            {t("invite_body", { account: joint.peer_label || t("peer_fallback") })}
-          </p>
-          <p className="joint-open-host__question">{joint.shared_question}</p>
-          <div className="dialog-actions">
-            <button type="button" className="primary" onClick={() => void handleAgreeContinue()}>
-              {t("agree")}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (phase === "birth_pick") {
     // Distinct from homepage joint marketing hero — step prompt only.
     const heroCopy = {
@@ -691,6 +663,29 @@ export function JointSessionOpenHost({
       ctaPrimary: "",
       billingNotice: "",
     };
+    const peer = joint?.peer_label?.trim() || t("peer_fallback");
+    const question = joint?.shared_question?.trim() || "";
+    const inviteSummary =
+      joint != null ? (
+        <div className="workspace-poju-joint-invite-summary" role="region" aria-label={t("title")}>
+          <div className="workspace-poju-joint-invite-summary__row">
+            <span className="workspace-poju-joint-invite-summary__kicker">
+              {joint.role === "invitee" ? t("hero_initiator") : t("card_peer")}
+            </span>
+            <span className="workspace-poju-joint-invite-summary__value" title={peer}>
+              {peer}
+            </span>
+          </div>
+          {question ? (
+            <div className="workspace-poju-joint-invite-summary__row">
+              <span className="workspace-poju-joint-invite-summary__kicker">{t("hero_question")}</span>
+              <span className="workspace-poju-joint-invite-summary__value workspace-poju-joint-invite-summary__value--question">
+                {question}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null;
     return (
       <div className="workspace-product-stack workspace-poju-stack">
         <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero workspace-poju-hero--joint">
@@ -702,6 +697,7 @@ export function JointSessionOpenHost({
             initialZoom={1.15}
             hideStarrySky
             hideVignette
+            afterDescription={inviteSummary}
           />
         </div>
         <div className="workspace-product-below workspace-poju-below">

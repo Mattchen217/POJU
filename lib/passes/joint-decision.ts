@@ -677,3 +677,104 @@ export async function getJointSeedForInitiator(params: {
   if (!res.seed) return { ok: false, reason: "not_ready" };
   return { ok: true, seed: res.seed, joint: res.joint };
 }
+
+/**
+ * Initiator cancels a pending joint invite (before either side has charged PASS).
+ * Sets status → canceled so it leaves both users' pending strips.
+ */
+export async function cancelJointAsInitiator(params: {
+  jointId: string;
+  userId: string;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isSupabaseAdminConfigured()) {
+    return { ok: false, reason: "admin_unconfigured" };
+  }
+  const admin = createSupabaseAdminClient();
+  const { data: raw } = await admin
+    .from("joint_decision_sessions")
+    .select("*")
+    .eq("id", params.jointId)
+    .maybeSingle();
+  const joint = asJoint(raw as Record<string, unknown> | null);
+  if (!joint) return { ok: false, reason: "joint_not_found" };
+  if (joint.initiator_user_id !== params.userId) {
+    return { ok: false, reason: "not_initiator" };
+  }
+  if (joint.pass_ref_a || joint.pass_ref_b) {
+    return { ok: false, reason: "already_charged" };
+  }
+  if (
+    joint.status !== "invited" &&
+    joint.status !== "accepted" &&
+    joint.status !== "partner_ready"
+  ) {
+    return { ok: false, reason: `bad_status:${joint.status}` };
+  }
+  const nowIso = new Date().toISOString();
+  const { error } = await admin
+    .from("joint_decision_sessions")
+    .update({
+      status: "canceled" as JointStatus,
+      updated_at: nowIso,
+      unread_a: false,
+      unread_b: false,
+    })
+    .eq("id", joint.id)
+    .eq("initiator_user_id", params.userId)
+    .in("status", ["invited", "accepted", "partner_ready"])
+    .is("pass_ref_a", null)
+    .is("pass_ref_b", null);
+  if (error) {
+    console.error("[joint] cancel initiator", error.code, error.message);
+    return { ok: false, reason: "cancel_failed" };
+  }
+  return { ok: true };
+}
+
+/**
+ * Invitee declines / deletes a pending invite (disagree) while still 待同意.
+ */
+export async function declineJointAsInvitee(params: {
+  jointId: string;
+  userId: string;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isSupabaseAdminConfigured()) {
+    return { ok: false, reason: "admin_unconfigured" };
+  }
+  const admin = createSupabaseAdminClient();
+  const { data: raw } = await admin
+    .from("joint_decision_sessions")
+    .select("*")
+    .eq("id", params.jointId)
+    .maybeSingle();
+  const joint = asJoint(raw as Record<string, unknown> | null);
+  if (!joint) return { ok: false, reason: "joint_not_found" };
+  if (joint.invitee_user_id !== params.userId) {
+    return { ok: false, reason: "not_invitee" };
+  }
+  if (joint.status !== "invited" && joint.status !== "accepted") {
+    return { ok: false, reason: `bad_status:${joint.status}` };
+  }
+  if (joint.pass_ref_a || joint.pass_ref_b) {
+    return { ok: false, reason: "already_charged" };
+  }
+  const nowIso = new Date().toISOString();
+  const { error } = await admin
+    .from("joint_decision_sessions")
+    .update({
+      status: "canceled" as JointStatus,
+      updated_at: nowIso,
+      unread_a: false,
+      unread_b: false,
+    })
+    .eq("id", joint.id)
+    .eq("invitee_user_id", params.userId)
+    .in("status", ["invited", "accepted"])
+    .is("pass_ref_a", null)
+    .is("pass_ref_b", null);
+  if (error) {
+    console.error("[joint] decline invitee", error.code, error.message);
+    return { ok: false, reason: "decline_failed" };
+  }
+  return { ok: true };
+}

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { HeroConstellation } from "@/components/marketing/HeroConstellation";
 import { HeroSpline } from "@/components/marketing/hero-spline";
 import { DsGradientTitle } from "@/components/ds/primitives";
@@ -34,6 +36,7 @@ export function PojuProductHero({
   hideStarrySky = false,
   hideVignette = false,
   workspaceMotion = "constellation",
+  afterDescription = null,
 }: {
   copy: PojuProductHeroCopy;
   /** Workspace center: no CTA / billing strip */
@@ -43,6 +46,8 @@ export function PojuProductHero({
   initialZoom?: number;
   hideStarrySky?: boolean;
   hideVignette?: boolean;
+  /** Optional block under hero description (e.g. joint invite summary). */
+  afterDescription?: ReactNode;
   /**
    * Workspace idle background:
    * - constellation — light 2D stars (default for POJU/Glyph/Match)
@@ -100,6 +105,7 @@ export function PojuProductHero({
           {copy.heading}
         </DsGradientTitle>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
+        {afterDescription}
         {copy.leadIn ? (
           <ProductHeroDescription>
             <HeroInlineBold text={copy.leadIn} />

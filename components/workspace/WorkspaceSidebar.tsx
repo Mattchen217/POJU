@@ -41,6 +41,7 @@ import {
 import type { JointDecisionPublicView } from "@/lib/passes/household-types";
 import {
   JOINT_LIST_UPDATED_EVENT,
+  notifyJointListUpdated,
   requestJointEntryMode,
   requestJointOpen,
 } from "@/lib/poju/joint-client-events";
@@ -648,6 +649,40 @@ export function WorkspaceSidebar({
     requestJointOpen(j.id, j);
   }
 
+  async function dismissJointInvite(j: JointDecisionPublicView) {
+    const isInitiator = j.role === "initiator";
+    const ok = await confirm(
+      isInitiator ? tJoint("cancelConfirmBody") : tJoint("declineConfirmBody"),
+      isInitiator ? tJoint("cancelConfirmTitle") : tJoint("declineConfirmTitle"),
+      {
+        confirmLabel: isInitiator ? tJoint("cancelConfirmOk") : tJoint("declineConfirmOk"),
+        cancelLabel: tJoint("back"),
+      },
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/joint/${j.id}/cancel`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ as: isInitiator ? "initiator" : "invitee" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        console.error("[sidebar] joint dismiss failed", res.status, data.error);
+        return;
+      }
+      if (activeJointId === j.id) {
+        setActiveJointId(null);
+        requestJointEntryMode("solo");
+      }
+      setJoints((prev) => prev.filter((row) => row.id !== j.id));
+      notifyJointListUpdated();
+    } catch (e) {
+      console.error("[sidebar] joint dismiss", e);
+    }
+  }
+
 
   function handleUserClick() {
     if (!ready) return;
@@ -767,6 +802,9 @@ export function WorkspaceSidebar({
                     minute: "2-digit",
                   })
                 : null;
+              const showCancel = j.role === "initiator";
+              const showDecline =
+                j.role === "invitee" && (j.status === "invited" || statusKey === "invited");
               return (
                 <article
                   key={j.id}
@@ -811,8 +849,34 @@ export function WorkspaceSidebar({
                       </span>
                     </p>
                     <p className="workspace-sidebar__invite-card-hint">{hint}</p>
-                    <span className="workspace-sidebar__invite-card-cta">{tJoint("card_cta")}</span>
                   </button>
+                  <div className="workspace-sidebar__invite-card-actions">
+                    <button
+                      type="button"
+                      className="workspace-sidebar__invite-card-cta"
+                      onClick={() => openJointRow(j)}
+                    >
+                      {tJoint("card_cta")}
+                    </button>
+                    {showCancel ? (
+                      <button
+                        type="button"
+                        className="workspace-sidebar__invite-card-dismiss"
+                        onClick={() => void dismissJointInvite(j)}
+                      >
+                        {tJoint("card_cancel")}
+                      </button>
+                    ) : null}
+                    {showDecline ? (
+                      <button
+                        type="button"
+                        className="workspace-sidebar__invite-card-dismiss"
+                        onClick={() => void dismissJointInvite(j)}
+                      >
+                        {tJoint("card_decline")}
+                      </button>
+                    ) : null}
+                  </div>
                 </article>
               );
             })}
