@@ -1382,7 +1382,7 @@
     "charged_flex": "1 PASS acheté déduit",
     "already_charged": "PASS déjà déduit pour cette session",
     "insufficient_need_buy": "PASS insuffisant — obtenez des PASS d’abord",
-    "blocked_insufficient": "PASS insuffisant. Obtenez des PASS puis Relancer ce dialogue.",
+    "blocked_insufficient": "PASS insuffisant pour ouvrir ce dialogue de décision. <buy>Obtenez des PASS</buy> puis <retry>Relancer ce dialogue</retry>.",
     "retry_start": "Relancer ce dialogue",
     "buy_pass": "Obtenir des PASS",
     "invite_sent_waiting": "Décision commune créée. En attente du partenaire.",

@@ -1875,6 +1875,61 @@
   color: #f2ca50;
 }
 
+/* Joint insufficient PASS — centered plain copy, gold links, no card/box */
+.joint-pass-gate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 28px auto 8px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  border: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.joint-pass-gate--solo {
+  min-height: 40vh;
+  margin: 0;
+}
+
+.joint-pass-gate__copy {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.65;
+  color: rgba(232, 234, 237, 0.92);
+  text-wrap: balance;
+}
+
+.joint-pass-gate__link {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ws-gold, #f2ca50);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(242, 202, 80, 0.55);
+  cursor: pointer;
+}
+
+.joint-pass-gate__link:hover {
+  color: #ffe08a;
+  text-decoration-color: rgba(255, 224, 138, 0.75);
+}
+
+.joint-pass-gate__link:focus-visible {
+  outline: 2px solid rgba(242, 202, 80, 0.55);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .workspace-product-hero .product-hero__accent,
 .workspace-poju-hero .product-hero__accent {
   margin-inline: auto;

@@ -1937,7 +1937,7 @@
     "charged_flex": "1 purchased PASS deducted",
     "already_charged": "PASS already deducted for this session",
     "insufficient_need_buy": "Not enough PASS — please get PASS first",
-    "blocked_insufficient": "Not enough PASS to open this dialogue. Get PASS, then tap Restart this dialogue.",
+    "blocked_insufficient": "Not enough PASS to open this decision dialogue. <buy>Get PASS</buy>, then tap <retry>Restart this dialogue</retry>.",
     "retry_start": "Restart this dialogue",
     "buy_pass": "Get PASS",
     "invite_sent_waiting": "Joint invite sent. Waiting for agreement — track status under the joint CTA.",

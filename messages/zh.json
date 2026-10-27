@@ -1937,7 +1937,7 @@
     "charged_flex": "已扣除购买份额 1 PASS",
     "already_charged": "本次对话 PASS 已扣除",
     "insufficient_need_buy": "PASS 不足，请先获取 PASS",
-    "blocked_insufficient": "PASS 不足，无法开启本次对话，请获取 PASS 后点击重新开始本次对话",
+    "blocked_insufficient": "PASS 不足，无法开启本次决策对话，请<buy>获取 PASS</buy>后点击<retry>重新开始本次对话</retry>",
     "retry_start": "重新开始本次对话",
     "buy_pass": "获取 PASS",
     "invite_sent_waiting": "已发起双人决策，等待对方同意。可在发起按钮下方查看邀请状态。",

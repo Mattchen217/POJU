@@ -23,6 +23,7 @@ import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPre
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { hydrateJointSessionFromSeed } from "@/lib/poju/hydrate-joint-session";
 import {
+  JOINT_PASS_BUY_EVENT,
   JOINT_PASS_RETRY_EVENT,
   JOINT_PORTRAIT_CLOSED_EVENT,
   markAwaitJointPortraitClose,
@@ -514,7 +515,8 @@ export function JointSessionOpenHost({
     prepare.setSession(next);
     prepare.setPhase("chat");
     setPhase("pass_blocked");
-    if (reason === "insufficient_pass") setBuyOpen(true);
+    // Never auto-open buy modal — user taps「获取 PASS」gold link when ready.
+    setBuyOpen(false);
   }
 
   useEffect(() => {
@@ -552,21 +554,22 @@ export function JointSessionOpenHost({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stable per joint open
   }, [jointId, locale, t, onClose, onEnteredChat]);
 
+  /** Silent re-charge — no 10s wait page. Fail → same centered copy again. */
   async function handleRetry() {
     const birth = lastBirthRef.current;
     if (!birth) {
       setPhase("birth_pick");
       return;
     }
-    setBlockedMsg(null);
     setBuyOpen(false);
-    tipShownRef.current = false;
+    tipShownRef.current = true;
     stage1StartedRef.current = false;
     chargeRef.current = { status: "pending" };
     hydratedSessionIdRef.current = null;
     hydratePromiseRef.current = null;
-    setPhase("preparing");
-    prepare.setPhase("preparing");
+    // Stay on chat / pass_blocked — do not enter preparing anim.
+    setPhase("pass_blocked");
+    prepare.setPhase("chat");
     try {
       const res = await fetch(`/api/joint/${jointId}/retry-start`, {
         method: "POST",
@@ -580,7 +583,11 @@ export function JointSessionOpenHost({
         already_charged?: boolean;
       };
       if (!res.ok || !data.ok || !data.seed) {
-        await injectPassGateUnderWelcome(data.error ?? "charge_failed");
+        await injectPassGateUnderWelcome(
+          data.error === "insufficient_pass" || data.error === "insufficient_balance"
+            ? "insufficient_pass"
+            : (data.error ?? "insufficient_pass"),
+        );
         return;
       }
       chargeRef.current = {
@@ -590,16 +597,15 @@ export function JointSessionOpenHost({
         seed: data.seed,
       };
       stage1StartedRef.current = true;
-      tipShownRef.current = true;
       try {
         await enterStage1AfterCharge(chargeRef.current);
       } catch (e) {
         console.error("[joint-open] retry enter stage1", e);
         stage1StartedRef.current = false;
-        await injectPassGateUnderWelcome("charge_failed");
+        await injectPassGateUnderWelcome("insufficient_pass");
       }
     } catch {
-      await injectPassGateUnderWelcome("network_error");
+      await injectPassGateUnderWelcome("insufficient_pass");
     }
   }
 
@@ -607,8 +613,15 @@ export function JointSessionOpenHost({
     function onRetry() {
       void handleRetry();
     }
+    function onBuy() {
+      setBuyOpen(true);
+    }
     window.addEventListener(JOINT_PASS_RETRY_EVENT, onRetry);
-    return () => window.removeEventListener(JOINT_PASS_RETRY_EVENT, onRetry);
+    window.addEventListener(JOINT_PASS_BUY_EVENT, onBuy);
+    return () => {
+      window.removeEventListener(JOINT_PASS_RETRY_EVENT, onRetry);
+      window.removeEventListener(JOINT_PASS_BUY_EVENT, onBuy);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jointId]);
 
@@ -624,30 +637,38 @@ export function JointSessionOpenHost({
   if (phase === "awaiting_tip" || phase === "pass_blocked" || phase === "done") {
     return (
       <>
-        {phase === "pass_blocked" && buyOpen ? (
+        {buyOpen ? (
           <PassPurchaseModal
             open={buyOpen}
             onClose={() => setBuyOpen(false)}
             reason="insufficient"
+            variant="full"
           />
         ) : null}
         {phase === "pass_blocked" && !prepare.session ? (
-          <div className="joint-open-host joint-open-host--blocked">
-            <div className="confirm-dialog">
-              <h2>{t("title")}</h2>
-              <p>{blockedMsg ?? t("blocked_insufficient")}</p>
-              <div className="dialog-actions dialog-actions--stack">
-                <button type="button" className="primary" onClick={() => void handleRetry()}>
-                  {t("retry_start")}
-                </button>
-                <button type="button" onClick={() => setBuyOpen(true)}>
-                  {t("buy_pass")}
-                </button>
-                <button type="button" onClick={onClose}>
-                  {t("back")}
-                </button>
-              </div>
-            </div>
+          <div className="joint-pass-gate joint-pass-gate--solo" role="status">
+            <p className="joint-pass-gate__copy">
+              {t.rich("blocked_insufficient", {
+                buy: (chunks) => (
+                  <button
+                    type="button"
+                    className="joint-pass-gate__link"
+                    onClick={() => setBuyOpen(true)}
+                  >
+                    {chunks}
+                  </button>
+                ),
+                retry: (chunks) => (
+                  <button
+                    type="button"
+                    className="joint-pass-gate__link"
+                    onClick={() => void handleRetry()}
+                  >
+                    {chunks}
+                  </button>
+                ),
+              })}
+            </p>
           </div>
         ) : null}
       </>

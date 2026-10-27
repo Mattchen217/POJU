@@ -177,7 +177,10 @@ import {
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
-import { requestJointPassRetry } from "@/lib/poju/joint-client-events";
+import {
+  requestJointPassBuy,
+  requestJointPassRetry,
+} from "@/lib/poju/joint-client-events";
 import { requestDeliveryAutoOpen } from "@/lib/workspace/doc-vault-types";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
@@ -3643,38 +3646,29 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (m.meta?.kind === "joint_pass_gate") {
         bareIds.add(mid);
         slots[mid] = (
-          <div
-            role="status"
-            style={{
-              margin: "8px 0 0",
-              padding: "12px 14px",
-              borderRadius: 8,
-              border: "1px solid rgba(242, 202, 80, 0.35)",
-              background: "rgba(11, 15, 18, 0.72)",
-              color: "#e8eaed",
-              fontSize: 14,
-              lineHeight: 1.5,
-            }}
-          >
-            <p style={{ margin: "0 0 10px" }}>{m.content || tJoint("blocked_insufficient")}</p>
-            <button
-              type="button"
-              className="primary"
-              style={{
-                appearance: "none",
-                border: "1px solid rgba(242, 202, 80, 0.55)",
-                background: "transparent",
-                color: "var(--ws-gold, #f2ca50)",
-                borderRadius: 6,
-                padding: "8px 14px",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-              onClick={() => requestJointPassRetry()}
-            >
-              {tJoint("retry_start")}
-            </button>
+          <div className="joint-pass-gate" role="status">
+            <p className="joint-pass-gate__copy">
+              {tJoint.rich("blocked_insufficient", {
+                buy: (chunks) => (
+                  <button
+                    type="button"
+                    className="joint-pass-gate__link"
+                    onClick={() => requestJointPassBuy()}
+                  >
+                    {chunks}
+                  </button>
+                ),
+                retry: (chunks) => (
+                  <button
+                    type="button"
+                    className="joint-pass-gate__link"
+                    onClick={() => requestJointPassRetry()}
+                  >
+                    {chunks}
+                  </button>
+                ),
+              })}
+            </p>
           </div>
         );
       }
