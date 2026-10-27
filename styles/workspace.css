@@ -6284,14 +6284,169 @@ button.workspace-poju-card__title:hover {
   overflow: hidden;
 }
 
-/* Pending joint invites under joint CTA (leave strip once dialogue starts). */
+/* Pending joint invites — independent tall cards under joint CTA (no cramped rail rows). */
 .workspace-sidebar__invite-strip {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 12px;
+  padding: 0 2px;
+  flex: 0 0 auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.workspace-sidebar__invite-card {
+  margin: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(242, 202, 80, 0.28);
+  background:
+    linear-gradient(165deg, rgba(242, 202, 80, 0.1) 0%, rgba(15, 20, 28, 0.92) 42%),
+    rgba(18, 24, 32, 0.95);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.workspace-sidebar__invite-card.is-unread {
+  border-color: rgba(242, 202, 80, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(242, 202, 80, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+.workspace-sidebar__invite-card.is-active {
+  border-color: rgba(242, 202, 80, 0.7);
+}
+
+.workspace-sidebar__invite-card.is-ready {
+  border-color: rgba(110, 200, 140, 0.45);
+}
+
+.workspace-sidebar__invite-card-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-height: 118px;
+  padding: 12px 12px 11px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.workspace-sidebar__invite-card-hit:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.workspace-sidebar__invite-card-hit:focus-visible {
+  outline: 2px solid rgba(242, 202, 80, 0.65);
+  outline-offset: -2px;
+}
+
+.workspace-sidebar__invite-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workspace-sidebar__invite-card-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: #f2ca50;
+  background: rgba(242, 202, 80, 0.14);
+  border: 1px solid rgba(242, 202, 80, 0.35);
+}
+
+.workspace-sidebar__invite-card-badge[data-status="ready"] {
+  color: #9de0b2;
+  background: rgba(110, 200, 140, 0.14);
+  border-color: rgba(110, 200, 140, 0.4);
+}
+
+.workspace-sidebar__invite-card-badge[data-status="waiting"] {
+  color: #c8d0dc;
+  background: rgba(180, 190, 210, 0.1);
+  border-color: rgba(180, 190, 210, 0.28);
+}
+
+.workspace-sidebar__invite-card-badge .workspace-sidebar__unread-dot {
+  position: static;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(18, 24, 32, 0.9);
+}
+
+.workspace-sidebar__invite-card-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(200, 208, 220, 0.55);
+}
+
+.workspace-sidebar__invite-card-peer,
+.workspace-sidebar__invite-card-question {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
-  margin: 4px 0 8px;
-  max-height: calc(5 * var(--ws-rail-row-h) + 4 * 2px + 8px);
-  overflow-y: auto;
+  margin: 0;
+}
+
+.workspace-sidebar__invite-card-kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(200, 208, 220, 0.48);
+}
+
+.workspace-sidebar__invite-card-peer-value {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: rgba(230, 236, 245, 0.92);
+  word-break: break-all;
+}
+
+.workspace-sidebar__invite-card-question-value {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #f5f7fb;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.workspace-sidebar__invite-card-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(200, 208, 220, 0.72);
+}
+
+.workspace-sidebar__invite-card-cta {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  color: #f2ca50;
 }
 
 /* History scrolls inside past-list only — never the whole left rail */

@@ -737,43 +737,85 @@ export function WorkspaceSidebar({
           onClick={() => void requestNewJoint()}
         />
 
-        {/* Pending joint invites only — leave strip once dialogue starts (my_charged). */}
+        {/* Pending joint invites — tall info cards (not rail buttons); leave once charged. */}
         {!collapsed && jointsReady && pendingInvites.length > 0 ? (
-          <div className="workspace-sidebar__invite-strip">
-            {pendingInvites.map((j) => (
-              <div
-                key={j.id}
-                className={`workspace-sidebar__history-row${
-                  activeJointId === j.id ? " is-active" : ""
-                }${j.unread ? " is-unread" : ""}`}
-              >
-                <button
-                  type="button"
-                  className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
-                  aria-current={activeJointId === j.id ? "page" : undefined}
-                  onClick={() => openJointRow(j)}
-                  title={j.shared_question}
+          <div className="workspace-sidebar__invite-strip" role="list">
+            {pendingInvites.map((j) => {
+              const statusKey = j.waiting_for_partner
+                ? "waiting"
+                : j.partner_ready
+                  ? "ready"
+                  : "invited";
+              const statusLabel =
+                statusKey === "waiting"
+                  ? tJoint("status_waiting")
+                  : statusKey === "ready"
+                    ? tJoint("status_ready")
+                    : tJoint("status_invited");
+              const hint =
+                statusKey === "waiting"
+                  ? tJoint("card_hint_waiting")
+                  : statusKey === "ready"
+                    ? tJoint("card_hint_ready")
+                    : tJoint("card_hint_invited");
+              const peer = j.peer_label?.trim() || tJoint("peer_fallback");
+              const when = j.created_at
+                ? new Date(j.created_at).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : null;
+              return (
+                <article
+                  key={j.id}
+                  role="listitem"
+                  className={`workspace-sidebar__invite-card is-${statusKey}${
+                    activeJointId === j.id ? " is-active" : ""
+                  }${j.unread ? " is-unread" : ""}`}
                 >
-                  <span className="workspace-sidebar__icon" aria-hidden>
-                    <span className="material-symbols-outlined">group</span>
-                    {j.unread ? (
-                      <span className="workspace-sidebar__unread-dot" aria-hidden />
-                    ) : null}
-                  </span>
-                  <span className="workspace-sidebar__submeta">
-                    <span className="workspace-sidebar__subtime">
-                      {j.waiting_for_partner
-                        ? tJoint("status_waiting")
-                        : j.partner_ready
-                          ? tJoint("status_ready")
-                          : tJoint("status_invited")}
-                      {j.peer_label ? ` · ${j.peer_label}` : ""}
-                    </span>
-                    <span className="workspace-sidebar__sublabel">{j.shared_question}</span>
-                  </span>
-                </button>
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    className="workspace-sidebar__invite-card-hit"
+                    aria-current={activeJointId === j.id ? "page" : undefined}
+                    onClick={() => openJointRow(j)}
+                  >
+                    <header className="workspace-sidebar__invite-card-head">
+                      <span className="workspace-sidebar__invite-card-badge" data-status={statusKey}>
+                        {statusLabel}
+                        {j.unread ? (
+                          <span className="workspace-sidebar__unread-dot" aria-hidden />
+                        ) : null}
+                      </span>
+                      {when ? (
+                        <time className="workspace-sidebar__invite-card-time" dateTime={j.created_at}>
+                          {when}
+                        </time>
+                      ) : null}
+                    </header>
+                    <p className="workspace-sidebar__invite-card-peer">
+                      <span className="workspace-sidebar__invite-card-kicker">
+                        {tJoint("card_peer")}
+                      </span>
+                      <span className="workspace-sidebar__invite-card-peer-value" title={peer}>
+                        {peer}
+                      </span>
+                    </p>
+                    <p className="workspace-sidebar__invite-card-question">
+                      <span className="workspace-sidebar__invite-card-kicker">
+                        {tJoint("card_question")}
+                      </span>
+                      <span className="workspace-sidebar__invite-card-question-value">
+                        {j.shared_question}
+                      </span>
+                    </p>
+                    <p className="workspace-sidebar__invite-card-hint">{hint}</p>
+                    <span className="workspace-sidebar__invite-card-cta">{tJoint("card_cta")}</span>
+                  </button>
+                </article>
+              );
+            })}
           </div>
         ) : null}
         {collapsed && hasPendingInviteUnread ? (
