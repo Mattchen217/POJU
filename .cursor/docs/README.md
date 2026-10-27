@@ -6,7 +6,8 @@
 
 1. [`v1-决策交付-产品边界.md`](./v1-决策交付-产品边界.md) — Eastern OS 决策交付产品总纲  
 2. [`v1-九模块与现网六页-迁移映射.md`](./v1-九模块与现网六页-迁移映射.md) — 九模块 ↔ 现网六页出稿；**九模块 ≠ 九议程（5–6 问）**  
-3. [`v1-Phase2-交付内容对齐.md`](./v1-Phase2-交付内容对齐.md) — Phase2：六 key 标签/duty/双轨依据文内分段
+3. [`v1-Phase2-交付内容对齐.md`](./v1-Phase2-交付内容对齐.md) — Phase2：六 key 标签/duty/双轨依据文内分段  
+4. [`../../docs/eastern-os/audits/2026-10-26-v1-nine-module-dual-track-readiness.md`](../../docs/eastern-os/audits/2026-10-26-v1-nine-module-dual-track-readiness.md) — 九模块双轨就绪审计（代码对照，2026-10-26）
 
 ## 现网交付运维（出稿仍六 key，内容结构以 v1 为准）
 
