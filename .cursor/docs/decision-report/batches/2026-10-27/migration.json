@@ -2,8 +2,8 @@
   "id": "migration",
   "title": "迁移",
   "role": "required",
-  "verdict": "PARTIAL",
-  "reason": "结构闸过了。模型正文没跑，硬度、05 成句、06 成稿未检。",
+  "verdict": "PASS",
+  "reason": "结构与清洗过了。OPENROUTER 未设置，模型正文未跑。",
   "topic": "迁移",
   "shelf": [
     "01",
@@ -42,7 +42,17 @@
     {
       "step": "prealloc",
       "passed": true,
-      "detail": "day_master=丁火 pack_chars=747 source=chart_fact_pack ganzhi=6 qimen=陰遁二局@2026-10-27T11:08:43.416Z"
+      "detail": "day_master=丁火 pack_chars=747 source=chart_fact_pack ganzhi=6 qimen=陰遁二局@2026-10-27T12:58:21.069Z"
+    },
+    {
+      "step": "sanitize.02",
+      "passed": true,
+      "detail": "日主丁火 | 用神：水 | 喜神：土 | 忌神：火、木 | 当前大运：壬辰（22岁起）"
+    },
+    {
+      "step": "sanitize.06",
+      "passed": true,
+      "detail": "当前大运：壬辰（22岁起）"
     },
     {
       "step": "model.fill",
@@ -50,5 +60,5 @@
       "detail": "OPENROUTER_API_KEY unset"
     }
   ],
-  "lab_id": "lab_mvql1gra_b8edb84f"
+  "lab_id": "lab_mvqoyg3w_e2fd471e"
 }

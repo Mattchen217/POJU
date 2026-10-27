@@ -16,6 +16,9 @@ import { createDeliveryLab } from "../lib/llm/pro/delivery/lab/store";
 import type { DeliveryLabSession } from "../lib/llm/pro/delivery/lab/types";
 import { DECISION_PAGE_SCHEMAS } from "../lib/llm/pro/delivery/page-schema/decision-pages";
 import { buildChartFactPack } from "../lib/llm/pro/delivery/page-schema/chart-fact-pack";
+import { replayObservedP0Shapes } from "../lib/llm/pro/delivery/page-schema/p0-fill-shape-replay";
+import { runPageSchemaFill } from "../lib/llm/pro/delivery/page-schema/fill-call";
+import type { DeliveryComputed } from "../lib/llm/pro/delivery/delivery-schema";
 import { resolveDeliveryPipeline } from "../lib/llm/pro/delivery/pipeline-v3/flag";
 import {
   sliceDumpKeys,
@@ -201,14 +204,44 @@ async function labGates(spec: DecisionCaseSpec, structured: unknown): Promise<{
       break;
     }
   }
-  gates.push({
-    step: "model.fill",
-    passed: "not_run",
-    detail: process.env.OPENROUTER_API_KEY
-      ? "key present; this batch still stops before fill"
-      : "OPENROUTER_API_KEY unset",
-  });
   return { lab_id: lab.lab_id, gates };
+}
+
+async function modelFillGates(
+  spec: DecisionCaseSpec,
+  chartText: string,
+  topic: string | null,
+): Promise<GateRow[]> {
+  if (!process.env.OPENROUTER_API_KEY?.trim()) {
+    return [
+      {
+        step: "model.fill",
+        passed: "not_run",
+        detail: "OPENROUTER_API_KEY unset",
+      },
+    ];
+  }
+  const gates: GateRow[] = [];
+  for (const key of ["situation_analysis", "execution_guidance"] as const) {
+    const filled = await runPageSchemaFill({
+      key,
+      finalize: {} as DeliveryComputed,
+      locale: "zh",
+      chart_fact_pack: chartText,
+      topic,
+      question_expectation: `${spec.question}\n${spec.expect}`,
+      fill_mode: "full",
+      deep_evidence_plan: null,
+      thinking_effort: "high",
+    });
+    gates.push({
+      step: `model.fill.${key}`,
+      passed: filled.ok,
+      detail: filled.ok ? `attempts=${filled.attempts}` : filled.reason,
+    });
+    if (!filled.ok) break;
+  }
+  return gates;
 }
 
 function runCase(spec: DecisionCaseSpec, structured: ReturnType<typeof chartFor>["structured"], pack: ReturnType<typeof chartFor>["pack"], ziwei: ReturnType<typeof buildZiweiFactPack>): Omit<CaseResult, "lab_id" | "gates"> & { gaps: string[] } {
@@ -332,7 +365,7 @@ function writeReport(results: CaseResult[], pipeline: string) {
   const lines = [
     "# 案例批跑 2026-10-27",
     "",
-    `管线：${pipeline}。模型 fill 未调用。`,
+    `管线：${pipeline}。模型 fill：${results.some((result) => result.gates.some((gate) => gate.step.startsWith("model.fill") && gate.passed !== "not_run")) ? "已调用" : "未调用（无 OPENROUTER_API_KEY）。下表是结构与清洗，不是成稿。"}`,
     "",
     "| 案 | 判定 | 原因 |",
     "|----|------|------|",
@@ -357,24 +390,57 @@ async function main() {
     const ziwei = buildZiweiFactPack(birth, { asOf: AS_OF });
     const structural = runCase(spec, structured, pack, ziwei);
     const lab = await labGates(spec, structured);
+    const replay = replayObservedP0Shapes(pack.text);
+    const replayGates: GateRow[] = [
+      {
+        step: "sanitize.02",
+        passed: replay.situation.ok,
+        detail: replay.situation.ok
+          ? replay.lines02.join(" | ")
+          : `${replay.situation.reason} ${replay.situation.notes.slice(0, 4).join(" | ")}`,
+      },
+      {
+        step: "sanitize.06",
+        passed: replay.execution.ok,
+        detail: replay.execution.ok
+          ? replay.lines06.join(" | ")
+          : `${replay.execution.reason} ${replay.execution.notes.slice(0, 4).join(" | ")}`,
+      },
+    ];
+    const modelGates = await modelFillGates(spec, pack.text, structural.topic);
     const labFail = lab.gates.filter((gate) => gate.passed === false);
+    const replayFail = replayGates.filter((gate) => gate.passed === false);
+    const modelFail = modelGates.filter((gate) => gate.passed === false);
+    const modelRan = modelGates.some((gate) => gate.passed !== "not_run");
     const gaps = [...structural.gaps];
     if (labFail.length) gaps.push(`lab:${labFail.map((gate) => gate.step).join(",")}`);
+    if (replayFail.length) gaps.push(`sanitize:${replayFail.map((gate) => gate.detail).join(" | ")}`);
     let verdict = structural.verdict;
     let reason = structural.reason;
-    if (labFail.length && structural.gaps.length === 0) {
-      verdict = "PARTIAL";
-      reason = `结构页序过了。Lab ${labFail.map((gate) => `${gate.step} ${gate.detail}`).join(" | ")}。模型正文没跑。`;
-    } else if (labFail.length) {
+    if (gaps.length) {
       verdict = "FAIL";
       reason = gaps.join("; ");
+    } else if (spec.role === "thin") {
+      verdict = "PARTIAL";
+      reason = modelRan
+        ? "Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。"
+        : "Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。模型正文未跑。";
+    } else if (modelFail.length) {
+      verdict = "FAIL";
+      reason = modelFail.map((gate) => `${gate.step} ${gate.detail}`).join(" | ");
+    } else if (!modelRan) {
+      verdict = "PASS";
+      reason = "结构与清洗过了。OPENROUTER 未设置，模型正文未跑。";
+    } else {
+      verdict = "PASS";
+      reason = "结构、清洗和本页 fill 过了。成稿硬度仍等人审。";
     }
     results.push({
       ...structural,
       verdict,
       reason,
       gaps,
-      gates: lab.gates,
+      gates: [...lab.gates, ...replayGates, ...modelGates],
       lab_id: lab.lab_id,
     });
     console.log(`${spec.id} ${verdict} topic=${structural.topic ?? "-"} shelf=${structural.shelf.join(",")}`);

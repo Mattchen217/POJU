@@ -1,6 +1,6 @@
 # joint / dyad 薄壳
 
-PARTIAL · Thin。07 按 joint 插入，otherChart 省略。模型正文没跑。
+PARTIAL · Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。模型正文未跑。
 
 活闸 topic：joint
 
@@ -10,7 +10,9 @@ PARTIAL · Thin。07 按 joint 插入，otherChart 省略。模型正文没跑�
 
 - bootstrap: true · 盘 structured + 问题就绪
 - thesis.gen: true · dims=6 as_of=2026-10-27
-- prealloc: true · day_master=丙火 pack_chars=780 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T11:08:43.489Z
+- prealloc: true · day_master=丙火 pack_chars=780 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T12:58:21.148Z
+- sanitize.02: true · 日主丙火 | 用神：土 | 喜神：金 | 忌神：火、木 | 当前大运：丁丑（36岁起）
+- sanitize.06: true · 当前大运：丁丑（36岁起）
 - model.fill: not_run · OPENROUTER_API_KEY unset
 
 ## 摘要
@@ -29,4 +31,4 @@ PARTIAL · Thin。07 按 joint 插入，otherChart 省略。模型正文没跑�
 
 结构缺口：无
 
-lab lab_mvql1gtc_113b6543
+lab lab_mvqoyg63_157fa705

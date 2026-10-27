@@ -30,6 +30,7 @@ import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
   hygienizeChartAnchorsRawLayer,
+  stampEmptyUnitAnchorsFromSlice,
   stampPageChartAnchorsFromDeepPlan,
 } from "./anchor-quality";
 import {
@@ -731,16 +732,43 @@ function sanitizeAnglesList(
   return angles.slice(0, maxKeep);
 }
 
+/** String toolkit names are wide-in. Angles may sit on the page root. */
+function coerceToolkitInput(
+  raw: unknown,
+  rootAngles: unknown,
+): Record<string, unknown> | null {
+  if (typeof raw === "string") {
+    const name = raw.trim();
+    if (!name) return null;
+    return {
+      title: name,
+      name,
+      angles: Array.isArray(rootAngles) ? rootAngles : [],
+    };
+  }
+  const obj = asObj(raw);
+  if (!obj) return null;
+  const hasAngles =
+    Array.isArray(obj.angles) || Array.isArray(obj.strategies) || Array.isArray(obj.paths);
+  if (!hasAngles && Array.isArray(rootAngles)) {
+    return { ...obj, angles: rootAngles };
+  }
+  return obj;
+}
+
 function sanitizeToolkit(
   raw: unknown,
   role: TrackRole,
   notes: string[],
+  rootAngles?: unknown,
 ): Record<string, unknown> | null {
-  const o = asObj(raw);
+  const promotedFromString = typeof raw === "string" && raw.trim().length > 0;
+  const o = coerceToolkitInput(raw, rootAngles);
   if (!o) {
     notes.push(`missing_${role}_toolkit`);
     return null;
   }
+  if (promotedFromString) notes.push(`promoted_string_toolkit:${role}`);
   const angles = sanitizeAnglesList(
     o.angles ?? o.strategies ?? o.paths,
     o,
@@ -933,6 +961,11 @@ export function sanitizePageJson(
     plainJudgmentFill?: boolean;
     /** P6: close ritual menu (+ optional) for day7 traceability. */
     closeRitualFeed?: string | null;
+    /**
+     * Page-scoped short anchors (02-D / 06 dayun). Stamp only into empty units.
+     * Absent → no slice stamp, so older callers keep their own anchors.
+     */
+    sliceAnchorLines?: readonly string[] | null;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -1341,11 +1374,13 @@ export function sanitizePageJson(
         root.primary_toolkit ?? root.primary ?? root.main_toolkit,
         "primary",
         notes,
+        root.angles,
       );
       const backup_toolkit = sanitizeToolkit(
         root.backup_toolkit ?? root.backup ?? root.aux_toolkit,
         "backup",
         notes,
+        root.backup_angles ?? root.angles,
       );
       if (!primary_toolkit || !backup_toolkit) {
         const tip =
@@ -2016,6 +2051,11 @@ export function sanitizePageJson(
     const plan = opts?.deepEvidencePlan;
     if (plan) {
       notes.push(...stampPageChartAnchorsFromDeepPlan(key, candidate, plan));
+    }
+    if (opts?.sliceAnchorLines?.length) {
+      notes.push(
+        ...stampEmptyUnitAnchorsFromSlice(key, candidate, opts.sliceAnchorLines),
+      );
     }
     const units = collectPageAnchorUnits(key, candidate);
     const aq = assessUnitAnchorQuality({

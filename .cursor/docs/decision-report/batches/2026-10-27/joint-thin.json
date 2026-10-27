@@ -3,7 +3,7 @@
   "title": "joint / dyad 薄壳",
   "role": "thin",
   "verdict": "PARTIAL",
-  "reason": "Thin。07 按 joint 插入，otherChart 省略。模型正文没跑。",
+  "reason": "Thin。07 按 joint 插入，otherChart 省略。结构与清洗过了。模型正文未跑。",
   "topic": "joint",
   "shelf": [
     "01",
@@ -43,7 +43,17 @@
     {
       "step": "prealloc",
       "passed": true,
-      "detail": "day_master=丙火 pack_chars=780 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T11:08:43.489Z"
+      "detail": "day_master=丙火 pack_chars=780 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T12:58:21.148Z"
+    },
+    {
+      "step": "sanitize.02",
+      "passed": true,
+      "detail": "日主丙火 | 用神：土 | 喜神：金 | 忌神：火、木 | 当前大运：丁丑（36岁起）"
+    },
+    {
+      "step": "sanitize.06",
+      "passed": true,
+      "detail": "当前大运：丁丑（36岁起）"
     },
     {
       "step": "model.fill",
@@ -51,5 +61,5 @@
       "detail": "OPENROUTER_API_KEY unset"
     }
   ],
-  "lab_id": "lab_mvql1gtc_113b6543"
+  "lab_id": "lab_mvqoyg63_157fa705"
 }

@@ -24,6 +24,11 @@ import {
 import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import { allowEmptyChartAnchorsOnFill } from "./anchor-quality";
+import { contentPageIdForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import {
+  chartFactPackFromText,
+  pageSliceAnchorLines,
+} from "@/lib/llm/pro/delivery/slice-for-page";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { mergeInventoryTokens } from "./layer-b-inventory-menu";
 import {
@@ -434,6 +439,18 @@ async function runPageSchemaFillOnce(input: {
     plain_judgment: plainJudgment,
     shape_mode: shapeMode,
   };
+  const face = contentPageIdForLegacyKey(input.key);
+  const chartText = input.chart_fact_pack?.trim() ?? "";
+  const sliceAnchorLines =
+    (input.key === "situation_analysis" || input.key === "execution_guidance") &&
+    (face === "02" || face === "06") &&
+    (chartText || input.ziwei_fact_pack)
+      ? pageSliceAnchorLines(face, {
+          chart: chartText ? chartFactPackFromText(chartText) : null,
+          zfp: input.ziwei_fact_pack,
+          topic: input.topic ?? null,
+        })
+      : [];
   const anchorTally = tallyAnchorCategoryUsage(
     input.prior_chart_anchors ?? [],
     input.category_token_sets,
@@ -627,6 +644,7 @@ async function runPageSchemaFillOnce(input: {
         plainJudgmentFill: input.key === "situation_analysis" && plainJudgment,
         closeRitualFeed:
           input.key === "validation_close" ? input.close_ritual_feed ?? null : undefined,
+        sliceAnchorLines,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;

@@ -581,6 +581,90 @@ export function sliceDumpKeys(value: unknown, found: string[] = []): string[] {
   return found;
 }
 
+/** Chart text from prealloc, projected the same way as a real ChartFactPack. */
+export function chartFactPackFromText(text: string): ChartFactPack {
+  const day = /^日主：([^\n（]+)/m.exec(text);
+  return {
+    text,
+    day_master: day?.[1]?.trim() ?? "",
+    ganzhi: [],
+    shen_sha: [],
+  };
+}
+
+const SLICE_ANCHOR_CAP = 6;
+
+function pushSliceAnchor(out: string[], seen: Set<string>, value: unknown): void {
+  if (out.length >= SLICE_ANCHOR_CAP || value == null) return;
+  if (typeof value === "string") {
+    for (const part of value.split(/\n+/)) {
+      const line = part.trim();
+      if (!line || line.length > 48 || seen.has(line)) continue;
+      seen.add(line);
+      out.push(line);
+      if (out.length >= SLICE_ANCHOR_CAP) return;
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      pushSliceAnchor(out, seen, item);
+      if (out.length >= SLICE_ANCHOR_CAP) return;
+    }
+    return;
+  }
+  if (typeof value !== "object") return;
+  const row = value as Record<string, unknown>;
+  if (typeof row.mutagen === "string" || typeof row.star === "string") {
+    const bit = [row.mutagen, row.star, row.palace]
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean)
+      .join("·");
+    pushSliceAnchor(out, seen, bit);
+    return;
+  }
+  if (typeof row.palace === "string" && row.palace.trim()) {
+    const stars = Array.isArray(row.majorStars)
+      ? row.majorStars
+          .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+          .slice(0, 2)
+      : [];
+    pushSliceAnchor(
+      out,
+      seen,
+      stars.length ? `${row.palace.trim()}·${stars.join("、")}` : row.palace.trim(),
+    );
+  }
+}
+
+/**
+ * 02-D / 06 short anchors from this page's slice only.
+ * Never copies chart text, ganzhi, shen_sha, palaces, or otherChart.
+ */
+export function pageSliceAnchorLines(pageId: DecisionPageId, packs?: PageFeedPacks): string[] {
+  const sliced = sliceForPage(pageId, packs);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const cfp = sliced.slice.cfp;
+  if (cfp) {
+    for (const key of ["dayMaster", "yongJi", "shishenHit", "dayunNow"] as const) {
+      const value = cfp[key];
+      if (key === "dayMaster" && typeof value === "string" && value && !value.startsWith("日主")) {
+        pushSliceAnchor(out, seen, `日主${value}`);
+      } else {
+        pushSliceAnchor(out, seen, value);
+      }
+    }
+  }
+  const zfp = sliced.slice.zfp;
+  if (zfp) {
+    pushSliceAnchor(out, seen, zfp.topicPalace);
+    pushSliceAnchor(out, seen, zfp.sihua);
+    pushSliceAnchor(out, seen, zfp.daxian);
+  }
+  return out;
+}
+
 /**
  * 按页裁切。`pageId` 不在 01–08 时抛错。
  * 调用 07 仍会返回该页切片；阅读序是否插入 07 看 `readingOrderForTopic`。

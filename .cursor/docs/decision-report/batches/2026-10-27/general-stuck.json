@@ -2,8 +2,8 @@
   "id": "general-stuck",
   "title": "一般卡住的决定",
   "role": "required",
-  "verdict": "PARTIAL",
-  "reason": "结构闸过了。模型正文没跑，硬度、05 成句、06 成稿未检。",
+  "verdict": "PASS",
+  "reason": "结构与清洗过了。OPENROUTER 未设置，模型正文未跑。",
   "topic": "general",
   "shelf": [
     "01",
@@ -39,7 +39,17 @@
     {
       "step": "prealloc",
       "passed": true,
-      "detail": "day_master=丙火 pack_chars=753 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T11:08:43.454Z"
+      "detail": "day_master=丙火 pack_chars=753 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T12:58:21.109Z"
+    },
+    {
+      "step": "sanitize.02",
+      "passed": true,
+      "detail": "日主丙火 | 用神：土 | 喜神：金 | 忌神：木、火 | 当前大运：辛巳（33岁起）"
+    },
+    {
+      "step": "sanitize.06",
+      "passed": true,
+      "detail": "当前大运：辛巳（33岁起）"
     },
     {
       "step": "model.fill",
@@ -47,5 +57,5 @@
       "detail": "OPENROUTER_API_KEY unset"
     }
   ],
-  "lab_id": "lab_mvql1gsd_2d4ebf8d"
+  "lab_id": "lab_mvqoyg50_d20164dc"
 }

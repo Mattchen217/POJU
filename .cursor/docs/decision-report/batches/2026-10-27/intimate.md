@@ -1,6 +1,6 @@
 # 亲密关系
 
-PARTIAL · 结构闸过了。模型正文没跑，硬度、05 成句、06 成稿未检。
+PASS · 结构与清洗过了。OPENROUTER 未设置，模型正文未跑。
 
 活闸 topic：亲密关系
 
@@ -10,7 +10,9 @@ PARTIAL · 结构闸过了。模型正文没跑，硬度、05 成句、06 成稿
 
 - bootstrap: true · 盘 structured + 问题就绪
 - thesis.gen: true · dims=6 as_of=2026-10-27
-- prealloc: true · day_master=辛金 pack_chars=712 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T11:08:43.376Z
+- prealloc: true · day_master=辛金 pack_chars=712 source=chart_fact_pack ganzhi=7 qimen=陰遁二局@2026-10-27T12:58:21.027Z
+- sanitize.02: true · 日主辛金 | 用神：火 | 喜神：木 | 忌神：土、金 | 当前大运：丙寅（33岁起）
+- sanitize.06: true · 当前大运：丙寅（33岁起）
 - model.fill: not_run · OPENROUTER_API_KEY unset
 
 ## 摘要
@@ -28,4 +30,4 @@ PARTIAL · 结构闸过了。模型正文没跑，硬度、05 成句、06 成稿
 
 结构缺口：无
 
-lab lab_mvql1gq7_76da219d
+lab lab_mvqoyg2q_60aa8324

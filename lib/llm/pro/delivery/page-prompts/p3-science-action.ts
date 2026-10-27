@@ -44,7 +44,7 @@ export function buildFillDuty(
 07 = 落实主辅的**执行原则与示例动作**（对事）。professional_evidence 是依据扎根，**不是**正文题材。
 ❌ 禁止把批断译成 strategy（互耗/生克链/泄掉过载…那是 02）。
 ❌ **与 08 分界**：本页禁止气场/仪轨/身心调频主体——那是 self_regulation；挪到 08 应违和。
-✅ strategy = 边界/发力/易栽/切换打法；means = 动作类型加上做成什么样。不是可勾选的作业清单。
+✅ strategy = 近步原则；means = 完成样貌（做成什么样）。旧调频折进本页，不另开一页作业。不是可勾选清单，不要写成今晚列出或打卡。
 
 # 任务
 对齐 P1 主辅;按【P3 科学手段候选菜单】写出可复用策略与行动。
@@ -55,7 +55,9 @@ export function buildFillDuty(
 
 # 必填槽
 - page="execution_guidance": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1 方案名)。键名必须是这两个，不要改成 primary/backup/tracks。
+- **两个 toolkit 必须是对象** \`{ role, title, angles }\`。禁止把方案名写成字符串。angles 写在该对象里面，不要只放在页根上。
 - **angles 钉死 3 条/轨**（与 deep 锁 3+3 对齐）=互补策略维；每条须有非空 means≥1，否则整轨会被判缺工具包。
+- **每个 angle.chart_anchors ≥1**，只取本页切片里的当前大运或大限短锚。禁止整页空锚。不要把全盘灌进锚。
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见「行动」)。
 - **对方写法**：只作现实约束/议题框（资源在对方侧、若对方拒绝则切辅 OK）；禁止替对方写心理/台词/改命。
 - **means 源(硬)**:user 侧【P3 科学手段候选菜单】是优先生长源;每条 means 须能回溯菜单中的帧/action_plan/收集事实 **或绑定摘要 means_candidate_ref**(可压缩改写)。禁止空喊通用职场鸡汤。
@@ -67,9 +69,9 @@ export function buildFillDuty(
 - 【跨页】不复读 P1 core_logic;辅轨各维只写与主轨不重复的一条动作。
 - 【能量一致】若本案需养/过耗/官杀压身:主轨 means 优先在岗边界、会议减载、决策权上收、收复精力、可复用资产沉淀;禁止默认「耗竭后再堆第二份全职强度任务」。
 - 【身份】大厂/多年专业经验:prefer Fractional Advisor / Consulting Micro-System / advisory seat;除非 covered_agenda 亲口要做,禁 crafts / side hustle / 手作等降维词。
-- 【交付物槽】主轨≥1 个 angle 的 means 须含「今晚可完成的可出示交付物」,细节从菜单收集事实生长。
+- 【完成样貌】主轨至少一条 means 写做成什么样，细节从菜单收集事实生长。不要写成今晚清单或勾选作业。
 - 【二元】angles 手段须用户可执行;对方只作现实约束/议题框(约谈对象 OK);禁第三方施事心理、禁合盘翻版。
-- fact-pack 压缩:chart_anchors 可留空;strategy/means **零命理专名**。
+- strategy/means **零命理专名**。chart_anchors 仍须有本页短锚，不要留空数组。
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
 }
