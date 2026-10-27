@@ -195,10 +195,11 @@ async function labGates(spec: DecisionCaseSpec, structured: unknown): Promise<{
     current = run.lab;
     const verdict = run.attempt?.gate_verdict;
     const passed = Boolean(run.ok && verdict?.passed);
+    const runFail = run.ok ? undefined : run.reason;
     gates.push({
       step,
       passed,
-      detail: verdict?.detail || verdict?.failed_rule || run.reason || (passed ? "ok" : "fail"),
+      detail: verdict?.detail || verdict?.failed_rule || runFail || (passed ? "ok" : "fail"),
     });
     if (!passed) break;
     const approved = await approveLabStep(current, step);
