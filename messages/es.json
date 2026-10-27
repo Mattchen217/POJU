@@ -1371,13 +1371,13 @@
     "newConfirmBody": "Saldrás del diálogo actual y empezarás una decisión conjunta nueva. Puedes recuperar este registro en Historial de decisión conjunta en la barra lateral.",
     "loading": "Cargando…",
     "waiting_partner": "Invitación enviada. Esperando que el partner acepte y envíe nacimiento.",
-    "partner_agreed_tip": "Tu partner aceptó y envió datos de nacimiento.",
+    "partner_agreed_tip": "Tu partner ya envió la información básica y aceptó. ¿Empezamos aquí?",
     "invite_title": "Invitación a decisión conjunta",
     "invite_body": "¿Aceptar la invitación de decisión conjunta de {account}?",
     "peer_fallback": "partner",
     "agree": "Aceptar y continuar",
     "back": "Volver",
-    "birth_hint": "Elige o añade nacimiento para este diálogo de decisión conjunta",
+    "birth_hint": "Elige o añade información básica para esta decisión conjunta",
     "charged_sub": "1 PASS de suscripción deducido",
     "charged_flex": "1 PASS comprado deducido",
     "already_charged": "PASS ya deducido para esta sesión",
@@ -1398,7 +1398,10 @@
     "err_invalid_email": "Introduce un email válido",
     "err_question_too_short": "La pregunta necesita al menos 4 caracteres",
     "err_invite_expired": "Invitación caducada",
-    "err_generic": "Algo falló — reintenta"
+    "err_generic": "Algo falló — reintenta",
+    "decision_history": "Historial de diálogos de decisión ({count})",
+    "partner_agreed_title": "Abrir diálogo conjunto",
+    "partner_agreed_cta": "Abrir diálogo conjunto (consume 1 PASS)"
   },
   "bazi": {
     "gender": {

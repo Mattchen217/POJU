@@ -6284,11 +6284,14 @@ button.workspace-poju-card__title:hover {
   overflow: hidden;
 }
 
-/* Joint rows have no stage timeline — cap visible list to ~5 compact rows */
-.workspace-sidebar__past-block--joint {
-  --ws-history-list-max-h: calc(
-    5 * var(--ws-rail-row-h) + 4 * 2px + 8px
-  );
+/* Pending joint invites under joint CTA (leave strip once dialogue starts). */
+.workspace-sidebar__invite-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+  max-height: calc(5 * var(--ws-rail-row-h) + 4 * 2px + 8px);
+  overflow-y: auto;
 }
 
 /* History scrolls inside past-list only — never the whole left rail */

@@ -50,6 +50,8 @@ export interface ArchiveSummary {
   journey_stage?: number;
   /** Birth card label e.g. `1991-07-03 · 18:00 · M` for left-rail history. */
   birth_label?: string;
+  /** Joint decision session — distinct icon in unified decision history. */
+  joint_decision?: boolean;
 }
 
 export interface GlyphReadingArchiveData {

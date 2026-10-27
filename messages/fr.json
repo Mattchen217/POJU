@@ -1371,13 +1371,13 @@
     "newConfirmBody": "Tu quitteras le dialogue en cours pour en commencer un nouveau à deux. Tu pourras retrouver cet enregistrement dans l’historique commun de la barre latérale.",
     "loading": "Chargement…",
     "waiting_partner": "Invitation envoyée. En attente de l’accord et de la naissance du partenaire.",
-    "partner_agreed_tip": "Votre partenaire a accepté et envoyé ses données de naissance.",
+    "partner_agreed_tip": "Votre partenaire a envoyé les infos de base et a accepté. Commencer ici ?",
     "invite_title": "Invitation commune",
     "invite_body": "Accepter l’invitation de {account} ?",
     "peer_fallback": "partenaire",
     "agree": "Accepter et continuer",
     "back": "Retour",
-    "birth_hint": "Choisissez ou ajoutez une naissance pour cette décision",
+    "birth_hint": "Choisissez ou ajoutez les informations de base pour cette décision",
     "charged_sub": "1 PASS d’abonnement déduit",
     "charged_flex": "1 PASS acheté déduit",
     "already_charged": "PASS déjà déduit pour cette session",
@@ -1398,7 +1398,10 @@
     "err_invalid_email": "Saisissez un e-mail valide",
     "err_question_too_short": "La question doit faire au moins 4 caractères",
     "err_invite_expired": "Invitation expirée",
-    "err_generic": "Échec — réessayez"
+    "err_generic": "Échec — réessayez",
+    "decision_history": "Historique des dialogues de décision ({count})",
+    "partner_agreed_title": "Ouvrir le dialogue à deux",
+    "partner_agreed_cta": "Ouvrir le dialogue à deux (1 PASS)"
   },
   "bazi": {
     "gender": {

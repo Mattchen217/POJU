@@ -47,8 +47,10 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
         const rows: ArchiveSummary[] = await Promise.all(
           slice.map(async (s) => {
             let birthLabel = "";
+            let jointDecision = false;
             try {
               const state = await loadPOJUSession(s.session_id);
+              jointDecision = state?.joint_decision === true;
               const pid =
                 state?.selected_stored_profile_id?.trim() ||
                 state?.agent_v2?.selected_profile_id?.trim() ||
@@ -72,6 +74,7 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
                 Boolean(s.main_delivery_done),
               ),
               birth_label: birthLabel || undefined,
+              joint_decision: jointDecision || undefined,
             };
           }),
         );

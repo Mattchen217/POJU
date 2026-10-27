@@ -327,7 +327,9 @@ function HistoryItemRow({
         title={[metaTop, snippet, createdLabel].filter(Boolean).join("\n")}
       >
         <span className="workspace-sidebar__icon" aria-hidden>
-          <span className="material-symbols-outlined">chat_bubble</span>
+          <span className="material-symbols-outlined">
+            {row.joint_decision ? "group" : "chat_bubble"}
+          </span>
         </span>
         <span className="workspace-sidebar__submeta">
           <span className="workspace-sidebar__subtime" title={metaTop}>
@@ -531,12 +533,28 @@ export function WorkspaceSidebar({
   const [joints, setJoints] = useState<JointDecisionPublicView[]>([]);
   const [jointsReady, setJointsReady] = useState(false);
   const [activeJointId, setActiveJointId] = useState<string | null>(null);
-  /** Only one history panel open at a time; null = both collapsed. */
-  const [historyOpen, setHistoryOpen] = useState<"joint" | "solo" | null>("solo");
+  /** Decision dialogue history expanded; null = collapsed. */
+  const [historyOpen, setHistoryOpen] = useState(true);
 
-  function toggleHistory(which: "joint" | "solo") {
-    setHistoryOpen((prev) => (prev === which ? null : which));
+  function toggleHistory() {
+    setHistoryOpen((prev) => !prev);
   }
+
+  /** Pending invites only — disappear from strip once this side has charged into chat. */
+  const pendingInvites = joints.filter((j) => {
+    if (j.my_charged) return false;
+    if (j.status === "running" || j.status === "sealed" || j.status === "canceled" || j.status === "expired") {
+      return false;
+    }
+    return (
+      j.waiting_for_partner ||
+      j.status === "invited" ||
+      j.status === "accepted" ||
+      j.status === "partner_ready" ||
+      j.partner_ready
+    );
+  });
+  const hasPendingInviteUnread = pendingInvites.some((j) => j.unread);
 
   const refreshJoints = useCallback(async () => {
     try {
@@ -598,7 +616,6 @@ export function WorkspaceSidebar({
     (prepare?.phase ?? "idle") === "idle";
 
   const jointEntryModeSolo = alreadyOnNewHome && activeJointId == null;
-  const hasJointUnread = joints.some((j) => j.unread);
 
   async function requestNewSolo() {
     if (inPojuChat) {
@@ -628,7 +645,6 @@ export function WorkspaceSidebar({
 
   function openJointRow(j: JointDecisionPublicView) {
     setActiveJointId(j.id);
-    setHistoryOpen("joint");
     requestJointOpen(j.id, j);
   }
 
@@ -656,7 +672,7 @@ export function WorkspaceSidebar({
             active={activeHistoryId === row.archive_id || activeHistoryId === row.session_id}
             onOpen={() => {
               setActiveJointId(null);
-              setHistoryOpen("solo");
+              setHistoryOpen(true);
               requestJointEntryMode("solo");
               onSelectArchive("poju", row.session_id || row.archive_id);
             }}
@@ -721,95 +737,65 @@ export function WorkspaceSidebar({
           onClick={() => void requestNewJoint()}
         />
 
-        <div className="workspace-sidebar__past-block workspace-sidebar__past-block--joint">
-          {!collapsed ? (
-            <button
-              type="button"
-              className="workspace-sidebar__section-label workspace-sidebar__section-label--toggle"
-              aria-expanded={historyOpen === "joint"}
-              aria-label={tJoint("history_toggle")}
-              onClick={() => toggleHistory("joint")}
-            >
-              <span className="workspace-sidebar__section-label-icon" aria-hidden>
-                <span className="material-symbols-outlined">history</span>
-                {hasJointUnread ? (
-                  <span className="workspace-sidebar__unread-dot" aria-hidden />
-                ) : null}
-              </span>
-              <span>
-                {tJoint("history_label", { count: jointsReady ? joints.length : 0 })}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="workspace-sidebar__item workspace-sidebar__item--solo"
-              data-tooltip={tJoint("history_label", { count: joints.length })}
-              aria-label={tJoint("history_label", { count: joints.length })}
-              aria-expanded={historyOpen === "joint"}
-              onClick={() => toggleHistory("joint")}
-            >
-              <span className="workspace-sidebar__icon" aria-hidden>
-                <span className="material-symbols-outlined">history</span>
-                {hasJointUnread ? (
-                  <span className="workspace-sidebar__unread-dot" aria-hidden />
-                ) : null}
-              </span>
-            </button>
-          )}
-          {!collapsed && historyOpen === "joint" ? (
-            <PastSessionsScroll>
-              {!jointsReady ? (
-                <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>
-              ) : joints.length === 0 ? (
-                <p className="workspace-sidebar__subempty">{tJoint("history_empty")}</p>
-              ) : (
-                joints.map((j) => (
-                  <div
-                    key={j.id}
-                    className={`workspace-sidebar__history-row${
-                      activeJointId === j.id ? " is-active" : ""
-                    }${j.unread ? " is-unread" : ""}`}
-                  >
-                    <button
-                      type="button"
-                      className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
-                      aria-current={activeJointId === j.id ? "page" : undefined}
-                      onClick={() => openJointRow(j)}
-                      title={j.shared_question}
-                    >
-                      <span className="workspace-sidebar__icon" aria-hidden>
-                        <span className="material-symbols-outlined">chat_bubble</span>
-                        {j.unread ? (
-                          <span className="workspace-sidebar__unread-dot" aria-hidden />
-                        ) : null}
-                      </span>
-                      <span className="workspace-sidebar__submeta">
-                        <span className="workspace-sidebar__subtime">
-                          {j.waiting_for_partner
-                            ? tJoint("status_waiting")
-                            : j.my_charged
-                              ? tJoint("status_running")
-                              : j.partner_ready
-                                ? tJoint("status_ready")
-                                : tJoint("status_invited")}
-                          {j.peer_label ? ` · ${j.peer_label}` : ""}
-                        </span>
-                        <span className="workspace-sidebar__sublabel">
-                          {j.shared_question}
-                        </span>
-                      </span>
-                    </button>
-                  </div>
-                ))
-              )}
-            </PastSessionsScroll>
-          ) : null}
-        </div>
+        {/* Pending joint invites only — leave strip once dialogue starts (my_charged). */}
+        {!collapsed && jointsReady && pendingInvites.length > 0 ? (
+          <div className="workspace-sidebar__invite-strip">
+            {pendingInvites.map((j) => (
+              <div
+                key={j.id}
+                className={`workspace-sidebar__history-row${
+                  activeJointId === j.id ? " is-active" : ""
+                }${j.unread ? " is-unread" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
+                  aria-current={activeJointId === j.id ? "page" : undefined}
+                  onClick={() => openJointRow(j)}
+                  title={j.shared_question}
+                >
+                  <span className="workspace-sidebar__icon" aria-hidden>
+                    <span className="material-symbols-outlined">group</span>
+                    {j.unread ? (
+                      <span className="workspace-sidebar__unread-dot" aria-hidden />
+                    ) : null}
+                  </span>
+                  <span className="workspace-sidebar__submeta">
+                    <span className="workspace-sidebar__subtime">
+                      {j.waiting_for_partner
+                        ? tJoint("status_waiting")
+                        : j.partner_ready
+                          ? tJoint("status_ready")
+                          : tJoint("status_invited")}
+                      {j.peer_label ? ` · ${j.peer_label}` : ""}
+                    </span>
+                    <span className="workspace-sidebar__sublabel">{j.shared_question}</span>
+                  </span>
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {collapsed && hasPendingInviteUnread ? (
+          <button
+            type="button"
+            className="workspace-sidebar__item workspace-sidebar__item--solo"
+            data-tooltip={tJoint("cta_new")}
+            aria-label={tJoint("cta_new")}
+            onClick={() => {
+              onToggleCollapse?.();
+            }}
+          >
+            <span className="workspace-sidebar__icon" aria-hidden>
+              <span className="material-symbols-outlined">group</span>
+              <span className="workspace-sidebar__unread-dot" aria-hidden />
+            </span>
+          </button>
+        ) : null}
 
         <div className="workspace-sidebar__divider" role="separator" />
 
-        {/* Solo decision CTA + history */}
+        {/* Solo CTA + unified decision dialogue history */}
         <SidebarCtaHintButton
           className={`workspace-sidebar__item workspace-sidebar__item--solo workspace-sidebar__item--cta${
             jointEntryModeSolo ? " is-active" : ""
@@ -826,30 +812,32 @@ export function WorkspaceSidebar({
             <button
               type="button"
               className="workspace-sidebar__section-label workspace-sidebar__section-label--toggle"
-              aria-expanded={historyOpen === "solo"}
+              aria-expanded={historyOpen}
               aria-label={tJoint("history_toggle")}
-              onClick={() => toggleHistory("solo")}
+              onClick={() => toggleHistory()}
             >
               <span className="workspace-sidebar__section-label-icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
               </span>
-              <span>{tJoint("solo_history", { count: historyReady ? items.length : 0 })}</span>
+              <span>
+                {tJoint("decision_history", { count: historyReady ? items.length : 0 })}
+              </span>
             </button>
           ) : (
             <button
               type="button"
               className="workspace-sidebar__item workspace-sidebar__item--solo"
-              data-tooltip={tJoint("solo_history", { count: items.length })}
-              aria-label={tJoint("solo_history", { count: items.length })}
-              aria-expanded={historyOpen === "solo"}
-              onClick={() => toggleHistory("solo")}
+              data-tooltip={tJoint("decision_history", { count: items.length })}
+              aria-label={tJoint("decision_history", { count: items.length })}
+              aria-expanded={historyOpen}
+              onClick={() => toggleHistory()}
             >
               <span className="workspace-sidebar__icon" aria-hidden>
                 <span className="material-symbols-outlined">history</span>
               </span>
             </button>
           )}
-          {!collapsed && historyOpen === "solo" ? (
+          {!collapsed && historyOpen ? (
             <PastSessionsScroll>
               {!historyReady ? (
                 <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>

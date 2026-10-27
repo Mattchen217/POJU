@@ -12,6 +12,8 @@ type Props = {
    * (other copy / motion to be swapped later).
    */
   entryMode?: "solo" | "joint";
+  /** Optional tip override (e.g. joint open host uses joint_flow.birth_hint). */
+  tipOverride?: string;
 };
 
 /** Left-rail: form chrome (title/tip/help) above Privacy & security.
@@ -20,6 +22,7 @@ type Props = {
 export function WorkspacePojuBirthSideCopy({
   hasBirthHistory = false,
   entryMode = "solo",
+  tipOverride,
 }: Props) {
   const t = useTranslations("birth_picker");
   const locale = useLocale();
@@ -28,6 +31,9 @@ export function WorkspacePojuBirthSideCopy({
     entryMode === "joint"
       ? t("form_section_title_joint")
       : t("form_section_title_solo");
+  const tip =
+    tipOverride?.trim() ||
+    (hasBirthHistory ? t("form_prompt_returning") : t("form_prompt_firstVisit"));
 
   return (
     <aside
@@ -39,9 +45,7 @@ export function WorkspacePojuBirthSideCopy({
       <div className="workspace-poju-copy__inner">
         <div className="workspace-poju-birth-chrome">
           <h3 className="workspace-poju-birth-chrome__title">{sectionTitle}</h3>
-          <p className="workspace-poju-birth-chrome__tip">
-            {hasBirthHistory ? t("form_prompt_returning") : t("form_prompt_firstVisit")}
-          </p>
+          <p className="workspace-poju-birth-chrome__tip">{tip}</p>
           <p className="workspace-poju-birth-chrome__help">
             <HeroInlineBold text={t("form_help")} />
           </p>

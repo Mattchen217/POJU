@@ -11,6 +11,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { clsx } from "clsx";
 
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
+import { PojuProductHero } from "@/components/marketing/poju-product-hero";
 import { AtmosThinkingAvatar } from "@/components/poju/AtmosThinkingAvatar";
 import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
 import { useAppDialog } from "@/components/ui/app-dialog";
@@ -99,8 +100,9 @@ export function JointSessionOpenHost({
   const locale = useLocale();
   const t = useTranslations("joint_flow");
   const tPrep = useTranslations("session_prep");
-  const { alert } = useAppDialog();
+  const { alert, confirm } = useAppDialog();
   const prepare = useWorkspacePojuPrepare();
+  const tOpen = useTranslations("workspace.sessionOpen");
 
   const [phase, setPhase] = useState<Phase>(() => initialPhase(initialJoint));
   const [joint, setJoint] = useState<JointDecisionPublicView | null>(
@@ -186,7 +188,14 @@ export function JointSessionOpenHost({
       }
 
       if (j.role === "initiator" && j.partner_ready) {
-        await alert(t("partner_agreed_tip"), t("title"));
+        const start = await confirm(t("partner_agreed_tip"), t("partner_agreed_title"), {
+          confirmLabel: t("partner_agreed_cta"),
+          cancelLabel: t("back"),
+        });
+        if (!start) {
+          onClose();
+          return;
+        }
         const birth = j.self_birth_for_my_session;
         if (birth) {
           setPhase("preparing");
@@ -615,14 +624,35 @@ export function JointSessionOpenHost({
   }
 
   if (phase === "birth_pick") {
+    const heroCopy = {
+      brandTag: tOpen("h1_joint"),
+      heading: tOpen("body_joint"),
+      description: tOpen("lead_joint"),
+      leadIn: "",
+      tagline: "",
+      ctaPrimary: "",
+      billingNotice: "",
+    };
     return (
-      <div className="workspace-product-stack workspace-poju-stack joint-open-host">
+      <div className="workspace-product-stack workspace-poju-stack">
+        <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero workspace-poju-hero--joint">
+          <PojuProductHero
+            copy={heroCopy}
+            hideActions
+            workspaceMotion="spline-constellation"
+            scene="/spline/atmoswork.splinecode"
+            initialZoom={1.15}
+            hideStarrySky
+            hideVignette
+          />
+        </div>
         <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__cluster">
             <div className="workspace-poju-below__unit" aria-busy={busy || undefined}>
               <WorkspacePojuBirthSideCopy
                 hasBirthHistory={hasBirthProfiles}
                 entryMode="joint"
+                tipOverride={t("birth_hint")}
               />
               <WorkspacePojuBirthHost
                 onHasProfilesChange={setHasBirthProfiles}

@@ -2931,5 +2931,12 @@
     "close": "Close profile",
     "openFromVault": "Open baseline profile",
     "subtitle": "Case structure for this decision session"
+  },
+  "joint_flow": {
+    "decision_history": "Entscheidungsdialog-Verlauf ({count})",
+    "partner_agreed_title": "Gemeinsamen Dialog starten",
+    "partner_agreed_cta": "Gemeinsamen Dialog starten (1 PASS)",
+    "partner_agreed_tip": "Partner hat Basisdaten gesendet und zugestimmt. Hier starten?",
+    "birth_hint": "Basisdaten für diese gemeinsame Entscheidung wählen oder neu eingeben"
   }
 }
