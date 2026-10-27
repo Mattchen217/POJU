@@ -48,9 +48,12 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
           slice.map(async (s) => {
             let birthLabel = "";
             let jointDecision = false;
+            let jointDecisionId: string | undefined;
             try {
               const state = await loadPOJUSession(s.session_id);
               jointDecision = state?.joint_decision === true;
+              const jid = state?.joint_decision_id?.trim();
+              if (jid) jointDecisionId = jid;
               const pid =
                 state?.selected_stored_profile_id?.trim() ||
                 state?.agent_v2?.selected_profile_id?.trim() ||
@@ -75,6 +78,7 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
               ),
               birth_label: birthLabel || undefined,
               joint_decision: jointDecision || undefined,
+              joint_decision_id: jointDecisionId,
             };
           }),
         );

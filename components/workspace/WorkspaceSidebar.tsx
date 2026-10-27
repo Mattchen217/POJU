@@ -40,8 +40,10 @@ import {
 } from "@/lib/archive/poju-session-vault";
 import type { JointDecisionPublicView } from "@/lib/passes/household-types";
 import {
+  JOINT_ENTERED_CHAT_EVENT,
   JOINT_LIST_UPDATED_EVENT,
   notifyJointListUpdated,
+  readJointEnteredChatIds,
   requestJointEntryMode,
   requestJointOpen,
 } from "@/lib/poju/joint-client-events";
@@ -541,9 +543,39 @@ export function WorkspaceSidebar({
     setHistoryOpen((prev) => !prev);
   }
 
-  /** Pending invites only — disappear from strip once this side has charged into chat. */
+  /** Joint ids already in decision history or marked entered-chat after 10s prepare. */
+  const [enteredChatIds, setEnteredChatIds] = useState<string[]>(() =>
+    typeof window !== "undefined" ? readJointEnteredChatIds() : [],
+  );
+
+  useEffect(() => {
+    function syncEntered() {
+      setEnteredChatIds(readJointEnteredChatIds());
+    }
+    window.addEventListener(JOINT_ENTERED_CHAT_EVENT, syncEntered);
+    window.addEventListener(JOINT_LIST_UPDATED_EVENT, syncEntered);
+    return () => {
+      window.removeEventListener(JOINT_ENTERED_CHAT_EVENT, syncEntered);
+      window.removeEventListener(JOINT_LIST_UPDATED_EVENT, syncEntered);
+    };
+  }, []);
+
+  const jointIdsInHistory = useMemo(() => {
+    const ids = new Set<string>(enteredChatIds);
+    for (const row of items) {
+      const jid = row.joint_decision_id?.trim();
+      if (jid) ids.add(jid);
+    }
+    return ids;
+  }, [items, enteredChatIds]);
+
+  /**
+   * Pending invite cards only — once this side enters chat (after 10s prepare),
+   * the card leaves and the session lives only under 决策对话历史 (both roles).
+   */
   const pendingInvites = joints.filter((j) => {
     if (j.my_charged) return false;
+    if (jointIdsInHistory.has(j.id)) return false;
     if (j.status === "running" || j.status === "sealed" || j.status === "canceled" || j.status === "expired") {
       return false;
     }

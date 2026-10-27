@@ -52,6 +52,8 @@ export interface ArchiveSummary {
   birth_label?: string;
   /** Joint decision session — distinct icon in unified decision history. */
   joint_decision?: boolean;
+  /** Server joint id — used to hide invite strip once this session is in history. */
+  joint_decision_id?: string;
 }
 
 export interface GlyphReadingArchiveData {

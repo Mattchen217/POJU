@@ -177,10 +177,7 @@ import {
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
-import {
-  requestJointPassBuy,
-  requestJointPassRetry,
-} from "@/lib/poju/joint-client-events";
+import { requestJointPassRetry } from "@/lib/poju/joint-client-events";
 import { requestDeliveryAutoOpen } from "@/lib/workspace/doc-vault-types";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
@@ -531,6 +528,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     content: string;
   } | null>(null);
   const [passBuyOpen, setPassBuyOpen] = useState(false);
+  /** Joint insufficient-PASS gold link — buy only; restart is a separate link. */
+  const [jointPassBuyOpen, setJointPassBuyOpen] = useState(false);
   const [passGateOpen, setPassGateOpen] = useState(false);
   const [passGatePhase, setPassGatePhase] = useState<PivotFirstPassGatePhase>("working");
   const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(
@@ -3653,7 +3652,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                   <button
                     type="button"
                     className="joint-pass-gate__link"
-                    onClick={() => requestJointPassBuy()}
+                    onClick={() => setJointPassBuyOpen(true)}
                   >
                     {chunks}
                   </button>
@@ -4346,6 +4345,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             session.pending_question ?? session.original_question,
           ),
         }}
+      />
+      <PassPurchaseModal
+        open={jointPassBuyOpen}
+        onClose={() => setJointPassBuyOpen(false)}
+        reason="insufficient"
+        variant="full"
       />
       <PartnerBirthModal
         open={partnerBirthOpen}

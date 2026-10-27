@@ -27,6 +27,7 @@ import {
   JOINT_PASS_RETRY_EVENT,
   JOINT_PORTRAIT_CLOSED_EVENT,
   markAwaitJointPortraitClose,
+  markJointEnteredChat,
   notifyJointListUpdated,
 } from "@/lib/poju/joint-client-events";
 import {
@@ -452,6 +453,10 @@ export function JointSessionOpenHost({
       if (charged.status === "ok") {
         await ensureHydratedSession(charged);
       }
+
+      // Entered chat after 10s — invite strip card goes away; history owns this joint.
+      markJointEnteredChat(jointId);
+      notifyJointListUpdated();
 
       markAwaitJointPortraitClose(jointId);
       prepare.setPhase("chat");

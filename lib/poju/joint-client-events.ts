@@ -19,6 +19,11 @@ export const JOINT_PASS_BUY_EVENT = "pojulife:joint-pass-buy";
 /** sessionStorage: set while waiting for baseline portrait close during joint start. */
 export const JOINT_AWAIT_PORTRAIT_KEY = "pojulife:joint-await-portrait";
 
+/** sessionStorage: joint ids that entered chat after the 10s prepare (invite card must hide). */
+export const JOINT_ENTERED_CHAT_KEY = "pojulife:joint-entered-chat";
+
+export const JOINT_ENTERED_CHAT_EVENT = "pojulife:joint-entered-chat";
+
 export type JointEntryMode = "solo" | "joint";
 
 export type JointEntryModeDetail = { mode: JointEntryMode };
@@ -109,4 +114,48 @@ export function requestJointPassRetry(): void {
 export function requestJointPassBuy(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(JOINT_PASS_BUY_EVENT));
+}
+
+function readEnteredChatIdSet(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = sessionStorage.getItem(JOINT_ENTERED_CHAT_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string" && Boolean(x.trim())));
+  } catch {
+    return new Set();
+  }
+}
+
+export function readJointEnteredChatIds(): string[] {
+  return [...readEnteredChatIdSet()];
+}
+
+/**
+ * After 10s prepare → chat: hide invite strip card; history owns this joint.
+ * Idempotent; fires JOINT_ENTERED_CHAT_EVENT + list refresh.
+ */
+export function markJointEnteredChat(jointId: string): void {
+  if (typeof window === "undefined") return;
+  const id = jointId.trim();
+  if (!id) return;
+  const set = readEnteredChatIdSet();
+  if (set.has(id)) {
+    window.dispatchEvent(
+      new CustomEvent(JOINT_ENTERED_CHAT_EVENT, { detail: { jointId: id } }),
+    );
+    return;
+  }
+  set.add(id);
+  try {
+    sessionStorage.setItem(JOINT_ENTERED_CHAT_KEY, JSON.stringify([...set]));
+  } catch {
+    /* private mode */
+  }
+  window.dispatchEvent(
+    new CustomEvent(JOINT_ENTERED_CHAT_EVENT, { detail: { jointId: id } }),
+  );
+  notifyJointListUpdated();
 }
