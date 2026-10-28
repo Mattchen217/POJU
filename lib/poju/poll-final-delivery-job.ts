@@ -7,16 +7,17 @@ import {
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import {
-  isDeliveryBudgetExhaustedReason,
-  PRODUCTION_V3_JOB_MAX_WALL_MS,
-} from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { isDeliveryBudgetExhaustedReason } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { isProductionV3ClosedFailure } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
+import { PRODUCTION_V3_POLL_MAX_MS } from "@/lib/llm/pro/delivery/pipeline-v3/wall-tail";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Match the production v3 job wall. A legacy rollback still ends earlier via the status API. */
-export const FINAL_DELIVERY_POLL_MAX_MS = PRODUCTION_V3_JOB_MAX_WALL_MS;
+/**
+ * Stay open through the shelf-tail grace. The server still stops a mid-book
+ * job at 120m; this only keeps the tab attached while assemble/finalize runs.
+ */
+export const FINAL_DELIVERY_POLL_MAX_MS = PRODUCTION_V3_POLL_MAX_MS;
 
 /**
  * Client auto-resume for soft interrupts only (lease blips).

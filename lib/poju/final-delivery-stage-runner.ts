@@ -66,8 +66,6 @@ import {
   DELIVERY_SEGMENT_SOFT_HOP_MAX,
   DELIVERY_JOB_MAX_CONTINUE_HOPS,
   isDeliveryBudgetExhaustedReason,
-  isActiveDeliveryJobWallExceeded,
-  activeDeliveryJobMaxWallMs,
   isDeliveryJobContinueHopExceeded,
   isDeliverySegmentTransportRetryable,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
@@ -224,13 +222,19 @@ async function tripDeliveryJobFuseIfNeeded(
   const hops = opts?.bump_continue_hop
     ? await bumpDeliveryJobContinueHop(job_id)
     : await loadDeliveryJobContinueHops(job_id);
-  const wallMax = activeDeliveryJobMaxWallMs();
-  const wall = isActiveDeliveryJobWallExceeded(created_at);
+  const { resolveDeliveryWallFuse } = await import(
+    "@/lib/llm/pro/delivery/pipeline-v3/wall-tail"
+  );
+  const wallFuse = await resolveDeliveryWallFuse({
+    job_id,
+    created_at,
+    stage,
+  });
   const hopCap = isDeliveryJobContinueHopExceeded(hops);
-  if (!wall && !hopCap) return "ok";
+  if (!wallFuse.tripped && !hopCap) return "ok";
 
-  const reason = wall
-    ? `job_time_budget_exhausted:age_ms=${Date.now() - created_at}:max_ms=${wallMax}`
+  const reason = wallFuse.tripped
+    ? `job_time_budget_exhausted:age_ms=${Date.now() - created_at}:max_ms=${wallFuse.limit_ms}`
     : `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`;
   console.error("[final-delivery-STOP] job-level fuse tripped", {
     job_id,
@@ -238,7 +242,7 @@ async function tripDeliveryJobFuseIfNeeded(
     reason,
     created_at,
     continue_hops: hops,
-    wall_ms: wallMax,
+    wall_ms: wallFuse.limit_ms,
     hop_max: DELIVERY_JOB_MAX_CONTINUE_HOPS,
   });
   await failStage(job_id, session_id, stage, reason, {

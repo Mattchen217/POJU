@@ -51,6 +51,9 @@ import {
   BODY_ACCEPTANCE_CONTINUE_RULE,
   POLISH_ACCEPTANCE_CONTINUE_RULE,
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
+import { productionV3LabId } from "@/lib/llm/pro/delivery/pipeline-v3/wall-tail";
+
+export { productionV3LabId };
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 
 /** One in-flight v3 step. Reused so the task lease serializes workers. */
@@ -71,10 +74,6 @@ export type ProductionV3TaskOutcome =
 
 export function isProductionV3Task(task_id: string): boolean {
   return task_id === PRODUCTION_V3_TASK_ID;
-}
-
-export function productionV3LabId(job_id: string): string {
-  return `prodv3_${job_id}`;
 }
 
 export function productionPolishLocale(locale: string): BodyPolishLocale {
