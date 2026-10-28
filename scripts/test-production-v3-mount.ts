@@ -8,6 +8,8 @@ import {
   activeDeliveryJobMaxWallMs,
   DELIVERY_JOB_MAX_WALL_MS,
   PRODUCTION_V3_JOB_MAX_WALL_MS,
+  PRODUCTION_V3_POLL_MAX_MS,
+  PRODUCTION_V3_TAIL_GRACE_MS,
 } from "../lib/llm/pro/delivery/delivery-retry-policy";
 import {
   isProductionV3ClosedFailure,
@@ -18,8 +20,6 @@ import { LAB_STEP_DEFS_V3 } from "../lib/llm/pro/delivery/lab/types-v3";
 import { saveDeliveryLab } from "../lib/llm/pro/delivery/lab/store";
 import {
   deliveryWallFuseDecision,
-  PRODUCTION_V3_POLL_MAX_MS,
-  PRODUCTION_V3_TAIL_GRACE_MS,
   productionV3LabId,
   resolveDeliveryWallFuse,
   v3CursorAwaitingShelfAssemble,

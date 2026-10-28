@@ -7,9 +7,11 @@ import {
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { isDeliveryBudgetExhaustedReason } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  isDeliveryBudgetExhaustedReason,
+  PRODUCTION_V3_POLL_MAX_MS,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { isProductionV3ClosedFailure } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
-import { PRODUCTION_V3_POLL_MAX_MS } from "@/lib/llm/pro/delivery/pipeline-v3/wall-tail";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 

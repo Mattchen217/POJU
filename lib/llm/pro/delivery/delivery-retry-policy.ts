@@ -92,6 +92,17 @@ export function isDeliveryJobWallExceeded(
  */
 export const PRODUCTION_V3_JOB_MAX_WALL_MS = 120 * 60_000;
 
+/**
+ * Local assemble/finalize after the last evidence step. Not another content gun.
+ * Kept here so the browser poll can share the number without importing the
+ * server wall fuse (lab store / node:crypto).
+ */
+export const PRODUCTION_V3_TAIL_GRACE_MS = 15 * 60_000;
+
+/** Client poll stays open through the shelf-tail grace. */
+export const PRODUCTION_V3_POLL_MAX_MS =
+  PRODUCTION_V3_JOB_MAX_WALL_MS + PRODUCTION_V3_TAIL_GRACE_MS;
+
 export function activeDeliveryJobMaxWallMs(
   env: NodeJS.ProcessEnv = process.env,
 ): number {
