@@ -3,6 +3,7 @@
  *   pnpm exec tsx scripts/test-invented-user-number.ts
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   findInventedUserAbsentNumber,
   inventedUserNumberPromptBlock,
@@ -12,6 +13,11 @@ import {
   INVENTED_USER_NUMBER_RULE_ID,
   P1_INVENTED_NUMBER_RULE_ID,
 } from "@/lib/llm/pro/delivery/pipeline-v3/invented-user-number";
+import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
+import {
+  BODY_ACCEPTANCE_CONTINUE_RULE,
+  bodySubstanceMayRetryOnce,
+} from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
 import {
   buildBodyGateAvoidanceBlockForPolish,
   gateBodyCategoryB,
@@ -233,5 +239,123 @@ const p3Fail = gateBodyCategoryB({
 });
 assert.ok(p3Fail && p3Fail.passed === false);
 assert.equal(p3Fail!.failed_rule, INVENTED_USER_NUMBER_RULE_ID);
+
+// --- phase A must use the same reality allowlist as the body step ---
+const groundedHours = {
+  page: "decision_brief",
+  page_title: "守住已说的时数",
+  page_subtitle: "主路与辅路",
+  core_judgment: "按收集里的每周不超过15小时来守边界。",
+  primary: {
+    name: "主路",
+    core_logic: "每周不超过15小时，只做已谈过的范围。",
+    why: "对齐收集",
+    when: "当前",
+  },
+  backup: {
+    name: "辅路",
+    core_logic: "超出已说时数就停。",
+    why: "止损",
+    when: "越界时",
+  },
+} as unknown as DeliveryPageData;
+const p1Plan = {
+  units: [
+    {
+      path: "core_judgment",
+      unit_claim: "用神承压偏高",
+      evidence: "窗口收窄",
+      calc_cite: "用神金",
+      chart_anchors: ["用神·metal"],
+    },
+  ],
+};
+
+const phaseABlind = gateContentPhaseA({
+  key: "decision_brief",
+  page_schema: groundedHours,
+  deep_evidence_plan: p1Plan as never,
+});
+assert.equal(phaseABlind.passed, false);
+assert.equal(
+  phaseABlind.failed_rule,
+  P1_INVENTED_NUMBER_RULE_ID,
+  "phase A without reality_blob false-fails a grounded quantity",
+);
+
+const phaseAGrounded = gateContentPhaseA({
+  key: "decision_brief",
+  page_schema: groundedHours,
+  deep_evidence_plan: p1Plan as never,
+  reality_blob: "收集：每周不超过15小时",
+});
+assert.equal(
+  phaseAGrounded.passed,
+  true,
+  "phase A with the body reality allowlist keeps the grounded quantity",
+);
+
+const phaseAInvented = gateContentPhaseA({
+  key: "decision_brief",
+  page_schema: inventPage,
+  deep_evidence_plan: p1Plan as never,
+  reality_blob: "对方已拒兼职；必须全职。未谈年薪数字。",
+});
+assert.equal(phaseAInvented.passed, false);
+assert.equal(
+  phaseAInvented.failed_rule,
+  P1_INVENTED_NUMBER_RULE_ID,
+  "passing reality_blob does not gut a real invented quantity",
+);
+
+assert.equal(
+  bodySubstanceMayRetryOnce({
+    ops_user: "production",
+    acceptance_armed: false,
+    failed_rule: P1_INVENTED_NUMBER_RULE_ID,
+  }),
+  true,
+);
+assert.equal(
+  bodySubstanceMayRetryOnce({
+    ops_user: "production",
+    acceptance_armed: false,
+    failed_rule: "gate_p4_body_invented_schedule",
+  }),
+  true,
+);
+assert.equal(
+  bodySubstanceMayRetryOnce({
+    ops_user: "production",
+    acceptance_armed: true,
+    failed_rule: P1_INVENTED_NUMBER_RULE_ID,
+  }),
+  false,
+);
+assert.equal(
+  bodySubstanceMayRetryOnce({
+    ops_user: "ops",
+    acceptance_armed: false,
+    failed_rule: P1_INVENTED_NUMBER_RULE_ID,
+  }),
+  false,
+);
+assert.equal(
+  bodySubstanceMayRetryOnce({
+    ops_user: "production",
+    acceptance_armed: false,
+    failed_rule: "scare_redline",
+  }),
+  false,
+);
+assert.equal(BODY_ACCEPTANCE_CONTINUE_RULE, "body_acceptance_continue");
+
+const step = readFileSync(
+  new URL("../lib/llm/pro/delivery/lab/run-step-v3.ts", import.meta.url),
+  "utf8",
+);
+assert.match(step, /bodySubstanceMayRetryOnce/);
+assert.match(step, /BODY_ACCEPTANCE_CONTINUE_RULE/);
+assert.match(step, /reality_blob: v3BodyRealityBlob\(opts\)/);
 
 console.log("ok: invented-user-number #11 detector + gate + scrub");

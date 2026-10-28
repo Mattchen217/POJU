@@ -31,6 +31,15 @@ export function gateContentPhaseA(input: {
    * Pass full only when polish was skipped and surface must hard-fail here.
    */
   body_surface?: "full" | "substance_only";
+  /**
+   * Same collecting / reality allowlist the body step used.
+   * #11 invented-number (and other grounded substance rulers) treat an
+   * omitted blob as "user gave nothing", so a quantity body already
+   * allowlisted fails here as invented.
+   */
+  reality_blob?: string | null;
+  partner_bazi?: "absent" | "present" | null;
+  pivot_chart_path?: "solo" | "dyad" | null;
 }): ContentGateVerdict {
   const notes: string[] = ["gate_phase:a", "ruler:shape_only_no_mutate"];
   const page = input.page_schema;
@@ -119,6 +128,9 @@ export function gateContentPhaseA(input: {
     key: input.key,
     page_schema: page,
     surface: bodySurface,
+    reality_blob: input.reality_blob,
+    partner_bazi: input.partner_bazi,
+    pivot_chart_path: input.pivot_chart_path,
   });
   if (catBody && !catBody.passed) {
     return {

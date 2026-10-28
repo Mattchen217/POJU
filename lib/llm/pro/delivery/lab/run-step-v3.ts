@@ -71,6 +71,8 @@ import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-e
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { isV3LabTransportSupplyFail } from "@/lib/llm/pro/delivery/dispatch/provider-escape";
 import {
+  BODY_ACCEPTANCE_CONTINUE_RULE,
+  bodySubstanceMayRetryOnce,
   buildAcceptanceCorrectiveBlock,
   POLISH_ACCEPTANCE_CONTINUE_RULE,
   polishQuotedScriptMayRetryOnce,
@@ -106,6 +108,28 @@ function ensurePage(
     lab.artifacts.by_page[page] = {};
   }
   return lab.artifacts.by_page[page]!;
+}
+
+/**
+ * Collecting / reality allowlist shared by the body substance gate and the
+ * phase-A recheck. Dropping it makes a grounded quantity look invented.
+ */
+function v3BodyRealityBlob(opts: {
+  reality_constraints?: string | null;
+  question_expectation?: string | null;
+  science_means_feed?: string | null;
+  metaphysics_moat_feed?: string | null;
+  eastern_calc_slice?: string | null;
+}): string {
+  return [
+    opts.reality_constraints,
+    opts.question_expectation,
+    opts.science_means_feed,
+    opts.metaphysics_moat_feed,
+    opts.eastern_calc_slice,
+  ]
+    .filter((s) => s?.trim())
+    .join("\n");
 }
 
 type V3EscapeKind = "judgment" | "body" | "polish" | "soft";
@@ -1437,6 +1461,7 @@ async function executeV3(
       p3_body_excerpt,
       pivot_chart_path: lab.source.pivot_chart_path ?? null,
       partner_bazi: lab.source.partner_bazi ?? null,
+      acceptance_corrective: v3AcceptanceCorrective(art, "body"),
     });
     if (!body.ok) {
       if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {
@@ -1499,15 +1524,7 @@ async function executeV3(
     art.page_schema_pre_polish = structuredClone(bodyPage);
     art.page_schema_by_locale = undefined;
     art.polish_skipped = undefined;
-    const realityBlob = [
-      opts.reality_constraints,
-      opts.question_expectation,
-      opts.science_means_feed,
-      opts.metaphysics_moat_feed,
-      opts.eastern_calc_slice,
-    ]
-      .filter((s) => s?.trim())
-      .join("\n");
+    const realityBlob = v3BodyRealityBlob(opts);
     /** 六页均有润色步：正文只硬拦事实/门槛；表面类 defer 到 polish（Skip 时回退 full）。 */
     const deferSurfaceToPolish = true;
     const bodyGate = gateBodyCategoryB({
@@ -1530,13 +1547,78 @@ async function executeV3(
       : null;
     const bodyFail = bodyGate && !bodyGate.passed;
     if (bodyFail) {
+      const bodyDetail = bodyGate.detail ?? "";
+      if (
+        bodySubstanceMayRetryOnce({
+          ops_user: lab.ops_user,
+          acceptance_armed: acceptanceArmedBody,
+          failed_rule: bodyGate.failed_rule,
+        })
+      ) {
+        setV3AcceptanceArmed(art, "body", true);
+        setV3AcceptancePrior(art, "body", {
+          failed_rule: bodyGate.failed_rule,
+          detail: bodyDetail,
+        });
+        return {
+          input_payload: {
+            key: page,
+            pipeline: "v3",
+            quality_gates: "category_b_substance",
+            acceptance_retry_scheduled: true,
+            prompt_chars: {
+              system: body.call_trace.system.length,
+              user: body.call_trace.user.length,
+            },
+            reasoning_chars: body.call_trace.reasoning?.length ?? 0,
+            meta: body.call_trace.meta,
+          },
+          raw_model_output: bodyPage,
+          processing_actions: [
+            { action: "runContentBodyGenerate", detail: "parse_only" },
+            {
+              action: "gateBodyCategoryB",
+              detail: bodyGate.failed_rule ?? "fail",
+            },
+            {
+              action: "v3_acceptance_retry_schedule",
+              detail: "body_substance_1plus1",
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: BODY_ACCEPTANCE_CONTINUE_RULE,
+            detail: `正文事实/门槛未过（${bodyGate.failed_rule ?? "gate"}）。生产验收再跑一枪（封顶 1+1）；仍不过则硬停。${bodyDetail}`,
+          },
+          output_to_next_stage: {
+            continue: true,
+            quality_retry: true,
+            next_chunk: 0,
+            chunks_total: 1,
+          },
+          tokens_used: body.tokens_used,
+          call_trace: body.call_trace,
+        };
+      }
+      const productionExhausted =
+        acceptanceArmedBody && lab.ops_user === "production";
+      if (productionExhausted) {
+        reportDeliveryAcceptanceExhausted({
+          phase: "content_body",
+          key: page,
+          failed_rule: bodyGate.failed_rule,
+          detail: bodyDetail,
+        });
+      }
       // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
+      // Production: the single substance continue already ran.
       clearV3Acceptance(art, "body");
       return {
         input_payload: {
           key: page,
           pipeline: "v3",
           quality_gates: "category_b_substance",
+          acceptance_retry_used: acceptanceArmedBody,
           prompt_chars: {
             system: body.call_trace.system.length,
             user: body.call_trace.user.length,
@@ -1555,7 +1637,11 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: bodyGate.failed_rule,
-          detail: `${bodyGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
+          detail: `${bodyDetail}（${
+            productionExhausted
+              ? "生产验收 1+1 已用尽 · 改生成侧后再跑"
+              : "Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑"
+          }）`,
         },
         output_to_next_stage: null,
         tokens_used: body.tokens_used,
@@ -1622,6 +1708,9 @@ async function executeV3(
       key: page,
       page_schema: art.page_schema as DeliveryPageData | undefined,
       deep_evidence_plan: art.plan as DeepEvidencePlan | undefined,
+      reality_blob: v3BodyRealityBlob(opts),
+      partner_bazi: lab.source.partner_bazi ?? null,
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
     });
     return {
       input_payload: { key: page, pipeline: "v3", phase: "gate_a" },
@@ -1705,15 +1794,7 @@ async function executeV3(
     if (!art.page_schema_pre_polish) {
       art.page_schema_pre_polish = structuredClone(draft);
     }
-    const realityBlobPolish = [
-      opts.reality_constraints,
-      opts.question_expectation,
-      opts.science_means_feed,
-      opts.metaphysics_moat_feed,
-      opts.eastern_calc_slice,
-    ]
-      .filter((s) => s?.trim())
-      .join("\n");
+    const realityBlobPolish = v3BodyRealityBlob(opts);
 
     /** Skip：不对 LLM；对冻结正文跑 full 表面闸。 */
     if (runOpts?.skip_polish) {
@@ -2350,7 +2431,8 @@ export async function runLabStepV3(
     );
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue" ||
-      result.gate_verdict.failed_rule === POLISH_ACCEPTANCE_CONTINUE_RULE;
+      result.gate_verdict.failed_rule === POLISH_ACCEPTANCE_CONTINUE_RULE ||
+      result.gate_verdict.failed_rule === BODY_ACCEPTANCE_CONTINUE_RULE;
     if (result.gate_verdict.passed && !result.error) {
       rec.status = "done";
     } else if (dispatchContinue) {
