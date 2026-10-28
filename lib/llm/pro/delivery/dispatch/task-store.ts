@@ -57,6 +57,11 @@ export async function releaseDispatchTaskLease(
   await kv.del(deliveryDispatchTaskLeaseKey(job_id, task_id));
 }
 
+export async function deliveryTaskLeaseHeld(job_id: string, task_id: string): Promise<boolean> {
+  const raw = await kv.get(deliveryDispatchTaskLeaseKey(job_id, task_id));
+  return Boolean(raw);
+}
+
 export async function patchDispatchTask(
   job_id: string,
   task_id: string,

@@ -166,6 +166,31 @@ async function main(): Promise<void> {
     read("vercel.json").includes("app/api/inngest/route.ts") &&
       read("app/api/inngest/route.ts").includes("maxDuration = 300"),
   );
+  const continueDispatch = read("lib/poju/delivery-continue-dispatch.ts");
+  assert(
+    "continue hop does not treat a missing worker as attached",
+    !continueDispatch.includes("assuming accepted") &&
+      continueDispatch.includes("no worker — direct stage"),
+  );
+  assert(
+    "unattached task stamps await_task_attach for status rescue",
+    continueDispatch.includes("await_task_attach:"),
+  );
+  assert(
+    "status rescues a running hop whose worker never attached",
+    statusSrc.includes("UNATTACHED_HOP_RESCUE_MS") &&
+      statusSrc.includes("unattached hop — direct") &&
+      statusSrc.includes("await_continue_ack|handoff_continue"),
+  );
+  assert(
+    "status route can host one rescued stage",
+    statusSrc.includes("maxDuration = 300") &&
+      read("vercel.json").includes("app/api/poju/final-delivery/status/route.ts"),
+  );
+  assert(
+    "park keeps an unattached task stamp",
+    read("lib/poju/final-delivery-stage-runner.ts").includes("await_task_attach:"),
+  );
 
   console.log(
     "\n" +
