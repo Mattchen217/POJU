@@ -4,13 +4,27 @@
  * Preference: Inngest (when INNGEST_EVENT_KEY is set) → QStash → direct fetch.
  * Vercel returns HTTP 508 when a /continue invoke self-fetches /continue;
  * Inngest/QStash publish from outside so the next hop is a fresh root request.
+ *
+ * Publish is not attachment. The continue function allows one run per job, so a
+ * hop sent from inside that function cannot ack until the sender returns.
+ * A missing ack runs the stage in this isolate (fast parent) or leaves
+ * `await_task_attach` for the status poll to host the next worker.
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
+
+import { deliveryTaskLeaseHeld } from "@/lib/llm/pro/delivery/dispatch/task-store";
 import { hasLiveDeliveryContinueForStage } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { getXhighJob, setXhighJobContent } from "@/lib/poju/xhigh-job-store";
 import { deliveryContinueFetchAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { inngest } from "@/lib/inngest/client";
 import type { DeliveryPipelineStage } from "@/lib/poju/final-delivery-stage-runner";
+
+/** Short enough that a blocked continue slot is released before status's 45s kill. */
+const CONTINUE_ATTACH_WAIT_MS = 8_000;
+const TASK_ATTACH_WAIT_MS = 8_000;
+
+const directStageDepth = new AsyncLocalStorage<number>();
 
 export type ContinuePostResult =
   | "accepted"
@@ -95,7 +109,7 @@ async function waitForContinueAck(
   let lastBeat = 0;
   while (Date.now() - started < timeoutMs) {
     if (await hasLiveDeliveryContinueForStage(job_id, stage)) return true;
-    // Status treats 45s without updated_at as a dead invoke. This wait is that long.
+    // Status hard-stops a running job after 45s without updated_at.
     if (Date.now() - lastBeat > 10_000) {
       lastBeat = Date.now();
       await setXhighJobContent(job_id, `await_continue_ack:${stage}:${Date.now()}`).catch(
@@ -105,6 +119,84 @@ async function waitForContinueAck(
     await sleep(250);
   }
   return hasLiveDeliveryContinueForStage(job_id, stage);
+}
+
+async function taskWorkerAttached(job_id: string, task_id: string): Promise<boolean> {
+  if (await deliveryTaskLeaseHeld(job_id, task_id)) return true;
+  const job = await getXhighJob(job_id);
+  const content = job?.accumulated_content ?? "";
+  return content.startsWith(`dispatch_task:${task_id}:`);
+}
+
+async function waitForTaskAttach(job_id: string, task_id: string, timeoutMs: number): Promise<boolean> {
+  const started = Date.now();
+  let lastBeat = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (await taskWorkerAttached(job_id, task_id)) return true;
+    if (Date.now() - lastBeat > 10_000) {
+      lastBeat = Date.now();
+      await setXhighJobContent(job_id, `await_task_attach:${task_id}:${Date.now()}`).catch(
+        () => undefined,
+      );
+    }
+    await sleep(250);
+  }
+  return taskWorkerAttached(job_id, task_id);
+}
+
+/**
+ * Continue publish succeeded but nobody took the lease.
+ * Run the stage here when this isolate can still host the parent hop.
+ * Deeper nests (assemble inside an already-direct stage) leave a fresh
+ * await_continue_ack so the status poll hosts them on a new 300s budget.
+ */
+async function runStageInThisIsolate(
+  job_id: string,
+  stage: string,
+): Promise<ContinuePostResult> {
+  const depth = directStageDepth.getStore() ?? 0;
+  if (depth >= 2) {
+    await setXhighJobContent(job_id, `await_continue_ack:${stage}:${Date.now()}`).catch(
+      () => undefined,
+    );
+    console.warn("[final-delivery] direct stage deferred to status", { job_id, stage, depth });
+    return "accepted";
+  }
+  console.warn("[final-delivery] continue published but no worker — direct stage", {
+    job_id,
+    stage,
+    depth,
+  });
+  try {
+    return await directStageDepth.run(depth + 1, async () => {
+      const { DELIVERY_PIPELINE_STAGES, runFinalDeliveryStage } = await import(
+        "@/lib/poju/final-delivery-stage-runner"
+      );
+      if (!(DELIVERY_PIPELINE_STAGES as readonly string[]).includes(stage)) return "rejected";
+      await runFinalDeliveryStage(job_id, stage as DeliveryPipelineStage);
+      return "accepted";
+    });
+  } catch (e) {
+    console.error("[final-delivery] direct stage failed", { job_id, stage, e });
+    return "rejected";
+  }
+}
+
+async function finishTaskPublish(
+  job_id: string,
+  task_id: string,
+  published: "published" | "failed",
+): Promise<"published" | "failed"> {
+  if (published !== "published") return published;
+  if (await waitForTaskAttach(job_id, task_id, TASK_ATTACH_WAIT_MS)) return "published";
+  await setXhighJobContent(job_id, `await_task_attach:${task_id}:${Date.now()}`).catch(
+    () => undefined,
+  );
+  console.warn("[final-delivery] task published but no worker — awaiting status rescue", {
+    job_id,
+    task_id,
+  });
+  return "published";
 }
 
 /**
@@ -267,12 +359,10 @@ export async function dispatchDeliveryContinue(
     const published = await publishContinueViaInngest(job_id, stage);
     if (published === "published") {
       // Inngest is async; ACK appears when the function acquires the lease.
-      if (await waitForContinueAck(job_id, stage, 45_000)) return "accepted";
-      console.warn("[final-delivery] Inngest published; ACK slow — assuming accepted", {
-        job_id,
-        stage,
-      });
-      return "accepted";
+      // Same-job continue concurrency is 1, so this wait cannot see a child
+      // that we ourselves are blocking. Missing ACK is not success.
+      if (await waitForContinueAck(job_id, stage, CONTINUE_ATTACH_WAIT_MS)) return "accepted";
+      return runStageInThisIsolate(job_id, stage);
     }
     console.warn("[final-delivery] Inngest continue failed — falling through", {
       job_id,
@@ -289,12 +379,8 @@ export async function dispatchDeliveryContinue(
   const viaQStash = async (): Promise<ContinuePostResult> => {
     const published = await publishContinueViaQStash(job_id, stage, secret, origin);
     if (published !== "published") return "rejected";
-    if (await waitForContinueAck(job_id, stage, 45_000)) return "accepted";
-    console.warn("[final-delivery] QStash published; ACK slow — assuming accepted", {
-      job_id,
-      stage,
-    });
-    return "accepted";
+    if (await waitForContinueAck(job_id, stage, CONTINUE_ATTACH_WAIT_MS)) return "accepted";
+    return runStageInThisIsolate(job_id, stage);
   };
 
   if (shouldDispatchContinueViaQStash()) {
@@ -305,7 +391,10 @@ export async function dispatchDeliveryContinue(
   if (direct === "loop_blocked") {
     if (shouldDispatchContinueViaInngest()) {
       const pub = await publishContinueViaInngest(job_id, stage);
-      if (pub === "published") return "accepted";
+      if (pub === "published") {
+        if (await waitForContinueAck(job_id, stage, CONTINUE_ATTACH_WAIT_MS)) return "accepted";
+        return runStageInThisIsolate(job_id, stage);
+      }
     }
     if (qstashToken()) {
       console.info("[final-delivery] 508 → falling back to QStash", { job_id, stage });
@@ -331,7 +420,7 @@ export async function publishDeliveryTask(
   secret: string,
 ): Promise<"published" | "failed"> {
   if (shouldDispatchContinueViaInngest()) {
-    return publishTaskViaInngest(job_id, task_id);
+    return finishTaskPublish(job_id, task_id, await publishTaskViaInngest(job_id, task_id));
   }
 
   const origin = continueOrigin();
@@ -370,7 +459,7 @@ export async function publishDeliveryTask(
         return "failed";
       }
       console.info("[final-delivery] QStash task published", { job_id, task_id });
-      return "published";
+      return finishTaskPublish(job_id, task_id, "published");
     } catch (e) {
       console.warn("[final-delivery] QStash task publish failed", { job_id, task_id, e });
       return "failed";
@@ -390,7 +479,7 @@ export async function publishDeliveryTask(
     }).catch((e) => {
       console.warn("[final-delivery] direct task fetch failed", { job_id, task_id, e });
     });
-    return "published";
+    return finishTaskPublish(job_id, task_id, "published");
   } catch (e) {
     console.warn("[final-delivery] direct task publish failed", { job_id, task_id, e });
     return "failed";

@@ -25,6 +25,9 @@
     "app/api/poju/final-delivery/route.ts": {
       "maxDuration": 300
     },
+    "app/api/poju/final-delivery/status/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/poju/final-delivery/continue/route.ts": {
       "maxDuration": 300
     },

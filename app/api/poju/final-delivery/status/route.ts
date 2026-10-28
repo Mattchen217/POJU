@@ -2,11 +2,14 @@ import { after, NextRequest, NextResponse } from "next/server";
 
 import { isKvStoreOutage } from "@/lib/kv/upstash-plan-limit";
 
+import { deliveryTaskLeaseHeld, releaseDispatchTaskLease } from "@/lib/llm/pro/delivery/dispatch/task-store";
 import {
   forceReleaseDeliveryContinueLease,
+  hasLiveDeliveryContinueForStage,
   loadAllDeliverySegmentReady,
   loadDeliveryContinueLease,
   loadDeliveryJobContinueHops,
+  type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import type { DeliverySegmentReady } from "@/lib/llm/pro/delivery/run-segment-chain";
 import {
@@ -27,11 +30,13 @@ import {
   setXhighJobContent,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
-import { isProductionV3ClosedFailure } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
+import { isProductionV3ClosedFailure, productionDeliveryUsesV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 import { isFinalDeliveryJobInput, isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** Rescued stage/task runs in after() and needs a full worker budget. */
+export const maxDuration = 300;
 
 /**
  * Heartbeat ~12s while a task runs.
@@ -48,6 +53,12 @@ const STALE_RUNNING_MS = 45_000;
 const PENDING_WORKER_GRACE_MS = 3 * 60_000;
 /** Still pending with only await_worker stamps → run the stage in this isolate. */
 const PENDING_DIRECT_AFTER_MS = 75_000;
+/**
+ * Running job parked on a publish that never attached (await_continue_ack /
+ * await_task_attach / dispatch_parked). Rescue before the 45s hard stop.
+ * Above the 12s stage heartbeat so a live invoke is not stolen.
+ */
+const UNATTACHED_HOP_RESCUE_MS = 15_000;
 /** Legacy 40m name kept for the fuse test. Live jobs use activeDeliveryJobMaxWallMs (v3 = 120m). */
 const MAX_JOB_AGE_MS = DELIVERY_JOB_MAX_WALL_MS;
 
@@ -62,6 +73,56 @@ const STAGE_PROGRESS_ZH: Record<string, string> = {
   mark: "正在打标与润色…",
 };
 
+function isPipelineStage(value: string): value is DeliveryPipelineStage {
+  return value === "finalize" || value === "segments" || value === "assemble";
+}
+
+type UnattachedHop =
+  | { kind: "stage"; stage: DeliveryPipelineStage; nextN: number }
+  | { kind: "task"; task_id: string; nextN: number };
+
+/**
+ * Publish succeeded and the worker never heartbeated. Not a general stale resume:
+ * only these stamps mean the next hop was never entered.
+ * A counted direct_continue stamp at n>=1 already failed to start — stop rescuing.
+ */
+function classifyUnattachedHop(
+  content: string | null | undefined,
+  currentStage: string | null,
+): UnattachedHop | "capped" | null {
+  if (!content) return null;
+  const counted = content.match(/^direct_continue:(stage|task):([^:]+):\d+:n(\d+)$/);
+  if (counted) {
+    const n = Number(counted[3]);
+    if (n >= 1) return "capped";
+    if (counted[1] === "stage" && isPipelineStage(counted[2])) {
+      return { kind: "stage", stage: counted[2], nextN: n + 1 };
+    }
+    if (counted[1] === "task" && counted[2]) {
+      return { kind: "task", task_id: counted[2], nextN: n + 1 };
+    }
+    return null;
+  }
+  const ack = content.match(/^(?:await_continue_ack|handoff_continue):([^:]+):\d+/);
+  if (ack?.[1] && isPipelineStage(ack[1])) {
+    return { kind: "stage", stage: ack[1], nextN: 0 };
+  }
+  const plainDirect = content.match(/^direct_continue:(finalize|segments|assemble):\d+$/);
+  if (plainDirect?.[1] && isPipelineStage(plainDirect[1])) {
+    return { kind: "stage", stage: plainDirect[1], nextN: 0 };
+  }
+  const task = content.match(/^await_task_attach:([^:]+):\d+/);
+  if (task?.[1]) return { kind: "task", task_id: task[1], nextN: 0 };
+  if (content.startsWith("dispatch_parked:") || content.startsWith("dispatch_scheduled:")) {
+    if (currentStage === "assemble") return { kind: "stage", stage: "assemble", nextN: 0 };
+    if (productionDeliveryUsesV3()) return { kind: "task", task_id: "v3.step", nextN: 0 };
+    if (currentStage === "segments" || currentStage === "finalize") {
+      return { kind: "stage", stage: currentStage, nextN: 0 };
+    }
+  }
+  return null;
+}
+
 function streamedSegmentsFromReady(ready: DeliverySegmentReady[]) {
   return ready.map((s) => ({
     key: s.key,
@@ -72,6 +133,80 @@ function streamedSegmentsFromReady(ready: DeliverySegmentReady[]) {
     evidence_ready: s.evidence_ready,
     page_schema: s.page_schema ?? undefined,
   }));
+}
+
+/**
+ * Host the next hop on this status request when publish never became a worker.
+ * Returns a running payload when a rescue was started. Null lets the caller
+ * keep the normal stale/running path (including hard STOP when rescue is capped).
+ */
+async function rescueUnattachedRunningJob(
+  job: { job_id: string; status: string; updated_at: number; accumulated_content?: string | null },
+  currentStage: string | null,
+): Promise<NextResponse | null> {
+  if (job.status !== "running") return null;
+  const age = Date.now() - job.updated_at;
+  const hop = classifyUnattachedHop(job.accumulated_content, currentStage);
+  if (!hop || hop === "capped") return null;
+  if (age <= UNATTACHED_HOP_RESCUE_MS) return null;
+
+  const { loadDeliveryDispatchDag } = await import("@/lib/llm/pro/delivery/dispatch/task-store");
+  const dag = await loadDeliveryDispatchDag(job.job_id).catch(() => null);
+  const liveDispatch = dag
+    ? Object.values(dag.tasks).filter(
+        (t) => t.status === "running" && Date.now() - (t.updated_at || 0) < 330_000,
+      )
+    : [];
+  if (liveDispatch.length > 0) return null;
+
+  if (hop.kind === "stage") {
+    const live = await hasLiveDeliveryContinueForStage(job.job_id, hop.stage);
+    if (live && age <= STALE_RUNNING_MS) return null;
+    if (live) await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
+  } else {
+    const held = await deliveryTaskLeaseHeld(job.job_id, hop.task_id);
+    if (held && age <= STALE_RUNNING_MS) return null;
+    if (held) await releaseDispatchTaskLease(job.job_id, hop.task_id).catch(() => undefined);
+  }
+
+  const stampKind = hop.kind === "stage" ? "stage" : "task";
+  const stampId = hop.kind === "stage" ? hop.stage : hop.task_id;
+  await setXhighJobContent(
+    job.job_id,
+    `direct_continue:${stampKind}:${stampId}:${Date.now()}:n${hop.nextN}`,
+  ).catch(() => undefined);
+
+  const jobId = job.job_id;
+  after(async () => {
+    try {
+      if (hop.kind === "stage") {
+        const { runFinalDeliveryStage } = await import("@/lib/poju/final-delivery-job-runner");
+        await runFinalDeliveryStage(jobId, hop.stage);
+        return;
+      }
+      const { runDeliveryTaskDirect } = await import("@/lib/poju/delivery-task-direct");
+      await runDeliveryTaskDirect(jobId, hop.task_id);
+    } catch (e) {
+      console.error("[final-delivery-status] direct hop failed", e);
+    }
+  });
+  console.warn("[final-delivery-status] unattached hop — direct", {
+    job_id: jobId,
+    kind: hop.kind,
+    target: stampId,
+    age_ms: age,
+    n: hop.nextN,
+  });
+  const ready = await loadAllDeliverySegmentReady(jobId).catch(() => []);
+  const streamed_segments = streamedSegmentsFromReady(ready);
+  return NextResponse.json({
+    ok: true,
+    job_id: jobId,
+    status: "running",
+    current_stage: currentStage,
+    progress_label: STAGE_PROGRESS_ZH[currentStage ?? ""] ?? "正在逐段撰写…",
+    streamed_segments: streamed_segments.length ? streamed_segments : undefined,
+  });
 }
 
 /**
@@ -265,9 +400,13 @@ async function readFinalDeliveryStatus(req: NextRequest) {
     }
   }
 
+  const rescued = await rescueUnattachedRunningJob(job, current_stage);
+  if (rescued) return rescued;
+
   // Dead invoke (Vercel kill / dropped after) — heartbeat stale.
   // Dispatch mode: workers park the /continue invoke but keep job alive via task heartbeats.
   // Never false-STOP while DAG still has live running tasks (assign/write can take minutes).
+  // Unattached publish stamps are rescued above; this STOP is for a hop that was entered and died.
   if (
     (job.status === "running" || job.status === "pending") &&
     Date.now() - job.updated_at > STALE_RUNNING_MS

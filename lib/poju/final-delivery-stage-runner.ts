@@ -1065,12 +1065,20 @@ async function progressDispatchSegments(
 ): Promise<"merged" | "scheduled" | "failed"> {
   /** Park this invoke: workers (or a delayed safety sweep) resume scheduling. */
   const parkForWorkers = async (why: string): Promise<"scheduled"> => {
-    // Keep job.updated_at fresh until workers' own heartbeats take over (status STALE=45s).
-    await setXhighJobContent(
-      job_id,
-      `dispatch_parked:${why}:${Date.now()}`,
-    ).catch(() => undefined);
+    // A task publish that never attached stamps await_task_attach. A live task
+    // stamps dispatch_task. Overwriting either hides the hop from status rescue.
     stopHeartbeat();
+    const snap = await getXhighJob(job_id);
+    const prior = snap?.accumulated_content ?? "";
+    const workerStamp =
+      prior.startsWith("await_task_attach:") || prior.startsWith("dispatch_task:");
+    const v3Busy = productionDeliveryUsesV3() && (await productionV3LeaseHeld(job_id));
+    if (!workerStamp && !v3Busy) {
+      await setXhighJobContent(
+        job_id,
+        `dispatch_parked:${why}:${Date.now()}`,
+      ).catch(() => undefined);
+    }
     await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
     leaseHandedOff.value = true;
     // Safety net if all workers die — delayed continue does NOT bump hop fuse.
