@@ -14,6 +14,16 @@ import {
   productionDeliveryUsesV3,
   resolveDeliveryPipeline,
 } from "../lib/llm/pro/delivery/pipeline-v3/flag";
+import { LAB_STEP_DEFS_V3 } from "../lib/llm/pro/delivery/lab/types-v3";
+import { saveDeliveryLab } from "../lib/llm/pro/delivery/lab/store";
+import {
+  deliveryWallFuseDecision,
+  PRODUCTION_V3_POLL_MAX_MS,
+  PRODUCTION_V3_TAIL_GRACE_MS,
+  productionV3LabId,
+  resolveDeliveryWallFuse,
+  v3CursorAwaitingShelfAssemble,
+} from "../lib/llm/pro/delivery/pipeline-v3/wall-tail";
 import {
   isProductionV3Task,
   isV3DispatchContinue,
@@ -455,4 +465,104 @@ if (!guidancePlan.ok) {
   );
 }
 
-console.log("production v3 mount ok");
+const asmIdx = LAB_STEP_DEFS_V3.findIndex((d) => d.step_key === "book.assemble");
+const prevKey = LAB_STEP_DEFS_V3[asmIdx - 1]!.step_key;
+assert.equal(prevKey, "validation_close.evidence_soft");
+assert.equal(
+  v3CursorAwaitingShelfAssemble({ cursor_index: asmIdx, steps: {}, pipeline: "v3_three_step" }),
+  true,
+);
+assert.equal(
+  v3CursorAwaitingShelfAssemble({
+    cursor_index: asmIdx - 1,
+    pipeline: "v3_three_step",
+    steps: { [prevKey]: { status: "approved" } },
+  }),
+  true,
+);
+assert.equal(
+  v3CursorAwaitingShelfAssemble({
+    cursor_index: 4,
+    pipeline: "v3_three_step",
+    steps: { "situation_analysis.content.body": { status: "approved" } },
+  }),
+  false,
+);
+assert.equal(
+  v3CursorAwaitingShelfAssemble({
+    cursor_index: asmIdx,
+    pipeline: "legacy",
+    steps: {},
+  }),
+  false,
+);
+
+const wall = PRODUCTION_V3_JOB_MAX_WALL_MS;
+assert.equal(
+  deliveryWallFuseDecision({ created_at: 0, now_ms: wall + 1, shelfTailReady: false }).tripped,
+  true,
+  "mid-book still dies at 120m",
+);
+assert.equal(
+  deliveryWallFuseDecision({ created_at: 0, now_ms: wall + 1, shelfTailReady: true }).tripped,
+  false,
+  "assemble tail is inside the grace",
+);
+assert.equal(
+  deliveryWallFuseDecision({
+    created_at: 0,
+    now_ms: wall + PRODUCTION_V3_TAIL_GRACE_MS + 1,
+    shelfTailReady: true,
+  }).tripped,
+  true,
+  "grace is finite",
+);
+assert.equal(
+  deliveryWallFuseDecision({
+    created_at: 0,
+    now_ms: wall + 1,
+    shelfTailReady: true,
+    env: { DELIVERY_PIPELINE: "legacy" } as unknown as NodeJS.ProcessEnv,
+  }).tripped,
+  true,
+  "legacy wall does not gain the v3 tail",
+);
+assert.equal(PRODUCTION_V3_POLL_MAX_MS, wall + PRODUCTION_V3_TAIL_GRACE_MS);
+
+async function assertTailGraceLoadsLab(): Promise<void> {
+  const tailJob = "fd_tail_grace";
+  const created = 1_000;
+  await saveDeliveryLab({
+    version: 1,
+    lab_id: productionV3LabId(tailJob),
+    pipeline: "v3_three_step",
+    cursor_index: asmIdx,
+    steps: { "book.assemble": { status: "idle" } },
+  } as unknown as import("../lib/llm/pro/delivery/lab/types").DeliveryLabSession);
+  const inside = await resolveDeliveryWallFuse({
+    job_id: tailJob,
+    created_at: created,
+    stage: "segments",
+    now_ms: created + wall + 60_000,
+  });
+  assert.equal(inside.tripped, false);
+  assert.equal(inside.limit_ms, wall + PRODUCTION_V3_TAIL_GRACE_MS);
+  const midBook = await resolveDeliveryWallFuse({
+    job_id: "fd_no_lab",
+    created_at: created,
+    stage: "segments",
+    now_ms: created + wall + 60_000,
+  });
+  assert.equal(midBook.tripped, true);
+  assert.equal(midBook.limit_ms, wall);
+}
+
+void assertTailGraceLoadsLab().then(
+  () => {
+    console.log("production v3 mount ok");
+  },
+  (err: unknown) => {
+    console.error(err);
+    process.exit(1);
+  },
+);

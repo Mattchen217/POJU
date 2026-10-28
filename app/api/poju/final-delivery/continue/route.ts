@@ -60,20 +60,25 @@ export async function POST(req: Request) {
     {
       const {
         DELIVERY_JOB_MAX_CONTINUE_HOPS,
-        activeDeliveryJobMaxWallMs,
         isDeliveryJobContinueHopExceeded,
-        isActiveDeliveryJobWallExceeded,
       } = await import("@/lib/llm/pro/delivery/delivery-retry-policy");
+      const { resolveDeliveryWallFuse } = await import(
+        "@/lib/llm/pro/delivery/pipeline-v3/wall-tail"
+      );
       const { loadDeliveryJobContinueHops } = await import(
         "@/lib/llm/pro/delivery/delivery-stage-store"
       );
       const hops = await loadDeliveryJobContinueHops(job_id).catch(() => 0);
-      const wall = isActiveDeliveryJobWallExceeded(job.created_at);
+      const wallFuse = await resolveDeliveryWallFuse({
+        job_id,
+        created_at: job.created_at,
+        stage: typeof stage === "string" ? stage : job.current_stage,
+      });
       const hopCap = isDeliveryJobContinueHopExceeded(hops);
-      if (wall || hopCap) {
+      if (wallFuse.tripped || hopCap) {
         const reason = hopCap
           ? `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`
-          : `job_time_budget_exhausted:age_ms=${Date.now() - job.created_at}:max_ms=${activeDeliveryJobMaxWallMs()}`;
+          : `job_time_budget_exhausted:age_ms=${Date.now() - job.created_at}:max_ms=${wallFuse.limit_ms}`;
         console.error("[final-delivery-STOP] continue route job fuse", {
           job_id,
           stage,

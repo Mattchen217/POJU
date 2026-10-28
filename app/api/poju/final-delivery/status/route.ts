@@ -17,8 +17,8 @@ import {
   DELIVERY_JOB_MAX_WALL_MS,
   activeDeliveryJobMaxWallMs,
   isDeliveryJobContinueHopExceeded,
-  isActiveDeliveryJobWallExceeded,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { resolveDeliveryWallFuse } from "@/lib/llm/pro/delivery/pipeline-v3/wall-tail";
 import {
   currentDeliveryDeployGeneration,
   isDeliveryJobFromCurrentDeploy,
@@ -397,10 +397,14 @@ async function readFinalDeliveryStatus(req: NextRequest) {
   // Absolute wall-clock / continue-hop fuse even with a live heartbeat.
   if (job.status === "running" || job.status === "pending") {
     const continueHops = await loadDeliveryJobContinueHops(job.job_id).catch(() => 0);
-    const wallMax = Math.max(MAX_JOB_AGE_MS, activeDeliveryJobMaxWallMs());
-    const wallTripped = isActiveDeliveryJobWallExceeded(job.created_at) || age_ms > wallMax;
+    const wallFuse = await resolveDeliveryWallFuse({
+      job_id: job.job_id,
+      created_at: job.created_at,
+      stage: current_stage,
+    });
+    const wallMax = Math.max(MAX_JOB_AGE_MS, wallFuse.limit_ms, activeDeliveryJobMaxWallMs());
     const hopTripped = isDeliveryJobContinueHopExceeded(continueHops);
-    if (wallTripped || hopTripped) {
+    if (wallFuse.tripped || hopTripped) {
       const reason = hopTripped
         ? "job_continue_budget_exhausted"
         : "job_time_budget_exhausted";
