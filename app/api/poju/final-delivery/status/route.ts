@@ -40,6 +40,12 @@ export const dynamic = "force-dynamic";
  * When segment:ready pages already exist, always pause for Continue — never wipe the book.
  */
 const STALE_RUNNING_MS = 45_000;
+/**
+ * Create publishes Inngest and returns while the job is still pending.
+ * The worker may not heartbeat within one stale window (cold start / queue).
+ * Rearm that hop instead of hard-STOP; do not charge a Pass.
+ */
+const PENDING_WORKER_GRACE_MS = 3 * 60_000;
 /** Legacy 40m name kept for the fuse test. Live jobs use activeDeliveryJobMaxWallMs (v3 = 120m). */
 const MAX_JOB_AGE_MS = DELIVERY_JOB_MAX_WALL_MS;
 
@@ -306,6 +312,38 @@ async function readFinalDeliveryStatus(req: NextRequest) {
         stale_ms: Date.now() - job.updated_at,
         lease_stage: lease.stage,
         lease_expires_at: lease.expires_at,
+      });
+    }
+
+    // Worker has not entered the stage yet. Killing here makes Inngest skip a still-valid job.
+    const ageMs = Date.now() - job.created_at;
+    if (job.status === "pending" && ageMs < PENDING_WORKER_GRACE_MS) {
+      const wakeStage =
+        current_stage === "segments" || current_stage === "assemble" || current_stage === "finalize"
+          ? current_stage
+          : "finalize";
+      await setXhighJobContent(
+        job.job_id,
+        `await_worker:${wakeStage}:${Date.now()}`,
+      ).catch(() => undefined);
+      const { publishContinueViaInngest, shouldDispatchContinueViaInngest } = await import(
+        "@/lib/poju/delivery-continue-dispatch"
+      );
+      if (shouldDispatchContinueViaInngest()) {
+        await publishContinueViaInngest(job.job_id, wakeStage).catch(() => undefined);
+      }
+      console.info("[final-delivery-status] pending before worker heartbeat — rearm continue", {
+        job_id: job.job_id,
+        stage: wakeStage,
+        age_ms: ageMs,
+        stale_ms: Date.now() - job.updated_at,
+      });
+      return NextResponse.json({
+        ok: true,
+        job_id: job.job_id,
+        status: "pending",
+        current_stage: wakeStage,
+        progress_label: STAGE_PROGRESS_ZH[wakeStage] ?? STAGE_PROGRESS_ZH.finalize,
       });
     }
 

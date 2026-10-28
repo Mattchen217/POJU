@@ -166,6 +166,11 @@ async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Pro
   const { shouldDispatchContinueViaInngest, publishContinueViaInngest } = await import(
     "@/lib/poju/delivery-continue-dispatch"
   );
+  // Stamp the queued stage so status does not treat a brand-new job as an unknown dead invoke.
+  await updateXhighJobStatus(job_id, "pending", {
+    current_stage: "finalize",
+    accumulated_content: `queued:finalize:${Date.now()}`,
+  }).catch(() => undefined);
   if (shouldDispatchContinueViaInngest()) {
     const published = await publishContinueViaInngest(job_id, "finalize");
     if (published === "published") return;

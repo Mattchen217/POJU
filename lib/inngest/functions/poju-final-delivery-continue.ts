@@ -58,6 +58,14 @@ export const pojuFinalDeliveryContinue = inngest.createFunction(
       if (job.status === "completed" || job.status === "failed") {
         return { skipped: true, status: job.status };
       }
+      // A late rearm of an earlier stage must not restart finalize after segments began.
+      if (isStage(job.current_stage) && isStage(stage)) {
+        const currentIdx = DELIVERY_PIPELINE_STAGES.indexOf(job.current_stage);
+        const eventIdx = DELIVERY_PIPELINE_STAGES.indexOf(stage);
+        if (currentIdx > eventIdx) {
+          return { skipped: true, reason: "stage_already_advanced", current: job.current_stage };
+        }
+      }
 
       {
         const {
