@@ -231,7 +231,10 @@ export function BirthInfoPicker({ onSubmit, onCancel, locale }: BirthInfoPickerP
         ) : null}
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={(event) => {
+            event.preventDefault();
+            handleSubmit();
+          }}
           className="submit-btn"
           disabled={!canSubmit}
           aria-disabled={!canSubmit}

@@ -40,7 +40,13 @@ export async function startPassCheckout(
     const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
     const me = (await meRes.json().catch(() => ({}))) as {
       user?: { id?: string } | null;
+      error?: string;
     };
+    // 503 session_uncertain / network / 5xx: stay put. Only a definite
+    // signed-out probe (200 + no user) sends the browser to /login.
+    if (!meRes.ok || me.error === "session_uncertain") {
+      return { ok: false, error: "network_error" };
+    }
     if (!me.user?.id) {
       try {
         window.localStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(intentWithReturn));
