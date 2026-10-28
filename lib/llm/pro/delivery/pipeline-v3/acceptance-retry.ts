@@ -46,6 +46,28 @@ export function polishQuotedScriptMayRetryOnce(input: {
   );
 }
 
+/**
+ * Production content.body substance miss → one republish of the same step.
+ * Covers `gate_p1_body_invented_number` and the other body category rulers.
+ * Lab must not emit this. The second miss stays a hard fail.
+ */
+export const BODY_ACCEPTANCE_CONTINUE_RULE = "body_acceptance_continue";
+
+/**
+ * Production-only 1+1 for a content.body category-B miss.
+ * Caller passes a `gateBodyCategoryB` rule. Transport, scare, and shape
+ * misses stay on their own paths. Second miss stays a hard fail.
+ */
+export function bodySubstanceMayRetryOnce(input: {
+  ops_user: string | null | undefined;
+  acceptance_armed: boolean;
+  failed_rule: string | null | undefined;
+}): boolean {
+  const rule = (input.failed_rule ?? "").trim();
+  if (!rule.startsWith("gate_")) return false;
+  return input.ops_user === "production" && !input.acceptance_armed;
+}
+
 /** Corrective block appended on attempt 2 only — category, never case-phrase bans. */
 export function buildAcceptanceCorrectiveBlock(
   fail: AcceptancePriorFail | null | undefined,

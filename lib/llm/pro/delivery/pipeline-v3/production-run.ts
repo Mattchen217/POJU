@@ -47,7 +47,10 @@ import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types"
 import type { DeliverySegmentReady, SegmentChainProgress } from "@/lib/llm/pro/delivery/run-segment-chain";
 import { V1_DELIVERY_SEGMENT_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
 import { failXhighJob, releaseXhighSessionLock, setXhighJobContent } from "@/lib/poju/xhigh-job-store";
-import { POLISH_ACCEPTANCE_CONTINUE_RULE } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
+import {
+  BODY_ACCEPTANCE_CONTINUE_RULE,
+  POLISH_ACCEPTANCE_CONTINUE_RULE,
+} from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 
 /** One in-flight v3 step. Reused so the task lease serializes workers. */
@@ -57,6 +60,7 @@ const V3_CONTINUE_RULES = new Set([
   "write_dispatch_continue",
   "soft_dispatch_continue",
   POLISH_ACCEPTANCE_CONTINUE_RULE,
+  BODY_ACCEPTANCE_CONTINUE_RULE,
 ]);
 
 const BOOK_ASSEMBLE_STEP = "book.assemble";
@@ -362,8 +366,11 @@ async function advanceToNextLlm(
  * assemble), then at most one model call. Supply-side chunk/escape continues
  * republish the same task. A polish thickness miss, or a P4 quoted-script
  * miss after polish, arms one in-step acceptance continue
- * (`polish_acceptance_continue`); the second miss is returned, not retried
- * here. P4 quoted script is a surface class: body defers it to this step.
+ * (`polish_acceptance_continue`). A content.body substance miss (including
+ * `gate_p1_body_invented_number`) arms `body_acceptance_continue`. The
+ * second miss is returned, not retried here. The phase-A gate rechecks the
+ * same reality allowlist the body step used, so a grounded quantity is not
+ * a hard stop. P4 quoted script is a surface class: body defers it to polish.
  */
 export async function runProductionV3Task(input: {
   job_id: string;
