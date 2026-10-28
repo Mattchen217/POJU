@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
+import { isKvStoreOutage, isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import {
   createXhighJob,
@@ -44,6 +44,9 @@ async function main(): Promise<void> {
   );
   assert("ignores ordinary failures", !isUpstashPlanLimitError(new Error("Missing session_id")));
   assert("ignores openrouter missing", !isUpstashPlanLimitError(new Error("OPENROUTER_API_KEY")));
+  assert("plan limit is a store outage", isKvStoreOutage(new Error(live)));
+  assert("redis transport is a store outage", isKvStoreOutage(new Error("fetch failed")));
+  assert("ordinary errors are not a store outage", !isKvStoreOutage(new Error("Missing session_id")));
 
   let jobId = "";
   await runWithEphemeralXhighKv(async () => {
@@ -119,6 +122,23 @@ async function main(): Promise<void> {
   assert(
     "delivery hops stay in-process when KV is ephemeral",
     read("lib/poju/final-delivery-stage-runner.ts").includes("ephemeral continue in-process"),
+  );
+  const statusRoute = read("app/api/poju/final-delivery/status/route.ts");
+  assert(
+    "status turns a Redis outage into a terminal payload",
+    statusRoute.includes("isKvStoreOutage") && statusRoute.includes('reason: "kv_unavailable"'),
+  );
+  assert(
+    "ephemeral create does not return a pollable job id",
+    delivery.includes("ephemeral book not durable") && delivery.includes('reason: "kv_unavailable"'),
+  );
+  assert(
+    "v3 steps run in-process when KV is ephemeral",
+    read("lib/poju/final-delivery-stage-runner.ts").includes("v3 steps in-process"),
+  );
+  assert(
+    "poll stops on kv_unavailable",
+    read("lib/poju/poll-final-delivery-job.ts").includes('data.reason === "kv_unavailable"'),
   );
 
   console.log(

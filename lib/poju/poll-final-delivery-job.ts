@@ -61,7 +61,12 @@ export type FinalDeliveryJobPollResult =
       ok: false;
       job_id: string;
       retryable: boolean;
-      reason: PojuXhighJobFailureReason | "poll_timeout" | "completed_without_result" | "job_not_found";
+      reason:
+        | PojuXhighJobFailureReason
+        | "poll_timeout"
+        | "completed_without_result"
+        | "job_not_found"
+        | "kv_unavailable";
       error: string;
       /** Soft pause — keep streamed UI; user may Continue. */
       interrupted?: boolean;
@@ -350,6 +355,18 @@ export async function pollFinalDeliveryJobUntilDone(input: {
     }
 
     if (status === "failed") {
+      if (data.reason === "kv_unavailable") {
+        return {
+          ok: false,
+          job_id: input.job_id,
+          retryable: true,
+          reason: "kv_unavailable",
+          error:
+            (typeof data.error === "string" && data.error.trim()) ||
+            "delivery status store unavailable — retry the book",
+          interrupted: false,
+        };
+      }
       const detail =
         typeof data.error_detail === "string" && data.error_detail.trim()
           ? data.error_detail.trim()

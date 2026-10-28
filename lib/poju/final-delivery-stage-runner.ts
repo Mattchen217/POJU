@@ -122,6 +122,7 @@ import {
   PRODUCTION_V3_TASK_ID,
   productionV3HardBlock,
   productionV3LeaseHeld,
+  runProductionV3Task,
 } from "@/lib/llm/pro/delivery/pipeline-v3/production-run";
 import {
   assembleIsOk,
@@ -965,6 +966,64 @@ async function progressProductionV3Segments(
       return "failed";
     }
     return "merged";
+  }
+
+  if (isEphemeralKvActive()) {
+    // No other isolate can see this store. Run v3 steps here until the book
+    // is checkpointed or the request budget is gone — never park a remote worker.
+    console.info("[final-delivery] v3 steps in-process (ephemeral kv)", { job_id });
+    for (let step = 0; step < 40; step += 1) {
+      const remain = ephemeralRemainingMs();
+      if (remain != null && remain < 25_000) {
+        await failXhighJob(job_id, "inline delivery stopped before the book finished", {
+          retryable: true,
+          failure_reason: "interrupted",
+          current_stage: "segments",
+          accumulated_content: "failed:ephemeral_wall",
+        });
+        stopHeartbeat();
+        await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+        leaseHandedOff.value = true;
+        return "failed";
+      }
+      const ready = await loadDeliveryStageCheckpoint(job_id, "segments");
+      if (ready) return "merged";
+      const outcome = await runProductionV3Task({ job_id, jobInput: input });
+      if (!outcome.ok) {
+        await failProductionV3Job({
+          job_id,
+          session_id: input.session_id,
+          reason: outcome.reason,
+        });
+        stopHeartbeat();
+        await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+        leaseHandedOff.value = true;
+        return "failed";
+      }
+      if (outcome.next === "wake_segments") {
+        const saved = await loadDeliveryStageCheckpoint(job_id, "segments");
+        if (saved) return "merged";
+        await failProductionV3Job({
+          job_id,
+          session_id: input.session_id,
+          reason: "v3_book_missing_checkpoint",
+        });
+        stopHeartbeat();
+        await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+        leaseHandedOff.value = true;
+        return "failed";
+      }
+    }
+    await failXhighJob(job_id, "inline delivery stopped before the book finished", {
+      retryable: true,
+      failure_reason: "interrupted",
+      current_stage: "segments",
+      accumulated_content: "failed:ephemeral_step_cap",
+    });
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    leaseHandedOff.value = true;
+    return "failed";
   }
 
   if (await productionV3LeaseHeld(job_id)) {
