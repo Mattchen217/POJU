@@ -544,13 +544,27 @@ export async function POST(req: Request) {
         });
         if (!charged.ok) return charged.response;
       }
-      if (!done) {
-        return NextResponse.json(
-          { ok: false, error: "inline delivery missing", retryable: true },
-          { status: 503 },
-        );
+      if (
+        done &&
+        done.status === "completed" &&
+        isFinalDeliveryJobResult(done.result) &&
+        done.result.full_text.trim()
+      ) {
+        return jobStatusResponse(done);
       }
-      return jobStatusResponse(done);
+      // A running id only exists in this isolate. Polling /status would 500 on Redis.
+      console.warn("[final-delivery] ephemeral book not durable — no pollable job_id", {
+        sessionId: sessionIdRaw,
+        status: done?.status ?? null,
+      });
+      return NextResponse.json({
+        ok: false,
+        status: "failed",
+        retryable: true,
+        interrupted: false,
+        reason: "kv_unavailable",
+        error: done?.error || "delivery book was not stored; retry",
+      });
     };
 
     // Resume in-flight job for this session (unless explicit regenerate forces a new one).

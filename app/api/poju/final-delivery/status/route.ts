@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isKvStoreOutage } from "@/lib/kv/upstash-plan-limit";
+
 import {
   forceReleaseDeliveryContinueLease,
   loadAllDeliverySegmentReady,
@@ -129,6 +131,26 @@ async function stopDeadJob(
 }
 
 export async function GET(req: NextRequest) {
+  try {
+    return await readFinalDeliveryStatus(req);
+  } catch (e) {
+    if (!isKvStoreOutage(e)) throw e;
+    const job_id = req.nextUrl.searchParams.get("job_id")?.trim() || "";
+    console.warn("[final-delivery-status] store unavailable", e);
+    // 200 + failed so the poller stops. A 500 is treated as a network blip and retried forever.
+    return NextResponse.json({
+      ok: false,
+      job_id,
+      status: "failed",
+      retryable: true,
+      interrupted: false,
+      reason: "kv_unavailable",
+      error: "delivery status store unavailable — retry the book",
+    });
+  }
+}
+
+async function readFinalDeliveryStatus(req: NextRequest) {
   const job_id = req.nextUrl.searchParams.get("job_id")?.trim();
   if (!job_id) {
     return NextResponse.json({ error: "missing job_id" }, { status: 400 });
