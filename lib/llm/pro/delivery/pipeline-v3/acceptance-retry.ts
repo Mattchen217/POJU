@@ -10,6 +10,25 @@ export type AcceptancePriorFail = {
   detail?: string;
 };
 
+/**
+ * Production polish thickness miss → one republish of the same step.
+ * Lab must not emit this (quality auto-retry is a hard stop there).
+ */
+export const POLISH_ACCEPTANCE_CONTINUE_RULE = "polish_acceptance_continue";
+
+/** Production-only 1+1 for `gate_polish_thin_synonym`. Second miss stays a hard fail. */
+export function polishThicknessMayRetryOnce(input: {
+  ops_user: string | null | undefined;
+  acceptance_armed: boolean;
+  failed_rule: string | null | undefined;
+}): boolean {
+  return (
+    input.ops_user === "production" &&
+    !input.acceptance_armed &&
+    input.failed_rule === "gate_polish_thin_synonym"
+  );
+}
+
 /** Corrective block appended on attempt 2 only — category, never case-phrase bans. */
 export function buildAcceptanceCorrectiveBlock(
   fail: AcceptancePriorFail | null | undefined,
