@@ -1296,7 +1296,13 @@ export async function createSynthesisXhighJob(input: {
     retryable?: boolean;
   };
 
-  if (payload.primary_path && payload.backup_path && payload.job_id) {
+  if (
+    payload.primary_path &&
+    payload.backup_path &&
+    payload.job_id &&
+    payload.ok !== false &&
+    payload.status !== "failed"
+  ) {
     console.info("[synthesis] job already complete on create", { job_id: payload.job_id });
     return {
       ok: true,
@@ -1311,7 +1317,12 @@ export async function createSynthesisXhighJob(input: {
     };
   }
 
-  if (!payload.job_id) {
+  if (
+    !payload.job_id ||
+    payload.ok === false ||
+    payload.status === "failed" ||
+    payload.status === "completed"
+  ) {
     return {
       ok: false,
       error: payload.error || `synthesis job create failed (${res.status})`,

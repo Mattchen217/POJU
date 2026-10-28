@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { Redis } from "@upstash/redis";
 
 import { isRemoteKvConfigured, MemoryKv } from "@/lib/kv/memory-kv";
@@ -22,7 +24,61 @@ function createKv(): Redis | MemoryKv {
   return Redis.fromEnv();
 }
 
-export const kv = createKv() as Redis;
+type EphemeralFrame = {
+  kv: MemoryKv;
+  /** Absolute timestamp. Delivery hops must stop before the request is killed. */
+  deadlineAt: number | null;
+};
+
+const ephemeralAls = new AsyncLocalStorage<EphemeralFrame>();
+const remoteKv = createKv();
+
+/**
+ * Request-scoped memory KV. Upstash plan-limit fallbacks run a job here and
+ * return it on the same response — another isolate cannot see this store.
+ * `deadlineMs` is the budget from now; delivery in-process hops read it.
+ */
+export function runWithEphemeralKv<T>(
+  fn: () => Promise<T>,
+  opts?: { deadlineMs?: number },
+): Promise<T> {
+  return ephemeralAls.run(
+    {
+      kv: new MemoryKv(),
+      deadlineAt:
+        opts?.deadlineMs != null && opts.deadlineMs > 0 ? Date.now() + opts.deadlineMs : null,
+    },
+    fn,
+  );
+}
+
+export function isEphemeralKvActive(): boolean {
+  return ephemeralAls.getStore() != null;
+}
+
+/** Milliseconds left in the ephemeral request budget, or null when not ephemeral. */
+export function ephemeralRemainingMs(): number | null {
+  const frame = ephemeralAls.getStore();
+  if (!frame?.deadlineAt) return null;
+  return frame.deadlineAt - Date.now();
+}
+
+function currentKv(): Redis | MemoryKv {
+  return ephemeralAls.getStore()?.kv ?? remoteKv;
+}
+
+/**
+ * Delegates to the ephemeral frame when one is active so delivery checkpoints,
+ * task leases, and xhigh jobs share one request-scoped store.
+ */
+export const kv = new Proxy(remoteKv as Redis, {
+  get(target, prop, receiver) {
+    const src = currentKv();
+    const value = Reflect.get(src, prop, src === target ? receiver : src);
+    if (typeof value === "function") return (value as (...args: unknown[]) => unknown).bind(src);
+    return value;
+  },
+});
 
 export const KV_TTL = {
   BASE_ANALYSIS_JOB: 60 * 60 * 2,

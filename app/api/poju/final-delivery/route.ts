@@ -11,7 +11,9 @@ import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { isPassEnforceEnabled } from "@/lib/passes/consume-pass";
 import { consumePassSmart } from "@/lib/passes/consume-pass-smart";
 import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
+import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
+import { runWithEphemeralXhighKv } from "@/lib/poju/xhigh-job-store";
 import {
   forceReleaseDeliveryContinueLease,
   loadAllDeliverySegmentReady,
@@ -121,6 +123,45 @@ async function jobStatusResponse(job: PojuXhighJob) {
   });
 }
 
+async function chargeDeliveryPass(input: {
+  sessionId: string;
+  question: string;
+  jointPassRef: string | null;
+}): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  if (!isPassEnforceEnabled("pivot") || !isSupabaseConfigured()) return { ok: true };
+  const user = await getServerUser();
+  if (!user?.id) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { ok: false, error: "pass_login_required", reason: "unauthorized" },
+        { status: 401 },
+      ),
+    };
+  }
+  const consumed = await consumePassSmart({
+    userId: user.id,
+    product: "pivot",
+    refId: input.jointPassRef || input.sessionId,
+    description: passUsageTopicFromQuestion(input.question),
+  });
+  if (!consumed.ok) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          ok: false,
+          error: "pass_required",
+          reason: consumed.reason ?? "insufficient_balance",
+          balance_after: consumed.balanceAfter ?? 0,
+        },
+        { status: 402 },
+      ),
+    };
+  }
+  return { ok: true };
+}
+
 async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Promise<void> {
   const { shouldDispatchContinueViaInngest, publishContinueViaInngest } = await import(
     "@/lib/poju/delivery-continue-dispatch"
@@ -149,6 +190,7 @@ async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Pro
  * Poll GET /api/poju/final-delivery/status?job_id=鈥?or POST with resume_job_id.
  */
 export async function POST(req: Request) {
+  let inlineCall: (() => Promise<NextResponse>) | null = null;
   try {
     if (!isOpenRouterConfigured()) {
       return NextResponse.json(
@@ -373,7 +415,15 @@ export async function POST(req: Request) {
     }
 
     if (body.resume_latest === true) {
-      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      let latest: Awaited<ReturnType<typeof findLatestXhighJobForSession>>;
+      try {
+        latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      } catch (e) {
+        if (isUpstashPlanLimitError(e)) {
+          return NextResponse.json({ ok: true, status: "none", job_id: null });
+        }
+        throw e;
+      }
       if (!latest) {
         // 200 (not 404): empty resume is a normal probe, not a broken route — keeps Vercel logs clean.
         return NextResponse.json({ ok: true, status: "none", job_id: null });
@@ -384,6 +434,7 @@ export async function POST(req: Request) {
     if (!isLooseAgentState(body.agent_v2)) {
       return NextResponse.json({ ok: false, error: "Invalid or missing agent_v2" }, { status: 400 });
     }
+    const agentV2 = body.agent_v2;
 
     const delivery_mode = resolveDeliveryMode({
       delivery_mode:
@@ -418,10 +469,99 @@ export async function POST(req: Request) {
       : [];
 
     const regenerate = body.regenerate === true;
+    const skipPass = regenerate;
+    const jointPassRef =
+      typeof body.joint_pass_ref === "string" && body.joint_pass_ref.startsWith("joint:")
+        ? body.joint_pass_ref.trim()
+        : null;
+    const isJointDecision = body.joint_decision === true || Boolean(jointPassRef);
+    const jobInput: FinalDeliveryJobInput = {
+      kind: "final_delivery",
+      session_id: sessionIdRaw,
+      locale,
+      agent_v2: body.agent_v2,
+      breakthrough_core,
+      covered_agenda,
+      base_analysis: body.base_analysis ?? null,
+      delivery_mode,
+      regenerate,
+      dyad_compat_summary:
+        body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+          ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+          : null,
+      partner_bazi:
+        body.partner_bazi === "present" || body.partner_bazi === "absent"
+          ? body.partner_bazi
+          : null,
+      pivot_chart_path:
+        body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
+          ? body.pivot_chart_path
+          : null,
+      dyad_matrix_pack:
+        body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
+          ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
+          : null,
+      joint_decision: isJointDecision,
+      joint_pass_ref: jointPassRef,
+    };
+
+    inlineCall = async () => {
+      console.warn("[final-delivery] Upstash plan limit — running book inline without KV", {
+        sessionId: sessionIdRaw,
+      });
+      const done = await runWithEphemeralXhighKv(async () => {
+        const created = await createXhighJob({
+          phase: "final_delivery",
+          session_id: sessionIdRaw,
+          locale,
+          job_input: jobInput,
+          deploy_generation: currentDeliveryDeployGeneration(),
+        });
+        try {
+          await runFinalDeliveryJob(created.job_id);
+        } catch (err) {
+          const current = await getXhighJob(created.job_id);
+          if (current && (current.status === "pending" || current.status === "running")) {
+            await failXhighJob(
+              created.job_id,
+              err instanceof Error ? err.message : String(err),
+              { retryable: true, failure_reason: "interrupted" },
+            ).catch(() => undefined);
+          }
+        }
+        return getXhighJob(created.job_id);
+      }, { deadlineMs: 275_000 });
+      if (
+        done &&
+        done.status === "completed" &&
+        isFinalDeliveryJobResult(done.result) &&
+        !skipPass
+      ) {
+        const charged = await chargeDeliveryPass({
+          sessionId: sessionIdRaw,
+          question: agentV2.original_question,
+          jointPassRef,
+        });
+        if (!charged.ok) return charged.response;
+      }
+      if (!done) {
+        return NextResponse.json(
+          { ok: false, error: "inline delivery missing", retryable: true },
+          { status: 503 },
+        );
+      }
+      return jobStatusResponse(done);
+    };
 
     // Resume in-flight job for this session (unless explicit regenerate forces a new one).
     if (!regenerate) {
-      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      let latest: Awaited<ReturnType<typeof findLatestXhighJobForSession>>;
+      try {
+        latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      } catch (e) {
+        if (isUpstashPlanLimitError(e)) return inlineCall();
+        throw e;
+      }
       if (latest) {
         // Prior deploy's job — kill without LLM; do not attach client to it.
         if (
@@ -463,7 +603,13 @@ export async function POST(req: Request) {
       }
     } else {
       // Regenerate: explicitly STOP any non-terminal job, then create a new chain.
-      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      let latest: Awaited<ReturnType<typeof findLatestXhighJobForSession>> = null;
+      try {
+        latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      } catch (e) {
+        if (isUpstashPlanLimitError(e)) return inlineCall();
+        throw e;
+      }
       if (latest && (latest.status === "pending" || latest.status === "running")) {
         await failXhighJob(latest.job_id, "STOP: superseded by regenerate", {
           retryable: false,
@@ -476,47 +622,6 @@ export async function POST(req: Request) {
       }
     }
 
-    const skipPass = regenerate;
-    const jointPassRef =
-      typeof body.joint_pass_ref === "string" && body.joint_pass_ref.startsWith("joint:")
-        ? body.joint_pass_ref.trim()
-        : null;
-    const isJointDecision =
-      body.joint_decision === true || Boolean(jointPassRef);
-    if (!skipPass && isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
-      const user = await getServerUser();
-      if (!user?.id) {
-        return NextResponse.json(
-          { ok: false, error: "pass_login_required", reason: "unauthorized" },
-          { status: 401 },
-        );
-      }
-      // Joint already charged at accept — reuse joint:{id}:a|b for idempotency.
-      const refId =
-        jointPassRef ||
-        sessionIdRaw ||
-        `pivot-delivery-${user.id}-${Date.now()}`;
-      const topicSrc =
-        isLooseAgentState(body.agent_v2) ? body.agent_v2.original_question : "";
-      const consumed = await consumePassSmart({
-        userId: user.id,
-        product: "pivot",
-        refId,
-        description: passUsageTopicFromQuestion(topicSrc),
-      });
-      if (!consumed.ok) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "pass_required",
-            reason: consumed.reason ?? "insufficient_balance",
-            balance_after: consumed.balanceAfter ?? 0,
-          },
-          { status: 402 },
-        );
-      }
-    }
-
     const locked = await acquireXhighSessionLock("final_delivery", sessionIdRaw);
     if (!locked) {
       // Never return an old job as if regenerate succeeded.
@@ -525,36 +630,6 @@ export async function POST(req: Request) {
         { status: 409 },
       );
     }
-
-    const jobInput: FinalDeliveryJobInput = {
-      kind: "final_delivery",
-      session_id: sessionIdRaw,
-      locale,
-      agent_v2: body.agent_v2,
-      breakthrough_core,
-      covered_agenda,
-      base_analysis: body.base_analysis ?? null,
-      delivery_mode,
-      regenerate,
-      dyad_compat_summary:
-        body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
-          ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
-          : null,
-      partner_bazi:
-        body.partner_bazi === "present" || body.partner_bazi === "absent"
-          ? body.partner_bazi
-          : null,
-      pivot_chart_path:
-        body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
-          ? body.pivot_chart_path
-          : null,
-      dyad_matrix_pack:
-        body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
-          ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
-          : null,
-      joint_decision: isJointDecision,
-      joint_pass_ref: jointPassRef,
-    };
 
     const job = await createXhighJob({
       phase: "final_delivery",
@@ -567,6 +642,22 @@ export async function POST(req: Request) {
     if (!isFinalDeliveryJobInput(job.input)) {
       await releaseXhighSessionLock("final_delivery", sessionIdRaw);
       return NextResponse.json({ ok: false, error: "job_create_failed" }, { status: 500 });
+    }
+
+    if (!skipPass) {
+      const charged = await chargeDeliveryPass({
+        sessionId: sessionIdRaw,
+        question: agentV2.original_question,
+        jointPassRef,
+      });
+      if (!charged.ok) {
+        await failXhighJob(job.job_id, "pass_required", {
+          retryable: false,
+          failure_reason: "transport_error",
+        }).catch(() => undefined);
+        await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
+        return charged.response;
+      }
     }
 
     await scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
@@ -588,6 +679,9 @@ export async function POST(req: Request) {
       status: job.status,
     });
   } catch (e) {
+    if (inlineCall && isUpstashPlanLimitError(e)) {
+      return inlineCall();
+    }
     console.error("[final-delivery]", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "final-delivery failed" },

@@ -6,6 +6,7 @@
  * gets a fresh 300s budget. Fail-fast: no stale-resume; schedule miss → STOP.
  */
 
+import { ephemeralRemainingMs, isEphemeralKvActive } from "@/lib/kv/client";
 import {
   extractActionsFromDelivery,
   resolveDeliveryMode,
@@ -292,6 +293,22 @@ export async function scheduleDeliveryStageContinue(
   }
 
   await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+
+  if (isEphemeralKvActive()) {
+    const remain = ephemeralRemainingMs();
+    if (remain != null && remain < 20_000) {
+      await failXhighJob(job_id, "inline delivery stopped before the book finished", {
+        retryable: true,
+        failure_reason: "interrupted",
+        current_stage: stage,
+        accumulated_content: "failed:ephemeral_wall",
+      });
+      return "scheduled";
+    }
+    console.info("[final-delivery] ephemeral continue in-process", { job_id, stage, remain });
+    await runFinalDeliveryStage(job_id, stage);
+    return "scheduled";
+  }
 
   const posted = await dispatchDeliveryContinue(job_id, stage, continueSecret(job_id));
   if (posted === "accepted") {
