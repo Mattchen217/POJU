@@ -226,7 +226,12 @@ export function WorkspaceBirthInfoPicker({ onSubmit, onCancel, locale }: Props) 
         ) : null}
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={(event) => {
+            // Never let this click become a document GET of `/app` (middleware
+            // would re-run and a soft session refresh can 307 to /login).
+            event.preventDefault();
+            handleSubmit();
+          }}
           className="submit-btn"
           disabled={!canSubmit}
           aria-disabled={!canSubmit}

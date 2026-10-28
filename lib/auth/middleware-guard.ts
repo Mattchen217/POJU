@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { safeNextPath } from "@/lib/auth/auth-helpers";
+import { copyResponseCookies } from "@/lib/auth/session-cookie-policy";
 import { userNeedsEmail } from "@/lib/auth/user-identity";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import {
@@ -74,11 +75,13 @@ function nextParamForRequest(locale: string, pathNoLocale: string, search: strin
   return safeNextPath(prefixed, `/${locale}/app`);
 }
 
-function copyCookies(from: NextResponse, to: NextResponse): void {
-  from.cookies.getAll().forEach((cookie) => {
-    to.cookies.set(cookie.name, cookie.value);
-  });
-}
+export type AuthRouteGuardOptions = {
+  /**
+   * Auth cookie still present, but user lookup failed softly.
+   * Do not redirect protected routes to `/login` and do not clear cookies.
+   */
+  sessionUncertain?: boolean;
+};
 
 /**
  * After intl + session refresh: redirect unauthenticated users away from
@@ -88,6 +91,7 @@ export function applyAuthRouteGuard(
   request: NextRequest,
   response: NextResponse,
   user: User | null,
+  options?: AuthRouteGuardOptions,
 ): NextResponse {
   if (!isSupabaseConfigured()) return response;
   if (!isAuthRouteGuardEnabled()) return response;
@@ -108,7 +112,7 @@ export function applyAuthRouteGuard(
     gateUrl.search = "";
     gateUrl.searchParams.set("next", next);
     const redirect = NextResponse.redirect(gateUrl);
-    copyCookies(response, redirect);
+    copyResponseCookies(response, redirect);
     return redirect;
   }
 
@@ -135,13 +139,15 @@ export function applyAuthRouteGuard(
     const useLocale = nextLocale !== routing.defaultLocale ? nextLocale : locale;
     dest.pathname = localizedPath(useLocale, dest.pathname || "/");
     const redirect = NextResponse.redirect(dest);
-    copyCookies(response, redirect);
+    copyResponseCookies(response, redirect);
     return redirect;
   }
 
   if (isAuthRoute(pathname)) return response;
   if (!isAuthProtectedPath(pathname)) return response;
   if (user) return response;
+  // Soft getUser failure: stay on /app (Continue must not bounce to login).
+  if (options?.sessionUncertain) return response;
 
   const next = nextParamForRequest(locale, pathNoLocale, search);
   const loginUrl = request.nextUrl.clone();
@@ -150,6 +156,6 @@ export function applyAuthRouteGuard(
   loginUrl.searchParams.set("next", next);
 
   const redirect = NextResponse.redirect(loginUrl);
-  copyCookies(response, redirect);
+  copyResponseCookies(response, redirect);
   return redirect;
 }

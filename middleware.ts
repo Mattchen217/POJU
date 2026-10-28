@@ -42,8 +42,8 @@ export default async function middleware(request: NextRequest) {
   }
 
   const intlResponse = intlMiddleware(request);
-  const { response, user } = await updateSupabaseSession(request, intlResponse);
-  return applyAuthRouteGuard(request, response, user);
+  const { response, user, sessionUncertain } = await updateSupabaseSession(request, intlResponse);
+  return applyAuthRouteGuard(request, response, user, { sessionUncertain });
 }
 
 export const config = {
