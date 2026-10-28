@@ -140,6 +140,17 @@ async function main(): Promise<void> {
     "poll stops on kv_unavailable",
     read("lib/poju/poll-final-delivery-job.ts").includes('data.reason === "kv_unavailable"'),
   );
+  const statusSrc = read("app/api/poju/final-delivery/status/route.ts");
+  assert(
+    "pending finalize is rearmed instead of stale_running inside the startup grace",
+    statusSrc.includes("PENDING_WORKER_GRACE_MS") &&
+      statusSrc.includes("publishContinueViaInngest") &&
+      statusSrc.includes("pending before worker heartbeat"),
+  );
+  assert(
+    "continue ack wait heartbeats so status does not declare the hop dead",
+    read("lib/poju/delivery-continue-dispatch.ts").includes("await_continue_ack:"),
+  );
 
   console.log(
     "\n" +

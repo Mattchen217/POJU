@@ -7,6 +7,7 @@
  */
 
 import { hasLiveDeliveryContinueForStage } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import { setXhighJobContent } from "@/lib/poju/xhigh-job-store";
 import { deliveryContinueFetchAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { inngest } from "@/lib/inngest/client";
 import type { DeliveryPipelineStage } from "@/lib/poju/final-delivery-stage-runner";
@@ -91,8 +92,16 @@ async function waitForContinueAck(
   timeoutMs: number,
 ): Promise<boolean> {
   const started = Date.now();
+  let lastBeat = 0;
   while (Date.now() - started < timeoutMs) {
     if (await hasLiveDeliveryContinueForStage(job_id, stage)) return true;
+    // Status treats 45s without updated_at as a dead invoke. This wait is that long.
+    if (Date.now() - lastBeat > 10_000) {
+      lastBeat = Date.now();
+      await setXhighJobContent(job_id, `await_continue_ack:${stage}:${Date.now()}`).catch(
+        () => undefined,
+      );
+    }
     await sleep(250);
   }
   return hasLiveDeliveryContinueForStage(job_id, stage);
