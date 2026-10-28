@@ -13,16 +13,13 @@ import { loadDeliveryLab } from "@/lib/llm/pro/delivery/lab/store";
 import { LAB_STEP_DEFS_V3 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import {
   activeDeliveryJobMaxWallMs,
-  PRODUCTION_V3_JOB_MAX_WALL_MS,
+  PRODUCTION_V3_TAIL_GRACE_MS,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { productionDeliveryUsesV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 
 export function productionV3LabId(job_id: string): string {
   return `prodv3_${job_id}`;
 }
-
-/** Local assemble + finalize after the last evidence_soft. Not another content gun. */
-export const PRODUCTION_V3_TAIL_GRACE_MS = 15 * 60_000;
 
 export function isV3ShelfTailStage(stage: string | null | undefined): boolean {
   return stage === "segments" || stage === "assemble" || stage === "finalize";
@@ -84,7 +81,3 @@ export async function resolveDeliveryWallFuse(input: {
     shelfTailReady,
   });
 }
-
-/** Client poll stays open through the same tail the server grace covers. */
-export const PRODUCTION_V3_POLL_MAX_MS =
-  PRODUCTION_V3_JOB_MAX_WALL_MS + PRODUCTION_V3_TAIL_GRACE_MS;
