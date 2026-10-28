@@ -44,9 +44,15 @@ export function stripPageSchemaFence(md: string): string {
 }
 
 function anchorsOf(list: readonly string[] | undefined): readonly string[] | undefined {
-  if (!list?.length) return undefined;
+  if (!Array.isArray(list) || !list.length) return undefined;
   const cleaned = list.map((s) => s.trim()).filter(Boolean);
   return cleaned.length ? cleaned : undefined;
+}
+
+/** Stored polish JSON omits zod defaults. A missing list is empty, not a throw. */
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
 function withAnchors(body: string, chart_anchors?: readonly string[]): DeliveryArgument {
@@ -137,38 +143,56 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
       const angleBody = (
         trackTitle: string,
         label: string,
-        a: (typeof page.primary_toolkit.angles)[number],
+        a: {
+          name?: string;
+          strategy?: string;
+          means?: unknown;
+          hard_metrics?: unknown;
+          chart_anchors?: readonly string[];
+        },
       ): DeliveryArgument => {
-        const means = a.means.map((s) => `- ${s}`).join("\n");
-        const metrics =
-          a.hard_metrics.length > 0
-            ? `\n\n**硬指标:**\n${a.hard_metrics.map((m) => `- ${m}`).join("\n")}`
-            : "";
+        const means = stringList(a.means);
+        const metrics = stringList(a.hard_metrics);
+        const action = means.length ? `\n\n**行动:**\n${means.map((s) => `- ${s}`).join("\n")}` : "";
+        const metricBlock = metrics.length
+          ? `\n\n**硬指标:**\n${metrics.map((m) => `- ${m}`).join("\n")}`
+          : "";
         return withAnchors(
-          `### ${label} · ${trackTitle} · ${a.name}\n\n**策略:** ${a.strategy}\n\n**行动:**\n${means}${metrics}`,
+          `### ${label} · ${trackTitle} · ${a.name ?? ""}\n\n**策略:** ${a.strategy ?? ""}${action}${metricBlock}`,
           a.chart_anchors,
         );
       };
       const out: DeliveryArgument[] = [];
-      if (page.opening?.trim()) {
+      if (typeof page.opening === "string" && page.opening.trim()) {
         out.push({ body: `### 开篇\n\n${page.opening.trim()}` });
       }
-      for (const a of page.primary_toolkit.angles) {
-        out.push(angleBody(page.primary_toolkit.title, "主·科学", a));
-      }
-      for (const a of page.backup_toolkit.angles) {
-        out.push(angleBody(page.backup_toolkit.title, "辅·科学", a));
+      const kits: Array<[{ title?: string; angles?: unknown } | undefined, string]> = [
+        [page.primary_toolkit, "主·科学"],
+        [page.backup_toolkit, "辅·科学"],
+      ];
+      for (const [kit, label] of kits) {
+        const angles = Array.isArray(kit?.angles) ? kit.angles : [];
+        for (const raw of angles) {
+          if (!raw || typeof raw !== "object") continue;
+          out.push(angleBody(typeof kit?.title === "string" ? kit.title : "", label, raw));
+        }
       }
       return out;
     }
     case "self_regulation": {
       /** question_anchor / desired_outcome stay in page_schema for fill grounding — not evidence slots / user page. */
-      return page.dimensions.map((a) =>
-        withAnchors(
-          `### 相关维 · ${a.name}\n\n**策略:** ${a.strategy}\n\n**行动:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,
-          a.chart_anchors,
-        ),
-      );
+      const dimensions = Array.isArray(page.dimensions) ? page.dimensions : [];
+      return dimensions.flatMap((a) => {
+        if (!a || typeof a !== "object") return [];
+        const means = stringList(a.means);
+        const action = means.length ? `\n\n**行动:**\n${means.map((m) => `- ${m}`).join("\n")}` : "";
+        return [
+          withAnchors(
+            `### 相关维 · ${a.name ?? ""}\n\n**策略:** ${a.strategy ?? ""}${action}`,
+            a.chart_anchors,
+          ),
+        ];
+      });
     }
     case "thirty_day":
       return [
@@ -182,53 +206,59 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
     case "validation_risk": {
       /** One RiskItem = one evidence slot (no 4-bucket merge). */
       const out: DeliveryArgument[] = [];
-      page.red_lights.forEach((x, i) => {
-        out.push(
-          withAnchors(`### 红灯 ${i + 1}\n\n${formatRiskItem(x)}`, x.chart_anchors),
-        );
-      });
-      page.traps.forEach((x, i) => {
-        out.push(
-          withAnchors(`### 特有坑 ${i + 1}\n\n${formatRiskItem(x)}`, x.chart_anchors),
-        );
-      });
-      out.push(
-        withAnchors(
-          `### 切辅开关\n\n${formatRiskItem(page.switch_to_backup)}`,
-          page.switch_to_backup.chart_anchors,
-        ),
-      );
-      page.protection_rules.forEach((x, i) => {
-        out.push(
-          withAnchors(`### 防护法则 ${i + 1}\n\n${formatRiskItem(x)}`, x.chart_anchors),
-        );
-      });
+      const pushRisk = (title: string, item: unknown) => {
+        if (!item || typeof item !== "object") return;
+        const row = item as RiskItem;
+        out.push(withAnchors(`### ${title}\n\n${formatRiskItem(row)}`, row.chart_anchors));
+      };
+      const reds = Array.isArray(page.red_lights) ? page.red_lights : [];
+      const traps = Array.isArray(page.traps) ? page.traps : [];
+      const rules = Array.isArray(page.protection_rules) ? page.protection_rules : [];
+      reds.forEach((x, i) => pushRisk(`红灯 ${i + 1}`, x));
+      traps.forEach((x, i) => pushRisk(`特有坑 ${i + 1}`, x));
+      pushRisk("切辅开关", page.switch_to_backup);
+      rules.forEach((x, i) => pushRisk(`防护法则 ${i + 1}`, x));
       return out;
     }
-    case "validation_close":
+    case "validation_close": {
+      const day7 = Array.isArray(page.day7_micro_actions) ? page.day7_micro_actions : [];
+      const takeaways = stringList(page.takeaways);
+      const text = (value: unknown) => (typeof value === "string" ? value : "");
+      const hasClose = [
+        page.identity_before,
+        page.identity_after,
+        page.identity_shift,
+        page.quote,
+        page.quote_use,
+        page.immediate_action,
+        page.tonight_done_looks_like,
+        page.tonight_why,
+      ].some((value) => typeof value === "string" && value.trim().length > 0);
+      if (!hasClose && day7.length === 0 && takeaways.length === 0) return [];
       return [
         withAnchors(
-          `### 身份重塑\n\n**之前:** ${page.identity_before}\n\n**之后:** ${page.identity_after}\n\n` +
-            `**为何切换:** ${page.identity_shift}`,
+          `### 身份重塑\n\n**之前:** ${text(page.identity_before)}\n\n**之后:** ${text(page.identity_after)}\n\n` +
+            `**为何切换:** ${text(page.identity_shift)}`,
           page.identity_shift_anchors,
         ),
-        { body: `### 金句\n\n> ${page.quote}\n\n**怎么用:** ${page.quote_use}` },
+        { body: `### 金句\n\n> ${text(page.quote)}\n\n**怎么用:** ${text(page.quote_use)}` },
         withAnchors(
-          `### 今晚一件事\n\n${page.immediate_action}\n\n` +
-            `**做成什么样:** ${page.tonight_done_looks_like}\n\n` +
-            `**为何今晚:** ${page.tonight_why}`,
+          `### 今晚一件事\n\n${text(page.immediate_action)}\n\n` +
+            `**做成什么样:** ${text(page.tonight_done_looks_like)}\n\n` +
+            `**为何今晚:** ${text(page.tonight_why)}`,
           page.tonight_anchors,
         ),
-        ...page.day7_micro_actions.map((x, i) =>
+        ...day7.map((x, i) =>
           withAnchors(
-            `### 近7日 · ${i + 1}\n\n**${x.action}**\n- 为何: ${x.why}\n- 勾选: ${x.done_when}`,
-            x.chart_anchors,
+            `### 近7日 · ${i + 1}\n\n**${text(x?.action)}**\n- 为何: ${text(x?.why)}\n- 勾选: ${text(x?.done_when)}`,
+            x?.chart_anchors,
           ),
         ),
         {
-          body: `### 带走三样\n\n${page.takeaways.map((t, i) => `${i + 1}. ${t}`).join("\n")}`,
+          body: `### 带走三样\n\n${takeaways.map((t, i) => `${i + 1}. ${t}`).join("\n")}`,
         },
       ];
+    }
     default:
       return [];
   }
