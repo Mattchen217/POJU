@@ -142,11 +142,22 @@ function stripInWordApostrophes(text: string): string {
   return String(text ?? "").replace(/(?<=\p{L})['’](?=\p{L})/gu, "");
 }
 
+/**
+ * 词中撇号（it's / don't / l'énergie）以及字母后的所有格撇号（partners' / James'）。
+ * 成对引号和开口单引号仍留下，交给任意引号闸。
+ */
+function stripNonScriptApostrophes(text: string): string {
+  return stripInWordApostrophes(text).replace(/(?<=\p{L})['’](?!\p{L})/gu, "");
+}
+
 function hasQuotedScript(text: string): boolean {
   return QUOTED_SCRIPT_RE.test(stripInWordApostrophes(text));
 }
 
-/** P4：可见层出现任一引号字符即废（含强调标签壳；duty=禁任何引号字符）。 */
+/**
+ * P4 full 表面：可见层任一引号字符即废（含强调标签壳）。
+ * 调用前先剥词中撇号与复数所有格，避免 partners' / don't 误杀。
+ */
 const P4_ANY_QUOTE_CHAR_RE = /[「」『』“”‘’„‟«»"']/;
 
 /** P4 站位/可见层 P3 交付物换皮 + 合伙权责词（整类）。 */
@@ -734,18 +745,9 @@ export function gateBodyCategoryB(input: {
       }
     }
     /**
-     * 开口稿 / 权责词 / 养生正例 / 物化水：已升类别且反复中 → 正文步硬拦。
-     * 专名/两五行等表面仍 defer 润色。
+     * 权责词 / 养生正例 / 物化水：已升类别且反复中 → 正文步硬拦。
+     * 开口稿与专名是表面类：substance_only defer 到润色（Skip 时 surface=full 仍硬拦）。
      */
-    if (hasQuotedScript(visible) || P4_ANY_QUOTE_CHAR_RE.test(stripInWordApostrophes(visible)) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
-      return {
-        passed: false,
-        failed_rule: "gate_p4_body_quoted_script",
-        detail:
-          "P4 正文含引号字符（含强调标签壳）或可照念台词/心里稿（就说/告诉他/心里默念/提醒自己：…）。改间接叙述（慢半拍/拖到气口再回；标签词勿包引号）后重跑——闸门不改稿。",
-        notes,
-      };
-    }
     if (P4_P3_DELIVERABLE_RE.test(visible)) {
       return {
         passed: false,
@@ -782,9 +784,22 @@ export function gateBodyCategoryB(input: {
         notes,
       };
     }
-    // —— 表面读感（有润色步时 defer）：专名报幕等 ——
+    // —— 表面读感（有润色步时 defer）：开口稿 / 专名报幕等 ——
     if (surface === "substance_only") {
       return null;
+    }
+    if (
+      hasQuotedScript(visible) ||
+      P4_ANY_QUOTE_CHAR_RE.test(stripNonScriptApostrophes(visible)) ||
+      P4_UNQUOTED_SCRIPT_RE.test(visible)
+    ) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_quoted_script",
+        detail:
+          "P4 正文含引号字符（含强调标签壳）或可照念台词/心里稿（就说/告诉他/心里默念/提醒自己：…）。改间接叙述（慢半拍/拖到气口再回；标签词勿包引号）后重跑——闸门不改稿。",
+        notes,
+      };
     }
     if (VISIBLE_JARGON_RE.test(visible)) {
       return {

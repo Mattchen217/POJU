@@ -182,6 +182,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【口吻】时位进退的**现代决策白话**，不是半文言电报。`,
         `  · 允许：窗口未熟先别冲、对方虚高先旁观、气太燥先收——完整口语句。`,
         `  · **禁**卦名爻辞/吉凶断语/符咒物化；**禁**声称五行气场确定改结果；**禁**跨案养生三联（深呼吸/温凉饮/背靠实墙换壳同禁）。`,
+        `  · **开口稿（类别）**：可见层不要引号壳，也不要可照念的开口稿或心里稿。用间接叙述写进退和收势（慢半拍、气口未开先别动）。词中撇号与复数所有格不是台词。`,
         TEMPLATE_VOICE_DUTY_LINE,
         `  · **禁半文言电报**：strategy≥2 完整句；means≥1 完整句且「做什么+为何此刻」。维名白话（两边胶着/窗口收窄）；禁主客/门宫原名。`,
         ``,
@@ -338,7 +339,7 @@ function pageShapeHint(key: DeliverySegmentKey): string {
         `    { "name":"站位…", "strategy":"…", "means":["…"], "chart_anchors":[] }`,
         `  ]`,
         `}`,
-        `硬自检：条数=批断；三柱维名；means 在允许轴；无卦辞墙；硬门槛下勿写已被拒投入形态作过渡；删批断须垮。`,
+        `硬自检：条数=批断；三柱维名；means 在允许轴；无卦辞墙；可见层无引号、无可照念心里稿；硬门槛下勿写已被拒投入形态作过渡；删批断须垮。`,
       ].join("\n");
     case "validation_risk":
       return `输出：{ "page":"validation_risk", "page_title":"...", "page_subtitle":"...", "red_lights":[{ "name":"...", "narrative":"..." }], "traps":[{ "name":"...", "narrative":"..." }], "switch_to_backup":{ "name":"...", "narrative":"..." }, "protection":[{ "name":"...", "narrative":"..." }] }`;
