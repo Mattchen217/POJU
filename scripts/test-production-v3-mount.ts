@@ -318,4 +318,141 @@ if (fullBook.ok) {
   assert.ok((fullBook.marked.personal_decision_patterns ?? []).length > 0);
 }
 
+/**
+ * Job fd_90a4af96…_fy33bq died in book persist:
+ * v3_page_unreadable:execution_guidance:Cannot read properties of undefined (reading 'length').
+ * Polish stores the model angle and only stamps chart_anchors, so hard_metrics
+ * (zod default []) is often absent. Missing lists convert; a page with no angles
+ * and no opening stays an empty-page hard stop.
+ */
+const guidanceMissingMetrics = pageSchemaToArgumentBodies({
+  page: "execution_guidance",
+  opening: "先把条件写下来",
+  primary_toolkit: {
+    title: "主轨",
+    angles: [{ name: "书面条件", strategy: "先写清再谈", means: ["今晚半页"] }],
+  },
+  backup_toolkit: {
+    title: "辅轨",
+    angles: [{ name: "停手", strategy: "被拒即停" }],
+  },
+} as unknown as DeliveryPageData);
+assert.equal(guidanceMissingMetrics.length, 3);
+assert.match(guidanceMissingMetrics[1]!.body, /书面条件/);
+assert.match(guidanceMissingMetrics[1]!.body, /今晚半页/);
+assert.match(guidanceMissingMetrics[2]!.body, /被拒即停/);
+assert.equal(guidanceMissingMetrics[2]!.body.includes("**行动:**"), false);
+
+assert.equal(
+  pageSchemaToArgumentBodies({
+    page: "execution_guidance",
+    primary_toolkit: { title: "主轨" },
+    backup_toolkit: {},
+  } as unknown as DeliveryPageData).length,
+  0,
+  "execution_guidance with no angles stays empty",
+);
+
+const regulationMissingMeans = pageSchemaToArgumentBodies({
+  page: "self_regulation",
+  dimensions: [{ name: "收势", strategy: "窗口未开先停" }],
+} as unknown as DeliveryPageData);
+assert.equal(regulationMissingMeans.length, 1);
+assert.match(regulationMissingMeans[0]!.body, /窗口未开先停/);
+assert.equal(
+  pageSchemaToArgumentBodies({ page: "self_regulation" } as unknown as DeliveryPageData).length,
+  0,
+  "self_regulation with no dimensions stays empty",
+);
+
+const riskPartial = pageSchemaToArgumentBodies({
+  page: "validation_risk",
+  switch_to_backup: { narrative: "主路被拒就切辅", chart_anchors: [] },
+} as unknown as DeliveryPageData);
+assert.equal(riskPartial.length, 1);
+assert.match(riskPartial[0]!.body, /主路被拒就切辅/);
+assert.equal(
+  pageSchemaToArgumentBodies({ page: "validation_risk" } as unknown as DeliveryPageData).length,
+  0,
+);
+
+const closePartial = pageSchemaToArgumentBodies({
+  page: "validation_close",
+  identity_before: "先开口",
+  identity_after: "先写条件",
+  identity_shift: "把核对放在承诺前",
+  quote: "条件没写清就不加码",
+  quote_use: "定心",
+  immediate_action: "今晚写半页",
+  tonight_done_looks_like: "半页条件",
+  tonight_why: "窗口还在",
+} as unknown as DeliveryPageData);
+assert.ok(closePartial.length >= 3);
+assert.match(closePartial.map((a) => a.body).join("\n"), /今晚写半页/);
+assert.equal(
+  pageSchemaToArgumentBodies({ page: "validation_close" } as unknown as DeliveryPageData).length,
+  0,
+  "validation_close shell stays empty",
+);
+
+const guidancePlan = planProductionV3Book(
+  bookLab({
+    decision_brief: brief,
+    situation_analysis: situation,
+    personal_decision_patterns: patternCard,
+    bottleneck_analysis: {
+      page: "bottleneck_analysis",
+      why_cards: [{ title: "障碍", surface: "表", essence: "质", chart_anchors: [] }],
+    } as unknown as DeliveryPageData,
+    strategic_options: {
+      page: "strategic_options",
+      options: [
+        {
+          name: "甲",
+          summary: "摘",
+          upside: "益",
+          cost: "本",
+          risk: "险",
+          reversibility: "可退",
+          chart_anchors: [],
+        },
+        {
+          name: "乙",
+          summary: "摘",
+          upside: "益",
+          cost: "本",
+          risk: "险",
+          reversibility: "可退",
+          chart_anchors: [],
+        },
+      ],
+    } as unknown as DeliveryPageData,
+    recommended_strategy: {
+      page: "recommended_strategy",
+      core_judgment: "主路先写清条件",
+      primary: { name: "主", why: "条件在手", exit: "被拒即停", chart_anchors: [] },
+      backup: { name: "辅", why: "主路失效", exit: "不再加码", chart_anchors: [] },
+    } as unknown as DeliveryPageData,
+    execution_guidance: {
+      page: "execution_guidance",
+      primary_toolkit: {
+        title: "主轨",
+        angles: [{ name: "书面条件", strategy: "先写清再谈", means: ["今晚半页"] }],
+      },
+      backup_toolkit: {
+        title: "辅轨",
+        angles: [{ name: "停手", strategy: "被拒即停", means: ["不再加码"] }],
+      },
+    } as unknown as DeliveryPageData,
+  }),
+);
+assert.equal(guidancePlan.ok, false);
+if (!guidancePlan.ok) {
+  assert.equal(
+    guidancePlan.reason,
+    "v3_missing_page_schema:self_regulation",
+    "missing hard_metrics must not throw v3_page_unreadable",
+  );
+}
+
 console.log("production v3 mount ok");
