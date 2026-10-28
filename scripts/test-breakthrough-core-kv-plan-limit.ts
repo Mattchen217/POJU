@@ -151,6 +151,21 @@ async function main(): Promise<void> {
     "continue ack wait heartbeats so status does not declare the hop dead",
     read("lib/poju/delivery-continue-dispatch.ts").includes("await_continue_ack:"),
   );
+  const createRoute = read("app/api/poju/final-delivery/route.ts");
+  assert(
+    "Inngest publish waits for a worker before skipping after()",
+    createRoute.includes("waitForDeliveryWorker") &&
+      createRoute.includes("no worker attached — falling back to after()"),
+  );
+  assert(
+    "pending await_worker escalates to a direct continue",
+    statusSrc.includes("PENDING_DIRECT_AFTER_MS") && statusSrc.includes("direct_continue:"),
+  );
+  assert(
+    "inngest serve allows a full stage",
+    read("vercel.json").includes("app/api/inngest/route.ts") &&
+      read("app/api/inngest/route.ts").includes("maxDuration = 300"),
+  );
 
   console.log(
     "\n" +

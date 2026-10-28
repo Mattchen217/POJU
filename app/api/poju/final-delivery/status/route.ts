@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { isKvStoreOutage } from "@/lib/kv/upstash-plan-limit";
 
@@ -46,6 +46,8 @@ const STALE_RUNNING_MS = 45_000;
  * Rearm that hop instead of hard-STOP; do not charge a Pass.
  */
 const PENDING_WORKER_GRACE_MS = 3 * 60_000;
+/** Still pending with only await_worker stamps → run the stage in this isolate. */
+const PENDING_DIRECT_AFTER_MS = 75_000;
 /** Legacy 40m name kept for the fuse test. Live jobs use activeDeliveryJobMaxWallMs (v3 = 120m). */
 const MAX_JOB_AGE_MS = DELIVERY_JOB_MAX_WALL_MS;
 
@@ -322,22 +324,58 @@ async function readFinalDeliveryStatus(req: NextRequest) {
         current_stage === "segments" || current_stage === "assemble" || current_stage === "finalize"
           ? current_stage
           : "finalize";
-      await setXhighJobContent(
-        job.job_id,
-        `await_worker:${wakeStage}:${Date.now()}`,
-      ).catch(() => undefined);
-      const { publishContinueViaInngest, shouldDispatchContinueViaInngest } = await import(
-        "@/lib/poju/delivery-continue-dispatch"
-      );
-      if (shouldDispatchContinueViaInngest()) {
-        await publishContinueViaInngest(job.job_id, wakeStage).catch(() => undefined);
+      const prior = job.accumulated_content ?? "";
+      const rearmMatch = prior.match(/^await_worker:[^:]+:\d+:n(\d+)$/);
+      const rearms = rearmMatch ? Number(rearmMatch[1]) : prior.startsWith("await_worker:") ? 1 : 0;
+      const nextRearm = rearms + 1;
+      const alreadyDirect = prior.startsWith("direct_continue:");
+      const escalate =
+        !alreadyDirect &&
+        rearms >= 1 &&
+        (nextRearm >= 2 || ageMs >= PENDING_DIRECT_AFTER_MS);
+      if (escalate) {
+        await setXhighJobContent(
+          job.job_id,
+          `direct_continue:${wakeStage}:${Date.now()}`,
+        ).catch(() => undefined);
+        const { runFinalDeliveryJob } = await import("@/lib/poju/final-delivery-job-runner");
+        after(async () => {
+          try {
+            await runFinalDeliveryJob(job.job_id);
+          } catch (e) {
+            console.error("[final-delivery-status] direct continue failed", e);
+          }
+        });
+        console.warn("[final-delivery-status] pending await_worker — direct continue", {
+          job_id: job.job_id,
+          stage: wakeStage,
+          age_ms: ageMs,
+          rearms,
+        });
+      } else if (!alreadyDirect) {
+        await setXhighJobContent(
+          job.job_id,
+          `await_worker:${wakeStage}:${Date.now()}:n${nextRearm}`,
+        ).catch(() => undefined);
+        const { publishContinueViaInngest, shouldDispatchContinueViaInngest } = await import(
+          "@/lib/poju/delivery-continue-dispatch"
+        );
+        if (shouldDispatchContinueViaInngest()) {
+          await publishContinueViaInngest(job.job_id, wakeStage).catch(() => undefined);
+        }
+        console.info("[final-delivery-status] pending before worker heartbeat — rearm continue", {
+          job_id: job.job_id,
+          stage: wakeStage,
+          age_ms: ageMs,
+          stale_ms: Date.now() - job.updated_at,
+          rearms: nextRearm,
+        });
+      } else {
+        await setXhighJobContent(
+          job.job_id,
+          `direct_continue:${wakeStage}:${Date.now()}`,
+        ).catch(() => undefined);
       }
-      console.info("[final-delivery-status] pending before worker heartbeat — rearm continue", {
-        job_id: job.job_id,
-        stage: wakeStage,
-        age_ms: ageMs,
-        stale_ms: Date.now() - job.updated_at,
-      });
       return NextResponse.json({
         ok: true,
         job_id: job.job_id,

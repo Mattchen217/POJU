@@ -172,11 +172,21 @@ async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Pro
     accumulated_content: `queued:finalize:${Date.now()}`,
   }).catch(() => undefined);
   if (shouldDispatchContinueViaInngest()) {
+    const { waitForDeliveryWorker } = await import("@/lib/poju/delivery-continue-dispatch");
     const published = await publishContinueViaInngest(job_id, "finalize");
-    if (published === "published") return;
-    console.warn("[final-delivery] Inngest start failed — falling back to after()", {
-      job_id,
-    });
+    if (published === "published") {
+      // Send succeeding is not a worker. If nothing attaches, run the stage here.
+      const attached = await waitForDeliveryWorker(job_id, "finalize", 30_000);
+      if (attached) return;
+      console.warn(
+        "[final-delivery] Inngest published but no worker attached — falling back to after()",
+        { job_id },
+      );
+    } else {
+      console.warn("[final-delivery] Inngest start failed — falling back to after()", {
+        job_id,
+      });
+    }
   }
   after(async () => {
     try {
