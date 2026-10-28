@@ -183,6 +183,13 @@ async function main(): Promise<void> {
       statusSrc.includes("await_continue_ack|handoff_continue"),
   );
   assert(
+    "status rescues a silent v3.step heartbeat instead of stale_running",
+    statusSrc.includes("silentWorker") &&
+      statusSrc.includes("dispatch_task:") &&
+      statusSrc.includes("v3_step:") &&
+      statusSrc.includes("noteDeadTaskRescue"),
+  );
+  assert(
     "status route can host one rescued stage",
     statusSrc.includes("maxDuration = 300") &&
       read("vercel.json").includes("app/api/poju/final-delivery/status/route.ts"),
