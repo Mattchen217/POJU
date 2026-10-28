@@ -9,12 +9,15 @@ import {
   releaseXhighSessionLock,
 } from "@/lib/poju/xhigh-job-store";
 import { runSegment2AgendaBridgeJob } from "@/lib/poju/xhigh-job-runner";
-import { isSegment2JobResult } from "@/lib/poju/xhigh-job-types";
+import { isSegment2JobResult, type Segment2AgendaJobInput } from "@/lib/poju/xhigh-job-types";
+import { runEphemeralXhighJob } from "@/lib/poju/xhigh-ephemeral-run";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 180;
+/** Call B can run inline for up to the same 270s ceiling as Call A when KV is unavailable. */
+export const maxDuration = 300;
 
 const STALE_RUNNING_MS = 2 * 60 * 1000;
 const PHASE = "segment2_agenda_bridge" as const;
@@ -95,6 +98,7 @@ function scheduleAgendaJob(job_id: string, session_id: string): void {
 
 /** Call B — agenda + 承上启下 first_question. Separate invocation from Call A. */
 export async function POST(req: Request) {
+  let inlineCall: (() => Promise<NextResponse>) | null = null;
   try {
     if (!isOpenRouterConfigured()) {
       return NextResponse.json(
@@ -144,6 +148,57 @@ export async function POST(req: Request) {
     const segment1_understanding =
       typeof body.segment1_understanding === "string" ? body.segment1_understanding : "";
 
+    const jobInput: Segment2AgendaJobInput = {
+      session_id: sessionId,
+      locale,
+      original_question,
+      question_category,
+      breakthrough_core: body.breakthrough_core,
+      ...(segment1_understanding.trim()
+        ? { segment1_understanding: segment1_understanding.trim() }
+        : {}),
+      dyad_compat_summary:
+        body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+          ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+          : null,
+      partner_bazi:
+        body.partner_bazi === "present" || body.partner_bazi === "absent"
+          ? body.partner_bazi
+          : null,
+      pivot_chart_path:
+        body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
+          ? body.pivot_chart_path
+          : null,
+      dyad_matrix_pack:
+        body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
+          ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
+          : null,
+    };
+
+    inlineCall = async () => {
+      console.warn(
+        "[breakthrough-core/agenda] Upstash plan limit — running Call B inline without KV",
+        { sessionId },
+      );
+      const done = await runEphemeralXhighJob(
+        () =>
+          createXhighJob({
+            phase: PHASE,
+            session_id: sessionId,
+            locale,
+            job_input: jobInput,
+          }),
+        runSegment2AgendaBridgeJob,
+      );
+      if (!done) {
+        return NextResponse.json(
+          { ok: false, error: "inline agenda missing", retryable: true },
+          { status: 503 },
+        );
+      }
+      return jobStatusResponse(done);
+    };
+
     const latest = await findLatestXhighJobForSession(PHASE, sessionId);
     if (latest) {
       const ageMs = Date.now() - latest.updated_at;
@@ -168,35 +223,10 @@ export async function POST(req: Request) {
         phase: PHASE,
         session_id: sessionId,
         locale,
-        job_input: {
-          session_id: sessionId,
-          locale,
-          original_question,
-          question_category,
-          breakthrough_core: body.breakthrough_core,
-          ...(segment1_understanding.trim()
-            ? { segment1_understanding: segment1_understanding.trim() }
-            : {}),
-          dyad_compat_summary:
-            body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
-              ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
-              : null,
-          partner_bazi:
-            body.partner_bazi === "present" || body.partner_bazi === "absent"
-              ? body.partner_bazi
-              : null,
-          pivot_chart_path:
-            body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
-              ? body.pivot_chart_path
-              : null,
-          dyad_matrix_pack:
-            body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
-              ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
-              : null,
-        },
+        job_input: jobInput,
       });
     } catch (e) {
-      await releaseXhighSessionLock(PHASE, sessionId);
+      await releaseXhighSessionLock(PHASE, sessionId).catch(() => undefined);
       throw e;
     }
 
@@ -210,6 +240,9 @@ export async function POST(req: Request) {
       phase: PHASE,
     });
   } catch (e: unknown) {
+    if (inlineCall && isUpstashPlanLimitError(e)) {
+      return inlineCall();
+    }
     const msg = e instanceof Error ? e.message : "Agenda bridge failed";
     console.warn("[breakthrough-core/agenda] request failed:", msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

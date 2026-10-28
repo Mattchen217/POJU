@@ -69,7 +69,7 @@ function main(): void {
     "B timeout = xhigh 270s ceiling (wallLeft still binds)",
     runner.includes("SEGMENT2_AGENDA_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS"),
   );
-  assert("agenda route maxDuration 180", agendaRoute.includes("maxDuration = 180"));
+  assert("agenda route maxDuration 300", agendaRoute.includes("maxDuration = 300"));
   assert("agenda salvage after transport", runner.includes("salvaged after transport error"));
   assert("agenda schedules own after()", agendaRoute.includes("runSegment2AgendaBridgeJob"));
   assert("report finalize", control.includes("finalizeSegment2ReportSuccess"));

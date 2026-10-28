@@ -73,10 +73,12 @@ import {
 } from "@/lib/prompts/language-directive";
 import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
 import {
+  agendaInlineToPollResult,
   applySegment2PollSuccess,
   createSegment2AgendaJob,
   createSegment2XhighJob,
   enqueueSegment2AgendaAutoRetry,
+  isAgendaInlineComplete,
   enqueueSegment2ReportAutoRetry,
   finalizeSegment2AgendaBridgeFailure,
   finalizeSegment2AgendaBridgeSuccess,
@@ -2325,6 +2327,27 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
   }
 
+  async function adoptInlineAgenda(
+    created: Awaited<ReturnType<typeof createSegment2AgendaJob>>,
+    sessionForRef?: POJUSessionState,
+  ): Promise<boolean> {
+    if (!isAgendaInlineComplete(created)) return false;
+    if (sessionForRef) sessionRef.current = sessionForRef;
+    setSegment2StageBoth("agenda");
+    await handleSegment2JobComplete(agendaInlineToPollResult(created));
+    return true;
+  }
+
+  async function adoptInlineAgendaRetry(
+    retried: Awaited<ReturnType<typeof enqueueSegment2AgendaAutoRetry>>,
+  ): Promise<boolean> {
+    if (!retried.ok || !("already_complete" in retried) || !retried.already_complete) return false;
+    sessionRef.current = retried.session;
+    setSegment2StageBoth("agenda");
+    await handleSegment2JobComplete(agendaInlineToPollResult(retried.inline));
+    return true;
+  }
+
   async function handleUnderstandingGateClick(action: "confirmed" | "wants_to_add") {
     if (sending || turnInFlightRef.current || segment2JobId) return;
     const baseSession = sessionRef.current;
@@ -2392,13 +2415,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             locale: processLocale(started.session),
             breakthrough_core: core,
           });
+          if (await adoptInlineAgenda(created, started.session)) return;
           if (!created.ok) {
             const retried = await enqueueSegment2AgendaAutoRetry({
               session: started.session,
               locale: processLocale(started.session),
               error: created.error,
             });
-            if (retried.ok) {
+            if (await adoptInlineAgendaRetry(retried)) return;
+            if (retried.ok && "job_id" in retried) {
               onSessionUpdate(retried.session);
               await savePOJUSession(retried.session);
               setSegment2JobId(retried.job_id);
@@ -2407,7 +2432,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             const failed = finalizeSegment2AgendaBridgeFailure({
               session: retried.session,
               locale: processLocale(retried.session),
-              error: retried.error || created.error,
+              error: ("error" in retried ? retried.error : undefined) || created.error,
             });
             unlockSegment2Pipeline();
             onSessionUpdate(failed);
@@ -2594,6 +2619,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           locale: sessionLang,
           breakthrough_core: core,
         });
+        if (await adoptInlineAgenda(created, session)) return;
         if (!created.ok) return;
         await persistPendingSegment2Job(created.job_id, "agenda");
         armSegment2PipelineLock();
@@ -2713,13 +2739,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       locale: processLocale(next),
       breakthrough_core: core,
     });
+    if (await adoptInlineAgenda(created, next)) return;
     if (!created.ok) {
       const retried = await enqueueSegment2AgendaAutoRetry({
         session: next,
         locale: processLocale(next),
         error: created.error,
       });
-      if (retried.ok) {
+      if (await adoptInlineAgendaRetry(retried)) return;
+      if (retried.ok && "job_id" in retried) {
         onSessionUpdate(retried.session);
         syncDebugStateLedger(retried.session);
         await savePOJUSession(retried.session);
@@ -2729,7 +2757,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const failed = finalizeSegment2AgendaBridgeFailure({
         session: retried.session,
         locale: processLocale(retried.session),
-        error: retried.error || created.error,
+        error: ("error" in retried ? retried.error : undefined) || created.error,
       });
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
@@ -2765,7 +2793,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         locale: lang,
         error,
       });
-      if (retried.ok) {
+      if (await adoptInlineAgendaRetry(retried)) return;
+      if (retried.ok && "job_id" in retried) {
         onSessionUpdate(retried.session);
         syncDebugStateLedger(retried.session);
         await savePOJUSession(retried.session);
@@ -2784,7 +2813,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const next = finalizeSegment2AgendaBridgeFailure({
         session: retried.session,
         locale: lang,
-        error: retried.error || error,
+        error: ("error" in retried ? retried.error : undefined) || error,
       });
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
@@ -3113,13 +3142,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             locale: processLocale(started.session),
             breakthrough_core: core,
           });
+          if (await adoptInlineAgenda(created, started.session)) return;
           if (!created.ok) {
             const retried = await enqueueSegment2AgendaAutoRetry({
               session: started.session,
               locale: processLocale(started.session),
               error: created.error,
             });
-            if (retried.ok) {
+            if (await adoptInlineAgendaRetry(retried)) return;
+            if (retried.ok && "job_id" in retried) {
               onSessionUpdate(retried.session);
               await savePOJUSession(retried.session);
               setSegment2JobId(retried.job_id);
@@ -3128,7 +3159,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             const failed = finalizeSegment2AgendaBridgeFailure({
               session: retried.session,
               locale: processLocale(retried.session),
-              error: retried.error || created.error,
+              error: ("error" in retried ? retried.error : undefined) || created.error,
             });
             unlockSegment2Pipeline();
             onSessionUpdate(failed);
