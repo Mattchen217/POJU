@@ -23,7 +23,12 @@ import {
   PRODUCTION_V3_TASK_ID,
 } from "../lib/llm/pro/delivery/pipeline-v3/production-run";
 import type { DeliveryLabSession } from "../lib/llm/pro/delivery/lab/types";
-import { V1_DELIVERY_SEGMENT_KEYS } from "../lib/llm/pro/delivery/segment-key-alias";
+import { pageSchemaToArgumentBodies } from "../lib/llm/pro/delivery/page-schema/render";
+import type { DeliveryPageData } from "../lib/llm/pro/delivery/page-schema/types";
+import {
+  V1_DELIVERY_SEGMENT_KEYS,
+  type V1DeliverySegmentKey,
+} from "../lib/llm/pro/delivery/segment-key-alias";
 
 const emptyEnv = {} as NodeJS.ProcessEnv;
 
@@ -87,5 +92,230 @@ const notAssembled = planProductionV3Book({
 } as unknown as DeliveryLabSession);
 assert.equal(notAssembled.ok, false);
 if (!notAssembled.ok) assert.equal(notAssembled.reason, "v3_assemble_not_approved");
+
+/**
+ * Job fd_90a4af96… failed at book persist, not mid-triad.
+ * `v3_empty_page` fires only after book.assemble is approved, and only when
+ * pageSchemaToArgumentBodies returns []. patterns/bottleneck/options/strategy
+ * had schemas (the triad writes them) but no converter case, so the first
+ * unhandled key in V1 order — personal_decision_patterns — hard-stopped
+ * before any segment checkpoint. A real empty why_cards list still stops.
+ */
+const patternCard = {
+  page: "personal_decision_patterns",
+  why_cards: [
+    {
+      title: "先收再问",
+      surface: "窗口一窄就先把话说死",
+      essence: "判断先于核对，所以补充信息来不及进这一轮",
+      chart_anchors: ["食神"],
+    },
+  ],
+} as unknown as DeliveryPageData;
+
+const patternBodies = pageSchemaToArgumentBodies(patternCard);
+assert.equal(patternBodies.length, 1);
+assert.match(patternBodies[0]!.body, /先收再问/);
+assert.match(patternBodies[0]!.body, /窗口一窄就先把话说死/);
+assert.deepEqual(patternBodies[0]!.chart_anchors, ["食神"]);
+
+assert.equal(
+  pageSchemaToArgumentBodies({
+    page: "personal_decision_patterns",
+    why_cards: [],
+  } as unknown as DeliveryPageData).length,
+  0,
+  "a patterns schema with no cards stays empty",
+);
+
+assert.equal(
+  pageSchemaToArgumentBodies({
+    page: "bottleneck_analysis",
+    why_cards: [{ title: "卡", surface: "表", essence: "质", chart_anchors: [] }],
+  } as unknown as DeliveryPageData).length,
+  1,
+);
+assert.equal(
+  pageSchemaToArgumentBodies({
+    page: "strategic_options",
+    options: [
+      {
+        name: "维持",
+        summary: "先不改结构",
+        upside: "少动",
+        cost: "窗口继续收",
+        risk: "被动",
+        reversibility: "随时可改",
+        chart_anchors: [],
+      },
+      {
+        name: "改口",
+        summary: "把条件写清再谈",
+        upside: "可核对",
+        cost: "慢一轮",
+        risk: "对方不接",
+        reversibility: "可退回维持",
+        chart_anchors: [],
+      },
+    ],
+  } as unknown as DeliveryPageData).length,
+  2,
+);
+assert.equal(
+  pageSchemaToArgumentBodies({
+    page: "recommended_strategy",
+    core_judgment: "主路先写清条件",
+    primary: { name: "主", why: "条件在手", when: "本周", exit: "对方拒书面", chart_anchors: [] },
+    backup: { name: "辅", why: "主路失效", when: "被拒后", exit: "不再加码", chart_anchors: [] },
+  } as unknown as DeliveryPageData).length,
+  3,
+);
+
+function markedTree(key: V1DeliverySegmentKey) {
+  return { [key]: [{ body: `${key} 依据` }] };
+}
+
+function bookLab(
+  pages: Partial<Record<V1DeliverySegmentKey, DeliveryPageData>>,
+): DeliveryLabSession {
+  const by_page: DeliveryLabSession["artifacts"]["by_page"] = {};
+  for (const key of Object.keys(pages) as V1DeliverySegmentKey[]) {
+    const schema = pages[key];
+    if (!schema) continue;
+    by_page[key] = {
+      page_schema: schema,
+      marked: key === "decision_brief" ? undefined : markedTree(key),
+    };
+  }
+  return {
+    steps: { "book.assemble": { status: "approved", attempts: [] } },
+    artifacts: { by_page },
+  } as unknown as DeliveryLabSession;
+}
+
+const brief = {
+  page: "decision_brief",
+  core_judgment: "先写清条件，再决定是否加码",
+  primary: { name: "主", core_logic: "路", why: "因", when: "时", chart_anchors: ["甲"] },
+  backup: { name: "辅", core_logic: "路", why: "因", when: "时", chart_anchors: ["乙"] },
+} as unknown as DeliveryPageData;
+const situation = {
+  page: "situation_analysis",
+  why_cards: [{ title: "处境", surface: "表", essence: "质", chart_anchors: [] }],
+} as unknown as DeliveryPageData;
+
+const filledPatterns = planProductionV3Book(
+  bookLab({
+    decision_brief: brief,
+    situation_analysis: situation,
+    personal_decision_patterns: patternCard,
+  }),
+);
+assert.equal(filledPatterns.ok, false);
+if (!filledPatterns.ok) {
+  assert.equal(
+    filledPatterns.reason,
+    "v3_missing_page_schema:bottleneck_analysis",
+    "a stored patterns card must not be reported empty",
+  );
+}
+
+const emptyPatterns = planProductionV3Book(
+  bookLab({
+    decision_brief: brief,
+    situation_analysis: situation,
+    personal_decision_patterns: {
+      page: "personal_decision_patterns",
+      why_cards: [],
+    } as unknown as DeliveryPageData,
+  }),
+);
+assert.equal(emptyPatterns.ok, false);
+if (!emptyPatterns.ok) {
+  assert.equal(emptyPatterns.reason, "v3_empty_page:personal_decision_patterns");
+}
+
+const angle = {
+  name: "角",
+  strategy: "打法",
+  means: ["一步"],
+  hard_metrics: [] as string[],
+  chart_anchors: [] as string[],
+};
+const risk = { narrative: "坑", chart_anchors: [] as string[] };
+const fullBook = planProductionV3Book(
+  bookLab({
+    decision_brief: brief,
+    situation_analysis: situation,
+    personal_decision_patterns: patternCard,
+    bottleneck_analysis: {
+      page: "bottleneck_analysis",
+      why_cards: [{ title: "障碍", surface: "表", essence: "质", chart_anchors: [] }],
+    } as unknown as DeliveryPageData,
+    strategic_options: {
+      page: "strategic_options",
+      options: [
+        {
+          name: "甲",
+          summary: "摘",
+          upside: "益",
+          cost: "本",
+          risk: "险",
+          reversibility: "可退",
+          chart_anchors: [],
+        },
+        {
+          name: "乙",
+          summary: "摘",
+          upside: "益",
+          cost: "本",
+          risk: "险",
+          reversibility: "可退",
+          chart_anchors: [],
+        },
+      ],
+    } as unknown as DeliveryPageData,
+    recommended_strategy: {
+      page: "recommended_strategy",
+      core_judgment: "主路先写清条件",
+      primary: { name: "主", why: "条件在手", exit: "被拒即停", chart_anchors: [] },
+      backup: { name: "辅", why: "主路失效", exit: "不再加码", chart_anchors: [] },
+    } as unknown as DeliveryPageData,
+    execution_guidance: {
+      page: "execution_guidance",
+      primary_toolkit: { title: "主轨", angles: [angle] },
+      backup_toolkit: { title: "辅轨", angles: [angle] },
+    } as unknown as DeliveryPageData,
+    self_regulation: {
+      page: "self_regulation",
+      dimensions: [{ name: "收势", strategy: "先停", means: ["慢半拍"], chart_anchors: [] }],
+    } as unknown as DeliveryPageData,
+    validation_risk: {
+      page: "validation_risk",
+      red_lights: [risk],
+      traps: [risk],
+      switch_to_backup: risk,
+      protection_rules: [risk],
+    } as unknown as DeliveryPageData,
+    validation_close: {
+      page: "validation_close",
+      identity_before: "前",
+      identity_after: "后",
+      identity_shift: "切换",
+      quote: "一句",
+      quote_use: "定心",
+      immediate_action: "今晚写条件",
+      tonight_done_looks_like: "半页",
+      tonight_why: "窗口在",
+      day7_micro_actions: [{ action: "核对", why: "防空转", done_when: "写下" }],
+      takeaways: ["一", "二", "三"],
+    } as unknown as DeliveryPageData,
+  }),
+);
+assert.equal(fullBook.ok, true, fullBook.ok ? "" : fullBook.reason);
+if (fullBook.ok) {
+  assert.match(fullBook.narrative.personal_decision_patterns?.[0]?.body ?? "", /先收再问/);
+  assert.ok((fullBook.marked.personal_decision_patterns ?? []).length > 0);
+}
 
 console.log("production v3 mount ok");

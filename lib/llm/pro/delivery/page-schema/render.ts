@@ -86,12 +86,53 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
       ];
     }
     case "situation_analysis":
-      return page.why_cards.map((c) =>
+    case "personal_decision_patterns":
+    case "bottleneck_analysis": {
+      // One why_card = one argument, same order as the shelf slots.
+      // A missing case used to fall through to [] and planProductionV3Book
+      // reported v3_empty_page after the triad had already stored the schema.
+      const cards = page.why_cards ?? [];
+      if (!cards.length) return [];
+      return cards.map((c) =>
         withAnchors(
           `### ${c.title}\n\n**表象:** ${c.surface}\n\n**本质:** ${c.essence}`,
           c.chart_anchors,
         ),
       );
+    }
+    case "strategic_options": {
+      const options = page.options ?? [];
+      if (!options.length) return [];
+      return options.map((opt) =>
+        withAnchors(
+          `### ${opt.name}\n\n${opt.summary}\n\n` +
+            `**收益:** ${opt.upside}\n\n` +
+            `**成本:** ${opt.cost}\n\n` +
+            `**风险:** ${opt.risk}\n\n` +
+            `**可逆:** ${opt.reversibility}`,
+          opt.chart_anchors,
+        ),
+      );
+    }
+    case "recommended_strategy": {
+      const primary = page.primary;
+      const backup = page.backup;
+      const judgment = String(page.core_judgment ?? "").trim();
+      if (!judgment || !primary?.why?.trim() || !backup?.why?.trim()) return [];
+      const whenLine = (when: string | undefined) =>
+        when?.trim() ? `\n\n**何时:** ${when.trim()}` : "";
+      return [
+        { body: `### 核心判定\n\n${judgment}` },
+        withAnchors(
+          `### 主路径 · ${primary.name}\n\n**为何:** ${primary.why}${whenLine(primary.when)}\n\n**退出:** ${primary.exit}`,
+          primary.chart_anchors,
+        ),
+        withAnchors(
+          `### 辅路径 · ${backup.name}\n\n**为何:** ${backup.why}${whenLine(backup.when)}\n\n**退出:** ${backup.exit}`,
+          backup.chart_anchors,
+        ),
+      ];
+    }
     case "execution_guidance": {
       const angleBody = (
         trackTitle: string,
