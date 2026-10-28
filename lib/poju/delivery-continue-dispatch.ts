@@ -130,7 +130,9 @@ async function taskWorkerAttached(job_id: string, task_id: string): Promise<bool
 
 async function waitForTaskAttach(job_id: string, task_id: string, timeoutMs: number): Promise<boolean> {
   const started = Date.now();
-  let lastBeat = Date.now();
+  // Stamp immediately. The caller's dispatch_task interval is already cleared,
+  // and a killed wait must not leave that stale heartbeat as the last write.
+  let lastBeat = 0;
   while (Date.now() - started < timeoutMs) {
     if (await taskWorkerAttached(job_id, task_id)) return true;
     if (Date.now() - lastBeat > 10_000) {

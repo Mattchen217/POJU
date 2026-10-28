@@ -78,13 +78,14 @@ function isPipelineStage(value: string): value is DeliveryPipelineStage {
 }
 
 type UnattachedHop =
-  | { kind: "stage"; stage: DeliveryPipelineStage; nextN: number }
-  | { kind: "task"; task_id: string; nextN: number };
+  | { kind: "stage"; stage: DeliveryPipelineStage; nextN: number; silentWorker?: boolean }
+  | { kind: "task"; task_id: string; nextN: number; silentWorker?: boolean };
 
 /**
- * Publish succeeded and the worker never heartbeated. Not a general stale resume:
- * only these stamps mean the next hop was never entered.
+ * Publish succeeded and the worker never heartbeated, or a v3.step worker
+ * stamped dispatch_task / v3_step and then went silent.
  * A counted direct_continue stamp at n>=1 already failed to start — stop rescuing.
+ * silentWorker hops wait out the 45s stale window so a live 12s heartbeat is not stolen.
  */
 function classifyUnattachedHop(
   content: string | null | undefined,
@@ -113,6 +114,13 @@ function classifyUnattachedHop(
   }
   const task = content.match(/^await_task_attach:([^:]+):\d+/);
   if (task?.[1]) return { kind: "task", task_id: task[1], nextN: 0 };
+  const runningTask = content.match(/^dispatch_task:([^:]+):(?:\d+|start)$/);
+  if (runningTask?.[1]) {
+    return { kind: "task", task_id: runningTask[1], nextN: 0, silentWorker: true };
+  }
+  if (/^v3_step:.+:\d+$/.test(content) && productionDeliveryUsesV3()) {
+    return { kind: "task", task_id: "v3.step", nextN: 0, silentWorker: true };
+  }
   if (content.startsWith("dispatch_parked:") || content.startsWith("dispatch_scheduled:")) {
     if (currentStage === "assemble") return { kind: "stage", stage: "assemble", nextN: 0 };
     if (productionDeliveryUsesV3()) return { kind: "task", task_id: "v3.step", nextN: 0 };
@@ -148,6 +156,9 @@ async function rescueUnattachedRunningJob(
   const age = Date.now() - job.updated_at;
   const hop = classifyUnattachedHop(job.accumulated_content, currentStage);
   if (!hop || hop === "capped") return null;
+  // A live v3.step heartbeats every 12s. Only take over once that heartbeat
+  // is already past the hard-stop window.
+  if (hop.silentWorker && age <= STALE_RUNNING_MS) return null;
   if (age <= UNATTACHED_HOP_RESCUE_MS) return null;
 
   const { loadDeliveryDispatchDag } = await import("@/lib/llm/pro/delivery/dispatch/task-store");
@@ -167,6 +178,26 @@ async function rescueUnattachedRunningJob(
     const held = await deliveryTaskLeaseHeld(job.job_id, hop.task_id);
     if (held && age <= STALE_RUNNING_MS) return null;
     if (held) await releaseDispatchTaskLease(job.job_id, hop.task_id).catch(() => undefined);
+  }
+
+  if (hop.silentWorker && hop.kind === "task") {
+    let cursor = 0;
+    if (hop.task_id === "v3.step") {
+      const { loadDeliveryLab } = await import("@/lib/llm/pro/delivery/lab/store");
+      const { productionV3LabId } = await import("@/lib/llm/pro/delivery/pipeline-v3/production-run");
+      const lab = await loadDeliveryLab(productionV3LabId(job.job_id)).catch(() => null);
+      cursor = lab?.cursor_index ?? 0;
+    }
+    const { noteDeadTaskRescue } = await import("@/lib/llm/pro/delivery/dispatch/task-store");
+    const rescueN = await noteDeadTaskRescue(job.job_id, cursor).catch(() => 1);
+    if (rescueN > 2) {
+      console.warn("[final-delivery-status] silent task rescue capped", {
+        job_id: job.job_id,
+        cursor,
+        n: rescueN,
+      });
+      return null;
+    }
   }
 
   const stampKind = hop.kind === "stage" ? "stage" : "task";
@@ -406,7 +437,8 @@ async function readFinalDeliveryStatus(req: NextRequest) {
   // Dead invoke (Vercel kill / dropped after) — heartbeat stale.
   // Dispatch mode: workers park the /continue invoke but keep job alive via task heartbeats.
   // Never false-STOP while DAG still has live running tasks (assign/write can take minutes).
-  // Unattached publish stamps are rescued above; this STOP is for a hop that was entered and died.
+  // Unattached publishes and silent dispatch_task / v3_step heartbeats are rescued above.
+  // This STOP is for a hop that died without those stamps, or a rescue that already capped.
   if (
     (job.status === "running" || job.status === "pending") &&
     Date.now() - job.updated_at > STALE_RUNNING_MS

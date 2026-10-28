@@ -62,6 +62,23 @@ export async function deliveryTaskLeaseHeld(job_id: string, task_id: string): Pr
   return Boolean(raw);
 }
 
+function deliveryDeadTaskRescueKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:dead-task-rescue`;
+}
+
+/**
+ * Count rescues of a worker that went silent on the same v3 cursor.
+ * A later step (cursor moved) starts again at 1. More than two on one
+ * cursor means the isolate keeps dying — let status hard-stop.
+ */
+export async function noteDeadTaskRescue(job_id: string, cursor: number): Promise<number> {
+  const key = deliveryDeadTaskRescueKey(job_id);
+  const prev = await kv.get<{ cursor?: number; n?: number }>(key);
+  const n = prev && prev.cursor === cursor && typeof prev.n === "number" ? prev.n + 1 : 1;
+  await kv.set(key, { cursor, n }, { ex: KV_TTL.POJU_XHIGH_JOB });
+  return n;
+}
+
 export async function patchDispatchTask(
   job_id: string,
   task_id: string,

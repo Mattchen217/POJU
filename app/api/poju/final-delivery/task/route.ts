@@ -125,7 +125,9 @@ export async function POST(req: Request) {
     }
 
     after(async () => {
+      let heartbeats = true;
       const heartbeat = setInterval(() => {
+        if (!heartbeats) return;
         void setXhighJobContent(
           job_id,
           `dispatch_task:${task_id}:${Date.now()}`,
@@ -151,6 +153,7 @@ export async function POST(req: Request) {
       try {
         if (isProductionV3Task(task_id)) {
           const outcome = await runProductionV3Task({ job_id, jobInput });
+          heartbeats = false;
           clearTimeout(prekillTimer);
           clearInterval(heartbeat);
           await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
@@ -201,6 +204,7 @@ export async function POST(req: Request) {
       } catch (e) {
         console.error("[final-delivery/task] worker error", { job_id, task_id, e });
       } finally {
+        heartbeats = false;
         clearTimeout(prekillTimer);
         clearInterval(heartbeat);
         if (!leaseReleased) {

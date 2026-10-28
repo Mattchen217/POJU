@@ -95,7 +95,9 @@ export const pojuFinalDeliveryTask = inngest.createFunction(
         return { skipped: true, reason: "lease_busy" };
       }
 
+      let heartbeats = true;
       const heartbeat = setInterval(() => {
+        if (!heartbeats) return;
         void setXhighJobContent(job_id, `dispatch_task:${task_id}:${Date.now()}`).catch(
           () => undefined,
         );
@@ -117,6 +119,7 @@ export const pojuFinalDeliveryTask = inngest.createFunction(
       try {
         if (isProductionV3Task(task_id)) {
           const outcome = await runProductionV3Task({ job_id, jobInput });
+          heartbeats = false;
           clearTimeout(prekillTimer);
           clearInterval(heartbeat);
           await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
@@ -181,6 +184,7 @@ export const pojuFinalDeliveryTask = inngest.createFunction(
         );
         return { ok: true, job_id, task_id };
       } finally {
+        heartbeats = false;
         clearTimeout(prekillTimer);
         clearInterval(heartbeat);
         if (!leaseReleased) {
