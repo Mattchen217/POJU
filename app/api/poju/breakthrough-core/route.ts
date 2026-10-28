@@ -10,8 +10,10 @@ import {
   releaseXhighSessionLock,
 } from "@/lib/poju/xhigh-job-store";
 import { runSegment2BreakthroughCoreJob } from "@/lib/poju/xhigh-job-runner";
-import { isSegment2JobResult } from "@/lib/poju/xhigh-job-types";
+import { isSegment2JobResult, type Segment2JobInput } from "@/lib/poju/xhigh-job-types";
+import { runEphemeralXhighJob } from "@/lib/poju/xhigh-ephemeral-run";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
+import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,6 +99,7 @@ function scheduleSegment2Job(job_id: string, session_id: string): void {
 }
 
 export async function POST(req: Request) {
+  let inlineCall: (() => Promise<NextResponse>) | null = null;
   try {
     if (!isOpenRouterConfigured()) {
       return NextResponse.json(
@@ -158,6 +161,55 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const profileId = resolveProfileId({ selected_stored_profile_id: body.selected_stored_profile_id, agent_v2 });
 
+    const jobInput: Segment2JobInput = {
+      session_id: sessionId,
+      original_question: body.original_question,
+      locale,
+      profile_id: profileId,
+      agent_v2: agent_v2 as POJUAgentState | null,
+      base_analysis,
+      dyad_compat_summary:
+        body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+          ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+          : null,
+      partner_bazi:
+        body.partner_bazi === "present" || body.partner_bazi === "absent"
+          ? body.partner_bazi
+          : null,
+      pivot_chart_path:
+        body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
+          ? body.pivot_chart_path
+          : null,
+      dyad_matrix_pack:
+        body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
+          ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
+          : null,
+    };
+
+    inlineCall = async () => {
+      console.warn(
+        "[breakthrough-core] Upstash plan limit — running Call A inline without KV",
+        { sessionId },
+      );
+      const done = await runEphemeralXhighJob(
+        () =>
+          createXhighJob({
+            phase: "segment2_breakthrough_core",
+            session_id: sessionId,
+            locale,
+            job_input: jobInput,
+          }),
+        runSegment2BreakthroughCoreJob,
+      );
+      if (!done) {
+        return NextResponse.json(
+          { ok: false, error: "inline segment2 missing", retryable: true },
+          { status: 503 },
+        );
+      }
+      return jobStatusResponse(done);
+    };
+
     const latest = await findLatestXhighJobForSession("segment2_breakthrough_core", sessionId);
     if (latest) {
       const ageMs = Date.now() - latest.updated_at;
@@ -184,33 +236,10 @@ export async function POST(req: Request) {
         phase: "segment2_breakthrough_core",
         session_id: sessionId,
         locale,
-        job_input: {
-          session_id: sessionId,
-          original_question: body.original_question,
-          locale,
-          profile_id: profileId,
-          agent_v2,
-          base_analysis,
-          dyad_compat_summary:
-            body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
-              ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
-              : null,
-          partner_bazi:
-            body.partner_bazi === "present" || body.partner_bazi === "absent"
-              ? body.partner_bazi
-              : null,
-          pivot_chart_path:
-            body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
-              ? body.pivot_chart_path
-              : null,
-          dyad_matrix_pack:
-            body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
-              ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
-              : null,
-        },
+        job_input: jobInput,
       });
     } catch (e) {
-      await releaseXhighSessionLock("segment2_breakthrough_core", sessionId);
+      await releaseXhighSessionLock("segment2_breakthrough_core", sessionId).catch(() => undefined);
       throw e;
     }
 
@@ -223,6 +252,9 @@ export async function POST(req: Request) {
       status: job.status,
     });
   } catch (e: unknown) {
+    if (inlineCall && isUpstashPlanLimitError(e)) {
+      return inlineCall();
+    }
     const msg = e instanceof Error ? e.message : "Breakthrough core failed";
     console.warn("[breakthrough-core] request failed:", msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

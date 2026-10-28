@@ -178,7 +178,8 @@ export async function createSegment2XhighJob(input: {
   };
 
   // Resume of a finished job: core is enough; agenda may be missing after JSON round-trip.
-  if (payload.breakthrough_core && payload.job_id) {
+  // Inline (no-KV) completion uses the same shape. A failed terminal job must not be polled.
+  if (payload.breakthrough_core && payload.job_id && payload.ok !== false && payload.status !== "failed") {
     console.info("[segment2] job already complete on create", { job_id: payload.job_id });
     return {
       ok: true,
@@ -194,7 +195,12 @@ export async function createSegment2XhighJob(input: {
     };
   }
 
-  if (!payload.job_id) {
+  if (
+    !payload.job_id ||
+    payload.ok === false ||
+    payload.status === "failed" ||
+    payload.status === "completed"
+  ) {
     return {
       ok: false,
       error: payload.error || `segment2 job create failed (${res.status})`,
@@ -563,12 +569,51 @@ export function finalizeSegment2JobFailure(input: {
   );
 }
 
-/** POST create Call B job ? does not poll. */
+export type CreateSegment2AgendaJobResult =
+  | { ok: true; job_id: string }
+  | {
+      ok: true;
+      already_complete: true;
+      job_id: string;
+      investigation_agenda: AgendaItem[];
+      first_question: string;
+      options?: string[];
+      breakthrough_core?: BreakthroughCore;
+      model?: string;
+      tokens_used?: number;
+      llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+    }
+  | { ok: false; error: string; retryable?: boolean };
+
+export function isAgendaInlineComplete(
+  created: CreateSegment2AgendaJobResult,
+): created is Extract<CreateSegment2AgendaJobResult, { already_complete: true }> {
+  return created.ok === true && "already_complete" in created && created.already_complete === true;
+}
+
+/** Map an inline Call B response onto the poll-success shape the UI already finalizes. */
+export function agendaInlineToPollResult(
+  created: Extract<CreateSegment2AgendaJobResult, { already_complete: true }>,
+): Extract<Segment2JobPollResult, { ok: true }> {
+  return {
+    ok: true,
+    job_id: created.job_id,
+    breakthrough_core: created.breakthrough_core,
+    investigation_agenda: created.investigation_agenda,
+    first_question: created.first_question,
+    options: created.options,
+    model: created.model,
+    tokens_used: created.tokens_used,
+    llm_debug: created.llm_debug,
+  };
+}
+
+/** POST create Call B job. Inline completion (KV plan limit) returns already_complete — do not poll. */
 export async function createSegment2AgendaJob(input: {
   session: POJUSessionState;
   locale: string;
   breakthrough_core: BreakthroughCore;
-}): Promise<{ ok: true; job_id: string } | { ok: false; error: string; retryable?: boolean }> {
+}): Promise<CreateSegment2AgendaJobResult> {
   if (typeof window === "undefined") {
     throw new Error("createSegment2AgendaJob is browser-only");
   }
@@ -603,7 +648,34 @@ export async function createSegment2AgendaJob(input: {
     error?: string;
     retryable?: boolean;
     reason?: string;
+    investigation_agenda?: AgendaItem[];
+    first_question?: string;
+    options?: string[];
+    breakthrough_core?: BreakthroughCore;
+    model?: string;
+    tokens_used?: number;
+    llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
   };
+  if (
+    payload.ok !== false &&
+    payload.status === "completed" &&
+    payload.job_id &&
+    (payload.first_question?.trim() ||
+      (Array.isArray(payload.investigation_agenda) && payload.investigation_agenda.length > 0))
+  ) {
+    return {
+      ok: true,
+      already_complete: true,
+      job_id: payload.job_id,
+      investigation_agenda: payload.investigation_agenda ?? [],
+      first_question: payload.first_question?.trim() ?? "",
+      options: payload.options,
+      breakthrough_core: payload.breakthrough_core,
+      model: payload.model,
+      tokens_used: payload.tokens_used,
+      llm_debug: payload.llm_debug,
+    };
+  }
   if (!payload.job_id || payload.status === "failed" || payload.ok === false) {
     console.warn("[segment2] agenda job create failed", {
       status: res.status,
@@ -765,6 +837,13 @@ export async function enqueueSegment2AgendaAutoRetry(input: {
   error?: string;
 }): Promise<
   | { ok: true; session: POJUSessionState; job_id: string; attempt: number }
+  | {
+      ok: true;
+      already_complete: true;
+      session: POJUSessionState;
+      attempt: number;
+      inline: Extract<CreateSegment2AgendaJobResult, { already_complete: true }>;
+    }
   | { ok: false; session: POJUSessionState; error: string }
 > {
   const locale = resolvePivotSessionLang(input.session, input.locale);
@@ -788,6 +867,9 @@ export async function enqueueSegment2AgendaAutoRetry(input: {
       locale,
       breakthrough_core: core,
     });
+    if (isAgendaInlineComplete(created)) {
+      return { ok: true, already_complete: true, session, attempt, inline: created };
+    }
     if (created.ok) {
       return {
         ok: true,
@@ -968,6 +1050,21 @@ export async function startSegment2AgendaRegenerate(input: {
     locale,
     breakthrough_core: core,
   });
+  if (isAgendaInlineComplete(created)) {
+    return {
+      session: finalizeSegment2AgendaBridgeSuccess({
+        session: cleaned,
+        locale,
+        investigation_agenda: created.investigation_agenda,
+        first_question: created.first_question,
+        options: created.options,
+        model: created.model,
+        tokens_used: created.tokens_used,
+        llm_debug: created.llm_debug,
+      }),
+      job_id: null,
+    };
+  }
   if (!created.ok) {
     return {
       session: finalizeSegment2AgendaBridgeFailure({
