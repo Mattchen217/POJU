@@ -72,6 +72,9 @@ import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types"
 import { isV3LabTransportSupplyFail } from "@/lib/llm/pro/delivery/dispatch/provider-escape";
 import {
   buildAcceptanceCorrectiveBlock,
+  POLISH_ACCEPTANCE_CONTINUE_RULE,
+  polishThicknessMayRetryOnce,
+  reportDeliveryAcceptanceExhausted,
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
@@ -1818,9 +1821,9 @@ async function executeV3(
     }
     const escapeArmedPolish = v3EscapeArmed(art, "polish");
     const acceptanceArmedPolish = v3AcceptanceArmed(art, "polish");
-    const polishPrior =
-      prior_gate_fail ??
-      (acceptanceArmedPolish ? art.v3_acceptance_prior?.polish ?? null : null);
+    const polishPrior = acceptanceArmedPolish
+      ? (art.v3_acceptance_prior?.polish ?? prior_gate_fail)
+      : prior_gate_fail;
     const polished = await runBodyPolishGenerate({
       key: page,
       locale: polishLocale,
@@ -1942,7 +1945,73 @@ async function executeV3(
       polished: polishedPage,
     });
     if (thickGate && !thickGate.passed) {
+      const thickDetail = [
+        `${thickGate.detail ?? ""}`,
+        ...(thickGate.notes?.length
+          ? [`hits:${thickGate.notes.slice(0, 4).join(" · ")}`]
+          : []),
+      ].join(" ");
+      if (
+        polishThicknessMayRetryOnce({
+          ops_user: lab.ops_user,
+          acceptance_armed: acceptanceArmedPolish,
+          failed_rule: thickGate.failed_rule,
+        })
+      ) {
+        setV3AcceptanceArmed(art, "polish", true);
+        setV3AcceptancePrior(art, "polish", {
+          failed_rule: thickGate.failed_rule,
+          detail: thickDetail,
+        });
+        return {
+          input_payload: {
+            key: page,
+            pipeline: "v3",
+            phase: "body_polish",
+            polish_locale: polishLocale,
+            quality_gates: "thickness_after_polish",
+            acceptance_retry_scheduled: true,
+          },
+          raw_model_output: polishedPage,
+          processing_actions: [
+            { action: "runBodyPolishGenerate", detail: "ok" },
+            { action: "gateBodyCategoryB", detail: "pass" },
+            {
+              action: "gateBodyPolishThickness",
+              detail: thickGate.failed_rule ?? "fail",
+            },
+            {
+              action: "v3_acceptance_retry_schedule",
+              detail: "polish_thickness_1plus1",
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: POLISH_ACCEPTANCE_CONTINUE_RULE,
+            detail: `润色厚度未过。生产验收再跑一枪（封顶 1+1）；仍不过则硬停。已过闸正文未覆盖。${thickDetail}`,
+          },
+          output_to_next_stage: {
+            continue: true,
+            quality_retry: true,
+            next_chunk: 0,
+            chunks_total: 1,
+          },
+          tokens_used: polished.tokens_used,
+          call_trace: polished.call_trace,
+        };
+      }
+      const productionExhausted =
+        acceptanceArmedPolish && lab.ops_user === "production";
+      if (productionExhausted) {
+        reportDeliveryAcceptanceExhausted({
+          phase: "body_polish",
+          key: page,
+          failed_rule: thickGate.failed_rule,
+          detail: thickDetail,
+        });
+      }
       // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
+      // Production: the single acceptance continue already ran.
       clearV3Acceptance(art, "polish");
       return {
         input_payload: {
@@ -1951,6 +2020,7 @@ async function executeV3(
           phase: "body_polish",
           polish_locale: polishLocale,
           quality_gates: "thickness_after_polish",
+          acceptance_retry_used: acceptanceArmedPolish,
         },
         raw_model_output: polishedPage,
         processing_actions: [
@@ -1965,7 +2035,11 @@ async function executeV3(
           passed: false,
           failed_rule: thickGate.failed_rule,
           detail: [
-            `${thickGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
+            `${thickGate.detail ?? ""}（${
+              productionExhausted
+                ? "生产验收 1+1 已用尽 · 不覆盖已过闸正文 · 改生成侧后再跑"
+                : "Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑"
+            }）`,
             ...(thickGate.notes?.length
               ? [`hits:${thickGate.notes.slice(0, 4).join(" · ")}`]
               : []),
@@ -2207,7 +2281,8 @@ export async function runLabStepV3(
       lab.pipeline === "decision_shelf" ? 8 : 2,
     );
     const dispatchContinue =
-      result.gate_verdict.failed_rule === "write_dispatch_continue";
+      result.gate_verdict.failed_rule === "write_dispatch_continue" ||
+      result.gate_verdict.failed_rule === POLISH_ACCEPTANCE_CONTINUE_RULE;
     if (result.gate_verdict.passed && !result.error) {
       rec.status = "done";
     } else if (dispatchContinue) {

@@ -47,6 +47,7 @@ import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types"
 import type { DeliverySegmentReady, SegmentChainProgress } from "@/lib/llm/pro/delivery/run-segment-chain";
 import { V1_DELIVERY_SEGMENT_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
 import { failXhighJob, releaseXhighSessionLock, setXhighJobContent } from "@/lib/poju/xhigh-job-store";
+import { POLISH_ACCEPTANCE_CONTINUE_RULE } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 
 /** One in-flight v3 step. Reused so the task lease serializes workers. */
@@ -55,6 +56,7 @@ export const PRODUCTION_V3_TASK_ID = "v3.step";
 const V3_CONTINUE_RULES = new Set([
   "write_dispatch_continue",
   "soft_dispatch_continue",
+  POLISH_ACCEPTANCE_CONTINUE_RULE,
 ]);
 
 const BOOK_ASSEMBLE_STEP = "book.assemble";
@@ -358,8 +360,9 @@ async function advanceToNextLlm(
 /**
  * One worker invoke: drain local steps (bootstrap, thesis, prealloc, gate,
  * assemble), then at most one model call. Supply-side chunk/escape continues
- * republish the same task. Quality failure is returned, not retried here
- * (the generator's own 1+1 already ran inside the step).
+ * republish the same task. A polish thickness miss arms one in-step
+ * acceptance continue (`polish_acceptance_continue`); the second miss is
+ * returned, not retried here.
  */
 export async function runProductionV3Task(input: {
   job_id: string;

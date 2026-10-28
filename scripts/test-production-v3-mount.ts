@@ -54,6 +54,8 @@ assert.ok(PRODUCTION_V3_JOB_MAX_WALL_MS > DELIVERY_JOB_MAX_WALL_MS);
 assert.equal(isProductionV3Task(PRODUCTION_V3_TASK_ID), true);
 assert.equal(isProductionV3Task("p.01.assign"), false);
 assert.equal(isV3DispatchContinue("soft_dispatch_continue"), true);
+assert.equal(isV3DispatchContinue("polish_acceptance_continue"), true);
+assert.equal(isV3DispatchContinue("gate_polish_thin_synonym"), false);
 assert.equal(isV3DispatchContinue("gate_body"), false);
 assert.equal(productionPolishLocale("zh-CN"), "zh");
 assert.equal(productionPolishLocale("en"), "en");

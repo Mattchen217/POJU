@@ -221,13 +221,20 @@ function pageRoleLock(key: DeliverySegmentKey): string {
 function thickenContract(key: DeliverySegmentKey): string {
   switch (key) {
     case "execution_guidance":
-    case "self_regulation":
       return [
         `- **本页正文步故意写短** → 润色必须加厚：strategy 2–4 个完整句、相对草稿明显加长；means 每条扩成 1–2 个完整句。`,
         `- **means 字数硬门槛（中译中尤易漏）**：每条 means 相对草稿须 visibly 加长（约多出半句到一句「为何此刻/场面效果」）；机检约 ≥1.15× 字数。禁只改个别词（视线↔目光、直冲↔正对）交差。`,
         `- 草稿 means 已是长单句时：优先拆成/扩成 **2 句**（做什么 + 为什么此刻），勿同义换壳保长。`,
         `- 禁止电报式同义改写交差。`,
         `- 不增删 angles/dimensions/means 条数；不改动作指向与事实门槛。`,
+      ].join("\n");
+    case "self_regulation":
+      return [
+        `- 正文步已要求 strategy≥2 完整句、means≥1 完整句（做什么+为何此刻）。润色默认=清表面 + 目标语言；**草稿已完整可读则保持信息量，禁止为凑厚度灌水**。`,
+        `- 仅当某条仍是电报体/半句时，才补成完整句（strategy 至少两句，means 至少一句）。`,
+        `- 禁止把已完整的条目抽成更短的半句。同义换词若仍是半句 = 废稿；已完整则保量不算废稿。`,
+        `- 译出（en/fr/es）不跟中文字数对拍：一条完整可读句即可，不必为凑第二句号灌水。`,
+        `- 不增删 dimensions/means 条数；不改动作指向与事实门槛。`,
       ].join("\n");
     case "decision_brief":
       return [
@@ -271,8 +278,11 @@ function polishSelfCheck(
     locale === "es"
       ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；**首次** mapa de fuerzas / cuadro energético 必须带短同位语（无则废稿），第二次起可短词；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
       : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。；#9禁 energy structure/retune/leak/mantra/surface-sting/fortune opener「your current state is」墙纸（改本案期望+收集事实决策备忘）。`;
-  if (key === "execution_guidance" || key === "self_regulation") {
+  if (key === "execution_guidance") {
     return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
+  }
+  if (key === "self_regulation") {
+    return `自检：草稿 strategy/means 已是完整句则保持信息量并出目标语言，禁灌水、禁抽成半句；仅电报体才补到完整句；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
   }
   if (key === "validation_close") {
     return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+watch_signals×3–5+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；对照信号只观察；锚槽原样照抄闭集；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
@@ -398,9 +408,60 @@ function p5Narratives(page: DeliveryPageData | null | undefined): string[] {
   ];
 }
 
+function collectAngleThinNotes(
+  draftAngles: AngleLike[],
+  polishedAngles: AngleLike[],
+  slotOk: (kind: "strategy" | "means", draft: string, polished: string) => boolean,
+): string[] {
+  const notes: string[] = [];
+  for (let i = 0; i < polishedAngles.length; i++) {
+    const d = draftAngles[i];
+    const p = polishedAngles[i];
+    if (!p) continue;
+    if (!slotOk("strategy", String(d?.strategy ?? ""), String(p.strategy ?? ""))) {
+      notes.push(`strategy[${i}]`);
+    }
+    const dMeans = d?.means ?? [];
+    const pMeans = p.means ?? [];
+    for (let j = 0; j < pMeans.length; j++) {
+      if (!slotOk("means", String(dMeans[j] ?? ""), String(pMeans[j] ?? ""))) {
+        notes.push(`means[${i}.${j}]`);
+      }
+    }
+  }
+  return notes;
+}
+
+/**
+ * P4 body already ships complete sentences. Same-script polish keeps that mass
+ * (surface cleanup may trim; collapse under ~60% or under the sentence floor fails).
+ * A telegram slot must still grow. Target-language rewrite of an already-complete
+ * slot needs one full sentence at the absolute floor — not a second period, and
+ * not a character-count race against the Chinese draft.
+ */
+function selfRegulationSlotKept(
+  draft: string,
+  polished: string,
+  opts: { minSents: number; ratio: number; add: number; floor: number },
+): boolean {
+  if (isCjkToLatinTranslation(draft, polished)) {
+    const sents = countReadableSentences(polished);
+    const pLen = compactLen(polished);
+    if (sents < 1 || pLen < opts.floor) return false;
+    if (draftAlreadyReadable(draft, opts.minSents, opts.floor)) return true;
+    return sents >= opts.minSents;
+  }
+  return keepIfReadyOrGrow(draft, polished, {
+    ...opts,
+    maxShrink: 0.6,
+  });
+}
+
 /**
  * 润色厚度闸：按页量尺，不统一灌水。
- * P3/P4 正文故意写短 → 相对加长；P1/P2/P5/P6 草稿已完整可读 → 保量（拦抽瘦/半句未补）。
+ * P3 正文故意写短 → 相对加长。
+ * P4 正文已是完整句 → 保量（拦抽瘦/半句）；仅电报体才补句。
+ * P1/P2/P5/P6 草稿已完整可读 → 保量（拦抽瘦/半句未补）。
  */
 export function gateBodyPolishThickness(input: {
   key: DeliverySegmentKey;
@@ -414,52 +475,47 @@ export function gateBodyPolishThickness(input: {
           passed: false as const,
           failed_rule: "gate_polish_thin_synonym",
           detail:
-            input.key === "execution_guidance" || input.key === "self_regulation"
+            input.key === "execution_guidance"
               ? "润色过薄：仍是同义换词/单句骨架。须明显加长为完整可读句；禁只改个别词交差——回改后重跑（不覆盖已过闸正文）。"
-              : "润色抽瘦或仍是半句骨架。草稿已完整可读则保持信息量；仅电报体才补句——回改后重跑（不覆盖已过闸正文）。",
+              : input.key === "self_regulation"
+                ? "润色抽瘦或仍是半句骨架。草稿已是完整句则保持信息量；仅电报体才补成完整句——回改后重跑（不覆盖已过闸正文）。"
+                : "润色抽瘦或仍是半句骨架。草稿已完整可读则保持信息量；仅电报体才补句——回改后重跑（不覆盖已过闸正文）。",
           notes: more.slice(0, 8),
         } satisfies ContentGateVerdict)
       : null;
 
-  if (input.key === "execution_guidance" || input.key === "self_regulation") {
-    const draftAngles =
-      input.key === "execution_guidance"
-        ? listToolkitAngles(input.draft)
-        : listDimAngles(input.draft);
-    const polishedAngles =
-      input.key === "execution_guidance"
-        ? listToolkitAngles(input.polished)
-        : listDimAngles(input.polished);
-    for (let i = 0; i < polishedAngles.length; i++) {
-      const d = draftAngles[i];
-      const p = polishedAngles[i];
-      if (!p) continue;
-      if (
-        !thickEnough(String(d?.strategy ?? ""), String(p.strategy ?? ""), {
-          minSents: 2,
-          ratio: 1.25,
-          add: 24,
-          floor: 40,
-        })
-      ) {
-        notes.push(`strategy[${i}]`);
-      }
-      const dMeans = d?.means ?? [];
-      const pMeans = p.means ?? [];
-      for (let j = 0; j < pMeans.length; j++) {
-        if (
-          !thickEnough(String(dMeans[j] ?? ""), String(pMeans[j] ?? ""), {
-            minSents: 1,
-            ratio: 1.15,
-            add: 8,
-            floor: 20,
-          })
-        ) {
-          notes.push(`means[${i}.${j}]`);
-        }
-      }
-    }
-    return fail(notes);
+  if (input.key === "execution_guidance") {
+    return fail(
+      collectAngleThinNotes(
+        listToolkitAngles(input.draft),
+        listToolkitAngles(input.polished),
+        (kind, draft, polished) =>
+          thickEnough(
+            draft,
+            polished,
+            kind === "strategy"
+              ? { minSents: 2, ratio: 1.25, add: 24, floor: 40 }
+              : { minSents: 1, ratio: 1.15, add: 8, floor: 20 },
+          ),
+      ),
+    );
+  }
+
+  if (input.key === "self_regulation") {
+    return fail(
+      collectAngleThinNotes(
+        listDimAngles(input.draft),
+        listDimAngles(input.polished),
+        (kind, draft, polished) =>
+          selfRegulationSlotKept(
+            draft,
+            polished,
+            kind === "strategy"
+              ? { minSents: 2, ratio: 1.2, add: 12, floor: 40 }
+              : { minSents: 1, ratio: 1.12, add: 6, floor: 20 },
+          ),
+      ),
+    );
   }
 
   if (input.key === "decision_brief") {
@@ -664,7 +720,7 @@ function buildPolishPrompts(input: {
     `- 与输入同页 key、同字段结构的完整 JSON。`,
     thickenContract(input.key),
     `- 读起来像给真人的说明；目标语言：${localeLabel(input.locale)}。`,
-    `- 机检：P3/P4 拦过薄同义换词；其它页拦抽瘦或半句未补 → \`gate_polish_thin_synonym\`。`,
+    `- 机检：P3 拦过薄同义换词；P4 与其它页拦抽瘦或半句未补 → \`gate_polish_thin_synonym\`。`,
     ``,
     localeTaskBlock(input.locale),
     ``,

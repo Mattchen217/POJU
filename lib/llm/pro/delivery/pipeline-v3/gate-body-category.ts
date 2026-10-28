@@ -276,7 +276,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- `gate_p4_body_materialized_water`：禁液态水道具/冷水洗脸当调候主体。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁试水路径。",
       "- `gate_p4_body_invented_schedule`：禁编造未收集的缓冲/观察月数；改气口未熟节奏差。",
-      "- `gate_*_polish_thin_synonym`：strategy/means 须相对草稿加厚；同义换词=不及格。",
+      "- `gate_*_polish_thin_synonym`：草稿已是完整句则保量，禁抽成半句；仅电报体才补句。半句上同义换词=不及格。",
       "- 页角色锁：主语=局/气/时方/结界；禁译成 P3 合同腔或 HR 教练腔（各语言同禁）。",
     ].join("\n");
   }
