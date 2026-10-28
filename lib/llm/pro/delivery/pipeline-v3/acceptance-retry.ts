@@ -29,6 +29,23 @@ export function polishThicknessMayRetryOnce(input: {
   );
 }
 
+/**
+ * Production-only 1+1 when polish still hits `gate_p4_body_quoted_script`.
+ * Body defers this surface class; the second polish miss stays a hard fail.
+ * Lab must not emit the continue.
+ */
+export function polishQuotedScriptMayRetryOnce(input: {
+  ops_user: string | null | undefined;
+  acceptance_armed: boolean;
+  failed_rule: string | null | undefined;
+}): boolean {
+  return (
+    input.ops_user === "production" &&
+    !input.acceptance_armed &&
+    input.failed_rule === "gate_p4_body_quoted_script"
+  );
+}
+
 /** Corrective block appended on attempt 2 only — category, never case-phrase bans. */
 export function buildAcceptanceCorrectiveBlock(
   fail: AcceptancePriorFail | null | undefined,

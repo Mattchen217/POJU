@@ -360,9 +360,10 @@ async function advanceToNextLlm(
 /**
  * One worker invoke: drain local steps (bootstrap, thesis, prealloc, gate,
  * assemble), then at most one model call. Supply-side chunk/escape continues
- * republish the same task. A polish thickness miss arms one in-step
- * acceptance continue (`polish_acceptance_continue`); the second miss is
- * returned, not retried here.
+ * republish the same task. A polish thickness miss, or a P4 quoted-script
+ * miss after polish, arms one in-step acceptance continue
+ * (`polish_acceptance_continue`); the second miss is returned, not retried
+ * here. P4 quoted script is a surface class: body defers it to this step.
  */
 export async function runProductionV3Task(input: {
   job_id: string;

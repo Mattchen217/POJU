@@ -73,6 +73,7 @@ import { isV3LabTransportSupplyFail } from "@/lib/llm/pro/delivery/dispatch/prov
 import {
   buildAcceptanceCorrectiveBlock,
   POLISH_ACCEPTANCE_CONTINUE_RULE,
+  polishQuotedScriptMayRetryOnce,
   polishThicknessMayRetryOnce,
   reportDeliveryAcceptanceExhausted,
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
@@ -1910,7 +1911,69 @@ async function executeV3(
     });
     const bodyFail = bodyGate && !bodyGate.passed;
     if (bodyFail) {
+      const quoteDetail = bodyGate.detail ?? "";
+      if (
+        polishQuotedScriptMayRetryOnce({
+          ops_user: lab.ops_user,
+          acceptance_armed: acceptanceArmedPolish,
+          failed_rule: bodyGate.failed_rule,
+        })
+      ) {
+        setV3AcceptanceArmed(art, "polish", true);
+        setV3AcceptancePrior(art, "polish", {
+          failed_rule: bodyGate.failed_rule,
+          detail: quoteDetail,
+        });
+        return {
+          input_payload: {
+            key: page,
+            pipeline: "v3",
+            phase: "body_polish",
+            polish_locale: polishLocale,
+            quality_gates: "category_b_after_polish",
+            acceptance_retry_scheduled: true,
+          },
+          raw_model_output: polishedPage,
+          processing_actions: [
+            { action: "runBodyPolishGenerate", detail: "ok" },
+            {
+              action: "gateBodyCategoryB",
+              detail: bodyGate.failed_rule ?? "fail",
+            },
+            {
+              action: "v3_acceptance_retry_schedule",
+              detail: "p4_quoted_script_1plus1",
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: POLISH_ACCEPTANCE_CONTINUE_RULE,
+            detail: `润色后仍含 P4 开口稿/引号。生产验收再跑一枪（封顶 1+1）；仍不过则硬停。已过闸正文未覆盖。${quoteDetail}`,
+          },
+          output_to_next_stage: {
+            continue: true,
+            quality_retry: true,
+            next_chunk: 0,
+            chunks_total: 1,
+          },
+          tokens_used: polished.tokens_used,
+          call_trace: polished.call_trace,
+        };
+      }
+      const quoteExhausted =
+        acceptanceArmedPolish &&
+        lab.ops_user === "production" &&
+        bodyGate.failed_rule === "gate_p4_body_quoted_script";
+      if (quoteExhausted) {
+        reportDeliveryAcceptanceExhausted({
+          phase: "body_polish",
+          key: page,
+          failed_rule: bodyGate.failed_rule,
+          detail: quoteDetail,
+        });
+      }
       // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
+      // Production: quoted-script 1+1 already ran, or this is another category.
       clearV3Acceptance(art, "polish");
       return {
         input_payload: {
@@ -1919,6 +1982,7 @@ async function executeV3(
           phase: "body_polish",
           polish_locale: polishLocale,
           quality_gates: "category_b_after_polish",
+          acceptance_retry_used: acceptanceArmedPolish,
         },
         raw_model_output: polishedPage,
         processing_actions: [
@@ -1931,7 +1995,11 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: bodyGate.failed_rule,
-          detail: `${bodyGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
+          detail: `${quoteDetail}（${
+            quoteExhausted
+              ? "生产验收 1+1 已用尽 · 不覆盖已过闸正文 · 改生成侧后再跑"
+              : "Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑"
+          }）`,
         },
         output_to_next_stage: null,
         tokens_used: polished.tokens_used,
