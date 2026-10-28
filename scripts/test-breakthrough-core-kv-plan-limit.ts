@@ -103,6 +103,24 @@ async function main(): Promise<void> {
   assert("client accepts inline Call B", control.includes("already_complete: true"));
   assert("UI finalizes inline Call B without polling", ui.includes("adoptInlineAgenda"));
 
+  const synthesis = read("app/api/poju/synthesis/route.ts");
+  const delivery = read("app/api/poju/final-delivery/route.ts");
+  const clientKv = read("lib/kv/client.ts");
+  assert("synthesis falls back inline", synthesis.includes("isUpstashPlanLimitError") && synthesis.includes("runEphemeralXhighJob"));
+  assert(
+    "final-delivery falls back inline",
+    delivery.includes("isUpstashPlanLimitError") && delivery.includes("runWithEphemeralXhighKv"),
+  );
+  assert(
+    "KV path charges after the job is stored",
+    delivery.lastIndexOf("chargeDeliveryPass({") > delivery.lastIndexOf("await createXhighJob"),
+  );
+  assert("ephemeral KV is request-scoped on the shared client", clientKv.includes("runWithEphemeralKv"));
+  assert(
+    "delivery hops stay in-process when KV is ephemeral",
+    read("lib/poju/final-delivery-stage-runner.ts").includes("ephemeral continue in-process"),
+  );
+
   console.log(
     "\n" +
       (failures.length === 0

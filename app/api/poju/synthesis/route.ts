@@ -6,7 +6,9 @@ import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { REPORT_BLUEPRINT } from "@/lib/poju/report-blueprint";
+import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 import { runSynthesisJob } from "@/lib/poju/xhigh-job-runner";
+import { runEphemeralXhighJob } from "@/lib/poju/xhigh-ephemeral-run";
 import {
   acquireXhighSessionLock,
   createXhighJob,
@@ -144,6 +146,7 @@ function scheduleSynthesisJob(job_id: string, session_id: string): void {
 }
 
 export async function POST(req: Request) {
+  let inlineCall: (() => Promise<NextResponse>) | null = null;
   try {
     if (!isOpenRouterConfigured()) {
       return NextResponse.json(
@@ -216,6 +219,48 @@ export async function POST(req: Request) {
 
     const locale = typeof body.locale === "string" ? body.locale : "en";
     const sessionId = body.session_id.trim();
+    const jobInput = buildSynthesisJobInput({
+      agent_v2,
+      original_question: body.original_question,
+      base_analysis,
+      dyad_compat_summary:
+        body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+          ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+          : null,
+      partner_bazi:
+        body.partner_bazi === "present" || body.partner_bazi === "absent"
+          ? body.partner_bazi
+          : null,
+      pivot_chart_path:
+        body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
+          ? body.pivot_chart_path
+          : null,
+      dyad_matrix_pack:
+        body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
+          ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
+          : null,
+    });
+
+    inlineCall = async () => {
+      console.warn("[synthesis] Upstash plan limit — running inline without KV", { sessionId });
+      const done = await runEphemeralXhighJob(
+        () =>
+          createXhighJob({
+            phase: "synthesis",
+            session_id: sessionId,
+            locale,
+            job_input: jobInput,
+          }),
+        runSynthesisJob,
+      );
+      if (!done) {
+        return NextResponse.json(
+          { ok: false, error: "inline synthesis missing", retryable: true },
+          { status: 503 },
+        );
+      }
+      return jobStatusResponse(done);
+    };
 
     const latest = await findLatestXhighJobForSession("synthesis", sessionId);
     if (latest) {
@@ -243,30 +288,10 @@ export async function POST(req: Request) {
         phase: "synthesis",
         session_id: sessionId,
         locale,
-        job_input: buildSynthesisJobInput({
-          agent_v2,
-          original_question: body.original_question,
-          base_analysis,
-          dyad_compat_summary:
-            body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
-              ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
-              : null,
-          partner_bazi:
-            body.partner_bazi === "present" || body.partner_bazi === "absent"
-              ? body.partner_bazi
-              : null,
-          pivot_chart_path:
-            body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
-              ? body.pivot_chart_path
-              : null,
-          dyad_matrix_pack:
-            body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
-              ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
-              : null,
-        }),
+        job_input: jobInput,
       });
     } catch (e) {
-      await releaseXhighSessionLock("synthesis", sessionId);
+      await releaseXhighSessionLock("synthesis", sessionId).catch(() => undefined);
       throw e;
     }
 
@@ -279,6 +304,9 @@ export async function POST(req: Request) {
       status: job.status,
     });
   } catch (e: unknown) {
+    if (inlineCall && isUpstashPlanLimitError(e)) {
+      return inlineCall();
+    }
     const msg = e instanceof Error ? e.message : "Synthesis failed";
     console.warn("[synthesis] request failed:", msg);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

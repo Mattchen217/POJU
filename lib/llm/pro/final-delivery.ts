@@ -643,7 +643,7 @@ export async function createFinalDeliveryJobFromApi(input: {
     error?: string;
     reason?: string;
   };
-  if (!res.ok) {
+  if (!res.ok || data.ok === false || data.status === "failed") {
     if (res.status === 402 || data.error === "pass_required") {
       throw new Error("PASS_REQUIRED");
     }
