@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { loadDeliveryLab, appendLabAudit } from "@/lib/llm/pro/delivery/lab/store";
 import { prepareLabRerun } from "@/lib/llm/pro/delivery/lab/run-step";
 import { prepareLabRerunV3 } from "@/lib/llm/pro/delivery/lab/run-step-v3";
+import { labUsesV3Executor } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import { requireOpsUser } from "@/lib/ops/require-ops";
 
@@ -45,12 +46,11 @@ export async function POST(req: Request, ctx: Ctx) {
       ? Math.max(0, Math.min(29, Math.floor(body.day_index)))
       : undefined;
 
-  const result =
-    lab.pipeline === "v3_three_step"
-      ? await prepareLabRerunV3(lab, step_key, {
-          clear_companion_pair_day_index: clearPair,
-        })
-      : await prepareLabRerun(lab, step_key);
+  const result = labUsesV3Executor(lab.pipeline)
+    ? await prepareLabRerunV3(lab, step_key, {
+        clear_companion_pair_day_index: clearPair,
+      })
+    : await prepareLabRerun(lab, step_key);
   await appendLabAudit({
     ops_user: auth.username,
     lab_id: lab.lab_id,

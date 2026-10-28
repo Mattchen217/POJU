@@ -32,6 +32,10 @@ export type LabV3StepDef = {
   step_key: string;
   label: string;
   page?: DeliverySegmentKey;
+  /** Content SoT shelf face (01–08). Folded papers share a face. */
+  faceId?: string;
+  /** primary | folded — how this paper lands on the shelf face. */
+  faceDisposition?: "primary" | "folded";
   kind: LabV3StepKind;
   uses_llm: boolean;
   accept: string;
@@ -74,7 +78,40 @@ function gateAccept(page: DeliverySegmentKey): string {
   return "人审：值钱？页角色对？因果成立？不要求读感加厚。表面类留给润色（可跳过；Skip 则 full 表面闸回退 body）。不过 → 回改内容步。";
 }
 
-function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
+/** SoT face short label for Lab step list (content SoT 2026-10-27). */
+function faceMeta(page: DeliverySegmentKey): {
+  short: string;
+  faceId: string;
+  faceDisposition: "primary" | "folded";
+} {
+  switch (page) {
+    case "decision_brief":
+      return { short: "01 断语", faceId: "01", faceDisposition: "primary" };
+    case "situation_analysis":
+      return { short: "02 为何", faceId: "02", faceDisposition: "primary" };
+    case "personal_decision_patterns":
+      return { short: "02·folded 模式", faceId: "02", faceDisposition: "folded" };
+    case "bottleneck_analysis":
+      return { short: "04 卡点", faceId: "04", faceDisposition: "primary" };
+    case "strategic_options":
+      return { short: "05 路径", faceId: "05", faceDisposition: "primary" };
+    case "recommended_strategy":
+      return { short: "05·folded 切轨", faceId: "05", faceDisposition: "folded" };
+    case "execution_guidance":
+      return { short: "06 落地", faceId: "06", faceDisposition: "primary" };
+    case "self_regulation":
+      return { short: "06·C 调频", faceId: "06", faceDisposition: "folded" };
+    case "validation_risk":
+      return { short: "08·A 红灯", faceId: "08", faceDisposition: "primary" };
+    case "validation_close":
+      return { short: "08·B 收束", faceId: "08", faceDisposition: "folded" };
+    default:
+      return { short: page, faceId: "?", faceDisposition: "primary" };
+  }
+}
+
+function pageTriad(page: DeliverySegmentKey): LabV3StepDef[] {
+  const { short, faceId, faceDisposition } = faceMeta(page);
   /** P1 also writes internal judgment (主辅真算根)；UI 仍不挂依据折层 → 无 evidence_soft. */
   const hangEvidenceSoft = page !== "decision_brief";
   const out: LabV3StepDef[] = [
@@ -85,6 +122,8 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
           ? `${short} 内容① · 原始批断（主辅根）`
           : `${short} 内容① · 原始批断`,
       page,
+      faceId,
+      faceDisposition,
       kind: "content_judgment",
       uses_llm: true,
       accept:
@@ -103,6 +142,8 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
             ? `${short} 内容① · 正文（直答·主辅）`
             : `${short} 内容① · 正文（可执行）`,
       page,
+      faceId,
+      faceDisposition,
       kind: "content_body",
       uses_llm: true,
       accept: bodyAccept(page),
@@ -111,6 +152,8 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       step_key: `${page}.gate`,
       label: `${short} 闸门② · 验收（只判不改）`,
       page,
+      faceId,
+      faceDisposition,
       kind: "gate",
       uses_llm: false,
       accept: gateAccept(page),
@@ -119,6 +162,8 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       step_key: `${page}.body_polish`,
       label: `${short} 润色 · 合规+目标语言`,
       page,
+      faceId,
+      faceDisposition,
       kind: "body_polish",
       uses_llm: true,
       accept:
@@ -130,6 +175,8 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       step_key: `${page}.evidence_soft`,
       label: `${short} 依据③ · 合规软译`,
       page,
+      faceId,
+      faceDisposition,
       kind: "evidence_soft",
       uses_llm: true,
       accept:
@@ -162,22 +209,23 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     uses_llm: false,
     accept: "本盘闭集词可引用。",
   },
-  ...pageTriad("decision_brief", "01 简报"),
-  ...pageTriad("situation_analysis", "02 处境"),
-  ...pageTriad("personal_decision_patterns", "03 模式"),
-  ...pageTriad("bottleneck_analysis", "04 障碍"),
-  ...pageTriad("strategic_options", "05 选项"),
-  ...pageTriad("recommended_strategy", "06 主策略"),
-  ...pageTriad("execution_guidance", "07 执行"),
-  ...pageTriad("self_regulation", "08 调频"),
-  ...pageTriad("validation_risk", "09a 风险"),
-  ...pageTriad("validation_close", "09b 收束"),
+  ...pageTriad("decision_brief"),
+  ...pageTriad("situation_analysis"),
+  ...pageTriad("personal_decision_patterns"),
+  ...pageTriad("bottleneck_analysis"),
+  ...pageTriad("strategic_options"),
+  ...pageTriad("recommended_strategy"),
+  ...pageTriad("execution_guidance"),
+  ...pageTriad("self_regulation"),
+  ...pageTriad("validation_risk"),
+  ...pageTriad("validation_close"),
   {
     step_key: "book.assemble",
-    label: "Assemble · 预览拼书",
+    label: "Assemble · 书架预览（01→02→04→05→06→(07)→08→03）",
     kind: "assemble",
     uses_llm: false,
-    accept: "十段通读；依据折叠为批断（或已软译）。",
+    accept:
+      "按内容 SoT 书架序通读；折叠键注明 folded→face；07 题相关才出；03 附录包尾。依据折叠为批断（或已软译）。",
   },
   {
     step_key: "companion.seal",

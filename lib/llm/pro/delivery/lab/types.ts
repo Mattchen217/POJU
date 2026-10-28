@@ -184,10 +184,12 @@ export type DeliveryLabSession = {
   ops_user: string;
   source: LabSource;
   /**
-   * Pipeline selector. Omit / legacy → classic assign/write/fill Lab.
-   * v3_three_step → greenfield three-step (see types-v3 + run-step-v3).
+   * Lab pipeline stamp (session-scoped; not env DELIVERY_PIPELINE).
+   * - legacy → classic assign/write/fill
+   * - v3_three_step → greenfield triad (older Labs)
+   * - decision_shelf → default new Labs: same v3 executor as prod + 01–08 face labels
    */
-  pipeline?: "legacy" | "v3_three_step";
+  pipeline?: "legacy" | "v3_three_step" | "decision_shelf";
   /** Index into active step defs (legacy LAB_STEP_DEFS or V3). */
   cursor_index: number;
   steps: Record<string, LabStepRecord>;

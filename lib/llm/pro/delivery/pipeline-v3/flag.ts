@@ -2,8 +2,12 @@
  * Delivery pipeline v3 — three-step content → gate → evidence_soft.
  *
  * Production final-delivery (`productionDeliveryUsesV3`) is v3 unless
- * `DELIVERY_PIPELINE` is explicitly `legacy`. Lab session create still uses
- * `resolveDeliveryPipeline`, which stays legacy when the env is unset.
+ * `DELIVERY_PIPELINE` is explicitly `legacy`.
+ *
+ * Lab session create no longer follows `resolveDeliveryPipeline` (unset→legacy).
+ * New Labs stamp `decision_shelf` and run the v3 executor — see
+ * `lab/pipeline-stamp.ts`. `resolveDeliveryPipeline` remains for env-gated
+ * callers / older tests; do not use it to choose Ops Lab pipeline.
  */
 
 export type DeliveryPipelineId = "legacy" | "v3_three_step";

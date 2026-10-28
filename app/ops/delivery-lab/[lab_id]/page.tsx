@@ -16,11 +16,14 @@ import {
   isCompanionStepListLocked,
 } from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
 import { withTransientNetworkRetry } from "@/lib/client/transient-network-retry";
+import { labPipelineBadge } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 
 type LabStepDef = {
   step_key: string;
   label: string;
   page?: string;
+  faceId?: string;
+  faceDisposition?: "primary" | "folded";
   kind: string;
   uses_llm: boolean;
   accept?: string;
@@ -834,12 +837,12 @@ export default function DeliveryLabConsolePage() {
         <span
           className={[
             "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-            lab.pipeline === "v3_three_step"
+            lab.pipeline === "decision_shelf" || lab.pipeline === "v3_three_step"
               ? "bg-[#9cf0ff]/15 text-[#9cf0ff]"
               : "bg-white/10 text-[#a1a1aa]",
           ].join(" ")}
         >
-          {lab.pipeline === "v3_three_step" ? "v3 · 三步" : "legacy"}
+          {labPipelineBadge(lab.pipeline)}
         </span>
         <span className="text-xs text-[#a1a1aa]">locale={lab.source.locale}</span>
         <span className="text-xs text-[#a1a1aa]">
@@ -975,6 +978,24 @@ export default function DeliveryLabConsolePage() {
                     ].join(" ")}
                   >
                     <span className="mr-1 tabular-nums text-[#71717a]">{i + 1}.</span>
+                    {d.faceId ? (
+                      <span
+                        className={[
+                          "mr-1 rounded px-1 text-[9px] font-mono",
+                          d.faceDisposition === "folded"
+                            ? "bg-white/5 text-[#a1a1aa]"
+                            : "bg-[#9cf0ff]/10 text-[#9cf0ff]",
+                        ].join(" ")}
+                        title={
+                          d.faceDisposition === "folded"
+                            ? `folded → face ${d.faceId}`
+                            : `face ${d.faceId}`
+                        }
+                      >
+                        {d.faceId}
+                        {d.faceDisposition === "folded" ? "↓" : ""}
+                      </span>
+                    ) : null}
                     {st === "approved" ? "✓ " : st === "failed" ? "✗ " : st === "stale" ? "↻ " : ""}
                     {d.label}
                     {d.uses_llm ? (

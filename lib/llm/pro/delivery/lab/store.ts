@@ -7,7 +7,10 @@ import {
   type LabSource,
 } from "@/lib/llm/pro/delivery/lab/types";
 import { initLabStepsV3 } from "@/lib/llm/pro/delivery/lab/types-v3";
-import { isDeliveryPipelineV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
+import {
+  DEFAULT_LAB_PIPELINE_STAMP,
+  labUsesV3Executor,
+} from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 import { createLabChatSession } from "@/lib/llm/pro/delivery/lab/lab-chat-session";
 import type { LabPipelineMode } from "@/lib/llm/pro/delivery/lab/lab-pipeline-types";
 
@@ -72,7 +75,9 @@ export async function createDeliveryLab(input: {
 }): Promise<DeliveryLabSession> {
   const lab_id = newLabId();
   const now = Date.now();
-  const useV3 = isDeliveryPipelineV3();
+  /** Decoupled from env DELIVERY_PIPELINE — new Labs match live prod v3. */
+  const pipeline = DEFAULT_LAB_PIPELINE_STAMP;
+  const useV3 = labUsesV3Executor(pipeline);
   const mode: LabPipelineMode = input.mode === "full_pipeline" ? "full_pipeline" : "delivery_only";
   const sourceSessionId =
     input.source.session_id?.trim() ||
@@ -87,7 +92,7 @@ export async function createDeliveryLab(input: {
       ...input.source,
       session_id: sourceSessionId,
     },
-    pipeline: useV3 ? "v3_three_step" : "legacy",
+    pipeline,
     cursor_index: 0,
     steps: useV3 ? initLabStepsV3() : initLabSteps(),
     artifacts: { by_page: {} },

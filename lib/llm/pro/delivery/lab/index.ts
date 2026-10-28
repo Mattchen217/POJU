@@ -4,6 +4,12 @@ export { labPublicView, type LabPublicView } from "./public-view";
 export { sanitizeLabDeliverySource } from "./sanitize-delivery-source";
 export { LAB_STEP_DEFS, labStepDef, type DeliveryLabSession, type LabSource } from "./types";
 export {
+  DEFAULT_LAB_PIPELINE_STAMP,
+  labUsesV3Executor,
+  labPipelineBadge,
+  type LabPipelineStamp,
+} from "./pipeline-stamp";
+export {
   buildLabCallTrace,
   formatLabTokenUsageLabel,
   type LabCallTrace,

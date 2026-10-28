@@ -4,17 +4,18 @@ import {
   LAB_STEP_DEFS_V3,
   ensureLabStepsV3,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
+import { labUsesV3Executor } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { labChatPublicSlice } from "@/lib/llm/pro/delivery/lab/pipeline-chat";
 import { pipelineNextHint } from "@/lib/llm/pro/delivery/lab/pipeline-cursor";
 
 function activeStepDefs(lab: DeliveryLabSession) {
-  return lab.pipeline === "v3_three_step" ? LAB_STEP_DEFS_V3 : LAB_STEP_DEFS;
+  return labUsesV3Executor(lab.pipeline) ? LAB_STEP_DEFS_V3 : LAB_STEP_DEFS;
 }
 
 /** Ops API / UI payload — omit bulky base_analysis blob. */
 export function labPublicView(lab: DeliveryLabSession) {
-  if (lab.pipeline === "v3_three_step") ensureLabStepsV3(lab);
+  if (labUsesV3Executor(lab.pipeline)) ensureLabStepsV3(lab);
   const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
   const defs = activeStepDefs(lab);
   /** Companion 产物可很大；列表只给摘要，完整在 attempt / 详情里。 */

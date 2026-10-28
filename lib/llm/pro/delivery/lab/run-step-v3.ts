@@ -47,6 +47,18 @@ import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/conte
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { labUsesV3Executor } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
+import {
+  readingOrderForTopic,
+  shelfKeysForPage,
+} from "@/lib/llm/pro/delivery/decision-page-bridge";
+import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
+import { remapRowForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import {
+  composePage07Markdown,
+} from "@/lib/llm/pro/delivery/page-07-face";
+import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
+import { V1_DELIVERY_SEGMENT_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
@@ -407,29 +419,81 @@ async function executeV3(
   }
 
   if (def.kind === "assemble") {
-    const pages: DeliverySegmentKey[] = [
-      "decision_brief",
-      "situation_analysis",
-      "execution_guidance",
-      "self_regulation",
-      "validation_risk",
-      "validation_close",
+    const topic = deliveryTopicFromSignals({
+      question: lab.source.original_question,
+    });
+    const order = readingOrderForTopic(topic);
+    const lines: string[] = [
+      "# Delivery Lab · shelf preview (content SoT)",
+      `topic=${topic ?? "(none → no face 07)"}`,
+      `order=${order.join(" → ")}`,
+      "",
     ];
-    const lines: string[] = ["# Delivery Lab v3 preview", ""];
-    for (const k of pages) {
+    for (const faceId of order) {
+      const face = DECISION_PAGE_SCHEMAS[faceId];
+      lines.push(`## ${faceId} ${face?.title ?? ""}`);
+      lines.push(`> ${face?.question ?? ""} · dual=${face?.dualTrack ?? "?"}`);
+      if (faceId === "07") {
+        const md = composePage07Markdown({
+          topic,
+          question: lab.source.original_question,
+        });
+        lines.push(md?.slice(0, 1_500) ?? "(07 slice inspect — no composed markdown)");
+        lines.push("");
+        continue;
+      }
+      if (faceId === "03") {
+        const pre = lab.artifacts.prealloc as
+          | { chart_fact_pack?: string }
+          | undefined;
+        const pack = pre?.chart_fact_pack?.trim() ?? "";
+        lines.push(
+          pack
+            ? `### appendix chart slice\n${pack.slice(0, 1_500)}`
+            : "(03 appendix — no chart_fact_pack yet; not a fill body)",
+        );
+        lines.push("");
+        continue;
+      }
+      const keys = shelfKeysForPage(faceId);
+      for (const k of keys) {
+        const remap = remapRowForLegacyKey(k);
+        const folded =
+          remap?.disposition === "folded"
+            ? ` · folded→${remap.pageId}${remap.segment ? `-${remap.segment}` : ""}`
+            : " · primary";
+        const p = lab.artifacts.by_page[k as DeliverySegmentKey];
+        const schema = p?.page_schema as DeliveryPageData | undefined;
+        lines.push(`### ${k}${folded}`);
+        lines.push(
+          schema
+            ? JSON.stringify(schema, null, 2).slice(0, 1_800)
+            : "(empty — run triad for this paper)",
+        );
+        lines.push("");
+      }
+    }
+    /** Papers not on reading order (should not happen for V1 keys) — dump leftover. */
+    const listed = new Set(order.flatMap((id) => [...shelfKeysForPage(id)]));
+    for (const k of V1_DELIVERY_SEGMENT_KEYS) {
+      if (listed.has(k)) continue;
       const p = lab.artifacts.by_page[k];
-      const schema = p?.page_schema as DeliveryPageData | undefined;
-      lines.push(`## ${k}`);
-      lines.push(schema ? JSON.stringify(schema, null, 2).slice(0, 2_000) : "(empty)");
+      if (!p?.page_schema) continue;
+      lines.push(`## (orphan paper) ${k}`);
+      lines.push(JSON.stringify(p.page_schema, null, 2).slice(0, 1_000));
       lines.push("");
     }
     const preview = lines.join("\n");
     lab.artifacts.assemble_preview = preview;
     return {
-      input_payload: { pipeline: "v3" },
-      raw_model_output: { preview_chars: preview.length },
-      processing_actions: [{ action: "assemble_preview_v3" }],
-      gate_verdict: { passed: true, detail: "preview ok" },
+      input_payload: {
+        pipeline: lab.pipeline ?? "v3",
+        shelf_order: order,
+        topic: topic ?? null,
+      },
+      raw_model_output: { preview_chars: preview.length, shelf_order: order },
+      processing_actions: [{ action: "assemble_preview_shelf" }],
+      gate_verdict: { passed: true, detail: `shelf preview ok · ${order.join("→")}` },
       output_to_next_stage: { preview },
     };
   }
@@ -1153,13 +1217,12 @@ async function executeV3(
     } else if (feed.metaphysics_moat) {
       metaphysicsMoatJudgment = opts.metaphysics_moat_feed?.trim() || "";
     }
-    const pageSlice = feed.thesis_factpack
-      ? formatPageSliceFeed({
-          key: page,
-          chartText: rawFactPack,
-          question: opts.question_expectation,
-        })
-      : null;
+    const pageSlice = formatPageSliceFeed({
+      key: page,
+      chartText: feed.thesis_factpack ? rawFactPack : null,
+      question: opts.question_expectation,
+      withAllowlistHeader: true,
+    });
     let feedParts = scrubJudgmentFeedPrescriptions(
       [
         feed.thesis_factpack ? opts.chart_thesis_block : "",
@@ -2138,7 +2201,11 @@ export async function runLabStepV3(
       ...(result.call_trace ? { call_trace: result.call_trace } : {}),
     };
     rec.attempts.push(attempt);
-    stripStaleAttemptCallTraces(rec.attempts);
+    /** Ops QC: keep more attempt bodies on decision_shelf (default was 2). */
+    stripStaleAttemptCallTraces(
+      rec.attempts,
+      lab.pipeline === "decision_shelf" ? 8 : 2,
+    );
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue";
     if (result.gate_verdict.passed && !result.error) {
@@ -2185,7 +2252,7 @@ export async function runLabStepV3(
 }
 
 export function isLabPipelineV3(lab: DeliveryLabSession): boolean {
-  return lab.pipeline === "v3_three_step";
+  return labUsesV3Executor(lab.pipeline);
 }
 
 export async function approveLabStepV3(

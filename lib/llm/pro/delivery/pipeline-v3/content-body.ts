@@ -333,15 +333,14 @@ export async function runContentBodyGenerate(input: {
     pivot_chart_path: input.pivot_chart_path,
     partner_bazi: input.partner_bazi,
   });
-  const pageSlice = feed.thesis_factpack
-    ? formatPageSliceFeed({
-        key: input.key,
-        chartText: input.chart_fact_pack,
-        ziwei: input.ziwei_fact_pack,
-        question: input.question_expectation,
-        topic: input.topic,
-      })
-    : null;
+  const pageSlice = formatPageSliceFeed({
+    key: input.key,
+    chartText: feed.thesis_factpack ? input.chart_fact_pack : null,
+    ziwei: feed.thesis_factpack ? input.ziwei_fact_pack : null,
+    question: input.question_expectation,
+    topic: input.topic,
+    withAllowlistHeader: true,
+  });
   let feedParts = [
     feed.thesis_factpack && input.chart_thesis_block?.trim()
       ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
