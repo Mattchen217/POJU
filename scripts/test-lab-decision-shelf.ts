@@ -63,6 +63,7 @@ const lab = {
     locale: "zh",
     original_question: "要不要换城市工作？",
     session_id: "lab-test",
+    base_analysis: {},
   },
   pipeline: DEFAULT_LAB_PIPELINE_STAMP,
   cursor_index: 0,
