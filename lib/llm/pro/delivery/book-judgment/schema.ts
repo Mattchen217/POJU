@@ -120,8 +120,9 @@ const PACK_MEANS_CLASSES: readonly { className: string; re: RegExp }[] = [
     re: /可收费验证|最小可收费|小成品|能直接使用/,
   },
   {
+    /** 信号/停损操作框（类级 · 不绑本案词）；框在即 FAIL，后文即使偏机制也不过。 */
     className: "redlight_stop",
-    re: /红灯信号|红灯则|停下并退回|停下来改|退回观察|近步原则|停在可逆|以不完美搁置/,
+    re: /红灯信号|绿灯信号|停损信号|(?:红|绿)灯(?:则|：|:)|若[^。；;]{0,24}则停|停下并退回|停下来改|退回观察|近步原则|停在可逆/,
   },
   {
     className: "next_action",
