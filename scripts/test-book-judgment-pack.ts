@@ -351,10 +351,11 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     const [a, b] = fixtures[className];
     assert.equal(classifyMeansPrescription(a), className, a);
     assert.equal(classifyMeansPrescription(b), className, b);
-    for (const [trackUnit, claim] of [
-      [sci!, a],
-      [destiny!, b],
-    ] as const) {
+    const trackCases: Array<{ trackUnit: BookJudgmentUnit; claim: string }> = [
+      { trackUnit: sci!, claim: a },
+      { trackUnit: destiny!, claim: b },
+    ];
+    for (const { trackUnit, claim } of trackCases) {
       const units = coveringUnits().map((u) =>
         u.id === trackUnit.id ? { ...u, claim } : u,
       );
