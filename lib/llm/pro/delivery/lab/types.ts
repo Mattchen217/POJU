@@ -32,6 +32,8 @@ export type LabAttempt = {
    * feed + system/user prompts + reasoning + raw/parsed output.
    */
   call_trace?: import("@/lib/llm/pro/delivery/lab/call-trace").LabCallTrace;
+  /** Gate human quality checklist (face QC) — persisted on the gate attempt. */
+  quality_review?: import("@/lib/llm/pro/delivery/lab/lab-face-qc").FaceQualityReview;
 };
 
 export type LabStepRecord = {
@@ -140,6 +142,20 @@ export type LabArtifacts = {
     >
   >;
   assemble_preview?: string;
+  /** Face-native assemble payload for FacePageSlots preview. */
+  assemble_faces?: Array<{
+    faceId: string;
+    title: string;
+    dualTrack: string;
+    page_schema: unknown | null;
+  }>;
+  /** Result of 07.gate_topic (applies / skip reason). */
+  topic_gate_07?: {
+    topic: string | null;
+    applies: boolean;
+    reason: string;
+    unlock_07_chain: boolean;
+  };
   /**
    * 30 天主辅双提醒 Lab 产物（seal + 按日稿）。
    * 与生产 CompanionJob 同源抽取/生成，不写 job-store。

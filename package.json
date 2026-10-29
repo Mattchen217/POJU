@@ -63,6 +63,7 @@
     "test:dyad-skip-path-ux": "tsx scripts/test-dyad-skip-path-ux.ts",
     "test:lab-pipeline-reconcile": "tsx scripts/test-lab-pipeline-reconcile.ts",
     "test:lab-decision-shelf": "tsx scripts/test-lab-decision-shelf.ts",
+    "test:lab-face-qc": "tsx scripts/test-lab-face-qc.ts",
     "test:lab-companion-entry-lock": "tsx scripts/test-lab-companion-entry-lock.ts",
     "test:match-step5": "tsx scripts/test-match-step5-llm-service.ts",
     "test:match-step6": "tsx scripts/test-match-step6-e2e.ts",

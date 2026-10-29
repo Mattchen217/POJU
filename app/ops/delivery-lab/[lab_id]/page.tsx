@@ -6,6 +6,14 @@ import { useParams } from "next/navigation";
 import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
 import { LabCallTracePanel } from "../_components/LabCallTracePanel";
 import {
+  LabAssembleFaceShelf,
+  LabFacePreview,
+} from "../_components/LabFacePreview";
+import {
+  LabGateQualityChecklist,
+  type QualityReviewState,
+} from "../_components/LabGateQualityChecklist";
+import {
   LabPipelinePanel,
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
@@ -17,6 +25,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
 import { withTransientNetworkRetry } from "@/lib/client/transient-network-retry";
 import { labPipelineBadge } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
+import { labLooksLikeLegacyTenPaper } from "@/lib/llm/pro/delivery/lab/types-v3";
 
 type LabStepDef = {
   step_key: string;
@@ -27,6 +36,7 @@ type LabStepDef = {
   kind: string;
   uses_llm: boolean;
   accept?: string;
+  topic_gated?: boolean;
 };
 
 type LabCallTrace = {
@@ -54,6 +64,7 @@ type LabAttempt = {
   output_to_next_stage: unknown;
   error?: string;
   call_trace?: LabCallTrace;
+  quality_review?: QualityReviewState & { updated_at?: string };
 };
 
 type CompanionArtView = {
@@ -107,6 +118,18 @@ type LabView = {
     companion?: CompanionArtView;
     pages?: Record<string, { page_schema?: unknown }>;
     by_page?: Record<string, { page_schema?: unknown }>;
+    assemble_faces?: Array<{
+      faceId: string;
+      title?: string;
+      dualTrack?: string;
+      page_schema?: unknown | null;
+    }>;
+    assemble_preview?: string;
+    topic_gate_07?: {
+      topic?: string | null;
+      applies?: boolean;
+      reason?: string;
+    };
   };
 } & LabPipelineView;
 
@@ -132,6 +155,10 @@ export default function DeliveryLabConsolePage() {
   const [polishLocale, setPolishLocale] = useState<"zh" | "en" | "fr" | "es">("zh");
   /** Companion 双日提醒起点 day_index（0–29）；运行时出 N 与 N+1。 */
   const [companionDayIndex, setCompanionDayIndex] = useState(0);
+  const [qualityReview, setQualityReview] = useState<QualityReviewState>({
+    checks: {},
+    notes: "",
+  });
   /** Bump to cancel in-flight write auto-continue (准备重跑 / 新一次运行). */
   const runGenerationRef = useRef(0);
   const runAbortRef = useRef<AbortController | null>(null);
@@ -172,6 +199,14 @@ export default function DeliveryLabConsolePage() {
     setAttemptIdx(-1);
   }, [selected]);
 
+  useEffect(() => {
+    const qr = attempt?.quality_review;
+    setQualityReview({
+      checks: (qr?.checks as QualityReviewState["checks"]) ?? {},
+      notes: qr?.notes ?? "",
+    });
+  }, [attempt?.attempt_number, attempt?.quality_review, selected]);
+
   const cursorKey = lab?.cursor_step ?? null;
   const selectedIdx = useMemo(() => {
     if (!lab || !selected) return -1;
@@ -183,6 +218,12 @@ export default function DeliveryLabConsolePage() {
   const isPolishStep = selectedKind === "body_polish";
   const isEvidenceSoftStep = selectedKind === "evidence_soft";
   const isLocaleStep = isPolishStep || isEvidenceSoftStep;
+  const isGateStep = selectedKind === "gate";
+  const isAssembleStep = selectedKind === "assemble";
+  const isTopicGateStep = selectedKind === "topic_gate";
+  const isFaceSliceStep = selectedKind === "face_slice";
+  const isNonLlmInspect =
+    isTopicGateStep || isFaceSliceStep || selectedKind === "prealloc";
   const isCompanionSeal = selectedKind === "companion_seal";
   const isCompanionDaily = selectedKind === "companion_daily";
   const isCompanionBatchPair = selectedKind === "companion_batch_pair";
@@ -194,13 +235,28 @@ export default function DeliveryLabConsolePage() {
     isCompanionBatchGate;
   const isCompanionLocaleStep =
     isCompanionDaily || isCompanionBatchPair || isCompanionSeal;
-  const polishPageKey =
-    lab?.step_defs.find((d) => d.step_key === selected)?.page ?? null;
+  const selectedStepDef = lab?.step_defs.find((d) => d.step_key === selected);
+  const polishPageKey = selectedStepDef?.page ?? null;
+  const selectedFaceId = selectedStepDef?.faceId ?? polishPageKey ?? null;
+  const facePreviewSchema =
+    (selectedFaceId &&
+      lab?.artifacts?.by_page?.[selectedFaceId]?.page_schema) ||
+    (attempt?.raw_model_output &&
+    typeof attempt.raw_model_output === "object" &&
+    attempt.raw_model_output !== null &&
+    "page" in (attempt.raw_model_output as object)
+      ? attempt.raw_model_output
+      : null);
 
   const companionArt = lab?.artifacts?.companion;
   const companionP1P3Ready = Boolean(
-    lab?.artifacts?.by_page?.direct_answer?.page_schema &&
-      lab?.artifacts?.by_page?.science_action?.page_schema,
+    (lab?.artifacts?.by_page?.["01"]?.page_schema &&
+      lab?.artifacts?.by_page?.["05"]?.page_schema) ||
+      (lab?.artifacts?.by_page?.direct_answer?.page_schema &&
+        lab?.artifacts?.by_page?.science_action?.page_schema),
+  );
+  const legacyTenPaper = Boolean(
+    lab && labLooksLikeLegacyTenPaper({ steps: lab.steps }),
   );
   const companionSealReady = Boolean(companionArt?.brief);
   const assembleStatus = lab?.steps?.[BOOK_ASSEMBLE_STEP_KEY]?.status ?? null;
@@ -429,7 +485,7 @@ export default function DeliveryLabConsolePage() {
 
   async function postAction(
     path: "run" | "approve" | "rerun",
-    opts?: { skip_polish?: boolean },
+    opts?: { skip_polish?: boolean; skip_body?: boolean },
   ) {
     if (!selected) return;
 
@@ -461,6 +517,9 @@ export default function DeliveryLabConsolePage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               stage_id: selected,
+              ...(path === "approve" && selectedDefForAction?.kind === "gate"
+                ? { quality_review: qualityReview }
+                : {}),
               /** 人手准备重跑：清空当前选中双日；504 自动解锁不走这里。 */
               ...(clearCompanionPair
                 ? {
@@ -532,7 +591,10 @@ export default function DeliveryLabConsolePage() {
                 }
               : isCompanionSealRun
                 ? { stage_id: selected, polish_locale: polishLocale }
-                : { stage_id: selected };
+                : {
+                    stage_id: selected,
+                    ...(opts?.skip_body ? { skip_body: true } : {}),
+                  };
 
       // Mark: one click → plan → stagger-parallel chunks → merge.
       if (isMark) {
@@ -885,6 +947,13 @@ export default function DeliveryLabConsolePage() {
         </div>
       ) : null}
 
+      {legacyTenPaper ? (
+        <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">
+          此 Lab 仍含旧 10 纸步键（decision_brief / personal_decision_patterns 等）。请新建 Lab
+          （decision_shelf · face 合同）再测；本会话可能混乱，勿当新版证据。
+        </div>
+      ) : null}
+
       {deliveryLocked ? (
         <div className="flex flex-wrap items-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100">
           <p className="flex-1">
@@ -980,20 +1049,10 @@ export default function DeliveryLabConsolePage() {
                     <span className="mr-1 tabular-nums text-[#71717a]">{i + 1}.</span>
                     {d.faceId ? (
                       <span
-                        className={[
-                          "mr-1 rounded px-1 text-[9px] font-mono",
-                          d.faceDisposition === "folded"
-                            ? "bg-white/5 text-[#a1a1aa]"
-                            : "bg-[#9cf0ff]/10 text-[#9cf0ff]",
-                        ].join(" ")}
-                        title={
-                          d.faceDisposition === "folded"
-                            ? `folded → face ${d.faceId}`
-                            : `face ${d.faceId}`
-                        }
+                        className="mr-1 rounded bg-[#9cf0ff]/10 px-1 font-mono text-[9px] text-[#9cf0ff]"
+                        title={`face ${d.faceId}${d.topic_gated ? " · topic-gated" : ""}`}
                       >
                         {d.faceId}
-                        {d.faceDisposition === "folded" ? "↓" : ""}
                       </span>
                     ) : null}
                     {st === "approved" ? "✓ " : st === "failed" ? "✗ " : st === "stale" ? "↻ " : ""}
@@ -1077,6 +1136,17 @@ export default function DeliveryLabConsolePage() {
                   </button>
                 ) : null}
               </>
+            ) : null}
+            {selected === "03.content.body" ? (
+              <button
+                type="button"
+                disabled={busy || !canRun}
+                onClick={() => void postAction("run", { skip_body: true })}
+                className="rounded-md border border-amber-400/50 px-3 py-1.5 text-sm text-amber-200 disabled:opacity-40"
+                title="附录对照句可 Skip：以 03.slice 检视为准"
+              >
+                跳过对照句
+              </button>
             ) : null}
             {isCompanionDaily || isCompanionBatchPair ? (
               <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
@@ -1314,6 +1384,25 @@ export default function DeliveryLabConsolePage() {
                     </pre>
                   </details>
                 </>
+              ) : isNonLlmInspect || isAssembleStep ? (
+                <div className="grid gap-2 lg:col-span-2 lg:grid-cols-2">
+                  <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
+                    <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
+                      Input
+                    </h2>
+                    <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {pretty(attempt.input_payload)}
+                    </pre>
+                  </div>
+                  <div className="flex min-h-[12rem] flex-col rounded-md border border-[#9cf0ff]/25 bg-[#101417]">
+                    <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#9cf0ff]">
+                      Result
+                    </h2>
+                    <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {pretty(attempt.raw_model_output ?? attempt.output_to_next_stage)}
+                    </pre>
+                  </div>
+                </div>
               ) : (
                 <LabCallTracePanel
                   call_trace={attempt.call_trace}
@@ -1321,6 +1410,52 @@ export default function DeliveryLabConsolePage() {
                   fallback_raw={attempt.raw_model_output}
                 />
               )}
+              {isGateStep ? (
+                <div className="lg:col-span-2">
+                  <LabGateQualityChecklist
+                    faceId={selectedFaceId ?? undefined}
+                    formatPassed={Boolean(attempt.gate_verdict.passed)}
+                    formatDetail={attempt.gate_verdict.detail}
+                    value={qualityReview}
+                    disabled={rec?.status === "approved"}
+                    onChange={setQualityReview}
+                  />
+                </div>
+              ) : null}
+              {isAssembleStep ? (
+                <div className="lg:col-span-2">
+                  <LabAssembleFaceShelf
+                    faces={
+                      lab.artifacts.assemble_faces ??
+                      (
+                        attempt.raw_model_output as {
+                          faces?: Array<{
+                            faceId: string;
+                            title?: string;
+                            dualTrack?: string;
+                            page_schema?: unknown | null;
+                          }>;
+                        } | null
+                      )?.faces ??
+                      []
+                    }
+                    locale={lab.source.locale || "zh"}
+                  />
+                </div>
+              ) : null}
+              {!isAssembleStep &&
+              selectedFaceId &&
+              (selectedKind === "content_body" ||
+                selectedKind === "gate" ||
+                selectedKind === "body_polish") ? (
+                <div className="lg:col-span-2">
+                  <LabFacePreview
+                    faceId={selectedFaceId}
+                    page_schema={facePreviewSchema}
+                    locale={lab.source.locale || "zh"}
+                  />
+                </div>
+              ) : null}
               <div className="flex min-h-[10rem] flex-col rounded-md border border-white/10 bg-[#101417] lg:col-span-2">
                 <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
                   Gate · processing · output_to_next

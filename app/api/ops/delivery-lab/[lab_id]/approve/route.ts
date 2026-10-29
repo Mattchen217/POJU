@@ -16,9 +16,16 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!auth.ok) return auth.response;
 
   const { lab_id } = await ctx.params;
-  let body: { stage_id?: string; step_key?: string };
+  let body: {
+    stage_id?: string;
+    step_key?: string;
+    quality_review?: {
+      checks?: Partial<Record<string, boolean>>;
+      notes?: string;
+    };
+  };
   try {
-    body = (await req.json()) as { stage_id?: string; step_key?: string };
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ ok: false, error: "bad_json" }, { status: 400 });
   }
@@ -39,8 +46,15 @@ export async function POST(req: Request, ctx: Ctx) {
     );
   }
 
+  const quality_review = body.quality_review
+    ? {
+        checks: body.quality_review.checks ?? {},
+        notes: body.quality_review.notes,
+      }
+    : undefined;
+
   const result = labUsesV3Executor(lab.pipeline)
-    ? await approveLabStepV3(lab, step_key)
+    ? await approveLabStepV3(lab, step_key, { quality_review })
     : await approveLabStep(lab, step_key);
   await appendLabAudit({
     ops_user: auth.username,

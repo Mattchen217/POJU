@@ -1,6 +1,7 @@
 /**
- * Delivery Lab v3 — face-native step table (01–08).
- * One triad per shelf face. No v1 paper fold steps.
+ * Delivery Lab v3 — face-native QC step table (01–08).
+ * One chain per shelf face. No v1 paper fold steps.
+ * 07 is topic-gated; 03 is slice-first appendix (no judgment).
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -11,6 +12,8 @@ export type LabV3StepKind =
   | "bootstrap"
   | "thesis"
   | "prealloc"
+  | "topic_gate"
+  | "face_slice"
   | "content_judgment"
   | "content_body"
   | "gate"
@@ -40,9 +43,12 @@ export type LabV3StepDef = {
   kind: LabV3StepKind;
   uses_llm: boolean;
   accept: string;
+  /** Topic-gated steps (07) — unlock after 07.gate_topic passes with applies=true. */
+  topic_gated?: boolean;
 };
 
-const FACE_ORDER: DecisionPageId[] = ["01", "02", "04", "05", "06", "08", "03"];
+/** Required main faces before topic gate / appendix. */
+const REQUIRED_FACE_ORDER: DecisionPageId[] = ["01", "02", "04", "05", "06", "08"];
 
 function bodyAccept(faceId: DecisionPageId): string {
   const s = DECISION_PAGE_SCHEMAS[faceId];
@@ -50,72 +56,148 @@ function bodyAccept(faceId: DecisionPageId): string {
 }
 
 function gateAccept(faceId: DecisionPageId): string {
-  return `格式闸：Face ${faceId} 段字段齐全、非空（facts=required）；无 primary/backup；喂料 ⊆ PageFeedMatrix。不过 → 回改正文。`;
+  return [
+    `格式（机检）：Face ${faceId} 段齐全、非空；无 primary/backup；喂料 ⊆ PageFeedMatrix；locale 一致；恐吓红线。`,
+    faceId === "01" ? "01 无长论证；依据仅指针。" : "",
+    faceId === "05" ? "05 switch_or_stop（切轨/停止）必出。" : "",
+    faceId === "06" ? "06 非勾选作业；动作类型+完成样貌。" : "",
+    `质量（人审勾选）：双轨站得住；删切片后垮；页角色对。不过 → 回改正文。`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
-function faceTriad(faceId: DecisionPageId): LabV3StepDef[] {
+/** dualTrack that hang evidence_soft after polish. */
+function hangEvidenceSoft(faceId: DecisionPageId): boolean {
+  const dt = DECISION_PAGE_SCHEMAS[faceId].dualTrack;
+  return dt === "abc" || dt === "fold";
+}
+
+function faceMainChain(
+  faceId: DecisionPageId,
+  opts?: { topic_gated?: boolean; skipJudgment?: boolean },
+): LabV3StepDef[] {
   const schema = DECISION_PAGE_SCHEMAS[faceId];
-  const short = `${faceId} ${schema.title}`;
-  const hangEvidenceSoft = faceId !== "01" && faceId !== "03";
-  const out: LabV3StepDef[] = [
-    {
+  const short = schema.title;
+  const topic = Boolean(opts?.topic_gated);
+  const out: LabV3StepDef[] = [];
+
+  if (!opts?.skipJudgment) {
+    out.push({
       step_key: `${faceId}.content.judgment`,
-      label: `${short} 内容① · 原始批断`,
+      label: `${short} · 原始批断`,
       page: faceId,
       faceId,
       faceDisposition: "primary",
       kind: "content_judgment",
       uses_llm: true,
-      accept: "产出本脸机制批断（可含闭集真词）。禁手段处方。已升闸类别机检；其余人审。",
-    },
+      topic_gated: topic || undefined,
+      accept: "产出本脸机制批断（可含闭集真词）。禁手段处方。禁 primary/backup。",
+    });
+  }
+
+  out.push(
     {
       step_key: `${faceId}.content.body`,
-      label: `${short} 内容① · 正文（face zod）`,
+      label: `${short} · 正文（face zod）`,
       page: faceId,
       faceId,
       faceDisposition: "primary",
       kind: "content_body",
       uses_llm: true,
+      topic_gated: topic || undefined,
       accept: bodyAccept(faceId),
     },
     {
       step_key: `${faceId}.gate`,
-      label: `${short} 闸门② · 验收（只判不改）`,
+      label: `${short} · 闸门（格式+人审）`,
       page: faceId,
       faceId,
       faceDisposition: "primary",
       kind: "gate",
       uses_llm: false,
+      topic_gated: topic || undefined,
       accept: gateAccept(faceId),
     },
     {
       step_key: `${faceId}.body_polish`,
-      label: `${short} 润色 · 合规+目标语言`,
+      label: `${short} · 润色（可 Skip）`,
       page: faceId,
       faceId,
       faceDisposition: "primary",
       kind: "body_polish",
       uses_llm: true,
+      topic_gated: topic || undefined,
       accept:
         "闸门通过后。合规 + 目标语言（zh/en/fr/es）。禁改事实与段结构；可跳过。",
     },
-  ];
-  if (hangEvidenceSoft) {
+  );
+
+  if (hangEvidenceSoft(faceId)) {
     out.push({
       step_key: `${faceId}.evidence_soft`,
-      label: `${short} 依据③ · 合规软译`,
+      label: `${short} · 依据软译（可 Skip）`,
       page: faceId,
       faceId,
       faceDisposition: "primary",
       kind: "evidence_soft",
       uses_llm: true,
-      accept: "依据折叠软译；不改正文段字段。可跳过（01/03 无此步）。",
+      topic_gated: topic || undefined,
+      accept: "依据折叠软译；不改正文段字段。可跳过。",
     });
   }
   return out;
 }
 
-/** Fixed unlock order for v3 labs — face-native. */
+/** Appendix 03: slice inspect required; optional body/polish (no judgment / no evidence_soft). */
+function face03Chain(): LabV3StepDef[] {
+  const schema = DECISION_PAGE_SCHEMAS["03"];
+  return [
+    {
+      step_key: "03.slice",
+      label: `${schema.title} · 切片检视`,
+      page: "03",
+      faceId: "03",
+      faceDisposition: "primary",
+      kind: "face_slice",
+      uses_llm: false,
+      accept:
+        "本地 sliceForPage(03) 全量 JSON；八字锚必见；紫微未稳标 zfpOmitted。非 LLM。",
+    },
+    {
+      step_key: "03.content.body",
+      label: `${schema.title} · 对照句（可 Skip）`,
+      page: "03",
+      faceId: "03",
+      faceDisposition: "primary",
+      kind: "content_body",
+      uses_llm: true,
+      accept: bodyAccept("03") + " 默认可 Skip（附录检视够用）。",
+    },
+    {
+      step_key: "03.gate",
+      label: `${schema.title} · 闸门`,
+      page: "03",
+      faceId: "03",
+      faceDisposition: "primary",
+      kind: "gate",
+      uses_llm: false,
+      accept: gateAccept("03"),
+    },
+    {
+      step_key: "03.body_polish",
+      label: `${schema.title} · 润色（可 Skip）`,
+      page: "03",
+      faceId: "03",
+      faceDisposition: "primary",
+      kind: "body_polish",
+      uses_llm: true,
+      accept: "可选。禁改切片事实。",
+    },
+  ];
+}
+
+/** Fixed unlock order for v3 labs — face-native QC. */
 export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
   {
     step_key: "bootstrap",
@@ -129,7 +211,7 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     label: "Thesis · 命盘总纲",
     kind: "thesis",
     uses_llm: false,
-    accept: "总纲维与 structured 对齐（本地真算）。",
+    accept: "总纲维与 structured 对齐；右侧展示未裁切 CFP/ZFP 包。",
   },
   {
     step_key: "prealloc",
@@ -138,22 +220,35 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     uses_llm: false,
     accept: "本盘闭集词可引用。",
   },
-  ...FACE_ORDER.flatMap((id) => faceTriad(id)),
+  ...REQUIRED_FACE_ORDER.flatMap((id) => faceMainChain(id)),
+  {
+    step_key: "07.gate_topic",
+    label: "场域 · 题门控",
+    page: "07",
+    faceId: "07",
+    faceDisposition: "primary",
+    kind: "topic_gate",
+    uses_llm: false,
+    accept:
+      "page07Applies：显示 stem 命中或跳过原因。命中后解锁 07 主链；未命中可跳过整链进 03。",
+  },
+  ...faceMainChain("07", { topic_gated: true }),
+  ...face03Chain(),
   {
     step_key: "book.assemble",
-    label: "Assemble · 书架预览（01→02→04→05→06→(07)→08→03）",
+    label: "Assemble · Face 书架预览",
     kind: "assemble",
     uses_llm: false,
     accept:
-      "按内容 SoT 书架序通读；07 题相关才出；03 附录包尾。全书 face-native，零主辅纸。",
+      "序 01→02→04→05→06→(07)→08→03；Face 槽渲染；零主辅纸；07 仅题命中时出现。",
   },
   {
     step_key: "companion.seal",
-    label: "Companion · 封版战略 Brief+流日包",
+    label: "Companion · 封版 Brief+流日包",
     kind: "companion_seal",
     uses_llm: false,
     accept:
-      "从 Face 01(+05) 抽主推荐/路径 Brief，本地建 30 日流日 pack。语言=站/Lab locale。",
+      "从 Face 01 main_recommendation + 05 路径抽 Brief，本地建 30 日流日 pack。禁 P1 主辅文案。",
   },
   {
     step_key: "companion.daily",
@@ -209,4 +304,15 @@ export function ensureLabStepsV3(lab: {
       };
     }
   }
+}
+
+/** Detect remapped 10-paper Labs that predate face-native step keys. */
+export function labLooksLikeLegacyTenPaper(lab: {
+  steps: Record<string, unknown>;
+}): boolean {
+  const keys = Object.keys(lab.steps);
+  return (
+    keys.some((k) => k.startsWith("decision_brief.") || k.startsWith("personal_decision_patterns.")) ||
+    keys.some((k) => k.startsWith("recommended_strategy.") || k.startsWith("validation_risk."))
+  );
 }

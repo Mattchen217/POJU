@@ -1,5 +1,5 @@
 /**
- * Lab decision_shelf stamp — prod-v3 parity, decoupled from DELIVERY_PIPELINE.
+ * Lab decision_shelf stamp — prod-v3 parity, face-native step table.
  *   pnpm exec tsx scripts/test-lab-decision-shelf.ts
  */
 import assert from "node:assert/strict";
@@ -14,6 +14,7 @@ import { labPublicView } from "../lib/llm/pro/delivery/lab/public-view";
 import {
   initLabStepsV3,
   LAB_STEP_DEFS_V3,
+  labLooksLikeLegacyTenPaper,
 } from "../lib/llm/pro/delivery/lab/types-v3";
 import type { DeliveryLabSession } from "../lib/llm/pro/delivery/lab/types";
 import {
@@ -75,32 +76,39 @@ const lab = {
 
 assert.equal(lab.pipeline, "decision_shelf");
 assert.ok(labUsesV3Executor(lab.pipeline), "decision_shelf uses v3 executor");
+assert.equal(labLooksLikeLegacyTenPaper(lab), false);
 
 const view = labPublicView(lab);
 assert.equal(view.pipeline, "decision_shelf");
 assert.equal(view.step_defs.length, LAB_STEP_DEFS_V3.length);
 
-const brief = view.step_defs.find(
-  (d) => d.step_key === "decision_brief.content.body",
-) as { faceId?: string; faceDisposition?: string; label?: string } | undefined;
-assert.ok(brief, "decision_brief body step present");
-assert.equal(brief!.faceId, "01");
-assert.equal(brief!.faceDisposition, "primary");
-assert.match(String(brief!.label), /01 断语/);
+const face01 = view.step_defs.find((d) => d.step_key === "01.content.body") as {
+  faceId?: string;
+  kind?: string;
+  label?: string;
+} | undefined;
+assert.ok(face01, "01 body step present");
+assert.equal(face01!.faceId, "01");
+assert.equal(face01!.kind, "content_body");
 
-const patterns = view.step_defs.find(
-  (d) => d.step_key === "personal_decision_patterns.content.judgment",
-) as { faceId?: string; faceDisposition?: string } | undefined;
-assert.ok(patterns);
-assert.equal(patterns!.faceId, "02");
-assert.equal(patterns!.faceDisposition, "folded");
-
-const bottleneck = view.step_defs.find(
-  (d) => d.step_key === "bottleneck_analysis.content.body",
+assert.ok(
+  view.step_defs.some((d) => d.step_key === "07.gate_topic"),
+  "07.gate_topic present",
 );
-assert.ok(bottleneck, "04 face paper present (not old 6-page subset)");
+assert.ok(
+  view.step_defs.some((d) => d.step_key === "03.slice"),
+  "03.slice present",
+);
+assert.ok(
+  !view.step_defs.some((d) => d.step_key === "03.content.judgment"),
+  "03 has no judgment",
+);
+assert.ok(
+  !view.step_defs.some((d) => d.step_key.startsWith("decision_brief.")),
+  "no legacy decision_brief steps",
+);
 
-const allow = formatPageFeedAllowlistHeader("situation_analysis");
+const allow = formatPageFeedAllowlistHeader("02");
 assert.ok(allow && allow.includes("face 02") && allow.includes("CFP."), allow ?? "missing");
 
 const order = readingOrderForTopic("迁移");

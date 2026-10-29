@@ -25,6 +25,7 @@ export async function POST(req: Request, ctx: Ctx) {
     mark_chunk?: number;
     polish_locale?: string;
     skip_polish?: boolean;
+    skip_body?: boolean;
     day_index?: number;
   };
   try {
@@ -64,6 +65,7 @@ export async function POST(req: Request, ctx: Ctx) {
     ? await runLabStepV3(lab, step_key, {
         polish_locale: body.polish_locale,
         skip_polish: Boolean(body.skip_polish),
+        skip_body: Boolean(body.skip_body),
         day_index,
       })
     : await runLabStep(lab, step_key, {
@@ -74,7 +76,7 @@ export async function POST(req: Request, ctx: Ctx) {
     ops_user: auth.username,
     lab_id: lab.lab_id,
     action: "run",
-    detail: `${step_key}:${body.skip_polish ? "skip_polish" : day_index != null ? `day_${day_index}` : body.polish_locale ?? mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
+    detail: `${step_key}:${body.skip_body ? "skip_body" : body.skip_polish ? "skip_polish" : day_index != null ? `day_${day_index}` : body.polish_locale ?? mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
   });
 
   return NextResponse.json({

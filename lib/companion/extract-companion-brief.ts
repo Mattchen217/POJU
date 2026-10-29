@@ -113,9 +113,91 @@ function findPage(
   return null;
 }
 
+function listField(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v.map((x) => str(x)).filter(Boolean);
+  }
+  const one = str(v);
+  return one ? [one] : [];
+}
+
+/**
+ * Face-native Brief source: Face 01 main_recommendation + Face 05 paths.
+ * Keeps CompanionBrief primary/backup slots for 30-day product compatibility
+ * (no product rewrite) — names/claims come from face fields, not P1 主辅纸.
+ */
+function tracksFromFace01And05(
+  face01: Record<string, unknown>,
+  face05: Record<string, unknown>,
+): { primary: CompanionTrackBrief; backup: CompanionTrackBrief } | null {
+  const main = str(face01.main_recommendation);
+  const conditions = str(face01.conditions);
+  const notChoosing = str(face01.not_choosing);
+  if (!main) return null;
+
+  const paths = Array.isArray(face05.paths)
+    ? face05.paths
+    : Array.isArray(face05.path_options)
+      ? face05.path_options
+      : [];
+  const pathTexts = paths
+    .map((p) => {
+      if (typeof p === "string") return p.trim();
+      const r = asRecord(p);
+      if (!r) return "";
+      return (
+        str(r.name) ||
+        str(r.label) ||
+        str(r.path) ||
+        str(r.summary) ||
+        str(r.body)
+      );
+    })
+    .filter(Boolean);
+  const switchOrStop =
+    str(face05.switch_or_stop) ||
+    str(face05.switchStop) ||
+    listField(face05.switch_conditions).join("；");
+
+  const primary: CompanionTrackBrief = {
+    role: "primary",
+    name: main.slice(0, 80) || "main",
+    claim: [main, conditions].filter(Boolean).join(" · ").slice(0, 1200),
+    strategy_excerpt: conditions || main.slice(0, 400),
+    means_excerpts: [
+      main.slice(0, 200),
+      ...(pathTexts.slice(0, 3).map((t) => t.slice(0, 200))),
+    ].filter(Boolean),
+  };
+  const backupName =
+    pathTexts[1] ||
+    pathTexts[0] ||
+    switchOrStop ||
+    notChoosing ||
+    "switch_or_stop";
+  const backup: CompanionTrackBrief = {
+    role: "backup",
+    name: backupName.slice(0, 80),
+    claim: (
+      switchOrStop ||
+      pathTexts.slice(1).join("；") ||
+      notChoosing ||
+      backupName
+    ).slice(0, 1200),
+    strategy_excerpt: (switchOrStop || notChoosing || backupName).slice(0, 400),
+    means_excerpts: [
+      (switchOrStop || notChoosing || backupName).slice(0, 200),
+      ...pathTexts.slice(0, 4).map((t) => t.slice(0, 200)),
+    ].filter(Boolean),
+  };
+  if (!primary.means_excerpts.length) primary.means_excerpts = [primary.claim.slice(0, 200)];
+  if (!backup.means_excerpts.length) backup.means_excerpts = [backup.claim.slice(0, 200)];
+  return { primary, backup };
+}
+
 /**
  * Build brief from page_schemas map and/or full_text fences.
- * Throws if primary/backup cannot be extracted.
+ * Prefers Face 01+05; falls back to legacy P1+P3 primary/backup.
  */
 export function extractCompanionBrief(input: {
   fullText: string;
@@ -127,27 +209,61 @@ export function extractCompanionBrief(input: {
   pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): CompanionBrief {
-  const p1 =
-    findPage(input.pageSchemas, "decision_brief", input.fullText) ??
-    findPage(input.pageSchemas, "recommended_strategy", input.fullText);
-  const p3 = findPage(input.pageSchemas, "execution_guidance", input.fullText);
-  if (
-    !p1 ||
-    (p1.page !== "decision_brief" && p1.page !== "recommended_strategy")
-  ) {
-    throw new Error("companion_brief_missing_p1");
+  const face01 =
+    findPage(input.pageSchemas, "01", input.fullText) ??
+    (input.pageSchemas?.["01"] as DeliveryPageData | undefined) ??
+    null;
+  const face05 =
+    findPage(input.pageSchemas, "05", input.fullText) ??
+    (input.pageSchemas?.["05"] as DeliveryPageData | undefined) ??
+    null;
+
+  let primary: CompanionTrackBrief | null = null;
+  let backup: CompanionTrackBrief | null = null;
+
+  if (face01 && face05) {
+    const fromFace = tracksFromFace01And05(
+      face01 as unknown as Record<string, unknown>,
+      face05 as unknown as Record<string, unknown>,
+    );
+    if (fromFace) {
+      primary = fromFace.primary;
+      backup = fromFace.backup;
+    }
   }
-  const p1r = p1 as unknown as Record<string, unknown>;
-  let primary = trackFromP1("primary", p1r);
-  let backup = trackFromP1("backup", p1r);
+
   if (!primary || !backup) {
-    throw new Error("companion_brief_missing_tracks");
+    const p1 =
+      findPage(input.pageSchemas, "decision_brief", input.fullText) ??
+      findPage(input.pageSchemas, "recommended_strategy", input.fullText) ??
+      findPage(input.pageSchemas, "direct_answer", input.fullText);
+    const p3 =
+      findPage(input.pageSchemas, "execution_guidance", input.fullText) ??
+      findPage(input.pageSchemas, "science_action", input.fullText);
+    if (
+      !p1 ||
+      (p1.page !== "decision_brief" &&
+        p1.page !== "recommended_strategy" &&
+        p1.page !== "direct_answer")
+    ) {
+      throw new Error("companion_brief_missing_01_or_p1");
+    }
+    const p1r = p1 as unknown as Record<string, unknown>;
+    primary = trackFromP1("primary", p1r);
+    backup = trackFromP1("backup", p1r);
+    if (!primary || !backup) {
+      throw new Error("companion_brief_missing_tracks");
+    }
+    if (
+      p3 &&
+      (p3.page === "execution_guidance" || p3.page === "science_action")
+    ) {
+      const p3r = p3 as unknown as Record<string, unknown>;
+      primary = mergeP3Means(primary, asRecord(p3r.primary_toolkit));
+      backup = mergeP3Means(backup, asRecord(p3r.backup_toolkit));
+    }
   }
-  if (p3 && p3.page === "execution_guidance") {
-    const p3r = p3 as unknown as Record<string, unknown>;
-    primary = mergeP3Means(primary, asRecord(p3r.primary_toolkit));
-    backup = mergeP3Means(backup, asRecord(p3r.backup_toolkit));
-  }
+
   const locale = normalizeCompanionLocale(input.locale);
   const relation_boundary =
     formatCompanionRelationBoundary({

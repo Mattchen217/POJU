@@ -63,12 +63,13 @@ export function labAsJobInput(lab: DeliveryLabSession) {
 export function labSyntheticFinalize(lab: DeliveryLabSession): DeliveryComputed {
   const q = lab.source.original_question.slice(0, 200);
   const out = {} as DeliveryComputed;
-  for (const key of DELIVERY_SEGMENT_KEYS) {
-    const page = lab.artifacts.by_page[key];
+  const keys = new Set<string>([...DELIVERY_SEGMENT_KEYS, "07"]);
+  for (const key of keys) {
+    const page = lab.artifacts.by_page[key as keyof typeof lab.artifacts.by_page];
     const core =
       (typeof page?.core_conclusion === "string" && page.core_conclusion.trim()) ||
       `【Lab】围绕「${q}」展开本页论证骨架。`;
-    out[key] = {
+    out[key as keyof DeliveryComputed] = {
       core_conclusion: core,
       bazi_basis: [],
       chart_anchors: [],

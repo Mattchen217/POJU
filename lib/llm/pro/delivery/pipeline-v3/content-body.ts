@@ -25,6 +25,7 @@ import { scrubJudgmentFeedPrescriptions, scrubP4BodyFeedPriming, stripQimenBlock
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
+import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 
 export type ContentBodyOk = {
@@ -492,6 +493,7 @@ export async function runContentBodyGenerate(input: {
     pivot_chart_path: input.pivot_chart_path,
     partner_bazi: input.partner_bazi,
   });
+  const faceNative = isFaceDeliveryKey(input.key);
   const pageSlice = formatPageSliceFeed({
     key: input.key,
     chartText: feed.thesis_factpack ? input.chart_fact_pack : null,
@@ -500,50 +502,53 @@ export async function runContentBodyGenerate(input: {
     topic: input.topic,
     withAllowlistHeader: true,
   });
-  let feedParts = [
-    feed.thesis_factpack && input.chart_thesis_block?.trim()
-      ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
-      : "",
-    pageSlice ?? "",
-    feed.primary_backup_hint && input.primary_backup_hint?.trim()
-      ? input.primary_backup_hint.trim()
-      : "",
-    feed.question_expectation ? input.question_expectation : "",
-    feed.dyad_relation_structure && input.dyad_relation_structure?.trim()
-      ? input.dyad_relation_structure.trim()
-      : "",
-    // P4 正文：奇门已在 Fact-pack + moat；禁再灌 eastern_calc（fill 派工全文含 Q·E/多维「用兼职节奏」等 priming）
-    feed.qimen && input.key !== "self_regulation"
-      ? input.eastern_calc_slice
-      : "",
-    feed.reality ? input.reality_constraints : "",
-    feed.foundation_surface ? input.foundation_surface_feed : "",
-    feed.science_means ? input.science_means_feed : "",
-    feed.metaphysics_moat ? input.metaphysics_moat_feed : "",
-    feed.risk_fuse ? input.risk_fuse_feed : "",
-    feed.close_ritual ? input.close_ritual_feed : "",
-    feed.structured_inventory && !pageSlice
-      ? input.structured_inventory?.slice(0, 6_000)
-      : "",
-    feed.upstream_action_excerpt && input.action_brief
-      ? `## action_brief\n${JSON.stringify(input.action_brief).slice(0, 2_000)}`
-      : "",
-    feed.upstream_action_excerpt && input.p3_body_excerpt?.trim()
-      ? `## P3 正文摘录（下游对齐用）\n${input.p3_body_excerpt.trim().slice(0, 2_000)}`
-      : "",
-  ]
-    .filter((s) => s?.trim())
-    .join("\n\n");
+  /** Face-native: user_feed = slice only (+ optional corrective). No legacy paper mash. */
+  let feedParts = faceNative
+    ? pageSlice ?? ""
+    : [
+        feed.thesis_factpack && input.chart_thesis_block?.trim()
+          ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
+          : "",
+        pageSlice ?? "",
+        feed.primary_backup_hint && input.primary_backup_hint?.trim()
+          ? input.primary_backup_hint.trim()
+          : "",
+        feed.question_expectation ? input.question_expectation : "",
+        feed.dyad_relation_structure && input.dyad_relation_structure?.trim()
+          ? input.dyad_relation_structure.trim()
+          : "",
+        // P4 正文：奇门已在 Fact-pack + moat；禁再灌 eastern_calc（fill 派工全文含 Q·E/多维「用兼职节奏」等 priming）
+        feed.qimen && input.key !== "self_regulation"
+          ? input.eastern_calc_slice
+          : "",
+        feed.reality ? input.reality_constraints : "",
+        feed.foundation_surface ? input.foundation_surface_feed : "",
+        feed.science_means ? input.science_means_feed : "",
+        feed.metaphysics_moat ? input.metaphysics_moat_feed : "",
+        feed.risk_fuse ? input.risk_fuse_feed : "",
+        feed.close_ritual ? input.close_ritual_feed : "",
+        feed.structured_inventory && !pageSlice
+          ? input.structured_inventory?.slice(0, 6_000)
+          : "",
+        feed.upstream_action_excerpt && input.action_brief
+          ? `## action_brief\n${JSON.stringify(input.action_brief).slice(0, 2_000)}`
+          : "",
+        feed.upstream_action_excerpt && input.p3_body_excerpt?.trim()
+          ? `## P3 正文摘录（下游对齐用）\n${input.p3_body_excerpt.trim().slice(0, 2_000)}`
+          : "",
+      ]
+        .filter((s) => s?.trim())
+        .join("\n\n");
 
   // 共享包剥未授权块。P4 正文禁跑 judgment 处方 scrub：会把允许轴「宜守」改成「承压偏高」，并污染取向锚。
-  if (input.key !== "self_regulation") {
+  if (!faceNative && input.key !== "self_regulation") {
     feedParts = scrubJudgmentFeedPrescriptions(feedParts);
   }
-  if (!feed.qimen) {
+  if (!faceNative && !feed.qimen) {
     feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
   }
   // P4 正文：组装后再剥试水/权责 priming（duty 不枚举这些词教模型写否定句）
-  if (input.key === "self_regulation") {
+  if (!faceNative && input.key === "self_regulation") {
     feedParts = scrubP4BodyFeedPriming(feedParts);
   }
   const userFeed = [

@@ -109,9 +109,32 @@ export function LabCallTracePanel({
       </div>
 
       <TraceBlock title="① 接收数据 · user_feed（喂料）" accent="text-[#9cf0ff]">
-        {call_trace.user_feed?.trim()
-          ? call_trace.user_feed
-          : "（无独立 user_feed — 见下方完整 User 提示词）"}
+        {(() => {
+          const feed = call_trace.user_feed?.trim() ?? "";
+          if (!feed) {
+            return "（无独立 user_feed — 见下方完整 User 提示词）";
+          }
+          const allowOk = /sliceStaysInAllowlist\s*✓/.test(feed);
+          const allowFail = /sliceStaysInAllowlist\s*✗/.test(feed);
+          return (
+            <>
+              {allowOk || allowFail ? (
+                <div
+                  className={`mb-2 rounded px-2 py-1 text-[10px] ${
+                    allowFail
+                      ? "bg-red-500/20 text-red-200"
+                      : "bg-emerald-500/15 text-emerald-200"
+                  }`}
+                >
+                  {allowFail
+                    ? "sliceStaysInAllowlist ✗ · 越权键红标"
+                    : "sliceStaysInAllowlist ✓ · 喂料 ⊆ PageFeedMatrix"}
+                </div>
+              ) : null}
+              {feed}
+            </>
+          );
+        })()}
       </TraceBlock>
 
       <TraceBlock title="② System 提示词" accent="text-[#f2ca50]">
