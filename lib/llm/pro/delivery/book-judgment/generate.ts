@@ -21,6 +21,7 @@ import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
   BOOK_FACE_IDS,
   BOOK_JUDGMENT_PACK_VERSION,
+  findMeansPrescriptionHits,
   indexBookJudgmentByFace,
   validateBookJudgmentPack,
   type BookJudgmentPack,
@@ -37,26 +38,34 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 只输出 JSON，不要 markdown。
 
 ## 主心骨（反推）
-配额表从决策报告各页各段反推。只写表内需要的批断；禁止无报告依据自由发挥；不够条数=失败勿早停。
-正文稍后只读切片阐述，本枪禁止手段处方、禁止 primary/backup、禁止恐吓预测。
+配额表从决策报告反推。只写表内需要的批断；不够条数=失败勿早停。
+正文稍后只读切片；本枪禁手段处方、primary/backup、恐吓预测。
 
-## units 规则（正写优先）
-- track=destiny：只写命理判断/机制；anchors∈CFP/ZFP 闭集（日主/用忌/大运、格局、宫干星曜四化）
-- track=science：默认句式＝机制/偏差/负荷陈述（例：「完美主义替代外部反馈抬高切换成本」）；禁操作框
-- track=convergence：只留命理↔科学交汇判断句；禁操作框与停损框
-- serves_face + serves_segment（A–E）对齐配额段槽；claim 短闭集句；anchors≥1
-- 每脸双轨 + 密度下限见配额表；patternHits 用则入 used，不用则 caveat
+## 正写句模（先写对 · 决定分布）
+- science：主语=机制/偏差/负荷；谓语=导致/维持/放大。
+  正例：「完美主义替代外部反馈抬高切换成本」
+  反例 timebox_block：「试点压成每周一个四小时块」← 禁
+- destiny：命理判断/结构倾向 + 闭集锚（日主/用忌/格局/宫干星曜）。
+  正例：「用神木受制于忌神火，开口窗口收窄」
+  反例 billable_min：「以最小可收费承诺作为验证单元」← 禁
+- convergence：双轨同向或张力交汇，禁止动作清单。
+  正例：「岁运忌神与损失厌恶同向放大开口成本」
+  反例 ops_checklist：「当三人付费时转为加大投入」← 禁
 
-## 全轨硬禁 · 框/处方（留给后文落地页；写入即 means_prescription FAIL + unitId）
-- 禁信号/停损框：「红灯信号 / 绿灯信号 / 停损信号 / 若…则停」——即使后文已偏机制也不过
-- 科学轨禁「若条件→加大/不再加大投入」操作清单；只写可验证机制与偏差
-- 禁「宜… / 不宜…」祈使（忌神/用神专名除外）
-- 禁「下一步动作 / 动作类型 / 轻量推进 / 不离开主业」操作句
-- 禁小时块/周内交付/低承诺小样/可收费最小样/执行清单等落地核对句
-- 配额表段职责已正写为机制/偏差/负荷；勿回写成红灯短信号或动作完成样貌
+## Feed 用法（硬）
+议程/用户手段语只可作背景事实一句（如「用户自述存在时段切分」）；
+claim 必须改写成机制/判断句；禁止把时段块/可收费样/投入加减原样写入 claim。
+
+## 配额与字段
+- serves_face + serves_segment 对齐配额；claim 短闭集；anchors≥1
+- 每脸双轨 + 密度见配额表；patternHits 用则入 used，不用则 caveat
+- 段职责已正写为机制/偏差/负荷|命理判断|交汇张力|复盘问句
+
+## 闭集安全网（写入 claim → means_prescription FAIL + unitId@className）
+imperative_yi · redlight_stop · stop_loss_ops · next_action · ops_checklist · timebox_block · billable_min · low_commit_sample
 
 ## 禁区
-手段处方、攻守祈使收束、恐吓必损必成、primary/backup 回流、无出处现编格局、顺推硬塞空壳。`;
+手段处方、攻守祈使、恐吓必损必成、primary/backup、无出处现编格局、顺推硬塞。`;
 
 const JSON_SHAPE = `输出 JSON：
 {
@@ -99,6 +108,16 @@ export type BookJudgmentGenerateFail = {
   shot_mode?: BookJudgmentShotMode;
 };
 
+type DegradeCarry = {
+  degrade: true;
+  reason: string;
+  detail?: string;
+  means_classes?: string[];
+  draft_pack?: BookJudgmentPack;
+  text?: string;
+  trace?: LabCallTrace;
+};
+
 function isDegradeReason(reason: string, finish: string | null): boolean {
   if (finish === "length" || finish === "max_tokens") return true;
   const r = reason.toLowerCase();
@@ -120,6 +139,7 @@ function isDegradeReason(reason: string, finish: string | null): boolean {
     r === "segment_uncovered" ||
     r === "segment_track_mismatch" ||
     r === "weak_science_anchor" ||
+    r === "means_prescription" ||
     r === "schema" ||
     r === "truncated" ||
     r === "quality_drift"
@@ -398,11 +418,16 @@ function feedBlock(input: {
     parts.push(`## 科学 / 现代证据 feed\n${input.science_feed.trim().slice(0, 8_000)}`);
   }
   if (input.agenda?.trim()) {
-    parts.push(`## agenda / 议题\n${input.agenda.trim().slice(0, 2_000)}`);
+    parts.push(
+      `## agenda / 议题（仅背景事实 · 禁把时段块/可收费样/投入加减原样写入 claim）\n${input.agenda.trim().slice(0, 2_000)}`,
+    );
   }
   if (input.question?.trim()) {
     parts.push(`## 原问\n${input.question.trim().slice(0, 1_200)}`);
   }
+  parts.push(
+    `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句，禁止原样复述操作日程或验证单元。`,
+  );
   const hits = patternHitsFromZiwei(input.ziwei);
   if (hits.length) {
     parts.push(
@@ -440,7 +465,7 @@ export async function runBookJudgmentPackGenerate(input: {
   let tokens_used = 0;
 
   const finishOneShot = async (): Promise<
-    BookJudgmentGenerateOk | BookJudgmentGenerateFail | { degrade: true; reason: string; text?: string; trace?: LabCallTrace }
+    BookJudgmentGenerateOk | BookJudgmentGenerateFail | DegradeCarry
   > => {
     const user_feed = feedBlock({
       chartText,
@@ -509,9 +534,20 @@ export async function runBookJudgmentPackGenerate(input: {
     const validated = validateBookJudgmentPack(draft, quota);
     if (!validated.ok) {
       if (isDegradeReason(validated.reason, shot.finish)) {
+        const means_classes =
+          validated.reason === "means_prescription"
+            ? [
+                ...new Set(
+                  findMeansPrescriptionHits(draft.units).map((h) => h.className),
+                ),
+              ]
+            : undefined;
         return {
           degrade: true,
           reason: validated.reason,
+          detail: validated.detail,
+          means_classes,
+          draft_pack: draft,
           text: shot.text,
           trace: shot.call_trace,
         };
@@ -538,8 +574,23 @@ export async function runBookJudgmentPackGenerate(input: {
   };
 
   const finishTwoShot = async (
-    degradeMeta?: { reason: string },
+    degradeMeta?: {
+      reason: string;
+      detail?: string;
+      means_classes?: string[];
+    },
   ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
+    const meansInject =
+      degradeMeta?.means_classes?.length
+        ? [
+            `## 一枪 means_prescription 失败类（二枪必须避开 · 改写成正写句模）`,
+            `className=${degradeMeta.means_classes.join(" · ")}`,
+            degradeMeta.detail ? `detail=${degradeMeta.detail}` : "",
+            `正写：science=机制/偏差/负荷；destiny=命理判断；convergence=交汇张力。禁原样复述 feed 操作语。`,
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : "";
     const destinyFeed = feedBlock({
       chartText,
       ziwei,
@@ -551,9 +602,12 @@ export async function runBookJudgmentPackGenerate(input: {
     const destinyUser = [
       `## BookJudgmentPack · 两枪·destiny locale=${input.locale}`,
       `只产出 track=destiny（可少量 convergence）。覆盖配额表全部 faces/段。`,
+      meansInject,
       quotaBlock,
       destinyFeed,
-    ].join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     const dShot = await callPackShot({
       phase: "book_judgment_pack_destiny",
       system: PACK_SYSTEM,
@@ -600,9 +654,12 @@ export async function runBookJudgmentPackGenerate(input: {
     const scienceUser = [
       `## BookJudgmentPack · 两枪·science locale=${input.locale}`,
       `只产出 track=science（可少量 convergence）。覆盖配额表；禁「科学维N」空壳。合并键 serves_face。`,
+      meansInject,
       quotaBlock,
       scienceFeed,
-    ].join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     const sShot = await callPackShot({
       phase: "book_judgment_pack_science",
       system: PACK_SYSTEM,
@@ -687,7 +744,11 @@ export async function runBookJudgmentPackGenerate(input: {
 
   const one = await finishOneShot();
   if ("degrade" in one) {
-    return finishTwoShot({ reason: one.reason });
+    return finishTwoShot({
+      reason: one.reason,
+      detail: one.detail,
+      means_classes: one.means_classes,
+    });
   }
   return one;
 }

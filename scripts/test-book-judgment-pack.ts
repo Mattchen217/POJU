@@ -8,17 +8,21 @@ import { isBookJudgmentPackEnabled } from "../lib/llm/pro/delivery/book-judgment
 import {
   BOOK_FACE_IDS,
   BOOK_JUDGMENT_PACK_VERSION,
+  classifyMeansPrescription,
   indexBookJudgmentByFace,
   isWeakScienceAnchor,
+  MEANS_PRESCRIPTION_CLASS_NAMES,
   softRepairFaceDualTrack,
   validateBookJudgmentPack,
   type BookJudgmentPack,
   type BookJudgmentSegmentId,
   type BookJudgmentUnit,
+  type MeansPrescriptionClassName,
 } from "../lib/llm/pro/delivery/book-judgment/schema";
 import {
   buildBookJudgmentQuotaFromBlueprint,
   formatQuotaTableForPrompt,
+  quotaPromptHasMeansDutyLeak,
 } from "../lib/llm/pro/delivery/book-judgment/quota-from-blueprint";
 import {
   deepEvidencePlanFromBookPack,
@@ -280,64 +284,109 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   if (!v.ok) assert.equal(v.reason, "under_density");
 }
 
-/** FAIL means_prescription · 语义类 + unit id/类名进 detail */
+/** 配额 prompt 无手段 duty 泄漏 */
 {
-  const cases = [
-    "宜以客位进取开创",
-    "不宜在主业外摊开试点",
-    "宜用低承诺交换，把样品拿给人用",
-    "固定4小时块做验证，宜退回观察",
-    "两周内递给三个人用并回收反馈",
-    "红灯信号：四小时完整块连续被侵蚀、熟人只给反馈不付费",
-    "红灯信号：完美主义替代外部反馈抬高切换成本",
-    "绿灯信号：负荷回落可加码",
-    "停损信号：偏差叠加时收束窗口",
-    "若外部反馈缺失则停止加码",
-    "近步原则是停在可逆、可收费验证的最小样，能直接使用的小成品",
-    "做一个低承诺小样验证再开口",
-    "四小时完整块被打断就停下并退回",
-    "不把试点摊成四周任务",
-    "下一步动作类型是只做不离开主业的轻量推进",
-    "连续两个完整时段未出现付费或明确外部兴趣时，不再加大投入。",
-    "当三个陌生人付费时，转为加大投入。",
-  ];
-  const sci = coveringUnits().find((u) => u.track === "science");
-  assert.ok(sci, "need science unit");
-  for (const rx of cases) {
-    const units = coveringUnits().map((u) =>
-      u.id === sci!.id ? { ...u, claim: rx } : u,
-    );
-    const v = validateBookJudgmentPack(
-      basePack({
-        units,
-        by_face: indexBookJudgmentByFace(units),
-      }),
-      quota,
-    );
-    assert.equal(
-      v.ok,
-      false,
-      `expected FAIL for「${rx.slice(0, 36)}」 got ${v.ok ? "PASS" : v.reason}`,
-    );
-    if (!v.ok) {
-      assert.equal(v.reason, "means_prescription");
-      assert.match(v.detail ?? "", new RegExp(sci!.id));
-      assert.match(v.detail ?? "", /@science\//);
-    }
+  const prompt = formatQuotaTableForPrompt(quota);
+  assert.equal(
+    quotaPromptHasMeansDutyLeak(prompt),
+    false,
+    "quota prompt must not leak means duty labels",
+  );
+  assert.match(prompt, /机制\/偏差\/负荷|命理判断|交汇张力|复盘问句/);
+}
+
+/** FAIL means_prescription · 闭集每 className ≥2 合成句 + 跨轨 */
+{
+  const fixtures: Record<MeansPrescriptionClassName, [string, string]> = {
+    imperative_yi: ["宜以客位进取开创", "不宜在主业外摊开试点"],
+    redlight_stop: [
+      "红灯信号：完美主义替代外部反馈抬高切换成本",
+      "绿灯信号：负荷回落可加码",
+    ],
+    stop_loss_ops: ["四小时完整块被打断就停下并退回", "窗口收窄后停下来改节奏停损"],
+    next_action: [
+      "下一步动作类型是只做不离开主业的轻量推进",
+      "动作类型改为推进可核对",
+    ],
+    ops_checklist: [
+      "连续两个完整时段未出现付费时，不再加大投入。",
+      "当三个陌生人付费时，转为加大投入。",
+    ],
+    timebox_block: [
+      "试点被压缩到每周一个四小时块做验证",
+      "不把试点摊成四周任务",
+    ],
+    billable_min: [
+      "以最小可收费承诺作为验证单元再开口",
+      "交付能直接使用的小成品换反馈",
+    ],
+    low_commit_sample: [
+      "做一个低承诺小样验证再开口",
+      "低承诺小样验证后观察窗口收窄",
+    ],
+  };
+  for (const name of MEANS_PRESCRIPTION_CLASS_NAMES) {
+    assert.ok(fixtures[name], `fixture for ${name}`);
   }
-  /** destiny / convergence 同开；多条命中时 detail 列 unit id */
+  const passClaims = [
+    "完美主义替代外部反馈抬高切换成本",
+    "用神木受制于忌神火，开口窗口收窄",
+    "岁运忌神与损失厌恶同向放大开口成本",
+    "工作记忆负荷偏高导致切换成本上升",
+  ];
+  for (const ok of passClaims) {
+    assert.equal(
+      classifyMeansPrescription(ok),
+      null,
+      `pure mechanism must PASS classify: ${ok}`,
+    );
+  }
+
+  const sci = coveringUnits().find((u) => u.track === "science");
   const destiny = coveringUnits().find((u) => u.track === "destiny");
   const conv = coveringUnits().find((u) => u.track === "convergence");
-  assert.ok(destiny && conv);
+  assert.ok(sci && destiny && conv);
+
+  for (const className of MEANS_PRESCRIPTION_CLASS_NAMES) {
+    const [a, b] = fixtures[className];
+    assert.equal(classifyMeansPrescription(a), className, a);
+    assert.equal(classifyMeansPrescription(b), className, b);
+    for (const [trackUnit, claim] of [
+      [sci!, a],
+      [destiny!, b],
+    ] as const) {
+      const units = coveringUnits().map((u) =>
+        u.id === trackUnit.id ? { ...u, claim } : u,
+      );
+      const v = validateBookJudgmentPack(
+        basePack({
+          units,
+          by_face: indexBookJudgmentByFace(units),
+        }),
+        quota,
+      );
+      assert.equal(
+        v.ok,
+        false,
+        `${className} on ${trackUnit.track}: expected FAIL got ${v.ok ? "PASS" : v.reason}`,
+      );
+      if (!v.ok) {
+        assert.equal(v.reason, "means_prescription");
+        assert.match(v.detail ?? "", new RegExp(trackUnit.id));
+        assert.match(v.detail ?? "", new RegExp(`@${trackUnit.track}/${className}`));
+      }
+    }
+  }
+
   const multi = coveringUnits().map((u) => {
     if (u.id === destiny!.id) {
-      return { ...u, claim: "做一个低承诺小样验证再看格局" };
+      return { ...u, claim: fixtures.low_commit_sample[0] };
     }
     if (u.id === conv!.id) {
-      return { ...u, claim: "下一步动作：轻量推进可核对" };
+      return { ...u, claim: fixtures.next_action[0] };
     }
     if (u.id === sci!.id) {
-      return { ...u, claim: "不宜把样板扩成四周任务" };
+      return { ...u, claim: fixtures.ops_checklist[0] };
     }
     return u;
   });

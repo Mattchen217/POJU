@@ -1,6 +1,7 @@
 /**
  * BookJudgmentPack quota · reverse from report blueprint (Canvas SoT).
  * 报告 → 段表 → 批断配额（反推，不顺推硬塞）。
+ * Pack-gun duty 正写：机制/偏差/负荷 | 命理判断 | 交汇张力 | 复盘问句。
  */
 
 import { CANONICAL_FACE_BLUEPRINT } from "@/lib/poju/report-blueprint";
@@ -51,17 +52,14 @@ function preferredForSegment(
       if (segmentId === "A") return { preferred_track: "destiny", needs_unit: true };
       if (segmentId === "B") return { preferred_track: "science", needs_unit: true };
       if (segmentId === "C") return { preferred_track: "convergence", needs_unit: true };
-      // D 可核对锚
       return { preferred_track: "any", needs_unit: true };
     case "pointer":
-      // A/B/C 各 ≥1；D 指针不强制独立盘面 unit
       if (segmentId === "D") return { preferred_track: "any", needs_unit: false };
       if (segmentId === "A") return { preferred_track: "destiny", needs_unit: true };
       if (segmentId === "B") return { preferred_track: "any", needs_unit: true };
       if (segmentId === "C") return { preferred_track: "science", needs_unit: true };
       return { preferred_track: "any", needs_unit: true };
     case "fold":
-      // A/B 双轨；C/D 按 duty
       if (segmentId === "A") return { preferred_track: "destiny", needs_unit: true };
       if (segmentId === "B") return { preferred_track: "science", needs_unit: true };
       if (segmentId === "C") return { preferred_track: "any", needs_unit: true };
@@ -87,7 +85,6 @@ function faceMins(dualTrack: DualTrackMount, slotCount: number): {
   min_destiny: number;
   min_science: number;
 } {
-  // Canvas: 单脸默认 ≥3（含双轨）
   const min_units = Math.max(3, Math.min(slotCount, 5));
   return {
     min_units,
@@ -96,9 +93,13 @@ function faceMins(dualTrack: DualTrackMount, slotCount: number): {
   };
 }
 
+const DUTY_MECH = "写可验证机制/偏差/负荷；禁手段处方与条件→投入加减。";
+const DUTY_JUDGE = "写命理判断/结构倾向；禁路径处方与落地操作句。";
+const DUTY_CONV = "写双轨交汇张力或同向；禁动作清单。";
+const DUTY_REVIEW = "写复盘问句或边界判断；禁信号停损框与操作处方。";
+
 /**
- * Pack-gun duty 正写：把「红灯信号→短信号 / 近步→动作类型」等操作框标签
- * 改成机制/偏差/负荷职责名（不改 decision-pages 正文 duty SoT）。
+ * Pack-gun duty 正写（不改 decision-pages 用户可见段标题 SoT）。
  */
 function toJudgmentSegmentCopy(seg: {
   id: string;
@@ -107,35 +108,58 @@ function toJudgmentSegmentCopy(seg: {
 }): { label: string; duty: string } {
   const label = seg.label.trim();
   const duty = seg.duty.trim();
-  if (/红灯|绿灯|停损/.test(label) || /^短信号/.test(duty)) {
-    return {
-      label: "偏差·负荷机制",
-      duty: "写可验证偏差/负荷/反馈机制；禁信号停损框与条件→投入加减。",
-    };
+  const blob = `${label} ${duty}`;
+
+  if (/红灯|绿灯|停损|短信号/.test(blob)) {
+    return { label: "偏差·负荷机制", duty: DUTY_MECH };
   }
-  if (/近步/.test(label) || /动作类型|完成样貌/.test(duty)) {
-    return {
-      label: "近窗机制约束",
-      duty: "写近窗相关机制/偏差/负荷；禁动作类型与完成样貌处方。",
-    };
+  if (/近步|动作类型|完成样貌|怎么落地|下周干/.test(blob)) {
+    return { label: "近窗机制约束", duty: DUTY_MECH };
   }
-  if (/切轨|停止/.test(label) || /换轨或停下/.test(duty)) {
-    return {
-      label: "边界判断",
-      duty: "写边界/成本判断；禁切轨操作清单。",
-    };
+  if (/切轨|停止|换轨或停下/.test(blob)) {
+    return { label: "边界判断", duty: DUTY_REVIEW };
   }
-  if (/自我调频/.test(label) || /怎么调自己/.test(duty)) {
-    return {
-      label: "自稳机制",
-      duty: "写执行中负荷/偏差自稳机制；禁调频操作处方。",
-    };
+  if (/自我调频|怎么调自己/.test(blob)) {
+    return { label: "自稳机制", duty: DUTY_MECH };
   }
   if (/科学机制/.test(label)) {
+    return { label: "科学机制", duty: DUTY_MECH };
+  }
+  if (/命理理由/.test(label)) {
+    return { label: "命理判断", duty: DUTY_JUDGE };
+  }
+  if (/汇合|交汇/.test(label)) {
+    return { label: "交汇张力", duty: DUTY_CONV };
+  }
+  if (/主推荐|首选|更宜的一条路|更宜/.test(blob)) {
+    return { label: "结构倾向判断", duty: DUTY_JUDGE };
+  }
+  if (/次选|慎选|不选什么|成立条件/.test(label)) {
+    return { label: "结构边界", duty: DUTY_JUDGE };
+  }
+  if (/卡点命名|表现|怎么出现|若硬顶/.test(blob)) {
+    return { label: "偏差·负荷机制", duty: DUTY_MECH };
+  }
+  if (/复盘问句|何时重跑/.test(label)) {
+    return {
+      label: label.includes("复盘") ? "复盘问句" : "重跑条件判断",
+      duty: DUTY_REVIEW,
+    };
+  }
+  if (/场域判断|关系\/互动|对齐/.test(label)) {
+    return { label, duty: DUTY_JUDGE };
+  }
+  if (/可核对锚|依据指针|依据折叠|对照|阶段气候|节奏提醒/.test(label)) {
     return {
       label,
-      duty: "写可验证机制/偏差/负荷；禁若条件→加大/不再加大投入。",
+      duty: /气候|节奏/.test(label) ? DUTY_MECH : "写短锚或对照判断；禁手段处方。",
     };
+  }
+  if (/八字本题|紫微本题|对照一句/.test(label)) {
+    return { label, duty: "写本题短锚对照；禁手段处方。" };
+  }
+  if (/更宜|落地|验证单元|投入|短信号|动作类型|完成样貌/.test(duty)) {
+    return { label: label || "结构判断", duty: DUTY_JUDGE };
   }
   return { label, duty };
 }
@@ -144,7 +168,8 @@ function toJudgmentDualTrackNote(note: string): string {
   return note
     .replace(/红灯[、，,]?/g, "偏差机制、")
     .replace(/近步原则、完成样貌、?/g, "近窗机制约束、")
-    .replace(/不是勾选作业。?/g, "禁操作清单。");
+    .replace(/不是勾选作业。?/g, "禁操作清单。")
+    .replace(/更宜/g, "结构倾向");
 }
 
 /**
@@ -182,7 +207,10 @@ export function buildBookJudgmentQuotaFromBlueprint(): BookJudgmentQuotaTable {
         needs_unit: pref.needs_unit,
       };
     });
-    const mins = faceMins(schema.dualTrack, segment_slots.filter((s) => s.needs_unit).length);
+    const mins = faceMins(
+      schema.dualTrack,
+      segment_slots.filter((s) => s.needs_unit).length,
+    );
     faces.push({
       faceId,
       title: schema.title,
@@ -210,6 +238,7 @@ export function formatQuotaTableForPrompt(quota: BookJudgmentQuotaTable): string
   const lines: string[] = [
     `## 批断配额表（从决策报告反推 · 只写表内需要的 · 禁无依据自由发挥）`,
     `total_min_units=${quota.total_min_units} · 不够条数=失败勿早停`,
+    `段职责已正写为：机制/偏差/负荷 | 命理判断 | 交汇张力 | 复盘问句 — 禁手段 duty`,
   ];
   for (const f of quota.faces) {
     lines.push(
@@ -232,4 +261,12 @@ export function formatQuotaTableForPrompt(quota: BookJudgmentQuotaTable): string
     }
   }
   return lines.join("\n");
+}
+
+/** Lab/单测：配额 prompt 不得残留手段 duty 标签。 */
+export const MEANS_DUTY_LEAK_RE =
+  /红灯信号|短信号|更宜的一条路|动作类型|完成样貌|验证单元|加大投入|下一步的动作/;
+
+export function quotaPromptHasMeansDutyLeak(prompt: string): boolean {
+  return MEANS_DUTY_LEAK_RE.test(prompt);
 }

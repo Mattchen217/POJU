@@ -94,59 +94,73 @@ export function isWeakScienceAnchor(anchor: string): boolean {
   return false;
 }
 
+/** Closed-set classNames for means_prescription (Canvas 全面排查). */
+export const MEANS_PRESCRIPTION_CLASS_NAMES = [
+  "imperative_yi",
+  "redlight_stop",
+  "next_action",
+  "ops_checklist",
+  "timebox_block",
+  "billable_min",
+  "low_commit_sample",
+  "stop_loss_ops",
+] as const;
+export type MeansPrescriptionClassName =
+  (typeof MEANS_PRESCRIPTION_CLASS_NAMES)[number];
+
 /**
- * 可执行手段句语义类（不靠单字黑名单）→ 批断包 FAIL。
- * 豁免：忌神/用神/喜神邻接「宜」。
+ * 可执行手段句闭集（类级 · 不绑本案词）→ 批断包 FAIL。
+ * 豁免：忌神/用神/喜神邻接「宜」。只检 units[].claim。
  */
-const PACK_MEANS_CLASSES: readonly { className: string; re: RegExp }[] = [
+const PACK_MEANS_CLASSES: readonly {
+  className: MeansPrescriptionClassName;
+  re: RegExp;
+}[] = [
   {
-    className: "yi_imperative",
+    className: "imperative_yi",
     re: /不宜|(?:^|[，,；;。.\s、])宜(?![忌神用喜])|宜用|宜退|宜把|宜将|宜以|宜守|宜进|宜藏|宜避|以静制动|守势探路/,
   },
   {
-    className: "timebox_block",
-    re: /小时块|\d+\s*小时(?:完整)?块|(?:四|4)\s*小时完整块|完整块连续|固定\s*\d+\s*小时/,
-  },
-  {
-    className: "week_delivery",
-    re: /\d+\s*周内|四周任务|摊成[^。；;]{0,8}周|试点摊/,
-  },
-  {
-    className: "low_commit_sample",
-    re: /低承诺(?:交换|小样)?|小样验证|做一个[^。；;]{0,16}(?:小样|验证)|最小样/,
-  },
-  {
-    className: "billable_min",
-    re: /可收费验证|最小可收费|小成品|能直接使用/,
-  },
-  {
-    /** 信号/停损操作框（类级 · 不绑本案词）；框在即 FAIL，后文即使偏机制也不过。 */
     className: "redlight_stop",
-    re: /红灯信号|绿灯信号|停损信号|(?:红|绿)灯(?:则|：|:)|若[^。；;]{0,24}则停|停下并退回|停下来改|退回观察|近步原则|停在可逆/,
+    re: /红灯信号|绿灯信号|停损信号|(?:红|绿)灯(?:则|：|:)|若[^。；;]{0,24}则停|近步原则|停在可逆/,
+  },
+  {
+    className: "stop_loss_ops",
+    re: /停下并退回|停下来改|退回观察|改节奏停损|停止加码/,
   },
   {
     className: "next_action",
     re: /下一步动作|动作类型|轻量推进|不离开主业|推进可核对/,
   },
   {
-    /**
-     * 操作清单 / 条件→投入加减（类级 · 不绑本案词）。
-     * 例：「…时，不再加大投入」「当…付费…转为加大投入」.
-     */
     className: "ops_checklist",
     re: /不再加大投入|转为加大投入|加大投入|再加大投入|当[^。；;]{0,48}(?:付费|兴趣)[^。；;]{0,32}(?:加大|投入)|未出现[^。；;]{0,36}时[，,]?(?:不再|停止)|若[^。；;]{0,40}(?:加大投入|不再加大)|完整时段|外部兴趣|拿给人用|递给[^。；;]{0,12}人|把样品|样品拿给|(?:兼职|灵活)?试水|加重筹码|全职(?:投入|跳入|加码)|冒进全职|更符合[^。；;]{0,40}|静润降温|延迟回应|不急于表态|此为[^。；;]{0,16}仪轨|可操作步骤|执行清单|今晚可|只给反馈不付费|primary_toolkit|backup_toolkit/,
+  },
+  {
+    className: "timebox_block",
+    re: /小时块|\d+\s*小时(?:完整)?块|(?:四|4)\s*小时完整块|完整块连续|固定\s*\d+\s*小时|\d+\s*周内|四周任务|摊成[^。；;]{0,8}周|试点摊|工作日封死/,
+  },
+  {
+    className: "billable_min",
+    re: /可收费验证|最小可收费|小成品|能直接使用|验证单元/,
+  },
+  {
+    className: "low_commit_sample",
+    re: /低承诺(?:交换|小样)?|小样验证|做一个[^。；;]{0,16}(?:小样|验证)|最小样/,
   },
 ];
 
 export type MeansPrescriptionHit = {
   unitId: string;
   track: string;
-  className: string;
+  className: MeansPrescriptionClassName;
   snippet: string;
 };
 
 /** First matching semantic class, or null. */
-export function classifyMeansPrescription(claim: string): string | null {
+export function classifyMeansPrescription(
+  claim: string,
+): MeansPrescriptionClassName | null {
   const t = claim.trim();
   if (!t) return null;
   for (const row of PACK_MEANS_CLASSES) {
