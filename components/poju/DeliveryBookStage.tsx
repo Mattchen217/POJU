@@ -14,11 +14,13 @@ import { DeliveryEnergyDashboard } from "@/components/poju/DeliveryEnergyDashboa
 import { DeliveryThirtyDayGantt } from "@/components/poju/DeliveryThirtyDayGantt";
 import { DeliveryPageScanCard } from "@/components/poju/DeliveryPageScanCard";
 import { DeliveryThreePhaseRoadmap } from "@/components/poju/DeliveryThreePhaseRoadmap";
-import {
-  DeliveryPageSlots,
-  deliveryMarkdownWithoutSchemaFence,
-} from "@/components/poju/delivery-pages/DeliveryPageSlots";
+import { DeliveryPageSlots } from "@/components/poju/delivery-pages/DeliveryPageSlots";
 import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
+import {
+  extractFaceSchemaSlices,
+  isInternalEngineInventoryModule,
+  prepareUserFacingDeliveryMarkdown,
+} from "@/lib/poju/delivery-user-facing";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { PojuLogo } from "@/components/ui/poju-logo";
@@ -443,8 +445,9 @@ export function DeliveryBookStage({
       };
     }
     const payloads = parsePojuStructPayloads(active.page.body);
-    const stripped = deliveryMarkdownWithoutSchemaFence(
+    const stripped = prepareUserFacingDeliveryMarkdown(
       stripPojuStructFences(active.page.body),
+      locale,
     );
     const bodyForModules = stripRenderedStructFallbacks(stripped, payloads, locale);
 
@@ -502,11 +505,11 @@ export function DeliveryBookStage({
     });
   }, [active, viewIndex, structWidgets.bodyForModules]);
 
-  /** Positional evidence aligned to pageSchemaToArgumentBodies / ### modules. */
-  const slotEvidence = useMemo(() => {
-    if (!activePageSchema) return [] as string[];
-    return modules.map((m) => m.evidence.trim());
-  }, [activePageSchema, modules]);
+  /** One slot tree per schema fence. A shelf face can fold more than one paper. */
+  const faceSlices = useMemo(
+    () => (active?.page.body ? extractFaceSchemaSlices(active.page.body) : []),
+    [active?.page.body],
+  );
 
   const evidenceTerms = useMemo(
     () => collectDeliveryEvidenceTerms(fullText, locale),
@@ -743,20 +746,23 @@ export function DeliveryBookStage({
                     ) : null}
                   </header>
                 ) : null}
-                {activePageSchema && active ? (
+                {faceSlices.length > 0 && active ? (
                   <div className="delivery-book-stage__page-slots">
-                    <DeliveryPageSlots
-                      markdown={active.page.body}
-                      locale={locale}
-                      pageSchema={activePageSchema}
-                      slotEvidence={slotEvidence}
-                    />
+                    {faceSlices.map((slice, sliceIndex) => (
+                      <DeliveryPageSlots
+                        key={`${active.slotId}-${slice.schema.page}-${sliceIndex}`}
+                        markdown={active.page.body}
+                        locale={locale}
+                        pageSchema={slice.schema}
+                        slotEvidence={slice.evidence}
+                      />
+                    ))}
                   </div>
                 ) : null}
-                {!activePageSchema && structWidgets.scan ? (
+                {faceSlices.length === 0 && structWidgets.scan ? (
                   <DeliveryPageScanCard data={structWidgets.scan} />
                 ) : null}
-                {!activePageSchema &&
+                {faceSlices.length === 0 &&
                 structWidgets.dashboard &&
                 active?.slotId === "02" ? (
                   <article className="delivery-book-stage__module delivery-book-stage__module--widget">
@@ -765,19 +771,24 @@ export function DeliveryBookStage({
                     </div>
                   </article>
                 ) : null}
-                {!activePageSchema && structWidgets.roadmap ? (
+                {faceSlices.length === 0 && structWidgets.roadmap ? (
                   <DeliveryThreePhaseRoadmap data={structWidgets.roadmap} />
                 ) : null}
-                {!activePageSchema && structWidgets.gantt ? (
+                {faceSlices.length === 0 && structWidgets.gantt ? (
                   <DeliveryThirtyDayGantt
                     data={structWidgets.gantt}
                     storageKey={`poju-gantt:${sessionId}:${reportId ?? "draft"}`}
                   />
                 ) : null}
-                {modules.length > 0 || showAppendixGlossary ? (
+                {(faceSlices.length === 0 && modules.length > 0) || showAppendixGlossary ? (
                   <div className="delivery-book-stage__modules">
-                    {!activePageSchema && !hideAppendixEmptyBody
-                      ? modules.map((mod, mi) => {
+                    {faceSlices.length === 0 && !hideAppendixEmptyBody
+                      ? modules
+                          .filter(
+                            (mod) =>
+                              !isInternalEngineInventoryModule(mod.title, mod.body, locale),
+                          )
+                          .map((mod, mi) => {
                           const hideTitle =
                             Boolean(pageTitleDisplay) &&
                             stripPartPrefix(mod.title).trim() === pageTitleDisplay.trim();

@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { DeliverableHtmlFrame } from "@/components/deliverables/DeliverableHtmlFrame";
 import { DeliveryBookStage } from "@/components/poju/DeliveryBookStage";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
-import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 import {
@@ -22,7 +20,6 @@ import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 
 import "@/styles/delivery-shelf.css";
 import "@/styles/delivery-phase4-ritual.css";
-import "@/styles/poju-companion.css";
 
 const DOWNLOAD_ICON = "/v2/xiazaiicon.svg";
 const EMAIL_ICON = "/v2/emailicon.svg";
@@ -122,7 +119,6 @@ export function DeliveryShelfView({
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
   const [packBusy, setPackBusy] = useState(false);
-  const [backfilledHtml, setBackfilledHtml] = useState<string | null>(null);
   const packCacheRef = useRef<string | null>(null);
 
   /** Old sessions: fill blank template once and persist. */
@@ -154,7 +150,6 @@ export function DeliveryShelfView({
           reportDate: new Date().toISOString().slice(0, 10),
         });
         if (cancelled) return;
-        setBackfilledHtml(filled.html);
         if (filled.session !== session) {
           try {
             await savePOJUSession(filled.session);
@@ -369,52 +364,23 @@ export function DeliveryShelfView({
       </div>
     ) : null;
 
-  const resolvedFilledHtml = filledHtml?.trim() || backfilledHtml?.trim() || "";
-  const useFilled = Boolean(resolvedFilledHtml);
-
+  // Popup is the slot flip-book. Filled HTML is download/email only
+  // (the iframe used to dump schema JSON and Chinese markdown labels).
   return (
-    <>
-      {useFilled ? (
-        <div className="delivery-shelf delivery-shelf--filled-html">
-          {chromeLeft ? (
-            <div className="delivery-shelf__filled-chrome">{chromeLeft}</div>
-          ) : null}
-          {networkSlot}
-          {interruptedSlot}
-          <DeliverableHtmlFrame html={resolvedFilledHtml} title={coverTitle} />
-        </div>
-      ) : (
-        <DeliveryBookStage
-          fullText={fullText}
-          locale={locale}
-          sessionId={sessionId}
-          complete={complete}
-          topic={topic}
-          originalQuestion={originalQuestion}
-          profileId={profileId}
-          jumpRequest={openReaderRequest}
-          initialProseIndex={readDeliveryShelfLastPage(sessionId)}
-          onProseIndexChange={handleProseIndexChange}
-          chromeLeft={chromeLeft}
-          networkSlot={networkSlot}
-          interruptedSlot={interruptedSlot}
-        />
-      )}
-      {complete ? (
-        <PojuCompanionFrame
-          sessionId={sessionId}
-          fullText={fullText}
-          structured={prepare?.matrixPayload?.structured ?? null}
-          originalQuestion={originalQuestion}
-          ready={complete}
-          profileId={profileId}
-          initialEmail={accountEmail ?? null}
-          partner_bazi={prepare?.session?.partner_bazi ?? null}
-          dyad_compat_summary={prepare?.session?.dyad_compat_summary ?? null}
-          pivot_chart_path={prepare?.session?.pivot_chart_path ?? null}
-          dyad_matrix_pack={prepare?.session?.dyad_matrix_pack ?? null}
-        />
-      ) : null}
-    </>
+    <DeliveryBookStage
+      fullText={fullText}
+      locale={locale}
+      sessionId={sessionId}
+      complete={complete}
+      topic={topic}
+      originalQuestion={originalQuestion}
+      profileId={profileId}
+      jumpRequest={openReaderRequest}
+      initialProseIndex={readDeliveryShelfLastPage(sessionId)}
+      onProseIndexChange={handleProseIndexChange}
+      chromeLeft={chromeLeft}
+      networkSlot={networkSlot}
+      interruptedSlot={interruptedSlot}
+    />
   );
 }

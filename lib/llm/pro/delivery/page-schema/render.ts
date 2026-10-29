@@ -21,26 +21,43 @@ export function encodePageSchemaFence(page: DeliveryPageData): string {
   })}\n\`\`\``;
 }
 
-export function extractPageSchemaFromMarkdown(md: string): DeliveryPageData | null {
-  const re = /```poju-page-schema\s*([\s\S]*?)```/i;
-  const m = md.match(re);
-  if (!m?.[1]) return null;
+function parsePageSchemaFenceBody(raw: string): DeliveryPageData | null {
   try {
-    const parsed = JSON.parse(m[1].trim()) as { page?: DeliveryPageData };
+    const parsed = JSON.parse(raw.trim()) as { page?: DeliveryPageData };
     if (parsed?.page && typeof parsed.page === "object" && "page" in parsed.page) {
       return parsed.page;
     }
-    // allow raw page object
-    const raw = JSON.parse(m[1].trim()) as DeliveryPageData;
-    if (raw && typeof raw === "object" && "page" in raw) return raw;
+    const direct = JSON.parse(raw.trim()) as DeliveryPageData;
+    if (direct && typeof direct === "object" && "page" in direct) return direct;
   } catch {
     return null;
   }
   return null;
 }
 
+export function extractPageSchemaFromMarkdown(md: string): DeliveryPageData | null {
+  const re = /```poju-page-schema\s*([\s\S]*?)```/i;
+  const m = md.match(re);
+  if (!m?.[1]) return null;
+  return parsePageSchemaFenceBody(m[1]);
+}
+
+/** Every closed fence on a shelf face (02/04/05/06/08 fold more than one paper). */
+export function extractAllPageSchemas(md: string): DeliveryPageData[] {
+  const re = /```poju-page-schema\s*([\s\S]*?)```/gi;
+  const out: DeliveryPageData[] = [];
+  for (const m of md.matchAll(re)) {
+    const page = m[1] ? parsePageSchemaFenceBody(m[1]) : null;
+    if (page) out.push(page);
+  }
+  return out;
+}
+
 export function stripPageSchemaFence(md: string): string {
-  return md.replace(/```poju-page-schema\s*[\s\S]*?```/gi, "").trim();
+  return md
+    .replace(/```poju-page-schema\s*[\s\S]*?```/gi, "")
+    .replace(/```poju-page-schema[\s\S]*$/gi, "")
+    .trim();
 }
 
 function anchorsOf(list: readonly string[] | undefined): readonly string[] | undefined {

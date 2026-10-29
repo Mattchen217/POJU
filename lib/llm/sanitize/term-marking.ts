@@ -49,6 +49,7 @@ import {
   type PojuTerm,
 } from "@/lib/glossary/pojulife-terms";
 import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
+import { localizeEvidenceGlue } from "@/lib/poju/localize-evidence-glue";
 import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
 import {
   BANNED_TERMS_ZH,
@@ -1773,7 +1774,9 @@ export function prepareTextForGlossaryRender(text: string, locale: string): stri
     repairShenshaMarkerSoftLabels(normalizeTermMarkerIds(rewritten, locale), locale),
     locale,
   );
-  return autoMarkBareTerms(wrapBareKeepCnSoftTerms(normalized, locale), locale);
+  const marked = autoMarkBareTerms(wrapBareKeepCnSoftTerms(normalized, locale), locale);
+  // Evidence pads stay Chinese while term slots render in the UI locale.
+  return localizeEvidenceGlue(marked, locale);
 }
 
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */

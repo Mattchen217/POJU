@@ -4,7 +4,8 @@
 .workspace-doc-vault-modal__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  /* Above chat composer (95) and atmos inquiry (85). Session picker stays at 600. */
+  z-index: 200;
   display: grid;
   place-items: center;
   padding: 16px;

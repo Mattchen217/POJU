@@ -101,12 +101,6 @@ function SlotCard({
   );
 }
 
-function judgmentPlain(text: string): string {
-  return text
-    .replace(/⟦w:([^⟧]+)⟧/g, "$1")
-    .replace(/⟦(?:t|词):[^|⟧]*\|([^⟧]+)⟧/g, "$1");
-}
-
 /** Folded evidence: fixed two subsections (命理 / 科学). Prefer structured fields. */
 function DualEvidenceBody({
   text,
@@ -133,7 +127,7 @@ function DualEvidenceBody({
     if (!fallback) return null;
     return (
       <div className="poju-delivery-v2__prose">
-        <p>{judgmentPlain(fallback)}</p>
+        <GlossaryText text={fallback} locale={locale as Locale} layer="evidence" bracketSoft={false} />
       </div>
     );
   }
@@ -142,13 +136,23 @@ function DualEvidenceBody({
       {hasMeta ? (
         <section className="dps-dual-evidence__section">
           <h3 className="dps-dual-evidence__h">{titles.meta}</h3>
-          <p>{judgmentPlain(dual.metaphysics_evidence)}</p>
+          <GlossaryText
+            text={dual.metaphysics_evidence}
+            locale={locale as Locale}
+            layer="evidence"
+            bracketSoft={false}
+          />
         </section>
       ) : null}
       {hasSci ? (
         <section className="dps-dual-evidence__section">
           <h3 className="dps-dual-evidence__h">{titles.sci}</h3>
-          <p>{judgmentPlain(dual.science_evidence)}</p>
+          <GlossaryText
+            text={dual.science_evidence}
+            locale={locale as Locale}
+            layer="evidence"
+            bracketSoft={false}
+          />
         </section>
       ) : null}
     </div>

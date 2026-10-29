@@ -32,6 +32,10 @@ import {
   type ThirtyDayGanttStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
+import {
+  isInternalEngineInventoryModule,
+  prepareUserFacingDeliveryMarkdown,
+} from "@/lib/poju/delivery-user-facing";
 
 export type DeliveryInteractiveHtmlMeta = {
   originalQuestion?: string;
@@ -869,14 +873,18 @@ export function renderDeliveryPageBodyHtml(
   const { locale, evidenceLabel, evidenceTerms, appendixCopy, pageIndex } = ctx;
   const zh = locale.startsWith("zh");
   const structHtml = renderStructWidgetsHtml(page.body);
+  const userFacingBody = prepareUserFacingDeliveryMarkdown(
+    stripPojuStructFences(page.body),
+    locale,
+  );
   const modules = buildDeliveryBookModules({
     pageTitle: page.title,
-    body: stripPojuStructFences(page.body),
+    body: userFacingBody,
     dualLayer: page.dualLayer,
     pageIndex,
-  });
+  }).filter((mod) => !isInternalEngineInventoryModule(mod.title, mod.body, locale));
   const pageTitleDisplay = stripPartPrefix(page.title);
-  const isAppendix = page.id === "appendix";
+  const isAppendix = page.id === "appendix" || page.id === "03";
   const hideEmptyAppendix =
     isAppendix &&
     evidenceTerms.length > 0 &&

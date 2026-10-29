@@ -326,7 +326,9 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
   const subtitle =
     item.kind === "energy_matrix"
       ? tPortrait("subtitle")
-      : item.subjectLabel || undefined;
+      : item.kind === "pivot_delivery" || item.kind === "pivot_reminders"
+        ? item.title
+        : item.subjectLabel || undefined;
 
   const showBaselineActions = Boolean(matrixPayload) && !loading && item.kind === "energy_matrix";
 
