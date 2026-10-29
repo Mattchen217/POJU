@@ -39,8 +39,7 @@ import {
   type DeliveryShelfSlotId,
   type DeliveryShelfSlotState,
 } from "@/lib/poju/delivery-shelf-slots";
-import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
-import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { decisionFaceKicker } from "@/lib/llm/pro/delivery/page-schema/face-kicker";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import {
   collectDeliveryEvidenceTerms,
@@ -138,12 +137,8 @@ function keepEasternOsTogether(text: string): string {
 }
 
 function tocFixedTag(slotId: DeliveryShelfSlotId, locale: string): string {
-  if (slotId === "03") {
-    return deliveryAppendixCopy(locale).heading;
-  }
   if (slotId === "cover" || slotId === "toc") return "";
-  const face = DECISION_PAGE_SCHEMAS[slotId as DecisionPageId];
-  return face?.title ?? slotId;
+  return decisionFaceKicker(slotId, locale);
 }
 
 /** Fixed tag + model page_title / page_subtitle for TOC rows (with legacy chrome repair). */

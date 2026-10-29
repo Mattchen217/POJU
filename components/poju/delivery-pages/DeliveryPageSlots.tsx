@@ -34,6 +34,50 @@ import {
   splitDualEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
 
+/** Polish / partial JSON may drop Zod defaults — never throw on .map / .length. */
+function asList(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function asStringList(value: unknown): string[] {
+  return asList(value).map((x) =>
+    typeof x === "string" ? x : x == null ? "" : String(x),
+  );
+}
+
+function asObjectList<T extends object = Record<string, unknown>>(
+  value: unknown,
+): T[] {
+  return asList(value).filter(
+    (x): x is T => x != null && typeof x === "object" && !Array.isArray(x),
+  );
+}
+
+function asText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+}
+
+function optionFieldLabels(locale: string): {
+  upside: string;
+  cost: string;
+  risk: string;
+  reversible: string;
+} {
+  const l = locale.toLowerCase();
+  if (l.startsWith("zh")) {
+    return { upside: "收益", cost: "成本", risk: "风险", reversible: "可逆" };
+  }
+  return {
+    upside: "Upside",
+    cost: "Cost",
+    risk: "Risk",
+    reversible: "Reversible",
+  };
+}
+
 function slotUiCopy(locale: string) {
   return deliverySlotUiCopy(locale);
 }
@@ -262,15 +306,17 @@ function AngleBody({
   copy,
   locale,
 }: {
-  angle: ActionAngle;
+  angle: ActionAngle | null | undefined;
   copy: ReturnType<typeof slotUiCopy>;
   locale: string;
 }) {
+  const means = asStringList(angle?.means);
+  const hardMetrics = asStringList(angle?.hard_metrics);
   return (
     <div className="delivery-book-stage__rx-parts">
       <Field label={copy.strategy}>
         <div className="dps-prose-stack">
-          {splitReadableParagraphs(angle.strategy).map((p, i) => (
+          {splitReadableParagraphs(angle?.strategy).map((p, i) => (
             <p key={`${i}-${p.slice(0, 20)}`}>
               <Gloss text={p} locale={locale} />
             </p>
@@ -279,7 +325,7 @@ function AngleBody({
       </Field>
       <Field label={copy.means}>
         <ol className="dps-step-list">
-          {angle.means.map((s, i) => (
+          {means.map((s, i) => (
             <li key={`${i}-${s.slice(0, 24)}`} className="dps-step-item">
               <span className="dps-step-num" aria-hidden>
                 {String(i + 1).padStart(2, "0")}
@@ -291,10 +337,10 @@ function AngleBody({
           ))}
         </ol>
       </Field>
-      {angle.hard_metrics.length > 0 ? (
+      {hardMetrics.length > 0 ? (
         <Field label={copy.metrics}>
           <ul className="dps-metrics-list">
-            {angle.hard_metrics.map((m) => (
+            {hardMetrics.map((m) => (
               <li key={m}>
                 <Gloss text={m} locale={locale} />
               </li>
@@ -747,26 +793,29 @@ function PageSlotsInner({
               </div>
             </SlotCard>
           ) : null}
-          {page.why_cards.map((c, i) => {
+          {asObjectList<{ title?: string; surface?: string; essence?: string }>(
+            page.why_cards,
+          ).map((c, i, cards) => {
             const evidence = evAt(slotEvidence, idx++);
+            const cardTitle = asText(c.title);
             return (
               <SlotCard
-                key={c.title}
-                title={c.title}
+                key={cardTitle || `why-${i}`}
+                title={cardTitle}
                 locale={locale}
                 evidence={evidence}
-                evidenceLabel={copy.evidenceFor(c.title)}
-                isLast={i === page.why_cards.length - 1}
+                evidenceLabel={copy.evidenceFor(cardTitle)}
+                isLast={i === cards.length - 1}
               >
                 <div className="delivery-book-stage__rx-parts">
                   <Field label={copy.surface}>
                     <p>
-                      <Gloss text={c.surface} locale={locale} />
+                      <Gloss text={asText(c.surface)} locale={locale} />
                     </p>
                   </Field>
                   <Field label={copy.essence}>
                     <p>
-                      <Gloss text={c.essence} locale={locale} />
+                      <Gloss text={asText(c.essence)} locale={locale} />
                     </p>
                   </Field>
                 </div>
@@ -777,44 +826,56 @@ function PageSlotsInner({
       );
     }
     case "strategic_options": {
+      const options = asObjectList<{
+        name?: string;
+        summary?: string;
+        upside?: string;
+        cost?: string;
+        risk?: string;
+        reversibility?: string;
+      }>(page.options);
+      const labels = optionFieldLabels(locale);
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--options">
-          {page.options.map((opt, i) => (
-            <SlotCard
-              key={opt.name}
-              title={opt.name}
-              locale={locale}
-              evidence={evAt(slotEvidence, i)}
-              evidenceLabel={copy.evidenceFor(opt.name)}
-              isLast={i === page.options.length - 1}
-            >
-              <div className="delivery-book-stage__rx-parts">
-                <p>
-                  <Gloss text={opt.summary} locale={locale} />
-                </p>
-                <Field label="Upside / 收益">
+          {options.map((opt, i) => {
+            const name = asText(opt.name);
+            return (
+              <SlotCard
+                key={name || `opt-${i}`}
+                title={name}
+                locale={locale}
+                evidence={evAt(slotEvidence, i)}
+                evidenceLabel={copy.evidenceFor(name)}
+                isLast={i === options.length - 1}
+              >
+                <div className="delivery-book-stage__rx-parts">
                   <p>
-                    <Gloss text={opt.upside} locale={locale} />
+                    <Gloss text={asText(opt.summary)} locale={locale} />
                   </p>
-                </Field>
-                <Field label="Cost / 成本">
-                  <p>
-                    <Gloss text={opt.cost} locale={locale} />
-                  </p>
-                </Field>
-                <Field label="Risk / 风险">
-                  <p>
-                    <Gloss text={opt.risk} locale={locale} />
-                  </p>
-                </Field>
-                <Field label="Reversibility / 可逆">
-                  <p>
-                    <Gloss text={opt.reversibility} locale={locale} />
-                  </p>
-                </Field>
-              </div>
-            </SlotCard>
-          ))}
+                  <Field label={labels.upside}>
+                    <p>
+                      <Gloss text={asText(opt.upside)} locale={locale} />
+                    </p>
+                  </Field>
+                  <Field label={labels.cost}>
+                    <p>
+                      <Gloss text={asText(opt.cost)} locale={locale} />
+                    </p>
+                  </Field>
+                  <Field label={labels.risk}>
+                    <p>
+                      <Gloss text={asText(opt.risk)} locale={locale} />
+                    </p>
+                  </Field>
+                  <Field label={labels.reversible}>
+                    <p>
+                      <Gloss text={asText(opt.reversibility)} locale={locale} />
+                    </p>
+                  </Field>
+                </div>
+              </SlotCard>
+            );
+          })}
         </div>
       );
     }
@@ -878,8 +939,18 @@ function PageSlotsInner({
     case "execution_guidance": {
       let idx = 0;
       const openingEv = page.opening?.trim() ? evAt(slotEvidence, idx++) : "";
-      const primaryAngles = page.primary_toolkit.angles;
-      const backupAngles = page.backup_toolkit.angles;
+      const primaryToolkit =
+        page.primary_toolkit && typeof page.primary_toolkit === "object"
+          ? page.primary_toolkit
+          : null;
+      const backupToolkit =
+        page.backup_toolkit && typeof page.backup_toolkit === "object"
+          ? page.backup_toolkit
+          : null;
+      const primaryTitle = asText(primaryToolkit?.title);
+      const backupTitle = asText(backupToolkit?.title);
+      const primaryAngles = asObjectList<ActionAngle>(primaryToolkit?.angles);
+      const backupAngles = asObjectList<ActionAngle>(backupToolkit?.angles);
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p3">
           {page.opening ? (
@@ -892,39 +963,41 @@ function PageSlotsInner({
             </SlotCard>
           ) : null}
           <TrackSectionHead
-            title={`${copy.primary} · ${page.primary_toolkit.title}`}
+            title={`${copy.primary} · ${primaryTitle}`}
             gloss={copy.primaryTrackGloss}
           />
           {primaryAngles.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
+            const angleName = asText(a?.name);
             return (
               <SlotCard
-                key={`p-${a.name}-${i}`}
-                title={`${copy.angle} · ${a.name}`}
+                key={`p-${angleName}-${i}`}
+                title={`${copy.angle} · ${angleName}`}
                 gloss={copy.angleGloss}
                 locale={locale}
                 evidence={evidence}
-                evidenceLabel={copy.evidenceFor(a.name)}
+                evidenceLabel={copy.evidenceFor(angleName)}
               >
                 <AngleBody angle={a} copy={copy} locale={locale} />
               </SlotCard>
             );
           })}
           <TrackSectionHead
-            title={`${copy.backup} · ${page.backup_toolkit.title}`}
+            title={`${copy.backup} · ${backupTitle}`}
             gloss={copy.backupTrackGloss}
           />
           {backupAngles.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
             const isLastAngle = i === backupAngles.length - 1;
+            const angleName = asText(a?.name);
             return (
               <SlotCard
-                key={`b-${a.name}-${i}`}
-                title={`${copy.angle} · ${a.name}`}
+                key={`b-${angleName}-${i}`}
+                title={`${copy.angle} · ${angleName}`}
                 gloss={copy.angleGloss}
                 locale={locale}
                 evidence={evidence}
-                evidenceLabel={copy.evidenceFor(a.name)}
+                evidenceLabel={copy.evidenceFor(angleName)}
                 isLast={isLastAngle}
               >
                 <AngleBody angle={a} copy={copy} locale={locale} />
@@ -936,12 +1009,13 @@ function PageSlotsInner({
     }
     case "self_regulation": {
       let idx = 0;
+      const dimensions = asObjectList<ActionAngle>(page.dimensions);
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p4">
-          {page.dimensions.map((a, i) => {
+          {dimensions.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
-            const isLast = i === page.dimensions.length - 1;
-            const dimName = remapP4DimensionNameForCompliance(a.name);
+            const isLast = i === dimensions.length - 1;
+            const dimName = remapP4DimensionNameForCompliance(asText(a?.name));
             return (
               <SlotCard
                 key={`d-${dimName}-${i}`}
@@ -959,26 +1033,36 @@ function PageSlotsInner({
         </div>
       );
     }
-    case "thirty_day":
+    case "thirty_day": {
+      const weeks = asObjectList<{
+        week?: number;
+        focus?: string;
+        actions?: unknown;
+      }>(page.weeks);
+      const day7Checklist = asStringList(page.day7_checklist);
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p5">
-          {page.weeks.map((w, wi) => (
-            <SlotCard
-              key={w.week}
-              title={`${copy.week(w.week)} · ${w.focus}`}
-              locale={locale}
-              evidence={evAt(slotEvidence, wi)}
-              evidenceLabel={copy.evidenceFor(copy.week(w.week))}
-            >
-              <ul className="dps-list">
-                {w.actions.map((a) => (
-                  <li key={a}>
-                    <Gloss text={a} locale={locale} />
-                  </li>
-                ))}
-              </ul>
-            </SlotCard>
-          ))}
+          {weeks.map((w, wi) => {
+            const weekNum = typeof w.week === "number" ? w.week : wi + 1;
+            const actions = asStringList(w.actions);
+            return (
+              <SlotCard
+                key={weekNum}
+                title={`${copy.week(weekNum)} · ${asText(w.focus)}`}
+                locale={locale}
+                evidence={evAt(slotEvidence, wi)}
+                evidenceLabel={copy.evidenceFor(copy.week(weekNum))}
+              >
+                <ul className="dps-list">
+                  {actions.map((a) => (
+                    <li key={a}>
+                      <Gloss text={a} locale={locale} />
+                    </li>
+                  ))}
+                </ul>
+              </SlotCard>
+            );
+          })}
           <SlotCard
             title={copy.day7}
             locale={locale}
@@ -987,7 +1071,7 @@ function PageSlotsInner({
             isLast
           >
             <ul className="dps-list">
-              {page.day7_checklist.map((x) => (
+              {day7Checklist.map((x) => (
                 <li key={x}>
                   <Gloss text={x} locale={locale} />
                 </li>
@@ -996,10 +1080,14 @@ function PageSlotsInner({
           </SlotCard>
         </div>
       );
+    }
     case "validation_risk": {
       /** Evidence order matches pageSchemaToArgumentBodies: red… · traps… · switch · protection… */
       let riskEvIdx = 0;
       const nextRiskEv = () => evAt(slotEvidence, riskEvIdx++);
+      const redLights = asList(page.red_lights);
+      const traps = asList(page.traps);
+      const protectionRules = asList(page.protection_rules);
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p6">
           <SlotCard
@@ -1008,7 +1096,7 @@ function PageSlotsInner({
             locale={locale}
           >
             <div className="dps-risk-stack">
-              {page.red_lights.map((x, i) => (
+              {redLights.map((x, i) => (
                 <RiskItemBlock
                   key={
                     typeof x === "object" && x && "situation" in x
@@ -1030,7 +1118,7 @@ function PageSlotsInner({
             locale={locale}
           >
             <div className="dps-risk-stack">
-              {page.traps.map((x, i) => (
+              {traps.map((x, i) => (
                 <RiskItemBlock
                   key={
                     typeof x === "object" && x && "situation" in x
@@ -1066,7 +1154,7 @@ function PageSlotsInner({
             isLast
           >
             <div className="dps-risk-stack">
-              {page.protection_rules.map((x, i) => (
+              {protectionRules.map((x, i) => (
                 <RiskItemBlock
                   key={
                     typeof x === "object" && x && "situation" in x
@@ -1086,7 +1174,7 @@ function PageSlotsInner({
       );
     }
     case "validation_close": {
-      const day7Rows = page.day7_micro_actions
+      const day7Rows = asList(page.day7_micro_actions)
         .map((x) => coerceDay7Item(x))
         .filter((x): x is Day7Item => Boolean(x));
       const watchSignals = (

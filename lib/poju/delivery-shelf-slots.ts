@@ -6,20 +6,17 @@
  * Internal generators still use v1 segment keys; those papers fold onto these faces.
  */
 
-import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
 import {
   readingOrderForTopic,
   resolveDecisionPage,
 } from "@/lib/llm/pro/delivery/decision-page-bridge";
 import { composePage07Markdown } from "@/lib/llm/pro/delivery/page-07-face";
 import { remapRowForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import { decisionFaceKicker } from "@/lib/llm/pro/delivery/page-schema/face-kicker";
 import { shelfFaceForHeading } from "@/lib/llm/pro/delivery/shelf-face-map";
 import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import { guessDeliverySegmentKey } from "@/lib/poju/parse-delivery";
-import {
-  deliveryAppendixCopy,
-  deliveryCoverCopy,
-} from "@/lib/llm/pro/delivery/delivery-locale";
+import { deliveryCoverCopy } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   buildDeliveryBookPages,
   type DeliveryBookPage,
@@ -127,9 +124,7 @@ function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
     return "Cover";
   }
   if (id === "toc") return deliveryCoverCopy(locale).tocTitle;
-  if (id === "03") return deliveryAppendixCopy(locale).heading;
-  const face = DECISION_PAGE_SCHEMAS[id as "01"];
-  return face?.title ?? id;
+  return decisionFaceKicker(id, locale);
 }
 
 function proseShelfTitle(
