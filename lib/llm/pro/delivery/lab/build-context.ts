@@ -26,6 +26,7 @@ import {
   thesisCycleGanzhiAllowlist,
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/build-page-plan";
+import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 
 function syntheticAgent(source: DeliveryLabSession["source"]) {
   const agent = createInitialAgentState({
@@ -230,7 +231,7 @@ export async function buildLabPromptOpts(
   let page_plan_slice = "";
   let eastern_calc_slice = "";
   let risk_calc_slice = "";
-  if (page_plan && input.breakthrough_core) {
+  if (page_plan && input.breakthrough_core && !isFaceDeliveryKey(key)) {
     const { formatPagePlanSliceForPrompt } = await import(
       "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt"
     );

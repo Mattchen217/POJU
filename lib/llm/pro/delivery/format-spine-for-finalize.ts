@@ -363,12 +363,14 @@ export function formatSpineSliceForSegment(
   opts?: SpineSliceOpts,
 ): string {
   if (opts?.pagePlan) {
-    return formatPagePlanSliceForPrompt(
+    const slice = formatPagePlanSliceForPrompt(
       key,
       opts.pagePlan,
       core,
       opts.questionExpectation,
     );
+    // Face keys have no legacy page-plan entry — fall through to spine slice.
+    if (slice) return slice;
   }
   const xc = core.key_crossroads;
   const er = core.energy_retune_frame;

@@ -146,12 +146,16 @@ relAgent.question_category = "relationship";
   const { negative, positive } = splitSelfCheckSignals(core.self_check_signals ?? []);
   assert.ok(negative.some((s) => s.includes("失眠")));
   assert.ok(positive.some((s) => s.includes("连续两周")));
-  const p5 = formatPagePlanSliceForPrompt("validation_risk", buildDeliveryPagePlan({ core, agent_v2: careerAgent }), core);
-  const p6 = formatPagePlanSliceForPrompt("validation_close", buildDeliveryPagePlan({ core, agent_v2: careerAgent }), core);
+  const plan = buildDeliveryPagePlan({ core, agent_v2: careerAgent });
+  const p5 = formatPagePlanSliceForPrompt("validation_risk", plan, core);
+  const p6 = formatPagePlanSliceForPrompt("validation_close", plan, core);
   assert.ok(p5.includes("self_check(负向)"));
   assert.ok(!p5.includes("连续两周"));
   assert.ok(p6.includes("self_check(正向)"));
   assert.ok(!p6.includes("失眠"));
+  // Face keys are not in legacy page-plan — must not throw on entry.goal.
+  assert.equal(formatPagePlanSliceForPrompt("01" as never, plan, core), "");
+  assert.equal(formatPagePlanSliceForPrompt("07" as never, plan, core), "");
   console.log("ok self_check positive/negative split");
 }
 

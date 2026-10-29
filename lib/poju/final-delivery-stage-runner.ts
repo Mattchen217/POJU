@@ -113,6 +113,7 @@ import {
 import { resolveDyadRelationStructureFeed } from "@/lib/poju/dyad-compat";
 import { dispatchDeliveryContinue, publishDeliveryTask } from "@/lib/poju/delivery-continue-dispatch";
 import { productionDeliveryUsesV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
+import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 import {
   ensureProductionV3Lab,
   failProductionV3Job,
@@ -675,7 +676,7 @@ async function executeFanoutTask(
       },
     );
   }
-  if (page_plan && input.breakthrough_core) {
+  if (page_plan && input.breakthrough_core && !isFaceDeliveryKey(key)) {
     const { formatPagePlanSliceForPrompt } = await import(
       "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt"
     );

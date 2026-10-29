@@ -91,7 +91,9 @@ export function formatPagePlanSliceForPrompt(
   core: BreakthroughCore,
   questionExpectation?: string,
 ): string {
-  const entry: DeliveryPagePlanEntry = plan.pages[key];
+  const entry: DeliveryPagePlanEntry | undefined = plan.pages[key];
+  // Face books (01–08) use sliceForPage — page-plan keys are legacy papers only.
+  if (!entry) return "";
   const lines = [
     `【本页派工 · ${key}】`,
     `目标: ${entry.goal}`,
