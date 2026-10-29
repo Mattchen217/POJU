@@ -10,7 +10,7 @@
  */
 
 import { loadDeliveryLab } from "@/lib/llm/pro/delivery/lab/store";
-import { LAB_STEP_DEFS_V3 } from "@/lib/llm/pro/delivery/lab/types-v3";
+import { labStepDefsV3 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import {
   activeDeliveryJobMaxWallMs,
   PRODUCTION_V3_TAIL_GRACE_MS,
@@ -35,10 +35,11 @@ export function v3CursorAwaitingShelfAssemble(lab: LabTailView): boolean {
   if (lab.pipeline === "legacy") return false;
   const steps = lab.steps ?? {};
   if (steps["book.assemble"]?.status === "approved") return true;
-  const asmIdx = LAB_STEP_DEFS_V3.findIndex((d) => d.step_key === "book.assemble");
+  const defs = labStepDefsV3();
+  const asmIdx = defs.findIndex((d) => d.step_key === "book.assemble");
   if (asmIdx < 0) return false;
   if (typeof lab.cursor_index === "number" && lab.cursor_index >= asmIdx) return true;
-  const prev = LAB_STEP_DEFS_V3[asmIdx - 1];
+  const prev = defs[asmIdx - 1];
   const prevStatus = prev ? steps[prev.step_key]?.status : undefined;
   return prevStatus === "approved" || prevStatus === "done";
 }

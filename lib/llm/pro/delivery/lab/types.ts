@@ -72,6 +72,11 @@ export type LabArtifacts = {
   prealloc?: unknown;
   /** Closed-set ZiweiFactPack (iztro chart + doushu pattern_hits). Stable birth only. */
   ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
+  /**
+   * BookJudgmentPack SoT (when BOOK_JUDGMENT_PACK on).
+   * Body reads serves_face slices; per-page judgment bypassed.
+   */
+  book_judgment_pack?: import("@/lib/llm/pro/delivery/book-judgment/schema").BookJudgmentPack | null;
   /** page → assignment / plan / page_schema / marked */
   by_page: Partial<
     Record<

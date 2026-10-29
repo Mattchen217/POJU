@@ -92,6 +92,18 @@ assert.equal(face01!.faceId, "01");
 assert.equal(face01!.kind, "content_body");
 
 assert.ok(
+  view.step_defs.some((d) => d.step_key === "book.judgment"),
+  "book.judgment present when pack flag on",
+);
+assert.ok(
+  view.step_defs.some((d) => d.step_key === "book.gate_judgment"),
+  "book.gate_judgment present",
+);
+assert.ok(
+  !view.step_defs.some((d) => d.kind === "content_judgment"),
+  "no per-page judgment when pack on",
+);
+assert.ok(
   view.step_defs.some((d) => d.step_key === "07.gate_topic"),
   "07.gate_topic present",
 );

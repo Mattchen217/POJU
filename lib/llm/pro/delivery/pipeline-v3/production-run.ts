@@ -37,7 +37,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/store";
 import type { DeliveryLabSession, LabSource } from "@/lib/llm/pro/delivery/lab/types";
 import {
-  LAB_STEP_DEFS_V3,
+  labStepDefsV3,
   initLabStepsV3,
   type BodyPolishLocale,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
@@ -90,7 +90,7 @@ export function isV3DispatchContinue(rule: string | null | undefined): boolean {
 /** Content papers v3 must finish before `book.assemble`. Same list the shelf folds. */
 export function productionV3ContentKeys(): readonly DeliverySegmentKey[] {
   const keys: DeliverySegmentKey[] = [];
-  for (const def of LAB_STEP_DEFS_V3) {
+  for (const def of labStepDefsV3()) {
     if (def.step_key === BOOK_ASSEMBLE_STEP) break;
     if (def.page && !keys.includes(def.page)) keys.push(def.page);
   }
@@ -148,7 +148,7 @@ export async function ensureProductionV3Lab(
 }
 
 function currentStep(lab: DeliveryLabSession) {
-  return LAB_STEP_DEFS_V3[lab.cursor_index] ?? null;
+  return labStepDefsV3()[lab.cursor_index] ?? null;
 }
 
 /** Quality failure already stored on the cursor. Supply continues are not blocks. */

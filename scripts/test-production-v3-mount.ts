@@ -36,6 +36,7 @@ import type { DeliveryLabSession } from "../lib/llm/pro/delivery/lab/types";
 import { pageSchemaToArgumentBodies } from "../lib/llm/pro/delivery/page-schema/render";
 import type { DeliveryPageData } from "../lib/llm/pro/delivery/page-schema/types";
 import {
+  FACE_DELIVERY_PAGE_KEYS,
   V1_DELIVERY_SEGMENT_KEYS,
   type V1DeliverySegmentKey,
 } from "../lib/llm/pro/delivery/segment-key-alias";
@@ -79,11 +80,18 @@ assert.equal(productionPolishLocale("en"), "en");
 assert.equal(productionPolishLocale("fr"), "fr");
 assert.equal(productionPolishLocale("es"), "es");
 
-assert.deepEqual(
-  [...productionV3ContentKeys()],
-  [...V1_DELIVERY_SEGMENT_KEYS],
-  "v3 content papers cover the shelf fold keys",
-);
+{
+  const keys = [...productionV3ContentKeys()];
+  for (const k of FACE_DELIVERY_PAGE_KEYS) {
+    assert.ok(keys.includes(k), `v3 content keys include face ${k}`);
+  }
+  assert.ok(keys.includes("07"), "v3 content keys include topic-gated 07");
+  assert.equal(
+    keys.length,
+    new Set(keys).size,
+    "v3 content keys unique",
+  );
+}
 
 const lab = {
   steps: { "book.assemble": { status: "approved", attempts: [] } },
@@ -181,20 +189,21 @@ assert.equal(
   3,
 );
 
-function markedTree(key: V1DeliverySegmentKey) {
+function markedTree(key: string) {
   return { [key]: [{ body: `${key} 依据` }] };
 }
 
 function bookLab(
-  pages: Partial<Record<V1DeliverySegmentKey, DeliveryPageData>>,
+  pages: Partial<Record<string, DeliveryPageData>>,
 ): DeliveryLabSession {
   const by_page: DeliveryLabSession["artifacts"]["by_page"] = {};
-  for (const key of Object.keys(pages) as V1DeliverySegmentKey[]) {
+  for (const key of Object.keys(pages)) {
     const schema = pages[key];
     if (!schema) continue;
-    by_page[key] = {
+    const skipMarked = key === "decision_brief" || key === "01" || key === "03";
+    by_page[key as keyof typeof by_page] = {
       page_schema: schema,
-      marked: key === "decision_brief" ? undefined : markedTree(key),
+      marked: skipMarked ? undefined : markedTree(key),
     };
   }
   return {
@@ -203,129 +212,120 @@ function bookLab(
   } as unknown as DeliveryLabSession;
 }
 
-const brief = {
-  page: "decision_brief",
-  core_judgment: "先写清条件，再决定是否加码",
-  primary: { name: "主", core_logic: "路", why: "因", when: "时", chart_anchors: ["甲"] },
-  backup: { name: "辅", core_logic: "路", why: "因", when: "时", chart_anchors: ["乙"] },
+/** Face-native book fixtures (planProductionV3Book reads FACE_DELIVERY_PAGE_KEYS). */
+function faceChrome(face: string, title: string) {
+  return {
+    page: face,
+    face,
+    page_title: title,
+    page_subtitle: "",
+  };
+}
+const face01 = {
+  ...faceChrome("01", "本题断语"),
+  main_recommendation: "先写清条件再加码",
+  conditions: "对方书面回应",
+  not_choosing: "不跳步全投",
+  evidence_pointer: "详见 02",
 } as unknown as DeliveryPageData;
-const situation = {
-  page: "situation_analysis",
-  why_cards: [{ title: "处境", surface: "表", essence: "质", chart_anchors: [] }],
+const face02 = {
+  ...faceChrome("02", "为何如此"),
+  destiny_reason: "用神承压窗口收窄",
+  science_mechanism: "决策负荷偏高",
+  convergence: "先收再问",
+  verifiable_anchors: ["用神木", "府相朝垣", "cognitive_load"],
+} as unknown as DeliveryPageData;
+const face04 = {
+  ...faceChrome("04", "真正卡点"),
+  bottleneck_name: "条件未写清",
+  manifestation: "口头加码",
+  if_force_through: "承压抬升",
+  evidence_fold: "岁运冲突",
+} as unknown as DeliveryPageData;
+const face05 = {
+  ...faceChrome("05", "路径排序"),
+  first_choice: "书面条件",
+  second_choice: "暂守",
+  caution_choice: "跳步",
+  switch_or_stop: "被拒即停",
+} as unknown as DeliveryPageData;
+const face06 = {
+  ...faceChrome("06", "怎么落地"),
+  near_step_principle: "今晚写半页",
+  stage_climate: "窗口仍在",
+  self_retune: "慢半拍",
+  rhythm_note: "先核对",
+} as unknown as DeliveryPageData;
+const face08 = {
+  ...faceChrome("08", "自检清单"),
+  red_lights: ["条件空转"],
+  review_questions: ["书面了吗"],
+  when_to_rerun: "窗口变了再跑",
+} as unknown as DeliveryPageData;
+const face03 = {
+  ...faceChrome("03", "盘面附录"),
+  bazi_slice: "日主庚金 · 用神木",
+  ziwei_slice: "府相朝垣",
+  contrast: "八字紫微同向",
 } as unknown as DeliveryPageData;
 
-const filledPatterns = planProductionV3Book(
+const partialFaceBook = planProductionV3Book(
   bookLab({
-    decision_brief: brief,
-    situation_analysis: situation,
-    personal_decision_patterns: patternCard,
-  }),
+    "01": face01,
+    "02": face02,
+  } as Partial<Record<string, DeliveryPageData>>),
 );
-assert.equal(filledPatterns.ok, false);
-if (!filledPatterns.ok) {
-  assert.equal(
-    filledPatterns.reason,
-    "v3_missing_page_schema:bottleneck_analysis",
-    "a stored patterns card must not be reported empty",
+assert.equal(partialFaceBook.ok, false);
+if (!partialFaceBook.ok) {
+  assert.match(
+    partialFaceBook.reason,
+    /^v3_missing_page_schema:/,
+    "partial face book fails closed on first missing face",
   );
 }
 
-const emptyPatterns = planProductionV3Book(
+const emptyFace02 = planProductionV3Book(
   bookLab({
-    decision_brief: brief,
-    situation_analysis: situation,
-    personal_decision_patterns: {
-      page: "personal_decision_patterns",
-      why_cards: [],
+    "01": face01,
+    "02": {
+      ...faceChrome("02", "为何如此"),
+      destiny_reason: "",
+      science_mechanism: "",
+      convergence: "",
+      verifiable_anchors: [],
     } as unknown as DeliveryPageData,
-  }),
+    "04": face04,
+    "05": face05,
+    "06": face06,
+    "08": face08,
+    "03": face03,
+  } as Partial<Record<string, DeliveryPageData>>),
 );
-assert.equal(emptyPatterns.ok, false);
-if (!emptyPatterns.ok) {
-  assert.equal(emptyPatterns.reason, "v3_empty_page:personal_decision_patterns");
+assert.equal(emptyFace02.ok, false);
+if (!emptyFace02.ok) {
+  assert.match(
+    emptyFace02.reason,
+    /^v3_empty_page:02$/,
+    "empty face 02 bodies hard-stop",
+  );
 }
 
-const angle = {
-  name: "角",
-  strategy: "打法",
-  means: ["一步"],
-  hard_metrics: [] as string[],
-  chart_anchors: [] as string[],
-};
-const risk = { narrative: "坑", chart_anchors: [] as string[] };
-const fullBook = planProductionV3Book(
+const fullFaceBook = planProductionV3Book(
   bookLab({
-    decision_brief: brief,
-    situation_analysis: situation,
-    personal_decision_patterns: patternCard,
-    bottleneck_analysis: {
-      page: "bottleneck_analysis",
-      why_cards: [{ title: "障碍", surface: "表", essence: "质", chart_anchors: [] }],
-    } as unknown as DeliveryPageData,
-    strategic_options: {
-      page: "strategic_options",
-      options: [
-        {
-          name: "甲",
-          summary: "摘",
-          upside: "益",
-          cost: "本",
-          risk: "险",
-          reversibility: "可退",
-          chart_anchors: [],
-        },
-        {
-          name: "乙",
-          summary: "摘",
-          upside: "益",
-          cost: "本",
-          risk: "险",
-          reversibility: "可退",
-          chart_anchors: [],
-        },
-      ],
-    } as unknown as DeliveryPageData,
-    recommended_strategy: {
-      page: "recommended_strategy",
-      core_judgment: "主路先写清条件",
-      primary: { name: "主", why: "条件在手", exit: "被拒即停", chart_anchors: [] },
-      backup: { name: "辅", why: "主路失效", exit: "不再加码", chart_anchors: [] },
-    } as unknown as DeliveryPageData,
-    execution_guidance: {
-      page: "execution_guidance",
-      primary_toolkit: { title: "主轨", angles: [angle] },
-      backup_toolkit: { title: "辅轨", angles: [angle] },
-    } as unknown as DeliveryPageData,
-    self_regulation: {
-      page: "self_regulation",
-      dimensions: [{ name: "收势", strategy: "先停", means: ["慢半拍"], chart_anchors: [] }],
-    } as unknown as DeliveryPageData,
-    validation_risk: {
-      page: "validation_risk",
-      red_lights: [risk],
-      traps: [risk],
-      switch_to_backup: risk,
-      protection_rules: [risk],
-    } as unknown as DeliveryPageData,
-    validation_close: {
-      page: "validation_close",
-      identity_before: "前",
-      identity_after: "后",
-      identity_shift: "切换",
-      quote: "一句",
-      quote_use: "定心",
-      immediate_action: "今晚写条件",
-      tonight_done_looks_like: "半页",
-      tonight_why: "窗口在",
-      day7_micro_actions: [{ action: "核对", why: "防空转", done_when: "写下" }],
-      takeaways: ["一", "二", "三"],
-    } as unknown as DeliveryPageData,
-  }),
+    "01": face01,
+    "02": face02,
+    "04": face04,
+    "05": face05,
+    "06": face06,
+    "08": face08,
+    "03": face03,
+  } as Partial<Record<string, DeliveryPageData>>),
 );
-assert.equal(fullBook.ok, true, fullBook.ok ? "" : fullBook.reason);
-if (fullBook.ok) {
-  assert.match(fullBook.narrative.personal_decision_patterns?.[0]?.body ?? "", /先收再问/);
-  assert.ok((fullBook.marked.personal_decision_patterns ?? []).length > 0);
+assert.equal(fullFaceBook.ok, true, fullFaceBook.ok ? "" : fullFaceBook.reason);
+if (fullFaceBook.ok) {
+  assert.match(fullFaceBook.narrative["02"]?.[0]?.body ?? "", /用神承压|命理/);
+  assert.ok((fullFaceBook.marked["02"] ?? []).length > 0);
+  assert.match(fullFaceBook.narrative["02"]?.[2]?.body ?? "", /先收再问/);
 }
 
 /**
@@ -405,69 +405,29 @@ assert.equal(
   "validation_close shell stays empty",
 );
 
-const guidancePlan = planProductionV3Book(
+const missing08 = planProductionV3Book(
   bookLab({
-    decision_brief: brief,
-    situation_analysis: situation,
-    personal_decision_patterns: patternCard,
-    bottleneck_analysis: {
-      page: "bottleneck_analysis",
-      why_cards: [{ title: "障碍", surface: "表", essence: "质", chart_anchors: [] }],
-    } as unknown as DeliveryPageData,
-    strategic_options: {
-      page: "strategic_options",
-      options: [
-        {
-          name: "甲",
-          summary: "摘",
-          upside: "益",
-          cost: "本",
-          risk: "险",
-          reversibility: "可退",
-          chart_anchors: [],
-        },
-        {
-          name: "乙",
-          summary: "摘",
-          upside: "益",
-          cost: "本",
-          risk: "险",
-          reversibility: "可退",
-          chart_anchors: [],
-        },
-      ],
-    } as unknown as DeliveryPageData,
-    recommended_strategy: {
-      page: "recommended_strategy",
-      core_judgment: "主路先写清条件",
-      primary: { name: "主", why: "条件在手", exit: "被拒即停", chart_anchors: [] },
-      backup: { name: "辅", why: "主路失效", exit: "不再加码", chart_anchors: [] },
-    } as unknown as DeliveryPageData,
-    execution_guidance: {
-      page: "execution_guidance",
-      primary_toolkit: {
-        title: "主轨",
-        angles: [{ name: "书面条件", strategy: "先写清再谈", means: ["今晚半页"] }],
-      },
-      backup_toolkit: {
-        title: "辅轨",
-        angles: [{ name: "停手", strategy: "被拒即停", means: ["不再加码"] }],
-      },
-    } as unknown as DeliveryPageData,
-  }),
+    "01": face01,
+    "02": face02,
+    "04": face04,
+    "05": face05,
+    "06": face06,
+    "03": face03,
+  } as Partial<Record<string, DeliveryPageData>>),
 );
-assert.equal(guidancePlan.ok, false);
-if (!guidancePlan.ok) {
+assert.equal(missing08.ok, false);
+if (!missing08.ok) {
   assert.equal(
-    guidancePlan.reason,
-    "v3_missing_page_schema:self_regulation",
-    "missing hard_metrics must not throw v3_page_unreadable",
+    missing08.reason,
+    "v3_missing_page_schema:08",
+    "missing face must not throw v3_page_unreadable",
   );
 }
 
 const asmIdx = LAB_STEP_DEFS_V3.findIndex((d) => d.step_key === "book.assemble");
 const prevKey = LAB_STEP_DEFS_V3[asmIdx - 1]!.step_key;
-assert.equal(prevKey, "validation_close.evidence_soft");
+assert.equal(prevKey, "03.body_polish");
+assert.ok(LAB_STEP_DEFS_V3.some((d) => d.step_key === "book.judgment"));
 assert.equal(
   v3CursorAwaitingShelfAssemble({ cursor_index: asmIdx, steps: {}, pipeline: "v3_three_step" }),
   true,
@@ -484,7 +444,7 @@ assert.equal(
   v3CursorAwaitingShelfAssemble({
     cursor_index: 4,
     pipeline: "v3_three_step",
-    steps: { "situation_analysis.content.body": { status: "approved" } },
+    steps: { "02.content.body": { status: "approved" } },
   }),
   false,
 );

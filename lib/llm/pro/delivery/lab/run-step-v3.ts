@@ -31,7 +31,7 @@ import type {
   LabGateVerdict,
 } from "@/lib/llm/pro/delivery/lab/types";
 import {
-  LAB_STEP_DEFS_V3,
+  labStepDefsV3,
   labV3StepDef,
   isBodyPolishLocale,
   ensureLabStepsV3,
@@ -42,6 +42,17 @@ import {
   BOOK_ASSEMBLE_STEP_KEY,
   isAssemblePassed,
 } from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
+import { isBookJudgmentPackEnabled } from "@/lib/llm/pro/delivery/book-judgment/flag";
+import { runBookJudgmentPackGenerate } from "@/lib/llm/pro/delivery/book-judgment/generate";
+import {
+  bookJudgmentTraceSummary,
+  deepEvidencePlanFromBookPack,
+  formatBookJudgmentPackBlock,
+} from "@/lib/llm/pro/delivery/book-judgment/slice";
+import {
+  validateBookJudgmentPack,
+  type BookJudgmentPack,
+} from "@/lib/llm/pro/delivery/book-judgment/schema";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
@@ -300,7 +311,7 @@ function companionP1P3Ready(lab: DeliveryLabSession): boolean {
 
 /** Companion entry SSOT: Assemble must pass before seal/daily/batch. */
 function companionAssemblePassed(lab: DeliveryLabSession): boolean {
-  const assembleIdx = LAB_STEP_DEFS_V3.findIndex(
+  const assembleIdx = labStepDefsV3().findIndex(
     (s) => s.step_key === BOOK_ASSEMBLE_STEP_KEY,
   );
   return isAssemblePassed({
@@ -313,10 +324,20 @@ function companionAssemblePassed(lab: DeliveryLabSession): boolean {
   });
 }
 
+function projectBookPackOntoFaces(lab: DeliveryLabSession, pack: BookJudgmentPack): void {
+  for (const face of Object.keys(pack.by_face)) {
+    const plan = deepEvidencePlanFromBookPack(pack, face as DeliverySegmentKey);
+    if (!plan?.units.length) continue;
+    const art = ensurePage(lab, face as DeliverySegmentKey);
+    art.plan = plan;
+  }
+}
+
 function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
-  const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
+  const defs = labStepDefsV3();
+  const idx = defs.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return "unknown_step";
-  const def = LAB_STEP_DEFS_V3[idx]!;
+  const def = defs[idx]!;
   /** Companion 侧轨：须 Assemble 通过；01+05（或旧 P1+P3）有正文才可跑；不挡交付主链 cursor。 */
   if (isCompanionSideKind(def.kind)) {
     if (!companionAssemblePassed(lab)) return "companion_needs_assemble";
@@ -1206,6 +1227,210 @@ async function executeV3(
     };
   }
 
+  if (def.kind === "book_judgment") {
+    if (!isBookJudgmentPackEnabled()) {
+      return {
+        input_payload: { flag: "BOOK_JUDGMENT_PACK=0" },
+        raw_model_output: null,
+        processing_actions: [{ action: "book_judgment_disabled" }],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "book_judgment_pack_disabled",
+          detail: "flag off — 步表应切回 per-page judgment",
+        },
+        output_to_next_stage: null,
+        error: "book_judgment_pack_disabled",
+      };
+    }
+    const { opts } = await buildLabPromptOpts(lab, "02");
+    const preallocArt = lab.artifacts.prealloc as
+      | { chart_fact_pack?: string }
+      | undefined;
+    const chartText = preallocArt?.chart_fact_pack?.trim() ?? "";
+    if (!chartText) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "missing_chart_fact_pack",
+          detail: "先跑 prealloc",
+        },
+        output_to_next_stage: null,
+        error: "missing_chart_fact_pack",
+      };
+    }
+    let science_feed = "";
+    try {
+      const { buildScienceMeansFeedBlock } = await import(
+        "@/lib/llm/pro/delivery/science-means-feed"
+      );
+      science_feed =
+        opts.science_means_judgment_feed?.trim() ||
+        opts.science_means_feed?.trim() ||
+        buildScienceMeansFeedBlock(
+          (lab.source.breakthrough_core as import("@/lib/poju/agent-state").BreakthroughCore | null) ??
+            null,
+          null,
+          { forJudgment: true },
+        );
+    } catch {
+      science_feed = opts.science_means_feed?.trim() || "";
+    }
+    const agenda = [
+      lab.source.original_question,
+      ...(lab.source.covered_agenda ?? []).map(
+        (a) => `${a.label}${a.answer ? `：${a.answer}` : ""}`,
+      ),
+    ]
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 1200);
+    const generated = await runBookJudgmentPackGenerate({
+      locale: lab.source.locale || "zh",
+      session_id,
+      timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+      chart_fact_pack: chartText,
+      ziwei_fact_pack: opts.ziwei_fact_pack ?? null,
+      thesis_block: opts.chart_thesis_block,
+      question: lab.source.original_question,
+      agenda,
+      science_feed,
+      thesis_ref:
+        typeof (lab.artifacts.thesis as { version?: string } | undefined)?.version ===
+        "string"
+          ? String((lab.artifacts.thesis as { version?: string }).version)
+          : "thesis",
+    });
+    if (!generated.ok) {
+      return {
+        input_payload: {
+          pipeline: "book_judgment_pack",
+          phase: "generate",
+          shot_mode: generated.shot_mode ?? "one",
+        },
+        raw_model_output: generated.last_raw_text
+          ? { _raw_text: generated.last_raw_text }
+          : null,
+        processing_actions: [
+          { action: "runBookJudgmentPackGenerate", detail: generated.reason },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: generated.reason,
+          detail: generated.reason,
+        },
+        output_to_next_stage: null,
+        tokens_used: generated.tokens_used,
+        error: generated.reason,
+        call_trace: generated.call_trace,
+      };
+    }
+    lab.artifacts.book_judgment_pack = generated.pack;
+    projectBookPackOntoFaces(lab, generated.pack);
+    const trace = bookJudgmentTraceSummary(generated.pack);
+    return {
+      input_payload: {
+        pipeline: "book_judgment_pack",
+        phase: "generate",
+        shot_mode: generated.shot_mode,
+        degraded_from_one: generated.degraded_from_one ?? false,
+        degrade_reason: generated.degrade_reason,
+        ...trace,
+        zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
+      },
+      raw_model_output: generated.pack,
+      processing_actions: [
+        {
+          action: "runBookJudgmentPackGenerate",
+          detail: `shot_mode=${generated.shot_mode}${generated.degraded_from_one ? `·degraded:${generated.degrade_reason}` : ""}`,
+        },
+        {
+          action: "projectBookPackOntoFaces",
+          detail: `faces=${Object.keys(trace.by_face_coverage).length}`,
+        },
+      ],
+      gate_verdict: {
+        passed: true,
+        detail: `shot_mode=${trace.shot_mode} · destiny=${trace.unit_counts.destiny} science=${trace.unit_counts.science} convergence=${trace.unit_counts.convergence} · zfpOmitted=${trace.zfpOmitted} · patternHits=${trace.pattern_hits_used.length}`,
+      },
+      output_to_next_stage: generated.pack,
+      tokens_used: generated.tokens_used,
+      call_trace: generated.call_trace,
+    };
+  }
+
+  if (def.kind === "gate_book_judgment") {
+    const pack = lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined;
+    if (!pack) {
+      return {
+        input_payload: { pipeline: "book_judgment_pack", phase: "gate" },
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "missing_book_judgment_pack",
+          detail: "先跑 book.judgment",
+        },
+        output_to_next_stage: null,
+        error: "missing_book_judgment_pack",
+      };
+    }
+    const validated = validateBookJudgmentPack(pack);
+    if (!validated.ok) {
+      return {
+        input_payload: {
+          pipeline: "book_judgment_pack",
+          phase: "gate",
+          reason: validated.reason,
+          detail: validated.detail,
+        },
+        raw_model_output: pack,
+        processing_actions: [
+          { action: "validateBookJudgmentPack", detail: validated.reason },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: validated.reason,
+          detail: validated.detail ?? validated.reason,
+        },
+        output_to_next_stage: null,
+        error: validated.reason,
+      };
+    }
+    lab.artifacts.book_judgment_pack = validated.pack;
+    projectBookPackOntoFaces(lab, validated.pack);
+    const trace = bookJudgmentTraceSummary(validated.pack);
+    return {
+      input_payload: {
+        pipeline: "book_judgment_pack",
+        phase: "gate",
+        quality_checklist:
+          "人审：双轨站得住；删 pack 切片后正文应垮；patternHits 入包（zfpOmitted=false 时）",
+        ...trace,
+        zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
+      },
+      raw_model_output: {
+        pack: validated.pack,
+        trace,
+      },
+      processing_actions: [
+        { action: "validateBookJudgmentPack", detail: "pass" },
+        { action: "projectBookPackOntoFaces", detail: "ok" },
+      ],
+      gate_verdict: {
+        passed: true,
+        detail: `机检过 · shot_mode=${trace.shot_mode} · 等人审勾选后解锁正文`,
+      },
+      output_to_next_stage: {
+        pack: validated.pack,
+        trace,
+        needs_quality_checklist: true,
+      },
+    };
+  }
+
   if (!page) {
     return {
       input_payload: {},
@@ -1221,6 +1446,29 @@ async function executeV3(
   const art = ensurePage(lab, page);
 
   if (def.kind === "content_judgment") {
+    if (isBookJudgmentPackEnabled()) {
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "book_judgment_pack",
+          phase: "content_judgment_bypassed",
+        },
+        raw_model_output: null,
+        processing_actions: [
+          {
+            action: "bypassPerPageJudgment",
+            detail: "BOOK_JUDGMENT_PACK on — use book.judgment",
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "per_page_judgment_bypassed",
+          detail: "批断已上移到 BookJudgmentPack；本步已旁路。设 BOOK_JUDGMENT_PACK=0 可回退。",
+        },
+        output_to_next_stage: null,
+        error: "per_page_judgment_bypassed",
+      };
+    }
     const preallocArt = lab.artifacts.prealloc as
       | { chart_fact_pack?: string }
       | undefined;
@@ -1613,7 +1861,23 @@ async function executeV3(
         output_to_next_stage: { skipped: true, page_schema: stub },
       };
     }
-    const plan = (art.plan as DeepEvidencePlan | undefined) ?? null;
+    const packOn = isBookJudgmentPackEnabled();
+    const bookPack = packOn
+      ? ((lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined) ??
+        null)
+      : null;
+    const packPlan =
+      bookPack && isFaceDeliveryKey(page)
+        ? deepEvidencePlanFromBookPack(bookPack, page)
+        : null;
+    const plan =
+      (packPlan as DeepEvidencePlan | null) ??
+      ((art.plan as DeepEvidencePlan | undefined) ?? null);
+    if (packPlan) art.plan = packPlan;
+    const packBlock =
+      bookPack && isFaceDeliveryKey(page)
+        ? formatBookJudgmentPackBlock(bookPack, page)
+        : null;
     const faceBody = isFaceDeliveryKey(page);
     /** Face 03 has no judgment; other faces still prefer a plan when present. */
     if (!faceBody && !plan?.units?.length) {
@@ -1631,9 +1895,14 @@ async function executeV3(
         input_payload: { key: page },
         raw_model_output: null,
         processing_actions: [],
-        gate_verdict: { passed: false, failed_rule: "missing_judgment_plan" },
+        gate_verdict: {
+          passed: false,
+          failed_rule: bookPack
+            ? "missing_book_judgment_slice"
+            : "missing_judgment_plan",
+        },
         output_to_next_stage: null,
-        error: "missing_judgment_plan",
+        error: bookPack ? "missing_book_judgment_slice" : "missing_judgment_plan",
       };
     }
     const finalize = labSyntheticFinalize(lab);
@@ -1652,6 +1921,7 @@ async function executeV3(
       thinking_effort: "high",
       dispatch_attempt: escapeArmedBody ? 2 : 1,
       deep_evidence_plan: plan,
+      book_judgment_pack_block: packBlock,
       action_brief: action_brief ?? null,
       chart_thesis_block: opts.chart_thesis_block,
       chart_fact_pack: preallocArt?.chart_fact_pack,
@@ -1870,7 +2140,11 @@ async function executeV3(
     return {
       input_payload: {
         key: page,
-        pipeline: "v3",
+        pipeline: packBlock ? "book_judgment_pack" : "v3",
+        phase: "content_body",
+        book_judgment_slice: Boolean(packBlock),
+        per_page_judgment: false,
+        pack_unit_ids: packPlan?.units.map((u) => u.calc_cite ?? u.path) ?? [],
         quality_gates: deferSurfaceToPolish
           ? "substance_only_surface_at_polish"
           : "shape_only_human",
@@ -1886,6 +2160,14 @@ async function executeV3(
       raw_model_output: bodyPage,
       processing_actions: [
         { action: "runContentBodyGenerate", detail: "parse_only" },
+        ...(packBlock
+          ? [
+              {
+                action: "sliceBookJudgmentForFace",
+                detail: `serves_face=${page} · no per-page judgment`,
+              },
+            ]
+          : []),
         {
           action: "gateBodyCategoryB",
           detail: deferSurfaceToPolish
@@ -2763,9 +3045,10 @@ export async function approveLabStepV3(
   },
 ): Promise<{ ok: true; lab: DeliveryLabSession } | { ok: false; reason: string; lab: DeliveryLabSession }> {
   ensureLabStepsV3(lab);
-  const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
+  const defs = labStepDefsV3();
+  const idx = defs.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
-  const def = LAB_STEP_DEFS_V3[idx]!;
+  const def = defs[idx]!;
   const companionSide = isCompanionSideKind(def.kind);
   /** Companion 侧轨：gate 过即可人审通过，不绑交付主链 cursor、不推进 cursor。 */
   if (!companionSide && idx !== lab.cursor_index) {
@@ -2799,8 +3082,8 @@ export async function approveLabStepV3(
     !(last.output_to_next_stage as { applies?: boolean } | null)?.applies
   ) {
     let next = idx + 1;
-    while (next < LAB_STEP_DEFS_V3.length && LAB_STEP_DEFS_V3[next]?.topic_gated) {
-      const skipKey = LAB_STEP_DEFS_V3[next]!.step_key;
+    while (next < defs.length && defs[next]?.topic_gated) {
+      const skipKey = defs[next]!.step_key;
       const skipRec = lab.steps[skipKey] ?? {
         step_key: skipKey,
         status: "idle" as const,
@@ -2812,12 +3095,12 @@ export async function approveLabStepV3(
       if (!lab.approved_order.includes(skipKey)) lab.approved_order.push(skipKey);
       next += 1;
     }
-    lab.cursor_index = Math.min(next, LAB_STEP_DEFS_V3.length - 1);
+    lab.cursor_index = Math.min(next, defs.length - 1);
     await saveDeliveryLab(lab);
     return { ok: true, lab };
   }
 
-  if (!companionSide && lab.cursor_index < LAB_STEP_DEFS_V3.length - 1) {
+  if (!companionSide && lab.cursor_index < defs.length - 1) {
     lab.cursor_index += 1;
   }
   await saveDeliveryLab(lab);
@@ -2830,9 +3113,10 @@ export async function prepareLabRerunV3(
   rerunOpts?: LabV3RerunOpts,
 ): Promise<{ ok: true; lab: DeliveryLabSession } | { ok: false; reason: string; lab: DeliveryLabSession }> {
   ensureLabStepsV3(lab);
-  const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
+  const defs = labStepDefsV3();
+  const idx = defs.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
-  const rerunDef = LAB_STEP_DEFS_V3[idx];
+  const rerunDef = defs[idx];
   /** Companion 侧轨：P1+P3 就绪即可准备重跑，不要求 cursor。 */
   const companionSide = rerunDef ? isCompanionSideKind(rerunDef.kind) : false;
   if (!companionSide && idx > lab.cursor_index) {
@@ -2847,6 +3131,24 @@ export async function prepareLabRerunV3(
 
   if (!companionSide) {
     lab.cursor_index = idx;
+  }
+  if (
+    rerunDef?.kind === "book_judgment" ||
+    rerunDef?.kind === "gate_book_judgment"
+  ) {
+    /** Invalidate pack → dirty all face bodies/plans downstream. */
+    lab.artifacts.book_judgment_pack = null;
+    for (const art of Object.values(lab.artifacts.by_page)) {
+      if (!art) continue;
+      art.plan = undefined;
+      art.page_schema = undefined;
+      art.page_schema_pre_polish = undefined;
+      art.page_schema_by_locale = undefined;
+      art.polish_skipped = undefined;
+      art.polish_locale = undefined;
+      art.evidence = undefined;
+      art.marked = undefined;
+    }
   }
   if (rerunDef?.kind === "companion_seal") {
     lab.artifacts.companion = undefined;
@@ -2934,8 +3236,8 @@ export async function prepareLabRerunV3(
       art.soft_chunk_index = undefined;
     }
   }
-  for (let i = idx; i < LAB_STEP_DEFS_V3.length; i++) {
-    const key = LAB_STEP_DEFS_V3[i]!.step_key;
+  for (let i = idx; i < defs.length; i++) {
+    const key = defs[i]!.step_key;
     const rec = lab.steps[key];
     if (!rec) continue;
     if (i === idx) {
@@ -2951,7 +3253,7 @@ export async function prepareLabRerunV3(
     }
   }
   lab.approved_order = lab.approved_order.filter((k) => {
-    const i = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === k);
+    const i = defs.findIndex((s) => s.step_key === k);
     return i >= 0 && i < idx;
   });
   await saveDeliveryLab(lab);

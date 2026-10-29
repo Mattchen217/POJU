@@ -2,11 +2,16 @@
  * Delivery Lab v3 — face-native QC step table (01–08).
  * One chain per shelf face. No v1 paper fold steps.
  * 07 is topic-gated; 03 is slice-first appendix (no judgment).
+ *
+ * When BOOK_JUDGMENT_PACK is on (default): per-page judgment is replaced by
+ * book.judgment + book.gate_judgment; faces only run body/gate/polish.
+ * Explicit BOOK_JUDGMENT_PACK=0 restores per-page judgment (no half-mix).
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
+import { isBookJudgmentPackEnabled } from "@/lib/llm/pro/delivery/book-judgment/flag";
 
 export type LabV3StepKind =
   | "bootstrap"
@@ -14,6 +19,8 @@ export type LabV3StepKind =
   | "prealloc"
   | "topic_gate"
   | "face_slice"
+  | "book_judgment"
+  | "gate_book_judgment"
   | "content_judgment"
   | "content_body"
   | "gate"
@@ -197,8 +204,7 @@ function face03Chain(): LabV3StepDef[] {
   ];
 }
 
-/** Fixed unlock order for v3 labs — face-native QC. */
-export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
+const HEAD_STEPS: LabV3StepDef[] = [
   {
     step_key: "bootstrap",
     label: "Bootstrap · 校验盘/问题",
@@ -220,20 +226,28 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     uses_llm: false,
     accept: "本盘闭集词可引用。",
   },
-  ...REQUIRED_FACE_ORDER.flatMap((id) => faceMainChain(id)),
+];
+
+const BOOK_JUDGMENT_STEPS: LabV3StepDef[] = [
   {
-    step_key: "07.gate_topic",
-    label: "场域 · 题门控",
-    page: "07",
-    faceId: "07",
-    faceDisposition: "primary",
-    kind: "topic_gate",
+    step_key: "book.judgment",
+    label: "BookJudgment · 全书批断包（一枪双轨）",
+    kind: "book_judgment",
+    uses_llm: true,
+    accept:
+      "产出 BookJudgmentPack：destiny+science（或 convergence）；by_face 覆盖 01–08+03；zfpOmitted=false 时含 patternHits。超时/截断可降两枪。禁 primary/backup。",
+  },
+  {
+    step_key: "book.gate_judgment",
+    label: "闸门 · 批断包（格式+人审）",
+    kind: "gate_book_judgment",
     uses_llm: false,
     accept:
-      "page07Applies：显示 stem 命中或跳过原因。命中后解锁 07 主链；未命中可跳过整链进 03。",
+      "机检：双轨、by_face、patternHits。人审：双轨站得住、删包切片后正文应垮。不过 → 回改包枪（Invalidate 下游正文）。",
   },
-  ...faceMainChain("07", { topic_gated: true }),
-  ...face03Chain(),
+];
+
+const TAIL_STEPS: LabV3StepDef[] = [
   {
     step_key: "book.assemble",
     label: "Assemble · Face 书架预览",
@@ -271,31 +285,83 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     uses_llm: false,
     accept: "须 30/30 有稿。过闸后生产才允许按日推送。",
   },
-] as const;
+];
 
-export function labV3StepDef(step_key: string): LabV3StepDef | undefined {
-  return LAB_STEP_DEFS_V3.find((s) => s.step_key === step_key);
+export function buildLabStepDefsV3(opts?: {
+  bookJudgmentPack?: boolean;
+}): LabV3StepDef[] {
+  const pack = opts?.bookJudgmentPack ?? true;
+  const skipJudgment = pack;
+  const faceChains = [
+    ...REQUIRED_FACE_ORDER.flatMap((id) =>
+      faceMainChain(id, { skipJudgment }),
+    ),
+    {
+      step_key: "07.gate_topic",
+      label: "场域 · 题门控",
+      page: "07" as DeliverySegmentKey,
+      faceId: "07",
+      faceDisposition: "primary" as const,
+      kind: "topic_gate" as const,
+      uses_llm: false,
+      accept:
+        "page07Applies：显示 stem 命中或跳过原因。命中后解锁 07 主链；未命中可跳过整链进 03。",
+    },
+    ...faceMainChain("07", { topic_gated: true, skipJudgment }),
+    ...face03Chain(),
+  ];
+  return [
+    ...HEAD_STEPS,
+    ...(pack ? BOOK_JUDGMENT_STEPS : []),
+    ...faceChains,
+    ...TAIL_STEPS,
+  ];
 }
 
-export function initLabStepsV3(): Record<
-  string,
-  { step_key: string; status: "idle"; attempts: [] }
-> {
-  const out: Record<string, { step_key: string; status: "idle"; attempts: [] }> = {};
-  for (const d of LAB_STEP_DEFS_V3) {
+/** Runtime step table — follows BOOK_JUDGMENT_PACK (default ON). */
+export function labStepDefsV3(
+  env: NodeJS.ProcessEnv = process.env,
+): readonly LabV3StepDef[] {
+  return buildLabStepDefsV3({
+    bookJudgmentPack: isBookJudgmentPackEnabled(env),
+  });
+}
+
+/**
+ * Default export for importers that still want a const.
+ * Resolves at module load from process.env (default pack ON).
+ */
+export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = labStepDefsV3();
+
+export function labV3StepDef(
+  step_key: string,
+  env: NodeJS.ProcessEnv = process.env,
+): LabV3StepDef | undefined {
+  return labStepDefsV3(env).find((s) => s.step_key === step_key);
+}
+
+export function initLabStepsV3(
+  env: NodeJS.ProcessEnv = process.env,
+): Record<string, { step_key: string; status: "idle"; attempts: [] }> {
+  const out: Record<string, { step_key: string; status: "idle"; attempts: [] }> =
+    {};
+  for (const d of labStepDefsV3(env)) {
     out[d.step_key] = { step_key: d.step_key, status: "idle", attempts: [] };
   }
   return out;
 }
 
-/** 旧 Lab 会话补齐新增步槽（如 companion.* / face 步）。 */
-export function ensureLabStepsV3(lab: {
-  steps: Record<
-    string,
-    { step_key: string; status: string; attempts: unknown[]; approved_attempt?: number }
-  >;
-}): void {
-  for (const d of LAB_STEP_DEFS_V3) {
+/** 旧 Lab 会话补齐新增步槽（如 companion.* / face 步 / book.judgment）。 */
+export function ensureLabStepsV3(
+  lab: {
+    steps: Record<
+      string,
+      { step_key: string; status: string; attempts: unknown[]; approved_attempt?: number }
+    >;
+  },
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  for (const d of labStepDefsV3(env)) {
     if (!lab.steps[d.step_key]) {
       lab.steps[d.step_key] = {
         step_key: d.step_key,

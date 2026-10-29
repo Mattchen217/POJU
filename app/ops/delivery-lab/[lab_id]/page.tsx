@@ -130,7 +130,22 @@ type LabView = {
       applies?: boolean;
       reason?: string;
     };
+    book_judgment_pack?: unknown;
   };
+  book_judgment_pack_enabled?: boolean;
+  book_judgment_trace?: {
+    shot_mode: string;
+    unit_counts: {
+      destiny: number;
+      science: number;
+      convergence: number;
+      total: number;
+    };
+    by_face_coverage: Record<string, number>;
+    zfpOmitted: boolean;
+    pattern_hits_used: string[];
+    science_tags_used: string[];
+  } | null;
 } & LabPipelineView;
 
 function pretty(v: unknown): string {
@@ -1008,6 +1023,29 @@ export default function DeliveryLabConsolePage() {
       >
         {/* Step list */}
         <aside className="max-h-[40vh] w-full overflow-y-auto border-b border-white/10 lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r">
+          {lab.book_judgment_pack_enabled !== false ? (
+            <div className="border-b border-white/10 px-2 py-2 text-[10px] leading-4 text-[#a1a1aa]">
+              <p className="font-medium text-[#9cf0ff]/90">BookJudgmentPack</p>
+              {lab.book_judgment_trace ? (
+                <p className="mt-1 font-mono text-[9px] text-[#d6d3d1]">
+                  shot={lab.book_judgment_trace.shot_mode} · d=
+                  {lab.book_judgment_trace.unit_counts.destiny} s=
+                  {lab.book_judgment_trace.unit_counts.science} c=
+                  {lab.book_judgment_trace.unit_counts.convergence} · zfpOmitted=
+                  {String(lab.book_judgment_trace.zfpOmitted)} · patternHits=
+                  {lab.book_judgment_trace.pattern_hits_used.length
+                    ? lab.book_judgment_trace.pattern_hits_used.slice(0, 3).join(",")
+                    : "∅"}
+                </p>
+              ) : (
+                <p className="mt-1">待跑 book.judgment · 无 per-page judgment</p>
+              )}
+            </div>
+          ) : (
+            <div className="border-b border-white/10 px-2 py-2 text-[10px] text-amber-200/80">
+              BOOK_JUDGMENT_PACK=0 · 旧 per-page judgment
+            </div>
+          )}
           <ul className="p-2">
             {lab.step_defs.map((d, i) => {
               const st = lab.steps[d.step_key]?.status ?? "idle";

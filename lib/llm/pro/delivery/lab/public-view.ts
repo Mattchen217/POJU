@@ -1,16 +1,19 @@
 import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
 import { LAB_STEP_DEFS } from "@/lib/llm/pro/delivery/lab/types";
 import {
-  LAB_STEP_DEFS_V3,
   ensureLabStepsV3,
+  labStepDefsV3,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { labUsesV3Executor } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { labChatPublicSlice } from "@/lib/llm/pro/delivery/lab/pipeline-chat";
 import { pipelineNextHint } from "@/lib/llm/pro/delivery/lab/pipeline-cursor";
+import { isBookJudgmentPackEnabled } from "@/lib/llm/pro/delivery/book-judgment/flag";
+import { bookJudgmentTraceSummary } from "@/lib/llm/pro/delivery/book-judgment/slice";
+import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 
 function activeStepDefs(lab: DeliveryLabSession) {
-  return labUsesV3Executor(lab.pipeline) ? LAB_STEP_DEFS_V3 : LAB_STEP_DEFS;
+  return labUsesV3Executor(lab.pipeline) ? labStepDefsV3() : LAB_STEP_DEFS;
 }
 
 /** Ops API / UI payload — omit bulky base_analysis blob. */
@@ -39,6 +42,11 @@ export function labPublicView(lab: DeliveryLabSession) {
         })),
       }
     : undefined;
+  const pack = lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined;
+  const book_judgment_trace =
+    pack && typeof pack === "object"
+      ? bookJudgmentTraceSummary(pack)
+      : null;
   return {
     version: lab.version,
     lab_id: lab.lab_id,
@@ -55,6 +63,8 @@ export function labPublicView(lab: DeliveryLabSession) {
       /** 完整 liuri_pack 只留服务端；ops JSON 用摘要 + 按日 cards。 */
       ...(companion ? { companion } : {}),
     },
+    book_judgment_pack_enabled: isBookJudgmentPackEnabled(),
+    book_judgment_trace,
     source: {
       locale: lab.source.locale,
       original_question: lab.source.original_question,

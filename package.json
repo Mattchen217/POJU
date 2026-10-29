@@ -33,6 +33,7 @@
     "test:ziwei-fact-pack": "tsx scripts/test-ziwei-fact-pack.ts",
     "test:lab-ziwei-feed": "tsx scripts/test-lab-ziwei-feed.ts",
     "test:body-slice-zfp": "tsx scripts/test-body-slice-zfp.ts",
+    "test:book-judgment-pack": "tsx scripts/test-book-judgment-pack.ts",
     "test:page-slice-w2": "tsx scripts/test-page-slice-w2.ts",
     "test:scare-gate-w3": "tsx scripts/test-scare-gate-w3.ts",
     "test:shelf-face-w4": "tsx scripts/test-shelf-face-w4.ts",

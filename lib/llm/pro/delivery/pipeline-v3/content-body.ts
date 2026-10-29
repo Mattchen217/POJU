@@ -461,6 +461,8 @@ export async function runContentBodyGenerate(input: {
   timeout_ms?: number;
   thinking_effort?: "off" | "low" | "medium" | "high" | "xhigh";
   deep_evidence_plan?: DeepEvidencePlan | null;
+  /** BookJudgmentPack face slice block (禁再发明批断). */
+  book_judgment_pack_block?: string | null;
   action_brief?: P5ActionBrief | null;
   primary_backup_hint?: string;
   question_expectation?: string;
@@ -566,6 +568,7 @@ export async function runContentBodyGenerate(input: {
       input.deep_evidence_plan,
       input.key,
     ),
+    book_judgment_pack_block: input.book_judgment_pack_block,
     user_feed: userFeed,
   });
 

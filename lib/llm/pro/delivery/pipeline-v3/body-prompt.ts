@@ -389,6 +389,8 @@ export function buildV3BodyPrompt(input: {
   core_conclusion?: string;
   judgment_lock?: string;
   user_feed: string;
+  /** BookJudgmentPack face slice — ban reinventing judgment. */
+  book_judgment_pack_block?: string | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
   if (faceId) {
@@ -397,10 +399,17 @@ export function buildV3BodyPrompt(input: {
       locale: input.locale,
       slice: { pageId: faceId, dump: { note: "see_user_feed_below" } },
     });
+    const packMode = Boolean(input.book_judgment_pack_block?.trim());
+    const judgmentHeader = packMode
+      ? `## 本页批断包切片（只阐述/装配 · 禁再发明批断 · 禁再锁主辅 · D锚须回指 pack unit id）\n${input.book_judgment_pack_block!.trim()}`
+      : input.judgment_lock?.trim()
+        ? `## 本页原始批断（扎根用；勿整段粘进可见段）\n${input.judgment_lock.trim()}`
+        : "";
     const user = [
       faceUser,
-      input.judgment_lock?.trim()
-        ? `## 本页原始批断（扎根用；勿整段粘进可见段）\n${input.judgment_lock.trim()}`
+      judgmentHeader,
+      packMode && input.judgment_lock?.trim()
+        ? `## 批断包 → DeepEvidence 投影（path/calc_cite 含 unit id）\n${input.judgment_lock.trim()}`
         : "",
       input.core_conclusion?.trim()
         ? `## core_conclusion\n${input.core_conclusion.trim()}`
