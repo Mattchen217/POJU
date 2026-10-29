@@ -27,6 +27,7 @@ import {
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/build-page-plan";
 import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
+import { ensureLabZiweiFactPack } from "@/lib/ziwei/lab-ziwei";
 
 function syntheticAgent(source: DeliveryLabSession["source"]) {
   const agent = createInitialAgentState({
@@ -415,6 +416,7 @@ export async function buildLabPromptOpts(
     prealloc_max_units: prealloc?.slot_count_by_page?.[key],
     primary_reuse_cap: prealloc?.reuse_cap,
     thesis_structured: structured,
+    ziwei_fact_pack: ensureLabZiweiFactPack(lab),
   };
 
   return { opts, p3_body_excerpt, action_brief };

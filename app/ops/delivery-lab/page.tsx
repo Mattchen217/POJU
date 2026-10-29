@@ -196,6 +196,7 @@ export default function DeliveryLabCreatePage() {
         locale,
         original_question: "(lab pipeline)",
         base_analysis: { structured: local.structured },
+        birth_info: birth,
         breakthrough_core: null,
         covered_agenda: [],
       });
@@ -238,6 +239,7 @@ export default function DeliveryLabCreatePage() {
         setError("交付-only 需要 Original question");
         return;
       }
+      const birthFromForm = getBirthInfoRef.current?.() ?? null;
       await createLab({
         mode: "delivery_only",
         locale,
@@ -245,6 +247,7 @@ export default function DeliveryLabCreatePage() {
         desired_outcome: desired || undefined,
         session_id: sessionId || undefined,
         base_analysis,
+        birth_info: birthFromForm,
         breakthrough_core,
         covered_agenda,
         question_category: questionCategory.trim() || null,

@@ -21,6 +21,7 @@ import {
 } from "@/lib/llm/pro/delivery/slice-for-page";
 import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+import { ensureLabZiweiFactPack } from "@/lib/ziwei/lab-ziwei";
 import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
 
 export const FACE_QUALITY_CHECK_IDS = [
@@ -72,9 +73,13 @@ export function buildLabPageFeedPacks(
   const chart = chartPackFromDeliveryText(pre?.chart_fact_pack);
   const question = lab.source.original_question?.trim() ?? "";
   const topic = labTopic(lab);
+  const ziwei =
+    opts?.ziwei !== undefined
+      ? opts.ziwei
+      : ensureLabZiweiFactPack(lab);
   return {
     chart,
-    zfp: opts?.ziwei ?? null,
+    zfp: ziwei ?? null,
     topic,
     user: question
       ? { Q: question, expect: question, detail: question }

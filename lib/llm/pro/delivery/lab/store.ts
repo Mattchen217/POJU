@@ -13,6 +13,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 import { createLabChatSession } from "@/lib/llm/pro/delivery/lab/lab-chat-session";
 import type { LabPipelineMode } from "@/lib/llm/pro/delivery/lab/lab-pipeline-types";
+import { tryBuildLabZiweiFactPack } from "@/lib/ziwei/lab-ziwei";
 
 export function deliveryLabKey(lab_id: string): string {
   return `poju-delivery-lab:${lab_id}`;
@@ -99,6 +100,8 @@ export async function createDeliveryLab(input: {
     approved_order: [],
     mode,
   };
+  const zfp = tryBuildLabZiweiFactPack(session.source);
+  if (zfp) session.artifacts.ziwei_fact_pack = zfp;
   if (mode === "full_pipeline") {
     session.chat_session = createLabChatSession({
       lab_id,

@@ -35,7 +35,14 @@ import {
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 
 const CFP_SHORT = ["dayMaster", "yongJi", "shishenHit", "dayunNow", "pathTags", "conflictAnchors"] as const;
-const ZFP_SHORT = ["topicPalace", "sihua", "daxian", "mingShen", "otherChart"] as const;
+const ZFP_SHORT = [
+  "topicPalace",
+  "sihua",
+  "daxian",
+  "mingShen",
+  "otherChart",
+  "patternHits",
+] as const;
 const USER_SHORT = ["Q", "expect", "detail"] as const;
 const DUMP_KEYS = new Set(["text", "ganzhi", "shen_sha", "palaces", "source", "day_master"]);
 
@@ -148,6 +155,17 @@ export type SlicedMingShen = {
   fiveElementsClass: string;
 };
 
+/** Closed-set pattern hit on the page slice (no description). */
+export type SlicedPatternHit = {
+  name: string;
+  level: string;
+  palaces: string[];
+  required?: string[];
+  bonus?: string[];
+  breaking?: string[];
+  source?: string;
+};
+
 export type PageSlice = {
   cfp?: Partial<Record<CfpShortKey, string | readonly string[]>>;
   zfp?: {
@@ -156,6 +174,7 @@ export type PageSlice = {
     daxian?: SlicedDaxian | string;
     mingShen?: SlicedMingShen | string;
     otherChart?: string | Record<string, unknown>;
+    patternHits?: readonly SlicedPatternHit[];
   };
   user?: Partial<Record<UserShortKey, string>>;
   sci?: { hooks: string | readonly string[] };
@@ -360,6 +379,31 @@ function projectMingShen(value: unknown): SlicedMingShen | string | undefined {
   return mingShen;
 }
 
+function projectPatternHits(value: unknown): readonly SlicedPatternHit[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const out: SlicedPatternHit[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const r = row as Record<string, unknown>;
+    const name = str(r.name);
+    if (!name) continue;
+    const level = str(r.level) || "neutral";
+    const palaces = stringList(r.palaces);
+    const hit: SlicedPatternHit = { name, level, palaces };
+    const required = stringList(r.required);
+    const bonus = stringList(r.bonus);
+    const breaking = stringList(r.breaking);
+    if (required.length) hit.required = required;
+    if (bonus.length) hit.bonus = bonus;
+    if (breaking.length) hit.breaking = breaking;
+    const source = str(r.source);
+    if (source) hit.source = source;
+    // Never copy description prose onto the slice.
+    out.push(hit);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 function projectOther(value: unknown): string | Record<string, unknown> | undefined {
   if (value == null) return undefined;
   if (typeof value === "string") {
@@ -475,6 +519,12 @@ function buildZfp(
     const otherChart = projectOther(source.otherChart);
     if (otherChart) out.otherChart = otherChart;
   }
+  if (allow.has("patternHits")) {
+    const patternHits = projectPatternHits(
+      source.patternHits ?? source.pattern_hits,
+    );
+    if (patternHits) out.patternHits = patternHits;
+  }
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
@@ -568,15 +618,23 @@ export function sliceStaysInAllowlist(pageId: DecisionPageId, slice: PageSlice):
 }
 
 /** 整包才有的键。切片里出现任意一个都是把全盘灌进了单页。 */
-export function sliceDumpKeys(value: unknown, found: string[] = []): string[] {
+/**
+ * Flag dump-only keys (full chart pack / ZFP index). Nested
+ * `patternHits[].palaces|source` are closed-set fields, not dumps.
+ */
+export function sliceDumpKeys(
+  value: unknown,
+  found: string[] = [],
+  inPatternHit = false,
+): string[] {
   if (!value || typeof value !== "object") return found;
   if (Array.isArray(value)) {
-    for (const item of value) sliceDumpKeys(item, found);
+    for (const item of value) sliceDumpKeys(item, found, inPatternHit);
     return found;
   }
   for (const [key, item] of Object.entries(value)) {
-    if (DUMP_KEYS.has(key)) found.push(key);
-    sliceDumpKeys(item, found);
+    if (DUMP_KEYS.has(key) && !inPatternHit) found.push(key);
+    sliceDumpKeys(item, found, inPatternHit || key === "patternHits");
   }
   return found;
 }
@@ -661,6 +719,16 @@ export function pageSliceAnchorLines(pageId: DecisionPageId, packs?: PageFeedPac
     pushSliceAnchor(out, seen, zfp.topicPalace);
     pushSliceAnchor(out, seen, zfp.sihua);
     pushSliceAnchor(out, seen, zfp.daxian);
+    if (zfp.patternHits?.length) {
+      pushSliceAnchor(
+        out,
+        seen,
+        zfp.patternHits
+          .slice(0, 4)
+          .map((h) => h.name)
+          .join("、"),
+      );
+    }
   }
   return out;
 }

@@ -4,6 +4,7 @@ import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import type { LabSource } from "@/lib/llm/pro/delivery/lab/types";
 import { requireOpsUser } from "@/lib/ops/require-ops";
+import { coerceBirthInfo } from "@/lib/ziwei/lab-ziwei";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ type CreateBody = {
   original_question?: string;
   desired_outcome?: string;
   base_analysis?: unknown;
+  /** Same BirthInfo as bazi clock — required for ZiweiFactPack on Lab guns. */
+  birth_info?: unknown;
   breakthrough_core?: unknown | null;
   covered_agenda?: LabSource["covered_agenda"];
   session_id?: string;
@@ -71,6 +74,7 @@ export async function POST(req: Request) {
         desired_outcome:
           typeof body.desired_outcome === "string" ? body.desired_outcome.trim() : undefined,
         base_analysis: clean.base_analysis,
+        birth_info: coerceBirthInfo(body.birth_info),
         breakthrough_core: mode === "full_pipeline" ? null : clean.breakthrough_core,
         covered_agenda:
           mode === "full_pipeline"

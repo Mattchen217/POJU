@@ -14,6 +14,8 @@ import { isSegment2JobResult, type Segment2JobInput } from "@/lib/poju/xhigh-job
 import { runEphemeralXhighJob } from "@/lib/poju/xhigh-ephemeral-run";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
+import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { coerceBirthInfo, ziweiClosedSetFromBirth } from "@/lib/ziwei/lab-ziwei";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -161,6 +163,20 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const profileId = resolveProfileId({ selected_stored_profile_id: body.selected_stored_profile_id, agent_v2 });
 
+    let ziwei_closed_set: string | null = null;
+    if (profileId) {
+      try {
+        const stored = await getStoredProfile(profileId);
+        const birth = coerceBirthInfo(stored?.birth_info);
+        const block = ziweiClosedSetFromBirth(birth);
+        if (block.trim()) ziwei_closed_set = block;
+      } catch (e) {
+        console.warn("[breakthrough-core] ziwei closed-set skip", {
+          err: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
     const jobInput: Segment2JobInput = {
       session_id: sessionId,
       original_question: body.original_question,
@@ -184,6 +200,7 @@ export async function POST(req: Request) {
         body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
           ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
           : null,
+      ziwei_closed_set,
     };
 
     inlineCall = async () => {

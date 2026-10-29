@@ -529,6 +529,11 @@ export function buildBreakthroughCorePrompt(input: {
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
   pivot_chart_path?: PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
+  /**
+   * Closed-set ZiweiFactPack summary (格局命中 / 宫星). Structure only — no prescriptions.
+   * Prefer preformatted string; or pass pack and we format.
+   */
+  ziwei_closed_set?: string | null;
 }): { system: string; user: string; structured: ProfileStructured; auditRelations: RelationLabel[] } {
   const { base_analysis, agent_v2, original_question, locale } = input;
   const path: PivotChartPath =
@@ -625,7 +630,11 @@ ${contextText}
 ${dyadBlock}
 
 ${factGuard}
-
+${
+  typeof input.ziwei_closed_set === "string" && input.ziwei_closed_set.trim()
+    ? `\n${input.ziwei_closed_set.trim()}\n`
+    : ""
+}
 【任务 · Call A】
 只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 必产(多维发散)。【禁止】输出 primary_path / backup_path / investigation_agenda / first_question。仅 JSON，无 markdown 围栏。
 （face 决策报告蓝图不在本段——可落地交付是汇总段/交付段的事；本段只把相关维度算全、算准。禁止「撑得起六页/主辅路径」话术。）`;
@@ -644,6 +653,8 @@ export function buildAgendaBridgePrompt(input: {
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
   pivot_chart_path?: PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
+  /** Closed-set ziwei/pattern summary — structure only, no prescriptions. */
+  ziwei_closed_set?: string | null;
 }): { system: string; user: string } {
   const { breakthrough_core, original_question, locale } = input;
   const path: PivotChartPath =
@@ -733,7 +744,11 @@ ${coreJson}
 
 【二元/合盘依据（按路径）】
 ${dyadBlock}
-
+${
+  typeof input.ziwei_closed_set === "string" && input.ziwei_closed_set.trim()
+    ? `\n${input.ziwei_closed_set.trim()}\n（结构依据可指回紫微/格局闭集词；议程仍禁处方。）\n`
+    : ""
+}
 # 落地内容类型备忘（工程路由参考 · 【不是】提问理由）
 若某条对齐信息最终会支撑下列某类落地内容,填对应 serves_page;仍须先满足「对解题/期望有用」。
 ${landingKindsHint}

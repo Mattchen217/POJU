@@ -37,6 +37,8 @@ export const FEED = {
     daxian: "ZFP.daxian",
     mingShen: "ZFP.mingShen",
     otherChart: "ZFP.otherChart",
+    /** Closed-set pattern hits (name/level/palaces) — no prose. */
+    patternHits: "ZFP.patternHits",
   },
   User: {
     Q: "User.Q",
@@ -103,14 +105,14 @@ export const PAGE_UNION_ALLOWLISTS: Record<DecisionPageId, PageUnionAllowlist> =
     pageId: "02",
     user: [U.Q, U.expect, U.detail],
     cfp: [C.dayMaster, C.yongJi, C.shishenHit, C.dayunNow],
-    zfp: [Z.topicPalace, Z.sihua, Z.daxian],
+    zfp: [Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
     sci: "yes",
   },
   "04": {
     pageId: "04",
     user: [U.detail],
     cfp: [C.yongJi, C.shishenHit, C.dayunNow],
-    zfp: [Z.sihua, Z.daxian],
+    zfp: [Z.sihua, Z.daxian, Z.patternHits],
     sci: "fold",
   },
   "05": {
@@ -145,7 +147,7 @@ export const PAGE_UNION_ALLOWLISTS: Record<DecisionPageId, PageUnionAllowlist> =
     pageId: "03",
     user: [],
     cfp: [C.dayMaster, C.yongJi, C.shishenHit, C.dayunNow],
-    zfp: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian],
+    zfp: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
     sci: false,
   },
 };
@@ -186,8 +188,8 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
     {
       id: "A",
       label: "命理理由",
-      fields: [C.yongJi, C.shishenHit, Z.topicPalace, Z.sihua],
-      optionalFields: [],
+      fields: [C.yongJi, C.shishenHit, Z.topicPalace, Z.sihua, Z.patternHits],
+      optionalFields: [Z.patternHits],
       facts: "required",
     },
     {
@@ -208,8 +210,8 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
     {
       id: "D",
       label: "可核对锚",
-      fields: [C.dayMaster, C.yongJi, C.dayunNow, Z.topicPalace, Z.sihua, Z.daxian],
-      optionalFields: [Z.topicPalace, Z.sihua, Z.daxian],
+      fields: [C.dayMaster, C.yongJi, C.dayunNow, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
+      optionalFields: [Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
       facts: "required",
       note: "紫微未稳时 ZFP 可空，只留八字锚。",
     },
@@ -218,8 +220,8 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
     {
       id: "A",
       label: "卡点命名",
-      fields: [C.shishenHit, C.yongJi, Z.sihua],
-      optionalFields: [],
+      fields: [C.shishenHit, C.yongJi, Z.sihua, Z.patternHits],
+      optionalFields: [Z.patternHits],
       facts: "required",
     },
     {
@@ -240,8 +242,8 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
     {
       id: "D",
       label: "依据折叠",
-      fields: [C.shishenHit, C.yongJi, Z.sihua, S.hooks],
-      optionalFields: [],
+      fields: [C.shishenHit, C.yongJi, Z.sihua, Z.patternHits, S.hooks],
+      optionalFields: [Z.patternHits],
       facts: "required",
     },
   ],
@@ -378,8 +380,8 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
     {
       id: "B",
       label: "紫微本题切片",
-      fields: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian],
-      optionalFields: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian],
+      fields: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
+      optionalFields: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
       facts: "optional",
       note: "紫微未稳则整段跳过，不注水。",
     },

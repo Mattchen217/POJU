@@ -648,6 +648,10 @@ async function executeV3(
       deliveryDayKey,
       timezone,
     });
+    const { ensureLabZiweiFactPack, ziweiCompanionTriggerAnchors } = await import(
+      "@/lib/ziwei/lab-ziwei"
+    );
+    const ziweiTriggers = ziweiCompanionTriggerAnchors(ensureLabZiweiFactPack(lab));
     const days = Array.from({ length: COMPANION_WINDOW_DAYS }, (_, i) => ({
       day_index: i,
       date_key: addDaysKey(deliveryDayKey, i),
@@ -665,6 +669,9 @@ async function executeV3(
       batch_status: "pending",
       batch_gate: null,
       output_locale: companionLocale,
+      ...(ziweiTriggers.length
+        ? { ziwei_trigger_anchors: ziweiTriggers }
+        : {}),
     };
     return {
       input_payload: {
@@ -677,6 +684,7 @@ async function executeV3(
         primary_means: brief.primary.means_excerpts.length,
         backup_means: brief.backup.means_excerpts.length,
         liuri_days: liuri_pack.length,
+        ziwei_trigger_anchors: ziweiTriggers,
       },
       raw_model_output: {
         brief,

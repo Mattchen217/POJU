@@ -24,6 +24,8 @@ export type Segment2JobInput = {
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
   pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
+  /** Preformatted Ziwei closed-set (格局/宫星) — structure only. */
+  ziwei_closed_set?: string | null;
 };
 
 /** Call B input — segment1靶心 + Call A JSON (no full chart dump). */
@@ -42,6 +44,8 @@ export type Segment2AgendaJobInput = {
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
   pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
+  /** Preformatted Ziwei closed-set — structure only for agenda cite-back. */
+  ziwei_closed_set?: string | null;
 };
 
 /** Phase 4 delivery book — multi-task pipeline input (stored so after() can finish after client leaves). */

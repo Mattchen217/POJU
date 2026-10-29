@@ -226,6 +226,7 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
       partner_bazi: input.partner_bazi ?? null,
       pivot_chart_path: input.pivot_chart_path ?? null,
       dyad_matrix_pack: input.dyad_matrix_pack ?? null,
+      ziwei_closed_set: input.ziwei_closed_set ?? null,
     });
     const sessionCacheId = profileId
       ? baseAnalysisCacheSessionId(profileId)
@@ -277,6 +278,7 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
       partner_bazi: job.input.partner_bazi ?? null,
       pivot_chart_path: job.input.pivot_chart_path ?? null,
       dyad_matrix_pack: job.input.dyad_matrix_pack ?? null,
+      ziwei_closed_set: job.input.ziwei_closed_set ?? null,
     });
     return {
       system,

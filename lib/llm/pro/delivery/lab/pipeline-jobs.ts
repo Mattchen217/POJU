@@ -49,6 +49,10 @@ import {
   type SynthesisJobInput,
 } from "@/lib/poju/xhigh-job-types";
 import { FACE_AGENDA_BLUEPRINT } from "@/lib/poju/report-blueprint";
+import {
+  ensureLabZiweiFactPack,
+  formatZiweiClosedSetForPrompt,
+} from "@/lib/ziwei/lab-ziwei";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { dyadSkipPatch } from "@/lib/poju/dyad-compat";
@@ -307,6 +311,7 @@ export async function labUnderstandingConfirm(lab: DeliveryLabSession): Promise<
 
   let job;
   try {
+    const ziweiPack = ensureLabZiweiFactPack(lab);
     job = await createXhighJob({
       phase: "segment2_breakthrough_core",
       session_id: sessionId,
@@ -322,6 +327,7 @@ export async function labUnderstandingConfirm(lab: DeliveryLabSession): Promise<
         partner_bazi: sessionPending.partner_bazi ?? null,
         pivot_chart_path: sessionPending.pivot_chart_path ?? null,
         dyad_matrix_pack: sessionPending.dyad_matrix_pack ?? null,
+        ziwei_closed_set: formatZiweiClosedSetForPrompt(ziweiPack),
       },
     });
   } catch (e) {
@@ -730,6 +736,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
     let agendaJob;
     try {
       const segment1_understanding = formatSegment1UnderstandingForPrompt(ensureAgentV2(sessionA));
+      const ziweiClosed = formatZiweiClosedSetForPrompt(ensureLabZiweiFactPack(lab));
       agendaJob = await createXhighJob({
         phase: "segment2_agenda_bridge",
         session_id: sessionId,
@@ -750,6 +757,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
           partner_bazi: sessionA.partner_bazi ?? null,
           pivot_chart_path: sessionA.pivot_chart_path ?? null,
           dyad_matrix_pack: sessionA.dyad_matrix_pack ?? null,
+          ziwei_closed_set: ziweiClosed || null,
         },
       });
     } catch (e) {

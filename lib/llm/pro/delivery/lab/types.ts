@@ -49,6 +49,11 @@ export type LabSource = {
   desired_outcome?: string;
   /** Full base_analysis row (must include structured for thesis). */
   base_analysis: unknown;
+  /**
+   * Birth clock shared with bazi (true solar / civil). Sanitize strips birth from
+   * base_analysis — keep it here so ZiweiFactPack stays same-hour as CFP.
+   */
+  birth_info?: import("@/lib/profile/types").BirthInfo | null;
   breakthrough_core?: unknown | null;
   covered_agenda?: Array<{ label: string; answer?: string }>;
   session_id?: string;
@@ -65,6 +70,8 @@ export type LabSource = {
 export type LabArtifacts = {
   thesis?: unknown;
   prealloc?: unknown;
+  /** Closed-set ZiweiFactPack (iztro chart + doushu pattern_hits). Stable birth only. */
+  ziwei_fact_pack?: import("@/lib/ziwei/fact-pack").ZiweiFactPack | null;
   /** page → assignment / plan / page_schema / marked */
   by_page: Partial<
     Record<
@@ -189,6 +196,8 @@ export type LabArtifacts = {
     } | null;
     /** Locale used for last companion generate (zh/en/fr/es). */
     output_locale?: string;
+    /** S5 light anchors: 大限/流年/格局名 — not a full face re-run. */
+    ziwei_trigger_anchors?: string[];
   };
 };
 

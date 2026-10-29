@@ -31,6 +31,7 @@
     "test:glyph-step7:live": "tsx scripts/test-glyph-v5-step7.ts --live",
     "test:qimen-integration": "tsx scripts/test-qimen-integration.ts",
     "test:ziwei-fact-pack": "tsx scripts/test-ziwei-fact-pack.ts",
+    "test:lab-ziwei-feed": "tsx scripts/test-lab-ziwei-feed.ts",
     "test:page-slice-w2": "tsx scripts/test-page-slice-w2.ts",
     "test:scare-gate-w3": "tsx scripts/test-scare-gate-w3.ts",
     "test:shelf-face-w4": "tsx scripts/test-shelf-face-w4.ts",

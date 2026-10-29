@@ -78,10 +78,25 @@ const first = buildZiweiFactPack(GOLDEN_BIRTH, { asOf: GOLDEN_AS_OF });
 const second = buildZiweiFactPack(GOLDEN_BIRTH, { asOf: GOLDEN_AS_OF });
 assert(JSON.stringify(first) === JSON.stringify(second), "same birth twice is stable");
 
-assert(first.source.library === "iztro" && first.source.version === "2.6.3", "iztro 2.6.3");
+assert(first.source.library === "ziwei-doushu", "main chain library ziwei-doushu");
+assert(first.source.chart_engine === "iztro", "chart still iztro");
 assert(first.source.license === "MIT", "MIT");
-assert(Object.keys(ZIWEI_ZFP_KEY_SET).sort().join(",") === "daxian,mingShen,otherChart,sihua,topicPalace", "ZFP keys");
+assert(
+  Object.keys(ZIWEI_ZFP_KEY_SET).sort().join(",") ===
+    "daxian,mingShen,otherChart,patternHits,sihua,topicPalace",
+  "ZFP keys",
+);
 assert(first.otherChart === null, "joint stub empty");
+assert(Array.isArray(first.pattern_hits), "pattern_hits array");
+assert(
+  first.pattern_hits.every(
+    (h) =>
+      typeof h.name === "string" &&
+      h.name.length > 0 &&
+      !("description" in h),
+  ),
+  "pattern_hits closed-set (no description)",
+);
 assert(first.palaces.length === 12, "twelve palaces");
 assert(first.topicPalace.role === "ming", "topic defaults to ming");
 assert(first.topicPalace.earthlyBranch === "午", "命宫在午");
@@ -116,7 +131,30 @@ assert(typeof topic === "object" && topic.majorStars.includes("紫微"), "02 cop
 assert(JSON.stringify(slice.slice.zfp?.sihua).includes("天同"), "02 copies sihua");
 assert(!JSON.stringify(slice.slice).includes("破军"), "02 omits mingShen");
 assert(!JSON.stringify(slice.slice).includes("木三局"), "02 omits 五行局");
-assert(!JSON.stringify(slice).includes('"palaces"'), "palaces index is not a slice field");
-assert(!JSON.stringify(slice).includes('"source"'), "source stays off the slice");
+assert(
+  !/"palaces"\s*:\s*\[/.test(JSON.stringify(slice.slice.zfp ?? {})) ||
+    Boolean(slice.slice.zfp?.patternHits),
+  "twelve-palace index is not a slice field (patternHits.palaces ok)",
+);
+assert(!("palaces" in (slice.slice.zfp ?? {})), "ZFP.palaces index omitted from slice");
+assert(!("source" in (slice.slice.zfp ?? {})), "pack source meta stays off the slice");
+if (first.pattern_hits.length > 0) {
+  assert(
+    Array.isArray(slice.slice.zfp?.patternHits) &&
+      (slice.slice.zfp?.patternHits?.length ?? 0) > 0,
+    "02 copies patternHits",
+  );
+  assert(
+    !JSON.stringify(slice.slice.zfp?.patternHits).includes("description"),
+    "slice patternHits drop prose",
+  );
+}
 
-console.log("ziwei-fact-pack W1 ok");
+const slice03 = sliceForPage("03", { zfp: first });
+assert(slice03.zfpOmitted === false, "03 keeps zfp");
+assert(slice03.slice.zfp?.mingShen != null, "03 has mingShen");
+
+console.log("ziwei-fact-pack W1+doushu ok", {
+  hits: first.pattern_hits.length,
+  names: first.pattern_hits.slice(0, 5).map((h) => h.name),
+});

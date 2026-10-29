@@ -12,6 +12,14 @@ import { version as iztroVersion } from "iztro/package.json";
 import type { ZfpShortKey } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { BirthInfo } from "@/lib/profile/types";
 import { birthInfoToIztroArgs, type ZiweiClockSource } from "@/lib/ziwei/birth-clock";
+import {
+  detectZiweiPatternHits,
+  DOUSHU_PATTERNS_COMMIT,
+  DOUSHU_PATTERNS_LIBRARY,
+  type ZiweiPatternHit,
+} from "@/lib/ziwei/doushu-adapter";
+
+export type { ZiweiPatternHit };
 
 const MUTAGEN_ORDER = ["禄", "权", "科", "忌"] as const;
 export type ZiweiMutagen = (typeof MUTAGEN_ORDER)[number];
@@ -70,8 +78,11 @@ export type ZiweiPalaceFact = {
   decadalRange: [number, number];
 };
 
+export type ZiweiFactLibrary = "ziwei-doushu" | "iztro";
+
 export type ZiweiFactSource = {
-  library: "iztro";
+  /** Main chain: ziwei-doushu patterns on iztro chart. Fallback: iztro-only. */
+  library: ZiweiFactLibrary;
   version: string;
   license: "MIT";
   solarDate: string;
@@ -80,6 +91,9 @@ export type ZiweiFactSource = {
   fixLeap: true;
   clock: ZiweiClockSource;
   asOf: string;
+  /** Chart structure engine (iztro) when library is ziwei-doushu. */
+  chart_engine?: "iztro";
+  patterns_commit?: string;
 };
 
 export type ZiweiFactPack = {
@@ -88,6 +102,8 @@ export type ZiweiFactPack = {
   daxian: ZiweiDaxian;
   mingShen: ZiweiMingShen;
   otherChart: null;
+  /** Closed-set pattern hits (name/level/palaces/conditions) — no description prose. */
+  pattern_hits: ZiweiPatternHit[];
   palaces: ZiweiPalaceFact[];
   source: ZiweiFactSource;
 };
@@ -99,7 +115,16 @@ export const ZIWEI_ZFP_KEY_SET: Record<ZfpShortKey, true> = {
   daxian: true,
   mingShen: true,
   otherChart: true,
+  patternHits: true,
 };
+
+/** Env `ZIWEI_ENGINE=iztro` → skip doushu patterns (对照/回退). */
+export function resolveZiweiEngine(): ZiweiFactLibrary {
+  const raw = (typeof process !== "undefined" ? process.env.ZIWEI_ENGINE : undefined)
+    ?.trim()
+    .toLowerCase();
+  return raw === "iztro" ? "iztro" : "ziwei-doushu";
+}
 
 export type ZiweiFactPackZfp = Pick<ZiweiFactPack, ZfpShortKey>;
 
@@ -178,6 +203,7 @@ export type BuildZiweiFactPackOptions = {
 export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPackOptions): ZiweiFactPack {
   const args = birthInfoToIztroArgs(birth);
   const asOf = asOfSolarDate(options?.asOf);
+  const engine = resolveZiweiEngine();
   const chart = astro.bySolar(args.solarDate, args.timeIndex, args.gender, args.fixLeap, args.language);
   const palaces = chart.palaces as RawPalace[];
   const ming = palaces.find((palace) => palace.name === "命宫");
@@ -188,6 +214,9 @@ export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPac
   const decadalPalace = palaces[horoscope.decadal.index];
   const yearlyPalace = palaces[horoscope.yearly.index];
   if (!decadalPalace || !yearlyPalace) throw new Error("ZiweiFactPack: decadal or yearly palace missing");
+
+  const pattern_hits =
+    engine === "ziwei-doushu" ? detectZiweiPatternHits(birth) : [];
 
   const pack: ZiweiFactPack = {
     topicPalace: {
@@ -225,6 +254,7 @@ export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPac
       fiveElementsClass: chart.fiveElementsClass,
     },
     otherChart: null,
+    pattern_hits,
     palaces: palaces.map((palace) => ({
       name: palace.name,
       heavenlyStem: palace.heavenlyStem,
@@ -234,8 +264,11 @@ export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPac
       decadalRange: [palace.decadal.range[0], palace.decadal.range[1]],
     })),
     source: {
-      library: "iztro",
-      version: iztroVersion,
+      library: engine,
+      version:
+        engine === "ziwei-doushu"
+          ? `${DOUSHU_PATTERNS_LIBRARY}@${DOUSHU_PATTERNS_COMMIT}+iztro@${iztroVersion}`
+          : iztroVersion,
       license: "MIT",
       solarDate: args.solarDate,
       timeIndex: args.timeIndex,
@@ -243,6 +276,12 @@ export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPac
       fixLeap: true,
       clock: args.clock,
       asOf,
+      ...(engine === "ziwei-doushu"
+        ? {
+            chart_engine: "iztro" as const,
+            patterns_commit: DOUSHU_PATTERNS_COMMIT,
+          }
+        : {}),
     },
   };
   return pack;
