@@ -7,13 +7,13 @@
 import { astro } from "iztro";
 import type { BirthInfo } from "@/lib/profile/types";
 import { birthInfoToIztroArgs } from "@/lib/ziwei/birth-clock";
-import { detectPatterns } from "@/vendor/ziwei-doushu/lib/ziwei/patterns";
+import { detectPatterns } from "@/lib/ziwei/doushu/patterns";
 import type {
   Palace as DoushuPalace,
   Star as DoushuStar,
   ZiweiChart as DoushuChart,
-} from "@/vendor/ziwei-doushu/lib/ziwei/types";
-import { BRANCHES } from "@/vendor/ziwei-doushu/lib/ziwei/constants";
+} from "@/lib/ziwei/doushu/types";
+import { BRANCHES } from "@/lib/ziwei/doushu/constants";
 
 export const DOUSHU_PATTERNS_COMMIT = "ff9a147";
 export const DOUSHU_PATTERNS_LIBRARY = "ziwei-doushu" as const;
