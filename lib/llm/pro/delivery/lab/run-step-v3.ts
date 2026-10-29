@@ -1398,6 +1398,7 @@ async function executeV3(
     const pageSlice = formatPageSliceFeed({
       key: page,
       chartText: feed.thesis_factpack ? rawFactPack : null,
+      ziwei: feed.thesis_factpack ? (opts.ziwei_fact_pack ?? null) : null,
       question: opts.question_expectation,
       withAllowlistHeader: true,
     });
@@ -1654,6 +1655,8 @@ async function executeV3(
       action_brief: action_brief ?? null,
       chart_thesis_block: opts.chart_thesis_block,
       chart_fact_pack: preallocArt?.chart_fact_pack,
+      /** Same ZFP as judgment face_slice — body 02-D / 03 / 04 must project patternHits. */
+      ziwei_fact_pack: opts.ziwei_fact_pack ?? null,
       primary_backup_hint: faceBody ? undefined : opts.primary_backup_hint,
       question_expectation: opts.question_expectation,
       dyad_relation_structure: faceBody ? undefined : opts.dyad_relation_structure,
