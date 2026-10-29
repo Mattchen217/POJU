@@ -12,6 +12,7 @@ import {
   writePendingLangSwitch,
 } from "@/lib/poju/pending-lang-switch";
 import { writeLastPojuWorkspaceSessionId } from "@/lib/poju/workspace-last-session";
+import { isCenterChatReportDump } from "@/lib/poju/center-chat-transcript";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
 import { QuietGpuGuard } from "@/components/spline/QuietGpuGuard";
@@ -809,7 +810,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         (m) =>
           m.role !== "system" &&
           !m.content.trim().startsWith("[SYSTEM:") &&
-          m.meta?.kind !== "paywall",
+          m.meta?.kind !== "paywall" &&
+          !isCenterChatReportDump(m),
       ),
     [displaySession.messages],
   );

@@ -45,8 +45,23 @@ export async function saveCompanionJob(job: CompanionJob): Promise<void> {
   });
   if (error) {
     console.error("[companion_jobs] upsert", error.code ?? error.message);
+    if (isMissingCompanionJobsTable(error)) {
+      // Migration not applied yet — keep the in-memory job so the request
+      // does not surface a schema-cache error. Persistence needs the table.
+      return;
+    }
     throw new Error(`companion_job_save_failed:${error.message}`);
   }
+}
+
+function isMissingCompanionJobsTable(error: { code?: string; message?: string }): boolean {
+  const blob = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  return (
+    blob.includes("schema cache") ||
+    blob.includes("does not exist") ||
+    blob.includes("pgrst205") ||
+    blob.includes("42p01")
+  );
 }
 
 export async function getCompanionJob(id: string): Promise<CompanionJob | null> {
