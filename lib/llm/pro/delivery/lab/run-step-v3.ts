@@ -1583,7 +1583,6 @@ async function executeV3(
           phase: "gate",
           reason: validated.reason,
           detail: failDetail,
-          quota_total_min: quota.total_min_units,
           body_frozen: true,
           validate_ok: false,
           matrix_from: "this_shot_fail",
