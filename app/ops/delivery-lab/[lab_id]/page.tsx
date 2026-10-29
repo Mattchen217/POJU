@@ -142,9 +142,24 @@ type LabView = {
       total: number;
     };
     by_face_coverage: Record<string, number>;
+    face_matrix?: Array<{
+      faceId: string;
+      destiny: number;
+      science: number;
+      convergence: number;
+      total: number;
+      missing_destiny: boolean;
+      missing_science: boolean;
+      under_density: boolean;
+      segment_coverage: number;
+      segment_needed: number;
+    }>;
     zfpOmitted: boolean;
     pattern_hits_used: string[];
+    pattern_hits_unused?: string[];
     science_tags_used: string[];
+    quota_total_min?: number;
+    under_density?: boolean;
   } | null;
 } & LabPipelineView;
 
@@ -233,12 +248,17 @@ export default function DeliveryLabConsolePage() {
   const isPolishStep = selectedKind === "body_polish";
   const isEvidenceSoftStep = selectedKind === "evidence_soft";
   const isLocaleStep = isPolishStep || isEvidenceSoftStep;
-  const isGateStep = selectedKind === "gate";
+  const isGateStep =
+    selectedKind === "gate" || selectedKind === "gate_book_judgment";
+  const isBookJudgmentGateStep = selectedKind === "gate_book_judgment";
   const isAssembleStep = selectedKind === "assemble";
   const isTopicGateStep = selectedKind === "topic_gate";
   const isFaceSliceStep = selectedKind === "face_slice";
   const isNonLlmInspect =
-    isTopicGateStep || isFaceSliceStep || selectedKind === "prealloc";
+    isTopicGateStep ||
+    isFaceSliceStep ||
+    selectedKind === "prealloc" ||
+    isBookJudgmentGateStep;
   const isCompanionSeal = selectedKind === "companion_seal";
   const isCompanionDaily = selectedKind === "companion_daily";
   const isCompanionBatchPair = selectedKind === "companion_batch_pair";
@@ -330,6 +350,23 @@ export default function DeliveryLabConsolePage() {
     (isCompanionStep
       ? companionEntryUnlocked
       : selected === cursorKey);
+  const approveBlockReason = !lab
+    ? "无 Lab"
+    : deliveryLocked
+      ? "交付步仍锁（pipeline 未解锁 / phase 未 ready）"
+      : !attempt
+        ? "请先运行本步"
+        : !attempt.gate_verdict.passed
+          ? `gate 未过${attempt.gate_verdict.failed_rule ? ` · ${attempt.gate_verdict.failed_rule}` : ""}`
+          : attempt.error
+            ? `attempt.error=${attempt.error}`
+            : rec?.status === "approved"
+              ? "已通过"
+              : !isCompanionStep && selected !== cursorKey
+                ? `非当前 cursor（cursor=${cursorKey ?? "?"}）`
+                : isCompanionStep && !companionEntryUnlocked
+                  ? "Companion 入口未解锁"
+                  : null;
   const canRerunPrep =
     lab &&
     !deliveryLocked &&
@@ -532,7 +569,9 @@ export default function DeliveryLabConsolePage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               stage_id: selected,
-              ...(path === "approve" && selectedDefForAction?.kind === "gate"
+              ...(path === "approve" &&
+              (selectedDefForAction?.kind === "gate" ||
+                selectedDefForAction?.kind === "gate_book_judgment")
                 ? { quality_review: qualityReview }
                 : {}),
               /** 人手准备重跑：清空当前选中双日；504 自动解锁不走这里。 */
@@ -1027,16 +1066,47 @@ export default function DeliveryLabConsolePage() {
             <div className="border-b border-white/10 px-2 py-2 text-[10px] leading-4 text-[#a1a1aa]">
               <p className="font-medium text-[#9cf0ff]/90">BookJudgmentPack</p>
               {lab.book_judgment_trace ? (
-                <p className="mt-1 font-mono text-[9px] text-[#d6d3d1]">
-                  shot={lab.book_judgment_trace.shot_mode} · d=
-                  {lab.book_judgment_trace.unit_counts.destiny} s=
-                  {lab.book_judgment_trace.unit_counts.science} c=
-                  {lab.book_judgment_trace.unit_counts.convergence} · zfpOmitted=
-                  {String(lab.book_judgment_trace.zfpOmitted)} · patternHits=
-                  {lab.book_judgment_trace.pattern_hits_used.length
-                    ? lab.book_judgment_trace.pattern_hits_used.slice(0, 3).join(",")
-                    : "∅"}
-                </p>
+                <div className="mt-1 space-y-1 font-mono text-[9px] text-[#d6d3d1]">
+                  <p>
+                    shot={lab.book_judgment_trace.shot_mode} · n=
+                    {lab.book_judgment_trace.unit_counts.total}
+                    {lab.book_judgment_trace.quota_total_min != null
+                      ? `/${lab.book_judgment_trace.quota_total_min}`
+                      : ""}
+                    {lab.book_judgment_trace.under_density ? " · 过稀" : ""} · d=
+                    {lab.book_judgment_trace.unit_counts.destiny} s=
+                    {lab.book_judgment_trace.unit_counts.science} c=
+                    {lab.book_judgment_trace.unit_counts.convergence}
+                  </p>
+                  {lab.book_judgment_trace.face_matrix?.length ? (
+                    <p className="leading-3 text-[#a1a1aa]">
+                      {lab.book_judgment_trace.face_matrix
+                        .map((r) => {
+                          const bad =
+                            r.missing_destiny ||
+                            r.missing_science ||
+                            r.under_density
+                              ? "!"
+                              : "";
+                          return `${r.faceId}${bad}(${r.destiny}/${r.science}/${r.convergence})`;
+                        })
+                        .join(" ")}
+                    </p>
+                  ) : null}
+                  <p>
+                    patternHits=
+                    {lab.book_judgment_trace.pattern_hits_used.length
+                      ? lab.book_judgment_trace.pattern_hits_used
+                          .slice(0, 3)
+                          .join(",")
+                      : "∅"}
+                    {lab.book_judgment_trace.pattern_hits_unused?.length
+                      ? ` · unused=${lab.book_judgment_trace.pattern_hits_unused
+                          .slice(0, 2)
+                          .join(",")}`
+                      : ""}
+                  </p>
+                </div>
               ) : (
                 <p className="mt-1">待跑 book.judgment · 无 per-page judgment</p>
               )}
@@ -1230,12 +1300,20 @@ export default function DeliveryLabConsolePage() {
               onClick={() => void postAction("approve")}
               className="rounded-md border border-[#9cf0ff]/50 px-3 py-1.5 text-sm text-[#9cf0ff] disabled:opacity-40"
               title={
-                isCompanionStep
-                  ? "Companion 侧轨：gate 过即可人审通过（不推进交付主链 cursor）"
-                  : "gate 未过或非当前 cursor 不可通过"
+                canApprove
+                  ? isCompanionStep
+                    ? "Companion 侧轨：gate 过即可人审通过（不推进交付主链 cursor）"
+                    : isBookJudgmentGateStep
+                      ? "批断包机检过即可通过（勾选可选）"
+                      : "通过并解锁下一步"
+                  : approveBlockReason ?? "不可通过"
               }
             >
-              {isCompanionStep ? "本步通过（人审）" : "本步通过（解锁下一步）"}
+              {isCompanionStep
+                ? "本步通过（人审）"
+                : isBookJudgmentGateStep
+                  ? "本步通过（解锁正文）"
+                  : "本步通过（解锁下一步）"}
             </button>
             {attempts.length > 1 ? (
               <label className="ml-2 text-xs text-[#a1a1aa]">
@@ -1451,9 +1529,17 @@ export default function DeliveryLabConsolePage() {
               {isGateStep ? (
                 <div className="lg:col-span-2">
                   <LabGateQualityChecklist
-                    faceId={selectedFaceId ?? undefined}
+                    faceId={
+                      isBookJudgmentGateStep
+                        ? "book"
+                        : (selectedFaceId ?? undefined)
+                    }
                     formatPassed={Boolean(attempt.gate_verdict.passed)}
-                    formatDetail={attempt.gate_verdict.detail}
+                    formatDetail={
+                      isBookJudgmentGateStep
+                        ? `${attempt.gate_verdict.detail ?? ""} · 勾选可选，机检过即可点「本步通过」`
+                        : attempt.gate_verdict.detail
+                    }
                     value={qualityReview}
                     disabled={rec?.status === "approved"}
                     onChange={setQualityReview}

@@ -43,9 +43,16 @@ export function labPublicView(lab: DeliveryLabSession) {
       }
     : undefined;
   const pack = lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined;
+  const zfpHits =
+    (
+      lab.artifacts.ziwei_fact_pack as
+        | { patternHits?: { name: string }[] }
+        | null
+        | undefined
+    )?.patternHits?.map((h) => h.name) ?? [];
   const book_judgment_trace =
     pack && typeof pack === "object"
-      ? bookJudgmentTraceSummary(pack)
+      ? bookJudgmentTraceSummary(pack, { pattern_hits_available: zfpHits })
       : null;
   return {
     version: lab.version,

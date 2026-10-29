@@ -6,19 +6,30 @@ export {
   BOOK_JUDGMENT_PACK_VERSION,
   BookFaceIdSchema,
   BookJudgmentPackSchema,
+  BookJudgmentSegmentIdSchema,
   BookJudgmentShotModeSchema,
   BookJudgmentTrackSchema,
   BookJudgmentUnitSchema,
   indexBookJudgmentByFace,
+  isWeakScienceAnchor,
+  softRepairFaceDualTrack,
   validateBookJudgmentPack,
   type BookFaceId,
   type BookJudgmentPack,
+  type BookJudgmentSegmentId,
   type BookJudgmentShotMode,
   type BookJudgmentTrack,
   type BookJudgmentUnit,
   type BookJudgmentValidateFail,
   type BookJudgmentValidateOk,
 } from "./schema";
+export {
+  buildBookJudgmentQuotaFromBlueprint,
+  formatQuotaTableForPrompt,
+  type BookJudgmentFaceQuota,
+  type BookJudgmentQuotaTable,
+  type BookJudgmentSegmentSlot,
+} from "./quota-from-blueprint";
 export {
   hashChartFactPackText,
   hashStableJson,
@@ -31,6 +42,7 @@ export {
   sliceBookJudgmentForFace,
   unitsForFace,
   type BookJudgmentFaceSlice,
+  type BookJudgmentFaceTraceRow,
 } from "./slice";
 export {
   runBookJudgmentPackGenerate,

@@ -24,28 +24,33 @@ import {
   indexBookJudgmentByFace,
   validateBookJudgmentPack,
   type BookJudgmentPack,
+  type BookJudgmentSegmentId,
   type BookJudgmentShotMode,
   type BookJudgmentUnit,
 } from "./schema";
+import {
+  buildBookJudgmentQuotaFromBlueprint,
+  formatQuotaTableForPrompt,
+} from "./quota-from-blueprint";
 
 const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmentPack）。
 只输出 JSON，不要 markdown。
 
-## 主心骨
-一次产出全书 destiny + science（可含 convergence）双轨批断原子。每条 unit 必须带 serves_face（01–08 或 03，可多页）。
+## 主心骨（反推）
+配额表从决策报告各页各段反推。只写表内需要的批断；禁止无报告依据自由发挥；不够条数=失败勿早停。
 正文稍后只读切片阐述，本枪禁止手段处方、禁止 primary/backup、禁止恐吓预测。
 
 ## units 规则
 - track=destiny：命理机制；anchors 只许闭集（日主/用忌/大运、格局名、宫干星曜四化等来自喂料 CFP/ZFP）
-- track=science：可验证现代机制/证据；anchors 用科学标签，禁止伪命理词
+- track=science：可验证现代机制句；anchors 禁止纯「科学维N」标签壳
 - track=convergence：交汇句，同时承命理+科学
+- serves_face + serves_segment（A–E）对齐配额段槽
 - claim 短闭集句；每条 anchors≥1
-- 每个 face（01–08+03）至少被 ≥1 条 unit 的 serves_face 覆盖
-- zfp 有格局时：pattern_hits_used 必须列入实际用到的格局名
-- science_tags_used 列入用到的科学锚标签
+- 每脸双轨 + 密度下限见配额表（全书 ≥24 或表内 total_min_units）
+- zfp patternHits：用则写入 pattern_hits_used；不用则在相关 unit 加 caveat 说明为何不用
 
 ## 禁区
-手段处方、攻守祈使收束、恐吓必损必成、primary/backup 回流、无出处现编格局。`;
+手段处方、攻守祈使收束、恐吓必损必成、primary/backup 回流、无出处现编格局、顺推硬塞空壳。`;
 
 const JSON_SHAPE = `输出 JSON：
 {
@@ -53,14 +58,15 @@ const JSON_SHAPE = `输出 JSON：
     {
       "id": "d01",
       "track": "destiny"|"science"|"convergence",
-      "serves_face": ["02","04"],
+      "serves_face": ["02"],
+      "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句",
-      "anchors": ["格局名或科学锚"],
+      "anchors": ["格局名或机制句"],
       "caveat": "可选"
     }
   ],
   "pattern_hits_used": ["格局名…"],
-  "science_tags_used": ["标签…"]
+  "science_tags_used": ["机制词…"]
 }`;
 
 export type BookJudgmentGenerateOk = {
@@ -97,6 +103,13 @@ function isDegradeReason(reason: string, finish: string | null): boolean {
     r === "missing_science_track" ||
     r === "missing_pattern_hits" ||
     r === "empty_face" ||
+    r === "face_missing_destiny" ||
+    r === "face_missing_science" ||
+    r === "face_under_density" ||
+    r === "under_density" ||
+    r === "segment_uncovered" ||
+    r === "segment_track_mismatch" ||
+    r === "weak_science_anchor" ||
     r === "schema" ||
     r === "truncated" ||
     r === "quality_drift"
@@ -138,10 +151,17 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     if (!claim || !anchors.length) continue;
     const id = String(row.id ?? `${track}_${i + 1}`).trim().slice(0, 64) || `${track}_${i + 1}`;
     const caveat = String(row.caveat ?? "").trim();
+    const segRaw = String(row.serves_segment ?? "").trim().toUpperCase();
+    const serves_segment = (["A", "B", "C", "D", "E"] as const).includes(
+      segRaw as BookJudgmentSegmentId,
+    )
+      ? (segRaw as BookJudgmentSegmentId)
+      : undefined;
     units.push({
       id,
       track,
       serves_face: serves as BookJudgmentUnit["serves_face"],
+      ...(serves_segment ? { serves_segment } : {}),
       claim: claim.slice(0, 400),
       anchors: anchors as [string, ...string[]],
       ...(caveat ? { caveat: caveat.slice(0, 240) } : {}),
@@ -373,6 +393,12 @@ function feedBlock(input: {
   if (input.question?.trim()) {
     parts.push(`## 原问\n${input.question.trim().slice(0, 1_200)}`);
   }
+  const hits = patternHitsFromZiwei(input.ziwei);
+  if (hits.length) {
+    parts.push(
+      `## ZFP patternHits 全量（用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
+    );
+  }
   parts.push(
     `## faces 必须覆盖\n${BOOK_FACE_IDS.join(", ")}`,
     JSON_SHAPE,
@@ -399,6 +425,8 @@ export async function runBookJudgmentPackGenerate(input: {
 }): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> {
   const chartText = input.chart_fact_pack?.trim() ?? "";
   const ziwei = input.ziwei_fact_pack ?? null;
+  const quota = buildBookJudgmentQuotaFromBlueprint();
+  const quotaBlock = formatQuotaTableForPrompt(quota);
   let tokens_used = 0;
 
   const finishOneShot = async (): Promise<
@@ -415,7 +443,8 @@ export async function runBookJudgmentPackGenerate(input: {
     });
     const user = [
       `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
-      `同时产出 destiny + science（可含 convergence）。每个 face 至少 1 条。`,
+      `按配额表产出；total_min_units=${quota.total_min_units}；每脸 dual-track + serves_segment。`,
+      quotaBlock,
       user_feed,
     ].join("\n\n");
     const shot = await callPackShot({
@@ -467,7 +496,7 @@ export async function runBookJudgmentPackGenerate(input: {
       pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
       science_tags_used: stringList(shot.parsed, "science_tags_used"),
     });
-    const validated = validateBookJudgmentPack(draft);
+    const validated = validateBookJudgmentPack(draft, quota);
     if (!validated.ok) {
       if (isDegradeReason(validated.reason, shot.finish)) {
         return {
@@ -509,7 +538,8 @@ export async function runBookJudgmentPackGenerate(input: {
     });
     const destinyUser = [
       `## BookJudgmentPack · 两枪·destiny locale=${input.locale}`,
-      `只产出 track=destiny（可少量 convergence）。覆盖全部 faces。`,
+      `只产出 track=destiny（可少量 convergence）。覆盖配额表全部 faces/段。`,
+      quotaBlock,
       destinyFeed,
     ].join("\n\n");
     const dShot = await callPackShot({
@@ -557,7 +587,8 @@ export async function runBookJudgmentPackGenerate(input: {
     });
     const scienceUser = [
       `## BookJudgmentPack · 两枪·science locale=${input.locale}`,
-      `只产出 track=science（可少量 convergence）。覆盖全部 faces。合并键 serves_face。`,
+      `只产出 track=science（可少量 convergence）。覆盖配额表；禁「科学维N」空壳。合并键 serves_face。`,
+      quotaBlock,
       scienceFeed,
     ].join("\n\n");
     const sShot = await callPackShot({
@@ -613,7 +644,7 @@ export async function runBookJudgmentPackGenerate(input: {
         ...stringList(sShot.parsed, "science_tags_used"),
       ],
     });
-    const validated = validateBookJudgmentPack(draft);
+    const validated = validateBookJudgmentPack(draft, quota);
     if (!validated.ok) {
       return {
         ok: false,

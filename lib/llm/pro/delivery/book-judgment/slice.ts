@@ -8,6 +8,8 @@ import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import type { BookFaceId, BookJudgmentPack, BookJudgmentUnit } from "./schema";
 import { BOOK_FACE_IDS } from "./schema";
+import type { BookJudgmentQuotaTable } from "./quota-from-blueprint";
+import { buildBookJudgmentQuotaFromBlueprint } from "./quota-from-blueprint";
 
 export type BookJudgmentFaceSlice = {
   faceId: BookFaceId;
@@ -39,6 +41,7 @@ export function formatBookJudgmentPackBlock(
       units.map((u) => ({
         id: u.id,
         track: u.track,
+        serves_segment: u.serves_segment,
         claim: u.claim,
         anchors: u.anchors,
         ...(u.caveat ? { caveat: u.caveat } : {}),
@@ -105,26 +108,94 @@ export function deepEvidencePlanFromBookPack(
   return { page: page as DeliverySegmentKey, units: mapped };
 }
 
-export function bookJudgmentTraceSummary(pack: BookJudgmentPack): {
+export type BookJudgmentFaceTraceRow = {
+  faceId: string;
+  destiny: number;
+  science: number;
+  convergence: number;
+  total: number;
+  missing_destiny: boolean;
+  missing_science: boolean;
+  under_density: boolean;
+  segment_coverage: number;
+  segment_needed: number;
+};
+
+export function bookJudgmentTraceSummary(
+  pack: BookJudgmentPack,
+  opts?: {
+    quota?: BookJudgmentQuotaTable;
+    pattern_hits_available?: string[];
+  },
+): {
   shot_mode: string;
   unit_counts: { destiny: number; science: number; convergence: number; total: number };
   by_face_coverage: Record<string, number>;
+  face_matrix: BookJudgmentFaceTraceRow[];
   zfpOmitted: boolean;
   pattern_hits_used: string[];
+  pattern_hits_available: string[];
+  pattern_hits_unused: string[];
   science_tags_used: string[];
+  quota_total_min: number;
+  under_density: boolean;
 } {
+  const quota = opts?.quota ?? buildBookJudgmentQuotaFromBlueprint();
   const unit_counts = { destiny: 0, science: 0, convergence: 0, total: pack.units.length };
   for (const u of pack.units) unit_counts[u.track] += 1;
   const by_face_coverage: Record<string, number> = {};
-  for (const face of BOOK_FACE_IDS) {
-    by_face_coverage[face] = (pack.by_face[face] ?? []).length;
+  const face_matrix: BookJudgmentFaceTraceRow[] = [];
+  for (const faceQuota of quota.faces) {
+    const face = faceQuota.faceId;
+    const units = unitsForFace(pack, face);
+    by_face_coverage[face] = units.length;
+    const destiny = units.filter(
+      (u) => u.track === "destiny" || u.track === "convergence",
+    ).length;
+    const science = units.filter(
+      (u) => u.track === "science" || u.track === "convergence",
+    ).length;
+    const convergence = units.filter((u) => u.track === "convergence").length;
+    const needed = faceQuota.segment_slots.filter((s) => s.needs_unit);
+    let covered = 0;
+    for (const slot of needed) {
+      const hit =
+        units.some((u) => u.serves_segment === slot.segmentId) ||
+        units.some((u) => {
+          if (slot.preferred_track === "any") return true;
+          if (u.track === slot.preferred_track) return true;
+          if (u.track === "convergence") return true;
+          return false;
+        });
+      if (hit) covered += 1;
+    }
+    face_matrix.push({
+      faceId: face,
+      destiny,
+      science,
+      convergence,
+      total: units.length,
+      missing_destiny: destiny < faceQuota.min_destiny,
+      missing_science: science < faceQuota.min_science,
+      under_density: units.length < faceQuota.min_units,
+      segment_coverage: covered,
+      segment_needed: needed.length,
+    });
   }
+  const available = opts?.pattern_hits_available ?? [];
+  const used = [...pack.pattern_hits_used];
+  const unused = available.filter((n) => !used.includes(n));
   return {
     shot_mode: pack.shot_mode,
     unit_counts,
     by_face_coverage,
+    face_matrix,
     zfpOmitted: pack.zfpOmitted,
-    pattern_hits_used: [...pack.pattern_hits_used],
+    pattern_hits_used: used,
+    pattern_hits_available: available,
+    pattern_hits_unused: unused,
     science_tags_used: [...pack.science_tags_used],
+    quota_total_min: quota.total_min_units,
+    under_density: pack.units.length < quota.total_min_units,
   };
 }

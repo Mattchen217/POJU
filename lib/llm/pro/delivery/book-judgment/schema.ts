@@ -1,10 +1,12 @@
 /**
- * BookJudgmentPack · Zod SoT (Canvas lock 2026-10-29).
- * Destiny + science dual-track; units keyed by serves_face.
+ * BookJudgmentPack · Zod SoT (Canvas lock 2026-10-29 + 达标改造).
+ * Destiny + science dual-track; units keyed by serves_face (+ optional serves_segment).
  */
 
 import { z } from "zod";
 import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import type { BookJudgmentQuotaTable } from "./quota-from-blueprint";
+import { buildBookJudgmentQuotaFromBlueprint } from "./quota-from-blueprint";
 
 export const BOOK_JUDGMENT_PACK_VERSION = 1 as const;
 
@@ -25,10 +27,15 @@ export type BookJudgmentTrack = z.infer<typeof BookJudgmentTrackSchema>;
 export const BookJudgmentShotModeSchema = z.enum(["one", "two"]);
 export type BookJudgmentShotMode = z.infer<typeof BookJudgmentShotModeSchema>;
 
+export const BookJudgmentSegmentIdSchema = z.enum(["A", "B", "C", "D", "E"]);
+export type BookJudgmentSegmentId = z.infer<typeof BookJudgmentSegmentIdSchema>;
+
 export const BookJudgmentUnitSchema = z.object({
   id: z.string().trim().min(1).max(64),
   track: BookJudgmentTrackSchema,
   serves_face: z.array(BookFaceIdSchema).min(1).max(9),
+  /** Segment back-ref for face body slots. */
+  serves_segment: BookJudgmentSegmentIdSchema.optional(),
   claim: z.string().trim().min(1).max(400),
   anchors: z.array(z.string().trim().min(1).max(120)).min(1).max(8),
   caveat: z.string().trim().max(240).optional(),
@@ -45,7 +52,7 @@ export const BookJudgmentPackSchema = z.object({
   zfpOmitted: z.boolean(),
   shot_mode: BookJudgmentShotModeSchema,
   created_at: z.string().trim().min(1),
-  units: z.array(BookJudgmentUnitSchema).min(1).max(80),
+  units: z.array(BookJudgmentUnitSchema).min(1).max(120),
   by_face: z.record(z.string(), z.array(z.string().trim().min(1))),
   pattern_hits_used: z.array(z.string().trim().min(1).max(80)).default([]),
   science_tags_used: z.array(z.string().trim().min(1).max(80)).default([]),
@@ -75,14 +82,32 @@ export function indexBookJudgmentByFace(
   return out;
 }
 
+/** Reject pure 「科学维N」 label shells. */
+export function isWeakScienceAnchor(anchor: string): boolean {
+  const t = anchor.trim();
+  if (!t) return true;
+  if (/^科学维\s*\d+/i.test(t)) return true;
+  if (/^sci(ence)?[_\s-]?\d+$/i.test(t)) return true;
+  if (/^维\s*\d+$/i.test(t)) return true;
+  return false;
+}
+
+function trackCovers(
+  unitTrack: BookJudgmentTrack,
+  preferred: "destiny" | "science" | "convergence" | "any",
+): boolean {
+  if (preferred === "any") return true;
+  if (unitTrack === preferred) return true;
+  if (unitTrack === "convergence") return true;
+  return false;
+}
+
 /**
- * Dual-track + coverage gate.
- * - Must have destiny and science (or convergence covering both roles).
- * - by_face must cover every face 01–08+03 with ≥1 unit.
- * - When zfpOmitted=false, pattern_hits_used must be non-empty.
+ * Dual-track + density + segment coverage gate (quota from blueprint).
  */
 export function validateBookJudgmentPack(
   raw: unknown,
+  quota: BookJudgmentQuotaTable = buildBookJudgmentQuotaFromBlueprint(),
 ): BookJudgmentValidateOk | BookJudgmentValidateFail {
   const parsed = BookJudgmentPackSchema.safeParse(raw);
   if (!parsed.success) {
@@ -113,12 +138,17 @@ export function validateBookJudgmentPack(
   if (!hasScience) {
     return { ok: false, reason: "missing_science_track" };
   }
-  // Prefer explicit both tracks; convergence may stand in for either side.
-  if (!tracks.has("destiny") && !tracks.has("science") && !tracks.has("convergence")) {
-    return { ok: false, reason: "missing_dual_track" };
+
+  if (pack.units.length < quota.total_min_units) {
+    return {
+      ok: false,
+      reason: "under_density",
+      detail: `units=${pack.units.length} < total_min_units=${quota.total_min_units}`,
+    };
   }
 
-  for (const face of BOOK_FACE_IDS) {
+  for (const faceQuota of quota.faces) {
+    const face = faceQuota.faceId;
     const list = by_face[face] ?? [];
     if (list.length === 0) {
       return { ok: false, reason: "empty_face", detail: `by_face[${face}] empty` };
@@ -129,6 +159,95 @@ export function validateBookJudgmentPack(
           ok: false,
           reason: "orphan_face_index",
           detail: `${face}→${id}`,
+        };
+      }
+    }
+    const faceUnits = pack.units.filter((u) => list.includes(u.id));
+    if (faceUnits.length < faceQuota.min_units) {
+      return {
+        ok: false,
+        reason: "face_under_density",
+        detail: `face ${face} units=${faceUnits.length} < min=${faceQuota.min_units}`,
+      };
+    }
+    const faceTracks = new Set(faceUnits.map((u) => u.track));
+    const faceDestiny =
+      faceTracks.has("destiny") || faceTracks.has("convergence");
+    const faceScience =
+      faceTracks.has("science") || faceTracks.has("convergence");
+    if (!faceDestiny) {
+      return {
+        ok: false,
+        reason: "face_missing_destiny",
+        detail: `by_face[${face}] has no destiny|convergence`,
+      };
+    }
+    if (!faceScience) {
+      return {
+        ok: false,
+        reason: "face_missing_science",
+        detail: `by_face[${face}] has no science|convergence`,
+      };
+    }
+    const destinyCount = faceUnits.filter(
+      (u) => u.track === "destiny" || u.track === "convergence",
+    ).length;
+    const scienceCount = faceUnits.filter(
+      (u) => u.track === "science" || u.track === "convergence",
+    ).length;
+    if (destinyCount < faceQuota.min_destiny) {
+      return {
+        ok: false,
+        reason: "face_missing_destiny",
+        detail: `face ${face} destiny-like=${destinyCount} < ${faceQuota.min_destiny}`,
+      };
+    }
+    if (scienceCount < faceQuota.min_science) {
+      return {
+        ok: false,
+        reason: "face_missing_science",
+        detail: `face ${face} science-like=${scienceCount} < ${faceQuota.min_science}`,
+      };
+    }
+
+    for (const slot of faceQuota.segment_slots) {
+      if (!slot.needs_unit) continue;
+      const bySeg = faceUnits.filter((u) => u.serves_segment === slot.segmentId);
+      if (bySeg.length > 0) {
+        const okTrack = bySeg.some((u) =>
+          trackCovers(u.track, slot.preferred_track),
+        );
+        if (!okTrack && slot.preferred_track !== "any") {
+          return {
+            ok: false,
+            reason: "segment_track_mismatch",
+            detail: `face ${face} seg ${slot.segmentId} needs track≈${slot.preferred_track}`,
+          };
+        }
+        continue;
+      }
+      // Fallback: preferred_track unit on face without serves_segment
+      const fallback = faceUnits.filter((u) =>
+        trackCovers(u.track, slot.preferred_track),
+      );
+      if (!fallback.length) {
+        return {
+          ok: false,
+          reason: "segment_uncovered",
+          detail: `face ${face} seg ${slot.segmentId}「${slot.label}」无 unit`,
+        };
+      }
+    }
+  }
+
+  for (const u of pack.units) {
+    if (u.track !== "science" && u.track !== "convergence") continue;
+    for (const a of u.anchors) {
+      if (isWeakScienceAnchor(a)) {
+        return {
+          ok: false,
+          reason: "weak_science_anchor",
+          detail: `unit ${u.id} anchor「${a}」禁止纯科学维N标签`,
         };
       }
     }
@@ -143,4 +262,17 @@ export function validateBookJudgmentPack(
   }
 
   return { ok: true, pack };
+}
+
+/**
+ * @deprecated Canvas 达标改造：禁止顺推硬塞过闸。保留仅供测试/诊断，generate/gate 不得调用。
+ */
+export function softRepairFaceDualTrack(
+  units: readonly BookJudgmentUnit[],
+): BookJudgmentUnit[] {
+  return units.map((u) => ({
+    ...u,
+    serves_face: [...u.serves_face] as BookJudgmentUnit["serves_face"],
+    anchors: [...u.anchors],
+  }));
 }

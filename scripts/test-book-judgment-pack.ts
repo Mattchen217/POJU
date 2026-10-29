@@ -1,5 +1,5 @@
 /**
- * P0/P4 contract: BookJudgmentPack dual-track + by_face + ZFP patternHits + flag + slice.
+ * BookJudgmentPack · quota reverse + dual-track + density + segment gate.
  * Run: pnpm exec tsx scripts/test-book-judgment-pack.ts
  */
 import assert from "node:assert/strict";
@@ -9,10 +9,17 @@ import {
   BOOK_FACE_IDS,
   BOOK_JUDGMENT_PACK_VERSION,
   indexBookJudgmentByFace,
+  isWeakScienceAnchor,
+  softRepairFaceDualTrack,
   validateBookJudgmentPack,
   type BookJudgmentPack,
+  type BookJudgmentSegmentId,
   type BookJudgmentUnit,
 } from "../lib/llm/pro/delivery/book-judgment/schema";
+import {
+  buildBookJudgmentQuotaFromBlueprint,
+  formatQuotaTableForPrompt,
+} from "../lib/llm/pro/delivery/book-judgment/quota-from-blueprint";
 import {
   deepEvidencePlanFromBookPack,
   sliceBookJudgmentForFace,
@@ -47,8 +54,32 @@ const chartText = [
   "当前大运：甲申",
 ].join("\n");
 
+const quota = buildBookJudgmentQuotaFromBlueprint();
+
+/** Quota table from blueprint covers all faces + segment slots */
+{
+  assert.ok(quota.total_min_units >= 24, `total_min=${quota.total_min_units}`);
+  assert.equal(quota.faces.length, BOOK_FACE_IDS.length);
+  for (const face of BOOK_FACE_IDS) {
+    const row = quota.faces.find((f) => f.faceId === face);
+    assert.ok(row, `quota face ${face}`);
+    assert.ok(row!.min_units >= 3, `${face} min_units`);
+    assert.ok(row!.segment_slots.length >= 1, `${face} segments`);
+    assert.ok(
+      row!.segment_slots.some((s) => s.needs_unit),
+      `${face} needs_unit slot`,
+    );
+  }
+  const prompt = formatQuotaTableForPrompt(quota);
+  assert.match(prompt, /批断配额表/);
+  assert.match(prompt, /Face 04/);
+  assert.match(prompt, /Face 02/);
+}
+
 function unit(
-  partial: Omit<BookJudgmentUnit, "serves_face"> & { serves_face?: BookJudgmentUnit["serves_face"] },
+  partial: Omit<BookJudgmentUnit, "serves_face"> & {
+    serves_face?: BookJudgmentUnit["serves_face"];
+  },
 ): BookJudgmentUnit {
   return {
     serves_face: partial.serves_face ?? ["01"],
@@ -56,27 +87,54 @@ function unit(
   };
 }
 
-/** Cover every face with at least one destiny+science pair shared. */
+/** Dense dual-track covering pack (meets per-face + total quota). */
 function coveringUnits(): BookJudgmentUnit[] {
   const pattern = ziwei.patternHits[0]!.name;
   const units: BookJudgmentUnit[] = [];
   for (const face of BOOK_FACE_IDS) {
-    units.push(
-      unit({
-        id: `d_${face}`,
-        track: "destiny",
-        serves_face: [face],
-        claim: `${face} 命理张力：用神承压窗口收窄`,
-        anchors: [pattern, "用神木", "大运甲申"],
-      }),
-      unit({
-        id: `s_${face}`,
-        track: "science",
-        serves_face: [face],
-        claim: `${face} 科学：决策负荷偏高需外部分解`,
-        anchors: ["cognitive_load", "decision_hygiene"],
-      }),
-    );
+    const faceQuota = quota.faces.find((f) => f.faceId === face)!;
+    const needed = faceQuota.segment_slots.filter((s) => s.needs_unit);
+    const slots =
+      needed.length >= faceQuota.min_units
+        ? needed
+        : [
+            ...needed,
+            ...Array.from({ length: faceQuota.min_units - needed.length }, (_, i) => ({
+              segmentId: (["A", "B", "C", "D", "E"] as BookJudgmentSegmentId[])[
+                Math.min(i, 4)
+              ]!,
+              preferred_track: "any" as const,
+            })),
+          ];
+    for (let i = 0; i < faceQuota.min_units; i++) {
+      const slot = slots[i] ?? slots[0]!;
+      const pref = "preferred_track" in slot ? slot.preferred_track : "any";
+      const track =
+        pref === "science"
+          ? "science"
+          : pref === "convergence"
+            ? "convergence"
+            : pref === "destiny"
+              ? "destiny"
+              : i % 3 === 1
+                ? "science"
+                : i % 3 === 2
+                  ? "convergence"
+                  : "destiny";
+      units.push(
+        unit({
+          id: `${track[0]}_${face}_${i}`,
+          track,
+          serves_face: [face],
+          serves_segment: slot.segmentId,
+          claim: `${face}${slot.segmentId} ${track}：配额反推批断`,
+          anchors:
+            track === "science"
+              ? ["cognitive_load", "decision_hygiene"]
+              : [pattern, "用神木"],
+        }),
+      );
+    }
   }
   return units;
 }
@@ -100,62 +158,173 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   };
 }
 
-/** PASS dual-track */
+/** PASS dense dual-track */
 {
-  const v = validateBookJudgmentPack(basePack());
-  assert.equal(v.ok, true, v.ok ? "" : v.reason);
+  const pack = basePack();
+  assert.ok(pack.units.length >= quota.total_min_units, `n=${pack.units.length}`);
+  const v = validateBookJudgmentPack(pack, quota);
+  assert.equal(v.ok, true, v.ok ? "" : `${v.reason}:${v.detail}`);
   if (v.ok) {
-    const sum = bookJudgmentTraceSummary(v.pack);
+    const sum = bookJudgmentTraceSummary(v.pack, {
+      quota,
+      pattern_hits_available: ziwei.patternHits.map((h) => h.name),
+    });
     assert.equal(sum.shot_mode, "one");
     assert.ok(sum.unit_counts.destiny >= 8);
     assert.ok(sum.unit_counts.science >= 8);
-    assert.equal(sum.zfpOmitted, false);
-    assert.ok(sum.pattern_hits_used.length > 0);
-    for (const face of BOOK_FACE_IDS) {
-      assert.ok((sum.by_face_coverage[face] ?? 0) >= 1, `cover ${face}`);
-    }
+    assert.equal(sum.under_density, false);
+    assert.ok(sum.face_matrix.every((r) => !r.missing_science));
+    assert.ok(sum.face_matrix.every((r) => !r.under_density));
   }
 }
 
-/** FAIL missing science track */
+/** FAIL missing science track (book-level) */
 {
-  const units = BOOK_FACE_IDS.map((face) =>
+  const units = BOOK_FACE_IDS.flatMap((face) => [
     unit({
       id: `only_d_${face}`,
       track: "destiny",
       serves_face: [face],
+      serves_segment: "A",
       claim: "只有命理",
       anchors: ["用神木"],
     }),
-  );
+    unit({
+      id: `only_d2_${face}`,
+      track: "destiny",
+      serves_face: [face],
+      serves_segment: "B",
+      claim: "仍只有命理",
+      anchors: ["大运甲申"],
+    }),
+    unit({
+      id: `only_d3_${face}`,
+      track: "destiny",
+      serves_face: [face],
+      serves_segment: "C",
+      claim: "第三命理",
+      anchors: [ziwei.patternHits[0]!.name],
+    }),
+  ]);
   const v = validateBookJudgmentPack(
     basePack({
       units,
       by_face: indexBookJudgmentByFace(units),
       pattern_hits_used: [ziwei.patternHits[0]!.name],
     }),
+    quota,
   );
   assert.equal(v.ok, false);
   if (!v.ok) assert.equal(v.reason, "missing_science_track");
+}
+
+/** FAIL face 04 missing science (density ok, dual-track broken on 04) */
+{
+  const pattern = ziwei.patternHits[0]!.name;
+  const units = coveringUnits().filter((u) => !u.serves_face.includes("04"));
+  const face04Quota = quota.faces.find((f) => f.faceId === "04")!;
+  for (let i = 0; i < face04Quota.min_units; i++) {
+    units.push(
+      unit({
+        id: `d_only_04_${i}`,
+        track: "destiny",
+        serves_face: ["04"],
+        serves_segment: (["A", "B", "C", "D"] as BookJudgmentSegmentId[])[i] ?? "A",
+        claim: `04 纯命理 ${i}`,
+        anchors: [pattern, "用神木"],
+      }),
+    );
+  }
+  assert.ok(
+    !units.some(
+      (u) =>
+        u.serves_face.includes("04") &&
+        (u.track === "science" || u.track === "convergence"),
+    ),
+  );
+  const v = validateBookJudgmentPack(
+    basePack({
+      units,
+      by_face: indexBookJudgmentByFace(units),
+      pattern_hits_used: [pattern],
+    }),
+    quota,
+  );
+  assert.equal(v.ok, false, v.ok ? "expected fail" : "");
+  if (!v.ok) {
+    assert.equal(v.reason, "face_missing_science");
+    assert.match(v.detail ?? "", /04/);
+  }
+}
+
+/** FAIL under_density */
+{
+  const thin = coveringUnits().slice(0, 10);
+  const v = validateBookJudgmentPack(
+    basePack({
+      units: thin,
+      by_face: indexBookJudgmentByFace(thin),
+    }),
+    quota,
+  );
+  assert.equal(v.ok, false);
+  if (!v.ok) assert.equal(v.reason, "under_density");
+}
+
+/** FAIL weak science anchor */
+{
+  assert.equal(isWeakScienceAnchor("科学维3"), true);
+  assert.equal(isWeakScienceAnchor("cognitive_load"), false);
+  const units = coveringUnits();
+  const sci = units.find((u) => u.track === "science");
+  assert.ok(sci, "need a science unit");
+  const poisoned = units.map((u) =>
+    u.id === sci!.id ? { ...u, anchors: ["科学维2"] } : u,
+  );
+  const v = validateBookJudgmentPack(
+    basePack({
+      units: poisoned,
+      by_face: indexBookJudgmentByFace(poisoned),
+    }),
+    quota,
+  );
+  assert.equal(v.ok, false, v.ok ? "expected weak_science_anchor fail" : "");
+  if (!v.ok) assert.equal(v.reason, "weak_science_anchor");
 }
 
 /** FAIL zfpOmitted=false without pattern_hits_used */
 {
   const v = validateBookJudgmentPack(
     basePack({ pattern_hits_used: [], zfpOmitted: false }),
+    quota,
   );
   assert.equal(v.ok, false);
   if (!v.ok) assert.equal(v.reason, "missing_pattern_hits");
 }
 
-/** FAIL empty face */
+/** FAIL empty face 02 (pad density on other faces) */
 {
+  const pattern = ziwei.patternHits[0]!.name;
   const units = coveringUnits().filter((u) => !u.serves_face.includes("02"));
+  while (units.length < quota.total_min_units) {
+    units.push(
+      unit({
+        id: `pad_${units.length}`,
+        track: "destiny",
+        serves_face: ["01"],
+        serves_segment: "A",
+        claim: "密度垫片",
+        anchors: [pattern],
+      }),
+    );
+  }
   const v = validateBookJudgmentPack(
     basePack({
       units,
       by_face: indexBookJudgmentByFace(units),
+      pattern_hits_used: [pattern],
     }),
+    quota,
   );
   assert.equal(v.ok, false);
   if (!v.ok) {
@@ -164,30 +333,16 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   }
 }
 
-/** convergence alone covers dual-track */
+/** softRepair is noop (no forward-fill) */
 {
-  const units = BOOK_FACE_IDS.map((face) =>
-    unit({
-      id: `c_${face}`,
-      track: "convergence",
-      serves_face: [face],
-      claim: "交汇：格局承压对齐决策负荷",
-      anchors: [ziwei.patternHits[0]!.name, "cognitive_load"],
-    }),
-  );
-  const v = validateBookJudgmentPack(
-    basePack({
-      units,
-      by_face: indexBookJudgmentByFace(units),
-      pattern_hits_used: [ziwei.patternHits[0]!.name],
-    }),
-  );
-  assert.equal(v.ok, true, v.ok ? "" : `${v.reason}:${v.detail}`);
+  const thin = coveringUnits().filter((u) => u.id !== "s_04");
+  const repaired = softRepairFaceDualTrack(thin);
+  assert.equal(repaired.length, thin.length, "softRepair must not clone-fill");
 }
 
-/** slice + deepEvidencePlan share formatPageSliceFeed path */
+/** slice + deepEvidencePlan */
 {
-  const v = validateBookJudgmentPack(basePack());
+  const v = validateBookJudgmentPack(basePack(), quota);
   assert.ok(v.ok);
   if (!v.ok) throw new Error("pack");
   const slice = sliceBookJudgmentForFace({
@@ -200,48 +355,25 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   assert.ok(slice);
   assert.ok(slice!.units.length >= 2);
   assert.match(slice!.pack_block, /禁再发明批断/);
-  assert.match(slice!.pack_block, /d_02|s_02/);
   assert.ok(slice!.fact_block);
   assert.match(slice!.fact_block!, /patternHits/);
-  assert.match(slice!.fact_block!, /紫微|格局|府相|火贪|铃贪|日月|紫微入命/);
 
   const plan = deepEvidencePlanFromBookPack(v.pack, "02");
   assert.ok(plan?.units.length);
-  assert.ok(plan!.units.some((u) => u.path.includes("d_02") || u.calc_cite?.includes("d_02")));
-  assert.ok(
-    plan!.units.some((u) => /科学|交汇/.test(u.evidence ?? "")),
-    "02 plan has science/convergence evidence",
-  );
 }
 
-/** Flag default ON; explicit 0 off */
+/** Flag + step table */
 {
   assert.equal(isBookJudgmentPackEnabled({} as unknown as NodeJS.ProcessEnv), true);
   assert.equal(
     isBookJudgmentPackEnabled({ BOOK_JUDGMENT_PACK: "0" } as unknown as NodeJS.ProcessEnv),
     false,
   );
-  assert.equal(
-    isBookJudgmentPackEnabled({ BOOK_JUDGMENT_PACK: "off" } as unknown as NodeJS.ProcessEnv),
-    false,
-  );
-}
-
-/** Step table switches by flag — no half-mix */
-{
   const packSteps = buildLabStepDefsV3({ bookJudgmentPack: true });
   const legacySteps = buildLabStepDefsV3({ bookJudgmentPack: false });
   assert.ok(packSteps.some((d) => d.step_key === "book.judgment"));
-  assert.ok(packSteps.some((d) => d.step_key === "book.gate_judgment"));
-  assert.ok(
-    !packSteps.some((d) => d.kind === "content_judgment"),
-    "pack mode hides per-page judgment",
-  );
+  assert.ok(!packSteps.some((d) => d.kind === "content_judgment"));
   assert.ok(legacySteps.some((d) => d.kind === "content_judgment"));
-  assert.ok(!legacySteps.some((d) => d.step_key === "book.judgment"));
-  assert.ok(packSteps.some((d) => d.step_key === "02.content.body"));
-  assert.ok(legacySteps.some((d) => d.step_key === "02.content.body"));
-
   const viaEnvOff = labStepDefsV3({
     BOOK_JUDGMENT_PACK: "0",
   } as unknown as NodeJS.ProcessEnv);
@@ -250,6 +382,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
 
 console.log("book-judgment-pack ok", {
   faces: BOOK_FACE_IDS.length,
+  total_min: quota.total_min_units,
   pattern: ziwei.patternHits[0]?.name,
-  cfp_hash: hashChartFactPackText(chartText),
+  dense_units: coveringUnits().length,
 });

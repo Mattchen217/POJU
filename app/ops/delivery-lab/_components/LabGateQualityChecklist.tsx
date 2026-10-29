@@ -27,6 +27,10 @@ export function LabGateQualityChecklist({
   onChange: (next: QualityReviewState) => void;
 }) {
   const relevant = FACE_QUALITY_CHECK_IDS.filter((id) => {
+    /** BookJudgmentPack gate — only dual-track + slice-collapse matter. */
+    if (faceId === "book") {
+      return id === "dual_track_holds" || id === "collapses_without_slice";
+    }
     if (id === "07_no_marriage_scare") return !faceId || faceId === "07";
     if (id === "01_points_to_02") return !faceId || faceId === "01" || faceId === "02";
     if (id === "05_real_options") return !faceId || faceId === "05";

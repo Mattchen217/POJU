@@ -53,6 +53,7 @@ import {
   validateBookJudgmentPack,
   type BookJudgmentPack,
 } from "@/lib/llm/pro/delivery/book-judgment/schema";
+import { buildBookJudgmentQuotaFromBlueprint } from "@/lib/llm/pro/delivery/book-judgment/quota-from-blueprint";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
@@ -1329,7 +1330,13 @@ async function executeV3(
     }
     lab.artifacts.book_judgment_pack = generated.pack;
     projectBookPackOntoFaces(lab, generated.pack);
-    const trace = bookJudgmentTraceSummary(generated.pack);
+    const quotaGen = buildBookJudgmentQuotaFromBlueprint();
+    const zfpAvail =
+      (opts.ziwei_fact_pack?.patternHits ?? []).map((h) => h.name) ?? [];
+    const trace = bookJudgmentTraceSummary(generated.pack, {
+      quota: quotaGen,
+      pattern_hits_available: zfpAvail,
+    });
     return {
       input_payload: {
         pipeline: "book_judgment_pack",
@@ -1362,8 +1369,11 @@ async function executeV3(
   }
 
   if (def.kind === "gate_book_judgment") {
-    const pack = lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined;
-    if (!pack) {
+    const rawPack = lab.artifacts.book_judgment_pack as
+      | BookJudgmentPack
+      | null
+      | undefined;
+    if (!rawPack) {
       return {
         input_payload: { pipeline: "book_judgment_pack", phase: "gate" },
         raw_model_output: null,
@@ -1377,7 +1387,9 @@ async function executeV3(
         error: "missing_book_judgment_pack",
       };
     }
-    const validated = validateBookJudgmentPack(pack);
+    const quota = buildBookJudgmentQuotaFromBlueprint();
+    /** No softRepair — 缺配额 = FAIL，正文冻结。 */
+    const validated = validateBookJudgmentPack(rawPack, quota);
     if (!validated.ok) {
       return {
         input_payload: {
@@ -1385,15 +1397,18 @@ async function executeV3(
           phase: "gate",
           reason: validated.reason,
           detail: validated.detail,
+          quota_total_min: quota.total_min_units,
+          body_frozen: true,
         },
-        raw_model_output: pack,
+        raw_model_output: rawPack,
         processing_actions: [
           { action: "validateBookJudgmentPack", detail: validated.reason },
+          { action: "body_frozen", detail: "pack quota FAIL" },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: validated.reason,
-          detail: validated.detail ?? validated.reason,
+          detail: `${validated.detail ?? validated.reason} · 正文冻结 · 回改包枪`,
         },
         output_to_next_stage: null,
         error: validated.reason,
@@ -1401,13 +1416,20 @@ async function executeV3(
     }
     lab.artifacts.book_judgment_pack = validated.pack;
     projectBookPackOntoFaces(lab, validated.pack);
-    const trace = bookJudgmentTraceSummary(validated.pack);
+    const zfpNames =
+      (lab.artifacts.ziwei_fact_pack as { patternHits?: { name: string }[] } | null)
+        ?.patternHits?.map((h) => h.name) ?? [];
+    const trace = bookJudgmentTraceSummary(validated.pack, {
+      quota,
+      pattern_hits_available: zfpNames,
+    });
     return {
       input_payload: {
         pipeline: "book_judgment_pack",
         phase: "gate",
         quality_checklist:
-          "人审：双轨站得住；删 pack 切片后正文应垮；patternHits 入包（zfpOmitted=false 时）",
+          "机检过即可点「本步通过」解锁正文；可选勾选双轨/删切片后垮",
+        quota_total_min: quota.total_min_units,
         ...trace,
         zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
       },
@@ -1416,17 +1438,18 @@ async function executeV3(
         trace,
       },
       processing_actions: [
-        { action: "validateBookJudgmentPack", detail: "pass" },
+        { action: "validateBookJudgmentPack", detail: "quota_pass" },
         { action: "projectBookPackOntoFaces", detail: "ok" },
       ],
       gate_verdict: {
         passed: true,
-        detail: `机检过 · shot_mode=${trace.shot_mode} · 等人审勾选后解锁正文`,
+        detail: `配额机检过 · units=${trace.unit_counts.total}≥${quota.total_min_units} · shot_mode=${trace.shot_mode}`,
       },
       output_to_next_stage: {
         pack: validated.pack,
         trace,
-        needs_quality_checklist: true,
+        needs_quality_checklist: false,
+        auto_approve_eligible: true,
       },
     };
   }
@@ -1862,10 +1885,41 @@ async function executeV3(
       };
     }
     const packOn = isBookJudgmentPackEnabled();
-    const bookPack = packOn
+    let bookPack = packOn
       ? ((lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined) ??
         null)
       : null;
+    if (bookPack && packOn) {
+      const quotaBody = buildBookJudgmentQuotaFromBlueprint();
+      const packGate = validateBookJudgmentPack(bookPack, quotaBody);
+      if (!packGate.ok) {
+        return {
+          input_payload: {
+            key: page,
+            pipeline: "book_judgment_pack",
+            phase: "content_body",
+            body_frozen: true,
+            pack_fail: packGate.reason,
+            pack_detail: packGate.detail,
+          },
+          raw_model_output: null,
+          processing_actions: [
+            {
+              action: "body_frozen",
+              detail: `${packGate.reason}:${packGate.detail ?? ""}`,
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: "book_judgment_pack_not_ready",
+            detail: `包未达标（${packGate.reason}）· 正文冻结 · 回改 book.judgment`,
+          },
+          output_to_next_stage: null,
+          error: "book_judgment_pack_not_ready",
+        };
+      }
+      bookPack = packGate.pack;
+    }
     const packPlan =
       bookPack && isFaceDeliveryKey(page)
         ? deepEvidencePlanFromBookPack(bookPack, page)
@@ -2983,6 +3037,28 @@ export async function runLabStepV3(
         lab,
         attempt,
       };
+    }
+    /**
+     * BookJudgment pack gate: machine PASS unlocks the body chain.
+     * Optional human checklist remains in UI; do not block cursor on 勾选.
+     */
+    if (
+      def.kind === "gate_book_judgment" &&
+      (result.output_to_next_stage as { auto_approve_eligible?: boolean } | null)
+        ?.auto_approve_eligible
+    ) {
+      rec.status = "approved";
+      rec.approved_attempt = attempt.attempt_number;
+      lab.steps[step_key] = rec;
+      if (!lab.approved_order.includes(step_key)) {
+        lab.approved_order.push(step_key);
+      }
+      const defs = labStepDefsV3();
+      const idx = defs.findIndex((s) => s.step_key === step_key);
+      if (idx >= 0 && idx === lab.cursor_index && idx < defs.length - 1) {
+        lab.cursor_index += 1;
+      }
+      await saveDeliveryLab(lab);
     }
     return { ok: true, lab, attempt };
   } catch (e) {

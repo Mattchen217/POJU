@@ -243,7 +243,7 @@ const BOOK_JUDGMENT_STEPS: LabV3StepDef[] = [
     kind: "gate_book_judgment",
     uses_llm: false,
     accept:
-      "机检：双轨、by_face、patternHits。人审：双轨站得住、删包切片后正文应垮。不过 → 回改包枪（Invalidate 下游正文）。",
+      "机检：双轨（每脸 destiny+science）、by_face、patternHits。机检过自动解锁正文；勾选可选。不过 → 回改包枪（Invalidate 下游）。",
   },
 ];
 
