@@ -298,6 +298,8 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     "四小时完整块被打断就停下并退回",
     "不把试点摊成四周任务",
     "下一步动作类型是只做不离开主业的轻量推进",
+    "连续两个完整时段未出现付费或明确外部兴趣时，不再加大投入。",
+    "当三个陌生人付费时，转为加大投入。",
   ];
   const sci = coveringUnits().find((u) => u.track === "science");
   assert.ok(sci, "need science unit");

@@ -97,6 +97,57 @@ function faceMins(dualTrack: DualTrackMount, slotCount: number): {
 }
 
 /**
+ * Pack-gun duty 正写：把「红灯信号→短信号 / 近步→动作类型」等操作框标签
+ * 改成机制/偏差/负荷职责名（不改 decision-pages 正文 duty SoT）。
+ */
+function toJudgmentSegmentCopy(seg: {
+  id: string;
+  label: string;
+  duty: string;
+}): { label: string; duty: string } {
+  const label = seg.label.trim();
+  const duty = seg.duty.trim();
+  if (/红灯|绿灯|停损/.test(label) || /^短信号/.test(duty)) {
+    return {
+      label: "偏差·负荷机制",
+      duty: "写可验证偏差/负荷/反馈机制；禁信号停损框与条件→投入加减。",
+    };
+  }
+  if (/近步/.test(label) || /动作类型|完成样貌/.test(duty)) {
+    return {
+      label: "近窗机制约束",
+      duty: "写近窗相关机制/偏差/负荷；禁动作类型与完成样貌处方。",
+    };
+  }
+  if (/切轨|停止/.test(label) || /换轨或停下/.test(duty)) {
+    return {
+      label: "边界判断",
+      duty: "写边界/成本判断；禁切轨操作清单。",
+    };
+  }
+  if (/自我调频/.test(label) || /怎么调自己/.test(duty)) {
+    return {
+      label: "自稳机制",
+      duty: "写执行中负荷/偏差自稳机制；禁调频操作处方。",
+    };
+  }
+  if (/科学机制/.test(label)) {
+    return {
+      label,
+      duty: "写可验证机制/偏差/负荷；禁若条件→加大/不再加大投入。",
+    };
+  }
+  return { label, duty };
+}
+
+function toJudgmentDualTrackNote(note: string): string {
+  return note
+    .replace(/红灯[、，,]?/g, "偏差机制、")
+    .replace(/近步原则、完成样貌、?/g, "近窗机制约束、")
+    .replace(/不是勾选作业。?/g, "禁操作清单。");
+}
+
+/**
  * Reverse quota from CANONICAL_FACE_BLUEPRINT + DECISION_PAGE_SCHEMAS.
  * Deterministic — no LLM.
  */
@@ -122,10 +173,11 @@ export function buildBookJudgmentQuotaFromBlueprint(): BookJudgmentQuotaTable {
     ];
     const segment_slots: BookJudgmentSegmentSlot[] = schema.segments.map((seg) => {
       const pref = preferredForSegment(schema.dualTrack, seg.id);
+      const copy = toJudgmentSegmentCopy(seg);
       return {
         segmentId: seg.id,
-        label: seg.label,
-        duty: seg.duty,
+        label: copy.label,
+        duty: copy.duty,
         preferred_track: pref.preferred_track,
         needs_unit: pref.needs_unit,
       };
@@ -135,7 +187,8 @@ export function buildBookJudgmentQuotaFromBlueprint(): BookJudgmentQuotaTable {
       faceId,
       title: schema.title,
       dualTrack: schema.dualTrack,
-      report_writes: report_writes || schema.dualTrackNote,
+      report_writes:
+        report_writes || toJudgmentDualTrackNote(schema.dualTrackNote),
       science_disciplines,
       min_units: mins.min_units,
       min_destiny: mins.min_destiny,
