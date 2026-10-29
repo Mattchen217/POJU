@@ -1429,7 +1429,6 @@ async function executeV3(
         phase: "gate",
         quality_checklist:
           "机检过即可点「本步通过」解锁正文；可选勾选双轨/删切片后垮",
-        quota_total_min: quota.total_min_units,
         ...trace,
         zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
       },
