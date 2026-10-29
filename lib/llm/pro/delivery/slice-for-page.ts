@@ -520,9 +520,7 @@ function buildZfp(
     if (otherChart) out.otherChart = otherChart;
   }
   if (allow.has("patternHits")) {
-    const patternHits = projectPatternHits(
-      source.patternHits ?? source.pattern_hits,
-    );
+    const patternHits = projectPatternHits(source.patternHits);
     if (patternHits) out.patternHits = patternHits;
   }
   return Object.keys(out).length > 0 ? out : undefined;

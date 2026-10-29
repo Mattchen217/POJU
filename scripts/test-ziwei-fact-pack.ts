@@ -87,15 +87,15 @@ assert(
   "ZFP keys",
 );
 assert(first.otherChart === null, "joint stub empty");
-assert(Array.isArray(first.pattern_hits), "pattern_hits array");
+assert(Array.isArray(first.patternHits), "patternHits array");
 assert(
-  first.pattern_hits.every(
+  first.patternHits.every(
     (h) =>
       typeof h.name === "string" &&
       h.name.length > 0 &&
       !("description" in h),
   ),
-  "pattern_hits closed-set (no description)",
+  "patternHits closed-set (no description)",
 );
 assert(first.palaces.length === 12, "twelve palaces");
 assert(first.topicPalace.role === "ming", "topic defaults to ming");
@@ -138,7 +138,7 @@ assert(
 );
 assert(!("palaces" in (slice.slice.zfp ?? {})), "ZFP.palaces index omitted from slice");
 assert(!("source" in (slice.slice.zfp ?? {})), "pack source meta stays off the slice");
-if (first.pattern_hits.length > 0) {
+if (first.patternHits.length > 0) {
   assert(
     Array.isArray(slice.slice.zfp?.patternHits) &&
       (slice.slice.zfp?.patternHits?.length ?? 0) > 0,
@@ -155,6 +155,6 @@ assert(slice03.zfpOmitted === false, "03 keeps zfp");
 assert(slice03.slice.zfp?.mingShen != null, "03 has mingShen");
 
 console.log("ziwei-fact-pack W1+doushu ok", {
-  hits: first.pattern_hits.length,
-  names: first.pattern_hits.slice(0, 5).map((h) => h.name),
+  hits: first.patternHits.length,
+  names: first.patternHits.slice(0, 5).map((h) => h.name),
 });

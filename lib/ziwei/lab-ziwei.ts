@@ -158,7 +158,7 @@ export function formatZiweiClosedSetForPrompt(pack: ZiweiFactPack | null | undef
           : ""),
     );
   }
-  const hits = formatPatternHitsSummary(pack.pattern_hits ?? [], 8);
+  const hits = formatPatternHitsSummary(pack.patternHits ?? [], 8);
   if (hits) lines.push(`格局命中：${hits}`);
   if (!lines.length) return "";
   return [
@@ -196,7 +196,7 @@ export function ziweiCompanionTriggerAnchors(pack: ZiweiFactPack | null | undefi
       `流年·${pack.daxian.liunian.year}@${pack.daxian.liunian.palace}`,
     );
   }
-  for (const hit of (pack.pattern_hits ?? []).slice(0, 3)) {
+  for (const hit of (pack.patternHits ?? []).slice(0, 3)) {
     out.push(`格局·${hit.name}`);
   }
   return out;

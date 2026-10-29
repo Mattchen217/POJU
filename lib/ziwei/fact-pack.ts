@@ -103,7 +103,7 @@ export type ZiweiFactPack = {
   mingShen: ZiweiMingShen;
   otherChart: null;
   /** Closed-set pattern hits (name/level/palaces/conditions) — no description prose. */
-  pattern_hits: ZiweiPatternHit[];
+  patternHits: ZiweiPatternHit[];
   palaces: ZiweiPalaceFact[];
   source: ZiweiFactSource;
 };
@@ -215,7 +215,7 @@ export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPac
   const yearlyPalace = palaces[horoscope.yearly.index];
   if (!decadalPalace || !yearlyPalace) throw new Error("ZiweiFactPack: decadal or yearly palace missing");
 
-  const pattern_hits =
+  const patternHits =
     engine === "ziwei-doushu" ? detectZiweiPatternHits(birth) : [];
 
   const pack: ZiweiFactPack = {
@@ -254,7 +254,7 @@ export function buildZiweiFactPack(birth: BirthInfo, options?: BuildZiweiFactPac
       fiveElementsClass: chart.fiveElementsClass,
     },
     otherChart: null,
-    pattern_hits,
+    patternHits,
     palaces: palaces.map((palace) => ({
       name: palace.name,
       heavenlyStem: palace.heavenlyStem,

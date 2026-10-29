@@ -36,7 +36,7 @@ const pack = tryBuildLabZiweiFactPack({
 });
 assert.ok(pack, "birth_info builds ZFP");
 assert.equal(pack!.source.library, "ziwei-doushu");
-assert.ok(Array.isArray(pack!.pattern_hits));
+assert.ok(Array.isArray(pack!.patternHits));
 
 const closed = formatZiweiClosedSetForPrompt(pack);
 assert.match(closed, /紫微闭集/);
@@ -72,7 +72,7 @@ const lab = {
 const feeds = buildLabPageFeedPacks(lab);
 assert.ok(feeds.zfp, "feed packs get ZFP by default");
 assert.ok(
-  (feeds.zfp as { pattern_hits?: unknown[] }).pattern_hits != null ||
+  (feeds.zfp as { patternHits?: unknown[] }).patternHits != null ||
     (feeds.zfp as { topicPalace?: unknown }).topicPalace != null,
   "ZFP has structure",
 );
@@ -103,7 +103,7 @@ const triggers = ziweiCompanionTriggerAnchors(pack);
 assert.ok(triggers.some((t) => t.startsWith("大限") || t.startsWith("流年") || t.startsWith("格局")));
 
 console.log("lab-ziwei-feed ok", {
-  hits: pack!.pattern_hits.length,
+  hits: pack!.patternHits.length,
   zfpOmitted: slice02!.zfpOmitted,
   anchors: anchors.slice(0, 6),
   triggers,
