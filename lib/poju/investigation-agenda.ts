@@ -360,6 +360,31 @@ export function isAgendaSatisfied(agenda: AgendaItem[]): boolean {
   return criticalLeft === 0 && coveredRatio >= AGENDA_COVERED_GATE;
 }
 
+/** Cap to max while keeping spine kinds — LLM often appends energy_retune last. */
+function capAgendaPreferSpine(items: AgendaItem[], max = 6): AgendaItem[] {
+  if (items.length <= max) return items;
+  const picked: AgendaItem[] = [];
+  const used = new Set<string>();
+  const take = (pred: (a: AgendaItem) => boolean) => {
+    for (const a of items) {
+      if (picked.length >= max || used.has(a.id)) continue;
+      if (!pred(a)) continue;
+      picked.push(a);
+      used.add(a.id);
+    }
+  };
+  take((a) => a.frame_kind === "energy_retune");
+  for (let i = 1; i <= 9; i++) {
+    const idx = i;
+    take((a) => a.frame_kind === "modern_action" && a.frame_index === idx);
+  }
+  take((a) => a.frame_kind === "modern_action");
+  take((a) => a.frame_kind === "key_crossroads");
+  take((a) => Boolean(a.critical));
+  take(() => true);
+  return picked;
+}
+
 export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
   if (!Array.isArray(raw) || raw.length < 3) return null;
   const items: AgendaItem[] = [];
@@ -398,7 +423,7 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
   }
   // Product: target 5–6, hard cap 6. Min 3 kept for salvage / short paths.
   if (items.length < 3) return null;
-  const capped = items.length > 6 ? items.slice(0, 6) : items;
+  const capped = capAgendaPreferSpine(items, 6);
   if (!capped.some((a) => a.critical)) {
     capped[0] = { ...capped[0], critical: true };
   }

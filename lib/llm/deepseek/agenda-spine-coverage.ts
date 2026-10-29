@@ -393,17 +393,23 @@ export function patchAgendaSpineCoverage(
   }
 
   if (isActionableNeeds(er.needs_validation) && !hasFrameKind(next, "energy_retune")) {
-    pushAgendaItem(next, {
-      id: nextAgendaId(next),
-      label: shortLabelFromNeeds(er.needs_validation, "你的日常调频现实"),
-      critical: true,
-      status: "unexplored",
-      frame_kind: "energy_retune",
-      supports: er.direction_fit || "energy_retune",
-      serves_page: "06",
-      role: "personalize",
-      collection_goal: `对齐调频/关系场景所需现实: ${er.needs_validation.slice(0, 120)}`,
-    });
+    if (next.length >= 6) {
+      const stamped = stampMissingEnergyRetune(next, core);
+      next.length = 0;
+      next.push(...stamped);
+    } else {
+      pushAgendaItem(next, {
+        id: nextAgendaId(next),
+        label: shortLabelFromNeeds(er.needs_validation, "你的日常调频现实"),
+        critical: true,
+        status: "unexplored",
+        frame_kind: "energy_retune",
+        supports: er.direction_fit || "energy_retune",
+        serves_page: "06",
+        role: "personalize",
+        collection_goal: `对齐调频/关系场景所需现实: ${er.needs_validation.slice(0, 120)}`,
+      });
+    }
   }
 
   if (isDualPartyPivotCase(core, ctx)) {
@@ -606,8 +612,17 @@ function selectAgendaSubset(
     }
   }
 
-  // Dual-party binary themes before energy_retune flood — otherwise a 6-cap trim
-  // can keep two retune rows and drop the only「底线」key_crossroads (Call B fail).
+  // Keep ONE energy_retune before dual-party flood (LLM often appends e1 last).
+  // Cap at 1 so two retune rows cannot evict the only「底线」key_crossroads.
+  {
+    const er = agenda.find((a) => a.frame_kind === "energy_retune" && !used.has(a));
+    if (er && picked.length < max) {
+      picked.push(er);
+      used.add(er);
+    }
+  }
+
+  // Dual-party binary themes — stamp covers gaps when at cap.
   if (isDualPartyPivotCase(core, ctx)) {
     for (const theme of BINARY_THEME_CHECKS) {
       take((a) => theme.pattern.test(agendaBlob(a)));
@@ -636,6 +651,50 @@ function selectAgendaSubset(
  * When at the 6-cap, push would be trimmed away — stamp missing binary themes
  * onto existing key_crossroads / risk rows so validate still passes.
  */
+/**
+ * At 6-cap, push+trim would drop energy_retune — stamp frame_kind onto an existing
+ * 06/08 (or non-action) row so validateAgendaSpineCoverage passes.
+ * Aligns with Call B: energy_retune 可并入 face 06/08.
+ */
+function stampMissingEnergyRetune(
+  agenda: AgendaItem[],
+  core: BreakthroughCore,
+): AgendaItem[] {
+  const er = core.energy_retune_frame;
+  if (!isActionableNeeds(er?.needs_validation)) return agenda;
+  if (agenda.some((a) => a.frame_kind === "energy_retune")) return agenda;
+  if (agenda.length === 0) return agenda;
+
+  const next = agenda.map((a) => ({ ...a }));
+  let idx = next.findIndex(
+    (a) =>
+      (a.serves_page === "08" || a.serves_page === "06") &&
+      a.frame_kind !== "modern_action",
+  );
+  if (idx < 0) {
+    idx = next.findIndex((a) => a.frame_kind !== "modern_action");
+  }
+  if (idx < 0) idx = next.length - 1;
+
+  const item = next[idx]!;
+  const page =
+    item.serves_page === "08" || item.serves_page === "06" ? item.serves_page : "06";
+  next[idx] = {
+    id: item.id,
+    label: item.label,
+    critical: true,
+    status: item.status,
+    frame_kind: "energy_retune",
+    supports: (item.supports && item.supports.trim()) || er.direction_fit || "energy_retune",
+    serves_page: page,
+    role: item.role ?? "personalize",
+    collection_goal:
+      (item.collection_goal && item.collection_goal.trim()) ||
+      `对齐调频/降温所需现实: ${er.needs_validation.slice(0, 120)}`,
+  };
+  return next;
+}
+
 function stampMissingBinaryThemes(
   agenda: AgendaItem[],
   core: BreakthroughCore,
@@ -736,11 +795,10 @@ export function ensureAgendaSpineCoverage(
     check = validateAgendaSpineCoverage(current, core, ctx);
   }
   if (!check.ok) {
-    // Last resort: stamp binary + re-finalize once more before failing Call B UI.
-    current = stampMissingBinaryThemes(
-      finalizeAgendaPool(current, core, ctx),
+    // Last resort: stamp binary + energy_retune + re-finalize once more before failing Call B UI.
+    current = stampMissingEnergyRetune(
+      stampMissingBinaryThemes(finalizeAgendaPool(current, core, ctx), core, ctx),
       core,
-      ctx,
     );
     check = validateAgendaSpineCoverage(current, core, ctx);
   }
