@@ -48,7 +48,7 @@ import {
   isSynthesisJobResult,
   type SynthesisJobInput,
 } from "@/lib/poju/xhigh-job-types";
-import { REPORT_BLUEPRINT } from "@/lib/poju/report-blueprint";
+import { FACE_AGENDA_BLUEPRINT } from "@/lib/poju/report-blueprint";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { dyadSkipPatch } from "@/lib/poju/dyad-compat";
@@ -105,10 +105,10 @@ function buildLabSynthesisJobInput(input: {
     question_category: agent_v2.question_category ?? "other",
     covered_agenda: buildCoveredAgendaEvidence(agent_v2),
     structured_inventory,
-    report_pages: REPORT_BLUEPRINT.map((p) => ({
-      id: p.id,
-      title: p.title.zh,
-      purpose: p.purpose,
+    report_pages: FACE_AGENDA_BLUEPRINT.filter((p) => p.input_role === "needs_reality").map((p) => ({
+      id: p.faceId,
+      title: p.title,
+      purpose: p.reality_needs.join("；") || p.title,
     })),
     dyad_compat_summary: input.dyad_compat_summary ?? null,
     partner_bazi: input.partner_bazi ?? null,

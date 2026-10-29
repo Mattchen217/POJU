@@ -4,7 +4,10 @@
  */
 
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
-import type { AgendaItem } from "@/lib/poju/investigation-agenda";
+import {
+  type AgendaItem,
+  normalizeServesPage,
+} from "@/lib/poju/investigation-agenda";
 import { DUAL_PARTY_REALITY_NEED_LABELS } from "@/lib/llm/prompts/pivot-dual-party-policy";
 import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
 import { splitNeedsValidationFacets } from "@/lib/llm/deepseek/segment2-spine-readiness";
@@ -177,9 +180,14 @@ function hasFrameKind(agenda: AgendaItem[], kind: AgendaItem["frame_kind"]): boo
 function servesPages(agenda: AgendaItem[]): Set<string> {
   const pages = new Set<string>();
   for (const item of agenda) {
-    if (item.serves_page?.trim()) pages.add(item.serves_page.trim());
-    else if (item.frame_kind === "modern_action") pages.add("execution_guidance");
-    else if (item.frame_kind === "energy_retune") pages.add("self_regulation");
+    const raw = item.serves_page?.trim();
+    if (raw) {
+      pages.add(normalizeServesPage(raw) ?? raw);
+    } else if (item.frame_kind === "modern_action") {
+      pages.add("06");
+    } else if (item.frame_kind === "energy_retune") {
+      pages.add("06");
+    }
   }
   return pages;
 }
@@ -263,12 +271,12 @@ export function validateAgendaSpineCoverage(
 
   const pages = servesPages(agenda);
   const hasScience =
-    pages.has("execution_guidance") || agenda.some((a) => a.frame_kind === "modern_action");
+    pages.has("06") || agenda.some((a) => a.frame_kind === "modern_action");
   if (!hasScience && frames.length > 0) {
     gaps.push("missing_serves_page_science_action");
   }
 
-  if (agenda.length >= 3 && pages.size === 1 && pages.has("execution_guidance")) {
+  if (agenda.length >= 3 && pages.size === 1 && pages.has("06")) {
     gaps.push("serves_page_all_science_action");
   }
 
@@ -281,7 +289,7 @@ export function validateAgendaSpineCoverage(
     if (criticalCount < 3) gaps.push("binary_critical_lt_3");
   }
 
-  if (needsSignalsCloseCoverage(core) && !pages.has("validation_close")) {
+  if (needsSignalsCloseCoverage(core) && !pages.has("08")) {
     const hasRhythmGoal = agenda.some((a) =>
       /近7|一周|节奏|时间|精力/.test(agendaBlob(a)),
     );
@@ -290,8 +298,9 @@ export function validateAgendaSpineCoverage(
 
   if (
     isDualPartyPivotCase(core, ctx) &&
-    !pages.has("validation_risk") &&
-    !pages.has("self_regulation") &&
+    !pages.has("08") &&
+    !pages.has("04") &&
+    !pages.has("06") &&
     !hasFrameKind(agenda, "energy_retune")
   ) {
     gaps.push("missing_serves_page_risk_or_metaphysics");
@@ -328,8 +337,7 @@ export function patchAgendaSpineCoverage(
       status: "unexplored",
       frame_kind: "key_crossroads",
       supports: xc.real_fork.slice(0, 80) || "key_crossroads",
-      serves_page: "validation_risk",
-      serves_path: "both",
+      serves_page: "08",
       role: "calibrate",
       collection_goal: `对齐分岔判断所需现实: ${xc.needs_validation.slice(0, 120)}`,
     });
@@ -347,7 +355,7 @@ export function patchAgendaSpineCoverage(
         ...item,
         label: item.label || shortLabelFromNeeds(facet, "你的分岔验证点"),
         collection_goal: [item.collection_goal, facet].filter(Boolean).join("；"),
-        serves_page: item.serves_page === "execution_guidance" ? "validation_risk" : item.serves_page,
+        serves_page: item.serves_page === "06" ? "08" : item.serves_page,
       };
       continue;
     }
@@ -358,8 +366,7 @@ export function patchAgendaSpineCoverage(
       status: "unexplored",
       frame_kind: "key_crossroads",
       supports: xc.real_fork.slice(0, 80) || "key_crossroads",
-      serves_page: "validation_risk",
-      serves_path: "both",
+      serves_page: "08",
       role: "calibrate",
       collection_goal: `对齐分岔面所需现实: ${facet.slice(0, 120)}`,
     });
@@ -378,8 +385,7 @@ export function patchAgendaSpineCoverage(
       frame_kind: "modern_action",
       frame_index: idx,
       supports: frame.direction,
-      serves_page: "execution_guidance",
-      serves_path: i === 0 ? "primary" : i === 1 ? "backup" : "both",
+      serves_page: "06",
       role: "fill",
       collection_goal: `验证行动假设#${idx}能否落地: ${(frame.needs_validation || frame.direction).slice(0, 120)}`,
     });
@@ -394,8 +400,7 @@ export function patchAgendaSpineCoverage(
       status: "unexplored",
       frame_kind: "energy_retune",
       supports: er.direction_fit || "energy_retune",
-      serves_page: "self_regulation",
-      serves_path: "both",
+      serves_page: "06",
       role: "personalize",
       collection_goal: `对齐调频/关系场景所需现实: ${er.needs_validation.slice(0, 120)}`,
     });
@@ -421,8 +426,7 @@ export function patchAgendaSpineCoverage(
         status: "unexplored",
         frame_kind: "key_crossroads",
         supports: xc.real_fork.slice(0, 80) || theme.label,
-        serves_page: theme.id === "bottom_line" ? "validation_risk" : "validation_risk",
-        serves_path: "both",
+        serves_page: theme.id === "bottom_line" ? "08" : "08",
         role: theme.id === "observable_behavior" ? "calibrate" : "fill",
         collection_goal: theme.label,
       });
@@ -433,8 +437,9 @@ export function patchAgendaSpineCoverage(
   const pages = servesPages(next);
   if (
     isDualPartyPivotCase(core, ctx) &&
-    !pages.has("validation_risk") &&
-    !pages.has("self_regulation") &&
+    !pages.has("08") &&
+    !pages.has("04") &&
+    !pages.has("06") &&
     !hasFrameKind(next, "energy_retune")
   ) {
     pushAgendaItem(next, {
@@ -444,14 +449,13 @@ export function patchAgendaSpineCoverage(
       status: "unexplored",
       frame_kind: "key_crossroads",
       supports: xc.path_costs.slice(0, 80) || "path_costs",
-      serves_page: "validation_risk",
-      serves_path: "both",
+      serves_page: "08",
       role: "calibrate",
       collection_goal: "摸清反对/摩擦的可观察表现,够写执行刹车与边界",
     });
   }
 
-  if (needsSignalsCloseCoverage(core) && !servesPages(next).has("validation_close")) {
+  if (needsSignalsCloseCoverage(core) && !servesPages(next).has("08")) {
     const hasRhythmGoal = next.some((a) => /近7|一周|节奏|时间|精力/.test(agendaBlob(a)));
     if (!hasRhythmGoal) {
       pushAgendaItem(next, {
@@ -462,8 +466,7 @@ export function patchAgendaSpineCoverage(
         frame_kind: "modern_action",
         frame_index: Math.min(2, core.modern_action_frames?.length ?? 1),
         supports: core.rhythm_frame.phase1_observe.slice(0, 80) || "rhythm_frame",
-        serves_page: "validation_close",
-        serves_path: "both",
+        serves_page: "08",
         role: "fill",
         collection_goal: "确认近7日可投入的时间/节奏,够写收束页微行动",
       });
@@ -481,7 +484,7 @@ function enrichAgendaForCoverage(
   const next = agenda.map((a) => ({ ...a }));
 
   if (needsSignalsCloseCoverage(core)) {
-    const hasPage = next.some((a) => a.serves_page === "validation_close");
+    const hasPage = next.some((a) => a.serves_page === "08");
     const hasRhythmGoal = next.some((a) => /近7|一周|节奏|时间|精力/.test(agendaBlob(a)));
     if (!hasPage && !hasRhythmGoal) {
       const idx = next.findIndex((a) => a.frame_kind === "modern_action");
@@ -514,14 +517,14 @@ function enrichAgendaForCoverage(
           ...item,
           label: item.label || theme.label,
           collection_goal: theme.label,
-          serves_page: "validation_risk",
+          serves_page: "08",
         };
         themes.add(theme.id);
       }
     }
     for (const item of next) {
-      if (item.frame_kind === "key_crossroads" && item.serves_page === "execution_guidance") {
-        item.serves_page = "validation_risk";
+      if (item.frame_kind === "key_crossroads" && item.serves_page === "06") {
+        item.serves_page = "08";
       }
     }
   }
@@ -612,9 +615,9 @@ function selectAgendaSubset(
   }
   take((a) => a.frame_kind === "key_crossroads");
   take((a) => a.frame_kind === "energy_retune");
-  take((a) => a.serves_page === "validation_risk" || a.serves_page === "self_regulation");
+  take((a) => a.serves_page === "08" || a.serves_page === "06");
   if (needsSignalsCloseCoverage(core)) {
-    take((a) => a.serves_page === "validation_close");
+    take((a) => a.serves_page === "08");
   }
 
   const rest = [...agenda]
@@ -647,7 +650,7 @@ function stampMissingBinaryThemes(
 
     const enrichIdx = next.findIndex(
       (a) =>
-        (a.frame_kind === "key_crossroads" || a.serves_page === "validation_risk") &&
+        (a.frame_kind === "key_crossroads" || a.serves_page === "08") &&
         !BINARY_THEME_CHECKS.some(
           (t) => t.id !== theme.id && t.pattern.test(agendaBlob(a)),
         ),
@@ -665,7 +668,7 @@ function stampMissingBinaryThemes(
       label: theme.pattern.test(item.label) ? item.label : theme.label,
       collection_goal: [item.collection_goal, theme.label].filter(Boolean).join("；"),
       supports: [item.supports, theme.label].filter(Boolean).join("；"),
-      serves_page: "validation_risk",
+      serves_page: "08",
       critical: true,
     };
     themes.add(theme.id);
@@ -696,8 +699,7 @@ function finalizeAgendaPool(
         status: "unexplored",
         frame_kind: "key_crossroads",
         supports: core.key_crossroads.structural_basis.slice(0, 80) || "spine",
-        serves_page: "execution_guidance",
-        serves_path: "both",
+        serves_page: "06",
         role: "fill",
         collection_goal: "补齐解题所需最少现实",
       });

@@ -1,6 +1,7 @@
 /**
- * 交付页提示词索引 · v1 十段（03–06 独立 duty；01/02/07–09 复用既有文件）。
- * 文案硬度不在 W0 改写。内容页只通过 contentPageForFillDuty 对齐 pageId。
+ * 交付页提示词索引 · legacy v1 papers only for fill/finalize fallback.
+ * **v3 face body = `face-prompt.ts` / `buildFacePromptPair`** — never call
+ * `fillDutyForKey` with face id 01–08 (will throw).
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -36,16 +37,19 @@ type PagePromptModule = {
   buildAssignDuty?: (tagZh: string) => string;
 };
 
+const FACE_FILL_REFUSED = new Set([
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+]);
+
 const BY_KEY: Partial<Record<DeliverySegmentKey, PagePromptModule>> = {
-  // Face-native (v3 body uses face-prompt.ts; these remain finalize/fill fallbacks)
-  "01": p1 as PagePromptModule,
-  "02": p2 as PagePromptModule,
-  "04": pBottleneck as PagePromptModule,
-  "05": pOptions as PagePromptModule,
-  "06": p3 as PagePromptModule,
-  "08": p5 as PagePromptModule,
-  "03": p2 as PagePromptModule,
-  "07": p2 as PagePromptModule,
+  // Face ids intentionally omitted from fillDuty — use face-prompt.ts.
   decision_brief: p1 as PagePromptModule,
   situation_analysis: p2 as PagePromptModule,
   personal_decision_patterns: pPatterns as PagePromptModule,
@@ -75,6 +79,11 @@ export function fillDutyForKey(
   tagZh: string,
   opts?: { plain_judgment?: boolean },
 ): string {
+  if (FACE_FILL_REFUSED.has(key)) {
+    throw new Error(
+      `fillDutyForKey refused face ${key}: use buildFacePromptPair / face-prompt.ts (no primary/backup paper duty)`,
+    );
+  }
   const mod = BY_KEY[key];
   return mod ? mod.buildFillDuty(tagZh, opts) : "";
 }
@@ -83,6 +92,11 @@ export function assignDutyForKey(
   key: DeliverySegmentKey,
   tagZh: string,
 ): string {
+  if (FACE_FILL_REFUSED.has(key)) {
+    throw new Error(
+      `assignDutyForKey refused face ${key}: face books use judgment/body face-prompt, not legacy assign duty`,
+    );
+  }
   const mod = BY_KEY[key];
   if (mod?.buildAssignDuty) return mod.buildAssignDuty(tagZh);
   return `# 本页派工任务 · 【${tagZh}】\n只写本盘结构主张 + 事实档短摘录；本页用户可见正文留给 fill。`;

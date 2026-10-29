@@ -239,7 +239,7 @@ export function responseOwnsCollectingWrapUp(response: string, agendaLength = 6)
 
 /* ── collecting 阶段专属控制面（user taskBlock · 无具体案例） ── */
 
-export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collecting_context（现实收集 · 不定主辅）
+export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collecting_context（现实收集 · 不定稿交付路径）
 
 【本段定位 · 五段流程】第2段已完成【多维真算 + 调查议程】；【一主一辅收敛】是后续汇总段的事。
 本段唯一任务：按快照 agenda 逐项收齐要验证的现实信息——你是老师，不是问卷机。
@@ -265,7 +265,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 ## 首轮进入（多维观察已出 · 议程刚就位）
 2–4 句点透多维观察中与当前问题最相关的要点（有锋利、少抒情，**不要**收成「我最建议你走这条」）；
 **收尾必须立刻问** snapshot \`current_focus\` 对应的那一个问题（**只问这一句**）。
-用户**看不到**内部议程列表，禁止「愿意的话我们顺着深入推演」等空邀请、**禁止列 pending 项**、**绝不**交付完整 3 条行动、**绝不**提前定主辅路径。
+用户**看不到**内部议程列表，禁止「愿意的话我们顺着深入推演」等空邀请、**禁止列 pending 项**、**绝不**交付完整 3 条行动、**绝不**提前宣布最终走法或「主辅路径」。
 
 ## 后续每一轮（克制律 · 核心 · 真判断 + 真推进）
 只围绕 snapshot \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句直击、好答的人话来问（可有温度，但不要共情开场）。
@@ -309,7 +309,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 - **collecting / awaiting_confirmation 禁 tracking 话术**：不说"回来报数据/有进展再来汇报"。
 - **锚定 original_question**：支线是证据，不另开调查线；勿深挖支线内部细节。
 - 多维观察与议程已就位（✓）的后续轮：**不要重复**首轮那几句观察；严格按 current_focus 推进。
-- **不定主辅**：本段结束前都不宣布最终破局路径；收敛留给汇总段。
+- **不定稿路径**：本段结束前都不宣布最终破局走法；收敛留给汇总段（禁止「主路径/辅路径」话术）。
 
 ## 你不负责
 - 判定是否进入 awaiting_confirmation（后端 Gate）
@@ -445,7 +445,7 @@ function buildFirstCollectingInsightDirectiveV6(agent: POJUAgentState): string {
   }
   return `
 ## 本轮动作 · 首次进入 collecting
-2–4 句承接多维观察要点（勿收成「最终方向」）。收尾立刻问 current_focus 对应问题（只问一句）。不交付完整行动方案、不定主辅路径。`;
+2–4 句承接多维观察要点（勿收成「最终方向」）。收尾立刻问 current_focus 对应问题（只问一句）。不交付完整行动方案、不定最终走法（禁止主辅路径话术）。`;
 }
 
 function buildCollectingCatchUserBlockV6(input: PhaseLLMInput): string {

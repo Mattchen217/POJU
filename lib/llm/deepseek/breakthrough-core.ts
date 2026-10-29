@@ -20,8 +20,10 @@ import {
   type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
 import {
-  BLUEPRINT_PAGES_NEEDING_REALITY,
+  FACE_AGENDA_BLUEPRINT,
+  FACE_AGENDA_NEEDS_REALITY,
 } from "@/lib/poju/report-blueprint";
+import { page07Applies, deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { pollBreakthroughCoreJobUntilDone, XHIGH_JOB_POLL_MAX_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
@@ -316,40 +318,42 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
 
 每条议程须能答:「对齐了这条,会怎样帮助解决他的问题 / 靠近期望?」答不上=删。
 
-# 九模块备料 vs 议程条数（逻辑 · 必懂 · 硬）
-第2段 Call A + 第3段 collecting + 第4段 synthesis 共同服务 **v1 九模块决策报告**;**不是**现在写报告。
-**九模块 ≠ 九问**：报告有 9 个内容模块,议程只要 **5–6 项**(上限 6)。【禁止】「一模块一条 agenda」凑数——用户会觉得啰嗦。
+# 脸书备料 vs 议程条数（逻辑 · 必懂 · 硬）
+第2段 Call A + 第3段 collecting + 第4段 synthesis 共同服务 **face-native 决策报告（01–08+03）**;**不是**现在写报告。
+**脸 ≠ 一脸一问**：书架有多张脸,议程只要 **5–6 项**(上限 6)。【禁止】「一脸一条 agenda」凑数——用户会觉得啰嗦。
 
-| 模块 id（主落地 serves_page） | Call B 干什么 |
+| face id（serves_page） | Call B 干什么 |
 |---|---|
-| decision_brief | **禁止**生成 agenda |
-| situation_analysis / personal_decision_patterns / bottleneck_analysis | 合并 needs_validation 进锐问;主落其一即可 |
-| strategic_options / recommended_strategy / execution_guidance | modern_action 等假设能否落地 → 主落其一(优先 execution_guidance 或 recommended_strategy) |
-| self_regulation | energy_retune 等 → 可主落本模块;可与验证类合并 |
-| validation_review | 风险/节奏/近阶约束 → 主落本模块 |
-**主辅 / action_plan 只 synthesis 产出**; Call B 【禁止】问「你选主还是辅」「最终定哪条」。
+| 01 | 主推成立条件 / 不选边界 / 期望结果 |
+| 02 / 03 | **禁止**生成 agenda（chart_only / 附录） |
+| 04 | 卡点/不可逆成本 |
+| 05 | 路径偏好 + 切轨/停止信号 |
+| 06 | 近阶节奏 + 可执行动作边界（非勾选清单） |
+| 07 | **仅**迁移/换场/合伙/亲密/joint 题才生成；场域事实与对方盘是否可提供 |
+| 08 | 红灯触发 / 何时重评停手 |
+**主辅路径话术禁止**; Call B 【禁止】问「你选主还是辅」「最终定哪条」;【禁止】为「撑得起六页/九模块交付」凑问。
 
-Call B 议程 = 把骨架 needs_validation **合并倒成**最少对齐项,让 synthesis 能收敛、九模块能扎根——不是为填满九模块而凑问。
+Call B 议程 = 把骨架 needs_validation **合并倒成**最少对齐项,让 synthesis 能收敛、**face 现实槽**能吃到料——不是为填满旧九模块而凑问。
 
 # needs_validation 覆盖（硬 · 可合并）
 扫描 key_crossroads、每条 modern_action_frame、energy_retune_frame 的 needs_validation:
 - 每一块须有 agenda **落点**(可多块合并进同一条 agenda 的 label/collection_goal,不可整块遗漏)。
 - key_crossroads.needs_validation 多独立分句 → 可合并近义;不可整片跳过。
 - modern_action 有 N 条假设 → 优先各有落点;若 N 大导致超 6 条,合并近义假设到同一 agenda(supports 写清合并了哪些方向关键词)。
-- energy_retune 有 needs_validation → 须有落点(可并入 self_regulation 或 validation_review 的一条,勿用「时间精力」偷换掉调频对齐)。
+- energy_retune 有 needs_validation → 须有落点(可并入 face 06 或 08 的一条,勿用「时间精力」偷换掉调频对齐)。
 
 # 议程数量（硬 · 宁少而锐 · 用户耐心）
 - **目标 5–6 项**;默认 **5**;仅二元案+多假设确实无法合并时才用满 **6**。
-- 【禁止】7 项及以上;【禁止】为凑九模块覆盖或凑 serves_page 拆重复问法。
+- 【禁止】7 项及以上;【禁止】为凑脸覆盖或凑 serves_page 拆重复问法。
 - 超出 6 项由代码裁剪——堆项不会加分,只会丢项。
 
 # serves_page 分布（硬 · 在 5–6 条内做分布,不加条）
-闭集(九模块 id):
-situation_analysis | personal_decision_patterns | bottleneck_analysis | strategic_options | recommended_strategy | execution_guidance | self_regulation | validation_review
-- ≥1 项主落 execution_guidance **或** recommended_strategy **或** strategic_options(可执行/路径相关现实)
-- 案含关系/感情/合作/家人反对: ≥1 项主落 validation_review **或** self_regulation(可把双方底线写进同一条 collection_goal)
-- 案含时间/节奏/近阶约束: 写入某条 collection_goal,或主落 validation_review
-禁止全部主落同一模块;【禁止】serves_page=decision_brief / appendix / direct_answer / foundation(旧六页诊断 id 勿用)。
+闭集(face id): 01 | 04 | 05 | 06 | 07 | 08
+- ≥1 项主落 05 **或** 06（路径/落地相关现实）
+- ≥1 项主落 01（条件/不选边界）当题需要明确主推时
+- 案含迁移/换场/合伙/亲密: ≥1 项主落 07
+- 案含关系底线/停手信号: ≥1 项主落 08 **或** 04
+禁止全部主落同一脸;【禁止】serves_page=02/03/decision_brief/appendix/旧九模块键/旧六页 id;【禁止】serves_path=primary|backup|both。
 
 # 事实源(必须同时用 · 勿另起炉灶真算)
 1. 第1段理解门(问题/情况/期望)— 解题靶心。
@@ -375,18 +379,18 @@ situation_analysis | personal_decision_patterns | bottleneck_analysis | strategi
   若 frame_kind 是 modern_action，supports 里【写清它对应哪条假设行动方向的意思】(用那条方向的关键词)——
   代码以 supports 内容锚定。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
 - **工程路由字段**(下游要用,但【不是】你提问的理由;先想清解题意义,再填):
-  - serves_page：九模块 id 之一（见上表闭集）。每条只标 **一个主落地模块**;该答可同时喂相邻模块(在 collection_goal 写清)。
-    【禁止】decision_brief / appendix / 旧六页 id(direct_answer|foundation|science_action|metaphysics_action|risk_guard|signals_close)。
-  - serves_path："primary" | "backup" | "both"(本段仍不定主辅,可预标供下游)。
+  - serves_page：face id 之一（01|04|05|06|07|08）。每条只标 **一个主落地脸**;该答可同时喂相邻脸(在 collection_goal 写清)。
+    【禁止】02/03/decision_brief/appendix/旧九模块键/旧六页 id。
+  - 【禁止】输出 serves_path（不再服务主辅路径）。
   - role："fill"(补齐才能落地) / "calibrate"(可能改变走法判断) / "personalize"(让方案贴他的真实约束)。
   - **collection_goal（对齐验收尺 · 给第3阶段判"够没够"）**：一句话说清
-    「对齐到什么程度，就够判断/够落地【解决他的问题、靠近期望】」——用解题语言,不用「够写某报告页」。
+    「对齐到什么程度，就够判断/够落地【解决他的问题、靠近期望】」——用解题语言,不用「够写某报告页/某主辅纸」。
     · 【信息层目标】要拿到什么;【不是下钻指令】(禁追到与解题无关的技术/流程细节)——粒度 = 解题真正需要的【最少信息】。
     · 【要能被"用户给不出"满足】:给不出时允许"确认到'当前处于X阶段、暂无此数据'即算够"——不逼没有的答案。
-- 自检(按顺序):①对解题/期望有没有用?②对应哪个多维侧面或哪条骨架?③工程上主落哪个九模块? ①答不上=删。④是否在硬凑一模块一问?是=合并。
+- 自检(按顺序):①对解题/期望有没有用?②对应哪个多维侧面或哪条骨架?③工程上主落哪张脸? ①答不上=删。④是否在硬凑一脸一问?是=合并。
 - 优先收集能【验证/推翻】结构假设的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
-- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role, collection_goal }。
+- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, role, collection_goal }。
 - **label（用户面板可见）**：必须用【第二人称】短名词短语。
   【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
   【禁止】把完整问句当 label——完整问句只放 first_question。
@@ -439,7 +443,7 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 
 # 输出（严格 JSON）
 仅输出三个顶层键: investigation_agenda, first_question, options。
-investigation_agenda 每项必含: id, label, critical, status, frame_kind, supports, serves_page, serves_path, role, collection_goal; modern_action 可加 frame_index。
+investigation_agenda 每项必含: id, label, critical, status, frame_kind, supports, serves_page, role, collection_goal; modern_action 可加 frame_index。【禁止】serves_path。
 first_question 为字符串; options 为 2–3 个字符串的数组(禁止对象包装)。
 
 # first_question 配一组选项(帮用户回答第一个问题)
@@ -624,7 +628,7 @@ ${factGuard}
 
 【任务 · Call A】
 只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 必产(多维发散)。【禁止】输出 primary_path / backup_path / investigation_agenda / first_question。仅 JSON，无 markdown 围栏。
-（6页正文报告蓝图不在本段——撑得起交付是汇总段/交付段的事；本段只把相关维度算全、算准。）`;
+（face 决策报告蓝图不在本段——可落地交付是汇总段/交付段的事；本段只把相关维度算全、算准。禁止「撑得起六页/主辅路径」话术。）`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -665,11 +669,25 @@ export function buildAgendaBridgePrompt(input: {
     2,
   );
 
+  const topic = deliveryTopicFromSignals({
+    question: original_question,
+    pivotChartPath: path,
+    partnerBazi: input.partner_bazi ?? null,
+  });
+  const include07 = page07Applies(topic);
+  const faceAgendaRows = [
+    ...FACE_AGENDA_NEEDS_REALITY,
+    ...(include07
+      ? FACE_AGENDA_BLUEPRINT.filter((r) => r.faceId === "07")
+      : []),
+  ];
   // Secondary checklist only — not the reason to ask. Keeps engineering routing honest.
-  const landingKindsHint = BLUEPRINT_PAGES_NEEDING_REALITY.map(
-    (p) =>
-      `- ${p.id}（${p.title.zh}）常见需对齐的现实：${(p.reality_needs ?? []).join("；")}`,
-  ).join("\n");
+  const landingKindsHint = faceAgendaRows
+    .map(
+      (p) =>
+        `- face ${p.faceId}（${p.title}）常见需对齐的现实：${p.reality_needs.join("；")}`,
+    )
+    .join("\n");
 
   const expressionContract = buildUserFacingExpressionContractBlock({
     locale,
@@ -721,8 +739,8 @@ ${dyadBlock}
 ${landingKindsHint}
 
 【任务 · Call B】
-你是 Eastern OS(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备九模块原料,不定稿报告;**议程只要 5–6 问,禁止一模块一问**)。
-综合第1段靶心 + 全维度真算 + 骨架 needs_validation(可合并覆盖) → investigation_agenda(5–6项,默认5,上限6;serves_page=九模块 id) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
+你是 Eastern OS(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备 **face 01/04/05/06${include07 ? "/07" : ""}/08** 现实槽,不定稿报告;**议程只要 5–6 问,禁止一脸一问**;禁止主辅路径/六页交付话术)。
+综合第1段靶心 + 全维度真算 + 骨架 needs_validation(可合并覆盖) → investigation_agenda(5–6项,默认5,上限6;serves_page=face id;禁止 serves_path) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
 
   return { system, user };
 }
@@ -1111,6 +1129,7 @@ function placeholderRhythm(): RhythmFrame {
 
 function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | null {
   if (frames.length < 2) return null;
+  const faceByIndex = ["05", "06", "01", "04", "08"] as const;
   const items: AgendaItem[] = [];
   for (let i = 0; i < frames.length; i++) {
     const d = frames[i]!;
@@ -1124,8 +1143,7 @@ function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | n
       frame_kind: "modern_action",
       frame_index: i + 1,
       supports: d.direction,
-      serves_page: "execution_guidance",
-      serves_path: i === 0 ? "primary" : i === 1 ? "backup" : "both",
+      serves_page: faceByIndex[i] ?? "05",
       role: "fill",
     });
   }
@@ -1136,8 +1154,7 @@ function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | n
       label: "待补关键信息",
       critical: false,
       status: "unexplored",
-      serves_page: "execution_guidance",
-      serves_path: "both",
+      serves_page: "01",
       role: "fill",
     });
   }

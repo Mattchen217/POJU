@@ -6,9 +6,9 @@
  * 旧键 → pageId 见 `page-id-remap.ts`。
  * v1 产品边界背景：`.cursor/docs/v1-决策交付-产品边界.md`。
  * 出稿 `delivery_segments` 仍是 v1 十段 key；本表数据不在 W0 改写。
- * 【1→4 阶段都 import 这里】——第2段真算据此确认主方向撑得起报告；
- * 2.1议程据此问「缺什么现实料」（议程 5–6 问，≠ 一模块一问）；第4段据此路由。
- * 运行时模块路由仍集中在本表。内容页序改 `.cursor/docs/decision-report/`，不要只改这里。
+ * 【1→4 阶段】议程真源 = FACE_AGENDA_BLUEPRINT（按脸 reality_needs；禁止六页/主辅纸凑问）。
+ * REPORT_BLUEPRINT 九模块表仅 legacy remap；Call B / synthesis 自检勿再读 path_role primary_and_backup。
+ * 内容页序改 `.cursor/docs/decision-report/` + page-feed-matrix；不要只改九模块表。
  *
  * 脸序在 `CANONICAL_FACE_BLUEPRINT`。模块表仍可单独 import。
  */
@@ -332,21 +332,119 @@ export const CANONICAL_FACE_BLUEPRINT: readonly CanonicalFaceBlueprint[] = FACE_
   }),
 );
 
-/** 需要议程收集的模块（Call B 只为这些生成 agenda；且总数仍 5–6，非一模块一问）。 */
+/**
+ * Stage1–3 议程真源（face-native）。
+ * Call B / collecting 只读本表；不再用 REPORT_BLUEPRINT.needs_reality 起草问句。
+ * 07 仅 topic 命中时纳入。
+ */
+export type FaceAgendaBlueprint = {
+  faceId: DecisionPageId;
+  title: string;
+  input_role: BlueprintInputRole;
+  reality_needs: readonly string[];
+  /** When true, Call B includes this face only if page07Applies(topic). */
+  topic_gated?: boolean;
+};
+
+export const FACE_AGENDA_BLUEPRINT: readonly FaceAgendaBlueprint[] = [
+  {
+    faceId: "01",
+    title: DECISION_PAGE_SCHEMAS["01"].title,
+    input_role: "needs_reality",
+    reality_needs: [
+      "主推成立的硬条件（不满足则不主张）",
+      "明确不选/不碰的边界",
+      "期望结果一句话（可核对）",
+    ],
+  },
+  {
+    faceId: "02",
+    title: DECISION_PAGE_SCHEMAS["02"].title,
+    input_role: "chart_only",
+    reality_needs: [],
+  },
+  {
+    faceId: "04",
+    title: DECISION_PAGE_SCHEMAS["04"].title,
+    input_role: "needs_reality",
+    reality_needs: ["已知卡点/反复踩的坑", "不可逆成本或硬底线"],
+  },
+  {
+    faceId: "05",
+    title: DECISION_PAGE_SCHEMAS["05"].title,
+    input_role: "needs_reality",
+    reality_needs: [
+      "可接受的路径选项偏好（非空泛平衡）",
+      "切轨/停止信号",
+      "资源与时间缓冲",
+    ],
+  },
+  {
+    faceId: "06",
+    title: DECISION_PAGE_SCHEMAS["06"].title,
+    input_role: "needs_reality",
+    reality_needs: [
+      "近阶可投入节奏",
+      "能执行的动作类型边界（完成样貌，非勾选清单）",
+    ],
+  },
+  {
+    faceId: "07",
+    title: DECISION_PAGE_SCHEMAS["07"].title,
+    input_role: "needs_reality",
+    topic_gated: true,
+    reality_needs: [
+      "场域事实（迁移/合伙/亲密对象与约束）",
+      "对方盘是否可提供（无则不编）",
+      "边界现实（禁合婚恐吓话术）",
+    ],
+  },
+  {
+    faceId: "08",
+    title: DECISION_PAGE_SCHEMAS["08"].title,
+    input_role: "needs_reality",
+    reality_needs: ["自检红灯触发点", "何时应重评/停手"],
+  },
+  {
+    faceId: "03",
+    title: DECISION_PAGE_SCHEMAS["03"].title,
+    input_role: "chart_only",
+    reality_needs: [],
+  },
+] as const;
+
+/** Call B 默认纳入的 needs_reality 脸（不含 topic_gated 07；07 由调用方按题门追加）。 */
+export const FACE_AGENDA_NEEDS_REALITY: readonly FaceAgendaBlueprint[] =
+  FACE_AGENDA_BLUEPRINT.filter(
+    (r) => r.input_role === "needs_reality" && !r.topic_gated,
+  );
+
+/** @deprecated Prefer FACE_AGENDA_NEEDS_REALITY. Kept for legacy adapters that expect ReportPage[]. */
 export const BLUEPRINT_PAGES_NEEDING_REALITY: readonly ReportPage[] =
   REPORT_BLUEPRINT.filter((p) => p.input_role === "needs_reality");
 
-/** 主辅路径展开相关模块。 */
+/** @deprecated Agenda must not use primary/backup path roles. */
 export const BLUEPRINT_PRIMARY_BACKUP_PAGES: readonly ReportPage[] =
   REPORT_BLUEPRINT.filter((p) => p.path_role === "primary_and_backup");
 
-/** 禁止作为 serves_page 的模块（简报不靠议程凑）。 */
+/** 禁止作为新议程 serves_page 输出（chart_only / 简报 / 附录）。 */
 export const BLUEPRINT_AGENDA_FORBIDDEN_PAGES = new Set<string>([
   "decision_brief",
   "appendix",
-  // legacy aliases
-  "decision_brief",
+  "direct_answer",
+  "02",
+  "03",
 ]);
+
+/** Face ids allowed as new-agenda serves_page. */
+export const FACE_AGENDA_SERVES_PAGE_IDS = [
+  "01",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+] as const;
 
 export function getBlueprintPage(id: string): ReportPage | undefined {
   const byId = REPORT_BLUEPRINT.find((p) => p.id === id);

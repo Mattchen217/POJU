@@ -9,12 +9,20 @@ import {
   PUSH_GATE,
   PUSH_MIN_TURNS,
 } from "@/lib/poju/agent-state";
+import { contentPageIdForLegacyKey } from "@/lib/llm/pro/delivery/page-id-remap";
+import {
+  FACE_AGENDA_SERVES_PAGE_IDS,
+  BLUEPRINT_AGENDA_FORBIDDEN_PAGES,
+} from "@/lib/poju/report-blueprint";
 
 export type AgendaItemStatus = "unexplored" | "partial" | "covered";
 
 export type AgendaFrameKind = "key_crossroads" | "modern_action" | "energy_retune";
 
-/** L3: 服务主路径 / 辅路径 / 两者。 */
+/**
+ * @deprecated Legacy primary/backup agenda routing. New agenda must not write this.
+ * Kept optional for reading old sessions only.
+ */
 export type AgendaServesPath = "primary" | "backup" | "both";
 
 /** L3: fill补料 / calibrate校准方向 / personalize个性化素材。 */
@@ -36,9 +44,11 @@ export interface AgendaItem {
   supports?: string;
   /** 用户对这一项收集到的答案(collecting 满足时写入;汇总段/交付读取)。 */
   captured_answer?: string;
-  /** L3: 这条议程服务第4段哪一页（对齐 report-blueprint 的 page id，如 "execution_guidance"）。 */
+  /** L3: 服务哪张决策脸（face id 01/04/05/06/07/08）。 */
   serves_page?: string;
-  /** L3: 服务主路径 / 辅路径 / 两者。 */
+  /**
+   * @deprecated Do not write on new agenda. Ignored by Stage2 face routing.
+   */
   serves_path?: AgendaServesPath;
   /** L3: 作用 —— fill补料 / calibrate校准方向 / personalize个性化素材。 */
   role?: AgendaRole;
@@ -56,80 +66,62 @@ export interface AgendaItem {
   unqualified_streak?: number;
 }
 
-/** v1 九模块议程主落地闭集（禁止 decision_brief / appendix）。 */
-export const V1_AGENDA_SERVES_PAGE_IDS = [
-  "situation_analysis",
-  "personal_decision_patterns",
-  "bottleneck_analysis",
-  "strategic_options",
-  "recommended_strategy",
-  "execution_guidance",
-  "self_regulation",
-  "validation_review",
-] as const;
-
-export type V1AgendaServesPageId = (typeof V1_AGENDA_SERVES_PAGE_IDS)[number];
-
-/** 旧六页 / 别名 → 九模块主落地。 */
-const LEGACY_SERVES_PAGE_TO_V1: Record<string, V1AgendaServesPageId> = {
-  direct_answer: "situation_analysis", // should not appear; normalize away
-  foundation: "bottleneck_analysis",
-  science_action: "execution_guidance",
-  metaphysics_action: "self_regulation",
-  risk_guard: "validation_review",
-  signals_close: "validation_review",
-  decision_brief: "situation_analysis",
-  appendix: "validation_review",
-};
+/** @deprecated Prefer FACE_AGENDA_SERVES_PAGE_IDS. */
+export const V1_AGENDA_SERVES_PAGE_IDS = FACE_AGENDA_SERVES_PAGE_IDS;
+export type V1AgendaServesPageId = (typeof FACE_AGENDA_SERVES_PAGE_IDS)[number];
 
 /**
- * Normalize LLM / legacy serves_page to a v1 module id.
- * Unknown strings pass through trimmed (downstream may still map via toDeliverySegmentKey).
+ * Normalize LLM / legacy serves_page → face id (01/04/05/06/07/08).
+ * Nine-module keys remap via contentPageIdForLegacyKey; chart_only faces dropped.
  */
 export function normalizeServesPage(raw: string | undefined | null): string | undefined {
   if (!raw || typeof raw !== "string") return undefined;
   const t = raw.trim();
   if (!t) return undefined;
-  if ((V1_AGENDA_SERVES_PAGE_IDS as readonly string[]).includes(t)) return t;
-  const mapped = LEGACY_SERVES_PAGE_TO_V1[t];
-  if (mapped) return mapped;
-  return t;
+  /** Face id already allowed. */
+  if ((FACE_AGENDA_SERVES_PAGE_IDS as readonly string[]).includes(t)) return t;
+  /** Brief/appendix/chart_only keys never become agenda serves_page. */
+  if (BLUEPRINT_AGENDA_FORBIDDEN_PAGES.has(t) || t === "02" || t === "03") {
+    return undefined;
+  }
+  const face = contentPageIdForLegacyKey(t);
+  if (face === "02" || face === "03") return undefined;
+  if (face && (FACE_AGENDA_SERVES_PAGE_IDS as readonly string[]).includes(face)) {
+    return face;
+  }
+  return undefined;
 }
 
-/** Re-export blueprint bridge: v1 module → 现网六页出稿 key. */
+/** Re-export blueprint bridge: module/face → 出稿 key (legacy remap). */
 export { toDeliverySegmentKey } from "@/lib/poju/report-blueprint";
 
 /**
  * Resolve L3 page anchors from LLM JSON.
- * serves_page: explicit wins (normalized to v1); else derive from frame_kind
- * (modern_action→execution_guidance, energy_retune→self_regulation).
+ * serves_page → face id; serves_path is never written on new agenda.
+ * frame_kind defaults: modern_action→06, energy_retune→06, key_crossroads→04.
  */
 export function resolveAgendaPageAnchors(
   o: Record<string, unknown>,
   frame_kind?: AgendaFrameKind,
-): Pick<AgendaItem, "serves_page" | "serves_path" | "role"> {
+): Pick<AgendaItem, "serves_page" | "role"> {
   const explicitPage =
     typeof o.serves_page === "string" && o.serves_page.trim()
       ? o.serves_page.trim()
       : undefined;
   const derivedPage =
     frame_kind === "modern_action"
-      ? "execution_guidance"
+      ? "06"
       : frame_kind === "energy_retune"
-        ? "self_regulation"
+        ? "06"
         : frame_kind === "key_crossroads"
-          ? "bottleneck_analysis"
+          ? "04"
           : undefined;
   const serves_page = normalizeServesPage(explicitPage ?? derivedPage);
-  const sp = o.serves_path;
-  const serves_path: AgendaServesPath | undefined =
-    sp === "primary" || sp === "backup" || sp === "both" ? sp : undefined;
   const r = o.role;
   const role: AgendaRole | undefined =
     r === "fill" || r === "calibrate" || r === "personalize" ? r : undefined;
   return {
     ...(serves_page ? { serves_page } : {}),
-    ...(serves_path ? { serves_path } : {}),
     ...(role ? { role } : {}),
   };
 }

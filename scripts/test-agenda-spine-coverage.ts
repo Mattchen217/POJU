@@ -67,8 +67,7 @@ const thinAgenda: AgendaItem[] = [
     frame_kind: "modern_action",
     frame_index: 1,
     supports: "影子咨询",
-    serves_page: "execution_guidance",
-    serves_path: "primary",
+    serves_page: "06",
     role: "fill",
   },
   {
@@ -79,8 +78,7 @@ const thinAgenda: AgendaItem[] = [
     frame_kind: "modern_action",
     frame_index: 1,
     supports: "影子咨询",
-    serves_page: "execution_guidance",
-    serves_path: "primary",
+    serves_page: "06",
     role: "fill",
   },
   {
@@ -90,8 +88,7 @@ const thinAgenda: AgendaItem[] = [
     status: "unexplored",
     frame_kind: "key_crossroads",
     supports: "分岔",
-    serves_page: "execution_guidance",
-    serves_path: "both",
+    serves_page: "06",
     role: "fill",
   },
   {
@@ -101,8 +98,7 @@ const thinAgenda: AgendaItem[] = [
     status: "unexplored",
     frame_kind: "key_crossroads",
     supports: "关系成本",
-    serves_page: "execution_guidance",
-    serves_path: "both",
+    serves_page: "06",
     role: "calibrate",
   },
 ];
@@ -127,8 +123,8 @@ const ctx = {
   assert.ok(patched.some((a) => a.frame_index === 2));
   assert.ok(patched.some((a) => a.frame_index === 3));
   const pages = new Set(patched.map((a) => a.serves_page).filter(Boolean));
-  assert.ok(pages.has("execution_guidance"));
-  assert.ok(pages.has("validation_risk") || pages.has("self_regulation"));
+  assert.ok(pages.has("06"));
+  assert.ok(pages.has("08") || pages.has("04"));
   const after = validateAgendaSpineCoverage(patched, careerDualCore, ctx);
   assert.equal(after.ok, true);
   console.log("ok patch fixes sample-like thin agenda");
@@ -203,8 +199,7 @@ const ctx = {
       status: "unexplored",
       frame_kind: "key_crossroads",
       supports: "确认对方对兼职的真实接受度，验证兼职路径是否可行",
-      serves_page: "execution_guidance",
-      serves_path: "primary",
+      serves_page: "06",
       role: "calibrate",
       collection_goal: "了解对方对兼职提议的初步反应",
     },
@@ -215,8 +210,7 @@ const ctx = {
       status: "unexplored",
       frame_kind: "modern_action",
       supports: "验证项目对技术的依赖程度",
-      serves_page: "execution_guidance",
-      serves_path: "primary",
+      serves_page: "06",
       role: "calibrate",
       collection_goal: "明确技术是否为核心壁垒",
     },
@@ -227,8 +221,7 @@ const ctx = {
       status: "unexplored",
       frame_kind: "key_crossroads",
       supports: "评估失去现有收入的风险承受力",
-      serves_page: "validation_risk",
-      serves_path: "both",
+      serves_page: "08",
       role: "fill",
       collection_goal: "了解你如果断了收入，能支撑多久",
     },
@@ -239,8 +232,7 @@ const ctx = {
       status: "unexplored",
       frame_kind: "modern_action",
       supports: "验证是否有可信赖的法律资源",
-      serves_page: "validation_risk",
-      serves_path: "primary",
+      serves_page: "08",
       role: "fill",
       collection_goal: "确认书面协议空间",
     },
@@ -251,8 +243,7 @@ const ctx = {
       status: "unexplored",
       frame_kind: "energy_retune",
       supports: "验证个人是否愿意尝试调频方式",
-      serves_page: "self_regulation",
-      serves_path: "both",
+      serves_page: "06",
       role: "personalize",
       collection_goal: "了解冷静下来的方法",
     },
@@ -263,8 +254,7 @@ const ctx = {
       status: "unexplored",
       frame_kind: "energy_retune",
       supports: "确认近7日可投入的时间与节奏",
-      serves_page: "validation_close",
-      serves_path: "both",
+      serves_page: "08",
       role: "personalize",
       collection_goal: "了解接下来一周时间",
     },

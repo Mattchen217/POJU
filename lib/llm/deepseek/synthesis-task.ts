@@ -58,7 +58,7 @@ export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收�
 - 【多维收敛,不是单点】：收敛必须综合 multi_dimension_reckoning 的【多个维度】，不许只抓一个维度定方向(那就退回单锚点了)。
 - 【命理只解释机制、不发明事实】：现实以 covered_agenda 为准，命理只解释"为什么"、指方向，不反推用户没说的事实。
 - 【合规表达】：用"适配度最高/阻力最小 + 明确推荐"；【严禁】"你不适合X/你运势不好"这类命运断言。
-- 【撑得起报告·自检】：主路径要能撑起交付6页、每页直面 desired_outcome、不空洞不离题；某页会因主方向写不出实质→重新收敛。
+- 【face 现实槽自检】：收敛方向须能喂 face 01/04/05/06/08（题门中时含 07）的现实槽——条件/边界、卡点、切轨、节奏、红灯；【禁止】旧六页/九模块/主辅纸交付话术；某脸现实槽会因方向写不出实质→重新收敛。
 - 【禁合盘翻版】：禁止输出对方八字断言、双人契合分数墙、合盘专章。
 
 # 输出(严格 JSON · 无围栏)
@@ -135,7 +135,7 @@ export function buildSynthesisPrompt(input: {
       ? job_input.report_pages
           .map((p) => `- ${p.id}（${p.title}）：${p.purpose}`)
           .join("\n")
-      : "（未附报告页清单；仍按撑得起交付全貌自检。）";
+      : "（未附 face 清单；仍按 face 01/04/05/06/08（+题门07）现实槽自检，禁止旧六页/主辅纸交付话术。）";
 
   const dyadBlock =
     path === "dyad"
@@ -176,11 +176,11 @@ ${dyadBlock}
 【structured_inventory】
 （默认不灌：multi_dimension_reckoning 已是唯一命理依据；勿另开全盘 inventory 复核。）
 
-【报告页(撑得起报告自检)】
+【face 现实槽(收敛自检 · 非六页主辅纸)】
 ${reportPages}
 
 【任务 · 汇总段】
-综合多维 + 现实，收敛出 primary_path + backup_path + action_plan。
+综合多维 + 现实，收敛出 primary_path + backup_path + action_plan（内部行动骨架；对外/议程勿复述「主辅路径/六页交付」话术）。
 每条路径必须含 chart_anchors≥2（选自多维 chart_basis）。
 若 covered_agenda 非空：每条路径还必须含 reality_anchors≥1（选自议程 label/answer）。结构×现实双绑。仅 JSON，无 markdown 围栏。`;
 

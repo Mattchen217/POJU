@@ -37,7 +37,7 @@ export const PIVOT_DUAL_PARTY_POLICY = `# 二元关系纪律（感情 / 合作 /
 export const DUAL_PARTY_AGENDA_COLLECTION_HINTS = [
   "确认对方在这段关系里的角色与权力位(伴侣/老板/合伙人等),够判断边界型方案是否可行",
   "确认对方近期可观察行为或态度(非猜测其动机),够校准你侧打法是否还成立",
-  "确认你在这段关系里的硬底线或不可逆成本,够判断主辅切换条件",
+  "确认你在这段关系里的硬底线或不可逆成本,够判断切轨/停止条件",
 ] as const;
 
 /** 蓝图/验收用的 reality_needs 短标签。 */
