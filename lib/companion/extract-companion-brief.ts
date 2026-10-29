@@ -233,18 +233,22 @@ export function extractCompanionBrief(input: {
   }
 
   if (!primary || !backup) {
+    /** Prefer canonical keys; also accept legacy alias slots in pageSchemas map. */
+    const schemas = input.pageSchemas;
     const p1 =
-      findPage(input.pageSchemas, "decision_brief", input.fullText) ??
-      findPage(input.pageSchemas, "recommended_strategy", input.fullText) ??
-      findPage(input.pageSchemas, "direct_answer", input.fullText);
+      findPage(schemas, "decision_brief", input.fullText) ??
+      findPage(schemas, "recommended_strategy", input.fullText) ??
+      schemas?.["direct_answer"] ??
+      schemas?.decision_brief ??
+      null;
     const p3 =
-      findPage(input.pageSchemas, "execution_guidance", input.fullText) ??
-      findPage(input.pageSchemas, "science_action", input.fullText);
+      findPage(schemas, "execution_guidance", input.fullText) ??
+      schemas?.["science_action"] ??
+      schemas?.execution_guidance ??
+      null;
     if (
       !p1 ||
-      (p1.page !== "decision_brief" &&
-        p1.page !== "recommended_strategy" &&
-        p1.page !== "direct_answer")
+      (p1.page !== "decision_brief" && p1.page !== "recommended_strategy")
     ) {
       throw new Error("companion_brief_missing_01_or_p1");
     }
@@ -254,13 +258,17 @@ export function extractCompanionBrief(input: {
     if (!primary || !backup) {
       throw new Error("companion_brief_missing_tracks");
     }
-    if (
-      p3 &&
-      (p3.page === "execution_guidance" || p3.page === "science_action")
-    ) {
+    if (p3 && p3.page === "execution_guidance") {
       const p3r = p3 as unknown as Record<string, unknown>;
       primary = mergeP3Means(primary, asRecord(p3r.primary_toolkit));
       backup = mergeP3Means(backup, asRecord(p3r.backup_toolkit));
+    } else if (p3) {
+      /** Legacy science_action blob may still carry toolkits under wrong page tag. */
+      const p3r = p3 as unknown as Record<string, unknown>;
+      if (asRecord(p3r.primary_toolkit) || asRecord(p3r.backup_toolkit)) {
+        primary = mergeP3Means(primary, asRecord(p3r.primary_toolkit));
+        backup = mergeP3Means(backup, asRecord(p3r.backup_toolkit));
+      }
     }
   }
 

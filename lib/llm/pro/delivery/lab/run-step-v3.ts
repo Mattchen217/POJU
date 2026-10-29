@@ -620,6 +620,9 @@ async function executeV3(
         pageSchemas: useFace
           ? { "01": face01!, "05": face05! }
           : {
+              decision_brief: legacyP1!,
+              execution_guidance: legacyP3!,
+              /** Keep alias slots for older callers that still key by six-page ids. */
               direct_answer: legacyP1!,
               science_action: legacyP3!,
             },
