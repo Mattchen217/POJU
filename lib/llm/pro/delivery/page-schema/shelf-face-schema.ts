@@ -1,68 +1,31 @@
 /**
- * Shelf-face zod. Generation still emits v1 segment JSON.
- * The reader face groups those segments: 06 holds principles + 06-C, 08 holds risk + close.
+ * Shelf-face zod — face-native segment schemas (01–08).
+ * Generation emits one JSON per face; no v1 paper fold wrappers.
  */
 
-import { z } from "zod";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
-import { DeliveryPageSchemaByKey } from "@/lib/llm/pro/delivery/page-schema/types";
+import {
+  FACE_PAGE_SCHEMAS,
+  Face01Schema,
+  Face02Schema,
+  Face03Schema,
+  Face04Schema,
+  Face05Schema,
+  Face06Schema,
+  Face07Schema,
+  Face08Schema,
+} from "@/lib/llm/pro/delivery/page-schema/face-types";
 
-const optionalBody = z.string().trim().optional();
+export const ShelfFace01Schema = Face01Schema;
+export const ShelfFace02Schema = Face02Schema;
+export const ShelfFace04Schema = Face04Schema;
+export const ShelfFace05Schema = Face05Schema;
+export const ShelfFace06Schema = Face06Schema;
+export const ShelfFace07Schema = Face07Schema;
+export const ShelfFace08Schema = Face08Schema;
+export const ShelfFace03Schema = Face03Schema;
 
-export const ShelfFace01Schema = z.object({
-  page: z.literal("01"),
-  brief: DeliveryPageSchemaByKey.decision_brief.optional(),
-});
-
-export const ShelfFace02Schema = z.object({
-  page: z.literal("02"),
-  situation: DeliveryPageSchemaByKey.situation_analysis.optional(),
-  patterns: DeliveryPageSchemaByKey.personal_decision_patterns.optional(),
-});
-
-export const ShelfFace04Schema = z.object({
-  page: z.literal("04"),
-  bottleneck: DeliveryPageSchemaByKey.bottleneck_analysis.optional(),
-});
-
-export const ShelfFace05Schema = z.object({
-  page: z.literal("05"),
-  options: DeliveryPageSchemaByKey.strategic_options.optional(),
-  strategy: DeliveryPageSchemaByKey.recommended_strategy.optional(),
-});
-
-export const ShelfFace06Schema = z.object({
-  page: z.literal("06"),
-  principles: DeliveryPageSchemaByKey.execution_guidance.optional(),
-  retune: DeliveryPageSchemaByKey.self_regulation.optional(),
-});
-
-export const ShelfFace07Schema = z.object({
-  page: z.literal("07"),
-  body: optionalBody,
-});
-
-export const ShelfFace08Schema = z.object({
-  page: z.literal("08"),
-  risk: DeliveryPageSchemaByKey.validation_risk.optional(),
-  close: DeliveryPageSchemaByKey.validation_close.optional(),
-});
-
-export const ShelfFace03Schema = z.object({
-  page: z.literal("03"),
-  body: optionalBody,
-});
-
-export const SHELF_FACE_SCHEMAS = {
-  "01": ShelfFace01Schema,
-  "02": ShelfFace02Schema,
-  "04": ShelfFace04Schema,
-  "05": ShelfFace05Schema,
-  "06": ShelfFace06Schema,
-  "07": ShelfFace07Schema,
-  "08": ShelfFace08Schema,
-  "03": ShelfFace03Schema,
-} as const;
+export const SHELF_FACE_SCHEMAS = FACE_PAGE_SCHEMAS;
 
 export function shelfFaceSchema(pageId: DecisionPageId) {
   return SHELF_FACE_SCHEMAS[pageId];

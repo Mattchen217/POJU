@@ -8,6 +8,7 @@ import {
   DELIVERY_SECTION_HEADINGS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { decisionFaceKicker } from "@/lib/llm/pro/delivery/page-schema/face-kicker";
 
 export type DeliveryLocaleBucket = "zh" | "en" | "es" | "de" | "fr";
 
@@ -95,7 +96,12 @@ export const DELIVERY_V2_EVIDENCE_LABEL_RE =
   /\*\*(?:依据与推理|Evidence\s*&\s*reasoning|Evidencia\s+y\s+razonamiento|Beweis\s*&\s*Schlussfolgerung|Preuves\s+et\s+raisonnement)[:：]\*\*/;
 
 export function deliverySectionHeading(key: DeliverySegmentKey, locale: string): string {
-  const h = DELIVERY_SECTION_HEADINGS[key];
+  // Face-native: use face kicker (locale SSOT).
+  if (/^(0[1-8])$/.test(key)) {
+    return decisionFaceKicker(key, locale);
+  }
+  const h = DELIVERY_SECTION_HEADINGS[key as keyof typeof DELIVERY_SECTION_HEADINGS];
+  if (!h) return key;
   const b = deliveryLocaleBucket(locale);
   if (b === "zh") return h.zh;
   if (b === "es") return h.es;
@@ -106,7 +112,11 @@ export function deliverySectionHeading(key: DeliverySegmentKey, locale: string):
 
 /** Fixed page tag for TOC / eyebrow (not the dynamic page_title). */
 export function deliveryPageTag(key: DeliverySegmentKey, locale: string): string {
-  const h = DELIVERY_PAGE_TAGS[key];
+  if (/^(0[1-8])$/.test(key)) {
+    return deliverySectionHeading(key, locale);
+  }
+  const h = DELIVERY_PAGE_TAGS[key as keyof typeof DELIVERY_PAGE_TAGS];
+  if (!h) return key;
   const b = deliveryLocaleBucket(locale);
   if (b === "zh") return h.zh;
   if (b === "es") return h.es;

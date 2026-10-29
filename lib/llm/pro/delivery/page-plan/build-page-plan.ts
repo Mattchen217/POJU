@@ -1,5 +1,6 @@
 import type { POJUAgentState, BreakthroughCore } from "@/lib/poju/agent-state";
-import { DELIVERY_SEGMENT_KEYS, type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { V1_DELIVERY_SEGMENT_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
 import {
   filterMultiDimIndicesForP4,
   filterMultiDimIndicesForRisk,
@@ -169,15 +170,19 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
   void selfNeg;
   void selfPos;
 
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (!pages[k]) {
+  // Page-plan still keys legacy papers; face books use face-prompt + sliceForPage.
+  for (const k of V1_DELIVERY_SEGMENT_KEYS) {
+    if (!(pages as Record<string, unknown>)[k]) {
       throw new Error(`missing page plan: ${k}`);
     }
   }
 
   return {
     version: "delivery_page_plan_v1",
-    pages: pages as Record<DeliverySegmentKey, DeliveryPagePlanEntry>,
+    pages: pages as Partial<Record<DeliverySegmentKey, DeliveryPagePlanEntry>> as Record<
+      DeliverySegmentKey,
+      DeliveryPagePlanEntry
+    >,
   };
 }
 

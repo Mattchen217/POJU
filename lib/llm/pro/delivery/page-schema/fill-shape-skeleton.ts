@@ -8,6 +8,9 @@
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { canonicalizeDeliverySegmentKey } from "@/lib/llm/pro/delivery/segment-key-alias";
+import { faceFillShapeSkeleton } from "@/lib/llm/pro/delivery/page-schema/face-types";
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
 
 const emptyAngle = () => ({
   name: "",
@@ -266,9 +269,16 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
 export function fillShapeSkeletonForKey(
   key: DeliverySegmentKey,
 ): Record<string, unknown> | null {
+  // New books: face-native empty shape (no primary/backup).
+  if ((DECISION_PAGE_IDS as readonly string[]).includes(key)) {
+    return structuredClone(faceFillShapeSkeleton(key as DecisionPageId));
+  }
   const direct = DELIVERY_FILL_SHAPE_SKELETON[key];
   if (direct) return structuredClone(direct);
   const canon = canonicalizeDeliverySegmentKey(key);
+  if (canon && (DECISION_PAGE_IDS as readonly string[]).includes(canon)) {
+    return structuredClone(faceFillShapeSkeleton(canon as DecisionPageId));
+  }
   if (canon && DELIVERY_FILL_SHAPE_SKELETON[canon]) {
     return structuredClone(DELIVERY_FILL_SHAPE_SKELETON[canon]!);
   }

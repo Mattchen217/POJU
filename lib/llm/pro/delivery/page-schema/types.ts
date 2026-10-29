@@ -10,6 +10,17 @@
 import { z } from "zod";
 import { DELIVERY_SEGMENT_KEYS, type DeliverySegmentKey } from "../delivery-schema";
 import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import {
+  Face01Schema,
+  Face02Schema,
+  Face03Schema,
+  Face04Schema,
+  Face05Schema,
+  Face06Schema,
+  Face07Schema,
+  Face08Schema,
+  type FacePageData,
+} from "@/lib/llm/pro/delivery/page-schema/face-types";
 
 export const DELIVERY_PAGE_SCHEMA_VERSION = "page_schema_v1" as const;
 
@@ -382,6 +393,16 @@ export const P7PageSchema = z.object({
 export type P7Page = z.infer<typeof P7PageSchema>;
 
 export const DeliveryPageSchemaByKey = {
+  // Face-native (new books)
+  "01": Face01Schema,
+  "02": Face02Schema,
+  "03": Face03Schema,
+  "04": Face04Schema,
+  "05": Face05Schema,
+  "06": Face06Schema,
+  "07": Face07Schema,
+  "08": Face08Schema,
+  // Legacy v1 papers (old sessions only)
   decision_brief: P1PageSchema,
   situation_analysis: P2PageSchema,
   personal_decision_patterns: PatternsPageSchema,
@@ -404,7 +425,16 @@ export const DeliveryPageSchemaByKey = {
 
 export type DeliveryPageSchemaKey = keyof typeof DeliveryPageSchemaByKey;
 
+/** Face-native pages (01–08) + legacy v1 papers for old sessions. */
 export const DeliveryPageUnionSchema = z.discriminatedUnion("page", [
+  Face01Schema,
+  Face02Schema,
+  Face03Schema,
+  Face04Schema,
+  Face05Schema,
+  Face06Schema,
+  Face07Schema,
+  Face08Schema,
   P1PageSchema,
   P2PageSchema,
   PatternsPageSchema,
@@ -417,7 +447,7 @@ export const DeliveryPageUnionSchema = z.discriminatedUnion("page", [
   P6PageSchema,
   P7PageSchema,
 ]);
-export type DeliveryPageData = z.infer<typeof DeliveryPageUnionSchema>;
+export type DeliveryPageData = z.infer<typeof DeliveryPageUnionSchema> | FacePageData;
 
 export const DeliveryReportPagesV1Schema = z.object({
   version: z.literal(DELIVERY_PAGE_SCHEMA_VERSION),

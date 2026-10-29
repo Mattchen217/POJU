@@ -368,10 +368,10 @@ ${
     if (key === "self_regulation") {
       hint = scrubP4FillAnchorFeed(hint);
       userParts.push(
-        `## 主辅对照(路径锚 · 工具词已剥 · 禁抄回 strategy/means)\n${hint}`,
+        `## 01主推荐+05路径对齐(路径锚 · 工具词已剥 · 禁抄回旧主辅轨)\n${hint}`,
       );
     } else {
-      userParts.push(`## 主辅对照(来自上游)\n${hint}`);
+      userParts.push(`## 01/05 对齐摘要(来自上游)\n${hint}`);
     }
   }
   if (

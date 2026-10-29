@@ -165,13 +165,13 @@ function poolSignature(
     true,
   );
   assert.ok(
-    SEGMENT_COMPUTED_INPUTS.signals_close.includes("action_plan"),
+    SEGMENT_COMPUTED_INPUTS.signals_close!.includes("action_plan"),
   );
   assert.ok(
-    SEGMENT_COMPUTED_INPUTS.signals_close.includes("rhythm_frame"),
+    SEGMENT_COMPUTED_INPUTS.signals_close!.includes("rhythm_frame"),
   );
   assert.ok(
-    SEGMENT_COMPUTED_INPUTS.signals_close.includes("action_brief_p3_p4"),
+    SEGMENT_COMPUTED_INPUTS.signals_close!.includes("action_brief_p3_p4"),
   );
   console.log("ok P6 inputs + evidence_coverage soft-retry");
 }

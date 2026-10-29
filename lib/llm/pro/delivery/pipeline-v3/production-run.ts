@@ -4,9 +4,8 @@
  * Live final-delivery does not read the Lab create flag. Unset env runs
  * judgment → body → gate → body_polish → evidence_soft via `runLabStepV3`,
  * one model call per worker so the 18-hop continue fuse stays untouched.
- * Page schemas land in the existing segment checkpoints. Assemble still
- * calls `mergeDeliveryToMarkdown`, and the shelf folds those v1 papers
- * onto faces 01–08 (07 from the topic slice, 03 from the appendix builder).
+ * Page schemas land as face-native JSON (01–08). Assemble merges face
+ * checkpoints onto the shelf (07 from the topic slice when gated).
  *
  * Explicit rollback: `DELIVERY_PIPELINE=legacy` keeps assign/write/fill.
  * A missing page schema or marked evidence fails the job. It does not
@@ -45,7 +44,7 @@ import {
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import type { DeliverySegmentReady, SegmentChainProgress } from "@/lib/llm/pro/delivery/run-segment-chain";
-import { V1_DELIVERY_SEGMENT_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
+import { FACE_DELIVERY_PAGE_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
 import { failXhighJob, releaseXhighSessionLock, setXhighJobContent } from "@/lib/poju/xhigh-job-store";
 import {
   BODY_ACCEPTANCE_CONTINUE_RULE,
@@ -218,7 +217,7 @@ export function planProductionV3Book(lab: DeliveryLabSession): ProductionV3BookP
     }
   }
 
-  for (const key of V1_DELIVERY_SEGMENT_KEYS) {
+  for (const key of FACE_DELIVERY_PAGE_KEYS) {
     const art = lab.artifacts.by_page[key];
     const schema = art?.page_schema;
     if (!isPageData(schema)) {
@@ -236,7 +235,7 @@ export function planProductionV3Book(lab: DeliveryLabSession): ProductionV3BookP
     }
     narrative[key] = bodies;
     schemas[key] = schema;
-    if (key === "decision_brief") continue;
+    if (key === "01" || key === "03") continue;
     const evidence = argsForKey(art?.marked, key);
     if (!evidence) {
       return { ok: false, reason: `v3_missing_marked:${key}` };
@@ -255,7 +254,7 @@ export async function persistProductionV3Book(
   const plan = planProductionV3Book(lab);
   if (!plan.ok) return plan;
 
-  for (const key of V1_DELIVERY_SEGMENT_KEYS) {
+  for (const key of FACE_DELIVERY_PAGE_KEYS) {
     const schema = plan.schemas[key];
     if (!schema) return { ok: false, reason: `v3_missing_page_schema:${key}` };
     const bodies = plan.narrative[key] ?? [];
@@ -278,7 +277,7 @@ export async function persistProductionV3Book(
         .filter(Boolean)
         .join("\n\n"),
       page_schema: schema,
-      evidence_ready: key === "decision_brief" || evidence.length > 0,
+      evidence_ready: key === "01" || key === "03" || evidence.length > 0,
       locale,
     };
     await saveDeliverySegmentReady(job_id, ready);

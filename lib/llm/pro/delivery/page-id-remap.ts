@@ -401,5 +401,20 @@ export function remapRowForLegacyKey(raw: string | null | undefined): LegacyPage
 
 /** 内容页。退役键返回 null。未知键返回 null，不猜测。 */
 export function contentPageIdForLegacyKey(raw: string | null | undefined): DecisionPageId | null {
-  return remapRowForLegacyKey(raw)?.pageId ?? null;
+  if (!raw?.trim()) return null;
+  const key = raw.trim();
+  // Face ids are already canonical page ids (new books).
+  if (
+    key === "01" ||
+    key === "02" ||
+    key === "03" ||
+    key === "04" ||
+    key === "05" ||
+    key === "06" ||
+    key === "07" ||
+    key === "08"
+  ) {
+    return key;
+  }
+  return remapRowForLegacyKey(key)?.pageId ?? null;
 }

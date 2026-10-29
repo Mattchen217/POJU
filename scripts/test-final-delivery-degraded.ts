@@ -11,6 +11,7 @@ import {
   validateDeliveryComputed,
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_SECTION_HEADINGS,
+  V1_DELIVERY_SEGMENT_KEYS,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   chunkDeliveryArgPayload,
@@ -264,12 +265,12 @@ const validated = validateDeliveryComputed(dualKey);
 assert(validated.ok, "validate filled delivery computed");
 
 const narrative = Object.fromEntries(
-  DELIVERY_SEGMENT_KEYS.map((k) => [k, `正文${k}：${dualKey[k].core_conclusion}`]),
+  V1_DELIVERY_SEGMENT_KEYS.map((k) => [k, `正文${k}：${dualKey[k]!.core_conclusion}`]),
 );
 const evidence = Object.fromEntries(
-  DELIVERY_SEGMENT_KEYS.map((k) => [
+  V1_DELIVERY_SEGMENT_KEYS.map((k) => [
     k,
-    dualKey[k].bazi_basis.length
+    dualKey[k]!.bazi_basis.length
       ? `依据靠 ⟦t:shi_shen|⟧ 等支撑。`
       : "本段依据待补。",
   ]),
@@ -283,20 +284,20 @@ const md = mergeDeliveryToMarkdown(narrative, evidence, "zh", {
 });
 assert(md.includes("# 关于"), "merge has cover title");
 assert(md.includes("## 目录"), "merge has TOC");
-assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.direct_answer.zh}`), "merge has direct_answer heading");
-assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.foundation.zh}`), "merge has foundation heading");
-assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.science_action.zh}`), "merge has action heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.direct_answer!.zh}`), "merge has direct_answer heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.foundation!.zh}`), "merge has foundation heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.science_action!.zh}`), "merge has action heading");
 assert(md.includes("## 附录"), "merge has appendix");
 assert(md.includes("**依据与推理:**"), "merge has evidence lead");
 assert(!md.includes("═══ ANALYSIS"), "no legacy ANALYSIS marker");
 
 const sections = parseDeliveryContent(md);
 assert(sections.length >= 7, `parsed ${sections.length} sections`);
-const proseTypes = new Set(DELIVERY_SEGMENT_KEYS);
+const proseTypes = new Set(V1_DELIVERY_SEGMENT_KEYS as readonly string[]);
 assert(
   sections
-    .filter((s) => proseTypes.has(s.type as (typeof DELIVERY_SEGMENT_KEYS)[number]))
-    .every((s) => proseTypes.has(s.type as (typeof DELIVERY_SEGMENT_KEYS)[number])),
+    .filter((s) => proseTypes.has(s.type))
+    .every((s) => proseTypes.has(s.type)),
   "prose section keys are book keys",
 );
 assert(
@@ -311,7 +312,7 @@ const delivery = {
 };
 assert(
   typeof delivery.full_text === "string" &&
-    delivery.full_text.includes(`## ${DELIVERY_SECTION_HEADINGS.direct_answer.zh}`),
+    delivery.full_text.includes(`## ${DELIVERY_SECTION_HEADINGS.direct_answer!.zh}`),
   "POJUDelivery full_text",
 );
 assert(!("analysis" in delivery), "no legacy analysis field");
@@ -704,7 +705,7 @@ const argEv = {
 };
 const argMd = mergeDeliveryToMarkdown(argNar, argEv, "zh");
 const sitChunk =
-  argMd.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.foundation.zh)) ?? "";
+  argMd.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.foundation!.zh)) ?? "";
 assert(sitChunk.includes("养学习习惯"), "arg1 body present");
 assert(sitChunk.includes("降低期待"), "arg2 body present");
 assert(
@@ -744,11 +745,11 @@ const thinEv = Object.fromEntries(
 );
 const mergedThin = mergeDeliveryToMarkdown(thinNar, thinEv, "zh");
 const prefaceMerged =
-  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.direct_answer.zh)) ?? "";
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.direct_answer!.zh)) ?? "";
 const epilogueMerged =
-  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.signals_close.zh)) ?? "";
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.signals_close!.zh)) ?? "";
 const situationMerged =
-  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.foundation.zh)) ?? "";
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.foundation!.zh)) ?? "";
 assert(
   !prefaceMerged.includes("依据与推理"),
   "merge skips direct_answer evidence (transition / single-layer)",

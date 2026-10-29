@@ -4,8 +4,10 @@
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
+import { buildFacePromptPair } from "@/lib/llm/pro/delivery/page-schema/face-prompt";
 import { TEMPLATE_VOICE_DUTY_LINE, templateVoicePromptBlock } from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
 import {
   INVENTED_USER_NUMBER_DUTY_LINE,
@@ -16,6 +18,7 @@ import {
   inventedPartnerChartPromptBlock,
 } from "@/lib/llm/pro/delivery/pipeline-v3/invented-partner-chart";
 import { DECISION_VOICE_DUTY } from "@/lib/llm/pro/delivery/page-prompts/decision-voice";
+import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 
 const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 · 内容步①正文）。
 只输出 JSON，不要 markdown。
@@ -387,7 +390,31 @@ export function buildV3BodyPrompt(input: {
   judgment_lock?: string;
   user_feed: string;
 }): { system: string; user: string } {
-  // P4：Lab core_conclusion 常粘贴含「兼职试水」的原题 → 换中性骨架，防 priming
+  const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
+  if (faceId) {
+    const { system, user: faceUser } = buildFacePromptPair({
+      faceId,
+      locale: input.locale,
+      slice: { pageId: faceId, dump: { note: "see_user_feed_below" } },
+    });
+    const user = [
+      faceUser,
+      input.judgment_lock?.trim()
+        ? `## 本页原始批断（扎根用；勿整段粘进可见段）\n${input.judgment_lock.trim()}`
+        : "",
+      input.core_conclusion?.trim()
+        ? `## core_conclusion\n${input.core_conclusion.trim()}`
+        : "",
+      input.user_feed.trim()
+        ? `## 本案切片/真算喂料（须 ⊆ PageFeedMatrix face ${faceId}）\n${input.user_feed.trim()}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    return { system: `${BODY_SYSTEM_FACE}\n\n${system}`, user };
+  }
+
+  // Legacy v1 papers (old labs only)
   const coreConclusion =
     input.key === "self_regulation"
       ? "【Lab】围绕本案合伙场域虚高推力与硬门槛下的藏隐气口、出手节奏展开本页论证骨架（勿复述生活路径词）。"
@@ -406,6 +433,15 @@ export function buildV3BodyPrompt(input: {
     .join("\n\n");
   return { system: BODY_SYSTEM, user };
 }
+
+const BODY_SYSTEM_FACE = `你是交付报告「face 段填槽」写手（Pipeline v3 · face-native）。
+只输出 JSON，不要 markdown。
+禁止 primary/backup、primary_toolkit/backup_toolkit。
+可见正文禁命理专名报幕；真词只进批断/锚槽。
+禁止恐吓预测；输出语言随 locale 整页一致。
+
+${DECISION_VOICE_DUTY}
+`;
 
 export function formatJudgmentLockForBody(
   plan: DeepEvidencePlan | null | undefined,

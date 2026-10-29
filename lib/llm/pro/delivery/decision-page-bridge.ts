@@ -1,12 +1,11 @@
 /**
  * 01–08 是页 id 真源。v1 出稿键是薄别名，折进这些脸：
  * - 书架槽：`deliveryShelfSlotIds`（cover、toc、01、02、04、05、06、题相关 07、08、03）
- * - 脸级 zod：`shelf-face-schema.ts`。填槽纸的 `page` 仍是别名，`face` 是脸 id
- * - `resolveCanonicalDeliveryPage` 返回脸。`resolveDeliverySegmentKey("06")` 仍落到主纸别名
- * - DAG 任务 id 以脸为干。折进来的纸在脸后面带别名
- * - `pageFeedFlags("06")` 用近步旗标；`shelfFaceFeed("06")` 同时给出 06-C
+ * - 脸级 zod：`shelf-face-schema.ts` / `face-types.ts`。新书 `page`=`face`=01–08
+ * - `resolveCanonicalDeliveryPage` 返回脸。新书 `resolveDeliverySegmentKey("06")` 即为脸 id
+ * - DAG / Lab 任务 id 以脸为干（一脸一填）
  *
- * 07 没有 DAG 任务。题目打开时，写路径是 `slice:07`（切片 + A–C + 用户问题）。
+ * 07 题相关才进阅读序；写路径仍是 face 07 + sliceForPage。
  */
 
 import {
@@ -26,27 +25,30 @@ import { readingOrderForTopic } from "@/lib/llm/pro/delivery/slice-for-page";
 
 export { page07Applies, readingOrderForTopic } from "@/lib/llm/pro/delivery/slice-for-page";
 
-/** 一页内容可能对应多张现网纸。07 没有纸。 */
+/**
+ * New books: one face id = one generator key.
+ * Legacy paper aliases remain readable via page-id-remap (old sessions only).
+ */
 const SHELF_KEYS_BY_PAGE: Record<DecisionPageId, readonly string[]> = {
-  "01": ["decision_brief"],
-  "02": ["situation_analysis", "personal_decision_patterns"],
-  "04": ["bottleneck_analysis", "personal_decision_patterns"],
-  "05": ["strategic_options", "recommended_strategy"],
-  "06": ["execution_guidance", "self_regulation"],
-  "07": [],
-  "08": ["validation_risk", "validation_close"],
-  "03": ["appendix"],
+  "01": ["01"],
+  "02": ["02"],
+  "04": ["04"],
+  "05": ["05"],
+  "06": ["06"],
+  "07": ["07"],
+  "08": ["08"],
+  "03": ["03"],
 };
 
 const PRIMARY_SHELF_KEY: Record<DecisionPageId, string | null> = {
-  "01": "decision_brief",
-  "02": "situation_analysis",
-  "04": "bottleneck_analysis",
-  "05": "strategic_options",
-  "06": "execution_guidance",
-  "07": null,
-  "08": "validation_risk",
-  "03": "appendix",
+  "01": "01",
+  "02": "02",
+  "04": "04",
+  "05": "05",
+  "06": "06",
+  "07": "07",
+  "08": "08",
+  "03": "03",
 };
 
 export type DecisionPageRoute = {

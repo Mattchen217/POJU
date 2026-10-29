@@ -83,8 +83,79 @@ function formatRiskItem(r: RiskItem): string {
     : `**出现:** ${r.situation}\n\n**该做:** ${r.then_do}\n\n**注意:** ${r.watch}\n\n**禁做:** ${r.forbid}`;
 }
 
+function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
+  const p = page as Record<string, unknown>;
+  const face = String(p.page ?? "");
+  if (!/^(0[1-8])$/.test(face)) return null;
+  const push = (title: string, body: unknown): DeliveryArgument | null => {
+    const text = Array.isArray(body)
+      ? body.map((x) => String(x ?? "").trim()).filter(Boolean).join("\n")
+      : String(body ?? "").trim();
+    if (!text) return null;
+    return { body: `### ${title}\n\n${text}` };
+  };
+  const out: DeliveryArgument[] = [];
+  const add = (title: string, key: string) => {
+    const arg = push(title, p[key]);
+    if (arg) out.push(arg);
+  };
+  switch (face) {
+    case "01":
+      add("主推荐", "main_recommendation");
+      add("成立条件", "conditions");
+      add("不选什么", "not_choosing");
+      add("依据指针", "evidence_pointer");
+      break;
+    case "02":
+      add("命理理由", "destiny_reason");
+      add("科学机制", "science_mechanism");
+      add("汇合", "convergence");
+      add("可核对锚", "verifiable_anchors");
+      break;
+    case "04":
+      add("卡点命名", "bottleneck_name");
+      add("表现", "manifestation");
+      add("若硬顶", "if_force_through");
+      add("依据折叠", "evidence_fold");
+      break;
+    case "05":
+      add("首选", "first_choice");
+      add("次选", "second_choice");
+      add("慎选", "caution_choice");
+      add("切轨/停止", "switch_or_stop");
+      add("对照", "contrast");
+      break;
+    case "06":
+      add("近步原则", "near_step_principle");
+      add("阶段气候", "stage_climate");
+      add("自我调频", "self_retune");
+      add("节奏提醒", "rhythm_note");
+      break;
+    case "07":
+      add("场域判断", "field_judgment");
+      add("关系/互动", "relation_interaction");
+      add("依据折叠", "evidence_fold");
+      add("与 01/05 对齐", "align_with_01_05");
+      break;
+    case "08":
+      add("红灯信号", "red_lights");
+      add("复盘问句", "review_questions");
+      add("何时重跑本题", "when_to_rerun");
+      break;
+    case "03":
+      add("八字本题切片", "bazi_slice");
+      add("紫微本题切片", "ziwei_slice");
+      add("对照一句", "contrast");
+      break;
+  }
+  return out;
+}
+
 /** Slot fields → labeled markdown bodies for evidence targeting (1 unit = 1 evidence). */
 export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgument[] {
+  const faceBodies = faceArgumentBodies(page);
+  if (faceBodies) return faceBodies;
+
   switch (page.page) {
     case "decision_brief": {
       const trackBody = (

@@ -95,6 +95,162 @@ function coerceTrack(
   };
 }
 
+function coerceFaceLoose(
+  key: string,
+  root: Record<string, unknown>,
+  page_title: string,
+  page_subtitle: string,
+): DeliveryPageData | null {
+  const faceKeys = new Set(["01", "02", "03", "04", "05", "06", "07", "08"]);
+  if (!faceKeys.has(key)) return null;
+  const str = (v: unknown) => String(v ?? "").trim();
+  const strList = (v: unknown) =>
+    Array.isArray(v)
+      ? v.map((x) => str(x)).filter(Boolean)
+      : str(v)
+        ? [str(v)]
+        : [];
+  const base = {
+    page: key,
+    face: key,
+    page_title,
+    page_subtitle,
+  };
+  switch (key) {
+    case "01": {
+      const main_recommendation = str(root.main_recommendation);
+      const conditions = str(root.conditions);
+      const not_choosing = str(root.not_choosing);
+      const evidence_pointer = str(root.evidence_pointer);
+      if (!main_recommendation || !conditions || !not_choosing || !evidence_pointer) {
+        return null;
+      }
+      return {
+        ...base,
+        page: "01",
+        face: "01",
+        main_recommendation,
+        conditions,
+        not_choosing,
+        evidence_pointer,
+      } as DeliveryPageData;
+    }
+    case "02": {
+      const destiny_reason = str(root.destiny_reason);
+      const science_mechanism = str(root.science_mechanism);
+      const convergence = str(root.convergence);
+      const verifiable_anchors = strList(root.verifiable_anchors);
+      if (!destiny_reason || !science_mechanism || !convergence || !verifiable_anchors.length) {
+        return null;
+      }
+      return {
+        ...base,
+        page: "02",
+        face: "02",
+        destiny_reason,
+        science_mechanism,
+        convergence,
+        verifiable_anchors,
+      } as DeliveryPageData;
+    }
+    case "04": {
+      const bottleneck_name = str(root.bottleneck_name);
+      const manifestation = str(root.manifestation);
+      const evidence_fold = str(root.evidence_fold);
+      if (!bottleneck_name || !manifestation || !evidence_fold) return null;
+      return {
+        ...base,
+        page: "04",
+        face: "04",
+        bottleneck_name,
+        manifestation,
+        if_force_through: str(root.if_force_through),
+        evidence_fold,
+      } as DeliveryPageData;
+    }
+    case "05": {
+      const first_choice = str(root.first_choice);
+      const second_choice = str(root.second_choice);
+      const caution_choice = str(root.caution_choice);
+      const switch_or_stop = str(root.switch_or_stop);
+      if (!first_choice || !second_choice || !caution_choice || !switch_or_stop) {
+        return null;
+      }
+      return {
+        ...base,
+        page: "05",
+        face: "05",
+        first_choice,
+        second_choice,
+        caution_choice,
+        switch_or_stop,
+        contrast: str(root.contrast),
+      } as DeliveryPageData;
+    }
+    case "06": {
+      const near_step_principle = str(root.near_step_principle);
+      const stage_climate = str(root.stage_climate);
+      const self_retune = str(root.self_retune);
+      const rhythm_note = str(root.rhythm_note);
+      if (!near_step_principle || !stage_climate || !self_retune || !rhythm_note) {
+        return null;
+      }
+      return {
+        ...base,
+        page: "06",
+        face: "06",
+        near_step_principle,
+        stage_climate,
+        self_retune,
+        rhythm_note,
+      } as DeliveryPageData;
+    }
+    case "07": {
+      const field_judgment = str(root.field_judgment);
+      const relation_interaction = str(root.relation_interaction);
+      const evidence_fold = str(root.evidence_fold);
+      if (!field_judgment || !relation_interaction || !evidence_fold) return null;
+      return {
+        ...base,
+        page: "07",
+        face: "07",
+        field_judgment,
+        relation_interaction,
+        evidence_fold,
+        align_with_01_05: str(root.align_with_01_05),
+      } as DeliveryPageData;
+    }
+    case "08": {
+      const red_lights = strList(root.red_lights);
+      const review_questions = strList(root.review_questions);
+      const when_to_rerun = str(root.when_to_rerun);
+      if (!red_lights.length || !review_questions.length || !when_to_rerun) return null;
+      return {
+        ...base,
+        page: "08",
+        face: "08",
+        red_lights,
+        review_questions,
+        when_to_rerun,
+      } as DeliveryPageData;
+    }
+    case "03": {
+      const bazi_slice = str(root.bazi_slice);
+      if (!bazi_slice) return null;
+      return {
+        ...base,
+        page: "03",
+        face: "03",
+        bazi_slice,
+        ziwei_slice: str(root.ziwei_slice),
+        contrast: str(root.contrast),
+      } as DeliveryPageData;
+    }
+    default:
+      return null;
+  }
+}
+
 /** Minimal coerce so Lab/UI can preview — never quality-rewrite. */
 export function coercePageSchemaLoose(
   key: DeliverySegmentKey,
@@ -110,6 +266,9 @@ export function coercePageSchemaLoose(
   }
   const page_title = String(root.page_title ?? "").trim();
   const page_subtitle = String(root.page_subtitle ?? "").trim();
+
+  const faceCoerced = coerceFaceLoose(key, root, page_title, page_subtitle);
+  if (faceCoerced) return faceCoerced;
 
   if (key === "decision_brief") {
     const primary = coerceTrack(root.primary, "primary");

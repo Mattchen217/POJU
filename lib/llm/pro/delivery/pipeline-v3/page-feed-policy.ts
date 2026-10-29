@@ -185,10 +185,67 @@ function pageFeedFlagsForSegment(
   };
 
   switch (key) {
+    // Face-native pages: sliceForPage + thesis; 01/05 use align hint (legacy flag name).
+    case "01":
+      if (phase === "judgment") {
+        return withDyadJudgment({
+          ...BASE,
+          reality: false,
+          question_expectation: false,
+          dyad_relation_structure: false,
+          primary_backup_hint: false,
+        });
+      }
+      return { ...BASE, primary_backup_hint: false };
+    case "02":
+    case "04":
+      return withDyadJudgment({
+        ...BASE,
+        foundation_surface: true,
+        primary_backup_hint: false,
+        reality: phase === "body",
+      });
+    case "05":
+      if (phase === "judgment") {
+        return withDyadJudgment({
+          ...BASE,
+          science_means: true,
+          primary_backup_hint: false,
+          reality: false,
+        });
+      }
+      return {
+        ...BASE,
+        science_means: true,
+        primary_backup_hint: true, // 01 main_recommendation align
+      };
+    case "06":
+      return {
+        ...BASE,
+        science_means: true,
+        primary_backup_hint: true,
+      };
+    case "07":
+      return withDyadJudgment({
+        ...BASE,
+        primary_backup_hint: true,
+        reality: phase === "body",
+      });
+    case "08":
+      return {
+        ...BASE,
+        risk_fuse: true,
+        primary_backup_hint: false,
+      };
+    case "03":
+      return {
+        ...BASE,
+        question_expectation: false,
+        primary_backup_hint: false,
+        reality: false,
+      };
     case "decision_brief":
-      // P1 批断：solo 只要八字松紧真算；dyad 另灌合盘闭集供二元关系批断。
-      // 不灌 collecting 原文（兼职/股权/话语权堆叠会诱回写「权责」）。
-      // P1 正文：可灌 reality，供 when/事实同向。
+      // Legacy P1 — kept for old labs only.
       if (phase === "judgment") {
         return withDyadJudgment({
           ...BASE,

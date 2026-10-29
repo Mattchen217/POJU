@@ -43,8 +43,13 @@ assert("translate name fr", deliveryTranslateTargetName("fr") === "French");
 for (const loc of ["es", "fr"] as const) {
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const h = deliverySectionHeading(k, loc);
-    assert(`${loc} heading ${k} not EN`, h === DELIVERY_SECTION_HEADINGS[k][loc]);
-    assert(`${loc} keyFromHeading ${k}`, deliveryKeyFromHeading(h) === k);
+    const row = DELIVERY_SECTION_HEADINGS[k];
+    if (row) {
+      assert(`${loc} heading ${k} not EN`, h === row[loc]);
+      assert(`${loc} keyFromHeading ${k}`, deliveryKeyFromHeading(h) === k);
+    } else {
+      assert(`${loc} face heading ${k} non-empty`, h.length > 0);
+    }
   }
   const plain = deliveryEvidenceLabelPlain(loc);
   const lead = deliveryEvidenceLeadLabel(loc);
@@ -59,10 +64,10 @@ for (const loc of ["es", "fr"] as const) {
   assert(`${loc} cover not English Contents`, !cover.includes("## Contents"));
   assert(
     `${loc} cover has localized foundation in TOC`,
-    cover.includes(DELIVERY_SECTION_HEADINGS.foundation[loc]),
+    cover.includes(DELIVERY_SECTION_HEADINGS.foundation![loc]),
   );
 
-  const sample = `## ${DELIVERY_SECTION_HEADINGS.foundation[loc]}
+  const sample = `## ${DELIVERY_SECTION_HEADINGS.foundation![loc]}
 
 ### Argument one
 Body one.

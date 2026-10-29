@@ -110,6 +110,7 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
   const lower = t.toLowerCase();
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const h = DELIVERY_SECTION_HEADINGS[k];
+    if (!h) continue;
     for (const label of [h.zh, h.en, h.es, h.de, h.fr]) {
       if (t === label || t.includes(label)) return k;
       if (label && lower.includes(label.toLowerCase())) return k;

@@ -434,9 +434,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
 };
 
 /** Sample nested evidence aligned to pageSchemaToArgumentBodies order. */
-export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
-  DeliverySegmentKey,
-  string[]
+export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Partial<
+  Record<DeliverySegmentKey, string[]>
 > = {
   decision_brief: [
     "判定层：在需养结构下硬冲一线会放大身体债；直接退居二线又丢掉你仅有的结果话语权。中间态是结构允许的最小代价路径。",
@@ -514,7 +513,9 @@ export function mockPageForPreview(
   const pack = locale.startsWith("zh")
     ? DELIVERY_PAGE_SCHEMA_MOCK_ZH
     : null;
-  const page = pack?.pages[key];
+  const page = pack?.pages
+    ? (pack.pages as Partial<Record<DeliverySegmentKey, DeliveryPageData>>)[key]
+    : undefined;
   if (!page) {
     throw new Error(`mock page missing: ${key}`);
   }

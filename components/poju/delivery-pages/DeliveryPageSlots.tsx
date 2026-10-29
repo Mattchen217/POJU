@@ -33,6 +33,13 @@ import {
   composeDualEvidence,
   splitDualEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
+import {
+  EmptyFacePageSlots,
+  FacePageSlots,
+} from "@/components/poju/delivery-pages/faces/FacePageSlots";
+import { isFaceNativePage } from "@/lib/llm/pro/delivery/page-schema/face-types";
+import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { isDecisionFaceId } from "@/lib/llm/pro/delivery/page-schema/face-kicker";
 
 /** Polish / partial JSON may drop Zod defaults — never throw on .map / .length. */
 function asList(value: unknown): unknown[] {
@@ -1327,13 +1334,40 @@ export function DeliveryPageSlots({
   locale,
   pageSchema,
   slotEvidence,
+  shelfFaceId,
 }: {
   markdown: string;
   locale: string;
   pageSchema?: DeliveryPageData | null;
   slotEvidence?: string[];
+  /** Shelf slot 01–08 — preferred dispatch for face-native books. */
+  shelfFaceId?: string | null;
 }) {
   const page = pageSchema ?? extractPageSchemaFromMarkdown(markdown);
+  if (page && isFaceNativePage(page)) {
+    return (
+      <FacePageSlots
+        page={page}
+        locale={locale}
+        faceId={
+          isDecisionFaceId(shelfFaceId ?? "")
+            ? (shelfFaceId as DecisionPageId)
+            : undefined
+        }
+      />
+    );
+  }
+  // Legacy v1 papers on an old book — degrade; new books must not hit this path.
+  if (
+    shelfFaceId &&
+    isDecisionFaceId(shelfFaceId) &&
+    (!page || !isFaceNativePage(page))
+  ) {
+    // If JSON is missing but we know the face, still show new section chrome.
+    if (!page) {
+      return <EmptyFacePageSlots faceId={shelfFaceId} locale={locale} />;
+    }
+  }
   if (!page) return null;
   return (
     <PageSlotsInner page={page} locale={locale} slotEvidence={slotEvidence} />

@@ -169,5 +169,5 @@ export function pickDeliveryConclusions(
 }
 
 export function describeDeliveryPaths(paths: readonly DeliverySegmentKey[]): string {
-  return paths.map((k) => DELIVERY_SECTION_HEADINGS[k].zh).join("、");
+  return paths.map((k) => DELIVERY_SECTION_HEADINGS[k]?.zh ?? k).join("、");
 }

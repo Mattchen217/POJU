@@ -57,7 +57,7 @@ import { PAGE_LABEL as P6_LABEL } from "@/lib/llm/pro/delivery/page-prompts/p6-s
 }
 
 {
-  assert.match(DELIVERY_PAGE_TAGS.signals_close.zh, /出门仪式/);
+  assert.match(DELIVERY_PAGE_TAGS.signals_close!.zh, /出门仪式/);
   assert.match(P6_LABEL, /出门仪式/);
 }
 

@@ -750,6 +750,11 @@ export function DeliveryBookStage({
                         locale={locale}
                         pageSchema={slice.schema}
                         slotEvidence={slice.evidence}
+                        shelfFaceId={
+                          active.slotId !== "cover" && active.slotId !== "toc"
+                            ? active.slotId
+                            : null
+                        }
                       />
                     ))}
                   </div>

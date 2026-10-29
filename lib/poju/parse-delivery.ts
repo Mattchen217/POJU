@@ -67,6 +67,7 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
   const lower = t.toLowerCase();
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const h = DELIVERY_SECTION_HEADINGS[k];
+    if (!h) continue;
     for (const label of [h.zh, h.en, h.es, h.de, h.fr]) {
       const tip = label.split("·")[0]!.trim();
       if (t.includes(tip) || lower.includes(tip.toLowerCase())) return k;
@@ -190,7 +191,7 @@ export function parseDeliveryContent(
   if (sections.length === 0 && fullText.trim()) {
     sections.push({
       type: "foundation",
-      title: DELIVERY_SECTION_HEADINGS.foundation.zh,
+      title: DELIVERY_SECTION_HEADINGS.foundation?.zh ?? "处境与障碍",
       body: fullText.trim(),
     });
   }

@@ -36,7 +36,16 @@ type PagePromptModule = {
   buildAssignDuty?: (tagZh: string) => string;
 };
 
-const BY_KEY: Record<DeliverySegmentKey, PagePromptModule> = {
+const BY_KEY: Partial<Record<DeliverySegmentKey, PagePromptModule>> = {
+  // Face-native (v3 body uses face-prompt.ts; these remain finalize/fill fallbacks)
+  "01": p1 as PagePromptModule,
+  "02": p2 as PagePromptModule,
+  "04": pBottleneck as PagePromptModule,
+  "05": pOptions as PagePromptModule,
+  "06": p3 as PagePromptModule,
+  "08": p5 as PagePromptModule,
+  "03": p2 as PagePromptModule,
+  "07": p2 as PagePromptModule,
   decision_brief: p1 as PagePromptModule,
   situation_analysis: p2 as PagePromptModule,
   personal_decision_patterns: pPatterns as PagePromptModule,

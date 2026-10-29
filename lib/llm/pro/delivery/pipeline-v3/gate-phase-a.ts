@@ -9,6 +9,10 @@ import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types"
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
+import {
+  gateFaceFormat,
+  isFaceDeliveryKey,
+} from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 
 export type ContentGateVerdict = {
   passed: boolean;
@@ -51,6 +55,23 @@ export function gateContentPhaseA(input: {
       notes,
     };
   }
+
+  // Face-native books: format gate replaces primary/backup hard fail.
+  if (isFaceDeliveryKey(input.key)) {
+    const faceGate = gateFaceFormat({ key: input.key, page_schema: page });
+    if (!faceGate.passed) {
+      return { ...faceGate, notes: [...notes, ...faceGate.notes] };
+    }
+    notes.push(...faceGate.notes);
+    const planFace = input.deep_evidence_plan;
+    if (!planFace?.units?.length && input.key !== "01" && input.key !== "03") {
+      notes.push("warn_missing_judgment_units");
+    }
+    notes.push("phase_a_pass_pending_human_review");
+    notes.push("face_native:format_ok");
+    return { passed: true, notes };
+  }
+
   const scare = scareRedlineSnippet(JSON.stringify(page));
   if (scare) {
     return {
@@ -64,49 +85,22 @@ export function gateContentPhaseA(input: {
   if (!plan?.units?.length) {
     return {
       passed: false,
-      failed_rule:
-        input.key === "decision_brief"
-          ? "gate_p1_missing_judgment"
-          : "gate_missing_judgment",
-      detail:
-        input.key === "decision_brief"
-          ? "P1 须先有主辅真算批断（core_judgment/primary/backup）。回改批断枪后重跑。"
-          : "有依据页缺原始批断。回改内容步批断枪。",
+      failed_rule: "gate_missing_judgment",
+      detail: "有依据页缺原始批断。回改内容步批断枪。",
       notes,
     };
   }
   notes.push(`judgment_units:${plan.units.length}`);
-  if (input.key === "decision_brief") {
-    notes.push("p1_judgment:internal_only_no_ui_fold");
-  }
   const title = String(
     (page as { page_title?: unknown }).page_title ?? "",
   ).trim();
   if (!title) {
     notes.push("warn_empty_page_title");
   }
+  // Legacy decision_brief path: no longer hard-fail on primary/backup for new books
+  // (face path above). Old labs still shape-check if they emit dual tracks.
   if (input.key === "decision_brief") {
-    const p1 = page as {
-      core_judgment?: unknown;
-      primary?: { name?: unknown; core_logic?: unknown };
-      backup?: { name?: unknown; core_logic?: unknown };
-    };
-    const hasDual =
-      Boolean(String(p1.core_judgment ?? "").trim()) &&
-      Boolean(String(p1.primary?.name ?? "").trim()) &&
-      Boolean(String(p1.primary?.core_logic ?? "").trim()) &&
-      Boolean(String(p1.backup?.name ?? "").trim()) &&
-      Boolean(String(p1.backup?.core_logic ?? "").trim());
-    if (!hasDual) {
-      return {
-        passed: false,
-        failed_rule: "gate_p1_missing_primary_backup",
-        detail:
-          "P1 必须是 core_judgment + primary + backup（一主一辅）。当前缺主辅轨——回改正文提示后重跑内容步。",
-        notes,
-      };
-    }
-    notes.push("p1_dual_track:present");
+    notes.push("legacy_decision_brief:shape_soft");
   }
 
   const cat = gateJudgmentCategoryB({

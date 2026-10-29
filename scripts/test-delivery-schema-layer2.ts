@@ -94,7 +94,7 @@ assert(
 
 const filled = fillMissingDeliverySegments({});
 for (const k of DELIVERY_SEGMENT_KEYS) {
-  assert(typeof filled[k].core_conclusion === "string", `filled ${k}`);
+  assert(typeof filled[k]?.core_conclusion === "string", `filled ${k}`);
 }
 
 const validated = validateDeliveryComputed({
