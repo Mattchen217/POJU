@@ -339,7 +339,11 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="workspace-doc-vault-modal__sheet"
+        className={
+          item.kind === "pivot_delivery"
+            ? "workspace-doc-vault-modal__sheet workspace-doc-vault-modal__sheet--decision"
+            : "workspace-doc-vault-modal__sheet"
+        }
         role="dialog"
         aria-modal="true"
         aria-label={title}

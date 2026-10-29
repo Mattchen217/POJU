@@ -14,7 +14,7 @@ import {
   deliveryAppendixCopy,
   deliveryEvidenceLabelPlain,
 } from "@/lib/llm/pro/delivery/delivery-locale";
-import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
+import { decisionFaceKicker } from "@/lib/llm/pro/delivery/page-schema/face-kicker";
 import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page";
 import { collectDeliveryEvidenceTerms } from "@/lib/poju/collect-delivery-evidence-terms";
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
@@ -66,9 +66,8 @@ function defaultTocLabel(id: DecisionReportSlotId, locale: string): string {
     if (b.startsWith("fr")) return "Couverture";
     return "Cover";
   }
-  if (id === "03" || id === "appendix") return deliveryAppendixCopy(locale).heading;
-  const face = DECISION_PAGE_SCHEMAS[id as "01"];
-  return face?.title ?? id;
+  if (id === "appendix") return decisionFaceKicker("03", locale);
+  return decisionFaceKicker(id, locale);
 }
 
 export function buildDeliverySlotMap(

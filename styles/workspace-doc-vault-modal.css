@@ -35,6 +35,14 @@
     linear-gradient(180deg, rgba(12, 14, 28, 0.96), rgba(6, 6, 14, 0.99));
 }
 
+/* Decision flip-book only — larger centered sheet, not fullscreen. */
+.workspace-doc-vault-modal__sheet--decision {
+  width: min(1440px, calc(100vw - 80px));
+  height: min(980px, calc(100vh - 72px));
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vh - 72px);
+}
+
 .workspace-doc-vault-modal__header {
   display: flex;
   align-items: flex-start;

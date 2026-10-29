@@ -20,9 +20,10 @@ function splitSentences(text: string): string[] {
 }
 
 export function splitReadableParagraphs(
-  text: string,
+  text: string | null | undefined,
   opts?: { targetChars?: number; hardMaxChars?: number },
 ): string[] {
+  if (typeof text !== "string") return [];
   const raw = text.replace(/\r\n/g, "\n").trim();
   if (!raw) return [];
 
