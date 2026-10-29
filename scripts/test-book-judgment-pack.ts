@@ -280,19 +280,24 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   if (!v.ok) assert.equal(v.reason, "under_density");
 }
 
-/** FAIL means prescription in claim (宜/手段/可操作步骤) */
+/** FAIL means_prescription · 语义类可执行手段句（不靠「宜用」字面） */
 {
   const cases = [
     "宜以客位进取开创",
     "宜用低承诺交换，把样品拿给人用",
     "固定4小时块做验证，宜退回观察",
     "两周内递给三个人用并回收反馈",
+    "红灯信号：四小时完整块连续被侵蚀、熟人只给反馈不付费",
+    "近步原则是停在可逆、可收费验证的最小样，能直接使用的小成品",
+    "做一个低承诺小样验证再开口",
+    "四小时完整块被打断就停下并退回",
+    "不把试点摊成四周任务",
   ];
   const sci = coveringUnits().find((u) => u.track === "science");
   assert.ok(sci, "need science unit");
   for (const rx of cases) {
     const units = coveringUnits().map((u) =>
-      u.id === sci!.id ? { ...u, claim: `承诺升级偏差偏高，${rx}` } : u,
+      u.id === sci!.id ? { ...u, claim: rx } : u,
     );
     const v = validateBookJudgmentPack(
       basePack({
@@ -301,12 +306,30 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
       }),
       quota,
     );
-    assert.equal(v.ok, false, `expected FAIL for「${rx}」 got ${v.ok ? "PASS" : v.reason}`);
+    assert.equal(
+      v.ok,
+      false,
+      `expected FAIL for「${rx.slice(0, 36)}」 got ${v.ok ? "PASS" : v.reason}`,
+    );
     if (!v.ok) {
       assert.equal(v.reason, "means_prescription");
       assert.match(v.detail ?? "", new RegExp(sci!.id));
     }
   }
+  /** destiny / convergence 同开 */
+  const destiny = coveringUnits().find((u) => u.track === "destiny");
+  assert.ok(destiny);
+  const dUnits = coveringUnits().map((u) =>
+    u.id === destiny!.id
+      ? { ...u, claim: "做一个低承诺小样验证再看格局" }
+      : u,
+  );
+  const dv = validateBookJudgmentPack(
+    basePack({ units: dUnits, by_face: indexBookJudgmentByFace(dUnits) }),
+    quota,
+  );
+  assert.equal(dv.ok, false);
+  if (!dv.ok) assert.equal(dv.reason, "means_prescription");
 }
 
 /** FAIL weak science anchor */
