@@ -1445,22 +1445,57 @@ async function executeV3(
           : "thesis",
     });
     if (!generated.ok) {
+      const quotaFail = buildBookJudgmentQuotaFromBlueprint();
+      const zfpFail =
+        (opts.ziwei_fact_pack?.patternHits ?? []).map((h) => h.name) ?? [];
+      const failDetail =
+        generated.detail?.trim() ||
+        generated.reason ||
+        "book_judgment_generate_fail";
+      /** 本枪已解析草案：写入 artifacts 刷新 face_matrix，避免 sidebar 仍显示上一枪。 */
+      let failTrace: ReturnType<typeof bookJudgmentTraceSummary> | null = null;
+      if (generated.draft_pack) {
+        lab.artifacts.book_judgment_pack = generated.draft_pack;
+        failTrace = bookJudgmentTraceSummary(generated.draft_pack, {
+          quota: quotaFail,
+          pattern_hits_available: zfpFail,
+        });
+      }
       return {
         input_payload: {
           pipeline: "book_judgment_pack",
           phase: "generate",
           shot_mode: generated.shot_mode ?? "one",
+          validate_ok: false,
+          validate_reason: generated.reason,
+          validate_detail: failDetail,
+          matrix_from: generated.draft_pack ? "this_shot_fail" : "stale_prior",
+          matrix_stale: !generated.draft_pack,
+          ...(failTrace ?? {}),
         },
-        raw_model_output: generated.last_raw_text
-          ? { _raw_text: generated.last_raw_text }
-          : null,
+        raw_model_output: generated.draft_pack
+          ? { pack: generated.draft_pack, _validate: failDetail }
+          : generated.last_raw_text
+            ? { _raw_text: generated.last_raw_text }
+            : null,
         processing_actions: [
-          { action: "runBookJudgmentPackGenerate", detail: generated.reason },
+          {
+            action: "runBookJudgmentPackGenerate",
+            detail: failDetail,
+          },
+          ...(generated.draft_pack
+            ? [
+                {
+                  action: "refresh_face_matrix_on_fail",
+                  detail: `n=${generated.draft_pack.units.length}`,
+                },
+              ]
+            : [{ action: "matrix_stale", detail: "无本枪草案可刷" }]),
         ],
         gate_verdict: {
           passed: false,
           failed_rule: generated.reason,
-          detail: generated.reason,
+          detail: failDetail,
         },
         output_to_next_stage: null,
         tokens_used: generated.tokens_used,
@@ -1531,24 +1566,43 @@ async function executeV3(
     /** No softRepair — 缺配额 = FAIL，正文冻结。 */
     const validated = validateBookJudgmentPack(rawPack, quota);
     if (!validated.ok) {
+      const zfpGateFail =
+        (lab.artifacts.ziwei_fact_pack as { patternHits?: { name: string }[] } | null)
+          ?.patternHits?.map((h) => h.name) ?? [];
+      const failTrace = bookJudgmentTraceSummary(rawPack, {
+        quota,
+        pattern_hits_available: zfpGateFail,
+      });
+      const failDetail =
+        validated.detail?.trim() ||
+        validated.reason ||
+        "book_judgment_gate_fail";
       return {
         input_payload: {
           pipeline: "book_judgment_pack",
           phase: "gate",
           reason: validated.reason,
-          detail: validated.detail,
+          detail: failDetail,
           quota_total_min: quota.total_min_units,
           body_frozen: true,
+          validate_ok: false,
+          matrix_from: "this_shot_fail",
+          matrix_stale: false,
+          ...failTrace,
         },
-        raw_model_output: rawPack,
+        raw_model_output: { pack: rawPack, trace: failTrace, _validate: failDetail },
         processing_actions: [
-          { action: "validateBookJudgmentPack", detail: validated.reason },
+          { action: "validateBookJudgmentPack", detail: failDetail },
           { action: "body_frozen", detail: "pack quota FAIL" },
+          {
+            action: "refresh_face_matrix_on_fail",
+            detail: `n=${failTrace.unit_counts.total}`,
+          },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: validated.reason,
-          detail: `${validated.detail ?? validated.reason} · 正文冻结 · 回改包枪`,
+          detail: `${failDetail} · 正文冻结 · 回改包枪`,
         },
         output_to_next_stage: null,
         error: validated.reason,

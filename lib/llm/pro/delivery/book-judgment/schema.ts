@@ -95,30 +95,80 @@ export function isWeakScienceAnchor(anchor: string): boolean {
 }
 
 /**
- * 可执行手段句（语义类 · 不靠单字黑名单）→ 批断包 FAIL。
- * 类别：宜/祈使 · 小时块/周内交付 · 低承诺小样 · 红灯停损退回 ·
- * 最小可收费样貌 · 停下来改节奏 · 试点摊任务。
+ * 可执行手段句语义类（不靠单字黑名单）→ 批断包 FAIL。
  * 豁免：忌神/用神/喜神邻接「宜」。
  */
-const PACK_MEANS_SEMANTIC_RES: readonly RegExp[] = [
-  // 宜 / 攻守祈使
-  /(?:^|[，,；;。.\s、])宜(?![忌神用喜])/,
-  /宜用|宜退|宜把|宜将|宜以|宜守|宜进|宜藏|宜避|以静制动|守势探路/,
-  // 小时块 / 周内交付 / 时窗操作
-  /小时块|\d+\s*小时(?:完整)?块|(?:四|4)\s*小时完整块|完整块连续|固定\s*\d+\s*小时/,
-  /\d+\s*周内|四周任务|摊成[^。；;]{0,8}周|试点摊/,
-  // 低承诺小样 / 可收费最小样貌 / 小成品
-  /低承诺(?:交换|小样)?|小样验证|做一个[^。；;]{0,16}(?:小样|验证)|最小样|可收费验证|最小可收费|小成品|能直接使用/,
-  // 红灯停损 / 退回 / 改节奏 / 近步操作句
-  /红灯信号|红灯则|停下并退回|停下来改|退回观察|近步原则|停在可逆/,
-  // 其它落地处方壳
-  /低承诺交换|拿给人用|递给[^。；;]{0,12}人|把样品|样品拿给|(?:兼职|灵活)?试水|加重筹码|全职(?:投入|跳入|加码)|冒进全职|更符合[^。；;]{0,40}|静润降温|延迟回应|不急于表态|再加大投入|此为[^。；;]{0,16}仪轨|可操作步骤|执行清单|今晚可|只给反馈不付费|primary_toolkit|backup_toolkit/,
+const PACK_MEANS_CLASSES: readonly { className: string; re: RegExp }[] = [
+  {
+    className: "yi_imperative",
+    re: /不宜|(?:^|[，,；;。.\s、])宜(?![忌神用喜])|宜用|宜退|宜把|宜将|宜以|宜守|宜进|宜藏|宜避|以静制动|守势探路/,
+  },
+  {
+    className: "timebox_block",
+    re: /小时块|\d+\s*小时(?:完整)?块|(?:四|4)\s*小时完整块|完整块连续|固定\s*\d+\s*小时/,
+  },
+  {
+    className: "week_delivery",
+    re: /\d+\s*周内|四周任务|摊成[^。；;]{0,8}周|试点摊/,
+  },
+  {
+    className: "low_commit_sample",
+    re: /低承诺(?:交换|小样)?|小样验证|做一个[^。；;]{0,16}(?:小样|验证)|最小样/,
+  },
+  {
+    className: "billable_min",
+    re: /可收费验证|最小可收费|小成品|能直接使用/,
+  },
+  {
+    className: "redlight_stop",
+    re: /红灯信号|红灯则|停下并退回|停下来改|退回观察|近步原则|停在可逆|以不完美搁置/,
+  },
+  {
+    className: "next_action",
+    re: /下一步动作|动作类型|轻量推进|不离开主业|推进可核对/,
+  },
+  {
+    className: "ops_checklist",
+    re: /拿给人用|递给[^。；;]{0,12}人|把样品|样品拿给|(?:兼职|灵活)?试水|加重筹码|全职(?:投入|跳入|加码)|冒进全职|更符合[^。；;]{0,40}|静润降温|延迟回应|不急于表态|再加大投入|此为[^。；;]{0,16}仪轨|可操作步骤|执行清单|今晚可|只给反馈不付费|primary_toolkit|backup_toolkit/,
+  },
 ];
 
-export function claimHasMeansPrescription(claim: string): boolean {
+export type MeansPrescriptionHit = {
+  unitId: string;
+  track: string;
+  className: string;
+  snippet: string;
+};
+
+/** First matching semantic class, or null. */
+export function classifyMeansPrescription(claim: string): string | null {
   const t = claim.trim();
-  if (!t) return false;
-  return PACK_MEANS_SEMANTIC_RES.some((re) => re.test(t));
+  if (!t) return null;
+  for (const row of PACK_MEANS_CLASSES) {
+    if (row.re.test(t)) return row.className;
+  }
+  return null;
+}
+
+export function claimHasMeansPrescription(claim: string): boolean {
+  return classifyMeansPrescription(claim) != null;
+}
+
+export function findMeansPrescriptionHits(
+  units: readonly { id: string; track: string; claim: string }[],
+): MeansPrescriptionHit[] {
+  const out: MeansPrescriptionHit[] = [];
+  for (const u of units) {
+    const className = classifyMeansPrescription(u.claim);
+    if (!className) continue;
+    out.push({
+      unitId: u.id,
+      track: u.track,
+      className,
+      snippet: u.claim.trim().slice(0, 64),
+    });
+  }
+  return out;
 }
 
 function trackCovers(
@@ -269,14 +319,20 @@ export function validateBookJudgmentPack(
     }
   }
 
+  const meansHits = findMeansPrescriptionHits(pack.units);
+  if (meansHits.length > 0) {
+    const head = meansHits
+      .slice(0, 8)
+      .map((h) => `${h.unitId}@${h.track}/${h.className}`)
+      .join(" · ");
+    const more = meansHits.length > 8 ? ` · +${meansHits.length - 8}` : "";
+    return {
+      ok: false,
+      reason: "means_prescription",
+      detail: `means_prescription ×${meansHits.length}：${head}${more}｜例「${meansHits[0]!.snippet}」`,
+    };
+  }
   for (const u of pack.units) {
-    if (claimHasMeansPrescription(u.claim)) {
-      return {
-        ok: false,
-        reason: "means_prescription",
-        detail: `unit ${u.id}（${u.track}）claim 含宜/手段/可操作步骤：「${u.claim.slice(0, 80)}」`,
-      };
-    }
     if (u.track !== "science" && u.track !== "convergence") continue;
     for (const a of u.anchors) {
       if (isWeakScienceAnchor(a)) {

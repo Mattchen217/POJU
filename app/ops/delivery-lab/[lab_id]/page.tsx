@@ -1148,6 +1148,19 @@ export default function DeliveryLabConsolePage() {
                     {lab.book_judgment_trace.unit_counts.destiny} s=
                     {lab.book_judgment_trace.unit_counts.science} c=
                     {lab.book_judgment_trace.unit_counts.convergence}
+                    {selected === "book.judgment" &&
+                    attempt &&
+                    !attempt.gate_verdict.passed &&
+                    attempt.input_payload &&
+                    typeof attempt.input_payload === "object" &&
+                    (attempt.input_payload as { matrix_stale?: boolean })
+                      .matrix_stale
+                      ? " · matrix:stale"
+                      : selected === "book.judgment" &&
+                          attempt &&
+                          !attempt.gate_verdict.passed
+                        ? " · matrix:this_shot"
+                        : ""}
                   </p>
                   {lab.book_judgment_trace.face_matrix?.length ? (
                     <p

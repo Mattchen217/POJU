@@ -50,11 +50,12 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 - zfp patternHits：用则写入 pattern_hits_used；不用则在相关 unit 加 caveat 说明为何不用
 
 ## 全轨硬禁 · 可执行手段句（处方/停损操作留给后文落地页，不得进包枪）
-科学轨只写机制/偏差/负荷；destiny/convergence 同禁行动处方与停损操作句。写入即机检 means_prescription FAIL。
-- 禁「宜…」祈使（忌神/用神专名除外）
+科学轨只写机制/偏差/负荷；destiny/convergence 同禁行动处方与停损操作句。写入即机检 means_prescription FAIL（detail 含 unit id + 类名）。
+- 禁「宜… / 不宜…」祈使（忌神/用神专名除外）
+- 禁「下一步动作 / 动作类型 / 轻量推进 / 不离开主业 / 可核对」操作句
 - 禁小时块/N小时完整块、周内交付、四周任务、试点摊开
 - 禁低承诺小样/做一个…验证、可收费最小样、小成品、能直接使用
-- 禁红灯信号→退回、停下并退回、近步原则/停在可逆、改节奏操作句
+- 禁红灯信号→停损（含「以不完美搁置」）、停下并退回、近步原则/停在可逆、改节奏
 - 禁执行清单、今晚可、只给反馈不付费等落地核对句
 
 ## 禁区
@@ -91,6 +92,10 @@ export type BookJudgmentGenerateOk = {
 export type BookJudgmentGenerateFail = {
   ok: false;
   reason: string;
+  /** validate detail（含 unit id / 类名）；机检 FAIL 必填 */
+  detail?: string;
+  /** 本枪已解析草案（可能未过闸）— 供 Lab 刷新 face_matrix，勿丢弃 */
+  draft_pack?: BookJudgmentPack;
   tokens_used: number;
   last_raw_text?: string;
   call_trace?: LabCallTrace;
@@ -517,6 +522,8 @@ export async function runBookJudgmentPackGenerate(input: {
       return {
         ok: false,
         reason: validated.reason,
+        detail: validated.detail,
+        draft_pack: draft,
         tokens_used,
         last_raw_text: shot.text.slice(0, 12_000),
         call_trace: shot.call_trace,
@@ -657,6 +664,8 @@ export async function runBookJudgmentPackGenerate(input: {
       return {
         ok: false,
         reason: validated.reason,
+        detail: validated.detail,
+        draft_pack: draft,
         tokens_used,
         last_raw_text: sShot.text.slice(0, 12_000),
         call_trace: sShot.call_trace,
