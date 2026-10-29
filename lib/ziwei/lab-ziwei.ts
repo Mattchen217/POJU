@@ -4,7 +4,7 @@
  */
 
 import type { DeliveryLabSession, LabSource } from "@/lib/llm/pro/delivery/lab/types";
-import type { BirthInfo, HourPeriod } from "@/lib/profile/types";
+import type { BirthInfo, HourPeriod, TstMeta } from "@/lib/profile/types";
 import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import { hourToHourPeriod } from "@/lib/profile/birth-info-utils";
 import {
@@ -87,10 +87,52 @@ export function coerceBirthInfo(raw: unknown): BirthInfo | null {
       };
     }
   }
-  if (isRecord(raw.tst_meta)) {
-    birth.tst_meta = raw.tst_meta as BirthInfo["tst_meta"];
-  }
+  const tst = coerceTstMeta(raw.tst_meta);
+  if (tst) birth.tst_meta = tst;
   return birth;
+}
+
+function coerceTstMeta(raw: unknown): TstMeta | null {
+  if (!isRecord(raw)) return null;
+  const original_date = typeof raw.original_date === "string" ? raw.original_date.trim() : "";
+  const original_time = typeof raw.original_time === "string" ? raw.original_time.trim() : "";
+  const true_solar_date =
+    typeof raw.true_solar_date === "string" ? raw.true_solar_date.trim() : "";
+  const true_solar_time =
+    typeof raw.true_solar_time === "string" ? raw.true_solar_time.trim() : "";
+  const timezone = typeof raw.timezone === "string" ? raw.timezone.trim() : "";
+  const diff_minutes = Number(raw.diff_minutes);
+  const longitude = Number(raw.longitude);
+  const ver = raw.computation_version;
+  if (
+    !original_date ||
+    !original_time ||
+    !true_solar_date ||
+    !true_solar_time ||
+    !timezone ||
+    Number.isNaN(diff_minutes) ||
+    Number.isNaN(longitude) ||
+    (ver !== "v1" && ver !== "v2_with_tst")
+  ) {
+    return null;
+  }
+  const out: TstMeta = {
+    original_date,
+    original_time,
+    true_solar_date,
+    true_solar_time,
+    diff_minutes,
+    longitude,
+    timezone,
+    computation_version: ver,
+  };
+  if (typeof raw.longitude_diff_minutes === "number") {
+    out.longitude_diff_minutes = raw.longitude_diff_minutes;
+  }
+  if (typeof raw.eq_of_time_minutes === "number") {
+    out.eq_of_time_minutes = raw.eq_of_time_minutes;
+  }
+  return out;
 }
 
 /** Prefer explicit LabSource.birth_info; fall back to rare nested shapes. */
