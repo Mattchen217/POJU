@@ -82,14 +82,26 @@ export function indexBookJudgmentByFace(
   return out;
 }
 
-/** Reject pure 「科学维N」 label shells. */
+/** Reject pure 「科学维N」 label shells / 空壳学科标签. */
 export function isWeakScienceAnchor(anchor: string): boolean {
   const t = anchor.trim();
-  if (!t) return true;
+  if (!t || t.length < 2) return true;
   if (/^科学维\s*\d+/i.test(t)) return true;
-  if (/^sci(ence)?[_\s-]?\d+$/i.test(t)) return true;
+  if (/^科学维\s*\d+\s*\//i.test(t)) return true;
+  if (/^sci(ence)?[_\s-]?\d+(\s*\/|$)/i.test(t)) return true;
   if (/^维\s*\d+$/i.test(t)) return true;
+  if (/^(结构轴|axis)\s*\d*$/i.test(t)) return true;
   return false;
+}
+
+/** 手段/攻守/投入处方进 claim → 批断包 FAIL（类别 · 换盘仍成立）。 */
+const PACK_CLAIM_PRESCRIPTION_RE =
+  /宜以客位|宜进取开创|宜守养休整|宜藏隐试探|宜退避防损|宜守中|宜以守势|以静制动|守势探路|(?:兼职|灵活)?试水|加重筹码|全职(?:投入|跳入|加码)|冒进全职|更符合[^。；;]{0,40}|静润降温|延迟回应|不急于表态|再加大投入|此为[^。；;]{0,16}仪轨|primary_toolkit|backup_toolkit/;
+
+export function claimHasMeansPrescription(claim: string): boolean {
+  const t = claim.trim();
+  if (!t) return false;
+  return PACK_CLAIM_PRESCRIPTION_RE.test(t);
 }
 
 function trackCovers(
@@ -241,6 +253,13 @@ export function validateBookJudgmentPack(
   }
 
   for (const u of pack.units) {
+    if (claimHasMeansPrescription(u.claim)) {
+      return {
+        ok: false,
+        reason: "means_prescription",
+        detail: `unit ${u.id} claim 含手段/攻守处方`,
+      };
+    }
     if (u.track !== "science" && u.track !== "convergence") continue;
     for (const a of u.anchors) {
       if (isWeakScienceAnchor(a)) {

@@ -377,10 +377,17 @@ export function buildScienceMeansFeedBlock(
       "六维结构轴（claim 主轴须互异，各贴一条）: " +
         SCIENCE_STRUCTURE_AXES.map((a) => a.label).join(" · "),
     );
+    lines.push(
+      "结构轴标签（禁写成 primary_toolkit/backup_toolkit path）: " +
+        SCIENCE_JUDGMENT_MEANS_REFS.join(" · "),
+    );
   }
 
-  const hintTable = formatAssignBindingHintTable(buildScienceAssignPathHints(core));
-  if (hintTable) lines.push(hintTable);
+  /** 正文枪才种 toolkit path 派工表；批断枪禁 primary/backup 路径。 */
+  if (!forJudgment) {
+    const hintTable = formatAssignBindingHintTable(buildScienceAssignPathHints(core));
+    if (hintTable) lines.push(hintTable);
+  }
 
   return lines.join("\n");
 }

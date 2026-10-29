@@ -10,6 +10,7 @@ export {
   BookJudgmentShotModeSchema,
   BookJudgmentTrackSchema,
   BookJudgmentUnitSchema,
+  claimHasMeansPrescription,
   indexBookJudgmentByFace,
   isWeakScienceAnchor,
   softRepairFaceDualTrack,

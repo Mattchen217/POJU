@@ -175,6 +175,15 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     assert.equal(sum.under_density, false);
     assert.ok(sum.face_matrix.every((r) => !r.missing_science));
     assert.ok(sum.face_matrix.every((r) => !r.under_density));
+    /** face_matrix exclusive tracks must match JSON unit.track（d+s+c === face total） */
+    for (const row of sum.face_matrix) {
+      assert.equal(
+        row.destiny + row.science + row.convergence,
+        row.total,
+        `face ${row.faceId} track sum`,
+      );
+    }
+    assert.equal(sum.unit_counts.total, pack.units.length);
   }
 }
 
@@ -271,9 +280,28 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   if (!v.ok) assert.equal(v.reason, "under_density");
 }
 
+/** FAIL means prescription in claim */
+{
+  const units = coveringUnits().map((u, i) =>
+    i === 0
+      ? { ...u, claim: `${u.claim}，宜以客位进取开创` }
+      : u,
+  );
+  const v = validateBookJudgmentPack(
+    basePack({
+      units,
+      by_face: indexBookJudgmentByFace(units),
+    }),
+    quota,
+  );
+  assert.equal(v.ok, false);
+  if (!v.ok) assert.equal(v.reason, "means_prescription");
+}
+
 /** FAIL weak science anchor */
 {
   assert.equal(isWeakScienceAnchor("科学维3"), true);
+  assert.equal(isWeakScienceAnchor("科学维2/格局·十神主矛盾"), true);
   assert.equal(isWeakScienceAnchor("cognitive_load"), false);
   const units = coveringUnits();
   const sci = units.find((u) => u.track === "science");

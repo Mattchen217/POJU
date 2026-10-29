@@ -251,14 +251,18 @@ export default function DeliveryLabConsolePage() {
   const isGateStep =
     selectedKind === "gate" || selectedKind === "gate_book_judgment";
   const isBookJudgmentGateStep = selectedKind === "gate_book_judgment";
+  const isBookJudgmentStep =
+    selectedKind === "book_judgment" || isBookJudgmentGateStep;
   const isAssembleStep = selectedKind === "assemble";
   const isTopicGateStep = selectedKind === "topic_gate";
   const isFaceSliceStep = selectedKind === "face_slice";
+  const isBootstrapStep = selectedKind === "bootstrap";
   const isNonLlmInspect =
     isTopicGateStep ||
     isFaceSliceStep ||
     selectedKind === "prealloc" ||
-    isBookJudgmentGateStep;
+    isBookJudgmentGateStep ||
+    isBootstrapStep;
   const isCompanionSeal = selectedKind === "companion_seal";
   const isCompanionDaily = selectedKind === "companion_daily";
   const isCompanionBatchPair = selectedKind === "companion_batch_pair";
@@ -329,6 +333,12 @@ export default function DeliveryLabConsolePage() {
     return () => clearInterval(t);
   }, [lab_id, deliveryLocked, lab?.pipeline_pending_job, refresh]);
 
+  /**
+   * 包闸人审与 cursor 解耦：下游卡在 02.evidence_soft 时，
+   * 只要已抵达过包步（selectedIdx <= cursor），仍可对本步点「通过」/重跑。
+   */
+  const bookPackHumanReviewFree =
+    isBookJudgmentStep && selectedIdx >= 0 && selectedIdx <= (lab?.cursor_index ?? -1);
   const canRun =
     lab &&
     !deliveryLocked &&
@@ -349,7 +359,7 @@ export default function DeliveryLabConsolePage() {
     rec?.status !== "approved" &&
     (isCompanionStep
       ? companionEntryUnlocked
-      : selected === cursorKey);
+      : bookPackHumanReviewFree || selected === cursorKey);
   const approveBlockReason = !lab
     ? "无 Lab"
     : deliveryLocked
@@ -362,7 +372,9 @@ export default function DeliveryLabConsolePage() {
             ? `attempt.error=${attempt.error}`
             : rec?.status === "approved"
               ? "已通过"
-              : !isCompanionStep && selected !== cursorKey
+              : !isCompanionStep &&
+                  !bookPackHumanReviewFree &&
+                  selected !== cursorKey
                 ? `非当前 cursor（cursor=${cursorKey ?? "?"}）`
                 : isCompanionStep && !companionEntryUnlocked
                   ? "Companion 入口未解锁"
@@ -1079,7 +1091,10 @@ export default function DeliveryLabConsolePage() {
                     {lab.book_judgment_trace.unit_counts.convergence}
                   </p>
                   {lab.book_judgment_trace.face_matrix?.length ? (
-                    <p className="leading-3 text-[#a1a1aa]">
+                    <p
+                      className="leading-3 text-[#a1a1aa]"
+                      title="每脸 exclusive track 计数（d+s+c=该脸 unit 数；与 JSON unit.track 一致；勿跨脸相加）"
+                    >
                       {lab.book_judgment_trace.face_matrix
                         .map((r) => {
                           const bad =
@@ -1088,7 +1103,7 @@ export default function DeliveryLabConsolePage() {
                             r.under_density
                               ? "!"
                               : "";
-                          return `${r.faceId}${bad}(${r.destiny}/${r.science}/${r.convergence})`;
+                          return `${r.faceId}${bad}(${r.destiny}/${r.science}/${r.convergence}=${r.total})`;
                         })
                         .join(" ")}
                     </p>
@@ -1628,7 +1643,22 @@ export default function DeliveryLabConsolePage() {
             <summary className="cursor-pointer">Question / artifacts peek</summary>
             <p className="mt-2 text-sm text-[#e4e4e7]">{lab.source.original_question}</p>
             <pre className="mt-2 max-h-40 overflow-auto font-mono text-[10px]">
-              {pretty(lab.artifacts)}
+              {pretty(
+                (() => {
+                  const arts = { ...(lab.artifacts as Record<string, unknown>) };
+                  if (isBootstrapStep && "book_judgment_pack" in arts) {
+                    const pack = arts.book_judgment_pack;
+                    delete arts.book_judgment_pack;
+                    return {
+                      ...arts,
+                      "lab-global:book_judgment_pack": pack
+                        ? { _note: "lab-global · 不属 Bootstrap 本步", present: true }
+                        : null,
+                    };
+                  }
+                  return arts;
+                })(),
+              )}
             </pre>
           </details>
         </section>

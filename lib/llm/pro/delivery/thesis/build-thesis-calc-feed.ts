@@ -53,6 +53,13 @@ const POS_HAN: Record<"year" | "month" | "day" | "hour", string> = {
 
 type PillarGod = { pos: "year" | "month" | "day" | "hour"; god: string };
 
+/** 日柱「元男/元女/日元」字段占位 → 日主自身（与 CFP formatter 对齐）。 */
+export function formatPillarTenGodLabel(god: string): string {
+  const g = god.trim();
+  if (g === "元男" || g === "元女" || g === "日元") return "日主自身";
+  return g;
+}
+
 /** Stem ten_god only (透干) — pillars_detail.ten_god. */
 function pillarGods(structured: ProfileStructured): PillarGod[] {
   const detail = structured.pillars_detail;
@@ -60,9 +67,42 @@ function pillarGods(structured: ProfileStructured): PillarGod[] {
   const out: PillarGod[] = [];
   for (const pos of ["year", "month", "day", "hour"] as const) {
     const g = String(detail[pos]?.ten_god ?? "").trim();
-    if (g) out.push({ pos, god: g });
+    if (g) out.push({ pos, god: formatPillarTenGodLabel(g) });
   }
   return out;
+}
+
+/** 月令调候粗锚（真值 · 非 STUB）。缺月支 → present=false 显式缺项。 */
+const BRANCH_CLIMATE: Record<string, { season: string; tone: string }> = {
+  寅: { season: "木令", tone: "春湿偏暖" },
+  卯: { season: "木令", tone: "春湿偏暖" },
+  辰: { season: "土令", tone: "季月湿燥交" },
+  巳: { season: "火令", tone: "夏燥偏热" },
+  午: { season: "火令", tone: "夏燥偏热" },
+  未: { season: "土令", tone: "季月湿热" },
+  申: { season: "金令", tone: "秋燥偏凉" },
+  酉: { season: "金令", tone: "秋燥偏凉" },
+  戌: { season: "土令", tone: "季月燥凉" },
+  亥: { season: "水令", tone: "冬寒偏湿" },
+  子: { season: "水令", tone: "冬寒偏湿" },
+  丑: { season: "土令", tone: "季月寒湿" },
+};
+
+function climateBalanceItem(structured: ProfileStructured): ChecklistItemStatus {
+  const branch =
+    String(structured.pillars_detail?.month?.branch ?? "").trim().charAt(0) ||
+    String(structured.four_pillars?.month ?? "").trim().charAt(1);
+  const hit = branch ? BRANCH_CLIMATE[branch] : undefined;
+  if (!hit) {
+    return item("climate_balance", false, "缺月令 · 调候不可算");
+  }
+  const dm = String(structured.day_master ?? "").trim();
+  const dmBit = dm ? `；对照日主${dm}` : "";
+  return item(
+    "climate_balance",
+    true,
+    `调候：月令${branch}${hit.season}（${hit.tone}）${dmBit}`,
+  );
 }
 
 type HiddenGodHit = {
@@ -307,8 +347,7 @@ function buildFavorAvoid(
       jiZh.length > 0,
       jiZh.length > 0 ? `忌神：${jiZh.join("、")}` : THESIS_ABSENT_SUMMARY_ZH,
     ),
-    // Stub: no climate/燥湿 engine on ProfileStructured yet — always absent (not a true-negative).
-    item("climate_balance", false, THESIS_ABSENT_SUMMARY_ZH),
+    climateBalanceItem(structured),
   ];
 
   const act = supplement?.yongshen_activation ?? null;

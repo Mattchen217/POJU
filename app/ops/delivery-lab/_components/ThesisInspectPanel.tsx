@@ -29,8 +29,6 @@ type ChartThesisLike = {
   dimensions?: ThesisDimension[];
 };
 
-const STUB_KEYS = new Set(["climate_balance"]);
-
 function isThesis(v: unknown): v is ChartThesisLike {
   return (
     typeof v === "object" &&
@@ -114,8 +112,8 @@ export function ThesisInspectPanel({ raw }: { raw: unknown }) {
                       {it.present ? "✓" : "○"}
                     </span>{" "}
                     <span className="text-[#71717a]">[{it.key}]</span> {it.summary_zh}
-                    {STUB_KEYS.has(it.key) ? (
-                      <span className="ml-1 text-amber-300/90">· STUB</span>
+                    {!it.present && it.key === "climate_balance" ? (
+                      <span className="ml-1 text-red-300/90">· 缺项</span>
                     ) : null}
                   </li>
                 ))}

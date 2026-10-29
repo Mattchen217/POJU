@@ -375,10 +375,53 @@ async function executeV3(
   if (def.kind === "bootstrap") {
     const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
     const q = lab.source.original_question?.trim() ?? "";
+    const { fingerprintThesisStructured } = await import(
+      "@/lib/llm/pro/delivery/thesis/fingerprint"
+    );
+    const { hashChartFactPackText, hashStableJson } = await import(
+      "@/lib/llm/pro/delivery/book-judgment/hash"
+    );
+    const structured_fp = structured
+      ? fingerprintThesisStructured(structured)
+      : null;
+    const chart_fp = structured
+      ? hashStableJson({
+          day_master: structured.day_master,
+          four_pillars: structured.four_pillars,
+          strength: structured.strength,
+          pattern: structured.pattern,
+        })
+      : null;
     const passed = Boolean(structured) && q.length >= 2;
     return {
-      input_payload: { pipeline: "v3_three_step", question_len: q.length },
-      raw_model_output: null,
+      input_payload: {
+        pipeline: "v3_three_step",
+        question_summary: q.slice(0, 240),
+        question_len: q.length,
+        structured_present: Boolean(structured),
+        structured_fp,
+        chart_fp,
+        /** peek 勿把全书包挂在本步；包属 lab-global */
+        peek_scope: "bootstrap_local",
+      },
+      raw_model_output: {
+        structured_present: Boolean(structured),
+        structured_fp,
+        chart_fp,
+        cfp_hash_preview: structured
+          ? hashChartFactPackText(
+              [
+                structured.day_master,
+                structured.four_pillars?.year,
+                structured.four_pillars?.month,
+                structured.four_pillars?.day,
+                structured.four_pillars?.hour,
+              ]
+                .filter(Boolean)
+                .join("|"),
+            )
+          : null,
+      },
       processing_actions: [{ action: "validate_structured" }],
       gate_verdict: {
         passed,
@@ -421,13 +464,49 @@ async function executeV3(
       as_of: new Date(),
     });
     lab.artifacts.thesis = thesis;
+    const { buildChartFactPack } = await import(
+      "@/lib/llm/pro/delivery/page-schema/chart-fact-pack"
+    );
+    const { hashChartFactPackText, hashZiweiFactPack } = await import(
+      "@/lib/llm/pro/delivery/book-judgment/hash"
+    );
+    const { ensureLabZiweiFactPack } = await import("@/lib/ziwei/lab-ziwei");
+    const cfp = buildChartFactPack(structured, { as_of: new Date() });
+    const ziwei = ensureLabZiweiFactPack(lab);
+    const patternHits = (ziwei?.patternHits ?? []).map((h) => h.name).filter(Boolean);
+    const climateAbsent = thesis.dimensions.some((d) =>
+      (Array.isArray(d.classical_basis) ? d.classical_basis : []).some(
+        (it) =>
+          it &&
+          typeof it === "object" &&
+          (it as { key?: string; present?: boolean }).key === "climate_balance" &&
+          (it as { present?: boolean }).present === false,
+      ),
+    );
+    const dimsOk = thesis.dimensions.length >= 1;
+    const passed = dimsOk && !climateAbsent;
     return {
-      input_payload: { dims: thesis.dimensions.length, pipeline: "v3" },
+      input_payload: {
+        pipeline: "v3",
+        dims: thesis.dimensions.length,
+        structured_fp: thesis.structured_fingerprint,
+        cfp_hash: hashChartFactPackText(cfp.text),
+        zfp_hash: hashZiweiFactPack(ziwei),
+        patternHits,
+        patternHits_n: patternHits.length,
+      },
       raw_model_output: thesis,
       processing_actions: [{ action: "buildChartThesisFromStructured" }],
       gate_verdict: {
-        passed: thesis.dimensions.length >= 1,
-        detail: `dims=${thesis.dimensions.length}`,
+        passed,
+        failed_rule: climateAbsent
+          ? "thesis:climate_balance_missing"
+          : dimsOk
+            ? undefined
+            : "thesis:empty",
+        detail: climateAbsent
+          ? "climate_balance 显式缺项 FAIL · 需月令可算调候"
+          : `dims=${thesis.dimensions.length} · 六维总纲`,
       },
       output_to_next_stage: thesis,
     };
@@ -437,28 +516,81 @@ async function executeV3(
     const thesis = (lab.artifacts.thesis as ChartThesis | null | undefined) ?? null;
     const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
     try {
+      const priorPrealloc = lab.artifacts.prealloc as
+        | {
+            qimen?: import("@/lib/llm/pro/delivery/page-schema/qimen-fact-pack").DeliveryQimenFactPack;
+            qimen_cast_at?: string;
+          }
+        | null
+        | undefined;
       const map = preallocateChartPrimaries({
         thesis,
         structured,
         eastern_calc_slice_by_key: { metaphysics_action: null },
+        existing_qimen: priorPrealloc?.qimen ?? null,
+        qimen_cast_at: priorPrealloc?.qimen_cast_at
+          ? new Date(priorPrealloc.qimen_cast_at)
+          : undefined,
       });
       const grounded = assertPreallocPrimariesGroundedInThesis(map, thesis);
       lab.artifacts.prealloc = map;
       const pack = map.chart_fact_pack?.trim() ?? "";
       const hasQimen = Boolean(map.qimen_cast_at && map.qimen?.text);
-      const gateOk = Boolean(pack) && hasQimen && grounded.ok;
+      const { hashChartFactPackText, hashZiweiFactPack } = await import(
+        "@/lib/llm/pro/delivery/book-judgment/hash"
+      );
+      const { ensureLabZiweiFactPack } = await import("@/lib/ziwei/lab-ziwei");
+      const ziwei = ensureLabZiweiFactPack(lab);
+      const cfp_hash = hashChartFactPackText(pack);
+      const zfp_hash = hashZiweiFactPack(ziwei);
+      /** pack+奇门有了仍须对照蓝图缺锚（日主/四柱干支须落在闭集货架）。 */
+      const missingAnchors: string[] = [];
+      if (pack && structured) {
+        const dm = String(structured.day_master ?? "").trim();
+        if (dm && !pack.includes(dm.charAt(0))) {
+          missingAnchors.push(`day_master:${dm}`);
+        }
+        for (const [label, g] of [
+          ["year", structured.four_pillars?.year],
+          ["month", structured.four_pillars?.month],
+          ["day", structured.four_pillars?.day],
+          ["hour", structured.four_pillars?.hour],
+        ] as const) {
+          const gz = String(g ?? "").trim();
+          if (gz && !pack.includes(gz)) missingAnchors.push(`pillar_${label}:${gz}`);
+        }
+      }
+      const anchorsOk = missingAnchors.length === 0;
+      const gateOk =
+        Boolean(pack) && hasQimen && grounded.ok && anchorsOk;
+      let failed_rule: string | undefined;
+      if (!gateOk) {
+        if (!pack) failed_rule = "prealloc:incomplete";
+        else if (!hasQimen) failed_rule = "prealloc:qimen_missing";
+        else if (!grounded.ok) failed_rule = grounded.reason;
+        else failed_rule = `prealloc:blueprint_missing_anchor:${missingAnchors[0]}`;
+      }
       return {
-        input_payload: { pack_chars: pack.length, qimen: map.qimen?.ju_name },
+        input_payload: {
+          pack_chars: pack.length,
+          qimen: map.qimen?.ju_name,
+          qimen_reused: Boolean(priorPrealloc?.qimen),
+          cfp_hash,
+          zfp_hash,
+          patternHits: (ziwei?.patternHits ?? []).map((h) => h.name),
+          missing_blueprint_anchors: missingAnchors,
+        },
         raw_model_output: map,
-        processing_actions: [{ action: "preallocateChartPrimaries" }],
+        processing_actions: [
+          { action: "preallocateChartPrimaries" },
+          ...(priorPrealloc?.qimen
+            ? [{ action: "reuse_existing_qimen", detail: "same Lab 不重铸" }]
+            : [{ action: "cast_qimen_lock_pan" }]),
+        ],
         gate_verdict: {
           passed: gateOk,
-          failed_rule: gateOk
-            ? undefined
-            : !hasQimen
-              ? "prealloc:qimen_missing"
-              : "prealloc:incomplete",
-          detail: `pack=${pack.length} qimen=${map.qimen?.ju_name ?? "?"}`,
+          failed_rule,
+          detail: `pack=${pack.length} qimen=${map.qimen?.ju_name ?? "?"} · cfp=${cfp_hash.slice(0, 8)} zfp=${(zfp_hash ?? "∅").toString().slice(0, 8)}`,
         },
         output_to_next_stage: map,
       };
@@ -1267,9 +1399,9 @@ async function executeV3(
       const { buildScienceMeansFeedBlock } = await import(
         "@/lib/llm/pro/delivery/science-means-feed"
       );
+      /** 批断包枪禁 primary_toolkit/backup_toolkit 路径；只用 forJudgment 结构轴 feed。 */
       science_feed =
         opts.science_means_judgment_feed?.trim() ||
-        opts.science_means_feed?.trim() ||
         buildScienceMeansFeedBlock(
           (lab.source.breakthrough_core as import("@/lib/poju/agent-state").BreakthroughCore | null) ??
             null,
@@ -1277,8 +1409,16 @@ async function executeV3(
           { forJudgment: true },
         );
     } catch {
-      science_feed = opts.science_means_feed?.trim() || "";
+      science_feed = "";
     }
+    science_feed = science_feed
+      .split("\n")
+      .filter(
+        (line) =>
+          !/primary_toolkit|backup_toolkit/i.test(line) &&
+          !/path=primary_toolkit|path=backup_toolkit/i.test(line),
+      )
+      .join("\n");
     const agenda = [
       lab.source.original_question,
       ...(lab.source.covered_agenda ?? []).map(

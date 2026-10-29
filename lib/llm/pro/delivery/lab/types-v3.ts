@@ -217,7 +217,7 @@ const HEAD_STEPS: LabV3StepDef[] = [
     label: "Thesis · 命盘总纲",
     kind: "thesis",
     uses_llm: false,
-    accept: "总纲维与 structured 对齐；右侧展示未裁切 CFP/ZFP 包。",
+    accept: "总纲六维与 structured 对齐；Input 列 CFP/ZFP/patternHits 指纹。",
   },
   {
     step_key: "prealloc",

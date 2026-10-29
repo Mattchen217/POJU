@@ -149,13 +149,12 @@ export function bookJudgmentTraceSummary(
     const face = faceQuota.faceId;
     const units = unitsForFace(pack, face);
     by_face_coverage[face] = units.length;
-    const destiny = units.filter(
-      (u) => u.track === "destiny" || u.track === "convergence",
-    ).length;
-    const science = units.filter(
-      (u) => u.track === "science" || u.track === "convergence",
-    ).length;
+    /** Exclusive track counts (= JSON unit.track；d+s+c === face total). */
+    const destiny = units.filter((u) => u.track === "destiny").length;
+    const science = units.filter((u) => u.track === "science").length;
     const convergence = units.filter((u) => u.track === "convergence").length;
+    const destinyLike = destiny + convergence;
+    const scienceLike = science + convergence;
     const needed = faceQuota.segment_slots.filter((s) => s.needs_unit);
     let covered = 0;
     for (const slot of needed) {
@@ -175,8 +174,8 @@ export function bookJudgmentTraceSummary(
       science,
       convergence,
       total: units.length,
-      missing_destiny: destiny < faceQuota.min_destiny,
-      missing_science: science < faceQuota.min_science,
+      missing_destiny: destinyLike < faceQuota.min_destiny,
+      missing_science: scienceLike < faceQuota.min_science,
       under_density: units.length < faceQuota.min_units,
       segment_coverage: covered,
       segment_needed: needed.length,
