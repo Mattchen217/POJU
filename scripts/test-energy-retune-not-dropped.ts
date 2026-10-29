@@ -218,12 +218,13 @@ const noRetune: AgendaItem[] = [
   },
 ];
 
-assert.ok(
-  validateAgendaSpineCoverage(noRetune, core, ctx).ok === false &&
-    (validateAgendaSpineCoverage(noRetune, core, ctx) as { gaps: string[] }).gaps.includes(
-      "missing_energy_retune_agenda",
-    ),
-);
+{
+  const rawCheck = validateAgendaSpineCoverage(noRetune, core, ctx);
+  assert.equal(rawCheck.ok, false);
+  assert.ok(
+    rawCheck.ok === false && rawCheck.gaps.includes("missing_energy_retune_agenda"),
+  );
+}
 const ensuredB = ensureAgendaSpineCoverage(noRetune, core, ctx);
 assert.ok(ensuredB.some((a) => a.frame_kind === "energy_retune"), "stamp energy_retune at 6-cap");
 assert.equal(validateAgendaSpineCoverage(ensuredB, core, ctx).ok, true);
