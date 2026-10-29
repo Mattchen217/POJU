@@ -42,12 +42,17 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 
 ## units 规则
 - track=destiny：命理机制；anchors 只许闭集（日主/用忌/大运、格局名、宫干星曜四化等来自喂料 CFP/ZFP）
-- track=science：可验证现代机制句；anchors 禁止纯「科学维N」标签壳
+- track=science：只写可验证机制/认知偏差/负荷结构；anchors 禁止纯「科学维N」标签壳
 - track=convergence：交汇句，同时承命理+科学
 - serves_face + serves_segment（A–E）对齐配额段槽
 - claim 短闭集句；每条 anchors≥1
 - 每脸双轨 + 密度下限见配额表（全书 ≥24 或表内 total_min_units）
 - zfp patternHits：用则写入 pattern_hits_used；不用则在相关 unit 加 caveat 说明为何不用
+
+## 科学轨硬禁（处方留给后文落地页，不得进包枪）
+- 禁「宜… / 宜用 / 宜退」祈使与手段收束（忌神/用神专名除外）
+- 禁可操作步骤：低承诺交换、拿样品给人用、固定N小时块、两周内递给…、执行清单、今晚可…
+- 科学轨只停在机制/偏差/负荷；落地动作写进后文页，本枪写入即机检 FAIL
 
 ## 禁区
 手段处方、攻守祈使收束、恐吓必损必成、primary/backup 回流、无出处现编格局、顺推硬塞空壳。`;

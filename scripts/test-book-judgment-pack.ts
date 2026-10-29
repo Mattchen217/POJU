@@ -280,22 +280,33 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   if (!v.ok) assert.equal(v.reason, "under_density");
 }
 
-/** FAIL means prescription in claim */
+/** FAIL means prescription in claim (宜/手段/可操作步骤) */
 {
-  const units = coveringUnits().map((u, i) =>
-    i === 0
-      ? { ...u, claim: `${u.claim}，宜以客位进取开创` }
-      : u,
-  );
-  const v = validateBookJudgmentPack(
-    basePack({
-      units,
-      by_face: indexBookJudgmentByFace(units),
-    }),
-    quota,
-  );
-  assert.equal(v.ok, false);
-  if (!v.ok) assert.equal(v.reason, "means_prescription");
+  const cases = [
+    "宜以客位进取开创",
+    "宜用低承诺交换，把样品拿给人用",
+    "固定4小时块做验证，宜退回观察",
+    "两周内递给三个人用并回收反馈",
+  ];
+  const sci = coveringUnits().find((u) => u.track === "science");
+  assert.ok(sci, "need science unit");
+  for (const rx of cases) {
+    const units = coveringUnits().map((u) =>
+      u.id === sci!.id ? { ...u, claim: `承诺升级偏差偏高，${rx}` } : u,
+    );
+    const v = validateBookJudgmentPack(
+      basePack({
+        units,
+        by_face: indexBookJudgmentByFace(units),
+      }),
+      quota,
+    );
+    assert.equal(v.ok, false, `expected FAIL for「${rx}」 got ${v.ok ? "PASS" : v.reason}`);
+    if (!v.ok) {
+      assert.equal(v.reason, "means_prescription");
+      assert.match(v.detail ?? "", new RegExp(sci!.id));
+    }
+  }
 }
 
 /** FAIL weak science anchor */

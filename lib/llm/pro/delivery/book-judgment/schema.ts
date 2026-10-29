@@ -94,9 +94,13 @@ export function isWeakScienceAnchor(anchor: string): boolean {
   return false;
 }
 
-/** 手段/攻守/投入处方进 claim → 批断包 FAIL（类别 · 换盘仍成立）。 */
+/**
+ * 手段/攻守/可操作步骤进 claim → 批断包 FAIL（类别 · 换盘仍成立）。
+ * 覆盖：宜用/宜退/低承诺交换/小时块/两周内递给… 等落地处方；
+ * 豁免「忌神/用神/喜神」邻接的「宜」字误伤（宜忌专名）。
+ */
 const PACK_CLAIM_PRESCRIPTION_RE =
-  /宜以客位|宜进取开创|宜守养休整|宜藏隐试探|宜退避防损|宜守中|宜以守势|以静制动|守势探路|(?:兼职|灵活)?试水|加重筹码|全职(?:投入|跳入|加码)|冒进全职|更符合[^。；;]{0,40}|静润降温|延迟回应|不急于表态|再加大投入|此为[^。；;]{0,16}仪轨|primary_toolkit|backup_toolkit/;
+  /(?:^|[，,；;。.\s、])宜(?![忌神用喜])|宜用|宜退|宜把|宜将|宜以|宜守|宜进|宜藏|宜避|以静制动|守势探路|低承诺交换|拿给人用|递给[^。；;]{0,12}人|把样品|样品拿给|固定\s*\d+\s*小时|小时块|\d+\s*周内|(?:兼职|灵活)?试水|加重筹码|全职(?:投入|跳入|加码)|冒进全职|更符合[^。；;]{0,40}|静润降温|延迟回应|不急于表态|再加大投入|此为[^。；;]{0,16}仪轨|可操作步骤|执行清单|今晚可|primary_toolkit|backup_toolkit/;
 
 export function claimHasMeansPrescription(claim: string): boolean {
   const t = claim.trim();
@@ -257,7 +261,7 @@ export function validateBookJudgmentPack(
       return {
         ok: false,
         reason: "means_prescription",
-        detail: `unit ${u.id} claim 含手段/攻守处方`,
+        detail: `unit ${u.id}（${u.track}）claim 含宜/手段/可操作步骤：「${u.claim.slice(0, 80)}」`,
       };
     }
     if (u.track !== "science" && u.track !== "convergence") continue;
