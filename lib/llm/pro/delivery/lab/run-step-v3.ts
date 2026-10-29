@@ -334,6 +334,38 @@ function projectBookPackOntoFaces(lab: DeliveryLabSession, pack: BookJudgmentPac
   }
 }
 
+/**
+ * 新包写入后：清掉旧 book.gate_judgment approved + 下游脸链，游标拨回 book.judgment，
+ * 避免 cursor 停在 02.evidence_soft 时对不上当前包、闸门 not_current_cursor。
+ */
+function rewindLabAfterBookPackWrite(lab: DeliveryLabSession): void {
+  const defs = labStepDefsV3();
+  const bookIdx = defs.findIndex((s) => s.kind === "book_judgment");
+  const gateIdx = defs.findIndex((s) => s.kind === "gate_book_judgment");
+  if (bookIdx < 0) return;
+  const from = gateIdx >= 0 ? gateIdx : bookIdx + 1;
+  for (let i = from; i < defs.length; i++) {
+    const key = defs[i]!.step_key;
+    const rec = lab.steps[key];
+    if (!rec) continue;
+    rec.status = i === from ? "idle" : "stale";
+    rec.approved_attempt = undefined;
+    lab.steps[key] = rec;
+  }
+  const bookKey = defs[bookIdx]!.step_key;
+  const bookRec = lab.steps[bookKey];
+  if (bookRec && bookRec.status === "approved") {
+    bookRec.status = "done";
+    bookRec.approved_attempt = undefined;
+    lab.steps[bookKey] = bookRec;
+  }
+  lab.approved_order = lab.approved_order.filter((k) => {
+    const i = defs.findIndex((s) => s.step_key === k);
+    return i >= 0 && i < bookIdx;
+  });
+  lab.cursor_index = bookIdx;
+}
+
 function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
   const defs = labStepDefsV3();
   const idx = defs.findIndex((s) => s.step_key === step_key);
@@ -1505,6 +1537,8 @@ async function executeV3(
     }
     lab.artifacts.book_judgment_pack = generated.pack;
     projectBookPackOntoFaces(lab, generated.pack);
+    /** 新包 SoT：旧闸门/下游作废，cursor 拨回 book.judgment 以便重审闸门。 */
+    rewindLabAfterBookPackWrite(lab);
     const quotaGen = buildBookJudgmentQuotaFromBlueprint();
     const zfpAvail =
       (opts.ziwei_fact_pack?.patternHits ?? []).map((h) => h.name) ?? [];
@@ -1521,6 +1555,8 @@ async function executeV3(
         degraded_from_one: generated.degraded_from_one ?? false,
         degrade_reason: generated.degrade_reason,
         zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
+        cursor_rewound_to: "book.judgment",
+        gate_invalidated: true,
       },
       raw_model_output: generated.pack,
       processing_actions: [
@@ -3318,9 +3354,37 @@ export async function approveLabStepV3(
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
   const def = defs[idx]!;
   const companionSide = isCompanionSideKind(def.kind);
-  /** Companion 侧轨：gate 过即可人审通过，不绑交付主链 cursor、不推进 cursor。 */
+  /**
+   * Companion 侧轨：不绑 cursor。
+   * 包枪/包闸：允许在 cursor 已往下游（如 02.evidence_soft）时回审；
+   * 回审时把 cursor 拨回本步并 stale 下游，避免旧闸门对不上新包。
+   */
+  const packStepFree =
+    def.kind === "book_judgment" || def.kind === "gate_book_judgment";
   if (!companionSide && idx !== lab.cursor_index) {
-    return { ok: false, reason: "not_current_cursor", lab };
+    if (!(packStepFree && idx <= lab.cursor_index)) {
+      return { ok: false, reason: "not_current_cursor", lab };
+    }
+    for (let i = idx + 1; i < defs.length; i++) {
+      const key = defs[i]!.step_key;
+      const downstream = lab.steps[key];
+      if (!downstream) continue;
+      if (
+        downstream.status === "approved" ||
+        downstream.status === "done" ||
+        downstream.status === "running" ||
+        downstream.status === "failed"
+      ) {
+        downstream.status = "stale";
+        downstream.approved_attempt = undefined;
+        lab.steps[key] = downstream;
+      }
+    }
+    lab.approved_order = lab.approved_order.filter((k) => {
+      const i = defs.findIndex((s) => s.step_key === k);
+      return i >= 0 && i <= idx;
+    });
+    lab.cursor_index = idx;
   }
 
   const rec = lab.steps[step_key];
@@ -3400,12 +3464,26 @@ export async function prepareLabRerunV3(
   if (!companionSide) {
     lab.cursor_index = idx;
   }
-  if (
-    rerunDef?.kind === "book_judgment" ||
-    rerunDef?.kind === "gate_book_judgment"
-  ) {
-    /** Invalidate pack → dirty all face bodies/plans downstream. */
+  if (rerunDef?.kind === "book_judgment") {
+    /** 重跑包枪：清包 + 脏脸链。 */
     lab.artifacts.book_judgment_pack = null;
+    for (const art of Object.values(lab.artifacts.by_page)) {
+      if (!art) continue;
+      art.plan = undefined;
+      art.page_schema = undefined;
+      art.page_schema_pre_polish = undefined;
+      art.page_schema_by_locale = undefined;
+      art.polish_skipped = undefined;
+      art.polish_locale = undefined;
+      art.evidence = undefined;
+      art.marked = undefined;
+    }
+  }
+  if (rerunDef?.kind === "gate_book_judgment") {
+    /**
+     * 重跑包闸：保留当前包，只脏脸链计划/正文，便于对 #N 包重审闸门。
+     * （勿 null pack — 否则对不上刚 PASS 的包枪。）
+     */
     for (const art of Object.values(lab.artifacts.by_page)) {
       if (!art) continue;
       art.plan = undefined;
