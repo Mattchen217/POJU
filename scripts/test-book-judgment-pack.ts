@@ -216,13 +216,13 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
 
 /** Flag default ON; explicit 0 off */
 {
-  assert.equal(isBookJudgmentPackEnabled({} as NodeJS.ProcessEnv), true);
+  assert.equal(isBookJudgmentPackEnabled({} as unknown as NodeJS.ProcessEnv), true);
   assert.equal(
-    isBookJudgmentPackEnabled({ BOOK_JUDGMENT_PACK: "0" } as NodeJS.ProcessEnv),
+    isBookJudgmentPackEnabled({ BOOK_JUDGMENT_PACK: "0" } as unknown as NodeJS.ProcessEnv),
     false,
   );
   assert.equal(
-    isBookJudgmentPackEnabled({ BOOK_JUDGMENT_PACK: "off" } as NodeJS.ProcessEnv),
+    isBookJudgmentPackEnabled({ BOOK_JUDGMENT_PACK: "off" } as unknown as NodeJS.ProcessEnv),
     false,
   );
 }
@@ -244,7 +244,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
 
   const viaEnvOff = labStepDefsV3({
     BOOK_JUDGMENT_PACK: "0",
-  } as NodeJS.ProcessEnv);
+  } as unknown as NodeJS.ProcessEnv);
   assert.ok(viaEnvOff.some((d) => d.kind === "content_judgment"));
 }
 

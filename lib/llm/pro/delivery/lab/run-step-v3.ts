@@ -1334,10 +1334,10 @@ async function executeV3(
       input_payload: {
         pipeline: "book_judgment_pack",
         phase: "generate",
+        ...trace,
         shot_mode: generated.shot_mode,
         degraded_from_one: generated.degraded_from_one ?? false,
         degrade_reason: generated.degrade_reason,
-        ...trace,
         zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
       },
       raw_model_output: generated.pack,

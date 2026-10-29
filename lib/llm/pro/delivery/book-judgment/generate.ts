@@ -641,7 +641,7 @@ export async function runBookJudgmentPackGenerate(input: {
   }
 
   const one = await finishOneShot();
-  if ("degrade" in one && one.degrade) {
+  if ("degrade" in one) {
     return finishTwoShot({ reason: one.reason });
   }
   return one;
