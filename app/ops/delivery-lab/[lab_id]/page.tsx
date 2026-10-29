@@ -171,6 +171,65 @@ function pretty(v: unknown): string {
   }
 }
 
+/** Artifact keys owned by the selected step kind (本步); rest → lab-global. */
+const PEEK_STEP_OWNED_KEYS: Record<string, readonly string[]> = {
+  bootstrap: [],
+  thesis: ["thesis"],
+  prealloc: ["prealloc"],
+  book_judgment: ["book_judgment_pack"],
+  gate_book_judgment: ["book_judgment_pack"],
+  topic_gate: ["topic_gate_07"],
+};
+
+/**
+ * Peek always splits 本步 / lab-global so book_judgment_pack is never a bare
+ * top-level sibling of thesis/prealloc on Bootstrap.
+ */
+function splitArtifactsPeek(
+  artifacts: unknown,
+  stepKind: string | null,
+): {
+  本步: Record<string, unknown>;
+  "lab-global": Record<string, unknown>;
+} {
+  const arts =
+    artifacts && typeof artifacts === "object"
+      ? { ...(artifacts as Record<string, unknown>) }
+      : {};
+  const owned = new Set(PEEK_STEP_OWNED_KEYS[stepKind ?? ""] ?? []);
+  /** Pack is lab-global except when inspecting the pack / pack-gate step. */
+  const packIsStepLocal =
+    stepKind === "book_judgment" || stepKind === "gate_book_judgment";
+  const local: Record<string, unknown> = {};
+  const global: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(arts)) {
+    if (key === "book_judgment_pack" && !packIsStepLocal) {
+      global["book_judgment_pack"] = {
+        _scope: "lab-global",
+        present: value != null,
+        ...(value && typeof value === "object"
+          ? {
+              shot_mode: (value as { shot_mode?: string }).shot_mode,
+              units_n: Array.isArray((value as { units?: unknown }).units)
+                ? (value as { units: unknown[] }).units.length
+                : undefined,
+            }
+          : {}),
+      };
+      continue;
+    }
+    if (owned.has(key)) local[key] = value;
+    else global[key] = value;
+  }
+
+  if (stepKind === "bootstrap") {
+    local._note = "Bootstrap 不写 artifacts；题面/指纹见本步 Input";
+  }
+
+  return { 本步: local, "lab-global": global };
+}
+
 export default function DeliveryLabConsolePage() {
   const params = useParams();
   const lab_id = String(params.lab_id ?? "");
@@ -1643,22 +1702,7 @@ export default function DeliveryLabConsolePage() {
             <summary className="cursor-pointer">Question / artifacts peek</summary>
             <p className="mt-2 text-sm text-[#e4e4e7]">{lab.source.original_question}</p>
             <pre className="mt-2 max-h-40 overflow-auto font-mono text-[10px]">
-              {pretty(
-                (() => {
-                  const arts = { ...(lab.artifacts as Record<string, unknown>) };
-                  if (isBootstrapStep && "book_judgment_pack" in arts) {
-                    const pack = arts.book_judgment_pack;
-                    delete arts.book_judgment_pack;
-                    return {
-                      ...arts,
-                      "lab-global:book_judgment_pack": pack
-                        ? { _note: "lab-global · 不属 Bootstrap 本步", present: true }
-                        : null,
-                    };
-                  }
-                  return arts;
-                })(),
-              )}
+              {pretty(splitArtifactsPeek(lab.artifacts, selectedKind))}
             </pre>
           </details>
         </section>
