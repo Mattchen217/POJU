@@ -59,6 +59,11 @@ import {
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { BRANCHES, STEMS } from "@/lib/calendar/data/stems-branches";
 import {
+  isCrossNsSoftPreserveHan,
+  softMapConfirmedCrossNsHans,
+  type NsAwareSanitizeOpts,
+} from "@/lib/glossary/ns-aware-surface-sanitize";
+import {
   allShenshaHanSurfaces,
   normalizeShenshaLocale,
   resolveShensha,
@@ -2372,13 +2377,20 @@ function cleanupAfterOutOfSetStrip(text: string): string {
     .trim();
 }
 
-/** Strip engine-out-of-set 神煞 from persisted chat text (markers + bare terms). */
-export function stripForbiddenShenSha(text: string): string {
+/**
+ * Strip engine-out-of-set 神煞 from persisted chat text (markers + bare terms).
+ * Dual-ns (空亡/白虎): soft-map only with confirmed qimen; else hard-strip (fail-closed).
+ */
+export function stripForbiddenShenSha(
+  text: string,
+  locale: string = "zh",
+  opts?: NsAwareSanitizeOpts,
+): string {
   if (!text?.trim()) return text ?? "";
-  let out = text;
+  let out = softMapConfirmedCrossNsHans(text, locale, opts).text;
   for (const m of parseTermMarkers(out)) {
     const blob = `${m.visible} ${m.plain ?? ""}`;
-    if (blobMatchesOutOfSetForbidden(blob)) {
+    if (blobMatchesOutOfSetForbidden(blob) && !blobHasOnlyCrossNsPreserve(blob)) {
       out = out.replace(m.raw, "");
     }
   }
@@ -2390,6 +2402,19 @@ export function stripForbiddenShenSha(text: string): string {
     out = out.replace(new RegExp(`\\b${escapeRegExp(en)}\\b`, "gi"), "");
   }
   return cleanupAfterOutOfSetStrip(out);
+}
+
+/** Marker blob whose only forbidden hans are dual-ns preserve candidates (keep marker if soft-mapped). */
+function blobHasOnlyCrossNsPreserve(blob: string): boolean {
+  let rest = blob;
+  for (const han of OUT_OF_SET_FORBIDDEN_HAN) {
+    if (isCrossNsSoftPreserveHan(han)) {
+      rest = rest.split(han).join("");
+      continue;
+    }
+    if (rest.includes(han)) return false;
+  }
+  return true;
 }
 
 function markerViolatesShenShaInstance(

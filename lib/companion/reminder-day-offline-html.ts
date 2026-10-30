@@ -20,7 +20,10 @@ import {
   type CompanionDayRecord,
   type CompanionJob,
 } from "@/lib/companion/types";
-import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
+import {
+  sanitizePlainExport,
+  type SanitizeExportOptions,
+} from "@/lib/glossary/sanitize-export-surface";
 /** Minimal job shape for pack fill (API publicJob is enough). */
 export type ReminderPackJobLike = Pick<
   CompanionJob,
@@ -57,13 +60,21 @@ function langAttr(locale: string): string {
 }
 
 /** Phase 5: shared export sanitize (decision-anchor copy only — no task tracker rewrite). */
-function compliantBody(s: string, locale: string): string {
-  return sanitizePlainExport(s ?? "", locale, "email").content;
+function compliantBody(
+  s: string,
+  locale: string,
+  options?: SanitizeExportOptions,
+): string {
+  return sanitizePlainExport(s ?? "", locale, "email", options).content;
 }
 
 /** Evidence body: sanitize then escape; markers already reduced by export pipeline. */
-function renderEvidenceHtml(evidence: string, locale: string): string {
-  const raw = compliantBody(evidence || "", locale);
+function renderEvidenceHtml(
+  evidence: string,
+  locale: string,
+  options?: SanitizeExportOptions,
+): string {
+  const raw = compliantBody(evidence || "", locale, options);
   return escapeHtml(raw).replace(/\n/g, "<br/>");
 }
 
@@ -71,13 +82,14 @@ function cardBodyHtml(
   cards: CompanionDayCards,
   labels: ReturnType<typeof companionUiLabels>,
   locale: string,
+  options?: SanitizeExportOptions,
 ): string {
   return [
-    `<h5>${escapeHtml(labels.today)}</h5><p>${escapeHtml(compliantBody(cards.today_is, locale))}</p>`,
-    `<h5>${escapeHtml(labels.suitable)}</h5><p>${escapeHtml(compliantBody(cards.suitable, locale))}</p>`,
-    `<h5>${escapeHtml(labels.unsuitable)}</h5><p>${escapeHtml(compliantBody(cards.unsuitable, locale))}</p>`,
-    `<h5>${escapeHtml(labels.suggestion)}</h5><p>${escapeHtml(compliantBody(cards.suggestion, locale))}</p>`,
-    `<details class="poju-companion-sheet__evidence"><summary>${escapeHtml(labels.evidence)}</summary><div class="poju-companion-sheet__evidence-body"><p>${renderEvidenceHtml(cards.evidence, locale)}</p></div></details>`,
+    `<h5>${escapeHtml(labels.today)}</h5><p>${escapeHtml(compliantBody(cards.today_is, locale, options))}</p>`,
+    `<h5>${escapeHtml(labels.suitable)}</h5><p>${escapeHtml(compliantBody(cards.suitable, locale, options))}</p>`,
+    `<h5>${escapeHtml(labels.unsuitable)}</h5><p>${escapeHtml(compliantBody(cards.unsuitable, locale, options))}</p>`,
+    `<h5>${escapeHtml(labels.suggestion)}</h5><p>${escapeHtml(compliantBody(cards.suggestion, locale, options))}</p>`,
+    `<details class="poju-companion-sheet__evidence"><summary>${escapeHtml(labels.evidence)}</summary><div class="poju-companion-sheet__evidence-body"><p>${renderEvidenceHtml(cards.evidence, locale, options)}</p></div></details>`,
   ].join("\n");
 }
 

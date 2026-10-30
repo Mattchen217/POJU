@@ -10,9 +10,16 @@ import {
   resolveShenshaDisposition,
   SHENSHA_BLOCKED_PLACEHOLDER,
 } from "@/lib/glossary/shensha-disposition";
+import {
+  crossNsSoftPreserveHans,
+  softMapConfirmedCrossNsHans,
+  type NsAwareSanitizeOpts,
+} from "@/lib/glossary/ns-aware-surface-sanitize";
 import { pojuTermBySlug, type TermLocale } from "@/lib/glossary/pojulife-terms";
 import { termHanVariants } from "@/lib/glossary/term-han-normalize";
 import RAW from "./data/shensha-i18n-map.json";
+
+export type { ConfirmedTermRef, NsAwareSanitizeOpts } from "@/lib/glossary/ns-aware-surface-sanitize";
 
 export type Locale = "en" | "zh" | "es" | "de" | "fr";
 export type Polarity = "support" | "edge" | "pressure";
@@ -281,15 +288,40 @@ export function textContainsRedlineShensha(text: string): string[] {
   return [...new Set(hits)];
 }
 
-/** Strip redline traditional surfaces from final user text (second pass). */
-export function stripRedlineShenshaFromText(text: string): string {
-  let out = text;
-  const surfaces = allShenshaHanSurfaces()
-    .filter((h) => isShenshaInternalRedline(h))
-    .sort((a, b) => b.length - a.length);
-  for (const han of surfaces) {
-    if (!han) continue;
-    out = out.split(han).join("");
+/**
+ * Strip redline traditional surfaces from final user text (second pass).
+ *
+ * Dual-ns tokens (空亡/白虎): soft-map to qimen SSOT **only** when `opts.confirmed`
+ * asserts qimen without competing bazi. Bare / bazi / ambiguous → hard-delete (fail-closed).
+ * Pure bazi redlines (童子煞…) always hard-delete.
+ *
+ * Marker spans `⟦t:…⟧` are left intact for the soft-render pipeline.
+ */
+export function stripRedlineShenshaFromText(
+  text: string,
+  locale: string = "zh",
+  opts?: NsAwareSanitizeOpts,
+): string {
+  const mapped = softMapConfirmedCrossNsHans(text ?? "", locale, opts);
+  let out = mapped.text;
+  // Pure JSON redlines + dual-ns leftovers (e.g. 白虎 may be redline but absent from i18n map surfaces).
+  const surfaces = [
+    ...allShenshaHanSurfaces().filter((h) => isShenshaInternalRedline(h)),
+    ...crossNsSoftPreserveHans(),
+  ];
+  const unique = [...new Set(surfaces.filter(Boolean))].sort((a, b) => b.length - a.length);
+  const markerSplit = /(⟦t:[^⟧]*⟧)/g;
+  const stripHan = (chunk: string, han: string) => chunk.split(han).join("");
+  for (const han of unique) {
+    // Confirmed-qimen tokens already soft-mapped; remaining dual-ns + pure redlines strip.
+    out = out.includes("⟦t:")
+      ? out
+          .split(markerSplit)
+          .map((part) =>
+            part.startsWith("⟦t:") && part.endsWith("⟧") ? part : stripHan(part, han),
+          )
+          .join("")
+      : stripHan(out, han);
   }
   return out;
 }

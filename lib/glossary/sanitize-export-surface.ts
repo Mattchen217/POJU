@@ -7,6 +7,7 @@
  */
 
 import { createHash } from "node:crypto";
+import type { NsAwareSanitizeOpts } from "@/lib/glossary/ns-aware-surface-sanitize";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 import {
   auditOutputPolicyText,
@@ -14,6 +15,10 @@ import {
   type OutputPolicyViolation,
 } from "@/lib/llm/compliance/audit-output";
 import { stripRedlineShenshaFromText } from "@/lib/poju/shensha";
+
+export type { ConfirmedTermRef, NsAwareSanitizeOpts } from "@/lib/glossary/ns-aware-surface-sanitize";
+
+export type SanitizeExportOptions = NsAwareSanitizeOpts;
 
 export type ExportSurfaceKind =
   | "plain"
@@ -80,11 +85,13 @@ function hitFromViolation(
 
 /**
  * Sanitize a plain / markdown / copy string through the shared compliance pipeline.
+ * Pass `options.confirmed` for structured qimen facts — never inferred from bare text.
  */
 export function sanitizePlainExport(
   text: string,
   locale: string,
   surface: ExportSurfaceKind = "plain",
+  options?: SanitizeExportOptions,
 ): SanitizeExportResult {
   const raw = text ?? "";
   if (!raw.trim()) {
@@ -106,11 +113,11 @@ export function sanitizePlainExport(
     hits.push(hitFromViolation(v, surface, "policy_hit", false));
   }
 
-  const noRedline = stripRedlineShenshaFromText(raw);
+  const noRedline = stripRedlineShenshaFromText(raw, locale, options);
   if (noRedline !== raw) {
     hits.push({
       tokenHash: hashToken("redline_shensha"),
-      namespace: "bazi",
+      namespace: options?.confirmed?.some((c) => c.namespace === "qimen") ? "qimen" : "bazi",
       surface,
       disposition: "stripped_redline",
       blocked: false,
@@ -160,10 +167,11 @@ export function sanitizeHtmlExport(
   html: string,
   locale: string,
   surface: ExportSurfaceKind = "html",
+  options?: SanitizeExportOptions,
 ): SanitizeExportResult {
   const raw = html ?? "";
   if (!raw.trim()) {
-    return sanitizePlainExport(raw, locale, surface);
+    return sanitizePlainExport(raw, locale, surface, options);
   }
 
   const hits: SanitizeExportHit[] = [];
@@ -171,7 +179,7 @@ export function sanitizeHtmlExport(
   let residualViolations = 0;
 
   const scrubChunk = (chunk: string): string => {
-    const r = sanitizePlainExport(chunk, locale, surface);
+    const r = sanitizePlainExport(chunk, locale, surface, options);
     hits.push(...r.audit.hits);
     if (r.audit.blocked) blocked = true;
     residualViolations += r.audit.residualViolations;
@@ -243,13 +251,17 @@ export function sanitizeExportSurface(input: {
   content: string;
   locale: string;
   surface: ExportSurfaceKind;
+  confirmed?: SanitizeExportOptions["confirmed"];
 }): SanitizeExportResult {
-  const { content, locale, surface } = input;
+  const { content, locale, surface, confirmed } = input;
+  const options: SanitizeExportOptions | undefined = confirmed
+    ? { confirmed }
+    : undefined;
   if (surface === "html" || surface === "email") {
     // Email may be HTML body; if it looks like markup, walk nodes.
     if (/<[a-z][\s\S]*>/i.test(content)) {
-      return sanitizeHtmlExport(content, locale, surface);
+      return sanitizeHtmlExport(content, locale, surface, options);
     }
   }
-  return sanitizePlainExport(content, locale, surface);
+  return sanitizePlainExport(content, locale, surface, options);
 }
