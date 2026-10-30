@@ -406,9 +406,10 @@ export function buildV3BodyPrompt(input: {
           `## 批断包装配令（正写 · pack 全文见下方 USER_FEED「本页批断包切片」）`,
           `- 可见主张必须从 pack unit.claim 装配；删掉 pack 后主张须垮。`,
           `- 三轨 destiny / science / convergence：本页凡有 unit 的轨都必须进主张或依据（禁丢 science）。`,
-          `- 依据指针/折层须点名 required_unit_ids 全部 id（例：依据见 02（d01、d02、d03））。`,
+          `- 依据指针/折层须点名 USER_FEED 中 required_unit_ids 列出的全部 id（按本页切片抄写，勿写死其它页/他案 id）。`,
           `- 禁复述题面/期望/议程原句当 main_recommendation / conditions / 等价主张段。`,
           `- 禁再发明批断；禁再锁主辅；可见层仍禁命理专名报幕。`,
+          `- **禁手段处方（与 pack means_prescription 同口径）**：解释页 destiny/science/**convergence** 只写为何如此/张力同向；禁「更宜…」「可收费小试点」「先拿一次」「付费后再切」等行动处方（05/06/08 路径页另论）。`,
         ].join("\n")
       : input.judgment_lock?.trim()
         ? `## 本页原始批断（扎根用；勿整段粘进可见段）\n${input.judgment_lock.trim()}`
@@ -430,9 +431,16 @@ export function buildV3BodyPrompt(input: {
       .filter(Boolean)
       .join("\n\n");
     const packSystem = packMode
-      ? `\n\n## Pack 正写（全局硬）\nUSER_FEED 含本页批断包三轨 unit；主张/依据必须消费之。禁把题面当正文。依据不得漏 science unit id。`
+      ? `\n\n## Pack 正写（全局硬）\nUSER_FEED 含本页批断包三轨 unit；主张/依据必须消费之。禁把题面当正文。依据不得漏 science unit id。解释页（含交汇）禁 means_prescription 闭集行动处方。`
       : "";
-    return { system: `${BODY_SYSTEM_FACE}\n\n${system}${packSystem}`, user };
+    const face02Means =
+      faceId === "02"
+        ? `\n\n## Face 02 正写\nA/B/C 只解释「为何如此」：命理理由、科学机制、交汇张力。禁把交汇写成行动处方或路径排序。D 锚抄本页切片格局名/短锚；unit id 以 required_unit_ids 为准。`
+        : "";
+    return {
+      system: `${BODY_SYSTEM_FACE}\n\n${system}${packSystem}${face02Means}`,
+      user,
+    };
   }
 
   // Legacy v1 papers (old labs only)

@@ -38,10 +38,12 @@ import {
   labStepDefsV3,
 } from "../lib/llm/pro/delivery/lab/types-v3";
 import {
+  BOOK_BODY_MEANS_PRESCRIPTION_RULE,
   BOOK_BODY_PACK_TRACK_DROP_RULE,
   BOOK_BODY_PACK_UNIT_MISS_RULE,
   BOOK_BODY_QUESTION_RESTATE_RULE,
   gateBookJudgmentBodyConsume,
+  gateFaceBodyMeansPrescription,
 } from "../lib/llm/pro/delivery/pipeline-v3/gate-book-judgment-body";
 import { buildV3BodyPrompt } from "../lib/llm/pro/delivery/pipeline-v3/body-prompt";
 
@@ -307,7 +309,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
 /** FAIL means_prescription · 闭集每 className ≥2 合成句 + 跨轨 */
 {
   const fixtures: Record<MeansPrescriptionClassName, [string, string]> = {
-    imperative_yi: ["宜以客位进取开创", "不宜在主业外摊开试点"],
+    imperative_yi: ["宜以客位进取开创", "更宜保留现有收入再观察窗口"],
     redlight_stop: [
       "红灯信号：完美主义替代外部反馈抬高切换成本",
       "绿灯信号：负荷回落可加码",
@@ -327,11 +329,11 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     ],
     billable_min: [
       "以最小可收费承诺作为验证单元再开口",
-      "交付能直接使用的小成品换反馈",
+      "业余可收费小试点验证负荷回落",
     ],
     low_commit_sample: [
       "做一个低承诺小样验证再开口",
-      "低承诺小样验证后观察窗口收窄",
+      "先拿一次付费后再切主业",
     ],
   };
   for (const name of MEANS_PRESCRIPTION_CLASS_NAMES) {
@@ -633,6 +635,104 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     },
   });
   assert.equal(ok01?.passed, true, ok01?.detail);
+}
+
+/** Face 02 body：交汇 means_prescription 机检 FAIL（与 pack 同口径） */
+{
+  assert.equal(
+    classifyMeansPrescription("更宜保留现有收入，业余可收费小试点"),
+    "imperative_yi",
+  );
+  assert.equal(
+    classifyMeansPrescription("业余可收费小试点验证负荷"),
+    "billable_min",
+  );
+  assert.equal(
+    classifyMeansPrescription("先拿一次付费后再切"),
+    "low_commit_sample",
+  );
+
+  const means02 = gateFaceBodyMeansPrescription({
+    key: "02",
+    page_schema: {
+      page: "02",
+      face: "02",
+      page_title: "为何",
+      page_subtitle: "",
+      destiny_reason: "庚金日主承压偏高，开口窗口收窄。",
+      science_mechanism: "现状与目标偏差抬高认知负荷。",
+      convergence:
+        "更宜保留现有收入，业余可收费小试点，先拿一次付费后再切。",
+      verifiable_anchors: ["d04", "d05", "d06", "d07"],
+    },
+  });
+  assert.equal(means02?.passed, false);
+  assert.equal(means02?.failed_rule, BOOK_BODY_MEANS_PRESCRIPTION_RULE);
+  assert.match(String(means02?.detail ?? ""), /convergence|交汇|means/);
+
+  const packMeans02 = gateBookJudgmentBodyConsume({
+    key: "02",
+    pack_units: [
+      {
+        id: "d04",
+        track: "destiny",
+        serves_face: ["02"],
+        claim: "庚金日主承压偏高",
+        anchors: ["庚金"],
+      },
+      {
+        id: "d05",
+        track: "science",
+        serves_face: ["02"],
+        claim: "现状偏差抬高认知负荷",
+        anchors: ["cognitive_load"],
+      },
+      {
+        id: "d06",
+        track: "convergence",
+        serves_face: ["02"],
+        claim: "承压与负荷同向收窄开口",
+        anchors: ["庚金", "cognitive_load"],
+      },
+    ],
+    page_schema: {
+      page: "02",
+      face: "02",
+      page_title: "为何",
+      page_subtitle: "",
+      destiny_reason: "庚金日主承压偏高，开口窗口收窄（d04）。",
+      science_mechanism: "现状偏差抬高认知负荷（d05）。",
+      convergence: "更宜保留现有收入再业余试点（d06）。",
+      verifiable_anchors: ["d04", "d05", "d06"],
+    },
+  });
+  assert.equal(packMeans02?.passed, false);
+  assert.equal(packMeans02?.failed_rule, BOOK_BODY_MEANS_PRESCRIPTION_RULE);
+
+  const clean02 = gateFaceBodyMeansPrescription({
+    key: "02",
+    page_schema: {
+      page: "02",
+      face: "02",
+      page_title: "为何",
+      page_subtitle: "",
+      destiny_reason: "庚金日主承压偏高，开口窗口收窄。",
+      science_mechanism: "现状与目标偏差抬高认知负荷。",
+      convergence: "命理承压与认知负荷同向，开口成本被一起抬高。",
+      verifiable_anchors: ["d04", "d05", "d06"],
+    },
+  });
+  assert.equal(clean02?.passed, true, clean02?.detail);
+
+  const prompt = buildV3BodyPrompt({
+    key: "02",
+    locale: "zh",
+    user_feed: "required_unit_ids: d04,d05,d06,d07",
+    book_judgment_pack_block: "required_unit_ids: d04,d05,d06,d07",
+  });
+  assert.match(prompt.system, /means_prescription|手段处方/);
+  assert.match(prompt.user, /required_unit_ids/);
+  assert.doesNotMatch(prompt.user, /d01、d02、d03/);
 }
 
 /** Flag + step table */

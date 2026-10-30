@@ -57,10 +57,10 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
     dualTrack: "abc",
     dualTrackNote: "同页 A 命理、B 科学、C 汇合都要有。D 是可核对短锚。",
     segments: [
-      { id: "A", label: "命理理由", duty: "用本页命理锚说明为何是这个断语。" },
-      { id: "B", label: "科学机制", duty: "同页科学机制，不另开一页。" },
-      { id: "C", label: "汇合", duty: "命理锚与科学机制收到同一个决定上。" },
-      { id: "D", label: "可核对锚", duty: "短锚。紫微未进切片时只留八字锚。" },
+      { id: "A", label: "命理理由", duty: "用本页命理锚说明为何是这个断语；禁手段处方。" },
+      { id: "B", label: "科学机制", duty: "同页科学机制，不另开一页；禁手段处方。" },
+      { id: "C", label: "汇合", duty: "命理锚与科学机制收到同一个决定上的交汇张力；禁宜/可收费试点/付费后再切等行动处方。" },
+      { id: "D", label: "可核对锚", duty: "短锚；格局名从本页切片抄。紫微未进切片时只留八字锚。" },
     ],
   },
   "04": {

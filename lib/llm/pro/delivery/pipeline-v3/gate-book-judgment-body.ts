@@ -1,9 +1,11 @@
 /**
  * Body must consume BookJudgmentPack face slice (all tracks → claims/evidence).
  * Ban restating the question/agenda as the visible recommendation.
+ * Explanation faces: ban means_prescription (same closed set as pack), incl. convergence.
  */
 
 import type { BookJudgmentTrack, BookJudgmentUnit } from "@/lib/llm/pro/delivery/book-judgment/schema";
+import { classifyMeansPrescription } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import { FACE_SEGMENT_FIELDS } from "@/lib/llm/pro/delivery/page-schema/face-types";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
@@ -12,6 +14,16 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 export const BOOK_BODY_PACK_UNIT_MISS_RULE = "gate_body_pack_unit_miss";
 export const BOOK_BODY_PACK_TRACK_DROP_RULE = "gate_body_pack_track_drop";
 export const BOOK_BODY_QUESTION_RESTATE_RULE = "gate_body_question_restate";
+export const BOOK_BODY_MEANS_PRESCRIPTION_RULE = "gate_body_means_prescription";
+
+/** Faces whose visible prose is explanation — not path/ops pages (05/06/08). */
+const BODY_MEANS_SCAN_FIELDS: Partial<
+  Record<DecisionPageId, readonly string[]>
+> = {
+  "02": ["destiny_reason", "science_mechanism", "convergence"],
+  "04": ["bottleneck_name", "manifestation", "if_force_through", "evidence_fold"],
+  "07": ["field_judgment", "relation_interaction", "evidence_fold"],
+};
 
 function asFaceId(key: string): DecisionPageId | null {
   return (DECISION_PAGE_IDS as readonly string[]).includes(key)
@@ -127,8 +139,59 @@ function unitCited(blob: string, unitId: string): boolean {
 }
 
 /**
+ * Explanation-face body must not invent means prescriptions (pack closed set).
+ * Runs with or without pack — machine FAIL, not human-only.
+ * Returns null when face is not in the scan set (e.g. 05/06/08 path pages).
+ */
+export function gateFaceBodyMeansPrescription(input: {
+  key: string;
+  page_schema: unknown;
+}): ContentGateVerdict | null {
+  const faceId = asFaceId(input.key);
+  if (!faceId) return null;
+  const fields = BODY_MEANS_SCAN_FIELDS[faceId];
+  if (!fields?.length) return null;
+
+  const page =
+    input.page_schema && typeof input.page_schema === "object"
+      ? (input.page_schema as Record<string, unknown>)
+      : null;
+  if (!page) {
+    return {
+      passed: false,
+      failed_rule: BOOK_BODY_MEANS_PRESCRIPTION_RULE,
+      detail: "正文缺 JSON，无法核对手段处方。",
+      notes: ["gate:face_body_means"],
+    };
+  }
+
+  const notes: string[] = ["gate:face_body_means", `face:${faceId}`];
+  for (const field of fields) {
+    const text = String(page[field] ?? "").trim();
+    if (!text) continue;
+    const className = classifyMeansPrescription(text);
+    if (!className) continue;
+    const snippet = text.slice(0, 48);
+    return {
+      passed: false,
+      failed_rule: BOOK_BODY_MEANS_PRESCRIPTION_RULE,
+      detail: `Face ${faceId}「${field}」写入手段处方（${className}）：「${snippet}」。解释页（含交汇）只写为何如此，禁宜/可收费试点/付费后再切等行动处方——与 pack means_prescription 同口径。`,
+      notes: [
+        ...notes,
+        BOOK_BODY_MEANS_PRESCRIPTION_RULE,
+        `field:${field}`,
+        `class:${className}`,
+      ],
+    };
+  }
+  notes.push("face_body_means_pass");
+  return { passed: true, notes };
+}
+
+/**
  * Returns null when pack slice absent (legacy body path).
  * Hard-fail when pack present but body drops units/tracks or restates question.
+ * Also hard-fail explanation-face means prescriptions (same closed set as pack).
  */
 export function gateBookJudgmentBodyConsume(input: {
   key: string;
@@ -136,8 +199,17 @@ export function gateBookJudgmentBodyConsume(input: {
   pack_units: readonly BookJudgmentUnit[] | null | undefined;
   question?: string | null;
 }): ContentGateVerdict | null {
+  const meansGate = gateFaceBodyMeansPrescription({
+    key: input.key,
+    page_schema: input.page_schema,
+  });
+  if (meansGate && !meansGate.passed) return meansGate;
+
   const units = input.pack_units ?? [];
-  if (!units.length) return null;
+  if (!units.length) {
+    // No pack slice: means gate (if any) already applied above; skip consume.
+    return meansGate;
+  }
 
   const faceId = asFaceId(input.key);
   if (!faceId || faceId === "03") {
@@ -160,7 +232,11 @@ export function gateBookJudgmentBodyConsume(input: {
     };
   }
 
-  const notes: string[] = ["gate:book_judgment_body", `pack_units:${units.length}`];
+  const notes: string[] = [
+    "gate:book_judgment_body",
+    `pack_units:${units.length}`,
+    ...(meansGate?.notes ?? []),
+  ];
   const citeBlob = evidenceBlob(faceId, page);
   const fullBlob = faceVisibleBlob(faceId, page);
   const claim = claimBlob(faceId, page);
