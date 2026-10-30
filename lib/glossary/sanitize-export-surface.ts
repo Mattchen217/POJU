@@ -106,15 +106,16 @@ export function sanitizePlainExport(
     hits.push(hitFromViolation(v, surface, "policy_hit", false));
   }
 
-  const noRedline = stripRedlineShenshaFromText(raw);
+  const noRedline = stripRedlineShenshaFromText(raw, locale);
   if (noRedline !== raw) {
+    // May include cross-ns soft-map (qimen) and/or pure bazi redline hard-strip.
     hits.push({
       tokenHash: hashToken("redline_shensha"),
       namespace: "bazi",
       surface,
       disposition: "stripped_redline",
       blocked: false,
-      category: "shensha:redline_strip",
+      category: "shensha:redline_ns_aware",
     });
   }
 

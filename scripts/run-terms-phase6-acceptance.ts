@@ -90,6 +90,12 @@ const STEPS: Step[] = [
     command: ["node", TSX, "scripts/test-terms-adversarial-phase6.ts"],
   },
   {
+    id: "ns-aware-export-exits",
+    layer: "E",
+    label: "Ns-aware export exits (空亡/白虎 soft-map)",
+    command: ["node", TSX, "scripts/test-ns-aware-export-exits.ts"],
+  },
+  {
     id: "generator-freeze",
     layer: "meta",
     label: "Legacy generator must refuse overwrite",

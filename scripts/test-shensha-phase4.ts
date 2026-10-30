@@ -116,10 +116,11 @@ function main() {
     "strip removes redline",
   );
 
-  // Final text pass
+  // Final text pass — dual-ns 空亡 soft-maps (qimen); pure redline 童子煞 hard-strips
   const dirty = "今日注意空亡与童子煞，天乙贵人仍可用。";
-  const scrubbed = stripRedlineShenshaFromText(dirty);
-  assert(!scrubbed.includes("空亡") && !scrubbed.includes("童子煞"), "text strip redline");
+  const scrubbed = stripRedlineShenshaFromText(dirty, "zh");
+  assert(!scrubbed.includes("空亡") && !scrubbed.includes("童子煞"), "text strip/soft-map redline hans");
+  assert(scrubbed.includes("覆盖缺口"), "空亡 soft-mapped to qimen coined label");
   assert(scrubbed.includes("天乙贵人") || scrubbed.includes("仍可用"), "text keeps non-redline context");
   assert(textContainsRedlineShensha(dirty).includes("空亡"), "detect redline in text");
   assert(textContainsRedlineShensha(scrubbed).length === 0, "scrubbed clean");

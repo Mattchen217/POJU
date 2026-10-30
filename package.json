@@ -118,6 +118,7 @@
     "test:terms-export-locales-phase6": "node ./node_modules/tsx/dist/cli.mjs scripts/test-terms-export-locales-phase6.ts",
     "test:terms-phase6": "node ./node_modules/tsx/dist/cli.mjs scripts/run-terms-phase6-acceptance.ts",
     "test:phase8-draft-diff": "node ./node_modules/tsx/dist/cli.mjs scripts/diff-phase8-draft-vs-ssot.ts",
+    "test:ns-aware-export-exits": "node ./node_modules/tsx/dist/cli.mjs scripts/test-ns-aware-export-exits.ts",
     "terms:legacy-calls": "node scripts/list-poju-term-legacy-calls.mjs",
     "test:template-voice": "tsx scripts/test-template-voice-ban.ts",
     "test:p4-quoted-script": "tsx scripts/test-p4-quoted-script-gate.ts",

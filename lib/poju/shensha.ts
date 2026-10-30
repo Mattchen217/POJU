@@ -10,6 +10,10 @@ import {
   resolveShenshaDisposition,
   SHENSHA_BLOCKED_PLACEHOLDER,
 } from "@/lib/glossary/shensha-disposition";
+import {
+  isCrossNsSoftPreserveHan,
+  softMapCrossNsForbiddenHans,
+} from "@/lib/glossary/ns-aware-surface-sanitize";
 import { pojuTermBySlug, type TermLocale } from "@/lib/glossary/pojulife-terms";
 import { termHanVariants } from "@/lib/glossary/term-han-normalize";
 import RAW from "./data/shensha-i18n-map.json";
@@ -281,11 +285,23 @@ export function textContainsRedlineShensha(text: string): string[] {
   return [...new Set(hits)];
 }
 
-/** Strip redline traditional surfaces from final user text (second pass). */
-export function stripRedlineShenshaFromText(text: string): string {
-  let out = text;
+/**
+ * Strip / neutralize redline traditional surfaces from final user text (second pass).
+ *
+ * Dual-ns tokens (bazi redline ∩ qimen legal, e.g. 空亡/白虎): soft-map to qimen
+ * coined labels — never hard-delete (would erase legitimate qimen meaning).
+ * Pure bazi redlines: hard-delete as before.
+ *
+ * @param locale Soft-label locale for cross-ns soft map (default zh).
+ */
+export function stripRedlineShenshaFromText(
+  text: string,
+  locale: string = "zh",
+): string {
+  const mapped = softMapCrossNsForbiddenHans(text ?? "", locale);
+  let out = mapped.text;
   const surfaces = allShenshaHanSurfaces()
-    .filter((h) => isShenshaInternalRedline(h))
+    .filter((h) => isShenshaInternalRedline(h) && !isCrossNsSoftPreserveHan(h))
     .sort((a, b) => b.length - a.length);
   for (const han of surfaces) {
     if (!han) continue;

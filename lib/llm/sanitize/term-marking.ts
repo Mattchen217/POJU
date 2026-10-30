@@ -32,6 +32,11 @@ import {
   YINYANG_SLUG,
   relationKindFromMarkerId,
 } from "@/lib/glossary/term-closed-set";
+import {
+  crossNsSoftPreserveHans,
+  isCrossNsSoftPreserveHan,
+  softMapCrossNsForbiddenHans,
+} from "@/lib/glossary/ns-aware-surface-sanitize";
 import { CLOSED_SET_GLOSSARY_ENTRIES } from "@/lib/glossary/term-glossary-closed";
 import {
   TERM_GLOSSARY,
@@ -2372,17 +2377,25 @@ function cleanupAfterOutOfSetStrip(text: string): string {
     .trim();
 }
 
-/** Strip engine-out-of-set 神煞 from persisted chat text (markers + bare terms). */
-export function stripForbiddenShenSha(text: string): string {
+/**
+ * Strip engine-out-of-set 神煞 from persisted chat text (markers + bare terms).
+ * Dual-ns bazi-forbidden ∩ qimen-legal (空亡/白虎): soft-map, never hard-delete.
+ */
+export function stripForbiddenShenSha(
+  text: string,
+  locale: string = "zh",
+): string {
   if (!text?.trim()) return text ?? "";
-  let out = text;
+  let out = softMapCrossNsForbiddenHans(text, locale).text;
   for (const m of parseTermMarkers(out)) {
     const blob = `${m.visible} ${m.plain ?? ""}`;
-    if (blobMatchesOutOfSetForbidden(blob)) {
+    if (blobMatchesOutOfSetForbidden(blob) && !blobHasOnlyCrossNsPreserve(blob)) {
       out = out.replace(m.raw, "");
     }
   }
-  const sortedHan = [...OUT_OF_SET_FORBIDDEN_HAN].sort((a, b) => b.length - a.length);
+  const sortedHan = [...OUT_OF_SET_FORBIDDEN_HAN]
+    .filter((h) => !isCrossNsSoftPreserveHan(h))
+    .sort((a, b) => b.length - a.length);
   for (const han of sortedHan) {
     out = out.replace(new RegExp(escapeRegExp(han), "g"), "");
   }
@@ -2390,6 +2403,18 @@ export function stripForbiddenShenSha(text: string): string {
     out = out.replace(new RegExp(`\\b${escapeRegExp(en)}\\b`, "gi"), "");
   }
   return cleanupAfterOutOfSetStrip(out);
+}
+
+function blobHasOnlyCrossNsPreserve(blob: string): boolean {
+  let rest = blob;
+  for (const han of crossNsSoftPreserveHans()) {
+    rest = rest.split(han).join("");
+  }
+  for (const han of OUT_OF_SET_FORBIDDEN_HAN) {
+    if (isCrossNsSoftPreserveHan(han)) continue;
+    if (rest.includes(han)) return false;
+  }
+  return true;
 }
 
 function markerViolatesShenShaInstance(

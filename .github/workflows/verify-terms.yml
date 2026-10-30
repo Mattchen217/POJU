@@ -44,4 +44,5 @@ jobs:
       - run: pnpm run test:term-context-phase5
       - run: pnpm run test:terms-adversarial-phase6
       - run: pnpm run test:terms-export-locales-phase6
+      - run: pnpm run test:ns-aware-export-exits
       - run: pnpm run test:terms-phase6
