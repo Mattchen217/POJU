@@ -26,9 +26,34 @@ import {
   normalizeTermMarkerIds,
   collapseMarkersToEmptySlots,
   rewriteMarkersWithSsotSoft,
+  stripMarkersForPrompt,
 } from "@/lib/llm/sanitize/term-marking";
 import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { EVIDENCE_TOXIC_PAD_PHRASES } from "@/lib/llm/pro/delivery/evidence-remnant-gate";
+
+/**
+ * Fold-render semantic collapse: grammar「未」mis-encoded as branch_wei → soft「暖沙」
+ * then 「暖沙被验证」flips meaning. Marker form or rendered soft both FAIL.
+ */
+export function findGrammarNegationBranchCollapse(
+  text: string,
+  locale = "zh",
+): string | null {
+  const src = text ?? "";
+  if (!src.trim()) return null;
+  // Marker still present (before UI soft fill)
+  const markerHit = src.match(
+    /⟦t:branch_wei\|[^⟧]*⟧\s*被?(?:验证|证实|确认|核定)/,
+  );
+  if (markerHit) return markerHit[0]!.slice(0, 32);
+  // Soft-rendered fold (SSOT zh 暖沙 / en Dunes / …)
+  const rendered = stripMarkersForPrompt(src, locale);
+  const softHit = rendered.match(
+    /(?:暖沙|Dunes|Dunas|Dünen)\s*被?(?:验证|证实|确认|核定|verified|validat)/i,
+  );
+  if (softHit) return softHit[0]!.slice(0, 32);
+  return null;
+}
 
 /**
  * Neutral gap fillers (≥4 Han) for local adjacent-slot repair only.
@@ -1098,6 +1123,16 @@ export function gateEncodedSoftEvidence(
       reason: `soft_element_echo:${echo.slice(0, 24)}`,
       text: out,
       notes,
+    };
+  }
+
+  const grammarCollapse = findGrammarNegationBranchCollapse(out, locale);
+  if (grammarCollapse) {
+    return {
+      ok: false,
+      reason: `soft_grammar_branch_collapse:${grammarCollapse}`,
+      text: out,
+      notes: [...notes, "soft_grammar_branch_collapse"],
     };
   }
 

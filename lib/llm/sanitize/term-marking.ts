@@ -414,6 +414,34 @@ const BRANCH_TO_SLUG: Readonly<Record<string, string>> = {
   亥: "branch_hai",
 };
 
+/**
+ * Grammar negation / particle chars that collide with 地支/命理单字（尤：未=地支 vs 「未验证」）.
+ * Never wrap as ⟦w:⟧ alone; never encode to branch_/shensha_ slugs.
+ * Multi-char compounds（未戌刑 / 午未六合）仍可走长表面。
+ */
+export const GRAMMAR_NEGATION_BAN_W_SLOTS = new Set([
+  "未",
+  "不",
+  "非",
+  "无",
+  "没",
+  "勿",
+  "莫",
+  "毋",
+  "弗",
+  "否",
+]);
+
+/** Peel already-wrapped grammar slots back to plain before encode. */
+export function peelBannedGrammarWordSlots(text: string): string {
+  if (!text?.includes("⟦")) return text ?? "";
+  return text.replace(/⟦(?:w|词):(未|不|非|无|没|勿|莫|毋|弗|否)⟧/g, "$1");
+}
+
+export function isBannedGrammarWSlotWord(word: string): boolean {
+  return GRAMMAR_NEGATION_BAN_W_SLOTS.has(word.trim());
+}
+
 /** 寅木/巳火/申金… */
 const BRANCH_ELEMENT_COMPOUNDS: readonly string[] = Object.entries(BRANCHES).map(
   ([branch, info]) => `${branch}${info.wuxing}`,
@@ -506,6 +534,8 @@ export function resolveTraditionalToSlug(traditional: string): string | null {
   const word = traditional.trim();
   if (!word) return null;
   if (AMBIGUOUS_CLASS_TRADITIONAL.has(word)) return null;
+  // 未/不/非… 作语法虚词时禁止映射地支/神煞（「未验证」≠ branch_wei）。
+  if (GRAMMAR_NEGATION_BAN_W_SLOTS.has(word)) return null;
 
   // Relation compounds first — one gold, not peel into branch+branch+六合.
   const relationCompound = resolveRelationCompoundSlug(word);
@@ -582,8 +612,10 @@ export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult 
   const unresolved: string[] = [];
   let resolved = 0;
   WORD_SLOT_PATTERN.lastIndex = 0;
-  const out = text.replace(WORD_SLOT_PATTERN, (full, raw: string) => {
+  const peeled = peelBannedGrammarWordSlots(text);
+  const out = peeled.replace(WORD_SLOT_PATTERN, (full, raw: string) => {
     const word = String(raw).trim();
+    if (isBannedGrammarWSlotWord(word)) return word;
     const slug = resolveTraditionalToSlug(word);
     if (slug) {
       resolved += 1;
@@ -631,9 +663,11 @@ function wrapBareSurfaces(): string[] {
       }
     }
   }
-  for (const ch of WRAP_SINGLE_OK) set.add(ch);
+  for (const ch of WRAP_SINGLE_OK) {
+    if (!GRAMMAR_NEGATION_BAN_W_SLOTS.has(ch)) set.add(ch);
+  }
   wrapSurfaceCache = [...set]
-    .filter((s) => s.length > 1 || WRAP_SINGLE_OK.has(s))
+    .filter((s) => s.length > 1 || (WRAP_SINGLE_OK.has(s) && !GRAMMAR_NEGATION_BAN_W_SLOTS.has(s)))
     .filter((s) => resolveTraditionalToSlug(s) != null)
     .sort((a, b) => b.length - a.length || a.localeCompare(b));
   return wrapSurfaceCache;
@@ -665,6 +699,12 @@ export function wrapBareJudgmentAsWordSlots(text: string): string {
             break;
           }
         }
+        // 否定/虚词单字禁止进 ⟦w:⟧（未验证 → 勿书签「未」）
+        if (hit && hit.length === 1 && GRAMMAR_NEGATION_BAN_W_SLOTS.has(hit)) {
+          out += hit;
+          i += 1;
+          continue;
+        }
         if (hit) {
           out += `⟦w:${hit}⟧`;
           i += [...hit].length;
@@ -676,7 +716,7 @@ export function wrapBareJudgmentAsWordSlots(text: string): string {
       return out;
     })
     .join("");
-  return collapseAdjacentWordSlots(mapped);
+  return peelBannedGrammarWordSlots(collapseAdjacentWordSlots(mapped));
 }
 
 /**

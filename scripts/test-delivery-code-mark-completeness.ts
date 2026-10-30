@@ -12,11 +12,17 @@ import {
   encodeAndPolishDeliveryEvidence,
   encodeTraditionalWordSlots,
   listUnresolvedWordSlots,
+  peelBannedGrammarWordSlots,
   resolveTraditionalToSlug,
   wrapBareJudgmentAsWordSlots,
 } from "@/lib/llm/sanitize/term-marking";
 import { maskMarkersForAudit } from "@/lib/llm/sanitize/term-marking";
 import { bareMingliWordInPlain } from "@/lib/llm/sanitize/term-marking";
+import {
+  encodeConnectiveEvidenceToTerms,
+  findGrammarNegationBranchCollapse,
+  gateEncodedSoftEvidence,
+} from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) {
@@ -106,6 +112,44 @@ assert(!wrapped.includes("⟦w:大运⟧⟦w:戊戌⟧"), "no glued 大运|戊�
   assert(!listed.includes("⟦w:戌⟧⟦w:地支⟧"), `戌|地支应收叠: ${listed}`);
 }
 assert(wrapBareJudgmentAsWordSlots("值使开门阴遁客克主").includes("开门"), "wrap 简体开门");
+console.log("  OK");
+
+console.log("== grammar negation 未禁止进 ⟦w:⟧ / encode≠branch_wei ==");
+{
+  const wrappedNeg = wrapBareJudgmentAsWordSlots(
+    "停在未验证的窗口，不宜把未戌刑当唯一锚。",
+  );
+  assert(!wrappedNeg.includes("⟦w:未⟧"), `未验证 must not wrap 未: ${wrappedNeg}`);
+  assert(wrappedNeg.includes("未验证"), "plain 未验证 kept");
+  assert(wrappedNeg.includes("⟦w:未戌刑⟧") || wrappedNeg.includes("未戌刑"), "未戌刑 compound still wrapable");
+  assert(resolveTraditionalToSlug("未") == null, "单字未 must not resolve to branch_wei");
+  const peeled = peelBannedGrammarWordSlots("停在⟦w:未⟧验证窗口");
+  assert(peeled === "停在未验证窗口", `peel: ${peeled}`);
+  const enc = encodeTraditionalWordSlots("停在⟦w:未⟧验证，见⟦w:午未六合⟧。");
+  assert(!enc.text.includes("branch_wei"), `no branch_wei: ${enc.text}`);
+  assert(enc.text.includes("未验证") || enc.text.includes("未"), "未 stays vernacular");
+  assert(enc.text.includes("⟦t:liuhe|⟧"), "午未六合 still encodes");
+  const soft = encodeConnectiveEvidenceToTerms(
+    "停在⟦w:未⟧验证的窗口。",
+    "zh",
+    { makeup: "fail", store: "slug_only" },
+  );
+  assert(!soft.includes("branch_wei"), `soft no branch_wei: ${soft}`);
+  assert(!/暖沙/.test(soft), `soft no 暖沙: ${soft}`);
+  const badGate = gateEncodedSoftEvidence("停在⟦t:branch_wei|⟧被验证", {
+    makeup: "fail",
+    locale: "zh",
+  });
+  assert(!badGate.ok, "gate must FAIL branch_wei+被验证");
+  assert(
+    String(badGate.ok ? "" : badGate.reason).includes("soft_grammar_branch_collapse"),
+    `reason: ${badGate.ok ? "" : badGate.reason}`,
+  );
+  assert(
+    findGrammarNegationBranchCollapse("停在⟦t:branch_wei|⟧被验证") != null,
+    "collapse detector hits marker form",
+  );
+}
 console.log("  OK");
 
 console.log("== word-slot encode ==");
