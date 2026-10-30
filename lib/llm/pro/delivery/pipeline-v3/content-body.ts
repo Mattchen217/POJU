@@ -504,9 +504,11 @@ export async function runContentBodyGenerate(input: {
     topic: input.topic,
     withAllowlistHeader: true,
   });
-  /** Face-native: user_feed = slice only (+ optional corrective). No legacy paper mash. */
+  /** Pack slice into USER_FEED so Lab call-trace ↔ prompt stay aligned (not chart-only). */
+  const packFeed = input.book_judgment_pack_block?.trim() || "";
+  /** Face-native: user_feed = pack (if any) + slice (+ optional corrective). No legacy paper mash. */
   let feedParts = faceNative
-    ? pageSlice ?? ""
+    ? [packFeed, pageSlice ?? ""].filter((s) => s?.trim()).join("\n\n")
     : [
         feed.thesis_factpack && input.chart_thesis_block?.trim()
           ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`

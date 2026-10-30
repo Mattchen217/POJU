@@ -39,12 +39,12 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
     required: true,
     topicGated: false,
     dualTrack: "pointer",
-    dualTrackNote: "不展开论证。一句指回 02。",
+    dualTrackNote: "不展开论证。一句指回 02，须点名本页全部 pack unit id（含 science）。",
     segments: [
-      { id: "A", label: "主推荐", duty: "一两句方向，带条件的明确主推。" },
-      { id: "B", label: "成立条件", duty: "这条路成立的条件。" },
+      { id: "A", label: "主推荐", duty: "一两句方向；从批断包 claim 装配，禁复述题面。" },
+      { id: "B", label: "成立条件", duty: "这条路成立的条件（贴 pack 机制/偏差，非议程复述）。" },
       { id: "C", label: "不选什么", duty: "眼下不走的方向。" },
-      { id: "D", label: "依据指针", duty: "一句指向 02。本段不喂盘面字段。" },
+      { id: "D", label: "依据指针", duty: "一句指向 02，列出本页全部 unit id（destiny+science+convergence）。本段不喂盘面字段。" },
     ],
   },
   "02": {

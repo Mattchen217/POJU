@@ -48,6 +48,7 @@ import {
   bookJudgmentTraceSummary,
   deepEvidencePlanFromBookPack,
   formatBookJudgmentPackBlock,
+  unitsForFace,
 } from "@/lib/llm/pro/delivery/book-judgment/slice";
 import {
   validateBookJudgmentPack,
@@ -58,6 +59,7 @@ import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/c
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
+import { gateBookJudgmentBodyConsume } from "@/lib/llm/pro/delivery/pipeline-v3/gate-book-judgment-body";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { labUsesV3Executor } from "@/lib/llm/pro/delivery/lab/pipeline-stamp";
 import {
@@ -2298,6 +2300,14 @@ async function executeV3(
       partner_bazi: lab.source.partner_bazi ?? null,
       pivot_chart_path: lab.source.pivot_chart_path ?? null,
     });
+    const packUnits =
+      bookPack && isFaceDeliveryKey(page) ? unitsForFace(bookPack, page) : [];
+    const packBodyGate = gateBookJudgmentBodyConsume({
+      key: page,
+      page_schema: bodyPage,
+      pack_units: packUnits,
+      question: opts.question_expectation ?? null,
+    });
     const surfacePreview = deferSurfaceToPolish
       ? gateBodyCategoryB({
           key: page,
@@ -2308,26 +2318,38 @@ async function executeV3(
           pivot_chart_path: lab.source.pivot_chart_path ?? null,
         })
       : null;
-    const bodyFail = bodyGate && !bodyGate.passed;
+    const effectiveBodyGate =
+      bodyGate && !bodyGate.passed
+        ? bodyGate
+        : packBodyGate && !packBodyGate.passed
+          ? packBodyGate
+          : bodyGate;
+    const bodyFail = effectiveBodyGate && !effectiveBodyGate.passed;
     if (bodyFail) {
-      const bodyDetail = bodyGate.detail ?? "";
+      const bodyDetail = effectiveBodyGate!.detail ?? "";
+      const failRule = effectiveBodyGate!.failed_rule;
+      const packFail = Boolean(
+        packBodyGate && !packBodyGate.passed && failRule === packBodyGate.failed_rule,
+      );
       if (
         bodySubstanceMayRetryOnce({
           ops_user: lab.ops_user,
           acceptance_armed: acceptanceArmedBody,
-          failed_rule: bodyGate.failed_rule,
+          failed_rule: failRule,
         })
       ) {
         setV3AcceptanceArmed(art, "body", true);
         setV3AcceptancePrior(art, "body", {
-          failed_rule: bodyGate.failed_rule,
+          failed_rule: failRule,
           detail: bodyDetail,
         });
         return {
           input_payload: {
             key: page,
-            pipeline: "v3",
-            quality_gates: "category_b_substance",
+            pipeline: packBlock ? "book_judgment_pack" : "v3",
+            quality_gates: packFail
+              ? "book_judgment_body_consume"
+              : "category_b_substance",
             acceptance_retry_scheduled: true,
             prompt_chars: {
               system: body.call_trace.system.length,
@@ -2340,8 +2362,10 @@ async function executeV3(
           processing_actions: [
             { action: "runContentBodyGenerate", detail: "parse_only" },
             {
-              action: "gateBodyCategoryB",
-              detail: bodyGate.failed_rule ?? "fail",
+              action: packFail
+                ? "gateBookJudgmentBodyConsume"
+                : "gateBodyCategoryB",
+              detail: failRule ?? "fail",
             },
             {
               action: "v3_acceptance_retry_schedule",
@@ -2351,7 +2375,7 @@ async function executeV3(
           gate_verdict: {
             passed: false,
             failed_rule: BODY_ACCEPTANCE_CONTINUE_RULE,
-            detail: `正文事实/门槛未过（${bodyGate.failed_rule ?? "gate"}）。生产验收再跑一枪（封顶 1+1）；仍不过则硬停。${bodyDetail}`,
+            detail: `正文事实/门槛未过（${failRule ?? "gate"}）。生产验收再跑一枪（封顶 1+1）；仍不过则硬停。${bodyDetail}`,
           },
           output_to_next_stage: {
             continue: true,
@@ -2369,7 +2393,7 @@ async function executeV3(
         reportDeliveryAcceptanceExhausted({
           phase: "content_body",
           key: page,
-          failed_rule: bodyGate.failed_rule,
+          failed_rule: failRule,
           detail: bodyDetail,
         });
       }
@@ -2379,8 +2403,10 @@ async function executeV3(
       return {
         input_payload: {
           key: page,
-          pipeline: "v3",
-          quality_gates: "category_b_substance",
+          pipeline: packBlock ? "book_judgment_pack" : "v3",
+          quality_gates: packFail
+            ? "book_judgment_body_consume"
+            : "category_b_substance",
           acceptance_retry_used: acceptanceArmedBody,
           prompt_chars: {
             system: body.call_trace.system.length,
@@ -2393,13 +2419,15 @@ async function executeV3(
         processing_actions: [
           { action: "runContentBodyGenerate", detail: "parse_only" },
           {
-            action: "gateBodyCategoryB",
-            detail: bodyGate.failed_rule ?? "fail",
+            action: packFail
+              ? "gateBookJudgmentBodyConsume"
+              : "gateBodyCategoryB",
+            detail: failRule ?? "fail",
           },
         ],
         gate_verdict: {
           passed: false,
-          failed_rule: bodyGate.failed_rule,
+          failed_rule: failRule,
           detail: `${bodyDetail}（${
             productionExhausted
               ? "生产验收 1+1 已用尽 · 改生成侧后再跑"
@@ -2409,7 +2437,7 @@ async function executeV3(
         output_to_next_stage: null,
         tokens_used: body.tokens_used,
         call_trace: body.call_trace,
-        error: bodyGate.failed_rule,
+        error: failRule,
       };
     }
     if (acceptanceArmedBody) clearV3Acceptance(art, "body");
@@ -2458,6 +2486,16 @@ async function executeV3(
               : "substance_pass·surface_clean"
             : "pass",
         },
+        ...(packBodyGate
+          ? [
+              {
+                action: "gateBookJudgmentBodyConsume",
+                detail: packBodyGate.passed
+                  ? "pack_consume_pass"
+                  : packBodyGate.failed_rule ?? "fail",
+              },
+            ]
+          : []),
         ...(acceptanceArmedBody
           ? [{ action: "v3_acceptance_retry_pass", detail: "substance_pass_on_2nd" }]
           : []),

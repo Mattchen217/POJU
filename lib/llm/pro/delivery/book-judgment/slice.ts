@@ -28,15 +28,24 @@ export function unitsForFace(
   return pack.units.filter((u) => ids.has(u.id));
 }
 
+/**
+ * Pack face slice for USER_FEED ∩ body prompt (single SoT).
+ * Chart PageFeedMatrix may say sci:no — pack science units still belong here.
+ */
 export function formatBookJudgmentPackBlock(
   pack: BookJudgmentPack,
   faceId: string,
 ): string {
   const units = unitsForFace(pack, faceId);
   if (!units.length) return "";
+  const tracks = { destiny: 0, science: 0, convergence: 0 };
+  for (const u of units) tracks[u.track] += 1;
+  const ids = units.map((u) => u.id);
   return [
-    `## 本页批断包切片（serves_face=${faceId} · 只阐述/装配 · 禁再发明批断 · 禁再锁主辅）`,
+    `## 本页批断包切片（USER_FEED∩prompt · serves_face=${faceId} · 只阐述/装配 · 禁再发明批断 · 禁再锁主辅）`,
     `shot_mode=${pack.shot_mode} · zfpOmitted=${pack.zfpOmitted}`,
+    `tracks: destiny=${tracks.destiny} science=${tracks.science} convergence=${tracks.convergence}`,
+    `required_unit_ids: ${ids.join(",")}`,
     JSON.stringify(
       units.map((u) => ({
         id: u.id,
@@ -49,6 +58,7 @@ export function formatBookJudgmentPackBlock(
       null,
       2,
     ),
+    "正写：可见主张从 unit.claim 装配（三轨凡有 unit 的都进主张或依据）；依据/指针须点名全部 required_unit_ids（禁丢 science）；禁复述题面/议程当正文。",
     "D 锚必须能回指上列 unit id；格局名/科学锚只能抄 pack+事实切片。",
   ].join("\n");
 }

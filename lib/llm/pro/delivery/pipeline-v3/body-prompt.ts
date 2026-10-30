@@ -400,11 +400,22 @@ export function buildV3BodyPrompt(input: {
       slice: { pageId: faceId, dump: { note: "see_user_feed_below" } },
     });
     const packMode = Boolean(input.book_judgment_pack_block?.trim());
+    /** Pack JSON lives only in USER_FEED (aligned with call-trace). Header = 正写令. */
     const judgmentHeader = packMode
-      ? `## 本页批断包切片（只阐述/装配 · 禁再发明批断 · 禁再锁主辅 · D锚须回指 pack unit id）\n${input.book_judgment_pack_block!.trim()}`
+      ? [
+          `## 批断包装配令（正写 · pack 全文见下方 USER_FEED「本页批断包切片」）`,
+          `- 可见主张必须从 pack unit.claim 装配；删掉 pack 后主张须垮。`,
+          `- 三轨 destiny / science / convergence：本页凡有 unit 的轨都必须进主张或依据（禁丢 science）。`,
+          `- 依据指针/折层须点名 required_unit_ids 全部 id（例：依据见 02（d01、d02、d03））。`,
+          `- 禁复述题面/期望/议程原句当 main_recommendation / conditions / 等价主张段。`,
+          `- 禁再发明批断；禁再锁主辅；可见层仍禁命理专名报幕。`,
+        ].join("\n")
       : input.judgment_lock?.trim()
         ? `## 本页原始批断（扎根用；勿整段粘进可见段）\n${input.judgment_lock.trim()}`
         : "";
+    const feedHeader = packMode
+      ? `## 本案 USER_FEED（批断包切片 + PageFeedMatrix；pack 与 prompt 对齐 · 正写消费）`
+      : `## 本案切片/真算喂料（须 ⊆ PageFeedMatrix face ${faceId}）`;
     const user = [
       faceUser,
       judgmentHeader,
@@ -414,13 +425,14 @@ export function buildV3BodyPrompt(input: {
       input.core_conclusion?.trim()
         ? `## core_conclusion\n${input.core_conclusion.trim()}`
         : "",
-      input.user_feed.trim()
-        ? `## 本案切片/真算喂料（须 ⊆ PageFeedMatrix face ${faceId}）\n${input.user_feed.trim()}`
-        : "",
+      input.user_feed.trim() ? `${feedHeader}\n${input.user_feed.trim()}` : "",
     ]
       .filter(Boolean)
       .join("\n\n");
-    return { system: `${BODY_SYSTEM_FACE}\n\n${system}`, user };
+    const packSystem = packMode
+      ? `\n\n## Pack 正写（全局硬）\nUSER_FEED 含本页批断包三轨 unit；主张/依据必须消费之。禁把题面当正文。依据不得漏 science unit id。`
+      : "";
+    return { system: `${BODY_SYSTEM_FACE}\n\n${system}${packSystem}`, user };
   }
 
   // Legacy v1 papers (old labs only)

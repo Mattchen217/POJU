@@ -26,8 +26,10 @@ import {
 } from "../lib/llm/pro/delivery/book-judgment/quota-from-blueprint";
 import {
   deepEvidencePlanFromBookPack,
+  formatBookJudgmentPackBlock,
   sliceBookJudgmentForFace,
   bookJudgmentTraceSummary,
+  unitsForFace,
 } from "../lib/llm/pro/delivery/book-judgment/slice";
 import { hashChartFactPackText, hashZiweiFactPack } from "../lib/llm/pro/delivery/book-judgment/hash";
 import { buildZiweiFactPack } from "../lib/ziwei/fact-pack";
@@ -35,6 +37,13 @@ import {
   buildLabStepDefsV3,
   labStepDefsV3,
 } from "../lib/llm/pro/delivery/lab/types-v3";
+import {
+  BOOK_BODY_PACK_TRACK_DROP_RULE,
+  BOOK_BODY_PACK_UNIT_MISS_RULE,
+  BOOK_BODY_QUESTION_RESTATE_RULE,
+  gateBookJudgmentBodyConsume,
+} from "../lib/llm/pro/delivery/pipeline-v3/gate-book-judgment-body";
+import { buildV3BodyPrompt } from "../lib/llm/pro/delivery/pipeline-v3/body-prompt";
 
 const GOLDEN_BIRTH: BirthInfo = {
   year: 2000,
@@ -489,11 +498,141 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   assert.ok(slice);
   assert.ok(slice!.units.length >= 2);
   assert.match(slice!.pack_block, /禁再发明批断/);
+  assert.match(slice!.pack_block, /USER_FEED∩prompt/);
+  assert.match(slice!.pack_block, /required_unit_ids:/);
+  assert.match(slice!.pack_block, /禁复述题面/);
   assert.ok(slice!.fact_block);
   assert.match(slice!.fact_block!, /patternHits/);
 
   const plan = deepEvidencePlanFromBookPack(v.pack, "02");
   assert.ok(plan?.units.length);
+}
+
+/** Body USER_FEED ↔ prompt pack alignment + 01 consume gate */
+{
+  const v = validateBookJudgmentPack(basePack(), quota);
+  assert.ok(v.ok);
+  if (!v.ok) throw new Error("pack");
+  const face01 = unitsForFace(v.pack, "01");
+  assert.ok(face01.length >= 1);
+  const packBlock = formatBookJudgmentPackBlock(v.pack, "01");
+  assert.match(packBlock, /tracks: destiny=/);
+  assert.match(packBlock, /science=/);
+  const prompt = buildV3BodyPrompt({
+    key: "01",
+    locale: "zh",
+    user_feed: `${packBlock}\n\n## PageFeedMatrix allowlist\nsci: no`,
+    book_judgment_pack_block: packBlock,
+    judgment_lock: "",
+  });
+  assert.match(prompt.user, /批断包装配令/);
+  assert.match(prompt.user, /USER_FEED/);
+  assert.match(prompt.user, /required_unit_ids:/);
+  assert.match(prompt.system, /Pack 正写/);
+  // Pack JSON appears once in user (via USER_FEED), not duplicated as second full block.
+  const packHdrHits = prompt.user.split("## 本页批断包切片").length - 1;
+  assert.equal(packHdrHits, 1, "pack slice must live once in USER_FEED");
+
+  const q = "先不裸辞，做三个月业余试点再决定";
+  const restated = gateBookJudgmentBodyConsume({
+    key: "01",
+    pack_units: face01,
+    question: q,
+    page_schema: {
+      page: "01",
+      face: "01",
+      page_title: "断",
+      page_subtitle: "",
+      main_recommendation: "先不裸辞，做三个月业余试点再决定",
+      conditions: "看情况",
+      not_choosing: "立刻裸辞",
+      evidence_pointer: "依据见 02（d01、d03）",
+    },
+  });
+  assert.equal(restated?.passed, false);
+  assert.equal(restated?.failed_rule, BOOK_BODY_QUESTION_RESTATE_RULE);
+
+  const dropSci = gateBookJudgmentBodyConsume({
+    key: "01",
+    pack_units: [
+      {
+        id: "d01",
+        track: "destiny",
+        serves_face: ["01"],
+        claim: "庚金日主承压偏高",
+        anchors: ["庚金"],
+      },
+      {
+        id: "d02",
+        track: "science",
+        serves_face: ["01"],
+        claim: "现状与目标偏差拉大认知负荷",
+        anchors: ["cognitive_load"],
+      },
+      {
+        id: "d03",
+        track: "convergence",
+        serves_face: ["01"],
+        claim: "命理承压与负荷同向",
+        anchors: ["庚金", "cognitive_load"],
+      },
+    ],
+    question: q,
+    page_schema: {
+      page: "01",
+      face: "01",
+      page_title: "断",
+      page_subtitle: "",
+      main_recommendation: "先守补给窗口，业余试点验证负荷是否回落",
+      conditions: "三个月内能量画像承压不恶化",
+      not_choosing: "立刻切断主收入",
+      evidence_pointer: "依据见 02（d01、d03）",
+    },
+  });
+  assert.equal(dropSci?.passed, false);
+  assert.ok(
+    dropSci?.failed_rule === BOOK_BODY_PACK_UNIT_MISS_RULE ||
+      dropSci?.failed_rule === BOOK_BODY_PACK_TRACK_DROP_RULE,
+  );
+
+  const ok01 = gateBookJudgmentBodyConsume({
+    key: "01",
+    pack_units: [
+      {
+        id: "d01",
+        track: "destiny",
+        serves_face: ["01"],
+        claim: "庚金日主承压偏高",
+        anchors: ["庚金"],
+      },
+      {
+        id: "d02",
+        track: "science",
+        serves_face: ["01"],
+        claim: "现状与目标偏差拉大认知负荷",
+        anchors: ["cognitive_load"],
+      },
+      {
+        id: "d03",
+        track: "convergence",
+        serves_face: ["01"],
+        claim: "命理承压与负荷同向",
+        anchors: ["庚金", "cognitive_load"],
+      },
+    ],
+    question: q,
+    page_schema: {
+      page: "01",
+      face: "01",
+      page_title: "断",
+      page_subtitle: "",
+      main_recommendation: "先守补给窗口，业余试点验证负荷是否回落",
+      conditions: "三个月内能量画像承压不恶化",
+      not_choosing: "立刻切断主收入",
+      evidence_pointer: "依据见 02（d01、d02、d03）",
+    },
+  });
+  assert.equal(ok01?.passed, true, ok01?.detail);
 }
 
 /** Flag + step table */

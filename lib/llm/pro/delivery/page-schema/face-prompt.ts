@@ -14,7 +14,7 @@ import { deliveryTranslateTargetName } from "@/lib/llm/pro/delivery/delivery-loc
 import type { PageSliceResult } from "@/lib/llm/pro/delivery/slice-for-page";
 
 const FACE_EXTRA_SYSTEM: Record<DecisionPageId, string> = {
-  "01": "1–2 句主推+条件；D 仅「依据见 02」，本页不展开论证矩阵。",
+  "01": "1–2 句主推+条件（从 pack claim 装配，禁复述题面）；D「依据见 02」须列本页全部 pack unit id（含 science），本页不展开论证矩阵。",
   "02": "A+B+C 必出；D≤6 行可核对锚；禁十二宫全列。",
   "04": "卡点命名清楚；C 写成本不写灾祸；D 依据可折。",
   "05": "路径 2–4 条；D 切轨/停止必出；禁空泛「平衡」。",
