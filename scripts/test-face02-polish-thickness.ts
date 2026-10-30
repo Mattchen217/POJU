@@ -61,13 +61,11 @@ const draftZh = asPage(
 
 /** es thin ~243 style → FAIL */
 {
-  const thin = asPage(
-    face02({
-      destiny: words(80, "destino"),
-      science: words(80, "ciencia"),
-      convergence: words(83, "cruce"),
-    }),
-  );
+  const thin = face02({
+    destiny: words(80, "destino"),
+    science: words(80, "ciencia"),
+    convergence: words(83, "cruce"),
+  });
   const abc = [thin.destiny_reason, thin.science_mechanism, thin.convergence]
     .join(" ")
     .trim()
@@ -76,7 +74,7 @@ const draftZh = asPage(
   const g = gateBodyPolishThickness({
     key: "02",
     draft: draftZh,
-    polished: thin,
+    polished: asPage(thin),
     locale: "es",
   });
   assert.equal(g?.passed, false);
@@ -86,16 +84,14 @@ const draftZh = asPage(
 
 /** 272 with titles still fails if ABC < 280 */
 {
-  const almost = asPage(
-    face02({
-      destiny: words(90, "a"),
-      science: words(90, "b"),
-      convergence: words(92, "c"),
-    }),
-  );
+  const almost = face02({
+    destiny: words(90, "a"),
+    science: words(90, "b"),
+    convergence: words(92, "c"),
+  });
   const g = gateFace02PolishThickness({
     draft: draftZh,
-    polished: almost,
+    polished: asPage(almost),
     locale: "es",
   });
   assert.equal(g.passed, false);
@@ -103,17 +99,15 @@ const draftZh = asPage(
 
 /** es thick ≥280 → PASS */
 {
-  const thick = asPage(
-    face02({
-      destiny: words(100, "destino"),
-      science: words(100, "ciencia"),
-      convergence: words(100, "cruce"),
-    }),
-  );
+  const thick = face02({
+    destiny: words(100, "destino"),
+    science: words(100, "ciencia"),
+    convergence: words(100, "cruce"),
+  });
   const g = gateBodyPolishThickness({
     key: "02",
     draft: draftZh,
-    polished: thick,
+    polished: asPage(thick),
     locale: "es",
   });
   assert.equal(g, null, g?.detail);
@@ -121,16 +115,14 @@ const draftZh = asPage(
 
 /** zh skip latin floor (不动 zh 尺) */
 {
-  const zhPage = asPage(
-    face02({
-      destiny: "命理承压偏高，开口窗口收窄，岁运冲突下用神承压。",
-      science: "现状与目标偏差抬高认知负荷，决策拖延随之加重。",
-      convergence: "承压与负荷同向，把开口成本一起抬高。",
-    }),
-  );
+  const zhPage = face02({
+    destiny: "命理承压偏高，开口窗口收窄，岁运冲突下用神承压。",
+    science: "现状与目标偏差抬高认知负荷，决策拖延随之加重。",
+    convergence: "承压与负荷同向，把开口成本一起抬高。",
+  });
   const g = gateFace02PolishThickness({
     draft: draftZh,
-    polished: zhPage,
+    polished: asPage(zhPage),
     locale: "zh",
   });
   assert.equal(g.passed, true, g.detail);
