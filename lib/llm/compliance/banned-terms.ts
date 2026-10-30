@@ -10,7 +10,7 @@
  */
 
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 
 /** Bare technical / fate terms that must not appear in soft-visible user copy. */
 export const BANNED_TERMS_ZH = [
@@ -103,7 +103,8 @@ export const FATE_LEXICON_SCRUB_ZH: Readonly<Record<string, string>> = {
 
 /** Resolve scrub/repair soft for a banned traditional — SSOT first, fate scrub second. */
 export function softForBannedTraditionalZh(traditional: string): string | null {
-  const t = pojuTermByTraditional(traditional, "bazi") ?? pojuTermByTraditional(traditional);
+  // Banned-term scrub is bazi façade / destiny lexicon — namespace required.
+  const t = resolvedPojuTerm(traditional, "bazi");
   if (t?.term.zh?.trim()) return t.term.zh.trim();
   const fate = FATE_LEXICON_SCRUB_ZH[traditional];
   return fate?.trim() || null;

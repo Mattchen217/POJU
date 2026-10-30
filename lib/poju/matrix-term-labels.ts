@@ -4,11 +4,8 @@
  */
 
 import { CLOSED_SET_SLUG } from "@/lib/glossary/term-closed-set";
-import {
-  glossOf,
-  pojuTermByTraditional,
-  termOf,
-} from "@/lib/glossary/pojulife-terms";
+import { glossOf, termOf } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 
 /** Layer caps for the four-pillar personality readout (no 「柱」). */
 export const MATRIX_LAYER_CAPS = {
@@ -114,7 +111,7 @@ export function matrixTermSlug(traditionalOrSoft: string): string | null {
   if (zd) return zd;
   const softHit = SOFT_LABEL_TO_SLUG[raw];
   if (softHit) return softHit;
-  const byTrad = pojuTermByTraditional(raw);
+  const byTrad = resolvedPojuTerm(raw, "bazi");
   if (byTrad) return byTrad.slug;
   const closed = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw];
   return closed ?? null;
@@ -191,7 +188,7 @@ export function matrixSoftTerm(traditionalOrSlug: string, locale: string): strin
   if (elementToSlug(raw)) return matrixElementSoft(raw, locale);
   const bySlug = termOf(raw, locale);
   if (bySlug) return bySlug;
-  const byTrad = pojuTermByTraditional(raw);
+  const byTrad = resolvedPojuTerm(raw, "bazi");
   if (byTrad) return termOf(byTrad.slug, locale) ?? byTrad.term.zh;
   const slug = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw];
   if (slug) return termOf(slug, locale) ?? raw;
@@ -212,7 +209,7 @@ export function matrixSoftGloss(traditionalOrSlug: string, locale: string): stri
   if (!raw) return "";
   const elSlug = elementToSlug(raw);
   if (elSlug) return glossOf(elSlug, locale) ?? "";
-  const byTrad = pojuTermByTraditional(raw);
+  const byTrad = resolvedPojuTerm(raw, "bazi");
   if (byTrad) return glossOf(byTrad.slug, locale) ?? "";
   const slug = CLOSED_SET_SLUG[raw] ?? LIFE_STAGE_HAN_TO_SLUG[raw] ?? raw;
   return glossOf(slug, locale) ?? "";

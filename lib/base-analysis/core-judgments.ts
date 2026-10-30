@@ -7,11 +7,15 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import type { DaYunEntry } from "@/lib/calculations/lunar-dayun";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 import { STEMS, type HeavenlyStem, type WuXing } from "@/lib/calendar/data/stems-branches";
 import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
 import type { RelationKind } from "@/lib/calculations/relation-engine";
-import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
+import {
+  autoMarkBareTerms,
+  resolveTraditionalToSlug,
+} from "@/lib/llm/sanitize/term-marking";
+import { CLOSED_SET_SLUG } from "@/lib/glossary/term-closed-set";
 
 /** RelationKind → 中文原词（喂模型真算；勿喂软译「磨蚀」）。 */
 const RELATION_KIND_HAN: Readonly<Record<RelationKind, string>> = {
@@ -315,9 +319,7 @@ function desensitizeShensha(structured: ProfileStructured): string[] {
     }
     const key = normalizeShenshaName(han);
     const t =
-      pojuTermByTraditional(han, "bazi") ??
-      pojuTermByTraditional(key, "bazi") ??
-      pojuTermByTraditional(key);
+      resolvedPojuTerm(han, "bazi") ?? resolvedPojuTerm(key, "bazi");
     if (!t) {
       dropped.push(`${han}(SSOT无对应术语,输出端无法软译→丢)`);
       continue;
@@ -362,7 +364,13 @@ export function softMarkCoreJudgmentsRefs(
     natal_relations: refs.natal_relations.map((s) => {
       const at = s.indexOf("@");
       if (at < 0) return autoMarkBareTerms(s, locale);
-      return `${autoMarkBareTerms(s.slice(0, at), locale)}@${s.slice(at + 1)}`;
+      // Engine form `刑@year-day` — kind is a closed relation root, not prose.
+      // Do not rely on wrapBareRelations lookbehind (needs 相/地支 prefix).
+      const kind = s.slice(0, at);
+      const slug =
+        resolveTraditionalToSlug(kind) ?? CLOSED_SET_SLUG[kind] ?? null;
+      if (slug) return `⟦t:${slug}|⟧@${s.slice(at + 1)}`;
+      return `${autoMarkBareTerms(kind, locale)}@${s.slice(at + 1)}`;
     }),
   };
 }

@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { BANNED_TERM_SOFT_ZH } from "@/lib/llm/compliance/banned-terms";
 import { wrapBareKeepCnSoftTerms } from "@/lib/llm/sanitize/term-marking";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 
 const failures: string[] = [];
 const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "utf8");
@@ -29,7 +29,7 @@ function main(): void {
   // ① scrub 软译 = SSOT term.zh；桥必须能把裸软译升成标记
   for (const [trad, slug] of BRIDGED) {
     const plain = BANNED_TERM_SOFT_ZH[trad];
-    const gold = pojuTermByTraditional(trad, "bazi") ?? pojuTermByTraditional(trad);
+    const gold = resolvedPojuTerm(trad, "bazi");
     assert(`BANNED_TERM_SOFT_ZH 有「${trad}」`, Boolean(plain));
     assert(`「${trad}」软译 === SSOT「${gold?.term.zh}」`, plain === gold?.term.zh);
     if (!plain) continue;
@@ -55,7 +55,7 @@ function main(): void {
   // ④ 禁词软译必须从 SSOT 派生（与金字同一事实源）
   const drift: string[] = [];
   for (const [trad, soft] of Object.entries(BANNED_TERM_SOFT_ZH)) {
-    const t = pojuTermByTraditional(trad, "bazi") ?? pojuTermByTraditional(trad);
+    const t = resolvedPojuTerm(trad, "bazi");
     if (!t) continue; // fate lexicon / out-of-set — no SSOT row
     if (soft !== t.term.zh) drift.push(`${trad}→${soft}≠${t.term.zh}`);
   }

@@ -9,10 +9,8 @@ import {
   SUPERSEDED_GLOSSARY_IDS,
 } from "@/lib/glossary/term-glossary-closed";
 import { CLOSED_SET_REPLACE_IDS } from "@/lib/glossary/term-closed-set";
-import {
-  pojuTermBySlug,
-  pojuTermByTraditional,
-} from "@/lib/glossary/pojulife-terms";
+import { pojuTermBySlug } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTermIn } from "@/lib/glossary/term-resolve";
 
 export type Locale = "en" | "zh" | "es" | "fr" | "de";
 export type Surface = "replace" | "allow" | "delete";
@@ -1004,8 +1002,17 @@ export const AUDIT_ALLOW_LABELS: Set<string> = new Set(
 );
 
 export function softFor(id: string, locale: Locale): string {
-  const fromPoju =
-    pojuTermByTraditional(id) ?? pojuTermByTraditional(id, "bazi") ?? pojuTermBySlug(id);
+  const fromSlug = pojuTermBySlug(id);
+  if (fromSlug) {
+    return fromSlug.term[locale] || fromSlug.term.en || fromSlug.term.zh || "";
+  }
+  const fromPoju = resolvedPojuTermIn(id, [
+    "bazi",
+    "qimen",
+    "ziwei",
+    "glyph",
+    "zodiac",
+  ]);
   if (fromPoju) {
     return fromPoju.term[locale] || fromPoju.term.en || fromPoju.term.zh || "";
   }

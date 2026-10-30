@@ -12,7 +12,7 @@ import {
   auditPaymentLeakResiduals,
   applyComplianceSanitize,
 } from "@/lib/llm/sanitize/compliance-terms";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 
 const failures: string[] = [];
 const assert = (l: string, ok: boolean) => {
@@ -60,12 +60,12 @@ function main(): void {
     ["流日", "日轨"],
     ["流時", "辰瞬"],
     ["流时", "辰瞬"],
-    ["真太陽時", "曜准"],
-    ["真太阳时", "曜准"],
+    ["真太陽時", "出生地校准"],
+    ["真太阳时", "出生地校准"],
     ["夫妻星", "俪模"],
     ["配偶星", "俪模"],
   ] as const) {
-    const t = pojuTermByTraditional(han, "bazi");
+    const t = resolvedPojuTerm(han, "bazi");
     assert(`「${han}」有术语（${zh}）`, t?.term.zh === zh);
   }
 
@@ -157,13 +157,13 @@ function main(): void {
       cleaned.includes("⟦t:pl_hour"),
   );
 
-  // ⑤ 术语总数 209（+12 生肖）
+  // ⑤ 术语总数 — Phase 6 freeze
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (src.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 209（实得 ${count}）`, count === 209);
+  assert(`术语总数 281（实得 ${count}）`, count === 281);
 
   // ⑥ contact.meta 五语言
   for (const l of ["zh", "en", "es", "de", "fr"]) {

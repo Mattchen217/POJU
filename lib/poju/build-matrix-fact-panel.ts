@@ -31,7 +31,8 @@ import {
   zodiacHanToSlug,
 } from "@/lib/poju/matrix-term-labels";
 import { normalizeShenshaLocale, resolveShenshaList } from "@/lib/poju/shensha";
-import { pojuTermByTraditional, termOf } from "@/lib/glossary/pojulife-terms";
+import { termOf } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 import { normalizeMatrixLocale } from "@/lib/poju/poju-matrix-i18n";
 
 export type MatrixFactChip = {
@@ -288,7 +289,7 @@ export function buildMatrixFactPanel(input: {
         const tg = calculateTenGod(dmStem, dyStem);
         if (tg) {
           ten_god_soft = matrixSoftTerm(tg, locale);
-          ten_god_slug = pojuTermByTraditional(tg)?.slug ?? null;
+          ten_god_slug = resolvedPojuTerm(tg, "bazi")?.slug ?? null;
         }
       } catch {
         ten_god_soft = null;
@@ -344,7 +345,7 @@ export function buildMatrixFactPanel(input: {
           if (soft) {
             yearSignLinks.push({
               soft,
-              slug: pojuTermByTraditional(tg)?.slug ?? null,
+              slug: resolvedPojuTerm(tg, "bazi")?.slug ?? null,
               polarity: "green",
             });
           }

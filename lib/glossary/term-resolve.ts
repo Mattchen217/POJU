@@ -122,6 +122,33 @@ export function resolvePojuTerm(
 }
 
 /**
+ * Production helper: resolved term or undefined (never silent cross-ns first-match).
+ * Prefer this over deprecated `pojuTermByTraditional`.
+ */
+export function resolvedPojuTerm(
+  input: string,
+  namespace: TermNs,
+): PojuTerm | undefined {
+  const r = resolvePojuTerm(input, { namespace });
+  return r.status === "resolved" ? r.term : undefined;
+}
+
+/**
+ * Try namespaces in explicit order; first resolved wins.
+ * Use when a surface may legally exist in more than one system (e.g. 驿马).
+ */
+export function resolvedPojuTermIn(
+  input: string,
+  namespaces: readonly TermNs[],
+): PojuTerm | undefined {
+  for (const ns of namespaces) {
+    const t = resolvedPojuTerm(input, ns);
+    if (t) return t;
+  }
+  return undefined;
+}
+
+/**
  * Diagnostic / audit only — cross-namespace candidates. Never use for user rendering.
  */
 export function findPojuTerms(input: string): readonly PojuTerm[] {

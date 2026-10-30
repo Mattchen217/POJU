@@ -8,8 +8,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 import { wrapBareRelations } from "@/lib/llm/sanitize/term-marking";
 import { hasCoreJudgmentsRedline } from "@/lib/base-analysis/generate-core-judgments";
 
@@ -165,7 +165,7 @@ function main(): void {
   const gaps: string[] = [];
   for (const w of ENGINE_WORDS) {
     if (isRedline(w)) continue;
-    const t = pojuTermByTraditional(w, "bazi") ?? pojuTermByTraditional(w);
+    const t = resolvedPojuTerm(w, "bazi");
     if (!t) gaps.push(w);
   }
   assert(
@@ -181,7 +181,7 @@ function main(): void {
     ["身旺", "strong_self"],
     ["合化", "rel_transmutation"],
   ] as const) {
-    const t = pojuTermByTraditional(alias, "bazi") ?? pojuTermByTraditional(alias);
+    const t = resolvedPojuTerm(alias, "bazi");
     assert(
       `「${alias}」→ ${expectSlug}（实得 ${t?.slug ?? "查不到"}）`,
       t?.slug === expectSlug,
@@ -198,13 +198,13 @@ function main(): void {
   );
   assert("恐吓红线仍拦", hasCoreJudgmentsRedline("此盘有十恶大败"));
 
-  // 术语总数 209
+  // 术语总数 — Phase 6 freeze (羊刃 collapsed into fei_ren)
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (src.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 209（实得 ${count}）`, count === 209);
+  assert(`术语总数 281（实得 ${count}）`, count === 281);
 
   // SHENSHA_ALIAS 第二事实源已清
   const aliasSrc = fs.readFileSync(

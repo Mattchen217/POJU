@@ -4,7 +4,7 @@
  */
 
 import type { GlossaryConcept, Locale } from "@/lib/glossary/term-glossary";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 
 type SoftGloss = { soft: Record<Locale, string>; gloss: Record<Locale, string> };
 
@@ -372,7 +372,7 @@ const KEEP_LOCAL_ENERGY_BASE_SOFT = new Set(["命盘", "八字"]);
 function overlayPojuSoftGloss(entries: GlossaryConcept[]): GlossaryConcept[] {
   return entries.map((c) => {
     if (KEEP_LOCAL_ENERGY_BASE_SOFT.has(c.id)) return c;
-    const t = pojuTermByTraditional(c.id, "bazi") ?? pojuTermByTraditional(c.id);
+    const t = resolvedPojuTerm(c.id, "bazi");
     if (!t) return c;
     return {
       ...c,

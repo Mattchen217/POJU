@@ -44,10 +44,13 @@ import {
   termHanVariants,
   glossOf,
   pojuTermBySlug,
-  pojuTermByTraditional,
   termOf,
   type PojuTerm,
 } from "@/lib/glossary/pojulife-terms";
+import {
+  resolvedPojuTerm,
+  resolvedPojuTermIn,
+} from "@/lib/glossary/term-resolve";
 import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { localizeEvidenceGlue } from "@/lib/poju/localize-evidence-glue";
 import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
@@ -557,10 +560,16 @@ export function resolveTraditionalToSlug(traditional: string): string | null {
     if (wx) return wx;
     const yy = YINYANG_SLUG[word as keyof typeof YINYANG_SLUG];
     if (yy) return yy;
+    // Relation roots 刑/冲/合/害 and other closed single-char SSOT rows.
+    const closedSingle = CLOSED_SET_SLUG[word];
+    if (closedSingle) return closedSingle;
+    const singleTerm = resolvedPojuTerm(word, "bazi");
+    if (singleTerm) return singleTerm.slug;
     return null;
   }
 
-  const term = pojuTermByTraditional(word);
+  // Word slots are usually bazi; allow qimen dual surfaces (空亡/白虎/驿马) explicitly.
+  const term = resolvedPojuTermIn(word, ["bazi", "qimen"]);
   if (term) return term.slug;
 
   const closed = CLOSED_SET_SLUG[word];
@@ -1428,9 +1437,9 @@ function resolveBareMarkLabels(
   {
     const key = normalizeShenshaName(hanId);
     const poju =
-      pojuTermByTraditional(hanId, "bazi") ??
-      pojuTermByTraditional(key, "bazi") ??
-      pojuTermByTraditional(key);
+      resolvedPojuTerm(hanId, "bazi") ??
+      resolvedPojuTerm(key, "bazi") ??
+      resolvedPojuTermIn(key, ["qimen", "ziwei"]);
     if (poju) {
       const loc = toGlossaryLocale(locale);
       return {

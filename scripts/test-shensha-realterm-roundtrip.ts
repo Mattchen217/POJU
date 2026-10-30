@@ -6,7 +6,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { pojuTermByTraditional } from "@/lib/glossary/pojulife-terms";
+import { resolvedPojuTerm } from "@/lib/glossary/term-resolve";
 import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
 import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
@@ -42,10 +42,8 @@ function main(): void {
     "羊刃",
   ];
   for (const han of engineNeutral) {
-    const t =
-      pojuTermByTraditional(han, "bazi") ??
-      pojuTermByTraditional(normalizeShenshaName(han), "bazi") ??
-      pojuTermByTraditional(normalizeShenshaName(han));
+    const key = normalizeShenshaName(han);
+    const t = resolvedPojuTerm(han, "bazi") ?? resolvedPojuTerm(key, "bazi");
     assert(`「${han}」查得到软译${t ? "（" + t.term.zh + "）" : ""}`, Boolean(t));
   }
 
@@ -91,13 +89,13 @@ function main(): void {
     );
   }
 
-  // ⑤ 术语总数 209（含柱位结构系列 + 合化 + 生肖）
+  // ⑤ 术语总数 — Phase 6 freeze
   const t = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (t.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 209（实得 ${count}）`, count === 209);
+  assert(`术语总数 281（实得 ${count}）`, count === 281);
 
   // ⑥ 喂真词：desensitize 后 refs 含真词而非软译「提携」
   // 最小 structured 不够触发引擎神煞时，至少保证别名归一后 push 的是 han 不是 soft
