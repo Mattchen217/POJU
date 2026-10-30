@@ -59,8 +59,8 @@ import {
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
 import { BRANCHES, STEMS } from "@/lib/calendar/data/stems-branches";
 import {
+  applyNsAwareSurfacePolicy,
   isCrossNsSoftPreserveHan,
-  softMapConfirmedCrossNsHans,
   type NsAwareSanitizeOpts,
 } from "@/lib/glossary/ns-aware-surface-sanitize";
 import {
@@ -2387,7 +2387,7 @@ export function stripForbiddenShenSha(
   opts?: NsAwareSanitizeOpts,
 ): string {
   if (!text?.trim()) return text ?? "";
-  let out = softMapConfirmedCrossNsHans(text, locale, opts).text;
+  let out = applyNsAwareSurfacePolicy(text, locale, opts).text;
   for (const m of parseTermMarkers(out)) {
     const blob = `${m.visible} ${m.plain ?? ""}`;
     if (blobMatchesOutOfSetForbidden(blob) && !blobHasOnlyCrossNsPreserve(blob)) {

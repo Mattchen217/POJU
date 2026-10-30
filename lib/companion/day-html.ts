@@ -33,6 +33,8 @@ export function buildCompanionDayHtml(input: {
   cards: CompanionDayCards;
   /** Structured term namespace bindings — required for qimen dual-ns soft-map. */
   confirmedTerms?: SanitizeExportOptions["confirmed"];
+  /** Fact-source id pairing with confirmedTerms[].sourceId. */
+  termSourceId?: string;
 }): string {
   const locale = normalizeCompanionLocale(input.job.brief.locale);
   const labels = companionUiLabels(locale);
@@ -44,9 +46,13 @@ export function buildCompanionDayHtml(input: {
     locale === "zh" ? "zh" : locale === "fr" ? "fr" : locale === "es" ? "es" : "en";
 
   const localeStr = String(locale);
-  const opts: SanitizeExportOptions | undefined = input.confirmedTerms
-    ? { confirmed: input.confirmedTerms }
-    : undefined;
+  const opts: SanitizeExportOptions | undefined =
+    input.confirmedTerms || input.termSourceId
+      ? {
+          ...(input.confirmedTerms ? { confirmed: input.confirmedTerms } : {}),
+          ...(input.termSourceId ? { sourceId: input.termSourceId } : {}),
+        }
+      : undefined;
   const section = (h: string, body: string) =>
     `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(compliantBody(body, localeStr, opts))}</p>`;
 

@@ -10,6 +10,7 @@ import { resolvePojuTerm } from "../lib/glossary/term-resolve";
 import {
   crossNsSoftPreserveHans,
   maySoftMapCrossNsToQimen,
+  sanitizeCrossNsMarkers,
   softMapConfirmedCrossNsHans,
   type ConfirmedTermRef,
 } from "../lib/glossary/ns-aware-surface-sanitize";
@@ -23,6 +24,10 @@ import { stripRedlineShenshaFromText } from "../lib/poju/shensha";
 import { stripForbiddenShenSha } from "../lib/llm/sanitize/term-marking";
 import { sanitizePaymentAuditLeaks } from "../lib/llm/sanitize/compliance-terms";
 import { buildCompanionDayHtml } from "../lib/companion/day-html";
+import {
+  buildReminderDayOfflineHtml,
+  buildReminderPackOfflineHtml,
+} from "../lib/companion/reminder-day-offline-html";
 import type { CompanionDayCards, CompanionJob } from "../lib/companion/types";
 import { termOf } from "../lib/glossary/pojulife-terms";
 
@@ -284,6 +289,148 @@ function main() {
     assert.ok(qimenSection.includes("覆盖缺口") || qimenSection.includes("冲击"));
     assert.ok(!baziSection.includes("覆盖缺口"));
     ok("mixed report: per-section ns handling");
+  }
+
+  // --- sourceId scoped confirmation (whole-doc qimen grant forbidden) ---
+  {
+    const scoped: ConfirmedTermRef[] = [
+      { traditional: "空亡", namespace: "qimen", slug: "qm_coverage_gap", sourceId: "seg-qimen" },
+      { traditional: "白虎", namespace: "qimen", slug: "qm_bai_hu", sourceId: "seg-qimen" },
+      { traditional: "空亡", namespace: "bazi", sourceId: "seg-bazi" },
+      { traditional: "白虎", namespace: "bazi", sourceId: "seg-bazi" },
+    ];
+    // Wrong: document-level confirmed without matching sourceId must NOT soft-map
+    assert.equal(
+      maySoftMapCrossNsToQimen("空亡", { confirmed: scoped }),
+      false,
+      "scoped rows require sourceId",
+    );
+    const wrongSeg = stripRedlineShenshaFromText("段落空亡白虎", "zh", {
+      confirmed: scoped,
+      sourceId: "seg-bazi",
+    });
+    assert.ok(!wrongSeg.includes("空亡") && !wrongSeg.includes("白虎"));
+    assert.ok(!wrongSeg.includes("覆盖缺口"), "bazi segment must not get qimen soft");
+
+    const rightSeg = stripRedlineShenshaFromText("段落空亡白虎", "zh", {
+      confirmed: scoped,
+      sourceId: "seg-qimen",
+    });
+    assert.ok(rightSeg.includes("覆盖缺口") && rightSeg.includes("冲击"));
+    assert.ok(!rightSeg.includes("空亡") && !rightSeg.includes("白虎"));
+
+    // Same document: two sections sanitized with their own sourceId
+    const baziPart = sanitizePlainExport("八字段空亡", "zh", "plain", {
+      confirmed: scoped,
+      sourceId: "seg-bazi",
+    }).content;
+    const qimenPart = sanitizePlainExport("奇门段空亡白虎", "zh", "plain", {
+      confirmed: scoped,
+      sourceId: "seg-qimen",
+    }).content;
+    assert.ok(!baziPart.includes("覆盖缺口"));
+    assert.ok(qimenPart.includes("覆盖缺口") || qimenPart.includes("冲击"));
+    ok("sourceId-scoped confirmedTerms (no whole-doc grant)");
+  }
+
+  // --- ⟦t:⟧ marker / slug redline (bazi must not bypass) ---
+  {
+    const baziMarker = stripRedlineShenshaFromText(
+      "依据⟦t:ss_fake|空亡⟧与⟦t:day_master|白虎⟧恐吓。",
+      "zh",
+    );
+    assert.ok(!baziMarker.includes("空亡") && !baziMarker.includes("白虎"));
+    assert.ok(!baziMarker.includes("⟦t:"), "bazi dual-ns markers stripped");
+    assert.ok(!baziMarker.includes("覆盖缺口"), "non-qm slug must not soft-map");
+    ok("bazi/non-qm markers hard-strip dual-ns");
+
+    const qmMarker = sanitizeCrossNsMarkers(
+      "奇门⟦t:qm_coverage_gap|空亡⟧遇⟦t:qm_bai_hu|白虎⟧",
+      "zh",
+    );
+    assert.ok(qmMarker.softMappedMarkers >= 2);
+    assert.ok(qmMarker.text.includes(termOf("qm_coverage_gap", "zh")!));
+    assert.ok(qmMarker.text.includes(termOf("qm_bai_hu", "zh")!));
+    assert.ok(!qmMarker.text.includes("空亡") && !qmMarker.text.includes("白虎"));
+
+    const mixedMarkers = stripRedlineShenshaFromText(
+      "混⟦t:ss_x|空亡⟧与⟦t:qm_coverage_gap|空亡⟧",
+      "zh",
+    );
+    assert.ok(!mixedMarkers.includes("⟦t:ss_x"));
+    assert.ok(mixedMarkers.includes("覆盖缺口"));
+    assert.ok(!mixedMarkers.includes("空亡"));
+    ok("marker slug-level: qm soft / bazi strip");
+  }
+
+  // --- 30-day reminder offline pack: confirmedTerms path ---
+  {
+    const SRC = "reminder-qimen";
+    const scopedQimen: ConfirmedTermRef[] = [
+      { traditional: "空亡", namespace: "qimen", slug: "qm_coverage_gap", sourceId: SRC },
+      { traditional: "白虎", namespace: "qimen", slug: "qm_bai_hu", sourceId: SRC },
+    ];
+    const cards: CompanionDayCards = {
+      today_is: "今日结构含空亡",
+      suitable: "白虎位宜缓",
+      unsuitable: "勿写童子煞",
+      suggestion: "跟覆盖缺口对齐边界",
+      evidence: "空亡·白虎",
+    };
+    const days = Array.from({ length: 30 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 9, 30 + i));
+      const date_key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      return {
+        day_index: i,
+        date_key,
+        status: i === 0 ? ("delivered" as const) : ("pending" as const),
+        cards: i === 0 ? cards : null,
+        error: null,
+        generated_at: null,
+        delivered_at: null,
+        sent_at: null,
+      };
+    });
+    const job = {
+      brief: {
+        locale: "zh",
+        primary: { name: "主路" },
+        backup: { name: "辅路" },
+      },
+      delivery_day_key: days[0]!.date_key,
+      ends_day_key: days[29]!.date_key,
+      days,
+    } as unknown as CompanionJob;
+
+    const dayHtml = buildReminderDayOfflineHtml({
+      job,
+      dayIndex: 0,
+      cards,
+      opts: { confirmedTerms: scopedQimen, termSourceId: SRC },
+    });
+    assert.ok(!dayHtml.includes("空亡") && !dayHtml.includes("白虎"));
+    assert.ok(!dayHtml.includes("童子煞"));
+    assert.ok(dayHtml.includes("覆盖缺口") || dayHtml.includes("冲击"));
+    ok("reminder day offline HTML confirmedTerms path");
+
+    const packHtml = buildReminderPackOfflineHtml(job, {
+      confirmedTerms: scopedQimen,
+      termSourceId: SRC,
+    });
+    assert.ok(packHtml.includes("30日提醒") || packHtml.includes("SLOT") || packHtml.length > 500);
+    assert.ok(!packHtml.includes("童子煞"));
+    // daysJson embeds sanitized card HTML
+    assert.ok(
+      packHtml.includes("覆盖缺口") || packHtml.includes("冲击"),
+      "pack daysJson must carry soft labels from confirmed path",
+    );
+    assert.ok(!packHtml.includes("空亡"), "pack must not leak traditional 空亡");
+    ok("reminder 30-day pack offline HTML confirmedTerms path");
+
+    const packBare = buildReminderPackOfflineHtml(job, {});
+    assert.ok(!packBare.includes("空亡"), "bare pack strips 空亡");
+    assert.ok(!packBare.includes("白虎"), "bare pack strips 白虎");
+    ok("reminder pack without confirmed fail-closed on dual-ns");
   }
 
   console.log("\nAll P1 ns-aware export exit tests passed.\n");

@@ -252,11 +252,16 @@ export function sanitizeExportSurface(input: {
   locale: string;
   surface: ExportSurfaceKind;
   confirmed?: SanitizeExportOptions["confirmed"];
+  sourceId?: string;
 }): SanitizeExportResult {
-  const { content, locale, surface, confirmed } = input;
-  const options: SanitizeExportOptions | undefined = confirmed
-    ? { confirmed }
-    : undefined;
+  const { content, locale, surface, confirmed, sourceId } = input;
+  const options: SanitizeExportOptions | undefined =
+    confirmed || sourceId
+      ? {
+          ...(confirmed ? { confirmed } : {}),
+          ...(sourceId ? { sourceId } : {}),
+        }
+      : undefined;
   if (surface === "html" || surface === "email") {
     // Email may be HTML body; if it looks like markup, walk nodes.
     if (/<[a-z][\s\S]*>/i.test(content)) {

@@ -36,6 +36,13 @@ export type BuildReminderOfflineHtmlOptions = {
   closeLabel?: string;
   /** Pack: note under subtitle. */
   packNote?: string;
+  /**
+   * Segment-scoped term confirmations for export sanitize.
+   * Must include matching `sourceId` on each row when soft-mapping dual-ns (空亡/白虎).
+   */
+  confirmedTerms?: SanitizeExportOptions["confirmed"];
+  /** Fact-source id for this reminder document (pairs with confirmedTerms.sourceId). */
+  termSourceId?: string;
 };
 
 function escapeHtml(s: string): string {
@@ -100,8 +107,22 @@ function weekdayLabels(locale: CompanionLocale): string[] {
   return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 }
 
+function sanitizeOptsFromBuild(
+  opts?: BuildReminderOfflineHtmlOptions,
+): SanitizeExportOptions | undefined {
+  if (!opts?.confirmedTerms?.length && !opts?.termSourceId) return undefined;
+  return {
+    ...(opts.confirmedTerms ? { confirmed: opts.confirmedTerms } : {}),
+    ...(opts.termSourceId ? { sourceId: opts.termSourceId } : {}),
+  };
+}
+
 /** Monday-start calendar grid covering job window. */
-function buildCalendarHtml(job: ReminderPackJobLike, locale: CompanionLocale): {
+function buildCalendarHtml(
+  job: ReminderPackJobLike,
+  locale: CompanionLocale,
+  sanitizeOpts?: SanitizeExportOptions,
+): {
   calendar: string;
   daysJson: Record<string, { title: string; html: string }>;
 } {
@@ -148,9 +169,9 @@ function buildCalendarHtml(job: ReminderPackJobLike, locale: CompanionLocale): {
       if (inWindow && dayRec) {
         if (ready && dayRec.cards) {
           const title = labels.title(dateKey, dayRec.day_index + 1);
-          const html = `<article class="poju-companion-sheet__card">${cardBodyHtml(dayRec.cards, labels, locale)}</article>`;
+          const html = `<article class="poju-companion-sheet__card">${cardBodyHtml(dayRec.cards, labels, locale, sanitizeOpts)}</article>`;
           daysJson[dateKey] = { title, html };
-          const sug = compliantBody(dayRec.cards.suggestion, locale);
+          const sug = compliantBody(dayRec.cards.suggestion, locale, sanitizeOpts);
           const snip = escapeHtml(sug.slice(0, 48));
           const more = sug.length > 48 ? "…" : "";
           inner += `<button type="button" class="atmos-forecast__snippet" data-day-key="${dateKey}"><span class="atmos-forecast__snippet-text">${snip}${more}</span><span class="atmos-forecast__expand">→</span></button>`;
@@ -192,6 +213,7 @@ export function buildReminderDayOfflineHtml(input: {
   const closeLabel =
     input.opts?.closeLabel?.trim() || (locale === "zh" ? "关闭" : "Close");
   const subtitle = labels.anchor(input.job.brief.primary.name, input.job.brief.backup.name);
+  const sanitizeOpts = sanitizeOptsFromBuild(input.opts);
   return fillSlots(REMINDER_DAY_BLANK_TEMPLATE, {
     SLOT_LANG: langAttr(locale),
     SLOT_DOC_TITLE: escapeHtml(title),
@@ -200,7 +222,7 @@ export function buildReminderDayOfflineHtml(input: {
     SLOT_FRAME_ARIA: escapeHtml(title),
     SLOT_TITLE: escapeHtml(title),
     SLOT_SUBTITLE: escapeHtml(subtitle),
-    SLOT_CARD_BODY: cardBodyHtml(input.cards, labels, locale),
+    SLOT_CARD_BODY: cardBodyHtml(input.cards, labels, locale, sanitizeOpts),
   });
 }
 
@@ -220,7 +242,8 @@ export function buildReminderPackOfflineHtml(
     (locale === "zh"
       ? "点日期查看当日提醒；与下载/邮件为同一份离线 HTML。"
       : "Tap a day to open that reminder — same offline HTML as download/email.");
-  const { calendar, daysJson } = buildCalendarHtml(job, locale);
+  const sanitizeOpts = sanitizeOptsFromBuild(opts);
+  const { calendar, daysJson } = buildCalendarHtml(job, locale, sanitizeOpts);
   return fillSlots(REMINDER_PACK_BLANK_TEMPLATE, {
     SLOT_LANG: langAttr(locale),
     SLOT_DOC_TITLE: escapeHtml(title),

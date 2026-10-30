@@ -5,14 +5,15 @@
  * Never infer namespace from bare surface text.
  *
  * Policy:
- * - confirmed qimen-only → soft-map to qimen SSOT label
- * - confirmed bazi → hard-strip (caller)
- * - both ns confirmed for same traditional → fail-closed strip bare (use ⟦t:slug|⟧)
- * - unconfirmed bare → fail-closed strip (caller)
+ * - confirmed qimen for this **sourceId** only → soft-map bare surfaces in that segment
+ * - confirmed bazi / wrong sourceId / no confirmation → hard-strip (caller)
+ * - both ns confirmed for same traditional without source split → fail-closed
+ * - `⟦t:slug|…⟧`: slug is authoritative — qm_* may soft-resolve; non-qimen dual-ns markers hard-strip
  */
 
 import type { TermNs } from "@/lib/glossary/term-ns";
 import {
+  pojuTermBySlug,
   termOf,
   toTermLocale,
 } from "@/lib/glossary/pojulife-terms";
@@ -20,17 +21,27 @@ import { forbiddenTokensForNamespace } from "@/lib/glossary/term-forbidden-regis
 import { resolvePojuTerm } from "@/lib/glossary/term-resolve";
 import { termHanVariants } from "@/lib/glossary/term-han-normalize";
 
+const TERM_MARKER_RE = /⟦t:([^|⟧]+)\|((?:\\.|[^|\\])*?)(?:\|((?:\\.|[^|\\])*?))?⟧/g;
 const TERM_MARKER_SPLIT = /(⟦t:[^⟧]*⟧)/g;
 
 export type ConfirmedTermRef = {
   traditional: string;
   namespace: TermNs;
   slug?: string;
+  /**
+   * Fact-source / paragraph id. Soft-map bare tokens only when sanitize
+   * `opts.sourceId` equals this id. Global (no sourceId) confirmed rows
+   * never authorize soft-map by themselves when any row carries a sourceId
+   * for the same traditional — prevents whole-doc qimen grant.
+   */
+  sourceId?: string;
 };
 
 export type NsAwareSanitizeOpts = {
   /** Structured facts that already know namespace. Never inferred from bare text. */
   confirmed?: readonly ConfirmedTermRef[];
+  /** Current text segment's fact-source id (must match ConfirmedTermRef.sourceId). */
+  sourceId?: string;
 };
 
 let _cachedCrossNs: readonly string[] | null = null;
@@ -60,28 +71,49 @@ export function isCrossNsSoftPreserveHan(han: string): boolean {
   return termHanVariants(t).some((v) => set.has(v));
 }
 
-function namespacesConfirming(
+function matchingConfirmed(
   traditional: string,
   confirmed: readonly ConfirmedTermRef[] | undefined,
+): ConfirmedTermRef[] {
+  if (!confirmed?.length) return [];
+  const variants = new Set(termHanVariants(traditional));
+  return confirmed.filter((row) =>
+    termHanVariants(row.traditional).some((v) => variants.has(v)),
+  );
+}
+
+function namespacesConfirmingForSource(
+  traditional: string,
+  opts?: NsAwareSanitizeOpts,
 ): Set<TermNs> {
   const out = new Set<TermNs>();
-  if (!confirmed?.length) return out;
-  const variants = new Set(termHanVariants(traditional));
-  for (const row of confirmed) {
-    const rowVars = termHanVariants(row.traditional);
-    if (rowVars.some((v) => variants.has(v))) {
-      out.add(row.namespace);
+  const rows = matchingConfirmed(traditional, opts?.confirmed);
+  if (!rows.length) return out;
+
+  const sourceId = opts?.sourceId?.trim() || "";
+  const scoped = rows.filter((r) => r.sourceId?.trim());
+  const unscoped = rows.filter((r) => !r.sourceId?.trim());
+
+  // Prefer source-scoped rows when any exist for this traditional.
+  if (scoped.length) {
+    if (!sourceId) return out; // no segment id → cannot authorize soft-map
+    for (const row of scoped) {
+      if (row.sourceId!.trim() === sourceId) out.add(row.namespace);
     }
+    return out;
   }
+
+  // Legacy unscoped rows only: still require no competing dual grant from mixed lists
+  for (const row of unscoped) out.add(row.namespace);
   return out;
 }
 
-/** True when qimen is confirmed and bazi is not — safe to soft-map bare surfaces. */
+/** True when qimen is confirmed for this segment and bazi is not. */
 export function maySoftMapCrossNsToQimen(
   traditional: string,
   opts?: NsAwareSanitizeOpts,
 ): boolean {
-  const ns = namespacesConfirming(traditional, opts?.confirmed);
+  const ns = namespacesConfirmingForSource(traditional, opts);
   return ns.has("qimen") && !ns.has("bazi");
 }
 
@@ -93,15 +125,94 @@ function mapOutsideMarkers(text: string, mapChunk: (chunk: string) => string): s
     .join("");
 }
 
+function markerBlobHasCrossNsHan(visible: string, plain: string): string | null {
+  const blob = `${visible}\n${plain}`;
+  for (const han of crossNsSoftPreserveHans()) {
+    if (blob.includes(han)) return han;
+  }
+  return null;
+}
+
+function isQimenSlug(slug: string): boolean {
+  return slug.trim().toLowerCase().startsWith("qm_");
+}
+
+/**
+ * Marker / slug pass before bare soft-map + hard-strip.
+ * - qm_* dual-ns markers → replace with qimen soft label (slug authoritative)
+ * - non-qimen markers carrying dual-ns traditional → hard-delete (no bypass)
+ * - unknown slug + dual-ns traditional in slots → hard-delete (fail-closed)
+ */
+export function sanitizeCrossNsMarkers(
+  text: string,
+  locale: string,
+): { text: string; strippedMarkers: number; softMappedMarkers: number } {
+  if (!text?.includes("⟦t:")) {
+    return { text: text ?? "", strippedMarkers: 0, softMappedMarkers: 0 };
+  }
+  const loc = toTermLocale(locale);
+  let strippedMarkers = 0;
+  let softMappedMarkers = 0;
+
+  const out = text.replace(TERM_MARKER_RE, (raw, slugRaw: string, visRaw: string, plainRaw?: string) => {
+    const slug = String(slugRaw ?? "").trim();
+    const visible = String(visRaw ?? "").replace(/\\\|/g, "|");
+    const plain = String(plainRaw ?? "").replace(/\\\|/g, "|");
+    const crossHan = markerBlobHasCrossNsHan(visible, plain) || markerBlobHasCrossNsHan(slug, "");
+
+    if (isQimenSlug(slug)) {
+      const bySlug = pojuTermBySlug(slug);
+      const byTrad =
+        crossHan != null ? resolvePojuTerm(crossHan, { namespace: "qimen" }) : null;
+      const term =
+        bySlug?.ns === "qimen"
+          ? bySlug
+          : byTrad?.status === "resolved"
+            ? byTrad.term
+            : null;
+      if (term) {
+        const soft = (termOf(term.slug, loc) || term.term[loc] || "").trim();
+        if (soft) {
+          softMappedMarkers += 1;
+          return soft;
+        }
+      }
+      // qm_ slug but no soft → fail-closed strip if dual-ns present
+      if (crossHan) {
+        strippedMarkers += 1;
+        return "";
+      }
+      return raw;
+    }
+
+    // Non-qimen (bazi / ss_ / invented): dual-ns traditional in marker → hard strip
+    if (crossHan || isCrossNsSoftPreserveHan(visible) || isCrossNsSoftPreserveHan(plain)) {
+      strippedMarkers += 1;
+      return "";
+    }
+    // Forbidden bazi resolve by traditional in slots
+    for (const han of [visible, plain]) {
+      if (!han.trim()) continue;
+      const b = resolvePojuTerm(han.trim(), { namespace: "bazi" });
+      if (b.status === "forbidden") {
+        strippedMarkers += 1;
+        return "";
+      }
+    }
+    return raw;
+  });
+
+  return { text: out, strippedMarkers, softMappedMarkers };
+}
+
 export type SoftMapCrossNsResult = {
   text: string;
-  replacements: Array<{ han: string; soft: string; slug: string; namespace: "qimen" }>;
+  replacements: Array<{ han: string; soft: string; slug: string; namespace: "qimen"; sourceId?: string }>;
 };
 
 /**
- * Soft-map dual-ns traditional surfaces → qimen coined soft labels **only** when
- * structured confirmation says qimen and does not also claim bazi for the same token.
- * Bare / ambiguous / bazi-confirmed tokens are left unchanged for hard-strip (fail-closed).
+ * Soft-map dual-ns bare surfaces → qimen soft labels only when segment-scoped
+ * confirmation says qimen and does not also claim bazi for this sourceId.
  */
 export function softMapConfirmedCrossNsHans(
   text: string,
@@ -120,20 +231,43 @@ export function softMapConfirmedCrossNsHans(
     const q = resolvePojuTerm(han, { namespace: "qimen" });
     if (q.status !== "resolved") continue;
     const soft = (termOf(q.term.slug, loc) || q.term.term[loc] || "").trim();
-    if (!soft) continue; // fail-closed: no invented label
+    if (!soft) continue;
 
     const before = out;
     out = mapOutsideMarkers(out, (chunk) => chunk.split(han).join(soft));
     if (out !== before) {
-      replacements.push({ han, soft, slug: q.term.slug, namespace: "qimen" });
+      replacements.push({
+        han,
+        soft,
+        slug: q.term.slug,
+        namespace: "qimen",
+        ...(opts?.sourceId ? { sourceId: opts.sourceId } : {}),
+      });
     }
   }
   return { text: out, replacements };
 }
 
 /**
- * @deprecated Name retained for call-site discovery — always pass opts.confirmed.
- * Without confirmation this is a no-op (fail-closed: do not invent qimen soft labels).
+ * Full ns-aware pass: markers (slug) → segment soft-map → caller hard-strips leftovers.
+ */
+export function applyNsAwareSurfacePolicy(
+  text: string,
+  locale: string,
+  opts?: NsAwareSanitizeOpts,
+): SoftMapCrossNsResult & { strippedMarkers: number; softMappedMarkers: number } {
+  const markers = sanitizeCrossNsMarkers(text ?? "", locale);
+  const soft = softMapConfirmedCrossNsHans(markers.text, locale, opts);
+  return {
+    text: soft.text,
+    replacements: soft.replacements,
+    strippedMarkers: markers.strippedMarkers,
+    softMappedMarkers: markers.softMappedMarkers,
+  };
+}
+
+/**
+ * @deprecated Prefer applyNsAwareSurfacePolicy / softMapConfirmedCrossNsHans with sourceId.
  */
 export function softMapCrossNsForbiddenHans(
   text: string,
