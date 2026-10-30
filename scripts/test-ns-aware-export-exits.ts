@@ -335,32 +335,62 @@ function main() {
 
   // --- ⟦t:⟧ marker / slug redline (bazi must not bypass) ---
   {
+    const gapSoft = termOf("qm_coverage_gap", "zh")!;
+    const tigerSoft = termOf("qm_bai_hu", "zh")!;
+
+    // Valid qimen slug + matching traditional → soft
+    const qmValid = sanitizeCrossNsMarkers(
+      "奇门⟦t:qm_coverage_gap|空亡⟧遇⟦t:qm_bai_hu|白虎⟧",
+      "zh",
+    );
+    assert.equal(qmValid.softMappedMarkers, 2);
+    assert.equal(qmValid.strippedMarkers, 0);
+    assert.ok(qmValid.text.includes(gapSoft) && qmValid.text.includes(tigerSoft));
+    assert.ok(!qmValid.text.includes("空亡") && !qmValid.text.includes("白虎"));
+    ok("valid qm slug + matching traditional → soft");
+
+    // Unknown qm_* slug + dual-ns → hard strip (no traditional fallback)
+    const qmUnknown = sanitizeCrossNsMarkers(
+      "假⟦t:qm_not_registered_xxx|空亡⟧与⟦t:qm_also_fake|白虎⟧",
+      "zh",
+    );
+    assert.ok(qmUnknown.strippedMarkers >= 2);
+    assert.equal(qmUnknown.softMappedMarkers, 0);
+    assert.ok(!qmUnknown.text.includes("空亡") && !qmUnknown.text.includes("白虎"));
+    assert.ok(!qmUnknown.text.includes(gapSoft), "unknown slug must not soft via traditional");
+    assert.ok(!qmUnknown.text.includes(tigerSoft));
+    assert.ok(!qmUnknown.text.includes("⟦t:"));
+    ok("unknown qm slug + dual-ns → hard strip (no trad fallback)");
+
+    // Known qimen slug + mismatched dual-ns traditional → fail-closed
+    const qmMismatch = sanitizeCrossNsMarkers(
+      "错配⟦t:qm_coverage_gap|白虎⟧与⟦t:qm_bai_hu|空亡⟧",
+      "zh",
+    );
+    assert.ok(qmMismatch.strippedMarkers >= 2);
+    assert.equal(qmMismatch.softMappedMarkers, 0);
+    assert.ok(!qmMismatch.text.includes("空亡") && !qmMismatch.text.includes("白虎"));
+    assert.ok(!qmMismatch.text.includes(gapSoft) && !qmMismatch.text.includes(tigerSoft));
+    ok("known qm slug + mismatched traditional → hard strip");
+
+    // Non-qimen slug + dual-ns → hard strip
     const baziMarker = stripRedlineShenshaFromText(
       "依据⟦t:ss_fake|空亡⟧与⟦t:day_master|白虎⟧恐吓。",
       "zh",
     );
     assert.ok(!baziMarker.includes("空亡") && !baziMarker.includes("白虎"));
     assert.ok(!baziMarker.includes("⟦t:"), "bazi dual-ns markers stripped");
-    assert.ok(!baziMarker.includes("覆盖缺口"), "non-qm slug must not soft-map");
-    ok("bazi/non-qm markers hard-strip dual-ns");
-
-    const qmMarker = sanitizeCrossNsMarkers(
-      "奇门⟦t:qm_coverage_gap|空亡⟧遇⟦t:qm_bai_hu|白虎⟧",
-      "zh",
-    );
-    assert.ok(qmMarker.softMappedMarkers >= 2);
-    assert.ok(qmMarker.text.includes(termOf("qm_coverage_gap", "zh")!));
-    assert.ok(qmMarker.text.includes(termOf("qm_bai_hu", "zh")!));
-    assert.ok(!qmMarker.text.includes("空亡") && !qmMarker.text.includes("白虎"));
+    assert.ok(!baziMarker.includes(gapSoft), "non-qm slug must not soft-map");
+    ok("non-qm slug + dual-ns → hard strip");
 
     const mixedMarkers = stripRedlineShenshaFromText(
       "混⟦t:ss_x|空亡⟧与⟦t:qm_coverage_gap|空亡⟧",
       "zh",
     );
     assert.ok(!mixedMarkers.includes("⟦t:ss_x"));
-    assert.ok(mixedMarkers.includes("覆盖缺口"));
+    assert.ok(mixedMarkers.includes(gapSoft));
     assert.ok(!mixedMarkers.includes("空亡"));
-    ok("marker slug-level: qm soft / bazi strip");
+    ok("marker mix: non-qm strip + valid qm soft");
   }
 
   // --- 30-day reminder offline pack: confirmedTerms path ---

@@ -8,7 +8,10 @@
  * - confirmed qimen for this **sourceId** only → soft-map bare surfaces in that segment
  * - confirmed bazi / wrong sourceId / no confirmation → hard-strip (caller)
  * - both ns confirmed for same traditional without source split → fail-closed
- * - `⟦t:slug|…⟧`: slug is authoritative — qm_* may soft-resolve; non-qimen dual-ns markers hard-strip
+ * - `⟦t:slug|…⟧`: qm_* prefix alone is NOT enough — must `pojuTermBySlug(slug)?.ns === "qimen"`.
+ *   Unknown qm_* + dual-ns traditional → hard-strip (no traditional-fallback resolve).
+ *   Known qimen slug + mismatched traditional/soft slot → hard-strip (marker consistency).
+ *   Non-qimen slug + dual-ns traditional → hard-strip.
  */
 
 import type { TermNs } from "@/lib/glossary/term-ns";
@@ -16,6 +19,8 @@ import {
   pojuTermBySlug,
   termOf,
   toTermLocale,
+  type PojuTerm,
+  type TermLocale,
 } from "@/lib/glossary/pojulife-terms";
 import { forbiddenTokensForNamespace } from "@/lib/glossary/term-forbidden-registry";
 import { resolvePojuTerm } from "@/lib/glossary/term-resolve";
@@ -133,15 +138,37 @@ function markerBlobHasCrossNsHan(visible: string, plain: string): string | null 
   return null;
 }
 
-function isQimenSlug(slug: string): boolean {
+function looksLikeQimenSlugPrefix(slug: string): boolean {
   return slug.trim().toLowerCase().startsWith("qm_");
+}
+
+/** Slots must match the slug's traditional / aliases / soft label — no cross-term smuggling. */
+function markerSlotsConsistentWithTerm(
+  term: PojuTerm,
+  visible: string,
+  plain: string,
+  loc: TermLocale,
+): boolean {
+  const slots = [visible, plain].map((s) => s.trim()).filter(Boolean);
+  if (!slots.length) return true;
+  const soft = (termOf(term.slug, loc) || term.term[loc] || "").trim();
+  const allowed = new Set<string>();
+  for (const han of [term.traditional, ...(term.aliases ?? [])]) {
+    for (const v of termHanVariants(han)) {
+      if (v) allowed.add(v);
+    }
+  }
+  if (soft) allowed.add(soft);
+  return slots.every(
+    (slot) => allowed.has(slot) || termHanVariants(slot).some((v) => allowed.has(v)),
+  );
 }
 
 /**
  * Marker / slug pass before bare soft-map + hard-strip.
- * - qm_* dual-ns markers → replace with qimen soft label (slug authoritative)
- * - non-qimen markers carrying dual-ns traditional → hard-delete (no bypass)
- * - unknown slug + dual-ns traditional in slots → hard-delete (fail-closed)
+ * - Verified qimen slug (`pojuTermBySlug` + ns=qimen) + consistent slots → soft label
+ * - Unknown qm_* / non-qimen / mismatched traditional → hard-delete when dual-ns present
+ * - Never resolve qimen meaning from traditional alone when the slug is unverified
  */
 export function sanitizeCrossNsMarkers(
   text: string,
@@ -159,26 +186,32 @@ export function sanitizeCrossNsMarkers(
     const visible = String(visRaw ?? "").replace(/\\\|/g, "|");
     const plain = String(plainRaw ?? "").replace(/\\\|/g, "|");
     const crossHan = markerBlobHasCrossNsHan(visible, plain) || markerBlobHasCrossNsHan(slug, "");
+    const hasDualNs =
+      Boolean(crossHan) ||
+      isCrossNsSoftPreserveHan(visible) ||
+      isCrossNsSoftPreserveHan(plain);
 
-    if (isQimenSlug(slug)) {
-      const bySlug = pojuTermBySlug(slug);
-      const byTrad =
-        crossHan != null ? resolvePojuTerm(crossHan, { namespace: "qimen" }) : null;
-      const term =
-        bySlug?.ns === "qimen"
-          ? bySlug
-          : byTrad?.status === "resolved"
-            ? byTrad.term
-            : null;
-      if (term) {
-        const soft = (termOf(term.slug, loc) || term.term[loc] || "").trim();
-        if (soft) {
-          softMappedMarkers += 1;
-          return soft;
+    if (looksLikeQimenSlugPrefix(slug)) {
+      const term = pojuTermBySlug(slug);
+      if (!term || term.ns !== "qimen") {
+        // Unknown / wrong-ns qm_* — never fall back through traditional resolve.
+        if (hasDualNs) {
+          strippedMarkers += 1;
+          return "";
         }
+        return raw;
       }
-      // qm_ slug but no soft → fail-closed strip if dual-ns present
-      if (crossHan) {
+      if (!markerSlotsConsistentWithTerm(term, visible, plain, loc)) {
+        // e.g. ⟦t:qm_coverage_gap|白虎⟧ — verified slug but smuggled dual-ns / wrong trad
+        strippedMarkers += 1;
+        return "";
+      }
+      const soft = (termOf(term.slug, loc) || term.term[loc] || "").trim();
+      if (soft) {
+        softMappedMarkers += 1;
+        return soft;
+      }
+      if (hasDualNs) {
         strippedMarkers += 1;
         return "";
       }
@@ -186,7 +219,7 @@ export function sanitizeCrossNsMarkers(
     }
 
     // Non-qimen (bazi / ss_ / invented): dual-ns traditional in marker → hard strip
-    if (crossHan || isCrossNsSoftPreserveHan(visible) || isCrossNsSoftPreserveHan(plain)) {
+    if (hasDualNs) {
       strippedMarkers += 1;
       return "";
     }
