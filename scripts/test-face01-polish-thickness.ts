@@ -15,13 +15,14 @@ import {
   assemblePolishLocaleSystem,
 } from "../lib/llm/pro/delivery/pipeline-v3/polish-locale-blocks";
 import type { DeliveryPageData } from "../lib/llm/pro/delivery/page-schema/types";
+import type { Face01 } from "../lib/llm/pro/delivery/page-schema/face-types";
 
 function face01(partial: {
   main: string;
   conditions: string;
   not_choosing: string;
   pointer: string;
-}): DeliveryPageData {
+}): Face01 {
   return {
     page: "01",
     face: "01",
@@ -31,7 +32,11 @@ function face01(partial: {
     conditions: partial.conditions,
     not_choosing: partial.not_choosing,
     evidence_pointer: partial.pointer,
-  } as DeliveryPageData;
+  };
+}
+
+function asPage(p: Face01): DeliveryPageData {
+  return p as unknown as DeliveryPageData;
 }
 
 const skeleton = face01({
@@ -74,8 +79,8 @@ assert.deepEqual(extractPolishUnitIds("依据见 02（d01、d02、d03）"), [
     pointer: "依据见 02（d01、d02、d03）",
   });
   const g = gateFace01PolishThickness({
-    draft: skeleton,
-    polished: thin,
+    draft: asPage(skeleton),
+    polished: asPage(thin),
     locale: "zh",
   });
   assert.equal(g.passed, false);
@@ -92,8 +97,8 @@ assert.deepEqual(extractPolishUnitIds("依据见 02（d01、d02、d03）"), [
   });
   const g = gateBodyPolishThickness({
     key: "01",
-    draft: skeleton,
-    polished: drop,
+    draft: asPage(skeleton),
+    polished: asPage(drop),
     locale: "zh",
   });
   assert.equal(g?.passed, false);
@@ -135,8 +140,8 @@ assert.deepEqual(extractPolishUnitIds("依据见 02（d01、d02、d03）"), [
   assert.ok(blobLen >= FACE01_POLISH_FLOOR.zh_chars, `blob=${blobLen}`);
   const g = gateBodyPolishThickness({
     key: "01",
-    draft: skeleton,
-    polished: thick,
+    draft: asPage(skeleton),
+    polished: asPage(thick),
     locale: "zh",
   });
   assert.equal(g, null, g?.detail);
@@ -151,8 +156,8 @@ assert.deepEqual(extractPolishUnitIds("依据见 02（d01、d02、d03）"), [
     pointer: "See 02 (d01, d02, d03)",
   });
   const g = gateFace01PolishThickness({
-    draft: skeleton,
-    polished: shortEn,
+    draft: asPage(skeleton),
+    polished: asPage(shortEn),
     locale: "en",
   });
   assert.equal(g.passed, false);
