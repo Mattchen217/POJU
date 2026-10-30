@@ -16,6 +16,8 @@ import {
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
+import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
@@ -76,11 +78,11 @@ const JSON_SHAPE = `输出 JSON：
       "serves_face": ["02"],
       "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句",
-      "anchors": ["格局名或机制句"],
+      "anchors": ["机制句或 hit:id:level"],
       "caveat": "可选"
     }
   ],
-  "pattern_hits_used": ["格局名…"],
+  "pattern_hits_used": ["hit:<id>:<level>…"],
   "science_tags_used": ["机制词…"]
 }`;
 
@@ -147,7 +149,8 @@ function isDegradeReason(reason: string, finish: string | null): boolean {
 }
 
 function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
-  return (ziwei?.patternHits ?? []).map((h) => h.name).filter(Boolean);
+  // Phase 10: never feed classical 格名 into judgment prompts — hit_id:level only.
+  return patternHitRefsForPrompt(ziwei?.patternHits ?? []);
 }
 
 function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
@@ -389,7 +392,11 @@ function mergeUnits(
   return out;
 }
 
-function feedBlock(input: {
+/**
+ * Build the Judgment user feed string (one-shot / destiny / science).
+ * Exported for Phase 10 leak tests — must not contain traditional Ziwei palace/star/pattern names.
+ */
+export function buildBookJudgmentFeedBlock(input: {
   chartText: string;
   ziwei: ZiweiFactPack | null;
   question?: string | null;
@@ -397,33 +404,70 @@ function feedBlock(input: {
   science_feed?: string | null;
   thesis_block?: string | null;
   mode: "all" | "destiny" | "science";
+  locale?: string;
 }): string {
+  const locale = input.locale ?? "zh";
+  // Field sources / allow-terms:
+  // - thesis_block: ziwei diagnosis prose → full ziwei scrub (no bazi-homonym preserve)
+  // - CFP chartText: bazi legal; not scrubbed by ziwei star lists
+  // - science_feed / agenda / question: free text → ziwei scrub + preserve bazi homonyms
+  //   (question must be scrubbed BEFORE formatPageSliceFeed — slice embeds user.Q)
+  // - patternHits: hit_id:level only (from soft projection)
+  const thesisSafe = input.thesis_block?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.thesis_block.trim(), {
+        ziwei: input.ziwei,
+        locale,
+      })
+    : "";
+  const scienceSafe = input.science_feed?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.science_feed.trim().slice(0, 8_000), {
+        ziwei: input.ziwei,
+        locale,
+        preserveBaziHomonyms: true,
+      })
+    : "";
+  const agendaSafe = input.agenda?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.agenda.trim().slice(0, 2_000), {
+        ziwei: input.ziwei,
+        locale,
+        preserveBaziHomonyms: true,
+      })
+    : "";
+  const questionSafe = input.question?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.question.trim().slice(0, 1_200), {
+        ziwei: input.ziwei,
+        locale,
+        preserveBaziHomonyms: true,
+      })
+    : "";
+
   const slice = formatPageSliceFeed({
     key: "02",
     chartText: input.chartText,
     ziwei: input.ziwei,
-    question: input.question,
+    question: questionSafe || null,
+    locale,
     withAllowlistHeader: true,
   });
   const parts: string[] = [];
-  if (input.mode !== "science" && input.thesis_block?.trim()) {
-    parts.push(`## 命盘总纲\n${input.thesis_block.trim()}`);
+  if (input.mode !== "science" && thesisSafe) {
+    parts.push(`## 命盘总纲\n${thesisSafe}`);
   }
   if (input.mode !== "science") {
     parts.push(slice ?? `## CFP\n${input.chartText.slice(0, 8_000)}`);
   } else if (slice) {
     parts.push(slice);
   }
-  if (input.mode !== "destiny" && input.science_feed?.trim()) {
-    parts.push(`## 科学 / 现代证据 feed\n${input.science_feed.trim().slice(0, 8_000)}`);
+  if (input.mode !== "destiny" && scienceSafe) {
+    parts.push(`## 科学 / 现代证据 feed\n${scienceSafe}`);
   }
-  if (input.agenda?.trim()) {
+  if (agendaSafe) {
     parts.push(
-      `## agenda / 议题（仅背景事实 · 禁把时段块/可收费样/投入加减原样写入 claim）\n${input.agenda.trim().slice(0, 2_000)}`,
+      `## agenda / 议题（仅背景事实 · 禁把时段块/可收费样/投入加减原样写入 claim）\n${agendaSafe}`,
     );
   }
-  if (input.question?.trim()) {
-    parts.push(`## 原问\n${input.question.trim().slice(0, 1_200)}`);
+  if (questionSafe) {
+    parts.push(`## 原问\n${questionSafe}`);
   }
   parts.push(
     `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句，禁止原样复述操作日程或验证单元。`,
@@ -431,7 +475,7 @@ function feedBlock(input: {
   const hits = patternHitsFromZiwei(input.ziwei);
   if (hits.length) {
     parts.push(
-      `## ZFP patternHits 全量（用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
+      `## ZFP patternHits 闭集引用（hit_id:level · 禁写古典格名；用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
     );
   }
   parts.push(
@@ -439,6 +483,13 @@ function feedBlock(input: {
     JSON_SHAPE,
   );
   return parts.filter(Boolean).join("\n\n");
+}
+
+/** @deprecated internal alias — use buildBookJudgmentFeedBlock */
+function feedBlock(
+  input: Parameters<typeof buildBookJudgmentFeedBlock>[0],
+): string {
+  return buildBookJudgmentFeedBlock(input);
 }
 
 export async function runBookJudgmentPackGenerate(input: {
@@ -470,6 +521,7 @@ export async function runBookJudgmentPackGenerate(input: {
     const user_feed = feedBlock({
       chartText,
       ziwei,
+      locale: input.locale,
       question: input.question,
       agenda: input.agenda,
       science_feed: input.science_feed,
@@ -594,6 +646,7 @@ export async function runBookJudgmentPackGenerate(input: {
     const destinyFeed = feedBlock({
       chartText,
       ziwei,
+      locale: input.locale,
       question: input.question,
       agenda: input.agenda,
       thesis_block: input.thesis_block,
@@ -646,6 +699,7 @@ export async function runBookJudgmentPackGenerate(input: {
     const scienceFeed = feedBlock({
       chartText,
       ziwei,
+      locale: input.locale,
       question: input.question,
       agenda: input.agenda,
       science_feed: input.science_feed,

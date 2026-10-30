@@ -56,6 +56,7 @@ export function formatPageSliceFeed(input: {
   ziwei?: ZiweiFactPack | null;
   question?: string | null;
   topic?: string | null;
+  locale?: string | null;
   cfp?: CfpShortInput | null;
   sciHooks?: string | readonly string[] | null;
   /** Prepend PageFeedMatrix allowlist header (Lab call-trace QC). Default false. */
@@ -76,6 +77,7 @@ export function formatPageSliceFeed(input: {
     zfp: input.ziwei ?? null,
     cfp: input.cfp ?? null,
     topic: input.topic,
+    locale: input.locale ?? "zh",
     user: question ? { Q: question, expect: question, detail: question } : null,
     sci: input.sciHooks ? { hooks: input.sciHooks } : null,
   };

@@ -138,10 +138,23 @@ assert(younger.daxian.liunian.heavenlyStem + younger.daxian.liunian.earthlyBranc
 const slice = sliceForPage("02", { zfp: first });
 assert(slice.zfpOmitted === false, "pack keeps zfp");
 const topic = slice.slice.zfp?.topicPalace;
-assert(typeof topic === "object" && topic.majorStars.includes("紫微"), "02 copies 命宫主星");
-assert(JSON.stringify(slice.slice.zfp?.sihua).includes("天同"), "02 copies sihua");
-assert(!JSON.stringify(slice.slice).includes("破军"), "02 omits mingShen");
-assert(!JSON.stringify(slice.slice).includes("木三局"), "02 omits 五行局");
+assert(typeof topic === "object", "02 topicPalace object");
+assert(
+  typeof topic === "object" && topic.palace === "核心定位域",
+  "02 topicPalace soft-maps 命宫",
+);
+assert(
+  typeof topic === "object" && !topic.majorStars.includes("紫微"),
+  "02 majorStars never traditional (Phase 10)",
+);
+assert(!JSON.stringify(slice.slice.zfp?.sihua).includes("天同"), "02 sihua no traditional star");
+assert(
+  JSON.stringify(slice.slice.zfp?.sihua).includes("摩擦转化") ||
+    JSON.stringify(slice.slice.zfp?.sihua).includes("资源转化"),
+  "02 sihua soft mutagen labels",
+);
+assert(!JSON.stringify(slice.slice).includes("破军"), "02 omits mingShen traditional");
+assert(!JSON.stringify(slice.slice).includes("木三局"), "02 omits 五行局 value");
 assert(
   !/"palaces"\s*:\s*\[/.test(JSON.stringify(slice.slice.zfp ?? {})) ||
     Boolean(slice.slice.zfp?.patternHits),
@@ -159,7 +172,19 @@ if (first.patternHits.length > 0) {
     !JSON.stringify(slice.slice.zfp?.patternHits).includes("description"),
     "slice patternHits drop prose",
   );
+  for (const hit of first.patternHits) {
+    assert(
+      !JSON.stringify(slice.slice.zfp?.patternHits).includes(hit.name),
+      `slice must not leak pattern name ${hit.name}`,
+    );
+  }
+  assert(
+    slice.slice.zfp?.patternHits?.every((h) => typeof h.hit_id === "string" && h.hit_id.length > 0),
+    "patternHits use hit_id",
+  );
 }
+// Internal FactPack still traditional
+assert(first.topicPalace.majorStars.includes("紫微"), "raw FactPack keeps 紫微");
 
 const slice03 = sliceForPage("03", { zfp: first });
 assert(slice03.zfpOmitted === false, "03 keeps zfp");
