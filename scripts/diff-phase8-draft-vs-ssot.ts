@@ -462,7 +462,7 @@ function main() {
     console.log("\ncopy deltas (need product confirm before overwrite):");
     for (const r of deltas) {
       console.log(
-        `  ${r.slug} term[${Object.keys(r.term_delta).join(",")}] def[${Object.keys(r.def_delta).join(",")}]`,
+        `  ${r.slug} term[${Object.keys(r.term_delta ?? {}).join(",")}] def[${Object.keys(r.def_delta ?? {}).join(",")}]`,
       );
     }
   } else {

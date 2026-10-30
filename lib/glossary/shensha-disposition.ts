@@ -9,7 +9,7 @@
  * (JSON execution_edge + tactical_impulse collapse to the same slug).
  */
 
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@/lib/sha256";
 import { CLOSED_SHEN_SHA } from "@/lib/glossary/term-closed-set";
 import { forbiddenTokensForNamespace } from "@/lib/glossary/term-forbidden-registry";
 import { termHanVariants } from "@/lib/glossary/term-han-normalize";
@@ -201,7 +201,8 @@ export function isShenshaInternalRedline(tokenOrId: string): boolean {
 }
 
 export function hashShenshaToken(token: string): string {
-  return createHash("sha256").update(token.trim(), "utf8").digest("hex").slice(0, 12);
+  // Isomorphic (@noble/hashes) — shensha.ts is imported by client UI; node:crypto breaks webpack.
+  return sha256Hex(new TextEncoder().encode(token.trim())).slice(0, 12);
 }
 
 /** Safe user-facing placeholder — never the raw traditional token. */

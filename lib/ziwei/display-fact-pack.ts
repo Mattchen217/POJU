@@ -3,12 +3,12 @@
  * Raw calculation pack is unchanged. Unmapped tokens are blocked (never traditional fallback).
  */
 
-import { createHash } from "node:crypto";
 import {
   toTermLocale,
   type TermLocale,
 } from "@/lib/glossary/pojulife-terms";
 import { resolvePojuTerm } from "@/lib/glossary/term-resolve";
+import { sha256Hex } from "@/lib/sha256";
 import type { ZiweiFactPack, ZiweiSihuaHit } from "@/lib/ziwei/fact-pack";
 import { ziweiTokenDisposition } from "@/lib/ziwei/token-disposition";
 
@@ -97,7 +97,8 @@ export type ZiweiDisplayFactPack = {
 };
 
 function tokenHash(raw: string): string {
-  return createHash("sha256").update(raw, "utf8").digest("hex").slice(0, 12);
+  // Isomorphic — this module is pulled into client via delivery-schema / preview-client.
+  return sha256Hex(new TextEncoder().encode(raw)).slice(0, 12);
 }
 
 function resolveZiweiAtom(raw: string, locale: TermLocale): ZiweiDisplayAtom {
@@ -147,10 +148,19 @@ function resolveZiweiAtom(raw: string, locale: TermLocale): ZiweiDisplayAtom {
       tokenHash: tokenHash(input),
     };
   }
+  if (disposition.status === "unknown_blocked") {
+    return {
+      status: "blocked",
+      reason: "unknown",
+      reasonCode: disposition.reasonCode,
+      tokenHash: tokenHash(input),
+    };
+  }
+  // public_glossary without resolvePojuTerm hit — treat as unknown, never leak traditional.
   return {
     status: "blocked",
     reason: "unknown",
-    reasonCode: disposition.reasonCode,
+    reasonCode: "unresolved_public_glossary",
     tokenHash: tokenHash(input),
   };
 }

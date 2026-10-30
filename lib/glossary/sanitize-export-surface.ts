@@ -6,7 +6,6 @@
  * returns structured audit hits (token hash only — never full birth PII).
  */
 
-import { createHash } from "node:crypto";
 import type { NsAwareSanitizeOpts } from "@/lib/glossary/ns-aware-surface-sanitize";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 import {
@@ -15,6 +14,7 @@ import {
   type OutputPolicyViolation,
 } from "@/lib/llm/compliance/audit-output";
 import { stripRedlineShenshaFromText } from "@/lib/poju/shensha";
+import { sha256Hex } from "@/lib/sha256";
 
 export type { ConfirmedTermRef, NsAwareSanitizeOpts } from "@/lib/glossary/ns-aware-surface-sanitize";
 
@@ -62,7 +62,7 @@ export type SanitizeExportResult = {
 };
 
 function hashToken(raw: string): string {
-  return createHash("sha256").update(raw, "utf8").digest("hex").slice(0, 12);
+  return sha256Hex(new TextEncoder().encode(raw)).slice(0, 12);
 }
 
 function hitFromViolation(

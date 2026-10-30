@@ -3,7 +3,6 @@
  * 计算层只产出 ID / 中文名；UI / LLM 渲染前必须经此层。
  * 未知/红线：不得 label=rawToken，不得拼接 zh_src。
  */
-import { createHash } from "node:crypto";
 import {
   hashShenshaToken,
   isShenshaInternalRedline,
@@ -323,7 +322,7 @@ export function stripRedlineShenshaFromText(
 }
 
 export function shenshaTokenAuditHash(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex").slice(0, 12);
+  return hashShenshaToken(token);
 }
 
 /** @deprecated Prefer resolveShensha + empty zh_src; kept for call-site discovery. */
