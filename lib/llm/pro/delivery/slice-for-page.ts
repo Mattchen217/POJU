@@ -37,6 +37,13 @@ import {
   buildZiweiDisplayFactPack,
   displayAtomLabel,
 } from "@/lib/ziwei/display-fact-pack";
+import {
+  softPatternHits,
+  softSihuaHit,
+  softZiweiLabel,
+  softZiweiLabelList,
+  softZiweiStructureField,
+} from "@/lib/ziwei/soft-zfp-labels";
 
 const CFP_SHORT = ["dayMaster", "yongJi", "shishenHit", "dayunNow", "pathTags", "conflictAnchors"] as const;
 const ZFP_SHORT = [
@@ -116,6 +123,8 @@ export type PageFeedPacks = {
    * career_move / relocation / partnership / relationship / joint 会改 topicPalace，并让 07 进入阅读序。
    */
   topic?: string | null;
+  /** Soft-label locale for ZFP delivery projection (default zh). */
+  locale?: string | null;
 };
 
 export type SlicedTopicPalace = {
@@ -159,11 +168,16 @@ export type SlicedMingShen = {
   fiveElementsClass: string;
 };
 
-/** Closed-set pattern hit on the page slice (no description). */
+/**
+ * Closed-set pattern hit on the page slice (Phase 10).
+ * Classical 格名 never appear — only hit_id + level (+ soft palace labels if any).
+ */
 export type SlicedPatternHit = {
-  name: string;
+  hit_id: string;
   level: string;
   palaces: string[];
+  /** @deprecated Removed from delivery slices; kept optional for old fixtures. */
+  name?: string;
   required?: string[];
   bonus?: string[];
   breaking?: string[];
@@ -307,32 +321,41 @@ function buildSci(mode: PageSciMode, sci: PageFeedPacks["sci"]): PageSlice["sci"
   return { hooks };
 }
 
-function projectSihua(value: unknown): readonly SlicedSihuaHit[] | string | undefined {
+function projectSihua(
+  value: unknown,
+  locale: string,
+): readonly SlicedSihuaHit[] | string | undefined {
   if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed || undefined;
+    // Opaque string blobs are not delivery-safe — omit rather than leak traditional.
+    return undefined;
   }
   if (!Array.isArray(value)) return undefined;
   const hits: SlicedSihuaHit[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
     const row = item as Record<string, unknown>;
-    const hit = { mutagen: str(row.mutagen), star: str(row.star), palace: str(row.palace) };
-    if (!hit.mutagen && !hit.star && !hit.palace) continue;
-    hits.push(hit);
+    const soft = softSihuaHit(
+      { mutagen: str(row.mutagen), star: str(row.star), palace: str(row.palace) },
+      locale,
+    );
+    if (!soft) continue;
+    hits.push(soft);
   }
   return hits.length > 0 ? hits : undefined;
 }
 
-function projectLiunian(value: unknown): SlicedDaxian["liunian"] | undefined {
+function projectLiunian(
+  value: unknown,
+  locale: string,
+): SlicedDaxian["liunian"] | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const row = value as Record<string, unknown>;
-  const sihua = projectSihua(row.sihua);
+  const sihua = projectSihua(row.sihua, locale);
   const liunian = {
     ...(typeof row.year === "number" ? { year: row.year } : {}),
-    heavenlyStem: str(row.heavenlyStem),
-    earthlyBranch: str(row.earthlyBranch),
-    palace: str(row.palace),
+    heavenlyStem: softZiweiStructureField(str(row.heavenlyStem), locale),
+    earthlyBranch: softZiweiStructureField(str(row.earthlyBranch), locale),
+    palace: softZiweiLabel(str(row.palace), locale),
     sihua: Array.isArray(sihua) ? [...sihua] : [],
   };
   if (!liunian.heavenlyStem && !liunian.earthlyBranch && !liunian.palace && liunian.sihua.length === 0 && liunian.year == null) {
@@ -341,71 +364,84 @@ function projectLiunian(value: unknown): SlicedDaxian["liunian"] | undefined {
   return liunian;
 }
 
-function projectDaxian(value: unknown): SlicedDaxian | string | undefined {
+function projectDaxian(value: unknown, locale: string): SlicedDaxian | string | undefined {
   if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed || undefined;
+    return undefined;
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const row = value as Record<string, unknown>;
-  const sihua = projectSihua(row.sihua);
-  const liunian = projectLiunian(row.liunian);
+  const sihua = projectSihua(row.sihua, locale);
+  const liunian = projectLiunian(row.liunian, locale);
   const daxian: SlicedDaxian = {
-    palace: str(row.palace),
-    heavenlyStem: str(row.heavenlyStem),
-    earthlyBranch: str(row.earthlyBranch),
-    majorStars: stringList(row.majorStars),
+    palace: softZiweiLabel(str(row.palace), locale),
+    heavenlyStem: softZiweiStructureField(str(row.heavenlyStem), locale),
+    earthlyBranch: softZiweiStructureField(str(row.earthlyBranch), locale),
+    majorStars: softZiweiLabelList(stringList(row.majorStars), locale),
     sihua: Array.isArray(sihua) ? [...sihua] : [],
     ...(typeof row.startAge === "number" ? { startAge: row.startAge } : {}),
     ...(typeof row.endAge === "number" ? { endAge: row.endAge } : {}),
     ...(liunian ? { liunian } : {}),
   };
-  if (!daxian.palace && daxian.majorStars.length === 0 && daxian.sihua.length === 0 && !daxian.liunian) return undefined;
+  if (!daxian.palace && daxian.majorStars.length === 0 && daxian.sihua.length === 0 && !daxian.liunian) {
+    // Keep age window alone if present (structure without traditional names).
+    if (daxian.startAge == null && daxian.endAge == null) return undefined;
+  }
   return daxian;
 }
 
-function projectMingShen(value: unknown): SlicedMingShen | string | undefined {
+function projectMingShen(value: unknown, locale: string): SlicedMingShen | string | undefined {
   if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed || undefined;
+    return undefined;
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const row = value as Record<string, unknown>;
   const mingShen: SlicedMingShen = {
-    soul: str(row.soul),
-    body: str(row.body),
-    mingBranch: str(row.mingBranch),
-    shenBranch: str(row.shenBranch),
-    shenPalace: str(row.shenPalace),
-    fiveElementsClass: str(row.fiveElementsClass),
+    soul: softZiweiLabel(str(row.soul), locale),
+    body: softZiweiLabel(str(row.body), locale),
+    mingBranch: softZiweiStructureField(str(row.mingBranch), locale),
+    shenBranch: softZiweiStructureField(str(row.shenBranch), locale),
+    shenPalace: softZiweiLabel(str(row.shenPalace), locale),
+    fiveElementsClass: softZiweiLabel(str(row.fiveElementsClass), locale),
   };
-  if (!mingShen.soul && !mingShen.body && !mingShen.shenPalace && !mingShen.fiveElementsClass) return undefined;
+  if (
+    !mingShen.soul &&
+    !mingShen.body &&
+    !mingShen.shenPalace &&
+    !mingShen.fiveElementsClass &&
+    !mingShen.mingBranch &&
+    !mingShen.shenBranch
+  ) {
+    return undefined;
+  }
   return mingShen;
 }
 
-function projectPatternHits(value: unknown): readonly SlicedPatternHit[] | undefined {
+function projectPatternHits(
+  value: unknown,
+  locale: string,
+): readonly SlicedPatternHit[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
-  const out: SlicedPatternHit[] = [];
-  for (const row of value) {
-    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-    const r = row as Record<string, unknown>;
-    const name = str(r.name);
-    if (!name) continue;
-    const level = str(r.level) || "neutral";
-    const palaces = stringList(r.palaces);
-    const hit: SlicedPatternHit = { name, level, palaces };
-    const required = stringList(r.required);
-    const bonus = stringList(r.bonus);
-    const breaking = stringList(r.breaking);
-    if (required.length) hit.required = required;
-    if (bonus.length) hit.bonus = bonus;
-    if (breaking.length) hit.breaking = breaking;
-    const source = str(r.source);
-    if (source) hit.source = source;
-    // Never copy description prose onto the slice.
-    out.push(hit);
-  }
-  return out.length > 0 ? out : undefined;
+  const soft = softPatternHits(
+    value.map((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        return { name: "", level: "", palaces: [] };
+      }
+      const r = row as Record<string, unknown>;
+      return {
+        name: str(r.name),
+        level: str(r.level),
+        palaces: stringList(r.palaces),
+      };
+    }),
+    locale,
+  );
+  if (!soft.length) return undefined;
+  // Never copy classical name / required star lists (traditional) onto the slice.
+  return soft.map((h) => ({
+    hit_id: h.hit_id,
+    level: h.level,
+    palaces: h.palaces,
+  }));
 }
 
 function projectOther(value: unknown): string | Record<string, unknown> | undefined {
@@ -442,33 +478,33 @@ function readPalaces(source: Record<string, unknown>): PalaceRow[] {
   return rows;
 }
 
-function thinPalace(row: PalaceRow, opposite?: PalaceRow): SlicedTopicPalace {
+function thinPalace(row: PalaceRow, opposite: PalaceRow | undefined, locale: string): SlicedTopicPalace {
   return {
-    palace: row.name,
-    heavenlyStem: row.heavenlyStem,
-    earthlyBranch: row.earthlyBranch,
-    majorStars: [...row.majorStars],
-    oppositePalace: opposite?.name ?? "",
-    oppositeMajorStars: opposite ? [...opposite.majorStars] : [],
+    palace: softZiweiLabel(row.name, locale),
+    heavenlyStem: softZiweiStructureField(row.heavenlyStem, locale),
+    earthlyBranch: softZiweiStructureField(row.earthlyBranch, locale),
+    majorStars: softZiweiLabelList(row.majorStars, locale),
+    oppositePalace: opposite ? softZiweiLabel(opposite.name, locale) : "",
+    oppositeMajorStars: opposite ? softZiweiLabelList(opposite.majorStars, locale) : [],
   };
 }
 
-function projectGivenTopic(value: unknown): SlicedTopicPalace | string | undefined {
+function projectGivenTopic(value: unknown, locale: string): SlicedTopicPalace | string | undefined {
   if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed || undefined;
+    // Opaque traditional strings are not delivery-safe.
+    return undefined;
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const row = value as Record<string, unknown>;
-  const palace = str(row.palace);
-  if (!palace) return undefined;
+  const rawPalace = str(row.palace);
+  if (!rawPalace) return undefined;
   return {
-    palace,
-    heavenlyStem: str(row.heavenlyStem),
-    earthlyBranch: str(row.earthlyBranch),
-    majorStars: stringList(row.majorStars),
-    oppositePalace: str(row.oppositePalace),
-    oppositeMajorStars: stringList(row.oppositeMajorStars),
+    palace: softZiweiLabel(rawPalace, locale),
+    heavenlyStem: softZiweiStructureField(str(row.heavenlyStem), locale),
+    earthlyBranch: softZiweiStructureField(str(row.earthlyBranch), locale),
+    majorStars: softZiweiLabelList(stringList(row.majorStars), locale),
+    oppositePalace: softZiweiLabel(str(row.oppositePalace), locale),
+    oppositeMajorStars: softZiweiLabelList(stringList(row.oppositeMajorStars), locale),
   };
 }
 
@@ -478,8 +514,12 @@ function palaceTarget(topic: string | null | undefined): string | null {
   return TOPIC_TO_PALACE[key] ?? (PALACE_NAMES.has(key) ? key : null);
 }
 
-function projectTopic(source: Record<string, unknown>, topic: string | null | undefined): SlicedTopicPalace | string | undefined {
-  const given = projectGivenTopic(source.topicPalace);
+function projectTopic(
+  source: Record<string, unknown>,
+  topic: string | null | undefined,
+  locale: string,
+): SlicedTopicPalace | string | undefined {
+  const given = projectGivenTopic(source.topicPalace, locale);
   const target = palaceTarget(topic);
   const palaces = readPalaces(source);
   if (!target || target === "命宫" || palaces.length === 0) return given;
@@ -487,7 +527,7 @@ function projectTopic(source: Record<string, unknown>, topic: string | null | un
   if (index < 0) return given;
   const row = palaces[index];
   if (!row) return given;
-  return thinPalace(row, palaces[(index + 6) % palaces.length]);
+  return thinPalace(row, palaces[(index + 6) % palaces.length], locale);
 }
 
 function zfpSource(packs: PageFeedPacks | undefined): Record<string, unknown> | null {
@@ -500,23 +540,24 @@ function buildZfp(
   allow: Set<string>,
   source: Record<string, unknown> | null,
   topic: string | null | undefined,
+  locale: string,
 ): PageSlice["zfp"] | undefined {
   if (!source) return undefined;
   const out: NonNullable<PageSlice["zfp"]> = {};
   if (allow.has("topicPalace")) {
-    const topicPalace = projectTopic(source, topic);
+    const topicPalace = projectTopic(source, topic, locale);
     if (topicPalace) out.topicPalace = topicPalace;
   }
   if (allow.has("sihua")) {
-    const sihua = projectSihua(source.sihua);
+    const sihua = projectSihua(source.sihua, locale);
     if (sihua) out.sihua = sihua;
   }
   if (allow.has("daxian")) {
-    const daxian = projectDaxian(source.daxian);
+    const daxian = projectDaxian(source.daxian, locale);
     if (daxian) out.daxian = daxian;
   }
   if (allow.has("mingShen")) {
-    const mingShen = projectMingShen(source.mingShen);
+    const mingShen = projectMingShen(source.mingShen, locale);
     if (mingShen) out.mingShen = mingShen;
   }
   if (allow.has("otherChart")) {
@@ -524,7 +565,7 @@ function buildZfp(
     if (otherChart) out.otherChart = otherChart;
   }
   if (allow.has("patternHits")) {
-    const patternHits = projectPatternHits(source.patternHits);
+    const patternHits = projectPatternHits(source.patternHits, locale);
     if (patternHits) out.patternHits = patternHits;
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -780,8 +821,9 @@ export function sliceForPage(pageId: DecisionPageId, packs?: PageFeedPacks): Pag
   }
   const allowlist = PAGE_UNION_ALLOWLISTS[pageId];
   const slice: PageSlice = {};
+  const locale = packs?.locale?.trim() || "zh";
   const cfp = buildCfp(shortKeys(allowlist.cfp), packs);
-  const zfp = buildZfp(shortKeys(allowlist.zfp), zfpSource(packs), packs?.topic);
+  const zfp = buildZfp(shortKeys(allowlist.zfp), zfpSource(packs), packs?.topic, locale);
   const user = buildUser(shortKeys(allowlist.user), packs?.user);
   const sci = buildSci(allowlist.sci, packs?.sci);
   if (cfp) slice.cfp = cfp;

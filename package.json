@@ -114,6 +114,7 @@
     "test:ziwei-term-completeness": "node ./node_modules/tsx/dist/cli.mjs scripts/test-ziwei-term-completeness-phase9.ts",
     "inventory:ziwei-terms-phase9": "node ./node_modules/tsx/dist/cli.mjs scripts/phase9-ziwei-term-inventory.ts",
     "test:ns-aware-export-exits": "node ./node_modules/tsx/dist/cli.mjs scripts/test-ns-aware-export-exits.ts",
+    "test:ziwei-delivery-isolation": "node ./node_modules/tsx/dist/cli.mjs scripts/test-ziwei-delivery-isolation-phase10.ts",
     "test:qimen-bazi-phase3": "node ./node_modules/tsx/dist/cli.mjs scripts/test-qimen-bazi-phase3.ts",
     "test:shensha-phase4": "node ./node_modules/tsx/dist/cli.mjs scripts/test-shensha-phase4.ts",
     "test:term-context-phase5": "node ./node_modules/tsx/dist/cli.mjs scripts/test-term-context-phase5.ts",

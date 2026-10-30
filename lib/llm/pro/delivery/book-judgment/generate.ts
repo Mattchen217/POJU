@@ -16,6 +16,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
@@ -76,11 +77,11 @@ const JSON_SHAPE = `输出 JSON：
       "serves_face": ["02"],
       "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句",
-      "anchors": ["格局名或机制句"],
+      "anchors": ["机制句或 hit:id:level"],
       "caveat": "可选"
     }
   ],
-  "pattern_hits_used": ["格局名…"],
+  "pattern_hits_used": ["hit:<id>:<level>…"],
   "science_tags_used": ["机制词…"]
 }`;
 
@@ -147,7 +148,8 @@ function isDegradeReason(reason: string, finish: string | null): boolean {
 }
 
 function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
-  return (ziwei?.patternHits ?? []).map((h) => h.name).filter(Boolean);
+  // Phase 10: never feed classical 格名 into judgment prompts — hit_id:level only.
+  return patternHitRefsForPrompt(ziwei?.patternHits ?? []);
 }
 
 function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
@@ -431,7 +433,7 @@ function feedBlock(input: {
   const hits = patternHitsFromZiwei(input.ziwei);
   if (hits.length) {
     parts.push(
-      `## ZFP patternHits 全量（用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
+      `## ZFP patternHits 闭集引用（hit_id:level · 禁写古典格名；用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
     );
   }
   parts.push(

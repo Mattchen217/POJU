@@ -62,3 +62,10 @@ export {
   baselineZiweiLensLinesFromDisplay,
   type BaselineLensLine,
 } from "@/lib/ziwei/baseline-lens";
+export {
+  patternHitRefsForPrompt,
+  softPatternHits,
+  softZiweiLabel,
+  softZiweiLabelList,
+  ziweiPatternHitId,
+} from "@/lib/ziwei/soft-zfp-labels";
