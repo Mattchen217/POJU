@@ -30,6 +30,14 @@ export const FACE01_POLISH_FLOOR = {
   synonym_jaccard: 0.72,
 } as const;
 
+/** Face 02 · dual-track ABC prose floors (latin report feel). */
+export const FACE02_POLISH_FLOOR = {
+  /** destiny_reason + science_mechanism + convergence (三段散文). */
+  latin_words: 280,
+  /** zh 字地板（latin 本拍不改 zh 行为时可另开）；机检 latin 为主。 */
+  zh_chars: 450,
+} as const;
+
 export const POLISH_LOCALE_BLOCKS: Record<BodyPolishLocale, PolishLocaleBlock> = {
   en: {
     locale: "en",
@@ -119,6 +127,23 @@ export function face01ReportSlotTemplate(locale: BodyPolishLocale): string {
   ].join("\n");
 }
 
+export function face02ReportSlotTemplate(locale: BodyPolishLocale): string {
+  const latinFloor = FACE02_POLISH_FLOOR.latin_words;
+  const floor =
+    locale === "zh"
+      ? `机检下限约：A+B+C 可见合计 ≥${FACE02_POLISH_FLOOR.zh_chars} 字；只解释为何如此，禁手段处方。`
+      : `机检下限（硬）：A+B+C 三段散文合计 ≥${latinFloor} words（destiny_reason + science_mechanism + convergence；不含标题也须达标）。es/en/fr 同尺；低于 ${latinFloor} → gate_polish_thin_synonym FAIL。`;
+  return [
+    `## Face 02 槽位报告感（同 schema · 勿改字段名）`,
+    `- page_title / page_subtitle：可微调语感，不扩写成摘要。`,
+    `- destiny_reason（A）：成段命理理由——为何如此，非行动处方。`,
+    `- science_mechanism（B）：成段科学机制。`,
+    `- convergence（C）：成段交汇张力；禁宜/可收费试点等手段。`,
+    `- verifiable_anchors（D）：短锚；格局名从本页切片抄；保留 unit id。`,
+    floor,
+  ].join("\n");
+}
+
 export function assemblePolishLocaleSystem(input: {
   locale: BodyPolishLocale;
   key: DeliverySegmentKey;
@@ -128,15 +153,17 @@ export function assemblePolishLocaleSystem(input: {
   prior_gate?: string;
 }): string {
   const localeBlock = POLISH_LOCALE_BLOCKS[input.locale].block;
-  const face01 =
+  const faceBlock =
     input.key === "01"
       ? face01ReportSlotTemplate(input.locale)
-      : isFaceDeliveryKey(input.key)
-        ? [
-            `## Face ${input.key} 加厚`,
-            `同共享合同：简报骨架 → 读者报告；禁近义换皮；禁灌水；保真主张与条数/结构。`,
-          ].join("\n")
-        : "";
+      : input.key === "02"
+        ? face02ReportSlotTemplate(input.locale)
+        : isFaceDeliveryKey(input.key)
+          ? [
+              `## Face ${input.key} 加厚`,
+              `同共享合同：简报骨架 → 读者报告；禁近义换皮；禁灌水；保真主张与条数/结构。`,
+            ].join("\n")
+          : "";
 
   return [
     `你是交付报告「可见正文润色」编辑（Pipeline v3 · body_polish）。`,
@@ -145,7 +172,7 @@ export function assemblePolishLocaleSystem(input: {
     localeBlock,
     ``,
     SHARED_BRIEF_TO_REPORT_CONTRACT,
-    face01 ? `\n${face01}` : "",
+    faceBlock ? `\n${faceBlock}` : "",
     input.page_role ? `\n${input.page_role}` : "",
     ``,
     `## 换壳同禁`,

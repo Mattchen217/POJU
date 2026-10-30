@@ -27,6 +27,7 @@ import { isBodyPolishLocale } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 import {
   FACE01_POLISH_FLOOR,
+  FACE02_POLISH_FLOOR,
   POLISH_LOCALE_BLOCKS,
   assemblePolishLocaleSystem,
   polishFaceSelfCheck,
@@ -630,9 +631,67 @@ export function gateFace01PolishThickness(input: {
   return { passed: true, notes };
 }
 
+function face02AbcBlob(page: DeliveryPageData): string {
+  const p = page as {
+    destiny_reason?: string;
+    science_mechanism?: string;
+    convergence?: string;
+  };
+  return [
+    String(p.destiny_reason ?? ""),
+    String(p.science_mechanism ?? ""),
+    String(p.convergence ?? ""),
+  ].join("\n");
+}
+
+/**
+ * Face 02：latin（es/en/fr）A+B+C 合计 ≥280 words；薄稿真 FAIL（与人眼同尺）。
+ * zh 同脚本暂不改尺（避免动已验 zh）；若误出拉丁文仍按 latin 地板。
+ */
+export function gateFace02PolishThickness(input: {
+  draft: DeliveryPageData;
+  polished: DeliveryPageData;
+  locale?: string | null;
+}): ContentGateVerdict {
+  const locale = normalizePolishLocale(input.locale ?? "zh");
+  const polishedBlob = face02AbcBlob(input.polished);
+  const notes: string[] = [`gate:face02_polish`, `locale:${locale}`];
+
+  const latinOut = looksLatinScript(polishedBlob);
+  const latinLocale = locale === "en" || locale === "es" || locale === "fr";
+
+  if (latinLocale || latinOut) {
+    const words = latinWordCount(polishedBlob);
+    const floor = FACE02_POLISH_FLOOR.latin_words;
+    if (words < floor) {
+      return {
+        passed: false,
+        failed_rule: "gate_polish_thin_synonym",
+        detail: `02 润色未达报告下限（A+B+C 约 ${words} words < ${floor}）。es/en/fr 同尺：三段散文须加厚到 ≥${floor} words，禁近义换皮交差。`,
+        notes: [...notes, `floor_abc_words:${words}`, `need:${floor}`],
+      };
+    }
+    notes.push("face02_polish_thickness_pass");
+    return { passed: true, notes };
+  }
+
+  // zh：保量语义不在此抬地板（本拍只锁 latin）；仍拦空段。
+  if (!polishedBlob.trim()) {
+    return {
+      passed: false,
+      failed_rule: "gate_polish_thin_synonym",
+      detail: "02 润色 A/B/C 为空。",
+      notes: [...notes, "empty_abc"],
+    };
+  }
+  notes.push("face02_polish_zh_skip_latin_floor");
+  return { passed: true, notes };
+}
+
 /**
  * 润色厚度闸：按页量尺，不统一灌水。
  * Face 01：简报→报告（绝对下限 + 打换皮 + 指针 id）。
+ * Face 02：latin A+B+C ≥280 words。
  * P3 正文故意写短 → 相对加长。
  * P4 正文已是完整句 → 保量（拦抽瘦/半句）；仅电报体才补句。
  * 其它 legacy：草稿已完整可读 → 保量（拦抽瘦/半句未补）。
@@ -646,6 +705,14 @@ export function gateBodyPolishThickness(input: {
 }): ContentGateVerdict | null {
   if (input.key === "01") {
     const v = gateFace01PolishThickness({
+      draft: input.draft,
+      polished: input.polished,
+      locale: input.locale,
+    });
+    return v.passed ? null : v;
+  }
+  if (input.key === "02") {
+    const v = gateFace02PolishThickness({
       draft: input.draft,
       polished: input.polished,
       locale: input.locale,
