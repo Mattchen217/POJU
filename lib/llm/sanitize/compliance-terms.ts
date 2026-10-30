@@ -934,9 +934,10 @@ export function sanitizePaymentAuditLeaks(text: string, locale: string): string 
   const filled = fillMissingMarkerPlain(repaired, locale);
   const noPlainLeak = stripLeakedMarkerPlainFromBody(filled);
   // Deterministic strip of engine-out-of-set 神煞 (阴阳差错/大耗/白虎…) — never burn LLM repair on inventable names.
-  const noOutOfSet = stripForbiddenShenSha(noPlainLeak);
-  // Phase 4 final pass: disposition internal_redline surfaces (belt-and-suspenders after prompt-time strip).
-  const noRedline = stripRedlineShenshaFromText(noOutOfSet);
+  // Fail-closed for bare dual-ns (空亡/白虎): no namespace inference in delivery scrub.
+  // Callers with structured qimen facts should soft-map before this pass or use sanitizePlainExport({ confirmed }).
+  const noOutOfSet = stripForbiddenShenSha(noPlainLeak, locale);
+  const noRedline = stripRedlineShenshaFromText(noOutOfSet, locale);
   return sanitizeDeliveryBodyPart(noRedline, locale);
 }
 

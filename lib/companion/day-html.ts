@@ -2,7 +2,10 @@
  * Self-contained single-day companion HTML (email attachment / offline).
  */
 
-import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
+import {
+  sanitizePlainExport,
+  type SanitizeExportOptions,
+} from "@/lib/glossary/sanitize-export-surface";
 import { companionUiLabels, normalizeCompanionLocale } from "./locale-voice";
 import type { CompanionDayCards, CompanionJob } from "./types";
 
@@ -15,8 +18,12 @@ function escapeHtml(s: string): string {
 }
 
 /** Phase 5: shared export sanitize before HTML escape (copy/email/offline). */
-function compliantBody(s: string, locale: string): string {
-  return sanitizePlainExport(s ?? "", locale, "email").content;
+function compliantBody(
+  s: string,
+  locale: string,
+  options?: SanitizeExportOptions,
+): string {
+  return sanitizePlainExport(s ?? "", locale, "email", options).content;
 }
 
 /** Build offline HTML for one delivered day (no gold calendar). */
@@ -24,6 +31,10 @@ export function buildCompanionDayHtml(input: {
   job: CompanionJob;
   dayIndex: number;
   cards: CompanionDayCards;
+  /** Structured term namespace bindings — required for qimen dual-ns soft-map. */
+  confirmedTerms?: SanitizeExportOptions["confirmed"];
+  /** Fact-source id pairing with confirmedTerms[].sourceId. */
+  termSourceId?: string;
 }): string {
   const locale = normalizeCompanionLocale(input.job.brief.locale);
   const labels = companionUiLabels(locale);
@@ -35,8 +46,15 @@ export function buildCompanionDayHtml(input: {
     locale === "zh" ? "zh" : locale === "fr" ? "fr" : locale === "es" ? "es" : "en";
 
   const localeStr = String(locale);
+  const opts: SanitizeExportOptions | undefined =
+    input.confirmedTerms || input.termSourceId
+      ? {
+          ...(input.confirmedTerms ? { confirmed: input.confirmedTerms } : {}),
+          ...(input.termSourceId ? { sourceId: input.termSourceId } : {}),
+        }
+      : undefined;
   const section = (h: string, body: string) =>
-    `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(compliantBody(body, localeStr))}</p>`;
+    `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(compliantBody(body, localeStr, opts))}</p>`;
 
   return `<!DOCTYPE html>
 <html lang="${langAttr}">

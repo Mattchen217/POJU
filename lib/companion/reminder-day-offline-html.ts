@@ -20,7 +20,10 @@ import {
   type CompanionDayRecord,
   type CompanionJob,
 } from "@/lib/companion/types";
-import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
+import {
+  sanitizePlainExport,
+  type SanitizeExportOptions,
+} from "@/lib/glossary/sanitize-export-surface";
 /** Minimal job shape for pack fill (API publicJob is enough). */
 export type ReminderPackJobLike = Pick<
   CompanionJob,
@@ -33,6 +36,13 @@ export type BuildReminderOfflineHtmlOptions = {
   closeLabel?: string;
   /** Pack: note under subtitle. */
   packNote?: string;
+  /**
+   * Segment-scoped term confirmations for export sanitize.
+   * Must include matching `sourceId` on each row when soft-mapping dual-ns (空亡/白虎).
+   */
+  confirmedTerms?: SanitizeExportOptions["confirmed"];
+  /** Fact-source id for this reminder document (pairs with confirmedTerms.sourceId). */
+  termSourceId?: string;
 };
 
 function escapeHtml(s: string): string {
@@ -57,13 +67,21 @@ function langAttr(locale: string): string {
 }
 
 /** Phase 5: shared export sanitize (decision-anchor copy only — no task tracker rewrite). */
-function compliantBody(s: string, locale: string): string {
-  return sanitizePlainExport(s ?? "", locale, "email").content;
+function compliantBody(
+  s: string,
+  locale: string,
+  options?: SanitizeExportOptions,
+): string {
+  return sanitizePlainExport(s ?? "", locale, "email", options).content;
 }
 
 /** Evidence body: sanitize then escape; markers already reduced by export pipeline. */
-function renderEvidenceHtml(evidence: string, locale: string): string {
-  const raw = compliantBody(evidence || "", locale);
+function renderEvidenceHtml(
+  evidence: string,
+  locale: string,
+  options?: SanitizeExportOptions,
+): string {
+  const raw = compliantBody(evidence || "", locale, options);
   return escapeHtml(raw).replace(/\n/g, "<br/>");
 }
 
@@ -71,13 +89,14 @@ function cardBodyHtml(
   cards: CompanionDayCards,
   labels: ReturnType<typeof companionUiLabels>,
   locale: string,
+  options?: SanitizeExportOptions,
 ): string {
   return [
-    `<h5>${escapeHtml(labels.today)}</h5><p>${escapeHtml(compliantBody(cards.today_is, locale))}</p>`,
-    `<h5>${escapeHtml(labels.suitable)}</h5><p>${escapeHtml(compliantBody(cards.suitable, locale))}</p>`,
-    `<h5>${escapeHtml(labels.unsuitable)}</h5><p>${escapeHtml(compliantBody(cards.unsuitable, locale))}</p>`,
-    `<h5>${escapeHtml(labels.suggestion)}</h5><p>${escapeHtml(compliantBody(cards.suggestion, locale))}</p>`,
-    `<details class="poju-companion-sheet__evidence"><summary>${escapeHtml(labels.evidence)}</summary><div class="poju-companion-sheet__evidence-body"><p>${renderEvidenceHtml(cards.evidence, locale)}</p></div></details>`,
+    `<h5>${escapeHtml(labels.today)}</h5><p>${escapeHtml(compliantBody(cards.today_is, locale, options))}</p>`,
+    `<h5>${escapeHtml(labels.suitable)}</h5><p>${escapeHtml(compliantBody(cards.suitable, locale, options))}</p>`,
+    `<h5>${escapeHtml(labels.unsuitable)}</h5><p>${escapeHtml(compliantBody(cards.unsuitable, locale, options))}</p>`,
+    `<h5>${escapeHtml(labels.suggestion)}</h5><p>${escapeHtml(compliantBody(cards.suggestion, locale, options))}</p>`,
+    `<details class="poju-companion-sheet__evidence"><summary>${escapeHtml(labels.evidence)}</summary><div class="poju-companion-sheet__evidence-body"><p>${renderEvidenceHtml(cards.evidence, locale, options)}</p></div></details>`,
   ].join("\n");
 }
 
@@ -88,8 +107,22 @@ function weekdayLabels(locale: CompanionLocale): string[] {
   return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 }
 
+function sanitizeOptsFromBuild(
+  opts?: BuildReminderOfflineHtmlOptions,
+): SanitizeExportOptions | undefined {
+  if (!opts?.confirmedTerms?.length && !opts?.termSourceId) return undefined;
+  return {
+    ...(opts.confirmedTerms ? { confirmed: opts.confirmedTerms } : {}),
+    ...(opts.termSourceId ? { sourceId: opts.termSourceId } : {}),
+  };
+}
+
 /** Monday-start calendar grid covering job window. */
-function buildCalendarHtml(job: ReminderPackJobLike, locale: CompanionLocale): {
+function buildCalendarHtml(
+  job: ReminderPackJobLike,
+  locale: CompanionLocale,
+  sanitizeOpts?: SanitizeExportOptions,
+): {
   calendar: string;
   daysJson: Record<string, { title: string; html: string }>;
 } {
@@ -136,9 +169,9 @@ function buildCalendarHtml(job: ReminderPackJobLike, locale: CompanionLocale): {
       if (inWindow && dayRec) {
         if (ready && dayRec.cards) {
           const title = labels.title(dateKey, dayRec.day_index + 1);
-          const html = `<article class="poju-companion-sheet__card">${cardBodyHtml(dayRec.cards, labels, locale)}</article>`;
+          const html = `<article class="poju-companion-sheet__card">${cardBodyHtml(dayRec.cards, labels, locale, sanitizeOpts)}</article>`;
           daysJson[dateKey] = { title, html };
-          const sug = compliantBody(dayRec.cards.suggestion, locale);
+          const sug = compliantBody(dayRec.cards.suggestion, locale, sanitizeOpts);
           const snip = escapeHtml(sug.slice(0, 48));
           const more = sug.length > 48 ? "…" : "";
           inner += `<button type="button" class="atmos-forecast__snippet" data-day-key="${dateKey}"><span class="atmos-forecast__snippet-text">${snip}${more}</span><span class="atmos-forecast__expand">→</span></button>`;
@@ -180,6 +213,7 @@ export function buildReminderDayOfflineHtml(input: {
   const closeLabel =
     input.opts?.closeLabel?.trim() || (locale === "zh" ? "关闭" : "Close");
   const subtitle = labels.anchor(input.job.brief.primary.name, input.job.brief.backup.name);
+  const sanitizeOpts = sanitizeOptsFromBuild(input.opts);
   return fillSlots(REMINDER_DAY_BLANK_TEMPLATE, {
     SLOT_LANG: langAttr(locale),
     SLOT_DOC_TITLE: escapeHtml(title),
@@ -188,7 +222,7 @@ export function buildReminderDayOfflineHtml(input: {
     SLOT_FRAME_ARIA: escapeHtml(title),
     SLOT_TITLE: escapeHtml(title),
     SLOT_SUBTITLE: escapeHtml(subtitle),
-    SLOT_CARD_BODY: cardBodyHtml(input.cards, labels, locale),
+    SLOT_CARD_BODY: cardBodyHtml(input.cards, labels, locale, sanitizeOpts),
   });
 }
 
@@ -208,7 +242,8 @@ export function buildReminderPackOfflineHtml(
     (locale === "zh"
       ? "点日期查看当日提醒；与下载/邮件为同一份离线 HTML。"
       : "Tap a day to open that reminder — same offline HTML as download/email.");
-  const { calendar, daysJson } = buildCalendarHtml(job, locale);
+  const sanitizeOpts = sanitizeOptsFromBuild(opts);
+  const { calendar, daysJson } = buildCalendarHtml(job, locale, sanitizeOpts);
   return fillSlots(REMINDER_PACK_BLANK_TEMPLATE, {
     SLOT_LANG: langAttr(locale),
     SLOT_DOC_TITLE: escapeHtml(title),
