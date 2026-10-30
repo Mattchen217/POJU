@@ -107,6 +107,10 @@ export function buildCompanionPairSystem(localeRaw: string): string {
       : `Brand frame: clarity on how to hold today — not luck/destiny. Face slots = decision / energy / pace only.`,
     "",
     locale === "zh"
+      ? `术语层（硬）：用户可见只用自造软译/slug 标记；禁止传统原名报幕。术语替换只改表达，**不得**把提醒改成任务追踪或未来预测。`
+      : `Terms (hard): user-visible soft labels / slug markers only — no traditional jargon. Term swaps change wording only; **never** turn reminders into task trackers or future prediction.`,
+    "",
+    locale === "zh"
       ? `一次写 1–2 天提醒（喂料有几天就写几天）。报告已有执行策略；**不布置作业、不轮转 means、不验收作业、不回访改旧报告**。每天决策锚五槽：today_is=今日主题 · suitable=适合关注 · suggestion=今天可以做 · unsuitable=今天需要避免 · evidence=今日锚点（决策原则）。`
       : `Write 1–2 day reminders in one shot. Report already has tactics; **no homework, no means rotation, no quizzes, no revisit edits**. Five decision-anchor slots: today_is=theme · suitable=attend · suggestion=can do · unsuitable=avoid · evidence=decision anchor.`,
     "",

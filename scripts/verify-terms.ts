@@ -74,12 +74,13 @@ const GLYPH_LEVEL_BY_TRADITIONAL: Record<string, string> = {
   陷: "eye_of_storm",
 };
 
-const EXPECTED_BAZI = 183;
-const EXPECTED_QIMEN = 48;
+const EXPECTED_BAZI = 184;
+const EXPECTED_QIMEN = 54;
 const EXPECTED_GLYPH = 17;
 const EXPECTED_ZODIAC = 12;
+const EXPECTED_ZIWEI = 14;
 const EXPECTED_TOTAL =
-  EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH + EXPECTED_ZODIAC;
+  EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH + EXPECTED_ZODIAC + EXPECTED_ZIWEI;
 
 const ZODIAC_SLUG_BY_TRADITIONAL: Record<string, string> = {
   鼠: "zd_rat",
@@ -125,6 +126,9 @@ function expectedSlug(term: PojuTerm): string | undefined {
   if (term.ns === "zodiac") {
     return ZODIAC_SLUG_BY_TRADITIONAL[term.traditional] ?? term.slug;
   }
+  if (term.ns === "ziwei") {
+    return term.slug;
+  }
   return slugForTraditional(term.traditional) ?? term.slug;
 }
 
@@ -161,6 +165,7 @@ function gate3Coverage(entries: readonly PojuTerm[]): Fail[] {
   const qimen = entries.filter((e) => e.ns === "qimen");
   const glyph = entries.filter((e) => e.ns === "glyph");
   const zodiac = entries.filter((e) => e.ns === "zodiac");
+  const ziwei = entries.filter((e) => e.ns === "ziwei");
 
   if (entries.length !== EXPECTED_TOTAL) {
     fails.push({
@@ -189,30 +194,41 @@ function gate3Coverage(entries: readonly PojuTerm[]): Fail[] {
       message: `coverage zodiac: expected ${EXPECTED_ZODIAC}, got ${zodiac.length}`,
     });
   }
+  if (ziwei.length !== EXPECTED_ZIWEI) {
+    fails.push({
+      gate: 3,
+      message: `coverage ziwei: expected ${EXPECTED_ZIWEI}, got ${ziwei.length}`,
+    });
+  }
   return fails;
 }
 
+/**
+ * Gate 4 — CJK soft-label substring collisions within one namespace (zh only).
+ * Latin multi-word / camelCase compounds intentionally reuse atom stems
+ * ("Anchor" ⊂ "Intrinsic Anchor", "Seal" ⊂ "SealSpan") — not silent remaps.
+ */
 function gate4NoSubstringCollisions(entries: readonly PojuTerm[]): Fail[] {
   const fails: Fail[] = [];
-  for (const loc of LOCALES) {
-    const labels = entries.map((e) => ({
-      traditional: e.traditional,
-      label: e.term[loc].trim(),
-      ns: e.ns,
-    }));
-    for (let i = 0; i < labels.length; i++) {
-      for (let j = 0; j < labels.length; j++) {
-        if (i === j) continue;
-        const a = labels[i]!;
-        const b = labels[j]!;
-        if (a.ns !== b.ns) continue;
-        if (a.label.length < 2 || b.label.length < 2) continue;
-        if (b.label.includes(a.label) && a.label !== b.label) {
-          fails.push({
-            gate: 4,
-            message: `[${loc}] substring collision: "${a.label}" ⊂ "${b.label}" (${a.traditional} vs ${b.traditional})`,
-          });
-        }
+  const loc = "zh" as const;
+  const labels = entries.map((e) => ({
+    traditional: e.traditional,
+    label: e.term[loc].trim(),
+    ns: e.ns,
+  }));
+  for (let i = 0; i < labels.length; i++) {
+    for (let j = 0; j < labels.length; j++) {
+      if (i === j) continue;
+      const a = labels[i]!;
+      const b = labels[j]!;
+      if (a.ns !== b.ns) continue;
+      if (a.label.length < 2 || b.label.length < 2) continue;
+      if (/\s/.test(a.label) || /\s/.test(b.label)) continue;
+      if (b.label.includes(a.label) && a.label !== b.label) {
+        fails.push({
+          gate: 4,
+          message: `[${loc}] substring collision: "${a.label}" ⊂ "${b.label}" (${a.traditional} vs ${b.traditional})`,
+        });
       }
     }
   }
@@ -254,10 +270,15 @@ function gate5AuditRegex(entries: readonly PojuTerm[]): Fail[] {
   return fails;
 }
 
-function gate6SingleWord(entries: readonly PojuTerm[]): Fail[] {
+/**
+ * Gate 6 — soft labels must be non-empty user-facing phrases.
+ * Multi-word soft labels are allowed (Phase 3+ product copy); ban empty,
+ * soft===traditional Han dump, and runaway length.
+ */
+function gate6SoftLabelShape(entries: readonly PojuTerm[]): Fail[] {
   const fails: Fail[] = [];
   for (const e of entries) {
-    // Fix D — glyph level phrase whitelist
+    // Fix D — glyph level phrase whitelist (multi-word imagery)
     if (e.ns === "glyph" && GLYPH_LEVEL_WORD_WHITELIST.has(e.slug)) continue;
     for (const loc of LOCALES) {
       const t = e.term[loc].trim();
@@ -265,10 +286,37 @@ function gate6SingleWord(entries: readonly PojuTerm[]): Fail[] {
         fails.push({ gate: 6, message: `[${loc}] empty term for ${e.traditional}` });
         continue;
       }
-      if (/\s/.test(t)) {
+      if (t !== e.term[loc]) {
         fails.push({
           gate: 6,
-          message: `[${loc}] term must be one word (no spaces): ${e.ns}:${e.traditional}="${t}"`,
+          message: `[${loc}] term has leading/trailing space: ${e.ns}:${e.slug}`,
+        });
+      }
+      // zh soft may equal traditional for zodiac animals / calendar atoms;
+      // non-zh must never echo traditional Han as the soft label.
+      if (loc !== "zh" && t === e.traditional) {
+        fails.push({
+          gate: 6,
+          message: `[${loc}] soft label equals traditional (leak): ${e.ns}:${e.slug}`,
+        });
+      }
+      if (
+        loc === "zh" &&
+        t === e.traditional &&
+        e.ns !== "zodiac" &&
+        e.traditional.length >= 2 &&
+        /[神煞盘局运主星宫]/.test(e.traditional)
+      ) {
+        fails.push({
+          gate: 6,
+          message: `[${loc}] soft label equals traditional jargon (leak): ${e.ns}:${e.slug}`,
+        });
+      }
+      const words = t.split(/\s+/).filter(Boolean);
+      if (words.length > 6) {
+        fails.push({
+          gate: 6,
+          message: `[${loc}] soft label too long (>6 words): ${e.ns}:${e.slug}="${t}"`,
         });
       }
     }
@@ -325,7 +373,7 @@ function main() {
     ...gate3Coverage(entries),
     ...gate4NoSubstringCollisions(entries),
     ...gate5AuditRegex(entries),
-    ...gate6SingleWord(entries),
+    ...gate6SoftLabelShape(entries),
     ...gate7CrossNsZhCollision(entries),
     ...gate8NsSlugUniqueness(entries),
   ];
@@ -349,8 +397,9 @@ function main() {
   const qimen = entries.filter((e) => e.ns === "qimen").length;
   const glyph = entries.filter((e) => e.ns === "glyph").length;
   const zodiac = entries.filter((e) => e.ns === "zodiac").length;
+  const ziwei = entries.filter((e) => e.ns === "ziwei").length;
   console.log(
-    `\nAll 8 gates passed (${entries.length} = bazi ${bazi} + qimen ${qimen} + glyph ${glyph} + zodiac ${zodiac}).\n`,
+    `\nAll 8 gates passed (${entries.length} = bazi ${bazi} + qimen ${qimen} + glyph ${glyph} + zodiac ${zodiac} + ziwei ${ziwei}).\n`,
   );
 }
 

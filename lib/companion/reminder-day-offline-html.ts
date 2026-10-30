@@ -20,6 +20,7 @@ import {
   type CompanionDayRecord,
   type CompanionJob,
 } from "@/lib/companion/types";
+import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
 /** Minimal job shape for pack fill (API publicJob is enough). */
 export type ReminderPackJobLike = Pick<
   CompanionJob,
@@ -55,39 +56,28 @@ function langAttr(locale: string): string {
   return normalizeCompanionLocale(locale);
 }
 
-/** Strip term markers for plain visible text; keep term. */
-function stripTermMarks(s: string): string {
-  return s.replace(/⟦t:([^|⟧]+)(?:\|[^|⟧]*)?⟧/g, "$1");
+/** Phase 5: shared export sanitize (decision-anchor copy only — no task tracker rewrite). */
+function compliantBody(s: string, locale: string): string {
+  return sanitizePlainExport(s ?? "", locale, "email").content;
 }
 
-/** Evidence body: escape text, turn term markers into data-gloss spans. */
-function renderEvidenceHtml(evidence: string): string {
-  const raw = evidence || "";
-  const parts: string[] = [];
-  const re = /⟦t:([^|⟧]+)(?:\|([^|⟧]*))?⟧/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(raw))) {
-    parts.push(escapeHtml(raw.slice(last, m.index)));
-    const t = escapeHtml(String(m[1]));
-    const g = m[2] ? escapeHtml(String(m[2])) : "";
-    parts.push(g ? `<span data-gloss="${g}" title="${g}">${t}</span>` : t);
-    last = m.index + m[0].length;
-  }
-  parts.push(escapeHtml(raw.slice(last)));
-  return parts.join("").replace(/\n/g, "<br/>");
+/** Evidence body: sanitize then escape; markers already reduced by export pipeline. */
+function renderEvidenceHtml(evidence: string, locale: string): string {
+  const raw = compliantBody(evidence || "", locale);
+  return escapeHtml(raw).replace(/\n/g, "<br/>");
 }
 
 function cardBodyHtml(
   cards: CompanionDayCards,
   labels: ReturnType<typeof companionUiLabels>,
+  locale: string,
 ): string {
   return [
-    `<h5>${escapeHtml(labels.today)}</h5><p>${escapeHtml(stripTermMarks(cards.today_is))}</p>`,
-    `<h5>${escapeHtml(labels.suitable)}</h5><p>${escapeHtml(stripTermMarks(cards.suitable))}</p>`,
-    `<h5>${escapeHtml(labels.unsuitable)}</h5><p>${escapeHtml(stripTermMarks(cards.unsuitable))}</p>`,
-    `<h5>${escapeHtml(labels.suggestion)}</h5><p>${escapeHtml(stripTermMarks(cards.suggestion))}</p>`,
-    `<details class="poju-companion-sheet__evidence"><summary>${escapeHtml(labels.evidence)}</summary><div class="poju-companion-sheet__evidence-body"><p>${renderEvidenceHtml(cards.evidence)}</p></div></details>`,
+    `<h5>${escapeHtml(labels.today)}</h5><p>${escapeHtml(compliantBody(cards.today_is, locale))}</p>`,
+    `<h5>${escapeHtml(labels.suitable)}</h5><p>${escapeHtml(compliantBody(cards.suitable, locale))}</p>`,
+    `<h5>${escapeHtml(labels.unsuitable)}</h5><p>${escapeHtml(compliantBody(cards.unsuitable, locale))}</p>`,
+    `<h5>${escapeHtml(labels.suggestion)}</h5><p>${escapeHtml(compliantBody(cards.suggestion, locale))}</p>`,
+    `<details class="poju-companion-sheet__evidence"><summary>${escapeHtml(labels.evidence)}</summary><div class="poju-companion-sheet__evidence-body"><p>${renderEvidenceHtml(cards.evidence, locale)}</p></div></details>`,
   ].join("\n");
 }
 
@@ -146,10 +136,11 @@ function buildCalendarHtml(job: ReminderPackJobLike, locale: CompanionLocale): {
       if (inWindow && dayRec) {
         if (ready && dayRec.cards) {
           const title = labels.title(dateKey, dayRec.day_index + 1);
-          const html = `<article class="poju-companion-sheet__card">${cardBodyHtml(dayRec.cards, labels)}</article>`;
+          const html = `<article class="poju-companion-sheet__card">${cardBodyHtml(dayRec.cards, labels, locale)}</article>`;
           daysJson[dateKey] = { title, html };
-          const snip = escapeHtml(dayRec.cards.suggestion.slice(0, 48));
-          const more = dayRec.cards.suggestion.length > 48 ? "…" : "";
+          const sug = compliantBody(dayRec.cards.suggestion, locale);
+          const snip = escapeHtml(sug.slice(0, 48));
+          const more = sug.length > 48 ? "…" : "";
           inner += `<button type="button" class="atmos-forecast__snippet" data-day-key="${dateKey}"><span class="atmos-forecast__snippet-text">${snip}${more}</span><span class="atmos-forecast__expand">→</span></button>`;
         } else {
           const pending =
@@ -197,7 +188,7 @@ export function buildReminderDayOfflineHtml(input: {
     SLOT_FRAME_ARIA: escapeHtml(title),
     SLOT_TITLE: escapeHtml(title),
     SLOT_SUBTITLE: escapeHtml(subtitle),
-    SLOT_CARD_BODY: cardBodyHtml(input.cards, labels),
+    SLOT_CARD_BODY: cardBodyHtml(input.cards, labels, locale),
   });
 }
 

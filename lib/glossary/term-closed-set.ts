@@ -6,6 +6,8 @@
 import { LIFE_STAGE_HAN } from "@/lib/calculations/chang-sheng";
 import type { TenGod } from "@/lib/calendar/data/stems-branches";
 import { BRANCHES, STEMS } from "@/lib/calendar/data/stems-branches";
+import { forbiddenTokensForNamespace } from "@/lib/glossary/term-forbidden-registry";
+import { pojuTermBySlug, type TermLocale } from "@/lib/glossary/pojulife-terms";
 
 /** A1 — engine-computed 神煞 (bazi-shensha-local). */
 export const CLOSED_SHEN_SHA = [
@@ -142,37 +144,11 @@ export const CLOSED_SET_REPLACE_IDS: readonly string[] = [
 /** allow-surface ids (not marked, kept as energy language). */
 export const CLOSED_SET_ALLOW_IDS: readonly string[] = [...CLOSED_WUXING, "五行", "易经", "阴阳", "气", "道"];
 
-/** Terms the engine NEVER computes — or computes but are redline (恐吓/宿命), never feed. */
-export const OUT_OF_SET_FORBIDDEN_HAN = [
-  "空亡",
-  "魁罡",
-  "十恶大败",
-  "孤鸾",
-  "孤鸾煞",
-  "阴阳差错",
-  "阴差阳错",
-  "元辰",
-  "六秀日",
-  "大耗",
-  "小耗",
-  "五鬼",
-  "丧门",
-  "吊客",
-  "白虎",
-  "天狗",
-  "血刃",
-  "流霞",
-  "隔角",
-  // 引擎会算、但属恐吓/宿命，不喂真算（用户红线）
-  "勾绞煞",
-  "童子煞",
-  "地网",
-  "天罗",
-  "八专日",
-  "十灵日",
-  "九丑日",
-  // 天厨 已移除 —— 现为合法术语 ss_tianchu
-] as const;
+/**
+ * @deprecated Prefer namespace-aware `matchForbidden` / `TERM_FORBIDDEN_REGISTRY`.
+ * Legacy global list ≡ bazi slice only. Do NOT apply to qimen (空亡/白虎 are legal there).
+ */
+export const OUT_OF_SET_FORBIDDEN_HAN = forbiddenTokensForNamespace("bazi");
 
 export const OUT_OF_SET_FORBIDDEN_EN = [
   "Void",
@@ -495,27 +471,32 @@ export const RELATION_KIND_SOFT: Record<RelationMarkerPrefix, FiveLocaleText> = 
   },
 };
 
-/** 十神张力闭集 slug（S5 · 中性软译，禁凶断）。 */
+/** 十神张力闭集 slug（S5 · 中性软译，禁凶断）。SSOT: pojulife-terms.ts */
 export const TEN_GOD_TENSION_MARKER_IDS = ["shangguan_jianguan", "xiaoshen_duoshi"] as const;
 
+function tensionSoftFromSsot(slug: (typeof TEN_GOD_TENSION_MARKER_IDS)[number]): FiveLocaleText {
+  const t = pojuTermBySlug(slug);
+  if (!t) {
+    throw new Error(`TEN_GOD_TENSION_SOFT missing SSOT slug=${slug}`);
+  }
+  const locales: TermLocale[] = ["zh", "en", "es", "de", "fr"];
+  const out = {} as FiveLocaleText;
+  for (const loc of locales) {
+    out[loc] = (t.definition[loc] || t.term[loc] || "").trim();
+  }
+  return out;
+}
+
+/**
+ * Derived from POJU_TERMS definitions — do not parallel-edit.
+ * Soft UI short labels live on term.*; this map keeps marker-plain compatibility.
+ */
 export const TEN_GOD_TENSION_SOFT: Record<
   (typeof TEN_GOD_TENSION_MARKER_IDS)[number],
   FiveLocaleText
 > = {
-  shangguan_jianguan: {
-    zh: "外部约束下的对抗张力",
-    en: "tension between expression and external norms",
-    es: "tensión entre expresión y normas externas",
-    de: "Spannung zwischen Ausdruck und äußeren Normen",
-    fr: "tension entre expression et normes externes",
-  },
-  xiaoshen_duoshi: {
-    zh: "内省本能对表达的挤占张力",
-    en: "inner pressure crowding out expression",
-    es: "presión interior que ahoga la expresión",
-    de: "innerer Druck, der Ausdruck verdrängt",
-    fr: "pression intérieure qui étouffe l'expression",
-  },
+  shangguan_jianguan: tensionSoftFromSsot("shangguan_jianguan"),
+  xiaoshen_duoshi: tensionSoftFromSsot("xiaoshen_duoshi"),
 };
 
 /** Generic relation surface terms — forbidden when chart has zero computed relations. */

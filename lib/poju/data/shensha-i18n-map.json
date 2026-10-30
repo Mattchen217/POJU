@@ -2,7 +2,7 @@
   "$schema": "poju.shensha.i18n/v2",
   "meta": {
     "purpose": "神煞全量多语言合规映射表。本地引擎（shunshi-bazi-core + bazi-shensha-local merge）只输出 ID，UI 渲染前按 locale 查 i18n 取合规文案。计算层与展示层彻底解耦。",
-    "compliance": "全部 51 种名称的英/中/西/德/法 label 均已去魔幻化，转译为宏观博弈 / 个人管理 / 结构动力学的商业语域。中文原名仅作 zh_src 字形保留（海外网关视为无语义东方符号，可作特色）。严禁任何语言出现 occult / fortune-telling / gothic 直译。",
+    "compliance": "全部 51 种名称的英/中/西/德/法 label 均已去魔幻化。Phase 4：用户可见只读 label/gloss（或 POJU_TERMS）；禁止拼接 zh_src。红线项经 shensha-disposition internal_redline 剥离。",
     "locales": [
       "en",
       "zh",
@@ -10,7 +10,7 @@
       "de",
       "fr"
     ],
-    "render_pattern": "i18n[locale].label + ' (' + zh_src + ')'",
+    "render_pattern": "label_only — NEVER concatenate zh_src (Phase 4)",
     "polarity_legend": {
       "support": "系统性支持（原吉神/贵人）— UI 金色",
       "edge": "中性力量 / 锋芒（原中性特质）— UI 冷白",

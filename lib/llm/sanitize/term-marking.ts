@@ -1866,8 +1866,10 @@ export function uiTermById(
   const loc = toGlossaryLocale(locale);
   const tension = TEN_GOD_TENSION_SOFT[termId as keyof typeof TEN_GOD_TENSION_SOFT];
   if (tension) {
-    const soft = pickFiveLocale(tension, loc);
-    return { soft, plain: soft, polarity: termPolarityById(termId) };
+    // Soft short label from SSOT term.*; plain from definition (TEN_GOD_TENSION_SOFT).
+    const soft = termOf(termId, loc) || pickFiveLocale(tension, loc);
+    const plain = pickFiveLocale(tension, loc) || soft;
+    return { soft, plain, polarity: termPolarityById(termId) };
   }
   const relKind = relationKindFromMarkerId(termId);
   if (relKind && termId !== relKind) {

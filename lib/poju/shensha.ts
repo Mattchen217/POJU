@@ -1,11 +1,17 @@
 /**
- * 神煞解析层 —— 全站唯一查表入口
- * 计算层（shunshi-bazi-core + bazi-shensha-local）只产出 ID（过渡期产出中文名）；
- * 任何 UI / LLM payload 在渲染前都必须经过这里取合规多语言文案。
- *
- * 部署：把 shensha-i18n-map.json 放到可被本文件 import 的数据目录，例如
- *   lib/poju/data/shensha-i18n-map.json
+ * 神煞解析层 —— 全站唯一查表入口（Phase 4 fail-closed）。
+ * 计算层只产出 ID / 中文名；UI / LLM 渲染前必须经此层。
+ * 未知/红线：不得 label=rawToken，不得拼接 zh_src。
  */
+import { createHash } from "node:crypto";
+import {
+  hashShenshaToken,
+  isShenshaInternalRedline,
+  resolveShenshaDisposition,
+  SHENSHA_BLOCKED_PLACEHOLDER,
+} from "@/lib/glossary/shensha-disposition";
+import { pojuTermBySlug, type TermLocale } from "@/lib/glossary/pojulife-terms";
+import { termHanVariants } from "@/lib/glossary/term-han-normalize";
 import RAW from "./data/shensha-i18n-map.json";
 
 export type Locale = "en" | "zh" | "es" | "de" | "fr";
@@ -20,7 +26,10 @@ export function normalizeShenshaLocale(locale: string): Locale {
   return "en";
 }
 
-interface I18nPack { label: string; gloss: string; }
+interface I18nPack {
+  label: string;
+  gloss: string;
+}
 interface TermDef {
   zh_src: string;
   aliases?: string[];
@@ -30,30 +39,39 @@ interface TermDef {
   note?: string;
   i18n: Record<Locale, I18nPack>;
 }
-interface MapFile { meta: { locales: Locale[] }; terms: Record<string, TermDef>; }
+interface MapFile {
+  meta: { locales: Locale[]; render_pattern?: string };
+  terms: Record<string, TermDef>;
+}
 
 const MAP = RAW as unknown as MapFile;
 const TERMS = MAP.terms;
 const FALLBACK_LOCALE: Locale = "en";
 
-/** 过渡期桥接：引擎仍吐中文名时，用 zh_src + aliases 反查 ID。引擎改吐 ID 后此表自然失效不被命中。 */
+/** Bridge: ID or zh_src/alias (+ simp/trad variants) → JSON id. First registration wins. */
 const ZH_TO_ID: Record<string, string> = (() => {
   const idx: Record<string, string> = {};
   for (const id of Object.keys(TERMS)) {
-    const t = TERMS[id];
-    for (const z of [t.zh_src, ...(t.aliases ?? [])]) if (z && !idx[z]) idx[z] = id;
+    const t = TERMS[id]!;
+    for (const z of [t.zh_src, ...(t.aliases ?? [])]) {
+      if (!z) continue;
+      for (const v of termHanVariants(z)) {
+        if (v && !idx[v]) idx[v] = id;
+      }
+    }
   }
   return idx;
 })();
 
-/** 把引擎产出的「ID 或 中文名」归一化为 ID。命中不了返回 null。 */
 export function toShenshaId(token: string): string | null {
-  if (TERMS[token]) return token;          // 已是 ID
-  if (ZH_TO_ID[token]) return ZH_TO_ID[token]; // 中文名 → ID
+  if (TERMS[token]) return token;
+  for (const v of termHanVariants(token)) {
+    if (ZH_TO_ID[v]) return ZH_TO_ID[v]!;
+  }
   return null;
 }
 
-/** All zh_src + aliases from the map, longest-first — for bare-term auto-mark coverage. */
+/** Surfaces for bare-term scanners — includes redline hans so strip/audit can see them. */
 export function allShenshaHanSurfaces(): string[] {
   const set = new Set<string>();
   for (const id of Object.keys(TERMS)) {
@@ -66,55 +84,221 @@ export function allShenshaHanSurfaces(): string[] {
   return [...set].sort((a, b) => b.length - a.length);
 }
 
-/** Soft label + gloss for a bare神煞 han surface (auto-mark). */
+export interface ShenshaView {
+  id: string;
+  /**
+   * @deprecated Phase 4: always empty for user-facing paths.
+   * Kept for type compatibility; never concatenate into UI.
+   */
+  zh_src: string;
+  label: string;
+  gloss: string;
+  polarity: Polarity;
+  axis: string;
+  source: "engine" | "local";
+  /** True when redline/unknown — omit from user lists. */
+  blocked?: boolean;
+  blockReason?: string;
+  tokenHash?: string;
+}
+
+function localePack(t: TermDef, locale: Locale): I18nPack {
+  return t.i18n[locale] ?? t.i18n[FALLBACK_LOCALE]!;
+}
+
+function fromGlossary(
+  termSlug: string,
+  locale: Locale,
+  fallback: TermDef | undefined,
+  jsonId: string,
+): ShenshaView {
+  const term = pojuTermBySlug(termSlug);
+  const loc = locale as TermLocale;
+  if (term) {
+    const label = (term.term[loc] || term.term.en || term.term.zh || "").trim();
+    const gloss = (term.definition[loc] || term.definition.en || term.definition.zh || "").trim();
+    return {
+      id: jsonId,
+      zh_src: "",
+      label,
+      gloss,
+      polarity: fallback?.polarity ?? "edge",
+      axis: fallback?.axis ?? "glossary",
+      source: fallback?.source ?? "engine",
+    };
+  }
+  if (fallback) {
+    const pack = localePack(fallback, locale);
+    return {
+      id: jsonId,
+      zh_src: "",
+      label: pack.label,
+      gloss: pack.gloss,
+      polarity: fallback.polarity,
+      axis: fallback.axis,
+      source: fallback.source,
+    };
+  }
+  return {
+    id: jsonId,
+    zh_src: "",
+    label: SHENSHA_BLOCKED_PLACEHOLDER,
+    gloss: "",
+    polarity: "edge",
+    axis: "unknown",
+    source: "engine",
+    blocked: true,
+    blockReason: "public_slug_missing",
+    tokenHash: hashShenshaToken(jsonId),
+  };
+}
+
+/**
+ * Resolve one shensha token. Never returns label === raw traditional on miss.
+ * Redline / unknown → blocked view with empty label.
+ */
+export function resolveShensha(token: string, locale: Locale = "en"): ShenshaView {
+  const raw = token.trim();
+  const disposition = resolveShenshaDisposition(raw);
+  const id = toShenshaId(raw);
+  const termDef = id ? TERMS[id] : undefined;
+
+  if (disposition.status === "internal_redline") {
+    return {
+      id: id ?? "redline",
+      zh_src: "",
+      label: SHENSHA_BLOCKED_PLACEHOLDER,
+      gloss: "",
+      polarity: "pressure",
+      axis: "redline",
+      source: termDef?.source ?? "engine",
+      blocked: true,
+      blockReason: disposition.reasonCode,
+      tokenHash: hashShenshaToken(raw),
+    };
+  }
+
+  if (disposition.status === "unknown_blocked") {
+    // Also treat unmapped JSON-less tokens as blocked (no raw fallback).
+    if (!id) {
+      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
+        console.warn(
+          `[shensha] unknown token hash=${hashShenshaToken(raw)} — fail-closed (no raw label)`,
+        );
+      }
+      return {
+        id: "unknown",
+        zh_src: "",
+        label: SHENSHA_BLOCKED_PLACEHOLDER,
+        gloss: "",
+        polarity: "edge",
+        axis: "unknown",
+        source: "engine",
+        blocked: true,
+        blockReason: disposition.reasonCode,
+        tokenHash: hashShenshaToken(raw),
+      };
+    }
+    // Known JSON id but not in disposition table → treat as blocked until audited.
+    return {
+      id,
+      zh_src: "",
+      label: SHENSHA_BLOCKED_PLACEHOLDER,
+      gloss: "",
+      polarity: termDef?.polarity ?? "edge",
+      axis: termDef?.axis ?? "unaudited",
+      source: termDef?.source ?? "engine",
+      blocked: true,
+      blockReason: "json_id_unaudited",
+      tokenHash: hashShenshaToken(raw),
+    };
+  }
+
+  // public_glossary
+  const jsonId = id ?? disposition.termSlug;
+  // Prefer disposition on the JSON id when token was han
+  const idDisposition = id ? resolveShenshaDisposition(id) : disposition;
+  if (idDisposition.status === "internal_redline") {
+    return {
+      id: id!,
+      zh_src: "",
+      label: SHENSHA_BLOCKED_PLACEHOLDER,
+      gloss: "",
+      polarity: "pressure",
+      axis: "redline",
+      source: termDef?.source ?? "engine",
+      blocked: true,
+      blockReason: idDisposition.reasonCode,
+      tokenHash: hashShenshaToken(raw),
+    };
+  }
+  const slug =
+    idDisposition.status === "public_glossary"
+      ? idDisposition.termSlug
+      : disposition.termSlug;
+  return fromGlossary(slug, locale, termDef, jsonId);
+}
+
+/** Soft labels for auto-mark — null when blocked/unknown. */
 export function resolveShenshaSoftLabels(
   han: string,
   locale: string,
 ): { slug: string; soft: string; plain: string } | null {
-  const id = toShenshaId(han);
-  if (!id) return null;
-  const view = resolveShensha(id, normalizeShenshaLocale(locale));
-  if (!view.label?.trim()) return null;
+  if (isShenshaInternalRedline(han)) return null;
+  const view = resolveShensha(han, normalizeShenshaLocale(locale));
+  if (view.blocked || !view.label?.trim()) return null;
   return {
-    slug: `shensha_${id}`,
+    slug: `shensha_${view.id}`,
     soft: view.label.trim(),
     plain: view.gloss?.trim() || view.label.trim(),
   };
 }
 
-export interface ShenshaView {
-  id: string;
-  zh_src: string;     // 中文原名（作括号字形保留）
-  label: string;      // 当前语言合规标题
-  gloss: string;      // 当前语言副行解读
-  polarity: Polarity; // support | edge | pressure（驱动 UI 配色）
-  axis: string;
-  source: "engine" | "local";
-}
-
-/** 单个神煞 → 当前语言视图。token 可为 ID 或中文名。 */
-export function resolveShensha(token: string, locale: Locale = "en"): ShenshaView {
-  const id = toShenshaId(token);
-  if (!id) {
-    console.warn(`[shensha] 未映射标识：${token} —— 已降级为原标识，请补进 shensha-i18n-map.json`);
-    return { id: "unknown", zh_src: token, label: token, gloss: "", polarity: "edge", axis: "unknown", source: "engine" };
-  }
-  const t = TERMS[id];
-  const pack = t.i18n[locale] ?? t.i18n[FALLBACK_LOCALE];
-  return { id, zh_src: t.zh_src, label: pack.label, gloss: pack.gloss, polarity: t.polarity, axis: t.axis, source: t.source };
-}
-
-/** 一柱/整盘的标识数组 → 视图数组；自动按 ID 去重（合并 engine/local 同义项，如 文昌/文昌贵人）。 */
+/** User-facing list: drops blocked/unknown; never exposes zh_src. */
 export function resolveShenshaList(tokens: string[], locale: Locale = "en"): ShenshaView[] {
   const seen = new Set<string>();
   const out: ShenshaView[] = [];
   for (const tk of tokens) {
     const v = resolveShensha(tk, locale);
-    // 同义合并：local 别名与 engine 正名视为同一项（去掉 _local 后缀比对）
+    if (v.blocked || !v.label.trim()) continue;
     const dedupeKey = v.id.replace(/_local$/, "");
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
-    out.push(v);
+    out.push({ ...v, zh_src: "" });
   }
   return out;
+}
+
+/** Final-output scan: true if text still contains redline traditional surfaces. */
+export function textContainsRedlineShensha(text: string): string[] {
+  if (!text) return [];
+  const hits: string[] = [];
+  for (const han of allShenshaHanSurfaces()) {
+    if (!han || han.length < 2) continue;
+    if (!isShenshaInternalRedline(han)) continue;
+    if (text.includes(han)) hits.push(han);
+  }
+  return [...new Set(hits)];
+}
+
+/** Strip redline traditional surfaces from final user text (second pass). */
+export function stripRedlineShenshaFromText(text: string): string {
+  let out = text;
+  const surfaces = allShenshaHanSurfaces()
+    .filter((h) => isShenshaInternalRedline(h))
+    .sort((a, b) => b.length - a.length);
+  for (const han of surfaces) {
+    if (!han) continue;
+    out = out.split(han).join("");
+  }
+  return out;
+}
+
+export function shenshaTokenAuditHash(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex").slice(0, 12);
+}
+
+/** @deprecated Prefer resolveShensha + empty zh_src; kept for call-site discovery. */
+export function formatShenshaLabelOnly(view: ShenshaView): string {
+  return view.label.trim();
 }

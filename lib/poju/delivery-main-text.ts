@@ -3,7 +3,7 @@
  * Used by future TTS and any export that must not speak the evidence layer.
  */
 
-import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
+import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
 import { DELIVERY_EVIDENCE_LABEL_PLAINS } from "@/lib/llm/pro/delivery/delivery-locale";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
@@ -30,7 +30,7 @@ export function extractDeliveryMainText(fullText: string, locale: string): strin
     for (const mod of modules) {
       const body = mod.body.trim();
       if (!body) continue;
-      const plain = toCompliantPlainText(body, locale).trim();
+      const plain = sanitizePlainExport(body, locale, "copy").content.trim();
       if (plain) chunks.push(plain);
     }
   }

@@ -1,11 +1,22 @@
 /**
- * W1 · ZiweiFactPack structure.
- * Run: pnpm exec tsx scripts/test-ziwei-fact-pack.ts
+ * W1 · ZiweiFactPack structure + Phase 2 display mapping.
+ * Run: node ./node_modules/tsx/dist/cli.mjs scripts/test-ziwei-fact-pack.ts
  *    or pnpm test:ziwei-fact-pack
  */
 import type { BirthInfo } from "../lib/profile/types";
 import { sliceForPage } from "../lib/llm/pro/delivery/page-feed-matrix";
-import { birthInfoToIztroArgs, buildZiweiFactPack, hourToIztroTimeIndex, ZIWEI_ZFP_KEY_SET } from "../lib/ziwei";
+import {
+  birthInfoToIztroArgs,
+  buildZiweiDisplayFactPack,
+  buildZiweiFactPack,
+  hourToIztroTimeIndex,
+  ZIWEI_RUNTIME_PALACES,
+  ZIWEI_ZFP_KEY_SET,
+  ziweiDisplayContainsTraditionalLeak,
+  ziweiTokenDisposition,
+} from "../lib/ziwei";
+import { resolvePojuTerm } from "../lib/glossary/term-resolve";
+import { TERM_NS_AVAILABILITY } from "../lib/glossary/term-ns";
 
 function assert(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -154,7 +165,84 @@ const slice03 = sliceForPage("03", { zfp: first });
 assert(slice03.zfpOmitted === false, "03 keeps zfp");
 assert(slice03.slice.zfp?.mingShen != null, "03 has mingShen");
 
-console.log("ziwei-fact-pack W1+doushu ok", {
+// --- Phase 2 display adapter ---
+assert(TERM_NS_AVAILABILITY.ziwei === "active", "ziwei ns active");
+assert(
+  first.palaces.some((p) => p.name === "仆役"),
+  "runtime keeps 仆役 (do not normalize to 交友)",
+);
+assert(
+  ZIWEI_RUNTIME_PALACES.includes("仆役"),
+  "inventory lists 仆役",
+);
+
+const display = buildZiweiDisplayFactPack(first, "zh");
+assert(display.otherChart === null, "display keeps otherChart null");
+assert(
+  display.topicPalace.palace.status === "resolved" &&
+    display.topicPalace.palace.slug === "zw_identity_field",
+  "命宫 → zw_identity_field",
+);
+assert(
+  display.sihua.every((h) => h.mutagen.status === "resolved"),
+  "四化 mutagens resolve via 禄/权/科/忌 aliases",
+);
+assert(
+  display.topicPalace.majorStars.every((s) => s.status === "blocked"),
+  "unconfirmed major stars fail-closed",
+);
+assert(
+  ziweiTokenDisposition("仆役").status === "internal_only",
+  "仆役 internal_only pending soft label",
+);
+assert(
+  ziweiTokenDisposition("紫微").status === "internal_only",
+  "紫微 internal_only pending soft label",
+);
+assert(
+  resolvePojuTerm("化忌", { namespace: "ziwei" }).status === "resolved",
+  "化忌 glossary present",
+);
+
+const leaks = ziweiDisplayContainsTraditionalLeak(display, first);
+assert(leaks.length === 0, `display must not leak traditional tokens: ${leaks.join(",")}`);
+
+for (const loc of ["zh", "en", "es", "de", "fr"] as const) {
+  const d = buildZiweiDisplayFactPack(first, loc);
+  assert(
+    d.topicPalace.palace.status === "resolved" && d.topicPalace.palace.label.trim().length > 0,
+    `five-locale label non-empty (${loc})`,
+  );
+}
+
+// Inventory across ≥10 births (unique palace set stable)
+const inventoryBirths: BirthInfo[] = [
+  GOLDEN_BIRTH,
+  { ...GOLDEN_BIRTH, year: 1990, month: 1, day: 1, hour: 0, gender: "M" },
+  { ...GOLDEN_BIRTH, year: 1985, month: 6, day: 15, hour: 12, gender: "F" },
+  { ...GOLDEN_BIRTH, year: 1975, month: 12, day: 31, hour: 23, gender: "M" },
+  { ...GOLDEN_BIRTH, year: 2005, month: 3, day: 8, hour: 8, gender: "F" },
+  { ...GOLDEN_BIRTH, year: 1968, month: 9, day: 22, hour: 18, gender: "M" },
+  { ...GOLDEN_BIRTH, year: 1995, month: 2, day: 14, hour: 6, gender: "F" },
+  { ...GOLDEN_BIRTH, year: 1988, month: 11, day: 11, hour: 22, gender: "M" },
+  { ...GOLDEN_BIRTH, year: 1955, month: 4, day: 20, hour: 10, gender: "M" },
+  { ...GOLDEN_BIRTH, year: 2001, month: 5, day: 5, hour: 16, gender: "F" },
+];
+const seenPalaces = new Set<string>();
+for (const b of inventoryBirths) {
+  const pack = buildZiweiFactPack(b, { asOf: GOLDEN_AS_OF });
+  for (const p of pack.palaces) seenPalaces.add(p.name);
+  const d = buildZiweiDisplayFactPack(pack, "zh");
+  assert(
+    ziweiDisplayContainsTraditionalLeak(d, pack).length === 0,
+    `no leak for birth ${b.year}`,
+  );
+}
+assert(seenPalaces.has("仆役"), "inventory across births still sees 仆役");
+assert(seenPalaces.size === 12, `twelve palace names closed (${seenPalaces.size})`);
+
+console.log("ziwei-fact-pack W1+doushu+display ok", {
   hits: first.patternHits.length,
-  names: first.patternHits.slice(0, 5).map((h) => h.name),
+  displayResolved: display.audit.resolved,
+  displayBlocked: display.audit.blocked,
 });

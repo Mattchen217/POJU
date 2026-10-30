@@ -7,11 +7,12 @@ cd "$ROOT"
 
 STAGED="$(git diff --cached --name-only --diff-filter=ACMR || true)"
 NEED=0
-echo "$STAGED" | grep -E '^(lib/glossary/|docs/完整重命名清单|scripts/verify-terms|scripts/generate-poju-terms)' >/dev/null 2>&1 && NEED=1 || true
+echo "$STAGED" | grep -E '^(lib/glossary/|docs/完整重命名清单|scripts/verify-terms|scripts/generate-poju-terms|scripts/poju-terms-ssot\.mjs)' >/dev/null 2>&1 && NEED=1 || true
 
 if [[ "$NEED" -eq 0 ]]; then
   exit 0
 fi
 
-echo "[pre-commit] running verify:terms…"
+echo "[pre-commit] running terms:check + verify:terms…"
+pnpm run terms:check
 pnpm run verify:terms

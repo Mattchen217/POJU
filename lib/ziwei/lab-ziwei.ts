@@ -8,10 +8,14 @@ import type { BirthInfo, HourPeriod, TstMeta } from "@/lib/profile/types";
 import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import { hourToHourPeriod } from "@/lib/profile/birth-info-utils";
 import {
+  buildZiweiDisplayFactPack,
+  displayAtomLabel,
+  joinDisplayLabels,
+} from "@/lib/ziwei/display-fact-pack";
+import {
   buildZiweiFactPack,
   type ZiweiFactPack,
 } from "@/lib/ziwei/fact-pack";
-import { formatPatternHitsSummary } from "@/lib/ziwei/doushu-adapter";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return Boolean(v) && typeof v === "object" && !Array.isArray(v);
@@ -178,35 +182,47 @@ export function ensureLabZiweiFactPack(
   return pack;
 }
 
-/** Closed-set lines for Call A / thesis / agenda (no prescriptions). */
-export function formatZiweiClosedSetForPrompt(pack: ZiweiFactPack | null | undefined): string {
+/** Closed-set lines for Call A / thesis / agenda (no prescriptions; soft labels only). */
+export function formatZiweiClosedSetForPrompt(
+  pack: ZiweiFactPack | null | undefined,
+  locale: string = "zh",
+): string {
   if (!pack) return "";
+  const d = buildZiweiDisplayFactPack(pack, locale);
   const lines: string[] = [];
-  const t = pack.topicPalace;
-  if (t?.palace) {
-    const stars = (t.majorStars ?? []).join("、");
+  const palace = displayAtomLabel(d.topicPalace.palace);
+  if (palace) {
+    const stars = joinDisplayLabels(d.topicPalace.majorStars);
     lines.push(
-      `命宫锚：${t.palace}${t.earthlyBranch ? `(${t.earthlyBranch})` : ""}${stars ? ` · ${stars}` : ""}`,
+      `${palace}${d.topicPalace.earthlyBranch ? `(${d.topicPalace.earthlyBranch})` : ""}${stars ? ` · ${stars}` : ""}`,
     );
   }
-  if (pack.mingShen?.soul || pack.mingShen?.body) {
-    lines.push(`命主/身主：${pack.mingShen.soul ?? "—"} / ${pack.mingShen.body ?? "—"}`);
+  const core = displayAtomLabel(d.mingShen.coreDriverLabel);
+  const action = displayAtomLabel(d.mingShen.actionDriverLabel);
+  if (core || action) {
+    const soul = displayAtomLabel(d.mingShen.soul) || "—";
+    const body = displayAtomLabel(d.mingShen.body) || "—";
+    lines.push(`${[core, action].filter(Boolean).join("/")}: ${soul} / ${body}`);
   }
-  if (pack.daxian?.palace) {
+  const longCycle = displayAtomLabel(d.daxian.label);
+  if (longCycle) {
+    const yearly = displayAtomLabel(d.daxian.liunian.label);
+    const daxianPalace = displayAtomLabel(d.daxian.palace) || "—";
     lines.push(
-      `大限：${pack.daxian.palace} ${pack.daxian.startAge}–${pack.daxian.endAge}` +
-        (pack.daxian.liunian
-          ? ` · 流年${pack.daxian.liunian.year}${pack.daxian.liunian.heavenlyStem}${pack.daxian.liunian.earthlyBranch}@${pack.daxian.liunian.palace}`
+      `${longCycle}: ${daxianPalace} ${d.daxian.startAge}–${d.daxian.endAge}` +
+        (yearly
+          ? ` · ${yearly}${d.daxian.liunian.year}${d.daxian.liunian.heavenlyStem}${d.daxian.liunian.earthlyBranch}`
           : ""),
     );
   }
-  const hits = formatPatternHitsSummary(pack.patternHits ?? [], 8);
-  if (hits) lines.push(`格局命中：${hits}`);
+  if (d.patternHitCount > 0) {
+    lines.push(`结构格局命中数: ${d.patternHitCount}（名称内部保留，不进入用户可见层）`);
+  }
   if (!lines.length) return "";
   return [
-    "【紫微闭集事实 · 结构依据 · 禁处方/解读长文】",
+    "【紫微闭集事实 · 结构依据 · 自造术语 · 禁处方/解读长文】",
     ...lines,
-    "（可用格局名/宫星作 chart_basis 锚；禁止据此开药方或灌散文。）",
+    "（仅用已映射软标签作 chart_basis 锚；禁止传统宫星原名与药方散文。）",
   ].join("\n");
 }
 
@@ -226,20 +242,24 @@ export function ziweiClosedSetFromBirth(
   }
 }
 
-/** S5 light trigger anchors — daxian/liunian or top pattern names only. */
-export function ziweiCompanionTriggerAnchors(pack: ZiweiFactPack | null | undefined): string[] {
+/** S5 light trigger anchors — soft cycle labels + year only (no traditional palace/pattern names). */
+export function ziweiCompanionTriggerAnchors(
+  pack: ZiweiFactPack | null | undefined,
+  locale: string = "zh",
+): string[] {
   if (!pack) return [];
+  const d = buildZiweiDisplayFactPack(pack, locale);
   const out: string[] = [];
-  if (pack.daxian?.palace) {
-    out.push(`大限·${pack.daxian.palace}`);
+  const longCycle = displayAtomLabel(d.daxian.label);
+  if (longCycle) {
+    out.push(`${longCycle}·${d.daxian.startAge}-${d.daxian.endAge}`);
   }
-  if (pack.daxian?.liunian?.palace) {
-    out.push(
-      `流年·${pack.daxian.liunian.year}@${pack.daxian.liunian.palace}`,
-    );
+  const yearly = displayAtomLabel(d.daxian.liunian.label);
+  if (yearly) {
+    out.push(`${yearly}·${d.daxian.liunian.year}`);
   }
-  for (const hit of (pack.patternHits ?? []).slice(0, 3)) {
-    out.push(`格局·${hit.name}`);
+  if (d.patternHitCount > 0) {
+    out.push(`patternHits·${d.patternHitCount}`);
   }
   return out;
 }

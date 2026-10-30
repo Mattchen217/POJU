@@ -15,6 +15,10 @@ import { scrubLeakedComplianceTerms } from "@/lib/llm/sanitize/compliance-terms"
  * 1) autoMarkBareTerms (+ keep_cn wrap) via prepareTextForGlossaryRender
  * 2) ⟦t:id|软译|白话⟧ → keep soft visible segment only
  * 3) scrub stray markers, bare 干支/高危词, Stripe redlines
+ *
+ * Phase 5: for audited export exits (HTML/email/push/PDF) prefer
+ * `sanitizeExportSurface` / `sanitizePlainExport` which wrap this pipeline
+ * and return structured audit hits (token hash only).
  */
 export function toCompliantPlainText(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";

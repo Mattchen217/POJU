@@ -12,6 +12,7 @@ import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
+import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
 import {
   buildDirectedDynamicRelationInventoryBlock,
   computeDirectedDynamicRelations,
@@ -445,6 +446,13 @@ ${buildPojuConclusionOriginalQuestionBlock()}
     buildDualLayerDeliveryPromptBlock(outLoc),
     buildTermMarkingPromptBlock(outLoc),
     structured ? buildStructuredInstanceInventory(structured) : "",
+    structured
+      ? buildTermContextPromptFromStructured(structured, outLoc, {
+          task: "final_delivery",
+          maxEntries: 40,
+          namespaces: ["bazi"],
+        })
+      : "",
     directedRelationBlock,
     buildDeliveryTermBindingBlock(outLoc),
     deliveryTaskTail,

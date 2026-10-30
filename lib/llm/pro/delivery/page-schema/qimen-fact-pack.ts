@@ -14,6 +14,7 @@ import { Lunar } from "lunar-typescript";
 import { QimenUtil } from "@/lib/qimen/QimenUtil";
 import { QimenFormatUtil } from "@/lib/qimen/FormatUtil";
 import type { QimenPan } from "@/lib/qimen/type";
+import { qimenElementalPhaseHeader } from "@/lib/qimen/display-policy";
 import {
   STEM_TO_WUXING,
   getWuXingRelation,
@@ -196,7 +197,7 @@ function buildText(pack: Omit<DeliveryQimenFactPack, "text">): string {
     `值使: ${pack.zhi_shi_door}落${pack.zhi_shi_palace}`,
     pack.host_guest,
     `局势姿态档: ${pack.stance_zh}（值使${pack.zhi_shi_door} · ${pack.door_meaning_zh}）`,
-    `旺相休囚死: ${pack.wang_xiang}`,
+    `${qimenElementalPhaseHeader("zh")}: ${pack.wang_xiang}`,
   ];
   if (pack.palace_lines.length > 0) {
     lines.push(`九宫摘要: ${pack.palace_lines.slice(0, 8).join("；")}`);

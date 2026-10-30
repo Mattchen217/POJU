@@ -1,0 +1,149 @@
+{
+  "generated_at": "2026-10-30T10:53:11.505Z",
+  "phase": 6,
+  "pass": true,
+  "summary": {
+    "steps": 11,
+    "passed": 11,
+    "failed_hard": 0,
+    "failed_optional": 0,
+    "terms_total": 281,
+    "terms_by_ns": {
+      "bazi": 184,
+      "qimen": 54,
+      "glyph": 17,
+      "zodiac": 12,
+      "ziwei": 14
+    },
+    "shensha_disposition_counts": {
+      "public_glossary": 56,
+      "internal_redline": 45,
+      "unknown_blocked": 0
+    },
+    "legacy_pojuTermByTraditional": {
+      "files": 9,
+      "call_sites": 22
+    }
+  },
+  "block_conditions": {
+    "traditional_or_unknown_in_user_exit": false,
+    "ns_collision_misresolve": false,
+    "five_locale_empty": false,
+    "unexplained_ssot_count_change": false,
+    "legacy_generator_can_overwrite": false,
+    "suite_incomplete": false
+  },
+  "steps": [
+    {
+      "id": "terms-check",
+      "layer": "A",
+      "label": "SSOT static check (terms:check)",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 127
+    },
+    {
+      "id": "verify-terms",
+      "layer": "A",
+      "label": "verify:terms 8 gates",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 510
+    },
+    {
+      "id": "term-resolve",
+      "layer": "B",
+      "label": "Resolver unit (Phase 1)",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 503
+    },
+    {
+      "id": "ziwei-fact-pack",
+      "layer": "C",
+      "label": "Ziwei fact-pack + display (Phase 2)",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 1960
+    },
+    {
+      "id": "qimen-bazi-phase3",
+      "layer": "C",
+      "label": "Qimen/Bazi coverage (Phase 3)",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 518
+    },
+    {
+      "id": "shensha-phase4",
+      "layer": "C",
+      "label": "Shensha disposition (Phase 4)",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 514
+    },
+    {
+      "id": "shensha-short-aliases",
+      "layer": "C",
+      "label": "Shensha short aliases",
+      "ok": true,
+      "optional": true,
+      "exitCode": 0,
+      "ms": 507
+    },
+    {
+      "id": "term-context-phase5",
+      "layer": "D",
+      "label": "Prompt/delivery term context (Phase 5)",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 722
+    },
+    {
+      "id": "export-locales",
+      "layer": "D",
+      "label": "Multi-locale export surfaces",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 1295
+    },
+    {
+      "id": "adversarial",
+      "layer": "E",
+      "label": "Adversarial / negative leaks",
+      "ok": true,
+      "optional": false,
+      "exitCode": 0,
+      "ms": 761
+    },
+    {
+      "id": "generator-freeze",
+      "layer": "meta",
+      "label": "Legacy generator must refuse overwrite",
+      "ok": true,
+      "optional": true,
+      "exitCode": 1,
+      "ms": 83
+    }
+  ],
+  "artifacts": {
+    "report": "lib/glossary/phase6-acceptance-report.json",
+    "terms_export": "lib/glossary/phase6-terms-export.json",
+    "legacy_callsites": "lib/glossary/phase6-legacy-callsites.json",
+    "shensha_audit": "lib/glossary/shensha-disposition-audit.json",
+    "release_checklist": ".cursor/docs/terms-phase6-release-checklist.md"
+  },
+  "unresolved_risks": [
+    "Legacy pojuTermByTraditional call sites remain — migrate to resolvePojuTerm({ namespace }) per phase6-legacy-callsites.json",
+    "Full live LLM five-locale delivery/PDF screenshots still require manual gray-release review",
+    "Observation window: do not delete old SSOT rows; only add mappings / fix errors with versioning"
+  ]
+}

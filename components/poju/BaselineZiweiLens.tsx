@@ -20,11 +20,12 @@ type Props = {
 export function BaselineZiweiLens({ birth, locale }: Props) {
   const lines = useMemo(() => {
     try {
-      return baselineZiweiLensLines(buildZiweiFactPack(birth));
+      // Phase 5: display adapter + locale soft labels (never raw traditional).
+      return baselineZiweiLensLines(buildZiweiFactPack(birth), locale);
     } catch {
       return [];
     }
-  }, [birth]);
+  }, [birth, locale]);
   if (!lines.length) return null;
   const zh = locale.toLowerCase().startsWith("zh");
 
@@ -33,9 +34,9 @@ export function BaselineZiweiLens({ birth, locale }: Props) {
       className="baseline-ziwei-lens"
       data-live-lens="ziwei"
       data-sot16-offline="0"
-      aria-label={zh ? "紫微结构" : "Ziwei structure"}
+      aria-label={zh ? "结构透镜" : "Structure lens"}
     >
-      <p className="baseline-ziwei-lens__title">{zh ? "紫微结构" : "Ziwei structure"}</p>
+      <p className="baseline-ziwei-lens__title">{zh ? "结构透镜" : "Structure lens"}</p>
       <dl className="baseline-ziwei-lens__list">
         {lines.map((line) => (
           <div key={line.label} className="baseline-ziwei-lens__row">

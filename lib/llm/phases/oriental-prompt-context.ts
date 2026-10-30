@@ -1,5 +1,6 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
+import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
 import { buildPojuChatCoreSections } from "@/lib/llm/prompts/poju-base";
 import {
   getPojuChatLanguageDirective,
@@ -97,6 +98,13 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
     injectionBlock,
     buildTermMarkingPromptBlock(outLoc),
     structured ? buildStructuredInstanceInventory(structured) : "",
+    structured
+      ? buildTermContextPromptFromStructured(structured, outLoc, {
+          task: "poju_chat_legacy",
+          maxEntries: 36,
+          namespaces: ["bazi"],
+        })
+      : "",
     buildChatPhaseTermBindingBlock(outLoc),
     snapshotBlock,
     taskBlock,

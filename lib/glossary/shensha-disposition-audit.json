@@ -1,0 +1,616 @@
+{
+  "generated": "phase4",
+  "counts": {
+    "public_glossary": 56,
+    "internal_redline": 45,
+    "unknown_blocked": 0
+  },
+  "rows": [
+    {
+      "key": "天乙贵人",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "tian_yi_gui_ren"
+    },
+    {
+      "key": "禄神",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "lu_shen"
+    },
+    {
+      "key": "飞刃",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "fei_ren"
+    },
+    {
+      "key": "文昌",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "wen_chang"
+    },
+    {
+      "key": "桃花",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "tao_hua"
+    },
+    {
+      "key": "驿马",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "yi_ma"
+    },
+    {
+      "key": "华盖",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "hua_gai"
+    },
+    {
+      "key": "孤辰",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "gu_chen"
+    },
+    {
+      "key": "寡宿",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "gua_su"
+    },
+    {
+      "key": "将星",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "jiang_xing"
+    },
+    {
+      "key": "劫煞",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "jie_sha"
+    },
+    {
+      "key": "亡神",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "wang_shen"
+    },
+    {
+      "key": "灾煞",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "zai_sha"
+    },
+    {
+      "key": "国印",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "guo_yin"
+    },
+    {
+      "key": "金舆",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "jin_yu"
+    },
+    {
+      "key": "天德",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "tian_de"
+    },
+    {
+      "key": "月德",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "yue_de"
+    },
+    {
+      "key": "福星贵人",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "fu_xing_gui_ren"
+    },
+    {
+      "key": "太极贵人",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "tai_ji_gui_ren"
+    },
+    {
+      "key": "天医",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "tian_yi_star"
+    },
+    {
+      "key": "学堂",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "xue_tang"
+    },
+    {
+      "key": "词馆",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "ci_guan"
+    },
+    {
+      "key": "红鸾",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "hong_luan"
+    },
+    {
+      "key": "天喜",
+      "kind": "closed_24",
+      "disposition": "public_glossary",
+      "detail": "tian_xi"
+    },
+    {
+      "key": "execution_edge",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "fei_ren"
+    },
+    {
+      "key": "tactical_impulse",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "fei_ren"
+    },
+    {
+      "key": "provision_anchor",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "lu_shen"
+    },
+    {
+      "key": "prime_mentor_node",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "tian_yi_gui_ren"
+    },
+    {
+      "key": "fortune_buffer",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "fu_xing_gui_ren"
+    },
+    {
+      "key": "insight_catalyst",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "tai_ji_gui_ren"
+    },
+    {
+      "key": "institutional_authority_node",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "guo_yin"
+    },
+    {
+      "key": "cognitive_advantage",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "wen_chang"
+    },
+    {
+      "key": "cognitive_advantage_local",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "wen_chang"
+    },
+    {
+      "key": "resource_provisioning",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ss_tianchu"
+    },
+    {
+      "key": "mobility_capital",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "jin_yu"
+    },
+    {
+      "key": "social_magnetism",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "tao_hua"
+    },
+    {
+      "key": "velocity_vector",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "yi_ma"
+    },
+    {
+      "key": "signature_originality",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "hua_gai"
+    },
+    {
+      "key": "command_authority",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "jiang_xing"
+    },
+    {
+      "key": "disruption_friction",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "jie_sha"
+    },
+    {
+      "key": "vigilance_load",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "wang_shen"
+    },
+    {
+      "key": "adversity_shock",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "zai_sha"
+    },
+    {
+      "key": "momentum_tailwind",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "tian_xi"
+    },
+    {
+      "key": "recovery_capacity",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "tian_yi_star"
+    },
+    {
+      "key": "relational_catalyst",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "hong_luan"
+    },
+    {
+      "key": "low_coupling_preference",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "gu_chen"
+    },
+    {
+      "key": "autonomy_index",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "gua_su"
+    },
+    {
+      "key": "grounded_support",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "yue_de"
+    },
+    {
+      "key": "systemic_support_core",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "tian_de"
+    },
+    {
+      "key": "articulation_strength",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ci_guan"
+    },
+    {
+      "key": "learning_foundation",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "xue_tang"
+    },
+    {
+      "key": "magnetic_appeal",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ss_hongyan"
+    },
+    {
+      "key": "transition_strain",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ss_pima"
+    },
+    {
+      "key": "resonant_alignment_vector",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ss_dexiu"
+    },
+    {
+      "key": "high_intensity_drive",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ss_jinshen"
+    },
+    {
+      "key": "reset_window",
+      "kind": "json_51",
+      "disposition": "public_glossary",
+      "detail": "ss_tianshe"
+    },
+    {
+      "key": "flow_volatility",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_流霞"
+    },
+    {
+      "key": "impact_exposure",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_血刃"
+    },
+    {
+      "key": "sentiment_drawdown",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_丧门"
+    },
+    {
+      "key": "external_drain",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_吊客"
+    },
+    {
+      "key": "entanglement_risk",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_勾绞煞"
+    },
+    {
+      "key": "baseline_volatility",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_元辰"
+    },
+    {
+      "key": "refined_talent",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_六秀日"
+    },
+    {
+      "key": "reputational_sensitivity",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_九丑日"
+    },
+    {
+      "key": "decisive_authority",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_魁罡"
+    },
+    {
+      "key": "structural_vulnerability",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_十恶大败"
+    },
+    {
+      "key": "timing_misalignment",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_阴差阳错"
+    },
+    {
+      "key": "independent_operating_mode",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_孤鸾煞"
+    },
+    {
+      "key": "concentrated_focus",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_八专日"
+    },
+    {
+      "key": "adaptive_acumen",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_十灵日"
+    },
+    {
+      "key": "constraint_field",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_地网"
+    },
+    {
+      "key": "perceptual_sensitivity",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_童子煞"
+    },
+    {
+      "key": "strategic_latency",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_空亡"
+    },
+    {
+      "key": "support_coupling",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "no_closed_set_月德合"
+    },
+    {
+      "key": "synergistic_dynamic",
+      "kind": "json_51",
+      "disposition": "internal_redline",
+      "detail": "no_closed_set_天德合"
+    },
+    {
+      "key": "空亡",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_空亡"
+    },
+    {
+      "key": "魁罡",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_魁罡"
+    },
+    {
+      "key": "十恶大败",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_十恶大败"
+    },
+    {
+      "key": "孤鸾",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_孤鸾"
+    },
+    {
+      "key": "孤鸾煞",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_孤鸾煞"
+    },
+    {
+      "key": "阴阳差错",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_阴阳差错"
+    },
+    {
+      "key": "阴差阳错",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_阴差阳错"
+    },
+    {
+      "key": "元辰",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_元辰"
+    },
+    {
+      "key": "六秀日",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_六秀日"
+    },
+    {
+      "key": "大耗",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_大耗"
+    },
+    {
+      "key": "小耗",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_小耗"
+    },
+    {
+      "key": "五鬼",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_五鬼"
+    },
+    {
+      "key": "丧门",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_丧门"
+    },
+    {
+      "key": "吊客",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_吊客"
+    },
+    {
+      "key": "白虎",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_白虎"
+    },
+    {
+      "key": "天狗",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_天狗"
+    },
+    {
+      "key": "血刃",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_血刃"
+    },
+    {
+      "key": "流霞",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_流霞"
+    },
+    {
+      "key": "隔角",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_隔角"
+    },
+    {
+      "key": "勾绞煞",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_勾绞煞"
+    },
+    {
+      "key": "童子煞",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_童子煞"
+    },
+    {
+      "key": "地网",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_地网"
+    },
+    {
+      "key": "天罗",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_天罗"
+    },
+    {
+      "key": "八专日",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_八专日"
+    },
+    {
+      "key": "十灵日",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_十灵日"
+    },
+    {
+      "key": "九丑日",
+      "kind": "forbidden",
+      "disposition": "internal_redline",
+      "detail": "forbidden_bazi_九丑日"
+    }
+  ]
+}

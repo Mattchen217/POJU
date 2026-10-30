@@ -39,3 +39,26 @@ export {
   ziweiClosedSetFromBirth,
   ziweiCompanionTriggerAnchors,
 } from "@/lib/ziwei/lab-ziwei";
+export {
+  buildZiweiDisplayFactPack,
+  collectZiweiTraditionalSuspects,
+  displayAtomLabel,
+  joinDisplayLabels,
+  ziweiDisplayContainsTraditionalLeak,
+  type ZiweiDisplayAtom,
+  type ZiweiDisplayFactPack,
+  type ZiweiDisplaySihuaHit,
+} from "@/lib/ziwei/display-fact-pack";
+export {
+  ZIWEI_RUNTIME_FIVE_ELEMENTS_CLASS,
+  ZIWEI_RUNTIME_PALACES,
+  ZIWEI_RUNTIME_STARS,
+  isZiweiTraditionalLeakCandidate,
+  ziweiTokenDisposition,
+  type ZiweiTokenDisposition,
+} from "@/lib/ziwei/token-disposition";
+export {
+  baselineZiweiLensLines,
+  baselineZiweiLensLinesFromDisplay,
+  type BaselineLensLine,
+} from "@/lib/ziwei/baseline-lens";

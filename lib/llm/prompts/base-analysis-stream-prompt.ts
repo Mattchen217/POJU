@@ -1,5 +1,6 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
+import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
 import { outputLanguageLabel } from "@/lib/base-analysis/resolve-output-language";
 import {
   buildPlainspeakVoiceSections,
@@ -472,6 +473,12 @@ export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInp
   const instanceInventory = buildStructuredInstanceInventory(input.local_data.structured, {
     forBaseAnalysis: true,
   });
+  // Phase 5: fact-scoped soft/definition/boundary only (never full SSOT dump).
+  const termContext = buildTermContextPromptFromStructured(
+    input.local_data.structured,
+    lang,
+    { task: "base_analysis", maxEntries: 40, namespaces: ["bazi"] },
+  );
 
   const identity = lang === "zh" ? BASE_ANALYSIS_IDENTITY_ZH : BASE_ANALYSIS_IDENTITY_EN;
 
@@ -546,6 +553,7 @@ Language: **${langLabel}** throughout.`;
     forbiddenBlock,
     ORIENTAL_SHARED_GUARDRAILS,
     instanceInventory,
+    termContext,
   );
 
   const user =

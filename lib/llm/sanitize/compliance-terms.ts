@@ -90,7 +90,11 @@ import {
   metaphorBlacklistForLocale,
   scrubBannedMetaphorInLeadLabels,
 } from "@/lib/llm/compliance/banned-terms";
-import { allShenshaHanSurfaces, resolveShenshaSoftLabels } from "@/lib/poju/shensha";
+import {
+  allShenshaHanSurfaces,
+  resolveShenshaSoftLabels,
+  stripRedlineShenshaFromText,
+} from "@/lib/poju/shensha";
 
 export {
   auditBareGanzhi,
@@ -931,7 +935,9 @@ export function sanitizePaymentAuditLeaks(text: string, locale: string): string 
   const noPlainLeak = stripLeakedMarkerPlainFromBody(filled);
   // Deterministic strip of engine-out-of-set 神煞 (阴阳差错/大耗/白虎…) — never burn LLM repair on inventable names.
   const noOutOfSet = stripForbiddenShenSha(noPlainLeak);
-  return sanitizeDeliveryBodyPart(noOutOfSet, locale);
+  // Phase 4 final pass: disposition internal_redline surfaces (belt-and-suspenders after prompt-time strip).
+  const noRedline = stripRedlineShenshaFromText(noOutOfSet);
+  return sanitizeDeliveryBodyPart(noRedline, locale);
 }
 
 /** POJU final delivery — deterministic scrub (redlines, bare terms, gloss wrap). Preserves ═══ marker lines. */

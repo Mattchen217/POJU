@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-10-30T10:53:11.500Z",
+  "files": 9,
+  "call_sites": 22,
+  "rows": [
+    {
+      "file": "lib/llm/sanitize/term-marking.ts",
+      "total": 4
+    },
+    {
+      "file": "lib/base-analysis/core-judgments.ts",
+      "total": 3
+    },
+    {
+      "file": "lib/poju/matrix-term-labels.ts",
+      "total": 3
+    },
+    {
+      "file": "lib/glossary/pojulife-terms.ts",
+      "total": 2
+    },
+    {
+      "file": "lib/glossary/term-glossary-closed.ts",
+      "total": 2
+    },
+    {
+      "file": "lib/glossary/term-glossary.ts",
+      "total": 2
+    },
+    {
+      "file": "lib/llm/compliance/banned-terms.ts",
+      "total": 2
+    },
+    {
+      "file": "lib/poju/build-matrix-fact-panel.ts",
+      "total": 2
+    },
+    {
+      "file": "lib/poju/shensha-alias.ts",
+      "total": 2
+    }
+  ]
+}

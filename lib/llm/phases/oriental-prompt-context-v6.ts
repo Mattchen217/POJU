@@ -9,6 +9,7 @@
 
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
+import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
 import {
   buildDirectedDynamicRelationInventoryBlock,
   computeDirectedDynamicRelations,
@@ -215,6 +216,13 @@ export async function buildPhaseTurnContextV6(
           : "",
         directedInventoryBlock,
         structured ? buildStructuredInstanceInventory(structured) : "",
+        structured
+          ? buildTermContextPromptFromStructured(structured, outLoc, {
+              task: `poju_chat_${phase ?? "unknown"}`,
+              maxEntries: 36,
+              namespaces: ["bazi"],
+            })
+          : "",
         anchoredFactsBlock,
         usedMetaphorsBlock,
       );

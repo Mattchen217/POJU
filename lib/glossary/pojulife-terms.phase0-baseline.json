@@ -1,0 +1,66 @@
+{
+  "phase": 0,
+  "recordedAt": "2026-10-30",
+  "canonicalSource": "lib/glossary/pojulife-terms.ts",
+  "legacyGeneratorDisabled": "scripts/generate-poju-terms.mjs",
+  "legacyDocOutdated": "docs/完整重命名清单（157）.json (155; missing zodiac/aliases)",
+  "counts": {
+    "total": 281,
+    "bazi": 184,
+    "qimen": 54,
+    "glyph": 17,
+    "zodiac": 12,
+    "ziwei": 14
+  },
+  "expected": {
+    "total": 281,
+    "bazi": 184,
+    "qimen": 54,
+    "glyph": 17,
+    "zodiac": 12,
+    "ziwei": 14
+  },
+  "nsSlugHash": "d45f422d2a5828d5828613b673a006c3be79168ebbadd25ab017ff00dd381b0f",
+  "contentFingerprint": "ea2d1b26764e6f11630ae783f48f0fca976e96eb702ffb9621076089e072eb74",
+  "fiveLocaleFields": [
+    "term",
+    "definition"
+  ],
+  "locales": [
+    "zh",
+    "en",
+    "es",
+    "de",
+    "fr"
+  ],
+  "knownAliasConflicts": [
+    {
+      "ns": "bazi",
+      "surface": "财星",
+      "keys": [
+        "bazi:class_cai_xing",
+        "bazi:zheng_cai"
+      ],
+      "sig": "bazi|财星|bazi:class_cai_xing|bazi:zheng_cai"
+    },
+    {
+      "ns": "bazi",
+      "surface": "印星",
+      "keys": [
+        "bazi:class_yin_xing",
+        "bazi:zheng_yin"
+      ],
+      "sig": "bazi|印星|bazi:class_yin_xing|bazi:zheng_yin"
+    },
+    {
+      "ns": "bazi",
+      "surface": "官星",
+      "keys": [
+        "bazi:class_guan_xing",
+        "bazi:zheng_guan"
+      ],
+      "sig": "bazi|官星|bazi:class_guan_xing|bazi:zheng_guan"
+    }
+  ],
+  "note": "Baseline for Phase 0. Do not overwrite SSOT via legacy generator. Product-confirmed new terms land only after Phase 1+ with --write --from. knownAliasConflicts are deferred to Phase 1 strict resolver (ambiguous)."
+}

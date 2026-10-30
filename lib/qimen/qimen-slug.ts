@@ -56,6 +56,16 @@ export const QIMEN_SLUG = {
   客生主: "qm_guest_sheng_host",
   主克客: "qm_host_ke_guest",
   客克主: "qm_guest_ke_host",
+  // Phase 3 field labels
+  旬首: "qm_cycle_anchor",
+  空亡: "qm_coverage_gap",
+  驿马: "qm_mobility_marker",
+  驛馬: "qm_mobility_marker",
+  节气: "qm_seasonal_pivot",
+  節氣: "qm_seasonal_pivot",
+  局数: "qm_configuration_index",
+  局數: "qm_configuration_index",
+  旺相休囚死: "qm_elemental_phase_profile",
 } as const;
 
 export type QimenTraditional = keyof typeof QIMEN_SLUG;

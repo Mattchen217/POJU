@@ -1,12 +1,28 @@
 /**
  * pojulife terminology — single source of truth (SSOT).
- * Generated from docs/完整重命名清单（157）.json with Fix A/B/C applied.
- * 260 = bazi 183 + qimen 48 + glyph 17 + zodiac 12. Do not parallel-maintain soft labels elsewhere.
+ * Phase 0 canonical source (not reverse-generated from legacy 157 JSON).
+ * 281 = bazi 184 + qimen 54 + glyph 17 + zodiac 12 + ziwei 14. Do not parallel-maintain soft labels elsewhere.
+ * Phase 4/6: 羊刃 collapsed into fei_ren (飞刃) alias — no parallel ss_yangren row.
+ * ziwei structure labels from Phase 2; qimen Phase 3 field labels; palace/star values use disposition fail-closed.
  *
- * Regenerate: node scripts/generate-poju-terms.mjs
+ * Validate: pnpm terms:check
+ * Safe write: pnpm terms:generate -- --write --from <approved-terms.json>
+ * Strict resolve: resolvePojuTerm(input, { namespace }) from term-resolve.ts
+ * Legacy generate-poju-terms.mjs is disabled and must not overwrite this file.
  */
 
-export type TermNs = "bazi" | "qimen" | "glyph" | "zodiac";
+import { termHanVariants } from "@/lib/glossary/term-han-normalize";
+import type { TermNs } from "@/lib/glossary/term-ns";
+
+export type { TermNs } from "@/lib/glossary/term-ns";
+export {
+  TERM_NS_ALL,
+  TERM_NS_AVAILABILITY,
+  isTermNs,
+  isTermNsAvailable,
+} from "@/lib/glossary/term-ns";
+export { termHanVariants } from "@/lib/glossary/term-han-normalize";
+
 export type TermPolarity = "favorable" | "caution" | "neutral";
 export type TermLocale = "zh" | "en" | "es" | "de" | "fr";
 
@@ -1590,6 +1606,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "fei_ren",
     traditional: "飞刃",
+    aliases: ["羊刃", "飛刃"],
     polarity: "caution",
     term: {
       zh: "锋芒",
@@ -3292,26 +3309,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       fr: "Focus savant et accumulation profonde — bâtit une base solide par une étude systématique.",
     },
   },
-  {
-    ns: "bazi",
-    slug: "ss_yangren",
-    traditional: "羊刃",
-    polarity: "neutral",
-    term: {
-      zh: "烈锋",
-      en: "Blaze",
-      es: "Ímpetu",
-      de: "Ungestüm",
-      fr: "Fougue",
-    },
-    definition: {
-      zh: "象征强烈的爆发力与双刃般的锐气，用之得当则势如破竹，需以规则与节律加以引导。",
-      en: "Intense burst force and double-edged sharpness—powerful when guided by rules and rhythm.",
-      es: "Fuerza explosiva e filo de doble filo; potente si se guía con reglas y ritmo.",
-      de: "Starke Ausbruchskraft und zweischneidige Schärfe—wirksam, wenn Regeln und Rhythmus sie führen.",
-      fr: "Force explosive et tranchant à double tranchant — puissant s'il est guidé par règles et rythme.",
-    },
-  },
+  // 羊刃 → fei_ren alias (Phase 4/6 collapse; do not reintroduce ss_yangren)
   // ── bazi 柱位结构（4）· Spatiotemporal Structures ──
   // traditional === 引擎输出名（年柱/月柱/日柱/时柱），与 ZH_STRUCTURE_SOFT_REPLACE 的 key 一致。
   {
@@ -5217,48 +5215,458 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       fr: "La force qui arrive presse ton côté : protège d'abord la sortie, puis parle d'avancer.",
     },
   },
+  // --- ziwei structure layer (Phase 2 / draft 08). Palace & star values: see token-disposition. ---
+  {
+    ns: "ziwei",
+    slug: "zw_identity_field",
+    traditional: "命宫",
+    polarity: "neutral",
+    term: {
+      zh: "核心定位域",
+      en: "CoreIdentityField",
+      es: "CampoIdentidadCentral",
+      de: "KernIdentitaetsfeld",
+      fr: "ChampIdentiteCentrale",
+    },
+    definition: {
+      zh: "用于组织个人结构信息的中心参考领域，不等同于固定人格结论。",
+      en: "The central reference domain for organizing personal structural information; it is not a fixed personality verdict.",
+      es: "El ámbito de referencia central para organizar información estructural personal; no constituye un diagnóstico fijo de personalidad.",
+      de: "Der zentrale Bezugsbereich zur Ordnung persönlicher Strukturdaten; er ist kein festes Persönlichkeitsurteil.",
+      fr: "Le domaine de référence central qui organise les informations structurelles personnelles ; il ne constitue pas un verdict fixe sur la personnalité.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_opposite_field",
+    traditional: "对宫",
+    polarity: "neutral",
+    term: {
+      zh: "对照定位域",
+      en: "CounterpartField",
+      es: "CampoContraste",
+      de: "Gegenfeld",
+      fr: "ChampCorrespondance",
+    },
+    definition: {
+      zh: "与核心定位域形成对照关系的参考领域，用于观察互补与张力。",
+      en: "A reference domain paired with the core field to examine complementarity and tension.",
+      es: "Un ámbito de referencia vinculado al campo central para observar complementariedades y tensiones.",
+      de: "Ein Bezugsbereich, der dem Kernfeld gegenübergestellt wird, um Ergänzungen und Spannungen zu betrachten.",
+      fr: "Un domaine de référence mis en regard du champ central afin d'observer complémentarités et tensions.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_life_domains",
+    traditional: "十二宫",
+    polarity: "neutral",
+    term: {
+      zh: "生活领域图谱",
+      en: "LifeDomainMap",
+      es: "MapaAmbitosVitales",
+      de: "Lebensbereichskarte",
+      fr: "CarteDomainesVie",
+    },
+    definition: {
+      zh: "将不同生活主题组织为十二个结构领域的索引，不代表事件必然发生。",
+      en: "An index organizing life themes into twelve structural domains; it does not imply that events will occur.",
+      es: "Un índice que organiza los temas de vida en doce ámbitos estructurales; no implica que ocurran determinados acontecimientos.",
+      de: "Ein Index, der Lebensthemen in zwölf strukturelle Bereiche gliedert; er bedeutet nicht, dass bestimmte Ereignisse eintreten.",
+      fr: "Un index qui organise les thèmes de vie en douze domaines structurels ; il ne signifie pas que des événements se produiront.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_four_shift_modes",
+    traditional: "四化",
+    polarity: "neutral",
+    term: {
+      zh: "四向转化",
+      en: "FourShiftModes",
+      es: "CuatroModosTransformacion",
+      de: "VierWandlungsmodi",
+      fr: "QuatreModesTransformation",
+    },
+    definition: {
+      zh: "将结构关系分为资源、主动权、认可与摩擦四种变化方向的传统分类。",
+      en: "A traditional classification of four change directions: resources, agency, recognition, and friction.",
+      es: "Una clasificación tradicional de cuatro direcciones de cambio: recursos, capacidad de acción, reconocimiento y fricción.",
+      de: "Eine traditionelle Einteilung in vier Veränderungsrichtungen: Ressourcen, Handlungsmacht, Anerkennung und Reibung.",
+      fr: "Une classification traditionnelle de quatre directions de changement : ressources, pouvoir d'agir, reconnaissance et friction.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_resource_shift",
+    traditional: "化禄",
+    aliases: ["禄"],
+    polarity: "favorable",
+    term: {
+      zh: "资源转化",
+      en: "ResourceShift",
+      es: "TransformacionRecursos",
+      de: "Ressourcenwandel",
+      fr: "TransformationRessources",
+    },
+    definition: {
+      zh: "描述某项结构关系如何关联资源获取、支持或流动。",
+      en: "Describes how a structural relationship relates to the access, support, or flow of resources.",
+      es: "Describe cómo una relación estructural se vincula con el acceso, el apoyo o el flujo de recursos.",
+      de: "Beschreibt, wie eine Strukturbeziehung mit Zugang, Unterstützung oder Fluss von Ressourcen zusammenhängt.",
+      fr: "Décrit comment une relation structurelle se rapporte à l'accès, au soutien ou à la circulation des ressources.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_agency_shift",
+    traditional: "化权",
+    aliases: ["权"],
+    polarity: "neutral",
+    term: {
+      zh: "主动权转化",
+      en: "AgencyShift",
+      es: "TransformacionAccion",
+      de: "HandlungsmachtWandel",
+      fr: "TransformationPouvoirAgir",
+    },
+    definition: {
+      zh: "描述某项结构关系如何关联影响力、主导权与行动控制。",
+      en: "Describes how a structural relationship relates to influence, initiative, and control over action.",
+      es: "Describe cómo una relación estructural se relaciona con la influencia, la iniciativa y el control de la acción.",
+      de: "Beschreibt, wie eine Strukturbeziehung mit Einfluss, Initiative und Handlungskontrolle zusammenhängt.",
+      fr: "Décrit comment une relation structurelle se rapporte à l'influence, à l'initiative et au contrôle de l'action.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_recognition_shift",
+    traditional: "化科",
+    aliases: ["科"],
+    polarity: "favorable",
+    term: {
+      zh: "认可转化",
+      en: "RecognitionShift",
+      es: "TransformacionReconocimiento",
+      de: "Anerkennungswandel",
+      fr: "TransformationReconnaissance",
+    },
+    definition: {
+      zh: "描述某项结构关系如何关联表达、专业呈现与外部认可。",
+      en: "Describes how a structural relationship relates to expression, professional presentation, and external recognition.",
+      es: "Describe cómo una relación estructural se vincula con la expresión, la presentación profesional y el reconocimiento externo.",
+      de: "Beschreibt, wie eine Strukturbeziehung mit Ausdruck, professioneller Darstellung und äußerer Anerkennung zusammenhängt.",
+      fr: "Décrit comment une relation structurelle se rapporte à l'expression, à la présentation professionnelle et à la reconnaissance extérieure.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_friction_shift",
+    traditional: "化忌",
+    aliases: ["忌"],
+    polarity: "caution",
+    term: {
+      zh: "摩擦转化",
+      en: "FrictionShift",
+      es: "TransformacionFriccion",
+      de: "Reibungswandel",
+      fr: "TransformationFrottements",
+    },
+    definition: {
+      zh: "描述某项结构关系中较容易出现阻力、反复或协调成本的方向。",
+      en: "Describes the direction in which a structural relationship may involve resistance, repetition, or coordination costs.",
+      es: "Describe la dirección en la que una relación estructural puede implicar resistencia, repetición o costes de coordinación.",
+      de: "Beschreibt die Richtung, in der eine Strukturbeziehung Widerstand, Wiederholungen oder Koordinationskosten mit sich bringen kann.",
+      fr: "Décrit la direction dans laquelle une relation structurelle peut impliquer résistance, répétition ou coûts de coordination.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_long_cycle",
+    traditional: "大限",
+    polarity: "neutral",
+    term: {
+      zh: "长周期段",
+      en: "LongCyclePhase",
+      es: "FaseCicloLargo",
+      de: "Langzyklusphase",
+      fr: "PhaseCycleLong",
+    },
+    definition: {
+      zh: "表示紫微结构模型中按年龄划分的一段较长周期，不构成未来事件预测。",
+      en: "A longer age-bounded phase in the Ziwei structural model; it is not a prediction of future events.",
+      es: "Una fase de mayor duración delimitada por edad en el modelo estructural Ziwei; no predice acontecimientos futuros.",
+      de: "Eine längere, altersbezogene Phase im Ziwei-Strukturmodell; sie sagt keine zukünftigen Ereignisse voraus.",
+      fr: "Une phase plus longue, délimitée par l'âge, dans le modèle structurel Ziwei ; elle ne prédit pas d'événements futurs.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_yearly_cycle",
+    traditional: "流年",
+    polarity: "neutral",
+    term: {
+      zh: "年度周期",
+      en: "YearlyCycle",
+      es: "CicloAnual",
+      de: "Jahreszyklus",
+      fr: "CycleAnnuel",
+    },
+    definition: {
+      zh: "用于标记当前分析年份的结构索引，不代表该年必然发生特定事件。",
+      en: "A structural index for the year being analyzed; it does not imply that specific events will occur.",
+      es: "Un índice estructural del año analizado; no implica que ocurran acontecimientos concretos.",
+      de: "Ein Strukturindex für das analysierte Jahr; er bedeutet nicht, dass bestimmte Ereignisse eintreten.",
+      fr: "Un indice structurel de l'année analysée ; il n'implique pas que des événements précis se produiront.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_core_driver",
+    traditional: "命主",
+    polarity: "neutral",
+    term: {
+      zh: "核心驱动",
+      en: "CoreDriver",
+      es: "ImpulsorCentral",
+      de: "Kernantrieb",
+      fr: "MoteurCentral",
+    },
+    definition: {
+      zh: "用于标记个人结构模型中的核心驱动角色，不是对个人能力的客观测量。",
+      en: "Marks a core-driver role in the personal structural model; it is not an objective measurement of ability.",
+      es: "Señala una función impulsora central en el modelo estructural personal; no mide objetivamente la capacidad.",
+      de: "Kennzeichnet eine zentrale Antriebsrolle im persönlichen Strukturmodell; es ist keine objektive Fähigkeitsmessung.",
+      fr: "Désigne un rôle moteur central dans le modèle structurel personnel ; il ne mesure pas objectivement les capacités.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_action_driver",
+    traditional: "身主",
+    polarity: "neutral",
+    term: {
+      zh: "行动驱动",
+      en: "ActionDriver",
+      es: "ImpulsorAccion",
+      de: "Handlungsantrieb",
+      fr: "MoteurAction",
+    },
+    definition: {
+      zh: "用于标记结构模型中与行动方式相关的驱动角色，不等同于实际行为表现。",
+      en: "Marks a driver associated with action style in the structural model; it is not the same as observed behavior.",
+      es: "Señala un impulsor relacionado con el estilo de acción en el modelo; no equivale a la conducta observada.",
+      de: "Kennzeichnet einen mit dem Handlungsstil verbundenen Antrieb im Modell; er ist nicht mit beobachtetem Verhalten gleichzusetzen.",
+      fr: "Désigne un moteur associé au style d'action dans le modèle ; il ne correspond pas au comportement observé.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_action_domain",
+    traditional: "身宫",
+    polarity: "neutral",
+    term: {
+      zh: "行动落点域",
+      en: "ActionDomain",
+      es: "AmbitoAccion",
+      de: "Handlungsbereich",
+      fr: "DomaineAction",
+    },
+    definition: {
+      zh: "标记个人结构信息中与行动实践关联的领域位置。",
+      en: "Marks the domain associated with the practical expression of action in the personal structure.",
+      es: "Señala el ámbito asociado con la expresión práctica de la acción en la estructura personal.",
+      de: "Kennzeichnet den Bereich, der mit der praktischen Umsetzung von Handlungen in der persönlichen Struktur verbunden ist.",
+      fr: "Désigne le domaine associé à l'expression concrète de l'action dans la structure personnelle.",
+    },
+  },
+  {
+    ns: "ziwei",
+    slug: "zw_elemental_configuration",
+    traditional: "五行局",
+    polarity: "neutral",
+    term: {
+      zh: "元素配置型",
+      en: "ElementalConfiguration",
+      es: "ConfiguracionElemental",
+      de: "Elementarkonfiguration",
+      fr: "ConfigurationElementaire",
+    },
+    definition: {
+      zh: "描述紫微排盘所采用的五元素分类配置，不是科学测得的物质属性。",
+      en: "Describes the five-element classification used by the Ziwei chart; it is not a scientifically measured physical property.",
+      es: "Describe la clasificación de cinco elementos utilizada por el esquema Ziwei; no es una propiedad física medida científicamente.",
+      de: "Beschreibt die Fünf-Elemente-Klassifikation des Ziwei-Charts; es handelt sich nicht um eine wissenschaftlich gemessene physikalische Eigenschaft.",
+      fr: "Décrit la classification des cinq éléments utilisée par le thème Ziwei ; il ne s'agit pas d'une propriété physique mesurée scientifiquement.",
+    },
+  },
+  // --- qimen Phase 3 field labels (draft 08). Values use display-policy (ganzhi/jieqi/digits). ---
+  {
+    ns: "qimen",
+    slug: "qm_cycle_anchor",
+    traditional: "旬首",
+    polarity: "neutral",
+    term: {
+      zh: "周期锚点",
+      en: "CycleAnchor",
+      es: "AnclaCiclo",
+      de: "Zyklusanker",
+      fr: "AncrageCycle",
+    },
+    definition: {
+      zh: "用于定位当前盘局所处六十甲子分段的结构索引，不代表事件结果。",
+      en: "A structural index locating the current chart within a sexagenary cycle segment; it does not predict an outcome.",
+      es: "Un índice estructural que sitúa el esquema actual dentro de un segmento del ciclo sexagenario; no predice resultados.",
+      de: "Ein Strukturindex zur Einordnung des aktuellen Charts in einen Abschnitt des Sexagenärzyklus; er sagt keine Ergebnisse voraus.",
+      fr: "Un indice structurel qui situe le thème actuel dans un segment du cycle sexagésimal ; il ne prédit aucun résultat.",
+    },
+  },
+  {
+    ns: "qimen",
+    slug: "qm_coverage_gap",
+    traditional: "空亡",
+    polarity: "caution",
+    term: {
+      zh: "覆盖缺口",
+      en: "CoverageGap",
+      es: "BrechaCobertura",
+      de: "Abdeckungsluecke",
+      fr: "LacuneCouverture",
+    },
+    definition: {
+      zh: "标记当前盘局中某些位置未形成常规承载关系的区域，用于提示信息覆盖边界。",
+      en: "Marks areas in the chart where ordinary support relationships are absent, indicating a limit in structural coverage.",
+      es: "Señala zonas del esquema donde faltan relaciones habituales de soporte e indica un límite de cobertura estructural.",
+      de: "Kennzeichnet Bereiche im Chart ohne übliche Stützbeziehungen und weist auf eine Grenze der strukturellen Abdeckung hin.",
+      fr: "Signale les zones du thème où les relations habituelles de soutien sont absentes et indique une limite de couverture structurelle.",
+    },
+  },
+  {
+    ns: "qimen",
+    slug: "qm_mobility_marker",
+    traditional: "驿马",
+    aliases: ["驛馬"],
+    polarity: "neutral",
+    term: {
+      zh: "移动标记",
+      en: "MobilityMarker",
+      es: "IndicadorMovilidad",
+      de: "Mobilitaetsmarker",
+      fr: "IndicateurMobilite",
+    },
+    definition: {
+      zh: "标识盘局中与移动、切换或位置变化相关的结构信号，不表示必然迁移。",
+      en: "Identifies a chart signal associated with movement, transition, or change of position; it does not imply inevitable relocation.",
+      es: "Identifica una señal del esquema asociada con movimiento, transición o cambio de posición; no implica una mudanza inevitable.",
+      de: "Kennzeichnet ein Chartsignal für Bewegung, Übergang oder Positionswechsel; es bedeutet keinen zwangsläufigen Umzug.",
+      fr: "Identifie un signal du thème lié au mouvement, à la transition ou au changement de position ; il n'implique pas un déménagement inévitable.",
+    },
+  },
+  {
+    ns: "qimen",
+    slug: "qm_seasonal_pivot",
+    traditional: "节气",
+    aliases: ["節氣"],
+    polarity: "neutral",
+    term: {
+      zh: "季节点",
+      en: "SeasonalPivot",
+      es: "PuntoGiroEstacional",
+      de: "SaisonalerWendepunkt",
+      fr: "PointBasculeSaisonnier",
+    },
+    definition: {
+      zh: "表示排盘计算所采用的季节分界节点，用于确定历法与盘局参数。",
+      en: "The seasonal boundary used by the chart calculation to determine calendar and configuration parameters.",
+      es: "El límite estacional utilizado por el cálculo para determinar los parámetros del calendario y del esquema.",
+      de: "Der saisonale Grenzpunkt, den die Berechnung zur Bestimmung von Kalender- und Konfigurationsparametern verwendet.",
+      fr: "La limite saisonnière utilisée par le calcul pour déterminer les paramètres calendaires et ceux du thème.",
+    },
+  },
+  {
+    ns: "qimen",
+    slug: "qm_configuration_index",
+    traditional: "局数",
+    aliases: ["局數"],
+    polarity: "neutral",
+    term: {
+      zh: "盘式索引",
+      en: "ConfigurationIndex",
+      es: "IndiceConfiguracion",
+      de: "Konfigurationsindex",
+      fr: "IndiceConfiguration",
+    },
+    definition: {
+      zh: "标识当前奇门盘采用的九宫配置编号，不是个人能力或吉凶评分。",
+      en: "Identifies the nine-palace configuration number used by the current Qimen chart; it is not a personal rating.",
+      es: "Identifica el número de configuración de nueve palacios utilizado por el esquema Qimen; no es una calificación personal.",
+      de: "Gibt die Nummer der Neun-Paläste-Konfiguration des aktuellen Qimen-Charts an; es ist keine persönliche Bewertung.",
+      fr: "Indique le numéro de configuration des neuf palais utilisé par le thème Qimen ; ce n'est pas une évaluation personnelle.",
+    },
+  },
+  {
+    ns: "qimen",
+    slug: "qm_elemental_phase_profile",
+    traditional: "旺相休囚死",
+    polarity: "neutral",
+    term: {
+      zh: "元素阶段谱",
+      en: "ElementalPhaseProfile",
+      es: "PerfilFasesElementales",
+      de: "Elementarphasenprofil",
+      fr: "ProfilPhasesElementaires",
+    },
+    definition: {
+      zh: "描述五类元素在当前历法阶段中的相对状态，是传统模型分类，不是物理能量测量。",
+      en: "Describes the relative states of five elements in the current calendrical phase; it is a traditional model classification, not a physical energy measurement.",
+      es: "Describe los estados relativos de los cinco elementos en la fase calendárica actual; es una clasificación tradicional, no una medición física de energía.",
+      de: "Beschreibt die relativen Zustände der fünf Elemente in der aktuellen Kalenderphase; es handelt sich um eine traditionelle Modellklassifikation, nicht um eine physikalische Energiemessung.",
+      fr: "Décrit les états relatifs des cinq éléments dans la phase calendaire actuelle ; il s'agit d'une classification traditionnelle, et non d'une mesure physique de l'énergie.",
+    },
+  },
+  // --- bazi Phase 3 combination concepts (single authority for tension markers) ---
+  {
+    ns: "bazi",
+    slug: "shangguan_jianguan",
+    traditional: "伤官见官",
+    polarity: "caution",
+    term: {
+      zh: "外束张力",
+      en: "NormTension",
+      es: "TensionNorma",
+      de: "NormSpannung",
+      fr: "TensionNorme",
+    },
+    definition: {
+      zh: "外部约束下的对抗张力",
+      en: "tension between expression and external norms",
+      es: "tensión entre expresión y normas externas",
+      de: "Spannung zwischen Ausdruck und äußeren Normen",
+      fr: "tension entre expression et normes externes",
+    },
+  },
+  {
+    ns: "bazi",
+    slug: "xiaoshen_duoshi",
+    traditional: "枭神夺食",
+    aliases: ["枭印夺食"],
+    polarity: "caution",
+    term: {
+      zh: "内挤张力",
+      en: "InnerCrowding",
+      es: "PresionInterior",
+      de: "Innendruck",
+      fr: "PressionInterieure",
+    },
+    definition: {
+      zh: "内省本能对表达的挤占张力",
+      en: "inner pressure crowding out expression",
+      es: "presión interior que ahoga la expresión",
+      de: "innerer Druck, der Ausdruck verdrängt",
+      fr: "pression intérieure qui étouffe l'expression",
+    },
+  },
 ];
-
-/** ns-isolated lookup key: `${ns}:${slug}`. */
-const HAN_SIMP_TO_TRAD: Readonly<Record<string, string>> = {
-  门: "門",
-  开: "開",
-  关: "關",
-  宫: "宮",
-  阳: "陽",
-  阴: "陰",
-  伤: "傷",
-  惊: "驚",
-  腾: "騰",
-  辅: "輔",
-  兑: "兌",
-  离: "離",
-  运: "運",
-  气: "氣",
-  龙: "龍",
-  马: "馬",
-  鸡: "雞",
-  猪: "豬",
-  库: "庫",
-  纳: "納",
-  调: "調",
-  时: "時",
-};
-
-const HAN_TRAD_TO_SIMP: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(HAN_SIMP_TO_TRAD).map(([simp, trad]) => [trad, simp]),
-);
-
-function mapHanChars(src: string, table: Readonly<Record<string, string>>): string {
-  return [...src].map((c) => table[c] ?? c).join("");
-}
-
-/** Engine often stores 繁体；批断/LLM 常写简体。lookup 两侧都要认。 */
-export function termHanVariants(surface: string): string[] {
-  const s = surface.trim();
-  if (!s) return [];
-  return [...new Set([s, mapHanChars(s, HAN_SIMP_TO_TRAD), mapHanChars(s, HAN_TRAD_TO_SIMP)])];
-}
 
 export const TERM_BY_KEY = new Map(
   POJU_TERMS.map((t) => [`${t.ns}:${t.slug}`, t] as const),
@@ -5336,10 +5744,33 @@ export function pojuTermBySlug(slug: string): PojuTerm | undefined {
   return TERM_BY_SLUG.get(slug);
 }
 
+let _missingNsWarnCount = 0;
+
+/** Test/telemetry helper — how many times legacy lookup omitted namespace this process. */
+export function pojuTermMissingNamespaceWarnCount(): number {
+  return _missingNsWarnCount;
+}
+
+/**
+ * @deprecated Prefer `resolvePojuTerm(input, { namespace })` from `@/lib/glossary/term-resolve`.
+ * Kept for migration; return semantics unchanged. Omitting `ns` may cross-ns first-match.
+ */
 export function pojuTermByTraditional(
   traditional: string,
   ns?: TermNs,
 ): PojuTerm | undefined {
+  if (ns === undefined) {
+    _missingNsWarnCount += 1;
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV !== "production" &&
+      _missingNsWarnCount <= 20
+    ) {
+      console.warn(
+        `[terms] pojuTermByTraditional("${traditional}") called without namespace — migrate to resolvePojuTerm(input, { namespace })`,
+      );
+    }
+  }
   const names = termHanVariants(traditional);
   for (const word of names) {
     const exact = ns
@@ -5356,7 +5787,12 @@ export function pojuTermByTraditional(
   return undefined;
 }
 
-/** Soft-label inject block for product prompts (available slug + 5-locale terms). */
+/**
+ * Soft-label name table (slug + ns + soft only — no definitions).
+ * @deprecated Phase 5: prefer `buildTermContextForFacts` / `buildTermContextPromptFromStructured`
+ * from `@/lib/glossary/term-context-for-facts` — inject only terms present in this run's facts.
+ * Do not dump the full SSOT into prompts.
+ */
 export function buildPojuTermsPromptTable(locale: string, namespaces?: TermNs[]): string {
   const loc = toTermLocale(locale);
   const nsFilter = namespaces?.length ? new Set(namespaces) : null;

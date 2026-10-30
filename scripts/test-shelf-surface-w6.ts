@@ -175,9 +175,14 @@ const lens = baselineZiweiLensLines({
   sihua: [{ mutagen: "禄", star: "廉贞", palace: "官禄" }],
 } as Pick<ZiweiFactPack, "topicPalace" | "mingShen" | "daxian" | "sihua">);
 const lensText = lens.map((line) => `${line.label} ${line.value}`).join("\n");
-assert("lens has the natal star", lensText.includes("紫微") && lensText.includes("贪狼"));
-assert("lens has the limit", lensText.includes("七杀") && lensText.includes("23–32"));
-assert("lens has sihua", lensText.includes("禄廉贞"));
+// Phase 2: soft labels only — traditional stars/palaces must not leak.
+assert("lens uses soft identity field", lensText.includes("核心定位域"));
+assert("lens uses soft opposite field", lensText.includes("对照定位域"));
+assert("lens blocks traditional major stars", !lensText.includes("紫微") && !lensText.includes("贪狼"));
+assert("lens has the age band", lensText.includes("23–32") && lensText.includes("长周期段"));
+assert("lens blocks traditional decadal star", !lensText.includes("七杀"));
+assert("lens uses soft sihua mutagen", lensText.includes("四向转化") || lensText.includes("资源转化"));
+assert("lens blocks traditional sihua star", !lensText.includes("廉贞") && !lensText.includes("官禄"));
 assert("lens stays structural", !lensText.includes("必散") && !lensText.includes("倪"));
 
 assert(

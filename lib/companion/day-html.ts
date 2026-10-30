@@ -2,6 +2,7 @@
  * Self-contained single-day companion HTML (email attachment / offline).
  */
 
+import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
 import { companionUiLabels, normalizeCompanionLocale } from "./locale-voice";
 import type { CompanionDayCards, CompanionJob } from "./types";
 
@@ -13,9 +14,9 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Strip ⟦t:term⟧ markers for plain email; keep term text. */
-function stripTermMarks(s: string): string {
-  return s.replace(/⟦t:([^|⟧]+)(?:\|[^⟧]*)?⟧/g, "$1");
+/** Phase 5: shared export sanitize before HTML escape (copy/email/offline). */
+function compliantBody(s: string, locale: string): string {
+  return sanitizePlainExport(s ?? "", locale, "email").content;
 }
 
 /** Build offline HTML for one delivered day (no gold calendar). */
@@ -33,8 +34,9 @@ export function buildCompanionDayHtml(input: {
   const langAttr =
     locale === "zh" ? "zh" : locale === "fr" ? "fr" : locale === "es" ? "es" : "en";
 
+  const localeStr = String(locale);
   const section = (h: string, body: string) =>
-    `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(body)}</p>`;
+    `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(compliantBody(body, localeStr))}</p>`;
 
   return `<!DOCTYPE html>
 <html lang="${langAttr}">
@@ -64,7 +66,7 @@ export function buildCompanionDayHtml(input: {
     ${section(labels.unsuitable, c.unsuitable)}
     ${section(labels.suggestion, c.suggestion)}
     <div class="evidence">
-      ${section(labels.evidence, stripTermMarks(c.evidence))}
+      ${section(labels.evidence, c.evidence)}
     </div>
   </section>
 </body>

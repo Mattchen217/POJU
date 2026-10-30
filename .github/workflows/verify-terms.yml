@@ -9,6 +9,7 @@ on:
       - "docs/完整重命名清单（157）.json"
       - "scripts/verify-terms.ts"
       - "scripts/generate-poju-terms.mjs"
+      - "scripts/poju-terms-ssot.mjs"
       - "package.json"
       - ".github/workflows/verify-terms.yml"
   pull_request:
@@ -19,6 +20,7 @@ on:
       - "docs/完整重命名清单（157）.json"
       - "scripts/verify-terms.ts"
       - "scripts/generate-poju-terms.mjs"
+      - "scripts/poju-terms-ssot.mjs"
       - "package.json"
       - ".github/workflows/verify-terms.yml"
 
@@ -33,4 +35,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Read-only SSOT gates — never run legacy generate:terms (disabled; would overwrite).
+      - run: pnpm run terms:check
       - run: pnpm run verify:terms
+      - run: pnpm run test:term-resolve
+      - run: pnpm run test:qimen-bazi-phase3
+      - run: pnpm run test:shensha-phase4
+      - run: pnpm run test:term-context-phase5
+      - run: pnpm run test:terms-adversarial-phase6
+      - run: pnpm run test:terms-export-locales-phase6
+      - run: pnpm run test:terms-phase6

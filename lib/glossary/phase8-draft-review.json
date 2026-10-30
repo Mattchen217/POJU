@@ -1,0 +1,511 @@
+{
+  "generated_at": "2026-10-30T10:56:25.823Z",
+  "source": "Desktop/POJU-terms-implementation-handoff/08-新增自造术语五语草案.md",
+  "policy": "Draft is product-candidate only. Do not invent 14 main stars / 12 palace names. Sexagenary 60 and compound markers stay out (§C).",
+  "summary": {
+    "total_draft_ab": 20,
+    "landed_exact_match": 0,
+    "landed_with_copy_delta": 20,
+    "missing_from_ssot": 0
+  },
+  "section_c_deferred": [
+    "六十甲子 ×60 — closed-set algorithm only",
+    "伤官见官 / 枭神夺食 — marker soft path, no parallel coined terms",
+    "紫微 14 主星 + 十二宫具体名 — collect from iztro inventory then name",
+    "神煞 51 — disposition done in Phase 4; redline has no public coined term"
+  ],
+  "rows": [
+    {
+      "slug": "qm_cycle_anchor",
+      "ns": "qimen",
+      "traditional": "旬首",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Cycle Anchor",
+          "live": "CycleAnchor"
+        },
+        "es": {
+          "draft": "Ancla del Ciclo",
+          "live": "AnclaCiclo"
+        },
+        "fr": {
+          "draft": "Ancrage du Cycle",
+          "live": "AncrageCycle"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "qm_coverage_gap",
+      "ns": "qimen",
+      "traditional": "空亡",
+      "polarity": "caution",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Coverage Gap",
+          "live": "CoverageGap"
+        },
+        "es": {
+          "draft": "Brecha de Cobertura",
+          "live": "BrechaCobertura"
+        },
+        "de": {
+          "draft": "Abdeckungslücke",
+          "live": "Abdeckungsluecke"
+        },
+        "fr": {
+          "draft": "Lacune de Couverture",
+          "live": "LacuneCouverture"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "qm_mobility_marker",
+      "ns": "qimen",
+      "traditional": "驿马",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Mobility Marker",
+          "live": "MobilityMarker"
+        },
+        "es": {
+          "draft": "Indicador de Movilidad",
+          "live": "IndicadorMovilidad"
+        },
+        "de": {
+          "draft": "Mobilitätsmarker",
+          "live": "Mobilitaetsmarker"
+        },
+        "fr": {
+          "draft": "Indicateur de Mobilité",
+          "live": "IndicateurMobilite"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "qm_seasonal_pivot",
+      "ns": "qimen",
+      "traditional": "节气",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Seasonal Pivot",
+          "live": "SeasonalPivot"
+        },
+        "es": {
+          "draft": "Punto de Giro Estacional",
+          "live": "PuntoGiroEstacional"
+        },
+        "de": {
+          "draft": "Saisonaler Wendepunkt",
+          "live": "SaisonalerWendepunkt"
+        },
+        "fr": {
+          "draft": "Point de Bascule Saisonnier",
+          "live": "PointBasculeSaisonnier"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "qm_configuration_index",
+      "ns": "qimen",
+      "traditional": "局数",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Configuration Index",
+          "live": "ConfigurationIndex"
+        },
+        "es": {
+          "draft": "Índice de Configuración",
+          "live": "IndiceConfiguracion"
+        },
+        "fr": {
+          "draft": "Indice de Configuration",
+          "live": "IndiceConfiguration"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "qm_elemental_phase_profile",
+      "ns": "qimen",
+      "traditional": "旺相休囚死",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Elemental Phase Profile",
+          "live": "ElementalPhaseProfile"
+        },
+        "es": {
+          "draft": "Perfil de Fases Elementales",
+          "live": "PerfilFasesElementales"
+        },
+        "fr": {
+          "draft": "Profil des Phases Élémentaires",
+          "live": "ProfilPhasesElementaires"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_identity_field",
+      "ns": "ziwei",
+      "traditional": "命宫",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Core Identity Field",
+          "live": "CoreIdentityField"
+        },
+        "es": {
+          "draft": "Campo de Identidad Central",
+          "live": "CampoIdentidadCentral"
+        },
+        "de": {
+          "draft": "Zentrales Identitätsfeld",
+          "live": "KernIdentitaetsfeld"
+        },
+        "fr": {
+          "draft": "Champ d'Identité Centrale",
+          "live": "ChampIdentiteCentrale"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_opposite_field",
+      "ns": "ziwei",
+      "traditional": "对宫",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Counterpart Field",
+          "live": "CounterpartField"
+        },
+        "es": {
+          "draft": "Campo de Contraste",
+          "live": "CampoContraste"
+        },
+        "de": {
+          "draft": "Gegenüberliegendes Feld",
+          "live": "Gegenfeld"
+        },
+        "fr": {
+          "draft": "Champ de Correspondance",
+          "live": "ChampCorrespondance"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_life_domains",
+      "ns": "ziwei",
+      "traditional": "十二宫",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Life-Domain Map",
+          "live": "LifeDomainMap"
+        },
+        "es": {
+          "draft": "Mapa de Ámbitos Vitales",
+          "live": "MapaAmbitosVitales"
+        },
+        "de": {
+          "draft": "Lebensbereichslandkarte",
+          "live": "Lebensbereichskarte"
+        },
+        "fr": {
+          "draft": "Carte des Domaines de Vie",
+          "live": "CarteDomainesVie"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_four_shift_modes",
+      "ns": "ziwei",
+      "traditional": "四化",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Four Shift Modes",
+          "live": "FourShiftModes"
+        },
+        "es": {
+          "draft": "Cuatro Modos de Transformación",
+          "live": "CuatroModosTransformacion"
+        },
+        "de": {
+          "draft": "Vier Wandlungsmodi",
+          "live": "VierWandlungsmodi"
+        },
+        "fr": {
+          "draft": "Quatre Modes de Transformation",
+          "live": "QuatreModesTransformation"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_resource_shift",
+      "ns": "ziwei",
+      "traditional": "化禄",
+      "polarity": "favorable",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Resource Shift",
+          "live": "ResourceShift"
+        },
+        "es": {
+          "draft": "Transformación de Recursos",
+          "live": "TransformacionRecursos"
+        },
+        "fr": {
+          "draft": "Transformation des Ressources",
+          "live": "TransformationRessources"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_agency_shift",
+      "ns": "ziwei",
+      "traditional": "化权",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Agency Shift",
+          "live": "AgencyShift"
+        },
+        "es": {
+          "draft": "Transformación de la Capacidad de Acción",
+          "live": "TransformacionAccion"
+        },
+        "de": {
+          "draft": "Wandel der Handlungsmacht",
+          "live": "HandlungsmachtWandel"
+        },
+        "fr": {
+          "draft": "Transformation du Pouvoir d'Agir",
+          "live": "TransformationPouvoirAgir"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_recognition_shift",
+      "ns": "ziwei",
+      "traditional": "化科",
+      "polarity": "favorable",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Recognition Shift",
+          "live": "RecognitionShift"
+        },
+        "es": {
+          "draft": "Transformación del Reconocimiento",
+          "live": "TransformacionReconocimiento"
+        },
+        "fr": {
+          "draft": "Transformation de la Reconnaissance",
+          "live": "TransformationReconnaissance"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_friction_shift",
+      "ns": "ziwei",
+      "traditional": "化忌",
+      "polarity": "caution",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Friction Shift",
+          "live": "FrictionShift"
+        },
+        "es": {
+          "draft": "Transformación de la Fricción",
+          "live": "TransformacionFriccion"
+        },
+        "fr": {
+          "draft": "Transformation des Frottements",
+          "live": "TransformationFrottements"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_long_cycle",
+      "ns": "ziwei",
+      "traditional": "大限",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Long-Cycle Phase",
+          "live": "LongCyclePhase"
+        },
+        "es": {
+          "draft": "Fase de Ciclo Largo",
+          "live": "FaseCicloLargo"
+        },
+        "fr": {
+          "draft": "Phase de Cycle Long",
+          "live": "PhaseCycleLong"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_yearly_cycle",
+      "ns": "ziwei",
+      "traditional": "流年",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Yearly Cycle",
+          "live": "YearlyCycle"
+        },
+        "es": {
+          "draft": "Ciclo Anual",
+          "live": "CicloAnual"
+        },
+        "fr": {
+          "draft": "Cycle Annuel",
+          "live": "CycleAnnuel"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_core_driver",
+      "ns": "ziwei",
+      "traditional": "命主",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Core Driver",
+          "live": "CoreDriver"
+        },
+        "es": {
+          "draft": "Impulsor Central",
+          "live": "ImpulsorCentral"
+        },
+        "fr": {
+          "draft": "Moteur Central",
+          "live": "MoteurCentral"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_action_driver",
+      "ns": "ziwei",
+      "traditional": "身主",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Action Driver",
+          "live": "ActionDriver"
+        },
+        "es": {
+          "draft": "Impulsor de Acción",
+          "live": "ImpulsorAccion"
+        },
+        "fr": {
+          "draft": "Moteur d'Action",
+          "live": "MoteurAction"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_action_domain",
+      "ns": "ziwei",
+      "traditional": "身宫",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Action Domain",
+          "live": "ActionDomain"
+        },
+        "es": {
+          "draft": "Ámbito de Acción",
+          "live": "AmbitoAccion"
+        },
+        "fr": {
+          "draft": "Domaine d'Action",
+          "live": "DomaineAction"
+        }
+      },
+      "def_delta": {}
+    },
+    {
+      "slug": "zw_elemental_configuration",
+      "ns": "ziwei",
+      "traditional": "五行局",
+      "polarity": "neutral",
+      "status": "landed_with_copy_delta",
+      "review": "product_confirm_copy_overwrite_or_keep_live",
+      "term_delta": {
+        "en": {
+          "draft": "Elemental Configuration",
+          "live": "ElementalConfiguration"
+        },
+        "es": {
+          "draft": "Configuración Elemental",
+          "live": "ConfiguracionElemental"
+        },
+        "fr": {
+          "draft": "Configuration Élémentaire",
+          "live": "ConfigurationElementaire"
+        }
+      },
+      "def_delta": {}
+    }
+  ]
+}

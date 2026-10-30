@@ -2,7 +2,7 @@
  * Delivery TTS narration units: each glass-card heading + body (evidence omitted).
  */
 
-import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
+import { sanitizePlainExport } from "@/lib/glossary/sanitize-export-surface";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
@@ -95,11 +95,11 @@ export function extractDeliveryNarrationUnits(
     });
 
     for (const mod of modules) {
-      const title = toCompliantPlainText(mod.title.trim(), locale).trim();
+      const title = sanitizePlainExport(mod.title.trim(), locale, "copy").content.trim();
       // Prefer card body; if dual-layer left prose only in evidence, still narrate it.
-      let body = toCompliantPlainText(mod.body.trim(), locale).trim();
+      let body = sanitizePlainExport(mod.body.trim(), locale, "copy").content.trim();
       if (!body && mod.evidence.trim()) {
-        body = toCompliantPlainText(mod.evidence.trim(), locale).trim();
+        body = sanitizePlainExport(mod.evidence.trim(), locale, "copy").content.trim();
       }
       if (!title && !body) continue;
       units.push({
