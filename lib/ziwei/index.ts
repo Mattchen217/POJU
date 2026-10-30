@@ -69,3 +69,4 @@ export {
   softZiweiLabelList,
   ziweiPatternHitId,
 } from "@/lib/ziwei/soft-zfp-labels";
+export { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";

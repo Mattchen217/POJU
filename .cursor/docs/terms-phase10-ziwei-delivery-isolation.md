@@ -14,7 +14,7 @@
 | 2 | `buildZiweiDisplayFactPack` | 间接（闭集/镜片） | Baseline / companion | 仅 `_traditional` 内镜；展示用软标或空 | 已 fail-closed |
 | 3 | `sliceForPage` / `buildZfp` | **是**（`formatPageSliceFeed` JSON） | 间接（模型→正文） | **曾泄漏** 宫星格原名 | **软投影**：SSOT 软标或隐藏；`patternHits`→`hit_id` |
 | 4 | `pageSliceAnchorLines` | fill 锚 | 间接 | Phase 9 已软标 | 保持软标 / `结构格局×N` |
-| 5 | Judgment Prompt | **是** | 否 | **曾灌** `patternHits[].name` | `hit:<id>:<level>` 闭集引用 |
+| 5 | Judgment Prompt | **是** | 否 | **曾灌** `patternHits[].name` + 原样 `thesis_block` | `hit:<id>:<level>`；`thesis_block` 经 `sanitizeZiweiLeaksInPromptText` |
 | 6 | 页面正文 Prompt | **是**（page slice feed） | 否 | 随 slice | 随软 ZFP |
 | 7 | Body Polish / Evidence Soft | 是 | 依据折层 | 走既有 `⟦t:⟧` / sanitize | 无新增传统 ZFP |
 | 8 | PDF / HTML / 报告导出 | — | **是** | 出口 sanitize | P1 ns-aware + 既有 scrub |

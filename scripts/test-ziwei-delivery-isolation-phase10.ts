@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BirthInfo } from "../lib/profile/types";
+import { buildBookJudgmentFeedBlock } from "../lib/llm/pro/delivery/book-judgment/generate";
 import { formatPageSliceFeed } from "../lib/llm/pro/delivery/page-slice-feed";
 import { sliceForPage } from "../lib/llm/pro/delivery/slice-for-page";
 import {
@@ -16,6 +17,7 @@ import {
   collectZiweiTraditionalSuspects,
   patternHitRefsForPrompt,
   softZiweiLabel,
+  ziweiPatternHitId,
 } from "../lib/ziwei";
 
 const AS_OF = "2026-10-30";
@@ -189,7 +191,69 @@ for (const birth of BIRTHS) {
 log(`ok: ${BIRTHS.length} births × ${LOCALES.length} locales slice isolation`);
 log("ok: raw FactPack preserved");
 log("ok: judgment pattern refs are hit_id only");
-log("ok: formatPageSliceFeed clean\n");
+log("ok: formatPageSliceFeed clean");
+
+// --- Judgment user Prompt leak tests (one-shot + two-shot feeds) ---
+{
+  const pack = buildZiweiFactPack(BIRTHS[0]!, { asOf: AS_OF });
+  const dirtyThesis = [
+    "## 命盘总纲",
+    `紫微在命宫，对宫贪狼；四化忌天同；格局${pack.patternHits[0]?.name ?? "杀破狼"}`,
+    "木三局 · 身宫官禄",
+  ].join("\n");
+  const chartText =
+    "日主：甲木\n用神：木\n喜神：水\n忌神：土\n当前大运：甲辰";
+
+  const oneShot = buildBookJudgmentFeedBlock({
+    chartText,
+    ziwei: pack,
+    thesis_block: dirtyThesis,
+    question: "要不要换工作",
+    mode: "all",
+    locale: "zh",
+  });
+  const destiny = buildBookJudgmentFeedBlock({
+    chartText,
+    ziwei: pack,
+    thesis_block: dirtyThesis,
+    mode: "destiny",
+    locale: "zh",
+  });
+  const science = buildBookJudgmentFeedBlock({
+    chartText,
+    ziwei: pack,
+    science_feed: "睡眠与决策负荷",
+    mode: "science",
+    locale: "zh",
+  });
+
+  for (const [label, feed] of [
+    ["one-shot", oneShot],
+    ["two-shot-destiny", destiny],
+    ["two-shot-science", science],
+  ] as const) {
+    assert.ok(!feed.includes("紫微"), `${label}: no 紫微`);
+    assert.ok(!feed.includes("贪狼"), `${label}: no 贪狼`);
+    assert.ok(!feed.includes("天同"), `${label}: no 天同`);
+    assert.ok(!feed.includes("木三局"), `${label}: no 木三局`);
+    assert.ok(!feed.includes("官禄"), `${label}: no 官禄`);
+    for (const name of pack.patternHits.map((h) => h.name)) {
+      assert.ok(!feed.includes(name), `${label}: no pattern ${name}`);
+    }
+    if (pack.patternHits[0]?.name) {
+      const id = ziweiPatternHitId(pack.patternHits[0].name);
+      assert.ok(
+        oneShot.includes(`hit:${id}`) || destiny.includes(`hit:${id}`),
+        "pattern classical name remapped to hit:id in thesis path",
+      );
+    }
+    assert.ok(feed.includes("命盘总纲") || label === "two-shot-science", `${label} structure`);
+  }
+  assert.ok(!science.includes("紫微"), "science feed still scrubbed if slice soft");
+  log("ok: judgment user Prompt one-shot + two-shot no traditional ziwei leaks");
+}
+
+log("");
 
 const recordPath = join(
   process.cwd(),

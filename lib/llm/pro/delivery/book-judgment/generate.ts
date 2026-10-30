@@ -17,6 +17,7 @@ import {
 import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
+import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
@@ -391,7 +392,11 @@ function mergeUnits(
   return out;
 }
 
-function feedBlock(input: {
+/**
+ * Build the Judgment user feed string (one-shot / destiny / science).
+ * Exported for Phase 10 leak tests — must not contain traditional Ziwei palace/star/pattern names.
+ */
+export function buildBookJudgmentFeedBlock(input: {
   chartText: string;
   ziwei: ZiweiFactPack | null;
   question?: string | null;
@@ -399,17 +404,24 @@ function feedBlock(input: {
   science_feed?: string | null;
   thesis_block?: string | null;
   mode: "all" | "destiny" | "science";
+  locale?: string;
 }): string {
+  const locale = input.locale ?? "zh";
   const slice = formatPageSliceFeed({
     key: "02",
     chartText: input.chartText,
     ziwei: input.ziwei,
     question: input.question,
+    locale,
     withAllowlistHeader: true,
   });
   const parts: string[] = [];
   if (input.mode !== "science" && input.thesis_block?.trim()) {
-    parts.push(`## 命盘总纲\n${input.thesis_block.trim()}`);
+    const thesisSafe = sanitizeZiweiLeaksInPromptText(input.thesis_block.trim(), {
+      ziwei: input.ziwei,
+      locale,
+    });
+    parts.push(`## 命盘总纲\n${thesisSafe}`);
   }
   if (input.mode !== "science") {
     parts.push(slice ?? `## CFP\n${input.chartText.slice(0, 8_000)}`);
@@ -440,7 +452,16 @@ function feedBlock(input: {
     `## faces 必须覆盖\n${BOOK_FACE_IDS.join(", ")}`,
     JSON_SHAPE,
   );
+  // Do not scrub the entire feed with ziwei star lists — CFP may legally cite
+  // bazi 七杀 etc. Thesis is projected above; ZFP arrives via soft slice + hit_ids.
   return parts.filter(Boolean).join("\n\n");
+}
+
+/** @deprecated internal alias — use buildBookJudgmentFeedBlock */
+function feedBlock(
+  input: Parameters<typeof buildBookJudgmentFeedBlock>[0],
+): string {
+  return buildBookJudgmentFeedBlock(input);
 }
 
 export async function runBookJudgmentPackGenerate(input: {
@@ -472,6 +493,7 @@ export async function runBookJudgmentPackGenerate(input: {
     const user_feed = feedBlock({
       chartText,
       ziwei,
+      locale: input.locale,
       question: input.question,
       agenda: input.agenda,
       science_feed: input.science_feed,
@@ -596,6 +618,7 @@ export async function runBookJudgmentPackGenerate(input: {
     const destinyFeed = feedBlock({
       chartText,
       ziwei,
+      locale: input.locale,
       question: input.question,
       agenda: input.agenda,
       thesis_block: input.thesis_block,
@@ -648,6 +671,7 @@ export async function runBookJudgmentPackGenerate(input: {
     const scienceFeed = feedBlock({
       chartText,
       ziwei,
+      locale: input.locale,
       question: input.question,
       agenda: input.agenda,
       science_feed: input.science_feed,

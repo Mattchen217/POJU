@@ -444,18 +444,27 @@ function projectPatternHits(
   }));
 }
 
+/** otherChart is joint-stub null in W1; when present, only these keys may enter the delivery slice. */
+const OTHER_CHART_ALLOWLIST = new Set([
+  "relation",
+  "role",
+  "link_id",
+]);
+
 function projectOther(value: unknown): string | Record<string, unknown> | undefined {
   if (value == null) return undefined;
   if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed || undefined;
+    // Opaque strings are not delivery-safe.
+    return undefined;
   }
   if (typeof value !== "object" || Array.isArray(value)) return undefined;
   const out: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value)) {
-    if (DUMP_KEYS.has(key) || item == null) continue;
+    if (!OTHER_CHART_ALLOWLIST.has(key) || item == null) continue;
     if (typeof item === "string" && !item.trim()) continue;
-    out[key] = item;
+    if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
+      out[key] = item;
+    }
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }
