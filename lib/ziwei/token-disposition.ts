@@ -5,7 +5,7 @@
  * Palace names (except 命宫), star names, 五行局 values, and pattern hits
  * wait for product soft-labels — registered as internal_only (no traditional fallback).
  *
- * Inventory source: scripts/test-ziwei-token-inventory.ts (≥10 births).
+ * Inventory: scripts/phase9-ziwei-term-inventory.ts + test-ziwei-term-completeness-phase9.ts.
  */
 
 export type ZiweiDispositionStatus = "public_glossary" | "internal_only" | "unknown_blocked";
@@ -31,7 +31,10 @@ export const ZIWEI_RUNTIME_PALACES = [
   "父母",
 ] as const;
 
-/** Major/aux stars observed in FactPack majorStars / soul / body / sihua. */
+/**
+ * Stars observed in FactPack majorStars / soul / body / sihua across inventory births.
+ * Phase 9: includes 火星 (soul/body), not only fourteen majors + common aux.
+ */
 export const ZIWEI_RUNTIME_STARS = [
   "紫微",
   "天机",
@@ -52,6 +55,7 @@ export const ZIWEI_RUNTIME_STARS = [
   "左辅",
   "右弼",
   "禄存",
+  "火星",
 ] as const;
 
 export const ZIWEI_RUNTIME_FIVE_ELEMENTS_CLASS = [

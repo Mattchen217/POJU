@@ -1,0 +1,1620 @@
+{
+  "meta": {
+    "phase": 9,
+    "iztroVersion": "2.6.3",
+    "births": 12,
+    "asOf": "2026-10-30",
+    "ziweiSsotCount": 14,
+    "note": "Inventory only — do not merge into POJU_TERMS"
+  },
+  "factPackTokens": {
+    "palaces": [
+      "财帛",
+      "夫妻",
+      "福德",
+      "父母",
+      "官禄",
+      "疾厄",
+      "命宫",
+      "仆役",
+      "迁移",
+      "田宅",
+      "兄弟",
+      "子女"
+    ],
+    "majorStars": [
+      "巨门",
+      "廉贞",
+      "破军",
+      "七杀",
+      "太阳",
+      "太阴",
+      "贪狼",
+      "天府",
+      "天机",
+      "天梁",
+      "天同",
+      "天相",
+      "武曲",
+      "紫微"
+    ],
+    "soulBodyStars": [
+      "火星",
+      "巨门",
+      "廉贞",
+      "禄存",
+      "破军",
+      "贪狼",
+      "天机",
+      "天梁",
+      "天同",
+      "天相",
+      "文昌",
+      "文曲"
+    ],
+    "sihuaStars": [
+      "巨门",
+      "廉贞",
+      "破军",
+      "太阳",
+      "太阴",
+      "贪狼",
+      "天机",
+      "天梁",
+      "天同",
+      "文昌",
+      "文曲",
+      "武曲",
+      "右弼",
+      "紫微",
+      "左辅"
+    ],
+    "sihuaStarsNotInMajorStarsList": [
+      "文昌",
+      "文曲",
+      "右弼",
+      "左辅"
+    ],
+    "mutagens": [
+      "忌",
+      "科",
+      "禄",
+      "权"
+    ],
+    "fiveElementsClass": [
+      "火六局",
+      "金四局",
+      "木三局",
+      "水二局",
+      "土五局"
+    ],
+    "shenPalace": [
+      "财帛",
+      "夫妻",
+      "福德",
+      "官禄",
+      "命宫",
+      "迁移"
+    ],
+    "daxianPalace": [
+      "财帛",
+      "夫妻",
+      "福德",
+      "父母",
+      "仆役",
+      "迁移",
+      "田宅",
+      "子女"
+    ],
+    "liunianPalace": [
+      "财帛",
+      "夫妻",
+      "疾厄",
+      "命宫",
+      "仆役",
+      "迁移",
+      "子女"
+    ],
+    "patternHitCount": 23,
+    "patternHits": [
+      "昌曲同会",
+      "府相朝垣",
+      "辅弼同会",
+      "化科入身",
+      "化权入官",
+      "火贪格",
+      "机月同梁",
+      "机月同梁三星会",
+      "巨日同宫",
+      "魁钺同会",
+      "廉杀羊",
+      "铃贪格",
+      "禄存守命",
+      "日月夹命",
+      "日月同宫",
+      "杀破狼",
+      "双禄朝垣",
+      "天机化忌入命",
+      "天马入命",
+      "天马在迁",
+      "天同天梁格",
+      "武曲七杀",
+      "紫微入命"
+    ],
+    "stems": [
+      "丙",
+      "丁",
+      "庚",
+      "癸",
+      "己",
+      "甲",
+      "壬",
+      "戊",
+      "辛",
+      "乙"
+    ],
+    "branches": [
+      "辰",
+      "丑",
+      "亥",
+      "卯",
+      "申",
+      "巳",
+      "未",
+      "午",
+      "戌",
+      "寅",
+      "酉",
+      "子"
+    ]
+  },
+  "dispositionTables": {
+    "ZIWEI_RUNTIME_PALACES": [
+      "命宫",
+      "兄弟",
+      "夫妻",
+      "子女",
+      "财帛",
+      "疾厄",
+      "迁移",
+      "仆役",
+      "官禄",
+      "田宅",
+      "福德",
+      "父母"
+    ],
+    "ZIWEI_RUNTIME_STARS": [
+      "紫微",
+      "天机",
+      "太阳",
+      "武曲",
+      "天同",
+      "廉贞",
+      "天府",
+      "太阴",
+      "贪狼",
+      "巨门",
+      "天相",
+      "天梁",
+      "七杀",
+      "破军",
+      "文昌",
+      "文曲",
+      "左辅",
+      "右弼",
+      "禄存",
+      "火星"
+    ],
+    "ZIWEI_RUNTIME_FIVE_ELEMENTS_CLASS": [
+      "水二局",
+      "木三局",
+      "金四局",
+      "土五局",
+      "火六局"
+    ]
+  },
+  "engineExtrasNotInPalaceMajorProjection": {
+    "minorStars": [
+      "地劫",
+      "地空",
+      "火星",
+      "铃星",
+      "禄存",
+      "擎羊",
+      "天魁",
+      "天马",
+      "天钺",
+      "陀罗",
+      "文昌",
+      "文曲",
+      "右弼",
+      "左辅"
+    ],
+    "adjectiveStars": [
+      "八座",
+      "恩光",
+      "蜚廉",
+      "封诰",
+      "凤阁",
+      "孤辰",
+      "寡宿",
+      "红鸾",
+      "华盖",
+      "截路",
+      "解神",
+      "空亡",
+      "龙池",
+      "年解",
+      "破碎",
+      "三台",
+      "台辅",
+      "天才",
+      "天厨",
+      "天德",
+      "天福",
+      "天官",
+      "天贵",
+      "天空",
+      "天哭",
+      "天伤",
+      "天使",
+      "天寿",
+      "天巫",
+      "天喜",
+      "天刑",
+      "天虚",
+      "天姚",
+      "天月",
+      "咸池",
+      "旬空",
+      "阴煞",
+      "月德"
+    ],
+    "boshi12": [
+      "病符",
+      "博士",
+      "大耗",
+      "飞廉",
+      "伏兵",
+      "官府",
+      "将军",
+      "力士",
+      "青龙",
+      "喜神",
+      "小耗",
+      "奏书"
+    ],
+    "changsheng12": [
+      "病",
+      "帝旺",
+      "冠带",
+      "绝",
+      "临官",
+      "沐浴",
+      "墓",
+      "衰",
+      "死",
+      "胎",
+      "养",
+      "长生"
+    ],
+    "jiangqian12": [
+      "华盖",
+      "将星",
+      "劫煞",
+      "攀鞍",
+      "岁驿",
+      "天煞",
+      "亡神",
+      "息神",
+      "咸池",
+      "月煞",
+      "灾煞",
+      "指背"
+    ],
+    "suiqian12": [
+      "白虎",
+      "病符",
+      "大耗",
+      "吊客",
+      "官符",
+      "贯索",
+      "晦气",
+      "龙德",
+      "丧门",
+      "岁建",
+      "天德",
+      "小耗"
+    ]
+  },
+  "ziweiSsot": [
+    {
+      "slug": "zw_identity_field",
+      "traditional": "命宫",
+      "aliases": []
+    },
+    {
+      "slug": "zw_opposite_field",
+      "traditional": "对宫",
+      "aliases": []
+    },
+    {
+      "slug": "zw_life_domains",
+      "traditional": "十二宫",
+      "aliases": []
+    },
+    {
+      "slug": "zw_four_shift_modes",
+      "traditional": "四化",
+      "aliases": []
+    },
+    {
+      "slug": "zw_resource_shift",
+      "traditional": "化禄",
+      "aliases": [
+        "禄"
+      ]
+    },
+    {
+      "slug": "zw_agency_shift",
+      "traditional": "化权",
+      "aliases": [
+        "权"
+      ]
+    },
+    {
+      "slug": "zw_recognition_shift",
+      "traditional": "化科",
+      "aliases": [
+        "科"
+      ]
+    },
+    {
+      "slug": "zw_friction_shift",
+      "traditional": "化忌",
+      "aliases": [
+        "忌"
+      ]
+    },
+    {
+      "slug": "zw_long_cycle",
+      "traditional": "大限",
+      "aliases": []
+    },
+    {
+      "slug": "zw_yearly_cycle",
+      "traditional": "流年",
+      "aliases": []
+    },
+    {
+      "slug": "zw_core_driver",
+      "traditional": "命主",
+      "aliases": []
+    },
+    {
+      "slug": "zw_action_driver",
+      "traditional": "身主",
+      "aliases": []
+    },
+    {
+      "slug": "zw_action_domain",
+      "traditional": "身宫",
+      "aliases": []
+    },
+    {
+      "slug": "zw_elemental_configuration",
+      "traditional": "五行局",
+      "aliases": []
+    }
+  ],
+  "matrix": [
+    {
+      "traditional": "财帛",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "夫妻",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "福德",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "父母",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "官禄",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "疾厄",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "命宫",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "仆役",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "迁移",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "田宅",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "兄弟",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "子女",
+      "category": "palace",
+      "inFactPack": true,
+      "disposition": "internal_only:palace_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "巨门",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "廉贞",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "破军",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "七杀",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "太阳",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "太阴",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "贪狼",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天府",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天机",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天梁",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天同",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天相",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "武曲",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "紫微",
+      "category": "major_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "火星",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "巨门",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "廉贞",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "禄存",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "破军",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "贪狼",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天机",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天梁",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天同",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天相",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "文昌",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "文曲",
+      "category": "soul_body_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "巨门",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "廉贞",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "破军",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "太阳",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "太阴",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "贪狼",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天机",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天梁",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天同",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "文昌",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "文曲",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "武曲",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "右弼",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "紫微",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "左辅",
+      "category": "sihua_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "忌",
+      "category": "mutagen",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "科",
+      "category": "mutagen",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "禄",
+      "category": "mutagen",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "权",
+      "category": "mutagen",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "化禄",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "化权",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "化科",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "化忌",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "四化",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "大限",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "流年",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "命主",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "身主",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "身宫",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "对宫",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "十二宫",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "五行局",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "命宫",
+      "category": "structure_label",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
+    },
+    {
+      "traditional": "火六局",
+      "category": "five_elements_class_value",
+      "inFactPack": true,
+      "disposition": "internal_only:five_elements_class_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "金四局",
+      "category": "five_elements_class_value",
+      "inFactPack": true,
+      "disposition": "internal_only:five_elements_class_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "木三局",
+      "category": "five_elements_class_value",
+      "inFactPack": true,
+      "disposition": "internal_only:five_elements_class_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "水二局",
+      "category": "five_elements_class_value",
+      "inFactPack": true,
+      "disposition": "internal_only:five_elements_class_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "土五局",
+      "category": "five_elements_class_value",
+      "inFactPack": true,
+      "disposition": "internal_only:five_elements_class_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "昌曲同会",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "府相朝垣",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "辅弼同会",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "化科入身",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "化权入官",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "火贪格",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "机月同梁",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "机月同梁三星会",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "巨日同宫",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "魁钺同会",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "廉杀羊",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "铃贪格",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "禄存守命",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "日月夹命",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "日月同宫",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "杀破狼",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "双禄朝垣",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天机化忌入命",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天马入命",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天马在迁",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天同天梁格",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "武曲七杀",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "紫微入命",
+      "category": "pattern_hit",
+      "inFactPack": true,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "地劫",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "地空",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "火星",
+      "category": "engine_minor_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "铃星",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "禄存",
+      "category": "engine_minor_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "擎羊",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天魁",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天马",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天钺",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "陀罗",
+      "category": "engine_minor_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "文昌",
+      "category": "engine_minor_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "文曲",
+      "category": "engine_minor_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "右弼",
+      "category": "engine_minor_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "左辅",
+      "category": "engine_minor_star",
+      "inFactPack": true,
+      "disposition": "internal_only:star_soft_label_pending",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "八座",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "恩光",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "蜚廉",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "封诰",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "凤阁",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "孤辰",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "寡宿",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "红鸾",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "华盖",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "截路",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "解神",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "空亡",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "龙池",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "年解",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "破碎",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "三台",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "台辅",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天才",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天厨",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天德",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天福",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天官",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天贵",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天空",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天哭",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天伤",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天使",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天寿",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天巫",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天喜",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天刑",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天虚",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天姚",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "天月",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "咸池",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "旬空",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "阴煞",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    },
+    {
+      "traditional": "月德",
+      "category": "engine_adjective_star",
+      "inFactPack": false,
+      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "ssotMapped": false,
+      "resolveStatus": "unknown"
+    }
+  ]
+}

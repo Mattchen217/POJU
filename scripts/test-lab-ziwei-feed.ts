@@ -41,9 +41,10 @@ assert.ok(Array.isArray(pack!.patternHits));
 const closed = formatZiweiClosedSetForPrompt(pack);
 assert.match(closed, /紫微闭集/);
 assert.ok(
-  /命宫|格局命中|大限/.test(closed),
-  "closed-set cites palace or pattern or daxian",
+  /核心定位域|结构格局命中|长周期段/.test(closed),
+  "closed-set uses soft labels (no traditional palace/daxian fallback)",
 );
+assert.ok(!closed.includes("命宫"), "closed-set must not fall back to 命宫");
 
 const lab = {
   version: 1,
@@ -85,10 +86,10 @@ assert.ok(slice02!.sliced.slice.zfp?.topicPalace, "02 has topicPalace");
 const anchors = pageSliceAnchorLines("02", feeds);
 const anchorText = anchors.join("|");
 assert.ok(
-  /紫微|格局|命宫|大限|四化|午|贪狼/.test(anchorText) ||
-    Boolean(slice02!.sliced.slice.zfp?.patternHits?.length),
-  "02 anchors include ziwei or pattern",
+  /核心定位域|四向转化|长周期段|年度周期|结构格局×/.test(anchorText),
+  `02 anchors use soft ziwei labels, got: ${anchorText}`,
 );
+assert.ok(!/紫微|贪狼|命宫|杀破狼|府相朝垣/.test(anchorText), "02 anchors omit traditional ziwei names");
 
 const twin = buildZiweiFactPack(GOLDEN_BIRTH, { asOf: "2026-10-27" });
 const otherBirth: BirthInfo = { ...GOLDEN_BIRTH, year: 1990, hour: 15, hour_period: "shen" };
@@ -100,7 +101,12 @@ assert.notEqual(
 );
 
 const triggers = ziweiCompanionTriggerAnchors(pack);
-assert.ok(triggers.some((t) => t.startsWith("大限") || t.startsWith("流年") || t.startsWith("格局")));
+assert.ok(
+  triggers.some(
+    (t) => t.startsWith("长周期段") || t.startsWith("年度周期") || t.startsWith("patternHits"),
+  ),
+  `companion soft triggers, got: ${triggers.join("|")}`,
+);
 
 console.log("lab-ziwei-feed ok", {
   hits: pack!.patternHits.length,

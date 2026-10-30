@@ -33,6 +33,10 @@ import {
   type ZfpShortKey,
 } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+import {
+  buildZiweiDisplayFactPack,
+  displayAtomLabel,
+} from "@/lib/ziwei/display-fact-pack";
 
 const CFP_SHORT = ["dayMaster", "yongJi", "shishenHit", "dayunNow", "pathTags", "conflictAnchors"] as const;
 const ZFP_SHORT = [
@@ -693,9 +697,57 @@ function pushSliceAnchor(out: string[], seen: Set<string>, value: unknown): void
   }
 }
 
+function isFullZiweiFactPack(value: unknown): value is ZiweiFactPack {
+  if (!value || typeof value !== "object") return false;
+  const pack = value as Partial<ZiweiFactPack>;
+  return (
+    pack.topicPalace != null &&
+    pack.mingShen != null &&
+    pack.daxian != null &&
+    Array.isArray(pack.sihua) &&
+    Array.isArray(pack.patternHits)
+  );
+}
+
+/**
+ * Soft-label ZFP anchors for fill stamps (Phase 9).
+ * Never emit traditional palace/star/pattern names — display projection or count only.
+ */
+function pushZiweiSoftAnchors(
+  out: string[],
+  seen: Set<string>,
+  packs?: PageFeedPacks,
+  slicedZfp?: NonNullable<ReturnType<typeof sliceForPage>["slice"]["zfp"]>,
+): void {
+  const raw = packs?.ziwei != null ? packs.ziwei : packs?.zfp;
+  if (isFullZiweiFactPack(raw)) {
+    const display = buildZiweiDisplayFactPack(raw);
+    const palace = displayAtomLabel(display.topicPalace.palace);
+    if (palace) pushSliceAnchor(out, seen, palace);
+    const sihua = displayAtomLabel(display.sihuaLabel);
+    if (sihua) pushSliceAnchor(out, seen, sihua);
+    const longCycle = displayAtomLabel(display.daxian.label);
+    if (longCycle) {
+      pushSliceAnchor(out, seen, `${longCycle}${display.daxian.startAge}–${display.daxian.endAge}`);
+    }
+    const yearly = displayAtomLabel(display.daxian.liunian.label);
+    if (yearly) {
+      pushSliceAnchor(out, seen, `${yearly}${display.daxian.liunian.year}`);
+    }
+    if (display.patternHitCount > 0) {
+      pushSliceAnchor(out, seen, `结构格局×${display.patternHitCount}`);
+    }
+    return;
+  }
+  if (slicedZfp?.patternHits?.length) {
+    pushSliceAnchor(out, seen, `结构格局×${slicedZfp.patternHits.length}`);
+  }
+}
+
 /**
  * 02-D / 06 short anchors from this page's slice only.
  * Never copies chart text, ganzhi, shen_sha, palaces, or otherChart.
+ * Ziwei: soft labels / pattern count only (no traditional palace·star·格名).
  */
 export function pageSliceAnchorLines(pageId: DecisionPageId, packs?: PageFeedPacks): string[] {
   const sliced = sliceForPage(pageId, packs);
@@ -712,21 +764,8 @@ export function pageSliceAnchorLines(pageId: DecisionPageId, packs?: PageFeedPac
       }
     }
   }
-  const zfp = sliced.slice.zfp;
-  if (zfp) {
-    pushSliceAnchor(out, seen, zfp.topicPalace);
-    pushSliceAnchor(out, seen, zfp.sihua);
-    pushSliceAnchor(out, seen, zfp.daxian);
-    if (zfp.patternHits?.length) {
-      pushSliceAnchor(
-        out,
-        seen,
-        zfp.patternHits
-          .slice(0, 4)
-          .map((h) => h.name)
-          .join("、"),
-      );
-    }
+  if (sliced.slice.zfp) {
+    pushZiweiSoftAnchors(out, seen, packs, sliced.slice.zfp);
   }
   return out;
 }
