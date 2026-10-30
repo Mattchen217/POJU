@@ -201,14 +201,20 @@ log("ok: formatPageSliceFeed clean");
     `紫微在命宫，对宫贪狼；四化忌天同；格局${pack.patternHits[0]?.name ?? "杀破狼"}`,
     "木三局 · 身宫官禄",
   ].join("\n");
+  const dirtyScience =
+    "睡眠负荷高；紫微/天同叙事勿入科学轨；对照贪狼冲动";
+  const dirtyAgenda = `议题：官禄宫压力与木三局节奏；勿写${pack.patternHits[0]?.name ?? "杀破狼"}`;
+  const dirtyQuestion = "紫微命宫要不要换工作？七杀透干怎么处理？流年节奏？";
   const chartText =
-    "日主：甲木\n用神：木\n喜神：水\n忌神：土\n当前大运：甲辰";
+    "日主：甲木\n用神：木\n喜神：水\n忌神：土\n七杀透干\n当前大运：甲辰\n流年：乙巳";
 
   const oneShot = buildBookJudgmentFeedBlock({
     chartText,
     ziwei: pack,
     thesis_block: dirtyThesis,
-    question: "要不要换工作",
+    science_feed: dirtyScience,
+    agenda: dirtyAgenda,
+    question: dirtyQuestion,
     mode: "all",
     locale: "zh",
   });
@@ -216,13 +222,17 @@ log("ok: formatPageSliceFeed clean");
     chartText,
     ziwei: pack,
     thesis_block: dirtyThesis,
+    agenda: dirtyAgenda,
+    question: dirtyQuestion,
     mode: "destiny",
     locale: "zh",
   });
   const science = buildBookJudgmentFeedBlock({
     chartText,
     ziwei: pack,
-    science_feed: "睡眠与决策负荷",
+    science_feed: dirtyScience,
+    agenda: dirtyAgenda,
+    question: dirtyQuestion,
     mode: "science",
     locale: "zh",
   });
@@ -240,6 +250,9 @@ log("ok: formatPageSliceFeed clean");
     for (const name of pack.patternHits.map((h) => h.name)) {
       assert.ok(!feed.includes(name), `${label}: no pattern ${name}`);
     }
+    // CFP / free-text may keep bazi-legal 七杀 · 流年 (homonym preserve on free fields + raw CFP)
+    assert.ok(feed.includes("七杀"), `${label}: bazi 七杀 preserved`);
+    assert.ok(feed.includes("流年"), `${label}: bazi 流年 preserved`);
     if (pack.patternHits[0]?.name) {
       const id = ziweiPatternHitId(pack.patternHits[0].name);
       assert.ok(
@@ -249,8 +262,13 @@ log("ok: formatPageSliceFeed clean");
     }
     assert.ok(feed.includes("命盘总纲") || label === "two-shot-science", `${label} structure`);
   }
-  assert.ok(!science.includes("紫微"), "science feed still scrubbed if slice soft");
-  log("ok: judgment user Prompt one-shot + two-shot no traditional ziwei leaks");
+
+  // Field-specific: dirty science/agenda/question surfaces scrubbed of ziwei-only terms
+  assert.ok(oneShot.includes("## 科学 / 现代证据 feed"));
+  assert.ok(oneShot.includes("## agenda"));
+  assert.ok(oneShot.includes("## 原问"));
+  assert.ok(!oneShot.includes("命宫") || oneShot.includes("核心定位域"), "命宫 soft or gone in free text");
+  log("ok: judgment Prompt one/two-shot; thesis/science/agenda/question scrubbed; bazi homonyms kept");
 }
 
 log("");

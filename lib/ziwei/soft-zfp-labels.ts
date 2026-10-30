@@ -4,16 +4,17 @@
  * falls back to traditional palace/star/pattern names.
  */
 
-import { createHash } from "node:crypto";
 import {
   toTermLocale,
   type TermLocale,
 } from "@/lib/glossary/pojulife-terms";
 import { resolvePojuTerm } from "@/lib/glossary/term-resolve";
+import { sha256Hex } from "@/lib/sha256";
 import { ziweiTokenDisposition } from "@/lib/ziwei/token-disposition";
 
 export function ziweiPatternHitId(name: string): string {
-  return createHash("sha256").update(name.trim(), "utf8").digest("hex").slice(0, 12);
+  // Isomorphic — soft-zfp is pulled into client via slice/delivery schema.
+  return sha256Hex(new TextEncoder().encode(name.trim())).slice(0, 12);
 }
 
 /** Soft label or empty — never traditional fallback. */

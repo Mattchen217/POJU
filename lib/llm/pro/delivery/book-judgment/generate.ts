@@ -407,20 +407,50 @@ export function buildBookJudgmentFeedBlock(input: {
   locale?: string;
 }): string {
   const locale = input.locale ?? "zh";
+  // Field sources / allow-terms:
+  // - thesis_block: ziwei diagnosis prose → full ziwei scrub (no bazi-homonym preserve)
+  // - CFP chartText: bazi legal; not scrubbed by ziwei star lists
+  // - science_feed / agenda / question: free text → ziwei scrub + preserve bazi homonyms
+  //   (question must be scrubbed BEFORE formatPageSliceFeed — slice embeds user.Q)
+  // - patternHits: hit_id:level only (from soft projection)
+  const thesisSafe = input.thesis_block?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.thesis_block.trim(), {
+        ziwei: input.ziwei,
+        locale,
+      })
+    : "";
+  const scienceSafe = input.science_feed?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.science_feed.trim().slice(0, 8_000), {
+        ziwei: input.ziwei,
+        locale,
+        preserveBaziHomonyms: true,
+      })
+    : "";
+  const agendaSafe = input.agenda?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.agenda.trim().slice(0, 2_000), {
+        ziwei: input.ziwei,
+        locale,
+        preserveBaziHomonyms: true,
+      })
+    : "";
+  const questionSafe = input.question?.trim()
+    ? sanitizeZiweiLeaksInPromptText(input.question.trim().slice(0, 1_200), {
+        ziwei: input.ziwei,
+        locale,
+        preserveBaziHomonyms: true,
+      })
+    : "";
+
   const slice = formatPageSliceFeed({
     key: "02",
     chartText: input.chartText,
     ziwei: input.ziwei,
-    question: input.question,
+    question: questionSafe || null,
     locale,
     withAllowlistHeader: true,
   });
   const parts: string[] = [];
-  if (input.mode !== "science" && input.thesis_block?.trim()) {
-    const thesisSafe = sanitizeZiweiLeaksInPromptText(input.thesis_block.trim(), {
-      ziwei: input.ziwei,
-      locale,
-    });
+  if (input.mode !== "science" && thesisSafe) {
     parts.push(`## 命盘总纲\n${thesisSafe}`);
   }
   if (input.mode !== "science") {
@@ -428,16 +458,16 @@ export function buildBookJudgmentFeedBlock(input: {
   } else if (slice) {
     parts.push(slice);
   }
-  if (input.mode !== "destiny" && input.science_feed?.trim()) {
-    parts.push(`## 科学 / 现代证据 feed\n${input.science_feed.trim().slice(0, 8_000)}`);
+  if (input.mode !== "destiny" && scienceSafe) {
+    parts.push(`## 科学 / 现代证据 feed\n${scienceSafe}`);
   }
-  if (input.agenda?.trim()) {
+  if (agendaSafe) {
     parts.push(
-      `## agenda / 议题（仅背景事实 · 禁把时段块/可收费样/投入加减原样写入 claim）\n${input.agenda.trim().slice(0, 2_000)}`,
+      `## agenda / 议题（仅背景事实 · 禁把时段块/可收费样/投入加减原样写入 claim）\n${agendaSafe}`,
     );
   }
-  if (input.question?.trim()) {
-    parts.push(`## 原问\n${input.question.trim().slice(0, 1_200)}`);
+  if (questionSafe) {
+    parts.push(`## 原问\n${questionSafe}`);
   }
   parts.push(
     `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句，禁止原样复述操作日程或验证单元。`,
@@ -452,8 +482,6 @@ export function buildBookJudgmentFeedBlock(input: {
     `## faces 必须覆盖\n${BOOK_FACE_IDS.join(", ")}`,
     JSON_SHAPE,
   );
-  // Do not scrub the entire feed with ziwei star lists — CFP may legally cite
-  // bazi 七杀 etc. Thesis is projected above; ZFP arrives via soft slice + hit_ids.
   return parts.filter(Boolean).join("\n\n");
 }
 
