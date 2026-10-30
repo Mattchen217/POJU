@@ -48,6 +48,7 @@ import {
   bookJudgmentTraceSummary,
   deepEvidencePlanFromBookPack,
   formatBookJudgmentPackBlock,
+  formatBookJudgmentPackClaimsBrief,
   unitsForFace,
 } from "@/lib/llm/pro/delivery/book-judgment/slice";
 import {
@@ -2756,6 +2757,15 @@ async function executeV3(
     const polishPrior = acceptanceArmedPolish
       ? (art.v3_acceptance_prior?.polish ?? prior_gate_fail)
       : prior_gate_fail;
+    const polishPack =
+      isFaceDeliveryKey(page) && isBookJudgmentPackEnabled()
+        ? ((lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined) ??
+          null)
+        : null;
+    const packClaimsBrief =
+      polishPack && isFaceDeliveryKey(page)
+        ? formatBookJudgmentPackClaimsBrief(polishPack, page)
+        : null;
     const polished = await runBodyPolishGenerate({
       key: page,
       locale: polishLocale,
@@ -2764,6 +2774,7 @@ async function executeV3(
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       dispatch_attempt: escapeArmedPolish ? 2 : 1,
       prior_gate_fail: polishPrior,
+      pack_claims_brief: packClaimsBrief,
     });
     if (!polished.ok) {
       if (isV3LabTransportSupplyFail(polished.reason) && !escapeArmedPolish) {
@@ -2942,6 +2953,7 @@ async function executeV3(
       key: page,
       draft: art.page_schema_pre_polish as DeliveryPageData,
       polished: polishedPage,
+      locale: polishLocale,
     });
     if (thickGate && !thickGate.passed) {
       const thickDetail = [

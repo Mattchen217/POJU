@@ -47,6 +47,7 @@ export {
   bookJudgmentTraceSummary,
   deepEvidencePlanFromBookPack,
   formatBookJudgmentPackBlock,
+  formatBookJudgmentPackClaimsBrief,
   sliceBookJudgmentForFace,
   unitsForFace,
   type BookJudgmentFaceSlice,

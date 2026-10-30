@@ -32,6 +32,18 @@ export function unitsForFace(
  * Pack face slice for USER_FEED ∩ body prompt (single SoT).
  * Chart PageFeedMatrix may say sci:no — pack science units still belong here.
  */
+/** Short claim lines for body_polish expand (not full pack dump). */
+export function formatBookJudgmentPackClaimsBrief(
+  pack: BookJudgmentPack,
+  faceId: string,
+): string {
+  const units = unitsForFace(pack, faceId);
+  if (!units.length) return "";
+  return units
+    .map((u) => `- ${u.id} [${u.track}]: ${u.claim}`)
+    .join("\n");
+}
+
 export function formatBookJudgmentPackBlock(
   pack: BookJudgmentPack,
   faceId: string,

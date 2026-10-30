@@ -24,6 +24,13 @@ import {
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import type { BodyPolishLocale } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { isBodyPolishLocale } from "@/lib/llm/pro/delivery/lab/types-v3";
+import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
+import {
+  FACE01_POLISH_FLOOR,
+  POLISH_LOCALE_BLOCKS,
+  assemblePolishLocaleSystem,
+  polishFaceSelfCheck,
+} from "@/lib/llm/pro/delivery/pipeline-v3/polish-locale-blocks";
 
 export type BodyPolishOk = {
   ok: true;
@@ -457,17 +464,195 @@ function selfRegulationSlotKept(
   });
 }
 
+function normalizeForSimilarity(s: string): string {
+  return String(s ?? "")
+    .toLowerCase()
+    .replace(/[\s\u3000，。、「」『』：:；;！!？?…·\-—_/\\|"'`~（）()【】\[\]{}<>]/g, "");
+}
+
+function bigramJaccard(a: string, b: string): number {
+  const grams = (t: string) => {
+    const n = normalizeForSimilarity(t);
+    const set = new Set<string>();
+    if (n.length < 2) {
+      if (n) set.add(n);
+      return set;
+    }
+    for (let i = 0; i < n.length - 1; i++) set.add(n.slice(i, i + 1 + 1));
+    return set;
+  };
+  const A = grams(a);
+  const B = grams(b);
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  for (const g of A) if (B.has(g)) inter += 1;
+  return inter / (A.size + B.size - inter);
+}
+
+function latinWordCount(text: string): number {
+  return String(text ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter((w) => /[A-Za-zÀ-ÿ]/.test(w)).length;
+}
+
+/** Pack / pointer unit ids (must contain a digit). */
+export function extractPolishUnitIds(text: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const m of String(text ?? "").matchAll(/\b([A-Za-z][A-Za-z0-9_]{0,31}\d[A-Za-z0-9_]{0,16})\b/g)) {
+    const id = m[1]!;
+    if (!seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
+}
+
+function face01VisibleParts(page: DeliveryPageData): {
+  main: string;
+  conditions: string;
+  not_choosing: string;
+  pointer: string;
+  blob: string;
+} {
+  const p = page as {
+    main_recommendation?: string;
+    conditions?: string;
+    not_choosing?: string;
+    evidence_pointer?: string;
+  };
+  const main = String(p.main_recommendation ?? "");
+  const conditions = String(p.conditions ?? "");
+  const not_choosing = String(p.not_choosing ?? "");
+  const pointer = String(p.evidence_pointer ?? "");
+  return {
+    main,
+    conditions,
+    not_choosing,
+    pointer,
+    blob: [main, conditions, not_choosing].join("\n"),
+  };
+}
+
+/**
+ * Face 01：简报骨架 → 报告体。绝对下限 + 相对增幅/换皮 + 指针 unit id。
+ */
+export function gateFace01PolishThickness(input: {
+  draft: DeliveryPageData;
+  polished: DeliveryPageData;
+  locale?: string | null;
+}): ContentGateVerdict {
+  const locale = normalizePolishLocale(input.locale ?? "zh");
+  const d = face01VisibleParts(input.draft);
+  const p = face01VisibleParts(input.polished);
+  const notes: string[] = [`gate:face01_polish`, `locale:${locale}`];
+
+  const requiredIds = extractPolishUnitIds(d.pointer);
+  if (requiredIds.length) {
+    const missing = requiredIds.filter((id) => !p.pointer.includes(id));
+    if (missing.length) {
+      return {
+        passed: false,
+        failed_rule: "gate_polish_thin_synonym",
+        detail: `01 润色丢掉依据 unit id：${missing.join("、")}（须全保留，含 science）。`,
+        notes: [...notes, `pointer_miss:${missing.join(",")}`],
+      };
+    }
+  }
+
+  const latin = looksLatinScript(p.blob);
+  if (locale === "zh" && !latin) {
+    const total = compactLen(p.blob);
+    if (total < FACE01_POLISH_FLOOR.zh_chars) {
+      return {
+        passed: false,
+        failed_rule: "gate_polish_thin_synonym",
+        detail: `01 润色未达报告下限（可见约 ${total} 字 < ${FACE01_POLISH_FLOOR.zh_chars}）。须把简报骨架加厚成报告体，禁近义换皮。`,
+        notes: [...notes, `floor_zh:${total}`],
+      };
+    }
+    if (compactLen(p.main) < FACE01_POLISH_FLOOR.main_zh) notes.push("slot_thin:main");
+    if (compactLen(p.conditions) < FACE01_POLISH_FLOOR.conditions_zh) {
+      notes.push("slot_thin:conditions");
+    }
+    if (compactLen(p.not_choosing) < FACE01_POLISH_FLOOR.not_choosing_zh) {
+      notes.push("slot_thin:not_choosing");
+    }
+    if (notes.some((n) => n.startsWith("slot_thin:"))) {
+      return {
+        passed: false,
+        failed_rule: "gate_polish_thin_synonym",
+        detail:
+          "01 润色槽位过薄（main/conditions/not_choosing 未成报告段）。按槽位加厚，禁口号一句交差。",
+        notes: notes.slice(0, 8),
+      };
+    }
+  } else {
+    const words = latinWordCount(p.blob);
+    const floorWords =
+      locale === "fr"
+        ? FACE01_POLISH_FLOOR.fr_words
+        : locale === "es"
+          ? FACE01_POLISH_FLOOR.es_words
+          : FACE01_POLISH_FLOOR.en_words;
+    if (words < floorWords) {
+      return {
+        passed: false,
+        failed_rule: "gate_polish_thin_synonym",
+        detail: `01 润色未达报告下限（约 ${words} words < ${floorWords}）。Expand the brief into a real report body—no synonym swap.`,
+        notes: [...notes, `floor_words:${words}`],
+      };
+    }
+  }
+
+  // Same-script synonym: high overlap + weak growth vs skeleton.
+  if (!isCjkToLatinTranslation(d.blob, p.blob)) {
+    const dLen = Math.max(1, compactLen(d.blob));
+    const pLen = compactLen(p.blob);
+    const growth = pLen / dLen;
+    const sim = bigramJaccard(d.main, p.main);
+    if (
+      growth < FACE01_POLISH_FLOOR.min_growth_ratio &&
+      sim >= FACE01_POLISH_FLOOR.synonym_jaccard
+    ) {
+      return {
+        passed: false,
+        failed_rule: "gate_polish_thin_synonym",
+        detail: `01 润色近义换皮（主推相似≈${sim.toFixed(2)} · 增幅×${growth.toFixed(2)}）。须展开成报告体，禁同义改写交差。`,
+        notes: [...notes, `synonym_growth:${growth.toFixed(2)}`, `jaccard:${sim.toFixed(2)}`],
+      };
+    }
+  }
+
+  notes.push("face01_polish_thickness_pass");
+  return { passed: true, notes };
+}
+
 /**
  * 润色厚度闸：按页量尺，不统一灌水。
+ * Face 01：简报→报告（绝对下限 + 打换皮 + 指针 id）。
  * P3 正文故意写短 → 相对加长。
  * P4 正文已是完整句 → 保量（拦抽瘦/半句）；仅电报体才补句。
- * P1/P2/P5/P6 草稿已完整可读 → 保量（拦抽瘦/半句未补）。
+ * 其它 legacy：草稿已完整可读 → 保量（拦抽瘦/半句未补）。
  */
 export function gateBodyPolishThickness(input: {
   key: DeliverySegmentKey;
   draft: DeliveryPageData;
   polished: DeliveryPageData;
+  /** Face polish target locale (zh|en|es|fr). */
+  locale?: string | null;
 }): ContentGateVerdict | null {
+  if (input.key === "01") {
+    const v = gateFace01PolishThickness({
+      draft: input.draft,
+      polished: input.polished,
+      locale: input.locale,
+    });
+    return v.passed ? null : v;
+  }
+
   const notes: string[] = [];
   const fail = (more: string[]) =>
     more.length
@@ -479,7 +664,9 @@ export function gateBodyPolishThickness(input: {
               ? "润色过薄：仍是同义换词/单句骨架。须明显加长为完整可读句；禁只改个别词交差——回改后重跑（不覆盖已过闸正文）。"
               : input.key === "self_regulation"
                 ? "润色抽瘦或仍是半句骨架。草稿已是完整句则保持信息量；仅电报体才补成完整句——回改后重跑（不覆盖已过闸正文）。"
-                : "润色抽瘦或仍是半句骨架。草稿已完整可读则保持信息量；仅电报体才补句——回改后重跑（不覆盖已过闸正文）。",
+                : isFaceDeliveryKey(input.key)
+                  ? "润色过薄或近义换皮。简报骨架须加厚成报告正文——回改后重跑（不覆盖已过闸正文）。"
+                  : "润色抽瘦或仍是半句骨架。草稿已完整可读则保持信息量；仅电报体才补句——回改后重跑（不覆盖已过闸正文）。",
           notes: more.slice(0, 8),
         } satisfies ContentGateVerdict)
       : null;
@@ -681,8 +868,14 @@ function buildPolishPrompts(input: {
   locale: BodyPolishLocale;
   draft: DeliveryPageData;
   prior_gate_fail?: { failed_rule?: string; detail?: string } | null;
+  /** Optional pack claim lines for brief→report expand (not full pack dump). */
+  pack_claims_brief?: string | null;
 }): { system: string; user: string } {
   const gateBlock = buildBodyGateAvoidanceBlockForPolish(input.key);
+  const faceMode = isFaceDeliveryKey(input.key);
+  const priorThinFace =
+    faceMode &&
+    input.prior_gate_fail?.failed_rule === "gate_polish_thin_synonym";
   const prior =
     input.prior_gate_fail?.failed_rule || input.prior_gate_fail?.detail
       ? [
@@ -691,59 +884,86 @@ function buildPolishPrompts(input: {
           input.prior_gate_fail.failed_rule
             ? `- rule: ${input.prior_gate_fail.failed_rule}`
             : "",
-          input.key !== "execution_guidance" &&
-          input.key !== "self_regulation" &&
-          input.prior_gate_fail.failed_rule === "gate_polish_thin_synonym"
-            ? `- detail: 上轮厚度尺已按页更正。本页草稿已完整则保量，禁止为旧「须加长」指令灌水；按现行厚度合同清表面并出目标语言。`
-            : input.prior_gate_fail.detail
-              ? `- detail: ${String(input.prior_gate_fail.detail).slice(0, 280)}`
-              : "",
+          priorThinFace
+            ? `- detail: 上轮未达报告体或近义换皮。须把简报骨架加厚成读者报告；禁同义改写交差；指针 unit id 全保留。`
+            : input.key !== "execution_guidance" &&
+                input.key !== "self_regulation" &&
+                !faceMode &&
+                input.prior_gate_fail.failed_rule === "gate_polish_thin_synonym"
+              ? `- detail: 上轮厚度尺已按页更正。本页草稿已完整则保量，禁止为旧「须加长」指令灌水；按现行厚度合同清表面并出目标语言。`
+              : input.prior_gate_fail.detail
+                ? `- detail: ${String(input.prior_gate_fail.detail).slice(0, 280)}`
+                : "",
         ]
           .filter(Boolean)
           .join("\n")
       : "";
 
-  const system = [
-    `你是交付报告「可见正文润色」编辑（Pipeline v3 · body_polish）。`,
-    `只输出 JSON，不要 markdown。`,
-    ``,
-    `## 人设`,
-    translatorPersona(input.locale),
-    `任务：按页厚度合同 + 清表面禁区 + 目标语言出稿。不要改主张。`,
-    ``,
-    `## 换壳同禁`,
-    `禁区按类别；近义/半否定/换道具仍算犯。`,
-    ``,
-    pageRoleLock(input.key),
-    ``,
-    `## 厚度合同（按页 · 非六页统一灌水）`,
-    `- 与输入同页 key、同字段结构的完整 JSON。`,
-    thickenContract(input.key),
-    `- 读起来像给真人的说明；目标语言：${localeLabel(input.locale)}。`,
-    `- 机检：P3 拦过薄同义换词；P4 与其它页拦抽瘦或半句未补 → \`gate_polish_thin_synonym\`。`,
-    ``,
-    localeTaskBlock(input.locale),
-    ``,
-    gateBlock,
-    ``,
-    `## 其它硬锁`,
-    `- 禁止为写厚而发明截止点/人数配额/未收集比例/$/%/年龄（#11）；时长与具体量只保留收集已给量。`,
-    `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
-    `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
-    `- 禁可照念对话引号；举例禁用模糊词时不要加引号。`,
-  ].join("\n");
+  const system = faceMode
+    ? assemblePolishLocaleSystem({
+        locale: input.locale,
+        key: input.key,
+        page_role: pageRoleLock(input.key) || undefined,
+        gate_avoidance: gateBlock || undefined,
+        prior_gate: prior || undefined,
+      })
+    : [
+        `你是交付报告「可见正文润色」编辑（Pipeline v3 · body_polish）。`,
+        `只输出 JSON，不要 markdown。`,
+        ``,
+        POLISH_LOCALE_BLOCKS[input.locale].block,
+        ``,
+        `## 人设补充`,
+        translatorPersona(input.locale),
+        ``,
+        `## 换壳同禁`,
+        `禁区按类别；近义/半否定/换道具仍算犯。`,
+        ``,
+        pageRoleLock(input.key),
+        ``,
+        `## 厚度合同（legacy 页 · 非六页统一灌水）`,
+        `- 与输入同页 key、同字段结构的完整 JSON。`,
+        thickenContract(input.key),
+        `- 读起来像给真人的说明；目标语言：${localeLabel(input.locale)}。`,
+        `- 机检：P3 拦过薄同义换词；P4 与其它页拦抽瘦或半句未补 → \`gate_polish_thin_synonym\`。`,
+        ``,
+        localeTaskBlock(input.locale),
+        ``,
+        gateBlock,
+        ``,
+        `## 其它硬锁`,
+        `- 禁止为写厚而发明截止点/人数配额/未收集比例/$/%/年龄（#11）；时长与具体量只保留收集已给量。`,
+        `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
+        `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
+        `- 禁可照念对话引号；举例禁用模糊词时不要加引号。`,
+      ].join("\n");
+
+  const packBrief = input.pack_claims_brief?.trim()
+    ? [
+        ``,
+        `## 本页批断主张摘要（加厚展开用 · 禁再发明批断 · 非全包 dump）`,
+        input.pack_claims_brief.trim(),
+      ].join("\n")
+    : "";
 
   const user = [
     `## 本页 key=${input.key} target_locale=${input.locale}`,
-    prior,
+    prior && !faceMode ? prior : "",
+    packBrief,
     ``,
-    `## 待润色草稿（中文真准骨架；按本页厚度合同合规出目标语言；结构与事实锁定）`,
+    faceMode
+      ? `## 待润色草稿（简报骨架 → 报告正文；结构与事实锁定；出 target_locale）`
+      : `## 待润色草稿（中文真准骨架；按本页厚度合同合规出目标语言；结构与事实锁定）`,
     JSON.stringify(input.draft, null, 2),
     ``,
     `## 输出`,
     `原样形状的完整 JSON（page 字段钉死为 "${input.key}"；可见字段语言=${input.locale}）。`,
-    polishSelfCheck(input.key, input.locale),
-  ].join("\n");
+    faceMode
+      ? polishFaceSelfCheck(input.locale)
+      : polishSelfCheck(input.key, input.locale),
+  ]
+    .filter((s) => s != null && String(s).length)
+    .join("\n");
 
   return { system, user };
 }
@@ -914,6 +1134,8 @@ export async function runBodyPolishGenerate(input: {
   prior_gate_fail?: { failed_rule?: string; detail?: string } | null;
   /** ≥2 after Lab transport stall → provider escape. */
   dispatch_attempt?: number;
+  /** Optional pack claim summary for face brief→report expand. */
+  pack_claims_brief?: string | null;
 }): Promise<BodyPolishOk | BodyPolishFail> {
   const locale = normalizePolishLocale(input.locale);
   const { system, user } = buildPolishPrompts({
@@ -921,6 +1143,7 @@ export async function runBodyPolishGenerate(input: {
     locale,
     draft: input.draft,
     prior_gate_fail: input.prior_gate_fail,
+    pack_claims_brief: input.pack_claims_brief,
   });
 
   let tokens_used = 0;
