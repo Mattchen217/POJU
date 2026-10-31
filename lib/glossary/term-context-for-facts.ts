@@ -277,7 +277,8 @@ export type FormatTermContextOptions = {
 
 /**
  * Compact markdown block for LLM system/user prompts.
- * Includes namespace + source provenance; never dumps traditional Han.
+ * TERMS-PIPELINE-SPEC-v1: traditional closed-set inventory only (ns + source).
+ * Soft/definition stay resolve-side — not dumped as model write targets.
  */
 export function formatTermContextForPrompt(
   ctx: TermContextResult,
