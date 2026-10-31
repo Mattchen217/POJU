@@ -5,23 +5,23 @@
   "legacyGeneratorDisabled": "scripts/generate-poju-terms.mjs",
   "legacyDocOutdated": "docs/完整重命名清单（157）.json (155; missing zodiac/aliases)",
   "counts": {
-    "total": 281,
+    "total": 317,
     "bazi": 184,
     "qimen": 54,
     "glyph": 17,
     "zodiac": 12,
-    "ziwei": 14
+    "ziwei": 50
   },
   "expected": {
-    "total": 281,
+    "total": 317,
     "bazi": 184,
     "qimen": 54,
     "glyph": 17,
     "zodiac": 12,
-    "ziwei": 14
+    "ziwei": 50
   },
-  "nsSlugHash": "d45f422d2a5828d5828613b673a006c3be79168ebbadd25ab017ff00dd381b0f",
-  "contentFingerprint": "ea2d1b26764e6f11630ae783f48f0fca976e96eb702ffb9621076089e072eb74",
+  "nsSlugHash": "43ae4266cc477e7dfecd309001c2fab9c25d9afd073f80a768ac088d75cce942",
+  "contentFingerprint": "b840a511885e3ad71caeda818e96f4b16fe6a052e8b4138d09fc5dae00a3abbf",
   "fiveLocaleFields": [
     "term",
     "definition"
@@ -62,5 +62,5 @@
       "sig": "bazi|官星|bazi:class_guan_xing|bazi:zheng_guan"
     }
   ],
-  "note": "Baseline for Phase 0. Do not overwrite SSOT via legacy generator. Product-confirmed new terms land only after Phase 1+ with --write --from. knownAliasConflicts are deferred to Phase 1 strict resolver (ambiguous)."
+  "note": "Phase 11 baseline: ziwei 50 / total 317. knownAliasConflicts (财星/印星/官星) = class_* traditional vs zheng_* alias — resolvePojuTerm returns ambiguous; do not silently pick one."
 }

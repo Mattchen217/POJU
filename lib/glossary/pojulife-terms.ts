@@ -1,7 +1,7 @@
 /**
  * pojulife terminology — single source of truth (SSOT).
  * Phase 0 canonical source (not reverse-generated from legacy 157 JSON).
- * 281 = bazi 184 + qimen 54 + glyph 17 + zodiac 12 + ziwei 14. Do not parallel-maintain soft labels elsewhere.
+ * 317 = bazi 184 + qimen 54 + glyph 17 + zodiac 12 + ziwei 50. Do not parallel-maintain soft labels elsewhere.
  * Phase 4/6: 羊刃 collapsed into fei_ren (飞刃) alias — no parallel ss_yangren row.
  * ziwei structure labels from Phase 2; qimen Phase 3 field labels; palace/star values use disposition fail-closed.
  *
@@ -6010,9 +6010,10 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     term: {
       zh: "言门星轨",
       en: "Voice Gate Track",
-      es: "Vía de la puerta de la voz",
+      // ≤6 soft-label words (verify-terms gate 6)
+      es: "Vía puerta-voz",
       de: "Stimm-Tor-Spur",
-      fr: "Voie de la porte de la voix",
+      fr: "Voie porte-voix",
     },
     definition: {
       zh: "标记言说、辨析与信息门径相关的结构星轨。",
