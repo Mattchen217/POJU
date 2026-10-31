@@ -1,7 +1,9 @@
 /**
- * Phase 10 — Ziwei user-delivery input isolation.
- * Asserts sliceForPage().slice.zfp never carries unmapped traditional names,
- * while raw FactPack stays complete.
+ * Phase 10 — Ziwei user-delivery input isolation (dual-layer aware).
+ * Soft: sliceForPage().slice.zfp + formatPageSliceFeed never carry unmapped traditional names.
+ * Evidence/judgment: destiny/all feeds MAY include a labeled Ziwei traditional closed-set;
+ * free-text thesis/science/agenda/question stay scrubbed; science mode omits the closed-set.
+ * Raw FactPack stays complete.
  *
  * Run: pnpm test:ziwei-delivery-isolation
  */
@@ -86,6 +88,28 @@ function traditionalLeaksInJson(json: string, suspects: string[]): string[] {
     if (scrubbed.includes(token)) hits.push(token);
   }
   return [...new Set(hits)];
+}
+
+
+/** Strip labeled evidence closed-set + segment-duty meta (may mention 紫微 as instruction). */
+function stripLabeledTraditionalClosedSet(feed: string): string {
+  const markers = [
+    "## 紫微传统闭集（依据层 · 自由传统词 · 禁止打标）",
+    "## Ziwei traditional closed-set (evidence layer · free traditional · no markers)",
+    "## 全书段级喂料职责（CFP+ZFP · 相关才用 · 禁整盘灌段）",
+    "## Global segment feed duties (CFP+ZFP · on-topic)",
+  ];
+  let out = feed;
+  for (const m of markers) {
+    const start = out.indexOf(m);
+    if (start < 0) continue;
+    // Block runs until next top-level ## heading or end
+    const after = out.slice(start + m.length);
+    const next = after.search(/\n## /);
+    const end = next < 0 ? out.length : start + m.length + next;
+    out = out.slice(0, start) + out.slice(end);
+  }
+  return out;
 }
 
 const runLog: string[] = [];
@@ -212,7 +236,7 @@ for (const birth of BIRTHS) {
 
 log(`ok: ${BIRTHS.length} births × ${LOCALES.length} locales slice isolation`);
 log("ok: raw FactPack preserved");
-log("ok: judgment pattern refs are hit_id only");
+log("ok: judgment pattern refs are hit_id (+ optional classical in labeled closed-set)");
 log("ok: formatPageSliceFeed clean");
 
 // --- Judgment user Prompt leak tests (one-shot + two-shot feeds) ---
@@ -259,18 +283,42 @@ log("ok: formatPageSliceFeed clean");
     locale: "zh",
   });
 
+  // Dual-layer: destiny/all may carry labeled traditional closed-set; science must not.
+  assert.ok(
+    oneShot.includes("## 紫微传统闭集（依据层 · 自由传统词 · 禁止打标）"),
+    "one-shot: evidence-layer traditional closed-set present",
+  );
+  assert.ok(
+    destiny.includes("## 紫微传统闭集（依据层 · 自由传统词 · 禁止打标）"),
+    "destiny: evidence-layer traditional closed-set present",
+  );
+  assert.ok(
+    !science.includes("## 紫微传统闭集（依据层 · 自由传统词 · 禁止打标）"),
+    "science: no traditional closed-set block",
+  );
+  assert.ok(
+    oneShot.includes("全书段级喂料职责") || oneShot.includes("段级喂料职责"),
+    "one-shot: global segment feed duties present",
+  );
+  assert.ok(
+    destiny.includes("全书段级喂料职责") || destiny.includes("段级喂料职责"),
+    "destiny: global segment feed duties present",
+  );
+
   for (const [label, feed] of [
     ["one-shot", oneShot],
     ["two-shot-destiny", destiny],
     ["two-shot-science", science],
   ] as const) {
-    assert.ok(!feed.includes("紫微"), `${label}: no 紫微`);
-    assert.ok(!feed.includes("贪狼"), `${label}: no 贪狼`);
-    assert.ok(!feed.includes("天同"), `${label}: no 天同`);
-    assert.ok(!feed.includes("木三局"), `${label}: no 木三局`);
-    assert.ok(!feed.includes("官禄"), `${label}: no 官禄`);
+    const free = stripLabeledTraditionalClosedSet(feed);
+    // Free-text / scrubbed surfaces: no uncontrolled traditional ziwei
+    assert.ok(!free.includes("紫微"), `${label}: free-text no 紫微`);
+    assert.ok(!free.includes("贪狼"), `${label}: free-text no 贪狼`);
+    assert.ok(!free.includes("天同"), `${label}: free-text no 天同`);
+    assert.ok(!free.includes("木三局"), `${label}: free-text no 木三局`);
+    assert.ok(!free.includes("官禄"), `${label}: free-text no 官禄`);
     for (const name of pack.patternHits.map((h) => h.name)) {
-      assert.ok(!feed.includes(name), `${label}: no pattern ${name}`);
+      assert.ok(!free.includes(name), `${label}: free-text no pattern ${name}`);
     }
     // CFP / free-text may keep bazi-legal 七杀 · 流年 (homonym preserve on free fields + raw CFP)
     assert.ok(feed.includes("七杀"), `${label}: bazi 七杀 preserved`);
@@ -289,8 +337,14 @@ log("ok: formatPageSliceFeed clean");
   assert.ok(oneShot.includes("## 科学 / 现代证据 feed"));
   assert.ok(oneShot.includes("## agenda"));
   assert.ok(oneShot.includes("## 原问"));
-  assert.ok(!oneShot.includes("命宫") || oneShot.includes("核心定位域"), "命宫 soft or gone in free text");
-  log("ok: judgment Prompt one/two-shot; thesis/science/agenda/question scrubbed; bazi homonyms kept");
+  {
+    const freeOne = stripLabeledTraditionalClosedSet(oneShot);
+    assert.ok(
+      !freeOne.includes("命宫") || freeOne.includes("核心定位域"),
+      "命宫 soft or gone in free text (outside labeled closed-set)",
+    );
+  }
+  log("ok: judgment dual-layer; closed-set on destiny/all; free-text scrubbed; science clean; bazi homonyms kept");
 }
 
 log("");

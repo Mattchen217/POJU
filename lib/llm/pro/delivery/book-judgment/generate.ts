@@ -19,6 +19,8 @@ import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
 import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
 import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { formatGlobalSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
+import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
   BOOK_FACE_IDS,
@@ -47,10 +49,11 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 - science：主语=机制/偏差/负荷；谓语=导致/维持/放大。
   正例：「完美主义替代外部反馈抬高切换成本」
   反例 timebox_block：「试点压成每周一个四小时块」← 禁
-- destiny：命理判断/结构倾向 + 闭集锚（日主/用忌/格局/宫干星曜）。
-  正例：「用神木受制于忌神火，开口窗口收窄」
+- destiny：命理判断/结构倾向 + 闭集锚。CFP+ZFP 共担同一断语（非八字模板贴紫微贴纸）。
+  有紫微（zfpOmitted=false）且段职责含 ZFP：claim/anchors 须纳入本盘相关紫微传统真词（见依据层闭集）；无关则省略，禁整盘灌段。
+  正例：「用神木受制于忌神火，开口窗口收窄；本题宫星四化同向收束」
   反例 billable_min：「以最小可收费承诺作为验证单元」← 禁
-- convergence：双轨同向或张力交汇，禁止动作清单。
+- convergence：双轨同向或张力交汇，禁止动作清单；可点名命理锚与科学机制的交汇张力（含相关紫微，勿硬塞）。
   正例：「岁运忌神与损失厌恶同向放大开口成本」
   反例 ops_checklist：「当三人付费时转为加大投入」← 禁
 
@@ -59,9 +62,9 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 claim 必须改写成机制/判断句；禁止把时段块/可收费样/投入加减原样写入 claim。
 
 ## 配额与字段
-- serves_face + serves_segment 对齐配额；claim 短闭集；anchors≥1
-- 每脸双轨 + 密度见配额表；patternHits 用则入 used，不用则 caveat
-- 段职责已正写为机制/偏差/负荷|命理判断|交汇张力|复盘问句
+- serves_face + serves_segment 对齐配额与「全书段级喂料职责」；claim 短闭集；anchors≥1
+- 每脸双轨 + 密度见配额表；用到的格局记 pattern_hits_used（hit:id:level）；古典格名可与 hit 并存于 destiny claim（须 ∈ 本盘闭集）
+- 段职责已正写为机制/偏差/负荷|命理判断|交汇张力|复盘问句；科学段勿硬塞紫微
 
 ## 闭集安全网（写入 claim → means_prescription FAIL + unitId@className）
 imperative_yi · redlight_stop · stop_loss_ops · next_action · ops_checklist · timebox_block · billable_min · low_commit_sample
@@ -394,7 +397,9 @@ function mergeUnits(
 
 /**
  * Build the Judgment user feed string (one-shot / destiny / science).
- * Exported for Phase 10 leak tests — must not contain traditional Ziwei palace/star/pattern names.
+ * Dual-layer: soft page slices stay vernacular/soft-ZFP; this judgment feed may include
+ * a labeled Ziwei traditional closed-set (evidence layer) when zfpOmitted=false.
+ * Free-text thesis/science/agenda/question remain scrubbed of uncontrolled Ziwei leaks.
  */
 export function buildBookJudgmentFeedBlock(input: {
   chartText: string;
@@ -472,10 +477,25 @@ export function buildBookJudgmentFeedBlock(input: {
   parts.push(
     `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句，禁止原样复述操作日程或验证单元。`,
   );
+  const zfpOmitted = !input.ziwei || !(input.ziwei.patternHits?.length > 0);
   const hits = patternHitsFromZiwei(input.ziwei);
+  if (input.mode !== "science") {
+    parts.push(
+      formatGlobalSegmentFeedDuties({
+        zfpOmitted,
+        locale,
+      }),
+    );
+  }
+  if (input.mode !== "science" && !zfpOmitted && input.ziwei) {
+    const trad = formatZiweiTraditionalClosedSetForEvidence(input.ziwei, {
+      locale,
+    });
+    if (trad) parts.push(trad);
+  }
   if (hits.length) {
     parts.push(
-      `## ZFP patternHits 闭集引用（hit_id:level · 禁写古典格名；用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
+      `## ZFP patternHits 稳定引用（hit_id:level · 用则入 pattern_hits_used；古典格名仅可写本盘闭集内且与段职责相关；不用则 unit.caveat）\n${hits.join("、")}`,
     );
   }
   parts.push(
