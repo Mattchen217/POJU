@@ -32,6 +32,8 @@ export type TermFactRef = {
 export type TermContextEntry = {
   namespace: TermNs;
   slug: string;
+  /** Closed-set traditional / primary Han form (model may write this). */
+  traditional: string;
   soft: string;
   definition: string;
   /** One-line cost / edge / non-certainty note. */
@@ -251,6 +253,7 @@ export function buildTermContextForFacts(
     entries.push({
       namespace: term.ns,
       slug: term.slug,
+      traditional: (term.traditional || "").trim(),
       soft,
       definition: includeDefinition
         ? (glossOf(term.slug, loc) || term.definition[loc] || "").trim()
@@ -274,7 +277,8 @@ export type FormatTermContextOptions = {
 
 /**
  * Compact markdown block for LLM system/user prompts.
- * Includes namespace + source provenance; never dumps traditional Han.
+ * TERMS-PIPELINE-SPEC-v1: traditional closed-set inventory only (ns + source).
+ * Soft/definition stay resolve-side — not dumped as model write targets.
  */
 export function formatTermContextForPrompt(
   ctx: TermContextResult,
@@ -282,22 +286,24 @@ export function formatTermContextForPrompt(
 ): string {
   if (!ctx.entries.length) return "";
   const zh = ctx.locale === "zh";
-  const withDef = opts?.includeDefinition !== false;
   const task = opts?.task?.trim() || "facts";
+  // Model-facing: traditional inventory only (multi-char). Soft is code-side — do not
+  // dump soft/definition as write targets (TERMS-PIPELINE-SPEC-v1).
   const header = zh
-    ? `# 本次事实术语上下文（仅下列可引用 · 任务=${task}）
-只许用 slug 或自造软译名；禁止把内部传统原名写进用户可见正文。
-| slug | ns | 软译 | ${withDef ? "定义 | " : ""}边界 | 来源 |`
-    : `# Fact-scoped term context (cite only these · task=${task})
-Use slug or soft label only; never emit traditional jargon in user-visible prose.
-| slug | ns | soft | ${withDef ? "definition | " : ""}boundary | source |`;
-  const sep = withDef
-    ? `|---|---|---|---|---|---|`
-    : `|---|---|---|---|---|`;
-  const rows = ctx.entries.map((e) => {
-    const def = withDef ? ` ${escapeCell(e.definition)} |` : "";
-    return `| \`${e.slug}\` | ${e.namespace} | **${escapeCell(e.soft)}** |${def} ${escapeCell(e.boundary)} | \`${escapeCell(e.source)}\` |`;
-  });
+    ? `# 本次盘闭集传统词（仅下列可写入 · 任务=${task}）
+直接写【多字/复合】传统真词；禁止 \`⟦t:…⟧\` / \`?t:…\` 打标；禁止自造软译；禁止孤立单字命理词。软译由代码层处理。
+| 传统词 | ns | 来源 |`
+    : `# This-chart closed-set traditional terms (cite only these · task=${task})
+Write multi-char/compound traditional forms; never markers \`⟦t:…⟧\` / \`?t:…\`; never coined soft labels; no isolated single-char 命理 atoms. Soft-translate is code-side.
+| traditional | ns | source |`;
+  const sep = `|---|---|---|`;
+  const rows = ctx.entries
+    .filter((e) => (e.traditional || "").trim().length >= 2)
+    .map((e) => {
+      const trad = escapeCell(e.traditional);
+      return `| ${trad} | ${e.namespace} | \`${escapeCell(e.source)}\` |`;
+    });
+  if (!rows.length) return "";
   return [header, sep, ...rows].join("\n");
 }
 

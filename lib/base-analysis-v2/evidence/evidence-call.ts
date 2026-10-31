@@ -80,6 +80,17 @@ export function backfillZeroAnchorSegment(
 ): string {
   if (/⟦t:/.test(segText)) return segText;
   if (!basis || basis.length === 0) return segText;
+  // Free-traditional model path: segment already cites a multi-char basis term →
+  // leave for autoMark polish; do not append a second anchor sentence.
+  const hasBasisTraditional = basis.some((t) => {
+    const term = String(t ?? "").trim();
+    if (term.length < 2) return false;
+    if (segText.includes(term)) return true;
+    // basis rows are often "术语 + 白话"; match first multi-char Han chunk
+    const m = term.match(/[\u4e00-\u9fff]{2,8}/);
+    return Boolean(m && segText.includes(m[0]!));
+  });
+  if (hasBasisTraditional) return segText;
   // 只取前 1-2 个承重真词打标,固定白话引导,不堆全部原始真词
   const topTerms = basis.slice(0, 2);
   const marked = topTerms
@@ -146,8 +157,8 @@ export function findEvidenceLeak(tree: unknown, locale: string): string | null {
   const simpPath = findSegmentText(tree, (t) => SIMP_RE.test(t));
   if (simpPath) {
     return locale.startsWith("zh")
-      ? `依据含十神简称(${simpPath})。必须用全称并打标（官杀→正官/七杀 等）。`
-      : `Evidence has a Ten-God abbreviation at ${simpPath}. Use full names + markers.`;
+      ? `依据含十神简称(${simpPath})。必须用全称传统真词（官杀→正官/七杀 等）；勿输出打标壳。`
+      : `Evidence has a Ten-God abbreviation at ${simpPath}. Use full traditional names (no marker shells).`;
   }
 
   let bareWord: string | null = null;
@@ -159,8 +170,8 @@ export function findEvidenceLeak(tree: unknown, locale: string): string | null {
   if (barePath) {
     const word = bareWord ?? "裸真词";
     return locale.startsWith("zh")
-      ? `依据仍有裸命理词「${word}」(${barePath})。请打标成 ⟦t:<slug>|⟧（竖线后留空）。`
-      : `Evidence still has bare term "${word}" at ${barePath}. Mark as ⟦t:<slug>|⟧ with empty slot.`;
+      ? `依据仍有裸命理词「${word}」(${barePath})。请改写为闭集传统真词（多字/复合）；勿输出打标壳（软译由代码层处理）。`
+      : `Evidence still has bare term "${word}" at ${barePath}. Rewrite as closed-set traditional multi-char forms; do not emit marker shells (soft-translate is code-side).`;
   }
 
   return null;

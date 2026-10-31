@@ -94,16 +94,28 @@ function main() {
   ok("entries have soft+boundary, no traditional soft");
 
   const prompt = formatTermContextForPrompt(ctx, { task: "test" });
-  assert.ok(prompt.includes("slug"), "prompt has slug col");
-  assert.ok(prompt.includes("天乙") === false || !prompt.includes("天乙贵人"), "no 天乙贵人 in prompt");
-  assert.ok(!prompt.includes("| 天乙"), "no traditional column dump");
-  ok("prompt block fact-scoped");
+  // TERMS-PIPELINE-SPEC-v1: model sees traditional closed-set inventory only.
+  // Soft/slug remain resolve-side fields — not model write targets / not prompt columns.
+  assert.ok(/traditional|传统/.test(prompt), "prompt has traditional inventory header");
+  assert.ok(
+    prompt.includes("文昌") || prompt.includes("飞刃") || prompt.includes("天乙贵人"),
+    "prompt lists fact traditional forms",
+  );
+  assert.ok(!/^\| slug \|/m.test(prompt), "no slug write-target column");
+  assert.ok(!prompt.includes("| soft |"), "no soft write-target column");
+  assert.ok(/禁止.*⟦t:|never markers/i.test(prompt), "prompt bans marker teaching");
+  assert.ok(!/只许用 slug 或自造软译/.test(prompt), "no soft-as-write-target teaching");
+  ok("prompt block fact-scoped traditional inventory");
 
   const oneShot = buildTermContextPromptFromStructured(structured, "en", {
     task: "base_analysis",
     maxEntries: 20,
   });
-  assert.ok(oneShot.includes("Fact-scoped") || oneShot.includes("slug"), "en prompt");
+  assert.ok(
+    oneShot.includes("closed-set traditional") || oneShot.includes("| traditional |"),
+    "en prompt traditional inventory",
+  );
+  assert.ok(!oneShot.includes("| soft |"), "en prompt no soft write column");
   ok("en locale prompt");
 
   // Full SSOT table is larger than fact context — prove we are not dumping all.

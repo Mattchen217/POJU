@@ -1,6 +1,9 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
+import {
+  buildTermContextPromptFromStructured,
+  collectTermFactsFromStructured,
+} from "@/lib/glossary/term-context-for-facts";
 import { outputLanguageLabel } from "@/lib/base-analysis/resolve-output-language";
 import {
   buildPlainspeakVoiceSections,
@@ -40,8 +43,8 @@ const BASE_ANALYSIS_IDENTITY_ZH = `# 你是谁 · 写什么
 **输入里你会看到真词**（喜神/忌神/大运/相刑/日主/食神/乙木…）——那是给你**推理算**用的，读它们、据它们判断。
 但你**输出**给用户时的铁律：
 - **正文**：全部白话，一个命理词都不留（详见 \`正文规范\`）。
-- **依据块**：命理词必须打标 ⟦t:<slug>|⟧，绝不裸露（详见 \`依据与打标\`）。
-输入有真词是正常的，你的活是把它【翻译成用户读得懂的样子】，不是把真词直接抄给用户。`;
+- **依据块**：闭集【多字/复合】传统真词直接写入（详见 \`依据与推理\`）；**禁止**输出任何打标壳；软译由系统代码层处理。
+输入有真词是正常的；依据块写传统真词，正文写白话——不要把软译/标记壳塞进输出。`;
 
 const BASE_ANALYSIS_IDENTITY_EN = `# Who you are · what you write
 
@@ -53,8 +56,8 @@ objective config + plain notes—**not** life story, career typing, or fortune-t
 **You will see raw terms in the input** (favorable-element / luck-pillar / punishment / day-master / eating-god / Yi wood…)—those are for **your reasoning**. Read them; judge from them.
 **Output iron rules for the user:**
 - **Body**: all vernacular—no jargon left (see Body rules).
-- **Evidence blocks**: jargon must be marked \`⟦t:<slug>|⟧\`—never bare (see Evidence & marking).
-Raw terms in input are expected; your job is to **translate them into something the user can read**, not copy them through.`;
+- **Evidence blocks**: write closed-set **traditional** multi-char/compound forms naturally (see Evidence \& reasoning); **never** emit marker shells — soft-translate is code-side.
+Raw terms in input are expected; evidence cites traditional forms, body stays vernacular.`;
 
 /** 块2 · 输出分区 */
 const BASE_ANALYSIS_OUTPUT_SECTIONS_ZH = `# 输出分区（必须齐全）
@@ -98,13 +101,11 @@ const BASE_ANALYSIS_OUTPUT_SECTIONS_EN = `# Output sections (all required)
 /** 块3 · 正文规范 */
 const BASE_ANALYSIS_BODY_RULES_ZH = `# 正文规范 · 给用户读的白话
 
-## 正文零标记 · 硬错不是风格
-- 正文是自然语言，像懂你的人平静地说话。**任何 ⟦t:…⟧ 都不许出现在正文**（含开篇身份锚）——出现即判失败。
+## 正文零术语壳 · 硬错不是风格
+- 正文是自然语言，像懂你的人平静地说话。**正文禁止**传统命理真词、禁止任何打标壳（含开篇身份锚）——出现即判失败。
 - 命理词（喜神/大运/相刑/食神/身弱…）不写进正文，用白话说清那个意思。
   \`strength\` 强弱**仅供你推理**，正文不写"身弱/身强/身旺"，用白话描述状态。
-- **五行字（火/水/木/金/土）在正文是你的白话意象，用字本身，不打标。**
-  判断标准（自己判、别背例子）：把它渲染成软译后若**读不通顺**，就说明是白话意象、本不该打标。
-    ✗ 你像一团被安置在陶罐里的 ⟦t:fire|⟧ （渲染成"一团发散"不通顺 → 错）
+- **五行字（火/水/木/金/土）在正文是你的白话意象，用字本身**（不要换成软译黑话）。
 
 ## 正文不用角引号
 - 不给任何词加角引号强调（不写 \`精准释放\` \`泄压通道\` \`输出\` \`水\` \`木\` 这类）。
@@ -118,13 +119,11 @@ const BASE_ANALYSIS_BODY_RULES_ZH = `# 正文规范 · 给用户读的白话
 
 const BASE_ANALYSIS_BODY_RULES_EN = `# Body rules · vernacular for the user
 
-## Body zero markers · hard fail, not style
-- Body is natural vernacular. **No \`⟦t:…⟧\` anywhere in the body** (including the opening identity)—presence = fail.
+## Body zero jargon shells · hard fail, not style
+- Body is natural vernacular. **No traditional metaphysical jargon and no marker shells anywhere in the body** (including the opening identity)—presence = fail.
 - Do not put jargon (favorable-element / luck-pillar / punishment / eating-god / weak-self…) in the body—say the meaning in plain words.
   \`strength\` is for **your reasoning only**—never write "weak self / strong self" in the body; describe the state in vernacular.
-- **Element words (fire/water/wood/metal/earth) in the body are vernacular imagery—use the word itself, never mark.**
-  Self-check (judge yourself; don't memorize examples): if rendering the marker to its soft label makes the sentence **stop reading naturally**, it was vernacular imagery and must not be marked.
-    ✗ "a ball of ⟦t:fire|⟧ sealed in clay" (renders to a soft that breaks the sentence → wrong)
+- **Element words (fire/water/wood/metal/earth) in the body are vernacular imagery—use the word itself** (do not swap in coined soft labels).
 
 ## No scare-quotes for emphasis
 - Do not wrap words in corner quotes / scare-quotes for emphasis.
@@ -136,13 +135,13 @@ const BASE_ANALYSIS_BODY_RULES_EN = `# Body rules · vernacular for the user
 - Do not write "Four-Pillar Configuration" or "Decade Climate Overview" sections; timing and Ganzhi years belong downstream.
 - You may name pattern / favorable directions / key ten-god mechanisms—**structured fields only**; no new shen_sha.`;
 
-/** 块4 · 依据与打标 */
-const BASE_ANALYSIS_EVIDENCE_RULES_ZH = `# 依据与推理块 · 写法与打标
+/** 块4 · 依据与推理（自由传统词 · 禁止打标） */
+const BASE_ANALYSIS_EVIDENCE_RULES_ZH = `# 依据与推理块 · 自由传统词
 
-## 输入真词 → 输出必打标（硬链，别漏）
+## 输入真词 → 依据写传统真词（硬链，别漏）
 输入里的真词（喜神/大运/相刑/食神/乙木…）是给你推理用的；输出给用户时：
-正文全白话（见 \`正文规范\`），**依据块里的命理词必须打标** \`⟦t:<slug>|⟧\`，绝不裸露。
-裸露任一真词（喜神/相刑/辛金…）到用户可见文本 = 硬错、判失败。
+正文全白话（见 \`正文规范\`），**依据块直接写闭集【多字/复合】传统真词**，像专家自然行文。
+**禁止**输出任何打标壳；**禁止**自造软译/品牌黑话——软译由系统代码层（autoMark + SSOT）处理。
 
 ## 依据先行（顺序焊死）
 ① **推理**：抓够锚点真算，标准是"讲透了、结论立得住"，不是个数。
@@ -157,26 +156,23 @@ const BASE_ANALYSIS_EVIDENCE_RULES_ZH = `# 依据与推理块 · 写法与打标
 - **最短**：只放本段结论真正依赖的锚点，无关的一个不带 → 天然不堆砌。
 - **完整**：承重的一个都不能少——少一环，证据链就断、结论悬空。
 - 不为求少砍承重环，不为凑数加无关环。
-- 自检：删掉任一金字，结论还站得住吗？站得住 = 那环是凑数的（删）；站不住 = 那环是承重的（留）。
+- 自检：删掉任一承重传统真词，结论还站得住吗？站得住 = 那环是凑数的（删）；站不住 = 那环是承重的（留）。
 
-## 打标格式
-- 每个 ## 分区末尾加 \`**依据与推理:**\`（默认折叠）；格式 \`⟦t:<slug>|⟧\`，竖线后留空——**软译白话由系统填，你只选对 slug**。
-- 打标覆盖：十神/干支/神煞/柱位——依据里引用到就打标，不裸露。
-  - **五行例外**：金/木/水/火/土直接写原字，**不要打标**（用户看得懂原字；软译成「发散/润流」是负收益）。
-  - 十神：\`⟦t:shi_shen|⟧\` \`⟦t:pian_cai|⟧\`，不要写十神原词。
-    ✗ 展现才华（食神）获取资源（偏财）（依据里裸写十神原词 → 错）
-  - 干支：任何干支组合都不得裸露，禁 \`(癸酉 phase)\`、\`during 壬申\` 半裸写法。
-- **关系类（相刑/相冲/六合）**：直接中性白话，**不打标**、不写关系 glossary slug（见 \`中立·闭集·关系\`）。
-- 白话槽留空、勿自造软译：✗ \`⟦t:weak_self|需养⟧\`（用词解释词）  ✗ \`⟦t:day_master|乙木⟧\`（裸干支进槽）。
-- 同 id 不重复刷标记；密度=完整的最短承重链（环数随结论浮动，不多不少）。
+## 输出规则（模型侧 · 禁止打标）
+- 每个 ## 分区末尾加 \`**依据与推理:**\`（默认折叠）。
+- 依据里引用到的十神/神煞/柱位/喜忌等：**直接写闭集传统真词**（如 正印 / 七杀 / 驿马 / 日主）。
+  - **五行例外**：金/木/水/火/土直接写原字。
+  - **关系类（相刑/相冲/六合）**：直接中性白话或完整关系名，见 \`中立·闭集·关系\`。
+- **禁止**打标壳；**禁止**自造软译；**禁止**孤立单字命理词硬塞。
+- 密度=完整的最短承重链（环数随结论浮动，不多不少）。
 - **泄身通道要交代**：某通道在当前强弱+喜忌下是推进还是消耗，说明白，别默认当优势。`;
 
-const BASE_ANALYSIS_EVIDENCE_RULES_EN = `# Evidence & reasoning · writing and marking
+const BASE_ANALYSIS_EVIDENCE_RULES_EN = `# Evidence & reasoning · free traditional terms
 
-## Input raw terms → output must mark (hard chain)
+## Input raw terms → evidence writes traditional forms (hard chain)
 Raw terms in the input are for your reasoning. For the user:
-body = all vernacular (see Body rules); **jargon in evidence blocks must be marked** \`⟦t:<slug>|⟧\`—never bare.
-Any bare jargon in user-visible text = hard fail.
+body = all vernacular (see Body rules); **in evidence, write closed-set multi-char/compound traditional terms naturally**.
+**Never** emit marker shells; **never** invent soft/coined labels — soft-translate is code-side (autoMark + SSOT).
 
 ## Evidence-first (order welded)
 ① **Reason**: gather enough anchors until the section is clear and the conclusion stands—not a count quota.
@@ -191,18 +187,16 @@ Reason for completeness (prefer extra links); evidence for precision (keep only 
 - **Shortest**: only anchors this conclusion truly depends on—no padding.
 - **Complete**: never drop a load-bearing link—one missing link breaks the chain.
 - Do not cut load-bearing links to look sparse; do not add unrelated links to look dense.
-- Self-check: delete any gold term—does the conclusion still stand? If yes = padding (delete); if no = load-bearing (keep).
+- Self-check: delete any load-bearing traditional term—does the conclusion still stand? If yes = padding (delete); if no = load-bearing (keep).
 
-## Marking format
-- End each ## section with \`**Evidence & reasoning:**\` (folded by default); format \`⟦t:<slug>|⟧\` with empty after the bar—**system fills soft**; you only pick the right slug.
-- Mark ten-gods / Ganzhi / shen_sha / pillars when cited in evidence—never bare.
-  - **Five Elements exception**: write 金/木/水/火/土 (Metal/Wood/Water/Fire/Earth) as plain characters—**do not mark** (soft labels like "radiate/flow" hurt readability).
-  - Ten-gods: \`⟦t:shi_shen|⟧\` \`⟦t:pian_cai|⟧\`—do not write bare ten-god jargon.
-  - Ganzhi: never bare; ban half-bare forms like \`(Gui-You phase)\` / \`during Ren-Shen\`.
-- **Relations (punishment / clash / six-harmony)**: neutral vernacular only—**no markers**, no relation glossary slugs (see Neutral · closed-set · relations).
-- Leave the plain slot empty; never invent softs: ✗ \`⟦t:weak_self|Conserving⟧\`  ✗ \`⟦t:day_master|Yi wood⟧\`.
-- Do not repeat the same id; density = complete shortest chain (link count floats with the conclusion).
-- **Name depleting outlets**: say whether a channel is propulsion or drain under current strength + xi/ji—never assume advantage.`;
+## Output rules (model-side · no marking)
+- End each ## section with \`**Evidence & reasoning:**\` (folded by default).
+- When citing ten-gods / shen_sha / pillars / xi-ji in evidence: **write traditional closed-set forms** (e.g. 正印 / 七杀 / 驿马 / 日主).
+  - **Five Elements exception**: write 金/木/水/火/土 (Metal/Wood/Water/Fire/Earth) as plain characters.
+  - **Relations (刑/冲/合)**: neutral vernacular or full relation names — see Neutral · closed-set · relations.
+- **No** marker shells; **no** coined soft labels; **no** isolated single-character 命理 atoms.
+- Density = complete shortest load-bearing chain.
+- **Name the drain/channel clearly**: whether a channel advances or drains under current strength + xi/ji — never default it to an advantage.`;
 
 /** 块5 · 中立·闭集·关系 */
 const BASE_ANALYSIS_NEUTRAL_CLOSEDSET_ZH = `# 中立底座 · 闭集 · 禁幻觉
@@ -235,7 +229,7 @@ const BASE_ANALYSIS_NEUTRAL_CLOSEDSET_ZH = `# 中立底座 · 闭集 · 禁幻�
   用它把"容易卡住的地方"或"核心配置"锚到真实结构张力上。
 - **最多点一处**，织进叙事，不枚举关系名（不写"你有寅巳相刑、巳酉半合"这类清单）。
 - 只用 \`source=natal\` 本命关系；流年/动态关系一律忽略（流年剧情留下游）。
-- 关系类直接中性白话，不打标（与 \`依据与打标\` 一致）。`;
+- 关系类直接中性白话，不打标（与 \`依据与推理\` 一致）。`;
 
 const BASE_ANALYSIS_NEUTRAL_CLOSEDSET_EN = `# Neutral base · closed-set · no hallucination
 
@@ -267,7 +261,7 @@ not who he is, what he does, or what will happen. Scenes belong to the four down
   use one to anchor **Where You Stick** or **Core Configuration** to real structural tension.
 - **At most one mention**, woven in—never enumerate relation names.
 - **Natal only (\`source=natal\`)**; ignore liunian/dynamic relations (plot timing belongs downstream).
-- Relations = neutral vernacular only—no markers (same as Evidence & marking).`;
+- Relations = neutral vernacular only—no markers (same as Evidence & reasoning).`;
 
 /** 块6 · 排版 */
 const BASE_ANALYSIS_LAYOUT_ZH = `# 排版 · 中立精密读数 + 人话注解（像 Apple 官网/顶级杂志：精炼、克制、留白）
@@ -304,7 +298,7 @@ const BASE_ANALYSIS_LAYOUT_ZH = `# 排版 · 中立精密读数 + 人话注解�
 - 标记嵌进通顺完整句：软译词前要有冠词/物主词/连接词（在标记**外**），不把标记当无冠词句首主语。
   ✗ \`mobility pulse (驿马)[···] Pairs with…\`（禁手写 \`[···]\`；用户侧由渲染层给软译加下划线）
 - 标记前禁裸换行；\`**依据与推理:**\` 与其后整段连成一块，勿空行拆开（免得金字漏在折叠外）。
-- 藏干不罗列：一句机制白话，必要时最多 1 个 ⟦t:…⟧，禁 \`Hidden stems (Wu earth…)\` 堆砌。
+- 藏干不罗列：一句机制白话；若需点名，用闭集传统真词（最多 1 个承重），禁 \`Hidden stems (Wu earth…)\` 堆砌。
 
 ## 篇幅
 约 800–1200 词，身份锚+五块齐全。宁可略超，不为压字数砍块。
@@ -343,7 +337,7 @@ Renderer splits on \\n\\n. Blank line between every block (### / lead / ¶ / > q
 ## Marker layout (inside evidence only)
 - Embed markers in complete grammatical sentences; put articles/possessives/connectors **outside** the marker—never use a marker as bare sentence-initial subject.
 - No bare newline before a marker; keep \`**Evidence & reasoning:**\` contiguous with its paragraph (blank lines leak gold outside the fold).
-- No hidden-stem dumps: one mechanism sentence; at most one \`⟦t:…⟧\` if needed.
+- No hidden-stem dumps: one mechanism sentence; at most one closed-set traditional term if needed.
 
 ## Length
 About 800–1200 words; identity + five blocks complete. Slightly over is OK; never drop a block for word count.
@@ -463,6 +457,22 @@ const BASE_ANALYSIS_FEW_SHOT_EN = `# Section skeleton + anti-examples (structure
 1. One main metaphor for the whole piece, set by \`day_master\` + \`strength\` + \`yong_shen\`
 2. Self-check: "Would this still fit another chart?" If yes, rewrite`;
 
+
+function traditionalInventoryFromStructured(
+  structured: Parameters<typeof collectTermFactsFromStructured>[0],
+): string[] {
+  const facts = collectTermFactsFromStructured(structured);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const f of facts) {
+    const t = String(f.traditional ?? "").trim();
+    if (t.length < 2 || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
 export function buildBaseAnalysisStreamPrompt(input: BaseAnalysisStreamPromptInput): {
   system: string;
   user: string;
@@ -537,10 +547,14 @@ Language: **${langLabel}** throughout.`;
     // 块3 正文规范
     lang === "zh" ? BASE_ANALYSIS_BODY_RULES_ZH : BASE_ANALYSIS_BODY_RULES_EN,
     ...buildPlainspeakVoiceSections(PLAINSPEAK_STYLE_EXAMPLE_BASE_ANALYSIS),
-    // 块4 依据与打标
+    // 块4 依据与推理
     lang === "zh" ? BASE_ANALYSIS_EVIDENCE_RULES_ZH : BASE_ANALYSIS_EVIDENCE_RULES_EN,
     buildDualLayerDeliveryPromptBlock(lang),
-    buildTermMarkingPromptBlock(lang, { principlesOnly: true, neutralBase: true }),
+    buildTermMarkingPromptBlock(lang, {
+      principlesOnly: true,
+      neutralBase: true,
+      traditionalInventory: traditionalInventoryFromStructured(input.local_data.structured),
+    }),
     // 块5 中立·闭集·关系
     lang === "zh" ? BASE_ANALYSIS_NEUTRAL_CLOSEDSET_ZH : BASE_ANALYSIS_NEUTRAL_CLOSEDSET_EN,
     buildForbiddenTermsPromptBlock(lang),

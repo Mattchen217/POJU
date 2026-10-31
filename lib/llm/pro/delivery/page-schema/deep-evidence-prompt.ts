@@ -16,6 +16,7 @@ import { formatAnchorCategoryUsageForPrompt, type CategoryTokenSets } from "./an
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
 import { appendPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
 
 /** Write→Fill mechanism shaping tag (locked after write). */
 export const DEEP_EVIDENCE_MECHANISM_TAGS = [
@@ -386,6 +387,16 @@ export function buildDeepEvidencePrompt(
     userParts.push(
       `【完整原始命盘闭集 · 与分类菜单互为补充；禁编造闭集外词】\n${opts.structured_inventory.trim()}`,
     );
+  }
+  const zfpOmitted =
+    !opts.ziwei_fact_pack || !(opts.ziwei_fact_pack.patternHits?.length > 0);
+  if (!zfpOmitted && opts.ziwei_fact_pack) {
+    const trad = formatZiweiTraditionalClosedSetForEvidence(opts.ziwei_fact_pack);
+    if (trad) {
+      userParts.push(
+        `${trad}\n（依据层自由传统词；相关才写入 metaphysics_evidence / chart_anchors；软译由下游 soft/mark。）`,
+      );
+    }
   }
   userParts.push(
     `## 输出\n只输出 JSON：page="${key}", units 长度 ${spec.min}–${spec.max}。每条 path/chart_anchors/evidence。`,

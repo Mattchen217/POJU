@@ -562,6 +562,9 @@ export async function runContentBodyGenerate(input: {
     .filter((s) => s?.trim())
     .join("\n\n");
 
+  const zfpOmitted =
+    !input.ziwei_fact_pack ||
+    !(input.ziwei_fact_pack.patternHits?.length > 0);
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
     locale: input.locale,
@@ -572,6 +575,7 @@ export async function runContentBodyGenerate(input: {
     ),
     book_judgment_pack_block: input.book_judgment_pack_block,
     user_feed: userFeed,
+    zfpOmitted,
   });
 
   let tokens_used = 0;

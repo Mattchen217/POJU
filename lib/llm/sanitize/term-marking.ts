@@ -14,6 +14,7 @@ import {
   CLOSED_SET_SLUG,
   CLOSED_SHEN_SHA,
   CLOSED_TEN_GODS,
+  CLOSED_LIFE_STAGES,
   HIGH_RISK_COMPLIANCE_HAN,
   HIGH_RISK_SOFT_LABEL,
   isClosedSetMarkerId,
@@ -1381,6 +1382,9 @@ const BARE_AUTO_MARK_HAN = [
   ]),
 ]
   .filter((han) => !DAILY_WORD_EXEMPT_HAN.has(han))
+  // SoT: isolated single-char 命理词 stay out of prose auto-mark (life_stage* fields only).
+  // Relation single-char atoms keep their lookbehind guards below.
+  .filter((han) => han.length >= 2 || Boolean(RELATION_SINGLE_CHAR_GUARD[han]))
   .sort((a, b) => b.length - a.length);
 
 /** 六十甲子干支对。裸单字天干/地支走 BARE_AUTO_MARK_HAN（带汉字边界，避免「孩子」误伤）。 */
@@ -1590,7 +1594,9 @@ export function autoMarkBareTerms(
                   if (oncePerText && seenSlugs.has(labels.slug)) return hanId;
                   if (oncePerText) seenSlugs.add(labels.slug);
                   marksInPara += 1;
-                  return encodeTermMarker(labels.slug, labels.soft, labels.plain);
+                  // Export/full-mark: never embed definition (plain) — it can contain other closed-set
+                  // traditional words and nest-break markers when oncePerText=false.
+                  return encodeTermMarker(labels.slug, labels.soft);
                 });
               }
               return out;
@@ -1813,13 +1819,21 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
  */
 export type MarkLayer = "body" | "evidence" | "legacy";
 
-export function prepareTextForGlossaryRender(text: string, locale: string): string {
+export function prepareTextForGlossaryRender(
+  text: string,
+  locale: string,
+  autoMarkOpts?: AutoMarkBareTermsOpts,
+): string {
   const rewritten = rewriteMarkersWithSsotSoft(text, locale);
   const normalized = fillMissingMarkerPlain(
     repairShenshaMarkerSoftLabels(normalizeTermMarkerIds(rewritten, locale), locale),
     locale,
   );
-  const marked = autoMarkBareTerms(wrapBareKeepCnSoftTerms(normalized, locale), locale);
+  const marked = autoMarkBareTerms(
+    wrapBareKeepCnSoftTerms(normalized, locale),
+    locale,
+    autoMarkOpts,
+  );
   // Evidence pads stay Chinese while term slots render in the UI locale.
   return localizeEvidenceGlue(marked, locale);
 }
@@ -1920,38 +1934,58 @@ export function uiTermById(
 export function buildTermMarkingFewShot(locale: string): string {
   const loc = toGlossaryLocale(locale);
   if (loc === "zh") {
-    return `## 打标形态（原则 · 勿照抄任何具体比方）
-\`⟦t:<slug>|<必须引用该用户亲口元素的贴题白话>⟧\`
-- 软译词【不用你写】——系统从术语表填入；你写了也会被覆盖。
-- 白话自检：换一个用户还成立？成立 → 不合格。
-- 标记只出现在「依据与推理」块；正文零标记。`;
+    return `## 自由传统词（原则 · 勿照抄具体比方）
+- 闭集内的【多字/复合】传统真词直接写入句子，像专家自然行文。
+- **禁止** \`⟦t:…⟧\` / \`?t:…\` / 任何打标壳；**禁止**自造软译或品牌黑话。
+- 软译与合规呈现由系统代码层（autoMark + SSOT）处理——提示词不教打标。`;
   }
-  return `## Marker shape (principles only — do not copy stock metaphors)
-\`⟦t:<slug>|<contextual plain that cites THIS user's own words>⟧\`
-- Soft label is SSOT-filled; anything you write in that slot is overwritten.
-- Self-check: would this plain still fit another user? If yes → rewrite.
-- Markers only inside Evidence & reasoning; zero markers in body.`;
+  return `## Free traditional terms (principles only — no stock metaphors)
+- Write closed-set **multi-char / compound** traditional terms naturally in prose.
+- **Never** emit \`⟦t:…⟧\` / \`?t:…\` or any marker shell; **never** invent soft/coined labels.
+- Soft-translate is code-side (autoMark + SSOT) — prompts do not teach marking.`;
 }
 
 export type TermMarkingPromptOptions = {
   /**
-   * Skip heavy few-shot / metaphor cues — for latency + anti-overfit (segment2 Call A).
-   * Still includes closed-set id table + hard rules.
+   * Skip heavy few-shot — for latency + anti-overfit.
+   * Still includes closed-set inventory constraint + hard rules.
    */
   principlesOnly?: boolean;
   /**
-   * 中立底座档:这一层【没有用户的具体处境】,所以不要求"贴题白话"。
-   * 词典只给 slug|真词（不给自造软译、不给整句释义）——软译/释义是渲染层的事。
-   *
-   * ⚠️ 名字只描述【提示词档位】,不描述代码行为。
-   * 上一版叫 ssotPlainOnly —— 用代码行为给提示词档命名,结果我把
-   * 「代码会用 SSOT 覆盖」当成指令写给了模型(「写了也会被丢弃」),
-   * 模型失去载体 → 把术语解释挪进正文 → 门禁死循环 → 底座整个挂掉。
-   * **代码要干什么,提示词不需要知道。** 别再往这一档里塞实现细节。
+   * 中立底座档: 没有用户具体处境。词典只给传统真词闭集（不给自造软译、不给整句释义）。
+   * 软译/释义是代码渲染层的事；提示词不教打标。
    */
   neutralBase?: boolean;
+  /**
+   * Per-chart multi-char traditional inventory (preferred).
+   * When omitted, fall back to category closed-set lists — never dump all soft SSOT rows.
+   */
+  traditionalInventory?: readonly string[];
 };
 
+/** Multi-char / compound traditional forms only (SoT: no isolated single-char 命理 atoms). */
+function filterMultiCharTraditional(items: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of items) {
+    const t = String(raw ?? "").trim();
+    if (t.length < 2) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+/**
+ * Model-facing term constraint (historical name kept for call-site compatibility).
+ *
+ * TERMS-PIPELINE-SPEC-v1 model rules:
+ * - Free traditional closed-set terms; no markers; no coined/soft labels.
+ * - Soft translate = code only.
+ * - Inventory = this-chart traditional multi-char when provided; else category closed-set —
+ *   never dump full POJU_TERMS soft table as an output target.
+ */
 export function buildTermMarkingPromptBlock(
   locale: string,
   opts?: TermMarkingPromptOptions,
@@ -1962,117 +1996,104 @@ export function buildTermMarkingPromptBlock(
     loc === "zh" ? "中文" : loc === "en" ? "English" : loc.toUpperCase();
   const principlesOnly = opts?.principlesOnly === true;
   const neutralBase = opts?.neutralBase === true;
-  const rows = DELIVERY_MARKING_ENTRIES.map((e) => {
-    if (neutralBase) {
-      // slug ↔ 真词(+别名)。模型是命理专家,认识"日主/用神/七杀/官星/天德贵人"。
-      // 【不给】自造软译;【不给】整句释义(渲染时读者点开看)。
-      const realTerms = (e.forbidden.length > 0 ? e.forbidden : [e.id]).slice(0, 4).join(" / ");
-      return `| \`${e.id}\` | ${realTerms} |`;
-    }
-    const soft = softLabel(e, loc);
-    const keep =
-      e.keep_cn === true
-        ? zh
-          ? "（可见软译只用上表词，禁括号干支）"
-          : " (visible soft label only — no stem-branch in parens)"
-        : "";
-    const sample = e.forbidden.slice(0, principlesOnly ? 2 : 4).join(" / ");
-    return `| \`${e.id}\` | ${sample} | **${soft}**${keep} |`;
-  }).join("\n");
 
-  const rules = neutralBase
-    ? zh
-      ? `## 打标记规则（中立底座）
-1. 格式：\`⟦t:<slug>|⟧\` —— **竖线保留，后面留空**。
-2. **正文零标记**；标记只出现在「依据与推理」。
-3. **只打承重项**：去掉就撑不住本段结论的才打；凑数的不打。禁止一句串一长排金字。
-4. **slug 必须取自上表**；自造 id 无效、句子会缺字 —— 上表没有的概念，**直接用白话讲，不打标**。
-5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
-6. **标记是用来【代替】那个词的，不是加在那个词后面。**
-   要标注一个命理概念时，直接写 \`⟦t:代号|⟧\` 就够了——标记本身【就代表】那个概念。
-   - 【不允许】把概念的中文名字写出来、再在后面补一个标记（等于同一个词说了两遍）。
-   - 标记出现的地方，就是那个概念该在的地方，它前面不要再放这个概念的中文真词。`
-      : `## Marking rules (neutral base)
-1. Format: \`⟦t:<slug>|⟧\` — **keep the pipe, leave the slot after it empty**.
-2. **Zero markers in body prose**; markers only in the evidence note.
-3. **Mark load-bearing terms only** — if removing it collapses the claim, mark it; otherwise omit. Do not stack a long run of markers in one sentence.
-4. **slug must come from the table**; invented ids are invalid — for concepts not listed, **use plain language, no marker**.
-5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
-6. **A marker REPLACES the term — it is not appended after the term.**
-   When marking a concept, write only \`⟦t:slug|⟧\` — the marker itself stands for that concept.
-   - Do **not** write the Chinese jargon and then a marker next to it (that says the same thing twice).
-   - Where the marker appears is where the concept belongs; do not put the Chinese real-term immediately before it.`
-    : principlesOnly
-      ? zh
-        ? `## 打标记规则（原则 · 严禁过拟合示例）
-1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` —— **软译词不用你写**（系统从术语表填入官方术语）。
-2. 贴题白话必须引用【这位用户亲口说过的具体词/场景】；禁止通用词典比方。
-3. 自检：换用户还成立？成立 → 重写。
-4. **正文零标记**；标记只出现在「依据与推理」；一段依据 ≤3 金字；**slug 必须取自上表**；自造 id = 拒绝；闭集没有 → 不打标、直接白话。
-5. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
+  const fromOpts = opts?.traditionalInventory
+    ? filterMultiCharTraditional(opts.traditionalInventory)
+    : null;
 
-${buildTermMarkingFewShot(locale)}`
-        : `## Marking rules (principles · no overfit examples)
-1. Format: \`⟦t:<slug>|<context plain>⟧\` — **do not invent soft labels** (system fills the official term).
-2. Context plain must cite words/scenes the user actually said; no generic dictionary metaphors.
-3. Self-check: would this still fit another user? If yes → rewrite.
-4. **Zero markers in body prose**; markers only in evidence; ≤3 per segment; **slug from the table only**; invented id = reject; not in closed set → plain language, no marker.
-5. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
+  // Prefer per-chart inventory. Fallback: category closed-set (NOT all soft rows).
+  let inventory: string[];
+  let inventoryNote: string;
+  if (fromOpts && fromOpts.length > 0) {
+    inventory = fromOpts;
+    inventoryNote = zh
+      ? "（本盘实例闭集 · 多字/复合形）"
+      : "(this-chart instance closed-set · multi-char/compounds)";
+  } else if (neutralBase || principlesOnly) {
+    // Category lists only — lean; evidence / stream already carry bazi_basis / structured.
+    inventory = filterMultiCharTraditional([
+      ...CLOSED_TEN_GODS,
+      ...CLOSED_SHEN_SHA,
+      ...CLOSED_LIFE_STAGES,
+      "日主",
+      "用神",
+      "喜神",
+      "忌神",
+      "大运",
+      "流年",
+      "天干",
+      "地支",
+      "相冲",
+      "相刑",
+      "相害",
+      "六合",
+      "半合",
+      "三合",
+    ]);
+    inventoryNote = zh
+      ? "（词汇闭集摘要 · 仍以本盘 structured / bazi_basis 实例为准）"
+      : "(category closed-set summary · still bound by this-chart structured / bazi_basis)";
+  } else {
+    // No per-chart inventory passed: category closed-set only — never dump all ~418 rows.
+    inventory = filterMultiCharTraditional([
+      ...CLOSED_TEN_GODS,
+      ...CLOSED_SHEN_SHA,
+      ...CLOSED_LIFE_STAGES,
+      "日主",
+      "用神",
+      "喜神",
+      "忌神",
+      "大运",
+      "流年",
+      "天干",
+      "地支",
+      "相冲",
+      "相刑",
+      "相害",
+      "六合",
+      "半合",
+      "三合",
+    ]);
+    inventoryNote = zh
+      ? "（词汇闭集摘要 · 请结合本盘 structured 实例，勿发明集外词）"
+      : "(category closed-set summary · bind to this-chart structured; no out-of-set invention)";
+  }
 
-${buildTermMarkingFewShot(locale)}`
-      : zh
-        ? `## 打标记规则
-1. 格式：\`⟦t:<slug>|<贴题白话>⟧\` 或 \`⟦t:<slug>||<贴题白话>⟧\`
-2. **软译词【不用写】**——上表 soft 仅供你识别概念；系统渲染时用官方术语覆盖你写的任何软译。
-3. 贴题白话 = 结合本句意境 + 用户问题的人话；只进 tooltip；必须引用该用户亲口元素。
-4. **正文零标记**；金字集中在「依据与推理」块；每段依据 ≤3 金字
-5. 流年/大运类先归因外境再给掌控感
-6. **签诗/古文不是术语**，不打标
-7. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）
-8. 若漏写贴题白话，UI 回退静态 gloss——禁止用与用户无关的通用句凑数
-9. **slug 必须取自闭集**；自造 = 拒绝；没有对应概念 → 不打标、直接白话讲
-
-${buildTermMarkingFewShot(locale)}
-
-${buildClosedSetConstraintPromptBlock(locale)}`
-        : `## Marking rules
-1. Format: \`⟦t:<slug>|<context plain>⟧\` or \`⟦t:<slug>||<context plain>⟧\`
-2. **Do not invent soft labels** — the soft column is for recognition only; the system overwrites with the official term.
-3. Context plain = this sentence + the user's question, in everyday language; tooltip only; must cite the user's own words.
-4. **Zero markers in body prose**; markers concentrate in the evidence block; ≤3 per evidence segment
-5. For year/decade luck: attribute to outer conditions first, then restore agency
-6. **Oracle verse / classical quotes are not terms** — do not mark
-7. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises)
-8. If context plain is missing, UI falls back to static gloss — never pad with generic unrelated lines
-9. **slug must come from the closed set**; invented = reject; no matching concept → plain language, no marker
-
-${buildTermMarkingFewShot(locale)}
-
-${buildClosedSetConstraintPromptBlock(locale)}`;
-
-  const tableHeader = neutralBase
-    ? zh
-      ? `| slug | 这个代号指的命理概念 |
-|---|---|`
-      : `| slug | real term this code refers to |
-|---|---|`
-    : zh
-      ? `| slug | 禁/术语示例 | 官方术语 (${langLabel}) |
-|---|---|---|`
-      : `| slug | banned / term examples | official term (${langLabel}) |
-|---|---|---|`;
-
-  const intro = neutralBase
-    ? zh
-      ? `凡在「依据与推理」中引用下表概念：认识真词后打成 \`⟦t:<slug>|⟧\`（竖线后留空）。`
-      : `When referencing a concept below in the evidence note, recognize the real term and mark it \`⟦t:<slug>|⟧\` (leave the slot after the pipe empty).`
-    : zh
-      ? `凡在「依据与推理」中引用下表概念：打 \`⟦t:<slug>|<贴题白话>⟧\`。**软译词由系统从术语表填入**（下表 soft 列仅供对照）。`
-      : `When referencing a concept below in the evidence note, mark it \`⟦t:<slug>|<context plain>⟧\`. **Soft labels are filled from the glossary by the system** (the soft column is for recognition only).`;
+  const rows = inventory.map((t) => `| ${t} |`).join("\n");
 
   const title = zh
-    ? `# 术语标记（输出 JSON 字符串 · ${langLabel}）`
-    : `# Term marking (output JSON strings · ${langLabel})`;
+    ? `# 术语闭集 · 自由传统词输出（${langLabel}）${inventoryNote}`
+    : `# Term closed-set · free traditional output (${langLabel}) ${inventoryNote}`;
+
+  const intro = zh
+    ? `凡引用命理概念：直接写闭集【传统真词】（多字/复合）。**不要打标**；**不要写自造软译**。软译由系统代码层处理。`
+    : `When citing a metaphysical concept, write the closed-set **traditional** multi-char form naturally. **No markers**; **no coined soft labels**. Soft-translate is code-side.`;
+
+  const tableHeader = zh
+    ? `| 可用传统词 |
+|---|`
+    : `| allowed traditional term |
+|---|`;
+
+  const rules = zh
+    ? `## 输出规则（模型侧）
+1. **自由传统词**：只用上表 / 本盘实例里的多字、复合传统真词，自然写入句子。
+2. **禁止打标**：不得输出 \`⟦t:…⟧\`、\`?t:…\`、或任何标记壳。
+3. **禁止自造软译 / 品牌黑话**（如自造「本元/锚元」当输出词）——软译是代码层（autoMark + SSOT）。
+4. **禁止孤立单字命理词**硬塞进散文；没有对应多字闭集形就改白话。
+5. **集外不写**：上表与本盘 structured / bazi_basis 都没有的概念 → 白话讲，不发明术语。
+6. 守六条语义红线（不预测/不算命/不占卜/不决吉凶/不恐吓/不超自然承诺）。
+${principlesOnly || neutralBase ? "" : "\n" + buildTermMarkingFewShot(locale)}
+${principlesOnly || neutralBase ? "" : "\n" + buildClosedSetConstraintPromptBlock(locale)}`
+    : `## Output rules (model-side)
+1. **Free traditional**: use only multi-char / compound traditional terms from the table / this-chart inventory.
+2. **No markers**: never emit \`⟦t:…⟧\`, \`?t:…\`, or any marker shell.
+3. **No coined soft labels** — soft-translate is code-side (autoMark + SSOT).
+4. **No isolated single-character 命理 atoms** in prose; if no multi-char form fits, use plain language.
+5. **Out-of-set → plain language**, never invent jargon.
+6. Keep the six semantic red lines (no prediction / fate-telling / divination / omen verdicts / fear / supernatural promises).
+${principlesOnly || neutralBase ? "" : "\n" + buildTermMarkingFewShot(locale)}
+${principlesOnly || neutralBase ? "" : "\n" + buildClosedSetConstraintPromptBlock(locale)}`;
 
   return `${title}
 
@@ -2081,7 +2102,7 @@ ${intro}
 ${tableHeader}
 ${rows}
 
-${rules}`;
+${rules}`.replace(/\n{3,}/g, "\n\n");
 }
 
 /**

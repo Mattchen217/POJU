@@ -1,6 +1,6 @@
 # Phase 10 · 测试运行记录
 
-Date: 2026-10-30T15:36:43.974Z
+Date: 2026-10-31T14:19:15.191Z
 Command: `pnpm test:ziwei-delivery-isolation`
 
 ```
@@ -8,9 +8,9 @@ Command: `pnpm test:ziwei-delivery-isolation`
 
 ok: 12 births × 5 locales slice isolation
 ok: raw FactPack preserved
-ok: judgment pattern refs are hit_id only
+ok: judgment pattern refs are hit_id (+ optional classical in labeled closed-set)
 ok: formatPageSliceFeed clean
-ok: judgment Prompt one/two-shot; thesis/science/agenda/question scrubbed; bazi homonyms kept
+ok: judgment dual-layer; closed-set on destiny/all; free-text scrubbed; science clean; bazi homonyms kept
 
 ```
 

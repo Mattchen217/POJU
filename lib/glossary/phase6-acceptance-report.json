@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-30T10:53:11.505Z",
+  "generated_at": "2026-10-31T01:08:37.782Z",
   "phase": 6,
   "pass": true,
   "summary": {
@@ -7,13 +7,13 @@
     "passed": 11,
     "failed_hard": 0,
     "failed_optional": 0,
-    "terms_total": 281,
+    "terms_total": 317,
     "terms_by_ns": {
       "bazi": 184,
       "qimen": 54,
       "glyph": 17,
       "zodiac": 12,
-      "ziwei": 14
+      "ziwei": 50
     },
     "shensha_disposition_counts": {
       "public_glossary": 56,
@@ -41,7 +41,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 127
+      "ms": 125
     },
     {
       "id": "verify-terms",
@@ -50,7 +50,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 510
+      "ms": 412
     },
     {
       "id": "term-resolve",
@@ -59,7 +59,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 503
+      "ms": 408
     },
     {
       "id": "ziwei-fact-pack",
@@ -68,7 +68,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 1960
+      "ms": 1873
     },
     {
       "id": "qimen-bazi-phase3",
@@ -77,7 +77,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 518
+      "ms": 421
     },
     {
       "id": "shensha-phase4",
@@ -86,7 +86,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 514
+      "ms": 448
     },
     {
       "id": "shensha-short-aliases",
@@ -95,7 +95,7 @@
       "ok": true,
       "optional": true,
       "exitCode": 0,
-      "ms": 507
+      "ms": 527
     },
     {
       "id": "term-context-phase5",
@@ -104,7 +104,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 722
+      "ms": 651
     },
     {
       "id": "export-locales",
@@ -113,7 +113,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 1295
+      "ms": 1264
     },
     {
       "id": "adversarial",
@@ -122,7 +122,7 @@
       "ok": true,
       "optional": false,
       "exitCode": 0,
-      "ms": 761
+      "ms": 693
     },
     {
       "id": "generator-freeze",
@@ -131,7 +131,7 @@
       "ok": true,
       "optional": true,
       "exitCode": 1,
-      "ms": 83
+      "ms": 80
     }
   ],
   "artifacts": {
