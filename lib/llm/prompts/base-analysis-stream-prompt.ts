@@ -553,7 +553,7 @@ Language: **${langLabel}** throughout.`;
     buildTermMarkingPromptBlock(lang, {
       principlesOnly: true,
       neutralBase: true,
-      traditionalInventory: traditionalInventoryFromStructured(structured),
+      traditionalInventory: traditionalInventoryFromStructured(input.local_data.structured),
     }),
     // 块5 中立·闭集·关系
     lang === "zh" ? BASE_ANALYSIS_NEUTRAL_CLOSEDSET_ZH : BASE_ANALYSIS_NEUTRAL_CLOSEDSET_EN,

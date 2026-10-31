@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import {
   prepareTextForGlossaryRender,
   toSoftTranslatedPlainText,
+  type Locale,
 } from "@/lib/terms/prepare-display-pipeline";
-import type { Locale } from "@/lib/types";
 
 /**
  * Delivery Lab harness for TERMS-PIPELINE-SPEC-v1 (code path only).
