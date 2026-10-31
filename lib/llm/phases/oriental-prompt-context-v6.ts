@@ -9,7 +9,10 @@
 
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
+import {
+  buildTermContextPromptFromStructured,
+  collectTermFactsFromStructured,
+} from "@/lib/glossary/term-context-for-facts";
 import {
   buildDirectedDynamicRelationInventoryBlock,
   computeDirectedDynamicRelations,
@@ -98,6 +101,23 @@ export function buildDirectedRelationAuditAllowlistV6(
   questionCategory: string | null | undefined,
 ) {
   return computeRelationAuditAllowlist(structured, getCurrentLiunian(), questionCategory);
+}
+
+
+/** Per-chart multi-char traditional inventory for model prompts (no soft dump). */
+function traditionalInventoryFromStructured(
+  structured: Parameters<typeof collectTermFactsFromStructured>[0],
+): string[] {
+  const facts = collectTermFactsFromStructured(structured);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const f of facts) {
+    const t = String(f.traditional ?? "").trim();
+    if (t.length < 2 || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
 }
 
 export async function loadBaseAnalysisForSessionV6(input: PhaseLLMInput): Promise<unknown> {
@@ -234,7 +254,9 @@ export async function buildPhaseTurnContextV6(
   // 避免"教一整套打标却没字段能用"的污染与冲突。
   const termPlane = needsTermMarking
     ? stitchPromptSections(
-        buildTermMarkingPromptBlock(outLoc),
+        buildTermMarkingPromptBlock(outLoc, {
+          traditionalInventory: traditionalInventoryFromStructured(structured),
+        }),
         buildChatPhaseTermBindingBlock(outLoc),
       )
     : "";

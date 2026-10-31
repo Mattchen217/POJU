@@ -78,8 +78,8 @@ const EXPECTED_BAZI = 185;
 const EXPECTED_QIMEN = 78;
 const EXPECTED_GLYPH = 17;
 const EXPECTED_ZODIAC = 12;
-/** Phase 11: 14 structure + 36 A-class palace/star/五行局. */
-const EXPECTED_ZIWEI = 125;
+/** Phase 12b: +白虎@ziwei (岁前); 旬空/月德 coined zh. */
+const EXPECTED_ZIWEI = 126;
 const EXPECTED_TOTAL =
   EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH + EXPECTED_ZODIAC + EXPECTED_ZIWEI;
 

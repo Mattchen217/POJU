@@ -17,6 +17,7 @@ import {
   LabPipelinePanel,
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
+import { LabTermsPipelinePanel } from "../_components/LabTermsPipelinePanel";
 import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 import {
   BOOK_ASSEMBLE_STEP_KEY,
@@ -1071,6 +1072,8 @@ export default function DeliveryLabConsolePage() {
           />
         </div>
       ) : null}
+
+      <LabTermsPipelinePanel />
 
       {legacyTenPaper ? (
         <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">

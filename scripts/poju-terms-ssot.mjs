@@ -28,14 +28,14 @@ const BASELINE_PATH = path.join(
 
 const LOCALES = ["zh", "en", "es", "de", "fr"];
 const EXPECTED = {
-  // Phase 12: +100 soft-translate gaps (ziwei/qimen jieqi/TST); 真太陽時 alias → total 417.
+  // Phase 12b: +白虎@ziwei; 旬空→旬隙 / 月德@ziwei→柔护; total 418.
   // Phase 6: 羊刃 collapsed into fei_ren alias (was 282/185 bazi).
-  total: 417,
+  total: 418,
   bazi: 185,
   qimen: 78,
   glyph: 17,
   zodiac: 12,
-  ziwei: 125,
+  ziwei: 126,
 };
 const VALID_NS = new Set(["bazi", "qimen", "glyph", "zodiac", "ziwei"]);
 const VALID_POLARITY = new Set(["favorable", "caution", "neutral"]);
