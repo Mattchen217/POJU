@@ -1,0 +1,192 @@
+{
+  "meta": {
+    "git_sha": "53fd647fdda4f8f0ef501c15fc920f1204eeeeee",
+    "note": "Types + builders from source; sample values synthetic/code-derived only — no user PII"
+  },
+  "packs": [
+    {
+      "system": "bazi",
+      "type_file": "lib/llm/pro/delivery/page-schema/chart-fact-pack.ts",
+      "type_name": "ChartFactPack",
+      "type_shape": {
+        "text": "string",
+        "day_master": "string",
+        "ganzhi": "string[]",
+        "shen_sha": "string[]"
+      },
+      "builder": "buildChartFactPack(structured, opts?)",
+      "upstream": [
+        "ProfileStructured (lib/profile + lib/calculations)",
+        "citeableShenSha / TERM_FORBIDDEN_REGISTRY",
+        "computeNatalChartRelations → relationLabel",
+        "resolveLuckCycles (大运/流年/流月/流日)"
+      ],
+      "fields": [
+        {
+          "name": "text",
+          "holds_traditional": true,
+          "structured": false,
+          "example_fragments": [
+            "日主：甲（身强）",
+            "用神：水",
+            "年柱 甲子 天干甲 地支子 十神比肩 藏干癸 神煞…",
+            "本盘合冲刑害：子午相冲",
+            "当前大运：…"
+          ],
+          "notes": "Concatenated traditional prose — primary judgment feed"
+        },
+        {
+          "name": "day_master",
+          "holds_traditional": true,
+          "structured": true,
+          "example": "甲"
+        },
+        {
+          "name": "ganzhi",
+          "holds_traditional": true,
+          "structured": true,
+          "example": [
+            "甲子",
+            "丙寅"
+          ],
+          "notes": "Pillar + luck cycle pairs collected into set"
+        },
+        {
+          "name": "shen_sha",
+          "holds_traditional": true,
+          "structured": true,
+          "notes": "Only citeable (non-forbidden) names"
+        }
+      ],
+      "call_chain": "BirthInfo → buildProfileStructured → buildChartFactPack → slice-for-page / thesis calc feed / book-judgment → delivery pages → sanitize-export",
+      "enters_prompt": true,
+      "enters_report": true,
+      "enters_reminder": "indirect via companion / atmos packs derived from structured",
+      "enters_pdf_html": "via delivery HTML + export sanitize"
+    },
+    {
+      "system": "ziwei",
+      "type_file": "lib/ziwei/fact-pack.ts",
+      "type_name": "ZiweiFactPack",
+      "type_shape": {
+        "topicPalace": "ZiweiTopicPalace",
+        "sihua": "ZiweiSihuaHit[]",
+        "daxian": "ZiweiDaxian",
+        "mingShen": "ZiweiMingShen",
+        "otherChart": "null",
+        "patternHits": "ZiweiPatternHit[]",
+        "palaces": "ZiweiPalaceFact[]",
+        "source": "ZiweiFactSource"
+      },
+      "builder": "buildZiweiFactPack(birth, options?)",
+      "engines": [
+        "iztro (chart structure)",
+        "ziwei-doushu detectPatterns (patternHits)"
+      ],
+      "fields": [
+        {
+          "name": "topicPalace.palace / majorStars / oppositePalace / oppositeMajorStars",
+          "holds_traditional": true,
+          "example": {
+            "palace": "命宫",
+            "majorStars": [
+              "紫微",
+              "天府"
+            ]
+          }
+        },
+        {
+          "name": "sihua[].mutagen/star/palace",
+          "holds_traditional": true,
+          "example": {
+            "mutagen": "禄",
+            "star": "武曲",
+            "palace": "财帛"
+          }
+        },
+        {
+          "name": "daxian (range/palace/stem/branch/majorStars) + nested liunian",
+          "holds_traditional": true
+        },
+        {
+          "name": "mingShen.soul/body/shenPalace/fiveElementsClass",
+          "holds_traditional": true,
+          "example": {
+            "soul": "贪狼",
+            "body": "火星",
+            "shenPalace": "迁移",
+            "fiveElementsClass": "木三局"
+          }
+        },
+        {
+          "name": "patternHits[].name",
+          "holds_traditional": true,
+          "notes": "Classical pattern names; Phase 10 Prompt uses hit_id soft isolation"
+        },
+        {
+          "name": "palaces[]",
+          "holds_traditional": true,
+          "notes": "12 palace names + majorStars; minor/adjective may exist in iztro but FactPack majorStars-focused"
+        },
+        {
+          "name": "otherChart",
+          "holds_traditional": false,
+          "notes": "always null"
+        }
+      ],
+      "display_projection": [
+        "lib/ziwei/display-fact-pack.ts",
+        "lib/ziwei/soft-zfp-labels.ts",
+        "lib/llm/pro/delivery/slice-for-page.ts",
+        "lib/ziwei/sanitize-prompt-ziwei-leaks.ts"
+      ],
+      "call_chain": "BirthInfo → buildZiweiFactPack → DisplayFactPack/soft labels → baseline-lens / page slice / judgment (sanitized) → HTML/PDF sanitize",
+      "enters_prompt": "soft / hit_id projected (raw retained in pack)",
+      "enters_baseline": true,
+      "enters_report": "pages that feed ZFP"
+    },
+    {
+      "system": "qimen",
+      "type_file": "lib/llm/pro/delivery/page-schema/qimen-fact-pack.ts",
+      "type_name": "DeliveryQimenFactPack",
+      "type_shape": {
+        "qimen_cast_at": "string ISO",
+        "ju_name": "string",
+        "zhi_fu_star": "string",
+        "zhi_fu_palace": "string",
+        "zhi_shi_door": "string",
+        "zhi_shi_palace": "string",
+        "host_guest": "string",
+        "stance": "DeliveryQimenStance",
+        "stance_zh": "string",
+        "door_meaning_zh": "string",
+        "wang_xiang": "string",
+        "palace_lines": "string[]",
+        "text": "string"
+      },
+      "builder": "castDeliveryQimenFactPack → mergeQimenIntoChartFactPackText",
+      "engine": "lib/qimen (dictionary / LunarUtil / QimenUtil) — Syncro-同源",
+      "fields_note": "Traditional 门/星/神/宫 in engine cells; delivery pack stores traditional door/star/palace strings + vernacular stance_zh/door_meaning_zh",
+      "call_chain": "cast lock (qimen_cast_at idempotent) → DeliveryQimenFactPack → ChartFactPack.text merge → P4 judgment/body → gates p4_qimen_lock_missing",
+      "enters_prompt": "P4 metaphysics path; locked cast",
+      "enters_report": "P4",
+      "enters_reminder": false
+    },
+    {
+      "system": "glyph / i_ching",
+      "note": "SSOT has ns=glyph rows; no GlyphFactPack / dedicated calc builder found under lib/ in this pass.",
+      "factpack": null,
+      "searched": [
+        "lib/**/*glyph*",
+        "lib/**/*iching*",
+        "lib/**/*yijing*",
+        "ALLOW_CONCEPT / compliance"
+      ]
+    },
+    {
+      "system": "zodiac",
+      "note": "SSOT ns=zodiac active; no independent ZodiacFactPack — animal tokens may appear via calendar/profile helpers",
+      "factpack": null
+    }
+  ]
+}

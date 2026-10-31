@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "git_sha": "53fd647fdda4f8f0ef501c15fc920f1204eeeeee",
+    "note": "Paths verified by file existence + call-site grep; not runtime traced"
+  },
+  "paths": [
+    {
+      "id": "personal_baseline_portrait",
+      "checked": [
+        "lib/poju/baseline-profile-offline-html.ts",
+        "lib/poju/baseline-interactive-html.ts",
+        "lib/ziwei/baseline-lens.ts"
+      ],
+      "source_fields": [
+        "ZiweiFactPack via DisplayFactPack",
+        "matrix fact panel / ProfileStructured"
+      ],
+      "glossary": true,
+      "sanitize": "soft-zfp-labels + matrix-term-labels + shensha soft map",
+      "raw_fallback_risk": "matrix-term-labels still calls pojuTermByTraditional without ns in places",
+      "may_bypass_term_resolve": "if soft label missing on main pre-Phase11, UI may show — / empty rather than traditional (fail-closed)"
+    },
+    {
+      "id": "matrix_fact_panel",
+      "entry": "lib/poju/build-matrix-fact-panel.ts",
+      "source_fields": [
+        "ten_god",
+        "shen_sha",
+        "relations",
+        "pillars"
+      ],
+      "glossary": true,
+      "sanitize": "partial — pojuTermByTraditional(tg) no-ns call sites present",
+      "notes": "Feeds baseline / debug panels"
+    },
+    {
+      "id": "delivery_report_pages_p1_p6",
+      "entry": "lib/llm/pro/delivery/** + final-delivery.ts",
+      "source_fields": [
+        "ChartFactPack.text",
+        "DeliveryQimenFactPack",
+        "soft ZFP",
+        "judgment/body slots"
+      ],
+      "glossary": "⟦t:⟧ via term-marking after generation",
+      "sanitize": "sanitize-delivery-book + export surfaces",
+      "raw_fallback_risk": "CFP traditional intentionally in judgment prompts; user body should be zero-classical per output contract"
+    },
+    {
+      "id": "ai_chat_oriental_context",
+      "entry": "lib/llm/phases/oriental-prompt-context.ts (+ v6)",
+      "glossary": "buildTermContextForFacts",
+      "enters_prompt": true
+    },
+    {
+      "id": "base_analysis_stream",
+      "entry": "lib/llm/prompts/base-analysis-stream-prompt.ts",
+      "notes": "Instructs against listing 藏干/十神 stacks in user copy"
+    },
+    {
+      "id": "book_judgment_prompt",
+      "entry": "lib/llm/pro/delivery/book-judgment/generate.ts",
+      "sanitize": "sanitizeZiweiLeaksInPromptText on thesis/science/agenda/question",
+      "raw_fallback": "CFP bazi traditional kept intentionally for mechanism claims"
+    },
+    {
+      "id": "term_marking_compliance",
+      "entry": "lib/llm/sanitize/term-marking.ts + compliance-terms.ts",
+      "notes": "⟦t:⟧ markers; still has some pojuTermByTraditional without ns"
+    },
+    {
+      "id": "export_sanitize_all_surfaces",
+      "entry": "lib/glossary/sanitize-export-surface.ts + ns-aware-surface-sanitize.ts",
+      "surfaces": [
+        "plain",
+        "markdown",
+        "html",
+        "email",
+        "push",
+        "copy",
+        "pdf"
+      ],
+      "dual_ns": "P1 confirmedTerms + sourceId fail-closed for 空亡/白虎 etc."
+    },
+    {
+      "id": "companion_day_html",
+      "entry": "lib/companion/day-html.ts",
+      "sanitize": "sanitizePlainExport(..., email)",
+      "confirmedTerms": "optional opts — callers must wire"
+    },
+    {
+      "id": "reminder_30day_offline_html",
+      "entry": "lib/companion/reminder-day-offline-html.ts",
+      "sanitize": "sanitizePlainExport",
+      "confirmedTerms": "optional — decision-anchor copy path",
+      "notes": "30-day companion pack; 流日 as optional background not main narrative"
+    },
+    {
+      "id": "daily_decision_anchor",
+      "entry": "lib/companion/types.ts DecisionAnchor slots + companion-daily-prompt.ts",
+      "source_fields": [
+        "today_is",
+        "suitable",
+        "suggestion",
+        "unsuitable",
+        "evidence"
+      ],
+      "glossary": "optional ⟦t:slug|plain⟧ in evidence",
+      "sanitize": "via reminder HTML sanitizePlainExport when rendered",
+      "notes": "Checked companion prompt + types; not a separate FactPack"
+    },
+    {
+      "id": "decision_report_offline_html",
+      "entry": "lib/poju/decision-report-offline-html.ts",
+      "sanitize": "verify per-builder wiring in later phase"
+    },
+    {
+      "id": "delivery_interactive_html",
+      "entry": "lib/poju/delivery-interactive-html.ts / delivery-marked-html.ts",
+      "glossary": "marked HTML path for ⟦t:⟧"
+    },
+    {
+      "id": "audit_output_banned",
+      "entry": "lib/llm/compliance/audit-output.ts + banned-terms.ts",
+      "notes": "Post-hoc classical leak detection — complementary to glossary soft map"
+    },
+    {
+      "id": "email_delivery",
+      "checked": [
+        "lib/companion/day-html.ts email surface",
+        "sanitize-export-surface email"
+      ],
+      "notes": "Companion/reminder use email surface; marketing share pages not fully enumerated"
+    },
+    {
+      "id": "share_pages",
+      "checked": [
+        "search share/marketing under app/ — thin for chart traditional"
+      ],
+      "notes": "No dedicated chart-term share pipeline found in this pass; marketing likely brand-only",
+      "status": "checked_thin"
+    }
+  ]
+}
