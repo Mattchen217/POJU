@@ -198,13 +198,13 @@ function main(): void {
   );
   assert("恐吓红线仍拦", hasCoreJudgmentsRedline("此盘有十恶大败"));
 
-  // 术语总数 209
+  // 术语总数 417
   const src = fs.readFileSync(
     path.join(process.cwd(), "lib/glossary/pojulife-terms.ts"),
     "utf8",
   );
   const count = (src.match(/slug:\s*"/g) ?? []).length;
-  assert(`术语总数 209（实得 ${count}）`, count === 209);
+  assert(`术语总数 417（实得 ${count}）`, count === 417);
 
   // SHENSHA_ALIAS 第二事实源已清
   const aliasSrc = fs.readFileSync(

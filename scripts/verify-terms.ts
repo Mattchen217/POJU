@@ -74,12 +74,12 @@ const GLYPH_LEVEL_BY_TRADITIONAL: Record<string, string> = {
   陷: "eye_of_storm",
 };
 
-const EXPECTED_BAZI = 184;
-const EXPECTED_QIMEN = 54;
+const EXPECTED_BAZI = 185;
+const EXPECTED_QIMEN = 78;
 const EXPECTED_GLYPH = 17;
 const EXPECTED_ZODIAC = 12;
 /** Phase 11: 14 structure + 36 A-class palace/star/五行局. */
-const EXPECTED_ZIWEI = 50;
+const EXPECTED_ZIWEI = 125;
 const EXPECTED_TOTAL =
   EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH + EXPECTED_ZODIAC + EXPECTED_ZIWEI;
 
