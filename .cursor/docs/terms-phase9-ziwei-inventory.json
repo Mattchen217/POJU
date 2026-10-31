@@ -4,7 +4,7 @@
     "iztroVersion": "2.6.3",
     "births": 12,
     "asOf": "2026-10-30",
-    "ziweiSsotCount": 14,
+    "ziweiSsotCount": 50,
     "note": "Inventory only — do not merge into POJU_TERMS"
   },
   "factPackTokens": {
@@ -405,6 +405,186 @@
       "slug": "zw_elemental_configuration",
       "traditional": "五行局",
       "aliases": []
+    },
+    {
+      "slug": "zw_peer_bond_field",
+      "traditional": "兄弟",
+      "aliases": []
+    },
+    {
+      "slug": "zw_partnership_field",
+      "traditional": "夫妻",
+      "aliases": []
+    },
+    {
+      "slug": "zw_continuity_field",
+      "traditional": "子女",
+      "aliases": []
+    },
+    {
+      "slug": "zw_resource_flow_field",
+      "traditional": "财帛",
+      "aliases": []
+    },
+    {
+      "slug": "zw_resilience_field",
+      "traditional": "疾厄",
+      "aliases": []
+    },
+    {
+      "slug": "zw_mobility_field",
+      "traditional": "迁移",
+      "aliases": []
+    },
+    {
+      "slug": "zw_collab_network_field",
+      "traditional": "仆役",
+      "aliases": []
+    },
+    {
+      "slug": "zw_role_craft_field",
+      "traditional": "官禄",
+      "aliases": []
+    },
+    {
+      "slug": "zw_anchorage_field",
+      "traditional": "田宅",
+      "aliases": []
+    },
+    {
+      "slug": "zw_inner_reserve_field",
+      "traditional": "福德",
+      "aliases": []
+    },
+    {
+      "slug": "zw_origin_support_field",
+      "traditional": "父母",
+      "aliases": []
+    },
+    {
+      "slug": "zw_config_water_dual",
+      "traditional": "水二局",
+      "aliases": []
+    },
+    {
+      "slug": "zw_config_wood_triple",
+      "traditional": "木三局",
+      "aliases": []
+    },
+    {
+      "slug": "zw_config_metal_quad",
+      "traditional": "金四局",
+      "aliases": []
+    },
+    {
+      "slug": "zw_config_earth_penta",
+      "traditional": "土五局",
+      "aliases": []
+    },
+    {
+      "slug": "zw_config_fire_hexa",
+      "traditional": "火六局",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_apex_axis",
+      "traditional": "紫微",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_pattern_sense",
+      "traditional": "天机",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_radiant_out",
+      "traditional": "太阳",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_craft_edge",
+      "traditional": "武曲",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_ease_bond",
+      "traditional": "天同",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_intense_edge",
+      "traditional": "廉贞",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_storehouse",
+      "traditional": "天府",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_inward_tide",
+      "traditional": "太阴",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_desire_drive",
+      "traditional": "贪狼",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_voice_gate",
+      "traditional": "巨门",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_protocol",
+      "traditional": "天相",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_elder_shade",
+      "traditional": "天梁",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_breach_force",
+      "traditional": "七杀",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_reset_edge",
+      "traditional": "破军",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_script_clarity",
+      "traditional": "文昌",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_lyric_flow",
+      "traditional": "文曲",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_left_support",
+      "traditional": "左辅",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_right_support",
+      "traditional": "右弼",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_resource_cache",
+      "traditional": "禄存",
+      "aliases": []
+    },
+    {
+      "slug": "zw_star_ignition",
+      "traditional": "火星",
+      "aliases": []
     }
   ],
   "matrix": [
@@ -412,55 +592,55 @@
       "traditional": "财帛",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "夫妻",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "福德",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "父母",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "官禄",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "疾厄",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "命宫",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "disposition": "public_glossary",
       "ssotMapped": true,
       "resolveStatus": "resolved"
     },
@@ -468,369 +648,369 @@
       "traditional": "仆役",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "迁移",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "田宅",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "兄弟",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "子女",
       "category": "palace",
       "inFactPack": true,
-      "disposition": "internal_only:palace_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "巨门",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "廉贞",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "破军",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "七杀",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "太阳",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "太阴",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "贪狼",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天府",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天机",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天梁",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天同",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天相",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "武曲",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "紫微",
       "category": "major_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "火星",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "巨门",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "廉贞",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "禄存",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "破军",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "贪狼",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天机",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天梁",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天同",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天相",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "文昌",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "文曲",
       "category": "soul_body_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "巨门",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "廉贞",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "破军",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "太阳",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "太阴",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "贪狼",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天机",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天梁",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "天同",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "文昌",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "文曲",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "武曲",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "右弼",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "紫微",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "左辅",
       "category": "sihua_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "忌",
@@ -972,7 +1152,7 @@
       "traditional": "命宫",
       "category": "structure_label",
       "inFactPack": true,
-      "disposition": "unknown_blocked:unregistered_ziwei_token",
+      "disposition": "public_glossary",
       "ssotMapped": true,
       "resolveStatus": "resolved"
     },
@@ -980,41 +1160,41 @@
       "traditional": "火六局",
       "category": "five_elements_class_value",
       "inFactPack": true,
-      "disposition": "internal_only:five_elements_class_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "金四局",
       "category": "five_elements_class_value",
       "inFactPack": true,
-      "disposition": "internal_only:five_elements_class_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "木三局",
       "category": "five_elements_class_value",
       "inFactPack": true,
-      "disposition": "internal_only:five_elements_class_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "水二局",
       "category": "five_elements_class_value",
       "inFactPack": true,
-      "disposition": "internal_only:five_elements_class_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "土五局",
       "category": "five_elements_class_value",
       "inFactPack": true,
-      "disposition": "internal_only:five_elements_class_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "昌曲同会",
@@ -1220,9 +1400,9 @@
       "traditional": "火星",
       "category": "engine_minor_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "铃星",
@@ -1236,9 +1416,9 @@
       "traditional": "禄存",
       "category": "engine_minor_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "擎羊",
@@ -1284,33 +1464,33 @@
       "traditional": "文昌",
       "category": "engine_minor_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "文曲",
       "category": "engine_minor_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "右弼",
       "category": "engine_minor_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "左辅",
       "category": "engine_minor_star",
       "inFactPack": true,
-      "disposition": "internal_only:star_soft_label_pending",
-      "ssotMapped": false,
-      "resolveStatus": "unknown"
+      "disposition": "public_glossary",
+      "ssotMapped": true,
+      "resolveStatus": "resolved"
     },
     {
       "traditional": "八座",

@@ -53,16 +53,37 @@ const STRUCTURE_SOFT_OK = new Set([
   "行动驱动",
   "行动落点域",
   "元素配置型",
+  // Phase 11 soft labels (also stripped via softZiweiLabel in leak scan)
+  "同辈联结域",
+  "伙伴关系域",
+  "延续创造域",
+  "资源流转域",
+  "承压调适域",
+  "流动切换域",
+  "协作网络域",
+  "职分事功域",
+  "安顿根基域",
+  "内在蓄养域",
+  "来源支撑域",
 ]);
 
 function traditionalLeaksInJson(json: string, suspects: string[]): string[] {
+  // Soft labels may legally contain traditional substrings (e.g. 左辅星轨); strip them first.
+  let scrubbed = json;
+  for (const soft of STRUCTURE_SOFT_OK) {
+    if (soft.length >= 2) scrubbed = scrubbed.split(soft).join("");
+  }
+  for (const token of suspects) {
+    const soft = softZiweiLabel(token, "zh");
+    if (soft.length >= 2) scrubbed = scrubbed.split(soft).join("");
+  }
   const hits: string[] = [];
   for (const token of suspects) {
     if (token.length < 2) continue;
     if (!/[\u4e00-\u9fff]/.test(token)) continue;
     if (STRUCTURE_SOFT_OK.has(token)) continue;
     if (/^[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]+$/.test(token)) continue;
-    if (json.includes(token)) hits.push(token);
+    if (scrubbed.includes(token)) hits.push(token);
   }
   return [...new Set(hits)];
 }
@@ -75,8 +96,9 @@ function log(line: string) {
 
 log("========== test-ziwei-delivery-isolation-phase10 ==========\n");
 
-assert.equal(softZiweiLabel("紫微", "zh"), "", "unmapped star fail-closed empty");
+assert.equal(softZiweiLabel("紫微", "zh"), "枢轴星轨", "Phase 11 紫微 soft");
 assert.equal(softZiweiLabel("命宫", "zh"), "核心定位域", "命宫 soft");
+assert.equal(softZiweiLabel("杀破狼", "zh"), "", "unregistered pattern still fail-closed empty");
 
 for (const birth of BIRTHS) {
   const pack = buildZiweiFactPack(birth, { asOf: AS_OF });
