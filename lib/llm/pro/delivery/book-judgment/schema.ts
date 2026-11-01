@@ -104,13 +104,14 @@ export const MEANS_PRESCRIPTION_CLASS_NAMES = [
   "billable_min",
   "low_commit_sample",
   "stop_loss_ops",
+  "means_edge_probe",
 ] as const;
 export type MeansPrescriptionClassName =
   (typeof MEANS_PRESCRIPTION_CLASS_NAMES)[number];
 
 /**
  * 可执行手段句闭集（类级 · 不绑本案词）→ 批断包 FAIL。
- * 豁免：忌神/用神/喜神邻接「宜」。只检 units[].claim。
+ * 豁免：忌神/用神/喜神邻接「宜」。检 units[].claim；means 词亦检 anchors。
  */
 const PACK_MEANS_CLASSES: readonly {
   className: MeansPrescriptionClassName;
@@ -149,6 +150,11 @@ const PACK_MEANS_CLASSES: readonly {
     className: "low_commit_sample",
     re: /低承诺(?:交换|小样)?|小样验证|做一个[^。；;]{0,16}(?:小样|验证)|最小样|先拿一次|付费后再切|付费后再[走换]/,
   },
+  {
+    className: "means_edge_probe",
+    // Meansy nouns / probe phrasing — keep claim at 承压/显隐/窗口收窄/偏差负荷
+    re: /小步验证|可逆性较高(?:的探测)?|可逆性[^。；;]{0,12}探测|探测性验证|高可逆[^。；;]{0,8}探测|时段块|可收费样/,
+  },
 ];
 
 export type MeansPrescriptionHit = {
@@ -175,18 +181,36 @@ export function claimHasMeansPrescription(claim: string): boolean {
 }
 
 export function findMeansPrescriptionHits(
-  units: readonly { id: string; track: string; claim: string }[],
+  units: readonly {
+    id: string;
+    track: string;
+    claim: string;
+    anchors?: readonly string[];
+  }[],
 ): MeansPrescriptionHit[] {
   const out: MeansPrescriptionHit[] = [];
   for (const u of units) {
     const className = classifyMeansPrescription(u.claim);
-    if (!className) continue;
-    out.push({
-      unitId: u.id,
-      track: u.track,
-      className,
-      snippet: u.claim.trim().slice(0, 64),
-    });
+    if (className) {
+      out.push({
+        unitId: u.id,
+        track: u.track,
+        className,
+        snippet: u.claim.trim().slice(0, 64),
+      });
+      continue;
+    }
+    for (const a of u.anchors ?? []) {
+      const aClass = classifyMeansPrescription(a);
+      if (!aClass) continue;
+      out.push({
+        unitId: u.id,
+        track: u.track,
+        className: aClass,
+        snippet: `anchor:${a.trim().slice(0, 56)}`,
+      });
+      break;
+    }
   }
   return out;
 }
@@ -204,9 +228,20 @@ function trackCovers(
 /**
  * Dual-track + density + segment coverage gate (quota from blueprint).
  */
+/** hit:<id>:<level> closed-set ref (Phase 10). */
+export function isPatternHitClosedRef(hit: string): boolean {
+  return /^hit:[a-z0-9]+:\S+/i.test(hit.trim());
+}
+
+export type BookJudgmentValidateOpts = {
+  /** Classical 格局名 — banned bare in claim (use hit:id:level). */
+  classical_pattern_names?: readonly string[];
+};
+
 export function validateBookJudgmentPack(
   raw: unknown,
   quota: BookJudgmentQuotaTable = buildBookJudgmentQuotaFromBlueprint(),
+  opts: BookJudgmentValidateOpts = {},
 ): BookJudgmentValidateOk | BookJudgmentValidateFail {
   const parsed = BookJudgmentPackSchema.safeParse(raw);
   if (!parsed.success) {
@@ -371,6 +406,40 @@ export function validateBookJudgmentPack(
       reason: "missing_pattern_hits",
       detail: "zfpOmitted=false requires pattern_hits_used",
     };
+  }
+
+  if (!pack.zfpOmitted) {
+    for (const hit of pack.pattern_hits_used) {
+      if (!isPatternHitClosedRef(hit)) {
+        return {
+          ok: false,
+          reason: "pattern_hit_not_closed_ref",
+          detail: `pattern_hits_used「${hit}」须为 hit:<id>:<level>；禁古典格名挂名`,
+        };
+      }
+      const inClaim = pack.units.some((u) => u.claim.includes(hit));
+      if (!inClaim) {
+        return {
+          ok: false,
+          reason: "pattern_hit_not_in_claim",
+          detail: `pattern_hits_used「${hit}」未写入任何 unit.claim（anchors-only=FAIL；须用 hit 等级+宫位/题面张力作判断）`,
+        };
+      }
+    }
+    const classical = (opts.classical_pattern_names ?? [])
+      .map((n) => n.trim())
+      .filter((n) => n.length >= 2);
+    for (const name of classical) {
+      for (const u of pack.units) {
+        if (u.claim.includes(name)) {
+          return {
+            ok: false,
+            reason: "classical_pattern_name_in_claim",
+            detail: `unit ${u.id} claim 裸写古典格名「${name}」；改用 hit:<id>:<level> 闭集引用`,
+          };
+        }
+      }
+    }
   }
 
   return { ok: true, pack };

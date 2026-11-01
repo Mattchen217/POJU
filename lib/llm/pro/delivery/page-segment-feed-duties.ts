@@ -151,7 +151,7 @@ export function formatGlobalSegmentFeedDuties(opts?: SegmentFeedDutiesOpts): str
         "serves_face + serves_segment 必须对齐下表字段职责。",
       ]
     : [
-        "zfpOmitted=false：destiny 单元落在下列含 ZFP 的段时，claim/anchors 须纳入相关紫微传统真词（本盘闭集），并在 pattern_hits_used 登记实际用到的 hit:id:level。",
+        "zfpOmitted=false：destiny 单元落在下列含 ZFP 的段时，claim/anchors 须纳入相关紫微传统真词（本盘闭集），并在 pattern_hits_used 登记实际用到的 hit:id:level（每条须写入 claim，禁 anchors-only）。",
         "无关段（如纯科学 B）不要硬塞紫微；含 ZFP 的命理段不要只写八字模板。",
         "CFP+ZFP 共担同一断语——禁止「八字正文 + 紫微贴纸」。",
         "serves_face + serves_segment 对齐下表；未列字段勿塞。",

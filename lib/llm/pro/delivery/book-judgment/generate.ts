@@ -29,7 +29,7 @@ import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
 import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
-import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { formatBookJudgmentFullBookPageFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { formatGlobalSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
 import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
@@ -73,11 +73,12 @@ claim 必须改写成机制/判断句；禁止把时段块/可收费样/投入�
 
 ## 配额与字段
 - serves_face + serves_segment 对齐配额与「全书段级喂料职责」；claim 短闭集；anchors≥1
-- 每脸双轨 + 密度见配额表；用到的格局记 pattern_hits_used（hit:id:level）；古典格名可与 hit 并存于 destiny claim（须 ∈ 本盘闭集）
+- 每脸双轨 + 密度见配额表；用到的格局记 pattern_hits_used（hit:id:level）且该 hit 必须写入 ≥1 条 unit.claim 作判断（等级+宫位/题面张力）；anchors-only=FAIL；claim 禁裸古典格名
 - 段职责已正写为机制/偏差/负荷|命理判断|交汇张力|复盘问句；科学段勿硬塞紫微
+- 本枪=依据/骨架：允许传统词（用神/忌神/宫星等 ∈ 本盘闭集）；下游 body soft。禁小步验证/可逆性探测等 means 边缘名词
 
-## 闭集安全网（写入 claim → means_prescription FAIL + unitId@className）
-imperative_yi · redlight_stop · stop_loss_ops · next_action · ops_checklist · timebox_block · billable_min · low_commit_sample
+## 闭集安全网（写入 claim 或 anchors → means_prescription FAIL + unitId@className）
+imperative_yi · redlight_stop · stop_loss_ops · next_action · ops_checklist · timebox_block · billable_min · low_commit_sample · means_edge_probe
 
 ## 禁区
 手段处方、攻守祈使、恐吓必损必成、primary/backup、无出处现编格局、顺推硬塞。`;
@@ -91,7 +92,7 @@ const JSON_SHAPE = `输出 JSON：
       "serves_face": ["02"],
       "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句",
-      "anchors": ["机制句或 hit:id:level"],
+      "anchors": ["机制句或 closed hit 旁证"],
       "caveat": "可选"
     }
   ],
@@ -516,13 +517,11 @@ export function buildBookJudgmentFeedBlock(input: {
       })
     : "";
 
-  const slice = formatPageSliceFeed({
-    key: "02",
+  const slice = formatBookJudgmentFullBookPageFeed({
     chartText: input.chartText,
     ziwei: input.ziwei,
     question: questionSafe || null,
     locale,
-    withAllowlistHeader: true,
   });
   const parts: string[] = [];
   if (input.mode !== "science" && thesisSafe) {
@@ -545,7 +544,7 @@ export function buildBookJudgmentFeedBlock(input: {
     parts.push(`## 原问\n${questionSafe}`);
   }
   parts.push(
-    `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句，禁止原样复述操作日程或验证单元。`,
+    `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句（承压/显隐/窗口收窄/偏差负荷）；禁止原样复述操作日程或验证单元；禁小步验证/可逆性较高的探测/时段块/可收费样等 means 边缘词。`,
   );
   const zfpOmitted = !input.ziwei || !(input.ziwei.patternHits?.length > 0);
   const hits = patternHitsFromZiwei(input.ziwei);
@@ -565,11 +564,11 @@ export function buildBookJudgmentFeedBlock(input: {
   }
   if (hits.length) {
     parts.push(
-      `## ZFP patternHits 稳定引用（hit_id:level · 用则入 pattern_hits_used；古典格名仅可写本盘闭集内且与段职责相关；不用则 unit.caveat）\n${hits.join("、")}`,
+      `## ZFP patternHits 稳定引用（hit:<id>:<level> · 列入 pattern_hits_used 的每一条必须写入 ≥1 unit.claim 作判断；禁只挂 anchors；claim 禁裸古典格名；不用则 unit.caveat）\n${hits.join("、")}`,
     );
   }
   parts.push(
-    `## faces 必须覆盖\n${BOOK_FACE_IDS.join(", ")}`,
+    `## faces 必须覆盖（全书；PageFeed 已按 01–08 分脸切片）\n${BOOK_FACE_IDS.join(", ")}`,
     JSON_SHAPE,
   );
   return parts.filter(Boolean).join("\n\n");
@@ -703,7 +702,12 @@ export async function runBookJudgmentPackGenerate(input: {
       pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
       science_tags_used: stringList(shot.parsed, "science_tags_used"),
     });
-    const validated = validateBookJudgmentPack(draft, quota);
+    const classicalNames = (ziwei?.patternHits ?? [])
+      .map((h) => (h.name ?? "").trim())
+      .filter(Boolean);
+    const validated = validateBookJudgmentPack(draft, quota, {
+      classical_pattern_names: classicalNames,
+    });
     if (!validated.ok) {
       // Validate/quality fail: hard fail — never schedule two_destiny continue.
       return {
@@ -910,7 +914,12 @@ export async function runBookJudgmentPackGenerate(input: {
         ...stringList(sShot.parsed, "science_tags_used"),
       ],
     });
-    const validated = validateBookJudgmentPack(draft, quota);
+    const classicalNames = (ziwei?.patternHits ?? [])
+      .map((h) => (h.name ?? "").trim())
+      .filter(Boolean);
+    const validated = validateBookJudgmentPack(draft, quota, {
+      classical_pattern_names: classicalNames,
+    });
     if (!validated.ok) {
       return {
         ok: false,

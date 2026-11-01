@@ -1705,7 +1705,12 @@ async function executeV3(
     }
     const quota = buildBookJudgmentQuotaFromBlueprint();
     /** No softRepair — 缺配额 = FAIL，正文冻结。 */
-    const validated = validateBookJudgmentPack(rawPack, quota);
+    const classicalGate = ((lab.artifacts.ziwei_fact_pack as { patternHits?: { name?: string }[] } | null | undefined)?.patternHits ?? [])
+      .map((h) => (h.name ?? "").trim())
+      .filter(Boolean);
+    const validated = validateBookJudgmentPack(rawPack, quota, {
+      classical_pattern_names: classicalGate,
+    });
     if (!validated.ok) {
       const zfpGateFail =
         (lab.artifacts.ziwei_fact_pack as { patternHits?: { name: string }[] } | null)
@@ -2224,7 +2229,12 @@ async function executeV3(
       : null;
     if (bookPack && packOn) {
       const quotaBody = buildBookJudgmentQuotaFromBlueprint();
-      const packGate = validateBookJudgmentPack(bookPack, quotaBody);
+      const classicalBody = ((lab.artifacts.ziwei_fact_pack as { patternHits?: { name?: string }[] } | null | undefined)?.patternHits ?? [])
+        .map((h) => (h.name ?? "").trim())
+        .filter(Boolean);
+      const packGate = validateBookJudgmentPack(bookPack, quotaBody, {
+        classical_pattern_names: classicalBody,
+      });
       if (!packGate.ok) {
         return {
           input_payload: {

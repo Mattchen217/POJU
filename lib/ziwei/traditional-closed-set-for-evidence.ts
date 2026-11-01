@@ -87,7 +87,7 @@ export function formatZiweiTraditionalClosedSetForEvidence(
   const rows = inventory.map((t) => `| ${t} |`).join("\n");
   if (locale === "en") {
     return [
-      "## Ziwei traditional closed-set (evidence layer · free traditional · no markers)",
+      "## Ziwei traditional closed-set (evidence layer · traditional OK this gun · downstream soft · no markers)",
       "Write multi-char traditional terms from the table naturally into destiny evidence/claims.",
       "Soft-translate is code-side. Do not invent out-of-set stars/patterns.",
       "On-topic only: use a term only when it supports this unit's segment duty; never dump the whole chart.",
@@ -102,15 +102,15 @@ export function formatZiweiTraditionalClosedSetForEvidence(
       .join("\n");
   }
   return [
-    "## 紫微传统闭集（依据层 · 自由传统词 · 禁止打标）",
-    "destiny / 命理依据：只用上表本盘多字传统真词自然写入句子；软译由代码层（autoMark + SSOT）。",
+    "## 紫微传统闭集（依据层 · 本枪允许传统词，下游 soft · 禁止打标）",
+    "destiny / 命理依据：只用上表本盘多字传统真词自然写入句子；软译由下游 body/代码层（autoMark + SSOT）。Lab Trace 裸传统=本枪依据骨架，非用户终稿。",
     "禁止发明集外宫星格局；禁止 ⟦t:⟧ / ?t: 标记壳。",
     "相关才用：段职责列到且与本单元主张相关才写入；禁整盘灌段。",
     "| 可用传统词 |",
     "|---|",
     rows,
     hitRefs.length
-      ? `格局稳定引用（用则入 pattern_hits_used；古典格名可与 hit 并存于 claim）：\n${hitRefs.join(" · ")}`
+      ? `格局稳定引用（用则入 pattern_hits_used 且必须写入 claim；claim 用 hit:<id>:<level>，禁裸古典格名）：\n${hitRefs.join(" · ")}`
       : "",
   ]
     .filter(Boolean)

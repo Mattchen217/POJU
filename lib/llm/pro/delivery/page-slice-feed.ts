@@ -5,6 +5,7 @@
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
+  DECISION_PAGE_IDS,
   PAGE_UNION_ALLOWLISTS,
   type DecisionPageId,
 } from "@/lib/llm/pro/delivery/page-feed-matrix";
@@ -93,6 +94,44 @@ export function formatPageSliceFeed(input: {
 }
 
 /** 有切片就推进 user 消息，并告诉调用方不要再附整包事实档或闭集 inventory。 */
+
+/**
+ * BookJudgment 全书枪：按 PageFeedMatrix 拼 01–08 各脸有值切片。
+ * 禁止只喂 face02 却产出全脸 pack——Trace/Lab 须标明全书 PageFeed。
+ */
+export function formatBookJudgmentFullBookPageFeed(input: {
+  chartText?: string | null;
+  ziwei?: ZiweiFactPack | null;
+  question?: string | null;
+  topic?: string | null;
+  locale?: string | null;
+  cfp?: CfpShortInput | null;
+  sciHooks?: string | readonly string[] | null;
+}): string {
+  const banner = [
+    "## 全书 PageFeed（BookJudgment · faces 01–08）",
+    "本枪=全书批断包：总纲+agenda 覆盖全脸；下列为各脸 PageFeedMatrix allowlist 有值切片（非仅 face02 样例）。",
+    "各脸 claim 应挂对应脸切片键；Lab Trace 勿解读为单页 02。",
+    "层注：本枪依据/骨架允许传统词；下游 body soft（勿把 Trace 裸传统当用户可见终稿）。",
+  ].join("\n");
+  const parts: string[] = [banner];
+  for (const face of DECISION_PAGE_IDS) {
+    const block = formatPageSliceFeed({
+      key: face,
+      chartText: input.chartText,
+      ziwei: input.ziwei,
+      question: input.question,
+      topic: input.topic,
+      locale: input.locale,
+      cfp: input.cfp,
+      sciHooks: input.sciHooks,
+      withAllowlistHeader: true,
+    });
+    if (block?.trim()) parts.push(block);
+  }
+  return parts.join("\n\n");
+}
+
 export function appendPageSliceFeed(
   parts: string[],
   input: Parameters<typeof formatPageSliceFeed>[0],

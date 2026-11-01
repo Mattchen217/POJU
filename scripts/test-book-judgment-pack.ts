@@ -33,6 +33,8 @@ import {
 } from "../lib/llm/pro/delivery/book-judgment/slice";
 import { hashChartFactPackText, hashZiweiFactPack } from "../lib/llm/pro/delivery/book-judgment/hash";
 import { buildZiweiFactPack } from "../lib/ziwei/fact-pack";
+import { patternHitRefsForPrompt } from "../lib/ziwei/soft-zfp-labels";
+import { buildBookJudgmentFeedBlock } from "../lib/llm/pro/delivery/book-judgment/generate";
 import {
   buildLabStepDefsV3,
   labStepDefsV3,
@@ -60,6 +62,8 @@ const GOLDEN_BIRTH: BirthInfo = {
 
 const ziwei = buildZiweiFactPack(GOLDEN_BIRTH, { asOf: "2026-10-27" });
 assert.ok(ziwei.patternHits.length > 0, "golden patternHits");
+const hitRef = patternHitRefsForPrompt([ziwei.patternHits[0]!])[0]!;
+assert.ok(hitRef.startsWith("hit:"), "hitRef");
 
 const chartText = [
   "日主：庚金",
@@ -104,7 +108,7 @@ function unit(
 
 /** Dense dual-track covering pack (meets per-face + total quota). */
 function coveringUnits(): BookJudgmentUnit[] {
-  const pattern = ziwei.patternHits[0]!.name;
+  const pattern = hitRef;
   const units: BookJudgmentUnit[] = [];
   for (const face of BOOK_FACE_IDS) {
     const faceQuota = quota.faces.find((f) => f.faceId === face)!;
@@ -142,11 +146,14 @@ function coveringUnits(): BookJudgmentUnit[] {
           track,
           serves_face: [face],
           serves_segment: slot.segmentId,
-          claim: `${face}${slot.segmentId} ${track}：配额反推批断`,
+          claim:
+            track === "science"
+              ? `${face}${slot.segmentId} science：配额反推批断`
+              : `${face}${slot.segmentId} ${track}：${hitRef} 承压窗口收窄`,
           anchors:
             track === "science"
               ? ["cognitive_load", "decision_hygiene"]
-              : [pattern, "用神木"],
+              : [hitRef, "用神木"],
         }),
       );
     }
@@ -167,7 +174,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     created_at: new Date().toISOString(),
     units,
     by_face: indexBookJudgmentByFace(units),
-    pattern_hits_used: [ziwei.patternHits[0]!.name],
+    pattern_hits_used: [hitRef],
     science_tags_used: ["cognitive_load"],
     ...over,
   };
@@ -227,14 +234,21 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
       serves_face: [face],
       serves_segment: "C",
       claim: "第三命理",
-      anchors: [ziwei.patternHits[0]!.name],
+      anchors: [hitRef],
+      claim: `第三命理 ${hitRef} 承压`,
     }),
   ]);
+  // patch first two claims too via map
+  const unitsHit = units.map((u, i) =>
+    i < 2
+      ? { ...u, claim: `${u.claim} ${hitRef}`, anchors: [hitRef, ...u.anchors] }
+      : u,
+  );
   const v = validateBookJudgmentPack(
     basePack({
-      units,
-      by_face: indexBookJudgmentByFace(units),
-      pattern_hits_used: [ziwei.patternHits[0]!.name],
+      units: unitsHit,
+      by_face: indexBookJudgmentByFace(unitsHit),
+      pattern_hits_used: [hitRef],
     }),
     quota,
   );
@@ -244,7 +258,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
 
 /** FAIL face 04 missing science (density ok, dual-track broken on 04) */
 {
-  const pattern = ziwei.patternHits[0]!.name;
+  const pattern = hitRef;
   const units = coveringUnits().filter((u) => !u.serves_face.includes("04"));
   const face04Quota = quota.faces.find((f) => f.faceId === "04")!;
   for (let i = 0; i < face04Quota.min_units; i++) {
@@ -254,7 +268,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
         track: "destiny",
         serves_face: ["04"],
         serves_segment: (["A", "B", "C", "D"] as BookJudgmentSegmentId[])[i] ?? "A",
-        claim: `04 纯命理 ${i}`,
+        claim: `04 纯命理 ${i} ${hitRef} 承压`,
         anchors: [pattern, "用神木"],
       }),
     );
@@ -334,6 +348,10 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
     low_commit_sample: [
       "做一个低承诺小样验证再开口",
       "先拿一次付费后再切主业",
+    ],
+    means_edge_probe: [
+      "先做小步验证再判断开口窗口",
+      "用可逆性较高的探测确认负荷回落",
     ],
   };
   for (const name of MEANS_PRESCRIPTION_CLASS_NAMES) {
@@ -449,7 +467,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
 
 /** FAIL empty face 02 (pad density on other faces) */
 {
-  const pattern = ziwei.patternHits[0]!.name;
+  const pattern = hitRef;
   const units = coveringUnits().filter((u) => !u.serves_face.includes("02"));
   while (units.length < quota.total_min_units) {
     units.push(
@@ -458,7 +476,7 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
         track: "destiny",
         serves_face: ["01"],
         serves_segment: "A",
-        claim: "密度垫片",
+        claim: `密度垫片 ${hitRef} 承压`,
         anchors: [pattern],
       }),
     );
@@ -733,6 +751,121 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   assert.match(prompt.system, /means_prescription|手段处方/);
   assert.match(prompt.user, /required_unit_ids/);
   assert.doesNotMatch(prompt.user, /d01、d02、d03/);
+}
+
+
+/** FAIL pattern_hits_used anchors-only (not in claim) */
+{
+  const units = coveringUnits().map((u, i) =>
+    i === 0
+      ? { ...u, claim: "命理承压窗口收窄（无 hit 引用）", anchors: [hitRef, "用神木"] }
+      : { ...u, claim: u.claim.replace(hitRef, "结构承压").replace(/hit:[a-z0-9]+:\S+/gi, "结构承压") },
+  );
+  const v = validateBookJudgmentPack(
+    basePack({
+      units,
+      by_face: indexBookJudgmentByFace(units),
+      pattern_hits_used: [hitRef],
+    }),
+    quota,
+  );
+  assert.equal(v.ok, false);
+  if (!v.ok) assert.equal(v.reason, "pattern_hit_not_in_claim");
+}
+
+/** FAIL classical pattern name hung in pattern_hits_used */
+{
+  const classical = ziwei.patternHits[0]!.name;
+  const v = validateBookJudgmentPack(
+    basePack({ pattern_hits_used: [classical] }),
+    quota,
+  );
+  assert.equal(v.ok, false);
+  if (!v.ok) assert.equal(v.reason, "pattern_hit_not_closed_ref");
+}
+
+/** FAIL classical 格局名 bare in claim when opts supplied */
+{
+  const classical = ziwei.patternHits[0]!.name;
+  const units = coveringUnits().map((u, i) =>
+    i === 0
+      ? {
+          ...u,
+          track: "destiny" as const,
+          claim: `${classical} 与题面同向收束 ${hitRef}`,
+          anchors: [hitRef],
+        }
+      : u,
+  );
+  const v = validateBookJudgmentPack(
+    basePack({
+      units,
+      by_face: indexBookJudgmentByFace(units),
+      pattern_hits_used: [hitRef],
+    }),
+    quota,
+    { classical_pattern_names: [classical] },
+  );
+  assert.equal(v.ok, false);
+  if (!v.ok) assert.equal(v.reason, "classical_pattern_name_in_claim");
+}
+
+/** FAIL means_edge on anchors subject */
+{
+  const units = coveringUnits().map((u, i) =>
+    i === 0
+      ? {
+          ...u,
+          claim: `${hitRef} 承压窗口收窄`,
+          anchors: ["小步验证", hitRef],
+        }
+      : u,
+  );
+  const v = validateBookJudgmentPack(
+    basePack({
+      units,
+      by_face: indexBookJudgmentByFace(units),
+      pattern_hits_used: [hitRef],
+    }),
+    quota,
+  );
+  assert.equal(v.ok, false);
+  if (!v.ok) {
+    assert.equal(v.reason, "means_prescription");
+    assert.match(v.detail ?? "", /means_edge_probe/);
+  }
+}
+
+/** BookJudgment feed is full-book PageFeed (01–08), not face02-only */
+{
+  const feed = buildBookJudgmentFeedBlock({
+    chartText,
+    ziwei,
+    question: "要不要换工作",
+    mode: "all",
+    locale: "zh",
+  });
+  assert.match(feed, /全书 PageFeed/);
+  assert.match(feed, /faces 01–08|01–08/);
+  assert.match(feed, /本枪允许传统词，下游 soft/);
+  assert.match(feed, /PageFeedMatrix allowlist（face 01/);
+  assert.match(feed, /PageFeedMatrix allowlist（face 08/);
+  assert.match(feed, /必须写入 ≥1 unit.claim/);
+  // must not be a lone face-02-only header without full-book banner
+  assert.doesNotMatch(
+    feed.split("## 全书 PageFeed")[0] ?? "",
+    /PageFeedMatrix allowlist（face 02/,
+  );
+}
+
+/** Trace summary exposes feed shape + layer note */
+{
+  const v = validateBookJudgmentPack(basePack(), quota);
+  assert.ok(v.ok);
+  if (!v.ok) throw new Error("pack");
+  const sum = bookJudgmentTraceSummary(v.pack, { quota });
+  assert.equal(sum.page_feed_shape, "full_book_01_08");
+  assert.match(sum.layer_note, /本枪允许传统词，下游 soft/);
 }
 
 /** Flag + step table */

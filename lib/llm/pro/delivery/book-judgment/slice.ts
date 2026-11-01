@@ -161,6 +161,10 @@ export function bookJudgmentTraceSummary(
   science_tags_used: string[];
   quota_total_min: number;
   under_density: boolean;
+  /** Lab Trace: full-book PageFeed (01–08), not face02-only. */
+  page_feed_shape: "full_book_01_08";
+  /** Lab Trace: naked traditional in claims is basis-layer; downstream soft. */
+  layer_note: string;
 } {
   const quota = opts?.quota ?? buildBookJudgmentQuotaFromBlueprint();
   const unit_counts = { destiny: 0, science: 0, convergence: 0, total: pack.units.length };
@@ -218,5 +222,7 @@ export function bookJudgmentTraceSummary(
     science_tags_used: [...pack.science_tags_used],
     quota_total_min: quota.total_min_units,
     under_density: pack.units.length < quota.total_min_units,
+    page_feed_shape: "full_book_01_08",
+    layer_note: "本枪允许传统词，下游 soft（Trace 裸传统≠用户可见终稿）",
   };
 }
