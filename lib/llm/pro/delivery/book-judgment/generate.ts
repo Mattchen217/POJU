@@ -300,7 +300,6 @@ async function callPackShot(input: {
   /** Lab/macro: cap OpenRouter transport to 1 admit (no stacked main_delivery). */
   single_provider_call?: boolean;
   signal?: AbortSignal;
-  signal?: AbortSignal;
 }): Promise<{
   ok: boolean;
   reason?: string;
