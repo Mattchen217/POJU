@@ -51,6 +51,8 @@ const BARE_MATCH_SHELL_SLUGS: ReadonlySet<string> = new Set([
 export function isAssignMenuEligibleSlug(slug: string): boolean {
   const s = slug.trim();
   if (!s) return false;
+  // ZFP absorb checklist keys / hints — never primary assign-menu carriers.
+  if (s.startsWith("zfp_pattern_hit:") || s.startsWith("zfp_hit:")) return false;
   if (HOLLOW_STRUCTURAL_SLUGS.has(s)) return false;
   if (CHANGSHENG.has(s)) return false;
   if (STRUCTURAL_PLACEHOLDER_SLUGS.has(s)) return false;

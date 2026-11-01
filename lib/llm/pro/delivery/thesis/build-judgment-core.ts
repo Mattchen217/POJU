@@ -5,6 +5,8 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { applyAgendaDepth } from "@/lib/llm/pro/delivery/thesis/apply-agenda-depth";
 import { buildThesisCalcFeed } from "@/lib/llm/pro/delivery/thesis/build-thesis-calc-feed";
+import { absorbPatternHitsIntoFeed } from "@/lib/llm/pro/delivery/thesis/pattern-hits-into-dims";
+import type { ZiweiPatternHit } from "@/lib/ziwei/fact-pack";
 import type {
   ChartThesis,
   ChecklistItemStatus,
@@ -178,18 +180,25 @@ export function buildChartThesisFromStructured(
     timezone?: string;
     question_category?: import("@/lib/poju/agent-state").QuestionCategory;
     supplement?: import("@/lib/calculations/topic-calc-supplement").TopicCalcSupplement | null;
+    /** On-topic ZFP patternHits absorbed into feed dims before agenda depth. */
+    patternHits?: readonly ZiweiPatternHit[] | null;
   },
 ): ChartThesis {
   const as_of = opts?.as_of ?? (opts?.nowYear
     ? new Date(Date.UTC(opts.nowYear, 5, 15, 12, 0, 0))
     : new Date());
-  const feed = buildThesisCalcFeed(structured, {
+  let feed = buildThesisCalcFeed(structured, {
     nowYear: opts?.nowYear,
     as_of,
     timezone: opts?.timezone,
     question_category: opts?.question_category,
     supplement: opts?.supplement,
   });
+  feed = absorbPatternHitsIntoFeed(
+    feed,
+    opts?.patternHits ?? null,
+    opts?.question_category ?? null,
+  );
   const core = buildJudgmentCoreFromFeed(feed, {
     as_of_day: asOfDayUtc(as_of),
     question_category: opts?.question_category ?? null,

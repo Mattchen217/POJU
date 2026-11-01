@@ -14,6 +14,9 @@ import type {
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { buildChartThesisFromStructured } from "@/lib/llm/pro/delivery/thesis";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
+import {
+  evaluateThesisPatternHitsCitationGate,
+} from "@/lib/llm/pro/delivery/thesis/pattern-hits-into-dims";
 import { inferQuestionCategoryFromText } from "@/lib/llm/prompts/relation-closed-set-context";
 import {
   assertPreallocPrimariesGroundedInThesis,
@@ -494,11 +497,6 @@ async function executeV3(
         [lab.source.original_question, agenda].filter(Boolean).join("\n"),
       ) as import("@/lib/poju/agent-state").QuestionCategory) ??
       null;
-    const thesis = buildChartThesisFromStructured(structured, agenda || null, {
-      question_category,
-      as_of: new Date(),
-    });
-    lab.artifacts.thesis = thesis;
     const { buildChartFactPack } = await import(
       "@/lib/llm/pro/delivery/page-schema/chart-fact-pack"
     );
@@ -508,7 +506,14 @@ async function executeV3(
     const { ensureLabZiweiFactPack } = await import("@/lib/ziwei/lab-ziwei");
     const cfp = buildChartFactPack(structured, { as_of: new Date() });
     const ziwei = ensureLabZiweiFactPack(lab);
-    const patternHits = (ziwei?.patternHits ?? []).map((h) => h.name).filter(Boolean);
+    const patternHitObjs = ziwei?.patternHits ?? [];
+    const patternHits = patternHitObjs.map((h) => h.name).filter(Boolean);
+    const thesis = buildChartThesisFromStructured(structured, agenda || null, {
+      question_category,
+      as_of: new Date(),
+      patternHits: patternHitObjs,
+    });
+    lab.artifacts.thesis = thesis;
     const climateAbsent = thesis.dimensions.some((d) =>
       (Array.isArray(d.classical_basis) ? d.classical_basis : []).some(
         (it) =>
@@ -518,8 +523,25 @@ async function executeV3(
           (it as { present?: boolean }).present === false,
       ),
     );
+    const citationGate = evaluateThesisPatternHitsCitationGate(
+      thesis,
+      patternHitObjs,
+      question_category,
+    );
     const dimsOk = thesis.dimensions.length >= 1;
-    const passed = dimsOk && !climateAbsent;
+    const passed = dimsOk && !climateAbsent && citationGate.passed;
+    const failed_rule = climateAbsent
+      ? "thesis:climate_balance_missing"
+      : !citationGate.passed
+        ? "thesis:pattern_hits_uncited"
+        : dimsOk
+          ? undefined
+          : "thesis:empty";
+    const detail = climateAbsent
+      ? "climate_balance 显式缺项 FAIL · 需月令可算调候"
+      : !citationGate.passed
+        ? `patternHits on-topic=${citationGate.on_topic_n} uncited=${citationGate.uncited.join("、") || "—"}`
+        : `dims=${thesis.dimensions.length} · 六维总纲 · patternHits=${patternHits.length}`;
     return {
       input_payload: {
         pipeline: "v3",
@@ -534,14 +556,8 @@ async function executeV3(
       processing_actions: [{ action: "buildChartThesisFromStructured" }],
       gate_verdict: {
         passed,
-        failed_rule: climateAbsent
-          ? "thesis:climate_balance_missing"
-          : dimsOk
-            ? undefined
-            : "thesis:empty",
-        detail: climateAbsent
-          ? "climate_balance 显式缺项 FAIL · 需月令可算调候"
-          : `dims=${thesis.dimensions.length} · 六维总纲`,
+        failed_rule,
+        detail,
       },
       output_to_next_stage: thesis,
     };
