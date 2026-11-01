@@ -114,6 +114,9 @@ export type BookJudgmentGenerateFail = {
   shot_mode?: BookJudgmentShotMode;
 };
 
+/** One-shot generate outcome (Ok | Fail). Restored after DegradeCarry/result-union removal. */
+export type BookJudgmentGenerateResult = BookJudgmentGenerateOk | BookJudgmentGenerateFail;
+
 function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
   // Phase 10: never feed classical 格名 into judgment prompts — hit_id:level only.
   return patternHitRefsForPrompt(ziwei?.patternHits ?? []);
