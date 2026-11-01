@@ -161,6 +161,10 @@ type LabView = {
     science_tags_used: string[];
     quota_total_min?: number;
     under_density?: boolean;
+    /** Lab Trace: full-book PageFeed (01–08), not face02-only. */
+    page_feed_shape?: "full_book_01_08" | string;
+    /** Lab Trace: naked traditional in claims is basis-layer; downstream soft. */
+    layer_note?: string;
   } | null;
 } & LabPipelineView;
 
@@ -1232,6 +1236,17 @@ export default function DeliveryLabConsolePage() {
                           .join(",")}`
                       : ""}
                   </p>
+                  {lab.book_judgment_trace.page_feed_shape ||
+                  lab.book_judgment_trace.layer_note ? (
+                    <p title={lab.book_judgment_trace.layer_note ?? ""}>
+                      page_feed_shape=
+                      {lab.book_judgment_trace.page_feed_shape ??
+                        "full_book_01_08"}
+                      {" · "}非 face02-only
+                    </p>
+                  ) : (
+                    <p>page_feed_shape=full_book_01_08 · 非 face02-only</p>
+                  )}
                 </div>
               ) : (
                 <p className="mt-1">待跑 book.judgment · 无 per-page judgment</p>

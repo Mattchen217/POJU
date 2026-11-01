@@ -89,7 +89,7 @@ const JSON_SHAPE = `输出 JSON：
     {
       "id": "d01",
       "track": "destiny"|"science"|"convergence",
-      "serves_face": ["02"],
+      "serves_face": ["01"] | ["02"] | … | ["08"],  // 全书分脸，非仅 02
       "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句",
       "anchors": ["机制句或 closed hit 旁证"],

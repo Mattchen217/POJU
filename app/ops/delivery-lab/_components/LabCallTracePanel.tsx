@@ -111,9 +111,33 @@ export function LabCallTracePanel({
       {typeof call_trace.phase === "string" &&
       call_trace.phase.includes("book_judgment") ? (
         <div className="rounded-md border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-[11px] text-violet-100">
-          BookJudgment · 全书 PageFeed（01–08）· 本枪允许传统词，下游 soft（Trace
-          裸传统是依据骨架，不是用户可见终稿）。pattern_hits_used 须写入 claim（禁
-          anchors-only）。
+          {(() => {
+            const feed = call_trace.user_feed ?? "";
+            const shape =
+              /page_feed_shape\s*=\s*full_book_01_08/.test(feed) ||
+              /全书 PageFeed（BookJudgment · faces 01–08）/.test(feed) ||
+              /全书分脸切片/.test(feed)
+                ? "full_book_01_08"
+                : /本页切片（page 02）|PageFeedMatrix allowlist（face 02）/.test(
+                      feed,
+                    ) && !/face 0[1345678]/.test(feed)
+                  ? "face02_only_HANG"
+                  : "book_judgment";
+            return (
+              <>
+                BookJudgment · page_feed_shape=
+                <span className="font-mono text-violet-50">{shape}</span>
+                {" · "}全书 PageFeed（01–08）· 本枪允许传统词，下游 soft（Trace
+                裸传统是依据骨架，不是用户可见终稿）。pattern_hits_used 须写入
+                claim（禁 anchors-only）。
+                {shape === "face02_only_HANG" ? (
+                  <span className="ml-1 text-amber-200">
+                    ⚠ Trace 仍像 face02-only — 应改全书标签。
+                  </span>
+                ) : null}
+              </>
+            );
+          })()}
         </div>
       ) : null}
 

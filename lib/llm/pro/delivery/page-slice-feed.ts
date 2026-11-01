@@ -97,7 +97,7 @@ export function formatPageSliceFeed(input: {
 
 /**
  * BookJudgment 全书枪：按 PageFeedMatrix 拼 01–08 各脸有值切片。
- * 禁止只喂 face02 却产出全脸 pack——Trace/Lab 须标明全书 PageFeed。
+ * 禁止只喂 face02 却产出全脸 pack——Trace/Lab 须用全书标签（勿挂本页/face02）。
  */
 export function formatBookJudgmentFullBookPageFeed(input: {
   chartText?: string | null;
@@ -110,13 +110,15 @@ export function formatBookJudgmentFullBookPageFeed(input: {
 }): string {
   const banner = [
     "## 全书 PageFeed（BookJudgment · faces 01–08）",
+    "page_feed_shape=full_book_01_08",
     "本枪=全书批断包：总纲+agenda 覆盖全脸；下列为各脸 PageFeedMatrix allowlist 有值切片（非仅 face02 样例）。",
-    "各脸 claim 应挂对应脸切片键；Lab Trace 勿解读为单页 02。",
-    "层注：本枪依据/骨架允许传统词；下游 body soft（勿把 Trace 裸传统当用户可见终稿）。",
+    "标签=全书分脸切片 / 全书 PageFeedMatrix allowlist（pack 01–08）——禁止解读为单页 本页切片/face02-only。",
+    "层注：本枪允许传统词，下游 soft（Trace 裸传统≠用户可见终稿；依据骨架，非用户可见终稿）。",
   ].join("\n");
   const parts: string[] = [banner];
   for (const face of DECISION_PAGE_IDS) {
-    const block = formatPageSliceFeed({
+    // Per-face body without page-centric headers; re-label as whole-pack.
+    const body = formatPageSliceFeed({
       key: face,
       chartText: input.chartText,
       ziwei: input.ziwei,
@@ -125,9 +127,19 @@ export function formatBookJudgmentFullBookPageFeed(input: {
       locale: input.locale,
       cfp: input.cfp,
       sciHooks: input.sciHooks,
-      withAllowlistHeader: true,
+      withAllowlistHeader: false,
     });
-    if (block?.trim()) parts.push(block);
+    const allow = formatPageFeedAllowlistHeader(face);
+    if (!body?.trim() && !allow?.trim()) continue;
+    const allowWhole = (allow ?? "").replace(
+      `## PageFeedMatrix allowlist（face ${face}`,
+      `## 全书 PageFeedMatrix allowlist（face ${face} · pack 01–08`,
+    );
+    const bodyWhole = (body ?? "").replace(
+      `## 本页切片（page ${face}`,
+      `## 全书分脸切片（face ${face} · pack 01–08`,
+    );
+    parts.push([allowWhole, bodyWhole].filter((x) => x.trim()).join("\n\n"));
   }
   return parts.join("\n\n");
 }

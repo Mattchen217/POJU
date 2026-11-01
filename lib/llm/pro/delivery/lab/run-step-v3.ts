@@ -1433,7 +1433,8 @@ async function executeV3(
         error: "book_judgment_pack_disabled",
       };
     }
-    const { opts } = await buildLabPromptOpts(lab, "02");
+    /** Whole-pack BookJudgment: key only seeds shared ziwei/thesis/science opts — NOT a face-02 PageFeed hang. */
+    const { opts } = await buildLabPromptOpts(lab, "01");
     const preallocArt = lab.artifacts.prealloc as
       | { chart_fact_pack?: string }
       | undefined;

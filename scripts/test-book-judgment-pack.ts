@@ -847,10 +847,16 @@ function basePack(over: Partial<BookJudgmentPack> = {}): BookJudgmentPack {
   });
   assert.match(feed, /全书 PageFeed/);
   assert.match(feed, /faces 01–08|01–08/);
+  assert.match(feed, /page_feed_shape=full_book_01_08/);
   assert.match(feed, /本枪允许传统词，下游 soft/);
-  assert.match(feed, /PageFeedMatrix allowlist（face 01/);
-  assert.match(feed, /PageFeedMatrix allowlist（face 08/);
+  assert.match(feed, /全书 PageFeedMatrix allowlist（face 01 · pack 01–08/);
+  assert.match(feed, /全书 PageFeedMatrix allowlist（face 08 · pack 01–08/);
+  assert.match(feed, /全书分脸切片（face 01 · pack 01–08/);
+  assert.match(feed, /全书分脸切片（face 08 · pack 01–08/);
   assert.match(feed, /必须写入 ≥1 unit.claim/);
+  // whole-pack labels — no page-centric headers (banner may mention 本页切片 as a forbid note)
+  assert.doesNotMatch(feed, /## 本页切片（page /);
+  assert.doesNotMatch(feed, /## PageFeedMatrix allowlist（face /);
   // must not be a lone face-02-only header without full-book banner
   assert.doesNotMatch(
     feed.split("## 全书 PageFeed")[0] ?? "",

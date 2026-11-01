@@ -143,8 +143,8 @@ export function formatGlobalSegmentFeedDuties(opts?: SegmentFeedDutiesOpts): str
   }
   const header =
     opts?.locale === "en"
-      ? `## Global segment feed duties (CFP+ZFP · on-topic)`
-      : `## 全书段级喂料职责（CFP+ZFP · 相关才用 · 禁整盘灌段）`;
+      ? `## Global segment feed duties (CFP+ZFP · pack 01–08 · on-topic · not face02-only)`
+      : `## 全书段级喂料职责（CFP+ZFP · pack 01–08 · 相关才用 · 禁整盘灌段 · 非仅 face02）`;
   const rules = zfpOmitted
     ? [
         "zfpOmitted=true：destiny 只写 CFP 锚；pattern_hits_used 可空。",
