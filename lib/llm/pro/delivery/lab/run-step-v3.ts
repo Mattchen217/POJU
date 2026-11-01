@@ -3399,6 +3399,10 @@ export async function runLabStepV3(
     );
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "fill_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "mark_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "soft_dispatch_continue" ||
+      result.gate_verdict.failed_rule === BOOK_JUDGMENT_SHOT_CONTINUE_RULE ||
       result.gate_verdict.failed_rule === POLISH_ACCEPTANCE_CONTINUE_RULE ||
       result.gate_verdict.failed_rule === BODY_ACCEPTANCE_CONTINUE_RULE;
     if (result.gate_verdict.passed && !result.error) {

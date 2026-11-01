@@ -59,6 +59,16 @@ assert.match(runStepSrc, /single_provider_call:\s*true/);
 assert.match(runStepSrc, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
 assert.match(runStepSrc, /isBookJudgmentGenerateContinue/);
 assert.match(runStepSrc, /book_judgment_shot_continue_schedule/);
+/** Wrapper must treat shot continue as dispatch continue (ok:true), else client never POSTs gun 2. */
+{
+  const dc = runStepSrc.indexOf("const dispatchContinue =");
+  assert.ok(dc > 0, "dispatchContinue in runLabStepV3");
+  const dcBlock = runStepSrc.slice(dc, dc + 700);
+  assert.match(dcBlock, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
+  assert.match(dcBlock, /soft_dispatch_continue/);
+  assert.match(dcBlock, /fill_dispatch_continue/);
+  assert.match(dcBlock, /mark_dispatch_continue/);
+}
 
 const pageSrc = fs.readFileSync(
   path.join(root, "app/ops/delivery-lab/[lab_id]/page.tsx"),
