@@ -3210,20 +3210,24 @@ async function executeV3(
     clearV3Acceptance(art, "soft");
     art.soft_partial = undefined;
     art.soft_chunk_index = undefined;
+    art.soft_partial = undefined;
     art.evidence = soft.evidence;
     art.marked = soft.marked;
+    const softStages = soft.stages ?? null;
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
         phase: "evidence_soft",
         locale: softLocale,
+        terms_pipeline: "terms-pipeline-spec-v1",
+        stage_keys: ["bare", "mark", "locale_polish", "soft"],
       },
-      raw_model_output: soft.slotted,
+      raw_model_output: softStages ?? soft.slotted,
       processing_actions: soft.notes.map((n) => ({ action: n })),
       gate_verdict: {
         passed: true,
-        detail: `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
+        detail: `依据软译完成（${softLocale}）· SPEC-v1 bare→mark→locale_polish→soft · 可人审 Call trace ⑤`,
       },
       output_to_next_stage: soft.marked,
       tokens_used: soft.tokens_used,

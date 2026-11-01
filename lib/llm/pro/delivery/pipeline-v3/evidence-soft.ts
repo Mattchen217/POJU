@@ -1,27 +1,51 @@
 /**
- * Pipeline v3 · Step3 evidence soft — wrap traditional judgment → mark connective
- * in the delivery locale → encode `⟦w:⟧` to coined-term `⟦t:⟧`. Does not rewrite page body.
+ * Pipeline v3 · Step3 evidence soft — TERMS-PIPELINE-SPEC-v1 code path.
  *
- * Args chunked by DELIVERY_SOFT_ARGS_PER_CALL (default 6 ≈ one page / one invoke).
- * Only soft-walls when a page has more nonempty evidence args than the cap.
+ * Dual-layer product rule:
+ * - Body / narrative: vernacular only (no traditional jargon).
+ * - Evidence: free traditional → code autoMark → (locale polish if needed) → code soft.
+ *
+ * Stages (Lab-visible on call_trace.parsed.stages):
+ * 1. bare — model free traditional (from judgment / DeepEvidencePlan)
+ * 2. mark — prepareTextForGlossaryRender (autoMark)
+ * 3. locale_polish — vernacular locale polish when still needed; zh = identity.
+ *    Markers already carry SSOT soft in the delivery locale via prepareText.
+ *    Full model connective rewrite is no longer the soft job (wave2).
+ * 4. soft — toSoftTranslatedPlainText (coined soft labels, plain)
+ *
+ * art.marked stores mark/locale_polish (⟦t:⟧) for GlossaryText fold UI.
+ * Soft plain is for Lab inspect / audit dumps.
+ *
+ * Chunk soft-wall (soft_chunk_*) is retained for API compat but unused:
+ * the code path finishes all args in one invoke.
  */
 
 import type {
+  DeliveryArgument,
   DeliveryArgumentTree,
   DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { zipArgumentEvidence } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
-import { runOneMarkArgChunk } from "@/lib/llm/pro/delivery/mark-evidence-call";
-import { pickMarkEvidenceInput } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
-import { stripElementCycleParentheticalSlots } from "@/lib/llm/pro/delivery/mark-evidence-opaque";
-import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
-import { wrapBareJudgmentAsWordSlots } from "@/lib/llm/sanitize/term-marking";
 import { buildLabCallTrace, type LabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import {
-  chunkDeliveryArgPayload,
-  DELIVERY_SOFT_ARGS_PER_CALL,
-} from "@/lib/llm/pro/delivery/delivery-tasks";
+  prepareTextForGlossaryRender,
+  toSoftTranslatedPlainText,
+} from "@/lib/terms/prepare-display-pipeline";
+
+/** Full closed-set coverage for evidence (same bar as export SoT). */
+const EVIDENCE_AUTO_MARK_OPTS = {
+  maxPerPara: Number.POSITIVE_INFINITY,
+  oncePerText: false,
+} as const;
+
+export type EvidenceSoftStageKey = "bare" | "mark" | "locale_polish" | "soft";
+
+export type EvidenceSoftStages = {
+  bare: DeliveryArgumentTree;
+  mark: DeliveryArgumentTree;
+  locale_polish: DeliveryArgumentTree;
+  soft: DeliveryArgumentTree;
+};
 
 export function freezeRawJudgmentAsEvidence(input: {
   key: DeliverySegmentKey;
@@ -48,70 +72,78 @@ export function freezeRawJudgmentAsEvidence(input: {
   };
 }
 
-function wrapTreeEvidence(tree: DeliveryArgumentTree): DeliveryArgumentTree {
-  const out: DeliveryArgumentTree = {};
-  for (const [k, args] of Object.entries(tree)) {
-    if (!args?.length) continue;
-    out[k as DeliverySegmentKey] = args.map((a) => ({
-      ...a,
-      evidence: a.evidence?.trim()
-        ? stripElementCycleParentheticalSlots(
-            wrapBareJudgmentAsWordSlots(a.evidence),
-          )
-        : a.evidence,
-    }));
-  }
-  return out;
-}
-
-function encodeTreeFields(
+function mapTreeEvidence(
   tree: DeliveryArgumentTree,
-  locale: string,
-  fields: readonly ("body" | "evidence")[],
+  mapEv: (evidence: string) => string,
 ): DeliveryArgumentTree {
   const out: DeliveryArgumentTree = {};
   for (const [k, args] of Object.entries(tree)) {
     if (!args?.length) continue;
     out[k as DeliverySegmentKey] = args.map((a) => {
-      const next = { ...a };
-      for (const f of fields) {
-        const raw = next[f]?.trim();
-        if (!raw) continue;
-        next[f] = encodeConnectiveEvidenceToTerms(raw, locale, {
-          makeup: "fail",
-          store: "slug_only",
-        });
-      }
+      const next: DeliveryArgument = { ...a };
+      const raw = a.evidence?.trim();
+      if (raw) next.evidence = mapEv(raw);
       return next;
     });
   }
   return out;
 }
 
-function restoreTitles(
-  zipped: DeliveryArgumentTree,
-  raw: DeliveryArgumentTree,
-): DeliveryArgumentTree {
-  const out: DeliveryArgumentTree = {};
-  for (const [k, args] of Object.entries(zipped)) {
-    const src = raw[k as DeliverySegmentKey] ?? [];
-    out[k as DeliverySegmentKey] = (args ?? []).map((a, i) => ({
-      ...a,
-      ...(src[i]?.title ? { title: src[i]!.title } : {}),
-    }));
-  }
-  return out;
+function isZhLocale(locale: string): boolean {
+  return locale.trim().toLowerCase().startsWith("zh");
 }
 
-function mergeSoftPartial(
-  prior: DeliveryArgumentTree | undefined,
-  chunkMarked: DeliveryArgumentTree,
-  key: DeliverySegmentKey,
-): DeliveryArgumentTree {
-  const priorArgs = prior?.[key] ?? [];
-  const nextArgs = chunkMarked[key] ?? [];
+/**
+ * Pure code pipeline — Lab + production share this SoT.
+ * Returns all four stages so Delivery Lab can dump live bare→mark→polish→soft.
+ */
+export function runEvidenceSoftCodePipeline(input: {
+  key: DeliverySegmentKey;
+  plan: DeepEvidencePlan;
+  locale: string;
+}): {
+  stages: EvidenceSoftStages;
+  notes: string[];
+  marked: DeliveryArgumentTree;
+  evidence: DeliveryArgumentTree;
+} {
+  const frozen = freezeRawJudgmentAsEvidence({
+    key: input.key,
+    plan: input.plan,
+  });
+  const bare = frozen.evidence;
+  const locale = input.locale.trim() || "zh";
+
+  const mark = mapTreeEvidence(bare, (ev) =>
+    prepareTextForGlossaryRender(ev, locale, EVIDENCE_AUTO_MARK_OPTS),
+  );
+
+  // Stage 3: model locale polish "if still needed".
+  // prepareText already fills SSOT soft inside ⟦t:⟧ for the delivery locale.
+  // zh: identity. non-zh: keep marked (no connective LLM; wave2 stops marker-emit soft job).
+  const locale_polish = mark;
+  const polishNote = isZhLocale(locale)
+    ? "evidence_soft:locale_polish:identity_zh"
+    : "evidence_soft:locale_polish:ssot_soft_in_markers";
+
+  const soft = mapTreeEvidence(locale_polish, (ev) =>
+    toSoftTranslatedPlainText(ev, locale),
+  );
+
+  const notes = [
+    ...frozen.notes,
+    "evidence_soft:code_mark:prepareTextForGlossaryRender",
+    polishNote,
+    "evidence_soft:code_soft:toSoftTranslatedPlainText",
+    "evidence_soft:pipeline:terms-pipeline-spec-v1",
+  ];
+
   return {
-    [key]: [...priorArgs, ...nextArgs],
+    stages: { bare, mark, locale_polish, soft },
+    notes,
+    /** GlossaryText fold UI needs ⟦t:⟧ markers. */
+    marked: locale_polish,
+    evidence: bare,
   };
 }
 
@@ -122,7 +154,9 @@ export type EvidenceSoftOk = {
   tokens_used: number;
   notes: string[];
   call_trace: LabCallTrace;
+  /** @deprecated w-slot feed; code path exposes bare as slotted for Lab dump compat. */
   slotted: DeliveryArgumentTree;
+  stages: EvidenceSoftStages;
 };
 
 export type EvidenceSoftContinue = {
@@ -154,152 +188,89 @@ export async function runEvidenceSoftGenerate(input: {
   key: DeliverySegmentKey;
   plan: DeepEvidencePlan;
   locale: string;
-  /** Unused for prompt — kept for API compat; soft does not feed the user question. */
+  /** Unused — kept for API compat; soft does not feed the user question. */
   original_question?: string | null;
   session_id?: string;
   timeout_ms?: number;
   /** Attempt-2 acceptance corrective (category · 1+1). */
   acceptance_corrective?: string | null;
-  /** Soft-wall: which arg-chunk to run this invoke (0-based). */
+  /** Soft-wall: unused on code path (always one-shot). */
   soft_chunk_index?: number;
-  /** Prior chunks' marked connective (args concatenated in order). */
   soft_partial?: DeliveryArgumentTree | null;
 }): Promise<EvidenceSoftOk | EvidenceSoftContinue | EvidenceSoftFail> {
-  const frozen = freezeRawJudgmentAsEvidence({
-    key: input.key,
-    plan: input.plan,
-  });
-  const raw = frozen.evidence;
-  const slotted = wrapTreeEvidence(raw);
-  const markPayload = pickMarkEvidenceInput(slotted, [input.key]);
-  const ctx = {
-    original_question: null,
-    acceptance_corrective: input.acceptance_corrective ?? null,
-  };
+  void input.original_question;
+  void input.session_id;
+  void input.timeout_ms;
+  void input.acceptance_corrective;
+  void input.soft_chunk_index;
+  void input.soft_partial;
 
-  if (!markPayload[input.key]?.arguments.length) {
+  const hasEvidence = (input.plan.units ?? []).some((u) =>
+    String(u.evidence ?? "").trim(),
+  );
+  if (!hasEvidence) {
+    const empty = freezeRawJudgmentAsEvidence({
+      key: input.key,
+      plan: input.plan,
+    });
     return {
       ok: false,
       reason: "evidence_soft_empty",
       tokens_used: 0,
-      notes: frozen.notes,
-      slotted,
+      notes: empty.notes,
+      slotted: empty.evidence,
       call_trace: buildLabCallTrace({
         phase: "evidence_soft",
         system: "",
         user: "",
-        parsed: slotted,
+        parsed: {
+          pipeline: "terms-pipeline-spec-v1",
+          stages: null,
+          fail: "evidence_soft_empty",
+        },
       }),
     };
   }
-
-  const chunks = chunkDeliveryArgPayload(
-    markPayload,
-    DELIVERY_SOFT_ARGS_PER_CALL,
-  );
-  const chunkIndex = Math.max(0, input.soft_chunk_index ?? 0);
-  if (chunkIndex >= chunks.length) {
-    return {
-      ok: false,
-      reason: `soft_chunk_oob:${chunkIndex}/${chunks.length}`,
-      tokens_used: 0,
-      notes: frozen.notes,
-      slotted,
-    };
-  }
-
-  const chunk = chunks[chunkIndex]!;
-  const markedChunk = await runOneMarkArgChunk(
-    chunk,
-    input.locale,
-    ctx,
-    input.session_id,
-    undefined,
-    input.timeout_ms,
-    { makeup: "fail" },
-  );
-
-  const traceBase = {
-    phase: "evidence_soft",
-    system: markedChunk.system,
-    user: markedChunk.user,
-    result: markedChunk.llm,
-  };
-
-  if (!markedChunk.ok) {
-    const rawDump =
-      markedChunk.raw_text?.trim() ||
-      (markedChunk.last_parsed != null
-        ? JSON.stringify(markedChunk.last_parsed)
-        : undefined);
-    return {
-      ok: false,
-      reason: markedChunk.reason,
-      tokens_used: markedChunk.tokens_used,
-      notes: [
-        ...frozen.notes,
-        `evidence_soft:mark_failed:c${chunkIndex}/${chunks.length}`,
-      ],
-      slotted,
-      last_raw_text: rawDump,
-      call_trace: buildLabCallTrace({
-        ...traceBase,
-        parsed: markedChunk.last_parsed ?? { fail: markedChunk.reason },
-        raw_text: rawDump,
-      }),
-    };
-  }
-
-  const soft_partial = mergeSoftPartial(
-    input.soft_partial ?? undefined,
-    markedChunk.value,
-    input.key,
-  );
-  const next = chunkIndex + 1;
-  const notes = [
-    ...frozen.notes,
-    `evidence_soft:mark_connective:c${chunkIndex}/${chunks.length}`,
-  ];
-
-  if (next < chunks.length) {
-    return {
-      ok: false,
-      needs_more_soft_chunks: true,
-      reason: "soft_chunk_continue",
-      next_chunk_index: next,
-      chunks_total: chunks.length,
-      soft_partial,
-      tokens_used: markedChunk.tokens_used,
-      notes,
-      slotted,
-      last_raw_text: markedChunk.raw_text ?? JSON.stringify(markedChunk.value),
-      call_trace: buildLabCallTrace({
-        ...traceBase,
-        parsed: markedChunk.value,
-        raw_text: markedChunk.raw_text ?? JSON.stringify(markedChunk.value),
-      }),
-    };
-  }
-
-  const zipped = restoreTitles(zipArgumentEvidence(raw, soft_partial), raw);
 
   try {
-    const encodedEvidence = encodeTreeFields(zipped, input.locale, ["evidence"]);
+    const ran = runEvidenceSoftCodePipeline({
+      key: input.key,
+      plan: input.plan,
+      locale: input.locale,
+    });
+
+    const stageSummary = {
+      pipeline: "terms-pipeline-spec-v1",
+      locale: input.locale,
+      stages: ran.stages,
+      stage_keys: ["bare", "mark", "locale_polish", "soft"] as EvidenceSoftStageKey[],
+    };
+
     return {
       ok: true,
-      evidence: raw,
-      marked: encodedEvidence,
-      tokens_used: markedChunk.tokens_used,
-      notes: [
-        ...notes,
-        "evidence_soft:wrap_w_slots",
-        "evidence_soft:encode_t_slots",
-      ],
-      slotted,
+      evidence: ran.evidence,
+      marked: ran.marked,
+      tokens_used: 0,
+      notes: ran.notes,
+      slotted: ran.stages.bare,
+      stages: ran.stages,
       call_trace: buildLabCallTrace({
-        ...traceBase,
-        parsed: soft_partial,
-        raw_text: markedChunk.raw_text ?? JSON.stringify(soft_partial),
+        phase: "evidence_soft",
+        system:
+          "TERMS-PIPELINE-SPEC-v1 code soft path — no LLM marker emit.\n" +
+          "bare (free traditional) → prepareTextForGlossaryRender → locale_polish → toSoftTranslatedPlainText",
+        user: JSON.stringify(
+          {
+            key: input.key,
+            locale: input.locale,
+            units: input.plan.units.length,
+          },
+          null,
+          2,
+        ),
+        user_feed: JSON.stringify(ran.stages.bare, null, 2),
+        parsed: stageSummary,
+        raw_text: JSON.stringify(ran.stages.soft, null, 2),
       }),
     };
   } catch (e) {
@@ -307,14 +278,13 @@ export async function runEvidenceSoftGenerate(input: {
     return {
       ok: false,
       reason,
-      tokens_used: markedChunk.tokens_used,
-      notes: [...notes, "evidence_soft:encode_failed"],
-      slotted,
-      last_raw_text: JSON.stringify(soft_partial),
+      tokens_used: 0,
+      notes: ["evidence_soft:code_path_failed"],
       call_trace: buildLabCallTrace({
-        ...traceBase,
-        parsed: soft_partial,
-        raw_text: markedChunk.raw_text ?? JSON.stringify(soft_partial),
+        phase: "evidence_soft",
+        system: "",
+        user: "",
+        parsed: { pipeline: "terms-pipeline-spec-v1", fail: reason },
       }),
     };
   }

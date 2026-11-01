@@ -17,7 +17,7 @@ import {
   LabPipelinePanel,
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
-import { LabTermsPipelinePanel } from "../_components/LabTermsPipelinePanel";
+import { LabTermsPipelinePanel, type LiveEvidenceSoftStages } from "../_components/LabTermsPipelinePanel";
 import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 import {
   BOOK_ASSEMBLE_STEP_KEY,
@@ -308,6 +308,41 @@ export default function DeliveryLabConsolePage() {
   const isPolishStep = selectedKind === "body_polish";
   const isEvidenceSoftStep = selectedKind === "evidence_soft";
   const isLocaleStep = isPolishStep || isEvidenceSoftStep;
+  /** Live SPEC-v1 stages from evidence_soft call_trace.parsed.stages (or raw dump). */
+  const liveEvidenceSoftStages = (() => {
+    if (!isEvidenceSoftStep || !attempt) return null;
+    const parsed = attempt.call_trace?.parsed;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "stages" in parsed &&
+      (parsed as { stages?: unknown }).stages &&
+      typeof (parsed as { stages?: unknown }).stages === "object"
+    ) {
+      return (parsed as { stages: LiveEvidenceSoftStages }).stages;
+    }
+    const raw = attempt.raw_model_output;
+    if (
+      raw &&
+      typeof raw === "object" &&
+      raw !== null &&
+      ("bare" in raw || "mark" in raw || "soft" in raw)
+    ) {
+      return raw as LiveEvidenceSoftStages;
+    }
+    return null;
+  })();
+  const liveEvidenceSoftLocale = (() => {
+    if (!isEvidenceSoftStep || !attempt) return null;
+    const fromInput =
+      attempt.input_payload &&
+      typeof attempt.input_payload === "object" &&
+      typeof (attempt.input_payload as { locale?: unknown }).locale === "string"
+        ? (attempt.input_payload as { locale: string }).locale
+        : null;
+    return fromInput;
+  })();
   const isGateStep =
     selectedKind === "gate" || selectedKind === "gate_book_judgment";
   const isBookJudgmentGateStep = selectedKind === "gate_book_judgment";
@@ -1073,7 +1108,7 @@ export default function DeliveryLabConsolePage() {
         </div>
       ) : null}
 
-      <LabTermsPipelinePanel />
+      <LabTermsPipelinePanel liveStages={liveEvidenceSoftStages} liveLocale={liveEvidenceSoftLocale} />
 
       {legacyTenPaper ? (
         <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">
@@ -1439,7 +1474,7 @@ export default function DeliveryLabConsolePage() {
               {isPolishStep
                 ? " 润色可选 zh/en/fr/es 一语；或「跳过润色」（将对正文跑 full 表面闸）。"
                 : isEvidenceSoftStep
-                  ? " 依据软译可选 zh/en/fr/es 一语（金字多语 SSOT + 该语白话连接）。"
+                  ? " 依据软译 · SPEC-v1 代码路径：bare→mark→locale_polish→soft（Call trace ⑤ + 上方 Terms panel Live）。locale 选 zh/en/fr/es。"
                   : isCompanionSeal
                     ? " 侧轨：Assemble 通过后解锁；仍需 P1+P3 正文才能封版（不挡交付主链 cursor）。抽 Brief + 本地 30 日流日 pack；locale=输出语言。"
                     : isCompanionDaily
