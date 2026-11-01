@@ -338,16 +338,24 @@ export type OpenRouterDegradeDecision =
   | { action: "throw"; error: unknown };
 
 /**
- * Classifier: same-slug retry (with backoff) → next-model degrade → queue throw / permanent throw.
+ * Classifier: same-slug retry (with backoff) then throw_queue / permanent throw.
  * Does not invent infinite retries. attemptIndex is 0-based on the current slug.
+ *
+ * Max lock (no model switch on queue): provider queue / busy / no-endpoints capacity
+ * NEVER returns `fallback_model` / never advances slug — even when hasNextCandidate.
+ * OpenRouter `allow_fallbacks:false` only blocks other *providers*, not our slug list,
+ * so this classifier must fail closed itself for queue class. Candidate pool may still
+ * exist for env override / true model-not-found (handled outside this classifier).
+ * `fallback_model` remains in the union for API stability but is unused for queue.
  */
 export function decideOpenRouterDegrade(input: {
   error: unknown;
   attemptIndex: number;
   maxAttempts: number;
+  /** Kept for call-site compatibility; ignored for queue class (never advances slug). */
   hasNextCandidate: boolean;
 }): OpenRouterDegradeDecision {
-  const { error, attemptIndex, maxAttempts, hasNextCandidate } = input;
+  const { error, attemptIndex, maxAttempts } = input;
 
   if (!(error instanceof Error)) {
     return { action: "throw", error };
@@ -366,15 +374,14 @@ export function decideOpenRouterDegrade(input: {
   }
 
   if (isProviderQueueClassError(error)) {
-    if (hasNextCandidate) {
-      return {
-        action: "fallback_model",
-        reason: isTransientNoEndpoints404(error)
-          ? "no_endpoints_exhausted"
-          : "queue_exhausted_try_next_slug",
-      };
-    }
-    return { action: "throw_queue", reason: "all_candidates_busy" };
+    // Same-slug retries exhausted → throw_queue. Do NOT fallback_model /
+    // try next slug for queue/busy, even when another candidate exists.
+    return {
+      action: "throw_queue",
+      reason: isTransientNoEndpoints404(error)
+        ? "no_endpoints_exhausted_same_slug"
+        : "queue_exhausted_same_slug",
+    };
   }
 
   return { action: "throw", error };

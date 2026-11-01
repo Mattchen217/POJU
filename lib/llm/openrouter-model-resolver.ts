@@ -134,8 +134,13 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Try candidates in order; retry retryable errors up to maxAttempts per slug;
- * on true model-not-found 404, degrade to next slug immediately;
- * on transient No-endpoints 404, retry same slug (Streamlake) then next candidate.
+ * on true model-not-found 404, degrade to next slug immediately (dead slug).
+ *
+ * Max lock: provider queue / busy / no-endpoints capacity NEVER advances slug.
+ * After same-slug retries exhaust, decideOpenRouterDegrade returns throw_queue
+ * (not fallback_model). Candidate pool remains for env override + dead-slug only.
+ * OpenRouter allow_fallbacks:false only blocks other providers — slug stickiness
+ * is enforced here / in decideOpenRouterDegrade.
  */
 export async function callWithOpenRouterModelFallback<T>(
   makeCall: (model: string) => Promise<T>,
@@ -207,6 +212,9 @@ export async function callWithOpenRouterModelFallback<T>(
           continue;
         }
 
+        // Legacy branch: decideOpenRouterDegrade no longer returns fallback_model for
+        // queue/busy (Max lock). Retained for true dead-slug paths that might set it,
+        // and to keep logs if a future classifier reintroduces non-queue degrade.
         if (decision.action === "fallback_model") {
           sawRetryableExhaustion = true;
           tried.push(model);
