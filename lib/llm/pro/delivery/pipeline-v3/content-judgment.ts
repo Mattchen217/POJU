@@ -13,7 +13,7 @@ import {
   PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
   PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { deliveryLabTransportMaxAttempts } from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
 import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
@@ -564,7 +564,7 @@ export async function runContentJudgmentGenerate(input: {
       response_format: "json",
       session_id: input.session_id,
       temperature: 0.3,
-      max_attempts: deliveryTransportMaxAttempts(),
+      max_attempts: deliveryLabTransportMaxAttempts(),
       signal: input.signal,
       provider,
       phase_name: "content_judgment_v3",

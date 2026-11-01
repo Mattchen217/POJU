@@ -11,6 +11,11 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
+  BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
+  deliveryLabTransportMaxAttempts,
+  type BookJudgmentLabShotPhase,
+} from "@/lib/llm/pro/delivery/lab/provider-call-budget";
+import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
@@ -112,6 +117,43 @@ export type BookJudgmentGenerateFail = {
   call_trace?: LabCallTrace;
   shot_mode?: BookJudgmentShotMode;
 };
+
+/** Lab/macro: this hop fired one gun; client/production must re-POST for next shot. */
+export type BookJudgmentGenerateContinue = {
+  ok: false;
+  continue: true;
+  reason: typeof BOOK_JUDGMENT_SHOT_CONTINUE_RULE;
+  next_shot_phase: Exclude<BookJudgmentLabShotPhase, "one">;
+  tokens_used: number;
+  shot_mode: BookJudgmentShotMode;
+  degrade_meta?: {
+    reason: string;
+    detail?: string;
+    means_classes?: string[];
+  };
+  destiny_units?: BookJudgmentUnit[];
+  destiny_pattern_hits_used?: string[];
+  destiny_science_tags_used?: string[];
+  last_raw_text?: string;
+  call_trace?: LabCallTrace;
+  draft_pack?: BookJudgmentPack;
+};
+
+export type BookJudgmentGenerateResult =
+  | BookJudgmentGenerateOk
+  | BookJudgmentGenerateFail
+  | BookJudgmentGenerateContinue;
+
+export function isBookJudgmentGenerateContinue(
+  r: BookJudgmentGenerateResult,
+): r is BookJudgmentGenerateContinue {
+  return (
+    r.ok === false &&
+    "continue" in r &&
+    r.continue === true &&
+    r.reason === BOOK_JUDGMENT_SHOT_CONTINUE_RULE
+  );
+}
 
 type DegradeCarry = {
   degrade: true;
@@ -255,6 +297,9 @@ async function callPackShot(input: {
   session_id?: string;
   timeout_ms?: number;
   dispatch_attempt?: number;
+  /** Lab/macro: cap OpenRouter transport to 1 admit (no stacked main_delivery). */
+  single_provider_call?: boolean;
+  signal?: AbortSignal;
   signal?: AbortSignal;
 }): Promise<{
   ok: boolean;
@@ -286,7 +331,9 @@ async function callPackShot(input: {
       response_format: "json",
       session_id: input.session_id,
       temperature: 0.3,
-      max_attempts: deliveryTransportMaxAttempts(),
+      max_attempts: input.single_provider_call
+        ? deliveryLabTransportMaxAttempts()
+        : deliveryTransportMaxAttempts(),
       signal: input.signal,
       provider,
       phase_name: input.phase,
@@ -515,11 +562,9 @@ function feedBlock(
 export async function runBookJudgmentPackGenerate(input: {
   locale: string;
   session_id?: string;
-  signal?: AbortSignal;
   timeout_ms?: number;
   dispatch_attempt?: number;
-  /** Force two-shot without trying one. */
-  force_two_shot?: boolean;
+  signal?: AbortSignal;
   question_id?: string;
   thesis_ref?: string;
   chart_fact_pack: string;
@@ -528,12 +573,34 @@ export async function runBookJudgmentPackGenerate(input: {
   question?: string | null;
   agenda?: string | null;
   science_feed?: string | null;
-}): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> {
+  /** Force two-shot without trying one. */
+  force_two_shot?: boolean;
+  /**
+   * Lab/macro: at most one provider call this invocation.
+   * Degrade / second gun returns `book_judgment_shot_continue` for a fresh HTTP.
+   */
+  single_provider_call?: boolean;
+  /** Which gun to fire when single_provider_call (default one / force_two → two_destiny). */
+  shot_phase?: BookJudgmentLabShotPhase;
+  /** Carry from prior two_destiny continue hop. */
+  prior_destiny_units?: BookJudgmentUnit[];
+  prior_destiny_pattern_hits_used?: string[];
+  prior_destiny_science_tags_used?: string[];
+  degrade_meta?: {
+    reason: string;
+    detail?: string;
+    means_classes?: string[];
+  };
+}): Promise<BookJudgmentGenerateResult> {
   const chartText = input.chart_fact_pack?.trim() ?? "";
   const ziwei = input.ziwei_fact_pack ?? null;
   const quota = buildBookJudgmentQuotaFromBlueprint();
   const quotaBlock = formatQuotaTableForPrompt(quota);
   let tokens_used = 0;
+  const single = Boolean(input.single_provider_call);
+  const shotPhase: BookJudgmentLabShotPhase =
+    input.shot_phase ??
+    (input.force_two_shot ? "two_destiny" : "one");
 
   const finishOneShot = async (): Promise<
     BookJudgmentGenerateOk | BookJudgmentGenerateFail | DegradeCarry
@@ -562,6 +629,7 @@ export async function runBookJudgmentPackGenerate(input: {
       session_id: input.session_id,
       timeout_ms: input.timeout_ms,
       dispatch_attempt: input.dispatch_attempt,
+      single_provider_call: single,
       signal: input.signal,
     });
     tokens_used += shot.tokens_used;
@@ -645,24 +713,43 @@ export async function runBookJudgmentPackGenerate(input: {
     };
   };
 
-  const finishTwoShot = async (
+  const meansInjectFor = (
     degradeMeta?: {
       reason: string;
       detail?: string;
       means_classes?: string[];
     },
-  ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
-    const meansInject =
-      degradeMeta?.means_classes?.length
-        ? [
-            `## 一枪 means_prescription 失败类（二枪必须避开 · 改写成正写句模）`,
-            `className=${degradeMeta.means_classes.join(" · ")}`,
-            degradeMeta.detail ? `detail=${degradeMeta.detail}` : "",
-            `正写：science=机制/偏差/负荷；destiny=命理判断；convergence=交汇张力。禁原样复述 feed 操作语。`,
-          ]
-            .filter(Boolean)
-            .join("\n")
-        : "";
+  ): string =>
+    degradeMeta?.means_classes?.length
+      ? [
+          `## 一枪 means_prescription 失败类（二枪必须避开 · 改写成正写句模）`,
+          `className=${degradeMeta.means_classes.join(" · ")}`,
+          degradeMeta.detail ? `detail=${degradeMeta.detail}` : "",
+          `正写：science=机制/偏差/负荷；destiny=命理判断；convergence=交汇张力。禁原样复述 feed 操作语。`,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
+  /** Destiny gun only (one provider call). */
+  const runDestinyShot = async (
+    degradeMeta?: {
+      reason: string;
+      detail?: string;
+      means_classes?: string[];
+    },
+  ): Promise<
+    | {
+        ok: true;
+        units: BookJudgmentUnit[];
+        pattern_hits_used: string[];
+        science_tags_used: string[];
+        text: string;
+        call_trace?: LabCallTrace;
+      }
+    | BookJudgmentGenerateFail
+  > => {
+    const meansInject = meansInjectFor(degradeMeta);
     const destinyFeed = feedBlock({
       chartText,
       ziwei,
@@ -689,6 +776,7 @@ export async function runBookJudgmentPackGenerate(input: {
       session_id: input.session_id,
       timeout_ms: input.timeout_ms,
       dispatch_attempt: input.dispatch_attempt,
+      single_provider_call: single,
       signal: input.signal,
     });
     tokens_used += dShot.tokens_used;
@@ -715,7 +803,27 @@ export async function runBookJudgmentPackGenerate(input: {
         shot_mode: "two",
       };
     }
+    return {
+      ok: true,
+      units: destinyUnits,
+      pattern_hits_used: stringList(dShot.parsed, "pattern_hits_used"),
+      science_tags_used: stringList(dShot.parsed, "science_tags_used"),
+      text: dShot.text,
+      call_trace: dShot.call_trace,
+    };
+  };
 
+  /** Science gun + merge (one provider call; destiny units must be carried in). */
+  const runScienceShot = async (
+    destinyUnits: BookJudgmentUnit[],
+    destinyHits: { pattern_hits_used: string[]; science_tags_used: string[] },
+    degradeMeta?: {
+      reason: string;
+      detail?: string;
+      means_classes?: string[];
+    },
+  ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
+    const meansInject = meansInjectFor(degradeMeta);
     const scienceFeed = feedBlock({
       chartText,
       ziwei,
@@ -742,6 +850,7 @@ export async function runBookJudgmentPackGenerate(input: {
       session_id: input.session_id,
       timeout_ms: input.timeout_ms,
       dispatch_attempt: input.dispatch_attempt,
+      single_provider_call: single,
       signal: input.signal,
     });
     tokens_used += sShot.tokens_used;
@@ -779,11 +888,11 @@ export async function runBookJudgmentPackGenerate(input: {
       shot_mode: "two",
       units,
       pattern_hits_used: [
-        ...stringList(dShot.parsed, "pattern_hits_used"),
+        ...destinyHits.pattern_hits_used,
         ...stringList(sShot.parsed, "pattern_hits_used"),
       ],
       science_tags_used: [
-        ...stringList(dShot.parsed, "science_tags_used"),
+        ...destinyHits.science_tags_used,
         ...stringList(sShot.parsed, "science_tags_used"),
       ],
     });
@@ -812,13 +921,107 @@ export async function runBookJudgmentPackGenerate(input: {
     };
   };
 
+  /** Legacy in-process two-shot (non-Lab only). Lab must use single_provider_call. */
+  const finishTwoShotStacked = async (
+    degradeMeta?: {
+      reason: string;
+      detail?: string;
+      means_classes?: string[];
+    },
+  ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
+    const destiny = await runDestinyShot(degradeMeta);
+    if (!destiny.ok) return destiny;
+    return runScienceShot(
+      destiny.units,
+      {
+        pattern_hits_used: destiny.pattern_hits_used,
+        science_tags_used: destiny.science_tags_used,
+      },
+      degradeMeta,
+    );
+  };
+
+  const continueTo = (
+    next: Exclude<BookJudgmentLabShotPhase, "one">,
+    extra: Partial<BookJudgmentGenerateContinue> & {
+      degrade_meta?: BookJudgmentGenerateContinue["degrade_meta"];
+    },
+  ): BookJudgmentGenerateContinue => ({
+    ok: false,
+    continue: true,
+    reason: BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
+    next_shot_phase: next,
+    tokens_used,
+    shot_mode: next === "two_destiny" || next === "two_science" ? "two" : "one",
+    ...extra,
+  });
+
+  // --- Lab/macro single-call phases ---
+  if (single) {
+    if (shotPhase === "two_science") {
+      const units = input.prior_destiny_units ?? [];
+      if (!units.length) {
+        return {
+          ok: false,
+          reason: "missing_prior_destiny_units",
+          tokens_used,
+          shot_mode: "two",
+        };
+      }
+      return runScienceShot(
+        units,
+        {
+          pattern_hits_used: input.prior_destiny_pattern_hits_used ?? [],
+          science_tags_used: input.prior_destiny_science_tags_used ?? [],
+        },
+        input.degrade_meta,
+      );
+    }
+
+    if (shotPhase === "two_destiny" || input.force_two_shot) {
+      const destiny = await runDestinyShot(
+        input.degrade_meta ??
+          (input.force_two_shot ? { reason: "force_two_shot" } : undefined),
+      );
+      if (!destiny.ok) return destiny;
+      return continueTo("two_science", {
+        degrade_meta:
+          input.degrade_meta ??
+          (input.force_two_shot ? { reason: "force_two_shot" } : undefined),
+        destiny_units: destiny.units,
+        destiny_pattern_hits_used: destiny.pattern_hits_used,
+        destiny_science_tags_used: destiny.science_tags_used,
+        last_raw_text: destiny.text.slice(0, 12_000),
+        call_trace: destiny.call_trace,
+      });
+    }
+
+    // shotPhase === "one"
+    const one = await finishOneShot();
+    if ("degrade" in one) {
+      return continueTo("two_destiny", {
+        degrade_meta: {
+          reason: one.reason,
+          detail: one.detail,
+          means_classes: one.means_classes,
+        },
+        draft_pack: one.draft_pack,
+        last_raw_text: one.text?.slice(0, 12_000),
+        call_trace: one.trace,
+        shot_mode: "one",
+      });
+    }
+    return one;
+  }
+
+  // --- Legacy stacked path (scripts / non-Lab) ---
   if (input.force_two_shot) {
-    return finishTwoShot({ reason: "force_two_shot" });
+    return finishTwoShotStacked({ reason: "force_two_shot" });
   }
 
   const one = await finishOneShot();
   if ("degrade" in one) {
-    return finishTwoShot({
+    return finishTwoShotStacked({
       reason: one.reason,
       detail: one.detail,
       means_classes: one.means_classes,

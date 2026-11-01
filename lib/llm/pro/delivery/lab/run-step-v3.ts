@@ -46,7 +46,14 @@ import {
   isAssemblePassed,
 } from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
 import { isBookJudgmentPackEnabled } from "@/lib/llm/pro/delivery/book-judgment/flag";
-import { runBookJudgmentPackGenerate } from "@/lib/llm/pro/delivery/book-judgment/generate";
+import {
+  isBookJudgmentGenerateContinue,
+  runBookJudgmentPackGenerate,
+} from "@/lib/llm/pro/delivery/book-judgment/generate";
+import {
+  BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
+  type BookJudgmentLabShotPhase,
+} from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import {
   bookJudgmentTraceSummary,
   deepEvidencePlanFromBookPack,
@@ -1479,6 +1486,11 @@ async function executeV3(
       .filter(Boolean)
       .join("\n")
       .slice(0, 1200);
+    const priorShot = lab.artifacts.book_judgment_shot ?? null;
+    const shot_phase: BookJudgmentLabShotPhase =
+      priorShot?.phase === "two_destiny" || priorShot?.phase === "two_science"
+        ? priorShot.phase
+        : "one";
     const generated = await runBookJudgmentPackGenerate({
       locale: lab.source.locale || "zh",
       session_id,
@@ -1494,7 +1506,76 @@ async function executeV3(
         "string"
           ? String((lab.artifacts.thesis as { version?: string }).version)
           : "thesis",
+      /** Lab/macro: one main_delivery per /run HTTP (fresh 300s). */
+      single_provider_call: true,
+      shot_phase,
+      prior_destiny_units: priorShot?.destiny_units,
+      prior_destiny_pattern_hits_used: priorShot?.destiny_pattern_hits_used,
+      prior_destiny_science_tags_used: priorShot?.destiny_science_tags_used,
+      degrade_meta: priorShot?.degrade_reason
+        ? {
+            reason: priorShot.degrade_reason,
+            detail: priorShot.degrade_detail,
+            means_classes: priorShot.means_classes,
+          }
+        : undefined,
     });
+
+    /** Dual-gun / degrade continuation — client re-POSTs; do not stack guns. */
+    if (isBookJudgmentGenerateContinue(generated)) {
+      lab.artifacts.book_judgment_shot = {
+        phase: generated.next_shot_phase,
+        degrade_reason: generated.degrade_meta?.reason,
+        degrade_detail: generated.degrade_meta?.detail,
+        means_classes: generated.degrade_meta?.means_classes,
+        destiny_units: generated.destiny_units,
+        destiny_pattern_hits_used: generated.destiny_pattern_hits_used,
+        destiny_science_tags_used: generated.destiny_science_tags_used,
+      };
+      if (generated.draft_pack) {
+        lab.artifacts.book_judgment_pack = generated.draft_pack;
+      }
+      return {
+        input_payload: {
+          pipeline: "book_judgment_pack",
+          phase: "generate",
+          shot_phase,
+          next_shot_phase: generated.next_shot_phase,
+          shot_mode: generated.shot_mode,
+          dispatch: "one_provider_call_per_invoke",
+          degrade_reason: generated.degrade_meta?.reason,
+        },
+        raw_model_output: generated.draft_pack
+          ? { pack: generated.draft_pack, _continue: generated.next_shot_phase }
+          : generated.last_raw_text
+            ? { _raw_text: generated.last_raw_text }
+            : null,
+        processing_actions: [
+          {
+            action: "runBookJudgmentPackGenerate",
+            detail: `shot=${shot_phase} → continue ${generated.next_shot_phase}`,
+          },
+          {
+            action: "book_judgment_shot_continue_schedule",
+            detail: BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
+          detail: `BookJudgment 一枪一调用（本枪 ${shot_phase}）。客户端将自动续跑下一枪 ${generated.next_shot_phase}（独立 ~300s）。`,
+        },
+        output_to_next_stage: {
+          continue: true,
+          next_chunk: 0,
+          chunks_total: 2,
+          shot_phase: generated.next_shot_phase,
+        },
+        tokens_used: generated.tokens_used,
+        call_trace: generated.call_trace,
+      };
+    }
+
     if (!generated.ok) {
       const quotaFail = buildBookJudgmentQuotaFromBlueprint();
       const zfpFail =
@@ -1512,10 +1593,12 @@ async function executeV3(
           pattern_hits_available: zfpFail,
         });
       }
+      lab.artifacts.book_judgment_shot = null;
       return {
         input_payload: {
           pipeline: "book_judgment_pack",
           phase: "generate",
+          shot_phase,
           shot_mode: generated.shot_mode ?? "one",
           validate_ok: false,
           validate_reason: generated.reason,
@@ -1555,6 +1638,7 @@ async function executeV3(
       };
     }
     lab.artifacts.book_judgment_pack = generated.pack;
+    lab.artifacts.book_judgment_shot = null;
     projectBookPackOntoFaces(lab, generated.pack);
     /** 新包 SoT：旧闸门/下游作废，cursor 拨回 book.judgment 以便重审闸门。 */
     rewindLabAfterBookPackWrite(lab);
@@ -1570,18 +1654,20 @@ async function executeV3(
         pipeline: "book_judgment_pack",
         phase: "generate",
         ...trace,
+        shot_phase,
         shot_mode: generated.shot_mode,
         degraded_from_one: generated.degraded_from_one ?? false,
         degrade_reason: generated.degrade_reason,
         zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
         cursor_rewound_to: "book.judgment",
         gate_invalidated: true,
+        dispatch: "one_provider_call_per_invoke",
       },
       raw_model_output: generated.pack,
       processing_actions: [
         {
           action: "runBookJudgmentPackGenerate",
-          detail: `shot_mode=${generated.shot_mode}${generated.degraded_from_one ? `·degraded:${generated.degrade_reason}` : ""}`,
+          detail: `shot_mode=${generated.shot_mode}${generated.degraded_from_one ? `·degraded:${generated.degrade_reason}` : ""} · phase=${shot_phase}`,
         },
         {
           action: "projectBookPackOntoFaces",
@@ -1590,7 +1676,7 @@ async function executeV3(
       ],
       gate_verdict: {
         passed: true,
-        detail: `shot_mode=${trace.shot_mode} · destiny=${trace.unit_counts.destiny} science=${trace.unit_counts.science} convergence=${trace.unit_counts.convergence} · zfpOmitted=${trace.zfpOmitted} · patternHits=${trace.pattern_hits_used.length}`,
+        detail: `BookJudgmentPack ok · shot=${generated.shot_mode} · units=${generated.pack.units.length}`,
       },
       output_to_next_stage: generated.pack,
       tokens_used: generated.tokens_used,
@@ -3644,6 +3730,9 @@ export async function prepareLabRerunV3(
         art.page_schema = structuredClone(art.page_schema_pre_polish);
       }
       art.polish_skipped = undefined;
+    }
+    if (rerunDef.kind === "book_judgment") {
+      lab.artifacts.book_judgment_shot = null;
     }
     if (rerunDef.kind === "evidence_soft") {
       art.evidence = undefined;
