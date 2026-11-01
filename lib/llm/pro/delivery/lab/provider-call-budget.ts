@@ -7,7 +7,9 @@
  * continuation (new POST / continue hop) — never stacked under one maxDuration.
  *
  * Soft chunk / mark chunk / fill chunk already follow this. BookJudgment
- * 一枪双轨 degrade → two-shot must too (`book_judgment_shot_continue`).
+ * prefers one-shot dual-track; degrade → two-shot (`book_judgment_shot_continue`)
+ * ONLY on ~300s time-budget timeout / llm_timeout / abort-maxDuration — not on
+ * quality / validate / coerce failures (those hard-fail; fix prompts after Lab).
  */
 
 /** Hard ceiling: provider admits per Lab `/run` (or one production V3 step hop). */

@@ -1,6 +1,7 @@
 ﻿/**
  * Lab/macro contract: one Lab `/run` HTTP ⇒ at most one LLM provider call.
- * BookJudgment 一枪双轨 degrade / two-shot must continue across POSTs.
+ * BookJudgment: one-shot first; timeout-budget degrade → two-shot across POSTs.
+ * Quality/validate fail must NOT schedule book_judgment_shot_continue.
  *
  * Run: pnpm exec tsx scripts/test-book-judgment-one-call-per-run.ts
  */
@@ -15,6 +16,7 @@ import {
 } from "../lib/llm/pro/delivery/lab/provider-call-budget";
 import {
   isBookJudgmentGenerateContinue,
+  isBookJudgmentTimeoutDegradeReason,
   type BookJudgmentGenerateContinue,
 } from "../lib/llm/pro/delivery/book-judgment/generate";
 import { isV3DispatchContinue } from "../lib/llm/pro/delivery/pipeline-v3/production-run";
@@ -101,11 +103,67 @@ const cont: BookJudgmentGenerateContinue = {
   next_shot_phase: "two_destiny",
   tokens_used: 0,
   shot_mode: "one",
-  degrade_meta: { reason: "empty_response" },
+  degrade_meta: { reason: "llm_timeout" },
 };
 assert.ok(isBookJudgmentGenerateContinue(cont));
 assert.equal(isBookJudgmentGenerateContinue({ ok: true, pack: {} as never, tokens_used: 0, shot_mode: "one" }), false);
 
+/** Timeout-budget degrade ONLY — quality reasons must not degrade. */
+{
+  assert.equal(isBookJudgmentTimeoutDegradeReason("llm_timeout"), true);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("Request timed out after 300000ms"), true);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("AbortError"), true);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("aborted due to maxDuration"), true);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("function time budget exceeded"), true);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("means_prescription"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("under_density"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("coerce_failed"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("schema"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("empty_response"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("json_parse"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("truncated", "length"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("quality_drift"), false);
+}
+
+/** finishOneShot: validate/coerce hard-fail; only timeout-class returns degrade → continueTo. */
+{
+  assert.doesNotMatch(
+    generateSrc,
+    /return \{ degrade: true, reason: "coerce_failed"/,
+    "coerce_failed must not degrade",
+  );
+  assert.doesNotMatch(
+    generateSrc,
+    /if \(isDegradeReason\(validated\.reason/,
+    "validate fail must not call isDegradeReason for degrade",
+  );
+  assert.match(
+    generateSrc,
+    /Validate\/quality fail: hard fail/,
+    "validate hard-fail comment present",
+  );
+  assert.match(
+    generateSrc,
+    /isBookJudgmentTimeoutDegradeReason/,
+    "timeout degrade helper exported/used",
+  );
+  const finishOne = generateSrc.indexOf("const finishOneShot = async");
+  const meansInject = generateSrc.indexOf("const meansInjectFor =");
+  assert.ok(finishOne > 0 && meansInject > finishOne, "finishOneShot block bounds");
+  const finishBlock = generateSrc.slice(finishOne, meansInject);
+  assert.match(finishBlock, /if \(isDegradeReason\(shot\.reason/);
+  assert.match(finishBlock, /degrade: true/);
+  assert.doesNotMatch(
+    finishBlock,
+    /means_prescription[\s\S]*degrade: true/,
+    "means_prescription must not trigger degrade inside finishOneShot",
+  );
+  assert.match(
+    finishBlock,
+    /reason: "coerce_failed"[\s\S]*shot_mode: "one"/,
+    "coerce_failed returns ok:false one-shot fail",
+  );
+}
 
 /** Pipeline-wide Lab LLM steps: transport=1; soft has no callLLM; companion Lab = high (no repair stack). */
 {

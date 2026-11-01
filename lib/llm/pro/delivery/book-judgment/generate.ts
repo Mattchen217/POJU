@@ -1,5 +1,8 @@
 /**
- * BookJudgmentPack generate gun — one-shot dual-track, degrade to two-shot.
+ * BookJudgmentPack generate gun — prefer one-shot dual-track.
+ * Degrade to two-shot (destiny then science, then merge) ONLY on ~300s
+ * Vercel time-budget failures (timeout / llm_timeout / abort-maxDuration).
+ * Quality / validate / coerce failures hard-fail the step — no gun split.
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -30,7 +33,6 @@ import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
   BOOK_FACE_IDS,
   BOOK_JUDGMENT_PACK_VERSION,
-  findMeansPrescriptionHits,
   indexBookJudgmentByFace,
   validateBookJudgmentPack,
   type BookJudgmentPack,
@@ -165,32 +167,32 @@ type DegradeCarry = {
   trace?: LabCallTrace;
 };
 
-function isDegradeReason(reason: string, finish: string | null): boolean {
-  if (finish === "length" || finish === "max_tokens") return true;
-  const r = reason.toLowerCase();
+/**
+ * Max lock (2026-11-01): one-shot → two-shot ONLY for Vercel ~300s time budget.
+ * Quality / validate / coerce / schema / density / means_prescription → hard fail.
+ * `finish` kept for call-site compat; truncation (length/max_tokens) is NOT degrade.
+ */
+export function isBookJudgmentTimeoutDegradeReason(
+  reason: string,
+  _finish?: string | null,
+): boolean {
+  const r = (reason ?? "").toLowerCase();
   return (
     r.includes("timeout") ||
     r.includes("timed out") ||
-    r.includes("abort") ||
-    r === "empty_response" ||
-    r === "json_parse" ||
-    r === "coerce_failed" ||
-    r === "missing_destiny_track" ||
-    r === "missing_science_track" ||
-    r === "missing_pattern_hits" ||
-    r === "empty_face" ||
-    r === "face_missing_destiny" ||
-    r === "face_missing_science" ||
-    r === "face_under_density" ||
-    r === "under_density" ||
-    r === "segment_uncovered" ||
-    r === "segment_track_mismatch" ||
-    r === "weak_science_anchor" ||
-    r === "means_prescription" ||
-    r === "schema" ||
-    r === "truncated" ||
-    r === "quality_drift"
+    r.includes("llm_timeout") ||
+    r.includes("maxduration") ||
+    r.includes("time budget") ||
+    r.includes("time_budget") ||
+    r.includes("deadline") ||
+    r.includes("etimedout") ||
+    r.includes("abort")
   );
+}
+
+/** @deprecated alias — prefer isBookJudgmentTimeoutDegradeReason */
+function isDegradeReason(reason: string, finish: string | null): boolean {
+  return isBookJudgmentTimeoutDegradeReason(reason, finish);
 }
 
 function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
@@ -576,7 +578,8 @@ export async function runBookJudgmentPackGenerate(input: {
   force_two_shot?: boolean;
   /**
    * Lab/macro: at most one provider call this invocation.
-   * Degrade / second gun returns `book_judgment_shot_continue` for a fresh HTTP.
+   * Timeout-budget degrade / second gun returns `book_judgment_shot_continue`
+   * for a fresh HTTP (quality fails do not continue).
    */
   single_provider_call?: boolean;
   /** Which gun to fire when single_provider_call (default one / force_two → two_destiny). */
@@ -657,7 +660,15 @@ export async function runBookJudgmentPackGenerate(input: {
     }
     const units = coerceUnits(shot.parsed);
     if (!units) {
-      return { degrade: true, reason: "coerce_failed", text: shot.text, trace: shot.call_trace };
+      // Quality/parse fail: hard fail — do NOT degrade to two-shot.
+      return {
+        ok: false,
+        reason: "coerce_failed",
+        tokens_used,
+        last_raw_text: shot.text.slice(0, 12_000),
+        call_trace: shot.call_trace,
+        shot_mode: "one",
+      };
     }
     const draft = buildPackDraft({
       locale: input.locale,
@@ -672,25 +683,7 @@ export async function runBookJudgmentPackGenerate(input: {
     });
     const validated = validateBookJudgmentPack(draft, quota);
     if (!validated.ok) {
-      if (isDegradeReason(validated.reason, shot.finish)) {
-        const means_classes =
-          validated.reason === "means_prescription"
-            ? [
-                ...new Set(
-                  findMeansPrescriptionHits(draft.units).map((h) => h.className),
-                ),
-              ]
-            : undefined;
-        return {
-          degrade: true,
-          reason: validated.reason,
-          detail: validated.detail,
-          means_classes,
-          draft_pack: draft,
-          text: shot.text,
-          trace: shot.call_trace,
-        };
-      }
+      // Validate/quality fail: hard fail — never schedule two_destiny continue.
       return {
         ok: false,
         reason: validated.reason,
