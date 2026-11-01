@@ -8,7 +8,8 @@
  *
  * Soft chunk / mark chunk / fill chunk already follow this. BookJudgment
  * prefers one-shot dual-track; degrade → two-shot (`book_judgment_shot_continue`)
- * ONLY on ~300s time-budget timeout / llm_timeout / abort-maxDuration — not on
+ * ONLY on true ~300s wall / maxDuration / llm_timeout — NOT on early stream_stall
+ * / OR 499 / zombie SSE chunk cancel (those hard-fail so Lab can diagnose) — not on
  * quality / validate / coerce failures (those hard-fail; fix prompts after Lab).
  */
 

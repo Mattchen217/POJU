@@ -266,7 +266,10 @@ async function openRouterChatCompletionStreamWithModel(
       const USAGE_GRACE_MS = 2_500;
       /**
        * After first byte: silence this long ⇒ zombie body (OR may show 8–10s gen + 499
-       * while our fetch never ends). Cancel+abort → llm_timeout so Lab can degrade.
+       * while our fetch never ends). Cancel+abort → stream_stall HARD FAIL for Lab
+       * diagnose (surface 499/zombie). Do NOT throw llm_timeout — that feeds
+       * isBookJudgmentTimeoutDegradeReason → book_judgment_shot_continue / two_destiny
+       * and hides the real cause. Wall ~300s / maxDuration still uses llm_timeout.
        * Do not arm before first byte (cold start / long TTFT uses wall timeout).
        */
       const STREAM_CHUNK_STALL_MS = 60_000;
@@ -488,7 +491,7 @@ async function openRouterChatCompletionStreamWithModel(
         throw new Error("slow_throughput");
       }
       if (abortedForChunkStall) {
-        throw new Error("llm_timeout");
+        throw new Error("stream_stall");
       }
 
       return {
@@ -514,7 +517,9 @@ async function openRouterChatCompletionStreamWithModel(
     } catch (e: unknown) {
       if (
         e instanceof Error &&
-        (e.message === "slow_throughput" || e.message === "reasoning_loop")
+        (e.message === "slow_throughput" ||
+          e.message === "reasoning_loop" ||
+          e.message === "stream_stall")
       ) {
         throw e;
       }
@@ -549,7 +554,7 @@ async function openRouterChatCompletionStreamWithModel(
           throw new Error("slow_throughput");
         }
         if (abortedForChunkStall) {
-          throw new Error("llm_timeout");
+          throw new Error("stream_stall");
         }
         if (signal_aborted) {
           const err = new Error("AbortError");

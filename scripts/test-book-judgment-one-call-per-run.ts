@@ -1,7 +1,8 @@
 ﻿/**
  * Lab/macro contract: one Lab `/run` HTTP ⇒ at most one LLM provider call.
- * BookJudgment: one-shot first; timeout-budget degrade → two-shot across POSTs.
- * Quality/validate fail must NOT schedule book_judgment_shot_continue.
+ * BookJudgment: one-shot first; true ~300s wall timeout-budget degrade → two-shot
+ * across POSTs. Quality/validate AND early stream_stall/499/zombie must NOT
+ * schedule book_judgment_shot_continue (surface real failure for Lab diagnose).
  *
  * Run: pnpm exec tsx scripts/test-book-judgment-one-call-per-run.ts
  */
@@ -108,13 +109,19 @@ const cont: BookJudgmentGenerateContinue = {
 assert.ok(isBookJudgmentGenerateContinue(cont));
 assert.equal(isBookJudgmentGenerateContinue({ ok: true, pack: {} as never, tokens_used: 0, shot_mode: "one" }), false);
 
-/** Timeout-budget degrade ONLY — quality reasons must not degrade. */
+/** Timeout-budget degrade ONLY — quality + early stall/499 must not degrade. */
 {
   assert.equal(isBookJudgmentTimeoutDegradeReason("llm_timeout"), true);
   assert.equal(isBookJudgmentTimeoutDegradeReason("Request timed out after 300000ms"), true);
   assert.equal(isBookJudgmentTimeoutDegradeReason("AbortError"), true);
   assert.equal(isBookJudgmentTimeoutDegradeReason("aborted due to maxDuration"), true);
   assert.equal(isBookJudgmentTimeoutDegradeReason("function time budget exceeded"), true);
+  // Early StreamLake/OR 499 / zombie SSE / 60s chunk stall — hard fail, no continue.
+  assert.equal(isBookJudgmentTimeoutDegradeReason("stream_stall"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("chunk_stall"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("provider_abort"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("cancelled"), false);
+  assert.equal(isBookJudgmentTimeoutDegradeReason("finish_cancelled"), false);
   assert.equal(isBookJudgmentTimeoutDegradeReason("means_prescription"), false);
   assert.equal(isBookJudgmentTimeoutDegradeReason("under_density"), false);
   assert.equal(isBookJudgmentTimeoutDegradeReason("coerce_failed"), false);
@@ -123,6 +130,37 @@ assert.equal(isBookJudgmentGenerateContinue({ ok: true, pack: {} as never, token
   assert.equal(isBookJudgmentTimeoutDegradeReason("json_parse"), false);
   assert.equal(isBookJudgmentTimeoutDegradeReason("truncated", "length"), false);
   assert.equal(isBookJudgmentTimeoutDegradeReason("quality_drift"), false);
+}
+
+
+/** openrouter-stream: zombie/chunk stall → stream_stall (not llm_timeout degrade bait). */
+{
+  const streamSrc = fs.readFileSync(
+    path.join(root, "lib/llm/openrouter-stream.ts"),
+    "utf8",
+  );
+  assert.match(streamSrc, /STREAM_CHUNK_STALL_MS\s*=\s*60_000/);
+  assert.match(streamSrc, /abortedForChunkStall/);
+  const stallThrows = [
+    ...streamSrc.matchAll(
+      /if \(abortedForChunkStall\) \{\s*throw new Error\("([^"]+)"\);/g,
+    ),
+  ].map((m) => m[1]);
+  assert.ok(stallThrows.length >= 1, "chunk stall must throw");
+  assert.ok(
+    stallThrows.every((r) => r === "stream_stall"),
+    `chunk stall must throw stream_stall, got ${stallThrows.join(",")}`,
+  );
+  assert.equal(
+    stallThrows.includes("llm_timeout"),
+    false,
+    "chunk stall must not throw llm_timeout (would auto-continue two_destiny)",
+  );
+  assert.match(
+    streamSrc,
+    /stream_stall HARD FAIL|Do NOT throw llm_timeout/,
+    "stall comment must forbid timeout-degrade path",
+  );
 }
 
 /** finishOneShot: validate/coerce hard-fail; only timeout-class returns degrade → continueTo. */

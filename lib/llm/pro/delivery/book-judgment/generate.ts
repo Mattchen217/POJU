@@ -1,7 +1,10 @@
 /**
  * BookJudgmentPack generate gun — prefer one-shot dual-track.
- * Degrade to two-shot (destiny then science, then merge) ONLY on ~300s
- * Vercel time-budget failures (timeout / llm_timeout / abort-maxDuration).
+ * Degrade to two-shot (destiny then science, then merge) ONLY on true ~300s
+ * Vercel wall / function maxDuration / explicit shot budget exhausted
+ * (timeout / llm_timeout / AbortError-maxDuration).
+ * Early StreamLake/OR 499 / zombie SSE / stream_stall / provider_abort → hard fail
+ * (surface for Lab diagnose; do NOT auto-continue to two_destiny).
  * Quality / validate / coerce failures hard-fail the step — no gun split.
  */
 
@@ -168,15 +171,30 @@ type DegradeCarry = {
 };
 
 /**
- * Max lock (2026-11-01): one-shot → two-shot ONLY for Vercel ~300s time budget.
+ * Max lock (2026-11-01): one-shot → two-shot ONLY for true Vercel ~300s wall /
+ * function maxDuration / explicit shot budget exhausted.
  * Quality / validate / coerce / schema / density / means_prescription → hard fail.
+ * Early StreamLake/OR 499 / zombie SSE / 60s chunk stall → stream_stall (etc.) hard
+ * fail — must NOT match here or Lab hides the cause via book_judgment_shot_continue.
  * `finish` kept for call-site compat; truncation (length/max_tokens) is NOT degrade.
  */
 export function isBookJudgmentTimeoutDegradeReason(
   reason: string,
   _finish?: string | null,
 ): boolean {
-  const r = (reason ?? "").toLowerCase();
+  const r = (reason ?? "").toLowerCase().trim();
+  // Provider mid-stream death / zombie body cancel — visible hard fail, not degrade.
+  if (
+    r.includes("stream_stall") ||
+    r.includes("chunk_stall") ||
+    r.includes("provider_abort") ||
+    r === "cancelled" ||
+    r === "canceled" ||
+    r === "finish_cancelled" ||
+    r === "finish_canceled"
+  ) {
+    return false;
+  }
   return (
     r.includes("timeout") ||
     r.includes("timed out") ||
@@ -186,7 +204,11 @@ export function isBookJudgmentTimeoutDegradeReason(
     r.includes("time_budget") ||
     r.includes("deadline") ||
     r.includes("etimedout") ||
-    r.includes("abort")
+    // True client/parent abort near wall (AbortError / aborted due to maxDuration).
+    // Intentionally NOT bare provider_abort (excluded above).
+    r.includes("aborterror") ||
+    r.includes("aborted due to maxduration") ||
+    (r.includes("abort") && !r.includes("provider_abort"))
   );
 }
 
