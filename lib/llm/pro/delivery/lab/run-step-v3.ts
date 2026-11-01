@@ -14,6 +14,9 @@ import type {
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { buildChartThesisFromStructured } from "@/lib/llm/pro/delivery/thesis";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
+import {
+  evaluateThesisPatternHitsCitationGate,
+} from "@/lib/llm/pro/delivery/thesis/pattern-hits-into-dims";
 import { inferQuestionCategoryFromText } from "@/lib/llm/prompts/relation-closed-set-context";
 import {
   assertPreallocPrimariesGroundedInThesis,
@@ -43,7 +46,9 @@ import {
   isAssemblePassed,
 } from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
 import { isBookJudgmentPackEnabled } from "@/lib/llm/pro/delivery/book-judgment/flag";
-import { runBookJudgmentPackGenerate } from "@/lib/llm/pro/delivery/book-judgment/generate";
+import {
+  runBookJudgmentPackGenerate,
+} from "@/lib/llm/pro/delivery/book-judgment/generate";
 import {
   bookJudgmentTraceSummary,
   deepEvidencePlanFromBookPack,
@@ -494,11 +499,6 @@ async function executeV3(
         [lab.source.original_question, agenda].filter(Boolean).join("\n"),
       ) as import("@/lib/poju/agent-state").QuestionCategory) ??
       null;
-    const thesis = buildChartThesisFromStructured(structured, agenda || null, {
-      question_category,
-      as_of: new Date(),
-    });
-    lab.artifacts.thesis = thesis;
     const { buildChartFactPack } = await import(
       "@/lib/llm/pro/delivery/page-schema/chart-fact-pack"
     );
@@ -508,7 +508,14 @@ async function executeV3(
     const { ensureLabZiweiFactPack } = await import("@/lib/ziwei/lab-ziwei");
     const cfp = buildChartFactPack(structured, { as_of: new Date() });
     const ziwei = ensureLabZiweiFactPack(lab);
-    const patternHits = (ziwei?.patternHits ?? []).map((h) => h.name).filter(Boolean);
+    const patternHitObjs = ziwei?.patternHits ?? [];
+    const patternHits = patternHitObjs.map((h) => h.name).filter(Boolean);
+    const thesis = buildChartThesisFromStructured(structured, agenda || null, {
+      question_category,
+      as_of: new Date(),
+      patternHits: patternHitObjs,
+    });
+    lab.artifacts.thesis = thesis;
     const climateAbsent = thesis.dimensions.some((d) =>
       (Array.isArray(d.classical_basis) ? d.classical_basis : []).some(
         (it) =>
@@ -518,8 +525,25 @@ async function executeV3(
           (it as { present?: boolean }).present === false,
       ),
     );
+    const citationGate = evaluateThesisPatternHitsCitationGate(
+      thesis,
+      patternHitObjs,
+      question_category,
+    );
     const dimsOk = thesis.dimensions.length >= 1;
-    const passed = dimsOk && !climateAbsent;
+    const passed = dimsOk && !climateAbsent && citationGate.passed;
+    const failed_rule = climateAbsent
+      ? "thesis:climate_balance_missing"
+      : !citationGate.passed
+        ? "thesis:pattern_hits_uncited"
+        : dimsOk
+          ? undefined
+          : "thesis:empty";
+    const detail = climateAbsent
+      ? "climate_balance 显式缺项 FAIL · 需月令可算调候"
+      : !citationGate.passed
+        ? `patternHits on-topic=${citationGate.on_topic_n} uncited=${citationGate.uncited.join("、") || "—"} omitted=${citationGate.omitted.length}`
+        : `dims=${thesis.dimensions.length} · 六维总纲 · patternHits=${patternHits.length}`;
     return {
       input_payload: {
         pipeline: "v3",
@@ -534,14 +558,8 @@ async function executeV3(
       processing_actions: [{ action: "buildChartThesisFromStructured" }],
       gate_verdict: {
         passed,
-        failed_rule: climateAbsent
-          ? "thesis:climate_balance_missing"
-          : dimsOk
-            ? undefined
-            : "thesis:empty",
-        detail: climateAbsent
-          ? "climate_balance 显式缺项 FAIL · 需月令可算调候"
-          : `dims=${thesis.dimensions.length} · 六维总纲`,
+        failed_rule,
+        detail,
       },
       output_to_next_stage: thesis,
     };
@@ -1410,7 +1428,8 @@ async function executeV3(
         error: "book_judgment_pack_disabled",
       };
     }
-    const { opts } = await buildLabPromptOpts(lab, "02");
+    /** Whole-pack BookJudgment: key only seeds shared ziwei/thesis/science opts — NOT a face-02 PageFeed hang. */
+    const { opts } = await buildLabPromptOpts(lab, "01");
     const preallocArt = lab.artifacts.prealloc as
       | { chart_fact_pack?: string }
       | undefined;
@@ -1478,7 +1497,10 @@ async function executeV3(
         "string"
           ? String((lab.artifacts.thesis as { version?: string }).version)
           : "thesis",
+      /** Lab/macro: one main_delivery per /run HTTP (fresh 300s). One-shot only. */
+      single_provider_call: true,
     });
+
     if (!generated.ok) {
       const quotaFail = buildBookJudgmentQuotaFromBlueprint();
       const zfpFail =
@@ -1555,17 +1577,16 @@ async function executeV3(
         phase: "generate",
         ...trace,
         shot_mode: generated.shot_mode,
-        degraded_from_one: generated.degraded_from_one ?? false,
-        degrade_reason: generated.degrade_reason,
         zfp_pattern_hits_in_pack: trace.pattern_hits_used.length > 0,
         cursor_rewound_to: "book.judgment",
         gate_invalidated: true,
+        dispatch: "one_provider_call_per_invoke",
       },
       raw_model_output: generated.pack,
       processing_actions: [
         {
           action: "runBookJudgmentPackGenerate",
-          detail: `shot_mode=${generated.shot_mode}${generated.degraded_from_one ? `·degraded:${generated.degrade_reason}` : ""}`,
+          detail: `shot_mode=${generated.shot_mode} · one-shot`,
         },
         {
           action: "projectBookPackOntoFaces",
@@ -1574,7 +1595,7 @@ async function executeV3(
       ],
       gate_verdict: {
         passed: true,
-        detail: `shot_mode=${trace.shot_mode} · destiny=${trace.unit_counts.destiny} science=${trace.unit_counts.science} convergence=${trace.unit_counts.convergence} · zfpOmitted=${trace.zfpOmitted} · patternHits=${trace.pattern_hits_used.length}`,
+        detail: `BookJudgmentPack ok · shot=${generated.shot_mode} · units=${generated.pack.units.length}`,
       },
       output_to_next_stage: generated.pack,
       tokens_used: generated.tokens_used,
@@ -1603,7 +1624,12 @@ async function executeV3(
     }
     const quota = buildBookJudgmentQuotaFromBlueprint();
     /** No softRepair — 缺配额 = FAIL，正文冻结。 */
-    const validated = validateBookJudgmentPack(rawPack, quota);
+    const classicalGate = ((lab.artifacts.ziwei_fact_pack as { patternHits?: { name?: string }[] } | null | undefined)?.patternHits ?? [])
+      .map((h) => (h.name ?? "").trim())
+      .filter(Boolean);
+    const validated = validateBookJudgmentPack(rawPack, quota, {
+      classical_pattern_names: classicalGate,
+    });
     if (!validated.ok) {
       const zfpGateFail =
         (lab.artifacts.ziwei_fact_pack as { patternHits?: { name: string }[] } | null)
@@ -2122,7 +2148,12 @@ async function executeV3(
       : null;
     if (bookPack && packOn) {
       const quotaBody = buildBookJudgmentQuotaFromBlueprint();
-      const packGate = validateBookJudgmentPack(bookPack, quotaBody);
+      const classicalBody = ((lab.artifacts.ziwei_fact_pack as { patternHits?: { name?: string }[] } | null | undefined)?.patternHits ?? [])
+        .map((h) => (h.name ?? "").trim())
+        .filter(Boolean);
+      const packGate = validateBookJudgmentPack(bookPack, quotaBody, {
+        classical_pattern_names: classicalBody,
+      });
       if (!packGate.ok) {
         return {
           input_payload: {
@@ -3210,20 +3241,24 @@ async function executeV3(
     clearV3Acceptance(art, "soft");
     art.soft_partial = undefined;
     art.soft_chunk_index = undefined;
+    art.soft_partial = undefined;
     art.evidence = soft.evidence;
     art.marked = soft.marked;
+    const softStages = soft.stages ?? null;
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
         phase: "evidence_soft",
         locale: softLocale,
+        terms_pipeline: "terms-pipeline-spec-v1",
+        stage_keys: ["bare", "mark", "locale_polish", "soft"],
       },
-      raw_model_output: soft.slotted,
+      raw_model_output: softStages ?? soft.slotted,
       processing_actions: soft.notes.map((n) => ({ action: n })),
       gate_verdict: {
         passed: true,
-        detail: `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
+        detail: `依据软译完成（${softLocale}）· SPEC-v1 bare→mark→locale_polish→soft · 可人审 Call trace ⑤`,
       },
       output_to_next_stage: soft.marked,
       tokens_used: soft.tokens_used,
@@ -3293,6 +3328,9 @@ export async function runLabStepV3(
     );
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "fill_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "mark_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "soft_dispatch_continue" ||
       result.gate_verdict.failed_rule === POLISH_ACCEPTANCE_CONTINUE_RULE ||
       result.gate_verdict.failed_rule === BODY_ACCEPTANCE_CONTINUE_RULE;
     if (result.gate_verdict.passed && !result.error) {
@@ -3624,6 +3662,8 @@ export async function prepareLabRerunV3(
         art.page_schema = structuredClone(art.page_schema_pre_polish);
       }
       art.polish_skipped = undefined;
+    }
+    if (rerunDef.kind === "book_judgment") {
     }
     if (rerunDef.kind === "evidence_soft") {
       art.evidence = undefined;

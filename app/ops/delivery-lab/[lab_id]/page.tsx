@@ -17,6 +17,7 @@ import {
   LabPipelinePanel,
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
+import { LabTermsPipelinePanel, type LiveEvidenceSoftStages } from "../_components/LabTermsPipelinePanel";
 import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 import {
   BOOK_ASSEMBLE_STEP_KEY,
@@ -160,6 +161,10 @@ type LabView = {
     science_tags_used: string[];
     quota_total_min?: number;
     under_density?: boolean;
+    /** Lab Trace: full-book PageFeed (01–08), not face02-only. */
+    page_feed_shape?: "full_book_01_08" | string;
+    /** Lab Trace: naked traditional in claims is basis-layer; downstream soft. */
+    layer_note?: string;
   } | null;
 } & LabPipelineView;
 
@@ -307,6 +312,41 @@ export default function DeliveryLabConsolePage() {
   const isPolishStep = selectedKind === "body_polish";
   const isEvidenceSoftStep = selectedKind === "evidence_soft";
   const isLocaleStep = isPolishStep || isEvidenceSoftStep;
+  /** Live SPEC-v1 stages from evidence_soft call_trace.parsed.stages (or raw dump). */
+  const liveEvidenceSoftStages = (() => {
+    if (!isEvidenceSoftStep || !attempt) return null;
+    const parsed = attempt.call_trace?.parsed;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "stages" in parsed &&
+      (parsed as { stages?: unknown }).stages &&
+      typeof (parsed as { stages?: unknown }).stages === "object"
+    ) {
+      return (parsed as { stages: LiveEvidenceSoftStages }).stages;
+    }
+    const raw = attempt.raw_model_output;
+    if (
+      raw &&
+      typeof raw === "object" &&
+      raw !== null &&
+      ("bare" in raw || "mark" in raw || "soft" in raw)
+    ) {
+      return raw as LiveEvidenceSoftStages;
+    }
+    return null;
+  })();
+  const liveEvidenceSoftLocale = (() => {
+    if (!isEvidenceSoftStep || !attempt) return null;
+    const fromInput =
+      attempt.input_payload &&
+      typeof attempt.input_payload === "object" &&
+      typeof (attempt.input_payload as { locale?: unknown }).locale === "string"
+        ? (attempt.input_payload as { locale: string }).locale
+        : null;
+    return fromInput;
+  })();
   const isGateStep =
     selectedKind === "gate" || selectedKind === "gate_book_judgment";
   const isBookJudgmentGateStep = selectedKind === "gate_book_judgment";
@@ -1072,6 +1112,8 @@ export default function DeliveryLabConsolePage() {
         </div>
       ) : null}
 
+      <LabTermsPipelinePanel liveStages={liveEvidenceSoftStages} liveLocale={liveEvidenceSoftLocale} />
+
       {legacyTenPaper ? (
         <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">
           此 Lab 仍含旧 10 纸步键（decision_brief / personal_decision_patterns 等）。请新建 Lab
@@ -1193,6 +1235,17 @@ export default function DeliveryLabConsolePage() {
                           .join(",")}`
                       : ""}
                   </p>
+                  {lab.book_judgment_trace.page_feed_shape ||
+                  lab.book_judgment_trace.layer_note ? (
+                    <p title={lab.book_judgment_trace.layer_note ?? ""}>
+                      page_feed_shape=
+                      {lab.book_judgment_trace.page_feed_shape ??
+                        "full_book_01_08"}
+                      {" · "}非 face02-only
+                    </p>
+                  ) : (
+                    <p>page_feed_shape=full_book_01_08 · 非 face02-only</p>
+                  )}
                 </div>
               ) : (
                 <p className="mt-1">待跑 book.judgment · 无 per-page judgment</p>
@@ -1436,7 +1489,7 @@ export default function DeliveryLabConsolePage() {
               {isPolishStep
                 ? " 润色可选 zh/en/fr/es 一语；或「跳过润色」（将对正文跑 full 表面闸）。"
                 : isEvidenceSoftStep
-                  ? " 依据软译可选 zh/en/fr/es 一语（金字多语 SSOT + 该语白话连接）。"
+                  ? " 依据软译 · SPEC-v1 代码路径：bare→mark→locale_polish→soft（Call trace ⑤ + 上方 Terms panel Live）。locale 选 zh/en/fr/es。"
                   : isCompanionSeal
                     ? " 侧轨：Assemble 通过后解锁；仍需 P1+P3 正文才能封版（不挡交付主链 cursor）。抽 Brief + 本地 30 日流日 pack；locale=输出语言。"
                     : isCompanionDaily

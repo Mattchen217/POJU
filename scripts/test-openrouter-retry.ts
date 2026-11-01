@@ -20,6 +20,10 @@ import {
   parseRetryAfterMs,
   withOpenRouterExponentialBackoff,
 } from "@/lib/llm/openrouter-retry";
+import {
+  callWithOpenRouterModelFallback,
+  resetOpenRouterModelResolverForTests,
+} from "@/lib/llm/openrouter-model-resolver";
 
 function assert(name: string, ok: boolean, detail = ""): void {
   console.log(`  [${ok ? "PASS" : "FAIL"}] ${name}${detail ? ` — ${detail}` : ""}`);
@@ -152,11 +156,14 @@ const fallbackDec = decideOpenRouterDegrade({
   maxAttempts: 2,
   hasNextCandidate: true,
 });
-assert("decide fallback_model after slug budget", fallbackDec.action === "fallback_model");
-if (fallbackDec.action === "fallback_model") {
+assert(
+  "decide throw_queue after slug budget even with next candidate",
+  fallbackDec.action === "throw_queue",
+);
+if (fallbackDec.action === "throw_queue") {
   assert(
-    "fallback reason queue_exhausted",
-    fallbackDec.reason === "queue_exhausted_try_next_slug",
+    "throw_queue reason queue_exhausted_same_slug (never fallback_model)",
+    fallbackDec.reason === "queue_exhausted_same_slug",
   );
 }
 
@@ -190,11 +197,13 @@ const noEp = decideOpenRouterDegrade({
   maxAttempts: 5,
   hasNextCandidate: true,
 });
-assert("decide fallback on no-endpoints exhausted", noEp.action === "fallback_model");
-if (noEp.action === "fallback_model") {
-  assert("no-endpoints reason", noEp.reason === "no_endpoints_exhausted");
+assert(
+  "decide throw_queue on no-endpoints exhausted (no slug advance)",
+  noEp.action === "throw_queue",
+);
+if (noEp.action === "throw_queue") {
+  assert("no-endpoints same-slug reason", noEp.reason === "no_endpoints_exhausted_same_slug");
 }
-
 (async () => {
   let calls = 0;
   const retries: number[] = [];
@@ -267,6 +276,44 @@ if (noEp.action === "fallback_model") {
     assert("network jitter recovers after retry", netCalls === 2);
   } catch {
     assert("network jitter recovers after retry", false);
+  }
+
+  // Max lock: queue busy with next candidate available → same-slug retry then throw_queue,
+  // NEVER fallback_model / next slug.
+  {
+    resetOpenRouterModelResolverForTests();
+    const prevEnv = process.env.OPENROUTER_MODEL;
+    process.env.OPENROUTER_MODEL = "deepseek/deepseek-v4-pro-0813";
+    const modelsTried: string[] = [];
+    let attempts = 0;
+    let caught: unknown;
+    try {
+      await callWithOpenRouterModelFallback(
+        async (model) => {
+          modelsTried.push(model);
+          attempts++;
+          throw new OpenRouterHttpError("http", 429, "provider queue busy");
+        },
+        { maxAttempts: 2 },
+      );
+    } catch (e) {
+      caught = e;
+    } finally {
+      if (prevEnv === undefined) delete process.env.OPENROUTER_MODEL;
+      else process.env.OPENROUTER_MODEL = prevEnv;
+      resetOpenRouterModelResolverForTests();
+    }
+    assert(
+      "queue busy throws OpenRouterProviderQueueError",
+      caught instanceof OpenRouterProviderQueueError,
+    );
+    assert(
+      "queue busy same-slug only (never next candidate)",
+      modelsTried.every((m) => m === "deepseek/deepseek-v4-pro-0813") &&
+        new Set(modelsTried).size === 1,
+      modelsTried.join(","),
+    );
+    assert("queue busy retries then throws (2 attempts)", attempts === 2, String(attempts));
   }
 })().then(() => {
   console.log(process.exitCode === 1 ? "\nSome checks failed.\n" : "\nAll checks passed.\n");

@@ -391,6 +391,8 @@ export function buildV3BodyPrompt(input: {
   user_feed: string;
   /** BookJudgmentPack face slice — ban reinventing judgment. */
   book_judgment_pack_block?: string | null;
+  /** When true, omit ZFP lines from per-segment feed duties. */
+  zfpOmitted?: boolean;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
   if (faceId) {
@@ -398,6 +400,7 @@ export function buildV3BodyPrompt(input: {
       faceId,
       locale: input.locale,
       slice: { pageId: faceId, dump: { note: "see_user_feed_below" } },
+      zfpOmitted: input.zfpOmitted,
     });
     const packMode = Boolean(input.book_judgment_pack_block?.trim());
     /** Pack JSON lives only in USER_FEED (aligned with call-trace). Header = 正写令. */
@@ -435,7 +438,7 @@ export function buildV3BodyPrompt(input: {
       : "";
     const face02Means =
       faceId === "02"
-        ? `\n\n## Face 02 正写\nA/B/C 只解释「为何如此」：命理理由、科学机制、交汇张力。禁把交汇写成行动处方或路径排序。D 锚抄本页切片格局名/短锚；unit id 以 required_unit_ids 为准。`
+        ? `\n\n## Face 02 正写\nA/B/C 只解释「为何如此」：A 命理 = 八字与相关紫微共担（有 ZFP 且段列到才写；无关省略）；B 科学；C 交汇。禁把交汇写成行动处方或路径排序。D 锚抄本页切片短锚；unit id 以 required_unit_ids 为准。可见层零紫微传统原名。`
         : "";
     return {
       system: `${BODY_SYSTEM_FACE}\n\n${system}${packSystem}${face02Means}`,
@@ -466,7 +469,8 @@ export function buildV3BodyPrompt(input: {
 const BODY_SYSTEM_FACE = `你是交付报告「face 段填槽」写手（Pipeline v3 · face-native）。
 只输出 JSON，不要 markdown。
 禁止 primary/backup、primary_toolkit/backup_toolkit。
-可见正文禁命理专名报幕；真词只进批断/锚槽。
+可见正文禁命理专名报幕（含紫微宫星格局原名）；真词只进批断/依据折层/锚槽。
+CFP+ZFP 按本页段级喂料职责共担同一主张——相关才用，禁止「八字模板 + 紫微贴纸」或整盘灌段。
 禁止恐吓预测；输出语言随 locale 整页一致。
 
 ${DECISION_VOICE_DUTY}

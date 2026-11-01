@@ -56,4 +56,7 @@ next-env.d.ts
 # Local ziwei-doushu clone/submodule only — ship patterns via lib/ziwei/doushu/ (Vercel-safe)
 /vendor/ziwei-doushu/
 
+# Local qimen source clone — was a gitlink without .gitmodules (CI cleanup noise)
+/temp/qimen-source/
+
 

@@ -1,6 +1,9 @@
 import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
+import {
+  buildTermContextPromptFromStructured,
+  collectTermFactsFromStructured,
+} from "@/lib/glossary/term-context-for-facts";
 import { buildPojuChatCoreSections } from "@/lib/llm/prompts/poju-base";
 import {
   getPojuChatLanguageDirective,
@@ -32,6 +35,23 @@ import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 /** Byte-stable output red lines — cached in system prompt (INV-1). */
 export function buildOutputRedLinesBlock(): string {
   return buildPojuOutputRedLinesBlock();
+}
+
+
+/** Per-chart multi-char traditional inventory for model prompts (no soft dump). */
+function traditionalInventoryFromStructured(
+  structured: Parameters<typeof collectTermFactsFromStructured>[0],
+): string[] {
+  const facts = collectTermFactsFromStructured(structured);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const f of facts) {
+    const t = String(f.traditional ?? "").trim();
+    if (t.length < 2 || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
 }
 
 export async function loadBaseAnalysisForSession(input: PhaseLLMInput): Promise<unknown> {
@@ -96,7 +116,9 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
     injectionBlock,
-    buildTermMarkingPromptBlock(outLoc),
+    buildTermMarkingPromptBlock(outLoc, {
+      traditionalInventory: traditionalInventoryFromStructured(structured),
+    }),
     structured ? buildStructuredInstanceInventory(structured) : "",
     structured
       ? buildTermContextPromptFromStructured(structured, outLoc, {

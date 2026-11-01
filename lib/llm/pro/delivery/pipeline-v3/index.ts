@@ -7,6 +7,7 @@ export { gateJudgmentCategoryB } from "./gate-judgment-category";
 export { gateBodyCategoryB, buildBodyGateAvoidanceBlockForPolish } from "./gate-body-category";
 export {
   freezeRawJudgmentAsEvidence,
+  runEvidenceSoftCodePipeline,
   runEvidenceSoftGenerate,
 } from "./evidence-soft";
 export {

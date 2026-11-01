@@ -213,16 +213,20 @@ assert(
   "四化 mutagens resolve via 禄/权/科/忌 aliases",
 );
 assert(
-  display.topicPalace.majorStars.every((s) => s.status === "blocked"),
-  "unconfirmed major stars fail-closed",
+  display.topicPalace.majorStars.every((s) => s.status === "resolved"),
+  "Phase 11 major stars resolve via SSOT",
 );
 assert(
-  ziweiTokenDisposition("仆役").status === "internal_only",
-  "仆役 internal_only pending soft label",
+  ziweiTokenDisposition("仆役").status === "public_glossary",
+  "仆役 public_glossary after Phase 11",
 );
 assert(
-  ziweiTokenDisposition("紫微").status === "internal_only",
-  "紫微 internal_only pending soft label",
+  ziweiTokenDisposition("紫微").status === "public_glossary",
+  "紫微 public_glossary after Phase 11",
+);
+assert(
+  resolvePojuTerm("紫微", { namespace: "ziwei" }).status === "resolved",
+  "紫微@ziwei SSOT",
 );
 assert(
   resolvePojuTerm("化忌", { namespace: "ziwei" }).status === "resolved",

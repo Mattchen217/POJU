@@ -217,7 +217,7 @@ const HEAD_STEPS: LabV3StepDef[] = [
     label: "Thesis · 命盘总纲",
     kind: "thesis",
     uses_llm: false,
-    accept: "总纲六维与 structured 对齐；Input 列 CFP/ZFP/patternHits 指纹。",
+    accept: "总纲六维与 structured 对齐；Input 列 CFP/ZFP/patternHits 指纹。ZFP 可用且 on-topic patternHits 时，六维 classical_basis / conclusion_zh 须确定性引用 hit id 或 name；禁盲注全盘；无关 hit 可省略；climate_balance 缺仍 FAIL。",
   },
   {
     step_key: "prealloc",

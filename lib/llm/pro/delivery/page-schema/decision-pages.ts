@@ -57,10 +57,10 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
     dualTrack: "abc",
     dualTrackNote: "同页 A 命理、B 科学、C 汇合都要有。D 是可核对短锚。",
     segments: [
-      { id: "A", label: "命理理由", duty: "用本页命理锚说明为何是这个断语；禁手段处方。" },
+      { id: "A", label: "命理理由", duty: "CFP+ZFP 共担：用本页八字锚与相关紫微（宫/四化/格局·有则用、无关省略）说明为何是这个断语；禁整盘灌段；禁手段处方。" },
       { id: "B", label: "科学机制", duty: "同页科学机制，不另开一页；禁手段处方。" },
-      { id: "C", label: "汇合", duty: "命理锚与科学机制收到同一个决定上的交汇张力；禁宜/可收费试点/付费后再切等行动处方。" },
-      { id: "D", label: "可核对锚", duty: "短锚；格局名从本页切片抄。紫微未进切片时只留八字锚。" },
+      { id: "C", label: "汇合", duty: "把本页已用的命理锚（八字±相关紫微）与科学机制收到同一决定上的交汇张力；勿为汇合硬塞未用紫微；禁行动处方。" },
+      { id: "D", label: "可核对锚", duty: "短锚；八字+相关紫微（有则抄本页切片/闭集）。紫微未稳时只留八字锚；禁堆砌未用宫星。" },
     ],
   },
   "04": {
@@ -73,10 +73,10 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
     dualTrack: "fold",
     dualTrackNote: "关键摩擦写在 A/B。依据可折叠，不逐句嵌双轨。",
     segments: [
-      { id: "A", label: "卡点命名", duty: "给卡住的机制起名。" },
+      { id: "A", label: "卡点命名", duty: "给卡住的机制起名；可用相关八字+紫微四化/格局共担，无关则省略。" },
       { id: "B", label: "表现", duty: "这个卡点在本题里怎么出现。" },
       { id: "C", label: "若硬顶", duty: "硬顶的成本。写代价，不写灾祸恐吓。" },
-      { id: "D", label: "依据折叠", duty: "A/B 的依据可折叠。" },
+      { id: "D", label: "依据折叠", duty: "A/B 的依据可折叠；命理折层可含相关紫微传统真词（证据层），可见正文仍白话。" },
     ],
   },
   "05": {
@@ -107,7 +107,7 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
     dualTrackNote: "现实偏重。近步原则、完成样貌、自我调频。不是勾选作业。",
     segments: [
       { id: "A", label: "近步原则", duty: "下一步的动作类型与完成样貌。" },
-      { id: "B", label: "阶段气候", duty: "当前大运/大限这一段的节奏，不播流日。" },
+      { id: "B", label: "阶段气候", duty: "当前大运/大限这一段的节奏（CFP dayun ↔ ZFP daxian 相关才写）；不播流日；禁整盘紫微。" },
       { id: "C", label: "自我调频", duty: "执行中怎么调自己。旧调频页折进这里。" },
       { id: "D", label: "节奏提醒", duty: "这一阶段的节奏，不是四周清单。" },
     ],
@@ -154,7 +154,7 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
     dualTrackNote: "包尾附录。命理核对为主，不要求科学双段。",
     segments: [
       { id: "A", label: "八字本题切片", duty: "只列本题用到的八字短锚。" },
-      { id: "B", label: "紫微本题切片", duty: "紫微未进切片时整段跳过，不补假宫。" },
+      { id: "B", label: "紫微本题切片", duty: "只列本题用到的紫微短锚；未进切片整段跳过，不补假宫、不灌十二宫。" },
       { id: "C", label: "对照一句", duty: "只对照 A/B 已经列出的内容。" },
     ],
   },

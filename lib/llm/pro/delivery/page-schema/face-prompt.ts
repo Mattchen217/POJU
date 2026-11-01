@@ -4,6 +4,7 @@
  */
 
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { formatPageSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
 import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
 import {
   FACE_SEGMENT_FIELDS,
@@ -15,7 +16,7 @@ import type { PageSliceResult } from "@/lib/llm/pro/delivery/slice-for-page";
 
 const FACE_EXTRA_SYSTEM: Record<DecisionPageId, string> = {
   "01": "1–2 句主推+条件（从 pack claim 装配，禁复述题面）；D「依据见 02」须列本页全部 pack unit id（含 science），本页不展开论证矩阵。",
-  "02": "A+B+C 必出（只解释为何如此）；交汇禁手段处方（更宜/可收费试点/付费后再切等）；D≤6 行可核对锚，格局名从本页切片抄；禁十二宫全列。",
+  "02": "A+B+C 必出（只解释为何如此）；A 命理 = CFP+ZFP 共担（相关才用，禁贴纸式硬塞）；交汇禁手段处方；D≤6 行可核对锚；禁十二宫全列。",
   "04": "卡点命名清楚；C 写成本不写灾祸；D 依据可折。",
   "05": "路径 2–4 条；D 切轨/停止必出；禁空泛「平衡」。",
   "06": "动作类型+完成样貌，不是 to-do / 勾选清单；禁流日择日假日历。",
@@ -36,18 +37,29 @@ export type BuildFacePromptInput = {
   locale: string;
   slice: PageSliceResult | { pageId: DecisionPageId; dump?: unknown };
   align?: FacePromptAlignHints;
+  /** When true, ZFP lines omitted from segment feed duties. */
+  zfpOmitted?: boolean;
 };
 
 export function buildFaceSystemPrompt(input: BuildFacePromptInput): string {
   const { faceId, locale } = input;
   const schema = DECISION_PAGE_SCHEMAS[faceId];
   const lang = deliveryTranslateTargetName(locale);
+  const zfpOmitted =
+    input.zfpOmitted ??
+    ("zfpOmitted" in input.slice && typeof (input.slice as PageSliceResult).zfpOmitted === "boolean"
+      ? (input.slice as PageSliceResult).zfpOmitted
+      : false);
   const segLines = schema.segments.map((s) => {
     const label = faceSegmentLabel(faceId, s.id, locale);
     const field = FACE_SEGMENT_FIELDS[faceId].find((f) => f.segmentId === s.id)?.key ?? s.id;
     return `- ${s.id} ${label} (JSON key: ${field}): ${s.duty}`;
   });
   const shape = faceFillShapeSkeleton(faceId);
+  const feedDuties = formatPageSegmentFeedDuties(faceId, {
+    zfpOmitted,
+    locale,
+  });
 
   return [
     `你只写 Face ${faceId}「${schema.title}」。读者问题：${schema.question}`,
@@ -57,6 +69,8 @@ export function buildFaceSystemPrompt(input: BuildFacePromptInput): string {
     `本脸加严：${FACE_EXTRA_SYSTEM[faceId]}`,
     `段职责：`,
     ...segLines,
+    feedDuties,
+    `双层：可见正文只用白话/软投影；紫微传统真词只进批断/依据折层/锚槽，禁止贴贴纸式整盘灌段。`,
     `硬禁：恐吓红线（必散/大祸/克应逼迫/付费消灾）；编造未喂锚；把全文盘塞进本页。`,
     `输出必须是单个 JSON 对象，形状示意（填实值，勿留空字符串当交付）：`,
     "```json",

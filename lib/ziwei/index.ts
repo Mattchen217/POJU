@@ -70,3 +70,7 @@ export {
   ziweiPatternHitId,
 } from "@/lib/ziwei/soft-zfp-labels";
 export { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
+export {
+  collectZiweiTraditionalInventory,
+  formatZiweiTraditionalClosedSetForEvidence,
+} from "@/lib/ziwei/traditional-closed-set-for-evidence";

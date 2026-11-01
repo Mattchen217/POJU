@@ -74,11 +74,12 @@ const GLYPH_LEVEL_BY_TRADITIONAL: Record<string, string> = {
   陷: "eye_of_storm",
 };
 
-const EXPECTED_BAZI = 184;
-const EXPECTED_QIMEN = 54;
+const EXPECTED_BAZI = 185;
+const EXPECTED_QIMEN = 78;
 const EXPECTED_GLYPH = 17;
 const EXPECTED_ZODIAC = 12;
-const EXPECTED_ZIWEI = 14;
+/** Phase 12b: +白虎@ziwei (岁前); 旬空/月德 coined zh. */
+const EXPECTED_ZIWEI = 126;
 const EXPECTED_TOTAL =
   EXPECTED_BAZI + EXPECTED_QIMEN + EXPECTED_GLYPH + EXPECTED_ZODIAC + EXPECTED_ZIWEI;
 

@@ -958,10 +958,13 @@ export function sanitizeDeliveryText(fullText: string, locale: string): string {
  * @see lib/glossary/to-compliant-plain-text.ts — canonical export entry
  */
 export function toSoftTranslatedPlainText(text: string, locale: string): string {
-  // Lazy import avoided — inline same pipeline as toCompliantPlainText to prevent circular deps.
+  // Keep parity with toCompliantPlainText export path (full closed-set soft-translate).
   if (!text?.trim()) return text ?? "";
-  const prepared = prepareTextForGlossaryRender(text, locale);
-  let plain = stripMarkersForPrompt(prepared);
+  const prepared = prepareTextForGlossaryRender(text, locale, {
+    maxPerPara: Number.POSITIVE_INFINITY,
+    oncePerText: false,
+  });
+  let plain = stripMarkersForPrompt(prepared, locale);
   plain = stripBrokenMarkers(plain);
   return scrubLeakedComplianceTerms(plain, locale).trim();
 }

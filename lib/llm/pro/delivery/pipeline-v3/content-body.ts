@@ -10,7 +10,7 @@ import {
   DELIVERY_SINGLE_CALL_TIMEOUT_MS,
   PAGE_SCHEMA_FILL_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { deliveryLabTransportMaxAttempts } from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData, P5ActionBrief } from "@/lib/llm/pro/delivery/page-schema/types";
 import {
@@ -562,6 +562,9 @@ export async function runContentBodyGenerate(input: {
     .filter((s) => s?.trim())
     .join("\n\n");
 
+  const zfpOmitted =
+    !input.ziwei_fact_pack ||
+    !(input.ziwei_fact_pack.patternHits?.length > 0);
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
     locale: input.locale,
@@ -572,6 +575,7 @@ export async function runContentBodyGenerate(input: {
     ),
     book_judgment_pack_block: input.book_judgment_pack_block,
     user_feed: userFeed,
+    zfpOmitted,
   });
 
   let tokens_used = 0;
@@ -592,7 +596,7 @@ export async function runContentBodyGenerate(input: {
       response_format: "json",
       session_id: input.session_id,
       temperature: 0.4,
-      max_attempts: deliveryTransportMaxAttempts(),
+      max_attempts: deliveryLabTransportMaxAttempts(),
       signal: input.signal,
       provider,
       phase_name: "content_body_v3",

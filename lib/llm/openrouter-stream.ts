@@ -220,6 +220,7 @@ async function openRouterChatCompletionStreamWithModel(
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     let abortedForSlow = false;
     let abortedForReasoningLoop = false;
+    let abortedForChunkStall = false;
     try {
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
@@ -256,15 +257,88 @@ async function openRouterChatCompletionStreamWithModel(
       let generation_id: string | null = null;
       let generation_time_ms: number | null = null;
       let buffer = "";
-      /** Wait briefly after finish_reason for the include_usage chunk before cancel. */
+      /**
+       * Wait briefly after finish_reason for the include_usage chunk before cancel.
+       * MUST be a real timer — checking grace only on the next SSE chunk fails when
+       * StreamLake leaves the body open after OR UI already shows complete/499
+       * (no further chunks → reader.read() hangs until FUNCTION_INVOCATION_TIMEOUT).
+       */
       const USAGE_GRACE_MS = 2_500;
+      /**
+       * After first byte: silence this long -> zombie body (OR may show 8-10s gen + 499
+       * while our fetch never ends). Cancel+abort -> stream_stall HARD FAIL for Lab
+       * diagnose (surface 499/zombie). Do NOT throw llm_timeout as a soft alias -
+       * BookJudgment is one-shot only; stall/timeout hard-fail visibly.
+       * Do not arm before first byte (cold start / long TTFT uses wall timeout).
+       */
+      const STREAM_CHUNK_STALL_MS = 60_000;
 
       reader = res.body.getReader();
       const decoder = new TextDecoder();
 
+      let usageGraceTimer: ReturnType<typeof setTimeout> | null = null;
+      let chunkStallTimer: ReturnType<typeof setTimeout> | null = null;
+      let usageGraceFired = false;
+      let sawAnyByte = false;
+
+      const clearStreamWatchdogs = () => {
+        if (usageGraceTimer) clearTimeout(usageGraceTimer);
+        if (chunkStallTimer) clearTimeout(chunkStallTimer);
+        usageGraceTimer = null;
+        chunkStallTimer = null;
+      };
+
+      const cancelReaderQuiet = (reason: string) => {
+        try {
+          void reader?.cancel(reason);
+        } catch {
+          /* ignore */
+        }
+      };
+
+      const armChunkStall = () => {
+        if (!sawAnyByte) return;
+        if (chunkStallTimer) clearTimeout(chunkStallTimer);
+        chunkStallTimer = setTimeout(() => {
+          abortedForChunkStall = true;
+          console.warn("[openrouter] stream chunk stall → cancel zombie body", {
+            stall_ms: STREAM_CHUNK_STALL_MS,
+            finish_reason,
+            usage_written,
+            content_chars: content.length,
+            reasoning_chars: reasoning.length,
+            call_type: options.call_type ?? null,
+            phase_name: options.phase_name ?? null,
+            provider,
+          });
+          cancelReaderQuiet("chunk_stall");
+          controller.abort();
+        }, STREAM_CHUNK_STALL_MS);
+      };
+
+      const armUsageGraceTimer = () => {
+        if (usageGraceTimer || usage_written) return;
+        usageGraceTimer = setTimeout(() => {
+          usageGraceFired = true;
+          console.warn("[openrouter] finish_reason usage grace → cancel open body", {
+            grace_ms: USAGE_GRACE_MS,
+            finish_reason,
+            call_type: options.call_type ?? null,
+            phase_name: options.phase_name ?? null,
+            provider,
+          });
+          cancelReaderQuiet("finish_reason_usage_grace_timer");
+        }, USAGE_GRACE_MS);
+      };
+
+      try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (value?.byteLength) {
+          sawAnyByte = true;
+          armChunkStall();
+        }
         buffer += decoder.decode(value, { stream: true });
         const { events, rest, sawDone } = parseSseJsonBlocks(buffer);
         buffer = rest;
@@ -303,6 +377,8 @@ async function openRouterChatCompletionStreamWithModel(
           if (choice && typeof choice.finish_reason === "string") {
             finish_reason = choice.finish_reason;
             if (finishReceivedAt == null) finishReceivedAt = Date.now();
+            // Arm timer immediately — do not wait for another chunk to notice grace.
+            if (!usage_written) armUsageGraceTimer();
           }
           const delta = choice?.delta as Record<string, unknown> | undefined;
           const message = choice?.message as Record<string, unknown> | undefined;
@@ -331,6 +407,7 @@ async function openRouterChatCompletionStreamWithModel(
                 provider,
               },
             );
+            clearStreamWatchdogs();
             controller.abort();
             break;
           }
@@ -342,21 +419,23 @@ async function openRouterChatCompletionStreamWithModel(
           }
         }
 
-        if (abortedForReasoningLoop) break;
+        if (abortedForReasoningLoop || abortedForChunkStall) break;
 
         /**
          * StreamLake/OpenRouter may leave the HTTP body open after finish_reason=stop
-         * or data:[DONE] (OR dashboard already shows complete). Waiting for
-         * reader done=true then hangs until Vercel FUNCTION_INVOCATION_TIMEOUT —
-         * client sees 504 while OR already billed.
+         * or data:[DONE] (OR dashboard already shows complete / provider 499). Waiting
+         * for reader done=true then hangs until Vercel FUNCTION_INVOCATION_TIMEOUT —
+         * client sees 504 while OR already billed (~8–10s gen).
          *
          * Usage often arrives in a separate chunk AFTER finish_reason when
-         * stream_options.include_usage is set. Cancel immediately only when we
-         * already have usage or saw [DONE]; otherwise wait a short grace.
+         * stream_options.include_usage is set. Cancel immediately when we already
+         * have usage / [DONE] / grace timer fired; otherwise armUsageGraceTimer.
          */
-        const usageGraceExpired =
-          finishReceivedAt != null && Date.now() - finishReceivedAt >= USAGE_GRACE_MS;
-        if (sawDone || (finish_reason && (usage_written || usageGraceExpired))) {
+        if (finish_reason && !usage_written && !sawDone) {
+          armUsageGraceTimer();
+        }
+        if (sawDone || (finish_reason && (usage_written || usageGraceFired))) {
+          clearStreamWatchdogs();
           try {
             await reader.cancel(
               sawDone
@@ -395,9 +474,13 @@ async function openRouterChatCompletionStreamWithModel(
             phase_name: options.phase_name ?? null,
             provider,
           });
+          clearStreamWatchdogs();
           controller.abort();
           break;
         }
+      }
+      } finally {
+        clearStreamWatchdogs();
       }
 
       if (abortedForReasoningLoop) {
@@ -405,6 +488,9 @@ async function openRouterChatCompletionStreamWithModel(
       }
       if (abortedForSlow) {
         throw new Error("slow_throughput");
+      }
+      if (abortedForChunkStall) {
+        throw new Error("stream_stall");
       }
 
       return {
@@ -430,7 +516,9 @@ async function openRouterChatCompletionStreamWithModel(
     } catch (e: unknown) {
       if (
         e instanceof Error &&
-        (e.message === "slow_throughput" || e.message === "reasoning_loop")
+        (e.message === "slow_throughput" ||
+          e.message === "reasoning_loop" ||
+          e.message === "stream_stall")
       ) {
         throw e;
       }
@@ -444,13 +532,16 @@ async function openRouterChatCompletionStreamWithModel(
           signal_aborted,
           aborted_for_slow: abortedForSlow,
           aborted_for_reasoning_loop: abortedForReasoningLoop,
+          aborted_for_chunk_stall: abortedForChunkStall,
           source: abortedForReasoningLoop
             ? "reasoning_loop"
             : abortedForSlow
               ? "slow_throughput"
-              : signal_aborted
-                ? "parent_signal"
-                : "client_timeout",
+              : abortedForChunkStall
+                ? "chunk_stall"
+                : signal_aborted
+                  ? "parent_signal"
+                  : "client_timeout",
           call_type: options.call_type ?? null,
           phase_name: options.phase_name ?? null,
           session_id: options.session_id ?? null,
@@ -460,6 +551,9 @@ async function openRouterChatCompletionStreamWithModel(
         }
         if (abortedForSlow) {
           throw new Error("slow_throughput");
+        }
+        if (abortedForChunkStall) {
+          throw new Error("stream_stall");
         }
         if (signal_aborted) {
           const err = new Error("AbortError");

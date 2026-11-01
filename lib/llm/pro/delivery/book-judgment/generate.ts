@@ -1,5 +1,7 @@
 /**
- * BookJudgmentPack generate gun — one-shot dual-track, degrade to two-shot.
+ * BookJudgmentPack generate gun — one-shot dual-track ONLY (Max lock 2026-11-01).
+ * No two-shot / degrade / book_judgment_shot_continue. Timeout, stall, quality,
+ * validate, coerce → hard fail the step. Lab: one main_delivery per /run HTTP.
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -10,6 +12,7 @@ import {
   PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { deliveryLabTransportMaxAttempts } from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import {
   buildLabCallTrace,
   type LabCallTrace,
@@ -18,12 +21,13 @@ import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
 import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
-import { formatPageSliceFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { formatBookJudgmentFullBookPageFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { formatGlobalSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
+import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
   BOOK_FACE_IDS,
   BOOK_JUDGMENT_PACK_VERSION,
-  findMeansPrescriptionHits,
   indexBookJudgmentByFace,
   validateBookJudgmentPack,
   type BookJudgmentPack,
@@ -47,10 +51,11 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 - science：主语=机制/偏差/负荷；谓语=导致/维持/放大。
   正例：「完美主义替代外部反馈抬高切换成本」
   反例 timebox_block：「试点压成每周一个四小时块」← 禁
-- destiny：命理判断/结构倾向 + 闭集锚（日主/用忌/格局/宫干星曜）。
-  正例：「用神木受制于忌神火，开口窗口收窄」
+- destiny：命理判断/结构倾向 + 闭集锚。CFP+ZFP 共担同一断语（非八字模板贴紫微贴纸）。
+  有紫微（zfpOmitted=false）且段职责含 ZFP：claim/anchors 须纳入本盘相关紫微传统真词（见依据层闭集）；无关则省略，禁整盘灌段。
+  正例：「用神木受制于忌神火，开口窗口收窄；本题宫星四化同向收束」
   反例 billable_min：「以最小可收费承诺作为验证单元」← 禁
-- convergence：双轨同向或张力交汇，禁止动作清单。
+- convergence：双轨同向或张力交汇，禁止动作清单；可点名命理锚与科学机制的交汇张力（含相关紫微，勿硬塞）。
   正例：「岁运忌神与损失厌恶同向放大开口成本」
   反例 ops_checklist：「当三人付费时转为加大投入」← 禁
 
@@ -59,12 +64,13 @@ const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmen
 claim 必须改写成机制/判断句；禁止把时段块/可收费样/投入加减原样写入 claim。
 
 ## 配额与字段
-- serves_face + serves_segment 对齐配额；claim 短闭集；anchors≥1
-- 每脸双轨 + 密度见配额表；patternHits 用则入 used，不用则 caveat
-- 段职责已正写为机制/偏差/负荷|命理判断|交汇张力|复盘问句
+- serves_face + serves_segment 对齐配额与「全书段级喂料职责」；claim 短闭集；anchors≥1
+- 每脸双轨 + 密度见配额表；用到的格局记 pattern_hits_used（hit:id:level）且该 hit 必须写入 ≥1 条 unit.claim 作判断（等级+宫位/题面张力）；anchors-only=FAIL；claim 禁裸古典格名
+- 段职责已正写为机制/偏差/负荷|命理判断|交汇张力|复盘问句；科学段勿硬塞紫微
+- 本枪=依据/骨架：允许传统词（用神/忌神/宫星等 ∈ 本盘闭集）；下游 body soft。禁小步验证/可逆性探测等 means 边缘名词
 
-## 闭集安全网（写入 claim → means_prescription FAIL + unitId@className）
-imperative_yi · redlight_stop · stop_loss_ops · next_action · ops_checklist · timebox_block · billable_min · low_commit_sample
+## 闭集安全网（写入 claim 或 anchors → means_prescription FAIL + unitId@className）
+imperative_yi · redlight_stop · stop_loss_ops · next_action · ops_checklist · timebox_block · billable_min · low_commit_sample · means_edge_probe
 
 ## 禁区
 手段处方、攻守祈使、恐吓必损必成、primary/backup、无出处现编格局、顺推硬塞。`;
@@ -75,10 +81,10 @@ const JSON_SHAPE = `输出 JSON：
     {
       "id": "d01",
       "track": "destiny"|"science"|"convergence",
-      "serves_face": ["02"],
+      "serves_face": ["01"] | ["02"] | … | ["08"],  // 全书分脸，非仅 02
       "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句",
-      "anchors": ["机制句或 hit:id:level"],
+      "anchors": ["机制句或 closed hit 旁证"],
       "caveat": "可选"
     }
   ],
@@ -93,8 +99,6 @@ export type BookJudgmentGenerateOk = {
   shot_mode: BookJudgmentShotMode;
   last_raw_text?: string;
   call_trace: LabCallTrace;
-  degraded_from_one?: boolean;
-  degrade_reason?: string;
 };
 
 export type BookJudgmentGenerateFail = {
@@ -110,43 +114,8 @@ export type BookJudgmentGenerateFail = {
   shot_mode?: BookJudgmentShotMode;
 };
 
-type DegradeCarry = {
-  degrade: true;
-  reason: string;
-  detail?: string;
-  means_classes?: string[];
-  draft_pack?: BookJudgmentPack;
-  text?: string;
-  trace?: LabCallTrace;
-};
-
-function isDegradeReason(reason: string, finish: string | null): boolean {
-  if (finish === "length" || finish === "max_tokens") return true;
-  const r = reason.toLowerCase();
-  return (
-    r.includes("timeout") ||
-    r.includes("timed out") ||
-    r.includes("abort") ||
-    r === "empty_response" ||
-    r === "json_parse" ||
-    r === "coerce_failed" ||
-    r === "missing_destiny_track" ||
-    r === "missing_science_track" ||
-    r === "missing_pattern_hits" ||
-    r === "empty_face" ||
-    r === "face_missing_destiny" ||
-    r === "face_missing_science" ||
-    r === "face_under_density" ||
-    r === "under_density" ||
-    r === "segment_uncovered" ||
-    r === "segment_track_mismatch" ||
-    r === "weak_science_anchor" ||
-    r === "means_prescription" ||
-    r === "schema" ||
-    r === "truncated" ||
-    r === "quality_drift"
-  );
-}
+/** One-shot generate outcome (Ok | Fail). Restored after DegradeCarry/result-union removal. */
+export type BookJudgmentGenerateResult = BookJudgmentGenerateOk | BookJudgmentGenerateFail;
 
 function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
   // Phase 10: never feed classical 格名 into judgment prompts — hit_id:level only.
@@ -252,6 +221,8 @@ async function callPackShot(input: {
   session_id?: string;
   timeout_ms?: number;
   dispatch_attempt?: number;
+  /** Lab/macro: cap OpenRouter transport to 1 admit (no stacked main_delivery). */
+  single_provider_call?: boolean;
   signal?: AbortSignal;
 }): Promise<{
   ok: boolean;
@@ -283,7 +254,9 @@ async function callPackShot(input: {
       response_format: "json",
       session_id: input.session_id,
       temperature: 0.3,
-      max_attempts: deliveryTransportMaxAttempts(),
+      max_attempts: input.single_provider_call
+        ? deliveryLabTransportMaxAttempts()
+        : deliveryTransportMaxAttempts(),
       signal: input.signal,
       provider,
       phase_name: input.phase,
@@ -394,7 +367,9 @@ function mergeUnits(
 
 /**
  * Build the Judgment user feed string (one-shot / destiny / science).
- * Exported for Phase 10 leak tests — must not contain traditional Ziwei palace/star/pattern names.
+ * Dual-layer: soft page slices stay vernacular/soft-ZFP; this judgment feed may include
+ * a labeled Ziwei traditional closed-set (evidence layer) when zfpOmitted=false.
+ * Free-text thesis/science/agenda/question remain scrubbed of uncontrolled Ziwei leaks.
  */
 export function buildBookJudgmentFeedBlock(input: {
   chartText: string;
@@ -441,13 +416,11 @@ export function buildBookJudgmentFeedBlock(input: {
       })
     : "";
 
-  const slice = formatPageSliceFeed({
-    key: "02",
+  const slice = formatBookJudgmentFullBookPageFeed({
     chartText: input.chartText,
     ziwei: input.ziwei,
     question: questionSafe || null,
     locale,
-    withAllowlistHeader: true,
   });
   const parts: string[] = [];
   if (input.mode !== "science" && thesisSafe) {
@@ -470,16 +443,31 @@ export function buildBookJudgmentFeedBlock(input: {
     parts.push(`## 原问\n${questionSafe}`);
   }
   parts.push(
-    `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句，禁止原样复述操作日程或验证单元。`,
+    `## Feed→claim 硬规则\n用户手段语可压缩为「用户自述存在…」一句背景；claim 必须改写成机制/判断句（承压/显隐/窗口收窄/偏差负荷）；禁止原样复述操作日程或验证单元；禁小步验证/可逆性较高的探测/时段块/可收费样等 means 边缘词。`,
   );
+  const zfpOmitted = !input.ziwei || !(input.ziwei.patternHits?.length > 0);
   const hits = patternHitsFromZiwei(input.ziwei);
+  if (input.mode !== "science") {
+    parts.push(
+      formatGlobalSegmentFeedDuties({
+        zfpOmitted,
+        locale,
+      }),
+    );
+  }
+  if (input.mode !== "science" && !zfpOmitted && input.ziwei) {
+    const trad = formatZiweiTraditionalClosedSetForEvidence(input.ziwei, {
+      locale,
+    });
+    if (trad) parts.push(trad);
+  }
   if (hits.length) {
     parts.push(
-      `## ZFP patternHits 闭集引用（hit_id:level · 禁写古典格名；用则入 pattern_hits_used；不用则 unit.caveat）\n${hits.join("、")}`,
+      `## ZFP patternHits 稳定引用（hit:<id>:<level> · 列入 pattern_hits_used 的每一条必须写入 ≥1 unit.claim 作判断；禁只挂 anchors；claim 禁裸古典格名；不用则 unit.caveat）\n${hits.join("、")}`,
     );
   }
   parts.push(
-    `## faces 必须覆盖\n${BOOK_FACE_IDS.join(", ")}`,
+    `## faces 必须覆盖（全书；PageFeed 已按 01–08 分脸切片）\n${BOOK_FACE_IDS.join(", ")}`,
     JSON_SHAPE,
   );
   return parts.filter(Boolean).join("\n\n");
@@ -495,11 +483,9 @@ function feedBlock(
 export async function runBookJudgmentPackGenerate(input: {
   locale: string;
   session_id?: string;
-  signal?: AbortSignal;
   timeout_ms?: number;
   dispatch_attempt?: number;
-  /** Force two-shot without trying one. */
-  force_two_shot?: boolean;
+  signal?: AbortSignal;
   question_id?: string;
   thesis_ref?: string;
   chart_fact_pack: string;
@@ -508,301 +494,103 @@ export async function runBookJudgmentPackGenerate(input: {
   question?: string | null;
   agenda?: string | null;
   science_feed?: string | null;
-}): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> {
+  /**
+   * Lab/macro: at most one provider call this invocation (transport maxAttempts=1).
+   * No continue hops — timeout/quality hard-fail.
+   */
+  single_provider_call?: boolean;
+}): Promise<BookJudgmentGenerateResult> {
   const chartText = input.chart_fact_pack?.trim() ?? "";
   const ziwei = input.ziwei_fact_pack ?? null;
   const quota = buildBookJudgmentQuotaFromBlueprint();
   const quotaBlock = formatQuotaTableForPrompt(quota);
   let tokens_used = 0;
+  const single = Boolean(input.single_provider_call);
 
-  const finishOneShot = async (): Promise<
-    BookJudgmentGenerateOk | BookJudgmentGenerateFail | DegradeCarry
-  > => {
-    const user_feed = feedBlock({
-      chartText,
-      ziwei,
-      locale: input.locale,
-      question: input.question,
-      agenda: input.agenda,
-      science_feed: input.science_feed,
-      thesis_block: input.thesis_block,
-      mode: "all",
-    });
-    const user = [
-      `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
-      `按配额表产出；total_min_units=${quota.total_min_units}；每脸 dual-track + serves_segment。`,
-      quotaBlock,
-      user_feed,
-    ].join("\n\n");
-    const shot = await callPackShot({
-      phase: "book_judgment_pack_one",
-      system: PACK_SYSTEM,
-      user,
-      user_feed,
-      session_id: input.session_id,
-      timeout_ms: input.timeout_ms,
-      dispatch_attempt: input.dispatch_attempt,
-      signal: input.signal,
-    });
-    tokens_used += shot.tokens_used;
-    if (!shot.ok) {
-      if (shot.reason === "scare_redline") {
-        return {
-          ok: false,
-          reason: "scare_redline",
-          tokens_used,
-          last_raw_text: shot.text.slice(0, 12_000),
-          call_trace: shot.call_trace,
-          shot_mode: "one",
-        };
-      }
-      if (isDegradeReason(shot.reason ?? "", shot.finish)) {
-        return { degrade: true, reason: shot.reason ?? "one_shot_fail", text: shot.text, trace: shot.call_trace };
-      }
-      return {
-        ok: false,
-        reason: shot.reason ?? "one_shot_fail",
-        tokens_used,
-        last_raw_text: shot.text.slice(0, 12_000),
-        call_trace: shot.call_trace,
-        shot_mode: "one",
-      };
-    }
-    const units = coerceUnits(shot.parsed);
-    if (!units) {
-      return { degrade: true, reason: "coerce_failed", text: shot.text, trace: shot.call_trace };
-    }
-    const draft = buildPackDraft({
-      locale: input.locale,
-      question_id: input.question_id,
-      thesis_ref: input.thesis_ref,
-      chartText,
-      ziwei,
-      shot_mode: "one",
-      units,
-      pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
-      science_tags_used: stringList(shot.parsed, "science_tags_used"),
-    });
-    const validated = validateBookJudgmentPack(draft, quota);
-    if (!validated.ok) {
-      if (isDegradeReason(validated.reason, shot.finish)) {
-        const means_classes =
-          validated.reason === "means_prescription"
-            ? [
-                ...new Set(
-                  findMeansPrescriptionHits(draft.units).map((h) => h.className),
-                ),
-              ]
-            : undefined;
-        return {
-          degrade: true,
-          reason: validated.reason,
-          detail: validated.detail,
-          means_classes,
-          draft_pack: draft,
-          text: shot.text,
-          trace: shot.call_trace,
-        };
-      }
-      return {
-        ok: false,
-        reason: validated.reason,
-        detail: validated.detail,
-        draft_pack: draft,
-        tokens_used,
-        last_raw_text: shot.text.slice(0, 12_000),
-        call_trace: shot.call_trace,
-        shot_mode: "one",
-      };
-    }
+  const user_feed = feedBlock({
+    chartText,
+    ziwei,
+    locale: input.locale,
+    question: input.question,
+    agenda: input.agenda,
+    science_feed: input.science_feed,
+    thesis_block: input.thesis_block,
+    mode: "all",
+  });
+  const user = [
+    `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
+    `按配额表产出；total_min_units=${quota.total_min_units}；每脸 dual-track + serves_segment。`,
+    quotaBlock,
+    user_feed,
+  ].join("\n\n");
+  const shot = await callPackShot({
+    phase: "book_judgment_pack_one",
+    system: PACK_SYSTEM,
+    user,
+    user_feed,
+    session_id: input.session_id,
+    timeout_ms: input.timeout_ms,
+    dispatch_attempt: input.dispatch_attempt,
+    single_provider_call: single,
+    signal: input.signal,
+  });
+  tokens_used += shot.tokens_used;
+  if (!shot.ok) {
     return {
-      ok: true,
-      pack: validated.pack,
+      ok: false,
+      reason: shot.reason ?? "one_shot_fail",
       tokens_used,
-      shot_mode: "one",
       last_raw_text: shot.text.slice(0, 12_000),
       call_trace: shot.call_trace,
+      shot_mode: "one",
     };
-  };
-
-  const finishTwoShot = async (
-    degradeMeta?: {
-      reason: string;
-      detail?: string;
-      means_classes?: string[];
-    },
-  ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
-    const meansInject =
-      degradeMeta?.means_classes?.length
-        ? [
-            `## 一枪 means_prescription 失败类（二枪必须避开 · 改写成正写句模）`,
-            `className=${degradeMeta.means_classes.join(" · ")}`,
-            degradeMeta.detail ? `detail=${degradeMeta.detail}` : "",
-            `正写：science=机制/偏差/负荷；destiny=命理判断；convergence=交汇张力。禁原样复述 feed 操作语。`,
-          ]
-            .filter(Boolean)
-            .join("\n")
-        : "";
-    const destinyFeed = feedBlock({
-      chartText,
-      ziwei,
-      locale: input.locale,
-      question: input.question,
-      agenda: input.agenda,
-      thesis_block: input.thesis_block,
-      mode: "destiny",
-    });
-    const destinyUser = [
-      `## BookJudgmentPack · 两枪·destiny locale=${input.locale}`,
-      `只产出 track=destiny（可少量 convergence）。覆盖配额表全部 faces/段。`,
-      meansInject,
-      quotaBlock,
-      destinyFeed,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    const dShot = await callPackShot({
-      phase: "book_judgment_pack_destiny",
-      system: PACK_SYSTEM,
-      user: destinyUser,
-      user_feed: destinyFeed,
-      session_id: input.session_id,
-      timeout_ms: input.timeout_ms,
-      dispatch_attempt: input.dispatch_attempt,
-      signal: input.signal,
-    });
-    tokens_used += dShot.tokens_used;
-    if (!dShot.ok) {
-      return {
-        ok: false,
-        reason: dShot.reason ?? "destiny_shot_fail",
-        tokens_used,
-        last_raw_text: dShot.text.slice(0, 12_000),
-        call_trace: dShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-    const destinyUnits = (coerceUnits(dShot.parsed) ?? []).filter(
-      (u) => u.track === "destiny" || u.track === "convergence",
-    );
-    if (!destinyUnits.length) {
-      return {
-        ok: false,
-        reason: "destiny_coerce_failed",
-        tokens_used,
-        last_raw_text: dShot.text.slice(0, 12_000),
-        call_trace: dShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-
-    const scienceFeed = feedBlock({
-      chartText,
-      ziwei,
-      locale: input.locale,
-      question: input.question,
-      agenda: input.agenda,
-      science_feed: input.science_feed,
-      mode: "science",
-    });
-    const scienceUser = [
-      `## BookJudgmentPack · 两枪·science locale=${input.locale}`,
-      `只产出 track=science（可少量 convergence）。覆盖配额表；禁「科学维N」空壳。合并键 serves_face。`,
-      meansInject,
-      quotaBlock,
-      scienceFeed,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    const sShot = await callPackShot({
-      phase: "book_judgment_pack_science",
-      system: PACK_SYSTEM,
-      user: scienceUser,
-      user_feed: scienceFeed,
-      session_id: input.session_id,
-      timeout_ms: input.timeout_ms,
-      dispatch_attempt: input.dispatch_attempt,
-      signal: input.signal,
-    });
-    tokens_used += sShot.tokens_used;
-    if (!sShot.ok) {
-      return {
-        ok: false,
-        reason: sShot.reason ?? "science_shot_fail",
-        tokens_used,
-        last_raw_text: sShot.text.slice(0, 12_000),
-        call_trace: sShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-    const scienceUnits = (coerceUnits(sShot.parsed) ?? []).filter(
-      (u) => u.track === "science" || u.track === "convergence",
-    );
-    if (!scienceUnits.length) {
-      return {
-        ok: false,
-        reason: "science_coerce_failed",
-        tokens_used,
-        last_raw_text: sShot.text.slice(0, 12_000),
-        call_trace: sShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-
-    const units = mergeUnits(destinyUnits, scienceUnits);
-    const draft = buildPackDraft({
-      locale: input.locale,
-      question_id: input.question_id,
-      thesis_ref: input.thesis_ref,
-      chartText,
-      ziwei,
-      shot_mode: "two",
-      units,
-      pattern_hits_used: [
-        ...stringList(dShot.parsed, "pattern_hits_used"),
-        ...stringList(sShot.parsed, "pattern_hits_used"),
-      ],
-      science_tags_used: [
-        ...stringList(dShot.parsed, "science_tags_used"),
-        ...stringList(sShot.parsed, "science_tags_used"),
-      ],
-    });
-    const validated = validateBookJudgmentPack(draft, quota);
-    if (!validated.ok) {
-      return {
-        ok: false,
-        reason: validated.reason,
-        detail: validated.detail,
-        draft_pack: draft,
-        tokens_used,
-        last_raw_text: sShot.text.slice(0, 12_000),
-        call_trace: sShot.call_trace,
-        shot_mode: "two",
-      };
-    }
+  }
+  const units = coerceUnits(shot.parsed);
+  if (!units) {
     return {
-      ok: true,
-      pack: validated.pack,
+      ok: false,
+      reason: "coerce_failed",
       tokens_used,
-      shot_mode: "two",
-      last_raw_text: sShot.text.slice(0, 12_000),
-      call_trace: sShot.call_trace,
-      degraded_from_one: Boolean(degradeMeta),
-      degrade_reason: degradeMeta?.reason,
+      last_raw_text: shot.text.slice(0, 12_000),
+      call_trace: shot.call_trace,
+      shot_mode: "one",
     };
+  }
+  const draft = buildPackDraft({
+    locale: input.locale,
+    question_id: input.question_id,
+    thesis_ref: input.thesis_ref,
+    chartText,
+    ziwei,
+    shot_mode: "one",
+    units,
+    pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
+    science_tags_used: stringList(shot.parsed, "science_tags_used"),
+  });
+  const classicalNames = (ziwei?.patternHits ?? [])
+    .map((h) => (h.name ?? "").trim())
+    .filter(Boolean);
+  const validated = validateBookJudgmentPack(draft, quota, {
+    classical_pattern_names: classicalNames,
+  });
+  if (!validated.ok) {
+    return {
+      ok: false,
+      reason: validated.reason,
+      detail: validated.detail,
+      draft_pack: draft,
+      tokens_used,
+      last_raw_text: shot.text.slice(0, 12_000),
+      call_trace: shot.call_trace,
+      shot_mode: "one",
+    };
+  }
+  return {
+    ok: true,
+    pack: validated.pack,
+    tokens_used,
+    shot_mode: "one",
+    last_raw_text: shot.text.slice(0, 12_000),
+    call_trace: shot.call_trace,
   };
-
-  if (input.force_two_shot) {
-    return finishTwoShot({ reason: "force_two_shot" });
-  }
-
-  const one = await finishOneShot();
-  if ("degrade" in one) {
-    return finishTwoShot({
-      reason: one.reason,
-      detail: one.detail,
-      means_classes: one.means_classes,
-    });
-  }
-  return one;
 }

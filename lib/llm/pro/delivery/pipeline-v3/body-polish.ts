@@ -11,7 +11,7 @@ import {
   DELIVERY_SINGLE_CALL_TIMEOUT_MS,
   PAGE_SCHEMA_FILL_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { deliveryLabTransportMaxAttempts } from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { coercePageSchemaLoose } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { buildBodyGateAvoidanceBlockForPolish } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
@@ -1231,7 +1231,7 @@ export async function runBodyPolishGenerate(input: {
       response_format: "json",
       session_id: input.session_id,
       temperature: 0.4,
-      max_attempts: deliveryTransportMaxAttempts(),
+      max_attempts: deliveryLabTransportMaxAttempts(),
       signal: input.signal,
       provider,
       phase_name: "content_body_polish_v3",

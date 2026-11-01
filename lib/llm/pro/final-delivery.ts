@@ -12,7 +12,10 @@ import type { POJUAction, POJUDelivery, POJUSessionState, POJUMessage } from "@/
 import { markCycleDelivered } from "@/lib/poju/cycle-manager";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-import { buildTermContextPromptFromStructured } from "@/lib/glossary/term-context-for-facts";
+import {
+  buildTermContextPromptFromStructured,
+  collectTermFactsFromStructured,
+} from "@/lib/glossary/term-context-for-facts";
 import {
   buildDirectedDynamicRelationInventoryBlock,
   computeDirectedDynamicRelations,
@@ -168,7 +171,7 @@ function buildDegradedDeliveryRules(agent: POJUAgentState): string {
 5. **合规不变**：
    - 重命盘 ≠ 编造：只用 Base Analysis 中真实算出的内容
    - ${POJU_DELIVERY_COMPLIANCE_LINE}
-   - 用户可见须 **⟦t:id|<该情景软译词>|<这句话里对他这件事的白话解释>⟧ 三段位硬要求**；第三段须针对当前处境/本句，不是术语通用定义；禁裸合婚排盘术语`;
+   - 用户可见依据处写闭集【传统真词】（多字/复合），禁打标壳、禁自造软译（软译代码层）；禁裸合婚排盘术语`;
 }
 
 function buildFullDeliveryTask(
@@ -199,7 +202,7 @@ ${regionalGuidance ? `${regionalGuidance}\n\n` : ""}规则:
 严格使用 POJU_OUTPUT_BRANDING 中的分段标记。**缺 ═══ 分隔 = 交付失败。**
 
 ═══ ANALYSIS ═══
-（**3–4 个 ### 子标题**；每子标题 2–3 短段 + ≥1 金句框；**每个子标题至少一处锚定本盘真实结构**——day_master/strength/yong_shen/十神/本命关系实例，**⟦t:id|情景软译|对他这件事的白话⟧ 三段位**，禁裸术语；若本盘有定向动态关系，织入 1–2 条解释「为什么会卡」）
+（**3–4 个 ### 子标题**；每子标题 2–3 短段 + ≥1 金句框；**每个子标题至少一处锚定本盘真实结构**——day_master/strength/yong_shen/十神/本命关系实例，闭集传统真词自然写入，禁打标壳、禁自造软译；若本盘有定向动态关系，织入 1–2 条解释「为什么会卡」）
 
 ═══ CONCLUSION ═══
 （**直答 original_question** + **1–2 句展开** + **金句框收束**——禁止一句话收场；依据 = 选定破局方向 × 本盘结构）
@@ -225,7 +228,7 @@ ${buildPojuConclusionOriginalQuestionBlock()}
 # 关键规则
 
 1. 全文使用用户语言。
-2. 关键术语 **⟦t:<id>|<该情景下的软译词>|<这句话里对他这件事的白话解释>⟧ 三段位硬要求**（可见软译**禁括号干支**）。第三段必须是【针对他当前处境/这句话】的具体解释，不是术语的通用定义；UI 仅在缺第三段时才回退词表。另：禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
+2. 关键术语写闭集【传统真词】；**禁止**打标壳与自造软译（软译由代码层 autoMark/SSOT）。另：禁裸合婚排盘术语 + 禁超自然承诺；五行/I Ching 可保留。
 3. WHAT TO DO 三条须极其具体（时间+地点+人+话+可观察结果）。
 4. 不下命运定论；不用中医话术（方子/诊脉/复诊）。
 5. 不暴露 Glyph / Syncro / Match 等产品名。
@@ -383,11 +386,11 @@ ${agendaStr}
 ## 命局基础（structured —— 事实源，节选）
 ${baseStr}`,
     `# 整合要求（闭环 · 反断点）
-- ANALYSIS：直接展开 situation_conclusion；**每个 ### 子标题**正文零标记；段末加 \`**依据与推理:**\`（≤2 句 / ≤3 金字 \`⟦t:slug|贴题白话⟧\`）；3–4 个子标题，短段+金句框，禁字墙。
+- ANALYSIS：直接展开 situation_conclusion；**每个 ### 子标题**正文零标记；段末加 \`**依据与推理:**\`（≤2 句 / ≤3 个承重传统真词）；3–4 个子标题，短段+金句框，禁字墙。
 - CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；**正面接住他问的问题本身**；含时间诉求时显式用条件成熟 + 可促成行动回应；依据块写「选定行动骨架 × 本盘锚点」。
 ${buildPojuConclusionOriginalQuestionBlock()}
 - WHAT TO DO：3 条从「选定 modern_action_frames × 用户亲口议程证据」生长，禁万能模板；
-  每条末尾 \`Profile basis:\`（= 依据与推理）写「这条为什么对你成立」——可打标，正文行动句零标记。
+  每条末尾 \`Profile basis:\`（= 依据与推理）写「这条为什么对你成立」——可写闭集传统真词（勿打标），正文行动句零术语壳。
 - 软译词不用写（系统从术语表填入）；贴题白话须情景化。
 - ${POJU_DELIVERY_COMPLIANCE_LINE}；不暴露 Glyph/Syncro/Match。
 - 须按 POJU 八字深度解读法则展开 ANALYSIS；按行动设计原则填写 WHAT TO DO 三条。`,
@@ -444,7 +447,9 @@ ${buildPojuConclusionOriginalQuestionBlock()}
     langDirective.directive.trim(),
     buildCurrentDateContext(new Date(), outLoc),
     buildDualLayerDeliveryPromptBlock(outLoc),
-    buildTermMarkingPromptBlock(outLoc),
+    buildTermMarkingPromptBlock(outLoc, {
+      traditionalInventory: traditionalInventoryFromStructured(structured),
+    }),
     structured ? buildStructuredInstanceInventory(structured) : "",
     structured
       ? buildTermContextPromptFromStructured(structured, outLoc, {
@@ -619,6 +624,23 @@ export function isUsableFinalDeliveryJobId(id: string | null | undefined): boole
 }
 
 /** Create (or resume) a final-delivery xhigh job — returns job_id immediately. */
+
+/** Per-chart multi-char traditional inventory for model prompts (no soft dump). */
+function traditionalInventoryFromStructured(
+  structured: Parameters<typeof collectTermFactsFromStructured>[0],
+): string[] {
+  const facts = collectTermFactsFromStructured(structured);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const f of facts) {
+    const t = String(f.traditional ?? "").trim();
+    if (t.length < 2 || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
 export async function createFinalDeliveryJobFromApi(input: {
   session_id?: string;
   base_analysis: unknown | null;

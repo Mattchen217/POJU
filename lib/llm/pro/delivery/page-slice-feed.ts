@@ -5,6 +5,7 @@
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
+  DECISION_PAGE_IDS,
   PAGE_UNION_ALLOWLISTS,
   type DecisionPageId,
 } from "@/lib/llm/pro/delivery/page-feed-matrix";
@@ -93,6 +94,56 @@ export function formatPageSliceFeed(input: {
 }
 
 /** 有切片就推进 user 消息，并告诉调用方不要再附整包事实档或闭集 inventory。 */
+
+/**
+ * BookJudgment 全书枪：按 PageFeedMatrix 拼 01–08 各脸有值切片。
+ * 禁止只喂 face02 却产出全脸 pack——Trace/Lab 须用全书标签（勿挂本页/face02）。
+ */
+export function formatBookJudgmentFullBookPageFeed(input: {
+  chartText?: string | null;
+  ziwei?: ZiweiFactPack | null;
+  question?: string | null;
+  topic?: string | null;
+  locale?: string | null;
+  cfp?: CfpShortInput | null;
+  sciHooks?: string | readonly string[] | null;
+}): string {
+  const banner = [
+    "## 全书 PageFeed（BookJudgment · faces 01–08）",
+    "page_feed_shape=full_book_01_08",
+    "本枪=全书批断包：总纲+agenda 覆盖全脸；下列为各脸 PageFeedMatrix allowlist 有值切片（非仅 face02 样例）。",
+    "标签=全书分脸切片 / 全书 PageFeedMatrix allowlist（pack 01–08）——禁止解读为单页 本页切片/face02-only。",
+    "层注：本枪允许传统词，下游 soft（Trace 裸传统≠用户可见终稿；依据骨架，非用户可见终稿）。",
+  ].join("\n");
+  const parts: string[] = [banner];
+  for (const face of DECISION_PAGE_IDS) {
+    // Per-face body without page-centric headers; re-label as whole-pack.
+    const body = formatPageSliceFeed({
+      key: face,
+      chartText: input.chartText,
+      ziwei: input.ziwei,
+      question: input.question,
+      topic: input.topic,
+      locale: input.locale,
+      cfp: input.cfp,
+      sciHooks: input.sciHooks,
+      withAllowlistHeader: false,
+    });
+    const allow = formatPageFeedAllowlistHeader(face);
+    if (!body?.trim() && !allow?.trim()) continue;
+    const allowWhole = (allow ?? "").replace(
+      `## PageFeedMatrix allowlist（face ${face}`,
+      `## 全书 PageFeedMatrix allowlist（face ${face} · pack 01–08`,
+    );
+    const bodyWhole = (body ?? "").replace(
+      `## 本页切片（page ${face}`,
+      `## 全书分脸切片（face ${face} · pack 01–08`,
+    );
+    parts.push([allowWhole, bodyWhole].filter((x) => x.trim()).join("\n\n"));
+  }
+  return parts.join("\n\n");
+}
+
 export function appendPageSliceFeed(
   parts: string[],
   input: Parameters<typeof formatPageSliceFeed>[0],

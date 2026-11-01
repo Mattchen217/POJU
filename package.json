@@ -127,7 +127,8 @@
     "test:p4-quoted-script": "tsx scripts/test-p4-quoted-script-gate.ts",
     "test:companion-evidence-slot": "tsx scripts/test-companion-evidence-slot.ts",
     "test:invented-user-number": "tsx scripts/test-invented-user-number.ts",
-    "test:invented-partner-chart": "tsx scripts/test-invented-partner-chart.ts"
+    "test:invented-partner-chart": "tsx scripts/test-invented-partner-chart.ts",
+    "test:book-judgment-one-call": "tsx scripts/test-book-judgment-one-call-per-run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

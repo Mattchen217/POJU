@@ -29,17 +29,23 @@ export const BASE_ANALYSIS_GATE_ERROR = "BASE_ANALYSIS_DELIVERY_GATE_FAILED";
  * 依据块锚点闸：只杀 0 锚点（结论悬空 / 假装有依据）。
  * 不设数字下限：任何 ≥1 的下限都会误杀"完整的最短承重证据链"，并逼模型注水凑数。
  */
-export function auditEvidenceMarkDensity(text: string): ComplianceViolation[] {
+export function auditEvidenceMarkDensity(
+  text: string,
+  locale = "zh",
+): ComplianceViolation[] {
   const out: ComplianceViolation[] = [];
+  // TERMS-PIPELINE-SPEC-v1: model emits free traditional in evidence; code autoMark
+  // produces markers. Density must audit post-mark text, not raw model prose.
+  const prepared = prepareTextForGlossaryRender(text, locale);
   // ZH + EN dual-layer labels (v1 RichReadingText / isEvidenceLeadLabel)
   const re =
     /\*\*(?:依据与推理|Evidence\s*&\s*reasoning|Evidencia\s+y\s+razonamiento|Beweis\s*&\s*Schlussfolgerung|Preuves\s+et\s+raisonnement)[:：]\*\*([\s\S]*?)(?=\n#{2,3}\s|\n*$)/gi;
   let m: RegExpExecArray | null;
   let idx = 0;
-  while ((m = re.exec(text)) !== null) {
+  while ((m = re.exec(prepared)) !== null) {
     idx += 1;
     const marks = new Set(m[1]?.match(/⟦t:[^|⟧]+/g) ?? []);
-    // 不设数字下限：任何 ≥1 的数字下限都会误杀"完整的最短承重证据链"（真 2 环完整就该 2 环），
+    // 不设数字下限：任意 >=1 的数字下限都会误杀"完整的最短承重证据链"（真 2 环完整就给 2 环），
     // 并逼模型注水凑数。质量由「完整的最短」内容约束 + 推理端「完整承重链」自检 + 人工验收管。
     // 代码只兜最硬一条：依据块存在、却一个承重锚点都没有 = 结论悬空 = 假装有依据。
     if (marks.size === 0) {
@@ -121,7 +127,7 @@ export function auditBaseAnalysisDelivery(
     ...auditMarkerCompleteness(marked, locale),
     ...auditShenShaAgainstInstance(marked, structured),
     // 依据锚点始终审完整原文（含依据块）
-    ...auditEvidenceMarkDensity(text),
+    ...auditEvidenceMarkDensity(text, locale),
   ]);
 
   if (violations.length > 0) {
@@ -168,6 +174,6 @@ export function buildBaseAnalysisRegenHint(
 ): string {
   const labels = [...new Set(violations.map((v) => v.label))].slice(0, 12).join(", ");
   return locale.startsWith("zh")
-    ? `\n\n【元报告落库门禁仍未通过（定点修补已用尽）— 须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；标记用标准形 ⟦t:<slug>|<贴题白话>⟧（软译由系统填；第2格白话不得为空）；禁裸干支/禁词见 system 禁词块；零大运/零年龄段时间锚。返回完整正文，勿截断。`
-    : `\n\n[BASE-ANALYSIS DELIVERY GATE STILL FAILING after surgical repair — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from structured inventory; markers as ⟦t:<slug>|<contextual plain>⟧ (system fills soft; plain slot must be non-empty); honor system banned-terms block; zero decade/age-band anchors. Return complete text.`;
+    ? `\n\n【元报告落库门禁仍未通过（定点修补已用尽）—须完整重写 Markdown 正文】问题：${labels}。神煞只能逐字取自本次 structured 实例清单；正文零传统命理词；依据块写闭集多字传统真词（禁止打标壳；软译由代码层处理）；禁裸干支；遵守 system 禁词块；零大运/零年龄段时间锚。返回完整正文，勿截断。`
+    : `\n\n[BASE-ANALYSIS DELIVERY GATE STILL FAILING after surgical repair — rewrite COMPLETE Markdown body] Issues: ${labels}. Shen_sha ONLY from structured inventory; body = vernacular only; evidence = closed-set multi-char traditional (no marker shells; soft-translate is code-side); honor system banned-terms block; zero decade/age-band anchors. Return complete text.`;
 }

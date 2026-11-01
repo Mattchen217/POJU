@@ -84,3 +84,12 @@
 - 不合并 A1/A2 自造词进 `POJU_TERMS`  
 - 不改 iztro / doushu 规则  
 - 不把 P1 与 Phase 10 混成同一 PR（P1 已在独立 commit/分支）
+
+---
+
+## Dual-layer addendum (Phase 11 soft/pack wire)
+
+- Soft delivery (`sliceForPage` / `formatPageSliceFeed` / body visible): still **zero** unmapped traditional Ziwei.
+- Evidence / BookJudgment destiny+all feeds: may include labeled `## 紫微传统闭集（依据层…）` + `formatGlobalSegmentFeedDuties` when `zfpOmitted=false`.
+- Science judgment mode: no traditional closed-set.
+- On-topic: CFP+ZFP per-segment duties; never dump whole chart into every section.

@@ -249,6 +249,8 @@ export async function generateCompanionDayPairCards(input: {
 
   const thinking_effort: ReasoningEffort = input.thinking_effort ?? "medium";
   const allowQualityRetry = thinking_effort !== "high";
+  /** Lab uses high: one provider call per /run (no quality loop, no JSON repair hop). */
+  const allowRepair = thinking_effort !== "high";
   const cacheSession = companionCacheSessionId(`${input.sessionId}:${locale}`);
 
   let userContent = user;
@@ -283,7 +285,7 @@ export async function generateCompanionDayPairCards(input: {
       validate: (parsed) => validatePairDays(parsed, expectedIndexes),
       repairHint: (missing) =>
         `Return JSON {"days":[...]} with day_index matching feed (${expectedIndexes.join(",")}). Missing: ${missing.join(", ")}`,
-      allowRepair: true,
+      allowRepair,
     });
 
     pairDays = out.value.days.map((d) => sanitizePairDay(d, locale));
