@@ -77,19 +77,6 @@ export type LabArtifacts = {
    * Body reads serves_face slices; per-page judgment bypassed.
    */
   book_judgment_pack?: import("@/lib/llm/pro/delivery/book-judgment/schema").BookJudgmentPack | null;
-  /**
-   * BookJudgment dual-gun continuation (Lab/macro one provider call per HTTP).
-   * Destiny units + degrade meta carried across `book_judgment_shot_continue` hops.
-   */
-  book_judgment_shot?: {
-    phase: import("@/lib/llm/pro/delivery/lab/provider-call-budget").BookJudgmentLabShotPhase;
-    degrade_reason?: string;
-    degrade_detail?: string;
-    means_classes?: string[];
-    destiny_units?: import("@/lib/llm/pro/delivery/book-judgment/schema").BookJudgmentUnit[];
-    destiny_pattern_hits_used?: string[];
-    destiny_science_tags_used?: string[];
-  } | null;
   /** page → assignment / plan / page_schema / marked */
   by_page: Partial<
     Record<

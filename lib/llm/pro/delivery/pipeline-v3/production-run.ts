@@ -50,7 +50,6 @@ import {
   BODY_ACCEPTANCE_CONTINUE_RULE,
   POLISH_ACCEPTANCE_CONTINUE_RULE,
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
-import { BOOK_JUDGMENT_SHOT_CONTINUE_RULE } from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import { productionV3LabId } from "@/lib/llm/pro/delivery/pipeline-v3/wall-tail";
 
 export { productionV3LabId };
@@ -60,7 +59,6 @@ import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 export const PRODUCTION_V3_TASK_ID = "v3.step";
 
 const V3_CONTINUE_RULES = new Set([
-  BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
   "write_dispatch_continue",
   "soft_dispatch_continue",
   POLISH_ACCEPTANCE_CONTINUE_RULE,

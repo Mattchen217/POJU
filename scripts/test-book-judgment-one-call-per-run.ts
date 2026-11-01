@@ -1,8 +1,7 @@
-﻿/**
+/**
  * Lab/macro contract: one Lab `/run` HTTP ⇒ at most one LLM provider call.
- * BookJudgment: one-shot first; true ~300s wall timeout-budget degrade → two-shot
- * across POSTs. Quality/validate AND early stream_stall/499/zombie must NOT
- * schedule book_judgment_shot_continue (surface real failure for Lab diagnose).
+ * BookJudgment: ONE-SHOT ONLY (Max lock 2026-11-01). No two-shot / degrade /
+ * book_judgment_shot_continue. Timeout, stall, quality → hard fail.
  *
  * Run: pnpm exec tsx scripts/test-book-judgment-one-call-per-run.ts
  */
@@ -10,64 +9,47 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import {
-  BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
   deliveryLabTransportMaxAttempts,
-  isBookJudgmentShotContinueRule,
   LAB_MAX_PROVIDER_CALLS_PER_HTTP,
 } from "../lib/llm/pro/delivery/lab/provider-call-budget";
-import {
-  isBookJudgmentGenerateContinue,
-  isBookJudgmentTimeoutDegradeReason,
-  type BookJudgmentGenerateContinue,
-} from "../lib/llm/pro/delivery/book-judgment/generate";
 import { isV3DispatchContinue } from "../lib/llm/pro/delivery/pipeline-v3/production-run";
 
 const root = path.join(__dirname, "..");
 
 assert.equal(LAB_MAX_PROVIDER_CALLS_PER_HTTP, 1);
 assert.equal(deliveryLabTransportMaxAttempts(), 1);
-assert.ok(isBookJudgmentShotContinueRule(BOOK_JUDGMENT_SHOT_CONTINUE_RULE));
-assert.ok(isV3DispatchContinue(BOOK_JUDGMENT_SHOT_CONTINUE_RULE));
 
 const generateSrc = fs.readFileSync(
   path.join(root, "lib/llm/pro/delivery/book-judgment/generate.ts"),
   "utf8",
 );
 assert.match(generateSrc, /single_provider_call\??:/);
-assert.match(generateSrc, /continueTo\("two_destiny"/);
-assert.match(generateSrc, /continueTo\("two_science"/);
 assert.match(generateSrc, /deliveryLabTransportMaxAttempts\(\)/);
-assert.match(generateSrc, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
-/** Lab single path must not fall through into stacked finishTwoShotStacked. */
-{
-  const singleBlockStart = generateSrc.indexOf("if (single) {");
-  assert.ok(singleBlockStart > 0, "single_provider_call branch");
-  const legacyStart = generateSrc.indexOf("// --- Legacy stacked path");
-  assert.ok(legacyStart > singleBlockStart, "legacy after single");
-  const singleBlock = generateSrc.slice(singleBlockStart, legacyStart);
-  assert.doesNotMatch(
-    singleBlock,
-    /finishTwoShotStacked/,
-    "Lab single branch must not call stacked two-shot",
-  );
-  assert.match(singleBlock, /runDestinyShot/);
-  assert.match(singleBlock, /runScienceShot/);
-}
+assert.match(generateSrc, /一枪双轨/);
+assert.doesNotMatch(generateSrc, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
+assert.doesNotMatch(generateSrc, /continueTo\(/);
+assert.doesNotMatch(generateSrc, /two_destiny/);
+assert.doesNotMatch(generateSrc, /runDestinyShot/);
+assert.doesNotMatch(generateSrc, /finishTwoShotStacked/);
+assert.doesNotMatch(generateSrc, /isBookJudgmentTimeoutDegradeReason/);
+assert.doesNotMatch(generateSrc, /force_two_shot/);
+assert.doesNotMatch(generateSrc, /BookJudgmentGenerateContinue/);
 
 const runStepSrc = fs.readFileSync(
   path.join(root, "lib/llm/pro/delivery/lab/run-step-v3.ts"),
   "utf8",
 );
 assert.match(runStepSrc, /single_provider_call:\s*true/);
-assert.match(runStepSrc, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
-assert.match(runStepSrc, /isBookJudgmentGenerateContinue/);
-assert.match(runStepSrc, /book_judgment_shot_continue_schedule/);
-/** Wrapper must treat shot continue as dispatch continue (ok:true), else client never POSTs gun 2. */
+assert.doesNotMatch(runStepSrc, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
+assert.doesNotMatch(runStepSrc, /isBookJudgmentGenerateContinue/);
+assert.doesNotMatch(runStepSrc, /book_judgment_shot_continue/);
+assert.doesNotMatch(runStepSrc, /book_judgment_shot/);
+
 {
   const dc = runStepSrc.indexOf("const dispatchContinue =");
   assert.ok(dc > 0, "dispatchContinue in runLabStepV3");
   const dcBlock = runStepSrc.slice(dc, dc + 700);
-  assert.match(dcBlock, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
+  assert.doesNotMatch(dcBlock, /BOOK_JUDGMENT_SHOT_CONTINUE/);
   assert.match(dcBlock, /soft_dispatch_continue/);
   assert.match(dcBlock, /fill_dispatch_continue/);
   assert.match(dcBlock, /mark_dispatch_continue/);
@@ -77,7 +59,7 @@ const pageSrc = fs.readFileSync(
   path.join(root, "app/ops/delivery-lab/[lab_id]/page.tsx"),
   "utf8",
 );
-assert.match(pageSrc, /book_judgment_shot_continue/);
+assert.doesNotMatch(pageSrc, /book_judgment_shot_continue/);
 
 for (const rel of [
   "lib/llm/pro/delivery/pipeline-v3/content-body.ts",
@@ -97,43 +79,7 @@ for (const rel of [
   );
 }
 
-const cont: BookJudgmentGenerateContinue = {
-  ok: false,
-  continue: true,
-  reason: BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
-  next_shot_phase: "two_destiny",
-  tokens_used: 0,
-  shot_mode: "one",
-  degrade_meta: { reason: "llm_timeout" },
-};
-assert.ok(isBookJudgmentGenerateContinue(cont));
-assert.equal(isBookJudgmentGenerateContinue({ ok: true, pack: {} as never, tokens_used: 0, shot_mode: "one" }), false);
-
-/** Timeout-budget degrade ONLY — quality + early stall/499 must not degrade. */
-{
-  assert.equal(isBookJudgmentTimeoutDegradeReason("llm_timeout"), true);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("Request timed out after 300000ms"), true);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("AbortError"), true);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("aborted due to maxDuration"), true);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("function time budget exceeded"), true);
-  // Early StreamLake/OR 499 / zombie SSE / 60s chunk stall — hard fail, no continue.
-  assert.equal(isBookJudgmentTimeoutDegradeReason("stream_stall"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("chunk_stall"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("provider_abort"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("cancelled"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("finish_cancelled"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("means_prescription"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("under_density"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("coerce_failed"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("schema"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("empty_response"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("json_parse"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("truncated", "length"), false);
-  assert.equal(isBookJudgmentTimeoutDegradeReason("quality_drift"), false);
-}
-
-
-/** openrouter-stream: zombie/chunk stall → stream_stall (not llm_timeout degrade bait). */
+/** openrouter-stream: zombie/chunk stall → stream_stall (hard fail, not soft alias). */
 {
   const streamSrc = fs.readFileSync(
     path.join(root, "lib/llm/openrouter-stream.ts"),
@@ -151,59 +97,31 @@ assert.equal(isBookJudgmentGenerateContinue({ ok: true, pack: {} as never, token
     stallThrows.every((r) => r === "stream_stall"),
     `chunk stall must throw stream_stall, got ${stallThrows.join(",")}`,
   );
-  assert.equal(
-    stallThrows.includes("llm_timeout"),
-    false,
-    "chunk stall must not throw llm_timeout (would auto-continue two_destiny)",
-  );
-  assert.match(
-    streamSrc,
-    /stream_stall HARD FAIL|Do NOT throw llm_timeout/,
-    "stall comment must forbid timeout-degrade path",
-  );
+  assert.equal(stallThrows.includes("llm_timeout"), false);
+  assert.doesNotMatch(streamSrc, /book_judgment_shot_continue/);
+  assert.doesNotMatch(streamSrc, /isBookJudgmentTimeoutDegradeReason/);
 }
 
-/** finishOneShot: validate/coerce hard-fail; only timeout-class returns degrade → continueTo. */
+/** Budget + production: no BookJudgment continue rule. */
 {
-  assert.doesNotMatch(
-    generateSrc,
-    /return \{ degrade: true, reason: "coerce_failed"/,
-    "coerce_failed must not degrade",
+  const budget = fs.readFileSync(
+    path.join(root, "lib/llm/pro/delivery/lab/provider-call-budget.ts"),
+    "utf8",
   );
-  assert.doesNotMatch(
-    generateSrc,
-    /if \(isDegradeReason\(validated\.reason/,
-    "validate fail must not call isDegradeReason for degrade",
+  assert.doesNotMatch(budget, /BOOK_JUDGMENT_SHOT_CONTINUE/);
+  assert.doesNotMatch(budget, /two_destiny/);
+  assert.match(budget, /LAB_MAX_PROVIDER_CALLS_PER_HTTP\s*=\s*1/);
+
+  const prod = fs.readFileSync(
+    path.join(root, "lib/llm/pro/delivery/pipeline-v3/production-run.ts"),
+    "utf8",
   );
-  assert.match(
-    generateSrc,
-    /Validate\/quality fail: hard fail/,
-    "validate hard-fail comment present",
-  );
-  assert.match(
-    generateSrc,
-    /isBookJudgmentTimeoutDegradeReason/,
-    "timeout degrade helper exported/used",
-  );
-  const finishOne = generateSrc.indexOf("const finishOneShot = async");
-  const meansInject = generateSrc.indexOf("const meansInjectFor =");
-  assert.ok(finishOne > 0 && meansInject > finishOne, "finishOneShot block bounds");
-  const finishBlock = generateSrc.slice(finishOne, meansInject);
-  assert.match(finishBlock, /if \(isDegradeReason\(shot\.reason/);
-  assert.match(finishBlock, /degrade: true/);
-  assert.doesNotMatch(
-    finishBlock,
-    /means_prescription[\s\S]*degrade: true/,
-    "means_prescription must not trigger degrade inside finishOneShot",
-  );
-  assert.match(
-    finishBlock,
-    /reason: "coerce_failed"[\s\S]*shot_mode: "one"/,
-    "coerce_failed returns ok:false one-shot fail",
-  );
+  assert.doesNotMatch(prod, /BOOK_JUDGMENT_SHOT_CONTINUE/);
+  assert.equal(isV3DispatchContinue("book_judgment_shot_continue"), false);
+  assert.equal(isV3DispatchContinue("soft_dispatch_continue"), true);
 }
 
-/** Pipeline-wide Lab LLM steps: transport=1; soft has no callLLM; companion Lab = high (no repair stack). */
+/** Pipeline-wide Lab LLM steps: transport=1; soft has no callLLM; companion Lab = high. */
 {
   const soft = fs.readFileSync(
     path.join(root, "lib/llm/pro/delivery/pipeline-v3/evidence-soft.ts"),
@@ -216,11 +134,6 @@ assert.equal(isBookJudgmentGenerateContinue({ ok: true, pack: {} as never, token
   );
   assert.match(companion, /const allowRepair = thinking_effort !== "high"/);
   assert.match(runStepSrc, /thinking_effort:\s*"high"/);
-  const prod = fs.readFileSync(
-    path.join(root, "lib/llm/pro/delivery/pipeline-v3/production-run.ts"),
-    "utf8",
-  );
-  assert.match(prod, /BOOK_JUDGMENT_SHOT_CONTINUE_RULE/);
 }
 
 console.log("PASS test-book-judgment-one-call-per-run");

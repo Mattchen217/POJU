@@ -925,8 +925,7 @@ export default function DeliveryLabConsolePage() {
           (data.attempt?.gate_verdict?.failed_rule === "write_dispatch_continue" ||
             data.attempt?.gate_verdict?.failed_rule === "fill_dispatch_continue" ||
             data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue" ||
-            data.attempt?.gate_verdict?.failed_rule === "soft_dispatch_continue" ||
-            data.attempt?.gate_verdict?.failed_rule === "book_judgment_shot_continue");
+            data.attempt?.gate_verdict?.failed_rule === "soft_dispatch_continue");
 
         if (continueDispatch) {
           const out = data.attempt?.output_to_next_stage as

@@ -1,11 +1,7 @@
 /**
- * BookJudgmentPack generate gun — prefer one-shot dual-track.
- * Degrade to two-shot (destiny then science, then merge) ONLY on true ~300s
- * Vercel wall / function maxDuration / explicit shot budget exhausted
- * (timeout / llm_timeout / AbortError-maxDuration).
- * Early StreamLake/OR 499 / zombie SSE / stream_stall / provider_abort → hard fail
- * (surface for Lab diagnose; do NOT auto-continue to two_destiny).
- * Quality / validate / coerce failures hard-fail the step — no gun split.
+ * BookJudgmentPack generate gun — one-shot dual-track ONLY (Max lock 2026-11-01).
+ * No two-shot / degrade / book_judgment_shot_continue. Timeout, stall, quality,
+ * validate, coerce → hard fail the step. Lab: one main_delivery per /run HTTP.
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -16,11 +12,7 @@ import {
   PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
-import {
-  BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
-  deliveryLabTransportMaxAttempts,
-  type BookJudgmentLabShotPhase,
-} from "@/lib/llm/pro/delivery/lab/provider-call-budget";
+import { deliveryLabTransportMaxAttempts } from "@/lib/llm/pro/delivery/lab/provider-call-budget";
 import {
   buildLabCallTrace,
   type LabCallTrace,
@@ -107,8 +99,6 @@ export type BookJudgmentGenerateOk = {
   shot_mode: BookJudgmentShotMode;
   last_raw_text?: string;
   call_trace: LabCallTrace;
-  degraded_from_one?: boolean;
-  degrade_reason?: string;
 };
 
 export type BookJudgmentGenerateFail = {
@@ -123,100 +113,6 @@ export type BookJudgmentGenerateFail = {
   call_trace?: LabCallTrace;
   shot_mode?: BookJudgmentShotMode;
 };
-
-/** Lab/macro: this hop fired one gun; client/production must re-POST for next shot. */
-export type BookJudgmentGenerateContinue = {
-  ok: false;
-  continue: true;
-  reason: typeof BOOK_JUDGMENT_SHOT_CONTINUE_RULE;
-  next_shot_phase: Exclude<BookJudgmentLabShotPhase, "one">;
-  tokens_used: number;
-  shot_mode: BookJudgmentShotMode;
-  degrade_meta?: {
-    reason: string;
-    detail?: string;
-    means_classes?: string[];
-  };
-  destiny_units?: BookJudgmentUnit[];
-  destiny_pattern_hits_used?: string[];
-  destiny_science_tags_used?: string[];
-  last_raw_text?: string;
-  call_trace?: LabCallTrace;
-  draft_pack?: BookJudgmentPack;
-};
-
-export type BookJudgmentGenerateResult =
-  | BookJudgmentGenerateOk
-  | BookJudgmentGenerateFail
-  | BookJudgmentGenerateContinue;
-
-export function isBookJudgmentGenerateContinue(
-  r: BookJudgmentGenerateResult,
-): r is BookJudgmentGenerateContinue {
-  return (
-    r.ok === false &&
-    "continue" in r &&
-    r.continue === true &&
-    r.reason === BOOK_JUDGMENT_SHOT_CONTINUE_RULE
-  );
-}
-
-type DegradeCarry = {
-  degrade: true;
-  reason: string;
-  detail?: string;
-  means_classes?: string[];
-  draft_pack?: BookJudgmentPack;
-  text?: string;
-  trace?: LabCallTrace;
-};
-
-/**
- * Max lock (2026-11-01): one-shot → two-shot ONLY for true Vercel ~300s wall /
- * function maxDuration / explicit shot budget exhausted.
- * Quality / validate / coerce / schema / density / means_prescription → hard fail.
- * Early StreamLake/OR 499 / zombie SSE / 60s chunk stall → stream_stall (etc.) hard
- * fail — must NOT match here or Lab hides the cause via book_judgment_shot_continue.
- * `finish` kept for call-site compat; truncation (length/max_tokens) is NOT degrade.
- */
-export function isBookJudgmentTimeoutDegradeReason(
-  reason: string,
-  _finish?: string | null,
-): boolean {
-  const r = (reason ?? "").toLowerCase().trim();
-  // Provider mid-stream death / zombie body cancel — visible hard fail, not degrade.
-  if (
-    r.includes("stream_stall") ||
-    r.includes("chunk_stall") ||
-    r.includes("provider_abort") ||
-    r === "cancelled" ||
-    r === "canceled" ||
-    r === "finish_cancelled" ||
-    r === "finish_canceled"
-  ) {
-    return false;
-  }
-  return (
-    r.includes("timeout") ||
-    r.includes("timed out") ||
-    r.includes("llm_timeout") ||
-    r.includes("maxduration") ||
-    r.includes("time budget") ||
-    r.includes("time_budget") ||
-    r.includes("deadline") ||
-    r.includes("etimedout") ||
-    // True client/parent abort near wall (AbortError / aborted due to maxDuration).
-    // Intentionally NOT bare provider_abort (excluded above).
-    r.includes("aborterror") ||
-    r.includes("aborted due to maxduration") ||
-    (r.includes("abort") && !r.includes("provider_abort"))
-  );
-}
-
-/** @deprecated alias — prefer isBookJudgmentTimeoutDegradeReason */
-function isDegradeReason(reason: string, finish: string | null): boolean {
-  return isBookJudgmentTimeoutDegradeReason(reason, finish);
-}
 
 function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
   // Phase 10: never feed classical 格名 into judgment prompts — hit_id:level only.
@@ -595,25 +491,11 @@ export async function runBookJudgmentPackGenerate(input: {
   question?: string | null;
   agenda?: string | null;
   science_feed?: string | null;
-  /** Force two-shot without trying one. */
-  force_two_shot?: boolean;
   /**
-   * Lab/macro: at most one provider call this invocation.
-   * Timeout-budget degrade / second gun returns `book_judgment_shot_continue`
-   * for a fresh HTTP (quality fails do not continue).
+   * Lab/macro: at most one provider call this invocation (transport maxAttempts=1).
+   * No continue hops — timeout/quality hard-fail.
    */
   single_provider_call?: boolean;
-  /** Which gun to fire when single_provider_call (default one / force_two → two_destiny). */
-  shot_phase?: BookJudgmentLabShotPhase;
-  /** Carry from prior two_destiny continue hop. */
-  prior_destiny_units?: BookJudgmentUnit[];
-  prior_destiny_pattern_hits_used?: string[];
-  prior_destiny_science_tags_used?: string[];
-  degrade_meta?: {
-    reason: string;
-    detail?: string;
-    means_classes?: string[];
-  };
 }): Promise<BookJudgmentGenerateResult> {
   const chartText = input.chart_fact_pack?.trim() ?? "";
   const ziwei = input.ziwei_fact_pack ?? null;
@@ -621,434 +503,91 @@ export async function runBookJudgmentPackGenerate(input: {
   const quotaBlock = formatQuotaTableForPrompt(quota);
   let tokens_used = 0;
   const single = Boolean(input.single_provider_call);
-  const shotPhase: BookJudgmentLabShotPhase =
-    input.shot_phase ??
-    (input.force_two_shot ? "two_destiny" : "one");
 
-  const finishOneShot = async (): Promise<
-    BookJudgmentGenerateOk | BookJudgmentGenerateFail | DegradeCarry
-  > => {
-    const user_feed = feedBlock({
-      chartText,
-      ziwei,
-      locale: input.locale,
-      question: input.question,
-      agenda: input.agenda,
-      science_feed: input.science_feed,
-      thesis_block: input.thesis_block,
-      mode: "all",
-    });
-    const user = [
-      `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
-      `按配额表产出；total_min_units=${quota.total_min_units}；每脸 dual-track + serves_segment。`,
-      quotaBlock,
-      user_feed,
-    ].join("\n\n");
-    const shot = await callPackShot({
-      phase: "book_judgment_pack_one",
-      system: PACK_SYSTEM,
-      user,
-      user_feed,
-      session_id: input.session_id,
-      timeout_ms: input.timeout_ms,
-      dispatch_attempt: input.dispatch_attempt,
-      single_provider_call: single,
-      signal: input.signal,
-    });
-    tokens_used += shot.tokens_used;
-    if (!shot.ok) {
-      if (shot.reason === "scare_redline") {
-        return {
-          ok: false,
-          reason: "scare_redline",
-          tokens_used,
-          last_raw_text: shot.text.slice(0, 12_000),
-          call_trace: shot.call_trace,
-          shot_mode: "one",
-        };
-      }
-      if (isDegradeReason(shot.reason ?? "", shot.finish)) {
-        return { degrade: true, reason: shot.reason ?? "one_shot_fail", text: shot.text, trace: shot.call_trace };
-      }
-      return {
-        ok: false,
-        reason: shot.reason ?? "one_shot_fail",
-        tokens_used,
-        last_raw_text: shot.text.slice(0, 12_000),
-        call_trace: shot.call_trace,
-        shot_mode: "one",
-      };
-    }
-    const units = coerceUnits(shot.parsed);
-    if (!units) {
-      // Quality/parse fail: hard fail — do NOT degrade to two-shot.
-      return {
-        ok: false,
-        reason: "coerce_failed",
-        tokens_used,
-        last_raw_text: shot.text.slice(0, 12_000),
-        call_trace: shot.call_trace,
-        shot_mode: "one",
-      };
-    }
-    const draft = buildPackDraft({
-      locale: input.locale,
-      question_id: input.question_id,
-      thesis_ref: input.thesis_ref,
-      chartText,
-      ziwei,
-      shot_mode: "one",
-      units,
-      pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
-      science_tags_used: stringList(shot.parsed, "science_tags_used"),
-    });
-    const classicalNames = (ziwei?.patternHits ?? [])
-      .map((h) => (h.name ?? "").trim())
-      .filter(Boolean);
-    const validated = validateBookJudgmentPack(draft, quota, {
-      classical_pattern_names: classicalNames,
-    });
-    if (!validated.ok) {
-      // Validate/quality fail: hard fail — never schedule two_destiny continue.
-      return {
-        ok: false,
-        reason: validated.reason,
-        detail: validated.detail,
-        draft_pack: draft,
-        tokens_used,
-        last_raw_text: shot.text.slice(0, 12_000),
-        call_trace: shot.call_trace,
-        shot_mode: "one",
-      };
-    }
+  const user_feed = feedBlock({
+    chartText,
+    ziwei,
+    locale: input.locale,
+    question: input.question,
+    agenda: input.agenda,
+    science_feed: input.science_feed,
+    thesis_block: input.thesis_block,
+    mode: "all",
+  });
+  const user = [
+    `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
+    `按配额表产出；total_min_units=${quota.total_min_units}；每脸 dual-track + serves_segment。`,
+    quotaBlock,
+    user_feed,
+  ].join("\n\n");
+  const shot = await callPackShot({
+    phase: "book_judgment_pack_one",
+    system: PACK_SYSTEM,
+    user,
+    user_feed,
+    session_id: input.session_id,
+    timeout_ms: input.timeout_ms,
+    dispatch_attempt: input.dispatch_attempt,
+    single_provider_call: single,
+    signal: input.signal,
+  });
+  tokens_used += shot.tokens_used;
+  if (!shot.ok) {
     return {
-      ok: true,
-      pack: validated.pack,
+      ok: false,
+      reason: shot.reason ?? "one_shot_fail",
       tokens_used,
-      shot_mode: "one",
       last_raw_text: shot.text.slice(0, 12_000),
       call_trace: shot.call_trace,
+      shot_mode: "one",
     };
-  };
-
-  const meansInjectFor = (
-    degradeMeta?: {
-      reason: string;
-      detail?: string;
-      means_classes?: string[];
-    },
-  ): string =>
-    degradeMeta?.means_classes?.length
-      ? [
-          `## 一枪 means_prescription 失败类（二枪必须避开 · 改写成正写句模）`,
-          `className=${degradeMeta.means_classes.join(" · ")}`,
-          degradeMeta.detail ? `detail=${degradeMeta.detail}` : "",
-          `正写：science=机制/偏差/负荷；destiny=命理判断；convergence=交汇张力。禁原样复述 feed 操作语。`,
-        ]
-          .filter(Boolean)
-          .join("\n")
-      : "";
-
-  /** Destiny gun only (one provider call). */
-  const runDestinyShot = async (
-    degradeMeta?: {
-      reason: string;
-      detail?: string;
-      means_classes?: string[];
-    },
-  ): Promise<
-    | {
-        ok: true;
-        units: BookJudgmentUnit[];
-        pattern_hits_used: string[];
-        science_tags_used: string[];
-        text: string;
-        call_trace?: LabCallTrace;
-      }
-    | BookJudgmentGenerateFail
-  > => {
-    const meansInject = meansInjectFor(degradeMeta);
-    const destinyFeed = feedBlock({
-      chartText,
-      ziwei,
-      locale: input.locale,
-      question: input.question,
-      agenda: input.agenda,
-      thesis_block: input.thesis_block,
-      mode: "destiny",
-    });
-    const destinyUser = [
-      `## BookJudgmentPack · 两枪·destiny locale=${input.locale}`,
-      `只产出 track=destiny（可少量 convergence）。覆盖配额表全部 faces/段。`,
-      meansInject,
-      quotaBlock,
-      destinyFeed,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    const dShot = await callPackShot({
-      phase: "book_judgment_pack_destiny",
-      system: PACK_SYSTEM,
-      user: destinyUser,
-      user_feed: destinyFeed,
-      session_id: input.session_id,
-      timeout_ms: input.timeout_ms,
-      dispatch_attempt: input.dispatch_attempt,
-      single_provider_call: single,
-      signal: input.signal,
-    });
-    tokens_used += dShot.tokens_used;
-    if (!dShot.ok) {
-      return {
-        ok: false,
-        reason: dShot.reason ?? "destiny_shot_fail",
-        tokens_used,
-        last_raw_text: dShot.text.slice(0, 12_000),
-        call_trace: dShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-    const destinyUnits = (coerceUnits(dShot.parsed) ?? []).filter(
-      (u) => u.track === "destiny" || u.track === "convergence",
-    );
-    if (!destinyUnits.length) {
-      return {
-        ok: false,
-        reason: "destiny_coerce_failed",
-        tokens_used,
-        last_raw_text: dShot.text.slice(0, 12_000),
-        call_trace: dShot.call_trace,
-        shot_mode: "two",
-      };
-    }
+  }
+  const units = coerceUnits(shot.parsed);
+  if (!units) {
     return {
-      ok: true,
-      units: destinyUnits,
-      pattern_hits_used: stringList(dShot.parsed, "pattern_hits_used"),
-      science_tags_used: stringList(dShot.parsed, "science_tags_used"),
-      text: dShot.text,
-      call_trace: dShot.call_trace,
-    };
-  };
-
-  /** Science gun + merge (one provider call; destiny units must be carried in). */
-  const runScienceShot = async (
-    destinyUnits: BookJudgmentUnit[],
-    destinyHits: { pattern_hits_used: string[]; science_tags_used: string[] },
-    degradeMeta?: {
-      reason: string;
-      detail?: string;
-      means_classes?: string[];
-    },
-  ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
-    const meansInject = meansInjectFor(degradeMeta);
-    const scienceFeed = feedBlock({
-      chartText,
-      ziwei,
-      locale: input.locale,
-      question: input.question,
-      agenda: input.agenda,
-      science_feed: input.science_feed,
-      mode: "science",
-    });
-    const scienceUser = [
-      `## BookJudgmentPack · 两枪·science locale=${input.locale}`,
-      `只产出 track=science（可少量 convergence）。覆盖配额表；禁「科学维N」空壳。合并键 serves_face。`,
-      meansInject,
-      quotaBlock,
-      scienceFeed,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    const sShot = await callPackShot({
-      phase: "book_judgment_pack_science",
-      system: PACK_SYSTEM,
-      user: scienceUser,
-      user_feed: scienceFeed,
-      session_id: input.session_id,
-      timeout_ms: input.timeout_ms,
-      dispatch_attempt: input.dispatch_attempt,
-      single_provider_call: single,
-      signal: input.signal,
-    });
-    tokens_used += sShot.tokens_used;
-    if (!sShot.ok) {
-      return {
-        ok: false,
-        reason: sShot.reason ?? "science_shot_fail",
-        tokens_used,
-        last_raw_text: sShot.text.slice(0, 12_000),
-        call_trace: sShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-    const scienceUnits = (coerceUnits(sShot.parsed) ?? []).filter(
-      (u) => u.track === "science" || u.track === "convergence",
-    );
-    if (!scienceUnits.length) {
-      return {
-        ok: false,
-        reason: "science_coerce_failed",
-        tokens_used,
-        last_raw_text: sShot.text.slice(0, 12_000),
-        call_trace: sShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-
-    const units = mergeUnits(destinyUnits, scienceUnits);
-    const draft = buildPackDraft({
-      locale: input.locale,
-      question_id: input.question_id,
-      thesis_ref: input.thesis_ref,
-      chartText,
-      ziwei,
-      shot_mode: "two",
-      units,
-      pattern_hits_used: [
-        ...destinyHits.pattern_hits_used,
-        ...stringList(sShot.parsed, "pattern_hits_used"),
-      ],
-      science_tags_used: [
-        ...destinyHits.science_tags_used,
-        ...stringList(sShot.parsed, "science_tags_used"),
-      ],
-    });
-    const classicalNames = (ziwei?.patternHits ?? [])
-      .map((h) => (h.name ?? "").trim())
-      .filter(Boolean);
-    const validated = validateBookJudgmentPack(draft, quota, {
-      classical_pattern_names: classicalNames,
-    });
-    if (!validated.ok) {
-      return {
-        ok: false,
-        reason: validated.reason,
-        detail: validated.detail,
-        draft_pack: draft,
-        tokens_used,
-        last_raw_text: sShot.text.slice(0, 12_000),
-        call_trace: sShot.call_trace,
-        shot_mode: "two",
-      };
-    }
-    return {
-      ok: true,
-      pack: validated.pack,
+      ok: false,
+      reason: "coerce_failed",
       tokens_used,
-      shot_mode: "two",
-      last_raw_text: sShot.text.slice(0, 12_000),
-      call_trace: sShot.call_trace,
-      degraded_from_one: Boolean(degradeMeta),
-      degrade_reason: degradeMeta?.reason,
+      last_raw_text: shot.text.slice(0, 12_000),
+      call_trace: shot.call_trace,
+      shot_mode: "one",
     };
-  };
-
-  /** Legacy in-process two-shot (non-Lab only). Lab must use single_provider_call. */
-  const finishTwoShotStacked = async (
-    degradeMeta?: {
-      reason: string;
-      detail?: string;
-      means_classes?: string[];
-    },
-  ): Promise<BookJudgmentGenerateOk | BookJudgmentGenerateFail> => {
-    const destiny = await runDestinyShot(degradeMeta);
-    if (!destiny.ok) return destiny;
-    return runScienceShot(
-      destiny.units,
-      {
-        pattern_hits_used: destiny.pattern_hits_used,
-        science_tags_used: destiny.science_tags_used,
-      },
-      degradeMeta,
-    );
-  };
-
-  const continueTo = (
-    next: Exclude<BookJudgmentLabShotPhase, "one">,
-    extra: Partial<BookJudgmentGenerateContinue> & {
-      degrade_meta?: BookJudgmentGenerateContinue["degrade_meta"];
-    },
-  ): BookJudgmentGenerateContinue => ({
-    ok: false,
-    continue: true,
-    reason: BOOK_JUDGMENT_SHOT_CONTINUE_RULE,
-    next_shot_phase: next,
-    tokens_used,
-    shot_mode: next === "two_destiny" || next === "two_science" ? "two" : "one",
-    ...extra,
+  }
+  const draft = buildPackDraft({
+    locale: input.locale,
+    question_id: input.question_id,
+    thesis_ref: input.thesis_ref,
+    chartText,
+    ziwei,
+    shot_mode: "one",
+    units,
+    pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
+    science_tags_used: stringList(shot.parsed, "science_tags_used"),
   });
-
-  // --- Lab/macro single-call phases ---
-  if (single) {
-    if (shotPhase === "two_science") {
-      const units = input.prior_destiny_units ?? [];
-      if (!units.length) {
-        return {
-          ok: false,
-          reason: "missing_prior_destiny_units",
-          tokens_used,
-          shot_mode: "two",
-        };
-      }
-      return runScienceShot(
-        units,
-        {
-          pattern_hits_used: input.prior_destiny_pattern_hits_used ?? [],
-          science_tags_used: input.prior_destiny_science_tags_used ?? [],
-        },
-        input.degrade_meta,
-      );
-    }
-
-    if (shotPhase === "two_destiny" || input.force_two_shot) {
-      const destiny = await runDestinyShot(
-        input.degrade_meta ??
-          (input.force_two_shot ? { reason: "force_two_shot" } : undefined),
-      );
-      if (!destiny.ok) return destiny;
-      return continueTo("two_science", {
-        degrade_meta:
-          input.degrade_meta ??
-          (input.force_two_shot ? { reason: "force_two_shot" } : undefined),
-        destiny_units: destiny.units,
-        destiny_pattern_hits_used: destiny.pattern_hits_used,
-        destiny_science_tags_used: destiny.science_tags_used,
-        last_raw_text: destiny.text.slice(0, 12_000),
-        call_trace: destiny.call_trace,
-      });
-    }
-
-    // shotPhase === "one"
-    const one = await finishOneShot();
-    if ("degrade" in one) {
-      return continueTo("two_destiny", {
-        degrade_meta: {
-          reason: one.reason,
-          detail: one.detail,
-          means_classes: one.means_classes,
-        },
-        draft_pack: one.draft_pack,
-        last_raw_text: one.text?.slice(0, 12_000),
-        call_trace: one.trace,
-        shot_mode: "one",
-      });
-    }
-    return one;
+  const classicalNames = (ziwei?.patternHits ?? [])
+    .map((h) => (h.name ?? "").trim())
+    .filter(Boolean);
+  const validated = validateBookJudgmentPack(draft, quota, {
+    classical_pattern_names: classicalNames,
+  });
+  if (!validated.ok) {
+    return {
+      ok: false,
+      reason: validated.reason,
+      detail: validated.detail,
+      draft_pack: draft,
+      tokens_used,
+      last_raw_text: shot.text.slice(0, 12_000),
+      call_trace: shot.call_trace,
+      shot_mode: "one",
+    };
   }
-
-  // --- Legacy stacked path (scripts / non-Lab) ---
-  if (input.force_two_shot) {
-    return finishTwoShotStacked({ reason: "force_two_shot" });
-  }
-
-  const one = await finishOneShot();
-  if ("degrade" in one) {
-    return finishTwoShotStacked({
-      reason: one.reason,
-      detail: one.detail,
-      means_classes: one.means_classes,
-    });
-  }
-  return one;
+  return {
+    ok: true,
+    pack: validated.pack,
+    tokens_used,
+    shot_mode: "one",
+    last_raw_text: shot.text.slice(0, 12_000),
+    call_trace: shot.call_trace,
+  };
 }
