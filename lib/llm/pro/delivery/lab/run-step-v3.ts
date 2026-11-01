@@ -540,7 +540,7 @@ async function executeV3(
     const detail = climateAbsent
       ? "climate_balance 显式缺项 FAIL · 需月令可算调候"
       : !citationGate.passed
-        ? `patternHits on-topic=${citationGate.on_topic_n} uncited=${citationGate.uncited.join("、") || "—"}`
+        ? `patternHits on-topic=${citationGate.on_topic_n} uncited=${citationGate.uncited.join("、") || "—"} omitted=${citationGate.omitted.length}`
         : `dims=${thesis.dimensions.length} · 六维总纲 · patternHits=${patternHits.length}`;
     return {
       input_payload: {

@@ -17,7 +17,9 @@ import {
   classifyPatternHit,
   evaluateThesisPatternHitsCitationGate,
   selectOnTopicPatternHits,
+  selectPatternHitsWithOmits,
   thesisCitesPatternHit,
+  ZFP_HIT_OMIT_HINT_PREFIX,
   ZFP_PATTERN_HIT_KEY_PREFIX,
 } from "@/lib/llm/pro/delivery/thesis/pattern-hits-into-dims";
 import { ziweiPatternHitId } from "@/lib/ziwei/soft-zfp-labels";
@@ -74,6 +76,31 @@ function testClassify() {
   console.log("ok classifyPatternHit");
 }
 
+/** Root-cause regression: detector level=caution must NOT demote natal ming_geju. */
+function testClassifyCautionLevelMingGeju() {
+  assert.equal(
+    classifyPatternHit(hit("紫微入命", "caution")),
+    "ming_geju",
+    "紫微入命-class with level=caution stays ming_geju",
+  );
+  assert.equal(
+    classifyPatternHit(hit("府相朝垣", "caution")),
+    "ming_geju",
+    "府相朝垣-class with level=caution stays ming_geju",
+  );
+  assert.equal(
+    classifyPatternHit(hit("日月同宫", "caution")),
+    "ming_geju",
+    "日月同宫-class with level=caution stays ming_geju",
+  );
+  // Synthetic alternate natal name also in MING_GEJU_NAME_RE
+  assert.equal(classifyPatternHit(hit("明珠出海", "caution")), "ming_geju");
+  // True break name still caution_break
+  assert.equal(classifyPatternHit(hit("羊陀夹忌", "caution")), "caution_break");
+  assert.equal(classifyPatternHit(hit("化忌入命", "caution")), "caution_break");
+  console.log("ok classify caution-level ming_geju (name-class wins)");
+}
+
 function testSelectCareerVsRelationship() {
   const hits = [
     hit("紫微入命", "excellent"),
@@ -103,6 +130,36 @@ function testSelectCareerVsRelationship() {
   console.log("ok selectOnTopicPatternHits career vs relationship omit");
 }
 
+function testSelectWithOmitsAuditable() {
+  const hits = [
+    hit("紫微入命", "caution"),
+    hit("羊陀夹忌", "caution"),
+    hit("化禄入财", "good"),
+  ];
+  const { on_topic, omitted } = selectPatternHitsWithOmits(hits, "career");
+  assert.equal(on_topic.length, 1);
+  assert.equal(on_topic[0]!.name, "紫微入命");
+  assert.equal(on_topic[0]!.hit_class, "ming_geju");
+  assert.ok(
+    omitted.some((o) => o.name === "羊陀夹忌" && o.reason === "caution_break"),
+  );
+  assert.ok(
+    omitted.some((o) => o.name === "化禄入财" && o.reason === "off_topic_category"),
+  );
+  const feed0 = buildThesisCalcFeed(baseStructured(), {
+    question_category: "career",
+    as_of: new Date(Date.UTC(2026, 5, 15)),
+  });
+  const feed = absorbPatternHitsIntoFeed(feed0, hits, "career");
+  assert.ok(
+    feed.dimensions.day_master_strength.hints.some((h) =>
+      h.startsWith(ZFP_HIT_OMIT_HINT_PREFIX),
+    ),
+    "omits leave auditable zfp_omit:* hints",
+  );
+  console.log("ok selectPatternHitsWithOmits auditable omit");
+}
+
 function testAbsorbIntoFeed() {
   const structured = baseStructured();
   const feed0 = buildThesisCalcFeed(structured, {
@@ -130,7 +187,6 @@ function testAbsorbIntoFeed() {
     feed.dimensions.day_master_strength.hints.some((h) => h.includes(idMing)),
     "hints carry zfp_hit",
   );
-  // Bazi items preserved
   for (const k of baziKeysBefore) {
     assert.ok(
       feed.dimensions.day_master_strength.items.some((i) => i.key === k),
@@ -138,6 +194,43 @@ function testAbsorbIntoFeed() {
     );
   }
   console.log("ok absorbPatternHitsIntoFeed");
+}
+
+/** All on-topic selected hits must land — including caution-level ming_geju-class. */
+function testAbsorbAllOnTopicIncludingCautionMing() {
+  const structured = baseStructured();
+  const feed0 = buildThesisCalcFeed(structured, {
+    question_category: "other",
+    as_of: new Date(Date.UTC(2026, 5, 15)),
+  });
+  // Synthetic triad: two excellent + one caution-level natal (lab-shaped but not lab-id).
+  const hits = [
+    hit("府相朝垣", "excellent"),
+    hit("日月同宫", "excellent"),
+    hit("紫微入命", "caution"),
+  ];
+  const feed = absorbPatternHitsIntoFeed(feed0, hits, "other");
+  const keys = feed.dimensions.day_master_strength.items.map((i) => i.key);
+  for (const name of ["府相朝垣", "日月同宫", "紫微入命"]) {
+    const id = ziweiPatternHitId(name);
+    assert.ok(
+      keys.includes(ZFP_PATTERN_HIT_KEY_PREFIX + id),
+      `absorb missing ${name} (${id})`,
+    );
+  }
+  const thesis = buildChartThesisFromStructured(structured, null, {
+    question_category: "other",
+    as_of: new Date(Date.UTC(2026, 5, 15)),
+    patternHits: hits,
+  });
+  const gate = evaluateThesisPatternHitsCitationGate(thesis, hits, "other");
+  assert.equal(gate.passed, true);
+  assert.equal(gate.on_topic_n, 3);
+  assert.deepEqual(gate.uncited, []);
+  for (const h of selectOnTopicPatternHits(hits, "other")) {
+    assert.ok(thesisCitesPatternHit(thesis, h), "cites " + h.name);
+  }
+  console.log("ok absorb ALL on-topic incl. caution-level ming_geju");
 }
 
 function testBuildCitesHits() {
@@ -165,7 +258,6 @@ function testCitationGateFailWhenStripped() {
     as_of: new Date(Date.UTC(2026, 5, 15)),
     patternHits: hits,
   });
-  // Strip ZFP absorb artifacts → gate must FAIL (no blind pass).
   const stripped: ChartThesis = {
     ...thesis,
     dimensions: thesis.dimensions.map((d) => ({
@@ -189,6 +281,47 @@ function testCitationGateFailWhenStripped() {
   console.log("ok citation gate FAIL when hits uncited");
 }
 
+/** Partial cite must FAIL — gate iterates every on-topic selected hit. */
+function testCitationGateFailPartialCite() {
+  const structured = baseStructured();
+  const hits = [
+    hit("府相朝垣", "excellent"),
+    hit("日月同宫", "excellent"),
+    hit("紫微入命", "caution"),
+  ];
+  const thesis = buildChartThesisFromStructured(structured, null, {
+    question_category: "other",
+    as_of: new Date(Date.UTC(2026, 5, 15)),
+    patternHits: hits,
+  });
+  // Keep first two cites; strip only 紫微入命 — classic under-count miss.
+  const idStrip = ziweiPatternHitId("紫微入命");
+  const partial: ChartThesis = {
+    ...thesis,
+    dimensions: thesis.dimensions.map((d) => ({
+      ...d,
+      classical_basis: (d.classical_basis ?? []).filter(
+        (it) => !String(it.key ?? "").includes(idStrip) && !String(it.summary_zh ?? "").includes("紫微入命"),
+      ),
+      conclusion_zh: (d.conclusion_zh ?? "")
+        .split("。")
+        .filter((seg) => !seg.includes("紫微入命") && !seg.includes(idStrip))
+        .join("。"),
+      usable_claims_hint: (d.usable_claims_hint ?? []).filter(
+        (h) => !h.includes(idStrip) && !h.includes("紫微入命"),
+      ),
+    })),
+  };
+  const gate = evaluateThesisPatternHitsCitationGate(partial, hits, "other");
+  assert.equal(gate.passed, false, "partial cite must FAIL");
+  assert.equal(gate.failed_rule, "thesis:pattern_hits_uncited");
+  assert.equal(gate.on_topic_n, 3);
+  assert.ok(gate.uncited.includes("紫微入命"));
+  assert.ok(!gate.uncited.includes("府相朝垣"));
+  assert.ok(!gate.uncited.includes("日月同宫"));
+  console.log("ok citation gate FAIL on partial cite");
+}
+
 function testOmitWhenNoHitsOrOffTopic() {
   const structured = baseStructured();
   const thesisEmpty = buildChartThesisFromStructured(structured, null, {
@@ -203,11 +336,16 @@ function testOmitWhenNoHitsOrOffTopic() {
   const wealthOnly = [hit("化禄入财", "good")];
   const selected = selectOnTopicPatternHits(wealthOnly, "relationship");
   assert.equal(selected.length, 0, "relationship omits wealth_cai entirely");
-  assert.equal(
-    evaluateThesisPatternHitsCitationGate(thesisEmpty, wealthOnly, "relationship")
-      .passed,
-    true,
-    "off-topic-only hits → gate omit/pass",
+  const gate = evaluateThesisPatternHitsCitationGate(
+    thesisEmpty,
+    wealthOnly,
+    "relationship",
+  );
+  assert.equal(gate.passed, true, "off-topic-only hits → gate omit/pass");
+  assert.ok(
+    gate.omitted.some(
+      (o) => o.name === "化禄入财" && o.reason === "off_topic_category",
+    ),
   );
   console.log("ok omit when no ZFP / off-topic");
 }
@@ -220,10 +358,14 @@ function testAssignMenuExcludesZfpPrefix() {
 }
 
 testClassify();
+testClassifyCautionLevelMingGeju();
 testSelectCareerVsRelationship();
+testSelectWithOmitsAuditable();
 testAbsorbIntoFeed();
+testAbsorbAllOnTopicIncludingCautionMing();
 testBuildCitesHits();
 testCitationGateFailWhenStripped();
+testCitationGateFailPartialCite();
 testOmitWhenNoHitsOrOffTopic();
 testAssignMenuExcludesZfpPrefix();
 console.log("\nall pattern-hits-into-dims checks passed\n");
