@@ -17,7 +17,7 @@ import {
   LabPipelinePanel,
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
-import { LabTermsPipelinePanel, type LiveEvidenceSoftStages } from "../_components/LabTermsPipelinePanel";
+import { LabTermsPipelinePanel, type LiveEvidenceSoftStages, type LiveLocalePolishMeta } from "../_components/LabTermsPipelinePanel";
 import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 import {
   BOOK_ASSEMBLE_STEP_KEY,
@@ -346,6 +346,22 @@ export default function DeliveryLabConsolePage() {
         ? (attempt.input_payload as { locale: string }).locale
         : null;
     return fromInput;
+  })();
+  /** locale_polish LLM meta from call_trace.parsed.locale_polish (model/tokens / skipped). */
+  const liveEvidenceSoftPolishMeta = (() => {
+    if (!isEvidenceSoftStep || !attempt) return null;
+    const parsed = attempt.call_trace?.parsed;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "locale_polish" in parsed &&
+      (parsed as { locale_polish?: unknown }).locale_polish &&
+      typeof (parsed as { locale_polish?: unknown }).locale_polish === "object"
+    ) {
+      return (parsed as { locale_polish: LiveLocalePolishMeta }).locale_polish;
+    }
+    return null;
   })();
   const isGateStep =
     selectedKind === "gate" || selectedKind === "gate_book_judgment";
@@ -740,7 +756,9 @@ export default function DeliveryLabConsolePage() {
           ? {
               stage_id: selected,
               polish_locale: polishLocale,
-              ...(isBodyPolish && opts?.skip_polish ? { skip_polish: true } : {}),
+              ...((isBodyPolish || isEvidenceSoft) && opts?.skip_polish
+                ? { skip_polish: true }
+                : {}),
             }
           : isCompanionDailyRun
             ? {
@@ -1112,7 +1130,7 @@ export default function DeliveryLabConsolePage() {
         </div>
       ) : null}
 
-      <LabTermsPipelinePanel liveStages={liveEvidenceSoftStages} liveLocale={liveEvidenceSoftLocale} />
+      <LabTermsPipelinePanel liveStages={liveEvidenceSoftStages} liveLocale={liveEvidenceSoftLocale} livePolishMeta={liveEvidenceSoftPolishMeta} />
 
       {legacyTenPaper ? (
         <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">
@@ -1372,15 +1390,19 @@ export default function DeliveryLabConsolePage() {
                     <option value="es">es</option>
                   </select>
                 </label>
-                {isPolishStep ? (
+                {isPolishStep || isEvidenceSoftStep ? (
                   <button
                     type="button"
                     disabled={busy || !canRun}
                     onClick={() => void postAction("run", { skip_polish: true })}
                     className="rounded-md border border-amber-400/50 px-3 py-1.5 text-sm text-amber-200 disabled:opacity-40"
-                    title="跳过润色：对冻结正文跑 full 表面闸；过才可解锁下一步"
+                    title={
+                      isEvidenceSoftStep
+                        ? "跳过 locale_polish：仍跑 bare→mark→soft；Lab 显示 stage3=skipped（非 identity 冒充）"
+                        : "跳过润色：对冻结正文跑 full 表面闸；过才可解锁下一步"
+                    }
                   >
-                    跳过润色
+                    {isEvidenceSoftStep ? "跳过多语润色" : "跳过润色"}
                   </button>
                 ) : null}
               </>
@@ -1489,7 +1511,7 @@ export default function DeliveryLabConsolePage() {
               {isPolishStep
                 ? " 润色可选 zh/en/fr/es 一语；或「跳过润色」（将对正文跑 full 表面闸）。"
                 : isEvidenceSoftStep
-                  ? " 依据软译 · SPEC-v1 代码路径：bare→mark→locale_polish→soft（Call trace ⑤ + 上方 Terms panel Live）。locale 选 zh/en/fr/es。"
+                  ? " 依据软译 · SPEC-v1 全链：1 bare → 2 mark(⟦t:⟧) → 3 locale_polish(真实 LLM，zh 也跑) → 4 soft。Terms panel Live 四阶段全显；Call trace ⑤ 含 polish model/tokens。可「跳过多语润色」。locale 选 zh/en/fr/es。"
                   : isCompanionSeal
                     ? " 侧轨：Assemble 通过后解锁；仍需 P1+P3 正文才能封版（不挡交付主链 cursor）。抽 Brief + 本地 30 日流日 pack；locale=输出语言。"
                     : isCompanionDaily

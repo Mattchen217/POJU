@@ -129,7 +129,8 @@
     "test:invented-user-number": "tsx scripts/test-invented-user-number.ts",
     "test:invented-partner-chart": "tsx scripts/test-invented-partner-chart.ts",
     "test:book-judgment-one-call": "tsx scripts/test-book-judgment-one-call-per-run.ts",
-    "test:face-body-vernacular-iron": "tsx scripts/test-face-body-vernacular-iron-rule.ts"
+    "test:face-body-vernacular-iron": "tsx scripts/test-face-body-vernacular-iron-rule.ts",
+    "test:lab-evidence-soft-stages": "tsx scripts/test-lab-evidence-soft-stages.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
