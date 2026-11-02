@@ -105,7 +105,7 @@ export const SHARED_BRIEF_TO_REPORT_CONTRACT = [
   `## 共享加厚合同（简报 → 报告 · 四语共用）`,
   `1. 角色：输入=简报骨架；输出=读者报告正文。禁止把「草稿完整」当成「禁止加长」。`,
   `2. 保真：不得改主张方向；不得丢 conditions / not_choosing / evidence_pointer 约束；指针若含 unit id（如 d01、d02、d03）必须全保留。`,
-  `3. 展开：用骨架主张 + 本页 pack 主张含义，把「为什么是这条路」写成可读段落；命理/科学/交汇在读者层自然展开（pointer 页：主文加厚 + 指针仍指向 02；主文不得只剩一句口号）。`,
+  `3. 展开：用骨架主张 + 本页 pack 主张含义，把「为什么是这条路」写成可读白话段落；结构理由/科学/交汇在读者层自然展开——禁把软投影或命理专名写进可见正文（pointer 页：主文加厚 + 指针仍指向 02；主文不得只剩一句口号）。`,
   `4. 禁近义换皮：主推与骨架仅同义替换且总可见量增幅不足 → 厚度闸 FAIL。`,
   `5. 禁灌水：不加空泛励志、不加手段处方清单、不加与题无关背景；仍守恐吓红线。`,
   `6. 双轨：科学轨含义须在可见层可感（01 可在主推/条件点出负荷/现状偏差等，不必写「科学」标签）。`,
@@ -136,7 +136,7 @@ export function face02ReportSlotTemplate(locale: BodyPolishLocale): string {
   return [
     `## Face 02 槽位报告感（同 schema · 勿改字段名）`,
     `- page_title / page_subtitle：可微调语感，不扩写成摘要。`,
-    `- destiny_reason（A）：成段命理理由——为何如此，非行动处方。`,
+    `- destiny_reason（A）：成段「为何如此」白话理由（禁命理专名与软投影）——非行动处方。`,
     `- science_mechanism（B）：成段科学机制。`,
     `- convergence（C）：成段交汇张力；禁宜/可收费试点等手段。`,
     `- verifiable_anchors（D）：短锚；格局名从本页切片抄；保留 unit id。`,
@@ -180,7 +180,7 @@ export function assemblePolishLocaleSystem(input: {
     ``,
     `## 其它硬锁`,
     `- 禁止为写厚而发明截止点/人数配额/未收集比例/$/%/年龄（#11）；时长与具体量只保留收集已给量。`,
-    `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
+    `- 禁止把 chart_anchors / 软投影 / 传统真词写进可见字段；锚与折层原样保留（双层）。`,
     `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
     `- 禁可照念对话引号；举例禁用模糊词时不要加引号。`,
     `- 机检失败规则：\`gate_polish_thin_synonym\`（过薄/换皮）、指针丢 unit id。`,
@@ -197,6 +197,6 @@ export function polishFaceSelfCheck(locale: BodyPolishLocale): string {
     `- 是否达到报告下限（非「略长于草稿」）？`,
     `- 是否近义换皮（主推几乎同义且总可见量未明显加厚）？`,
     `- evidence_pointer 是否仍含草稿全部 unit id（含 science）？`,
-    `- 输出语言是否整页=${locale}？可见层零命理专名报幕？`,
+    `- 输出语言是否整页=${locale}？可见层零命理专名、零软投影（核心定位域/资源流转/资源转化/金土·木性·截伐等）？传统/软只留锚与折层？`,
   ].join("\n");
 }
