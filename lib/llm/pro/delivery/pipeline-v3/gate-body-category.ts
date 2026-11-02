@@ -22,6 +22,11 @@ import {
   inventedPartnerChartGateDetail,
   INVENTED_PARTNER_CHART_RULE_ID,
 } from "@/lib/llm/pro/delivery/pipeline-v3/invented-partner-chart";
+import {
+  buildFaceBodySurfaceAvoidanceForPolish,
+  gateFaceBodySurface,
+} from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-body-surface";
+import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 
 /** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
@@ -327,6 +332,13 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- 对照信号只观察，禁写成新动作清单或复读切辅叙事。",
       "- 禁四周甘特/第三份完整药方；信号须能指回上游。",
       "- 完整可读短句即可；草稿已完整则保量。",
+    ].join("\n");
+  }
+  if (isFaceDeliveryKey(String(key))) {
+    return [
+      ...common,
+      buildFaceBodySurfaceAvoidanceForPolish(),
+      "- 草稿已成段则保量；禁近义换皮；禁把软投影/专名从锚槽粘进正文。",
     ].join("\n");
   }
   return [
@@ -919,6 +931,21 @@ export function gateBodyCategoryB(input: {
         notes,
       };
     }
+    return null;
+  }
+
+  // Face 01–08 · Max iron rule: visible body vernacular only (destiny + soft coined → surface)
+  {
+    const faceHit = gateFaceBodySurface({
+      key: input.key,
+      page_schema: input.page_schema,
+      surface,
+    });
+    if (faceHit) return faceHit;
+  }
+
+  if (isFaceDeliveryKey(String(input.key))) {
+    // Face keys have no legacy P1–P6 category rules below.
     return null;
   }
 
