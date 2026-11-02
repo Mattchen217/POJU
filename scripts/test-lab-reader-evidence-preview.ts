@@ -80,6 +80,9 @@ assert.equal(direct.includes("【交汇】"), false);
 {
   const mash = "把这些合在一起看，金土耗元截伐锚元与损失厌恶同向";
   const softMash = toSoftTranslatedPlainText(mash, "zh");
+  assert.equal(softMash.includes("截伐"), false, `reader soft no 截伐: ${softMash}`);
+  assert.equal(softMash.includes("耗元截伐锚元"), false, `reader soft no jam: ${softMash}`);
+  assert.ok(softMash.includes("耗元") && softMash.includes("锚元"), softMash);
   // Soft labels may remain; traditional+own-soft STACKS and EN/ZH mixed stacks must not.
   assert.equal(softMash.includes("命宫核心定位域"), false);
 
@@ -110,6 +113,33 @@ assert.equal(direct.includes("【交汇】"), false);
   const softMarkedZh = toSoftTranslatedPlainText(markedMash, "zh");
   assert.ok(softMarkedZh.includes("耗元") && softMarkedZh.includes("锚元"), softMarkedZh);
   assert.equal(softMarkedZh.includes("耗元锚元"), false, `no abut hard-paste: ${softMarkedZh}`);
+  assert.equal(softMarkedZh.includes("截伐"), false, `marked mash rewrites 截伐: ${softMarkedZh}`);
+  assert.equal(
+    softMarkedZh.includes("耗元截伐锚元"),
+    false,
+    `marked mash no classical jam: ${softMarkedZh}`,
+  );
+
+  const mCai = encodeTermMarker("zw_resource_flow_field", "资源流转域");
+  const mTu = encodeTermMarker("earth", "承托");
+  const echoPlain = toSoftTranslatedPlainText(`${mCai}资源流转${mTu}偏薄`, "zh");
+  assert.equal(
+    echoPlain.includes("资源流转域资源流转"),
+    false,
+    `no prefix echo: ${echoPlain}`,
+  );
+
+  const anchors = toSoftTranslatedPlainText(
+    "日主庚充沛而用木，月令巳火本有调候偏燥，气口不在强弱",
+    "zh",
+  );
+  assert.equal(anchors.includes("庚") || anchors.includes("巳火") || anchors.includes("用木"), false, anchors);
+  const mergedAnchors = mergeReaderEvidenceProse({ text: anchors, locale: "zh" });
+  assert.equal(
+    mergedAnchors.includes("庚") || mergedAnchors.includes("巳火") || mergedAnchors.includes("用木"),
+    false,
+    mergedAnchors,
+  );
   const softMarkedEn = toSoftTranslatedPlainText(markedMash, "en");
   assert.equal(
     softMarkedEn.includes("CoreIdentityField核心定位域"),

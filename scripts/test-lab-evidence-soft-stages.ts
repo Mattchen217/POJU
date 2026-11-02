@@ -230,12 +230,39 @@ async function main() {
     );
     assert.equal(stackSoftEn.includes("核心定位域"), false, stackSoftEn);
     const mashSoft = toSoftTranslatedPlainText("金土耗元截伐锚元", "zh");
-    // Plain soft mash without markers is outside mark path; ensure stack peels still hold:
+    assert.equal(mashSoft.includes("截伐"), false, `no classical 截伐: ${mashSoft}`);
+    assert.equal(mashSoft.includes("耗元截伐锚元"), false, `no jammed mash: ${mashSoft}`);
+    assert.ok(mashSoft.includes("耗元") && mashSoft.includes("锚元"), `keeps softs: ${mashSoft}`);
     assert.equal(
       toSoftTranslatedPlainText("命宫核心定位域", "zh").includes("命宫核心定位域"),
       false,
     );
-    void mashSoft;
+
+    // Prefix soft-echo after marker (polish leftover 资源流转)
+    const { encodeTermMarker } = await import("@/lib/llm/sanitize/term-marking");
+    const mCai = encodeTermMarker("zw_resource_flow_field", "资源流转域");
+    const mTu = encodeTermMarker("earth", "承托");
+    const echoSoft = toSoftTranslatedPlainText(`${mCai}资源流转${mTu}偏薄`, "zh");
+    assert.equal(
+      echoSoft.includes("资源流转域资源流转"),
+      false,
+      `no prefix echo jam: ${echoSoft}`,
+    );
+    assert.ok(echoSoft.includes("资源流转域") && echoSoft.includes("承托"), echoSoft);
+
+    // Verifiable-anchor bare trad after soft parents
+    const anchors = toSoftTranslatedPlainText(
+      "日主庚充沛而用木，月令巳火本有调候偏燥，气口不在强弱",
+      "zh",
+    );
+    assert.equal(anchors.includes("庚"), false, `no bare 庚: ${anchors}`);
+    assert.equal(anchors.includes("巳火"), false, `no bare 巳火: ${anchors}`);
+    assert.equal(anchors.includes("用木"), false, `no bare 用木: ${anchors}`);
+    assert.equal(anchors.includes("日主"), false, `no bare 日主: ${anchors}`);
+    assert.equal(anchors.includes("月令"), false, `no bare 月令: ${anchors}`);
+    assert.ok(anchors.includes("本元") && anchors.includes("刚锋"), anchors);
+    assert.ok(anchors.includes("月纲") && anchors.includes("初照"), anchors);
+    assert.ok(anchors.includes("借舒展"), `用木→借舒展: ${anchors}`);
   }
 
   // EN locale_polish must be REAL LLM (not table-swap-only identity of mark)
