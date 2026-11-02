@@ -6,6 +6,7 @@
  */
 
 import { assembleSoftConnectiveStructuralIfNeeded } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { repairAdjacentSsotSoftGlue } from "@/lib/llm/sanitize/term-marking";
 import {
   composeTripleEvidence,
   splitDualEvidence,
@@ -125,6 +126,8 @@ export function mergeReaderEvidenceProse(opts: {
   }
 
   out = assembleSoftConnectiveStructuralIfNeeded(out, locale);
+  // Soft-plain Lab/report path may already be marker-stripped — repair abutting SSOT softs.
+  out = repairAdjacentSsotSoftGlue(out, locale);
   out = out
     .replace(/\s*\n+\s*/g, joinLocale(locale) === "zh" ? "" : " ")
     .trim();

@@ -9,6 +9,8 @@ import {
   mergeReaderEvidenceProse,
   readerEvidenceHasTrackChrome,
 } from "../lib/llm/pro/delivery/page-schema/reader-evidence-prose";
+import { toSoftTranslatedPlainText } from "../lib/llm/sanitize/compliance-terms";
+import { encodeTermMarker } from "../lib/llm/sanitize/term-marking";
 
 const softStages = {
   "02": [
@@ -42,4 +44,34 @@ assert.equal(direct.includes("【能量配置】"), false);
 assert.equal(direct.includes("【科学】"), false);
 assert.equal(direct.includes("【交汇】"), false);
 
+
+// --- Bug A: hard-paste after marker strip (adjacent softs need connective) ---
+{
+  const mJi = encodeTermMarker("unfavorable_element", "耗元");
+  const mYong = encodeTermMarker("yong_shen", "锚元");
+  const adjacentMarked = `金土${mJi}${mYong}再看窗口`;
+  const softAdjacent = toSoftTranslatedPlainText(adjacentMarked, "zh");
+  assert.ok(softAdjacent.includes("耗元"), `soft has 耗元: ${softAdjacent}`);
+  assert.ok(softAdjacent.includes("锚元"), `soft has 锚元: ${softAdjacent}`);
+  assert.equal(softAdjacent.includes("耗元锚元"), false, `no hard-paste 耗元锚元: ${softAdjacent}`);
+
+  const alreadyPasted = "金土耗元锚元再看窗口";
+  const repaired = mergeReaderEvidenceProse({ text: alreadyPasted, locale: "zh" });
+  assert.equal(repaired.includes("耗元锚元"), false, `merge repairs hard-paste: ${repaired}`);
+  assert.ok(repaired.includes("耗元") && repaired.includes("锚元"), `merge keeps softs: ${repaired}`);
+}
+
+// --- Bug B: traditional+soft stack 命宫核心定位域 must not leak to reader ---
+{
+  const stack = "本案关键看命宫核心定位域的落点。";
+  const softStack = toSoftTranslatedPlainText(stack, "zh");
+  assert.equal(softStack.includes("命宫核心定位域"), false, `no trad+soft stack: ${softStack}`);
+  assert.equal(softStack.includes("命宫"), false, `no bare 命宫: ${softStack}`);
+  assert.ok(softStack.includes("核心定位域"), `soft-only 核心定位域: ${softStack}`);
+
+  const bareMing = "本案关键看命宫的落点。";
+  const softMing = toSoftTranslatedPlainText(bareMing, "zh");
+  assert.equal(softMing.includes("命宫"), false, `bare 命宫 soft-translated: ${softMing}`);
+  assert.ok(softMing.includes("核心定位域"), `bare 命宫 → 核心定位域: ${softMing}`);
+}
 console.log("test-lab-reader-evidence-preview: ok");

@@ -33,6 +33,7 @@ import {
   auditShenShaAgainstInstance,
   auditTermMarkerDensity,
   autoMarkBareTerms,
+  repairAdjacentSsotSoftGlue,
   buildTermMarkingPromptBlock,
   buildTermMarkingFewShot,
   detectBrokenMarkers,
@@ -76,6 +77,7 @@ import {
   wrapBareStemElements,
   wrapBareTenGods,
 } from "@/lib/llm/sanitize/term-marking";
+import { assembleSoftConnectiveStructuralIfNeeded } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { auditEmptyKeepCnBrackets } from "@/lib/llm/sanitize/keep-cn-brackets";
 import {
   BARE_GANZHI_MARKER,
@@ -964,8 +966,15 @@ export function toSoftTranslatedPlainText(text: string, locale: string): string 
     maxPerPara: Number.POSITIVE_INFINITY,
     oncePerText: false,
   });
-  let plain = stripMarkersForPrompt(prepared, locale);
+  // Soft B (zh): thicken broken seams while markers still exist (Bug A — hard-paste after strip).
+  // Non-zh: Latin softs are spaced; avoid pressure-pad soup on CJK gaps under foreign locale.
+  const assembled = locale.trim().toLowerCase().startsWith("zh")
+    ? assembleSoftConnectiveStructuralIfNeeded(prepared, locale)
+    : prepared;
+  let plain = stripMarkersForPrompt(assembled, locale);
   plain = stripBrokenMarkers(plain);
+  // Belt: already-stripped soft abutments (Lab merge / residual).
+  plain = repairAdjacentSsotSoftGlue(plain, locale);
   return scrubLeakedComplianceTerms(plain, locale).trim();
 }
 
