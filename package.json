@@ -131,7 +131,8 @@
     "test:book-judgment-one-call": "tsx scripts/test-book-judgment-one-call-per-run.ts",
     "test:face-body-vernacular-iron": "tsx scripts/test-face-body-vernacular-iron-rule.ts",
     "test:face02-evidence-fold-ui": "tsx scripts/test-face02-evidence-fold-ui.ts",
-    "test:lab-reader-evidence-preview": "tsx scripts/test-lab-reader-evidence-preview.ts"
+    "test:lab-reader-evidence-preview": "tsx scripts/test-lab-reader-evidence-preview.ts",
+    "test:lab-evidence-soft-stages": "tsx scripts/test-lab-evidence-soft-stages.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

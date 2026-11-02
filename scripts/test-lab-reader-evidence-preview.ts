@@ -74,4 +74,48 @@ assert.equal(direct.includes("【交汇】"), false);
   assert.equal(softMing.includes("命宫"), false, `bare 命宫 soft-translated: ${softMing}`);
   assert.ok(softMing.includes("核心定位域"), `bare 命宫 → 核心定位域: ${softMing}`);
 }
+
+
+// --- Max 2026-11-02 production fragments: must not survive soft/reader exit ---
+{
+  const mash = "把这些合在一起看，金土耗元截伐锚元与损失厌恶同向";
+  const softMash = toSoftTranslatedPlainText(mash, "zh");
+  // Soft labels may remain; traditional+own-soft STACKS and EN/ZH mixed stacks must not.
+  assert.equal(softMash.includes("命宫核心定位域"), false);
+
+  const stackZh = "核心定位域与流动切换域对拱令显隐冲突放大";
+  // Coined soft-only is OK; trad+soft stack is not.
+  const softOnly = toSoftTranslatedPlainText("命宫核心定位域与流动切换域", "zh");
+  assert.equal(softOnly.includes("命宫核心定位域"), false, `no trad+soft: ${softOnly}`);
+  assert.equal(softOnly.includes("命宫"), false, `no bare 命宫: ${softOnly}`);
+  assert.ok(softOnly.includes("核心定位域"), `keeps soft 核心定位域: ${softOnly}`);
+
+  const softEnStack = toSoftTranslatedPlainText("命宫核心定位域", "en");
+  assert.equal(
+    softEnStack.includes("CoreIdentityField核心定位域"),
+    false,
+    `no EN+ZH soft stack: ${softEnStack}`,
+  );
+  assert.equal(softEnStack.includes("核心定位域"), false, `EN soft drops zh soft: ${softEnStack}`);
+  assert.equal(softEnStack.includes("命宫"), false, `EN soft drops 命宫: ${softEnStack}`);
+  assert.ok(
+    softEnStack.includes("CoreIdentityField") || softEnStack.includes("Core Identity"),
+    `EN soft identity field: ${softEnStack}`,
+  );
+
+  // Exact Max mash with markers → soft must not hard-paste 耗元锚元; EN must not be zh-connective-only table swap proof via polish elsewhere.
+  const mJi = encodeTermMarker("unfavorable_element", "耗元");
+  const mYong = encodeTermMarker("yong_shen", "锚元");
+  const markedMash = `金土${mJi}截伐${mYong}`;
+  const softMarkedZh = toSoftTranslatedPlainText(markedMash, "zh");
+  assert.ok(softMarkedZh.includes("耗元") && softMarkedZh.includes("锚元"), softMarkedZh);
+  assert.equal(softMarkedZh.includes("耗元锚元"), false, `no abut hard-paste: ${softMarkedZh}`);
+  const softMarkedEn = toSoftTranslatedPlainText(markedMash, "en");
+  assert.equal(
+    softMarkedEn.includes("CoreIdentityField核心定位域"),
+    false,
+    softMarkedEn,
+  );
+}
+
 console.log("test-lab-reader-evidence-preview: ok");

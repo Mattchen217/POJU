@@ -1538,16 +1538,32 @@ export type AutoMarkBareTermsOpts = {
  */
 export function peelTraditionalOwnSoftStacks(text: string, locale = "zh"): string {
   if (!text?.trim()) return text ?? "";
+  // Always include delivery-locale soft AND zh soft (and sibling locales).
+  // Production stacks are often traditional+zh-soft even when delivery locale is en
+  // (e.g. 命宫核心定位域 → CoreIdentityField核心定位域 if only en soft is peeled).
   const loc = toGlossaryLocale(locale);
+  const softLocales: Locale[] = Array.from(
+    new Set<Locale>([loc, "zh", "en", "es", "fr", "de"]),
+  );
   const pairs: Array<{ trad: string; soft: string }> = [];
-  for (const t of POJU_TERMS) {
-    const soft = pickFiveLocale(t.term, loc).trim();
-    const trad = (t.traditional ?? "").trim();
-    if (!trad || soft.length < 2 || soft === trad) continue;
+  const seenPair = new Set<string>();
+  const pushPair = (trad: string, soft: string) => {
+    if (!trad || soft.length < 2 || soft === trad) return;
+    const key = `${trad}\0${soft}`;
+    if (seenPair.has(key)) return;
+    seenPair.add(key);
     pairs.push({ trad, soft });
-    for (const a of t.aliases ?? []) {
-      const alias = String(a ?? "").trim();
-      if (alias.length >= 2 && alias !== soft) pairs.push({ trad: alias, soft });
+  };
+  for (const t of POJU_TERMS) {
+    const trad = (t.traditional ?? "").trim();
+    if (!trad) continue;
+    for (const softLoc of softLocales) {
+      const soft = pickFiveLocale(t.term, softLoc).trim();
+      pushPair(trad, soft);
+      for (const a of t.aliases ?? []) {
+        const alias = String(a ?? "").trim();
+        if (alias.length >= 2) pushPair(alias, soft);
+      }
     }
   }
   pairs.sort((a, b) => b.trad.length + b.soft.length - (a.trad.length + a.soft.length));
@@ -1559,11 +1575,6 @@ export function peelTraditionalOwnSoftStacks(text: string, locale = "zh"): strin
   return out;
 }
 
-/**
- * Remove immediate soft-gloss echo after a term marker:
- * `⟦t:zw_identity_field|核心定位域⟧核心定位域` → marker only.
- * Kept in term-marking so prepareText (mark stage) can clean before soft strip.
- */
 export function stripImmediateSoftGlossEchoAfterMarkers(text: string): string {
   if (!text?.includes("⟦t:")) return text ?? "";
   return text.replace(/⟦t:([^⟦⟧]+)⟧(\s*)([^\s⟦⟧，。；、,.!?]+)/g, (full, inner, ws, next) => {
