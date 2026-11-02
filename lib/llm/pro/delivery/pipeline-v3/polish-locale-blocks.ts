@@ -136,10 +136,10 @@ export function face02ReportSlotTemplate(locale: BodyPolishLocale): string {
   return [
     `## Face 02 槽位报告感（同 schema · 勿改字段名）`,
     `- page_title / page_subtitle：可微调语感，不扩写成摘要。`,
-    `- destiny_reason（A）：成段「为何如此」白话理由（禁命理专名与软投影）——非行动处方。`,
+    `- destiny_reason（A）：成段「为何如此」白话理由（禁裸词「命理」、禁命理专名与软投影）——非行动处方。`,
     `- science_mechanism（B）：成段科学机制。`,
     `- convergence（C）：成段交汇张力；禁宜/可收费试点等手段。`,
-    `- verifiable_anchors（D）：短锚；格局名从本页切片抄；保留 unit id。`,
+    `- verifiable_anchors（D）：短锚；格局名从本页切片抄；须点名本页全部 required_unit_ids（含 science）；传统/软只留此处。`,
     floor,
   ].join("\n");
 }
@@ -197,6 +197,6 @@ export function polishFaceSelfCheck(locale: BodyPolishLocale): string {
     `- 是否达到报告下限（非「略长于草稿」）？`,
     `- 是否近义换皮（主推几乎同义且总可见量未明显加厚）？`,
     `- evidence_pointer 是否仍含草稿全部 unit id（含 science）？`,
-    `- 输出语言是否整页=${locale}？可见层零命理专名、零软投影（核心定位域/资源流转/资源转化/金土·木性·截伐等）？传统/软只留锚与折层？`,
+    `- 输出语言是否整页=${locale}？可见标题+A/B/C 零裸词「命理」、零命理专名、零软投影（核心定位域/资源流转/资源转化/金土·木性·截伐等）？传统/软只留锚与折层？D 是否仍含全部 unit id（含 science）？`,
   ].join("\n");
 }

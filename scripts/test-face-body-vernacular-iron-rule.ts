@@ -10,6 +10,10 @@ import {
   gateFaceBodySurface,
 } from "../lib/llm/pro/delivery/pipeline-v3/gate-face-body-surface";
 import { gateBodyCategoryB } from "../lib/llm/pro/delivery/pipeline-v3/gate-body-category";
+import {
+  BOOK_BODY_PACK_UNIT_MISS_RULE,
+  gateBookJudgmentBodyConsume,
+} from "../lib/llm/pro/delivery/pipeline-v3/gate-book-judgment-body";
 
 function face02(over: Record<string, unknown> = {}) {
   return {
@@ -154,5 +158,109 @@ function face02(over: Record<string, unknown> = {}) {
   const hit = findFaceBodySurfaceHit(faceVisibleBodyBlob("02", page));
   assert.ok(hit && hit.kind === "soft_coined", hit);
 }
+
+
+// --- bare 「命理」 in title / A FAIL; soft in D OK ---
+{
+  const titleHit = findFaceBodySurfaceHit(
+    faceVisibleBodyBlob("02", face02({ page_title: "命理依据" })),
+  );
+  assert.ok(titleHit && titleHit.kind === "destiny_jargon", titleHit);
+  assert.equal(titleHit!.hit, "命理");
+
+  const aHit = findFaceBodySurfaceHit(
+    faceVisibleBodyBlob("02", face02({ destiny_reason: "从命理看，你更吃得住慢热铺垫。" })),
+  );
+  assert.ok(aHit && aHit.kind === "destiny_jargon");
+  assert.equal(aHit!.hit, "命理");
+
+  const softInD = face02({
+    verifiable_anchors: ["命理·命宫", "核心定位域", "d02A", "d02B"],
+  });
+  assert.equal(
+    findFaceBodySurfaceHit(faceVisibleBodyBlob("02", softInD)),
+    null,
+    "命理/soft in D anchors OK",
+  );
+}
+
+// --- Face 02 pack cite: missing science unit id in D FAIL; full cite PASS ---
+{
+  const units = [
+    {
+      id: "d02A",
+      track: "destiny" as const,
+      serves_face: ["02" as const],
+      claim: "承压偏高，开口窗口收窄",
+      anchors: ["庚金"],
+    },
+    {
+      id: "d02B",
+      track: "science" as const,
+      serves_face: ["02" as const],
+      claim: "认知负荷抬高，注意力变窄",
+      anchors: ["cognitive_load"],
+    },
+    {
+      id: "d02C",
+      track: "convergence" as const,
+      serves_face: ["02" as const],
+      claim: "承压与负荷同向收窄开口",
+      anchors: ["庚金", "cognitive_load"],
+    },
+    {
+      id: "d02D",
+      track: "science" as const,
+      serves_face: ["02" as const],
+      claim: "决策带宽被占用时更易扩面",
+      anchors: ["decision_bandwidth"],
+    },
+  ];
+
+  const missScience = gateBookJudgmentBodyConsume({
+    key: "02",
+    pack_units: units,
+    page_schema: {
+      ...face02({
+        destiny_reason: "承压偏高，开口窗口收窄，节奏跟得上才站得住。",
+        science_mechanism: "认知负荷抬高，注意力变窄，容易把临时缺口当成必须立刻铺开的信号。",
+        convergence: "两边同向：承压与负荷一起把开口成本抬高。",
+        // D cites destiny+convergence only — drops science d02B/d02D (Lab #7).
+        verifiable_anchors: ["d02A", "d02C", "命宫·紫微"],
+      }),
+    },
+  });
+  assert.equal(missScience?.passed, false, missScience?.detail);
+  assert.equal(missScience?.failed_rule, BOOK_BODY_PACK_UNIT_MISS_RULE);
+  assert.match(String(missScience?.detail ?? ""), /d02B|d02D|science/);
+
+  // A/B/C naming ids must NOT satisfy cite — only D/evidence slots count.
+  const idsOnlyInProse = gateBookJudgmentBodyConsume({
+    key: "02",
+    pack_units: units,
+    page_schema: {
+      ...face02({
+        destiny_reason: "承压偏高（d02A），开口窗口收窄。",
+        science_mechanism: "认知负荷抬高（d02B、d02D）。",
+        convergence: "同向收窄（d02C）。",
+        verifiable_anchors: ["命宫·紫微", "核心定位域"],
+      }),
+    },
+  });
+  assert.equal(idsOnlyInProse?.passed, false, "ids in A/B/C prose must not pass cite gate");
+  assert.equal(idsOnlyInProse?.failed_rule, BOOK_BODY_PACK_UNIT_MISS_RULE);
+
+  const fullCite = gateBookJudgmentBodyConsume({
+    key: "02",
+    pack_units: units,
+    page_schema: {
+      ...face02({
+        verifiable_anchors: ["d02A", "d02B", "d02C", "d02D", "命宫·紫微"],
+      }),
+    },
+  });
+  assert.equal(fullCite?.passed, true, fullCite?.detail);
+}
+
 
 console.log("ok: face body vernacular iron rule (Face 02 soft+elemental + anchors dual-layer)");

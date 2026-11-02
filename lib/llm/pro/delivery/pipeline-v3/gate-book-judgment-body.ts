@@ -55,20 +55,16 @@ function faceVisibleBlob(faceId: DecisionPageId, page: Record<string, unknown>):
   return parts.join("\n");
 }
 
-/** Evidence / pointer fields that must cite unit ids. */
+/** Evidence / pointer / D-anchor fields that must cite unit ids (not A/B/C prose). */
 function evidenceBlob(faceId: DecisionPageId, page: Record<string, unknown>): string {
   switch (faceId) {
     case "01":
       return String(page.evidence_pointer ?? "");
     case "02":
-      return [
-        String(page.destiny_reason ?? ""),
-        String(page.science_mechanism ?? ""),
-        String(page.convergence ?? ""),
-        ...(Array.isArray(page.verifiable_anchors)
-          ? page.verifiable_anchors.map((x) => String(x ?? ""))
-          : []),
-      ].join("\n");
+      // D only — A/B/C vernacular must not be the cite surface (Lab Face 02 #7).
+      return Array.isArray(page.verifiable_anchors)
+        ? page.verifiable_anchors.map((x) => String(x ?? "")).join("\n")
+        : "";
     case "04":
     case "07":
       return String(page.evidence_fold ?? "");
@@ -76,6 +72,9 @@ function evidenceBlob(faceId: DecisionPageId, page: Record<string, unknown>): st
       return faceVisibleBlob(faceId, page);
   }
 }
+
+/** Faces whose evidence fold/pointer/D slots must name EVERY required_unit_id. */
+const REQUIRE_ALL_UNIT_IDS_IN_EVIDENCE = new Set<DecisionPageId>(["01", "02", "04", "07"]);
 
 function claimBlob(faceId: DecisionPageId, page: Record<string, unknown>): string {
   switch (faceId) {
@@ -261,14 +260,14 @@ export function gateBookJudgmentBodyConsume(input: {
     return overlap >= 6 && overlap / Math.min(uNorm.length, 28) >= 0.35;
   }
 
-  // Face 01: pointer must list every unit id (science included).
-  if (faceId === "01") {
+  // Evidence fold/pointer/D: must cite EVERY required_unit_id (incl. science/convergence).
+  if (REQUIRE_ALL_UNIT_IDS_IN_EVIDENCE.has(faceId)) {
     const pointerMiss = units.filter((u) => !unitCited(citeBlob, u.id));
     if (pointerMiss.length) {
       return {
         passed: false,
         failed_rule: BOOK_BODY_PACK_UNIT_MISS_RULE,
-        detail: `01 依据指针未点名 pack unit：${pointerMiss.map((u) => u.id).join("、")}（须含 science）。`,
+        detail: `Face ${faceId} 依据折层/指针/D锚未点名 pack unit：${pointerMiss.map((u) => u.id).join("、")}（须含全部 required_unit_ids，禁丢 science）。`,
         notes: [
           ...notes,
           BOOK_BODY_PACK_UNIT_MISS_RULE,
@@ -296,12 +295,12 @@ export function gateBookJudgmentBodyConsume(input: {
   const dropped: BookJudgmentTrack[] = [];
   for (const track of presentTracks) {
     const trackUnits = units.filter((u) => u.track === track);
-    const hit =
-      faceId === "01"
-        ? trackUnits.some((u) => unitCited(citeBlob, u.id))
-        : trackUnits.some((u) => unitConsumed(u));
+    const hit = REQUIRE_ALL_UNIT_IDS_IN_EVIDENCE.has(faceId)
+      ? trackUnits.some((u) => unitCited(citeBlob, u.id))
+      : trackUnits.some((u) => unitConsumed(u));
     if (!hit) dropped.push(track);
   }
+
   if (dropped.length) {
     return {
       passed: false,

@@ -34,7 +34,7 @@ const EVIDENCE_LAYER_KEYS = new Set([
  * Extends legacy VISIBLE_JARGON with 金土/木性/截伐-class hits that Lab Face 02 missed.
  */
 export const FACE_BODY_DESTINY_JARGON_RE =
-  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|运岁|月令|时支|日支|奇门|死门|开门|休门|生门|伤门|杜门|景门|惊门|值符|值使|主客|客生主|客来生主|客克主|主生客|主克客|阴遁|阳遁|用神|喜神|忌神|忌旺|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|命宫|财帛|官禄|迁移|仆役|田宅|福德|父母|夫妻|子女|兄弟|疾厄|紫微|天机|太阳|武曲|天同|廉贞|天府|太阴|贪狼|巨门|天相|天梁|七杀|破军|贪狼|化禄|化权|化科|化忌|[金木水火土]{2}|[金木水火土]性|截伐|截金|伐[金木水火土]|泄[金木水火土]|[金木水火土]泄|[金木水火土]旺/;
+  /命理|宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|运岁|月令|时支|日支|奇门|死门|开门|休门|生门|伤门|杜门|景门|惊门|值符|值使|主客|客生主|客来生主|客克主|主生客|主克客|阴遁|阳遁|用神|喜神|忌神|忌旺|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|命宫|财帛|官禄|迁移|仆役|田宅|福德|父母|夫妻|子女|兄弟|疾厄|紫微|天机|太阳|武曲|天同|廉贞|天府|太阴|贪狼|巨门|天相|天梁|七杀|破军|贪狼|化禄|化权|化科|化忌|[金木水火土]{2}|[金木水火土]性|截伐|截金|伐[金木水火土]|泄[金木水火土]|[金木水火土]泄|[金木水火土]旺/;
 
 /**
  * Soft projections that FAIL human review when left in visible body
@@ -259,7 +259,7 @@ export function gateFaceBodySurface(input: {
 export function buildFaceBodySurfaceAvoidanceForPolish(): string {
   return [
     `- \`${FACE_BODY_SURFACE_RULE_ID}\`（Max 铁律）：可见正文（含 page_title/subtitle、main_recommendation/conditions/not_choosing、destiny_reason/science_mechanism/convergence 等）= **纯白话**。`,
-    `  禁命理专名报幕（宫星十神用忌干支岁运合冲、五行并写如金土/木性、截伐类）。`,
+    `  禁命理专名报幕（含裸词「命理」作标题/A/B/C 报幕；宫星十神用忌干支岁运合冲、五行并写如金土/木性、截伐类）。`,
     `  禁软投影/自造软词进正文（如核心定位域、资源流转、资源转化、*Field/*Track/*Shift）。`,
     `  软投影与传统真词 **只** 进 evidence_pointer / evidence_fold / verifiable_anchors（D 锚）；禁改事实方向。`,
   ].join("\n");
