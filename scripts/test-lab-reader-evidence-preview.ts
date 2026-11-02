@@ -148,4 +148,36 @@ assert.equal(direct.includes("【交汇】"), false);
   );
 }
 
+
+// --- Max 2026-11-02: hide ZFP pattern closed refs from reader soft/merge ---
+{
+  const sample =
+    "本案窗口（hit:e044e7cdde6d:good）与负荷同向 (hit:abc123:weak)。";
+  const soft = toSoftTranslatedPlainText(sample, "zh");
+  assert.equal(soft.includes("hit:"), false, `soft no hit: ${soft}`);
+  assert.equal(soft.includes("e044e7cdde6d"), false, `soft no id: ${soft}`);
+  assert.equal(soft.includes("（）"), false, `soft no empty fullwidth parens: ${soft}`);
+  assert.equal(soft.includes("()"), false, `soft no empty ascii parens: ${soft}`);
+  assert.ok(soft.includes("本案窗口"), `soft keeps 本案窗口: ${soft}`);
+  assert.ok(soft.includes("与负荷同向"), `soft keeps 与负荷同向 (must not eat CJK after paren): ${soft}`);
+
+  const merged = mergeReaderEvidenceProse({ text: sample, locale: "zh" });
+  assert.equal(merged.includes("hit:"), false, `merge no hit: ${merged}`);
+  assert.equal(merged.includes("e044e7cdde6d"), false, `merge no id: ${merged}`);
+
+  const lab = mergeLabSoftStageReaderProse(
+    {
+      "02": [
+        { title: "destiny_reason", evidence: "日主偏弱（hit:e044e7cdde6d:good）。" },
+        { title: "science_mechanism", evidence: "负荷过高。" },
+        { title: "convergence", evidence: "同向。" },
+      ],
+    },
+    "zh",
+  );
+  assert.equal(lab.includes("hit:"), false, `lab preview no hit: ${lab}`);
+  assert.equal(lab.includes("e044e7cdde6d"), false, `lab preview no id: ${lab}`);
+  assert.ok(lab.includes("日主偏弱"), `lab keeps destiny prose: ${lab}`);
+}
+
 console.log("test-lab-reader-evidence-preview: ok");

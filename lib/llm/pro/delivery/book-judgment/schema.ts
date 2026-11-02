@@ -233,6 +233,22 @@ export function isPatternHitClosedRef(hit: string): boolean {
   return /^hit:[a-z0-9]+:\S+/i.test(hit.trim());
 }
 
+/**
+ * Strip reader-visible ZFP pattern closed refs (hit:<id>:<level>) and optional
+ * surrounding ASCII/fullwidth parens. Keep raw text for Lab/gate/BookJudgment
+ * validation — call only at soft / merge-for-reader exits.
+ * Token shape aligns with isPatternHitClosedRef; level uses [a-z0-9_-]+ (not \S+) so CJK after ）/parens is not eaten.
+ */
+export function stripPatternHitClosedRefsFromReaderText(text: string): string {
+  if (!text) return text ?? "";
+  return text
+    .replace(/(?:[（(]\s*)?hit:[a-z0-9]+:[a-z0-9][a-z0-9_-]*(?:\s*[）)])?/gi, "")
+    .replace(/[（(]\s*[）)]/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([，。！？；：、,.!?;:])/g, "$1")
+    .trim();
+}
+
 export type BookJudgmentValidateOpts = {
   /** Classical 格局名 — banned bare in claim (use hit:id:level). */
   classical_pattern_names?: readonly string[];

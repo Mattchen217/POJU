@@ -12,6 +12,7 @@ import {
   splitDualEvidence,
   type DualEvidenceParts,
 } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
+import { stripPatternHitClosedRefsFromReaderText } from "@/lib/llm/pro/delivery/book-judgment/schema";
 
 /** Reader-facing track chrome — strip before merge. */
 const TRACK_LABEL_RE =
@@ -131,6 +132,8 @@ export function mergeReaderEvidenceProse(opts: {
   out = out
     .replace(/\s*\n+\s*/g, joinLocale(locale) === "zh" ? "" : " ")
     .trim();
+  // Reader merge-for-reader exit: hide ZFP hit:<id>:<level> closed refs.
+  out = stripPatternHitClosedRefsFromReaderText(out);
   return out;
 }
 

@@ -16,6 +16,7 @@ import {
   type Locale,
   toGlossaryLocale,
 } from "@/lib/glossary/term-glossary";
+import { stripPatternHitClosedRefsFromReaderText } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import { recordUserFacingLeakHit } from "@/lib/glossary/vernacular-leak-feedback";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import {
@@ -975,7 +976,10 @@ export function toSoftTranslatedPlainText(text: string, locale: string): string 
   plain = stripBrokenMarkers(plain);
   // Belt: already-stripped soft abutments (Lab merge / residual).
   plain = repairAdjacentSsotSoftGlue(plain, locale);
-  return scrubLeakedComplianceTerms(plain, locale).trim();
+  plain = scrubLeakedComplianceTerms(plain, locale);
+  // Reader soft-exit: hide ZFP hit:<id>:<level> closed refs (Lab/gate keep raw).
+  plain = stripPatternHitClosedRefsFromReaderText(plain);
+  return plain.trim();
 }
 
 /** @deprecated Use buildTermMarkingPromptBlock — LLM marks terms at generation time. */
