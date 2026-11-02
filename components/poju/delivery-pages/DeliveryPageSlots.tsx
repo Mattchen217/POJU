@@ -29,10 +29,7 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 import { remapP4DimensionNameForCompliance } from "@/lib/llm/pro/delivery/page-schema/p4-compliance-dim-names";
 import { deliverySlotUiCopy } from "@/lib/llm/pro/delivery/delivery-slot-ui-copy";
-import {
-  composeDualEvidence,
-  splitDualEvidence,
-} from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
+import { DualEvidenceBody } from "@/components/poju/delivery-pages/DualEvidenceBody";
 import {
   EmptyFacePageSlots,
   FacePageSlots,
@@ -89,14 +86,6 @@ function slotUiCopy(locale: string) {
   return deliverySlotUiCopy(locale);
 }
 
-function dualEvidenceSectionTitles(locale: string): { meta: string; sci: string } {
-  const l = locale.toLowerCase();
-  if (l.startsWith("zh")) return { meta: "命理依据", sci: "科学依据" };
-  if (l.startsWith("es")) return { meta: "Base metafísica", sci: "Base científica" };
-  if (l.startsWith("fr")) return { meta: "Fondement métaphysique", sci: "Fondement scientifique" };
-  if (l.startsWith("de")) return { meta: "Metaphysische Basis", sci: "Wissenschaftliche Basis" };
-  return { meta: "Metaphysics basis", sci: "Science basis" };
-}
 
 /** One module = existing book chrome (dot title + glass section-card). */
 function SlotCard({
@@ -149,64 +138,6 @@ function SlotCard({
         ) : null}
       </div>
     </article>
-  );
-}
-
-/** Folded evidence: fixed two subsections (命理 / 科学). Prefer structured fields. */
-function DualEvidenceBody({
-  text,
-  locale,
-  metaphysics,
-  science,
-}: {
-  text?: string;
-  locale: string;
-  metaphysics?: string;
-  science?: string;
-}) {
-  const structuredM = (metaphysics ?? "").trim();
-  const structuredS = (science ?? "").trim();
-  const dual =
-    structuredM || structuredS
-      ? composeDualEvidence(structuredM, structuredS)
-      : splitDualEvidence(text);
-  const titles = dualEvidenceSectionTitles(locale);
-  const hasMeta = Boolean(dual.metaphysics_evidence);
-  const hasSci = Boolean(dual.science_evidence);
-  if (!hasMeta && !hasSci) {
-    const fallback = (text ?? "").trim();
-    if (!fallback) return null;
-    return (
-      <div className="poju-delivery-v2__prose">
-        <GlossaryText text={fallback} locale={locale as Locale} layer="evidence" bracketSoft={false} />
-      </div>
-    );
-  }
-  return (
-    <div className="poju-delivery-v2__prose dps-dual-evidence">
-      {hasMeta ? (
-        <section className="dps-dual-evidence__section">
-          <h3 className="dps-dual-evidence__h">{titles.meta}</h3>
-          <GlossaryText
-            text={dual.metaphysics_evidence}
-            locale={locale as Locale}
-            layer="evidence"
-            bracketSoft={false}
-          />
-        </section>
-      ) : null}
-      {hasSci ? (
-        <section className="dps-dual-evidence__section">
-          <h3 className="dps-dual-evidence__h">{titles.sci}</h3>
-          <GlossaryText
-            text={dual.science_evidence}
-            locale={locale as Locale}
-            layer="evidence"
-            bracketSoft={false}
-          />
-        </section>
-      ) : null}
-    </div>
   );
 }
 
@@ -1354,6 +1285,7 @@ export function DeliveryPageSlots({
             ? (shelfFaceId as DecisionPageId)
             : undefined
         }
+        slotEvidence={slotEvidence}
       />
     );
   }
