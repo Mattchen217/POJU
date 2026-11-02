@@ -13,6 +13,8 @@ export type LabGateVerdict = {
   passed: boolean;
   failed_rule?: string;
   detail?: string;
+  /** Optional stage checklist (e.g. evidence_soft four-stage acceptance). */
+  notes?: string[];
 };
 
 export type LabAttempt = {

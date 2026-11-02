@@ -7,9 +7,16 @@ export { gateJudgmentCategoryB } from "./gate-judgment-category";
 export { gateBodyCategoryB, buildBodyGateAvoidanceBlockForPolish } from "./gate-body-category";
 export {
   freezeRawJudgmentAsEvidence,
+  runEvidenceSoftMarkPipeline,
   runEvidenceSoftCodePipeline,
   runEvidenceSoftGenerate,
 } from "./evidence-soft";
+export {
+  runEvidenceLocalePolish,
+  mockPolishMarkedEvidenceKeepMarkers,
+  markersPreserved,
+  buildEvidenceLocalePolishPrompt,
+} from "./evidence-locale-polish";
 export {
   countReadableSentences,
   gateBodyPolishThickness,

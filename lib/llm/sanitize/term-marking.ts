@@ -1373,7 +1373,8 @@ const BARE_AUTO_MARK_HAN = [
     ...Object.keys(RELATION_WORD_TO_SLUG),
     // 类称/别名（官星、天德贵人…）—— traditional + aliases，≥2 字
     ...POJU_TERMS.flatMap((t) =>
-      t.ns !== "bazi"
+      // bazi + ziwei closed-set traditionals (reader soft exit). Prefer bazi on dual-ns overlap in resolveBareMarkLabels.
+      t.ns !== "bazi" && t.ns !== "ziwei"
         ? []
         : [t.traditional, ...(t.aliases ?? [])].filter(
             (w): w is string => typeof w === "string" && w.length >= 2,
@@ -1438,7 +1439,9 @@ function resolveBareMarkLabels(
     const key = normalizeShenshaName(hanId);
     const poju =
       pojuTermByTraditional(hanId, "bazi") ??
+      pojuTermByTraditional(hanId, "ziwei") ??
       pojuTermByTraditional(key, "bazi") ??
+      pojuTermByTraditional(key, "ziwei") ??
       pojuTermByTraditional(key);
     if (poju) {
       const loc = toGlossaryLocale(locale);
@@ -1528,6 +1531,122 @@ export type AutoMarkBareTermsOpts = {
  * 默认：同一术语全文仅首次 + 每段最多 2 个（正文防密度）。
  * 依据块传 `{ maxPerPara: Infinity, oncePerText: false }` → 出现的命理词无条件全打。
  */
+/**
+ * Peel traditional+own-soft stacks before autoMark (Bug B).
+ * Example: 命宫核心定位域 → 命宫 (soft is SSOT coined label for that traditional).
+ * Longest composite first; fail-closed to traditional only (soft re-applied by mark→soft).
+ */
+export function peelTraditionalOwnSoftStacks(text: string, locale = "zh"): string {
+  if (!text?.trim()) return text ?? "";
+  // Always include delivery-locale soft AND zh soft (and sibling locales).
+  // Production stacks are often traditional+zh-soft even when delivery locale is en
+  // (e.g. 命宫核心定位域 → CoreIdentityField核心定位域 if only en soft is peeled).
+  const loc = toGlossaryLocale(locale);
+  const softLocales: Locale[] = Array.from(
+    new Set<Locale>([loc, "zh", "en", "es", "fr", "de"]),
+  );
+  const pairs: Array<{ trad: string; soft: string }> = [];
+  const seenPair = new Set<string>();
+  const pushPair = (trad: string, soft: string) => {
+    if (!trad || soft.length < 2 || soft === trad) return;
+    const key = `${trad}\0${soft}`;
+    if (seenPair.has(key)) return;
+    seenPair.add(key);
+    pairs.push({ trad, soft });
+  };
+  for (const t of POJU_TERMS) {
+    const trad = (t.traditional ?? "").trim();
+    if (!trad) continue;
+    for (const softLoc of softLocales) {
+      const soft = pickFiveLocale(t.term, softLoc).trim();
+      pushPair(trad, soft);
+      for (const a of t.aliases ?? []) {
+        const alias = String(a ?? "").trim();
+        if (alias.length >= 2) pushPair(alias, soft);
+      }
+    }
+  }
+  pairs.sort((a, b) => b.trad.length + b.soft.length - (a.trad.length + a.soft.length));
+  let out = text;
+  for (const { trad, soft } of pairs) {
+    const stack = trad + soft;
+    if (out.includes(stack)) out = out.split(stack).join(trad);
+  }
+  return out;
+}
+
+export function stripImmediateSoftGlossEchoAfterMarkers(text: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  return text.replace(/⟦t:([^⟦⟧]+)⟧(\s*)([^\s⟦⟧，。；、,.!?]+)/g, (full, inner, ws, next) => {
+    const soft = String(inner).split("|")[1]?.trim() ?? "";
+    if (soft.length >= 2 && next === soft) {
+      return `⟦t:${inner}⟧${ws ?? ""}`;
+    }
+    return full;
+  });
+}
+
+const NEUTRAL_SOFT_GLUE_ZH = [
+  "在机制上衔接",
+  "由此引动",
+  "并落到此处",
+  "再对照结构",
+] as const;
+
+let _ssotSoftLabelsZhCache: string[] | null = null;
+function ssotSoftLabelsZhDesc(): string[] {
+  if (_ssotSoftLabelsZhCache) return _ssotSoftLabelsZhCache;
+  const set = new Set<string>();
+  for (const t of POJU_TERMS) {
+    const soft = String(t.term?.zh ?? "").trim();
+    if (soft.length >= 2) set.add(soft);
+  }
+  _ssotSoftLabelsZhCache = [...set].sort((a, b) => b.length - a.length);
+  return _ssotSoftLabelsZhCache;
+}
+
+/**
+ * Post-soft (marker-stripped) glue repair: abutting SSOT soft labels get a neutral
+ * vernacular connective so reader exit is not hard-paste (Bug A belt).
+ * Prefer assembleSoftConnectiveStructuralIfNeeded while markers still exist.
+ */
+export function repairAdjacentSsotSoftGlue(text: string, locale = "zh"): string {
+  if (!text?.trim()) return text ?? "";
+  if (!locale.trim().toLowerCase().startsWith("zh")) return text;
+  const softs = ssotSoftLabelsZhDesc();
+  if (!softs.length) return text;
+  let out = "";
+  let i = 0;
+  let padIndex = 0;
+  let prevSoft: string | null = null;
+  while (i < text.length) {
+    let hit: string | null = null;
+    for (const soft of softs) {
+      if (text.startsWith(soft, i)) {
+        hit = soft;
+        break;
+      }
+    }
+    if (hit) {
+      if (prevSoft !== null) {
+        // Abutting softs — insert neutral connective (skip if already have Han between).
+        const pad = NEUTRAL_SOFT_GLUE_ZH[padIndex % NEUTRAL_SOFT_GLUE_ZH.length]!;
+        padIndex += 1;
+        out += pad;
+      }
+      out += hit;
+      i += hit.length;
+      prevSoft = hit;
+      continue;
+    }
+    // Non-soft char breaks the soft-adjacency run.
+    prevSoft = null;
+    out += text[i]!;
+    i += 1;
+  }
+  return out;
+}
+
 export function autoMarkBareTerms(
   text: string,
   locale: string,
@@ -1539,7 +1658,9 @@ export function autoMarkBareTerms(
   // Phrase-first: never mark 月柱/正印/壬水 as three abutting softs.
   // Quoted single chars ("养") are rhetorical — do not auto-mark.
   const { text: protectedText, restore } = protectQuotedSingleHanChars(text);
-  const folded = collapseChainedSoftReplaceArtifacts(replaceZhMingliStacks(protectedText));
+  // Peel traditional+own-soft stacks (命宫核心定位域 → 命宫) before mark.
+  const peeled = peelTraditionalOwnSoftStacks(protectedText, locale);
+  const folded = collapseChainedSoftReplaceArtifacts(replaceZhMingliStacks(peeled));
   const seenSlugs = new Set<string>();
   // 正文限流时：已有标记 seed，避免同 slug 再开。依据全打时不 seed（裸词仍要补）。
   if (oncePerText) {
@@ -1834,8 +1955,10 @@ export function prepareTextForGlossaryRender(
     locale,
     autoMarkOpts,
   );
+  // Strip soft echo glued after markers (⟦t:…|核心定位域⟧核心定位域).
+  const deEchoed = stripImmediateSoftGlossEchoAfterMarkers(marked);
   // Evidence pads stay Chinese while term slots render in the UI locale.
-  return localizeEvidenceGlue(marked, locale);
+  return localizeEvidenceGlue(deEchoed, locale);
 }
 
 /** Remove broken / unclosed markers so users never see raw `⟦`. Intact closed markers become visible text. */

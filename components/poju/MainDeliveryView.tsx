@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
+import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import {
   DeliveryReportV2,
@@ -252,7 +253,7 @@ function ActionRow({
       <RichReadingText text={action.text} locale={locale} density="delivery" />
       {rationale ? (
         <EvidenceBlock label={evidenceLabel} locale={locale}>
-          <RichReadingText text={rationale} locale={locale} density="delivery" />
+          <RichReadingText text={mergeReaderEvidenceProse({ text: rationale, locale })} locale={locale} density="delivery" />
         </EvidenceBlock>
       ) : null}
       {onUpdate && action.status === "pending" ? (

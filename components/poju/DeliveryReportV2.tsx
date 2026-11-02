@@ -9,6 +9,7 @@
 
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
 import { groupDeliverySectionsByFace } from "@/lib/llm/pro/delivery/shelf-face-map";
@@ -101,7 +102,7 @@ export function DeliverySectionBodyV2({
             className="poju-delivery-v2__evidence"
           >
             <div className="poju-delivery-v2__evidence-body">
-              <DeliveryProseV2 text={blk.text} locale={locale} layer="evidence" />
+              <DeliveryProseV2 text={mergeReaderEvidenceProse({ text: blk.text, locale })} locale={locale} layer="evidence" />
             </div>
           </EvidenceBlock>
         ),

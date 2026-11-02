@@ -1,18 +1,21 @@
 /**
- * v1 dual-track evidence · split / compose / gate helpers.
- * Prefer structured metaphysics_evidence + science_evidence;
- * migrate legacy 「【命理】…【科学】…」 single string.
+ * v1 dual-track evidence — split / compose / gate helpers.
+ * Prefer structured metaphysics_evidence + science_evidence (+ optional convergence);
+ * migrate legacy 「【命理】…【科学】…【交汇】…」 single string.
  */
 
 export type DualEvidenceParts = {
   metaphysics_evidence: string;
   science_evidence: string;
+  /** Face 02 / pack convergence track when marked or structured. */
+  convergence_evidence?: string;
   /** Combined for mark / legacy consumers. */
   evidence: string;
 };
 
 const META_MARK = /【命理】/;
 const SCI_MARK = /【科学】/;
+const CONV_MARK = /【交汇】/;
 
 /** Impersonation / pseudo-fusion phrases (A claiming science proof of bazi, etc.). */
 const PSEUDO_FUSION_RE =
@@ -30,50 +33,74 @@ const META_AS_SCI_RE =
 const CASE_BIND_RE =
   /你|本案|对方|关系|工作|收入|期限|收集|事实|选项|路径|协议|实验|验证|推进|停止|切换|窗口|决策|风险|成本|收益/;
 
-/** Split legacy combined evidence into dual parts. */
+function stripSection(
+  raw: string,
+  startMark: RegExp,
+  otherMarks: RegExp[],
+): string {
+  const start = raw.search(startMark);
+  if (start < 0) return "";
+  let end = raw.length;
+  for (const mark of otherMarks) {
+    const idx = raw.search(mark);
+    if (idx > start && idx < end) end = idx;
+  }
+  return raw.slice(start, end).replace(startMark, "").trim();
+}
+
+/** Split legacy combined evidence into dual/triple parts. */
 export function splitDualEvidence(raw: string | null | undefined): DualEvidenceParts {
   const s = (raw ?? "").trim();
   if (!s) {
-    return { metaphysics_evidence: "", science_evidence: "", evidence: "" };
+    return {
+      metaphysics_evidence: "",
+      science_evidence: "",
+      convergence_evidence: "",
+      evidence: "",
+    };
   }
   const hasMeta = META_MARK.test(s);
   const hasSci = SCI_MARK.test(s);
-  if (hasMeta || hasSci) {
-    const metaIdx = s.search(META_MARK);
-    const sciIdx = s.search(SCI_MARK);
-    let metaphysics = "";
-    let science = "";
-    if (metaIdx >= 0 && sciIdx >= 0) {
-      if (metaIdx < sciIdx) {
-        metaphysics = s.slice(metaIdx).replace(META_MARK, "").split(SCI_MARK)[0]?.trim() ?? "";
-        science = s.slice(sciIdx).replace(SCI_MARK, "").trim();
-      } else {
-        science = s.slice(sciIdx).replace(SCI_MARK, "").split(META_MARK)[0]?.trim() ?? "";
-        metaphysics = s.slice(metaIdx).replace(META_MARK, "").trim();
-      }
-    } else if (metaIdx >= 0) {
-      metaphysics = s.slice(metaIdx).replace(META_MARK, "").trim();
-    } else if (sciIdx >= 0) {
-      science = s.slice(sciIdx).replace(SCI_MARK, "").trim();
-    }
-    return composeDualEvidence(metaphysics, science);
+  const hasConv = CONV_MARK.test(s);
+  if (hasMeta || hasSci || hasConv) {
+    const metaphysics = hasMeta
+      ? stripSection(s, META_MARK, [SCI_MARK, CONV_MARK])
+      : "";
+    const science = hasSci
+      ? stripSection(s, SCI_MARK, [META_MARK, CONV_MARK])
+      : "";
+    const convergence = hasConv
+      ? stripSection(s, CONV_MARK, [META_MARK, SCI_MARK])
+      : "";
+    return composeTripleEvidence(metaphysics, science, convergence);
   }
   // No markers: treat whole as metaphysics (legacy pure chart evidence).
-  return composeDualEvidence(s, "");
+  return composeTripleEvidence(s, "", "");
 }
 
 export function composeDualEvidence(
   metaphysics: string,
   science: string,
 ): DualEvidenceParts {
+  return composeTripleEvidence(metaphysics, science, "");
+}
+
+export function composeTripleEvidence(
+  metaphysics: string,
+  science: string,
+  convergence: string,
+): DualEvidenceParts {
   const m = metaphysics.trim();
   const sci = science.trim();
+  const conv = convergence.trim();
   const parts: string[] = [];
   if (m) parts.push(m);
   if (sci) parts.push(sci);
+  if (conv) parts.push(conv);
   return {
     metaphysics_evidence: m,
     science_evidence: sci,
+    convergence_evidence: conv,
     evidence: parts.join("\n"),
   };
 }
@@ -84,12 +111,14 @@ export function normalizeUnitDualEvidence<
     evidence?: string;
     metaphysics_evidence?: string;
     science_evidence?: string;
+    convergence_evidence?: string;
   },
 >(unit: T): T & DualEvidenceParts {
   const m = (unit.metaphysics_evidence ?? "").trim();
   const sci = (unit.science_evidence ?? "").trim();
-  if (m || sci) {
-    const dual = composeDualEvidence(m, sci);
+  const conv = (unit.convergence_evidence ?? "").trim();
+  if (m || sci || conv) {
+    const dual = composeTripleEvidence(m, sci, conv);
     return { ...unit, ...dual };
   }
   const dual = splitDualEvidence(unit.evidence);
@@ -131,9 +160,17 @@ export function gateDualEvidenceParts(
     .replace(/⟦w:[^⟧]*⟧/g, "")
     .replace(/[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥木火土金水]/g, "")
     .trim();
-  if (stripped.length > 40 && !/用|忌|生|克|冲|合|运|局|宫|门|星|印|财|官|食|伤|比|劫/.test(parts.metaphysics_evidence)) {
+  if (
+    stripped.length > 40 &&
+    !/用|忌|生|克|冲|合|运|局|宫|门|星|印|财|官|食|伤|比|劫/.test(
+      parts.metaphysics_evidence,
+    )
+  ) {
     // keep soft — hard fail only when almost no structure words left AND no slots
-    if (!/⟦w:/.test(parts.metaphysics_evidence) && stripped === parts.metaphysics_evidence.replace(/\s+/g, "")) {
+    if (
+      !/⟦w:/.test(parts.metaphysics_evidence) &&
+      stripped === parts.metaphysics_evidence.replace(/\s+/g, "")
+    ) {
       return { ok: false, reason: "dual_metaphysics_generic" };
     }
   }

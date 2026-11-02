@@ -3154,6 +3154,7 @@ async function executeV3(
         : "zh";
     const escapeArmedSoft = v3EscapeArmed(art, "soft");
     const softChunkIdx = art.soft_chunk_index ?? 0;
+    const skipLocalePolish = Boolean(runOpts?.skip_polish);
     const soft = await runEvidenceSoftGenerate({
       key: page,
       plan,
@@ -3162,6 +3163,7 @@ async function executeV3(
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       soft_chunk_index: softChunkIdx,
       soft_partial: (art.soft_partial as DeliveryArgumentTree | undefined) ?? null,
+      skip_locale_polish: skipLocalePolish,
     });
     if ("needs_more_soft_chunks" in soft && soft.needs_more_soft_chunks) {
       art.soft_partial = soft.soft_partial;
@@ -3245,6 +3247,19 @@ async function executeV3(
     art.evidence = soft.evidence;
     art.marked = soft.marked;
     const softStages = soft.stages ?? null;
+    const polishMeta =
+      soft.ok && soft.locale_polish_meta
+        ? soft.locale_polish_meta
+        : null;
+    const polishMode = polishMeta?.mode ?? (skipLocalePolish ? "skipped" : "llm");
+    const stageGateNotes = [
+      "1 bare：自由传统输出",
+      "2 mark：代码打标 ⟦t:⟧",
+      polishMode === "skipped"
+        ? "3 locale_polish：已 Skip（未跑模型 · 非 identity 冒充）"
+        : `3 locale_polish：真实 LLM 多语润色（model=${polishMeta?.actual_model ?? "?"}; tokens=${polishMeta?.tokens_used ?? soft.tokens_used}）`,
+      "4 soft：代码 toSoftTranslatedPlainText",
+    ];
     return {
       input_payload: {
         key: page,
@@ -3253,12 +3268,15 @@ async function executeV3(
         locale: softLocale,
         terms_pipeline: "terms-pipeline-spec-v1",
         stage_keys: ["bare", "mark", "locale_polish", "soft"],
+        skip_locale_polish: skipLocalePolish,
+        locale_polish_mode: polishMode,
       },
       raw_model_output: softStages ?? soft.slotted,
       processing_actions: soft.notes.map((n) => ({ action: n })),
       gate_verdict: {
         passed: true,
-        detail: `依据软译完成（${softLocale}）· SPEC-v1 bare→mark→locale_polish→soft · 可人审 Call trace ⑤`,
+        detail: `依据软译完成（${softLocale}）· SPEC-v1 四阶段可人审：${stageGateNotes.join(" → ")} · Call trace ⑤ / Terms panel Live`,
+        notes: stageGateNotes,
       },
       output_to_next_stage: soft.marked,
       tokens_used: soft.tokens_used,

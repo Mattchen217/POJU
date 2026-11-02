@@ -68,7 +68,19 @@ function main(): void {
   // Must not crash; preferably no raw traditional if scrubbed, or left if fail-closed peel.
   assert("no marker crash tokens", !baihu.includes("?t:"), baihu);
 
-  console.log("\n=== Summary ===\n");
+    console.log("\n--- ziwei 命宫 stack + bare soft exit ---\n");
+  const stack = toCompliantPlainText("命宫核心定位域落点清楚。", "zh");
+  assert("no trad+soft stack", !stack.includes("命宫核心定位域"), stack);
+  assert("no bare 命宫", !stack.includes("命宫"), stack);
+  assert("has soft 核心定位域", stack.includes("核心定位域"), stack);
+
+  const adjacent = toCompliantPlainText("忌神用神并见。", "zh");
+  // softs may be 耗元/锚元 — must not hard-paste if both present
+  if (adjacent.includes("耗元") && adjacent.includes("锚元")) {
+    assert("no 耗元锚元 hard-paste", !adjacent.includes("耗元锚元"), adjacent);
+  }
+
+console.log("\n=== Summary ===\n");
   if (failures.length) {
     console.error(`FAILED (${failures.length}):`, failures.join(" | "));
     process.exit(1);
