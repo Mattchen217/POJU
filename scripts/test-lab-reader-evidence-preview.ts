@@ -180,4 +180,105 @@ assert.equal(direct.includes("【交汇】"), false);
   assert.ok(lab.includes("日主偏弱"), `lab keeps destiny prose: ${lab}`);
 }
 
+
+// --- Max 2026-11-02: EN/ES/FR labeled soft tracks → one prose + D fold (no 【chrome】) ---
+{
+  const enSoft = {
+    "02": [
+      {
+        title: "destiny_reason",
+        evidence:
+          "【life trajectory analysis】Anchor Wood is under the metal energy of Transit and is cut down by the Drainer metal. Its need to grow into visible form is strong, but the resource flow in Resource Flow Field is too thin to support it. CoreIdentityField and Mobility Field oppose each other, which magnifies the open-versus-hidden conflict.",
+      },
+      {
+        title: "science_mechanism",
+        evidence:
+          "【Science】The user reports being caught between a stable career and an unverified direction. The two-system conflict makes the safety signal overvalued and the growth signal discounted as a distant payoff.",
+      },
+      {
+        title: "convergence",
+        evidence:
+          "【Intersection】Metal and earth, the Drainer, cut down the Anchor wood. This runs in the same direction as loss aversion, so reluctance to act shows up as overvaluing current security and undervaluing unverified opportunities.",
+      },
+      {
+        title: "verifiable_anchors",
+        evidence:
+          "【life trajectory analysis】Checkable anchor: Core, Geng, is Abundant and uses wood. In the MonthLead, the Kindle has an inherent Climatic Alignment that is dry.",
+      },
+    ],
+  };
+  const en = mergeLabSoftStageReaderProse(enSoft, "en");
+  assert.ok(en.length > 0, `EN prose non-empty: ${en}`);
+  assert.equal(readerEvidenceHasTrackChrome(en), false, `EN no track chrome: ${en}`);
+  assert.equal(en.includes("【"), false, `EN no 【 chrome: ${en}`);
+  assert.equal(en.includes("】"), false, `EN no 】 chrome: ${en}`);
+  assert.equal(/life trajectory analysis/i.test(en), false, `EN no raw track title: ${en}`);
+  assert.equal(/\bIntersection\b/.test(en), false, `EN no Intersection title: ${en}`);
+  assert.equal(/Checkable anchor/i.test(en), false, `EN no Checkable anchor chrome: ${en}`);
+  assert.ok(en.includes("Anchor Wood"), `EN keeps destiny prose: ${en}`);
+  assert.ok(en.includes("stable career") || en.includes("safety signal"), `EN keeps science: ${en}`);
+  assert.ok(en.includes("loss aversion") || en.includes("Anchor wood"), `EN keeps convergence: ${en}`);
+  assert.ok(en.includes("At the same time") || en.includes("at the same time"), `EN mid joiner: ${en}`);
+  assert.ok(en.includes("Taken together") || en.includes("taken together"), `EN close joiner: ${en}`);
+  assert.ok(en.includes("\n\n"), `EN D is second paragraph: ${en}`);
+  const enParas = en.split(/\n\n+/);
+  assert.ok(enParas.length >= 2, `EN A/B/C + D paragraphs: ${en}`);
+  assert.ok(
+    enParas[1]!.includes("Core") || enParas[1]!.includes("Abundant") || enParas[1]!.includes("MonthLead"),
+    `EN D anchors body: ${enParas[1]}`,
+  );
+  // Soft coined terms may remain (dual-layer).
+  assert.ok(
+    en.includes("CoreIdentityField") || en.includes("Resource Flow Field") || en.includes("Mobility Field"),
+    `EN soft coined terms kept: ${en}`,
+  );
+
+  const esSoft = {
+    "02": [
+      { title: "destiny_reason", evidence: "【Base metafísica】La madera ancla está bajo presión." },
+      { title: "science_mechanism", evidence: "【Base científica】El usuario valora demasiado la seguridad actual." },
+      { title: "convergence", evidence: "【Convergencia】Ambas pistas empujan a posponer la verificación." },
+      { title: "verifiable_anchors", evidence: "【Anclas verificables】Núcleo abundante; revisar el flujo este mes." },
+    ],
+  };
+  const es = mergeLabSoftStageReaderProse(esSoft, "es");
+  assert.equal(readerEvidenceHasTrackChrome(es), false, `ES no chrome: ${es}`);
+  assert.equal(es.includes("【"), false, `ES no 【: ${es}`);
+  assert.equal(/Base metafísica|Base científica|Convergencia|Anclas verificables/i.test(es), false, es);
+  assert.ok(es.includes("Al mismo tiempo") || es.includes("madera ancla"), `ES joiner/body: ${es}`);
+  assert.ok(es.includes("\n\n"), `ES D second para: ${es}`);
+
+  const frSoft = {
+    "02": [
+      { title: "destiny_reason", evidence: "【Fondement métaphysique】Le bois d'ancrage est sous pression." },
+      { title: "science_mechanism", evidence: "【Fondement scientifique】L'utilisateur surestime la sécurité actuelle." },
+      { title: "convergence", evidence: "【Convergence】Les deux pistes poussent à différer la vérification." },
+      { title: "verifiable_anchors", evidence: "【Ancres vérifiables】Noyau abondant; vérifier le flux ce mois-ci." },
+    ],
+  };
+  const fr = mergeLabSoftStageReaderProse(frSoft, "fr");
+  assert.equal(readerEvidenceHasTrackChrome(fr), false, `FR no chrome: ${fr}`);
+  assert.equal(fr.includes("【"), false, `FR no 【: ${fr}`);
+  assert.equal(
+    /Fondement métaphysique|Fondement scientifique|Ancres vérifiables/i.test(fr),
+    false,
+    fr,
+  );
+  assert.ok(fr.includes("En même temps") || fr.includes("bois d'ancrage"), `FR joiner/body: ${fr}`);
+  assert.ok(fr.includes("\n\n"), `FR D second para: ${fr}`);
+
+  // Legacy combined EN string (single text) must also merge without chrome.
+  const combined = mergeReaderEvidenceProse({
+    text:
+      "【life trajectory analysis】Wood is pressured.\n【Science】Safety is overvalued.\n【Intersection】Both point to delay.",
+    locale: "en",
+  });
+  assert.equal(readerEvidenceHasTrackChrome(combined), false, combined);
+  assert.equal(combined.includes("【"), false, combined);
+  assert.ok(combined.includes("Wood is pressured"), combined);
+  assert.ok(combined.includes("At the same time"), combined);
+  assert.ok(combined.includes("Taken together"), combined);
+}
+
+
 console.log("test-lab-reader-evidence-preview: ok");

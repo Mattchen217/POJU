@@ -14,12 +14,88 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
 import { stripPatternHitClosedRefsFromReaderText } from "@/lib/llm/pro/delivery/book-judgment/schema";
 
-/** Reader-facing track chrome — strip before merge. */
-const TRACK_LABEL_RE =
-  /【(?:命理|科学|交汇|能量配置)】|\[\[(?:命理|科学|交汇|能量配置)\]\]/g;
+/**
+ * Reader-facing track chrome — strip before merge.
+ * ZH authoring SoT uses 【命理】/【科学】/【交汇】/【能量配置】; locale_polish + soft
+ * may emit EN/ES/FR/DE equivalents (e.g. 【life trajectory analysis】/【Science】/
+ * 【Intersection】) or face-segment titles. All must disappear at reader exit.
+ */
+const TRACK_LABEL_INNERS = [
+  // ZH authoring + soft
+  "命理",
+  "科学",
+  "交汇",
+  "能量配置",
+  "可核对锚",
+  "命理依据",
+  "科学依据",
+  "交汇依据",
+  // EN (locale_polish / soft / Face02 / section titles)
+  "life trajectory analysis",
+  "life trajectory",
+  "destiny reason",
+  "destiny",
+  "science",
+  "science mechanism",
+  "science basis",
+  "intersection",
+  "convergence",
+  "metaphysics",
+  "metaphysics basis",
+  "energy configuration",
+  "checkable anchor",
+  "checkable anchors",
+  // ES
+  "base metafísica",
+  "base científica",
+  "convergencia",
+  "razón metafísica",
+  "mecanismo científico",
+  "anclas verificables",
+  // FR
+  "fondement métaphysique",
+  "fondement scientifique",
+  "raison métaphysique",
+  "mécanisme scientifique",
+  "ancres vérifiables",
+  // DE
+  "metaphysische basis",
+  "wissenschaftliche basis",
+  "konvergenz",
+  "schicksalsgrund",
+  "wissenschaftlicher mechanismus",
+  "prüfbare anker",
+];
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const TRACK_LABEL_INNER_ALT = TRACK_LABEL_INNERS.map(escapeRegExp).join("|");
+
+/** 【…】 / [[…]] track chrome (case-insensitive for Latin locales). */
+const TRACK_LABEL_RE = new RegExp(
+  `【(?:${TRACK_LABEL_INNER_ALT})】|\\[\\[(?:${TRACK_LABEL_INNER_ALT})\\]\\]`,
+  "gi",
+);
+
+/** Line/section titles + D checkable-anchor prefixes (not mid-sentence prose). */
 const SECTION_TITLE_RE =
-  /(?:^|\n)\s*(?:命理依据|科学依据|交汇依据|能量配置|Metaphysics basis|Science basis|Convergence)\s*[:：]?\s*/gi;
+  /(?:^|\n)\s*(?:命理依据|科学依据|交汇依据|能量配置|可核对锚|Metaphysics basis|Science basis|Science mechanism|Destiny reason|Convergence|Intersection|Checkable anchors?|Base metafísica|Base científica|Convergencia|Razón metafísica|Mecanismo científico|Anclas verificables|Fondement métaphysique|Fondement scientifique|Raison métaphysique|Mécanisme scientifique|Ancres vérifiables|Metaphysische Basis|Wissenschaftliche Basis|Konvergenz|Schicksalsgrund|Wissenschaftlicher Mechanismus|Prüfbare Anker|Life trajectory analysis)\s*[:：]?\s*/gi;
+
+/** Normalize localized destiny chrome to ZH split mark before splitDualEvidence. */
+const META_CHROME_TO_SPLIT_RE = new RegExp(
+  `【(?:命理|能量配置|life trajectory analysis|life trajectory|destiny reason|destiny|metaphysics(?: basis)?|energy configuration|base metafísica|razón metafísica|fondement métaphysique|raison métaphysique|metaphysische basis|schicksalsgrund)】`,
+  "gi",
+);
+const SCI_CHROME_TO_SPLIT_RE = new RegExp(
+  `【(?:科学|science(?: mechanism| basis)?|base científica|mecanismo científico|fondement scientifique|mécanisme scientifique|wissenschaftliche basis|wissenschaftlicher mechanismus)】`,
+  "gi",
+);
+const CONV_CHROME_TO_SPLIT_RE = new RegExp(
+  `【(?:交汇|intersection|convergence|convergencia|konvergenz)】`,
+  "gi",
+);
 
 export function stripEvidenceTrackLabels(text: string): string {
   return (text ?? "")
@@ -28,6 +104,14 @@ export function stripEvidenceTrackLabels(text: string): string {
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/** Map localized 【track】 chrome to ZH split markers for legacy combined strings. */
+export function normalizeEvidenceTrackMarksForSplit(text: string): string {
+  return (text ?? "")
+    .replace(META_CHROME_TO_SPLIT_RE, "【命理】")
+    .replace(SCI_CHROME_TO_SPLIT_RE, "【科学】")
+    .replace(CONV_CHROME_TO_SPLIT_RE, "【交汇】");
 }
 
 function endsWithSentencePunct(s: string): boolean {
@@ -102,8 +186,8 @@ export function mergeReaderEvidenceProse(opts: {
   if (structuredM || structuredS || structuredC) {
     parts = composeTripleEvidence(structuredM, structuredS, structuredC);
   } else {
-    // Soft destiny chrome uses 【能量配置】 in packs; normalize to split marker.
-    const normalizedText = (opts.text ?? "").replace(/【能量配置】/g, "【命理】");
+    // Soft / locale_polish may leave localized 【track】 chrome; map to ZH split marks.
+    const normalizedText = normalizeEvidenceTrackMarksForSplit(opts.text ?? "");
     parts = splitDualEvidence(normalizedText);
     parts = composeTripleEvidence(
       stripEvidenceTrackLabels(parts.metaphysics_evidence),
@@ -143,8 +227,11 @@ export const mergeFace02ReaderEvidenceProse = mergeReaderEvidenceProse;
 /** True when rendered reader evidence still leaks track chrome. */
 export function readerEvidenceHasTrackChrome(text: string): boolean {
   const t = text ?? "";
-  return (
-    /【(?:命理|科学|交汇|能量配置)】/.test(t) ||
-    /命理依据|科学依据|交汇依据/.test(t)
+  TRACK_LABEL_RE.lastIndex = 0;
+  if (TRACK_LABEL_RE.test(t)) return true;
+  SECTION_TITLE_RE.lastIndex = 0;
+  if (SECTION_TITLE_RE.test(t)) return true;
+  return /命理依据|科学依据|交汇依据|Checkable anchors?|life trajectory analysis/i.test(
+    t,
   );
 }
