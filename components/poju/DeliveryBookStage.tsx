@@ -23,6 +23,7 @@ import {
 } from "@/lib/poju/delivery-user-facing";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 import { PojuLogo } from "@/components/ui/poju-logo";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import {
@@ -868,7 +869,7 @@ export function DeliveryBookStage({
                                     <div className="poju-delivery-v2__evidence-body">
                                       <div className="poju-delivery-v2__prose">
                                         <GlossaryText
-                                          text={mod.evidence}
+                                          text={mergeReaderEvidenceProse({ text: mod.evidence, locale: loc })}
                                           locale={loc}
                                           layer="evidence"
                                           bracketSoft={false}

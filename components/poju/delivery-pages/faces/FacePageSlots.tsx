@@ -3,6 +3,12 @@
  * dualTrack mounts: pointer | abc | fold | reality | appendix.
  * slotEvidence[i] aligns 1:1 with FACE_SEGMENT_FIELDS[face] order
  * (same order as pageSchemaToArgumentBodies / extractFaceSchemaSlices).
+ *
+ * Reader evidence soft-exit (all faces): opened EvidenceBlock body = one
+ * vernacular prose paragraph (no 【能量配置】/【科学】/【交汇】 chrome).
+ * Face02: one shared merged fold for A/B/C (no 4× EvidenceBlock).
+ * Other faces: per-segment fold still DualEvidenceBody presentation="prose".
+ * Lab may pass presentation="tracks". 04/SoT16 frozen elsewhere.
  */
 
 "use client";
@@ -16,6 +22,7 @@ import type { FacePageData } from "@/lib/llm/pro/delivery/page-schema/face-types
 import { FACE_SEGMENT_FIELDS } from "@/lib/llm/pro/delivery/page-schema/face-types";
 import { faceSegmentLabel } from "@/lib/llm/pro/delivery/face-segment-locale";
 import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
+import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 
 function asText(value: unknown): string {
   if (typeof value === "string") return value;
@@ -31,17 +38,18 @@ function evAt(slotEvidence: string[] | undefined, index: number): string {
 }
 
 /**
- * Face 02 packs are single-track per segment. Soft text may drop markers —
- * re-tag by segment so DualEvidenceBody does not mislabel science as destiny.
+ * Collect Face02 A/B/C soft evidence by segment index.
+ * Internally still destiny / science / convergence (+ ZFP when in soft);
+ * do not re-tag with reader-visible 【命理】/【科学】/【交汇】 chrome.
  */
-function tagFace02Evidence(faceId: DecisionPageId, segmentId: string, raw: string): string {
-  const ev = raw.trim();
-  if (!ev || faceId !== "02") return ev;
-  if (/【命理】|【科学】|【交汇】/.test(ev)) return ev;
-  if (segmentId === "B") return "【科学】" + ev;
-  if (segmentId === "C") return "【交汇】" + ev;
-  if (segmentId === "A") return "【命理】" + ev;
-  return ev;
+function collectFace02TrackEvidence(
+  slotEvidence: string[] | undefined,
+): { metaphysics: string; science: string; convergence: string } {
+  return {
+    metaphysics: evAt(slotEvidence, 0),
+    science: evAt(slotEvidence, 1),
+    convergence: evAt(slotEvidence, 2),
+  };
 }
 
 function SlotCard({
@@ -50,12 +58,14 @@ function SlotCard({
   fold,
   locale,
   evidence,
+  evidencePresentation = "prose",
 }: {
   title: string;
   children: ReactNode;
   fold?: boolean;
   locale: string;
   evidence?: string;
+  evidencePresentation?: "tracks" | "prose";
 }) {
   const evidenceLabel = deliveryEvidenceLabelPlain(locale);
   const ev = (evidence ?? "").trim();
@@ -71,7 +81,11 @@ function SlotCard({
           className="delivery-book-stage__evidence dps-face-evidence"
         >
           <div className="poju-delivery-v2__evidence-body">
-            <DualEvidenceBody text={ev} locale={locale} />
+            <DualEvidenceBody
+              text={ev}
+              locale={locale}
+              presentation={evidencePresentation}
+            />
           </div>
         </EvidenceBlock>
       ) : null}
@@ -155,6 +169,43 @@ function shouldFold(
   return isFoldSegment(faceId, segmentId);
 }
 
+function Face02ReaderEvidenceFold({
+  slotEvidence,
+  locale,
+}: {
+  slotEvidence?: string[];
+  locale: string;
+}) {
+  const tracks = collectFace02TrackEvidence(slotEvidence);
+  const prose = mergeReaderEvidenceProse({
+    metaphysics: tracks.metaphysics,
+    science: tracks.science,
+    convergence: tracks.convergence,
+    locale,
+  });
+  if (!prose) return null;
+  const evidenceLabel = deliveryEvidenceLabelPlain(locale);
+  return (
+    <EvidenceBlock
+      label={evidenceLabel}
+      locale={locale}
+      defaultOpen={false}
+      toggleIcon="play"
+      className="delivery-book-stage__evidence dps-face-evidence dps-face02-evidence-prose"
+    >
+      <div className="poju-delivery-v2__evidence-body">
+        <DualEvidenceBody
+          metaphysics={tracks.metaphysics}
+          science={tracks.science}
+          convergence={tracks.convergence}
+          locale={locale}
+          presentation="prose"
+        />
+      </div>
+    </EvidenceBlock>
+  );
+}
+
 export function FacePageSlots({
   page,
   locale,
@@ -172,19 +223,22 @@ export function FacePageSlots({
     page.page) as DecisionPageId;
   const dual = DECISION_PAGE_SCHEMAS[id]?.dualTrack ?? "reality";
   const fields = FACE_SEGMENT_FIELDS[id] ?? [];
+  const isFace02 = id === "02";
 
   return (
     <div
       className={`dps-face dps-face--${id} dps-face-dual--${dual}`}
       data-face={id}
       data-dual-track={dual}
+      data-evidence-presentation="prose"
     >
       {fields.map(({ key, segmentId }, index) => {
         const title = faceSegmentLabel(id, segmentId, locale);
         const raw = fieldValue(page, key);
         const fold = shouldFold(id, segmentId, key);
         const isList = Array.isArray(raw);
-        const evidence = tagFace02Evidence(id, segmentId, evAt(slotEvidence, index));
+        // Face02: no per-segment EvidenceBlock — one shared prose fold below.
+        const evidence = isFace02 ? "" : evAt(slotEvidence, index);
         return (
           <SlotCard
             key={key}
@@ -204,6 +258,11 @@ export function FacePageSlots({
           </SlotCard>
         );
       })}
+      {isFace02 ? (
+        <div className="dps-face02-reader-evidence">
+          <Face02ReaderEvidenceFold slotEvidence={slotEvidence} locale={locale} />
+        </div>
+      ) : null}
     </div>
   );
 }

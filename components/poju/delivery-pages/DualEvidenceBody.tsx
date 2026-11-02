@@ -1,7 +1,7 @@
 /**
- * Dual/triple-track evidence body for delivery folds.
- * Prefer structured metaphysics / science / convergence fields;
- * else split legacy 「【命理】…【科学】…【交汇】…」 markers.
+ * Reader evidence body for delivery folds.
+ * Default presentation = "prose": one vernacular paragraph, no track labels.
+ * presentation="tracks" kept for Lab / debug multi-track chrome only.
  */
 
 "use client";
@@ -13,6 +13,7 @@ import {
   splitDualEvidence,
   type DualEvidenceParts,
 } from "@/lib/llm/pro/delivery/page-schema/dual-evidence";
+import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 
 export function dualEvidenceSectionTitles(locale: string): {
   meta: string;
@@ -51,20 +52,44 @@ export function dualEvidenceSectionTitles(locale: string): {
   };
 }
 
-/** Folded evidence: destiny / science / convergence subsections when present. */
+/** Folded evidence body. Reader default = one prose paragraph (no track headers). */
 export function DualEvidenceBody({
   text,
   locale,
   metaphysics,
   science,
   convergence,
+  presentation = "prose",
 }: {
   text?: string;
   locale: string;
   metaphysics?: string;
   science?: string;
   convergence?: string;
+  /** "prose" (default, reader) | "tracks" (Lab/debug chrome only). */
+  presentation?: "tracks" | "prose";
 }) {
+  if (presentation === "prose") {
+    const prose = mergeReaderEvidenceProse({
+      text,
+      metaphysics,
+      science,
+      convergence,
+      locale,
+    });
+    if (!prose) return null;
+    return (
+      <div className="poju-delivery-v2__prose dps-dual-evidence dps-dual-evidence--prose">
+        <GlossaryText
+          text={prose}
+          locale={locale as Locale}
+          layer="evidence"
+          bracketSoft={false}
+        />
+      </div>
+    );
+  }
+
   const structuredM = (metaphysics ?? "").trim();
   const structuredS = (science ?? "").trim();
   const structuredC = (convergence ?? "").trim();
@@ -77,7 +102,7 @@ export function DualEvidenceBody({
   const hasSci = Boolean(dual.science_evidence);
   const hasConv = Boolean(dual.convergence_evidence);
   if (!hasMeta && !hasSci && !hasConv) {
-    const fallback = (text ?? "").trim();
+    const fallback = mergeReaderEvidenceProse({ text, locale });
     if (!fallback) return null;
     return (
       <div className="poju-delivery-v2__prose">

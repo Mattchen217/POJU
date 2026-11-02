@@ -6,6 +6,7 @@ import {
   EvidenceBlock,
   isEvidenceLeadLabel,
 } from "@/components/cross-product/EvidenceBlock";
+import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
 import { cn } from "@/lib/utils/classnames";
 import {
@@ -62,7 +63,7 @@ function LeadBlock({
             {/* 依据块自成一体（折叠、独立阅读）→ 用自己的 dedupe scope，
                 别被正文/上一段已出现过的同名词挤成没有下划线的裸金字。 */}
             <MarkedInline
-              text={body}
+              text={mergeReaderEvidenceProse({ text: body, locale })}
               locale={locale}
               dedupeScope={new Set<string>()}
               keyBase={blockKey}
@@ -216,7 +217,7 @@ export function RichReadingText({
               {block.body ? (
                 <p className="reading-p reading-p--evidence">
                   <MarkedInline
-                    text={block.body}
+                    text={mergeReaderEvidenceProse({ text: block.body, locale })}
                     locale={locale}
                     dedupeScope={evidenceScope}
                     keyBase={keyBase}
