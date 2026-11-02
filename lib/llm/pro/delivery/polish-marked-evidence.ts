@@ -313,7 +313,7 @@ export function repairAdjacentWordSlotGaps(text: string): string {
  * onto good LLM drafts (#23/#24 pad-soup).
  */
 const SOFT_HALF_CLASSICAL_BRIDGE_RE =
-  /^(生|泄|克|冲|合|刑|害|冲克|相冲|相克|相生|相泄|引动|势叠加|势共振)$/;
+  /^(生|泄|克|冲|合|刑|害|冲克|相冲|相克|相生|相泄|引动|势叠加|势共振|截伐)$/;
 
 /** Half-classical / empty bridges → one short causal clause (≥4 Han). */
 const SOFT_BROKEN_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
@@ -332,6 +332,7 @@ const SOFT_BROKEN_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
   引动: '又进一步带动',
   势叠加: '压力一层层叠上来',
   势共振: '气势互相呼应',
+  截伐: '会截断压制',
   无: '当中还缺少',
   为: '在这里就是',
 };
@@ -353,6 +354,7 @@ const SOFT_BROKEN_BRIDGE_REWRITE_EN: Readonly<Record<string, string>> = {
   引动: 'then pulls the next beat',
   势叠加: 'pressure stacks layer on layer',
   势共振: 'the pressure echoes back',
+  截伐: 'cuts hard against',
   无: 'is still missing',
   为: 'here means',
   produces: 'keeps feeding capacity into',
@@ -383,6 +385,7 @@ const SOFT_BROKEN_BRIDGE_REWRITE_ES: Readonly<Record<string, string>> = {
   引动: 'y luego tira del siguiente tramo',
   势叠加: 'la presión se apila capa a capa',
   势共振: 'la presión hace eco',
+  截伐: 'corta con fuerza',
   无: 'aún falta',
   为: 'aquí significa',
 };
@@ -403,6 +406,7 @@ const SOFT_BROKEN_BRIDGE_REWRITE_FR: Readonly<Record<string, string>> = {
   引动: 'puis tire le prochain temps',
   势叠加: 'la pression s’empile couche après couche',
   势共振: 'la pression résonne',
+  截伐: 'tranche net contre',
   无: 'manque encore',
   为: 'ici veut dire',
 };
@@ -1222,7 +1226,9 @@ export function stripSoftGlossEchoAfterMarkers(text: string): string {
   if (!text?.includes("⟦t:")) return text ?? "";
   return text.replace(/⟦t:([^⟧]+)⟧(\s*)([^\s⟦⟧，。；、,.!?]+)/g, (full, inner, ws, next) => {
     const soft = String(inner).split("|")[1]?.trim() ?? "";
-    if (soft.length >= 2 && next === soft) {
+    const n = String(next ?? "");
+    // Exact soft echo OR proper prefix echo (资源流转域 + 资源流转).
+    if (soft.length >= 2 && n.length >= 2 && (n === soft || soft.startsWith(n))) {
       return `⟦t:${inner}⟧${ws ?? ""}`;
     }
     return full;

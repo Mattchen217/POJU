@@ -1367,6 +1367,7 @@ const BARE_AUTO_MARK_HAN = [
     ...HIGH_RISK_COMPLIANCE_HAN,
     ...CLOSED_SET_REPLACE_IDS,
     ...STEM_ELEMENT_COMPOUNDS,
+    ...BRANCH_ELEMENT_COMPOUNDS,
     ...allShenshaHanSurfaces(),
     // 关系原词（刑/冲/害… + aliases 相刑/相冲…）—— 从 SSOT 自动展开
     ...Object.keys(RELATION_SLUG),
@@ -1459,8 +1460,22 @@ function resolveBareMarkLabels(
     const element = hanId[1]!;
     const stemInfo = STEMS[stem as keyof typeof STEMS];
     if (stemInfo && stemInfo.wuxing === element) {
-      const slug = CLOSED_SET_SLUG[stem] ?? stem;
+      const slug = CLOSED_SET_SLUG[stem] ?? STEM_TO_SLUG[stem] ?? stem;
       const ui = uiTermById(slug, locale) ?? uiTermById(stem, locale);
+      if (ui) {
+        return {
+          slug,
+          soft: ui.soft,
+          plain: plainByTermId(slug, locale) ?? ui.plain,
+        };
+      }
+    }
+    // 地支+五行合称（如巳火）→ 标为对应地支
+    const branch = hanId[0]!;
+    const branchInfo = BRANCHES[branch as keyof typeof BRANCHES];
+    if (branchInfo && branchInfo.wuxing === element) {
+      const slug = BRANCH_TO_SLUG[branch] ?? CLOSED_SET_SLUG[branch] ?? branch;
+      const ui = uiTermById(slug, locale) ?? uiTermById(branch, locale);
       if (ui) {
         return {
           slug,
@@ -1579,7 +1594,9 @@ export function stripImmediateSoftGlossEchoAfterMarkers(text: string): string {
   if (!text?.includes("⟦t:")) return text ?? "";
   return text.replace(/⟦t:([^⟦⟧]+)⟧(\s*)([^\s⟦⟧，。；、,.!?]+)/g, (full, inner, ws, next) => {
     const soft = String(inner).split("|")[1]?.trim() ?? "";
-    if (soft.length >= 2 && next === soft) {
+    const n = String(next ?? "");
+    // Exact soft echo OR proper prefix echo (资源流转域 + 资源流转).
+    if (soft.length >= 2 && n.length >= 2 && (n === soft || soft.startsWith(n))) {
       return `⟦t:${inner}⟧${ws ?? ""}`;
     }
     return full;
@@ -1593,6 +1610,34 @@ const NEUTRAL_SOFT_GLUE_ZH = [
   "再对照结构",
 ] as const;
 
+/** Plain-belt classical bridges between softs (mirror polish SOFT_HALF_CLASSICAL + 截伐). */
+const SOFT_PLAIN_CLASSICAL_BRIDGES: ReadonlyArray<{ raw: string; rewrite: string }> = [
+  { raw: "截伐", rewrite: "会截断压制" },
+  { raw: "冲克", rewrite: "冲撞压制" },
+  { raw: "相冲", rewrite: "彼此冲撞" },
+  { raw: "相克", rewrite: "彼此压制" },
+  { raw: "相生", rewrite: "彼此生养" },
+  { raw: "相泄", rewrite: "彼此消耗" },
+  { raw: "引动", rewrite: "又进一步带动" },
+  { raw: "势叠加", rewrite: "压力一层层叠上来" },
+  { raw: "势共振", rewrite: "气势互相呼应" },
+  { raw: "生", rewrite: "还会去生养" },
+  { raw: "泄", rewrite: "会不断消耗" },
+  { raw: "克", rewrite: "会直接压制" },
+  { raw: "冲", rewrite: "会直接冲撞" },
+  { raw: "合", rewrite: "会勾连在一起" },
+  { raw: "刑", rewrite: "会互相刑伤" },
+  { raw: "害", rewrite: "会互相拖累" },
+].sort((a, b) => b.raw.length - a.raw.length);
+
+const WUXING_SOFT_ZH: Readonly<Record<string, string>> = {
+  木: "舒展",
+  火: "发散",
+  土: "承托",
+  金: "精练",
+  水: "润流",
+};
+
 let _ssotSoftLabelsZhCache: string[] | null = null;
 function ssotSoftLabelsZhDesc(): string[] {
   if (_ssotSoftLabelsZhCache) return _ssotSoftLabelsZhCache;
@@ -1605,20 +1650,45 @@ function ssotSoftLabelsZhDesc(): string[] {
   return _ssotSoftLabelsZhCache;
 }
 
+let _stemSoftZhCache: Array<{ trad: string; soft: string }> | null = null;
+function stemSoftZhPairs(): Array<{ trad: string; soft: string }> {
+  if (_stemSoftZhCache) return _stemSoftZhCache;
+  const out: Array<{ trad: string; soft: string }> = [];
+  for (const [han, slug] of Object.entries(STEM_TO_SLUG)) {
+    const soft = String(pojuTermBySlug(slug)?.term?.zh ?? "").trim();
+    if (soft.length >= 2) out.push({ trad: han, soft });
+  }
+  _stemSoftZhCache = out;
+  return out;
+}
+
+let _branchElementSoftZhCache: Array<{ trad: string; soft: string }> | null = null;
+function branchElementSoftZhPairs(): Array<{ trad: string; soft: string }> {
+  if (_branchElementSoftZhCache) return _branchElementSoftZhCache;
+  const out: Array<{ trad: string; soft: string }> = [];
+  for (const compound of BRANCH_ELEMENT_COMPOUNDS) {
+    const branch = compound[0]!;
+    const slug = BRANCH_TO_SLUG[branch];
+    if (!slug) continue;
+    const soft = String(pojuTermBySlug(slug)?.term?.zh ?? "").trim();
+    if (soft.length >= 2) out.push({ trad: compound, soft });
+  }
+  out.sort((a, b) => b.trad.length - a.trad.length);
+  _branchElementSoftZhCache = out;
+  return out;
+}
+
 /**
- * Post-soft (marker-stripped) glue repair: abutting SSOT soft labels get a neutral
- * vernacular connective so reader exit is not hard-paste (Bug A belt).
- * Prefer assembleSoftConnectiveStructuralIfNeeded while markers still exist.
+ * Drop exact/prefix soft echoes already in plain text
+ * (资源流转域资源流转承托 → 资源流转域承托).
  */
-export function repairAdjacentSsotSoftGlue(text: string, locale = "zh"): string {
+export function stripSsotSoftPrefixEchoPlain(text: string, locale = "zh"): string {
   if (!text?.trim()) return text ?? "";
   if (!locale.trim().toLowerCase().startsWith("zh")) return text;
   const softs = ssotSoftLabelsZhDesc();
   if (!softs.length) return text;
   let out = "";
   let i = 0;
-  let padIndex = 0;
-  let prevSoft: string | null = null;
   while (i < text.length) {
     let hit: string | null = null;
     for (const soft of softs) {
@@ -1628,20 +1698,117 @@ export function repairAdjacentSsotSoftGlue(text: string, locale = "zh"): string 
       }
     }
     if (hit) {
+      out += hit;
+      i += hit.length;
+      if (text.startsWith(hit, i)) {
+        i += hit.length;
+        continue;
+      }
+      for (let len = hit.length - 1; len >= 2; len -= 1) {
+        const pref = hit.slice(0, len);
+        if (text.startsWith(pref, i)) {
+          i += pref.length;
+          break;
+        }
+      }
+      continue;
+    }
+    out += text[i]!;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * Soft-exit chart residues glued after SSOT softs: 本元庚→本元刚锋, 月纲巳火→月纲初照,
+ * 用木→借舒展. Runs before adjacency glue so new softs get pads.
+ */
+export function softChartAtomResiduals(text: string, locale = "zh"): string {
+  if (!text?.trim()) return text ?? "";
+  if (!locale.trim().toLowerCase().startsWith("zh")) return text;
+  const softs = ssotSoftLabelsZhDesc();
+  if (!softs.length) return text;
+  let out = text;
+  const softAlt = softs.map(escapeRegExp).join("|");
+  for (const { trad, soft } of stemSoftZhPairs()) {
+    const re = new RegExp(`(${softAlt})${escapeRegExp(trad)}(?![（(])`, "g");
+    out = out.replace(re, `$1${soft}`);
+  }
+  for (const { trad, soft } of branchElementSoftZhPairs()) {
+    const re = new RegExp(`(${softAlt})${escapeRegExp(trad)}(?![（(])`, "g");
+    out = out.replace(re, `$1${soft}`);
+  }
+  // Bare BRANCH_ELEMENT anywhere on soft exit (巳火 left after 月令→月纲).
+  for (const { trad, soft } of branchElementSoftZhPairs()) {
+    if (out.includes(trad)) out = out.split(trad).join(soft);
+  }
+  // 用木 / 用火 … → 借舒展 / 借发散 (favorable-element shorthand).
+  out = out.replace(/用([木火土金水])/g, (_m, el) => {
+    const elSoft = WUXING_SOFT_ZH[el];
+    return elSoft ? `借${elSoft}` : `用${el}`;
+  });
+  return out;
+}
+
+/**
+ * Post-soft (marker-stripped) glue repair: abutting SSOT soft labels get a neutral
+ * vernacular connective so reader exit is not hard-paste (Bug A belt).
+ * Prefer assembleSoftConnectiveStructuralIfNeeded while markers still exist.
+ * Also: prefix-echo strip, classical-bridge rewrite (截伐), wuxing hinge, chart atoms.
+ */
+export function repairAdjacentSsotSoftGlue(text: string, locale = "zh"): string {
+  if (!text?.trim()) return text ?? "";
+  if (!locale.trim().toLowerCase().startsWith("zh")) return text;
+  let working = stripSsotSoftPrefixEchoPlain(text, locale);
+  working = softChartAtomResiduals(working, locale);
+  working = stripSsotSoftPrefixEchoPlain(working, locale);
+  const softs = ssotSoftLabelsZhDesc();
+  if (!softs.length) return working;
+  let out = "";
+  let i = 0;
+  let padIndex = 0;
+  let prevSoft: string | null = null;
+  let hadConnective = false;
+  while (i < working.length) {
+    if (prevSoft !== null) {
+      let bridged = false;
+      for (const { raw, rewrite } of SOFT_PLAIN_CLASSICAL_BRIDGES) {
+        if (working.startsWith(raw, i)) {
+          out += rewrite;
+          i += raw.length;
+          hadConnective = true;
+          bridged = true;
+          break;
+        }
+      }
+      if (bridged) continue;
+    }
+    let hit: string | null = null;
+    for (const soft of softs) {
+      if (working.startsWith(soft, i)) {
+        hit = soft;
+        break;
+      }
+    }
+    if (hit) {
       if (prevSoft !== null) {
-        // Abutting softs — insert neutral connective (skip if already have Han between).
-        const pad = NEUTRAL_SOFT_GLUE_ZH[padIndex % NEUTRAL_SOFT_GLUE_ZH.length]!;
-        padIndex += 1;
-        out += pad;
+        if (!hadConnective) {
+          const pad = NEUTRAL_SOFT_GLUE_ZH[padIndex % NEUTRAL_SOFT_GLUE_ZH.length]!;
+          padIndex += 1;
+          out += pad;
+        }
+      } else if (/[金木水火土]+$/.test(out)) {
+        out += "这边的";
       }
       out += hit;
       i += hit.length;
       prevSoft = hit;
+      hadConnective = false;
       continue;
     }
-    // Non-soft char breaks the soft-adjacency run.
     prevSoft = null;
-    out += text[i]!;
+    hadConnective = false;
+    out += working[i]!;
     i += 1;
   }
   return out;
