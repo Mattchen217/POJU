@@ -6,6 +6,7 @@ import {
   toSoftTranslatedPlainText,
   type Locale,
 } from "@/lib/terms/prepare-display-pipeline";
+import { mergeLabSoftStageReaderProse } from "@/lib/llm/pro/delivery/lab/lab-reader-evidence-preview";
 
 /**
  * Delivery Lab harness for TERMS-PIPELINE-SPEC-v1.
@@ -42,6 +43,7 @@ function pretty(v: unknown): string {
   }
 }
 
+
 /** Flatten first non-empty evidence string from a DeliveryArgumentTree-like dump. */
 function firstEvidenceText(tree: unknown): string {
   if (typeof tree === "string") return tree;
@@ -74,6 +76,14 @@ export function LabTermsPipelinePanel({
         liveStages.mark != null ||
         liveStages.soft != null),
   );
+
+  const readerReportProse = useMemo(() => {
+    if (!hasLive || liveStages?.soft == null) return "";
+    return mergeLabSoftStageReaderProse(
+      liveStages.soft,
+      liveLocale?.trim() || "zh",
+    );
+  }, [hasLive, liveStages, liveLocale]);
 
   const evidenceMarked = useMemo(
     () => prepareTextForGlossaryRender(evidenceBare, "zh"),
@@ -196,6 +206,28 @@ export function LabTermsPipelinePanel({
           </p>
         </div>
       </div>
+
+      {hasLive && readerReportProse ? (
+        <div className="mt-3 rounded-md border border-sky-400/40 bg-[#0c1520] p-3">
+          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-sky-300/95">
+              决策报告 · 读者依据预览
+            </h3>
+            <p className="text-[10px] text-[#71717a]">
+              报告 UI 出口（strip track labels + join A/B/C(+D)）· 不是第 5 个管线阶段
+            </p>
+          </div>
+          <p className="mb-2 text-[11px] leading-relaxed text-[#a1a1aa]">
+            与决策报告 EvidenceBlock / Face02ReaderEvidenceFold 相同：复用{" "}
+            <code className="text-[10px] text-sky-200/90">mergeReaderEvidenceProse</code>
+            ，去掉【能量配置】/【科学】/【交汇】等轨道标签后的读者可见正文。上方四阶段仍是 Lab
+            中间态 dump。
+          </p>
+          <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded border border-sky-500/20 bg-black/40 p-3 font-mono text-[12px] leading-relaxed text-[#e4e4e7]">
+            {readerReportProse}
+          </pre>
+        </div>
+      ) : null}
     </section>
   );
 }
