@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
 import { LabCallTracePanel } from "../_components/LabCallTracePanel";
+import { LabDecisionContextPanel } from "../_components/LabDecisionContextPanel";
 import {
   LabAssembleFaceShelf,
   LabFacePreview,
@@ -114,6 +115,14 @@ type LabView = {
     original_question: string;
     structured_present: boolean;
     base_analysis_present: boolean;
+    decision_context_binding?: {
+      context_id: string;
+      context_version: number;
+      context_hash: string;
+    } | null;
+    has_decision_context_snapshot?: boolean;
+    decision_context_status?: string | null;
+    decision_context_delivery_mode?: string | null;
   };
   artifacts: {
     companion?: CompanionArtView;
@@ -1129,6 +1138,37 @@ export default function DeliveryLabConsolePage() {
           />
         </div>
       ) : null}
+
+      <div className="border-b border-white/10 px-4 py-3">
+        <LabDecisionContextPanel
+          binding={lab.source.decision_context_binding ?? null}
+          hasSnapshot={Boolean(lab.source.has_decision_context_snapshot)}
+          status={lab.source.decision_context_status}
+          deliveryMode={lab.source.decision_context_delivery_mode}
+          bodyFeedPresent={
+            attempt &&
+            typeof attempt.input_payload === "object" &&
+            attempt.input_payload != null &&
+            "decision_context_feed_present" in (attempt.input_payload as object)
+              ? Boolean(
+                  (attempt.input_payload as { decision_context_feed_present?: boolean })
+                    .decision_context_feed_present,
+                )
+              : null
+          }
+          bodyFeedHash={
+            attempt &&
+            typeof attempt.input_payload === "object" &&
+            attempt.input_payload != null &&
+            "decision_context_hash" in (attempt.input_payload as object)
+              ? String(
+                  (attempt.input_payload as { decision_context_hash?: string | null })
+                    .decision_context_hash ?? "",
+                ) || null
+              : null
+          }
+        />
+      </div>
 
       <LabTermsPipelinePanel liveStages={liveEvidenceSoftStages} liveLocale={liveEvidenceSoftLocale} livePolishMeta={liveEvidenceSoftPolishMeta} />
 

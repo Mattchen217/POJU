@@ -28,3 +28,4 @@ export * from "./opening-anchor";
 export * from "./read-bound";
 export * from "./dc-page-feed";
 export * from "./stage4-report";
+export * from "./freeze-to-delivery";
