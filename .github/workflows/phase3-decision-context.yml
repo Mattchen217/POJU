@@ -1,6 +1,21 @@
-﻿name: Phase3 Decision Context
+name: Phase3 Decision Context
 on:
   pull_request:
+    paths:
+      - "lib/poju/decision-context/**"
+      - "lib/poju/generation/**"
+      - "lib/poju/session-mutation.ts"
+      - "lib/poju/session-manager.ts"
+      - "lib/db/poju-db.ts"
+      - "scripts/test-decision-context-phase3-*.ts"
+      - "scripts/test-session-cas-s1.ts"
+      - "scripts/test-generation-s2.ts"
+      - "scripts/test-control-plane-s3.ts"
+      - "scripts/test-normalize-s4.ts"
+      - ".github/workflows/phase3-decision-context.yml"
+  push:
+    branches:
+      - "feat/decision-context-phase1"
     paths:
       - "lib/poju/decision-context/**"
       - "lib/poju/generation/**"
@@ -19,9 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Do not pin version here — package.json packageManager (pnpm@10.33.2) is authoritative.
+      # Specifying version: 9 conflicts and fails pnpm/action-setup@v4.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
