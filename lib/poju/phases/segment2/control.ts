@@ -1387,13 +1387,46 @@ export async function startSynthesisAfterGateConfirm(input: {
     original_question: freshQuestion,
   });
 
-  const sessionPending = withSessionProfileFlags({
+  let sessionPending = withSessionProfileFlags({
     ...session,
     original_question: freshQuestion,
     messages: messagesWithUser,
     agent_v2,
     last_interaction_at: new Date().toISOString(),
   });
+
+  // S5: Freeze on sufficiency before synthesis (not stall/degraded). Persist DC before job.
+  if (
+    !agent_v2.stall_offer_pending &&
+    agent_v2.delivery_mode !== "degraded"
+  ) {
+    const { ensureSessionFrozenForDelivery } = await import(
+      "@/lib/poju/decision-context/production-freeze-wire"
+    );
+    const freeze = await ensureSessionFrozenForDelivery(sessionPending, {
+      trigger: "pre_synthesis_safety",
+      from_stall_or_max_turns: false,
+      from_purchase_or_report_cta: false,
+    });
+    if (freeze.ok) {
+      sessionPending = withSessionProfileFlags({
+        ...freeze.session,
+        original_question: freshQuestion,
+        messages: messagesWithUser,
+        agent_v2,
+        last_interaction_at: new Date().toISOString(),
+      });
+    }
+    // Freeze failure with draft DC sufficient is hard — do not silently continue without persist.
+    if (!freeze.ok && sessionPending.decision_context?.status === "draft") {
+      const { evaluateDecisionSufficiency } = await import(
+        "@/lib/poju/decision-context"
+      );
+      if (evaluateDecisionSufficiency(sessionPending.decision_context).canStop) {
+        throw new Error(`DC_FREEZE_FAILED:${freeze.reason}`);
+      }
+    }
+  }
 
   if (!advance.trigger_synthesis) {
     return { session: sessionPending, job_id: null };

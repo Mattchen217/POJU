@@ -924,12 +924,37 @@ export async function runFinalDeliveryForSession(
   const { resolvePivotSessionLang } = await import("@/lib/poju/session-lang");
   const sessionLang = resolvePivotSessionLang(session, locale);
 
+  // S5: Freeze on Stage3 sufficiency only (never stall/purchase/CTA). Persist before job create
+  // so freeze success is not lost if the delivery HTTP fails.
+  let sessionForDelivery = session;
+  if (delivery_mode !== "degraded" && !session.agent_v2.stall_offer_pending) {
+    const { ensureSessionFrozenForDelivery } = await import(
+      "@/lib/poju/decision-context/production-freeze-wire"
+    );
+    const freeze = await ensureSessionFrozenForDelivery(session, {
+      trigger: "pre_delivery_safety",
+      from_stall_or_max_turns: false,
+      from_purchase_or_report_cta: false,
+    });
+    if (!freeze.ok) {
+      throw new Error(`DC_FREEZE_FAILED:${freeze.reason}`);
+    }
+    sessionForDelivery = freeze.session;
+  }
+
+  const { resolveDeliveryDcPayload } = await import(
+    "@/lib/poju/decision-context/production-freeze-wire"
+  );
+  const dcPayload = resolveDeliveryDcPayload(sessionForDelivery);
+
   // Mark awaiting BEFORE create HTTP — if the tab closes mid-request, reopen can still resume_latest.
   const awaitingSession: POJUSessionState = {
-    ...session,
-    locked_output_locale: session.locked_output_locale ?? sessionLang,
-    pending_delivery_job_id: isUsableFinalDeliveryJobId(session.pending_delivery_job_id)
-      ? session.pending_delivery_job_id
+    ...sessionForDelivery,
+    locked_output_locale: sessionForDelivery.locked_output_locale ?? sessionLang,
+    pending_delivery_job_id: isUsableFinalDeliveryJobId(
+      sessionForDelivery.pending_delivery_job_id,
+    )
+      ? sessionForDelivery.pending_delivery_job_id
       : FINAL_DELIVERY_JOB_AWAITING,
   };
   await savePOJUSession(awaitingSession);
@@ -960,11 +985,15 @@ export async function runFinalDeliveryForSession(
       dyad_matrix_pack: awaitingSession.dyad_matrix_pack ?? null,
       joint_decision: awaitingSession.joint_decision === true,
       joint_pass_ref: awaitingSession.joint_pass_ref ?? null,
-      // S1: pass frozen DC when session already has it (Freeze→Delivery soft path).
-      decision_context: awaitingSession.decision_context ?? null,
-      decision_context_versions: awaitingSession.decision_context_versions ?? null,
+      // S5: frozen binding when available; require only per compatibility policy.
+      decision_context: dcPayload.decision_context,
+      decision_context_versions: dcPayload.decision_context_versions,
+      decision_context_binding: dcPayload.binding,
+      decision_context_snapshot: dcPayload.snapshot,
+      require_decision_context: dcPayload.require_decision_context,
     });
   } catch (e) {
+    // Keep frozen DC on session; only clear pending job id so retry can resume.
     const cleared: POJUSessionState = { ...awaitingSession, pending_delivery_job_id: null };
     await savePOJUSession(cleared).catch(() => undefined);
     throw e;
@@ -974,6 +1003,12 @@ export async function runFinalDeliveryForSession(
   const pendingSession: POJUSessionState = {
     ...awaitingSession,
     pending_delivery_job_id: created.job_id,
+    // Pin delivery binding so later V2 supplements cannot silently retarget this job.
+    ...(dcPayload.binding
+      ? {
+          last_delivery_context_binding: dcPayload.binding,
+        }
+      : {}),
   };
   await savePOJUSession(pendingSession);
 

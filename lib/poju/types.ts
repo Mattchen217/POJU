@@ -325,6 +325,11 @@ export interface POJUSessionState {
    */
   decision_context_idempotency_keys?: string[];
   /**
+   * S5 — binding pinned when a delivery job was created for a frozen DC.
+   * Survives later V2 supplements so old jobs/reports are not retargeted.
+   */
+  last_delivery_context_binding?: import("./decision-context").DecisionContextBinding | null;
+  /**
    * Phase 3 S2 — async Generation TaskContext rows (Contract §6).
    * Hydrate to [] on create/load when absent.
    */
