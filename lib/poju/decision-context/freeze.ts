@@ -2,6 +2,12 @@
  * Freeze = Stage3 decision-sufficiency end (C2).
  * NOT purchase / report CTA / stall-as-sufficient.
  * Open Conflict → unresolved_in_final; never auto-clarified.
+ *
+ * Eng SoT Gate (no FAIL bypass via degraded / blanket allow):
+ * - Unknown that does NOT affect P5 ranking → may Freeze with noted boundary
+ * - Critical unknown that MAY change P5 ranking → hard block (not sufficient)
+ * - Unresolved conflict that decides preferred path → hard block (not sufficient)
+ * - Non-preferred-path open conflict → SoT-allowed Freeze → unresolved_in_final + degraded
  */
 
 import { markOpenConflictsUnresolvedInFinal } from "./conflict-lifecycle";
@@ -24,8 +30,6 @@ export interface FreezeOptions {
    * Must be true: caller affirms Stage3 sufficiency-end path (not purchase/CTA).
    */
   stage3_sufficiency_end: boolean;
-  /** When true, allow freeze with noted boundaries / unresolved conflicts per SoT. */
-  allow_unresolved_path?: boolean;
   /** Stall / MAX turns must not claim sufficiency (C3). */
   from_stall_or_max_turns?: boolean;
   /** Purchase / report CTA must not trigger Freeze. */
@@ -64,7 +68,8 @@ export function freezeDecisionContext(
   }
 
   const sufficiency = evaluateDecisionSufficiency(dc);
-  if (!sufficiency.canStop && !opts.allow_unresolved_path) {
+  // Hard FAIL / continue_collecting: never Freeze, never bypass via degraded flag.
+  if (!sufficiency.canStop) {
     throw new FreezeError(
       `Decision not sufficient to freeze: ${sufficiency.reasons.join("; ")}`,
     );
@@ -82,14 +87,19 @@ export function freezeDecisionContext(
   };
   const content_hash = computeContentHash(draftForHash);
 
+  // SoT-allowed degraded only: boundary unknowns / non-preferred unresolved conflicts.
+  // Never rewrite hard FAIL into degraded success.
+  const delivery_mode =
+    sufficiency.verdict === "sufficient_with_boundaries"
+      ? "degraded"
+      : dc.delivery_mode ?? "normal";
+
   const frozen: DecisionContext = {
     ...draftForHash,
     status: "final",
     content_hash,
     updated_at: now,
-    delivery_mode: opts.allow_unresolved_path && !sufficiency.canStop
-      ? "degraded"
-      : dc.delivery_mode ?? "normal",
+    delivery_mode,
   };
 
   // Immutable snapshot for versions[]

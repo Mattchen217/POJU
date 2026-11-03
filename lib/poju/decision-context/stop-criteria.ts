@@ -1,9 +1,16 @@
 /**
  * Decision sufficiency stop-criteria (replaces old Gate decision power).
  * turn counts / agenda covered / PUSH_GATE are NOT sufficiency.
+ *
+ * Eng SoT dichotomies:
+ * - Unknown NOT affecting P5 ranking → may stop with noted boundary
+ * - Unknown that MAY change P5 ranking → continue (not sufficient)
+ * - Open Conflict affecting preferred path → hard block (delivery FAIL)
+ * - Open Conflict NOT affecting preferred path → do not over-block; Freeze may
+ *   mark unresolved_in_final with degraded / boundary
  */
 
-import type { DecisionContext, DIR } from "./types";
+import type { Conflict, DecisionContext, DIR } from "./types";
 
 export interface SufficiencyOptions {
   /** Hard-push is urge-only; never alone sufficient (C4 / H3). */
@@ -23,8 +30,22 @@ export interface DecisionSufficiencyResult {
   reasons: string[];
   blocking_dir_ids: string[];
   open_conflict_ids: string[];
+  /** Open conflicts that block preferred-path sufficiency (hard FAIL). */
+  blocking_conflict_ids: string[];
+  /** Open conflicts that do not affect preferred path (boundary / degraded OK). */
+  nonblocking_conflict_ids: string[];
   /** Hard push did not override blocking unknowns that may affect P5. */
   hard_push_ignored_for_sufficiency: boolean;
+}
+
+/** Conservative: undefined may_affect_p5_ranking → treat as affecting (blocks). */
+export function dirUnknownAffectsP5Ranking(dir: DIR): boolean {
+  return dir.may_affect_p5_ranking !== false;
+}
+
+/** Conservative: undefined affects_preferred_path → treat as affecting (blocks). */
+export function conflictAffectsPreferredPath(conflict: Conflict): boolean {
+  return conflict.affects_preferred_path !== false;
 }
 
 function criticalDirs(dc: DecisionContext, opts: SufficiencyOptions): DIR[] {
@@ -37,12 +58,29 @@ function criticalDirs(dc: DecisionContext, opts: SufficiencyOptions): DIR[] {
   return flagged.length > 0 ? flagged : active;
 }
 
+function classifyOpenConflicts(dc: DecisionContext): {
+  blocking: string[];
+  nonblocking: string[];
+} {
+  const blocking: string[] = [];
+  const nonblocking: string[] = [];
+  for (const c of dc.conflicts) {
+    if (c.state !== "open") continue;
+    if (conflictAffectsPreferredPath(c)) {
+      blocking.push(c.conflict_id);
+    } else {
+      nonblocking.push(c.conflict_id);
+    }
+  }
+  return { blocking, nonblocking };
+}
+
 /**
  * Evaluate whether Collecting may stop on decision-sufficiency grounds.
  * - Hypothesis-only (no Facts) → not sufficient.
  * - Critical DIR unknown that may_affect_p5_ranking → continue (even if hard-push).
- * - Critical DIR conflict / open conflicts affecting judgment → prefer clarify; may still
- *   allow stop only when product path accepts unresolved_in_final at Freeze (not auto-sufficient).
+ * - Critical DIR conflict / open conflicts affecting preferred path → hard block.
+ * - Open conflicts that do NOT affect preferred path → boundary only (do not over-block).
  * - All critical known|n_a → sufficient.
  * - Unknown that does not affect P5 → sufficient_with_boundaries.
  */
@@ -52,9 +90,12 @@ export function evaluateDecisionSufficiency(
 ): DecisionSufficiencyResult {
   const reasons: string[] = [];
   const blocking_dir_ids: string[] = [];
-  const open_conflict_ids = dc.conflicts
-    .filter((c) => c.state === "open")
-    .map((c) => c.conflict_id);
+  const { blocking: blocking_conflict_ids, nonblocking: nonblocking_conflict_ids } =
+    classifyOpenConflicts(dc);
+  const open_conflict_ids = [
+    ...blocking_conflict_ids,
+    ...nonblocking_conflict_ids,
+  ];
 
   if ((dc.reality_facts?.length ?? 0) === 0 && (dc.hypotheses?.length ?? 0) > 0) {
     reasons.push("hypotheses_without_reality_facts");
@@ -64,6 +105,8 @@ export function evaluateDecisionSufficiency(
       reasons,
       blocking_dir_ids: criticalDirs(dc, opts).map((d) => d.dir_id),
       open_conflict_ids,
+      blocking_conflict_ids,
+      nonblocking_conflict_ids,
       hard_push_ignored_for_sufficiency: Boolean(opts.userHardPush),
     };
   }
@@ -76,6 +119,8 @@ export function evaluateDecisionSufficiency(
       reasons,
       blocking_dir_ids: criticalDirs(dc, opts).map((d) => d.dir_id),
       open_conflict_ids,
+      blocking_conflict_ids,
+      nonblocking_conflict_ids,
       hard_push_ignored_for_sufficiency: Boolean(opts.userHardPush),
     };
   }
@@ -86,33 +131,61 @@ export function evaluateDecisionSufficiency(
   for (const dir of dirs) {
     if (dir.current_state === "known" || dir.current_state === "n_a") continue;
     if (dir.current_state === "conflict") {
-      blocking_dir_ids.push(dir.dir_id);
-      reasons.push(`dir_conflict:${dir.dir_id}`);
+      // DIR-level conflict: same preferred-path dichotomy via may_affect_p5_ranking.
+      if (dirUnknownAffectsP5Ranking(dir)) {
+        blocking_dir_ids.push(dir.dir_id);
+        reasons.push(`dir_conflict_affects_preferred:${dir.dir_id}`);
+      } else {
+        boundaryOnlyUnknown = true;
+        reasons.push(`dir_conflict_boundary_ok:${dir.dir_id}`);
+      }
       continue;
     }
     // unknown
-    if (dir.may_affect_p5_ranking !== false && dir.may_affect_p5_ranking) {
+    if (dir.may_affect_p5_ranking === true) {
       blocking_dir_ids.push(dir.dir_id);
       reasons.push(`dir_unknown_may_affect_p5:${dir.dir_id}`);
     } else if (dir.may_affect_p5_ranking === false) {
       boundaryOnlyUnknown = true;
       reasons.push(`dir_unknown_boundary_ok:${dir.dir_id}`);
     } else {
-      // Default conservative: unknown critical dir blocks.
+      // Default conservative: unspecified unknown critical dir blocks.
       blocking_dir_ids.push(dir.dir_id);
       reasons.push(`dir_unknown:${dir.dir_id}`);
     }
   }
 
+  // Also note non-critical active unknowns as boundaries (do not block).
+  const criticalSet = new Set(dirs.map((d) => d.dir_id));
+  for (const dir of dc.dirs) {
+    if (dir.id_lifecycle !== "active") continue;
+    if (criticalSet.has(dir.dir_id)) continue;
+    if (dir.current_state === "unknown" && dir.may_affect_p5_ranking === false) {
+      boundaryOnlyUnknown = true;
+      reasons.push(`dir_unknown_boundary_ok:${dir.dir_id}`);
+    }
+  }
+
+  if (nonblocking_conflict_ids.length > 0) {
+    boundaryOnlyUnknown = true;
+    for (const id of nonblocking_conflict_ids) {
+      reasons.push(`open_conflict_boundary_ok:${id}`);
+    }
+  }
+
   const hard_push_ignored_for_sufficiency =
-    Boolean(opts.userHardPush) && blocking_dir_ids.length > 0;
-  if (opts.userHardPush && blocking_dir_ids.length > 0) {
+    Boolean(opts.userHardPush) &&
+    (blocking_dir_ids.length > 0 || blocking_conflict_ids.length > 0);
+  if (
+    opts.userHardPush &&
+    (blocking_dir_ids.length > 0 || blocking_conflict_ids.length > 0)
+  ) {
     reasons.push("hard_push_does_not_satisfy_critical_unknown_or_conflict");
   }
 
-  if (blocking_dir_ids.length > 0 || open_conflict_ids.length > 0) {
-    if (open_conflict_ids.length > 0) {
-      reasons.push("open_conflicts_present");
+  if (blocking_dir_ids.length > 0 || blocking_conflict_ids.length > 0) {
+    if (blocking_conflict_ids.length > 0) {
+      reasons.push("preferred_path_open_conflicts_present");
     }
     return {
       verdict: "continue_collecting",
@@ -120,6 +193,8 @@ export function evaluateDecisionSufficiency(
       reasons,
       blocking_dir_ids,
       open_conflict_ids,
+      blocking_conflict_ids,
+      nonblocking_conflict_ids,
       hard_push_ignored_for_sufficiency,
     };
   }
@@ -131,7 +206,9 @@ export function evaluateDecisionSufficiency(
       canStop: true,
       reasons,
       blocking_dir_ids: [],
-      open_conflict_ids: [],
+      open_conflict_ids,
+      blocking_conflict_ids: [],
+      nonblocking_conflict_ids,
       hard_push_ignored_for_sufficiency: false,
     };
   }
@@ -143,6 +220,8 @@ export function evaluateDecisionSufficiency(
     reasons,
     blocking_dir_ids: [],
     open_conflict_ids: [],
+    blocking_conflict_ids: [],
+    nonblocking_conflict_ids: [],
     hard_push_ignored_for_sufficiency: false,
   };
 }

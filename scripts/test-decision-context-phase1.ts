@@ -166,6 +166,34 @@ async function main() {
     assert.equal(dc.reality_facts.length, 1);
     assert.equal(dc.reality_facts[0]!.user_confirmed, true);
     assert.equal(dc.constraints.length, 1);
+    // Opening Seed → Constraint: user_confirmed is DERIVED (event + asserted), not a free field.
+    assert.equal(dc.constraints[0]!.verification_level, "user_asserted");
+    assert.equal(dc.constraints[0]!.status, "confirmed");
+    assert.equal(
+      dc.constraints[0]!.user_confirmed,
+      true,
+      "constraint with user_confirmed_event + user_asserted must derive user_confirmed=true",
+    );
+    // Counter: same seed path without confirm event must derive false
+    const dcNoConfirm = seedDecisionContextFromOpening({
+      session_id: "s1b",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: {
+        concrete_event: "Offer expires Friday",
+        stakes: "Career path lock-in",
+        sticking_point: "Relocation vs remote",
+      },
+      desired_direction: { wants: "Keep optionality", priority: "Family first" },
+      user_constraints: [
+        {
+          statement: "Cannot relocate this year",
+          category: "responsibility",
+          user_confirmed_event: false,
+        },
+      ],
+    });
+    assert.equal(dcNoConfirm.constraints[0]!.user_confirmed, false);
+    assert.equal(dcNoConfirm.constraints[0]!.status, "unverified");
     assert.equal(dc.content_hash, null);
   });
 
@@ -280,7 +308,7 @@ async function main() {
     assert.equal(full.current_state, "known");
   });
 
-  await check("open conflict → unresolved_in_final; no auto clarify", () => {
+  await check("open conflict 鈫?unresolved_in_final; no auto clarify", () => {
     const fA = buildRealityFact({
       fact_id: "fa",
       statement: "Budget is 10k",
@@ -412,7 +440,7 @@ async function main() {
     assert.equal(r.hard_push_ignored_for_sufficiency, true);
   });
 
-  await check("V1→V2: superseded keeps hash; draft new version", () => {
+  await check("V1鈫扸2: superseded keeps hash; draft new version", () => {
     let dc = seedDecisionContextFromOpening({
       context_id: "dc_ver",
       now: "2026-11-02T12:00:00.000Z",
@@ -529,6 +557,225 @@ async function main() {
     });
     assert.equal(restored.decision_context?.definition.concrete_event, "E");
     assert.equal(restored.ignored_buffers, true);
+  });
+
+
+  await check("NEG: critical P5-affecting unknown must NOT Freeze (no bypass)", () => {
+    const dc: DecisionContext = {
+      ...seedDecisionContextFromOpening({
+        context_id: "dc_neg_unknown",
+        now: "2026-11-02T12:00:00.000Z",
+        core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+        desired_direction: { wants: "W", priority: null },
+        user_statements: [
+          {
+            statement: "E",
+            verification_level: "user_asserted",
+            user_confirmed_event: true,
+            fact_roles: ["event"],
+          },
+        ],
+      }),
+      dirs: [
+        {
+          dir_id: "dir_p5_unknown",
+          need: "critical unknown",
+          why: "changes P5 ranking",
+          required_fact_roles: ["missing_role"],
+          current_state: "unknown",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          may_affect_p5_ranking: true,
+          id_lifecycle: "active",
+        },
+      ],
+    };
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, false);
+    assert.equal(suf.verdict, "continue_collecting");
+    assert.ok(suf.blocking_dir_ids.includes("dir_p5_unknown"));
+    assert.throws(
+      () =>
+        freezeDecisionContext(dc, {
+          stage3_sufficiency_end: true,
+          now: "2026-11-02T13:00:00.000Z",
+        }),
+      FreezeError,
+    );
+  });
+
+  await check("NEG: preferred-path open conflict must NOT Freeze (hard FAIL)", () => {
+    const base = seedDecisionContextFromOpening({
+      context_id: "dc_neg_conflict",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "Budget is 10k",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["budget"],
+          status: "confirmed",
+        },
+        {
+          statement: "Budget is 3k",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["budget"],
+          status: "confirmed",
+        },
+      ],
+    });
+    const conflict = openConflict({
+      conflict_id: "conflict_preferred",
+      fact_ids: [base.reality_facts[0]!.fact_id, base.reality_facts[1]!.fact_id],
+      conflict_field: "budget",
+      facts: base.reality_facts,
+      affects_preferred_path: true,
+      now: "2026-11-02T12:00:00.000Z",
+    });
+    const dc: DecisionContext = {
+      ...base,
+      dirs: [
+        {
+          dir_id: "dir_budget",
+          need: "budget clarity",
+          why: "preferred path cost",
+          required_fact_roles: ["budget"],
+          current_state: "known",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          may_affect_p5_ranking: true,
+          id_lifecycle: "active",
+        },
+      ],
+      conflicts: [conflict],
+    };
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, false);
+    assert.ok(suf.blocking_conflict_ids.includes("conflict_preferred"));
+    assert.throws(
+      () =>
+        freezeDecisionContext(dc, {
+          stage3_sufficiency_end: true,
+          now: "2026-11-02T13:00:00.000Z",
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof FreezeError);
+        assert.match(String((err as Error).message), /preferred_path_open_conflicts|not sufficient/i);
+        return true;
+      },
+    );
+  });
+
+  await check("non-P5 unknown may Freeze with boundary / degraded", () => {
+    let dc = seedDecisionContextFromOpening({
+      context_id: "dc_boundary_unknown",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "E",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["event"],
+        },
+      ],
+    });
+    dc.dirs = [
+      {
+        dir_id: "dir_boundary",
+        need: "nice-to-have color",
+        why: "does not change ranking",
+        required_fact_roles: ["missing_color"],
+        current_state: "unknown",
+        partial_satisfaction: false,
+        agenda_item_ids: [],
+        may_affect_p5_ranking: false,
+        id_lifecycle: "active",
+      },
+    ];
+    dc.information_boundaries = ["color preference unknown; does not affect P5"];
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, true);
+    assert.equal(suf.verdict, "sufficient_with_boundaries");
+    const { frozen } = freezeDecisionContext(dc, {
+      stage3_sufficiency_end: true,
+      now: "2026-11-02T13:00:00.000Z",
+    });
+    assert.equal(frozen.status, "final");
+    assert.equal(frozen.delivery_mode, "degraded");
+  });
+
+  await check("non-preferred-path open conflict does not over-block; Freeze OK", () => {
+    const base = seedDecisionContextFromOpening({
+      context_id: "dc_nonpref_conflict",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "Prefers blue UI",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["color"],
+          status: "confirmed",
+        },
+        {
+          statement: "Prefers green UI",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["color"],
+          status: "confirmed",
+        },
+        {
+          statement: "Event E",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["event"],
+          status: "confirmed",
+        },
+      ],
+    });
+    const conflict = openConflict({
+      conflict_id: "conflict_color",
+      fact_ids: [base.reality_facts[0]!.fact_id, base.reality_facts[1]!.fact_id],
+      conflict_field: "ui_color",
+      facts: base.reality_facts,
+      affects_preferred_path: false,
+      now: "2026-11-02T12:00:00.000Z",
+    });
+    const dc: DecisionContext = {
+      ...base,
+      dirs: [
+        {
+          dir_id: "dir_event",
+          need: "event known",
+          why: "core",
+          required_fact_roles: ["event"],
+          current_state: "known",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          may_affect_p5_ranking: true,
+          id_lifecycle: "active",
+        },
+      ],
+      conflicts: [conflict],
+    };
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, true, "non-preferred conflict must not over-block stop");
+    assert.equal(suf.verdict, "sufficient_with_boundaries");
+    assert.deepEqual(suf.blocking_conflict_ids, []);
+    assert.ok(suf.nonblocking_conflict_ids.includes("conflict_color"));
+    const { frozen } = freezeDecisionContext(dc, {
+      stage3_sufficiency_end: true,
+      now: "2026-11-02T13:00:00.000Z",
+    });
+    assert.equal(frozen.status, "final");
+    assert.equal(frozen.conflicts[0]!.state, "unresolved_in_final");
+    assert.equal(frozen.delivery_mode, "degraded");
   });
 
   console.log(`\nAll decision-context phase1 checks passed (${passed}).`);

@@ -1,6 +1,6 @@
 /**
- * Conflict lifecycle: open → clarified (user confirm only) |
- * Freeze: open → unresolved_in_final (never auto-clarified).
+ * Conflict lifecycle: open 鈫?clarified (user confirm only) |
+ * Freeze: open 鈫?unresolved_in_final (never auto-clarified).
  */
 
 import type { Conflict, ConflictSourceRef, RealityFact } from "./types";
@@ -19,6 +19,8 @@ export interface OpenConflictInput {
   facts: RealityFact[];
   now?: string;
   supersedes?: string | null;
+  /** When false, open conflict does not decide preferred-path hold (boundary OK). Default true. */
+  affects_preferred_path?: boolean;
   related_conflict_ids?: string[];
 }
 
@@ -31,7 +33,7 @@ function newConflictId(factIds: string[]): string {
   return `conflict_${key.slice(0, 48)}_${rand}`;
 }
 
-/** Open a conflict over ≥2 facts. Does not delete prior conflicts. */
+/** Open a conflict over 鈮? facts. Does not delete prior conflicts. */
 export function openConflict(input: OpenConflictInput): Conflict {
   if (input.fact_ids.length < 2) {
     throw new ConflictLifecycleError("Conflict requires at least two fact_ids");
@@ -61,6 +63,7 @@ export function openConflict(input: OpenConflictInput): Conflict {
     state: "open",
     resolution: null,
     user_confirmation: false,
+    affects_preferred_path: input.affects_preferred_path !== false,
     updated_at: now,
     supersedes: input.supersedes ?? null,
     related_conflict_ids: input.related_conflict_ids ?? [],
@@ -94,7 +97,7 @@ export function clarifyConflict(
   };
 }
 
-/** Freeze path: every still-open conflict → unresolved_in_final (preserve statements). */
+/** Freeze path: every still-open conflict 鈫?unresolved_in_final (preserve statements). */
 export function markOpenConflictsUnresolvedInFinal(
   conflicts: Conflict[],
   now?: string,

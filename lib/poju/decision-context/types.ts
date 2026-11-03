@@ -141,6 +141,12 @@ export interface Conflict {
   resolution: string | null;
   /** Required true for clarified; model may not self-clarify. */
   user_confirmation: boolean;
+  /**
+   * Eng SoT Gate: unresolved conflict that decides whether the preferred path holds
+   * → delivery-blocking FAIL. When false, Freeze may keep unresolved_in_final with
+   * noted boundary / degraded delivery. Undefined = conservative true (blocks).
+   */
+  affects_preferred_path?: boolean;
   updated_at?: string;
   supersedes?: string | null;
   related_conflict_ids?: string[];

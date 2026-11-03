@@ -1,5 +1,5 @@
 /**
- * Canonical business payload → SHA-256 hex for Freeze / report binding.
+ * Canonical business payload 鈫?SHA-256 hex for Freeze / report binding.
  * Excludes lifecycle metadata (status, timestamps, superseded_*).
  */
 
@@ -98,6 +98,7 @@ export interface BusinessPayload {
     state: Conflict["state"];
     resolution: string | null;
     user_confirmation: boolean;
+    affects_preferred_path?: boolean;
     related_conflict_ids?: string[];
   }>;
   information_boundaries?: string[];
@@ -162,6 +163,9 @@ export function extractBusinessPayload(dc: DecisionContext): BusinessPayload {
       state: c.state,
       resolution: c.resolution,
       user_confirmation: c.user_confirmation,
+      ...(c.affects_preferred_path !== undefined
+        ? { affects_preferred_path: c.affects_preferred_path }
+        : {}),
       ...(c.related_conflict_ids
         ? { related_conflict_ids: [...c.related_conflict_ids] }
         : {}),
