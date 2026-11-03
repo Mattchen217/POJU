@@ -9,7 +9,7 @@
 
 - Contract HIGHEST: `PHASE3-FINAL-ENG-CONTRACT-2026-11-03.md` **§10–§12**
 - Mapping: `PHASE3-FINAL-IMPLEMENTATION-MAPPING-2026-11-03.md` **§5**
-- S2 acceptance carry-forwards (flag only): C1 extend two-phase, C5 vault rename plaintext, J4 shared xhigh store
+- S2 acceptance carry-forwards (historical at S3): C1/C5/J4 — later **CLOSED** in rem package (see PHASE3-FINAL-ACCEPTANCE.md)
 - Hold: Stage4 / Lab / 04 / SoT16 / BookJudgment / Call A/B product UI / Freeze aggregation redesign
 - S2 GAP: product must use pending→bind; do not rely on Path A synthesizing completed TaskContext when missing
 
@@ -82,9 +82,9 @@
 
 ## Carry-forwards (flag only — not implemented)
 
-- C1 extend two-phase
-- C5 vault rename plaintext
-- J4 shared xhigh store
+- C1 extend two-phase — rem CLOSED (FINAL-ACCEPTANCE)
+- C5 vault rename plaintext — rem CLOSED
+- J4 shared xhigh store — rem CLOSED
 - Hold Stage4 / Lab / 04 / SoT16 / BookJudgment / Call A/B product UI / Freeze aggregation redesign
 - S2 GAP: product pending→bind; no Path A completed TaskContext synthesis when missing
 
