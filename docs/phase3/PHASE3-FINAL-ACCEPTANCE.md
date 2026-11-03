@@ -9,9 +9,12 @@ Do **not** treat this document as Final PASS until GitHub Actions is green on th
 
 ## 1. Final HEAD SHA (local)
 
-`e70616bcc1a91b4ea9c29d71b26130186abdf162` — `phase3 rem: restore fail-closed on blob load`
+Tip of `feat/decision-context-phase1`: **`git rev-parse HEAD`** at push time (docs-only commits may follow suite evidence).
 
-Ahead of `origin/feat/decision-context-phase1`: **13** commits (unpushed). Runtime tip for suites was `d3681bb9…`; tip includes docs-only acceptance commits.
+**Suite evidence runtime tip:** `d3681bb91b808305b53cdd21cdf1991e125601c9` (restore fail-closed).  
+All commits after that through branch tip are **docs-only** acceptance packaging (no runtime/test source changes).
+
+Ahead of `origin/feat/decision-context-phase1`: **13** commits (unpushed) as of packaging.
 
 ## 2. Full diff vs baseline `96cf819d26bbbb7a1eb174848fb0366c1eebfe9f`
 

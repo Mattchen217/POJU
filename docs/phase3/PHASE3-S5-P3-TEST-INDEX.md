@@ -1,6 +1,6 @@
 # PHASE3 S5 — P3-61…130 Test Index
 
-**Acceptance HEAD (local rem package):** `e70616bcc1a91b4ea9c29d71b26130186abdf162`  
+**Acceptance HEAD (local rem package):** suite tip `d3681bb91b808305b53cdd21cdf1991e125601c9` (+ docs-only tip)  
 **HEAD baseline for S5 work:** starts from `740fe32ec8155b07aa9bb4c2ff0e0baa47a15ece`  
 **Contract:** Final Engineering Contract §18  
 **Mapping:** Implementation Mapping §7
