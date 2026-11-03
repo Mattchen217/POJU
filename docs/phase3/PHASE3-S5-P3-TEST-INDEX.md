@@ -59,7 +59,7 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-109 | Same action+target idempotent skip | §18.6 | test-decision-context-phase3-e2e.ts | outcome idempotent_skip |
 | P3-110 | Same action different target hard fail | §18.6 | test-decision-context-phase3-unit.ts | CONFIRMATION_ACTION_REUSED |
 | P3-111 | event target/type mismatch hard fail | §18.6 | test-decision-context-phase3-e2e.ts | validator throws |
-| P3-112 | missing source_turn_id hard fail | §18.6 | test-decision-context-phase3-e2e.ts | validator throws |
+| P3-112 | Confirmation source provenance — real user message on Session | §18.6 / §11.3 / §16.6 | test-decision-context-phase3-e2e.ts | missing/forged/cross-session/non-user/target mismatch/action reuse hard-fail; happy path OK |
 | P3-113 | user_estimate stays unverified | §18.6 | test-decision-context-phase3-unit.ts | status unverified |
 | P3-114 | independently_verified no auto user_confirmed | §18.6 | test-decision-context-phase3-e2e.ts | deriveUserConfirmed false |
 | P3-115 | Constraint illegal combination hard fail | §18.6 | test-decision-context-phase3-e2e.ts | IllegalFactCombinationError |

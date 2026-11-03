@@ -46,6 +46,7 @@ Workflow added at `.github/workflows/phase3-decision-context.yml`.
 - Product Call A/B UI/Job wiring Hold
 - Product Stage4 / Page 5b14cc07 v2 / Lab/04/SoT16/BookJudgment/Freeze redesign Hold
 - P3-99/P3-100 remediated: runtime Generation consistency validator hard-fails case A/B at reload/PathB/PathC/formal read-commit
+- P3-112 remediated: confirmFact/Constraint require real user-message provenance on current Session
 - P3-70 remediated: real encrypt inject on casWritePOJUSession path (cipher throw before Dexie commit)
 - P3-71 remediated: real Dexie mid-txn abort after session update + cycle-index clear (no manual restore)
 - P3-91 remediated: real Path A staged Registry write then fail before Binding (Dexie abort; retry OK)
