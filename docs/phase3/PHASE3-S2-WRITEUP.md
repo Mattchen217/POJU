@@ -93,7 +93,7 @@ S3 ControlPlane/Confirmation/Opening Anchor product wiring; S4 Normalize/Fingerp
 
 - **C1** — full product C1 ControlPlane coupling left to S3; S2 only accepts optional opaque slice.
 - **C5** — not invented.
-- **J4** — flagged shared store; same recovery API; no Lab-specific policy.
+- **J4** — rem CLOSED (see PHASE3-J4-JOB-STORE-ISOLATION.md / FINAL-ACCEPTANCE).
 
 ## Job recovery evidence vs S0
 

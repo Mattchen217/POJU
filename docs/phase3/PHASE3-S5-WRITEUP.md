@@ -3,8 +3,9 @@
 **Date:** 2026-11-03 (America/Chicago)  
 **Branch:** `feat/decision-context-phase1`  
 **PR:** #32  
-**Start HEAD:** `740fe32ec8155b07aa9bb4c2ff0e0baa47a15ece`  
-**Max S4 verdict:** PASS_WITH_GAPS (authorized S5)
+**Acceptance HEAD (local):** `d3681bb91b808305b53cdd21cdf1991e125601c9`  
+**Baseline:** `96cf819d26bbbb7a1eb174848fb0366c1eebfe9f`  
+**Max prior:** S5 PASS_WITH_GAPS → remediations → Final Acceptance package
 
 ## Deliverables
 
@@ -13,45 +14,69 @@
 | L1 unit | `scripts/test-decision-context-phase3-unit.ts` |
 | L2 IDB | `scripts/test-decision-context-phase3-idb.ts` |
 | L3 e2e | `scripts/test-decision-context-phase3-e2e.ts` |
+| Job idempotency | `scripts/test-decision-context-phase3-job-idempotency.ts` |
 | Test index | `docs/phase3/PHASE3-S5-P3-TEST-INDEX.md` |
+| Final acceptance | `docs/phase3/PHASE3-FINAL-ACCEPTANCE.md` |
+| J4 isolation | `docs/phase3/PHASE3-J4-JOB-STORE-ISOLATION.md` |
 | CI workflow | `.github/workflows/phase3-decision-context.yml` |
-| package scripts | `test:decision-context-phase3(-unit|-idb|-e2e|-core)` |
 
-## Commands
+## Commands (local acceptance evidence)
 
 ```
-pnpm exec tsx scripts/test-decision-context-phase3-unit.ts --core
-pnpm exec tsx scripts/test-decision-context-phase3-idb.ts --core
-pnpm exec tsx scripts/test-decision-context-phase3-e2e.ts --core
-pnpm test:decision-context-phase3
+# Core 26 (PowerShell: set CORE then run each; do not rely on npm &&)
+$env:PHASE3_CORE_ONLY="1"
+node ./node_modules/tsx/dist/cli.mjs scripts/test-decision-context-phase3-unit.ts --core
+node ./node_modules/tsx/dist/cli.mjs scripts/test-decision-context-phase3-idb.ts --core
+node ./node_modules/tsx/dist/cli.mjs scripts/test-decision-context-phase3-e2e.ts --core
+
+Remove-Item Env:PHASE3_CORE_ONLY -ErrorAction SilentlyContinue
+pnpm test:decision-context-phase3-unit
+pnpm test:decision-context-phase3-idb
+pnpm test:decision-context-phase3-e2e
+pnpm test:decision-context-phase3-job
+pnpm exec next typegen
 pnpm exec tsc --noEmit
 ```
 
-## Results (this delivery)
+## Results (this acceptance package)
 
-- Core blocking: ALL PASS (26 IDs)
-- L1 unit: PASS=35 FAIL=0 SKIP=0
-- L2 idb: PASS=12 FAIL=0 SKIP=0 (incl. P3-91)
-- L3 e2e: PASS=23 FAIL=0 SKIP=0
-- tsc --noEmit: 0 errors
+| Suite | PASS | FAIL | SKIP |
+|---|---|---|---|
+| Core 26 IDs | 26 | 0 | — |
+| L1 unit | 35 | 0 | 0 |
+| L2 idb | 21 | 0 | 0 |
+| L3 e2e | 23 | 0 | 0 |
+| Job | 10 | 0 | 0 |
+| next typegen | OK | — | — |
+| tsc --noEmit | 0 errors | — | — |
+
+## Remediation status (former PASS_WITH_GAPS items)
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P3-70 | CLOSED | Real encrypt inject; no rev/blob change; retry OK |
+| P3-71 | CLOSED | Real Dexie mid-txn abort after clear; full rollback |
+| P3-91 | CLOSED | Staged Registry then fail before Binding; abort |
+| P3-99/100 | CLOSED | Generation consistency hard-fail |
+| P3-112 | CLOSED | Confirmation requires real user-message provenance |
+| ITEM6 Job | CLOSED | SET NX + latest candidate recovery |
+| C1 | CLOSED | Renewals folded into CAS row update (honest row-atomic) |
+| C5 | CLOSED | Rename decrypt-fail fail-closed |
+| J4 | CLOSED | Shared store isolation + resume phase guards |
+| Restore leftover | CLOSED | Fail-closed on blob load (P3-148) |
 
 ## CI
 
-Workflow added at `.github/workflows/phase3-decision-context.yml`.  
-**Remote Actions run:** none yet (not pushed by default). Workflow present locally; no remote run SHA.
+Workflow: `.github/workflows/phase3-decision-context.yml`.  
+**Remote Actions:** PENDING_PUSH (do not claim Final PASS until green on pushed SHA).
 
-## Gaps / Holds (carry-forward)
+## Known limits (honest — not PASS_WITH_GAPS re-label)
 
-- C1 extend two-phase, C5 vault rename plaintext, J4 shared xhigh (S4 gaps)
-- Product Call A/B UI/Job wiring Hold
-- Product Stage4 / Page 5b14cc07 v2 / Lab/04/SoT16/BookJudgment/Freeze redesign Hold
-- P3-99/P3-100 remediated: runtime Generation consistency validator hard-fails case A/B at reload/PathB/PathC/formal read-commit
-- P3-112 remediated: confirmFact/Constraint require real user-message provenance on current Session
-- ITEM 6 remediated: createXhighJob uses SET NX client_task claim; lookup repairs via latest candidate; dangling index → recovery_required
-- P3-70 remediated: real encrypt inject on casWritePOJUSession path (cipher throw before Dexie commit)
-- P3-71 remediated: real Dexie mid-txn abort after session update + cycle-index clear (no manual restore)
-- P3-91 remediated: real Path A staged Registry write then fail before Binding (Dexie abort; retry OK)
+- `getXhighJob(job_id)` unscoped; callers must verify phase.
+- Lab shares phase namespace with product when same `session_id`.
+- Restore post-CAS status/archive step can leave retryable archived+extended mid-flight if interrupted after CAS.
+- Product Call A/B UI Hold; Stage4/Page/Lab redesign Holds remain out of scope.
 
 ## Ready
 
-Ready for Max independent S5 acceptance. No merge/deploy performed.
+**READY_FOR_PASS_PENDING_CI** — local mandatory evidence green. No merge/deploy/push performed in this package.

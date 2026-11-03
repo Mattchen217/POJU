@@ -124,5 +124,5 @@ pnpm exec tsc --noEmit
 
 Max independently accepted **S4 PASS_WITH_GAPS** and authorized S5.  
 S5 tests map S4 behaviors via P3-121鈥?30 (see `PHASE3-S5-P3-TEST-INDEX.md`).  
-Remaining S4 gaps unchanged: C1 extend two-phase; C5 vault rename plaintext; J4 shared xhigh; product Call A/B UI Hold; Stage4/Page/Lab Holds.
+S4 gaps rem CLOSED: C1/C5/J4 (see PHASE3-FINAL-ACCEPTANCE.md). Product Call A/B UI Hold; Stage4/Page/Lab Holds remain.
 
