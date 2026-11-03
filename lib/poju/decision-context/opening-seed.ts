@@ -1,9 +1,9 @@
 /**
- * Opening â†’ DC draft seed (Definition + initial Facts + Constraints).
+ * Opening â†?DC draft seed (Definition + initial Facts + Constraints).
  * Forbidden: DIR, agenda, Hypothesis, model-inferred RealityFact.
  */
 
-import { buildRealityFact } from "./fact-combination";
+import { buildRealityFact, deriveUserConfirmed } from "./fact-combination";
 import type {
   Constraint,
   ConstraintCategory,
@@ -28,7 +28,7 @@ export interface OpeningDirectionBuffer {
 /** User-sourced statement eligible to become a RealityFact (never model insight). */
 export interface OpeningUserStatement {
   statement: string;
-  /** Stable id or null â†’ generated. */
+  /** Stable id or null â†?generated. */
   fact_id?: string;
   verification_level: Extract<
     VerificationLevel,
@@ -58,7 +58,7 @@ export interface SeedOpeningInput {
   context_id?: string;
   session_id?: string;
   now?: string;
-  /** Temporary agent_v2 buffers â€” NOT formal authority after seed. */
+  /** Temporary agent_v2 buffers â€?NOT formal authority after seed. */
   core_dilemma: OpeningDilemmaBuffer | null;
   desired_direction: OpeningDirectionBuffer | null;
   /** Only user-explicit sentences; model insights must be omitted. */
@@ -142,7 +142,7 @@ export function seedDecisionContextFromOpening(
   }
 
   // Stakes / concrete_event as user-asserted facts only when present in buffers
-  // AND mirrored in user_statements â€” buffers alone are temporary; do not invent
+  // AND mirrored in user_statements â€?buffers alone are temporary; do not invent
   // Facts from model-filled buffers without user_statements. Callers must pass
   // user_statements for anything that should become RealityFact.
 
@@ -162,7 +162,11 @@ export function seedDecisionContextFromOpening(
       source_stage: "opening",
       source_turn_id: c.source_turn_id ?? null,
       rigidity: c.rigidity ?? "hard",
-      user_confirmed: Boolean(c.user_confirmed_event) && verification_level !== "independently_verified",
+      user_confirmed: deriveUserConfirmed({
+        status,
+        verification_level,
+        has_user_confirm_event: Boolean(c.user_confirmed_event),
+      }),
       updated_at: now,
     });
   }
