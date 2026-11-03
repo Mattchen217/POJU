@@ -12,7 +12,7 @@
 | S1 PageFeed | Implemented (eng) | DC contract, policy flag, user_feed parity, Lab create/public-view, client delivery soft path |
 | S2 BookJudgment | Implemented (eng) | Pack gun injects Formal DC for faces 05/06/08 |
 | S3 LAB observability | Implemented (eng) | Binding panel + attempt `decision_context_*` payload; full Stage/Prompt matrix still incremental |
-| S4 Freeze→Delivery | Helper + soft path | `freeze-to-delivery.ts` + session DC passed to final-delivery; chat Freeze UX still not production-wired |
+| S4 Freeze→Delivery | Helper + soft path | Superseded by S5 production wire — see `docs/stage4/S5-S6-PROGRESS.md` |
 
 ## Tests
 

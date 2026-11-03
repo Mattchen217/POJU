@@ -34,6 +34,11 @@ export type LabAttempt = {
    * feed + system/user prompts + reasoning + raw/parsed output.
    */
   call_trace?: import("@/lib/llm/pro/delivery/lab/call-trace").LabCallTrace;
+  /**
+   * S6 — structured Stage/Input/Context/Prompt/Model/Response/Transform/Validation/Render.
+   * Built from obtainable fields only (no forged model internals).
+   */
+  observation?: import("@/lib/llm/pro/delivery/lab/observation").LabObservationLayer;
   /** Gate human quality checklist (face QC) — persisted on the gate attempt. */
   quality_review?: import("@/lib/llm/pro/delivery/lab/lab-face-qc").FaceQualityReview;
 };

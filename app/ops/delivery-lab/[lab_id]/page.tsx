@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
 import { LabCallTracePanel } from "../_components/LabCallTracePanel";
 import { LabDecisionContextPanel } from "../_components/LabDecisionContextPanel";
+import { LabObservationPanel } from "../_components/LabObservationPanel";
 import {
   LabAssembleFaceShelf,
   LabFacePreview,
@@ -66,6 +67,7 @@ type LabAttempt = {
   output_to_next_stage: unknown;
   error?: string;
   call_trace?: LabCallTrace;
+  observation?: Record<string, unknown> | null;
   quality_review?: QualityReviewState & { updated_at?: string };
 };
 
@@ -1722,11 +1724,20 @@ export default function DeliveryLabConsolePage() {
                   </div>
                 </div>
               ) : (
-                <LabCallTracePanel
-                  call_trace={attempt.call_trace}
-                  fallback_input={attempt.input_payload}
-                  fallback_raw={attempt.raw_model_output}
-                />
+                <div className="flex flex-col gap-2 lg:col-span-2">
+                  <LabObservationPanel
+                    observation={
+                      attempt.observation as Parameters<
+                        typeof LabObservationPanel
+                      >[0]["observation"]
+                    }
+                  />
+                  <LabCallTracePanel
+                    call_trace={attempt.call_trace}
+                    fallback_input={attempt.input_payload}
+                    fallback_raw={attempt.raw_model_output}
+                  />
+                </div>
               )}
               {isGateStep ? (
                 <div className="lg:col-span-2">

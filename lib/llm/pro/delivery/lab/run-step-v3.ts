@@ -64,6 +64,7 @@ import { buildBookJudgmentQuotaFromBlueprint } from "@/lib/llm/pro/delivery/book
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { formatDecisionContextSliceForPage } from "@/lib/poju/decision-context/dc-page-feed";
+import { buildLabObservation } from "@/lib/llm/pro/delivery/lab/observation";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 import { gateBookJudgmentBodyConsume } from "@/lib/llm/pro/delivery/pipeline-v3/gate-book-judgment-body";
@@ -3343,6 +3344,44 @@ export async function runLabStepV3(
   const attempt_number = rec.attempts.length + 1;
   try {
     const result = await executeV3(lab, def, runOpts);
+    const payloadObj =
+      result.input_payload && typeof result.input_payload === "object"
+        ? (result.input_payload as Record<string, unknown>)
+        : {};
+    const observation = buildLabObservation({
+      stage: `v3:${def.kind}`,
+      step_key,
+      page: def.page ?? (typeof payloadObj.key === "string" ? payloadObj.key : null),
+      session_id: lab.source.session_id ?? null,
+      lab_id: lab.lab_id,
+      call_trace: result.call_trace ?? null,
+      input_payload: result.input_payload,
+      processing_actions: result.processing_actions,
+      gate_verdict: result.gate_verdict,
+      raw_model_output: result.raw_model_output,
+      output_to_next_stage: result.output_to_next_stage,
+      context_binding: lab.source.decision_context_binding ?? null,
+      has_context_snapshot: Boolean(lab.source.decision_context_snapshot),
+      context_status: lab.source.decision_context_snapshot?.status ?? null,
+      dc_feed_injected:
+        typeof payloadObj.decision_context_feed_present === "boolean"
+          ? payloadObj.decision_context_feed_present
+          : null,
+    });
+    if (result.processing_actions?.some((a) => a.action === "dc_freeze") !== true) {
+      // Annotate when Formal DC was present on this invoke (observability only).
+      if (observation.context?.feed_injected) {
+        observation.transform = [
+          ...(observation.transform ?? []),
+          {
+            action: "dc_page_feed",
+            detail: lab.source.decision_context_binding
+              ? `${lab.source.decision_context_binding.context_id}@v${lab.source.decision_context_binding.context_version}`
+              : "injected",
+          },
+        ];
+      }
+    }
     const attempt: LabAttempt = {
       attempt_number,
       timestamp: new Date().toISOString(),
@@ -3355,6 +3394,7 @@ export async function runLabStepV3(
       gate_verdict: result.gate_verdict,
       output_to_next_stage: result.output_to_next_stage,
       error: result.error,
+      observation,
       ...(result.call_trace ? { call_trace: result.call_trace } : {}),
     };
     rec.attempts.push(attempt);
