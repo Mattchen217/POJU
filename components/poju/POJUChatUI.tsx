@@ -46,7 +46,8 @@ import {
   type PojuActivity,
 } from "@/lib/poju/activity";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { createPOJUSession, loadPOJUSession, savePOJUSession, savePOJUSessionCore, runPOJUSessionPostCommitSideEffects, confirmSessionAfterCorePersist } from "@/lib/poju/session-manager";
+import { hydratePersistIdempotencyFromKeys } from "@/lib/poju/decision-context/persist";
 import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-delivery-vault";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
@@ -551,6 +552,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const pdfFileRef = useRef<HTMLInputElement | null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
+
+  // Phase 2 C1: hydrate durable DC idempotency keys on session identity change.
+  // Restore authority is applied inside loadPOJUSession / applyDecisionContextRestore —
+  // do not rebuild DC from agent_v2 buffers here.
+  useEffect(() => {
+    hydratePersistIdempotencyFromKeys(session.decision_context_idempotency_keys);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- identity + durable keys only
+  }, [session.session_id, session.decision_context_idempotency_keys]);
+
+
 
   useEffect(() => {
     if (!paintPendingUser) return;
@@ -2037,10 +2048,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     await getPojuDb().pojuSessionRecords.update(targetSessionId, { original_question: value });
     const state = await loadPOJUSession(targetSessionId);
     if (state) {
-      state.original_question = value;
-      await savePOJUSession(state);
+      // loadPOJUSession already applied DC restore authority.
+      const next = { ...state, original_question: value };
       if (targetSessionId === sessionRef.current.session_id) {
-        onSessionUpdate({ ...state });
+        // C1: confirm UI memory only after core blob+cycle persist succeeds.
+        await confirmSessionAfterCorePersist(next, onSessionUpdate);
+      } else {
+        await savePOJUSessionCore(next);
+        void runPOJUSessionPostCommitSideEffects(next);
       }
     }
     setSessionRows((prev) =>

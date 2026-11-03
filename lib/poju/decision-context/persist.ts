@@ -1,6 +1,7 @@
 /**
  * C1 local snapshot / working-copy / commit / rollback + idempotency.
- * Phase 1: in-memory API only — does NOT wire session-manager / Gate / Opening.
+ * Phase 2: durable idempotency keys live on the session slice (survive reload);
+ * blob writer is provided by session-manager (savePOJUSessionCore).
  * Restore trusts persisted DC as source of truth (ignores agent_v2 buffers).
  */
 
@@ -19,6 +20,11 @@ export type ControlPlaneSlice = Record<string, unknown>;
 export interface DcSessionSlice {
   decision_context?: DecisionContext | null;
   decision_context_versions?: DecisionContext[];
+  /**
+   * Completed DC persist op ids — durable in the encrypted session blob.
+   * Required so reload / new JS heap still honors idempotency.
+   */
+  decision_context_idempotency_keys?: string[];
   /** Opaque control-plane fields (phase, agenda status, focus, stall, turn, …). */
   control_plane?: ControlPlaneSlice;
 }
@@ -39,7 +45,7 @@ export interface PersistTransaction {
   readonly idempotency_key: string;
   readonly snapshot: PersistSnapshot;
   working: DcSessionSlice;
-  /** Completed keys in this process (idempotent no-op on retry). */
+  /** Process-local completed keys (also mirrored into durable slice on commit). */
   readonly completed_keys: Set<string>;
 }
 
@@ -55,10 +61,24 @@ function cloneSlice(session: DcSessionSlice): DcSessionSlice {
     decision_context_versions: session.decision_context_versions
       ? (JSON.parse(JSON.stringify(session.decision_context_versions)) as DecisionContext[])
       : undefined,
+    decision_context_idempotency_keys: session.decision_context_idempotency_keys
+      ? [...session.decision_context_idempotency_keys]
+      : undefined,
     control_plane: session.control_plane
       ? (JSON.parse(JSON.stringify(session.control_plane)) as ControlPlaneSlice)
       : undefined,
   };
+}
+
+function hasCompletedKey(session: DcSessionSlice, key: string): boolean {
+  if (globalCompletedKeys.has(key)) return true;
+  return (session.decision_context_idempotency_keys ?? []).includes(key);
+}
+
+function stampDurableKey(session: DcSessionSlice, key: string): void {
+  const next = new Set(session.decision_context_idempotency_keys ?? []);
+  next.add(key);
+  session.decision_context_idempotency_keys = Array.from(next);
 }
 
 /** Step 1 — snapshot memory before mutation. */
@@ -70,14 +90,14 @@ export function snapshotSession(session: DcSessionSlice, now?: string): PersistS
 }
 
 /**
- * Begin a C1 transaction. If idempotency_key already completed, returns null
- * (caller should no-op — do not duplicate Fact/Hypothesis/DIR/advance).
+ * Begin a C1 transaction. If idempotency_key already completed (process-local
+ * OR durable on the session slice), returns null — caller must no-op.
  */
 export function beginPersistTransaction(
   current: DcSessionSlice,
   opts: BeginPersistOptions,
 ): PersistTransaction | null {
-  if (globalCompletedKeys.has(opts.idempotency_key)) {
+  if (hasCompletedKey(current, opts.idempotency_key)) {
     return null;
   }
   const snapshot = snapshotSession(current, opts.now);
@@ -122,6 +142,8 @@ export interface CommitPersistResult {
 /**
  * Steps 2–5: require DC + control plane working state, then blob write.
  * On any failure → restore memory from snapshot; do not mark success.
+ * Successful commit stamps the idempotency key into the durable key list
+ * before the blob write so a reload can recover it.
  */
 export async function commitPersistTransaction(
   tx: PersistTransaction,
@@ -131,7 +153,7 @@ export async function commitPersistTransaction(
     require_control_plane?: boolean;
   },
 ): Promise<CommitPersistResult> {
-  if (globalCompletedKeys.has(tx.idempotency_key)) {
+  if (hasCompletedKey(tx.snapshot.session, tx.idempotency_key) || globalCompletedKeys.has(tx.idempotency_key)) {
     return {
       session: cloneSlice(tx.snapshot.session),
       committed: false,
@@ -145,12 +167,12 @@ export async function commitPersistTransaction(
       throw new PersistError("DC working copy missing decision_context");
     }
     if (opts?.require_control_plane !== false) {
-      // Control plane may be empty object but should be defined if required.
       if (tx.working.control_plane === undefined) {
         throw new PersistError("Control plane sync missing on working copy");
       }
     }
 
+    stampDurableKey(tx.working, tx.idempotency_key);
     await writeBlob(cloneSlice(tx.working));
     globalCompletedKeys.add(tx.idempotency_key);
     return {
@@ -180,6 +202,7 @@ export function rollbackToSnapshot(snapshot: PersistSnapshot): DcSessionSlice {
 export function restoreDecisionContextAuthority(input: {
   persisted_dc?: DecisionContext | null;
   persisted_versions?: DecisionContext[];
+  persisted_idempotency_keys?: string[];
   /** Ignored for formal authority — buffers only. */
   agent_v2_buffers?: {
     core_dilemma?: unknown;
@@ -190,16 +213,54 @@ export function restoreDecisionContextAuthority(input: {
 }): {
   decision_context: DecisionContext | null | undefined;
   decision_context_versions: DecisionContext[] | undefined;
+  decision_context_idempotency_keys: string[] | undefined;
   ignored_buffers: boolean;
 } {
+  if (input.persisted_idempotency_keys?.length) {
+    hydratePersistIdempotencyFromKeys(input.persisted_idempotency_keys);
+  }
   return {
     decision_context: input.persisted_dc,
     decision_context_versions: input.persisted_versions,
+    decision_context_idempotency_keys: input.persisted_idempotency_keys
+      ? [...input.persisted_idempotency_keys]
+      : undefined,
     ignored_buffers: Boolean(input.agent_v2_buffers),
   };
 }
 
-/** Test helper — clear idempotency registry. */
+/** Rehydrate process-local idempotency registry from a durable session field. */
+export function hydratePersistIdempotencyFromKeys(keys: string[] | undefined | null): void {
+  for (const key of keys ?? []) {
+    if (typeof key === "string" && key.trim()) {
+      globalCompletedKeys.add(key);
+    }
+  }
+}
+
+/** Test helper — clear process-local idempotency registry. */
 export function __resetPersistIdempotencyForTests(): void {
   globalCompletedKeys.clear();
+}
+
+/** Extract DC persist slice from a session-shaped object (no agent buffer authority). */
+export function extractDcSessionSlice(session: {
+  decision_context?: DecisionContext | null;
+  decision_context_versions?: DecisionContext[];
+  decision_context_idempotency_keys?: string[];
+  agent_v2?: { current_phase?: string } | null;
+  /** Optional explicit control plane already prepared by caller. */
+  control_plane?: ControlPlaneSlice;
+}): DcSessionSlice {
+  const control_plane =
+    session.control_plane ??
+    (session.agent_v2
+      ? ({ current_phase: session.agent_v2.current_phase } as ControlPlaneSlice)
+      : undefined);
+  return cloneSlice({
+    decision_context: session.decision_context,
+    decision_context_versions: session.decision_context_versions,
+    decision_context_idempotency_keys: session.decision_context_idempotency_keys,
+    control_plane,
+  });
 }

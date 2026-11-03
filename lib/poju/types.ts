@@ -300,9 +300,14 @@ export interface POJUSessionState {
   /**
    * Formal Decision Context (Eastern OS Stage1-3). Sole authority for facts/dirs/hypotheses.
    * agent_v2 dilemma/direction/breakthrough_core remain temporary buffers only.
-   * Phase 1: types + library API only — Gate/Opening/CallA/B/Collecting not wired here.
+   * Phase 2: wired through session-manager C1 persist; Gate/Opening/CallA/B/Collecting still later.
    */
   decision_context?: import("./decision-context").DecisionContext | null;
   /** Append-only version history for the same context_id (H1 versioning). */
   decision_context_versions?: import("./decision-context").DecisionContext[];
+  /**
+   * Durable DC persist idempotency keys (C1). Survives reload inside the encrypted session blob.
+   * Process-local registry is hydrated from this on load/restore.
+   */
+  decision_context_idempotency_keys?: string[];
 }

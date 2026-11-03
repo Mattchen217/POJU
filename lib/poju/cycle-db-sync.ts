@@ -1,20 +1,23 @@
 /**
  * Persist cycle index rows for Tool Linking (encrypted payload remains source of truth).
+ * Phase 2 C1: cycle index is part of the *core* persist boundary with the session blob
+ * (see savePOJUSessionCore). Archive/profile sync stays post-commit side effects.
  */
 
-import { getPojuDb } from "@/lib/db/poju-db";
+import { getPojuDb, type PojuDb } from "@/lib/db/poju-db";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
-export async function syncSessionCyclesToDb(state: POJUSessionState): Promise<void> {
-  if (typeof window === "undefined") return;
+async function writeCycleIndexRows(
+  db: PojuDb,
+  state: POJUSessionState,
+  ownerKey: string,
+): Promise<void> {
   const cycles = state.cycles;
   if (!cycles?.length) return;
 
-  const db = getPojuDb();
   const sessionId = state.session_id;
   const deviceId = state.device_id;
-  const ownerKey = await resolveLocalOwnerKey();
 
   await db.poju_cycles.where("session_id").equals(sessionId).delete();
 
@@ -51,3 +54,32 @@ export async function syncSessionCyclesToDb(state: POJUSessionState): Promise<vo
     await db.poju_tool_suggestions.bulkPut(suggestionRows);
   }
 }
+
+export async function syncSessionCyclesToDb(state: POJUSessionState): Promise<void> {
+  if (typeof window === "undefined") return;
+  const cycles = state.cycles;
+  if (!cycles?.length) return;
+
+  const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
+  await writeCycleIndexRows(db, state, ownerKey);
+}
+
+/**
+ * Same cycle-index write, intended to run inside a Dexie transaction that also
+ * updates `pojuSessionRecords` (C1 core boundary = blob + cycle index).
+ */
+export async function syncSessionCyclesToDbWithDb(
+  db: PojuDb,
+  state: POJUSessionState,
+  ownerKey: string,
+): Promise<void> {
+  await writeCycleIndexRows(db, state, ownerKey);
+}
+
+/** Table names participating in the C1 core Dexie transaction. */
+export const POJU_SESSION_CORE_TABLES = [
+  "pojuSessionRecords",
+  "poju_cycles",
+  "poju_tool_suggestions",
+] as const;

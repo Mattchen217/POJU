@@ -1,6 +1,6 @@
 /**
- * Decision Context public barrel (Phase 1 API).
- * No Gate / Opening / CallA / CallB / Collecting production wiring in this PR.
+ * Decision Context public barrel.
+ * Phase 2: persist wired to session-manager C1 (blob + cycle); Gate/Opening/CallA/B/Collecting not production-wired.
  */
 
 export * from "./types";

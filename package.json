@@ -133,7 +133,8 @@
     "test:face02-evidence-fold-ui": "tsx scripts/test-face02-evidence-fold-ui.ts",
     "test:lab-reader-evidence-preview": "tsx scripts/test-lab-reader-evidence-preview.ts",
     "test:lab-evidence-soft-stages": "tsx scripts/test-lab-evidence-soft-stages.ts",
-    "test:decision-context": "tsx scripts/test-decision-context-phase1.ts"
+    "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
+    "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
