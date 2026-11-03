@@ -17,7 +17,7 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-67 | Two Tab same Generation → one identity | §18.1 | test-decision-context-phase3-idb.ts | single TaskContext for shared client_task_id |
 | P3-68 | Path A concurrent with chat message | §18.1 | test-decision-context-phase3-idb.ts | message retained |
 | P3-69 | Path A DC moved → GENERATION_BASE_STALE | §18.1 | test-decision-context-phase3-idb.ts | code==GENERATION_BASE_STALE |
-| P3-70 | Encrypt/apply failure → no rev/blob change | §18.1 | test-decision-context-phase3-idb.ts | revisions+cipher unchanged |
+| P3-70 | Real encryptJson throw on casWrite path — no rev/blob/idempotency change; retry OK | §18.1 / §15.3 | test-decision-context-phase3-idb.ts | encrypt invoked+throws; cipher+revs unchanged; same op_id retry commits |
 | P3-71 | Dexie mid-txn failure rollback | §18.1 | test-decision-context-phase3-idb.ts | revisions+cycle index unchanged |
 | P3-72 | TaskContext/Registry client_task_id mismatch | §18.2 | test-decision-context-phase3-unit.ts | GENERATION_IDENTITY_COLLISION |
 | P3-73 | Same generation_id different client_task_id | §18.2 | test-decision-context-phase3-unit.ts | GENERATION_IDENTITY_COLLISION |

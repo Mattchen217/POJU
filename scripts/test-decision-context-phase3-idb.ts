@@ -51,6 +51,8 @@ if (!g.crypto || !g.crypto.getRandomValues) {
 type Row = { id: string; name: string; status: "PASS" | "FAIL" | "SKIP"; err?: string };
 const results: Row[] = [];
 function shouldRun(id: string): boolean {
+  const only = process.env.PHASE3_ONLY_IDS;
+  if (only && only.trim()) return only.split(/[,\s]+/).filter(Boolean).includes(id);
   return !CORE_ONLY || CORE_IDS.has(id);
 }
 async function p3(id: string, name: string, fn: () => void | Promise<void>): Promise<void> {
@@ -481,35 +483,95 @@ async function main() {
     assert.equal(threw, true);
   });
 
-  await p3("P3-70", "encrypt failure → no Revision/blob change", async () => {
+  await p3("P3-70", "encrypt failure — no Revision/blob change", async () => {
     await resetDb();
     const sid = await createPOJUSession({ payment_id: "pay_s5_70", original_question: "70" });
     const before = await loadPOJUSession(sid);
     const db = getPojuDb();
     const rowBefore = await db.pojuSessionRecords.get(sid);
-    // Force encrypt failure by temporarily breaking crypto path via invalid circular structure
-    // Prefer mocking: if savePOJUSessionCore gets unencryptable — use mutate with throw inside apply after load is fine;
-    // Contract: encrypt failure during CAS write leaves no change.
-    // Simulate by corrupting owner key mid-write is hard; instead verify that a thrown apply does not commit:
+    const cyclesBefore = await db.poju_cycles.where("session_id").equals(sid).count();
+    const keysBefore = [...(before!.decision_context_idempotency_keys ?? [])].sort();
+    const bindingsBefore = JSON.stringify(before!.generation_operation_bindings ?? []);
+    const registryBefore = JSON.stringify(before!.generation_registry ?? []);
+    const tasksBefore = JSON.stringify(before!.generation_task_contexts ?? []);
+    const cipherBefore = rowBefore!.encrypted_data;
+    const ivBefore = rowBefore!.iv;
+    const sRevBefore = before!.session_revision;
+    const dRevBefore = before!.dc_write_revision;
+    const rowSBefore = rowBefore!.session_revision;
+    const rowDBefore = rowBefore!.dc_write_revision;
+
+    let encryptCalls = 0;
+    const failingEncrypt: typeof encryptJson = async (_secret, payload) => {
+      encryptCalls += 1;
+      // Prove we reached the real encrypt step with a concrete candidate payload.
+      assert.ok(payload && typeof payload === "object");
+      assert.equal((payload as any).session_id, sid);
+      throw new Error("simulated-encrypt-failure");
+    };
+
     let threw = false;
+    let thrownMsg = "";
     try {
-      await mutatePOJUSession(sid, {
-        operation_id: "op_70_fail",
-        kind: "session_patch",
-        bump_dc: false,
-        apply: () => {
-          throw new Error("simulated-encrypt-or-apply-failure");
+      await mutatePOJUSession(
+        sid,
+        {
+          operation_id: "op_70_encrypt_fail",
+          kind: "session_patch",
+          bump_dc: false,
+          apply: (latest) => ({
+            ...latest,
+            original_question: "70-after-encrypt-should-not-persist",
+            last_interaction_at: "2026-11-03T12:07:00.000Z",
+          }),
         },
-      });
-    } catch {
+        { encrypt: failingEncrypt },
+      );
+    } catch (err) {
       threw = true;
+      thrownMsg = err instanceof Error ? err.message : String(err);
     }
-    assert.equal(threw, true);
-    const after = await loadPOJUSession(sid);
-    assert.equal(after!.session_revision, before!.session_revision);
-    assert.equal(after!.dc_write_revision, before!.dc_write_revision);
-    const rowAfter = await db.pojuSessionRecords.get(sid);
-    assert.equal(rowAfter!.encrypted_data, rowBefore!.encrypted_data);
+    assert.equal(threw, true, "encrypt failure must throw");
+    assert.match(thrownMsg, /simulated-encrypt-failure/);
+    assert.ok(encryptCalls >= 1, "real encrypt path must have been invoked");
+
+    const afterFail = await loadPOJUSession(sid);
+    const rowAfterFail = await db.pojuSessionRecords.get(sid);
+    const cyclesAfterFail = await db.poju_cycles.where("session_id").equals(sid).count();
+    assert.equal(afterFail!.session_revision, sRevBefore);
+    assert.equal(afterFail!.dc_write_revision, dRevBefore);
+    assert.equal(rowAfterFail!.session_revision, rowSBefore);
+    assert.equal(rowAfterFail!.dc_write_revision, rowDBefore);
+    assert.equal(rowAfterFail!.encrypted_data, cipherBefore);
+    assert.equal(rowAfterFail!.iv, ivBefore);
+    assert.equal(afterFail!.original_question, before!.original_question);
+    assert.equal(cyclesAfterFail, cyclesBefore);
+    assert.deepEqual([...(afterFail!.decision_context_idempotency_keys ?? [])].sort(), keysBefore);
+    assert.equal(JSON.stringify(afterFail!.generation_operation_bindings ?? []), bindingsBefore);
+    assert.equal(JSON.stringify(afterFail!.generation_registry ?? []), registryBefore);
+    assert.equal(JSON.stringify(afterFail!.generation_task_contexts ?? []), tasksBefore);
+
+    // Same stable operation identity retry with real encrypt must complete.
+    const retry = await mutatePOJUSession(sid, {
+      operation_id: "op_70_encrypt_fail",
+      kind: "session_patch",
+      bump_dc: false,
+      apply: (latest) => ({
+        ...latest,
+        original_question: "70-after-encrypt-should-not-persist",
+        last_interaction_at: "2026-11-03T12:07:00.000Z",
+      }),
+    });
+    assert.equal(retry.session_revision, sRevBefore! + 1);
+    assert.equal(retry.dc_write_revision, dRevBefore);
+    assert.equal(retry.state.original_question, "70-after-encrypt-should-not-persist");
+
+    const afterOk = await loadPOJUSession(sid);
+    const rowAfterOk = await db.pojuSessionRecords.get(sid);
+    assert.equal(afterOk!.session_revision, sRevBefore! + 1);
+    assert.equal(afterOk!.dc_write_revision, dRevBefore);
+    assert.notEqual(rowAfterOk!.encrypted_data, cipherBefore);
+    assert.equal(afterOk!.original_question, "70-after-encrypt-should-not-persist");
   });
 
   await p3("P3-71", "Dexie mid-txn failure rolls back blob+revisions+indexes", async () => {

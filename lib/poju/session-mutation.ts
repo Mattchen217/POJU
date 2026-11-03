@@ -236,6 +236,12 @@ export interface CasWritePOJUSessionInput {
    */
   generation_base_revision?: number;
   owner_key?: string;
+  /**
+   * Test-only encrypt override. Production callers omit this so the real
+   * encryptJson path runs. Used to inject encrypt failures before the Dexie
+   * write transaction (Contract §15.3 / P3-70).
+   */
+  encrypt?: typeof encryptJson;
 }
 
 export interface CasWritePOJUSessionResult {
@@ -272,7 +278,8 @@ export async function casWritePOJUSession(
   };
 
   // §7.5 step 6 — encrypt OUTSIDE the Dexie transaction
-  const payload = await encryptJson(SESSION_SECRET, committedState);
+  const encrypt = input.encrypt ?? encryptJson;
+  const payload = await encrypt(SESSION_SECRET, committedState);
 
   const db = getPojuDb();
   const ownerKey = input.owner_key ?? (await resolveLocalOwnerKey());
@@ -397,6 +404,8 @@ export interface MutatePOJUSessionOptions {
     state: POJUSessionState;
   } | null>;
   casWrite?: typeof casWritePOJUSession;
+  /** Test-only: forwarded to casWritePOJUSession.encrypt (P3-70). */
+  encrypt?: typeof encryptJson;
 }
 
 async function defaultLoad(
@@ -481,6 +490,7 @@ export async function mutatePOJUSession(
         ...(mutation.generation_base_revision !== undefined
           ? { generation_base_revision: mutation.generation_base_revision }
           : {}),
+        ...(opts.encrypt ? { encrypt: opts.encrypt } : {}),
       });
     } catch (err) {
       if (isSessionCasError(err) && err.code === SESSION_CAS_CONFLICT && attempt <= maxRetries) {
