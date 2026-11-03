@@ -2045,18 +2045,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const value = newTitle.trim();
     if (!value) return;
 
-    await getPojuDb().pojuSessionRecords.update(targetSessionId, { original_question: value });
+    // Rename commits only through savePOJUSessionCore (C1) so plaintext index
+    // + encrypted blob stay consistent -- no independent pre-save index update.
     const state = await loadPOJUSession(targetSessionId);
-    if (state) {
-      // loadPOJUSession already applied DC restore authority.
-      const next = { ...state, original_question: value };
-      if (targetSessionId === sessionRef.current.session_id) {
-        // C1: confirm UI memory only after core blob+cycle persist succeeds.
-        await confirmSessionAfterCorePersist(next, onSessionUpdate);
-      } else {
-        await savePOJUSessionCore(next);
-        void runPOJUSessionPostCommitSideEffects(next);
-      }
+    if (!state) return;
+    // loadPOJUSession already applied DC restore authority.
+    const next = { ...state, original_question: value };
+    if (targetSessionId === sessionRef.current.session_id) {
+      // C1: confirm UI memory only after core blob+cycle persist succeeds.
+      await confirmSessionAfterCorePersist(next, onSessionUpdate);
+    } else {
+      await savePOJUSessionCore(next);
+      void runPOJUSessionPostCommitSideEffects(next);
     }
     setSessionRows((prev) =>
       prev.map((x) => (x.session_id === targetSessionId ? { ...x, original_question: value } : x)),

@@ -244,7 +244,7 @@ export async function savePOJUSessionCore(state: POJUSessionState): Promise<void
   const hint = getCurrentStateHint(state);
 
   const run = async () => {
-    await db.pojuSessionRecords.update(state.session_id, {
+    const updated = await db.pojuSessionRecords.update(state.session_id, {
       encrypted_data: payload.cipher,
       iv: payload.iv,
       original_question: state.original_question.trim(),
@@ -257,6 +257,13 @@ export async function savePOJUSessionCore(state: POJUSessionState): Promise<void
       main_delivery_at: state.main_delivery_done ? new Date() : undefined,
       active_cycle_id: state.active_cycle_id,
     });
+    // Dexie update returns modified count; 0 means missing row -- throw so the
+    // surrounding transaction rolls back cycle-index writes too (C1 atomicity).
+    if (updated !== 1) {
+      throw new Error(
+        `pojuSessionRecords.update expected 1 row, got ${updated} (session_id=${state.session_id})`,
+      );
+    }
     await syncSessionCyclesToDbWithDb(db, state, ownerKey);
   };
 

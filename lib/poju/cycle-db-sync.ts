@@ -13,13 +13,16 @@ async function writeCycleIndexRows(
   state: POJUSessionState,
   ownerKey: string,
 ): Promise<void> {
-  const cycles = state.cycles;
-  if (!cycles?.length) return;
-
+  const cycles = state.cycles ?? [];
   const sessionId = state.session_id;
   const deviceId = state.device_id;
 
+  // Always clear prior index rows in the same transaction -- including when
+  // cycles were emptied -- so stale cycle/suggestion indexes cannot survive.
   await db.poju_cycles.where("session_id").equals(sessionId).delete();
+  await db.poju_tool_suggestions.where("session_id").equals(sessionId).delete();
+
+  if (!cycles.length) return;
 
   const rows = cycles.map((c) => ({
     cycle_id: c.cycle_id,
@@ -34,8 +37,6 @@ async function writeCycleIndexRows(
   }));
 
   await db.poju_cycles.bulkPut(rows);
-
-  await db.poju_tool_suggestions.where("session_id").equals(sessionId).delete();
 
   const suggestionRows = cycles.flatMap((c) =>
     c.tool_suggestions.map((s, idx) => ({
@@ -57,11 +58,10 @@ async function writeCycleIndexRows(
 
 export async function syncSessionCyclesToDb(state: POJUSessionState): Promise<void> {
   if (typeof window === "undefined") return;
-  const cycles = state.cycles;
-  if (!cycles?.length) return;
 
   const db = getPojuDb();
   const ownerKey = await resolveLocalOwnerKey();
+  // writeCycleIndexRows deletes old rows even when cycles is empty.
   await writeCycleIndexRows(db, state, ownerKey);
 }
 

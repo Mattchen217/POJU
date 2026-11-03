@@ -445,3 +445,16 @@ export async function ensurePojuDbReady(): Promise<PojuDb> {
   }
   return db;
 }
+
+/** Test-only: close + drop the Dexie singleton so IDB suites start clean. */
+export async function __resetPojuDbForTests(): Promise<void> {
+  if (singleton) {
+    try {
+      singleton.close();
+    } catch {
+      /* ignore */
+    }
+    singleton = null;
+  }
+  await Dexie.delete("pojulife_v4");
+}
