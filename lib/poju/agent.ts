@@ -803,6 +803,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     role: isSystemMessage ? "system" : "user",
     content: userMessage,
     timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
   };
 
   let messagesWithUser: POJUMessage[];
@@ -1259,7 +1260,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const resolvedOriginalQuestion =
     agent_v2.original_question?.trim() || workingSession.original_question;
 
-  const sessionOut = withSessionProfileFlags({
+  let sessionOut = withSessionProfileFlags({
     ...workingSession,
     original_question: resolvedOriginalQuestion,
     messages: [...messagesWithUser, assistantMessage],
@@ -1279,6 +1280,39 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       llmResponse.locked_provider ?? workingSession.locked_provider,
     locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
   });
+
+  // S7 — Collecting: map user turn → unverified RealityFact + DIR reaggregation via C1.
+  const phaseAfterCollect =
+    normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
+  if (
+    phaseAfterCollect === "collecting_context" &&
+    !isSystemMessage &&
+    phaseUserMessage.trim() &&
+    sessionOut.decision_context?.status === "draft"
+  ) {
+    const lastUser = [...messagesWithUser]
+      .reverse()
+      .find((m) => m.role === "user" && !m.is_rejected);
+    const turnId = lastUser?.client_id?.trim();
+    if (turnId) {
+      try {
+        const { persistCollectingUserTurnDc } = await import(
+          "@/lib/poju/decision-context/production-dc-lifecycle"
+        );
+        const collected = await persistCollectingUserTurnDc(sessionOut, {
+          statement: phaseUserMessage,
+          source_turn_id: turnId,
+          now: nowIso,
+        });
+        if (collected.applied) sessionOut = collected.session;
+      } catch (e) {
+        console.warn(
+          "[agent] collecting DC update failed (non-fatal)",
+          e instanceof Error ? e.message : e,
+        );
+      }
+    }
+  }
 
   if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
   return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);

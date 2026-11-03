@@ -15,3 +15,5 @@
 | S4-11 | sample P5/P6/P8 consistency | Shared metrics | same | `assertP5P6P8Consistency` + 8 dimensions ok |
 | S4-12 | cover meta binding line | Artifact binding | same | cover includes Decision Context line |
 | S4-13 | unverified not upgraded | Fact/hypothesis separation | same | feed keeps unverified bucket + never-upgrade rule |
+| S5/S6 | Freeze wire + LAB observation | S5–S6 progress | `scripts/test-s5-freeze-s6-observation.ts` | 8 PASS |
+| S7-01..08 | Draft DC lifecycle + Chat observation | S7 integration | `scripts/test-s7-dc-lifecycle.ts` | Opening/A/B/Collecting boundaries + nine-layer obs |

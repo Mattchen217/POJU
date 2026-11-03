@@ -32,6 +32,11 @@ export type LabPipelineAttempt = {
   input_payload?: unknown;
   raw_model_output?: unknown;
   error?: string;
+  /**
+   * S7 — Chat full_pipeline observation parity with v3 LabAttempt
+   * (Stage/Input/Context/Prompt/Model/Response/Transform/Validation/Render).
+   */
+  observation?: import("@/lib/llm/pro/delivery/lab/observation").LabObservationLayer;
 };
 
 export type LabPipelineTurn = {

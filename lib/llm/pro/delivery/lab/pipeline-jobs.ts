@@ -61,12 +61,14 @@ import { clearDyadGateUi } from "@/lib/poju/reply-options";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
+import { buildLabObservation } from "@/lib/llm/pro/delivery/lab/observation";
 import { derivePipelineCursor } from "@/lib/llm/pro/delivery/lab/pipeline-cursor";
 import {
   chatReadyForDeliveryUnlock,
 } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 import type { LabPipelineTurn } from "@/lib/llm/pro/delivery/lab/lab-pipeline-types";
 import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
+import type { DecisionContextBinding } from "@/lib/poju/decision-context";
 
 function newTurnId(): string {
   return `pt_${Date.now().toString(36)}_${randomBytes(3).toString("hex")}`;
@@ -183,64 +185,127 @@ function appendGateTurn(
 function jobAttemptsFromTraces(
   phase: string,
   job: NonNullable<Awaited<ReturnType<typeof getXhighJob>>>,
-  opts?: { error?: string; raw_fallback?: unknown },
+  opts?: {
+    error?: string;
+    raw_fallback?: unknown;
+    session?: POJUSessionState | null;
+    lab_id?: string | null;
+  },
 ): import("@/lib/llm/pro/delivery/lab/lab-pipeline-types").LabPipelineAttempt[] {
   const duration_ms = Math.max(0, (job.completed_at ?? Date.now()) - job.created_at);
+  const dc = opts?.session?.decision_context ?? null;
+  const binding: DecisionContextBinding | null =
+    opts?.session?.last_delivery_context_binding ?? null;
   const traces = Array.isArray(job.lab_call_traces) ? job.lab_call_traces : [];
   if (traces.length > 0) {
-    return traces.map((t, i) => ({
-      attempt_number: i + 1,
-      timestamp: new Date().toISOString(),
-      duration_ms,
-      call_trace: t,
-      raw_model_output: t.parsed ?? t.raw_text ?? opts?.raw_fallback ?? job.result,
-      error: opts?.error,
-      input_payload: {
+    return traces.map((t, i) => {
+      const input_payload = {
         job_id: job.job_id,
         leg: t.phase,
         job_phase: job.phase,
-      },
-    }));
+        session_id: opts?.session?.session_id ?? job.session_id,
+        dc_status: dc?.status ?? null,
+        dc_hypotheses: dc?.hypotheses?.length ?? 0,
+        dc_dirs: dc?.dirs?.length ?? 0,
+        dc_facts: dc?.reality_facts?.length ?? 0,
+      };
+      return {
+        attempt_number: i + 1,
+        timestamp: new Date().toISOString(),
+        duration_ms,
+        call_trace: t,
+        raw_model_output: t.parsed ?? t.raw_text ?? opts?.raw_fallback ?? job.result,
+        error: opts?.error,
+        input_payload,
+        observation: buildLabObservation({
+          stage: phase,
+          step_key: `pipeline_${phase}`,
+          session_id: opts?.session?.session_id ?? job.session_id,
+          lab_id: opts?.lab_id ?? null,
+          job_id: job.job_id,
+          call_trace: t,
+          input_payload,
+          processing_actions: [
+            { action: "xhigh_job", detail: job.phase },
+            ...(opts?.error
+              ? [{ action: "job_error", detail: opts.error }]
+              : [{ action: "job_complete", detail: job.status }]),
+          ],
+          gate_verdict: opts?.error
+            ? { passed: false, failed_rule: "job_failed", detail: opts.error }
+            : { passed: true },
+          raw_model_output: t.parsed ?? t.raw_text ?? opts?.raw_fallback ?? job.result,
+          output_to_next_stage: opts?.raw_fallback ?? job.result,
+          context_binding: binding,
+          has_context_snapshot: Boolean(dc),
+          context_status: dc?.status ?? null,
+        }),
+      };
+    });
   }
   // Fallback when older jobs lack lab_call_traces
+  const fallbackTrace = slimLabCallTrace(
+    buildLabCallTrace({
+      phase,
+      system: "(本 job 未写入 lab_call_traces — 请重跑本段以捕获完整 prompt)",
+      user: JSON.stringify(
+        { job_id: job.job_id, phase: job.phase, status: job.status },
+        null,
+        2,
+      ),
+      raw_text: job.accumulated_content || null,
+      parsed: job.result ?? undefined,
+      result: {
+        reasoning: undefined,
+        actual_model: job.model ?? "unknown",
+        meta: {
+          call_type: "deep_analysis",
+          tokens_used: Number(job.tokens_used ?? 0),
+          latency_ms: duration_ms,
+          cost_usd: 0,
+          cached_tokens: 0,
+          thinking_enabled: true,
+          thinking_effort: "high",
+          // Fallback synthetic trace: job may lack per-call usage write-back.
+          usage_written:
+            typeof job.tokens_used === "number" && job.tokens_used > 0 ? true : false,
+          generation_id: job.job_id,
+        },
+      },
+    }),
+  );
+  const input_payload = {
+    job_id: job.job_id,
+    phase: job.phase,
+    session_id: opts?.session?.session_id ?? job.session_id,
+  };
   return [
     {
       attempt_number: 1,
       timestamp: new Date().toISOString(),
       duration_ms,
-      call_trace: slimLabCallTrace(
-        buildLabCallTrace({
-          phase,
-          system: "(本 job 未写入 lab_call_traces — 请重跑本段以捕获完整 prompt)",
-          user: JSON.stringify(
-            { job_id: job.job_id, phase: job.phase, status: job.status },
-            null,
-            2,
-          ),
-          raw_text: job.accumulated_content || null,
-          parsed: job.result ?? undefined,
-          result: {
-            reasoning: undefined,
-            actual_model: job.model ?? "unknown",
-            meta: {
-              call_type: "deep_analysis",
-              tokens_used: Number(job.tokens_used ?? 0),
-              latency_ms: duration_ms,
-              cost_usd: 0,
-              cached_tokens: 0,
-              thinking_enabled: true,
-              thinking_effort: "high",
-              // Fallback synthetic trace: job may lack per-call usage write-back.
-              usage_written:
-                typeof job.tokens_used === "number" && job.tokens_used > 0 ? true : false,
-              generation_id: job.job_id,
-            },
-          },
-        }),
-      ),
+      call_trace: fallbackTrace,
       raw_model_output: opts?.raw_fallback ?? job.result,
       error: opts?.error,
-      input_payload: { job_id: job.job_id, phase: job.phase },
+      input_payload,
+      observation: buildLabObservation({
+        stage: phase,
+        step_key: `pipeline_${phase}`,
+        session_id: opts?.session?.session_id ?? job.session_id,
+        lab_id: opts?.lab_id ?? null,
+        job_id: job.job_id,
+        call_trace: fallbackTrace,
+        input_payload,
+        processing_actions: [{ action: "xhigh_job_fallback_trace", detail: job.phase }],
+        gate_verdict: opts?.error
+          ? { passed: false, failed_rule: "job_failed", detail: opts.error }
+          : { passed: true },
+        raw_model_output: opts?.raw_fallback ?? job.result,
+        output_to_next_stage: opts?.raw_fallback ?? job.result,
+        context_binding: binding,
+        has_context_snapshot: Boolean(dc),
+        context_status: dc?.status ?? null,
+      }),
     },
   ];
 }
@@ -686,6 +751,8 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
         kind: "segment2_a",
         attempts: jobAttemptsFromTraces("segment2_a", job, {
           error: job.error ?? "segment2_a_failed",
+          session: lab.chat_session,
+          lab_id: lab.lab_id,
         }),
       };
       const out: DeliveryLabSession = {
@@ -698,7 +765,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       return out;
     }
 
-    const sessionA = finalizeSegment2ReportSuccess({
+    let sessionA = finalizeSegment2ReportSuccess({
       session: clearPendingSegment2Job(lab.chat_session),
       locale,
       breakthrough_core: job.result.breakthrough_core,
@@ -706,12 +773,31 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       tokens_used: job.tokens_used,
       llm_debug: job.llm_debug,
     });
+    try {
+      const { persistDcLifecycleChange } = await import(
+        "@/lib/poju/decision-context/production-dc-lifecycle"
+      );
+      if (sessionA.decision_context) {
+        const p = await persistDcLifecycleChange(
+          lab.chat_session,
+          sessionA,
+          `dc_call_a:${sessionA.session_id}:lab_report`,
+        );
+        sessionA = p.session;
+      }
+    } catch (e) {
+      console.warn("[lab-pipeline] Call A DC persist failed", e);
+    }
 
     const turnA: LabPipelineTurn = {
       turn_id: newTurnId(),
       phase: "segment2_a",
       kind: "segment2_a",
-      attempts: jobAttemptsFromTraces("segment2_a", job, { raw_fallback: job.result }),
+      attempts: jobAttemptsFromTraces("segment2_a", job, {
+        raw_fallback: job.result,
+        session: sessionA,
+        lab_id: lab.lab_id,
+      }),
     };
 
     // Auto-start Call B
@@ -794,6 +880,8 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
             kind: "segment2_b",
             attempts: jobAttemptsFromTraces("segment2_b", job, {
               error: job.error ?? "segment2_b_failed",
+              session: lab.chat_session,
+              lab_id: lab.lab_id,
             }),
           },
         ],
@@ -802,12 +890,27 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       return out;
     }
 
-    const sessionB = finalizeSegment2AgendaBridgeSuccess({
+    let sessionB = finalizeSegment2AgendaBridgeSuccess({
       session: clearPendingSegment2Job(lab.chat_session),
       locale,
       investigation_agenda: job.result.investigation_agenda ?? [],
       first_question: job.result.first_question ?? "",
     });
+    try {
+      const { persistDcLifecycleChange } = await import(
+        "@/lib/poju/decision-context/production-dc-lifecycle"
+      );
+      if (sessionB.decision_context) {
+        const p = await persistDcLifecycleChange(
+          lab.chat_session,
+          sessionB,
+          `dc_call_b:${sessionB.session_id}:lab_agenda_${job.result.investigation_agenda?.length ?? 0}`,
+        );
+        sessionB = p.session;
+      }
+    } catch (e) {
+      console.warn("[lab-pipeline] Call B DC persist failed", e);
+    }
 
     const out: DeliveryLabSession = {
       ...lab,
@@ -819,7 +922,11 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
           turn_id: newTurnId(),
           phase: "segment2_b",
           kind: "segment2_b",
-          attempts: jobAttemptsFromTraces("segment2_b", job, { raw_fallback: job.result }),
+          attempts: jobAttemptsFromTraces("segment2_b", job, {
+            raw_fallback: job.result,
+            session: sessionB,
+            lab_id: lab.lab_id,
+          }),
         },
       ],
     };
@@ -846,6 +953,8 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
             kind: "synthesis",
             attempts: jobAttemptsFromTraces("synthesis", job, {
               error: job.error ?? "synthesis_failed",
+              session: lab.chat_session,
+              lab_id: lab.lab_id,
             }),
           },
         ],
@@ -899,7 +1008,11 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
           turn_id: newTurnId(),
           phase: "synthesis",
           kind: "synthesis",
-          attempts: jobAttemptsFromTraces("synthesis", job, { raw_fallback: job.result }),
+          attempts: jobAttemptsFromTraces("synthesis", job, {
+            raw_fallback: job.result,
+            session: sessionDone,
+            lab_id: lab.lab_id,
+          }),
         },
       ],
     };

@@ -66,7 +66,7 @@ export function LabObservationPanel({ observation }: { observation?: Obs | null 
   if (!observation) {
     return (
       <div className="rounded border border-white/10 bg-white/[0.02] px-3 py-2 text-xs text-[#a1a1aa]">
-        本步尚无 S6 observation（旧 attempt 或非 v3 步）。
+        本步尚无 S6/S7 observation（旧 attempt、非 v3 步，或 Chat full_pipeline 尚未写入）。
       </div>
     );
   }

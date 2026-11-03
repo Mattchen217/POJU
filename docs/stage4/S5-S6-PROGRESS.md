@@ -16,7 +16,7 @@
 | Hook: pre-delivery safety | Done (`runFinalDeliveryForSession`) |
 | Binding on delivery job + `last_delivery_context_binding` | Done |
 | Compatibility `require_decision_context` | Soft policy + env `POJU_REQUIRE_DECISION_CONTEXT` (default off for legacy) |
-| Opening/CallA/B/Collecting DC product seed | **Still not fully production-wired** — Freeze runs when draft DC already exists |
+| Opening/CallA/B/Collecting DC product seed | **Moved to S7** — see `S7-INTEGRATION-PROGRESS.md` |
 
 ## S6 LAB observation
 
@@ -25,7 +25,7 @@
 | `LabObservationLayer` Stage/Input/Context/Prompt/Model/Response/Transform/Validation/Render | Done |
 | Attached on v3 Lab attempts | Done (`runLabStepV3`) |
 | Ops UI panel | Done (`LabObservationPanel`) |
-| full_pipeline chat turns observation | Partial / deferred |
+| full_pipeline chat turns observation | **Moved to S7** — Chat/segment2/synthesis attempts now carry `observation` |
 | Live OpenRouter E2E | Not executed (S8) |
 
 ## Tests

@@ -6,6 +6,7 @@ import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-strea
 import { matchDyadGateAction } from "@/lib/poju/dyad-compat";
 import type { BirthInfo } from "@/lib/profile/types";
 import { LabCallTracePanel } from "./LabCallTracePanel";
+import { LabObservationPanel } from "./LabObservationPanel";
 import { LabOpsBirthForm } from "./LabOpsBirthForm";
 
 type LabCallTrace = {
@@ -28,6 +29,7 @@ type PipelineAttempt = {
   error?: string;
   raw_model_output?: unknown;
   input_payload?: unknown;
+  observation?: Parameters<typeof LabObservationPanel>[0]["observation"];
 };
 
 type PipelineTurn = {
@@ -587,6 +589,9 @@ export function LabPipelinePanel({
           {selectedAttempt?.error ? (
             <p className="mb-2 text-xs text-red-300">{selectedAttempt.error}</p>
           ) : null}
+          <div className="mb-2">
+            <LabObservationPanel observation={selectedAttempt?.observation} />
+          </div>
           {selectedTrace ? (
             <LabCallTracePanel
               call_trace={selectedTrace}

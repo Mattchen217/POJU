@@ -2682,7 +2682,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     // Call B complete (or duplicate complete after success ? finalize is idempotent)
     if (treatAsAgenda) {
-      const next = finalizeSegment2AgendaBridgeSuccess({
+      let next = finalizeSegment2AgendaBridgeSuccess({
         session: base,
         locale: lang,
         investigation_agenda: result.investigation_agenda ?? [],
@@ -2695,6 +2695,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         tokens_used: result.tokens_used,
         llm_debug: result.llm_debug,
       });
+      try {
+        const { persistDcLifecycleChange } = await import(
+          "@/lib/poju/decision-context/production-dc-lifecycle"
+        );
+        if (next.decision_context) {
+          const p = await persistDcLifecycleChange(
+            base,
+            next,
+            `dc_call_b:${base.session_id}:agenda_${result.investigation_agenda?.length ?? 0}`,
+          );
+          next = p.session;
+        }
+      } catch (e) {
+        console.warn("[segment2] Call B DC persist failed (non-fatal)", e);
+      }
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
       // Arm typewriter before session paint ? await would flash full text first.
@@ -2723,7 +2738,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await handleSegment2JobError("Call A completed without breakthrough_core", "completed_without_core");
       return;
     }
-    const next = applySegment2PollSuccess(base, lang, result);
+    let next = applySegment2PollSuccess(base, lang, result);
+    try {
+      const { persistDcLifecycleChange } = await import(
+        "@/lib/poju/decision-context/production-dc-lifecycle"
+      );
+      if (next.decision_context && result.breakthrough_core) {
+        const p = await persistDcLifecycleChange(
+          base,
+          next,
+          `dc_call_a:${base.session_id}:report`,
+        );
+        next = p.session;
+      }
+    } catch (e) {
+      console.warn("[segment2] Call A DC persist failed (non-fatal)", e);
+    }
     const reportMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
     // Arm typewriter in the same paint as the bubble ? never full-text then retype.
     if (reportMsg?.content.trim()) {

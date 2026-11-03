@@ -7,6 +7,7 @@ import { handleUserMessage } from "@/lib/poju/agent";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { DYAD_CONTINUE_SYSTEM } from "@/lib/poju/dyad-compat";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
+import { buildLabObservation } from "@/lib/llm/pro/delivery/lab/observation";
 import {
   derivePipelineCursor,
   lastAssistantOptions,
@@ -145,6 +146,27 @@ export async function runLabPipelineChatTurn(input: {
   const phaseAfter =
     normalizeAgentPhase(nextSession.agent_v2?.current_phase) ?? phaseBefore;
   const asst = lastAssistant(nextSession);
+  const call_trace = buildTraceFromTurn({
+    phase: String(phaseBefore),
+    system: captured.system,
+    user: captured.user,
+    session: nextSession,
+  });
+  const input_payload = {
+    user_message: input.userMessage,
+    phase_before: phaseBefore,
+    phase_after: phaseAfter,
+    session_id: nextSession.session_id,
+    dc_status: nextSession.decision_context?.status ?? null,
+    dc_facts: nextSession.decision_context?.reality_facts?.length ?? 0,
+    dc_hypotheses: nextSession.decision_context?.hypotheses?.length ?? 0,
+    dc_dirs: nextSession.decision_context?.dirs?.length ?? 0,
+  };
+  const raw_model_output = {
+    content: asst?.content ?? null,
+    options: asst?.options ?? null,
+    meta: asst?.meta ?? null,
+  };
   const turn: LabPipelineTurn = {
     turn_id: newTurnId(),
     phase: String(phaseAfter),
@@ -155,21 +177,37 @@ export async function runLabPipelineChatTurn(input: {
         attempt_number: 1,
         timestamp: new Date().toISOString(),
         duration_ms: Date.now() - t0,
-        call_trace: buildTraceFromTurn({
-          phase: String(phaseBefore),
-          system: captured.system,
-          user: captured.user,
-          session: nextSession,
+        call_trace,
+        input_payload,
+        raw_model_output,
+        observation: buildLabObservation({
+          stage: String(phaseAfter),
+          step_key: "pipeline_chat",
+          session_id: nextSession.session_id,
+          lab_id: input.lab.lab_id,
+          call_trace,
+          input_payload,
+          processing_actions: [
+            { action: "handleUserMessage", detail: String(phaseBefore) },
+            {
+              action: "dc_snapshot",
+              detail: `status=${nextSession.decision_context?.status ?? "none"} facts=${nextSession.decision_context?.reality_facts?.length ?? 0}`,
+            },
+          ],
+          gate_verdict: {
+            passed: Boolean(asst?.content?.trim()),
+            failed_rule: asst?.content?.trim() ? undefined : "empty_assistant",
+          },
+          raw_model_output,
+          output_to_next_stage: {
+            phase: phaseAfter,
+            options: asst?.options ?? null,
+            understanding_gate: asst?.meta?.understanding_gate_pending ?? false,
+          },
+          context_binding: nextSession.last_delivery_context_binding ?? null,
+          has_context_snapshot: Boolean(nextSession.decision_context),
+          context_status: nextSession.decision_context?.status ?? null,
         }),
-        input_payload: {
-          user_message: input.userMessage,
-          phase_before: phaseBefore,
-        },
-        raw_model_output: {
-          content: asst?.content ?? null,
-          options: asst?.options ?? null,
-          meta: asst?.meta ?? null,
-        },
       },
     ],
   };
@@ -274,22 +312,50 @@ export async function rerunLabPipelineLastChatTurn(
   const phaseAfter =
     normalizeAgentPhase(nextSession.agent_v2?.current_phase) ?? phaseBefore;
   const asst = lastAssistant(nextSession);
+  const call_trace = buildTraceFromTurn({
+    phase: String(phaseBefore),
+    system: captured.system,
+    user: captured.user,
+    session: nextSession,
+  });
+  const input_payload = {
+    user_message: userInput,
+    phase_before: phaseBefore,
+    phase_after: phaseAfter,
+    rerun: true,
+    session_id: nextSession.session_id,
+    dc_status: nextSession.decision_context?.status ?? null,
+  };
+  const raw_model_output = {
+    content: asst?.content ?? null,
+    options: asst?.options ?? null,
+    meta: asst?.meta ?? null,
+  };
   const newAttempt = {
     attempt_number: attemptBase + 1,
     timestamp: new Date().toISOString(),
     duration_ms: Date.now() - t0,
-    call_trace: buildTraceFromTurn({
-      phase: String(phaseBefore),
-      system: captured.system,
-      user: captured.user,
-      session: nextSession,
+    call_trace,
+    input_payload,
+    raw_model_output,
+    observation: buildLabObservation({
+      stage: String(phaseAfter),
+      step_key: "pipeline_chat_rerun",
+      session_id: nextSession.session_id,
+      lab_id: lab.lab_id,
+      call_trace,
+      input_payload,
+      processing_actions: [{ action: "rerun_chat_turn", detail: String(phaseBefore) }],
+      gate_verdict: {
+        passed: Boolean(asst?.content?.trim()),
+        failed_rule: asst?.content?.trim() ? undefined : "empty_assistant",
+      },
+      raw_model_output,
+      output_to_next_stage: { phase: phaseAfter, options: asst?.options ?? null },
+      context_binding: nextSession.last_delivery_context_binding ?? null,
+      has_context_snapshot: Boolean(nextSession.decision_context),
+      context_status: nextSession.decision_context?.status ?? null,
     }),
-    input_payload: { user_message: userInput, phase_before: phaseBefore, rerun: true },
-    raw_model_output: {
-      content: asst?.content ?? null,
-      options: asst?.options ?? null,
-      meta: asst?.meta ?? null,
-    },
   };
 
   const rebuiltTurn: LabPipelineTurn = {

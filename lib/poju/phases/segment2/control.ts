@@ -33,6 +33,10 @@ import {
   segment2RegenerateButtonLabel,
   synthesisGenerationFailedMessage,
 } from "@/lib/poju/phases/segment2/display";
+import {
+  applyCallAToSessionDc,
+  applyCallBToSessionDc,
+} from "@/lib/poju/decision-context/production-dc-lifecycle";
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
   const base = session.agent_v2;
@@ -267,13 +271,27 @@ export async function startSegment2AfterGateConfirm(input: {
     freshQuestion,
   );
 
-  const sessionPending = withSessionProfileFlags({
+  let sessionPending = withSessionProfileFlags({
     ...session,
     original_question: freshQuestion,
     messages: messagesWithUser,
     agent_v2,
     last_interaction_at: new Date().toISOString(),
   });
+
+  // S7 — seed Draft DC from Opening Definition + user Facts before Call A.
+  try {
+    const { ensureOpeningDraftDcPersisted } = await import(
+      "@/lib/poju/decision-context/production-dc-lifecycle"
+    );
+    const seeded = await ensureOpeningDraftDcPersisted(sessionPending);
+    sessionPending = seeded.session;
+  } catch (e) {
+    console.warn(
+      "[segment2] opening draft DC seed failed (non-fatal)",
+      e instanceof Error ? e.message : e,
+    );
+  }
 
   if (!advance.trigger_breakthrough_core) {
     return { session: sessionPending, job_id: null };
@@ -497,7 +515,7 @@ export function finalizeSegment2ReportSuccess(input: {
     },
   };
 
-  return clearPendingSegment2Job(
+  let next = clearPendingSegment2Job(
     withSessionProfileFlags({
       ...session,
       messages: [...session.messages, assistantMessage],
@@ -506,6 +524,21 @@ export function finalizeSegment2ReportSuccess(input: {
       last_interaction_at: new Date().toISOString(),
     }),
   );
+
+  // S7 — Call A: Hypotheses only (sync in-memory; C1 persist via persistCallADcOnSession).
+  try {
+    const applied = applyCallAToSessionDc(next, coreWithoutQ, {
+      source_ref: `call_a:${session.session_id}:report`,
+    });
+    if (applied.applied) next = applied.session;
+  } catch (e) {
+    console.warn(
+      "[segment2] Call A DC apply failed (non-fatal)",
+      e instanceof Error ? e.message : e,
+    );
+  }
+
+  return next;
 }
 
 /** @deprecated Prefer finalizeSegment2ReportSuccess + finalizeSegment2AgendaBridgeSuccess. */
@@ -956,7 +989,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
     },
   };
 
-  return clearPendingSegment2Job(
+  let next = clearPendingSegment2Job(
     withSessionProfileFlags({
       ...session,
       messages: [...session.messages, assistantMessage],
@@ -965,6 +998,19 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
       last_interaction_at: new Date().toISOString(),
     }),
   );
+
+  // S7 — Call B: DIR + Agenda mapping (sync in-memory; C1 via persistCallBDcOnSession).
+  try {
+    const applied = applyCallBToSessionDc(next, input.investigation_agenda);
+    if (applied.applied) next = applied.session;
+  } catch (e) {
+    console.warn(
+      "[segment2] Call B DC apply failed (non-fatal)",
+      e instanceof Error ? e.message : e,
+    );
+  }
+
+  return next;
 }
 
 /** Call B failed ? keep A report; show regenerate-question; unlock. */

@@ -31,3 +31,4 @@ export * from "./stage4-report";
 export * from "./freeze-to-delivery";
 export * from "./require-dc-flag";
 export * from "./production-freeze-wire";
+export * from "./production-dc-lifecycle";
