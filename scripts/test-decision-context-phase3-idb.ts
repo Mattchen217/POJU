@@ -1089,6 +1089,185 @@ async function main() {
   });
 
 
+  // ---------- Phase 3 rem C5 — vault rename decrypt-fail must not rewrite plaintext index ----------
+  await p3("P3-139", "C5 rename decrypt fail → index+cipher+vault title unchanged; DECRYPT_OR_LOAD_FAILED", async () => {
+    await resetDb();
+    const { renamePojuSessionHistory, syncPojuSessionVaultArchive } = await import(
+      "../lib/archive/poju-session-vault"
+    );
+    const sid = await createPOJUSession({
+      payment_id: "pay_s5_139",
+      original_question: "original-title-139",
+    });
+    const before = await loadPOJUSession(sid);
+    assert.ok(before);
+    await syncPojuSessionVaultArchive(before!, "en");
+
+    const db = getPojuDb();
+    const rowBefore = await db.pojuSessionRecords.get(sid);
+    assert.ok(rowBefore);
+    const indexBefore = rowBefore!.original_question;
+    const cipherBefore = rowBefore!.encrypted_data;
+    const ivBefore = rowBefore!.iv;
+    const vaultBefore = (await db.archive.toArray()).find(
+      (r) => r.product === "poju" && r.session_id === sid,
+    );
+    assert.ok(vaultBefore);
+    const vaultTitleBefore = vaultBefore!.title;
+
+    // Corrupt session blob so loadPOJUSession returns null (decrypt fail).
+    await db.pojuSessionRecords.update(sid, {
+      encrypted_data: "not-valid-cipher-c5",
+      iv: "not-valid-iv-c5",
+    });
+
+    const result = await renamePojuSessionHistory(sid, "attacker-new-title-139", "en");
+    assert.equal(result.ok, false);
+    if (result.ok) throw new Error("expected fail");
+    assert.equal(result.code, "DECRYPT_OR_LOAD_FAILED");
+
+    const rowAfter = await db.pojuSessionRecords.get(sid);
+    assert.equal(rowAfter!.original_question, indexBefore, "must not overwrite plaintext index");
+    assert.equal(rowAfter!.encrypted_data, "not-valid-cipher-c5", "corrupt cipher preserved (no silent repair write)");
+    assert.equal(rowAfter!.iv, "not-valid-iv-c5");
+    // Ensure we did not restore old cipher either — fail closed leaves storage as-found.
+    assert.notEqual(rowAfter!.encrypted_data, cipherBefore);
+    assert.notEqual(indexBefore, "attacker-new-title-139");
+
+    const vaultAfter = await db.archive.get(vaultBefore!.archive_id);
+    assert.equal(vaultAfter!.title, vaultTitleBefore, "vault title must not become rename authority");
+    void ivBefore;
+  });
+
+  await p3("P3-140", "C5 rename missing session → NOT_FOUND; no index invented", async () => {
+    await resetDb();
+    const { renamePojuSessionHistory } = await import("../lib/archive/poju-session-vault");
+    const db = getPojuDb();
+    const beforeCount = await db.pojuSessionRecords.count();
+    const result = await renamePojuSessionHistory("sess_missing_c5_140", "ghost-title", "en");
+    assert.equal(result.ok, false);
+    if (result.ok) throw new Error("expected fail");
+    assert.equal(result.code, "NOT_FOUND");
+    assert.equal(await db.pojuSessionRecords.count(), beforeCount);
+    assert.equal(await db.pojuSessionRecords.get("sess_missing_c5_140"), undefined);
+  });
+
+  await p3("P3-141", "C5 stale index: decrypt fail refuses overwrite of existing correct index", async () => {
+    await resetDb();
+    const { renamePojuSessionHistory, syncPojuSessionVaultArchive } = await import(
+      "../lib/archive/poju-session-vault"
+    );
+    const sid = await createPOJUSession({
+      payment_id: "pay_s5_141",
+      original_question: "correct-index-141",
+    });
+    // Happy-path rename first — CAS aligns blob + index.
+    const ok = await renamePojuSessionHistory(sid, "last-good-index-141", "en");
+    assert.equal(ok.ok, true);
+    if (!ok.ok) throw new Error("expected cas ok");
+    const loaded = await loadPOJUSession(sid);
+    assert.equal(loaded!.original_question, "last-good-index-141");
+    await syncPojuSessionVaultArchive(loaded!, "en");
+
+    const db = getPojuDb();
+    const rowGood = await db.pojuSessionRecords.get(sid);
+    const indexGood = rowGood!.original_question;
+    assert.equal(indexGood, "last-good-index-141");
+
+    // Decrypt becomes impossible; attempt rename to a different title.
+    await db.pojuSessionRecords.update(sid, {
+      encrypted_data: "corrupt-cipher-141",
+      iv: "corrupt-iv-141",
+    });
+    const refused = await renamePojuSessionHistory(sid, "stale-overwrite-attempt-141", "en");
+    assert.equal(refused.ok, false);
+    if (refused.ok) throw new Error("expected fail");
+    assert.equal(refused.code, "DECRYPT_OR_LOAD_FAILED");
+
+    const rowAfter = await db.pojuSessionRecords.get(sid);
+    assert.equal(
+      rowAfter!.original_question,
+      "last-good-index-141",
+      "existing correct index must remain authority when blob unverifiable",
+    );
+    assert.notEqual(rowAfter!.original_question, "stale-overwrite-attempt-141");
+  });
+
+  await p3("P3-142", "C5 retry after blob restored → CAS rename succeeds; index+blob align", async () => {
+    await resetDb();
+    const { renamePojuSessionHistory } = await import("../lib/archive/poju-session-vault");
+    const sid = await createPOJUSession({
+      payment_id: "pay_s5_142",
+      original_question: "title-142",
+    });
+    const db = getPojuDb();
+    const row = await db.pojuSessionRecords.get(sid);
+    const goodCipher = row!.encrypted_data;
+    const goodIv = row!.iv;
+
+    await db.pojuSessionRecords.update(sid, {
+      encrypted_data: "broken-142",
+      iv: "broken-iv-142",
+    });
+    const fail = await renamePojuSessionHistory(sid, "should-not-stick-142", "en");
+    assert.equal(fail.ok, false);
+    if (fail.ok) throw new Error("expected fail");
+    assert.equal(fail.code, "DECRYPT_OR_LOAD_FAILED");
+    assert.equal((await db.pojuSessionRecords.get(sid))!.original_question, "title-142");
+
+    // Restore verifiable blob (simulates recovery / retry after repair).
+    await db.pojuSessionRecords.update(sid, {
+      encrypted_data: goodCipher,
+      iv: goodIv,
+    });
+    const retry = await renamePojuSessionHistory(sid, "recovered-title-142", "en");
+    assert.equal(retry.ok, true);
+    if (!retry.ok) throw new Error("expected cas ok");
+    assert.equal(retry.path, "cas");
+
+    const after = await loadPOJUSession(sid);
+    const rowAfter = await db.pojuSessionRecords.get(sid);
+    assert.equal(after!.original_question, "recovered-title-142");
+    assert.equal(rowAfter!.original_question, "recovered-title-142");
+  });
+
+  await p3("P3-143", "C5 empty/missing index + decrypt ok → CAS can set index; decrypt fail still refuses", async () => {
+    await resetDb();
+    const { renamePojuSessionHistory } = await import("../lib/archive/poju-session-vault");
+    const sid = await createPOJUSession({
+      payment_id: "pay_s5_143",
+      original_question: "temp-143",
+    });
+    // Simulate sparse index while blob still decrypts: clear plaintext column only.
+    const db = getPojuDb();
+    await db.pojuSessionRecords.update(sid, { original_question: "" });
+    const state = await loadPOJUSession(sid);
+    assert.ok(state, "blob still decrypts");
+    // Blob still carries prior original_question; CAS rename sets both.
+    const ok = await renamePojuSessionHistory(sid, "filled-from-cas-143", "en");
+    assert.equal(ok.ok, true);
+    const after = await loadPOJUSession(sid);
+    const row = await db.pojuSessionRecords.get(sid);
+    assert.equal(after!.original_question, "filled-from-cas-143");
+    assert.equal(row!.original_question, "filled-from-cas-143");
+
+    await db.pojuSessionRecords.update(sid, {
+      original_question: "",
+      encrypted_data: "nope-143",
+      iv: "nope-iv-143",
+    });
+    const refused = await renamePojuSessionHistory(sid, "invented-while-undecryptable-143", "en");
+    assert.equal(refused.ok, false);
+    if (refused.ok) throw new Error("expected fail");
+    assert.equal(refused.code, "DECRYPT_OR_LOAD_FAILED");
+    assert.equal(
+      (await db.pojuSessionRecords.get(sid))!.original_question,
+      "",
+      "must not invent plaintext index from rename while undecryptable",
+    );
+  });
+
+
   summarize("phase3-s5-idb");
 }
 

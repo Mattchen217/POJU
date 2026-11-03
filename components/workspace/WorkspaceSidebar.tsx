@@ -283,7 +283,11 @@ function HistoryItemRow({
     if (!trimmed || trimmed === title) return;
     try {
       if (row.session_id) {
-        await renamePojuSessionHistory(row.session_id, trimmed, locale);
+        const renamed = await renamePojuSessionHistory(row.session_id, trimmed, locale);
+        if (!renamed.ok) {
+          // C5: decrypt/load fail refuses index rewrite — do not refresh as success.
+          throw new Error(renamed.message);
+        }
       } else {
         await renameArchiveItem(row.archive_id, trimmed);
       }

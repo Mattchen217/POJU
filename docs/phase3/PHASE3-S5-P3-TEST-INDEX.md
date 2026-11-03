@@ -68,6 +68,11 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-136 | C1 extend encrypt/blob fail → renewals unchanged | C1 rem / §7 | test-decision-context-phase3-idb.ts | metadata must not advance alone |
 | P3-137 | C1 extend mid-txn fail → renewals+blob rollback | C1 rem / §7 | test-decision-context-phase3-idb.ts | reverse of metadata-only commit |
 | P3-138 | C1 recovery blob OK renewals missing → append | C1 rem / §7 | test-decision-context-phase3-idb.ts | legacy split residue recoverable |
+| P3-139 | C5 rename decrypt fail → index unchanged | C5 rem | test-decision-context-phase3-idb.ts | DECRYPT_OR_LOAD_FAILED; cipher preserved |
+| P3-140 | C5 rename missing session → NOT_FOUND | C5 rem | test-decision-context-phase3-idb.ts | no invented row/index |
+| P3-141 | C5 stale index decrypt fail refuses overwrite | C5 rem | test-decision-context-phase3-idb.ts | last-good index stays authority |
+| P3-142 | C5 retry after blob restore → CAS rename | C5 rem | test-decision-context-phase3-idb.ts | index+blob align on retry |
+| P3-143 | C5 missing index: CAS ok / decrypt fail refuse | C5 rem | test-decision-context-phase3-idb.ts | no invent while undecryptable |
 | P3-96* | Concurrent + response-lost retry one Job | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | Promise.all same identity; sequential retry |
 | P3-113 | user_estimate stays unverified | §18.6 | test-decision-context-phase3-unit.ts | status unverified |
 | P3-114 | independently_verified no auto user_confirmed | §18.6 | test-decision-context-phase3-e2e.ts | deriveUserConfirmed false |

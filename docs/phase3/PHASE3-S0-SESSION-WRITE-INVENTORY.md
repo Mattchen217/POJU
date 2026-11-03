@@ -133,7 +133,7 @@ Per Mapping §2.2: index fields, Archive, Profile, other tables are **out of Ses
 | C2 | W1 `createPOJUSession` | `put` then cycle sync then vault — not create-if-absent / dual-revision yet | Implement Mapping create-if-absent + rev init in S1 |
 | C3 | W2 | `update` returns count≠1 throws, but **no revision CAS** | S1 casWrite |
 | C4 | POJUChatUI direct Core | Product path calls `savePOJUSessionCore` for rename | Route through mutate/CAS only |
-| C5 | Vault rename fallback | Writes `original_question` column without blob when load fails → plaintext index can diverge from undecryptable blob | Keep as non-blob; or fail closed — **Contract/Mapping do not specify**; flag for Max/Grok |
+| C5 | Vault rename fallback | **CLOSED (rem)**: decrypt/load fail → refuse plaintext index/vault title write (fail closed). Happy path → CAS. | Rem chose fail closed (wrong index must not become authority). Tests P3-139–143. |
 | C6 | `commitDecisionContextChange` unused by product | Phase2 C1 entry exists; Opening/CallA/CallB not wired | Expected for S0; S3/S4 wiring later — not a conflict |
 | C7 | Dual revision fields | Absent on `POJUSessionRecord` / session state today | S1 schema add per Mapping §3 — inventory only notes absence |
 
