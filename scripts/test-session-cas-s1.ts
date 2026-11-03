@@ -436,6 +436,20 @@ async function main() {
     );
   });
 
+  await check("loadPOJUSession: corrupted row mirror → REVISION_MIRROR_MISMATCH", async () => {
+    await resetDb();
+    const state = mockSession({ session_revision: 0, dc_write_revision: 0 });
+    await seedWithCas(state);
+    const db = getPojuDb();
+    // Corrupt row mirror only — blob still at 0/0; load must hard-fail (S1.1).
+    await db.pojuSessionRecords.update(state.session_id, { session_revision: 9 });
+
+    await assert.rejects(
+      () => loadPOJUSession(state.session_id),
+      (e: unknown) => e instanceof SessionCasError && e.code === REVISION_MIRROR_MISMATCH,
+    );
+  });
+
   await check("savePOJUSessionCore thin CAS wrapper bumps session rev", async () => {
     await resetDb();
     const state = mockSession({ original_question: "core-wrap" });

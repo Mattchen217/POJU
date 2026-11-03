@@ -20,6 +20,7 @@ import type { DecisionContext } from "@/lib/poju/decision-context";
 import {
   casWritePOJUSessionFromCandidate,
   createPOJUSessionRecordIfAbsent,
+  resolveRevisionMirror,
   SessionCasError,
   SESSION_CREATE_EXISTS,
 } from "@/lib/poju/session-mutation";
@@ -222,17 +223,23 @@ export async function loadPOJUSession(sessionId: string): Promise<POJUSessionSta
   const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
   if (!row || !isRowOwnedBy(row, ownerKey)) return null;
+  let raw: POJUSessionState;
   try {
-    const raw = await decryptJson<POJUSessionState>(SESSION_SECRET, {
+    raw = await decryptJson<POJUSessionState>(SESSION_SECRET, {
       iv: row.iv,
       cipher: row.encrypted_data,
     });
-    const withCycles = ensureSessionCycles(raw);
-    // Phase 2 C1 restore: DC is authority; hydrate durable idempotency keys.
-    return applyDecisionContextRestore(withCycles);
   } catch {
+    // Pure decrypt/crypto failures may still look like "not found".
     return null;
   }
+  // Phase 3 S1.1 / GI-04 — after decrypt, enforce row/blob revision mirror.
+  // Mismatch / one-sided / illegal type → throw SessionCasError(REVISION_MIRROR_MISMATCH).
+  // Must NOT return silent null (Contract §3.4 / §7.5 step 3 on read).
+  resolveRevisionMirror(row, raw);
+  const withCycles = ensureSessionCycles(raw);
+  // Phase 2 C1 restore: DC is authority; hydrate durable idempotency keys.
+  return applyDecisionContextRestore(withCycles);
 }
 
 /**
