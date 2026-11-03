@@ -46,7 +46,7 @@ import {
   type PojuActivity,
 } from "@/lib/poju/activity";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { createPOJUSession, loadPOJUSession, savePOJUSession, savePOJUSessionCore, runPOJUSessionPostCommitSideEffects, confirmSessionAfterCorePersist } from "@/lib/poju/session-manager";
+import { createPOJUSession, loadPOJUSession, savePOJUSession, confirmSessionAfterCorePersist } from "@/lib/poju/session-manager";
 import { hydratePersistIdempotencyFromKeys } from "@/lib/poju/decision-context/persist";
 import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-delivery-vault";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
@@ -2045,18 +2045,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const value = newTitle.trim();
     if (!value) return;
 
-    // Rename commits only through savePOJUSessionCore (C1) so plaintext index
-    // + encrypted blob stay consistent -- no independent pre-save index update.
+    // Rename commits only through Session CAS (savePOJUSession / confirm wrapper)
+    // so plaintext index + encrypted blob stay consistent — no direct Core/Dexie blob write.
     const state = await loadPOJUSession(targetSessionId);
     if (!state) return;
     // loadPOJUSession already applied DC restore authority.
     const next = { ...state, original_question: value };
     if (targetSessionId === sessionRef.current.session_id) {
-      // C1: confirm UI memory only after core blob+cycle persist succeeds.
+      // C1: confirm UI memory only after unified CAS core persist succeeds.
       await confirmSessionAfterCorePersist(next, onSessionUpdate);
     } else {
-      await savePOJUSessionCore(next);
-      void runPOJUSessionPostCommitSideEffects(next);
+      // Phase 3 S1 — no direct Core/Dexie blob write; same CAS path via savePOJUSession.
+      await savePOJUSession(next);
     }
     setSessionRows((prev) =>
       prev.map((x) => (x.session_id === targetSessionId ? { ...x, original_question: value } : x)),

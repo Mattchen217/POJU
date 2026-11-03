@@ -1,5 +1,5 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
-import { encryptJson, decryptJson } from "@/lib/crypto";
+import { decryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -17,6 +17,12 @@ import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import type { DecisionContext } from "@/lib/poju/decision-context";
+import {
+  casWritePOJUSessionFromCandidate,
+  createPOJUSessionRecordIfAbsent,
+  SessionCasError,
+  SESSION_CREATE_EXISTS,
+} from "@/lib/poju/session-mutation";
 import {
   applyControlPlaneToWorking,
   applyDcToWorking,
@@ -179,27 +185,25 @@ export async function createPOJUSession(input: {
     unlock_status: "preview",
   };
 
-  const payload = await encryptJson(SESSION_SECRET, sessionState);
-  await db.pojuSessionRecords.put({
+  // Phase 3 S1 W1 — create-if-absent; dual revision init 0; never overwrite.
+  sessionState.session_revision = 0;
+  sessionState.dc_write_revision = 0;
+  const { created } = await createPOJUSessionRecordIfAbsent({
     session_id: sessionId,
     device_id: deviceId,
     owner_key: ownerKey,
-    encrypted_data: payload.cipher,
-    iv: payload.iv,
-    status: "active",
-    original_question: sessionState.original_question,
-    created_at: now,
-    last_interaction_at: now,
-    expires_at: expiresAt,
+    state: sessionState,
     payment_id: input.payment_id,
     payment_processor: "dodopayments",
-    renewals: [],
-    tokens_used: 0,
-    turn_count: 0,
+    status: "active",
     current_state_hint: "opening",
-    main_delivery_done: false,
-    active_cycle_id: firstCycle.cycle_id,
   });
+  if (!created) {
+    throw new SessionCasError(
+      SESSION_CREATE_EXISTS,
+      `createPOJUSession refused overwrite of existing session_id=${sessionId}`,
+    );
+  }
 
   await syncSessionCyclesToDb(sessionState);
 
@@ -236,44 +240,10 @@ export async function loadPOJUSession(sessionId: string): Promise<POJUSessionSta
  * Archive / profile sync are intentionally NOT here (post-commit side effects).
  */
 export async function savePOJUSessionCore(state: POJUSessionState): Promise<void> {
-  const db = getPojuDb();
-  const ownerKey = await resolveLocalOwnerKey();
-  const payload = await encryptJson(SESSION_SECRET, state);
-  const lastInteraction = new Date(state.last_interaction_at);
-  const expiresAt = new Date(state.expires_at);
-  const turnCount = countUserTurns(state);
-  const hint = getCurrentStateHint(state);
-
-  const run = async () => {
-    const updated = await db.pojuSessionRecords.update(state.session_id, {
-      encrypted_data: payload.cipher,
-      iv: payload.iv,
-      original_question: state.original_question.trim(),
-      last_interaction_at: lastInteraction,
-      expires_at: expiresAt,
-      tokens_used: state.tokens_used,
-      turn_count: turnCount,
-      current_state_hint: hint,
-      main_delivery_done: state.main_delivery_done,
-      main_delivery_at: state.main_delivery_done ? new Date() : undefined,
-      active_cycle_id: state.active_cycle_id,
-    });
-    // Dexie update returns modified count; 0 means missing row -- throw so the
-    // surrounding transaction rolls back cycle-index writes too (C1 atomicity).
-    if (updated !== 1) {
-      throw new Error(
-        `pojuSessionRecords.update expected 1 row, got ${updated} (session_id=${state.session_id})`,
-      );
-    }
-    await syncSessionCyclesToDbWithDb(db, state, ownerKey);
-  };
-
-  // Prefer one Dexie transaction for blob + cycle index (C1 core boundary).
-  if (typeof window !== "undefined" && typeof db.transaction === "function") {
-    await db.transaction("rw", [...POJU_SESSION_CORE_TABLES], run);
-  } else {
-    await run();
-  }
+  // Phase 3 S1 W2 — thin wrapper over unified CAS (Contract §7.4–7.5).
+  // Prefer mutatePOJUSession for concurrent-safe patches; this bridge keeps
+  // legacy whole-state callers on the single encrypted_data write path.
+  await casWritePOJUSessionFromCandidate(state, { bump_dc: "auto" });
 }
 
 /**
@@ -487,6 +457,10 @@ export async function extendPOJUV4Session(
     last_interaction_at: now.toISOString(),
   };
 
+  // Phase 3 S1 open item C1 — metadata vs blob keep separate atomicity boundaries
+  // (S0 inventory C1 option a; Contract/Mapping do not prescribe folding renewals
+  // into a single blob CAS). Metadata columns updated here WITHOUT encrypted_data;
+  // blob expiry mirror goes through savePOJUSession → unified CAS.
   await db.pojuSessionRecords.update(sessionId, {
     expires_at: exp,
     last_interaction_at: now,
@@ -532,3 +506,14 @@ export async function deletePOJUSession(sessionId: string): Promise<void> {
 
 // Re-export apply helpers so Call sites can use one module for DC session commits.
 export { applyDcToWorking, applyControlPlaneToWorking };
+
+// Phase 3 S1 — unified Session CAS / Mutation API
+export {
+  mutatePOJUSession,
+  casWritePOJUSession,
+  applyMessageAppend,
+  SessionCasError,
+  REVISION_MIRROR_MISMATCH,
+  SESSION_CAS_CONFLICT,
+  MESSAGE_CLIENT_ID_CONFLICT,
+} from "@/lib/poju/session-mutation";

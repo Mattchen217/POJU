@@ -25,6 +25,10 @@ export interface POJUSessionRecord {
   owner_key?: string;
   encrypted_data: string;
   iv: string;
+  /** Phase 3 S1 — CAS mirror; must equal decrypted blob.session_revision. */
+  session_revision?: number;
+  /** Phase 3 S1 — CAS mirror; must equal decrypted blob.dc_write_revision. */
+  dc_write_revision?: number;
   status: "active" | "paused" | "resolved" | "archived";
   original_question: string;
   created_at: Date;

@@ -73,6 +73,7 @@ async function main() {
     savePOJUSessionCore,
     loadPOJUSession,
   } = await import("../lib/poju/session-manager");
+  const { createPOJUSessionRecordIfAbsent } = await import("../lib/poju/session-mutation");
   const { resolveLocalOwnerKey } = await import("../lib/storage/local-owner");
   const types = await import("../lib/poju/types");
   type POJUSessionState = types.POJUSessionState;
@@ -135,30 +136,24 @@ async function main() {
   }
 
   async function seedSessionRow(state: POJUSessionState): Promise<void> {
-    const db = getPojuDb();
+    // Phase 3 S1 W6a — fixture init via create-if-absent CAS semantics (dual rev 0).
+    // Subsequent writes must go through savePOJUSessionCore → unified CAS.
     const ownerKey = await resolveLocalOwnerKey();
-    const payload = await encryptJson(SESSION_SECRET, state);
-    const now = new Date(state.created_at);
-    await db.pojuSessionRecords.put({
-      session_id: state.session_id,
-      device_id: state.device_id,
+    const seeded: POJUSessionState = {
+      ...state,
+      session_revision: state.session_revision ?? 0,
+      dc_write_revision: state.dc_write_revision ?? 0,
+    };
+    const { created } = await createPOJUSessionRecordIfAbsent({
+      session_id: seeded.session_id,
+      device_id: seeded.device_id,
       owner_key: ownerKey,
-      encrypted_data: payload.cipher,
-      iv: payload.iv,
-      status: "active",
-      original_question: state.original_question,
-      created_at: now,
-      last_interaction_at: new Date(state.last_interaction_at),
-      expires_at: new Date(state.expires_at),
+      state: seeded,
       payment_id: "pay_test",
-      payment_processor: "dodopayments",
-      renewals: [],
-      tokens_used: state.tokens_used,
-      turn_count: 0,
-      current_state_hint: "opening",
-      main_delivery_done: false,
-      active_cycle_id: state.active_cycle_id,
     });
+    if (!created) {
+      throw new Error(`seedSessionRow: session already exists: ${seeded.session_id}`);
+    }
   }
 
   async function readBlob(sessionId: string): Promise<POJUSessionState | null> {
@@ -211,7 +206,7 @@ async function main() {
       await savePOJUSessionCore(state);
     } catch (e) {
       threw = true;
-      assert.match(String(e), /expected 1 row/i);
+      assert.match(String(e), /expected 1 row|session row missing|SESSION_CAS_CONFLICT/i);
     }
     assert.equal(threw, true);
 
@@ -245,8 +240,11 @@ async function main() {
       1,
     );
 
+    // Re-load so session_revision mirrors the CAS bump from the first Core write.
+    const afterFirst = await loadPOJUSession(seeded.session_id);
+    assert.ok(afterFirst);
     const emptied: POJUSessionState = {
-      ...seeded,
+      ...afterFirst!,
       original_question: "cleared",
       cycles: [],
       active_cycle_id: undefined,

@@ -135,7 +135,8 @@
     "test:lab-evidence-soft-stages": "tsx scripts/test-lab-evidence-soft-stages.ts",
     "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
-    "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts"
+    "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",
+    "test:session-cas-s1": "tsx scripts/test-session-cas-s1.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

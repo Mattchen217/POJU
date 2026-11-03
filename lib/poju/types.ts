@@ -190,6 +190,16 @@ export interface SituationAnalysisCacheEntry {
 
 export interface POJUSessionState {
   session_id: string;
+  /**
+   * Phase 3 S1 — Session CAS mirror of POJUSessionRecord.session_revision.
+   * Bumps on every successful encrypted blob write. Init 0 via create/CAS only.
+   */
+  session_revision?: number;
+  /**
+   * Phase 3 S1 — bumps only when formal DC content changes.
+   * Must mirror POJUSessionRecord.dc_write_revision.
+   */
+  dc_write_revision?: number;
   device_id: string;
   original_question: string;
   messages: POJUMessage[];
