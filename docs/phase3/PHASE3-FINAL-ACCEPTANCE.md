@@ -3,18 +3,20 @@
 > Phase 3 Final Acceptance package (Max §10.2).  
 > Branch: `feat/decision-context-phase1` · PR #32  
 > Local evidence date: 2026-11-03 (America/Chicago)  
-> **Conclusion: READY_FOR_PASS_PENDING_CI** (local mandatory suites + tsc green; Actions PENDING_PUSH)
+> **Verdict: Phase 3 Engineering Final = PASS**  
+> **Acceptance: Max independent acceptance (not self-report)**  
+> HEAD: `8addcc444f155c3b8d8bb4c1ff65386148aeb9b8`
 
-Do **not** treat this document as Final PASS until GitHub Actions is green on the pushed SHA.
+Product Stage 4 / P5 / P6 / P8 remains **held** pending explicit user authorization. No merge / no production deploy.
 
-## 1. Final HEAD SHA (local)
+## 1. Final HEAD SHA
 
-Tip of `feat/decision-context-phase1`: **`git rev-parse HEAD`** at push time (docs-only commits may follow suite evidence).
+**`8addcc444f155c3b8d8bb4c1ff65386148aeb9b8`** on `feat/decision-context-phase1` (PR #32).
 
-**Suite evidence runtime tip:** `d3681bb91b808305b53cdd21cdf1991e125601c9` (restore fail-closed).  
-All commits after that through branch tip are **docs-only** acceptance packaging (no runtime/test source changes).
+Suite evidence runtime tip (last rem commit before docs packaging): `d3681bb91b808305b53cdd21cdf1991e125601c9` (restore fail-closed).  
+Commits after that through Final PASS tip include rem docs packaging + this seal (docs-only for the seal commit).
 
-Ahead of `origin/feat/decision-context-phase1`: **13** commits (unpushed) as of packaging.
+Pushed tip verified by Max independent acceptance + Actions success on the same SHA.
 
 ## 2. Full diff vs baseline `96cf819d26bbbb7a1eb174848fb0366c1eebfe9f`
 
@@ -113,16 +115,12 @@ pnpm exec tsc --noEmit   # exit 0 — clean
 
 ## 8. GitHub Actions
 
-**PENDING_PUSH** — no remote run URL/SHA until parent pushes `feat/decision-context-phase1`.  
-Workflow file present: `.github/workflows/phase3-decision-context.yml`.
+Same SHA `8addcc444f155c3b8d8bb4c1ff65386148aeb9b8`:
 
-Suggested push (parent only, after review):
+- Push: https://github.com/Mattchen217/POJU/actions/runs/41663817547 (success)
+- PR: https://github.com/Mattchen217/POJU/actions/runs/41663828595 (success)
 
-```
-git push -u origin feat/decision-context-phase1
-```
-
-Then record Actions run URL + SHA here / in PR before Final PASS.
+Workflow: `.github/workflows/phase3-decision-context.yml`.
 
 ## 9. C1 / C5 / J4 final status
 
@@ -139,7 +137,7 @@ Then record Actions run URL + SHA here / in PR before Final PASS.
 2. Lab shares phase namespace with product segment2/synthesis when using the same `session_id` — isolation via optional Generation identity fields + `jobMatchesIdentity`, not a separate Lab KV namespace (no Contract fifth phase).
 3. Restore: status flip + archive delete still **after** CAS; if that post-step fails mid-flight, blob may already be extended while row still `archived` and archive retained → retryable; not wrong plaintext index authority.
 4. Product Call A/B UI / Job wiring Hold; Stage4 / Page / Lab SoT redesign Holds — out of Phase 3 rem scope.
-5. This package is **READY_FOR_PASS_PENDING_CI**, not Final PASS.
+5. Product Stage 4 / P5 / P6 / P8 still **held** pending user authorization; no merge / no production deploy.
 
 ## 11. Contract vs Mapping compliance (itemization)
 
@@ -158,5 +156,12 @@ Then record Actions run URL + SHA here / in PR before Final PASS.
 
 ## Verdict
 
-**READY_FOR_PASS_PENDING_CI** — all mandatory local suites + typegen + tsc green at `d3681bb9…`.  
-Await parent push + Actions green before Final PASS. No merge/prod.
+**Phase 3 Engineering Final = PASS**
+
+- Independent acceptor: **Max** (not self-report)
+- HEAD: `8addcc444f155c3b8d8bb4c1ff65386148aeb9b8`
+- Core26 PASS; L1 35 / L2 21 / L3 23 / Job 10; typegen+tsc 0
+- Actions success on same SHA: 41663817547 (push), 41663828595 (PR)
+- Known limitations in §10 remain documented and do **not** constitute FAIL
+
+**Product Stage 4 still held** pending user authorization. No merge / no production deploy.
