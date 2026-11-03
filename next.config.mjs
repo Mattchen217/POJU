@@ -45,8 +45,8 @@ const nextConfig = {
    * via http://192.168.31.197:3000 during local development.
    */
   allowedDevOrigins: ["192.168.31.197", "localhost", "127.0.0.1"],
-  // 便于在 VPS / Docker 用「单进程 + 小 node_modules」部署
-  output: "standalone",
+  // VPS / Docker 用 standalone；Vercel 必须走默认 .next（否则易 NEXT_NO_ROUTES_MANIFEST）
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   /**
    * Windows：终端 cwd 与编辑器打开路径大小写不一致（如 pojulife vs POJULIFE）时，
    * Webpack 会把同一物理目录当成两套模块，Next/React 加载两份 → App Router 报错
