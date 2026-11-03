@@ -174,6 +174,13 @@ export async function POST(req: Request) {
       if (!job) {
         return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
       }
+      // Phase 3 J4 — shared store ≠ shared business identity: refuse cross-phase resume.
+      if (job.phase !== "synthesis") {
+        return NextResponse.json(
+          { ok: false, error: "job_phase_mismatch", expected: "synthesis", actual: job.phase },
+          { status: 409 },
+        );
+      }
       return jobStatusResponse(job);
     }
 

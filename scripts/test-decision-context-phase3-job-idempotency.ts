@@ -94,6 +94,9 @@ async function main() {
   const {
     createXhighJob,
     getXhighJobByClientTaskId,
+    getXhighJob,
+    findLatestXhighJobForSession,
+    jobMatchesIdentity,
     runWithEphemeralXhighKv,
   } = await import("../lib/poju/xhigh-job-store");
   const fpv = "poju-generation-fp-v1";
@@ -327,6 +330,226 @@ async function main() {
       assert.notEqual(syn.job_id, fd.job_id);
     });
   });
+
+  await p3("P3-144", "J4 POJU Generation must not recover Lab/legacy job lacking generation_type", async () => {
+    await runWithEphemeralXhighKv(async () => {
+      const sid = await createPOJUSession({ payment_id: "pay_job_144", original_question: "144" });
+      // Lab-style create: same phase+session, no client_task_id / generation_type.
+      const lab = await createXhighJob({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        locale: "en",
+        job_input: seg2Input(sid, "lab-144"),
+      });
+      assert.equal(lab.generation_type, undefined);
+      assert.equal(lab.client_task_id, undefined);
+
+      const latest = await findLatestXhighJobForSession("segment2_breakthrough_core", sid);
+      assert.ok(latest);
+      assert.equal(latest!.job_id, lab.job_id);
+
+      // Generation recovery with client_task + generation_type must not accept Lab latest.
+      const found = await getXhighJobByClientTaskId({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        client_task_id: "ctask_gen_144",
+        generation_type: "call_a_hypothesis",
+        consult_latest_candidate: true,
+      });
+      assert.equal(found.status, "missing");
+
+      assert.equal(
+        jobMatchesIdentity(lab, {
+          phase: "segment2_breakthrough_core",
+          session_id: sid,
+          client_task_id: "ctask_gen_144",
+          generation_type: "call_a_hypothesis",
+        }),
+        false,
+      );
+
+      // POJU create with Phase 3 fields still succeeds as a distinct identity.
+      const poju = await createXhighJob({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        locale: "en",
+        client_task_id: "ctask_gen_144",
+        generation_type: "call_a_hypothesis",
+        job_input: seg2Input(sid, "poju-144"),
+      });
+      assert.notEqual(poju.job_id, lab.job_id);
+      assert.equal(poju.generation_type, "call_a_hypothesis");
+      assert.equal(poju.client_task_id, "ctask_gen_144");
+    });
+  });
+
+  await p3("P3-145", "J4 cross-phase recovery missing; getByClientTaskId scoped to phase", async () => {
+    await runWithEphemeralXhighKv(async () => {
+      const sid = await createPOJUSession({ payment_id: "pay_job_145", original_question: "145" });
+      const ctid = "ctask_cross_phase_145";
+      const core = await createXhighJob({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        locale: "en",
+        client_task_id: ctid,
+        generation_type: "call_a_hypothesis",
+        job_input: seg2Input(sid, "145-core"),
+      });
+      const wrongPhase = await getXhighJobByClientTaskId({
+        phase: "synthesis",
+        session_id: sid,
+        client_task_id: ctid,
+        generation_type: "call_a_hypothesis",
+      });
+      assert.equal(wrongPhase.status, "missing");
+      const right = await getXhighJobByClientTaskId({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        client_task_id: ctid,
+        generation_type: "call_a_hypothesis",
+      });
+      assert.equal(right.status, "found");
+      if (right.status === "found") assert.equal(right.job.job_id, core.job_id);
+    });
+  });
+
+  await p3("P3-146", "J4 Lab/FD/Synthesis without Phase3 fields keep create+latest semantics", async () => {
+    await runWithEphemeralXhighKv(async () => {
+      const sid = await createPOJUSession({ payment_id: "pay_job_146", original_question: "146" });
+      const labCore = await createXhighJob({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        locale: "en",
+        job_input: seg2Input(sid, "lab-146"),
+      });
+      const syn = await createXhighJob({
+        phase: "synthesis",
+        session_id: sid,
+        locale: "en",
+        job_input: {
+          kind: "synthesis",
+          multi_dimension_reckoning: [],
+          desired_outcome: "x",
+          original_question: "146",
+          question_category: "unknown",
+          covered_agenda: [],
+          structured_inventory: "",
+        },
+      });
+      const fd = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "en",
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "en",
+          agent_v2: {} as any,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+        },
+      });
+      assert.equal(labCore.client_task_id, undefined);
+      assert.equal(syn.client_task_id, undefined);
+      assert.equal(fd.client_task_id, undefined);
+      assert.equal((await getXhighJob(labCore.job_id))!.job_id, labCore.job_id);
+      assert.equal(
+        (await findLatestXhighJobForSession("segment2_breakthrough_core", sid))!.job_id,
+        labCore.job_id,
+      );
+      assert.equal((await findLatestXhighJobForSession("synthesis", sid))!.job_id, syn.job_id);
+      assert.equal((await findLatestXhighJobForSession("final_delivery", sid))!.job_id, fd.job_id);
+      // Cross-business latest isolation
+      assert.notEqual(
+        (await findLatestXhighJobForSession("synthesis", sid))!.job_id,
+        labCore.job_id,
+      );
+    });
+  });
+
+  await p3("P3-147", "J4 same client_task_id across businesses: recovery never cross-binds", async () => {
+    await runWithEphemeralXhighKv(async () => {
+      const sid = await createPOJUSession({ payment_id: "pay_job_147", original_question: "147" });
+      const ctid = "ctask_biz_147";
+      const poju = await createXhighJob({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        locale: "en",
+        client_task_id: ctid,
+        generation_type: "call_a_hypothesis",
+        job_input: seg2Input(sid, "147-poju"),
+      });
+      const syn = await createXhighJob({
+        phase: "synthesis",
+        session_id: sid,
+        locale: "en",
+        client_task_id: ctid,
+        job_input: {
+          kind: "synthesis",
+          multi_dimension_reckoning: [],
+          desired_outcome: "x",
+          original_question: "147",
+          question_category: "unknown",
+          covered_agenda: [],
+          structured_inventory: "",
+        },
+      });
+      const fd = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "en",
+        client_task_id: ctid,
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "en",
+          agent_v2: {} as any,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+        },
+      });
+      assert.notEqual(poju.job_id, syn.job_id);
+      assert.notEqual(poju.job_id, fd.job_id);
+      const asPoju = await getXhighJobByClientTaskId({
+        phase: "segment2_breakthrough_core",
+        session_id: sid,
+        client_task_id: ctid,
+        generation_type: "call_a_hypothesis",
+      });
+      const asSyn = await getXhighJobByClientTaskId({
+        phase: "synthesis",
+        session_id: sid,
+        client_task_id: ctid,
+      });
+      const asFd = await getXhighJobByClientTaskId({
+        phase: "final_delivery",
+        session_id: sid,
+        client_task_id: ctid,
+      });
+      assert.equal(asPoju.status, "found");
+      assert.equal(asSyn.status, "found");
+      assert.equal(asFd.status, "found");
+      if (asPoju.status === "found") assert.equal(asPoju.job.job_id, poju.job_id);
+      if (asSyn.status === "found") assert.equal(asSyn.job.job_id, syn.job_id);
+      if (asFd.status === "found") assert.equal(asFd.job.job_id, fd.job_id);
+      // POJU generation_type probe must not match synthesis job even with shared ctid via wrong phase already covered;
+      // also: synthesis job lacks generation_type — strict match rejects if probed as call_a on synthesis phase.
+      assert.equal(
+        jobMatchesIdentity(syn, {
+          phase: "synthesis",
+          session_id: sid,
+          client_task_id: ctid,
+          generation_type: "call_a_hypothesis",
+        }),
+        false,
+      );
+    });
+  });
+
 
   summarize();
 }

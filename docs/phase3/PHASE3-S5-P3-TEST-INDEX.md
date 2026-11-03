@@ -64,7 +64,11 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-132 | Job OK Binding fail → recover binds original | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | getByClientTaskId + bind original |
 | P3-133 | Same Session different Generation no mis-bind | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | phase-isolated identities |
 | P3-134 | Different Sessions same client_task_id isolated | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | no cross-session job |
-| P3-135 | Synthesis/FD/POJU shared store no identity collide | §18.4 / ITEM6 / J4-lite | test-decision-context-phase3-job-idempotency.ts | phase keys isolate callers |
+| P3-135 | Synthesis/FD/POJU shared store no identity collide | §18.4 / ITEM6 / J4 | test-decision-context-phase3-job-idempotency.ts | phase keys isolate callers |
+| P3-144 | J4 POJU Gen must not recover Lab/legacy job | J4 rem / §6 | test-decision-context-phase3-job-idempotency.ts | generation_type strict; latest not enough |
+| P3-145 | J4 cross-phase getByClientTaskId missing | J4 rem | test-decision-context-phase3-job-idempotency.ts | phase-scoped recovery |
+| P3-146 | J4 Lab/FD/Syn without Phase3 fields OK | J4 rem | test-decision-context-phase3-job-idempotency.ts | create+latest semantics preserved |
+| P3-147 | J4 same client_task across businesses no cross-bind | J4 rem | test-decision-context-phase3-job-idempotency.ts | recovery returns own job_id only |
 | P3-136 | C1 extend encrypt/blob fail → renewals unchanged | C1 rem / §7 | test-decision-context-phase3-idb.ts | metadata must not advance alone |
 | P3-137 | C1 extend mid-txn fail → renewals+blob rollback | C1 rem / §7 | test-decision-context-phase3-idb.ts | reverse of metadata-only commit |
 | P3-138 | C1 recovery blob OK renewals missing → append | C1 rem / §7 | test-decision-context-phase3-idb.ts | legacy split residue recoverable |

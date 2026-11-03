@@ -32,5 +32,5 @@ Bulk `savePOJUSession(~55)` call sites remain API-compatible; they now hit unifi
 
 1. **C1** extend metadata vs blob — **closed (rem)**: unified CAS `append_renewal` (same Dexie update). Tests P3-136/137/138.
 2. **C5** vault rename plaintext fallback — **closed (rem)**: fail closed on decrypt/load; tests P3-139–143.
-3. **J4 / Generation** — out of S1 scope (S2).
+3. **J4 / Generation** — **closed (rem)**: shared store isolation documented + enforced (see PHASE3-J4-JOB-STORE-ISOLATION.md).
 4. Whole-UI migrate to `mutatePOJUSession` for every chat save — Core CAS bridge accepted for S1; full mutate migration can continue without new write primitives.

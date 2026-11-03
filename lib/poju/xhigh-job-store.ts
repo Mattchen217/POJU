@@ -23,7 +23,21 @@ export function runWithEphemeralXhighKv<T>(
   return runWithEphemeralKv(fn, opts);
 }
 
-function jobMatchesIdentity(
+/**
+ * Phase 3 J4 — business identity gate for shared Job Store recovery.
+ *
+ * Identity axes (shared storage ≠ shared business identity):
+ * - phase (segment2_breakthrough_core | segment2_agenda_bridge | synthesis | final_delivery)
+ * - session_id
+ * - client_task_id (when present — Phase 3 Generation / ITEM 6)
+ * - generation_type (when caller supplies it — POJU Call A/B only today)
+ *
+ * Lab / Synthesis / Final Delivery creates omit client_task_id + generation_type;
+ * those fields remain optional so existing business semantics are unchanged.
+ * When a Generation caller *does* supply generation_type, the job must carry the
+ * same value — a Lab/legacy job missing generation_type must not match.
+ */
+export function jobMatchesIdentity(
   job: PojuXhighJob,
   input: {
     phase: PojuXhighJobPhase;
@@ -35,12 +49,9 @@ function jobMatchesIdentity(
   if (job.phase !== input.phase) return false;
   if (job.session_id !== input.session_id) return false;
   if (job.client_task_id !== input.client_task_id) return false;
-  if (
-    input.generation_type &&
-    job.generation_type &&
-    job.generation_type !== input.generation_type
-  ) {
-    return false;
+  if (input.generation_type) {
+    // Strict: Generation recovery must not accept Lab/legacy jobs lacking type.
+    if (job.generation_type !== input.generation_type) return false;
   }
   return true;
 }

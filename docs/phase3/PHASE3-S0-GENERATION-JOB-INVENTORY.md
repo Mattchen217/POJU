@@ -158,7 +158,7 @@ Because **`client_task_id` reverse-lookup does not exist**, S0 records the Mappi
 | J1 | Latest-only index vs §2.4 identity | Add client_task index + field; keep latest as UX convenience only |
 | J2 | Random `job_id` vs stable client identity | Keep server `job_id`; add client_task as create identity (Mapping) |
 | J3 | Ephemeral KV path | Same identity rules must apply or Mapping-forbid submit without durable pending — S2 |
-| J4 | Lab/synthesis/final_delivery share store | Same recovery gap; Phase3 Stage1–3 scope is Call A/B but store is shared — flag for implementers |
+| J4 | Lab/synthesis/final_delivery share store | **CLOSED (rem)**: phase+session keys + strict `generation_type` match when supplied; resume phase guards; Lab omits Phase3 fields (semantics preserved). See `PHASE3-J4-JOB-STORE-ISOLATION.md`. Tests P3-144–147. |
 
 ---
 
