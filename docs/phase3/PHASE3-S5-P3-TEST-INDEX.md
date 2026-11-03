@@ -46,8 +46,8 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-96 | Running Job → no second Job | §18.4 | test-decision-context-phase3-e2e.ts | same job_id for same client_task_id |
 | P3-97 | Server Job failed keeps identity | §18.4 | test-decision-context-phase3-e2e.ts | failed status; same client_task_id/job_id |
 | P3-98 | Result after DC Base moved hard fail | §18.4 | test-decision-context-phase3-e2e.ts | GENERATION_BASE_STALE; no stale write |
-| P3-99 | TaskContext completed Registry missing | §18.4 | test-decision-context-phase3-e2e.ts | inconsistency detectable |
-| P3-100 | Registry completed TaskContext running | §18.4 | test-decision-context-phase3-e2e.ts | inconsistency detectable |
+| P3-99 | TaskContext completed Registry missing — runtime hard fail | §18.4 / §9.5 | test-decision-context-phase3-e2e.ts | restore/jobReload/read/commit throw GENERATION_STATE_INCONSISTENT case A |
+| P3-100 | Registry completed TaskContext running — runtime hard fail | §18.4 / §9.5 | test-decision-context-phase3-e2e.ts | restore/PathB/PathC throw GENERATION_STATE_INCONSISTENT case B |
 | P3-101 | ControlPlane unknown field rejected | §18.5 | test-decision-context-phase3-unit.ts | UNKNOWN_CONTROL_PLANE_FIELD |
 | P3-102 | Known field wrong type rejected | §18.5 | test-decision-context-phase3-unit.ts | INVALID_CONTROL_PLANE_FIELD |
 | P3-103 | Illegal AgentPhase rejected | §18.5 | test-decision-context-phase3-unit.ts | validator throws |

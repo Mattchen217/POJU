@@ -8,5 +8,6 @@ export * from "./session-id";
 export * from "./registry";
 export * from "./binding";
 export * from "./collision";
+export * from "./consistency";
 export * from "./task-context";
 export * from "./commit-paths";

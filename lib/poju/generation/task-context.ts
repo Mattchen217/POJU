@@ -19,6 +19,7 @@ import {
   type GenerationType,
 } from "./types";
 import { assertValidProductionSessionId } from "./session-id";
+import { assertSessionGenerationConsistency } from "./consistency";
 import { defaultLoadForGeneration } from "./task-context-load";
 
 export function generateClientTaskId(): string {
@@ -47,8 +48,12 @@ export function listTaskContexts(
  * Returns the persisted task verbatim; NEVER regenerates identity fields.
  */
 export function restoreTaskContextOnReload(
-  session: Pick<POJUSessionState, "generation_task_contexts" | "session_id">,
+  session: Pick<
+    POJUSessionState,
+    "generation_task_contexts" | "generation_registry" | "session_id"
+  >,
   client_task_id: string,
+  opts?: { boundary?: "job_reload" | "task_context_restore" },
 ): GenerationTaskContext | null {
   assertValidProductionSessionId(session.session_id, "reload");
   const task = findTaskContext(session.generation_task_contexts, client_task_id);
@@ -59,7 +64,32 @@ export function restoreTaskContextOnReload(
       "TaskContext session_id does not match session",
     );
   }
+  // P3-99/100 — hard-block inconsistent TaskContext/Registry on reload/restore.
+  assertSessionGenerationConsistency(
+    session,
+    client_task_id,
+    opts?.boundary ?? "task_context_restore",
+    {
+      generation_type: task.generation_type,
+      generation_id: task.generation_id,
+    },
+  );
   return { ...task };
+}
+
+/**
+ * Job Reload / Recovery entry — same restore, explicit job_reload boundary (P3-99/100).
+ */
+export function restoreGenerationOnJobReload(
+  session: Pick<
+    POJUSessionState,
+    "generation_task_contexts" | "generation_registry" | "session_id"
+  >,
+  client_task_id: string,
+): GenerationTaskContext | null {
+  return restoreTaskContextOnReload(session, client_task_id, {
+    boundary: "job_reload",
+  });
 }
 
 function upsertTask(

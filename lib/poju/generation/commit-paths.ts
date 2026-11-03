@@ -35,6 +35,7 @@ import {
 } from "./types";
 import { assertValidProductionSessionId } from "./session-id";
 import { assertLegalTaskTransition } from "./types";
+import { assertSessionGenerationConsistency } from "./consistency";
 
 export interface GenerationDcMutation {
   decision_context: DecisionContext;
@@ -159,7 +160,13 @@ export async function commitGenerationGuarded(
     decision_context_idempotency_keys: loaded.state.decision_context_idempotency_keys ?? [],
   };
 
-  // Steps 1–9 BEFORE any key-only skip (§5.3).
+  // P3-99/100 — TaskContext/Registry consistency before Path judgment (§9.5).
+  assertSessionGenerationConsistency(latest, input.probe.client_task_id, "formal_result_commit", {
+    generation_type: input.probe.generation_type,
+    generation_id: input.probe.generation_id,
+  });
+
+  // Steps 1-8 BEFORE any key-only skip (§5.3).
   const collision = checkGenerationCollision({
     probe: input.probe,
     registry: latest.generation_registry,
@@ -173,6 +180,10 @@ export async function commitGenerationGuarded(
     if (!collision.registry_entry || !collision.binding) {
       throw new GenerationError(GENERATION_HARD_FAIL, "Path B missing registry/binding");
     }
+    assertSessionGenerationConsistency(latest, input.probe.client_task_id, "path_b_replay", {
+      generation_type: input.probe.generation_type,
+      generation_id: input.probe.generation_id,
+    });
     return {
       path: "B",
       outcome: "already_committed",
@@ -198,6 +209,10 @@ export async function commitGenerationGuarded(
   // Path C — new key, session+1, dc unchanged, no DC rewrite, no duplicate Registry (§9.3).
   if (collision.path === "C") {
     const reg = collision.registry_entry!;
+    assertSessionGenerationConsistency(latest, input.probe.client_task_id, "path_c_register", {
+      generation_type: input.probe.generation_type,
+      generation_id: input.probe.generation_id,
+    });
     const write = await mutatePOJUSession(
       session_id,
       {
