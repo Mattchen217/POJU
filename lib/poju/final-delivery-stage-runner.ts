@@ -2154,6 +2154,7 @@ export async function runFinalDeliveryStage(
         breakthrough_core,
         page_structs,
         page_schemas,
+        decision_context_binding: input.decision_context_binding ?? null,
       };
       const markdown = mergeDeliveryToMarkdown(
         narrativeForMerge,

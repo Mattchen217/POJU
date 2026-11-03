@@ -7,7 +7,7 @@
 > **Acceptance: Max independent acceptance (not self-report)**  
 > HEAD: `8addcc444f155c3b8d8bb4c1ff65386148aeb9b8`
 
-Product Stage 4 / P5 / P6 / P8 remains **held** pending explicit user authorization. No merge / no production deploy.
+Product Stage 4 / P5 / P6 / P8: **authorized and in progress** on the same PR branch after Phase 3 Final PASS (see `docs/stage4/`). No merge / no production deploy.
 
 ## 1. Final HEAD SHA
 

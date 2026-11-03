@@ -49,6 +49,8 @@ export type DeliveryBookMeta = {
    * or complete UI falls back to legacy prose modules.
    */
   page_schemas?: Partial<Record<DeliverySegmentKey, DeliveryPageData>>;
+  /** Product Stage 4 — frozen Decision Context binding on the delivered book. */
+  decision_context_binding?: import("@/lib/poju/decision-context").DecisionContextBinding | null;
 };
 
 /** Deterministic cover + TOC shell (also used for progressive stream before full merge). */
@@ -63,11 +65,16 @@ export function buildCoverAndToc(meta: DeliveryBookMeta): string {
     return `${i + 1}. ${deliverySectionHeading(k, meta.locale)}`;
   }).join("\n");
 
+  const dc = meta.decision_context_binding;
+  const dcLine = dc
+    ? `\n\nDecision Context: \`${dc.context_id}@v${dc.context_version}\` · hash=\`${dc.context_hash.slice(0, 16)}…\``
+    : "";
+
   return `# ${title}
 
 > ${copy.subtitle}
 
-${copy.metaLine(id, date)}
+${copy.metaLine(id, date)}${dcLine}
 
 ## ${copy.tocTitle}
 

@@ -63,6 +63,7 @@ import {
 import { buildBookJudgmentQuotaFromBlueprint } from "@/lib/llm/pro/delivery/book-judgment/quota-from-blueprint";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
+import { formatDecisionContextSliceForPage } from "@/lib/poju/decision-context/dc-page-feed";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 import { gateBookJudgmentBodyConsume } from "@/lib/llm/pro/delivery/pipeline-v3/gate-book-judgment-body";
@@ -2228,6 +2229,10 @@ async function executeV3(
     const escapeArmedBody = v3EscapeArmed(art, "body");
     const acceptanceArmedBody = v3AcceptanceArmed(art, "body");
     const topic = lab.artifacts.topic_gate_07?.topic ?? null;
+    const dcFeed = lab.source.decision_context_snapshot
+      ? formatDecisionContextSliceForPage(lab.source.decision_context_snapshot, page) ||
+        null
+      : null;
     const body = await runContentBodyGenerate({
       key: page,
       finalize,
@@ -2259,6 +2264,7 @@ async function executeV3(
       pivot_chart_path: lab.source.pivot_chart_path ?? null,
       partner_bazi: lab.source.partner_bazi ?? null,
       acceptance_corrective: v3AcceptanceCorrective(art, "body"),
+      decision_context_feed: dcFeed,
     });
     if (!body.ok) {
       if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {

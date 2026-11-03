@@ -118,6 +118,8 @@ function labSourceFromJob(input: FinalDeliveryJobInput): LabSource {
     dyad_compat_summary: input.dyad_compat_summary ?? null,
     dyad_matrix_pack: input.dyad_matrix_pack ?? null,
     joint_decision: input.joint_decision ?? null,
+    decision_context_binding: input.decision_context_binding ?? null,
+    decision_context_snapshot: input.decision_context_snapshot ?? null,
   };
 }
 

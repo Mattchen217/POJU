@@ -489,6 +489,8 @@ export async function runContentBodyGenerate(input: {
   acceptance_corrective?: string | null;
   pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
   partner_bazi?: "absent" | "present" | null;
+  /** Product Stage 4 — preformatted frozen DC feed (faces 01/02/04/05/06/08). */
+  decision_context_feed?: string | null;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body", {
@@ -576,6 +578,7 @@ export async function runContentBodyGenerate(input: {
     book_judgment_pack_block: input.book_judgment_pack_block,
     user_feed: userFeed,
     zfpOmitted,
+    decision_context_feed: input.decision_context_feed,
   });
 
   let tokens_used = 0;

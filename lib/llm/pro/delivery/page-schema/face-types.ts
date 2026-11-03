@@ -56,7 +56,15 @@ export const Face04Schema = z.object({
 });
 export type Face04 = z.infer<typeof Face04Schema>;
 
-/** 05 · 路径排序 · dualTrack=fold */
+/** Product Stage 4 P5 — conditional recommendation caveats + evidence ids. */
+const Face05Stage4Extras = {
+  /** Unknowns / conflicts that may change ranking (required when DC has P5-critical gaps). */
+  recommendation_conditions: z.string().trim().max(960).optional().default(""),
+  /** Trace ids: fact:… / hypothesis:… / dir:… / conflict:… */
+  evidence_trace: z.array(NonEmpty.max(120)).max(12).optional().default([]),
+};
+
+/** 05 · 路径排序 · dualTrack=fold · Product Stage 4 P5 */
 export const Face05Schema = z.object({
   page: z.literal("05"),
   ...FaceChromeSchema.shape,
@@ -66,10 +74,22 @@ export const Face05Schema = z.object({
   caution_choice: NonEmpty.max(720),
   switch_or_stop: NonEmpty.max(720),
   contrast: z.string().trim().max(320).optional().default(""),
+  ...Face05Stage4Extras,
 });
 export type Face05 = z.infer<typeof Face05Schema>;
 
-/** 06 · 怎么落地 · dualTrack=reality */
+/** Product Stage 4 P6 — verification experiment (7 questions). */
+export const Face06VerificationExperimentSchema = z.object({
+  hypothesis: NonEmpty.max(480),
+  action: NonEmpty.max(480),
+  observe: NonEmpty.max(480),
+  window: NonEmpty.max(240),
+  success_criteria: NonEmpty.max(480),
+  if_fail: NonEmpty.max(480),
+  defer_costs: NonEmpty.max(480),
+});
+
+/** 06 · 怎么落地 · dualTrack=reality · Product Stage 4 P6 */
 export const Face06Schema = z.object({
   page: z.literal("06"),
   ...FaceChromeSchema.shape,
@@ -78,6 +98,8 @@ export const Face06Schema = z.object({
   stage_climate: NonEmpty.max(720),
   self_retune: NonEmpty.max(720),
   rhythm_note: NonEmpty.max(480),
+  /** Stage 4: structured verification experiment (optional for legacy Lab fills). */
+  verification_experiment: Face06VerificationExperimentSchema.optional(),
 });
 export type Face06 = z.infer<typeof Face06Schema>;
 
@@ -93,7 +115,7 @@ export const Face07Schema = z.object({
 });
 export type Face07 = z.infer<typeof Face07Schema>;
 
-/** 08 · 自检清单 · dualTrack=reality */
+/** 08 · 自检清单 · dualTrack=reality · Product Stage 4 P8 */
 export const Face08Schema = z.object({
   page: z.literal("08"),
   ...FaceChromeSchema.shape,
@@ -101,6 +123,12 @@ export const Face08Schema = z.object({
   red_lights: z.array(NonEmpty.max(240)).min(1).max(8),
   review_questions: z.array(NonEmpty.max(240)).min(1).max(8),
   when_to_rerun: NonEmpty.max(480),
+  /** Shared with P6 experiment observables — must not be replaced by path-only metrics. */
+  shared_core_metrics: z.array(NonEmpty.max(240)).max(8).optional().default([]),
+  review_decision: z
+    .enum(["continue", "adjust", "stop", "rerun"])
+    .optional(),
+  review_decision_rationale: z.string().trim().max(720).optional().default(""),
 });
 export type Face08 = z.infer<typeof Face08Schema>;
 
@@ -231,6 +259,8 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
         caution_choice: "",
         switch_or_stop: "",
         contrast: "",
+        recommendation_conditions: "",
+        evidence_trace: [],
       };
     case "06":
       return {
@@ -239,6 +269,15 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
         stage_climate: "",
         self_retune: "",
         rhythm_note: "",
+        verification_experiment: {
+          hypothesis: "",
+          action: "",
+          observe: "",
+          window: "",
+          success_criteria: "",
+          if_fail: "",
+          defer_costs: "",
+        },
       };
     case "07":
       return {
@@ -254,6 +293,9 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
         red_lights: [""],
         review_questions: [""],
         when_to_rerun: "",
+        shared_core_metrics: [""],
+        review_decision: "continue",
+        review_decision_rationale: "",
       };
     case "03":
       return {

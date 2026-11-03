@@ -393,6 +393,8 @@ export function buildV3BodyPrompt(input: {
   book_judgment_pack_block?: string | null;
   /** When true, omit ZFP lines from per-segment feed duties. */
   zfpOmitted?: boolean;
+  /** Product Stage 4 — formal frozen Decision Context feed block. */
+  decision_context_feed?: string | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
   if (faceId) {
@@ -401,6 +403,7 @@ export function buildV3BodyPrompt(input: {
       locale: input.locale,
       slice: { pageId: faceId, dump: { note: "see_user_feed_below" } },
       zfpOmitted: input.zfpOmitted,
+      decisionContextFeed: input.decision_context_feed,
     });
     const packMode = Boolean(input.book_judgment_pack_block?.trim());
     /** Pack JSON lives only in USER_FEED (aligned with call-trace). Header = 正写令. */

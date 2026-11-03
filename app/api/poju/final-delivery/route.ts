@@ -236,6 +236,12 @@ export async function POST(req: Request) {
       dyad_matrix_pack?: unknown;
       joint_decision?: unknown;
       joint_pass_ref?: unknown;
+      /** Product Stage 4 — frozen DC binding / snapshot / session slice. */
+      decision_context_binding?: unknown;
+      decision_context_snapshot?: unknown;
+      decision_context?: unknown;
+      decision_context_versions?: unknown;
+      require_decision_context?: unknown;
     };
 
     if (body.continue_interrupted === true) {
@@ -490,6 +496,88 @@ export async function POST(req: Request) {
         ? body.joint_pass_ref.trim()
         : null;
     const isJointDecision = body.joint_decision === true || Boolean(jointPassRef);
+
+    const requireDecisionContext = body.require_decision_context === true;
+    let decision_context_binding: import("@/lib/poju/decision-context").DecisionContextBinding | null =
+      null;
+    let decision_context_snapshot: import("@/lib/poju/decision-context").DecisionContext | null =
+      null;
+    try {
+      const {
+        assertSnapshotMatchesBinding,
+        resolveDecisionContextForReport,
+      } = await import("@/lib/poju/decision-context");
+      const bindingRaw = body.decision_context_binding;
+      const snapRaw = body.decision_context_snapshot;
+      const hasSlice =
+        body.decision_context != null ||
+        (Array.isArray(body.decision_context_versions) &&
+          body.decision_context_versions.length > 0);
+      if (snapRaw && typeof snapRaw === "object" && bindingRaw && typeof bindingRaw === "object") {
+        const snap = snapRaw as import("@/lib/poju/decision-context").DecisionContext;
+        const binding = bindingRaw as import("@/lib/poju/decision-context").DecisionContextBinding;
+        assertSnapshotMatchesBinding(snap, binding);
+        decision_context_snapshot = snap;
+        decision_context_binding = binding;
+      } else if (hasSlice || requireDecisionContext) {
+        const resolved = resolveDecisionContextForReport(
+          {
+            decision_context:
+              body.decision_context && typeof body.decision_context === "object"
+                ? (body.decision_context as import("@/lib/poju/decision-context").DecisionContext)
+                : null,
+            decision_context_versions: Array.isArray(body.decision_context_versions)
+              ? (body.decision_context_versions as import("@/lib/poju/decision-context").DecisionContext[])
+              : [],
+          },
+          bindingRaw && typeof bindingRaw === "object"
+            ? {
+                context_id: (bindingRaw as { context_id?: string }).context_id,
+                version: (bindingRaw as { context_version?: number }).context_version,
+                expected_hash: (bindingRaw as { context_hash?: string }).context_hash,
+              }
+            : undefined,
+        );
+        decision_context_snapshot = resolved.snapshot;
+        decision_context_binding = resolved.binding;
+      } else if (requireDecisionContext) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "Stage4 requires frozen Decision Context binding",
+            code: "DC_REPORT_MISSING",
+          },
+          { status: 400 },
+        );
+      }
+    } catch (e) {
+      const code =
+        e && typeof e === "object" && "code" in e
+          ? String((e as { code: string }).code)
+          : "DC_REPORT_BIND_FAILED";
+      if (requireDecisionContext || body.decision_context_binding != null || body.decision_context != null) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: e instanceof Error ? e.message : "Decision Context bind failed",
+            code,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (requireDecisionContext && (!decision_context_binding || !decision_context_snapshot)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Stage4 requires frozen Decision Context binding",
+          code: "DC_REPORT_MISSING",
+        },
+        { status: 400 },
+      );
+    }
+
     const jobInput: FinalDeliveryJobInput = {
       kind: "final_delivery",
       session_id: sessionIdRaw,
@@ -518,6 +606,9 @@ export async function POST(req: Request) {
           : null,
       joint_decision: isJointDecision,
       joint_pass_ref: jointPassRef,
+      decision_context_binding,
+      decision_context_snapshot,
+      require_decision_context: requireDecisionContext,
     };
 
     inlineCall = async () => {

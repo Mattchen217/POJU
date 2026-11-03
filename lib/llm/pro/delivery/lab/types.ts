@@ -67,6 +67,10 @@ export type LabSource = {
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
   joint_decision?: boolean | null;
+  /** Product Stage 4 — frozen DC binding for report artifacts. */
+  decision_context_binding?: import("@/lib/poju/decision-context").DecisionContextBinding | null;
+  /** Read-only frozen DC snapshot for face 01/02/04/05/06/08 feed. */
+  decision_context_snapshot?: import("@/lib/poju/decision-context").DecisionContext | null;
 };
 
 export type LabArtifacts = {

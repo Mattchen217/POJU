@@ -67,6 +67,15 @@ export type FinalDeliveryJobInput = {
   /** Duo joint: micro-copy + skip second charge via joint_pass_ref. */
   joint_decision?: boolean | null;
   joint_pass_ref?: string | null;
+  /**
+   * Product Stage 4 — frozen Decision Context binding triple.
+   * When require_decision_context is true, binding + snapshot are mandatory.
+   */
+  decision_context_binding?: import("@/lib/poju/decision-context").DecisionContextBinding | null;
+  /** Read-only frozen DC snapshot for page feed (must match binding). */
+  decision_context_snapshot?: import("@/lib/poju/decision-context").DecisionContext | null;
+  /** Hard-gate Stage 4 path: refuse job without valid frozen DC. */
+  require_decision_context?: boolean;
 };
 
 /** 汇总段(第4段)输入:多维真算 + 收集现实 → 收敛。 */

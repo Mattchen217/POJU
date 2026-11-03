@@ -85,4 +85,4 @@ Workflow: `.github/workflows/phase3-decision-context.yml`.
 **Phase 3 Engineering Final = PASS** (Max independent acceptance, not self-report).  
 HEAD `8addcc444f155c3b8d8bb4c1ff65386148aeb9b8`. Known limits above remain documented.  
 
-**Product Stage 4 / P5 / P6 / P8 still held** pending user authorization. No merge / no production deploy.
+**Product Stage 4 / P5 / P6 / P8:** authorized after Max Final PASS — see `docs/stage4/STAGE4-WRITEUP.md`. No merge / no production deploy.
