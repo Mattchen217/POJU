@@ -9,9 +9,9 @@ Do **not** treat this document as Final PASS until GitHub Actions is green on th
 
 ## 1. Final HEAD SHA (local)
 
-`d3681bb91b808305b53cdd21cdf1991e125601c9` — `phase3 rem: restore fail-closed on blob load`
+`e70616bcc1a91b4ea9c29d71b26130186abdf162` — `phase3 rem: restore fail-closed on blob load`
 
-Ahead of `origin/feat/decision-context-phase1`: **10** commits (unpushed).
+Ahead of `origin/feat/decision-context-phase1`: **13** commits (unpushed). Runtime tip for suites was `d3681bb9…`; tip includes docs-only acceptance commits.
 
 ## 2. Full diff vs baseline `96cf819d26bbbb7a1eb174848fb0366c1eebfe9f`
 
@@ -40,6 +40,8 @@ Remediation-only commits since `b17d583654b2f0156896077c681f53642f8981af`:
 | 4748c918 | phase3 rem: C5 vault rename decrypt-fail index |
 | 70a98d86 | phase3 rem: J4 shared job store isolation |
 | d3681bb9 | phase3 rem: restore fail-closed on blob load |
+| ffec91ed | phase3 rem: final acceptance package |
+| 93f0bc07 | phase3 rem: note S3 writeup C1/C5/J4 closed |
 
 ## 3. Modified file list (vs baseline)
 

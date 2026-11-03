@@ -3,7 +3,7 @@
 **Date:** 2026-11-03 (America/Chicago)  
 **Branch:** `feat/decision-context-phase1`  
 **PR:** #32  
-**Acceptance HEAD (local):** `d3681bb91b808305b53cdd21cdf1991e125601c9`  
+**Acceptance HEAD (local):** `e70616bcc1a91b4ea9c29d71b26130186abdf162`  
 **Baseline:** `96cf819d26bbbb7a1eb174848fb0366c1eebfe9f`  
 **Max prior:** S5 PASS_WITH_GAPS → remediations → Final Acceptance package
 
