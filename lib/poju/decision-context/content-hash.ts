@@ -1,9 +1,11 @@
 /**
- * Canonical business payload 鈫?SHA-256 hex for Freeze / report binding.
- * Excludes lifecycle metadata (status, timestamps, superseded_*).
+ * Canonical business payload → SHA-256 hex for Freeze / report binding.
+ * Excludes lifecycle metadata (status timestamps on container, superseded_*).
+ * Phase 3 S4: canonical JSON shared with Fingerprint via normalize.ts (no dual stack).
  */
 
 import { sha256 } from "@noble/hashes/sha2.js";
+import { canonicalStringify } from "./normalize";
 import type {
   Conflict,
   Constraint,
@@ -22,23 +24,7 @@ function bytesToHex(bytes: Uint8Array): string {
     .join("");
 }
 
-/** Stable JSON: sorted object keys; arrays preserve order. */
-export function canonicalStringify(value: unknown): string {
-  return JSON.stringify(sortKeys(value));
-}
-
-function sortKeys(value: unknown): unknown {
-  if (value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(sortKeys);
-  const obj = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(obj).sort()) {
-    const v = obj[key];
-    if (v === undefined) continue;
-    out[key] = sortKeys(v);
-  }
-  return out;
-}
+// canonicalStringify lives in normalize.ts (unique stack); imported above for hashing.
 
 export interface BusinessPayload {
   definition: Definition;

@@ -1,10 +1,16 @@
 /**
- * Call A breakthrough_core (temporary I/O) → formal Hypothesis[] in DC.
- * NEVER creates RealityFact. Formal Hypothesis exists only after this write.
+ * Call A breakthrough_core → formal Hypothesis[] in DC (Contract §14.2).
+ * Consumes Normalized Object only (via prepare/normalize). NEVER creates RealityFact/Constraint.
+ * Phase 3 S4: same Normalized Object feeds Fingerprint and this Mapper (GI-23).
  */
 
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import type { Hypothesis, HypothesisState } from "./types";
+import {
+  normalizeCallAInput,
+  type NormalizedActionFrame,
+  type NormalizedCallAInput,
+} from "./normalize-call-a";
 
 export interface HypothesisFromCoreOptions {
   /** Stable idempotency / provenance (session_id + job_id / core_generation_id). */
@@ -29,6 +35,22 @@ function pushHypothesis(
   out.push(h);
 }
 
+function nonNullStrings(values: Array<string | null | undefined>): string[] {
+  const out: string[] = [];
+  for (const v of values) {
+    if (v != null && v.length > 0) out.push(v);
+  }
+  return out;
+}
+
+function joinNonNull(
+  parts: Array<string | null | undefined>,
+  sep: string,
+): string | null {
+  const xs = nonNullStrings(parts);
+  return xs.length ? xs.join(sep) : null;
+}
+
 function frameToHypothesis(
   statement: string,
   validation_need: string | null,
@@ -40,10 +62,10 @@ function frameToHypothesis(
 ): Hypothesis {
   return {
     hypothesis_id: newHypId(source_ref, slot),
-    statement: statement.trim(),
-    supporting_evidence: evidence.filter((e) => e.trim().length > 0),
+    statement,
+    supporting_evidence: evidence,
     counter_evidence: [],
-    validation_need: validation_need?.trim() ? validation_need.trim() : null,
+    validation_need,
     state,
     related_dir_ids: [],
     source_ref,
@@ -51,129 +73,145 @@ function frameToHypothesis(
   };
 }
 
+function stateFromNeedsValidation(
+  needs_validation: string | null,
+): HypothesisState {
+  return needs_validation ? "pending_validation" : "proposed";
+}
+
+function evidenceFromFrame(frame: NormalizedActionFrame): string[] {
+  return nonNullStrings([
+    frame.structural_basis,
+    ...frame.chart_anchors,
+  ]);
+}
+
 /**
- * Map BreakthroughCore skeleton frames → Hypothesis[].
- * breakthrough_core remains temporary process I/O; DC is the only formal home.
+ * Map Normalized Call A Object → Hypothesis[].
+ * MUST NOT re-normalize, re-trim, filter-renumber frames, or create Facts/Constraints.
+ * modern_action_frames keep original indices in stable hypothesis slot ids.
  */
-export function hypothesesFromBreakthroughCore(
-  core: BreakthroughCore | null | undefined,
+export function hypothesesFromNormalizedCallA(
+  normalized: NormalizedCallAInput,
   opts: HypothesisFromCoreOptions,
 ): Hypothesis[] {
-  if (!core) return opts.existing ? [...opts.existing] : [];
   const now = opts.now ?? new Date().toISOString();
   const out: Hypothesis[] = [];
   const seen = new Set<string>();
 
-  // Idempotency: keep existing with same source_ref, then add/overwrite slots for this ref.
+  // Same source_ref re-submit: drop prior rows for this generation identity, then replace.
   for (const prev of opts.existing ?? []) {
     if (prev.source_ref !== opts.source_ref) {
       pushHypothesis(out, seen, prev);
     }
   }
 
-  if (core.situation_conclusion?.trim()) {
+  if (normalized.situation_conclusion) {
     pushHypothesis(
       out,
       seen,
       frameToHypothesis(
-        core.situation_conclusion,
+        normalized.situation_conclusion,
         null,
         opts.source_ref,
         "situation",
         "proposed",
         now,
-        core.energy_structure ? [core.energy_structure] : [],
+        nonNullStrings([normalized.energy_structure]),
       ),
     );
   }
 
-  const kc = core.key_crossroads;
-  if (kc?.real_fork?.trim()) {
-    const stmt = [kc.real_fork, kc.path_costs, kc.decision_traits]
-      .filter((x) => x?.trim())
-      .join(" | ");
+  const kc = normalized.key_crossroads;
+  if (kc?.real_fork) {
+    const stmt = joinNonNull(
+      [kc.real_fork, kc.path_costs, kc.decision_traits],
+      " | ",
+    )!;
     pushHypothesis(
       out,
       seen,
       frameToHypothesis(
         stmt,
-        kc.needs_validation ?? null,
+        kc.needs_validation,
         opts.source_ref,
         "key_crossroads",
-        kc.needs_validation?.trim() ? "pending_validation" : "proposed",
+        stateFromNeedsValidation(kc.needs_validation),
         now,
-        [kc.structural_basis].filter(Boolean),
+        nonNullStrings([kc.structural_basis]),
       ),
     );
   }
 
-  (core.modern_action_frames ?? []).forEach((frame, i) => {
-    if (!frame?.direction?.trim()) return;
-    const stmt = [frame.direction, frame.why_fits].filter((x) => x?.trim()).join(" — ");
+  // Preserve original indices — do NOT compact null slots before assigning slot ids.
+  normalized.modern_action_frames.forEach((frame, i) => {
+    if (!frame?.direction) return;
+    const stmt = joinNonNull([frame.direction, frame.why_fits], " — ")!;
     pushHypothesis(
       out,
       seen,
       frameToHypothesis(
         stmt,
-        frame.needs_validation ?? null,
+        frame.needs_validation,
         opts.source_ref,
         `modern_action_${i + 1}`,
-        frame.needs_validation?.trim() ? "pending_validation" : "proposed",
+        stateFromNeedsValidation(frame.needs_validation),
         now,
-        [frame.structural_basis, ...(frame.chart_anchors ?? [])].filter(Boolean),
+        evidenceFromFrame(frame),
       ),
     );
   });
 
-  if (core.primary_path?.direction?.trim()) {
-    const frame = core.primary_path;
+  if (normalized.primary_path?.direction) {
+    const frame = normalized.primary_path;
     pushHypothesis(
       out,
       seen,
       frameToHypothesis(
-        [frame.direction, frame.why_fits].filter(Boolean).join(" — "),
-        frame.needs_validation ?? null,
+        joinNonNull([frame.direction, frame.why_fits], " — ")!,
+        frame.needs_validation,
         opts.source_ref,
         "primary_path",
-        frame.needs_validation?.trim() ? "pending_validation" : "proposed",
+        stateFromNeedsValidation(frame.needs_validation),
         now,
-        [frame.structural_basis].filter(Boolean),
+        evidenceFromFrame(frame),
       ),
     );
   }
 
-  if (core.backup_path?.direction?.trim()) {
-    const frame = core.backup_path;
+  if (normalized.backup_path?.direction) {
+    const frame = normalized.backup_path;
     pushHypothesis(
       out,
       seen,
       frameToHypothesis(
-        [frame.direction, frame.why_fits].filter(Boolean).join(" — "),
-        frame.needs_validation ?? null,
+        joinNonNull([frame.direction, frame.why_fits], " — ")!,
+        frame.needs_validation,
         opts.source_ref,
         "backup_path",
-        frame.needs_validation?.trim() ? "pending_validation" : "proposed",
+        stateFromNeedsValidation(frame.needs_validation),
         now,
-        [frame.structural_basis].filter(Boolean),
+        evidenceFromFrame(frame),
       ),
     );
   }
 
-  const er = core.energy_retune_frame;
-  if (er?.direction_fit?.trim()) {
+  const er = normalized.energy_retune_frame;
+  if (er?.direction_fit) {
     pushHypothesis(
       out,
       seen,
       frameToHypothesis(
-        [er.direction_fit, er.timing_ripeness, er.daily_retune]
-          .filter((x) => x?.trim())
-          .join(" | "),
-        er.needs_validation ?? null,
+        joinNonNull(
+          [er.direction_fit, er.timing_ripeness, er.daily_retune],
+          " | ",
+        )!,
+        er.needs_validation,
         opts.source_ref,
         "energy_retune",
-        er.needs_validation?.trim() ? "pending_validation" : "proposed",
+        stateFromNeedsValidation(er.needs_validation),
         now,
-        [er.structural_basis].filter(Boolean),
+        nonNullStrings([er.structural_basis]),
       ),
     );
   }
@@ -181,11 +219,44 @@ export function hypothesesFromBreakthroughCore(
   return out;
 }
 
+/**
+ * Compat entry: Validate → Normalize once → Mapper.
+ * Prefer prepareCallAGeneration + hypothesesFromNormalizedCallA at Generation paths
+ * so Fingerprint and Mapper share one Normalized Object explicitly.
+ */
+export function hypothesesFromBreakthroughCore(
+  core: BreakthroughCore | null | undefined,
+  opts: HypothesisFromCoreOptions,
+): Hypothesis[] {
+  if (!core) return opts.existing ? [...opts.existing] : [];
+  const normalized = normalizeCallAInput(core);
+  return hypothesesFromNormalizedCallA(normalized, opts);
+}
+
 /** Apply into a DC draft (returns new DC; does not mutate). */
 export function applyHypothesesFromCoreToDc<
   T extends { hypotheses: Hypothesis[]; updated_at: string },
->(dc: T, core: BreakthroughCore | null | undefined, opts: HypothesisFromCoreOptions): T {
+>(
+  dc: T,
+  core: BreakthroughCore | null | undefined,
+  opts: HypothesisFromCoreOptions,
+): T {
   const hypotheses = hypothesesFromBreakthroughCore(core, {
+    ...opts,
+    existing: dc.hypotheses,
+  });
+  return {
+    ...dc,
+    hypotheses,
+    updated_at: opts.now ?? new Date().toISOString(),
+  };
+}
+
+/** Apply Normalized Object into a DC draft. */
+export function applyHypothesesFromNormalizedCallAToDc<
+  T extends { hypotheses: Hypothesis[]; updated_at: string },
+>(dc: T, normalized: NormalizedCallAInput, opts: HypothesisFromCoreOptions): T {
+  const hypotheses = hypothesesFromNormalizedCallA(normalized, {
     ...opts,
     existing: dc.hypotheses,
   });

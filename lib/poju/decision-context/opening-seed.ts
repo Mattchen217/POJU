@@ -1,8 +1,9 @@
 /**
- * Opening → DC draft seed (Definition + initial Facts + Constraints).
- * Forbidden: DIR, agenda, Hypothesis, model-inferred RealityFact.
- * Phase 3 S3: do NOT use user_confirmed_event?: boolean as formal confirm source.
+ * Opening → DC draft seed (Definition + initial Facts + Constraints) — Contract §14.1.
+ * Forbidden: DIR, Agenda, Hypothesis, model-inferred RealityFact, breakthrough_core as user fact source.
+ * Phase 3 S3/S4: do NOT use user_confirmed_event?: boolean as formal confirm source.
  * Prefer Confirmation Events; ephemeral has_user_confirm_event only for seed-time derive.
+ * Gate confirm must NOT auto-confirm all facts (handled by Opening Anchor / S3).
  */
 
 import { buildRealityFact, deriveUserConfirmed } from "./fact-combination";
@@ -16,6 +17,21 @@ import type {
   VerificationLevel,
 } from "./types";
 import { assertLegalFactCombination } from "./fact-combination";
+
+export const OPENING_SEED_MISSING_SOURCE_TURN =
+  "OPENING_SEED_MISSING_SOURCE_TURN" as const;
+export const OPENING_SEED_FORBIDDEN_ENTITY =
+  "OPENING_SEED_FORBIDDEN_ENTITY" as const;
+
+export class OpeningSeedError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "OpeningSeedError";
+    this.code = code;
+  }
+}
 
 export interface OpeningDilemmaBuffer {
   concrete_event: string | null;
@@ -49,7 +65,11 @@ export interface OpeningUserStatement {
    */
   user_confirmed_event?: boolean;
   status?: "confirmed" | "unverified";
-  source_turn_id?: string | null;
+  /**
+   * Required for RealityFact creation (Contract §14.1).
+   * Must be a non-empty turn id naming the user statement source.
+   */
+  source_turn_id: string;
   fact_roles?: string[];
 }
 
@@ -66,21 +86,33 @@ export interface OpeningUserConstraint {
   has_user_confirm_event?: boolean;
   /** @deprecated Alias only — not formal Confirmation Event authority. */
   user_confirmed_event?: boolean;
-  source_turn_id?: string | null;
+  /** Required for Constraint creation (Contract §14.1 source clarity). */
+  source_turn_id: string;
 }
 
 export interface SeedOpeningInput {
   context_id?: string;
   session_id?: string;
   now?: string;
-  /** Temporary agent_v2 buffers — NOT formal authority after seed. */
+  /**
+   * Temporary agent_v2 Opening buffers for Definition only — NOT formal RealityFact authority.
+   * Must NOT be confused with breakthrough_core (banned as user fact source).
+   */
   core_dilemma: OpeningDilemmaBuffer | null;
   desired_direction: OpeningDirectionBuffer | null;
-  /** Only user-explicit sentences; model insights must be omitted. */
+  /** Only user-explicit sentences; model insights / breakthrough_core must be omitted. */
   user_statements?: OpeningUserStatement[];
   user_constraints?: OpeningUserConstraint[];
   decision_question?: string | null;
   unacceptable_outcomes?: string[];
+  /**
+   * Hard ban surface: if caller passes these, seed MUST fail (Contract §14.1).
+   * Not part of happy-path API — present so misuse is catchable.
+   */
+  hypotheses?: unknown;
+  dirs?: unknown;
+  agenda?: unknown;
+  breakthrough_core?: unknown;
 }
 
 function newId(prefix: string): string {
@@ -95,6 +127,21 @@ function nonempty(s: string | null | undefined): string | null {
   if (s == null) return null;
   const t = s.trim();
   return t.length ? t : null;
+}
+
+function requireSourceTurnId(
+  raw: string | null | undefined,
+  kind: "fact" | "constraint",
+  index: number,
+): string {
+  const id = nonempty(raw ?? null);
+  if (!id) {
+    throw new OpeningSeedError(
+      OPENING_SEED_MISSING_SOURCE_TURN,
+      `Opening Seed ${kind}[${index}] requires non-empty source_turn_id (Contract §14.1)`,
+    );
+  }
+  return id;
 }
 
 export function buildDefinitionFromOpeningBuffers(
@@ -123,6 +170,32 @@ export function buildDefinitionFromOpeningBuffers(
 export function seedDecisionContextFromOpening(
   input: SeedOpeningInput,
 ): DecisionContext {
+  // Ban creating Hypotheses / DIR / Agenda / breakthrough_core-as-fact via this path.
+  if (input.hypotheses != null) {
+    throw new OpeningSeedError(
+      OPENING_SEED_FORBIDDEN_ENTITY,
+      "Opening Seed must not create or accept Hypotheses (Contract §14.1)",
+    );
+  }
+  if (input.dirs != null) {
+    throw new OpeningSeedError(
+      OPENING_SEED_FORBIDDEN_ENTITY,
+      "Opening Seed must not create or accept DIR (Contract §14.1)",
+    );
+  }
+  if (input.agenda != null) {
+    throw new OpeningSeedError(
+      OPENING_SEED_FORBIDDEN_ENTITY,
+      "Opening Seed must not create or accept Agenda (Contract §14.1)",
+    );
+  }
+  if (input.breakthrough_core != null) {
+    throw new OpeningSeedError(
+      OPENING_SEED_FORBIDDEN_ENTITY,
+      "breakthrough_core must not be used as user fact source (Contract §14.1)",
+    );
+  }
+
   const now = input.now ?? new Date().toISOString();
   const context_id =
     input.context_id ??
@@ -141,8 +214,12 @@ export function seedDecisionContextFromOpening(
   for (const [i, stmt] of (input.user_statements ?? []).entries()) {
     const statement = stmt.statement.trim();
     if (!statement) continue;
-    const hasEvt = Boolean(stmt.has_user_confirm_event ?? stmt.user_confirmed_event);
-    // user_estimate stays unverified even after confirm (Contract §11.5).
+    const source_turn_id = requireSourceTurnId(stmt.source_turn_id, "fact", i);
+    const hasEvt = Boolean(
+      stmt.has_user_confirm_event ?? stmt.user_confirmed_event,
+    );
+    // user_estimate stays unverified even after confirm (Contract §11.5 / P3-113).
+    // Gate confirm must not auto-confirm — only explicit per-fact event flag / Confirmation Event.
     const status =
       stmt.status ??
       (stmt.verification_level === "user_estimate"
@@ -157,7 +234,7 @@ export function seedDecisionContextFromOpening(
         status,
         verification_level: stmt.verification_level,
         source_stage: "opening",
-        source_turn_id: stmt.source_turn_id ?? null,
+        source_turn_id,
         has_user_confirm_event: hasEvt,
         fact_roles: stmt.fact_roles,
       }),
@@ -168,6 +245,7 @@ export function seedDecisionContextFromOpening(
   for (const [i, c] of (input.user_constraints ?? []).entries()) {
     const statement = c.statement.trim();
     if (!statement) continue;
+    const source_turn_id = requireSourceTurnId(c.source_turn_id, "constraint", i);
     const verification_level = c.verification_level ?? "user_asserted";
     const hasEvt = Boolean(c.has_user_confirm_event ?? c.user_confirmed_event);
     const status =
@@ -184,7 +262,7 @@ export function seedDecisionContextFromOpening(
       status,
       verification_level,
       source_stage: "opening",
-      source_turn_id: c.source_turn_id ?? null,
+      source_turn_id,
       rigidity: c.rigidity ?? "hard",
       user_confirmed: deriveUserConfirmed({
         status,

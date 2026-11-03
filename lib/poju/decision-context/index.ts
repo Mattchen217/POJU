@@ -2,10 +2,15 @@
  * Decision Context public barrel.
  * Phase 2: persist wired to session-manager C1 (blob + cycle); Gate/Opening/CallA/B/Collecting not production-wired.
  * Phase 3 S3: ControlPlane + Confirmation Event + Opening Anchor formal modules.
+ * Phase 3 S4: Normalization + Fingerprint + Mapper (Opening Seed / Call A / Call B).
  */
 
 export * from "./types";
 export * from "./fact-combination";
+export * from "./normalize";
+export * from "./normalize-call-a";
+export * from "./normalize-call-b";
+export * from "./fingerprint";
 export * from "./opening-seed";
 export * from "./hypothesis-from-core";
 export * from "./dir-from-agenda";

@@ -147,6 +147,7 @@ async function main() {
           user_confirmed_event: true,
           status: "confirmed",
           fact_roles: ["deadline"],
+          source_turn_id: "t_s4fix_1",
         },
       ],
       user_constraints: [
@@ -154,6 +155,7 @@ async function main() {
           statement: "Cannot relocate this year",
           category: "responsibility",
           user_confirmed_event: true,
+          source_turn_id: "t_s4fix_2",
         },
       ],
       decision_question: "Accept the offer?",
@@ -189,6 +191,7 @@ async function main() {
           statement: "Cannot relocate this year",
           category: "responsibility",
           user_confirmed_event: false,
+          source_turn_id: "t_s4fix_3",
         },
       ],
     });
@@ -360,6 +363,7 @@ async function main() {
           user_confirmed_event: true,
           status: "confirmed",
           fact_roles: ["event"],
+          source_turn_id: "t_s4fix_4",
         },
       ],
     });
@@ -418,6 +422,7 @@ async function main() {
             verification_level: "user_asserted",
             user_confirmed_event: true,
             fact_roles: ["event"],
+            source_turn_id: "t_s4fix_5",
           },
         ],
       }),
@@ -452,6 +457,7 @@ async function main() {
           verification_level: "user_asserted",
           user_confirmed_event: true,
           fact_roles: ["event"],
+          source_turn_id: "t_s4fix_6",
         },
       ],
     });
@@ -573,6 +579,7 @@ async function main() {
             verification_level: "user_asserted",
             user_confirmed_event: true,
             fact_roles: ["event"],
+            source_turn_id: "t_s4fix_7",
           },
         ],
       }),
@@ -617,6 +624,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["budget"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_8",
         },
         {
           statement: "Budget is 3k",
@@ -624,6 +632,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["budget"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_9",
         },
       ],
     });
@@ -681,6 +690,7 @@ async function main() {
           verification_level: "user_asserted",
           user_confirmed_event: true,
           fact_roles: ["event"],
+          source_turn_id: "t_s4fix_10",
         },
       ],
     });
@@ -722,6 +732,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["color"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_11",
         },
         {
           statement: "Prefers green UI",
@@ -729,6 +740,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["color"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_12",
         },
         {
           statement: "Event E",
@@ -736,6 +748,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["event"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_13",
         },
       ],
     });
@@ -792,6 +805,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["event"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_14",
         },
       ],
     });
@@ -852,6 +866,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["budget"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_15",
         },
         {
           statement: "Budget is 3k",
@@ -859,6 +874,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["budget"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_16",
         },
       ],
     });
@@ -921,6 +937,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["budget"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_17",
         },
         {
           statement: "Budget is 3k",
@@ -928,6 +945,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["budget"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_18",
         },
       ],
     });
@@ -1003,6 +1021,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["color"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_19",
         },
         {
           statement: "Color B",
@@ -1010,6 +1029,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["color"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_20",
         },
         {
           statement: "Event E",
@@ -1017,6 +1037,7 @@ async function main() {
           user_confirmed_event: true,
           fact_roles: ["event"],
           status: "confirmed",
+          source_turn_id: "t_s4fix_21",
         },
       ],
     });
