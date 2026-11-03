@@ -3,6 +3,7 @@
  * Phase 2: persist wired to session-manager C1 (blob + cycle); Gate/Opening/CallA/B/Collecting not production-wired.
  * Phase 3 S3: ControlPlane + Confirmation Event + Opening Anchor formal modules.
  * Phase 3 S4: Normalization + Fingerprint + Mapper (Opening Seed / Call A / Call B).
+ * Product Stage 4: frozen DC read-bound + page feed + P5/P6/P8 report helpers.
  */
 
 export * from "./types";
@@ -24,3 +25,6 @@ export * from "./persist";
 export * from "./control-plane";
 export * from "./confirmation-event";
 export * from "./opening-anchor";
+export * from "./read-bound";
+export * from "./dc-page-feed";
+export * from "./stage4-report";

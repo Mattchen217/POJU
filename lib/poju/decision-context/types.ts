@@ -175,7 +175,10 @@ export interface DecisionContext {
   delivery_mode?: "normal" | "degraded" | null;
 }
 
-/** Report binding stub only (Stage4 Hold — reserve fields, do not implement pipeline). */
+/**
+ * Product Stage 4 report binding triple.
+ * Every Stage 4 report artifact must carry this; pipeline is read-only vs frozen DC.
+ */
 export interface DecisionContextBinding {
   context_id: string;
   context_version: number;
