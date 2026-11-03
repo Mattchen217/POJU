@@ -1268,6 +1268,44 @@ async function main() {
   });
 
 
+  await p3("P3-148", "restore fail-closed: decrypt fail → status stays archived; archive kept; renewals unchanged", async () => {
+    await resetDb();
+    const sid = await createPOJUSession({ payment_id: "pay_s5_148", original_question: "148" });
+    const db = getPojuDb();
+    const row = await db.pojuSessionRecords.get(sid);
+    assert.ok(row);
+    // Archive the session the same way maintenance/resolve does (copy cipher + mark archived).
+    await db.pojuSessionArchive.put({
+      session_id: row!.session_id,
+      device_id: row!.device_id,
+      owner_key: row!.owner_key,
+      encrypted_data: row!.encrypted_data,
+      iv: row!.iv,
+      archived_at: new Date(),
+      original_question: row!.original_question,
+      user_marked_resolved: false,
+    });
+    await db.pojuSessionRecords.update(sid, { status: "archived" });
+
+    // Corrupt live blob so restore cannot verify Session content.
+    await db.pojuSessionRecords.update(sid, {
+      encrypted_data: "corrupt-restore-148",
+      iv: "corrupt-iv-148",
+    });
+    const renewalsBefore = JSON.stringify((await db.pojuSessionRecords.get(sid))!.renewals ?? []);
+    const { restorePOJUV4ArchivedSession } = await import("../lib/poju/v4-lifecycle");
+    const ok = await restorePOJUV4ArchivedSession(sid, "pay_restore_148");
+    assert.equal(ok, false);
+
+    const rowAfter = await db.pojuSessionRecords.get(sid);
+    const archAfter = await db.pojuSessionArchive.get(sid);
+    assert.equal(rowAfter!.status, "archived", "must not activate without verifiable blob");
+    assert.ok(archAfter, "archive row must remain for retry");
+    assert.equal(JSON.stringify(rowAfter!.renewals ?? []), renewalsBefore, "renewals must not advance");
+    assert.equal(rowAfter!.encrypted_data, "corrupt-restore-148", "must not rewrite cipher on fail");
+  });
+
+
   summarize("phase3-s5-idb");
 }
 

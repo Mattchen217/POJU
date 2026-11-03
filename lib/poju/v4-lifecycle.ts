@@ -1,7 +1,8 @@
 import { getPojuDb } from "@/lib/db/poju-db";
 import type { POJUSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { loadPOJUSession, runPOJUSessionPostCommitSideEffects } from "@/lib/poju/session-manager";
+import { mutatePOJUSession } from "@/lib/poju/session-mutation";
 import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -73,27 +74,49 @@ export async function restorePOJUV4ArchivedSession(
   if (getPojuDeviceId() !== row.device_id) return false;
   if (!paymentId.trim()) return false;
 
+  const payId = paymentId.trim();
+
+  // Phase 3 rem (C5 leftover): fail closed — require decryptable blob BEFORE
+  // status/expires/renewals mutation or archive delete. Wrong metadata must not
+  // become authority over an unverifiable Session blob.
+  let state;
+  try {
+    state = await loadPOJUSession(sessionId);
+  } catch {
+    return false;
+  }
+  if (!state) return false;
+
   const now = new Date();
   const exp = new Date(now.getTime() + THIRTY_DAYS_MS);
-  await db.pojuSessionRecords.update(sessionId, {
-    status: "active",
-    expires_at: exp,
-    last_interaction_at: now,
-    renewals: [
-      ...row.renewals,
-      { extended_at: now, reason: "paid_restore", payment_id: paymentId.trim() },
-    ],
-  });
-  await db.pojuSessionArchive.delete(sessionId);
+  const nowIso = now.toISOString();
+  const expIso = exp.toISOString();
 
-  const state = await loadPOJUSession(sessionId);
-  if (state) {
-    await savePOJUSession({
-      ...state,
-      expires_at: exp.toISOString(),
-      last_interaction_at: now.toISOString(),
+  try {
+    const result = await mutatePOJUSession(sessionId, {
+      operation_id: `restore_paid_${payId}`,
+      kind: "session_patch",
+      bump_dc: false,
+      append_renewal: {
+        extended_at: now,
+        reason: "paid_restore",
+        payment_id: payId,
+      },
+      apply: (latest) => ({
+        ...latest,
+        expires_at: expIso,
+        last_interaction_at: nowIso,
+      }),
     });
+    await runPOJUSessionPostCommitSideEffects(result.state);
+  } catch {
+    // CAS failed — leave status=archived and archive row intact for retry.
+    return false;
   }
+
+  // After verifiable blob+renewals commit: activate + drop archive copy.
+  await db.pojuSessionRecords.update(sessionId, { status: "active" });
+  await db.pojuSessionArchive.delete(sessionId);
   return true;
 }
 

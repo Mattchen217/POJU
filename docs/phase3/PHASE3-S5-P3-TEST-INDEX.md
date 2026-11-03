@@ -77,6 +77,7 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-141 | C5 stale index decrypt fail refuses overwrite | C5 rem | test-decision-context-phase3-idb.ts | last-good index stays authority |
 | P3-142 | C5 retry after blob restore → CAS rename | C5 rem | test-decision-context-phase3-idb.ts | index+blob align on retry |
 | P3-143 | C5 missing index: CAS ok / decrypt fail refuse | C5 rem | test-decision-context-phase3-idb.ts | no invent while undecryptable |
+| P3-148 | restore decrypt fail → stay archived | C5 leftover rem | test-decision-context-phase3-idb.ts | fail-closed; archive kept |
 | P3-96* | Concurrent + response-lost retry one Job | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | Promise.all same identity; sequential retry |
 | P3-113 | user_estimate stays unverified | §18.6 | test-decision-context-phase3-unit.ts | status unverified |
 | P3-114 | independently_verified no auto user_confirmed | §18.6 | test-decision-context-phase3-e2e.ts | deriveUserConfirmed false |
