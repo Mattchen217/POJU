@@ -752,7 +752,7 @@ async function main() {
   await p3("P3-91", "Registry written but Binding missing → whole txn fails, no half-product", async () => {
     await resetDb();
     const sid = await createPOJUSession({ payment_id: "pay_s5_91", original_question: "91" });
-    await createPendingGenerationTaskContext({
+    const pending = await createPendingGenerationTaskContext({
       session_id: sid,
       generation_type: "call_b_dir",
       fingerprint: "fp91",
@@ -764,57 +764,187 @@ async function main() {
       client_task_id: "ctask_91",
       job_id: "job_91",
     });
+
     const before = await loadPOJUSession(sid);
-    const regBefore = (before!.generation_registry ?? []).length;
-    const bindBefore = (before!.generation_operation_bindings ?? []).length;
-    // Simulate mid-commit failure after would-be registry write by throwing inside apply of a guarded commit path:
-    // Prefer empty_result / throw — use mutate that attempts inconsistent half write then throws.
+    const db = getPojuDb();
+    const rowBefore = await db.pojuSessionRecords.get(sid);
+    const baseRev = before!.dc_write_revision ?? 0;
+    const sRevBefore = before!.session_revision;
+    const dRevBefore = before!.dc_write_revision;
+    const cipherBefore = rowBefore!.encrypted_data;
+    const dcBefore = before!.decision_context ?? null;
+    const regBefore = JSON.stringify(before!.generation_registry ?? []);
+    const bindBefore = JSON.stringify(before!.generation_operation_bindings ?? []);
+    const tasksBefore = JSON.stringify(before!.generation_task_contexts ?? []);
+    const keysBefore = [...(before!.decision_context_idempotency_keys ?? [])].sort();
+    const taskBefore = (before!.generation_task_contexts ?? []).find(
+      (t) => t.client_task_id === "ctask_91",
+    );
+    assert.ok(taskBefore, "running TaskContext required");
+    assert.notEqual(taskBefore!.status, "completed");
+
+    const idem = "idem_91";
+    const dc = makeDc({ context_id: "ctx_91", version: 1, content_hash: "hash_91" });
+    const probe = {
+      session_id: sid,
+      idempotency_key: idem,
+      generation_type: "call_b_dir" as const,
+      generation_id: "job_91",
+      client_task_id: "ctask_91",
+      generation_base_revision: baseRev,
+      fingerprint: "fp91",
+      fingerprint_version: fpv,
+      job_id: "job_91",
+      sync_task_id: null as string | null,
+    };
+
+    let stage1Writes = 0;
     let threw = false;
+    let thrownMsg = "";
     try {
-      await mutatePOJUSession(sid, {
-        operation_id: "op_91_half",
-        kind: "session_patch",
-        bump_dc: true,
-        apply: (latest) => {
-          // Build half-product then abort before return would commit — throw instead
-          const half = {
-            ...latest,
-            generation_registry: [
-              ...(latest.generation_registry ?? []),
-              {
-                session_id: sid,
-                generation_type: "call_b_dir",
-                generation_id: "job_91",
-                client_task_id: "ctask_91",
-                generation_base_revision: 0,
-                fingerprint: "fp91",
-                fingerprint_version: fpv,
-                job_id: "job_91",
-                sync_task_id: null,
-                status: "completed",
-                result_marker: "half",
-                committed_session_revision: 99,
-                committed_dc_write_revision: 99,
-                committed_context_id: "ctx_half",
-                committed_context_version: 1,
-                committed_context_hash: null,
-                completed_at: "2026-11-03T12:00:00.000Z",
-              },
-            ],
-            // intentionally NO binding append
-          };
-          throw new Error("simulated-txn-fail-after-registry");
-          return half as typeof latest;
+      await commitGenerationGuarded(
+        {
+          probe,
+          dc_mutation: {
+            decision_context: dc,
+            result_marker: "marker_91",
+            context_hash: "hash_91",
+          },
         },
-      });
-    } catch {
+        {
+          // Real Path A CAS path with staged Registry write then fail before Binding.
+          casWrite: async (input) => {
+            const stage1Candidate = {
+              ...input.candidate,
+              generation_operation_bindings: (
+                input.candidate.generation_operation_bindings ?? []
+              ).filter((b) => b.idempotency_key !== idem),
+              decision_context_idempotency_keys: (
+                input.candidate.decision_context_idempotency_keys ?? []
+              ).filter((k) => k !== idem),
+            };
+            // Prove stage1 still carries formal DC + completed Registry.
+            assert.equal(
+              stage1Candidate.decision_context?.context_id,
+              "ctx_91",
+            );
+            assert.ok(
+              (stage1Candidate.generation_registry ?? []).some(
+                (e) =>
+                  e.generation_id === "job_91" &&
+                  e.status === "completed" &&
+                  e.client_task_id === "ctask_91",
+              ),
+              "stage1 must include completed Registry",
+            );
+            assert.equal(
+              (stage1Candidate.generation_operation_bindings ?? []).some(
+                (b) => b.idempotency_key === idem,
+              ),
+              false,
+              "stage1 must not include Binding yet",
+            );
+            return casWritePOJUSession({
+              ...input,
+              testStagedPreBinding: {
+                candidate: stage1Candidate,
+                afterWrite: async () => {
+                  stage1Writes += 1;
+                  throw new Error(
+                    "simulated-path-a-after-registry-before-binding",
+                  );
+                },
+              },
+            });
+          },
+        },
+      );
+    } catch (err) {
       threw = true;
+      thrownMsg = err instanceof Error ? err.message : String(err);
     }
-    assert.equal(threw, true);
-    const after = await loadPOJUSession(sid);
-    assert.equal((after!.generation_registry ?? []).length, regBefore);
-    assert.equal((after!.generation_operation_bindings ?? []).length, bindBefore);
+
+    assert.equal(threw, true, "Path A mid-txn fail must throw");
+    assert.match(thrownMsg, /simulated-path-a-after-registry-before-binding/);
+    assert.ok(stage1Writes >= 1, "stage1 Registry write must have executed inside txn");
+
+    // Re-read IndexedDB — Dexie abort; no manual restore.
+    const afterFail = await loadPOJUSession(sid);
+    const rowAfterFail = await db.pojuSessionRecords.get(sid);
+    assert.equal(afterFail!.session_revision, sRevBefore);
+    assert.equal(afterFail!.dc_write_revision, dRevBefore);
+    assert.equal(rowAfterFail!.encrypted_data, cipherBefore);
+    assert.equal(
+      afterFail!.decision_context?.context_id ?? null,
+      dcBefore?.context_id ?? null,
+    );
+    assert.equal(JSON.stringify(afterFail!.generation_registry ?? []), regBefore);
+    assert.equal(
+      JSON.stringify(afterFail!.generation_operation_bindings ?? []),
+      bindBefore,
+    );
+    assert.equal(
+      JSON.stringify(afterFail!.generation_task_contexts ?? []),
+      tasksBefore,
+    );
+    assert.deepEqual(
+      [...(afterFail!.decision_context_idempotency_keys ?? [])].sort(),
+      keysBefore,
+    );
+    assert.equal(
+      (afterFail!.generation_registry ?? []).some(
+        (e) => e.generation_id === "job_91" && e.status === "completed",
+      ),
+      false,
+    );
+    assert.equal(
+      (afterFail!.generation_operation_bindings ?? []).some(
+        (b) => b.idempotency_key === idem,
+      ),
+      false,
+    );
+    const taskAfterFail = (afterFail!.generation_task_contexts ?? []).find(
+      (t) => t.client_task_id === "ctask_91",
+    );
+    assert.ok(taskAfterFail);
+    assert.notEqual(taskAfterFail!.status, "completed");
+    assert.equal((afterFail!.decision_context_idempotency_keys ?? []).includes(idem), false);
+
+    // Same stable identity retry without inject — Path A commits fully.
+    const retry = await commitGenerationGuarded({
+      probe,
+      dc_mutation: {
+        decision_context: dc,
+        result_marker: "marker_91",
+        context_hash: "hash_91",
+      },
+    });
+    assert.equal(retry.path, "A");
+    if (retry.path !== "A") throw new Error("expected Path A");
+    assert.equal(retry.outcome, "committed");
+
+    const afterOk = await loadPOJUSession(sid);
+    assert.equal(afterOk!.dc_write_revision, (dRevBefore ?? 0) + 1);
+    assert.ok((afterOk!.session_revision ?? 0) > (sRevBefore ?? 0));
+    assert.equal(afterOk!.decision_context?.context_id, "ctx_91");
+    assert.ok(
+      (afterOk!.generation_registry ?? []).some(
+        (e) => e.generation_id === "job_91" && e.status === "completed",
+      ),
+    );
+    assert.ok(
+      (afterOk!.generation_operation_bindings ?? []).some(
+        (b) => b.idempotency_key === idem,
+      ),
+    );
+    assert.ok((afterOk!.decision_context_idempotency_keys ?? []).includes(idem));
+    const taskOk = (afterOk!.generation_task_contexts ?? []).find(
+      (t) => t.client_task_id === "ctask_91",
+    );
+    assert.equal(taskOk?.status, "completed");
+    void pending;
   });
+
 
   summarize("phase3-s5-idb");
 }

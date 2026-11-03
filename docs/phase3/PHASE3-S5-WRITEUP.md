@@ -48,6 +48,7 @@ Workflow added at `.github/workflows/phase3-decision-context.yml`.
 - P3-99/P3-100: inconsistency is **detectable**; a dedicated runtime hard-fail detector may still be product Hold (tests assert detectable inconsistent state, not a new product API)
 - P3-70 remediated: real encrypt inject on casWritePOJUSession path (cipher throw before Dexie commit)
 - P3-71 remediated: real Dexie mid-txn abort after session update + cycle-index clear (no manual restore)
+- P3-91 remediated: real Path A staged Registry write then fail before Binding (Dexie abort; retry OK)
 
 ## Ready
 

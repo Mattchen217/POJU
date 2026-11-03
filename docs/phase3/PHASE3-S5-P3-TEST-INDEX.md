@@ -38,7 +38,7 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-88 | Path B lost response Reload recovers | §18.3 | test-decision-context-phase3-e2e.ts | Path B replay credentials |
 | P3-89 | Path A UI missed → Binding/Registry completed | §18.3 | test-decision-context-phase3-e2e.ts | registry completed on reload |
 | P3-90 | Empty mapper result no completed | §18.3 | test-decision-context-phase3-unit.ts | EMPTY_GENERATION_RESULT; registry empty |
-| P3-91 | Registry without Binding → txn fail no half-product | §18.3 | test-decision-context-phase3-idb.ts | throw rolls back registry/binding |
+| P3-91 | Real Path A staged Registry write then fail before Binding — full abort; retry OK | §18.3 | test-decision-context-phase3-idb.ts | stage1 afterWrite throws; DC/reg/bind/task/keys/revs unchanged; retry Path A commits |
 | P3-92 | pending_create Reload same identity/base | §18.4 | test-decision-context-phase3-e2e.ts | restoreTaskContextOnReload |
 | P3-93 | Job create+bind → running | §18.4 | test-decision-context-phase3-e2e.ts | status running |
 | P3-94 | Job create ok bind fail → recovery_required | §18.4 | test-decision-context-phase3-e2e.ts | status recovery_required; one identity |

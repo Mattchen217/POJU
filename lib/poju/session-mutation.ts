@@ -247,6 +247,15 @@ export interface CasWritePOJUSessionInput {
    * syncSessionCyclesToDbWithDb runs inside the C1 Dexie transaction (P3-71).
    */
   cycleSync?: typeof syncSessionCyclesToDbWithDb;
+  /**
+   * Test-only (P3-91): inside the Dexie txn, write this candidate first
+   * (Registry/DC present, Binding not yet), run afterWrite (may throw), then
+   * write the final candidate. Production omits — single final write only.
+   */
+  testStagedPreBinding?: {
+    candidate: POJUSessionState;
+    afterWrite?: () => void | Promise<void>;
+  };
 }
 
 export interface CasWritePOJUSessionResult {
@@ -285,6 +294,18 @@ export async function casWritePOJUSession(
   // §7.5 step 6 — encrypt OUTSIDE the Dexie transaction
   const encrypt = input.encrypt ?? encryptJson;
   const payload = await encrypt(SESSION_SECRET, committedState);
+
+  // P3-91 test-only staged encrypt (also outside txn)
+  let stagedPayload: { cipher: string; iv: string } | null = null;
+  let stagedCommitted: POJUSessionState | null = null;
+  if (input.testStagedPreBinding) {
+    stagedCommitted = {
+      ...input.testStagedPreBinding.candidate,
+      session_revision: nextSessionRevision,
+      dc_write_revision: nextDcWriteRevision,
+    };
+    stagedPayload = await encrypt(SESSION_SECRET, stagedCommitted);
+  }
 
   const db = getPojuDb();
   const ownerKey = input.owner_key ?? (await resolveLocalOwnerKey());
@@ -348,6 +369,35 @@ export async function casWritePOJUSession(
     }
 
     // §7.5 step 12 — atomic blob + mirrors + indexes
+    // P3-91 test-only: stage1 write (Registry/DC, no Binding) before final write.
+    if (stagedPayload && stagedCommitted && input.testStagedPreBinding) {
+      const stageUpdated = await db.pojuSessionRecords.update(sessionId, {
+        encrypted_data: stagedPayload.cipher,
+        iv: stagedPayload.iv,
+        session_revision: nextSessionRevision,
+        dc_write_revision: nextDcWriteRevision,
+        original_question: stagedCommitted.original_question.trim(),
+        last_interaction_at: new Date(stagedCommitted.last_interaction_at),
+        expires_at: new Date(stagedCommitted.expires_at),
+        tokens_used: stagedCommitted.tokens_used,
+        turn_count: countUserTurns(stagedCommitted),
+        current_state_hint: getCurrentStateHint(stagedCommitted),
+        main_delivery_done: stagedCommitted.main_delivery_done,
+        main_delivery_at: stagedCommitted.main_delivery_done ? new Date() : undefined,
+        active_cycle_id: stagedCommitted.active_cycle_id,
+      });
+      if (stageUpdated !== 1) {
+        throw new SessionCasError(
+          SESSION_CAS_CONFLICT,
+          `pojuSessionRecords staged update expected 1 row, got ${stageUpdated}`,
+        );
+      }
+      // testStagedPreBinding stage1 complete — Binding not yet in blob
+      if (input.testStagedPreBinding.afterWrite) {
+        await input.testStagedPreBinding.afterWrite();
+      }
+    }
+
     const updated = await db.pojuSessionRecords.update(sessionId, {
       encrypted_data: payload.cipher,
       iv: payload.iv,
