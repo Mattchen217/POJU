@@ -1,6 +1,8 @@
 /**
- * Opening �?DC draft seed (Definition + initial Facts + Constraints).
+ * Opening → DC draft seed (Definition + initial Facts + Constraints).
  * Forbidden: DIR, agenda, Hypothesis, model-inferred RealityFact.
+ * Phase 3 S3: do NOT use user_confirmed_event?: boolean as formal confirm source.
+ * Prefer Confirmation Events; ephemeral has_user_confirm_event only for seed-time derive.
  */
 
 import { buildRealityFact, deriveUserConfirmed } from "./fact-combination";
@@ -13,6 +15,7 @@ import type {
   RealityFact,
   VerificationLevel,
 } from "./types";
+import { assertLegalFactCombination } from "./fact-combination";
 
 export interface OpeningDilemmaBuffer {
   concrete_event: string | null;
@@ -28,13 +31,22 @@ export interface OpeningDirectionBuffer {
 /** User-sourced statement eligible to become a RealityFact (never model insight). */
 export interface OpeningUserStatement {
   statement: string;
-  /** Stable id or null �?generated. */
+  /** Stable id or null → generated. */
   fact_id?: string;
   verification_level: Extract<
     VerificationLevel,
     "user_asserted" | "user_estimate"
   >;
-  /** Explicit confirm at understanding gate. */
+  /**
+   * Ephemeral seed-time flag only — NOT a formal Confirmation Event.
+   * Prefer wiring ConfirmationEvent[] and deriveUserConfirmedFromEvents at product paths.
+   * @deprecated boolean must not be formal confirm authority (Contract §11.5).
+   */
+  has_user_confirm_event?: boolean;
+  /**
+   * @deprecated Deleted as formal confirm source (Contract §11.5 / Mapping §5.2).
+   * Accepted only as input alias → has_user_confirm_event for prior suite compat.
+   */
   user_confirmed_event?: boolean;
   status?: "confirmed" | "unverified";
   source_turn_id?: string | null;
@@ -50,6 +62,9 @@ export interface OpeningUserConstraint {
     VerificationLevel,
     "user_asserted" | "user_estimate"
   >;
+  /** Ephemeral only — not formal Confirmation Event authority. */
+  has_user_confirm_event?: boolean;
+  /** @deprecated Alias only — not formal Confirmation Event authority. */
   user_confirmed_event?: boolean;
   source_turn_id?: string | null;
 }
@@ -58,7 +73,7 @@ export interface SeedOpeningInput {
   context_id?: string;
   session_id?: string;
   now?: string;
-  /** Temporary agent_v2 buffers �?NOT formal authority after seed. */
+  /** Temporary agent_v2 buffers — NOT formal authority after seed. */
   core_dilemma: OpeningDilemmaBuffer | null;
   desired_direction: OpeningDirectionBuffer | null;
   /** Only user-explicit sentences; model insights must be omitted. */
@@ -126,7 +141,15 @@ export function seedDecisionContextFromOpening(
   for (const [i, stmt] of (input.user_statements ?? []).entries()) {
     const statement = stmt.statement.trim();
     if (!statement) continue;
-    const status = stmt.status ?? (stmt.user_confirmed_event ? "confirmed" : "unverified");
+    const hasEvt = Boolean(stmt.has_user_confirm_event ?? stmt.user_confirmed_event);
+    // user_estimate stays unverified even after confirm (Contract §11.5).
+    const status =
+      stmt.status ??
+      (stmt.verification_level === "user_estimate"
+        ? "unverified"
+        : hasEvt
+          ? "confirmed"
+          : "unverified");
     reality_facts.push(
       buildRealityFact({
         fact_id: stmt.fact_id ?? newId(`fact_opening_${i}`),
@@ -135,24 +158,25 @@ export function seedDecisionContextFromOpening(
         verification_level: stmt.verification_level,
         source_stage: "opening",
         source_turn_id: stmt.source_turn_id ?? null,
-        has_user_confirm_event: Boolean(stmt.user_confirmed_event),
+        has_user_confirm_event: hasEvt,
         fact_roles: stmt.fact_roles,
       }),
     );
   }
-
-  // Stakes / concrete_event as user-asserted facts only when present in buffers
-  // AND mirrored in user_statements �?buffers alone are temporary; do not invent
-  // Facts from model-filled buffers without user_statements. Callers must pass
-  // user_statements for anything that should become RealityFact.
 
   const constraints: Constraint[] = [];
   for (const [i, c] of (input.user_constraints ?? []).entries()) {
     const statement = c.statement.trim();
     if (!statement) continue;
     const verification_level = c.verification_level ?? "user_asserted";
-    const status = c.user_confirmed_event ? "confirmed" : "unverified";
-    // Constraints reuse Fact legality for status×verification (no inferred).
+    const hasEvt = Boolean(c.has_user_confirm_event ?? c.user_confirmed_event);
+    const status =
+      verification_level === "user_estimate"
+        ? "unverified"
+        : hasEvt
+          ? "confirmed"
+          : "unverified";
+    assertLegalFactCombination(status, verification_level);
     constraints.push({
       constraint_id: c.constraint_id ?? newId(`constraint_opening_${i}`),
       statement,
@@ -165,7 +189,7 @@ export function seedDecisionContextFromOpening(
       user_confirmed: deriveUserConfirmed({
         status,
         verification_level,
-        has_user_confirm_event: Boolean(c.user_confirmed_event),
+        has_user_confirm_event: hasEvt,
       }),
       updated_at: now,
     });

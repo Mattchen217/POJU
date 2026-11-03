@@ -3,9 +3,17 @@
  * Phase 2: durable idempotency keys live on the session slice (survive reload);
  * blob writer is provided by session-manager (savePOJUSessionCore).
  * Restore trusts persisted DC as source of truth (ignores agent_v2 buffers).
+ * Phase 3 S3: formal Phase3ControlPlane on slice (Contract §10) — ban opaque Record.
  */
 
 import type { DecisionContext } from "./types";
+import {
+  cloneFormalControlPlane,
+  mergeControlPlanePatch,
+  replaceFormalControlPlane,
+  resolveFormalControlPlaneFromSession,
+  type Phase3ControlPlane,
+} from "./control-plane";
 
 export class PersistError extends Error {
   constructor(message: string) {
@@ -14,8 +22,13 @@ export class PersistError extends Error {
   }
 }
 
-/** Control-plane subset that may change with a DC write (agent_v2 process state). */
-export type ControlPlaneSlice = Record<string, unknown>;
+/**
+ * @deprecated Name kept for call-site compatibility; formal type is Phase3ControlPlane.
+ * Must NOT be Record<string, unknown>.
+ */
+export type ControlPlaneSlice = Phase3ControlPlane;
+
+export type { Phase3ControlPlane };
 
 export interface DcSessionSlice {
   /** Scopes process-local idempotency; must be set for cross-session isolation. */
@@ -27,8 +40,8 @@ export interface DcSessionSlice {
    * Required so reload / new JS heap still honors idempotency.
    */
   decision_context_idempotency_keys?: string[];
-  /** Opaque control-plane fields (phase, agenda status, focus, stall, turn, …). */
-  control_plane?: ControlPlaneSlice;
+  /** Formal ControlPlane (Contract §10) — not opaque process bag. */
+  control_plane?: Phase3ControlPlane;
 }
 
 export interface PersistSnapshot {
@@ -95,7 +108,7 @@ function cloneSlice(session: DcSessionSlice): DcSessionSlice {
       ? [...session.decision_context_idempotency_keys]
       : undefined,
     control_plane: session.control_plane
-      ? (JSON.parse(JSON.stringify(session.control_plane)) as ControlPlaneSlice)
+      ? cloneFormalControlPlane(session.control_plane)
       : undefined,
   };
 }
@@ -152,15 +165,17 @@ export function applyDcToWorking(
   }
 }
 
-/** Apply control-plane sync on working copy (never formal Fact authority). */
+/**
+ * Apply formal ControlPlane on working copy (Contract §10).
+ * Replaces with validated formal plane — no opaque unknown-field spread.
+ */
 export function applyControlPlaneToWorking(
   tx: PersistTransaction,
-  patch: ControlPlaneSlice,
+  patch: Phase3ControlPlane | unknown,
 ): void {
-  tx.working.control_plane = {
-    ...(tx.working.control_plane ?? {}),
-    ...patch,
-  };
+  // Whitelist merge onto existing working formal CP (or defaults), then validate.
+  // Full formal planes replace; unknown fields / wrong types hard-fail (Contract §10.3).
+  tx.working.control_plane = mergeControlPlanePatch(tx.working.control_plane, patch);
 }
 
 export interface CommitPersistResult {
@@ -207,6 +222,8 @@ export async function commitPersistTransaction(
       if (tx.working.control_plane === undefined) {
         throw new PersistError("Control plane sync missing on working copy");
       }
+      // Output validator at commit boundary.
+      tx.working.control_plane = cloneFormalControlPlane(tx.working.control_plane);
     }
 
     stampDurableKey(tx.working, tx.idempotency_key);
@@ -291,21 +308,20 @@ export function __resetPersistIdempotencyForTests(): void {
   completedKeysBySession.clear();
 }
 
-/** Extract DC persist slice from a session-shaped object (no agent buffer authority). */
+/**
+ * Extract DC persist slice from a session-shaped object.
+ * Formal CP from session.control_plane only — never synthesize from agent_v2 (Contract §10.1).
+ */
 export function extractDcSessionSlice(session: {
   session_id?: string;
   decision_context?: DecisionContext | null;
   decision_context_versions?: DecisionContext[];
   decision_context_idempotency_keys?: string[];
   agent_v2?: { current_phase?: string } | null;
-  /** Optional explicit control plane already prepared by caller. */
-  control_plane?: ControlPlaneSlice;
+  /** Formal ControlPlane authority. */
+  control_plane?: Phase3ControlPlane | unknown;
 }): DcSessionSlice {
-  const control_plane =
-    session.control_plane ??
-    (session.agent_v2
-      ? ({ current_phase: session.agent_v2.current_phase } as ControlPlaneSlice)
-      : undefined);
+  const control_plane = resolveFormalControlPlaneFromSession(session);
   return cloneSlice({
     session_id: session.session_id,
     decision_context: session.decision_context,

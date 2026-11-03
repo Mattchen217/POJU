@@ -36,6 +36,12 @@ import {
   type ControlPlaneSlice,
   type PersistTransaction,
 } from "@/lib/poju/decision-context/persist";
+import {
+  cloneFormalControlPlane,
+  mergeControlPlanePatch,
+  mirrorControlPlanePhaseToAgentV2Patch,
+  type Phase3ControlPlane,
+} from "@/lib/poju/decision-context/control-plane";
 
 const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary (local plaintext phase)
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -90,7 +96,7 @@ export function mergeDcPersistSliceIntoSession(
     decision_context?: DecisionContext | null;
     decision_context_versions?: DecisionContext[];
     decision_context_idempotency_keys?: string[];
-    control_plane?: ControlPlaneSlice;
+    control_plane?: Phase3ControlPlane | ControlPlaneSlice | unknown;
   },
 ): POJUSessionState {
   const next = deepCloneSession(base);
@@ -102,25 +108,30 @@ export function mergeDcPersistSliceIntoSession(
     next.decision_context_idempotency_keys = slice.decision_context_idempotency_keys;
   }
 
-  const plane = slice.control_plane;
-  if (plane && Object.keys(plane).length > 0) {
+  // Formal CP authority (Contract §10). Never restore CP from agent_v2.
+  // Accept full formal plane or whitelist patch merged onto existing / defaults.
+  if (slice.control_plane !== undefined) {
+    const formal = mergeControlPlanePatch(next.control_plane, slice.control_plane);
+    next.control_plane = formal;
+    const mirror = mirrorControlPlanePhaseToAgentV2Patch(formal);
     const prev = next.agent_v2;
-    const patch: Partial<POJUAgentState> = {};
-    if (typeof plane.current_phase === "string") {
-      (patch as { current_phase?: POJUAgentState["current_phase"] }).current_phase =
-        plane.current_phase as POJUAgentState["current_phase"];
-    }
-    // Control-plane only — never copy dilemma/direction/breakthrough_core from plane into authority.
     if (prev) {
-      next.agent_v2 = { ...prev, ...patch };
-    } else if (Object.keys(patch).length > 0) {
-      // Avoid inventing a full agent_v2; only attach phase marker when already present elsewhere.
-      next.agent_v2 = patch as POJUAgentState;
+      next.agent_v2 = {
+        ...prev,
+        current_phase: mirror.current_phase,
+        investigation_agenda: mirror.investigation_agenda,
+      };
+    } else {
+      next.agent_v2 = {
+        current_phase: mirror.current_phase,
+        investigation_agenda: mirror.investigation_agenda,
+      } as POJUAgentState;
     }
   }
 
   return next;
 }
+
 
 export async function createPOJUSession(input: {
   payment_id: string;
@@ -187,6 +198,9 @@ export async function createPOJUSession(input: {
     generation_task_contexts: [],
     generation_registry: [],
     generation_operation_bindings: [],
+    confirmation_events: [],
+    opening_anchors: [],
+    opening_confirm_history: [],
   };
 
   // Phase 3 S1 W1 — create-if-absent; dual revision init 0; never overwrite.
@@ -247,8 +261,18 @@ export async function loadPOJUSession(sessionId: string): Promise<POJUSessionSta
   if (!Array.isArray(withCycles.generation_operation_bindings)) {
     withCycles.generation_operation_bindings = [];
   }
+  // Phase 3 S3 — hydrate Confirmation / Opening Anchor stores (Contract §11–§12).
+  if (!Array.isArray(withCycles.confirmation_events)) withCycles.confirmation_events = [];
+  if (!Array.isArray(withCycles.opening_anchors)) withCycles.opening_anchors = [];
+  if (!Array.isArray(withCycles.opening_confirm_history)) {
+    withCycles.opening_confirm_history = [];
+  }
+  if (withCycles.control_plane !== undefined && withCycles.control_plane !== null) {
+    withCycles.control_plane = cloneFormalControlPlane(withCycles.control_plane);
+  }
 
   // Phase 2 C1 restore: DC is authority; hydrate durable idempotency keys.
+  // Formal CP is NOT restored from agent_v2 (Contract §10.1).
   return applyDecisionContextRestore(withCycles);
 }
 

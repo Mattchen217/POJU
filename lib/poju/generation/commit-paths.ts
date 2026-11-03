@@ -8,6 +8,7 @@
 
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { ControlPlaneSlice } from "@/lib/poju/decision-context/persist";
+import { mergeControlPlanePatch } from "@/lib/poju/decision-context/control-plane";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
   mutatePOJUSession,
@@ -38,7 +39,7 @@ import { assertLegalTaskTransition } from "./types";
 export interface GenerationDcMutation {
   decision_context: DecisionContext;
   decision_context_versions?: DecisionContext[];
-  /** ControlPlane update if present — Contract §8.1 item 3. */
+  /** Formal Phase3ControlPlane / whitelist patch — Path A C1 write (Contract §8.1 / §10). */
   control_plane?: ControlPlaneSlice;
   result_marker: string;
   context_hash?: string | null;
@@ -413,10 +414,13 @@ export async function commitGenerationGuarded(
           decision_context: mutation.decision_context,
           decision_context_versions:
             mutation.decision_context_versions ?? base.decision_context_versions,
-          // control_plane: S3 product wiring deferred; accept opaque slice if provided.
+          // Phase 3 S3 — Path A C1 writes formal ControlPlane when provided (Contract §8.1 / §10).
           ...(mutation.control_plane
             ? {
-                // Keep agent_v2 mirror only as compatibility — do not invent Phase3ControlPlane.
+                control_plane: mergeControlPlanePatch(
+                  base.control_plane,
+                  mutation.control_plane,
+                ),
               }
             : {}),
           generation_registry: appendRegistryEntry(base.generation_registry, registry_entry),

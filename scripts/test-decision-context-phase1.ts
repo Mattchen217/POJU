@@ -512,7 +512,7 @@ async function main() {
     const memory = {
       decision_context: baseDc,
       decision_context_versions: [] as DecisionContext[],
-      control_plane: { phase: "opening" as unknown },
+      control_plane: undefined,
     };
 
     const tx = beginPersistTransaction(memory, { idempotency_key: "op_seed_1" });
@@ -522,7 +522,7 @@ async function main() {
       definition: { ...baseDc.definition, stakes: "updated" },
     };
     applyDcToWorking(tx!, next);
-    applyControlPlaneToWorking(tx!, { phase: "collecting" });
+    applyControlPlaneToWorking(tx!, { current_phase: "collecting_context" });
     const ok = await commitPersistTransaction(tx!, async () => {});
     assert.equal(ok.committed, true);
     assert.equal(ok.session.decision_context?.definition.stakes, "updated");
@@ -532,7 +532,7 @@ async function main() {
       ...baseDc,
       definition: { ...baseDc.definition, stakes: "should_not_stick" },
     });
-    applyControlPlaneToWorking(tx2!, { phase: "x" });
+    applyControlPlaneToWorking(tx2!, { current_phase: "collecting_context" });
     const fail = await commitPersistTransaction(tx2!, async () => {
       throw new Error("IDB write failed");
     });
@@ -542,7 +542,7 @@ async function main() {
 
     const tx3 = beginPersistTransaction(memory, { idempotency_key: "op_once" });
     applyDcToWorking(tx3!, next);
-    applyControlPlaneToWorking(tx3!, { phase: "collecting" });
+    applyControlPlaneToWorking(tx3!, { current_phase: "collecting_context" });
     const first = await commitPersistTransaction(tx3!, async () => {});
     assert.equal(first.committed, true);
     const tx4 = beginPersistTransaction(memory, { idempotency_key: "op_once" });

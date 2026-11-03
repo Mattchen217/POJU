@@ -137,7 +137,8 @@
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
     "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",
     "test:session-cas-s1": "tsx scripts/test-session-cas-s1.ts",
-    "test:generation-s2": "tsx scripts/test-generation-s2.ts"
+    "test:generation-s2": "tsx scripts/test-generation-s2.ts",
+    "test:control-plane-s3": "tsx scripts/test-control-plane-s3.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

@@ -600,7 +600,7 @@ async function main() {
         version: 1,
         updated_at: "2026-11-03T15:00:00.000Z",
       }),
-      control_plane: { current_phase: "test" },
+      control_plane: undefined,
     };
     hydratePersistIdempotencyFromKeys("sess_persist_guard_1", ["key_done"]);
     const early = beginPersistTransaction(slice, { idempotency_key: "key_done" });

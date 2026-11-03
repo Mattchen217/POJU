@@ -100,6 +100,10 @@ export interface POJUMessage {
   offered_options?: string[];
   /** Stage-1 dyad collect/skip gate pending on this assistant turn. */
   dyad_gate_pending?: boolean;
+  /** Phase 3 S3 — message marked as Opening Anchor (Contract §12.3). */
+  is_opening_anchor?: boolean;
+  /** Phase 3 S3 — bound Opening Anchor id (≠ message client_id). */
+  opening_anchor_id?: string;
   /** Collecting escalation — show refund entry (user-initiated). */
   kind?: "energy_matrix" | "paywall" | "joint_pass_gate" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch" | "unsupported_language_notice";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */
@@ -333,4 +337,21 @@ export interface POJUSessionState {
    * Phase 3 S2 — Generation Operation Bindings by idempotency_key (Contract §5.2).
    */
   generation_operation_bindings?: import("./generation").GenerationOperationBinding[];
+  /**
+   * Phase 3 S3 — formal ControlPlane authority (Contract §10).
+   * agent_v2 may mirror FROM this; never overwrite this from agent_v2.
+   */
+  control_plane?: import("./decision-context/control-plane").Phase3ControlPlane;
+  /**
+   * Phase 3 S3 — append-only Fact/Constraint Confirmation Events (Contract §11).
+   */
+  confirmation_events?: import("./decision-context/confirmation-event").ConfirmationEvent[];
+  /**
+   * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
+   */
+  opening_anchors?: import("./decision-context/opening-anchor").OpeningAnchor[];
+  /**
+   * Phase 3 S3 — Opening Gate confirm history append-only (Contract §12).
+   */
+  opening_confirm_history?: import("./decision-context/opening-anchor").OpeningConfirmHistoryEntry[];
 }

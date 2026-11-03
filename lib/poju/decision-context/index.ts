@@ -1,6 +1,7 @@
 /**
  * Decision Context public barrel.
  * Phase 2: persist wired to session-manager C1 (blob + cycle); Gate/Opening/CallA/B/Collecting not production-wired.
+ * Phase 3 S3: ControlPlane + Confirmation Event + Opening Anchor formal modules.
  */
 
 export * from "./types";
@@ -15,3 +16,6 @@ export * from "./content-hash";
 export * from "./freeze";
 export * from "./versioning";
 export * from "./persist";
+export * from "./control-plane";
+export * from "./confirmation-event";
+export * from "./opening-anchor";
