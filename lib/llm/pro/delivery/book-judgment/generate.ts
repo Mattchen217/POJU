@@ -22,6 +22,7 @@ import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
 import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
 import { formatBookJudgmentFullBookPageFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
+import { formatDecisionContextSliceForPage } from "@/lib/poju/decision-context/dc-page-feed";
 import { formatGlobalSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
 import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
@@ -380,6 +381,8 @@ export function buildBookJudgmentFeedBlock(input: {
   thesis_block?: string | null;
   mode: "all" | "destiny" | "science";
   locale?: string;
+  /** S2 — frozen Decision Context formal feed (read-only; no invent). */
+  decision_context_snapshot?: import("@/lib/poju/decision-context").DecisionContext | null;
 }): string {
   const locale = input.locale ?? "zh";
   // Field sources / allow-terms:
@@ -470,6 +473,21 @@ export function buildBookJudgmentFeedBlock(input: {
     `## faces 必须覆盖（全书；PageFeed 已按 01–08 分脸切片）\n${BOOK_FACE_IDS.join(", ")}`,
     JSON_SHAPE,
   );
+  // S2: inject Formal DC for pack gun — claims must not contradict confirmed facts /
+  // must not upgrade hypotheses; 05/06/08 units must respect Stage4 P5/P6/P8 rules.
+  if (input.decision_context_snapshot) {
+    const focus = (["05", "06", "08"] as const)
+      .map((faceId) =>
+        formatDecisionContextSliceForPage(input.decision_context_snapshot, faceId),
+      )
+      .filter(Boolean);
+    if (focus.length) {
+      parts.push(
+        `## Formal Decision Context（冻结只读 · BookJudgment 不得改写/升级）\nbinding=${input.decision_context_snapshot.context_id}@v${input.decision_context_snapshot.version} hash=${input.decision_context_snapshot.content_hash ?? "null"}\nclaims 必须可追溯到 confirmed facts / constraints；hypothesis 不得写成事实；未解决冲突须进入 caveat。`,
+        ...focus,
+      );
+    }
+  }
   return parts.filter(Boolean).join("\n\n");
 }
 
@@ -499,6 +517,8 @@ export async function runBookJudgmentPackGenerate(input: {
    * No continue hops — timeout/quality hard-fail.
    */
   single_provider_call?: boolean;
+  /** S2 — frozen DC snapshot for formal PageFeed into pack gun. */
+  decision_context_snapshot?: import("@/lib/poju/decision-context").DecisionContext | null;
 }): Promise<BookJudgmentGenerateResult> {
   const chartText = input.chart_fact_pack?.trim() ?? "";
   const ziwei = input.ziwei_fact_pack ?? null;
@@ -516,6 +536,7 @@ export async function runBookJudgmentPackGenerate(input: {
     science_feed: input.science_feed,
     thesis_block: input.thesis_block,
     mode: "all",
+    decision_context_snapshot: input.decision_context_snapshot ?? null,
   });
   const user = [
     `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
