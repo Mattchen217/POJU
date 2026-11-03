@@ -34,8 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Do not pin version here — package.json packageManager (pnpm@10.33.2) is authoritative.
-      # Specifying version: 9 conflicts and fails pnpm/action-setup@v4.
+      # package.json packageManager (pnpm@10.33.2) is authoritative — do not pin version.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -56,4 +55,7 @@ jobs:
       - name: Phase3 S5 full L1/L2/L3
         run: pnpm test:decision-context-phase3
       - name: Typecheck
-        run: pnpm exec tsc --noEmit
+        run: |
+          # next-env.d.ts is gitignored; without it CI lacks next/image-types (*.png) decls.
+          pnpm exec next typegen
+          pnpm exec tsc --noEmit
