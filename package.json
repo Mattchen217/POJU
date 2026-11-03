@@ -139,7 +139,12 @@
     "test:session-cas-s1": "tsx scripts/test-session-cas-s1.ts",
     "test:generation-s2": "tsx scripts/test-generation-s2.ts",
     "test:control-plane-s3": "tsx scripts/test-control-plane-s3.ts",
-    "test:normalize-s4": "tsx scripts/test-normalize-s4.ts"
+    "test:normalize-s4": "tsx scripts/test-normalize-s4.ts",
+    "test:decision-context-phase3-unit": "tsx scripts/test-decision-context-phase3-unit.ts",
+    "test:decision-context-phase3-idb": "tsx scripts/test-decision-context-phase3-idb.ts",
+    "test:decision-context-phase3-e2e": "tsx scripts/test-decision-context-phase3-e2e.ts",
+    "test:decision-context-phase3-core": "tsx scripts/test-decision-context-phase3-unit.ts --core && tsx scripts/test-decision-context-phase3-idb.ts --core && tsx scripts/test-decision-context-phase3-e2e.ts --core",
+    "test:decision-context-phase3": "tsx scripts/test-decision-context-phase3-unit.ts && tsx scripts/test-decision-context-phase3-idb.ts && tsx scripts/test-decision-context-phase3-e2e.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

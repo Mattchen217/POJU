@@ -1,0 +1,44 @@
+﻿name: Phase3 Decision Context
+on:
+  pull_request:
+    paths:
+      - "lib/poju/decision-context/**"
+      - "lib/poju/generation/**"
+      - "lib/poju/session-mutation.ts"
+      - "lib/poju/session-manager.ts"
+      - "lib/db/poju-db.ts"
+      - "scripts/test-decision-context-phase3-*.ts"
+      - "scripts/test-session-cas-s1.ts"
+      - "scripts/test-generation-s2.ts"
+      - "scripts/test-control-plane-s3.ts"
+      - "scripts/test-normalize-s4.ts"
+      - ".github/workflows/phase3-decision-context.yml"
+  workflow_dispatch:
+jobs:
+  phase3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Phase3 S1-S4 regression
+        run: |
+          pnpm test:session-cas-s1
+          pnpm test:generation-s2
+          pnpm test:control-plane-s3
+          pnpm test:normalize-s4
+      - name: Phase3 S5 core blocking
+        run: |
+          pnpm exec tsx scripts/test-decision-context-phase3-unit.ts --core
+          pnpm exec tsx scripts/test-decision-context-phase3-idb.ts --core
+          pnpm exec tsx scripts/test-decision-context-phase3-e2e.ts --core
+      - name: Phase3 S5 full L1/L2/L3
+        run: pnpm test:decision-context-phase3
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
