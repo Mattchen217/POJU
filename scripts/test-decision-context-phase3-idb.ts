@@ -96,6 +96,7 @@ async function main() {
     createPOJUSession,
     loadPOJUSession,
     savePOJUSessionCore,
+    extendPOJUV4Session,
   } = await import("../lib/poju/session-manager");
   const {
     mutatePOJUSession,
@@ -943,6 +944,148 @@ async function main() {
     );
     assert.equal(taskOk?.status, "completed");
     void pending;
+  });
+
+
+  // ---------- Phase 3 rem C1 — metadata vs blob unified CAS ----------
+  await p3("P3-136", "C1 extend: blob/encrypt fail → renewals unchanged (no metadata-only advance)", async () => {
+    await resetDb();
+    const sid = await createPOJUSession({ payment_id: "pay_s5_136", original_question: "136" });
+    const db = getPojuDb();
+    const rowBefore = await db.pojuSessionRecords.get(sid);
+    const before = await loadPOJUSession(sid);
+    assert.ok(rowBefore && before);
+    const renewalsBefore = JSON.stringify(rowBefore!.renewals ?? []);
+    const expBefore = rowBefore!.expires_at.getTime();
+    const blobExpBefore = before!.expires_at;
+    const cipherBefore = rowBefore!.encrypted_data;
+    const sRevBefore = before!.session_revision;
+    const renewalsLenBefore = (rowBefore!.renewals ?? []).length;
+
+    let encryptCalls = 0;
+    const failingEncrypt: typeof encryptJson = async (_secret, payload) => {
+      encryptCalls += 1;
+      assert.equal((payload as any).session_id, sid);
+      throw new Error("simulated-c1-encrypt-failure");
+    };
+
+    let threw = false;
+    let thrownMsg = "";
+    try {
+      await extendPOJUV4Session(sid, "pay_extend_136", { encrypt: failingEncrypt });
+    } catch (err) {
+      threw = true;
+      thrownMsg = err instanceof Error ? err.message : String(err);
+    }
+    assert.equal(threw, true, "encrypt failure must throw");
+    assert.match(thrownMsg, /simulated-c1-encrypt-failure/);
+    assert.ok(encryptCalls >= 1);
+
+    const rowAfter = await db.pojuSessionRecords.get(sid);
+    const after = await loadPOJUSession(sid);
+    assert.equal(JSON.stringify(rowAfter!.renewals ?? []), renewalsBefore, "renewals must not advance without blob");
+    assert.equal((rowAfter!.renewals ?? []).length, renewalsLenBefore);
+    assert.equal(rowAfter!.expires_at.getTime(), expBefore);
+    assert.equal(after!.expires_at, blobExpBefore);
+    assert.equal(rowAfter!.encrypted_data, cipherBefore);
+    assert.equal(after!.session_revision, sRevBefore);
+
+    // Retry without inject — unified write commits renewals + blob together.
+    const ok = await extendPOJUV4Session(sid, "pay_extend_136");
+    assert.ok(ok);
+    const rowOk = await db.pojuSessionRecords.get(sid);
+    const afterOk = await loadPOJUSession(sid);
+    assert.ok((rowOk!.renewals ?? []).some((r) => r.payment_id === "pay_extend_136"));
+    assert.ok(rowOk!.expires_at.getTime() > expBefore);
+    assert.notEqual(afterOk!.expires_at, blobExpBefore);
+    assert.equal(afterOk!.expires_at, rowOk!.expires_at.toISOString());
+    assert.ok((afterOk!.session_revision ?? 0) > (sRevBefore ?? 0));
+
+    // Idempotent same payment_id — no duplicate renewal.
+    const again = await extendPOJUV4Session(sid, "pay_extend_136");
+    assert.ok(again);
+    const rowAgain = await db.pojuSessionRecords.get(sid);
+    const pays = (rowAgain!.renewals ?? []).filter((r) => r.payment_id === "pay_extend_136");
+    assert.equal(pays.length, 1, "same payment_id must not duplicate renewals");
+  });
+
+  await p3("P3-137", "C1 extend: mid-txn fail → renewals+blob both rolled back (reverse of metadata-only)", async () => {
+    await resetDb();
+    const sid = await createPOJUSession({ payment_id: "pay_s5_137", original_question: "137" });
+    const db = getPojuDb();
+    const rowBefore = await db.pojuSessionRecords.get(sid);
+    const before = await loadPOJUSession(sid);
+    const renewalsBefore = JSON.stringify(rowBefore!.renewals ?? []);
+    const expBefore = rowBefore!.expires_at.getTime();
+    const cipherBefore = rowBefore!.encrypted_data;
+    const sRevBefore = before!.session_revision;
+    const rowSBefore = rowBefore!.session_revision;
+
+    let syncCalls = 0;
+    const failingSync: typeof syncSessionCyclesToDbWithDb = async () => {
+      syncCalls += 1;
+      throw new Error("simulated-c1-cyclesync-failure");
+    };
+
+    let threw = false;
+    let thrownMsg = "";
+    try {
+      await extendPOJUV4Session(sid, "pay_extend_137", { cycleSync: failingSync });
+    } catch (err) {
+      threw = true;
+      thrownMsg = err instanceof Error ? err.message : String(err);
+    }
+    assert.equal(threw, true);
+    assert.match(thrownMsg, /simulated-c1-cyclesync-failure/);
+    assert.ok(syncCalls >= 1, "cycleSync must run inside the CAS txn");
+
+    const rowAfter = await db.pojuSessionRecords.get(sid);
+    const after = await loadPOJUSession(sid);
+    assert.equal(JSON.stringify(rowAfter!.renewals ?? []), renewalsBefore, "renewals rolled back with blob");
+    assert.equal(rowAfter!.expires_at.getTime(), expBefore);
+    assert.equal(rowAfter!.encrypted_data, cipherBefore);
+    assert.equal(rowAfter!.session_revision, rowSBefore);
+    assert.equal(after!.session_revision, sRevBefore);
+    assert.equal(after!.expires_at, before!.expires_at);
+
+    const ok = await extendPOJUV4Session(sid, "pay_extend_137");
+    assert.ok(ok);
+    const rowOk = await db.pojuSessionRecords.get(sid);
+    assert.ok((rowOk!.renewals ?? []).some((r) => r.payment_id === "pay_extend_137"));
+    assert.ok(rowOk!.expires_at.getTime() > expBefore);
+    assert.notEqual(rowOk!.encrypted_data, cipherBefore);
+  });
+
+  await p3("P3-138", "C1 recovery: blob already extended, renewals missing → append without clobber", async () => {
+    await resetDb();
+    const sid = await createPOJUSession({ payment_id: "pay_s5_138", original_question: "138" });
+    const db = getPojuDb();
+    const payId = "pay_extend_138_recover";
+
+    // First successful unified extend.
+    const first = await extendPOJUV4Session(sid, payId);
+    assert.ok(first);
+    const rowAfterFirst = await db.pojuSessionRecords.get(sid);
+    assert.ok((rowAfterFirst!.renewals ?? []).some((r) => r.payment_id === payId));
+    const expIso = first!.expires_at;
+    const renewalsLen = (rowAfterFirst!.renewals ?? []).length;
+
+    // Simulate legacy residue: strip renewals entry but keep blob/row expires (metadata missing).
+    const stripped = (rowAfterFirst!.renewals ?? []).filter((r) => r.payment_id !== payId);
+    await db.pojuSessionRecords.update(sid, { renewals: stripped });
+    const rowStripped = await db.pojuSessionRecords.get(sid);
+    assert.equal((rowStripped!.renewals ?? []).some((r) => r.payment_id === payId), false);
+    assert.equal(rowStripped!.expires_at.toISOString(), expIso);
+
+    // Re-run same payment_id — renewals missing so early-return does not fire;
+    // unified CAS appends renewals again (recoverable protocol for legacy split).
+    const recovered = await extendPOJUV4Session(sid, payId);
+    assert.ok(recovered);
+    const rowRec = await db.pojuSessionRecords.get(sid);
+    assert.ok((rowRec!.renewals ?? []).some((r) => r.payment_id === payId));
+    assert.equal((rowRec!.renewals ?? []).filter((r) => r.payment_id === payId).length, 1);
+    assert.ok(rowRec!.expires_at.getTime() >= new Date(expIso).getTime());
+    assert.ok((rowRec!.renewals ?? []).length >= renewalsLen);
   });
 
 

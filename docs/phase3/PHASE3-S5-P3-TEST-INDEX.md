@@ -65,6 +65,9 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-133 | Same Session different Generation no mis-bind | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | phase-isolated identities |
 | P3-134 | Different Sessions same client_task_id isolated | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | no cross-session job |
 | P3-135 | Synthesis/FD/POJU shared store no identity collide | §18.4 / ITEM6 / J4-lite | test-decision-context-phase3-job-idempotency.ts | phase keys isolate callers |
+| P3-136 | C1 extend encrypt/blob fail → renewals unchanged | C1 rem / §7 | test-decision-context-phase3-idb.ts | metadata must not advance alone |
+| P3-137 | C1 extend mid-txn fail → renewals+blob rollback | C1 rem / §7 | test-decision-context-phase3-idb.ts | reverse of metadata-only commit |
+| P3-138 | C1 recovery blob OK renewals missing → append | C1 rem / §7 | test-decision-context-phase3-idb.ts | legacy split residue recoverable |
 | P3-96* | Concurrent + response-lost retry one Job | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | Promise.all same identity; sequential retry |
 | P3-113 | user_estimate stays unverified | §18.6 | test-decision-context-phase3-unit.ts | status unverified |
 | P3-114 | independently_verified no auto user_confirmed | §18.6 | test-decision-context-phase3-e2e.ts | deriveUserConfirmed false |

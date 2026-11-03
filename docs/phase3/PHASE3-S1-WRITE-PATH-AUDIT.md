@@ -13,7 +13,7 @@ See git log at acceptance time.
 |----|-------|-----------|-------|
 | **W1** | `createPOJUSession` | **Migrated** | `createPOJUSessionRecordIfAbsent`; dual rev init `0`; refuses overwrite (`SESSION_CREATE_EXISTS`). |
 | **W2** | `savePOJUSessionCore` | **Migrated** | Thin wrapper → `casWritePOJUSessionFromCandidate` → `casWritePOJUSession` (§7.5 encrypt-outside-tx). |
-| **W3** | `extendPOJUV4Session` | **Open C1 documented** | Metadata `update` (renewals/expires/last_interaction) stays **non-blob**; blob via `savePOJUSession` → CAS. Chose S0 C1 option (a): keep separate atomicity boundaries; did **not** invent fold-into-single-CAS policy. |
+| **W3** | `extendPOJUV4Session` | **Closed C1 (rem)** | Renewals folded into the **same Dexie CAS update** as `encrypted_data` / expires mirrors via `mutatePOJUSession.append_renewal` → `casWritePOJUSession`. No second Session write authority. Honest claim: **row-atomic** (one `update()`), not a cross-store distributed txn. |
 | **W4** | `commitDecisionContextChange` | **Migrated** | Still uses `writeCore` defaulting to Core → CAS; `bump_dc: auto` bumps `dc_write_revision` only when formal DC content changes. |
 | **W5** | `savePOJUSession` / `confirmSessionAfterCorePersist` | **Migrated** | No second write impl; both terminate at W2 CAS. |
 | **W6a** | phase2-idb fixture put | **Migrated** | Seed via `createPOJUSessionRecordIfAbsent`; subsequent writes through Core/CAS. |
@@ -30,7 +30,7 @@ Bulk `savePOJUSession(~55)` call sites remain API-compatible; they now hit unifi
 
 ## Ambiguities refused (for Grok)
 
-1. **C1** extend two-phase vs single CAS — documented option (a); no policy invention.
+1. **C1** extend metadata vs blob — **closed (rem)**: unified CAS `append_renewal` (same Dexie update). Tests P3-136/137/138.
 2. **C5** vault rename plaintext fallback divergence — flagged only.
 3. **J4 / Generation** — out of S1 scope (S2).
 4. Whole-UI migrate to `mutatePOJUSession` for every chat save — Core CAS bridge accepted for S1; full mutate migration can continue without new write primitives.

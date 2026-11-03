@@ -129,7 +129,7 @@ Per Mapping §2.2: index fields, Archive, Profile, other tables are **out of Ses
 
 | # | Location | Observation | Minimal options (not deciding policy) |
 |---|----------|-------------|----------------------------------------|
-| C1 | W3 `extendPOJUV4Session` | Metadata `update` then separate `savePOJUSession` — not one atomic CAS today | (a) document two-phase with failure handling; (b) fold expiry into single CAS mutate; Mapping says keep correct boundaries — S1 must pick without inventing Contract text |
+| C1 | W3 `extendPOJUV4Session` | **CLOSED (rem)**: renewals + blob expires share one Dexie CAS `update` via `append_renewal` (not a second write authority). Pre-rem: metadata then separate save. | Rem chose fold into existing CAS write (same row). Tests P3-136 (encrypt fail → no renewals advance), P3-137 (mid-txn fail → both roll back), P3-138 (legacy renewals-missing recovery). |
 | C2 | W1 `createPOJUSession` | `put` then cycle sync then vault — not create-if-absent / dual-revision yet | Implement Mapping create-if-absent + rev init in S1 |
 | C3 | W2 | `update` returns count≠1 throws, but **no revision CAS** | S1 casWrite |
 | C4 | POJUChatUI direct Core | Product path calls `savePOJUSessionCore` for rename | Route through mutate/CAS only |

@@ -59,6 +59,17 @@ export interface SessionMutation {
    * Passed through to casWritePOJUSession; mismatch → GENERATION_BASE_STALE.
    */
   generation_base_revision?: number;
+  /**
+   * Phase 3 C1 — optional non-blob row column written in the SAME Dexie CAS
+   * update as encrypted_data / revision mirrors / expires_at. Not a second
+   * Session write authority: renewals are folded into casWritePOJUSession.
+   * Applied inside the txn from the latest row (idempotent by payment_id).
+   */
+  append_renewal?: {
+    extended_at: Date;
+    reason: string;
+    payment_id?: string;
+  };
 }
 
 export class SessionCasError extends Error {
@@ -256,6 +267,15 @@ export interface CasWritePOJUSessionInput {
     candidate: POJUSessionState;
     afterWrite?: () => void | Promise<void>;
   };
+  /**
+   * Phase 3 C1 — fold renewals into the single Dexie CAS update (same txn as
+   * encrypted_data). Idempotent by payment_id against the row read inside txn.
+   */
+  append_renewal?: {
+    extended_at: Date;
+    reason: string;
+    payment_id?: string;
+  };
 }
 
 export interface CasWritePOJUSessionResult {
@@ -398,6 +418,26 @@ export async function casWritePOJUSession(
       }
     }
 
+    // Phase 3 C1 — renewals (payment audit) share this update with the blob.
+    // Computed from the in-txn row so CAS retries stay idempotent by payment_id.
+    let nextRenewals: POJUSessionRecord["renewals"] | undefined;
+    if (input.append_renewal) {
+      const existing = Array.isArray(row.renewals) ? row.renewals : [];
+      const payId = input.append_renewal.payment_id?.trim();
+      const already =
+        !!payId && existing.some((r) => r.payment_id && r.payment_id === payId);
+      nextRenewals = already
+        ? existing
+        : [
+            ...existing,
+            {
+              extended_at: input.append_renewal.extended_at,
+              reason: input.append_renewal.reason,
+              ...(payId ? { payment_id: payId } : {}),
+            },
+          ];
+    }
+
     const updated = await db.pojuSessionRecords.update(sessionId, {
       encrypted_data: payload.cipher,
       iv: payload.iv,
@@ -412,6 +452,7 @@ export async function casWritePOJUSession(
       main_delivery_done: committedState.main_delivery_done,
       main_delivery_at: committedState.main_delivery_done ? new Date() : undefined,
       active_cycle_id: committedState.active_cycle_id,
+      ...(nextRenewals !== undefined ? { renewals: nextRenewals } : {}),
     });
     if (updated !== 1) {
       throw new SessionCasError(
@@ -524,11 +565,22 @@ export async function mutatePOJUSession(
       return rest;
     };
     if (JSON.stringify(stripRevs(candidate)) === JSON.stringify(stripRevs(base))) {
-      return {
-        state: base,
-        session_revision: mirror.session_revision,
-        dc_write_revision: mirror.dc_write_revision,
-      };
+      // C1 recovery: blob content may already match while renewals still need the
+      // payment_id (legacy split left blob OK / metadata missing). Fall through
+      // so append_renewal can still commit in the same CAS update.
+      const payId = mutation.append_renewal?.payment_id?.trim();
+      const renewalPending =
+        !!payId &&
+        !(loaded.row.renewals ?? []).some(
+          (r) => r.payment_id && r.payment_id === payId,
+        );
+      if (!renewalPending) {
+        return {
+          state: base,
+          session_revision: mirror.session_revision,
+          dc_write_revision: mirror.dc_write_revision,
+        };
+      }
     }
 
     const bumpPolicy = mutation.bump_dc ?? "auto";
@@ -547,6 +599,9 @@ export async function mutatePOJUSession(
         bump_dc_write_revision: bumpDc,
         ...(mutation.generation_base_revision !== undefined
           ? { generation_base_revision: mutation.generation_base_revision }
+          : {}),
+        ...(mutation.append_renewal
+          ? { append_renewal: mutation.append_renewal }
           : {}),
         ...(opts.encrypt ? { encrypt: opts.encrypt } : {}),
         ...(opts.cycleSync ? { cycleSync: opts.cycleSync } : {}),

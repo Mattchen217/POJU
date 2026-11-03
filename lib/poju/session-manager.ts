@@ -1,5 +1,5 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
-import { decryptJson } from "@/lib/crypto";
+import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
@@ -20,6 +20,7 @@ import type { DecisionContext } from "@/lib/poju/decision-context";
 import {
   casWritePOJUSessionFromCandidate,
   createPOJUSessionRecordIfAbsent,
+  mutatePOJUSession,
   resolveRevisionMirror,
   SessionCasError,
   SESSION_CREATE_EXISTS,
@@ -476,10 +477,30 @@ function getCurrentStateHint(state: POJUSessionState): PojuV4StateHint {
   return "collecting_context";
 }
 
-/** Extend active session by 30 days after a paid renewal. */
+/**
+ * Extend active session by 30 days after a paid renewal.
+ *
+ * Phase 3 C1 — unified Session CAS write: blob expires_at / last_interaction_at
+ * and row renewals share one Dexie update inside casWritePOJUSession (via
+ * mutatePOJUSession.append_renewal). Not a second write authority.
+ *
+ * Failure modes (honest atomicity claim):
+ * - Encrypt fail before txn → neither blob nor renewals change.
+ * - Mid-txn abort (e.g. cycle index) → Dexie rolls back blob + renewals together.
+ * - Legacy split residue: same payment_id is idempotent; missing renewals with
+ *   already-extended blob still appends renewals (mutate no-op gate).
+ */
 export async function extendPOJUV4Session(
   sessionId: string,
   paymentId: string,
+  /**
+   * Test-only injects forwarded to mutatePOJUSession (P3-136/137).
+   * Production callers omit this.
+   */
+  opts?: {
+    encrypt?: typeof encryptJson;
+    cycleSync?: typeof syncSessionCyclesToDbWithDb;
+  },
 ): Promise<POJUSessionState | null> {
   const db = getPojuDb();
   const ownerKey = await resolveLocalOwnerKey();
@@ -490,29 +511,45 @@ export async function extendPOJUV4Session(
   if (getPojuDeviceId() !== state.device_id) return null;
   if (!paymentId.trim()) return null;
 
+  const payId = paymentId.trim();
+  // True idempotent: same payment_id already recorded → return current session
+  // (do not re-bump expires). Recoverable path still runs when renewals were lost.
+  if ((row.renewals ?? []).some((r) => r.payment_id === payId)) {
+    return state;
+  }
+
   const now = new Date();
   const exp = new Date(now.getTime() + THIRTY_DAYS_MS);
-  const next: POJUSessionState = {
-    ...state,
-    expires_at: exp.toISOString(),
-    last_interaction_at: now.toISOString(),
-  };
+  const nowIso = now.toISOString();
+  const expIso = exp.toISOString();
 
-  // Phase 3 S1 open item C1 — metadata vs blob keep separate atomicity boundaries
-  // (S0 inventory C1 option a; Contract/Mapping do not prescribe folding renewals
-  // into a single blob CAS). Metadata columns updated here WITHOUT encrypted_data;
-  // blob expiry mirror goes through savePOJUSession → unified CAS.
-  await db.pojuSessionRecords.update(sessionId, {
-    expires_at: exp,
-    last_interaction_at: now,
-    renewals: [
-      ...row.renewals,
-      { extended_at: now, reason: "paid_extension", payment_id: paymentId.trim() },
-    ],
-  });
+  const result = await mutatePOJUSession(
+    sessionId,
+    {
+      operation_id: `extend_paid_${payId}`,
+      kind: "session_patch",
+      bump_dc: false,
+      append_renewal: {
+        extended_at: now,
+        reason: "paid_extension",
+        payment_id: payId,
+      },
+      apply: (latest) => ({
+        ...latest,
+        expires_at: expIso,
+        last_interaction_at: nowIso,
+      }),
+    },
+    {
+      ...(opts?.encrypt ? { encrypt: opts.encrypt } : {}),
+      ...(opts?.cycleSync ? { cycleSync: opts.cycleSync } : {}),
+    },
+  );
 
-  await savePOJUSession(next);
-  return next;
+  // Post-commit side effects (archive/profile) — same rule as savePOJUSession:
+  // failures must not roll back the already-committed core CAS write.
+  await runPOJUSessionPostCommitSideEffects(result.state);
+  return result.state;
 }
 
 export async function listPOJUV4SessionRowsForDevice(deviceId: string) {
