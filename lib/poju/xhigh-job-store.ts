@@ -23,80 +23,26 @@ export function runWithEphemeralXhighKv<T>(
   return runWithEphemeralKv(fn, opts);
 }
 
-export async function createXhighJob(input: {
-  phase: PojuXhighJobPhase;
-  session_id: string;
-  locale: string;
-  job_input: PojuXhighJob["input"];
-  /** Phase-4: stamp deploy generation so redeploy can kill orphaned continues. */
-  deploy_generation?: string;
-  /**
-   * Phase 3 S2 — stable client create identity (Contract §22 / Mapping §2.4).
-   * When set, create is idempotent: same identity returns the existing job (no blind retry).
-   */
-  client_task_id?: string;
-  generation_type?: PojuXhighJob["generation_type"];
-  fingerprint?: string;
-  fingerprint_version?: string;
-}): Promise<PojuXhighJob> {
-  const client_task_id =
-    typeof input.client_task_id === "string" && input.client_task_id.trim()
-      ? input.client_task_id.trim()
-      : undefined;
-
-  // Check existing identity BEFORE generateXhighJobId — never second job for same identity.
-  if (client_task_id) {
-    const existing = await getXhighJobByClientTaskId({
-      phase: input.phase,
-      session_id: input.session_id,
-      client_task_id,
-    });
-    if (existing.status === "found") {
-      return existing.job;
-    }
-    if (existing.status === "recovery_required") {
-      throw new Error(
-        "XHIGH_JOB_RECOVERY_REQUIRED: ambiguous client_task_id=" +
-          client_task_id +
-          " phase=" +
-          input.phase,
-      );
-    }
+function jobMatchesIdentity(
+  job: PojuXhighJob,
+  input: {
+    phase: PojuXhighJobPhase;
+    session_id: string;
+    client_task_id: string;
+    generation_type?: PojuXhighJob["generation_type"];
+  },
+): boolean {
+  if (job.phase !== input.phase) return false;
+  if (job.session_id !== input.session_id) return false;
+  if (job.client_task_id !== input.client_task_id) return false;
+  if (
+    input.generation_type &&
+    job.generation_type &&
+    job.generation_type !== input.generation_type
+  ) {
+    return false;
   }
-
-  const job: PojuXhighJob = {
-    job_id: generateXhighJobId(input.phase, input.session_id),
-    phase: input.phase,
-    session_id: input.session_id,
-    locale: input.locale,
-    status: "pending",
-    accumulated_content: "",
-    input: input.job_input,
-    ...(client_task_id ? { client_task_id } : {}),
-    ...(input.generation_type ? { generation_type: input.generation_type } : {}),
-    ...(input.fingerprint ? { fingerprint: input.fingerprint } : {}),
-    ...(input.fingerprint_version ? { fingerprint_version: input.fingerprint_version } : {}),
-    ...(input.deploy_generation?.trim()
-      ? { deploy_generation: input.deploy_generation.trim() }
-      : {}),
-    created_at: Date.now(),
-    updated_at: Date.now(),
-  };
-
-  // Job record is authority — persist identity inside job BEFORE ack.
-  await kv.set(xhighJobKey(job.job_id), job, { ex: KV_TTL.POJU_XHIGH_JOB });
-  await kv.set(xhighSessionLatestKey(input.phase, input.session_id), job.job_id, {
-    ex: KV_TTL.POJU_XHIGH_JOB,
-  });
-  if (client_task_id) {
-    // Rebuildable index (non-authoritative).
-    await kv.set(
-      xhighClientTaskKey(input.phase, input.session_id, client_task_id),
-      job.job_id,
-      { ex: KV_TTL.POJU_XHIGH_JOB },
-    );
-  }
-  return job;
+  return true;
 }
 
 export type GetXhighJobByClientTaskResult =
@@ -105,15 +51,22 @@ export type GetXhighJobByClientTaskResult =
   | { status: "recovery_required"; reason: string };
 
 /**
- * Reverse lookup by client_task_id (S0 ABSENT → S2).
- * Index is rebuildable; job record is authority. Ambiguity → recovery_required (no blind create).
+ * Reverse lookup by stable create identity (session_id + phase/generation + client_task_id).
+ * Job record is authority; index is rebuildable.
+ * Distinguishes missing / found / recovery_required (never blind-create on ambiguity).
  */
 export async function getXhighJobByClientTaskId(input: {
   phase: PojuXhighJobPhase;
   session_id: string;
   client_task_id: string;
-  /** Optional candidate job_id from Reload / latest — verified against identity. */
+  /** Optional candidate job_id from Reload / HTTP retry / pending bind. */
   candidate_job_id?: string | null;
+  /**
+   * When true (default on create/reload), treat session `latest` as a *candidate only*
+   * and verify job.client_task_id before accepting (Mapping §2.4 / ITEM 6).
+   */
+  consult_latest_candidate?: boolean;
+  generation_type?: PojuXhighJob["generation_type"];
 }): Promise<GetXhighJobByClientTaskResult> {
   const client_task_id = input.client_task_id.trim();
   if (!client_task_id) {
@@ -124,44 +77,206 @@ export async function getXhighJobByClientTaskId(input: {
   const indexedId = await kv.get<string>(indexKey);
 
   const candidates = new Set<string>();
-  if (typeof indexedId === "string" && indexedId.trim()) candidates.add(indexedId.trim());
+  if (typeof indexedId === "string" && indexedId.trim()) {
+    candidates.add(indexedId.trim());
+  }
   if (input.candidate_job_id && input.candidate_job_id.trim()) {
     candidates.add(input.candidate_job_id.trim());
   }
-
-  const matches: PojuXhighJob[] = [];
-  for (const job_id of candidates) {
-    const job = await getXhighJob(job_id);
-    if (!job) continue;
-    if (job.phase !== input.phase) continue;
-    if (job.session_id !== input.session_id) continue;
-    if (job.client_task_id !== client_task_id) continue;
-    matches.push(job);
-  }
-
-  if (matches.length > 1) {
-    const ids = Array.from(new Set(matches.map((m) => m.job_id)));
-    if (ids.length > 1) {
-      return {
-        status: "recovery_required",
-        reason:
-          "multiple jobs for client_task_id=" + client_task_id + ": " + ids.join(","),
-      };
+  if (input.consult_latest_candidate !== false) {
+    const latestId = await kv.get<string>(
+      xhighSessionLatestKey(input.phase, input.session_id),
+    );
+    if (typeof latestId === "string" && latestId.trim()) {
+      candidates.add(latestId.trim());
     }
   }
 
-  if (matches.length === 1) {
+  const matches: PojuXhighJob[] = [];
+  let danglingIndex = false;
+  for (const job_id of candidates) {
+    const job = await getXhighJob(job_id);
+    if (!job) {
+      if (indexedId && indexedId.trim() === job_id) danglingIndex = true;
+      continue;
+    }
+    if (
+      !jobMatchesIdentity(job, {
+        phase: input.phase,
+        session_id: input.session_id,
+        client_task_id,
+        generation_type: input.generation_type,
+      })
+    ) {
+      continue;
+    }
+    matches.push(job);
+  }
+
+  const uniqueIds = Array.from(new Set(matches.map((m) => m.job_id)));
+  if (uniqueIds.length > 1) {
+    return {
+      status: "recovery_required",
+      reason:
+        "multiple jobs for client_task_id=" + client_task_id + ": " + uniqueIds.join(","),
+    };
+  }
+
+  if (uniqueIds.length === 1) {
     const job = matches[0]!;
-    // Repair index when possible.
+    // Repair rebuildable index when possible.
     if (indexedId !== job.job_id) {
       await kv.set(indexKey, job.job_id, { ex: KV_TTL.POJU_XHIGH_JOB });
     }
     return { status: "found", job };
   }
 
-  // Index miss + no verified candidate → missing (caller may create once).
-  // Do NOT consult latest-only as authority (S0: latest is not create-identity).
+  // Index points at a missing/foreign job with no verified candidate → unclear; do not create.
+  if (danglingIndex) {
+    return {
+      status: "recovery_required",
+      reason:
+        "client_task index dangling (job missing) for client_task_id=" + client_task_id,
+    };
+  }
+
   return { status: "missing" };
+}
+
+/**
+ * Atomic unique create for stable identity session+phase(+generation_type)+client_task_id.
+ * Uses SET NX on the rebuildable index as the create claim (works on Upstash and MemoryKv).
+ * MUST NOT: query-miss → random job_id → unconditional write (race).
+ */
+export async function createXhighJob(input: {
+  phase: PojuXhighJobPhase;
+  session_id: string;
+  locale: string;
+  job_input: PojuXhighJob["input"];
+  deploy_generation?: string;
+  client_task_id?: string;
+  generation_type?: PojuXhighJob["generation_type"];
+  fingerprint?: string;
+  fingerprint_version?: string;
+  /**
+   * Test-only: after job authority write succeeds, skip/fail index repair path.
+   * Production omits. Used to prove Reload recovers via latest candidate (ITEM 6.2).
+   */
+  __test_delete_index_after_create?: boolean;
+}): Promise<PojuXhighJob> {
+  const client_task_id =
+    typeof input.client_task_id === "string" && input.client_task_id.trim()
+      ? input.client_task_id.trim()
+      : undefined;
+
+  if (client_task_id) {
+    const existing = await getXhighJobByClientTaskId({
+      phase: input.phase,
+      session_id: input.session_id,
+      client_task_id,
+      generation_type: input.generation_type,
+      consult_latest_candidate: true,
+    });
+    if (existing.status === "found") {
+      return existing.job;
+    }
+    if (existing.status === "recovery_required") {
+      throw new Error(
+        "XHIGH_JOB_RECOVERY_REQUIRED: " +
+          existing.reason +
+          " phase=" +
+          input.phase,
+      );
+    }
+
+    const job_id = generateXhighJobId(input.phase, input.session_id);
+    const indexKey = xhighClientTaskKey(input.phase, input.session_id, client_task_id);
+
+    // Atomic claim of stable identity BEFORE writing a second authority record.
+    const claimed = await kv.set(indexKey, job_id, {
+      ex: KV_TTL.POJU_XHIGH_JOB,
+      nx: true,
+    });
+    if (claimed !== "OK") {
+      // Lost the race — return the winner (or surface ambiguity).
+      const again = await getXhighJobByClientTaskId({
+        phase: input.phase,
+        session_id: input.session_id,
+        client_task_id,
+        generation_type: input.generation_type,
+        consult_latest_candidate: true,
+      });
+      if (again.status === "found") return again.job;
+      throw new Error(
+        "XHIGH_JOB_RECOVERY_REQUIRED: lost create race for client_task_id=" +
+          client_task_id +
+          (again.status === "recovery_required" ? " (" + again.reason + ")" : ""),
+      );
+    }
+
+    const job: PojuXhighJob = {
+      job_id,
+      phase: input.phase,
+      session_id: input.session_id,
+      locale: input.locale,
+      status: "pending",
+      accumulated_content: "",
+      input: input.job_input,
+      client_task_id,
+      ...(input.generation_type ? { generation_type: input.generation_type } : {}),
+      ...(input.fingerprint ? { fingerprint: input.fingerprint } : {}),
+      ...(input.fingerprint_version
+        ? { fingerprint_version: input.fingerprint_version }
+        : {}),
+      ...(input.deploy_generation?.trim()
+        ? { deploy_generation: input.deploy_generation.trim() }
+        : {}),
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    try {
+      // Job record is authority — persist identity inside job after NX claim.
+      await kv.set(xhighJobKey(job.job_id), job, { ex: KV_TTL.POJU_XHIGH_JOB });
+      await kv.set(xhighSessionLatestKey(input.phase, input.session_id), job.job_id, {
+        ex: KV_TTL.POJU_XHIGH_JOB,
+      });
+    } catch (err) {
+      // Release claim so the same identity can retry; do not leave a silent second identity.
+      await kv.del(indexKey);
+      throw err;
+    }
+
+    if (input.__test_delete_index_after_create) {
+      await kv.del(indexKey);
+    }
+
+    return job;
+  }
+
+  // Legacy path without client_task_id (pre-Phase3 callers). Not identity-safe under retry.
+  const job: PojuXhighJob = {
+    job_id: generateXhighJobId(input.phase, input.session_id),
+    phase: input.phase,
+    session_id: input.session_id,
+    locale: input.locale,
+    status: "pending",
+    accumulated_content: "",
+    input: input.job_input,
+    ...(input.generation_type ? { generation_type: input.generation_type } : {}),
+    ...(input.fingerprint ? { fingerprint: input.fingerprint } : {}),
+    ...(input.fingerprint_version ? { fingerprint_version: input.fingerprint_version } : {}),
+    ...(input.deploy_generation?.trim()
+      ? { deploy_generation: input.deploy_generation.trim() }
+      : {}),
+    created_at: Date.now(),
+    updated_at: Date.now(),
+  };
+  await kv.set(xhighJobKey(job.job_id), job, { ex: KV_TTL.POJU_XHIGH_JOB });
+  await kv.set(xhighSessionLatestKey(input.phase, input.session_id), job.job_id, {
+    ex: KV_TTL.POJU_XHIGH_JOB,
+  });
+  return job;
 }
 
 export async function getXhighJob(job_id: string): Promise<PojuXhighJob | null> {
@@ -186,8 +301,6 @@ export async function updateXhighJobStatus(
   const job = await getXhighJob(job_id);
   if (!job) return;
 
-  // Terminal states are sticky — never revive a failed/completed job (stale race),
-  // except interrupted deliveries which user Continue re-arms explicitly.
   const allowInterruptedRevive =
     job.status === "failed" &&
     status === "running" &&

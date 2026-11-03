@@ -60,6 +60,12 @@ Format: `Test ID → Name → Contract Section → File → Assertion`
 | P3-110 | Same action different target hard fail | §18.6 | test-decision-context-phase3-unit.ts | CONFIRMATION_ACTION_REUSED |
 | P3-111 | event target/type mismatch hard fail | §18.6 | test-decision-context-phase3-e2e.ts | validator throws |
 | P3-112 | Confirmation source provenance — real user message on Session | §18.6 / §11.3 / §16.6 | test-decision-context-phase3-e2e.ts | missing/forged/cross-session/non-user/target mismatch/action reuse hard-fail; happy path OK |
+| P3-131 | Job write OK index missing → Reload recovers | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | latest-candidate recover; retry same job_id |
+| P3-132 | Job OK Binding fail → recover binds original | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | getByClientTaskId + bind original |
+| P3-133 | Same Session different Generation no mis-bind | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | phase-isolated identities |
+| P3-134 | Different Sessions same client_task_id isolated | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | no cross-session job |
+| P3-135 | Synthesis/FD/POJU shared store no identity collide | §18.4 / ITEM6 / J4-lite | test-decision-context-phase3-job-idempotency.ts | phase keys isolate callers |
+| P3-96* | Concurrent + response-lost retry one Job | §18.4 / ITEM6 | test-decision-context-phase3-job-idempotency.ts | Promise.all same identity; sequential retry |
 | P3-113 | user_estimate stays unverified | §18.6 | test-decision-context-phase3-unit.ts | status unverified |
 | P3-114 | independently_verified no auto user_confirmed | §18.6 | test-decision-context-phase3-e2e.ts | deriveUserConfirmed false |
 | P3-115 | Constraint illegal combination hard fail | §18.6 | test-decision-context-phase3-e2e.ts | IllegalFactCombinationError |
