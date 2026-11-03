@@ -10,6 +10,7 @@ import type {
   DirCurrentState,
   RealityFact,
 } from "./types";
+import { conflictAffectsPreferredPath } from "./stop-criteria";
 
 export interface FactContribution {
   fact_id: string;
@@ -35,6 +36,12 @@ function factMatchesRole(fact: RealityFact, role: string): boolean {
   return roles.includes(role);
 }
 
+/**
+ * Preferred-path affecting open/unresolved conflicts among contributing facts
+ * upgrade DIR → conflict. Non-preferred-path Conflicts must NOT re-escalate
+ * merely because they associate Facts (affects_preferred_path: false).
+ * Undefined affects_preferred_path is conservative true (blocks).
+ */
 function isOpenConflictAffecting(
   conflicts: Conflict[],
   factIds: Set<string>,
@@ -42,6 +49,7 @@ function isOpenConflictAffecting(
   return conflicts.some(
     (c) =>
       (c.state === "open" || c.state === "unresolved_in_final") &&
+      conflictAffectsPreferredPath(c) &&
       c.fact_ids.some((id) => factIds.has(id)),
   );
 }
@@ -68,7 +76,7 @@ export function scoreFactContribution(
 /**
  * Aggregate DIR state from required_fact_roles + Facts + Conflicts.
  * Priority rules (Eng SoT §3):
- * - affecting open conflict → conflict
+ * - preferred-path affecting open/unresolved conflict → conflict
  * - all required roles N/A → n_a
  * - all required roles satisfied by confirmed facts → known
  * - some info but missing confirmed required → unknown + partial_satisfaction

@@ -3,10 +3,10 @@
  * turn counts / agenda covered / PUSH_GATE are NOT sufficiency.
  *
  * Eng SoT dichotomies:
- * - Unknown NOT affecting P5 ranking → may stop with noted boundary
- * - Unknown that MAY change P5 ranking → continue (not sufficient)
- * - Open Conflict affecting preferred path → hard block (delivery FAIL)
- * - Open Conflict NOT affecting preferred path → do not over-block; Freeze may
+ * - Unknown NOT affecting P5 ranking — may stop with noted boundary
+ * - Unknown that MAY change P5 ranking — continue (not sufficient)
+ * - Open Conflict affecting preferred path — hard block (delivery FAIL)
+ * - Open Conflict NOT affecting preferred path — do not over-block; Freeze may
  *   mark unresolved_in_final with degraded / boundary
  */
 
@@ -15,7 +15,10 @@ import type { Conflict, DecisionContext, DIR } from "./types";
 export interface SufficiencyOptions {
   /** Hard-push is urge-only; never alone sufficient (C4 / H3). */
   userHardPush?: boolean;
-  /** Critical DIR ids; default = dirs with may_affect_p5_ranking or all dirs. */
+  /**
+   * Critical DIR ids; default = active DIRs where may_affect_p5_ranking !== false
+   * (undefined is treated as may-affect-P5; only explicit false is excluded).
+   */
   criticalDirIds?: string[];
 }
 
@@ -54,8 +57,10 @@ function criticalDirs(dc: DecisionContext, opts: SufficiencyOptions): DIR[] {
     const set = new Set(opts.criticalDirIds);
     return active.filter((d) => set.has(d.dir_id));
   }
-  const flagged = active.filter((d) => d.may_affect_p5_ranking);
-  return flagged.length > 0 ? flagged : active;
+  // Only explicit false excludes a DIR from P5 blocking checks.
+  // Undefined must be treated as may-affect-P5 (consistent with dirUnknownAffectsP5Ranking).
+  // Do NOT drop undefined DIRs merely because another DIR is flagged true.
+  return active.filter((d) => dirUnknownAffectsP5Ranking(d));
 }
 
 function classifyOpenConflicts(dc: DecisionContext): {
@@ -141,13 +146,13 @@ export function evaluateDecisionSufficiency(
       }
       continue;
     }
-    // unknown
-    if (dir.may_affect_p5_ranking === true) {
-      blocking_dir_ids.push(dir.dir_id);
-      reasons.push(`dir_unknown_may_affect_p5:${dir.dir_id}`);
-    } else if (dir.may_affect_p5_ranking === false) {
+    // unknown — only explicit false is non-blocking; undefined may-affect-P5.
+    if (dir.may_affect_p5_ranking === false) {
       boundaryOnlyUnknown = true;
       reasons.push(`dir_unknown_boundary_ok:${dir.dir_id}`);
+    } else if (dir.may_affect_p5_ranking === true) {
+      blocking_dir_ids.push(dir.dir_id);
+      reasons.push(`dir_unknown_may_affect_p5:${dir.dir_id}`);
     } else {
       // Default conservative: unspecified unknown critical dir blocks.
       blocking_dir_ids.push(dir.dir_id);

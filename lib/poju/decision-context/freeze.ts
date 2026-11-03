@@ -85,10 +85,22 @@ export function freezeDecisionContext(
     conflicts,
     updated_at: now,
   };
+
+  // Re-validate after conflict conversion + DIR reaggregation so aggregation-produced
+  // blocking states (e.g. P5-affecting DIR conflict) cannot bypass the Freeze Gate.
+  const postAggregation = evaluateDecisionSufficiency(draftForHash);
+  if (!postAggregation.canStop) {
+    throw new FreezeError(
+      `Post-aggregation DecisionContext not sufficient to freeze: ${postAggregation.reasons.join("; ")}`,
+    );
+  }
+
   const content_hash = computeContentHash(draftForHash);
 
   // SoT-allowed degraded only: boundary unknowns / non-preferred unresolved conflicts.
   // Never rewrite hard FAIL into degraded success.
+  // Use pre-conversion verdict for delivery_mode (non-preferred open → boundaries),
+  // while postAggregation is the hard Gate on final aggregate state.
   const delivery_mode =
     sufficiency.verdict === "sufficient_with_boundaries"
       ? "degraded"

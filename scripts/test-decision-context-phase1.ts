@@ -778,6 +778,320 @@ async function main() {
     assert.equal(frozen.delivery_mode, "degraded");
   });
 
+
+  await check("NEG: mixed true+undefined DIR; undefined P5 unknown must block Freeze", () => {
+    const base = seedDecisionContextFromOpening({
+      context_id: "dc_mixed_p5_undefined",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "Event E",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["event"],
+          status: "confirmed",
+        },
+      ],
+    });
+    const dc: DecisionContext = {
+      ...base,
+      dirs: [
+        {
+          dir_id: "dir_flagged_true",
+          need: "explicit P5",
+          why: "flagged true and known",
+          required_fact_roles: ["event"],
+          current_state: "known",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          may_affect_p5_ranking: true,
+          id_lifecycle: "active",
+        },
+        {
+          dir_id: "dir_undefined_p5",
+          need: "omitted P5 field",
+          why: "undefined must be treated as may-affect-P5",
+          required_fact_roles: ["missing_role"],
+          current_state: "unknown",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          // may_affect_p5_ranking intentionally omitted (undefined)
+          id_lifecycle: "active",
+        },
+      ],
+    };
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, false, "undefined P5 unknown must not be dropped when a true DIR exists");
+    assert.equal(suf.verdict, "continue_collecting");
+    assert.ok(
+      suf.blocking_dir_ids.includes("dir_undefined_p5"),
+      `expected dir_undefined_p5 in blocking_dir_ids, got ${JSON.stringify(suf.blocking_dir_ids)}`,
+    );
+    assert.throws(
+      () =>
+        freezeDecisionContext(dc, {
+          stage3_sufficiency_end: true,
+          now: "2026-11-02T13:00:00.000Z",
+        }),
+      FreezeError,
+    );
+  });
+
+  await check("non-preferred Conflict linked to P5 DIR must NOT upgrade via aggregation", () => {
+    const base = seedDecisionContextFromOpening({
+      context_id: "dc_nonpref_agg",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "Budget is 10k",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["budget"],
+          status: "confirmed",
+        },
+        {
+          statement: "Budget is 3k",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["budget"],
+          status: "confirmed",
+        },
+      ],
+    });
+    const conflict = openConflict({
+      conflict_id: "conflict_nonpref_budget",
+      fact_ids: [base.reality_facts[0]!.fact_id, base.reality_facts[1]!.fact_id],
+      conflict_field: "budget_display",
+      facts: base.reality_facts,
+      affects_preferred_path: false,
+      now: "2026-11-02T12:00:00.000Z",
+    });
+    const dir: DIR = {
+      dir_id: "dir_budget_p5",
+      need: "budget clarity",
+      why: "P5-critical but conflict is non-preferred",
+      required_fact_roles: ["budget"],
+      current_state: "known",
+      partial_satisfaction: false,
+      agenda_item_ids: [],
+      may_affect_p5_ranking: true,
+      id_lifecycle: "active",
+    };
+    const agg = aggregateDirState(dir, base.reality_facts, [conflict]);
+    assert.notEqual(
+      agg.current_state,
+      "conflict",
+      "non-preferred conflict must not reaggregate DIR into conflict",
+    );
+    assert.equal(agg.current_state, "known");
+
+    const dc: DecisionContext = {
+      ...base,
+      dirs: [dir],
+      conflicts: [conflict],
+    };
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, true);
+    assert.deepEqual(suf.blocking_conflict_ids, []);
+    const { frozen } = freezeDecisionContext(dc, {
+      stage3_sufficiency_end: true,
+      now: "2026-11-02T13:00:00.000Z",
+    });
+    assert.equal(frozen.status, "final");
+    assert.equal(frozen.conflicts[0]!.state, "unresolved_in_final");
+    assert.equal(frozen.dirs[0]!.current_state, "known");
+    assert.notEqual(frozen.dirs[0]!.current_state, "conflict");
+    assert.equal(frozen.delivery_mode, "degraded");
+  });
+
+  await check("preferred-path Conflict still hard-blocks even after aggregation path", () => {
+    const base = seedDecisionContextFromOpening({
+      context_id: "dc_pref_agg_block",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "Budget is 10k",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["budget"],
+          status: "confirmed",
+        },
+        {
+          statement: "Budget is 3k",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["budget"],
+          status: "confirmed",
+        },
+      ],
+    });
+    const conflict = openConflict({
+      conflict_id: "conflict_pref_budget",
+      fact_ids: [base.reality_facts[0]!.fact_id, base.reality_facts[1]!.fact_id],
+      conflict_field: "budget",
+      facts: base.reality_facts,
+      affects_preferred_path: true,
+      now: "2026-11-02T12:00:00.000Z",
+    });
+    const dir: DIR = {
+      dir_id: "dir_budget_pref",
+      need: "budget clarity",
+      why: "preferred path cost",
+      required_fact_roles: ["budget"],
+      current_state: "known",
+      partial_satisfaction: false,
+      agenda_item_ids: [],
+      may_affect_p5_ranking: true,
+      id_lifecycle: "active",
+    };
+    const agg = aggregateDirState(dir, base.reality_facts, [conflict]);
+    assert.equal(
+      agg.current_state,
+      "conflict",
+      "preferred-path conflict must still upgrade DIR via aggregation",
+    );
+
+    const dc: DecisionContext = {
+      ...base,
+      dirs: [dir],
+      conflicts: [conflict],
+    };
+    const suf = evaluateDecisionSufficiency(dc);
+    assert.equal(suf.canStop, false);
+    assert.ok(suf.blocking_conflict_ids.includes("conflict_pref_budget"));
+    assert.throws(
+      () =>
+        freezeDecisionContext(dc, {
+          stage3_sufficiency_end: true,
+          now: "2026-11-02T13:00:00.000Z",
+        }),
+      FreezeError,
+    );
+
+    // Even if open Conflicts were converted first, reaggregated P5 DIR conflict must block.
+    const unresolved = markOpenConflictsUnresolvedInFinal([conflict], "2026-11-02T13:00:00.000Z");
+    const dirsAfter = reaggregateDirs([dir], base.reality_facts, unresolved);
+    assert.equal(dirsAfter[0]!.current_state, "conflict");
+    const post = evaluateDecisionSufficiency({
+      ...dc,
+      dirs: dirsAfter,
+      conflicts: unresolved,
+    });
+    assert.equal(post.canStop, false, "post-aggregation P5 DIR conflict must hard-block");
+    assert.ok(post.blocking_dir_ids.includes("dir_budget_pref"));
+  });
+
+  await check("Freeze final aggregate must not leave Gate-skipped blocking state", () => {
+    // Pre-gate looks stoppable (known P5 DIR + non-preferred conflict), but if aggregation
+    // wrongly upgraded the DIR to conflict, post-agg Gate must reject. With the fix,
+    // aggregation does not upgrade; Freeze succeeds and final state remains Gate-clean.
+    const base = seedDecisionContextFromOpening({
+      context_id: "dc_freeze_post_agg_gate",
+      now: "2026-11-02T12:00:00.000Z",
+      core_dilemma: { concrete_event: "E", stakes: "S", sticking_point: null },
+      desired_direction: { wants: "W", priority: null },
+      user_statements: [
+        {
+          statement: "Color A",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["color"],
+          status: "confirmed",
+        },
+        {
+          statement: "Color B",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["color"],
+          status: "confirmed",
+        },
+        {
+          statement: "Event E",
+          verification_level: "user_asserted",
+          user_confirmed_event: true,
+          fact_roles: ["event"],
+          status: "confirmed",
+        },
+      ],
+    });
+    const nonPref = openConflict({
+      conflict_id: "conflict_color_gate",
+      fact_ids: [base.reality_facts[0]!.fact_id, base.reality_facts[1]!.fact_id],
+      conflict_field: "color",
+      facts: base.reality_facts,
+      affects_preferred_path: false,
+      now: "2026-11-02T12:00:00.000Z",
+    });
+    const dc: DecisionContext = {
+      ...base,
+      dirs: [
+        {
+          dir_id: "dir_event_gate",
+          need: "event",
+          why: "core P5",
+          required_fact_roles: ["event"],
+          current_state: "known",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          may_affect_p5_ranking: true,
+          id_lifecycle: "active",
+        },
+        {
+          dir_id: "dir_color_p5",
+          need: "color",
+          why: "linked facts but non-preferred conflict",
+          required_fact_roles: ["color"],
+          current_state: "known",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          may_affect_p5_ranking: true,
+          id_lifecycle: "active",
+        },
+      ],
+      conflicts: [nonPref],
+    };
+
+    const pre = evaluateDecisionSufficiency(dc);
+    assert.equal(pre.canStop, true);
+
+    const { frozen } = freezeDecisionContext(dc, {
+      stage3_sufficiency_end: true,
+      now: "2026-11-02T13:00:00.000Z",
+    });
+    assert.equal(frozen.status, "final");
+
+    // Final aggregate must not contain a P5-affecting DIR conflict that skipped the Gate.
+    const blockingFinalDirs = frozen.dirs.filter(
+      (d) =>
+        d.id_lifecycle === "active" &&
+        d.current_state === "conflict" &&
+        d.may_affect_p5_ranking !== false,
+    );
+    assert.equal(
+      blockingFinalDirs.length,
+      0,
+      `frozen DC has Gate-skipped blocking DIR conflict(s): ${blockingFinalDirs.map((d) => d.dir_id).join(",")}`,
+    );
+
+    // Crafted post-agg blocking state must be rejected by Freeze Gate re-validation path.
+    const craftedBlocking: DecisionContext = {
+      ...dc,
+      dirs: dc.dirs.map((d) =>
+        d.dir_id === "dir_color_p5" ? { ...d, current_state: "conflict" as const } : d,
+      ),
+      conflicts: markOpenConflictsUnresolvedInFinal(dc.conflicts, "2026-11-02T13:00:00.000Z"),
+    };
+    const craftedSuf = evaluateDecisionSufficiency(craftedBlocking);
+    assert.equal(craftedSuf.canStop, false);
+    assert.ok(craftedSuf.blocking_dir_ids.includes("dir_color_p5"));
+  });
+
   console.log(`\nAll decision-context phase1 checks passed (${passed}).`);
 }
 
