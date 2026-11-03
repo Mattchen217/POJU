@@ -8,6 +8,23 @@ import { getPojuDb, type PojuDb } from "@/lib/db/poju-db";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
+/** Test-only phases after real related-table writes inside the C1 Dexie txn. */
+export type CycleIndexWriteHookPhase = "after_clear" | "after_cycles_put";
+type CycleIndexWriteHook = (
+  phase: CycleIndexWriteHookPhase,
+) => void | Promise<void>;
+let cycleIndexWriteHookForTests: CycleIndexWriteHook | null = null;
+
+/**
+ * Test-only: run after real poju_cycles / poju_tool_suggestions writes so mid-txn
+ * failures can prove Dexie abort (P3-71). Production never sets this.
+ */
+export function __setCycleIndexWriteHookForTests(
+  hook: CycleIndexWriteHook | null,
+): void {
+  cycleIndexWriteHookForTests = hook;
+}
+
 async function writeCycleIndexRows(
   db: PojuDb,
   state: POJUSessionState,
@@ -21,6 +38,10 @@ async function writeCycleIndexRows(
   // cycles were emptied -- so stale cycle/suggestion indexes cannot survive.
   await db.poju_cycles.where("session_id").equals(sessionId).delete();
   await db.poju_tool_suggestions.where("session_id").equals(sessionId).delete();
+
+  if (cycleIndexWriteHookForTests) {
+    await cycleIndexWriteHookForTests("after_clear");
+  }
 
   if (!cycles.length) return;
 
@@ -37,6 +58,10 @@ async function writeCycleIndexRows(
   }));
 
   await db.poju_cycles.bulkPut(rows);
+
+  if (cycleIndexWriteHookForTests) {
+    await cycleIndexWriteHookForTests("after_cycles_put");
+  }
 
   const suggestionRows = cycles.flatMap((c) =>
     c.tool_suggestions.map((s, idx) => ({

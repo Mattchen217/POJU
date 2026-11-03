@@ -47,6 +47,7 @@ Workflow added at `.github/workflows/phase3-decision-context.yml`.
 - Product Stage4 / Page 5b14cc07 v2 / Lab/04/SoT16/BookJudgment/Freeze redesign Hold
 - P3-99/P3-100: inconsistency is **detectable**; a dedicated runtime hard-fail detector may still be product Hold (tests assert detectable inconsistent state, not a new product API)
 - P3-70 remediated: real encrypt inject on casWritePOJUSession path (cipher throw before Dexie commit)
+- P3-71 remediated: real Dexie mid-txn abort after session update + cycle-index clear (no manual restore)
 
 ## Ready
 

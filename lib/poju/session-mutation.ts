@@ -242,6 +242,11 @@ export interface CasWritePOJUSessionInput {
    * write transaction (Contract §15.3 / P3-70).
    */
   encrypt?: typeof encryptJson;
+  /**
+   * Test-only cycle-index sync override. Production omits this so the real
+   * syncSessionCyclesToDbWithDb runs inside the C1 Dexie transaction (P3-71).
+   */
+  cycleSync?: typeof syncSessionCyclesToDbWithDb;
 }
 
 export interface CasWritePOJUSessionResult {
@@ -364,7 +369,8 @@ export async function casWritePOJUSession(
         `pojuSessionRecords.update expected 1 row, got ${updated}`,
       );
     }
-    await syncSessionCyclesToDbWithDb(db, committedState, ownerKey);
+    const syncCycles = input.cycleSync ?? syncSessionCyclesToDbWithDb;
+    await syncCycles(db, committedState, ownerKey);
   };
 
   if (typeof window !== "undefined" && typeof db.transaction === "function") {
@@ -406,6 +412,8 @@ export interface MutatePOJUSessionOptions {
   casWrite?: typeof casWritePOJUSession;
   /** Test-only: forwarded to casWritePOJUSession.encrypt (P3-70). */
   encrypt?: typeof encryptJson;
+  /** Test-only: forwarded to casWritePOJUSession.cycleSync (P3-71). */
+  cycleSync?: typeof syncSessionCyclesToDbWithDb;
 }
 
 async function defaultLoad(
@@ -491,6 +499,7 @@ export async function mutatePOJUSession(
           ? { generation_base_revision: mutation.generation_base_revision }
           : {}),
         ...(opts.encrypt ? { encrypt: opts.encrypt } : {}),
+        ...(opts.cycleSync ? { cycleSync: opts.cycleSync } : {}),
       });
     } catch (err) {
       if (isSessionCasError(err) && err.code === SESSION_CAS_CONFLICT && attempt <= maxRetries) {
