@@ -184,6 +184,9 @@ export async function createPOJUSession(input: {
     last_interaction_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
     unlock_status: "preview",
+    generation_task_contexts: [],
+    generation_registry: [],
+    generation_operation_bindings: [],
   };
 
   // Phase 3 S1 W1 — create-if-absent; dual revision init 0; never overwrite.
@@ -238,6 +241,13 @@ export async function loadPOJUSession(sessionId: string): Promise<POJUSessionSta
   // Must NOT return silent null (Contract §3.4 / §7.5 step 3 on read).
   resolveRevisionMirror(row, raw);
   const withCycles = ensureSessionCycles(raw);
+  // Phase 3 S2 — hydrate Generation arrays (Contract §3.2 defaults).
+  if (!Array.isArray(withCycles.generation_task_contexts)) withCycles.generation_task_contexts = [];
+  if (!Array.isArray(withCycles.generation_registry)) withCycles.generation_registry = [];
+  if (!Array.isArray(withCycles.generation_operation_bindings)) {
+    withCycles.generation_operation_bindings = [];
+  }
+
   // Phase 2 C1 restore: DC is authority; hydrate durable idempotency keys.
   return applyDecisionContextRestore(withCycles);
 }

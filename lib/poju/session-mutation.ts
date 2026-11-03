@@ -54,6 +54,11 @@ export interface SessionMutation {
    * - `false`: never bump (Path C / non-DC)
    */
   bump_dc?: boolean | "auto";
+  /**
+   * Phase 3 S2 — Path A / pending_create DC base gate (Contract §6.3 step 8 / §7.3).
+   * Passed through to casWritePOJUSession; mismatch → GENERATION_BASE_STALE.
+   */
+  generation_base_revision?: number;
 }
 
 export class SessionCasError extends Error {
@@ -473,6 +478,9 @@ export async function mutatePOJUSession(
         expected_session_revision: mirror.session_revision,
         expected_dc_write_revision: mirror.dc_write_revision,
         bump_dc_write_revision: bumpDc,
+        ...(mutation.generation_base_revision !== undefined
+          ? { generation_base_revision: mutation.generation_base_revision }
+          : {}),
       });
     } catch (err) {
       if (isSessionCasError(err) && err.code === SESSION_CAS_CONFLICT && attempt <= maxRetries) {

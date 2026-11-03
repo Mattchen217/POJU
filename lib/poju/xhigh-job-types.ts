@@ -151,6 +151,15 @@ export interface PojuXhighJob {
   session_id: string;
   locale: string;
   status: PojuXhighJobStatus;
+  /**
+   * Phase 3 S2 — create identity for Job recovery (Contract §22 / Mapping §2.4 / S0).
+   * Persisted inside the job record BEFORE ack; authority for reverse lookup.
+   */
+  client_task_id?: string;
+  /** Optional generation identity mirrors (best-effort; Job record is authority). */
+  generation_type?: "call_a_hypothesis" | "call_b_dir";
+  fingerprint?: string;
+  fingerprint_version?: string;
   /** Streamed LLM JSON body (progress + final parse source). */
   accumulated_content: string;
   /** Phase-4 pipeline progress — which stage is running / last finished. */
@@ -202,6 +211,15 @@ export function xhighSessionLockKey(phase: PojuXhighJobPhase, session_id: string
 
 export function xhighSessionLatestKey(phase: PojuXhighJobPhase, session_id: string): string {
   return `poju-xhigh:latest:${phase}:${session_id}`;
+}
+
+/** Rebuildable (non-authoritative) index — Mapping §2.4 / S0 recovery. */
+export function xhighClientTaskKey(
+  phase: PojuXhighJobPhase,
+  session_id: string,
+  client_task_id: string,
+): string {
+  return `poju-xhigh:client_task:${phase}:${session_id}:${client_task_id}`;
 }
 
 export function isFinalDeliveryJobInput(

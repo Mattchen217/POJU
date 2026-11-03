@@ -320,4 +320,17 @@ export interface POJUSessionState {
    * Process-local registry is hydrated from this on load/restore.
    */
   decision_context_idempotency_keys?: string[];
+  /**
+   * Phase 3 S2 — async Generation TaskContext rows (Contract §6).
+   * Hydrate to [] on create/load when absent.
+   */
+  generation_task_contexts?: import("./generation").GenerationTaskContext[];
+  /**
+   * Phase 3 S2 — completed-only Generation Registry (Contract §5.1).
+   */
+  generation_registry?: import("./generation").GenerationRegistryEntry[];
+  /**
+   * Phase 3 S2 — Generation Operation Bindings by idempotency_key (Contract §5.2).
+   */
+  generation_operation_bindings?: import("./generation").GenerationOperationBinding[];
 }

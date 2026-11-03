@@ -38,9 +38,17 @@ export interface PersistSnapshot {
 
 export type PersistBlobWriter = (session: DcSessionSlice) => Promise<void> | void;
 
+export type PersistGuardMode = "idempotent_first" | "generation_guarded";
+
 export interface BeginPersistOptions {
   idempotency_key: string;
   now?: string;
+  /**
+   * Phase 3 S2 / Mapping §4.6:
+   * - idempotent_first (default): Phase 2 key-only early return
+   * - generation_guarded: skip key-only early return so collision/Path A/B/C run first
+   */
+  mode?: PersistGuardMode;
 }
 
 export interface PersistTransaction {
@@ -119,7 +127,8 @@ export function beginPersistTransaction(
   current: DcSessionSlice,
   opts: BeginPersistOptions,
 ): PersistTransaction | null {
-  if (hasCompletedKey(current, opts.idempotency_key)) {
+  // Mapping §4.6 — generation_guarded must not key-skip before collision checks.
+  if (opts.mode !== "generation_guarded" && hasCompletedKey(current, opts.idempotency_key)) {
     return null;
   }
   const snapshot = snapshotSession(current, opts.now);
@@ -173,9 +182,15 @@ export async function commitPersistTransaction(
   opts?: {
     /** When false, skip control-plane presence check (DC-only ops). */
     require_control_plane?: boolean;
+    /** Mapping §4.6 — must match begin mode for Generation. */
+    mode?: PersistGuardMode;
   },
 ): Promise<CommitPersistResult> {
-  if (hasCompletedKey(tx.snapshot.session, tx.idempotency_key)) {
+  // Mapping §4.6 — fix BOTH begin and commit key-only early returns.
+  if (
+    opts?.mode !== "generation_guarded" &&
+    hasCompletedKey(tx.snapshot.session, tx.idempotency_key)
+  ) {
     return {
       session: cloneSlice(tx.snapshot.session),
       committed: false,
