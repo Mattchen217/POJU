@@ -297,4 +297,12 @@ export interface POJUSessionState {
   locked_provider?: string;
   /** 会话首条有效用户消息确定的输出语言；锁定后整段会话不变（语言一致性 + 系统提示词 byte 恒定 → 缓存命中）。 */
   locked_output_locale?: "en" | "es" | "zh" | "fr";
+  /**
+   * Formal Decision Context (Eastern OS Stage1-3). Sole authority for facts/dirs/hypotheses.
+   * agent_v2 dilemma/direction/breakthrough_core remain temporary buffers only.
+   * Phase 1: types + library API only — Gate/Opening/CallA/B/Collecting not wired here.
+   */
+  decision_context?: import("./decision-context").DecisionContext | null;
+  /** Append-only version history for the same context_id (H1 versioning). */
+  decision_context_versions?: import("./decision-context").DecisionContext[];
 }
