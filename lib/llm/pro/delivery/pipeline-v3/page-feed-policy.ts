@@ -19,6 +19,7 @@ import {
   primaryShelfKeyForPage,
   shelfKeysForPage,
 } from "@/lib/llm/pro/delivery/decision-page-bridge";
+import { pageReceivesDecisionContextFeed } from "@/lib/poju/decision-context/dc-page-feed";
 import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 export type PageFeedPhase = "judgment" | "body";
@@ -53,6 +54,12 @@ export type PageFeedFlags = {
   primary_backup_hint: boolean;
   /** 正文步：action_brief / P3 摘录 */
   upstream_action_excerpt: boolean;
+  /**
+   * Product Stage 4 / S1 — formal frozen Decision Context projection.
+   * True for faces in STAGE4_DC_FEED_PAGES on body phase when DC snapshot is available upstream.
+   * Chart matrix (sliceForPage) stays separate; DC is a parallel formal channel.
+   */
+  decision_context: boolean;
 };
 
 export type PageFeedPathOpts = {
@@ -75,6 +82,7 @@ const BASE: PageFeedFlags = {
   structured_inventory: true,
   primary_backup_hint: false,
   upstream_action_excerpt: false,
+  decision_context: false,
 };
 
 function isDyadPath(opts?: PageFeedPathOpts): boolean {
@@ -133,6 +141,18 @@ function segmentForFeedKey(key: DeliverySegmentKey | DecisionPageId): DeliverySe
   return key;
 }
 
+function withDecisionContextFlag(
+  flags: PageFeedFlags,
+  key: DeliverySegmentKey | DecisionPageId,
+  phase: PageFeedPhase,
+): PageFeedFlags {
+  // Formal DC is a body-phase formal channel for Stage4 faces (not judgment chart slice).
+  const pageHint = isContentPageId(String(key)) ? String(key) : String(key);
+  const dc =
+    phase === "body" && pageReceivesDecisionContextFeed(pageHint);
+  return { ...flags, decision_context: dc };
+}
+
 export function pageFeedFlags(
   key: DeliverySegmentKey | DecisionPageId,
   phase: PageFeedPhase = "body",
@@ -149,9 +169,16 @@ export function pageFeedFlags(
       risk_fuse: false,
       close_ritual: false,
       structured_inventory: false,
+      decision_context: false,
     };
   }
-  return pageFeedFlagsForSegment(segmentKey, phase, pathOpts);
+  // Prefer face id when caller passed 01–08 directly.
+  const faceKey = isContentPageId(String(key)) ? (key as DecisionPageId) : segmentKey;
+  return withDecisionContextFlag(
+    pageFeedFlagsForSegment(segmentKey, phase, pathOpts),
+    faceKey,
+    phase,
+  );
 }
 
 /** 一页书架脸下每个内部键的喂料旗标。06 含近步和 06-C，08 含风险和收束。 */

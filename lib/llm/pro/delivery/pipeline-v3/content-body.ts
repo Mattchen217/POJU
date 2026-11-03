@@ -557,7 +557,10 @@ export async function runContentBodyGenerate(input: {
   if (!faceNative && input.key === "self_regulation") {
     feedParts = scrubP4BodyFeedPriming(feedParts);
   }
+  // S1: include Formal DC in user_feed so Lab call_trace ① matches model prompt.
+  const dcBlock = input.decision_context_feed?.trim() || "";
   const userFeed = [
+    dcBlock,
     feedParts,
     input.acceptance_corrective?.trim() || "",
   ]
@@ -578,6 +581,7 @@ export async function runContentBodyGenerate(input: {
     book_judgment_pack_block: input.book_judgment_pack_block,
     user_feed: userFeed,
     zfpOmitted,
+    // Already folded into userFeed for call-trace parity; keep param for face stub too.
     decision_context_feed: input.decision_context_feed,
   });
 

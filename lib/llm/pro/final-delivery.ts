@@ -657,6 +657,12 @@ export async function createFinalDeliveryJobFromApi(input: {
   dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
   joint_decision?: boolean | null;
   joint_pass_ref?: string | null;
+  /** Product Stage 4 / S1 — frozen DC for PageFeed (optional until Freeze wired). */
+  decision_context?: import("@/lib/poju/decision-context").DecisionContext | null;
+  decision_context_versions?: import("@/lib/poju/decision-context").DecisionContext[] | null;
+  decision_context_binding?: import("@/lib/poju/decision-context").DecisionContextBinding | null;
+  decision_context_snapshot?: import("@/lib/poju/decision-context").DecisionContext | null;
+  require_decision_context?: boolean;
 }): Promise<{ job_id: string; already_complete: boolean; result?: FinalDeliveryResult }> {
   if (typeof window === "undefined") throw new Error("createFinalDeliveryJobFromApi is browser-only");
 
@@ -954,6 +960,9 @@ export async function runFinalDeliveryForSession(
       dyad_matrix_pack: awaitingSession.dyad_matrix_pack ?? null,
       joint_decision: awaitingSession.joint_decision === true,
       joint_pass_ref: awaitingSession.joint_pass_ref ?? null,
+      // S1: pass frozen DC when session already has it (Freeze→Delivery soft path).
+      decision_context: awaitingSession.decision_context ?? null,
+      decision_context_versions: awaitingSession.decision_context_versions ?? null,
     });
   } catch (e) {
     const cleared: POJUSessionState = { ...awaitingSession, pending_delivery_job_id: null };

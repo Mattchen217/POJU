@@ -1500,6 +1500,7 @@ async function executeV3(
           : "thesis",
       /** Lab/macro: one main_delivery per /run HTTP (fresh 300s). One-shot only. */
       single_provider_call: true,
+      decision_context_snapshot: lab.source.decision_context_snapshot ?? null,
     });
 
     if (!generated.ok) {
@@ -2288,6 +2289,12 @@ async function executeV3(
           has_call_trace: Boolean(body.call_trace),
           provider_escape_used: escapeArmedBody,
           acceptance_retry_used: acceptanceArmedBody,
+          decision_context_feed_present: Boolean(dcFeed),
+          decision_context_binding: lab.source.decision_context_binding ?? null,
+          decision_context_hash:
+            lab.source.decision_context_binding?.context_hash ??
+            lab.source.decision_context_snapshot?.content_hash ??
+            null,
         },
         raw_model_output: body.last_raw_text
           ? { _raw_text: body.last_raw_text }
@@ -2498,6 +2505,12 @@ async function executeV3(
           : "shape_only_human",
         surface_deferred: surfaceDeferred,
         acceptance_retry_used: acceptanceArmedBody,
+        decision_context_feed_present: Boolean(dcFeed),
+        decision_context_binding: lab.source.decision_context_binding ?? null,
+        decision_context_hash:
+          lab.source.decision_context_binding?.context_hash ??
+          lab.source.decision_context_snapshot?.content_hash ??
+          null,
         prompt_chars: {
           system: body.call_trace.system.length,
           user: body.call_trace.user.length,

@@ -24,6 +24,9 @@ type CreateBody = {
   /** full_pipeline = Stage1–3 chat then unlock delivery; omit = delivery-only. */
   mode?: "delivery_only" | "full_pipeline";
   selected_stored_profile_id?: string | null;
+  /** Product Stage 4 / S1 — optional frozen Decision Context for PageFeed. */
+  decision_context_binding?: LabSource["decision_context_binding"];
+  decision_context_snapshot?: LabSource["decision_context_snapshot"];
 };
 
 export async function POST(req: Request) {
@@ -89,6 +92,16 @@ export async function POST(req: Request) {
             : body.question_category === null
               ? null
               : undefined,
+        decision_context_binding:
+          body.decision_context_binding &&
+          typeof body.decision_context_binding === "object"
+            ? body.decision_context_binding
+            : null,
+        decision_context_snapshot:
+          body.decision_context_snapshot &&
+          typeof body.decision_context_snapshot === "object"
+            ? body.decision_context_snapshot
+            : null,
       },
     });
     await appendLabAudit({

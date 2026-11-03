@@ -82,6 +82,12 @@ export function labPublicView(lab: DeliveryLabSession) {
       base_analysis_present: lab.source.base_analysis != null,
       structured_present: Boolean(structured),
       pivot_chart_path: lab.source.pivot_chart_path ?? null,
+      /** S1/S3 — binding only (no full DC snapshot in public view). */
+      decision_context_binding: lab.source.decision_context_binding ?? null,
+      has_decision_context_snapshot: Boolean(lab.source.decision_context_snapshot),
+      decision_context_status: lab.source.decision_context_snapshot?.status ?? null,
+      decision_context_delivery_mode:
+        lab.source.decision_context_snapshot?.delivery_mode ?? null,
     },
     step_defs: defs,
     ...(() => {
