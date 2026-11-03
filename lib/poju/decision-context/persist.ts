@@ -18,6 +18,8 @@ export class PersistError extends Error {
 export type ControlPlaneSlice = Record<string, unknown>;
 
 export interface DcSessionSlice {
+  /** Scopes process-local idempotency; must be set for cross-session isolation. */
+  session_id?: string;
   decision_context?: DecisionContext | null;
   decision_context_versions?: DecisionContext[];
   /**
@@ -45,14 +47,34 @@ export interface PersistTransaction {
   readonly idempotency_key: string;
   readonly snapshot: PersistSnapshot;
   working: DcSessionSlice;
-  /** Process-local completed keys (also mirrored into durable slice on commit). */
+  /** Session-scoped process-local completed keys (also mirrored into durable slice on commit). */
   readonly completed_keys: Set<string>;
 }
 
-const globalCompletedKeys = new Set<string>();
+/**
+ * Process-local completed keys scoped by session_id.
+ * Never share keys across sessions — isolation is non-negotiable.
+ * Missing session_id collapses to "__anon__" (unit-test / legacy only).
+ */
+const completedKeysBySession = new Map<string, Set<string>>();
+
+function scopeSessionId(sessionId: string | undefined | null): string {
+  return typeof sessionId === "string" && sessionId.trim() ? sessionId.trim() : "__anon__";
+}
+
+function getSessionCompletedKeys(sessionId: string | undefined | null): Set<string> {
+  const id = scopeSessionId(sessionId);
+  let set = completedKeysBySession.get(id);
+  if (!set) {
+    set = new Set<string>();
+    completedKeysBySession.set(id, set);
+  }
+  return set;
+}
 
 function cloneSlice(session: DcSessionSlice): DcSessionSlice {
   return {
+    session_id: session.session_id,
     decision_context: session.decision_context
       ? (JSON.parse(JSON.stringify(session.decision_context)) as DecisionContext)
       : session.decision_context === null
@@ -71,7 +93,7 @@ function cloneSlice(session: DcSessionSlice): DcSessionSlice {
 }
 
 function hasCompletedKey(session: DcSessionSlice, key: string): boolean {
-  if (globalCompletedKeys.has(key)) return true;
+  if (getSessionCompletedKeys(session.session_id).has(key)) return true;
   return (session.decision_context_idempotency_keys ?? []).includes(key);
 }
 
@@ -90,8 +112,8 @@ export function snapshotSession(session: DcSessionSlice, now?: string): PersistS
 }
 
 /**
- * Begin a C1 transaction. If idempotency_key already completed (process-local
- * OR durable on the session slice), returns null — caller must no-op.
+ * Begin a C1 transaction. If idempotency_key already completed (session-scoped
+ * process-local OR durable on the session slice), returns null — caller must no-op.
  */
 export function beginPersistTransaction(
   current: DcSessionSlice,
@@ -105,7 +127,7 @@ export function beginPersistTransaction(
     idempotency_key: opts.idempotency_key,
     snapshot,
     working: cloneSlice(current),
-    completed_keys: globalCompletedKeys,
+    completed_keys: getSessionCompletedKeys(current.session_id),
   };
 }
 
@@ -153,7 +175,7 @@ export async function commitPersistTransaction(
     require_control_plane?: boolean;
   },
 ): Promise<CommitPersistResult> {
-  if (hasCompletedKey(tx.snapshot.session, tx.idempotency_key) || globalCompletedKeys.has(tx.idempotency_key)) {
+  if (hasCompletedKey(tx.snapshot.session, tx.idempotency_key)) {
     return {
       session: cloneSlice(tx.snapshot.session),
       committed: false,
@@ -174,7 +196,9 @@ export async function commitPersistTransaction(
 
     stampDurableKey(tx.working, tx.idempotency_key);
     await writeBlob(cloneSlice(tx.working));
-    globalCompletedKeys.add(tx.idempotency_key);
+    getSessionCompletedKeys(tx.working.session_id ?? tx.snapshot.session.session_id).add(
+      tx.idempotency_key,
+    );
     return {
       session: cloneSlice(tx.working),
       committed: true,
@@ -200,6 +224,8 @@ export function rollbackToSnapshot(snapshot: PersistSnapshot): DcSessionSlice {
  * Restore authority: persisted DC wins; agent_v2 buffers must not overwrite DC.
  */
 export function restoreDecisionContextAuthority(input: {
+  /** Required for correct session-scoped hydrate; omit only in anon unit tests. */
+  session_id?: string;
   persisted_dc?: DecisionContext | null;
   persisted_versions?: DecisionContext[];
   persisted_idempotency_keys?: string[];
@@ -217,7 +243,7 @@ export function restoreDecisionContextAuthority(input: {
   ignored_buffers: boolean;
 } {
   if (input.persisted_idempotency_keys?.length) {
-    hydratePersistIdempotencyFromKeys(input.persisted_idempotency_keys);
+    hydratePersistIdempotencyFromKeys(input.session_id, input.persisted_idempotency_keys);
   }
   return {
     decision_context: input.persisted_dc,
@@ -229,22 +255,30 @@ export function restoreDecisionContextAuthority(input: {
   };
 }
 
-/** Rehydrate process-local idempotency registry from a durable session field. */
-export function hydratePersistIdempotencyFromKeys(keys: string[] | undefined | null): void {
+/**
+ * Rehydrate session-scoped process-local idempotency registry from durable keys.
+ * Only the given session_id's bucket is updated — never a process-global dump.
+ */
+export function hydratePersistIdempotencyFromKeys(
+  sessionId: string | undefined | null,
+  keys: string[] | undefined | null,
+): void {
+  const set = getSessionCompletedKeys(sessionId);
   for (const key of keys ?? []) {
     if (typeof key === "string" && key.trim()) {
-      globalCompletedKeys.add(key);
+      set.add(key);
     }
   }
 }
 
-/** Test helper — clear process-local idempotency registry. */
+/** Test helper — clear all session-scoped process-local idempotency registries. */
 export function __resetPersistIdempotencyForTests(): void {
-  globalCompletedKeys.clear();
+  completedKeysBySession.clear();
 }
 
 /** Extract DC persist slice from a session-shaped object (no agent buffer authority). */
 export function extractDcSessionSlice(session: {
+  session_id?: string;
   decision_context?: DecisionContext | null;
   decision_context_versions?: DecisionContext[];
   decision_context_idempotency_keys?: string[];
@@ -258,6 +292,7 @@ export function extractDcSessionSlice(session: {
       ? ({ current_phase: session.agent_v2.current_phase } as ControlPlaneSlice)
       : undefined);
   return cloneSlice({
+    session_id: session.session_id,
     decision_context: session.decision_context,
     decision_context_versions: session.decision_context_versions,
     decision_context_idempotency_keys: session.decision_context_idempotency_keys,

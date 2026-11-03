@@ -557,7 +557,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   // Restore authority is applied inside loadPOJUSession / applyDecisionContextRestore —
   // do not rebuild DC from agent_v2 buffers here.
   useEffect(() => {
-    hydratePersistIdempotencyFromKeys(session.decision_context_idempotency_keys);
+    hydratePersistIdempotencyFromKeys(session.session_id, session.decision_context_idempotency_keys);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- identity + durable keys only
   }, [session.session_id, session.decision_context_idempotency_keys]);
 

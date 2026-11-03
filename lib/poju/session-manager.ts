@@ -52,6 +52,7 @@ function deepCloneSession(state: POJUSessionState): POJUSessionState {
  */
 export function applyDecisionContextRestore(state: POJUSessionState): POJUSessionState {
   const restored = restoreDecisionContextAuthority({
+    session_id: state.session_id,
     persisted_dc: state.decision_context,
     persisted_versions: state.decision_context_versions,
     persisted_idempotency_keys: state.decision_context_idempotency_keys,
@@ -344,7 +345,10 @@ export async function commitDecisionContextChange(
   input: CommitDecisionContextChangeInput,
 ): Promise<CommitDecisionContextChangeResult> {
   const memorySnapshot = deepCloneSession(input.session);
-  hydratePersistIdempotencyFromKeys(input.session.decision_context_idempotency_keys);
+  hydratePersistIdempotencyFromKeys(
+    input.session.session_id,
+    input.session.decision_context_idempotency_keys,
+  );
 
   const slice = extractDcSessionSlice(input.session);
   const tx = beginPersistTransaction(slice, {
