@@ -9,6 +9,7 @@
     "dev": "next dev --webpack",
     "prebuild": "node scripts/build-v2-landing-assets.mjs",
     "build": "next build --webpack",
+    "postbuild": "node scripts/assert-next-routes-manifest.mjs",
     "start": "next start",
     "start:public": "next start -H 0.0.0.0 -p 3000",
     "start:standalone": "node scripts/run-standalone.cjs",
