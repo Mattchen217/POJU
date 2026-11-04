@@ -34,6 +34,8 @@ Decision Context (DC) exists as a formal data model with strong pure-function to
 
 **Intake 2.0 must replace the product entry** (`handleUserMessage` phase spine + Call A/B as agenda factory), while **reusing** local Bazi/Ziwei calc, glossary, DC pure functions, report feed matrix, and much of the chat UI shell.
 
+**Follow-up enrichment (same day):** Parallel read-only deep-dives reconciled below — UI send path naming, production auto Call B, DC Conflict/Constraint gaps, Ziwei closed-set in breakthrough (not collecting phases), production delivery ZFP hydration gap. See §19.
+
 ---
 
 ## 1. Audit baseline Commit SHA
@@ -109,9 +111,10 @@ Source: `lib/poju/agent-state.ts` + `lib/poju/state-machine.ts:32–38`
 
 **Client production path**
 
-1. `components/poju/POJUChatUI.tsx` imports `handleUserMessage` from `lib/poju/phase-router.ts:7`  
-2. Send path calls `handleUserMessage({ session, userMessage, locale, ... })` (e.g. ~L1279, ~L3309, ~L3951)  
-3. `handleUserMessage` — `lib/poju/agent.ts:782`  
+1. `components/poju/POJUChatUI.tsx` — `handlePojuSend` (~L1771) → `runUserTurn` (~L1224)  
+2. Imports `handleUserMessage` from `lib/poju/phase-router.ts:7`  
+3. `runUserTurn` calls `handleUserMessage({ session, userMessage, locale, userAlreadyAppended: true, ... })` (~L1279+)  
+4. `handleUserMessage` — `lib/poju/agent.ts:782`  
 4. Loads profile/base_analysis (`loadSessionProfileBundle`) then  
    - browser: `callLLMViaAPI` → `fetch("/api/poju/chat")` (`agent.ts` ~L1545–L1616)  
    - LAB: `server_invoke` → `callPOJULLMDirect` (`agent.ts` ~L959–L970, ~L1471)  
@@ -149,6 +152,8 @@ Rollback: `ENABLE_POJU_V6=false` → `callOpeningPhase` (v5). Flag: `lib/poju/po
 |---|---|---|---|
 | **Call A** | User confirms understanding gate | `startSegment2AfterGateConfirm` `phases/segment2/control.ts:227` | `createSegment2XhighJob` `:126` → xhigh job runner |
 | **Call B** | After Call A report success | agenda bridge finalize / `createSegment2AgendaJob` `:645` | Call B maps agenda + `first_question` |
+
+**Production vs Lab:** Production UI **auto-starts Call B** after Call A poll success (`POJUChatUI.tsx` ~L2735–2788 → `createSegment2AgendaJob`). Lab parks at `awaiting_agenda` and waits for ops “Next”. APIs: `POST /api/poju/breakthrough-core` (Call A), `POST /api/poju/breakthrough-core/agenda` (Call B). Agenda prompt/parse: `buildAgendaBridgePrompt` / `parseSanitizeAgendaBridge` in `lib/llm/deepseek/breakthrough-core.ts`.
 
 Gate confirm path (`control.ts:236–305`):
 
@@ -303,9 +308,9 @@ Authoritative buffers today:
 |---|---|---|
 | Fact (opening) | `seedDecisionContextFromOpening` via user statements | unverified / user_asserted |
 | Fact (collecting) | `applyCollectingUserTurnToSessionDc` `:240` → `persistCollectingUserTurnDc` | never auto-confirm |
-| Fact confirm | `confirmFact` in `confirmation-event.ts:552` | Confirmation Event path |
+| Fact confirm | `confirmFact` → `applyFactConfirmToDc` (`confirmation-event.ts:552+`) | Sets **`user_confirmed` only** — does **not** flip `status` to `confirmed` |
 | Hypothesis | `applyCallAToSessionDc` / `hypothesesFromBreakthroughCore` | Call A only; never Facts |
-| Constraint | types + confirmation helpers | **VERIFY** how often chat writes constraints today |
+| Constraint | Opening seed only (`opening-seed.ts` ~244–274); `confirmConstraint` | **No collecting Constraint writer** in production lifecycle |
 | DIR | `dirsFromAgenda` / `applyCallBToSessionDc` | Call B agenda → DIR seeds |
 
 ### Q3–Q4. DIR generation & aggregation
@@ -328,6 +333,8 @@ Authoritative buffers today:
 | Freeze conversion | `markOpenConflictsUnresolvedInFinal` | used by `freeze.ts:79` |
 
 Preferred-path vs boundary: `conflictAffectsPreferredPath` in `stop-criteria.ts:50`.
+
+**Production gap:** `production-dc-lifecycle.ts` **never appends** to `dc.conflicts`. Conflict library is complete; Intake 2.0 must own detection → `openConflict` wiring.
 
 ### Q6. Freeze real call conditions
 
@@ -432,8 +439,8 @@ flowchart TD
 
 | # | Answer | Evidence |
 |---|---|---|
-| 1 | **Call B** generates agenda | `xhigh-job-runner.ts` Call B mapping; `finalizeSegment2AgendaBridgeSuccess` |
-| 2 | **Mostly one-shot** after Call A; regenerate via `startSegment2AgendaRegenerate` / agenda jobs | segment2 control |
+| 1 | **Call B** generates agenda | `buildAgendaBridgePrompt` + `parseSanitizeAgendaBridge` (`breakthrough-core.ts`); `finalizeSegment2AgendaBridgeSuccess`; size typically 5–6, hard cap 6 |
+| 2 | **One-shot by contract** (`agenda_generated: true` must not regenerate); regenerate only via explicit agenda regenerate / job retry while `!agenda_generated` | `agent-state.ts` ~L540–543; segment2 control |
 | 3 | Each round: `selectCurrentAgendaFocus` + collecting LLM | `investigation-agenda.ts:496`; `collecting-phase-v6.ts` |
 | 4 | `status: covered/partial` + `completed_in_this_turn` + `captureAgendaAnswer` | agenda + question-status clamp |
 | 5 | `responseReasksCoveredAgendaItem` + pullback / stale catchup blocks | `investigation-agenda.ts:593`, `:479` |
@@ -450,9 +457,10 @@ flowchart TD
 | Definition | `question-status.ts:36–41` | `looksLikeCantProvideAnswer` && prior cant-provide count ≥ 1 |
 | Clamp (authoritative) | `question-status.ts:151–154` | Force `question_status="satisfied"`, clear session_action; may write `completed_in_this_turn` |
 | Collecting v6 mirror | `collecting-phase-v6.ts:960–967` | Same force before return payload |
+| Parallel (no direct call) | `state-machine.ts` ~L404–415, L504–506 | Same focus + 2× cant-provide → `qualityCoverFocus` → mark **covered** even if model omitted completed labels |
 | Unit test | `scripts/test-poju-phase3-cover-alignment.ts:51` | Asserts second cant-provide → true |
 
-**Actual product effect:** On the **same agenda focus**, the second “答不了/无法回答/…” style reply is treated as **covered/satisfied**, advancing agenda. This is intentional hard stop-loss, **not** a full information completion signal. Intake 2.0 readiness must **not** equate this with “direction known.”
+**Actual product effect:** On the **same agenda focus**, the second “答不了/无法回答/…” style reply is treated as **covered/satisfied**, advancing agenda. This is intentional hard stop-loss, **not** a full information completion signal. Intake 2.0 readiness must **not** equate this with “direction known.” Residual risk: `CANT_PROVIDE_ANSWER_RE` false positives (e.g. phrases like `目前没有` inside otherwise substantive answers).
 
 ---
 
@@ -495,12 +503,14 @@ flowchart LR
   Lab[ensureLabZiweiFactPack]
   Del[delivery page-feed ZFP / pipeline-v3]
   ChatPrompt[chat phase prompts]
+  CA[Call A/B closed-set block]
 
   Birth --> Clock --> Iztro --> ZFP
   Birth --> Pat --> ZFP
   ZFP --> Disp
   ZFP --> Lab --> Del
   ZFP -.->|NOT in lib/llm/phases| ChatPrompt
+  ZFP --> CA
 ```
 
 | # | Answer | Evidence |
@@ -510,11 +520,13 @@ flowchart LR
 | 5 | Fields: `topicPalace`, `sihua`, `daxian`, `mingShen`, `otherChart:null`, `patternHits`, `palaces`, `source` | `fact-pack.ts:99–109` |
 | 6 | `source.version` (iztro version / patterns commit), `clock`, `asOf`, `solarDate`, `timeIndex` | `ZiweiFactSource` `:83–97` |
 | 7 | **Yes in report/Lab delivery** (ZFP allowlists in page-feed-matrix; pipeline-v3 body) | `page-feed-matrix.ts`; `content-body.ts` |
-| 8 | **No in chat phase modules** — grep of `lib/llm/phases` finds no ziwei inject | verified |
+| 8 | **Not in `lib/llm/phases` collecting/opening.** Segment-2 Call A/B injects **closed-set** text via `ziweiClosedSetFromBirth` / `ziwei_closed_set` in `breakthrough-core` + `/api/poju/breakthrough-core` — not full FactPack | phases empty; breakthrough-core wired |
 | 9 | **No unified Personal Analysis Profile** object spanning Bazi+Ziwei for Intake | separate structured + ZFP |
 | 10 | Intake 2.0 should read **ProfileStructured** + **ZiweiFactPack** (display projection for prompts) via shared Personal Analysis loader — do not invent second calc | recommendation |
 
-**Capability:** complete. **Chat integration:** incomplete. **Delivery integration:** present (esp. Lab / v3 feeds).
+**Bazi numeric start:** `getBaziChart` (`shunshi-bazi-core`) via `calculateProfileWithShunshi` / `lib/calculations/shunshi-adapter.ts` → `buildProfileStructured`.
+
+**Capability:** complete. **Chat integration:** closed-set at Call A/B only. **Delivery integration:** Lab/v3 slice machinery yes; **default production `task-context` dispatch does not hydrate `ziwei_fact_pack`** into page feeds unless another path supplies it (`dispatch/task-context.ts` ~L360–398).
 
 ---
 
@@ -672,10 +684,13 @@ From `PAGE_UNION_ALLOWLISTS` (`page-feed-matrix.ts:96–153`): each page mixes *
 2. **Call A/B DC persist gap:** `persistCallA/BDcOnSession` unused; in-memory apply may be lost or non-idempotent across refresh depending on session save timing.  
 3. **Second cant-provide → satisfied** can mark DIR-relevant agenda covered without real information — dangerous if reused as readiness.  
 4. **Stale “v6 shadow” comments** risk wrong rollback decisions.  
-5. **Ziwei absent from chat prompts** while present in report feeds — Intake personal insight cannot rely on chat model “seeing” Ziwei today.  
+5. **Ziwei:** collecting phases have no ZFP; Call A/B get closed-set only; production delivery dispatch often omits full `ziwei_fact_pack` — personal insight + report ZFP are incomplete on default path.  
 6. **Collecting stop ≠ DC sufficiency:** turn/agenda gates (`collection-progress`, `canTransitionToConfirmation`) diverge from `evaluateDecisionSufficiency`.  
 7. **Freeze blocked on stall/max-turns** while product may still offer degraded delivery — Intake readiness must keep this distinction explicit.  
-8. **Lab vs production paths** (`server_invoke`, Lab ziwei ensure) can hide missing production wiring.
+8. **Lab vs production paths** (`server_invoke`, Lab ziwei ensure, manual Call B) can hide missing production wiring.  
+9. **Conflicts never written in production lifecycle** — sufficiency/freeze conflict gates are mostly dormant.  
+10. **Fact confirm does not set `status: "confirmed"`** — DIR aggregation may under-count confirmed facts if it keys on `status`.  
+11. **No collecting Constraint writer** after Opening seed.
 
 ---
 
@@ -732,11 +747,35 @@ Reuse existing TypeScript types from `decision-context/types.ts` wherever possib
 |---|---|
 | Whether every production session save after Call A/B finalize reliably persists in-memory DC | Need runtime/session-manager trace beyond static call graph |
 | How often `confirmFact` / Opening Anchor confirm run in live chat UX | Modules exist; chat UX wiring depth not fully traced end-to-end |
-| Constraint write frequency in collecting | Types + helpers exist; production writers sparse in grep |
 | Exact production `REQUIRE_DECISION_CONTEXT` / freeze flag defaults on Vercel | Env-dependent (`require-dc-flag.ts`) |
-| Whether any chat prompt path injects Ziwei via non-`phases/` side door | No hits under `lib/llm/phases`; other paths **VERIFY** |
+| Which non-Lab production paths (if any) hydrate `ziwei_fact_pack` into delivery `promptOpts` | `task-context` omits; need full DAG caller graph |
 | Full list of Segment-2 silent retry ceilings vs product SLA | Constants in segment2 control; ops behavior **VERIFY** |
-| Personal Pattern Insight copy/UI experiments outside main chat | Not found in components; may exist only in plans |
+
+**Resolved from follow-up deep-dives (no longer VERIFY):**
+
+| Item | Resolution |
+|---|---|
+| Ziwei outside `lib/llm/phases` | **Yes** — Call A/B closed-set via `breakthrough-core` / breakthrough-core API |
+| Collecting Constraint writers | **None** — Opening seed only |
+| Conflict production writers | **None** — library only |
+| Personal Pattern Insight UI | **Not shipped** — plans/docs only; closest is report module / matrix chips |
+| Production Call B trigger | **Auto after Call A** in `POJUChatUI` (Lab manual) |
+
+---
+
+## 19. Follow-up reconciliation log
+
+Deep-dive agents (read-only) whose findings were folded into this document:
+
+| Focus | Agent |
+|---|---|
+| Agent / Call A–B / UI entry | [Audit Agent call chain](1122593d-b129-45dd-81fb-42ea0958d917) |
+| Decision Context lifecycle | [Audit Decision Context](971f6f70-226b-4bac-aefc-61b17c7d5906) |
+| Agenda / cant-provide | [Audit Agenda & questions](fd70c56e-2287-4655-8f86-e5183c1eacb2) |
+| Prompts / terms | [Audit prompts & terms](001c3dea-f091-4d2c-a550-84b962ee1570) |
+| Bazi / Ziwei / UI / report | [Audit Bazi Ziwei UI report](cac838d4-504f-4a66-971e-cf916c8de81a) |
+
+No production code changed in this follow-up.
 
 ---
 
