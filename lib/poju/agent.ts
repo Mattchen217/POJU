@@ -793,6 +793,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   // Gate free-text = revise in the input (no「补充并修正」chip). Flip phase first so
   // Opening/collecting absorb the content — never re-run an identical gate summary.
+  // After this turn merges updates, force back to the understanding gate when fields
+  // are still complete (model often just says「好」with sufficient=false).
+  let revisingUnderstandingGate = false;
   if (!isSystemMessage && userMessage.trim()) {
     const phase0 =
       normalizeAgentPhase(sessionBase.agent_v2?.current_phase) ??
@@ -804,6 +807,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       );
       if (userMessage.trim() !== understandingGateConfirmButtonLabel(gateLang)) {
         sessionBase = applyUnderstandingGateSupplement(sessionBase);
+        revisingUnderstandingGate = true;
       }
     } else if (
       phase0 === "awaiting_confirmation" &&
@@ -1095,6 +1099,21 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       active_question_state: null,
     };
     workingSession = { ...workingSession, understanding_confirm_held_for_dyad: false };
+  }
+
+  // Stage-1 gate revise: user typed a correction while on the confirm card.
+  // After Opening absorbs it, re-show the deterministic gate (don't leave a lone「好」bubble).
+  if (
+    revisingUnderstandingGate &&
+    (normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) === "opening" &&
+    isUnderstandingComplete(agent_v2) &&
+    resolveSessionHasProfile(workingSession)
+  ) {
+    agent_v2 = {
+      ...agent_v2,
+      current_phase: "awaiting_understanding_confirm",
+      active_question_state: null,
+    };
   }
 
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;

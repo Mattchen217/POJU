@@ -314,6 +314,23 @@ export function LabPipelinePanel({
       rerunTargetKind === "segment2_b" ||
       rerunTargetKind === "synthesis");
 
+  /**「撤销」target — last step or in-flight pending job. */
+  const undoLabel = useMemo(() => {
+    if (pending?.stage === "segment2_a") return "进行中的 Call A";
+    if (pending?.stage === "segment2_b") return "进行中的 Call B";
+    if (pending?.stage === "synthesis") return "进行中的 Synthesis";
+    if (rerunTargetKind === "segment2_a") return "Call A · 分析";
+    if (rerunTargetKind === "segment2_b") return "Call B · 议程+首问";
+    if (rerunTargetKind === "synthesis") return "Synthesis";
+    if (rerunTargetKind === "chat") return "对话";
+    for (let i = turns.length - 1; i >= 0; i--) {
+      const t = turns[i];
+      if (t?.kind === "gate") return `闸门 · ${t.gate?.action ?? "gate"}`;
+    }
+    return null;
+  }, [pending?.stage, rerunTargetKind, turns]);
+  const canUndo = Boolean(undoLabel);
+
   // Auto-open partner birth form when Stage-1 dyad gate appears (ops visibility).
   useEffect(() => {
     if (showDyad) setPartnerFormOpen(true);
@@ -327,6 +344,8 @@ export function LabPipelinePanel({
           <h2 className="text-sm font-medium text-[#f2ca50]">全流程 Pipeline · Stage1–3</h2>
           <p className="mt-1 text-xs text-[#a1a1aa]">
             {view.pipeline_next_hint ?? view.pipeline_cursor ?? "—"}
+            {" · "}
+            走错了点「撤销」退回上一步；「重跑」是同一手再打一遍
           </p>
           <p className="mt-1 font-mono text-[10px] text-[#71717a]">
             cursor={view.pipeline_cursor} · path={view.chat_session?.pivot_chart_path ?? "unset"} ·
@@ -336,6 +355,30 @@ export function LabPipelinePanel({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busy || !canUndo}
+            title={
+              undoLabel
+                ? `撤销上一步：${undoLabel}（内容从聊天消失，回到上一步可继续）`
+                : "没有可撤销的步骤"
+            }
+            onClick={() => {
+              if (!undoLabel) return;
+              if (
+                typeof window !== "undefined" &&
+                !window.confirm(`撤销「${undoLabel}」？左侧对应内容会去掉，回到上一步。`)
+              ) {
+                return;
+              }
+              void postJson(
+                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/chat/undo`,
+              );
+            }}
+            className="rounded border border-red-400/40 px-2 py-1 text-xs text-red-200 disabled:opacity-40"
+          >
+            {undoLabel ? `撤销 · ${undoLabel}` : "撤销"}
+          </button>
           <button
             type="button"
             disabled={busy || !canRerunCurrent}
