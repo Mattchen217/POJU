@@ -70,59 +70,83 @@
 
 ---
 
-## AC2-4 Chart / personal pattern
+## AC2-4 Chart / personal pattern / source-backed DDRs
 
 | ID | Criterion | Pass if |
 |---|---|---|
 | AC2-4.1 | CFP/ZFP field sources named from existing types/PageFeedMatrix | No invented packs |
 | AC2-4.2 | Chart interpretation ≠ confirmed RealityFact | Explicit |
-| AC2-4.3 | Incomplete BaZi/ZiWei handling defined | Blueprint §6 / Topic §5 |
+| AC2-4.3 | Incomplete BaZi/ZiWei handling defined | Blueprint §6; DDR §1.3 / §3.3.1 |
 | AC2-4.4 | No duplicate calc engine proposed | Stated |
+| AC2-4.5 | Empty DIR list never auto-satisfied | DDR §1.1 |
+| AC2-4.6 | DDR-02 uses Product Rule A (CFP mandatory) | DDR-02-ATTRIBUTION row |
+| AC2-4.7 | Gate order formalized | DDR §1.4 |
+
+---
+
+## AC2-5 Source & Gate acceptance tests (required)
+
+All expected outcomes are **documentation-normative** (what the Gate composer must implement). Author self-check vs catalog text.
+
+| # | Given | DDR focus | Expected DDR status | Expected Gate effect |
+|---|---|---|---|---|
+| 1 | CFP `source_ok`; ZFP absent; DDR-03 DIRs empty; explicit no N/A needed | DDR-03 | **`satisfied`** | P2 OK; ZFP absence alone does not block |
+| 2 | CFP `source_absent_not_supplied` + **explicit** N/A evidence | DDR-03 | **`n_a`** | P2 terminal OK; other P0/P1 independent |
+| 3 | Birth/profile expected; CFP `source_calc_failed` | DDR-03 | **`pending`** | Never silent N/A; P2 alone must not block report |
+| 4 | CFP blob present but provenance/hash missing when Blueprint expected hash | DDR-03 | **`pending`** | Unresolved; not `satisfied` / not auto `n_a` |
+| 5 | DDR-02 ordinary DIRs all `known`/`n_a` (≥1 known); CFP missing/failed | DDR-02-ATTRIBUTION | **`pending`** (not satisfied) | **P0 FAIL** (Rule A) |
+| 6 | Any P0 DDR required source missing/unresolved (e.g. DDR-02 CFP) | that P0 | unsatisfied | **FAIL** |
+| 7 | P1 DDR required source missing; ranking impact true (`affects_option_ranking` or DIR ranking or decision_critical) | that P1 | unsatisfied | **FAIL** |
+| 8 | P1 DDR required source missing; no ranking impact; dangling false; complete L; boundaries recorded | that P1 | unsatisfied | **WARN**-eligible |
+| 9 | P2 optional source missing (ZFP) while required CFP `source_ok` | DDR-03 / DDR-02 | may **`satisfied`** | Optional miss alone does not FAIL |
+| 10 | `required_dir_ids=[]` and no explicit N/A evidence and required source not `source_ok` | DDR-03 | **`pending`** | Empty DIR list ≠ satisfied ≠ auto N/A |
+
+Additional regression (Phase 1 preserved):
 
 | Given | Then |
 |---|---|
-| Missing birth data | DDR-03 N/A; P0 can still PASS |
-| CFP yes, ZFP no | DDR-03 completable; ZFP omitted |
+| Partial dangling on P1 | FAIL (not WARN) |
 | Model writes chart claim as RealityFact confirmed | **Forbidden** |
 
 ---
 
-## AC2-5 Architecture bans
+## AC2-6 Architecture bans
 
 | ID | Criterion | Pass if |
 |---|---|---|
-| AC2-5.1 | No Call A/B as Intake entry | Stated |
-| AC2-5.2 | No legacy Stage 1–4 upgrade-as-Intake | Stated |
-| AC2-5.3 | No Agenda as DIR SoT | Stated |
-| AC2-5.4 | No fixed question list / task table as product design | Topic + Blueprint |
-| AC2-5.5 | No runtime code in Phase 2 | Diff |
-| AC2-5.6 | Independent Intake 2.0 engine | Stated |
+| AC2-6.1 | No Call A/B as Intake entry | Stated |
+| AC2-6.2 | No legacy Stage 1–4 upgrade-as-Intake | Stated |
+| AC2-6.3 | No Agenda as DIR SoT | Stated |
+| AC2-6.4 | No fixed question list / task table as product design | Topic + Blueprint |
+| AC2-6.5 | No runtime code in Phase 2 | Diff |
+| AC2-6.6 | Independent Intake 2.0 engine | Stated |
 
 ---
 
-## AC2-6 Author consistency self-check
+## AC2-7 Author consistency self-check
 
 > Not a substitute for independent product review.
 
 | # | Check | Result |
 |---|---|---|
-| 1 | DDR→DIR refs resolve | **PASS** (manual: 12 DDRs + DDR-03 empty) |
-| 2 | DIR catalog 20 ids; mapping uses 19 + support STAKEHOLDERS | **PASS** |
-| 3 | Pages 01–08 covered; 03 appendix; 07 conditional | **PASS** |
+| 1 | DDR→DIR refs resolve | **PASS** |
+| 2 | DIR catalog 20 ids | **PASS** |
+| 3 | Pages 01–08; 03 appendix; 07 conditional | **PASS** |
 | 4 | P0=6, P1=5, P2=2 | **PASS** |
 | 5 | Blueprint bans live DIR dual SoT | **PASS** |
 | 6 | Phase 1 C1–C5 deviations | **0** |
-| 7 | PageFeedMatrix unmodified | **PASS** (Phase 2 does not edit it) |
-| 8 | Honest gaps listed (classifier, DDR-03 source check) | **PASS** |
+| 7 | PageFeedMatrix unmodified | **PASS** |
+| 8 | Source check + Gate order documented | **PASS** (DDR §1.3–§1.7) |
+| 9 | AC2-5 tests 1–10 unambiguous in catalog | **PASS** (author) |
 
 ---
 
 ## Unresolved issues / trade-offs
 
-1. **DDR-03 source-only Gate check** — Phase 1 DIR rollup insufficient alone; Phase 3 Gate composer must add CFP presence.  
+1. **Runtime** Gate composer implementing §1.4 — Phase 3+ (spec closed).  
 2. **Topic classifier** — design outputs frozen; implementation later.  
-3. **`DIR-STAKEHOLDERS`** — support-only in v1 mapping (not hard-required).  
-4. Runtime confirmFact promotion / FreezeRecord sidecar — still Phase 1 deferred, not solved here.
+3. **`DIR-STAKEHOLDERS`** — support-only in v1 mapping.  
+4. Runtime confirmFact promotion / FreezeRecord sidecar — Phase 1 deferred, unchanged.
 
 ---
 

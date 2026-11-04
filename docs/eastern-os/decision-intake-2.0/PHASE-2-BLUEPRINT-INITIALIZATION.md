@@ -118,13 +118,21 @@ FreezeRecord binds `blueprint_version` + `ddr_version` + `dc_content_hash` (Phas
 
 ---
 
-## 6. Incomplete profile handling
+## 6. Incomplete profile handling (aligned DDR catalog §1.3 / §3.3.1)
 
-| Case | Blueprint / DDR-03 |
-|---|---|
-| Birth data missing | `has_cfp=false`; DDR-03 → applicability N/A with evidence; Gate still can PASS on P0/P1 |
-| BaZi ok, ZiWei missing | `has_zfp=false`; ZFP omitted per PageFeedMatrix; DDR-03 still completable via CFP |
-| Packs present | Hashes recorded for provenance; never copied into RealityFacts |
+| Case | `profile_binding` | DDR-03 | DDR-02-ATTRIBUTION |
+|---|---|---|---|
+| Birth/profile **not supplied** | `has_cfp=false`, reason=`not_supplied` | `n_a` **only** with explicit N/A evidence; else `pending` | CFP required → composed unsatisfied → Gate **P0 FAIL** (paid Intake expects profile for attribution) |
+| Birth supplied, **calc/load failed** | `has_cfp=false`, reason=`calc_failed` | `pending` — **never** silent N/A | `pending` → P0 **FAIL** |
+| CFP present, **hash/provenance missing** when expected | `cfp_hash` null unexpectedly | `pending` | `pending` → P0 **FAIL** |
+| CFP `source_ok`, ZFP absent | `has_zfp=false` | **`satisfied`** (ZFP optional) | **`satisfied`** if DIRs OK (ZFP optional) |
+| Packs present + hashes | `has_cfp/has_zfp` + hashes | May `satisfied` | May `satisfied` if DIRs OK |
+
+Calc packs never become RealityFacts. Blueprint does not store live DIR state.
+
+Gate evaluation order (normative):  
+`DIR Rollup → Required Source Check → Conflict Check → DDR Status → Sufficiency Gate`  
+(see `PHASE-2-DDR-CATALOG.md` §1.4).
 
 ---
 
@@ -140,7 +148,8 @@ Users never see Stage labels; Unified Decision Understanding UI only.
 
 1. Topic classifier implementation = later phase (rules in Topic Applicability are design-time).  
 2. Hash functions for CFP/ZFP reuse existing delivery hash helpers when wired — not reimplemented here.  
-3. No runtime Blueprint engine in Phase 2.
+3. Runtime Gate composer for Required Source Check = Phase 3+ (spec closed in DDR catalog §1.3–§1.6).  
+4. No runtime Blueprint engine in Phase 2.
 
 ---
 

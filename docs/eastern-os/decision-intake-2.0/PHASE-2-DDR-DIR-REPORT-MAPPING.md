@@ -4,7 +4,7 @@
 |---|---|
 | **Baseline** | `main` @ `1f1c111e` |
 | **Sources** | `PHASE-2-DDR-CATALOG.md` · `PHASE-2-DIR-CATALOG.md` · PageFeedMatrix |
-| **Matrix version** | `map_version = 1` |
+| **Matrix version** | `map_version = 1.1` |
 
 ---
 
@@ -14,11 +14,14 @@
 Report Deliverable (page/section)
   → DDR (obligation)
   → DIR ids (definitions → live DC.dirs)
-  → Evidence requirements (roles / sources)
+  → Required sources (CFP/ZFP/…) when declared
+  → Evidence / conflicts
+  → Eval order: DIR Rollup → Required Source Check → Conflict → DDR Status → Sufficiency Gate
   → Frozen DC + FreezeRecord → Final judgment
 ```
 
-Agenda coverage is **audit only**, never sufficiency proof.
+Agenda coverage is **audit only**, never sufficiency proof.  
+Empty `required_dir_ids` never auto-satisfies; see `PHASE-2-DDR-CATALOG.md` §1.1 / §1.4 / §3.3.1.
 
 ---
 
@@ -29,9 +32,9 @@ Agenda coverage is **audit only**, never sufficiency proof.
 | 01 | A | Primary recommendation | `DDR-01-PRIMARY` | P0 | DEF-QUESTION, DEF-OUTCOME, OPT-ON-TABLE, STATUS-QUO | definition, reality_fact, cfp | yes |
 | 01 | B | Hold conditions | `DDR-01-HOLD-CONDITIONS` | P0 | DEF-STAKES, OPT-CONSTRAINTS, TIMING-WINDOW | definition, reality_fact, constraint | yes |
 | 01 | C | Anti-path | `DDR-01-ANTI-PATH` | P0 | OPT-ON-TABLE, DEF-UNACCEPTABLE | definition, reality_fact, conflict | yes |
-| 02 | A/C | Attribution | `DDR-02-ATTRIBUTION` | P0 | DEF-QUESTION, STATUS-QUO, PAST-ATTEMPTS | reality_fact, definition, cfp, zfp? | no |
-| 02 | B | Science bridge | `DDR-02-SCIENCE-BRIDGE` | P1 | DEF-QUESTION, OPT-CONSTRAINTS, VALIDATION-CAPACITY | reality_fact, constraint, boundary | no |
-| 03 | A/B/C | Chart appendix | `DDR-03-CHART-APPENDIX` | P2 | _(none)_ | cfp, zfp? | no |
+| 02 | A/C | Attribution | `DDR-02-ATTRIBUTION` | P0 | DEF-QUESTION, STATUS-QUO, PAST-ATTEMPTS | reality_fact, definition, **cfp required**, zfp optional | no |
+| 02 | B | Science bridge | `DDR-02-SCIENCE-BRIDGE` | P1 | DEF-QUESTION, OPT-CONSTRAINTS, VALIDATION-CAPACITY | reality_fact, constraint, boundary (no CFP req) | no |
+| 03 | A/B/C | Chart appendix | `DDR-03-CHART-APPENDIX` | P2 | _(none)_ | **cfp required**, zfp optional | no |
 | 04 | A/B/C | Blockers | `DDR-04-BLOCKERS` | P1 | OPT-CONSTRAINTS, RISK-TOLERANCE, OPT-IRREV | constraint, reality_fact, conflict | yes |
 | 05 | A/B/C | Ranking | `DDR-05-RANKING` | P0 | OPT-ON-TABLE, DEF-PRIORITIES, DEF-OUTCOME, OPT-CONSTRAINTS | reality_fact, definition, constraint, cfp | yes |
 | 05 | D | Switch/stop | `DDR-05-SWITCH-STOP` | P1 | EXIT-CRITERIA, TIMING-WINDOW, RISK-TOLERANCE | reality_fact, constraint, boundary | yes |
@@ -78,9 +81,10 @@ DIR IDs abbreviated: prefix `DIR-` omitted in table cells for width; full ids in
 1. Every DDR `required_dir_ids` entry **must** exist in DIR catalog (except empty list for `DDR-03` only).  
 2. Every DIR used in §1 must appear in DIR catalog.  
 3. No orphan DIR required for Gate in v1 except optional `DIR-STAKEHOLDERS` (support).  
-4. Page 03 has no DIR requirement — calc sources only.  
-5. Page 07 absent from Blueprint seed when not applicable — **not** dangling.  
-6. PageFeedMatrix page order / responsibilities **unchanged**.
+4. Page 03 has no DIR requirement — **CFP required source** + optional ZFP (§3.3.1). Empty DIR ≠ satisfied.  
+5. `DDR-02-ATTRIBUTION` requires CFP (Rule A); science-bridge does not.  
+6. Page 07 absent from Blueprint seed when not applicable — **not** dangling.  
+7. PageFeedMatrix page order / responsibilities **unchanged**.
 
 ---
 

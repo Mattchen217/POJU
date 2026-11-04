@@ -6,14 +6,14 @@
 | **Baseline** | `main` @ `1f1c111eb58d2aedfe6e79696131896c2f7f0264` (Phase 1 merged) |
 | **PageFeedMatrix** | `.cursor/docs/decision-report/PageFeedMatrix-2026-10-27.md` (locked 2026-10-27) |
 | **Phase 1 authority** | `PHASE-1-DATA-CONTRACT.md` §§3–4 (C3–C4) |
-| **Catalog version** | `ddr_catalog_version = 1` |
+| **Catalog version** | `ddr_catalog_version = 1.1` (remediation: source-backed Gate) |
 
 ---
 
 ## 0. Purpose
 
 This catalog defines **concrete report obligations** (DDR instances) for the locked eight-page report.  
-Live DDR **status** is never stored here; it is **computed** at runtime from `DC.dirs` + blockers per Phase 1 §3.2.
+Live DDR **status** is never stored here; it is **computed** at runtime per §1.3–§1.5 (extends Phase 1 §3.2 DIR rollup with **required source checks**).
 
 **Non-goals:** runtime engine, Call A/B entry, fixed question lists, Agenda-as-sufficiency.
 
@@ -31,23 +31,32 @@ Each DDR definition record:
 | `decision_question` | string (what this deliverable must answer) | yes |
 | `priority` | `P0` \| `P1` \| `P2` | yes |
 | `required_dir_ids` | string[] (refs into DIR catalog) | yes (may be `[]` only if §1.1) |
+| `required_sources` | `{ code, obligation }`[] | yes (may be empty) |
 | `report_page_id` | `01`–`08` | yes |
 | `report_section_id` | segment id (A/B/C/…) | yes |
 | `completion_criteria` | string | yes |
 | `affects_option_ranking` | boolean | yes (Page 05 / Gate P1 path) |
-| `required_evidence_types` | enum[] | yes |
+| `required_evidence_types` | enum[] | yes (legacy alias of sources + fact classes; keep for readability) |
 | `missing_info_handling` | string | yes |
 | `applicability` | rule id / prose | yes |
 | `decision_critical` | boolean | yes (P1 FAIL vs WARN input) |
 
+`required_sources.obligation`:
+
+| Value | Meaning |
+|---|---|
+| `required` | Must be present+valid for DDR to leave `pending` toward `satisfied` (unless DDR `n_a`) |
+| `optional` | Absence → degrade per PageFeedMatrix / completion_criteria; **never alone** blocks DDR satisfaction |
+| `supporting` | Same as optional for Gate; may color prose only |
+
 ### 1.1 Empty `required_dir_ids`
 
-Allowed **only** when:
+Allowed **only** when the DDR is **source-backed** (has ≥1 `required_sources` with `obligation=required` or an explicit N/A path), e.g. `DDR-03-CHART-APPENDIX`.
 
-1. `required_evidence_types` includes calc/profile sources (`cfp` / `zfp`) **and** no user RealityFact is needed for that deliverable (e.g. appendix 03), **or**
-2. Explicit N/A applicability with evidence (Phase 1 `truly_unrequired`).
+**Hard rule:** `required_dir_ids=[]` is **never** automatically `satisfied`.  
+Evaluation still requires §1.4 Required Source Check and/or explicit N/A evidence (Phase 1 `truly_unrequired` + `explicit_na_evidence`).
 
-Empty ids **without** N/A evidence → status `pending` (Phase 1). P0 must not rely on empty-ids pending.
+Empty ids **without** required-source satisfaction **and** without N/A evidence → `pending`.
 
 ### 1.2 Evidence type vocabulary
 
@@ -59,8 +68,70 @@ Empty ids **without** N/A evidence → status `pending` (Phase 1). P0 must not r
 | `conflict` | Conflict state | Agenda covered |
 | `hypothesis` | Explicit Hypothesis only | RealityFact |
 | `cfp` | ChartFactPack / ProfileStructured BaZi slice | User biography invented from chart |
-| `zfp` | `ZiweiFactPack` | Required when pack absent (omit/degrade per PageFeedMatrix) |
+| `zfp` | `ZiweiFactPack` | Treated **optional** unless a DDR marks it `required` (none in v1.1) |
 | `boundary` | `information_boundaries` disclosure | Fake completeness |
+
+### 1.3 Source presence states (normative)
+
+| State | Definition |
+|---|---|
+| `source_ok` | Artifact loaded, structurally valid for PageFeedMatrix slice use, provenance/hash available when Blueprint recorded expectation |
+| `source_absent_not_supplied` | Required birth/profile inputs were never supplied by user → applicability path may allow DDR `n_a` **only with explicit evidence** |
+| `source_calc_failed` | Inputs were present / expected, but calculation or load **failed** → **unresolved**; **never** silent `n_a` |
+| `source_provenance_missing` | Artifact present but required provenance/hash unavailable when Blueprint `profile_binding` expected it → treat as **unresolved** (same Gate class as calc failed) |
+| `source_optional_absent` | Optional source (e.g. ZFP) missing → degrade; do not fail DDR solely for this |
+
+### 1.4 Normative evaluation order (Gate composer)
+
+```text
+1. DIR Rollup          — Phase 1 §3.2 on required_dir_ids / DC.dirs
+                         (dangling, truly_unrequired, blocked, partial, pending, satisfied, n_a)
+2. Required Source Check — §1.3 for each required_sources where obligation=required
+3. Conflict Check      — related blockers (Phase 1); may force blocked
+4. DDR Status compose  — merge DIR rollup + source check + conflicts (§1.5)
+5. Sufficiency Gate    — Phase 1 §3.3 on composed DDR statuses (P0/P1/P2; dangling; ranking)
+```
+
+Phase 1 C1–C5 unchanged. P1 partial-dangling and ranking-impact rules **fully preserved**.
+
+### 1.5 Composing DDR status after source check
+
+Let `dir_status` = Phase 1 §3.2 result.  
+Let `src` = worst state among **required** sources (`source_ok` best; unresolved = calc_failed | provenance_missing).
+
+| Condition | Composed `ddr.status` |
+|---|---|
+| `dir_status = blocked` OR related conflict blocks | `blocked` |
+| Any required source = `source_calc_failed` OR `source_provenance_missing` | `pending` (unresolved; **not** `n_a`) |
+| `dir_status = n_a` with explicit N/A **and** no required-source unresolved | `n_a` |
+| Empty dirs + required source `source_absent_not_supplied` + **explicit** N/A evidence | `n_a` |
+| Empty dirs + no N/A evidence + required source not `source_ok` | `pending` |
+| `dir_status ∈ {pending, partial}` | keep `dir_status` (sources cannot upgrade) |
+| `dir_status = satisfied` **and** all required sources `source_ok` (optional may be absent) | `satisfied` |
+| `dir_status = satisfied` **but** a required source not `source_ok` | `pending` (or `partial` if some dirs known and product marks partial — default **`pending`**) |
+
+**Forbidden:** treating empty `required_dir_ids` as `satisfied` solely because DIR rollup has nothing to fail.
+
+### 1.6 Source miss → Gate consequences
+
+| Case | DDR composed | Gate |
+|---|---|---|
+| P0 required source missing/unresolved | not `satisfied`/`n_a` | **FAIL** |
+| P1 required source missing/unresolved + ranking impact (`affects_option_ranking` **or** any linked DIR `may_affect_p5_ranking !== false` **or** `decision_critical`) | unsatisfied | **FAIL** |
+| P1 required source missing/unresolved + **no** ranking impact + complete DIR resolve (`dangling===false`) + boundaries | unsatisfied | **WARN**-eligible |
+| P2 required source missing/unresolved | unsatisfied | Must **not alone** block |
+| Optional source missing | no status penalty alone | PASS/WARN/FAIL from other DDRs only |
+| Explicit N/A with evidence | `n_a` | Terminal OK like `satisfied` for Gate tests |
+
+### 1.7 Ranking flag interaction
+
+| Flag | Layer | Use |
+|---|---|---|
+| DDR `affects_option_ranking` | DDR definition | If true, P1 unsatisfied → prefer FAIL path |
+| DIR `may_affect_p5_ranking` | Live/seed DIR | Phase 1 §3.3 P1 WARN requires **every** linked active DIR `=== false` |
+| `decision_critical` | DDR definition | If true, P1 unsatisfied → FAIL |
+
+WARN still requires Phase 1: `dangling===false`, `|L|≥1`, `|L|===ids.length`, boundaries recorded. Empty/partial dangling never WARN.
 
 ---
 
@@ -69,7 +140,7 @@ Empty ids **without** N/A evidence → status `pending` (Phase 1). P0 must not r
 | Priority | Role | Gate if unsatisfied (`∉ {satisfied,n_a}`) |
 |---|---|---|
 | **P0** | Without this, report cannot honestly answer the core decision | **FAIL** |
-| **P1** | Material to conclusion / ranking; WARN only if non-ranking + complete DIR resolve + boundaries | FAIL or WARN per Phase 1 §3.3 |
+| **P1** | Material to conclusion / ranking; WARN only if non-ranking + complete DIR resolve + boundaries | FAIL or WARN per Phase 1 §3.3 + §1.6 |
 | **P2** | Enrichment / appendix / conditional depth | Must **not alone** block report |
 
 ---
@@ -144,13 +215,16 @@ IDs are stable. Do not renumber; deprecate + supersede if needed later.
 | decision_question | Why does this recommendation fit this person/situation? |
 | priority | **P0** |
 | required_dir_ids | `DIR-DEF-QUESTION`, `DIR-STATUS-QUO`, `DIR-PAST-ATTEMPTS` |
+| required_sources | `cfp:required`, `zfp:optional` |
 | report_page_id / section | `02` / `A`+`C` |
-| completion_criteria | Question + status quo known; past attempts known or N/A with evidence; CFP available for structure anchors |
+| completion_criteria | DIRs known/N/A per roles; **CFP `source_ok` mandatory (Product Rule A)**; ZFP optional degrade |
 | affects_option_ranking | false |
-| required_evidence_types | reality_fact, definition, cfp, zfp (optional) |
-| missing_info_handling | Partial OK until freeze; P0 needs question+status quo |
-| applicability | Always |
+| required_evidence_types | reality_fact, definition, cfp (required), zfp (optional) |
+| missing_info_handling | DIRs open → pending/partial; CFP missing/failed → pending → **P0 FAIL** at Gate; ZFP absent OK |
+| applicability | Always (paid report expects birth profile for attribution) |
 | decision_critical | false |
+
+**Product Rule A (closed):** CFP is **mandatory** for `DDR-02-ATTRIBUTION`. Gate composer **must** run Required Source Check; DIR rollup alone is insufficient. Missing CFP while ordinary DIRs are satisfied ⇒ composed status **not** `satisfied` ⇒ P0 **FAIL**.
 
 #### `DDR-02-SCIENCE-BRIDGE`
 
@@ -161,11 +235,12 @@ IDs are stable. Do not renumber; deprecate + supersede if needed later.
 | decision_question | What case-specific mechanisms should action design respect? |
 | priority | **P1** |
 | required_dir_ids | `DIR-DEF-QUESTION`, `DIR-OPT-CONSTRAINTS`, `DIR-VALIDATION-CAPACITY` |
+| required_sources | _(none)_ — CFP/ZFP **not** required |
 | report_page_id / section | `02` / `B` |
 | completion_criteria | Question known; constraints or validation capacity known or bounded |
 | affects_option_ranking | false |
 | required_evidence_types | reality_fact, constraint, boundary |
-| missing_info_handling | WARN-eligible if DIRs non-ranking + boundaries; else FAIL |
+| missing_info_handling | WARN-eligible if DIRs non-ranking + boundaries + no dangling; else FAIL |
 | applicability | Always |
 | decision_critical | false |
 
@@ -182,15 +257,31 @@ IDs are stable. Do not renumber; deprecate + supersede if needed later.
 | decision_question | What chart-structure pattern package accompanies this decision? |
 | priority | **P2** |
 | required_dir_ids | `[]` |
+| required_sources | `cfp:required`, `zfp:optional` |
 | report_page_id / section | `03` / `A`+`B`+`C` |
-| completion_criteria | Valid birth profile → CFP (`ProfileStructured` / ChartFactPack fields used by PageFeedMatrix). ZFP omit-OK if unavailable. **No RealityFact required.** |
+| completion_criteria | See **§3.3.1** source evaluation table |
 | affects_option_ranking | false |
-| required_evidence_types | cfp, zfp (optional) |
-| missing_info_handling | If no birth data: mark DDR `n_a` with explicit profile-missing evidence — never invent chart. Does not alone block Gate (P2). |
-| applicability | Emit when birth data present; else explicit N/A |
+| required_evidence_types | cfp (required), zfp (optional) |
+| missing_info_handling | Per §3.3.1; P2 alone must not block Gate |
+| applicability | Always considered; N/A only via explicit not-supplied evidence |
 | decision_critical | false |
 
-**Phase 2 note:** Status for source-only DDR uses Phase 1 empty-ids rules: with birth data, treat as `truly_unrequired` for DIR purposes **and** completion via `required_evidence_types` check in Gate composer (implementation Phase 3+). Documented gap if engine only implements DIR rollup — must add source-presence check for this DDR.
+##### 3.3.1 `DDR-03` source evaluation (normative)
+
+| CFP condition | ZFP condition | DDR-03 status | Notes |
+|---|---|---|---|
+| `source_ok` | `source_ok` or `source_optional_absent` | **`satisfied`** | ZFP absence alone **never** blocks completion |
+| `source_absent_not_supplied` + **explicit** N/A evidence (no birth/profile supplied) | any | **`n_a`** | Not silence; evidence required |
+| `source_absent_not_supplied` **without** N/A evidence | any | **`pending`** | Empty DIR list ≠ auto N/A / auto satisfied |
+| `source_calc_failed` | any | **`pending`** | Never silent N/A |
+| `source_provenance_missing` | any | **`pending`** | Unresolved |
+| Empty `required_dir_ids` + no source check | — | **Illegal composition** | Must run §1.4 step 2 |
+
+Representation without violating Phase 1 empty-DIR rules:
+
+- DIR rollup sees `truly_unrequired` (`ids.length===0`) → does **not** yield `satisfied`.  
+- Satisfaction comes **only** from Required Source Check (`cfp:required` → `source_ok`) **or** explicit N/A evidence path.  
+- Live chart blobs stay on Blueprint `profile_binding` / calc packs — **not** as RealityFacts and **not** as a second DIR SoT.
 
 ---
 
@@ -344,13 +435,23 @@ IDs are stable. Do not renumber; deprecate + supersede if needed later.
 
 Page coverage: `01,02,03,04,05,06,07,08` — order unchanged. Page 03 appendix; Page 07 conditional.
 
+**Required-source DDRs (v1.1):**
+
+| DDR | Required sources | Optional |
+|---|---|---|
+| `DDR-02-ATTRIBUTION` | CFP | ZFP |
+| `DDR-03-CHART-APPENDIX` | CFP | ZFP |
+
+Other DDRs: no required calc sources in v1.1 (`cfp`/`zfp` in evidence lists are supporting/optional only unless listed above).
+
 ---
 
 ## 5. Gaps (honest)
 
-1. **Source-only satisfaction** for `DDR-03-CHART-APPENDIX` needs Gate composer extension beyond pure DIR rollup (documented above).  
-2. Exact FEED field codes remain in PageFeedMatrix; DDR does not duplicate CFP/ZFP schemas.  
-3. No runtime `lib/decision-intake/` in this phase.
+1. Exact FEED field codes remain in PageFeedMatrix; DDR does not duplicate CFP/ZFP schemas.  
+2. Runtime Gate composer implementing §1.4 = Phase 3+ (spec closed here).  
+3. Topic classifier implementation still later.  
+4. No runtime `lib/decision-intake/` in this phase.
 
 ---
 
