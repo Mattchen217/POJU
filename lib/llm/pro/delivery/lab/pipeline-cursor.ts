@@ -59,13 +59,18 @@ export function pipelineNextHint(
   }
 }
 
-/** Last assistant reply options for chips (hide after options_consumed). */
+/**
+ * Composer chips for the latest assistant turn only (parity with POJUChatUI).
+ * Do NOT walk back to an older assistant bubble — that resurfaces stale Opening
+ * chips after Call B / collecting when the new turn omitted options.
+ */
 export function lastAssistantOptions(session: POJUSessionState | undefined): string[] {
   if (!session?.messages?.length) return [];
   for (let i = session.messages.length - 1; i >= 0; i--) {
     const m = session.messages[i];
-    if (m?.role !== "assistant" || !Array.isArray(m.options) || !m.options.length) continue;
+    if (!m || m.role !== "assistant") continue;
     if (m.meta?.options_consumed) return [];
+    if (!Array.isArray(m.options) || m.options.length === 0) return [];
     return m.options.filter((o): o is string => typeof o === "string" && o.trim().length > 0);
   }
   return [];
