@@ -47,7 +47,7 @@ export function pipelineNextHint(
     case "opening":
       return `Opening · path=${path} · 继续对话或点芯片；够了会进理解确认门`;
     case "awaiting_understanding":
-      return `理解门 · path=${path} · 点「确认」起 Call A，或补充说明`;
+      return `理解门 · path=${path} · 点「确认」起 Call A；要修正请在输入框直接打字`;
     case "segment2":
       return `Segment2 · path=${path} · 等 Call A 完成（可轮询 job）`;
     case "awaiting_agenda":
@@ -55,7 +55,7 @@ export function pipelineNextHint(
     case "collecting":
       return `Collecting · path=${path} · 答议程 / 点芯片；够了进汇总确认`;
     case "awaiting_confirmation":
-      return `汇总确认门 · path=${path} · 点确认起 Synthesis`;
+      return `汇总确认门 · path=${path} · 点「确认」起 Synthesis；要修正请在输入框直接打字`;
     case "synthesis":
       return `Synthesis 运行中 · path=${path}`;
     case "ready_for_delivery":

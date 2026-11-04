@@ -854,8 +854,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const deliveryConfirmPending =
     session.agent_v2?.current_phase === "awaiting_confirmation" &&
     !session.agent_v2?.stall_offer_pending;
-  /** Confirmation gates: free-text locked; chips stay pickable until next phase. */
-  const confirmationGateInputLock = understandingGatePending || deliveryConfirmPending;
+  /** Stage-1/3 gates: confirm chip only; free-text revise stays unlocked (type in the box). */
+  const confirmationGateOpen = understandingGatePending || deliveryConfirmPending;
   /** Pivot process copy (gates / delivery confirm) ? follows locked session language, not website UI. */
   /** Output language ≡ website UI locale (single SSOT). */
   const sessionLang = resolvePivotSessionLang(session, locale);
@@ -884,10 +884,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.agent_v2?.synthesis_status === "pending";
 
   useEffect(() => {
-    if (composerLocked || confirmationGateInputLock || hideComposer) stopVoiceInput();
-  }, [composerLocked, confirmationGateInputLock, hideComposer, stopVoiceInput]);
+    if (composerLocked || hideComposer) stopVoiceInput();
+  }, [composerLocked, hideComposer, stopVoiceInput]);
 
-  // gateSupplementPrompt cleared on send; while a gate is open, pick-placeholder wins via ternary below.
+  // gateSupplementPrompt cleared on send; stage-1/3 gates use revise placeholder while open.
 
   // terminate_refund lock: ping ops + 30s local wipe (session_id only ? Never Stored).
   useEffect(() => {
@@ -1769,7 +1769,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }, [session.session_id]);
 
   async function handlePojuSend(text: string) {
-    if ((composerLocked || confirmationGateInputLock) && !expired) return;
+    if (composerLocked && !expired) return;
     if (expired) return;
     stopVoiceInput();
     const typed = text.trim();
@@ -3891,13 +3891,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const activeComposerOptions = useMemo(() => {
     if (composerLocked || sending) return undefined;
     if (understandingGatePending) {
-      return [
-        understandingGateConfirmButtonLabel(sessionLang),
-        understandingGateSupplementButtonLabel(sessionLang),
-      ];
+      return [understandingGateConfirmButtonLabel(sessionLang)];
     }
     if (deliveryConfirmPending) {
-      return [deliveryConfirmButtonLabel(sessionLang), deliverySupplementButtonLabel(sessionLang)];
+      return [deliveryConfirmButtonLabel(sessionLang)];
     }
     const last = [...visibleMessages].reverse().find((m) => m.role === "assistant" && !m.is_rejected);
     if (
@@ -4055,13 +4052,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
     if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
       const confirm = understandingGateConfirmButtonLabel(sessionLang);
-      const supplement = understandingGateSupplementButtonLabel(sessionLang);
       if (opt === confirm) {
         void handleUnderstandingGateClick("confirmed");
         return;
       }
+      // Legacy「补充并修正」chip: treat as free-text revise cue (unlock path already open).
+      const supplement = understandingGateSupplementButtonLabel(sessionLang);
       if (opt === supplement) {
-        void handleUnderstandingGateClick("wants_to_add");
+        setGateSupplementPrompt(true);
         return;
       }
     }
@@ -4070,13 +4068,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       !session.agent_v2?.stall_offer_pending
     ) {
       const confirm = deliveryConfirmButtonLabel(sessionLang);
-      const supplement = deliverySupplementButtonLabel(sessionLang);
       if (opt === confirm) {
         void handleDeliveryConfirmGateClick("confirmed");
         return;
       }
+      const supplement = deliverySupplementButtonLabel(sessionLang);
       if (opt === supplement) {
-        void handleDeliveryConfirmGateClick("wants_to_add");
+        setGateSupplementPrompt(true);
         return;
       }
     }
@@ -4211,7 +4209,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         typewritingMessageId={typewritingMessageId}
         onTypewriterDone={() => setTypewritingMessageId(null)}
         composerDisabled={composerLocked}
-        composerInputDisabled={confirmationGateInputLock}
+        composerInputDisabled={false}
         hideComposer={hideComposer}
         centerSlot={deliveryShelfNode}
         messageSlots={messageSlots}
@@ -4234,18 +4232,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         initialScrollPosition={initialScrollPosition}
         onActivityRenderReady={handleActivityRenderReady}
         inputPlaceholder={
-          gateSupplementPrompt
-            ? t("input_placeholder_gate_supplement")
-            : understandingGatePending || deliveryConfirmPending
-              ? t("input_placeholder_gate_pick")
-              : activeComposerOptions
-                ? t("input_placeholder_with_options")
-                : sending ||
-                    composerLocked ||
-                    Boolean(segment2JobId) ||
-                    segment2PipelineLock
-                  ? ""
-                  : t("input_placeholder")
+          confirmationGateOpen || gateSupplementPrompt
+            ? t("input_placeholder_gate_revise")
+            : activeComposerOptions
+              ? t("input_placeholder_with_options")
+              : sending ||
+                  composerLocked ||
+                  Boolean(segment2JobId) ||
+                  segment2PipelineLock
+                ? ""
+                : t("input_placeholder")
         }
         composerOptions={activeComposerOptions}
         onComposerOptionPick={handleComposerOptionPick}

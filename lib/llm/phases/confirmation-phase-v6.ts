@@ -58,7 +58,7 @@ export const POJU_V6_CONFIRMATION_FOLLOW_UP_RULES = `# 当前阶段任务 · awa
 用户刚回应你的总结/核对邀请。判断他是要补充、确认可以交付、还是还没说清：
 
 - **明确确认**（确认并继续 / 可以 / 没有了 / 开始吧 / 继续）→ \`confirmation_signal: "confirmed"\`，1–3 句自然承接，\`suggested_phase: "awaiting_confirmation"\`。**不要**在此输出完整破局交付正文。
-- **要补充或修正**（补充并修正 / 还要补充…）→ \`confirmation_signal: "wants_to_add"\`，接住新信息，\`suggested_phase: "collecting_context"\`
+- **要补充或修正**（在输入框直接打字补充 / 还要补充…）→ \`confirmation_signal: "wants_to_add"\`，接住新信息，\`suggested_phase: "collecting_context"\`
 - **含糊未决** → \`confirmation_signal: "unclear"\`，温和再确认一次，\`suggested_phase: "awaiting_confirmation"\`
 
 ## 严禁

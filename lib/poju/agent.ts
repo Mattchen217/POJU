@@ -82,7 +82,7 @@ import {
   classifyLanguageSwitchRequest,
   parseAppLocale,
 } from "@/lib/prompts/language-directive";
-import { nextLockedOutputLocale } from "@/lib/poju/session-lang";
+import { nextLockedOutputLocale, resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import {
   applyAgendaStatusUpdates,
   captureAgendaAnswer,
@@ -790,6 +790,38 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     skipWhenSystemTurn: isSystemMessage && !externalHandoffPending,
   });
   let sessionBase = injectionPrep.session;
+
+  // Gate free-text = revise in the input (no「补充并修正」chip). Flip phase first so
+  // Opening/collecting absorb the content — never re-run an identical gate summary.
+  if (!isSystemMessage && userMessage.trim()) {
+    const phase0 =
+      normalizeAgentPhase(sessionBase.agent_v2?.current_phase) ??
+      sessionBase.agent_v2?.current_phase;
+    const gateLang = resolvePivotSessionLang(sessionBase, locale);
+    if (phase0 === "awaiting_understanding_confirm") {
+      const { understandingGateConfirmButtonLabel } = await import(
+        "@/lib/poju/understanding-gate-reply"
+      );
+      if (userMessage.trim() !== understandingGateConfirmButtonLabel(gateLang)) {
+        sessionBase = applyUnderstandingGateSupplement(sessionBase);
+      }
+    } else if (
+      phase0 === "awaiting_confirmation" &&
+      !sessionBase.agent_v2?.stall_offer_pending
+    ) {
+      const { deliveryConfirmButtonLabel } = await import(
+        "@/lib/poju/delivery-confirm-reply"
+      );
+      if (userMessage.trim() !== deliveryConfirmButtonLabel(gateLang)) {
+        const { applyDeliveryConfirmationSupplement } = await import(
+          "@/lib/poju/phases/delivery/control"
+        );
+        sessionBase = applyDeliveryConfirmationSupplement(sessionBase, gateLang, {
+          silent: true,
+        });
+      }
+    }
+  }
 
   if (!isSystemMessage && !userAlreadyAppended) {
     const ruleCheck = checkRuleViolation(userMessage, sessionBase);

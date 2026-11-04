@@ -43,7 +43,7 @@ ${contextText}
 
 ## 任务
 你已收齐该问要对齐的现实信息。写一份【对齐核对】：开篇 1–2 句；每一项用 \`###\` 分节——先写对齐的问题是什么，再写对齐到的答案（禁草率答案子弹）。
-末尾明确邀请：若以上对齐准确，请点「确认并继续」——确认后我会进入汇总收敛，把刚才对齐的现实织进你的破局方案；若要补充或修正，请点「补充并修正」。
+末尾明确邀请：若以上对齐准确，请在输入框选择「确认并继续」——确认后我会进入汇总收敛，把刚才对齐的现实织进你的破局方案；若要补充或修正，请在输入框里直接输入需要补充的信息或不同的描述。
 confirmation_signal 填 "unclear"（等待用户回应）。
 
 输出 JSON：response, confirmation_signal, suggested_phase, context_updates`;
@@ -61,7 +61,7 @@ ${contextText}
 ## 任务
 用户刚回应你的总结/核对邀请。判断他是要补充、确认可以交付、还是还没说清：
 - 明确确认（确认并继续 / 可以 / 没有了 / 继续 / 开始吧）→ confirmation_signal: "confirmed"，1-3 句自然承接，suggested_phase: "awaiting_confirmation"
-- 要补充或修正（补充并修正 / …）→ confirmation_signal: "wants_to_add"，接住新信息，suggested_phase: "collecting_context"
+- 要补充或修正（输入框直接打字 / …）→ confirmation_signal: "wants_to_add"，接住新信息，suggested_phase: "collecting_context"
 - 含糊未决 → confirmation_signal: "unclear"，温和再确认一次，suggested_phase: "awaiting_confirmation"
 不要在此输出完整破局交付正文。
 

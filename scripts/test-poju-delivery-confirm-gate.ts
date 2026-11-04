@@ -36,6 +36,12 @@ function main(): void {
 
   assert("UI delivery confirm gate handler", ui.includes("handleDeliveryConfirmGateClick"));
   assert("UI composer options for awaiting_confirmation", ui.includes("deliveryConfirmButtonLabel"));
+  assert(
+    "UI stage-1/3 gates confirm-only (no supplement chip in activeComposerOptions)",
+    ui.includes("return [deliveryConfirmButtonLabel(sessionLang)]") &&
+      ui.includes("return [understandingGateConfirmButtonLabel(sessionLang)]"),
+  );
+  assert("UI gate revise placeholder", ui.includes("input_placeholder_gate_revise"));
   assert("UI gate confirm starts synthesis", ui.includes("startSynthesisAfterGateConfirm"));
   {
     const confirmIdx = ui.indexOf("async function handleDeliveryConfirmGateClick");
@@ -89,7 +95,8 @@ function main(): void {
   const enCta = deliveryConfirmSummaryCta("en");
   assert("zh CTA mentions synthesis", zhCta.includes("汇总收敛") && zhCta.includes("破局方案"));
   assert("zh CTA has confirm chip", zhCta.includes("确认并继续"));
-  assert("zh CTA has supplement chip", zhCta.includes("补充并修正"));
+  assert("zh CTA guides type-in-box revise", zhCta.includes("请在输入框里直接输入"));
+  assert("zh CTA has no supplement chip label", !zhCta.includes("**[补充并修正]**"));
   assert("zh CTA uses bold brackets", zhCta.includes("**[") && zhCta.includes("]**"));
   assert("en CTA mentions plan", enCta.toLowerCase().includes("plan") || enCta.toLowerCase().includes("synthesis"));
   assert(

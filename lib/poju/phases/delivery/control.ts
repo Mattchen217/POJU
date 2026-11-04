@@ -29,11 +29,13 @@ function ensureAgentV2(session: POJUSessionState): POJUAgentState {
 
 /**
  * Phase-3 confirmation gate: user wants to add more before Phase 4.
- * Returns to collecting_context and acknowledges — next user text is absorbed into context.
+ * Returns to collecting_context. Optional ack bubble (legacy chip path);
+ * free-text path uses `silent: true` so the user's typed revision is the next turn.
  */
 export function applyDeliveryConfirmationSupplement(
   session: POJUSessionState,
   locale: string,
+  opts?: { silent?: boolean },
 ): POJUSessionState {
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
@@ -42,6 +44,13 @@ export function applyDeliveryConfirmationSupplement(
   const signals = extractModelTurnSignals({ confirmation_signal: "wants_to_add" });
   const advance = advanceStateMachine(baseAgent, signals, "");
   const now = new Date().toISOString();
+  if (opts?.silent) {
+    return withSessionProfileFlags({
+      ...session,
+      agent_v2: advance.next_agent,
+      last_interaction_at: now,
+    });
+  }
   const ack: POJUMessage = {
     role: "assistant",
     content: deliverySupplementAck(locale),

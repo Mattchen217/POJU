@@ -97,23 +97,22 @@ const GATE_COPY: Record<
   },
 };
 
-/** CTA with bold [label] chips so options don't blend into body prose. */
+/** CTA with bold [confirm] chip — revise by typing in the input (no supplement chip). */
 function buildSummaryCta(
-  copy: { confirm: string; supplement: string },
+  copy: { confirm: string },
   lang: GateLocale,
 ): string {
   const a = `**[${copy.confirm}]**`;
-  const b = `**[${copy.supplement}]**`;
   if (lang === "zh") {
-    return `若以上理解准确，请在输入框选择 ${a}；若要补充或修正，请选择 ${b}。`;
+    return `若以上理解准确，请在输入框选择 ${a}；若要补充或修正，请在输入框里直接输入需要补充的信息或不同的描述。`;
   }
   if (lang === "es") {
-    return `Si encaja, elige ${a} en el cuadro de entrada. Para corregir o añadir, elige ${b}.`;
+    return `Si encaja, elige ${a} en el cuadro de entrada. Para corregir o añadir, escribe directamente en el cuadro de entrada.`;
   }
   if (lang === "fr") {
-    return `Si c'est correct, choisis ${a} dans la zone de saisie. Pour corriger, choisis ${b}.`;
+    return `Si c'est correct, choisis ${a} dans la zone de saisie. Pour corriger ou compléter, écris directement dans la zone de saisie.`;
   }
-  return `If this looks right, choose ${a} in the input. To revise, choose ${b}.`;
+  return `If this looks right, choose ${a} in the input. To add or revise, type your correction directly in the input box.`;
 }
 
 /** Section: `### heading` + blank line + body (RichReadingText → reading-subhead). */

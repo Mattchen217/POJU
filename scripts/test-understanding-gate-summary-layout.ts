@@ -24,7 +24,8 @@ assert.ok(!zh.includes("你的问题是："));
 assert.ok(!zh.includes("情况是："));
 assert.ok(zh.includes("确认并继续"));
 assert.ok(zh.includes("**[确认并继续]**"));
-assert.ok(zh.includes("**[补充并修正]**"));
+assert.ok(zh.includes("请在输入框里直接输入"));
+assert.ok(!zh.includes("**[补充并修正]**"));
 assert.ok(/\n\n/.test(zh));
 
 // Stakes that start with bare「接：」must be softened so they don't glue to prior「不接」.

@@ -409,29 +409,19 @@ export function LabPipelinePanel({
           {(showUnderstanding || showDyad || showAgendaNext || showSynthesis) && (
             <div className="flex flex-wrap gap-2 border-t border-white/10 px-3 py-2">
               {showUnderstanding ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={busy || Boolean(pending)}
-                    onClick={() =>
-                      void postJson(
-                        `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
-                        { action: "understanding_confirm" },
-                      )
-                    }
-                    className="rounded bg-[#f2ca50] px-3 py-1 text-xs font-medium text-black disabled:opacity-40"
-                  >
-                    确认理解 → Call A
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy || Boolean(pending)}
-                    onClick={() => void sendMessage("我想补充一点")}
-                    className="rounded border border-white/20 px-3 py-1 text-xs disabled:opacity-40"
-                  >
-                    补充说明
-                  </button>
-                </>
+                <button
+                  type="button"
+                  disabled={busy || Boolean(pending)}
+                  onClick={() =>
+                    void postJson(
+                      `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
+                      { action: "understanding_confirm" },
+                    )
+                  }
+                  className="rounded bg-[#f2ca50] px-3 py-1 text-xs font-medium text-black disabled:opacity-40"
+                >
+                  确认理解 → Call A
+                </button>
               ) : null}
               {showAgendaNext ? (
                 <button
@@ -575,7 +565,13 @@ export function LabPipelinePanel({
                   void sendMessage(draft);
                 }
               }}
-              placeholder={pending ? "job 运行中…" : "输入消息…"}
+              placeholder={
+                pending
+                  ? "job 运行中…"
+                  : showUnderstanding || showSynthesis
+                    ? "请在这里输入需要补充或修正的信息…"
+                    : "输入消息…"
+              }
             />
             <button
               type="button"

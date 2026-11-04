@@ -13,6 +13,7 @@ const COPY: Record<
   GateLocale,
   {
     confirm: string;
+    /** @deprecated No supplement chip — kept for matching legacy button taps. */
     supplement: string;
     supplementAck: string;
     /** Closing CTA after collecting summary — fixed copy, do not paraphrase. */
@@ -26,7 +27,7 @@ const COPY: Record<
     supplement: "补充并修正",
     supplementAck: "好的，请直接补充——我会把新信息纳入，再请你确认后进入汇总。",
     summaryCta:
-      "若以上对齐准确，请在输入框选择 **[确认并继续]**——确认后我会进入汇总收敛，把刚才对齐的现实织进你的破局方案；若要补充或修正，请选择 **[补充并修正]**。",
+      "若以上对齐准确，请在输入框选择 **[确认并继续]**——确认后我会进入汇总收敛，把刚才对齐的现实织进你的破局方案；若要补充或修正，请在输入框里直接输入需要补充的信息或不同的描述。",
     summaryFooter: "你确认之后，我会把刚才对齐的现实信息织进破局方案里。",
   },
   en: {
@@ -35,7 +36,7 @@ const COPY: Record<
     supplementAck:
       "Sure — tell me what to add. I'll fold it in, then ask you to confirm before we move into synthesis.",
     summaryCta:
-      "If this alignment looks right, choose **[Confirm and continue]** in the input — I'll then move into synthesis and weave what we aligned into your breakthrough plan. To add or correct anything, choose **[Add and revise]**.",
+      "If this alignment looks right, choose **[Confirm and continue]** in the input — I'll then move into synthesis and weave what we aligned into your breakthrough plan. To add or correct anything, type it directly in the input box.",
     summaryFooter: "Once you confirm, I'll weave what we aligned into your breakthrough plan.",
   },
   es: {
@@ -44,7 +45,7 @@ const COPY: Record<
     supplementAck:
       "De acuerdo — cuéntame qué añadir. Lo incorporaré y luego te pediré confirmación antes de pasar a la síntesis.",
     summaryCta:
-      "Si este alineamiento encaja, elige **[Confirmar y continuar]** en el cuadro de entrada: pasaré a la síntesis y tejeré lo alineado en tu plan de ruptura. Para añadir o corregir, elige **[Añadir y corregir]**.",
+      "Si este alineamiento encaja, elige **[Confirmar y continuar]** en el cuadro de entrada: pasaré a la síntesis y tejeré lo alineado en tu plan de ruptura. Para añadir o corregir, escribe directamente en el cuadro de entrada.",
     summaryFooter: "Cuando confirmes, tejeré lo alineado en tu plan de ruptura.",
   },
   fr: {
@@ -53,7 +54,7 @@ const COPY: Record<
     supplementAck:
       "D'accord — dis-moi ce qu'il faut ajouter. Je l'intégrerai, puis je te redemanderai confirmation avant la synthèse.",
     summaryCta:
-      "Si cet alignement est exact, choisis **[Confirmer et continuer]** dans la zone de saisie — je passerai alors à la synthèse et j'intégrerai ce que nous avons aligné dans ton plan de rupture. Pour ajouter ou corriger, choisis **[Compléter et corriger]**.",
+      "Si cet alignement est exact, choisis **[Confirmer et continuer]** dans la zone de saisie — je passerai alors à la synthèse et j'intégrerai ce que nous avons aligné dans ton plan de rupture. Pour ajouter ou corriger, écris directement dans la zone de saisie.",
     summaryFooter: "Après confirmation, j'intégrerai ce que nous avons aligné dans ton plan de rupture.",
   },
 };
@@ -92,7 +93,6 @@ export function ensureDeliveryConfirmCta(response: string, locale: string): stri
   }
 
   const confirm = deliveryConfirmButtonLabel(locale);
-  const supplement = deliverySupplementButtonLabel(locale);
   // Drop trailing invitation paragraphs that already mention the chip labels or "if accurate…"
   const stripped = body
     .replace(
@@ -110,7 +110,7 @@ export function ensureDeliveryConfirmCta(response: string, locale: string): stri
     .trim();
 
   const withCta =
-    stripped.includes(confirm) && stripped.includes(supplement) && stripped.length > cta.length
+    stripped.includes(confirm) && stripped.length > cta.length
       ? `${stripped}\n\n${cta}`
       : `${stripped}\n\n${cta}`;
   return `${withCta}\n\n${footer}`;
