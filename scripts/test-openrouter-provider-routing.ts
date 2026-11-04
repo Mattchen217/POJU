@@ -77,6 +77,23 @@ withEnv(
   },
 );
 
+withEnv(
+  {
+    OPENROUTER_PROVIDER_ORDER: "sail-research,streamlake",
+    OPENROUTER_PROVIDER_IGNORE: undefined,
+  },
+  () => {
+    assert(
+      "Sail Research → sail-research (space/hyphen)",
+      normalizeProviderSlugForLock("Sail Research") === "sail-research",
+    );
+    assert(
+      "lock from display name",
+      resolveSessionLockedProvider(null, "Sail Research") === "sail-research",
+    );
+  },
+);
+
 withEnv({ OPENROUTER_PROVIDER_ORDER: "A, B", OPENROUTER_PROVIDER_IGNORE: undefined }, () => {
   assert("comma ORDER trims", parseProviderOrder().join(",") === "A,B");
 });

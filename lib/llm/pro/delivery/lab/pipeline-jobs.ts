@@ -53,6 +53,9 @@ import {
   ensureLabZiweiFactPack,
   formatZiweiClosedSetForPrompt,
 } from "@/lib/ziwei/lab-ziwei";
+import { prepareFrozenDcForDelivery } from "@/lib/poju/decision-context/freeze-to-delivery";
+import { applySufficiencyFreezeToSession } from "@/lib/poju/decision-context/production-freeze-wire";
+import { evaluateDecisionSufficiency } from "@/lib/poju/decision-context";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { dyadSkipPatch } from "@/lib/poju/dyad-compat";
@@ -1070,6 +1073,47 @@ export async function labSynthesisConfirm(lab: DeliveryLabSession): Promise<{
     last_interaction_at: new Date().toISOString(),
   });
 
+  // S5/S8: LAB parity with production — Freeze on sufficiency before synthesis.
+  // Lab sessions live in Ops KV (not Session C1), so apply in-memory freeze only.
+  if (
+    !agent_v2.stall_offer_pending &&
+    agent_v2.delivery_mode !== "degraded"
+  ) {
+    const freeze = applySufficiencyFreezeToSession(sessionPending);
+    if (freeze.ok) {
+      sessionPending = withSessionProfileFlags({
+        ...freeze.session,
+        original_question: freshQuestion,
+        messages: messagesWithUser,
+        agent_v2,
+        last_interaction_at: new Date().toISOString(),
+      });
+      if (!freeze.skipped && "pack" in freeze) {
+        try {
+          const prepared = prepareFrozenDcForDelivery({
+            decision_context: sessionPending.decision_context,
+            decision_context_versions: sessionPending.decision_context_versions,
+          });
+          sessionPending = {
+            ...sessionPending,
+            last_delivery_context_binding: prepared.decision_context_binding,
+          };
+        } catch (e) {
+          console.warn("[lab-pipeline] freeze binding prepare failed", e);
+        }
+      } else if (freeze.skipped && freeze.binding) {
+        sessionPending = {
+          ...sessionPending,
+          last_delivery_context_binding: freeze.binding,
+        };
+      }
+    } else if (sessionPending.decision_context?.status === "draft") {
+      if (evaluateDecisionSufficiency(sessionPending.decision_context).canStop) {
+        throw new Error(`DC_FREEZE_FAILED:${freeze.reason}`);
+      }
+    }
+  }
+
   let labOut = appendGateTurn(
     { ...lab, chat_session: sessionPending },
     { action: "synthesis_confirm" },
@@ -1140,10 +1184,38 @@ export function seedLabSourceFromChat(lab: DeliveryLabSession): DeliveryLabSessi
       ? agent.desired_direction.wants
       : lab.source.desired_outcome;
 
+  let decision_context_binding =
+    lab.source.decision_context_binding ??
+    session.last_delivery_context_binding ??
+    null;
+  let decision_context_snapshot = lab.source.decision_context_snapshot ?? null;
+  if (
+    session.decision_context &&
+    (session.decision_context.status === "final" ||
+      session.decision_context.status === "superseded")
+  ) {
+    try {
+      const prepared = prepareFrozenDcForDelivery({
+        decision_context: session.decision_context,
+        decision_context_versions: session.decision_context_versions,
+      });
+      decision_context_binding = prepared.decision_context_binding;
+      decision_context_snapshot = prepared.decision_context_snapshot;
+    } catch (e) {
+      console.warn("[lab-pipeline] seed DC binding failed", e);
+      decision_context_snapshot = session.decision_context;
+    }
+  }
+
   return {
     ...lab,
     pipeline_delivery_unlocked: true,
     pipeline_cursor: "ready_for_delivery",
+    chat_session: {
+      ...session,
+      last_delivery_context_binding:
+        decision_context_binding ?? session.last_delivery_context_binding ?? null,
+    },
     source: {
       ...lab.source,
       base_analysis: clean.base_analysis,
@@ -1159,6 +1231,8 @@ export function seedLabSourceFromChat(lab: DeliveryLabSession): DeliveryLabSessi
       partner_bazi: session.partner_bazi ?? lab.source.partner_bazi,
       dyad_compat_summary: session.dyad_compat_summary ?? lab.source.dyad_compat_summary,
       dyad_matrix_pack: session.dyad_matrix_pack ?? lab.source.dyad_matrix_pack,
+      decision_context_binding,
+      decision_context_snapshot,
     },
   };
 }

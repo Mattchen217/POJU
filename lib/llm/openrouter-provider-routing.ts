@@ -2,15 +2,30 @@ import { parseProviderIgnore, parseProviderOrder } from "@/lib/llm/openrouter-sh
 
 export type OpenRouterRoutePath = "chat" | "once";
 
+/** Collapse spaces/underscores/hyphens so "Sail Research" matches "sail-research". */
+function compactProviderToken(s: string): string {
+  return s.trim().toLowerCase().replace(/[\s_-]+/g, "");
+}
+
 export function providerMatchesOrderEntry(served: string, orderSlug: string): boolean {
   const norm = (s: string) => s.trim().toLowerCase();
   const s = norm(served);
   const o = norm(orderSlug);
   if (!s || !o) return false;
   if (s === o) return true;
+  const sCompact = compactProviderToken(s);
+  const oCompact = compactProviderToken(o);
+  if (sCompact && oCompact && sCompact === oCompact) return true;
   const sBase = s.split("/")[0]!;
   const oBase = o.split("/")[0]!;
-  return sBase === oBase || s.includes(oBase) || o.includes(sBase);
+  if (sBase === oBase) return true;
+  if (compactProviderToken(sBase) === compactProviderToken(oBase)) return true;
+  return (
+    s.includes(oBase) ||
+    o.includes(sBase) ||
+    sCompact.includes(oCompact) ||
+    oCompact.includes(sCompact)
+  );
 }
 
 /** Map OpenRouter response `provider` (e.g. StreamLake) to ORDER slug (e.g. streamlake). */
