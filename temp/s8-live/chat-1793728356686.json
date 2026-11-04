@@ -1,0 +1,72 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "cursor": "opening",
+  "phase": "opening",
+  "pending_job": null,
+  "delivery_unlocked": false,
+  "dc": null,
+  "binding": null,
+  "turns": [
+    {
+      "turn_id": "pt_mw0zivb0_08b5cc",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 112,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 23671
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728290-xf0zoXXpR0kckTro0IpB"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zjtkm_252e8e",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 50,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 43988
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728314-EejH8b6No3rZlYEi3F5x"
+        }
+      ]
+    }
+  ],
+  "last_assistant": "你给的这几个数字，已经把「不能赌」的底线画得很清楚了——房贷占三分之一，储蓄六到八个月，孩子明年入学。这说明你真正要的，不是「要不要自由」，而是「怎样自由才不伤家底」。你手里有两个口头意向，但还没落纸，所以现在最该想清楚的，不是「要不要走」，而是「走到哪一步才算稳」。那么，如果这件事能按你希望的方向发展，你最想先实现的是哪一种状态？"
+}

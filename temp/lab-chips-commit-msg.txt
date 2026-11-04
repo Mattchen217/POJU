@@ -1,0 +1,3 @@
+fix(lab): stop falling back to stale Opening chips after Call B
+
+LAB lastAssistantOptions now mirrors POJUChatUI: only the latest assistant turn's options, so an empty Call B bridge no longer resurfaces prior calibration chips.

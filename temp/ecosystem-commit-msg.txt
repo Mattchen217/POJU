@@ -1,0 +1,3 @@
+chore(prompt): drop obsolete Glyph/Syncro/Match ecosystem diversion block
+
+Remove the outdated pojulife sibling-product intro from POJU identity prompts (v5 base + v6).

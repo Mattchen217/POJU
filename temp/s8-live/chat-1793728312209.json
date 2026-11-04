@@ -1,0 +1,42 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "cursor": "opening",
+  "phase": "opening",
+  "pending_job": null,
+  "delivery_unlocked": false,
+  "dc": null,
+  "binding": null,
+  "turns": [
+    {
+      "turn_id": "pt_mw0zivb0_08b5cc",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 112,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 23671
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728290-xf0zoXXpR0kckTro0IpB"
+        }
+      ]
+    }
+  ],
+  "last_assistant": "你把「该不该动」和「什么条件下能动」放在一起问，其实已经说明你不是不想动——是房贷和孩子这两根绳子让你不能赌。你要的不是一个「走或留」的判决，而是一个「不赌」的框架：什么条件下动，才算对家里负责。那针对这件事，你最想先要的是什么？"
+}

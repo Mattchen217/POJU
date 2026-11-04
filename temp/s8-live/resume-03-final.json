@@ -1,0 +1,16 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "phase": "awaiting_confirmation",
+  "cursor": "ready_for_delivery",
+  "unlocked": true,
+  "fully_covered": false,
+  "items": [],
+  "dc": {
+    "status": "draft",
+    "facts": 14,
+    "constraints": 0,
+    "hypotheses": 6,
+    "dirs": 6
+  },
+  "binding": null
+}

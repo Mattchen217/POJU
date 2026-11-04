@@ -1,0 +1,478 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "pipeline": "decision_shelf",
+  "cursor": "ready_for_delivery",
+  "phase": "awaiting_confirmation",
+  "unlocked": true,
+  "dc": {
+    "status": "draft",
+    "version": 1,
+    "facts": 14,
+    "constraints": 0,
+    "hypotheses": 6,
+    "dirs": 6,
+    "conflicts": 0
+  },
+  "binding": null,
+  "agenda": [
+    {
+      "id": "agenda_02",
+      "label": "你公司对兼职或外部顾问的边界",
+      "status": "covered",
+      "critical": true
+    },
+    {
+      "id": "agenda_06",
+      "label": "你获取客户是否依赖公开表达",
+      "status": "covered",
+      "critical": false
+    },
+    {
+      "id": "ag_coverage_7",
+      "label": "你的有可公开的专业内容",
+      "status": "covered",
+      "critical": false
+    },
+    {
+      "id": "agenda_05",
+      "label": "你每周能稳定投入的精力余量",
+      "status": "covered",
+      "critical": false
+    },
+    {
+      "id": "agenda_01",
+      "label": "对方可观察行为/态度",
+      "status": "covered",
+      "critical": true
+    },
+    {
+      "id": "agenda_03",
+      "label": "你家现金流不能跌破的底线",
+      "status": "covered",
+      "critical": true
+    }
+  ],
+  "steps": [
+    {
+      "key": "bootstrap",
+      "status": "idle"
+    },
+    {
+      "key": "thesis.gen",
+      "status": "idle"
+    },
+    {
+      "key": "prealloc",
+      "status": "idle"
+    },
+    {
+      "key": "book.judgment",
+      "status": "idle"
+    },
+    {
+      "key": "book.gate_judgment",
+      "status": "idle"
+    },
+    {
+      "key": "01.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "01.gate",
+      "status": "idle"
+    },
+    {
+      "key": "01.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "02.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "02.gate",
+      "status": "idle"
+    },
+    {
+      "key": "02.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "02.evidence_soft",
+      "status": "idle"
+    },
+    {
+      "key": "04.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "04.gate",
+      "status": "idle"
+    },
+    {
+      "key": "04.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "04.evidence_soft",
+      "status": "idle"
+    },
+    {
+      "key": "05.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "05.gate",
+      "status": "idle"
+    },
+    {
+      "key": "05.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "05.evidence_soft",
+      "status": "idle"
+    },
+    {
+      "key": "06.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "06.gate",
+      "status": "idle"
+    },
+    {
+      "key": "06.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "08.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "08.gate",
+      "status": "idle"
+    },
+    {
+      "key": "08.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "07.gate_topic",
+      "status": "idle"
+    },
+    {
+      "key": "07.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "07.gate",
+      "status": "idle"
+    },
+    {
+      "key": "07.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "07.evidence_soft",
+      "status": "idle"
+    },
+    {
+      "key": "03.slice",
+      "status": "idle"
+    },
+    {
+      "key": "03.content.body",
+      "status": "idle"
+    },
+    {
+      "key": "03.gate",
+      "status": "idle"
+    },
+    {
+      "key": "03.body_polish",
+      "status": "idle"
+    },
+    {
+      "key": "book.assemble",
+      "status": "idle"
+    },
+    {
+      "key": "companion.seal",
+      "status": "idle"
+    },
+    {
+      "key": "companion.daily",
+      "status": "idle"
+    },
+    {
+      "key": "companion.batch_pair",
+      "status": "idle"
+    },
+    {
+      "key": "companion.batch_gate",
+      "status": "idle"
+    }
+  ],
+  "turn_count": 19,
+  "turns": [
+    {
+      "phase": "opening",
+      "kind": "chat",
+      "obs_stages": [
+        "opening"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "opening",
+      "kind": "chat",
+      "obs_stages": [
+        "opening"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "awaiting_understanding_confirm",
+      "kind": "chat",
+      "obs_stages": [
+        "awaiting_understanding_confirm"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "gate",
+      "obs_stages": [
+        null
+      ],
+      "has_formal_dc": [
+        null
+      ],
+      "validation": [
+        null
+      ]
+    },
+    {
+      "phase": "segment2_a",
+      "kind": "segment2_a",
+      "obs_stages": [
+        "segment2_a",
+        "segment2_a",
+        "segment2_a"
+      ],
+      "has_formal_dc": [
+        false,
+        false,
+        false
+      ],
+      "validation": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "phase": "segment2_b",
+      "kind": "segment2_b",
+      "obs_stages": [
+        "segment2_b"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "collecting_context",
+      "kind": "chat",
+      "obs_stages": [
+        "collecting_context"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "awaiting_confirmation",
+      "kind": "chat",
+      "obs_stages": [
+        "awaiting_confirmation"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    },
+    {
+      "phase": "awaiting_confirmation",
+      "kind": "gate",
+      "obs_stages": [
+        null
+      ],
+      "has_formal_dc": [
+        null
+      ],
+      "validation": [
+        null
+      ]
+    },
+    {
+      "phase": "synthesis",
+      "kind": "synthesis",
+      "obs_stages": [
+        "synthesis"
+      ],
+      "has_formal_dc": [
+        false
+      ],
+      "validation": [
+        true
+      ]
+    }
+  ],
+  "source": {
+    "has_breakthrough_core": true,
+    "covered_agenda": 6,
+    "question": "我在北美考虑要不要离开现在的全职工作，去做更有自主权但收入波动更大的独立顾问。家里有房贷，另有一个学龄孩子。请帮我判断近半年该不该动、什么条件下能动。 现状是公"
+  }
+}

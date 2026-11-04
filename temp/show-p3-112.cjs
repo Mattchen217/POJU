@@ -1,0 +1,10 @@
+﻿const fs=require("fs");
+const s=fs.readFileSync("scripts/test-decision-context-phase3-e2e.ts","utf8");
+const a=s.indexOf('await p3("P3-112"');
+const b=s.indexOf('await p3("', a+10);
+console.log(s.slice(a, b>0?b:a+800));
+console.log("==== P3-110/111 nearby ====");
+const a2=s.indexOf('await p3("P3-110"');
+const a3=s.indexOf('await p3("P3-111"');
+console.log("110 in e2e?", a2, "111", a3);
+if(a3>=0) console.log(s.slice(a3, a3+500));

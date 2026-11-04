@@ -1,0 +1,14 @@
+{
+  "ok": false,
+  "reason": "step_locked_approve_prior",
+  "step": {
+    "status": "idle",
+    "attempts": 0,
+    "last_err": null,
+    "obs": null,
+    "gate": null
+  },
+  "dc_status": "draft",
+  "binding": null,
+  "snapshot_present": false
+}

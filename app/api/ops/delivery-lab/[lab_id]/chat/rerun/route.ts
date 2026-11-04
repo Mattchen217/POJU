@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { requireOpsUser } from "@/lib/ops/require-ops";
 import {
   appendLabAudit,
@@ -6,7 +6,13 @@ import {
   saveDeliveryLab,
 } from "@/lib/llm/pro/delivery/lab/store";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
-import { rerunLabPipelineLastChatTurn } from "@/lib/llm/pro/delivery/lab/pipeline-chat";
+import { rerunLabPipelineCurrentStep } from "@/lib/llm/pro/delivery/lab/pipeline-chat";
+import {
+  labApplyPendingJobByLabId,
+  labRunSegment2AJob,
+  labRunSegment2BJob,
+  labRunSynthesisJob,
+} from "@/lib/llm/pro/delivery/lab/pipeline-jobs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,14 +35,51 @@ export async function POST(
   }
 
   try {
-    const next = await rerunLabPipelineLastChatTurn(lab);
+    const next = await rerunLabPipelineCurrentStep(lab);
     await saveDeliveryLab(next);
+
+    const pending = next.pipeline_pending_job;
+    if (pending) {
+      after(async () => {
+        try {
+          if (pending.stage === "segment2_a") {
+            await labRunSegment2AJob(pending.job_id);
+            const afterA = await labApplyPendingJobByLabId(lab_id);
+            // Call A apply auto-creates Call B — kick it (same as jobs/segment2 GET).
+            const b = afterA?.pipeline_pending_job;
+            if (b?.stage === "segment2_b") {
+              await labRunSegment2BJob(b.job_id);
+              await labApplyPendingJobByLabId(lab_id);
+            }
+          } else if (pending.stage === "segment2_b") {
+            await labRunSegment2BJob(pending.job_id);
+            await labApplyPendingJobByLabId(lab_id);
+          } else if (pending.stage === "synthesis") {
+            await labRunSynthesisJob(pending.job_id);
+            await labApplyPendingJobByLabId(lab_id);
+          }
+        } catch (e) {
+          console.error("[lab-chat/rerun] job kick failed", e);
+          try {
+            await labApplyPendingJobByLabId(lab_id);
+          } catch (applyErr) {
+            console.error("[lab-chat/rerun] apply-after-fail also failed", applyErr);
+          }
+        }
+      });
+    }
+
     await appendLabAudit({
       ops_user: auth.username,
       lab_id,
-      action: "pipeline_chat_rerun",
+      action: "pipeline_step_rerun",
+      detail: pending ? `${pending.stage}:${pending.job_id}` : "chat",
     });
-    return NextResponse.json({ ok: true, lab: labPublicView(next) });
+    return NextResponse.json({
+      ok: true,
+      lab: labPublicView(next),
+      job_id: pending?.job_id ?? null,
+    });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "rerun_failed" },

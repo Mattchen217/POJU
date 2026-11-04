@@ -161,6 +161,96 @@ function markCorePending(agent: POJUAgentState, freshQuestion: string): POJUAgen
   };
 }
 
+/** Create Call B (agenda bridge) xhigh job; caller must hold session lock. */
+async function createLabAgendaBridgeJob(input: {
+  lab: DeliveryLabSession;
+  session: POJUSessionState;
+  locale: string;
+  breakthrough_core: BreakthroughCore;
+}): Promise<Awaited<ReturnType<typeof createXhighJob>>> {
+  const { lab, session, locale, breakthrough_core } = input;
+  const segment1_understanding = formatSegment1UnderstandingForPrompt(ensureAgentV2(session));
+  const ziweiClosed = formatZiweiClosedSetForPrompt(ensureLabZiweiFactPack(lab));
+  return createXhighJob({
+    phase: "segment2_agenda_bridge",
+    session_id: session.session_id,
+    locale,
+    job_input: {
+      session_id: session.session_id,
+      locale,
+      original_question:
+        session.agent_v2?.original_question?.trim() ||
+        session.original_question?.trim() ||
+        "",
+      question_category: session.agent_v2?.question_category ?? null,
+      breakthrough_core,
+      ...(segment1_understanding.trim()
+        ? { segment1_understanding: segment1_understanding.trim() }
+        : {}),
+      dyad_compat_summary: session.dyad_compat_summary ?? null,
+      partner_bazi: session.partner_bazi ?? null,
+      pivot_chart_path: session.pivot_chart_path ?? null,
+      dyad_matrix_pack: session.dyad_matrix_pack ?? null,
+      ziwei_closed_set: ziweiClosed || null,
+    },
+  });
+}
+
+function stripLabCallBArtifacts(session: POJUSessionState): POJUSessionState {
+  const base = ensureAgentV2(session);
+  const core = base.breakthrough_core;
+  if (!core) throw new Error("missing_breakthrough_core_for_call_b_rerun");
+  const messages = session.messages.filter(
+    (m) =>
+      !(
+        m.role === "assistant" &&
+        (m.meta?.segment2_bridge_question || m.meta?.segment2_agenda_bridge_failed)
+      ),
+  );
+  return withSessionProfileFlags({
+    ...session,
+    messages,
+    agent_v2: {
+      ...base,
+      breakthrough_core: { ...core, first_question: undefined },
+      investigation_agenda: [],
+      agenda_generated: false,
+      current_phase: "collecting_context",
+      core_generation_failed: false,
+    },
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
+function stripLabCallAArtifacts(session: POJUSessionState): POJUSessionState {
+  const base = ensureAgentV2(session);
+  const messages = session.messages.filter(
+    (m) =>
+      !(
+        m.role === "assistant" &&
+        (m.meta?.segment2_analysis ||
+          m.meta?.segment2_bridge_question ||
+          m.meta?.segment2_agenda_bridge_failed ||
+          m.meta?.core_generation_failed)
+      ),
+  );
+  const freshQuestion =
+    base.original_question?.trim() ||
+    extractOpeningProblem(messages) ||
+    session.original_question?.trim() ||
+    "";
+  return withSessionProfileFlags({
+    ...session,
+    messages,
+    original_question: freshQuestion || session.original_question,
+    agent_v2: markCorePending(
+      { ...base, original_question: freshQuestion || base.original_question },
+      freshQuestion || base.original_question || "",
+    ),
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
 function appendGateTurn(
   lab: DeliveryLabSession,
   gate: { action: string; detail?: string },
@@ -824,30 +914,11 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
 
     let agendaJob;
     try {
-      const segment1_understanding = formatSegment1UnderstandingForPrompt(ensureAgentV2(sessionA));
-      const ziweiClosed = formatZiweiClosedSetForPrompt(ensureLabZiweiFactPack(lab));
-      agendaJob = await createXhighJob({
-        phase: "segment2_agenda_bridge",
-        session_id: sessionId,
+      agendaJob = await createLabAgendaBridgeJob({
+        lab,
+        session: sessionA,
         locale,
-        job_input: {
-          session_id: sessionId,
-          locale,
-          original_question:
-            sessionA.agent_v2?.original_question?.trim() ||
-            sessionA.original_question?.trim() ||
-            "",
-          question_category: sessionA.agent_v2?.question_category ?? null,
-          breakthrough_core: core,
-          ...(segment1_understanding.trim()
-            ? { segment1_understanding: segment1_understanding.trim() }
-            : {}),
-          dyad_compat_summary: sessionA.dyad_compat_summary ?? null,
-          partner_bazi: sessionA.partner_bazi ?? null,
-          pivot_chart_path: sessionA.pivot_chart_path ?? null,
-          dyad_matrix_pack: sessionA.dyad_matrix_pack ?? null,
-          ziwei_closed_set: ziweiClosed || null,
-        },
+        breakthrough_core: core,
       });
     } catch (e) {
       await releaseXhighSessionLock("segment2_agenda_bridge", sessionId);
@@ -1166,6 +1237,203 @@ export async function labSynthesisConfirm(lab: DeliveryLabSession): Promise<{
   };
   labOut.pipeline_cursor = derivePipelineCursor(labOut);
   return { lab: labOut, job_id: job.job_id };
+}
+
+/**
+ * Rerun Call B only: drop last segment2_b turn + bridge bubble, keep Call A,
+ * enqueue a fresh agenda_bridge job.
+ */
+export async function rerunLabSegment2B(lab: DeliveryLabSession): Promise<DeliveryLabSession> {
+  if (lab.mode !== "full_pipeline" || !lab.chat_session) {
+    throw new Error("lab_not_full_pipeline");
+  }
+  if (lab.pipeline_pending_job) throw new Error("pipeline_job_pending");
+
+  const turns = [...(lab.pipeline_turns ?? [])];
+  let lastIdx = -1;
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i]?.kind === "segment2_b") {
+      lastIdx = i;
+      break;
+    }
+  }
+  if (lastIdx < 0) throw new Error("no_segment2_b_turn_to_rerun");
+
+  const locale = resolvePivotSessionLang(lab.chat_session, lab.source.locale || "zh");
+  const cleaned = stripLabCallBArtifacts(lab.chat_session);
+  const core = ensureAgentV2(cleaned).breakthrough_core;
+  if (!core) throw new Error("missing_breakthrough_core_for_call_b_rerun");
+
+  const sessionId = cleaned.session_id;
+  const locked = await acquireXhighSessionLock("segment2_agenda_bridge", sessionId);
+  if (!locked) throw new Error("segment2_job_in_progress");
+
+  let agendaJob;
+  try {
+    agendaJob = await createLabAgendaBridgeJob({
+      lab,
+      session: cleaned,
+      locale,
+      breakthrough_core: core,
+    });
+  } catch (e) {
+    await releaseXhighSessionLock("segment2_agenda_bridge", sessionId);
+    throw e;
+  }
+
+  const out: DeliveryLabSession = {
+    ...lab,
+    chat_session: withPendingSegment2Job(cleaned, agendaJob.job_id, "agenda"),
+    pipeline_pending_job: { job_id: agendaJob.job_id, stage: "segment2_b" },
+    pipeline_turns: turns.slice(0, lastIdx),
+    pipeline_delivery_unlocked: false,
+    source: {
+      ...lab.source,
+      breakthrough_core: core,
+    },
+  };
+  out.pipeline_cursor = derivePipelineCursor(out);
+  return out;
+}
+
+/**
+ * Rerun Call A (and the auto Call B that follows): drop segment2_a/b turns +
+ * analysis/bridge bubbles, enqueue a fresh breakthrough_core job.
+ */
+export async function rerunLabSegment2A(lab: DeliveryLabSession): Promise<DeliveryLabSession> {
+  if (lab.mode !== "full_pipeline" || !lab.chat_session) {
+    throw new Error("lab_not_full_pipeline");
+  }
+  if (lab.pipeline_pending_job) throw new Error("pipeline_job_pending");
+
+  const turns = [...(lab.pipeline_turns ?? [])];
+  let lastAIdx = -1;
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i]?.kind === "segment2_a") {
+      lastAIdx = i;
+      break;
+    }
+  }
+  if (lastAIdx < 0) throw new Error("no_segment2_a_turn_to_rerun");
+
+  // Drop Call A and everything after it (Call B / later collecting chats that
+  // depended on the prior analysis).
+  const locale = resolvePivotSessionLang(lab.chat_session, lab.source.locale || "zh");
+  const cleaned = stripLabCallAArtifacts(lab.chat_session);
+  const agent_v2 = ensureAgentV2(cleaned);
+  const freshQuestion =
+    agent_v2.original_question?.trim() ||
+    cleaned.original_question?.trim() ||
+    "";
+  if (!freshQuestion) throw new Error("missing_question_for_call_a_rerun");
+
+  const sessionId = cleaned.session_id;
+  const locked = await acquireXhighSessionLock("segment2_breakthrough_core", sessionId);
+  if (!locked) throw new Error("segment2_job_in_progress");
+
+  let job;
+  try {
+    const ziweiPack = ensureLabZiweiFactPack(lab);
+    job = await createXhighJob({
+      phase: "segment2_breakthrough_core",
+      session_id: sessionId,
+      locale,
+      job_input: {
+        session_id: sessionId,
+        original_question: freshQuestion,
+        locale,
+        profile_id: cleaned.selected_stored_profile_id?.trim() || null,
+        agent_v2,
+        base_analysis: lab.source.base_analysis,
+        dyad_compat_summary: cleaned.dyad_compat_summary ?? null,
+        partner_bazi: cleaned.partner_bazi ?? null,
+        pivot_chart_path: cleaned.pivot_chart_path ?? null,
+        dyad_matrix_pack: cleaned.dyad_matrix_pack ?? null,
+        ziwei_closed_set: formatZiweiClosedSetForPrompt(ziweiPack),
+      },
+    });
+  } catch (e) {
+    await releaseXhighSessionLock("segment2_breakthrough_core", sessionId);
+    throw e;
+  }
+
+  const out: DeliveryLabSession = {
+    ...lab,
+    chat_session: withPendingSegment2Job(cleaned, job.job_id, "report"),
+    pipeline_pending_job: { job_id: job.job_id, stage: "segment2_a" },
+    pipeline_turns: turns.slice(0, lastAIdx),
+    pipeline_delivery_unlocked: false,
+    source: {
+      ...lab.source,
+      original_question: freshQuestion,
+      breakthrough_core: undefined,
+    },
+  };
+  out.pipeline_cursor = derivePipelineCursor(out);
+  return out;
+}
+
+/**
+ * Rerun synthesis: drop last synthesis turn + unlock, re-enqueue from
+ * awaiting_confirmation state (keeps collecting transcript + Call A/B).
+ */
+export async function rerunLabSynthesis(lab: DeliveryLabSession): Promise<DeliveryLabSession> {
+  if (lab.mode !== "full_pipeline" || !lab.chat_session) {
+    throw new Error("lab_not_full_pipeline");
+  }
+  if (lab.pipeline_pending_job) throw new Error("pipeline_job_pending");
+
+  const turns = [...(lab.pipeline_turns ?? [])];
+  let lastIdx = -1;
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i]?.kind === "synthesis") {
+      lastIdx = i;
+      break;
+    }
+  }
+  if (lastIdx < 0) throw new Error("no_synthesis_turn_to_rerun");
+
+  const locale = resolvePivotSessionLang(lab.chat_session, lab.source.locale || "zh");
+  const base = ensureAgentV2(lab.chat_session);
+  const core = base.breakthrough_core;
+  if (!core) throw new Error("missing_breakthrough_core_for_synthesis_rerun");
+
+  // Roll phase back to awaiting_confirmation so labSynthesisConfirm can fire.
+  // Drop the synthesis_confirm gate turn if it sits just before synthesis.
+  let cutIdx = lastIdx;
+  if (cutIdx > 0 && turns[cutIdx - 1]?.kind === "gate" && turns[cutIdx - 1]?.gate?.action === "synthesis_confirm") {
+    cutIdx -= 1;
+  }
+
+  let session = ensureSessionCycles(lab.chat_session);
+  // Drop the synthetic confirm user bubble if it is the last user message.
+  const confirmLabel = deliveryConfirmButtonLabel(locale);
+  const msgs = [...session.messages];
+  if (msgs[msgs.length - 1]?.role === "user" && msgs[msgs.length - 1]!.content.trim() === confirmLabel) {
+    msgs.pop();
+  }
+  session = withSessionProfileFlags({
+    ...session,
+    messages: msgs,
+    pending_synthesis_job_id: null,
+    agent_v2: {
+      ...base,
+      current_phase: "awaiting_confirmation",
+      synthesis_status: undefined,
+      synthesis_generation_failed: false,
+    },
+    last_interaction_at: new Date().toISOString(),
+  });
+
+  const rolled: DeliveryLabSession = {
+    ...lab,
+    chat_session: session,
+    pipeline_turns: turns.slice(0, cutIdx),
+    pipeline_pending_job: null,
+    pipeline_delivery_unlocked: false,
+  };
+  rolled.pipeline_cursor = derivePipelineCursor(rolled);
+  return (await labSynthesisConfirm(rolled)).lab;
 }
 
 /** Write Stage1–3 outputs into LabSource and unlock delivery steps. */

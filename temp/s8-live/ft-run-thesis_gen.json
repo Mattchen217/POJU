@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "reason": null,
+  "status": "done",
+  "gate": {
+    "passed": true,
+    "detail": "dims=6 · 六维总纲 · patternHits=5"
+  },
+  "obs": {
+    "stage": "v3:thesis",
+    "step_key": "thesis.gen",
+    "page": null,
+    "session_id": "lab-chat-lab_mw0zic7l_f3aa32ec",
+    "lab_id": "lab_mw0zic7l_f3aa32ec",
+    "job_id": null,
+    "generation_id": null,
+    "call_id": null,
+    "context": {
+      "binding": null,
+      "has_snapshot": false,
+      "status": null,
+      "feed_injected": false
+    },
+    "input": {
+      "pipeline": "v3",
+      "dims": 6,
+      "structured_fp": "9b62bd40a4dc58b8e9c5bef3e4195933",
+      "cfp_hash": "9b22b509bc22d2ff3ca2e51f",
+      "zfp_hash": "ccfa260541b30d0479ece723",
+      "patternHits": [
+        "日月同宫",
+        "太阳化禄入命",
+        "化科入命",
+        "昌曲同会",
+        "魁钺同会"
+      ],
+      "patternHits_n": 5
+    },
+    "prompt": {
+      "system_chars": 0,
+      "user_chars": 0,
+      "user_feed_chars": 0,
+      "has_formal_dc": false
+    },
+    "model": {
+      "name": null,
+      "thinking_effort": null,
+      "latency_ms": null
+    },
+    "response": {
+      "raw_chars": 0,
+      "parsed_present": false,
+      "finish_reason": null
+    },
+    "transform": [
+      {
+        "action": "buildChartThesisFromStructured"
+      }
+    ],
+    "validation": {
+      "passed": true,
+      "failed_rule": null,
+      "detail": "dims=6 · 六维总纲 · patternHits=5"
+    },
+    "render": {
+      "preview_kind": "output_to_next_stage",
+      "preview_chars": 5254
+    }
+  }
+}

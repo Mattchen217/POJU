@@ -1,0 +1,25 @@
+{
+  "dc_status": "draft",
+  "sufficiency": {
+    "verdict": "continue_collecting",
+    "canStop": false,
+    "reasons": [
+      "dir_unknown_may_affect_p5:dir_agenda_02",
+      "dir_unknown_may_affect_p5:dir_agenda_01",
+      "dir_unknown_may_affect_p5:dir_agenda_03",
+      "dir_unknown_boundary_ok:dir_agenda_06",
+      "dir_unknown_boundary_ok:dir_ag_coverage_7",
+      "dir_unknown_boundary_ok:dir_agenda_05"
+    ],
+    "blocking_dir_ids": [
+      "dir_agenda_02",
+      "dir_agenda_01",
+      "dir_agenda_03"
+    ],
+    "open_conflict_ids": [],
+    "blocking_conflict_ids": [],
+    "nonblocking_conflict_ids": [],
+    "hard_push_ignored_for_sufficiency": false
+  },
+  "binding": null
+}

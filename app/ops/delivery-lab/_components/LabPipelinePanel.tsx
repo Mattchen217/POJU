@@ -279,6 +279,32 @@ export function LabPipelinePanel({
       view.pipeline_cursor === "awaiting_understanding");
   const showSynthesis = view.pipeline_cursor === "awaiting_confirmation";
 
+  /** Last non-gate turn — what「重跑本轮」will actually re-execute. */
+  const rerunTargetKind = useMemo(() => {
+    for (let i = turns.length - 1; i >= 0; i--) {
+      const k = turns[i]?.kind;
+      if (k && k !== "gate") return k;
+    }
+    return null;
+  }, [turns]);
+  const rerunTargetLabel =
+    rerunTargetKind === "segment2_a"
+      ? "Call A"
+      : rerunTargetKind === "segment2_b"
+        ? "Call B"
+        : rerunTargetKind === "synthesis"
+          ? "Synthesis"
+          : rerunTargetKind === "chat"
+            ? "对话"
+            : null;
+  const canRerunCurrent =
+    Boolean(rerunTargetKind) &&
+    !pending &&
+    (rerunTargetKind === "chat" ||
+      rerunTargetKind === "segment2_a" ||
+      rerunTargetKind === "segment2_b" ||
+      rerunTargetKind === "synthesis");
+
   // Auto-open partner birth form when Stage-1 dyad gate appears (ops visibility).
   useEffect(() => {
     if (showDyad) setPartnerFormOpen(true);
@@ -303,7 +329,12 @@ export function LabPipelinePanel({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={busy || !turns.some((t) => t.kind === "chat")}
+            disabled={busy || !canRerunCurrent}
+            title={
+              rerunTargetLabel
+                ? `重跑当前步骤：${rerunTargetLabel}`
+                : "没有可重跑的步骤"
+            }
             onClick={() =>
               void postJson(
                 `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/chat/rerun`,
@@ -311,7 +342,7 @@ export function LabPipelinePanel({
             }
             className="rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-40"
           >
-            重跑本轮
+            {rerunTargetLabel ? `重跑本轮 · ${rerunTargetLabel}` : "重跑本轮"}
           </button>
           {pending ? (
             <button

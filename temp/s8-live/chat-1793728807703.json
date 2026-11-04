@@ -1,0 +1,334 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "cursor": "collecting",
+  "phase": "collecting_context",
+  "pending_job": null,
+  "delivery_unlocked": false,
+  "dc": {
+    "context_id": "dc_lab-chat-lab_mw0zic7l_f3aa32ec",
+    "version": 1,
+    "status": "draft",
+    "content_hash": null,
+    "facts": 7,
+    "constraints": 0,
+    "hypotheses": 6,
+    "dirs": 6,
+    "conflicts": 0,
+    "definition": {
+      "concrete_event": "你在考虑是否离开现在的全职工作，转去做收入波动更大的独立顾问——这是你当前最想先解决的核心决策。",
+      "stakes": "家里有房贷（月供约占税后收入三分之一），储蓄可支撑六到八个月；孩子明年上小学；公司稳定但晋升停滞；独立顾问已有两个潜在客户口头意向，尚未签合同。",
+      "desired_outcome": "你更在意可逆性——希望先兼职试水三个月而不是直接裸辞；若客户意向落空，还能回到全职路径。",
+      "decision_question": "我在北美考虑要不要离开现在的全职工作，去做更有自主权但收入波动更大的独立顾问。家里有房贷，另有一个学龄孩子。请帮我判断近半年该不该动、什么条件下能动。 现状是公司稳定但晋升停滞，独立顾问已有两个潜在客户口头意向，还没签合同。；房贷月供大概占家庭税后收入三分之一，储蓄大概还能撑六到八个月。孩子明年要上小学，搬家成本也算进去了。",
+      "goal_priorities": [],
+      "unacceptable_outcomes": []
+    }
+  },
+  "binding": null,
+  "turns": [
+    {
+      "turn_id": "pt_mw0zivb0_08b5cc",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 112,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 23671
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728290-xf0zoXXpR0kckTro0IpB"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zjtkm_252e8e",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 50,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 43988
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728314-EejH8b6No3rZlYEi3F5x"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zk35c_606225",
+      "phase": "awaiting_understanding_confirm",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "awaiting_understanding_confirm",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 45,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 11929
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728358-Vvjwq9xhiqsCYPnNy6mf"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zk3h7_0b75de",
+      "phase": "collecting_context",
+      "kind": "gate",
+      "gate": {
+        "action": "understanding_confirm",
+        "detail": "path=solo"
+      },
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": null,
+          "obs_prompt_chars": null,
+          "obs_model": null,
+          "obs_validation": null,
+          "generation_id": null
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zok7x_99391c",
+      "phase": "segment2_a",
+      "kind": "segment2_a",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "segment2_a",
+          "obs_prompt_chars": {
+            "system": 8620,
+            "user": 4262,
+            "feed": 1594,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "high",
+            "latency_ms": 205072
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728415-nVJ8q3hqv4zLhOrTH3v1"
+        },
+        {
+          "n": 2,
+          "err": null,
+          "obs_stage": "segment2_a",
+          "obs_prompt_chars": {
+            "system": 10201,
+            "user": 4364,
+            "feed": 1594,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "high",
+            "latency_ms": 205072
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728415-kYPxUJ7TyhIKCCdeF4Aw"
+        },
+        {
+          "n": 3,
+          "err": null,
+          "obs_stage": "segment2_a",
+          "obs_prompt_chars": {
+            "system": 12023,
+            "user": 4980,
+            "feed": 0,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "high",
+            "latency_ms": 205072
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": null
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zrb5q_8eb0bf",
+      "phase": "segment2_b",
+      "kind": "segment2_b",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "segment2_b",
+          "obs_prompt_chars": {
+            "system": 12024,
+            "user": 6447,
+            "feed": 0,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "high",
+            "latency_ms": 125262
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728581-xVervtHjYdxlLU6Lpfx4"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zrs58_31398d",
+      "phase": "collecting_context",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "collecting_context",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 31,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 21577
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728708-7rqmHTmLXDuJ5Fo5Z6C9"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zs5az_49e2b8",
+      "phase": "collecting_context",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "collecting_context",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 21,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 16302
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728730-vJQUCzwvAsBD8AeQX7j4"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0ztgzr_abd717",
+      "phase": "collecting_context",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "collecting_context",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 27,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 61078
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728747-s6zBgxWOAXWtoimsSRyP"
+        }
+      ]
+    }
+  ],
+  "last_assistant": "有一个客户给了预算或下一步时间，推进感实——试水至少不是空转，有一个可验证的锚点；另一个还虚，所以别把两个都当到手的资源。那家里的现金流底线，你心里那条不能破的线具体是什么？"
+}

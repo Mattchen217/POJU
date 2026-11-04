@@ -1,0 +1,3 @@
+feat(opening): independent minimum_interaction_gate before confirm
+
+Require one system-user calibration round before understanding confirm, without folding into understanding_sufficient. Prompt asks for a high-value light clarification when cores are already complete; hard gate blocks early confirm.

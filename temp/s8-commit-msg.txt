@@ -1,0 +1,3 @@
+﻿fix(s8): sticky provider slug + LAB sufficiency Freeze wire
+
+Map OpenRouter display names (e.g. Sail Research) to ORDER slugs so session lock does not 404; apply in-memory Freeze on LAB synthesis confirm and seed DC binding into LabSource. Add S8 live E2E drivers/docs.

@@ -1,0 +1,124 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "cursor": "segment2",
+  "phase": "collecting_context",
+  "pending_job": {
+    "job_id": "s2a_lab-chat-lab_mw0zic7l_f3_1793728369438_qavsvs",
+    "stage": "segment2_a"
+  },
+  "delivery_unlocked": false,
+  "dc": null,
+  "binding": null,
+  "turns": [
+    {
+      "turn_id": "pt_mw0zivb0_08b5cc",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 112,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 23671
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728290-xf0zoXXpR0kckTro0IpB"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zjtkm_252e8e",
+      "phase": "opening",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "opening",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 50,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 43988
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728314-EejH8b6No3rZlYEi3F5x"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zk35c_606225",
+      "phase": "awaiting_understanding_confirm",
+      "kind": "chat",
+      "gate": null,
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": "awaiting_understanding_confirm",
+          "obs_prompt_chars": {
+            "system": 2822,
+            "user": 12030,
+            "feed": 45,
+            "has_formal_dc": false
+          },
+          "obs_model": {
+            "name": "deepseek/deepseek-v4-pro-0813",
+            "thinking_effort": "medium",
+            "latency_ms": 11929
+          },
+          "obs_validation": {
+            "passed": true,
+            "failed_rule": null,
+            "detail": null
+          },
+          "generation_id": "gen-1793728358-Vvjwq9xhiqsCYPnNy6mf"
+        }
+      ]
+    },
+    {
+      "turn_id": "pt_mw0zk3h7_0b75de",
+      "phase": "collecting_context",
+      "kind": "gate",
+      "gate": {
+        "action": "understanding_confirm",
+        "detail": "path=solo"
+      },
+      "attempts": [
+        {
+          "n": 1,
+          "err": null,
+          "obs_stage": null,
+          "obs_prompt_chars": null,
+          "obs_model": null,
+          "obs_validation": null,
+          "generation_id": null
+        }
+      ]
+    }
+  ]
+}

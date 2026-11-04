@@ -245,12 +245,64 @@ export async function labContinueAfterDyadGate(
   });
 }
 
+/**
+ * Rerun the *current* pipeline step (last non-gate turn), not always the last chat.
+ * Opening/collecting chat → replay that user text; Call A/B / synthesis → re-enqueue that job.
+ */
+export async function rerunLabPipelineCurrentStep(
+  lab: DeliveryLabSession,
+): Promise<DeliveryLabSession> {
+  if (lab.mode !== "full_pipeline" || !lab.chat_session) {
+    throw new Error("lab_not_full_pipeline");
+  }
+  if (lab.pipeline_pending_job) {
+    throw new Error("pipeline_job_pending");
+  }
+
+  const turns = lab.pipeline_turns ?? [];
+  let lastIdx = -1;
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i]?.kind && turns[i]!.kind !== "gate") {
+      lastIdx = i;
+      break;
+    }
+  }
+  if (lastIdx < 0) throw new Error("no_turn_to_rerun");
+  const kind = turns[lastIdx]!.kind;
+
+  if (kind === "chat") {
+    return rerunLabPipelineLastChatTurn(lab);
+  }
+  if (kind === "segment2_b") {
+    const { rerunLabSegment2B } = await import(
+      "@/lib/llm/pro/delivery/lab/pipeline-jobs"
+    );
+    return rerunLabSegment2B(lab);
+  }
+  if (kind === "segment2_a") {
+    const { rerunLabSegment2A } = await import(
+      "@/lib/llm/pro/delivery/lab/pipeline-jobs"
+    );
+    return rerunLabSegment2A(lab);
+  }
+  if (kind === "synthesis") {
+    const { rerunLabSynthesis } = await import(
+      "@/lib/llm/pro/delivery/lab/pipeline-jobs"
+    );
+    return rerunLabSynthesis(lab);
+  }
+  throw new Error(`cannot_rerun_kind_${kind}`);
+}
+
 /** Drop last assistant (+ matching user if present) and re-run with same user_input. */
 export async function rerunLabPipelineLastChatTurn(
   lab: DeliveryLabSession,
 ): Promise<DeliveryLabSession> {
   if (lab.mode !== "full_pipeline" || !lab.chat_session) {
     throw new Error("lab_not_full_pipeline");
+  }
+  if (lab.pipeline_pending_job) {
+    throw new Error("pipeline_job_pending");
   }
   const turns = [...(lab.pipeline_turns ?? [])];
   let lastChatIdx = -1;
@@ -261,6 +313,13 @@ export async function rerunLabPipelineLastChatTurn(
     }
   }
   if (lastChatIdx < 0) throw new Error("no_chat_turn_to_rerun");
+  // Only replay chat when it is the current step (no later Call A/B/synthesis).
+  for (let i = turns.length - 1; i > lastChatIdx; i--) {
+    const k = turns[i]?.kind;
+    if (k && k !== "gate" && k !== "chat") {
+      throw new Error("chat_not_current_step");
+    }
+  }
   const lastTurn = turns[lastChatIdx]!;
   const userInput = lastTurn.user_input?.trim();
   if (!userInput) throw new Error("missing_user_input_for_rerun");

@@ -1,0 +1,1 @@
+const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.scripts['test:normalize-s4']='tsx scripts/test-normalize-s4.ts'; fs.writeFileSync('package.json', JSON.stringify(p,null,2)+String.fromCharCode(10)); console.log('added', p.scripts['test:normalize-s4']);  

@@ -1,0 +1,64 @@
+{
+  "ok": true,
+  "reason": null,
+  "status": "done",
+  "gate": {
+    "passed": true,
+    "detail": "ok"
+  },
+  "obs": {
+    "stage": "v3:bootstrap",
+    "step_key": "bootstrap",
+    "page": null,
+    "session_id": "lab-chat-lab_mw0zic7l_f3aa32ec",
+    "lab_id": "lab_mw0zic7l_f3aa32ec",
+    "job_id": null,
+    "generation_id": null,
+    "call_id": null,
+    "context": {
+      "binding": null,
+      "has_snapshot": false,
+      "status": null,
+      "feed_injected": false
+    },
+    "input": {
+      "pipeline": "v3_three_step",
+      "question_summary": "我在北美考虑要不要离开现在的全职工作，去做更有自主权但收入波动更大的独立顾问。家里有房贷，另有一个学龄孩子。请帮我判断近半年该不该动、什么条件下能动。 现状是公司稳定但晋升停滞，独立顾问已有两个潜在客户口头意向，还没签合同。；房贷月供大概占家庭税后收入三分之一，储蓄大概还能撑六到八个月。孩子明年要上小学，搬家成本也算进去了。",
+      "question_len": 163,
+      "structured_present": true,
+      "structured_fp": "9b62bd40a4dc58b8e9c5bef3e4195933",
+      "chart_fp": "697651a51931955dbc4478e0",
+      "peek_scope": "bootstrap_local"
+    },
+    "prompt": {
+      "system_chars": 0,
+      "user_chars": 0,
+      "user_feed_chars": 0,
+      "has_formal_dc": false
+    },
+    "model": {
+      "name": null,
+      "thinking_effort": null,
+      "latency_ms": null
+    },
+    "response": {
+      "raw_chars": 0,
+      "parsed_present": false,
+      "finish_reason": null
+    },
+    "transform": [
+      {
+        "action": "validate_structured"
+      }
+    ],
+    "validation": {
+      "passed": true,
+      "failed_rule": null,
+      "detail": "ok"
+    },
+    "render": {
+      "preview_kind": "output_to_next_stage",
+      "preview_chars": 27
+    }
+  }
+}

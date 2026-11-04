@@ -1,0 +1,16 @@
+{
+  "lab_id": "lab_mw0zic7l_f3aa32ec",
+  "phase": "collecting_context",
+  "cursor": "collecting",
+  "unlocked": false,
+  "fully_covered": false,
+  "items": [],
+  "dc": {
+    "status": "draft",
+    "facts": 12,
+    "constraints": 0,
+    "hypotheses": 6,
+    "dirs": 6
+  },
+  "binding": null
+}
