@@ -5,6 +5,7 @@
 import {
   getOpenRouterDefaultModel,
   isOpenRouterConfigured,
+  OPENROUTER_DEFAULT_TIMEOUT_MS,
   openRouterProviderExtras,
   type OpenRouterChatMessage,
   type OpenRouterRoutePath,
@@ -52,7 +53,7 @@ export interface CallLLMInput {
   thinking_effort?: ReasoningEffort;
   response_format?: "json" | "text";
   temperature?: number;
-  /** OpenRouter HTTP timeout (ms). Defaults to 90s; deep_analysis uses 180s. */
+  /** OpenRouter HTTP timeout (ms). Default ~285s (under Vercel 300). */
   timeout_ms?: number;
   /** OpenRouter transport retries per slug (default OPENROUTER_MAX_ATTEMPTS). Segment-2 xhigh uses 1. */
   max_attempts?: number;
@@ -225,15 +226,9 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     `[llm/router] ${input.call_type} → ${normalizedType} (thinking: ${thinkingEnabled ? effort : "off"}, max_tokens: ${max_tokens})`,
   );
 
-  const timeout_ms =
-    input.timeout_ms ??
-    (input.call_type === "syncro_batch"
-      ? 90_000
-      : input.call_type === "base_analysis"
-        ? 240_000
-        : normalizedType === "deep_analysis"
-          ? 180_000
-          : undefined);
+  // Default ~285s (under Vercel 300). Explicit input.timeout_ms still wins
+  // (delivery / segment2 / synthesis already pass their own ceilings).
+  const timeout_ms = input.timeout_ms ?? OPENROUTER_DEFAULT_TIMEOUT_MS;
 
   const locked = input.locked_provider?.trim();
   const provider =

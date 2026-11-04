@@ -279,7 +279,7 @@ export async function generateCompanionDayPairCards(input: {
         temperature: qualityRetried ? 0.3 : 0.45,
         session_id: cacheSession,
         phase_name: "companion_daily_pair",
-        /** Only delta vs 14c2a10: wall 285s instead of OpenRouter default 90s. */
+        /** Explicit wall (same ceiling as OpenRouter default / delivery). */
         timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       },
       validate: (parsed) => validatePairDays(parsed, expectedIndexes),

@@ -12,6 +12,7 @@ import {
   resolveOpenRouterCandidateOrder,
   type OpenRouterChatMessage,
   type OpenRouterChatOptions,
+  OPENROUTER_DEFAULT_TIMEOUT_MS,
   type OpenRouterCompletionResult,
 } from "@/lib/llm/openrouter-shared";
 import {
@@ -28,7 +29,8 @@ import {
 } from "@/lib/llm/openrouter-slow-stream";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_STREAM_FETCH_TIMEOUT_MS = 90_000;
+/** Same ceiling as non-stream path — Opening/chat must not die at 90s. */
+const OPENROUTER_STREAM_FETCH_TIMEOUT_MS = OPENROUTER_DEFAULT_TIMEOUT_MS;
 /** Do not start another stream admit under the same callLLM wall below this. */
 const OPENROUTER_RETRY_MIN_REMAINING_MS = 45_000;
 const OPENROUTER_RETRY_TAIL_MS = 5_000;

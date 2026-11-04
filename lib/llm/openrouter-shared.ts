@@ -89,7 +89,14 @@ export type OpenRouterChatMessage = {
   content: string | OpenRouterMultimodalContent[];
 };
 
-const OPENROUTER_FETCH_TIMEOUT_MS = 90_000;
+/**
+ * Default per-invoke client wall when callers omit `timeout_ms`.
+ * Align with delivery (`DELIVERY_SINGLE_CALL_TIMEOUT_MS`): under Vercel
+ * `maxDuration=300` hard kill, reserve ~15s for cleanup. A 90s default only
+ * aborted healthy Opening/chat streams mid-generation (OR 499 / Cancelled).
+ */
+export const OPENROUTER_DEFAULT_TIMEOUT_MS = 285_000;
+const OPENROUTER_FETCH_TIMEOUT_MS = OPENROUTER_DEFAULT_TIMEOUT_MS;
 /** Do not start another HTTP admit under the same callLLM wall below this. */
 const OPENROUTER_RETRY_MIN_REMAINING_MS = 45_000;
 const OPENROUTER_RETRY_TAIL_MS = 5_000;
@@ -108,7 +115,7 @@ export type OpenRouterChatOptions = {
   /** When true, sets response_format json_object (still instruct JSON in prompts). */
   json_mode?: boolean;
   reasoning_effort?: "off" | "low" | "medium" | "high" | "xhigh";
-  /** Override default 90s abort (ms). */
+  /** Override default ~285s abort (ms). Under Vercel maxDuration=300. */
   timeout_ms?: number;
   /** Per-slug OpenRouter transport retries (default OPENROUTER_MAX_ATTEMPTS). */
   max_attempts?: number;
