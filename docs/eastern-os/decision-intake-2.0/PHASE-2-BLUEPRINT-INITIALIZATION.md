@@ -4,7 +4,7 @@
 |---|---|
 | **Baseline** | `main` @ `1f1c111e` |
 | **Phase 1** | Data Contract §4 · State Machines `blueprint_building` → `blueprint_ready` |
-| **Catalogs** | DDR/DIR catalog version 1 |
+| **Catalogs** | `ddr_catalog_version = 1.1` · `dir_catalog_version = 1` |
 | **Code reuse** | `Definition`, `DIR` shape from `types.ts`; CFP via ProfileStructured; ZFP via `lib/ziwei/fact-pack` |
 
 ---
@@ -36,8 +36,8 @@ Define how the **initial InvestigationBlueprint** is constructed as a **versione
 |---|---|
 | `blueprint_id` | New id |
 | `blueprint_version` | Start at 1; bump on scope change |
-| `ddr_version` | `ddr_catalog_version` used (1) |
-| `dir_catalog_version` | 1 |
+| `ddr_version` | `1.1` (must equal `ddr_catalog_version` used) |
+| `dir_catalog_version` | `1` |
 | `session_id` / `context_id` | Bind to session + DC |
 | `topic_tags` | From applicability |
 | `page_07_emit` | boolean |

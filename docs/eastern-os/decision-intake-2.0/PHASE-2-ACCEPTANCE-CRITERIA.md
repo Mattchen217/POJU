@@ -4,6 +4,7 @@
 |---|---|
 | **Scope** | Phase 2 documentation package quality |
 | **Baseline** | `main` @ `1f1c111e` (Phase 1 merged) |
+| **Canonical versions** | `ddr_catalog_version = 1.1` · `map_version = 1.1` · Blueprint `ddr_version = 1.1` · `dir_catalog_version = 1` |
 | **Pass rule** | All **AC2-*** PASS or product-WAIVED with reason |
 | **Not in scope** | Runtime implementation (Phase 3+) |
 
@@ -20,6 +21,7 @@
 | AC2-1.5 | Blueprint init distinguishes seed vs `DC.dirs` live state | Explicit bans present |
 | AC2-1.6 | Topic applicability defines page_07 without fixed questionnaire | Present |
 | AC2-1.7 | Docs-only PR; no runtime/UI/schema/prompt/PASS | `git diff` check |
+| AC2-1.8 | Version declarations consistent across Phase 2 package | `ddr_catalog_version`/`ddr_version`/`map_version` = **1.1**; `dir_catalog_version` = **1**; no conflicting literals |
 
 ---
 
@@ -138,6 +140,7 @@ Additional regression (Phase 1 preserved):
 | 7 | PageFeedMatrix unmodified | **PASS** |
 | 8 | Source check + Gate order documented | **PASS** (DDR §1.3–§1.7) |
 | 9 | AC2-5 tests 1–10 unambiguous in catalog | **PASS** (author) |
+| 10 | Version literals: ddr/map/ddr_version=1.1; dir=1 | **PASS** |
 
 ---
 

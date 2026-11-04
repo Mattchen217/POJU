@@ -145,7 +145,7 @@ WARN still requires Phase 1: `dangling===false`, `|L|≥1`, `|L|===ids.length`, 
 
 ---
 
-## 3. Instance catalog (`ddr_catalog_version = 1`)
+## 3. Instance catalog (`ddr_catalog_version = 1.1`)
 
 IDs are stable. Do not renumber; deprecate + supersede if needed later.
 

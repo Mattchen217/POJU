@@ -7,6 +7,7 @@
 | **Live SoT** | **`DC.dirs` only** (Phase 1 C3) — this file never stores `current_state` |
 | **Code alignment** | `lib/poju/decision-context/types.ts` `DIR` fields |
 | **Catalog version** | `dir_catalog_version = 1` |
+| **Companion DDR catalog** | `ddr_catalog_version = 1.1` |
 
 ---
 

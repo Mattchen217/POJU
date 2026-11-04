@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Baseline** | `main` @ `1f1c111e` |
-| **Companion** | DDR/DIR catalogs · Blueprint Initialization |
+| **Companion** | DDR catalog `1.1` · DIR catalog `1` · Blueprint Initialization |
 | **Rule** | Reusable requirements + applicability — **not** a fixed exhaustive questionnaire |
 
 ---

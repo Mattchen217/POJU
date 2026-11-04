@@ -88,7 +88,7 @@ DIR IDs abbreviated: prefix `DIR-` omitted in table cells for width; full ids in
 
 ---
 
-## 4. Coverage statistics (`map_version = 1`)
+## 4. Coverage statistics (`map_version = 1.1`)
 
 | Metric | Value |
 |---|---|
