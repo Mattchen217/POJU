@@ -253,15 +253,16 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 |---|---|
 | **Given** | Mix of DDR priorities and statuses |
 | **When** | Sufficiency Gate evaluates |
-| **Then** | P0 with status ∉ {`satisfied`,`n_a`} ⇒ FAIL (not PASS); P0/`n_a` is Gate-acceptable terminal; P1 uses deterministic WARN/FAIL rule on unsatisfied **with `|L|≥1` required for WARN**; P2 alone must not block report; WARN allows conditional report with disclosures; FAIL forbids normal freeze |
+| **Then** | P0 with status ∉ {`satisfied`,`n_a`} ⇒ FAIL (not PASS); P0/`n_a` is Gate-acceptable terminal; P1 WARN requires `dangling === false` **and** `|L|≥1` **and** complete id resolution; P2 alone must not block report; WARN allows conditional report with disclosures; FAIL forbids normal freeze |
 | **Verify** | Data contract §3.3; State Machines §4.2; Traceability §5 |
 
 | Given | When | Then |
 |---|---|---|
 | P0 DDR all required DIRs `n_a` → DDR `n_a` | Gate | May PASS on this DDR (terminal OK); must not FAIL solely because status is `n_a` rather than `satisfied` |
 | P0 DDR `partial` / `pending` / `blocked` (incl. dangling → pending) | Gate | FAIL |
-| P1 DDR unsatisfied; `|L|=0` (no linked active DIR; empty-set / dangling) | Gate | **FAIL** — must not vacuous WARN even if boundaries exist |
-| P1 DDR unsatisfied; `|L|≥1`; every L has `may_affect_p5_ranking === false`; boundaries recorded | Gate | **WARN** |
+| P1 DDR unsatisfied; `|L|=0` (no linked active DIR) | Gate | **FAIL** — must not vacuous WARN even if boundaries exist |
+| P1 DDR unsatisfied; **partial dangling** (`ids=[A,B]`, A active with `may_affect_p5_ranking===false`, B missing/deprecated, `|L|=1`, boundaries recorded) | Gate | **FAIL** — partial dangling never WARN |
+| P1 DDR unsatisfied; `dangling === false`; `|L|≥1`; `|L|===ids.length`; every L has `may_affect_p5_ranking === false`; boundaries recorded | Gate | **WARN** |
 | Only P2 DDR unsatisfied | Gate | Must not alone prevent report |
 
 ### AC-C9 — unknown / declined / not_applicable ≠ satisfied
@@ -320,7 +321,7 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 | 10 | Decision Understanding remains derived | **PASS** |
 | 11 | All required DIRs `n_a` → DDR `n_a` (not `satisfied`) | **PASS** (Contract §3.2; SM §4.1; Trace §2; AC-C7) |
 | 12 | `truly_unrequired` (`ids.length===0`) + evidence → `n_a`; dangling refs → `pending` never `n_a` | **PASS** |
-| 13 | P1 WARN requires `|L|≥1`; empty linked set → FAIL (no vacuous every) | **PASS** (Contract §3.3; SM §4.2; AC-C8) |
+| 13 | P1 WARN requires `dangling===false` and `|L|≥1` and complete ids; empty L **or** partial dangling → FAIL | **PASS** (Contract §3.3; SM §4.2; AC-C8) |
 
 ---
 

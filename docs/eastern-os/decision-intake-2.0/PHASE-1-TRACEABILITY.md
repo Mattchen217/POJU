@@ -65,7 +65,8 @@ DDR.status = f(DIR states, blockers, ref integrity)   ← Data Contract §3.2
   · truly_unrequired without N/A evidence → pending
 Gate = g(DDR statuses by priority)     ← §3.3
   · Gate accepts {satisfied, n_a} as terminal OK for P0/P1 tests
-  · P1 WARN requires |L|≥1 linked active DIRs; empty L → FAIL
+  · P1 WARN requires dangling===false AND |L|≥1 AND |L|===ids.length
+  · empty L or any dangling (incl. partial) → FAIL — never WARN
 Report segment cites ddr_ids + fact_ids + FreezeRecord
 ```
 

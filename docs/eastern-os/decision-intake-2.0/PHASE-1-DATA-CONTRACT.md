@@ -285,17 +285,18 @@ Verdicts: `PASS` \| `WARN` \| `FAIL`.
 
 Compose after DDR status refresh + DIR reaggregation + Definition/conflict checks:
 
-Let `L` = linked **active** DIRs for this DDR (`R` as resolved in §3.2; dangling yields `|L|=0` or incomplete — treated as no valid linked set for WARN).
+Let `L` = linked **active** DIRs for this DDR (`R` as resolved in §3.2).  
+`dangling` is defined in §3.2 (`ids.length > 0` with any missing/deprecated required id) — including **partial** dangling where some ids resolve and others do not.
 
 | Rule | Gate |
 |---|---|
 | Any **P0** DDR is `pending` / `partial` / `blocked` (not `satisfied`/`n_a`) | **FAIL** (not PASS) |
-| **P1** DDR unsatisfied **and** (`|L|=0` **or** decision-critical / ranking impact) | **FAIL** |
-| **P1** DDR unsatisfied **and** `|L|≥1` **and** every DIR in `L` has `may_affect_p5_ranking === false` **and** boundaries recorded | **WARN** |
+| **P1** DDR unsatisfied **and** (`dangling` **or** `|L|=0` **or** decision-critical / ranking impact) | **FAIL** |
+| **P1** DDR unsatisfied **and** `dangling === false` **and** `|L|≥1` **and** `|L| === ids.length` **and** every DIR in `L` has `may_affect_p5_ranking === false` **and** boundaries recorded | **WARN** |
 | Only **P2** DDRs unsatisfied | Must **not** alone prevent report; Gate may still PASS/WARN on other grounds |
 | Open preferred-path conflicts without boundary policy | **FAIL** |
 | Boundary-only unknowns / non-preferred conflicts disclosed | **WARN** |
-| Definition unclear / hash integrity fail / dangling DIR refs on P0/P1 | **FAIL** |
+| Definition unclear / hash integrity fail / **any** dangling DIR refs on P0/P1 (full or partial) | **FAIL** |
 | User hard-push / stall / MAX turns alone | **Never PASS** |
 
 **WARN:** may enter **conditional report** after E2 UnderstandingConfirm; must disclose unresolved info, premises, and conclusion limits (`delivery_mode=degraded` / information_boundaries).  
@@ -305,20 +306,28 @@ Let `L` = linked **active** DIRs for this DDR (`R` as resolved in §3.2; danglin
 
 ```text
 if P1 ddr.status ∉ {satisfied, n_a}:
+  let ids = ddr.required_dir_ids
   let L = linked active DIRs for this DDR  # from DC.dirs; exclude missing/deprecated
+  let dangling = ids.length > 0 AND |L| < ids.length  # any unresolved required id
+  if dangling:
+       → FAIL   # partial or full dangling: never WARN (overrides |L|≥1)
   if |L| === 0:
        → FAIL   # empty linked set: never vacuously WARN (conservative)
   if ddr.completion_criteria marks decision_critical=true
      OR any DIR in L has may_affect_p5_ranking !== false:
        → FAIL
-  if every DIR in L has may_affect_p5_ranking === false
+  if dangling === false
+     AND |L| ≥ 1
+     AND |L| === ids.length
+     AND every DIR in L has may_affect_p5_ranking === false
      AND information_boundaries includes this gap:
        → WARN
   else:
        → FAIL  # conservative default
 ```
 
-**Forbidden:** treating vacuous `every([]) === true` as P1 WARN eligibility.
+**Forbidden:** treating vacuous `every([]) === true` as P1 WARN eligibility.  
+**Forbidden:** treating partial dangling (`|L|≥1` but `|L| < ids.length`) as WARN-eligible.
 
 Legacy `evaluateDecisionSufficiency` is DIR/conflict core to **reuse inside** this composer; Intake Gate is the outer function (future `evaluateIntakeSufficiency`).
 

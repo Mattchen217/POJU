@@ -225,12 +225,14 @@ Gate composition: Data Contract §3.3.
 
 | Priority | Unsatisfied means `status ∉ {satisfied, n_a}` | Gate effect |
 |---|---|---|
-| P0 | any (incl. dangling → pending) | **FAIL** (not PASS) |
-| P1 | yes + (`|L|=0` **or** decision-critical / ranking impact) | **FAIL** |
-| P1 | yes + `|L|≥1` + every linked active DIR `may_affect_p5_ranking === false` + boundaries | **WARN** |
+| P0 | any (incl. full/partial dangling → pending) | **FAIL** (not PASS) |
+| P1 | yes + (`dangling` **or** `|L|=0` **or** decision-critical / ranking impact) | **FAIL** |
+| P1 | yes + `dangling === false` + `|L|≥1` + `|L| === ids.length` + every L `may_affect_p5_ranking === false` + boundaries | **WARN** |
 | P2 | yes alone | must **not** alone block report |
 
-`L` = linked **active** DIRs. Empty `L` must **not** vacuously WARN.
+`L` = linked **active** DIRs. `dangling` = any declared required id missing/deprecated (full **or** partial).
+
+Forbidden WARN paths: empty `L`; **partial dangling** (e.g. ids=`[A,B]`, only A active, B missing) even if A is non-ranking and boundaries exist.
 
 P0/P1 DDR in `n_a` counts as Gate-acceptable terminal (same bucket as `satisfied` for PASS/FAIL tests only).
 
