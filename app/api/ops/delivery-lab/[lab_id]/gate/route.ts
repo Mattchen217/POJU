@@ -128,9 +128,20 @@ export async function POST(
       if (job_id) {
         after(async () => {
           try {
-            await labRunSegment2AJob(job_id);
+            // Apply after Call A fully settles (incl. voice wave) so analysis
+            // lands in LAB chat without waiting on client poll.
+            await labRunSegment2AJob(job_id, {
+              onSettled: async () => {
+                await labApplyPendingJobByLabId(lab_id);
+              },
+            });
           } catch (e) {
             console.error("[lab-gate] segment2_a failed", e);
+            try {
+              await labApplyPendingJobByLabId(lab_id);
+            } catch (applyErr) {
+              console.error("[lab-gate] Call A apply-after-fail also failed", applyErr);
+            }
           }
         });
       }

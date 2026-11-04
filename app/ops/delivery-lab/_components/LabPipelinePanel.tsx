@@ -50,6 +50,9 @@ type ChatMsg = {
     understanding_gate_pending?: boolean;
     dyad_gate_pending?: boolean;
     current_state?: string;
+    segment2_analysis?: boolean;
+    segment2_bridge_question?: boolean;
+    segment2_agenda_bridge_failed?: boolean;
   };
 };
 
@@ -236,10 +239,13 @@ export function LabPipelinePanel({
     }
   }
 
-  async function pollJobs() {
+  async function pollJobs(opts?: { quiet?: boolean }) {
     if (!pending) return;
-    setBusy(true);
-    setError(null);
+    const quiet = opts?.quiet === true;
+    if (!quiet) {
+      setBusy(true);
+      setError(null);
+    }
     try {
       const path =
         pending.stage === "synthesis"
@@ -248,23 +254,25 @@ export function LabPipelinePanel({
       const res = await fetch(path, { credentials: "include" });
       const data = (await res.json()) as { ok?: boolean; error?: string; lab?: unknown };
       if (!res.ok) {
-        setError(data.error ?? `HTTP ${res.status}`);
+        if (!quiet) setError(data.error ?? `HTTP ${res.status}`);
         return;
       }
       applyLab(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "poll_failed");
+      if (!quiet) setError(e instanceof Error ? e.message : "poll_failed");
     } finally {
-      setBusy(false);
+      if (!quiet) setBusy(false);
     }
   }
 
-  // Auto-poll while a job is pending.
+  // Auto-poll while a job is pending (quiet — don't lock the whole panel every 4s).
   useEffect(() => {
     if (!pending) return;
     const t = setInterval(() => {
-      void pollJobs();
-    }, 4000);
+      void pollJobs({ quiet: true });
+    }, 3000);
+    // Immediate first poll so Call A apply shows without waiting a full interval.
+    void pollJobs({ quiet: true });
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending?.job_id, pending?.stage, lab_id]);
@@ -346,14 +354,31 @@ export function LabPipelinePanel({
             {rerunTargetLabel ? `重跑本轮 · ${rerunTargetLabel}` : "重跑本轮"}
           </button>
           {pending ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void pollJobs()}
-              className="rounded border border-[#f2ca50]/40 px-2 py-1 text-xs text-[#f2ca50]"
-            >
-              刷新 job
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void pollJobs()}
+                className="rounded border border-[#f2ca50]/40 px-2 py-1 text-xs text-[#f2ca50]"
+              >
+                刷新 job
+              </button>
+              {pending.stage === "segment2_a" || pending.stage === "segment2_b" ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  title="job 卡住时重踢 runner（续跑 Call A / Call B）"
+                  onClick={() =>
+                    void postJson(
+                      `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/jobs/segment2`,
+                    )
+                  }
+                  className="rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-40"
+                >
+                  重踢 runner
+                </button>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
@@ -364,13 +389,31 @@ export function LabPipelinePanel({
         </p>
       ) : null}
 
+      {pending ? (
+        <p className="mt-2 rounded border border-[#f2ca50]/35 bg-[#f2ca50]/10 px-2 py-1.5 text-xs text-[#f2ca50]">
+          {pending.stage === "segment2_a"
+            ? "Call A · 第2阶段分析生成中…完成后会显示在左侧聊天，再点「下一步」起草议程+首问"
+            : pending.stage === "segment2_b"
+              ? "Call B · 议程起草 + 首问生成中…完成后会显示在左侧聊天"
+              : pending.stage === "synthesis"
+                ? "Synthesis · 汇总生成中…"
+                : `job 运行中 · ${pending.stage}`}
+        </p>
+      ) : null}
+
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="flex min-h-[320px] flex-col rounded border border-white/10 bg-[#0b0f12]">
           <div className="flex-1 space-y-2 overflow-y-auto p-3 text-sm">
             {messages.length === 0 ? (
               <p className="text-xs text-[#71717a]">还没有消息。输入问题开始 Opening。</p>
             ) : (
-              messages.map((m, i) => (
+              messages.map((m, i) => {
+                const stepTag = m.meta?.segment2_analysis
+                  ? "Call A · 分析"
+                  : m.meta?.segment2_bridge_question || m.meta?.segment2_agenda_bridge_failed
+                    ? "Call B · 议程+首问"
+                    : null;
+                return (
                 <div
                   key={`${m.role}-${i}-${m.timestamp ?? ""}`}
                   className={
@@ -383,10 +426,14 @@ export function LabPipelinePanel({
                 >
                   <div className="mb-0.5 font-mono text-[10px] uppercase text-[#71717a]">
                     {m.role}
+                    {stepTag ? (
+                      <span className="ml-2 normal-case text-[#f2ca50]">{stepTag}</span>
+                    ) : null}
                   </div>
                   <div className="whitespace-pre-wrap">{m.content}</div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 

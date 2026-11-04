@@ -597,13 +597,32 @@ export async function labDyadCollect(
   return labOut;
 }
 
-export async function labRunSegment2AJob(job_id: string): Promise<void> {
+/**
+ * Run Call A (analysis). Wave1 may park at `voice_queued`; voice continues in a
+ * nested `after()` for a fresh wall clock. Pass `onSettled` so LAB always folds
+ * the finished job into chat (apply) — do not rely on client poll alone.
+ */
+export async function labRunSegment2AJob(
+  job_id: string,
+  opts?: { onSettled?: () => Promise<void> },
+): Promise<void> {
+  const settle = async () => {
+    if (!opts?.onSettled) return;
+    try {
+      await opts.onSettled();
+    } catch (e) {
+      console.error("[lab-pipeline] Call A onSettled failed", e);
+    }
+  };
+
+  let deferredToVoice = false;
   try {
     await runSegment2BreakthroughCoreJob(job_id);
     const mid = await getXhighJob(job_id);
     // Wave1 parks at voice_queued. Nested after() = fresh Vercel maxDuration for voice
     // (awaiting voice in this same invoke would still share the first 300s wall).
     if (mid?.status === "running" && mid.current_stage === "voice_queued") {
+      deferredToVoice = true;
       const session_id = mid.session_id;
       const { after } = await import("next/server");
       after(async () => {
@@ -625,6 +644,7 @@ export async function labRunSegment2AJob(job_id: string): Promise<void> {
           }
         } finally {
           await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
+          await settle();
         }
       });
       return;
@@ -641,6 +661,7 @@ export async function labRunSegment2AJob(job_id: string): Promise<void> {
       await releaseXhighSessionLock("segment2_breakthrough_core", job.session_id);
     }
   }
+  if (!deferredToVoice) await settle();
 }
 
 export async function labRunSegment2BJob(job_id: string): Promise<void> {
@@ -822,7 +843,7 @@ function slimPipelineTurnsForSave(lab: DeliveryLabSession): DeliveryLabSession {
   return { ...lab, pipeline_turns: slimmed };
 }
 
-/** Poll pending job; apply into chat_session; auto-start Call B after Call A. */
+/** Poll pending job; apply into chat_session. Call A parks at awaiting_agenda (no auto Call B). */
 export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<DeliveryLabSession> {
   const pending = lab.pipeline_pending_job;
   if (!pending || !lab.chat_session) return lab;

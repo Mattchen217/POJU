@@ -43,14 +43,12 @@ export async function POST(
       after(async () => {
         try {
           if (pending.stage === "segment2_a") {
-            await labRunSegment2AJob(pending.job_id);
-            const afterA = await labApplyPendingJobByLabId(lab_id);
-            // Call A apply auto-creates Call B — kick it (same as jobs/segment2 GET).
-            const b = afterA?.pipeline_pending_job;
-            if (b?.stage === "segment2_b") {
-              await labRunSegment2BJob(b.job_id);
-              await labApplyPendingJobByLabId(lab_id);
-            }
+            // LAB split: Call A only → park awaiting_agenda (ops clicks Next for Call B).
+            await labRunSegment2AJob(pending.job_id, {
+              onSettled: async () => {
+                await labApplyPendingJobByLabId(lab_id);
+              },
+            });
           } else if (pending.stage === "segment2_b") {
             await labRunSegment2BJob(pending.job_id);
             await labApplyPendingJobByLabId(lab_id);

@@ -7,6 +7,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/store";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import {
+  labApplyPendingJobByLabId,
   labPollPipelineJob,
   labRunSegment2AJob,
   labRunSegment2BJob,
@@ -17,7 +18,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * GET — poll pending segment2 job and apply when complete (auto-starts Call B after A).
+ * GET — poll pending segment2 job and apply when complete.
+ * Call A parks at awaiting_agenda; Call B only starts from gate agenda_confirm.
  * POST — re-kick runner for pending segment2 job (if stalled).
  */
 export async function GET(
@@ -40,20 +42,6 @@ export async function GET(
     const next = await labPollPipelineJob(lab);
     if (next !== lab) {
       await saveDeliveryLab(next);
-      // If Call B was just created, schedule it.
-      if (
-        next.pipeline_pending_job?.stage === "segment2_b" &&
-        lab.pipeline_pending_job?.stage === "segment2_a"
-      ) {
-        const job_id = next.pipeline_pending_job.job_id;
-        after(async () => {
-          try {
-            await labRunSegment2BJob(job_id);
-          } catch (e) {
-            console.error("[lab-jobs/segment2] Call B failed", e);
-          }
-        });
-      }
     }
     return NextResponse.json({ ok: true, lab: labPublicView(next) });
   } catch (e) {
@@ -83,10 +71,23 @@ export async function POST(
 
   after(async () => {
     try {
-      if (pending.stage === "segment2_a") await labRunSegment2AJob(pending.job_id);
-      else await labRunSegment2BJob(pending.job_id);
+      if (pending.stage === "segment2_a") {
+        await labRunSegment2AJob(pending.job_id, {
+          onSettled: async () => {
+            await labApplyPendingJobByLabId(lab_id);
+          },
+        });
+      } else {
+        await labRunSegment2BJob(pending.job_id);
+        await labApplyPendingJobByLabId(lab_id);
+      }
     } catch (e) {
       console.error("[lab-jobs/segment2] kick failed", e);
+      try {
+        await labApplyPendingJobByLabId(lab_id);
+      } catch (applyErr) {
+        console.error("[lab-jobs/segment2] apply-after-fail also failed", applyErr);
+      }
     }
   });
 
