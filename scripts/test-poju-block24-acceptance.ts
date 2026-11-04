@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
-import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { createInitialAgentState, withCompleteUnderstanding } from "@/lib/poju/agent-state";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
@@ -40,12 +40,15 @@ function main(): void {
   assert("countSubstantiveOpeningTurns exported", agentTs.includes("export function countSubstantiveOpeningTurns"));
   assert("poju-gate diagnostic log", agentTs.includes("[poju-gate]"));
   assert("substantive_opening_turns signal", sm.includes("substantive_opening_turns"));
-  assert("state machine uses turns signal not persisted counter", !sm.includes("opening_substantive_turns"));
+  assert(
+    "state machine prefers turns signal (with agent fallback)",
+    sm.includes("signals.substantive_opening_turns") && sm.includes("OPENING_MIN_SUBSTANTIVE_TURNS"),
+  );
 
   const history = [msg("user", "你好"), msg("user", "离婚8年想再婚"), msg("user", "最近两年几乎没接触过异性")];
   assert("greeting excluded from count", countSubstantiveOpeningTurns(history) === 2);
 
-  const agent = createInitialAgentState({ original_question: "" });
+  const agent = withCompleteUnderstanding(createInitialAgentState({ original_question: "离婚8年想再婚" }));
   const signals = (turns: number) =>
     extractModelTurnSignals({
       understanding_sufficient: true,
@@ -59,9 +62,9 @@ function main(): void {
       "opening",
   );
   assert(
-    "turns=2 enters collecting",
+    "turns=2 + complete understanding enters confirm gate",
     advanceStateMachine({ ...agent, has_base_analysis: true }, signals(2), "最近两年几乎没接触过异性")
-      .next_state === "collecting_context",
+      .next_state === "awaiting_understanding_confirm",
   );
   assert("MIN turns still 2", OPENING_MIN_SUBSTANTIVE_TURNS === 2);
 

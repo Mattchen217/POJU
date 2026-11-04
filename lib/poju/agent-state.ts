@@ -1048,8 +1048,10 @@ export interface PhaseTransitionInput {
   stop_loss?: { triggered: boolean; reason: string | null };
   /** LLM stall-offer branch (Step 3). */
   stall_offer?: boolean;
-  /** Opening Deep Judge — only true allows opening → collecting. */
+  /** Opening Deep Judge — info sufficiency only (independent of minimum_interaction_gate). */
   understanding_sufficient?: boolean;
+  /** Opening substantive user turns — feeds minimum_interaction_gate. */
+  substantive_opening_turns?: number;
 }
 
 export interface PhaseTransitionResult {
@@ -1074,20 +1076,27 @@ export function decidePhaseTransition(input: PhaseTransitionInput): PhaseTransit
   const current = normalizeAgentPhase(current_state.current_phase) ?? current_state.current_phase;
 
   switch (current) {
-    case "opening":
+    case "opening": {
+      const openingTurns =
+        input.substantive_opening_turns ?? current_state.opening_substantive_turns ?? 0;
+      // Minimum interaction gate is independent of understanding_sufficient (SSOT: opening-interaction-gate).
+      const interactionMet = openingTurns >= 2;
       if (
         user_message !== "__OPENING__" &&
         user_message.trim() &&
         isUnderstandingComplete(current_state) &&
-        input.understanding_sufficient === true
+        input.understanding_sufficient === true &&
+        interactionMet
       ) {
         return {
           should_transition: true,
           new_phase: "awaiting_understanding_confirm",
-          reason: "Understanding structure complete and model sufficient, awaiting user confirmation",
+          reason:
+            "Understanding structure complete, model sufficient, and minimum interaction met — awaiting confirmation",
         };
       }
       break;
+    }
 
     case "collecting_context": {
       if (input.stall_offer) {

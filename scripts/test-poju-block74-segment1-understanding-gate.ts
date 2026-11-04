@@ -47,8 +47,14 @@ function main(): void {
   assert("opening gate uses structComplete", sm.includes("const structComplete = isUnderstandingComplete(agent)"));
   assert("opening prompt core_dilemma", opening.includes("core_dilemma"));
   assert("opening prompt desired_direction", opening.includes("desired_direction"));
-  assert("opening must ask desired direction", opening.includes("你最希望这件事往哪个方向走"));
-  assert("opening three-field close", opening.includes("只收三样：问题、情况、期望"));
+  assert(
+    "opening must ask desired direction",
+    opening.includes("你最希望变成什么样") || opening.includes("往哪个方向走"),
+  );
+  assert(
+    "opening three-field close",
+    opening.includes("只收三样：主问题、情况、主期望") || opening.includes("只收三样：问题、情况、期望"),
+  );
   assert("opening bans means as collect item", opening.includes("手段是我们的产出，不是收集项"));
   assert("opening expectation is direction not plan", opening.includes("期望=方向，不是方案"));
   assert("opening mergeCoreDilemma", opening.includes("mergeCoreDilemma"));
@@ -108,10 +114,27 @@ function main(): void {
   assert(
     "struct complete + base + model sufficient enters confirm gate",
     advanceStateMachine(
-      { ...complete, has_base_analysis: true },
-      extractModelTurnSignals({ understanding_sufficient: true, base_analysis_ready: true }),
+      { ...complete, has_base_analysis: true, opening_substantive_turns: 2 },
+      extractModelTurnSignals({
+        understanding_sufficient: true,
+        base_analysis_ready: true,
+        substantive_opening_turns: 2,
+      }),
       "用户消息",
     ).next_state === "awaiting_understanding_confirm",
+  );
+
+  assert(
+    "struct+base+sufficient on turn1 blocked by minimum_interaction_gate",
+    advanceStateMachine(
+      { ...complete, has_base_analysis: true, opening_substantive_turns: 1 },
+      extractModelTurnSignals({
+        understanding_sufficient: true,
+        base_analysis_ready: true,
+        substantive_opening_turns: 1,
+      }),
+      "用户消息",
+    ).next_state === "opening",
   );
 
   assert(
@@ -144,10 +167,11 @@ function main(): void {
   assert("decidePhaseTransition blocks struct complete without model sufficient", !blockedStruct.should_transition);
 
   const allowed = decidePhaseTransition({
-    current_state: complete,
+    current_state: { ...complete, opening_substantive_turns: 2 },
     llm_suggested_phase: "collecting_context",
     user_message: "卡了三年想转行",
     understanding_sufficient: true,
+    substantive_opening_turns: 2,
   });
   assert("decidePhaseTransition allows struct complete with model sufficient", allowed.should_transition);
 

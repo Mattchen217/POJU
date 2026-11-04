@@ -26,6 +26,10 @@ import {
   type AdvanceResult,
 } from "@/lib/poju/state-machine";
 import {
+  countSubstantiveOpeningTurns as countSubstantiveOpeningTurnsGate,
+  isMinimumInteractionGateMet,
+} from "@/lib/poju/opening-interaction-gate";
+import {
   clampQuestionSignals,
   ensureCollectingCatchPrefix,
   nextEscalationStage,
@@ -259,15 +263,9 @@ export function extractOpeningProblem(messages: POJUMessage[]): string {
   return substantive.slice(0, 2).join("；");
 }
 
-/** Count substantive user turns in opening from message history (deterministic gate input). */
+/** Count substantive user turns in opening (SSOT implementation in opening-interaction-gate). */
 export function countSubstantiveOpeningTurns(messages: POJUMessage[]): number {
-  return messages.filter((m) => {
-    if (m.role !== "user" || m.is_rejected) return false;
-    const trimmed = m.content.trim();
-    if (trimmed.length <= 6 || trimmed === "__OPENING__") return false;
-    if (trimmed.startsWith("[SYSTEM:")) return false;
-    return !OPENING_GREETING_PATTERN.test(trimmed);
-  }).length;
+  return countSubstantiveOpeningTurnsGate(messages);
 }
 
 /** Latest assistant turn before the trailing user message (for active_question_state.asked). */
@@ -510,6 +508,7 @@ function finalizeAgentV2(
     understanding_struct_complete: isUnderstandingComplete(merged),
     base_analysis_ready: baseAnalysisReady,
     substantive_opening_turns: substantiveOpeningTurns,
+    minimum_interaction_met: isMinimumInteractionGateMet(substantiveOpeningTurns),
     reply_quality: clampedSignals.reply_quality,
     question_status: clampedSignals.question_status,
     session_action: clampedSignals.session_action,

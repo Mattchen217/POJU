@@ -47,7 +47,11 @@ import {
   resolveAgendaRelationContext,
 } from "@/lib/llm/prompts/relation-closed-set-context";
 import { buildChatPhaseTermBindingBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
-import { countSubstantiveOpeningTurns } from "@/lib/poju/agent";
+import {
+  buildMinimumInteractionGateControlBlock,
+  countSubstantiveOpeningTurns,
+  isMinimumInteractionGateMet,
+} from "@/lib/poju/opening-interaction-gate";
 import {
   buildTurnContextSnapshot,
   shouldForceConverge,
@@ -265,8 +269,14 @@ export async function buildPhaseTurnContextV6(
   const baseAnalysisReady = Boolean(
     baseAnalysis ?? input.session.has_profile ?? structured,
   );
+  const interactionMet = isMinimumInteractionGateMet(substantiveOpeningTurns);
+  const minimumInteractionBlock =
+    phase === "opening" && !interactionMet
+      ? buildMinimumInteractionGateControlBlock(outLoc)
+      : "";
   const forceConvergeBlock =
     phase === "opening" &&
+    interactionMet &&
     shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady)
       ? `【控制面指令 · 安全网催收敛·不是轮数KPI】后端检测到开口轮次偏多，请你【按信息】自检：主问题单楔 / 情况实质 / 主期望方向是否已有用户亲口或点选的实质内容？①三样已齐 → 立刻 understanding_sufficient=true，禁止再闲聊加轮。②仍缺某一核心格 → 本轮【只问】那一个缺口（互斥 options），答糊则 retry 同问，禁止跳去问无关侧面。③仍多议题未钉楔 → 只问「先解决哪一件」。**禁止**替用户敲定主战场或脑补期望；**禁止**把「聊满轮数」当目标。`
       : "";
@@ -284,6 +294,7 @@ export async function buildPhaseTurnContextV6(
     termPlane,
     buildPojuUserSideControlPlane(outLoc, phase),
     snapshotBlock,
+    minimumInteractionBlock,
     forceConvergeBlock,
     agendaCatchupBlock,
     taskBlock,

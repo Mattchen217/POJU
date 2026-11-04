@@ -24,6 +24,10 @@ import {
   parseSessionAction,
 } from "@/lib/poju/question-status";
 import type { QuestionStatus, SessionAction } from "@/lib/poju/question-status";
+import {
+  OPENING_MIN_SUBSTANTIVE_TURNS,
+  isMinimumInteractionGateMet,
+} from "@/lib/poju/opening-interaction-gate";
 
 export type PojuState =
   | "opening"
@@ -251,19 +255,18 @@ export function extractModelTurnSignals(source: {
   };
 }
 
-/** Minimum substantive opening turns before entering collecting (unless single message is rich). */
+/** @deprecated Legacy richness cue — not used by minimum_interaction_gate (no first-turn bypass). */
 export const OPENING_RICH_CHARS = 80;
 /** Soft cue: inject a converge *hint* into the prompt (not a product "close by turn N" KPI). */
 export const OPENING_MAX_SUBSTANTIVE_TURNS = 5;
 /**
  * 硬上限 · 防死循环安全网(【不是】正常收口手段，也【不是】「第 N 轮必须收口」的产品标准)。
- * 正常收口只靠 canAdvance(模型 understanding_sufficient=true + 字段真实填充)。
+ * 正常收口只靠 canAdvance(模型 understanding_sufficient=true + 字段真实填充 + minimum_interaction_gate)。
  * 仅当模型连续说"没够"、一路问到撞这个很宽的硬上限,才强制兜底收口——平时永不触发。
  */
 export const OPENING_HARD_CEILING = 8;
 
-/** Minimum substantive opening turns when message is below OPENING_RICH_CHARS. */
-export const OPENING_MIN_SUBSTANTIVE_TURNS = 2;
+export { OPENING_MIN_SUBSTANTIVE_TURNS, isMinimumInteractionGateMet };
 
 /**
  * Control-plane safety hint: after many turns, remind the model to check
@@ -299,14 +302,21 @@ export function advanceStateMachine(
     case "opening": {
       const structComplete = isUnderstandingComplete(agent);
       const turns = signals.substantive_opening_turns ?? agent.opening_substantive_turns ?? 0;
+      const interactionMet = isMinimumInteractionGateMet(turns);
       const overHardCeiling = turns >= OPENING_HARD_CEILING;
       const hasInput = Boolean(userInput.trim() && userInput !== "__OPENING__");
       const baseReady = signals.base_analysis_ready === true;
       const modelDone = signals.understanding_sufficient === true;
 
-      const canAdvance = structComplete && baseReady && hasInput && modelDone;
-      // 收口交给模型:canAdvance(模型说够 + 字段真实)是【唯一正常收口路径】。
-      // forceAdvance 降级为【极宽安全网】——只在撞硬上限(防模型永远说没够的死循环)才兜底,平时永不触发。
+      // Normal close: info (model + fields) AND independent minimum interaction gate.
+      // interaction gate is NOT folded into understanding_sufficient.
+      const canAdvance =
+        structComplete &&
+        baseReady &&
+        hasInput &&
+        modelDone &&
+        turns >= OPENING_MIN_SUBSTANTIVE_TURNS;
+      // forceAdvance 降级为【极宽安全网】——只在撞硬上限才兜底（可越过 interaction 防死循环）。
       const forceAdvance =
         !canAdvance && baseReady && hasInput && overHardCeiling && hasSubstantiveDilemmaAndDirection(agent);
 
@@ -316,19 +326,29 @@ export function advanceStateMachine(
         next = { ...agent, original_question: lockedQuestion };
         nextState = "awaiting_understanding_confirm";
         transitionReason = canAdvance
-          ? "Understanding structure complete and model sufficient, awaiting confirmation"
+          ? "Understanding structure complete, model sufficient, and minimum interaction met — awaiting confirmation"
           : "Opening hard ceiling reached — substantive fields, awaiting confirmation";
         if (forceAdvance) {
           console.info("[poju-gate] opening hard ceiling force advance to understanding confirm", {
             turns,
+            interaction_met: interactionMet,
             missing: getUnderstandingMissingFields(agent),
           });
         }
+      } else if (structComplete && baseReady && hasInput && modelDone && !interactionMet) {
+        transitionReason =
+          "Info sufficient but minimum_interaction_gate not met — stay in opening for one calibration turn";
+        console.info("[poju-gate] minimum_interaction_gate blocked early confirm", {
+          turns,
+          model_sufficient: true,
+          struct_complete: true,
+        });
       } else if (structComplete && baseReady && hasInput && !modelDone) {
         transitionReason =
           "Structure complete but model still gathering — stay in opening (no confirm gate)";
         console.info("[poju-gate] struct complete, model not sufficient — continue opening", {
           turns,
+          interaction_met: interactionMet,
           over_hard_ceiling: overHardCeiling,
         });
       } else if (signals.understanding_sufficient === true && !structComplete) {
@@ -337,6 +357,7 @@ export function advanceStateMachine(
         console.info("[poju-gate] blocked opening→collecting", {
           model_sufficient: true,
           turns,
+          interaction_met: interactionMet,
           over_hard_ceiling: overHardCeiling,
           missing: getUnderstandingMissingFields(agent),
         });

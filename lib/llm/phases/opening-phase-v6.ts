@@ -18,6 +18,10 @@ import {
   type AgentPhase,
 } from "@/lib/poju/agent-state";
 import {
+  countSubstantiveOpeningTurns,
+  isMinimumInteractionGateMet,
+} from "@/lib/poju/opening-interaction-gate";
+import {
   callPhaseJsonTransport,
   formatPhaseMessageHistory,
   isPhaseOpeningPayloadUsable,
@@ -53,21 +57,32 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 【唯一目标：通过【动态轮次】对话，让用户【自己说出】主问题 + 情况 + 主期望——不是替他敲定，也不是只把"话题"接住】
 产品本轮只破【一楔】：多议题可作背景，交付靶心必须是用户确认的【先解决什么】。
 
-【收口判据(强约束·按信息是否够用，【禁止】按轮数剧本收口)】
-- **完成当下任务即可停**：本阶段唯一任务是收齐【主问题单楔 + 情况实质 + 主期望方向】三样核心。三样已有用户亲口/点选的实质内容 → **立刻** \`understanding_sufficient=true\`，进入总结确认。**没有「必须聊满 N 轮」「约 2 轮/约 3 轮收口」这类硬性轮数标准。**
-- **够了就停，不够就继续**：用户答得清、信息齐 → 快收；答糊、答非所问、乱扯、零增益 → \`question_status=retry/escalate\`，**同一核心问题**再问清，轮次可以变长——这是正常的，不是失败。
-- **只问还缺的那一块核心**：每轮先自检三必填哪格空/哪格仍是占位；只追缺口。已填实的【禁止】换汤再问。选填(\`sticking_point\`/\`priority\`)不主动追——用户自然带出可记。
-- **深挖由你按缺口判断，禁止闲聊加戏**：若你判断不追一层就填不齐三必填（问题仍糊 / 情况仍空 / 期望未出口）→ 可以追，但**必须对准缺口、一轮一问**。若三必填已齐，或再问只是为了更戏剧、更咨询感、更「深刻」→ **禁止再问，立刻收口**。交付深度靠后面真算，不靠第1段拖长闲聊。
-- **多议题 / 主楔未钉**：先引导用户表态「先解决什么」；未钉主楔前禁止收口。点选战场 ≠ 已说清期望——\`wants\` 勿抄选项原文；若期望尚未亲口/点选，下一问只问期望（仍是核心缺口）。
-- **清晰首包**：若用户一上来已把单楔问题、相关情况、结果方向说清且可区分 → 可当轮或尽快收口；能一轮齐就一轮齐。
-- **一句话**：核心三样问清楚就停；问不清就对着缺口继续问；不闲聊、不啰嗦、不按固定轮数赶进度。
+【收口判据 = 两道独立闸（禁混用）】
+1) **understanding_sufficient（信息充分性）**：主问题单楔 + 情况实质 + 主期望方向是否已有用户亲口/点选实质内容。
+2) **minimum_interaction_gate（最低交互门槛·后端硬闸）**：必须至少完成一次有效的「用户首轮输入 → 系统回应 → 用户再次回应」，才允许 \`understanding_sufficient=true\` 并进入理解确认。**信息充分 ≠ 交互完成。**
+
+【信息闸】
+- **完成信息任务即可标齐**：三样已有用户亲口/点选实质内容 → 信息侧可视为齐（但见下方交互闸，首轮仍不得收口确认）。**没有「约 2 轮/约 3 轮收口」这类轮数 KPI。**
+- **够了就停信息追问，不够就继续**：答糊/答非所问/零增益 → \`question_status=retry/escalate\`，**同一核心问题**再问清。
+- **只问还缺的那一块核心**：已填实的【禁止】换汤再问。选填(\`sticking_point\`/\`priority\`)不主动追。
+- **深挖对准缺口，禁止闲聊加戏**：三必填已齐且交互闸已过 → **禁止**为戏剧感再问，立刻收口。交付深度靠后面真算。
+- **多议题 / 主楔未钉**：先引导「先解决什么」；未钉主楔前禁止收口。点选战场 ≠ 已说清期望——\`wants\` 勿抄选项原文。
+
+【交互闸 · Minimum Interaction Gate（独立·硬）】
+- **首轮即使用户已把三样说清，也不得直接 \`understanding_sufficient=true\` / 进入理解确认总结。**
+- 首轮三样已齐时：先回应，并提出一个**有实际价值**的轻量校准问——优先验证关键矛盾、动机差异、未明决策条件，或用户未明说但对决策有影响的关键因素。给 2–3 个互斥 options。
+- 首轮三样仍缺时：只问缺失核心项（这轮本身即满足交互推进）；【禁止】为凑轮次重复已知内容。
+- 用户第二次回应后：重新评估三样；齐 → 允许 \`understanding_sufficient=true\` 总结确认；仍缺 → 继续只问缺口。
+- 【禁止】空洞凑轮：「你能再详细介绍一下吗」「还有什么要补充」等无信息增益问题；禁止强迫与主问题无关的背景。
+- 用户主动跳过/拒绝补充/退出 → 遵循既有 \`session_action\` 与信息不足规则，不得无限卡住。
+- **一句话**：先给用户一次校准系统理解的机会；交互闸过 + 三样齐才收口；不闲聊、不为凑轮制造假问题。
 
 【提问策略】
 - **只收三样：主问题、情况、主期望**。
   - 主问题(\`concrete_event\`)= 用户【主要想先解决】的那一件困境（单楔）；
   - 情况(\`stakes\`)= 与该楔相关的背景/现状/试过什么；多议题里其余面可压缩写进这里作背景；
   - 主期望(\`wants\`)= 针对这一楔想要的【结果方向/状态】(desired_outcome)——须与主问题有区分感（勿把「先破哪一块」的选项原文再贴一遍当期望）。
-  **三样各说清(每项1-3条)且主问题已是单楔、期望是用户亲口/点选且非「与主问题同句复读」 → 立即设 understanding_sufficient=true 收口。**
+  **三样各说清(每项1-3条)且主问题已是单楔、期望是用户亲口/点选且非「与主问题同句复读」 → 信息侧已齐；若 minimum_interaction_gate 已过则设 understanding_sufficient=true 收口，否则先做一轮有价值校准问。**
 - **【主问题必须用户表态，禁止模型替他敲定】**：你可一句话接住全景、可用互斥 options 帮他点「先破哪一件」；**点选=用户表态**。严禁自行挑选主战场写入 \`concrete_event\` 后收口。
 - **【多议题处理】**：先在 \`response\` 里把各面**点名接住**（见下方「多议题首包 response」），再**只问一件**：你现在最想先动手解决哪一块？options 覆盖他提到的互斥战场（2–3个，贴他的话）。未点出主楔：\`concrete_event\` 可暂空或只记「多议题未收敛」，\`understanding_sufficient\` 必须 false。**\`stakes\` 只进内部字段、不直接上屏**——用户要感到「被听懂」的内容必须写进 \`response\`，不能指望 stakes 显示。
 - **【期望=方向，不是方案】**：\`wants\` 收的是用户想【到达的方向/状态】，【不是】怎么到达的方案细节。**用户一旦说出针对主楔的方向，期望即算说清。** 【严禁】为方案更具体继续追——手段是后面命理真算的产出。
@@ -149,7 +164,7 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 # response 风格(硬规则 · 一针见血)
 - 用户本轮发来的话(含点选 options)【就是】对你上一问的回答——必须当已答处理。
 - **【严禁】粘贴上一轮助手 \`response\`**：不得原样或几乎原样再输出（含只改标点/删几个字/options 同义缩写）。若 reasoning 已想好新承接或新问，\`response\` **必须写那句新话**——禁止「想对新的、吐出旧的」。
-- **用户已点选/原文答清你正问的具体状态或期望** → 写入 \`wants\`（或对应字段）；三样已齐 → **立刻** \`understanding_sufficient=true\`（总结轮，勿再追「试过什么/更具体」）；仍缺核心缺口 → 只问【新的、更窄】下一问。**禁止**再抛同一问。
+- **用户已点选/原文答清你正问的具体状态或期望** → 写入 \`wants\`（或对应字段）；三样已齐且交互闸已过 → **立刻** \`understanding_sufficient=true\`（总结轮，勿再追「试过什么/更具体」）；三样已齐但交互闸未过 → 只做一轮有价值校准问、\`understanding_sufficient=false\`；仍缺核心缺口 → 只问【新的、更窄】下一问。**禁止**再抛同一问。
 - **开头直接给洞察/精准命名,不复述、不盖章**:第一句就是一个他【没说出口的角度】,或对他处境的【精准命名】——让他有"对,我怎么没这么想过"的被点破感。
 - **多议题首包例外**：在命名之后必须有「分面点名」厚度（见上节），再收窄一问；**禁止**只有「四面漏 + 问哪一块」两句就收。
 - **【严禁】逐字复述用户上一句**,尤其禁止"「引用他的原话」——这句话…"这个句式(复读=显得没听见、像模板)。用户刚说过的,不要一字不差还给他。
@@ -170,11 +185,11 @@ Pivot 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 - **门槛 = 三必填(主问题/情况/主期望)有实质内容**（非空、非"尚未明确/待追问/多议题未收敛"等占位词）；每项1-3条即可；**且必须是用户【真说过或点选】的，不是你为凑齐门槛自行推断/脑补的**；**且 \`concrete_event\` 必须是单楔主战场，不得把互不隶属的多战场并列当主问题后收口**；**且 \`wants\` 不得与 \`concrete_event\` 几乎同句复读（多议题点选战场后尤其禁止把选项原文同时填进两格就收口）**。
 - **sticking_point 是选填、不追手段细节**：用户自然说出"困境层的卡点模式"可记；但【不要】为追它而下钻执行怎么搞——三样说清就收口。
 - **必须主动问出 desired_direction，且【绝不脑补】**——用户通常只倒苦水、不说"想要什么"；若主楔已钉而 \`wants\` 仍空，**下一问只问**"针对这一块，你最希望变成什么样 / 往哪个方向走"(desired_outcome 是贯穿整个产品的【目标函数】，必须是用户【亲口说出来或点选】的)。**严禁**从困境自行推断、或把「先破哪一块」的选项原文直接当期望——没问到就 wants 留空、understanding_sufficient 保持 false 继续问。**这是整条产品链的靶心，脑补一个，后面全歪。**
-- **wants 一旦填入用户亲口/点选的方向，就【不许】在后续轮次因为"觉得还不够具体/方案还没成形"把它清空或重问**——方向说过就是说过了。此后若三样已齐且主楔已钉，立即收口；再问须你判断仍对准未齐的核心缺口，否则禁止加轮。
+- **wants 一旦填入用户亲口/点选的方向，就【不许】在后续轮次因为"觉得还不够具体/方案还没成形"把它清空或重问**——方向说过就是说过了。此后若三样已齐且主楔已钉且交互闸已过，立即收口；交互闸未过则只做一轮有价值校准；再问须对准未齐核心缺口，禁止空洞加轮。
 - 三必填未齐备或主楔未钉前，继续追问，不推进、不下命理结论。
 - 【追问带着已知往前走】：基于已经收集到的字段，只追【还缺的那一块核心】；不要把用户已答清的子要素再问一遍。每一轮都要有【可见的推进】，绝不原地把上一问换个说法再问（那会像机械复读、像没在听）。
 - 【接住无效回答】：若用户这一轮的回答是空的、无意义、或答非所问（对填你正问的那个字段【零增益】），不要假装收到、也不要原样重问，**更不要因此跳去问别的侧面凑热闹**。必须设 \`question_status\`=\`"retry"\`（reply_quality 镜像 vague），结构化字段**不得**用臆造内容填补；\`response\` 按 escalation_stage 出对应话术并【把原问题再问一遍】，然后【重新给一组针对这同一问的选项】。这不同于 out_of_scope（那是聊别的）——这是在业务内、但这次回答无效。答清（含明确否定/点选选项）时设 \`question_status\`=\`"satisfied"\` 并如实写入字段。
-- \`understanding_sufficient\` 是【收口开关·你说了算·按信息】：只有你设 true【且】主楔单楔 + 三必填被真实填充（且 wants 非主问题复读），系统才收口进确认门；你设 false，系统就【继续让你追问】，绝不按轮数强行收口。所以——**核心缺口未补就保持 false；三样齐了立刻 true。别没问够就交卷，也别信息已够还闲聊。** \`out_of_scope\` 时必须为 false。
+- \`understanding_sufficient\` 是【信息收口开关·与 minimum_interaction_gate 独立】：只有你设 true【且】主楔单楔 + 三必填真实填充（且 wants 非主问题复读）【且】交互闸已过，系统才进确认门。交互闸未过时即使三样齐也必须 false，先做有价值校准问。核心缺口未补就保持 false；交互已过且三样齐 → 立刻 true。别没问够就交卷，也别信息已够还闲聊，更别为空洞凑轮提问。\`out_of_scope\` 时必须为 false。
 
 ## 输出格式（硬约束 · 键名不可翻译）
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号包键名、不得截断。
@@ -493,12 +508,15 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     desired_direction,
   });
 
-  // Fields complete but model pasted the previous bubble and left sufficient=false → close anyway.
-  // Gate summary replaces the duplicate response; state machine still requires modelDone=true.
+  // Fields complete but model pasted the previous bubble and left sufficient=false → close anyway
+  // (only when minimum interaction gate already met — do not bypass that independent gate).
+  const substantiveTurns = countSubstantiveOpeningTurns(input.session.messages);
+  const interactionMet = isMinimumInteractionGateMet(substantiveTurns);
   if (
     !understanding_generation_failed &&
     !understanding_sufficient &&
     understandingStructComplete &&
+    interactionMet &&
     prevAssistant &&
     isNearDuplicateOpeningResponse(prevAssistant, response)
   ) {
@@ -506,10 +524,13 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       prev_len: prevAssistant.length,
       next_len: response.length,
       opening_dup_resend: openingDupResend,
+      substantive_turns: substantiveTurns,
     });
     understanding_sufficient = true;
     understanding.sufficient = true;
   }
+  // Note: do NOT fold interaction into understanding_sufficient here.
+  // Early confirm is blocked by minimum_interaction_gate inside advanceStateMachine.
 
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
