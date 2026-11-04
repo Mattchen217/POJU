@@ -1,0 +1,3 @@
+fix(call-a): dedicated voice invoke + fail closed; raise remaining short LLM walls
+
+Call A no longer runs voice on leftover ~80s of a shared 300s wall (nested after). Voice must STOP or the job fails — no fallbackVoice fake analysis. LAB passes Call B options. Raise leftover 90/120/180s attempt walls to 285s.
