@@ -5,8 +5,10 @@
 | **Document type** | Formal data contract (docs only; no runtime code) |
 | **Base SHA** | `297544134d7dcc8c942d5d314760bc3f4a75423f` (`main`) |
 | **Phase 0 baseline** | `docs/eastern-os/decision-intake-2.0/PHASE-0-CODEBASE-BASELINE.md` @ `cc00be4a` |
+| **Phase 1.1 review** | `PHASE-1-1-REVIEW-REPORT.md` @ `17aec05c` |
+| **Phase 1.2** | Closes product decisions **C1–C5** (this revision) |
 | **Product SSOT** | `.cursor/plans/全新统一决策问答系统：架构设计与开发实施规范.MD` |
-| **Engineering role** | Review, validate, document — **do not change product semantics** |
+| **Engineering role** | Encode confirmed product rules — **do not invent new product semantics** |
 
 ---
 
@@ -16,51 +18,55 @@ This document freezes the **data model contract** for Decision Intake 2.0 so lat
 
 | Authority | Scope |
 |---|---|
-| Product design plan | Business meaning, object duties, rules |
+| Product design plan + Phase 1.2 decisions C1–C5 | Business meaning, object duties, rules |
 | This document | Typed fields, enums, invariants, reuse vs new types, tech risks |
 | Existing code | Evidence of what already exists / is wired |
 
-**Non-goals (Phase 1):** implement engines, change Agent/Call A/B, migrate DB, change UI/prompts.
+**Non-goals (Phase 1 / 1.2):** implement engines, change Agent/Call A/B, migrate DB, change UI/prompts.
+
+**C1–C5 status:** **CLOSED** in this document (see §15).
 
 ---
 
 ## 1. Object map (duties)
 
 ```text
-InvestigationBlueprint  ──defines──►  DDR[] + InvestigationDirection[] + DIR[]
-        │
+InvestigationBlueprint  ──seeds──►  DDR[] + InvestigationDirection[] + dir_id refs
+        │                           + immutable DIR seed snapshot @ blueprint_version
         ▼
 AdaptiveQuestionPlan    ──queues──►  AgendaItem[] (execution only; NOT facts)
         │
         ▼
-User Answer / Evidence  ──writes──►  DecisionContext (ONLY fact SoT)
+User Answer / Evidence  ──writes──►  DecisionContext
         │
-        ├── RealityFacts / Constraints / Hypotheses / Conflicts / DIR.current_state
+        ├── RealityFacts / Constraints / Hypotheses / Conflicts
+        └── DC.dirs  ◄── sole mutable DIR Source of Truth
         │
         ▼
-DecisionUnderstanding   ──derives──►  UI + model planner (read-only projection)
+DecisionUnderstanding   ──derives──►  UI + model planner (read-only)
         │
-PersonalAnalysisProfile ──feeds──►  Pattern Insight + report CFP/ZFP (NOT RealityFacts)
+PersonalAnalysisProfile ──feeds──►  Pattern Insight + CFP/ZFP (NOT RealityFacts)
         │
-SufficiencyGate         ──reads──►  DC + DDR + DIR  (code gate; model may advise only)
+SufficiencyGate         ──reads──►  DC + DDR status + DC.dirs
         │
-Freeze                  ──immutabilizes──►  DC final + binding triple
+FreezeRecord            ──binds──►  dc_content_hash + blueprint_version + ddr_version
         │
-Report (01–08)          ──reads──►  frozen DC + PageFeedMatrix slices
+Report (01–08)          ──reads──►  frozen DC + FreezeRecord + PageFeedMatrix
 ```
 
 | Object | Duty | Must NOT |
 |---|---|---|
-| **DecisionContext (DC)** | Sole authoritative store of definition, facts, constraints, hypotheses, conflicts, DIR states | Be duplicated into `agent_v2` as authority |
-| **DDR** | What the **report** must deliver (per face/section) | Hold user facts; substitute for DC |
-| **DIR** | What **information** a judgment needs; aggregated from facts | Flip to `known` because Agenda covered |
-| **InvestigationBlueprint** | Locked investigation scope + directions + links to DDR/DIR | Be a static question list |
-| **AdaptiveQuestionPlan / Agenda** | Execution queue of asks | Be fact SoT or sufficiency proxy |
-| **DecisionUnderstanding** | Derived view for UI + planner | Become a second fact DB |
-| **PersonalPatternInsight** | Derived from local BaZi/ZiWei calc relevance | Be written as RealityFact |
-| **SufficiencyGate** | Code verdict PASS/WARN/FAIL | Auto-PASS on user hard-push / stall alone |
-| **SessionLifecycle** | Intake session phases | Be merged with Lockout SM |
-| **InvalidInput / Lockout** | Abuse protection (server-enforced) | Call model / mutate DC / spend PASS while locked |
+| **DecisionContext (DC)** | Sole store of definition, facts, constraints, hypotheses, conflicts, **live DIR (`DC.dirs`)** | Duplicate into `agent_v2` as authority |
+| **DDR** | Report obligations; **status computed** from DIRs/evidence/blockers | Hold user facts; Agenda covered ⇒ satisfied |
+| **DIR (`DC.dirs`)** | Information needs; state via `reaggregateDirs` | Agenda covered ⇒ known; live copy on Blueprint |
+| **InvestigationBlueprint** | Scope, directions, DDR defs, `dir_id` refs, **immutable** DIR seed snapshot | Second live DIR status array; overwrite `DC.dirs` on blueprint edit |
+| **Agenda / AdaptiveQuestionPlan** | Ask execution queue | Fact SoT / sufficiency proxy |
+| **DecisionUnderstanding** | Derived UI+planner view | Second fact DB |
+| **PersonalPatternInsight** | Local BaZi/ZiWei relevance | RealityFact |
+| **SufficiencyGate** | PASS / WARN / FAIL | Hard-push/stall alone ⇒ PASS |
+| **SessionLifecycle** | Phases incl. internal `blueprint_building` | Merge with Lockout; show Stage 1/2/3 labels |
+| **InvalidInput / Lockout** | Server abuse protection | Model/DC/Agenda/PASS while locked |
+| **FreezeRecord** | Bind DC hash + Blueprint/DDR versions | Put Blueprint/DDR versions inside `DC.content_hash` |
 
 ---
 
@@ -70,46 +76,48 @@ Report (01–08)          ──reads──►  frozen DC + PageFeedMatrix slice
 
 | Item | Code today | Intake 2.0 |
 |---|---|---|
-| Core types | `lib/poju/decision-context/types.ts` | **REUSE** types; keep SoT path |
-| Legal status×verification | `fact-combination.ts` `LEGAL_FACT_COMBINATIONS` | **REUSE** |
-| DIR aggregate | `dir-aggregator.ts` | **REUSE** |
-| Freeze / hash / version | `freeze.ts`, `content-hash.ts`, `versioning.ts` | **REUSE** with Blueprint/DDR version fields added to freeze metadata (new wrapper fields, not silent hash pollution) |
-| Production lifecycle | `production-dc-lifecycle.ts` (Call A/B coupled) | **REBUILD** writers; keep pure helpers |
+| Core types | `lib/poju/decision-context/types.ts` | **REUSE** |
+| Legal status×verification | `fact-combination.ts` `LEGAL_FACT_COMBINATIONS` | **REUSE** pairs; writers must apply §2.4 promotion |
+| DIR aggregate | `dir-aggregator.ts` | **REUSE** (`known` needs `status===confirmed`) |
+| Content hash | `content-hash.ts` `extractBusinessPayload` | **REUSE** — DC business only (C5) |
+| Freeze / version | `freeze.ts`, `versioning.ts` | **REUSE** DC freeze; **ADD** FreezeRecord sidecar (C5) |
+| Production lifecycle | `production-dc-lifecycle.ts` | **REBUILD** writers; keep pure helpers |
+| `confirmFact` today | Sets `user_confirmed` only | **FUTURE CODE** must also apply §2.4A status promotion (Phase 3) |
 
 ### 2.2 Status and fields
 
-`DecisionContext` (existing):
-
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `context_id` | string | yes | Stable id |
+| `context_id` | string | yes | |
 | `version` | number | yes | Monotonic within `context_id` |
 | `status` | `draft` \| `final` \| `superseded` | yes | |
-| `definition` | `Definition` | yes | See §2.3 |
-| `reality_facts` | `RealityFact[]` | yes (may be empty draft) | |
+| `definition` | `Definition` | yes | |
+| `reality_facts` | `RealityFact[]` | yes | |
 | `constraints` | `Constraint[]` | yes | |
 | `hypotheses` | `Hypothesis[]` | yes | Never RealityFacts |
-| `dirs` | `DIR[]` | yes | States from aggregation |
+| `dirs` | `DIR[]` | yes | **Sole live DIR SoT (C3)** |
 | `conflicts` | `Conflict[]` | yes | |
-| `content_hash` | string \| null | null in draft; required in final | Business payload only |
+| `content_hash` | string \| null | null draft; required final | **DC business payload only (C5)** |
 | `created_at` / `updated_at` | ISO string | yes | |
-| `information_boundaries` | string[]? | optional | Explicit unknowns for WARN |
-| `delivery_mode` | `normal` \| `degraded` \| null | optional | After freeze |
+| `information_boundaries` | string[]? | optional | |
+| `delivery_mode` | `normal` \| `degraded` \| null | optional | |
 
 ### 2.3 Definition
 
-| Field | Type | Notes |
-|---|---|---|
-| `concrete_event` | string \| null | |
-| `stakes` | string \| null | |
-| `desired_outcome` | string \| null | |
-| `decision_question` | string \| null | |
-| `goal_priorities` | string[] | |
-| `unacceptable_outcomes` | string[] | |
+| Field | Type |
+|---|---|
+| `concrete_event` | string \| null |
+| `stakes` | string \| null |
+| `desired_outcome` | string \| null |
+| `decision_question` | string \| null |
+| `goal_priorities` | string[] |
+| `unacceptable_outcomes` | string[] |
 
-**Invariant:** Model speculation must not be written as user-confirmed goals without user evidence / confirm event.
+**Invariant:** Model speculation ≠ user-confirmed goals without evidence / fact-confirm event.
 
-### 2.4 RealityFact — status × verification (product + code aligned)
+### 2.4 RealityFact — status × verification + confirmation (C1 CLOSED)
+
+#### Legal pairs (unchanged; matches `LEGAL_FACT_COMBINATIONS`)
 
 | status | Allowed `verification_level` |
 |---|---|
@@ -119,48 +127,69 @@ Report (01–08)          ──reads──►  frozen DC + PageFeedMatrix slice
 | `declined` | `none` |
 | `not_applicable` | `none` |
 
-**Forbidden:** `inferred` as verification_level on RealityFacts.
+**Forbidden:** `inferred` as verification_level. Model must not write hypotheses as confirmed facts.
 
-**`user_confirmed`:**
+#### Two distinct confirmation events (must not conflate)
 
-- Derived only from an **explicit user-confirm event** + legal status (`deriveUserConfirmed`).
-- `independently_verified` **must not** imply `user_confirmed` (even if other signals exist).
-- `unknown` / `declined` / `not_applicable` → always `user_confirmed = false`.
+| Event | Purpose | Effects |
+|---|---|---|
+| **E1 FactConfirm** | User confirms a **specific fact** is accurate | May change that fact’s `status` / `user_confirmed` per rules below |
+| **E2 UnderstandingConfirm** | User confirms **Decision Understanding summary** and authorizes Freeze | Does **not** bulk-upgrade estimates/facts to `confirmed`; triggers Freeze path only |
 
-**Tech finding (Phase 0):** production `confirmFact` today updates confirm flags but does **not** flip `status` to `confirmed`. Intake writers must define an explicit promote path (product: confirmed requires assert + confirm event) — **open implementation detail for Phase 3**, not a product rule change.
+#### Promotion / confirmation rules (normative)
+
+**A. `user_asserted`**
+
+After **E1 FactConfirm** on a fact with `verification_level = user_asserted`:
+
+- set `status = confirmed`
+- set `user_confirmed = true`
+- keep original `source_*` and `verification_level`
+- require an explicit user-confirm event record; model may not infer confirm
+
+Initial write of a clear user statement (before E1) may be `unverified` + `user_asserted` until E1.
+
+**B. `independently_verified`**
+
+- may use `status = confirmed`
+- **`user_confirmed = false` always** (independent verification ≠ user confirmation)
+- E1 must not set `user_confirmed = true` for this verification_level
+
+**C. `user_estimate`**
+
+- `status = unverified`, `verification_level = user_estimate`
+- **E1 FactConfirm alone must not upgrade to `confirmed`**
+- **E2 UnderstandingConfirm must not upgrade estimates to `confirmed`**
+- Only new qualifying evidence (new verification path meeting legal pairs) may change verification/status
+
+**D. Other statuses**
+
+- `unknown` / `declined` / `not_applicable` ⇒ `verification_level = none`; `user_confirmed = false`
+- Declined / unknown never become satisfied DDR/DIR via Agenda covered
+
+#### Compatibility with `aggregateDirState`
+
+`dir-aggregator.ts` treats a required role as fully satisfied for `known` only when a matching fact has **`status === "confirmed"`**.
+
+Therefore Intake writers **must** apply §2.4A so user-asserted facts that receive E1 become `status=confirmed`; otherwise DIR cannot become `known`. This is intentional alignment, not a product change.
+
+**Implementation note (not this phase):** today’s `confirmFact` / `applyFactConfirmToDc` only flips `user_confirmed` — Phase 3 must extend it to §2.4A. Document rule is closed; code change is deferred.
 
 ### 2.5 Constraint
 
-Existing fields + product additions to plan in implementation:
-
-| Field | Required | Notes |
-|---|---|---|
-| `constraint_id`, `statement`, `category`, `status`, `verification_level`, `source_stage`, `source_turn_id`, `rigidity`, `user_confirmed` | yes | Match `types.ts` |
-| `related_dir_ids` | recommended (product) | **New optional field** on Constraint if missing in code — ADAPT |
-
-`rigidity`: `hard` \| `soft`. Hard constraints must not be silently ignored by models.
-
-**Tech finding:** collecting Constraint writer missing in production lifecycle — Intake must add writers (Phase 3).
+Same fields as `types.ts` + recommended `related_dir_ids`. Hard/soft rigidity. Collecting Constraint writer missing today → Phase 3.
 
 ### 2.6 Hypothesis
 
-Existing `Hypothesis` + product `related_fact_ids` (recommended add).
-
-**Invariant:** Hypotheses never written into `reality_facts`.
+Never written into `reality_facts`. Recommended `related_fact_ids` additive later.
 
 ### 2.7 Conflict
 
-| Field | Notes |
-|---|---|
-| `state` | `open` \| `clarified` \| `unresolved_in_final` |
-| `user_confirmation` | Required true to clarify |
-| `affects_preferred_path` | undefined → conservative true (blocks) |
+`open` \| `clarified` \| `unresolved_in_final`. Clarify requires `user_confirmation=true`.  
+`affects_preferred_path` undefined ⇒ conservative true.  
+Production writer missing → Phase 3. Conflicts block only **related** DDRs (see §3.2).
 
-**Tech finding:** no production writer into `dc.conflicts` today — library only.
-
-### 2.8 DIR (inside DC)
-
-Existing `DIR` type. Product aliases:
+### 2.8 DIR — live SoT = `DC.dirs` (C3 CLOSED)
 
 | Product term | Code field |
 |---|---|
@@ -170,332 +199,254 @@ Existing `DIR` type. Product aliases:
 
 `current_state`: `known` \| `unknown` \| `conflict` \| `n_a`.
 
-**Invariant (hard):** Agenda `covered` **never** alone sets DIR `known` (`agendaCoveredImpliesDirKnown() === false` today — keep).
+**Invariants:**
 
-`may_affect_p5_ranking`: critical unknown/conflict blocking flag for sufficiency.
+1. **`DC.dirs` is the only mutable DIR Source of Truth.**  
+2. Blueprint holds `dir_id[]` + **immutable seed snapshot** at `blueprint_version` — never a second live status array.  
+3. Blueprint version bumps **must not** overwrite or reset live `DC.dirs` states/evidence links.  
+4. Agenda `covered` **never alone** sets DIR `known`.  
+5. After every Fact/Conflict write → `reaggregateDirs(DC.dirs, facts, conflicts)`.
 
-### 2.9 SourceStage adaptation
+### 2.9 SourceStage
 
-Existing includes `call_a` / `call_b`. Intake 2.0 **must not** use Call A/B as product stages. Contract for new writers:
-
-| New semantic | Mapping |
-|---|---|
-| Intake opening / blueprint | Prefer `opening` or add `intake_init` in later phase (**OPEN**: product OK with extending enum without changing meaning of existing values) |
-| Adaptive Q&A turns | `collecting` or new `intake_turn` |
-| User supplement after freeze | `user_supplement` |
-
-Do **not** invent Call A/B facts in Intake writers.
+Existing includes `call_a` / `call_b`. Intake writers **must not** stamp Call A/B. Prefer `opening` / `collecting` / `user_supplement` until enum extension (still deferred eng/product light item; not C1–C5).
 
 ---
 
-## 3. Decision Deliverable Requirements (DDR)
+## 3. Decision Deliverable Requirements (DDR) + Gate (C4 CLOSED)
 
-**New type family** (not present as first-class types today). Product fields:
+### 3.1 Fields
 
 | Field | Type | Required |
 |---|---|---|
 | `ddr_id` | string | yes |
 | `deliverable` | string | yes |
 | `report_page_id` | `DecisionPageId` (`01`–`08`) | yes |
-| `report_section_id` | string (segment A–E or schema segment id) | yes |
+| `report_section_id` | string | yes |
 | `required_dir_ids` | string[] | yes |
-| `required_sources` | enum[] (e.g. `user_fact`, `constraint`, `hypothesis`, `bazi`, `ziwei`, `sci`) | yes |
+| `required_sources` | enum[] | yes |
 | `priority` | `P0` \| `P1` \| `P2` | yes |
 | `completion_criteria` | string | yes |
-| `status` | `pending` \| `partial` \| `satisfied` \| `blocked` \| `n_a` | yes |
+| `status` | see §3.2 | yes (computed) |
+| `blocking_conflict_ids` | string[] | optional derived |
+| `ddr_version` | number | yes on catalog freeze |
 
-**Invariants:**
+DDR definitions live on Blueprint; **status is computed**, not manually set by model.
 
-1. DDR ≠ DC. DDR is report obligation; DC is known information.
-2. `report_page_id` must be in PageFeedMatrix face set; **do not invent pages**.
-3. P2 DDR must not block sufficiency alone (product).
-4. DDR status is computed from DIR states + sources — not from Agenda coverage %.
+### 3.2 Normative DDR status function
 
-**Suggested example DDR families (product list → faces):**
+Let `R` = required DIRs referenced by `required_dir_ids` that are `id_lifecycle=active` in **`DC.dirs`**.  
+Let `blocking` = open/unresolved conflicts that **reference those DIRs’ contributing facts** or are explicitly linked to this DDR (not global indiscriminate block).
 
-| Deliverable family | Typical `report_page_id` |
+| Condition | `ddr.status` |
 |---|---|
-| Structured dilemma / cause | `02` |
-| Personal pattern ↔ decision | `02` / `04` (+ CFP/ZFP sources) |
-| Reality constraints | `01` / `05` |
-| Path comparison / ranking | `05` |
-| Costs, risks, premises | `05` / `04` |
-| Primary + backup recommendation | `01` / `05` |
-| Low-cost validation path | `06` |
-| P6 experiment | `06` |
-| Continue/Adjust/Stop/Rerun | `08` |
-| Chart appendix | `03` |
+| All DIRs in R are `known` or `n_a`, and ≥1 is `known` **or** R empty only if completion_criteria explicitly N/A with evidence | `satisfied` |
+| R empty and DDR marked not applicable with explicit evidence | `n_a` |
+| Some DIRs in R are `known`/`n_a`, others still `unknown`/`conflict` without full block rule | `partial` |
+| No contributing evidence yet; cannot judge | `pending` |
+| Related unresolved blocking conflict/condition for this DDR | `blocked` |
 
-Exact DDR catalog is **Blueprint Engine output** (Phase 2), not frozen instance list here.
+**Hard constraints:**
+
+1. Status from DIR states + evidence + blockers — **not** Agenda covered %.  
+2. User decline / unknown ≠ `satisfied` and ≠ automatic `n_a`.  
+3. `n_a` requires explicit applicability evidence — must not mask unknown/declined/incomplete.  
+4. Conflicts block only **related** DDRs.  
+5. P2 unsatisfied alone must not block report generation.
+
+### 3.3 Sufficiency Gate composition
+
+Verdicts: `PASS` \| `WARN` \| `FAIL`.
+
+Compose after DDR status refresh + DIR reaggregation + Definition/conflict checks:
+
+| Rule | Gate |
+|---|---|
+| Any **P0** DDR is `pending` / `partial` / `blocked` (not `satisfied`/`n_a`) | **FAIL** (not PASS) |
+| **P1** DDR unsatisfied **and** it affects final conclusion / preferred-path ranking (linked DIR `may_affect_p5_ranking !== false` or DDR completion_criteria says decision-critical) | **FAIL** |
+| **P1** DDR unsatisfied **but** does not affect preferred-path ranking / conclusion (explicit `may_affect_p5_ranking === false` on all linked critical DIRs **and** boundaries recorded) | **WARN** |
+| Only **P2** DDRs unsatisfied | Must **not** alone prevent report; Gate may still PASS/WARN on other grounds |
+| Open preferred-path conflicts without boundary policy | **FAIL** |
+| Boundary-only unknowns / non-preferred conflicts disclosed | **WARN** |
+| Definition unclear / hash integrity fail | **FAIL** |
+| User hard-push / stall / MAX turns alone | **Never PASS** |
+
+**WARN:** may enter **conditional report** after E2 UnderstandingConfirm; must disclose unresolved info, premises, and conclusion limits (`delivery_mode=degraded` / information_boundaries).  
+**FAIL:** must **not** freeze as normal deliverable report.
+
+**P1 WARN vs FAIL decision basis (deterministic):**
+
+```text
+if P1 ddr.status ∉ {satisfied, n_a}:
+  if any linked active DIR has may_affect_p5_ranking !== false
+     OR ddr.completion_criteria marks decision_critical=true:
+       → FAIL
+  else if all linked critical DIRs have may_affect_p5_ranking === false
+       AND information_boundaries includes this gap:
+       → WARN
+  else:
+       → FAIL  # conservative default
+```
+
+Legacy `evaluateDecisionSufficiency` is DIR/conflict core to **reuse inside** this composer; Intake Gate is the outer function (future `evaluateIntakeSufficiency`).
+
+### 3.4 Example DDR families → faces
+
+Unchanged mapping to PageFeedMatrix faces `01`–`08` / appendix `03` (see Traceability). Catalog instances = Phase 2.
 
 ---
 
-## 4. Investigation Blueprint
-
-Container (product: Decision Blueprint):
+## 4. Investigation Blueprint (C3)
 
 | Field | Type | Notes |
 |---|---|---|
 | `blueprint_id` | string | |
-| `blueprint_version` | number | Immutable history; no silent overwrite |
-| `session_id` | string | |
-| `context_id` | string | Links to DC |
+| `blueprint_version` | number | Immutable history |
+| `ddr_version` | number | Catalog version bound at freeze |
+| `session_id` / `context_id` | string | |
 | `directions` | `InvestigationDirection[]` | |
-| `ddr` | `DDR[]` | |
-| `dir_index` | `DIR[]` or ids referencing DC.dirs | Prefer **DC.dirs as SoT**; blueprint holds seed + scope metadata |
-| `scope_locked` | boolean | After init |
-| `change_log` | `BlueprintChangeRecord[]` | Required for scope changes |
+| `ddr` | `DDR[]` | Definitions; live status computed against `DC.dirs` |
+| `dir_ids` | string[] | References into `DC.dirs` only |
+| `dir_seed_snapshot` | immutable copy of initial DIR **requirements** (need/why/roles) at seed time | **Not** live `current_state` |
+| `scope_locked` | boolean | |
+| `change_log` | `BlueprintChangeRecord[]` | |
 
-### InvestigationDirection
+**Forbidden:** Blueprint maintaining `current_state` / evidence links as a parallel mutable DIR store.  
+**Forbidden:** Blueprint update resetting `DC.dirs` live aggregation.
 
-| Field | Type | Notes |
-|---|---|---|
-| `direction_id` | string | |
-| `name` | string | |
-| `objective` | string | |
-| `decision_relevance` | string | |
-| `required_information` | string[] | |
-| `optional_information` | string[] | |
-| `priority` | `P0` \| `P1` \| `P2` | P2 must not block completion |
-| `completion_criteria` | string | |
-| `dependencies` | string[] | other direction_ids |
-| `scope_boundary` | string | |
-| `status` | `open` \| `in_progress` \| `satisfied` \| `unknown_bounded` \| `closed` | |
-| `related_dir_ids` | string[] | |
-| `max_followup_depth` | number | default soft 3 (product §4.4) |
-| `followup_depth_used` | number | |
-
-**Scope change proposal** (product §3.3) required fields before adding a new top-level direction:
-
-`proposed_direction`, `originating_fact_id`, `related_decision_question`, `decision_impact`, `why_existing_directions_are_insufficient`, `priority`, `estimated_information_value`.
+InvestigationDirection fields unchanged (priority P0/P1/P2, depth caps, scope_boundary, etc.).
 
 ---
 
 ## 5. Adaptive Question Plan & Agenda
 
-### AdaptiveQuestionPlan (planner output per turn)
+Unchanged duties: one primary question; must cite `direction_id` + `dir_ids` / `ddr_ids`; Agenda execution only; covered ≠ DIR known / DDR satisfied.
 
-| Field | Type | Notes |
+---
+
+## 6. Decision Understanding (derived)
+
+Same blocks as before. Progress weights remain **deferred** (not C1–C5). Progress must not use Agenda coverage as primary metric.
+
+---
+
+## 7. Personal Analysis & glossary
+
+Unchanged: BaZi/ZiWei isolated from RealityFacts; glossary mandatory reuse; ZFP hydration gap deferred Phase 5/9.
+
+---
+
+## 8. Session Lifecycle enum (C2 CLOSED)
+
+**Canonical `IntakeSessionPhase` (exact set — Data Contract ≡ State Machines):**
+
+| Phase | User-visible? | Meaning |
 |---|---|---|
-| `plan_id` / `turn_index` | string / number | |
-| `selected_direction_id` | string | Must be in Blueprint |
-| `selected_dir_ids` | string[] | Must link DDR/DIR |
-| `selected_ddr_ids` | string[] | |
-| `question_text` | string | One primary question (product §4.3) |
-| `why_ask` | string | |
-| `expected_information_gain` | string | |
-| `depth_level` | 1..N | Within direction soft cap |
-| `reply_options` | string[]? | 0–3 chips; optional |
-| `out_of_scope_rejected` | string[] | Planner self-check |
+| `intake_init` | no stage label | First message / definition seed / profile load |
+| `blueprint_building` | **internal only** | Building InvestigationBlueprint + DDR/DIR seeds |
+| `blueprint_ready` | no stage label | Scope locked; blueprint_version persisted |
+| `investigating` | no stage label | Adaptive Q&A |
+| `understanding_review` | no stage label | Final summary **shown** (E2 not yet done) |
+| `awaiting_user_confirm` | no stage label | Waiting for E2 UnderstandingConfirm or revise |
+| `frozen` | no stage label | DC final + FreezeRecord written |
+| `reporting` | no stage label | Report generation read-only |
+| `closed` | — | Ended normally or terminated |
+| `expired` | — | 24h retain elapsed (≠ lockout strike) |
 
-### AgendaItem (execution queue)
-
-**ADAPT** from `lib/poju/investigation-agenda.ts` `AgendaItem`, but:
-
-| Keep | Drop / do not use as SoT |
-|---|---|
-| `id`, `label`, `status`, `captured_answer`, `critical`, `collection_goal` | Treating `covered` as DIR known |
-| Link fields → `direction_id`, `dir_ids`, `ddr_ids` (**new**) | Legacy `serves_path` |
-| | Call B one-shot factory as Intake entry |
-
-**Invariant:** Agenda completion ≠ sufficiency; ≠ DIR known.
+**UX rule:** Users always see unified Decision Understanding UI + current question. **No** Stage 1/2/3 labels. Internal phase changes must not alter that product UX.
 
 ---
 
-## 6. Decision Understanding (derived view)
+## 9. Invalid Input / Lockout
 
-Read-only projection shared by **UI** and **Adaptive Question Engine**.
-
-| Block | Source |
-|---|---|
-| Current understanding summary | DC.definition + confirmed/unverified facts |
-| Understood items | DIR known / facts confirmed |
-| Need to understand | DIR unknown (P0/P1), open conflicts |
-| Progress % | Weighted DDR + P0/P1 DIR + sufficiency (product §7.4) — **code-owned weights** |
-| Personal Pattern Insight | PersonalAnalysisProfile relevance slice |
-| Gate / lockout badges | SufficiencyGate + LockoutState |
-
-**Invariant:** Same structured snapshot fed to model planner and UI. No parallel “understanding JSON” SoT.
-
-Progress must **not** use Agenda covered ratio as primary metric (legacy `AgendaProgressPanel` does — **RETIRE** that formula).
+Unchanged product SM (deferred implementation Phase 8). Separate from Session phases.
 
 ---
 
-## 7. Personal Analysis Profile & Pattern Insight
+## 10. Persistence & FreezeRecord (C5 CLOSED)
 
-### PersonalAnalysisProfile (new adapter interface)
+### 10.1 Persist matrix
 
-| Branch | Code SoT to map |
+| Data | Persist |
 |---|---|
-| BaZi | `ProfileStructured` (`build-profile-structured.ts`) + ChartFactPack |
-| ZiWei | `ZiweiFactPack` (`fact-pack.ts`) + display projection |
-| Metadata | calc module, version, asOf, clock, data_availability |
+| DC draft/final + versions + idempotency keys | yes |
+| Blueprint versions + change_log + ddr_version | yes |
+| Agenda / plan audit | yes (not fact SoT) |
+| DecisionUnderstanding | optional cache; rebuild from DC |
+| Lockout counters | server durable (Phase 8) |
+| **FreezeRecord** | yes; immutable |
 
-**Invariants:**
+### 10.2 `DC.content_hash` scope
 
-1. Local calc ≠ RealityFact.
-2. BaZi and ZiWei remain separately traceable (not mashed into one prose blob).
-3. Pattern Insight disclosure may prompt user validation → user answers become Facts; calc remains calc.
+Matches `content-hash.ts` `extractBusinessPayload`:
 
-### PersonalPatternInsight
+- Includes: Definition, RealityFacts, Constraints, Hypotheses, **DIRS (live state)**, Conflicts, information_boundaries  
+- **Excludes:** Blueprint version, DDR catalog version, UI progress, lockout, pure timestamps outside business fields as defined by existing extractor  
 
-| Field | Type |
-|---|---|
-| `insight_id` | string |
-| `statement_user_facing` | string (glossary-safe vernacular) |
-| `bazi_anchors` | structured refs |
-| `ziwei_anchors` | structured refs |
-| `related_dir_ids` / `related_ddr_ids` | string[] |
-| `requires_user_validation` | boolean |
-| `shown_at_turn` | number \| null |
+### 10.3 FreezeRecord (sidecar; Scheme A)
 
-**Tech:** no shipped UI today; chat phases do not inject full ZFP (Call A/B closed-set only). Contract still requires both systems as inputs.
-
-### Terminology (hard)
-
-Existing POJU glossary / soft-label pipeline is **mandatory reuse**:
-
-- `lib/glossary/**` (`termOf`, namespaces including `ziwei`)
-- `lib/llm/sanitize/term-marking.ts` (`autoMarkBareTerms`, `prepareTextForGlossaryRender`)
-- UI: `RichReadingText` / `GlossaryText`
-
-**Forbidden:** redesign or replace the POJU term conversion system in Intake 2.0.
-
----
-
-## 8. Sufficiency Gate
-
-Product verdicts: `PASS` \| `WARN` \| `FAIL`.
-
-| Existing code | Mapping |
-|---|---|
-| `evaluateDecisionSufficiency` → `sufficient` | ≈ PASS |
-| `sufficient_with_boundaries` | ≈ WARN |
-| `continue_collecting` / hard block | ≈ FAIL |
-
-**Intake contract extends checks** (product §9.1) beyond DIR-only:
-
-1. Definition clarity  
-2. P0 DIR satisfied  
-3. P1 enough for option compare  
-4. Critical constraints known  
-5. Blocking conflicts resolved or bounded  
-6. **DDR** obligations satisfied for required faces  
-7. Important unknowns disclosed  
-8. Hash/version integrity  
-
-**Hard rules:**
-
-- User hard-push / stall / MAX turns **must not** alone force PASS (aligns with existing freeze guards).
-- Critical unknown that may change path ranking → FAIL (or conditional WARN only if product marks `may_affect_p5_ranking === false` and boundaries recorded).
-
----
-
-## 9. Session Lifecycle (separate from Lockout)
-
-Suggested Intake session phases (product workflow; **not** legacy AgentPhase names as SoT):
-
-| Phase | Meaning |
-|---|---|
-| `intake_init` | First message / seed definition |
-| `blueprint_ready` | InvestigationBlueprint frozen for scope |
-| `investigating` | Adaptive Q&A loop |
-| `understanding_review` | Final understanding summary shown |
-| `awaiting_user_confirm` | User confirm / revise summary |
-| `frozen` | DC final; ready for report |
-| `reporting` | Report generation (read-only DC) |
-| `closed` | Session ended normally |
-| `expired` | 24h retention elapsed (not a lockout strike) |
-
-Legacy `opening` / `collecting_context` / Call A/B are **out of Intake SoT** (adapter may bridge during migration).
-
----
-
-## 10. Invalid Input / Lockout (separate state machine)
-
-| Field | Type | Rule |
+| Field | Type | Required |
 |---|---|---|
-| `invalid_streak` | number | Reset to 0 on valid answer |
-| `lockout_count` | number | +1 per lockout event |
-| `lockout_until` | ISO \| null | Cool-down 10 minutes |
-| `session_retain_until` | ISO | 24h retention |
-| `terminated` | boolean | After 3rd lockout event |
-| `last_invalid_at` | ISO \| null | |
+| `freeze_id` | string | yes |
+| `session_id` | string | yes |
+| `context_id` | string | yes |
+| `context_version` | number | yes |
+| `dc_content_hash` | string | yes (= `DC.content_hash` at freeze) |
+| `blueprint_version` | number | yes |
+| `ddr_version` | number | yes |
+| `frozen_at` | ISO string | yes |
+| `gate_verdict` | `PASS` \| `WARN` | yes |
+| `delivery_mode` | `normal` \| `degraded` | yes |
 
-**Invalid input** (product): off-topic to current ask, garbage, repeated unrelated — **not** short answers, unknown, declined.
+**Report generation must verify** all of: `dc_content_hash`, `blueprint_version`, `ddr_version` match the artifacts used.  
+**History:** new Blueprint/DDR/DC versions create new FreezeRecords; **must not silently overwrite** prior FreezeRecords or prior report bindings.
 
-**On lockout:** no model call, no Agenda update, no DC formal mutate, no PASS spend, no client-only bypass. Server idempotent counters.
-
-**Normal unknown/declined:** write Fact `unknown`/`declined`; may deepen once then bound — **not** invalid streak.
+Existing `DecisionContextBinding` remains the DC triple; FreezeRecord **extends** it with blueprint/ddr versions.
 
 ---
 
-## 11. Persistence Contract
+## 11. Question budget
 
-| Data | Persist? | Notes |
+Unchanged defaults (soft 12 / hard 15; depth 3). Not part of C1–C5 reopen.
+
+---
+
+## 12. Suggested code directory
+
+Still recommend `lib/decision-intake/` later — **do not create in Phase 1.2**.
+
+---
+
+## 13. Technical risks (remaining after C1–C5)
+
+| ID | Item | Phase |
 |---|---|---|
-| DC draft/final + versions + idempotency keys | yes | Reuse C1 pattern (`persist.ts`, `commitDecisionContextChange`) |
-| Blueprint versions + change_log | yes | New |
-| DDR/DIR seeds (if not only inside DC) | yes | Prefer DIR inside DC |
-| Agenda / AdaptiveQuestionPlan history | yes (execution audit) | Not fact SoT |
-| DecisionUnderstanding snapshot | optional cache | Must rebuild from DC |
-| Lockout counters | **server durable** | Required |
-| PersonalAnalysisProfile version refs | yes | Not full recompute dump every turn |
-| UI-only progress animation | no | |
-
-**Consistency rules:**
-
-1. DC is authority over `agent_v2` buffers (`restoreDecisionContextAuthority` spirit).  
-2. Concurrent writes: idempotency keys + transactional commit; lockout updates atomic.  
-3. Freeze: append version snapshot; never overwrite final.  
-4. Report binds `DecisionContextBinding` (`context_id`, `context_version`, `content_hash`).
+| T1 | `agent_v2` dual authority in UI | Bridge / 3–7 |
+| T2 | Call A/B must not be Intake entry | Always |
+| T3 | Conflict/Constraint writers missing | 3 |
+| T4 | **CLOSED by C1** (doc); code `confirmFact` promote still Phase 3 | 3 |
+| T5 | Product plan v6=Shadow vs production v6 | Doc hygiene |
+| T6 | Ziwei task-context hydration | 5/9 |
+| T7 | SourceStage enum extend | light OPEN |
+| T8 | DDR instance catalog | Phase 2 |
+| T9 | Progress weight table | 6–7 |
+| T10 | PASS legal copy | product/legal |
+| T11 | Lockout server schema / classifier | 8 |
 
 ---
 
-## 12. Question budget (config contract)
+## 14. C1–C5 closure proof
 
-Product initial params (tunable; not sacred constants):
-
-| Complexity | Effective answer turns |
-|---|---:|
-| Simple | 5–7 |
-| Medium | 8–10 |
-| High | 10–12 |
-| Soft cap | 12 |
-| Hard cap | 15 |
-
-Per-direction follow-up soft depth: **3** (extend only via rule-layer approval).
-
-Only **valid** answers consume budget. Invalid / infra errors do not.
-
-Hard cap reached → evaluate conditional report / disclose unknowns — **not** fabricate questions.
-
----
-
-## 13. Suggested code directory (review only; do not create in Phase 1)
-
-| Option | Verdict |
-|---|---|
-| **`lib/decision-intake/`** | **Recommended** — independent lifecycle; imports `lib/poju/decision-context/*` as library |
-| `lib/poju/decision-intake/` | Rejected as primary — too easy to re-couple into `agent.ts` / Call A/B |
-
-Keep glossary, ziwei, calculations, page-feed where they are.
-
----
-
-## 14. Technical risks & OPEN items
-
-| ID | Risk / OPEN | Severity |
+| ID | Decision | Where encoded |
 |---|---|---|
-| T1 | Legacy dual authority `agent_v2` vs DC | High |
-| T2 | Call A/B persist helpers unused; Intake must not inherit | High |
-| T3 | No production Conflict/Constraint collecting writers | High |
-| T4 | Fact confirm ≠ status confirmed | Medium |
-| T5 | Product plan text still calls v6 “Shadow”; Phase 0 shows v6 is production default | Doc drift |
-| T6 | Ziwei full pack not in production delivery `task-context` | Medium |
-| T7 | Whether to extend `SourceStage` enum vs reuse `collecting` | OPEN (product) |
-| T8 | Exact DDR catalog instances | Deferred to Phase 2 Blueprint |
-| T9 | Weight table for Understanding progress % | OPEN (product+eng constants) |
-| T10 | PASS policy legal copy vs engineering enforcement surface | OPEN (product/legal) |
+| C1 | Fact confirm promotion A–D + E1≠E2 | §2.4 |
+| C2 | Phase enum + internal `blueprint_building` | §8 |
+| C3 | `DC.dirs` sole live DIR SoT | §1, §2.8, §4 |
+| C4 | DDR status table + Gate P0/P1/P2 | §3.2–§3.3 |
+| C5 | Hash = DC only; FreezeRecord sidecar | §10 |
 
-**Declaration:** This Phase 1 document does not modify runtime code.
+---
+
+## 15. Declaration
+
+Phase 1.2 documentation revision only. **No runtime code, schema, UI, prompt, or PASS changes.**

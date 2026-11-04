@@ -1,291 +1,260 @@
-# Decision Intake 2.0 · Phase 1 State Machines & Lifecycles
+# Decision Intake 2.0 · Phase 1 State Machines
 
 | Field | Value |
 |---|---|
-| **Companion** | `PHASE-1-DATA-CONTRACT.md` |
+| **Document type** | Formal state machines (docs only) |
+| **Companion** | `PHASE-1-DATA-CONTRACT.md` (Phase 1.2 C1–C5) |
+| **Phase 1.1 review** | `PHASE-1-1-REVIEW-REPORT.md` @ `17aec05c` |
 | **Base SHA** | `297544134d7dcc8c942d5d314760bc3f4a75423f` |
-| **Product SSOT** | Architecture plan §§3–4, §8–9 |
-| **Rule** | **Session lifecycle ≠ Lockout state machine** |
+
+**C1–C5 status:** **CLOSED** (aligned with Data Contract).
 
 ---
 
-## 0. Separation of machines
+## 0. Rules
 
-| Machine | Owns | Must not own |
+1. Every state listed here **must** appear in Data Contract enums.  
+2. Diagram arrows **must** match transition tables.  
+3. No undefined, orphan, or unreachable states.  
+4. Session ≠ Lockout.  
+5. Users never see Stage 1/2/3 labels; `blueprint_building` is internal only.
+
+---
+
+## 1. Session Lifecycle (C2)
+
+### 1.1 Canonical enum (`IntakeSessionPhase`)
+
+Identical to Data Contract §8:
+
+`intake_init` · `blueprint_building` · `blueprint_ready` · `investigating` · `understanding_review` · `awaiting_user_confirm` · `frozen` · `reporting` · `closed` · `expired`
+
+### 1.2 Diagram
+
+```text
+                    ┌──────────────┐
+                    │ intake_init  │
+                    └──────┬───────┘
+                           │ first usable message / birth data OK
+                           ▼
+                 ┌─────────────────────┐
+                 │ blueprint_building  │  (INTERNAL — no UI stage label)
+                 └──────────┬──────────┘
+                            │ Blueprint + DDR defs + DC.dirs seeds ready
+                            │ blueprint_version persisted
+                            ▼
+                   ┌──────────────────┐
+                   │ blueprint_ready  │
+                   └────────┬─────────┘
+                            │ scope_locked; first AgendaItem issued
+                            ▼
+                    ┌───────────────┐
+              ┌────►│ investigating │◄──── revise / reopen from review
+              │     └───────┬───────┘
+              │             │ Gate ready OR soft budget / user request review
+              │             ▼
+              │   ┌──────────────────────┐
+              │   │ understanding_review │  ← summary SHOWN (E2 not yet)
+              │   └──────────┬───────────┘
+              │              │ auto-enter wait for confirm UX
+              │              ▼
+              │   ┌─────────────────────────┐
+              └───│ awaiting_user_confirm   │
+                  └──────────┬──────────────┘
+                     confirm │        │ revise / reopen
+                     (E2)    │        └──► investigating
+                             ▼
+                       ┌─────────┐
+                       │ frozen  │  ← FreezeRecord written
+                       └────┬────┘
+                            │ start report
+                            ▼
+                      ┌───────────┐
+                      │ reporting │
+                      └─────┬─────┘
+                            │ success / terminal fail policy
+                            ▼
+                       ┌─────────┐
+                       │ closed  │
+                       └─────────┘
+
+Any active (non-frozen/reporting) ──retain elapsed──► expired
+frozen / reporting ──policy──► closed (not silent expire overwrite)
+```
+
+### 1.3 Transition table
+
+| From | Event | Guard | To | Effects |
+|---|---|---|---|---|
+| `intake_init` | `FIRST_USABLE_INPUT` | Not locked out; birth/profile loadable | `blueprint_building` | Seed Definition draft; load PersonalAnalysisProfile |
+| `blueprint_building` | `BLUEPRINT_BUILT` | DDR defs + `dir_ids` + `DC.dirs` seeds present; `blueprint_version` set | `blueprint_ready` | Persist Blueprint; **do not** reset later live DIR states |
+| `blueprint_ready` | `SCOPE_LOCKED` | `scope_locked=true`; Agenda primary ready | `investigating` | Issue first question |
+| `investigating` | `FACT_WRITTEN` / `CONFLICT_*` | — | `investigating` | Update DC; `reaggregateDirs`; refresh DDR statuses |
+| `investigating` | `FACT_CONFIRM` (E1) | FactConfirmEvent valid | `investigating` | Apply §2.4A–C promotion; reaggregate |
+| `investigating` | `GATE_READY_FOR_REVIEW` | Gate PASS or WARN with disclosures ready | `understanding_review` | Build DecisionUnderstanding |
+| `investigating` | `USER_REQUEST_REVIEW` | Soft budget or explicit | `understanding_review` | Same |
+| `understanding_review` | `SUMMARY_PRESENTED` | Summary rendered | `awaiting_user_confirm` | **Show ≠ confirm** |
+| `awaiting_user_confirm` | `USER_CONFIRM_UNDERSTANDING` (E2) | Gate ≠ FAIL; disclosures OK | `frozen` | DC→final; write **FreezeRecord** (hash+bp+ddr versions) |
+| `awaiting_user_confirm` | `USER_REVISE` | — | `investigating` | Keep DC draft; bump version |
+| `frozen` | `START_REPORT` | Binding verify OK | `reporting` | Read-only DC |
+| `reporting` | `REPORT_DONE` / `REPORT_FAIL_TERMINAL` | — | `closed` | Persist report ↔ FreezeRecord |
+| `*` (pre-freeze) | `RETAIN_ELAPSED` | 24h | `expired` | Soft clear; no silent Freeze overwrite |
+| any | `HARD_TERMINATE` | Policy | `closed` | Audit |
+
+### 1.4 Forbidden
+
+- Skipping `blueprint_building` without a recorded Blueprint version.  
+- `understanding_review` → `frozen` without E2.  
+- Treating E2 as E1 bulk fact promotion.  
+- Stage labels in UI.  
+- Mutating DC after `frozen` except supersede+new context.
+
+### 1.5 Investigating turn loop (within `investigating`)
+
+```text
+select Agenda primary
+  → present question (no Stage label)
+  → classify answer (cooperative / unknown / declined / invalid)
+  → write Fact|Constraint|Hypothesis|Conflict (never Call A/B stamp)
+  → apply E1 if FactConfirm
+  → reaggregateDirs(DC.dirs)
+  → refresh DDR statuses (§4)
+  → soft Gate evaluate
+  → next ask OR GATE_READY_FOR_REVIEW / USER_REQUEST_REVIEW
+```
+
+Invalid-input streak feeds Lockout SM (§6), not Session phase change (except terminate/expire).
+
+---
+
+## 2. Fact confirmation & status promotion (C1)
+
+### 2.1 Events
+
+| Event | Code / name | Scope |
 |---|---|---|
-| **M1 Session / Intake lifecycle** | Blueprint → investigate → confirm → freeze → report | Abuse lockout counters |
-| **M2 Per-turn investigation loop** | Ask → interpret → update DC → replan | PASS spend policy text |
-| **M3 Lockout / invalid input** | invalid_streak, lockout_count, cool-down, terminate | Formal DC fact writes |
-| **M4 Sufficiency & Freeze** | Gate verdict → understanding review → freeze | Agenda covered % as PASS |
+| E1 | `FACT_CONFIRM` / FactConfirmEvent | Single fact |
+| E2 | `USER_CONFIRM_UNDERSTANDING` | Whole summary → Freeze |
 
-Legacy `advanceStateMachine` / AgentPhase is **not** M1 SoT. It may be referenced only as migration debt.
+### 2.2 Fact status after E1
+
+| Prior `verification_level` | After E1 |
+|---|---|
+| `user_asserted` | `status=confirmed`, `user_confirmed=true`; keep source & verification_level |
+| `independently_verified` | keep `status=confirmed`; **`user_confirmed` stays false** |
+| `user_estimate` | **no status upgrade**; remains `unverified` + `user_estimate` |
+| `none` (unknown/declined/n_a) | no promotion to confirmed |
+
+E2: **no** automatic fact status changes.
+
+After any E1 that yields `status=confirmed`, call `reaggregateDirs` so DIR `known` can fire (`status===confirmed` required).
+
+### 2.3 Writes that never confirm
+
+Model inference, hypothesis, Agenda covered → never set `confirmed` / `user_confirmed=true`.
 
 ---
 
-## 1. M1 — Session / Intake lifecycle
+## 3. DIR state machine (live on `DC.dirs` only — C3)
 
 ```text
-[start]
-   │
-   ▼
-intake_init ──(definition seed + profile load)──► blueprint_building
-   │
-   ▼
-blueprint_ready ──(scope locked)──► investigating
-   │
-   │◄──────────── (revise after user correction) ──┐
-   ▼                                                 │
-understanding_review ──(user confirms)──► awaiting_user_confirm
-   │                         │                      │
-   │                         ├── modify/supplement ─┘
-   │                         ▼
-   │                      frozen
-   │                         │
-   │                         ▼
-   │                      reporting ──► closed
-   │
-   ├── budget hard-cap with FAIL critical ──► understanding_review (bounded/conditional)
-   ├── user abandons ──► closed
-   └── retain 24h elapsed ──► expired  (≠ lockout strike)
+                    ┌─────────┐
+          seed ───► │ unknown │
+                    └────┬────┘
+           evidence│     │ conflict on contributors
+                   ▼     ▼
+              ┌───────┐ ┌──────────┐
+              │ known │ │ conflict │──clarify──► unknown|known
+              └───┬───┘ └──────────┘
+                  │ N/A evidence
+                  ▼
+               ┌─────┐
+               │ n_a │
+               └─────┘
 ```
 
-### Transitions (normative)
+| Event | Effect |
+|---|---|
+| `DIR_SEEDED_FROM_BLUEPRINT` | Insert/update **requirement** fields into `DC.dirs` once; never wipe later evidence states on blueprint bump |
+| `FACTS_CHANGED` | `reaggregateDirs` |
+| `CONFLICT_OPEN` / `CLARIFIED` | Reaggregate |
+| Agenda covered | **No** DIR transition alone |
 
-| From | Event | To | Guards |
-|---|---|---|---|
-| `intake_init` | Initial understanding + blueprint draft OK | `blueprint_ready` | Definition minimum fields present (product: event/question/outcome progressively) |
-| `blueprint_ready` | Scope lock recorded | `investigating` | Blueprint version persisted |
-| `investigating` | Sufficiency PASS or WARN+user path / hard-cap policy | `understanding_review` | Gate evaluated by **code**; model advisory only |
-| `understanding_review` | Summary shown | `awaiting_user_confirm` | Summary includes unknowns/conflicts |
-| `awaiting_user_confirm` | User confirms | `frozen` | Freeze eligibility (M4) |
-| `awaiting_user_confirm` | User modifies | `investigating` or re-`understanding_review` | Re-evaluate DIR/DDR/Gate |
-| `frozen` | Report job start | `reporting` | Binding triple present |
-| `reporting` | Report complete | `closed` | |
-| any active | 24h retain without resume | `expired` | Does **not** increment `lockout_count` |
-| any | 3rd lockout terminate | `closed` (terminated) | Via M3 |
-
-**Forbidden:** Jump from `investigating` to `frozen` without understanding confirm (product §9.2–9.3).  
-**Forbidden:** Enter report while DC `status !== final` when Stage-4 require-DC path is on.
+Blueprint must **not** host a parallel live `current_state` store.
 
 ---
 
-## 2. M2 — Per-turn investigation loop
+## 4. DDR status & Gate timing (C4)
 
-Executed only while Session ∈ `investigating` **and** Lockout ∉ locked/terminated.
+### 4.1 When to refresh DDR status
+
+After: Fact write, E1, Conflict change, DIR reaggregate, Blueprint seed (initial only).
+
+Function: Data Contract §3.2 → `satisfied` \| `partial` \| `pending` \| `blocked` \| `n_a`.
+
+### 4.2 When to evaluate Gate
+
+| Moment | Action |
+|---|---|
+| Each investigating turn after DC write | Soft evaluate (advisory UX) |
+| Enter `understanding_review` | Hard evaluate; block E2 if FAIL |
+| Before FreezeRecord | Re-check; FAIL aborts freeze |
+| Report start | Verify FreezeRecord bindings |
+
+Gate composition: Data Contract §3.3 (P0→FAIL; P1 WARN/FAIL rule; P2 alone not blocking).
+
+---
+
+## 5. Decision Understanding (derived)
 
 ```text
-load DecisionUnderstanding snapshot (same struct for UI + model)
-        │
-        ▼
-Adaptive Question Engine
-  - read Blueprint, DC, DDR/DIR
-  - pick one gap (priority P0→P1→P2; dependency-aware)
-  - enforce scope_boundary + budget + depth
-  - emit AdaptiveQuestionPlan (+ optional Agenda enqueue)
-        │
-        ▼
-present question (+ ≤3 options)
-        │
-        ▼
-user input
-        │
-        ├── classify: valid_answer | unknown/declined | invalid_input
-        │
-        ▼
-Answer Interpretation (model propose → **code validate** → write DC)
-        │
-        ├── RealityFact / Constraint / Hypothesis / Conflict updates
-        ├── reaggregateDirs
-        ├── update direction/DDR derived status
-        ├── reset invalid_streak if valid
-        │
-        ▼
-Decision Readiness evaluation (code)
-        │
-        ├── continue → next turn
-        └── stop candidate → understanding_review
+DC change → rebuild Understanding → UI
+E2 confirm → Freeze (not a second SoT write)
 ```
 
-### 2.1 Investigation direction initialization
+No independent fact writes from Understanding.
 
-| Step | Action |
-|---|---|
-| 1 | Initial Decision Understanding model call (product §10.1 A) |
-| 2 | Blueprint Initialization (§10.1 B) — directions + DDR + DIR seeds — **not** full question list |
-| 3 | Persist Blueprint v1; set `scope_locked` |
-| 4 | Seed DC draft Definition + opening Facts (reuse `seedDecisionContextFromOpening` patterns; **new** Intake writer) |
-| 5 | Load PersonalAnalysisProfile (read-only) |
+---
 
-**Must not:** Call B agenda factory as Intake blueprint initializer.
+## 6. Invalid Input / Lockout
 
-### 2.2 After each answer — DC update rules
+Unchanged product machine (Phase 8). Orthogonal to Session. While locked: block Agent/DC/Agenda/PASS; do not advance Session except expire/terminate policies.
 
-| User signal | DC write |
-|---|---|
-| Clear fact | `unverified`+`user_asserted` (or estimate) Fact; roles linked to DIR |
-| Explicit confirm of prior statement | confirm event → may promote toward `confirmed` per legal pairs |
-| “不知道 / 说不上来” (cooperative) | Fact `unknown`+`none` **or** DIR remains unknown; **do not** mark Agenda covered as known |
-| Decline to provide | Fact `declined`+`none` |
-| Contradicts prior fact | `openConflict`; do not overwrite silently |
-| Model insight | Hypothesis only |
+---
 
-**Never:** Force `satisfied`/`covered`/`known` solely to increase progress (product §4.4 / §5.7 / §7.4).
+## 7. Freeze / report binding (C5)
 
-**Tech debt note:** Legacy `shouldForceSatisfiedAfterSecondCantProvide` marks Agenda covered — **must not** be ported as DIR/sufficiency rule. Intake maps 2× cant-provide → `unknown`/`declined` + depth stop.
+```text
+E2 ──► DC.status=final
+    ──► content_hash = hash(DC business payload ONLY)
+    ──► FreezeRecord{ dc_content_hash, blueprint_version, ddr_version, ... }
+    ──► session → frozen
 
-### 2.3 Dynamic next question selection
+Report start:
+  assert FreezeRecord.dc_content_hash == DC.content_hash
+  assert FreezeRecord.blueprint_version == Blueprint.blueprint_version used
+  assert FreezeRecord.ddr_version == catalog version used
+  mismatch → refuse / FAIL (no silent remap)
 
-Priority (product §4.2):
+New Blueprint/DDR version later:
+  new freeze only on new E2 cycle
+  prior FreezeRecords + report bindings immutable
+```
 
-1. Affects final conclusion (P0)  
-2. Affects ranking  
-3. Affects recommendation preconditions  
-4. Open blocking conflicts  
-5. Prerequisites available  
-6. High information gain / low ask cost  
+---
 
-Rules:
+## 8. Cross-check vs Data Contract
 
-- Default **one** primary question per turn.  
-- Must cite `direction_id` + `dir_ids` / `ddr_ids`.  
-- Out-of-blueprint questions rejected by code.  
-- New top-level direction only via scope-change record.
-
-### 2.4 Depth & budget controls
-
-| Control | Default (product) | On exhaust |
+| Topic | Contract § | SM § |
 |---|---|---|
-| Per-direction follow-up depth | soft max 3 | Record unknown/partial; disclose; no infinite ask |
-| Soft session budget | 12 valid turns | Prefer readiness eval |
-| Hard session budget | 15 valid turns | Conditional report path or user choose continue; **no** fake questions |
-
-Valid turns only consume budget. Invalid / infra do not.
-
-### 2.5 Unknown / refuse / cannot provide
-
-| Class | Machine effect |
-|---|---|
-| Cooperative unknown | Valid turn; Fact/DIR unknown; depth may +1 then bound |
-| Decline | Valid turn; `declined`; show in final summary |
-| Invalid (M3) | No DC write; streak++ |
+| Phase enum | §8 | §1 |
+| Fact promotion | §2.4 | §2 |
+| DIR SoT | §2.8 | §3 |
+| DDR/Gate | §3 | §4 |
+| FreezeRecord | §10 | §7 |
 
 ---
 
-## 3. M3 — Invalid input & Lockout
+## 9. Declaration
 
-```text
-investigating + unlocked
-        │
-   invalid input
-        │
-   invalid_streak = 1 → warn + restate same question
-        │
-   invalid again (streak = 2)
-        │
-        ▼
-   LOCKED
-     - lockout_count += 1
-     - lockout_until = now + 10 min
-     - session_retain_until = now + 24 h (if not set)
-     - forbid: model, agenda update, DC formal mutate, PASS spend
-        │
-   after 10 min → show Continue
-        │
-   user resumes → investigating, streak = 0
-        │
-   if lockout_count reaches 3 → TERMINATED (permanent for session)
-```
-
-| Event | `invalid_streak` | `lockout_count` |
-|---|---|---|
-| Valid answer | → 0 | unchanged |
-| Invalid | +1 | unchanged until lock |
-| Enter lock | reset after lock handling | +1 |
-| Expire 24h | n/a | **unchanged** (not strike 3) |
-| Platform error | no +streak | no |
-
-**Server enforcement required** (product §8.5). Client disable is insufficient.
-
-**PASS:** Abuse termination follows disclosed PASS policy; not a blanket “no refunds for all failures.”
-
----
-
-## 4. M4 — Sufficiency, confirmation, Freeze
-
-```text
-Readiness eval each turn (and on demand)
-        │
-        ├── FAIL → stay investigating (unless hard-cap policy → bounded review)
-        ├── WARN → may offer understanding_review with boundaries
-        └── PASS → understanding_review
-                │
-                ▼
-        Final Understanding Summary (user-facing)
-                │
-                ├── confirm → freezeDecisionContext(stage3_sufficiency_end)
-                ├── modify → patch DC + re-gate
-                └── supplement → investigating
-                │
-                ▼
-        DC status=final, content_hash set, version snapshot appended
-                │
-                ▼
-        Report reads binding only (read-only)
-```
-
-### Freeze guards (align code + product)
-
-| Allow | Deny |
-|---|---|
-| User confirmed understanding after Gate PASS/WARN-bounded | Purchase/CTA alone |
-| `stage3_sufficiency_end` path | Stall / MAX turns claiming sufficiency |
-| Legal fact combinations | Open preferred-path conflicts without boundary policy |
-
-Open conflicts at freeze → `unresolved_in_final` (existing `markOpenConflictsUnresolvedInFinal`).
-
-Supplement after freeze → `startV2FromFinal` pattern: old final `superseded`, new draft, re-investigate, re-freeze.
-
----
-
-## 5. DecisionUnderstanding refresh cadence
-
-| Trigger | Action |
-|---|---|
-| After every successful DC commit | Recompute projection |
-| Blueprint version change | Recompute |
-| Pattern insight eligibility | Optional block update |
-| Lockout | Show locked state; freeze projection content |
-
-Planner and UI **must** read the same computed snapshot id/version.
-
----
-
-## 6. Mapping from legacy (informative only)
-
-| Legacy | Intake |
-|---|---|
-| `opening` → `awaiting_understanding_confirm` | `intake_init` → `blueprint_ready` (no Call A gate) |
-| Call A / Call B | **Retired** as Intake entry |
-| `collecting_context` + Agenda covered gate | `investigating` + DIR/DDR sufficiency |
-| `awaiting_confirmation` delivery confirm | Split: understanding confirm (Intake) vs delivery/report confirm (downstream) |
-| `shouldForceSatisfiedAfterSecondCantProvide` | Replace with unknown/declined + depth stop |
-| `MAX_COLLECTING_TURNS=12` stop-loss stall | Budget soft/hard + Gate; stall ≠ PASS |
-
----
-
-## 7. Unimplemented today (must exist in later phases)
-
-| Transition / behavior | Status in repo @ baseline |
-|---|---|
-| Blueprint scope lock + change_log | Missing |
-| Adaptive single-gap planner bound to DDR/DIR | Missing (Call B one-shot agenda instead) |
-| Server lockout SM (10m / 24h / 3 strikes) | Missing as product M3 (legacy has different abuse/escalation) |
-| Understanding panel derived from DDR/DIR | Missing (AgendaProgressPanel = agenda %) |
-| Freeze after Intake understanding confirm (not delivery CTA) | Partial DC freeze wire; coupled to delivery/segment2 |
-| Conflict auto-open on contradicting facts | Library only; no production writer |
-
----
-
-## 8. Declaration
-
-No runtime code modified in Phase 1. This document defines required machines for Phase 2+ implementation acceptance.
+Docs only. No runtime changes. C1–C5 closed in SM form.

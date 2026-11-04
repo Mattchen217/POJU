@@ -1,221 +1,152 @@
-# Decision Intake 2.0 · Phase 1 Traceability Contract
+# Decision Intake 2.0 · Phase 1 Traceability
 
 | Field | Value |
 |---|---|
-| **Companion** | `PHASE-1-DATA-CONTRACT.md`, `PHASE-1-STATE-MACHINES.md` |
-| **Report SoT** | `lib/llm/pro/delivery/page-feed-matrix.ts` + `.cursor/docs/decision-report/PageFeedMatrix-2026-10-27.md` |
-| **Rule** | Do **not** change eight-page structure; map DDR/DIR onto existing faces |
+| **Document type** | Formal traceability (docs only) |
+| **Companion** | Data Contract + State Machines (Phase 1.2 C1–C5) |
+| **PageFeedMatrix** | `.cursor/docs/decision-report/PageFeedMatrix-2026-10-27.md` |
+| **Phase 1.1 review** | @ `17aec05c` |
+
+**C1–C5 status:** **CLOSED**. Page structure `01–08` (07 conditional, `03` appendix) **unchanged**.
 
 ---
 
-## 1. End-to-end trace chain (normative)
+## 0. Purpose
+
+Guarantee every report judgment can be traced:
 
 ```text
-Report Deliverable (face 01–08 segment)
-        ▲
-        │ required by
-        │
-       DDR
-        ▲
-        │ satisfied via
-        │
-       DIR  ◄──── aggregated from RealityFacts / Constraints / Conflicts
-        ▲
-        │ investigated by
-        │
-InvestigationDirection ⊂ Blueprint
-        ▲
-        │ queued as
-        │
-AgendaItem / AdaptiveQuestionPlan
-        ▲
-        │ answered by
-        │
-User Answer / Evidence (+ optional PersonalAnalysis anchors)
-        │
-        ▼
-DecisionContext (write SoT)
-        │
-        ▼ freeze
-DecisionContextBinding (context_id, version, hash)
-        │
-        ▼
-Final Report Judgment (read-only feeds + DC slice)
+Report claim
+  → DDR (obligation)
+  → DIR (info need)   [state from DC.dirs ONLY]
+  → Evidence (Fact / Constraint / Conflict / Hypothesis boundary)
+  → optional CFP/ZFP / PersonalInsight
+  → FreezeRecord (dc_content_hash + blueprint_version + ddr_version)
 ```
 
-**Every critical judgment in the report must be able to answer:**
+---
 
-1. Which **DDR** required this deliverable?  
-2. Which **DIR**(s) supplied the information need?  
-3. Which **Fact / Constraint / Hypothesis / Conflict / calc anchor** supports it?  
-4. Which **user turn** or **local calc metadata** is the provenance?  
-5. If unknown — is it disclosed as boundary / WARN path?
+## 1. Source of Truth map (C3)
 
-If any link is missing, the judgment is **non-compliant** for Intake 2.0 Stage-4-style delivery.
+| Concern | SoT | Not SoT |
+|---|---|---|
+| Live facts / constraints / hypotheses / conflicts | **DC** | Understanding, Agenda, Blueprint |
+| Live DIR `current_state` + evidence links | **`DC.dirs`** | Blueprint live copy, Agenda |
+| DIR/DDR **definitions** / seed requirements | Blueprint @ version | — |
+| Ask execution | Agenda | — |
+| UI summary | DecisionUnderstanding (derived) | — |
+| Chart structure | CFP / ZFP | RealityFacts |
+| Freeze binding | **FreezeRecord** | Mutating old DC in place |
+
+**Rule:** Blueprint updates never overwrite live `DC.dirs` states. Trace readers always resolve DIR status via `context.dirs.find(dir_id)`.
 
 ---
 
-## 2. Layer duties in the chain
+## 2. Canonical chain
 
-| Layer | Writes? | Trace role |
-|---|---|---|
-| DDR | Blueprint init / versioned updates | Report obligation id |
-| DIR | Seeded then `reaggregateDirs` | Information need + state |
-| Agenda | Execution only | Proof a question was asked — **not** proof need met |
-| User answer | → Facts/Constraints via validated writers | Evidence |
-| Hypothesis | Analytical only | Must cite supporting/counter evidence ids |
-| PersonalAnalysisProfile | Read-only calc | CFP/ZFP anchors; never masquerade as user reality |
-| DecisionUnderstanding | Derived | Debug/UI; not provenance SoT |
-| Frozen DC + binding | Immutable | Report attachment |
+```text
+DDR.required_dir_ids[]
+        │
+        ▼
+DC.dirs[dir_id].current_state   ← sole status read
+        │
+        ├── known  ← RealityFacts with status=confirmed matching required_roles
+        ├── conflict ← open Conflict on contributors
+        ├── n_a ← explicit N/A evidence
+        └── unknown ← otherwise
 
----
+DDR.status = f(DIR states, blockers)   ← Data Contract §3.2
+Gate = g(DDR statuses by priority)     ← §3.3
+Report segment cites ddr_ids + fact_ids + FreezeRecord
+```
 
-## 3. Eight-page structure (locked)
-
-From `page-feed-matrix.ts`:
-
-| pageId | Role | Main narrative |
-|---|---|---|
-| `01` | Direct answer / brief | yes |
-| `02` | Foundation / attribution | yes |
-| `03` | Appendix (pack tail) | appendix only |
-| `04` | Eastern strategy / bottleneck | yes |
-| `05` | Path ranking / risk-relevant compare | yes |
-| `06` | Execution / validation signals | yes |
-| `07` | Topic-conditional field/relationship | conditional |
-| `08` | Self-check / continue-adjust-stop | yes |
-
-Order: `MAIN_NARRATIVE_PAGE_ORDER = 01,02,04,05,06,07,08`; appendix `03`.
-
-**Forbidden in Phase 1+ mapping:** invent page `09`, reorder faces, or treat legacy nine-module ids as face SoT without `page-id-remap`.
+Agenda may appear only as audit: “asked via AgendaItem_y” — never as sufficiency proof.
 
 ---
 
-## 4. DDR → PageFeedMatrix mapping
+## 3. Fact confirmation provenance (C1)
 
-DDR.`report_page_id` **must** be a `DecisionPageId`.  
-DDR.`report_section_id` should align to segment allowlists A–E / schema segment ids.
+| Claim in report | Must be able to show |
+|---|---|
+| Fact treated as confirmed user assertion | E1 FactConfirmEvent id + `status=confirmed` + `user_confirmed=true` + `verification_level=user_asserted` |
+| Independently verified fact | `verification_level=independently_verified`, `user_confirmed=false` |
+| Estimate | `user_estimate` + `unverified`; must not appear as hard premise without boundary |
+| Understanding freeze | E2 event + FreezeRecord; E2 must not invent fact confirms |
 
-### 4.1 Feed families per face (existing unions)
+---
 
-| Face | User | CFP (BaZi) | ZFP (ZiWei) | Sci |
-|---|---|---|---|---|
-| 01 | Q, expect | pathTags, yongJi, dayunNow, conflictAnchors | topicPalace, daxian | no |
-| 02 | Q, expect, detail | dayMaster, yongJi, shishenHit, dayunNow | topicPalace, sihua, daxian, patternHits | yes |
-| 04 | detail | yongJi, shishenHit, dayunNow | sihua, daxian, patternHits | fold |
-| 05 | expect, detail | pathTags, yongJi, conflictAnchors, dayunNow | topicPalace, sihua, daxian | optional |
-| 06 | Q, expect, detail | dayunNow | daxian | yes |
-| 07 | detail | pathTags | topicPalace, daxian, otherChart | fold |
-| 08 | Q, expect | shishenHit, dayunNow | sihua | no |
-| 03 | — | dayMaster, yongJi, shishenHit, dayunNow | mingShen, topicPalace, sihua, daxian, patternHits | no |
+## 4. DDR → PageFeedMatrix faces
 
-### 4.2 DDR family → face (product deliverables → locked faces)
-
-| DDR family (product) | Primary face | Typical sources |
+| DDR family (examples) | Face | Primary evidence |
 |---|---|---|
-| Structured dilemma / causes | `02` | User.detail, Facts, DIR |
-| Personal traits ↔ decision | `02` / `04` | CFP+ZFP + Insight (not Facts) |
-| Reality conditions & constraints | `01` B / `05` | Constraints, Facts |
-| Path comparison | `05` | Facts, Constraints, DIR, Hypotheses |
-| Costs / risks / premises | `04` / `05` | Constraints, Conflicts |
-| Primary + alternative recommendation | `01` / `05` | Definition, DIR known |
-| Low-cost / staged validation | `06` | Facts, DIR |
-| P6 verification experiment | `06` | DDR+DIR |
-| Continue / Adjust / Stop / Rerun | `08` | Gate boundaries, open unknowns |
+| Decision frame / conclusion | `01` | Definition + confirmed facts |
+| Mechanism / attribution | `02` | Facts + CFP/ZFP |
 | Chart appendix | `03` | CFP+ZFP only |
+| Costs / risks | `04`/`05` | Constraints, Conflicts |
+| Alternatives / ranking | `05` | DIR known + may_affect_p5_ranking |
+| Validation / experiment | `06` | Facts + DIR |
+| Question-tied deep dive | `07` | Topic DIRs (emit only if relevant) |
+| Continue/Adjust/Stop | `08` | Gate boundaries + open unknowns |
 
-Exact DDR instance catalog = Phase 2 Blueprint Engine output; this table freezes **mapping rules**.
+Exact instance catalog = Phase 2. Mapping **rules** frozen; face order locked by PageFeedMatrix.
 
-### 4.3 DC page feed (existing)
-
-`STAGE4_DC_FEED_PAGES = 01,02,04,05,06,08` (`dc-page-feed.ts`).  
-DDR mapping must remain compatible: faces that receive DC slices should list DC among `required_sources` when judgments depend on formal facts.
+`STAGE4_DC_FEED_PAGES = 01,02,04,05,06,08` remains compatible.
 
 ---
 
-## 5. What Q&A must collect vs local calc
+## 5. Gate & delivery disclosure (C4)
 
-| Need | Source |
+| Gate | Trace requirement |
 |---|---|
-| Concrete event, stakes, desired outcome | Q&A → Definition / Facts |
-| Hard constraints (money, time, duties) | Q&A → Constraints |
-| Options on table, irreversibility | Q&A → Facts / Constraints |
-| Conflict resolution between stories | Q&A → Conflicts clarified |
-| Day master, 用喜忌, 大运, ten gods | Local BaZi → CFP |
-| Palace / sihua / daxian / patternHits | Local ZiWei → ZFP |
-| Eastern strategy parameters | Calc + Q&A premises (P4 dual-core elsewhere) |
+| PASS | All P0 DDR `satisfied`/`n_a`; P1 OK per §3.3; FreezeRecord present |
+| WARN | Conditional report lists unsatisfied DDRs/DIRs + boundaries; `delivery_mode=degraded` |
+| FAIL | No normal freeze; provenance of failing P0/P1 DDR retained in audit |
 
-**Rule:** Report sections that claim user reality must cite Fact/Constraint ids; sections that claim chart structure must cite CFP/ZFP field codes + calc metadata.
+Decline/unknown facts must appear as open DIRs or boundaries — never as satisfied DDR evidence.
 
 ---
 
-## 6. Agenda’s place in the chain
+## 6. Version binding (C5)
 
-```text
-DDR ← DIR ← Facts
-         ↑
-      Agenda only proves "asked / answered attempt"
-```
+Report artifact metadata must store:
 
-| Allowed | Forbidden |
-|---|---|
-| Trace “DIR_x investigated via AgendaItem_y at turn_z” | `Agenda covered` ⇒ `DIR known` |
-| Show unanswered Agenda for UX | Sufficiency PASS because Agenda 100% |
-| Capture answer text into Fact writers | Treat `captured_answer` as frozen DC without validation |
+- `freeze_id`
+- `dc_content_hash`
+- `blueprint_version`
+- `ddr_version`
+- `context_id` / `context_version`
+
+Regeneration / audit: load FreezeRecord → verify hashes/versions → load matching Blueprint/DDR catalog snapshot → load DC version. **Silent remap forbidden.**
 
 ---
 
-## 7. Judgment provenance record (implementation shape for later phases)
+## 7. JudgmentProvenance (future attach)
 
-Recommended attachable record (not implemented in Phase 1):
-
-```ts
-type JudgmentProvenance = {
-  judgment_key: string;          // e.g. face:01:segment:A
-  ddr_ids: string[];
-  dir_ids: string[];
-  fact_ids: string[];
-  constraint_ids: string[];
-  hypothesis_ids: string[];
-  conflict_ids: string[];
-  cfp_fields: string[];          // FEED.CFP.*
-  zfp_fields: string[];          // FEED.ZFP.*
-  personal_insight_ids: string[];
-  context_binding: {
-    context_id: string;
-    context_version: number;
-    context_hash: string;
-  };
-};
-```
-
-Report generation must refuse or WARN when `ddr_ids` empty for a critical segment marked `facts: "required"` in PageFeedMatrix.
+Same shape as prior Phase 1 draft; `dir_ids` resolve status only through `DC.dirs`. `context_binding` must align with FreezeRecord when frozen.
 
 ---
 
-## 8. Traceability failure modes (must detect)
+## 8. Failure modes (detect)
 
 | Failure | Detection |
 |---|---|
-| Orphan report claim | Segment has no DDR id |
-| DDR without DIR | `required_dir_ids` empty for non-N/A DDR |
-| DIR known without contributing facts | Aggregator + audit |
-| Hypothesis cited as Fact in User.detail | Type check on feed builder |
-| Calc cited as user constraint | Source tag check |
-| Binding mismatch | `resolveDecisionContextForReport` hash fail |
-| Agenda-only sufficiency | Gate unit tests |
+| Dual DIR status (Blueprint vs DC) | Audit: Blueprint has no live status fields; readers use DC.dirs |
+| Agenda ⇒ DIR known | Gate/aggregator unit tests |
+| E2 ⇒ estimate confirmed | AC-C3 |
+| independently_verified + user_confirmed | AC-C2 |
+| Orphan claim / DDR without DIR | Provenance empty checks |
+| Binding mismatch | Report start verify |
+| Conflict blocks all DDRs | Related-only linker tests |
+| Page order drift | PageFeedMatrix lock |
 
 ---
 
-## 9. Tech review notes
+## 9. Deferred (not C1–C5)
 
-1. Existing `formatDecisionContextSliceForPage` is the right **DC→prompt** adapter to reuse.  
-2. Existing `sliceForPage` / `formatPageSliceFeed` is the right **CFP/ZFP/User→prompt** adapter.  
-3. Production gap: `task-context` may omit `ziwei_fact_pack` — trace chain for ZFP is incomplete until hydrated (Phase 5/9).  
-4. Do not invent a second matrix; extend DDR metadata to point at FEED codes.
+Progress weights, Lockout, Ziwei hydration, agent_v2 cutover — remain later phases per Phase 1.1 report. Do not alter PageFeedMatrix or reintroduce Call A/B as Intake entry.
 
 ---
 
 ## 10. Declaration
 
-No runtime code modified. Page structure unchanged. Trace rules ready for Phase 2 Blueprint DDR emission and Phase 9 report integration.
+Docs only. Traceability aligned with C1–C5 SoT rules.
