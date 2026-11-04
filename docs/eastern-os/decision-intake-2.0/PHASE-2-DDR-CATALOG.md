@@ -104,13 +104,18 @@ Let `src` = worst state among **required** sources (`source_ok` best; unresolved
 | `dir_status = blocked` OR related conflict blocks | `blocked` |
 | Any required source = `source_calc_failed` OR `source_provenance_missing` | `pending` (unresolved; **not** `n_a`) |
 | `dir_status = n_a` with explicit N/A **and** no required-source unresolved | `n_a` |
-| Empty dirs + required source `source_absent_not_supplied` + **explicit** N/A evidence | `n_a` |
+| Empty dirs (`required_dir_ids=[]`) + required source `source_absent_not_supplied` + **explicit** N/A evidence | `n_a` (only when that DDR’s applicability allows N/A — e.g. DDR-03; **not** DDR-02) |
 | Empty dirs + no N/A evidence + required source not `source_ok` | `pending` |
 | `dir_status ∈ {pending, partial}` | keep `dir_status` (sources cannot upgrade) |
 | `dir_status = satisfied` **and** all required sources `source_ok` (optional may be absent) | `satisfied` |
+| **`required_dir_ids=[]` + all required sources `source_ok` + no blocking conflict** | **`satisfied`** |
 | `dir_status = satisfied` **but** a required source not `source_ok` | `pending` (or `partial` if some dirs known and product marks partial — default **`pending`**) |
 
-**Forbidden:** treating empty `required_dir_ids` as `satisfied` solely because DIR rollup has nothing to fail.
+**Empty-DIR clarification (normative):**
+
+- `required_dir_ids=[]` **by itself never** yields `satisfied` (DIR rollup alone must not auto-pass).  
+- `required_dir_ids=[]` becomes `satisfied` **only when** every **required** source is `source_ok` **and** there is **no** blocking conflict (row above).  
+- Optional sources may be absent.
 
 ### 1.6 Source miss → Gate consequences
 
@@ -224,7 +229,13 @@ IDs are stable. Do not renumber; deprecate + supersede if needed later.
 | applicability | Always (paid report expects birth profile for attribution) |
 | decision_critical | false |
 
-**Product Rule A (closed):** CFP is **mandatory** for `DDR-02-ATTRIBUTION`. Gate composer **must** run Required Source Check; DIR rollup alone is insufficient. Missing CFP while ordinary DIRs are satisfied ⇒ composed status **not** `satisfied` ⇒ P0 **FAIL**.
+**Product Rule A (closed) — CFP is non-waivable for `DDR-02-ATTRIBUTION`:**
+
+- CFP is a **mandatory** required source; Gate composer **must** run Required Source Check; DIR rollup alone is insufficient.  
+- `source_absent_not_supplied` **must not** move DDR-02 to `n_a` (no applicability exemption; unlike DDR-03).  
+- Any CFP state other than `source_ok` (`source_absent_not_supplied`, `source_calc_failed`, `source_provenance_missing`) ⇒ composed status **`pending`** ⇒ Gate **P0 FAIL**.  
+- Ordinary DIRs satisfied while CFP missing/invalid still ⇒ **`pending`** → **P0 FAIL**.  
+- ZFP remains optional. **DDR-03 N/A rules are unchanged.**
 
 #### `DDR-02-SCIENCE-BRIDGE`
 

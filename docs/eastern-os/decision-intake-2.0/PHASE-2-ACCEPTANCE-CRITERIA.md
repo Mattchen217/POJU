@@ -102,6 +102,9 @@ All expected outcomes are **documentation-normative** (what the Gate composer mu
 | 8 | P1 DDR required source missing; no ranking impact; dangling false; complete L; boundaries recorded | that P1 | unsatisfied | **WARN**-eligible |
 | 9 | P2 optional source missing (ZFP) while required CFP `source_ok` | DDR-03 / DDR-02 | may **`satisfied`** | Optional miss alone does not FAIL |
 | 10 | `required_dir_ids=[]` and no explicit N/A evidence and required source not `source_ok` | DDR-03 | **`pending`** | Empty DIR list ≠ satisfied ≠ auto N/A |
+| 11 | `required_dir_ids=[]` + all required sources `source_ok` + no blocking conflict | DDR-03 | **`satisfied`** | Empty DIR alone insufficient; sources+no-block required |
+| 12 | Profile not supplied; DDR-03 has explicit N/A evidence; DDR-02 CFP absent | DDR-03 / DDR-02 | DDR-03 **`n_a`**; DDR-02 **`pending`** | DDR-02 cannot N/A via absent CFP → **P0 FAIL** |
+| 13 | DDR-02 DIRs satisfied; CFP `source_absent_not_supplied` (no N/A attempted or attempted) | DDR-02-ATTRIBUTION | **`pending`** | CFP non-waivable; never `n_a` → **P0 FAIL** |
 
 Additional regression (Phase 1 preserved):
 
@@ -109,6 +112,7 @@ Additional regression (Phase 1 preserved):
 |---|---|
 | Partial dangling on P1 | FAIL (not WARN) |
 | Model writes chart claim as RealityFact confirmed | **Forbidden** |
+| Empty `required_dir_ids` with zero source check | Illegal / not `satisfied` |
 
 ---
 
@@ -139,7 +143,7 @@ Additional regression (Phase 1 preserved):
 | 6 | Phase 1 C1–C5 deviations | **0** |
 | 7 | PageFeedMatrix unmodified | **PASS** |
 | 8 | Source check + Gate order documented | **PASS** (DDR §1.3–§1.7) |
-| 9 | AC2-5 tests 1–10 unambiguous in catalog | **PASS** (author) |
+| 9 | AC2-5 tests 1–13 unambiguous in catalog | **PASS** (author) |
 | 10 | Version literals: ddr/map/ddr_version=1.1; dir=1 | **PASS** |
 
 ---

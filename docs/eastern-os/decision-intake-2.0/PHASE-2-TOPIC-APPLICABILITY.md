@@ -98,7 +98,7 @@ Usually no page 07; timing covered by `DIR-TIMING-WINDOW` + core DDRs.
 | Separation | Chart → appendix / slice feeds; **not** RealityFact confirmed |
 | No science claim | Do not present systems as scientifically validated prediction |
 | No duplicate engine | Do not reimplement BaZi/ZiWei inside Intake |
-| Missing profile | DDR-03 N/A; other DDRs proceed |
+| Missing profile | **DDR-03:** may enter `n_a` **only** with explicit not-supplied evidence (else `pending`). **Non-chart DDRs** (e.g. 01/04/05/06/08 DIRs): evaluate independently on their own DIR/source rules. **`DDR-02-ATTRIBUTION`:** CFP missing ⇒ remains **`pending`** ⇒ Gate **P0 FAIL** (CFP non-waivable; not N/A). |
 
 Full Blueprint handling: `PHASE-2-BLUEPRINT-INITIALIZATION.md` §6.
 
