@@ -97,19 +97,31 @@ Phase 1 C1–C5 unchanged. P1 partial-dangling and ranking-impact rules **fully 
 ### 1.5 Composing DDR status after source check
 
 Let `dir_status` = Phase 1 §3.2 result.  
-Let `src` = worst state among **required** sources (`source_ok` best; unresolved = calc_failed | provenance_missing).
+Let required-source states use §1.3.  
+Treat as **not `source_ok`**: `source_absent_not_supplied` | `source_calc_failed` | `source_provenance_missing`.
+
+**First-match evaluation order (normative; later rows must not override earlier):**
+
+1. **Blocking conflict** → `blocked`  
+2. **Non-waivable required source miss** (Product Rule A and any future sibling): if the DDR declares a required source that **must not** be waived by DIR-level N/A (CFP on `DDR-02-ATTRIBUTION`), and that source is **not** `source_ok` → composed status **`pending`** — **regardless** of whether `dir_status` is `satisfied`, `partial`, or **`n_a`**. Never emit `n_a` from this path.  
+3. Other required-source unresolved (`source_calc_failed` / `source_provenance_missing`) when not already covered → `pending`  
+4. General DIR `n_a` / empty-DIR N/A paths (only if step 2 did not fire)  
+5. Satisfied / partial / pending from DIR rollup + remaining source checks  
 
 | Condition | Composed `ddr.status` |
 |---|---|
 | `dir_status = blocked` OR related conflict blocks | `blocked` |
-| Any required source = `source_calc_failed` OR `source_provenance_missing` | `pending` (unresolved; **not** `n_a`) |
-| `dir_status = n_a` with explicit N/A **and** no required-source unresolved | `n_a` |
-| Empty dirs (`required_dir_ids=[]`) + required source `source_absent_not_supplied` + **explicit** N/A evidence | `n_a` (only when that DDR’s applicability allows N/A — e.g. DDR-03; **not** DDR-02) |
+| **Non-waivable required source not `source_ok`** (e.g. DDR-02 CFP under Rule A) | **`pending`** — **overrides** DIR `satisfied` / `partial` / **`n_a`**; **never** `n_a` |
+| Any other required source = `source_calc_failed` OR `source_provenance_missing` | `pending` (unresolved; **not** `n_a`) |
+| `dir_status = n_a` with explicit N/A **and** all **non-waivable** required sources are `source_ok` (or DDR has no such sources) | `n_a` |
+| Empty dirs (`required_dir_ids=[]`) + required source `source_absent_not_supplied` + **explicit** N/A evidence **and** DDR applicability allows source-absence N/A (DDR-03 only in v1.1) | `n_a` |
 | Empty dirs + no N/A evidence + required source not `source_ok` | `pending` |
-| `dir_status ∈ {pending, partial}` | keep `dir_status` (sources cannot upgrade) |
+| `dir_status ∈ {pending, partial}` (and step 2 did not force pending already) | keep `dir_status` (sources cannot upgrade) |
 | `dir_status = satisfied` **and** all required sources `source_ok` (optional may be absent) | `satisfied` |
 | **`required_dir_ids=[]` + all required sources `source_ok` + no blocking conflict** | **`satisfied`** |
-| `dir_status = satisfied` **but** a required source not `source_ok` | `pending` (or `partial` if some dirs known and product marks partial — default **`pending`**) |
+| `dir_status = satisfied` **but** a required source not `source_ok` | `pending` |
+
+**Priority (closed):** Product Rule A / non-waivable required-source rules **outrank** the generic “DIR all `n_a` → DDR `n_a`” composition. Example: DDR-02 with every DIR explicitly `n_a` **and** CFP = `source_absent_not_supplied` → **`pending`**, Gate **P0 FAIL**, **not** `n_a`.
 
 **Empty-DIR clarification (normative):**
 
@@ -126,7 +138,7 @@ Let `src` = worst state among **required** sources (`source_ok` best; unresolved
 | P1 required source missing/unresolved + **no** ranking impact + complete DIR resolve (`dangling===false`) + boundaries | unsatisfied | **WARN**-eligible |
 | P2 required source missing/unresolved | unsatisfied | Must **not alone** block |
 | Optional source missing | no status penalty alone | PASS/WARN/FAIL from other DDRs only |
-| Explicit N/A with evidence | `n_a` | Terminal OK like `satisfied` for Gate tests |
+| Explicit N/A with evidence (and no non-waivable required source miss) | `n_a` | Terminal OK like `satisfied` for Gate tests |
 
 ### 1.7 Ranking flag interaction
 
@@ -232,9 +244,9 @@ IDs are stable. Do not renumber; deprecate + supersede if needed later.
 **Product Rule A (closed) — CFP is non-waivable for `DDR-02-ATTRIBUTION`:**
 
 - CFP is a **mandatory** required source; Gate composer **must** run Required Source Check; DIR rollup alone is insufficient.  
+- **Priority:** Rule A **overrides** §1.5 generic DIR-`n_a` composition.  
 - `source_absent_not_supplied` **must not** move DDR-02 to `n_a` (no applicability exemption; unlike DDR-03).  
-- Any CFP state other than `source_ok` (`source_absent_not_supplied`, `source_calc_failed`, `source_provenance_missing`) ⇒ composed status **`pending`** ⇒ Gate **P0 FAIL**.  
-- Ordinary DIRs satisfied while CFP missing/invalid still ⇒ **`pending`** → **P0 FAIL**.  
+- Any CFP state other than `source_ok` (`source_absent_not_supplied`, `source_calc_failed`, `source_provenance_missing`) ⇒ composed status **`pending`** ⇒ Gate **P0 FAIL**, **even if** every required DIR is explicitly `n_a`, or DIRs are `satisfied`/`partial`.  
 - ZFP remains optional. **DDR-03 N/A rules are unchanged.**
 
 #### `DDR-02-SCIENCE-BRIDGE`
