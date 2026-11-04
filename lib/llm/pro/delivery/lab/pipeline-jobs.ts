@@ -929,43 +929,12 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       }),
     };
 
-    // Auto-start Call B
+    // LAB split: stop after analysis. Ops clicks「下一步」→ labStartSegment2B.
     const core = job.result.breakthrough_core;
-    const sessionId = sessionA.session_id;
-    const locked = await acquireXhighSessionLock("segment2_agenda_bridge", sessionId);
-    if (!locked) {
-      const out: DeliveryLabSession = {
-        ...lab,
-        chat_session: sessionA,
-        pipeline_pending_job: null,
-        pipeline_turns: [...(lab.pipeline_turns ?? []), turnA],
-        source: {
-          ...lab.source,
-          breakthrough_core: core,
-        },
-      };
-      out.pipeline_cursor = derivePipelineCursor(out);
-      return out;
-    }
-
-    let agendaJob;
-    try {
-      agendaJob = await createLabAgendaBridgeJob({
-        lab,
-        session: sessionA,
-        locale,
-        breakthrough_core: core,
-      });
-    } catch (e) {
-      await releaseXhighSessionLock("segment2_agenda_bridge", sessionId);
-      throw e;
-    }
-
-    const sessionPendingB = withPendingSegment2Job(sessionA, agendaJob.job_id, "agenda");
     const out: DeliveryLabSession = {
       ...lab,
-      chat_session: sessionPendingB,
-      pipeline_pending_job: { job_id: agendaJob.job_id, stage: "segment2_b" },
+      chat_session: sessionA,
+      pipeline_pending_job: null,
       pipeline_turns: [...(lab.pipeline_turns ?? []), turnA],
       source: {
         ...lab.source,
@@ -1281,6 +1250,59 @@ export async function labSynthesisConfirm(lab: DeliveryLabSession): Promise<{
 }
 
 /**
+ * LAB only — after Call A analysis, ops clicks Next to start Call B
+ * (agenda + first question). Production still auto-chains A→B.
+ */
+export async function labStartSegment2B(lab: DeliveryLabSession): Promise<{
+  lab: DeliveryLabSession;
+  job_id: string;
+}> {
+  if (lab.mode !== "full_pipeline" || !lab.chat_session) {
+    throw new Error("lab_not_full_pipeline");
+  }
+  if (lab.pipeline_pending_job) throw new Error("pipeline_job_pending");
+
+  const session = ensureSessionCycles(lab.chat_session);
+  const agent = ensureAgentV2(session);
+  const core = agent.breakthrough_core;
+  if (!core) throw new Error("missing_breakthrough_core_for_call_b");
+  if (agent.agenda_generated) throw new Error("agenda_already_generated");
+
+  const locale = resolvePivotSessionLang(session, lab.source.locale || "zh");
+  const sessionId = session.session_id;
+  const locked = await acquireXhighSessionLock("segment2_agenda_bridge", sessionId);
+  if (!locked) throw new Error("segment2_job_in_progress");
+
+  let agendaJob;
+  try {
+    agendaJob = await createLabAgendaBridgeJob({
+      lab,
+      session,
+      locale,
+      breakthrough_core: core,
+    });
+  } catch (e) {
+    await releaseXhighSessionLock("segment2_agenda_bridge", sessionId);
+    throw e;
+  }
+
+  let labOut = appendGateTurn(
+    {
+      ...lab,
+      chat_session: withPendingSegment2Job(session, agendaJob.job_id, "agenda"),
+      pipeline_pending_job: { job_id: agendaJob.job_id, stage: "segment2_b" },
+      source: {
+        ...lab.source,
+        breakthrough_core: core,
+      },
+    },
+    { action: "agenda_confirm", detail: "call_b" },
+  );
+  labOut.pipeline_cursor = derivePipelineCursor(labOut);
+  return { lab: labOut, job_id: agendaJob.job_id };
+}
+
+/**
  * Rerun Call B only: drop last segment2_b turn + bridge bubble, keep Call A,
  * enqueue a fresh agenda_bridge job.
  */
@@ -1338,7 +1360,7 @@ export async function rerunLabSegment2B(lab: DeliveryLabSession): Promise<Delive
 }
 
 /**
- * Rerun Call A (and the auto Call B that follows): drop segment2_a/b turns +
+ * Rerun Call A only (LAB no longer auto-starts Call B): drop segment2_a/b turns +
  * analysis/bridge bubbles, enqueue a fresh breakthrough_core job.
  */
 export async function rerunLabSegment2A(lab: DeliveryLabSession): Promise<DeliveryLabSession> {

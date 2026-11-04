@@ -12,6 +12,8 @@ import {
   labDyadSkip,
   labForceUnlockDelivery,
   labRunSegment2AJob,
+  labRunSegment2BJob,
+  labStartSegment2B,
   labRunSynthesisJob,
   labSynthesisConfirm,
   labUnderstandingConfirm,
@@ -27,6 +29,7 @@ type Body = {
     | "understanding_confirm"
     | "dyad_skip"
     | "dyad_collect"
+    | "agenda_confirm"
     | "synthesis_confirm"
     | "unlock_delivery";
   partner_base_analysis?: unknown;
@@ -136,6 +139,31 @@ export async function POST(
         lab_id,
         action: "gate_understanding_confirm",
         detail: job_id ? `job=${job_id}` : undefined,
+      });
+      return NextResponse.json({ ok: true, lab: labPublicView(next), job_id });
+    }
+
+    if (body.action === "agenda_confirm") {
+      const { lab: next, job_id } = await labStartSegment2B(lab);
+      await saveDeliveryLab(next);
+      after(async () => {
+        try {
+          await labRunSegment2BJob(job_id);
+          await labApplyPendingJobByLabId(lab_id);
+        } catch (e) {
+          console.error("[lab-gate] segment2_b failed", e);
+          try {
+            await labApplyPendingJobByLabId(lab_id);
+          } catch (applyErr) {
+            console.error("[lab-gate] Call B apply-after-fail also failed", applyErr);
+          }
+        }
+      });
+      await appendLabAudit({
+        ops_user: auth.username,
+        lab_id,
+        action: "gate_agenda_confirm",
+        detail: `job=${job_id}`,
       });
       return NextResponse.json({ ok: true, lab: labPublicView(next), job_id });
     }

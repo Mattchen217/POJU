@@ -12,6 +12,8 @@ export type LabPipelineCursor =
   | "opening"
   | "awaiting_understanding"
   | "segment2"
+  /** Call A done — ops must click Next before Call B (agenda + first question). */
+  | "awaiting_agenda"
   | "collecting"
   | "awaiting_confirmation"
   | "synthesis"

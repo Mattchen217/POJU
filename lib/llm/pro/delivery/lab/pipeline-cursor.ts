@@ -22,8 +22,12 @@ export function derivePipelineCursor(lab: DeliveryLabSession): LabPipelineCursor
       return "opening";
     case "awaiting_understanding_confirm":
       return "awaiting_understanding";
-    case "collecting_context":
-      return session.agent_v2?.breakthrough_core ? "collecting" : "segment2";
+    case "collecting_context": {
+      if (!session.agent_v2?.breakthrough_core) return "segment2";
+      // LAB split: analysis first; agenda+first Q only after ops clicks Next.
+      if (!session.agent_v2.agenda_generated) return "awaiting_agenda";
+      return "collecting";
+    }
     case "awaiting_confirmation":
       return "awaiting_confirmation";
     case "delivered":
@@ -45,7 +49,9 @@ export function pipelineNextHint(
     case "awaiting_understanding":
       return `理解门 · path=${path} · 点「确认」起 Call A，或补充说明`;
     case "segment2":
-      return `Segment2 · path=${path} · 等 Call A/B 完成（可轮询 job）`;
+      return `Segment2 · path=${path} · 等 Call A 完成（可轮询 job）`;
+    case "awaiting_agenda":
+      return `分析已出 · path=${path} · 点「下一步」跑议程起草 + 首问（Call B）`;
     case "collecting":
       return `Collecting · path=${path} · 答议程 / 点芯片；够了进汇总确认`;
     case "awaiting_confirmation":

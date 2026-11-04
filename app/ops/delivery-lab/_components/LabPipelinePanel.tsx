@@ -278,6 +278,7 @@ export function LabPipelinePanel({
     (Boolean(lastMsg?.meta?.understanding_gate_pending) ||
       view.pipeline_cursor === "awaiting_understanding");
   const showSynthesis = view.pipeline_cursor === "awaiting_confirmation";
+  const showAgendaNext = view.pipeline_cursor === "awaiting_agenda";
 
   /** Last non-gate turn — what「重跑本轮」will actually re-execute. */
   const rerunTargetKind = useMemo(() => {
@@ -405,7 +406,7 @@ export function LabPipelinePanel({
             </div>
           ) : null}
 
-          {(showUnderstanding || showDyad || showSynthesis) && (
+          {(showUnderstanding || showDyad || showAgendaNext || showSynthesis) && (
             <div className="flex flex-wrap gap-2 border-t border-white/10 px-3 py-2">
               {showUnderstanding ? (
                 <>
@@ -431,6 +432,21 @@ export function LabPipelinePanel({
                     补充说明
                   </button>
                 </>
+              ) : null}
+              {showAgendaNext ? (
+                <button
+                  type="button"
+                  disabled={busy || Boolean(pending)}
+                  onClick={() =>
+                    void postJson(
+                      `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
+                      { action: "agenda_confirm" },
+                    )
+                  }
+                  className="rounded bg-[#f2ca50] px-3 py-1 text-xs font-medium text-black disabled:opacity-40"
+                >
+                  下一步 → 议程起草 + 首问
+                </button>
               ) : null}
               {showDyad ? (
                 <>
