@@ -426,7 +426,7 @@ export async function fetchLlmAdviceBatch(input: {
       thinking_effort: "low",
       response_format: "json",
       temperature: auditRetried ? 0.3 : 0.55,
-      timeout_ms: 90_000,
+      timeout_ms: 285_000,
       session_id: cacheSessionId,
     });
 
@@ -459,7 +459,7 @@ export async function fetchLlmAdviceBatch(input: {
         thinking_effort: "low",
         response_format: "json",
         temperature: 0.4,
-        timeout_ms: 90_000,
+        timeout_ms: 285_000,
         session_id: cacheSessionId,
       });
       try {

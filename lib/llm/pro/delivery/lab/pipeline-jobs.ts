@@ -34,6 +34,7 @@ import {
   acquireXhighSessionLock,
   completeXhighJob,
   createXhighJob,
+  failXhighJob,
   findLatestXhighJobForSession,
   getXhighJob,
   releaseXhighSessionLock,
@@ -599,9 +600,44 @@ export async function labDyadCollect(
 export async function labRunSegment2AJob(job_id: string): Promise<void> {
   try {
     await runSegment2BreakthroughCoreJob(job_id);
+    const mid = await getXhighJob(job_id);
+    // Wave1 parks at voice_queued. Nested after() = fresh Vercel maxDuration for voice
+    // (awaiting voice in this same invoke would still share the first 300s wall).
+    if (mid?.status === "running" && mid.current_stage === "voice_queued") {
+      const session_id = mid.session_id;
+      const { after } = await import("next/server");
+      after(async () => {
+        try {
+          await runSegment2BreakthroughCoreJob(job_id);
+        } catch (e) {
+          console.error("[lab-pipeline] Call A voice wave failed", e);
+          const job = await getXhighJob(job_id);
+          if (job && (job.status === "running" || job.status === "pending")) {
+            await failXhighJob(
+              job_id,
+              e instanceof Error ? e.message : String(e),
+              {
+                retryable: true,
+                failure_reason: "llm_timeout",
+                accumulated_content: job.accumulated_content,
+              },
+            ).catch(() => undefined);
+          }
+        } finally {
+          await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
+        }
+      });
+      return;
+    }
   } finally {
     const job = await getXhighJob(job_id);
-    if (job?.session_id) {
+    if (
+      job?.session_id &&
+      !(
+        job.status === "running" &&
+        (job.current_stage === "voice_queued" || job.current_stage === "voice")
+      )
+    ) {
       await releaseXhighSessionLock("segment2_breakthrough_core", job.session_id);
     }
   }
@@ -969,6 +1005,11 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       locale,
       investigation_agenda: job.result.investigation_agenda ?? [],
       first_question: job.result.first_question ?? "",
+      // Production parity (POJUChatUI): Call B chips live on the bridge message.
+      options: job.result.options,
+      model: job.model,
+      tokens_used: job.tokens_used,
+      llm_debug: job.llm_debug,
     });
     try {
       const { persistDcLifecycleChange } = await import(

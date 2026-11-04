@@ -45,7 +45,7 @@ export async function generateVisionTaskBrief(input: {
     route_path: "once",
     provider: { allow_fallbacks: true },
     signal: input.signal,
-    timeout_ms: 60_000,
+    timeout_ms: 285_000,
   });
 
   const brief = result.text?.trim();
@@ -81,7 +81,7 @@ export async function extractVisionReport(input: {
     route_path: "once",
     provider: { allow_fallbacks: true },
     signal: input.signal,
-    timeout_ms: 120_000,
+    timeout_ms: 285_000,
   });
 
   const report = result.text?.trim();

@@ -13,7 +13,6 @@ import {
   buildBreakthroughCoreDimsPrompt,
   buildBreakthroughCoreSpinePrompt,
   buildBreakthroughCoreVoicePrompt,
-  fallbackVoiceFromDims,
   finalizeMergedCallA,
   mergeSegment2APartials,
   parseDimsPartial,
@@ -60,7 +59,11 @@ import {
   getXhighJob,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
-import type { PojuXhighJob, PojuXhighJobFailureReason, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types";
+import type {
+  PojuXhighJob,
+  PojuXhighJobFailureReason,
+  PojuXhighJobPhase,
+} from "@/lib/poju/xhigh-job-types";
 import {
   isSegment2AgendaInput,
   isSegment2ReportInput,
@@ -89,7 +92,10 @@ export const SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
 export const SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS = 20_000;
 export const SEGMENT2_A_VOICE_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
 export const SEGMENT2_A_VOICE_MAX_TOKENS = 20_000;
+/** @deprecated Voice always runs on a dedicated second invoke (full wall). */
 export const SEGMENT2_A_VOICE_MIN_WALL_MS = 25_000;
+/** Park dims∥spine here → caller re-enters for a fresh 270s voice invoke. */
+export const SEGMENT2_A_VOICE_QUEUED_STAGE = "voice_queued";
 
 /** Call A0 — relevance plan before parallel dims/spine. */
 export const SEGMENT2_A0_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
@@ -389,9 +395,248 @@ export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {
   },
 };
 
+function extractCallAAccumSection(
+  blob: string,
+  label: "dims" | "spine" | "voice",
+): string {
+  const re = new RegExp(`===${label}===\\s*([\\s\\S]*?)(?====|$)`, "i");
+  const m = blob.match(re);
+  return (m?.[1] ?? "").trim();
+}
+
 /**
- * Call A — parallel A-dims ∥ A-spine (high) → merge → A-voice (high).
- * Still one KV job / one UI poll id (segment2_breakthrough_core).
+ * Call A wave2 — dedicated invoke for voice (full SEGMENT2_A_VOICE_TIMEOUT_MS).
+ * Requires dims∥spine already in job.accumulated_content and stage=voice_queued.
+ */
+async function runSegment2CallAVoiceWave(
+  job_id: string,
+  job: PojuXhighJob,
+): Promise<void> {
+  if (!isSegment2ReportInput(job.input)) {
+    await failXhighJob(job_id, "segment2_report_input_expected");
+    return;
+  }
+
+  const invocationStartedAt = Date.now();
+  const defaultModel = getOpenRouterDefaultModel();
+  const locale = job.locale || job.input.locale || "zh";
+  const profileId = job.input.profile_id;
+  const sessionCacheId = profileId
+    ? baseAnalysisCacheSessionId(profileId)
+    : pojuCacheSessionId(job.input.session_id);
+
+  const dimsText = extractCallAAccumSection(job.accumulated_content ?? "", "dims");
+  const spineText = extractCallAAccumSection(job.accumulated_content ?? "", "spine");
+  if (dimsText.length < 40 || spineText.length < 40) {
+    await failXhighJob(job_id, "voice_wave_missing_dims_spine", {
+      retryable: true,
+      failure_reason: "parse_failed",
+      accumulated_content: job.accumulated_content,
+      current_stage: "voice",
+    });
+    return;
+  }
+
+  let dims;
+  let spine;
+  try {
+    dims = parseDimsPartial(dimsText);
+    spine = parseSpinePartial(spineText);
+  } catch (e) {
+    await failXhighJob(job_id, e instanceof Error ? e.message : "dims_spine_parse_failed", {
+      retryable: true,
+      failure_reason: "parse_failed",
+      accumulated_content: job.accumulated_content,
+      current_stage: "voice",
+    });
+    return;
+  }
+
+  const mergedBase = mergeSegment2APartials({ dims, spine, response: "" });
+  let voiceBuf = "";
+  const heartbeat = setInterval(() => {
+    void updateXhighJobStatus(job_id, "running", {});
+  }, XHIGH_JOB_HEARTBEAT_MS);
+
+  try {
+    await updateXhighJobStatus(job_id, "running", {
+      accumulated_content: job.accumulated_content,
+      current_stage: "voice",
+    });
+
+    const voiceTimeout = Math.min(
+      SEGMENT2_A_VOICE_TIMEOUT_MS,
+      INVOCATION_HARD_DEADLINE_MS - INVOCATION_WRITE_HEADROOM_MS,
+    );
+    const voicePrompt = buildBreakthroughCoreVoicePrompt({
+      merged_core: mergedBase,
+      original_question: job.input.original_question,
+      locale,
+    });
+
+    console.info("[xhigh-job] segment2 voice wave start", {
+      job_id,
+      voice_timeout_ms: voiceTimeout,
+    });
+
+    let voiceResponse = "";
+    let voiceFinish: string | null = null;
+    let voiceTokens = 0;
+    let voiceReasoning: string | null = null;
+    let voiceModel: string | undefined;
+
+    try {
+      const voiceOut = await openRouterChatCompletionStream(
+        {
+          messages: [
+            { role: "system", content: voicePrompt.system },
+            { role: "user", content: voicePrompt.user },
+          ],
+          max_tokens: SEGMENT2_A_VOICE_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "high",
+          timeout_ms: voiceTimeout,
+          max_attempts: 1,
+          session_id: sessionCacheId,
+          call_type: "deep_analysis_voice",
+          phase_name: "segment2_a_voice",
+          route_path: "once",
+          provider: openRouterProviderExtras(),
+          disable_slow_stream_abort: true,
+        },
+        {
+          onContent: (full) => {
+            voiceBuf = full;
+            void updateXhighJobStatus(job_id, "running", {
+              accumulated_content: `===dims===\n${dimsText}\n===spine===\n${spineText}\n===voice===\n${full}`,
+              current_stage: "voice",
+            });
+          },
+        },
+      );
+      voiceFinish = voiceOut.finish_reason ?? null;
+      voiceTokens = voiceOut.completion_tokens ?? 0;
+      voiceReasoning = voiceOut.reasoning?.trim() || null;
+      voiceModel = voiceOut.model;
+      voiceResponse = parseVoiceResponse((voiceOut.text || voiceBuf).trim());
+      if (voiceFinish !== "stop") {
+        console.warn("[xhigh-job] segment2 voice finish not stop — fail job", {
+          job_id,
+          voice_finish: voiceFinish,
+          voice_buf_len: voiceBuf.length,
+        });
+        await failXhighJob(job_id, `voice_finish_${voiceFinish ?? "null"}`, {
+          retryable: true,
+          failure_reason: "llm_timeout",
+          error_detail: `voice_finish=${voiceFinish ?? "null"}`,
+          accumulated_content: `===dims===\n${dimsText}\n===spine===\n${spineText}\n===voice===\n${voiceBuf}`,
+          current_stage: "voice",
+        });
+        return;
+      }
+    } catch (voiceErr) {
+      const msg = voiceErr instanceof Error ? voiceErr.message : String(voiceErr);
+      const resolved = resolveTransportFailureReason(voiceErr);
+      console.warn("[xhigh-job] segment2 voice wave failed — fail job (no fallback)", {
+        job_id,
+        msg,
+        failure_reason: resolved.failure_reason,
+        voice_buf_len: voiceBuf.length,
+      });
+      await failXhighJob(job_id, msg, {
+        retryable: resolved.retryable,
+        failure_reason: resolved.failure_reason,
+        error_detail: msg,
+        accumulated_content: `===dims===\n${dimsText}\n===spine===\n${spineText}\n===voice===\n${voiceBuf}`,
+        current_stage: "voice",
+      });
+      return;
+    }
+
+    const merged = mergeSegment2APartials({ dims, spine, response: voiceResponse });
+    let sanitized: ReturnType<typeof finalizeMergedCallA>;
+    try {
+      sanitized = finalizeMergedCallA(merged, locale);
+    } catch (readinessErr) {
+      if (readinessErr instanceof Segment2ReadinessError) {
+        await failXhighJob(job_id, readinessErr.message, {
+          retryable: true,
+          failure_reason: "spine_readiness_failed",
+          error_detail: readinessErr.gaps.join(","),
+          accumulated_content: `===dims===\n${dimsText}\n===spine===\n${spineText}\n===voice===\n${voiceResponse}`,
+        });
+        return;
+      }
+      throw readinessErr;
+    }
+
+    const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
+      sanitized.breakthrough_core,
+      job.input.base_analysis,
+    );
+    const latency_ms = Date.now() - invocationStartedAt;
+    const lab_call_traces: LabCallTrace[] = [
+      buildXhighLabCallTrace({
+        phase: "segment2_a_voice",
+        system: voicePrompt.system,
+        user: voicePrompt.user,
+        raw_text: voiceBuf || voiceResponse,
+        parsed: { response: voiceResponse },
+        reasoning: voiceReasoning,
+        actual_model: voiceModel || defaultModel,
+        thinking_effort: "high",
+        tokens_used: voiceTokens,
+        usage_written: voiceTokens > 0,
+        completion_tokens: voiceTokens,
+        latency_ms,
+        finish_reason: voiceFinish,
+      }),
+    ];
+
+    console.info("[xhigh-job] segment2 voice wave complete", {
+      job_id,
+      elapsed_ms: latency_ms,
+      voice_finish: voiceFinish,
+      tokens_used: voiceTokens,
+    });
+
+    await completeXhighJob(job_id, {
+      accumulated_content: `===dims===\n${dimsText}\n===spine===\n${spineText}\n===voice===\n${voiceResponse}`,
+      result: {
+        breakthrough_core,
+        investigation_agenda: [],
+      },
+      model: voiceModel || defaultModel,
+      tokens_used: voiceTokens,
+      lab_call_traces,
+      llm_debug: buildLlmDebug({
+        phase: "segment2_breakthrough_core",
+        requested_effort: "high",
+        max_tokens: SEGMENT2_A_VOICE_MAX_TOKENS,
+        model: voiceModel || defaultModel,
+        latency_ms,
+        finish_reason: `voice_wave:${voiceFinish ?? "?"}`,
+        completion_tokens: voiceTokens,
+      }),
+    });
+  } catch (e) {
+    const detail = describeTransportError(e);
+    const resolved = resolveTransportFailureReason(e);
+    await failXhighJob(job_id, detail.msg, {
+      retryable: resolved.retryable,
+      failure_reason: resolved.failure_reason,
+      error_detail: detail.body_snippet,
+      accumulated_content: `===dims===\n${dimsText}\n===spine===\n${spineText}\n===voice===\n${voiceBuf}`,
+    });
+  } finally {
+    clearInterval(heartbeat);
+  }
+}
+
+/**
+ * Call A — wave1: A0 + dims∥spine → park `voice_queued`.
+ * Wave2 (fresh Vercel invoke): voice STOP → complete.
+ * Same job_id / UI poll; voice no longer starves on leftover ~80s of a shared 300s wall.
  */
 export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<void> {
   if (!isOpenRouterConfigured()) {
@@ -405,7 +650,13 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     return;
   }
   if (job.status === "completed") return;
-  if (job.status === "running" && Date.now() - job.updated_at < 15_000) {
+  const resumeVoice = job.current_stage === SEGMENT2_A_VOICE_QUEUED_STAGE;
+  // Allow immediate re-entry for voice wave; still debounce true in-flight dims/spine.
+  if (
+    job.status === "running" &&
+    !resumeVoice &&
+    Date.now() - job.updated_at < 15_000
+  ) {
     console.info("[xhigh-job] run skipped — already running:", { job_id });
     return;
   }
@@ -415,6 +666,11 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
   }
   if (!isSegment2ReportInput(job.input)) {
     await failXhighJob(job_id, "segment2_report_input_expected");
+    return;
+  }
+
+  if (resumeVoice) {
+    await runSegment2CallAVoiceWave(job_id, job);
     return;
   }
 
@@ -691,350 +947,33 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       });
     }
 
-    const dims = parseDimsPartial(dimsText);
-    const spine = parseSpinePartial(spineText);
-    let merged = mergeSegment2APartials({ dims, spine, response: "" });
+    // Validate dims/spine parse before parking (fail closed here, not in voice wave).
+    parseDimsPartial(dimsText);
+    parseSpinePartial(spineText);
 
-    // Critical: if voice times out / worker dies, stale salvage needs complete dims∥spine.
+    // Checkpoint dims∥spine, then park — voice gets a fresh Vercel invoke (full ~270s).
+    // Old path starved voice on leftover wall (~80s) → OR 499 / fake fallback analysis.
     await persistCheckpoint();
-
-    const wallLeft =
-      INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS;
-    let voiceResponse = "";
-    let voiceFinish: string | null = null;
-    let voiceTokens = 0;
-
-    let voicePromptForLab: { system: string; user: string } | null = null;
-    let voiceReasoning: string | null = null;
-    let voiceModel: string | undefined;
-    if (wallLeft >= SEGMENT2_A_VOICE_MIN_WALL_MS) {
-      progressStage = "voice";
-      await updateXhighJobStatus(job_id, "running", {
-        accumulated_content: buildAccumBlob(),
-        current_stage: "voice",
-      });
-      const voiceTimeout = Math.min(SEGMENT2_A_VOICE_TIMEOUT_MS, wallLeft);
-      const voicePrompt = buildBreakthroughCoreVoicePrompt({
-        merged_core: merged,
-        original_question: job.input.original_question,
-        locale,
-      });
-      voicePromptForLab = voicePrompt;
-      try {
-        const voiceOut = await openRouterChatCompletionStream(
-          {
-            messages: [
-              { role: "system", content: voicePrompt.system },
-              { role: "user", content: voicePrompt.user },
-            ],
-            max_tokens: SEGMENT2_A_VOICE_MAX_TOKENS,
-            json_mode: true,
-            reasoning_effort: "high",
-            timeout_ms: voiceTimeout,
-            max_attempts: 1,
-            session_id: sessionCacheId,
-            call_type: "deep_analysis_voice",
-            phase_name: "segment2_a_voice",
-            route_path: "once",
-            provider: openRouterProviderExtras(),
-            disable_slow_stream_abort: true,
-          },
-          {
-            onContent: (full) => {
-              voiceBuf = full;
-              persistProgress();
-            },
-          },
-        );
-        voiceFinish = voiceOut.finish_reason ?? null;
-        voiceTokens = voiceOut.completion_tokens ?? 0;
-        voiceReasoning = voiceOut.reasoning?.trim() || null;
-        voiceModel = voiceOut.model;
-        voiceResponse = parseVoiceResponse((voiceOut.text || voiceBuf).trim());
-      } catch (voiceErr) {
-        console.warn("[xhigh-job] segment2 voice failed — fallback from dims", {
-          job_id,
-          msg: voiceErr instanceof Error ? voiceErr.message : String(voiceErr),
-          wall_left_ms: wallLeft,
-          voice_buf_len: voiceBuf.length,
-        });
-        // Prefer partial voice markdown/JSON if the stream wrote usable ### sections.
-        if (voiceBuf.trim().length > 40) {
-          try {
-            voiceResponse = parseVoiceResponse(voiceBuf.trim());
-            voiceFinish = "partial_salvaged";
-          } catch {
-            voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
-          }
-        } else {
-          voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
-        }
-        await persistCheckpoint(voiceResponse).catch(() => undefined);
-      }
-    } else {
-      console.warn("[xhigh-job] segment2 skip voice — wall too tight", {
-        job_id,
-        wall_left_ms: wallLeft,
-      });
-      voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
-    }
-
-    merged = mergeSegment2APartials({ dims, spine, response: voiceResponse });
-    progressStage = "finalize";
     await updateXhighJobStatus(job_id, "running", {
-      accumulated_content: [
-        "===dims===\n",
-        dimsText,
-        "\n===spine===\n",
-        spineText,
-        "\n===voice===\n",
-        voiceResponse,
-      ].join(""),
-      current_stage: "finalize",
+      accumulated_content: buildAccumBlob(),
+      current_stage: SEGMENT2_A_VOICE_QUEUED_STAGE,
     });
-    let sanitized: ReturnType<typeof finalizeMergedCallA>;
-    try {
-      sanitized = finalizeMergedCallA(merged, locale);
-    } catch (readinessErr) {
-      if (readinessErr instanceof Segment2ReadinessError) {
-        console.warn("[xhigh-job] segment2 spine readiness failed", {
-          job_id,
-          gaps: readinessErr.gaps,
-        });
-        await failXhighJob(job_id, readinessErr.message, {
-          retryable: true,
-          failure_reason: "spine_readiness_failed",
-          error_detail: readinessErr.gaps.join(","),
-          accumulated_content: [
-            "===dims===\n",
-            dimsText,
-            "\n===spine===\n",
-            spineText,
-            "\n===voice===\n",
-            voiceResponse,
-          ].join(""),
-        });
-        return;
-      }
-      throw readinessErr;
-    }
-    const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
-      sanitized.breakthrough_core,
-      job.input.base_analysis,
-    );
-
-    const latency_ms = Date.now() - invocationStartedAt;
-    const tokens_used =
-      (dimsOut.completion_tokens ?? 0) +
-      (spineOut.completion_tokens ?? 0) +
-      voiceTokens +
-      (dimsOut.prompt_tokens ?? 0) +
-      (spineOut.prompt_tokens ?? 0);
-
-    console.info("[xhigh-job] segment2 parallel A complete", {
+    console.info("[xhigh-job] segment2 dims∥spine done — voice deferred to next invoke", {
       job_id,
-      elapsed_ms: latency_ms,
-      dims_count: dims.length,
-      voice_finish: voiceFinish,
-      tokens_used,
+      elapsed_ms: Date.now() - invocationStartedAt,
+      dims_finish: dimsOut.finish_reason,
+      spine_finish: spineOut.finish_reason,
     });
-
-    const lab_call_traces: LabCallTrace[] = [
-      buildXhighLabCallTrace({
-        phase: "segment2_a_dims",
-        system: dimsPrompt.system,
-        user: dimsPrompt.user,
-        user_feed: calcSlice?.trim() ? calcSlice : undefined,
-        raw_text: dimsText,
-        parsed: dims,
-        reasoning: dimsOut.reasoning ?? null,
-        actual_model: dimsOut.model || defaultModel,
-        thinking_effort: "high",
-        tokens_used: (dimsOut.prompt_tokens ?? 0) + (dimsOut.completion_tokens ?? 0),
-        usage_written: dimsOut.usage_written,
-        prompt_tokens: dimsOut.prompt_tokens,
-        completion_tokens: dimsOut.completion_tokens,
-        reasoning_tokens: dimsOut.reasoning_tokens ?? null,
-        latency_ms,
-        generation_id: dimsOut.generation_id ?? null,
-        finish_reason: dimsOut.finish_reason ?? null,
-      }),
-      buildXhighLabCallTrace({
-        phase: "segment2_a_spine",
-        system: spinePrompt.system,
-        user: spinePrompt.user,
-        user_feed: calcSlice?.trim() ? calcSlice : undefined,
-        raw_text: spineText,
-        parsed: spine,
-        reasoning: spineOut.reasoning ?? null,
-        actual_model: spineOut.model || defaultModel,
-        thinking_effort: "high",
-        tokens_used: (spineOut.prompt_tokens ?? 0) + (spineOut.completion_tokens ?? 0),
-        usage_written: spineOut.usage_written,
-        prompt_tokens: spineOut.prompt_tokens,
-        completion_tokens: spineOut.completion_tokens,
-        reasoning_tokens: spineOut.reasoning_tokens ?? null,
-        latency_ms,
-        generation_id: spineOut.generation_id ?? null,
-        finish_reason: spineOut.finish_reason ?? null,
-      }),
-    ];
-    if (voicePromptForLab && (voiceResponse.trim() || voiceBuf.trim())) {
-      lab_call_traces.push(
-        buildXhighLabCallTrace({
-          phase: "segment2_a_voice",
-          system: voicePromptForLab.system,
-          user: voicePromptForLab.user,
-          raw_text: voiceBuf || voiceResponse,
-          parsed: { response: voiceResponse },
-          reasoning: voiceReasoning,
-          actual_model: voiceModel || dimsOut.model || spineOut.model || defaultModel,
-          thinking_effort: "high",
-          tokens_used: voiceTokens,
-          usage_written: voiceTokens > 0 ? true : false,
-          completion_tokens: voiceTokens,
-          latency_ms,
-          finish_reason: voiceFinish,
-        }),
-      );
-    }
-
-    await completeXhighJob(job_id, {
-      accumulated_content: [
-        "===dims===\n",
-        dimsText,
-        "\n===spine===\n",
-        spineText,
-        "\n===voice===\n",
-        voiceResponse,
-      ].join(""),
-      result: {
-        breakthrough_core,
-        investigation_agenda: [],
-      },
-      model: dimsOut.model || spineOut.model || defaultModel,
-      tokens_used,
-      lab_call_traces,
-      llm_debug: buildLlmDebug({
-        phase: "segment2_breakthrough_core",
-        requested_effort: "high",
-        max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
-        model: dimsOut.model || defaultModel,
-        latency_ms,
-        finish_reason: `parallel:${dimsOut.finish_reason ?? "?"}+${spineOut.finish_reason ?? "?"}+${voiceFinish ?? "fallback"}`,
-        prompt_tokens: (dimsOut.prompt_tokens ?? 0) + (spineOut.prompt_tokens ?? 0),
-        completion_tokens:
-          (dimsOut.completion_tokens ?? 0) + (spineOut.completion_tokens ?? 0) + voiceTokens,
-      }),
-    });
+    return;
   } catch (e) {
     const detail = describeTransportError(e);
     const resolved = resolveTransportFailureReason(e);
-    // Try salvage: parse whatever landed in buffers.
-    try {
-      if (dimsBuf.trim().length > 40 && spineBuf.trim().length > 40) {
-        const dims = parseDimsPartial(dimsBuf);
-        const spine = parseSpinePartial(spineBuf);
-        const response =
-          voiceBuf.trim().length > 10
-            ? (() => {
-                try {
-                  return parseVoiceResponse(voiceBuf);
-                } catch {
-                  return fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
-                }
-              })()
-            : fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
-        const merged = mergeSegment2APartials({ dims, spine, response });
-        const sanitized = finalizeMergedCallA(merged, locale);
-        const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
-          sanitized.breakthrough_core,
-          job.input.base_analysis,
-        );
-        console.warn("[xhigh-job] segment2 parallel salvaged after error", {
-          job_id,
-          msg: detail.msg,
-          failure_reason: resolved.failure_reason,
-        });
-        const salvageTraces: LabCallTrace[] = [
-          buildXhighLabCallTrace({
-            phase: "segment2_a_dims",
-            system: dimsPrompt.system,
-            user: dimsPrompt.user,
-            raw_text: dimsBuf,
-            parsed: dims,
-            thinking_effort: "high",
-            actual_model: defaultModel,
-            latency_ms: Date.now() - invocationStartedAt,
-            finish_reason: "salvaged_parallel",
-        usage_written: false,
-          }),
-          buildXhighLabCallTrace({
-            phase: "segment2_a_spine",
-            system: spinePrompt.system,
-            user: spinePrompt.user,
-            raw_text: spineBuf,
-            parsed: spine,
-            thinking_effort: "high",
-            actual_model: defaultModel,
-            latency_ms: Date.now() - invocationStartedAt,
-            finish_reason: "salvaged_parallel",
-        usage_written: false,
-          }),
-        ];
-        if (voiceBuf.trim().length > 10) {
-          try {
-            const vp = buildBreakthroughCoreVoicePrompt({
-              merged_core: merged,
-              original_question: job.input.original_question,
-              locale,
-            });
-            salvageTraces.push(
-              buildXhighLabCallTrace({
-                phase: "segment2_a_voice",
-                system: vp.system,
-                user: vp.user,
-                raw_text: voiceBuf,
-                parsed: response,
-                thinking_effort: "high",
-                actual_model: defaultModel,
-                latency_ms: Date.now() - invocationStartedAt,
-                finish_reason: "salvaged_parallel",
-        usage_written: false,
-              }),
-            );
-          } catch {
-            /* voice prompt rebuild optional on salvage */
-          }
-        }
-        await completeXhighJob(job_id, {
-          accumulated_content: `===dims===\n${dimsBuf}\n===spine===\n${spineBuf}\n===voice===\n${response}`,
-          result: { breakthrough_core, investigation_agenda: [] },
-          model: defaultModel,
-          tokens_used: 0,
-          llm_debug: buildLlmDebug({
-            phase: "segment2_breakthrough_core",
-            requested_effort: "high",
-            max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
-            model: defaultModel,
-            latency_ms: Date.now() - invocationStartedAt,
-            finish_reason: "salvaged_parallel",
-          }),
-          lab_call_traces: salvageTraces,
-        });
-        return;
-      }
-    } catch (salvageErr) {
-      console.warn("[xhigh-job] segment2 parallel salvage failed", {
-        job_id,
-        msg: salvageErr instanceof Error ? salvageErr.message : String(salvageErr),
-      });
-    }
-
+    // Keep dims/spine/voice buffers for Lab dump — do NOT complete as success
+    // with fallbackVoiceFromDims (that was painting fake analysis after 499).
     console.warn("[xhigh-job] segment2_breakthrough_core failed", {
       job_id,
       elapsed_ms: Date.now() - invocationStartedAt,
-      content_len: dimsBuf.length + spineBuf.length,
+      content_len: dimsBuf.length + spineBuf.length + voiceBuf.length,
       msg: detail.msg,
       http_status: detail.http_status,
       failure_reason: resolved.failure_reason,
@@ -1043,7 +982,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       retryable: resolved.retryable,
       failure_reason: resolved.failure_reason,
       error_detail: detail.body_snippet,
-      accumulated_content: `===dims===\n${dimsBuf}\n===spine===\n${spineBuf}`,
+      accumulated_content: `===dims===\n${dimsBuf}\n===spine===\n${spineBuf}\n===voice===\n${voiceBuf}`,
     });
   } finally {
     clearInterval(heartbeat);

@@ -61,7 +61,7 @@ const MAX_ATTEMPTS = 3;
  * 3 次 × ~80s ≈ 240s,给 180s 意味着最多吃掉最后一次重试 —— 可接受。
  * ⚠️ 改小之前先看 OpenRouter 后台的真实耗时,别想当然。
  */
-const CORE_JUDGMENTS_TOTAL_TIMEOUT_MS = 180_000;
+const CORE_JUDGMENTS_TOTAL_TIMEOUT_MS = 285_000;
 
 /** Model only writes these — climate_now / refs are code. */
 const LLM_INTERPRETIVE_KEYS = [

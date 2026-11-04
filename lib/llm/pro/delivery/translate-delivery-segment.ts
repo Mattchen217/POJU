@@ -145,7 +145,7 @@ matching input length.`;
       messages: [{ role: "user", content: user }],
       max_tokens: DELIVERY_WRITE_MAX_TOKENS,
       thinking_effort: "high",
-      timeout_ms: 120_000,
+      timeout_ms: 285_000,
       response_format: "text",
       session_id: opts?.session_id,
       temperature: 0.3,

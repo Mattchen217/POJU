@@ -137,7 +137,7 @@ export async function runNarrativeTask(
         messages: [{ role: "user", content: user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
-        timeout_ms: 120_000,
+        timeout_ms: 285_000,
         response_format: "json",
         session_id,
         temperature: 0.5,

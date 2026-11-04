@@ -5,7 +5,6 @@
 
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import {
-  fallbackVoiceFromDims,
   finalizeMergedCallA,
   mergeSegment2APartials,
   parseDimsPartial,
@@ -46,16 +45,20 @@ export function salvageSegment2ParallelAccumulated(
   try {
     const dims = parseDimsPartial(dimsText);
     const spine = parseSpinePartial(spineText);
-    let response = "";
-    if (voiceText.length > 10) {
-      try {
-        response = parseVoiceResponse(voiceText);
-      } catch {
-        response = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
-      }
-    } else {
-      response = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+    // Require a real voice body — never invent fallbackVoiceFromDims for user UI.
+    if (voiceText.length < 40) {
+      return { ok: false, reason: "missing_voice_section" };
     }
+    let response: string;
+    try {
+      response = parseVoiceResponse(voiceText);
+    } catch (e) {
+      return {
+        ok: false,
+        reason: e instanceof Error ? e.message : "voice_parse_failed",
+      };
+    }
+    void locale;
 
     const merged = mergeSegment2APartials({ dims, spine, response });
     const { breakthrough_core: sanitizedCore } = finalizeMergedCallA(merged, locale);

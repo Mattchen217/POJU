@@ -32,7 +32,7 @@ import {
 
 const TRANSLATE_TEMPERATURE = 0.35;
 /** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
-const ATTEMPT_TIMEOUT_MS = 120_000;
+const ATTEMPT_TIMEOUT_MS = 285_000;
 const TOTAL_TIMEOUT_MS = 300_000;
 
 const MARKER_RE = /⟦t:[^⟧]+⟧/g;

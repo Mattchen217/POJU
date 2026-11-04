@@ -38,7 +38,7 @@ export type { NarrativeTaskName } from "@/lib/base-analysis-v2/narrative/narrati
 
 const NARRATIVE_TEMPERATURE = 0.65;
 /** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
-const ATTEMPT_TIMEOUT_MS = 120_000;
+const ATTEMPT_TIMEOUT_MS = 285_000;
 /** 4 Task 并发墙，对齐 Hobby 300s。 */
 const TOTAL_TIMEOUT_MS = 300_000;
 

@@ -84,6 +84,28 @@ function scheduleSegment2Job(job_id: string, session_id: string): void {
   after(async () => {
     try {
       await runSegment2BreakthroughCoreJob(job_id);
+      const mid = await getXhighJob(job_id);
+      // Nested after = fresh maxDuration=300 for voice (same await would share wall).
+      if (mid?.status === "running" && mid.current_stage === "voice_queued") {
+        after(async () => {
+          try {
+            await runSegment2BreakthroughCoreJob(job_id);
+          } catch (e) {
+            console.error("[breakthrough-core] voice wave failed:", e);
+            const job = await getXhighJob(job_id);
+            if (job && (job.status === "running" || job.status === "pending")) {
+              await failXhighJob(job_id, e instanceof Error ? e.message : String(e), {
+                retryable: true,
+                failure_reason: "llm_timeout",
+                accumulated_content: job.accumulated_content,
+              }).catch(() => undefined);
+            }
+          } finally {
+            await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
+          }
+        });
+        return;
+      }
     } catch (e) {
       console.error("[breakthrough-core] background job failed:", e);
       const job = await getXhighJob(job_id);
@@ -95,7 +117,15 @@ function scheduleSegment2Job(job_id: string, session_id: string): void {
         }).catch(() => undefined);
       }
     } finally {
-      await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
+      const job = await getXhighJob(job_id);
+      if (
+        !(
+          job?.status === "running" &&
+          (job.current_stage === "voice_queued" || job.current_stage === "voice")
+        )
+      ) {
+        await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
+      }
     }
   });
 }

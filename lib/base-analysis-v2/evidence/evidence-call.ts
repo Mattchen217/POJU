@@ -55,7 +55,7 @@ export type { EvidenceTaskName } from "@/lib/base-analysis-v2/narrative/narrativ
 export const EVIDENCE_TASK_MAX_TOKENS = V2_OUTPUT_MAX_TOKENS;
 const EVIDENCE_TEMPERATURE = 0.35;
 /** 单次硬尝试 fetch 超时；硬重试共用 phase 总墙。 */
-const ATTEMPT_TIMEOUT_MS = 120_000;
+const ATTEMPT_TIMEOUT_MS = 285_000;
 /** 4 Task 并发；对齐 Hobby 300s。 */
 const TOTAL_TIMEOUT_MS = 300_000;
 
