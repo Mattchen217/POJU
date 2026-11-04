@@ -192,6 +192,19 @@ After: Fact write, E1, Conflict change, DIR reaggregate, Blueprint seed (initial
 
 Function: Data Contract §3.2 → `satisfied` \| `partial` \| `pending` \| `blocked` \| `n_a`.
 
+**Roll-up (must match Contract §3.2; first match wins):**
+
+| Condition | DDR status |
+|---|---|
+| Related blocking conflict | `blocked` |
+| All required DIRs `known`\|`n_a`, **≥1 `known`** | `satisfied` |
+| All required DIRs `n_a` + explicit N/A evidence | `n_a` |
+| No required DIRs (`R` empty) + explicit N/A evidence | `n_a` |
+| Mix of resolved (`known`/`n_a`) and unresolved (`unknown`/`conflict`) | `partial` |
+| Insufficient evidence (incl. empty `R` without N/A evidence) | `pending` |
+
+Forbidden: treat all-DIR-`n_a` as `satisfied`; treat empty `R` as `satisfied`.
+
 ### 4.2 When to evaluate Gate
 
 | Moment | Action |
@@ -201,7 +214,16 @@ Function: Data Contract §3.2 → `satisfied` \| `partial` \| `pending` \| `bloc
 | Before FreezeRecord | Re-check; FAIL aborts freeze |
 | Report start | Verify FreezeRecord bindings |
 
-Gate composition: Data Contract §3.3 (P0→FAIL; P1 WARN/FAIL rule; P2 alone not blocking).
+Gate composition: Data Contract §3.3.
+
+| Priority | Unsatisfied means `status ∉ {satisfied, n_a}` | Gate effect |
+|---|---|---|
+| P0 | any | **FAIL** (not PASS) |
+| P1 | yes + decision-critical / ranking impact | **FAIL** |
+| P1 | yes + non-ranking + boundaries recorded | **WARN** |
+| P2 | yes alone | must **not** alone block report |
+
+P0/P1 DDR in `n_a` counts as Gate-acceptable terminal (same bucket as `satisfied` for PASS/FAIL tests only).
 
 ---
 

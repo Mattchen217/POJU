@@ -233,8 +233,18 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 |---|---|
 | **Given** | Required DIR states + related blockers for a DDR |
 | **When** | DDR status is computed |
-| **Then** | Result ∈ {`satisfied`,`partial`,`pending`,`blocked`,`n_a`} per Data contract §3.2; not set by Agenda covered; `n_a` needs explicit evidence |
-| **Verify** | Data contract §3.2; State Machines §4 |
+| **Then** | Result ∈ {`satisfied`,`partial`,`pending`,`blocked`,`n_a`} per Data contract §3.2; statuses mutually exclusive via first-match order; not set by Agenda covered; `n_a` needs explicit evidence |
+| **Verify** | Data contract §3.2; State Machines §4.1 |
+
+**Boundary cases (must hold):**
+
+| Given | When | Then |
+|---|---|---|
+| R = {A,B,C}; all three DIR `n_a` + explicit N/A evidence | compute DDR status | `n_a` — **not** `satisfied` |
+| R non-empty; all `known`\|`n_a`; ≥1 `known` | compute | `satisfied` |
+| R empty + explicit N/A evidence on DDR | compute | `n_a` — **not** `satisfied` |
+| R empty **without** N/A evidence | compute | `pending` — **not** `satisfied` / not automatic `n_a` |
+| Related blocking conflict | compute | `blocked` (wins before satisfied/n_a) |
 
 ### AC-C8 — P0/P1/P2 × PASS/WARN/FAIL
 
@@ -242,8 +252,14 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 |---|---|
 | **Given** | Mix of DDR priorities and statuses |
 | **When** | Sufficiency Gate evaluates |
-| **Then** | P0 unsatisfied ⇒ not PASS (FAIL); P1 uses deterministic WARN/FAIL rule; P2 alone must not block report; WARN allows conditional report with disclosures; FAIL forbids normal freeze |
-| **Verify** | Data contract §3.3; State Machines §4; Traceability §5 |
+| **Then** | P0 with status ∉ {`satisfied`,`n_a`} ⇒ FAIL (not PASS); P0/`n_a` is Gate-acceptable terminal; P1 uses deterministic WARN/FAIL rule on unsatisfied; P2 alone must not block report; WARN allows conditional report with disclosures; FAIL forbids normal freeze |
+| **Verify** | Data contract §3.3; State Machines §4.2; Traceability §5 |
+
+| Given | When | Then |
+|---|---|---|
+| P0 DDR all required DIRs `n_a` → DDR `n_a` | Gate | May PASS on this DDR (terminal OK); must not FAIL solely because status is `n_a` rather than `satisfied` |
+| P0 DDR `partial` / `pending` / `blocked` | Gate | FAIL |
+| Only P2 DDR unsatisfied | Gate | Must not alone prevent report |
 
 ### AC-C9 — unknown / declined / not_applicable ≠ satisfied
 
@@ -251,7 +267,7 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 |---|---|
 | **Given** | Facts in `unknown` / `declined` / `not_applicable` or user refusal |
 | **When** | DIR/DDR/Gate evaluated |
-| **Then** | Must not mark DIR `known` or DDR `satisfied`/`n_a` solely from refuse/unknown; verification_level=`none` for those statuses |
+| **Then** | Must not mark DIR `known` or DDR `satisfied` / automatic `n_a` solely from refuse/unknown; verification_level=`none` for those fact statuses; DDR `n_a` only via explicit applicability evidence (Contract §3.2) |
 | **Verify** | Data contract §§2.4D, 3.2; AC-5.6 |
 
 ### AC-C10 — DC.content_hash excludes Blueprint/DDR versions
@@ -285,18 +301,22 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 
 ## Cross-document consistency check (Phase 1.2)
 
-| # | Check | Result |
+> **Note:** This table is the **authoring self-check** after the C4 DDR boundary fix. It is **not** an independent product acceptance verdict. External review must re-verify, especially C4.
+
+| # | Check | Result (author self-check) |
 |---|---|---|
 | 1 | Objects/fields/enums in Data Contract ≡ State Machines | **PASS** (Phase enum, Fact rules, DIR/DDR/Gate, FreezeRecord) |
 | 2 | Every SM state defined in Data Contract | **PASS** (`IntakeSessionPhase` closed set) |
 | 3 | Traceability SoT = DC.dirs for DIR status | **PASS** |
-| 4 | AC / AC-C verify normative rules | **PASS** (AC-C1–C12 added) |
-| 5 | C1–C5 no longer OPEN | **PASS** (Contract §14) |
+| 4 | AC / AC-C verify normative rules | **PASS** (AC-C1–C12; AC-C7/C8/C9 updated for all-`n_a` / empty-`R`) |
+| 5 | C1–C5 closed in docs; C4 satisfied/`n_a` mutually exclusive | **PASS** (Contract §3.2 revised) |
 | 6 | No new dual data authority introduced | **PASS** (Blueprint seed vs DC.dirs split) |
 | 7 | PageFeedMatrix 01–08 order unchanged | **PASS** |
 | 8 | Call A/B not Intake entry | **PASS** |
-| 9 | Agenda covered ≠ DIR known | **PASS** |
+| 9 | Agenda covered ≠ DIR known / DDR satisfied | **PASS** |
 | 10 | Decision Understanding remains derived | **PASS** |
+| 11 | All required DIRs `n_a` → DDR `n_a` (not `satisfied`) | **PASS** (Contract §3.2; SM §4.1; Trace §2; AC-C7) |
+| 12 | Empty `R` → `n_a` only with explicit evidence; else `pending`; never `satisfied` | **PASS** |
 
 ---
 
@@ -333,12 +353,16 @@ Phase 1.1 report file itself is **unchanged** in this Phase 1.2 work.
 
 ## Phase 1.2 exit statement (for PR)
 
-When AC-C1–AC-C12 and updated AC-1–12 pass product review:
+When AC-C1–AC-C12 and updated AC-1–12 pass **independent** product review:
 
-- C1–C5 are closed in normative docs.  
+- C1–C5 are closed in normative docs (including C4 all-DIR-`n_a` / empty-`R` fix).  
 - Phase 2 Blueprint Engine may start **only after** explicit product PASS of this PR.  
 - **No** runtime / Agent / Call A/B / schema / UI / PASS changes in this PR.  
 - **Do not merge** until product review completes.
+
+### PR file-list note
+
+Compared to base `docs/decision-intake-2.0-phase-1-data-contract`, the branch may also show **`PHASE-1-1-REVIEW-REPORT.md` as added**. That file is the Phase 1.1 independent review record brought along because Phase 1.2 branched from the review commit — **not** a Phase 1.2 edit of the review report. Phase 1.2 normative edits are only the four Phase 1 contract documents.
 
 ---
 

@@ -56,7 +56,12 @@ DC.dirs[dir_id].current_state   ← sole status read
         └── unknown ← otherwise
 
 DDR.status = f(DIR states, blockers)   ← Data Contract §3.2
+  · all known|n_a with ≥1 known → satisfied
+  · all n_a (+ explicit N/A evidence) → n_a   (NOT satisfied)
+  · R empty + explicit N/A → n_a
+  · R empty without N/A evidence → pending
 Gate = g(DDR statuses by priority)     ← §3.3
+  · Gate accepts {satisfied, n_a} as terminal OK for P0/P1 tests
 Report segment cites ddr_ids + fact_ids + FreezeRecord
 ```
 
@@ -98,11 +103,12 @@ Exact instance catalog = Phase 2. Mapping **rules** frozen; face order locked by
 
 | Gate | Trace requirement |
 |---|---|
-| PASS | All P0 DDR `satisfied`/`n_a`; P1 OK per §3.3; FreezeRecord present |
+| PASS | All P0 DDR ∈ {`satisfied`,`n_a`}; P1 OK per §3.3; FreezeRecord present |
 | WARN | Conditional report lists unsatisfied DDRs/DIRs + boundaries; `delivery_mode=degraded` |
 | FAIL | No normal freeze; provenance of failing P0/P1 DDR retained in audit |
 
-Decline/unknown facts must appear as open DIRs or boundaries — never as satisfied DDR evidence.
+Decline/unknown facts must appear as open DIRs or boundaries — never as `satisfied` or automatic `n_a` DDR evidence.  
+All-DIR-`n_a` DDR must trace as status `n_a` (explicit applicability), not as a delivered/satisfied claim.
 
 ---
 

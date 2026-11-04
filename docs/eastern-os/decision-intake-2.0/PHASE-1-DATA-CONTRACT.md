@@ -236,15 +236,28 @@ DDR definitions live on Blueprint; **status is computed**, not manually set by m
 ### 3.2 Normative DDR status function
 
 Let `R` = required DIRs referenced by `required_dir_ids` that are `id_lifecycle=active` in **`DC.dirs`**.  
-Let `blocking` = open/unresolved conflicts that **reference those DIRs’ contributing facts** or are explicitly linked to this DDR (not global indiscriminate block).
+Let `blocking` = open/unresolved conflicts that **reference those DIRs’ contributing facts** or are explicitly linked to this DDR (not global indiscriminate block).  
+Let `explicit_na_evidence` = documented applicability evidence that this DDR (or every DIR in R) is not applicable — never inferred from silence, decline, or Agenda covered.
+
+**Evaluation order (first match wins; statuses are mutually exclusive):**
+
+1. If `blocking` is non-empty → `blocked`  
+2. Else apply the table below.
 
 | Condition | `ddr.status` |
 |---|---|
-| All DIRs in R are `known` or `n_a`, and ≥1 is `known` **or** R empty only if completion_criteria explicitly N/A with evidence | `satisfied` |
-| R empty and DDR marked not applicable with explicit evidence | `n_a` |
-| Some DIRs in R are `known`/`n_a`, others still `unknown`/`conflict` without full block rule | `partial` |
-| No contributing evidence yet; cannot judge | `pending` |
-| Related unresolved blocking conflict/condition for this DDR | `blocked` |
+| `R` non-empty; every DIR in R is `known` or `n_a`; **and ≥1 DIR is `known`** | `satisfied` |
+| `R` non-empty; every DIR in R is `n_a`; **and** `explicit_na_evidence` | `n_a` |
+| `R` empty; DDR has no required DIRs; **and** `explicit_na_evidence` (completion_criteria / applicability record) | `n_a` |
+| `R` non-empty; some DIRs in R are `known` or `n_a`, and ≥1 remains `unknown` or `conflict` (without triggering `blocked`) | `partial` |
+| No valid evidence yet to classify the above (including `R` empty **without** `explicit_na_evidence`) | `pending` |
+
+**Boundary notes (normative):**
+
+- **All DIRs `n_a` ≠ `satisfied`.** Example: DIR-A/B/C all `n_a` with evidence → DDR = `n_a`, never `satisfied`.  
+- **`satisfied` and `n_a` are mutually exclusive.** `satisfied` always requires ≥1 `known` in non-empty `R`. Empty `R` never yields `satisfied`.  
+- Empty `R` without explicit N/A evidence → `pending` (incomplete blueprint/wiring), not `satisfied` or automatic `n_a`.  
+- Aligns with `dir-aggregator.ts`: a single DIR may aggregate to `n_a` when all required roles are N/A; DDR then rolls up those DIR states per this table.
 
 **Hard constraints:**
 
@@ -252,7 +265,8 @@ Let `blocking` = open/unresolved conflicts that **reference those DIRs’ contri
 2. User decline / unknown ≠ `satisfied` and ≠ automatic `n_a`.  
 3. `n_a` requires explicit applicability evidence — must not mask unknown/declined/incomplete.  
 4. Conflicts block only **related** DDRs.  
-5. P2 unsatisfied alone must not block report generation.
+5. P2 unsatisfied alone must not block report generation.  
+6. For Gate purposes, DDR `n_a` is an **acceptable terminal** like `satisfied` (see §3.3); it is **not** the same semantic as “delivered with known evidence.”
 
 ### 3.3 Sufficiency Gate composition
 
@@ -442,7 +456,7 @@ Still recommend `lib/decision-intake/` later — **do not create in Phase 1.2**.
 | C1 | Fact confirm promotion A–D + E1≠E2 | §2.4 |
 | C2 | Phase enum + internal `blueprint_building` | §8 |
 | C3 | `DC.dirs` sole live DIR SoT | §1, §2.8, §4 |
-| C4 | DDR status table + Gate P0/P1/P2 | §3.2–§3.3 |
+| C4 | DDR status table (satisfied/n_a mutually exclusive; all-DIR-n_a → n_a) + Gate P0/P1/P2 | §3.2–§3.3 |
 | C5 | Hash = DC only; FreezeRecord sidecar | §10 |
 
 ---
