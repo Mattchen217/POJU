@@ -242,8 +242,9 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 |---|---|---|
 | R = {A,B,C}; all three DIR `n_a` + explicit N/A evidence | compute DDR status | `n_a` — **not** `satisfied` |
 | R non-empty; all `known`\|`n_a`; ≥1 `known` | compute | `satisfied` |
-| R empty + explicit N/A evidence on DDR | compute | `n_a` — **not** `satisfied` |
-| R empty **without** N/A evidence | compute | `pending` — **not** `satisfied` / not automatic `n_a` |
+| `ids.length === 0` + explicit N/A evidence | compute | `n_a` — **not** `satisfied` |
+| `ids.length === 0` **without** N/A evidence | compute | `pending` |
+| **Dangling:** `ids = [A,B]` but A/B missing or deprecated in `DC.dirs` (R empty/incomplete) | compute | `pending` (+ integrity) — **not** `n_a` / not `satisfied` |
 | Related blocking conflict | compute | `blocked` (wins before satisfied/n_a) |
 
 ### AC-C8 — P0/P1/P2 × PASS/WARN/FAIL
@@ -252,22 +253,24 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 |---|---|
 | **Given** | Mix of DDR priorities and statuses |
 | **When** | Sufficiency Gate evaluates |
-| **Then** | P0 with status ∉ {`satisfied`,`n_a`} ⇒ FAIL (not PASS); P0/`n_a` is Gate-acceptable terminal; P1 uses deterministic WARN/FAIL rule on unsatisfied; P2 alone must not block report; WARN allows conditional report with disclosures; FAIL forbids normal freeze |
+| **Then** | P0 with status ∉ {`satisfied`,`n_a`} ⇒ FAIL (not PASS); P0/`n_a` is Gate-acceptable terminal; P1 uses deterministic WARN/FAIL rule on unsatisfied **with `|L|≥1` required for WARN**; P2 alone must not block report; WARN allows conditional report with disclosures; FAIL forbids normal freeze |
 | **Verify** | Data contract §3.3; State Machines §4.2; Traceability §5 |
 
 | Given | When | Then |
 |---|---|---|
 | P0 DDR all required DIRs `n_a` → DDR `n_a` | Gate | May PASS on this DDR (terminal OK); must not FAIL solely because status is `n_a` rather than `satisfied` |
-| P0 DDR `partial` / `pending` / `blocked` | Gate | FAIL |
+| P0 DDR `partial` / `pending` / `blocked` (incl. dangling → pending) | Gate | FAIL |
+| P1 DDR unsatisfied; `|L|=0` (no linked active DIR; empty-set / dangling) | Gate | **FAIL** — must not vacuous WARN even if boundaries exist |
+| P1 DDR unsatisfied; `|L|≥1`; every L has `may_affect_p5_ranking === false`; boundaries recorded | Gate | **WARN** |
 | Only P2 DDR unsatisfied | Gate | Must not alone prevent report |
 
 ### AC-C9 — unknown / declined / not_applicable ≠ satisfied
 
 | | |
 |---|---|
-| **Given** | Facts in `unknown` / `declined` / `not_applicable` or user refusal |
+| **Given** | Facts in `unknown` / `declined` / `not_applicable` or user refusal; **or** dangling DIR refs |
 | **When** | DIR/DDR/Gate evaluated |
-| **Then** | Must not mark DIR `known` or DDR `satisfied` / automatic `n_a` solely from refuse/unknown; verification_level=`none` for those fact statuses; DDR `n_a` only via explicit applicability evidence (Contract §3.2) |
+| **Then** | Must not mark DIR `known` or DDR `satisfied` / automatic `n_a` solely from refuse/unknown/**dangling**; verification_level=`none` for those fact statuses; DDR `n_a` only via `truly_unrequired` or all-DIR-`n_a` + explicit evidence (Contract §3.2) |
 | **Verify** | Data contract §§2.4D, 3.2; AC-5.6 |
 
 ### AC-C10 — DC.content_hash excludes Blueprint/DDR versions
@@ -316,7 +319,8 @@ Each item is a documentation acceptance test with Given / When / Then. Implement
 | 9 | Agenda covered ≠ DIR known / DDR satisfied | **PASS** |
 | 10 | Decision Understanding remains derived | **PASS** |
 | 11 | All required DIRs `n_a` → DDR `n_a` (not `satisfied`) | **PASS** (Contract §3.2; SM §4.1; Trace §2; AC-C7) |
-| 12 | Empty `R` → `n_a` only with explicit evidence; else `pending`; never `satisfied` | **PASS** |
+| 12 | `truly_unrequired` (`ids.length===0`) + evidence → `n_a`; dangling refs → `pending` never `n_a` | **PASS** |
+| 13 | P1 WARN requires `|L|≥1`; empty linked set → FAIL (no vacuous every) | **PASS** (Contract §3.3; SM §4.2; AC-C8) |
 
 ---
 

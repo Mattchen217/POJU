@@ -55,13 +55,17 @@ DC.dirs[dir_id].current_state   ← sole status read
         ├── n_a ← explicit N/A evidence
         └── unknown ← otherwise
 
-DDR.status = f(DIR states, blockers)   ← Data Contract §3.2
+DDR.status = f(DIR states, blockers, ref integrity)   ← Data Contract §3.2
+  · ids = required_dir_ids; R = active DC.dirs hits; dangling ≠ truly_unrequired
   · all known|n_a with ≥1 known → satisfied
   · all n_a (+ explicit N/A evidence) → n_a   (NOT satisfied)
-  · R empty + explicit N/A → n_a
-  · R empty without N/A evidence → pending
+  · ids.length === 0 + explicit N/A → n_a
+  · dangling (ids declared but missing/deprecated in DC.dirs) → pending
+    (R empty alone does NOT prove “no required DIRs”; never auto n_a)
+  · truly_unrequired without N/A evidence → pending
 Gate = g(DDR statuses by priority)     ← §3.3
   · Gate accepts {satisfied, n_a} as terminal OK for P0/P1 tests
+  · P1 WARN requires |L|≥1 linked active DIRs; empty L → FAIL
 Report segment cites ddr_ids + fact_ids + FreezeRecord
 ```
 

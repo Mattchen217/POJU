@@ -235,35 +235,46 @@ DDR definitions live on Blueprint; **status is computed**, not manually set by m
 
 ### 3.2 Normative DDR status function
 
-Let `R` = required DIRs referenced by `required_dir_ids` that are `id_lifecycle=active` in **`DC.dirs`**.  
-Let `blocking` = open/unresolved conflicts that **reference those DIRs’ contributing facts** or are explicitly linked to this DDR (not global indiscriminate block).  
-Let `explicit_na_evidence` = documented applicability evidence that this DDR (or every DIR in R) is not applicable — never inferred from silence, decline, or Agenda covered.
+**Definitions (do not conflate):**
+
+| Symbol | Meaning |
+|---|---|
+| `ids` | `ddr.required_dir_ids` as declared on the Blueprint DDR definition |
+| `R` | DIRs in **`DC.dirs`** with `id ∈ ids` **and** `id_lifecycle=active` |
+| `dangling` | `ids.length > 0` **and** at least one id is missing from `DC.dirs` **or** present only as non-active / deprecated — Blueprint↔DC reference integrity failure |
+| `truly_unrequired` | `ids.length === 0` (DDR declares no required DIRs) |
+| `blocking` | open/unresolved conflicts on contributing facts of DIRs in `R`, or explicitly linked to this DDR (not global indiscriminate block) |
+| `explicit_na_evidence` | documented applicability evidence that this DDR (or every DIR in `R`) is not applicable — never inferred from silence, decline, Agenda covered, or dangling refs |
+
+**Important:** `R` empty is **not** proof that the DDR has no required DIRs. Only `truly_unrequired` (`ids.length === 0`) means that. `dangling` also yields empty or incomplete `R` and must **never** become `n_a`.
 
 **Evaluation order (first match wins; statuses are mutually exclusive):**
 
 1. If `blocking` is non-empty → `blocked`  
-2. Else apply the table below.
+2. Else if `dangling` → `pending` (reference integrity; optional audit flag `ddr_dir_ref_integrity_error` — still not `n_a`)  
+3. Else apply the table below.
 
 | Condition | `ddr.status` |
 |---|---|
 | `R` non-empty; every DIR in R is `known` or `n_a`; **and ≥1 DIR is `known`** | `satisfied` |
 | `R` non-empty; every DIR in R is `n_a`; **and** `explicit_na_evidence` | `n_a` |
-| `R` empty; DDR has no required DIRs; **and** `explicit_na_evidence` (completion_criteria / applicability record) | `n_a` |
+| `truly_unrequired` (`ids.length === 0`); **and** `explicit_na_evidence` | `n_a` |
 | `R` non-empty; some DIRs in R are `known` or `n_a`, and ≥1 remains `unknown` or `conflict` (without triggering `blocked`) | `partial` |
-| No valid evidence yet to classify the above (including `R` empty **without** `explicit_na_evidence`) | `pending` |
+| Otherwise (incl. `truly_unrequired` **without** `explicit_na_evidence`) | `pending` |
 
 **Boundary notes (normative):**
 
 - **All DIRs `n_a` ≠ `satisfied`.** Example: DIR-A/B/C all `n_a` with evidence → DDR = `n_a`, never `satisfied`.  
-- **`satisfied` and `n_a` are mutually exclusive.** `satisfied` always requires ≥1 `known` in non-empty `R`. Empty `R` never yields `satisfied`.  
-- Empty `R` without explicit N/A evidence → `pending` (incomplete blueprint/wiring), not `satisfied` or automatic `n_a`.  
+- **`satisfied` and `n_a` are mutually exclusive.** `satisfied` always requires ≥1 `known` in non-empty `R`.  
+- **`dangling` ≠ N/A.** Lost/deprecated DIR refs → `pending` (+ integrity error), never `n_a` / `satisfied`.  
+- **`R` empty alone never decides `n_a`.** Only `truly_unrequired` + evidence → `n_a`; dangling or incomplete wiring → `pending`.  
 - Aligns with `dir-aggregator.ts`: a single DIR may aggregate to `n_a` when all required roles are N/A; DDR then rolls up those DIR states per this table.
 
 **Hard constraints:**
 
 1. Status from DIR states + evidence + blockers — **not** Agenda covered %.  
 2. User decline / unknown ≠ `satisfied` and ≠ automatic `n_a`.  
-3. `n_a` requires explicit applicability evidence — must not mask unknown/declined/incomplete.  
+3. `n_a` requires explicit applicability evidence — must not mask unknown/declined/incomplete/**dangling**.  
 4. Conflicts block only **related** DDRs.  
 5. P2 unsatisfied alone must not block report generation.  
 6. For Gate purposes, DDR `n_a` is an **acceptable terminal** like `satisfied` (see §3.3); it is **not** the same semantic as “delivered with known evidence.”
@@ -274,15 +285,17 @@ Verdicts: `PASS` \| `WARN` \| `FAIL`.
 
 Compose after DDR status refresh + DIR reaggregation + Definition/conflict checks:
 
+Let `L` = linked **active** DIRs for this DDR (`R` as resolved in §3.2; dangling yields `|L|=0` or incomplete — treated as no valid linked set for WARN).
+
 | Rule | Gate |
 |---|---|
 | Any **P0** DDR is `pending` / `partial` / `blocked` (not `satisfied`/`n_a`) | **FAIL** (not PASS) |
-| **P1** DDR unsatisfied **and** it affects final conclusion / preferred-path ranking (linked DIR `may_affect_p5_ranking !== false` or DDR completion_criteria says decision-critical) | **FAIL** |
-| **P1** DDR unsatisfied **but** does not affect preferred-path ranking / conclusion (explicit `may_affect_p5_ranking === false` on all linked critical DIRs **and** boundaries recorded) | **WARN** |
+| **P1** DDR unsatisfied **and** (`|L|=0` **or** decision-critical / ranking impact) | **FAIL** |
+| **P1** DDR unsatisfied **and** `|L|≥1` **and** every DIR in `L` has `may_affect_p5_ranking === false` **and** boundaries recorded | **WARN** |
 | Only **P2** DDRs unsatisfied | Must **not** alone prevent report; Gate may still PASS/WARN on other grounds |
 | Open preferred-path conflicts without boundary policy | **FAIL** |
 | Boundary-only unknowns / non-preferred conflicts disclosed | **WARN** |
-| Definition unclear / hash integrity fail | **FAIL** |
+| Definition unclear / hash integrity fail / dangling DIR refs on P0/P1 | **FAIL** |
 | User hard-push / stall / MAX turns alone | **Never PASS** |
 
 **WARN:** may enter **conditional report** after E2 UnderstandingConfirm; must disclose unresolved info, premises, and conclusion limits (`delivery_mode=degraded` / information_boundaries).  
@@ -292,15 +305,20 @@ Compose after DDR status refresh + DIR reaggregation + Definition/conflict check
 
 ```text
 if P1 ddr.status ∉ {satisfied, n_a}:
-  if any linked active DIR has may_affect_p5_ranking !== false
-     OR ddr.completion_criteria marks decision_critical=true:
+  let L = linked active DIRs for this DDR  # from DC.dirs; exclude missing/deprecated
+  if |L| === 0:
+       → FAIL   # empty linked set: never vacuously WARN (conservative)
+  if ddr.completion_criteria marks decision_critical=true
+     OR any DIR in L has may_affect_p5_ranking !== false:
        → FAIL
-  else if all linked critical DIRs have may_affect_p5_ranking === false
-       AND information_boundaries includes this gap:
+  if every DIR in L has may_affect_p5_ranking === false
+     AND information_boundaries includes this gap:
        → WARN
   else:
        → FAIL  # conservative default
 ```
+
+**Forbidden:** treating vacuous `every([]) === true` as P1 WARN eligibility.
 
 Legacy `evaluateDecisionSufficiency` is DIR/conflict core to **reuse inside** this composer; Intake Gate is the outer function (future `evaluateIntakeSufficiency`).
 

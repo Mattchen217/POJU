@@ -194,16 +194,23 @@ Function: Data Contract §3.2 → `satisfied` \| `partial` \| `pending` \| `bloc
 
 **Roll-up (must match Contract §3.2; first match wins):**
 
+Defs: `ids = required_dir_ids`; `R` = active DIRs found in `DC.dirs` for those ids; `dangling` = `ids.length > 0` but missing/deprecated refs; `truly_unrequired` = `ids.length === 0`.
+
 | Condition | DDR status |
 |---|---|
 | Related blocking conflict | `blocked` |
-| All required DIRs `known`\|`n_a`, **≥1 `known`** | `satisfied` |
-| All required DIRs `n_a` + explicit N/A evidence | `n_a` |
-| No required DIRs (`R` empty) + explicit N/A evidence | `n_a` |
-| Mix of resolved (`known`/`n_a`) and unresolved (`unknown`/`conflict`) | `partial` |
-| Insufficient evidence (incl. empty `R` without N/A evidence) | `pending` |
+| `dangling` (ids declared but no complete active set in DC.dirs) | `pending` (+ integrity error) — **never** `n_a` |
+| All DIRs in `R` are `known`\|`n_a`, **≥1 `known`** | `satisfied` |
+| All DIRs in `R` are `n_a` + explicit N/A evidence | `n_a` |
+| `truly_unrequired` (`ids.length === 0`) + explicit N/A evidence | `n_a` |
+| Mix of resolved (`known`/`n_a`) and unresolved (`unknown`/`conflict`) in `R` | `partial` |
+| Otherwise (incl. `truly_unrequired` without N/A evidence) | `pending` |
 
-Forbidden: treat all-DIR-`n_a` as `satisfied`; treat empty `R` as `satisfied`.
+Forbidden:
+
+- treat all-DIR-`n_a` as `satisfied`  
+- treat `R` empty alone as proof of “no required DIRs”  
+- treat `dangling` as `n_a` / `satisfied`
 
 ### 4.2 When to evaluate Gate
 
@@ -218,10 +225,12 @@ Gate composition: Data Contract §3.3.
 
 | Priority | Unsatisfied means `status ∉ {satisfied, n_a}` | Gate effect |
 |---|---|---|
-| P0 | any | **FAIL** (not PASS) |
-| P1 | yes + decision-critical / ranking impact | **FAIL** |
-| P1 | yes + non-ranking + boundaries recorded | **WARN** |
+| P0 | any (incl. dangling → pending) | **FAIL** (not PASS) |
+| P1 | yes + (`|L|=0` **or** decision-critical / ranking impact) | **FAIL** |
+| P1 | yes + `|L|≥1` + every linked active DIR `may_affect_p5_ranking === false` + boundaries | **WARN** |
 | P2 | yes alone | must **not** alone block report |
+
+`L` = linked **active** DIRs. Empty `L` must **not** vacuously WARN.
 
 P0/P1 DDR in `n_a` counts as Gate-acceptable terminal (same bucket as `satisfied` for PASS/FAIL tests only).
 
