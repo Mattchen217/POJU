@@ -49,7 +49,10 @@ export interface BusinessPayload {
     source_turn_id: Constraint["source_turn_id"];
     rigidity: Constraint["rigidity"];
     user_confirmed: boolean;
+    related_dir_ids?: string[];
   }>;
+  /** Intake ExplicitNaEvidence — sorted by evidence_id for stable hash. */
+  explicit_na_evidence: Array<Record<string, unknown>>;
   hypotheses: Array<{
     hypothesis_id: string;
     statement: string;
@@ -114,7 +117,15 @@ export function extractBusinessPayload(dc: DecisionContext): BusinessPayload {
       source_turn_id: c.source_turn_id,
       rigidity: c.rigidity,
       user_confirmed: c.user_confirmed,
+      ...(c.related_dir_ids
+        ? { related_dir_ids: [...c.related_dir_ids].sort() }
+        : {}),
     })),
+    explicit_na_evidence: [...(dc.explicit_na_evidence ?? [])]
+      .map((e) => ({ ...e }) as Record<string, unknown>)
+      .sort((a, b) =>
+        String(a.evidence_id ?? "").localeCompare(String(b.evidence_id ?? "")),
+      ),
     hypotheses: dc.hypotheses.map((h) => ({
       hypothesis_id: h.hypothesis_id,
       statement: h.statement,

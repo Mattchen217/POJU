@@ -92,7 +92,74 @@ export interface Constraint {
   rigidity: ConstraintRigidity;
   user_confirmed: boolean;
   updated_at?: string;
+  /**
+   * Phase 1 §2.5 recommended; required for Intake role resolution (R6).
+   * Absent/empty ⇒ Constraint cannot resolve any DIR role.
+   */
+  related_dir_ids?: string[];
 }
+
+/** DIR-level N/A evidence (R6 Final Binding §1 — not role-level). */
+export type NaSourceRef =
+  | { kind: "reality_fact"; fact_id: string }
+  | { kind: "constraint"; constraint_id: string };
+
+export type NaSystemBasis =
+  | { kind: "topic_not_applicable"; topic_code: string; rule_id: string }
+  | {
+      kind: "catalog_na_condition_met";
+      target_dir_id: string;
+      condition_eval_id: string;
+    }
+  | {
+      kind: "empty_dir_source_absence";
+      ddr_id: "DDR-03-CHART-APPENDIX";
+      source_code: string;
+      source_state: "source_absent_not_supplied";
+      eval_id: string;
+    };
+
+export type ExplicitNaEvidence =
+  | {
+      evidence_id: string;
+      target: "dir";
+      dir_id: string;
+      na_condition_code: string;
+      evidence_type: "user_explicit_na";
+      source_ref: NaSourceRef;
+      written_by: "code";
+      revoked: boolean;
+    }
+  | {
+      evidence_id: string;
+      target: "dir";
+      dir_id: string;
+      na_condition_code: string;
+      evidence_type: "system_na_marker";
+      system_basis: NaSystemBasis;
+      written_by: "code";
+      revoked: boolean;
+    }
+  | {
+      evidence_id: string;
+      target: "ddr";
+      ddr_id: "DDR-03-CHART-APPENDIX";
+      na_condition_code: string;
+      evidence_type: "user_explicit_na";
+      source_ref: NaSourceRef;
+      written_by: "code";
+      revoked: boolean;
+    }
+  | {
+      evidence_id: string;
+      target: "ddr";
+      ddr_id: "DDR-03-CHART-APPENDIX";
+      na_condition_code: string;
+      evidence_type: "system_na_marker";
+      system_basis: NaSystemBasis;
+      written_by: "code";
+      revoked: boolean;
+    };
 
 export interface Hypothesis {
   hypothesis_id: string;
@@ -163,6 +230,11 @@ export interface DecisionContext {
   hypotheses: Hypothesis[];
   dirs: DIR[];
   conflicts: Conflict[];
+  /**
+   * Intake 2.0 ExplicitNaEvidence (DIR/DDR-level). Absent on legacy DC → treat as [].
+   * Included in content_hash (R6 / C5).
+   */
+  explicit_na_evidence?: ExplicitNaEvidence[];
   /** Required when status === final; draft may be empty. */
   content_hash: string | null;
   created_at: string;
