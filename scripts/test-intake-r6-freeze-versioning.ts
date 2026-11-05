@@ -60,6 +60,7 @@ async function main() {
     computeUnresolvedCount,
     freezeDecisionContext,
     freezeDraftForDelivery,
+    buildFreezeNaValidationFromSession,
     FreezeError,
     naValidationBoundToDc,
     persistV2FromFinalOnSession,
@@ -1009,6 +1010,133 @@ async function main() {
     );
     console.log(
       "  PASS  matching Freeze → version snapshot + content_hash consistent",
+    );
+
+    // Session N/A authority must ignore forged opts.authority event stores.
+    const sessionNaAction = {
+      declaration_action_id: "na-act-sess",
+      session_id: SESS,
+      context_id: CTX,
+      actor: "user" as const,
+      control_id: "na_declare",
+      source_ref: { kind: "reality_fact" as const, fact_id: "f_runway" },
+      dir_id: "DIR-A",
+      na_condition_code: NA_CODE,
+      declaration_turn_id: "t_na_sess",
+      occurred_at: NOW,
+      revoked: false,
+      expires_at: null,
+    };
+    const sessionWithNa = sessionOf(draft, {
+      confirmation_events: [
+        {
+          event_id: "e1_f_runway",
+          target_type: "fact",
+          fact_id: "f_runway",
+          source_turn_id: "t_runway",
+          confirmation_turn_id: "t_runway_b",
+          confirmation_action_id: "ca_f_runway",
+          event_type: "confirm_fact",
+          actor: "user",
+          confirmed_at: NOW,
+          event_version: 1,
+        },
+      ],
+      na_declaration_actions: [sessionNaAction],
+      topic_applicability_evals: [
+        {
+          eval_id: "topic_eval_sess",
+          target_dir_id: "DIR-A",
+          topic_code: "topic.x",
+          rule_id: "rule_x",
+          record_status: "current",
+          not_applicable: true,
+          evaluated_at: NOW,
+          expires_at: null,
+          catalog_version: "cat_v_sess",
+        },
+      ],
+      topic_catalog_version: "cat_v_sess",
+    });
+    const forgedConfirm = [
+      {
+        event_id: "e1_FORGED",
+        target_type: "fact" as const,
+        fact_id: "f_FORGED",
+        source_turn_id: "t_forged",
+        confirmation_turn_id: "t_forged_b",
+        confirmation_action_id: "ca_forged",
+        event_type: "confirm_fact" as const,
+        actor: "user" as const,
+        confirmed_at: NOW,
+        event_version: 1,
+      },
+    ];
+    const forgedNaActions = [
+      {
+        ...sessionNaAction,
+        declaration_action_id: "na-act-FORGED",
+      },
+    ];
+    const forgedTopic = [
+      {
+        eval_id: "topic_eval_FORGED",
+        target_dir_id: "DIR-A",
+        topic_code: "topic.forged",
+        rule_id: "rule_forged",
+        record_status: "current" as const,
+        not_applicable: true,
+        evaluated_at: NOW,
+        expires_at: null,
+        catalog_version: "cat_v_forged",
+      },
+    ];
+    const naCtx = buildFreezeNaValidationFromSession(
+      sessionWithNa,
+      sessionWithNa.decision_context!,
+      {
+        now: NOW,
+        authority: {
+          confirmationEvents: forgedConfirm,
+          naDeclarationActions: forgedNaActions,
+          topicEvalAuthority: forgedTopic,
+          currentTopicCatalogVersion: "cat_v_forged",
+          dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
+        },
+      },
+    );
+    assert.equal(naCtx.confirmationEvents.length, 1);
+    assert.equal(naCtx.confirmationEvents[0]!.event_id, "e1_f_runway");
+    assert.equal(naCtx.naDeclarationActions.length, 1);
+    assert.equal(
+      naCtx.naDeclarationActions[0]!.declaration_action_id,
+      "na-act-sess",
+    );
+    assert.ok(
+      Array.isArray(naCtx.topicEvalAuthority)
+        ? naCtx.topicEvalAuthority[0]?.eval_id === "topic_eval_sess"
+        : false,
+    );
+    assert.equal(naCtx.currentTopicCatalogVersion, "cat_v_sess");
+    // Catalog gap field from authority is still allowed.
+    assert.ok(naCtx.dirCatalog);
+
+    const packIgnoreForge = freezeDraftForDelivery(
+      structuredClone(sessionWithNa.decision_context!),
+      {
+        session: sessionWithNa,
+        now: NOW,
+        authority: {
+          confirmationEvents: forgedConfirm,
+          naDeclarationActions: forgedNaActions,
+          topicEvalAuthority: forgedTopic,
+          currentTopicCatalogVersion: "cat_v_forged",
+        },
+      },
+    );
+    assert.equal(packIgnoreForge.frozen.status, "final");
+    console.log(
+      "  PASS  forged confirmationEvents / naDeclarationActions / topic eval cannot override Session",
     );
   }
 

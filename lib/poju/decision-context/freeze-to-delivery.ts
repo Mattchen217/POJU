@@ -9,6 +9,7 @@ import {
   extractBusinessPayload,
 } from "./content-hash";
 import { freezeDecisionContext, type FreezeOptions } from "./freeze";
+import type { NaValidationContext } from "./explicit-na-validate";
 import {
   buildNaValidationContextFromSession,
   type NaValidationAuthorityOverrides,
@@ -114,6 +115,48 @@ export function assertSessionDraftBusinessSnapshotBound(
 }
 
 /**
+ * Freeze-path NaValidationContext: Session SoT for confirmation / N/A actions /
+ * topic eval rows. Caller authority may only supply catalog/CFP gap fields —
+ * never replace Session event stores.
+ */
+export function buildFreezeNaValidationFromSession(
+  session: POJUSessionState,
+  authoritative: DecisionContext,
+  opts?: { now?: string; authority?: NaValidationAuthorityOverrides },
+): NaValidationContext {
+  const raw = opts?.authority ?? {};
+  // Strip Session-owned authority keys — even if present on opts.authority.
+  const {
+    confirmationEvents: _confirmationEvents,
+    naDeclarationActions: _naDeclarationActions,
+    topicEvalAuthority: _topicEvalAuthority,
+    currentTopicCatalogVersion: _currentTopicCatalogVersion,
+    realityFacts: _realityFacts,
+    constraints: _constraints,
+    explicitNaClassifications: _explicitNaClassifications,
+    ...catalogOrCfpAuthority
+  } = raw;
+
+  const topicVersion =
+    session.topic_catalog_version != null && session.topic_catalog_version !== ""
+      ? session.topic_catalog_version
+      : undefined;
+
+  return buildNaValidationContextFromSession(session, {
+    ...catalogOrCfpAuthority,
+    nowIso: opts?.now ?? raw.nowIso,
+    realityFacts: authoritative.reality_facts,
+    constraints: authoritative.constraints,
+    explicitNaClassifications: authoritative.explicit_na_classifications,
+    // Hard Session SoT — cannot be overridden by opts.authority.
+    confirmationEvents: session.confirmation_events ?? [],
+    naDeclarationActions: session.na_declaration_actions ?? [],
+    topicEvalAuthority: session.topic_applicability_evals,
+    currentTopicCatalogVersion: topicVersion,
+  });
+}
+
+/**
  * Freeze a draft DC for delivery. Refuses purchase/CTA/stall triggers.
  * Builds NaValidationContext from Session — never emptyNaValidation().
  * Draft must match Session DC business snapshot (facts/constraints/N/A/dirs/conflicts).
@@ -127,15 +170,11 @@ export function freezeDraftForDelivery(
     draft,
   );
 
-  // Session confirmation_events / na_declaration_actions + Session DC N/A slices.
-  // Never splice a foreign draft's evidence onto Session authority.
-  const naValidation = buildNaValidationContextFromSession(opts.session, {
-    ...opts.authority,
-    nowIso: opts.now ?? opts.authority?.nowIso,
-    realityFacts: authoritative.reality_facts,
-    constraints: authoritative.constraints,
-    explicitNaClassifications: authoritative.explicit_na_classifications,
-  });
+  const naValidation = buildFreezeNaValidationFromSession(
+    opts.session,
+    authoritative,
+    { now: opts.now, authority: opts.authority },
+  );
 
   const { frozen, version_snapshot } = freezeDecisionContext(authoritative, {
     stage3_sufficiency_end: true,
