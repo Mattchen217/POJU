@@ -53,25 +53,62 @@ type UnderstandingState = {
 
 | Aspect | Spec |
 |---|---|
-| **Structure** | `{ items: UnderstoodItem[] }` where `UnderstoodItem = { dir_id; label; fact_ids; status: "known"\|"n_a"; user_confirmed_any: boolean }` |
+| **Structure** | `{ items: UnderstoodItem[] }` where `UnderstoodItem = { dir_id; label; fact_ids; status: "known"\|"n_a"; user_confirmed_any: boolean; na_evidence_ids?: string[] }` |
 | **Definition** | DIRs that are `known` or `n_a` with evidence |
 | **Source** | `DC.dirs` + contributing RealityFacts/Constraints |
 | **Update** | After DIR reaggregation |
 | **Model inference** | **Forbidden** to mark understood without DC state |
 | **vs confirmed** | `user_confirmed_any` reflects E1 on contributing facts (C1); independently_verified ⇒ `user_confirmed_any=false` |
-| **Trace** | Each item → `dir_id` + `fact_ids` |
+| **Trace** | Each item → `dir_id` + `fact_ids`; for `n_a` see §2.7 |
 
-### 2.3 `need_to_understand`
+### 2.3 `need_to_understand` (R1-05)
+
+Phase 2 allows some DDRs with **no required DIR** but with required sources. NeedItems therefore have two shapes — **never invent a DIR** to fill a source-only gap.
+
+```ts
+type NeedItem =
+  | {
+      kind: "dir_based";
+      dir_id: string;                 // required
+      ddr_ids: string[];
+      priority: "P0" | "P1" | "P2";
+      why: string;
+      may_affect_p5_ranking: boolean;
+      gap_type: "unknown" | "partial" | "conflict" | "declined";
+    }
+  | {
+      kind: "source_only";
+      dir_id?: never;                 // must be absent
+      ddr_id: string;                 // DDR that requires the source
+      source_code: string;            // e.g. cfp.birth_datetime
+      source_state: "missing" | "pending" | "calc_failed" | "not_ok";
+      priority: "P0" | "P1" | "P2";
+      why: string;
+      may_affect_p5_ranking: boolean;
+      gap_type: "source_pending";
+      user_askable: boolean;          // product: usually false for pure pack wait; true if UX can request profile/birth data
+    };
+```
 
 | Aspect | Spec |
 |---|---|
-| **Structure** | `{ items: NeedItem[] }` where `NeedItem = { dir_id; ddr_ids; priority: "P0"\|"P1"\|"P2"; why; may_affect_p5_ranking; gap_type: "unknown"\|"partial"\|"conflict"\|"declined"\|"source_pending" }` |
-| **Definition** | Open information gaps driving the next ask |
-| **Source** | Active DIRs not known/n_a; required-source misses (Phase 2 §1.3); open conflicts |
-| **Update** | After DDR compose + source check |
-| **Model inference** | May reorder presentation; **cannot** invent new DIR ids outside Blueprint |
-| **vs confirmed** | Gaps are absences/conflicts — never written as facts |
-| **Trace** | `dir_id` → catalog + live `DC.dirs`; `ddr_ids` from Phase 2 mapping |
+| **DIR-based gap** | Live `DC.dirs[dir_id]` not known/n_a (or conflict/declined); maps to Blueprint DIRs only |
+| **Required-source gap** | Phase 2 §1.3 Required Source Check failed for a DDR; may attach to DIR-based NeedItem when that DDR also has DIRs, **or** stand alone as `source_only` when DDR has empty required DIR set |
+| **Source-only → user question?** | Only if `user_askable=true` (e.g. “请补充出生时间以便计算”). If false, planner skips NL ask and surfaces supply UX / soft FAIL attribution — **no fictional DIR** |
+| **Trace** | `dir_based`: `dir_id` → catalog + `DC.dirs`; `source_only`: `ddr_id` + `source_code` + `source_state` → Phase 2 source matrix |
+| **Model** | May reorder; **cannot** invent DIR ids; cannot convert source_only → dir_based |
+
+### 2.7 N/A evidence provenance (R1-06)
+
+Align Phase 1 §3.2 and Phase 2 §1.5:
+
+| Rule | Requirement |
+|---|---|
+| Valid `n_a` | Must cite **explicit N/A evidence** (`na_evidence_ids` → RealityFact/Constraint/Event with N/A semantics, or catalog-allowed N/A marker written by code) |
+| Invalid | Claiming N/A solely because `current_state=n_a` was set without evidence |
+| Forbidden conversion | `unknown` / `declined` **must not** auto-become `n_a` or `known` |
+| Product Rule A | DDR-02 CFP required-source miss **cannot** be satisfied via N/A waiver |
+| Understood block | `status=n_a` items without `na_evidence_ids` are **builder bugs** — exclude from Gate satisfaction |
 
 ### 2.4 `personal_pattern_insight`
 

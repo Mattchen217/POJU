@@ -42,7 +42,7 @@
 
 ---
 
-## AC3-3 Design matrix (MX-01 … MX-24)
+## AC3-3 Design matrix (MX-01 … MX-33)
 
 Each case is a **design** acceptance test: docs must mandate the Then.
 
@@ -62,16 +62,25 @@ Each case is a **design** acceptance test: docs must mandate the Then.
 | MX-12 | P0 and P1/P2 gaps together | Plan | Ask P0 first | P0 ddr_ids |
 | MX-13 | P1 gap may_affect_p5_ranking true | Plan / Gate soft | Treat ranking-critical; cannot soft-pass Freeze later if open | Phase 1 §3.3 / Phase 2 |
 | MX-14 | P1 gap ranking false + boundaries | Plan / Gate | WARN-eligible path preserved; still may ask if budget | Phase 1 P1 WARN |
-| MX-15 | Hard budget exhausted; P0 open | Terminate | No fake complete; cannot PASS freeze | Budget §5.2 |
+| MX-15 | Hard budget exhausted; P0 open | Terminate | No fake complete; cannot PASS freeze; Session stays Phase-1 states only | Budget §5.2 |
 | MX-16 | Model repeats prior ask | Validation | Reject; replan | Candidate filter |
 | MX-17 | Model asks out of Blueprint | Validation | Reject; no silent scope expand | Blueprint.dir_ids |
-| MX-18 | Model invalid schema | Contract | Retry/repair once; no DC write on fail | Model Contract §4 |
-| MX-19 | Duplicate client_turn_id | Persist | Idempotent replay | Model Contract §5 |
-| MX-20 | Persist fails after LLM | Persist | No committed ask shown; retry/error | Consistency §5.4 |
+| MX-18 | Model invalid schema | Contract | Retry/repair once; no Answer Commit on fail | Model Contract §4 |
+| MX-19 | Duplicate client_turn_id | Persist | Idempotent AnswerCommitResult replay | Model Contract §5 |
+| MX-20 | Persist fails after LLM (phase B) | Persist | No AskPayload shown; answer Commit A kept; retry B | Model Contract §5.2–§5.4 |
 | MX-21 | Blueprint version changes | Lifecycle | Merge seeds; keep live DIR states | Phase 2 Blueprint |
 | MX-22 | User reality ≠ pattern insight | insight_mismatch | Hypothesis/note; ask reality DIR; no chart-as-fact | Personal Pattern block |
 | MX-23 | Profile missing / CFP calc fail | Source check | DDR-03 N/A or pending per Phase 2; DDR-02 CFP miss → pending → P0 FAIL (Rule A) | DDR-02 / DDR-03 |
-| MX-24 | All P0/P1 satisfied or n_a per Gate | Soft Gate | Enter understanding_review; no more ask | Gate Phase 1/2 |
+| MX-24 | Soft/Review Gate **PASS** (all P0/P1 OK) | Soft→Review | May enter `understanding_review`; no further ask on this path; E2 allowed after Freeze Gate PASS | Phase 1 §4.2 |
+| MX-25 | Soft/Review Gate **WARN** (P1 non-ranking + complete L + boundaries) | Soft→Review | May enter `understanding_review` with disclosures; Freeze may be conditional/`degraded`; not disguised as PASS | Phase 1 §3.3 / §4.2 |
+| MX-26 | Soft Gate **FAIL** + open P0 gaps | Soft Gate | **Stay `investigating`**; continue Question Planning (P0 first); investigating **not** terminated by FAIL alone | Phase 1 §1.3 / §1.5; Arch §3 |
+| MX-27 | Soft Gate **FAIL** + user requests review | USER_REQUEST_REVIEW | May enter `understanding_review` with honest FAIL summary; **must not** present PASS; **E2 Freeze forbidden** | Phase 1 §1.3 |
+| MX-28 | Soft budget hit; P0 still open | Budget | Continue P0-only asks until hard; disclose pressure; no fake PASS | Planning §5.2 |
+| MX-29 | DDR with required source, no required DIR | NeedItem | Emit `source_only` NeedItem; no invented DIR; ask only if `user_askable` | Understanding §2.3; Phase 2 |
+| MX-30 | DIR marked n_a without na evidence | Understood / Gate | Invalid; exclude from satisfaction; unknown/declined not auto-n_a | Understanding §2.7; Phase 1 §3.2 |
+| MX-31 | Commit A done; LLM timeout in B | Persist | DC kept; resume B; asked_count unchanged until Ask shown | Model Contract §5.4 |
+| MX-32 | Equal scores on two P1 candidates | Plan sort | Stable tie-break by dir_id / ddr_ids / candidate_id; P0>P1>P2 never overridden | Planning §2.1 |
+| MX-33 | Only P2 gaps after hard budget | Review | May enter review; P2 alone must not block report | Phase 1; Planning §5.2 |
 
 ---
 
@@ -83,20 +92,25 @@ Each case is a **design** acceptance test: docs must mandate the Then.
 | 2 | Write authority matrix present | **PASS** |
 | 3 | Answer classes ≥ required list | **PASS** |
 | 4 | CandidateQuestion fields complete | **PASS** |
-| 5 | MX-01…24 present with G/W/T | **PASS** |
+| 5 | MX-01…33 present with G/W/T | **PASS** |
 | 6 | Phase 2 Rule A referenced for MX-23 | **PASS** |
-| 7 | Deviations from Phase 1/2 | **0 intended** |
-| 8 | Runtime code changed | **No** |
+| 7 | Soft ≠ Review ≠ Freeze Gate (R1-01) | **PASS** |
+| 8 | Two-phase persist; no LLM-in-TX (R1-03) | **PASS** |
+| 9 | Deviations from Phase 1/2 | **0 intended** (OPEN product notes only) |
+| 10 | Runtime code changed | **No** |
 
 ---
 
 ## Unresolved / risks
 
 1. Exact LLM prompt text — Phase 3.2+ implementation.  
-2. Information-gain numeric scoring weights — tunable; defaults TBD in impl without changing Gate.  
+2. Information-gain numeric constants — defaults in Planning §2.1; retunable without changing Gate.  
 3. Lockout classifier owner — still Phase 8.  
 4. Runtime confirmFact status promotion — still Phase 3+ code (Phase 1 deferred).  
-5. Multi-DIR single utterance edge cases — validator heuristics need goldenset later.
+5. Multi-DIR single utterance edge cases — validator heuristics need goldenset later.  
+6. **OPEN product:** hard-budget + P0 open → stay investigating vs review-with-FAIL (no new Session state).  
+7. **OPEN product:** Commit B version drift → auto-replan once vs force client refresh.  
+8. **OPEN product:** how many UX steps for non-askable source_only gaps.
 
 ---
 

@@ -64,52 +64,98 @@ Bound what the model may see and propose, what code alone may write, and how tur
 |---|---|
 | Invalid schema | Retry once with repair prompt; else no ask / keep prior Understanding; log |
 | Out-of-scope / duplicate ask | Replan ≤2; then skip |
-| Timeout / empty LLM | Provider escape policy (lab/prod per delivery iron — design: 1 escape); do not partial-write DC |
-| Partial JSON | Discard; no DC write |
+| Timeout / empty LLM (Answer Interpretation) | No Answer Commit; provider escape 1×; user may resubmit |
+| Timeout / empty LLM (Question Generation) | Answer Commit already durable; phase B retry / template fallback; **do not roll back answer** |
+| Partial JSON | Discard that phase output; no write for that phase |
 | Model loses prior confirms | Always re-feed Understanding + confirmed fact ids; DC is SoT — UI rebuild from DC |
-| Persist fail after model success | Do not show question as committed; retry persist or error; **no** “shown but not written” |
+| Persist fail after LLM success (phase B) | Do not show AskPayload; retry persist or error; **no** “shown but not written” |
 
 ---
 
-## 5. Persistence & concurrency
+## 5. Persistence & concurrency (R1-03 · two-phase)
 
-### 5.1 Turn transaction
+**Hard ban:** one DB transaction that spans external LLM wall-clock. LLM calls happen **outside** short DB transactions.
+
+### 5.1 Phase A — Answer Commit (short TX, no LLM inside TX)
 
 ```text
-BEGIN
-  assert session not locked
-  assert DC.version == expected_version
-  assert idempotency_key unused OR return stored result
-  apply AnswerEvent writes
-  reaggregate + compose DDR
-  rebuild Understanding
-  plan + validate question (if any)
-  persist: DC, Understanding cache, Agenda audit, TurnSnapshot
-  bump DC.version / turn index
+Preconditions (outside TX OK):
+  - Optional LLM Answer Interpretation → AnswerEvent (validated in memory)
+  - If interpretation LLM fails → abort; no DC write
+
+BEGIN short TX
+  assert session not locked / not frozen
+  assert DC.version == expected_context_version
+  assert idempotency_key unused OR return stored AnswerCommitResult
+  apply AnswerEvent writes to DC
+  reaggregateDirs + compose DDR statuses
+  rebuild Understanding (derived cache)
+  Soft Gate evaluate (code)
+  persist: DC, Understanding cache, TurnSnapshot(phase=answer_commit),
+           soft_verdict, bump context_version
 COMMIT
+→ return AnswerCommitResult { context_version', soft_verdict, need_planning: bool }
 ```
 
-### 5.2 Records
+After Commit A succeeds, the **answer is durable** even if Question Planning later fails.
+
+### 5.2 Phase B — Question Planning / Delivery (LLM outside TX)
+
+```text
+Load DC @ context_version' from Commit A
+IF Soft Gate / user path → understanding_review (no ask):
+  persist ReviewTransition; return (no AskPayload)
+ELSE:
+  plan candidates (code; model hints optional, outside TX)
+  LLM Question Generation (outside TX) → NL
+  validate Question
+  BEGIN short TX
+    assert DC.version still == context_version'   // or allow only if no concurrent write
+    assert blueprint_version bind matches session
+    assert no newer AskPayload for this turn already shown
+    persist AskPayload + TurnSnapshot(phase=question_delivery)
+  COMMIT
+  ONLY THEN show AskPayload to user
+```
+
+If Commit B fails after LLM success → **retry persist** or surface error; never display unpersisted ask. If planning decides “no ask” → persist skip_reason; show review CTA per Architecture §3.
+
+### 5.3 Records
 
 | Record | Content |
 |---|---|
-| `TurnSnapshot` | client_turn_id, AnswerEvent id, before/after context_version, candidate_id, question_text?, gate_soft |
-| `IdempotencyRecord` | key → result payload |
-| Blueprint bind | blueprint_version + ddr_version on session |
+| `AnswerCommitResult` | client_turn_id, AnswerEvent id, before/after context_version, soft_verdict |
+| `AskPayload` | candidate_id, question_text, dir_id?, ddr_ids, context_version, blueprint_version |
+| `TurnSnapshot` | phases A/B markers, gate_soft, skip_reason? |
+| `IdempotencyRecord` | key → AnswerCommitResult (and optional AskPayload id) |
+| Blueprint bind | blueprint_version + ddr_version + dir_catalog_version on session |
 
-### 5.3 Concurrency
+### 5.4 Concurrency, Blueprint upgrade, recovery
 
-- Stale `context_version` → `409 conflict`; client must reload.  
-- Duplicate `client_turn_id` → return first commit result.  
-- Mid-flight Blueprint bump → new version; planners use new seed merge rules without wiping DIR states.
+**Concurrency / duplicate submit**
 
-### 5.4 Recovery
+- Stale `expected_context_version` on Commit A → `409`; client reloads DC.  
+- Duplicate `client_turn_id` / idempotency key → return first **AnswerCommitResult** (and existing AskPayload if B already done).  
+- Concurrent Commit A → one wins version bump; loser 409.  
+- Commit B sees version drift (another answer landed) → **do not** attach AskPayload to obsolete understanding; re-run Soft Gate / planning on latest DC (**OPEN product:** auto-replan once vs force client refresh).
+
+**Blueprint mid-flight upgrade**
+
+- Session binds `blueprint_version` at start of turn.  
+- If Blueprint bumps between A and B: B uses **new seed merge** (Phase 2) without wiping live `DC.dirs`.  
+- In-flight model call that referenced old Blueprint scope: discard NL if out-of-scope vs **current** bind; replan. Do not write AskPayload with obsolete scope.  
+- FreezeRecord (later) binds DC version + Blueprint + DDR catalog versions (C5) — unchanged.
+
+**Recovery matrix**
 
 | Event | Recovery |
 |---|---|
-| Crash after commit | Resume from DC + last TurnSnapshot |
-| Crash before commit | No user-visible ask commit; safe retry |
-| LLM timeout after DC write | DC kept; planning may run without new model call using templates / re-invoke once |
+| Crash before Commit A | No DC change; safe retry Answer Interpretation |
+| Crash after Commit A, before B | DC durable; `need_planning=true`; resume B without re-interpreting answer |
+| LLM timeout during B | DC kept; B retry / template; asked_count unchanged until AskPayload shown |
+| Crash after Commit B persist, before UI paint | AskPayload exists → UI may load pending ask (idempotent show) |
+| UI showed ask without Commit B | **Forbidden by protocol**; treat as bug |
+| Partial Commit A TX fail | Rollback; no half-written dirs |
 
 ---
 
@@ -117,9 +163,10 @@ COMMIT
 
 1. Understanding.context_version === DC.version used to build.  
 2. Every UnderstoodItem.fact_ids ⊆ DC.reality_facts.  
-3. NeedItem.dir_id ∈ DC.dirs and Blueprint.dir_ids (active).  
-4. Shown AskPayload.candidate_id persisted in same transaction.  
-5. No RealityFact from chart insight channel.
+3. DIR-based NeedItem.dir_id ∈ DC.dirs and Blueprint.dir_ids (active). Source-only NeedItems use `source_code` + `ddr_id` (no invented DIR).  
+4. Shown AskPayload must equal last persisted AskPayload for that turn (Commit B before show).  
+5. No RealityFact from chart insight channel.  
+6. No long-running TX enclosing LLM.
 
 ---
 

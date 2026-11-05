@@ -28,7 +28,8 @@ User message
 │  Answer Interpretation → DC Update → Understanding       │
 │  → Personal Pattern Insight (read calc)                  │
 │  → Question Planning → Generation → Validation           │
-│  → Soft Gate / readiness                                 │
+│  → Soft Gate → (plan ask | enter review)                 │
+│  Review Gate / Freeze Gate at lifecycle points           │
 └─────────────────────────────────────────────────────────┘
     │ writes (code only)          │ reads
     ▼                             ▼
@@ -56,26 +57,55 @@ User message
 
 ---
 
-## 3. Normative turn pipeline
+## 3. Normative turn pipeline (R1-01)
+
+Aligns Phase 1 State Machines §1.3 / §1.5 / §4.2. **No new Session phases.**
+
+### 3.1 Three Gate moments (must not conflate)
+
+| Gate moment | When | Role |
+|---|---|---|
+| **Soft Gate** | Each investigating turn after DC write | Advisory UX + planner input; **FAIL does not exit `investigating`** |
+| **Review Gate** | On enter `understanding_review` (and before leaving to await confirm) | Formal evaluate; disclosures for WARN; **FAIL blocks E2**, not investigating itself |
+| **Freeze Gate** | Before FreezeRecord on E2 | Re-check; **FAIL aborts freeze**; never fake PASS |
+
+### 3.2 Turn steps while `investigating`
 
 ```text
 0. Load Session + Blueprint@version + DC@version + Lockout check
 1. Answer Interpretation (user text → AnswerEvent)
-2. Decision Context Update (atomic transaction)
+2. Decision Context Update (Answer Commit — see Model Contract two-phase persist)
      → write Definition / Facts / Constraints / Hypotheses / Conflicts
      → reaggregateDirs(DC.dirs)
      → compose DDR statuses (Phase 2 §1.4–§1.5)
 3. Rebuild Understanding State (derived)
 4. Refresh Personal Pattern Insight (read-only calc)
-5. Soft Gate evaluate (advisory)
-6. If Gate FAIL hard-stop path OR ready for review → skip ask / enter understanding_review
-7. Else Question Planning → select ≤1 primary CandidateQuestion
-8. Question Generation → NL
-9. Question Validation → accept or replan (cap N)
-10. Persist turn snapshot + emit UI payload
+5. Soft Gate evaluate (advisory; record soft_verdict)
+6. Branch (Phase 1 §1.3 / §1.5):
+     a. Soft Gate PASS or WARN(+disclosures ready) AND (ready signal OR policy)
+          → emit GATE_READY_FOR_REVIEW → understanding_review
+     b. USER_REQUEST_REVIEW (soft budget or explicit)
+          → understanding_review
+            NOTE: if Soft/Review Gate is FAIL, still may show review summary,
+            but E2 Freeze remains forbidden (Phase 1: E2 requires Gate ≠ FAIL)
+     c. Else if investigable gaps remain (open NeedItems / P0 first)
+          → Question Planning → select ≤1 primary CandidateQuestion
+             Soft Gate FAIL with gaps ⇒ CONTINUE planning (do NOT terminate investigating)
+     d. Else if no candidate and hard-budget / termination policy
+          → see Question Planning §5.2 (no new Session state)
+7. Question Generation → NL (only if 6c selected a candidate)
+8. Question Validation → accept or replan (cap N)
+9. Question Delivery persist (phase B) → only then show AskPayload
 ```
 
-Understanding updates **before** deciding the next question (steps 3–4 before 7).
+Understanding updates **before** deciding the next question (steps 3–4 before 6c).
+
+### 3.3 After enter `understanding_review`
+
+1. Run **Review Gate** (formal).  
+2. Present summary (`SUMMARY_PRESENTED` → `awaiting_user_confirm`).  
+3. E2 allowed only if Freeze Gate ≠ FAIL and disclosures OK (Phase 1 §1.3).  
+4. Soft Gate FAIL earlier **never** implies Session left `investigating` solely for that reason.
 
 ---
 
@@ -109,9 +139,12 @@ Understanding updates **before** deciding the next question (steps 3–4 before 
 
 ## 6. Persistence & concurrency (summary)
 
-Full rules: see `PHASE-3-MODEL-CONTRACT.md` § persistence and `PHASE-3-QUESTION-PLANNING.md` § budget.
+Full rules: `PHASE-3-MODEL-CONTRACT.md` §5 (two-phase) and `PHASE-3-QUESTION-PLANNING.md` §5.
 
-Per turn: one **transaction** with `context_version` optimistic check; idempotency key = `(session_id, client_turn_id)`. Duplicate submit → replay prior result. Concurrent writes → reject stale version.
+- **Phase A Answer Commit** and **Phase B Ask Delivery** are separate short DB transactions.  
+- **No LLM inside a DB transaction.**  
+- Idempotency key = `(session_id, client_turn_id)`; duplicate → replay AnswerCommitResult (+ AskPayload if B done).  
+- Stale `context_version` → reject; AskPayload shown only after Commit B.
 
 ---
 
