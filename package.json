@@ -152,6 +152,7 @@
     "test:intake-r6-production-agg": "tsx scripts/test-intake-r6-production-agg.ts",
     "test:intake-r6-freeze-versioning": "tsx scripts/test-intake-r6-freeze-versioning.ts",
     "test:intake-r6-dir-catalog": "tsx scripts/test-intake-r6-dir-catalog.ts",
+    "test:intake-r6-freeze-wire-reason": "tsx scripts/test-intake-r6-freeze-wire-reason.ts",
     "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
     "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",
