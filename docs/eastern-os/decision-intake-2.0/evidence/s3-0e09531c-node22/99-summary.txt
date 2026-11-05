@@ -1,0 +1,8 @@
+﻿summary_node22
+freeze-wire-reason: 0
+dir-catalog: 0
+na-cas: 0
+resolver: 0
+tsc: 0
+freeze-versioning: 1
+node: v22.22.0

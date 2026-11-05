@@ -1,0 +1,11 @@
+﻿S3 verification raw logs (Node.js 22.x)
+commit: 0e09531c06840d373d8715426dec542c61130ebe
+parent: 9411c83f475605945874f87bb969db3ac1329ee9
+branch_tip_was: a8feda48 (evidence) / feat/s3-freeze-wire-reason-code
+detached_at: 0e09531c
+captured_at_utc: 2026-11-05T08:31:26.3990429-06:00
+host_node: v22.22.0
+host_npm: 9.5.1
+host_pnpm: 8.15.0
+node_path: C:\Program Files\nodejs\node.exe
+cwd: D:\POJU\pojulife
