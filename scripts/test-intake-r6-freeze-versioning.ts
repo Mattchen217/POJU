@@ -60,7 +60,6 @@ async function main() {
     computeUnresolvedCount,
     freezeDecisionContext,
     freezeDraftForDelivery,
-    buildFreezeNaValidationFromSession,
     FreezeError,
     naValidationBoundToDc,
     persistV2FromFinalOnSession,
@@ -1011,8 +1010,25 @@ async function main() {
     console.log(
       "  PASS  matching Freeze → version snapshot + content_hash consistent",
     );
+  }
 
-    // Session N/A authority must ignore forged opts.authority event stores.
+  // ---------- F. freezeDraftForDelivery Explicit N/A Gate (runtime) ----------
+  console.log("\n== F. Freeze Explicit N/A Gate via freezeDraftForDelivery ==");
+  {
+    const TOPIC_NA = "topic_na";
+    const TOPIC_EXPIRY = "2027-06-01T00:00:00.000Z";
+    const e1Fact = {
+      event_id: "e1_f_runway",
+      target_type: "fact" as const,
+      fact_id: "f_runway",
+      source_turn_id: "t_runway",
+      confirmation_turn_id: "t_runway_b",
+      confirmation_action_id: "ca_f_runway",
+      event_type: "confirm_fact" as const,
+      actor: "user" as const,
+      confirmed_at: NOW,
+      event_version: 1,
+    };
     const sessionNaAction = {
       declaration_action_id: "na-act-sess",
       session_id: SESS,
@@ -1025,39 +1041,32 @@ async function main() {
       declaration_turn_id: "t_na_sess",
       occurred_at: NOW,
       revoked: false,
-      expires_at: null,
+      expires_at: null as string | null,
     };
-    const sessionWithNa = sessionOf(draft, {
-      confirmation_events: [
-        {
-          event_id: "e1_f_runway",
-          target_type: "fact",
-          fact_id: "f_runway",
-          source_turn_id: "t_runway",
-          confirmation_turn_id: "t_runway_b",
-          confirmation_action_id: "ca_f_runway",
-          event_type: "confirm_fact",
-          actor: "user",
-          confirmed_at: NOW,
-          event_version: 1,
-        },
-      ],
-      na_declaration_actions: [sessionNaAction],
-      topic_applicability_evals: [
-        {
-          eval_id: "topic_eval_sess",
-          target_dir_id: "DIR-A",
-          topic_code: "topic.x",
-          rule_id: "rule_x",
-          record_status: "current",
-          not_applicable: true,
-          evaluated_at: NOW,
-          expires_at: null,
-          catalog_version: "cat_v_sess",
-        },
-      ],
-      topic_catalog_version: "cat_v_sess",
-    });
+    const classification = {
+      classification_id: "na_cls_na-act-sess",
+      context_id: CTX,
+      source_ref: sessionNaAction.source_ref,
+      dir_id: "DIR-A",
+      na_condition_code: NA_CODE,
+      authority: "user_declared" as const,
+      written_by: "code" as const,
+      declaration_action_id: "na-act-sess",
+      declaration_turn_id: "t_na_sess",
+      revoked: false,
+      expires_at: null as string | null,
+      created_at: NOW,
+    };
+    const userNaEvidence = {
+      evidence_id: "na_ev_na-act-sess",
+      target: "dir" as const,
+      dir_id: "DIR-A",
+      na_condition_code: NA_CODE,
+      evidence_type: "user_explicit_na" as const,
+      source_ref: sessionNaAction.source_ref,
+      written_by: "code" as const,
+      revoked: false,
+    };
     const forgedConfirm = [
       {
         event_id: "e1_FORGED",
@@ -1076,68 +1085,239 @@ async function main() {
       {
         ...sessionNaAction,
         declaration_action_id: "na-act-FORGED",
+        declaration_turn_id: "t_na_forged",
       },
     ];
-    const forgedTopic = [
-      {
-        eval_id: "topic_eval_FORGED",
-        target_dir_id: "DIR-A",
-        topic_code: "topic.forged",
-        rule_id: "rule_forged",
-        record_status: "current" as const,
-        not_applicable: true,
-        evaluated_at: NOW,
-        expires_at: null,
-        catalog_version: "cat_v_forged",
-      },
-    ];
-    const naCtx = buildFreezeNaValidationFromSession(
-      sessionWithNa,
-      sessionWithNa.decision_context!,
-      {
+
+    // F1: Session has live action+E1; forge has wrong events → Freeze still applies N/A.
+    {
+      const base = makeSufficientDraft();
+      const dc = {
+        ...base,
+        explicit_na_evidence: [userNaEvidence],
+        explicit_na_classifications: [classification],
+      };
+      // Pre-aggregate without N/A authority → known from facts; Freeze will re-agg with Session N/A.
+      assert.equal(dc.dirs[0]!.current_state, "known");
+      const sess = sessionOf(dc, {
+        confirmation_events: [e1Fact],
+        na_declaration_actions: [sessionNaAction],
+      });
+      const pack = freezeDraftForDelivery(structuredClone(dc), {
+        session: sess,
         now: NOW,
         authority: {
           confirmationEvents: forgedConfirm,
           naDeclarationActions: forgedNaActions,
-          topicEvalAuthority: forgedTopic,
-          currentTopicCatalogVersion: "cat_v_forged",
           dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
         },
-      },
-    );
-    assert.equal(naCtx.confirmationEvents.length, 1);
-    assert.equal(naCtx.confirmationEvents[0]!.event_id, "e1_f_runway");
-    assert.equal(naCtx.naDeclarationActions.length, 1);
-    assert.equal(
-      naCtx.naDeclarationActions[0]!.declaration_action_id,
-      "na-act-sess",
-    );
-    assert.ok(
-      Array.isArray(naCtx.topicEvalAuthority)
-        ? naCtx.topicEvalAuthority[0]?.eval_id === "topic_eval_sess"
-        : false,
-    );
-    assert.equal(naCtx.currentTopicCatalogVersion, "cat_v_sess");
-    // Catalog gap field from authority is still allowed.
-    assert.ok(naCtx.dirCatalog);
+      });
+      assert.equal(pack.frozen.status, "final");
+      assert.equal(
+        pack.frozen.dirs[0]!.current_state,
+        "n_a",
+        "Session events must authorize Explicit N/A during Freeze reaggregation",
+      );
+      console.log(
+        "  PASS  F1 Session N/A + forged authority → Freeze DIR n_a (Gate used Session)",
+      );
+    }
 
-    const packIgnoreForge = freezeDraftForDelivery(
-      structuredClone(sessionWithNa.decision_context!),
-      {
-        session: sessionWithNa,
+    // F2 reverse: Session lacks declaration; forge supplies the matching action → must NOT n_a.
+    {
+      const base = makeSufficientDraft();
+      const dc = {
+        ...base,
+        explicit_na_evidence: [userNaEvidence],
+        explicit_na_classifications: [classification],
+      };
+      const sess = sessionOf(dc, {
+        confirmation_events: [e1Fact],
+        // No live declaration matching classification.declaration_action_id.
+        na_declaration_actions: [],
+      });
+      const pack = freezeDraftForDelivery(structuredClone(dc), {
+        session: sess,
         now: NOW,
         authority: {
+          // If Freeze wrongly trusted authority, this would authorize N/A → n_a.
           confirmationEvents: forgedConfirm,
-          naDeclarationActions: forgedNaActions,
-          topicEvalAuthority: forgedTopic,
-          currentTopicCatalogVersion: "cat_v_forged",
+          naDeclarationActions: [sessionNaAction],
+          dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
         },
-      },
-    );
-    assert.equal(packIgnoreForge.frozen.status, "final");
-    console.log(
-      "  PASS  forged confirmationEvents / naDeclarationActions / topic eval cannot override Session",
-    );
+      });
+      assert.equal(pack.frozen.status, "final");
+      assert.equal(
+        pack.frozen.dirs[0]!.current_state,
+        "known",
+        "forged naDeclarationActions must not authorize Explicit N/A",
+      );
+      assert.notEqual(pack.frozen.dirs[0]!.current_state, "n_a");
+      console.log(
+        "  PASS  F2 reverse: Session missing action + forged matching action → still known (no N/A)",
+      );
+    }
+
+    // F3 Topic: Session topic eval authorizes; forged topic eval ignored → n_a.
+    {
+      const topicEvidence = {
+        evidence_id: "na_ev_topic_sess",
+        target: "dir" as const,
+        dir_id: "DIR-A",
+        na_condition_code: TOPIC_NA,
+        evidence_type: "system_na_marker" as const,
+        system_basis: {
+          kind: "topic_not_applicable" as const,
+          topic_code: "topic.x",
+          rule_id: "rule_x",
+        },
+        written_by: "code" as const,
+        revoked: false,
+      };
+      const topicRule = {
+        rule_id: "rule_x",
+        topic_code: "topic.x",
+        target_dir_id: "DIR-A",
+        evaluation: {
+          eval_id: "topic_eval_sess",
+          evaluated_at: NOW,
+          status: "current" as const,
+          not_applicable: true,
+          expires_at: TOPIC_EXPIRY,
+          catalog_version: "cat_v_sess",
+        },
+      };
+      const sessionTopicEval = {
+        eval_id: "topic_eval_sess",
+        rule_id: "rule_x",
+        topic_code: "topic.x",
+        target_dir_id: "DIR-A",
+        catalog_version: "cat_v_sess",
+        not_applicable: true,
+        evaluated_at: NOW,
+        expires_at: TOPIC_EXPIRY,
+        record_status: "current" as const,
+      };
+      const forgedTopicEval = {
+        eval_id: "topic_eval_FORGED",
+        rule_id: "rule_x",
+        topic_code: "topic.x",
+        target_dir_id: "DIR-A",
+        catalog_version: "cat_v_forged",
+        not_applicable: true,
+        evaluated_at: NOW,
+        expires_at: TOPIC_EXPIRY,
+        record_status: "current" as const,
+      };
+      const base = makeSufficientDraft();
+      const dc = {
+        ...base,
+        explicit_na_evidence: [topicEvidence],
+        explicit_na_classifications: [],
+      };
+      const sess = sessionOf(dc, {
+        confirmation_events: [e1Fact],
+        topic_applicability_evals: [sessionTopicEval],
+        topic_catalog_version: "cat_v_sess",
+      });
+      const pack = freezeDraftForDelivery(structuredClone(dc), {
+        session: sess,
+        now: NOW,
+        authority: {
+          topicEvalAuthority: [forgedTopicEval],
+          currentTopicCatalogVersion: "cat_v_forged",
+          dirCatalog: [
+            { dir_id: "DIR-A", na_conditions: [NA_CODE, TOPIC_NA] },
+          ],
+          topicRules: [topicRule],
+        },
+      });
+      assert.equal(pack.frozen.status, "final");
+      assert.equal(
+        pack.frozen.dirs[0]!.current_state,
+        "n_a",
+        "Session topic eval must authorize topic N/A during Freeze",
+      );
+      console.log(
+        "  PASS  F3 Topic: Session eval + forged topic authority → Freeze DIR n_a",
+      );
+    }
+
+    // F4 Topic reverse: Session missing matching eval; forge supplies it → must NOT n_a.
+    {
+      const topicEvidence = {
+        evidence_id: "na_ev_topic_rev",
+        target: "dir" as const,
+        dir_id: "DIR-A",
+        na_condition_code: TOPIC_NA,
+        evidence_type: "system_na_marker" as const,
+        system_basis: {
+          kind: "topic_not_applicable" as const,
+          topic_code: "topic.x",
+          rule_id: "rule_x",
+        },
+        written_by: "code" as const,
+        revoked: false,
+      };
+      const topicRule = {
+        rule_id: "rule_x",
+        topic_code: "topic.x",
+        target_dir_id: "DIR-A",
+        evaluation: {
+          eval_id: "topic_eval_needed",
+          evaluated_at: NOW,
+          status: "current" as const,
+          not_applicable: true,
+          expires_at: TOPIC_EXPIRY,
+          catalog_version: "cat_v_sess",
+        },
+      };
+      const forgedMatchingEval = {
+        eval_id: "topic_eval_needed",
+        rule_id: "rule_x",
+        topic_code: "topic.x",
+        target_dir_id: "DIR-A",
+        catalog_version: "cat_v_sess",
+        not_applicable: true,
+        evaluated_at: NOW,
+        expires_at: TOPIC_EXPIRY,
+        record_status: "current" as const,
+      };
+      const base = makeSufficientDraft();
+      const dc = {
+        ...base,
+        explicit_na_evidence: [topicEvidence],
+        explicit_na_classifications: [],
+      };
+      const sess = sessionOf(dc, {
+        confirmation_events: [e1Fact],
+        // Session has no matching eval_id — only forge does.
+        topic_applicability_evals: [],
+        topic_catalog_version: "cat_v_sess",
+      });
+      const pack = freezeDraftForDelivery(structuredClone(dc), {
+        session: sess,
+        now: NOW,
+        authority: {
+          topicEvalAuthority: [forgedMatchingEval],
+          currentTopicCatalogVersion: "cat_v_sess",
+          dirCatalog: [
+            { dir_id: "DIR-A", na_conditions: [NA_CODE, TOPIC_NA] },
+          ],
+          topicRules: [topicRule],
+        },
+      });
+      assert.equal(pack.frozen.status, "final");
+      assert.equal(
+        pack.frozen.dirs[0]!.current_state,
+        "known",
+        "forged topicEvalAuthority must not authorize topic N/A",
+      );
+      assert.notEqual(pack.frozen.dirs[0]!.current_state, "n_a");
+      console.log(
+        "  PASS  F4 Topic reverse: Session missing eval + forged matching eval → still known",
+      );
+    }
   }
 
   console.log("\nAll intake-r6-freeze-versioning checks passed.");
