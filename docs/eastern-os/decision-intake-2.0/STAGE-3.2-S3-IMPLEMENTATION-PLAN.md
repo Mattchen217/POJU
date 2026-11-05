@@ -5,7 +5,8 @@
 | Field | Value |
 |---|---|
 | **Document status** | PLAN ONLY — no production/test implementation authorized by this document |
-| **Revision** | **1.1** (resolves plan review R1–R4 against `ce520987`) |
+| **Revision** | **1.2** (resolves evidence-classification findings R1–R4 against `dfcd9122`) |
+| **Rev 1.1 plan commit** | `dfcd9122254dea500475527a7847afd6572c94c9` |
 | **Rev 1.0 plan commit** | `ce520987e928cc7fc7ea10313db8666f90661828` |
 | **Authoritative design** | [`STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md`](./STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md) **Revision 1.3** §5.2, §7 (DC-4/5/6 wire), §10.1, §10.3 **S3 row** |
 | **S2 accepted baseline** | `9411c83f475605945874f87bb969db3ac1329ee9` |
@@ -13,14 +14,12 @@
 | **Proposed implement branch** | `feat/s3-freeze-wire-reason-code` (from S2 tip above) |
 | **S3 implement** | **NOT AUTHORIZED** until independent plan review PASS + separate written implement auth |
 
-### Revision 1.1 — review resolutions
+### Revision history — review resolutions
 
-| Review | Resolution (locked below) |
-|---|---|
-| **R1** catch-path test strategy | §6.2 Tier B — export thin `freezeFailWireResult(session, e)`; unit-test with **constructed** `FreezeError` / plain `Error` (not Registry); catch body must only call that helper (code-review gate) |
-| **R2** persist + propagation | §6.2 Tier B — export `persistFailWireResult(session, commitError?)`; unit-test shape; propagation = `ensure` returns apply fail unchanged + optional ensure-driven plain-Error fail |
-| **R3** consumer/type audit | §2.3 + §7 — complete inventory; no consumer Diff required in S3 |
-| **R4** evidence separation | §6.0 — Tier A unit / Tier B production-path / Tier C regression labeled distinctly |
+| Rev | Against | Resolutions |
+|---|---|---|
+| **1.1** | `ce520987` | Catch/persist helpers; consumer audit; Tier A/B/C introduced |
+| **1.2** | `dfcd9122` | **R1** separate helper unit / actual catch execution / code-review; **R2** actual `ensure*` apply-propagation + persist-fail execution (or explicit untested); **R3** keep consumer audit + implement-time re-search + tsc; **R4** Tier B = only behavior actually executed on production functions |
 
 ---
 
@@ -70,7 +69,7 @@ ensureSessionFrozenForDelivery                   // ~L180–250
 | Generic `FreezeError` (CTA/stall/sufficiency/…) | usually **no** `.code` | Wire cannot classify vs catalog |
 | `ensureSessionFrozenForDelivery` persist fail L239–243 | `reason: commit.error ?? "dc_freeze_persist_failed"` | No structured `reason_code`; luckily default string is already a token |
 
-### 2.3 Complete `FreezeWireResult` consumer / type audit (R3)
+### 2.3 Complete `FreezeWireResult` consumer / type audit (R3 — preserved)
 
 **Type definition (sole constructor site today):**  
 `lib/poju/decision-context/production-freeze-wire.ts` — `FreezeWireResult` discriminated union; `ok: false` = `{ reason: string; session }` only.  
@@ -93,15 +92,15 @@ ensureSessionFrozenForDelivery                   // ~L180–250
 | `lib/poju/phases/segment2/control.ts` ~L1452–1473 | `ensureSessionFrozenForDelivery` | `ok`, `reason`, `session` | `freeze.ok` then `!freeze.ok && draft` | Yes — same throw | No | **No** |
 | `lib/llm/pro/delivery/lab/pipeline-jobs.ts` ~L1184–1215 | `applySufficiencyFreezeToSession` | `ok`, `skipped`, `pack`, `binding`, `reason`, `session` | `freeze.ok` / `else if draft` | Yes — same throw | No | **No** |
 
-**HTTP / API:** None of the above serialize `FreezeWireResult` as JSON response. Failures become thrown `Error` with prefix `DC_FREEZE_FAILED:` + **`freeze.reason`**. No API DTO contract change in S3.
+**HTTP / API:** None of the above serialize `FreezeWireResult` as JSON response. Failures become thrown `Error` with prefix `DC_FREEZE_FAILED:` + **`freeze.reason`**. No API DTO contract change in S3. **No consumer changes are authorized by this plan.**
 
 #### 2.3.3 Scripts / harness consumers
 
 | File | Call site | Fields read | S3 Diff required? |
 |---|---|---|---|
-| `scripts/s8-freeze-and-thesis.ts` ~L78–84 | `applySufficiencyFreezeToSession` | `ok`, `skipped`, `reason` (log only) | **No** — logging gains optional new field in JSON dumps if stringify full object elsewhere; current log does not require `reason_code` |
-| `scripts/test-s5-freeze-s6-observation.ts` ~L158–188 | `applySufficiencyFreezeToSession` | Asserts `ok: true` success / skip only | **No** — never asserts fail branch |
-| `scripts/test-intake-r6-freeze-versioning.ts` ~L659+, ~L997 | `ensureSessionFrozenForDelivery` / `applySufficiencyFreezeToSession` | Expects success or skip; `JSON.stringify(freeze)` on unexpected fail | **No** required for S3 green path; stringify will include `reason_code` after S3 (harmless). Suite remains staged RED at F1 until S5 (disclose, not “fix”) |
+| `scripts/s8-freeze-and-thesis.ts` ~L78–84 | `applySufficiencyFreezeToSession` | `ok`, `skipped`, `reason` (log only) | **No** |
+| `scripts/test-s5-freeze-s6-observation.ts` ~L158–188 | `applySufficiencyFreezeToSession` | Asserts `ok: true` success / skip only | **No** |
+| `scripts/test-intake-r6-freeze-versioning.ts` ~L659+, ~L997 | `ensureSessionFrozenForDelivery` / `applySufficiencyFreezeToSession` | Expects success or skip; `JSON.stringify(freeze)` on unexpected fail | **No** required; suite remains staged RED at F1 until S5 (disclose) |
 
 #### 2.3.4 TypeScript compatibility verdict
 
@@ -111,11 +110,19 @@ ensureSessionFrozenForDelivery                   // ~L180–250
 | Consumers that only read `.reason` after `!ok` | Compile + runtime OK. |
 | Skip arm `reason: FreezeWireSkipReason` | Unrelated field; **must not** add `reason_code` on `ok: true`. |
 | Exhaustive switches on skip `reason` | Unaffected. |
-| Discriminated access `freeze.reason` when `ok` | TypeScript already requires narrowing (`ok && skipped` vs `!ok`); S3 must keep fail `reason` so existing access remains typed. |
-| Barrel re-export | Automatic; no index change needed unless implement chooses not to export helpers (helpers **should** be exported for Tier A/B tests — §5.1). |
-| Downstream optional adoption of `reason_code` | **Out of S3 Diff**; recommended later for consumers that throw `DC_FREEZE_FAILED`. |
+| Discriminated access `freeze.reason` when `ok` | TypeScript already requires narrowing; S3 must keep fail `reason`. |
+| Barrel re-export | Helpers exported from same module; index star-export picks them up. |
+| Downstream optional adoption of `reason_code` | **Out of S3 Diff**. |
 
-**Skip path (`ok: true, skipped: true`)** uses `reason: FreezeWireSkipReason` — **unchanged by S3**; do not conflate with `ok: false` `reason_code`.
+#### 2.3.5 Implement-time re-audit (R3 — mandatory when implement authorized)
+
+Before ACCEPT, implement must:
+
+1. Re-run repository-wide search for `FreezeWireResult` construction sites and consumers (not rely solely on this plan’s inventory).
+2. Confirm still **no** consumer Diff and **no** unauthorized construction sites outside `production-freeze-wire.ts`.
+3. Run `pnpm exec tsc --noEmit` (Tier C).
+
+**Skip path (`ok: true, skipped: true`)** uses `reason: FreezeWireSkipReason` — **unchanged by S3**.
 
 ### 2.4 S2 already provides (do not redo)
 
@@ -146,8 +153,9 @@ flowchart TD
   load["loadDirNaCatalog ACTIVE"] -->|!ok| fe["FreezeError.code = loader reason_code"]
   gate["Generic FreezeError / plain Error"] --> map
   fe --> map["mapCaughtFreezeFailure"]
-  map --> failHelper["freezeFailWireResult session + mapped"]
-  failHelper --> wire["ok:false reason + reason_code"]
+  map --> failHelper["freezeFailWireResult"]
+  failHelper --> catchRet["apply catch return"]
+  catchRet --> wire["ok:false reason + reason_code"]
   persistFail["!commit.committed"] --> persistHelper["persistFailWireResult"]
   persistHelper --> wireP["ok:false reason_code=dc_freeze_persist_failed"]
   applyFail["applied.ok false"] --> ensurePass["ensure returns applied unchanged"]
@@ -216,7 +224,7 @@ function persistFailWireResult(
 |---|---|---|
 | `FreezeError` with **no** `.code` | `freeze_failed` | Keep `e.message` (compat for `DC_FREEZE_FAILED:${reason}`) |
 | `FreezeError` with `.code` **not** in allowlist | `freeze_failed` | Keep message; **do not** pass unknown code through as public `reason_code` |
-| Non-`FreezeError` `Error` (e.g. snapshot mismatch) | `freeze_failed` | Keep `e.message` |
+| Non-`FreezeError` `Error` (e.g. snapshot mismatch / missing `session_id`) | `freeze_failed` | Keep `e.message` |
 | Non-Error throw | `freeze_failed` | `String(e)` |
 
 **Forbidden:** `reason_code = e.message`; exposing arbitrary internal strings as codes.
@@ -242,18 +250,19 @@ function persistFailWireResult(
 | Consumer expectation | S3 rule |
 |---|---|
 | `freeze.ok` / `freeze.skipped` | Unchanged |
-| `freeze.reason` on fail | **Remain present**; for catalog failures set `reason === reason_code` (stable token, same as today’s message for S2 catalog throws) |
-| `DC_FREEZE_FAILED:${freeze.reason}` | Continues to work; catalog cases get token after colon instead of prose |
+| `freeze.reason` on fail | **Remain present**; for catalog failures set `reason === reason_code` |
+| `DC_FREEZE_FAILED:${freeze.reason}` | Continues to work |
 | Skip `reason` union | Unchanged |
 | New field | Add **`reason_code: string`** on `ok: false` only (required) |
 
-**API response contracts:** No separate Freeze DTO in HTTP layer (§2.3). **Out of S3:** changing `DC_FREEZE_FAILED` prefix or adding a new HTTP error body. Optional follow-up (separate auth): consumers prefer `freeze.reason_code` when present — **not** required in S3 Diff.
+**API response contracts:** No separate Freeze DTO in HTTP layer (§2.3). **Out of S3:** changing `DC_FREEZE_FAILED` prefix or consumer Diff.
 
 ### 4.8 Explicit non-assumptions
 
 - Not every `Error.message` is a stable code.
 - S3 does **not** claim runtime fault-injection of S2 `!load.ok` inside production loader.
 - S3 does **not** claim wire `reason_code` ≡ “catalog load was runtime-faulted in CI.”
+- Direct helper unit tests do **not** prove enclosing production catch/persist branches executed.
 
 ---
 
@@ -270,33 +279,45 @@ function persistFailWireResult(
 - `freeze.ts` / `freeze-to-delivery.ts` / `catalog/**` / `na-declaration.ts`
 - Sufficiency Gate, Schema, C5, Versioning, CFP/Topic, S4/S5 work
 - Consumer files in §2.3.2–2.3.3 — **no required change**
+- Adding `writeCore` (or other) inject parameters to `ensureSessionFrozenForDelivery` solely for tests — **forbidden** (expands production surface)
 
 ### 5.3 Tests allowlist (when implement authorized)
 
 | Path | Role |
 |---|---|
-| **Preferred:** new `scripts/test-intake-r6-freeze-wire-reason.ts` + `package.json` script | Tier A + Tier B only; keep labels in PASS lines |
-| Optional: extend `scripts/test-intake-r6-dir-catalog.ts` | Only if implement prefers single script — still must label tiers |
+| **Preferred:** new `scripts/test-intake-r6-freeze-wire-reason.ts` + `package.json` script | Tier A helpers + Tier B production-function execution; labeled PASS lines |
+| May reuse fixtures/patterns from | `scripts/test-intake-r6-freeze-versioning.ts` (IDB reset, sufficient draft seed, CAS), `scripts/test-s5-freeze-s6-observation.ts` (skip/success) |
 
 ---
 
-## 6. Test matrix and evidence tiers (R4)
+## 6. Test matrix and evidence tiers (R4 — Rev 1.2)
 
-### 6.0 Evidence separation (locked)
+### 6.0 Evidence classification (locked)
 
-| Tier | Name | What it proves | What it must **not** claim |
+Three **independent** evidence kinds. Do not conflate them.
+
+| Kind | Label | Counts as proof of… | Does **not** count as… |
 |---|---|---|---|
-| **A — Unit** | Pure mapping + Wire fail builders | `mapCaughtFreezeFailure` table; `freezeFailWireResult` / `persistFailWireResult` object shape from constructed inputs | Production Registry load fail; S2 compose `!load.ok` runtime; live Session C1 CAS |
-| **B — Production-path** | Catch / ensure wiring without Registry | Catch body uses `freezeFailWireResult` (code-review + builder tests); `ensure` pass-through of apply fail; persist builder distinct from catalog | “ACTIVE catalog load was fault-injected”; S2 branch runtime coverage |
-| **C — Regression** | Existing green suites + tsc | S0–S2 / na-cas / resolver still PASS; typecheck | Fixing freeze-versioning F1; S4/S5 |
+| **Helper unit** | `[Tier A]` | Mapper / `freezeFailWireResult` / `persistFailWireResult` behavior on constructed inputs | Execution of `applySufficiencyFreezeToSession` catch or `ensureSessionFrozenForDelivery` persist branch |
+| **Production-function execution** | `[Tier B]` | Actual call of `applySufficiencyFreezeToSession` / `ensureSessionFrozenForDelivery` that enters the branch under test | Helper-only calls; static review |
+| **Static code-review** | `[Code-review]` | Catch/persist bodies are thin `return *FailWireResult(...)`; ensure pass-through unchanged | Runtime execution of those branches |
+| **Regression** | `[Tier C]` | Existing suites + tsc + consumer re-search | New Wire mapping correctness |
 
-Implement reports **must** print distinct PASS labels, e.g.:
+**Hard rule (R4):** Tier B PASS lines may be printed **only** when the named production function was invoked and the target branch ran. Helper unit tests stay `[Tier A]`. Code-review stays `[Code-review]` — **never** relabeled as Tier B.
 
-- `PASS  [Tier A] mapCaughtFreezeFailure …`
-- `PASS  [Tier B] freezeFailWireResult catalog codes …`
+Implement reports **must** use labels like:
+
+- `PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_load_failed`
+- `PASS  [Tier A] freezeFailWireResult constructed FreezeError …` *(helper — not catch execution)*
+- `PASS  [Tier B] applySufficiencyFreezeToSession catch → freeze_failed`
+- `PASS  [Tier B] ensureSessionFrozenForDelivery apply-fail propagation`
+- `PASS  [Tier B] ensureSessionFrozenForDelivery persist-fail → dc_freeze_persist_failed` **or** `UNTESTED  [production-path] ensure persist-fail …`
+- `PASS  [Code-review] catch body === freezeFailWireResult only`
 - `PASS  [Tier C] tsc --noEmit`
 
-### 6.1 Tier A — Pure mapping (`mapCaughtFreezeFailure`)
+### 6.1 Tier A — Helper unit tests
+
+#### 6.1.1 `mapCaughtFreezeFailure`
 
 | Case | Input | Expected `reason_code` | Expected `reason` |
 |---|---|---|---|
@@ -306,69 +327,114 @@ Implement reports **must** print distinct PASS labels, e.g.:
 | Plain `Error` | `new Error("freezeDraftForDelivery: …")` | `freeze_failed` | message preserved |
 | Non-Error | `"boom"` | `freeze_failed` | `"boom"` |
 
-**Label:** `[Tier A] pure Wire mapping` — **not** production Registry failure integration; **not** S2 load-branch runtime coverage.
+#### 6.1.2 `freezeFailWireResult` / `persistFailWireResult` (helpers only)
 
-### 6.2 Tier B — Catch path (R1) and persist / propagation (R2)
+| Case | Assert |
+|---|---|
+| Constructed catalog `FreezeError` → `freezeFailWireResult` | `ok:false`, `reason_code` 1:1, session identity |
+| Constructed unknown/missing/plain/non-Error → `freezeFailWireResult` | `reason_code === "freeze_failed"` |
+| `persistFailWireResult(session, "cas boom")` | `reason_code === "dc_freeze_persist_failed"`, `reason` carries error text |
+| `persistFailWireResult(session, null)` | `reason_code` and `reason` === `"dc_freeze_persist_failed"` |
+| Distinctness | persist `reason_code` ≠ any `dir_catalog_*` and ≠ accidental sole reliance on `freeze_failed` |
 
-#### R1 — Production catch-path strategy (resolved)
+**Label:** `[Tier A]` — **forbidden** to claim these prove catch/persist production branches ran.
 
-**Problem with Rev 1.0:** Catch coverage was ambiguous (code-review vs optional smoke vs forbidden DI).
+### 6.2 Code-review gates (not Tier B)
 
-**Locked strategy:**
+Required for ACCEPT; report as `[Code-review]`:
 
-1. **Export** `freezeFailWireResult(session, e)` that calls `mapCaughtFreezeFailure` and returns full `ok: false` Wire object.
-2. **Production catch** must be exactly: `return freezeFailWireResult(session, e);` (code-review acceptance gate — no inline remapping).
-3. **Tier B tests** call `freezeFailWireResult` directly with:
-   - constructed `new FreezeError(code, { code })` for **each allowlisted catalog code**;
-   - constructed unknown / missing code / plain `Error` / non-Error.
-4. Assert returned object: `ok === false`, `reason_code`, `reason`, `session` identity.
-5. **Forbidden:** production Registry injection; test-only override of `loadDirNaCatalog` / `freezeDraftForDelivery` seams; claiming this equals S2 `!load.ok` runtime coverage.
+1. `applySufficiencyFreezeToSession` catch body is exactly `return freezeFailWireResult(session, e);` (no inline remapping).
+2. `ensureSessionFrozenForDelivery` persist fail is exactly `return persistFailWireResult(session, commit.error);`.
+3. On `!applied.ok`, ensure **returns `applied` unchanged** (no rebuild that drops `reason_code`).
+4. Catalog-coded throws through `apply*` catch remain **runtime-untested** without Registry (S2 policy preserved); coverage for those codes is Tier A mapping + this review that catch uses the helper.
 
-**Why this is production-path, not “fake unit-only”:** The tested function is the **same exported production assembly** the catch invokes; inputs are synthetic errors of the same types compose already throws — without needing to execute the loader fail branch.
+### 6.3 Tier B — Production-function execution (R1 / R2 corrected)
 
-**Optional supplement (not required for S3 ACCEPT):** If a fixture can drive `applySufficiencyFreezeToSession` into catch via plain `Error` (e.g. intentional snapshot mismatch) without Registry, assert `reason_code === "freeze_failed"`. Catalog-coded catch through `apply*` remains **out of runtime claim**.
+#### 6.3.1 R1 — Actual catch path of `applySufficiencyFreezeToSession`
 
-#### R2 — Persistence and propagation strategy (resolved)
+**Rev 1.1 error:** Calling `freezeFailWireResult` directly was mislabeled as production catch-path evidence.
 
-**Persist failure:**
+**Rev 1.2 locked:**
 
-1. **Export** `persistFailWireResult(session, commitError?)`.
-2. Persist branch: `return persistFailWireResult(session, commit.error)`.
-3. **Tier B tests** on the helper:
-   - `reason_code === "dc_freeze_persist_failed"` always;
-   - `reason === commitError` when provided, else `"dc_freeze_persist_failed"`;
-   - `reason_code` ≠ any `dir_catalog_*` and ≠ confusing collapse into `freeze_failed`.
-4. **Not required for S3:** live `casWrite` fail harness (freeze-versioning has CAS patterns, but wiring that is optional / out of min Diff). If added later, label `[Tier B] ensure persist fail harness` separately — still not S4/S5.
+| Evidence | Method | Claim allowed? |
+|---|---|---|
+| Helper unit | `freezeFailWireResult(...)` | Tier A only |
+| Code-review | catch → helper | `[Code-review]` only |
+| **Required Tier B** | Invoke **`applySufficiencyFreezeToSession(session)`** such that `freezeDraftForDelivery` throws and the **catch branch returns** | Yes — this is catch-path execution |
 
-**Apply-fail propagation through `ensureSessionFrozenForDelivery`:**
+**Preferred executable fixture (no Registry, no S2 change, no test-only production seams):**
 
-1. Production: keep `if (!applied.ok || applied.skipped) return applied;` — no remap.
-2. **Tier B evidence (required, no Registry):**
-   - **Code-review gate:** ensure does not strip/rebuild `reason_code` on apply fail.
-   - **Executable:** call `freezeFailWireResult` to build a fail object; assert shape; document that ensure returns `applied` by identity when `!applied.ok` (thin control-flow — may be verified by exporting nothing extra if catch assembly + code review suffice).
-   - **Preferred executable strengthen (still no Registry):** if implement can invoke `ensureSessionFrozenForDelivery` with a session that causes apply catch via **plain Error** (snapshot), assert returned `reason_code === "freeze_failed"` — proves ensure does not replace apply fail with persist codes.
-3. **Distinctness assert:** persist helper `reason_code` ≠ apply/catalog codes under same test file.
+- Build a **sufficient** draft (reuse freeze-versioning / s5 sufficient-draft patterns) so `canFreezeSessionOnSufficiency` returns `allowed: true`.
+- Put it on a session whose `session_id` is missing/empty (or otherwise trip `assertSessionDraftBusinessSnapshotBound` / bind failure with a plain `Error` **without** mutating Catalog/loader).
+- Call `applySufficiencyFreezeToSession(session)`.
+- Assert: `ok === false`, `reason_code === "freeze_failed"`, `reason` preserves the thrown message, session returned is the input session.
 
-**Skip unchanged (Tier B):** eligibility fail → `ok: true, skipped, reason ∈ FreezeWireSkipReason`; **no** `reason_code` on skip arm (type-level).
+**Why this hits the real catch:** Eligibility passes; `freezeDraftForDelivery` throws plain `Error` (e.g. `freezeDraftForDelivery: session.session_id required`); catch runs.
 
-### 6.3 Tier C — Compatibility / regression
+**Still untested (explicit):** Catalog-coded `FreezeError` (`dir_catalog_*`) entering that same catch via ACTIVE loader failure — **UNTESTED production-function-path** (no Registry). Covered by Tier A + Code-review only. Do not claim otherwise.
+
+#### 6.3.2 R2 — `ensureSessionFrozenForDelivery` propagation and persist
+
+##### (1) Apply-failure propagation — **required Tier B**
+
+- Use the **same** catch-inducing session as §6.3.1 (sufficient draft, empty/`invalid` for bind so apply catch fires).
+- Call **`ensureSessionFrozenForDelivery(session, { trigger: "pre_delivery_safety", … })`**.
+- Assert: `ok === false`, `reason_code === "freeze_failed"` (same class as apply fail — **not** `dc_freeze_persist_failed`), proving ensure did not remap apply failure into persist codes.
+
+##### (2)–(3) Persistence-failure branch — **Tier B if feasible; else explicit UNTESTED**
+
+Target branch today:
+
+```
+if (!commit.committed) {
+  return { ok: false, reason: commit.error ?? "dc_freeze_persist_failed", session };
+}
+```
+
+After S3: `return persistFailWireResult(session, commit.error)`.
+
+**Constraint:** `ensureSessionFrozenForDelivery` does **not** expose `writeCore` / CAS inject. Adding such a parameter for tests is **out of S3** (production-surface expansion).
+
+**Feasibility order (implement must try in order; report which landed):**
+
+| Attempt | Approach | Tier B if succeeds |
+|---|---|---|
+| A | Reuse existing IDB fixtures (`__resetPojuDbForTests`, `createPOJUSession`, seed sufficient draft as in freeze-versioning §C). After in-memory freeze would succeed, force **core write failure** via existing CAS/IDB behavior (e.g. delete/absent row so `savePOJUSessionCore` → CAS throws → `commit.committed === false`) **without** new production APIs | `ok:false`, **`reason_code === "dc_freeze_persist_failed"`**, `reason` may carry underlying error; ≠ `dir_catalog_*` / not remapped to sole `freeze_failed` |
+| B | Any other **existing** test harness hook already used by freeze-versioning/CAS suites that can make `commitDecisionContextChange` return `!committed` while still calling **production** `ensureSessionFrozenForDelivery` unchanged | Same asserts |
+| C | If A/B genuinely fail without expanding production surface | Report `UNTESTED  [production-path] ensureSessionFrozenForDelivery persist-fail branch` + rely on `[Tier A] persistFailWireResult` + `[Code-review] return persistFailWireResult(...)` |
+
+**Hard rule:** `[Tier A] persistFailWireResult` alone **must not** be claimed as proof that the ensure persist branch executed.
+
+##### (4) Skip and success — **required Tier B**
+
+Reuse existing fixtures (freeze-versioning / s5 observation patterns):
+
+| Case | Call | Assert |
+|---|---|---|
+| Success freeze (in-memory) | `applySufficiencyFreezeToSession` sufficient draft | `ok: true`, pack/session final; no `reason_code` on success arm |
+| Skip already frozen / not sufficient / stall path | eligibility | `ok: true`, `skipped: true`, `reason ∈ FreezeWireSkipReason`; **no** `reason_code` |
+| Success persist (optional if IDB available) | `ensureSessionFrozenForDelivery` on seeded session | `ok: true` (or disclose env limits); must not break existing green expectations |
+
+### 6.4 Tier C — Compatibility / regression
 
 | Suite | Expectation | Label |
 |---|---|---|
+| Repo-wide construction/consumer re-search (§2.3.5) | No surprise sites; no consumer Diff | `[Tier C]` |
 | `pnpm test:intake-r6-dir-catalog` | PASS (S0–S2) | `[Tier C]` |
 | `pnpm test:intake-r6-na-cas` / `resolver` | PASS | `[Tier C]` |
-| New wire-reason script | Tier A+B PASS | own labels |
+| New wire-reason script | Tier A + required Tier B + Code-review checklist | own labels |
 | `pnpm exec tsc --noEmit` | PASS | `[Tier C]` |
-| `pnpm test:intake-r6-freeze-versioning` | Known staged RED at F1 until S5 — **disclose**, do not claim S3 fixed | `[Tier C disclose]` |
-| `pnpm test:s5-freeze-s6-observation` (if run) | Expect PASS on success/skip paths; no fail-branch asserts | optional `[Tier C]` |
+| `pnpm test:intake-r6-freeze-versioning` | Known staged RED at F1 until S5 — **disclose** | `[Tier C disclose]` |
 
-### 6.4 Explicitly out of S3 test claims
+### 6.5 Explicitly out of / untested claims
 
-- Runtime inducing `dir_catalog_ssot_unavailable` / `load_failed` via production Registry.
-- S2 compose `!load.ok` runtime coverage.
-- Equating Tier A/B mapper tests with “catalog load failed in production CI.”
-- S4 DC-10 / S5 F1–F4.
-- Changing consumer `DC_FREEZE_FAILED` to prefer `reason_code`.
+| Claim | Status |
+|---|---|
+| Runtime ACTIVE catalog load fail → apply catch (`dir_catalog_*`) | **UNTESTED** production-function-path (no Registry) |
+| S2 compose `!load.ok` runtime | Out (S2 policy) |
+| Helper unit ≡ catch/persist branch execution | **Forbidden misclaim** |
+| Code-review ≡ Tier B execution | **Forbidden misclaim** |
+| S4 / S5 / consumer `DC_FREEZE_FAILED` → `reason_code` | Out |
 
 ---
 
@@ -378,10 +444,9 @@ Implement reports **must** print distinct PASS labels, e.g.:
 |---|---|
 | TypeScript consumers of `FreezeWireResult` | Runtime product consumers (§2.3.2) only read `.reason` after `!ok` → **compatible without Diff**. |
 | Construct sites | Only wire file → **must** set `reason_code` in S3 Diff. |
-| `DC_FREEZE_FAILED:${freeze.reason}` | Compatible; catalog failures become token-shaped reasons (message already equals code on S2 catalog throws). |
+| Implement re-search + tsc | Mandatory before ACCEPT (§2.3.5). |
+| `DC_FREEZE_FAILED:${freeze.reason}` | Compatible; catalog failures become token-shaped reasons when that path is hit. |
 | Skip union | Unchanged; no `reason_code` on skip. |
-| Scripts / JSON.stringify on unexpected fail | Extra field appears; no assert breakage expected. |
-| Barrel export | Helpers exported from same module; index star-export picks them up. |
 | HTTP API | No FreezeWireResult DTO — **no API contract change**. |
 | S2 compose | Unchanged. |
 | Persist failure | Gains explicit `reason_code`; `reason` may still show commit error text. |
@@ -397,9 +462,10 @@ Implement reports **must** print distinct PASS labels, e.g.:
 | Schema / C5 / Versioning / CFP / Topic | Out |
 | S4 DC-10 | Next |
 | S5 F1–F4 fixture migration | Later mandatory |
-| Changing HTTP error envelope / consumer throws to use `reason_code` | Out unless separately authorized |
+| Consumer Diff / HTTP envelope change | Out |
 | Equating S3 with “catalog load runtime-faulted in CI” | Forbidden |
-| Production Registry / test-only loader injection API | Forbidden |
+| Production Registry / test-only loader injection / new ensure inject APIs | Forbidden |
+| Claiming helper tests prove enclosing production branches | Forbidden |
 
 ---
 
@@ -408,13 +474,17 @@ Implement reports **must** print distinct PASS labels, e.g.:
 S3 may be accepted only when:
 
 1. `FreezeWireResult` `ok: false` includes **`reason_code: string`**.
-2. Catch path is `return freezeFailWireResult(session, e)` only; allowlisted codes → same `reason_code`; unknown/absent → `freeze_failed`; **never** message-as-code.
-3. Persist failure uses `persistFailWireResult` → `reason_code: "dc_freeze_persist_failed"` distinct from catalog / `freeze_failed`.
-4. Skip reasons unchanged; no `reason_code` on skip arm.
-5. Evidence reported in **three labeled tiers** (§6.0): Tier A mapping table; Tier B catch-assembly + persist helper (+ propagation gates); Tier C regression/tsc; freeze-versioning F1 disclosed RED.
-6. Production Diff ⊆ §5.1; baseline parent = `9411c83f475605945874f87bb969db3ac1329ee9`.
-7. Consumer Diff empty (§2.3) unless separately authorized.
-8. **Not claimed:** S4/S5; Registry load runtime; S2 `!load.ok` runtime; API redesign of `DC_FREEZE_FAILED`.
+2. Catch path is `return freezeFailWireResult(session, e)` only (`[Code-review]`); allowlisted codes map 1:1 in **`[Tier A]`**; unknown/absent → `freeze_failed`; **never** message-as-code.
+3. Persist fail site is `return persistFailWireResult(...)` (`[Code-review]`); helper asserts `dc_freeze_persist_failed` (`[Tier A]`).
+4. **`[Tier B]`** executes:
+   - `applySufficiencyFreezeToSession` **catch** → `freeze_failed` (plain bind/`session_id` fixture);
+   - `ensureSessionFrozenForDelivery` **apply-fail propagation** → `freeze_failed` (not persist code);
+   - skip + success paths unchanged;
+   - **and either** `ensureSessionFrozenForDelivery` **persist-fail** → `dc_freeze_persist_failed` **or** explicit `UNTESTED [production-path]` for that branch (helper+review only — no false Tier B claim).
+5. Evidence labels obey §6.0 (helper ≠ Tier B; code-review ≠ Tier B).
+6. Production Diff ⊆ §5.1; baseline parent = `9411c83f475605945874f87bb969db3ac1329ee9`; S2 behavior preserved.
+7. Consumer Diff empty; §2.3.5 re-search + tsc done.
+8. **Not claimed:** S4/S5; Registry catalog catch execution; S2 `!load.ok` runtime; helper≡enclosing-branch.
 
 ---
 
@@ -424,8 +494,8 @@ S3 may be accepted only when:
 pnpm test:intake-r6-dir-catalog          # Tier C
 pnpm test:intake-r6-na-cas                # Tier C
 pnpm test:intake-r6-resolver              # Tier C
-pnpm test:intake-r6-freeze-wire-reason   # Tier A + B (name TBD if different)
-pnpm exec tsc --noEmit                   # Tier C
+pnpm test:intake-r6-freeze-wire-reason   # Tier A + Tier B + Code-review checklist
+pnpm exec tsc --noEmit                   # Tier C (+ consumer/construction re-search)
 pnpm test:intake-r6-freeze-versioning     # Tier C disclose RED / S5 dependency
 ```
 
@@ -433,7 +503,7 @@ pnpm test:intake-r6-freeze-versioning     # Tier C disclose RED / S5 dependency
 
 ## Stop Condition
 
-This document is **plan-only** (Revision **1.1**).
+This document is **plan-only** (Revision **1.2**).
 
 No production or test implementation is authorized hereby.  
 Do not start S4/S5.  
