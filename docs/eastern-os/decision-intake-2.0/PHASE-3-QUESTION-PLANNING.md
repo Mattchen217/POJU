@@ -78,42 +78,94 @@ Inputs: UnderstandingState, DC, Blueprint, BudgetSnapshot, Soft Gate verdict, la
 
 Model may propose scores / priority hints; **code** applies filters, `gate_class`, and **final** sort. Model never overrides P0>P1>P2.
 
-### 2.1 Scoring, repetition_count, sort (R3-04)
+### 2.1 Scoring, repetition_count, sort (R4-02 / R4-03)
 
-**`information_gain_est` (code-owned; model hints ignored for final rank):**
+#### 2.1.1 `gap_type` enum & derivation (R4-02)
+
+```ts
+type GapType =
+  | "unknown"        // DIR current_state=unknown OR required roles all absent
+  | "partial"        // some required roles satisfied/confirmed, ≥1 unresolved
+  | "conflict"       // DIR current_state=conflict OR open Conflict linked to DIR
+  | "declined"       // contributing facts declined / user declined this DIR thread
+  | "source_pending"; // source_only NeedItem; required source not source_ok
+```
+
+**Derive (code; single value per candidate):**
+
+```text
+if kind=source_only → gap_type = source_pending
+else if any linked DIR.current_state=conflict OR open Conflict hits dir_ids → conflict
+else if declined markers on all targeted roles / DIR declined thread → declined
+else if ≥1 required fact_role_code resolved AND ≥1 unresolved → partial
+else → unknown
+```
+
+Priority if multiple would apply: `conflict` > `declined` > `partial` > `unknown` (source_only fixed).
+
+#### 2.1.2 Unresolved `fact_role_code` (R4-02)
+
+```text
+For dir_based candidate C:
+  roles = unique(C.fact_role_codes)   // already namespaced §2.2
+  resolved(role) = true iff DC has a RealityFact/Constraint satisfying that role
+                 with status∈{confirmed} OR (n_a with VALID ExplicitNaEvidence for that DIR)
+                 per Phase 1 aggregator semantics
+  unresolved_roles(C) = sort(roles.filter(not resolved))
+  unresolved_count = |unresolved_roles(C)|   // deduped set size — never count same role twice
+For source_only: unresolved_count = 0 (gain uses +6 source term instead)
+```
+
+Multi-DIR candidate (rare, flagged): take **union** of unresolved roles across `dir_ids`, then unique — no double-count of the same `fact_role_code`.
+
+#### 2.1.3 Soft Gate FAIL attribution (R4-02)
+
+```text
+attributable_fail(C) = true iff Soft Gate verdict=FAIL AND either:
+  (a) kind=dir_based AND ∃ ddr ∈ C.ddr_ids such that
+        ddr.priority=P0 AND ddr.status ∉ {satisfied, n_a}
+      OR ∃ dir ∈ C.dir_ids that is a required_dir of such a failing P0 DDR
+  (b) kind=source_only AND ∃ ddr ∈ C.ddr_ids such that
+        ddr.priority=P0 AND required source of ddr is not source_ok
+        (incl. DDR-02 CFP Rule A pending)
+Otherwise false.
+Multi-DDR: OR across C.ddr_ids (once); do not add +2 per ddr — flag is boolean.
+```
+
+#### 2.1.4 `information_gain_est` formula
 
 ```text
 gain = 0
-+ 3 per unresolved fact_role_code on target DIR (dir_based)
++ 3 * unresolved_count                         // §2.1.2; dir_based only
 + 4 if gap_type=conflict
 + 2 if gap_type=partial
-+ 5 if impact.decision_critical OR may_affect_p5_ranking
-+ 2 if Soft Gate FAIL attributable to this ddr/dir/source
-+ 6 if source_only AND required source not source_ok on P0 DDR
++ 0 if gap_type ∈ {unknown, declined, source_pending}  // no extra beyond other terms
++ 5 if impact.decision_critical OR may_affect_p5_ranking   // boolean OR once
++ 2 if attributable_fail(C)                    // §2.1.3; once
++ 6 if kind=source_only AND ∃ ddr ∈ C.ddr_ids with priority=P0
+         AND required source not source_ok     // once even if multiple ddr_ids
 ```
 
-**`repetition_count` algorithm (deterministic; never model similarity):**
+All inputs code-derived; model hints ignored. Same DC+NeedItem ⇒ same gain.
+
+#### 2.1.5 `repetition_count`
 
 ```text
 Inputs:
-  H = all AskPayload in session where delivery_status=shown
-      (exclude: unshown, stale, discarded, invalidated, superseded)
+  H = AskPayload where delivery_status = "shown"
+      (exclude: persisted_unshown, stale, discarded, invalidated)
+      NOTE: no "superseded" delivery_status — use stale|discarded|invalidated only (R4-04)
   C = current candidate
   Match key K(x):
     if x.kind=dir_based:
       (kind, sort(unique(dir_ids)).join("|"), sort(unique(fact_role_codes)).join("|"))
-      // ddr_ids NOT required in key (multi-DDR same roles still count as repeat)
     if x.kind=source_only:
       (kind, source_code, sort(unique(ddr_ids)).join("|"))
-  Cross-kind: never match (dir_based ≠ source_only)
-  Blueprint version: historical shown asks still count after Blueprint bump
-    (identity is role/source based, not blueprint_version)
-  review_cycle: does NOT reset repetition_count (session-scoped)
+  Cross-kind: never match
+  Blueprint bump / review_cycle: do NOT reset; still count historical shown
 
 repetition_count(C) = |{ h ∈ H | K(h) == K(C) }|
 ```
-
-Unshown / stale / discarded → **not** in H. Same AskPayload resume → already in H once.
 
 **Normalize before sort:**
 
@@ -154,25 +206,28 @@ Same DC + Blueprint + shown-ask set ⇒ identical order.
 | NL fields | `expected_info` / `missing_info` are display only; **forbidden** as repetition keys |
 | Compare | Always via sorted unique `fact_role_codes` |
 
-### 2.3 `candidate_id` (deterministic; R3-04)
+### 2.3 `candidate_id` (deterministic; R4-03)
+
+**Serialization SSOT:** reuse existing `canonicalStringify` from `lib/poju/decision-context/normalize.ts` (same stack as `content-hash.ts`). **Forbidden** to invent a second canonical JSON for Intake candidate ids.
 
 ```text
-canon = JSON canonical object (keys sorted) {
+canon_obj = {
   id_schema_version: 1,
-  kind, blueprint_version,
+  kind,
+  blueprint_version,
   dir_ids: sort(unique(dir_ids)),
   source_code: source_code ?? "",
   fact_role_codes: sort(unique(fact_role_codes)),
   ddr_ids: sort(unique(ddr_ids)),
   direction_id
 }
-candidate_id = "cq_" + hex(sha256(utf8(canon)))[0:32]
+candidate_id = "cq_" + hex(sha256(utf8(canonicalStringify(canon_obj))))[0:32]
 ```
 
 - No random, no clock, no model id.  
-- Same inputs ⇒ same id.  
-- Distinct logical gaps must differ in at least one canon field (do not over-collapse).  
-- Changing `id_schema_version` is an intentional break; bump only with migration note.
+- Same inputs ⇒ same id across runtimes that share `canonicalStringify`.  
+- Distinct logical gaps must differ in ≥1 canon field.  
+- Bump `id_schema_version` only with explicit migration note.
 
 ### 2.4 `gate_class` authority (R3-04)
 

@@ -145,6 +145,7 @@ type AskPayload = {
   client_turn_id: string;
   delivery_generation: number;
   delivery_status: "persisted_unshown" | "shown" | "stale" | "discarded" | "invalidated";
+  // no "superseded" — use stale|discarded|invalidated (R4-04)
   shown_at: string | null;
   delivery_receipt_id: string | null;
   // ... question fields, context_version, blueprint_version
@@ -161,6 +162,7 @@ Same logical turn retry / resume **reuses** `ask_payload_id`. New logical questi
 | Writer | Server handler `confirmAskShown(ask_payload_id, delivery_receipt_id)` after client ack |
 | Atomicity | Single short TX: if AskPayload.delivery_status=`persisted_unshown` → set `shown` + `shown_at` + `delivery_receipt_id` AND insert `AskCountLedger(ask_payload_id)` UNIQUE AND `session_asked_count += 1` |
 | Idempotent confirm | If already `shown` / ledger row exists → return success; **no** second +1 |
+| Concurrent confirm race | UNIQUE(`ask_payload_id`) conflict on loser → **must** re-read AskPayload + ledger; if winner committed `shown` → return **idempotent success** to client (same payload). **Must not** surface duplicate-confirm race as client error |
 | Crash after Commit B before show | Resume loads `persisted_unshown`; show again; first ShowReceipt counts once |
 | UI retry / re-render | Re-sends same `ask_payload_id` → idempotent |
 

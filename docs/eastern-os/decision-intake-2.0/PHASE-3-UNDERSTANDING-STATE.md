@@ -98,7 +98,7 @@ type NeedItem =
 | **Trace** | `dir_based`: `dir_id` → catalog + `DC.dirs`; `source_only`: `ddr_id` + `source_code` + `source_state` → Phase 2 source matrix |
 | **Model** | May reorder; **cannot** invent DIR ids; cannot convert source_only → dir_based |
 
-### 2.7 N/A evidence provenance (R3-03)
+### 2.7 N/A evidence provenance (R4-01)
 
 Align Phase 1 §2.4 / §3.2 / §10.2 and Phase 2 §1.5. Understanding caches `na_evidence_ids` only — **not** authority.
 
@@ -114,71 +114,128 @@ Align Phase 1 §2.4 / §3.2 / §10.2 and Phase 2 §1.5. Understanding caches `na
 **Invalid N/A processing order (no cross-layer assign):**
 
 ```text
-1. Validate ExplicitNaEvidence / linked facts/constraints against DIR.na_conditions
-2. If invalid → DIR must NOT become n_a
+1. Validate ExplicitNaEvidence (target + source + condition + not revoked) — §A/C
+2. If INVALID → target must NOT become n_a
 3. reaggregateDirs → legal DIR current_state ∈ {known, unknown, conflict, n_a}
 4. DDR roll-up (Phase 1/2) → DDR status
 5. Gate composer → PASS | WARN | FAIL
 ```
 
-#### A. Authority store (chosen scheme: DC field)
+Only evidence that passes §C may influence steps 3–5.
+
+#### A. Authority store — discriminated target (R4-01)
 
 ```ts
-type ExplicitNaEvidence = {
-  evidence_id: string;
-  dir_id?: string;            // when supporting DIR n_a
-  ddr_id?: string;            // when supporting empty-DIR DDR n_a paths (e.g. DDR-03)
-  na_condition_code: string;  // must match catalog na_conditions
-  source_ref?: string;        // fact_id / constraint_id
-  evidence_type: "user_explicit_na" | "system_na_marker";
-  written_by: "code";
-  revoked: boolean;
-};
+type NaSourceRef =
+  | { kind: "reality_fact"; fact_id: string }
+  | { kind: "constraint"; constraint_id: string };
+
+type NaSystemBasis =
+  | { kind: "topic_not_applicable"; topic_code: string; rule_id: string }
+  | { kind: "catalog_na_condition_met"; condition_eval_id: string }
+  | { kind: "empty_dir_source_absence"; ddr_id: string; source_code: string; eval_id: string };
+  // rule_id / condition_eval_id / eval_id = durable id of the deterministic check run that proved the condition
+
+type ExplicitNaEvidence =
+  | {
+      evidence_id: string;
+      target: "dir";
+      dir_id: string;                 // REQUIRED — exactly one DIR
+      ddr_id?: never;                 // MUST be absent
+      na_condition_code: string;      // ∈ DIR Catalog.na_conditions for dir_id
+      evidence_type: "user_explicit_na";
+      source_ref: NaSourceRef;        // REQUIRED — user fact/constraint
+      system_basis?: never;
+      written_by: "code";
+      revoked: boolean;
+    }
+  | {
+      evidence_id: string;
+      target: "dir";
+      dir_id: string;
+      ddr_id?: never;
+      na_condition_code: string;
+      evidence_type: "system_na_marker";
+      source_ref?: never;             // system markers do not use user source_ref
+      system_basis: NaSystemBasis;    // REQUIRED — proven code evaluation
+      written_by: "code";
+      revoked: boolean;
+    }
+  | {
+      evidence_id: string;
+      target: "ddr";
+      ddr_id: string;                 // REQUIRED — empty-DIR / applicability DDR n_a (e.g. DDR-03)
+      dir_id?: never;                 // MUST be absent
+      na_condition_code: string;      // ∈ DDR applicability / Phase 2 empty-DIR N/A rules
+      evidence_type: "user_explicit_na";
+      source_ref: NaSourceRef;        // REQUIRED
+      system_basis?: never;
+      written_by: "code";
+      revoked: boolean;
+    }
+  | {
+      evidence_id: string;
+      target: "ddr";
+      ddr_id: string;
+      dir_id?: never;
+      na_condition_code: string;
+      evidence_type: "system_na_marker";
+      source_ref?: never;
+      system_basis: NaSystemBasis;    // REQUIRED
+      written_by: "code";
+      revoked: boolean;
+    };
 // DC.explicit_na_evidence: ExplicitNaEvidence[]
 ```
 
+| Hard constraint | Rule |
+|---|---|
+| Exactly one target | `target=dir` ⇒ `dir_id` present, `ddr_id` absent; `target=ddr` ⇒ `ddr_id` present, `dir_id` absent |
+| No orphan evidence | Both ids absent → **REJECT** (never persist) |
+| No dual target | Both ids present → **REJECT** (one evidence, one target) |
+| `user_explicit_na` | `source_ref` **REQUIRED**; resolve to live non-revoked RealityFact/Constraint; payload must support the claimed N/A semantics |
+| `system_na_marker` | `system_basis` **REQUIRED**; code must re-verify basis still true at write time; `na_condition_code` alone is **insufficient** |
+| `model_inferred` | Not a legal `evidence_type` — reject |
+
 | Store | Role |
 |---|---|
-| `DC.explicit_na_evidence[]` | **Primary** code-validated N/A markers; DC business data |
-| `DC.reality_facts[]` / `DC.constraints[]` | May be `source_ref` targets for user-explicit N/A |
+| `DC.explicit_na_evidence[]` | Primary code-validated markers; DC business data ∈ `content_hash` |
+| `DC.reality_facts[]` / `DC.constraints[]` | Targets of `source_ref` |
 | Understanding `na_evidence_ids` | Derived pointers only |
 
-- Not model-authored.  
-- Not stored outside DC as Gate-affecting authority.  
-- **Must** be included in `DC.content_hash` business payload (MC §6.1; Phase 1 §10.2 scope = business payload; Blueprint/DDR catalog versions stay **out** of hash per C5).
+#### B. Evidence types (summary)
 
-#### B. Evidence types
-
-| Type | May support DIR/DDR `n_a`? |
+| Type | Allowed if |
 |---|---|
-| `user_explicit_na` (fact/constraint + marker) | Yes if `na_conditions` match |
-| `system_na_marker` (code after validated rule) | Yes if legal `na_condition_code` |
-| `model_inferred` | **No** |
-| Silence / missing data / dangling | **No** |
-| `unknown` / `declined` | **No** — never auto-convert |
+| `user_explicit_na` | Valid target + required `source_ref` + `na_conditions` match |
+| `system_na_marker` | Valid target + required `system_basis` proven + condition match |
+| Model / silence / dangling / unknown / declined | **Never** |
 
-#### C. `na_conditions` validation
+#### C. Legality validation (code; all must pass)
 
 ```text
-1. Load evidence from DC.explicit_na_evidence (+ source_ref objects)
-2. evidence.dir_id must match target DIR when DIR n_a claimed
-3. na_condition_code ∈ DIR Catalog.na_conditions (or DDR applicability rule for empty-DIR n_a)
-4. revoked/conflict/wrong type → INVALID
-5. INVALID → do not set DIR current_state=n_a; reaggregate to unknown|conflict|known as facts warrant
+REJECT if any:
+  - target missing / both dir_id and ddr_id set / neither set
+  - evidence_type=user_explicit_na AND source_ref missing or dangling
+  - evidence_type=system_na_marker AND system_basis missing or re-eval false
+  - na_condition_code not in catalog for that target
+  - revoked=true (ignored for satisfaction; may remain for audit)
+  - written_by ≠ "code" / model-authored payload
+
+ACCEPT → may feed reaggregateDirs / DDR roll-up / Gate
 ```
 
 #### D. Rebuild / revoke / hash
 
-1. Add/revoke evidence → DC Update → `DC.version++` → recompute `content_hash` → reaggregate → DDR → Gate.  
+1. Add/revoke → DC Update → `DC.version++` → recompute `content_hash` (includes `explicit_na_evidence`) → reaggregate → DDR → Gate.  
 2. Understanding rebuild from DC only.  
-3. FreezeRecord captures `dc_content_hash` at E2; prior FreezeRecords immutable.  
-4. Hash must change when evidence set changes in a Gate-affecting way.
+3. FreezeRecord.dc_content_hash at E2; prior freezes immutable.  
 
 #### E. Non-bypass (frozen)
 
 - unknown/declined ↛ n_a  
-- Evidence-less n_a excluded from Gate satisfaction  
-- DDR-02 CFP Required Source miss → `pending` → P0 FAIL; **N/A cannot waive Rule A** (Phase 2)  
+- Evidence-less / INVALID evidence → no Gate satisfaction via n_a  
+- DDR-02 CFP miss → pending → P0 FAIL; **N/A cannot waive Rule A**  
 - Dangling / missing profile ≠ automatic n_a
 
 ### 2.4 `personal_pattern_insight`

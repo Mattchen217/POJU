@@ -52,7 +52,7 @@
 
 ---
 
-## AC3-3 Design matrix (MX-01 … MX-60)
+## AC3-3 Design matrix (MX-01 … MX-68)
 
 | ID | Given | When | Then | Spec |
 |---|---|---|---|---|
@@ -117,11 +117,17 @@
 | MX-59 | Same inputs twice | candidate_id | Identical cq_ hash | Plan §2.3 |
 | MX-60 | Distinct role sets | candidate_id | Different ids; no false collision | Plan §2.3 |
 | MX-61 | Model priority hint says P2 on P0 DDR | gate_class | Code still P0; hint ignored | Plan §2.4 |
-| MX-62 | Same shown-ask set | repetition_count | Identical counts; stale/discarded excluded | Plan §2.1 |
+| MX-62 | Same shown-ask set | repetition_count | Identical counts; stale/discarded/invalidated excluded (no superseded enum) | Plan §2.1 |
+| MX-63 | ExplicitNaEvidence missing target / both dir+ddr | N/A validate | REJECT; never persist; no Gate effect | US §2.7A/C |
+| MX-64 | user_explicit_na without source_ref | N/A validate | REJECT | US §2.7A |
+| MX-65 | system_na_marker with only na_condition_code, no system_basis | N/A validate | REJECT | US §2.7A |
+| MX-66 | Same unresolved roles listed twice / multi-DIR union | gain | Deduped unresolved_count; attributable_fail boolean once | Plan §2.1.2–§2.1.4 |
+| MX-67 | candidate_id via canonicalStringify | Identity | Must use `normalize.ts` canonicalStringify; same obj ⇒ same id | Plan §2.3 |
+| MX-68 | Concurrent ShowReceipt UNIQUE conflict | Count | Loser re-reads; returns idempotent success; no double count; no client error | MC §5.3 |
 
 ---
 
-## AC3-4 Detailed R3 case cards
+## AC3-4 Detailed R3/R4 case cards
 
 ### MX-15 — Hard + P0
 
@@ -187,7 +193,11 @@
 | USER_REVISE | Arch §3.3/§3.4 ↔ Plan §5.1 ↔ AC MX-34/49 | **Yes** — cycle bump; hard not reset |
 | ShowReceipt / count | MC §5.3 ↔ Arch §6 ↔ Plan §5.1 ↔ AC MX-51/52 | **Yes** — Commit B ≠ count |
 | delivery_generation | MC §5.5 ↔ Arch §6 ↔ AC MX-53/54 | **Yes** — bump frees slot |
-| ExplicitNaEvidence | US §2.7A ↔ MC §6.1 ↔ Arch §4 ↔ AC MX-55/56 | **Yes** — DC field + hash |
+| ExplicitNaEvidence | US §2.7A (discriminated target + source_ref/system_basis) ↔ MC §6.1 ↔ Arch §4 ↔ AC MX-55/56/63–65 | **Yes** |
+| gain inputs | Plan §2.1.1–§2.1.4 ↔ AC MX-66 | **Yes** |
+| candidate_id canon | Plan §2.3 → `canonicalStringify` ↔ AC MX-67 | **Yes** |
+| delivery_status | MC §5.3 ↔ Plan §2.1.5 (no superseded) ↔ AC MX-62 | **Yes** |
+| ShowReceipt race | MC §5.3 concurrent → idempotent success ↔ AC MX-68 | **Yes** |
 | DIR/DDR types | US §2.7 A0 ↔ MC §6.9 ↔ AC MX-58 | **Yes** |
 | candidate_id / roles / gate_class | Plan §2.2–§2.4 ↔ MC §3 ↔ AC MX-59–62 | **Yes** |
 | R2-02 source_only validation | Plan §4 (unchanged intent) ↔ MX-29/35/36 | **Yes** — not redesigned |
@@ -202,7 +212,10 @@ If a product UX choice remains OPEN, it is listed below — **not** marked PASS.
 |---|---|---|
 | 1 | Understanding derived | **PASS** |
 | 2 | R2-02 kind validation retained | **PASS** |
-| 3 | MX-01…62 with G/W/T | **PASS** |
+| 3 | MX-01…68 with G/W/T | **PASS** |
+| 3b | ExplicitNaEvidence target/source/basis closed (R4-01) | **PASS** |
+| 3c | information_gain_est inputs closed (R4-02) | **PASS** |
+| 3d | candidate_id → canonicalStringify (R4-03) | **PASS** |
 | 4 | Soft sticky bug closed via review_cycle | **PASS** |
 | 5 | ShowReceipt exactly-once | **PASS** |
 | 6 | N/A on DC + C5 hash | **PASS** |
@@ -249,4 +262,4 @@ Product independent re-review required. **Do not** merge, create PR unless asked
 
 ## Declaration
 
-Stage 3.1-R3 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes.
+Stage 3.1-R4 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes. Budget / ShowReceipt core / source_only / Gate not redesigned.
