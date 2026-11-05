@@ -5,7 +5,8 @@
 | Field | Value |
 |---|---|
 | **Document status** | PLAN ONLY — no production/test implementation authorized by this document |
-| **Revision** | **1.1** (locks revoke fail-closed, independent S4 branch, C09/C10/C19–C21/C24/C25) |
+| **Revision** | **1.2** (C09e expires_at equality; C10a evidence_id binding; C21 missing-DC revoke mandatory) |
+| **Rev 1.1 plan commit** | `484fdb2e628c0bc6056ff6999ccb4d20097705cc` |
 | **Rev 1.0 plan commit** | `6944307c03e42c89c3916fd4971693af558a7537` |
 | **Stage** | Decision Intake 2.0 · Stage 3.2 · **S4** Write / Freeze Consistency |
 | **Authoritative design** | [`STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md`](./STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md) Rev 1.3 · DC-10 / consistency |
@@ -16,16 +17,12 @@
 | **Toolchain** | Node `22.22.0` · `corepack pnpm` `10.33.2` |
 | **S4 implement** | **NOT AUTHORIZED** until independent plan review PASS + separate written implement auth |
 
-### Revision 1.1 — review resolutions
+### Revision history
 
-| Finding | Locked resolution |
-|---|---|
-| **1** Revoke fail-closed | Missing DC → reject; `status !== "draft"` → reject; reject **before** any Action/Classification/Evidence mutation; no implement-time choice left |
-| **2** Git | Independent S4 branch from exact `0e09531c`; no force-push / rebase / rewrite of S3 or plan history |
-| **3** C09/C10 | Full key binding field lists + tamper fixtures + DIR must not become `n_a` |
-| **4** C19–C21 | Production `declareDirNotApplicable` / `revokeDirNaDeclaration` + reload + unchanged state |
-| **5** C24 | Full CAS chain + post-freeze reload checklist for snapshot/hash/binding |
-| **6** C25 | Real CAS persist-fail attempt; else UNTESTED; no production fault-inject API |
+| Rev | Against | Resolutions |
+|---|---|---|
+| **1.1** | `6944307c` | Revoke fail-closed; independent S4 branch; C09/C10/C19–C21/C24/C25 locks |
+| **1.2** | `484fdb2e` | **C09e** production must equate `expires_at` (not only “both not expired”); **C10a** production must bind `evidence_id === na_ev_${action_id}`; **C21b** missing-DC revoke **mandatory** |
 
 ---
 
@@ -47,7 +44,7 @@ Does **not**: expand Catalog SSOT content; rewrite S0–S3; perform S5 F1–F4 i
 | **Docs/plan/evidence history** | Remains on `feat/s3-freeze-wire-reason-code` (commits after `0e09531c` such as evidence + this plan). **Do not** rebase, force-push, or rewrite that history, S3 history, or plan commits. |
 | **Forbidden** | Force push; rebase S3 / plan tip onto S4; amend S3; make S4 parent an evidence or plan commit |
 
-Plan-doc commits (including Rev 1.1) may continue on `feat/s3-freeze-wire-reason-code`. They are **not** S4 production parents.
+Plan-doc commits (including Rev 1.1 / 1.2) may continue on `feat/s3-freeze-wire-reason-code`. They are **not** S4 production parents.
 
 ---
 
@@ -173,7 +170,7 @@ Compare `source_ref` with `sourceRefEquals` (kind + fact_id / constraint_id), **
 | `na_condition_code` | `action.na_condition_code` |
 | `declaration_turn_id` | `action.declaration_turn_id` |
 | `source_ref` | `sourceRefEquals(action.source_ref)` |
-| `expires_at` | `action.expires_at` |
+| `expires_at` | **Must equal** `action.expires_at` (see §6.1 C09e — **production gap today**) |
 | `revoked` | consistent with live authorization (false when authorizing) |
 
 ### 5.3 `ExplicitNaEvidence` (user_explicit_na / dir) ↔ Action
@@ -182,7 +179,7 @@ Compare `source_ref` with `sourceRefEquals` (kind + fact_id / constraint_id), **
 |---|---|
 | `evidence_type` | `"user_explicit_na"` |
 | `target` | `"dir"` |
-| `evidence_id` | `` `na_ev_${action.declaration_action_id}` `` |
+| `evidence_id` | **Must equal** `` `na_ev_${action.declaration_action_id}` `` (see §6.2 C10a — **production gap today**) |
 | `dir_id` | `action.dir_id` |
 | `na_condition_code` | `action.na_condition_code` |
 | `source_ref` | `sourceRefEquals(action.source_ref)` |
@@ -193,45 +190,101 @@ Validate path: `validateExplicitNaEvidence` → `findMatchingNaClassification` �
 
 ---
 
-## 6. C09 / C10 tamper fixtures (locked)
+## 6. C09 / C10 tamper fixtures + production gaps (locked · Rev 1.2)
 
-**Setup:** Complete legal write (C01) so DIR would otherwise be `n_a`. Then **tamper only** the named binding while keeping other records present. Run `buildFreezeNaValidationFromSession` / `reaggregateDirsIntake` (and/or `freezeDraftForDelivery` when draft snapshot still valid).
+**Setup:** Complete legal write (C01) so DIR would otherwise be `n_a`. Then **tamper only** the named binding while keeping other records present. Run production validation path: `buildFreezeNaValidationFromSession` / `validateExplicitNaEvidence` → `findMatchingNaClassification` / `findValidatedDirLevelNa` → `reaggregateDirsIntake` (and/or freeze compose when snapshot still valid).
+
+**Hard pass criterion:** mismatched triad ⇒ `findValidatedDirLevelNa` returns **null**; target DIR **`current_state !== "n_a"`**.
+
+### 6.1 C09e — Classification / Action `expires_at` equality (**production gap**)
+
+**Gap @ `0e09531c` (`findMatchingNaClassification` ~L175–194):**  
+Classification and Action each run `checkExpiresAt(..., now)` independently. A row survives if **both are not expired** (and not invalid). There is **no** comparison requiring:
+
+```ts
+classification.expires_at === action.expires_at
+// (null/null equal; otherwise exact ISO string equality as stored)
+```
+
+Therefore today a Classification with `expires_at = T1` and Action with `expires_at = T2` (both future) can still match and authorize N/A — **inconsistent with S4 triad binding**.
+
+**Required production fix (S4):** In `findMatchingNaClassification` (or immediate helper used only from that path), after Action is resolved and before `return row`, fail-closed unless Classification `expires_at` equals Action `expires_at`. On mismatch: skip/continue (no match) ⇒ `findValidatedDirLevelNa` → null ⇒ DIR must not become `n_a`.
+
+**Allowlist:** `lib/poju/decision-context/explicit-na-validate.ts` is **required** for this fix (not optional).
+
+**C09e fixture (mandatory shape):**
+
+| Constraint | Value |
+|---|---|
+| Action `expires_at` | Future ISO `T_action` (e.g. `NOW + 30d`) — **not expired** |
+| Classification `expires_at` | Different future ISO `T_cls` (e.g. `NOW + 60d`) — **also not expired** |
+| All other binding fields | Legal / matching |
+| Forbidden | Using an already-expired Classification or Action as the sole C09e proof |
+
+Expected: validate fails; `findValidatedDirLevelNa` null; DIR ≠ `n_a`.
+
+### 6.2 C10a — Evidence ID ↔ Action ID (**production gap**)
+
+**Gap @ `0e09531c`:**  
+`validateUserSource` / `findMatchingNaClassification` / `findValidatedDirLevelNa` **never** assert:
+
+```ts
+evidence.evidence_id === `na_ev_${action.declaration_action_id}`
+```
+
+(write creates that id by convention, but validate does not enforce it.)
+
+**Required production fix (S4):** After a matching Classification/Action is found (or as part of `validateUserSource` once Action is known), reject unless Evidence ID equals ``na_ev_${action.declaration_action_id}``. Preferred site: `validateUserSource` in `explicit-na-validate.ts` immediately after `findMatchingNaClassification` succeeds (Action id available via `classification.declaration_action_id`), or inside `findMatchingNaClassification` if evidence is in scope — **document exact function in Diff**. On mismatch: `{ ok: false, reason_code: ... }` / no validated evidence ⇒ DIR must not become `n_a`.
+
+**Allowlist:** `lib/poju/decision-context/explicit-na-validate.ts` **required**.
+
+**C10a fixture (mandatory shape):**
+
+| Constraint | Value |
+|---|---|
+| Tamper | **Only** `evidence.evidence_id` changed (e.g. `na_ev_WRONG` or `na_ev_${other_id}`) |
+| All other Evidence fields | Remain legal (`user_explicit_na`, `target: "dir"`, dir/condition/`source_ref`/`written_by`/`revoked` match Action) |
+| Classification + Action | Untouched and consistent |
+| Path | Production validate → reaggregate (not a pure unit stub of a helper alone as sole PASS) |
+
+Expected: validation failure; DIR ≠ `n_a`.
+
+### 6.3 Other C09 / C10 cases
 
 | Case | Tamper | Expected |
 |---|---|---|
-| **C09a** | Classification `declaration_action_id` ≠ Action id | `findValidatedDirLevelNa` → null; target DIR **`current_state !== "n_a"`** |
+| **C09a** | Classification `declaration_action_id` ≠ Action id | null / DIR ≠ `n_a` |
 | **C09b** | Classification `dir_id` or `na_condition_code` ≠ Action | same |
 | **C09c** | Classification `source_ref` ≠ Action (`sourceRefEquals` false) | same |
 | **C09d** | Classification `context_id` or `declaration_turn_id` ≠ Action | same |
-| **C09e** | Classification `expires_at` ≠ Action | same |
-| **C10a** | Evidence `evidence_id` ≠ ``na_ev_${action_id}`` | same |
+| **C09e** | §6.1 — both unexpired, `expires_at` unequal | same + production equality check |
+| **C10a** | §6.2 — only `evidence_id` wrong | same + production id bind check |
 | **C10b** | Evidence `dir_id` / `na_condition_code` ≠ Action | same |
 | **C10c** | Evidence `source_ref` ≠ Action | same |
 | **C10d** | Evidence `target` ≠ `"dir"` or type ≠ `user_explicit_na` | same |
 
-**Hard pass criterion:** mismatched triad **must not** authorize DIR `n_a`. Print explicit asserts on `current_state`.
-
 ---
 
-## 7. C19 / C20 / C21 — production entry + reload (locked)
+## 7. C19 / C20 / C21 — production entry + reload (locked · Rev 1.2)
 
 **Forbidden substitute:** calling only `applyDeclareDirNaToSession` / in-memory revoke apply without `declareDirNotApplicable` / `revokeDirNaDeclaration`.
 
 ### Shared method
 
-1. `createPOJUSession` + CAS-seed DC in target status (`final` / `superseded`) with baseline snapshot of: `na_declaration_actions`, `explicit_na_classifications`, `explicit_na_evidence`, `dc.version`, `dc.status`, dir states, content_hash if present.
+1. `createPOJUSession` + CAS-seed with baseline snapshot of: `na_declaration_actions`, `explicit_na_classifications`, `explicit_na_evidence`, `dc` (if any: `version`, `status`, dirs, hash), and other business fields under test.
 2. Invoke **production** entry (`declareDirNotApplicable` or `revokeDirNaDeclaration`).
 3. Expect throw / fail-closed (not silent success).
 4. `loadPOJUSession(sessionId)` again.
-5. Assert **byte-stable business equality** (deep compare / field asserts): actions, classifications, evidence, `version`, `status`, and other business DC fields unchanged vs baseline.
+5. Assert **byte-stable business equality** vs baseline: actions, classifications, evidence, DC fields (when DC present), **no** Action newly marked `revoked`, **no** partial business mutation.
 
 | ID | Entry | Seed | Expected |
 |---|---|---|---|
 | **C19** | `declareDirNotApplicable` | `status: "final"` | Reject; reload unchanged |
 | **C20** | `declareDirNotApplicable` | `status: "superseded"` | Reject; reload unchanged |
-| **C21** | `revokeDirNaDeclaration` | `status: "final"` (+ optional pre-existing action ids from a prior draft-then-freeze fixture) | Reject **before** mutation; reload unchanged (actions not newly revoked; version not bumped) |
+| **C21a** | `revokeDirNaDeclaration` | `status: "final"` (may include prior action ids from draft-then-freeze fixture) | Reject **before** mutation; reload unchanged (actions not newly revoked; version not bumped) |
+| **C21b** (**mandatory**) | `revokeDirNaDeclaration` | Session with **`decision_context == null`** (missing DC); may still have `na_declaration_actions` seeded for observation | Reject; **Action not marked revoked**; no partial business mutation; reload equals pre-op baseline |
 
-Also assert missing-DC revoke reject if constructible without inventing new lifecycle (C21 sibling or note in report).
+**C21b construction:** CAS-seed session with null/absent DC via `mutatePOJUSession` (existing session manager patterns). Do **not** invent Final→Draft lifecycle. If seeding actions without DC, baseline must still prove actions unchanged after rejected revoke.
 
 ---
 
@@ -300,12 +353,15 @@ New: `scripts/test-intake-r6-write-freeze-consistency.ts` + package script.
 | C06 | hash + binding | Match frozen |
 | C07 | forged `dir_na_conditions` | Ignored / no illegal auth |
 | C08 | bad DIR/condition | Write reject |
-| C09 | §6 classification tampers | Not `n_a` |
-| C10 | §6 evidence tampers | Not `n_a` |
+| C09a–d | §6.3 classification tampers | Not `n_a` |
+| C09e | §6.1 unexpired unequal `expires_at` | Not `n_a` (prod equality) |
+| C10a | §6.2 evidence_id only wrong | Not `n_a` (prod id bind) |
+| C10b–d | §6.3 evidence tampers | Not `n_a` |
 | C11–C14 | revoke / flags / expiry | Not `n_a` |
 | C15–C16 | bad / unconfirmed source | Reject or not `n_a` |
 | C17–C18 | idempotent / binding clash | skip / reject |
-| C19–C21 | §7 production + reload | Reject; unchanged |
+| C19–C21a | §7 final/superseded | Reject; unchanged |
+| C21b | §7 missing DC revoke | Reject; actions not revoked; reload stable |
 | C22 | conflict + N/A | DIR `conflict` |
 | C23 | forged `authority.dirCatalog` | Ignored |
 | C24 | §8 full CAS | Final + snapshot/hash/binding |
@@ -319,10 +375,11 @@ New: `scripts/test-intake-r6-write-freeze-consistency.ts` + package script.
 
 | Path | Change |
 |---|---|
-| `lib/poju/decision-context/na-declaration.ts` | **Required:** draft-only write; revoke fail-closed per §4.2 |
+| `lib/poju/decision-context/na-declaration.ts` | **Required:** draft-only write; revoke fail-closed per §4.2 (incl. missing DC) |
+| `lib/poju/decision-context/explicit-na-validate.ts` | **Required (Rev 1.2):** C09e `expires_at` equality in `findMatchingNaClassification`; C10a `evidence_id === na_ev_${action_id}` in validate path |
 | `scripts/test-intake-r6-write-freeze-consistency.ts` | **Required** |
 | `package.json` | **Required** script |
-| `explicit-na-validate.ts` / `na-validation-from-session.ts` / `freeze-to-delivery.ts` | Only if proven defect blocks C09–C16/C23 |
+| `na-validation-from-session.ts` / `freeze-to-delivery.ts` | Only if proven defect blocks C09–C16/C23 beyond §6.1–§6.2 |
 
 ### Denylist
 
@@ -367,8 +424,8 @@ Confirm S4 code commit: `git rev-parse HEAD^` === `0e09531c06840d373d8715426dec5
 
 1. S4 code on `feat/s4-dir-na-write-freeze-consistency` with parent **exactly** `0e09531c…`.
 2. Write + revoke fail-closed per §4.1–§4.2 (missing DC and non-draft).
-3. C09/C10 prove mismatched triad ⇒ DIR ≠ `n_a`.
-4. C19–C21 use production entries + reload unchanged.
+3. Production validate enforces C09e `expires_at` equality and C10a evidence_id bind; tests prove DIR ≠ `n_a`.
+4. C19 / C20 / C21a / **C21b (missing DC revoke)** use production entries + reload unchanged.
 5. C24 full CAS + post-freeze reload checklist.
 6. C25 PASS or explicit UNTESTED.
 7. C01–C24 otherwise PASS; regressions green; F1 disclosed.
@@ -378,7 +435,7 @@ Confirm S4 code commit: `git rev-parse HEAD^` === `0e09531c06840d373d8715426dec5
 
 ## Stop Condition
 
-This document is **plan-only** (Revision **1.1**).
+This document is **plan-only** (Revision **1.2**).
 
 No production or test implementation is authorized hereby.  
 Do not start S5. Do not merge or deploy.  
