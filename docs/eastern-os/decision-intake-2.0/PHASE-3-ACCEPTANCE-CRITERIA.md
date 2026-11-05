@@ -52,7 +52,7 @@
 
 ---
 
-## AC3-3 Design matrix (MX-01 … MX-82)
+## AC3-3 Design matrix (MX-01 … MX-127)
 
 | ID | Given | When | Then | Spec |
 |---|---|---|---|---|
@@ -138,10 +138,55 @@
 | MX-80 | Constraint related_dir_ids misses candidate DIR (or absent) | gain resolve | **Not** resolved | Plan §2.1.2 |
 | MX-81 | Same fact_role_code listed twice on candidate | unresolved_count | Count once | Plan §2.1.2 |
 | MX-82 | Fact related only to D1; role namespaced to D2 | gain resolve | Must **not** resolve D2 role | Plan §2.1.2 |
+| MX-83 | Fact has role tag; no `related_dir_ids` | Resolve (Planner=Aggregator) | Unresolved both | Plan §2.1.2 |
+| MX-84 | Fact has DIR link; no matching role tag | Resolve | Unresolved both | Plan §2.1.2 |
+| MX-85 | Fact exact role + exact DIR + confirmed legal | Resolve | Confirmed both | Plan §2.1.2 |
+| MX-86 | Fact linked DIR-A only | Resolve same role for DIR-B | Unresolved | Plan §2.1.2 |
+| MX-87 | Fact two DIR links + matching roles | Resolve each | May satisfy each linked DIR; no bleed | Plan §2.1.2 |
+| MX-88 | Fact unverified / user_estimate | Resolve | Unresolved | Plan §2.1.2 |
+| MX-89 | Fact independently_verified + confirmed | Resolve factual role | May confirm role; `user_confirmed=false`; **not** user_explicit_na | Plan §2.1.2; US §2.7 A3 |
+| MX-90 | Constraint hard + DIR link + confirmed | Resolve hard_constraint | Confirmed both | Plan §2.1.2 Scheme A |
+| MX-91 | Constraint soft + DIR link + confirmed | Resolve soft_constraint | Confirmed both | Plan §2.1.2 |
+| MX-92 | Constraint rigidity ≠ role | Resolve | Unresolved | Plan §2.1.2 |
+| MX-93 | Constraint lacks related_dir_ids | Resolve | Unresolved | Plan §2.1.2; MC §6.1 |
+| MX-94 | Constraint category violates catalog | Resolve | Unresolved | Plan §2.1.2 |
+| MX-95 | Constraint unknown/declined/unverified | Resolve | Unresolved | Plan §2.1.2 |
+| MX-96 | Constraint illegal status×VL pair | Validate DC | Reject write | P1 C1; Plan §2.1.2 |
+| MX-97 | Two evidence records one role | Resolve | Role once | Plan §2.1.2 |
+| MX-98 | One Fact two tagged roles same DIR | Resolve | Each role once | Plan §2.1.2 |
+| MX-99 | Candidate duplicate role codes | unresolved_count | Deduped | Plan §2.1.2 |
+| MX-100 | Roles from multiple DIRs | Resolve | Each against own DIR | Plan §2.1.2 |
+| MX-101 | User N/A: confirmed+user_asserted+E1+DIR link+condition | Validate | May accept | US §2.7 A3 |
+| MX-102 | User N/A source independently_verified | Validate | Reject | US §2.7 A3 |
+| MX-103 | User N/A unverified/user_estimate | Validate | Reject | US §2.7 A3 |
+| MX-104 | User N/A no persisted E1 | Validate | Reject | US §2.7 A3 |
+| MX-105 | User N/A source other DIR | Validate | Reject | US §2.7 A3 |
+| MX-106 | na_condition_code ≠ catalog | Validate | Reject | US §2.7 A3 |
+| MX-107 | Source unrelated to N/A condition | Validate | Reject | US §2.7 A3 |
+| MX-108 | N/A only by model inference | Validate | Reject | US §2.7 A3 |
+| MX-109 | Source Fact superseded | Revalidate | Evidence drops | US §2.7 D |
+| MX-110 | N/A evidence revoked | Reaggregate | Satisfaction removed; version+hash change | US §2.7 D |
+| MX-111 | DDR-03 CFP absent_not_supplied + valid evidence | Compose | May `n_a` | US §2.7 A1 |
+| MX-112 | DDR-03 source_calc_failed | Attempt N/A | Reject; pending | US §2.7 A1 |
+| MX-113 | DDR-03 source_provenance_missing | Attempt N/A | Reject; pending | US §2.7 A1 |
+| MX-114 | DDR-03 wrong source_code | Validate | Reject | US §2.7 A1/A2 |
+| MX-115 | Unrelated Fact for DDR-03 absence | Validate | Reject | US §2.7 A3 |
+| MX-116 | DDR-02 CFP not ok; DIRs all N/A | Compose | pending; P0 FAIL | US §2.7 A1; Rule A |
+| MX-117 | Non-DDR-03 empty_dir_source_absence | Validate | Reject | US §2.7 A1/A2 |
+| MX-118 | One role N/A; another unresolved | Aggregate | DIR not n_a | Plan §2.1.2 |
+| MX-119 | All roles valid N/A | Aggregate | DIR n_a | Plan §2.1.2 |
+| MX-120 | All confirmed\|n_a; ≥1 confirmed | Aggregate | DIR known | Plan §2.1.2 |
+| MX-121 | Add ExplicitNaEvidence | DC update | version++; hash changes | MC §6.1 |
+| MX-122 | Revoke ExplicitNaEvidence | DC update | version++; hash changes | MC §6.1 |
+| MX-123 | Constraint.related_dir_ids changes | DC update | version++; hash changes | MC §6.1 |
+| MX-124 | Understanding deleted; DC N/A valid | Rebuild | View from DC | US §2.7 D |
+| MX-125 | Understanding claims N/A; DC absent | Rebuild | Claim discarded | US §2.7 D |
+| MX-126 | Blueprint version only changes | Freeze bind | DC content_hash unchanged | MC §6.1; C5 |
+| MX-127 | DDR catalog version only | Freeze bind | DC content_hash unchanged | MC §6.1; C5 |
 
 ---
 
-## AC3-4 Detailed case cards (R3–R5)
+## AC3-4 Detailed case cards (R3–R6)
 
 ### MX-15 — Hard + P0
 
@@ -217,22 +262,29 @@
 | **Spec** | Plan §2.1.2 |
 | **Doc check** | Spec present — **pending independent review** |
 
+### MX-83–127 — R6 canonical resolver / E1 N/A / hash
+
+| | |
+|---|---|
+| **Given / When / Then** | See AC3-3 rows MX-83…127 (full matrix) |
+| **Spec** | Plan §2.1.2; US §2.7 A3/D; MC §3 / §6.1–§6.2 |
+| **Constraint scheme** | **A** — Constraints participate via shared resolver; aggregator extended in 3.2 |
+| **Doc check** | Spec present — **pending independent review** |
+
 ---
 
-## AC3-5 Cross-doc consistency (with section cites)
+## AC3-5 Cross-doc consistency (R6)
 
-| Topic | Docs & sections | Consistent? |
-|---|---|---|
-| Soft/Hard + review_cycle | Arch §3.4 ↔ Plan §5.1–§5.2 ↔ AC MX-15/28/34/49/50 | Aligned — **pending independent review** |
-| USER_REVISE | Arch §3.3/§3.4 ↔ Plan §5.1 ↔ AC MX-34/49 | Aligned — **pending independent review** |
-| ShowReceipt / count | MC §5.3 ↔ Arch §6 ↔ Plan §5.1 ↔ AC MX-51/52/68 | Aligned — **pending independent review** |
-| ExplicitNaEvidence + DDR allowlist | US §2.7 A1–A3 ↔ MC §3 / §6.1 ↔ AC MX-69–77 | Aligned — **pending independent review** |
-| Constraint/Fact → fact_role_code | Plan §2.1.2 ↔ AC MX-78–82 | Aligned — **pending independent review** |
-| gain / candidate_id / gate_class | Plan §2.1–§2.4 ↔ AC MX-32/46–48/59–67 | Aligned — **pending independent review** |
-| R2-02 source_only | Plan §4 ↔ MX-29/35/36 | Unchanged intent — **pending independent review** |
-| Phase 2 Rule A | US §2.7 A1/E ↔ P2 DDR-02 ↔ MX-71/72 | No semantic reopen claimed — **pending independent review** |
+| Topic | Docs & sections | Author alignment note | Independent review |
+|---|---|---|---|
+| Canonical resolver AND association | Plan §2.1.2 ↔ MC §3 / §6.2 ↔ MX-83…100 | Planner=Aggregator; OR-fallback retired in 3.2 | **Pending** |
+| Constraint Scheme A | Plan §2.1.2 ↔ MC §6.1–§6.2 ↔ MX-90…95 | hard/soft only; related_dir_ids required to resolve | **Pending** |
+| user_explicit_na E1 | US §2.7 A3 ↔ MX-101…108 | confirmed+user_asserted+E1; no independently_verified | **Pending** |
+| DDR-03 / Rule A | US §2.7 A1 ↔ MX-111…117 | Unchanged Phase 2 | **Pending** |
+| C5 hash extensions | MC §6.1 ↔ MX-121…127 | explicit_na + Constraint.related_dir_ids in; bp/ddr out | **Pending** |
+| Budget / ShowReceipt / Gate / source_only | unchanged | Not redesigned in R6 | **Pending** |
 
-OPEN product UX items below are **not** marked PASS.
+OPEN UX items below are **not** PASS.
 
 ---
 
@@ -240,21 +292,20 @@ OPEN product UX items below are **not** marked PASS.
 
 | # | Check | Author note | Independent review |
 |---|---|---|---|
-| 1 | Understanding derived | Claimed | **Pending** |
-| 2 | R2-02 kind validation retained | Claimed | **Pending** |
-| 3 | MX-01…82 G/W/T present; numbering continuous | Claimed | **Pending** |
-| 4 | R5-01 DDR-03-only empty-DIR N/A; Rule A | Claimed | **Pending** |
-| 5 | R5-02 system_basis scopes | Claimed | **Pending** |
-| 6 | R5-03 source_ref semantic checks | Claimed | **Pending** |
-| 7 | R5-04 Constraint/Fact role mapping; no new Phase 1 fields | Claimed | **Pending** |
-| 8 | Budget / ShowReceipt / Gate not redesigned | Claimed | **Pending** |
-| 9 | Runtime / Schema / UI / Prompt / PageFeedMatrix / Phase 1–2 docs | **No changes** | **Pending** |
+| 1 | Scheme A + shared resolver specified | Claimed | **Pending** |
+| 2 | RealityFact AND association (no OR) | Claimed | **Pending** |
+| 3 | Constraint roles + Phase 3.2 aggregator extension listed | Claimed | **Pending** |
+| 4 | E1/N/A fail-closed deterministic | Claimed | **Pending** |
+| 5 | MX-01…127 continuous; R6 adds 83–127 | Claimed | **Pending** |
+| 6 | Budget/ShowReceipt/Gate/source_only untouched | Claimed | **Pending** |
+| 7 | No runtime/Phase1–2 doc edits | Claimed | **Pending** |
+| 8 | Author self-check ≠ independent PASS | Affirmed | **Pending** |
 
 ---
 
-## Frozen rules check (semantic · R5)
+## Frozen rules check (semantic · R6)
 
-| Rule | Semantic change in R5? |
+| Rule | Semantic change in R6? |
 |---|---|
 | C1 FactStatus×VL / E1 | **No** — source_ref uses existing Fact/Constraint only |
 | C2 no Stage labels | **No** |
@@ -270,7 +321,8 @@ OPEN product UX items below are **not** marked PASS.
 | No new Session phase | **No** |
 | Agenda ≠ known | **No** |
 | unknown/declined ↛ n_a | **No** |
-| No new Phase 1 Constraint fields | **No** — map via rigidity/category/status + recommended related_dir_ids |
+| No new Phase 1 Constraint fields | **No reopen of Phase 1 doc** — Phase 3.2 adds optional `related_dir_ids` already recommended in Phase 1 §2.5 |
+| Aggregator OR-fallback | **Phase 3.2 Intake path must retire OR** — design extension, not Phase 1 freeze rewrite |
 
 ---
 
@@ -292,4 +344,4 @@ Product independent re-review required. **Do not** merge, create PR unless asked
 
 ## Declaration
 
-Stage 3.1-R5 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes. Budget / ShowReceipt core / source_only / Gate not redesigned. Author self-check ≠ independent PASS.
+Stage 3.1-R6 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes. Budget / ShowReceipt / source_only / Gate not redesigned. **Scheme A** + shared resolver. Author self-check ≠ independent PASS. After independent PASS, prefer Stage 3.2 vertical slice over further design R-cycles.

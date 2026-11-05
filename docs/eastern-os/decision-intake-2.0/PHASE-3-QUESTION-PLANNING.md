@@ -103,68 +103,93 @@ else → unknown
 
 Priority if multiple would apply: `conflict` > `declined` > `partial` > `unknown` (source_only fixed).
 
-#### 2.1.2 Unresolved `fact_role_code` (R5-04)
+#### 2.1.2 Canonical role resolver (R6-01 / R6-02 · Scheme A)
 
-**Namespace parse:** `v1/dir/{dir_id}/role/{role_code}` → `(dir_id, role_code)`; `v1/source/...` not resolved via Fact/Constraint (source_only path).
+**Decision (Scheme A):** Constraints **may** satisfy only `hard_constraint` / `soft_constraint`. Question Planning and DIR aggregation **MUST** call the **same** code-owned resolver. No second matching algorithm.
 
-**Do not invent Phase 1 DC fields.** Constraint has no `fact_roles` in Phase 1; mapping uses `rigidity`, `category`, `status`, `verification_level`, `user_confirmed`, and Phase 1 **recommended** `related_dir_ids` when present.
+**Phase 3.2 MUST:** extend `reaggregateDirs` (or successor) to accept `constraints` + `explicit_na_evidence`; replace today's OR-fallback (`related_dir_ids` **or** role-tag match in `dir-aggregator.ts`) with the **AND** rules below. Planning must import the same function — not reimplement.
 
-##### RealityFact → role
+##### Namespace
 
 ```text
-Fact F satisfies namespaced role R=v1/dir/{D}/role/{r} iff ALL:
-  1. F.related_dir_ids includes D
-     — if related_dir_ids missing/empty → NOT resolved (refuse guess)
-  2. F.fact_roles includes r OR includes full R
-     — if fact_roles missing → NOT resolved for that role
-  3. Legal status for aggregator "known" contribution:
-     status === "confirmed" (Phase 1 dir-aggregator), OR
-     (DIR n_a path: VALID ExplicitNaEvidence for D — not counted as fact role fill)
-  4. verification_level / user_confirmed consistent with C1 for that status
-     (independently_verified ⇒ user_confirmed=false still OK if status rules allow)
-  5. Same F may fill multiple roles ONLY if each role's r ∈ F.fact_roles AND
-     related_dir_ids includes that role's D — never invent cross-DIR satisfaction
+Canonical: v1/dir/{dir_id}/role/{role_code}
+Parse → { namespace_version:1, dir_id, role_code }
+Reject if dir_id not in DC.dirs / role_code ∉ that DIR.required_fact_roles / bad version
+v1/source/... → not resolved via Fact/Constraint (source_only path)
 ```
 
-##### Constraint → `hard_constraint` / `soft_constraint`
+##### Interface
 
-```text
-Constraint K satisfies R=v1/dir/{D}/role/{r} iff ALL:
-  1. r ∈ {"hard_constraint","soft_constraint"} 
-     — other role_codes: Constraint NEVER auto-resolves (→ unresolved)
-  2. rigidity map:
-       r=hard_constraint ⇒ K.rigidity === "hard"
-       r=soft_constraint ⇒ K.rigidity === "soft"
-  3. Association to D:
-       K.related_dir_ids (Phase 1 recommended) includes D
-       — if related_dir_ids absent → NOT resolved (do not infer from category alone)
-  4. category filter (optional tighten, never loosen):
-       If DIR Catalog / candidate declares expected ConstraintCategory set for this role,
-       then K.category must ∈ that set; if no expected set → category unused for match
-  5. Status legality (parallel to facts; no new E1 type):
-       K.status === "confirmed" required to count as resolved
-       (unknown/declined/unverified ≠ resolved)
-  6. verification_level / user_confirmed must obey C1 pairing for that status
+```ts
+resolveDirRoleEvidence({
+  dir, roleCode, realityFacts, constraints, explicitNaEvidence, conflicts
+}): {
+  dir_id; role_code;
+  state: "confirmed" | "partial" | "n_a" | "unresolved" | "conflict";
+  contributing_fact_ids; contributing_constraint_ids; na_evidence_ids;
+  reason_code;
+}
 ```
 
-**Insufficient fields ⇒ refuse auto-resolved** (leave role unresolved). Never invent `fact_roles` on Constraint.
-
-##### Aggregation
+##### RealityFact (AND — no OR fallback)
 
 ```text
-For dir_based candidate C:
-  roles = unique(C.fact_role_codes)
-  resolved(role) = true iff ≥1 Fact OR Constraint satisfies role under rules above
-                 OR (role's DIR D has current_state=n_a with VALID ExplicitNaEvidence)
-  unresolved_roles(C) = sort(roles.filter(not resolved))
-  unresolved_count = |unresolved_roles(C)|     // each role once
+F satisfies role r for DIR D iff ALL:
+  1. F.status === "confirmed"
+  2. F.fact_roles contains exact r (or full namespaced code)
+  3. F.related_dir_ids contains exact D   // missing/empty ⇒ unresolved
+  4. C1-legal verification_level × user_confirmed for that status
+  5. Not deleted/superseded/invalidated; no blocking Conflict on this evidence
+FORBIDDEN: fact_roles alone without related_dir_ids; related_dir_ids alone without role tag;
+           cross-DIR satisfaction; NL/similarity/model judgment as match
+independently_verified + confirmed: may fill factual roles (user_confirmed=false OK);
+  MUST NOT prove user_explicit_na (§ Understanding 2.7 A3)
+```
 
-Multi-DIR candidate:
-  Evaluate each namespaced role against ITS OWN dir_id only
-  Union unresolved set; unique by full fact_role_code string
-  A Fact related only to D1 must NOT resolve v1/dir/D2/role/...
+##### Constraint (Scheme A — only two roles)
 
-source_only: unresolved_count = 0 (gain uses +6 source term)
+```text
+K satisfies role r for DIR D iff ALL:
+  1. r ∈ {hard_constraint, soft_constraint}  // else Constraint never resolves
+  2. rigidity: hard_constraint⇔hard; soft_constraint⇔soft
+  3. K.related_dir_ids includes exact D
+     — Phase 3.2 adds optional related_dir_ids?: string[] on Constraint (Phase 1 §2.5 recommended)
+     — absent/empty ⇒ unresolved (no category/NL inference)
+  4. K.status === "confirmed"; C1-legal VL × user_confirmed
+  5. category ⊆ catalog allowed_categories(role) if declared; else unused
+     category alone NEVER establishes role
+  6. Not deleted/superseded; no blocking Conflict
+unknown/declined/unverified/not_applicable ⇒ unresolved
+```
+
+##### Role / DIR outcome (same for Planner + Aggregator)
+
+```text
+Per required role on DIR D:
+  if blocking Conflict → conflict
+  else if VALID ExplicitNaEvidence n_a for that DIR/role path → n_a
+  else if Fact or Constraint confirms → confirmed
+  else if partial support (Phase 1 partial semantics) → partial
+  else → unresolved
+
+DIR current_state (Phase 1 vocabulary only):
+  conflict if blocking conflict
+  n_a if every required role is validly n_a
+  known if every role confirmed|n_a and ≥1 confirmed
+  unknown (+ partial_satisfaction) per Phase 1 when partial/unresolved remain
+Zero required roles: preserve Phase 1 behavior — not auto n_a
+```
+
+##### Planner `unresolved_count`
+
+```text
+roles = unique(candidate.fact_role_codes)  // full canonical strings
+for each role: result = resolveDirRoleEvidence(...)
+resolved = state ∈ {confirmed, n_a}
+unresolved_count = |{ roles where not resolved }|   // dedupe by full code
+Multi-DIR: each role against ITS dir_id only; no cross-DIR bleed
+Same role supported by many facts/constraints → still count once
+source_only: unresolved_count = 0
 ```
 
 #### 2.1.3 Soft Gate FAIL attribution (R4-02)

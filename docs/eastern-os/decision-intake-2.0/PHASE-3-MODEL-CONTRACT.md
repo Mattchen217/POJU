@@ -50,12 +50,13 @@ Bound what the model may see and propose, what code alone may write, and how tur
 ## 3. Deterministic code responsibilities
 
 1. Schema validation (zod) of all model JSON.  
-2. Fact combination legality + confirmation derivation (reuse `fact-combination` / confirmation-event semantics).  
-3. `reaggregateDirs` + DDR compose + Gate (Phase 2 §1.4–§1.6).  
-4. N/A evidence validation: Understanding §2.7 A1 allowlist / A2 system_basis / A3 source_ref / `na_conditions`; never trust Understanding cache alone; never waive DDR-02 Rule A.  
-5. Blueprint version binding & FreezeRecord (C5) when freezing.  
-6. Idempotency, optimistic concurrency, Lockout gates; Commit B unique slot (§5.4).  
-7. Strip/reject out-of-scope DIR/DDR references; kind-aware CandidateQuestion validation.
+2. Fact combination legality + confirmation derivation (reuse `fact-combination` / confirmation-event / E1 semantics). **No new E1/E2 types.**  
+3. **Canonical `resolveDirRoleEvidence`** (Planning §2.1.2) — single implementation shared by Question Planning and DIR aggregation.  
+4. Phase 3.2: extend aggregator inputs to `(dirs, realityFacts, constraints, conflicts, explicitNaEvidence)`; **remove** OR-fallback association (`related_dir_ids` OR role-tag). Use AND rules only.  
+5. DDR compose + Gate (Phase 2 §1.4–§1.6); never waive DDR-02 Rule A.  
+6. N/A validation: Understanding §2.7 A1–A3 (allowlist, system_basis, E1 source_ref, deterministic condition).  
+7. Blueprint version binding & FreezeRecord (C5).  
+8. Idempotency / Commit B slot (§5.4); kind-aware CandidateQuestion validation.
 
 ---
 
@@ -249,15 +250,26 @@ OPEN product only: auto-replan once vs force client refresh after step 5–6.
 9. DIR `current_state` ∈ {known, unknown, conflict, n_a} only — never DDR statuses.  
 10. `DC.explicit_na_evidence` is DC business payload and **must** enter `DC.content_hash` (Phase 1 §10.2 / C5).
 
-### 6.1 ExplicitNaEvidence ↔ C5 hash (R3-03)
+### 6.1 ExplicitNaEvidence + Constraint.related_dir_ids ↔ C5 hash (R6-03)
 
 | Rule | Spec |
 |---|---|
-| Field | `DC.explicit_na_evidence: ExplicitNaEvidence[]` (DC-owned; not sidecar outside DC) |
-| Hash | Included in `extractBusinessPayload` alongside Definition/Facts/Constraints/DIRS/Conflicts/boundaries (Phase 3.2 must extend extractor; **does not** put Blueprint/DDR catalog versions into hash — C5 unchanged) |
-| Add/revoke evidence | DC Update TX → bump `DC.version` → recompute `content_hash` → reaggregateDirs → DDR compose → Gate |
-| Freeze | FreezeRecord.dc_content_hash = hash at E2; history immutable; new freeze = new record |
-| Gate influence | Only through DC states after reaggregate; no external N/A store |
+| Fields | `DC.explicit_na_evidence[]`; `Constraint.related_dir_ids?: string[]` (Phase 3.2 optional field; Phase 1 §2.5 recommended) |
+| Hash | Both ∈ `extractBusinessPayload` with Facts/Constraints/DIRS/Conflicts/Definition/Hypotheses/boundaries; serialize via existing **`canonicalStringify`** only |
+| Excluded from DC hash | Blueprint version, DDR catalog version, UI, lockout, Understanding cache (FreezeRecord binds bp/ddr versions) |
+| Missing related_dir_ids | Valid Constraint as context; **cannot** resolve DIR roles or pass A3 association |
+| Update | Any change → `DC.version++` → recompute hash → canonical resolve → reaggregate → DDR → Gate |
+| Freeze | `dc_content_hash` at E2; historical FreezeRecords immutable |
+| Gate influence | Only via DC after reaggregate; no external N/A store |
+
+### 6.2 Phase 3.2 implementation checklist (R6)
+
+1. Add `explicit_na_evidence` to DC (+ empty-array normalize for old records).  
+2. Add optional `related_dir_ids` on Constraint.  
+3. Extend content-hash extractor.  
+4. Implement shared `resolveDirRoleEvidence`; wire Planning + aggregator.  
+5. Fail-closed N/A validator (US §2.7).  
+6. Preserve Phase 1 enums / C1–C5 / budgets / Gate; Phase 2 Rule A / DDR-03 semantics.
 
 ---
 

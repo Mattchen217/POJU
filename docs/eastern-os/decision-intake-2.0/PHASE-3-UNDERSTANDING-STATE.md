@@ -238,19 +238,30 @@ On target=ddr evidence OR system_basis.kind=empty_dir_source_absence:
 
 Any mismatch of target / rule / source / condition → **REJECT** (do not persist as Gate-affecting evidence).
 
-#### A3. `user_explicit_na` / `source_ref` semantics (R5-03)
+#### A3. `user_explicit_na` / `source_ref` (R6-04 / R6-05)
 
-Existence of an id is **not** enough. Code MUST verify:
+Existence of an id is **not** enough. Fail-closed. **No new E1/E2 types.**
 
-1. **Resolve:** `source_ref` → live RealityFact or Constraint; not deleted; not superseded; Constraint/Fact `status` not treating record as void.  
-2. **Association:**  
-   - `target=dir`: Fact.`related_dir_ids` contains `dir_id`, **or** Constraint has Phase 1 recommended `related_dir_ids` containing `dir_id`. If Constraint lacks `related_dir_ids` → **REJECT** (cannot prove association; do not guess).  
-   - `target=ddr`: only legal when ddr ∈ DDR-03 allowlist path; `source_ref` statement/evidence must support “chart appendix not supplied / not applicable” semantics for DDR-03 — not a random unrelated fact.  
-3. **Condition support:** source payload/statement must support the cited `na_condition_code` (catalog match + content check).  
-4. **User-explicit only:** source must be user-asserted channel (E1-compatible fact/constraint path). **REJECT** if model-inferred, silence, missing fields, or mere `unknown`/`declined` status used as N/A proof.  
-5. **No new C1/E1 semantics:** confirming N/A evidence does not invent a second confirmation event type; uses existing Fact/Constraint records only.
+**Eligible source record (ALL required):**
 
-Fail any step → **REJECT**; must not affect reaggregate / DDR roll-up / Gate.
+| Check | Rule |
+|---|---|
+| Exists | Live Fact or Constraint in current DC |
+| Not void | Not deleted / superseded / revoked |
+| Status | `status === "confirmed"` only |
+| Verification | `verification_level === "user_asserted"` |
+| E1 | `user_confirmed === true` **and** a persisted FactConfirm (E1) event exists for that record |
+| Provenance | Original source is user-originated statement (not model draft) |
+| Association | `target=dir`: `related_dir_ids` contains exact `dir_id` (Fact or Constraint). Missing → **REJECT**. `target=ddr`: only DDR-03 path; source must prove **chart appendix not supplied** for the exact required source — unrelated confirmed records **REJECT** |
+| Condition | `na_condition_code` exact-match catalog for target; deterministic classifier / persisted user-confirmation classification supports that condition |
+| Live | Condition still true at validate time |
+
+**REJECT (never Gate-affecting):** `independently_verified` as user_explicit_na source; `unknown` / `declined` / `unverified` / `user_estimate`; silence; omitted answers; model-only semantic judgment; embedding/keyword-only; Understanding cache claims; DDR-03 calc_failed or provenance_missing dressed as absence.
+
+**Deterministic semantic proof (R6-05):**  
+Code MUST use catalog condition + association + E1 + a **code-verifiable** classification (persisted user-confirmed N/A intent linked to the statement). Model may propose classification; it is **not** authoritative until user E1-confirm and persist. If schema cannot prove exact declaration + E1 → **REJECT**.
+
+**DDR-03 user-explicit:** must identify exact required source_code and explicit non-supply; re-read live CFP registry — user statement cannot convert `source_calc_failed` / `source_provenance_missing` into absence.
 
 #### B. Evidence types (summary)
 
@@ -275,11 +286,20 @@ REJECT if any:
 ACCEPT → may feed reaggregateDirs / DDR roll-up / Gate
 ```
 
-#### D. Rebuild / revoke / hash
+#### D. Rebuild / revoke / hash (R6 lifecycle)
 
-1. Add/revoke → DC Update → `DC.version++` → recompute `content_hash` → reaggregate → DDR → Gate.  
-2. Understanding rebuild from DC only.  
-3. FreezeRecord.dc_content_hash at E2; prior freezes immutable.  
+```text
+create/revoke ExplicitNaEvidence OR invalidate source_ref OR change Constraint.related_dir_ids
+  → DC.version++
+  → content_hash via canonicalStringify(extractBusinessPayload)
+  → resolveDirRoleEvidence (shared)
+  → DIR reaggregate (facts + constraints + na evidence)
+  → DDR compose → Gate → Understanding rebuild
+```
+
+1. Understanding from DC only; cache never keeps stale N/A.  
+2. FreezeRecord.dc_content_hash at E2; prior freezes immutable.  
+3. `explicit_na_evidence` + `constraints[].related_dir_ids` ∈ business payload (MC §6.1). Blueprint/DDR versions stay out of DC hash.  
 
 #### E. Non-bypass (frozen)
 
