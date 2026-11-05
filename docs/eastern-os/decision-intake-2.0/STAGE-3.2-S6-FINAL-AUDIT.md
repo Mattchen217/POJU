@@ -165,8 +165,10 @@ See `evidence/s6-final-audit/r6-f1-to-f4-matrix.md`.
 
 Full table: `evidence/s6-final-audit/dc-1-to-dc-12-matrix.md`.
 
+**SSOT:** `STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md` Rev 1.3 **§7 Test matrix** (corrected from an earlier mistaken §9 cite; §9 is “Items needing separate authorization”).
+
 **Summary:** DC-1…DC-6, DC-7a, DC-8…DC-12 → **PASS** with cited tests.  
-**DC-7b** → **DEFERRED / SPECIFICATION_GAP** (E-SCHEMA-1), not claimed.
+**DC-7b** → **SPECIFICATION_GAP / DEFERRED** (E-SCHEMA-1), **not implemented**, not claimed.
 
 ---
 
@@ -196,8 +198,16 @@ See §7 table + `authority-gaps.md`.
 
 ## 15. Full Regression Results
 
-Evidence file: `evidence/s6-final-audit/test-results.txt`  
-Toolchain: `evidence/s6-final-audit/toolchain.txt`
+### 15.1 Authoritative S6-commit re-run (required)
+
+Evidence: `evidence/s6-final-audit/test-results-s6-commit.txt`  
+Toolchain: `evidence/s6-final-audit/toolchain-s6-commit.txt`
+
+| Field | Value |
+|---|---|
+| **HEAD at execution** | `f1454b87e9dbea71837f1d2f27ab181986961fae` (S6 audit commit) |
+| **HEAD^** | `76fa70bd5577ae4cc5b793e205518c38c5baf2b5` (S5) |
+| Node / pnpm | `v22.22.0` / `10.33.2` |
 
 | Command | Exit |
 |---|---|
@@ -211,7 +221,9 @@ Toolchain: `evidence/s6-final-audit/toolchain.txt`
 | `pnpm test:intake-r6-freeze-versioning` | **0** |
 | `pnpm exec tsc --noEmit` | **0** |
 
-Node `v22.22.0` · pnpm `10.33.2` · HEAD at run = S5 baseline `76fa70bd…` (pre-audit-commit).
+### 15.2 Earlier S5-baseline run (superseded as S6 proof)
+
+`test-results.txt` / `toolchain.txt` recorded HEAD=`76fa70bd…` (S5). Kept for transparency; **not** the authoritative S6-commit execution evidence. Use §15.1 files for acceptance.
 
 ### S4 historical F1 string (explicit)
 

@@ -1,8 +1,9 @@
 # DC-1–DC-12 Traceability Matrix (S6)
 
-**SSOT definition source:** `STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md` Rev 1.3 §9 table.  
-**Baseline HEAD:** `76fa70bd5577ae4cc5b793e205518c38c5baf2b5`  
-**Regression evidence:** `test-results.txt` (S6 re-run, all listed commands exit 0)
+**SSOT definition source:** `STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md` Rev 1.3 **§7 Test matrix**.  
+(§9 = Items needing separate authorization; §10 = implementation steps — not the DC-1–DC-12 definition table.)  
+**Baseline HEAD (this supplemental evidence):** must match S6 audit commit when recorded in `toolchain-s6-commit.txt` / `test-results-s6-commit.txt`.  
+**Regression evidence:** `test-results-s6-commit.txt` (full suite executed at S6 commit SHA; all listed commands exit 0)
 
 | Control | Formal requirement (from design §9) | Implementation | Tests / cases | Evidence | Conclusion |
 |---|---|---|---|---|---|
@@ -14,7 +15,7 @@
 | **DC-5** | Unexpected throw after valid version → `dir_catalog_load_failed` | loader try/catch → `load_failed`; Wire allowlist | dir-catalog load_failed stubs; freeze-wire Tier A | PASS | **PASS** |
 | **DC-6** | Non-ACTIVE absent major (e.g. 999) → `dir_catalog_version_unknown` | `resolveDirNaCatalog` | dir-catalog 999 | PASS | **PASS** (loader; Freeze uses ACTIVE only) |
 | **DC-7a** | Loader rejects bad/unknown/missing numeric versions (distinct codes) | same loader | dir-catalog invalid / missing / unknown | PASS | **PASS** |
-| **DC-7b** | Write pin vs Freeze pin incompatibility | Requires Schema pin (E-SCHEMA-1) | — | Design marks out of scope | **SPECIFICATION / DEFERRED** (not Stage 3.2 claim) |
+| **DC-7b** | Write pin vs Freeze pin incompatibility | Requires Schema pin (E-SCHEMA-1) | — | Design §7 marks out of scope / deferred | **SPECIFICATION_GAP / DEFERRED** (not implemented; not Stage 3.2 claim) |
 | **DC-8** | Forged `authority.dirCatalog` while SSOT denies → no false `n_a` | `buildFreezeNaValidationFromSession` strips `dirCatalog`; loads ACTIVE | dir-catalog DC-8; S4 C23; S5 F1 forged dirCatalog | PASS | **PASS** |
 | **DC-9** | Caller forged `dir_na_conditions` list cannot authorize | Write ignores `input.dir_na_conditions`; uses loader membership | dir-catalog DC-9a/9b; S4 C07 | PASS | **PASS** |
 | **DC-10** | Same ACTIVE snapshot; write membership ≡ Freeze membership | Write + Freeze both `loadDirNaCatalog(ACTIVE)` / same ACTIVE constant | dir-catalog consistency; S4 C01–C04 / C07 | PASS under ACTIVE | **PASS** |
@@ -23,5 +24,6 @@
 
 **Notes**
 
-- DC-7b is explicitly **not** an implement/claim item for this vertical slice.
+- Formal DC definitions: design Rev 1.3 **§7 Test matrix** (not §9).
+- DC-7b remains **SPECIFICATION_GAP / DEFERRED** — must not be treated as implemented or PASS.
 - DC-4 production Freeze “Registry inject” is intentionally **not** a runtime test path; design requires pure resolver + wire mapper evidence instead.
