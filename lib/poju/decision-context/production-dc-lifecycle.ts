@@ -24,7 +24,7 @@ import { dirsFromAgenda } from "./dir-from-agenda";
 import { normalizeCallAInput } from "./normalize-call-a";
 import { normalizeCallBInput } from "./normalize-call-b";
 import { fingerprintCallA, fingerprintCallB } from "./fingerprint";
-import { reaggregateDirs } from "./dir-aggregator";
+import { reaggregateDirsOnSession } from "./na-validation-from-session";
 import { buildRealityFact } from "./fact-combination";
 import type { DecisionContext, RealityFact } from "./types";
 
@@ -206,9 +206,11 @@ export function applyCallBToSessionDc(
     const fp = fingerprintCallB(normalized);
     const dirs = dirsFromAgenda(investigation_agenda, { existing: dc.dirs });
     const now = opts?.now ?? new Date().toISOString();
+    // Intake 2.0: shared resolveDirRoleEvidence — no legacy OR-fallback aggregator.
+    const aggregated = reaggregateDirsOnSession(base, dirs, { nowIso: now });
     const nextDc: DecisionContext = {
       ...dc,
-      dirs: reaggregateDirs(dirs, dc.reality_facts, dc.conflicts),
+      dirs: aggregated,
       updated_at: now,
     };
     return {
@@ -271,8 +273,12 @@ export function applyCollectingUserTurnToSessionDc(
     fact_roles: ["collecting_user_statement"],
   });
   const reality_facts = [...dc.reality_facts, fact];
-  const dirs = reaggregateDirs(dc.dirs, reality_facts, dc.conflicts);
   const now = input.now ?? new Date().toISOString();
+  // Intake 2.0: reaggregate with Session-built NaValidationContext + constraints/N/A.
+  const dirs = reaggregateDirsOnSession(session, dc.dirs, {
+    realityFacts: reality_facts,
+    nowIso: now,
+  });
   return {
     session: {
       ...session,

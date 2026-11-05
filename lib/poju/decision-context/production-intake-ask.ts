@@ -12,6 +12,7 @@
 
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { NaValidationContext } from "./explicit-na-validate";
+import { buildNaValidationContextFromSession } from "./na-validation-from-session";
 import {
   planNextAskFromCandidates,
   type PlanNextAskResult,
@@ -114,10 +115,16 @@ export function selectNextIntakeAskForSession(
     ...(input.extraCandidates ?? []),
   ];
 
+  const naValidation =
+    input.naValidation ??
+    buildNaValidationContextFromSession(input.session, {
+      nowIso: input.nowIso,
+    });
+
   const plan = planNextAskFromCandidates({
     candidates,
     snap: snapshotFromDc(dc),
-    naValidation: input.naValidation,
+    naValidation,
     softGate: input.softGate,
     p0DdrIncomplete: input.p0DdrIncomplete,
     p0SourceNotOk: input.p0SourceNotOk,
