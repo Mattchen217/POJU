@@ -400,6 +400,10 @@ function main() {
       (session.decision_context?.explicit_na_classifications ?? []).length,
       0,
     );
+    assert.equal(
+      (session.decision_context?.explicit_na_evidence ?? []).length,
+      0,
+    );
     console.log("  PASS  DC-2 unregistered DIR → dir_not_in_catalog, no append");
   }
 
@@ -424,6 +428,14 @@ function main() {
       "na_condition_not_in_catalog",
     );
     assert.equal((session.na_declaration_actions ?? []).length, 0);
+    assert.equal(
+      (session.decision_context?.explicit_na_classifications ?? []).length,
+      0,
+    );
+    assert.equal(
+      (session.decision_context?.explicit_na_evidence ?? []).length,
+      0,
+    );
     console.log(
       "  PASS  DC-3 unregistered condition → na_condition_not_in_catalog, no append",
     );
@@ -499,10 +511,14 @@ function main() {
   }
 
   {
-    // Pure mapping coverage only — not production Registry fault integration
+    // Pure mapping coverage only — not production Registry fault integration.
+    // Assert all five loader failure reason_codes pass through unchanged.
     for (const reason of [
-      "dir_catalog_load_failed",
+      "dir_catalog_version_missing",
+      "dir_catalog_version_invalid",
+      "dir_catalog_version_unknown",
       "dir_catalog_ssot_unavailable",
+      "dir_catalog_load_failed",
     ] as const) {
       const mapped = membershipFromCatalogLoad(
         { ok: false, reason_code: reason },
@@ -513,7 +529,7 @@ function main() {
       if (!mapped.ok) assert.equal(mapped.reason_code, reason);
     }
     console.log(
-      "  PASS  load-fail pure mapping coverage (not production Registry integration)",
+      "  PASS  load-fail pure mapping coverage — all 5 loader reason_codes (not production Registry integration)",
     );
   }
 
