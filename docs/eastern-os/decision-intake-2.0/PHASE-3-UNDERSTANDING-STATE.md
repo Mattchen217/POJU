@@ -98,9 +98,9 @@ type NeedItem =
 | **Trace** | `dir_based`: `dir_id` → catalog + `DC.dirs`; `source_only`: `ddr_id` + `source_code` + `source_state` → Phase 2 source matrix |
 | **Model** | May reorder; **cannot** invent DIR ids; cannot convert source_only → dir_based |
 
-### 2.7 N/A evidence provenance (R4-01)
+### 2.7 N/A evidence provenance (R4-01 + R5-01…R5-03)
 
-Align Phase 1 §2.4 / §3.2 / §10.2 and Phase 2 §1.5. Understanding caches `na_evidence_ids` only — **not** authority.
+Align Phase 1 §2.4 / §3.2 / §10.2 and Phase 2 §1.5 / DDR-02 Rule A / DDR-03 §3.3.1. Understanding caches `na_evidence_ids` only — **not** authority.
 
 #### A0. DIR vs DDR state types (frozen; never mix)
 
@@ -130,11 +130,17 @@ type NaSourceRef =
   | { kind: "reality_fact"; fact_id: string }
   | { kind: "constraint"; constraint_id: string };
 
+/** system_basis kinds — scope locked in §A2 (R5-02). */
 type NaSystemBasis =
   | { kind: "topic_not_applicable"; topic_code: string; rule_id: string }
-  | { kind: "catalog_na_condition_met"; condition_eval_id: string }
-  | { kind: "empty_dir_source_absence"; ddr_id: string; source_code: string; eval_id: string };
-  // rule_id / condition_eval_id / eval_id = durable id of the deterministic check run that proved the condition
+  | { kind: "catalog_na_condition_met"; target_dir_id: string; condition_eval_id: string }
+  | {
+      kind: "empty_dir_source_absence";
+      ddr_id: "DDR-03-CHART-APPENDIX"; // literal allowlist — only DDR-03
+      source_code: string;             // must be DDR-03 required CFP source
+      source_state: "source_absent_not_supplied"; // only this state
+      eval_id: string;
+    };
 
 type ExplicitNaEvidence =
   | {
@@ -191,52 +197,97 @@ type ExplicitNaEvidence =
 | Hard constraint | Rule |
 |---|---|
 | Exactly one target | `target=dir` ⇒ `dir_id` present, `ddr_id` absent; `target=ddr` ⇒ `ddr_id` present, `dir_id` absent |
-| No orphan evidence | Both ids absent → **REJECT** (never persist) |
-| No dual target | Both ids present → **REJECT** (one evidence, one target) |
-| `user_explicit_na` | `source_ref` **REQUIRED**; resolve to live non-revoked RealityFact/Constraint; payload must support the claimed N/A semantics |
-| `system_na_marker` | `system_basis` **REQUIRED**; code must re-verify basis still true at write time; `na_condition_code` alone is **insufficient** |
-| `model_inferred` | Not a legal `evidence_type` — reject |
+| No orphan / dual target | Neither or both ids → **REJECT** |
+| `user_explicit_na` | `source_ref` **REQUIRED** + §A3 semantic checks |
+| `system_na_marker` | `system_basis` **REQUIRED** + §A2 scope; `na_condition_code` alone **never** enough |
+| `model_inferred` | Illegal type — reject |
 
 | Store | Role |
 |---|---|
-| `DC.explicit_na_evidence[]` | Primary code-validated markers; DC business data ∈ `content_hash` |
-| `DC.reality_facts[]` / `DC.constraints[]` | Targets of `source_ref` |
-| Understanding `na_evidence_ids` | Derived pointers only |
+| `DC.explicit_na_evidence[]` | Primary code-validated markers; ∈ `content_hash` |
+| `DC.reality_facts[]` / `DC.constraints[]` | `source_ref` targets |
+| Understanding `na_evidence_ids` | Derived only |
+
+#### A1. DDR-level N/A allowlist (R5-01 · Phase 2 closed)
+
+**Code MUST enforce allowlist + source-state — not only `na_condition_code`.**
+
+| DDR | Empty-DIR + Source-Absence N/A path? | Allowed CFP/source state for DDR `n_a` | Forbidden |
+|---|---|---|---|
+| **`DDR-03-CHART-APPENDIX`** | **Yes — sole allowlist member (v1.1)** | CFP = `source_absent_not_supplied` **and** VALID ExplicitNaEvidence (`target=ddr`, ddr_id=DDR-03) | `source_calc_failed` → **never** N/A (stay `pending`); `source_provenance_missing` → **never** N/A |
+| **`DDR-02-ATTRIBUTION`** | **No** | **None** — CFP non-waivable (Product Rule A) | Any CFP ≠ `source_ok` ⇒ DDR **`pending`** ⇒ Gate **P0 FAIL**; DIR N/A / DDR N/A / `system_na_marker` / `empty_dir_source_absence` **cannot** waive |
+| Any other DDR | **No** | No empty-DIR source-absence N/A | Attempt → **REJECT** evidence; compose per Phase 2 without that path |
+
+```text
+DDR_EMPTY_DIR_SOURCE_ABSENCE_ALLOWLIST = { "DDR-03-CHART-APPENDIX" }
+
+On target=ddr evidence OR system_basis.kind=empty_dir_source_absence:
+  REJECT unless ddr_id ∈ allowlist
+  REJECT if ddr_id = DDR-02-ATTRIBUTION (any N/A waiver path)
+  For DDR-03: REJECT unless measured CFP state == source_absent_not_supplied
+  REJECT if CFP ∈ {source_calc_failed, source_provenance_missing}
+```
+
+#### A2. `system_basis` scope (R5-02)
+
+| `system_basis.kind` | Allowed targets | Validation (all required) |
+|---|---|---|
+| `topic_not_applicable` | `target=dir` whose DIR is topic-seeded per Phase 2 Topic Applicability; **not** DDR-02 Rule A waiver | `rule_id` ∈ Topic Applicability catalog; `topic_code` matches; re-run applicability → still not applicable; `na_condition_code` matches DIR `na_conditions` |
+| `catalog_na_condition_met` | `target=dir` only (`target_dir_id` == evidence.`dir_id`) | Re-execute deterministic DIR `na_conditions` check for that DIR; `condition_eval_id` records proof; **forbidden** as substitute for DDR-03 source-absence or DDR-02 CFP |
+| `empty_dir_source_absence` | **`target=ddr` AND `ddr_id=DDR-03-CHART-APPENDIX` only** | `source_code` is DDR-03 required CFP source; live state == `source_absent_not_supplied`; `system_basis.ddr_id` == evidence.`ddr_id` == DDR-03; **forbidden** for any DIR target, DDR-02, or non-allowlist DDR |
+
+Any mismatch of target / rule / source / condition → **REJECT** (do not persist as Gate-affecting evidence).
+
+#### A3. `user_explicit_na` / `source_ref` semantics (R5-03)
+
+Existence of an id is **not** enough. Code MUST verify:
+
+1. **Resolve:** `source_ref` → live RealityFact or Constraint; not deleted; not superseded; Constraint/Fact `status` not treating record as void.  
+2. **Association:**  
+   - `target=dir`: Fact.`related_dir_ids` contains `dir_id`, **or** Constraint has Phase 1 recommended `related_dir_ids` containing `dir_id`. If Constraint lacks `related_dir_ids` → **REJECT** (cannot prove association; do not guess).  
+   - `target=ddr`: only legal when ddr ∈ DDR-03 allowlist path; `source_ref` statement/evidence must support “chart appendix not supplied / not applicable” semantics for DDR-03 — not a random unrelated fact.  
+3. **Condition support:** source payload/statement must support the cited `na_condition_code` (catalog match + content check).  
+4. **User-explicit only:** source must be user-asserted channel (E1-compatible fact/constraint path). **REJECT** if model-inferred, silence, missing fields, or mere `unknown`/`declined` status used as N/A proof.  
+5. **No new C1/E1 semantics:** confirming N/A evidence does not invent a second confirmation event type; uses existing Fact/Constraint records only.
+
+Fail any step → **REJECT**; must not affect reaggregate / DDR roll-up / Gate.
 
 #### B. Evidence types (summary)
 
 | Type | Allowed if |
 |---|---|
-| `user_explicit_na` | Valid target + required `source_ref` + `na_conditions` match |
-| `system_na_marker` | Valid target + required `system_basis` proven + condition match |
+| `user_explicit_na` | §A3 + catalog condition |
+| `system_na_marker` | §A2 + catalog condition |
 | Model / silence / dangling / unknown / declined | **Never** |
 
 #### C. Legality validation (code; all must pass)
 
 ```text
 REJECT if any:
-  - target missing / both dir_id and ddr_id set / neither set
-  - evidence_type=user_explicit_na AND source_ref missing or dangling
-  - evidence_type=system_na_marker AND system_basis missing or re-eval false
+  - target orphan/dual (§A)
+  - ddr path fails allowlist / source-state (§A1)
+  - system_basis out of scope or inconsistent (§A2)
+  - user_explicit_na fails source_ref semantic checks (§A3)
   - na_condition_code not in catalog for that target
-  - revoked=true (ignored for satisfaction; may remain for audit)
-  - written_by ≠ "code" / model-authored payload
+  - revoked=true (audit-only; no satisfaction)
+  - written_by ≠ "code" / model-authored
 
 ACCEPT → may feed reaggregateDirs / DDR roll-up / Gate
 ```
 
 #### D. Rebuild / revoke / hash
 
-1. Add/revoke → DC Update → `DC.version++` → recompute `content_hash` (includes `explicit_na_evidence`) → reaggregate → DDR → Gate.  
+1. Add/revoke → DC Update → `DC.version++` → recompute `content_hash` → reaggregate → DDR → Gate.  
 2. Understanding rebuild from DC only.  
 3. FreezeRecord.dc_content_hash at E2; prior freezes immutable.  
 
 #### E. Non-bypass (frozen)
 
 - unknown/declined ↛ n_a  
-- Evidence-less / INVALID evidence → no Gate satisfaction via n_a  
-- DDR-02 CFP miss → pending → P0 FAIL; **N/A cannot waive Rule A**  
-- Dangling / missing profile ≠ automatic n_a
+- INVALID evidence → no Gate satisfaction via n_a  
+- **DDR-02 CFP any non-`source_ok` → `pending` → P0 FAIL; no N/A waiver (Rule A)**  
+- **Only DDR-03** may use empty-DIR + `source_absent_not_supplied` N/A  
+- DDR-03 `source_calc_failed` / `source_provenance_missing` ≠ N/A
 
 ### 2.4 `personal_pattern_insight`
 

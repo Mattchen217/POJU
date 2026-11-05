@@ -52,7 +52,7 @@ Bound what the model may see and propose, what code alone may write, and how tur
 1. Schema validation (zod) of all model JSON.  
 2. Fact combination legality + confirmation derivation (reuse `fact-combination` / confirmation-event semantics).  
 3. `reaggregateDirs` + DDR compose + Gate (Phase 2 §1.4–§1.6).  
-4. N/A evidence validation against DIR `na_conditions` (Understanding §2.7); never trust Understanding cache alone.  
+4. N/A evidence validation: Understanding §2.7 A1 allowlist / A2 system_basis / A3 source_ref / `na_conditions`; never trust Understanding cache alone; never waive DDR-02 Rule A.  
 5. Blueprint version binding & FreezeRecord (C5) when freezing.  
 6. Idempotency, optimistic concurrency, Lockout gates; Commit B unique slot (§5.4).  
 7. Strip/reject out-of-scope DIR/DDR references; kind-aware CandidateQuestion validation.

@@ -103,20 +103,69 @@ else → unknown
 
 Priority if multiple would apply: `conflict` > `declined` > `partial` > `unknown` (source_only fixed).
 
-#### 2.1.2 Unresolved `fact_role_code` (R4-02)
+#### 2.1.2 Unresolved `fact_role_code` (R5-04)
+
+**Namespace parse:** `v1/dir/{dir_id}/role/{role_code}` → `(dir_id, role_code)`; `v1/source/...` not resolved via Fact/Constraint (source_only path).
+
+**Do not invent Phase 1 DC fields.** Constraint has no `fact_roles` in Phase 1; mapping uses `rigidity`, `category`, `status`, `verification_level`, `user_confirmed`, and Phase 1 **recommended** `related_dir_ids` when present.
+
+##### RealityFact → role
+
+```text
+Fact F satisfies namespaced role R=v1/dir/{D}/role/{r} iff ALL:
+  1. F.related_dir_ids includes D
+     — if related_dir_ids missing/empty → NOT resolved (refuse guess)
+  2. F.fact_roles includes r OR includes full R
+     — if fact_roles missing → NOT resolved for that role
+  3. Legal status for aggregator "known" contribution:
+     status === "confirmed" (Phase 1 dir-aggregator), OR
+     (DIR n_a path: VALID ExplicitNaEvidence for D — not counted as fact role fill)
+  4. verification_level / user_confirmed consistent with C1 for that status
+     (independently_verified ⇒ user_confirmed=false still OK if status rules allow)
+  5. Same F may fill multiple roles ONLY if each role's r ∈ F.fact_roles AND
+     related_dir_ids includes that role's D — never invent cross-DIR satisfaction
+```
+
+##### Constraint → `hard_constraint` / `soft_constraint`
+
+```text
+Constraint K satisfies R=v1/dir/{D}/role/{r} iff ALL:
+  1. r ∈ {"hard_constraint","soft_constraint"} 
+     — other role_codes: Constraint NEVER auto-resolves (→ unresolved)
+  2. rigidity map:
+       r=hard_constraint ⇒ K.rigidity === "hard"
+       r=soft_constraint ⇒ K.rigidity === "soft"
+  3. Association to D:
+       K.related_dir_ids (Phase 1 recommended) includes D
+       — if related_dir_ids absent → NOT resolved (do not infer from category alone)
+  4. category filter (optional tighten, never loosen):
+       If DIR Catalog / candidate declares expected ConstraintCategory set for this role,
+       then K.category must ∈ that set; if no expected set → category unused for match
+  5. Status legality (parallel to facts; no new E1 type):
+       K.status === "confirmed" required to count as resolved
+       (unknown/declined/unverified ≠ resolved)
+  6. verification_level / user_confirmed must obey C1 pairing for that status
+```
+
+**Insufficient fields ⇒ refuse auto-resolved** (leave role unresolved). Never invent `fact_roles` on Constraint.
+
+##### Aggregation
 
 ```text
 For dir_based candidate C:
-  roles = unique(C.fact_role_codes)   // already namespaced §2.2
-  resolved(role) = true iff DC has a RealityFact/Constraint satisfying that role
-                 with status∈{confirmed} OR (n_a with VALID ExplicitNaEvidence for that DIR)
-                 per Phase 1 aggregator semantics
+  roles = unique(C.fact_role_codes)
+  resolved(role) = true iff ≥1 Fact OR Constraint satisfies role under rules above
+                 OR (role's DIR D has current_state=n_a with VALID ExplicitNaEvidence)
   unresolved_roles(C) = sort(roles.filter(not resolved))
-  unresolved_count = |unresolved_roles(C)|   // deduped set size — never count same role twice
-For source_only: unresolved_count = 0 (gain uses +6 source term instead)
-```
+  unresolved_count = |unresolved_roles(C)|     // each role once
 
-Multi-DIR candidate (rare, flagged): take **union** of unresolved roles across `dir_ids`, then unique — no double-count of the same `fact_role_code`.
+Multi-DIR candidate:
+  Evaluate each namespaced role against ITS OWN dir_id only
+  Union unresolved set; unique by full fact_role_code string
+  A Fact related only to D1 must NOT resolve v1/dir/D2/role/...
+
+source_only: unresolved_count = 0 (gain uses +6 source term)
+```
 
 #### 2.1.3 Soft Gate FAIL attribution (R4-02)
 

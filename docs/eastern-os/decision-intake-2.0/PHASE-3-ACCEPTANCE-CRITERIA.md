@@ -52,7 +52,7 @@
 
 ---
 
-## AC3-3 Design matrix (MX-01 … MX-68)
+## AC3-3 Design matrix (MX-01 … MX-82)
 
 | ID | Given | When | Then | Spec |
 |---|---|---|---|---|
@@ -124,10 +124,24 @@
 | MX-66 | Same unresolved roles listed twice / multi-DIR union | gain | Deduped unresolved_count; attributable_fail boolean once | Plan §2.1.2–§2.1.4 |
 | MX-67 | candidate_id via canonicalStringify | Identity | Must use `normalize.ts` canonicalStringify; same obj ⇒ same id | Plan §2.3 |
 | MX-68 | Concurrent ShowReceipt UNIQUE conflict | Count | Loser re-reads; returns idempotent success; no double count; no client error | MC §5.3 |
+| MX-69 | DDR-03; CFP=`source_absent_not_supplied` + VALID ExplicitNaEvidence target=ddr | DDR N/A | DDR-03 may be `n_a` | US §2.7 A1; P2 §3.3.1 |
+| MX-70 | DDR-03; CFP=`source_calc_failed`; N/A evidence attempted | DDR N/A | **REJECT** N/A; DDR stays `pending` | US §2.7 A1 |
+| MX-71 | DDR-02; CFP not source_ok; all DIRs n_a | Rule A | DDR-02 `pending`; Gate P0 FAIL; N/A cannot waive | US §2.7 A1/E; P2 Rule A |
+| MX-72 | DDR-02 evidence with `empty_dir_source_absence` | system_basis | **REJECT** | US §2.7 A1/A2 |
+| MX-73 | Non-DDR-03 empty-DIR source-absence N/A | Allowlist | **REJECT** | US §2.7 A1 |
+| MX-74 | DIR system_na_marker uses `empty_dir_source_absence` | system_basis | **REJECT** (basis only for DDR-03 target=ddr) | US §2.7 A2 |
+| MX-75 | source_ref Fact related_dir_ids misses target DIR | user_explicit_na | **REJECT** | US §2.7 A3 |
+| MX-76 | source_ref points to revoked/superseded Fact | user_explicit_na | **REJECT** | US §2.7 A3 |
+| MX-77 | source_ref is model-inferred / silence / unknown-as-N/A | user_explicit_na | **REJECT** | US §2.7 A3 |
+| MX-78 | Constraint.rigidity=hard; related_dir_ids has D; status=confirmed; role hard_constraint | gain resolve | Role resolved | Plan §2.1.2 |
+| MX-79 | Constraint.rigidity=soft; same association; role soft_constraint | gain resolve | Role resolved | Plan §2.1.2 |
+| MX-80 | Constraint related_dir_ids misses candidate DIR (or absent) | gain resolve | **Not** resolved | Plan §2.1.2 |
+| MX-81 | Same fact_role_code listed twice on candidate | unresolved_count | Count once | Plan §2.1.2 |
+| MX-82 | Fact related only to D1; role namespaced to D2 | gain resolve | Must **not** resolve D2 role | Plan §2.1.2 |
 
 ---
 
-## AC3-4 Detailed R3/R4 case cards
+## AC3-4 Detailed case cards (R3–R5)
 
 ### MX-15 — Hard + P0
 
@@ -181,66 +195,82 @@
 | **Given** | Equal scores / cross-kind / ddr order / id regen / hint / rep set |
 | **Expected Then** | Full sort key; deterministic id; DDR gate_class; shown-only rep |
 | **Spec** | Plan §2.1–§2.4 |
-| **Doc check** | **PASS** |
+| **Doc check** | Spec present — **pending independent review** |
+
+### MX-69–77 — DDR allowlist / system_basis / source_ref (R5)
+
+| | |
+|---|---|
+| **Given** | See AC3-3 rows MX-69…77 |
+| **When** | ExplicitNaEvidence validate (§2.7 A1–A3) |
+| **Then** | Only DDR-03 + source_absent_not_supplied N/A; Rule A intact; bad basis/ref REJECT |
+| **Spec** | US §2.7 A1–A3; P2 Rule A / §3.3.1 |
+| **Doc check** | Spec present — **pending independent review** |
+
+### MX-78–82 — Constraint/Fact role mapping (R5-04)
+
+| | |
+|---|---|
+| **Given** | See AC3-3 rows MX-78…82 |
+| **When** | unresolved_count / resolved(role) (§2.1.2) |
+| **Then** | rigidity map; association required; no cross-DIR bleed; dedupe roles |
+| **Spec** | Plan §2.1.2 |
+| **Doc check** | Spec present — **pending independent review** |
 
 ---
 
-## AC3-5 Cross-doc consistency (R3 · with section cites)
+## AC3-5 Cross-doc consistency (with section cites)
 
 | Topic | Docs & sections | Consistent? |
 |---|---|---|
-| Soft/Hard + review_cycle | Arch §3.4 ↔ Plan §5.1–§5.2 ↔ AC MX-15/28/34/49/50 | **Yes** — same field math |
-| USER_REVISE | Arch §3.3/§3.4 ↔ Plan §5.1 ↔ AC MX-34/49 | **Yes** — cycle bump; hard not reset |
-| ShowReceipt / count | MC §5.3 ↔ Arch §6 ↔ Plan §5.1 ↔ AC MX-51/52 | **Yes** — Commit B ≠ count |
-| delivery_generation | MC §5.5 ↔ Arch §6 ↔ AC MX-53/54 | **Yes** — bump frees slot |
-| ExplicitNaEvidence | US §2.7A (discriminated target + source_ref/system_basis) ↔ MC §6.1 ↔ Arch §4 ↔ AC MX-55/56/63–65 | **Yes** |
-| gain inputs | Plan §2.1.1–§2.1.4 ↔ AC MX-66 | **Yes** |
-| candidate_id canon | Plan §2.3 → `canonicalStringify` ↔ AC MX-67 | **Yes** |
-| delivery_status | MC §5.3 ↔ Plan §2.1.5 (no superseded) ↔ AC MX-62 | **Yes** |
-| ShowReceipt race | MC §5.3 concurrent → idempotent success ↔ AC MX-68 | **Yes** |
-| DIR/DDR types | US §2.7 A0 ↔ MC §6.9 ↔ AC MX-58 | **Yes** |
-| candidate_id / roles / gate_class | Plan §2.2–§2.4 ↔ MC §3 ↔ AC MX-59–62 | **Yes** |
-| R2-02 source_only validation | Plan §4 (unchanged intent) ↔ MX-29/35/36 | **Yes** — not redesigned |
+| Soft/Hard + review_cycle | Arch §3.4 ↔ Plan §5.1–§5.2 ↔ AC MX-15/28/34/49/50 | Aligned — **pending independent review** |
+| USER_REVISE | Arch §3.3/§3.4 ↔ Plan §5.1 ↔ AC MX-34/49 | Aligned — **pending independent review** |
+| ShowReceipt / count | MC §5.3 ↔ Arch §6 ↔ Plan §5.1 ↔ AC MX-51/52/68 | Aligned — **pending independent review** |
+| ExplicitNaEvidence + DDR allowlist | US §2.7 A1–A3 ↔ MC §3 / §6.1 ↔ AC MX-69–77 | Aligned — **pending independent review** |
+| Constraint/Fact → fact_role_code | Plan §2.1.2 ↔ AC MX-78–82 | Aligned — **pending independent review** |
+| gain / candidate_id / gate_class | Plan §2.1–§2.4 ↔ AC MX-32/46–48/59–67 | Aligned — **pending independent review** |
+| R2-02 source_only | Plan §4 ↔ MX-29/35/36 | Unchanged intent — **pending independent review** |
+| Phase 2 Rule A | US §2.7 A1/E ↔ P2 DDR-02 ↔ MX-71/72 | No semantic reopen claimed — **pending independent review** |
 
-If a product UX choice remains OPEN, it is listed below — **not** marked PASS.
+OPEN product UX items below are **not** marked PASS.
 
 ---
 
 ## AC3-6 Author consistency self-check
 
-| # | Check | Result |
-|---|---|---|
-| 1 | Understanding derived | **PASS** |
-| 2 | R2-02 kind validation retained | **PASS** |
-| 3 | MX-01…68 with G/W/T | **PASS** |
-| 3b | ExplicitNaEvidence target/source/basis closed (R4-01) | **PASS** |
-| 3c | information_gain_est inputs closed (R4-02) | **PASS** |
-| 3d | candidate_id → canonicalStringify (R4-03) | **PASS** |
-| 4 | Soft sticky bug closed via review_cycle | **PASS** |
-| 5 | ShowReceipt exactly-once | **PASS** |
-| 6 | N/A on DC + C5 hash | **PASS** |
-| 7 | gate_class from DDR catalog | **PASS** |
-| 8 | Runtime changed | **No** |
+| # | Check | Author note | Independent review |
+|---|---|---|---|
+| 1 | Understanding derived | Claimed | **Pending** |
+| 2 | R2-02 kind validation retained | Claimed | **Pending** |
+| 3 | MX-01…82 G/W/T present; numbering continuous | Claimed | **Pending** |
+| 4 | R5-01 DDR-03-only empty-DIR N/A; Rule A | Claimed | **Pending** |
+| 5 | R5-02 system_basis scopes | Claimed | **Pending** |
+| 6 | R5-03 source_ref semantic checks | Claimed | **Pending** |
+| 7 | R5-04 Constraint/Fact role mapping; no new Phase 1 fields | Claimed | **Pending** |
+| 8 | Budget / ShowReceipt / Gate not redesigned | Claimed | **Pending** |
+| 9 | Runtime / Schema / UI / Prompt / PageFeedMatrix / Phase 1–2 docs | **No changes** | **Pending** |
 
 ---
 
-## Frozen rules check (semantic)
+## Frozen rules check (semantic · R5)
 
-| Rule | Semantic change in R3? |
+| Rule | Semantic change in R5? |
 |---|---|
-| C1 FactStatus×VL / E1 | **No** |
+| C1 FactStatus×VL / E1 | **No** — source_ref uses existing Fact/Constraint only |
 | C2 no Stage labels | **No** |
-| C3 DC sole fact SoT | **No** — ExplicitNaEvidence is **inside** DC |
-| C4 DDR compose / Gate | **No** — clarified DIR≠DDR types only |
-| C5 FreezeRecord hash bind | **No** — clarified ExplicitNaEvidence ∈ business payload hash; Blueprint/DDR versions still sidecar |
+| C3 DC sole fact SoT | **No** |
+| C4 DDR compose / Gate | **No** — restates Phase 2 allowlist/Rule A in Phase 3 validate |
+| C5 FreezeRecord hash bind | **No** |
 | DC.dirs live SoT | **No** |
 | Blueprint seed-only | **No** |
 | P0/P1/P2 + WARN | **No** |
-| Required Source order + Rule A | **No** |
+| Required Source order + Rule A | **No** — DDR-02 still non-waivable |
+| DDR-03-only empty-DIR N/A | **No** — Phase 2 v1.1 restated |
 | E1 ≠ E2 | **No** |
 | No new Session phase | **No** |
 | Agenda ≠ known | **No** |
 | unknown/declined ↛ n_a | **No** |
+| No new Phase 1 Constraint fields | **No** — map via rigidity/category/status + recommended related_dir_ids |
 
 ---
 
@@ -249,7 +279,7 @@ If a product UX choice remains OPEN, it is listed below — **not** marked PASS.
 1. Hard-exhausted UX copy / screen (investigating vs review CTA) — Gate FAIL / no E2 / no asks **closed**.  
 2. After generation bump: auto-replan once vs force client refresh.  
 3. non-askable source_only UX step count.  
-4. Phase 3.2 concrete persistence of `DC.explicit_na_evidence` field wiring into existing `types.ts` / `extractBusinessPayload` (design mandates inclusion; impl detail OPEN).  
+4. Phase 3.2: wire `DC.explicit_na_evidence` + hash extractor; optional Constraint.`related_dir_ids` per Phase 1 recommendation (absent ⇒ role unresolved).  
 5. ShowReceipt client ack transport (websocket vs HTTP) — semantics closed.
 
 ---
@@ -262,4 +292,4 @@ Product independent re-review required. **Do not** merge, create PR unless asked
 
 ## Declaration
 
-Stage 3.1-R4 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes. Budget / ShowReceipt core / source_only / Gate not redesigned.
+Stage 3.1-R5 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes. Budget / ShowReceipt core / source_only / Gate not redesigned. Author self-check ≠ independent PASS.
