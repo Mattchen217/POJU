@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | **Document status** | PLAN ONLY — no production/test implementation authorized by this document |
-| **Plan revision** | **1.1** (review amendments locked — `FreezeError` ctor, Freeze-reachable taxonomy, CFP pass-through, staged freeze-versioning RED, strengthened DC-8, private helpers) |
-| **Prior plan commit** | `dc76468c8ae9eac0c345eb93ee1721d8eba1e973` |
+| **Plan revision** | **1.2** (mapping coverage clarification — production fail-closed is code-reviewed, not runtime-tested via scripts twin; DC-1/DC-8 remain compose integration) |
+| **Prior plan commits** | Rev 1.0 `dc76468c…` → Rev 1.1 `ed8caa24…` |
 | **Authoritative design** | [`STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md`](./STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md) **Revision 1.3** |
 | **Design sections used** | §1.2 (Freeze gap), §3.2.2 / §3.4 (taxonomy), §3.2–3.6 (loader / ACTIVE / membership), §5 (Freeze production read · full), §6 (trust boundary), §7 (DC-1 Freeze, DC-8), §8 (compat), §9 (deferred), §10.1–10.3 (**S2 row**), §10.2 structural isolation |
 | **Depends on** | S0 + S1 accepted on `feat/s1-dir-na-write-catalog` |
@@ -49,7 +49,7 @@ Acceptance slice for S2 (design table): **DC-1 Freeze**, **DC-8**; **R6 T0 Sessi
    - On success → set `dirCatalog = load.entries` (**overwrite**).
    - **Remove caller authority over `dirCatalog`** (never merge / never fall back).
 3. Preserve existing T0 Session strip exactly.
-4. Tests for **DC-1 Freeze**, **strengthened DC-8**, and pure load→`FreezeError` mapping (no Registry injection), in `scripts/test-intake-r6-dir-catalog.ts`.
+4. Tests for **DC-1 Freeze** and **strengthened DC-8** via real ACTIVE loader + production compose, in `scripts/test-intake-r6-dir-catalog.ts`. Production `!load.ok` → `FreezeError.code` mapping is **code-reviewed, not runtime-tested** (§C.3 / §E.2).
 
 ### A.5 Explicit out-of-scope (do not implement under S2 auth)
 
@@ -165,27 +165,27 @@ export class FreezeError extends Error {
 
 **I/O:** Input session + authoritative DC + optional authority (`dirCatalog` ignored). Output NaValidation with T2 from ACTIVE load. Errors: throw only — no Session/DC mutation in this helper.
 
-### C.3 Module-private mapping helper (same file — **not** exported)
+### C.3 Fail-closed mapping — inline in compose (no test API)
+
+**Locked production shape:** Inside `buildFreezeNaValidationFromSession`, after `load = loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION)`:
 
 ```ts
-// Pseudocode — plan only; keep function unexported from freeze-to-delivery.ts
-function dirCatalogEntriesOrThrow(
-  load: DirNaCatalogLoadResult,
-): readonly DirNaCatalogEntry[] {
-  if (!load.ok) {
-    throw new FreezeError(load.reason_code, { code: load.reason_code });
-  }
-  return load.entries;
+if (!load.ok) {
+  throw new FreezeError(load.reason_code, { code: load.reason_code });
 }
+// use load.entries as dirCatalog
 ```
 
-| Coverage label | Meaning |
-|---|---|
-| **Pure mapping coverage** | Unit-test private helper via file-local test access pattern **or** exercise through compose with synthetic load only if reachable without export — prefer testing throw path by exporting **nothing**; if a test needs the mapper, keep helper **module-private** and cover Freeze-reachable codes via documented compose/integration where ACTIVE load succeeds, plus **scripts-only** duplicate of mapping assert is forbidden as a second production seam. Practical S2 approach: keep helper private; add a **scripts/**-local copy of the mapping assertion **only** if needed, **or** test by invoking `buildFreezeNaValidationFromSession` after a controlled failure is impossible without injection — then **pure mapping** tests call a **scripts/fixtures** twin of the two-line map, **not** a production export. |
-| **Production compose integration** | Real `loadDirNaCatalog(ACTIVE)` inside `buildFreezeNaValidationFromSession` / `freezeDraftForDelivery` (DC-1 Freeze, DC-8) |
-| **Production Registry failure integration** | **Not claimed in S2** — would require forbidden Registry injection |
+A private local helper that performs exactly this throw is optional and **must remain unexported**. Prefer the inline form.
 
-**Locked decision:** Do **not** export the helper from production modules / barrels. Prefer inline throw in compose + scripts-local pure mapping checks that construct `FreezeError` the same way / assert the two-line map logic without importing a production test API. If implementer inlines without a named helper, that is acceptable.
+| Rule | Locked |
+|---|---|
+| No test-only production API | Do **not** export helpers, Registry injection, or seams for inducing `!load.ok` |
+| No scripts twin as production coverage | Do **not** duplicate this mapping in `scripts/**` and call that “production mapping coverage” — a scripts copy cannot detect production omitting `.code` |
+| How mapping is verified in S2 | **Independent code review** of the compose throw site. Implement / acceptance reports must label it: **`code-reviewed, not runtime-tested`** |
+| Runtime tests in S2 | **DC-1 Freeze** and **DC-8** only — real ACTIVE loader + production compose path |
+| Production Registry failure integration | **Not claimed** — cannot induce without forbidden injection |
+| Wire `reason_code` | **Not S2** — setting `FreezeError.code` ≠ `FreezeWireResult.reason_code` available (S3) |
 
 ### C.4 Files not modified in S2
 
@@ -243,8 +243,9 @@ Freeze **always** requests `ACTIVE_DIR_NA_CATALOG_VERSION`.
 |---|---|---|---|
 | **DC-1 Freeze** | SSOT-authorized Session N/A → Freeze → DIR `n_a` | Declare/apply `DIR-DEF-UNACCEPTABLE` + `explicit_no_hard_red_lines`; sufficient draft; call **production** `freezeDraftForDelivery` / compose **without** relying on caller `dirCatalog` | `frozen.dirs[…].current_state === "n_a"` |
 | **DC-8 (strengthened)** | Prove **caller catalog authority is ignored** | Session owns classification + `user_explicit_na` evidence + declaration action for a DIR/condition pair that **production SSOT does not authorize** (e.g. `DIR-A` + `explicit_not_applicable`, or any non-SSOT pair). Supply forged `authority.dirCatalog` that **does** list that pair. Call actual production Freeze compose (`freezeDraftForDelivery` → `buildFreezeNaValidationFromSession`) | DIR must **not** become `n_a`. Failure mode = membership deny under production SSOT despite forge — **not** merely “missing evidence” |
-| **Load→FreezeError map** | Pure mapping | Synthetic `!load.ok` for **Freeze-reachable** codes `dir_catalog_ssot_unavailable` + `dir_catalog_load_failed` (and optionally loader-only codes for fail-closed preserve-original, labeled loader-only) via **scripts-local** assert / private helper discipline — **no** production Registry injection | `FreezeError.code === reason_code`; label **pure mapping coverage** |
 | **T0 strip smoke** | Forged Session event stores on authority still stripped | Minimal SSOT-safe fixture | Session SoT wins |
+
+**Not a runtime test in S2:** `!load.ok` → `FreezeError.code` mapping. Verify by **code review** of the inline throw in `buildFreezeNaValidationFromSession`; report as **`code-reviewed, not runtime-tested`**. Do not add scripts twins, production exports, or Registry injection to runtime-test that path.
 
 **DC-8 negative proof checklist:**
 
@@ -258,9 +259,10 @@ Freeze **always** requests `ACTIVE_DIR_NA_CATALOG_VERSION`.
 
 | Class | S2 |
 |---|---|
-| Pure mapping coverage | Scripts-local / private map → `FreezeError.code` |
-| Production compose integration | DC-1 Freeze, DC-8 via real ACTIVE loader |
+| Production compose integration (runtime) | DC-1 Freeze, DC-8 via real `loadDirNaCatalog(ACTIVE)` + production compose |
+| Fail-closed `.code` mapping on `!load.ok` | **Code-reviewed, not runtime-tested** — no scripts twin claimed as production coverage |
 | Production Registry failure integration | **Not claimed** |
+| Wire `FreezeWireResult.reason_code` | **S3 only** — S2 must not equate `FreezeError.code` with wire `reason_code` |
 
 ### E.3 Existing suites / temporary freeze-versioning RED — locked
 
@@ -316,8 +318,8 @@ Freeze **always** requests `ACTIVE_DIR_NA_CATALOG_VERSION`.
 |---|---|
 | `lib/poju/decision-context/freeze.ts` | Locked `FreezeError` ctor + optional `code` |
 | `lib/poju/decision-context/freeze-to-delivery.ts` | Loader join; omit `dirCatalog`; throw on `!load.ok`; private helper optional |
-| `scripts/test-intake-r6-dir-catalog.ts` | DC-1 Freeze, strengthened DC-8, pure mapping labels |
-| `scripts/fixtures/**` | Test-only only; never imported by production Freeze path |
+| `scripts/test-intake-r6-dir-catalog.ts` | DC-1 Freeze, strengthened DC-8 (compose integration only) |
+| `scripts/fixtures/**` | Only if needed for DC-1/DC-8 fixtures; never imported by production; **no** mapping-twin “coverage” |
 | `package.json` | Only if new script required (prefer existing) |
 
 ### G.2 Denylist
@@ -360,7 +362,8 @@ Report as **known staged regression dependency** pending mandatory S5 — not as
 | F1/F3 RED | Accepted until S5; do not re-enable `authority.dirCatalog`; do not weaken F1–F4 |
 | Message-only catalog faults | Locked `.code` on catalog throws |
 | Empty catalog paper-over | Forbidden |
-| Public test helper leak | Helper private / not exported (§C.3) |
+| Fake mapping coverage via scripts twin | Forbidden — mapping is code-reviewed only (§C.3 / §E.2) |
+| Equating `FreezeError.code` with wire `reason_code` | Forbidden until S3 |
 | CFP pass-through confused with T2 | Membership only from loader entries (§D.3) |
 
 ### I.2 Former unresolved questions — **RESOLVED (plan Rev 1.1)**
@@ -384,21 +387,21 @@ Report as **known staged regression dependency** pending mandatory S5 — not as
 S2 may be independently accepted only when **all** hold:
 
 1. **Production:** `buildFreezeNaValidationFromSession` loads `loadDirNaCatalog(ACTIVE)`, sets `dirCatalog` from `load.entries`, ignores `authority.dirCatalog`.
-2. **Failure:** `!load.ok` → `FreezeError` with `.code ===` original loader `reason_code`; no empty-catalog continue; Freeze-reachable taxonomy claims limited to `ssot_unavailable` + `load_failed`.
+2. **Failure:** Compose contains inline `!load.ok` → `FreezeError(..., { code: load.reason_code })`; no empty-catalog continue; Freeze-reachable taxonomy claims limited to `ssot_unavailable` + `load_failed`. Mapping verified by **code review** (`code-reviewed, not runtime-tested`).
 3. **Ctor:** `FreezeError` matches locked signature; legacy message-only call sites untouched.
 4. **T0:** Session strip / hard-bind unchanged; CFP/evals pass-through cannot restore T2 forge.
-5. **Tests:** DC-1 Freeze + strengthened DC-8 (Session-owned non-SSOT pair + forged catalog → no `n_a`) PASS; pure mapping labeled; no production Registry injection.
+5. **Runtime tests:** DC-1 Freeze + strengthened DC-8 (Session-owned non-SSOT pair + forged catalog → no `n_a`) PASS via real ACTIVE loader + production compose. No scripts mapping twin; no Registry injection; no production test export.
 6. **API boundary:** No test/Registry helpers exported from production modules.
 7. **Compatibility:** S0/S1 suites in §H required-green list PASS; `tsc` PASS.
 8. **Git scope:** Diff ⊆ §G allowlist; implement branch from `7eda9bd44791562c0f4c151231df898fe6319c6a`.
 9. **freeze-versioning:** Run disclosed as known staged RED / S5 dependency — **not** claimed PASS; F1–F4 assertions preserved for S5.
-10. **Not claimed:** S3 wire mapping, S4 DC-10, S5 F1–F4 SSOT green, Stage 3.2 complete.
+10. **Not claimed:** Runtime proof of `!load.ok` mapping; S3 wire `reason_code`; S4 DC-10; S5 F1–F4 SSOT migration; Stage 3.2 complete.
 
 ---
 
 ## Stop Condition
 
-This document is **plan-only** (Rev 1.1 amendments).
+This document is **plan-only** (Rev 1.2 — mapping coverage clarification).
 
 - No production or test implementation is authorized by this revision.
 - Wait for independent plan review and **explicit written S2 implementation authorization**.
