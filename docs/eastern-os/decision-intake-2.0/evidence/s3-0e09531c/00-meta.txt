@@ -1,0 +1,8 @@
+﻿S3 verification raw logs
+commit: 0e09531c06840d373d8715426dec542c61130ebe
+parent: 9411c83f475605945874f87bb969db3ac1329ee9
+branch: feat/s3-freeze-wire-reason-code
+captured_at_utc: 2026-11-05T08:22:59.8821360-06:00
+host_node: v20.18.1
+host_pnpm: 10.33.2
+cwd: D:\POJU\pojulife

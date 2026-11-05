@@ -1,0 +1,67 @@
+﻿=== command: pnpm test:intake-r6-freeze-wire-reason
+=== exit_code: 0
+=== commit: 0e09531c06840d373d8715426dec542c61130ebe
+=== captured_at_utc: 2026-11-05T08:23:15.6321809-06:00
+ WARN  Unsupported engine: wanted: {"node":"22.x"} (current: {"node":"v20.18.1","pnpm":"10.33.2"})
+
+> pojulife@0.1.0 test:intake-r6-freeze-wire-reason D:\POJU\pojulife
+> tsx scripts/test-intake-r6-freeze-wire-reason.ts
+
+⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+S3 Freeze Wire reason_code
+
+== Tier A — helper unit ==
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_ssot_unavailable
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_ssot_unavailable
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_load_failed
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_load_failed
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_version_unknown
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_version_unknown
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_version_missing
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_version_missing
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_version_invalid
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_version_invalid
+  PASS  [Tier A] mapCaughtFreezeFailure unknown code → freeze_failed
+  PASS  [Tier A] mapCaughtFreezeFailure missing code → freeze_failed
+  PASS  [Tier A] mapCaughtFreezeFailure plain Error → freeze_failed
+  PASS  [Tier A] mapCaughtFreezeFailure non-Error → freeze_failed
+  PASS  [Tier A] persistFailWireResult with commit error
+  PASS  [Tier A] persistFailWireResult null/empty → token reason
+  PASS  [Tier A] canFreezeSessionOnSufficiency stall (gate-only)
+
+== Code-review ==
+  PASS  [Code-review] catch / persist / pass-through thin helpers
+
+== Tier B — production-function execution ==
+  PASS  [Tier B] applySufficiencyFreezeToSession catch → freeze_failed
+  PASS  [Tier B] ensureSessionFrozenForDelivery apply-fail propagation
+  PASS  [Tier B] applySufficiencyFreezeToSession success
+  PASS  [Tier B] applySufficiencyFreezeToSession skip already_frozen
+  PASS  [Tier B] applySufficiencyFreezeToSession skip not_sufficient
+  PASS  [Tier B] applySufficiencyFreezeToSession skip stall_or_degraded_path
+
+== Tier B — ensure persist-fail (attempt A) ==
+  UNTESTED  [production-path] ensureSessionFrozenForDelivery persist-fail branch
+           IDB/CAS attempt threw before branch proof: Cannot read properties of undefined (reading 'deleteDatabase'). Rely on [Tier A] persistFailWireResult + [Code-review].
+
+S3 wire-reason done. passed=24 failed=0 untested=1

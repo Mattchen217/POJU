@@ -1,0 +1,57 @@
+﻿=== command: pnpm test:intake-r6-dir-catalog
+=== exit_code: 0
+=== commit: 0e09531c06840d373d8715426dec542c61130ebe
+=== captured_at_utc: 2026-11-05T08:23:18.0577948-06:00
+ WARN  Unsupported engine: wanted: {"node":"22.x"} (current: {"node":"v20.18.1","pnpm":"10.33.2"})
+
+> pojulife@0.1.0 test:intake-r6-dir-catalog D:\POJU\pojulife
+> tsx scripts/test-intake-r6-dir-catalog.ts
+
+⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+intake-r6-dir-catalog (S0)
+  PASS  loadDirNaCatalog(ACTIVE) → ok, version 1, 20 entries
+  PASS  Phase 2 20 DIR ids + condition tokens match
+  PASS  deep freeze (entries / entry / na_conditions)
+  PASS  undefined/null → dir_catalog_version_missing
+  PASS  invalid versions → dir_catalog_version_invalid
+  PASS  999 → dir_catalog_version_unknown
+  PASS  ACTIVE∉registry → dir_catalog_ssot_unavailable
+  PASS  load_failed: has-throw / get-throw / version mismatch / non-array (no rethrow)
+  PASS  membership allow / deny DIR / deny condition
+  PASS  additive-only all 10 v1 pairs still ok under v2
+  PASS  production Registry not exported from catalog barrel
+
+S1 write-side catalog integration
+  PASS  DC-1 registered DIR+condition → append
+  PASS  DC-1 replay after catalog → idempotent_skip
+  PASS  DC-2 unregistered DIR → dir_not_in_catalog, no append
+  PASS  DC-3 unregistered condition → na_condition_not_in_catalog, no append
+  PASS  DC-9a forged list cannot authorize unregistered DIR
+  PASS  DC-9b forged legal-list cannot authorize illegal condition
+  PASS  load-fail pure mapping coverage — all 5 loader reason_codes (not production Registry integration)
+
+S2 Freeze compose catalog integration
+  PASS  DC-1 Freeze SSOT pair → DIR n_a via production compose
+  PASS  DC-8 forged dirCatalog ignored — Session N/A for non-SSOT pair → not n_a
+
+All intake-r6-dir-catalog (S0+S1+S2) checks passed.

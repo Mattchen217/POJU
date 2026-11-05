@@ -1,0 +1,80 @@
+﻿=== command: pnpm test:intake-r6-freeze-versioning
+=== exit_code: 1
+=== commit: 0e09531c06840d373d8715426dec542c61130ebe
+=== captured_at_utc: 2026-11-05T08:23:32.0191444-06:00
+ WARN  Unsupported engine: wanted: {"node":"22.x"} (current: {"node":"v20.18.1","pnpm":"10.33.2"})
+
+> pojulife@0.1.0 test:intake-r6-freeze-versioning D:\POJU\pojulife
+> tsx scripts/test-intake-r6-freeze-versioning.ts
+
+intake-r6-freeze-versioning
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== A. Freeze Intake aggregation ==
+  PASS  Freeze uses Intake → known with linked confirmed fact
+  PASS  CTA / stall still blocked
+  PASS  critical unknown (no role/DIR facts) blocks Freeze
+  PASS  no DIR link → Intake unknown; legacy OR would be known
+  PASS  Scheme A hard_constraint satisfies role
+  PASS  N/A fail-closed without catalog; valid+catalog → n_a
+  PASS  revoked / cross-context N/A ineffective
+  PASS  blocking conflict blocks Freeze (post-agg gate)
+  PASS  Session/DC mismatch rejected
+
+== B. Versioning Intake aggregation ==
+  PASS  V1 superseded + hash stable; V2 draft; deep clone
+  PASS  Versioning Session mismatch rejected
+  PASS  V2 add_conflicts → Intake conflict state
+
+== C. Production Freeze / V2 persist ==
+  PASS  ensureSessionFrozenForDelivery persist + reload
+  PASS  persistV2FromFinalOnSession + reload; V1 history intact
+  PASS  CAS conflict retry no duplicate boundary
+
+== D. Planner / Aggregator / Freeze consistency ==
+  PASS  Planner / Production agg / Freeze agree on role_states + current_state
+
+== E. freezeDraftForDelivery Session/DC snapshot binding ==
+  PASS  context_id mismatch → reject
+  PASS  version mismatch → reject
+  PASS  session final + draft draft → reject
+  PASS  facts diverge → reject
+  PASS  Explicit N/A Evidence diverge → reject
+  PASS  constraints / conflicts diverge → reject
+  PASS  identical snapshot → Freeze OK
+  PASS  matching Freeze → version snapshot + content_hash consistent
+
+== F. Freeze Explicit N/A Gate via freezeDraftForDelivery ==
+AssertionError [ERR_ASSERTION]: Session events must authorize Explicit N/A during Freeze reaggregation
+
+'known' !== 'n_a'
+
+    at main (D:\POJU\pojulife\scripts\test-intake-r6-freeze-versioning.ts:1116:14)
+    at runNextTicks (node:internal/process/task_queues:60:5)
+    at process.processImmediate (node:internal/timers:454:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'known',
+  expected: 'n_a',
+  operator: 'strictEqual'
+}
+ ELIFECYCLE  Command failed with exit code 1.
