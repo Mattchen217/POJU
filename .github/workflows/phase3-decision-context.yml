@@ -13,6 +13,7 @@ on:
       - "scripts/test-control-plane-s3.ts"
       - "scripts/test-normalize-s4.ts"
       - "scripts/test-intake-r6-role-resolver.ts"
+      - "scripts/test-intake-r6-na-cas.ts"
       - "package.json"
       - ".github/workflows/phase3-decision-context.yml"
   push:
@@ -31,6 +32,7 @@ on:
       - "scripts/test-control-plane-s3.ts"
       - "scripts/test-normalize-s4.ts"
       - "scripts/test-intake-r6-role-resolver.ts"
+      - "scripts/test-intake-r6-na-cas.ts"
       - "package.json"
       - ".github/workflows/phase3-decision-context.yml"
   workflow_dispatch:
@@ -60,7 +62,9 @@ jobs:
       - name: Phase3 S5 full L1/L2/L3
         run: pnpm test:decision-context-phase3
       - name: Intake 2.0 Stage 3.2 R6 resolver / N/A / planner
-        run: pnpm test:intake-r6-resolver
+        run: |
+          pnpm test:intake-r6-resolver
+          pnpm test:intake-r6-na-cas
       - name: Typecheck
         run: |
           # next-env.d.ts is gitignored; without it CI lacks next/image-types (*.png) decls.

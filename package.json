@@ -148,6 +148,7 @@
     "test:lab-reader-evidence-preview": "tsx scripts/test-lab-reader-evidence-preview.ts",
     "test:lab-evidence-soft-stages": "tsx scripts/test-lab-evidence-soft-stages.ts",
     "test:intake-r6-resolver": "tsx scripts/test-intake-r6-role-resolver.ts",
+    "test:intake-r6-na-cas": "tsx scripts/test-intake-r6-na-cas.ts",
     "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
     "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",

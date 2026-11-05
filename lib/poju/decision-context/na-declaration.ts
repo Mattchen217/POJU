@@ -480,32 +480,106 @@ export function applyDeclareDirNaToSession(
     );
   }
 
+  // Server-authored identity — never from client/model.
+  const source_ref: NaSourceRef = input.fact_id
+    ? { kind: "reality_fact", fact_id: input.fact_id }
+    : { kind: "constraint", constraint_id: input.constraint_id! };
+
   const prior = (latest.na_declaration_actions ?? []).find(
     (a) => a.declaration_action_id === input.declaration_action_id,
   );
   if (prior) {
+    // Revoked actions must not reactivate via replay.
+    if (prior.revoked) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "action_revoked_replay",
+      );
+    }
+    // Same action_id with different binding payload → hard reject (not silent prior).
+    if (prior.control_id !== input.control_id) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_control_mismatch",
+      );
+    }
+    if (prior.dir_id !== input.dir_id) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_dir_mismatch",
+      );
+    }
+    if (prior.na_condition_code !== input.na_condition_code) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_condition_mismatch",
+      );
+    }
+    if (!sourceRefEquals(prior.source_ref, source_ref)) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_source_mismatch",
+      );
+    }
+
     const cls = (dc.explicit_na_classifications ?? []).find(
       (c) => c.declaration_action_id === prior.declaration_action_id,
     );
     if (!cls) {
       throw new NaDeclarationError(
         NA_DECLARATION_INVALID,
-        "idempotent action missing classification",
+        "idempotent_action_missing_classification",
       );
     }
-    const ev = (dc.explicit_na_evidence ?? []).find(
-      (e) =>
-        e.evidence_type === "user_explicit_na" &&
-        e.target === "dir" &&
-        e.dir_id === prior.dir_id &&
-        e.na_condition_code === prior.na_condition_code,
-    );
-    if (!ev) {
+    if (cls.revoked) {
       throw new NaDeclarationError(
         NA_DECLARATION_INVALID,
-        "idempotent action missing evidence",
+        "classification_revoked_replay",
       );
     }
+    if (
+      cls.context_id !== prior.context_id ||
+      cls.dir_id !== prior.dir_id ||
+      cls.na_condition_code !== prior.na_condition_code ||
+      !sourceRefEquals(cls.source_ref, prior.source_ref)
+    ) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_classification_binding_mismatch",
+      );
+    }
+
+    const expectedEvId = `na_ev_${prior.declaration_action_id}`;
+    const ev = (dc.explicit_na_evidence ?? []).find(
+      (e) => e.evidence_id === expectedEvId,
+    );
+    if (
+      !ev ||
+      ev.evidence_type !== "user_explicit_na" ||
+      ev.target !== "dir"
+    ) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_action_missing_evidence",
+      );
+    }
+    if (ev.revoked) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "evidence_revoked_replay",
+      );
+    }
+    if (
+      ev.dir_id !== prior.dir_id ||
+      ev.na_condition_code !== prior.na_condition_code ||
+      !sourceRefEquals(ev.source_ref, prior.source_ref)
+    ) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_evidence_binding_mismatch",
+      );
+    }
+
     return {
       session: latest,
       action: prior,
@@ -514,11 +588,6 @@ export function applyDeclareDirNaToSession(
       outcome: "idempotent_skip",
     };
   }
-
-  // Server-authored identity — never from client/model.
-  const source_ref: NaSourceRef = input.fact_id
-    ? { kind: "reality_fact", fact_id: input.fact_id }
-    : { kind: "constraint", constraint_id: input.constraint_id! };
 
   const actionDraft: UserNaDeclarationAction = {
     declaration_action_id: input.declaration_action_id,
@@ -586,7 +655,7 @@ export async function declareDirNotApplicable(
   input: DeclareDirNaInput,
   opts: MutatePOJUSessionOptions = {},
 ): Promise<DeclareDirNaResult> {
-  let committed: ApplyDeclareDirNaResult | null = null;
+  const box: { value: ApplyDeclareDirNaResult | null } = { value: null };
   const now = input.occurred_at ?? new Date().toISOString();
 
   const result = await mutatePOJUSession(
@@ -597,14 +666,14 @@ export async function declareDirNotApplicable(
       bump_dc: true,
       apply: (latest) => {
         const applied = applyDeclareDirNaToSession(latest, sessionId, input, now);
-        committed = applied;
+        box.value = applied;
         return applied.session;
       },
     },
     opts,
   );
 
-  if (!committed) {
+  if (!box.value) {
     throw new NaDeclarationError(
       NA_DECLARATION_INVALID,
       "declareDirNotApplicable produced no action",
@@ -613,10 +682,10 @@ export async function declareDirNotApplicable(
 
   return {
     ...result,
-    action: committed.action,
-    classification: committed.classification,
-    evidence: committed.evidence,
-    outcome: committed.outcome,
+    action: box.value.action,
+    classification: box.value.classification,
+    evidence: box.value.evidence,
+    outcome: box.value.outcome,
   };
 }
 

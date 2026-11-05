@@ -17,6 +17,7 @@ import {
   applyDeclareDirNaToSession,
   checkExpiresAt,
   createExplicitNaClassificationFromUserDeclaration,
+  NaDeclarationError,
   type UserNaDeclarationAction,
 } from "@/lib/poju/decision-context/na-declaration";
 import {
@@ -492,6 +493,183 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
   );
 }
 
+console.log("\n== P0-1 Idempotent replay binding ==");
+{
+  const first = applyDeclareDirNaToSession(
+    baseSession(),
+    SESSION_ID,
+    {
+      operation_id: "op-idemp",
+      declaration_action_id: "na-act-idemp",
+      control_id: "na_declare",
+      fact_id: "f1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t-idemp",
+      dir_na_conditions: [VALID_NA_CODE],
+    },
+    NOW,
+  );
+  const replay = applyDeclareDirNaToSession(
+    first.session,
+    SESSION_ID,
+    {
+      operation_id: "op-idemp-2",
+      declaration_action_id: "na-act-idemp",
+      control_id: "na_declare",
+      fact_id: "f1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t-idemp",
+      dir_na_conditions: [VALID_NA_CODE],
+    },
+    NOW,
+  );
+  assert("same payload replay → idempotent_skip", replay.outcome === "idempotent_skip");
+  assert(
+    "replay evidence id exact na_ev_${action}",
+    replay.evidence.evidence_id === "na_ev_na-act-idemp",
+  );
+
+  let badFact = false;
+  try {
+    applyDeclareDirNaToSession(
+      first.session,
+      SESSION_ID,
+      {
+        operation_id: "op-bad-fact",
+        declaration_action_id: "na-act-idemp",
+        control_id: "na_declare",
+        fact_id: "OTHER",
+        dir_id: "DIR-A",
+        na_condition_code: VALID_NA_CODE,
+        declaration_turn_id: "t-idemp",
+        dir_na_conditions: [VALID_NA_CODE],
+      },
+      NOW,
+    );
+  } catch (e) {
+    badFact =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_source_mismatch");
+  }
+  assert("same action_id different fact_id → reject", badFact);
+
+  // second action with constraint on same DIR/condition
+  const withCst = applyDeclareDirNaToSession(
+    {
+      ...first.session,
+      decision_context: {
+        ...first.session.decision_context!,
+        constraints: [constraint({ constraint_id: "k1" })],
+      },
+    },
+    SESSION_ID,
+    {
+      operation_id: "op-cst",
+      declaration_action_id: "na-act-cst",
+      control_id: "na_declare",
+      constraint_id: "k1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t-cst",
+      dir_na_conditions: [VALID_NA_CODE],
+    },
+    NOW,
+  );
+  assert(
+    "two actions same DIR/condition keep distinct evidence ids",
+    withCst.evidence.evidence_id === "na_ev_na-act-cst" &&
+      (withCst.session.decision_context?.explicit_na_evidence ?? []).some(
+        (e) => e.evidence_id === "na_ev_na-act-idemp",
+      ),
+  );
+
+  let badCst = false;
+  try {
+    applyDeclareDirNaToSession(
+      withCst.session,
+      SESSION_ID,
+      {
+        operation_id: "op-bad-cst",
+        declaration_action_id: "na-act-cst",
+        control_id: "na_declare",
+        fact_id: "f1",
+        dir_id: "DIR-A",
+        na_condition_code: VALID_NA_CODE,
+        declaration_turn_id: "t-cst",
+        dir_na_conditions: [VALID_NA_CODE],
+      },
+      NOW,
+    );
+  } catch (e) {
+    badCst = e instanceof NaDeclarationError;
+  }
+  assert("same action_id constraint→fact swap → reject", badCst);
+
+  const missingEvSess = {
+    ...first.session,
+    decision_context: {
+      ...first.session.decision_context!,
+      explicit_na_evidence: [],
+    },
+  };
+  let missingEv = false;
+  try {
+    applyDeclareDirNaToSession(
+      missingEvSess,
+      SESSION_ID,
+      {
+        operation_id: "op-miss",
+        declaration_action_id: "na-act-idemp",
+        control_id: "na_declare",
+        fact_id: "f1",
+        dir_id: "DIR-A",
+        na_condition_code: VALID_NA_CODE,
+        declaration_turn_id: "t-idemp",
+        dir_na_conditions: [VALID_NA_CODE],
+      },
+      NOW,
+    );
+  } catch (e) {
+    missingEv =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_action_missing_evidence");
+  }
+  assert("missing evidence → fail-closed", missingEv);
+
+  const revokedSess = {
+    ...first.session,
+    na_declaration_actions: (first.session.na_declaration_actions ?? []).map(
+      (a) =>
+        a.declaration_action_id === "na-act-idemp" ? { ...a, revoked: true } : a,
+    ),
+  };
+  let revokedReplay = false;
+  try {
+    applyDeclareDirNaToSession(
+      revokedSess,
+      SESSION_ID,
+      {
+        operation_id: "op-rev",
+        declaration_action_id: "na-act-idemp",
+        control_id: "na_declare",
+        fact_id: "f1",
+        dir_id: "DIR-A",
+        na_condition_code: VALID_NA_CODE,
+        declaration_turn_id: "t-idemp",
+        dir_na_conditions: [VALID_NA_CODE],
+      },
+      NOW,
+    );
+  } catch (e) {
+    revokedReplay =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("action_revoked_replay");
+  }
+  assert("revoked action replay → reject (no reactivate)", revokedReplay);
+}
+
 console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
 {
   const topicNa: ExplicitNaEvidence = {
@@ -766,4 +944,4 @@ if (failures.length) {
   console.error(`FAILED ${failures.length}:`, failures);
   process.exit(1);
 }
-console.log("All Intake R6 Stage 3.2 round-4 acceptance checks passed.");
+console.log("All Intake R6 Stage 3.2 round-5 acceptance checks passed.");

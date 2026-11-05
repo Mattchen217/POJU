@@ -107,9 +107,14 @@ function asMap<T extends { [K in Id]: string }, Id extends keyof T>(
   idKey: Id,
 ): Map<string, T> {
   if (!input) return new Map();
-  if (input instanceof Map) return new Map(input);
   const m = new Map<string, T>();
-  for (const row of input) m.set(row[idKey], row);
+  if (Array.isArray(input)) {
+    for (const row of input) m.set(row[idKey], row);
+    return m;
+  }
+  input.forEach((v, k) => {
+    m.set(String(k), v);
+  });
   return m;
 }
 
@@ -117,9 +122,14 @@ function dirCatalogMap(
   ctx: NaValidationContext,
 ): Map<string, DirNaCatalogEntry> {
   if (!ctx.dirCatalog) return new Map();
-  if (ctx.dirCatalog instanceof Map) return new Map(ctx.dirCatalog);
   const m = new Map<string, DirNaCatalogEntry>();
-  for (const row of ctx.dirCatalog) m.set(row.dir_id, row);
+  if (Array.isArray(ctx.dirCatalog)) {
+    for (const row of ctx.dirCatalog) m.set(row.dir_id, row);
+    return m;
+  }
+  ctx.dirCatalog.forEach((v, k) => {
+    m.set(String(k), v);
+  });
   return m;
 }
 

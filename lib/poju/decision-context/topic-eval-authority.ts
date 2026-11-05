@@ -63,11 +63,12 @@ export function resolveAuthoritativeTopicEval(args: {
   if (!args.authority) {
     return { ok: false, reason_code: "topic_authority_missing" };
   }
-  if (args.authority instanceof Map) {
-    record = args.authority.get(args.eval_id);
-  } else {
-    record = args.authority.find((r) => r.eval_id === args.eval_id);
-  }
+  const rows: readonly AuthoritativeTopicEvalRecord[] = Array.isArray(
+    args.authority,
+  )
+    ? args.authority
+    : Array.from(args.authority.values());
+  record = rows.find((r) => r.eval_id === args.eval_id);
   if (!record) {
     return { ok: false, reason_code: "topic_eval_id_unknown" };
   }
