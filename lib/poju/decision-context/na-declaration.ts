@@ -496,6 +496,27 @@ export function applyDeclareDirNaToSession(
         "action_revoked_replay",
       );
     }
+
+    // Session / Decision Context ownership — fail-closed, never cross-session skip.
+    if (
+      prior.session_id !== latest.session_id ||
+      prior.session_id !== expectedSessionId
+    ) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_session_mismatch",
+      );
+    }
+    if (prior.context_id !== dc.context_id) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_context_mismatch",
+      );
+    }
+
+    const inputExpiresAt =
+      input.expires_at === undefined ? null : input.expires_at;
+
     // Same action_id with different binding payload → hard reject (not silent prior).
     if (prior.control_id !== input.control_id) {
       throw new NaDeclarationError(
@@ -521,6 +542,18 @@ export function applyDeclareDirNaToSession(
         "idempotent_source_mismatch",
       );
     }
+    if (prior.declaration_turn_id !== input.declaration_turn_id) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_turn_mismatch",
+      );
+    }
+    if (prior.expires_at !== inputExpiresAt) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_expires_mismatch",
+      );
+    }
 
     const cls = (dc.explicit_na_classifications ?? []).find(
       (c) => c.declaration_action_id === prior.declaration_action_id,
@@ -537,10 +570,19 @@ export function applyDeclareDirNaToSession(
         "classification_revoked_replay",
       );
     }
+    // Classification must belong to the current DC (and match prior action binding).
+    if (cls.context_id !== dc.context_id) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent_classification_context_mismatch",
+      );
+    }
     if (
       cls.context_id !== prior.context_id ||
       cls.dir_id !== prior.dir_id ||
       cls.na_condition_code !== prior.na_condition_code ||
+      cls.declaration_turn_id !== prior.declaration_turn_id ||
+      cls.expires_at !== prior.expires_at ||
       !sourceRefEquals(cls.source_ref, prior.source_ref)
     ) {
       throw new NaDeclarationError(
@@ -569,6 +611,7 @@ export function applyDeclareDirNaToSession(
         "evidence_revoked_replay",
       );
     }
+    // Evidence is looked up on current DC only; still require payload binding match.
     if (
       ev.dir_id !== prior.dir_id ||
       ev.na_condition_code !== prior.na_condition_code ||

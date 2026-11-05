@@ -668,6 +668,120 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       String(e.message).includes("action_revoked_replay");
   }
   assert("revoked action replay → reject (no reactivate)", revokedReplay);
+
+  // Round-6: Session / DC ownership + turn / expires binding on idempotent replay.
+  const idempInput = {
+    operation_id: "op-idemp-r6",
+    declaration_action_id: "na-act-idemp",
+    control_id: "na_declare",
+    fact_id: "f1",
+    dir_id: "DIR-A",
+    na_condition_code: VALID_NA_CODE,
+    declaration_turn_id: "t-idemp",
+    dir_na_conditions: [VALID_NA_CODE],
+  } as const;
+
+  const badSessionSess = {
+    ...first.session,
+    na_declaration_actions: (first.session.na_declaration_actions ?? []).map(
+      (a) =>
+        a.declaration_action_id === "na-act-idemp"
+          ? { ...a, session_id: "OTHER_SESSION" }
+          : a,
+    ),
+  };
+  let badSession = false;
+  try {
+    applyDeclareDirNaToSession(badSessionSess, SESSION_ID, idempInput, NOW);
+  } catch (e) {
+    badSession =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_session_mismatch");
+  }
+  assert("prior.session_id ≠ current Session → reject", badSession);
+
+  const badCtxSess = {
+    ...first.session,
+    na_declaration_actions: (first.session.na_declaration_actions ?? []).map(
+      (a) =>
+        a.declaration_action_id === "na-act-idemp"
+          ? { ...a, context_id: "OTHER_DC" }
+          : a,
+    ),
+  };
+  let badCtx = false;
+  try {
+    applyDeclareDirNaToSession(badCtxSess, SESSION_ID, idempInput, NOW);
+  } catch (e) {
+    badCtx =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_context_mismatch");
+  }
+  assert("prior.context_id ≠ current DC → reject", badCtx);
+
+  const badClsCtxSess = {
+    ...first.session,
+    decision_context: {
+      ...first.session.decision_context!,
+      explicit_na_classifications: (
+        first.session.decision_context?.explicit_na_classifications ?? []
+      ).map((c) =>
+        c.declaration_action_id === "na-act-idemp"
+          ? { ...c, context_id: "OTHER_DC" }
+          : c,
+      ),
+    },
+  };
+  let badClsCtx = false;
+  try {
+    applyDeclareDirNaToSession(badClsCtxSess, SESSION_ID, idempInput, NOW);
+  } catch (e) {
+    badClsCtx =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_classification_context_mismatch");
+  }
+  assert("classification.context_id ≠ current DC → reject", badClsCtx);
+
+  let badTurn = false;
+  try {
+    applyDeclareDirNaToSession(
+      first.session,
+      SESSION_ID,
+      { ...idempInput, declaration_turn_id: "t-OTHER" },
+      NOW,
+    );
+  } catch (e) {
+    badTurn =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_turn_mismatch");
+  }
+  assert("declaration_turn_id mismatch → reject", badTurn);
+
+  let badExpires = false;
+  try {
+    applyDeclareDirNaToSession(
+      first.session,
+      SESSION_ID,
+      { ...idempInput, expires_at: "2026-12-31T00:00:00.000Z" },
+      NOW,
+    );
+  } catch (e) {
+    badExpires =
+      e instanceof NaDeclarationError &&
+      String(e.message).includes("idempotent_expires_mismatch");
+  }
+  assert("expires_at mismatch → reject", badExpires);
+
+  const sameAgain = applyDeclareDirNaToSession(
+    first.session,
+    SESSION_ID,
+    idempInput,
+    NOW,
+  );
+  assert(
+    "identical payload replay still → idempotent_skip",
+    sameAgain.outcome === "idempotent_skip",
+  );
 }
 
 console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
@@ -944,4 +1058,4 @@ if (failures.length) {
   console.error(`FAILED ${failures.length}:`, failures);
   process.exit(1);
 }
-console.log("All Intake R6 Stage 3.2 round-5 acceptance checks passed.");
+console.log("All Intake R6 Stage 3.2 round-6 acceptance checks passed.");

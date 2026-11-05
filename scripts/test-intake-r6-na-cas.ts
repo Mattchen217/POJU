@@ -424,6 +424,194 @@ async function main() {
   assert.equal(replayRevoked, true);
   console.log("  PASS  revoke sync + replay rejected + validator fail-closed");
 
+  console.log("\n== Round-6 Session/DC + turn/expires binding ==");
+  // Fresh session so revoked na-act-cas-1 does not interfere.
+  const sid2 = await createPOJUSession({
+    payment_id: "pay_intake_na_cas_r6",
+    original_question: "na cas r6",
+  });
+  await mutatePOJUSession(sid2, {
+    operation_id: "op_seed_dc_na_r6",
+    kind: "session_patch",
+    bump_dc: true,
+    apply: (latest) => ({
+      ...latest,
+      decision_context: makeDc({
+        context_id: "dc_na_cas_r6",
+        version: 1,
+        reality_facts: [
+          {
+            fact_id: "fact_r6",
+            statement: "r6 fact",
+            status: "confirmed",
+            verification_level: "user_asserted",
+            source_stage: "user_supplement",
+            source_turn_id: "turn_r6",
+            user_confirmed: true,
+            fact_roles: ["situation"],
+            related_dir_ids: ["DIR-A"],
+          },
+        ],
+        dirs: [
+          {
+            dir_id: "DIR-A",
+            need: "need",
+            why: "why",
+            required_fact_roles: ["situation"],
+            current_state: "unknown",
+            partial_satisfaction: false,
+            agenda_item_ids: [],
+            id_lifecycle: "active",
+          },
+        ],
+      }),
+      confirmation_events: [
+        {
+          event_id: "e1_fact_r6",
+          target_type: "fact",
+          fact_id: "fact_r6",
+          source_turn_id: "turn_r6",
+          confirmation_turn_id: "turn_r6b",
+          confirmation_action_id: "ca_fact_r6",
+          event_type: "confirm_fact",
+          actor: "user",
+          confirmed_at: NOW,
+          event_version: 1,
+        },
+      ],
+    }),
+  });
+
+  const r6Input = {
+    operation_id: "op_r6_declare",
+    declaration_action_id: "na-act-r6",
+    control_id: "na_declare" as const,
+    fact_id: "fact_r6",
+    dir_id: "DIR-A",
+    na_condition_code: NA_CODE,
+    declaration_turn_id: "turn_r6_declare",
+    dir_na_conditions: [NA_CODE],
+    occurred_at: NOW,
+  };
+  const r6First = await declareDirNotApplicable(sid2, r6Input);
+  assert.equal(r6First.outcome, "appended");
+
+  const r6Replay = await declareDirNotApplicable(sid2, {
+    ...r6Input,
+    operation_id: "op_r6_replay_same",
+  });
+  assert.equal(r6Replay.outcome, "idempotent_skip");
+  console.log("  PASS  production same payload → idempotent_skip");
+
+  let turnReject = false;
+  try {
+    await declareDirNotApplicable(sid2, {
+      ...r6Input,
+      operation_id: "op_r6_bad_turn",
+      declaration_turn_id: "turn_OTHER",
+    });
+  } catch (err) {
+    turnReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_turn_mismatch");
+  }
+  assert.equal(turnReject, true);
+  console.log("  PASS  production declaration_turn_id mismatch → reject");
+
+  let expiresReject = false;
+  try {
+    await declareDirNotApplicable(sid2, {
+      ...r6Input,
+      operation_id: "op_r6_bad_expires",
+      expires_at: "2027-01-01T00:00:00.000Z",
+    });
+  } catch (err) {
+    expiresReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_expires_mismatch");
+  }
+  assert.equal(expiresReject, true);
+  console.log("  PASS  production expires_at mismatch → reject");
+
+  const loadedR6 = await loadPOJUSession(sid2);
+  const forgedSession = structuredClone(loadedR6!);
+  forgedSession.na_declaration_actions = (
+    forgedSession.na_declaration_actions ?? []
+  ).map((a) =>
+    a.declaration_action_id === "na-act-r6"
+      ? { ...a, session_id: "sess_FORGED" }
+      : a,
+  );
+  let sessReject = false;
+  try {
+    applyDeclareDirNaToSession(forgedSession, sid2, r6Input, NOW);
+  } catch (err) {
+    sessReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_session_mismatch");
+  }
+  assert.equal(sessReject, true);
+  console.log("  PASS  prior.session_id mismatch → reject");
+
+  const forgedCtx = structuredClone(loadedR6!);
+  forgedCtx.na_declaration_actions = (forgedCtx.na_declaration_actions ?? []).map(
+    (a) =>
+      a.declaration_action_id === "na-act-r6"
+        ? { ...a, context_id: "dc_FORGED" }
+        : a,
+  );
+  let ctxReject = false;
+  try {
+    applyDeclareDirNaToSession(forgedCtx, sid2, r6Input, NOW);
+  } catch (err) {
+    ctxReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_context_mismatch");
+  }
+  assert.equal(ctxReject, true);
+  console.log("  PASS  prior.context_id mismatch → reject");
+
+  const forgedCls = structuredClone(loadedR6!);
+  forgedCls.decision_context = {
+    ...forgedCls.decision_context!,
+    explicit_na_classifications: (
+      forgedCls.decision_context!.explicit_na_classifications ?? []
+    ).map((c) =>
+      c.declaration_action_id === "na-act-r6"
+        ? { ...c, context_id: "dc_FORGED" }
+        : c,
+    ),
+  };
+  let clsCtxReject = false;
+  try {
+    applyDeclareDirNaToSession(forgedCls, sid2, r6Input, NOW);
+  } catch (err) {
+    clsCtxReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_classification_context_mismatch");
+  }
+  assert.equal(clsCtxReject, true);
+  console.log("  PASS  classification.context_id mismatch → reject");
+
+  await revokeDirNaDeclaration(sid2, {
+    operation_id: "op_r6_revoke",
+    declaration_action_id: "na-act-r6",
+    revoked_at: NOW,
+  });
+  let r6RevokedReplay = false;
+  try {
+    await declareDirNotApplicable(sid2, {
+      ...r6Input,
+      operation_id: "op_r6_replay_revoked",
+    });
+  } catch (err) {
+    r6RevokedReplay =
+      err instanceof NaDeclarationError &&
+      err.message.includes("action_revoked_replay");
+  }
+  assert.equal(r6RevokedReplay, true);
+  console.log("  PASS  revoke then replay still rejected");
+
   // silence unused
   void isSessionCasError;
 
