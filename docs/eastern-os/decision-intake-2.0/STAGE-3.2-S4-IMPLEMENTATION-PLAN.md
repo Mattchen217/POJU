@@ -5,14 +5,27 @@
 | Field | Value |
 |---|---|
 | **Document status** | PLAN ONLY — no production/test implementation authorized by this document |
-| **Revision** | **1.0** |
+| **Revision** | **1.1** (locks revoke fail-closed, independent S4 branch, C09/C10/C19–C21/C24/C25) |
+| **Rev 1.0 plan commit** | `6944307c03e42c89c3916fd4971693af558a7537` |
 | **Stage** | Decision Intake 2.0 · Stage 3.2 · **S4** Write / Freeze Consistency |
 | **Authoritative design** | [`STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md`](./STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md) Rev 1.3 · DC-10 / consistency |
-| **S4 start / required parent** | `0e09531c06840d373d8715426dec542c61130ebe` (S3 implement tip; evidence-only commits after this are **not** S4 parents) |
+| **S4 start / required parent** | `0e09531c06840d373d8715426dec542c61130ebe` |
 | **S3 parent** | `9411c83f475605945874f87bb969db3ac1329ee9` |
-| **Working branch** | `feat/s3-freeze-wire-reason-code` |
+| **Docs / plan history branch** | `feat/s3-freeze-wire-reason-code` (may hold plan/evidence commits **after** `0e09531c`) |
+| **S4 implement branch (locked)** | **`feat/s4-dir-na-write-freeze-consistency`** — created from `0e09531c` only |
 | **Toolchain** | Node `22.22.0` · `corepack pnpm` `10.33.2` |
 | **S4 implement** | **NOT AUTHORIZED** until independent plan review PASS + separate written implement auth |
+
+### Revision 1.1 — review resolutions
+
+| Finding | Locked resolution |
+|---|---|
+| **1** Revoke fail-closed | Missing DC → reject; `status !== "draft"` → reject; reject **before** any Action/Classification/Evidence mutation; no implement-time choice left |
+| **2** Git | Independent S4 branch from exact `0e09531c`; no force-push / rebase / rewrite of S3 or plan history |
+| **3** C09/C10 | Full key binding field lists + tamper fixtures + DIR must not become `n_a` |
+| **4** C19–C21 | Production `declareDirNotApplicable` / `revokeDirNaDeclaration` + reload + unchanged state |
+| **5** C24 | Full CAS chain + post-freeze reload checklist for snapshot/hash/binding |
+| **6** C25 | Real CAS persist-fail attempt; else UNTESTED; no production fault-inject API |
 
 ---
 
@@ -24,22 +37,17 @@ Does **not**: expand Catalog SSOT content; rewrite S0–S3; perform S5 F1–F4 i
 
 ---
 
-## 2. S4 start commit and parent (locked)
+## 2. Git branch strategy (locked · Rev 1.1)
 
-| Item | SHA |
+| Item | Value |
 |---|---|
-| **S4 Parent (hard)** | `0e09531c06840d373d8715426dec542c61130ebe` |
-| Branch tip may include later **docs-only** evidence commits (`a8feda48`, `7d56641d`, `fd8cfd9b`, …) | Not production; **S4 code commit must still have parent = `0e09531c`** |
+| **S4 production commit Parent (hard)** | Exactly `0e09531c06840d373d8715426dec542c61130ebe` |
+| **S4 implement branch** | `feat/s4-dir-na-write-freeze-consistency` |
+| **How to start (when authorized)** | `git checkout -b feat/s4-dir-na-write-freeze-consistency 0e09531c06840d373d8715426dec542c61130ebe` then implement → first S4 code commit’s parent is `0e09531c` |
+| **Docs/plan/evidence history** | Remains on `feat/s3-freeze-wire-reason-code` (commits after `0e09531c` such as evidence + this plan). **Do not** rebase, force-push, or rewrite that history, S3 history, or plan commits. |
+| **Forbidden** | Force push; rebase S3 / plan tip onto S4; amend S3; make S4 parent an evidence or plan commit |
 
-**Implement procedure (when authorized):**
-
-```text
-git checkout 0e09531c06840d373d8715426dec542c61130ebe
-# apply S4 Diff → commit  → parent is 0e09531c
-# push to feat/s3-freeze-wire-reason-code (or update tip without rewriting S3)
-```
-
-Do **not** rebase/rewrite S3. Do **not** make S4 parent an evidence commit.
+Plan-doc commits (including Rev 1.1) may continue on `feat/s3-freeze-wire-reason-code`. They are **not** S4 production parents.
 
 ---
 
@@ -60,7 +68,7 @@ declareDirNotApplicable(sessionId, input, opts?)
 ```
 
 **File:** `lib/poju/decision-context/na-declaration.ts`  
-**Note:** `input.dir_na_conditions` is already **ignored** for authorization (comment @ L535–536).
+**Note:** `input.dir_na_conditions` is already **ignored** for authorization.
 
 ### 3.2 Freeze (production)
 
@@ -84,29 +92,19 @@ ensureSessionFrozenForDelivery / applySufficiencyFreezeToSession
 |---|---|---|
 | Version | `ACTIVE_DIR_NA_CATALOG_VERSION` | same |
 | Loader | `loadDirNaCatalog(ACTIVE)` | same |
-| Membership | `assertNaConditionInDirCatalog` via `membershipFromCatalogLoad` | via `NaValidationContext.dirCatalog` + validate |
+| Membership | `membershipFromCatalogLoad` | `dirCatalog` from ACTIVE load |
 | Client list | ignored | N/A |
 | `authority.dirCatalog` | N/A | stripped / overwritten (S2) |
 
-**S4-1 verdict (pre-implement):** Membership **semantics already unified** by S0–S2. S4 primarily **proves** with C07/C08/C23 (+ regression). Production rewrite of Catalog join **not** planned unless audit finds a regression.
+**S4-1:** Membership already unified; prove via C07/C08/C23. No Catalog rewrite planned unless regression found.
 
 ---
 
-## 4. Confirmed inconsistency → required production fix
+## 4. Required production fixes (S4-2)
 
-### 4.1 Final/superseded writable (S4-2) — **must change**
+### 4.1 Write gate — `applyDeclareDirNaToSession`
 
-**Site:** `applyDeclareDirNaToSession` ~L527–533
-
-```ts
-if (!dc || (dc.status !== "draft" && dc.status !== "final")) {
-  throw new NaDeclarationError(NA_DECLARATION_CONTEXT_INVALID, "Decision Context missing");
-}
-```
-
-Allows `final` into the write path. Freeze snapshot bind requires `draft`.
-
-**Target:**
+Replace current `draft|final` allow with:
 
 ```ts
 if (!dc) {
@@ -114,179 +112,240 @@ if (!dc) {
 }
 if (dc.status !== "draft") {
   throw new NaDeclarationError(
-    /* see §4.2 */,
+    NA_DECLARATION_CONTEXT_INVALID, // or NA_DECLARATION_CONTEXT_NOT_WRITABLE if added
     "Decision Context is not writable",
   );
 }
 ```
 
-- Reject **before** any Action/Classification/Evidence mutation.
-- Covers `final`, `superseded`, and unknown statuses.
+Reject **before** catalog membership side effects that write records, and **before** any Action/Classification/Evidence append. Covers `final`, `superseded`, unknown.
 
-### 4.2 Error code choice
+### 4.2 Revoke fail-closed — `revokeDirNaDeclaration` (**locked · no implement ambiguity**)
 
-Existing codes only:
+**Site today:** ~L804–859 — no DC status gate; can mutate Final.
 
-- `NA_DECLARATION_INVALID`
-- `NA_DECLARATION_SOURCE_INVALID`
-- `NA_DECLARATION_CONTEXT_INVALID`
+**Locked contract (Rev 1.1):**
 
-**Plan default:** reuse `NA_DECLARATION_CONTEXT_INVALID` with message `"Decision Context is not writable"` (minimal surface).  
-**Optional:** add `NA_DECLARATION_CONTEXT_NOT_WRITABLE` only if implement review prefers a distinct machine token — document in Diff if chosen.
+| Condition | Behavior |
+|---|---|
+| `latest.decision_context` **missing** (`null` / undefined) | **Reject** with `NaDeclarationError` (`NA_DECLARATION_CONTEXT_INVALID` or dedicated not-writable code) |
+| `dc.status !== "draft"` (incl. `final`, `superseded`, unknown) | **Reject** with same family of error |
+| Timing | Rejection occurs **before** any mutation of `na_declaration_actions`, `explicit_na_classifications`, `explicit_na_evidence`, or `dc.version` / `updated_at` |
+| Success path | Only when `dc.status === "draft"` may revoke mark action/classification/evidence and bump draft version |
 
-### 4.3 Revoke on frozen DC (S4-2) — **must change**
+**Forbidden:**
 
-**Site:** `revokeDirNaDeclaration` ~L804–859 — **no** DC status gate; mutates classifications/evidence and bumps `dc.version` on whatever status.
+- Revoking actions while leaving Final DC untouched as a “partial success.”
+- Silent no-op that returns CAS success without error when DC is missing or non-draft.
+- Inventing Final → new Draft supersede lifecycle in S4.
+- Leaving “prefer reject vs action-only revoke” as an implement-time choice.
 
-**Target (fail-closed; no new version lifecycle):**
+### 4.3 Error code
 
-- If `!dc` → current behavior may still mark actions revoked (review: prefer reject if no DC, or only action-list revoke without DC bump — **lock at implement:** if `dc` present and `status !== "draft"`, throw same not-writable error **before** mutation).
-- If `dc.status !== "draft"` → throw; **no** in-place Final revoke.
-- Do **not** invent Final→new-Draft supersede flow in S4.
+Existing: `NA_DECLARATION_INVALID` | `NA_DECLARATION_SOURCE_INVALID` | `NA_DECLARATION_CONTEXT_INVALID`.
 
-### 4.4 What S4 does **not** rewrite (retain + prove)
+**Default:** reuse `NA_DECLARATION_CONTEXT_INVALID` with distinct messages (`missing` vs `not writable`).  
+**Optional:** add `NA_DECLARATION_CONTEXT_NOT_WRITABLE` — document in Diff if used. Same code family for write and revoke gates.
 
-| Area | Status @ `0e09531c` | S4 action |
+### 4.4 Retain + prove (no rewrite)
+
+ACTIVE write join; Freeze ACTIVE ignore `dirCatalog`; existing create/idempotent/source/conflict>N/A; S3 Wire — prove via tests.
+
+---
+
+## 5. Key binding fields (S4-3) — closed lists for C01 / C09 / C10
+
+Compare `source_ref` with `sourceRefEquals` (kind + fact_id / constraint_id), **never** object identity.
+
+### 5.1 `UserNaDeclarationAction` (must hold)
+
+`declaration_action_id`, `session_id`, `context_id`, `actor === "user"`, `control_id`, `source_ref`, `dir_id`, `na_condition_code`, `declaration_turn_id`, `occurred_at`, `revoked`, `expires_at`
+
+### 5.2 `ExplicitNaClassification` ↔ Action
+
+| Classification field | Must equal |
+|---|---|
+| `authority` | `"user_declared"` |
+| `written_by` | `"code"` |
+| `context_id` | `action.context_id` |
+| `declaration_action_id` | `action.declaration_action_id` |
+| `dir_id` | `action.dir_id` |
+| `na_condition_code` | `action.na_condition_code` |
+| `declaration_turn_id` | `action.declaration_turn_id` |
+| `source_ref` | `sourceRefEquals(action.source_ref)` |
+| `expires_at` | `action.expires_at` |
+| `revoked` | consistent with live authorization (false when authorizing) |
+
+### 5.3 `ExplicitNaEvidence` (user_explicit_na / dir) ↔ Action
+
+| Evidence field | Must equal |
+|---|---|
+| `evidence_type` | `"user_explicit_na"` |
+| `target` | `"dir"` |
+| `evidence_id` | `` `na_ev_${action.declaration_action_id}` `` |
+| `dir_id` | `action.dir_id` |
+| `na_condition_code` | `action.na_condition_code` |
+| `source_ref` | `sourceRefEquals(action.source_ref)` |
+| `written_by` | `"code"` |
+| `revoked` | `false` when authorizing |
+
+Validate path: `validateExplicitNaEvidence` → `findMatchingNaClassification` → live Action; then `findValidatedDirLevelNa` / `reaggregateDirsIntake`.
+
+---
+
+## 6. C09 / C10 tamper fixtures (locked)
+
+**Setup:** Complete legal write (C01) so DIR would otherwise be `n_a`. Then **tamper only** the named binding while keeping other records present. Run `buildFreezeNaValidationFromSession` / `reaggregateDirsIntake` (and/or `freezeDraftForDelivery` when draft snapshot still valid).
+
+| Case | Tamper | Expected |
 |---|---|---|
-| ACTIVE catalog write join | Present | Prove C07/C08 |
-| Freeze ACTIVE load / ignore `dirCatalog` | S2 | Prove C23 |
-| Action/Classification/Evidence creation bindings | Present in apply | Prove C01–C06, C09–C18 |
-| Source binding / E1 | Present in validate + write | Prove C15–C16 |
-| Idempotency | Present | Prove C17–C18 |
-| Conflict > N/A in aggregator | Present | Prove C22 |
-| Wire `reason_code` (S3) | Present | Regression only |
+| **C09a** | Classification `declaration_action_id` ≠ Action id | `findValidatedDirLevelNa` → null; target DIR **`current_state !== "n_a"`** |
+| **C09b** | Classification `dir_id` or `na_condition_code` ≠ Action | same |
+| **C09c** | Classification `source_ref` ≠ Action (`sourceRefEquals` false) | same |
+| **C09d** | Classification `context_id` or `declaration_turn_id` ≠ Action | same |
+| **C09e** | Classification `expires_at` ≠ Action | same |
+| **C10a** | Evidence `evidence_id` ≠ ``na_ev_${action_id}`` | same |
+| **C10b** | Evidence `dir_id` / `na_condition_code` ≠ Action | same |
+| **C10c** | Evidence `source_ref` ≠ Action | same |
+| **C10d** | Evidence `target` ≠ `"dir"` or type ≠ `user_explicit_na` | same |
+
+**Hard pass criterion:** mismatched triad **must not** authorize DIR `n_a`. Print explicit asserts on `current_state`.
 
 ---
 
-## 5. Action / Classification / Evidence consistency strategy (S4-3)
+## 7. C19 / C20 / C21 — production entry + reload (locked)
 
-### 5.1 Production functions under test
+**Forbidden substitute:** calling only `applyDeclareDirNaToSession` / in-memory revoke apply without `declareDirNotApplicable` / `revokeDirNaDeclaration`.
 
-| Step | Function |
-|---|---|
-| Write append | `applyDeclareDirNaToSession` / `declareDirNotApplicable` |
-| Classification factory | `createExplicitNaClassificationFromUserDeclaration` |
-| Evidence id | `na_ev_${declaration_action_id}` (existing convention) |
-| Freeze validate | `validateExplicitNaEvidence` → `findValidatedDirLevelNa` |
-| Match helpers | `findMatchingNaClassification` (as used by validate) |
+### Shared method
 
-### 5.2 Assertions (C01 / C09–C14)
+1. `createPOJUSession` + CAS-seed DC in target status (`final` / `superseded`) with baseline snapshot of: `na_declaration_actions`, `explicit_na_classifications`, `explicit_na_evidence`, `dc.version`, `dc.status`, dir states, content_hash if present.
+2. Invoke **production** entry (`declareDirNotApplicable` or `revokeDirNaDeclaration`).
+3. Expect throw / fail-closed (not silent success).
+4. `loadPOJUSession(sessionId)` again.
+5. Assert **byte-stable business equality** (deep compare / field asserts): actions, classifications, evidence, `version`, `status`, and other business DC fields unchanged vs baseline.
 
-After successful write (and again after `loadPOJUSession`):
-
-1. Action fields bound server-side: `session_id`, `context_id`, `actor === "user"`, dir/condition/turn/source/expires/revoked/control.
-2. Classification: `authority === "user_declared"`, `written_by === "code"`, IDs/dir/condition/turn/expires match action; `source_ref` compared by **kind + id fields**, not object identity.
-3. Evidence: `evidence_type === "user_explicit_na"`, `target === "dir"`, `evidence_id === na_ev_*`, dir/condition/source/`written_by` match.
-4. Tamper fixtures (memory or post-load mutate before freeze): mismatched action↔classification, action↔evidence, revoked action/classification/evidence, expired action → `findValidatedDirLevelNa` null / DIR ≠ `n_a` after reaggregate/freeze compose.
-
-### 5.3 Source binding (S4-4 → C15–C16)
-
-Reuse existing write validators + Freeze `validateUserSource` path:
-
-- Fact/Constraint present, confirmed, `user_asserted`, `user_confirmed`, E1 present, `related_dir_ids` contains target DIR.
-- Forbid independently_verified-as-user-NA, missing E1, unrelated DIR.
-
----
-
-## 6. Session CAS integration construction (S4-8)
-
-**Reuse:** `scripts/test-intake-r6-na-cas.ts` / freeze-versioning patterns:
-
-- `import "fake-indexeddb/auto"`
-- localStorage / crypto polyfills
-- `__resetPojuDbForTests` + `ensurePojuDbReady`
-- `createPOJUSession` → seed draft DC + confirmation events via `mutatePOJUSession`
-- `declareDirNotApplicable` (not pure apply alone for “persist PASS”)
-- `loadPOJUSession` round-trip
-- `reaggregateDirsIntake` / sufficiency session → `ensureSessionFrozenForDelivery` **or** `freezeDraftForDelivery` where CAS freeze not required by case
-- Second `loadPOJUSession` for frozen state
-
-**SSOT pair:** production ACTIVE pair already used in na-cas (`explicit_no_hard_red_lines` + registered DIR) — do not forge Catalog.
-
-**C25 CAS persist fail:** Prefer existing CAS conflict / write-fail harness from na-cas / freeze-versioning. If cannot force `!committed` without new production inject APIs → mark **`UNTESTED [production-path] C25`** (same discipline as S3 persist).
-
-**Hard rule:** Pure `applyDeclareDirNaToSession` alone ≠ C02/C24 persist PASS. Pure `freezeDraftForDelivery` alone ≠ C24 CAS Freeze PASS.
-
----
-
-## 7. C01–C25 implementation matrix
-
-New script: `scripts/test-intake-r6-write-freeze-consistency.ts`  
-Package: `"test:intake-r6-write-freeze-consistency": "tsx scripts/test-intake-r6-write-freeze-consistency.ts"`
-
-| ID | How | Primary production surface | Expected |
+| ID | Entry | Seed | Expected |
 |---|---|---|---|
-| C01 | `declareDirNotApplicable` SSOT pair | write apply | Action+Classification+Evidence |
-| C02 | `loadPOJUSession` after C01 | CAS | Three records durable |
-| C03 | `reaggregateDirsIntake` on loaded DC | aggregator + validate | DIR `n_a` |
-| C04 | `freezeDraftForDelivery` / ensure on loaded | Freeze compose | Frozen DIR still `n_a` |
-| C05 | Inspect pack `version_snapshot` | freeze | Matches frozen DC business |
-| C06 | content_hash + binding | freeze / binding helpers | Match |
-| C07 | Pass forged `dir_na_conditions` on input | write | Still only SSOT; illegal combo reject if attempted |
-| C08 | Unregistered DIR/condition | write | Reject; no append |
-| C09 | After write, mutate classification binding in memory then freeze validate | validate | Not N/A |
-| C10 | Mutate evidence binding | validate | Not N/A |
-| C11 | `revokeDirNaDeclaration` then freeze path | revoke + validate | Not N/A |
-| C12 | Classification revoked flag | validate | Not N/A |
-| C13 | Evidence revoked | validate | Not N/A |
-| C14 | Expired action/`nowIso` past expires | validate | Not N/A |
-| C15 | Source missing / wrong DIR | write or validate | Reject / not N/A |
-| C16 | Unconfirmed / missing E1 | write or validate | Reject / not N/A |
-| C17 | Replay identical action | write | `idempotent_skip`; no dup |
-| C18 | Same action_id different binding | write | Reject |
-| C19 | Seed `final` DC; declare | applyDeclare** after S4-2** | Reject; Final unchanged |
-| C20 | Seed `superseded` | apply | Reject |
-| C21 | Final + revoke | revoke after S4-2 | Reject; Final not mutated |
-| C22 | Open blocking conflict + valid N/A | aggregator | DIR `conflict` |
-| C23 | `freezeDraftForDelivery(..., { authority: { dirCatalog: forged } })` | S2 compose | Forged ignored; SSOT only |
-| C24 | Full chain create→declare→load→reagg→ensure→load | CAS + wire | Final DC / versions / hash / binding |
-| C25 | Force CAS persist failure if feasible | mutate/CAS | Fail-closed; else **UNTESTED** |
+| **C19** | `declareDirNotApplicable` | `status: "final"` | Reject; reload unchanged |
+| **C20** | `declareDirNotApplicable` | `status: "superseded"` | Reject; reload unchanged |
+| **C21** | `revokeDirNaDeclaration` | `status: "final"` (+ optional pre-existing action ids from a prior draft-then-freeze fixture) | Reject **before** mutation; reload unchanged (actions not newly revoked; version not bumped) |
 
-Labels: print `PASS` / `FAIL` / `UNTESTED` explicitly; never equate UNTESTED with PASS.
+Also assert missing-DC revoke reject if constructible without inventing new lifecycle (C21 sibling or note in report).
 
 ---
 
-## 8. File allowlist / denylist
+## 8. C24 — full CAS + post-freeze reload checklist (locked)
 
-### 8.1 Expected change allowlist
+### 8.1 Chain (must execute)
 
-| Path | Likely change |
+```text
+__resetPojuDbForTests → ensurePojuDbReady
+  → createPOJUSession
+  → mutatePOJUSession seed draft + E1 + SSOT-capable fact/DIR
+  → declareDirNotApplicable          // production write
+  → loadPOJUSession                  // C02-class persist proof
+  → verify Action/Classification/Evidence on loaded session
+  → reaggregateDirsIntake → DIR n_a  // C03
+  → ensureSessionFrozenForDelivery   // production CAS freeze (not freezeDraft alone)
+  → loadPOJUSession again            // post-freeze durable state
+```
+
+### 8.2 Post-freeze reload asserts
+
+On **reloaded** session after ensure:
+
+| Check | Assert |
 |---|---|
-| `lib/poju/decision-context/na-declaration.ts` | **Required:** draft-only write gate; revoke draft-only fail-closed |
-| `scripts/test-intake-r6-write-freeze-consistency.ts` | **Required:** new |
-| `package.json` | **Required:** new script |
-| `lib/poju/decision-context/explicit-na-validate.ts` | Only if audit finds binding gap blocking C09–C16 (prefer test-first; change only if defect proven) |
-| `lib/poju/decision-context/na-validation-from-session.ts` | Same — only if proven defect |
-| `lib/poju/decision-context/freeze-to-delivery.ts` | Prefer **no** change (S2 locked); only if S4 finds blocking defect |
+| DC status | `final` |
+| Target DIR | `current_state === "n_a"` |
+| `decision_context_versions` | Contains snapshot with same `context_id` + `version` as frozen DC’s version row |
+| `version_snapshot` vs frozen | Business equality for facts/constraints/dirs/conflicts/N/A classifications/evidence (and hash payload fields) |
+| `content_hash` | Frozen DC `content_hash` set; equals binding `context_hash` |
+| Binding | `context_id` / `context_version` / `context_hash` match frozen DC (`bindingFromDecisionContext` / pack.binding / `last_delivery_context_binding` if wire sets it) |
+| N/A triad | Still present and consistent on frozen DC |
+| Round-trip | Second load equals first post-freeze load on these fields |
 
-### 8.2 Denylist
-
-Catalog SSOT content; S0 loader structure (unless blocking + planned); S1/S2/S3 rewrites; Resolver priority redesign; CFP/Topic/Ask/Versioning/Sufficiency/Schema/C5; UI/Prompt/Report; Registry inject APIs; S5 F1–F4 work; unrelated modules.
+**Hard rule:** `freezeDraftForDelivery` alone without `ensureSessionFrozenForDelivery` + reload ≠ C24 PASS.
 
 ---
 
-## 9. Compatibility risks
+## 9. C25 — CAS persist failure (locked)
+
+1. Attempt real failure using **existing** CAS/IDB harness (patterns from na-cas / freeze-versioning) **without** new production fault-inject APIs.
+2. If `declareDirNotApplicable` / ensure persist fails: assert caller-visible failure; no success outcome; no durable false N/A / false Freeze on reload.
+3. If infeasible in locked toolchain → `UNTESTED [production-path] C25` with reason; **not** PASS.
+
+---
+
+## 10. Session CAS construction notes
+
+Reuse na-cas polyfills (`fake-indexeddb/auto`, localStorage, crypto), `__resetPojuDbForTests`, `ensurePojuDbReady`, SSOT ACTIVE pair (`explicit_no_hard_red_lines` + registered DIR).
+
+Pure `applyDeclareDirNaToSession` alone ≠ C02/C19–C21/C24 persist PASS.
+
+---
+
+## 11. C01–C25 matrix (summary)
+
+New: `scripts/test-intake-r6-write-freeze-consistency.ts` + package script.
+
+| ID | Entry / method | Expected |
+|---|---|---|
+| C01 | `declareDirNotApplicable` | Triad created; key fields §5 |
+| C02 | `loadPOJUSession` | Triad durable |
+| C03 | reaggregate on loaded | DIR `n_a` |
+| C04 | Freeze compose on loaded | Frozen DIR `n_a` |
+| C05 | pack `version_snapshot` | Matches frozen business |
+| C06 | hash + binding | Match frozen |
+| C07 | forged `dir_na_conditions` | Ignored / no illegal auth |
+| C08 | bad DIR/condition | Write reject |
+| C09 | §6 classification tampers | Not `n_a` |
+| C10 | §6 evidence tampers | Not `n_a` |
+| C11–C14 | revoke / flags / expiry | Not `n_a` |
+| C15–C16 | bad / unconfirmed source | Reject or not `n_a` |
+| C17–C18 | idempotent / binding clash | skip / reject |
+| C19–C21 | §7 production + reload | Reject; unchanged |
+| C22 | conflict + N/A | DIR `conflict` |
+| C23 | forged `authority.dirCatalog` | Ignored |
+| C24 | §8 full CAS | Final + snapshot/hash/binding |
+| C25 | §9 | Fail-closed or **UNTESTED** |
+
+---
+
+## 12. File allowlist / denylist
+
+### Allowlist
+
+| Path | Change |
+|---|---|
+| `lib/poju/decision-context/na-declaration.ts` | **Required:** draft-only write; revoke fail-closed per §4.2 |
+| `scripts/test-intake-r6-write-freeze-consistency.ts` | **Required** |
+| `package.json` | **Required** script |
+| `explicit-na-validate.ts` / `na-validation-from-session.ts` / `freeze-to-delivery.ts` | Only if proven defect blocks C09–C16/C23 |
+
+### Denylist
+
+Unchanged from Rev 1.0: Catalog SSOT content; S0–S3 rewrites; Resolver/CFP/Topic/Ask/Versioning/Sufficiency/Schema/C5; UI; Registry inject; S5; unrelated modules; PR merge; deploy.
+
+---
+
+## 13. Compatibility / UNTESTED
 
 | Risk | Mitigation |
 |---|---|
-| Callers that declared N/A on `final` sessions | Will start failing — **intended**; document as contract tighten |
-| Revoke-on-final clients | Fail-closed; no silent no-op that looks like success |
-| Existing na-cas tests seed only draft | Expect stay green; if any case used final write, update **only if** that case was wrong-by-design (prefer keep tests green without weakening S4 gate) |
-| S3 Wire consumers | Untouched |
+| Final-session N/A write/revoke callers | Fail-closed — intended |
+| na-cas suite | Expect green on draft-only seeds |
 
----
-
-## 10. Known / expected UNTESTED
-
-| Item | Condition |
+| UNTESTED | When |
 |---|---|
-| **C25** true CAS persist-fail → no success / no fake Freeze | If cannot trigger without new production inject API (same IDB/`deleteDatabase` limits as S3) |
-| Runtime ACTIVE catalog Registry fault through Write/Freeze | Out of S4 (S0/S2 policy) |
-| S5 F1–F4 / freeze-versioning F1 RED | Disclose only; do not “fix” in S4 |
+| C25 | Cannot trigger real persist fail without new inject API |
+| Registry catalog fault runtime | Out of S4 |
+| freeze-versioning F1 | Disclose RED until S5 |
 
 ---
 
-## 11. Verification commands (when implement authorized)
+## 14. Verification (when implement authorized)
 
 ```bash
 node --version          # v22.22.0
@@ -295,30 +354,31 @@ corepack pnpm --version # 10.33.2
 corepack pnpm test:intake-r6-write-freeze-consistency
 corepack pnpm test:intake-r6-dir-catalog
 corepack pnpm test:intake-r6-freeze-wire-reason
-corepack pnpm test:intake-r6-na-cas          # if na-declaration changed
+corepack pnpm test:intake-r6-na-cas
 corepack pnpm exec tsc --noEmit
-# disclose only:
-corepack pnpm test:intake-r6-freeze-versioning   # expect F1 RED until S5
+corepack pnpm test:intake-r6-freeze-versioning   # disclose F1 RED
 ```
+
+Confirm S4 code commit: `git rev-parse HEAD^` === `0e09531c06840d373d8715426dec542c61130ebe`.
 
 ---
 
-## 12. Acceptance criteria (implement phase)
+## 15. Acceptance criteria
 
-1. Parent of S4 production Diff commit = `0e09531c06840d373d8715426dec542c61130ebe`.
-2. Draft-only N/A write + revoke fail-closed on non-draft (C19–C21).
-3. C01–C24 PASS (or documented UNTESTED only where plan allows); C25 PASS or UNTESTED.
-4. Catalog membership remains ACTIVE-only; C07/C08/C23 PASS.
-5. Full CAS happy path C02/C24 PASS (not pure-function substitutes).
-6. S0–S3 regression green; F1 RED disclosed.
-7. Diff ⊆ allowlist; no S5/PR/deploy.
-8. Stop after S4; wait for independent review.
+1. S4 code on `feat/s4-dir-na-write-freeze-consistency` with parent **exactly** `0e09531c…`.
+2. Write + revoke fail-closed per §4.1–§4.2 (missing DC and non-draft).
+3. C09/C10 prove mismatched triad ⇒ DIR ≠ `n_a`.
+4. C19–C21 use production entries + reload unchanged.
+5. C24 full CAS + post-freeze reload checklist.
+6. C25 PASS or explicit UNTESTED.
+7. C01–C24 otherwise PASS; regressions green; F1 disclosed.
+8. Diff ⊆ allowlist; no S5/PR/deploy; stop after S4.
 
 ---
 
 ## Stop Condition
 
-This document is **plan-only** (Revision **1.0**).
+This document is **plan-only** (Revision **1.1**).
 
 No production or test implementation is authorized hereby.  
 Do not start S5. Do not merge or deploy.  
