@@ -5,7 +5,7 @@
 **Baseline HEAD (this supplemental evidence):** must match S6 audit commit when recorded in `toolchain-s6-commit.txt` / `test-results-s6-commit.txt`.  
 **Regression evidence:** `test-results-s6-commit.txt` (full suite executed at S6 commit SHA; all listed commands exit 0)
 
-| Control | Formal requirement (from design §9) | Implementation | Tests / cases | Evidence | Conclusion |
+| Control | Formal requirement (from design §7) | Implementation | Tests / cases | Evidence | Conclusion |
 |---|---|---|---|---|---|
 | **DC-1** | DIR+condition in ACTIVE SSOT; valid Session/DC; Declare appends; Freeze → DIR `n_a` | `loadDirNaCatalog(ACTIVE)`; `applyDeclareDirNaToSession` / `declareDirNotApplicable`; `buildFreezeNaValidationFromSession` + `freezeDraftForDelivery` | `test-intake-r6-dir-catalog.ts` DC-1 write + DC-1 Freeze; S4 C01–C04 | dir-catalog PASS; write-freeze C01–C04 PASS | **PASS** |
 | **DC-2** | `dir_id` not in SSOT → write `dir_not_in_catalog`; no action | `resolveDeclareDirNaCatalogMembership` / `membershipFromCatalogLoad` | dir-catalog DC-2; S4 C08 | PASS lines in test-results | **PASS** |
