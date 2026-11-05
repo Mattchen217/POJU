@@ -5,7 +5,8 @@
 | Field | Value |
 |---|---|
 | **Document status** | PLAN ONLY — no production/test implementation authorized by this document |
-| **Revision** | **1.2** (resolves evidence-classification findings R1–R4 against `dfcd9122`) |
+| **Revision** | **1.3** (fixes remaining R4 skip Tier B vs eligibility inconsistency against `5b94d05d`) |
+| **Rev 1.2 plan commit** | `5b94d05debd554351bb0f41187e8044a63f9747c` |
 | **Rev 1.1 plan commit** | `dfcd9122254dea500475527a7847afd6572c94c9` |
 | **Rev 1.0 plan commit** | `ce520987e928cc7fc7ea10313db8666f90661828` |
 | **Authoritative design** | [`STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md`](./STAGE-3.2-DIR-CATALOG-VERTICAL-SLICE-DESIGN.md) **Revision 1.3** §5.2, §7 (DC-4/5/6 wire), §10.1, §10.3 **S3 row** |
@@ -20,6 +21,7 @@
 |---|---|---|
 | **1.1** | `ce520987` | Catch/persist helpers; consumer audit; Tier A/B/C introduced |
 | **1.2** | `dfcd9122` | **R1** separate helper unit / actual catch execution / code-review; **R2** actual `ensure*` apply-propagation + persist-fail execution (or explicit untested); **R3** keep consumer audit + implement-time re-search + tsc; **R4** Tier B = only behavior actually executed on production functions |
+| **1.3** | `5b94d05d` | **R4 remaining:** Tier B skip must call `applySufficiencyFreezeToSession` (not `canFreezeSessionOnSufficiency` alone); gate-only checks are Tier A |
 
 ---
 
@@ -159,7 +161,7 @@ flowchart TD
   persistFail["!commit.committed"] --> persistHelper["persistFailWireResult"]
   persistHelper --> wireP["ok:false reason_code=dc_freeze_persist_failed"]
   applyFail["applied.ok false"] --> ensurePass["ensure returns applied unchanged"]
-  skip["eligibility skip"] --> skipOk["ok:true skipped reason=FreezeWireSkipReason UNCHANGED"]
+  skip["applySufficiencyFreezeToSession skip arm"] --> skipOk["ok:true skipped reason=FreezeWireSkipReason UNCHANGED"]
 ```
 
 ---
@@ -298,8 +300,8 @@ Three **independent** evidence kinds. Do not conflate them.
 
 | Kind | Label | Counts as proof of… | Does **not** count as… |
 |---|---|---|---|
-| **Helper unit** | `[Tier A]` | Mapper / `freezeFailWireResult` / `persistFailWireResult` behavior on constructed inputs | Execution of `applySufficiencyFreezeToSession` catch or `ensureSessionFrozenForDelivery` persist branch |
-| **Production-function execution** | `[Tier B]` | Actual call of `applySufficiencyFreezeToSession` / `ensureSessionFrozenForDelivery` that enters the branch under test | Helper-only calls; static review |
+| **Helper unit** | `[Tier A]` | Mapper / `freezeFailWireResult` / `persistFailWireResult` on constructed inputs; optional direct `canFreezeSessionOnSufficiency` checks | Execution of `applySufficiencyFreezeToSession` catch/skip arms or `ensureSessionFrozenForDelivery` persist/propagation branches |
+| **Production-function execution** | `[Tier B]` | Actual call of `applySufficiencyFreezeToSession` / `ensureSessionFrozenForDelivery` that enters the branch under test (including **skip arm** via `apply*`, not gate-only) | Helper-only calls; direct `canFreezeSessionOnSufficiency` alone; static review |
 | **Static code-review** | `[Code-review]` | Catch/persist bodies are thin `return *FailWireResult(...)`; ensure pass-through unchanged | Runtime execution of those branches |
 | **Regression** | `[Tier C]` | Existing suites + tsc + consumer re-search | New Wire mapping correctness |
 
@@ -310,10 +312,12 @@ Implement reports **must** use labels like:
 - `PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_load_failed`
 - `PASS  [Tier A] freezeFailWireResult constructed FreezeError …` *(helper — not catch execution)*
 - `PASS  [Tier B] applySufficiencyFreezeToSession catch → freeze_failed`
+- `PASS  [Tier B] applySufficiencyFreezeToSession skip (already_frozen|not_sufficient|stall_or_degraded_path)`
 - `PASS  [Tier B] ensureSessionFrozenForDelivery apply-fail propagation`
 - `PASS  [Tier B] ensureSessionFrozenForDelivery persist-fail → dc_freeze_persist_failed` **or** `UNTESTED  [production-path] ensure persist-fail …`
 - `PASS  [Code-review] catch body === freezeFailWireResult only`
 - `PASS  [Tier C] tsc --noEmit`
+- Optional: `PASS  [Tier A] canFreezeSessionOnSufficiency …` *(does **not** replace Tier B skip)*
 
 ### 6.1 Tier A — Helper unit tests
 
@@ -336,8 +340,9 @@ Implement reports **must** use labels like:
 | `persistFailWireResult(session, "cas boom")` | `reason_code === "dc_freeze_persist_failed"`, `reason` carries error text |
 | `persistFailWireResult(session, null)` | `reason_code` and `reason` === `"dc_freeze_persist_failed"` |
 | Distinctness | persist `reason_code` ≠ any `dir_catalog_*` and ≠ accidental sole reliance on `freeze_failed` |
+| Optional: direct `canFreezeSessionOnSufficiency(...)` | Gate `allowed` / `reason` only — **Tier A**; does **not** prove `applySufficiencyFreezeToSession` skip arm |
 
-**Label:** `[Tier A]` — **forbidden** to claim these prove catch/persist production branches ran.
+**Label:** `[Tier A]` — **forbidden** to claim these prove catch / skip / persist production branches ran.
 
 ### 6.2 Code-review gates (not Tier B)
 
@@ -407,13 +412,17 @@ After S3: `return persistFailWireResult(session, commit.error)`.
 
 ##### (4) Skip and success — **required Tier B**
 
-Reuse existing fixtures (freeze-versioning / s5 observation patterns):
+Reuse existing fixtures (freeze-versioning / s5 observation patterns).
 
-| Case | Call | Assert |
-|---|---|---|
-| Success freeze (in-memory) | `applySufficiencyFreezeToSession` sufficient draft | `ok: true`, pack/session final; no `reason_code` on success arm |
-| Skip already frozen / not sufficient / stall path | eligibility | `ok: true`, `skipped: true`, `reason ∈ FreezeWireSkipReason`; **no** `reason_code` |
-| Success persist (optional if IDB available) | `ensureSessionFrozenForDelivery` on seeded session | `ok: true` (or disclose env limits); must not break existing green expectations |
+**Hard rule:** Tier B skip evidence **must** invoke production `applySufficiencyFreezeToSession(session)`. Calling `canFreezeSessionOnSufficiency` alone is **Tier A only** and does **not** constitute Tier B skip-arm execution (§6.0 / §9 aligned).
+
+| Case | Call | Fixtures | Assert |
+|---|---|---|---|
+| Success freeze (in-memory) | `applySufficiencyFreezeToSession(session)` | Sufficient draft session | `ok === true`; pack/session final; **no** `reason_code` on success arm |
+| Skip — already frozen | `applySufficiencyFreezeToSession(session)` | Already-frozen session (`status` final/superseded) | `ok === true`; `skipped === true`; `reason ∈ FreezeWireSkipReason` (e.g. `already_frozen`); **no** `reason_code` on skip arm |
+| Skip — insufficient draft | `applySufficiencyFreezeToSession(session)` | Insufficient draft (`canStop === false`) | Same shape; `reason` e.g. `not_sufficient`; **no** `reason_code` |
+| Skip — stall / degraded | `applySufficiencyFreezeToSession(session)` | Stall or degraded session (`stall_offer_pending` / `delivery_mode === "degraded"`) | Same shape; `reason` e.g. `stall_or_degraded_path`; **no** `reason_code` |
+| Success persist (optional if IDB available) | `ensureSessionFrozenForDelivery(session, …)` | Seeded sufficient session | `ok === true` (or disclose env limits); must not break existing green expectations |
 
 ### 6.4 Tier C — Compatibility / regression
 
@@ -432,7 +441,8 @@ Reuse existing fixtures (freeze-versioning / s5 observation patterns):
 |---|---|
 | Runtime ACTIVE catalog load fail → apply catch (`dir_catalog_*`) | **UNTESTED** production-function-path (no Registry) |
 | S2 compose `!load.ok` runtime | Out (S2 policy) |
-| Helper unit ≡ catch/persist branch execution | **Forbidden misclaim** |
+| Helper unit ≡ catch/persist/skip branch execution | **Forbidden misclaim** |
+| `canFreezeSessionOnSufficiency` alone ≡ Tier B apply skip arm | **Forbidden misclaim** |
 | Code-review ≡ Tier B execution | **Forbidden misclaim** |
 | S4 / S5 / consumer `DC_FREEZE_FAILED` → `reason_code` | Out |
 
@@ -465,7 +475,7 @@ Reuse existing fixtures (freeze-versioning / s5 observation patterns):
 | Consumer Diff / HTTP envelope change | Out |
 | Equating S3 with “catalog load runtime-faulted in CI” | Forbidden |
 | Production Registry / test-only loader injection / new ensure inject APIs | Forbidden |
-| Claiming helper tests prove enclosing production branches | Forbidden |
+| Claiming helper / gate-only tests prove enclosing production branches (incl. apply skip arm) | Forbidden |
 
 ---
 
@@ -479,12 +489,12 @@ S3 may be accepted only when:
 4. **`[Tier B]`** executes:
    - `applySufficiencyFreezeToSession` **catch** → `freeze_failed` (plain bind/`session_id` fixture);
    - `ensureSessionFrozenForDelivery` **apply-fail propagation** → `freeze_failed` (not persist code);
-   - skip + success paths unchanged;
+   - `applySufficiencyFreezeToSession` **success** + **skip arm** for already-frozen, insufficient, and stall/degraded fixtures (§6.3.2(4)); `ok === true`, `skipped === true` on skips, `reason ∈ FreezeWireSkipReason`, **no** `reason_code` on skip/success arms;
    - **and either** `ensureSessionFrozenForDelivery` **persist-fail** → `dc_freeze_persist_failed` **or** explicit `UNTESTED [production-path]` for that branch (helper+review only — no false Tier B claim).
-5. Evidence labels obey §6.0 (helper ≠ Tier B; code-review ≠ Tier B).
+5. Evidence labels obey §6.0 (helper ≠ Tier B; `canFreezeSessionOnSufficiency` alone ≠ Tier B skip; code-review ≠ Tier B).
 6. Production Diff ⊆ §5.1; baseline parent = `9411c83f475605945874f87bb969db3ac1329ee9`; S2 behavior preserved.
 7. Consumer Diff empty; §2.3.5 re-search + tsc done.
-8. **Not claimed:** S4/S5; Registry catalog catch execution; S2 `!load.ok` runtime; helper≡enclosing-branch.
+8. **Not claimed:** S4/S5; Registry catalog catch execution; S2 `!load.ok` runtime; helper≡enclosing-branch; gate-only eligibility ≡ apply skip arm.
 
 ---
 
@@ -503,7 +513,7 @@ pnpm test:intake-r6-freeze-versioning     # Tier C disclose RED / S5 dependency
 
 ## Stop Condition
 
-This document is **plan-only** (Revision **1.2**).
+This document is **plan-only** (Revision **1.3**).
 
 No production or test implementation is authorized hereby.  
 Do not start S4/S5.  
