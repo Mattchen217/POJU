@@ -9,6 +9,7 @@ import type {
   DirNaCatalogVersion,
 } from "@/lib/poju/decision-context/catalog";
 import type { DirNaCatalogEntry } from "@/lib/poju/decision-context/explicit-na-validate";
+import { DIR_NA_CATALOG_V1_ENTRIES } from "@/lib/poju/decision-context/catalog/dir-na-catalog.v1";
 
 /** Registry with no key for version 1 (ACTIVE gap → ssot_unavailable). */
 export function registryWithoutVersion(
@@ -22,6 +23,33 @@ export function registryWithoutVersion(
     });
   }
   return m;
+}
+
+/** has(version) throws → load_failed (exception boundary). */
+export function registryThrowingOnHas(
+  version: DirNaCatalogVersion,
+): DirNaCatalogRegistry {
+  const inner = new Map<DirNaCatalogVersion, DirNaCatalogSnapshot>([
+    [
+      version,
+      {
+        dir_catalog_version: version,
+        entries: [{ dir_id: "DIR-DEF-QUESTION", na_conditions: [] }],
+      },
+    ],
+  ]);
+  return {
+    has: (_k: DirNaCatalogVersion) => {
+      throw new Error("test registry.has throw");
+    },
+    get: (k: DirNaCatalogVersion) => inner.get(k),
+    forEach: inner.forEach.bind(inner),
+    size: inner.size,
+    entries: inner.entries.bind(inner),
+    keys: inner.keys.bind(inner),
+    values: inner.values.bind(inner),
+    [Symbol.iterator]: () => inner[Symbol.iterator](),
+  } as DirNaCatalogRegistry;
 }
 
 /** has(1) true but get(1) throws → load_failed. */
@@ -82,33 +110,43 @@ export function registryNonArrayEntries(
   ]);
 }
 
-/** Minimal additive v1⊂v2 pair for compatibility checks. */
+/**
+ * Additive-only: full production v1 entries ⊆ v2 entries.
+ * v1Pairs = every non-empty (dir_id, code) from the v1 catalog.
+ */
 export function additiveV1V2Registries(): {
   v1: DirNaCatalogRegistry;
   v2: DirNaCatalogRegistry;
   v1Pairs: Array<{ dir_id: string; code: string }>;
 } {
-  const v1Entries: DirNaCatalogEntry[] = [
-    {
-      dir_id: "DIR-DEF-UNACCEPTABLE",
-      na_conditions: ["explicit_no_hard_red_lines"],
-    },
-    { dir_id: "DIR-DEF-QUESTION", na_conditions: [] },
-  ];
-  const v2Entries: DirNaCatalogEntry[] = [
-    {
-      dir_id: "DIR-DEF-UNACCEPTABLE",
-      na_conditions: [
-        "explicit_no_hard_red_lines",
-        "explicit_extra_additive_only",
-      ],
-    },
-    { dir_id: "DIR-DEF-QUESTION", na_conditions: [] },
-    {
-      dir_id: "DIR-NEW-ADDITIVE",
-      na_conditions: ["explicit_new_dir_condition"],
-    },
-  ];
+  const v1Entries: readonly DirNaCatalogEntry[] = DIR_NA_CATALOG_V1_ENTRIES;
+  const v1Pairs: Array<{ dir_id: string; code: string }> = [];
+  for (const entry of v1Entries) {
+    for (const code of entry.na_conditions) {
+      v1Pairs.push({ dir_id: entry.dir_id, code });
+    }
+  }
+
+  const v2Entries: DirNaCatalogEntry[] = v1Entries.map((entry) => {
+    if (entry.dir_id === "DIR-DEF-UNACCEPTABLE") {
+      return {
+        dir_id: entry.dir_id,
+        na_conditions: [
+          ...entry.na_conditions,
+          "explicit_extra_additive_only",
+        ],
+      };
+    }
+    return {
+      dir_id: entry.dir_id,
+      na_conditions: [...entry.na_conditions],
+    };
+  });
+  v2Entries.push({
+    dir_id: "DIR-NEW-ADDITIVE",
+    na_conditions: ["explicit_new_dir_condition"],
+  });
+
   return {
     v1: new Map([
       [1, { dir_catalog_version: 1, entries: v1Entries }],
@@ -116,6 +154,6 @@ export function additiveV1V2Registries(): {
     v2: new Map([
       [2, { dir_catalog_version: 2, entries: v2Entries }],
     ]),
-    v1Pairs: [{ dir_id: "DIR-DEF-UNACCEPTABLE", code: "explicit_no_hard_red_lines" }],
+    v1Pairs,
   };
 }

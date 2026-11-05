@@ -72,14 +72,16 @@ export function resolveDirNaCatalog(
   if (!isValidDirNaCatalogVersion(requested)) {
     return { ok: false, reason_code: "dir_catalog_version_invalid" };
   }
-  if (!registry.has(requested)) {
-    if (requested === activeVersion) {
-      return { ok: false, reason_code: "dir_catalog_ssot_unavailable" };
-    }
-    return { ok: false, reason_code: "dir_catalog_version_unknown" };
-  }
 
+  // has / get / snapshot reads share one exception boundary → load_failed.
+  // Normal has()===false keeps ssot_unavailable vs version_unknown classification.
   try {
+    if (!registry.has(requested)) {
+      if (requested === activeVersion) {
+        return { ok: false, reason_code: "dir_catalog_ssot_unavailable" };
+      }
+      return { ok: false, reason_code: "dir_catalog_version_unknown" };
+    }
     const snapshot = registry.get(requested);
     if (snapshot == null) {
       return { ok: false, reason_code: "dir_catalog_load_failed" };

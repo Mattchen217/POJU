@@ -15,6 +15,7 @@ import {
   additiveV1V2Registries,
   registryNonArrayEntries,
   registryThrowingOnGet,
+  registryThrowingOnHas,
   registryVersionMismatch,
   registryWithoutVersion,
 } from "./fixtures/dir-na-catalog-test-registry";
@@ -150,6 +151,16 @@ function main() {
   console.log("  PASS  ACTIVE∉registry → dir_catalog_ssot_unavailable");
 
   // load_failed matrix — must not throw out
+  const failHasThrow = resolveDirNaCatalog(
+    1,
+    registryThrowingOnHas(1),
+    ACTIVE_DIR_NA_CATALOG_VERSION,
+  );
+  assert.equal(failHasThrow.ok, false);
+  if (!failHasThrow.ok) {
+    assert.equal(failHasThrow.reason_code, "dir_catalog_load_failed");
+  }
+
   const failThrow = resolveDirNaCatalog(
     1,
     registryThrowingOnGet(1),
@@ -180,7 +191,7 @@ function main() {
     assert.equal(failNonArray.reason_code, "dir_catalog_load_failed");
   }
   console.log(
-    "  PASS  load_failed: throw / version mismatch / non-array (no rethrow)",
+    "  PASS  load_failed: has-throw / get-throw / version mismatch / non-array (no rethrow)",
   );
 
   // Membership
@@ -204,8 +215,23 @@ function main() {
   }
   console.log("  PASS  membership allow / deny DIR / deny condition");
 
-  // Additive-only: v1 pairs still ok under v2 entries
+  // Additive-only: every non-empty v1 (dir_id, code) still ok under v2
+  const expectedNonEmptyPairs: Array<{ dir_id: string; code: string }> = [];
+  for (const [dirId, codes] of Object.entries(EXPECTED_TOKENS)) {
+    for (const code of codes) {
+      expectedNonEmptyPairs.push({ dir_id: dirId, code });
+    }
+  }
   const { v2, v1Pairs } = additiveV1V2Registries();
+  assert.equal(v1Pairs.length, expectedNonEmptyPairs.length);
+  assert.deepEqual(
+    [...v1Pairs].sort((a, b) =>
+      `${a.dir_id}:${a.code}`.localeCompare(`${b.dir_id}:${b.code}`),
+    ),
+    [...expectedNonEmptyPairs].sort((a, b) =>
+      `${a.dir_id}:${a.code}`.localeCompare(`${b.dir_id}:${b.code}`),
+    ),
+  );
   const v2Load = resolveDirNaCatalog(2, v2, 2);
   assert.equal(v2Load.ok, true);
   if (!v2Load.ok) throw new Error("unreachable");
@@ -213,7 +239,9 @@ function main() {
     const m = assertNaConditionInDirCatalog(v2Load, pair.dir_id, pair.code);
     assert.equal(m.ok, true, `additive fail ${pair.dir_id}/${pair.code}`);
   }
-  console.log("  PASS  additive-only v1 pairs still ok under v2");
+  console.log(
+    `  PASS  additive-only all ${v1Pairs.length} v1 pairs still ok under v2`,
+  );
 
   // Production Registry must not be a public export of the catalog barrel
   assert.equal("productionDirNaRegistry" in catalogApi, false);
