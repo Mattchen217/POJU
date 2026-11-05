@@ -98,17 +98,59 @@ type NeedItem =
 | **Trace** | `dir_based`: `dir_id` → catalog + `DC.dirs`; `source_only`: `ddr_id` + `source_code` + `source_state` → Phase 2 source matrix |
 | **Model** | May reorder; **cannot** invent DIR ids; cannot convert source_only → dir_based |
 
-### 2.7 N/A evidence provenance (R1-06)
+### 2.7 N/A evidence provenance (R2-04)
 
-Align Phase 1 §3.2 and Phase 2 §1.5:
+Align Phase 1 §3.2 and Phase 2 §1.5. Understanding caches `na_evidence_ids` for display only — **not** the authority store.
 
-| Rule | Requirement |
+#### A. Authority store
+
+Authority lives on **Decision Context**, aligned with Phase 1 `explicit_na_evidence` (Data Contract DDR/DIR N/A rules). Understanding only caches ids.
+
+| Store | Role |
 |---|---|
-| Valid `n_a` | Must cite **explicit N/A evidence** (`na_evidence_ids` → RealityFact/Constraint/Event with N/A semantics, or catalog-allowed N/A marker written by code) |
-| Invalid | Claiming N/A solely because `current_state=n_a` was set without evidence |
-| Forbidden conversion | `unknown` / `declined` **must not** auto-become `n_a` or `known` |
-| Product Rule A | DDR-02 CFP required-source miss **cannot** be satisfied via N/A waiver |
-| Understood block | `status=n_a` items without `na_evidence_ids` are **builder bugs** — exclude from Gate satisfaction |
+| `DC.reality_facts[]` | User-asserted facts whose payload/status encodes applicability absence for a DIR |
+| `DC.constraints[]` | Explicit “no X / not applicable” constraints with stable ids |
+| DC-side `ExplicitNaEvidence` records | Code-written markers `{ evidence_id, dir_id?, ddr_id?, na_condition_code, source_ref, written_by: "code" }` persisted with DC (Phase 3.2 chooses concrete field bag **without** reopening Phase 1 C1–C5 enums). Not model-authored. |
+| Understanding `na_evidence_ids` | Derived pointers into the above — rebuildable; **never** sole proof |
+
+Model output alone is **never** written into these stores as N/A proof. Do not treat a cache-only `current_state=n_a` as evidence.
+
+#### B. Evidence types
+
+| Type | Code | May support DIR `n_a`? |
+|---|---|---|
+| User-explicit fact/constraint stating N/A applicability | `user_explicit_na` | Yes, if matches `na_conditions` |
+| System N/A marker written by deterministic code after validated user evidence / catalog rule | `system_na_marker` | Yes, if marker cites legal `na_condition_code` |
+| Model inference / free-form judgment | `model_inferred` | **No** — reject as N/A evidence |
+| Silent absence / empty field | — | **No** |
+| `unknown` / `declined` fact status | — | **No** — must not convert to `n_a` |
+
+#### C. DIR Catalog `na_conditions` validation
+
+```text
+For candidate DIR n_a:
+  1. Resolve na_evidence_ids → authoritative records in DC
+  2. Each evidence must reference this dir_id (or mapped constraint link)
+  3. Match evidence.na_condition_code / semantics against DIR Catalog.na_conditions
+  4. If any evidence missing, wrong dir, wrong condition, revoked, or conflicting
+       → n_a INVALID
+  5. reaggregateDirs: invalid n_a → do not emit current_state=n_a for Gate satisfaction
+       (typically pending/unknown/partial per Phase 1/2 aggregator rules)
+```
+
+Presence of an evidence id **alone** is insufficient without `na_conditions` match.
+
+#### D. Rebuild / revoke
+
+1. Understanding rebuild reads DC evidence + `reaggregateDirs` output only.  
+2. If evidence revoked/superseded/conflicted → reaggregate clears illegal `n_a`; Understanding drops that UnderstoodItem or marks gap.  
+3. Cache mismatch with DC → discard Understanding cache; rebuild.
+
+#### E. Non-bypass rules (frozen)
+
+- `unknown` ↛ `n_a`; `declined` ↛ `n_a`  
+- Evidence-less `n_a` **excluded** from Gate satisfaction  
+- DDR-02 CFP Required Source miss **cannot** be waived by DIR/DDR N/A (Phase 2 Rule A)
 
 ### 2.4 `personal_pattern_insight`
 

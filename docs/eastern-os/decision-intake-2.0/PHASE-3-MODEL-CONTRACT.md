@@ -52,9 +52,10 @@ Bound what the model may see and propose, what code alone may write, and how tur
 1. Schema validation (zod) of all model JSON.  
 2. Fact combination legality + confirmation derivation (reuse `fact-combination` / confirmation-event semantics).  
 3. `reaggregateDirs` + DDR compose + Gate (Phase 2 §1.4–§1.6).  
-4. Blueprint version binding & FreezeRecord (C5) when freezing.  
-5. Idempotency, optimistic concurrency, Lockout gates.  
-6. Strip/reject out-of-scope DIR/DDR references.
+4. N/A evidence validation against DIR `na_conditions` (Understanding §2.7); never trust Understanding cache alone.  
+5. Blueprint version binding & FreezeRecord (C5) when freezing.  
+6. Idempotency, optimistic concurrency, Lockout gates; Commit B unique slot (§5.4).  
+7. Strip/reject out-of-scope DIR/DDR references; kind-aware CandidateQuestion validation.
 
 ---
 
@@ -103,17 +104,21 @@ After Commit A succeeds, the **answer is durable** even if Question Planning lat
 
 ```text
 Load DC @ context_version' from Commit A
-IF Soft Gate / user path → understanding_review (no ask):
+IF soft_budget / Soft Gate ready / USER_REQUEST_REVIEW → understanding_review (no ask):
   persist ReviewTransition; return (no AskPayload)
 ELSE:
+  IF AskPayload already exists for (session_id, client_turn_id) AND status=valid:
+    return existing AskPayload (idempotent); do NOT regenerate; do NOT bump asked_count
   plan candidates (code; model hints optional, outside TX)
   LLM Question Generation (outside TX) → NL
-  validate Question
-  BEGIN short TX
-    assert DC.version still == context_version'   // or allow only if no concurrent write
-    assert blueprint_version bind matches session
-    assert no newer AskPayload for this turn already shown
-    persist AskPayload + TurnSnapshot(phase=question_delivery)
+  validate Question (kind-aware)
+  BEGIN short TX  // Commit B
+    assert delivery_slot free OR same payload fingerprint
+    assert DC.version == planned_context_version          // else abort → §5.5
+    assert blueprint_version == planned_blueprint_version // else abort → §5.6
+    UPSERT AskPayload with UNIQUE(session_id, client_turn_id)
+    set status=valid; bind context_version + blueprint_version
+    TurnSnapshot(phase=question_delivery)
   COMMIT
   ONLY THEN show AskPayload to user
 ```
@@ -125,37 +130,68 @@ If Commit B fails after LLM success → **retry persist** or surface error; neve
 | Record | Content |
 |---|---|
 | `AnswerCommitResult` | client_turn_id, AnswerEvent id, before/after context_version, soft_verdict |
-| `AskPayload` | candidate_id, question_text, dir_id?, ddr_ids, context_version, blueprint_version |
+| `AskPayload` | candidate_id, question_text, kind, dir_ids?, source_code?, ddr_ids, context_version, blueprint_version, status=`valid`\|`superseded`\|`invalidated` |
 | `TurnSnapshot` | phases A/B markers, gate_soft, skip_reason? |
-| `IdempotencyRecord` | key → AnswerCommitResult (and optional AskPayload id) |
+| `IdempotencyRecord` | key=`(session_id, client_turn_id)` → AnswerCommitResult + optional AskPayload id |
 | Blueprint bind | blueprint_version + ddr_version + dir_catalog_version on session |
 
-### 5.4 Concurrency, Blueprint upgrade, recovery
+### 5.4 Commit B uniqueness, concurrency, recovery (R2-03)
+
+**Uniqueness / idempotency (normative)**
+
+1. At most **one valid** AskPayload per `(session_id, client_turn_id)`.  
+2. Unique constraint (or equivalent) on that key for `status=valid`.  
+3. Re-entry of phase B for the same turn: if valid AskPayload exists → **return it**; do not generate a second question; do not increment `asked_count`.  
+4. Persist **before** UI show. Shown payload must equal persisted valid payload.  
+5. LLM timeout + late response race: Commit B uses **atomic compare-and-set** on the delivery slot (`delivery_generation` / empty→occupied). Loser discards NL; winner’s payload is authoritative.  
+6. Persisted-but-unshown AskPayload on resume → **load and show**; never regenerate over it.
 
 **Concurrency / duplicate submit**
 
 - Stale `expected_context_version` on Commit A → `409`; client reloads DC.  
-- Duplicate `client_turn_id` / idempotency key → return first **AnswerCommitResult** (and existing AskPayload if B already done).  
+- Duplicate `client_turn_id` → return first AnswerCommitResult (+ existing AskPayload if B done).  
 - Concurrent Commit A → one wins version bump; loser 409.  
-- Commit B sees version drift (another answer landed) → **do not** attach AskPayload to obsolete understanding; re-run Soft Gate / planning on latest DC (**OPEN product:** auto-replan once vs force client refresh).
+- Concurrent Commit B for same turn → CAS / unique constraint; one persist; others return that row.
 
-**Blueprint mid-flight upgrade**
+### 5.5 Version-drift safety protocol (R2-03)
 
-- Session binds `blueprint_version` at start of turn.  
-- If Blueprint bumps between A and B: B uses **new seed merge** (Phase 2) without wiping live `DC.dirs`.  
-- In-flight model call that referenced old Blueprint scope: discard NL if out-of-scope vs **current** bind; replan. Do not write AskPayload with obsolete scope.  
-- FreezeRecord (later) binds DC version + Blueprint + DDR catalog versions (C5) — unchanged.
+Safety protocol is **closed** (not OPEN). UX choice after safe abort may be OPEN.
 
-**Recovery matrix**
+```text
+On Commit B:
+  IF DC.version != planned_context_version
+     OR Understanding.context_version != planned_context_version:
+    → do NOT persist AskPayload
+    → mark in-memory NL as invalidated
+    → must NOT bind old AskPayload to new DC
+    → discard/stale-mark any draft tied to old version
+    → MUST re-check Soft Gate + rebuild Understanding on latest DC
+    → MUST re-run candidate planning against latest DC + Blueprint
+    → OPEN product: auto-replan once vs force client refresh
+       (either UX OK only if this protocol held)
+```
+
+### 5.6 Blueprint upgrade between A and B (R2-03)
+
+1. New Blueprint version merges **initialization seeds only** (Phase 2).  
+2. **Must not** overwrite existing live DIR `current_state` or user evidence.  
+3. After bump: reconcile affected `DC.dirs` per Phase 2; rebuild Understanding; re-evaluate Soft Gate.  
+4. Validate CandidateQuestion still in **latest** Blueprint scope (and kind rules).  
+5. NL generated under old Blueprint and not yet Commit B → **discard**; never persist as valid AskPayload.  
+6. FreezeRecord (later) still binds DC + Blueprint + DDR versions (C5).
+
+### 5.7 Recovery matrix
 
 | Event | Recovery |
 |---|---|
 | Crash before Commit A | No DC change; safe retry Answer Interpretation |
 | Crash after Commit A, before B | DC durable; `need_planning=true`; resume B without re-interpreting answer |
-| LLM timeout during B | DC kept; B retry / template; asked_count unchanged until AskPayload shown |
-| Crash after Commit B persist, before UI paint | AskPayload exists → UI may load pending ask (idempotent show) |
-| UI showed ask without Commit B | **Forbidden by protocol**; treat as bug |
+| LLM timeout during B | DC kept; CAS on Commit B; asked_count unchanged until AskPayload shown |
+| Late LLM after CAS lost | Discard; return winner AskPayload |
+| Crash after Commit B persist, before UI paint | Load valid AskPayload; idempotent show; no regenerate |
+| UI showed ask without Commit B | **Forbidden**; treat as bug |
 | Partial Commit A TX fail | Rollback; no half-written dirs |
+| Blueprint bump mid-B | §5.6; discard stale NL |
 
 ---
 
@@ -164,9 +200,11 @@ If Commit B fails after LLM success → **retry persist** or surface error; neve
 1. Understanding.context_version === DC.version used to build.  
 2. Every UnderstoodItem.fact_ids ⊆ DC.reality_facts.  
 3. DIR-based NeedItem.dir_id ∈ DC.dirs and Blueprint.dir_ids (active). Source-only NeedItems use `source_code` + `ddr_id` (no invented DIR).  
-4. Shown AskPayload must equal last persisted AskPayload for that turn (Commit B before show).  
-5. No RealityFact from chart insight channel.  
-6. No long-running TX enclosing LLM.
+4. Shown AskPayload must equal last **valid** persisted AskPayload for that turn (Commit B before show).  
+5. ≤1 valid AskPayload per `(session_id, client_turn_id)`.  
+6. No RealityFact from chart insight channel.  
+7. No long-running TX enclosing LLM.  
+8. N/A satisfaction only via authoritative DC evidence (§ Understanding 2.7); Understanding cache is not SoT.
 
 ---
 

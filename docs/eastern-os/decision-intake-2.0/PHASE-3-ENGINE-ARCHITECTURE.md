@@ -81,20 +81,23 @@ Aligns Phase 1 State Machines §1.3 / §1.5 / §4.2. **No new Session phases.**
 3. Rebuild Understanding State (derived)
 4. Refresh Personal Pattern Insight (read-only calc)
 5. Soft Gate evaluate (advisory; record soft_verdict)
-6. Branch (Phase 1 §1.3 / §1.5):
+6. Branch (Phase 1 §1.3 / §1.5) — evaluate in order:
      a. Soft Gate PASS or WARN(+disclosures ready) AND (ready signal OR policy)
           → emit GATE_READY_FOR_REVIEW → understanding_review
-     b. USER_REQUEST_REVIEW (soft budget or explicit)
-          → understanding_review
-            NOTE: if Soft/Review Gate is FAIL, still may show review summary,
-            but E2 Freeze remains forbidden (Phase 1: E2 requires Gate ≠ FAIL)
+     b. Soft budget reached OR explicit user review request
+          → emit USER_REQUEST_REVIEW → understanding_review
+            (R2-01: Soft budget ALWAYS enters review — even if P0 still open.
+             Do NOT auto-extend investigating to “hard”. Keep real Gate FAIL.
+             Review MUST show unresolved P0 gaps + true Gate verdict.
+             Explicit user request ≠ system inventing budget extension.)
      c. Else if investigable gaps remain (open NeedItems / P0 first)
+          AND soft budget NOT reached
           → Question Planning → select ≤1 primary CandidateQuestion
              Soft Gate FAIL with gaps ⇒ CONTINUE planning (do NOT terminate investigating)
      d. Else if no candidate and hard-budget / termination policy
-          → see Question Planning §5.2 (no new Session state)
+          → see Question Planning §5.2 (no new Session state; no fake PASS)
 7. Question Generation → NL (only if 6c selected a candidate)
-8. Question Validation → accept or replan (cap N)
+8. Question Validation → accept or replan (cap N; kind-aware — Planning §4)
 9. Question Delivery persist (phase B) → only then show AskPayload
 ```
 
@@ -103,9 +106,10 @@ Understanding updates **before** deciding the next question (steps 3–4 before 
 ### 3.3 After enter `understanding_review`
 
 1. Run **Review Gate** (formal).  
-2. Present summary (`SUMMARY_PRESENTED` → `awaiting_user_confirm`).  
+2. Present summary including unresolved NeedItems / P0 gaps and true Gate verdict (`SUMMARY_PRESENTED` → `awaiting_user_confirm`).  
 3. E2 allowed only if Freeze Gate ≠ FAIL and disclosures OK (Phase 1 §1.3).  
-4. Soft Gate FAIL earlier **never** implies Session left `investigating` solely for that reason.
+4. Soft Gate FAIL earlier **never** implies Session left `investigating` solely for that reason.  
+5. `USER_REVISE` from `awaiting_user_confirm` → return `investigating` (Phase 1 §1.3); keep DC draft; bump version; may ask again under remaining hard budget.
 
 ---
 
@@ -143,8 +147,9 @@ Full rules: `PHASE-3-MODEL-CONTRACT.md` §5 (two-phase) and `PHASE-3-QUESTION-PL
 
 - **Phase A Answer Commit** and **Phase B Ask Delivery** are separate short DB transactions.  
 - **No LLM inside a DB transaction.**  
-- Idempotency key = `(session_id, client_turn_id)`; duplicate → replay AnswerCommitResult (+ AskPayload if B done).  
-- Stale `context_version` → reject; AskPayload shown only after Commit B.
+- Idempotency: `(session_id, client_turn_id)` → at most one AnswerCommitResult and **at most one valid AskPayload**.  
+- Commit B: unique key + atomic CAS on delivery slot; persist **before** UI show; replay does not bump `asked_count`.  
+- Version drift / Blueprint bump: discard obsolete NL; never bind old AskPayload to new DC (Model Contract §5.4–§5.6).
 
 ---
 
