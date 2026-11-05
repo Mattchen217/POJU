@@ -12,20 +12,21 @@
 
 | ID | Criterion | Pass if |
 |---|---|---|
-| AC3-1.1 | Six Phase 3 docs present under `docs/eastern-os/decision-intake-2.0/` | Files exist |
-| AC3-1.2 | Engine modules + write authority defined | Architecture §2–§4 |
-| AC3-1.3 | Understanding is derived; not second fact DB | Understanding State §0 |
-| AC3-1.4 | Answer classes cover required cases | Answer Interpretation §2 |
-| AC3-1.5 | CandidateQuestion traces DDR/DIR/value/budget | Question Planning §1 |
-| AC3-1.6 | Model cannot declare Gate PASS / DDR satisfied | Model Contract §2 |
-| AC3-1.7 | Docs-only; no runtime/UI/schema/PageFeedMatrix edits | `git diff` |
-| AC3-1.8 | Phase 1 C1–C5 + Phase 2 catalogs cited; no silent reopen | Cross refs |
-| AC3-1.9 | Budget soft 12 / hard 15 / depth 3; soft budget → review (Phase 1) | Planning §5; Arch §3 |
-| AC3-1.10 | Blueprint seed vs DC.dirs SoT preserved | Planning §6 |
-| AC3-1.11 | Kind-aware validation (dir_based / source_only) | Planning §4 |
-| AC3-1.12 | Commit B uniqueness + version-drift safety | Model Contract §5.4–§5.6 |
-| AC3-1.13 | N/A authority + na_conditions protocol | Understanding §2.7 |
-| AC3-1.14 | Deterministic sort + repetition_count + normalized ddr_ids | Planning §2.1 |
+| AC3-1.1 | Six Phase 3 docs present | Files exist |
+| AC3-1.2 | Engine modules + write authority | Architecture §2–§4 |
+| AC3-1.3 | Understanding derived | US §0 |
+| AC3-1.4 | Answer classes | Answer Interpretation §2 |
+| AC3-1.5 | CandidateQuestion + fact_role_codes + candidate_id | Plan §1 / §2.2–§2.3 |
+| AC3-1.6 | Model cannot declare Gate PASS | MC §2 |
+| AC3-1.7 | Docs-only | `git diff` |
+| AC3-1.8 | Phase 1 C1–C5 + Phase 2 intact | Cross refs |
+| AC3-1.9 | Soft/hard + review_cycle budget model | Arch §3.4; Plan §5.1 |
+| AC3-1.10 | Blueprint seed vs DC.dirs SoT | Plan §6 |
+| AC3-1.11 | Kind-aware validation (R2-02 retained) | Plan §4 |
+| AC3-1.12 | ShowReceipt + delivery_generation | MC §5.3–§5.5 |
+| AC3-1.13 | ExplicitNaEvidence on DC + content_hash | US §2.7; MC §6.1 |
+| AC3-1.14 | Deterministic sort / gate_class from DDR | Plan §2.1 / §2.4 |
+| AC3-1.15 | DIR vs DDR state types never mixed | US §2.7 A0 |
 
 ---
 
@@ -33,7 +34,7 @@
 
 | Ban | Result |
 |---|---|
-| Call A/B Intake entry | **PASS** (forbidden in Architecture) |
+| Call A/B Intake entry | **PASS** |
 | Stage 1–4 as Intake | **PASS** |
 | Fixed questionnaire as product logic | **PASS** |
 | Agenda as DIR SoT | **PASS** |
@@ -41,212 +42,211 @@
 | Model writes unverified confirmed facts | **PASS** |
 | Chart as confirmed reality | **PASS** |
 | Bypass P0/P1/P2 Gate | **PASS** |
-| Progress via ask count | **PASS** |
-| Soft budget auto-extends investigating past Phase 1 | **PASS** (forbidden; R2-01) |
+| Progress via ask count without ShowReceipt | **PASS** (forbidden) |
+| Soft sticky forever after USER_REVISE | **PASS** (forbidden; review_cycle) |
+| Hard reset via USER_REVISE | **PASS** (forbidden) |
+| DIR current_state ← DDR statuses | **PASS** (forbidden) |
+| N/A store outside DC affecting Gate | **PASS** (forbidden) |
 | New Session states | **PASS** (none) |
-| Runtime / PageFeedMatrix change in this PR | **PASS** (docs only) |
+| Runtime / PageFeedMatrix change | **PASS** (docs only) |
 
 ---
 
-## AC3-3 Design matrix (MX-01 … MX-48)
+## AC3-3 Design matrix (MX-01 … MX-60)
 
-Each case is a **design** acceptance test: docs must mandate the Then.
-
-| ID | Given | When | Then | Phase 1/2 · Phase 3 |
+| ID | Given | When | Then | Spec |
 |---|---|---|---|---|
-| MX-01 | First simple decision message | Init + first plan | Blueprint seeds core DIRs; one primary Q to open P0 DIR | P2 Blueprint · Plan §1–2 |
-| MX-02 | Complex multi-constraint decision | Plan | Prioritize P0; one ask | P2 DDR-01/05 · Plan §2 |
-| MX-03 | User changes goal mid-session | goal_change | Blueprint bump if needed; **DIR states not wiped** | P2 Blueprint · Plan §6 |
-| MX-04 | User supplements important fact | supplement | New RealityFact unverified→E1 path; reaggregate | P1 C1 · Answer Interp |
-| MX-05 | User corrects confirmed fact | correction | Supersede + reaggregate; no silent overwrite | P1 C1 |
-| MX-06 | Contradictory statements | contradiction | Conflict open; no auto-pick | P1 Conflict |
-| MX-07 | User says unknown | unknown | status=unknown; not n_a; not known | P1 §3.2 · US §2.7 |
-| MX-08 | User declines | declined | gap remains; not auto n_a | P1 §3.2 · US §2.7 |
-| MX-09 | Repeated off-topic | off_topic | No fact write; Lockout streak | P1 Lockout |
-| MX-10 | DIR already known | Plan | No re-ask same roles | Plan §2 filter |
-| MX-11 | Multiple DDRs with gaps | Plan | Candidates ranked P0>P1>P2 | Plan §2.1 |
-| MX-12 | P0 and P1/P2 gaps together | Plan | Ask P0 first | Plan §2.1 |
-| MX-13 | P1 may_affect_p5_ranking true | Plan / Gate | Ranking-critical; cannot soft-pass Freeze if open | P1 §3.3 |
-| MX-14 | P1 ranking false + boundaries | Plan / Gate | WARN-eligible path preserved | P1 §3.3 / §4.2 |
-| MX-15 | Hard budget exhausted; P0 open | Hard stop boundary | Keep **FAIL**; forbid E2; no fake complete; no new Session state; UX path **OPEN** only | P1 phases · Plan §5.2 |
-| MX-16 | Model repeats prior ask | Validation | Reject; replan | Plan §4 |
-| MX-17 | Model asks out of Blueprint | Validation | Reject; no silent scope expand | Plan §4.2 |
-| MX-18 | Model invalid schema | Contract | Retry/repair once; no Answer Commit on fail | MC §4 |
-| MX-19 | Duplicate client_turn_id (A) | Persist | Idempotent AnswerCommitResult replay | MC §5.1 |
-| MX-20 | Persist fails after LLM (B) | Persist | No AskPayload shown; A kept; retry B | MC §5.2 |
-| MX-21 | Blueprint version changes | Lifecycle | Merge seeds only; keep live DIR states; rebuild Understanding; Soft Gate; revalidate candidates | P2 Blueprint · Plan §6 · MC §5.6 |
-| MX-22 | User reality ≠ pattern insight | insight_mismatch | Hypothesis/note; ask reality DIR; no chart-as-fact | US §2.4 |
-| MX-23 | Profile missing / CFP calc fail | Source check | DDR-03 per P2; DDR-02 CFP miss → pending → P0 FAIL (Rule A) | P2 Rule A |
-| MX-24 | Soft/Review Gate **PASS** | Soft→Review | Enter `understanding_review`; E2 after Freeze PASS | P1 §4.2 · Arch §3 |
-| MX-25 | Soft/Review Gate **WARN** | Soft→Review | Enter review with disclosures; not disguised PASS | P1 §3.3 / §4.2 |
-| MX-26 | Soft Gate **FAIL** + P0 gaps + soft budget **not** reached | Soft Gate | Stay `investigating`; continue Plan (P0 first) | P1 §1.3 · Arch §3 |
-| MX-27 | Soft Gate **FAIL** + explicit user review | USER_REQUEST_REVIEW | Enter review with honest FAIL; E2 forbidden | P1 §1.3 |
-| MX-28 | Soft budget reached; P0 still open | Soft budget | Emit `USER_REQUEST_REVIEW` → `understanding_review`; keep real FAIL; show P0 gaps; **do not** keep asking until hard | P1 §1.3 · Plan §5.2 · Arch §3 |
-| MX-29 | DDR required source, no required DIR; `user_askable=true` | Plan + Validate | `source_only` NeedItem + CandidateQuestion with empty `dir_ids`, required `source_code`/`source_state`; §4.3 accepts (not reject for missing dir_ids) | US §2.3 · Plan §4.3 |
-| MX-30 | DIR marked n_a without DC evidence | Understood / Gate | Invalid; exclude from satisfaction | US §2.7 · P1 §3.2 |
-| MX-31 | Commit A done; LLM timeout in B | Persist | DC kept; CAS B; asked_count unchanged until shown | MC §5.4 / §5.7 |
-| MX-32 | Two P1 candidates equal gain/depth/repetition | Plan sort | Stable tie-break: kind → dir/source → normalized ddr_ids → candidate_id | Plan §2.1 |
-| MX-33 | Only P2 gaps after hard budget | Review | May enter review; P2 alone must not block report | P1 · Plan §5.2 |
-| MX-34 | Soft budget hit; user later `USER_REVISE` | Lifecycle | Return `investigating`; DC kept; may ask under remaining hard | P1 §1.3 · Plan §5.2 |
-| MX-35 | `source_only` + `user_askable=false` | Plan | No NL CandidateQuestion; NeedItem retained; supply UX / soft FAIL attribution | Plan §2 / §4.3 · US §2.3 |
-| MX-36 | Validator mistakenly requires dir_ids on source_only | Validate | Spec forbids; §4.3 must accept empty dir_ids | Plan §4.3 |
-| MX-37 | Duplicate Commit B same turn | Persist | Return same AskPayload; asked_count unchanged | MC §5.4 |
-| MX-38 | Two late LLM results race on B | Persist | Atomic CAS; one valid AskPayload; loser discarded | MC §5.4 |
-| MX-39 | AskPayload persisted, UI crash before show | Recovery | Resume loads same AskPayload; no regenerate | MC §5.4 / §5.7 |
-| MX-40 | DC.version drifts before Commit B | Drift | Do not persist/show old NL; invalidate draft; re-Gate + replan on latest DC | MC §5.5 |
-| MX-41 | Blueprint bumps between A and B | Blueprint | Seed merge only; no wipe live DIR; rebuild Understanding; Soft Gate; discard old NL | MC §5.6 · Plan §6 |
-| MX-42 | n_a evidence wrong DIR / fails na_conditions | N/A validate | Reject n_a; exclude Gate satisfaction; reaggregate | US §2.7C |
-| MX-43 | Invalid / model-inferred N/A marker | N/A validate | Reject; model_inferred cannot support n_a | US §2.7B |
-| MX-44 | Legal N/A evidence later revoked | Rebuild | reaggregate clears illegal n_a; Understanding rebuild drops it | US §2.7D |
-| MX-45 | Legal N/A in DC; Understanding cache cleared | Rebuild | Rebuild restores n_a UnderstoodItem from DC evidence | US §2.7D |
-| MX-46 | dir_based vs source_only equal P1 gain | Plan sort | Deterministic via kind_rank then dir/source keys (no require dir_id on source_only) | Plan §2.1 |
-| MX-47 | Same ddr set, different input order | Plan sort | Identical normalized_ddr_ids → identical order | Plan §2.1 |
-| MX-48 | P0 low gain vs P1 high gain; P2 high gain vs P1 | Plan sort | P0 before P1; P1 before P2 regardless of gain | Plan §2.1 |
+| MX-01 | First simple decision | Init + plan | Seed DIRs; one P0 ask | Plan §1–2 |
+| MX-02 | Complex multi-constraint | Plan | P0 first; one ask | Plan §2 |
+| MX-03 | Goal change | goal_change | BP bump OK; DIR states kept | Plan §6 |
+| MX-04 | Supplement fact | supplement | E1 path; reaggregate | P1 C1 |
+| MX-05 | Correct confirmed | correction | Supersede; no silent overwrite | P1 C1 |
+| MX-06 | Contradiction | contradiction | Conflict open | P1 |
+| MX-07 | Unknown | unknown | Not n_a / known | US §2.7 |
+| MX-08 | Declined | declined | Not auto n_a | US §2.7 |
+| MX-09 | Off-topic streak | off_topic | Lockout path | P1 |
+| MX-10 | DIR known | Plan | No re-ask same roles | Plan §2 |
+| MX-11 | Multi DDR gaps | Plan | P0>P1>P2 | Plan §2.1 |
+| MX-12 | P0+P1/P2 | Plan | Ask P0 first | Plan §2.1/§2.4 |
+| MX-13 | P1 ranking-critical | Gate | Cannot soft-pass Freeze if open | P1 §3.3 |
+| MX-14 | P1 WARN-eligible | Gate | WARN path preserved | P1 §3.3 |
+| MX-15 | `session_asked_count ≥ hard`; P0 open | Hard boundary | FAIL; forbid E2; **stop ordinary asks**; no new phase; UX OPEN | Arch §3.4; Plan §5.2 |
+| MX-16 | Model repeats ask | Validate | Reject; replan | Plan §4 |
+| MX-17 | Out of Blueprint | Validate | Reject | Plan §4.2 |
+| MX-18 | Invalid schema | Contract | No Answer Commit | MC §4 |
+| MX-19 | Dup client_turn_id A | Persist | Replay AnswerCommitResult | MC §5.1 |
+| MX-20 | Persist fail B | Persist | No show; A kept | MC §5.2 |
+| MX-21 | Blueprint bump | Lifecycle | Seed merge; live DIR kept; gen rules | Plan §6; MC §5.6 |
+| MX-22 | Reality ≠ insight | insight_mismatch | No chart-as-fact | US §2.4 |
+| MX-23 | CFP miss / calc fail | Source | DDR-02 Rule A → pending → P0 FAIL | P2 Rule A |
+| MX-24 | Gate PASS | Soft→Review | Enter review; E2 after Freeze PASS | Arch §3 |
+| MX-25 | Gate WARN | Soft→Review | Disclosures; not fake PASS | P1 §4.2 |
+| MX-26 | FAIL + gaps + cycle soft not hit | Soft | Stay investigating; Plan | Arch §3.2 |
+| MX-27 | FAIL + explicit review | USER_REQUEST_REVIEW | Honest FAIL; no E2 | P1 §1.3 |
+| MX-28 | Cycle soft reached; P0 open | Soft budget | → `understanding_review`; keep FAIL; show P0; **no** keep-asking in cycle | Arch §3.4; Plan §5.2 |
+| MX-29 | source_only askable | Plan+Validate | Empty dir_ids; §4.3 accepts | Plan §4.3 |
+| MX-30 | n_a without DC evidence | Gate | Invalid; exclude satisfaction; DIR not n_a | US §2.7 |
+| MX-31 | A done; LLM timeout B | Persist | Count unchanged until ShowReceipt | MC §5.3 |
+| MX-32 | Two P1 equal gain/depth/rep | Sort | Full key §2.1 through candidate_id | Plan §2.1 |
+| MX-33 | Hard; only P2 | Review | P2 alone must not block | Plan §5.2 |
+| MX-34 | Soft review then USER_REVISE | Lifecycle | New `review_cycle`; `cycle_base_asked=session_asked`; may ask while remaining_hard>0; hard not reset | Arch §3.4; Plan §5.1 |
+| MX-35 | source_only not askable | Plan | No NL; NeedItem kept | Plan §4.3 |
+| MX-36 | Require dir_ids on source_only | Validate | Forbidden; §4.3 accepts empty | Plan §4.3 |
+| MX-37 | Dup Commit B | Persist | Same `ask_payload_id`; no count | MC §5.3–§5.4 |
+| MX-38 | Dual LLM race B | CAS | One payload; loser discard | MC §5.4 |
+| MX-39 | B ok; UI crash before show | Recovery | Load `persisted_unshown`; same id; ShowReceipt once | MC §5.3 / §5.7 |
+| MX-40 | DC drift before B | Drift | Gen bump; stale old; replan | MC §5.5 |
+| MX-41 | BP bump A→B | Blueprint | Seed only; discard old NL | MC §5.6 |
+| MX-42 | Evidence wrong DIR / na_conditions | N/A | Reject; DIR not n_a; reaggregate | US §2.7C |
+| MX-43 | model_inferred N/A | N/A | Reject | US §2.7B |
+| MX-44 | Revoke legal N/A | Rebuild | Clear DIR n_a; version+hash change | US §2.7D; MC §6.1 |
+| MX-45 | Cache cleared; DC has N/A | Rebuild | Restore from DC.explicit_na_evidence | US §2.7D |
+| MX-46 | dir_based vs source_only equal P1 | Sort | kind_rank then dir/source keys | Plan §2.1 |
+| MX-47 | Same ddr set, input order differs | Sort | Same normalized_ddr_ids / order | Plan §2.1 |
+| MX-48 | P0 low gain vs P1 high; P2 vs P1 | Sort | P0>P1>P2 hard | Plan §2.4 |
+| MX-49 | Soft→Review→REVISE→use remaining hard→soft again | Budget cycle | Second cycle soft_cap=remaining; second review; session_asked≤hard | Plan §5.1; Arch §3.4 |
+| MX-50 | Many USER_REVISE | Hard ceiling | Cannot exceed hard; cannot reset session_asked_count | Plan §5.1 |
+| MX-51 | Duplicate ShowReceipt | Count | Exactly-once +1 | MC §5.3 |
+| MX-52 | Persist ok; show fails; resume | Count | First ShowReceipt +1; restore no double | MC §5.3 / §5.7 |
+| MX-53 | Old generation invalidated | Gen lifecycle | New generation plans/shows; old slot not blocking | MC §5.5 |
+| MX-54 | Late result of old generation | Gen | Reject; cannot overwrite new gen AskPayload | MC §5.5 / §5.7 |
+| MX-55 | Add ExplicitNaEvidence | Hash | DC.version++; content_hash changes | MC §6.1 |
+| MX-56 | E2 after N/A change | Freeze | FreezeRecord.dc_content_hash = new hash; prior freezes immutable | P1 §10.3; MC §6.1 |
+| MX-57 | DDR-02 CFP missing + DIR n_a attempt | Rule A | DDR pending; P0 FAIL; N/A cannot waive | P2 Rule A; US §2.7E |
+| MX-58 | Code tries DIR.current_state=pending | Types | Forbidden; only known\|unknown\|conflict\|n_a | US §2.7 A0 |
+| MX-59 | Same inputs twice | candidate_id | Identical cq_ hash | Plan §2.3 |
+| MX-60 | Distinct role sets | candidate_id | Different ids; no false collision | Plan §2.3 |
+| MX-61 | Model priority hint says P2 on P0 DDR | gate_class | Code still P0; hint ignored | Plan §2.4 |
+| MX-62 | Same shown-ask set | repetition_count | Identical counts; stale/discarded excluded | Plan §2.1 |
 
 ---
 
-## AC3-4 Detailed R2 case cards
+## AC3-4 Detailed R3 case cards
 
-### MX-15 — Hard budget + P0 open
-
-| | |
-|---|---|
-| **Given** | `asked_count ≥ hard_limit`; ≥1 P0 unsatisfied / pending |
-| **When** | Engine evaluates termination |
-| **Then** | Gate remains FAIL; E2 forbidden; no fake PASS/complete; Session ∈ Phase 1 states only; UX choice OPEN |
-| **P1/2** | SM phases; Data Contract §11 |
-| **P3** | Plan §5.2; Arch §3.2 step 6d |
-
-### MX-28 — Soft budget + P0 open
+### MX-15 — Hard + P0
 
 | | |
 |---|---|
-| **Given** | Soft budget reached; P0 still open; Soft Gate FAIL |
-| **When** | Post Soft Gate branch |
-| **Then** | `USER_REQUEST_REVIEW` → `understanding_review`; review shows P0 gaps + FAIL; **no** further P0-only asks this path |
-| **P1/2** | SM §1.3 `USER_REQUEST_REVIEW` |
-| **P3** | Arch §3.2 6b; Plan §5.2 |
+| **Given** | `session_asked_count ≥ hard_budget_limit`; P0 open |
+| **Expected Then** | FAIL; no E2; no ordinary asks; Phase-1 states only; UX OPEN |
+| **Spec** | Arch §3.4; Plan §5.2 |
+| **Doc check** | **PASS** |
 
-### MX-29 — source_only askable
-
-| | |
-|---|---|
-| **Given** | DDR with required source, empty required DIRs; source not ok; `user_askable=true` |
-| **When** | Expand + Validate |
-| **Then** | NeedItem `source_only`; CandidateQuestion `kind=source_only`, `dir_ids=[]`, `source_code` set; §4.3 **accepts** |
-| **P1/2** | P2 Required Source / empty DIR DDR |
-| **P3** | US §2.3; Plan §1 / §4.3 |
-
-### MX-34 — USER_REVISE after soft-budget review
+### MX-28 — Soft cycle + P0
 
 | | |
 |---|---|
-| **Given** | Session in `awaiting_user_confirm` after soft-budget review; P0 still open |
-| **When** | `USER_REVISE` |
-| **Then** | → `investigating`; DC draft kept; version bump; may plan asks under remaining hard |
-| **P1/2** | SM §1.3 |
-| **P3** | Arch §3.3; Plan §5.2 |
+| **Given** | `soft_budget_reached` for current cycle; P0 open |
+| **Expected Then** | → understanding_review; FAIL honest; no more asks **this cycle** |
+| **Spec** | Arch §3.2 6b / §3.4; Plan §5.2 |
+| **Doc check** | **PASS** |
 
-### MX-37 / MX-38 / MX-39 — Commit B idempotency
-
-| | |
-|---|---|
-| **Given** | Same `(session_id, client_turn_id)` |
-| **When** | Duplicate B / dual LLM / crash after persist |
-| **Then** | ≤1 valid AskPayload; CAS winner; resume shows persisted; asked_count not double-counted |
-| **P3** | MC §5.4 / §5.7 |
-
-### MX-40 / MX-41 — Drift & Blueprint
+### MX-34 / MX-49 / MX-50 — REVISE + cycles
 
 | | |
 |---|---|
-| **Given** | Version or Blueprint changes between plan and Commit B |
-| **When** | Commit B |
-| **Then** | Old NL not persisted; no bind to new DC; re-Gate + replan; Blueprint seed-merge only |
-| **P3** | MC §5.5–§5.6; Plan §6 |
+| **Given** | Soft review; USER_REVISE; remaining hard > 0 (MX-49 continues until cycle soft again; MX-50 many revises) |
+| **Expected Then** | New review_cycle; soft window resets via cycle_base; hard cumulative; cannot bypass 15 |
+| **Spec** | Plan §5.1; Arch §3.4 |
+| **Doc check** | **PASS** |
 
-### MX-42–MX-45 — N/A protocol
-
-| | |
-|---|---|
-| **Given** | Various evidence validity / revoke / rebuild |
-| **When** | reaggregate + Understanding rebuild |
-| **Then** | Only authority+na_conditions evidence yields Gate-countable n_a; model inference never; rebuild from DC |
-| **P1/2** | P1 §3.2; P2 §1.5; Rule A |
-| **P3** | US §2.7 |
-
-### MX-32 / MX-46–MX-48 — Sort determinism
+### MX-37–39 / MX-51–54 — Delivery & count
 
 | | |
 |---|---|
-| **Given** | Equal or cross-class candidates |
-| **When** | Sort §2.1 |
-| **Then** | P0>P1>P2 hard; normalized ddr_ids; unified tie-break without requiring dir_id on source_only |
-| **P3** | Plan §2.1 |
+| **Given** | Dup B / CAS / crash / ShowReceipt / gen bump / late old gen |
+| **Expected Then** | Stable ask_payload_id; count only on first ShowReceipt; old gen rejected; new gen free |
+| **Spec** | MC §5.3–§5.5 / §5.7 |
+| **Doc check** | **PASS** |
+
+### MX-30 / MX-42–45 / MX-55–58 — N/A + types + hash
+
+| | |
+|---|---|
+| **Given** | Missing/wrong/model/revoked evidence; hash; Rule A; DIR=pending attempt |
+| **Expected Then** | Order validate→DIR aggregate→DDR→Gate; DC field+hash; Rule A; type ban |
+| **Spec** | US §2.7; MC §6.1 |
+| **Doc check** | **PASS** |
+
+### MX-32 / MX-46–48 / MX-59–62 — Identity & sort
+
+| | |
+|---|---|
+| **Given** | Equal scores / cross-kind / ddr order / id regen / hint / rep set |
+| **Expected Then** | Full sort key; deterministic id; DDR gate_class; shown-only rep |
+| **Spec** | Plan §2.1–§2.4 |
+| **Doc check** | **PASS** |
 
 ---
 
-## AC3-5 Author consistency self-check
+## AC3-5 Cross-doc consistency (R3 · with section cites)
+
+| Topic | Docs & sections | Consistent? |
+|---|---|---|
+| Soft/Hard + review_cycle | Arch §3.4 ↔ Plan §5.1–§5.2 ↔ AC MX-15/28/34/49/50 | **Yes** — same field math |
+| USER_REVISE | Arch §3.3/§3.4 ↔ Plan §5.1 ↔ AC MX-34/49 | **Yes** — cycle bump; hard not reset |
+| ShowReceipt / count | MC §5.3 ↔ Arch §6 ↔ Plan §5.1 ↔ AC MX-51/52 | **Yes** — Commit B ≠ count |
+| delivery_generation | MC §5.5 ↔ Arch §6 ↔ AC MX-53/54 | **Yes** — bump frees slot |
+| ExplicitNaEvidence | US §2.7A ↔ MC §6.1 ↔ Arch §4 ↔ AC MX-55/56 | **Yes** — DC field + hash |
+| DIR/DDR types | US §2.7 A0 ↔ MC §6.9 ↔ AC MX-58 | **Yes** |
+| candidate_id / roles / gate_class | Plan §2.2–§2.4 ↔ MC §3 ↔ AC MX-59–62 | **Yes** |
+| R2-02 source_only validation | Plan §4 (unchanged intent) ↔ MX-29/35/36 | **Yes** — not redesigned |
+
+If a product UX choice remains OPEN, it is listed below — **not** marked PASS.
+
+---
+
+## AC3-6 Author consistency self-check
 
 | # | Check | Result |
 |---|---|---|
-| 1 | Understanding derived only | **PASS** |
-| 2 | Write authority matrix present | **PASS** |
-| 3 | Answer classes ≥ required list | **PASS** |
-| 4 | CandidateQuestion fields + kind validation | **PASS** |
-| 5 | MX-01…48 present with G/W/T | **PASS** |
-| 6 | Phase 2 Rule A referenced for MX-23 | **PASS** |
-| 7 | Soft ≠ Review ≠ Freeze Gate | **PASS** |
-| 8 | Two-phase persist; no LLM-in-TX; Commit B unique | **PASS** |
-| 9 | Soft budget → review (Phase 1); not extend to hard | **PASS** |
-| 10 | Deviations from Phase 1/2 | **0 intended** (OPEN = UX only) |
-| 11 | Runtime code changed | **No** |
+| 1 | Understanding derived | **PASS** |
+| 2 | R2-02 kind validation retained | **PASS** |
+| 3 | MX-01…62 with G/W/T | **PASS** |
+| 4 | Soft sticky bug closed via review_cycle | **PASS** |
+| 5 | ShowReceipt exactly-once | **PASS** |
+| 6 | N/A on DC + C5 hash | **PASS** |
+| 7 | gate_class from DDR catalog | **PASS** |
+| 8 | Runtime changed | **No** |
 
 ---
 
-## Cross-doc consistency (R2 full pass)
+## Frozen rules check (semantic)
 
-| Topic | Arch | Plan | MC | US | AC | Consistent? |
-|---|---|---|---|---|---|---|
-| Soft budget → review | §3.2 6b | §5.2 | §5.2 | — | MX-28 | Yes |
-| Soft FAIL + gaps (budget not hit) → keep investigating | §3.2 6c | §5.2 | — | — | MX-26 | Yes |
-| Hard budget + P0 | §3.2 6d | §5.2 | — | — | MX-15 | Yes |
-| source_only empty dir_ids | — | §1 / §4.3 | — | §2.3 | MX-29/35/36 | Yes |
-| Commit B unique + CAS | §6 | — | §5.4 | — | MX-37–39 | Yes |
-| Version drift safety closed | §6 | — | §5.5 | — | MX-40 | Yes |
-| Blueprint seed-only merge | — | §6 | §5.6 | — | MX-21/41 | Yes |
-| N/A authority + na_conditions | — | — | §3 / §6.8 | §2.7 | MX-30/42–45 | Yes |
-| Sort + repetition_count | — | §2.1 | — | — | MX-32/46–48 | Yes |
+| Rule | Semantic change in R3? |
+|---|---|
+| C1 FactStatus×VL / E1 | **No** |
+| C2 no Stage labels | **No** |
+| C3 DC sole fact SoT | **No** — ExplicitNaEvidence is **inside** DC |
+| C4 DDR compose / Gate | **No** — clarified DIR≠DDR types only |
+| C5 FreezeRecord hash bind | **No** — clarified ExplicitNaEvidence ∈ business payload hash; Blueprint/DDR versions still sidecar |
+| DC.dirs live SoT | **No** |
+| Blueprint seed-only | **No** |
+| P0/P1/P2 + WARN | **No** |
+| Required Source order + Rule A | **No** |
+| E1 ≠ E2 | **No** |
+| No new Session phase | **No** |
+| Agenda ≠ known | **No** |
+| unknown/declined ↛ n_a | **No** |
 
 ---
 
-## Unresolved / risks (OPEN product only)
+## OPEN (must not fake PASS)
 
-1. Exact LLM prompt text — Phase 3.2+.  
-2. Information-gain numeric constants — retunable; Gate unchanged.  
-3. Lockout classifier owner — Phase 8.  
-4. Runtime confirmFact promotion — Phase 3+ code.  
-5. Multi-DIR single utterance goldenset — later.  
-6. **OPEN:** hard-budget + P0 — investigating screen vs review CTA (Gate FAIL / no E2 fixed).  
-7. **OPEN:** after version-drift safe abort — auto-replan once vs force client refresh.  
-8. **OPEN:** non-askable source_only UX step count.  
-9. **OPEN:** finer `repetition_count` reset mid-session beyond USER_REVISE supersede.
-
-**Not OPEN:** soft budget lifecycle; Commit B uniqueness; drift safety protocol; N/A evidence rules; P0>P1>P2 sort.
+1. Hard-exhausted UX copy / screen (investigating vs review CTA) — Gate FAIL / no E2 / no asks **closed**.  
+2. After generation bump: auto-replan once vs force client refresh.  
+3. non-askable source_only UX step count.  
+4. Phase 3.2 concrete persistence of `DC.explicit_na_evidence` field wiring into existing `types.ts` / `extractBusinessPayload` (design mandates inclusion; impl detail OPEN).  
+5. ShowReceipt client ack transport (websocket vs HTTP) — semantics closed.
 
 ---
 
 ## Phase 3.1 exit
 
-When product PASSes this design PR:
-
-- Stage 3.2 may implement Engine against these contracts.  
-- **Do not** merge without product approval.  
-- **Do not** start runtime work until approved.  
-- **Do not** self-declare independent product PASS.
+Product independent re-review required. **Do not** merge, create PR unless asked, start Stage 3.2, or self-declare PASS.
 
 ---
 
 ## Declaration
 
-Stage 3.1-R2 design docs only. **No runtime code, schema, UI, prompt, or PageFeedMatrix changes.** Phase 1/2 frozen docs untouched.
+Stage 3.1-R3 design docs only. **No** runtime / schema / UI / prompt / PageFeedMatrix / Phase 1–2 frozen doc changes.

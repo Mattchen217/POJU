@@ -84,21 +84,22 @@ Aligns Phase 1 State Machines §1.3 / §1.5 / §4.2. **No new Session phases.**
 6. Branch (Phase 1 §1.3 / §1.5) — evaluate in order:
      a. Soft Gate PASS or WARN(+disclosures ready) AND (ready signal OR policy)
           → emit GATE_READY_FOR_REVIEW → understanding_review
-     b. Soft budget reached OR explicit user review request
+     b. Soft budget reached for **current review_cycle** OR explicit user review request
           → emit USER_REQUEST_REVIEW → understanding_review
-            (R2-01: Soft budget ALWAYS enters review — even if P0 still open.
-             Do NOT auto-extend investigating to “hard”. Keep real Gate FAIL.
+            (Soft cycle budget ALWAYS enters review — even if P0 still open.
+             Do NOT auto-extend this cycle to hard. Keep real Gate FAIL.
              Review MUST show unresolved P0 gaps + true Gate verdict.
-             Explicit user request ≠ system inventing budget extension.)
+             Budget fields: Planning §5.1 / Arch §3.4.)
      c. Else if investigable gaps remain (open NeedItems / P0 first)
-          AND soft budget NOT reached
+          AND soft budget for current cycle NOT reached
+          AND remaining_hard_budget > 0
           → Question Planning → select ≤1 primary CandidateQuestion
              Soft Gate FAIL with gaps ⇒ CONTINUE planning (do NOT terminate investigating)
-     d. Else if no candidate and hard-budget / termination policy
-          → see Question Planning §5.2 (no new Session state; no fake PASS)
+     d. Else if hard_budget_reached OR (no candidate + termination policy)
+          → Planning §5.2 (no new Session state; no fake PASS; no more ordinary asks)
 7. Question Generation → NL (only if 6c selected a candidate)
 8. Question Validation → accept or replan (cap N; kind-aware — Planning §4)
-9. Question Delivery persist (phase B) → only then show AskPayload
+9. Question Delivery persist (Commit B) → ShowReceipt protocol → only counted ask after shown (Model Contract §5.3–§5.5)
 ```
 
 Understanding updates **before** deciding the next question (steps 3–4 before 6c).
@@ -109,7 +110,31 @@ Understanding updates **before** deciding the next question (steps 3–4 before 
 2. Present summary including unresolved NeedItems / P0 gaps and true Gate verdict (`SUMMARY_PRESENTED` → `awaiting_user_confirm`).  
 3. E2 allowed only if Freeze Gate ≠ FAIL and disclosures OK (Phase 1 §1.3).  
 4. Soft Gate FAIL earlier **never** implies Session left `investigating` solely for that reason.  
-5. `USER_REVISE` from `awaiting_user_confirm` → return `investigating` (Phase 1 §1.3); keep DC draft; bump version; may ask again under remaining hard budget.
+5. `USER_REVISE` → `investigating` (Phase 1 §1.3): keep DC draft; bump DC.version; **open a new `review_cycle`** (Arch §3.4) so soft budget is not permanently stuck; **never** reset `session_asked_count` / hard ceiling.
+
+### 3.4 Budget model (R3-01) — session fields
+
+```ts
+type SessionBudget = {
+  soft_budget_limit: 12;                 // per review_cycle window
+  hard_budget_limit: 15;                 // entire Session cumulative ceiling
+  session_asked_count: number;           // shown asks only; never decreases; never reset by USER_REVISE
+  review_cycle: number;                  // starts 1; +1 on each USER_REVISE return to investigating
+  cycle_base_asked: number;              // session_asked_count when current cycle began
+  cycle_soft_cap: number;                // min(soft_budget_limit, hard_budget_limit - cycle_base_asked)
+  review_entry_reason: null | "gate_ready" | "soft_budget" | "user_request" | "hard_exhausted_ux";
+  remaining_hard_budget: number;         // hard_budget_limit - session_asked_count
+};
+```
+
+| Rule | Spec |
+|---|---|
+| Hard ceiling | Whole Session; USER_REVISE **cannot** reset or bypass |
+| Count | Only AskPayload with durable ShowReceipt (§ MC 5.3); restore same id → no double count |
+| Soft reached | `(session_asked_count - cycle_base_asked) >= cycle_soft_cap` |
+| On USER_REVISE | `review_cycle++`; `cycle_base_asked = session_asked_count`; recompute `cycle_soft_cap`; clear sticky soft flag for prior cycle |
+| Re-trigger review | Soft reached again in new cycle, OR Gate ready, OR explicit user request |
+| Hard reached + P0 | Keep FAIL; forbid E2; **no** ordinary asks; no new Session phase; UX OPEN |
 
 ---
 
@@ -120,11 +145,13 @@ Understanding updates **before** deciding the next question (steps 3–4 before 
 | `RealityFact` / `Constraint` | DC Update only after Interpretation + legality (`LEGAL_FACT_COMBINATIONS`) + E1 rules (C1) | Model cannot stamp `confirmed` / `user_confirmed` |
 | `Hypothesis` | DC Update from explicit model **hypothesis** channel | Never into `reality_facts` |
 | `Conflict` | DC Update when contradiction detected | Clarify needs user confirmation |
-| `DC.dirs.*.current_state` | **Only** `reaggregateDirs` / lifecycle ops | Blueprint never |
+| `DC.dirs.*.current_state` | **Only** `reaggregateDirs` | Values ∈ {known, unknown, conflict, n_a} only |
+| `DC.explicit_na_evidence` | DC Update (code) after validation | In content_hash; model cannot write |
 | Blueprint seed / version | Blueprint builder (init / scoped bump) | No live state |
 | Understanding State | Builder (derived) | Not SoT |
 | Agenda / AdaptiveQuestionPlan | Planner (execution audit) | covered ≠ DIR known |
 | Gate verdict | Code Gate composer | Model may not announce PASS |
+| AskPayload / ShowReceipt / AskCountLedger | Persist layer (MC §5) | Count only on ShowReceipt |
 
 ---
 
@@ -143,13 +170,13 @@ Understanding updates **before** deciding the next question (steps 3–4 before 
 
 ## 6. Persistence & concurrency (summary)
 
-Full rules: `PHASE-3-MODEL-CONTRACT.md` §5 (two-phase) and `PHASE-3-QUESTION-PLANNING.md` §5.
+Full rules: `PHASE-3-MODEL-CONTRACT.md` §5 and `PHASE-3-QUESTION-PLANNING.md` §5.
 
-- **Phase A Answer Commit** and **Phase B Ask Delivery** are separate short DB transactions.  
-- **No LLM inside a DB transaction.**  
-- Idempotency: `(session_id, client_turn_id)` → at most one AnswerCommitResult and **at most one valid AskPayload**.  
-- Commit B: unique key + atomic CAS on delivery slot; persist **before** UI show; replay does not bump `asked_count`.  
-- Version drift / Blueprint bump: discard obsolete NL; never bind old AskPayload to new DC (Model Contract §5.4–§5.6).
+- Phase A / Phase B short TXs; **no LLM inside TX**.  
+- AskPayload stable `ask_payload_id`; Commit B ≠ shown.  
+- ShowReceipt → exactly-once `session_asked_count` (MC §5.3).  
+- `delivery_generation` CAS lifecycle on drift (MC §5.5).  
+- Never bind stale AskPayload / old generation NL to new DC.
 
 ---
 

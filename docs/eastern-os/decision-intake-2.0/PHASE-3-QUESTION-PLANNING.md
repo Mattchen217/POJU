@@ -15,34 +15,38 @@ Covers **Question Planning**, **Question Generation**, **Blueprint/DIR lifecycle
 Every candidate **must** carry:
 
 ```ts
+type FactRoleCode = string; // namespaced, versioned — see §2.2 (NOT free-text)
+
 type CandidateQuestion = {
-  candidate_id: string;
+  candidate_id: string;        // code-generated deterministic — §2.3; never model/random/time
   kind: "dir_based" | "source_only";
-  ddr_ids: string[];           // ≥1 always; sort uses normalized form (§2.1)
+  ddr_ids: string[];           // ≥1; sort uses normalized form
   dir_ids: string[];           // dir_based: ≥1; source_only: MUST be []
   source_code?: string;        // required if source_only
-  source_state?: "missing" | "pending" | "calc_failed" | "not_ok"; // required if source_only
-  user_askable?: boolean;      // required if source_only
-  missing_info: string;
-  decision_value: string;
-  ask_now_reason: string;
-  expected_info: string;
+  source_state?: "missing" | "pending" | "calc_failed" | "not_ok";
+  user_askable?: boolean;
+  fact_role_codes: FactRoleCode[]; // structured authority for repetition / identity
+  missing_info: string;        // NL explanation only
+  decision_value: string;      // NL only
+  ask_now_reason: string;      // NL only
+  expected_info: string;       // NL only — NOT used as repetition key
   impact: {
-    affects_option_ranking: boolean;
-    may_affect_p5_ranking: boolean;
-    decision_critical: boolean;
-    gate_class: "P0" | "P1" | "P2";
+    affects_option_ranking: boolean;   // from DDR/DIR catalog flags (code)
+    may_affect_p5_ranking: boolean;    // from DDR catalog (code)
+    decision_critical: boolean;        // from DDR catalog (code)
+    gate_class: "P0" | "P1" | "P2";    // code from DDR priorities — §2.4; model hint ignored
   };
-  depth: number;               // 1..3 dir_based; 0 source_only
-  repetition_count: number;    // code-owned (§2.1); never from model
-  budget_cost: number;         // usually 1 if shown
+  depth: number;
+  repetition_count: number;    // §2.1 algorithm; code-owned
+  budget_cost: number;
   direction_id: string;
   blueprint_version: number;
+  id_schema_version: 1;        // bumped only when candidate_id canon changes
   skip_if?: string[];
 };
 ```
 
-No candidate without DDR trace. `dir_based` requires DIR(s); `source_only` forbids inventing DIRs and forbids non-empty `dir_ids`. **No** zero-value filler asks.
+No candidate without DDR trace. `dir_based` requires DIR(s); `source_only` forbids inventing DIRs and forbids non-empty `dir_ids`. **No** zero-value filler asks. R2-02 kind-aware validation (§4) unchanged in intent.
 
 ---
 
@@ -51,15 +55,16 @@ No candidate without DDR trace. `dir_based` requires DIR(s); `source_only` forbi
 ```text
 Inputs: UnderstandingState, DC, Blueprint, BudgetSnapshot, Soft Gate verdict, last AskOutcome
 1. If Soft Gate PASS|WARN(+disclosures ready AND ready policy)
-     OR soft_budget_reached
+     OR soft_budget_reached for current review_cycle (§5.1)
      OR explicit USER_REQUEST_REVIEW
-     → select none; set skip_reason=enter_review
+     → select none; set skip_reason=enter_review; set review_entry_reason
      → investigating → understanding_review (Phase 1 §1.3)
-     → Soft budget ALWAYS enters review even if P0 open (R2-01); keep real FAIL
-     → Soft Gate FAIL alone (budget not reached) does NOT skip planning when gaps remain
+     → Soft cycle budget ALWAYS enters review even if P0 open; keep real FAIL
+     → Soft Gate FAIL alone (cycle soft not reached) does NOT skip planning when gaps remain
 2. Collect open NeedItems (DIR gaps + source-only gaps; see Understanding State)
 3. Expand to CandidateQuestion[] via DIR/DDR catalogs (no invented DIRs)
-4. Filter + validate by kind (§4):
+   → assign gate_class (§2.4), fact_role_codes (§2.2), candidate_id (§2.3)
+4. Filter + validate by kind (§4) — R2-02 unchanged:
      - dir_based: dir_id not in Blueprint.dir_ids → drop
      - source_only: user_askable=false → do NOT emit NL CandidateQuestion;
          keep NeedItem for Gate/UX supply path (gap not discarded)
@@ -67,19 +72,19 @@ Inputs: UnderstandingState, DC, Blueprint, BudgetSnapshot, Soft Gate verdict, la
      - duplicate of answered-sufficient DIR → drop
      - depth > 3 on same dir_id → drop / escalate to boundary
      - chart-as-fact confirm asks → drop
-5. Deterministic sort (§2.1); select top with budget_cost ≤ remaining_hard
+5. Deterministic sort (§2.1); select top with budget_cost ≤ remaining_hard_budget
 6. If none and gaps remain → termination policy (§5.2)
 ```
 
-Model may propose scores; **code** applies filters and **final** sort. Model scores never override hard P0>P1>P2.
+Model may propose scores / priority hints; **code** applies filters, `gate_class`, and **final** sort. Model never overrides P0>P1>P2.
 
-### 2.1 Scoring & tie-break (R2-05)
+### 2.1 Scoring, repetition_count, sort (R3-04)
 
-**`information_gain_est` (default, code-owned; model hints ignored for final rank):**
+**`information_gain_est` (code-owned; model hints ignored for final rank):**
 
 ```text
 gain = 0
-+ 3 per unresolved required_fact_role on target DIR (dir_based only)
++ 3 per unresolved fact_role_code on target DIR (dir_based)
 + 4 if gap_type=conflict
 + 2 if gap_type=partial
 + 5 if impact.decision_critical OR may_affect_p5_ranking
@@ -87,42 +92,100 @@ gain = 0
 + 6 if source_only AND required source not source_ok on P0 DDR
 ```
 
-**`repetition_count` (code-owned; never from model):**
+**`repetition_count` algorithm (deterministic; never model similarity):**
 
-| Aspect | Rule |
-|---|---|
-| Source | Session ask audit / Agenda ask records for this session |
-| Scope | Shown AskPayloads only (persisted + delivered) |
-| dir_based | Count of shown asks whose primary `dir_ids` intersect this candidate’s `dir_ids` AND overlapping `expected_info` / fact_role set |
-| source_only | Count of shown asks with same `source_code` (+ same `ddr_ids` normalized) |
-| Generation retry / validation reject / unshown NL | **Does not** increment |
-| Idempotent replay of same AskPayload | **Does not** increment |
-| Reset | New session; or after ask thread superseded on `USER_REVISE` (**OPEN product** for finer mid-session reset — default: no reset except supersede) |
+```text
+Inputs:
+  H = all AskPayload in session where delivery_status=shown
+      (exclude: unshown, stale, discarded, invalidated, superseded)
+  C = current candidate
+  Match key K(x):
+    if x.kind=dir_based:
+      (kind, sort(unique(dir_ids)).join("|"), sort(unique(fact_role_codes)).join("|"))
+      // ddr_ids NOT required in key (multi-DDR same roles still count as repeat)
+    if x.kind=source_only:
+      (kind, source_code, sort(unique(ddr_ids)).join("|"))
+  Cross-kind: never match (dir_based ≠ source_only)
+  Blueprint version: historical shown asks still count after Blueprint bump
+    (identity is role/source based, not blueprint_version)
+  review_cycle: does NOT reset repetition_count (session-scoped)
+
+repetition_count(C) = |{ h ∈ H | K(h) == K(C) }|
+```
+
+Unshown / stale / discarded → **not** in H. Same AskPayload resume → already in H once.
 
 **Normalize before sort:**
 
 ```text
 normalized_ddr_ids = unique(ddr_ids).sort(lexicographic)
+normalized_roles   = unique(fact_role_codes).sort(lexicographic)
 primary_dir_id     = min(dir_ids) if kind=dir_based else ""
 primary_source     = source_code if kind=source_only else ""
-kind_rank          = dir_based=0, source_only=1   // tie-break only; NOT over P0/P1/P2
+kind_rank          = dir_based=0, source_only=1
+gate_rank          = P0=3, P1=2, P2=1
 ```
 
-Same DDR set with different input order ⇒ same `normalized_ddr_ids` ⇒ same sort outcome.
+**Final sort key (no undefined tie-break):**
 
-**Sort key (descending on ranks/gain; ascending on penalties; then stable tie-break):**
+| # | Field | Order |
+|---|---|---|
+| 1 | `gate_rank` | DESC (P0 first) — **hard; model cannot override** |
+| 2 | `may_affect_p5_ranking` | true before false |
+| 3 | `decision_critical` | true before false |
+| 4 | `information_gain_est` | DESC |
+| 5 | `depth` | ASC |
+| 6 | `repetition_count` | ASC |
+| 7 | `kind_rank` | ASC |
+| 8 | `primary_dir_id` | ASC lex |
+| 9 | `primary_source` | ASC lex |
+| 10 | `normalized_ddr_ids.join(",")` | ASC lex |
+| 11 | `candidate_id` | ASC lex |
 
-1. `gate_class` rank: P0=3 > P1=2 > P2=1 (**hard; model gain cannot override**)  
-2. `may_affect_p5_ranking` then `decision_critical` (true first)  
-3. `information_gain_est` (higher first)  
-4. Lower `depth` first  
-5. Lower `repetition_count` first  
-6. Stable tie-break (lexicographic ascending):  
-   `kind_rank` → `primary_dir_id` → `primary_source` → `normalized_ddr_ids.join(",")` → `candidate_id`
+Same DC + Blueprint + shown-ask set ⇒ identical order.
 
-Same DC version + same Blueprint version + same ask audit ⇒ **deterministic** order.
+### 2.2 `fact_role_codes` (structured; R3-04)
 
-**Weights note:** gain constants are a default implementation basis, not a trained model. Retunable without changing Gate / P0>P1>P2.
+| Rule | Spec |
+|---|---|
+| Namespace | `v1/dir/{dir_id}/role/{role_code}` or `v1/source/{source_code}` |
+| Authority | DIR Catalog `required_fact_roles` / Phase 2 Required Source codes — **not** NL |
+| Version | Prefix `v1/`; new roles use new codes; **must not** rename old codes silently |
+| NL fields | `expected_info` / `missing_info` are display only; **forbidden** as repetition keys |
+| Compare | Always via sorted unique `fact_role_codes` |
+
+### 2.3 `candidate_id` (deterministic; R3-04)
+
+```text
+canon = JSON canonical object (keys sorted) {
+  id_schema_version: 1,
+  kind, blueprint_version,
+  dir_ids: sort(unique(dir_ids)),
+  source_code: source_code ?? "",
+  fact_role_codes: sort(unique(fact_role_codes)),
+  ddr_ids: sort(unique(ddr_ids)),
+  direction_id
+}
+candidate_id = "cq_" + hex(sha256(utf8(canon)))[0:32]
+```
+
+- No random, no clock, no model id.  
+- Same inputs ⇒ same id.  
+- Distinct logical gaps must differ in at least one canon field (do not over-collapse).  
+- Changing `id_schema_version` is an intentional break; bump only with migration note.
+
+### 2.4 `gate_class` authority (R3-04)
+
+```text
+For candidate C with ddr_ids D:
+  priorities = map each d ∈ D → DDR Catalog.priority ∈ {P0,P1,P2}
+  gate_class(C) = strongest(priorities) where P0 > P1 > P2
+```
+
+- Computed by **code** from DDR Catalog only.  
+- Model priority hint / confidence / NL **ignored**.  
+- Multi-DDR → strongest wins (P0 dominates).  
+- Same D ⇒ same `gate_class`.
 
 ---
 
@@ -180,58 +243,75 @@ Validation **branches on `kind`**. Do **not** apply a blanket “missing dir_ids
 
 ---
 
-## 5. Budget & termination (R2-01)
+## 5. Budget & termination (R3-01)
 
 Session path remains Phase 1 only:
 
 `investigating → understanding_review → awaiting_user_confirm`  
 (`USER_REVISE` → `investigating`; E2 → `frozen` only if Freeze Gate ≠ FAIL).
 
-### 5.1 BudgetSnapshot & counting
+### 5.1 BudgetSnapshot (aligned Arch §3.4)
 
 ```ts
 type BudgetSnapshot = {
-  soft_limit: 12;
-  hard_limit: 15;
-  asked_count: number;       // see counting rules
-  remaining_soft: number;
-  remaining_hard: number;
+  soft_budget_limit: 12;
+  hard_budget_limit: 15;
+  session_asked_count: number;     // ShowReceipt counted; session cumulative
+  remaining_hard_budget: number;   // hard_budget_limit - session_asked_count
+  review_cycle: number;
+  cycle_base_asked: number;
+  cycle_soft_cap: number;          // min(soft_budget_limit, hard_budget_limit - cycle_base_asked)
+  cycle_asked: number;             // session_asked_count - cycle_base_asked
+  remaining_soft_in_cycle: number; // max(0, cycle_soft_cap - cycle_asked)
+  soft_budget_reached: boolean;    // cycle_asked >= cycle_soft_cap
+  hard_budget_reached: boolean;    // session_asked_count >= hard_budget_limit
+  review_entry_reason: null | "gate_ready" | "soft_budget" | "user_request" | "hard_exhausted_ux";
   per_dir_depth: Record<string, number>;
 };
 ```
 
-**`asked_count` counting (normative):**
+**Counting (exactly-once; see Model Contract §5.3):**
 
-| Event | Counts toward asked_count? |
+| Event | `session_asked_count` |
 |---|---|
-| Primary question **persisted and shown** to user | **Yes** (+1) |
-| Allowed short follow-up clarifier on same DIR (depth+1), shown | **Yes** (+1) |
-| Model generation retry / invalid schema / validation reject before show | **No** |
-| Failed generation never shown | **No** |
-| Soft Gate / Review / system status messages | **No** |
-| Idempotent replay of same AskPayload | **No** (already counted) |
+| Commit B persist only | **No** |
+| First durable ShowReceipt for `ask_payload_id` | **Yes** (+1) |
+| Duplicate ShowReceipt / UI retry / re-render | **No** |
+| Restore + show same `ask_payload_id` | **No** |
+| Generation fail / unshown / stale / discarded | **No** |
 
-**`per_dir_depth`:** increments when a shown ask targets that `dir_id` (primary or clarifier). Cap soft **3** (Phase 1). Source-only gaps do not use dir depth; they use a separate `source_gap_attempts` counter (max 1 system prompt to supply birth data — **OPEN product** if more UX steps needed).
+**USER_REVISE soft recovery (normative):**
 
-Allocation while still investigating (soft budget **not** reached): P0 first; P1 ranking-critical next; P2 last.
+```text
+On USER_REVISE → investigating:
+  review_cycle += 1
+  cycle_base_asked = session_asked_count   // soft window resets HERE
+  cycle_soft_cap = min(soft_budget_limit, hard_budget_limit - cycle_base_asked)
+  soft_budget_reached = false              // prior cycle soft flag cleared
+  // session_asked_count UNCHANGED — hard ceiling intact
+```
 
-### 5.2 Stop / transition (aligned Phase 1 §1.3 / §4.2)
+Example: soft 12 / hard 15; after 12 shown → review; USER_REVISE → new cycle with `cycle_soft_cap=3`; after 3 more shown → soft review again; total cannot exceed 15.
+
+**`per_dir_depth`:** +1 per shown ask targeting that `dir_id`. Cap 3. Source-only uses `source_gap_attempts` (**OPEN** UX depth).
+
+### 5.2 Stop / transition (Phase 1 §1.3 / §4.2)
 
 | Condition | Session / ask behavior | Freeze |
 |---|---|---|
-| Soft Gate **PASS** or **WARN** (+ disclosures ready) | Emit `GATE_READY_FOR_REVIEW` → `understanding_review`; no further ask this path | Freeze later only if Freeze Gate ≠ FAIL; WARN → conditional/`degraded` OK |
-| Soft Gate **FAIL** + investigable gaps + soft budget **not** reached | **Stay `investigating`**; continue Question Planning (**P0 first**) | E2 forbidden while FAIL |
-| Soft Gate **FAIL** + explicit `USER_REQUEST_REVIEW` | Enter `understanding_review` with honest FAIL + open P0 list; **must not** present as PASS | E2 forbidden |
-| **Soft budget reached** (P0 open or not) | Emit `USER_REQUEST_REVIEW` → `understanding_review` (**Phase 1 frozen**). Do **not** auto-extend investigating to hard. Keep real Gate FAIL if P0 open. Review shows unresolved gaps. | No PASS freeze while FAIL |
-| After review, `USER_REVISE` | Return `investigating` (Phase 1); keep DC; bump version; may ask under remaining hard budget | — |
-| Hard budget exhausted; P0 open | **Must** keep FAIL; **forbid** E2; **no** fake completeness; **no** new Session state. **OPEN product:** UX copy / whether to surface review CTA vs stay on investigating screen — underlying Gate/Freeze rules fixed | FAIL / no E2 |
-| Hard budget; only P2 open | May enter `understanding_review`; P2 alone must not block report (Phase 1) | Allowed if Gate else OK |
-| P1 unsatisfied, non-ranking, complete L, boundaries | WARN path preserved (Phase 1 §3.3 / §4.2) | Conditional freeze OK if Freeze Gate WARN |
-| Unknown / declined on DIR | Record as unknown/declined; **never** auto `known` or `n_a` | Gate uses real status |
-| Marginal value (depth=3) | Stop that DIR thread; leave gap + boundary | — |
-| Out-of-scope model ask | Reject | — |
+| Soft Gate **PASS**/**WARN** (+ disclosures) | `GATE_READY_FOR_REVIEW` → `understanding_review` | Freeze later if Freeze Gate ≠ FAIL |
+| Soft Gate **FAIL** + gaps + cycle soft **not** reached + remaining_hard > 0 | Stay `investigating`; Plan P0 first | E2 forbidden while FAIL |
+| Explicit `USER_REQUEST_REVIEW` | → `understanding_review`; honest Gate; show P0 gaps | E2 forbidden if FAIL |
+| **Cycle soft budget reached** (P0 open or not) | `USER_REQUEST_REVIEW` → `understanding_review`; keep FAIL if P0 open; **do not** keep asking in this cycle | No PASS while FAIL |
+| `USER_REVISE` | → `investigating`; new `review_cycle` (§5.1); may ask while remaining_hard > 0 | — |
+| **Hard budget reached**; P0 open | Keep FAIL; forbid E2; **stop ordinary asks**; no new Session phase; UX OPEN | FAIL / no E2 |
+| Hard reached; only P2 open | May review; P2 alone must not block report | Per Gate |
+| Multiple USER_REVISE | Allowed; **cannot** raise hard ceiling or reset `session_asked_count` | — |
+| P1 WARN path | Preserved (Phase 1 §3.3 / §4.2) | Conditional OK |
+| Unknown / declined | Never auto `known`/`n_a` | Real status |
+| Marginal depth=3 | Stop DIR thread; leave gap | — |
 
-**Forbidden:** treat soft budget as license to keep asking; extend budget ad hoc to fake completeness; lower Gate standards; Agenda covered ⇒ known; empty DIR ⇒ satisfied; inflate ask count; invent Session phases; conflate explicit user review request with “system extends soft→hard investigating.”
+**Forbidden:** sticky soft flag blocking post-REVISE investigates; reset hard via REVISE; fake PASS; invent Session phases; count unshown asks.
 
 ---
 
@@ -252,12 +332,16 @@ Allocation while still investigating (soft budget **not** reached): P0 first; P1
 
 ## 7. Generation ↔ Planning outputs to UI
 
+UI consumes AskPayload per Model Contract §5.3 (`ask_payload_id`, `delivery_status`, ShowReceipt). Planning attaches:
+
 ```ts
-type AskPayload = {
-  question_text: string;
+type AskPayloadView = {
+  ask_payload_id: string;
   candidate_id: string;
+  question_text: string;
   understanding_state_id: string;
   budget: BudgetSnapshot;
+  delivery_status: "persisted_unshown" | "shown";
 };
 ```
 
