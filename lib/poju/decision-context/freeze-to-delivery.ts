@@ -6,12 +6,17 @@
 
 import { freezeDecisionContext, type FreezeOptions } from "./freeze";
 import {
+  buildNaValidationContextFromSession,
+  type NaValidationAuthorityOverrides,
+} from "./na-validation-from-session";
+import {
   assertSnapshotMatchesBinding,
   bindingFromDecisionContext,
   type DecisionContextSessionSlice,
   resolveDecisionContextForReport,
 } from "./read-bound";
 import type { DecisionContext, DecisionContextBinding } from "./types";
+import type { POJUSessionState } from "@/lib/poju/types";
 
 export type FrozenDeliveryPackage = {
   frozen: DecisionContext;
@@ -19,20 +24,53 @@ export type FrozenDeliveryPackage = {
   binding: DecisionContextBinding;
 };
 
+export type FreezeDraftForDeliveryOpts = Omit<
+  FreezeOptions,
+  "stage3_sufficiency_end" | "naValidation" | "expectedSessionId"
+> & {
+  now?: string;
+  /** Authoritative Session — required for Intake N/A validation context. */
+  session: POJUSessionState;
+  authority?: NaValidationAuthorityOverrides;
+};
+
 /**
  * Freeze a draft DC for delivery. Refuses purchase/CTA/stall triggers.
+ * Builds NaValidationContext from Session — never emptyNaValidation().
  */
 export function freezeDraftForDelivery(
   draft: DecisionContext,
-  opts?: Omit<FreezeOptions, "stage3_sufficiency_end"> & {
-    now?: string;
-  },
+  opts: FreezeDraftForDeliveryOpts,
 ): FrozenDeliveryPackage {
+  const sessionDc = opts.session.decision_context;
+  if (!sessionDc) {
+    throw new Error("freezeDraftForDelivery: session missing Decision Context");
+  }
+  if (sessionDc.context_id !== draft.context_id) {
+    throw new Error(
+      `freezeDraftForDelivery: session DC context_id=${sessionDc.context_id} draft=${draft.context_id}`,
+    );
+  }
+  if (draft.status !== "draft") {
+    throw new Error(`freezeDraftForDelivery: draft status=${draft.status}`);
+  }
+
+  const naValidation = buildNaValidationContextFromSession(opts.session, {
+    ...opts.authority,
+    nowIso: opts.now ?? opts.authority?.nowIso,
+    // Freeze must aggregate the exact draft snapshot being frozen.
+    realityFacts: draft.reality_facts,
+    constraints: draft.constraints,
+    explicitNaClassifications: draft.explicit_na_classifications,
+  });
+
   const { frozen, version_snapshot } = freezeDecisionContext(draft, {
     stage3_sufficiency_end: true,
     from_purchase_or_report_cta: false,
     from_stall_or_max_turns: false,
-    now: opts?.now,
+    now: opts.now,
+    naValidation,
+    expectedSessionId: opts.session.session_id,
   });
   const binding = bindingFromDecisionContext(frozen);
   assertSnapshotMatchesBinding(frozen, binding);

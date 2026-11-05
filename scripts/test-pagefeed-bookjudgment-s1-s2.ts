@@ -10,10 +10,12 @@ import {
   formatDecisionContextSliceForPage,
   pageReceivesDecisionContextFeed,
   prepareFrozenDcForDelivery,
-  reaggregateDirs,
+  naValidationBoundToDc,
+  reaggregateDirsIntake,
   seedDecisionContextFromOpening,
   type DecisionContext,
 } from "../lib/poju/decision-context";
+import type { POJUSessionState } from "../lib/poju/types";
 import {
   dcFieldsForPage,
   faceRequiresFormalDecisionContext,
@@ -82,21 +84,34 @@ function makeFreezableDraft(): DecisionContext {
       related_dir_ids: [],
     },
   ];
-  seeded.dirs = reaggregateDirs(
-    [
-      {
-        dir_id: "d1",
-        need: "runway",
-        why: "afford",
-        required_fact_roles: ["runway"],
-        current_state: "unknown",
-        partial_satisfaction: false,
-        agenda_item_ids: [],
-        id_lifecycle: "active",
-      },
-    ],
+  seeded.reality_facts = seeded.reality_facts.map((f) => ({
+    ...f,
+    related_dir_ids: ["d1"],
+  }));
+  seeded.constraints = seeded.constraints.map((c) => ({
+    ...c,
+    related_dir_ids: ["d1"],
+  }));
+  const dirsSeed = [
+    {
+      dir_id: "d1",
+      need: "runway",
+      why: "afford",
+      required_fact_roles: ["runway"],
+      current_state: "unknown" as const,
+      partial_satisfaction: false,
+      agenda_item_ids: [] as string[],
+      id_lifecycle: "active" as const,
+      may_affect_p5_ranking: false,
+    },
+  ];
+  seeded.dirs = reaggregateDirsIntake(
+    dirsSeed,
     seeded.reality_facts,
     [],
+    seeded.constraints,
+    [],
+    naValidationBoundToDc(seeded, "sess_pagefeed_s1"),
   );
   return seeded;
 }
@@ -104,7 +119,14 @@ function makeFreezableDraft(): DecisionContext {
 async function main() {
   console.log("S1 PageFeed + S2 BookJudgment + S4 freeze helper");
 
-  const pack = freezeDraftForDelivery(makeFreezableDraft(), {
+  const pagefeedDraft = makeFreezableDraft();
+  const pagefeedSession = {
+    session_id: "sess_pagefeed_s1",
+    decision_context: pagefeedDraft,
+    decision_context_versions: [],
+  } as POJUSessionState;
+  const pack = freezeDraftForDelivery(pagefeedDraft, {
+    session: pagefeedSession,
     now: "2026-11-03T18:30:00.000Z",
   });
   const frozen = pack.frozen;

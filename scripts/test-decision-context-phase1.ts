@@ -27,9 +27,11 @@ import {
   markOpenConflictsUnresolvedInFinal,
   openConflict,
   reaggregateDirs,
+  reaggregateDirsIntake,
   restoreDecisionContextAuthority,
   seedDecisionContextFromOpening,
   startV2FromFinal,
+  naValidationBoundToDc,
   __resetPersistIdempotencyForTests,
   type DecisionContext,
   type DIR,
@@ -37,6 +39,40 @@ import {
 } from "../lib/poju/decision-context";
 import type { BreakthroughCore } from "../lib/poju/agent-state";
 import type { AgendaItem } from "../lib/poju/investigation-agenda";
+
+const PHASE1_SESS = "sess_phase1_fixture";
+function naFor(dc: DecisionContext) {
+  return naValidationBoundToDc(dc, PHASE1_SESS);
+}
+/** Link facts/constraints to DIR so Intake AND-association matches Phase1 fixtures. */
+function bindFactsToDirs(dc: DecisionContext, dirIds: string[]): void {
+  dc.reality_facts = dc.reality_facts.map((f) => ({
+    ...f,
+    related_dir_ids: Array.from(
+      new Set([...(f.related_dir_ids ?? []), ...dirIds]),
+    ),
+  }));
+  dc.constraints = dc.constraints.map((c) => ({
+    ...c,
+    related_dir_ids: Array.from(
+      new Set([...(c.related_dir_ids ?? []), ...dirIds]),
+    ),
+  }));
+}
+function intakeReagg(dc: DecisionContext, dirs: DIR[]): DIR[] {
+  bindFactsToDirs(
+    dc,
+    dirs.map((d) => d.dir_id),
+  );
+  return reaggregateDirsIntake(
+    dirs,
+    dc.reality_facts,
+    dc.conflicts,
+    dc.constraints,
+    dc.explicit_na_evidence ?? [],
+    naFor(dc),
+  );
+}
 
 let passed = 0;
 function check(name: string, fn: () => void | Promise<void>): Promise<void> {
@@ -367,26 +403,23 @@ async function main() {
         },
       ],
     });
-    dc.dirs = reaggregateDirs(
-      [
-        {
-          dir_id: "dir_x",
-          need: "n",
-          why: "w",
-          required_fact_roles: ["event"],
-          current_state: "unknown",
-          partial_satisfaction: false,
-          agenda_item_ids: [],
-          may_affect_p5_ranking: true,
-          id_lifecycle: "active",
-        },
-      ],
-      dc.reality_facts,
-      [],
-    );
+    dc.dirs = intakeReagg(dc, [
+      {
+        dir_id: "dir_x",
+        need: "n",
+        why: "w",
+        required_fact_roles: ["event"],
+        current_state: "unknown",
+        partial_satisfaction: false,
+        agenda_item_ids: [],
+        may_affect_p5_ranking: true,
+        id_lifecycle: "active",
+      },
+    ]);
     assert.throws(
       () =>
         freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
           stage3_sufficiency_end: true,
           from_purchase_or_report_cta: true,
         }),
@@ -395,12 +428,14 @@ async function main() {
     assert.throws(
       () =>
         freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
           stage3_sufficiency_end: true,
           from_stall_or_max_turns: true,
         }),
       FreezeError,
     );
     const { frozen } = freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
       stage3_sufficiency_end: true,
       now: "2026-11-02T13:00:00.000Z",
     });
@@ -479,6 +514,7 @@ async function main() {
       [],
     );
     const { frozen } = freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
       stage3_sufficiency_end: true,
       now: "2026-11-02T13:00:00.000Z",
     });
@@ -494,6 +530,7 @@ async function main() {
       fact_roles: ["event"],
     });
     const { superseded, draft } = startV2FromFinal(frozen, {
+      naValidation: naFor(frozen),
       add_facts: [extra],
       affected_dir_ids: ["dir_x"],
       now: "2026-11-02T14:00:00.000Z",
@@ -604,6 +641,7 @@ async function main() {
     assert.throws(
       () =>
         freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
           stage3_sufficiency_end: true,
           now: "2026-11-02T13:00:00.000Z",
         }),
@@ -667,6 +705,7 @@ async function main() {
     assert.throws(
       () =>
         freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
           stage3_sufficiency_end: true,
           now: "2026-11-02T13:00:00.000Z",
         }),
@@ -712,6 +751,7 @@ async function main() {
     assert.equal(suf.canStop, true);
     assert.equal(suf.verdict, "sufficient_with_boundaries");
     const { frozen } = freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
       stage3_sufficiency_end: true,
       now: "2026-11-02T13:00:00.000Z",
     });
@@ -762,27 +802,30 @@ async function main() {
     });
     const dc: DecisionContext = {
       ...base,
-      dirs: [
-        {
-          dir_id: "dir_event",
-          need: "event known",
-          why: "core",
-          required_fact_roles: ["event"],
-          current_state: "known",
-          partial_satisfaction: false,
-          agenda_item_ids: [],
-          may_affect_p5_ranking: true,
-          id_lifecycle: "active",
-        },
-      ],
+      dirs: [],
       conflicts: [conflict],
     };
+    dc.dirs = intakeReagg(dc, [
+      {
+        dir_id: "dir_event",
+        need: "event known",
+        why: "core",
+        required_fact_roles: ["event"],
+        current_state: "unknown",
+        partial_satisfaction: false,
+        agenda_item_ids: [],
+        may_affect_p5_ranking: true,
+        id_lifecycle: "active",
+      },
+    ]);
+    assert.equal(dc.dirs[0]!.current_state, "known");
     const suf = evaluateDecisionSufficiency(dc);
     assert.equal(suf.canStop, true, "non-preferred conflict must not over-block stop");
     assert.equal(suf.verdict, "sufficient_with_boundaries");
     assert.deepEqual(suf.blocking_conflict_ids, []);
     assert.ok(suf.nonblocking_conflict_ids.includes("conflict_color"));
     const { frozen } = freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
       stage3_sufficiency_end: true,
       now: "2026-11-02T13:00:00.000Z",
     });
@@ -846,6 +889,7 @@ async function main() {
     assert.throws(
       () =>
         freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
           stage3_sufficiency_end: true,
           now: "2026-11-02T13:00:00.000Z",
         }),
@@ -907,13 +951,16 @@ async function main() {
 
     const dc: DecisionContext = {
       ...base,
-      dirs: [dir],
+      dirs: [],
       conflicts: [conflict],
     };
+    dc.dirs = intakeReagg(dc, [{ ...dir, current_state: "unknown" }]);
+    assert.equal(dc.dirs[0]!.current_state, "known");
     const suf = evaluateDecisionSufficiency(dc);
     assert.equal(suf.canStop, true);
     assert.deepEqual(suf.blocking_conflict_ids, []);
     const { frozen } = freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
       stage3_sufficiency_end: true,
       now: "2026-11-02T13:00:00.000Z",
     });
@@ -986,6 +1033,7 @@ async function main() {
     assert.throws(
       () =>
         freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
           stage3_sufficiency_end: true,
           now: "2026-11-02T13:00:00.000Z",
         }),
@@ -1051,13 +1099,24 @@ async function main() {
     });
     const dc: DecisionContext = {
       ...base,
-      dirs: [
+      dirs: [],
+      conflicts: [nonPref],
+    };
+    // Event fact only → dir_event; color facts → dir_color (Intake AND association).
+    dc.reality_facts = dc.reality_facts.map((f) => ({
+      ...f,
+      related_dir_ids: (f.fact_roles ?? []).includes("event")
+        ? ["dir_event_gate"]
+        : ["dir_color_p5"],
+    }));
+    dc.dirs = reaggregateDirsIntake(
+      [
         {
           dir_id: "dir_event_gate",
           need: "event",
           why: "core P5",
           required_fact_roles: ["event"],
-          current_state: "known",
+          current_state: "unknown",
           partial_satisfaction: false,
           agenda_item_ids: [],
           may_affect_p5_ranking: true,
@@ -1068,20 +1127,26 @@ async function main() {
           need: "color",
           why: "linked facts but non-preferred conflict",
           required_fact_roles: ["color"],
-          current_state: "known",
+          current_state: "unknown",
           partial_satisfaction: false,
           agenda_item_ids: [],
           may_affect_p5_ranking: true,
           id_lifecycle: "active",
         },
       ],
-      conflicts: [nonPref],
-    };
+      dc.reality_facts,
+      dc.conflicts,
+      dc.constraints,
+      [],
+      naFor(dc),
+    );
+    assert.ok(dc.dirs.every((d) => d.current_state === "known"));
 
     const pre = evaluateDecisionSufficiency(dc);
     assert.equal(pre.canStop, true);
 
     const { frozen } = freezeDecisionContext(dc, {
+      naValidation: naFor(dc),
       stage3_sufficiency_end: true,
       now: "2026-11-02T13:00:00.000Z",
     });

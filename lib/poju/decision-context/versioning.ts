@@ -1,11 +1,16 @@
 /**
  * V1 final → superseded; clone V2 draft (same context_id, version++).
- * V1 content_hash unchanged. Affected DIRs reaggregated after supplements.
+ * V1 content_hash unchanged. Affected DIRs reaggregated after supplements via Intake resolver.
  */
 
-import { reaggregateDirs } from "./dir-aggregator";
-import type { DecisionContext, RealityFact, Conflict } from "./types";
+import { reaggregateDirsIntake } from "./dir-aggregator-intake";
+import type { NaValidationContext } from "./explicit-na-validate";
 import { FreezeError } from "./freeze";
+import {
+  assertNaValidationBoundToDc,
+  naValidationForDcSnapshot,
+} from "./na-validation-from-session";
+import type { Conflict, DecisionContext, RealityFact } from "./types";
 
 export class VersioningError extends Error {
   constructor(message: string) {
@@ -22,6 +27,12 @@ export interface StartV2Options {
   information_boundaries?: string[];
   /** DIR ids known to be affected by the supplement (marked for reaggregation). */
   affected_dir_ids?: string[];
+  /**
+   * Required Intake N/A validation context from the authoritative Session.
+   * Must align with finalDc.context_id / session; catalogs not invented.
+   */
+  naValidation: NaValidationContext;
+  expectedSessionId?: string;
 }
 
 export interface StartV2Result {
@@ -34,13 +45,20 @@ export interface StartV2Result {
 function deepCloneBusiness(dc: DecisionContext): DecisionContext {
   return {
     ...dc,
-    definition: { ...dc.definition, goal_priorities: [...dc.definition.goal_priorities], unacceptable_outcomes: [...dc.definition.unacceptable_outcomes] },
+    definition: {
+      ...dc.definition,
+      goal_priorities: [...dc.definition.goal_priorities],
+      unacceptable_outcomes: [...dc.definition.unacceptable_outcomes],
+    },
     reality_facts: dc.reality_facts.map((f) => ({
       ...f,
       fact_roles: f.fact_roles ? [...f.fact_roles] : undefined,
       related_dir_ids: f.related_dir_ids ? [...f.related_dir_ids] : undefined,
     })),
-    constraints: dc.constraints.map((c) => ({ ...c })),
+    constraints: dc.constraints.map((c) => ({
+      ...c,
+      related_dir_ids: c.related_dir_ids ? [...c.related_dir_ids] : undefined,
+    })),
     hypotheses: dc.hypotheses.map((h) => ({
       ...h,
       supporting_evidence: [...h.supporting_evidence],
@@ -62,6 +80,10 @@ function deepCloneBusiness(dc: DecisionContext): DecisionContext {
         : undefined,
     })),
     information_boundaries: [...(dc.information_boundaries ?? [])],
+    explicit_na_evidence: (dc.explicit_na_evidence ?? []).map((e) => ({ ...e })),
+    explicit_na_classifications: (dc.explicit_na_classifications ?? []).map(
+      (c) => ({ ...c }),
+    ),
   };
 }
 
@@ -70,7 +92,7 @@ function deepCloneBusiness(dc: DecisionContext): DecisionContext {
  */
 export function startV2FromFinal(
   finalDc: DecisionContext,
-  opts: StartV2Options = {},
+  opts: StartV2Options,
 ): StartV2Result {
   if (finalDc.status !== "final") {
     throw new VersioningError(
@@ -79,6 +101,20 @@ export function startV2FromFinal(
   }
   if (!finalDc.content_hash) {
     throw new VersioningError("final DecisionContext missing content_hash");
+  }
+  if (!opts.naValidation) {
+    throw new VersioningError(
+      "startV2FromFinal requires naValidation from authoritative Session",
+    );
+  }
+  try {
+    assertNaValidationBoundToDc(
+      opts.naValidation,
+      finalDc,
+      opts.expectedSessionId ?? opts.naValidation.sessionId,
+    );
+  } catch (e) {
+    throw new VersioningError(e instanceof Error ? e.message : String(e));
   }
 
   const now = opts.now ?? new Date().toISOString();
@@ -135,13 +171,17 @@ export function startV2FromFinal(
     ];
   }
 
-  draft.dirs = reaggregateDirs(
+  const na = naValidationForDcSnapshot(opts.naValidation, draft);
+  draft.dirs = reaggregateDirsIntake(
     draft.dirs,
     draft.reality_facts,
     draft.conflicts,
+    draft.constraints,
+    draft.explicit_na_evidence ?? [],
+    na,
   );
 
-  // Touch affected dirs' satisfaction note for observability
+  // Touch affected dirs' satisfaction note for observability — never overrides state.
   if (opts.affected_dir_ids?.length) {
     const aff = new Set(opts.affected_dir_ids);
     draft.dirs = draft.dirs.map((d) =>

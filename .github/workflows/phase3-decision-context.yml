@@ -15,6 +15,7 @@ on:
       - "scripts/test-intake-r6-role-resolver.ts"
       - "scripts/test-intake-r6-na-cas.ts"
       - "scripts/test-intake-r6-production-agg.ts"
+      - "scripts/test-intake-r6-freeze-versioning.ts"
       - "package.json"
       - ".github/workflows/phase3-decision-context.yml"
   push:
@@ -35,6 +36,7 @@ on:
       - "scripts/test-intake-r6-role-resolver.ts"
       - "scripts/test-intake-r6-na-cas.ts"
       - "scripts/test-intake-r6-production-agg.ts"
+      - "scripts/test-intake-r6-freeze-versioning.ts"
       - "package.json"
       - ".github/workflows/phase3-decision-context.yml"
   workflow_dispatch:
@@ -68,6 +70,7 @@ jobs:
           pnpm test:intake-r6-resolver
           pnpm test:intake-r6-na-cas
           pnpm test:intake-r6-production-agg
+          pnpm test:intake-r6-freeze-versioning
       - name: Typecheck
         run: |
           # next-env.d.ts is gitignored; without it CI lacks next/image-types (*.png) decls.

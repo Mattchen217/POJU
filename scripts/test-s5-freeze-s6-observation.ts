@@ -9,7 +9,8 @@ import {
   canFreezeSessionOnSufficiency,
   evaluateDecisionSufficiency,
   freezeDraftForDelivery,
-  reaggregateDirs,
+  naValidationBoundToDc,
+  reaggregateDirsIntake,
   resolveDeliveryDcPayload,
   seedDecisionContextFromOpening,
   shouldRequireFrozenDecisionContext,
@@ -63,21 +64,34 @@ function makeDraft(): DecisionContext {
       },
     ],
   });
-  seeded.dirs = reaggregateDirs(
-    [
-      {
-        dir_id: "d1",
-        need: "runway",
-        why: "afford",
-        required_fact_roles: ["runway"],
-        current_state: "unknown",
-        partial_satisfaction: false,
-        agenda_item_ids: [],
-        id_lifecycle: "active",
-      },
-    ],
+  seeded.reality_facts = seeded.reality_facts.map((f) => ({
+    ...f,
+    related_dir_ids: ["d1"],
+  }));
+  seeded.constraints = seeded.constraints.map((c) => ({
+    ...c,
+    related_dir_ids: ["d1"],
+  }));
+  const dirsSeed = [
+    {
+      dir_id: "d1",
+      need: "runway",
+      why: "afford",
+      required_fact_roles: ["runway"],
+      current_state: "unknown" as const,
+      partial_satisfaction: false,
+      agenda_item_ids: [] as string[],
+      id_lifecycle: "active" as const,
+      may_affect_p5_ranking: false,
+    },
+  ];
+  seeded.dirs = reaggregateDirsIntake(
+    dirsSeed,
     seeded.reality_facts,
     [],
+    seeded.constraints,
+    [],
+    naValidationBoundToDc(seeded, "sess_s5"),
   );
   return seeded;
 }
@@ -159,6 +173,7 @@ async function main() {
 
   await check("S5: already frozen skips idempotently", () => {
     const pack = freezeDraftForDelivery(draft, {
+      session: sessionWith(draft),
       now: "2026-11-03T20:10:00.000Z",
     });
     const s = sessionWith(pack.frozen, {
@@ -197,6 +212,7 @@ async function main() {
 
   await check("S5: resolveDeliveryDcPayload after freeze", () => {
     const pack = freezeDraftForDelivery(draft, {
+      session: sessionWith(draft),
       now: "2026-11-03T20:10:00.000Z",
     });
     const s = sessionWith(pack.frozen, {

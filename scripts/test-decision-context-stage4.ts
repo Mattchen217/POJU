@@ -17,8 +17,9 @@ import {
   DC_REPORT_NOT_FROZEN,
   formatDecisionContextSliceForPage,
   freezeDecisionContext,
+  naValidationBoundToDc,
   pageReceivesDecisionContextFeed,
-  reaggregateDirs,
+  reaggregateDirsIntake,
   resolveDecisionContextForReport,
   seedDecisionContextFromOpening,
   stage4ValueDimensionChecklist,
@@ -93,37 +94,6 @@ function makeFreezableDraft(context_id: string): DecisionContext {
       related_dir_ids: ["dir_s4_p5"],
     },
   ];
-  seeded.dirs = reaggregateDirs(
-    [
-      {
-        dir_id: "dir_s4_known",
-        need: "Confirm runway",
-        why: "Affordability",
-        required_fact_roles: ["runway"],
-        current_state: "unknown",
-        partial_satisfaction: false,
-        agenda_item_ids: [],
-        id_lifecycle: "active",
-        may_affect_p5_ranking: false,
-      },
-      {
-        dir_id: "dir_s4_p5",
-        need: "Partner support certainty",
-        why: "Changes preferred path ranking",
-        required_fact_roles: ["support"],
-        current_state: "unknown",
-        partial_satisfaction: false,
-        agenda_item_ids: [],
-        id_lifecycle: "active",
-        may_affect_p5_ranking: true,
-      },
-    ],
-    seeded.reality_facts,
-    [],
-  );
-  // Make P5-critical DIR non-blocking for freeze: mark as known via a confirmed support fact role,
-  // but keep a boundary note so Stage4 still requires recommendation_conditions from sample builder
-  // OR convert may_affect unknown into boundary-only by giving support a confirmed fact.
   seeded.reality_facts.push({
     fact_id: "f_support_placeholder",
     statement: "Partner discussed support at a high level (still incomplete detail)",
@@ -133,8 +103,55 @@ function makeFreezableDraft(context_id: string): DecisionContext {
     source_turn_id: "t_s4_3",
     user_confirmed: true,
     fact_roles: ["support"],
+    related_dir_ids: ["dir_s4_p5"],
   });
-  seeded.dirs = reaggregateDirs(seeded.dirs, seeded.reality_facts, []);
+  seeded.reality_facts = seeded.reality_facts.map((f) => ({
+    ...f,
+    related_dir_ids: Array.from(
+      new Set([
+        ...(f.related_dir_ids ?? []),
+        ...(f.fact_roles?.includes("support")
+          ? ["dir_s4_p5"]
+          : ["dir_s4_known"]),
+      ]),
+    ),
+  }));
+  seeded.constraints = seeded.constraints.map((c) => ({
+    ...c,
+    related_dir_ids: ["dir_s4_known", "dir_s4_p5"],
+  }));
+  const dirsSeed = [
+    {
+      dir_id: "dir_s4_known",
+      need: "Confirm runway",
+      why: "Affordability",
+      required_fact_roles: ["runway"],
+      current_state: "unknown" as const,
+      partial_satisfaction: false,
+      agenda_item_ids: [] as string[],
+      id_lifecycle: "active" as const,
+      may_affect_p5_ranking: false,
+    },
+    {
+      dir_id: "dir_s4_p5",
+      need: "Partner support certainty",
+      why: "Changes preferred path ranking",
+      required_fact_roles: ["support"],
+      current_state: "unknown" as const,
+      partial_satisfaction: false,
+      agenda_item_ids: [] as string[],
+      id_lifecycle: "active" as const,
+      may_affect_p5_ranking: true,
+    },
+  ];
+  seeded.dirs = reaggregateDirsIntake(
+    dirsSeed,
+    seeded.reality_facts,
+    [],
+    seeded.constraints,
+    [],
+    naValidationBoundToDc(seeded, "sess_stage4_fixture"),
+  );
   seeded.information_boundaries = [
     "Exact partner support amount unknown; may change P5 ranking detail",
   ];
@@ -145,9 +162,11 @@ async function main() {
   console.log("decision-context product stage4");
 
   const draft = makeFreezableDraft("dc_stage4");
+  const STAGE4_SESS = "sess_stage4_fixture";
   const { frozen, version_snapshot } = freezeDecisionContext(draft, {
     stage3_sufficiency_end: true,
     now: "2026-11-03T15:30:00.000Z",
+    naValidation: naValidationBoundToDc(draft, STAGE4_SESS),
   });
 
   await check("freeze yields final + hash", () => {
@@ -208,6 +227,7 @@ async function main() {
     const { superseded, draft: v2 } = startV2FromFinal(frozen, {
       now: "2026-11-03T16:00:00.000Z",
       information_boundaries: ["New user note after report"],
+      naValidation: naValidationBoundToDc(frozen, STAGE4_SESS),
     });
     assert.equal(superseded.content_hash, v1Hash);
     assert.equal(superseded.status, "superseded");

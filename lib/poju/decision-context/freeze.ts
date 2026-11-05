@@ -8,12 +8,19 @@
  * - Critical unknown that MAY change P5 ranking → hard block (not sufficient)
  * - Unresolved conflict that decides preferred path → hard block (not sufficient)
  * - Non-preferred-path open conflict → SoT-allowed Freeze → unresolved_in_final + degraded
+ *
+ * DIR reaggregation uses Intake resolver (R6) — never legacy OR-fallback.
  */
 
 import { markOpenConflictsUnresolvedInFinal } from "./conflict-lifecycle";
 import { computeContentHash } from "./content-hash";
-import { reaggregateDirs } from "./dir-aggregator";
+import { reaggregateDirsIntake } from "./dir-aggregator-intake";
+import type { NaValidationContext } from "./explicit-na-validate";
 import { assertLegalFactCombination } from "./fact-combination";
+import {
+  assertNaValidationBoundToDc,
+  naValidationForDcSnapshot,
+} from "./na-validation-from-session";
 import { evaluateDecisionSufficiency } from "./stop-criteria";
 import type { DecisionContext } from "./types";
 
@@ -34,6 +41,13 @@ export interface FreezeOptions {
   from_stall_or_max_turns?: boolean;
   /** Purchase / report CTA must not trigger Freeze. */
   from_purchase_or_report_cta?: boolean;
+  /**
+   * Required Intake N/A validation context from the authoritative Session.
+   * Must not be emptyNaValidation() inventing PASS catalogs.
+   */
+  naValidation: NaValidationContext;
+  /** When set, must equal naValidation.sessionId (Session-aware callers). */
+  expectedSessionId?: string;
 }
 
 export interface FreezeResult {
@@ -62,6 +76,18 @@ export function freezeDecisionContext(
   if (dc.status !== "draft") {
     throw new FreezeError(`Cannot freeze DecisionContext in status=${dc.status}`);
   }
+  if (!opts.naValidation) {
+    throw new FreezeError("Freeze requires naValidation from authoritative Session");
+  }
+  try {
+    assertNaValidationBoundToDc(
+      opts.naValidation,
+      dc,
+      opts.expectedSessionId ?? opts.naValidation.sessionId,
+    );
+  } catch (e) {
+    throw new FreezeError(e instanceof Error ? e.message : String(e));
+  }
 
   for (const f of dc.reality_facts) {
     assertLegalFactCombination(f.status, f.verification_level);
@@ -77,13 +103,26 @@ export function freezeDecisionContext(
 
   const now = opts.now ?? new Date().toISOString();
   const conflicts = markOpenConflictsUnresolvedInFinal(dc.conflicts, now);
-  const dirs = reaggregateDirs(dc.dirs, dc.reality_facts, conflicts);
 
-  const draftForHash: DecisionContext = {
+  // Bind validation facts/constraints to the DC being frozen (post-conflict snapshot).
+  const draftForAgg: DecisionContext = {
     ...dc,
-    dirs,
     conflicts,
     updated_at: now,
+  };
+  const na = naValidationForDcSnapshot(opts.naValidation, draftForAgg);
+  const dirs = reaggregateDirsIntake(
+    dc.dirs,
+    dc.reality_facts,
+    conflicts,
+    dc.constraints,
+    dc.explicit_na_evidence ?? [],
+    na,
+  );
+
+  const draftForHash: DecisionContext = {
+    ...draftForAgg,
+    dirs,
   };
 
   // Re-validate after conflict conversion + DIR reaggregation so aggregation-produced
@@ -124,6 +163,12 @@ export function freezeDecisionContext(
     conflicts: frozen.conflicts.map((c) => ({ ...c })),
     definition: { ...frozen.definition },
     information_boundaries: [...(frozen.information_boundaries ?? [])],
+    explicit_na_evidence: frozen.explicit_na_evidence
+      ? frozen.explicit_na_evidence.map((e) => ({ ...e }))
+      : undefined,
+    explicit_na_classifications: frozen.explicit_na_classifications
+      ? frozen.explicit_na_classifications.map((c) => ({ ...c }))
+      : undefined,
   };
 
   return { frozen, version_snapshot };

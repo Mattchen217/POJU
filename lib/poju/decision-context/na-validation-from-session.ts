@@ -18,6 +18,7 @@ import type { AuthoritativeTopicEvalRecord } from "./topic-eval-authority";
 import type {
   Conflict,
   Constraint,
+  DecisionContext,
   DIR,
   ExplicitNaClassification,
   ExplicitNaEvidence,
@@ -56,6 +57,81 @@ export type NaValidationAuthorityOverrides = {
   currentTopicCatalogVersion?: string;
   cfpSourceState?: NaValidationContext["cfpSourceState"];
 };
+
+/**
+ * Fail-closed Session/DC binding for Freeze / Versioning / aggregation.
+ * Does not invent catalogs — only checks identity alignment.
+ */
+export function assertNaValidationBoundToDc(
+  na: NaValidationContext,
+  dc: DecisionContext,
+  expectedSessionId?: string,
+): void {
+  if (!na.contextId || na.contextId !== dc.context_id) {
+    throw new Error(
+      `NaValidationContext.contextId mismatch: na=${na.contextId} dc=${dc.context_id}`,
+    );
+  }
+  if (expectedSessionId != null && na.sessionId !== expectedSessionId) {
+    throw new Error(
+      `NaValidationContext.sessionId mismatch: na=${na.sessionId} expected=${expectedSessionId}`,
+    );
+  }
+  if (!na.sessionId) {
+    throw new Error("NaValidationContext.sessionId required");
+  }
+}
+
+/**
+ * Bind NaValidationContext facts/constraints/classifications to a specific DC snapshot
+ * (e.g. post-conflict Freeze draft or V2 draft after supplements). Keeps Session authority.
+ */
+export function naValidationForDcSnapshot(
+  na: NaValidationContext,
+  dc: DecisionContext,
+): NaValidationContext {
+  assertNaValidationBoundToDc(na, dc, na.sessionId);
+  return {
+    ...na,
+    contextId: dc.context_id,
+    realityFacts: dc.reality_facts,
+    constraints: dc.constraints,
+    explicitNaClassifications: dc.explicit_na_classifications ?? [],
+  };
+}
+
+/**
+ * Fixture / pure-DC helper: bind ids + DC facts without inventing catalogs.
+ * Production Freeze/Versioning must prefer buildNaValidationContextFromSession.
+ */
+export function naValidationBoundToDc(
+  dc: DecisionContext,
+  sessionId: string,
+  overrides: NaValidationAuthorityOverrides = {},
+): NaValidationContext {
+  if (!sessionId.trim()) {
+    throw new Error("naValidationBoundToDc: sessionId required");
+  }
+  return {
+    contextId: dc.context_id,
+    sessionId,
+    realityFacts: overrides.realityFacts ?? dc.reality_facts,
+    constraints: overrides.constraints ?? dc.constraints,
+    confirmationEvents: overrides.confirmationEvents ?? [],
+    explicitNaClassifications:
+      overrides.explicitNaClassifications ??
+      dc.explicit_na_classifications ??
+      [],
+    naDeclarationActions: overrides.naDeclarationActions ?? [],
+    nowIso: overrides.nowIso,
+    topicEvalAuthority: overrides.topicEvalAuthority,
+    currentTopicCatalogVersion: overrides.currentTopicCatalogVersion,
+    dirCatalog: overrides.dirCatalog,
+    catalogConditionEvals: overrides.catalogConditionEvals,
+    topicRules: overrides.topicRules,
+    cfpSourceState: overrides.cfpSourceState,
+  };
+}
 
 /**
  * Build NaValidationContext from live Session + Decision Context.

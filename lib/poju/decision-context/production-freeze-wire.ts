@@ -142,7 +142,10 @@ export function applySufficiencyFreezeToSession(
     };
   }
   try {
-    const pack = freezeDraftForDelivery(gate.draft!, { now: opts?.now });
+    const pack = freezeDraftForDelivery(gate.draft!, {
+      session,
+      now: opts?.now,
+    });
     const slice = applyFreezeToSessionSlice(
       {
         decision_context: session.decision_context,
@@ -205,6 +208,8 @@ export async function ensureSessionFrozenForDelivery(
     session,
     idempotency_key: applied.idempotency_key,
     now: opts?.now,
+    // Freeze is DC-authority; control plane may be absent on early sessions.
+    require_control_plane: false,
     apply: (tx) => {
       const merged = applyFreezeToSessionSlice(
         {
