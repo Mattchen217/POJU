@@ -525,10 +525,16 @@ export function applyDeclareDirNaToSession(
   }
 
   const dc = latest.decision_context;
-  if (!dc || (dc.status !== "draft" && dc.status !== "final")) {
+  if (!dc) {
     throw new NaDeclarationError(
       NA_DECLARATION_CONTEXT_INVALID,
       "Decision Context missing",
+    );
+  }
+  if (dc.status !== "draft") {
+    throw new NaDeclarationError(
+      NA_DECLARATION_CONTEXT_INVALID,
+      "Decision Context is not writable",
     );
   }
 
@@ -824,13 +830,24 @@ export async function revokeDirNaDeclaration(
             "session_id mismatch",
           );
         }
+        const dc = latest.decision_context;
+        if (!dc) {
+          throw new NaDeclarationError(
+            NA_DECLARATION_CONTEXT_INVALID,
+            "Decision Context missing",
+          );
+        }
+        if (dc.status !== "draft") {
+          throw new NaDeclarationError(
+            NA_DECLARATION_CONTEXT_INVALID,
+            "Decision Context is not writable",
+          );
+        }
         const actions = (latest.na_declaration_actions ?? []).map((a) =>
           a.declaration_action_id === input.declaration_action_id
             ? { ...a, revoked: true }
             : a,
         );
-        const dc = latest.decision_context;
-        if (!dc) return { ...latest, na_declaration_actions: actions };
         const classifications = (dc.explicit_na_classifications ?? []).map(
           (c) =>
             c.declaration_action_id === input.declaration_action_id

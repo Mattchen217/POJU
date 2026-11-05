@@ -193,6 +193,11 @@ export function findMatchingNaClassification(
     const actExpiry = checkExpiresAt(action.expires_at, now);
     if (actExpiry === "invalid" || actExpiry === true) continue;
 
+    // C09e — Classification and Action must share the same expires_at binding
+    // (null/null equal; otherwise exact stored ISO string equality). Independent
+    // "both not expired" is not sufficient.
+    if (row.expires_at !== action.expires_at) continue;
+
     if (evidence.target === "dir" && action.dir_id !== dirId) continue;
     if (action.na_condition_code !== evidence.na_condition_code) continue;
     if (!sourceRefEquals(action.source_ref, evidence.source_ref)) continue;
@@ -241,6 +246,12 @@ function validateUserSource(
   const classification = findMatchingNaClassification(evidence, ctx);
   if (!classification) {
     return { ok: false, reason_code: "explicit_na_classification_missing" };
+  }
+
+  // C10a — Evidence ID must bind to the authorizing Action ID.
+  const expectedEvidenceId = `na_ev_${classification.declaration_action_id}`;
+  if (evidence.evidence_id !== expectedEvidenceId) {
+    return { ok: false, reason_code: "evidence_id_action_mismatch" };
   }
 
   const ref = evidence.source_ref;

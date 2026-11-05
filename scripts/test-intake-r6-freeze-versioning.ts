@@ -315,8 +315,9 @@ async function main() {
     console.log("  PASS  Scheme A hard_constraint satisfies role");
 
     // N/A without catalog fail-closed
+    // S4 C10a: evidence_id must equal na_ev_${declaration_action_id} ("na-act-f").
     const naEv = {
-      evidence_id: "na_ev_f",
+      evidence_id: "na_ev_na-act-f",
       target: "dir" as const,
       dir_id: "DIR-A",
       na_condition_code: NA_CODE,
