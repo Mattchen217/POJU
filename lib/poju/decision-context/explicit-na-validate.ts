@@ -7,10 +7,15 @@
 import type { ConfirmationEvent } from "./confirmation-event";
 import {
   checkExpiresAt,
+  isAllowedNaControlId,
   parseValidIsoMs,
   sourceRefEquals,
   type UserNaDeclarationAction,
 } from "./na-declaration";
+import {
+  resolveAuthoritativeTopicEval,
+  type AuthoritativeTopicEvalRecord,
+} from "./topic-eval-authority";
 import type {
   Constraint,
   ExplicitNaClassification,
@@ -58,6 +63,8 @@ export type DirNaCatalogEntry = {
 
 export type NaValidationContext = {
   contextId: string;
+  /** Current session id — action.session_id must match. */
+  sessionId: string;
   realityFacts: RealityFact[];
   constraints: Constraint[];
   confirmationEvents: ConfirmationEvent[];
@@ -80,6 +87,15 @@ export type NaValidationContext = {
   topicRules?:
     | ReadonlyMap<string, TopicApplicabilityRule>
     | readonly TopicApplicabilityRule[];
+  /**
+   * Authoritative topic eval rows keyed by eval_id.
+   * Embedded evaluation.status alone is never sufficient.
+   */
+  topicEvalAuthority?:
+    | ReadonlyMap<string, AuthoritativeTopicEvalRecord>
+    | readonly AuthoritativeTopicEvalRecord[];
+  /** Live Topic Applicability catalog version. */
+  currentTopicCatalogVersion?: string;
 };
 
 export type NaValidationResult =
@@ -159,7 +175,10 @@ export function findMatchingNaClassification(
     if (action.revoked) continue;
     if (action.actor !== "user") continue;
     if (action.context_id !== ctx.contextId) continue;
+    if (action.session_id !== ctx.sessionId) continue;
     if (action.declaration_turn_id !== row.declaration_turn_id) continue;
+    // Re-check allowlist at validate time (create-time check is not enough).
+    if (!isAllowedNaControlId(action.control_id)) continue;
 
     const actExpiry = checkExpiresAt(action.expires_at, now);
     if (actExpiry === "invalid" || actExpiry === true) continue;
@@ -326,20 +345,27 @@ function validateTopicNotApplicable(
   if (parseValidIsoMs(evaluation.evaluated_at) === null) {
     return { ok: false, reason_code: "topic_evaluation_time_invalid" };
   }
+  // Embedded status is a hint only — authority lookup is mandatory.
   if (evaluation.status !== "current") {
     return { ok: false, reason_code: `topic_evaluation_${evaluation.status}` };
   }
-
-  const now = ctx.nowIso ?? new Date().toISOString();
-  const expiry = checkExpiresAt(evaluation.expires_at, now);
-  if (expiry === "invalid") {
-    return { ok: false, reason_code: "topic_evaluation_expiry_invalid" };
-  }
-  if (expiry === true) {
-    return { ok: false, reason_code: "topic_evaluation_expired" };
-  }
   if (!evaluation.not_applicable) {
     return { ok: false, reason_code: "topic_still_applicable" };
+  }
+
+  const now = ctx.nowIso ?? new Date().toISOString();
+  const authority = resolveAuthoritativeTopicEval({
+    eval_id: evaluation.eval_id,
+    rule_id: basis.rule_id,
+    topic_code: basis.topic_code,
+    target_dir_id: evidence.dir_id,
+    claimed_catalog_version: evaluation.catalog_version,
+    current_catalog_version: ctx.currentTopicCatalogVersion ?? "",
+    authority: ctx.topicEvalAuthority,
+    nowIso: now,
+  });
+  if (!authority.ok) {
+    return { ok: false, reason_code: authority.reason_code };
   }
   return { ok: true, evidence };
 }

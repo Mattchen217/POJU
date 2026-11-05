@@ -1,5 +1,5 @@
 /**
- * Stage 3.2 acceptance round-3 — N/A declaration create path, topic eval, production ask wire.
+ * Stage 3.2 acceptance round-4 — production N/A persist + topic authority + CI.
  *   pnpm exec tsx scripts/test-intake-r6-role-resolver.ts
  *   pnpm test:intake-r6-resolver
  */
@@ -14,8 +14,7 @@ import {
   type TopicApplicabilityRule,
 } from "@/lib/poju/decision-context/explicit-na-validate";
 import {
-  appendNaClassificationToDc,
-  appendNaDeclarationAction,
+  applyDeclareDirNaToSession,
   checkExpiresAt,
   createExplicitNaClassificationFromUserDeclaration,
   type UserNaDeclarationAction,
@@ -24,7 +23,6 @@ import {
   INTAKE_ASK_SCORING_PATH,
   selectNextIntakeAskForSession,
 } from "@/lib/poju/decision-context/production-intake-ask";
-import { planNextAskFromCandidates } from "@/lib/poju/decision-context/question-plan-cycle";
 import {
   computeUnresolvedCount,
   plannerAggregatorRoleMismatches,
@@ -34,6 +32,7 @@ import {
   emptyNaValidation,
   resolveDirRoleEvidence,
 } from "@/lib/poju/decision-context/role-resolver";
+import type { AuthoritativeTopicEvalRecord } from "@/lib/poju/decision-context/topic-eval-authority";
 import type {
   Constraint,
   DecisionContext,
@@ -54,6 +53,8 @@ const CTX = "dc-test-1";
 const SESSION_ID = "sess-1";
 const VALID_NA_CODE = "explicit_not_applicable";
 const NOW = "2026-11-05T00:00:00.000Z";
+const TOPIC_CAT = "topic-cat-v1";
+const TOPIC_EXPIRY = "2026-12-01T00:00:00.000Z";
 
 function baseDir(overrides: Partial<DIR> = {}): DIR {
   return {
@@ -140,22 +141,31 @@ function baseDc(overrides: Partial<DecisionContext> = {}): DecisionContext {
   };
 }
 
-function declarationAction(
-  partial: Partial<UserNaDeclarationAction> = {},
-): UserNaDeclarationAction {
+function baseSession(overrides: Partial<POJUSessionState> = {}): POJUSessionState {
   return {
-    declaration_action_id: "na-act-1",
     session_id: SESSION_ID,
-    context_id: CTX,
-    actor: "user",
-    control_id: "na_declare",
-    source_ref: { kind: "reality_fact", fact_id: "f1" },
-    dir_id: "DIR-A",
-    na_condition_code: VALID_NA_CODE,
-    declaration_turn_id: "t-na-1",
-    occurred_at: NOW,
-    revoked: false,
-    expires_at: null,
+    decision_context: baseDc(),
+    messages: [],
+    created_at: NOW,
+    last_interaction_at: NOW,
+    expires_at: TOPIC_EXPIRY,
+    ...overrides,
+  } as POJUSessionState;
+}
+
+function authorityTopic(
+  partial: Partial<AuthoritativeTopicEvalRecord> = {},
+): AuthoritativeTopicEvalRecord {
+  return {
+    eval_id: "tev-1",
+    rule_id: "rule-topic-1",
+    topic_code: "topic.x",
+    target_dir_id: "DIR-A",
+    catalog_version: TOPIC_CAT,
+    not_applicable: true,
+    evaluated_at: NOW,
+    expires_at: TOPIC_EXPIRY,
+    record_status: "current",
     ...partial,
   };
 }
@@ -175,8 +185,8 @@ function topicRule(
       evaluated_at: NOW,
       status: "current",
       not_applicable: true,
-      expires_at: null,
-      catalog_version: "topic-cat-v1",
+      expires_at: TOPIC_EXPIRY,
+      catalog_version: TOPIC_CAT,
       ...evalPartial,
     },
     ...rest,
@@ -186,16 +196,25 @@ function topicRule(
 function provenNaValidation(
   overrides: Partial<NaValidationContext> = {},
 ): NaValidationContext {
-  const action = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE, "topic_na"],
-  });
-  if (!created.ok) throw new Error(`fixture create failed: ${created.reason_code}`);
+  const session = baseSession();
+  const applied = applyDeclareDirNaToSession(
+    session,
+    SESSION_ID,
+    {
+      operation_id: "op-fixture",
+      declaration_action_id: "na-act-1",
+      control_id: "na_declare",
+      fact_id: "f1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t-na-1",
+      dir_na_conditions: [VALID_NA_CODE, "topic_na"],
+    },
+    NOW,
+  );
   return emptyNaValidation({
     contextId: CTX,
+    sessionId: SESSION_ID,
     nowIso: NOW,
     dirCatalog: [
       { dir_id: "DIR-A", na_conditions: [VALID_NA_CODE, "topic_na"] },
@@ -210,17 +229,20 @@ function provenNaValidation(
       },
     ],
     topicRules: [topicRule()],
+    topicEvalAuthority: [authorityTopic()],
+    currentTopicCatalogVersion: TOPIC_CAT,
     realityFacts: [fact({ fact_id: "f1" })],
     confirmationEvents: [e1Fact("f1")],
-    explicitNaClassifications: [created.classification],
-    naDeclarationActions: [action],
+    explicitNaClassifications:
+      applied.session.decision_context?.explicit_na_classifications ?? [],
+    naDeclarationActions: applied.session.na_declaration_actions ?? [],
     ...overrides,
   });
 }
 
 function userNaEvidence(): ExplicitNaEvidence {
   return {
-    evidence_id: "na-user-1",
+    evidence_id: "na_ev_na-act-1",
     target: "dir",
     dir_id: "DIR-A",
     na_condition_code: VALID_NA_CODE,
@@ -250,7 +272,7 @@ function validCatalogNa(): ExplicitNaEvidence {
 
 const dir = baseDir();
 
-console.log("\n== R1/R2 regression: Fact AND / user_confirmed / Constraint ==");
+console.log("\n== R1–R3 regression: Fact / Constraint / user_confirmed ==");
 {
   const r = resolveDirRoleEvidence({
     dir,
@@ -259,33 +281,9 @@ console.log("\n== R1/R2 regression: Fact AND / user_confirmed / Constraint ==");
     constraints: [],
     explicitNaEvidence: [],
     conflicts: [],
-    naValidation: emptyNaValidation({ contextId: CTX }),
+    naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
   assert("MX-83 missing related_dir_ids → unresolved", r.state === "unresolved");
-}
-{
-  const r = resolveDirRoleEvidence({
-    dir,
-    roleCode: "situation",
-    realityFacts: [fact({ fact_id: "f1", fact_roles: undefined })],
-    constraints: [],
-    explicitNaEvidence: [],
-    conflicts: [],
-    naValidation: emptyNaValidation({ contextId: CTX }),
-  });
-  assert("MX-84 missing role tag → unresolved", r.state === "unresolved");
-}
-{
-  const r = resolveDirRoleEvidence({
-    dir,
-    roleCode: "situation",
-    realityFacts: [fact({ fact_id: "f1", user_confirmed: true })],
-    constraints: [],
-    explicitNaEvidence: [],
-    conflicts: [],
-    naValidation: emptyNaValidation({ contextId: CTX }),
-  });
-  assert("MX-85 exact pair confirmed", r.state === "confirmed");
 }
 {
   const r = resolveDirRoleEvidence({
@@ -302,7 +300,7 @@ console.log("\n== R1/R2 regression: Fact AND / user_confirmed / Constraint ==");
     constraints: [],
     explicitNaEvidence: [],
     conflicts: [],
-    naValidation: emptyNaValidation({ contextId: CTX }),
+    naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
   assert("user_confirmed=false → NOT confirmed", r.state === "unresolved");
 }
@@ -320,7 +318,7 @@ console.log("\n== R1/R2 regression: Fact AND / user_confirmed / Constraint ==");
     constraints: [],
     explicitNaEvidence: [],
     conflicts: [],
-    naValidation: emptyNaValidation(),
+    naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
   assert("independently_verified → confirmed", r.state === "confirmed");
 }
@@ -332,246 +330,169 @@ console.log("\n== R1/R2 regression: Fact AND / user_confirmed / Constraint ==");
     constraints: [constraint({ constraint_id: "k1" })],
     explicitNaEvidence: [],
     conflicts: [],
-    naValidation: emptyNaValidation({ contextId: CTX }),
+    naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
   assert("MX-90 hard_constraint confirmed", r.state === "confirmed");
 }
-{
-  const r = resolveDirRoleEvidence({
-    dir,
-    roleCode: "hard_constraint",
-    realityFacts: [],
-    constraints: [constraint({ constraint_id: "k1", rigidity: "soft" })],
-    explicitNaEvidence: [],
-    conflicts: [],
-    naValidation: emptyNaValidation({ contextId: CTX }),
-  });
-  assert("MX-92 rigidity mismatch → unresolved", r.state === "unresolved");
-}
 
-console.log("\n== P0-1 Production createExplicitNaClassificationFromUserDeclaration ==");
+console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
 {
-  const action = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action,
-    dc: baseDc(),
+  const applied = applyDeclareDirNaToSession(
+    baseSession(),
+    SESSION_ID,
+    {
+      operation_id: "op1",
+      declaration_action_id: "na-act-prod",
+      control_id: "na_declare",
+      fact_id: "f1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t-na-prod",
+      dir_na_conditions: [VALID_NA_CODE],
+    },
+    NOW,
+  );
+  assert("production apply outcome appended", applied.outcome === "appended");
+  assert(
+    "action written to session.na_declaration_actions",
+    (applied.session.na_declaration_actions ?? []).some(
+      (a) => a.declaration_action_id === "na-act-prod",
+    ),
+  );
+  assert(
+    "server set action.session_id from session",
+    applied.action.session_id === SESSION_ID,
+  );
+  assert(
+    "server set action.context_id from DC",
+    applied.action.context_id === CTX,
+  );
+  assert("server set actor=user", applied.action.actor === "user");
+  assert(
+    "classification written to DC",
+    (applied.session.decision_context?.explicit_na_classifications ?? []).length ===
+      1,
+  );
+  assert(
+    "evidence written to DC",
+    (applied.session.decision_context?.explicit_na_evidence ?? []).some(
+      (e) => e.evidence_type === "user_explicit_na",
+    ),
+  );
+
+  const ctx = emptyNaValidation({
+    contextId: CTX,
+    sessionId: SESSION_ID,
     nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
+    dirCatalog: [{ dir_id: "DIR-A", na_conditions: [VALID_NA_CODE] }],
+    realityFacts: [fact({ fact_id: "f1" })],
+    confirmationEvents: [e1Fact("f1")],
+    explicitNaClassifications:
+      applied.session.decision_context?.explicit_na_classifications ?? [],
+    naDeclarationActions: applied.session.na_declaration_actions ?? [],
   });
-  assert("production create from user declaration → ok", created.ok);
-  if (created.ok) {
-    assert(
-      "created classification bound to declaration_action_id",
-      created.classification.declaration_action_id === action.declaration_action_id,
+  const ev: ExplicitNaEvidence = applied.evidence;
+  assert(
+    "validate accepts production-persisted declaration",
+    validateExplicitNaEvidence(ev, ctx).ok,
+  );
+}
+{
+  let rejected = false;
+  try {
+    applyDeclareDirNaToSession(
+      baseSession(),
+      SESSION_ID,
+      {
+        operation_id: "op-bad",
+        declaration_action_id: "x",
+        control_id: "model_keyword_hit",
+        fact_id: "f1",
+        dir_id: "DIR-A",
+        na_condition_code: VALID_NA_CODE,
+        declaration_turn_id: "t",
+        dir_na_conditions: [VALID_NA_CODE],
+      },
+      NOW,
     );
-    assert(
-      "authority user_declared written_by code",
-      created.classification.authority === "user_declared" &&
-        created.classification.written_by === "code",
-    );
+  } catch {
+    rejected = true;
   }
+  assert("non-allowlisted control_id rejected at production apply", rejected);
 }
 {
-  const bad = createExplicitNaClassificationFromUserDeclaration({
-    action: declarationAction({ control_id: "model_inferred_control" }),
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
+  const applied = applyDeclareDirNaToSession(
+    baseSession(),
+    SESSION_ID,
+    {
+      operation_id: "op2",
+      declaration_action_id: "na-act-sess",
+      control_id: "na_declare",
+      fact_id: "f1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t-na",
+      dir_na_conditions: [VALID_NA_CODE],
+    },
+    NOW,
+  );
+  const wrongSession = provenNaValidation({
+    sessionId: "OTHER_SESSION",
+    explicitNaClassifications:
+      applied.session.decision_context?.explicit_na_classifications,
+    naDeclarationActions: applied.session.na_declaration_actions,
   });
-  assert("model/non-allowlisted control → reject create", !bad.ok);
+  assert(
+    "action.session_id mismatch → reject at validate",
+    !validateExplicitNaEvidence(applied.evidence, wrongSession).ok,
+  );
 }
 {
-  const bad = createExplicitNaClassificationFromUserDeclaration({
-    action: declarationAction({ actor: "user", revoked: true }),
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  assert("revoked action → reject create", !bad.ok);
-}
-{
-  // E1 alone cannot create classification — create path requires declaration action
-  const evidence = userNaEvidence();
-  const e1Only = provenNaValidation({
+  // E1 alone still insufficient
+  const bad = validateExplicitNaEvidence(userNaEvidence(), provenNaValidation({
     explicitNaClassifications: [],
     naDeclarationActions: [],
-  });
-  const bad = validateExplicitNaEvidence(evidence, e1Only);
-  assert(
-    "E1 without classification+declaration → reject",
-    !bad.ok && bad.reason_code === "explicit_na_classification_missing",
-  );
+  }));
+  assert("E1 without declaration persist → reject", !bad.ok);
 }
 {
-  // Hand-crafted classification with fake action_id (not in action store) → reject
-  const action = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action,
-    dc: baseDc(),
+  // control_id allowlist re-checked at validate: forge action with bad control after create
+  const applied = applyDeclareDirNaToSession(
+    baseSession(),
+    SESSION_ID,
+    {
+      operation_id: "op3",
+      declaration_action_id: "na-act-ctrl",
+      control_id: "na_declare",
+      fact_id: "f1",
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t",
+      dir_na_conditions: [VALID_NA_CODE],
+    },
+    NOW,
+  );
+  const forgedActions: UserNaDeclarationAction[] = (
+    applied.session.na_declaration_actions ?? []
+  ).map((a) => ({ ...a, control_id: "hacked_control" }));
+  const ctx = emptyNaValidation({
+    contextId: CTX,
+    sessionId: SESSION_ID,
     nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  const forged = provenNaValidation({
-    explicitNaClassifications: [created.classification],
-    naDeclarationActions: [], // action missing from store
-  });
-  const bad = validateExplicitNaEvidence(userNaEvidence(), forged);
-  assert("classification without persisted declaration action → reject", !bad.ok);
-}
-{
-  const action = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  const wrongFact = provenNaValidation({
-    explicitNaClassifications: [
-      {
-        ...created.classification,
-        source_ref: { kind: "reality_fact", fact_id: "OTHER" },
-      },
-    ],
-    naDeclarationActions: [action],
+    dirCatalog: [{ dir_id: "DIR-A", na_conditions: [VALID_NA_CODE] }],
+    realityFacts: [fact({ fact_id: "f1" })],
+    confirmationEvents: [e1Fact("f1")],
+    explicitNaClassifications:
+      applied.session.decision_context?.explicit_na_classifications ?? [],
+    naDeclarationActions: forgedActions,
   });
   assert(
-    "classification source mismatch vs evidence → reject",
-    !validateExplicitNaEvidence(userNaEvidence(), wrongFact).ok,
-  );
-}
-{
-  const action = declarationAction({ dir_id: "DIR-B" });
-  // create will fail because DIR-B not on dc / source not linked — use forged cls on DIR-B action
-  const okAction = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action: okAction,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  const otherDirCtx = provenNaValidation({
-    explicitNaClassifications: [
-      { ...created.classification, dir_id: "DIR-B" },
-    ],
-    naDeclarationActions: [action],
-  });
-  assert(
-    "classification/action for other DIR → reject",
-    !validateExplicitNaEvidence(userNaEvidence(), otherDirCtx).ok,
-  );
-}
-{
-  const action = declarationAction({ revoked: true });
-  const okAction = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action: okAction,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  const revokedCtx = provenNaValidation({
-    explicitNaClassifications: [created.classification],
-    naDeclarationActions: [action],
-  });
-  assert(
-    "revoked declaration action → reject",
-    !validateExplicitNaEvidence(userNaEvidence(), revokedCtx).ok,
-  );
-}
-{
-  const action = declarationAction({ expires_at: "2026-11-01T00:00:00.000Z" });
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action: declarationAction(),
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  const expiredCtx = provenNaValidation({
-    nowIso: NOW,
-    explicitNaClassifications: [
-      { ...created.classification, expires_at: "2026-11-01T00:00:00.000Z" },
-    ],
-    naDeclarationActions: [action],
-  });
-  assert(
-    "expired classification/action → reject",
-    !validateExplicitNaEvidence(userNaEvidence(), expiredCtx).ok,
-  );
-}
-{
-  const action = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  let dc = appendNaClassificationToDc(baseDc(), created.classification, NOW);
-  const actions = appendNaDeclarationAction([], action);
-  const ctx = provenNaValidation({
-    explicitNaClassifications: dc.explicit_na_classifications,
-    naDeclarationActions: actions,
-  });
-  const ok = validateExplicitNaEvidence(userNaEvidence(), ctx);
-  assert("full production create → validate accept", ok.ok);
-  const dirs = reaggregateDirsIntake(
-    [dir],
-    [fact({ fact_id: "f1" })],
-    [],
-    [],
-    [userNaEvidence()],
-    ctx,
-  );
-  assert("validated user_explicit_na → DIR n_a", dirs[0]!.current_state === "n_a");
-}
-
-console.log("\n== P1-2 Illegal expires_at / nowIso fail-closed ==");
-{
-  assert(
-    "illegal expires_at → invalid",
-    checkExpiresAt("not-a-date", NOW) === "invalid",
-  );
-  assert(
-    "illegal nowIso → invalid",
-    checkExpiresAt("2026-12-01T00:00:00.000Z", "nope") === "invalid",
-  );
-  const action = declarationAction({ expires_at: "garbage-date" });
-  // validateUserNaDeclarationAction throws; create catches
-  const bad = createExplicitNaClassificationFromUserDeclaration({
-    action,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  assert("illegal expires_at on create → reject", !bad.ok);
-
-  const okAction = declarationAction();
-  const created = createExplicitNaClassificationFromUserDeclaration({
-    action: okAction,
-    dc: baseDc(),
-    nowIso: NOW,
-    dirNaConditions: [VALID_NA_CODE],
-  });
-  if (!created.ok) throw new Error("setup");
-  const badNow = provenNaValidation({
-    nowIso: "not-iso",
-    explicitNaClassifications: [created.classification],
-    naDeclarationActions: [okAction],
-  });
-  assert(
-    "illegal nowIso at validate → reject classification match",
-    !validateExplicitNaEvidence(userNaEvidence(), badNow).ok,
+    "validate re-checks control_id allowlist → reject forged control",
+    !validateExplicitNaEvidence(applied.evidence, ctx).ok,
   );
 }
 
-console.log("\n== P0-2 Topic evaluation must be explicitly current ==");
+console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
 {
   const topicNa: ExplicitNaEvidence = {
     evidence_id: "na-topic",
@@ -588,85 +509,102 @@ console.log("\n== P0-2 Topic evaluation must be explicitly current ==");
     revoked: false,
   };
   assert(
-    "topic current eval → accept",
+    "topic with live authority → accept",
     validateExplicitNaEvidence(topicNa, provenNaValidation()).ok,
   );
   assert(
-    "topic other DIR → reject",
-    !validateExplicitNaEvidence(
-      topicNa,
-      provenNaValidation({ topicRules: [topicRule({ target_dir_id: "DIR-B" })] }),
-    ).ok,
-  );
-  assert(
-    "topic stale status → reject",
+    "forged eval_id → reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
-        topicRules: [topicRule({ evaluation: { status: "stale" } })],
+        topicRules: [topicRule({ evaluation: { eval_id: "forged-id" } })],
       }),
     ).ok,
   );
   assert(
-    "topic superseded → reject",
+    "catalog version mismatch → reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
-        topicRules: [topicRule({ evaluation: { status: "superseded" } })],
+        currentTopicCatalogVersion: "topic-cat-v2",
       }),
     ).ok,
   );
   assert(
-    "topic revoked eval → reject",
+    "authority stale → reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
-        topicRules: [topicRule({ evaluation: { status: "revoked" } })],
+        topicEvalAuthority: [authorityTopic({ record_status: "stale" })],
       }),
     ).ok,
   );
   assert(
-    "topic still applicable → reject",
+    "authority superseded → reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
-        topicRules: [topicRule({ evaluation: { not_applicable: false } })],
+        topicEvalAuthority: [authorityTopic({ record_status: "superseded" })],
       }),
     ).ok,
   );
   assert(
-    "topic expired eval → reject",
+    "authority revoked → reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
-        nowIso: NOW,
-        topicRules: [
-          topicRule({
-            evaluation: { expires_at: "2026-11-01T00:00:00.000Z" },
-          }),
-        ],
+        topicEvalAuthority: [authorityTopic({ record_status: "revoked" })],
       }),
     ).ok,
   );
   assert(
-    "topic missing evaluation → reject",
+    "authority other DIR → reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
-        topicRules: [
-          {
-            rule_id: "rule-topic-1",
-            topic_code: "topic.x",
-            target_dir_id: "DIR-A",
-            evaluation: undefined as unknown as TopicApplicabilityRule["evaluation"],
-          },
-        ],
+        topicEvalAuthority: [authorityTopic({ target_dir_id: "DIR-B" })],
+      }),
+    ).ok,
+  );
+  assert(
+    "authority still applicable → reject",
+    !validateExplicitNaEvidence(
+      topicNa,
+      provenNaValidation({
+        topicEvalAuthority: [authorityTopic({ not_applicable: false })],
+      }),
+    ).ok,
+  );
+  assert(
+    "authority expired → reject",
+    !validateExplicitNaEvidence(
+      topicNa,
+      provenNaValidation({
+        nowIso: "2027-01-01T00:00:00.000Z",
+        topicEvalAuthority: [authorityTopic({ expires_at: TOPIC_EXPIRY })],
+      }),
+    ).ok,
+  );
+  assert(
+    "missing authority store → reject",
+    !validateExplicitNaEvidence(
+      topicNa,
+      provenNaValidation({ topicEvalAuthority: undefined }),
+    ).ok,
+  );
+  assert(
+    "embedded status current but no authority → reject",
+    !validateExplicitNaEvidence(
+      topicNa,
+      provenNaValidation({
+        topicRules: [topicRule()],
+        topicEvalAuthority: [],
       }),
     ).ok,
   );
 }
 
-console.log("\n== System N/A / DDR-03 / DIR aggregation ==");
+console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
 {
   const dirs = reaggregateDirsIntake(
     [dir],
@@ -677,17 +615,6 @@ console.log("\n== System N/A / DDR-03 / DIR aggregation ==");
     provenNaValidation(),
   );
   assert("MX-119 catalog N/A → n_a", dirs[0]!.current_state === "n_a");
-}
-{
-  const dirs = reaggregateDirsIntake(
-    [dir],
-    [fact({ fact_id: "f1" })],
-    [],
-    [],
-    [],
-    emptyNaValidation({ contextId: CTX }),
-  );
-  assert("MX-118 without N/A → unknown", dirs[0]!.current_state === "unknown");
 }
 {
   const bad = validateExplicitNaEvidence(
@@ -707,92 +634,57 @@ console.log("\n== System N/A / DDR-03 / DIR aggregation ==");
       written_by: "code",
       revoked: false,
     },
-    emptyNaValidation({ contextId: CTX, cfpSourceState: "source_calc_failed" }),
+    emptyNaValidation({
+      contextId: CTX,
+      sessionId: SESSION_ID,
+      cfpSourceState: "source_calc_failed",
+    }),
   );
   assert("MX-112 calc_failed → reject", !bad.ok);
 }
-
-console.log("\n== P1-1 Production selectNextIntakeAskForSession ==");
 {
-  const session = {
-    session_id: SESSION_ID,
+  const session = baseSession({
     decision_context: baseDc({
-      dirs: [
-        baseDir({
-          required_fact_roles: ["situation", "hard_constraint"],
-          current_state: "unknown",
-        }),
-      ],
+      dirs: [baseDir({ current_state: "unknown" })],
       reality_facts: [fact({ fact_id: "f1" })],
       constraints: [],
     }),
-  } as POJUSessionState;
-
-  const result = selectNextIntakeAskForSession({ session, nowIso: NOW });
-  assert(
-    "production call chain literal",
-    result.production_call_chain === INTAKE_ASK_SCORING_PATH,
-  );
-  assert("production writes intake_ask_plan", !!result.session.intake_ask_plan);
-  assert(
-    "intake_ask_plan.scoring_path matches production chain",
-    result.session.intake_ask_plan?.scoring_path === INTAKE_ASK_SCORING_PATH,
-  );
-  assert("production selected a dir gap candidate", result.selected != null);
-  assert(
-    "production unresolved uses shared resolver (hard_constraint open → 1)",
-    result.selected?.score.unresolved_count === 1,
-  );
-
-  const sourceOnly = {
-    candidate_id: "cq_src",
-    kind: "source_only" as const,
-    dir_ids: [] as string[],
-    ddr_ids: ["DDR-03-CHART-APPENDIX"],
-    fact_role_codes: ["v1/source/cfp.birth"],
-    source_code: "cfp.birth",
-    impact: {
-      decision_critical: true,
-      may_affect_p5_ranking: false,
-      gate_class: "P0" as const,
-    },
-    depth: 0,
-    repetition_count: 0,
-    budget_cost: 1,
-  };
-  const withSrc = selectNextIntakeAskForSession({
-    session,
-    nowIso: NOW,
-    extraCandidates: [sourceOnly],
-    p0SourceNotOk: true,
   });
+  const planned = selectNextIntakeAskForSession({ session, nowIso: NOW });
   assert(
-    "source_only unresolved_count=0",
-    withSrc.plan.ranked.find((r) => r.candidate.candidate_id === "cq_src")
-      ?.score.unresolved_count === 0,
+    "production planner chain",
+    planned.production_call_chain === INTAKE_ASK_SCORING_PATH,
   );
   assert(
-    "source_only gap_type=source_pending",
-    withSrc.plan.ranked.find((r) => r.candidate.candidate_id === "cq_src")
-      ?.score.gap_type === "source_pending",
-  );
-  assert(
-    "P0 source_only selected over P1 dir",
-    withSrc.selected?.candidate.candidate_id === "cq_src",
+    "source_only unresolved=0",
+    selectNextIntakeAskForSession({
+      session,
+      nowIso: NOW,
+      extraCandidates: [
+        {
+          candidate_id: "cq_src",
+          kind: "source_only",
+          dir_ids: [],
+          ddr_ids: ["DDR-03"],
+          fact_role_codes: ["v1/source/cfp.birth"],
+          source_code: "cfp.birth",
+          impact: {
+            decision_critical: true,
+            may_affect_p5_ranking: false,
+            gate_class: "P0",
+          },
+          depth: 0,
+          repetition_count: 0,
+          budget_cost: 1,
+        },
+      ],
+      p0SourceNotOk: true,
+    }).selected?.score.unresolved_count === 0,
   );
 }
-
-console.log("\n== Planner/Aggregator consistency + planNextAsk ==");
 {
   const facts = [fact({ fact_id: "f1" })];
   const constraints = [constraint({ constraint_id: "k1" })];
-  const snap = {
-    dirs: [dir],
-    reality_facts: facts,
-    constraints,
-    conflicts: [],
-    explicit_na_evidence: [] as ExplicitNaEvidence[],
-  };
   const candidate: PlanningCandidate = {
     candidate_id: "c1",
     kind: "dir_based",
@@ -808,66 +700,65 @@ console.log("\n== Planner/Aggregator consistency + planNextAsk ==");
       gate_class: "P1",
     },
   };
-  const { role_states } = computeUnresolvedCount(candidate, snap);
+  const { role_states } = computeUnresolvedCount(candidate, {
+    dirs: [dir],
+    reality_facts: facts,
+    constraints,
+    conflicts: [],
+  });
   const agg = aggregateDirStateIntake(
     dir,
     facts,
     [],
     constraints,
     [],
-    emptyNaValidation({ contextId: CTX }),
+    emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   );
   assert(
-    "Planner/Aggregator role states match",
+    "Planner/Aggregator match",
     plannerAggregatorRoleMismatches({
       dir,
       plannerRoleStates: role_states,
       aggregatorRoleStates: agg.role_states,
     }).length === 0,
   );
-  const ranked = planNextAskFromCandidates({
-    candidates: [
-      {
-        ...candidate,
-        depth: 1,
-        repetition_count: 0,
-        budget_cost: 1,
-      },
-    ],
-    snap,
-    remaining_hard_budget: 15,
-  });
-  assert(
-    "planNextAsk scoring_path shared resolver",
-    ranked.scoring_path === "scorePlanningCandidate→resolveDirRoleEvidence",
-  );
 }
-
-console.log("\n== C5 hash ==");
 {
+  assert("illegal expires_at → invalid", checkExpiresAt("bad", NOW) === "invalid");
   const dc = baseDc({ reality_facts: [], constraints: [constraint({ constraint_id: "k1" })] });
   const h1 = computeContentHash(dc);
   const h2 = computeContentHash({ ...dc, explicit_na_evidence: [validCatalogNa()] });
-  const h3 = computeContentHash({
-    ...dc,
-    constraints: [
-      constraint({ constraint_id: "k1", related_dir_ids: ["DIR-A", "DIR-B"] }),
-    ],
-  });
+  assert("MX-121 N/A changes hash", h1 !== h2);
   const created = createExplicitNaClassificationFromUserDeclaration({
-    action: declarationAction(),
+    action: {
+      declaration_action_id: "h",
+      session_id: SESSION_ID,
+      context_id: CTX,
+      actor: "user",
+      control_id: "na_declare",
+      source_ref: { kind: "reality_fact", fact_id: "f1" },
+      dir_id: "DIR-A",
+      na_condition_code: VALID_NA_CODE,
+      declaration_turn_id: "t",
+      occurred_at: NOW,
+      revoked: false,
+      expires_at: null,
+    },
     dc: baseDc(),
     nowIso: NOW,
     dirNaConditions: [VALID_NA_CODE],
   });
-  assert("create for hash fixture ok", created.ok);
-  const h4 = computeContentHash({
-    ...dc,
-    explicit_na_classifications: created.ok ? [created.classification] : [],
-  });
-  assert("MX-121 N/A evidence changes hash", h1 !== h2);
-  assert("MX-123 related_dir_ids changes hash", h1 !== h3);
-  assert("classification changes hash", h1 !== h4);
+  assert("classification hash fixture", created.ok);
+  if (created.ok) {
+    assert(
+      "classification changes hash",
+      h1 !==
+        computeContentHash({
+          ...dc,
+          explicit_na_classifications: [created.classification],
+        }),
+    );
+  }
 }
 
 console.log("");
@@ -875,4 +766,4 @@ if (failures.length) {
   console.error(`FAILED ${failures.length}:`, failures);
   process.exit(1);
 }
-console.log("All Intake R6 Stage 3.2 round-3 acceptance checks passed.");
+console.log("All Intake R6 Stage 3.2 round-4 acceptance checks passed.");

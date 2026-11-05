@@ -57,6 +57,7 @@ export function emptyNaValidation(
 ): NaValidationContext {
   return {
     contextId: overrides.contextId ?? "",
+    sessionId: overrides.sessionId ?? "",
     realityFacts: overrides.realityFacts ?? [],
     constraints: overrides.constraints ?? [],
     confirmationEvents: overrides.confirmationEvents ?? [],
@@ -67,6 +68,8 @@ export function emptyNaValidation(
     dirCatalog: overrides.dirCatalog,
     catalogConditionEvals: overrides.catalogConditionEvals,
     topicRules: overrides.topicRules,
+    topicEvalAuthority: overrides.topicEvalAuthority,
+    currentTopicCatalogVersion: overrides.currentTopicCatalogVersion,
   };
 }
 

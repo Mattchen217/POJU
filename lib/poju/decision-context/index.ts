@@ -23,6 +23,7 @@ export * from "./question-planning";
 export * from "./question-plan-cycle";
 export * from "./production-intake-ask";
 export * from "./na-declaration";
+export * from "./topic-eval-authority";
 export * from "./conflict-lifecycle";
 export * from "./stop-criteria";
 export * from "./content-hash";

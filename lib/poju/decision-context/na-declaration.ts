@@ -2,11 +2,23 @@
  * Production ExplicitNaClassification creation (R6 Final Binding §3 / US §2.7 A3).
  * Distinct from ConfirmationEvent (E1). Not a new E1/E2 type.
  * Only a persisted user N/A declaration action may authorize classification.
+ *
+ * Production persist entry (mirrors confirmFact):
+ *   declareDirNotApplicable(sessionId, input) → mutatePOJUSession
+ *     writes session.na_declaration_actions + DC.explicit_na_classifications
+ *     + DC.explicit_na_evidence (user_explicit_na)
  */
 
+import {
+  mutatePOJUSession,
+  type CasWritePOJUSessionResult,
+  type MutatePOJUSessionOptions,
+} from "@/lib/poju/session-mutation";
+import type { POJUSessionState } from "@/lib/poju/types";
 import type {
   DecisionContext,
   ExplicitNaClassification,
+  ExplicitNaEvidence,
   NaSourceRef,
 } from "./types";
 
@@ -63,7 +75,18 @@ export type CreateNaClassificationResult =
   | { ok: true; classification: ExplicitNaClassification; action: UserNaDeclarationAction }
   | { ok: false; reason_code: string };
 
-const DEFAULT_NA_CONTROLS = ["na_declare", "na_declare_chip", "explicit_na_control"] as const;
+/** Server allowlist — re-checked at validate time, not only at create. */
+export const ALLOWED_NA_CONTROL_IDS: readonly string[] = [
+  "na_declare",
+  "na_declare_chip",
+  "explicit_na_control",
+];
+
+const DEFAULT_NA_CONTROLS = ALLOWED_NA_CONTROL_IDS;
+
+export function isAllowedNaControlId(controlId: string): boolean {
+  return ALLOWED_NA_CONTROL_IDS.includes(controlId);
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -286,7 +309,7 @@ export function createExplicitNaClassificationFromUserDeclaration(
   }
 
   const allowed = input.allowedControlIds ?? DEFAULT_NA_CONTROLS;
-  if (!allowed.includes(action.control_id)) {
+  if (!allowed.includes(action.control_id) || !isAllowedNaControlId(action.control_id)) {
     return { ok: false, reason_code: "control_id_not_allowlisted" };
   }
 
@@ -358,4 +381,303 @@ export function appendNaDeclarationAction(
     return list;
   }
   return [...list, action];
+}
+
+function appendUserExplicitNaEvidence(
+  dc: DecisionContext,
+  evidence: ExplicitNaEvidence,
+  nowIso: string,
+): DecisionContext {
+  const existing = dc.explicit_na_evidence ?? [];
+  if (existing.some((e) => e.evidence_id === evidence.evidence_id)) {
+    return dc;
+  }
+  return {
+    ...dc,
+    explicit_na_evidence: [...existing, evidence],
+    updated_at: nowIso,
+  };
+}
+
+/**
+ * Client/UI may propose these fields only. Server fills actor/session/context.
+ * Never accept model-authored actor or session_id.
+ */
+export type DeclareDirNaInput = {
+  operation_id: string;
+  declaration_action_id: string;
+  /** Must be on ALLOWED_NA_CONTROL_IDS — server re-checks. */
+  control_id: string;
+  fact_id?: string;
+  constraint_id?: string;
+  dir_id: string;
+  na_condition_code: string;
+  declaration_turn_id: string;
+  expires_at?: string | null;
+  /**
+   * Server-resolved catalog conditions for dir_id (from DIR catalog code path).
+   * Never trust model-supplied condition lists as authority without catalog join.
+   */
+  dir_na_conditions: readonly string[];
+  occurred_at?: string;
+};
+
+export type DeclareDirNaResult = CasWritePOJUSessionResult & {
+  action: UserNaDeclarationAction;
+  classification: ExplicitNaClassification;
+  evidence: ExplicitNaEvidence;
+  outcome: "appended" | "idempotent_skip";
+};
+
+export type ApplyDeclareDirNaResult = {
+  session: POJUSessionState;
+  action: UserNaDeclarationAction;
+  classification: ExplicitNaClassification;
+  evidence: ExplicitNaEvidence;
+  outcome: "appended" | "idempotent_skip";
+};
+
+/**
+ * Pure session apply used by declareDirNotApplicable CAS callback.
+ * Server determines actor / session_id / context_id from `latest` — never from input.
+ */
+export function applyDeclareDirNaToSession(
+  latest: POJUSessionState,
+  expectedSessionId: string,
+  input: DeclareDirNaInput,
+  nowIso: string,
+): ApplyDeclareDirNaResult {
+  if (latest.session_id !== expectedSessionId) {
+    throw new NaDeclarationError(
+      NA_DECLARATION_SOURCE_INVALID,
+      "session_id mismatch",
+    );
+  }
+  if (!isAllowedNaControlId(input.control_id)) {
+    throw new NaDeclarationError(
+      NA_DECLARATION_INVALID,
+      `control_id not allowlisted: ${input.control_id}`,
+    );
+  }
+  if (!input.fact_id && !input.constraint_id) {
+    throw new NaDeclarationError(
+      NA_DECLARATION_INVALID,
+      "fact_id or constraint_id required",
+    );
+  }
+  if (input.fact_id && input.constraint_id) {
+    throw new NaDeclarationError(
+      NA_DECLARATION_INVALID,
+      "fact_id and constraint_id are mutually exclusive",
+    );
+  }
+
+  const dc = latest.decision_context;
+  if (!dc || (dc.status !== "draft" && dc.status !== "final")) {
+    throw new NaDeclarationError(
+      NA_DECLARATION_CONTEXT_INVALID,
+      "Decision Context missing",
+    );
+  }
+
+  const prior = (latest.na_declaration_actions ?? []).find(
+    (a) => a.declaration_action_id === input.declaration_action_id,
+  );
+  if (prior) {
+    const cls = (dc.explicit_na_classifications ?? []).find(
+      (c) => c.declaration_action_id === prior.declaration_action_id,
+    );
+    if (!cls) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent action missing classification",
+      );
+    }
+    const ev = (dc.explicit_na_evidence ?? []).find(
+      (e) =>
+        e.evidence_type === "user_explicit_na" &&
+        e.target === "dir" &&
+        e.dir_id === prior.dir_id &&
+        e.na_condition_code === prior.na_condition_code,
+    );
+    if (!ev) {
+      throw new NaDeclarationError(
+        NA_DECLARATION_INVALID,
+        "idempotent action missing evidence",
+      );
+    }
+    return {
+      session: latest,
+      action: prior,
+      classification: cls,
+      evidence: ev,
+      outcome: "idempotent_skip",
+    };
+  }
+
+  // Server-authored identity — never from client/model.
+  const source_ref: NaSourceRef = input.fact_id
+    ? { kind: "reality_fact", fact_id: input.fact_id }
+    : { kind: "constraint", constraint_id: input.constraint_id! };
+
+  const actionDraft: UserNaDeclarationAction = {
+    declaration_action_id: input.declaration_action_id,
+    session_id: latest.session_id,
+    context_id: dc.context_id,
+    actor: "user",
+    control_id: input.control_id,
+    source_ref,
+    dir_id: input.dir_id,
+    na_condition_code: input.na_condition_code,
+    declaration_turn_id: input.declaration_turn_id,
+    occurred_at: nowIso,
+    revoked: false,
+    expires_at: input.expires_at === undefined ? null : input.expires_at,
+  };
+
+  const created = createExplicitNaClassificationFromUserDeclaration({
+    action: actionDraft,
+    dc,
+    nowIso,
+    dirNaConditions: input.dir_na_conditions,
+  });
+  if (!created.ok) {
+    throw new NaDeclarationError(NA_DECLARATION_INVALID, created.reason_code);
+  }
+
+  const evidence: ExplicitNaEvidence = {
+    evidence_id: `na_ev_${input.declaration_action_id}`,
+    target: "dir",
+    dir_id: input.dir_id,
+    na_condition_code: input.na_condition_code,
+    evidence_type: "user_explicit_na",
+    source_ref,
+    written_by: "code",
+    revoked: false,
+  };
+
+  let nextDc = appendNaClassificationToDc(dc, created.classification, nowIso);
+  nextDc = appendUserExplicitNaEvidence(nextDc, evidence, nowIso);
+  nextDc = { ...nextDc, version: dc.version + 1 };
+
+  return {
+    session: {
+      ...latest,
+      na_declaration_actions: appendNaDeclarationAction(
+        latest.na_declaration_actions,
+        created.action,
+      ),
+      decision_context: nextDc,
+    },
+    action: created.action,
+    classification: created.classification,
+    evidence,
+    outcome: "appended",
+  };
+}
+
+/**
+ * Production entry — persist user DIR N/A declaration (CAS, mirrors confirmFact).
+ * Call chain: UI control → declareDirNotApplicable → mutatePOJUSession
+ *   → applyDeclareDirNaToSession → session.na_declaration_actions + DC writes.
+ */
+export async function declareDirNotApplicable(
+  sessionId: string,
+  input: DeclareDirNaInput,
+  opts: MutatePOJUSessionOptions = {},
+): Promise<DeclareDirNaResult> {
+  let committed: ApplyDeclareDirNaResult | null = null;
+  const now = input.occurred_at ?? new Date().toISOString();
+
+  const result = await mutatePOJUSession(
+    sessionId,
+    {
+      operation_id: input.operation_id,
+      kind: "session_patch",
+      bump_dc: true,
+      apply: (latest) => {
+        const applied = applyDeclareDirNaToSession(latest, sessionId, input, now);
+        committed = applied;
+        return applied.session;
+      },
+    },
+    opts,
+  );
+
+  if (!committed) {
+    throw new NaDeclarationError(
+      NA_DECLARATION_INVALID,
+      "declareDirNotApplicable produced no action",
+    );
+  }
+
+  return {
+    ...result,
+    action: committed.action,
+    classification: committed.classification,
+    evidence: committed.evidence,
+    outcome: committed.outcome,
+  };
+}
+
+/**
+ * Production revoke — marks action + classification + matching evidence revoked.
+ * Syncs so subsequent validate fail-closed.
+ */
+export async function revokeDirNaDeclaration(
+  sessionId: string,
+  input: {
+    operation_id: string;
+    declaration_action_id: string;
+    revoked_at?: string;
+  },
+  opts: MutatePOJUSessionOptions = {},
+): Promise<CasWritePOJUSessionResult> {
+  const now = input.revoked_at ?? new Date().toISOString();
+  return mutatePOJUSession(
+    sessionId,
+    {
+      operation_id: input.operation_id,
+      kind: "session_patch",
+      bump_dc: true,
+      apply: (latest) => {
+        if (latest.session_id !== sessionId) {
+          throw new NaDeclarationError(
+            NA_DECLARATION_SOURCE_INVALID,
+            "session_id mismatch",
+          );
+        }
+        const actions = (latest.na_declaration_actions ?? []).map((a) =>
+          a.declaration_action_id === input.declaration_action_id
+            ? { ...a, revoked: true }
+            : a,
+        );
+        const dc = latest.decision_context;
+        if (!dc) return { ...latest, na_declaration_actions: actions };
+        const classifications = (dc.explicit_na_classifications ?? []).map(
+          (c) =>
+            c.declaration_action_id === input.declaration_action_id
+              ? { ...c, revoked: true }
+              : c,
+        );
+        const evidence = (dc.explicit_na_evidence ?? []).map((e) => {
+          if (e.evidence_type !== "user_explicit_na") return e;
+          if (e.evidence_id !== `na_ev_${input.declaration_action_id}`) return e;
+          return { ...e, revoked: true };
+        });
+        return {
+          ...latest,
+          na_declaration_actions: actions,
+          decision_context: {
+            ...dc,
+            explicit_na_classifications: classifications,
+            explicit_na_evidence: evidence,
+            version: dc.version + 1,
+            updated_at: now,
+          },
+        };
+      },
+    },
+    opts,
+  );
 }
