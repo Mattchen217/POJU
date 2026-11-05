@@ -4,6 +4,10 @@
  * AND association — no OR fallback with legacy dir-aggregator scoreFactContribution.
  */
 
+import {
+  findValidatedDirLevelNa,
+  type NaValidationContext,
+} from "./explicit-na-validate";
 import { isLegalFactCombination } from "./fact-combination";
 import { conflictAffectsPreferredPath } from "./stop-criteria";
 import type {
@@ -38,9 +42,29 @@ export type ResolveDirRoleInput = {
   constraints: Constraint[];
   explicitNaEvidence: ExplicitNaEvidence[];
   conflicts: Conflict[];
+  /**
+   * Required for N/A to affect resolution. Without proofs, system/user N/A
+   * markers fail closed and never derive n_a.
+   */
+  naValidation: NaValidationContext;
 };
 
 const CONSTRAINT_ROLES = new Set(["hard_constraint", "soft_constraint"]);
+
+/** Empty catalog / proofs — fail-closed N/A (tests or callers that omit catalog). */
+export function emptyNaValidation(
+  overrides: Partial<NaValidationContext> = {},
+): NaValidationContext {
+  return {
+    realityFacts: overrides.realityFacts ?? [],
+    constraints: overrides.constraints ?? [],
+    confirmationEvents: overrides.confirmationEvents ?? [],
+    cfpSourceState: overrides.cfpSourceState,
+    dirCatalog: overrides.dirCatalog,
+    catalogConditionEvals: overrides.catalogConditionEvals,
+    topicRules: overrides.topicRules,
+  };
+}
 
 /** Parse `v1/dir/{dir_id}/role/{role_code}` or bare role_code (DIR implied by caller). */
 export function parseFactRoleCode(
@@ -64,7 +88,11 @@ function factAssociatedToDir(fact: RealityFact, dirId: string): boolean {
   return (fact.related_dir_ids ?? []).includes(dirId);
 }
 
-/** Final Binding §2.1 — association gate then status×VL contribution. */
+/**
+ * Final Binding §2.1 — association gate then status×VL×user_confirmed contribution.
+ * confirmed+user_asserted contributes confirmed only when user_confirmed === true.
+ * confirmed+independently_verified contributes confirmed with user_confirmed === false.
+ */
 function factContribution(
   fact: RealityFact,
   dirId: string,
@@ -74,11 +102,16 @@ function factContribution(
   if (!factHasRoleTag(fact, roleCode, dirId)) return null;
   if (!isLegalFactCombination(fact.status, fact.verification_level)) return null;
 
+  if (fact.status === "confirmed" && fact.verification_level === "user_asserted") {
+    if (fact.user_confirmed !== true) return null;
+    return "confirmed";
+  }
   if (
     fact.status === "confirmed" &&
-    (fact.verification_level === "user_asserted" ||
-      fact.verification_level === "independently_verified")
+    fact.verification_level === "independently_verified"
   ) {
+    // Derived contract: independently_verified must keep user_confirmed === false.
+    if (fact.user_confirmed !== false) return null;
     return "confirmed";
   }
   if (
@@ -102,6 +135,15 @@ function constraintContribution(
   if (!(c.related_dir_ids ?? []).includes(dirId)) return null;
   if (c.status !== "confirmed") return null;
   if (!isLegalFactCombination(c.status, c.verification_level)) return null;
+  if (c.verification_level === "user_asserted" && c.user_confirmed !== true) {
+    return null;
+  }
+  if (
+    c.verification_level === "independently_verified" &&
+    c.user_confirmed !== false
+  ) {
+    return null;
+  }
   return "confirmed";
 }
 
@@ -118,28 +160,20 @@ function blockingConflictForDir(
   );
 }
 
-/** Live, non-revoked DIR-level N/A marker for this DIR (Final Binding §1). */
-export function findValidDirLevelNa(
-  dirId: string,
-  evidence: ExplicitNaEvidence[],
-): ExplicitNaEvidence | null {
-  for (const e of evidence) {
-    if (e.revoked) continue;
-    if (e.written_by !== "code") continue;
-    if (e.target !== "dir") continue;
-    if (e.dir_id !== dirId) continue;
-    return e;
-  }
-  return null;
-}
-
 /**
- * Shared role resolver. N/A is DIR-level only: when DIR has valid N/A marker,
- * every required role is derived as n_a (not separate role evidence).
+ * Shared role resolver. N/A is DIR-level only and only when fully validated.
+ * When DIR has a validated N/A marker, every required role is derived as n_a.
  */
 export function resolveDirRoleEvidence(input: ResolveDirRoleInput): RoleResolution {
-  const { dir, roleCode, realityFacts, constraints, explicitNaEvidence, conflicts } =
-    input;
+  const {
+    dir,
+    roleCode,
+    realityFacts,
+    constraints,
+    explicitNaEvidence,
+    conflicts,
+    naValidation,
+  } = input;
   const dirId = dir.dir_id;
 
   const associatedFactIds: string[] = [];
@@ -161,7 +195,23 @@ export function resolveDirRoleEvidence(input: ResolveDirRoleInput): RoleResoluti
     };
   }
 
-  const dirNa = findValidDirLevelNa(dirId, explicitNaEvidence);
+  const validationCtx: NaValidationContext = {
+    ...naValidation,
+    realityFacts:
+      naValidation.realityFacts.length > 0
+        ? naValidation.realityFacts
+        : realityFacts,
+    constraints:
+      naValidation.constraints.length > 0
+        ? naValidation.constraints
+        : constraints,
+  };
+
+  const dirNa = findValidatedDirLevelNa(
+    dirId,
+    explicitNaEvidence,
+    validationCtx,
+  );
   if (dirNa) {
     return {
       dir_id: dirId,
@@ -229,6 +279,10 @@ export function isRoleResolvedForPlanning(state: RoleEvidenceState): boolean {
   return state === "confirmed" || state === "n_a";
 }
 
+/**
+ * @deprecated Prefer question-planning.computeUnresolvedCount — kept as thin
+ * re-export path used by early vertical-slice tests.
+ */
 export function unresolvedRoleCountForCandidate(args: {
   factRoleCodes: string[];
   dirsById: Map<string, DIR>;
@@ -236,8 +290,15 @@ export function unresolvedRoleCountForCandidate(args: {
   constraints: Constraint[];
   explicitNaEvidence: ExplicitNaEvidence[];
   conflicts: Conflict[];
+  naValidation?: NaValidationContext;
 }): number {
   const unique = [...new Set(args.factRoleCodes)];
+  const naValidation =
+    args.naValidation ??
+    emptyNaValidation({
+      realityFacts: args.realityFacts,
+      constraints: args.constraints,
+    });
   let unresolved = 0;
   for (const code of unique) {
     const parsed = parseFactRoleCode(code);
@@ -262,6 +323,7 @@ export function unresolvedRoleCountForCandidate(args: {
       constraints: args.constraints,
       explicitNaEvidence: args.explicitNaEvidence,
       conflicts: args.conflicts,
+      naValidation,
     });
     if (!isRoleResolvedForPlanning(result.state)) unresolved += 1;
   }

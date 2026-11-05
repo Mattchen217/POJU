@@ -4,7 +4,11 @@
  */
 
 import {
-  findValidDirLevelNa,
+  findValidatedDirLevelNa,
+  type NaValidationContext,
+} from "./explicit-na-validate";
+import {
+  emptyNaValidation,
   resolveDirRoleEvidence,
   type RoleEvidenceState,
 } from "./role-resolver";
@@ -44,9 +48,26 @@ function dirHasBlockingConflict(
   );
 }
 
+function mergeNaValidation(
+  facts: RealityFact[],
+  constraints: Constraint[],
+  naValidation?: NaValidationContext,
+): NaValidationContext {
+  if (!naValidation) {
+    return emptyNaValidation({ realityFacts: facts, constraints });
+  }
+  return {
+    ...naValidation,
+    realityFacts:
+      naValidation.realityFacts.length > 0 ? naValidation.realityFacts : facts,
+    constraints:
+      naValidation.constraints.length > 0 ? naValidation.constraints : constraints,
+  };
+}
+
 /**
  * Aggregate one DIR using Final Binding §2.4:
- * conflict > DIR-level n_a > all roles confirmed → known > else unknown.
+ * conflict > validated DIR-level n_a > all roles confirmed → known > else unknown.
  * Partial role support → unknown + partial_satisfaction; no DIR `partial` state.
  */
 export function aggregateDirStateIntake(
@@ -55,9 +76,11 @@ export function aggregateDirStateIntake(
   conflicts: Conflict[] = [],
   constraints: Constraint[] = [],
   explicitNaEvidence: ExplicitNaEvidence[] = [],
+  naValidation?: NaValidationContext,
 ): IntakeAggregationResult {
   const roles = dir.required_fact_roles ?? [];
   const role_states: Record<string, RoleEvidenceState> = {};
+  const validation = mergeNaValidation(facts, constraints, naValidation);
 
   if (dirHasBlockingConflict(dir, facts, conflicts)) {
     return {
@@ -69,7 +92,11 @@ export function aggregateDirStateIntake(
     };
   }
 
-  const dirNa = findValidDirLevelNa(dir.dir_id, explicitNaEvidence);
+  const dirNa = findValidatedDirLevelNa(
+    dir.dir_id,
+    explicitNaEvidence,
+    validation,
+  );
   if (dirNa) {
     for (const r of roles) role_states[r] = "n_a";
     return {
@@ -101,6 +128,7 @@ export function aggregateDirStateIntake(
       constraints,
       explicitNaEvidence,
       conflicts,
+      naValidation: validation,
     });
     role_states[roleCode] = result.state;
     if (result.state === "conflict") {
@@ -141,6 +169,7 @@ export function reaggregateDirsIntake(
   conflicts: Conflict[] = [],
   constraints: Constraint[] = [],
   explicitNaEvidence: ExplicitNaEvidence[] = [],
+  naValidation?: NaValidationContext,
 ): DIR[] {
   return dirs.map((dir) => {
     if (dir.id_lifecycle === "deprecated") return dir;
@@ -150,6 +179,7 @@ export function reaggregateDirsIntake(
       conflicts,
       constraints,
       explicitNaEvidence,
+      naValidation,
     );
     return {
       ...dir,
