@@ -1,12 +1,14 @@
 /**
  * Fail-closed ExplicitNaEvidence validation (R6 Final Binding §1 / §3 · US §2.7).
- * Surface fields alone never authorize N/A. Catalog / topic / E1 proofs must re-verify.
+ * Surface fields + E1 alone never authorize user_explicit_na — need ExplicitNaClassification.
  */
 
 import type { ConfirmationEvent } from "./confirmation-event";
 import type {
   Constraint,
+  ExplicitNaClassification,
   ExplicitNaEvidence,
+  NaSourceRef,
   NaSystemBasis,
   RealityFact,
 } from "./types";
@@ -22,12 +24,19 @@ export type CatalogNaConditionEval = {
   orphaned?: boolean;
 };
 
-/** Topic Applicability catalog rule (Phase 2). */
+/**
+ * Topic Applicability catalog rule / live eval (Phase 2).
+ * target_dir_id is mandatory — a rule without DIR scope cannot prove applicability.
+ */
 export type TopicApplicabilityRule = {
   rule_id: string;
   topic_code: string;
-  /** Re-run: topic still not applicable for the target DIR. */
+  /** Exact DIR this rule/eval applies to. */
+  target_dir_id: string;
+  /** Re-run: topic still not applicable for target_dir_id. */
   not_applicable_for_dir: boolean;
+  revoked?: boolean;
+  stale?: boolean;
 };
 
 /** DIR catalog slice needed for N/A condition membership. */
@@ -37,32 +46,29 @@ export type DirNaCatalogEntry = {
 };
 
 export type NaValidationContext = {
+  /** Current DC context_id — classifications must match. */
+  contextId: string;
   realityFacts: RealityFact[];
   constraints: Constraint[];
-  /** Persisted E1 events for the session/DC. */
+  /** Persisted E1 events for the session/DC. E1 ≠ N/A declaration. */
   confirmationEvents: ConfirmationEvent[];
+  /**
+   * Persisted user-declared N/A classifications (code-verifiable).
+   * Required for user_explicit_na. Missing match → reject.
+   */
+  explicitNaClassifications: ExplicitNaClassification[];
+  /** Wall-clock ISO for expires_at checks; default = now. */
+  nowIso?: string;
   /** Live CFP state for DDR-03 path; omit if not chart-related. */
   cfpSourceState?:
     | "source_ok"
     | "source_absent_not_supplied"
     | "source_calc_failed"
     | "source_provenance_missing";
-  /**
-   * DIR catalog na_conditions. Absent/empty for a DIR ⇒ fail-closed
-   * (cannot prove na_condition_code membership).
-   */
   dirCatalog?: ReadonlyMap<string, DirNaCatalogEntry> | readonly DirNaCatalogEntry[];
-  /**
-   * Persisted catalog condition evaluations keyed by condition_eval_id.
-   * Required to accept catalog_na_condition_met system markers.
-   */
   catalogConditionEvals?:
     | ReadonlyMap<string, CatalogNaConditionEval>
     | readonly CatalogNaConditionEval[];
-  /**
-   * Topic Applicability rules keyed by rule_id.
-   * Required to accept topic_not_applicable system markers.
-   */
   topicRules?:
     | ReadonlyMap<string, TopicApplicabilityRule>
     | readonly TopicApplicabilityRule[];
@@ -103,6 +109,54 @@ function conditionInDirCatalog(
   return entry.na_conditions.includes(code);
 }
 
+function sourceRefEquals(a: NaSourceRef, b: NaSourceRef): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "reality_fact" && b.kind === "reality_fact") {
+    return a.fact_id === b.fact_id;
+  }
+  if (a.kind === "constraint" && b.kind === "constraint") {
+    return a.constraint_id === b.constraint_id;
+  }
+  return false;
+}
+
+function isExpired(expiresAt: string | null, nowIso: string): boolean {
+  if (expiresAt == null || expiresAt === "") return false;
+  return Date.parse(expiresAt) <= Date.parse(nowIso);
+}
+
+/**
+ * Find a live ExplicitNaClassification proving user declared this N/A condition.
+ * E1 ConfirmationEvent is never accepted as a substitute.
+ */
+export function findMatchingNaClassification(
+  evidence: ExplicitNaEvidence & { evidence_type: "user_explicit_na" },
+  ctx: NaValidationContext,
+): ExplicitNaClassification | null {
+  if (evidence.target !== "dir") {
+    // DDR user_explicit_na still needs classification scoped to chart source;
+    // Stage 3.2 vertical slice focuses DIR path; DDR uses same source_ref+condition.
+  }
+  const now = ctx.nowIso ?? new Date().toISOString();
+  const dirId = evidence.target === "dir" ? evidence.dir_id : "";
+
+  for (const row of ctx.explicitNaClassifications) {
+    if (row.revoked) continue;
+    if (row.written_by !== "code") continue;
+    if (row.authority !== "user_declared") continue;
+    if (row.context_id !== ctx.contextId) continue;
+    if (isExpired(row.expires_at, now)) continue;
+    if (evidence.target === "dir") {
+      if (row.dir_id !== dirId) continue;
+    }
+    if (row.na_condition_code !== evidence.na_condition_code) continue;
+    if (!sourceRefEquals(row.source_ref, evidence.source_ref)) continue;
+    if (!row.declaration_action_id || !row.declaration_turn_id) continue;
+    return row;
+  }
+  return null;
+}
+
 function hasE1ForFact(
   events: ConfirmationEvent[],
   factId: string,
@@ -137,6 +191,11 @@ function validateUserSource(
     if (!conditionInDirCatalog(ctx, evidence.dir_id, evidence.na_condition_code)) {
       return { ok: false, reason_code: "na_condition_not_in_catalog" };
     }
+  }
+
+  const classification = findMatchingNaClassification(evidence, ctx);
+  if (!classification) {
+    return { ok: false, reason_code: "explicit_na_classification_missing" };
   }
 
   const ref = evidence.source_ref;
@@ -234,8 +293,14 @@ function validateTopicNotApplicable(
   if (!rule) {
     return { ok: false, reason_code: "topic_rule_missing" };
   }
+  if (rule.revoked || rule.stale) {
+    return { ok: false, reason_code: "topic_rule_revoked_or_stale" };
+  }
   if (rule.topic_code !== basis.topic_code) {
     return { ok: false, reason_code: "topic_code_mismatch" };
+  }
+  if (rule.target_dir_id !== evidence.dir_id) {
+    return { ok: false, reason_code: "topic_rule_dir_mismatch" };
   }
   if (!rule.not_applicable_for_dir) {
     return { ok: false, reason_code: "topic_still_applicable" };
@@ -262,7 +327,6 @@ function validateSystemMarker(
     return { ok: false, reason_code: "system_basis_unproven" };
   }
 
-  // target=ddr — only empty_dir_source_absence on DDR-03 (checked upstream)
   if (b.kind !== "empty_dir_source_absence") {
     return { ok: false, reason_code: "ddr_system_basis_kind" };
   }
@@ -280,7 +344,7 @@ function validateSystemMarker(
 
 /**
  * Validate a candidate ExplicitNaEvidence record before persist / Gate effect.
- * Does not authorize via model semantics or written_by alone.
+ * Does not authorize via model semantics, written_by alone, or E1 alone.
  */
 export function validateExplicitNaEvidence(
   evidence: ExplicitNaEvidence,
@@ -315,10 +379,6 @@ export function validateExplicitNaEvidence(
   return validateSystemMarker(evidence, ctx);
 }
 
-/**
- * Return the first fully-validated live DIR-level N/A marker for dirId.
- * Surface-only markers (revoked/stale/unproven/mismatched) never qualify.
- */
 export function findValidatedDirLevelNa(
   dirId: string,
   evidence: ExplicitNaEvidence[] | undefined,
@@ -333,7 +393,6 @@ export function findValidatedDirLevelNa(
   return null;
 }
 
-/** Filter candidates that pass full validation for Gate / aggregation. */
 export function liveValidatedDirNaEvidence(
   all: ExplicitNaEvidence[] | undefined,
   ctx: NaValidationContext,

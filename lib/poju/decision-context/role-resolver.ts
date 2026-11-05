@@ -56,9 +56,12 @@ export function emptyNaValidation(
   overrides: Partial<NaValidationContext> = {},
 ): NaValidationContext {
   return {
+    contextId: overrides.contextId ?? "",
     realityFacts: overrides.realityFacts ?? [],
     constraints: overrides.constraints ?? [],
     confirmationEvents: overrides.confirmationEvents ?? [],
+    explicitNaClassifications: overrides.explicitNaClassifications ?? [],
+    nowIso: overrides.nowIso,
     cfpSourceState: overrides.cfpSourceState,
     dirCatalog: overrides.dirCatalog,
     catalogConditionEvals: overrides.catalogConditionEvals,

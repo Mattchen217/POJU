@@ -53,6 +53,8 @@ export interface BusinessPayload {
   }>;
   /** Intake ExplicitNaEvidence — sorted by evidence_id for stable hash. */
   explicit_na_evidence: Array<Record<string, unknown>>;
+  /** User-declared N/A classifications — sorted by classification_id. */
+  explicit_na_classifications: Array<Record<string, unknown>>;
   hypotheses: Array<{
     hypothesis_id: string;
     statement: string;
@@ -125,6 +127,13 @@ export function extractBusinessPayload(dc: DecisionContext): BusinessPayload {
       .map((e) => ({ ...e }) as Record<string, unknown>)
       .sort((a, b) =>
         String(a.evidence_id ?? "").localeCompare(String(b.evidence_id ?? "")),
+      ),
+    explicit_na_classifications: [...(dc.explicit_na_classifications ?? [])]
+      .map((c) => ({ ...c }) as Record<string, unknown>)
+      .sort((a, b) =>
+        String(a.classification_id ?? "").localeCompare(
+          String(b.classification_id ?? ""),
+        ),
       ),
     hypotheses: dc.hypotheses.map((h) => ({
       hypothesis_id: h.hypothesis_id,

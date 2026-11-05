@@ -20,6 +20,7 @@ export * from "./dir-aggregator-intake";
 export * from "./role-resolver";
 export * from "./explicit-na-validate";
 export * from "./question-planning";
+export * from "./question-plan-cycle";
 export * from "./conflict-lifecycle";
 export * from "./stop-criteria";
 export * from "./content-hash";
