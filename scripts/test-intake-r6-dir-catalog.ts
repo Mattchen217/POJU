@@ -1,6 +1,7 @@
 /**
  * S0 — DIR N/A Catalog SSOT & loader.
  * S1 — declare write-side catalog integration (DC-1/2/3/9).
+ * S2 — Freeze compose loads ACTIVE catalog; ignore authority.dirCatalog.
  *   pnpm test:intake-r6-dir-catalog
  */
 import assert from "node:assert/strict";
@@ -12,11 +13,14 @@ import {
   loadDirNaCatalog,
   resolveDirNaCatalog,
 } from "../lib/poju/decision-context/catalog";
+import { reaggregateDirsIntake } from "../lib/poju/decision-context/dir-aggregator-intake";
+import { freezeDraftForDelivery } from "../lib/poju/decision-context/freeze-to-delivery";
 import {
   applyDeclareDirNaToSession,
   membershipFromCatalogLoad,
   NaDeclarationError,
 } from "../lib/poju/decision-context/na-declaration";
+import { buildNaValidationContextFromSession } from "../lib/poju/decision-context/na-validation-from-session";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import type { POJUSessionState } from "../lib/poju/types";
 import {
@@ -30,63 +34,94 @@ import {
 
 const SSOT_DIR = "DIR-DEF-UNACCEPTABLE";
 const SSOT_CODE = "explicit_no_hard_red_lines";
+/** Non-SSOT pair for DC-8 (forged catalog only). */
+const FORGE_DIR = "DIR-A";
+const FORGE_CODE = "explicit_not_applicable";
 const WRITE_NOW = "2026-11-05T12:00:00.000Z";
 const WRITE_SESSION = "sess-s1-dir-catalog";
 const WRITE_CTX = "dc-s1-dir-catalog";
 
-function makeWriteSession(): POJUSessionState {
-  const dc: DecisionContext = {
+function e1ForFact(factId: string) {
+  return {
+    event_id: `e1_${factId}`,
+    target_type: "fact" as const,
+    fact_id: factId,
+    source_turn_id: "t1",
+    confirmation_turn_id: "t1b",
+    confirmation_action_id: `ca_${factId}`,
+    event_type: "confirm_fact" as const,
+    actor: "user" as const,
+    confirmed_at: WRITE_NOW,
+    event_version: 1,
+  };
+}
+
+function makeWriteSession(
+  overrides: {
+    dirId?: string;
+    factId?: string;
+  } = {},
+): POJUSessionState {
+  const dirId = overrides.dirId ?? SSOT_DIR;
+  const factId = overrides.factId ?? "fact_s1";
+  const fact = {
+    fact_id: factId,
+    statement: "s1",
+    status: "confirmed" as const,
+    verification_level: "user_asserted" as const,
+    source_stage: "user_supplement" as const,
+    source_turn_id: "t1",
+    user_confirmed: true,
+    fact_roles: ["situation"],
+    related_dir_ids: [dirId],
+  };
+  const dir = {
+    dir_id: dirId,
+    need: "need",
+    why: "why",
+    required_fact_roles: ["situation"],
+    current_state: "unknown" as const,
+    partial_satisfaction: false,
+    agenda_item_ids: [] as string[],
+    id_lifecycle: "active" as const,
+    may_affect_p5_ranking: false as const,
+  };
+  const draftShell: DecisionContext = {
     context_id: WRITE_CTX,
     version: 1,
     status: "draft",
     definition: {
-      concrete_event: null,
-      stakes: null,
+      concrete_event: "Stay or leave",
+      stakes: "Income",
       desired_outcome: null,
-      decision_question: null,
+      decision_question: "Q",
       goal_priorities: [],
       unacceptable_outcomes: [],
     },
-    reality_facts: [
-      {
-        fact_id: "fact_s1",
-        statement: "s1",
-        status: "confirmed",
-        verification_level: "user_asserted",
-        source_stage: "user_supplement",
-        source_turn_id: "t1",
-        user_confirmed: true,
-        fact_roles: ["situation"],
-        related_dir_ids: [SSOT_DIR],
-      },
-    ],
+    reality_facts: [fact],
     constraints: [],
     hypotheses: [],
-    dirs: [
-      {
-        dir_id: SSOT_DIR,
-        need: "need",
-        why: "why",
-        required_fact_roles: ["situation"],
-        current_state: "unknown",
-        partial_satisfaction: false,
-        agenda_item_ids: [],
-        id_lifecycle: "active",
-      },
-    ],
+    dirs: [dir],
     conflicts: [],
     content_hash: null,
     created_at: WRITE_NOW,
     updated_at: WRITE_NOW,
   };
-  return {
+  const sessionShell = {
     session_id: WRITE_SESSION,
-    decision_context: dc,
+    decision_context: draftShell,
     messages: [],
     created_at: WRITE_NOW,
     last_interaction_at: WRITE_NOW,
     expires_at: "2026-12-01T00:00:00.000Z",
+    confirmation_events: [e1ForFact(factId)],
   } as POJUSessionState;
+  const na = buildNaValidationContextFromSession(sessionShell, {
+    nowIso: WRITE_NOW,
+  });
+  const dirs = reaggregateDirsIntake([dir], [fact], [], [], [], na);
+  const dc: DecisionContext = { ...draftShell, dirs };
+  return { ...sessionShell, decision_context: dc };
 }
 
 function baseDeclareInput(
@@ -533,7 +568,112 @@ function main() {
     );
   }
 
-  console.log("\nAll intake-r6-dir-catalog (S0+S1) checks passed.");
+  // --- S2 Freeze compose (DC-1 Freeze / DC-8) ---
+  // Fail-closed !load.ok → FreezeError.code is code-reviewed, not runtime-tested.
+  console.log("\nS2 Freeze compose catalog integration");
+
+  {
+    const session = makeWriteSession();
+    const applied = applyDeclareDirNaToSession(
+      session,
+      WRITE_SESSION,
+      baseDeclareInput({ declaration_action_id: "na-act-s2-dc1" }),
+      WRITE_NOW,
+    );
+    assert.equal(applied.outcome, "appended");
+    const draft = applied.session.decision_context!;
+    const pack = freezeDraftForDelivery(structuredClone(draft), {
+      session: applied.session,
+      now: WRITE_NOW,
+    });
+    assert.equal(pack.frozen.status, "final");
+    const frozenDir = pack.frozen.dirs.find((d) => d.dir_id === SSOT_DIR);
+    assert.ok(frozenDir);
+    assert.equal(
+      frozenDir!.current_state,
+      "n_a",
+      "DC-1 Freeze: SSOT-authorized Session N/A must yield DIR n_a",
+    );
+    console.log("  PASS  DC-1 Freeze SSOT pair → DIR n_a via production compose");
+  }
+
+  {
+    // Strengthened DC-8: Session owns full N/A stack for a non-SSOT pair;
+    // forged authority.dirCatalog lists that pair; production compose must ignore it.
+    const session = makeWriteSession({ dirId: FORGE_DIR, factId: "fact_forge" });
+    const source_ref = {
+      kind: "reality_fact" as const,
+      fact_id: "fact_forge",
+    };
+    const action = {
+      declaration_action_id: "na-act-s2-dc8",
+      session_id: WRITE_SESSION,
+      context_id: WRITE_CTX,
+      actor: "user" as const,
+      control_id: "na_declare",
+      source_ref,
+      dir_id: FORGE_DIR,
+      na_condition_code: FORGE_CODE,
+      declaration_turn_id: "turn_dc8",
+      occurred_at: WRITE_NOW,
+      revoked: false,
+      expires_at: null as string | null,
+    };
+    const classification = {
+      classification_id: "na_cls_na-act-s2-dc8",
+      context_id: WRITE_CTX,
+      source_ref,
+      dir_id: FORGE_DIR,
+      na_condition_code: FORGE_CODE,
+      authority: "user_declared" as const,
+      written_by: "code" as const,
+      declaration_action_id: "na-act-s2-dc8",
+      declaration_turn_id: "turn_dc8",
+      revoked: false,
+      expires_at: null as string | null,
+      created_at: WRITE_NOW,
+    };
+    const evidence = {
+      evidence_id: "na_ev_na-act-s2-dc8",
+      target: "dir" as const,
+      dir_id: FORGE_DIR,
+      na_condition_code: FORGE_CODE,
+      evidence_type: "user_explicit_na" as const,
+      source_ref,
+      written_by: "code" as const,
+      revoked: false,
+    };
+    const dc = {
+      ...session.decision_context!,
+      explicit_na_classifications: [classification],
+      explicit_na_evidence: [evidence],
+    };
+    assert.equal(dc.dirs[0]!.current_state, "known");
+    const sess: POJUSessionState = {
+      ...session,
+      decision_context: dc,
+      na_declaration_actions: [action],
+    };
+    const pack = freezeDraftForDelivery(structuredClone(dc), {
+      session: sess,
+      now: WRITE_NOW,
+      authority: {
+        dirCatalog: [{ dir_id: FORGE_DIR, na_conditions: [FORGE_CODE] }],
+      },
+    });
+    assert.equal(pack.frozen.status, "final");
+    assert.notEqual(
+      pack.frozen.dirs[0]!.current_state,
+      "n_a",
+      "DC-8: forged authority.dirCatalog must not authorize non-SSOT pair",
+    );
+    assert.equal(pack.frozen.dirs[0]!.current_state, "known");
+    console.log(
+      "  PASS  DC-8 forged dirCatalog ignored — Session N/A for non-SSOT pair → not n_a",
+    );
+  }
+
+  console.log("\nAll intake-r6-dir-catalog (S0+S1+S2) checks passed.");
 }
 
 main();

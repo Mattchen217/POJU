@@ -8,7 +8,11 @@ import {
   computeContentHash,
   extractBusinessPayload,
 } from "./content-hash";
-import { freezeDecisionContext, type FreezeOptions } from "./freeze";
+import {
+  ACTIVE_DIR_NA_CATALOG_VERSION,
+  loadDirNaCatalog,
+} from "./catalog";
+import { FreezeError, freezeDecisionContext, type FreezeOptions } from "./freeze";
 import type { NaValidationContext } from "./explicit-na-validate";
 import {
   buildNaValidationContextFromSession,
@@ -116,8 +120,9 @@ export function assertSessionDraftBusinessSnapshotBound(
 
 /**
  * Freeze-path NaValidationContext: Session SoT for confirmation / N/A actions /
- * topic eval rows. Caller authority may only supply catalog/CFP gap fields —
- * never replace Session event stores.
+ * topic eval rows. T2 dirCatalog comes only from loadDirNaCatalog(ACTIVE).
+ * Caller authority.dirCatalog is ignored. Other non-T2 gap fields (CFP /
+ * catalogConditionEvals / topicRules) may still pass through after T0 strip.
  */
 export function buildFreezeNaValidationFromSession(
   session: POJUSessionState,
@@ -134,6 +139,7 @@ export function buildFreezeNaValidationFromSession(
     realityFacts: _realityFacts,
     constraints: _constraints,
     explicitNaClassifications: _explicitNaClassifications,
+    dirCatalog: _callerDirCatalog,
     ...catalogOrCfpAuthority
   } = raw;
 
@@ -141,6 +147,12 @@ export function buildFreezeNaValidationFromSession(
     session.topic_catalog_version != null && session.topic_catalog_version !== ""
       ? session.topic_catalog_version
       : undefined;
+
+  // T2 — production ACTIVE catalog only (code-reviewed fail-closed; not Registry-injectable).
+  const load = loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION);
+  if (!load.ok) {
+    throw new FreezeError(load.reason_code, { code: load.reason_code });
+  }
 
   return buildNaValidationContextFromSession(session, {
     ...catalogOrCfpAuthority,
@@ -153,6 +165,8 @@ export function buildFreezeNaValidationFromSession(
     naDeclarationActions: session.na_declaration_actions ?? [],
     topicEvalAuthority: session.topic_applicability_evals,
     currentTopicCatalogVersion: topicVersion,
+    // T2 overwrite — never from caller authority.dirCatalog.
+    dirCatalog: load.entries,
   });
 }
 

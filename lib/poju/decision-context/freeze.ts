@@ -25,9 +25,12 @@ import { evaluateDecisionSufficiency } from "./stop-criteria";
 import type { DecisionContext } from "./types";
 
 export class FreezeError extends Error {
-  constructor(message: string) {
+  readonly code?: string;
+
+  constructor(message: string, options?: { code?: string }) {
     super(message);
     this.name = "FreezeError";
+    this.code = options?.code;
   }
 }
 
