@@ -56,8 +56,10 @@ async function main() {
     aggregateDirState,
     applySufficiencyFreezeToSession,
     buildNaValidationContextFromSession,
+    computeContentHash,
     computeUnresolvedCount,
     freezeDecisionContext,
+    freezeDraftForDelivery,
     FreezeError,
     naValidationBoundToDc,
     persistV2FromFinalOnSession,
@@ -834,6 +836,179 @@ async function main() {
     assert.equal(prodAgg[0]!.current_state, frozen.dirs[0]!.current_state);
     console.log(
       "  PASS  Planner / Production agg / Freeze agree on role_states + current_state",
+    );
+  }
+
+  // ---------- E. Session/DC business snapshot binding ----------
+  console.log("\n== E. freezeDraftForDelivery Session/DC snapshot binding ==");
+  {
+    const draft = makeSufficientDraft();
+    const session = sessionOf(draft);
+
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(
+          { ...draft, context_id: "OTHER_CTX" },
+          { session, now: NOW },
+        ),
+      (e: unknown) =>
+        e instanceof Error && String(e.message).includes("context_id mismatch"),
+    );
+    console.log("  PASS  context_id mismatch → reject");
+
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(
+          { ...draft, version: draft.version + 1 },
+          { session, now: NOW },
+        ),
+      (e: unknown) =>
+        e instanceof Error && String(e.message).includes("version mismatch"),
+    );
+    console.log("  PASS  version mismatch → reject");
+
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(draft, {
+          session: sessionOf({ ...draft, status: "final", content_hash: "a".repeat(64) }),
+          now: NOW,
+        }),
+      (e: unknown) =>
+        e instanceof Error &&
+        String(e.message).includes("session DC status must be draft"),
+    );
+    console.log("  PASS  session final + draft draft → reject");
+
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(
+          {
+            ...draft,
+            reality_facts: [
+              {
+                ...draft.reality_facts[0]!,
+                statement: "TAMPERED FACT",
+              },
+            ],
+          },
+          { session, now: NOW },
+        ),
+      (e: unknown) =>
+        e instanceof Error &&
+        String(e.message).includes("reality_facts"),
+    );
+    console.log("  PASS  facts diverge → reject");
+
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(
+          {
+            ...draft,
+            explicit_na_evidence: [
+              {
+                evidence_id: "na_ev_tamper",
+                target: "dir",
+                dir_id: "DIR-A",
+                na_condition_code: NA_CODE,
+                evidence_type: "user_explicit_na",
+                source_ref: { kind: "reality_fact", fact_id: "f_runway" },
+                written_by: "code",
+                revoked: false,
+              },
+            ],
+          },
+          { session, now: NOW },
+        ),
+      (e: unknown) =>
+        e instanceof Error &&
+        String(e.message).includes("explicit_na_evidence"),
+    );
+    console.log("  PASS  Explicit N/A Evidence diverge → reject");
+
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(
+          {
+            ...draft,
+            constraints: [
+              {
+                constraint_id: "k_tamper",
+                statement: "tampered",
+                category: "time",
+                status: "confirmed",
+                verification_level: "user_asserted",
+                source_stage: "user_supplement",
+                source_turn_id: "t_k",
+                rigidity: "hard",
+                user_confirmed: true,
+                related_dir_ids: ["DIR-A"],
+              },
+            ],
+          },
+          { session, now: NOW },
+        ),
+      (e: unknown) =>
+        e instanceof Error && String(e.message).includes("constraints"),
+    );
+    assert.throws(
+      () =>
+        freezeDraftForDelivery(
+          {
+            ...draft,
+            conflicts: [
+              {
+                conflict_id: "c_tamper",
+                fact_ids: ["f_runway"],
+                conflict_field: "path",
+                statements_snapshot: ["a", "b"],
+                source_refs: [
+                  {
+                    fact_id: "f_runway",
+                    source_stage: "user_supplement",
+                    source_turn_id: "t_runway",
+                  },
+                ],
+                state: "open",
+                resolution: null,
+                user_confirmation: false,
+                affects_preferred_path: false,
+              },
+            ],
+          },
+          { session, now: NOW },
+        ),
+      (e: unknown) =>
+        e instanceof Error && String(e.message).includes("conflicts"),
+    );
+    console.log("  PASS  constraints / conflicts diverge → reject");
+
+    const pack = freezeDraftForDelivery(structuredClone(draft), {
+      session,
+      now: NOW,
+    });
+    assert.equal(pack.frozen.status, "final");
+    assert.ok(pack.frozen.content_hash);
+    assert.equal(pack.version_snapshot.content_hash, pack.frozen.content_hash);
+    assert.equal(pack.binding.context_hash, pack.frozen.content_hash);
+    console.log("  PASS  identical snapshot → Freeze OK");
+
+    // Persist + reload: use ensureSessionFrozen path already seeded in C; also
+    // verify matching clone freeze then in-memory apply keeps hash.
+    const applied = applySufficiencyFreezeToSession(session, { now: NOW });
+    assert.equal(applied.ok, true);
+    if (!applied.ok || ("skipped" in applied && applied.skipped)) {
+      throw new Error("expected matching freeze apply");
+    }
+    assert.equal(
+      applied.session.decision_context?.content_hash,
+      pack.frozen.content_hash,
+    );
+    assert.equal(
+      computeContentHash(applied.pack.version_snapshot),
+      applied.pack.frozen.content_hash,
+    );
+    console.log(
+      "  PASS  matching Freeze → version snapshot + content_hash consistent",
     );
   }
 
