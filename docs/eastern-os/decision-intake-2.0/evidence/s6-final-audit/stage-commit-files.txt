@@ -1,0 +1,84 @@
+﻿=== S0-land ===
+SHA=db019cbdb84aac92f7b8df413c778246fe2b5387
+PARENT=fec0d7a3d8f821f82f94bcc785e1eab2eb50453f
+SUBJECT=feat(decision-intake): S0 DIR N/A catalog SSOT and loader
+FILES:
+A	lib/poju/decision-context/catalog/dir-na-catalog.v1.ts
+A	lib/poju/decision-context/catalog/index.ts
+A	lib/poju/decision-context/catalog/load-dir-na-catalog.ts
+M	lib/poju/decision-context/index.ts
+M	package.json
+A	scripts/fixtures/dir-na-catalog-test-registry.ts
+A	scripts/test-intake-r6-dir-catalog.ts
+
+=== S0-fix ===
+SHA=118088564830c039d3eddf4821cc30e087f7885d
+PARENT=db019cbdb84aac92f7b8df413c778246fe2b5387
+SUBJECT=fix(decision-intake): S0 catalog resolver exception boundary
+FILES:
+M	lib/poju/decision-context/catalog/load-dir-na-catalog.ts
+M	scripts/fixtures/dir-na-catalog-test-registry.ts
+M	scripts/test-intake-r6-dir-catalog.ts
+
+=== S1-feat ===
+SHA=202e6d4422113fb601cd9f488f66dfa6551c3862
+PARENT=118088564830c039d3eddf4821cc30e087f7885d
+SUBJECT=feat(decision-intake): S1 wire declare write to DIR N/A catalog loader
+FILES:
+M	lib/poju/decision-context/na-declaration.ts
+M	scripts/test-intake-r6-dir-catalog.ts
+M	scripts/test-intake-r6-na-cas.ts
+M	scripts/test-intake-r6-role-resolver.ts
+
+=== S1-test ===
+SHA=7eda9bd44791562c0f4c151231df898fe6319c6a
+PARENT=202e6d4422113fb601cd9f488f66dfa6551c3862
+SUBJECT=test(decision-intake): S1 tighten DC-2/3 and loader reason mapping asserts
+FILES:
+M	scripts/test-intake-r6-dir-catalog.ts
+
+=== S2 ===
+SHA=9411c83f475605945874f87bb969db3ac1329ee9
+PARENT=7eda9bd44791562c0f4c151231df898fe6319c6a
+SUBJECT=feat(decision-intake): S2 Freeze compose loads ACTIVE DIR N/A catalog
+FILES:
+M	lib/poju/decision-context/freeze-to-delivery.ts
+M	lib/poju/decision-context/freeze.ts
+M	scripts/test-intake-r6-dir-catalog.ts
+
+=== S3 ===
+SHA=0e09531c06840d373d8715426dec542c61130ebe
+PARENT=9411c83f475605945874f87bb969db3ac1329ee9
+SUBJECT=feat(decision-intake): S3 Wire reason_code for Freeze failures
+FILES:
+M	lib/poju/decision-context/production-freeze-wire.ts
+M	package.json
+A	scripts/test-intake-r6-freeze-wire-reason.ts
+
+=== S4-impl ===
+SHA=eff73fd1358abd9bc05d6675ca7aa45937bf9247
+PARENT=0e09531c06840d373d8715426dec542c61130ebe
+SUBJECT=feat(decision-intake): S4 Write/Freeze consistency + N/A validate binds
+FILES:
+M	lib/poju/decision-context/explicit-na-validate.ts
+M	lib/poju/decision-context/na-declaration.ts
+M	package.json
+M	scripts/test-intake-r6-freeze-versioning.ts
+A	scripts/test-intake-r6-write-freeze-consistency.ts
+
+=== S4-c25 ===
+SHA=b1a1f0242d445f1b11f948225c9bac2231e4655b
+PARENT=eff73fd1358abd9bc05d6675ca7aa45937bf9247
+SUBJECT=test(decision-intake): S4 C25 prove real casWritePOJUSession persist fail
+FILES:
+M	scripts/test-intake-r6-write-freeze-consistency.ts
+
+=== S5 ===
+SHA=76fa70bd5577ae4cc5b793e205518c38c5baf2b5
+PARENT=b1a1f0242d445f1b11f948225c9bac2231e4655b
+SUBJECT=test(decision-intake): S5 F1–F4 Freeze authority regression isolation
+FILES:
+M	package.json
+A	scripts/test-intake-r6-freeze-authority-regression.ts
+M	scripts/test-intake-r6-freeze-versioning.ts
+
