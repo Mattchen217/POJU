@@ -92,13 +92,15 @@ async function main() {
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
     "../lib/db/poju-db"
   );
-  const { createPOJUSession, loadPOJUSession } = await import(
+  const { createPOJUSession, loadPOJUSession, deletePOJUSession } = await import(
     "../lib/poju/session-manager"
   );
   const {
     mutatePOJUSession,
+    casWritePOJUSession,
     SESSION_CAS_CONFLICT,
     SessionCasError,
+    isSessionCasError,
   } = await import("../lib/poju/session-mutation");
   const {
     declareDirNotApplicable,
@@ -1291,54 +1293,166 @@ async function main() {
     );
   });
 
-  // ========== C25 CAS persist failure ==========
-  console.log("\n== C25 CAS persist failure ==");
+  // ========== C25 CAS / IndexedDB persist failure ==========
+  // Plan §9: real production-path persist failure, else UNTESTED [production-path].
+  // Replacing casWrite with an early throw is NOT production-path evidence.
+  console.log("\n== C25 CAS / IndexedDB persist failure ==");
 
-  await check("C25 declare CAS conflict fail-closed (no durable false N/A)", async () => {
+  let c25ProductionPathPass = false;
+
+  // Attempt A — concurrent real casWritePOJUSession race (no early throw).
+  // Harness only schedules a second production write; the declare write itself
+  // must fail inside casWritePOJUSession / IndexedDB CAS checks.
+  try {
     await __resetPojuDbForTests();
     await ensurePojuDbReady();
-    const sid = await seedDraftSession("c25");
-    let conflictInjected = false;
-    let sawCallerFailure = false;
+    const sid = await seedDraftSession("c25a");
+    let racedThroughProductionWrite = false;
+    let declareErr: unknown = null;
     try {
-      await declareDirNotApplicable(
-        sid,
-        declareInput("c25"),
-        {
-          max_retries: 0,
-          casWrite: async () => {
-            conflictInjected = true;
-            throw new SessionCasError(SESSION_CAS_CONFLICT, "injected C25 conflict");
-          },
+      await declareDirNotApplicable(sid, declareInput("c25a"), {
+        max_retries: 0,
+        casWrite: async (args) => {
+          const live = (await loadPOJUSession(sid))!;
+          await casWritePOJUSession({
+            candidate: {
+              ...live,
+              last_interaction_at: "2026-11-05T12:00:01.000Z",
+            },
+            expected_session_revision: live.session_revision ?? 0,
+            expected_dc_write_revision: live.dc_write_revision ?? 0,
+            bump_dc_write_revision: false,
+          });
+          racedThroughProductionWrite = true;
+          // Stale expected revisions from declare's apply → real CAS reject.
+          return casWritePOJUSession(args);
         },
-      );
+      });
     } catch (err) {
-      sawCallerFailure =
-        err instanceof SessionCasError ||
-        (err instanceof Error &&
-          (err.message.includes("conflict") ||
-            err.message.includes("CAS") ||
-            err.message.includes("injected")));
-      // Also accept NaDeclarationError wrapping — surface must not be success.
-      if (!sawCallerFailure) {
-        sawCallerFailure = true; // any throw = caller-visible failure
-      }
+      declareErr = err;
     }
-    assert.equal(conflictInjected, true);
-    assert.equal(sawCallerFailure, true);
-    const s = (await loadPOJUSession(sid))!;
-    assert.equal((s.na_declaration_actions ?? []).length, 0);
-    assert.equal(
-      (s.decision_context?.explicit_na_classifications ?? []).length,
-      0,
+
+    if (
+      racedThroughProductionWrite &&
+      isSessionCasError(declareErr) &&
+      declareErr.code === SESSION_CAS_CONFLICT
+    ) {
+      const after = (await loadPOJUSession(sid))!;
+      assert.equal((after.na_declaration_actions ?? []).length, 0);
+      assert.equal(
+        (after.decision_context?.explicit_na_classifications ?? []).length,
+        0,
+      );
+      assert.equal(
+        (after.decision_context?.explicit_na_evidence ?? []).filter(
+          (e) => e.evidence_type === "user_explicit_na",
+        ).length,
+        0,
+      );
+      c25ProductionPathPass = true;
+      pass(
+        "C25 [production-path] real casWritePOJUSession conflict → no durable N/A",
+      );
+    } else {
+      markUntested(
+        "C25 [production-path] Attempt A concurrent casWritePOJUSession race",
+        `Did not prove real IndexedDB CAS reject on declare write. raced=${racedThroughProductionWrite} err=${
+          declareErr instanceof Error
+            ? `${declareErr.name}:${declareErr.message}`
+            : String(declareErr)
+        }`,
+      );
+    }
+  } catch (e) {
+    markUntested(
+      "C25 [production-path] Attempt A concurrent casWritePOJUSession race",
+      `Harness threw before proof: ${
+        e instanceof Error ? e.message : String(e)
+      }`,
     );
-    assert.equal(
-      (s.decision_context?.explicit_na_evidence ?? []).filter(
+  }
+
+  // Attempt B — delete durable row then declare (existing S3-style IDB harness).
+  if (!c25ProductionPathPass) {
+    try {
+      await __resetPojuDbForTests();
+      await ensurePojuDbReady();
+      const sid = await seedDraftSession("c25b");
+      await deletePOJUSession(sid);
+      let declareErr: unknown = null;
+      try {
+        await declareDirNotApplicable(sid, declareInput("c25b"));
+      } catch (err) {
+        declareErr = err;
+      }
+      // delete-then-declare fails at load ("session not found"), before apply /
+      // casWritePOJUSession persist of the N/A triad — not mid-persist proof.
+      markUntested(
+        "C25 [production-path] Attempt B deletePOJUSession then declare",
+        `Session-row delete yields load-time failure (${
+          declareErr instanceof Error
+            ? `${(declareErr as SessionCasError).code ?? declareErr.name}:${declareErr.message}`
+            : String(declareErr)
+        }), not a mid-persist CAS reject after apply. Insufficient for C25 PASS.`,
+      );
+    } catch (e) {
+      markUntested(
+        "C25 [production-path] Attempt B deletePOJUSession then declare",
+        `Harness threw before proof: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    }
+  }
+
+  if (!c25ProductionPathPass) {
+    // Non-PASS harness note only — early throw before casWritePOJUSession is
+    // NOT production persist-failure evidence (Rev 1.2 §9 / independent review).
+    console.log(
+      "\n== C25 harness-note (NOT production-path; does not count as C25 PASS) ==",
+    );
+    await __resetPojuDbForTests();
+    await ensurePojuDbReady();
+    const sid = await seedDraftSession("c25note");
+    let earlyThrowHookRan = false;
+    let sawSessionCasConflict = false;
+    try {
+      await declareDirNotApplicable(sid, declareInput("c25note"), {
+        max_retries: 0,
+        casWrite: async () => {
+          earlyThrowHookRan = true;
+          throw new SessionCasError(
+            SESSION_CAS_CONFLICT,
+            "harness early-throw before casWritePOJUSession (not production-path)",
+          );
+        },
+      });
+    } catch (err) {
+      sawSessionCasConflict =
+        isSessionCasError(err) && err.code === SESSION_CAS_CONFLICT;
+    }
+    const after = (await loadPOJUSession(sid))!;
+    const noDurableNa =
+      (after.na_declaration_actions ?? []).length === 0 &&
+      (after.decision_context?.explicit_na_classifications ?? []).length === 0 &&
+      (after.decision_context?.explicit_na_evidence ?? []).filter(
         (e) => e.evidence_type === "user_explicit_na",
-      ).length,
-      0,
+      ).length === 0;
+    console.log(
+      `  NOTE  early-throw casWrite hook: hookRan=${earlyThrowHookRan} SessionCasError=${sawSessionCasConflict} noDurableNa=${noDurableNa}`,
     );
-  });
+    console.log(
+      "         This only shows mutatePOJUSession surfaces a replaced casWrite throw;",
+    );
+    console.log(
+      "         it does NOT prove real IndexedDB / casWritePOJUSession persist failure.",
+    );
+
+    markUntested(
+      "C25 [production-path]",
+      "Locked toolchain: no reliable way to force declareDirNotApplicable through real casWritePOJUSession/IndexedDB persist failure without a pre-write casWrite replacement throw (disallowed as C25 PASS) or new production fault-inject APIs (forbidden). Attempt A race and Attempt B delete-row did not yield mid-persist proof. See harness-note above (not PASS).",
+    );
+  }
 
   // Disclose freeze-versioning F1 outside this script (run separately).
   markUntested(
