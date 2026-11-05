@@ -19,6 +19,7 @@ export * from "./dir-aggregator";
 export * from "./dir-aggregator-intake";
 export * from "./role-resolver";
 export * from "./explicit-na-validate";
+export * from "./catalog";
 export * from "./na-validation-from-session";
 export * from "./question-planning";
 export * from "./question-plan-cycle";
