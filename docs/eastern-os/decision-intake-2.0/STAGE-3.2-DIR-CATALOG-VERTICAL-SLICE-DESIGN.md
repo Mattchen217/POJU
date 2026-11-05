@@ -3,9 +3,9 @@
 | Field | Value |
 |---|---|
 | **Status** | **DESIGN ONLY — NO PRODUCTION IMPLEMENTATION AUTHORIZED** |
-| **Revision** | **1.2** (clarify DC-4: request-version-missing vs SSOT-unavailable; production Freeze reachability) |
-| **Parent design commit** | `6efd0b1f37c43a8f3f0caf03bca4b5ed6814ab4b` |
-| **Prior** | R1 `ce914225…` → R1.1 `51f625e7…` → R1.1 doc `6efd0b1f…` |
+| **Revision** | **1.3** (static import boundary; pure resolver for DC-4; Freeze-reachable faults only) |
+| **Parent design commit** | `e8c16f0cc3e9d8cc793c19c6c86046d129a835ec` |
+| **Prior** | … → R1.1 `6efd0b1f…` → R1.2 `e8c16f0c…` |
 | **Depends on** | N/A Authority audit + Supplement 1 (`STAGE-3.2-NA-AUTHORITY-PRODUCTION-SOURCES-AUDIT.md`); R6 freeze `5012e114…` |
 | **In scope** | `DIR Catalog SSOT → declareDirNotApplicable write check → Freeze production read → N/A Validation` |
 | **Out of scope** | CFP Live Reader; Topic Eval writer/recompute; Ask / Versioning / Lifecycle authority rewires; Schema / C5 / Gate changes; production or test code edits in **this design revision** |
@@ -111,11 +111,11 @@ Write and Freeze **do not** share one catalog membership helper today: write use
 | Artifact | Proposed path | Role |
 |---|---|---|
 | Versioned entries | `lib/poju/decision-context/catalog/dir-na-catalog.v1.ts` | **Runtime SSOT** — exported const table |
-| Loader API | `lib/poju/decision-context/catalog/load-dir-na-catalog.ts` | `loadDirNaCatalog`, membership helpers |
+| Loader API | `lib/poju/decision-context/catalog/load-dir-na-catalog.ts` | `resolveDirNaCatalog` (pure) + `loadDirNaCatalog` (production wrapper), membership helpers |
 | Shared assert | same module or `dir-na-catalog-membership.ts` | Used by write + Freeze |
 | Human doc | `PHASE-2-DIR-CATALOG.md` | Spec narrative; optional future CI drift check (**separate auth**) |
 
-**Forbidden:** `fs.readFile` / fetch / markdown parse of Phase 2 doc at runtime.
+**Forbidden:** `fs.readFile` / fetch / markdown parse of Phase 2 doc at runtime. **No dynamic `import()`** for DIR catalog SSOT unless separately justified and authorized — default is **static import** of the registry module.
 
 ### 3.2 Catalog version type (unified — Revision 1 / 1.1)
 
@@ -159,31 +159,51 @@ type DirNaCatalogLoadResult =
         | "dir_catalog_version_missing"      // request was null/undefined
         | "dir_catalog_version_invalid"      // not a positive integer
         | "dir_catalog_version_unknown"      // positive integer, not this caller's concern as "ACTIVE gap"
-        | "dir_catalog_ssot_unavailable"    // positive integer equals ACTIVE (or requested production major) but no snapshot registered / SSOT gap
-        | "dir_catalog_load_failed";        // unexpected throw / corrupt read after version accepted
+        | "dir_catalog_ssot_unavailable"    // Registry object available; no snapshot for ACTIVE (see §3.2.1)
+        | "dir_catalog_load_failed";        // unexpected throw / corrupt materialize after version accepted
     };
 
-function loadDirNaCatalog(
+/** Pure resolver — injectable registry for tests; no I/O. */
+function resolveDirNaCatalog(
   requested: DirNaCatalogVersion | null | undefined,
+  registry: ReadonlyMap<DirNaCatalogVersion, DirNaCatalogSnapshot>,
+  activeVersion: DirNaCatalogVersion,
 ): DirNaCatalogLoadResult;
+
+/** Production wrapper — static production registry + ACTIVE only. */
+function loadDirNaCatalog(
+  requested: DirNaCatalogVersion | null | undefined = ACTIVE_DIR_NA_CATALOG_VERSION,
+): DirNaCatalogLoadResult;
+// loadDirNaCatalog(requested) ≡ resolveDirNaCatalog(requested, PRODUCTION_REGISTRY, ACTIVE_DIR_NA_CATALOG_VERSION)
 ```
 
 **Version comparison:** strict numeric equality (`requested === registeredKey`). No semver range. No string SoT.
 
-**Fault taxonomy (Revision 1.2 — do not collapse these):**
+#### 3.2.1 Static module loading boundary (Revision 1.3)
+
+| Situation | Classification | Runtime FreezeError? |
+|---|---|---|
+| **Registry is loaded** (static import succeeded) but has **no snapshot** for `ACTIVE_DIR_NA_CATALOG_VERSION` | `dir_catalog_ssot_unavailable` | **Yes** — production Freeze maps this code |
+| Statically imported SSOT / registry **module missing or unresolvable** at build/bundle time | **Build / deployment failure** | **No** — not a FreezeError; bundler/CI fails before runtime |
+| Claim that `loadDirNaCatalog` can `try/catch` a failed **static** `import` of the SSOT module | **Invalid** | Static import resolution is not a catchable runtime catalog fault inside the loader |
+
+Do **not** introduce dynamic imports for this slice unless separately justified and explicitly specified in a later authorized design.
+
+#### 3.2.2 Fault taxonomy (preserve 1.2 splits; refine SSOT meaning)
 
 | Fault | When | `reason_code` |
 |---|---|---|
-| **Request version absent** | Caller passed `null` / `undefined` into `loadDirNaCatalog` | `dir_catalog_version_missing` |
-| **Request version invalid** | Non-integer / `≤ 0` / `NaN` (e.g. `1.1`) | `dir_catalog_version_invalid` |
-| **Request version unknown** | Positive integer **not** in registry, and it is **not** the production ACTIVE major being resolved as SSOT gap (typical: caller/probe `999`) | `dir_catalog_version_unknown` |
-| **Catalog SSOT unavailable** | Production resolves `ACTIVE_DIR_NA_CATALOG_VERSION` (positive integer) but **no snapshot** is registered for that key (mis-ship / empty registry / ACTIVE bumped without table) | `dir_catalog_ssot_unavailable` |
-| **Load failed** | Version argument already validated as positive integer **in** registry lookup path, then unexpected throw / corrupt snapshot materialization | `dir_catalog_load_failed` |
+| **Request version absent** | `requested` is `null` / `undefined` | `dir_catalog_version_missing` |
+| **Request version invalid** | Non-integer / `≤ 0` / `NaN` | `dir_catalog_version_invalid` |
+| **Request version unknown** | Positive integer ≠ `activeVersion` and absent from `registry` (e.g. probe `999`) | `dir_catalog_version_unknown` |
+| **Catalog SSOT unavailable** | `registry` **object is available**; `requested === activeVersion` (production: ACTIVE); **no snapshot** for that key | `dir_catalog_ssot_unavailable` |
+| **Load failed** | Version accepted for lookup; then unexpected throw / corrupt snapshot materialization inside resolver | `dir_catalog_load_failed` |
 
-**Implementation note for ACTIVE vs unknown:**  
-`loadDirNaCatalog(requested)` should return `dir_catalog_ssot_unavailable` when `requested === ACTIVE_DIR_NA_CATALOG_VERSION && !registry.has(requested)`.  
-Return `dir_catalog_version_unknown` when `requested` is some other positive integer absent from the registry.  
-This keeps DC-4 (SSOT gap on ACTIVE) distinct from DC-6 (arbitrary unknown major).
+**ACTIVE vs unknown (in `resolveDirNaCatalog`):**  
+- `requested === activeVersion && !registry.has(requested)` → `dir_catalog_ssot_unavailable`  
+- `requested` other positive integer absent → `dir_catalog_version_unknown`  
+
+This keeps DC-4 distinct from DC-6.
 
 **Compatibility with Phase 2 numeric definition:**
 
@@ -328,35 +348,34 @@ applySufficiencyFreezeToSession
 
 `applySufficiencyFreezeToSession` continues to omit `authority` (~L145–148).
 
-### 5.2 Locked Freeze failure semantics (Revision 1.1 — structured codes required)
+### 5.2 Locked Freeze failure semantics (Revision 1.3 — reachability corrected)
 
 **Single production rule — no competing “inert evidence and continue Freeze” path for catalog availability failures.**
 
-| Catalog availability outcome | Production behavior |
-|---|---|
-| Catalog missing / SSOT unloadable | **This Freeze attempt fails** |
-| Loader read failure / throw | **This Freeze attempt fails** |
-| Version missing / invalid / unknown | **This Freeze attempt fails** |
-| Future pin incompatible (E-SCHEMA-1 only) | **This Freeze attempt fails** |
+Production Freeze always uses the positive-integer `ACTIVE_DIR_NA_CATALOG_VERSION` via `loadDirNaCatalog(ACTIVE)` → `resolveDirNaCatalog(ACTIVE, PRODUCTION_REGISTRY, ACTIVE)`.
+
+| Outcome | Layer | Production Freeze wire? |
+|---|---|---|
+| `dir_catalog_ssot_unavailable` (Registry loaded; ACTIVE key absent) | Resolver → FreezeError | **Yes — must fail** with structured `code` |
+| `dir_catalog_load_failed` (unexpected throw / corrupt materialize after valid ACTIVE lookup path) | Resolver → FreezeError | **Yes — must fail** with structured `code` |
+| `dir_catalog_version_missing` / `_invalid` / `_unknown` | **Loader-level** validation (`resolveDirNaCatalog` with bad/non-ACTIVE request) | **Not** normal production Freeze scenarios (Freeze does not pass null/invalid/999) |
+| Static SSOT module unresolvable at build | Build/deploy | **Not** FreezeError (§3.2.1) |
+| Future pin incompatible (E-SCHEMA-1) | Future | Freeze fails when authorized |
 
 **Required properties (locked — not optional):**
 
-1. Throw `FreezeError` with a **structured** `code` field holding the catalog failure reason from the loader:  
-   `dir_catalog_ssot_unavailable` | `dir_catalog_load_failed` | `dir_catalog_version_unknown` | `dir_catalog_version_invalid` | `dir_catalog_version_missing` | (future) `dir_catalog_version_incompatible`.  
-   Human-readable `message` may exist but is **not** the classification channel.  
-2. `FreezeWireResult` when `ok: false` **must** expose the same failure as a structured field (e.g. `reason_code: FreezeError["code"]`, or equivalent). Callers and tests **must not** classify failures by parsing `Error.message` / `reason` free text.  
-3. Production Freeze **always** calls `loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION)`. It does **not** pass `null`/`undefined`. Therefore `dir_catalog_version_missing` is **not** a production Freeze wire scenario (see §7 DC-4).  
-4. **Do not** silently continue Freeze when catalog cannot be loaded.  
-5. **Do not** set `dirCatalog: []` / defaults to make N/A validation “pass” or to paper over missing T2.  
-6. **Do not** change Sufficiency Gate business rules (`evaluateDecisionSufficiency` / `canFreezeSessionOnSufficiency`) — catalog failure is a **post-eligibility** Freeze compose failure, not a sufficiency verdict change.  
+1. On production Freeze-reachable catalog faults, throw `FreezeError` with structured `code`:  
+   **`dir_catalog_ssot_unavailable` | `dir_catalog_load_failed`** (and future pin codes when authorized).  
+   Loader-level codes (`_missing` / `_invalid` / `_unknown`) remain valid on `resolveDirNaCatalog` / write paths and DC-4-missing / DC-6 / DC-7a — they are simply **not** claimed as everyday Freeze-wire inputs.  
+2. `FreezeWireResult` when `ok: false` **must** expose structured `reason_code` (or equivalent) from `FreezeError.code`. **No** message parsing.  
+3. Production Freeze **always** calls `loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION)`.  
+4. **Do not** silently continue Freeze when ACTIVE catalog load fails.  
+5. **Do not** set `dirCatalog: []` / defaults to paper over missing T2.  
+6. **Do not** change Sufficiency Gate business rules.
 
-**All catalog availability failures must be produced inside `loadDirNaCatalog` (or a pure mapper from its `DirNaCatalogLoadResult`),** then thrown as `FreezeError.code = result.reason_code`. Do not leave “SSOT module missing” as an uncaught import error outside the loader — the loader/registry bootstrap must catch and return `dir_catalog_ssot_unavailable` or `dir_catalog_load_failed` as appropriate.
+**Propagation:** Map `FreezeError.code` → `FreezeWireResult.reason_code` in `production-freeze-wire.ts` (today only maps `message` — implement allowlist §10.1).
 
-**Propagation through `applySufficiencyFreezeToSession` (today → target):**  
-Today (`production-freeze-wire.ts` ~L145–172) maps catch to `{ ok: false, reason: message, session }` only.  
-**Target (implement allowlist §10.1):** map `FreezeError.code` → `FreezeWireResult.reason_code` (name illustrative; equivalent structured field OK). Keep `reason` as optional human text. Callers already observe `ok: false` — **no Sufficiency Gate change**.
-
-**DC-4 / DC-5 / DC-6:** Must assert **different** structured codes (`dir_catalog_ssot_unavailable` vs `dir_catalog_load_failed` vs `dir_catalog_version_unknown`), not message substrings.
+**DC-4 / DC-5 / DC-6** remain independent structured codes (`ssot_unavailable` vs `load_failed` vs `version_unknown`).
 
 **Separate case (not a catalog-availability failure):**  
 Loader succeeds, but a particular Explicit N/A Evidence’s condition is not registered → existing validate fail (`na_condition_not_in_catalog`); DIR not `n_a`; Freeze may still succeed if sufficiency and other gates pass. That is membership deny, not missing catalog.
@@ -413,7 +432,7 @@ Distinguish **rejection classes**. Implementation under later authorization; R6 
 | **DC-1** | DIR+condition in active SSOT; valid Session/DC/E1/action | Normal allow | Declare appends; production Freeze path → DIR `n_a` | `scripts/test-intake-r6-dir-catalog.ts` (**new**) |
 | **DC-2** | `dir_id` not in SSOT | Normal reject | Write `dir_not_in_catalog`; no action | same **new** |
 | **DC-3** | DIR registered; condition not listed | Normal reject | Write `na_condition_not_in_catalog` | same **new** |
-| **DC-4** | **Catalog SSOT unavailable** on production Freeze path: `ACTIVE` is a positive integer but **no snapshot registered** for that key (mis-ship / empty registry). Loader returns `dir_catalog_ssot_unavailable`; Freeze maps to `FreezeError.code` / wire `reason_code` same value; **`ok: false`** — **no silent Freeze success** | SSOT unavailable | **Reachable production Freeze fault** (not `null` version). Verify via: (1) loader unit where registry lacks `ACTIVE`; (2) Freeze compose/wire mapping when load result is that code. Do **not** use `dir_catalog_version_missing` here | same **new** |
+| **DC-4** | Registry **available** but **no snapshot for ACTIVE** → `dir_catalog_ssot_unavailable` | SSOT unavailable | **Two required checks (no production Registry injection):** (1) `resolveDirNaCatalog(ACTIVE, testLocalRegistryWithoutActive, ACTIVE)` → `dir_catalog_ssot_unavailable`; (2) FreezeError/`FreezeWireResult.reason_code` propagation for that code (compose/wire unit with the load-result→error mapper — **not** by injecting a test Registry into production Freeze wire). Fixtures under `scripts/**`. Do **not** use `_missing` here; do **not** claim catch of static import failure | same **new** |
 | **DC-4-missing** | `loadDirNaCatalog(null\|undefined)` → `dir_catalog_version_missing` | Request version absent | **Loader/unit only** — **not** claimed as `applySufficiencyFreezeToSession` path (Freeze never passes null). May share file with DC-7a | same **new** |
 | **DC-5** | After a **valid positive-integer** request that is present or being materialized, loader hits unexpected throw / corrupt materialization → `dir_catalog_load_failed` | Read error | Structured `reason_code === "dir_catalog_load_failed"` — **≠** DC-4 / DC-6. Verify with loader unit stubbing internal materialize throw; wire mapping same as other codes. Keep independent from SSOT-unavailable | same **new** |
 | **DC-6** | `loadDirNaCatalog(999)` (integer ≠ ACTIVE or any non-ACTIVE absent major) → `dir_catalog_version_unknown` | Unknown version | Structured `reason_code === "dir_catalog_version_unknown"` — **≠** DC-4. Write reject if write used that version; Freeze production path uses ACTIVE only — DC-6 is **loader (+ optional write)**, not “ACTIVE missing” | same **new** |
@@ -433,9 +452,10 @@ Distinguish **rejection classes**. Implementation under later authorization; R6 
 **Notes:**
 
 - DC-4 (`dir_catalog_ssot_unavailable`) / DC-5 (`dir_catalog_load_failed`) / DC-6 (`dir_catalog_version_unknown`) / DC-4-missing (`dir_catalog_version_missing`) must stay **distinct** — **not** `message` parsing.  
-- Do **not** keep a DC-4 scenario that requires production Freeze to pass `null` into the loader.  
+- DC-4 uses **test-local Registry** via `resolveDirNaCatalog` only; production Freeze wire never accepts external Registry.  
+- Do **not** keep a DC-4 scenario that requires production Freeze to pass `null`, or that claims catching static import failures.  
 - DC-8 must hit production ignore rules, not a helper that still merges `authority.dirCatalog`.  
-- R6 F1–F4: keep original semantics and assertions; catalog needs for those tests use **structural** isolation (§10.2).
+- R6 F1–F4: keep original semantics and assertions; structural isolation (§10.2).
 
 ---
 
@@ -476,7 +496,7 @@ Distinguish **rejection classes**. Implementation under later authorization; R6 
 | Path | Allowed change |
 |---|---|
 | `lib/poju/decision-context/catalog/dir-na-catalog.v1.ts` | **New** — integer version `1` SSOT entries |
-| `lib/poju/decision-context/catalog/load-dir-na-catalog.ts` | **New** — `loadDirNaCatalog`, parse helper, membership assert |
+| `lib/poju/decision-context/catalog/load-dir-na-catalog.ts` | **New** — `resolveDirNaCatalog` (pure), `loadDirNaCatalog` (prod wrapper), parse helper, membership assert |
 | `lib/poju/decision-context/catalog/**` (barrel if needed) | **New** only |
 | `lib/poju/decision-context/na-declaration.ts` | Wire loader; ignore caller `dir_na_conditions` for authority |
 | `lib/poju/decision-context/freeze-to-delivery.ts` | Load production SSOT via `loadDirNaCatalog`; ignore `authority.dirCatalog`; throw `FreezeError` with **`code`** on catalog availability failure (§5.2) |
@@ -511,7 +531,7 @@ Distinguish **rejection classes**. Implementation under later authorization; R6 
 
 | Step | Work | Files | Acceptance |
 |---|---|---|---|
-| **S0** | Land positive-integer SSOT `1` + `loadDirNaCatalog` + membership assert | catalog/** new | DC-2/3/6/7a unit; no markdown IO; version type `number` |
+| **S0** | Land positive-integer SSOT `1` + `resolveDirNaCatalog` + `loadDirNaCatalog` + membership assert | catalog/** new | DC-2/3/6/7a + DC-4(1) via pure resolver + test-local registry; static import only; version type `number` |
 | **S1** | Wire declare write to loader; ignore caller lists | `na-declaration.ts` | DC-1 write, DC-2, DC-3, DC-9 |
 | **S2** | Freeze compose loads production SSOT; ignore `authority.dirCatalog`; load fail → `FreezeError` **with `code`** | `freeze-to-delivery.ts` + `freeze.ts` | DC-1 Freeze, DC-8; R6 T0 strip unchanged |
 | **S3** | Wire maps `code` → structured `reason_code`; Freeze `ok: false` | `production-freeze-wire.ts` | DC-4 (`ssot_unavailable` mapping), DC-5, DC-6 codes distinct; DC-4-missing loader-only |
@@ -535,13 +555,13 @@ Distinguish **rejection classes**. Implementation under later authorization; R6 
 
 | Claim | Allowed? |
 |---|---|
-| DIR Catalog vertical slice **design delivered** (incl. Revision 1.2) | Yes (this document) |
+| DIR Catalog vertical slice **design delivered** (incl. Revision 1.3) | Yes (this document) |
 | DIR Catalog **implemented** / N/A Authority **production-connected** | **No** |
 | Stage 3.2 **complete** | **No** |
 | Production / test / schema modified by this revision | **No** |
 
 **DESIGN ONLY — NO PRODUCTION IMPLEMENTATION AUTHORIZED**
 
-Revision 1.2: split **request version missing** (`dir_catalog_version_missing`, loader-only) vs **SSOT unavailable** (`dir_catalog_ssot_unavailable`, production Freeze when ACTIVE∉registry); DC-5/DC-6 unchanged as independent codes; removed unverifiable “Freeze passes null” DC-4 story.
+Revision 1.3 (minimal): `dir_catalog_ssot_unavailable` = Registry present, ACTIVE key absent; static import failure = build/deploy only; pure `resolveDirNaCatalog` for DC-4 testability; production Freeze-reachable codes = `ssot_unavailable` + `load_failed` only (missing/invalid/unknown stay loader-level). Preserves R1.1–1.2 decisions.
 
 Await independent design review and explicit implement authorization before any code change.
