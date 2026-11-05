@@ -1,0 +1,10 @@
+﻿S3 verification raw logs (Node.js 22.22.0 + pnpm 10.33.2)
+commit: 0e09531c06840d373d8715426dec542c61130ebe
+parent: 9411c83f475605945874f87bb969db3ac1329ee9
+detached_at: 0e09531c
+captured_at_utc: 2026-11-05T08:39:08.0785954-06:00
+host_node: v22.22.0
+host_pnpm_via: corepack pnpm
+host_pnpm: 10.33.2
+node_path: C:\Program Files\nodejs\node.exe
+cwd: D:\POJU\pojulife

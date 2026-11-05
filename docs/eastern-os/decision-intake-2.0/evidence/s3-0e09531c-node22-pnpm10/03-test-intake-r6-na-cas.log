@@ -1,0 +1,66 @@
+﻿=== command: corepack pnpm test:intake-r6-na-cas
+=== exit_code: 0
+=== commit: 0e09531c06840d373d8715426dec542c61130ebe
+=== node: v22.22.0
+=== pnpm: 10.33.2
+=== captured_at_utc: 2026-11-05T08:39:15.6376920-06:00
+
+> pojulife@0.1.0 test:intake-r6-na-cas D:\POJU\pojulife
+> tsx scripts/test-intake-r6-na-cas.ts
+
+intake-r6-na-cas (declareDirNotApplicable production CAS)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== declareDirNotApplicable CAS write + reload ==
+  PASS  CAS write + reload binds action/classification/evidence
+
+== same operation_id + same payload → CAS idempotent ==
+  PASS  repeat operation_id does not duplicate records
+
+== same action_id + different fact_id → reject ==
+  PASS  different fact_id rejected
+
+== same action_id + different constraint_id → reject ==
+  PASS  different constraint vs fact source rejected
+
+== two actions same DIR/condition stay distinct ==
+  PASS  distinct action/evidence ids for same DIR/condition
+
+== missing evidence fail-closed on pure replay ==
+  PASS  missing evidence fail-closed
+
+== CAS conflict retry does not duplicate ==
+  PASS  CAS conflict retry single record
+
+== revokeDirNaDeclaration + validator reject ==
+  PASS  revoke sync + replay rejected + validator fail-closed
+
+== Round-6 Session/DC + turn/expires binding ==
+  PASS  production same payload → idempotent_skip
+  PASS  production declaration_turn_id mismatch → reject
+  PASS  production expires_at mismatch → reject
+  PASS  prior.session_id mismatch → reject
+  PASS  prior.context_id mismatch → reject
+  PASS  classification.context_id mismatch → reject
+  PASS  revoke then replay still rejected
+
+All intake-r6-na-cas checks passed.

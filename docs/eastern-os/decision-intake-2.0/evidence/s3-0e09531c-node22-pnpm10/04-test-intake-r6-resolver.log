@@ -1,0 +1,91 @@
+﻿=== command: corepack pnpm test:intake-r6-resolver
+=== exit_code: 0
+=== commit: 0e09531c06840d373d8715426dec542c61130ebe
+=== node: v22.22.0
+=== pnpm: 10.33.2
+=== captured_at_utc: 2026-11-05T08:39:17.8705473-06:00
+
+> pojulife@0.1.0 test:intake-r6-resolver D:\POJU\pojulife
+> tsx scripts/test-intake-r6-role-resolver.ts
+
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== R1–R3 regression: Fact / Constraint / user_confirmed ==
+  [PASS] MX-83 missing related_dir_ids → unresolved
+  [PASS] user_confirmed=false → NOT confirmed
+  [PASS] independently_verified → confirmed
+  [PASS] MX-90 hard_constraint confirmed
+
+== P0-1 Production applyDeclareDirNaToSession persist path ==
+  [PASS] production apply outcome appended
+  [PASS] action written to session.na_declaration_actions
+  [PASS] server set action.session_id from session
+  [PASS] server set action.context_id from DC
+  [PASS] server set actor=user
+  [PASS] classification written to DC
+  [PASS] evidence written to DC
+  [PASS] validate accepts production-persisted declaration
+  [PASS] non-allowlisted control_id rejected at production apply
+  [PASS] action.session_id mismatch → reject at validate
+  [PASS] E1 without declaration persist → reject
+  [PASS] validate re-checks control_id allowlist → reject forged control
+
+== P0-1 Idempotent replay binding ==
+  [PASS] same payload replay → idempotent_skip
+  [PASS] replay evidence id exact na_ev_${action}
+  [PASS] same action_id different fact_id → reject
+  [PASS] two actions same DIR/condition keep distinct evidence ids
+  [PASS] same action_id constraint→fact swap → reject
+  [PASS] missing evidence → fail-closed
+  [PASS] revoked action replay → reject (no reactivate)
+  [PASS] prior.session_id ≠ current Session → reject
+  [PASS] prior.context_id ≠ current DC → reject
+  [PASS] classification.context_id ≠ current DC → reject
+  [PASS] declaration_turn_id mismatch → reject
+  [PASS] expires_at mismatch → reject
+  [PASS] identical payload replay still → idempotent_skip
+
+== P0-2 Topic authority (eval_id + catalog version) ==
+  [PASS] topic with live authority → accept
+  [PASS] forged eval_id → reject
+  [PASS] catalog version mismatch → reject
+  [PASS] authority stale → reject
+  [PASS] authority superseded → reject
+  [PASS] authority revoked → reject
+  [PASS] authority other DIR → reject
+  [PASS] authority still applicable → reject
+  [PASS] authority expired → reject
+  [PASS] missing authority store → reject
+  [PASS] embedded status current but no authority → reject
+
+== System N/A / DDR-03 / DIR / Planner / C5 ==
+  [PASS] MX-119 catalog N/A → n_a
+  [PASS] MX-112 calc_failed → reject
+  [PASS] production planner chain
+  [PASS] source_only unresolved=0
+  [PASS] Planner/Aggregator match
+  [PASS] illegal expires_at → invalid
+  [PASS] MX-121 N/A changes hash
+  [PASS] classification hash fixture
+  [PASS] classification changes hash
+
+All Intake R6 Stage 3.2 round-6 acceptance checks passed.
