@@ -45,7 +45,8 @@ memoryStore.set("pojulife_device_id_v4", "dev_intake_r6_na_cas");
 memoryStore.set("pojulife_owner_key_migrated_v1", "1");
 
 const NOW = "2026-11-05T12:00:00.000Z";
-const NA_CODE = "explicit_not_applicable";
+/** Production SSOT pair (S0 v1) — declare write authority. */
+const NA_CODE = "explicit_no_hard_red_lines";
 
 async function main() {
   console.log("intake-r6-na-cas (declareDirNotApplicable production CAS)");
@@ -132,7 +133,7 @@ async function main() {
             source_turn_id: "turn_na_1",
             user_confirmed: true,
             fact_roles: ["situation"],
-            related_dir_ids: ["DIR-A"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
           },
           {
             fact_id: "fact_na_2",
@@ -143,7 +144,7 @@ async function main() {
             source_turn_id: "turn_na_2",
             user_confirmed: true,
             fact_roles: ["situation"],
-            related_dir_ids: ["DIR-A"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
           },
         ],
         constraints: [
@@ -157,12 +158,12 @@ async function main() {
             source_turn_id: "turn_na_c",
             rigidity: "hard",
             user_confirmed: true,
-            related_dir_ids: ["DIR-A"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
           },
         ],
         dirs: [
           {
-            dir_id: "DIR-A",
+            dir_id: "DIR-DEF-UNACCEPTABLE",
             need: "need",
             why: "why",
             required_fact_roles: ["situation"],
@@ -195,7 +196,7 @@ async function main() {
     declaration_action_id: "na-act-cas-1",
     control_id: "na_declare" as const,
     fact_id: "fact_na_1",
-    dir_id: "DIR-A",
+    dir_id: "DIR-DEF-UNACCEPTABLE",
     na_condition_code: NA_CODE,
     declaration_turn_id: "turn_declare_1",
     dir_na_conditions: [NA_CODE],
@@ -270,7 +271,7 @@ async function main() {
     declaration_action_id: "na-act-cas-cst",
     control_id: "na_declare",
     constraint_id: "cst_na_1",
-    dir_id: "DIR-A",
+    dir_id: "DIR-DEF-UNACCEPTABLE",
     na_condition_code: NA_CODE,
     declaration_turn_id: "turn_declare_cst",
     dir_na_conditions: [NA_CODE],
@@ -283,7 +284,7 @@ async function main() {
       declaration_action_id: "na-act-cas-cst",
       control_id: "na_declare",
       fact_id: "fact_na_1",
-      dir_id: "DIR-A",
+      dir_id: "DIR-DEF-UNACCEPTABLE",
       na_condition_code: NA_CODE,
       declaration_turn_id: "turn_declare_cst",
       dir_na_conditions: [NA_CODE],
@@ -401,7 +402,7 @@ async function main() {
     contextId: "dc_na_cas",
     sessionId: sid,
     nowIso: NOW,
-    dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
+    dirCatalog: [{ dir_id: "DIR-DEF-UNACCEPTABLE", na_conditions: [NA_CODE] }],
     realityFacts: revokedSess!.decision_context!.reality_facts,
     confirmationEvents: revokedSess!.confirmation_events ?? [],
     explicitNaClassifications:
@@ -449,12 +450,12 @@ async function main() {
             source_turn_id: "turn_r6",
             user_confirmed: true,
             fact_roles: ["situation"],
-            related_dir_ids: ["DIR-A"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
           },
         ],
         dirs: [
           {
-            dir_id: "DIR-A",
+            dir_id: "DIR-DEF-UNACCEPTABLE",
             need: "need",
             why: "why",
             required_fact_roles: ["situation"],
@@ -487,7 +488,7 @@ async function main() {
     declaration_action_id: "na-act-r6",
     control_id: "na_declare" as const,
     fact_id: "fact_r6",
-    dir_id: "DIR-A",
+    dir_id: "DIR-DEF-UNACCEPTABLE",
     na_condition_code: NA_CODE,
     declaration_turn_id: "turn_r6_declare",
     dir_na_conditions: [NA_CODE],

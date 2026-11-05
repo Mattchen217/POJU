@@ -1,5 +1,6 @@
 /**
  * S0 — DIR N/A Catalog SSOT & loader.
+ * S1 — declare write-side catalog integration (DC-1/2/3/9).
  *   pnpm test:intake-r6-dir-catalog
  */
 import assert from "node:assert/strict";
@@ -12,6 +13,13 @@ import {
   resolveDirNaCatalog,
 } from "../lib/poju/decision-context/catalog";
 import {
+  applyDeclareDirNaToSession,
+  membershipFromCatalogLoad,
+  NaDeclarationError,
+} from "../lib/poju/decision-context/na-declaration";
+import type { DecisionContext } from "../lib/poju/decision-context/types";
+import type { POJUSessionState } from "../lib/poju/types";
+import {
   additiveV1V2Registries,
   registryNonArrayEntries,
   registryThrowingOnGet,
@@ -19,6 +27,87 @@ import {
   registryVersionMismatch,
   registryWithoutVersion,
 } from "./fixtures/dir-na-catalog-test-registry";
+
+const SSOT_DIR = "DIR-DEF-UNACCEPTABLE";
+const SSOT_CODE = "explicit_no_hard_red_lines";
+const WRITE_NOW = "2026-11-05T12:00:00.000Z";
+const WRITE_SESSION = "sess-s1-dir-catalog";
+const WRITE_CTX = "dc-s1-dir-catalog";
+
+function makeWriteSession(): POJUSessionState {
+  const dc: DecisionContext = {
+    context_id: WRITE_CTX,
+    version: 1,
+    status: "draft",
+    definition: {
+      concrete_event: null,
+      stakes: null,
+      desired_outcome: null,
+      decision_question: null,
+      goal_priorities: [],
+      unacceptable_outcomes: [],
+    },
+    reality_facts: [
+      {
+        fact_id: "fact_s1",
+        statement: "s1",
+        status: "confirmed",
+        verification_level: "user_asserted",
+        source_stage: "user_supplement",
+        source_turn_id: "t1",
+        user_confirmed: true,
+        fact_roles: ["situation"],
+        related_dir_ids: [SSOT_DIR],
+      },
+    ],
+    constraints: [],
+    hypotheses: [],
+    dirs: [
+      {
+        dir_id: SSOT_DIR,
+        need: "need",
+        why: "why",
+        required_fact_roles: ["situation"],
+        current_state: "unknown",
+        partial_satisfaction: false,
+        agenda_item_ids: [],
+        id_lifecycle: "active",
+      },
+    ],
+    conflicts: [],
+    content_hash: null,
+    created_at: WRITE_NOW,
+    updated_at: WRITE_NOW,
+  };
+  return {
+    session_id: WRITE_SESSION,
+    decision_context: dc,
+    messages: [],
+    created_at: WRITE_NOW,
+    last_interaction_at: WRITE_NOW,
+    expires_at: "2026-12-01T00:00:00.000Z",
+  } as POJUSessionState;
+}
+
+function baseDeclareInput(
+  overrides: Partial<{
+    declaration_action_id: string;
+    dir_id: string;
+    na_condition_code: string;
+    dir_na_conditions: readonly string[];
+  }> = {},
+) {
+  return {
+    operation_id: "op_s1",
+    declaration_action_id: overrides.declaration_action_id ?? "na-act-s1",
+    control_id: "na_declare" as const,
+    fact_id: "fact_s1",
+    dir_id: overrides.dir_id ?? SSOT_DIR,
+    na_condition_code: overrides.na_condition_code ?? SSOT_CODE,
+    declaration_turn_id: "turn_s1",
+    dir_na_conditions: overrides.dir_na_conditions ?? [SSOT_CODE],
+  };
+}
 
 const EXPECTED_DIR_IDS = [
   "DIR-DEF-QUESTION",
@@ -248,7 +337,187 @@ function main() {
   assert.equal("PRODUCTION_DIR_NA_REGISTRY" in catalogApi, false);
   console.log("  PASS  production Registry not exported from catalog barrel");
 
-  console.log("\nAll intake-r6-dir-catalog (S0) checks passed.");
+  // --- S1 write-side (DC-1 / DC-2 / DC-3 / DC-9a / DC-9b) ---
+  console.log("\nS1 write-side catalog integration");
+
+  {
+    const session = makeWriteSession();
+    const applied = applyDeclareDirNaToSession(
+      session,
+      WRITE_SESSION,
+      baseDeclareInput(),
+      WRITE_NOW,
+    );
+    assert.equal(applied.outcome, "appended");
+    assert.equal((applied.session.na_declaration_actions ?? []).length, 1);
+    assert.equal(
+      (applied.session.decision_context?.explicit_na_classifications ?? [])
+        .length,
+      1,
+    );
+    assert.ok(
+      (applied.session.decision_context?.explicit_na_evidence ?? []).some(
+        (e) => e.evidence_id === "na_ev_na-act-s1",
+      ),
+    );
+    console.log("  PASS  DC-1 registered DIR+condition → append");
+
+    const replay = applyDeclareDirNaToSession(
+      applied.session,
+      WRITE_SESSION,
+      baseDeclareInput(),
+      WRITE_NOW,
+    );
+    assert.equal(replay.outcome, "idempotent_skip");
+    assert.equal((replay.session.na_declaration_actions ?? []).length, 1);
+    console.log("  PASS  DC-1 replay after catalog → idempotent_skip");
+  }
+
+  {
+    const session = makeWriteSession();
+    const before = (session.na_declaration_actions ?? []).length;
+    let threw: unknown;
+    try {
+      applyDeclareDirNaToSession(
+        session,
+        WRITE_SESSION,
+        baseDeclareInput({
+          dir_id: "DIR-NOT-IN-SSOT",
+          dir_na_conditions: [SSOT_CODE],
+        }),
+        WRITE_NOW,
+      );
+    } catch (e) {
+      threw = e;
+    }
+    assert.ok(threw instanceof NaDeclarationError);
+    assert.equal(
+      (threw as NaDeclarationError).code,
+      "dir_not_in_catalog",
+    );
+    assert.equal((session.na_declaration_actions ?? []).length, before);
+    assert.equal(
+      (session.decision_context?.explicit_na_classifications ?? []).length,
+      0,
+    );
+    console.log("  PASS  DC-2 unregistered DIR → dir_not_in_catalog, no append");
+  }
+
+  {
+    const session = makeWriteSession();
+    let threw: unknown;
+    try {
+      applyDeclareDirNaToSession(
+        session,
+        WRITE_SESSION,
+        baseDeclareInput({
+          na_condition_code: "explicit_not_in_ssot_for_this_dir",
+        }),
+        WRITE_NOW,
+      );
+    } catch (e) {
+      threw = e;
+    }
+    assert.ok(threw instanceof NaDeclarationError);
+    assert.equal(
+      (threw as NaDeclarationError).code,
+      "na_condition_not_in_catalog",
+    );
+    assert.equal((session.na_declaration_actions ?? []).length, 0);
+    console.log(
+      "  PASS  DC-3 unregistered condition → na_condition_not_in_catalog, no append",
+    );
+  }
+
+  {
+    // DC-9a: unregistered DIR + forged list containing real SSOT condition
+    const session = makeWriteSession();
+    let threw: unknown;
+    try {
+      applyDeclareDirNaToSession(
+        session,
+        WRITE_SESSION,
+        baseDeclareInput({
+          declaration_action_id: "na-act-dc9a",
+          dir_id: "DIR-FORGED",
+          dir_na_conditions: [SSOT_CODE, "forged_allow_all"],
+        }),
+        WRITE_NOW,
+      );
+    } catch (e) {
+      threw = e;
+    }
+    assert.ok(threw instanceof NaDeclarationError);
+    assert.equal((threw as NaDeclarationError).code, "dir_not_in_catalog");
+    assert.equal((session.na_declaration_actions ?? []).length, 0);
+    assert.equal(
+      (session.decision_context?.explicit_na_classifications ?? []).length,
+      0,
+    );
+    assert.equal(
+      (session.decision_context?.explicit_na_evidence ?? []).length,
+      0,
+    );
+    console.log("  PASS  DC-9a forged list cannot authorize unregistered DIR");
+  }
+
+  {
+    // DC-9b: registered DIR + illegal condition; caller list includes legal SSOT code
+    const session = makeWriteSession();
+    let threw: unknown;
+    try {
+      applyDeclareDirNaToSession(
+        session,
+        WRITE_SESSION,
+        baseDeclareInput({
+          declaration_action_id: "na-act-dc9b",
+          na_condition_code: "explicit_forged_condition",
+          dir_na_conditions: [SSOT_CODE, "forged_extra"],
+        }),
+        WRITE_NOW,
+      );
+    } catch (e) {
+      threw = e;
+    }
+    assert.ok(threw instanceof NaDeclarationError);
+    assert.equal(
+      (threw as NaDeclarationError).code,
+      "na_condition_not_in_catalog",
+    );
+    assert.equal((session.na_declaration_actions ?? []).length, 0);
+    assert.equal(
+      (session.decision_context?.explicit_na_classifications ?? []).length,
+      0,
+    );
+    assert.equal(
+      (session.decision_context?.explicit_na_evidence ?? []).length,
+      0,
+    );
+    console.log(
+      "  PASS  DC-9b forged legal-list cannot authorize illegal condition",
+    );
+  }
+
+  {
+    // Pure mapping coverage only — not production Registry fault integration
+    for (const reason of [
+      "dir_catalog_load_failed",
+      "dir_catalog_ssot_unavailable",
+    ] as const) {
+      const mapped = membershipFromCatalogLoad(
+        { ok: false, reason_code: reason },
+        SSOT_DIR,
+        SSOT_CODE,
+      );
+      assert.equal(mapped.ok, false);
+      if (!mapped.ok) assert.equal(mapped.reason_code, reason);
+    }
+    console.log(
+      "  PASS  load-fail pure mapping coverage (not production Registry integration)",
+    );
+  }
+
+  console.log("\nAll intake-r6-dir-catalog (S0+S1) checks passed.");
 }
 
 main();

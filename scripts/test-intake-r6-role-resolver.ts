@@ -52,13 +52,16 @@ const assert = (label: string, ok: boolean) => {
 
 const CTX = "dc-test-1";
 const SESSION_ID = "sess-1";
-const VALID_NA_CODE = "explicit_not_applicable";
+/** Production SSOT pair for applyDeclareDirNaToSession success paths. */
+const SSOT_DIR = "DIR-DEF-UNACCEPTABLE";
+const VALID_NA_CODE = "explicit_no_hard_red_lines";
 const NOW = "2026-11-05T00:00:00.000Z";
 const TOPIC_CAT = "topic-cat-v1";
 const TOPIC_EXPIRY = "2026-12-01T00:00:00.000Z";
 
 function baseDir(overrides: Partial<DIR> = {}): DIR {
   return {
+    // Default DIR-A is for generic role/fingerprint fixtures (not production catalog).
     dir_id: "DIR-A",
     need: "need",
     why: "why",
@@ -154,6 +157,21 @@ function baseSession(overrides: Partial<POJUSessionState> = {}): POJUSessionStat
   } as POJUSessionState;
 }
 
+/** Session/DC correlated to production SSOT DIR for declare write paths. */
+function declareSession(
+  overrides: Partial<POJUSessionState> = {},
+): POJUSessionState {
+  return baseSession({
+    decision_context: baseDc({
+      dirs: [baseDir({ dir_id: SSOT_DIR })],
+      reality_facts: [
+        fact({ fact_id: "f1", related_dir_ids: [SSOT_DIR] }),
+      ],
+    }),
+    ...overrides,
+  });
+}
+
 function authorityTopic(
   partial: Partial<AuthoritativeTopicEvalRecord> = {},
 ): AuthoritativeTopicEvalRecord {
@@ -197,7 +215,7 @@ function topicRule(
 function provenNaValidation(
   overrides: Partial<NaValidationContext> = {},
 ): NaValidationContext {
-  const session = baseSession();
+  const session = declareSession();
   const applied = applyDeclareDirNaToSession(
     session,
     SESSION_ID,
@@ -206,9 +224,10 @@ function provenNaValidation(
       declaration_action_id: "na-act-1",
       control_id: "na_declare",
       fact_id: "f1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t-na-1",
+      // Forged extras ignored for write auth (production loader is authority).
       dir_na_conditions: [VALID_NA_CODE, "topic_na"],
     },
     NOW,
@@ -218,21 +237,21 @@ function provenNaValidation(
     sessionId: SESSION_ID,
     nowIso: NOW,
     dirCatalog: [
-      { dir_id: "DIR-A", na_conditions: [VALID_NA_CODE, "topic_na"] },
+      { dir_id: SSOT_DIR, na_conditions: [VALID_NA_CODE, "topic_na"] },
       { dir_id: "DIR-B", na_conditions: [VALID_NA_CODE, "topic_na"] },
     ],
     catalogConditionEvals: [
       {
         condition_eval_id: "ev1",
-        target_dir_id: "DIR-A",
+        target_dir_id: SSOT_DIR,
         na_condition_code: VALID_NA_CODE,
         condition_met: true,
       },
     ],
-    topicRules: [topicRule()],
-    topicEvalAuthority: [authorityTopic()],
+    topicRules: [topicRule({ target_dir_id: SSOT_DIR })],
+    topicEvalAuthority: [authorityTopic({ target_dir_id: SSOT_DIR })],
     currentTopicCatalogVersion: TOPIC_CAT,
-    realityFacts: [fact({ fact_id: "f1" })],
+    realityFacts: [fact({ fact_id: "f1", related_dir_ids: [SSOT_DIR] })],
     confirmationEvents: [e1Fact("f1")],
     explicitNaClassifications:
       applied.session.decision_context?.explicit_na_classifications ?? [],
@@ -245,7 +264,7 @@ function userNaEvidence(): ExplicitNaEvidence {
   return {
     evidence_id: "na_ev_na-act-1",
     target: "dir",
-    dir_id: "DIR-A",
+    dir_id: SSOT_DIR,
     na_condition_code: VALID_NA_CODE,
     evidence_type: "user_explicit_na",
     source_ref: { kind: "reality_fact", fact_id: "f1" },
@@ -258,12 +277,12 @@ function validCatalogNa(): ExplicitNaEvidence {
   return {
     evidence_id: "na1",
     target: "dir",
-    dir_id: "DIR-A",
+    dir_id: SSOT_DIR,
     na_condition_code: VALID_NA_CODE,
     evidence_type: "system_na_marker",
     system_basis: {
       kind: "catalog_na_condition_met",
-      target_dir_id: "DIR-A",
+      target_dir_id: SSOT_DIR,
       condition_eval_id: "ev1",
     },
     written_by: "code",
@@ -339,14 +358,14 @@ console.log("\n== R1–R3 regression: Fact / Constraint / user_confirmed ==");
 console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
 {
   const applied = applyDeclareDirNaToSession(
-    baseSession(),
+    declareSession(),
     SESSION_ID,
     {
       operation_id: "op1",
       declaration_action_id: "na-act-prod",
       control_id: "na_declare",
       fact_id: "f1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t-na-prod",
       dir_na_conditions: [VALID_NA_CODE],
@@ -385,8 +404,8 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
     contextId: CTX,
     sessionId: SESSION_ID,
     nowIso: NOW,
-    dirCatalog: [{ dir_id: "DIR-A", na_conditions: [VALID_NA_CODE] }],
-    realityFacts: [fact({ fact_id: "f1" })],
+    dirCatalog: [{ dir_id: SSOT_DIR, na_conditions: [VALID_NA_CODE] }],
+    realityFacts: [fact({ fact_id: "f1", related_dir_ids: [SSOT_DIR] })],
     confirmationEvents: [e1Fact("f1")],
     explicitNaClassifications:
       applied.session.decision_context?.explicit_na_classifications ?? [],
@@ -402,14 +421,14 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
   let rejected = false;
   try {
     applyDeclareDirNaToSession(
-      baseSession(),
+    declareSession(),
       SESSION_ID,
       {
         operation_id: "op-bad",
         declaration_action_id: "x",
         control_id: "model_keyword_hit",
         fact_id: "f1",
-        dir_id: "DIR-A",
+        dir_id: SSOT_DIR,
         na_condition_code: VALID_NA_CODE,
         declaration_turn_id: "t",
         dir_na_conditions: [VALID_NA_CODE],
@@ -423,14 +442,14 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
 }
 {
   const applied = applyDeclareDirNaToSession(
-    baseSession(),
+    declareSession(),
     SESSION_ID,
     {
       operation_id: "op2",
       declaration_action_id: "na-act-sess",
       control_id: "na_declare",
       fact_id: "f1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t-na",
       dir_na_conditions: [VALID_NA_CODE],
@@ -459,14 +478,14 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
 {
   // control_id allowlist re-checked at validate: forge action with bad control after create
   const applied = applyDeclareDirNaToSession(
-    baseSession(),
+    declareSession(),
     SESSION_ID,
     {
       operation_id: "op3",
       declaration_action_id: "na-act-ctrl",
       control_id: "na_declare",
       fact_id: "f1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t",
       dir_na_conditions: [VALID_NA_CODE],
@@ -480,8 +499,8 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
     contextId: CTX,
     sessionId: SESSION_ID,
     nowIso: NOW,
-    dirCatalog: [{ dir_id: "DIR-A", na_conditions: [VALID_NA_CODE] }],
-    realityFacts: [fact({ fact_id: "f1" })],
+    dirCatalog: [{ dir_id: SSOT_DIR, na_conditions: [VALID_NA_CODE] }],
+    realityFacts: [fact({ fact_id: "f1", related_dir_ids: [SSOT_DIR] })],
     confirmationEvents: [e1Fact("f1")],
     explicitNaClassifications:
       applied.session.decision_context?.explicit_na_classifications ?? [],
@@ -496,14 +515,14 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
 console.log("\n== P0-1 Idempotent replay binding ==");
 {
   const first = applyDeclareDirNaToSession(
-    baseSession(),
+    declareSession(),
     SESSION_ID,
     {
       operation_id: "op-idemp",
       declaration_action_id: "na-act-idemp",
       control_id: "na_declare",
       fact_id: "f1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t-idemp",
       dir_na_conditions: [VALID_NA_CODE],
@@ -518,7 +537,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       declaration_action_id: "na-act-idemp",
       control_id: "na_declare",
       fact_id: "f1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t-idemp",
       dir_na_conditions: [VALID_NA_CODE],
@@ -541,7 +560,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
         declaration_action_id: "na-act-idemp",
         control_id: "na_declare",
         fact_id: "OTHER",
-        dir_id: "DIR-A",
+        dir_id: SSOT_DIR,
         na_condition_code: VALID_NA_CODE,
         declaration_turn_id: "t-idemp",
         dir_na_conditions: [VALID_NA_CODE],
@@ -561,7 +580,12 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       ...first.session,
       decision_context: {
         ...first.session.decision_context!,
-        constraints: [constraint({ constraint_id: "k1" })],
+        constraints: [
+          constraint({
+            constraint_id: "k1",
+            related_dir_ids: [SSOT_DIR],
+          }),
+        ],
       },
     },
     SESSION_ID,
@@ -570,7 +594,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       declaration_action_id: "na-act-cst",
       control_id: "na_declare",
       constraint_id: "k1",
-      dir_id: "DIR-A",
+      dir_id: SSOT_DIR,
       na_condition_code: VALID_NA_CODE,
       declaration_turn_id: "t-cst",
       dir_na_conditions: [VALID_NA_CODE],
@@ -595,7 +619,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
         declaration_action_id: "na-act-cst",
         control_id: "na_declare",
         fact_id: "f1",
-        dir_id: "DIR-A",
+        dir_id: SSOT_DIR,
         na_condition_code: VALID_NA_CODE,
         declaration_turn_id: "t-cst",
         dir_na_conditions: [VALID_NA_CODE],
@@ -624,7 +648,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
         declaration_action_id: "na-act-idemp",
         control_id: "na_declare",
         fact_id: "f1",
-        dir_id: "DIR-A",
+        dir_id: SSOT_DIR,
         na_condition_code: VALID_NA_CODE,
         declaration_turn_id: "t-idemp",
         dir_na_conditions: [VALID_NA_CODE],
@@ -655,7 +679,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
         declaration_action_id: "na-act-idemp",
         control_id: "na_declare",
         fact_id: "f1",
-        dir_id: "DIR-A",
+        dir_id: SSOT_DIR,
         na_condition_code: VALID_NA_CODE,
         declaration_turn_id: "t-idemp",
         dir_na_conditions: [VALID_NA_CODE],
@@ -675,7 +699,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
     declaration_action_id: "na-act-idemp",
     control_id: "na_declare",
     fact_id: "f1",
-    dir_id: "DIR-A",
+    dir_id: SSOT_DIR,
     na_condition_code: VALID_NA_CODE,
     declaration_turn_id: "t-idemp",
     dir_na_conditions: [VALID_NA_CODE],
@@ -789,7 +813,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
   const topicNa: ExplicitNaEvidence = {
     evidence_id: "na-topic",
     target: "dir",
-    dir_id: "DIR-A",
+    dir_id: SSOT_DIR,
     na_condition_code: "topic_na",
     evidence_type: "system_na_marker",
     system_basis: {
@@ -898,8 +922,9 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
 
 console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
 {
+  // Correlate DIR under test with provenNaValidation / validCatalogNa SSOT pair.
   const dirs = reaggregateDirsIntake(
-    [dir],
+    [baseDir({ dir_id: SSOT_DIR })],
     [],
     [],
     [],
@@ -1021,6 +1046,7 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
   const h1 = computeContentHash(dc);
   const h2 = computeContentHash({ ...dc, explicit_na_evidence: [validCatalogNa()] });
   assert("MX-121 N/A changes hash", h1 !== h2);
+  // Direct create unit test: injected dirNaConditions ≠ production Catalog authority.
   const created = createExplicitNaClassificationFromUserDeclaration({
     action: {
       declaration_action_id: "h",

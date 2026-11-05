@@ -15,6 +15,12 @@ import {
   type MutatePOJUSessionOptions,
 } from "@/lib/poju/session-mutation";
 import type { POJUSessionState } from "@/lib/poju/types";
+import {
+  ACTIVE_DIR_NA_CATALOG_VERSION,
+  assertNaConditionInDirCatalog,
+  loadDirNaCatalog,
+  type DirNaCatalogLoadResult,
+} from "./catalog";
 import type {
   DecisionContext,
   ExplicitNaClassification,
@@ -415,12 +421,58 @@ export type DeclareDirNaInput = {
   declaration_turn_id: string;
   expires_at?: string | null;
   /**
-   * Server-resolved catalog conditions for dir_id (from DIR catalog code path).
-   * Never trust model-supplied condition lists as authority without catalog join.
+   * @deprecated Ignored for authorization. Production membership comes only from
+   * `loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION)` + assertNaConditionInDirCatalog.
+   * Retained for caller compat; do not trust, merge, or fall back to this list.
    */
   dir_na_conditions: readonly string[];
   occurred_at?: string;
 };
+
+export type DeclareDirNaCatalogMembershipResult =
+  | { ok: true; dirNaConditions: readonly string[] }
+  | {
+      ok: false;
+      reason_code:
+        | Extract<DirNaCatalogLoadResult, { ok: false }>["reason_code"]
+        | "dir_not_in_catalog"
+        | "na_condition_not_in_catalog";
+    };
+
+/**
+ * Pure mapper — preserve loader reason codes; unit-testable without Registry injection.
+ * On success, `dirNaConditions` come from the same validated load.entries snapshot.
+ */
+export function membershipFromCatalogLoad(
+  load: DirNaCatalogLoadResult,
+  dirId: string,
+  naConditionCode: string,
+): DeclareDirNaCatalogMembershipResult {
+  if (!load.ok) {
+    return { ok: false, reason_code: load.reason_code };
+  }
+  const membership = assertNaConditionInDirCatalog(load, dirId, naConditionCode);
+  if (!membership.ok) {
+    return { ok: false, reason_code: membership.reason_code };
+  }
+  const entry = load.entries.find((e) => e.dir_id === dirId);
+  if (!entry) {
+    return { ok: false, reason_code: "dir_not_in_catalog" };
+  }
+  return { ok: true, dirNaConditions: entry.na_conditions };
+}
+
+/** Production write join: load(ACTIVE) then membershipFromCatalogLoad. */
+export function resolveDeclareDirNaCatalogMembership(
+  dirId: string,
+  naConditionCode: string,
+): DeclareDirNaCatalogMembershipResult {
+  return membershipFromCatalogLoad(
+    loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION),
+    dirId,
+    naConditionCode,
+  );
+}
 
 export type DeclareDirNaResult = CasWritePOJUSessionResult & {
   action: UserNaDeclarationAction;
@@ -477,6 +529,19 @@ export function applyDeclareDirNaToSession(
     throw new NaDeclarationError(
       NA_DECLARATION_CONTEXT_INVALID,
       "Decision Context missing",
+    );
+  }
+
+  // Catalog join at write entry (design §4.1) — before idempotent branch.
+  // input.dir_na_conditions is ignored for authorization.
+  const catalogMembership = resolveDeclareDirNaCatalogMembership(
+    input.dir_id,
+    input.na_condition_code,
+  );
+  if (!catalogMembership.ok) {
+    throw new NaDeclarationError(
+      catalogMembership.reason_code,
+      catalogMembership.reason_code,
     );
   }
 
@@ -651,7 +716,7 @@ export function applyDeclareDirNaToSession(
     action: actionDraft,
     dc,
     nowIso,
-    dirNaConditions: input.dir_na_conditions,
+    dirNaConditions: catalogMembership.dirNaConditions,
   });
   if (!created.ok) {
     throw new NaDeclarationError(NA_DECLARATION_INVALID, created.reason_code);
