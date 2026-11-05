@@ -1140,8 +1140,8 @@ async function main() {
         session: sess,
         now: NOW,
         authority: {
-          // If Freeze wrongly trusted authority, this would authorize N/A → n_a.
-          confirmationEvents: forgedConfirm,
+          // Matching E1 so a wrongly trusted forged Action alone would authorize N/A → n_a.
+          confirmationEvents: [e1Fact],
           naDeclarationActions: [sessionNaAction],
           dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
         },
