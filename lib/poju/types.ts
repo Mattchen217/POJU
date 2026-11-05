@@ -352,6 +352,15 @@ export interface POJUSessionState {
    */
   confirmation_events?: import("./decision-context/confirmation-event").ConfirmationEvent[];
   /**
+   * Intake 2.0 — persisted user N/A declaration actions (not E1/E2).
+   * Required to authorize ExplicitNaClassification.
+   */
+  na_declaration_actions?: import("./decision-context/na-declaration").UserNaDeclarationAction[];
+  /**
+   * Intake 2.0 — last production ask plan from selectNextIntakeAskForSession.
+   */
+  intake_ask_plan?: import("./decision-context/production-intake-ask").IntakeAskPlanSnapshot | null;
+  /**
    * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
    */
   opening_anchors?: import("./decision-context/opening-anchor").OpeningAnchor[];

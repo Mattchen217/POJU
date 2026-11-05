@@ -1,14 +1,20 @@
 /**
  * Fail-closed ExplicitNaEvidence validation (R6 Final Binding §1 / §3 · US §2.7).
- * Surface fields + E1 alone never authorize user_explicit_na — need ExplicitNaClassification.
+ * user_explicit_na requires ExplicitNaClassification bound to a live UserNaDeclarationAction.
+ * E1 ConfirmationEvent never substitutes for N/A declaration.
  */
 
 import type { ConfirmationEvent } from "./confirmation-event";
+import {
+  checkExpiresAt,
+  parseValidIsoMs,
+  sourceRefEquals,
+  type UserNaDeclarationAction,
+} from "./na-declaration";
 import type {
   Constraint,
   ExplicitNaClassification,
   ExplicitNaEvidence,
-  NaSourceRef,
   NaSystemBasis,
   RealityFact,
 } from "./types";
@@ -18,48 +24,50 @@ export type CatalogNaConditionEval = {
   condition_eval_id: string;
   target_dir_id: string;
   na_condition_code: string;
-  /** Live re-check result — must be true to accept. */
   condition_met: boolean;
   stale?: boolean;
   orphaned?: boolean;
 };
 
 /**
- * Topic Applicability catalog rule / live eval (Phase 2).
- * target_dir_id is mandatory — a rule without DIR scope cannot prove applicability.
+ * Live Topic Applicability evaluation — status must be explicitly "current".
+ * Absence of stale/revoked flags is NOT treated as current.
  */
+export type TopicApplicabilityEvaluation = {
+  eval_id: string;
+  evaluated_at: string;
+  /** Only "current" may authorize N/A. */
+  status: "current" | "stale" | "superseded" | "revoked";
+  not_applicable: boolean;
+  expires_at: string | null;
+  catalog_version: string;
+};
+
 export type TopicApplicabilityRule = {
   rule_id: string;
   topic_code: string;
-  /** Exact DIR this rule/eval applies to. */
   target_dir_id: string;
-  /** Re-run: topic still not applicable for target_dir_id. */
-  not_applicable_for_dir: boolean;
-  revoked?: boolean;
-  stale?: boolean;
+  /** Required current evaluation record — missing ⇒ fail-closed. */
+  evaluation: TopicApplicabilityEvaluation;
 };
 
-/** DIR catalog slice needed for N/A condition membership. */
 export type DirNaCatalogEntry = {
   dir_id: string;
   na_conditions: readonly string[];
 };
 
 export type NaValidationContext = {
-  /** Current DC context_id — classifications must match. */
   contextId: string;
   realityFacts: RealityFact[];
   constraints: Constraint[];
-  /** Persisted E1 events for the session/DC. E1 ≠ N/A declaration. */
   confirmationEvents: ConfirmationEvent[];
-  /**
-   * Persisted user-declared N/A classifications (code-verifiable).
-   * Required for user_explicit_na. Missing match → reject.
-   */
   explicitNaClassifications: ExplicitNaClassification[];
-  /** Wall-clock ISO for expires_at checks; default = now. */
+  /**
+   * Persisted user N/A declaration actions (session SoT).
+   * Classification.declaration_action_id must resolve here.
+   */
+  naDeclarationActions: UserNaDeclarationAction[];
   nowIso?: string;
-  /** Live CFP state for DDR-03 path; omit if not chart-related. */
   cfpSourceState?:
     | "source_ok"
     | "source_absent_not_supplied"
@@ -109,35 +117,27 @@ function conditionInDirCatalog(
   return entry.na_conditions.includes(code);
 }
 
-function sourceRefEquals(a: NaSourceRef, b: NaSourceRef): boolean {
-  if (a.kind !== b.kind) return false;
-  if (a.kind === "reality_fact" && b.kind === "reality_fact") {
-    return a.fact_id === b.fact_id;
-  }
-  if (a.kind === "constraint" && b.kind === "constraint") {
-    return a.constraint_id === b.constraint_id;
-  }
-  return false;
-}
-
-function isExpired(expiresAt: string | null, nowIso: string): boolean {
-  if (expiresAt == null || expiresAt === "") return false;
-  return Date.parse(expiresAt) <= Date.parse(nowIso);
+function findDeclarationAction(
+  ctx: NaValidationContext,
+  actionId: string,
+): UserNaDeclarationAction | null {
+  return (
+    ctx.naDeclarationActions.find((a) => a.declaration_action_id === actionId) ??
+    null
+  );
 }
 
 /**
- * Find a live ExplicitNaClassification proving user declared this N/A condition.
- * E1 ConfirmationEvent is never accepted as a substitute.
+ * Classification is Gate-affecting only when bound to a live, matching
+ * UserNaDeclarationAction (not E1, not bare string ids).
  */
 export function findMatchingNaClassification(
   evidence: ExplicitNaEvidence & { evidence_type: "user_explicit_na" },
   ctx: NaValidationContext,
 ): ExplicitNaClassification | null {
-  if (evidence.target !== "dir") {
-    // DDR user_explicit_na still needs classification scoped to chart source;
-    // Stage 3.2 vertical slice focuses DIR path; DDR uses same source_ref+condition.
-  }
   const now = ctx.nowIso ?? new Date().toISOString();
+  if (parseValidIsoMs(now) === null) return null;
+
   const dirId = evidence.target === "dir" ? evidence.dir_id : "";
 
   for (const row of ctx.explicitNaClassifications) {
@@ -145,13 +145,29 @@ export function findMatchingNaClassification(
     if (row.written_by !== "code") continue;
     if (row.authority !== "user_declared") continue;
     if (row.context_id !== ctx.contextId) continue;
-    if (isExpired(row.expires_at, now)) continue;
-    if (evidence.target === "dir") {
-      if (row.dir_id !== dirId) continue;
-    }
+
+    const clsExpiry = checkExpiresAt(row.expires_at, now);
+    if (clsExpiry === "invalid" || clsExpiry === true) continue;
+
+    if (evidence.target === "dir" && row.dir_id !== dirId) continue;
     if (row.na_condition_code !== evidence.na_condition_code) continue;
     if (!sourceRefEquals(row.source_ref, evidence.source_ref)) continue;
     if (!row.declaration_action_id || !row.declaration_turn_id) continue;
+
+    const action = findDeclarationAction(ctx, row.declaration_action_id);
+    if (!action) continue;
+    if (action.revoked) continue;
+    if (action.actor !== "user") continue;
+    if (action.context_id !== ctx.contextId) continue;
+    if (action.declaration_turn_id !== row.declaration_turn_id) continue;
+
+    const actExpiry = checkExpiresAt(action.expires_at, now);
+    if (actExpiry === "invalid" || actExpiry === true) continue;
+
+    if (evidence.target === "dir" && action.dir_id !== dirId) continue;
+    if (action.na_condition_code !== evidence.na_condition_code) continue;
+    if (!sourceRefEquals(action.source_ref, evidence.source_ref)) continue;
+
     return row;
   }
   return null;
@@ -293,16 +309,36 @@ function validateTopicNotApplicable(
   if (!rule) {
     return { ok: false, reason_code: "topic_rule_missing" };
   }
-  if (rule.revoked || rule.stale) {
-    return { ok: false, reason_code: "topic_rule_revoked_or_stale" };
-  }
   if (rule.topic_code !== basis.topic_code) {
     return { ok: false, reason_code: "topic_code_mismatch" };
   }
   if (rule.target_dir_id !== evidence.dir_id) {
     return { ok: false, reason_code: "topic_rule_dir_mismatch" };
   }
-  if (!rule.not_applicable_for_dir) {
+
+  const evaluation = rule.evaluation;
+  if (!evaluation) {
+    return { ok: false, reason_code: "topic_evaluation_missing" };
+  }
+  if (!evaluation.eval_id || !evaluation.catalog_version) {
+    return { ok: false, reason_code: "topic_evaluation_incomplete" };
+  }
+  if (parseValidIsoMs(evaluation.evaluated_at) === null) {
+    return { ok: false, reason_code: "topic_evaluation_time_invalid" };
+  }
+  if (evaluation.status !== "current") {
+    return { ok: false, reason_code: `topic_evaluation_${evaluation.status}` };
+  }
+
+  const now = ctx.nowIso ?? new Date().toISOString();
+  const expiry = checkExpiresAt(evaluation.expires_at, now);
+  if (expiry === "invalid") {
+    return { ok: false, reason_code: "topic_evaluation_expiry_invalid" };
+  }
+  if (expiry === true) {
+    return { ok: false, reason_code: "topic_evaluation_expired" };
+  }
+  if (!evaluation.not_applicable) {
     return { ok: false, reason_code: "topic_still_applicable" };
   }
   return { ok: true, evidence };
@@ -342,10 +378,6 @@ function validateSystemMarker(
   return { ok: true, evidence };
 }
 
-/**
- * Validate a candidate ExplicitNaEvidence record before persist / Gate effect.
- * Does not authorize via model semantics, written_by alone, or E1 alone.
- */
 export function validateExplicitNaEvidence(
   evidence: ExplicitNaEvidence,
   ctx: NaValidationContext,

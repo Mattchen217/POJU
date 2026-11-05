@@ -1355,6 +1355,17 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           now: nowIso,
         });
         if (collected.applied) sessionOut = collected.session;
+        // Intake 2.0 production ask planning — sole scoring path via shared resolver.
+        if (sessionOut.decision_context?.status === "draft") {
+          const { selectNextIntakeAskForSession } = await import(
+            "@/lib/poju/decision-context/production-intake-ask"
+          );
+          const planned = selectNextIntakeAskForSession({
+            session: sessionOut,
+            nowIso,
+          });
+          sessionOut = planned.session;
+        }
       } catch (e) {
         console.warn(
           "[agent] collecting DC update failed (non-fatal)",

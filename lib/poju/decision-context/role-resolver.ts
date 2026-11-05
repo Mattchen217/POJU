@@ -61,6 +61,7 @@ export function emptyNaValidation(
     constraints: overrides.constraints ?? [],
     confirmationEvents: overrides.confirmationEvents ?? [],
     explicitNaClassifications: overrides.explicitNaClassifications ?? [],
+    naDeclarationActions: overrides.naDeclarationActions ?? [],
     nowIso: overrides.nowIso,
     cfpSourceState: overrides.cfpSourceState,
     dirCatalog: overrides.dirCatalog,
