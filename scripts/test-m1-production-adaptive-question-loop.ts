@@ -287,7 +287,13 @@ async function main() {
       for (const d of out.adaptive_ask_plan!.dir_ids) {
         assert.ok(needDirs.has(d) || out.decision_context!.dirs.some((x) => x.dir_id === d));
       }
-      await savePOJUSession(out);
+      // Persist via CAS mutate so revision mirrors from C1 are respected.
+      await mutatePOJUSession(sidTurn, {
+        operation_id: "op_m1_02_save",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => out,
+      });
     });
 
     // M1-04
@@ -303,14 +309,34 @@ async function main() {
       assert.ok(out.adaptive_ask_plan);
       const q2 = lastAssistant(out).content;
       assert.equal(q2, out.adaptive_ask_plan!.question_text);
-      assert.notEqual(q2, q1);
+      // Understanding / DC must change; question may move to a new DIR or deepen.
       assert.ok(
         out.decision_context!.reality_facts.length >
           before.decision_context!.reality_facts.length ||
           out.decision_context!.constraints.length >
             before.decision_context!.constraints.length,
       );
-      await savePOJUSession(out);
+      assert.notDeepEqual(
+        out.decision_understanding!.current_understanding,
+        before.decision_understanding!.current_understanding,
+      );
+      const sameQ = q2 === q1;
+      if (sameQ) {
+        // Same DIR follow-up is allowed only if depth advanced or need set shrank/changed.
+        assert.ok(
+          (out.adaptive_ask_plan!.depth ?? 0) >
+            (before.adaptive_ask_plan?.depth ?? 0) ||
+            JSON.stringify(out.decision_understanding!.need_to_understand.items) !==
+              JSON.stringify(before.decision_understanding!.need_to_understand.items),
+          "second turn must change need/depth if question text repeats",
+        );
+      }
+      await mutatePOJUSession(sidTurn, {
+        operation_id: "op_m1_04_save",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => out,
+      });
     });
 
     // M1-05
@@ -638,7 +664,12 @@ async function main() {
         userMessage: "现状是朝九晚六，没什么成长。",
         locale: "zh-CN",
       });
-      await savePOJUSession(out);
+      await mutatePOJUSession(sid, {
+        operation_id: "op_m1_13_save",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => out,
+      });
       const reloaded = await durable(sid);
       assert.deepEqual(
         reloaded.decision_understanding?.current_understanding,

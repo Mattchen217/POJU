@@ -7,9 +7,9 @@ import type { POJUSessionState } from "@/lib/poju/types";
 import type { AnswerClass, AnswerEvent, ProposedWrite } from "./types";
 
 const UNKNOWN_RE =
-  /^(i\s*don'?t\s*know|不知道|不清楚|不了解|没印象|unsure|no\s*idea)\b/i;
+  /^(i\s*don'?t\s*know|不知道|不清楚|不了解|没印象|unsure|no\s*idea)(\b|$|[!。！？.\s])/i;
 const DECLINED_RE =
-  /^(不想说|不愿回答|跳过|skip|decline|prefer\s*not|no\s*comment)\b/i;
+  /^(不想说|不愿回答|跳过|skip(\b|$)|decline(\b|$)|prefer\s*not|no\s*comment)/i;
 const ESTIMATE_RE =
   /(大概|估计|大约|maybe|perhaps|about\s+\d|roughly|i\s*think|我觉得|可能)/i;
 const CONSTRAINT_RE =
@@ -80,6 +80,13 @@ function classify(text: string): { cls: AnswerClass; notes: string[] } {
   const notes: string[] = [];
   if (t.length < 2) return { cls: "invalid_input", notes: ["empty"] };
   if (OFF_TOPIC_RE.test(t)) return { cls: "off_topic", notes: ["off_topic"] };
+  // Exact Chinese tokens first (word-boundary \b is unreliable for CJK).
+  if (t === "不知道" || t === "不清楚" || t === "不了解" || t === "没印象") {
+    return { cls: "unknown", notes: ["user_unknown"] };
+  }
+  if (t === "不想说" || t === "不愿回答" || t === "跳过") {
+    return { cls: "declined", notes: ["user_declined"] };
+  }
   if (UNKNOWN_RE.test(t)) return { cls: "unknown", notes: ["user_unknown"] };
   if (DECLINED_RE.test(t)) return { cls: "declined", notes: ["user_declined"] };
   if (CORRECTION_RE.test(t)) return { cls: "correction", notes: ["correction"] };

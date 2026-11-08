@@ -1011,6 +1011,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             decision_understanding: sessionForLlm.decision_understanding,
             adaptive_ask_plan: sessionForLlm.adaptive_ask_plan,
             intake_ask_plan: sessionForLlm.intake_ask_plan,
+            session_revision: sessionForLlm.session_revision,
+            dc_write_revision: sessionForLlm.dc_write_revision,
           };
         }
       }
@@ -1426,6 +1428,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           m1CollectingTurn.plan ?? sessionOut.adaptive_ask_plan,
         intake_ask_plan:
           m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
+        session_revision:
+          m1CollectingTurn.session.session_revision ?? sessionOut.session_revision,
+        dc_write_revision:
+          m1CollectingTurn.session.dc_write_revision ?? sessionOut.dc_write_revision,
         messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
       },
       m1CollectingTurn.plan,

@@ -166,22 +166,27 @@ export async function runAdaptiveQuestionTurn(input: {
           persist_error: persisted.error ?? "persist_failed",
         };
       } else {
+        // Keep C1 revision mirrors from commit.session — caller/savePOJUSession
+        // must not see a stale session_revision after DC write.
         current = {
+          ...applied.session,
           ...persisted.session,
+          decision_context:
+            persisted.session.decision_context ?? applied.session.decision_context,
+          decision_context_versions:
+            persisted.session.decision_context_versions ??
+            applied.session.decision_context_versions,
+          decision_context_idempotency_keys:
+            persisted.session.decision_context_idempotency_keys ??
+            applied.session.decision_context_idempotency_keys,
+          control_plane:
+            persisted.session.control_plane ?? applied.session.control_plane,
           decision_blueprint: applied.session.decision_blueprint,
           messages: applied.session.messages,
           agent_v2: applied.session.agent_v2,
+          session_revision: persisted.session.session_revision,
+          dc_write_revision: persisted.session.dc_write_revision,
         };
-        // Ensure blueprint + interpreted DC fields survive commit merge.
-        if (!current.decision_context && applied.session.decision_context) {
-          current = { ...current, decision_context: applied.session.decision_context };
-        }
-        if (applied.session.decision_blueprint) {
-          current = {
-            ...current,
-            decision_blueprint: applied.session.decision_blueprint,
-          };
-        }
       }
     } catch (e) {
       return {
