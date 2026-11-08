@@ -4,10 +4,7 @@
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
-import {
-  buildNaValidationContextFromSession,
-  type NaValidationAuthorityOverrides,
-} from "./na-validation-from-session";
+import { buildProductionNaValidationContextFromSession } from "./na-validation-from-session";
 import { applyDcToWorking } from "./persist";
 import {
   startV2FromFinal,
@@ -45,12 +42,11 @@ export type PersistV2Result =
 export type StartV2OnSessionOpts = Omit<
   StartV2Options,
   "naValidation" | "expectedSessionId"
-> & {
-  authority?: NaValidationAuthorityOverrides;
-};
+>;
 
 /**
- * Pure: open V2 draft on Session using Session-built NaValidationContext.
+ * Pure: open V2 draft on Session using the production NaValidationContext
+ * (Session authority + ACTIVE DIR catalog; no caller authority entry).
  */
 export function applyV2FromFinalToSession(
   session: POJUSessionState,
@@ -63,12 +59,8 @@ export function applyV2FromFinalToSession(
     );
   }
 
-  const naValidation = buildNaValidationContextFromSession(session, {
-    ...opts.authority,
-    nowIso: opts.now ?? opts.authority?.nowIso,
-    realityFacts: finalDc.reality_facts,
-    constraints: finalDc.constraints,
-    explicitNaClassifications: finalDc.explicit_na_classifications,
+  const naValidation = buildProductionNaValidationContextFromSession(session, {
+    nowIso: opts.now,
   });
 
   const { superseded, draft } = startV2FromFinal(finalDc, {

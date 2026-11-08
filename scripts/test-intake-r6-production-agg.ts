@@ -77,10 +77,16 @@ async function main() {
     "../lib/poju/decision-context/dir-aggregator"
   );
   const {
-    buildNaValidationContextFromSession,
+    buildProductionNaValidationContextFromSession,
+    naValidationBoundToDc,
     PRODUCTION_NA_VALIDATION_SOURCE_GAPS,
     reaggregateDirsOnSession,
   } = await import("../lib/poju/decision-context/na-validation-from-session");
+  type NaValidationFixtureOverrides =
+    import("../lib/poju/decision-context/na-validation-from-session").NaValidationFixtureOverrides;
+  const { ACTIVE_DIR_NA_CATALOG_VERSION, loadDirNaCatalog } = await import(
+    "../lib/poju/decision-context/catalog"
+  );
   const { validateExplicitNaEvidence } = await import(
     "../lib/poju/decision-context/explicit-na-validate"
   );
@@ -489,93 +495,255 @@ async function main() {
 
     assert.ok(PRODUCTION_NA_VALIDATION_SOURCE_GAPS.length >= 1);
 
-    // Without catalog authority → N/A fail-closed, DIR stays unknown/known from facts
-    const noCatalog = reaggregateDirsOnSession(sessionShell, [dir], {
-      nowIso: NOW,
-    });
-    assert.notEqual(noCatalog[0]!.current_state, "n_a");
-    console.log("  PASS  missing dirCatalog → N/A not applied (fail-closed)");
-
-    const withCatalog = reaggregateDirsOnSession(sessionShell, [dir], {
-      nowIso: NOW,
-      authority: {
-        dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-      },
-    });
-    assert.equal(withCatalog[0]!.current_state, "n_a");
-    console.log("  PASS  valid DIR-level ExplicitNaEvidence + catalog → n_a");
-
-    // Revoked evidence
-    const revoked = reaggregateDirsOnSession(
-      {
-        ...sessionShell,
-        decision_context: {
-          ...sessionShell.decision_context!,
-          explicit_na_evidence: [{ ...evidence, revoked: true }],
-        },
-      },
-      [dir],
-      {
-        nowIso: NOW,
-        authority: {
-          dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-        },
-      },
-    );
-    assert.notEqual(revoked[0]!.current_state, "n_a");
-    console.log("  PASS  revoked N/A → no aggregation effect");
-
-    // Cross-context classification
-    const crossCtx = reaggregateDirsOnSession(
-      {
-        ...sessionShell,
-        decision_context: {
-          ...sessionShell.decision_context!,
-          explicit_na_classifications: [
-            { ...classification, context_id: "OTHER_DC" },
-          ],
-        },
-      },
-      [dir],
-      {
-        nowIso: NOW,
-        authority: {
-          dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-        },
-      },
-    );
-    assert.notEqual(crossCtx[0]!.current_state, "n_a");
-    console.log("  PASS  cross-context classification → no n_a");
-
-    // Blocking conflict > N/A
-    const conflicted = reaggregateDirsOnSession(sessionShell, [dir], {
-      nowIso: NOW,
-      conflicts: [
+    type Shell = typeof sessionShell;
+    const reasonOf = (
+      ev: Parameters<typeof validateExplicitNaEvidence>[0],
+      ctx: Parameters<typeof validateExplicitNaEvidence>[1],
+    ) => {
+      const r = validateExplicitNaEvidence(ev, ctx);
+      return r.ok ? "ok" : r.reason_code;
+    };
+    const blockingConflict = {
+      conflict_id: "c1",
+      fact_ids: ["f1"],
+      conflict_field: "path",
+      statements_snapshot: ["a", "b"],
+      source_refs: [
         {
-          conflict_id: "c1",
-          fact_ids: ["f1"],
-          conflict_field: "path",
-          statements_snapshot: ["a", "b"],
-          source_refs: [
-            {
-              fact_id: "f1",
-              source_stage: "user_supplement",
-              source_turn_id: "t1",
-            },
-          ],
-          state: "open",
-          resolution: null,
-          user_confirmation: false,
-          affects_preferred_path: true,
-          updated_at: NOW,
+          fact_id: "f1",
+          source_stage: "user_supplement" as const,
+          source_turn_id: "t1",
         },
       ],
-      authority: {
-        dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-      },
+      state: "open" as const,
+      resolution: null,
+      user_confirmation: false,
+      affects_preferred_path: true,
+      updated_at: NOW,
+    };
+    const withDc = (
+      s: Shell,
+      patch: Partial<NonNullable<Shell["decision_context"]>>,
+    ): Shell => ({
+      ...s,
+      decision_context: { ...s.decision_context!, ...patch },
     });
-    assert.equal(conflicted[0]!.current_state, "conflict");
-    console.log("  PASS  blocking conflict priority over N/A");
+
+    // ----- C-Pure: fixture path (naValidationBoundToDc + reaggregateDirsIntake) -----
+    // Explicit test catalog for DIR-A / NA_CODE (not ACTIVE). Session authority
+    // passed explicitly from the shell so only the variable under test differs.
+    const FIXTURE_CATALOG = [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }];
+    const fixtureNa = (
+      s: Shell,
+      extra: NaValidationFixtureOverrides = {},
+    ) =>
+      naValidationBoundToDc(s.decision_context!, s.session_id, {
+        nowIso: NOW,
+        confirmationEvents: s.confirmation_events,
+        naDeclarationActions: s.na_declaration_actions,
+        ...extra,
+      });
+    const aggPure = (
+      s: Shell,
+      extra: NaValidationFixtureOverrides,
+      conflicts: Shell["decision_context"]["conflicts"] = s.decision_context!
+        .conflicts,
+    ) =>
+      reaggregateDirsIntake(
+        [dir],
+        s.decision_context!.reality_facts,
+        conflicts,
+        s.decision_context!.constraints,
+        s.decision_context!.explicit_na_evidence ?? [],
+        fixtureNa(s, extra),
+      );
+
+    const pureWithCatalog = aggPure(sessionShell, {
+      dirCatalog: FIXTURE_CATALOG,
+    });
+    assert.equal(pureWithCatalog[0]!.current_state, "n_a");
+    console.log(
+      "  PASS  [C-Pure] valid DIR-level ExplicitNaEvidence + fixture catalog → n_a",
+    );
+
+    // Precondition: pureWithCatalog === n_a with identical triad. Only catalog removed.
+    const pureNoCatalog = aggPure(sessionShell, {});
+    assert.notEqual(pureNoCatalog[0]!.current_state, "n_a");
+    assert.equal(
+      reasonOf(evidence, fixtureNa(sessionShell)),
+      "na_condition_not_in_catalog",
+    );
+    console.log(
+      "  PASS  [C-Pure] missing dirCatalog → not n_a (direct cause: na_condition_not_in_catalog)",
+    );
+
+    // Precondition: pureWithCatalog === n_a. Only evidence.revoked flipped.
+    const revokedShell = withDc(sessionShell, {
+      explicit_na_evidence: [{ ...evidence, revoked: true }],
+    });
+    const pureRevoked = aggPure(revokedShell, { dirCatalog: FIXTURE_CATALOG });
+    assert.notEqual(pureRevoked[0]!.current_state, "n_a");
+    assert.equal(
+      reasonOf(
+        { ...evidence, revoked: true },
+        fixtureNa(revokedShell, { dirCatalog: FIXTURE_CATALOG }),
+      ),
+      "revoked",
+    );
+    console.log("  PASS  [C-Pure] revoked N/A → not n_a (direct cause: revoked)");
+
+    // Precondition: pureWithCatalog === n_a. Only classification.context_id changed.
+    const crossShell = withDc(sessionShell, {
+      explicit_na_classifications: [
+        { ...classification, context_id: "OTHER_DC" },
+      ],
+    });
+    const pureCross = aggPure(crossShell, { dirCatalog: FIXTURE_CATALOG });
+    assert.notEqual(pureCross[0]!.current_state, "n_a");
+    assert.equal(
+      reasonOf(evidence, fixtureNa(crossShell, { dirCatalog: FIXTURE_CATALOG })),
+      "explicit_na_classification_missing",
+    );
+    console.log(
+      "  PASS  [C-Pure] cross-context classification → not n_a (direct cause: explicit_na_classification_missing)",
+    );
+
+    // Precondition: pureWithCatalog === n_a and evidence still validates; only conflict added.
+    assert.equal(
+      reasonOf(evidence, fixtureNa(sessionShell, { dirCatalog: FIXTURE_CATALOG })),
+      "ok",
+    );
+    const pureConflicted = aggPure(
+      sessionShell,
+      { dirCatalog: FIXTURE_CATALOG },
+      [blockingConflict],
+    );
+    assert.equal(pureConflicted[0]!.current_state, "conflict");
+    console.log("  PASS  [C-Pure] blocking conflict priority over valid N/A");
+
+    // ----- C-Production: reaggregateDirsOnSession (ACTIVE catalog only) -----
+    // ACTIVE v1 defines DIR-DEF-UNACCEPTABLE.na_conditions = ["explicit_no_hard_red_lines"].
+    const activeLoad = loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION);
+    assert.equal(activeLoad.ok, true);
+    if (!activeLoad.ok) throw new Error("ACTIVE catalog unavailable");
+    const ACTIVE_DIR = "DIR-DEF-UNACCEPTABLE";
+    const ACTIVE_CODE = "explicit_no_hard_red_lines";
+    assert.deepEqual(
+      activeLoad.entries.find((e) => e.dir_id === ACTIVE_DIR)?.na_conditions,
+      [ACTIVE_CODE],
+    );
+    assert.equal(
+      activeLoad.entries.some((e) => e.dir_id === "DIR-A"),
+      false,
+      "DIR-A must not be an ACTIVE catalog DIR",
+    );
+
+    const prodDir = { ...dir, dir_id: ACTIVE_DIR };
+    const prodFact = { ...fact, related_dir_ids: [ACTIVE_DIR] };
+    const prodAction = {
+      ...action,
+      declaration_action_id: "na-act-agg-prod",
+      dir_id: ACTIVE_DIR,
+      na_condition_code: ACTIVE_CODE,
+    };
+    const prodClassification = {
+      ...classification,
+      classification_id: "na_cls_na-act-agg-prod",
+      dir_id: ACTIVE_DIR,
+      na_condition_code: ACTIVE_CODE,
+      declaration_action_id: "na-act-agg-prod",
+    };
+    const prodEvidence = {
+      ...evidence,
+      evidence_id: "na_ev_na-act-agg-prod",
+      dir_id: ACTIVE_DIR,
+      na_condition_code: ACTIVE_CODE,
+    };
+    const prodShell: Shell = {
+      ...sessionShell,
+      na_declaration_actions: [prodAction],
+      decision_context: {
+        ...sessionShell.decision_context!,
+        reality_facts: [prodFact],
+        dirs: [prodDir],
+        explicit_na_evidence: [prodEvidence],
+        explicit_na_classifications: [prodClassification],
+      },
+    };
+    const prodReason = (s: Shell, ev: typeof prodEvidence) =>
+      reasonOf(
+        ev,
+        buildProductionNaValidationContextFromSession(s, { nowIso: NOW }),
+      );
+
+    const prodValid = reaggregateDirsOnSession(prodShell, [prodDir], {
+      nowIso: NOW,
+    });
+    assert.equal(prodValid[0]!.current_state, "n_a");
+    assert.equal(prodReason(prodShell, prodEvidence), "ok");
+    console.log(
+      "  PASS  [C-Prod] ACTIVE legal pair + Session action/E1 + DC classification/evidence → n_a",
+    );
+
+    // Precondition: C-Pure with FIXTURE_CATALOG made this exact DIR-A triad n_a.
+    // Forged catalog arrives via a non-literal opts object (no production field).
+    const forgedReaggOpts = {
+      nowIso: NOW,
+      authority: { dirCatalog: FIXTURE_CATALOG },
+      dirCatalog: FIXTURE_CATALOG,
+    };
+    const prodForgedCatalog = reaggregateDirsOnSession(
+      sessionShell,
+      [dir],
+      forgedReaggOpts,
+    );
+    assert.notEqual(prodForgedCatalog[0]!.current_state, "n_a");
+    assert.equal(
+      prodReason(sessionShell, evidence),
+      "na_condition_not_in_catalog",
+    );
+    console.log(
+      "  PASS  [C-Prod] non-ACTIVE DIR-A + forged caller catalog → not n_a (direct cause: na_condition_not_in_catalog)",
+    );
+
+    // Precondition: prodValid === n_a. Only evidence.revoked flipped.
+    const prodRevokedEv = { ...prodEvidence, revoked: true };
+    const prodRevokedShell = withDc(prodShell, {
+      explicit_na_evidence: [prodRevokedEv],
+    });
+    const prodRevoked = reaggregateDirsOnSession(prodRevokedShell, [prodDir], {
+      nowIso: NOW,
+    });
+    assert.notEqual(prodRevoked[0]!.current_state, "n_a");
+    assert.equal(prodReason(prodRevokedShell, prodRevokedEv), "revoked");
+    console.log("  PASS  [C-Prod] revoked N/A → not n_a (direct cause: revoked)");
+
+    // Precondition: prodValid === n_a. Only classification.context_id changed.
+    const prodCrossShell = withDc(prodShell, {
+      explicit_na_classifications: [
+        { ...prodClassification, context_id: "OTHER_DC" },
+      ],
+    });
+    const prodCross = reaggregateDirsOnSession(prodCrossShell, [prodDir], {
+      nowIso: NOW,
+    });
+    assert.notEqual(prodCross[0]!.current_state, "n_a");
+    assert.equal(
+      prodReason(prodCrossShell, prodEvidence),
+      "explicit_na_classification_missing",
+    );
+    console.log(
+      "  PASS  [C-Prod] cross-context classification → not n_a (direct cause: explicit_na_classification_missing)",
+    );
+
+    // Precondition: prodValid === n_a with evidence ok; only blocking conflict added.
+    const prodConflicted = reaggregateDirsOnSession(prodShell, [prodDir], {
+      nowIso: NOW,
+      conflicts: [blockingConflict],
+    });
+    assert.equal(prodReason(prodShell, prodEvidence), "ok");
+    assert.equal(prodConflicted[0]!.current_state, "conflict");
+    console.log("  PASS  [C-Prod] blocking conflict priority over valid N/A");
 
     // DDR-03: calc_failed reject; absent_not_supplied accepts with complete basis
     const ddrEv = {
@@ -594,17 +762,29 @@ async function main() {
       written_by: "code" as const,
       revoked: false,
     };
-    const ctxBase = buildNaValidationContextFromSession(sessionShell, {
-      nowIso: NOW,
+    // C-Pure: CFP source state is fixture-injected (no production CFP reader).
+    const ctxBase = fixtureNa(sessionShell, {
       cfpSourceState: "source_calc_failed",
     });
     assert.equal(validateExplicitNaEvidence(ddrEv, ctxBase).ok, false);
-    const ctxOk = buildNaValidationContextFromSession(sessionShell, {
-      nowIso: NOW,
+    const ctxOk = fixtureNa(sessionShell, {
       cfpSourceState: "source_absent_not_supplied",
     });
     assert.equal(validateExplicitNaEvidence(ddrEv, ctxOk).ok, true);
-    console.log("  PASS  DDR-03 CFP: calc_failed reject; absent_not_supplied accept");
+    console.log(
+      "  PASS  [C-Pure] DDR-03 CFP: calc_failed reject; absent_not_supplied accept",
+    );
+
+    // C-Production: ctxOk precondition accepts ddrEv; production builder has no
+    // CFP source → cfpSourceState unset → reject.
+    const prodCtx = buildProductionNaValidationContextFromSession(sessionShell, {
+      nowIso: NOW,
+    });
+    assert.equal(prodCtx.cfpSourceState, undefined);
+    assert.equal(reasonOf(ddrEv, prodCtx), "ddr03_cfp_not_absent");
+    console.log(
+      "  PASS  [C-Prod] DDR-03 CFP source absent in production → reject (direct cause: ddr03_cfp_not_absent)",
+    );
 
     // DIR-targeted empty_dir_source_absence must reject (basis only for DDR-03)
     const dirBadBasis = {
@@ -800,7 +980,7 @@ async function main() {
     const targetDir = sess.decision_context!.dirs[0]!;
     assert.equal(targetDir.current_state, "known");
 
-    const na = buildNaValidationContextFromSession(sess, { nowIso: NOW });
+    const na = buildProductionNaValidationContextFromSession(sess, { nowIso: NOW });
     const agg = aggregateDirStateIntake(
       targetDir,
       sess.decision_context!.reality_facts,

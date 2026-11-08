@@ -54,9 +54,12 @@ async function main() {
   const {
     aggregateDirStateIntake,
     aggregateDirState,
+    ACTIVE_DIR_NA_CATALOG_VERSION,
     applySufficiencyFreezeToSession,
-    buildNaValidationContextFromSession,
+    buildProductionNaValidationContextFromSession,
     computeContentHash,
+    loadDirNaCatalog,
+    validateExplicitNaEvidence,
     computeUnresolvedCount,
     freezeDecisionContext,
     freezeDraftForDelivery,
@@ -200,7 +203,7 @@ async function main() {
   {
     const draft = makeSufficientDraft();
     const session = sessionOf(draft);
-    const na = buildNaValidationContextFromSession(session, { nowIso: NOW });
+    const na = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
     const { frozen } = freezeDecisionContext(draft, {
       stage3_sufficiency_end: true,
       now: NOW,
@@ -364,60 +367,186 @@ async function main() {
         },
       ],
     });
-    const noCat = reaggregateDirsOnSession(sessNa, withNaDraft.dirs, {
-      nowIso: NOW,
-    });
-    assert.notEqual(noCat[0]!.current_state, "n_a");
-    const withCat = reaggregateDirsOnSession(sessNa, withNaDraft.dirs, {
-      nowIso: NOW,
-      authority: {
-        dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-      },
-    });
-    assert.equal(withCat[0]!.current_state, "n_a");
-    console.log("  PASS  N/A fail-closed without catalog; valid+catalog → n_a");
+    // ----- A-Pure: fixture path; explicit test catalog for DIR-A / NA_CODE -----
+    const FIXTURE_CATALOG = [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }];
+    const reasonOf = (
+      ev: Parameters<typeof validateExplicitNaEvidence>[0],
+      ctx: Parameters<typeof validateExplicitNaEvidence>[1],
+    ) => {
+      const r = validateExplicitNaEvidence(ev, ctx);
+      return r.ok ? "ok" : r.reason_code;
+    };
+    const fixtureNa = (
+      s: POJUSessionState,
+      withCatalog: boolean,
+    ) =>
+      naValidationBoundToDc(s.decision_context!, s.session_id, {
+        nowIso: NOW,
+        confirmationEvents: s.confirmation_events,
+        naDeclarationActions: s.na_declaration_actions,
+        ...(withCatalog ? { dirCatalog: FIXTURE_CATALOG } : {}),
+      });
+    const aggPure = (s: POJUSessionState, withCatalog: boolean) => {
+      const dc = s.decision_context!;
+      return reaggregateDirsIntake(
+        dc.dirs,
+        dc.reality_facts,
+        dc.conflicts,
+        dc.constraints,
+        dc.explicit_na_evidence ?? [],
+        fixtureNa(s, withCatalog),
+      );
+    };
 
-    // Revoked / cross-context
-    const revokedAgg = reaggregateDirsOnSession(
-      {
-        ...sessNa,
-        decision_context: {
-          ...withNaDraft,
-          explicit_na_evidence: [{ ...naEv, revoked: true }],
-        },
-      },
-      withNaDraft.dirs,
-      {
-        nowIso: NOW,
-        authority: {
-          dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-        },
-      },
+    const withCat = aggPure(sessNa, true);
+    assert.equal(withCat[0]!.current_state, "n_a");
+    // Precondition: withCat === n_a with identical triad; only catalog removed.
+    const noCat = aggPure(sessNa, false);
+    assert.notEqual(noCat[0]!.current_state, "n_a");
+    assert.equal(
+      reasonOf(naEv, fixtureNa(sessNa, false)),
+      "na_condition_not_in_catalog",
     );
+    console.log(
+      "  PASS  [A-Pure] N/A fail-closed without catalog (direct cause: na_condition_not_in_catalog); valid+catalog → n_a",
+    );
+
+    // Precondition: withCat === n_a. Only evidence.revoked flipped.
+    const revokedEv = { ...naEv, revoked: true };
+    const sessRevoked = {
+      ...sessNa,
+      decision_context: { ...withNaDraft, explicit_na_evidence: [revokedEv] },
+    };
+    const revokedAgg = aggPure(sessRevoked, true);
     assert.notEqual(revokedAgg[0]!.current_state, "n_a");
-    const crossAgg = reaggregateDirsOnSession(
-      {
-        ...sessNa,
-        decision_context: {
-          ...withNaDraft,
-          explicit_na_classifications: [
-            {
-              ...withNaDraft.explicit_na_classifications![0]!,
-              context_id: "OTHER",
-            },
-          ],
-        },
+    assert.equal(reasonOf(revokedEv, fixtureNa(sessRevoked, true)), "revoked");
+    // Precondition: withCat === n_a. Only classification.context_id changed.
+    const sessCross = {
+      ...sessNa,
+      decision_context: {
+        ...withNaDraft,
+        explicit_na_classifications: [
+          {
+            ...withNaDraft.explicit_na_classifications![0]!,
+            context_id: "OTHER",
+          },
+        ],
       },
-      withNaDraft.dirs,
-      {
-        nowIso: NOW,
-        authority: {
-          dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-        },
-      },
-    );
+    };
+    const crossAgg = aggPure(sessCross, true);
     assert.notEqual(crossAgg[0]!.current_state, "n_a");
-    console.log("  PASS  revoked / cross-context N/A ineffective");
+    assert.equal(
+      reasonOf(naEv, fixtureNa(sessCross, true)),
+      "explicit_na_classification_missing",
+    );
+    console.log(
+      "  PASS  [A-Pure] revoked (direct cause: revoked) / cross-context (direct cause: explicit_na_classification_missing) N/A ineffective",
+    );
+
+    // ----- A-Production: reaggregateDirsOnSession (ACTIVE catalog only) -----
+    // ACTIVE v1: DIR-DEF-UNACCEPTABLE.na_conditions = ["explicit_no_hard_red_lines"].
+    const ACTIVE_DIR = "DIR-DEF-UNACCEPTABLE";
+    const ACTIVE_CODE = "explicit_no_hard_red_lines";
+    const activeLoad = loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION);
+    if (!activeLoad.ok) throw new Error("ACTIVE catalog unavailable");
+    assert.deepEqual(
+      activeLoad.entries.find((e) => e.dir_id === ACTIVE_DIR)?.na_conditions,
+      [ACTIVE_CODE],
+    );
+    assert.equal(activeLoad.entries.some((e) => e.dir_id === "DIR-A"), false);
+
+    const prodNaEv = {
+      ...naEv,
+      evidence_id: "na_ev_na-act-prod",
+      dir_id: ACTIVE_DIR,
+      na_condition_code: ACTIVE_CODE,
+    };
+    const prodDraft = {
+      ...draft,
+      reality_facts: [
+        { ...draft.reality_facts[0]!, related_dir_ids: [ACTIVE_DIR] },
+      ],
+      dirs: [baseDir({ dir_id: ACTIVE_DIR })],
+      explicit_na_evidence: [prodNaEv],
+      explicit_na_classifications: [
+        {
+          ...withNaDraft.explicit_na_classifications![0]!,
+          classification_id: "na_cls_prod",
+          dir_id: ACTIVE_DIR,
+          na_condition_code: ACTIVE_CODE,
+          declaration_action_id: "na-act-prod",
+        },
+      ],
+    };
+    const sessProd = sessionOf(prodDraft, {
+      na_declaration_actions: [
+        {
+          ...sessNa.na_declaration_actions![0]!,
+          declaration_action_id: "na-act-prod",
+          dir_id: ACTIVE_DIR,
+          na_condition_code: ACTIVE_CODE,
+        },
+      ],
+    });
+    const prodReason = (s: POJUSessionState, ev: typeof prodNaEv) =>
+      reasonOf(
+        ev,
+        buildProductionNaValidationContextFromSession(s, { nowIso: NOW }),
+      );
+
+    const prodValid = reaggregateDirsOnSession(sessProd, prodDraft.dirs, {
+      nowIso: NOW,
+    });
+    assert.equal(prodValid[0]!.current_state, "n_a");
+    assert.equal(prodReason(sessProd, prodNaEv), "ok");
+    console.log("  PASS  [A-Prod] ACTIVE legal pair → n_a via production reaggregation");
+
+    // Precondition: A-Pure withCat made the same DIR-A triad n_a. Forged catalog
+    // arrives as a non-literal opts object (no production field accepts it).
+    const forgedOpts = {
+      nowIso: NOW,
+      authority: { dirCatalog: FIXTURE_CATALOG },
+      dirCatalog: FIXTURE_CATALOG,
+    };
+    const prodForged = reaggregateDirsOnSession(sessNa, withNaDraft.dirs, forgedOpts);
+    assert.notEqual(prodForged[0]!.current_state, "n_a");
+    assert.equal(prodReason(sessNa, naEv), "na_condition_not_in_catalog");
+    console.log(
+      "  PASS  [A-Prod] forged caller catalog for non-ACTIVE DIR-A → not n_a (direct cause: na_condition_not_in_catalog)",
+    );
+
+    // Precondition: prodValid === n_a. Only evidence.revoked flipped.
+    const prodRevokedEv = { ...prodNaEv, revoked: true };
+    const sessProdRevoked = sessionOf(
+      { ...prodDraft, explicit_na_evidence: [prodRevokedEv] },
+      { na_declaration_actions: sessProd.na_declaration_actions },
+    );
+    const prodRevoked = reaggregateDirsOnSession(sessProdRevoked, prodDraft.dirs, {
+      nowIso: NOW,
+    });
+    assert.notEqual(prodRevoked[0]!.current_state, "n_a");
+    assert.equal(prodReason(sessProdRevoked, prodRevokedEv), "revoked");
+    // Precondition: prodValid === n_a. Only classification.context_id changed.
+    const sessProdCross = sessionOf(
+      {
+        ...prodDraft,
+        explicit_na_classifications: [
+          { ...prodDraft.explicit_na_classifications[0]!, context_id: "OTHER" },
+        ],
+      },
+      { na_declaration_actions: sessProd.na_declaration_actions },
+    );
+    const prodCross = reaggregateDirsOnSession(sessProdCross, prodDraft.dirs, {
+      nowIso: NOW,
+    });
+    assert.notEqual(prodCross[0]!.current_state, "n_a");
+    assert.equal(
+      prodReason(sessProdCross, prodNaEv),
+      "explicit_na_classification_missing",
+    );
+    console.log(
+      "  PASS  [A-Prod] revoked (direct cause: revoked) / cross-context (direct cause: explicit_na_classification_missing) N/A ineffective",
+    );
 
     // Conflict > N/A; post-agg sufficiency
     const conflictDraft = {
@@ -447,14 +576,11 @@ async function main() {
       () =>
         freezeDecisionContext(conflictDraft, {
           stage3_sufficiency_end: true,
-          naValidation: buildNaValidationContextFromSession(
+          naValidation: fixtureNa(
             sessionOf(conflictDraft, {
               na_declaration_actions: sessNa.na_declaration_actions,
             }),
-            {
-              nowIso: NOW,
-              dirCatalog: [{ dir_id: "DIR-A", na_conditions: [NA_CODE] }],
-            },
+            true,
           ),
           expectedSessionId: SESS,
         }),
@@ -494,7 +620,7 @@ async function main() {
     const { frozen } = freezeDecisionContext(draft, {
       stage3_sufficiency_end: true,
       now: NOW,
-      naValidation: buildNaValidationContextFromSession(session, {
+      naValidation: buildProductionNaValidationContextFromSession(session, {
         nowIso: NOW,
       }),
       expectedSessionId: SESS,
@@ -783,7 +909,7 @@ async function main() {
   {
     const draft = makeSufficientDraft();
     const session = sessionOf(draft);
-    const na = buildNaValidationContextFromSession(session, { nowIso: NOW });
+    const na = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
     const dir = draft.dirs[0]!;
 
     const agg = aggregateDirStateIntake(

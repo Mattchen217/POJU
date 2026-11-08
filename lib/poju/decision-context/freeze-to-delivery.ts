@@ -8,15 +8,11 @@ import {
   computeContentHash,
   extractBusinessPayload,
 } from "./content-hash";
-import {
-  ACTIVE_DIR_NA_CATALOG_VERSION,
-  loadDirNaCatalog,
-} from "./catalog";
 import { FreezeError, freezeDecisionContext, type FreezeOptions } from "./freeze";
 import type { NaValidationContext } from "./explicit-na-validate";
 import {
-  buildNaValidationContextFromSession,
-  type NaValidationAuthorityOverrides,
+  buildProductionNaValidationContextFromSession,
+  ProductionNaAuthorityError,
 } from "./na-validation-from-session";
 import {
   assertSnapshotMatchesBinding,
@@ -38,9 +34,8 @@ export type FreezeDraftForDeliveryOpts = Omit<
   "stage3_sufficiency_end" | "naValidation" | "expectedSessionId"
 > & {
   now?: string;
-  /** Authoritative Session — required for Intake N/A validation context. */
+  /** Authoritative Session — sole source of Intake N/A validation authority. */
   session: POJUSessionState;
-  authority?: NaValidationAuthorityOverrides;
 };
 
 const BUSINESS_SLICES = [
@@ -119,55 +114,30 @@ export function assertSessionDraftBusinessSnapshotBound(
 }
 
 /**
- * Freeze-path NaValidationContext: Session SoT for confirmation / N/A actions /
- * topic eval rows. T2 dirCatalog comes only from loadDirNaCatalog(ACTIVE).
- * Caller authority.dirCatalog is ignored. Other non-T2 gap fields (CFP /
- * catalogConditionEvals / topicRules) may still pass through after T0 strip.
+ * Freeze-path NaValidationContext via the sole production builder.
+ * `authoritative` must be the Session DC (see assertSessionDraftBusinessSnapshotBound).
+ * ACTIVE catalog load failure → FreezeError carrying the loader reason_code.
  */
 export function buildFreezeNaValidationFromSession(
   session: POJUSessionState,
   authoritative: DecisionContext,
-  opts?: { now?: string; authority?: NaValidationAuthorityOverrides },
+  opts?: { now?: string },
 ): NaValidationContext {
-  const raw = opts?.authority ?? {};
-  // Strip Session-owned authority keys — even if present on opts.authority.
-  const {
-    confirmationEvents: _confirmationEvents,
-    naDeclarationActions: _naDeclarationActions,
-    topicEvalAuthority: _topicEvalAuthority,
-    currentTopicCatalogVersion: _currentTopicCatalogVersion,
-    realityFacts: _realityFacts,
-    constraints: _constraints,
-    explicitNaClassifications: _explicitNaClassifications,
-    dirCatalog: _callerDirCatalog,
-    ...catalogOrCfpAuthority
-  } = raw;
-
-  const topicVersion =
-    session.topic_catalog_version != null && session.topic_catalog_version !== ""
-      ? session.topic_catalog_version
-      : undefined;
-
-  // T2 — production ACTIVE catalog only (code-reviewed fail-closed; not Registry-injectable).
-  const load = loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION);
-  if (!load.ok) {
-    throw new FreezeError(load.reason_code, { code: load.reason_code });
+  if (session.decision_context !== authoritative) {
+    throw new Error(
+      "buildFreezeNaValidationFromSession: authoritative DC must be session.decision_context",
+    );
   }
-
-  return buildNaValidationContextFromSession(session, {
-    ...catalogOrCfpAuthority,
-    nowIso: opts?.now ?? raw.nowIso,
-    realityFacts: authoritative.reality_facts,
-    constraints: authoritative.constraints,
-    explicitNaClassifications: authoritative.explicit_na_classifications,
-    // Hard Session SoT — cannot be overridden by opts.authority.
-    confirmationEvents: session.confirmation_events ?? [],
-    naDeclarationActions: session.na_declaration_actions ?? [],
-    topicEvalAuthority: session.topic_applicability_evals,
-    currentTopicCatalogVersion: topicVersion,
-    // T2 overwrite — never from caller authority.dirCatalog.
-    dirCatalog: load.entries,
-  });
+  try {
+    return buildProductionNaValidationContextFromSession(session, {
+      nowIso: opts?.now,
+    });
+  } catch (e) {
+    if (e instanceof ProductionNaAuthorityError) {
+      throw new FreezeError(e.reason_code, { code: e.reason_code });
+    }
+    throw e;
+  }
 }
 
 /**
@@ -187,7 +157,7 @@ export function freezeDraftForDelivery(
   const naValidation = buildFreezeNaValidationFromSession(
     opts.session,
     authoritative,
-    { now: opts.now, authority: opts.authority },
+    { now: opts.now },
   );
 
   const { frozen, version_snapshot } = freezeDecisionContext(authoritative, {

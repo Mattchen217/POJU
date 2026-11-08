@@ -11,8 +11,7 @@
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
-import type { NaValidationContext } from "./explicit-na-validate";
-import { buildNaValidationContextFromSession } from "./na-validation-from-session";
+import { buildProductionNaValidationContextFromSession } from "./na-validation-from-session";
 import {
   planNextAskFromCandidates,
   type PlanNextAskResult,
@@ -74,7 +73,6 @@ export type SelectNextIntakeAskInput = {
   remaining_hard_budget?: number;
   /** Extra candidates (e.g. source_only) supplied by Gate/CFP layer. */
   extraCandidates?: RankablePlanningCandidate[];
-  naValidation?: NaValidationContext;
   softGate?: { verdict: "PASS" | "WARN" | "FAIL" };
   p0DdrIncomplete?: boolean;
   p0SourceNotOk?: boolean;
@@ -91,6 +89,7 @@ export type SelectNextIntakeAskResult = {
 /**
  * Production entry: score/sort/select next ask for a session with draft DC.
  * Always uses planNextAskFromCandidates — never a second scoring algorithm.
+ * NaValidationContext comes only from the production builder (no caller injection).
  */
 export function selectNextIntakeAskForSession(
   input: SelectNextIntakeAskInput,
@@ -115,11 +114,10 @@ export function selectNextIntakeAskForSession(
     ...(input.extraCandidates ?? []),
   ];
 
-  const naValidation =
-    input.naValidation ??
-    buildNaValidationContextFromSession(input.session, {
-      nowIso: input.nowIso,
-    });
+  const naValidation = buildProductionNaValidationContextFromSession(
+    input.session,
+    { nowIso: input.nowIso },
+  );
 
   const plan = planNextAskFromCandidates({
     candidates,

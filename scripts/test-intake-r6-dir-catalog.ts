@@ -20,7 +20,7 @@ import {
   membershipFromCatalogLoad,
   NaDeclarationError,
 } from "../lib/poju/decision-context/na-declaration";
-import { buildNaValidationContextFromSession } from "../lib/poju/decision-context/na-validation-from-session";
+import { buildProductionNaValidationContextFromSession } from "../lib/poju/decision-context/na-validation-from-session";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import type { POJUSessionState } from "../lib/poju/types";
 import {
@@ -116,7 +116,7 @@ function makeWriteSession(
     expires_at: "2026-12-01T00:00:00.000Z",
     confirmation_events: [e1ForFact(factId)],
   } as POJUSessionState;
-  const na = buildNaValidationContextFromSession(sessionShell, {
+  const na = buildProductionNaValidationContextFromSession(sessionShell, {
     nowIso: WRITE_NOW,
   });
   const dirs = reaggregateDirsIntake([dir], [fact], [], [], [], na);
