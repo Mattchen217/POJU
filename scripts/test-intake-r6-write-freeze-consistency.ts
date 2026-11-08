@@ -1426,10 +1426,57 @@ async function main() {
     );
   }
 
-  // Disclose freeze-versioning F1 outside this script (run separately).
-  markUntested(
-    "[disclose] freeze-versioning F1",
-    "Run test:intake-r6-freeze-versioning separately; F1 RED disclosed until S5",
+  // R6 F1 (Session N/A + forged caller authority → DIR n_a) was disclosed here as
+  // RED until S5; it now runs on this suite's IndexedDB production path.
+  console.log("\n== freeze-versioning F1 (S4 disclosure, executed) ==");
+  await check(
+    "[disclose→executed] freeze-versioning F1: Session triad via declareDirNotApplicable + forged caller authority → frozen DIR n_a",
+    async () => {
+      const sid = await seedDraftSession("f1disc");
+      await declareDirNotApplicable(sid, declareInput("f1disc"));
+      const declared = await loadPOJUSession(sid);
+      assert.ok(declared?.decision_context);
+      const declaredDc = declared.decision_context;
+      // Same as C04: persist production reaggregation so sufficiency sees the DIR state.
+      const dirs = reaggregateDirsIntake(
+        declaredDc.dirs,
+        declaredDc.reality_facts,
+        declaredDc.conflicts,
+        declaredDc.constraints,
+        declaredDc.explicit_na_evidence ?? [],
+        freezeNa(declared),
+      );
+      assert.equal(dirs.find((d) => d.dir_id === SSOT_DIR)?.current_state, "n_a");
+      await mutatePOJUSession(sid, {
+        operation_id: "op_reagg_f1disc",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: (latest): POJUSessionState => {
+          assert.ok(latest.decision_context);
+          return { ...latest, decision_context: { ...latest.decision_context, dirs, updated_at: NOW } };
+        },
+      });
+      const s = await loadPOJUSession(sid);
+      assert.ok(s?.decision_context);
+      const dc = s.decision_context;
+      // Untyped caller payload: `authority` is not part of FreezeDraftForDeliveryOpts.
+      const forgedOpts = {
+        session: s,
+        now: NOW,
+        authority: {
+          confirmationEvents: [],
+          naDeclarationActions: [],
+          dirCatalog: [{ dir_id: "DIR-A", na_conditions: ["explicit_not_applicable"] }],
+        },
+      };
+      const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
+      assert.equal(pack.frozen.status, "final");
+      assert.equal(
+        pack.frozen.dirs.find((d) => d.dir_id === SSOT_DIR)?.current_state,
+        "n_a",
+      );
+      assert.deepEqual(pack.frozen.reality_facts, dc.reality_facts);
+    },
   );
 
   console.log(

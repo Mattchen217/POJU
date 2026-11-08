@@ -5,9 +5,12 @@
  * Evidence labels: [Tier A] helper unit · [Tier B] production-function execution ·
  * [Code-review] static · not Registry / not S2 !load.ok runtime.
  */
+import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
+import { withIdbWriteFault } from "./fixtures/idb-storage-fault";
 import {
   applySufficiencyFreezeToSession,
   canFreezeSessionOnSufficiency,
@@ -28,6 +31,8 @@ import {
 } from "../lib/poju/decision-context";
 import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { POJUSessionState } from "../lib/poju/types";
+
+installIntakeR6TestGlobals("dev_intake_r6_s3_wire_reason");
 
 const NOW = "2026-11-05T18:00:00.000Z";
 const SESS = "sess_s3_wire_reason";
@@ -410,112 +415,79 @@ async function main() {
     },
   );
 
-  // Persist-fail: try existing IDB fixtures without new production APIs.
-  console.log("\n== Tier B — ensure persist-fail (attempt A) ==");
-  try {
-    const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
-      "../lib/db/poju-db"
-    );
-    const {
-      createPOJUSession,
-      deletePOJUSession,
-      loadPOJUSession,
-      mutatePOJUSession,
-    } = await import("../lib/poju/session-manager");
-
-    await __resetPojuDbForTests();
-    await ensurePojuDbReady();
-    const sid = await createPOJUSession({
-      payment_id: "pay_s3_wire_persist",
-      original_question: "s3 persist fail",
-    });
-    const liveDraft = makeSufficientDraft();
-    liveDraft.context_id = `dc_${sid}`;
-    liveDraft.dirs = reaggregateDirsIntake(
-      liveDraft.dirs,
-      liveDraft.reality_facts,
-      liveDraft.conflicts,
-      liveDraft.constraints,
-      liveDraft.explicit_na_evidence ?? [],
-      naValidationBoundToDc(liveDraft, sid),
-    );
-
-    await mutatePOJUSession(sid, {
-      operation_id: "op_s3_seed_draft",
-      kind: "session_patch",
-      bump_dc: true,
-      apply: (latest) => ({
-        ...latest,
-        agent_v2: latest.agent_v2
-          ? {
-              ...latest.agent_v2,
-              stall_offer_pending: false,
-              delivery_mode: "full" as const,
-            }
-          : latest.agent_v2,
-        decision_context: liveDraft,
-        confirmation_events: latest.confirmation_events ?? [],
-      }),
-    });
-
-    let sess = (await loadPOJUSession(sid))!;
-    assert.equal(sess.decision_context?.status, "draft");
-    assert.equal(evaluateDecisionSufficiency(sess.decision_context!).canStop, true);
-
-    // Remove durable row so core CAS write during ensure persist fails.
-    await deletePOJUSession(sid);
-    const orphan = {
-      ...sess,
-      // Keep sufficient draft + real session_id so apply succeeds in memory.
-    };
-
-    const persistResult = await ensureSessionFrozenForDelivery(orphan, {
-      trigger: "pre_delivery_safety",
-      now: NOW,
-    });
-
-    if (
-      !persistResult.ok &&
-      persistResult.reason_code === FREEZE_WIRE_PERSIST_FAIL_CODE
-    ) {
-      assert.notEqual(
-        persistResult.reason_code,
-        FREEZE_WIRE_GENERIC_FAIL_CODE,
+  // Persist-fail: real IndexedDB write failure (storage-level tx abort, test fixture).
+  console.log("\n== Tier B — ensure persist-fail (real IndexedDB tx abort) ==");
+  await check(
+    "[Tier B] ensureSessionFrozenForDelivery persist-fail (IDB tx abort) → dc_freeze_persist_failed; Session unchanged; IDB draft",
+    async () => {
+      const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
+        "../lib/db/poju-db"
       );
+      const { createPOJUSession, loadPOJUSession, mutatePOJUSession } =
+        await import("../lib/poju/session-manager");
+
+      await __resetPojuDbForTests();
+      await ensurePojuDbReady();
+      const sid = await createPOJUSession({
+        payment_id: "pay_s3_wire_persist",
+        original_question: "s3 persist fail",
+      });
+      const liveDraft = makeSufficientDraft();
+      liveDraft.context_id = `dc_${sid}`;
+      liveDraft.dirs = reaggregateDirsIntake(
+        liveDraft.dirs,
+        liveDraft.reality_facts,
+        liveDraft.conflicts,
+        liveDraft.constraints,
+        liveDraft.explicit_na_evidence ?? [],
+        naValidationBoundToDc(liveDraft, sid),
+      );
+
+      await mutatePOJUSession(sid, {
+        operation_id: "op_s3_seed_draft",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: (latest) => ({
+          ...latest,
+          agent_v2: latest.agent_v2
+            ? {
+                ...latest.agent_v2,
+                stall_offer_pending: false,
+                delivery_mode: "full" as const,
+              }
+            : latest.agent_v2,
+          decision_context: liveDraft,
+          confirmation_events: latest.confirmation_events ?? [],
+        }),
+      });
+
+      const sess = await loadPOJUSession(sid);
+      assert.ok(sess?.decision_context);
+      assert.equal(sess.decision_context.status, "draft");
+      assert.equal(evaluateDecisionSufficiency(sess.decision_context).canStop, true);
+
+      const { value: persistResult, hits } = await withIdbWriteFault(
+        "pojuSessionRecords",
+        () =>
+          ensureSessionFrozenForDelivery(sess, {
+            trigger: "pre_delivery_safety",
+            now: NOW,
+          }),
+      );
+      assert.equal(hits, 1);
+      assert.equal(persistResult.ok, false);
+      if (persistResult.ok) throw new Error("expected ok:false");
+      assert.equal(persistResult.reason_code, FREEZE_WIRE_PERSIST_FAIL_CODE);
+      assert.notEqual(persistResult.reason_code, FREEZE_WIRE_GENERIC_FAIL_CODE);
       for (const code of FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES) {
         assert.notEqual(persistResult.reason_code, code);
       }
-      pass(
-        "[Tier B] ensureSessionFrozenForDelivery persist-fail → dc_freeze_persist_failed",
-      );
-    } else {
-      markUntested(
-        "[production-path] ensureSessionFrozenForDelivery persist-fail branch",
-        `delete-row attempt did not hit !commit.committed with persist code; got ${JSON.stringify(
-          {
-            ok: persistResult.ok,
-            reason:
-              !persistResult.ok || ("skipped" in persistResult && persistResult.skipped)
-                ? "reason" in persistResult
-                  ? persistResult.reason
-                  : null
-                : null,
-            reason_code:
-              !persistResult.ok && "reason_code" in persistResult
-                ? persistResult.reason_code
-                : null,
-          },
-        )}. Rely on [Tier A] persistFailWireResult + [Code-review].`,
-      );
-    }
-  } catch (e) {
-    markUntested(
-      "[production-path] ensureSessionFrozenForDelivery persist-fail branch",
-      `IDB/CAS attempt threw before branch proof: ${
-        e instanceof Error ? e.message : String(e)
-      }. Rely on [Tier A] persistFailWireResult + [Code-review].`,
-    );
-  }
+      assert.strictEqual(persistResult.session, sess);
+      const after = await loadPOJUSession(sid);
+      assert.equal(after?.decision_context?.status, "draft");
+      assert.deepEqual(after?.decision_context, sess.decision_context);
+    },
+  );
 
   console.log(
     `\nS3 wire-reason done. passed=${passed} failed=${failed} untested=${untested}`,
