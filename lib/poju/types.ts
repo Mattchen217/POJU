@@ -393,6 +393,19 @@ export interface POJUSessionState {
    */
   intake_ask_plan?: import("./decision-context/production-intake-ask").IntakeAskPlanSnapshot | null;
   /**
+   * M1 — Decision Blueprint seed (investigation directions / budget / scope).
+   * Not a live DIR store; live state remains on decision_context.dirs.
+   */
+  decision_blueprint?: import("./decision-intake/types").DecisionBlueprint | null;
+  /**
+   * M1 — derived Understanding State (NOT a second fact SoT).
+   */
+  decision_understanding?: import("./decision-intake/types").UnderstandingState | null;
+  /**
+   * M1 — authorized Adaptive Question Plan that drives the next sent question.
+   */
+  adaptive_ask_plan?: import("./decision-intake/types").AdaptiveQuestionPlan | null;
+  /**
    * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
    */
   opening_anchors?: import("./decision-context/opening-anchor").OpeningAnchor[];

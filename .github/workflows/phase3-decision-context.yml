@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "lib/poju/decision-context/**"
+      - "lib/poju/decision-intake/**"
       - "lib/poju/generation/**"
       - "lib/poju/session-mutation.ts"
       - "lib/poju/session-manager.ts"
@@ -42,6 +43,7 @@ on:
       - "app/api/poju/final-delivery/route.ts"
       - "scripts/test-intake-r6-*.ts"
       - "scripts/test-intake-r6-s9-production-authority-sources.ts"
+      - "scripts/test-m1-production-adaptive-question-loop.ts"
       - "scripts/fixtures/**"
       - "scripts/test-decision-context-phase1.ts"
       - "scripts/test-decision-context-stage4.ts"
@@ -55,8 +57,10 @@ on:
       - "feat/decision-context-phase1"
       - "docs/decision-intake-2.0-phase-3-design"
       - "feat/s9-production-na-authority-sources"
+      - "feat/m1-production-adaptive-question-loop"
     paths:
       - "lib/poju/decision-context/**"
+      - "lib/poju/decision-intake/**"
       - "lib/poju/generation/**"
       - "lib/poju/session-mutation.ts"
       - "lib/poju/session-manager.ts"
@@ -95,6 +99,7 @@ on:
       - "app/api/poju/final-delivery/route.ts"
       - "scripts/test-intake-r6-*.ts"
       - "scripts/test-intake-r6-s9-production-authority-sources.ts"
+      - "scripts/test-m1-production-adaptive-question-loop.ts"
       - "scripts/fixtures/**"
       - "scripts/test-decision-context-phase1.ts"
       - "scripts/test-decision-context-stage4.ts"
@@ -149,6 +154,9 @@ jobs:
       - name: Intake 2.0 S9 regression (production N/A authority sources)
         run: |
           pnpm test:intake-r6-s9-production-authority-sources
+      - name: Intake 2.0 M1 Adaptive Question Loop
+        run: |
+          pnpm test:m1-production-adaptive-question-loop
       - name: Intake 2.0 S8 regression (N/A authority regression closure)
         run: |
           pnpm test:intake-r6-barrel-export-boundary

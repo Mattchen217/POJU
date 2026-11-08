@@ -957,6 +957,66 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     archive_data = await loadArchiveDataForSession(sessionForLlm.session_id);
   }
 
+
+  // M1 — Adaptive Question Loop BEFORE assistant generation.
+  // User answer → Interpretation → DC → Understanding → Plan → authorized question.
+  // Plan must drive the question the user sees (not a post-hoc Session side-effect).
+  let m1CollectingTurn: Awaited<ReturnType<typeof runCollectingDcTurn>> | null = null;
+  {
+    const phaseBeforeLlm =
+      normalizeAgentPhase(ensureAgentV2(sessionForLlm).current_phase) ??
+      ensureAgentV2(sessionForLlm).current_phase;
+    const collectingUserTurn =
+      phaseBeforeLlm === "collecting_context" &&
+      !isSystemMessage &&
+      !isOpeningSignal &&
+      Boolean(userMessage.trim()) &&
+      sessionForLlm.decision_context?.status === "draft";
+    if (collectingUserTurn) {
+      const lastUser = [...messagesWithUser]
+        .reverse()
+        .find((m) => m.role === "user" && !m.is_rejected);
+      const turnId = lastUser?.client_id?.trim();
+      const statement = (userMessage.trim() === "__OPENING__" ? "" : isSystemMessage ? "" : userMessage).trim();
+      if (turnId && statement) {
+        const nowPre = new Date().toISOString();
+        m1CollectingTurn = await runCollectingDcTurn(sessionForLlm, {
+          statement,
+          source_turn_id: turnId,
+          now: nowPre,
+        });
+        if (
+          m1CollectingTurn.outcome === "persist_failed" ||
+          m1CollectingTurn.outcome === "persist_threw"
+        ) {
+          console.warn(
+            "[agent] M1 collecting DC update failed before LLM (non-fatal)",
+            m1CollectingTurn.outcome,
+            m1CollectingTurn.persist_error,
+          );
+        } else {
+          // Adopt DC + understanding + plan into the Session the LLM sees.
+          sessionForLlm = {
+            ...m1CollectingTurn.session,
+            messages: messagesWithUser,
+          };
+          workingSession = {
+            ...workingSession,
+            decision_context: sessionForLlm.decision_context,
+            decision_context_versions: sessionForLlm.decision_context_versions,
+            decision_context_idempotency_keys:
+              sessionForLlm.decision_context_idempotency_keys,
+            control_plane: sessionForLlm.control_plane,
+            decision_blueprint: sessionForLlm.decision_blueprint,
+            decision_understanding: sessionForLlm.decision_understanding,
+            adaptive_ask_plan: sessionForLlm.adaptive_ask_plan,
+            intake_ask_plan: sessionForLlm.intake_ask_plan,
+          };
+        }
+      }
+    }
+  }
+
   const llmResponse = input.server_invoke
     ? await callPOJULLMDirect({
         session: sessionForLlm,
@@ -1332,41 +1392,69 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
   });
 
-  // S7 — Collecting: map user turn → unverified RealityFact + DIR reaggregation via C1.
-  const phaseAfterCollect =
-    normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
-  if (
-    phaseAfterCollect === "collecting_context" &&
-    !isSystemMessage &&
-    phaseUserMessage.trim() &&
-    sessionOut.decision_context?.status === "draft"
-  ) {
+  // M1 — Plan controls the actual sent question (post-LLM enforce / attach).
+  // DC + Understanding + Plan already ran BEFORE the LLM call.
+  if (m1CollectingTurn?.plan && m1CollectingTurn.authorized_question) {
+    const { assertQuestionMatchesPlan, attachAuthorizedAssistantQuestion } = await import(
+      "@/lib/poju/decision-intake"
+    );
+    const matched = assertQuestionMatchesPlan(finalContent, m1CollectingTurn.plan);
+    finalContent = matched.text;
     const lastUser = [...messagesWithUser]
       .reverse()
       .find((m) => m.role === "user" && !m.is_rejected);
-    const turnId = lastUser?.client_id?.trim();
-    if (turnId) {
-      const turn = await runCollectingDcTurn(sessionOut, {
-        statement: phaseUserMessage,
-        source_turn_id: turnId,
-        now: nowIso,
-      });
-      sessionOut = turn.session;
-      if (
-        turn.outcome === "persist_failed" ||
-        turn.outcome === "persist_threw" ||
-        turn.ask_error !== undefined
-      ) {
-        console.warn(
-          "[agent] collecting DC update failed (non-fatal)",
-          turn.outcome,
-          turn.ask_error ?? turn.persist_error,
-        );
-      }
-    }
-  }
+    const turnId = lastUser?.client_id?.trim() || "unknown_turn";
+    sessionOut = attachAuthorizedAssistantQuestion(
+      {
+        ...sessionOut,
+        decision_context:
+          m1CollectingTurn.session.decision_context ?? sessionOut.decision_context,
+        decision_context_versions:
+          m1CollectingTurn.session.decision_context_versions ??
+          sessionOut.decision_context_versions,
+        decision_context_idempotency_keys:
+          m1CollectingTurn.session.decision_context_idempotency_keys ??
+          sessionOut.decision_context_idempotency_keys,
+        control_plane:
+          m1CollectingTurn.session.control_plane ?? sessionOut.control_plane,
+        decision_blueprint:
+          m1CollectingTurn.session.decision_blueprint ?? sessionOut.decision_blueprint,
+        decision_understanding:
+          m1CollectingTurn.session.decision_understanding ??
+          sessionOut.decision_understanding,
+        adaptive_ask_plan:
+          m1CollectingTurn.plan ?? sessionOut.adaptive_ask_plan,
+        intake_ask_plan:
+          m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
+        messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
+      },
+      m1CollectingTurn.plan,
+      turnId,
+    );
+  } else if (m1CollectingTurn?.outcome === "ready_no_question") {
+    // Readiness stop — replace free-form ask with final understanding confirm.
+    const summary =
+      m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+      "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+    finalContent = `【理解确认】${summary}
 
-  if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+    sessionOut = {
+      ...sessionOut,
+      decision_context:
+        m1CollectingTurn.session.decision_context ?? sessionOut.decision_context,
+      decision_blueprint:
+        m1CollectingTurn.session.decision_blueprint ?? sessionOut.decision_blueprint,
+      decision_understanding:
+        m1CollectingTurn.session.decision_understanding ??
+        sessionOut.decision_understanding,
+      adaptive_ask_plan: null,
+      intake_ask_plan:
+        m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
+      messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
+    };
+  }
+if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
   return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);
 }
 

@@ -7,7 +7,8 @@
   "include": [
     "next-env.d.ts",
     "scripts/test-intake-r6-*.ts",
-    "scripts/fixtures/**/*.ts"
+    "scripts/fixtures/**/*.ts",
+    "scripts/test-m1-production-adaptive-question-loop.ts"
   ],
   "exclude": [
     "node_modules"

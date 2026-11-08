@@ -163,6 +163,7 @@
     "test:intake-r6-freeze-persist-disclose": "tsx scripts/test-intake-r6-freeze-persist-disclose.ts",
     "test:intake-r6-delivery-na-compat": "tsx scripts/test-intake-r6-delivery-na-compat.ts",
     "test:intake-r6-s9-production-authority-sources": "tsx scripts/test-intake-r6-s9-production-authority-sources.ts",
+    "test:m1-production-adaptive-question-loop": "tsx scripts/test-m1-production-adaptive-question-loop.ts",
     "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
     "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",

@@ -1,21 +1,25 @@
-﻿/**
- * Collecting-phase DC turn orchestration for `handleUserMessage`:
- *   persistCollectingUserTurnDc (C1) 鈫?selectNextIntakeAskForSession.
+/**
+ * Collecting-phase DC turn orchestration for `handleUserMessage`.
  *
- * Adoption rule: the caller's Session takes the new DC only when C1 committed it
- * (or reported a prior commit via `idempotent_skip`). A rolled-back commit leaves
- * the caller's Session exactly as passed in 鈥?the uncommitted DC never reaches
- * memory, so a later whole-session save cannot write it outside C1. Next-ask
- * planning reads only that adopted / unchanged Session; a planning failure keeps
- * the committed DC and writes no plan.
+ * M1: delegates to runAdaptiveQuestionTurn so the production order is:
+ *   Answer Interpretation → DC Update → Understanding → Question Plan
+ *   → authorized question (drives assistant), not post-hoc whole-statement dump.
+ *
+ * Adoption rule unchanged: caller Session takes new DC only when C1 committed
+ * (or idempotent_skip). Planning failure keeps committed DC.
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
+import type {
+  AdaptiveQuestionPlan,
+  AnswerEvent,
+  UnderstandingState,
+} from "@/lib/poju/decision-intake/types";
 
 export type CollectingDcTurnOutcome =
   /** DC committed by C1 (or prior commit via idempotent_skip) and adopted. */
   | "dc_committed"
-  /** Collecting mapper skipped this turn (no draft DC, empty / duplicate turn鈥?. */
+  /** Collecting mapper skipped this turn (no draft DC, empty / duplicate turn…). */
   | "not_applied"
   /** C1 rolled back; caller Session returned unchanged, no planning. */
   | "persist_failed"
@@ -25,63 +29,106 @@ export type CollectingDcTurnOutcome =
 export type CollectingDcTurnResult = {
   session: POJUSessionState;
   outcome: CollectingDcTurnOutcome;
-  /** True when a fresh next-ask plan was written onto `session`. */
+  /** True when a next-ask plan (or readiness stop) was written onto `session`. */
   ask_planned: boolean;
   /** Persist error, mapper skip reason, or `idempotent_skip`. */
   persist_error?: string;
   /** Set when next-ask planning threw (DC stays as adopted). */
   ask_error?: string;
+  /** M1: authorized question text that MUST drive the assistant turn. */
+  authorized_question?: string | null;
+  plan?: AdaptiveQuestionPlan | null;
+  understanding?: UnderstandingState | null;
+  answer_event?: AnswerEvent | null;
 };
 
-const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
+/**
+ * Production collecting turn — M1 adaptive loop.
+ * `init_only` builds Blueprint + first question without interpreting an answer.
+ */
 export async function runCollectingDcTurn(
   session: POJUSessionState,
-  input: { statement: string; source_turn_id: string; now: string },
+  input: {
+    statement: string;
+    source_turn_id: string;
+    now: string;
+    init_only?: boolean;
+  },
 ): Promise<CollectingDcTurnResult> {
-  let current = session;
-  let outcome: CollectingDcTurnOutcome;
-  let persistError: string | undefined;
-  try {
-    const { persistCollectingUserTurnDc } = await import(
-      "@/lib/poju/decision-context/production-dc-lifecycle"
-    );
-    const collected = await persistCollectingUserTurnDc(session, {
-      statement: input.statement,
-      source_turn_id: input.source_turn_id,
-      now: input.now,
-    });
-    persistError = collected.error;
-    if (!collected.applied) {
-      outcome = "not_applied";
-    } else if (collected.error === undefined || collected.error === "idempotent_skip") {
-      current = collected.session;
-      outcome = "dc_committed";
-    } else {
-      return { session, outcome: "persist_failed", ask_planned: false, persist_error: collected.error };
-    }
-  } catch (e) {
-    return { session, outcome: "persist_threw", ask_planned: false, persist_error: errorText(e) };
-  }
+  const { runAdaptiveQuestionTurn } = await import(
+    "@/lib/poju/decision-intake/adaptive-turn"
+  );
+  const turn = await runAdaptiveQuestionTurn({
+    session,
+    statement: input.statement,
+    source_turn_id: input.source_turn_id,
+    now: input.now,
+    init_only: input.init_only,
+  });
 
-  // Intake 2.0 production ask planning 鈥?sole scoring path via shared resolver.
-  if (current.decision_context?.status !== "draft") {
-    return { session: current, outcome, ask_planned: false, persist_error: persistError };
-  }
-  try {
-    const { selectNextIntakeAskForSession } = await import(
-      "@/lib/poju/decision-context/production-intake-ask"
-    );
-    const planned = await selectNextIntakeAskForSession({ session: current, nowIso: input.now });
-    return { session: planned.session, outcome, ask_planned: true, persist_error: persistError };
-  } catch (e) {
+  const common = {
+    authorized_question: turn.authorized_question,
+    plan: turn.plan,
+    understanding: turn.understanding,
+    answer_event: turn.answer_event,
+    ask_error: turn.ask_error,
+  };
+
+  if (turn.outcome === "dc_persist_failed") {
     return {
-      session: current,
-      outcome,
+      session,
+      outcome: "persist_failed",
       ask_planned: false,
-      persist_error: persistError,
-      ask_error: errorText(e),
+      persist_error: turn.persist_error,
+      ...common,
+      authorized_question: null,
+      plan: null,
+      understanding: null,
     };
   }
-}
+  if (turn.outcome === "dc_persist_threw") {
+    return {
+      session,
+      outcome: "persist_threw",
+      ask_planned: false,
+      persist_error: turn.persist_error,
+      ...common,
+      authorized_question: null,
+      plan: null,
+      understanding: null,
+    };
+  }
+  if (turn.outcome === "not_applicable_phase") {
+    return {
+      session: turn.session,
+      outcome: "not_applied",
+      ask_planned: false,
+      persist_error: turn.persist_error,
+      ...common,
+    };
+  }
+  if (turn.outcome === "idempotent_replay") {
+    return {
+      session: turn.session,
+      outcome: "not_applied",
+      ask_planned: Boolean(turn.plan) || turn.understanding != null,
+      persist_error: turn.persist_error ?? "turn_already_mapped",
+      ...common,
+    };
+  }
 
+  // planned | ready_no_question
+  const skipWrite =
+    turn.persist_error === "off_topic" ||
+    turn.persist_error === "invalid_input" ||
+    turn.persist_error === "no_writes" ||
+    turn.persist_error === "empty_statement";
+
+  return {
+    session: turn.session,
+    outcome: skipWrite && !input.init_only ? "not_applied" : "dc_committed",
+    ask_planned: Boolean(turn.plan) || turn.outcome === "ready_no_question",
+    persist_error: turn.persist_error,
+    ...common,
+  };
+}

@@ -417,10 +417,13 @@ async function main() {
 
   // ============================================== S. static
   console.log("\n== S. Static wiring ==");
-  await check("S1 agent.ts reaches collecting persist / Ask only through runCollectingDcTurn", async () => {
+  await check("S1 agent.ts reaches collecting persist / Ask only through runCollectingDcTurn (M1: before LLM)", async () => {
     const src = readFileSync(join(REPO, "lib/poju/agent.ts"), "utf8");
     assert.match(src, /import \{ runCollectingDcTurn \} from "@\/lib\/poju\/collecting-dc-turn";/);
-    assert.match(src, /await runCollectingDcTurn\(sessionOut,/);
+    // M1: adaptive turn must run BEFORE assistant generation so the plan drives the question.
+    assert.match(src, /await runCollectingDcTurn\(sessionForLlm,/);
+    assert.match(src, /assertQuestionMatchesPlan/);
+    assert.equal(/await runCollectingDcTurn\(sessionOut,/.test(src), false);
     assert.equal(/persistCollectingUserTurnDc/.test(src), false);
     assert.equal(/selectNextIntakeAskForSession/.test(src), false);
   });

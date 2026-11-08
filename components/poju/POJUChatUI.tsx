@@ -112,6 +112,7 @@ import {
   seedMatrixWelcomeMessage,
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
+import { DecisionUnderstandingPanel } from "@/components/poju/DecisionUnderstandingPanel";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAction";
@@ -4413,6 +4414,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
               ) : null}
               {session.agent_v2 ? (
                 <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
+                  <DecisionUnderstandingPanel session={session} locale={sessionLang} />
               ) : null}
             </>
           )
