@@ -111,7 +111,7 @@ export async function runCollectingDcTurn(
     return {
       session: turn.session,
       outcome: "not_applied",
-      ask_planned: Boolean(turn.plan) || turn.understanding != null,
+      ask_planned: Boolean(turn.plan) || (turn.understanding != null && !turn.ask_error),
       persist_error: turn.persist_error ?? "turn_already_mapped",
       ...common,
     };
@@ -127,7 +127,10 @@ export async function runCollectingDcTurn(
   return {
     session: turn.session,
     outcome: skipWrite && !input.init_only ? "not_applied" : "dc_committed",
-    ask_planned: Boolean(turn.plan) || turn.outcome === "ready_no_question",
+    // Ask failure (ask_error) must not count as planned — S8-H3.
+    ask_planned:
+      Boolean(turn.plan) ||
+      (turn.outcome === "ready_no_question" && !turn.ask_error),
     persist_error: turn.persist_error,
     ...common,
   };
