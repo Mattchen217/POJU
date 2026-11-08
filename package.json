@@ -161,6 +161,7 @@
     "test:intake-r6-agent-collecting-failure": "tsx scripts/test-intake-r6-agent-collecting-failure.ts",
     "test:intake-r6-versioning-idb-fault": "tsx scripts/test-intake-r6-versioning-idb-fault.ts",
     "test:intake-r6-freeze-persist-disclose": "tsx scripts/test-intake-r6-freeze-persist-disclose.ts",
+    "test:intake-r6-delivery-na-compat": "tsx scripts/test-intake-r6-delivery-na-compat.ts",
     "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
     "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",

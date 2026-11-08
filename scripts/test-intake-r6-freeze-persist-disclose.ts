@@ -18,8 +18,8 @@ import assert from "node:assert/strict";
 import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
 import { withIdbWriteFault } from "./fixtures/idb-storage-fault";
 import { ACTIVE_NA_DIR, NORMAL_DIR, seedNaDraftSession } from "./fixtures/intake-r6-na-seed";
+import { seedBreakthroughCoreForDelivery } from "./fixtures/intake-r6-delivery-core";
 import type { ConfirmationEvent } from "../lib/poju/decision-context/confirmation-event";
-import type { BreakthroughCore } from "../lib/poju/agent-state";
 import type { POJUSessionState } from "../lib/poju/types";
 
 installIntakeR6TestGlobals("dev_intake_r6_s8_freeze_persist");
@@ -150,52 +150,8 @@ async function main() {
 
   await check("E1b Delivery entry (runFinalDeliveryForSession) under the same fault → DC_FREEZE_FAILED before any job fetch / pending save; IDB stays draft", async () => {
     const { runFinalDeliveryForSession } = await import("../lib/llm/pro/final-delivery");
-    const { createInitialAgentState } = await import("../lib/poju/agent-state");
     const { sid } = await seedNaDraftSession("e1b", NOW);
-    const frame = {
-      direction: "Negotiate a bridge",
-      why_fits: "Keeps optionality",
-      structural_basis: "basis",
-      needs_validation: "manager flexibility",
-    };
-    const core: BreakthroughCore = {
-      situation_conclusion: "Income risk vs optionality",
-      key_crossroads: {
-        real_fork: "Stay vs leave",
-        path_costs: "Stability vs growth",
-        decision_traits: "Risk tolerance",
-        structural_basis: "basis",
-        needs_validation: "runway",
-      },
-      modern_action_frames: [frame],
-      energy_retune_frame: {
-        direction_fit: "fit",
-        timing_ripeness: "next quarter",
-        daily_retune: "sleep",
-        complementary: "mentor",
-        structural_basis: "basis",
-        needs_validation: "stress",
-      },
-      rhythm_frame: {
-        phase1_observe: "watch cash",
-        phase2_adjust: "talk terms",
-        phase3_consolidate: "decide",
-      },
-      self_check_signals: ["anxiety spike"],
-      generated_at: NOW,
-    };
-    await mutatePOJUSession(sid, {
-      operation_id: "op_s8_e1b_core",
-      kind: "session_patch",
-      bump_dc: false,
-      apply: (latest) => {
-        const agent = createInitialAgentState({ original_question: latest.original_question });
-        agent.delivery_mode = "full";
-        agent.stall_offer_pending = false;
-        agent.breakthrough_core = core;
-        return { ...latest, agent_v2: agent };
-      },
-    });
+    await seedBreakthroughCoreForDelivery(sid, NOW, "e1b");
     const before = await durable(sid);
     const idbBefore = freezeState(before);
 
