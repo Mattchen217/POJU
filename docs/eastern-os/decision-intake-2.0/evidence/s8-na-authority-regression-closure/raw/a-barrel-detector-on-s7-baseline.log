@@ -1,0 +1,122 @@
+﻿# Worktree HEAD=ed608c904d894f9dc32eb2616960fe3adef960f9 (S7 baseline; index.ts still 'export * from ./na-validation-from-session')
+# Copied in: scripts/test-intake-r6-barrel-export-boundary.ts, scripts/fixtures/test-browser-globals.ts
+# Command: pnpm exec tsx scripts/test-intake-r6-barrel-export-boundary.ts  exit=1 (expected RED)
+
+intake-r6-barrel-export-boundary (S8-A)
+
+== N. Detector negative controls (virtual probes) ==
+  PASS  N0 probe modules type-check (detector sees real resolved exports)
+  PASS  N export_star → detected
+  PASS  N named_reexport → detected
+  PASS  N alias_reexport → detected
+  PASS  N type_alias_reexport → detected
+  PASS  N import_then_export → detected
+  PASS  N namespace_export → detected
+  PASS  N namespace_import_reexport → detected
+  PASS  N wrapper_const → detected
+  PASS  N wrapper_function → detected
+  PASS  N transitive_mid → detected
+  PASS  N transitive_end → detected
+  PASS  N clean explicit production exports → no leak
+
+== P. Production surface (lib/ + app/, tsconfig.json program) ==
+  PASS  P0 program covers lib/ + app/ and the fixture definition file
+corepack :   FAIL  P1 no lib/ or app/ module exports or references the fixture (semantic)
+所在位置 行:1 字符: 481
++ ... parse HEAD; corepack pnpm exec tsx scripts/test-intake-r6-barrel-expo ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  FAIL  P1 no l...ture (semantic):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   {
++     detail: 'naValidationBoundToDc',
++     file: 'lib/poju/decision-context/index.ts',
++     kind: 'export'
++   },
++   {
++     detail: 'NaValidationFixtureOverrides',
++     file: 'lib/poju/decision-context/index.ts',
++     kind: 'export'
++   }
++ ]
+- []
+
+    at <anonymous> (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:227:12)
+    at check (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:34:11)
+    at main (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:226:9) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+  FAIL  P2 every production barrel (25) export table is fixture-free
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   {
++     detail: 'naValidationBoundToDc',
++     file: 'lib/poju/decision-context/index.ts',
++     kind: 'export'
++   },
++   {
++     detail: 'NaValidationFixtureOverrides',
++     file: 'lib/poju/decision-context/index.ts',
++     kind: 'export'
++   }
++ ]
+- []
+
+    at <anonymous> (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:233:12)
+    at check (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:34:11)
+    at main (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:231:9) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+  FAIL  P3 decision-context barrel re-exports the NA module only by explicit name (no export *)
+
+== R. Runtime barrel surface ==
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+1 !== 0
+
+    at <anonymous> (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:251:12)
+    at check (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:34:11)
+    at main (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:237:9) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  R1 runtime decision-context barrel has production NA exports and no fixture builder
+AssertionError [ERR_ASSERTION]: naValidationBoundToDc
+
+true !== false
+
+    at <anonymous> (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:268:43)
+    at async check (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:34:5)
+    at async main (D:\POJU\_s7_baseline_wt\scripts\test-intake-r6-barrel-export-boundary.ts:265:3) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  PASS  R2 fixture still importable from its definition file (tests unaffected)
+
+S8 barrel-export-boundary done. PASS=15 FAIL=4
+
+

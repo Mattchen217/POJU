@@ -1,0 +1,55 @@
+S8 changed files vs S7 (git diff --name-status ed608c90..5da7e2bb) — 29 files, +2827 / -386
+(evidence directory added in the final docs commit is not listed here)
+
+Production (lib/) — 3 files
+  M lib/poju/decision-context/index.ts   S8-A  `export * from "./na-validation-from-session"` → explicit named
+                                               production exports; fixture builder naValidationBoundToDc and
+                                               NaValidationFixtureOverrides no longer on the barrel.
+  A lib/poju/collecting-dc-turn.ts       S8-C  runCollectingDcTurn: adopt DC only when C1 committed it; Ask only
+                                               on adopted/unchanged draft; Ask failure keeps committed DC.
+  M lib/poju/agent.ts                    S8-C  collecting try/catch replaced by runCollectingDcTurn (static import).
+  Versioning / Freeze / Delivery / Report production files: unchanged (no defect proven by tests).
+
+Config
+  M package.json                         scripts: test:intake-r6-barrel-export-boundary, typecheck:intake-r6-tests,
+                                         test:intake-r6-agent-collecting-failure, test:intake-r6-versioning-idb-fault,
+                                         test:intake-r6-freeze-persist-disclose, test:intake-r6-delivery-na-compat
+  A tsconfig.intake-r6-tests.json        S8-B  extends tsconfig.json (strict unchanged); includes next-env.d.ts,
+                                               scripts/test-intake-r6-*.ts, scripts/fixtures/**/*.ts
+
+Test fixtures (scripts/fixtures/, never imported by lib/ or app/ — enforced by S8-A P1/P2)
+  A scripts/fixtures/test-browser-globals.ts   window/localStorage/crypto/device-id shim (moved out of test bodies)
+  A scripts/fixtures/intake-r6-session.ts      typed test Session + confirmFactEvent (S8-B)
+  A scripts/fixtures/idb-storage-fault.ts      real IndexedDB tx abort on put/add/cursor.update (S8-C/D/E)
+  A scripts/fixtures/dir-catalog-fault.ts      ACTIVE registry lookup fault, production registry only (S8-C)
+  A scripts/fixtures/intake-r6-na-seed.ts      production-path sufficient draft with Session N/A triad (S8-D/E/F)
+  A scripts/fixtures/intake-r6-delivery-core.ts BreakthroughCore for runFinalDeliveryForSession (S8-E/F)
+
+New tests
+  A scripts/test-intake-r6-barrel-export-boundary.ts   S8-A (19 checks)
+  A scripts/test-intake-r6-agent-collecting-failure.ts S8-C (9 checks)
+  A scripts/test-intake-r6-versioning-idb-fault.ts     S8-D (3 checks)
+  A scripts/test-intake-r6-freeze-persist-disclose.ts  S8-E (5 checks)
+  A scripts/test-intake-r6-delivery-na-compat.ts       S8-F (13 checks)
+
+Existing intake-r6 tests — S8-B strict-type fixes (no assertion/any/ts-nocheck added) unless noted
+  M scripts/test-intake-r6-dir-catalog.ts
+  M scripts/test-intake-r6-freeze-authority-regression.ts   (+ S8-A fixture import move)
+  M scripts/test-intake-r6-freeze-versioning.ts             (+ S8-A fixture import move)
+  M scripts/test-intake-r6-na-cas.ts
+  M scripts/test-intake-r6-production-agg.ts
+  M scripts/test-intake-r6-production-authority-boundary.ts (+ S8-A fixture import move)
+  M scripts/test-intake-r6-role-resolver.ts
+  M scripts/test-intake-r6-write-freeze-consistency.ts      (+ S8-E: [disclose] F1 placeholder → executed check)
+  M scripts/test-intake-r6-freeze-wire-reason.ts            (S8-A import move; S8-E: UNTESTED persist-fail →
+                                                             executed real IndexedDB fault check)
+
+Existing non-intake-r6 tests — import-only (fixture builder import path moved off the barrel, S8-A)
+  M scripts/test-decision-context-phase1.ts
+  M scripts/test-decision-context-stage4.ts
+  M scripts/test-pagefeed-bookjudgment-s1-s2.ts
+  M scripts/test-s5-freeze-s6-observation.ts
+  All four were re-run at final HEAD: exit 0 (raw/final-*.log).
+
+Not changed (forbidden scope): DIR Catalog content, Session/DC schema, C1–C5 semantics, Question Budget /
+Review Cycle, Gate / Sufficiency / DDR Composer, Prompt / LLM / UI, Topic Rules, Catalog Condition Evals, CFP reader.

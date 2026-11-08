@@ -1,0 +1,7 @@
+﻿# HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+# cmd: pnpm typecheck:intake-r6-tests
+
+> pojulife@0.1.0 typecheck:intake-r6-tests D:\POJU\pojulife
+> tsc --noEmit -p tsconfig.intake-r6-tests.json
+
+# exit=0

@@ -1,0 +1,42 @@
+S8-B typecheck results
+
+Project: tsconfig.intake-r6-tests.json
+  extends ./tsconfig.json (strict and all compiler options inherited unchanged)
+  include: next-env.d.ts, scripts/test-intake-r6-*.ts, scripts/fixtures/**/*.ts
+  script : pnpm typecheck:intake-r6-tests  (= tsc --noEmit -p tsconfig.intake-r6-tests.json)
+
+Baseline (S7 ed608c90, sources unmodified, only the tsconfig copied in) — raw/b-typecheck-s7-baseline.log
+  exit 2, 44 errors, all in pre-existing S4–S7 test files:
+    13 scripts/test-intake-r6-production-agg.ts
+    10 scripts/test-intake-r6-production-authority-boundary.ts
+     8 scripts/test-intake-r6-freeze-authority-regression.ts
+     7 scripts/test-intake-r6-write-freeze-consistency.ts
+     3 scripts/test-intake-r6-dir-catalog.ts
+     1 scripts/test-intake-r6-freeze-versioning.ts
+     1 scripts/test-intake-r6-na-cas.ts
+     1 scripts/test-intake-r6-role-resolver.ts
+  by code: 28 TS2322, 8 TS2345, 4 TS2353, 2 TS2352, 1 TS2749, 1 TS7022
+  Typical causes: partial Session literals cast/assigned to POJUSessionState, ConfirmationEvent literals
+  with widened string fields, extra `authority` property on FreezeDraftForDeliveryOpts (intentional forged
+  caller payload), `user_id` not a Session field, value used as type, implicit any in self-referencing loop.
+
+Classification: 44 / 44 baseline (present at S7 before any S8 change). S8-introduced: 0.
+  Every S8 commit was typechecked with the project before committing; new S8 test files and fixtures were
+  added under the project include and compile with 0 errors.
+
+How the 44 were fixed (no bypass):
+  - no @ts-nocheck / @ts-ignore / @ts-expect-error
+  - no `any`, no new `as` type assertions, no non-null `!`, no `as const` on S8-added lines
+    (diff scan of all added .ts lines vs ed608c90; only matches are prose inside test-label strings)
+  - strict not relaxed; no compiler option changed
+  - partial Sessions → typed fixture testSessionState() building a full POJUSessionState
+  - event literals → typed ConfirmationEvent via confirmFactEvent()
+  - intentional forged caller payloads (extra `authority`) → untyped local object passed through
+    (excess-property check applies only to fresh literals), documented inline
+  - non-Session fields removed; narrowing via assert.ok instead of casts
+  Pre-existing `as` casts in S7 test lines that already compiled were left untouched (not S8 lines).
+
+Final (HEAD 5da7e2bb):
+  pnpm exec tsc --noEmit -p tsconfig.intake-r6-tests.json  exit 0, 0 errors  (raw/final-tsc-intake-r6-project.log)
+  pnpm typecheck:intake-r6-tests                            exit 0, 0 errors  (raw/final-typecheck-intake-r6-tests.log)
+  pnpm exec tsc --noEmit  (main project)                    exit 0, 0 errors  (raw/final-tsc-noEmit.log)

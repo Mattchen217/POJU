@@ -1,0 +1,60 @@
+﻿# HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+# cmd: pnpm test:intake-r6-production-agg
+
+> pojulife@0.1.0 test:intake-r6-production-agg D:\POJU\pojulife
+> tsx scripts/test-intake-r6-production-agg.ts
+
+intake-r6-production-agg (Call B / Collecting → reaggregateDirsIntake)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== A. Call B production aggregation ==
+  PASS  Call B seed → unknown; covered ≠ known
+  PASS  confirmed Fact+Constraint (Scheme A) → known
+  PASS  missing DIR link → Intake unknown; legacy OR path would be known
+  PASS  soft Constraint ≠ hard_constraint Scheme A
+
+== B. Collecting production aggregation ==
+  PASS  collecting fact reaggregates; no role/DIR link → not known
+
+== C. N/A + conflict priorities ==
+  PASS  [C-Pure] valid DIR-level ExplicitNaEvidence + fixture catalog → n_a
+  PASS  [C-Pure] missing dirCatalog → not n_a (direct cause: na_condition_not_in_catalog)
+  PASS  [C-Pure] revoked N/A → not n_a (direct cause: revoked)
+  PASS  [C-Pure] cross-context classification → not n_a (direct cause: explicit_na_classification_missing)
+  PASS  [C-Pure] blocking conflict priority over valid N/A
+  PASS  [C-Prod] ACTIVE legal pair + Session action/E1 + DC classification/evidence → n_a
+  PASS  [C-Prod] non-ACTIVE DIR-A + forged caller catalog → not n_a (direct cause: na_condition_not_in_catalog)
+  PASS  [C-Prod] revoked N/A → not n_a (direct cause: revoked)
+  PASS  [C-Prod] cross-context classification → not n_a (direct cause: explicit_na_classification_missing)
+  PASS  [C-Prod] blocking conflict priority over valid N/A
+  PASS  [C-Pure] DDR-03 CFP: calc_failed reject; absent_not_supplied accept
+  PASS  [C-Prod] DDR-03 CFP source absent in production → reject (direct cause: ddr03_cfp_not_absent)
+  PASS  DDR-02 Rule A / DIR empty_dir basis still rejected
+
+== D. Production persist + planner/aggregator consistency ==
+  PASS  persistCallBDcOnSession + reload → dirs unknown
+  PASS  persistCollectingUserTurnDc + reload
+  PASS  CAS conflict retry does not duplicate/corrupt aggregate
+  PASS  planner ↔ aggregator role states match on same DC snapshot
+
+All intake-r6-production-agg checks passed.
+# exit=0

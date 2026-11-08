@@ -1,0 +1,61 @@
+﻿# HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+# cmd: pnpm test:intake-r6-delivery-na-compat
+
+> pojulife@0.1.0 test:intake-r6-delivery-na-compat D:\POJU\pojulife
+> tsx scripts/test-intake-r6-delivery-na-compat.ts
+
+intake-r6-delivery-na-compat (S8-F)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== F0 production hand-off: runFinalDeliveryForSession POST body ==
+  PASS  F0 runFinalDeliveryForSession freezes via C1 and POSTs the frozen n_a snapshot + matching binding (route binding accepts the wire body)
+
+== F1 n_a is not consumed as unknown ==
+  PASS  F1 feed DIR state n_a on all six DC-fed pages; boundary lines (if any) label n_a, never unknown
+  PASS  F1 Stage4 report: n_a DIR adds no P5 unknown condition and does not require recommendation_conditions; control: same DIR as unknown does require them
+
+== F2 n_a is not consumed as known ==
+  PASS  F2 same DIR + same confirmed fact: N/A session → n_a, no-N/A session → known; consumers keep them distinct
+  PASS  F2 N/A does not upgrade the underlying fact: statement / status / verification_level / user_confirmed unchanged in snapshot and feed
+
+== F3 invalid N/A evidence does not reach the report ==
+  PASS  F3 forged DC-only evidence (user_explicit_na without Session action + classification, and system_na_marker) → DIR stays known in frozen snapshot, feeds and report
+  PASS  F3 declaration with a code outside the ACTIVE catalog pair is rejected at write; IndexedDB unchanged (nothing to consume)
+
+== F4 revoked N/A evidence is not consumed ==
+  PASS  F4 revokeDirNaDeclaration → production reaggregation → DIR known; frozen snapshot keeps the revoked rows inert; feeds/report never show n_a; replay rejected
+
+== F5 N/A traceable to DIR + source ==
+  PASS  F5 frozen n_a traces to one valid evidence row → DIR + source fact (+E1) → Session declaration action → classification; trace rows are hash-bound to the report binding
+
+== F6 V1 → V2 keeps n_a and its evidence linkage ==
+  PASS  F6 V1 final (n_a) → persistV2FromFinalOnSession → V2 draft n_a with identical evidence/classification; V2 freeze binds n_a; V1 still resolvable by version with n_a
+
+== F7 conflict outranks n_a ==
+  PASS  F7 preferred-path conflict on the N/A DIR → DIR conflict although the N/A triad is still valid; freeze refused; no binding reaches Delivery; normal DIR unaffected
+  PASS  F7 non-preferred-path conflict (existing §2.4: not blocking) → DIR stays n_a; frozen as unresolved_in_final; surfaced to report conditions + feed conflicts
+
+== F8 normal DIRs unaffected by N/A ==
+  PASS  F8 normal DIR projection identical with and without N/A on another DIR (feeds, boundary lines, fact projection); no N/A row targets it
+
+S8 delivery-na-compat done. PASS=13 FAIL=0
+# exit=0

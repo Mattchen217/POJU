@@ -1,0 +1,43 @@
+S8 — NA Authority Regression Closure · baseline
+
+Required parent SHA : ed608c904d894f9dc32eb2616960fe3adef960f9   (S7 final commit)
+Source branch       : feat/s7-na-authority-boundary-hardening (S7, not in main)
+  git rev-parse feat/s7-na-authority-boundary-hardening → ed608c904d894f9dc32eb2616960fe3adef960f9
+  git ls-remote origin feat/s7-na-authority-boundary-hardening → ed608c904d894f9dc32eb2616960fe3adef960f9
+
+S8 branch:
+  feat/s8-na-authority-regression-closure
+  git reflog show feat/s8-na-authority-regression-closure (oldest entry):
+    ed608c90 ...@{2026-11-08 08:31:53 -0600}: branch: Created from HEAD   (HEAD was ed608c90)
+  First S8 commit b5d93816 has parent ed608c904d894f9dc32eb2616960fe3adef960f9.
+  git merge-base --is-ancestor ed608c90 HEAD → exit 0
+
+Not done (by instruction):
+  - branch from main / rebase onto main / merge S7 into anything / modify main
+    (origin main = ee8c96e8a7a128fa8e059c2a9f81c9f0d2127688, untouched)
+  - PR / merge / deploy
+  - declare S8 accepted
+
+Toolchain (all S8 commands):
+  node v22.22.0, pnpm 10.33.2 via corepack (see raw/final-exit-codes.txt header).
+
+Working tree:
+  Untracked .cursor/plans/*.MD files are not part of S8 and were never staged.
+
+Baseline RED evidence captured at S7 (pre-S8) code — see raw/:
+  a-barrel-detector-on-s7-baseline.log   S8-A test at ed608c90 → exit 1 (P1/P2/P3/R1 FAIL: `export *` leaks fixture)
+  b-typecheck-s7-baseline.log            tsconfig.intake-r6-tests.json at ed608c90 → exit 2, 44 errors
+  c-agent-collecting-on-pre-s8-agent.log S8-C test with agent.ts identical to S7 → exit 1 (P2 + S1 FAIL)
+  Worktree used: D:\POJU\_s7_baseline_wt (detached; removed after evidence capture).
+
+Local environment incident during cleanup (not part of the S8 code):
+  - What happened: the baseline worktree's node_modules was a junction to D:\POJU\pojulife\node_modules.
+    `git worktree remove --force` followed that junction and deleted files inside the main repo's node_modules
+    (e.g. node_modules/.bin and some package files).
+  - Repair:
+    - removed the junction link only (`rmdir` without /s)
+    - deleted the leftover worktree dir after confirming it had no other reparse points
+    - `pnpm install --frozen-lockfile --force` re-imported all packages from the store
+    - a plain `pnpm install --frozen-lockfile` is now a no-op, and no tracked file changed (git status clean apart from evidence)
+  - Effect on S8: no tracked source, commit or lockfile affected. All final commands were re-run after the
+    repair at the same HEAD with identical results (test-results.txt).

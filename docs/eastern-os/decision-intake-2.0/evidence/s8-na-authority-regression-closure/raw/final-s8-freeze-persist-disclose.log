@@ -1,0 +1,39 @@
+﻿# HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+# cmd: pnpm test:intake-r6-freeze-persist-disclose
+
+> pojulife@0.1.0 test:intake-r6-freeze-persist-disclose D:\POJU\pojulife
+> tsx scripts/test-intake-r6-freeze-persist-disclose.ts
+
+intake-r6-freeze-persist-disclose (S8-E)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== E1 Freeze persist failure (real IndexedDB tx abort) ==
+  PASS  E1 sufficient + NaValidation ok + in-memory freeze ok, C1 write aborted → ok:false dc_freeze_persist_failed; DC stays draft; no frozen binding for Delivery; retry freezes
+  PASS  E1b Delivery entry (runFinalDeliveryForSession) under the same fault → DC_FREEZE_FAILED before any job fetch / pending save; IDB stays draft
+
+== E2 S4 freeze-versioning F1 on the IndexedDB production path ==
+  PASS  E2-F1 Session triad (declareDirNotApplicable) + forged caller authority → frozen DIR n_a; durable via wire; facts not upgraded
+  PASS  E2-F1 authority source: Freeze NaValidation reads Session actions / E1 / ACTIVE catalog only
+  PASS  E2-F1 E1 required: same triad without the Session E1 for the N/A fact → frozen DIR not n_a
+
+S8 freeze-persist-disclose done. PASS=5 FAIL=0
+# exit=0
