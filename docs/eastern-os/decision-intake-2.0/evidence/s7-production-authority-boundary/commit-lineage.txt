@@ -1,0 +1,26 @@
+S7 commit lineage (branch feat/s7-na-authority-boundary-hardening)
+
+Prior chain (unchanged by S7):
+  S0      db019cbd…  (parent fec0d7a3)
+  S0 fix  11808856…
+  S1      202e6d44…
+  S1 test 7eda9bd4…
+  S2      9411c83f…
+  S3      0e09531c…
+  S4      eff73fd1…
+  S4 C25  b1a1f024…
+  S5      76fa70bd…
+  S6      f1454b87… → a9f89c75… → 13e5115984ad1361e782d9159e50ea9de317a3f3   (S6 tip, branch feat/s6-stage-3-2-final-audit)
+
+S7:
+  8048aaaee9df1de1b48782c577a70aec8041f5c5
+    parent 13e5115984ad1361e782d9159e50ea9de317a3f3
+    "S7: production NaValidation authority boundary hardening"
+    production code + tests + package.json script (see changed-files.txt)
+    → full required regression run at exactly this SHA (test-results.txt, raw/)
+
+  <evidence commit>  child of 8048aaae
+    docs-only: this evidence directory. No production / test / package.json change.
+    (Its own SHA cannot be written inside itself; reported in the delivery message.)
+
+S7 is not in main. No PR merged, nothing deployed.

@@ -1,0 +1,80 @@
+
+> pojulife@0.1.0 test:intake-r6-production-authority-boundary D:\POJU\pojulife
+> tsx scripts/test-intake-r6-production-authority-boundary.ts
+
+intake-r6-production-authority-boundary (S7)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== A. Production builder sources ==
+  PASS  A1 Session-owned authority read by reference from Session
+  PASS  A2 DC facts/constraints/classifications read from current DC
+  PASS  A3 dirCatalog === loadDirNaCatalog(ACTIVE).entries
+  PASS  A4 topicRules / catalogConditionEvals / cfpSourceState unset (no [] substitute)
+  PASS  A5 forged authority on builder opts ignored (non-literal opts)
+  PASS  A6 missing / superseded DC or missing session_id → throw (no context)
+
+== B. Freeze anti-forge (freezeDraftForDelivery) ==
+  PASS  B0 precondition: Session triad + ACTIVE pair → Freeze n_a
+  PASS  B1 forged dirCatalog (+ forged naValidation) → not n_a (direct cause: na_condition_not_in_catalog)
+  PASS  B2 forged topicRules → not n_a (direct cause: topic_rule_missing)
+  PASS  B3 forged catalogConditionEvals → not n_a (direct cause: catalog_eval_missing)
+  PASS  B4 forged cfpSourceState=source_absent_not_supplied → Freeze ctx unset; DDR-03 reject (direct cause: ddr03_cfp_not_absent)
+  PASS  B5 forged confirmationEvents → not n_a (direct cause: e1_missing)
+  PASS  B6 forged naDeclarationActions → not n_a (direct cause: explicit_na_classification_missing)
+  PASS  B7 forged topic evals/version → Freeze ctx authority = Session; with rule still rejects (topic_eval_id_unknown)
+  PASS  B8 C23/DC-8 mirror: DIR-A + explicit_not_applicable full Session triad + forged catalog → not n_a (direct cause: na_condition_not_in_catalog)
+
+== C. Versioning anti-forge (applyV2FromFinalToSession) ==
+  PASS  C0 precondition: V1 n_a → V2 draft keeps n_a via ACTIVE catalog; V1 hash stable
+  PASS  C1 Session action removed + forged action/naValidation → V2 not n_a (direct cause: explicit_na_classification_missing)
+  PASS  C2 forged dirCatalog → V2 not n_a (direct cause: na_condition_not_in_catalog)
+
+== D. Lifecycle anti-forge (reaggregateDirsOnSession / collecting) ==
+  PASS  D0 S7 semantic: collecting reaggregation applies valid Session N/A (ACTIVE) → n_a
+  PASS  D1 forged authority on reaggregate opts → not n_a (direct cause: explicit_na_classification_missing)
+  PASS  D2 in-flight (unpersisted) fact used by production reaggregation → n_a
+  PASS  D3 in-flight snapshot cannot override Session authority (direct cause: explicit_na_classification_missing)
+
+== E. Ask anti-forge (selectNextIntakeAskForSession) ==
+  PASS  E0 production ask == planNextAskFromCandidates(production ctx); ranking/budget unchanged
+  PASS  E1 forged input.naValidation ignored; low-level planner injection still effective
+  PASS  E2 S7 semantic: N/A applied in collecting → DIR no longer an ask candidate
+
+== F. Fail-closed (ACTIVE loader fault · missing gap sources) ==
+  PASS  F0 injector hits the real production registry (loadDirNaCatalog → dir_catalog_load_failed); restored after
+  PASS  F1 Freeze: FreezeError(code=dir_catalog_load_failed); wire reason_code; IDB DC stays draft
+  PASS  F2 Versioning: apply throws; persistV2 ok:false (dir_catalog_load_failed), no V2
+[dc-lifecycle] Call B DIR map failed dir_catalog_load_failed
+[dc-lifecycle] Call B DIR map failed dir_catalog_load_failed
+  PASS  F3 Lifecycle: reaggregate throws; Call B → dir_map_error, dirs not re-aggregated, IDB unchanged
+  PASS  F4 Collecting: persistCollectingUserTurnDc rejects; IDB DC update discarded (no partial persist)
+  PASS  F5 Ask: loader fault → throws, no plan / no fallback
+  PASS  F6 gap sources missing → fail-closed (topic_rule_missing / catalog_eval_missing / ddr03_cfp_not_absent; see B2–B4)
+
+== S. Static boundary (production sources) ==
+  PASS  S1 no lib/ or app/ module (except fixture definition file) references fixture builder/types (incl. alias / re-export)
+  PASS  S2 removed names gone: buildNaValidationContextFromSession / NaValidationAuthorityOverrides
+  PASS  S3 production builder / reaggregate / snapshot bodies do not touch fixture path or env
+  PASS  S4 production entry types expose no authority / naValidation injection
+  PASS  S5 every production path calls the production builder
+
+S7 production-authority-boundary done. PASS=37 FAIL=0

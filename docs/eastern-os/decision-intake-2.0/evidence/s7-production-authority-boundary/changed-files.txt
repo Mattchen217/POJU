@@ -1,0 +1,62 @@
+S7 changed files — git diff 13e5115984ad1361e782d9159e50ea9de317a3f3 8048aaaee9df1de1b48782c577a70aec8041f5c5
+(+added / -removed lines)
+
+PRODUCTION (all within the S7 allowlist)
+  M lib/poju/decision-context/na-validation-from-session.ts        +131 -83
+      - NEW buildProductionNaValidationContextFromSession(session, opts?: { nowIso })
+        Session SoT + current DC + loadDirNaCatalog(ACTIVE); topicRules /
+        catalogConditionEvals / cfpSourceState left unset.
+      - NEW ProductionNaAuthorityError(reason_code) — ACTIVE load failure, no [] substitute.
+      - NEW PRODUCTION_NA_VALIDATION_DIR_CATALOG_SOURCE constant.
+      - PRODUCTION_NA_VALIDATION_SOURCE_GAPS: dirCatalog entry removed (ACTIVE loader exists);
+        topicRules / catalogConditionEvals / cfpSourceState kept.
+      - DELETED buildNaValidationContextFromSession (no compatibility alias).
+      - NaValidationAuthorityOverrides → NaValidationFixtureOverrides (TEST/FIXTURE ONLY),
+        used only by naValidationBoundToDc (kept in this file, labelled test-only).
+      - reaggregateDirsOnSession: opts.authority removed; builds production ctx, rebinds
+        in-flight facts/constraints via existing naValidationForDcSnapshot.
+  M lib/poju/decision-context/freeze-to-delivery.ts                 +22 -52
+      - FreezeDraftForDeliveryOpts.authority removed.
+      - buildFreezeNaValidationFromSession: opts = { now } only; calls production builder;
+        ProductionNaAuthorityError → FreezeError(reason_code, { code: reason_code }) (unchanged contract);
+        requires authoritative === session.decision_context.
+      - assertSessionDraftBusinessSnapshotBound / C5 hash / binding untouched.
+  M lib/poju/decision-context/production-versioning.ts              +6 -14
+      - StartV2OnSessionOpts.authority removed; applyV2FromFinalToSession uses production builder.
+      - V1/V2 record, idempotency key, C1 commit untouched.
+  M lib/poju/decision-context/production-intake-ask.ts              +6 -8
+      - SelectNextIntakeAskInput.naValidation removed; always production builder.
+      - planNextAskFromCandidates (low-level injection), ranking, budget, candidate IDs untouched.
+  (unchanged) lib/poju/decision-context/production-dc-lifecycle.ts
+      - already called reaggregateDirsOnSession without authority; hardened via na-validation-from-session.ts.
+
+Other production files: NONE changed (production-freeze-wire.ts, freeze.ts, versioning.ts,
+agent.ts, catalog/*, explicit-na-validate.ts, topic-eval-authority.ts, types, schema — untouched).
+
+PACKAGE
+  M package.json                                                    +1 -0
+      - "test:intake-r6-production-authority-boundary" only.
+
+TESTS
+  A scripts/test-intake-r6-production-authority-boundary.ts         +1377
+      - NEW S7 test: A builder sources · B Freeze anti-forge · C Versioning · D Lifecycle ·
+        E Ask · F fail-closed (ACTIVE loader fault, gap sources) · S static boundary. 37 checks.
+  M scripts/test-intake-r6-freeze-authority-regression.ts           +227 -43   (S5, scope agreed)
+      - F1 unchanged. F2 kept on production path + added "only cause" precondition.
+      - F3 → F3-Pure (2) + F3-Production + F3-Production-Source.
+      - F4 → F4-Pure + F4-Production.
+  M scripts/test-intake-r6-freeze-versioning.ts                     +180 -54   (scope agreed)
+      - Section A N/A block → A-Pure (original DIR-A assertions, explicit fixture catalog)
+        + A-Prod (ACTIVE pair; forged catalog; revoked; cross-context) with direct reason_codes.
+      - builder call-sites: nowIso-only → production builder; dirCatalog override → fixture.
+  M scripts/test-intake-r6-production-agg.ts                        +261 -81   (scope agreed)
+      - Section C → C-Pure (original DIR-A assertions) + C-Prod (ACTIVE pair; forged catalog;
+        revoked; cross-context; conflict) with direct reason_codes.
+      - CFP case → fixture path + NEW production assertion (cfp unset → ddr03_cfp_not_absent).
+      - L803 builder call-site → production builder.
+  M scripts/test-intake-r6-dir-catalog.ts                           +2 -2      (scope agreed)
+      - only the line-119 builder call (+ its import) → production builder.
+  (unchanged) scripts/test-intake-r6-write-freeze-consistency.ts — C23 kept as-is (agreed).
+
+No assertion was deleted or weakened; see authority-source-matrix.md §4 for the
+per-assertion migration map.

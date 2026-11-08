@@ -1,0 +1,9 @@
+S7 toolchain (all S7 test / tsc runs)
+
+node --version            → v22.22.0
+(Get-Command node).Source → C:\Program Files\nodejs\node.exe
+corepack pnpm --version   → 10.33.2
+
+Note: the default shell resolved node to C:\nvm4w\nodejs (v20.18.1). PATH was prefixed with
+"C:\Program Files\nodejs" for the S7 session; no command in test-results.txt ran on v20.
+No env var is read by production code or tests to switch production/test behaviour.

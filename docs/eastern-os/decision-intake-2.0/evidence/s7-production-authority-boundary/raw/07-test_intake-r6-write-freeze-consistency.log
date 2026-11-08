@@ -1,0 +1,81 @@
+
+> pojulife@0.1.0 test:intake-r6-write-freeze-consistency D:\POJU\pojulife
+> tsx scripts/test-intake-r6-write-freeze-consistency.ts
+
+intake-r6-write-freeze-consistency (S4 C01–C25)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== C01–C06 legal write / persist / freeze ==
+  PASS  C01 declareDirNotApplicable triad key fields
+  PASS  C02 loadPOJUSession triad durable
+  PASS  C03 reaggregate → DIR n_a
+  PASS  C04 freeze compose → frozen DIR n_a
+  PASS  C05/C06 version_snapshot + hash/binding (compose pack)
+
+== C07–C08 catalog membership ==
+  PASS  C07 forged dir_na_conditions ignored (legal SSOT still ok)
+  PASS  C08 bad DIR/condition write reject
+
+== C09–C10 binding tampers ==
+  PASS  C09a classification declaration_action_id mismatch
+  PASS  C09b classification dir_id / condition mismatch
+  PASS  C09c classification source_ref mismatch
+  PASS  C09d classification context_id / turn mismatch
+  PASS  C09e both unexpired but unequal expires_at → not n_a
+  PASS  C10a evidence_id only wrong → not n_a
+  PASS  C10b evidence dir/condition mismatch
+  PASS  C10c evidence source_ref mismatch
+  PASS  C10d evidence target/type wrong
+
+== C11–C14 revoke / flags / expiry ==
+  PASS  C11 revoke → not n_a
+  PASS  C12 classification revoked flag → not n_a
+  PASS  C13 evidence revoked flag → not n_a
+  PASS  C14 expired action/classification → not n_a
+
+== C15–C18 source / idempotent ==
+  PASS  C15 independently_verified source → not n_a
+  PASS  C16 unconfirmed / missing E1 → not n_a
+  PASS  C17 idempotent skip same payload
+  PASS  C18 binding clash same action_id → reject
+
+== C19–C21 draft-only write/revoke ==
+  PASS  C19 declare on final → reject; reload unchanged
+  PASS  C20 declare on superseded → reject; reload unchanged
+  PASS  C21a revoke on final → reject; actions not newly revoked
+  PASS  C21b missing DC revoke → reject; actions not revoked; reload stable
+
+== C22 conflict > N/A ==
+  PASS  C22 open blocking conflict → DIR conflict not n_a
+
+== C23 forged authority.dirCatalog ==
+  PASS  C23 forged dirCatalog ignored on freeze compose
+
+== C24 full CAS freeze + reload ==
+  PASS  C24 ensureSessionFrozenForDelivery + reload checklist
+
+== C25 CAS / IndexedDB persist failure ==
+  PASS  C25 [production-path] real casWritePOJUSession conflict → no durable N/A
+  UNTESTED  [disclose] freeze-versioning F1
+           Run test:intake-r6-freeze-versioning separately; F1 RED disclosed until S5
+
+S4 write-freeze-consistency done. PASS=32 FAIL=0 UNTESTED=1

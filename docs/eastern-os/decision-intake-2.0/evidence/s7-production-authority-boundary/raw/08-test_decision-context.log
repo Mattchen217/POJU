@@ -1,0 +1,49 @@
+
+> pojulife@0.1.0 test:decision-context D:\POJU\pojulife
+> tsx scripts/test-decision-context-phase1.ts
+
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+decision-context phase1
+  PASS  legal confirmed+user_asserted
+  PASS  illegal confirmed+none rejected
+  PASS  independently_verified does NOT imply user_confirmed
+  PASS  user_confirmed only from user-confirm event + asserted
+  PASS  unknown cannot be user_confirmed
+  PASS  opening-seed writes Definition+Facts+Constraints, no DIR/hyp
+  PASS  hypothesis-from-core maps frames; never RealityFact
+  PASS  agenda covered does not imply DIR.known
+  PASS  multi-Fact aggregation; single confirmed != known
+  PASS  open conflict 鈫?unresolved_in_final; no auto clarify
+  PASS  freeze rejects CTA/stall; sets hash + final
+  PASS  stop-criteria: hard push does not clear P5-critical unknown
+  PASS  V1鈫扸2: superseded keeps hash; draft new version
+  PASS  persist C1 commit / rollback / idempotency / restore DC authority
+  PASS  NEG: critical P5-affecting unknown must NOT Freeze (no bypass)
+  PASS  NEG: preferred-path open conflict must NOT Freeze (hard FAIL)
+  PASS  non-P5 unknown may Freeze with boundary / degraded
+  PASS  non-preferred-path open conflict does not over-block; Freeze OK
+  PASS  NEG: mixed true+undefined DIR; undefined P5 unknown must block Freeze
+  PASS  non-preferred Conflict linked to P5 DIR must NOT upgrade via aggregation
+  PASS  preferred-path Conflict still hard-blocks even after aggregation path
+  PASS  Freeze final aggregate must not leave Gate-skipped blocking state
+
+All decision-context phase1 checks passed (22).
