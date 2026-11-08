@@ -32,7 +32,7 @@ export type LiveCfpSourceState =
 export type LiveCfpEvaluation = {
   state: LiveCfpSourceState;
   eval_id: string;
-  source_code: typeof CFP_SOURCE_CODE_CHART_FACT_PACK;
+  source_code: string;
   profile_id: string | null;
   session_id: string;
 };
