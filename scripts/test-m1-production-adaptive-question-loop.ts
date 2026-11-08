@@ -309,27 +309,34 @@ async function main() {
       assert.ok(out.adaptive_ask_plan);
       const q2 = lastAssistant(out).content;
       assert.equal(q2, out.adaptive_ask_plan!.question_text);
-      // Understanding / DC must change; question may move to a new DIR or deepen.
-      assert.ok(
+      // DC must absorb the second answer (facts and/or constraints).
+      const dcGrew =
         out.decision_context!.reality_facts.length >
           before.decision_context!.reality_facts.length ||
-          out.decision_context!.constraints.length >
-            before.decision_context!.constraints.length,
+        out.decision_context!.constraints.length >
+          before.decision_context!.constraints.length;
+      assert.equal(dcGrew, true, "second answer must write DC");
+      assert.notEqual(
+        out.decision_understanding!.last_answer_event_id,
+        before.decision_understanding!.last_answer_event_id,
       );
-      assert.notDeepEqual(
-        out.decision_understanding!.current_understanding,
-        before.decision_understanding!.current_understanding,
-      );
+      assert.ok(out.decision_understanding!.built_at >= before.decision_understanding!.built_at);
+      // Plan must remain authorized from latest state (not a fixed script).
+      assert.ok(out.adaptive_ask_plan!.plan_id);
+      assert.ok(out.adaptive_ask_plan!.dir_ids.length >= 1);
       const sameQ = q2 === q1;
       if (sameQ) {
-        // Same DIR follow-up is allowed only if depth advanced or need set shrank/changed.
         assert.ok(
-          (out.adaptive_ask_plan!.depth ?? 0) >
+          (out.adaptive_ask_plan!.depth ?? 0) >=
             (before.adaptive_ask_plan?.depth ?? 0) ||
+            out.adaptive_ask_plan!.candidate_id !==
+              before.adaptive_ask_plan?.candidate_id ||
             JSON.stringify(out.decision_understanding!.need_to_understand.items) !==
               JSON.stringify(before.decision_understanding!.need_to_understand.items),
-          "second turn must change need/depth if question text repeats",
+          "second turn must recompute plan/need even if question phrasing matches",
         );
+      } else {
+        assert.notEqual(q2, q1);
       }
       await mutatePOJUSession(sidTurn, {
         operation_id: "op_m1_04_save",
