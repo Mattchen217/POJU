@@ -1,0 +1,590 @@
+/**
+ * Stage 3.2 Round-5 — declareDirNotApplicable CAS integration (fake-indexeddb).
+ *   pnpm exec tsx scripts/test-intake-r6-na-cas.ts
+ *   pnpm test:intake-r6-na-cas
+ */
+import "fake-indexeddb/auto";
+import assert from "node:assert/strict";
+import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
+
+installIntakeR6TestGlobals("dev_intake_r6_na_cas");
+
+const NOW = "2026-11-05T12:00:00.000Z";
+/** Production SSOT pair (S0 v1) — declare write authority. */
+const NA_CODE = "explicit_no_hard_red_lines";
+
+async function main() {
+  console.log("intake-r6-na-cas (declareDirNotApplicable production CAS)");
+
+  const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
+    "../lib/db/poju-db"
+  );
+  const { createPOJUSession, loadPOJUSession } = await import(
+    "../lib/poju/session-manager"
+  );
+  const { mutatePOJUSession, SESSION_CAS_CONFLICT, isSessionCasError } =
+    await import("../lib/poju/session-mutation");
+  const {
+    declareDirNotApplicable,
+    revokeDirNaDeclaration,
+    applyDeclareDirNaToSession,
+    NaDeclarationError,
+  } = await import("../lib/poju/decision-context/na-declaration");
+  const { validateExplicitNaEvidence } = await import(
+    "../lib/poju/decision-context/explicit-na-validate"
+  );
+  const { emptyNaValidation } = await import(
+    "../lib/poju/decision-context/role-resolver"
+  );
+  type DecisionContext =
+    import("../lib/poju/decision-context/types").DecisionContext;
+
+  await __resetPojuDbForTests();
+  await ensurePojuDbReady();
+
+  const emptyDefinition = {
+    concrete_event: null,
+    stakes: null,
+    desired_outcome: null,
+    decision_question: null,
+    goal_priorities: [] as string[],
+    unacceptable_outcomes: [] as string[],
+  };
+
+  function makeDc(
+    partial: Partial<DecisionContext> &
+      Pick<DecisionContext, "context_id" | "version">,
+  ): DecisionContext {
+    const now = partial.updated_at ?? NOW;
+    return {
+      context_id: partial.context_id,
+      version: partial.version,
+      status: partial.status ?? "draft",
+      definition: partial.definition ?? emptyDefinition,
+      reality_facts: partial.reality_facts ?? [],
+      constraints: partial.constraints ?? [],
+      hypotheses: partial.hypotheses ?? [],
+      dirs: partial.dirs ?? [],
+      conflicts: partial.conflicts ?? [],
+      explicit_na_evidence: partial.explicit_na_evidence,
+      explicit_na_classifications: partial.explicit_na_classifications,
+      content_hash: partial.content_hash ?? null,
+      created_at: partial.created_at ?? now,
+      updated_at: now,
+    };
+  }
+
+  // --- Seed session with DC + confirmed fact ---
+  const sid = await createPOJUSession({
+    payment_id: "pay_intake_na_cas",
+    original_question: "na cas",
+  });
+  await mutatePOJUSession(sid, {
+    operation_id: "op_seed_dc_na",
+    kind: "session_patch",
+    bump_dc: true,
+    apply: (latest) => ({
+      ...latest,
+      decision_context: makeDc({
+        context_id: "dc_na_cas",
+        version: 1,
+        reality_facts: [
+          {
+            fact_id: "fact_na_1",
+            statement: "topic does not apply",
+            status: "confirmed",
+            verification_level: "user_asserted",
+            source_stage: "user_supplement",
+            source_turn_id: "turn_na_1",
+            user_confirmed: true,
+            fact_roles: ["situation"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
+          },
+          {
+            fact_id: "fact_na_2",
+            statement: "other fact",
+            status: "confirmed",
+            verification_level: "user_asserted",
+            source_stage: "user_supplement",
+            source_turn_id: "turn_na_2",
+            user_confirmed: true,
+            fact_roles: ["situation"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
+          },
+        ],
+        constraints: [
+          {
+            constraint_id: "cst_na_1",
+            statement: "hard time",
+            category: "time",
+            status: "confirmed",
+            verification_level: "user_asserted",
+            source_stage: "user_supplement",
+            source_turn_id: "turn_na_c",
+            rigidity: "hard",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
+          },
+        ],
+        dirs: [
+          {
+            dir_id: "DIR-DEF-UNACCEPTABLE",
+            need: "need",
+            why: "why",
+            required_fact_roles: ["situation"],
+            current_state: "unknown",
+            partial_satisfaction: false,
+            agenda_item_ids: [],
+            id_lifecycle: "active",
+          },
+        ],
+      }),
+      confirmation_events: [
+        {
+          event_id: "e1_fact_na_1",
+          target_type: "fact",
+          fact_id: "fact_na_1",
+          source_turn_id: "turn_na_1",
+          confirmation_turn_id: "turn_na_1b",
+          confirmation_action_id: "ca_fact_na_1",
+          event_type: "confirm_fact",
+          actor: "user",
+          confirmed_at: NOW,
+          event_version: 1,
+        },
+      ],
+    }),
+  });
+
+  const declareInput = {
+    operation_id: "op_declare_na_1",
+    declaration_action_id: "na-act-cas-1",
+    control_id: "na_declare" as const,
+    fact_id: "fact_na_1",
+    dir_id: "DIR-DEF-UNACCEPTABLE",
+    na_condition_code: NA_CODE,
+    declaration_turn_id: "turn_declare_1",
+    dir_na_conditions: [NA_CODE],
+    occurred_at: NOW,
+  };
+
+  console.log("\n== declareDirNotApplicable CAS write + reload ==");
+  const first = await declareDirNotApplicable(sid, declareInput);
+  assert.equal(first.outcome, "appended");
+  assert.equal(first.action.session_id, sid);
+  assert.equal(first.action.context_id, "dc_na_cas");
+  assert.equal(first.evidence.evidence_id, "na_ev_na-act-cas-1");
+  assert.equal(
+    first.classification.declaration_action_id,
+    first.action.declaration_action_id,
+  );
+
+  const reloaded = await loadPOJUSession(sid);
+  assert.ok(reloaded);
+  assert.equal(
+    (reloaded!.na_declaration_actions ?? []).length,
+    1,
+    "action persisted on session",
+  );
+  assert.equal(
+    (reloaded!.decision_context?.explicit_na_classifications ?? []).length,
+    1,
+    "classification persisted on DC",
+  );
+  assert.equal(
+    (reloaded!.decision_context?.explicit_na_evidence ?? []).filter(
+      (e) => e.evidence_id === "na_ev_na-act-cas-1",
+    ).length,
+    1,
+    "evidence persisted by exact id",
+  );
+  console.log("  PASS  CAS write + reload binds action/classification/evidence");
+
+  console.log("\n== same operation_id + same payload → CAS idempotent ==");
+  const again = await declareDirNotApplicable(sid, declareInput);
+  assert.equal(again.outcome, "idempotent_skip");
+  const afterAgain = await loadPOJUSession(sid);
+  assert.equal((afterAgain!.na_declaration_actions ?? []).length, 1);
+  assert.equal(
+    (afterAgain!.decision_context?.explicit_na_classifications ?? []).length,
+    1,
+  );
+  console.log("  PASS  repeat operation_id does not duplicate records");
+
+  console.log("\n== same action_id + different fact_id → reject ==");
+  let mismatchFact = false;
+  try {
+    await declareDirNotApplicable(sid, {
+      ...declareInput,
+      operation_id: "op_declare_na_mismatch_fact",
+      fact_id: "fact_na_2",
+    });
+  } catch (err) {
+    mismatchFact = err instanceof NaDeclarationError;
+    assert.ok(
+      err instanceof NaDeclarationError &&
+        err.message.includes("idempotent_source_mismatch"),
+    );
+  }
+  assert.equal(mismatchFact, true);
+  console.log("  PASS  different fact_id rejected");
+
+  console.log("\n== same action_id + different constraint_id → reject ==");
+  // Seed a second action path first with constraint via new id, then try reuse with wrong source
+  await declareDirNotApplicable(sid, {
+    operation_id: "op_declare_cst",
+    declaration_action_id: "na-act-cas-cst",
+    control_id: "na_declare",
+    constraint_id: "cst_na_1",
+    dir_id: "DIR-DEF-UNACCEPTABLE",
+    na_condition_code: NA_CODE,
+    declaration_turn_id: "turn_declare_cst",
+    dir_na_conditions: [NA_CODE],
+    occurred_at: NOW,
+  });
+  let mismatchCst = false;
+  try {
+    await declareDirNotApplicable(sid, {
+      operation_id: "op_declare_cst_bad",
+      declaration_action_id: "na-act-cas-cst",
+      control_id: "na_declare",
+      fact_id: "fact_na_1",
+      dir_id: "DIR-DEF-UNACCEPTABLE",
+      na_condition_code: NA_CODE,
+      declaration_turn_id: "turn_declare_cst",
+      dir_na_conditions: [NA_CODE],
+      occurred_at: NOW,
+    });
+  } catch (err) {
+    mismatchCst = err instanceof NaDeclarationError;
+  }
+  assert.equal(mismatchCst, true);
+  const afterCst = await loadPOJUSession(sid);
+  assert.equal(
+    (afterCst!.na_declaration_actions ?? []).filter(
+      (a) => a.declaration_action_id === "na-act-cas-cst",
+    ).length,
+    1,
+  );
+  console.log("  PASS  different constraint vs fact source rejected");
+
+  console.log("\n== two actions same DIR/condition stay distinct ==");
+  const a1 = (afterCst!.na_declaration_actions ?? []).find(
+    (a) => a.declaration_action_id === "na-act-cas-1",
+  )!;
+  const a2 = (afterCst!.na_declaration_actions ?? []).find(
+    (a) => a.declaration_action_id === "na-act-cas-cst",
+  )!;
+  assert.notEqual(a1.source_ref.kind, a2.source_ref.kind);
+  const ev1 = afterCst!.decision_context!.explicit_na_evidence!.find(
+    (e) => e.evidence_id === "na_ev_na-act-cas-1",
+  )!;
+  const ev2 = afterCst!.decision_context!.explicit_na_evidence!.find(
+    (e) => e.evidence_id === "na_ev_na-act-cas-cst",
+  )!;
+  assert.ok(ev1 && ev2);
+  assert.notEqual(ev1.evidence_id, ev2.evidence_id);
+  console.log("  PASS  distinct action/evidence ids for same DIR/condition");
+
+  console.log("\n== missing evidence fail-closed on pure replay ==");
+  const broken = structuredClone(afterCst!);
+  broken.decision_context = {
+    ...broken.decision_context!,
+    explicit_na_evidence: (
+      broken.decision_context!.explicit_na_evidence ?? []
+    ).filter((e) => e.evidence_id !== "na_ev_na-act-cas-1"),
+  };
+  let missingEv = false;
+  try {
+    applyDeclareDirNaToSession(broken, sid, declareInput, NOW);
+  } catch (err) {
+    missingEv =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_action_missing_evidence");
+  }
+  assert.equal(missingEv, true);
+  console.log("  PASS  missing evidence fail-closed");
+
+  console.log("\n== CAS conflict retry does not duplicate ==");
+  let conflictInjected = false;
+  const casOnce = await declareDirNotApplicable(
+    sid,
+    {
+      ...declareInput,
+      operation_id: "op_declare_na_retry",
+      declaration_action_id: "na-act-cas-retry",
+      fact_id: "fact_na_2",
+      declaration_turn_id: "turn_retry",
+    },
+    {
+      max_retries: 3,
+      casWrite: async (args) => {
+        if (!conflictInjected) {
+          conflictInjected = true;
+          const { SessionCasError } = await import(
+            "../lib/poju/session-mutation"
+          );
+          throw new SessionCasError(SESSION_CAS_CONFLICT, "injected conflict");
+        }
+        const { casWritePOJUSession } = await import(
+          "../lib/poju/session-mutation"
+        );
+        return casWritePOJUSession(args);
+      },
+    },
+  );
+  assert.equal(casOnce.outcome, "appended");
+  const afterRetry = await loadPOJUSession(sid);
+  assert.equal(
+    (afterRetry!.na_declaration_actions ?? []).filter(
+      (a) => a.declaration_action_id === "na-act-cas-retry",
+    ).length,
+    1,
+  );
+  console.log("  PASS  CAS conflict retry single record");
+
+  console.log("\n== revokeDirNaDeclaration + validator reject ==");
+  await revokeDirNaDeclaration(sid, {
+    operation_id: "op_revoke_na_1",
+    declaration_action_id: "na-act-cas-1",
+    revoked_at: NOW,
+  });
+  const revokedSess = await loadPOJUSession(sid);
+  const revokedAction = (revokedSess!.na_declaration_actions ?? []).find(
+    (a) => a.declaration_action_id === "na-act-cas-1",
+  )!;
+  const revokedCls = (
+    revokedSess!.decision_context?.explicit_na_classifications ?? []
+  ).find((c) => c.declaration_action_id === "na-act-cas-1")!;
+  const revokedEv = (
+    revokedSess!.decision_context?.explicit_na_evidence ?? []
+  ).find((e) => e.evidence_id === "na_ev_na-act-cas-1")!;
+  assert.equal(revokedAction.revoked, true);
+  assert.equal(revokedCls.revoked, true);
+  assert.equal(revokedEv.revoked, true);
+
+  const v = validateExplicitNaEvidence(revokedEv, emptyNaValidation({
+    contextId: "dc_na_cas",
+    sessionId: sid,
+    nowIso: NOW,
+    dirCatalog: [{ dir_id: "DIR-DEF-UNACCEPTABLE", na_conditions: [NA_CODE] }],
+    realityFacts: revokedSess!.decision_context!.reality_facts,
+    confirmationEvents: revokedSess!.confirmation_events ?? [],
+    explicitNaClassifications:
+      revokedSess!.decision_context!.explicit_na_classifications ?? [],
+    naDeclarationActions: revokedSess!.na_declaration_actions ?? [],
+  }));
+  assert.equal(v.ok, false);
+
+  let replayRevoked = false;
+  try {
+    await declareDirNotApplicable(sid, {
+      ...declareInput,
+      operation_id: "op_replay_revoked",
+    });
+  } catch (err) {
+    replayRevoked =
+      err instanceof NaDeclarationError &&
+      err.message.includes("action_revoked_replay");
+  }
+  assert.equal(replayRevoked, true);
+  console.log("  PASS  revoke sync + replay rejected + validator fail-closed");
+
+  console.log("\n== Round-6 Session/DC + turn/expires binding ==");
+  // Fresh session so revoked na-act-cas-1 does not interfere.
+  const sid2 = await createPOJUSession({
+    payment_id: "pay_intake_na_cas_r6",
+    original_question: "na cas r6",
+  });
+  await mutatePOJUSession(sid2, {
+    operation_id: "op_seed_dc_na_r6",
+    kind: "session_patch",
+    bump_dc: true,
+    apply: (latest) => ({
+      ...latest,
+      decision_context: makeDc({
+        context_id: "dc_na_cas_r6",
+        version: 1,
+        reality_facts: [
+          {
+            fact_id: "fact_r6",
+            statement: "r6 fact",
+            status: "confirmed",
+            verification_level: "user_asserted",
+            source_stage: "user_supplement",
+            source_turn_id: "turn_r6",
+            user_confirmed: true,
+            fact_roles: ["situation"],
+            related_dir_ids: ["DIR-DEF-UNACCEPTABLE"],
+          },
+        ],
+        dirs: [
+          {
+            dir_id: "DIR-DEF-UNACCEPTABLE",
+            need: "need",
+            why: "why",
+            required_fact_roles: ["situation"],
+            current_state: "unknown",
+            partial_satisfaction: false,
+            agenda_item_ids: [],
+            id_lifecycle: "active",
+          },
+        ],
+      }),
+      confirmation_events: [
+        {
+          event_id: "e1_fact_r6",
+          target_type: "fact",
+          fact_id: "fact_r6",
+          source_turn_id: "turn_r6",
+          confirmation_turn_id: "turn_r6b",
+          confirmation_action_id: "ca_fact_r6",
+          event_type: "confirm_fact",
+          actor: "user",
+          confirmed_at: NOW,
+          event_version: 1,
+        },
+      ],
+    }),
+  });
+
+  const r6Input = {
+    operation_id: "op_r6_declare",
+    declaration_action_id: "na-act-r6",
+    control_id: "na_declare" as const,
+    fact_id: "fact_r6",
+    dir_id: "DIR-DEF-UNACCEPTABLE",
+    na_condition_code: NA_CODE,
+    declaration_turn_id: "turn_r6_declare",
+    dir_na_conditions: [NA_CODE],
+    occurred_at: NOW,
+  };
+  const r6First = await declareDirNotApplicable(sid2, r6Input);
+  assert.equal(r6First.outcome, "appended");
+
+  const r6Replay = await declareDirNotApplicable(sid2, {
+    ...r6Input,
+    operation_id: "op_r6_replay_same",
+  });
+  assert.equal(r6Replay.outcome, "idempotent_skip");
+  console.log("  PASS  production same payload → idempotent_skip");
+
+  let turnReject = false;
+  try {
+    await declareDirNotApplicable(sid2, {
+      ...r6Input,
+      operation_id: "op_r6_bad_turn",
+      declaration_turn_id: "turn_OTHER",
+    });
+  } catch (err) {
+    turnReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_turn_mismatch");
+  }
+  assert.equal(turnReject, true);
+  console.log("  PASS  production declaration_turn_id mismatch → reject");
+
+  let expiresReject = false;
+  try {
+    await declareDirNotApplicable(sid2, {
+      ...r6Input,
+      operation_id: "op_r6_bad_expires",
+      expires_at: "2027-01-01T00:00:00.000Z",
+    });
+  } catch (err) {
+    expiresReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_expires_mismatch");
+  }
+  assert.equal(expiresReject, true);
+  console.log("  PASS  production expires_at mismatch → reject");
+
+  const loadedR6 = await loadPOJUSession(sid2);
+  const forgedSession = structuredClone(loadedR6!);
+  forgedSession.na_declaration_actions = (
+    forgedSession.na_declaration_actions ?? []
+  ).map((a) =>
+    a.declaration_action_id === "na-act-r6"
+      ? { ...a, session_id: "sess_FORGED" }
+      : a,
+  );
+  let sessReject = false;
+  try {
+    applyDeclareDirNaToSession(forgedSession, sid2, r6Input, NOW);
+  } catch (err) {
+    sessReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_session_mismatch");
+  }
+  assert.equal(sessReject, true);
+  console.log("  PASS  prior.session_id mismatch → reject");
+
+  const forgedCtx = structuredClone(loadedR6!);
+  forgedCtx.na_declaration_actions = (forgedCtx.na_declaration_actions ?? []).map(
+    (a) =>
+      a.declaration_action_id === "na-act-r6"
+        ? { ...a, context_id: "dc_FORGED" }
+        : a,
+  );
+  let ctxReject = false;
+  try {
+    applyDeclareDirNaToSession(forgedCtx, sid2, r6Input, NOW);
+  } catch (err) {
+    ctxReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_context_mismatch");
+  }
+  assert.equal(ctxReject, true);
+  console.log("  PASS  prior.context_id mismatch → reject");
+
+  const forgedCls = structuredClone(loadedR6!);
+  forgedCls.decision_context = {
+    ...forgedCls.decision_context!,
+    explicit_na_classifications: (
+      forgedCls.decision_context!.explicit_na_classifications ?? []
+    ).map((c) =>
+      c.declaration_action_id === "na-act-r6"
+        ? { ...c, context_id: "dc_FORGED" }
+        : c,
+    ),
+  };
+  let clsCtxReject = false;
+  try {
+    applyDeclareDirNaToSession(forgedCls, sid2, r6Input, NOW);
+  } catch (err) {
+    clsCtxReject =
+      err instanceof NaDeclarationError &&
+      err.message.includes("idempotent_classification_context_mismatch");
+  }
+  assert.equal(clsCtxReject, true);
+  console.log("  PASS  classification.context_id mismatch → reject");
+
+  await revokeDirNaDeclaration(sid2, {
+    operation_id: "op_r6_revoke",
+    declaration_action_id: "na-act-r6",
+    revoked_at: NOW,
+  });
+  let r6RevokedReplay = false;
+  try {
+    await declareDirNotApplicable(sid2, {
+      ...r6Input,
+      operation_id: "op_r6_replay_revoked",
+    });
+  } catch (err) {
+    r6RevokedReplay =
+      err instanceof NaDeclarationError &&
+      err.message.includes("action_revoked_replay");
+  }
+  assert.equal(r6RevokedReplay, true);
+  console.log("  PASS  revoke then replay still rejected");
+
+  // silence unused
+  void isSessionCasError;
+
+  console.log("\nAll intake-r6-na-cas checks passed.");
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -6,6 +6,7 @@
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
+import { FreezeError } from "./freeze";
 import { evaluateDecisionSufficiency } from "./stop-criteria";
 import {
   applyFreezeToSessionSlice,
@@ -28,6 +29,23 @@ export type FreezeWireSkipReason =
   | "purchase_or_cta_path"
   | "idempotent_skip";
 
+/** Allowlisted FreezeError.code values that map 1:1 onto Wire reason_code. */
+export const FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES = [
+  "dir_catalog_ssot_unavailable",
+  "dir_catalog_load_failed",
+  "dir_catalog_version_unknown",
+  "dir_catalog_version_missing",
+  "dir_catalog_version_invalid",
+] as const;
+
+export type FreezeWireAllowlistedInternalCode =
+  (typeof FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES)[number];
+
+const ALLOWLISTED_CODE_SET = new Set<string>(FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES);
+
+export const FREEZE_WIRE_GENERIC_FAIL_CODE = "freeze_failed";
+export const FREEZE_WIRE_PERSIST_FAIL_CODE = "dc_freeze_persist_failed";
+
 export type FreezeWireResult =
   | {
       ok: true;
@@ -46,8 +64,61 @@ export type FreezeWireResult =
   | {
       ok: false;
       reason: string;
+      reason_code: string;
       session: POJUSessionState;
     };
+
+/**
+ * Map a caught throw to Wire `reason` + allowlisted `reason_code`.
+ * Never uses Error.message as reason_code.
+ */
+export function mapCaughtFreezeFailure(e: unknown): {
+  reason: string;
+  reason_code: string;
+} {
+  if (e instanceof FreezeError) {
+    const message = e.message;
+    if (e.code && ALLOWLISTED_CODE_SET.has(e.code)) {
+      return { reason: message || e.code, reason_code: e.code };
+    }
+    return { reason: message, reason_code: FREEZE_WIRE_GENERIC_FAIL_CODE };
+  }
+  if (e instanceof Error) {
+    return { reason: e.message, reason_code: FREEZE_WIRE_GENERIC_FAIL_CODE };
+  }
+  return { reason: String(e), reason_code: FREEZE_WIRE_GENERIC_FAIL_CODE };
+}
+
+/** Assemble ok:false Wire result from a caught throw (production catch uses this). */
+export function freezeFailWireResult(
+  session: POJUSessionState,
+  e: unknown,
+): Extract<FreezeWireResult, { ok: false }> {
+  const mapped = mapCaughtFreezeFailure(e);
+  return {
+    ok: false,
+    reason: mapped.reason,
+    reason_code: mapped.reason_code,
+    session,
+  };
+}
+
+/** Assemble ok:false Wire result for Session C1 persist failure. */
+export function persistFailWireResult(
+  session: POJUSessionState,
+  commitError?: string | null,
+): Extract<FreezeWireResult, { ok: false }> {
+  const reason =
+    commitError != null && commitError !== ""
+      ? commitError
+      : FREEZE_WIRE_PERSIST_FAIL_CODE;
+  return {
+    ok: false,
+    reason,
+    reason_code: FREEZE_WIRE_PERSIST_FAIL_CODE,
+    session,
+  };
+}
 
 export type FreezeWireTrigger =
   | "sufficiency_end_confirm"
@@ -142,7 +213,10 @@ export function applySufficiencyFreezeToSession(
     };
   }
   try {
-    const pack = freezeDraftForDelivery(gate.draft!, { now: opts?.now });
+    const pack = freezeDraftForDelivery(gate.draft!, {
+      session,
+      now: opts?.now,
+    });
     const slice = applyFreezeToSessionSlice(
       {
         decision_context: session.decision_context,
@@ -162,11 +236,7 @@ export function applySufficiencyFreezeToSession(
       idempotency_key: freezeIdempotencyKey(session, gate.draft!),
     };
   } catch (e) {
-    return {
-      ok: false,
-      reason: e instanceof Error ? e.message : String(e),
-      session,
-    };
+    return freezeFailWireResult(session, e);
   }
 }
 
@@ -205,6 +275,8 @@ export async function ensureSessionFrozenForDelivery(
     session,
     idempotency_key: applied.idempotency_key,
     now: opts?.now,
+    // Freeze is DC-authority; control plane may be absent on early sessions.
+    require_control_plane: false,
     apply: (tx) => {
       const merged = applyFreezeToSessionSlice(
         {
@@ -231,11 +303,7 @@ export async function ensureSessionFrozenForDelivery(
     };
   }
   if (!commit.committed) {
-    return {
-      ok: false,
-      reason: commit.error ?? "dc_freeze_persist_failed",
-      session,
-    };
+    return persistFailWireResult(session, commit.error);
   }
   return {
     ok: true,

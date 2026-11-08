@@ -1,0 +1,14 @@
+S8 commit lineage (oldest → newest; "SHA parent subject")
+
+ed608c904d894f9dc32eb2616960fe3adef960f9  (S7 final — parent of S8)
+b5d9381641043230b025730a34556364ccda99d9 ed608c904d894f9dc32eb2616960fe3adef960f9 S8-A: close NaValidation fixture barrel exposure
+d1a6790a1303c758171597d3fa0e1d8eebd6c6f4 b5d9381641043230b025730a34556364ccda99d9 S8-B: strict typecheck for Intake R6 tests
+6f6756066586b32b892b7eb11b47a3d4c001c535 d1a6790a1303c758171597d3fa0e1d8eebd6c6f4 S8-C: collecting DC turn adopts only C1-committed DC
+165429eda0302f460b7a96b71c678abdf6e9a95f 6f6756066586b32b892b7eb11b47a3d4c001c535 S8-D: Versioning V1->V2 under real IndexedDB write failure
+3dcdf9a1b72d48476c040d29ec0fe7319a23d088 165429eda0302f460b7a96b71c678abdf6e9a95f S8-E: freeze persist failure (IDB tx abort) + S4 F1 disclosure executed
+be80b8be28b33b15be6b3125e3d052ed430c1b8c 3dcdf9a1b72d48476c040d29ec0fe7319a23d088 S8-F: Delivery/Report N/A compatibility F1-F8 (production freeze -> payload -> route binding -> page feed -> Stage4)
+5da7e2bbe2c52c47d7f1102a2f27475848b54751 be80b8be28b33b15be6b3125e3d052ed430c1b8c S8: drop remaining non-null / const assertions from S8-touched test lines
+(+ evidence commit on top: docs only)
+
+Final code HEAD for all raw/final-*.log runs: 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+Linear history, no merge commits, no rebase. ed608c90 is an ancestor of every S8 commit.

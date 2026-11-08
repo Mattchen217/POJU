@@ -12,10 +12,44 @@ on:
       - "scripts/test-generation-s2.ts"
       - "scripts/test-control-plane-s3.ts"
       - "scripts/test-normalize-s4.ts"
+      - "scripts/test-intake-r6-role-resolver.ts"
+      - "scripts/test-intake-r6-na-cas.ts"
+      - "scripts/test-intake-r6-production-agg.ts"
+      - "scripts/test-intake-r6-freeze-versioning.ts"
+      - "package.json"
       - ".github/workflows/phase3-decision-context.yml"
+      # Intake 2.0 S7/S8 regression surface (DIR N/A authority vertical slice)
+      - "lib/poju/agent.ts"
+      - "lib/poju/agent-state.ts"
+      - "lib/poju/collecting-dc-turn.ts"
+      - "lib/poju/investigation-agenda.ts"
+      - "lib/poju/types.ts"
+      - "lib/llm/pro/final-delivery.ts"
+      - "lib/llm/pro/delivery/page-feed-matrix.ts"
+      - "lib/llm/pro/delivery/page-feed-dc-contract.ts"
+      - "lib/llm/pro/delivery/merge-delivery-markdown.ts"
+      - "lib/llm/pro/delivery/book-judgment/**"
+      - "lib/llm/pro/delivery/lab/observation.ts"
+      - "lib/llm/pro/delivery/lab/public-view.ts"
+      - "lib/llm/pro/delivery/lab/types.ts"
+      - "lib/llm/pro/delivery/page-schema/face-prompt.ts"
+      - "lib/llm/pro/delivery/page-schema/face-types.ts"
+      - "lib/llm/pro/delivery/pipeline-v3/body-prompt.ts"
+      - "lib/llm/pro/delivery/pipeline-v3/page-feed-policy.ts"
+      - "app/api/poju/final-delivery/route.ts"
+      - "scripts/test-intake-r6-*.ts"
+      - "scripts/fixtures/**"
+      - "scripts/test-decision-context-phase1.ts"
+      - "scripts/test-decision-context-stage4.ts"
+      - "scripts/test-pagefeed-bookjudgment-s1-s2.ts"
+      - "scripts/test-s5-freeze-s6-observation.ts"
+      - "tsconfig.json"
+      - "tsconfig.intake-r6-tests.json"
+      - "pnpm-lock.yaml"
   push:
     branches:
       - "feat/decision-context-phase1"
+      - "docs/decision-intake-2.0-phase-3-design"
     paths:
       - "lib/poju/decision-context/**"
       - "lib/poju/generation/**"
@@ -27,7 +61,39 @@ on:
       - "scripts/test-generation-s2.ts"
       - "scripts/test-control-plane-s3.ts"
       - "scripts/test-normalize-s4.ts"
+      - "scripts/test-intake-r6-role-resolver.ts"
+      - "scripts/test-intake-r6-na-cas.ts"
+      - "scripts/test-intake-r6-production-agg.ts"
+      - "scripts/test-intake-r6-freeze-versioning.ts"
+      - "package.json"
       - ".github/workflows/phase3-decision-context.yml"
+      - "lib/poju/agent.ts"
+      - "lib/poju/agent-state.ts"
+      - "lib/poju/collecting-dc-turn.ts"
+      - "lib/poju/investigation-agenda.ts"
+      - "lib/poju/types.ts"
+      - "lib/llm/pro/final-delivery.ts"
+      - "lib/llm/pro/delivery/page-feed-matrix.ts"
+      - "lib/llm/pro/delivery/page-feed-dc-contract.ts"
+      - "lib/llm/pro/delivery/merge-delivery-markdown.ts"
+      - "lib/llm/pro/delivery/book-judgment/**"
+      - "lib/llm/pro/delivery/lab/observation.ts"
+      - "lib/llm/pro/delivery/lab/public-view.ts"
+      - "lib/llm/pro/delivery/lab/types.ts"
+      - "lib/llm/pro/delivery/page-schema/face-prompt.ts"
+      - "lib/llm/pro/delivery/page-schema/face-types.ts"
+      - "lib/llm/pro/delivery/pipeline-v3/body-prompt.ts"
+      - "lib/llm/pro/delivery/pipeline-v3/page-feed-policy.ts"
+      - "app/api/poju/final-delivery/route.ts"
+      - "scripts/test-intake-r6-*.ts"
+      - "scripts/fixtures/**"
+      - "scripts/test-decision-context-phase1.ts"
+      - "scripts/test-decision-context-stage4.ts"
+      - "scripts/test-pagefeed-bookjudgment-s1-s2.ts"
+      - "scripts/test-s5-freeze-s6-observation.ts"
+      - "tsconfig.json"
+      - "tsconfig.intake-r6-tests.json"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
 jobs:
   phase3:
@@ -54,8 +120,38 @@ jobs:
           pnpm exec tsx scripts/test-decision-context-phase3-e2e.ts --core
       - name: Phase3 S5 full L1/L2/L3
         run: pnpm test:decision-context-phase3
+      - name: Intake 2.0 Stage 3.2 R6 resolver / N/A / planner / production agg
+        run: |
+          pnpm test:intake-r6-resolver
+          pnpm test:intake-r6-na-cas
+          pnpm test:intake-r6-production-agg
+          pnpm test:intake-r6-freeze-versioning
+      - name: Intake 2.0 S7 regression (production N/A authority boundary)
+        run: |
+          pnpm test:intake-r6-production-authority-boundary
+          pnpm test:intake-r6-dir-catalog
+          pnpm test:intake-r6-resolver
+          pnpm test:intake-r6-production-agg
+          pnpm test:intake-r6-freeze-versioning
+          pnpm test:intake-r6-freeze-wire-reason
+          pnpm test:intake-r6-write-freeze-consistency
+          pnpm test:intake-r6-na-cas
+          pnpm test:decision-context
+      - name: Intake 2.0 S8 regression (N/A authority regression closure)
+        run: |
+          pnpm test:intake-r6-barrel-export-boundary
+          pnpm test:intake-r6-agent-collecting-failure
+          pnpm test:intake-r6-versioning-idb-fault
+          pnpm test:intake-r6-freeze-persist-disclose
+          pnpm test:intake-r6-delivery-na-compat
+      - name: Intake 2.0 cross-boundary regression (Stage 4 / PageFeed / S5-S6)
+        run: |
+          pnpm test:decision-context-stage4
+          pnpm test:pagefeed-bookjudgment-s1-s2
+          pnpm test:s5-freeze-s6-observation
       - name: Typecheck
         run: |
           # next-env.d.ts is gitignored; without it CI lacks next/image-types (*.png) decls.
           pnpm exec next typegen
           pnpm exec tsc --noEmit
+          pnpm typecheck:intake-r6-tests

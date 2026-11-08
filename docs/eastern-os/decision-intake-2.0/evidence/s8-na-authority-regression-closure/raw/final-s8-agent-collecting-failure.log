@@ -1,0 +1,86 @@
+﻿# HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+# cmd: pnpm test:intake-r6-agent-collecting-failure
+
+> pojulife@0.1.0 test:intake-r6-agent-collecting-failure D:\POJU\pojulife
+> tsx scripts/test-intake-r6-agent-collecting-failure.ts
+
+intake-r6-agent-collecting-failure (S8-C)
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+== H. runCollectingDcTurn (real IDB + C1) ==
+  PASS  H1 persist OK + Ask OK → committed DC + fresh plan adopted; IDB == memory DC; input Session not mutated
+  PASS  H2 DC persist fails (IDB tx abort) → uncommitted DC not adopted, no plan; Session + IDB unchanged; retry commits (not idempotent_skip)
+  PASS  H3 Ask fails after DC commit → committed DC kept (== IDB), no new plan (prior plan untouched)
+  PASS  H4 exception inside persist (DC mapper throws) → Session returned as-is, IDB unchanged, no key
+  PASS  H5 mapper skip (turn already mapped) → not_applied; Ask still plans on unchanged DC (pre-S8 behavior)
+
+== P. handleUserMessage → runCollectingDcTurn (fetch stub, no network) ==
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a0f5fb8a-cfaf-47cd-853a-89879e65761d","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  P1 normal turn → DC committed via C1 (key present), fresh plan; only /api/poju/chat fetched
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7db8801b-7142-455a-9eef-1311edf9fcea","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[agent] collecting DC update failed (non-fatal) persist_failed Error modifying one or more objects. Errors: AbortError: A request was aborted, for example through a call to IDBTransaction.abort.
+  PASS  P2 C1 write aborted → returned Session keeps pre-turn DC + plan; UI savePOJUSession writes no uncommitted DC
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6ba88171-d5db-4b92-b96f-c2ae5d59bb7a","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[agent] collecting DC update failed (non-fatal) dc_committed dir_catalog_load_failed
+  PASS  P3 Ask fails after commit → returned Session has committed DC (== IDB), prior plan untouched
+
+== S. Static wiring ==
+  PASS  S1 agent.ts reaches collecting persist / Ask only through runCollectingDcTurn
+
+S8 agent-collecting-failure done. PASS=9 FAIL=0
+# exit=0

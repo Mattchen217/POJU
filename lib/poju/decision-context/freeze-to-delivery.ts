@@ -4,7 +4,16 @@
  * Production chat wiring should call prepareFrozenDcForDelivery then persist + POST delivery.
  */
 
-import { freezeDecisionContext, type FreezeOptions } from "./freeze";
+import {
+  computeContentHash,
+  extractBusinessPayload,
+} from "./content-hash";
+import { FreezeError, freezeDecisionContext, type FreezeOptions } from "./freeze";
+import type { NaValidationContext } from "./explicit-na-validate";
+import {
+  buildProductionNaValidationContextFromSession,
+  ProductionNaAuthorityError,
+} from "./na-validation-from-session";
 import {
   assertSnapshotMatchesBinding,
   bindingFromDecisionContext,
@@ -12,6 +21,7 @@ import {
   resolveDecisionContextForReport,
 } from "./read-bound";
 import type { DecisionContext, DecisionContextBinding } from "./types";
+import type { POJUSessionState } from "@/lib/poju/types";
 
 export type FrozenDeliveryPackage = {
   frozen: DecisionContext;
@@ -19,20 +29,144 @@ export type FrozenDeliveryPackage = {
   binding: DecisionContextBinding;
 };
 
+export type FreezeDraftForDeliveryOpts = Omit<
+  FreezeOptions,
+  "stage3_sufficiency_end" | "naValidation" | "expectedSessionId"
+> & {
+  now?: string;
+  /** Authoritative Session — sole source of Intake N/A validation authority. */
+  session: POJUSessionState;
+};
+
+const BUSINESS_SLICES = [
+  "reality_facts",
+  "constraints",
+  "explicit_na_evidence",
+  "explicit_na_classifications",
+  "conflicts",
+  "dirs",
+  "hypotheses",
+  "definition",
+  "information_boundaries",
+] as const;
+
+/**
+ * Fail-closed: Session DC and caller draft must be the same business snapshot.
+ * Uses C5 content-hash payload (excludes lifecycle timestamps / status container).
+ */
+export function assertSessionDraftBusinessSnapshotBound(
+  session: POJUSessionState,
+  draft: DecisionContext,
+): DecisionContext {
+  const sessionId = session.session_id?.trim();
+  if (!sessionId) {
+    throw new Error("freezeDraftForDelivery: session.session_id required");
+  }
+  const sessionDc = session.decision_context;
+  if (!sessionDc) {
+    throw new Error("freezeDraftForDelivery: session missing Decision Context");
+  }
+  if (sessionDc.context_id !== draft.context_id) {
+    throw new Error(
+      `freezeDraftForDelivery: context_id mismatch session=${sessionDc.context_id} draft=${draft.context_id}`,
+    );
+  }
+  if (sessionDc.version !== draft.version) {
+    throw new Error(
+      `freezeDraftForDelivery: version mismatch session=${sessionDc.version} draft=${draft.version}`,
+    );
+  }
+  if (sessionDc.status !== "draft") {
+    throw new Error(
+      `freezeDraftForDelivery: session DC status must be draft, got ${sessionDc.status}`,
+    );
+  }
+  if (draft.status !== "draft") {
+    throw new Error(
+      `freezeDraftForDelivery: draft status must be draft, got ${draft.status}`,
+    );
+  }
+
+  const sessionPayload = extractBusinessPayload(sessionDc);
+  const draftPayload = extractBusinessPayload(draft);
+  const mismatched: string[] = [];
+  for (const key of BUSINESS_SLICES) {
+    const a = JSON.stringify(sessionPayload[key] ?? null);
+    const b = JSON.stringify(draftPayload[key] ?? null);
+    if (a !== b) mismatched.push(key);
+  }
+  if (mismatched.length > 0) {
+    throw new Error(
+      `freezeDraftForDelivery: business snapshot mismatch on [${mismatched.join(", ")}]`,
+    );
+  }
+
+  const sessionHash = computeContentHash(sessionDc);
+  const draftHash = computeContentHash(draft);
+  if (sessionHash !== draftHash) {
+    throw new Error(
+      `freezeDraftForDelivery: business content_hash mismatch session=${sessionHash} draft=${draftHash}`,
+    );
+  }
+
+  // Authoritative freeze target = Session current DC (same business as draft).
+  return sessionDc;
+}
+
+/**
+ * Freeze-path NaValidationContext via the sole production builder.
+ * `authoritative` must be the Session DC (see assertSessionDraftBusinessSnapshotBound).
+ * ACTIVE catalog load failure → FreezeError carrying the loader reason_code.
+ */
+export function buildFreezeNaValidationFromSession(
+  session: POJUSessionState,
+  authoritative: DecisionContext,
+  opts?: { now?: string },
+): NaValidationContext {
+  if (session.decision_context !== authoritative) {
+    throw new Error(
+      "buildFreezeNaValidationFromSession: authoritative DC must be session.decision_context",
+    );
+  }
+  try {
+    return buildProductionNaValidationContextFromSession(session, {
+      nowIso: opts?.now,
+    });
+  } catch (e) {
+    if (e instanceof ProductionNaAuthorityError) {
+      throw new FreezeError(e.reason_code, { code: e.reason_code });
+    }
+    throw e;
+  }
+}
+
 /**
  * Freeze a draft DC for delivery. Refuses purchase/CTA/stall triggers.
+ * Builds NaValidationContext from Session — never emptyNaValidation().
+ * Draft must match Session DC business snapshot (facts/constraints/N/A/dirs/conflicts).
  */
 export function freezeDraftForDelivery(
   draft: DecisionContext,
-  opts?: Omit<FreezeOptions, "stage3_sufficiency_end"> & {
-    now?: string;
-  },
+  opts: FreezeDraftForDeliveryOpts,
 ): FrozenDeliveryPackage {
-  const { frozen, version_snapshot } = freezeDecisionContext(draft, {
+  const authoritative = assertSessionDraftBusinessSnapshotBound(
+    opts.session,
+    draft,
+  );
+
+  const naValidation = buildFreezeNaValidationFromSession(
+    opts.session,
+    authoritative,
+    { now: opts.now },
+  );
+
+  const { frozen, version_snapshot } = freezeDecisionContext(authoritative, {
     stage3_sufficiency_end: true,
     from_purchase_or_report_cta: false,
     from_stall_or_max_turns: false,
-    now: opts?.now,
+    now: opts.now,
+    naValidation,
+    expectedSessionId: opts.session.session_id,
   });
   const binding = bindingFromDecisionContext(frozen);
   assertSnapshotMatchesBinding(frozen, binding);

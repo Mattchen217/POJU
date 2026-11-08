@@ -1,0 +1,52 @@
+S7 required regression — run at exact S7 code HEAD
+
+HEAD    : 8048aaaee9df1de1b48782c577a70aec8041f5c5
+parent  : 13e5115984ad1361e782d9159e50ea9de317a3f3
+branch  : feat/s7-na-authority-boundary-hardening
+toolchain: node v22.22.0 · pnpm 10.33.2 (corepack)
+Working tree at run time: identical to 8048aaae for all code/test/package files
+(only untracked: .cursor/plans/*.MD, and this evidence dir being written).
+
+Full stdout+stderr of each command (cmd /c "corepack pnpm <script> > log 2>&1"):
+  raw/01-test_intake-r6-production-authority-boundary.log
+  raw/02-test_intake-r6-dir-catalog.log
+  raw/03-test_intake-r6-resolver.log
+  raw/04-test_intake-r6-production-agg.log
+  raw/05-test_intake-r6-freeze-versioning.log
+  raw/06-test_intake-r6-freeze-wire-reason.log
+  raw/07-test_intake-r6-write-freeze-consistency.log
+  raw/08-test_decision-context.log
+  raw/09-tsc-noEmit.log   (empty = no diagnostics)
+
+#   command                                                   exit  summary line
+01  pnpm test:intake-r6-production-authority-boundary          0    S7 production-authority-boundary done. PASS=37 FAIL=0
+02  pnpm test:intake-r6-dir-catalog                            0    All intake-r6-dir-catalog (S0+S1+S2) checks passed.
+03  pnpm test:intake-r6-resolver                               0    All Intake R6 Stage 3.2 round-6 acceptance checks passed.
+04  pnpm test:intake-r6-production-agg                         0    All intake-r6-production-agg checks passed.
+05  pnpm test:intake-r6-freeze-versioning                      0    All intake-r6-freeze-versioning (A–E) checks passed.
+                                                                    S5 freeze-authority-regression done. PASS=8 FAIL=0
+06  pnpm test:intake-r6-freeze-wire-reason                     0    S3 wire-reason done. passed=24 failed=0 untested=1
+07  pnpm test:intake-r6-write-freeze-consistency               0    S4 write-freeze-consistency done. PASS=32 FAIL=0 UNTESTED=1
+08  pnpm test:decision-context                                 0    All decision-context phase1 checks passed (22).
+09  pnpm exec tsc --noEmit                                     0    (no output)
+
+Classification of non-PASS lines (none are new in S7):
+  06  UNTESTED [production-path] ensureSessionFrozenForDelivery persist-fail branch
+      — baseline since S3 (fake-indexeddb deleteDatabase harness limit). Unchanged by S7.
+  07  UNTESTED [disclose] freeze-versioning F1
+      — baseline since S4 C25 (historical disclosure line). Unchanged by S7.
+  01/04 stdout "[dc-lifecycle] Call B DIR map failed dir_catalog_load_failed"
+      — expected console.warn from the F3 fault-injection check (Call B catch path).
+  all  stderr "[terms] pojuTermByTraditional(...) called without namespace"
+      — pre-existing module-load warnings, unrelated to S7.
+
+New failures introduced by S7: none.  Environment failures: none.
+
+Also run on the working tree before the commit (not required, informational):
+  pnpm test:intake-r6-na-cas → exit 0 "All intake-r6-na-cas checks passed."
+
+Mutation sanity (working tree, reverted before commit; not part of 8048aaae):
+  - production-intake-ask re-reading input.naValidation      → E1 FAIL
+  - production builder re-reading opts.naDeclarationActions   → A5 FAIL
+  Both reverted (git diff confirmed); next run, after B8 was added, PASS=37 FAIL=0;
+  run 01 above is the committed-HEAD result.

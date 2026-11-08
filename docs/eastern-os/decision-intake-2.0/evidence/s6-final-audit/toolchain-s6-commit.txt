@@ -1,0 +1,11 @@
+﻿# S6 supplemental evidence — regression executed at exact S6 audit commit
+# (not S5 baseline). Recorded before supplemental docs commit.
+node=v22.22.0
+pnpm=10.33.2
+HEAD=f1454b87e9dbea71837f1d2f27ab181986961fae
+HEAD_PARENT=76fa70bd5577ae4cc5b793e205518c38c5baf2b5
+S6_AUDIT_COMMIT=f1454b87e9dbea71837f1d2f27ab181986961fae
+S5=76fa70bd5577ae4cc5b793e205518c38c5baf2b5
+branch=feat/s6-stage-3-2-final-audit
+date_utc=2026-11-05T09:47:28.5779135-06:00
+expected_HEAD_match=True

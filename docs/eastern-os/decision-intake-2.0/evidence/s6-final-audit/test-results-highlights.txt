@@ -1,0 +1,226 @@
+﻿  PASS  loadDirNaCatalog(ACTIVE) → ok, version 1, 20 entries
+  PASS  Phase 2 20 DIR ids + condition tokens match
+  PASS  deep freeze (entries / entry / na_conditions)
+  PASS  undefined/null → dir_catalog_version_missing
+  PASS  invalid versions → dir_catalog_version_invalid
+  PASS  999 → dir_catalog_version_unknown
+  PASS  ACTIVE∉registry → dir_catalog_ssot_unavailable
+  PASS  load_failed: has-throw / get-throw / version mismatch / non-array (no rethrow)
+  PASS  membership allow / deny DIR / deny condition
+  PASS  additive-only all 10 v1 pairs still ok under v2
+  PASS  production Registry not exported from catalog barrel
+  PASS  DC-1 registered DIR+condition → append
+  PASS  DC-1 replay after catalog → idempotent_skip
+  PASS  DC-2 unregistered DIR → dir_not_in_catalog, no append
+  PASS  DC-3 unregistered condition → na_condition_not_in_catalog, no append
+  PASS  DC-9a forged list cannot authorize unregistered DIR
+  PASS  DC-9b forged legal-list cannot authorize illegal condition
+  PASS  load-fail pure mapping coverage — all 5 loader reason_codes (not production Registry integration)
+  PASS  DC-1 Freeze SSOT pair → DIR n_a via production compose
+  PASS  DC-8 forged dirCatalog ignored — Session N/A for non-SSOT pair → not n_a
+All intake-r6-dir-catalog (S0+S1+S2) checks passed.
+======== END test:intake-r6-dir-catalog exit=0 ========
+  [PASS] MX-83 missing related_dir_ids → unresolved
+  [PASS] user_confirmed=false → NOT confirmed
+  [PASS] independently_verified → confirmed
+  [PASS] MX-90 hard_constraint confirmed
+  [PASS] production apply outcome appended
+  [PASS] action written to session.na_declaration_actions
+  [PASS] server set action.session_id from session
+  [PASS] server set action.context_id from DC
+  [PASS] server set actor=user
+  [PASS] classification written to DC
+  [PASS] evidence written to DC
+  [PASS] validate accepts production-persisted declaration
+  [PASS] non-allowlisted control_id rejected at production apply
+  [PASS] action.session_id mismatch → reject at validate
+  [PASS] E1 without declaration persist → reject
+  [PASS] validate re-checks control_id allowlist → reject forged control
+  [PASS] same payload replay → idempotent_skip
+  [PASS] replay evidence id exact na_ev_${action}
+  [PASS] same action_id different fact_id → reject
+  [PASS] two actions same DIR/condition keep distinct evidence ids
+  [PASS] same action_id constraint→fact swap → reject
+  [PASS] missing evidence → fail-closed
+  [PASS] revoked action replay → reject (no reactivate)
+  [PASS] prior.session_id ≠ current Session → reject
+  [PASS] prior.context_id ≠ current DC → reject
+  [PASS] classification.context_id ≠ current DC → reject
+  [PASS] declaration_turn_id mismatch → reject
+  [PASS] expires_at mismatch → reject
+  [PASS] identical payload replay still → idempotent_skip
+  [PASS] topic with live authority → accept
+  [PASS] forged eval_id → reject
+  [PASS] catalog version mismatch → reject
+  [PASS] authority stale → reject
+  [PASS] authority superseded → reject
+  [PASS] authority revoked → reject
+  [PASS] authority other DIR → reject
+  [PASS] authority still applicable → reject
+  [PASS] authority expired → reject
+  [PASS] missing authority store → reject
+  [PASS] embedded status current but no authority → reject
+  [PASS] MX-119 catalog N/A → n_a
+  [PASS] MX-112 calc_failed → reject
+  [PASS] production planner chain
+  [PASS] source_only unresolved=0
+  [PASS] Planner/Aggregator match
+  [PASS] illegal expires_at → invalid
+  [PASS] MX-121 N/A changes hash
+  [PASS] classification hash fixture
+  [PASS] classification changes hash
+All Intake R6 Stage 3.2 round-6 acceptance checks passed.
+======== END test:intake-r6-resolver exit=0 ========
+  PASS  CAS write + reload binds action/classification/evidence
+  PASS  repeat operation_id does not duplicate records
+  PASS  different fact_id rejected
+  PASS  different constraint vs fact source rejected
+  PASS  distinct action/evidence ids for same DIR/condition
+== missing evidence fail-closed on pure replay ==
+  PASS  missing evidence fail-closed
+  PASS  CAS conflict retry single record
+  PASS  revoke sync + replay rejected + validator fail-closed
+  PASS  production same payload → idempotent_skip
+  PASS  production declaration_turn_id mismatch → reject
+  PASS  production expires_at mismatch → reject
+  PASS  prior.session_id mismatch → reject
+  PASS  prior.context_id mismatch → reject
+  PASS  classification.context_id mismatch → reject
+  PASS  revoke then replay still rejected
+All intake-r6-na-cas checks passed.
+======== END test:intake-r6-na-cas exit=0 ========
+  PASS  Call B seed → unknown; covered ≠ known
+  PASS  confirmed Fact+Constraint (Scheme A) → known
+  PASS  missing DIR link → Intake unknown; legacy OR path would be known
+  PASS  soft Constraint ≠ hard_constraint Scheme A
+  PASS  collecting fact reaggregates; no role/DIR link → not known
+  PASS  missing dirCatalog → N/A not applied (fail-closed)
+  PASS  valid DIR-level ExplicitNaEvidence + catalog → n_a
+  PASS  revoked N/A → no aggregation effect
+  PASS  cross-context classification → no n_a
+  PASS  blocking conflict priority over N/A
+  PASS  DDR-03 CFP: calc_failed reject; absent_not_supplied accept
+  PASS  DDR-02 Rule A / DIR empty_dir basis still rejected
+  PASS  persistCallBDcOnSession + reload → dirs unknown
+  PASS  persistCollectingUserTurnDc + reload
+  PASS  CAS conflict retry does not duplicate/corrupt aggregate
+  PASS  planner ↔ aggregator role states match on same DC snapshot
+All intake-r6-production-agg checks passed.
+======== END test:intake-r6-production-agg exit=0 ========
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_ssot_unavailable
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_ssot_unavailable
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_load_failed
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_load_failed
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_version_unknown
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_version_unknown
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_version_missing
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_version_missing
+  PASS  [Tier A] mapCaughtFreezeFailure dir_catalog_version_invalid
+  PASS  [Tier A] freezeFailWireResult constructed dir_catalog_version_invalid
+  PASS  [Tier A] mapCaughtFreezeFailure unknown code → freeze_failed
+  PASS  [Tier A] mapCaughtFreezeFailure missing code → freeze_failed
+  PASS  [Tier A] mapCaughtFreezeFailure plain Error → freeze_failed
+  PASS  [Tier A] mapCaughtFreezeFailure non-Error → freeze_failed
+  PASS  [Tier A] persistFailWireResult with commit error
+  PASS  [Tier A] persistFailWireResult null/empty → token reason
+  PASS  [Tier A] canFreezeSessionOnSufficiency stall (gate-only)
+  PASS  [Code-review] catch / persist / pass-through thin helpers
+  PASS  [Tier B] applySufficiencyFreezeToSession catch → freeze_failed
+  PASS  [Tier B] ensureSessionFrozenForDelivery apply-fail propagation
+  PASS  [Tier B] applySufficiencyFreezeToSession success
+  PASS  [Tier B] applySufficiencyFreezeToSession skip already_frozen
+  PASS  [Tier B] applySufficiencyFreezeToSession skip not_sufficient
+  PASS  [Tier B] applySufficiencyFreezeToSession skip stall_or_degraded_path
+== Tier B — ensure persist-fail (attempt A) ==
+  UNTESTED  [production-path] ensureSessionFrozenForDelivery persist-fail branch
+           IDB/CAS attempt threw before branch proof: Cannot read properties of undefined (reading 'deleteDatabase'). Rely on [Tier A] persistFailWireResult + [Code-review].
+S3 wire-reason done. passed=24 failed=0 untested=1
+======== END test:intake-r6-freeze-wire-reason exit=0 ========
+intake-r6-write-freeze-consistency (S4 C01–C25)
+  PASS  C01 declareDirNotApplicable triad key fields
+  PASS  C02 loadPOJUSession triad durable
+  PASS  C03 reaggregate → DIR n_a
+  PASS  C04 freeze compose → frozen DIR n_a
+  PASS  C05/C06 version_snapshot + hash/binding (compose pack)
+  PASS  C07 forged dir_na_conditions ignored (legal SSOT still ok)
+  PASS  C08 bad DIR/condition write reject
+  PASS  C09a classification declaration_action_id mismatch
+  PASS  C09b classification dir_id / condition mismatch
+  PASS  C09c classification source_ref mismatch
+  PASS  C09d classification context_id / turn mismatch
+  PASS  C09e both unexpired but unequal expires_at → not n_a
+  PASS  C10a evidence_id only wrong → not n_a
+  PASS  C10b evidence dir/condition mismatch
+  PASS  C10c evidence source_ref mismatch
+  PASS  C10d evidence target/type wrong
+  PASS  C11 revoke → not n_a
+  PASS  C12 classification revoked flag → not n_a
+  PASS  C13 evidence revoked flag → not n_a
+  PASS  C14 expired action/classification → not n_a
+  PASS  C15 independently_verified source → not n_a
+  PASS  C16 unconfirmed / missing E1 → not n_a
+  PASS  C17 idempotent skip same payload
+  PASS  C18 binding clash same action_id → reject
+  PASS  C19 declare on final → reject; reload unchanged
+  PASS  C20 declare on superseded → reject; reload unchanged
+  PASS  C21a revoke on final → reject; actions not newly revoked
+  PASS  C21b missing DC revoke → reject; actions not revoked; reload stable
+  PASS  C22 open blocking conflict → DIR conflict not n_a
+  PASS  C23 forged dirCatalog ignored on freeze compose
+  PASS  C24 ensureSessionFrozenForDelivery + reload checklist
+== C25 CAS / IndexedDB persist failure ==
+  PASS  C25 [production-path] real casWritePOJUSession conflict → no durable N/A
+  UNTESTED  [disclose] freeze-versioning F1
+           Run test:intake-r6-freeze-versioning separately; F1 RED disclosed until S5
+S4 write-freeze-consistency done. PASS=32 FAIL=0 UNTESTED=1
+======== END test:intake-r6-write-freeze-consistency exit=0 ========
+  ACTIVE fixture pair: DIR-DEF-UNACCEPTABLE + explicit_no_hard_red_lines
+  PASS  F1 Session N/A + forged caller authority → DIR n_a
+  PASS  F2 Session missing action + forged matching action → not n_a
+  PASS  F3 Session topic eval + forged topic authority → DIR n_a
+  PASS  F4 Session missing eval + forged matching eval → not n_a
+S5 freeze-authority-regression done. PASS=4 FAIL=0
+======== END test:intake-r6-freeze-authority-regression exit=0 ========
+  PASS  Freeze uses Intake → known with linked confirmed fact
+  PASS  CTA / stall still blocked
+  PASS  critical unknown (no role/DIR facts) blocks Freeze
+  PASS  no DIR link → Intake unknown; legacy OR would be known
+  PASS  Scheme A hard_constraint satisfies role
+  PASS  N/A fail-closed without catalog; valid+catalog → n_a
+  PASS  revoked / cross-context N/A ineffective
+  PASS  blocking conflict blocks Freeze (post-agg gate)
+  PASS  Session/DC mismatch rejected
+  PASS  V1 superseded + hash stable; V2 draft; deep clone
+  PASS  Versioning Session mismatch rejected
+  PASS  V2 add_conflicts → Intake conflict state
+  PASS  ensureSessionFrozenForDelivery persist + reload
+  PASS  persistV2FromFinalOnSession + reload; V1 history intact
+  PASS  CAS conflict retry no duplicate boundary
+  PASS  Planner / Production agg / Freeze agree on role_states + current_state
+  PASS  context_id mismatch → reject
+  PASS  version mismatch → reject
+  PASS  session final + draft draft → reject
+  PASS  facts diverge → reject
+  PASS  Explicit N/A Evidence diverge → reject
+  PASS  constraints / conflicts diverge → reject
+  PASS  identical snapshot → Freeze OK
+  PASS  matching Freeze → version snapshot + content_hash consistent
+All intake-r6-freeze-versioning (A–E) checks passed.
+  (F1–F4 → test:intake-r6-freeze-authority-regression)
+  ACTIVE fixture pair: DIR-DEF-UNACCEPTABLE + explicit_no_hard_red_lines
+  PASS  F1 Session N/A + forged caller authority → DIR n_a
+  PASS  F2 Session missing action + forged matching action → not n_a
+  PASS  F3 Session topic eval + forged topic authority → DIR n_a
+  PASS  F4 Session missing eval + forged matching eval → not n_a
+S5 freeze-authority-regression done. PASS=4 FAIL=0
+======== END test:intake-r6-freeze-versioning exit=0 ========
+======== END tsc exit=0 ========
+test:intake-r6-dir-catalog exit=0
+test:intake-r6-resolver exit=0
+test:intake-r6-na-cas exit=0
+test:intake-r6-production-agg exit=0
+test:intake-r6-freeze-wire-reason exit=0
+test:intake-r6-write-freeze-consistency exit=0
+test:intake-r6-freeze-authority-regression exit=0
+test:intake-r6-freeze-versioning exit=0
+tsc --noEmit exit=0

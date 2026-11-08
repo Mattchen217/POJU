@@ -1,0 +1,24 @@
+S7 — Production NaValidation Authority Boundary Hardening · baseline
+
+Required parent SHA : 13e5115984ad1361e782d9159e50ea9de317a3f3
+Source branch       : feat/s6-stage-3-2-final-audit (S6, not in main)
+Checked before work :
+  git branch --show-current → feat/s6-stage-3-2-final-audit
+  git rev-parse HEAD        → 13e5115984ad1361e782d9159e50ea9de317a3f3   (MATCH)
+  git status --short        → only untracked .cursor/plans/*.MD (not part of S7, never staged)
+
+S7 branch created:
+  git switch -c feat/s7-na-authority-boundary-hardening 13e5115984ad1361e782d9159e50ea9de317a3f3
+  HEAD after switch → 13e5115984ad1361e782d9159e50ea9de317a3f3
+
+Not done (by instruction):
+  - branch from main
+  - modify / rewrite / force-push S6 history
+  - mix S7 into an S6 commit
+  - PR merge / deploy
+
+Toolchain at start:
+  default shell `node --version` → v20.18.1 (C:\nvm4w\nodejs) — MISMATCH vs required 22.22.0
+  fix: prepend "C:\Program Files\nodejs" to PATH for the session → node v22.22.0
+  pnpm via corepack → 10.33.2
+  All S7 commands (tests + tsc) were run with node v22.22.0 / pnpm 10.33.2 (see toolchain.txt).

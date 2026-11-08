@@ -1,0 +1,55 @@
+﻿# HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+# cmd: pnpm test:intake-r6-barrel-export-boundary
+
+> pojulife@0.1.0 test:intake-r6-barrel-export-boundary D:\POJU\pojulife
+> tsx scripts/test-intake-r6-barrel-export-boundary.ts
+
+intake-r6-barrel-export-boundary (S8-A)
+
+== N. Detector negative controls (virtual probes) ==
+  PASS  N0 probe modules type-check (detector sees real resolved exports)
+  PASS  N export_star → detected
+  PASS  N named_reexport → detected
+  PASS  N alias_reexport → detected
+  PASS  N type_alias_reexport → detected
+  PASS  N import_then_export → detected
+  PASS  N namespace_export → detected
+  PASS  N namespace_import_reexport → detected
+  PASS  N wrapper_const → detected
+  PASS  N wrapper_function → detected
+  PASS  N transitive_mid → detected
+  PASS  N transitive_end → detected
+  PASS  N clean explicit production exports → no leak
+
+== P. Production surface (lib/ + app/, tsconfig.json program) ==
+  PASS  P0 program covers lib/ + app/ and the fixture definition file
+  PASS  P1 no lib/ or app/ module exports or references the fixture (semantic)
+  PASS  P2 every production barrel (25) export table is fixture-free
+  PASS  P3 decision-context barrel re-exports the NA module only by explicit name (no export *)
+
+== R. Runtime barrel surface ==
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+  PASS  R1 runtime decision-context barrel has production NA exports and no fixture builder
+  PASS  R2 fixture still importable from its definition file (tests unaffected)
+
+S8 barrel-export-boundary done. PASS=19 FAIL=0
+# exit=0

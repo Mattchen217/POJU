@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "scripts/test-intake-r6-*.ts",
+    "scripts/fixtures/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

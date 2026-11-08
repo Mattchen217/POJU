@@ -1,0 +1,57 @@
+S8 test results — all executed at code HEAD 5da7e2bbe2c52c47d7f1102a2f27475848b54751
+node v22.22.0 · pnpm 10.33.2 · run 2026-11-08T09:04:43-06:00 → 09:05:57-06:00 (all 20 commands in one pass)
+Exit codes are the real process exit codes (raw/final-exit-codes.txt); counts are PASS/FAIL lines in each raw log.
+The same command set had already passed at this HEAD at 08:59–09:00. It was re-run after the local node_modules
+repair described in baseline.txt, with identical counts; raw/ holds the post-repair run.
+
+#   command                                                        exit  result
+--  -------------------------------------------------------------  ----  -----------------------------------------
+Required (S8 instruction)
+01  pnpm test:intake-r6-production-authority-boundary              0     PASS=37 FAIL=0
+02  pnpm test:intake-r6-dir-catalog                                0     PASS=20 FAIL=0
+03  pnpm test:intake-r6-resolver                                   0     PASS=49 FAIL=0
+04  pnpm test:intake-r6-production-agg                             0     PASS=22 FAIL=0
+05  pnpm test:intake-r6-freeze-versioning                          0     PASS=35 FAIL=0 (freeze-versioning + S5 authority-regression 8/8)
+06  pnpm test:intake-r6-freeze-wire-reason                         0     passed=25 failed=0 untested=0
+07  pnpm test:intake-r6-write-freeze-consistency                   0     PASS=33 FAIL=0 UNTESTED=0
+08  pnpm test:decision-context                                     0     22 checks passed
+09  pnpm exec tsc --noEmit                                         0     0 errors
+10  pnpm exec tsc --noEmit -p tsconfig.intake-r6-tests.json        0     0 errors
+New S8 tests
+11  pnpm test:intake-r6-barrel-export-boundary                     0     PASS=19 FAIL=0
+12  pnpm test:intake-r6-agent-collecting-failure                   0     PASS=9  FAIL=0
+13  pnpm test:intake-r6-versioning-idb-fault                       0     PASS=3  FAIL=0
+14  pnpm test:intake-r6-freeze-persist-disclose                    0     PASS=5  FAIL=0
+15  pnpm test:intake-r6-delivery-na-compat                         0     PASS=13 FAIL=0
+16  pnpm typecheck:intake-r6-tests  (script form of #10)           0     0 errors
+Additional regression
+17  pnpm test:intake-r6-na-cas                                     0     PASS=15 FAIL=0
+18  pnpm test:decision-context-stage4        (import-only change)  0     PASS=13 FAIL=0
+19  pnpm test:pagefeed-bookjudgment-s1-s2    (import-only change)  0     PASS=8  FAIL=0
+20  pnpm test:s5-freeze-s6-observation       (import-only change)  0     PASS=8  FAIL=0
+
+UNTESTED carried from S7 → now executed:
+  S3 [production-path] ensureSessionFrozenForDelivery persist-fail branch
+     → "[Tier B] ensureSessionFrozenForDelivery persist-fail (IDB tx abort) → dc_freeze_persist_failed;
+        Session unchanged; IDB draft"  PASS (#06)
+  S4 [disclose] freeze-versioning F1
+     → "[disclose→executed] freeze-versioning F1: Session triad via declareDirNotApplicable + forged caller
+        authority → frozen DIR n_a"  PASS (#07); also E2-F1 checks in #14.
+No UNTESTED lines remain in any suite above.
+
+RED-before / GREEN-after (same test, pre-S8 code vs S8):
+  S8-A barrel-export-boundary   at ed608c90: exit 1, P1/P2/P3/R1 FAIL   → at HEAD: 19/19
+  S8-B tsconfig.intake-r6-tests at ed608c90: exit 2, 44 errors          → at HEAD: 0
+  S8-C agent-collecting-failure with S7 agent.ts: exit 1, P2 + S1 FAIL  → at HEAD: 9/9
+  S8-D / S8-E / S8-F: no production defect found; these tests were written against production and pass
+  without production changes (no RED-before exists for them; nothing claimed).
+
+Scope of "E2E" in these results:
+  All suites run real production modules in Node with fake-indexeddb + Dexie (real IndexedDB transactions).
+  No browser, no Next.js server, no HTTP route handler execution, no LLM call. Where a check says "route
+  binding", it calls the same library functions app/api/poju/final-delivery/route.ts calls
+  (assertSnapshotMatchesBinding / resolveDecisionContextForReport) on a JSON round-tripped body; the route
+  handler itself was not executed. F0 captures the real POST body built by runFinalDeliveryForSession via a
+  fetch stub that answers 503 (no job is created or polled).
+
+Raw logs: raw/final-<name>.log (each starts with "# HEAD <sha>" / "# cmd" and ends with "# exit=<code>").
