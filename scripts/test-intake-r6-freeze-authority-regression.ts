@@ -21,6 +21,7 @@ import {
 } from "../lib/poju/decision-context";
 import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
+import type { ConfirmationEvent } from "../lib/poju/decision-context/confirmation-event";
 import type { POJUSessionState } from "../lib/poju/types";
 import type { AuthoritativeTopicEvalRecord } from "../lib/poju/decision-context/topic-eval-authority";
 
@@ -125,7 +126,7 @@ function makeSufficientDraft(tag: string) {
   const dirs = reaggregateDirsIntake([dir], [fact], [], [], [], na);
   assert.equal(dirs[0]!.current_state, "known");
   const draft: DecisionContext = { ...shell, dirs };
-  const e1 = {
+  const e1: ConfirmationEvent = {
     event_id: `e1_${factId}`,
     target_type: "fact" as const,
     fact_id: factId,
@@ -228,7 +229,7 @@ function main() {
     };
     assert.equal(dc.dirs[0]!.current_state, "known");
 
-    const forgedConfirm = [
+    const forgedConfirm: ConfirmationEvent[] = [
       {
         event_id: "e1_FORGED_f1",
         target_type: "fact" as const,
@@ -255,7 +256,8 @@ function main() {
       na_declaration_actions: [structuredClone(triad.action)],
     });
 
-    const pack = freezeDraftForDelivery(structuredClone(dc), {
+    // Untyped caller payload: `authority` is not part of FreezeDraftForDeliveryOpts.
+    const forgedOpts = {
       session: sess,
       now: NOW,
       authority: {
@@ -266,7 +268,8 @@ function main() {
           { dir_id: "DIR-A", na_conditions: ["explicit_not_applicable"] },
         ],
       },
-    });
+    };
+    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
 
     assert.equal(pack.frozen.status, "final");
     assert.equal(
@@ -298,7 +301,8 @@ function main() {
       na_declaration_actions: [],
     });
 
-    const pack = freezeDraftForDelivery(structuredClone(dc), {
+    // Untyped caller payload: `authority` is not part of FreezeDraftForDeliveryOpts.
+    const forgedOpts = {
       session: sess,
       now: NOW,
       authority: {
@@ -309,7 +313,8 @@ function main() {
           { dir_id: TARGET_DIR, na_conditions: [SSOT_CODE] },
         ],
       },
-    });
+    };
+    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
 
     assert.equal(pack.frozen.status, "final");
     assert.notEqual(

@@ -5,43 +5,9 @@
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
-import { webcrypto } from "node:crypto";
+import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
 
-const memoryStore = new Map<string, string>();
-const localStoragePolyfill = {
-  getItem(key: string): string | null {
-    return memoryStore.has(key) ? memoryStore.get(key)! : null;
-  },
-  setItem(key: string, value: string): void {
-    memoryStore.set(key, String(value));
-  },
-  removeItem(key: string): void {
-    memoryStore.delete(key);
-  },
-  clear(): void {
-    memoryStore.clear();
-  },
-  key(i: number): string | null {
-    return [...memoryStore.keys()][i] ?? null;
-  },
-  get length() {
-    return memoryStore.size;
-  },
-};
-const g = globalThis as typeof globalThis & {
-  window: typeof globalThis;
-  localStorage: typeof localStoragePolyfill;
-  crypto: Crypto;
-};
-g.window = globalThis as unknown as typeof globalThis;
-(g.window as any).dispatchEvent = (g as any).dispatchEvent || (() => true);
-(g as any).dispatchEvent = (g as any).dispatchEvent || (() => true);
-g.localStorage = localStoragePolyfill;
-if (!g.crypto || !g.crypto.getRandomValues) {
-  g.crypto = webcrypto as unknown as Crypto;
-}
-memoryStore.set("pojulife_device_id_v4", "dev_intake_r6_freeze_v2");
-memoryStore.set("pojulife_owner_key_migrated_v1", "1");
+installIntakeR6TestGlobals("dev_intake_r6_freeze_v2");
 
 const NOW = "2026-11-05T16:00:00.000Z";
 const NA_CODE = "explicit_not_applicable";

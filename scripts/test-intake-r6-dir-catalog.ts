@@ -21,8 +21,11 @@ import {
   NaDeclarationError,
 } from "../lib/poju/decision-context/na-declaration";
 import { buildProductionNaValidationContextFromSession } from "../lib/poju/decision-context/na-validation-from-session";
+import type { ConfirmationEvent } from "../lib/poju/decision-context/confirmation-event";
+import type { DirNaCatalogEntry } from "../lib/poju/decision-context/explicit-na-validate";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import type { POJUSessionState } from "../lib/poju/types";
+import { testSessionState } from "./fixtures/intake-r6-session";
 import {
   additiveV1V2Registries,
   registryNonArrayEntries,
@@ -41,7 +44,7 @@ const WRITE_NOW = "2026-11-05T12:00:00.000Z";
 const WRITE_SESSION = "sess-s1-dir-catalog";
 const WRITE_CTX = "dc-s1-dir-catalog";
 
-function e1ForFact(factId: string) {
+function e1ForFact(factId: string): ConfirmationEvent {
   return {
     event_id: `e1_${factId}`,
     target_type: "fact" as const,
@@ -107,15 +110,11 @@ function makeWriteSession(
     created_at: WRITE_NOW,
     updated_at: WRITE_NOW,
   };
-  const sessionShell = {
-    session_id: WRITE_SESSION,
+  const sessionShell = testSessionState(WRITE_SESSION, WRITE_NOW, {
     decision_context: draftShell,
-    messages: [],
-    created_at: WRITE_NOW,
-    last_interaction_at: WRITE_NOW,
     expires_at: "2026-12-01T00:00:00.000Z",
     confirmation_events: [e1ForFact(factId)],
-  } as POJUSessionState;
+  });
   const na = buildProductionNaValidationContextFromSession(sessionShell, {
     nowIso: WRITE_NOW,
   });
@@ -209,7 +208,8 @@ function main() {
   assert.equal(ids.size, EXPECTED_DIR_IDS.length);
   for (const id of EXPECTED_DIR_IDS) {
     assert.ok(ids.has(id), `missing dir_id ${id}`);
-    const entry = ok.entries.find((e) => e.dir_id === id)!;
+    const entry: DirNaCatalogEntry | undefined = ok.entries.find((e) => e.dir_id === id);
+    assert.ok(entry, `missing entry ${id}`);
     assert.deepEqual(
       [...entry.na_conditions],
       [...EXPECTED_TOKENS[id]!],
@@ -654,13 +654,15 @@ function main() {
       decision_context: dc,
       na_declaration_actions: [action],
     };
-    const pack = freezeDraftForDelivery(structuredClone(dc), {
+    // Untyped caller payload: `authority` is not part of FreezeDraftForDeliveryOpts.
+    const forgedOpts = {
       session: sess,
       now: WRITE_NOW,
       authority: {
         dirCatalog: [{ dir_id: FORGE_DIR, na_conditions: [FORGE_CODE] }],
       },
-    });
+    };
+    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
     assert.equal(pack.frozen.status, "final");
     assert.notEqual(
       pack.frozen.dirs[0]!.current_state,

@@ -22,39 +22,9 @@ import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
 
-const memoryStore = new Map<string, string>();
-const localStoragePolyfill = {
-  getItem(key: string): string | null {
-    return memoryStore.has(key) ? memoryStore.get(key)! : null;
-  },
-  setItem(key: string, value: string): void {
-    memoryStore.set(key, String(value));
-  },
-  removeItem(key: string): void {
-    memoryStore.delete(key);
-  },
-  clear(): void {
-    memoryStore.clear();
-  },
-  key(i: number): string | null {
-    return [...memoryStore.keys()][i] ?? null;
-  },
-  get length() {
-    return memoryStore.size;
-  },
-};
-type TestGlobal = typeof globalThis & {
-  window: typeof globalThis;
-  localStorage: typeof localStoragePolyfill;
-  dispatchEvent: (event: Event) => boolean;
-};
-const g = globalThis as TestGlobal;
-g.window = globalThis;
-if (typeof g.dispatchEvent !== "function") g.dispatchEvent = () => true;
-g.localStorage = localStoragePolyfill;
-memoryStore.set("pojulife_device_id_v4", "dev_intake_r6_s7_boundary");
-memoryStore.set("pojulife_owner_key_migrated_v1", "1");
+installIntakeR6TestGlobals("dev_intake_r6_s7_boundary");
 
 const NOW = "2026-11-08T12:00:00.000Z";
 const TOPIC_EXPIRY = "2027-06-01T00:00:00.000Z";
@@ -137,6 +107,8 @@ async function main() {
     import("../lib/poju/decision-context/explicit-na-validate").NaValidationContext;
   type AuthoritativeTopicEvalRecord =
     import("../lib/poju/decision-context/topic-eval-authority").AuthoritativeTopicEvalRecord;
+  type ConfirmationEvent =
+    import("../lib/poju/decision-context/confirmation-event").ConfirmationEvent;
 
   await __resetPojuDbForTests();
   await ensurePojuDbReady();
@@ -166,7 +138,7 @@ async function main() {
     unacceptable_outcomes: [] as string[],
   };
 
-  function e1For(factId: string, tag: string) {
+  function e1For(factId: string, tag: string): ConfirmationEvent {
     return {
       event_id: `e1_${factId}`,
       target_type: "fact" as const,

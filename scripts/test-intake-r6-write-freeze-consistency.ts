@@ -8,44 +8,9 @@
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
-import { webcrypto } from "node:crypto";
+import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
 
-const memoryStore = new Map<string, string>();
-const localStoragePolyfill = {
-  getItem(key: string): string | null {
-    return memoryStore.has(key) ? memoryStore.get(key)! : null;
-  },
-  setItem(key: string, value: string): void {
-    memoryStore.set(key, String(value));
-  },
-  removeItem(key: string): void {
-    memoryStore.delete(key);
-  },
-  clear(): void {
-    memoryStore.clear();
-  },
-  key(i: number): string | null {
-    return [...memoryStore.keys()][i] ?? null;
-  },
-  get length() {
-    return memoryStore.size;
-  },
-};
-
-const g = globalThis as typeof globalThis & {
-  window: typeof globalThis;
-  localStorage: typeof localStoragePolyfill;
-  crypto: Crypto;
-};
-g.window = globalThis as unknown as typeof globalThis;
-(g.window as any).dispatchEvent = (g as any).dispatchEvent || (() => true);
-(g as any).dispatchEvent = (g as any).dispatchEvent || (() => true);
-g.localStorage = localStoragePolyfill;
-if (!g.crypto || !g.crypto.getRandomValues) {
-  g.crypto = webcrypto as unknown as Crypto;
-}
-memoryStore.set("pojulife_device_id_v4", "dev_intake_r6_s4_wfc");
-memoryStore.set("pojulife_owner_key_migrated_v1", "1");
+installIntakeR6TestGlobals("dev_intake_r6_s4_wfc");
 
 const NOW = "2026-11-05T12:00:00.000Z";
 const SSOT_DIR = "DIR-DEF-UNACCEPTABLE";
@@ -127,7 +92,8 @@ async function main() {
     import("../lib/poju/decision-context/types").ExplicitNaClassification;
   type ExplicitNaEvidence =
     import("../lib/poju/decision-context/types").ExplicitNaEvidence;
-
+  type ConfirmationEvent =
+    import("../lib/poju/decision-context/confirmation-event").ConfirmationEvent;
   await __resetPojuDbForTests();
   await ensurePojuDbReady();
 
@@ -195,7 +161,7 @@ async function main() {
     };
   }
 
-  function e1For(factId: string) {
+  function e1For(factId: string): ConfirmationEvent {
     return {
       event_id: `e1_${factId}`,
       target_type: "fact" as const,
@@ -229,7 +195,7 @@ async function main() {
       operation_id: `op_seed_${tag}`,
       kind: "session_patch",
       bump_dc: true,
-      apply: (latest) => {
+      apply: (latest): POJUSessionState => {
         const facts = [ssotFact(factId), ...(overrides.extraFacts ?? [])];
         const dc = makeDc({
           context_id: `dc_${tag}`,
@@ -1053,7 +1019,7 @@ async function main() {
       operation_id: "op_seed_c23_forge",
       kind: "session_patch",
       bump_dc: true,
-      apply: (latest) => {
+      apply: (latest): POJUSessionState => {
         const fact = {
           fact_id: "fact_c23_forge",
           statement: "forge",
@@ -1155,13 +1121,15 @@ async function main() {
       ),
     };
     const s: POJUSessionState = { ...s0, decision_context: dcReady };
-    const pack = freezeDraftForDelivery(structuredClone(dcReady), {
+    // Untyped caller payload: `authority` is not part of FreezeDraftForDeliveryOpts.
+    const forgedOpts = {
       session: s,
       now: NOW,
       authority: {
         dirCatalog: [{ dir_id: forgeDir, na_conditions: [forgeCode] }],
       },
-    });
+    };
+    const pack = freezeDraftForDelivery(structuredClone(dcReady), forgedOpts);
     const frozenForge = pack.frozen.dirs.find((d) => d.dir_id === forgeDir);
     assert.ok(frozenForge);
     assert.notEqual(frozenForge!.current_state, "n_a");
@@ -1391,7 +1359,11 @@ async function main() {
         "C25 [production-path] Attempt B deletePOJUSession then declare",
         `Session-row delete yields load-time failure (${
           declareErr instanceof Error
-            ? `${(declareErr as SessionCasError).code ?? declareErr.name}:${declareErr.message}`
+            ? `${
+                "code" in declareErr && typeof declareErr.code === "string"
+                  ? declareErr.code
+                  : declareErr.name
+              }:${declareErr.message}`
             : String(declareErr)
         }), not a mid-persist CAS reject after apply. Insufficient for C25 PASS.`,
       );

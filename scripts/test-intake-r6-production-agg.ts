@@ -5,44 +5,12 @@
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
-import { webcrypto } from "node:crypto";
+import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
 
-const memoryStore = new Map<string, string>();
-const localStoragePolyfill = {
-  getItem(key: string): string | null {
-    return memoryStore.has(key) ? memoryStore.get(key)! : null;
-  },
-  setItem(key: string, value: string): void {
-    memoryStore.set(key, String(value));
-  },
-  removeItem(key: string): void {
-    memoryStore.delete(key);
-  },
-  clear(): void {
-    memoryStore.clear();
-  },
-  key(i: number): string | null {
-    return [...memoryStore.keys()][i] ?? null;
-  },
-  get length() {
-    return memoryStore.size;
-  },
-};
+import { confirmFactEvent, testSessionState } from "./fixtures/intake-r6-session";
+import type { POJUSessionState } from "../lib/poju/types";
 
-const g = globalThis as typeof globalThis & {
-  window: typeof globalThis;
-  localStorage: typeof localStoragePolyfill;
-  crypto: Crypto;
-};
-g.window = globalThis as unknown as typeof globalThis;
-(g.window as any).dispatchEvent = (g as any).dispatchEvent || (() => true);
-(g as any).dispatchEvent = (g as any).dispatchEvent || (() => true);
-g.localStorage = localStoragePolyfill;
-if (!g.crypto || !g.crypto.getRandomValues) {
-  g.crypto = webcrypto as unknown as Crypto;
-}
-memoryStore.set("pojulife_device_id_v4", "dev_intake_r6_prod_agg");
-memoryStore.set("pojulife_owner_key_migrated_v1", "1");
+installIntakeR6TestGlobals("dev_intake_r6_prod_agg");
 
 const NOW = "2026-11-05T14:00:00.000Z";
 const NA_CODE = "explicit_not_applicable";
@@ -176,33 +144,19 @@ async function main() {
       priority: "reversibility",
     };
     agent.current_phase = "awaiting_understanding_confirm";
-    return {
-      session_id: "sess_prod_agg_pure",
-      user_id: "u_agg",
-      created_at: NOW,
-      last_interaction_at: NOW,
+    return testSessionState("sess_prod_agg_pure", NOW, {
       expires_at: "2026-12-05T00:00:00.000Z",
       original_question: "Should I leave my job?",
       messages: [
         {
-          role: "user" as const,
+          role: "user",
           content: "I got a startup offer but I am worried about runway.",
           timestamp: NOW,
           client_id: "u_open_1",
         },
       ],
-      context_collected: {},
-      has_profile: false,
-      profile_skipped: false,
-      actions: [],
-      tokens_used: 0,
-      abuse_metrics: {
-        long_input_count: 0,
-        jailbreak_attempts: 0,
-        duplicate_attempts: 0,
-      },
       agent_v2: agent,
-    } as import("../lib/poju/types").POJUSessionState;
+    });
   }
 
   // ---------- A. Call B aggregation ----------
@@ -450,22 +404,16 @@ async function main() {
       revoked: false,
     };
 
-    const sessionShell = {
+    const sessionShell: POJUSessionState = {
       ...agentSession(),
       session_id: "sess_na",
       confirmation_events: [
-        {
-          event_id: "e1_f1",
-          target_type: "fact" as const,
-          fact_id: "f1",
-          source_turn_id: "t1",
-          confirmation_turn_id: "t1b",
-          confirmation_action_id: "ca_f1",
-          event_type: "confirm_fact" as const,
-          actor: "user" as const,
-          confirmed_at: NOW,
-          event_version: 1,
-        },
+        confirmFactEvent({
+          factId: "f1",
+          sourceTurnId: "t1",
+          confirmationTurnId: "t1b",
+          confirmedAt: NOW,
+        }),
       ],
       na_declaration_actions: [action],
       decision_context: {
@@ -546,7 +494,7 @@ async function main() {
     const aggPure = (
       s: Shell,
       extra: NaValidationFixtureOverrides,
-      conflicts: Shell["decision_context"]["conflicts"] = s.decision_context!
+      conflicts: NonNullable<Shell["decision_context"]>["conflicts"] = s.decision_context!
         .conflicts,
     ) =>
       reaggregateDirsIntake(
@@ -917,7 +865,7 @@ async function main() {
       operation_id: "op_install_roles_facts",
       kind: "session_patch",
       bump_dc: true,
-      apply: (latest) => {
+      apply: (latest): POJUSessionState => {
         const dc = latest.decision_context!;
         const target = dc.dirs[0]!;
         const nextDirs = dc.dirs.map((d, i) =>
@@ -939,22 +887,18 @@ async function main() {
             related_dir_ids: [target.dir_id],
           },
         ];
-        const withFacts = {
+        const withFacts: POJUSessionState = {
           ...latest,
           confirmation_events: [
             ...(latest.confirmation_events ?? []),
-            {
-              event_id: "e1_f_plan",
-              target_type: "fact" as const,
-              fact_id: "f_plan_sit",
-              source_turn_id: "t_plan",
-              confirmation_turn_id: "t_plan_b",
-              confirmation_action_id: "ca_f_plan",
-              event_type: "confirm_fact" as const,
-              actor: "user" as const,
-              confirmed_at: NOW,
-              event_version: 1,
-            },
+            confirmFactEvent({
+              factId: "f_plan_sit",
+              sourceTurnId: "t_plan",
+              confirmationTurnId: "t_plan_b",
+              confirmedAt: NOW,
+              eventId: "e1_f_plan",
+              confirmationActionId: "ca_f_plan",
+            }),
           ],
           decision_context: {
             ...dc,

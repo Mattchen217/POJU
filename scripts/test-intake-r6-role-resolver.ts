@@ -190,7 +190,7 @@ function authorityTopic(
 }
 
 function topicRule(
-  partial: Partial<TopicApplicabilityRule> & {
+  partial: Omit<Partial<TopicApplicabilityRule>, "evaluation"> & {
     evaluation?: Partial<TopicApplicabilityRule["evaluation"]>;
   } = {},
 ): TopicApplicabilityRule {
