@@ -1,7 +1,7 @@
 /**
- * S8-D — Versioning (V1 final → V2 draft) under a real IndexedDB write failure.
+ * S8-D 鈥?Versioning (V1 final 鈫?V2 draft) under a real IndexedDB write failure.
  *
- * V1 is frozen through production (seed fixture → ensureSessionFrozenForDelivery).
+ * V1 is frozen through production (seed fixture 鈫?ensureSessionFrozenForDelivery).
  * The fault is storage-level only: the C1 blob write's IndexedDB transaction is
  * aborted (scripts/fixtures/idb-storage-fault). persistV2FromFinalOnSession,
  * commitDecisionContextChange, applyDcToWorking and casWritePOJUSession all run
@@ -62,7 +62,7 @@ async function main() {
     return s;
   }
 
-  /** Seed + production freeze → V1 final, reloaded from IndexedDB. */
+  /** Seed + production freeze 鈫?V1 final, reloaded from IndexedDB. */
   async function v1FinalSession(tag: string): Promise<POJUSessionState> {
     const { sid } = await seedNaDraftSession(tag, NOW);
     const draft = await durable(sid);
@@ -126,7 +126,7 @@ async function main() {
     assert.equal(snapV1?.content_hash, v1Hash);
   });
 
-  await check("D1 C1 write aborted → ok:false (not idempotent_skip); caller Session unchanged; reload: V1 content+hash intact, no V2 draft, no superseded, no V2 key; retry commits", async () => {
+  await check("D1 C1 write aborted 鈫?ok:false (not idempotent_skip); caller Session unchanged; reload: V1 content+hash intact, no V2 draft, no superseded, no V2 key; retry commits", async () => {
     const v1 = await v1FinalSession("d1");
     const v1Clone = structuredClone(v1);
     const idbBefore = versionState(v1);
@@ -171,10 +171,10 @@ async function main() {
     assert.equal(snapV1?.content_hash, v1Dc.content_hash);
   });
 
-  await check("D2 commitDecisionContextChange + applyDcToWorking under the same fault → rolled_back, memory = snapshot, no process-local key (retry not skipped)", async () => {
+  await check("D2 commitDecisionContextChange + applyDcToWorking under the same fault 鈫?rolled_back, memory = snapshot, no process-local key (retry not skipped)", async () => {
     const v1 = await v1FinalSession("d2");
     const idbBefore = versionState(v1);
-    const applied = applyV2FromFinalToSession(v1, { now: V2_NOW });
+    const applied = await applyV2FromFinalToSession(v1, { now: V2_NOW });
     const key = `s8_d2_direct:${v1.session_id}`;
     const commitArgs = {
       session: v1,

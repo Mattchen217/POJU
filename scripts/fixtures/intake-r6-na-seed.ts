@@ -1,11 +1,11 @@
 /**
- * IndexedDB seed for Intake R6 Freeze / Versioning / Delivery tests — scripts/** only.
+ * IndexedDB seed for Intake R6 Freeze / Versioning / Delivery tests 閳?scripts/** only.
  * Must never be imported from lib/ or app/ production modules.
  *
  * Builds a sufficient draft DC strictly through production paths:
- *   createPOJUSession → mutatePOJUSession (facts + Session E1)
- *   → declareDirNotApplicable (ACTIVE pair, Session Action + DC Classification/Evidence)
- *   → reaggregateDirsOnSession (production NaValidation builder) persisted via CAS.
+ *   createPOJUSession 閳?mutatePOJUSession (facts + Session E1)
+ *   閳?declareDirNotApplicable (ACTIVE pair, Session Action + DC Classification/Evidence)
+ *   閳?reaggregateDirsOnSession (production NaValidation builder) persisted via CAS.
  * No fixture NaValidation, no caller catalog. Lib modules are imported lazily so
  * test files can install browser globals + fake-indexeddb first.
  */
@@ -95,10 +95,11 @@ export async function seedNaDraftSession(
   const normalFactId = `fact_ok_${tag}`;
   const declarationActionId = `na-act-${tag}`;
 
-  const reaggregated = (s: POJUSessionState): POJUSessionState => {
+  const reaggregateNow = async (s: POJUSessionState): Promise<POJUSessionState> => {
     const dc = s.decision_context;
     if (!dc) throw new Error("seedNaDraftSession: DC missing");
-    return { ...s, decision_context: { ...dc, dirs: reaggregateDirsOnSession(s, dc.dirs, { nowIso: now }) } };
+    const dirs = await reaggregateDirsOnSession(s, dc.dirs, { nowIso: now });
+    return { ...s, decision_context: { ...dc, dirs } };
   };
 
   await mutatePOJUSession(sid, {
@@ -130,7 +131,7 @@ export async function seedNaDraftSession(
         created_at: now,
         updated_at: now,
       };
-      return reaggregated({
+      return ({
         ...latest,
         agent_v2: latest.agent_v2
           ? { ...latest.agent_v2, stall_offer_pending: false, delivery_mode: "full" }
@@ -157,11 +158,18 @@ export async function seedNaDraftSession(
       dir_na_conditions: [],
       occurred_at: now,
     });
+  }
+  // Always reaggregate so confirmed facts yield known / n_a (withNa:false must not leave unknown).
+  {
+    const { loadPOJUSession } = await import("@/lib/poju/session-manager");
+    const beforeReagg = await loadPOJUSession(sid);
+    if (!beforeReagg) throw new Error("seedNaDraftSession: session missing before reagg");
+    const afterReagg = await reaggregateNow(beforeReagg);
     await mutatePOJUSession(sid, {
       operation_id: `op_s8_reagg_${tag}`,
       kind: "session_patch",
       bump_dc: true,
-      apply: (latest) => reaggregated(latest),
+      apply: () => afterReagg,
     });
   }
   return { sid, naFactId, normalFactId, declarationActionId };

@@ -1,5 +1,5 @@
-/**
- * S7 — Production Draft DC lifecycle (Opening → Call A → Call B → Collecting).
+﻿/**
+ * S7 鈥?Production Draft DC lifecycle (Opening 鈫?Call A 鈫?Call B 鈫?Collecting).
  * Single SoT: session.decision_context via C1. agent_v2 remains non-authoritative buffer.
  */
 
@@ -39,12 +39,12 @@ function agentBuffers(agent: POJUAgentState | null | undefined) {
 function looksLikeGateConfirmLabel(text: string): boolean {
   const t = text.trim();
   if (t.length > 40) return false;
-  return /理解正确|继续深入|that's right|looks right|confirm|确认理解|没问题，继续/i.test(
+  return /鐞嗚В姝ｇ‘|缁х画娣卞叆|that's right|looks right|confirm|纭鐞嗚В|娌￠棶棰橈紝缁х画/i.test(
     t,
   );
 }
 
-/** Opening user statements only — never gate-confirm chip as a Fact. */
+/** Opening user statements only 鈥?never gate-confirm chip as a Fact. */
 function openingStatementsFromSession(
   session: POJUSessionState,
 ): OpeningUserStatement[] {
@@ -130,7 +130,7 @@ export function seedOpeningDraftDcOnSession(
   }
 }
 
-/** Pure: Call A — hypotheses only into draft DC (never Facts / Constraints). */
+/** Pure: Call A 鈥?hypotheses only into draft DC (never Facts / Constraints). */
 export function applyCallAToSessionDc(
   session: POJUSessionState,
   breakthrough_core: BreakthroughCore,
@@ -183,12 +183,12 @@ export function applyCallAToSessionDc(
   };
 }
 
-/** Pure: Call B — DIR seeds from Agenda (never promote covered→known). */
-export function applyCallBToSessionDc(
+/** Pure: Call B 鈥?DIR seeds from Agenda (never promote covered鈫択nown). */
+export async function applyCallBToSessionDc(
   session: POJUSessionState,
   investigation_agenda: AgendaItem[],
   opts?: { now?: string },
-): { session: POJUSessionState; applied: boolean; skipped_reason?: string } {
+): Promise<{ session: POJUSessionState; applied: boolean; skipped_reason?: string }> {
   let base = session;
   if (!base.decision_context || base.decision_context.status !== "draft") {
     const seeded = seedOpeningDraftDcOnSession(base, { now: opts?.now });
@@ -206,8 +206,8 @@ export function applyCallBToSessionDc(
     const fp = fingerprintCallB(normalized);
     const dirs = dirsFromAgenda(investigation_agenda, { existing: dc.dirs });
     const now = opts?.now ?? new Date().toISOString();
-    // Intake 2.0: shared resolveDirRoleEvidence — no legacy OR-fallback aggregator.
-    const aggregated = reaggregateDirsOnSession(base, dirs, { nowIso: now });
+    // Intake 2.0: shared resolveDirRoleEvidence 鈥?no legacy OR-fallback aggregator.
+    const aggregated = await reaggregateDirsOnSession(base, dirs, { nowIso: now });
     const nextDc: DecisionContext = {
       ...dc,
       dirs: aggregated,
@@ -239,14 +239,14 @@ export function applyCallBToSessionDc(
  * Collecting: append an unverified RealityFact from a user turn (never auto-confirm).
  * Confirmation Events remain the only path to user_confirmed.
  */
-export function applyCollectingUserTurnToSessionDc(
+export async function applyCollectingUserTurnToSessionDc(
   session: POJUSessionState,
   input: {
     statement: string;
     source_turn_id: string;
     now?: string;
   },
-): { session: POJUSessionState; applied: boolean; skipped_reason?: string } {
+): Promise<{ session: POJUSessionState; applied: boolean; skipped_reason?: string }> {
   const dc = session.decision_context;
   if (!dc || dc.status !== "draft") {
     return { session, applied: false, skipped_reason: "no_draft_dc" };
@@ -275,7 +275,7 @@ export function applyCollectingUserTurnToSessionDc(
   const reality_facts = [...dc.reality_facts, fact];
   const now = input.now ?? new Date().toISOString();
   // Intake 2.0: reaggregate with Session-built NaValidationContext + constraints/N/A.
-  const dirs = reaggregateDirsOnSession(session, dc.dirs, {
+  const dirs = await reaggregateDirsOnSession(session, dc.dirs, {
     realityFacts: reality_facts,
     nowIso: now,
   });
@@ -298,7 +298,7 @@ export function applyCollectingUserTurnToSessionDc(
 
 /**
  * Persist a DC lifecycle mutation through C1 (idempotent).
- * `nextDcSession` must already carry the desired messages/agent_v2 + DC —
+ * `nextDcSession` must already carry the desired messages/agent_v2 + DC 鈥?
  * it is the snapshot written on commit (not a DC-only patch onto an older base).
  */
 export async function persistDcLifecycleChange(
@@ -328,7 +328,7 @@ export async function persistDcLifecycleChange(
     control_plane_patch: nextDcSession.control_plane ?? undefined,
   });
   if (commit.idempotent_skip) {
-    // Prior successful commit — keep caller's next (messages) + restored DC authority.
+    // Prior successful commit 鈥?keep caller's next (messages) + restored DC authority.
     return {
       session: {
         ...nextDcSession,
@@ -397,7 +397,7 @@ export async function persistCallBDcOnSession(
   investigation_agenda: AgendaItem[],
   opts?: { now?: string },
 ): Promise<{ session: POJUSessionState; applied: boolean; error?: string }> {
-  const applied = applyCallBToSessionDc(session, investigation_agenda, opts);
+  const applied = await applyCallBToSessionDc(session, investigation_agenda, opts);
   if (!applied.applied) {
     return { session: applied.session, applied: false, error: applied.skipped_reason };
   }
@@ -414,7 +414,7 @@ export async function persistCollectingUserTurnDc(
   session: POJUSessionState,
   input: { statement: string; source_turn_id: string; now?: string },
 ): Promise<{ session: POJUSessionState; applied: boolean; error?: string }> {
-  const applied = applyCollectingUserTurnToSessionDc(session, input);
+  const applied = await applyCollectingUserTurnToSessionDc(session, input);
   if (!applied.applied) {
     return { session: applied.session, applied: false, error: applied.skipped_reason };
   }
@@ -426,3 +426,7 @@ export async function persistCollectingUserTurnDc(
     error: persisted.error,
   };
 }
+
+
+
+

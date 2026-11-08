@@ -2682,7 +2682,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     // Call B complete (or duplicate complete after success ? finalize is idempotent)
     if (treatAsAgenda) {
-      let next = finalizeSegment2AgendaBridgeSuccess({
+      let next = await finalizeSegment2AgendaBridgeSuccess({
         session: base,
         locale: lang,
         investigation_agenda: result.investigation_agenda ?? [],

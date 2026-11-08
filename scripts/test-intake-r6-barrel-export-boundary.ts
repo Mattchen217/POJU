@@ -1,5 +1,5 @@
 /**
- * S8-A — the NaValidation fixture builder / overrides type stay off every
+ * S8-A 鈥?the NaValidation fixture builder / overrides type stay off every
  * production export surface (lib/ + app/).
  *
  * Semantic (TypeScript checker), not textual: every module's export table and
@@ -189,7 +189,7 @@ async function main() {
   const probeDiagnostics = ts
     .getPreEmitDiagnostics(probes)
     .filter((d) => d.file && norm(d.file.fileName).includes("/__s8_probe_"));
-  await check("N0 probe modules type-check (detector sees real resolved exports)", () => {
+  await check("N0 probe modules type-check (detector sees real resolved exports)", async () => {
     assert.deepEqual(
       probeDiagnostics.map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n")),
       [],
@@ -199,9 +199,8 @@ async function main() {
     const sf = probes.getSourceFile(probePath(name));
     await check(
       name === "clean"
-        ? "N clean explicit production exports → no leak"
-        : `N ${name} → detected`,
-      () => {
+        ? "N clean explicit production exports 鈫?no leak"
+        : `N ${name} 鈫?detected`, async () => {
         assert.ok(sf, `probe missing: ${name}`);
         const leaks = findLeaks(probes, [sf]);
         if (name === "clean") assert.deepEqual(leaks, []);
@@ -218,23 +217,23 @@ async function main() {
     .getSourceFiles()
     .filter((sf) => isProductionFile(sf.fileName));
 
-  await check("P0 program covers lib/ + app/ and the fixture definition file", () => {
+  await check("P0 program covers lib/ + app/ and the fixture definition file", async () => {
     assert.ok(prodFiles.length > 100, `only ${prodFiles.length} production files`);
     assert.ok(program.getSourceFile(NA_FILE));
   });
 
-  await check("P1 no lib/ or app/ module exports or references the fixture (semantic)", () => {
+  await check("P1 no lib/ or app/ module exports or references the fixture (semantic)", async () => {
     assert.deepEqual(findLeaks(program, prodFiles), []);
   });
 
   const barrels = prodFiles.filter((sf) => /\/index\.tsx?$/.test(norm(sf.fileName)));
-  await check(`P2 every production barrel (${barrels.length}) export table is fixture-free`, () => {
+  await check(`P2 every production barrel (${barrels.length}) export table is fixture-free`, async () => {
     assert.ok(barrels.length >= 1);
     assert.deepEqual(findLeaks(program, barrels), []);
   });
 
   const DC_BARREL = `${DC_DIR}/index.ts`;
-  await check("P3 decision-context barrel re-exports the NA module only by explicit name (no export *)", () => {
+  await check("P3 decision-context barrel re-exports the NA module only by explicit name (no export *)", async () => {
     const sf = program.getSourceFile(DC_BARREL);
     const naSource = program.getSourceFile(NA_FILE);
     assert.ok(sf && naSource);

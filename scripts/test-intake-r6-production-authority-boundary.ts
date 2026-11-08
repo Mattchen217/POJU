@@ -1,5 +1,5 @@
 /**
- * S7 — Production NaValidation authority boundary.
+ * S7 闂?Production NaValidation authority boundary.
  *   pnpm test:intake-r6-production-authority-boundary
  *
  * Production entries (Freeze / Versioning / Lifecycle / Ask) must build
@@ -8,10 +8,10 @@
  *                topic_applicability_evals, topic_catalog_version
  *   DC SoT       reality_facts, constraints, explicit_na_classifications
  *   Catalog      loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION)
- *   Gaps         topicRules, catalogConditionEvals, cfpSourceState → unset
+ *   Gaps         topicRules, catalogConditionEvals, cfpSourceState 闂?unset
  *
  * Every negative ("not n_a") assertion states its positive precondition
- * (same inputs + the missing authority → n_a / "ok") and asserts the direct
+ * (same inputs + the missing authority 闂?n_a / "ok") and asserts the direct
  * reason_code, so the rule under test is the only cause.
  *
  * ACTIVE loader failure is exercised with a test-local fault: Map.prototype.has
@@ -416,7 +416,10 @@ async function main() {
       return (
         typeof snap === "object" &&
         snap !== null &&
-        Reflect.get(snap, "entries") === DIR_NA_CATALOG_V1_ENTRIES
+        Reflect.get(snap, "dir_catalog_version") === ACTIVE_DIR_NA_CATALOG_VERSION &&
+        Array.isArray(Reflect.get(snap, "entries")) &&
+        // Distinguish from topic registry snapshots (rules[]) vs DIR snapshots (entries[]).
+        !Array.isArray(Reflect.get(snap, "rules"))
       );
     };
     Map.prototype.has = function patchedHas(
@@ -460,8 +463,8 @@ async function main() {
       topic_catalog_version: t.catalogVersion,
     });
 
-    await check("A1 Session-owned authority read by reference from Session", () => {
-      const ctx = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+    await check("A1 Session-owned authority read by reference from Session", async () => {
+      const ctx = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       assert.equal(ctx.sessionId, session.session_id);
       assert.strictEqual(ctx.confirmationEvents, session.confirmation_events);
       assert.strictEqual(ctx.naDeclarationActions, session.na_declaration_actions);
@@ -470,18 +473,18 @@ async function main() {
       assert.equal(ctx.nowIso, NOW);
     });
 
-    await check("A2 DC facts/constraints/classifications read from current DC", () => {
-      const ctx = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+    await check("A2 DC facts/constraints/classifications read from current DC", async () => {
+      const ctx = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       assert.equal(ctx.contextId, dc.context_id);
       assert.strictEqual(ctx.realityFacts, dc.reality_facts);
       assert.strictEqual(ctx.constraints, dc.constraints);
       assert.strictEqual(ctx.explicitNaClassifications, dc.explicit_na_classifications);
     });
 
-    await check("A3 dirCatalog === loadDirNaCatalog(ACTIVE).entries", () => {
-      const ctx = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+    await check("A3 dirCatalog === loadDirNaCatalog(ACTIVE).entries", async () => {
+      const ctx = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       assert.strictEqual(ctx.dirCatalog, activeEntries());
-      assert.strictEqual(ctx.dirCatalog, DIR_NA_CATALOG_V1_ENTRIES);
+      assert.deepEqual(ctx.dirCatalog, activeEntries());
       assert.equal(
         PRODUCTION_NA_VALIDATION_DIR_CATALOG_SOURCE,
         "loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION)",
@@ -492,25 +495,32 @@ async function main() {
       );
     });
 
-    await check("A4 topicRules / catalogConditionEvals / cfpSourceState unset (no [] substitute)", () => {
-      const ctx = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
-      for (const key of ["topicRules", "catalogConditionEvals", "cfpSourceState"] as const) {
-        assert.equal(ctx[key], undefined, key);
-        assert.equal(Object.prototype.hasOwnProperty.call(ctx, key), false, key);
-      }
+        await check("A4 S9: topicRules+CFP wired from SSOT/reader; catalogConditionEvals remain unset (no [] substitute)", async () => {
+      const ctx = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+      assert.ok(Array.isArray(ctx.topicRules) && ctx.topicRules!.length >= 1, "topicRules from ACTIVE SSOT");
+      assert.equal(ctx.catalogConditionEvals, undefined, "catalogConditionEvals");
+      assert.equal(Object.prototype.hasOwnProperty.call(ctx, "catalogConditionEvals"), false);
+      // default session has no profile skip 鈫?reader unavailable in Node 鈫?cfp unset (fail-closed)
+      assert.equal(ctx.cfpSourceState, undefined, "cfpSourceState unset when reader unavailable");
       assert.deepEqual([...PRODUCTION_NA_VALIDATION_SOURCE_GAPS].map((s) => s.split(" ")[0]), [
         "catalogConditionEvals",
-        "topicRules",
-        "cfpSourceState",
       ]);
       assert.equal(
         PRODUCTION_NA_VALIDATION_SOURCE_GAPS.some((s) => s.startsWith("dirCatalog")),
         false,
       );
+      assert.equal(
+        PRODUCTION_NA_VALIDATION_SOURCE_GAPS.some((s) => s.startsWith("topicRules")),
+        false,
+      );
+      assert.equal(
+        PRODUCTION_NA_VALIDATION_SOURCE_GAPS.some((s) => s.startsWith("cfpSourceState")),
+        false,
+      );
     });
 
-    await check("A5 forged authority on builder opts ignored (non-literal opts)", () => {
-      const clean = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+    await check("A5 forged authority on builder opts ignored (non-literal opts)", async () => {
+      const clean = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       const forgedOpts = {
         nowIso: NOW,
         authority: { dirCatalog: [{ dir_id: TARGET_DIR, na_conditions: [NON_ACTIVE_CODE] }] },
@@ -528,42 +538,43 @@ async function main() {
         constraints: [],
         explicitNaClassifications: [],
       };
-      const forged = buildProductionNaValidationContextFromSession(session, forgedOpts);
+      const forged = await buildProductionNaValidationContextFromSession(session, forgedOpts);
       assert.deepEqual(forged, clean);
-      assert.strictEqual(forged.dirCatalog, DIR_NA_CATALOG_V1_ENTRIES);
+      assert.strictEqual(forged.dirCatalog, clean.dirCatalog);
+      assert.strictEqual(forged.dirCatalog, activeEntries());
       assert.strictEqual(forged.confirmationEvents, session.confirmation_events);
     });
 
-    await check("A6 missing / superseded DC or missing session_id → throw (no context)", () => {
-      assert.throws(() =>
-        buildProductionNaValidationContextFromSession({ ...session, decision_context: null }),
-      );
-      assert.throws(() =>
-        buildProductionNaValidationContextFromSession({
+    await check("A6 missing / superseded DC or missing session_id 闂?throw (no context)", async () => {
+      await assert.rejects(async () => {
+        await buildProductionNaValidationContextFromSession({ ...session, decision_context: null });
+      });
+      await assert.rejects(async () => {
+        await buildProductionNaValidationContextFromSession({
           ...session,
           decision_context: { ...dc, status: "superseded" },
-        }),
-      );
-      assert.throws(() =>
-        buildProductionNaValidationContextFromSession({ ...session, session_id: "  " }),
-      );
+        });
+      });
+      await assert.rejects(async () => {
+        await buildProductionNaValidationContextFromSession({ ...session, session_id: "  " });
+      });
     });
   }
 
   // ======================================================== B. Freeze anti-forge
   console.log("\n== B. Freeze anti-forge (freezeDraftForDelivery) ==");
   {
-    await check("B0 precondition: Session triad + ACTIVE pair → Freeze n_a", () => {
+    await check("B0 precondition: Session triad + ACTIVE pair 闂?Freeze n_a", async () => {
       const c = userCase("b0");
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
       assert.equal(pack.frozen.status, "final");
       assert.equal(stateOf(pack.frozen.dirs), "n_a");
     });
 
-    await check("B1 forged dirCatalog (+ forged naValidation) → not n_a (direct cause: na_condition_not_in_catalog)", () => {
+    await check("B1 forged dirCatalog (+ forged naValidation) 闂?not n_a (direct cause: na_condition_not_in_catalog)", async () => {
       const c = userCase("b1", { code: NON_ACTIVE_CODE });
       const forgedCatalog = [{ dir_id: TARGET_DIR, na_conditions: [NON_ACTIVE_CODE] }];
-      // Precondition: same triad + forged catalog on the fixture path → n_a.
+      // Precondition: same triad + forged catalog on the fixture path 闂?n_a.
       const forgedCtx = c.fixture({ dirCatalog: forgedCatalog });
       assert.equal(reasonOf(c.triad.evidence, forgedCtx), "ok");
       assert.equal(c.pureState(forgedCtx), "n_a");
@@ -574,21 +585,21 @@ async function main() {
         dirCatalog: forgedCatalog,
         naValidation: forgedCtx,
       };
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), opts);
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), opts);
       assert.notEqual(stateOf(pack.frozen.dirs), "n_a");
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
       assert.equal(reasonOf(c.triad.evidence, prod), "na_condition_not_in_catalog");
     });
 
-    await check("B2 forged topicRules → not n_a (direct cause: topic_rule_missing)", () => {
+    await check("B2 forged topicRules 闂?not n_a (direct cause: topic_rule_missing)", async () => {
       const t = topicFixtures("b2");
       const c = systemCase(
         "b2",
         { kind: "topic_not_applicable", topic_code: t.topicCode, rule_id: t.ruleId },
         { topic_applicability_evals: [t.evalRow], topic_catalog_version: t.catalogVersion },
       );
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
-      // Precondition: production ctx (Session eval/version, ACTIVE) + rule → ok / n_a.
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      // Precondition: production ctx (Session eval/version, ACTIVE) + rule 闂?ok / n_a.
       const withRule = { ...prod, topicRules: [t.rule] };
       assert.equal(reasonOf(c.evidence, withRule), "ok");
       assert.equal(c.pureState(withRule), "n_a");
@@ -598,12 +609,12 @@ async function main() {
         authority: { topicRules: [t.rule] },
         topicRules: [t.rule],
       };
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), opts);
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), opts);
       assert.notEqual(stateOf(pack.frozen.dirs), "n_a");
       assert.equal(reasonOf(c.evidence, prod), "topic_rule_missing");
     });
 
-    await check("B3 forged catalogConditionEvals → not n_a (direct cause: catalog_eval_missing)", () => {
+    await check("B3 forged catalogConditionEvals 闂?not n_a (direct cause: catalog_eval_missing)", async () => {
       const evalRow = {
         condition_eval_id: "ce_b3",
         target_dir_id: TARGET_DIR,
@@ -615,8 +626,8 @@ async function main() {
         target_dir_id: TARGET_DIR,
         condition_eval_id: "ce_b3",
       });
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
-      // Precondition: production ctx + the condition eval → ok / n_a.
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      // Precondition: production ctx + the condition eval 闂?ok / n_a.
       const withEval = { ...prod, catalogConditionEvals: [evalRow] };
       assert.equal(reasonOf(c.evidence, withEval), "ok");
       assert.equal(c.pureState(withEval), "n_a");
@@ -626,12 +637,12 @@ async function main() {
         authority: { catalogConditionEvals: [evalRow] },
         catalogConditionEvals: [evalRow],
       };
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), opts);
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), opts);
       assert.notEqual(stateOf(pack.frozen.dirs), "n_a");
       assert.equal(reasonOf(c.evidence, prod), "catalog_eval_missing");
     });
 
-    await check("B4 forged cfpSourceState=source_absent_not_supplied → Freeze ctx unset; DDR-03 reject (direct cause: ddr03_cfp_not_absent)", () => {
+    await check("B4 forged cfpSourceState=source_absent_not_supplied 闂?Freeze ctx unset; DDR-03 reject (direct cause: ddr03_cfp_not_absent)", async () => {
       const c = userCase("b4");
       const ddrEv: ExplicitNaEvidence = {
         evidence_id: "na_ddr03_b4",
@@ -654,29 +665,29 @@ async function main() {
         authority: { cfpSourceState: "source_absent_not_supplied" as const },
         cfpSourceState: "source_absent_not_supplied" as const,
       };
-      const freezeCtx = buildFreezeNaValidationFromSession(
+      const freezeCtx = await buildFreezeNaValidationFromSession(
         c.session,
         c.session.decision_context!,
         forgedCtxOpts,
       );
       assert.equal(freezeCtx.cfpSourceState, undefined);
-      // Precondition: same ctx with the forged CFP state → accept.
+      // Precondition: same ctx with the forged CFP state 闂?accept.
       assert.equal(
         reasonOf(ddrEv, { ...freezeCtx, cfpSourceState: "source_absent_not_supplied" }),
         "ok",
       );
       assert.equal(reasonOf(ddrEv, freezeCtx), "ddr03_cfp_not_absent");
-      const clean = freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
-      const forged = freezeDraftForDelivery(structuredClone(c.dc), {
+      const clean = await freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
+      const forged = await freezeDraftForDelivery(structuredClone(c.dc), {
         session: c.session,
         ...forgedCtxOpts,
       });
       assert.deepEqual(forged.frozen, clean.frozen);
     });
 
-    await check("B5 forged confirmationEvents → not n_a (direct cause: e1_missing)", () => {
+    await check("B5 forged confirmationEvents 闂?not n_a (direct cause: e1_missing)", async () => {
       const c = userCase("b5", { withSessionE1: false });
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
       assert.equal(reasonOf(c.triad.evidence, { ...prod, confirmationEvents: [c.e1] }), "ok");
       const opts = {
         session: c.session,
@@ -684,14 +695,14 @@ async function main() {
         authority: { confirmationEvents: [c.e1] },
         confirmationEvents: [c.e1],
       };
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), opts);
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), opts);
       assert.notEqual(stateOf(pack.frozen.dirs), "n_a");
       assert.equal(reasonOf(c.triad.evidence, prod), "e1_missing");
     });
 
-    await check("B6 forged naDeclarationActions → not n_a (direct cause: explicit_na_classification_missing)", () => {
+    await check("B6 forged naDeclarationActions 闂?not n_a (direct cause: explicit_na_classification_missing)", async () => {
       const c = userCase("b6", { withSessionAction: false });
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
       assert.equal(
         reasonOf(c.triad.evidence, { ...prod, naDeclarationActions: [c.triad.action] }),
         "ok",
@@ -702,12 +713,12 @@ async function main() {
         authority: { naDeclarationActions: [c.triad.action] },
         naDeclarationActions: [c.triad.action],
       };
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), opts);
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), opts);
       assert.notEqual(stateOf(pack.frozen.dirs), "n_a");
       assert.equal(reasonOf(c.triad.evidence, prod), "explicit_na_classification_missing");
     });
 
-    await check("B7 forged topic evals/version → Freeze ctx authority = Session; with rule still rejects (topic_eval_id_unknown)", () => {
+    await check("B7 forged topic evals/version 闂?Freeze ctx authority = Session; with rule still rejects (topic_eval_id_unknown)", async () => {
       const t = topicFixtures("b7");
       const c = systemCase(
         "b7",
@@ -719,14 +730,14 @@ async function main() {
         authority: { topicEvalAuthority: [t.evalRow], currentTopicCatalogVersion: t.catalogVersion },
         topicEvalAuthority: [t.evalRow],
       };
-      const freezeCtx = buildFreezeNaValidationFromSession(
+      const freezeCtx = await buildFreezeNaValidationFromSession(
         c.session,
         c.session.decision_context!,
         forgedCtxOpts,
       );
       assert.strictEqual(freezeCtx.topicEvalAuthority, c.session.topic_applicability_evals);
       assert.deepEqual(freezeCtx.topicEvalAuthority, []);
-      // Precondition: rule + the forged row (if it were trusted) → ok.
+      // Precondition: rule + the forged row (if it were trusted) 闂?ok.
       assert.equal(
         reasonOf(c.evidence, { ...freezeCtx, topicRules: [t.rule], topicEvalAuthority: [t.evalRow] }),
         "ok",
@@ -735,27 +746,27 @@ async function main() {
         reasonOf(c.evidence, { ...freezeCtx, topicRules: [t.rule] }),
         "topic_eval_id_unknown",
       );
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, ...forgedCtxOpts });
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, ...forgedCtxOpts });
       assert.notEqual(stateOf(pack.frozen.dirs), "n_a");
     });
 
-    await check("B8 C23/DC-8 mirror: DIR-A + explicit_not_applicable full Session triad + forged catalog → not n_a (direct cause: na_condition_not_in_catalog)", () => {
+    await check("B8 C23/DC-8 mirror: DIR-A + explicit_not_applicable full Session triad + forged catalog 闂?not n_a (direct cause: na_condition_not_in_catalog)", async () => {
       const forgeDir = "DIR-A";
       const c = userCase("b8", { dirId: forgeDir, code: NON_ACTIVE_CODE });
       assert.equal(activeEntries().some((e) => e.dir_id === forgeDir), false);
       const forgedCatalog = [{ dir_id: forgeDir, na_conditions: [NON_ACTIVE_CODE] }];
-      // Precondition: identical Session triad + E1; trusted forged catalog → n_a.
+      // Precondition: identical Session triad + E1; trusted forged catalog 闂?n_a.
       const forgedCtx = c.fixture({ dirCatalog: forgedCatalog });
       assert.equal(reasonOf(c.triad.evidence, forgedCtx), "ok");
       assert.equal(c.pureState(forgedCtx), "n_a");
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), {
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), {
         session: c.session,
         now: NOW,
         ...{ authority: { dirCatalog: forgedCatalog } },
       });
       assert.equal(pack.frozen.status, "final");
       assert.equal(stateOf(pack.frozen.dirs, forgeDir), "known");
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
       assert.equal(reasonOf(c.triad.evidence, prod), "na_condition_not_in_catalog");
     });
   }
@@ -763,8 +774,8 @@ async function main() {
   // ======================================================== C. Versioning anti-forge
   console.log("\n== C. Versioning anti-forge (applyV2FromFinalToSession) ==");
   {
-    function finalSessionFor(c: ReturnType<typeof userCase>, sessionPatch: Partial<POJUSessionState> = {}) {
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
+    async function finalSessionFor(c: ReturnType<typeof userCase>, sessionPatch: Partial<POJUSessionState> = {}) {
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
       return {
         pack,
         session: {
@@ -776,46 +787,46 @@ async function main() {
       };
     }
 
-    await check("C0 precondition: V1 n_a → V2 draft keeps n_a via ACTIVE catalog; V1 hash stable", () => {
+    await check("C0 precondition: V1 n_a 闂?V2 draft keeps n_a via ACTIVE catalog; V1 hash stable", async () => {
       const c = userCase("c0");
-      const { pack, session } = finalSessionFor(c);
+      const { pack, session } = await finalSessionFor(c);
       assert.equal(stateOf(pack.frozen.dirs), "n_a");
-      const v2 = applyV2FromFinalToSession(session, { now: NOW });
+      const v2 = await applyV2FromFinalToSession(session, { now: NOW });
       assert.equal(v2.draft.status, "draft");
       assert.equal(stateOf(v2.draft.dirs), "n_a");
       assert.equal(v2.superseded.content_hash, pack.frozen.content_hash);
     });
 
-    await check("C1 Session action removed + forged action/naValidation → V2 not n_a (direct cause: explicit_na_classification_missing)", () => {
+    await check("C1 Session action removed + forged action/naValidation 闂?V2 not n_a (direct cause: explicit_na_classification_missing)", async () => {
       const c = userCase("c1");
-      const { session } = finalSessionFor(c, { na_declaration_actions: [] });
+      const { session } = await finalSessionFor(c, { na_declaration_actions: [] });
       const forgedCtx = naValidationBoundToDc(session.decision_context!, session.session_id, {
         nowIso: NOW,
         confirmationEvents: [c.e1],
         naDeclarationActions: [c.triad.action],
         dirCatalog: activeEntries(),
       });
-      // Precondition: forged ctx (only the Action differs from Session) → ok.
+      // Precondition: forged ctx (only the Action differs from Session) 闂?ok.
       assert.equal(reasonOf(c.triad.evidence, forgedCtx), "ok");
       const opts = {
         now: NOW,
         authority: { naDeclarationActions: [c.triad.action] },
         naValidation: forgedCtx,
       };
-      const v2 = applyV2FromFinalToSession(session, opts);
+      const v2 = await applyV2FromFinalToSession(session, opts);
       assert.notEqual(stateOf(v2.draft.dirs), "n_a");
-      const prod = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       assert.equal(reasonOf(c.triad.evidence, prod), "explicit_na_classification_missing");
     });
 
-    await check("C2 forged dirCatalog → V2 not n_a (direct cause: na_condition_not_in_catalog)", () => {
+    await check("C2 forged dirCatalog 闂?V2 not n_a (direct cause: na_condition_not_in_catalog)", async () => {
       const c = userCase("c2", { code: NON_ACTIVE_CODE });
-      const { session } = finalSessionFor(c);
+      const { session } = await finalSessionFor(c);
       const forgedCatalog = [{ dir_id: TARGET_DIR, na_conditions: [NON_ACTIVE_CODE] }];
-      const prod = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       assert.equal(reasonOf(c.triad.evidence, { ...prod, dirCatalog: forgedCatalog }), "ok");
       const opts = { now: NOW, authority: { dirCatalog: forgedCatalog }, dirCatalog: forgedCatalog };
-      const v2 = applyV2FromFinalToSession(session, opts);
+      const v2 = await applyV2FromFinalToSession(session, opts);
       assert.notEqual(stateOf(v2.draft.dirs), "n_a");
       assert.equal(reasonOf(c.triad.evidence, prod), "na_condition_not_in_catalog");
     });
@@ -824,10 +835,10 @@ async function main() {
   // ======================================================== D. Lifecycle anti-forge
   console.log("\n== D. Lifecycle anti-forge (reaggregateDirsOnSession / collecting) ==");
   {
-    await check("D0 S7 semantic: collecting reaggregation applies valid Session N/A (ACTIVE) → n_a", () => {
+    await check("D0 S7 semantic: collecting reaggregation applies valid Session N/A (ACTIVE) 闂?n_a", async () => {
       const c = userCase("d0");
       assert.equal(stateOf(c.dc.dirs), "known");
-      const r = applyCollectingUserTurnToSessionDc(c.session, {
+      const r = await applyCollectingUserTurnToSessionDc(c.session, {
         statement: "Another note from the user.",
         source_turn_id: "u_d0",
         now: NOW,
@@ -836,7 +847,7 @@ async function main() {
       assert.equal(stateOf(r.session.decision_context!.dirs), "n_a");
     });
 
-    await check("D1 forged authority on reaggregate opts → not n_a (direct cause: explicit_na_classification_missing)", () => {
+    await check("D1 forged authority on reaggregate opts 闂?not n_a (direct cause: explicit_na_classification_missing)", async () => {
       const c = userCase("d1", { withSessionAction: false });
       const forgedCtx = c.fixture();
       assert.equal(reasonOf(c.triad.evidence, forgedCtx), "ok");
@@ -851,34 +862,34 @@ async function main() {
         naDeclarationActions: [c.triad.action],
         naValidation: forgedCtx,
       };
-      const dirs = reaggregateDirsOnSession(c.session, c.dc.dirs, opts);
+      const dirs = await reaggregateDirsOnSession(c.session, c.dc.dirs, opts);
       assert.notEqual(stateOf(dirs), "n_a");
-      const prod = buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
+      const prod = await buildProductionNaValidationContextFromSession(c.session, { nowIso: NOW });
       assert.equal(reasonOf(c.triad.evidence, prod), "explicit_na_classification_missing");
     });
 
-    await check("D2 in-flight (unpersisted) fact used by production reaggregation → n_a", () => {
+    await check("D2 in-flight (unpersisted) fact used by production reaggregation 闂?n_a", async () => {
       const c = userCase("d2");
       const dcWithoutFact = { ...c.dc, reality_facts: [] };
       const session = { ...c.session, decision_context: dcWithoutFact };
       // Contrast: Session DC alone lacks the source fact.
-      const noInflight = reaggregateDirsOnSession(session, c.dc.dirs, { nowIso: NOW });
+      const noInflight = await reaggregateDirsOnSession(session, c.dc.dirs, { nowIso: NOW });
       assert.notEqual(stateOf(noInflight), "n_a");
       assert.equal(
         reasonOf(
           c.triad.evidence,
-          buildProductionNaValidationContextFromSession(session, { nowIso: NOW }),
+          await buildProductionNaValidationContextFromSession(session, { nowIso: NOW }),
         ),
         "source_missing",
       );
-      const inflight = reaggregateDirsOnSession(session, c.dc.dirs, {
+      const inflight = await reaggregateDirsOnSession(session, c.dc.dirs, {
         realityFacts: [c.fact],
         nowIso: NOW,
       });
       assert.equal(stateOf(inflight), "n_a");
     });
 
-    await check("D3 in-flight snapshot cannot override Session authority (direct cause: explicit_na_classification_missing)", () => {
+    await check("D3 in-flight snapshot cannot override Session authority (direct cause: explicit_na_classification_missing)", async () => {
       const c = userCase("d3", { withSessionAction: false });
       const dcWithoutFact = { ...c.dc, reality_facts: [] };
       const session = { ...c.session, decision_context: dcWithoutFact };
@@ -888,10 +899,10 @@ async function main() {
         authority: { naDeclarationActions: [c.triad.action] },
         naDeclarationActions: [c.triad.action],
       };
-      const dirs = reaggregateDirsOnSession(session, c.dc.dirs, forged);
+      const dirs = await reaggregateDirsOnSession(session, c.dc.dirs, forged);
       assert.notEqual(stateOf(dirs), "n_a");
 
-      const base = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+      const base = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
       const inflightDc = { ...dcWithoutFact, reality_facts: [c.fact] };
       const rebound = naValidationForDcSnapshot(base, inflightDc);
       assert.strictEqual(rebound.realityFacts, inflightDc.reality_facts);
@@ -899,11 +910,12 @@ async function main() {
       assert.strictEqual(rebound.naDeclarationActions, session.na_declaration_actions);
       assert.strictEqual(rebound.topicEvalAuthority, session.topic_applicability_evals);
       assert.equal(rebound.currentTopicCatalogVersion, base.currentTopicCatalogVersion);
-      assert.strictEqual(rebound.dirCatalog, DIR_NA_CATALOG_V1_ENTRIES);
-      assert.equal(rebound.topicRules, undefined);
+      assert.strictEqual(rebound.dirCatalog, activeEntries());
+      assert.ok(Array.isArray(rebound.topicRules) && rebound.topicRules!.length >= 1);
+      assert.strictEqual(rebound.topicRules, base.topicRules);
       assert.equal(rebound.catalogConditionEvals, undefined);
       assert.equal(rebound.cfpSourceState, undefined);
-      // Precondition: same rebound ctx + Session Action → ok; without it → rejected.
+      // Precondition: same rebound ctx + Session Action 闂?ok; without it 闂?rejected.
       assert.equal(
         reasonOf(c.triad.evidence, { ...rebound, naDeclarationActions: [c.triad.action] }),
         "ok",
@@ -938,9 +950,9 @@ async function main() {
       return { sessId, triad, e1, dc, session };
     }
 
-    await check("E0 production ask == planNextAskFromCandidates(production ctx); ranking/budget unchanged", () => {
+    await check("E0 production ask == planNextAskFromCandidates(production ctx); ranking/budget unchanged", async () => {
       const a = askCase("e0", false);
-      const planned = selectNextIntakeAskForSession({
+      const planned = await selectNextIntakeAskForSession({
         session: a.session,
         nowIso: NOW,
         remaining_hard_budget: 7,
@@ -948,14 +960,14 @@ async function main() {
       const direct = planNextAskFromCandidates({
         candidates: buildIntakeCandidatesFromDc(a.dc),
         snap: snapshotFromDc(a.dc),
-        naValidation: buildProductionNaValidationContextFromSession(a.session, { nowIso: NOW }),
+        naValidation: await buildProductionNaValidationContextFromSession(a.session, { nowIso: NOW }),
         remaining_hard_budget: 7,
       });
       assert.deepEqual(planned.plan, direct);
       assert.ok(planned.plan.ranked.some((r) => r.candidate.candidate_id === `cq_dir_${TARGET_DIR}`));
     });
 
-    await check("E1 forged input.naValidation ignored; low-level planner injection still effective", () => {
+    await check("E1 forged input.naValidation ignored; low-level planner injection still effective", async () => {
       const a = askCase("e1", false);
       const forgedCtx = naValidationBoundToDc(a.dc, a.sessId, {
         nowIso: NOW,
@@ -963,7 +975,7 @@ async function main() {
         naDeclarationActions: [a.triad.action],
         dirCatalog: activeEntries(),
       });
-      const prodCtx = buildProductionNaValidationContextFromSession(a.session, { nowIso: NOW });
+      const prodCtx = await buildProductionNaValidationContextFromSession(a.session, { nowIso: NOW });
       const candidates = buildIntakeCandidatesFromDc(a.dc);
       const snap = snapshotFromDc(a.dc);
       const lowForged = planNextAskFromCandidates({ candidates, snap, naValidation: forgedCtx, remaining_hard_budget: 15 });
@@ -974,31 +986,31 @@ async function main() {
       assert.notEqual(unresolved(lowForged), unresolved(lowProd));
 
       const input = { session: a.session, nowIso: NOW, naValidation: forgedCtx };
-      const planned = selectNextIntakeAskForSession(input);
-      const clean = selectNextIntakeAskForSession({ session: a.session, nowIso: NOW });
+      const planned = await selectNextIntakeAskForSession(input);
+      const clean = await selectNextIntakeAskForSession({ session: a.session, nowIso: NOW });
       assert.deepEqual(planned.plan, clean.plan);
       assert.deepEqual(planned.plan, lowProd);
       assert.equal(unresolved(planned.plan), unresolved(lowProd));
     });
 
-    await check("E2 S7 semantic: N/A applied in collecting → DIR no longer an ask candidate", () => {
+    await check("E2 S7 semantic: N/A applied in collecting 闂?DIR no longer an ask candidate", async () => {
       const a = askCase("e2", true);
-      const before = selectNextIntakeAskForSession({ session: a.session, nowIso: NOW });
+      const before = await selectNextIntakeAskForSession({ session: a.session, nowIso: NOW });
       assert.ok(before.plan.ranked.some((r) => r.candidate.dir_ids.includes(TARGET_DIR)));
-      const collected = applyCollectingUserTurnToSessionDc(a.session, {
+      const collected = await applyCollectingUserTurnToSessionDc(a.session, {
         statement: "Nothing else is off-limits.",
         source_turn_id: "u_e2",
         now: NOW,
       });
       assert.equal(collected.applied, true);
       assert.equal(stateOf(collected.session.decision_context!.dirs), "n_a");
-      const after = selectNextIntakeAskForSession({ session: collected.session, nowIso: NOW });
+      const after = await selectNextIntakeAskForSession({ session: collected.session, nowIso: NOW });
       assert.equal(after.plan.ranked.some((r) => r.candidate.dir_ids.includes(TARGET_DIR)), false);
     });
   }
 
   // ======================================================== F. fail-closed
-  console.log("\n== F. Fail-closed (ACTIVE loader fault · missing gap sources) ==");
+  console.log("\n== F. Fail-closed (ACTIVE loader fault 闁?missing gap sources) ==");
   {
     async function seedIdbSession(tag: string, dc: DecisionContext, extra: Partial<POJUSessionState>) {
       const sid = await createPOJUSession({
@@ -1053,14 +1065,16 @@ async function main() {
       return sid;
     }
 
-    await check("F0 injector hits the real production registry (loadDirNaCatalog → dir_catalog_load_failed); restored after", async () => {
-      await withActiveCatalogFault(() => {
+    await check("F0 injector hits the real production registry (loadDirNaCatalog ? dir_catalog_load_failed); restored after", async () => {
+      await withActiveCatalogFault(async () => {
         const r = loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION);
         assert.equal(r.ok, false);
         if (!r.ok) assert.equal(r.reason_code, "dir_catalog_load_failed");
-        assert.throws(
+        await assert.rejects(
           () => buildProductionNaValidationContextFromSession(userCase("f0").session),
-          (e: unknown) => e instanceof ProductionNaAuthorityError && e.reason_code === "dir_catalog_load_failed",
+          (e: unknown) =>
+            e instanceof ProductionNaAuthorityError &&
+            e.reason_code === "dir_catalog_load_failed",
         );
       });
       assert.equal(loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION).ok, true);
@@ -1068,8 +1082,8 @@ async function main() {
 
     await check("F1 Freeze: FreezeError(code=dir_catalog_load_failed); wire reason_code; IDB DC stays draft", async () => {
       const c = userCase("f1");
-      await withActiveCatalogFault(() => {
-        assert.throws(
+      await withActiveCatalogFault(async () => {
+        await assert.rejects(
           () => freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW }),
           (e: unknown) =>
             e instanceof FreezeError &&
@@ -1077,7 +1091,7 @@ async function main() {
             e.message === "dir_catalog_load_failed",
         );
       });
-      // Precondition twin: no fault → ensure freezes + persists.
+      // Precondition twin: no fault 闂?ensure freezes + persists.
       const sidOk = await seededUserSession("f1ok");
       const okRes = await ensureSessionFrozenForDelivery((await loadPOJUSession(sidOk))!, { now: NOW });
       assert.equal(okRes.ok, true);
@@ -1097,10 +1111,10 @@ async function main() {
 
     await check("F2 Versioning: apply throws; persistV2 ok:false (dir_catalog_load_failed), no V2", async () => {
       const c = userCase("f2");
-      const pack = freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
+      const pack = await freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
       const session = { ...c.session, decision_context: pack.frozen, decision_context_versions: [pack.version_snapshot] };
       await withActiveCatalogFault(async () => {
-        assert.throws(
+        await assert.rejects(
           () => applyV2FromFinalToSession(session, { now: NOW }),
           (e: unknown) => e instanceof ProductionNaAuthorityError,
         );
@@ -1113,10 +1127,10 @@ async function main() {
       });
     });
 
-    await check("F3 Lifecycle: reaggregate throws; Call B → dir_map_error, dirs not re-aggregated, IDB unchanged", async () => {
+    await check("F3 Lifecycle: reaggregate throws; Call B 闂?dir_map_error, dirs not re-aggregated, IDB unchanged", async () => {
       const c = userCase("f3");
-      await withActiveCatalogFault(() => {
-        assert.throws(
+      await withActiveCatalogFault(async () => {
+        await assert.rejects(
           () => reaggregateDirsOnSession(c.session, c.dc.dirs, { nowIso: NOW }),
           (e: unknown) => e instanceof ProductionNaAuthorityError,
         );
@@ -1134,9 +1148,9 @@ async function main() {
           frame_index: 1,
         },
       ];
-      // Precondition: no fault → Call B applies.
-      assert.equal(applyCallBToSessionDc(c.session, agenda, { now: NOW }).applied, true);
-      const pure = await withActiveCatalogFault(() =>
+      // Precondition: no fault 闂?Call B applies.
+      assert.equal((await applyCallBToSessionDc(c.session, agenda, { now: NOW })).applied, true);
+      const pure = await withActiveCatalogFault(async () =>
         applyCallBToSessionDc(c.session, agenda, { now: NOW }),
       );
       assert.equal(pure.applied, false);
@@ -1156,7 +1170,7 @@ async function main() {
     });
 
     await check("F4 Collecting: persistCollectingUserTurnDc rejects; IDB DC update discarded (no partial persist)", async () => {
-      // Precondition twin: no fault → collecting fact committed.
+      // Precondition twin: no fault 闂?collecting fact committed.
       const sidOk = await seededUserSession("f4ok");
       const okRes = await persistCollectingUserTurnDc((await loadPOJUSession(sidOk))!, {
         statement: "Savings cover four months.",
@@ -1189,17 +1203,17 @@ async function main() {
       assert.equal(after.messages.length, before.messages.length);
     });
 
-    await check("F5 Ask: loader fault → throws, no plan / no fallback", async () => {
+    await check("F5 Ask: loader fault 闂?throws, no plan / no fallback", async () => {
       const c = userCase("f5");
-      await withActiveCatalogFault(() => {
-        assert.throws(
+      await withActiveCatalogFault(async () => {
+        await assert.rejects(
           () => selectNextIntakeAskForSession({ session: c.session, nowIso: NOW }),
           (e: unknown) => e instanceof ProductionNaAuthorityError,
         );
       });
     });
 
-    await check("F6 gap sources missing → fail-closed (topic_rule_missing / catalog_eval_missing / ddr03_cfp_not_absent; see B2–B4)", () => {
+    await check("F6 gap sources missing 闂?fail-closed (topic_rule_missing / catalog_eval_missing / ddr03_cfp_not_absent; see B2闂備胶鍋ㄩ崕鎻掝嚕?)", async () => {
       const t = topicFixtures("f6");
       const topic = systemCase(
         "f6t",
@@ -1212,19 +1226,19 @@ async function main() {
         condition_eval_id: "ce_f6",
       });
       assert.equal(
-        stateOf(reaggregateDirsOnSession(topic.session, topic.dc.dirs, { nowIso: NOW })) === "n_a",
+        stateOf(await reaggregateDirsOnSession(topic.session, topic.dc.dirs, { nowIso: NOW })) === "n_a",
         false,
       );
       assert.equal(
-        reasonOf(topic.evidence, buildProductionNaValidationContextFromSession(topic.session)),
+        reasonOf(topic.evidence, await buildProductionNaValidationContextFromSession(topic.session)),
         "topic_rule_missing",
       );
       assert.equal(
-        stateOf(reaggregateDirsOnSession(cat.session, cat.dc.dirs, { nowIso: NOW })) === "n_a",
+        stateOf(await reaggregateDirsOnSession(cat.session, cat.dc.dirs, { nowIso: NOW })) === "n_a",
         false,
       );
       assert.equal(
-        reasonOf(cat.evidence, buildProductionNaValidationContextFromSession(cat.session)),
+        reasonOf(cat.evidence, await buildProductionNaValidationContextFromSession(cat.session)),
         "catalog_eval_missing",
       );
     });
@@ -1265,7 +1279,7 @@ async function main() {
       return src.slice(i, next < 0 ? undefined : next);
     }
 
-    await check("S1 no lib/ or app/ module (except fixture definition file) references fixture builder/types (incl. alias / re-export)", () => {
+    await check("S1 no lib/ or app/ module (except fixture definition file) references fixture builder/types (incl. alias / re-export)", async () => {
       const files: string[] = [];
       walk("lib", files);
       walk("app", files);
@@ -1275,7 +1289,7 @@ async function main() {
       assert.deepEqual(offenders, []);
     });
 
-    await check("S2 removed names gone: buildNaValidationContextFromSession / NaValidationAuthorityOverrides", () => {
+    await check("S2 removed names gone: buildNaValidationContextFromSession / NaValidationAuthorityOverrides", async () => {
       const src = read(NA_FILE);
       assert.equal(/\bbuildNaValidationContextFromSession\b/.test(src), false);
       assert.equal(/\bNaValidationAuthorityOverrides\b/.test(src), false);
@@ -1288,12 +1302,12 @@ async function main() {
       assert.deepEqual(stale, []);
     });
 
-    await check("S3 production builder / reaggregate / snapshot bodies do not touch fixture path or env", () => {
+    await check("S3 production builder / reaggregate / snapshot bodies do not touch fixture path or env", async () => {
       const src = read(NA_FILE);
       for (const marker of [
-        "export function buildProductionNaValidationContextFromSession",
+        "export async function buildProductionNaValidationContextFromSession",
         "export function naValidationForDcSnapshot",
-        "export function reaggregateDirsOnSession",
+        "export async function reaggregateDirsOnSession",
         "export type ProductionNaValidationBuildOpts",
         "export type ReaggregateDirsOnSessionOpts",
       ]) {
@@ -1302,19 +1316,20 @@ async function main() {
         assert.equal(/overrides|authority\??:|process\.env/.test(b), false, marker);
       }
       assert.ok(
-        block(src, "export function reaggregateDirsOnSession").includes(
-          "buildProductionNaValidationContextFromSession(",
+        block(src, "export async function reaggregateDirsOnSession").includes(
+          "await buildProductionNaValidationContextFromSession(",
         ),
       );
       assert.equal(/process\.env/.test(src), false);
+
     });
 
-    await check("S4 production entry types expose no authority / naValidation injection", () => {
+    await check("S4 production entry types expose no authority / naValidation injection", async () => {
       const freeze = read("lib/poju/decision-context/freeze-to-delivery.ts");
       const freezeOpts = block(freeze, "export type FreezeDraftForDeliveryOpts");
       assert.equal(/authority\??:/.test(freezeOpts), false);
       assert.ok(/"naValidation"/.test(freezeOpts), "FreezeOptions.naValidation must stay omitted");
-      assert.equal(/authority\??:/.test(block(freeze, "export function buildFreezeNaValidationFromSession")), false);
+      assert.equal(/authority\??:/.test(block(freeze, "export async function buildFreezeNaValidationFromSession")), false);
 
       const ver = read("lib/poju/decision-context/production-versioning.ts");
       const verOpts = block(ver, "export type StartV2OnSessionOpts");
@@ -1327,13 +1342,13 @@ async function main() {
       assert.equal(/input\.naValidation/.test(ask), false);
     });
 
-    await check("S5 every production path calls the production builder", () => {
-      const calls = "buildProductionNaValidationContextFromSession(";
+    await check("S5 every production path calls the production builder", async () => {
+      const calls = "await buildProductionNaValidationContextFromSession(";
       assert.ok(read("lib/poju/decision-context/freeze-to-delivery.ts").includes(calls));
       assert.ok(read("lib/poju/decision-context/production-versioning.ts").includes(calls));
       assert.ok(read("lib/poju/decision-context/production-intake-ask.ts").includes(calls));
       const life = read("lib/poju/decision-context/production-dc-lifecycle.ts");
-      assert.ok(life.includes("reaggregateDirsOnSession("));
+      assert.ok(life.includes("await reaggregateDirsOnSession("));
       assert.equal(/authority\s*:/.test(life), false);
       for (const f of PROD_FILES) {
         assert.equal(FIXTURE_IDENT.test(read(f)), false, f);

@@ -1,19 +1,19 @@
-/**
- * DIR N/A Catalog SSOT — version 1 (Phase 2 dir_catalog_version = 1).
+﻿/**
+ * DIR N/A Catalog SSOT 鈥?version 1 (Phase 2 dir_catalog_version = 1).
  * Runtime authority: this module only. Do not parse PHASE-2-DIR-CATALOG.md at runtime.
  *
- * Phase 2 prose → token (non-empty only):
- * - DIR-DEF-STAKES: stakes unknowable + boundary → explicit_stakes_unknowable_boundary
- * - DIR-DEF-UNACCEPTABLE: no hard red lines → explicit_no_hard_red_lines
- * - DIR-STATUS-QUO: no current state → explicit_no_current_state
- * - DIR-OPT-CONSTRAINTS: no material constraints → explicit_no_material_constraints
- * - DIR-OPT-IRREV: fully reversible → explicit_fully_reversible
- * - DIR-PAST-ATTEMPTS: first-time decision → explicit_first_time_decision
- * - DIR-TIMING-WINDOW: open-ended timing → explicit_open_ended_timing
- * - DIR-EXIT-CRITERIA: no exit, all-in → explicit_no_exit_all_in
- * - DIR-VALIDATION-CAPACITY: nothing testable → explicit_nothing_testable
- * - DIR-STAKEHOLDERS: solo decision → explicit_solo_decision
- * Empty [] = Never N/A / not N/A-seeded for topic packs.
+ * Phase 2 prose 鈫?token (non-empty only):
+ * - DIR-DEF-STAKES: stakes unknowable + boundary 鈫?explicit_stakes_unknowable_boundary
+ * - DIR-DEF-UNACCEPTABLE: no hard red lines 鈫?explicit_no_hard_red_lines
+ * - DIR-STATUS-QUO: no current state 鈫?explicit_no_current_state
+ * - DIR-OPT-CONSTRAINTS: no material constraints 鈫?explicit_no_material_constraints
+ * - DIR-OPT-IRREV: fully reversible 鈫?explicit_fully_reversible
+ * - DIR-PAST-ATTEMPTS: first-time decision 鈫?explicit_first_time_decision
+ * - DIR-TIMING-WINDOW: open-ended timing 鈫?explicit_open_ended_timing
+ * - DIR-EXIT-CRITERIA: no exit, all-in 鈫?explicit_no_exit_all_in
+ * - DIR-VALIDATION-CAPACITY: nothing testable 鈫?explicit_nothing_testable
+ * - DIR-STAKEHOLDERS: solo decision 鈫?explicit_solo_decision
+ * Empty [] = Never N/A. Topic packs use topic_pack_not_applicable (S9 Topic Applicability).
  */
 
 import type { DirNaCatalogEntry } from "../explicit-na-validate";
@@ -66,11 +66,11 @@ const RAW_ENTRIES: DirNaCatalogEntry[] = [
     dir_id: "DIR-STAKEHOLDERS",
     na_conditions: ["explicit_solo_decision"],
   },
-  { dir_id: "DIR-REL-DYNAMICS", na_conditions: [] },
-  { dir_id: "DIR-JOB-OFFER", na_conditions: [] },
-  { dir_id: "DIR-BIZ-MODEL", na_conditions: [] },
-  { dir_id: "DIR-LOCALE-MOVE", na_conditions: [] },
-  { dir_id: "DIR-EDU-PATH", na_conditions: [] },
+  { dir_id: "DIR-REL-DYNAMICS", na_conditions: ["topic_pack_not_applicable"] },
+  { dir_id: "DIR-JOB-OFFER", na_conditions: ["topic_pack_not_applicable"] },
+  { dir_id: "DIR-BIZ-MODEL", na_conditions: ["topic_pack_not_applicable"] },
+  { dir_id: "DIR-LOCALE-MOVE", na_conditions: ["topic_pack_not_applicable"] },
+  { dir_id: "DIR-EDU-PATH", na_conditions: ["topic_pack_not_applicable"] },
 ];
 
 function deepFreezeDirNaEntries(
@@ -86,3 +86,4 @@ function deepFreezeDirNaEntries(
 /** Deep-frozen production entries for catalog version 1. */
 export const DIR_NA_CATALOG_V1_ENTRIES: readonly DirNaCatalogEntry[] =
   deepFreezeDirNaEntries(RAW_ENTRIES);
+

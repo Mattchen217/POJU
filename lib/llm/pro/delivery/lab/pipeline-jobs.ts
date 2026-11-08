@@ -990,7 +990,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       return out;
     }
 
-    let sessionB = finalizeSegment2AgendaBridgeSuccess({
+    let sessionB = await finalizeSegment2AgendaBridgeSuccess({
       session: clearPendingSegment2Job(lab.chat_session),
       locale,
       investigation_agenda: job.result.investigation_agenda ?? [],
@@ -1181,7 +1181,7 @@ export async function labSynthesisConfirm(lab: DeliveryLabSession): Promise<{
     !agent_v2.stall_offer_pending &&
     agent_v2.delivery_mode !== "degraded"
   ) {
-    const freeze = applySufficiencyFreezeToSession(sessionPending);
+    const freeze = await applySufficiencyFreezeToSession(sessionPending);
     if (freeze.ok) {
       sessionPending = withSessionProfileFlags({
         ...freeze.session,

@@ -1,5 +1,5 @@
-/**
- * S5 — Chat Freeze → Delivery production wire (sufficiency-end only).
+﻿/**
+ * S5 鈥?Chat Freeze 鈫?Delivery production wire (sufficiency-end only).
  *
  * Allowed: Stage3 decision sufficiency (evaluateDecisionSufficiency.canStop).
  * Forbidden triggers: purchase, report CTA, stall, MAX_COLLECTING_TURNS stop-loss.
@@ -181,10 +181,10 @@ export function freezeIdempotencyKey(
 /**
  * Apply freeze into an in-memory session slice (caller persists via C1).
  */
-export function applySufficiencyFreezeToSession(
+export async function applySufficiencyFreezeToSession(
   session: POJUSessionState,
   opts?: { now?: string },
-): FreezeWireResult {
+): Promise<FreezeWireResult> {
   const gate = canFreezeSessionOnSufficiency({
     session,
     trigger: "sufficiency_end_confirm",
@@ -213,7 +213,7 @@ export function applySufficiencyFreezeToSession(
     };
   }
   try {
-    const pack = freezeDraftForDelivery(gate.draft!, {
+    const pack = await freezeDraftForDelivery(gate.draft!, {
       session,
       now: opts?.now,
     });
@@ -261,10 +261,10 @@ export async function ensureSessionFrozenForDelivery(
     from_purchase_or_report_cta: opts?.from_purchase_or_report_cta,
   });
   if (!gate.allowed) {
-    return applySufficiencyFreezeToSession(session, { now: opts?.now });
+    return await applySufficiencyFreezeToSession(session, { now: opts?.now });
   }
 
-  const applied = applySufficiencyFreezeToSession(session, { now: opts?.now });
+  const applied = await applySufficiencyFreezeToSession(session, { now: opts?.now });
   if (!applied.ok || applied.skipped) return applied;
 
   const { commitDecisionContextChange } = await import(
@@ -350,3 +350,6 @@ export function resolveDeliveryDcPayload(session: POJUSessionState): {
     snapshot,
   };
 }
+
+
+

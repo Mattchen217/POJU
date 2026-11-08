@@ -1,7 +1,7 @@
 /**
- * S0 — DIR N/A Catalog SSOT & loader.
- * S1 — declare write-side catalog integration (DC-1/2/3/9).
- * S2 — Freeze compose loads ACTIVE catalog; ignore authority.dirCatalog.
+ * S0 閳?DIR N/A Catalog SSOT & loader.
+ * S1 閳?declare write-side catalog integration (DC-1/2/3/9).
+ * S2 閳?Freeze compose loads ACTIVE catalog; ignore authority.dirCatalog.
  *   pnpm test:intake-r6-dir-catalog
  */
 import assert from "node:assert/strict";
@@ -59,12 +59,12 @@ function e1ForFact(factId: string): ConfirmationEvent {
   };
 }
 
-function makeWriteSession(
+async function makeWriteSession(
   overrides: {
     dirId?: string;
     factId?: string;
   } = {},
-): POJUSessionState {
+): Promise<POJUSessionState> {
   const dirId = overrides.dirId ?? SSOT_DIR;
   const factId = overrides.factId ?? "fact_s1";
   const fact = {
@@ -115,7 +115,7 @@ function makeWriteSession(
     expires_at: "2026-12-01T00:00:00.000Z",
     confirmation_events: [e1ForFact(factId)],
   });
-  const na = buildProductionNaValidationContextFromSession(sessionShell, {
+  const na = await buildProductionNaValidationContextFromSession(sessionShell, {
     nowIso: WRITE_NOW,
   });
   const dirs = reaggregateDirsIntake([dir], [fact], [], [], [], na);
@@ -182,14 +182,14 @@ const EXPECTED_TOKENS: Record<string, readonly string[]> = {
   "DIR-EXIT-CRITERIA": ["explicit_no_exit_all_in"],
   "DIR-VALIDATION-CAPACITY": ["explicit_nothing_testable"],
   "DIR-STAKEHOLDERS": ["explicit_solo_decision"],
-  "DIR-REL-DYNAMICS": [],
-  "DIR-JOB-OFFER": [],
-  "DIR-BIZ-MODEL": [],
-  "DIR-LOCALE-MOVE": [],
-  "DIR-EDU-PATH": [],
+  "DIR-REL-DYNAMICS": ["topic_pack_not_applicable"],
+  "DIR-JOB-OFFER": ["topic_pack_not_applicable"],
+  "DIR-BIZ-MODEL": ["topic_pack_not_applicable"],
+  "DIR-LOCALE-MOVE": ["topic_pack_not_applicable"],
+  "DIR-EDU-PATH": ["topic_pack_not_applicable"],
 };
 
-function main() {
+async function main() {
   console.log("intake-r6-dir-catalog (S0)");
 
   assert.equal(DIR_NA_CATALOG_VERSION, 1);
@@ -201,7 +201,7 @@ function main() {
   if (!ok.ok) throw new Error("unreachable");
   assert.equal(ok.dir_catalog_version, 1);
   assert.equal(ok.entries.length, 20);
-  console.log("  PASS  loadDirNaCatalog(ACTIVE) → ok, version 1, 20 entries");
+  console.log("  PASS  loadDirNaCatalog(ACTIVE) 閳?ok, version 1, 20 entries");
 
   // Phase 2 id + token inventory
   const ids = new Set(ok.entries.map((e) => e.dir_id));
@@ -229,14 +229,14 @@ function main() {
   }
   console.log("  PASS  deep freeze (entries / entry / na_conditions)");
 
-  // Explicit undefined / null → missing (not ACTIVE)
+  // Explicit undefined / null 閳?missing (not ACTIVE)
   const missU = loadDirNaCatalog(undefined);
   assert.equal(missU.ok, false);
   if (!missU.ok) assert.equal(missU.reason_code, "dir_catalog_version_missing");
   const missN = loadDirNaCatalog(null);
   assert.equal(missN.ok, false);
   if (!missN.ok) assert.equal(missN.reason_code, "dir_catalog_version_missing");
-  console.log("  PASS  undefined/null → dir_catalog_version_missing");
+  console.log("  PASS  undefined/null 閳?dir_catalog_version_missing");
 
   // Invalid
   for (const bad of [1.1, 0, -1, Number.NaN] as const) {
@@ -244,7 +244,7 @@ function main() {
     assert.equal(r.ok, false);
     if (!r.ok) assert.equal(r.reason_code, "dir_catalog_version_invalid");
   }
-  console.log("  PASS  invalid versions → dir_catalog_version_invalid");
+  console.log("  PASS  invalid versions 閳?dir_catalog_version_invalid");
 
   // Unknown (non-ACTIVE absent)
   const unk = resolveDirNaCatalog(
@@ -262,7 +262,7 @@ function main() {
   );
   assert.equal(unk.ok, false);
   if (!unk.ok) assert.equal(unk.reason_code, "dir_catalog_version_unknown");
-  console.log("  PASS  999 → dir_catalog_version_unknown");
+  console.log("  PASS  999 閳?dir_catalog_version_unknown");
 
   // DC-4(1) ACTIVE absent from test-local registry
   const ssot = resolveDirNaCatalog(
@@ -272,9 +272,9 @@ function main() {
   );
   assert.equal(ssot.ok, false);
   if (!ssot.ok) assert.equal(ssot.reason_code, "dir_catalog_ssot_unavailable");
-  console.log("  PASS  ACTIVE∉registry → dir_catalog_ssot_unavailable");
+  console.log("  PASS  ACTIVE閳『egistry 閳?dir_catalog_ssot_unavailable");
 
-  // load_failed matrix — must not throw out
+  // load_failed matrix 閳?must not throw out
   const failHasThrow = resolveDirNaCatalog(
     1,
     registryThrowingOnHas(1),
@@ -376,7 +376,7 @@ function main() {
   console.log("\nS1 write-side catalog integration");
 
   {
-    const session = makeWriteSession();
+    const session = await makeWriteSession();
     const applied = applyDeclareDirNaToSession(
       session,
       WRITE_SESSION,
@@ -395,7 +395,7 @@ function main() {
         (e) => e.evidence_id === "na_ev_na-act-s1",
       ),
     );
-    console.log("  PASS  DC-1 registered DIR+condition → append");
+    console.log("  PASS  DC-1 registered DIR+condition 閳?append");
 
     const replay = applyDeclareDirNaToSession(
       applied.session,
@@ -405,11 +405,11 @@ function main() {
     );
     assert.equal(replay.outcome, "idempotent_skip");
     assert.equal((replay.session.na_declaration_actions ?? []).length, 1);
-    console.log("  PASS  DC-1 replay after catalog → idempotent_skip");
+    console.log("  PASS  DC-1 replay after catalog 閳?idempotent_skip");
   }
 
   {
-    const session = makeWriteSession();
+    const session = await makeWriteSession();
     const before = (session.na_declaration_actions ?? []).length;
     let threw: unknown;
     try {
@@ -439,11 +439,11 @@ function main() {
       (session.decision_context?.explicit_na_evidence ?? []).length,
       0,
     );
-    console.log("  PASS  DC-2 unregistered DIR → dir_not_in_catalog, no append");
+    console.log("  PASS  DC-2 unregistered DIR 閳?dir_not_in_catalog, no append");
   }
 
   {
-    const session = makeWriteSession();
+    const session = await makeWriteSession();
     let threw: unknown;
     try {
       applyDeclareDirNaToSession(
@@ -472,13 +472,13 @@ function main() {
       0,
     );
     console.log(
-      "  PASS  DC-3 unregistered condition → na_condition_not_in_catalog, no append",
+      "  PASS  DC-3 unregistered condition 閳?na_condition_not_in_catalog, no append",
     );
   }
 
   {
     // DC-9a: unregistered DIR + forged list containing real SSOT condition
-    const session = makeWriteSession();
+    const session = await makeWriteSession();
     let threw: unknown;
     try {
       applyDeclareDirNaToSession(
@@ -510,7 +510,7 @@ function main() {
 
   {
     // DC-9b: registered DIR + illegal condition; caller list includes legal SSOT code
-    const session = makeWriteSession();
+    const session = await makeWriteSession();
     let threw: unknown;
     try {
       applyDeclareDirNaToSession(
@@ -546,7 +546,7 @@ function main() {
   }
 
   {
-    // Pure mapping coverage only — not production Registry fault integration.
+    // Pure mapping coverage only 閳?not production Registry fault integration.
     // Assert all five loader failure reason_codes pass through unchanged.
     for (const reason of [
       "dir_catalog_version_missing",
@@ -564,16 +564,16 @@ function main() {
       if (!mapped.ok) assert.equal(mapped.reason_code, reason);
     }
     console.log(
-      "  PASS  load-fail pure mapping coverage — all 5 loader reason_codes (not production Registry integration)",
+      "  PASS  load-fail pure mapping coverage 閳?all 5 loader reason_codes (not production Registry integration)",
     );
   }
 
   // --- S2 Freeze compose (DC-1 Freeze / DC-8) ---
-  // Fail-closed !load.ok → FreezeError.code is code-reviewed, not runtime-tested.
+  // Fail-closed !load.ok 閳?FreezeError.code is code-reviewed, not runtime-tested.
   console.log("\nS2 Freeze compose catalog integration");
 
   {
-    const session = makeWriteSession();
+    const session = await makeWriteSession();
     const applied = applyDeclareDirNaToSession(
       session,
       WRITE_SESSION,
@@ -582,7 +582,7 @@ function main() {
     );
     assert.equal(applied.outcome, "appended");
     const draft = applied.session.decision_context!;
-    const pack = freezeDraftForDelivery(structuredClone(draft), {
+    const pack = await freezeDraftForDelivery(structuredClone(draft), {
       session: applied.session,
       now: WRITE_NOW,
     });
@@ -594,13 +594,13 @@ function main() {
       "n_a",
       "DC-1 Freeze: SSOT-authorized Session N/A must yield DIR n_a",
     );
-    console.log("  PASS  DC-1 Freeze SSOT pair → DIR n_a via production compose");
+    console.log("  PASS  DC-1 Freeze SSOT pair 閳?DIR n_a via production compose");
   }
 
   {
     // Strengthened DC-8: Session owns full N/A stack for a non-SSOT pair;
     // forged authority.dirCatalog lists that pair; production compose must ignore it.
-    const session = makeWriteSession({ dirId: FORGE_DIR, factId: "fact_forge" });
+    const session = await makeWriteSession({ dirId: FORGE_DIR, factId: "fact_forge" });
     const source_ref = {
       kind: "reality_fact" as const,
       fact_id: "fact_forge",
@@ -662,7 +662,7 @@ function main() {
         dirCatalog: [{ dir_id: FORGE_DIR, na_conditions: [FORGE_CODE] }],
       },
     };
-    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
+    const pack = await freezeDraftForDelivery(structuredClone(dc), forgedOpts);
     assert.equal(pack.frozen.status, "final");
     assert.notEqual(
       pack.frozen.dirs[0]!.current_state,
@@ -671,11 +671,11 @@ function main() {
     );
     assert.equal(pack.frozen.dirs[0]!.current_state, "known");
     console.log(
-      "  PASS  DC-8 forged dirCatalog ignored — Session N/A for non-SSOT pair → not n_a",
+      "  PASS  DC-8 forged dirCatalog ignored 閳?Session N/A for non-SSOT pair 閳?not n_a",
     );
   }
 
   console.log("\nAll intake-r6-dir-catalog (S0+S1+S2) checks passed.");
 }
 
-main();
+main().catch((e)=>{console.error(e);process.exit(1);});

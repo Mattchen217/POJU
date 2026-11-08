@@ -1,5 +1,5 @@
 /**
- * S8 — freeze existing unlocked lab DC (if sufficient) + bootstrap → thesis.
+ * S8 鈥?freeze existing unlocked lab DC (if sufficient) + bootstrap 鈫?thesis.
  *
  *   pnpm exec tsx scripts/s8-freeze-and-thesis.ts lab_xxx
  */
@@ -75,7 +75,7 @@ async function main() {
   });
 
   if (lab.chat_session.decision_context?.status === "draft") {
-    const freeze = applySufficiencyFreezeToSession(lab.chat_session);
+    const freeze = await applySufficiencyFreezeToSession(lab.chat_session);
     console.log("[s8-ft] freeze", {
       ok: freeze.ok,
       skipped: freeze.ok ? freeze.skipped : undefined,
@@ -114,7 +114,7 @@ async function main() {
     snapshot: Boolean(lab.source.decision_context_snapshot),
   });
 
-  // bootstrap → approve → thesis
+  // bootstrap 鈫?approve 鈫?thesis
   for (const step of ["bootstrap", "thesis.gen"] as const) {
     console.log(`[s8-ft] run ${step}`);
     let result = await runLabStepV3(lab, step);

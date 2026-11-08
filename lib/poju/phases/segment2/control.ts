@@ -331,7 +331,7 @@ export async function startSegment2AfterGateConfirm(input: {
 
   if ("already_complete" in created && created.already_complete) {
     return {
-      session: finalizeSegment2JobSuccess({
+      session: await finalizeSegment2JobSuccess({
         session: sessionPending,
         locale,
         breakthrough_core: created.breakthrough_core,
@@ -446,7 +446,7 @@ export async function startSegment2Regenerate(input: {
 
   if ("already_complete" in created && created.already_complete) {
     return {
-      session: finalizeSegment2JobSuccess({
+      session: await finalizeSegment2JobSuccess({
         session: sessionPending,
         locale,
         breakthrough_core: created.breakthrough_core,
@@ -542,7 +542,7 @@ export function finalizeSegment2ReportSuccess(input: {
 }
 
 /** @deprecated Prefer finalizeSegment2ReportSuccess + finalizeSegment2AgendaBridgeSuccess. */
-export function finalizeSegment2JobSuccess(input: {
+export async function finalizeSegment2JobSuccess(input: {
   session: POJUSessionState;
   locale: string;
   breakthrough_core: BreakthroughCore;
@@ -550,7 +550,7 @@ export function finalizeSegment2JobSuccess(input: {
   model?: string;
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
-}): POJUSessionState {
+}): Promise<POJUSessionState> {
   const locale = resolvePivotSessionLang(input.session, input.locale);
   const withReport = finalizeSegment2ReportSuccess({
     session: input.session,
@@ -563,7 +563,7 @@ export function finalizeSegment2JobSuccess(input: {
   if (!input.investigation_agenda?.length && !input.breakthrough_core.first_question) {
     return withReport;
   }
-  return finalizeSegment2AgendaBridgeSuccess({
+  return await finalizeSegment2AgendaBridgeSuccess({
     session: withReport,
     locale,
     investigation_agenda: input.investigation_agenda,
@@ -923,7 +923,7 @@ export async function enqueueSegment2AgendaAutoRetry(input: {
 }
 
 /** Call B success — append bridge question + set agenda; UI unlocks. */
-export function finalizeSegment2AgendaBridgeSuccess(input: {
+export async function finalizeSegment2AgendaBridgeSuccess(input: {
   session: POJUSessionState;
   locale: string;
   investigation_agenda: AgendaItem[];
@@ -932,7 +932,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
   model?: string;
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
-}): POJUSessionState {
+}): Promise<POJUSessionState> {
   const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const base = ensureAgentV2(session);
@@ -1001,7 +1001,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
 
   // S7 — Call B: DIR + Agenda mapping (sync in-memory; C1 via persistCallBDcOnSession).
   try {
-    const applied = applyCallBToSessionDc(next, input.investigation_agenda);
+    const applied = await applyCallBToSessionDc(next, input.investigation_agenda);
     if (applied.applied) next = applied.session;
   } catch (e) {
     console.warn(
@@ -1098,7 +1098,7 @@ export async function startSegment2AgendaRegenerate(input: {
   });
   if (isAgendaInlineComplete(created)) {
     return {
-      session: finalizeSegment2AgendaBridgeSuccess({
+      session: await finalizeSegment2AgendaBridgeSuccess({
         session: cleaned,
         locale,
         investigation_agenda: created.investigation_agenda,

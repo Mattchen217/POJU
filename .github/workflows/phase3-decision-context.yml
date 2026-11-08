@@ -24,6 +24,8 @@ on:
       - "lib/poju/collecting-dc-turn.ts"
       - "lib/poju/investigation-agenda.ts"
       - "lib/poju/types.ts"
+      - "lib/poju/phases/**"
+      - "components/poju/POJUChatUI.tsx"
       - "lib/llm/pro/final-delivery.ts"
       - "lib/llm/pro/delivery/page-feed-matrix.ts"
       - "lib/llm/pro/delivery/page-feed-dc-contract.ts"
@@ -38,6 +40,7 @@ on:
       - "lib/llm/pro/delivery/pipeline-v3/page-feed-policy.ts"
       - "app/api/poju/final-delivery/route.ts"
       - "scripts/test-intake-r6-*.ts"
+      - "scripts/test-intake-r6-s9-production-authority-sources.ts"
       - "scripts/fixtures/**"
       - "scripts/test-decision-context-phase1.ts"
       - "scripts/test-decision-context-stage4.ts"
@@ -50,6 +53,7 @@ on:
     branches:
       - "feat/decision-context-phase1"
       - "docs/decision-intake-2.0-phase-3-design"
+      - "feat/s9-production-na-authority-sources"
     paths:
       - "lib/poju/decision-context/**"
       - "lib/poju/generation/**"
@@ -72,6 +76,8 @@ on:
       - "lib/poju/collecting-dc-turn.ts"
       - "lib/poju/investigation-agenda.ts"
       - "lib/poju/types.ts"
+      - "lib/poju/phases/**"
+      - "components/poju/POJUChatUI.tsx"
       - "lib/llm/pro/final-delivery.ts"
       - "lib/llm/pro/delivery/page-feed-matrix.ts"
       - "lib/llm/pro/delivery/page-feed-dc-contract.ts"
@@ -86,6 +92,7 @@ on:
       - "lib/llm/pro/delivery/pipeline-v3/page-feed-policy.ts"
       - "app/api/poju/final-delivery/route.ts"
       - "scripts/test-intake-r6-*.ts"
+      - "scripts/test-intake-r6-s9-production-authority-sources.ts"
       - "scripts/fixtures/**"
       - "scripts/test-decision-context-phase1.ts"
       - "scripts/test-decision-context-stage4.ts"
@@ -100,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # package.json packageManager (pnpm@10.33.2) is authoritative — do not pin version.
+      # package.json packageManager (pnpm@10.33.2) is authoritative 鈥?do not pin version.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -137,6 +144,9 @@ jobs:
           pnpm test:intake-r6-write-freeze-consistency
           pnpm test:intake-r6-na-cas
           pnpm test:decision-context
+      - name: Intake 2.0 S9 regression (production N/A authority sources)
+        run: |
+          pnpm test:intake-r6-s9-production-authority-sources
       - name: Intake 2.0 S8 regression (N/A authority regression closure)
         run: |
           pnpm test:intake-r6-barrel-export-boundary

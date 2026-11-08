@@ -1,5 +1,5 @@
 /**
- * Stage 3.2 — Freeze / Versioning Intake resolver unification.
+ * Stage 3.2 鈥?Freeze / Versioning Intake resolver unification.
  *   pnpm exec tsx scripts/test-intake-r6-freeze-versioning.ts
  *   pnpm test:intake-r6-freeze-versioning
  */
@@ -171,7 +171,7 @@ async function main() {
   {
     const draft = makeSufficientDraft();
     const session = sessionOf(draft);
-    const na = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
     const { frozen } = freezeDecisionContext(draft, {
       stage3_sufficiency_end: true,
       now: NOW,
@@ -181,7 +181,7 @@ async function main() {
     assert.equal(frozen.status, "final");
     assert.equal(frozen.dirs[0]!.current_state, "known");
     assert.ok(frozen.content_hash);
-    console.log("  PASS  Freeze uses Intake → known with linked confirmed fact");
+    console.log("  PASS  Freeze uses Intake 鈫?known with linked confirmed fact");
 
     assert.throws(
       () =>
@@ -203,7 +203,7 @@ async function main() {
     );
     console.log("  PASS  CTA / stall still blocked");
 
-    // Agenda covered ≠ known: DIR with no matching facts stays unknown → freeze blocked if critical
+    // Agenda covered 鈮?known: DIR with no matching facts stays unknown 鈫?freeze blocked if critical
     const agendaish = makeSufficientDraft({
       reality_facts: [],
       dirs: [
@@ -214,7 +214,7 @@ async function main() {
         }),
       ],
     });
-    // re-seed empty facts → critical unknown blocks
+    // re-seed empty facts 鈫?critical unknown blocks
     assert.throws(
       () =>
         freezeDecisionContext(agendaish, {
@@ -227,7 +227,7 @@ async function main() {
     );
     console.log("  PASS  critical unknown (no role/DIR facts) blocks Freeze");
 
-    // Missing DIR link — Intake unknown vs legacy known; freeze of non-critical unknown may pass with boundaries
+    // Missing DIR link 鈥?Intake unknown vs legacy known; freeze of non-critical unknown may pass with boundaries
     const noLinkFact = {
       ...draft.reality_facts[0]!,
       related_dir_ids: [] as string[],
@@ -248,7 +248,7 @@ async function main() {
     const legacy = aggregateDirState(noLinkDraft.dirs[0]!, [noLinkFact], []);
     assert.equal(intake.current_state, "unknown");
     assert.equal(legacy.current_state, "known");
-    console.log("  PASS  no DIR link → Intake unknown; legacy OR would be known");
+    console.log("  PASS  no DIR link 鈫?Intake unknown; legacy OR would be known");
 
     // Scheme A constraint
     const hardDir = baseDir({
@@ -376,7 +376,7 @@ async function main() {
       "na_condition_not_in_catalog",
     );
     console.log(
-      "  PASS  [A-Pure] N/A fail-closed without catalog (direct cause: na_condition_not_in_catalog); valid+catalog → n_a",
+      "  PASS  [A-Pure] N/A fail-closed without catalog (direct cause: na_condition_not_in_catalog); valid+catalog 鈫?n_a",
     );
 
     // Precondition: withCat === n_a. Only evidence.revoked flipped.
@@ -456,18 +456,18 @@ async function main() {
         },
       ],
     });
-    const prodReason = (s: POJUSessionState, ev: typeof prodNaEv) =>
+    const prodReason = async (s: POJUSessionState, ev: typeof prodNaEv) =>
       reasonOf(
         ev,
-        buildProductionNaValidationContextFromSession(s, { nowIso: NOW }),
+        await buildProductionNaValidationContextFromSession(s, { nowIso: NOW }),
       );
 
-    const prodValid = reaggregateDirsOnSession(sessProd, prodDraft.dirs, {
+    const prodValid = await reaggregateDirsOnSession(sessProd, prodDraft.dirs, {
       nowIso: NOW,
     });
     assert.equal(prodValid[0]!.current_state, "n_a");
-    assert.equal(prodReason(sessProd, prodNaEv), "ok");
-    console.log("  PASS  [A-Prod] ACTIVE legal pair → n_a via production reaggregation");
+    assert.equal(await prodReason(sessProd, prodNaEv), "ok");
+    console.log("  PASS  [A-Prod] ACTIVE legal pair 鈫?n_a via production reaggregation");
 
     // Precondition: A-Pure withCat made the same DIR-A triad n_a. Forged catalog
     // arrives as a non-literal opts object (no production field accepts it).
@@ -476,11 +476,11 @@ async function main() {
       authority: { dirCatalog: FIXTURE_CATALOG },
       dirCatalog: FIXTURE_CATALOG,
     };
-    const prodForged = reaggregateDirsOnSession(sessNa, withNaDraft.dirs, forgedOpts);
+    const prodForged = await reaggregateDirsOnSession(sessNa, withNaDraft.dirs, forgedOpts);
     assert.notEqual(prodForged[0]!.current_state, "n_a");
-    assert.equal(prodReason(sessNa, naEv), "na_condition_not_in_catalog");
+    assert.equal(await prodReason(sessNa, naEv), "na_condition_not_in_catalog");
     console.log(
-      "  PASS  [A-Prod] forged caller catalog for non-ACTIVE DIR-A → not n_a (direct cause: na_condition_not_in_catalog)",
+      "  PASS  [A-Prod] forged caller catalog for non-ACTIVE DIR-A 鈫?not n_a (direct cause: na_condition_not_in_catalog)",
     );
 
     // Precondition: prodValid === n_a. Only evidence.revoked flipped.
@@ -489,11 +489,11 @@ async function main() {
       { ...prodDraft, explicit_na_evidence: [prodRevokedEv] },
       { na_declaration_actions: sessProd.na_declaration_actions },
     );
-    const prodRevoked = reaggregateDirsOnSession(sessProdRevoked, prodDraft.dirs, {
+    const prodRevoked = await reaggregateDirsOnSession(sessProdRevoked, prodDraft.dirs, {
       nowIso: NOW,
     });
     assert.notEqual(prodRevoked[0]!.current_state, "n_a");
-    assert.equal(prodReason(sessProdRevoked, prodRevokedEv), "revoked");
+    assert.equal(await prodReason(sessProdRevoked, prodRevokedEv), "revoked");
     // Precondition: prodValid === n_a. Only classification.context_id changed.
     const sessProdCross = sessionOf(
       {
@@ -504,12 +504,12 @@ async function main() {
       },
       { na_declaration_actions: sessProd.na_declaration_actions },
     );
-    const prodCross = reaggregateDirsOnSession(sessProdCross, prodDraft.dirs, {
+    const prodCross = await reaggregateDirsOnSession(sessProdCross, prodDraft.dirs, {
       nowIso: NOW,
     });
     assert.notEqual(prodCross[0]!.current_state, "n_a");
     assert.equal(
-      prodReason(sessProdCross, prodNaEv),
+      await prodReason(sessProdCross, prodNaEv),
       "explicit_na_classification_missing",
     );
     console.log(
@@ -588,7 +588,7 @@ async function main() {
     const { frozen } = freezeDecisionContext(draft, {
       stage3_sufficiency_end: true,
       now: NOW,
-      naValidation: buildProductionNaValidationContextFromSession(session, {
+      naValidation: await buildProductionNaValidationContextFromSession(session, {
         nowIso: NOW,
       }),
       expectedSessionId: SESS,
@@ -624,7 +624,7 @@ async function main() {
       v2.dirs.find((d) => d.dir_id === "DIR-A")?.satisfaction,
       "reaggregated_after_v2_supplement",
     );
-    // V1 immutable — mutating v2 facts must not change frozenCopy
+    // V1 immutable 鈥?mutating v2 facts must not change frozenCopy
     v2.reality_facts.push({
       ...extra,
       fact_id: "f_should_not_touch_v1",
@@ -671,7 +671,7 @@ async function main() {
       conflictV2.draft.dirs.find((d) => d.dir_id === "DIR-A")?.current_state,
       "conflict",
     );
-    console.log("  PASS  V2 add_conflicts → Intake conflict state");
+    console.log("  PASS  V2 add_conflicts 鈫?Intake conflict state");
   }
 
   // ---------- C. Production persist ----------
@@ -768,8 +768,8 @@ async function main() {
     assert.ok(versionsAfterFreeze.length >= 1);
     console.log("  PASS  ensureSessionFrozenForDelivery persist + reload");
 
-    // Final immutable via assert path — second freeze skips
-    const again = applySufficiencyFreezeToSession(sess);
+    // Final immutable via assert path 鈥?second freeze skips
+    const again = await applySufficiencyFreezeToSession(sess);
     assert.equal(again.ok, true);
     assert.equal("skipped" in again && again.skipped, true);
 
@@ -815,7 +815,7 @@ async function main() {
       operation_id: v2.idempotency_key,
     });
     assert.equal(v2again.ok, true);
-    // already draft — not_final skip OR idempotent
+    // already draft 鈥?not_final skip OR idempotent
     assert.ok(
       ("skipped" in v2again && v2again.skipped) ||
         sess.decision_context?.version === 2,
@@ -877,7 +877,7 @@ async function main() {
   {
     const draft = makeSufficientDraft();
     const session = sessionOf(draft);
-    const na = buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(session, { nowIso: NOW });
     const dir = draft.dirs[0]!;
 
     const agg = aggregateDirStateIntake(
@@ -925,7 +925,7 @@ async function main() {
     });
     assert.equal(frozen.dirs[0]!.current_state, agg.current_state);
 
-    const prodAgg = reaggregateDirsOnSession(session, draft.dirs, {
+    const prodAgg = await reaggregateDirsOnSession(session, draft.dirs, {
       nowIso: NOW,
     });
     assert.equal(prodAgg[0]!.current_state, frozen.dirs[0]!.current_state);
@@ -940,31 +940,28 @@ async function main() {
     const draft = makeSufficientDraft();
     const session = sessionOf(draft);
 
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(
           { ...draft, context_id: "OTHER_CTX" },
           { session, now: NOW },
         ),
       (e: unknown) =>
         e instanceof Error && String(e.message).includes("context_id mismatch"),
     );
-    console.log("  PASS  context_id mismatch → reject");
+    console.log("  PASS  context_id mismatch 鈫?reject");
 
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(
           { ...draft, version: draft.version + 1 },
           { session, now: NOW },
         ),
       (e: unknown) =>
         e instanceof Error && String(e.message).includes("version mismatch"),
     );
-    console.log("  PASS  version mismatch → reject");
+    console.log("  PASS  version mismatch 鈫?reject");
 
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(draft, {
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(draft, {
           session: sessionOf({ ...draft, status: "final", content_hash: "a".repeat(64) }),
           now: NOW,
         }),
@@ -972,11 +969,10 @@ async function main() {
         e instanceof Error &&
         String(e.message).includes("session DC status must be draft"),
     );
-    console.log("  PASS  session final + draft draft → reject");
+    console.log("  PASS  session final + draft draft 鈫?reject");
 
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(
           {
             ...draft,
             reality_facts: [
@@ -992,11 +988,10 @@ async function main() {
         e instanceof Error &&
         String(e.message).includes("reality_facts"),
     );
-    console.log("  PASS  facts diverge → reject");
+    console.log("  PASS  facts diverge 鈫?reject");
 
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(
           {
             ...draft,
             explicit_na_evidence: [
@@ -1018,11 +1013,10 @@ async function main() {
         e instanceof Error &&
         String(e.message).includes("explicit_na_evidence"),
     );
-    console.log("  PASS  Explicit N/A Evidence diverge → reject");
+    console.log("  PASS  Explicit N/A Evidence diverge 鈫?reject");
 
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(
           {
             ...draft,
             constraints: [
@@ -1045,9 +1039,8 @@ async function main() {
       (e: unknown) =>
         e instanceof Error && String(e.message).includes("constraints"),
     );
-    assert.throws(
-      () =>
-        freezeDraftForDelivery(
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(
           {
             ...draft,
             conflicts: [
@@ -1075,9 +1068,9 @@ async function main() {
       (e: unknown) =>
         e instanceof Error && String(e.message).includes("conflicts"),
     );
-    console.log("  PASS  constraints / conflicts diverge → reject");
+    console.log("  PASS  constraints / conflicts diverge 鈫?reject");
 
-    const pack = freezeDraftForDelivery(structuredClone(draft), {
+    const pack = await freezeDraftForDelivery(structuredClone(draft), {
       session,
       now: NOW,
     });
@@ -1085,11 +1078,11 @@ async function main() {
     assert.ok(pack.frozen.content_hash);
     assert.equal(pack.version_snapshot.content_hash, pack.frozen.content_hash);
     assert.equal(pack.binding.context_hash, pack.frozen.content_hash);
-    console.log("  PASS  identical snapshot → Freeze OK");
+    console.log("  PASS  identical snapshot 鈫?Freeze OK");
 
     // Persist + reload: use ensureSessionFrozen path already seeded in C; also
     // verify matching clone freeze then in-memory apply keeps hash.
-    const applied = applySufficiencyFreezeToSession(session, { now: NOW });
+    const applied = await applySufficiencyFreezeToSession(session, { now: NOW });
     assert.equal(applied.ok, true);
     if (!applied.ok || ("skipped" in applied && applied.skipped)) {
       throw new Error("expected matching freeze apply");
@@ -1103,18 +1096,18 @@ async function main() {
       applied.pack.frozen.content_hash,
     );
     console.log(
-      "  PASS  matching Freeze → version snapshot + content_hash consistent",
+      "  PASS  matching Freeze 鈫?version snapshot + content_hash consistent",
     );
   }
 
-  // F1–F4 Freeze authority regression moved to isolated S5 suite:
+  // F1鈥揊4 Freeze authority regression moved to isolated S5 suite:
   //   scripts/test-intake-r6-freeze-authority-regression.ts
   //   (pnpm test:intake-r6-freeze-authority-regression; also chained from
   //    test:intake-r6-freeze-versioning). ACTIVE Catalog fixtures only.
 
-  console.log("\nAll intake-r6-freeze-versioning (A–E) checks passed.");
+  console.log("\nAll intake-r6-freeze-versioning (A鈥揈) checks passed.");
   console.log(
-    "  (F1–F4 → test:intake-r6-freeze-authority-regression)",
+    "  (F1鈥揊4 鈫?test:intake-r6-freeze-authority-regression)",
   );
 }
 

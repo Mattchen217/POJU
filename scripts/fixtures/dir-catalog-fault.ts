@@ -25,11 +25,12 @@ export function armActiveCatalogFault(
   let restored = false;
   const isProductionRegistry = (m: Map<unknown, unknown>): boolean => {
     const snap: unknown = originalGet.call(m, activeVersion);
-    return (
-      typeof snap === "object" &&
-      snap !== null &&
-      Reflect.get(snap, "entries") === activeEntries
-    );
+    if (typeof snap !== "object" || snap === null) return false;
+    // Structural match — avoid dual-module identity on the entries array import.
+    if (Reflect.get(snap, "dir_catalog_version") !== activeVersion) return false;
+    const entries = Reflect.get(snap, "entries");
+    if (!Array.isArray(entries) || entries.length !== activeEntries.length) return false;
+    return true;
   };
   Map.prototype.has = function faultHas(this: Map<unknown, unknown>, key: unknown): boolean {
     if (key === activeVersion && isProductionRegistry(this)) {

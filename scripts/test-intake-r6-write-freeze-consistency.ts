@@ -1,5 +1,5 @@
 /**
- * S4 — Write / Freeze consistency (C01–C25).
+ * S4 鈥?Write / Freeze consistency (C01鈥揅25).
  *   pnpm test:intake-r6-write-freeze-consistency
  *
  * Production entries: declareDirNotApplicable / revokeDirNaDeclaration /
@@ -16,7 +16,7 @@ const NOW = "2026-11-05T12:00:00.000Z";
 const SSOT_DIR = "DIR-DEF-UNACCEPTABLE";
 const SSOT_CODE = "explicit_no_hard_red_lines";
 const T_ACTION = "2026-12-05T12:00:00.000Z"; // NOW + 30d
-const T_CLS = "2027-01-04T12:00:00.000Z"; // NOW + 60d — both future, unequal
+const T_CLS = "2027-01-04T12:00:00.000Z"; // NOW + 60d 鈥?both future, unequal
 
 let passed = 0;
 let failed = 0;
@@ -52,7 +52,7 @@ async function check(
 }
 
 async function main() {
-  console.log("intake-r6-write-freeze-consistency (S4 C01–C25)");
+  console.log("intake-r6-write-freeze-consistency (S4 C01鈥揅25)");
 
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
     "../lib/db/poju-db"
@@ -278,14 +278,14 @@ async function main() {
     });
   }
 
-  function freezeNa(session: POJUSessionState) {
+  async function freezeNa(session: POJUSessionState) {
     const dc = session.decision_context!;
-    return buildFreezeNaValidationFromSession(session, dc, { now: NOW });
+    return await buildFreezeNaValidationFromSession(session, dc, { now: NOW });
   }
 
-  function dirStateAfterAgg(session: POJUSessionState): string | undefined {
+  async function dirStateAfterAgg(session: POJUSessionState): Promise<string | undefined> {
     const dc = session.decision_context!;
-    const na = freezeNa(session);
+    const na = await freezeNa(session);
     const dirs = reaggregateDirsIntake(
       dc.dirs,
       dc.reality_facts,
@@ -297,15 +297,15 @@ async function main() {
     return dirs.find((d) => d.dir_id === SSOT_DIR)?.current_state;
   }
 
-  function assertNotNa(session: POJUSessionState, why: string) {
-    const na = freezeNa(session);
+  async function assertNotNa(session: POJUSessionState, why: string) {
+    const na = await freezeNa(session);
     const validated = findValidatedDirLevelNa(
       SSOT_DIR,
       session.decision_context?.explicit_na_evidence,
       na,
     );
     assert.equal(validated, null, `${why}: findValidatedDirLevelNa must be null`);
-    const state = dirStateAfterAgg(session);
+    const state = await dirStateAfterAgg(session);
     assert.notEqual(state, "n_a", `${why}: DIR must not be n_a (got ${state})`);
   }
 
@@ -333,8 +333,8 @@ async function main() {
     };
   }
 
-  // ========== C01–C06 legal write → persist → n_a → freeze compose ==========
-  console.log("\n== C01–C06 legal write / persist / freeze ==");
+  // ========== C01鈥揅06 legal write 鈫?persist 鈫?n_a 鈫?freeze compose ==========
+  console.log("\n== C01鈥揅06 legal write / persist / freeze ==");
 
   const sidMain = await seedDraftSession("main");
   const inputMain = declareInput("main");
@@ -398,10 +398,10 @@ async function main() {
     );
   });
 
-  await check("C03 reaggregate → DIR n_a", async () => {
+  await check("C03 reaggregate 鈫?DIR n_a", async () => {
     const s = (await loadPOJUSession(sidMain))!;
-    assert.equal(dirStateAfterAgg(s), "n_a");
-    const na = freezeNa(s);
+    assert.equal(await dirStateAfterAgg(s), "n_a");
+    const na = await freezeNa(s);
     assert.ok(
       findValidatedDirLevelNa(
         SSOT_DIR,
@@ -411,11 +411,11 @@ async function main() {
     );
   });
 
-  await check("C04 freeze compose → frozen DIR n_a", async () => {
+  await check("C04 freeze compose 鈫?frozen DIR n_a", async () => {
     const s = (await loadPOJUSession(sidMain))!;
     // Reaggregate dirs onto draft before freeze so sufficiency sees n_a.
     const dc = s.decision_context!;
-    const na = freezeNa(s);
+    const na = await freezeNa(s);
     const dirs = reaggregateDirsIntake(
       dc.dirs,
       dc.reality_facts,
@@ -439,7 +439,7 @@ async function main() {
       }),
     });
     const s2 = (await loadPOJUSession(sidMain))!;
-    const pack = freezeDraftForDelivery(
+    const pack = await freezeDraftForDelivery(
       structuredClone(s2.decision_context!),
       { session: s2, now: NOW },
     );
@@ -455,7 +455,7 @@ async function main() {
     // still draft after C04 compose-only; re-seed dirs if needed
     const dc = s.decision_context!;
     assert.equal(dc.status, "draft");
-    const pack = freezeDraftForDelivery(structuredClone(dc), {
+    const pack = await freezeDraftForDelivery(structuredClone(dc), {
       session: s,
       now: NOW,
     });
@@ -480,7 +480,7 @@ async function main() {
   });
 
   // ========== C07 / C08 forged / bad membership ==========
-  console.log("\n== C07–C08 catalog membership ==");
+  console.log("\n== C07鈥揅08 catalog membership ==");
 
   await check("C07 forged dir_na_conditions ignored (legal SSOT still ok)", async () => {
     const sid = await seedDraftSession("c07");
@@ -492,7 +492,7 @@ async function main() {
     );
     assert.equal(r.outcome, "appended");
     const s = (await loadPOJUSession(sid))!;
-    assert.equal(dirStateAfterAgg(s), "n_a");
+    assert.equal(await dirStateAfterAgg(s), "n_a");
   });
 
   await check("C08 bad DIR/condition write reject", async () => {
@@ -515,7 +515,7 @@ async function main() {
   });
 
   // ========== C09 / C10 tamper fixtures ==========
-  console.log("\n== C09–C10 binding tampers ==");
+  console.log("\n== C09鈥揅10 binding tampers ==");
 
   async function legalThen(
     tag: string,
@@ -523,7 +523,7 @@ async function main() {
     const sid = await seedDraftSession(tag);
     await declareDirNotApplicable(sid, declareInput(tag));
     const s = (await loadPOJUSession(sid))!;
-    assert.equal(dirStateAfterAgg(s), "n_a", `${tag} setup must be n_a`);
+    assert.equal(await dirStateAfterAgg(s), "n_a", `${tag} setup must be n_a`);
     return s;
   }
 
@@ -534,7 +534,7 @@ async function main() {
         ? { ...c, declaration_action_id: "na-act-WRONG" }
         : c,
     );
-    assertNotNa(tampered, "C09a");
+    await assertNotNa(tampered, "C09a");
   });
 
   await check("C09b classification dir_id / condition mismatch", async () => {
@@ -544,7 +544,7 @@ async function main() {
         ? { ...c, dir_id: "DIR-DEF-QUESTION" }
         : c,
     );
-    assertNotNa(tampered, "C09b");
+    await assertNotNa(tampered, "C09b");
   });
 
   await check("C09c classification source_ref mismatch", async () => {
@@ -557,7 +557,7 @@ async function main() {
           }
         : c,
     );
-    assertNotNa(tampered, "C09c");
+    await assertNotNa(tampered, "C09c");
   });
 
   await check("C09d classification context_id / turn mismatch", async () => {
@@ -567,11 +567,11 @@ async function main() {
         ? { ...c, declaration_turn_id: "turn_OTHER" }
         : c,
     );
-    assertNotNa(tampered, "C09d");
+    await assertNotNa(tampered, "C09d");
   });
 
   await check(
-    "C09e both unexpired but unequal expires_at → not n_a",
+    "C09e both unexpired but unequal expires_at 鈫?not n_a",
     async () => {
       const sid = await seedDraftSession("c09e");
       await declareDirNotApplicable(
@@ -579,7 +579,7 @@ async function main() {
         declareInput("c09e", { expires_at: T_ACTION }),
       );
       const s = (await loadPOJUSession(sid))!;
-      assert.equal(dirStateAfterAgg(s), "n_a");
+      assert.equal(await dirStateAfterAgg(s), "n_a");
       // Tamper ONLY Classification.expires_at to a different future ISO.
       const tampered = withTamperedClassification(s, (c) =>
         c.declaration_action_id === "na-act-c09e"
@@ -598,11 +598,11 @@ async function main() {
       // Both still in the future relative to NOW.
       assert.ok(Date.parse(action.expires_at!) > Date.parse(NOW));
       assert.ok(Date.parse(cls.expires_at!) > Date.parse(NOW));
-      assertNotNa(tampered, "C09e");
+      await assertNotNa(tampered, "C09e");
     },
   );
 
-  await check("C10a evidence_id only wrong → not n_a", async () => {
+  await check("C10a evidence_id only wrong 鈫?not n_a", async () => {
     const s = await legalThen("c10a");
     const tampered = withTamperedEvidence(s, (e) =>
       e.evidence_id === "na_ev_na-act-c10a"
@@ -619,13 +619,13 @@ async function main() {
     assert.equal(ev.na_condition_code, SSOT_CODE);
     assert.equal(ev.written_by, "code");
     assert.equal(ev.revoked, false);
-    const na = freezeNa(tampered);
+    const na = await freezeNa(tampered);
     const result = validateExplicitNaEvidence(ev, na);
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.reason_code, "evidence_id_action_mismatch");
     }
-    assertNotNa(tampered, "C10a");
+    await assertNotNa(tampered, "C10a");
   });
 
   await check("C10b evidence dir/condition mismatch", async () => {
@@ -635,7 +635,7 @@ async function main() {
         ? { ...e, dir_id: "DIR-DEF-QUESTION" }
         : e,
     );
-    assertNotNa(tampered, "C10b");
+    await assertNotNa(tampered, "C10b");
   });
 
   await check("C10c evidence source_ref mismatch", async () => {
@@ -649,7 +649,7 @@ async function main() {
           }
         : e,
     );
-    assertNotNa(tampered, "C10c");
+    await assertNotNa(tampered, "C10c");
   });
 
   await check("C10d evidence target/type wrong", async () => {
@@ -671,13 +671,13 @@ async function main() {
           } as ExplicitNaEvidence)
         : e,
     );
-    assertNotNa(tampered, "C10d");
+    await assertNotNa(tampered, "C10d");
   });
 
-  // ========== C11–C14 revoke / flags / expiry ==========
-  console.log("\n== C11–C14 revoke / flags / expiry ==");
+  // ========== C11鈥揅14 revoke / flags / expiry ==========
+  console.log("\n== C11鈥揅14 revoke / flags / expiry ==");
 
-  await check("C11 revoke → not n_a", async () => {
+  await check("C11 revoke 鈫?not n_a", async () => {
     const sid = await seedDraftSession("c11");
     await declareDirNotApplicable(sid, declareInput("c11"));
     await revokeDirNaDeclaration(sid, {
@@ -692,26 +692,26 @@ async function main() {
       )?.revoked,
       true,
     );
-    assertNotNa(s, "C11");
+    await assertNotNa(s, "C11");
   });
 
-  await check("C12 classification revoked flag → not n_a", async () => {
+  await check("C12 classification revoked flag 鈫?not n_a", async () => {
     const s = await legalThen("c12");
     const tampered = withTamperedClassification(s, (c) =>
       c.declaration_action_id === "na-act-c12" ? { ...c, revoked: true } : c,
     );
-    assertNotNa(tampered, "C12");
+    await assertNotNa(tampered, "C12");
   });
 
-  await check("C13 evidence revoked flag → not n_a", async () => {
+  await check("C13 evidence revoked flag 鈫?not n_a", async () => {
     const s = await legalThen("c13");
     const tampered = withTamperedEvidence(s, (e) =>
       e.evidence_id === "na_ev_na-act-c13" ? { ...e, revoked: true } : e,
     );
-    assertNotNa(tampered, "C13");
+    await assertNotNa(tampered, "C13");
   });
 
-  await check("C14 expired action/classification → not n_a", async () => {
+  await check("C14 expired action/classification 鈫?not n_a", async () => {
     const sid = await seedDraftSession("c14");
     // Write with future expiry (create rejects already-expired), then tamper to past.
     await declareDirNotApplicable(
@@ -719,7 +719,7 @@ async function main() {
       declareInput("c14", { expires_at: T_ACTION }),
     );
     const s0 = (await loadPOJUSession(sid))!;
-    assert.equal(dirStateAfterAgg(s0), "n_a");
+    assert.equal(await dirStateAfterAgg(s0), "n_a");
     const past = "2026-10-01T00:00:00.000Z";
     const actions = (s0.na_declaration_actions ?? []).map((a) =>
       a.declaration_action_id === "na-act-c14"
@@ -741,13 +741,13 @@ async function main() {
         explicit_na_classifications: classifications,
       },
     };
-    assertNotNa(tampered, "C14");
+    await assertNotNa(tampered, "C14");
   });
 
-  // ========== C15–C18 source / idempotent ==========
-  console.log("\n== C15–C18 source / idempotent ==");
+  // ========== C15鈥揅18 source / idempotent ==========
+  console.log("\n== C15鈥揅18 source / idempotent ==");
 
-  await check("C15 independently_verified source → not n_a", async () => {
+  await check("C15 independently_verified source 鈫?not n_a", async () => {
     const s0 = await legalThen("c15");
     const dc = s0.decision_context!;
     const facts = dc.reality_facts.map((f) =>
@@ -762,13 +762,13 @@ async function main() {
       ...s0,
       decision_context: { ...dc, reality_facts: facts },
     };
-    assertNotNa(tampered, "C15");
+    await assertNotNa(tampered, "C15");
   });
 
-  await check("C16 unconfirmed / missing E1 → not n_a", async () => {
+  await check("C16 unconfirmed / missing E1 鈫?not n_a", async () => {
     const s0 = await legalThen("c16");
     const tampered = { ...s0, confirmation_events: [] };
-    assertNotNa(tampered, "C16");
+    await assertNotNa(tampered, "C16");
   });
 
   await check("C17 idempotent skip same payload", async () => {
@@ -782,7 +782,7 @@ async function main() {
     assert.equal((s.na_declaration_actions ?? []).length, 1);
   });
 
-  await check("C18 binding clash same action_id → reject", async () => {
+  await check("C18 binding clash same action_id 鈫?reject", async () => {
     const sid = await seedDraftSession("c18", {
       extraFacts: [ssotFact("fact_c18b")],
     });
@@ -816,10 +816,10 @@ async function main() {
     assert.equal(rejected, true);
   });
 
-  // ========== C19–C21 fail-closed write/revoke ==========
-  console.log("\n== C19–C21 draft-only write/revoke ==");
+  // ========== C19鈥揅21 fail-closed write/revoke ==========
+  console.log("\n== C19鈥揅21 draft-only write/revoke ==");
 
-  await check("C19 declare on final → reject; reload unchanged", async () => {
+  await check("C19 declare on final 鈫?reject; reload unchanged", async () => {
     const sid = await seedDraftSession("c19", { status: "final" });
     const before = businessBaseline((await loadPOJUSession(sid))!);
     let rejected = false;
@@ -838,7 +838,7 @@ async function main() {
   });
 
   await check(
-    "C20 declare on superseded → reject; reload unchanged",
+    "C20 declare on superseded 鈫?reject; reload unchanged",
     async () => {
       const sid = await seedDraftSession("c20", { status: "superseded" });
       const before = businessBaseline((await loadPOJUSession(sid))!);
@@ -860,7 +860,7 @@ async function main() {
   );
 
   await check(
-    "C21a revoke on final → reject; actions not newly revoked",
+    "C21a revoke on final 鈫?reject; actions not newly revoked",
     async () => {
       const sid = await seedDraftSession("c21a");
       await declareDirNotApplicable(sid, declareInput("c21a"));
@@ -915,7 +915,7 @@ async function main() {
   );
 
   await check(
-    "C21b missing DC revoke → reject; actions not revoked; reload stable",
+    "C21b missing DC revoke 鈫?reject; actions not revoked; reload stable",
     async () => {
       const sid = await createPOJUSession({
         payment_id: "pay_s4_c21b",
@@ -980,7 +980,7 @@ async function main() {
   // ========== C22 conflict > N/A ==========
   console.log("\n== C22 conflict > N/A ==");
 
-  await check("C22 open blocking conflict → DIR conflict not n_a", async () => {
+  await check("C22 open blocking conflict 鈫?DIR conflict not n_a", async () => {
     const sid = await seedDraftSession("c22", {
       conflicts: [
         {
@@ -1004,7 +1004,7 @@ async function main() {
     });
     await declareDirNotApplicable(sid, declareInput("c22"));
     const s = (await loadPOJUSession(sid))!;
-    assert.equal(dirStateAfterAgg(s), "conflict");
+    assert.equal(await dirStateAfterAgg(s), "conflict");
   });
 
   // ========== C23 forged authority.dirCatalog ==========
@@ -1129,7 +1129,7 @@ async function main() {
         dirCatalog: [{ dir_id: forgeDir, na_conditions: [forgeCode] }],
       },
     };
-    const pack = freezeDraftForDelivery(structuredClone(dcReady), forgedOpts);
+    const pack = await freezeDraftForDelivery(structuredClone(dcReady), forgedOpts);
     const frozenForge = pack.frozen.dirs.find((d) => d.dir_id === forgeDir);
     assert.ok(frozenForge);
     assert.notEqual(frozenForge!.current_state, "n_a");
@@ -1148,7 +1148,7 @@ async function main() {
     let sess = (await loadPOJUSession(sid))!;
     {
       const dc = sess.decision_context!;
-      const na = freezeNa(sess);
+      const na = await freezeNa(sess);
       const dirs = reaggregateDirsIntake(
         dc.dirs,
         dc.reality_facts,
@@ -1262,13 +1262,13 @@ async function main() {
   });
 
   // ========== C25 CAS / IndexedDB persist failure ==========
-  // Plan §9: real production-path persist failure, else UNTESTED [production-path].
+  // Plan 搂9: real production-path persist failure, else UNTESTED [production-path].
   // Replacing casWrite with an early throw is NOT production-path evidence.
   console.log("\n== C25 CAS / IndexedDB persist failure ==");
 
   let c25ProductionPathPass = false;
 
-  // Attempt A — concurrent real casWritePOJUSession race (no early throw).
+  // Attempt A 鈥?concurrent real casWritePOJUSession race (no early throw).
   // Harness only schedules a second production write; the declare write itself
   // must fail inside casWritePOJUSession / IndexedDB CAS checks.
   try {
@@ -1292,7 +1292,7 @@ async function main() {
             bump_dc_write_revision: false,
           });
           racedThroughProductionWrite = true;
-          // Stale expected revisions from declare's apply → real CAS reject.
+          // Stale expected revisions from declare's apply 鈫?real CAS reject.
           return casWritePOJUSession(args);
         },
       });
@@ -1319,7 +1319,7 @@ async function main() {
       );
       c25ProductionPathPass = true;
       pass(
-        "C25 [production-path] real casWritePOJUSession conflict → no durable N/A",
+        "C25 [production-path] real casWritePOJUSession conflict 鈫?no durable N/A",
       );
     } else {
       markUntested(
@@ -1340,7 +1340,7 @@ async function main() {
     );
   }
 
-  // Attempt B — delete durable row then declare (existing S3-style IDB harness).
+  // Attempt B 鈥?delete durable row then declare (existing S3-style IDB harness).
   if (!c25ProductionPathPass) {
     try {
       await __resetPojuDbForTests();
@@ -1354,7 +1354,7 @@ async function main() {
         declareErr = err;
       }
       // delete-then-declare fails at load ("session not found"), before apply /
-      // casWritePOJUSession persist of the N/A triad — not mid-persist proof.
+      // casWritePOJUSession persist of the N/A triad 鈥?not mid-persist proof.
       markUntested(
         "C25 [production-path] Attempt B deletePOJUSession then declare",
         `Session-row delete yields load-time failure (${
@@ -1378,8 +1378,8 @@ async function main() {
   }
 
   if (!c25ProductionPathPass) {
-    // Non-PASS harness note only — early throw before casWritePOJUSession is
-    // NOT production persist-failure evidence (Rev 1.2 §9 / independent review).
+    // Non-PASS harness note only 鈥?early throw before casWritePOJUSession is
+    // NOT production persist-failure evidence (Rev 1.2 搂9 / independent review).
     console.log(
       "\n== C25 harness-note (NOT production-path; does not count as C25 PASS) ==",
     );
@@ -1426,11 +1426,11 @@ async function main() {
     );
   }
 
-  // R6 F1 (Session N/A + forged caller authority → DIR n_a) was disclosed here as
+  // R6 F1 (Session N/A + forged caller authority 鈫?DIR n_a) was disclosed here as
   // RED until S5; it now runs on this suite's IndexedDB production path.
   console.log("\n== freeze-versioning F1 (S4 disclosure, executed) ==");
   await check(
-    "[disclose→executed] freeze-versioning F1: Session triad via declareDirNotApplicable + forged caller authority → frozen DIR n_a",
+    "[disclose鈫抏xecuted] freeze-versioning F1: Session triad via declareDirNotApplicable + forged caller authority 鈫?frozen DIR n_a",
     async () => {
       const sid = await seedDraftSession("f1disc");
       await declareDirNotApplicable(sid, declareInput("f1disc"));
@@ -1444,7 +1444,7 @@ async function main() {
         declaredDc.conflicts,
         declaredDc.constraints,
         declaredDc.explicit_na_evidence ?? [],
-        freezeNa(declared),
+        await freezeNa(declared),
       );
       assert.equal(dirs.find((d) => d.dir_id === SSOT_DIR)?.current_state, "n_a");
       await mutatePOJUSession(sid, {
@@ -1469,7 +1469,7 @@ async function main() {
           dirCatalog: [{ dir_id: "DIR-A", na_conditions: ["explicit_not_applicable"] }],
         },
       };
-      const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
+      const pack = await freezeDraftForDelivery(structuredClone(dc), forgedOpts);
       assert.equal(pack.frozen.status, "final");
       assert.equal(
         pack.frozen.dirs.find((d) => d.dir_id === SSOT_DIR)?.current_state,

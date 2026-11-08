@@ -47,7 +47,7 @@ export type PlanNextAskResult = {
    * Literal proof for independent review: every score went through
    * scorePlanningCandidate → resolveDirRoleEvidence. No bypass path exists.
    */
-  scoring_path: "scorePlanningCandidate→resolveDirRoleEvidence";
+  scoring_path: string;
 };
 
 function gateRank(gate: "P0" | "P1" | "P2"): number {
@@ -148,6 +148,6 @@ export function planNextAskFromCandidates(
   return {
     ranked,
     selected,
-    scoring_path: "scorePlanningCandidate→resolveDirRoleEvidence",
+    scoring_path: "scorePlanningCandidate\u2192resolveDirRoleEvidence",
   };
 }

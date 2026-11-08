@@ -1,5 +1,5 @@
 /**
- * Stage 3.2 acceptance round-4 — production N/A persist + topic authority + CI.
+ * Stage 3.2 acceptance round-4 鈥?production N/A persist + topic authority + CI.
  *   pnpm exec tsx scripts/test-intake-r6-role-resolver.ts
  *   pnpm test:intake-r6-resolver
  */
@@ -292,7 +292,7 @@ function validCatalogNa(): ExplicitNaEvidence {
 
 const dir = baseDir();
 
-console.log("\n== R1–R3 regression: Fact / Constraint / user_confirmed ==");
+console.log("\n== R1鈥揜3 regression: Fact / Constraint / user_confirmed ==");
 {
   const r = resolveDirRoleEvidence({
     dir,
@@ -303,7 +303,7 @@ console.log("\n== R1–R3 regression: Fact / Constraint / user_confirmed ==");
     conflicts: [],
     naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
-  assert("MX-83 missing related_dir_ids → unresolved", r.state === "unresolved");
+  assert("MX-83 missing related_dir_ids 鈫?unresolved", r.state === "unresolved");
 }
 {
   const r = resolveDirRoleEvidence({
@@ -322,7 +322,7 @@ console.log("\n== R1–R3 regression: Fact / Constraint / user_confirmed ==");
     conflicts: [],
     naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
-  assert("user_confirmed=false → NOT confirmed", r.state === "unresolved");
+  assert("user_confirmed=false 鈫?NOT confirmed", r.state === "unresolved");
 }
 {
   const r = resolveDirRoleEvidence({
@@ -340,7 +340,7 @@ console.log("\n== R1–R3 regression: Fact / Constraint / user_confirmed ==");
     conflicts: [],
     naValidation: emptyNaValidation({ contextId: CTX, sessionId: SESSION_ID }),
   });
-  assert("independently_verified → confirmed", r.state === "confirmed");
+  assert("independently_verified 鈫?confirmed", r.state === "confirmed");
 }
 {
   const r = resolveDirRoleEvidence({
@@ -463,7 +463,7 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
     naDeclarationActions: applied.session.na_declaration_actions,
   });
   assert(
-    "action.session_id mismatch → reject at validate",
+    "action.session_id mismatch 鈫?reject at validate",
     !validateExplicitNaEvidence(applied.evidence, wrongSession).ok,
   );
 }
@@ -473,7 +473,7 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
     explicitNaClassifications: [],
     naDeclarationActions: [],
   }));
-  assert("E1 without declaration persist → reject", !bad.ok);
+  assert("E1 without declaration persist 鈫?reject", !bad.ok);
 }
 {
   // control_id allowlist re-checked at validate: forge action with bad control after create
@@ -507,7 +507,7 @@ console.log("\n== P0-1 Production applyDeclareDirNaToSession persist path ==");
     naDeclarationActions: forgedActions,
   });
   assert(
-    "validate re-checks control_id allowlist → reject forged control",
+    "validate re-checks control_id allowlist 鈫?reject forged control",
     !validateExplicitNaEvidence(applied.evidence, ctx).ok,
   );
 }
@@ -544,7 +544,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
     },
     NOW,
   );
-  assert("same payload replay → idempotent_skip", replay.outcome === "idempotent_skip");
+  assert("same payload replay 鈫?idempotent_skip", replay.outcome === "idempotent_skip");
   assert(
     "replay evidence id exact na_ev_${action}",
     replay.evidence.evidence_id === "na_ev_na-act-idemp",
@@ -572,7 +572,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_source_mismatch");
   }
-  assert("same action_id different fact_id → reject", badFact);
+  assert("same action_id different fact_id 鈫?reject", badFact);
 
   // second action with constraint on same DIR/condition
   const withCst = applyDeclareDirNaToSession(
@@ -629,7 +629,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
   } catch (e) {
     badCst = e instanceof NaDeclarationError;
   }
-  assert("same action_id constraint→fact swap → reject", badCst);
+  assert("same action_id constraint鈫抐act swap 鈫?reject", badCst);
 
   const missingEvSess = {
     ...first.session,
@@ -660,7 +660,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_action_missing_evidence");
   }
-  assert("missing evidence → fail-closed", missingEv);
+  assert("missing evidence 鈫?fail-closed", missingEv);
 
   const revokedSess = {
     ...first.session,
@@ -691,7 +691,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("action_revoked_replay");
   }
-  assert("revoked action replay → reject (no reactivate)", revokedReplay);
+  assert("revoked action replay 鈫?reject (no reactivate)", revokedReplay);
 
   // Round-6: Session / DC ownership + turn / expires binding on idempotent replay.
   const idempInput = {
@@ -722,7 +722,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_session_mismatch");
   }
-  assert("prior.session_id ≠ current Session → reject", badSession);
+  assert("prior.session_id 鈮?current Session 鈫?reject", badSession);
 
   const badCtxSess = {
     ...first.session,
@@ -741,7 +741,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_context_mismatch");
   }
-  assert("prior.context_id ≠ current DC → reject", badCtx);
+  assert("prior.context_id 鈮?current DC 鈫?reject", badCtx);
 
   const badClsCtxSess = {
     ...first.session,
@@ -764,7 +764,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_classification_context_mismatch");
   }
-  assert("classification.context_id ≠ current DC → reject", badClsCtx);
+  assert("classification.context_id 鈮?current DC 鈫?reject", badClsCtx);
 
   let badTurn = false;
   try {
@@ -779,7 +779,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_turn_mismatch");
   }
-  assert("declaration_turn_id mismatch → reject", badTurn);
+  assert("declaration_turn_id mismatch 鈫?reject", badTurn);
 
   let badExpires = false;
   try {
@@ -794,7 +794,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
       e instanceof NaDeclarationError &&
       String(e.message).includes("idempotent_expires_mismatch");
   }
-  assert("expires_at mismatch → reject", badExpires);
+  assert("expires_at mismatch 鈫?reject", badExpires);
 
   const sameAgain = applyDeclareDirNaToSession(
     first.session,
@@ -803,7 +803,7 @@ console.log("\n== P0-1 Idempotent replay binding ==");
     NOW,
   );
   assert(
-    "identical payload replay still → idempotent_skip",
+    "identical payload replay still 鈫?idempotent_skip",
     sameAgain.outcome === "idempotent_skip",
   );
 }
@@ -825,11 +825,11 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     revoked: false,
   };
   assert(
-    "topic with live authority → accept",
+    "topic with live authority 鈫?accept",
     validateExplicitNaEvidence(topicNa, provenNaValidation()).ok,
   );
   assert(
-    "forged eval_id → reject",
+    "forged eval_id 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -838,7 +838,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "catalog version mismatch → reject",
+    "catalog version mismatch 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -847,7 +847,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "authority stale → reject",
+    "authority stale 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -856,7 +856,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "authority superseded → reject",
+    "authority superseded 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -865,7 +865,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "authority revoked → reject",
+    "authority revoked 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -874,7 +874,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "authority other DIR → reject",
+    "authority other DIR 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -883,7 +883,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "authority still applicable → reject",
+    "authority still applicable 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -892,7 +892,7 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "authority expired → reject",
+    "authority expired 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -902,14 +902,14 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
     ).ok,
   );
   assert(
-    "missing authority store → reject",
+    "missing authority store 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({ topicEvalAuthority: undefined }),
     ).ok,
   );
   assert(
-    "embedded status current but no authority → reject",
+    "embedded status current but no authority 鈫?reject",
     !validateExplicitNaEvidence(
       topicNa,
       provenNaValidation({
@@ -920,6 +920,8 @@ console.log("\n== P0-2 Topic authority (eval_id + catalog version) ==");
   );
 }
 
+
+async function s9RoleResolverTail() {
 console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
 {
   // Correlate DIR under test with provenNaValidation / validCatalogNa SSOT pair.
@@ -931,7 +933,7 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
     [validCatalogNa()],
     provenNaValidation(),
   );
-  assert("MX-119 catalog N/A → n_a", dirs[0]!.current_state === "n_a");
+  assert("MX-119 catalog N/A 鈫?n_a", dirs[0]!.current_state === "n_a");
 }
 {
   const bad = validateExplicitNaEvidence(
@@ -957,7 +959,7 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
       cfpSourceState: "source_calc_failed",
     }),
   );
-  assert("MX-112 calc_failed → reject", !bad.ok);
+  assert("MX-112 calc_failed 鈫?reject", !bad.ok);
 }
 {
   const session = baseSession({
@@ -967,14 +969,13 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
       constraints: [],
     }),
   });
-  const planned = selectNextIntakeAskForSession({ session, nowIso: NOW });
+  const planned = await selectNextIntakeAskForSession({ session, nowIso: NOW });
   assert(
     "production planner chain",
     planned.production_call_chain === INTAKE_ASK_SCORING_PATH,
   );
-  assert(
-    "source_only unresolved=0",
-    selectNextIntakeAskForSession({
+  {
+    const srcOnly = await selectNextIntakeAskForSession({
       session,
       nowIso: NOW,
       extraCandidates: [
@@ -996,8 +997,12 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
         },
       ],
       p0SourceNotOk: true,
-    }).selected?.score.unresolved_count === 0,
-  );
+    });
+    assert(
+      "source_only unresolved=0",
+      srcOnly.selected?.score.unresolved_count === 0,
+    );
+  }
 }
 {
   const facts = [fact({ fact_id: "f1" })];
@@ -1041,12 +1046,12 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
   );
 }
 {
-  assert("illegal expires_at → invalid", checkExpiresAt("bad", NOW) === "invalid");
+  assert("illegal expires_at 鈫?invalid", checkExpiresAt("bad", NOW) === "invalid");
   const dc = baseDc({ reality_facts: [], constraints: [constraint({ constraint_id: "k1" })] });
   const h1 = computeContentHash(dc);
   const h2 = computeContentHash({ ...dc, explicit_na_evidence: [validCatalogNa()] });
   assert("MX-121 N/A changes hash", h1 !== h2);
-  // Direct create unit test: injected dirNaConditions ≠ production Catalog authority.
+  // Direct create unit test: injected dirNaConditions 鈮?production Catalog authority.
   const created = createExplicitNaClassificationFromUserDeclaration({
     action: {
       declaration_action_id: "h",
@@ -1079,9 +1084,13 @@ console.log("\n== System N/A / DDR-03 / DIR / Planner / C5 ==");
   }
 }
 
-console.log("");
-if (failures.length) {
-  console.error(`FAILED ${failures.length}:`, failures);
-  process.exit(1);
 }
-console.log("All Intake R6 Stage 3.2 round-6 acceptance checks passed.");
+
+s9RoleResolverTail().then(() => {
+  console.log("");
+  if (failures.length) {
+    console.error(`FAILED ${failures.length}:`, failures);
+    process.exit(1);
+  }
+  console.log("All Intake R6 Stage 3.2 round-6 acceptance checks passed.");
+}).catch((e) => { console.error(e); process.exit(1); });

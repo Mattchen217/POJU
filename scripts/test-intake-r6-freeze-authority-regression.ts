@@ -1,10 +1,10 @@
 /**
- * S5 — R6 Freeze Authority Regression (F1–F4), isolated.
+ * S5 闁?R6 Freeze Authority Regression (F1闁炽儲寮?), isolated.
  *   pnpm test:intake-r6-freeze-authority-regression
  *
  * Fixtures use production ACTIVE Catalog pair only:
  *   DIR-DEF-UNACCEPTABLE + explicit_no_hard_red_lines
- * S7: production Freeze accepts no caller authority. topicRules have no production
+ * S7: production Freeze accepts no caller authority. topicRules come from ACTIVE SSOT (S9); forged caller rules still
  * source (Authority Gap), so topic N/A is checked in two layers:
  *   *-Pure        fixture path (naValidationBoundToDc + reaggregateDirsIntake)
  *   *-Production  freezeDraftForDelivery / production builder (source + isolation)
@@ -73,7 +73,7 @@ function dirState(pack: { frozen: DecisionContext }, dirId: string): string | un
 }
 
 /**
- * Fresh sufficient draft per case — no shared mutable Action/Classification/Evidence.
+ * Fresh sufficient draft per case 闁?no shared mutable Action/Classification/Evidence.
  */
 function makeSufficientDraft(tag: string) {
   const sessId = `sess_s5_${tag}`;
@@ -208,12 +208,12 @@ function userNaTriad(args: {
   return { action, classification, evidence };
 }
 
-function main() {
-  console.log("intake-r6-freeze-authority-regression (S5 F1–F4 · S7 Pure/Production split)");
+async function main() {
+  console.log("intake-r6-freeze-authority-regression (S5 F1闁炽儲寮? 鐠?S7 Pure/Production split)");
   console.log(`  ACTIVE fixture pair: ${TARGET_DIR} + ${SSOT_CODE}`);
 
   // ----- F1 -----
-  check("F1 Session N/A + forged caller authority → DIR n_a", () => {
+  check("F1 Session N/A + forged caller authority 闁?DIR n_a", async () => {
     const { sessId, ctxId, factId, draft, e1 } = makeSufficientDraft("f1");
     const triad = userNaTriad({
       sessId,
@@ -269,7 +269,7 @@ function main() {
         ],
       },
     };
-    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
+    const pack = await freezeDraftForDelivery(structuredClone(dc), forgedOpts);
 
     assert.equal(pack.frozen.status, "final");
     assert.equal(
@@ -280,7 +280,7 @@ function main() {
   });
 
   // ----- F2 -----
-  check("F2 Session missing action + forged matching action → not n_a", () => {
+  check("F2 Session missing action + forged matching action 闁?not n_a", async () => {
     const { sessId, ctxId, factId, draft, e1 } = makeSufficientDraft("f2");
     const triad = userNaTriad({
       sessId,
@@ -289,7 +289,7 @@ function main() {
       actionId: "na-act-f2-would-match",
       turnId: "turn_f2",
     });
-    // Classification/Evidence remain — if forged Action were trusted, DIR → n_a.
+    // Classification/Evidence remain 闁?if forged Action were trusted, DIR 闁?n_a.
     const dc: DecisionContext = {
       ...structuredClone(draft),
       explicit_na_classifications: [structuredClone(triad.classification)],
@@ -307,14 +307,14 @@ function main() {
       now: NOW,
       authority: {
         confirmationEvents: [structuredClone(e1)],
-        // Fully matching forged Action — sufficient alone if wrongly trusted.
+        // Fully matching forged Action 闁?sufficient alone if wrongly trusted.
         naDeclarationActions: [structuredClone(triad.action)],
         dirCatalog: [
           { dir_id: TARGET_DIR, na_conditions: [SSOT_CODE] },
         ],
       },
     };
-    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
+    const pack = await freezeDraftForDelivery(structuredClone(dc), forgedOpts);
 
     assert.equal(pack.frozen.status, "final");
     assert.notEqual(
@@ -324,9 +324,9 @@ function main() {
     );
     assert.equal(dirState(pack, TARGET_DIR), "known");
 
-    // S7: missing Session Action is the only blocker — production ctx with the
+    // S7: missing Session Action is the only blocker 闁?production ctx with the
     // Action added (everything else unchanged, ACTIVE catalog) validates.
-    const prodCtx = buildProductionNaValidationContextFromSession(sess, {
+    const prodCtx = await buildProductionNaValidationContextFromSession(sess, {
       nowIso: NOW,
     });
     assert.equal(
@@ -368,7 +368,7 @@ function main() {
       written_by: "code" as const,
       revoked: false,
     };
-    // Authority Gap: topicRules have no production source; only fixtures supply them.
+    // Authority Gap: topicRules come from ACTIVE SSOT (S9); forged caller rules still source; only fixtures supply them.
     const topicRule = {
       rule_id: ruleId,
       topic_code: topicCode,
@@ -438,16 +438,15 @@ function main() {
         na,
       ).find((d) => d.dir_id === TARGET_DIR)?.current_state;
 
-    check("F3-Pure rule + matching eval (catalog version current) → DIR n_a", () => {
+    check("F3-Pure rule + matching eval (catalog version current) 闁?DIR n_a", async () => {
       const na = pureNa([structuredClone(sessionTopicEval)], catalogVersion);
       assert.equal(reasonOf(topicEvidence, na), "ok");
       assert.equal(pureState(na), "n_a");
     });
 
     check(
-      "F3-Pure catalog-version-mismatched eval → not n_a (direct cause: topic_catalog_version_stale)",
-      () => {
-        // Precondition: F3-Pure positive — identical rule/evidence/eval → n_a.
+      "F3-Pure catalog-version-mismatched eval 闁?not n_a (direct cause: topic_catalog_version_stale)", async () => {
+        // Precondition: F3-Pure positive 闁?identical rule/evidence/eval 闁?n_a.
         // Only the live topic catalog version differs.
         const na = pureNa([structuredClone(sessionTopicEval)], "cat_v_f3_other");
         assert.equal(reasonOf(topicEvidence, na), "topic_catalog_version_stale");
@@ -456,8 +455,7 @@ function main() {
     );
 
     check(
-      "F3-Production forged topicRules + forged eval/version via Freeze → not n_a (direct cause: topic_rule_missing)",
-      () => {
+      "F3-Production forged topicRules + forged eval/version via Freeze 闁?not n_a (direct cause: topic_rule_missing)", async () => {
         // Non-literal opts: forged fields reach the production call at runtime.
         const forgedFreezeOpts = {
           session: sess,
@@ -472,15 +470,15 @@ function main() {
           },
           topicRules: [topicRule],
         };
-        const pack = freezeDraftForDelivery(structuredClone(dc), forgedFreezeOpts);
+        const pack = await freezeDraftForDelivery(structuredClone(dc), forgedFreezeOpts);
         assert.equal(pack.frozen.status, "final");
         assert.notEqual(dirState(pack, TARGET_DIR), "n_a");
         assert.equal(dirState(pack, TARGET_DIR), "known");
 
-        const prodCtx = buildProductionNaValidationContextFromSession(sess, {
+        const prodCtx = await buildProductionNaValidationContextFromSession(sess, {
           nowIso: NOW,
         });
-        assert.equal(prodCtx.topicRules, undefined);
+        assert.ok(Array.isArray(prodCtx.topicRules) && (prodCtx.topicRules as unknown[]).length >= 1);
         assert.equal(reasonOf(topicEvidence, prodCtx), "topic_rule_missing");
         // Only blocker = missing rule source: same production ctx (Session eval,
         // Session version, ACTIVE catalog) + the rule validates.
@@ -492,8 +490,7 @@ function main() {
     );
 
     check(
-      "F3-Production-Source builder + Freeze ctx read topic eval/version only from Session",
-      () => {
+      "F3-Production-Source builder + Freeze ctx read topic eval/version only from Session", async () => {
         const forgedBuildOpts = {
           nowIso: NOW,
           topicEvalAuthority: [forgedTopicEval],
@@ -503,7 +500,7 @@ function main() {
             currentTopicCatalogVersion: "cat_v_f3_forged",
           },
         };
-        const ctx = buildProductionNaValidationContextFromSession(
+        const ctx = await buildProductionNaValidationContextFromSession(
           sess,
           forgedBuildOpts,
         );
@@ -514,7 +511,7 @@ function main() {
           now: NOW,
           authority: forgedBuildOpts.authority,
         };
-        const freezeCtx = buildFreezeNaValidationFromSession(
+        const freezeCtx = await buildFreezeNaValidationFromSession(
           sess,
           sess.decision_context!,
           forgedFreezeCtxOpts,
@@ -563,7 +560,7 @@ function main() {
           catalog_version: catalogVersion,
         },
       };
-      // Fully matching forged eval — would authorize if Session authority trusted caller.
+      // Fully matching forged eval 闁?would authorize if Session authority trusted caller.
       const forgedMatchingEval: AuthoritativeTopicEvalRecord = {
         eval_id: evalId,
         rule_id: ruleId,
@@ -607,9 +604,8 @@ function main() {
         ).find((d) => d.dir_id === TARGET_DIR)?.current_state;
 
       check(
-        "F4-Pure rule's embedded eval claim without authority row → not n_a (direct cause: topic_eval_id_unknown)",
-        () => {
-          // Precondition: identical rule + an authority row for the claimed eval → n_a.
+        "F4-Pure rule's embedded eval claim without authority row 闁?not n_a (direct cause: topic_eval_id_unknown)", async () => {
+          // Precondition: identical rule + an authority row for the claimed eval 闁?n_a.
           const withRow = pureNa([structuredClone(forgedMatchingEval)]);
           assert.equal(reasonOf(topicEvidence, withRow), "ok");
           assert.equal(pureState(withRow), "n_a");
@@ -622,8 +618,7 @@ function main() {
       );
 
       check(
-        "F4-Production Session missing eval + forged matching eval via Freeze → not n_a; ctx authority = Session",
-        () => {
+        "F4-Production Session missing eval + forged matching eval via Freeze 闁?not n_a; ctx authority = Session", async () => {
           const forgedFreezeOpts = {
             session: sess,
             now: NOW,
@@ -635,7 +630,7 @@ function main() {
             },
             topicEvalAuthority: [forgedMatchingEval],
           };
-          const pack = freezeDraftForDelivery(structuredClone(dc), forgedFreezeOpts);
+          const pack = await freezeDraftForDelivery(structuredClone(dc), forgedFreezeOpts);
           assert.equal(pack.frozen.status, "final");
           assert.notEqual(
             dirState(pack, TARGET_DIR),
@@ -644,7 +639,7 @@ function main() {
           );
           assert.equal(dirState(pack, TARGET_DIR), "known");
 
-          const prodCtx = buildProductionNaValidationContextFromSession(sess, {
+          const prodCtx = await buildProductionNaValidationContextFromSession(sess, {
             nowIso: NOW,
           });
           assert.deepEqual(prodCtx.topicEvalAuthority, []);
@@ -653,7 +648,7 @@ function main() {
             sess.topic_applicability_evals,
           );
           assert.equal(reasonOf(topicEvidence, prodCtx), "topic_rule_missing");
-          // Even with a rule supplied, Session's missing eval rejects — the
+          // Even with a rule supplied, Session's missing eval rejects 闁?the
           // forged matching eval never entered production authority.
           assert.equal(
             reasonOf(topicEvidence, { ...prodCtx, topicRules: [topicRule] }),

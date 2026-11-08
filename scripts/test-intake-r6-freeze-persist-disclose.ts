@@ -1,14 +1,14 @@
 /**
- * S8-E — Freeze persist failure (E1) + S4 "freeze-versioning F1" executed evidence (E2).
+ * S8-E 鈥?Freeze persist failure (E1) + S4 "freeze-versioning F1" executed evidence (E2).
  *
  * E1: sufficient draft, production NaValidation passes, freezeDraftForDelivery
  *     succeeds in memory, then the C1 blob write's IndexedDB transaction is
  *     aborted (scripts/fixtures/idb-storage-fault). Wire must fail closed and no
  *     frozen-but-unpersisted DC / Frozen Binding may reach Delivery.
  * E2: S4 C25-era line `[disclose] freeze-versioning F1` referred to R6 F1
- *     ("Session N/A + forged caller authority → DIR n_a", S5 authority-regression
+ *     ("Session N/A + forged caller authority 鈫?DIR n_a", S5 authority-regression
  *     suite). Here it runs on the IndexedDB production path: Session triad written
- *     by declareDirNotApplicable → production Freeze.
+ *     by declareDirNotApplicable 鈫?production Freeze.
  *
  *   pnpm test:intake-r6-freeze-persist-disclose
  */
@@ -87,7 +87,7 @@ async function main() {
   // ============================================== E1
   console.log("\n== E1 Freeze persist failure (real IndexedDB tx abort) ==");
 
-  await check("E1 sufficient + NaValidation ok + in-memory freeze ok, C1 write aborted → ok:false dc_freeze_persist_failed; DC stays draft; no frozen binding for Delivery; retry freezes", async () => {
+  await check("E1 sufficient + NaValidation ok + in-memory freeze ok, C1 write aborted 鈫?ok:false dc_freeze_persist_failed; DC stays draft; no frozen binding for Delivery; retry freezes", async () => {
     const { sid } = await seedNaDraftSession("e1", NOW);
     const before = await durable(sid);
     const beforeClone = structuredClone(before);
@@ -99,7 +99,7 @@ async function main() {
     assert.equal(draft.status, "draft");
     assert.equal(evaluateDecisionSufficiency(draft).canStop, true);
     assert.equal(stateOf(before, ACTIVE_NA_DIR), "n_a", "production NaValidation accepts the Session triad");
-    const inMemory = applySufficiencyFreezeToSession(before, { now: NOW });
+    const inMemory = await applySufficiencyFreezeToSession(before, { now: NOW });
     assert.ok(inMemory.ok && !("skipped" in inMemory && inMemory.skipped), JSON.stringify(inMemory));
     assert.equal(inMemory.pack.frozen.status, "final", "freezeDraftForDelivery succeeds before persist");
     const freezeKey = freezeIdempotencyKey(before, draft);
@@ -148,7 +148,7 @@ async function main() {
     assert.equal(okPayload.binding.context_hash, frozen.decision_context?.content_hash);
   });
 
-  await check("E1b Delivery entry (runFinalDeliveryForSession) under the same fault → DC_FREEZE_FAILED before any job fetch / pending save; IDB stays draft", async () => {
+  await check("E1b Delivery entry (runFinalDeliveryForSession) under the same fault 鈫?DC_FREEZE_FAILED before any job fetch / pending save; IDB stays draft", async () => {
     const { runFinalDeliveryForSession } = await import("../lib/llm/pro/final-delivery");
     const { sid } = await seedNaDraftSession("e1b", NOW);
     await seedBreakthroughCoreForDelivery(sid, NOW, "e1b");
@@ -183,7 +183,7 @@ async function main() {
   // ============================================== E2
   console.log("\n== E2 S4 freeze-versioning F1 on the IndexedDB production path ==");
 
-  await check("E2-F1 Session triad (declareDirNotApplicable) + forged caller authority → frozen DIR n_a; durable via wire; facts not upgraded", async () => {
+  await check("E2-F1 Session triad (declareDirNotApplicable) + forged caller authority 鈫?frozen DIR n_a; durable via wire; facts not upgraded", async () => {
     const seed = await seedNaDraftSession("e2f1", NOW);
     const s = await durable(seed.sid);
     const dc = s.decision_context;
@@ -215,7 +215,7 @@ async function main() {
         dirCatalog: [{ dir_id: "DIR-A", na_conditions: ["explicit_not_applicable"] }],
       },
     };
-    const pack = freezeDraftForDelivery(structuredClone(dc), forgedOpts);
+    const pack = await freezeDraftForDelivery(structuredClone(dc), forgedOpts);
     assert.equal(pack.frozen.status, "final");
     assert.equal(
       pack.frozen.dirs.find((d) => d.dir_id === ACTIVE_NA_DIR)?.current_state,
@@ -237,16 +237,26 @@ async function main() {
     const s = await durable(seed.sid);
     const dc = s.decision_context;
     assert.ok(dc);
-    const ctx = buildFreezeNaValidationFromSession(s, dc, { now: NOW });
+    const ctx = await buildFreezeNaValidationFromSession(s, dc, { now: NOW });
     assert.deepEqual(ctx.naDeclarationActions, s.na_declaration_actions);
     assert.deepEqual(ctx.confirmationEvents, s.confirmation_events);
     const { DIR_NA_CATALOG_V1_ENTRIES } = await import(
       "../lib/poju/decision-context/catalog/dir-na-catalog.v1"
     );
-    assert.strictEqual(ctx.dirCatalog, DIR_NA_CATALOG_V1_ENTRIES, "ACTIVE catalog object, not a caller list");
+    assert.ok(Array.isArray(ctx.dirCatalog), "ACTIVE catalog must be array");
+    assert.equal(
+      ctx.dirCatalog.length,
+      DIR_NA_CATALOG_V1_ENTRIES.length,
+      "ACTIVE catalog entry count (not a caller list)",
+    );
+    assert.deepEqual(
+      [...ctx.dirCatalog].map((e) => e.dir_id).sort(),
+      [...DIR_NA_CATALOG_V1_ENTRIES].map((e) => e.dir_id).sort(),
+      "ACTIVE catalog dir ids match SSOT",
+    );
   });
 
-  await check("E2-F1 E1 required: same triad without the Session E1 for the N/A fact → frozen DIR not n_a", async () => {
+  await check("E2-F1 E1 required: same triad without the Session E1 for the N/A fact 鈫?frozen DIR not n_a", async () => {
     const seed = await seedNaDraftSession("e2noe1", NOW);
     await mutatePOJUSession(seed.sid, {
       operation_id: "op_s8_e2_drop_e1",
@@ -263,7 +273,7 @@ async function main() {
     const dc = s.decision_context;
     assert.ok(dc);
     assert.ok((s.na_declaration_actions ?? []).length === 1, "Session Action still present");
-    const pack = freezeDraftForDelivery(structuredClone(dc), { session: s, now: NOW });
+    const pack = await freezeDraftForDelivery(structuredClone(dc), { session: s, now: NOW });
     assert.notEqual(pack.frozen.dirs.find((d) => d.dir_id === ACTIVE_NA_DIR)?.current_state, "n_a");
   });
 

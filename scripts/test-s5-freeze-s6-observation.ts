@@ -1,5 +1,5 @@
 /**
- * S5 Freeze→Delivery wire + S6 LAB observation (engineering gates, no live LLM).
+ * S5 Freeze閳墬elivery wire + S6 LAB observation (engineering gates, no live LLM).
  * Run: pnpm exec tsx scripts/test-s5-freeze-s6-observation.ts
  */
 
@@ -127,7 +127,7 @@ async function main() {
   const draft = makeDraft();
   assert.equal(evaluateDecisionSufficiency(draft).canStop, true);
 
-  await check("S5: stall path cannot freeze", () => {
+  await check("S5: stall path cannot freeze", async () => {
     const base = sessionWith(draft);
     const s = sessionWith(draft, {
       agent_v2: {
@@ -143,7 +143,7 @@ async function main() {
     assert.equal(gate.reason, "stall_or_degraded_path");
   });
 
-  await check("S5: purchase/CTA flag blocks freeze", () => {
+  await check("S5: purchase/CTA flag blocks freeze", async () => {
     const gate = canFreezeSessionOnSufficiency({
       session: sessionWith(draft),
       trigger: "pre_delivery_safety",
@@ -153,9 +153,9 @@ async function main() {
     assert.equal(gate.reason, "purchase_or_cta_path");
   });
 
-  await check("S5: sufficiency freezes draft → final + binding", () => {
+  await check("S5: sufficiency freezes draft 閳?final + binding", async () => {
     const s = sessionWith(draft);
-    const result = applySufficiencyFreezeToSession(s, {
+    const result = await applySufficiencyFreezeToSession(s, {
       now: "2026-11-03T20:10:00.000Z",
     });
     assert.equal(result.ok, true);
@@ -171,15 +171,15 @@ async function main() {
     );
   });
 
-  await check("S5: already frozen skips idempotently", () => {
-    const pack = freezeDraftForDelivery(draft, {
+  await check("S5: already frozen skips idempotently", async () => {
+    const pack = await freezeDraftForDelivery(draft, {
       session: sessionWith(draft),
       now: "2026-11-03T20:10:00.000Z",
     });
     const s = sessionWith(pack.frozen, {
       decision_context_versions: [pack.version_snapshot],
     });
-    const result = applySufficiencyFreezeToSession(s);
+    const result = await applySufficiencyFreezeToSession(s);
     assert.equal(result.ok, true);
     assert.equal("skipped" in result && result.skipped, true);
     if (!result.ok || !("skipped" in result) || !result.skipped) {
@@ -188,7 +188,7 @@ async function main() {
     assert.equal(result.reason, "already_frozen");
   });
 
-  await check("S5: legacy session without DC does not require DC", () => {
+  await check("S5: legacy session without DC does not require DC", async () => {
     assert.equal(
       shouldRequireFrozenDecisionContext({
         sessionHasDecisionContext: false,
@@ -199,7 +199,7 @@ async function main() {
     );
   });
 
-  await check("S5: frozen DC session always requires binding", () => {
+  await check("S5: frozen DC session always requires binding", async () => {
     assert.equal(
       shouldRequireFrozenDecisionContext({
         sessionHasDecisionContext: true,
@@ -210,8 +210,8 @@ async function main() {
     );
   });
 
-  await check("S5: resolveDeliveryDcPayload after freeze", () => {
-    const pack = freezeDraftForDelivery(draft, {
+  await check("S5: resolveDeliveryDcPayload after freeze", async () => {
+    const pack = await freezeDraftForDelivery(draft, {
       session: sessionWith(draft),
       now: "2026-11-03T20:10:00.000Z",
     });
@@ -225,7 +225,7 @@ async function main() {
     assert.ok(payload.snapshot);
   });
 
-  await check("S6: observation layers present", () => {
+  await check("S6: observation layers present", async () => {
     const obs = buildLabObservation({
       stage: "v3:body",
       step_key: "05.body",

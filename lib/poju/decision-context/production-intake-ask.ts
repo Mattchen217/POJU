@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Production Intake 2.0 next-ask orchestration.
  *
  * Call chain (sole scoring path):
  *   selectNextIntakeAskForSession
- *     → planNextAskFromCandidates
- *       → scorePlanningCandidate
- *         → resolveDirRoleEvidence
+ *     鈫?planNextAskFromCandidates
+ *       鈫?scorePlanningCandidate
+ *         鈫?resolveDirRoleEvidence
  *
  * Wired from agent collecting after DC turn persist. No parallel gain/unresolved path.
  */
@@ -22,7 +22,7 @@ import { snapshotFromDc } from "./question-planning";
 import type { DecisionContext } from "./types";
 
 export const INTAKE_ASK_SCORING_PATH =
-  "selectNextIntakeAskForSession→planNextAskFromCandidates→scorePlanningCandidate→resolveDirRoleEvidence" as const;
+  ("selectNextIntakeAskForSession\u2192planNextAskFromCandidates\u2192scorePlanningCandidate\u2192resolveDirRoleEvidence") as const;
 
 export type IntakeAskPlanSnapshot = {
   scored_at: string;
@@ -88,12 +88,12 @@ export type SelectNextIntakeAskResult = {
 
 /**
  * Production entry: score/sort/select next ask for a session with draft DC.
- * Always uses planNextAskFromCandidates — never a second scoring algorithm.
+ * Always uses planNextAskFromCandidates 鈥?never a second scoring algorithm.
  * NaValidationContext comes only from the production builder (no caller injection).
  */
-export function selectNextIntakeAskForSession(
+export async function selectNextIntakeAskForSession(
   input: SelectNextIntakeAskInput,
-): SelectNextIntakeAskResult {
+): Promise<SelectNextIntakeAskResult> {
   const dc = input.session.decision_context;
   if (!dc || (dc.status !== "draft" && dc.status !== "final")) {
     return {
@@ -101,7 +101,7 @@ export function selectNextIntakeAskForSession(
       plan: {
         ranked: [],
         selected: null,
-        scoring_path: "scorePlanningCandidate→resolveDirRoleEvidence",
+        scoring_path: INTAKE_ASK_SCORING_PATH,
       },
       selected: null,
       production_call_chain: INTAKE_ASK_SCORING_PATH,
@@ -114,10 +114,7 @@ export function selectNextIntakeAskForSession(
     ...(input.extraCandidates ?? []),
   ];
 
-  const naValidation = buildProductionNaValidationContextFromSession(
-    input.session,
-    { nowIso: input.nowIso },
-  );
+  const naValidation = await buildProductionNaValidationContextFromSession(input.session, { nowIso: input.nowIso });
 
   const plan = planNextAskFromCandidates({
     candidates,
@@ -156,3 +153,5 @@ export function selectNextIntakeAskForSession(
     production_call_chain: INTAKE_ASK_SCORING_PATH,
   };
 }
+
+

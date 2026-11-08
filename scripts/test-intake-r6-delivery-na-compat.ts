@@ -1,15 +1,12 @@
 /**
- * S8-F — Delivery / Report compatibility with DIR n_a (F1–F8).
+ * S8-F 鈥?Delivery / Report compatibility with DIR n_a (F1鈥揊8).
  *
  * Every Decision Context here is produced by production paths only:
- *   seedNaDraftSession (createPOJUSession → E1 → declareDirNotApplicable →
- *   reaggregateDirsOnSession) → ensureSessionFrozenForDelivery (C1 / IndexedDB).
+ *   seedNaDraftSession (createPOJUSession 鈫?E1 鈫?declareDirNotApplicable 鈫? *   reaggregateDirsOnSession) 鈫?ensureSessionFrozenForDelivery (C1 / IndexedDB).
  * Consumers exercised on the frozen result:
- *   resolveDeliveryDcPayload (client POST payload) → JSON wire copy →
- *   assertSnapshotMatchesBinding / resolveDecisionContextForReport (the two
- *   binding branches app/api/poju/final-delivery/route.ts calls) →
- *   buildDecisionContextPageFeed / formatDecisionContextSliceForPage (page prompts,
- *   BookJudgment, run-step-v3) → buildStage4SampleFromFrozenDc /
+ *   resolveDeliveryDcPayload (client POST payload) 鈫?JSON wire copy 鈫? *   assertSnapshotMatchesBinding / resolveDecisionContextForReport (the two
+ *   binding branches app/api/poju/final-delivery/route.ts calls) 鈫? *   buildDecisionContextPageFeed / formatDecisionContextSliceForPage (page prompts,
+ *   BookJudgment, run-step-v3) 鈫?buildStage4SampleFromFrozenDc /
  *   assertP5P6P8Consistency (Stage 4 report structure).
  * F0 additionally captures the real POST body sent by runFinalDeliveryForSession.
  * The HTTP route handler itself is not executed (no server in this script).
@@ -133,17 +130,21 @@ async function main() {
 
   /** Persist production reaggregation (Session-derived NaValidation) onto the draft. */
   async function reaggregate(sid: string, op: string): Promise<void> {
+    const latest = await loadPOJUSession(sid);
+    if (!latest) throw new Error(`session missing for reaggregate: ${sid}`);
+    const dc = dcOf(latest);
+    const dirs = await reaggregateDirsOnSession(latest, dc.dirs, { nowIso: NOW });
     await mutatePOJUSession(sid, {
       operation_id: op,
       kind: "session_patch",
       bump_dc: true,
-      apply: (latest): POJUSessionState => {
-        const dc = dcOf(latest);
+      apply: (cur): POJUSessionState => {
+        const curDc = dcOf(cur);
         return {
-          ...latest,
+          ...cur,
           decision_context: {
-            ...dc,
-            dirs: reaggregateDirsOnSession(latest, dc.dirs, { nowIso: NOW }),
+            ...curDc,
+            dirs,
             updated_at: NOW,
           },
         };
@@ -342,7 +343,7 @@ async function main() {
   // ============================================== F2
   console.log("\n== F2 n_a is not consumed as known ==");
 
-  await check("F2 same DIR + same confirmed fact: N/A session → n_a, no-N/A session → known; consumers keep them distinct", async () => {
+  await check("F2 same DIR + same confirmed fact: N/A session 鈫?n_a, no-N/A session 鈫?known; consumers keep them distinct", async () => {
     const na = naBound.bound;
     const kn = knownBound.bound;
     assert.equal(dirState(na.snapshot, ACTIVE_NA_DIR), "n_a");
@@ -381,7 +382,7 @@ async function main() {
   // ============================================== F3
   console.log("\n== F3 invalid N/A evidence does not reach the report ==");
 
-  await check("F3 forged DC-only evidence (user_explicit_na without Session action + classification, and system_na_marker) → DIR stays known in frozen snapshot, feeds and report", async () => {
+  await check("F3 forged DC-only evidence (user_explicit_na without Session action + classification, and system_na_marker) 鈫?DIR stays known in frozen snapshot, feeds and report", async () => {
     const seed = await seedNaDraftSession("f3", NOW, { withNa: false });
     const draft = dcOf(await durable(seed.sid));
     const forgedActionId = "na-act-f3-forged";
@@ -437,7 +438,7 @@ async function main() {
 
     const b = await freezeAndBind(seed.sid);
     assert.equal(dirState(b.snapshot, ACTIVE_NA_DIR), "known");
-    const na = buildProductionNaValidationContextFromSession(b.session, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(b.session, { nowIso: NOW });
     assert.equal(findValidatedDirLevelNa(ACTIVE_NA_DIR, b.snapshot.explicit_na_evidence, na), null);
     eachFeed(b, (page, feed) => {
       assert.equal(feedDir(feed, ACTIVE_NA_DIR)?.current_state, "known", `page ${page}`);
@@ -476,7 +477,7 @@ async function main() {
   // ============================================== F4
   console.log("\n== F4 revoked N/A evidence is not consumed ==");
 
-  await check("F4 revokeDirNaDeclaration → production reaggregation → DIR known; frozen snapshot keeps the revoked rows inert; feeds/report never show n_a; replay rejected", async () => {
+  await check("F4 revokeDirNaDeclaration 鈫?production reaggregation 鈫?DIR known; frozen snapshot keeps the revoked rows inert; feeds/report never show n_a; replay rejected", async () => {
     const seed = await seedNaDraftSession("f4", NOW);
     assert.equal(dirState(dcOf(await durable(seed.sid)), ACTIVE_NA_DIR), "n_a");
     await revokeDirNaDeclaration(seed.sid, {
@@ -520,7 +521,7 @@ async function main() {
       )?.revoked,
       true,
     );
-    const na = buildProductionNaValidationContextFromSession(b.session, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(b.session, { nowIso: NOW });
     assert.equal(findValidatedDirLevelNa(ACTIVE_NA_DIR, b.snapshot.explicit_na_evidence, na), null);
     eachFeed(b, (page, feed) =>
       assert.equal(feedDir(feed, ACTIVE_NA_DIR)?.current_state, "known", `page ${page}`),
@@ -530,10 +531,10 @@ async function main() {
   // ============================================== F5
   console.log("\n== F5 N/A traceable to DIR + source ==");
 
-  await check("F5 frozen n_a traces to one valid evidence row → DIR + source fact (+E1) → Session declaration action → classification; trace rows are hash-bound to the report binding", async () => {
+  await check("F5 frozen n_a traces to one valid evidence row 鈫?DIR + source fact (+E1) 鈫?Session declaration action 鈫?classification; trace rows are hash-bound to the report binding", async () => {
     const b = naBound.bound;
     const { seed } = naBound;
-    const na = buildProductionNaValidationContextFromSession(b.session, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(b.session, { nowIso: NOW });
     const ev = findValidatedDirLevelNa(ACTIVE_NA_DIR, b.snapshot.explicit_na_evidence, na);
     assert.ok(ev, "validated evidence for the n_a DIR");
     assert.equal(ev.target, "dir");
@@ -581,9 +582,9 @@ async function main() {
   });
 
   // ============================================== F6
-  console.log("\n== F6 V1 → V2 keeps n_a and its evidence linkage ==");
+  console.log("\n== F6 V1 鈫?V2 keeps n_a and its evidence linkage ==");
 
-  await check("F6 V1 final (n_a) → persistV2FromFinalOnSession → V2 draft n_a with identical evidence/classification; V2 freeze binds n_a; V1 still resolvable by version with n_a", async () => {
+  await check("F6 V1 final (n_a) 鈫?persistV2FromFinalOnSession 鈫?V2 draft n_a with identical evidence/classification; V2 freeze binds n_a; V1 still resolvable by version with n_a", async () => {
     const seed = await seedNaDraftSession("f6", NOW);
     const v1b = await freezeAndBind(seed.sid);
     const v1 = v1b.snapshot;
@@ -622,7 +623,7 @@ async function main() {
     assert.equal(dirState(v2b.snapshot, ACTIVE_NA_DIR), "n_a");
     assert.deepEqual(v2b.snapshot.explicit_na_evidence, v1.explicit_na_evidence);
     assert.deepEqual(v2b.snapshot.explicit_na_classifications, v1.explicit_na_classifications);
-    const na = buildProductionNaValidationContextFromSession(v2b.session, { nowIso: V2_NOW });
+    const na = await buildProductionNaValidationContextFromSession(v2b.session, { nowIso: V2_NOW });
     assert.ok(findValidatedDirLevelNa(ACTIVE_NA_DIR, v2b.snapshot.explicit_na_evidence, na));
     eachFeed(v2b, (page, feed) =>
       assert.equal(feedDir(feed, ACTIVE_NA_DIR)?.current_state, "n_a", `page ${page}`),
@@ -671,20 +672,21 @@ async function main() {
     await reaggregate(sid, `op_f7_reagg_${tag}`);
   }
 
-  await check("F7 preferred-path conflict on the N/A DIR → DIR conflict although the N/A triad is still valid; freeze refused; no binding reaches Delivery; normal DIR unaffected", async () => {
+  await check("F7 preferred-path conflict on the N/A DIR 鈫?DIR conflict although the N/A triad is still valid; freeze refused; no binding reaches Delivery; normal DIR unaffected", async () => {
     const seed = await seedNaDraftSession("f7", NOW);
     await addConflictOnNaDir(seed.sid, seed.naFactId, "f7", true);
     const s = await durable(seed.sid);
     const dc = dcOf(s);
     assert.equal(dirState(dc, ACTIVE_NA_DIR), "conflict");
     assert.equal(dirState(dc, NORMAL_DIR), "known");
-    const na = buildProductionNaValidationContextFromSession(s, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(s, { nowIso: NOW });
     assert.ok(
       findValidatedDirLevelNa(ACTIVE_NA_DIR, dc.explicit_na_evidence, na),
-      "N/A evidence itself still validates — conflict wins by precedence",
+      "N/A evidence itself still validates 鈥?conflict wins by precedence",
     );
 
-    assert.throws(() => freezeDraftForDelivery(structuredClone(dc), { session: s, now: NOW }));
+    await assert.rejects(async () =>
+        await freezeDraftForDelivery(structuredClone(dc), { session: s, now: NOW }));
     const wire = await ensureSessionFrozenForDelivery(s, { trigger: "pre_delivery_safety", now: NOW });
     assert.ok(wire.ok && "skipped" in wire && wire.skipped, "freeze not performed");
     assert.equal(wire.reason, "not_sufficient");
@@ -695,7 +697,7 @@ async function main() {
     assert.equal(payload.snapshot, null);
   });
 
-  await check("F7 non-preferred-path conflict (existing §2.4: not blocking) → DIR stays n_a; frozen as unresolved_in_final; surfaced to report conditions + feed conflicts", async () => {
+  await check("F7 non-preferred-path conflict (existing 搂2.4: not blocking) 鈫?DIR stays n_a; frozen as unresolved_in_final; surfaced to report conditions + feed conflicts", async () => {
     const seed = await seedNaDraftSession("f7b", NOW);
     await addConflictOnNaDir(seed.sid, seed.naFactId, "f7b", false);
     assert.equal(dirState(dcOf(await durable(seed.sid)), ACTIVE_NA_DIR), "n_a");

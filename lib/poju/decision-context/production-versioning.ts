@@ -1,6 +1,6 @@
-/**
- * Production V1 final → V2 draft Session wire (Intake reaggregation).
- * Persist via C1 commitDecisionContextChange — same SoT as Freeze.
+﻿/**
+ * Production V1 final 鈫?V2 draft Session wire (Intake reaggregation).
+ * Persist via C1 commitDecisionContextChange 鈥?same SoT as Freeze.
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -48,10 +48,10 @@ export type StartV2OnSessionOpts = Omit<
  * Pure: open V2 draft on Session using the production NaValidationContext
  * (Session authority + ACTIVE DIR catalog; no caller authority entry).
  */
-export function applyV2FromFinalToSession(
+export async function applyV2FromFinalToSession(
   session: POJUSessionState,
   opts: StartV2OnSessionOpts = {},
-): ApplyV2Result {
+): Promise<ApplyV2Result> {
   const finalDc = session.decision_context;
   if (!finalDc || finalDc.status !== "final") {
     throw new VersioningError(
@@ -59,9 +59,7 @@ export function applyV2FromFinalToSession(
     );
   }
 
-  const naValidation = buildProductionNaValidationContextFromSession(session, {
-    nowIso: opts.now,
-  });
+  const naValidation = await buildProductionNaValidationContextFromSession(session, { nowIso: opts.now });
 
   const { superseded, draft } = startV2FromFinal(finalDc, {
     ...opts,
@@ -138,7 +136,7 @@ export async function persistV2FromFinalOnSession(
 
   let applied: ApplyV2Result;
   try {
-    applied = applyV2FromFinalToSession(session, opts);
+    applied = await applyV2FromFinalToSession(session, opts);
   } catch (e) {
     return {
       ok: false,
@@ -192,3 +190,6 @@ export async function persistV2FromFinalOnSession(
     idempotency_key,
   };
 }
+
+
+

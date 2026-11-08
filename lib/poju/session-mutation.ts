@@ -46,7 +46,9 @@ export type SessionMutationKind =
 export interface SessionMutation {
   operation_id: string;
   kind: SessionMutationKind;
-  apply: (latest: POJUSessionState) => POJUSessionState;
+  apply: (
+    latest: POJUSessionState,
+  ) => POJUSessionState | Promise<POJUSessionState>;
   /**
    * DC revision policy for this mutation:
    * - `auto` (default): bump dc_write_revision only when formal DC content changes
@@ -553,7 +555,7 @@ export async function mutatePOJUSession(
       dc_write_revision: mirror.dc_write_revision,
     };
 
-    const candidate = mutation.apply(base);
+    const candidate = await Promise.resolve(mutation.apply(base));
     if (candidate.session_id !== sessionId) {
       throw new SessionCasError("INVALID_SESSION_ID", "mutation changed session_id");
     }

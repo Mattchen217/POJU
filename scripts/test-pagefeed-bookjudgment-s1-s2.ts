@@ -125,13 +125,13 @@ async function main() {
     decision_context: pagefeedDraft,
     decision_context_versions: [],
   } as POJUSessionState;
-  const pack = freezeDraftForDelivery(pagefeedDraft, {
+  const pack = await freezeDraftForDelivery(pagefeedDraft, {
     session: pagefeedSession,
     now: "2026-11-03T18:30:00.000Z",
   });
   const frozen = pack.frozen;
 
-  await check("S1: DC feed pages contract matches STAGE4 list", () => {
+  await check("S1: DC feed pages contract matches STAGE4 list", async () => {
     const pages = listDecisionContextFeedPages();
     assert.deepEqual([...pages], ["01", "02", "04", "05", "06", "08"]);
     assert.equal(faceRequiresFormalDecisionContext("05"), true);
@@ -141,14 +141,14 @@ async function main() {
     assert.equal(PAGE_DC_DISPLAY_POLICY.hypothesis, "never_upgrade_to_fact");
   });
 
-  await check("S1: pageFeedFlags.decision_context body vs judgment", () => {
+  await check("S1: pageFeedFlags.decision_context body vs judgment", async () => {
     assert.equal(pageFeedFlags("05", "body").decision_context, true);
     assert.equal(pageFeedFlags("05", "judgment").decision_context, false);
     assert.equal(pageFeedFlags("03", "body").decision_context, false);
     assert.equal(pageFeedFlags("08", "body").decision_context, true);
   });
 
-  await check("S1: body prompt user_feed parity includes Formal DC", () => {
+  await check("S1: body prompt user_feed parity includes Formal DC", async () => {
     const dcFeed = formatDecisionContextSliceForPage(frozen, "05");
     assert.ok(dcFeed.includes("Formal Decision Context"));
     const { user } = buildV3BodyPrompt({
@@ -161,14 +161,14 @@ async function main() {
     assert.ok(user.includes(frozen.content_hash!));
   });
 
-  await check("S1: version binding isolation via prepareFrozenDcForDelivery", () => {
+  await check("S1: version binding isolation via prepareFrozenDcForDelivery", async () => {
     const slice = applyFreezeToSessionSlice({}, pack);
     const prepared = prepareFrozenDcForDelivery(slice);
     assert.equal(prepared.decision_context_binding.context_hash, frozen.content_hash);
     assert.equal(prepared.decision_context_snapshot.version, frozen.version);
   });
 
-  await check("S2: BookJudgment feed includes DC for 05/06/08", () => {
+  await check("S2: BookJudgment feed includes DC for 05/06/08", async () => {
     const feed = buildBookJudgmentFeedBlock({
       chartText: "CFP stub",
       ziwei: null,
@@ -183,7 +183,7 @@ async function main() {
     assert.ok(pageReceivesDecisionContextFeed("05"));
   });
 
-  await check("S2: BookJudgment without DC has no Formal DC block", () => {
+  await check("S2: BookJudgment without DC has no Formal DC block", async () => {
     const feed = buildBookJudgmentFeedBlock({
       chartText: "CFP stub",
       ziwei: null,
@@ -193,7 +193,7 @@ async function main() {
     assert.equal(feed.includes("Formal Decision Context"), false);
   });
 
-  await check("S3: labPublicView exposes binding without full snapshot", () => {
+  await check("S3: labPublicView exposes binding without full snapshot", async () => {
     const lab = {
       version: 1,
       lab_id: "lab_test",
@@ -224,7 +224,7 @@ async function main() {
     );
   });
 
-  await check("S4: freezeDraftForDelivery refuses non-sufficiency path via Freeze API", () => {
+  await check("S4: freezeDraftForDelivery refuses non-sufficiency path via Freeze API", async () => {
     // freezeDraftForDelivery always sets stage3_sufficiency_end; purchase flag is forced false.
     // Ensure pack is consistent.
     assert.equal(pack.binding.context_hash, pack.frozen.content_hash);

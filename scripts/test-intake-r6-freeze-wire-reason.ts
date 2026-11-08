@@ -1,9 +1,9 @@
 /**
- * S3 — Freeze Wire reason_code mapping.
+ * S3 閳?Freeze Wire reason_code mapping.
  *   pnpm test:intake-r6-freeze-wire-reason
  *
- * Evidence labels: [Tier A] helper unit · [Tier B] production-function execution ·
- * [Code-review] static · not Registry / not S2 !load.ok runtime.
+ * Evidence labels: [Tier A] helper unit 璺?[Tier B] production-function execution 璺?
+ * [Code-review] static 璺?not Registry / not S2 !load.ok runtime.
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
@@ -194,18 +194,18 @@ async function main() {
   console.log("S3 Freeze Wire reason_code\n");
 
   // ---------- Tier A ----------
-  console.log("== Tier A — helper unit ==");
+  console.log("== Tier A 閳?helper unit ==");
   const phantomSession = sessionWith(null);
 
   for (const code of FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES) {
-    await check(`[Tier A] mapCaughtFreezeFailure ${code}`, () => {
+    await check(`[Tier A] mapCaughtFreezeFailure ${code}`, async () => {
       const mapped = mapCaughtFreezeFailure(
         new FreezeError(code, { code }),
       );
       assert.equal(mapped.reason_code, code);
       assert.equal(mapped.reason, code);
     });
-    await check(`[Tier A] freezeFailWireResult constructed ${code}`, () => {
+    await check(`[Tier A] freezeFailWireResult constructed ${code}`, async () => {
       const r = freezeFailWireResult(
         phantomSession,
         new FreezeError(code, { code }),
@@ -217,7 +217,7 @@ async function main() {
     });
   }
 
-  await check("[Tier A] mapCaughtFreezeFailure unknown code → freeze_failed", () => {
+  await check("[Tier A] mapCaughtFreezeFailure unknown code 閳?freeze_failed", async () => {
     const mapped = mapCaughtFreezeFailure(
       new FreezeError("x", { code: "not_in_allowlist" }),
     );
@@ -225,7 +225,7 @@ async function main() {
     assert.equal(mapped.reason, "x");
   });
 
-  await check("[Tier A] mapCaughtFreezeFailure missing code → freeze_failed", () => {
+  await check("[Tier A] mapCaughtFreezeFailure missing code 閳?freeze_failed", async () => {
     const mapped = mapCaughtFreezeFailure(
       new FreezeError("Decision not sufficient to freeze"),
     );
@@ -233,7 +233,7 @@ async function main() {
     assert.equal(mapped.reason, "Decision not sufficient to freeze");
   });
 
-  await check("[Tier A] mapCaughtFreezeFailure plain Error → freeze_failed", () => {
+  await check("[Tier A] mapCaughtFreezeFailure plain Error 閳?freeze_failed", async () => {
     const mapped = mapCaughtFreezeFailure(
       new Error("freezeDraftForDelivery: session.session_id required"),
     );
@@ -244,13 +244,13 @@ async function main() {
     );
   });
 
-  await check("[Tier A] mapCaughtFreezeFailure non-Error → freeze_failed", () => {
+  await check("[Tier A] mapCaughtFreezeFailure non-Error 閳?freeze_failed", async () => {
     const mapped = mapCaughtFreezeFailure("boom");
     assert.equal(mapped.reason_code, FREEZE_WIRE_GENERIC_FAIL_CODE);
     assert.equal(mapped.reason, "boom");
   });
 
-  await check("[Tier A] persistFailWireResult with commit error", () => {
+  await check("[Tier A] persistFailWireResult with commit error", async () => {
     const r = persistFailWireResult(phantomSession, "cas boom");
     assert.equal(r.ok, false);
     assert.equal(r.reason_code, FREEZE_WIRE_PERSIST_FAIL_CODE);
@@ -262,7 +262,7 @@ async function main() {
     assert.notEqual(r.reason_code, FREEZE_WIRE_GENERIC_FAIL_CODE);
   });
 
-  await check("[Tier A] persistFailWireResult null/empty → token reason", () => {
+  await check("[Tier A] persistFailWireResult null/empty 閳?token reason", async () => {
     const rNull = persistFailWireResult(phantomSession, null);
     assert.equal(rNull.reason_code, FREEZE_WIRE_PERSIST_FAIL_CODE);
     assert.equal(rNull.reason, FREEZE_WIRE_PERSIST_FAIL_CODE);
@@ -271,7 +271,7 @@ async function main() {
     assert.equal(rEmpty.reason, FREEZE_WIRE_PERSIST_FAIL_CODE);
   });
 
-  await check("[Tier A] canFreezeSessionOnSufficiency stall (gate-only)", () => {
+  await check("[Tier A] canFreezeSessionOnSufficiency stall (gate-only)", async () => {
     const draft = makeSufficientDraft();
     const base = sessionWith(draft);
     const s = sessionWith(draft, {
@@ -287,7 +287,7 @@ async function main() {
 
   // ---------- Code-review ----------
   console.log("\n== Code-review ==");
-  await check("[Code-review] catch / persist / pass-through thin helpers", () => {
+  await check("[Code-review] catch / persist / pass-through thin helpers", async () => {
     const src = readFileSync(
       resolve("lib/poju/decision-context/production-freeze-wire.ts"),
       "utf8",
@@ -307,19 +307,18 @@ async function main() {
   });
 
   // ---------- Tier B ----------
-  console.log("\n== Tier B — production-function execution ==");
+  console.log("\n== Tier B 閳?production-function execution ==");
   const draft = makeSufficientDraft();
 
   await check(
-    "[Tier B] applySufficiencyFreezeToSession catch → freeze_failed",
-    () => {
+    "[Tier B] applySufficiencyFreezeToSession catch 閳?freeze_failed", async () => {
       const s = sessionWith(draft, { session_id: "" });
       const gate = canFreezeSessionOnSufficiency({
         session: s,
         trigger: "sufficiency_end_confirm",
       });
       assert.equal(gate.allowed, true);
-      const result = applySufficiencyFreezeToSession(s, { now: NOW });
+      const result = await applySufficiencyFreezeToSession(s, { now: NOW });
       assert.equal(result.ok, false);
       if (result.ok) throw new Error("expected fail");
       assert.equal(result.reason_code, FREEZE_WIRE_GENERIC_FAIL_CODE);
@@ -346,10 +345,9 @@ async function main() {
   );
 
   await check(
-    "[Tier B] applySufficiencyFreezeToSession success",
-    () => {
+    "[Tier B] applySufficiencyFreezeToSession success", async () => {
       const s = sessionWith(draft);
-      const result = applySufficiencyFreezeToSession(s, { now: NOW });
+      const result = await applySufficiencyFreezeToSession(s, { now: NOW });
       assert.equal(result.ok, true);
       if (!result.ok || ("skipped" in result && result.skipped)) {
         throw new Error("expected success freeze");
@@ -361,16 +359,15 @@ async function main() {
   );
 
   await check(
-    "[Tier B] applySufficiencyFreezeToSession skip already_frozen",
-    () => {
-      const pack = freezeDraftForDelivery(draft, {
+    "[Tier B] applySufficiencyFreezeToSession skip already_frozen", async () => {
+      const pack = await freezeDraftForDelivery(draft, {
         session: sessionWith(draft),
         now: NOW,
       });
       const s = sessionWith(pack.frozen, {
         decision_context_versions: [pack.version_snapshot],
       });
-      const result = applySufficiencyFreezeToSession(s);
+      const result = await applySufficiencyFreezeToSession(s);
       assert.equal(result.ok, true);
       assert.equal("skipped" in result && result.skipped, true);
       if (!result.ok || !("skipped" in result) || !result.skipped) {
@@ -382,11 +379,10 @@ async function main() {
   );
 
   await check(
-    "[Tier B] applySufficiencyFreezeToSession skip not_sufficient",
-    () => {
+    "[Tier B] applySufficiencyFreezeToSession skip not_sufficient", async () => {
       const insufficient = makeInsufficientDraft();
       const s = sessionWith(insufficient);
-      const result = applySufficiencyFreezeToSession(s);
+      const result = await applySufficiencyFreezeToSession(s);
       assert.equal(result.ok, true);
       assert.equal("skipped" in result && result.skipped, true);
       if (!result.ok || !("skipped" in result) || !result.skipped) {
@@ -398,13 +394,12 @@ async function main() {
   );
 
   await check(
-    "[Tier B] applySufficiencyFreezeToSession skip stall_or_degraded_path",
-    () => {
+    "[Tier B] applySufficiencyFreezeToSession skip stall_or_degraded_path", async () => {
       const base = sessionWith(draft);
       const s = sessionWith(draft, {
         agent_v2: { ...base.agent_v2!, stall_offer_pending: true },
       });
-      const result = applySufficiencyFreezeToSession(s);
+      const result = await applySufficiencyFreezeToSession(s);
       assert.equal(result.ok, true);
       assert.equal("skipped" in result && result.skipped, true);
       if (!result.ok || !("skipped" in result) || !result.skipped) {
@@ -416,9 +411,9 @@ async function main() {
   );
 
   // Persist-fail: real IndexedDB write failure (storage-level tx abort, test fixture).
-  console.log("\n== Tier B — ensure persist-fail (real IndexedDB tx abort) ==");
+  console.log("\n== Tier B 閳?ensure persist-fail (real IndexedDB tx abort) ==");
   await check(
-    "[Tier B] ensureSessionFrozenForDelivery persist-fail (IDB tx abort) → dc_freeze_persist_failed; Session unchanged; IDB draft",
+    "[Tier B] ensureSessionFrozenForDelivery persist-fail (IDB tx abort) 閳?dc_freeze_persist_failed; Session unchanged; IDB draft",
     async () => {
       const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
         "../lib/db/poju-db"

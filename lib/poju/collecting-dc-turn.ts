@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Collecting-phase DC turn orchestration for `handleUserMessage`:
- *   persistCollectingUserTurnDc (C1) → selectNextIntakeAskForSession.
+ *   persistCollectingUserTurnDc (C1) 鈫?selectNextIntakeAskForSession.
  *
  * Adoption rule: the caller's Session takes the new DC only when C1 committed it
  * (or reported a prior commit via `idempotent_skip`). A rolled-back commit leaves
- * the caller's Session exactly as passed in — the uncommitted DC never reaches
+ * the caller's Session exactly as passed in 鈥?the uncommitted DC never reaches
  * memory, so a later whole-session save cannot write it outside C1. Next-ask
  * planning reads only that adopted / unchanged Session; a planning failure keeps
  * the committed DC and writes no plan.
@@ -15,7 +15,7 @@ import type { POJUSessionState } from "@/lib/poju/types";
 export type CollectingDcTurnOutcome =
   /** DC committed by C1 (or prior commit via idempotent_skip) and adopted. */
   | "dc_committed"
-  /** Collecting mapper skipped this turn (no draft DC, empty / duplicate turn…). */
+  /** Collecting mapper skipped this turn (no draft DC, empty / duplicate turn鈥?. */
   | "not_applied"
   /** C1 rolled back; caller Session returned unchanged, no planning. */
   | "persist_failed"
@@ -64,7 +64,7 @@ export async function runCollectingDcTurn(
     return { session, outcome: "persist_threw", ask_planned: false, persist_error: errorText(e) };
   }
 
-  // Intake 2.0 production ask planning — sole scoring path via shared resolver.
+  // Intake 2.0 production ask planning 鈥?sole scoring path via shared resolver.
   if (current.decision_context?.status !== "draft") {
     return { session: current, outcome, ask_planned: false, persist_error: persistError };
   }
@@ -72,7 +72,7 @@ export async function runCollectingDcTurn(
     const { selectNextIntakeAskForSession } = await import(
       "@/lib/poju/decision-context/production-intake-ask"
     );
-    const planned = selectNextIntakeAskForSession({ session: current, nowIso: input.now });
+    const planned = await selectNextIntakeAskForSession({ session: current, nowIso: input.now });
     return { session: planned.session, outcome, ask_planned: true, persist_error: persistError };
   } catch (e) {
     return {
@@ -84,3 +84,4 @@ export async function runCollectingDcTurn(
     };
   }
 }
+

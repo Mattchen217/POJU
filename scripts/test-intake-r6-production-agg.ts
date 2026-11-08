@@ -1,5 +1,5 @@
 /**
- * Stage 3.2 — Production DIR aggregation wiring (Call B / Collecting / CAS).
+ * Stage 3.2 鈥?Production DIR aggregation wiring (Call B / Collecting / CAS).
  *   pnpm exec tsx scripts/test-intake-r6-production-agg.ts
  *   pnpm test:intake-r6-production-agg
  */
@@ -16,7 +16,7 @@ const NOW = "2026-11-05T14:00:00.000Z";
 const NA_CODE = "explicit_not_applicable";
 
 async function main() {
-  console.log("intake-r6-production-agg (Call B / Collecting → reaggregateDirsIntake)");
+  console.log("intake-r6-production-agg (Call B / Collecting 鈫?reaggregateDirsIntake)");
 
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
     "../lib/db/poju-db"
@@ -167,7 +167,7 @@ async function main() {
       source_ref: "call_a:agg",
       now: NOW,
     }).session;
-    const applied = applyCallBToSessionDc(s, sampleAgenda, { now: NOW });
+    const applied = await applyCallBToSessionDc(s, sampleAgenda, { now: NOW });
     assert.equal(applied.applied, true);
     const dirs = applied.session.decision_context!.dirs;
     assert.ok(dirs.length >= 1);
@@ -184,7 +184,7 @@ async function main() {
       "agenda covered must not promote DIR known",
     );
     assert.equal(sampleAgenda[0]!.status, "covered");
-    console.log("  PASS  Call B seed → unknown; covered ≠ known");
+    console.log("  PASS  Call B seed 鈫?unknown; covered 鈮?known");
 
     // Precise role + DIR association required for known
     const targetId = dir.dir_id;
@@ -230,16 +230,16 @@ async function main() {
         ],
       },
     };
-    const knownDirs = reaggregateDirsOnSession(
+    const knownDirs = await reaggregateDirsOnSession(
       withRoles,
       withRoles.decision_context!.dirs,
       { nowIso: NOW },
     );
     const known = knownDirs.find((d) => d.dir_id === targetId)!;
     assert.equal(known.current_state, "known");
-    console.log("  PASS  confirmed Fact+Constraint (Scheme A) → known");
+    console.log("  PASS  confirmed Fact+Constraint (Scheme A) 鈫?known");
 
-    // Missing related_dir_ids → must NOT satisfy (no OR-fallback).
+    // Missing related_dir_ids 鈫?must NOT satisfy (no OR-fallback).
     // Single-role DIR so legacy role-tag-only path would reach known.
     const situationOnlyDir = {
       ...dir,
@@ -266,7 +266,7 @@ async function main() {
         constraints: [],
       },
     };
-    const noLinkDirs = reaggregateDirsOnSession(
+    const noLinkDirs = await reaggregateDirsOnSession(
       noLinkSession,
       [situationOnlyDir],
       { nowIso: NOW },
@@ -279,7 +279,7 @@ async function main() {
       "sanity: legacy OR/role-only path reaches known without related_dir_ids",
     );
     console.log(
-      "  PASS  missing DIR link → Intake unknown; legacy OR path would be known",
+      "  PASS  missing DIR link 鈫?Intake unknown; legacy OR path would be known",
     );
 
     // Soft constraint cannot fill hard_constraint role
@@ -298,7 +298,7 @@ async function main() {
         ],
       },
     };
-    const softDirs = reaggregateDirsOnSession(
+    const softDirs = await reaggregateDirsOnSession(
       softOnly,
       softOnly.decision_context!.dirs,
       { nowIso: NOW },
@@ -307,7 +307,7 @@ async function main() {
       softDirs.find((d) => d.dir_id === targetId)!.current_state,
       "known",
     );
-    console.log("  PASS  soft Constraint ≠ hard_constraint Scheme A");
+    console.log("  PASS  soft Constraint 鈮?hard_constraint Scheme A");
   }
 
   // ---------- B. Collecting aggregation ----------
@@ -318,9 +318,9 @@ async function main() {
       source_ref: "call_a:col",
       now: NOW,
     }).session;
-    s = applyCallBToSessionDc(s, sampleAgenda, { now: NOW }).session;
+    s = (await applyCallBToSessionDc(s, sampleAgenda, { now: NOW })).session;
     const before = s.decision_context!.dirs.map((d) => d.current_state);
-    const collected = applyCollectingUserTurnToSessionDc(s, {
+    const collected = await applyCollectingUserTurnToSessionDc(s, {
       statement: "I have about four months of savings.",
       source_turn_id: "u_collect_agg_1",
       now: NOW,
@@ -338,7 +338,7 @@ async function main() {
       after.every((d) => d.current_state !== "known"),
       "unlinked collecting fact must not make DIR known",
     );
-    console.log("  PASS  collecting fact reaggregates; no role/DIR link → not known");
+    console.log("  PASS  collecting fact reaggregates; no role/DIR link 鈫?not known");
   }
 
   // ---------- C. N/A + conflict ----------
@@ -511,7 +511,7 @@ async function main() {
     });
     assert.equal(pureWithCatalog[0]!.current_state, "n_a");
     console.log(
-      "  PASS  [C-Pure] valid DIR-level ExplicitNaEvidence + fixture catalog → n_a",
+      "  PASS  [C-Pure] valid DIR-level ExplicitNaEvidence + fixture catalog 鈫?n_a",
     );
 
     // Precondition: pureWithCatalog === n_a with identical triad. Only catalog removed.
@@ -522,7 +522,7 @@ async function main() {
       "na_condition_not_in_catalog",
     );
     console.log(
-      "  PASS  [C-Pure] missing dirCatalog → not n_a (direct cause: na_condition_not_in_catalog)",
+      "  PASS  [C-Pure] missing dirCatalog 鈫?not n_a (direct cause: na_condition_not_in_catalog)",
     );
 
     // Precondition: pureWithCatalog === n_a. Only evidence.revoked flipped.
@@ -538,7 +538,7 @@ async function main() {
       ),
       "revoked",
     );
-    console.log("  PASS  [C-Pure] revoked N/A → not n_a (direct cause: revoked)");
+    console.log("  PASS  [C-Pure] revoked N/A 鈫?not n_a (direct cause: revoked)");
 
     // Precondition: pureWithCatalog === n_a. Only classification.context_id changed.
     const crossShell = withDc(sessionShell, {
@@ -553,7 +553,7 @@ async function main() {
       "explicit_na_classification_missing",
     );
     console.log(
-      "  PASS  [C-Pure] cross-context classification → not n_a (direct cause: explicit_na_classification_missing)",
+      "  PASS  [C-Pure] cross-context classification 鈫?not n_a (direct cause: explicit_na_classification_missing)",
     );
 
     // Precondition: pureWithCatalog === n_a and evidence still validates; only conflict added.
@@ -618,19 +618,19 @@ async function main() {
         explicit_na_classifications: [prodClassification],
       },
     };
-    const prodReason = (s: Shell, ev: typeof prodEvidence) =>
+    const prodReason = async (s: Shell, ev: typeof prodEvidence) =>
       reasonOf(
         ev,
-        buildProductionNaValidationContextFromSession(s, { nowIso: NOW }),
+        await buildProductionNaValidationContextFromSession(s, { nowIso: NOW }),
       );
 
-    const prodValid = reaggregateDirsOnSession(prodShell, [prodDir], {
+    const prodValid = await reaggregateDirsOnSession(prodShell, [prodDir], {
       nowIso: NOW,
     });
     assert.equal(prodValid[0]!.current_state, "n_a");
-    assert.equal(prodReason(prodShell, prodEvidence), "ok");
+    assert.equal(await prodReason(prodShell, prodEvidence), "ok");
     console.log(
-      "  PASS  [C-Prod] ACTIVE legal pair + Session action/E1 + DC classification/evidence → n_a",
+      "  PASS  [C-Prod] ACTIVE legal pair + Session action/E1 + DC classification/evidence 鈫?n_a",
     );
 
     // Precondition: C-Pure with FIXTURE_CATALOG made this exact DIR-A triad n_a.
@@ -640,18 +640,18 @@ async function main() {
       authority: { dirCatalog: FIXTURE_CATALOG },
       dirCatalog: FIXTURE_CATALOG,
     };
-    const prodForgedCatalog = reaggregateDirsOnSession(
+    const prodForgedCatalog = await reaggregateDirsOnSession(
       sessionShell,
       [dir],
       forgedReaggOpts,
     );
     assert.notEqual(prodForgedCatalog[0]!.current_state, "n_a");
     assert.equal(
-      prodReason(sessionShell, evidence),
+      await prodReason(sessionShell, evidence),
       "na_condition_not_in_catalog",
     );
     console.log(
-      "  PASS  [C-Prod] non-ACTIVE DIR-A + forged caller catalog → not n_a (direct cause: na_condition_not_in_catalog)",
+      "  PASS  [C-Prod] non-ACTIVE DIR-A + forged caller catalog 鈫?not n_a (direct cause: na_condition_not_in_catalog)",
     );
 
     // Precondition: prodValid === n_a. Only evidence.revoked flipped.
@@ -659,12 +659,12 @@ async function main() {
     const prodRevokedShell = withDc(prodShell, {
       explicit_na_evidence: [prodRevokedEv],
     });
-    const prodRevoked = reaggregateDirsOnSession(prodRevokedShell, [prodDir], {
+    const prodRevoked = await reaggregateDirsOnSession(prodRevokedShell, [prodDir], {
       nowIso: NOW,
     });
     assert.notEqual(prodRevoked[0]!.current_state, "n_a");
-    assert.equal(prodReason(prodRevokedShell, prodRevokedEv), "revoked");
-    console.log("  PASS  [C-Prod] revoked N/A → not n_a (direct cause: revoked)");
+    assert.equal(await prodReason(prodRevokedShell, prodRevokedEv), "revoked");
+    console.log("  PASS  [C-Prod] revoked N/A 鈫?not n_a (direct cause: revoked)");
 
     // Precondition: prodValid === n_a. Only classification.context_id changed.
     const prodCrossShell = withDc(prodShell, {
@@ -672,24 +672,24 @@ async function main() {
         { ...prodClassification, context_id: "OTHER_DC" },
       ],
     });
-    const prodCross = reaggregateDirsOnSession(prodCrossShell, [prodDir], {
+    const prodCross = await reaggregateDirsOnSession(prodCrossShell, [prodDir], {
       nowIso: NOW,
     });
     assert.notEqual(prodCross[0]!.current_state, "n_a");
     assert.equal(
-      prodReason(prodCrossShell, prodEvidence),
+      await prodReason(prodCrossShell, prodEvidence),
       "explicit_na_classification_missing",
     );
     console.log(
-      "  PASS  [C-Prod] cross-context classification → not n_a (direct cause: explicit_na_classification_missing)",
+      "  PASS  [C-Prod] cross-context classification 鈫?not n_a (direct cause: explicit_na_classification_missing)",
     );
 
     // Precondition: prodValid === n_a with evidence ok; only blocking conflict added.
-    const prodConflicted = reaggregateDirsOnSession(prodShell, [prodDir], {
+    const prodConflicted = await reaggregateDirsOnSession(prodShell, [prodDir], {
       nowIso: NOW,
       conflicts: [blockingConflict],
     });
-    assert.equal(prodReason(prodShell, prodEvidence), "ok");
+    assert.equal(await prodReason(prodShell, prodEvidence), "ok");
     assert.equal(prodConflicted[0]!.current_state, "conflict");
     console.log("  PASS  [C-Prod] blocking conflict priority over valid N/A");
 
@@ -724,14 +724,14 @@ async function main() {
     );
 
     // C-Production: ctxOk precondition accepts ddrEv; production builder has no
-    // CFP source → cfpSourceState unset → reject.
-    const prodCtx = buildProductionNaValidationContextFromSession(sessionShell, {
+    // CFP source 鈫?cfpSourceState unset 鈫?reject.
+    const prodCtx = await buildProductionNaValidationContextFromSession(sessionShell, {
       nowIso: NOW,
     });
     assert.equal(prodCtx.cfpSourceState, undefined);
     assert.equal(reasonOf(ddrEv, prodCtx), "ddr03_cfp_not_absent");
     console.log(
-      "  PASS  [C-Prod] DDR-03 CFP source absent in production → reject (direct cause: ddr03_cfp_not_absent)",
+      "  PASS  [C-Prod] DDR-03 CFP source absent in production 鈫?reject (direct cause: ddr03_cfp_not_absent)",
     );
 
     // DIR-targeted empty_dir_source_absence must reject (basis only for DDR-03)
@@ -797,7 +797,7 @@ async function main() {
     assert.ok(
       sess.decision_context!.dirs.every((d) => d.current_state === "unknown"),
     );
-    console.log("  PASS  persistCallBDcOnSession + reload → dirs unknown");
+    console.log("  PASS  persistCallBDcOnSession + reload 鈫?dirs unknown");
 
     const collect = await persistCollectingUserTurnDc(sess, {
       statement: "Savings cover about four months.",
@@ -821,8 +821,8 @@ async function main() {
         operation_id: "op_cas_reagg_conflict",
         kind: "session_patch",
         bump_dc: true,
-        apply: (latest) => {
-          const applied = applyCollectingUserTurnToSessionDc(latest, {
+        apply: async (latest) => {
+          const applied = await applyCollectingUserTurnToSessionDc(latest, {
             statement: "Also considering spouse income.",
             source_turn_id: "u_cas_collect_2",
             now: NOW,
@@ -865,7 +865,7 @@ async function main() {
       operation_id: "op_install_roles_facts",
       kind: "session_patch",
       bump_dc: true,
-      apply: (latest): POJUSessionState => {
+      apply: async (latest): Promise<POJUSessionState> => {
         const dc = latest.decision_context!;
         const target = dc.dirs[0]!;
         const nextDirs = dc.dirs.map((d, i) =>
@@ -906,7 +906,7 @@ async function main() {
             reality_facts: facts,
           },
         };
-        const dirs = reaggregateDirsOnSession(withFacts, nextDirs, {
+        const dirs = await reaggregateDirsOnSession(withFacts, nextDirs, {
           realityFacts: facts,
           nowIso: NOW,
         });
@@ -924,7 +924,7 @@ async function main() {
     const targetDir = sess.decision_context!.dirs[0]!;
     assert.equal(targetDir.current_state, "known");
 
-    const na = buildProductionNaValidationContextFromSession(sess, { nowIso: NOW });
+    const na = await buildProductionNaValidationContextFromSession(sess, { nowIso: NOW });
     const agg = aggregateDirStateIntake(
       targetDir,
       sess.decision_context!.reality_facts,
@@ -959,7 +959,7 @@ async function main() {
     assert.deepEqual(mismatches, []);
     assert.equal(planner.unresolved_count, 0);
 
-    const planned = selectNextIntakeAskForSession({
+    const planned = await selectNextIntakeAskForSession({
       session: sess,
       nowIso: NOW,
     });
@@ -970,7 +970,7 @@ async function main() {
         r.candidate.dir_ids.includes(targetDir.dir_id),
       ),
     );
-    console.log("  PASS  planner ↔ aggregator role states match on same DC snapshot");
+    console.log("  PASS  planner 鈫?aggregator role states match on same DC snapshot");
   }
 
   // silence unused import

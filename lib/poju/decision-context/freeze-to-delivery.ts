@@ -1,5 +1,5 @@
-/**
- * S4 integration helper — Freeze → Delivery binding package.
+﻿/**
+ * S4 integration helper 鈥?Freeze 鈫?Delivery binding package.
  * Does not trigger purchase/CTA Freeze. Call only on Stage3 sufficiency end.
  * Production chat wiring should call prepareFrozenDcForDelivery then persist + POST delivery.
  */
@@ -34,7 +34,7 @@ export type FreezeDraftForDeliveryOpts = Omit<
   "stage3_sufficiency_end" | "naValidation" | "expectedSessionId"
 > & {
   now?: string;
-  /** Authoritative Session — sole source of Intake N/A validation authority. */
+  /** Authoritative Session 鈥?sole source of Intake N/A validation authority. */
   session: POJUSessionState;
 };
 
@@ -116,22 +116,20 @@ export function assertSessionDraftBusinessSnapshotBound(
 /**
  * Freeze-path NaValidationContext via the sole production builder.
  * `authoritative` must be the Session DC (see assertSessionDraftBusinessSnapshotBound).
- * ACTIVE catalog load failure → FreezeError carrying the loader reason_code.
+ * ACTIVE catalog load failure 鈫?FreezeError carrying the loader reason_code.
  */
-export function buildFreezeNaValidationFromSession(
+export async function buildFreezeNaValidationFromSession(
   session: POJUSessionState,
   authoritative: DecisionContext,
   opts?: { now?: string },
-): NaValidationContext {
+): Promise<NaValidationContext> {
   if (session.decision_context !== authoritative) {
     throw new Error(
       "buildFreezeNaValidationFromSession: authoritative DC must be session.decision_context",
     );
   }
   try {
-    return buildProductionNaValidationContextFromSession(session, {
-      nowIso: opts?.now,
-    });
+    return await buildProductionNaValidationContextFromSession(session, { nowIso: opts?.now });
   } catch (e) {
     if (e instanceof ProductionNaAuthorityError) {
       throw new FreezeError(e.reason_code, { code: e.reason_code });
@@ -142,19 +140,19 @@ export function buildFreezeNaValidationFromSession(
 
 /**
  * Freeze a draft DC for delivery. Refuses purchase/CTA/stall triggers.
- * Builds NaValidationContext from Session — never emptyNaValidation().
+ * Builds NaValidationContext from Session 鈥?never emptyNaValidation().
  * Draft must match Session DC business snapshot (facts/constraints/N/A/dirs/conflicts).
  */
-export function freezeDraftForDelivery(
+export async function freezeDraftForDelivery(
   draft: DecisionContext,
   opts: FreezeDraftForDeliveryOpts,
-): FrozenDeliveryPackage {
+): Promise<FrozenDeliveryPackage> {
   const authoritative = assertSessionDraftBusinessSnapshotBound(
     opts.session,
     draft,
   );
 
-  const naValidation = buildFreezeNaValidationFromSession(
+  const naValidation = await buildFreezeNaValidationFromSession(
     opts.session,
     authoritative,
     { now: opts.now },
@@ -208,3 +206,5 @@ export function applyFreezeToSessionSlice(
     decision_context_versions: versions,
   };
 }
+
+

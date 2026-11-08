@@ -1,15 +1,15 @@
 /**
- * S8-C — Collecting DC turn: persist / Ask failure handling.
+ * S8-C 閳?Collecting DC turn: persist / Ask failure handling.
  *
  * H: `runCollectingDcTurn` (the helper `handleUserMessage` calls) against real
  *    fake-indexeddb + production C1. Faults are bottom-level only:
- *      - storage: IndexedDB write → transaction abort (scripts/fixtures/idb-storage-fault)
+ *      - storage: IndexedDB write 閳?transaction abort (scripts/fixtures/idb-storage-fault)
  *      - Ask: ACTIVE DIR N/A registry read throws, armed by the C1 write itself
  *        so it fires strictly after the DC commit (scripts/fixtures/dir-catalog-fault)
- * P: production call chain `handleUserMessage` → helper, with only the
+ * P: production call chain `handleUserMessage` 閳?helper, with only the
  *    `/api/poju/chat` fetch stubbed (no LLM, no network), plus the UI's
  *    follow-up `savePOJUSession` to prove no uncommitted DC is written outside C1.
- * S: static — agent.ts reaches persist / Ask only through the helper.
+ * S: static 閳?agent.ts reaches persist / Ask only through the helper.
  *
  *   pnpm test:intake-r6-agent-collecting-failure
  */
@@ -24,7 +24,7 @@ import { armActiveCatalogFault, type CatalogFault } from "./fixtures/dir-catalog
 import type { POJUSessionState } from "../lib/poju/types";
 
 installIntakeR6TestGlobals("dev_intake_r6_s8_agent");
-// handleUserMessage → yieldToBrowserPaint uses rAF once `window` exists.
+// handleUserMessage 閳?yieldToBrowserPaint uses rAF once `window` exists.
 Object.defineProperty(globalThis, "requestAnimationFrame", {
   value: (cb: (t: number) => void) => setTimeout(() => cb(Date.now()), 0),
   configurable: true,
@@ -124,6 +124,7 @@ async function main() {
       payment_id: `pay_s8c_${tag}`,
       original_question: "Should I leave my job for a startup offer?",
     });
+    // Persist collecting shell first (sync CAS apply), then ask outside CAS.
     await mutatePOJUSession(sid, {
       operation_id: `op_seed_s8c_${tag}`,
       kind: "session_patch",
@@ -141,15 +142,23 @@ async function main() {
           sticking_point: "Family depends on salary",
         };
         agent.desired_direction = { wants: "Keep optionality", priority: "reversibility" };
-        const seeded: POJUSessionState = {
+        return {
           ...latest,
           has_profile: true,
           agent_v2: agent,
           control_plane: createDefaultControlPlane("collecting_context"),
           decision_context: draftDc(`dc_${sid}`),
         };
-        return selectNextIntakeAskForSession({ session: seeded, nowIso: NOW }).session;
       },
+    });
+    const seeded = await loadPOJUSession(sid);
+    if (!seeded) throw new Error(`seed session missing: ${sid}`);
+    const asked = await selectNextIntakeAskForSession({ session: seeded, nowIso: NOW });
+    await mutatePOJUSession(sid, {
+      operation_id: `op_seed_s8c_ask_${tag}`,
+      kind: "session_patch",
+      bump_dc: true,
+      apply: () => asked.session,
     });
     return sid;
   }
@@ -196,7 +205,7 @@ async function main() {
   // ============================================== H. helper
   console.log("\n== H. runCollectingDcTurn (real IDB + C1) ==");
 
-  await check("H1 persist OK + Ask OK → committed DC + fresh plan adopted; IDB == memory DC; input Session not mutated", async () => {
+  await check("H1 persist OK + Ask OK 閳?committed DC + fresh plan adopted; IDB == memory DC; input Session not mutated", async () => {
     const sid = await seedCollectingSession("h1");
     const before = await durable(sid);
     const beforeClone = structuredClone(before);
@@ -219,7 +228,7 @@ async function main() {
     assert.ok((after.decision_context_idempotency_keys ?? []).includes(collectKey(sid, "u_h1")));
   });
 
-  await check("H2 DC persist fails (IDB tx abort) → uncommitted DC not adopted, no plan; Session + IDB unchanged; retry commits (not idempotent_skip)", async () => {
+  await check("H2 DC persist fails (IDB tx abort) 閳?uncommitted DC not adopted, no plan; Session + IDB unchanged; retry commits (not idempotent_skip)", async () => {
     const sid = await seedCollectingSession("h2");
     const before = await durable(sid);
     const beforeClone = structuredClone(before);
@@ -252,7 +261,7 @@ async function main() {
     assert.ok(hasTurnFact(await durable(sid), "u_h2"));
   });
 
-  await check("H3 Ask fails after DC commit → committed DC kept (== IDB), no new plan (prior plan untouched)", async () => {
+  await check("H3 Ask fails after DC commit 閳?committed DC kept (== IDB), no new plan (prior plan untouched)", async () => {
     const sid = await seedCollectingSession("h3");
     const before = await durable(sid);
     const { value: res, catalogHits, writeHits } = await withCatalogFaultAfterNextSessionWrite(() =>
@@ -274,7 +283,7 @@ async function main() {
     assert.equal(loadDirNaCatalog(ACTIVE_DIR_NA_CATALOG_VERSION).ok, true, "fault restored");
   });
 
-  await check("H4 exception inside persist (DC mapper throws) → Session returned as-is, IDB unchanged, no key", async () => {
+  await check("H4 exception inside persist (DC mapper throws) 閳?Session returned as-is, IDB unchanged, no key", async () => {
     const sid = await seedCollectingSession("h4");
     const before = await durable(sid);
     const beforeClone = structuredClone(before);
@@ -299,7 +308,7 @@ async function main() {
     assert.deepEqual(persistedDcState(await durable(sid)), idbBefore);
   });
 
-  await check("H5 mapper skip (turn already mapped) → not_applied; Ask still plans on unchanged DC (pre-S8 behavior)", async () => {
+  await check("H5 mapper skip (turn already mapped) 閳?not_applied; Ask still plans on unchanged DC (pre-S8 behavior)", async () => {
     const sid = await seedCollectingSession("h5");
     const first = await runCollectingDcTurn(await durable(sid), {
       statement: "Savings cover four months of expenses.",
@@ -319,7 +328,7 @@ async function main() {
   });
 
   // ============================================== P. production call chain
-  console.log("\n== P. handleUserMessage → runCollectingDcTurn (fetch stub, no network) ==");
+  console.log("\n== P. handleUserMessage 閳?runCollectingDcTurn (fetch stub, no network) ==");
 
   const fetchCalls: string[] = [];
   const originalFetch = globalThis.fetch;
@@ -345,7 +354,7 @@ async function main() {
   };
 
   try {
-    await check("P1 normal turn → DC committed via C1 (key present), fresh plan; only /api/poju/chat fetched", async () => {
+    await check("P1 normal turn 閳?DC committed via C1 (key present), fresh plan; only /api/poju/chat fetched", async () => {
       const sid = await seedCollectingSession("p1");
       const before = await durable(sid);
       fetchCalls.length = 0;
@@ -362,7 +371,7 @@ async function main() {
       assert.deepEqual((await durable(sid)).decision_context, out.decision_context);
     });
 
-    await check("P2 C1 write aborted → returned Session keeps pre-turn DC + plan; UI savePOJUSession writes no uncommitted DC", async () => {
+    await check("P2 C1 write aborted 閳?returned Session keeps pre-turn DC + plan; UI savePOJUSession writes no uncommitted DC", async () => {
       const sid = await seedCollectingSession("p2");
       const before = await durable(sid);
       const { value: out, hits } = await withIdbWriteFault(SESSION_STORE, () =>
@@ -377,7 +386,7 @@ async function main() {
       assert.deepEqual(out.decision_context_idempotency_keys ?? [], before.decision_context_idempotency_keys ?? []);
       const idbAfterTurn = await durable(sid);
       assert.deepEqual(idbAfterTurn.decision_context, before.decision_context);
-      // Same follow-up the chat UI performs (POJUChatUI → savePOJUSession(finalSession)).
+      // Same follow-up the chat UI performs (POJUChatUI 閳?savePOJUSession(finalSession)).
       await savePOJUSession(out);
       const idbAfterSave = await durable(sid);
       assert.deepEqual(idbAfterSave.decision_context, before.decision_context);
@@ -389,7 +398,7 @@ async function main() {
       assert.equal(idbAfterSave.messages.length, out.messages.length, "chat turn itself still saved");
     });
 
-    await check("P3 Ask fails after commit → returned Session has committed DC (== IDB), prior plan untouched", async () => {
+    await check("P3 Ask fails after commit 閳?returned Session has committed DC (== IDB), prior plan untouched", async () => {
       const sid = await seedCollectingSession("p3");
       const before = await durable(sid);
       const { value: out, catalogHits } = await withCatalogFaultAfterNextSessionWrite(() =>
@@ -408,7 +417,7 @@ async function main() {
 
   // ============================================== S. static
   console.log("\n== S. Static wiring ==");
-  await check("S1 agent.ts reaches collecting persist / Ask only through runCollectingDcTurn", () => {
+  await check("S1 agent.ts reaches collecting persist / Ask only through runCollectingDcTurn", async () => {
     const src = readFileSync(join(REPO, "lib/poju/agent.ts"), "utf8");
     assert.match(src, /import \{ runCollectingDcTurn \} from "@\/lib\/poju\/collecting-dc-turn";/);
     assert.match(src, /await runCollectingDcTurn\(sessionOut,/);
