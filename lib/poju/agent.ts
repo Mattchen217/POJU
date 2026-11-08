@@ -1,6 +1,7 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { loadSessionProfileBundle, resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import { logBaseAnalysisPayload } from "@/lib/poju/base-analysis-diagnostics";
+import { runCollectingDcTurn } from "@/lib/poju/collecting-dc-turn";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
@@ -1345,31 +1346,21 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       .find((m) => m.role === "user" && !m.is_rejected);
     const turnId = lastUser?.client_id?.trim();
     if (turnId) {
-      try {
-        const { persistCollectingUserTurnDc } = await import(
-          "@/lib/poju/decision-context/production-dc-lifecycle"
-        );
-        const collected = await persistCollectingUserTurnDc(sessionOut, {
-          statement: phaseUserMessage,
-          source_turn_id: turnId,
-          now: nowIso,
-        });
-        if (collected.applied) sessionOut = collected.session;
-        // Intake 2.0 production ask planning — sole scoring path via shared resolver.
-        if (sessionOut.decision_context?.status === "draft") {
-          const { selectNextIntakeAskForSession } = await import(
-            "@/lib/poju/decision-context/production-intake-ask"
-          );
-          const planned = selectNextIntakeAskForSession({
-            session: sessionOut,
-            nowIso,
-          });
-          sessionOut = planned.session;
-        }
-      } catch (e) {
+      const turn = await runCollectingDcTurn(sessionOut, {
+        statement: phaseUserMessage,
+        source_turn_id: turnId,
+        now: nowIso,
+      });
+      sessionOut = turn.session;
+      if (
+        turn.outcome === "persist_failed" ||
+        turn.outcome === "persist_threw" ||
+        turn.ask_error !== undefined
+      ) {
         console.warn(
           "[agent] collecting DC update failed (non-fatal)",
-          e instanceof Error ? e.message : e,
+          turn.outcome,
+          turn.ask_error ?? turn.persist_error,
         );
       }
     }

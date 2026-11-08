@@ -158,6 +158,7 @@
     "test:intake-r6-production-authority-boundary": "tsx scripts/test-intake-r6-production-authority-boundary.ts",
     "test:intake-r6-barrel-export-boundary": "tsx scripts/test-intake-r6-barrel-export-boundary.ts",
     "typecheck:intake-r6-tests": "tsc --noEmit -p tsconfig.intake-r6-tests.json",
+    "test:intake-r6-agent-collecting-failure": "tsx scripts/test-intake-r6-agent-collecting-failure.ts",
     "test:decision-context": "tsx scripts/test-decision-context-phase1.ts",
     "test:decision-context-phase2": "tsx scripts/test-decision-context-phase2.ts",
     "test:decision-context-phase2-idb": "tsx scripts/test-decision-context-phase2-idb.ts",
