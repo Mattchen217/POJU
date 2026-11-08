@@ -10,6 +10,7 @@
  *   *-Production  freezeDraftForDelivery / production builder (source + isolation)
  */
 import assert from "node:assert/strict";
+import { ACTIVE_TOPIC_APPLICABILITY_VERSION } from "../lib/poju/decision-context/catalog";
 import {
   ACTIVE_DIR_NA_CATALOG_VERSION,
   buildFreezeNaValidationFromSession,
@@ -351,7 +352,7 @@ async function main() {
     const ruleId = "rule_s5_f3";
     const topicCode = "topic.s5.f3";
     const evalId = "topic_eval_f3_sess";
-    const catalogVersion = "cat_v_f3_sess";
+    const catalogVersion = ACTIVE_TOPIC_APPLICABILITY_VERSION;
 
     const topicEvidence = {
       evidence_id: "na_ev_topic_f3",
@@ -505,7 +506,7 @@ async function main() {
           forgedBuildOpts,
         );
         assert.strictEqual(ctx.topicEvalAuthority, sess.topic_applicability_evals);
-        assert.equal(ctx.currentTopicCatalogVersion, catalogVersion);
+        assert.equal(ctx.currentTopicCatalogVersion, ACTIVE_TOPIC_APPLICABILITY_VERSION);
 
         const forgedFreezeCtxOpts = {
           now: NOW,
@@ -520,7 +521,7 @@ async function main() {
           freezeCtx.topicEvalAuthority,
           sess.topic_applicability_evals,
         );
-        assert.equal(freezeCtx.currentTopicCatalogVersion, catalogVersion);
+        assert.equal(freezeCtx.currentTopicCatalogVersion, ACTIVE_TOPIC_APPLICABILITY_VERSION);
       },
     );
   }

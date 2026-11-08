@@ -710,28 +710,42 @@ async function main() {
       written_by: "code" as const,
       revoked: false,
     };
-    // C-Pure: CFP source state is fixture-injected (no production CFP reader).
+    // C-Pure: CFP source + live evaluation are fixture-injected (S9-R4 bind).
     const ctxBase = fixtureNa(sessionShell, {
       cfpSourceState: "source_calc_failed",
+      cfpLiveEvaluation: {
+        state: "source_calc_failed",
+        eval_id: "cfp_eval_1",
+        source_code: "cfp.birth",
+        profile_id: null,
+        session_id: sessionShell.session_id,
+      },
     });
     assert.equal(validateExplicitNaEvidence(ddrEv, ctxBase).ok, false);
     const ctxOk = fixtureNa(sessionShell, {
       cfpSourceState: "source_absent_not_supplied",
+      cfpLiveEvaluation: {
+        state: "source_absent_not_supplied",
+        eval_id: "cfp_eval_1",
+        source_code: "cfp.birth",
+        profile_id: null,
+        session_id: sessionShell.session_id,
+      },
     });
     assert.equal(validateExplicitNaEvidence(ddrEv, ctxOk).ok, true);
     console.log(
       "  PASS  [C-Pure] DDR-03 CFP: calc_failed reject; absent_not_supplied accept",
     );
 
-    // C-Production: ctxOk precondition accepts ddrEv; production builder has no
-    // CFP source 鈫?cfpSourceState unset 鈫?reject.
+    // C-Production: production builder has no live CFP eval → reject.
     const prodCtx = await buildProductionNaValidationContextFromSession(sessionShell, {
       nowIso: NOW,
     });
     assert.equal(prodCtx.cfpSourceState, undefined);
-    assert.equal(reasonOf(ddrEv, prodCtx), "ddr03_cfp_not_absent");
+    assert.equal(prodCtx.cfpLiveEvaluation, undefined);
+    assert.equal(reasonOf(ddrEv, prodCtx), "ddr03_live_eval_missing");
     console.log(
-      "  PASS  [C-Prod] DDR-03 CFP source absent in production 鈫?reject (direct cause: ddr03_cfp_not_absent)",
+      "  PASS  [C-Prod] DDR-03 CFP live eval missing in production → reject (direct cause: ddr03_live_eval_missing)",
     );
 
     // DIR-targeted empty_dir_source_absence must reject (basis only for DDR-03)
