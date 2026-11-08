@@ -17,7 +17,6 @@ import {
   DC_REPORT_NOT_FROZEN,
   formatDecisionContextSliceForPage,
   freezeDecisionContext,
-  naValidationBoundToDc,
   pageReceivesDecisionContextFeed,
   reaggregateDirsIntake,
   resolveDecisionContextForReport,
@@ -27,6 +26,7 @@ import {
   STAGE4_VALUE_DIMENSIONS,
   type DecisionContext,
 } from "../lib/poju/decision-context";
+import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import { buildFacePromptPair } from "../lib/llm/pro/delivery/page-schema/face-prompt";
 import { Face05Schema, Face06Schema, Face08Schema } from "../lib/llm/pro/delivery/page-schema/face-types";
 import { buildCoverAndToc } from "../lib/llm/pro/delivery/merge-delivery-markdown";

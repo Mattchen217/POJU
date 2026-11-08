@@ -9,13 +9,13 @@ import {
   canFreezeSessionOnSufficiency,
   evaluateDecisionSufficiency,
   freezeDraftForDelivery,
-  naValidationBoundToDc,
   reaggregateDirsIntake,
   resolveDeliveryDcPayload,
   seedDecisionContextFromOpening,
   shouldRequireFrozenDecisionContext,
   type DecisionContext,
 } from "../lib/poju/decision-context";
+import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { POJUSessionState } from "../lib/poju/types";
 import { buildLabObservation } from "../lib/llm/pro/delivery/lab/observation";
 

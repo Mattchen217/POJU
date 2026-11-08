@@ -31,12 +31,12 @@ import {
   restoreDecisionContextAuthority,
   seedDecisionContextFromOpening,
   startV2FromFinal,
-  naValidationBoundToDc,
   __resetPersistIdempotencyForTests,
   type DecisionContext,
   type DIR,
   type RealityFact,
 } from "../lib/poju/decision-context";
+import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { BreakthroughCore } from "../lib/poju/agent-state";
 import type { AgendaItem } from "../lib/poju/investigation-agenda";
 

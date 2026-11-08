@@ -64,7 +64,6 @@ async function main() {
     freezeDecisionContext,
     freezeDraftForDelivery,
     FreezeError,
-    naValidationBoundToDc,
     persistV2FromFinalOnSession,
     plannerAggregatorRoleMismatches,
     reaggregateDirsIntake,
@@ -74,6 +73,9 @@ async function main() {
     VersioningError,
     ensureSessionFrozenForDelivery,
   } = await import("../lib/poju/decision-context");
+  const { naValidationBoundToDc } = await import(
+    "../lib/poju/decision-context/na-validation-from-session"
+  );
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import(
     "../lib/db/poju-db"
   );

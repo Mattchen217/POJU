@@ -20,13 +20,13 @@ import {
   FREEZE_WIRE_PERSIST_FAIL_CODE,
   freezeFailWireResult,
   mapCaughtFreezeFailure,
-  naValidationBoundToDc,
   persistFailWireResult,
   reaggregateDirsIntake,
   seedDecisionContextFromOpening,
   type DecisionContext,
   type FreezeWireSkipReason,
 } from "../lib/poju/decision-context";
+import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { POJUSessionState } from "../lib/poju/types";
 
 const NOW = "2026-11-05T18:00:00.000Z";

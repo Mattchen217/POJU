@@ -100,7 +100,6 @@ async function main() {
     persistCallBDcOnSession,
     persistCollectingUserTurnDc,
     loadDirNaCatalog,
-    naValidationBoundToDc,
     naValidationForDcSnapshot,
     planNextAskFromCandidates,
     PRODUCTION_NA_VALIDATION_DIR_CATALOG_SOURCE,
@@ -112,6 +111,9 @@ async function main() {
     snapshotFromDc,
     validateExplicitNaEvidence,
   } = dcMod;
+  const { naValidationBoundToDc } = await import(
+    "../lib/poju/decision-context/na-validation-from-session"
+  );
   const { createDefaultControlPlane } = await import(
     "../lib/poju/decision-context/control-plane"
   );

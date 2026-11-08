@@ -17,9 +17,9 @@ import {
   freezeDraftForDelivery,
   loadDirNaCatalog,
   reaggregateDirsIntake,
-  naValidationBoundToDc,
   validateExplicitNaEvidence,
 } from "../lib/poju/decision-context";
+import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import type { POJUSessionState } from "../lib/poju/types";
 import type { AuthoritativeTopicEvalRecord } from "../lib/poju/decision-context/topic-eval-authority";

@@ -20,7 +20,20 @@ export * from "./dir-aggregator-intake";
 export * from "./role-resolver";
 export * from "./explicit-na-validate";
 export * from "./catalog";
-export * from "./na-validation-from-session";
+// Explicit list: the fixture builder/type in this module are test-only and stay off the barrel.
+export {
+  PRODUCTION_NA_VALIDATION_DIR_CATALOG_SOURCE,
+  PRODUCTION_NA_VALIDATION_SOURCE_GAPS,
+  ProductionNaAuthorityError,
+  buildProductionNaValidationContextFromSession,
+  assertNaValidationBoundToDc,
+  naValidationForDcSnapshot,
+  reaggregateDirsOnSession,
+} from "./na-validation-from-session";
+export type {
+  ProductionNaValidationBuildOpts,
+  ReaggregateDirsOnSessionOpts,
+} from "./na-validation-from-session";
 export * from "./question-planning";
 export * from "./question-plan-cycle";
 export * from "./production-intake-ask";

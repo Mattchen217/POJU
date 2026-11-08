@@ -10,11 +10,11 @@ import {
   formatDecisionContextSliceForPage,
   pageReceivesDecisionContextFeed,
   prepareFrozenDcForDelivery,
-  naValidationBoundToDc,
   reaggregateDirsIntake,
   seedDecisionContextFromOpening,
   type DecisionContext,
 } from "../lib/poju/decision-context";
+import { naValidationBoundToDc } from "../lib/poju/decision-context/na-validation-from-session";
 import type { POJUSessionState } from "../lib/poju/types";
 import {
   dcFieldsForPage,
