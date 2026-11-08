@@ -20,6 +20,7 @@
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
+import { ACTIVE_TOPIC_APPLICABILITY_VERSION } from "../lib/poju/decision-context/catalog";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
@@ -379,7 +380,7 @@ async function main() {
     const ruleId = `rule_s7_${tag}`;
     const topicCode = `topic.s7.${tag}`;
     const evalId = `topic_eval_${tag}`;
-    const catalogVersion = `cat_v_${tag}`;
+    const catalogVersion = ACTIVE_TOPIC_APPLICABILITY_VERSION;
     const rule = {
       rule_id: ruleId,
       topic_code: topicCode,
@@ -469,7 +470,7 @@ async function main() {
       assert.strictEqual(ctx.confirmationEvents, session.confirmation_events);
       assert.strictEqual(ctx.naDeclarationActions, session.na_declaration_actions);
       assert.strictEqual(ctx.topicEvalAuthority, session.topic_applicability_evals);
-      assert.equal(ctx.currentTopicCatalogVersion, t.catalogVersion);
+      assert.equal(ctx.currentTopicCatalogVersion, ACTIVE_TOPIC_APPLICABILITY_VERSION);
       assert.equal(ctx.nowIso, NOW);
     });
 
@@ -673,10 +674,10 @@ async function main() {
       assert.equal(freezeCtx.cfpSourceState, undefined);
       // Precondition: same ctx with the forged CFP state 闂?accept.
       assert.equal(
-        reasonOf(ddrEv, { ...freezeCtx, cfpSourceState: "source_absent_not_supplied" }),
+        reasonOf(ddrEv, { ...freezeCtx, cfpSourceState: "source_absent_not_supplied", cfpLiveEvaluation: { state: "source_absent_not_supplied", eval_id: "cfp_eval_b4", source_code: "cfp.birth", profile_id: null, session_id: freezeCtx.sessionId } }),
         "ok",
       );
-      assert.equal(reasonOf(ddrEv, freezeCtx), "ddr03_cfp_not_absent");
+      assert.equal(reasonOf(ddrEv, freezeCtx), "ddr03_live_eval_missing");
       const clean = await freezeDraftForDelivery(structuredClone(c.dc), { session: c.session, now: NOW });
       const forged = await freezeDraftForDelivery(structuredClone(c.dc), {
         session: c.session,

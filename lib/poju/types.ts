@@ -100,6 +100,28 @@ export interface POJUMessage {
   offered_options?: string[];
   /** Stage-1 dyad collect/skip gate pending on this assistant turn. */
   dyad_gate_pending?: boolean;
+  /**
+   * S9-R1 — user confirmation turn binding for topic applicability N/A writer.
+   * Required on the confirmation_turn_id user message; ordinary chat must omit.
+   */
+  topic_applicability_confirm?: {
+    rule_id: string;
+    control_id: string;
+    not_applicable: boolean;
+    session_id: string;
+    target_dir_id: string;
+  };
+  /**
+   * Assistant offer for topic N/A confirm chips (production UI entry).
+   * Decline/skip labels must not call the N/A writer.
+   */
+  topic_applicability_offer?: {
+    rule_id: string;
+    control_id: string;
+    target_dir_id: string;
+    confirm_label: string;
+    decline_label?: string;
+  };
   /** Phase 3 S3 — message marked as Opening Anchor (Contract §12.3). */
   is_opening_anchor?: boolean;
   /** Phase 3 S3 — bound Opening Anchor id (≠ message client_id). */

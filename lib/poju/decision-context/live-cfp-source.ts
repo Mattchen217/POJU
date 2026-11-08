@@ -1,8 +1,11 @@
-﻿/**
- * Live CFP source-state reader for Intake N/A authority (S9-B).
+/**
+ * Live CFP source-state reader for Intake N/A authority (S9-B / S9-R3).
  *
  * Identity binding comes only from Session SoT. Never accepts client cfpSourceState.
- * getStoredProfile is browser/IndexedDB-only (Never Stored server-side) — when the
+ * Reads outer IndexedDB StoredProfileRecord.birth_info_hash + decrypted StoredProfileData,
+ * recomputes hash from birth_info, and compares. Missing/mismatch → source_provenance_missing.
+ *
+ * getStoredProfileWithRecord is browser/IndexedDB-only (Never Stored server-side) — when the
  * runtime cannot read device profile data, returns ok:false (fail-closed), never
  * invents source_absent_not_supplied.
  *
@@ -10,8 +13,12 @@
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
-import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
-import type { StoredProfileData } from "@/lib/db/poju-db";
+import {
+  computeStoredBirthInfoHash,
+  getStoredProfileWithRecord,
+  type StoredProfileWithRecord,
+} from "@/lib/profile/stored-profiles-service";
+import type { StoredProfileData, StoredProfileRecord } from "@/lib/db/poju-db";
 import { buildChartFactPack } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
 
 export const CFP_SOURCE_CODE_CHART_FACT_PACK = "cfp.chart_fact_pack" as const;
@@ -22,14 +29,18 @@ export type LiveCfpSourceState =
   | "source_calc_failed"
   | "source_provenance_missing";
 
+export type LiveCfpEvaluation = {
+  state: LiveCfpSourceState;
+  eval_id: string;
+  source_code: typeof CFP_SOURCE_CODE_CHART_FACT_PACK;
+  profile_id: string | null;
+  session_id: string;
+};
+
 export type LiveCfpSourceReadResult =
-  | {
+  | ({
       ok: true;
-      state: LiveCfpSourceState;
-      eval_id: string;
-      source_code: typeof CFP_SOURCE_CODE_CHART_FACT_PACK;
-      profile_id: string | null;
-    }
+    } & LiveCfpEvaluation)
   | {
       ok: false;
       reason_code:
@@ -40,8 +51,13 @@ export type LiveCfpSourceReadResult =
     };
 
 export type LiveCfpReaderDeps = {
-  /** Override for tests only — production composer never forwards caller deps. */
-  getStoredProfile?: (profileId: string) => Promise<StoredProfileData | null>;
+  /**
+   * Override for tests only — must return real Record + decrypted data shapes.
+   * Production composer never forwards caller deps.
+   */
+  getStoredProfileWithRecord?: (
+    profileId: string,
+  ) => Promise<StoredProfileWithRecord | null>;
   /** Override browser detection for tests. */
   isBrowser?: () => boolean;
   /** Optional wall clock for eval_id stability in tests. */
@@ -57,17 +73,14 @@ function neverSupplied(session: POJUSessionState): boolean {
   if (selected) return false;
   if (session.has_profile) return false;
   if (session.birth_submitted_in_session) return false;
-  // Explicit skip with no profile identity is the only absent path.
   return session.profile_skipped === true;
 }
 
 function identityMismatch(session: POJUSessionState): boolean {
   const selected = session.selected_stored_profile_id?.trim() ?? "";
-  // Skipped but still bound to a stored profile / has_profile — inconsistent.
   if (session.profile_skipped && (selected || session.has_profile)) {
     return true;
   }
-  // Claimed has_profile without any selected id and without in-session birth.
   if (
     session.has_profile &&
     !selected &&
@@ -85,19 +98,37 @@ function hasUsableStructured(data: StoredProfileData): boolean {
   return Boolean(day);
 }
 
+function okEval(
+  sessionId: string,
+  state: LiveCfpSourceState,
+  evalId: string,
+  profileId: string | null,
+): LiveCfpSourceReadResult {
+  return {
+    ok: true,
+    state,
+    eval_id: evalId,
+    source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
+    profile_id: profileId,
+    session_id: sessionId,
+  };
+}
+
 /**
  * Live read. Priority:
  * 1. identity mismatch → ok:false
- * 2. inputs present but calc/structure fail → source_calc_failed
- * 3. data without required provenance → source_provenance_missing
- * 4. never supplied → source_absent_not_supplied
- * 5. otherwise source_ok
+ * 2. never supplied → source_absent_not_supplied
+ * 3. reader unavailable → ok:false
+ * 4. inputs present but calc/structure fail → source_calc_failed
+ * 5. missing/mismatched Record birth_info_hash provenance → source_provenance_missing
+ * 6. otherwise source_ok
  */
 export async function readLiveCfpSourceState(
   session: POJUSessionState,
   deps: LiveCfpReaderDeps = {},
 ): Promise<LiveCfpSourceReadResult> {
-  if (!session.session_id?.trim()) {
+  const sessionId = session.session_id?.trim() ?? "";
+  if (!sessionId) {
     return { ok: false, reason_code: "cfp_session_id_missing" };
   }
 
@@ -107,100 +138,131 @@ export async function readLiveCfpSourceState(
 
   if (neverSupplied(session)) {
     const now = deps.nowIso ?? new Date().toISOString();
-    return {
-      ok: true,
-      state: "source_absent_not_supplied",
-      eval_id: `cfp_eval_absent_${session.session_id}_${now}`,
-      source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-      profile_id: null,
-    };
+    return okEval(
+      sessionId,
+      "source_absent_not_supplied",
+      `cfp_eval_absent_${sessionId}_${now}`,
+      null,
+    );
   }
 
   const isBrowser = deps.isBrowser ?? defaultIsBrowser;
   if (!isBrowser()) {
-    // Never Stored: server/Node cannot read device IndexedDB.
     return { ok: false, reason_code: "cfp_reader_unavailable" };
   }
 
   const selected = session.selected_stored_profile_id?.trim() ?? "";
   if (!selected) {
-    // Expected a profile path but no id to read — not "never supplied".
     return { ok: false, reason_code: "cfp_reader_unavailable" };
   }
 
-  const getter = deps.getStoredProfile ?? getStoredProfile;
-  let profile: StoredProfileData | null;
+  const getter = deps.getStoredProfileWithRecord ?? getStoredProfileWithRecord;
+  let loaded: StoredProfileWithRecord | null;
   try {
-    profile = await getter(selected);
+    loaded = await getter(selected);
   } catch {
     return { ok: false, reason_code: "cfp_read_failed" };
   }
 
-  if (!profile) {
-    // Bound id but row missing / decrypt failed / ownership miss.
-    return {
-      ok: true,
-      state: "source_calc_failed",
-      eval_id: `cfp_eval_calc_fail_${session.session_id}_${selected}`,
-      source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-      profile_id: selected,
-    };
+  if (!loaded) {
+    return okEval(
+      sessionId,
+      "source_calc_failed",
+      `cfp_eval_calc_fail_${sessionId}_${selected}`,
+      selected,
+    );
   }
 
-  if (!hasUsableStructured(profile)) {
-    return {
-      ok: true,
-      state: "source_calc_failed",
-      eval_id: `cfp_eval_calc_fail_${session.session_id}_${selected}`,
-      source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-      profile_id: selected,
-    };
+  const { record, data } = loaded;
+  if (record.profile_id !== selected) {
+    return { ok: false, reason_code: "cfp_identity_mismatch" };
   }
 
-  const birthHash = (profile as { birth_info_hash?: string }).birth_info_hash;
-  // Provenance: require structured + non-empty birth hash when present on decrypted blob.
-  // StoredProfileData may carry hash only on the IndexedDB record; if structured exists
-  // but chart pack cannot be built, treat as calc_failed; if pack builds but day_master
-  // empty after build — provenance_missing.
+  const recordHash =
+    typeof record.birth_info_hash === "string" ? record.birth_info_hash.trim() : "";
+  if (!recordHash) {
+    return okEval(
+      sessionId,
+      "source_provenance_missing",
+      `cfp_eval_prov_miss_${sessionId}_${selected}`,
+      selected,
+    );
+  }
+
+  let recomputed: string;
   try {
-    const pack = buildChartFactPack(profile.base_analysis!.structured!);
-    if (!pack.day_master?.trim()) {
-      return {
-        ok: true,
-        state: "source_provenance_missing",
-        eval_id: `cfp_eval_prov_miss_${session.session_id}_${selected}`,
-        source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-        profile_id: selected,
-      };
-    }
-    // Optional stricter provenance when hash field exists on data blob.
-    const dataHash =
-      typeof (profile as { content_hash?: string }).content_hash === "string"
-        ? (profile as { content_hash?: string }).content_hash
-        : birthHash;
-    if (dataHash !== undefined && dataHash !== null && String(dataHash).trim() === "") {
-      return {
-        ok: true,
-        state: "source_provenance_missing",
-        eval_id: `cfp_eval_prov_miss_${session.session_id}_${selected}`,
-        source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-        profile_id: selected,
-      };
-    }
-    return {
-      ok: true,
-      state: "source_ok",
-      eval_id: `cfp_eval_ok_${session.session_id}_${selected}`,
-      source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-      profile_id: selected,
-    };
+    recomputed = await computeStoredBirthInfoHash(data.birth_info);
   } catch {
-    return {
-      ok: true,
-      state: "source_calc_failed",
-      eval_id: `cfp_eval_calc_fail_${session.session_id}_${selected}`,
-      source_code: CFP_SOURCE_CODE_CHART_FACT_PACK,
-      profile_id: selected,
-    };
+    return okEval(
+      sessionId,
+      "source_provenance_missing",
+      `cfp_eval_prov_miss_${sessionId}_${selected}`,
+      selected,
+    );
   }
+  if (!recomputed || recomputed !== recordHash) {
+    return okEval(
+      sessionId,
+      "source_provenance_missing",
+      `cfp_eval_prov_miss_${sessionId}_${selected}`,
+      selected,
+    );
+  }
+
+  if (!data.base_analysis || !hasUsableStructured(data)) {
+    return okEval(
+      sessionId,
+      "source_calc_failed",
+      `cfp_eval_calc_fail_${sessionId}_${selected}`,
+      selected,
+    );
+  }
+
+  try {
+    const pack = buildChartFactPack(data.base_analysis.structured!);
+    if (!pack.day_master?.trim()) {
+      return okEval(
+        sessionId,
+        "source_provenance_missing",
+        `cfp_eval_prov_miss_${sessionId}_${selected}`,
+        selected,
+      );
+    }
+    return okEval(
+      sessionId,
+      "source_ok",
+      `cfp_eval_ok_${sessionId}_${selected}`,
+      selected,
+    );
+  } catch {
+    return okEval(
+      sessionId,
+      "source_calc_failed",
+      `cfp_eval_calc_fail_${sessionId}_${selected}`,
+      selected,
+    );
+  }
+}
+
+/** Test helper: build a minimal StoredProfileRecord shell with a real birth_info_hash. */
+export function testStoredProfileRecordShell(
+  profileId: string,
+  birthInfoHash: string,
+  overrides: Partial<StoredProfileRecord> = {},
+): StoredProfileRecord {
+  const now = new Date();
+  return {
+    profile_id: profileId,
+    device_id: "test_device",
+    display_name: "test",
+    birth_info_hash: birthInfoHash,
+    relationship: "self",
+    encrypted_data: "",
+    iv: "",
+    created_at: now,
+    last_used_at: now,
+    used_in_products: { poju: 0, glyph: 0, syncro: 0, match: 0, atmos: 0 },
+    has_base_analysis: true,
+    ...overrides,
+  };
 }

@@ -16,6 +16,7 @@ import {
   resolveAuthoritativeTopicEval,
   type AuthoritativeTopicEvalRecord,
 } from "./topic-eval-authority";
+import type { LiveCfpEvaluation } from "./live-cfp-source";
 import type {
   Constraint,
   ExplicitNaClassification,
@@ -80,6 +81,12 @@ export type NaValidationContext = {
     | "source_absent_not_supplied"
     | "source_calc_failed"
     | "source_provenance_missing";
+  /**
+   * Full live CFP evaluation from readLiveCfpSourceState (S9-R4).
+   * DDR-03 Evidence must bind eval_id/source_code/state/session to this row.
+   * Absence means reader failed — fail-closed (no DDR-03 N/A).
+   */
+  cfpLiveEvaluation?: LiveCfpEvaluation;
   dirCatalog?: ReadonlyMap<string, DirNaCatalogEntry> | readonly DirNaCatalogEntry[];
   catalogConditionEvals?:
     | ReadonlyMap<string, CatalogNaConditionEval>
@@ -416,11 +423,55 @@ function validateSystemMarker(
   if (b.ddr_id !== "DDR-03-CHART-APPENDIX") {
     return { ok: false, reason_code: "ddr03_basis_ddr" };
   }
+  return bindDdr03ToLiveCfpEvaluation(evidence, b, ctx);
+}
+
+/**
+ * S9-R4 — DDR-03 Evidence must equal this compose's live CFP evaluation.
+ * State-only compare is insufficient; reject stale/forged/cross-session eval ids.
+ */
+function bindDdr03ToLiveCfpEvaluation(
+  evidence: ExplicitNaEvidence,
+  b: Extract<NaSystemBasis, { kind: "empty_dir_source_absence" }>,
+  ctx: NaValidationContext,
+): NaValidationResult {
+  const live = ctx.cfpLiveEvaluation;
+  if (!live) {
+    return { ok: false, reason_code: "ddr03_live_eval_missing" };
+  }
+  if (live.session_id !== ctx.sessionId) {
+    return { ok: false, reason_code: "ddr03_eval_session_mismatch" };
+  }
+  if (ctx.cfpSourceState === "source_calc_failed" || live.state === "source_calc_failed") {
+    return { ok: false, reason_code: "ddr03_calc_failed_no_na" };
+  }
+  if (
+    ctx.cfpSourceState === "source_provenance_missing" ||
+    live.state === "source_provenance_missing"
+  ) {
+    return { ok: false, reason_code: "ddr03_provenance_missing_no_na" };
+  }
+  if (live.state !== "source_absent_not_supplied") {
+    return { ok: false, reason_code: "ddr03_cfp_not_absent" };
+  }
   if (b.source_state !== "source_absent_not_supplied") {
     return { ok: false, reason_code: "ddr03_basis_state" };
   }
   if (!b.source_code || !b.eval_id) {
     return { ok: false, reason_code: "ddr03_basis_incomplete" };
+  }
+  if (b.source_code !== live.source_code) {
+    return { ok: false, reason_code: "ddr03_source_code_mismatch" };
+  }
+  if (b.eval_id !== live.eval_id) {
+    return { ok: false, reason_code: "ddr03_eval_id_mismatch" };
+  }
+  if (b.source_state !== live.state) {
+    return { ok: false, reason_code: "ddr03_source_state_mismatch" };
+  }
+  // Absent path must not claim a profile binding.
+  if (live.profile_id != null) {
+    return { ok: false, reason_code: "ddr03_profile_id_unexpected" };
   }
   return { ok: true, evidence };
 }
@@ -440,13 +491,30 @@ export function validateExplicitNaEvidence(
     if (evidence.ddr_id !== "DDR-03-CHART-APPENDIX") {
       return { ok: false, reason_code: "ddr_not_allowlisted" };
     }
-    if (ctx.cfpSourceState === "source_calc_failed") {
+    // Full live-eval bind happens in validateSystemMarker / bindDdr03ToLiveCfpEvaluation.
+    // Fail closed early when composer did not attach a live evaluation.
+    if (!ctx.cfpLiveEvaluation) {
+      return { ok: false, reason_code: "ddr03_live_eval_missing" };
+    }
+    if (ctx.cfpLiveEvaluation.session_id !== ctx.sessionId) {
+      return { ok: false, reason_code: "ddr03_eval_session_mismatch" };
+    }
+    if (
+      ctx.cfpSourceState === "source_calc_failed" ||
+      ctx.cfpLiveEvaluation.state === "source_calc_failed"
+    ) {
       return { ok: false, reason_code: "ddr03_calc_failed_no_na" };
     }
-    if (ctx.cfpSourceState === "source_provenance_missing") {
+    if (
+      ctx.cfpSourceState === "source_provenance_missing" ||
+      ctx.cfpLiveEvaluation.state === "source_provenance_missing"
+    ) {
       return { ok: false, reason_code: "ddr03_provenance_missing_no_na" };
     }
-    if (ctx.cfpSourceState !== "source_absent_not_supplied") {
+    if (
+      ctx.cfpSourceState !== "source_absent_not_supplied" ||
+      ctx.cfpLiveEvaluation.state !== "source_absent_not_supplied"
+    ) {
       return { ok: false, reason_code: "ddr03_cfp_not_absent" };
     }
   }

@@ -48,6 +48,7 @@ import {
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession, confirmSessionAfterCorePersist } from "@/lib/poju/session-manager";
 import { hydratePersistIdempotencyFromKeys } from "@/lib/poju/decision-context/persist";
+import { confirmTopicApplicabilityEvalFromUiClick } from "@/lib/poju/decision-context/topic-applicability-write";
 import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-delivery-vault";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
@@ -2365,6 +2366,45 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     return true;
   }
 
+
+  /**
+   * S9-R1 production entry — topic N/A confirm chip.
+   * Appends bound user turn + CAS-writes topic_applicability_evals.
+   * Decline/skip chips must not call this.
+   */
+  async function handleTopicApplicabilityConfirmClick(offer: {
+    rule_id: string;
+    control_id: string;
+    target_dir_id: string;
+    confirm_label: string;
+  }) {
+    if (sending || turnInFlightRef.current) return;
+    const baseSession = sessionRef.current;
+    const turnId = safeRandomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      const result = await confirmTopicApplicabilityEvalFromUiClick(
+        baseSession.session_id,
+        {
+          operation_id: "topic_na_confirm_" + turnId,
+          eval_id: "te_" + turnId,
+          rule_id: offer.rule_id,
+          control_id: offer.control_id,
+          confirmation_turn_id: turnId,
+          confirmation_content: offer.confirm_label,
+          expires_at: expiresAt,
+          not_applicable: true,
+        },
+      );
+      const next = result.state;
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+    } catch (e) {
+      console.warn("[poju] topic applicability confirm failed:", e);
+    }
+  }
+
   async function handleUnderstandingGateClick(action: "confirmed" | "wants_to_add") {
     if (sending || turnInFlightRef.current || segment2JobId) return;
     const baseSession = sessionRef.current;
@@ -4050,6 +4090,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setPartnerBirthOpen(true);
       return;
     }
+    // S9-R1 — topic applicability N/A confirm chip (production CAS writer).
+    {
+      const offerMsg = [...session.messages].reverse().find(
+        (m) => m.role === "assistant" && m.meta?.topic_applicability_offer,
+      );
+      const offer = offerMsg?.meta?.topic_applicability_offer;
+      if (offer) {
+        if (opt === offer.confirm_label) {
+          void handleTopicApplicabilityConfirmClick(offer);
+          return;
+        }
+        if (offer.decline_label && opt === offer.decline_label) {
+          // Explicit decline/skip — must NOT mint N/A authority.
+          void handlePojuSend(opt);
+          return;
+        }
+      }
+    }
+
     if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
       const confirm = understandingGateConfirmButtonLabel(sessionLang);
       if (opt === confirm) {

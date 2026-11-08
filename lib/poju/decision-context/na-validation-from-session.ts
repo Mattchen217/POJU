@@ -105,6 +105,8 @@ export function composeTopicRulesFromActiveAndSession(
   const evals = sessionEvals ?? [];
   const out: TopicApplicabilityRule[] = [];
   for (const def of definitions) {
+    // Attach Session eval for the rule; catalog_version mismatch is fail-closed
+    // by resolveAuthoritativeTopicEval against ACTIVE currentTopicCatalogVersion (S9-R2).
     const match =
       evals.find(
         (e) => e.rule_id === def.rule_id && e.record_status === "current",
@@ -182,18 +184,11 @@ export async function buildProductionNaValidationContextFromSession(
     throw new ProductionNaAuthorityError(topicLoad.reason_code);
   }
 
-  // Session may pin a version string; production authority version is ACTIVE.
-  // Validator compares Session eval catalog_version to currentTopicCatalogVersion.
-  const topicVersion = ACTIVE_TOPIC_APPLICABILITY_VERSION;
-  // If Session claims a non-ACTIVE topic catalog version, keep that string so
-  // resolveAuthoritativeTopicEval fails closed as topic_catalog_version_stale
-  // when evals were minted against an old catalog.
-  const sessionTopicVersion =
-    session.topic_catalog_version != null &&
-    session.topic_catalog_version !== ""
-      ? session.topic_catalog_version
-      : undefined;
-  const currentTopicCatalogVersion = sessionTopicVersion ?? topicVersion;
+  // S9-R2: currentTopicCatalogVersion ALWAYS from ACTIVE Loader.
+  // Session.topic_catalog_version is a verified object only — never defines "current".
+  // Session≠ACTIVE (or missing/unknown) does not widen current; old evals fail
+  // via resolveAuthoritativeTopicEval catalog_version !== current (ACTIVE).
+  const currentTopicCatalogVersion = ACTIVE_TOPIC_APPLICABILITY_VERSION;
 
   const topicRules = composeTopicRulesFromActiveAndSession(
     topicLoad.rules,
@@ -204,7 +199,17 @@ export async function buildProductionNaValidationContextFromSession(
     nowIso: opts.nowIso,
   });
   // Reader ok:false → leave unset (fail-closed). Never invent source_absent.
+  // S9-R4: bind full live evaluation (eval_id/source_code/profile_id/session_id).
   const cfpSourceState = cfpRead.ok ? cfpRead.state : undefined;
+  const cfpLiveEvaluation = cfpRead.ok
+    ? {
+        state: cfpRead.state,
+        eval_id: cfpRead.eval_id,
+        source_code: cfpRead.source_code,
+        profile_id: cfpRead.profile_id,
+        session_id: cfpRead.session_id,
+      }
+    : undefined;
 
   return {
     contextId: dc.context_id,
@@ -220,6 +225,7 @@ export async function buildProductionNaValidationContextFromSession(
     dirCatalog: dirLoad.entries,
     topicRules,
     cfpSourceState,
+    cfpLiveEvaluation,
     // catalogConditionEvals intentionally omitted (SOURCE_GAP).
   };
 }
@@ -290,6 +296,7 @@ export type NaValidationFixtureOverrides = {
     | readonly AuthoritativeTopicEvalRecord[];
   currentTopicCatalogVersion?: string;
   cfpSourceState?: NaValidationContext["cfpSourceState"];
+  cfpLiveEvaluation?: NaValidationContext["cfpLiveEvaluation"];
 };
 
 /**
@@ -323,6 +330,7 @@ export function naValidationBoundToDc(
     catalogConditionEvals: overrides.catalogConditionEvals,
     topicRules: overrides.topicRules,
     cfpSourceState: overrides.cfpSourceState,
+    cfpLiveEvaluation: overrides.cfpLiveEvaluation,
   };
 }
 

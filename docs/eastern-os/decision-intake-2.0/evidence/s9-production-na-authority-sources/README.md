@@ -33,3 +33,17 @@ All four paths call `buildProductionNaValidationContextFromSession` (async):
 Raw logs under `raw/`. Suites exercised include S7 PAB, S8 (barrel/agent/delivery/freeze-persist/versioning-idb), S9 20 checks, dir-catalog, freeze-authority, freeze-versioning, production-agg, write-freeze-consistency, Stage4, PageFeed, S5–S6, `test:decision-context`, `tsc --noEmit`, `typecheck:intake-r6-tests`, `verify:terms`.
 
 CI: GitHub Actions on push of this branch (phase3-decision-context.yml includes S9 step + branch trigger).
+
+## S9-R1..R5 REQUEST CHANGES follow-up (same branch)
+
+Fixes (do not self-ACCEPTED):
+
+1. **S9-R1 Topic writer** — confirmation_turn_id must bind a real Session *user* message with meta.topic_applicability_confirm (session_id/rule_id/control_id/target_dir_id). Production UI entry: confirmTopicApplicabilityEvalFromUiClick wired from POJUChatUI topic offer chips. Decline/skip/ordinary chat cannot mint N/A. Tests cover missing/assistant/cross-session/forged turns + full CAS entry via injected load/casWrite.
+2. **S9-R2 Topic catalog version** — currentTopicCatalogVersion always ACTIVE Loader. Session version is verified object only. Session=v0+Eval=v0 against ACTIVE=v1 fail-closed.
+3. **S9-R3 CFP provenance** — getStoredProfileWithRecord returns outer IndexedDB Record + decrypted data; recompute irth_info_hash and compare. Missing/mismatch → source_provenance_missing (never degrade to source_ok). Tests use real Record/Data shapes.
+4. **S9-R4 CFP eval bind** — Composer attaches cfpLiveEvaluation (eval_id/source_code/profile_id/session_id). DDR-03 validator requires equality to live read; forged/stale/cross-session eval ids rejected.
+5. **S9-R5 Four-path test** — S9-16 drives Freeze / 
+eaggregateDirsOnSession / selectNextIntakeAskForSession / pplyV2FromFinalToSession and asserts DIR 
+_a + NA reason agreement.
+
+Authority matrix honesty after R-fixes: topicRules wired (with real confirm+CAS); cfpSourceState wired (browser Record provenance + live eval bind); catalogConditionEvals still fail-closed.

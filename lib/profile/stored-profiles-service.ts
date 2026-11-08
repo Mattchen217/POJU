@@ -37,6 +37,13 @@ function assertBrowser(): void {
   }
 }
 
+/** Canonical birth_info hash — same algorithm as StoredProfileRecord.birth_info_hash. */
+export async function computeStoredBirthInfoHash(
+  birth: BirthInfo | StoredProfileData["birth_info"],
+): Promise<string> {
+  return hashBirthInfo(birth as BirthInfo);
+}
+
 async function hashBirthInfo(birth: BirthInfo): Promise<string> {
   const loc = birth.birth_location;
   const locPart =
@@ -294,6 +301,44 @@ export async function getStoredProfile(profileId: string): Promise<StoredProfile
       ...data,
       birth_info: birth as unknown as StoredProfileData["birth_info"],
       user_profile: { ...data.user_profile, birth },
+    };
+  } catch (e) {
+    console.error("[stored-profiles] Decrypt failed:", e);
+    return null;
+  }
+}
+
+
+export type StoredProfileWithRecord = {
+  record: StoredProfileRecord;
+  data: StoredProfileData;
+};
+
+/**
+ * Production CFP reader entry — outer IndexedDB Record + decrypted data together.
+ * Never strips birth_info_hash; required for provenance compare.
+ */
+export async function getStoredProfileWithRecord(
+  profileId: string,
+): Promise<StoredProfileWithRecord | null> {
+  if (typeof window === "undefined") return null;
+  const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await db.stored_profiles.get(profileId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return null;
+  try {
+    const data = await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
+      iv: record.iv,
+      cipher: record.encrypted_data,
+    });
+    const birth = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
+    return {
+      record,
+      data: {
+        ...data,
+        birth_info: birth as unknown as StoredProfileData["birth_info"],
+        user_profile: { ...data.user_profile, birth },
+      },
     };
   } catch (e) {
     console.error("[stored-profiles] Decrypt failed:", e);
