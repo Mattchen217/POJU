@@ -1437,7 +1437,12 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       m1CollectingTurn.plan,
       turnId,
     );
-  } else if (m1CollectingTurn?.outcome === "ready_no_question") {
+  } else if (
+    m1CollectingTurn &&
+    !m1CollectingTurn.authorized_question &&
+    m1CollectingTurn.understanding &&
+    m1CollectingTurn.understanding.readiness.can_ask === false
+  ) {
     // Readiness stop — replace free-form ask with final understanding confirm.
     const summary =
       m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||

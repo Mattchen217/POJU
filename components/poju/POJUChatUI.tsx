@@ -4413,8 +4413,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                 />
               ) : null}
               {session.agent_v2 ? (
-                <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
-                  <DecisionUnderstandingPanel session={session} locale={sessionLang} />
+                <>
+                    <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
+                    <DecisionUnderstandingPanel session={session} locale={sessionLang} />
+                  </>
               ) : null}
             </>
           )
