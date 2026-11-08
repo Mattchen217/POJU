@@ -447,13 +447,13 @@ async function main() {
         operation_id: "op_s3_seed_draft",
         kind: "session_patch",
         bump_dc: true,
-        apply: (latest) => ({
+        apply: (latest): POJUSessionState => ({
           ...latest,
           agent_v2: latest.agent_v2
             ? {
                 ...latest.agent_v2,
                 stall_offer_pending: false,
-                delivery_mode: "full" as const,
+                delivery_mode: "full",
               }
             : latest.agent_v2,
           decision_context: liveDraft,

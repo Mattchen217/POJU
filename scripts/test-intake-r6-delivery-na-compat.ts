@@ -268,10 +268,12 @@ async function main() {
       globalThis.fetch = originalFetch;
     }
     assert.equal(posts.length, 1, "exactly one create-job POST");
+    const [rawBody] = posts;
+    assert.ok(rawBody);
     const sent: {
       decision_context_snapshot: DecisionContext;
       decision_context_binding: DecisionContextBinding;
-    } = JSON.parse(posts[0]!);
+    } = JSON.parse(rawBody);
     assert.ok(isRecord(sent.decision_context_snapshot));
     assert.ok(isRecord(sent.decision_context_binding));
 

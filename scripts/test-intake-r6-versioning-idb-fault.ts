@@ -15,6 +15,7 @@ import assert from "node:assert/strict";
 import { installIntakeR6TestGlobals } from "./fixtures/test-browser-globals";
 import { withIdbWriteFault } from "./fixtures/idb-storage-fault";
 import { ACTIVE_NA_DIR, NORMAL_DIR, seedNaDraftSession } from "./fixtures/intake-r6-na-seed";
+import type { DecisionContext, RealityFact } from "../lib/poju/decision-context/types";
 import type { POJUSessionState } from "../lib/poju/types";
 
 installIntakeR6TestGlobals("dev_intake_r6_s8_versioning");
@@ -88,28 +89,32 @@ async function main() {
     };
   }
 
+  const supplement: RealityFact = {
+    fact_id: "f_v2_supplement",
+    statement: "supplement after delivery",
+    status: "unverified",
+    verification_level: "user_asserted",
+    source_stage: "user_supplement",
+    source_turn_id: "t_v2",
+    user_confirmed: false,
+    fact_roles: ["situation"],
+    related_dir_ids: [NORMAL_DIR],
+  };
   const v2Opts = {
     now: V2_NOW,
-    add_facts: [
-      {
-        fact_id: "f_v2_supplement",
-        statement: "supplement after delivery",
-        status: "unverified" as const,
-        verification_level: "user_asserted" as const,
-        source_stage: "user_supplement" as const,
-        source_turn_id: "t_v2",
-        user_confirmed: false,
-        fact_roles: ["situation"],
-        related_dir_ids: [NORMAL_DIR],
-      },
-    ],
+    add_facts: [supplement],
     affected_dir_ids: [NORMAL_DIR],
   };
 
+  function finalDcOf(s: POJUSessionState): DecisionContext {
+    assert.ok(s.decision_context, "Decision Context missing");
+    return s.decision_context;
+  }
+
   await check("D0 precondition: V1 final + V2 opens normally (draft v2, V1 snapshot superseded, hash intact)", async () => {
     const v1 = await v1FinalSession("d0");
-    const v1Hash = v1.decision_context!.content_hash;
-    const v1Version = v1.decision_context!.version;
+    const v1Hash = finalDcOf(v1).content_hash;
+    const v1Version = finalDcOf(v1).version;
     const r = await persistV2FromFinalOnSession(v1, v2Opts);
     assert.equal(r.ok, true, JSON.stringify(r));
     assert.ok(r.ok && !("skipped" in r && r.skipped));
@@ -125,7 +130,7 @@ async function main() {
     const v1 = await v1FinalSession("d1");
     const v1Clone = structuredClone(v1);
     const idbBefore = versionState(v1);
-    const v1Dc = v1.decision_context!;
+    const v1Dc = finalDcOf(v1);
     const v2Key = v2IdempotencyKey(v1, v1Dc, v1Dc.version + 1);
 
     const { value: r, hits } = await withIdbWriteFault(SESSION_STORE, () =>
@@ -194,7 +199,7 @@ async function main() {
     const retry = await commitDecisionContextChange({ ...commitArgs, session: await durable(v1.session_id) });
     assert.equal(retry.idempotent_skip, false, "failed commit must not leave a process-local key");
     assert.equal(retry.committed, true);
-    assert.equal((await durable(v1.session_id)).decision_context?.version, v1.decision_context!.version + 1);
+    assert.equal((await durable(v1.session_id)).decision_context?.version, finalDcOf(v1).version + 1);
   });
 
   console.log(`\nS8 versioning-idb-fault done. PASS=${passed} FAIL=${failed}`);
