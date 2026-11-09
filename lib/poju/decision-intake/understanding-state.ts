@@ -4,7 +4,15 @@
 
 import { evaluateDecisionSufficiency } from "@/lib/poju/decision-context/stop-criteria";
 import type { POJUSessionState } from "@/lib/poju/types";
-import { directionIdForDir } from "./blueprint";
+import {
+  directionIdForDir,
+  gateClassForDirFromCatalog,
+  resolveDdrIdsForDir,
+} from "./blueprint";
+import {
+  ACTIVE_DDR_CATALOG_VERSION,
+  loadDdrCatalog,
+} from "@/lib/poju/decision-context/catalog";
 import type {
   AdaptiveQuestionPlan,
   DecisionBlueprint,
@@ -59,6 +67,7 @@ export function buildUnderstandingState(input: {
 
   const understood: UnderstoodItem[] = [];
   const needs: NeedItem[] = [];
+  const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
 
   for (const dir of dc.dirs) {
     if (dir.id_lifecycle !== "active") continue;
@@ -75,11 +84,28 @@ export function buildUnderstandingState(input: {
       });
       continue;
     }
+    // Blueprint scope only — never invent needs outside Catalog seed.
+    if (!input.blueprint.dir_ids.includes(dir.dir_id)) continue;
     const direction_id = directionIdForDir(input.blueprint, dir.dir_id);
     const direction = input.blueprint.directions.find(
       (d) => d.direction_id === direction_id,
     );
-    const priority = direction?.priority ?? (dir.may_affect_p5_ranking ? "P0" : "P1");
+    const gate = ddrLoad.ok
+      ? gateClassForDirFromCatalog(
+          dir.dir_id,
+          ddrLoad.snapshot.by_id,
+          ddrLoad.snapshot.dir_to_ddr,
+        )
+      : null;
+    const ddr_ids = resolveDdrIdsForDir(dir.dir_id, input.blueprint);
+    if (ddr_ids.length === 0) {
+      // No legal Catalog DDR link — do not disguise as formal DDR investigation need.
+      continue;
+    }
+    const priority =
+      gate?.gate_class ??
+      direction?.priority ??
+      "P2";
     let gap_type: "unknown" | "partial" | "conflict" | "declined" = "unknown";
     if (dir.current_state === "conflict") gap_type = "conflict";
     else if (
@@ -90,17 +116,19 @@ export function buildUnderstandingState(input: {
     } else if (dir.partial_satisfaction || relatedFacts.length > 0) {
       gap_type = "partial";
     }
+    const ranking =
+      gate?.may_affect_p5_ranking ?? dir.may_affect_p5_ranking !== false;
     needs.push({
       kind: "dir_based",
       dir_id: dir.dir_id,
-      ddr_ids: [`DDR_FOR_${dir.dir_id}`],
+      ddr_ids,
       direction_id,
       priority,
       why: dir.why || "Required for decision judgment",
       missing_content: dir.need,
-      may_affect_p5_ranking: dir.may_affect_p5_ranking !== false,
+      may_affect_p5_ranking: ranking,
       gap_type,
-      must_continue: dir.may_affect_p5_ranking !== false,
+      must_continue: ranking || priority === "P0",
     });
   }
 

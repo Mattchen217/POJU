@@ -5,7 +5,21 @@
 export * from "./types";
 export { interpretUserAnswer } from "./answer-interpretation";
 export { applyAnswerEventToSessionDc } from "./apply-answer-to-dc";
-export { ensureDecisionBlueprint, directionIdForDir, blueprintAllowsDir } from "./blueprint";
+export {
+  ensureDecisionBlueprint,
+  directionIdForDir,
+  blueprintAllowsDir,
+  blueprintAllowsDdr,
+  buildCatalogBlueprintScope,
+  resolveDdrIdsForDir,
+  gateClassForDirFromCatalog,
+  mergeCatalogDirsIntoDc,
+  seedDirFromDefinition,
+} from "./blueprint";
+export {
+  classifyDecisionTopic,
+  filterCatalogLegalIds,
+} from "./topic-classify";
 export {
   buildUnderstandingState,
   evaluatePersonalPatternInsight,

@@ -183,7 +183,8 @@
     "test:s7-dc-lifecycle": "tsx scripts/test-s7-dc-lifecycle.ts",
     "test:m1-r-fresh-session-main-loop": "tsx scripts/test-m1-r-fresh-session-main-loop.ts",
     "test:m2-1-readiness-confirm-freeze": "tsx scripts/test-m2-1-readiness-confirm-freeze.ts",
-    "test:m2-2-freeze-report-binding": "tsx scripts/test-m2-2-freeze-report-binding.ts"
+    "test:m2-2-freeze-report-binding": "tsx scripts/test-m2-2-freeze-report-binding.ts",
+    "test:m2-3-decision-blueprint": "tsx scripts/test-m2-3-decision-blueprint.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

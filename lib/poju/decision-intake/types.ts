@@ -62,10 +62,13 @@ export type InvestigationDirection = {
   priority: "P0" | "P1" | "P2";
   label: string;
   dir_ids: string[];
+  /** Catalog DDR ids linked to this direction (many DDR per DIR allowed). */
+  ddr_ids?: string[];
   needed_info: string;
   completion_criteria: string;
   depth_soft_cap: number;
   scope_boundary: string;
+  dependencies?: string[];
 };
 
 export type DecisionBlueprint = {
@@ -79,6 +82,12 @@ export type DecisionBlueprint = {
   definition_snapshot: DecisionContext["definition"];
   directions: InvestigationDirection[];
   dir_ids: string[];
+  /** Selected Catalog DDR ids for this Blueprint scope. */
+  ddr_ids?: string[];
+  topic_tags?: string[];
+  page_07_emit?: boolean;
+  /** catalog = question-specific Catalog scope; starter_fallback = controlled fallback only. */
+  scope_source?: "catalog" | "starter_fallback";
   scope_locked: boolean;
   question_budget: { soft: number; hard: number; depth_per_direction: number };
   created_at: string;

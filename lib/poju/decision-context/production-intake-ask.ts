@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Production Intake 2.0 next-ask orchestration.
  *
  * Call chain (sole scoring path):
@@ -20,6 +20,15 @@ import {
 } from "./question-plan-cycle";
 import { snapshotFromDc } from "./question-planning";
 import type { DecisionContext } from "./types";
+import type { DecisionBlueprint } from "@/lib/poju/decision-intake/types";
+import {
+  gateClassForDirFromCatalog,
+  resolveDdrIdsForDir,
+} from "@/lib/poju/decision-intake/blueprint";
+import {
+  ACTIVE_DDR_CATALOG_VERSION,
+  loadDdrCatalog,
+} from "@/lib/poju/decision-context/catalog";
 
 export const INTAKE_ASK_SCORING_PATH =
   ("selectNextIntakeAskForSession\u2192planNextAskFromCandidates\u2192scorePlanningCandidate\u2192resolveDirRoleEvidence") as const;
@@ -36,27 +45,55 @@ export type IntakeAskPlanSnapshot = {
 /** Build dir_based gap candidates from live DC dirs (unknown/conflict). */
 export function buildIntakeCandidatesFromDc(
   dc: DecisionContext,
+  blueprint?: DecisionBlueprint | null,
 ): RankablePlanningCandidate[] {
   const out: RankablePlanningCandidate[] = [];
+  const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
   for (const dir of dc.dirs) {
     if (dir.id_lifecycle === "deprecated") continue;
     if (dir.current_state === "known" || dir.current_state === "n_a") continue;
+    if (blueprint && !blueprint.dir_ids.includes(dir.dir_id)) continue;
     const roles = dir.required_fact_roles ?? [];
     if (roles.length === 0) continue;
+    const ddr_ids = resolveDdrIdsForDir(dir.dir_id, blueprint);
+    // No legal Catalog DDR link → not a formal DDR investigation candidate.
+    if (ddr_ids.length === 0) continue;
+    if (ddr_ids.some((id) => id.startsWith("DDR_FOR_"))) continue;
     const fact_role_codes = roles.map(
       (r) => `v1/dir/${dir.dir_id}/role/${r}`,
     );
-    const gate =
-      dir.may_affect_p5_ranking === true ? ("P0" as const) : ("P1" as const);
+    const gateInfo = ddrLoad.ok
+      ? gateClassForDirFromCatalog(
+          dir.dir_id,
+          ddrLoad.snapshot.by_id,
+          ddrLoad.snapshot.dir_to_ddr,
+        )
+      : null;
+    let gate = gateInfo?.gate_class ?? "P2";
+    const may_affect_p5_ranking =
+      gateInfo?.may_affect_p5_ranking ?? dir.may_affect_p5_ranking === true;
+    let decision_critical =
+      gateInfo?.decision_critical ?? may_affect_p5_ranking;
+    // Decision-specific topic pack DIRs are investigation-critical for this session.
+    if (
+      blueprint?.page_07_emit &&
+      blueprint.directions.some(
+        (d) =>
+          d.direction_id === "DIRN-TOPIC" && d.dir_ids.includes(dir.dir_id),
+      )
+    ) {
+      gate = "P0";
+      decision_critical = true;
+    }
     out.push({
       candidate_id: `cq_dir_${dir.dir_id}`,
       kind: "dir_based",
       dir_ids: [dir.dir_id],
-      ddr_ids: [`DDR_FOR_${dir.dir_id}`],
+      ddr_ids,
       fact_role_codes,
       impact: {
-        decision_critical: dir.may_affect_p5_ranking === true,
-        may_affect_p5_ranking: dir.may_affect_p5_ranking === true,
+        decision_critical,
+        may_affect_p5_ranking,
         gate_class: gate,
       },
       depth: 1,
@@ -110,7 +147,7 @@ export async function selectNextIntakeAskForSession(
   }
 
   const candidates = [
-    ...buildIntakeCandidatesFromDc(dc),
+    ...buildIntakeCandidatesFromDc(dc, input.session.decision_blueprint),
     ...(input.extraCandidates ?? []),
   ];
 

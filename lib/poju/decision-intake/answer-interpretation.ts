@@ -9,6 +9,7 @@ export const ANSWER_INTERPRETATION_VERSION = "deterministic_m1_v1_simplified" as
 
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { AnswerClass, AnswerEvent, ProposedWrite } from "./types";
+import { resolveDdrIdsForDir } from "./blueprint";
 
 const UNKNOWN_RE =
   /^(i\s*don'?t\s*know|不知道|不清楚|不了解|没印象|unsure|no\s*idea)(\b|$|[!。！？.\s])/i;
@@ -56,7 +57,7 @@ function activeTargets(session: POJUSessionState): {
         : ["situation"];
       return {
         dir_ids: [m[1]],
-        ddr_ids: [`DDR_FOR_${m[1]}`],
+        ddr_ids: resolveDdrIdsForDir(m[1], session.decision_blueprint),
         fact_roles: roles,
       };
     }
@@ -70,7 +71,7 @@ function activeTargets(session: POJUSessionState): {
   if (open) {
     return {
       dir_ids: [open.dir_id],
-      ddr_ids: [`DDR_FOR_${open.dir_id}`],
+      ddr_ids: resolveDdrIdsForDir(open.dir_id, session.decision_blueprint),
       fact_roles: open.required_fact_roles?.length
         ? open.required_fact_roles
         : ["situation"],

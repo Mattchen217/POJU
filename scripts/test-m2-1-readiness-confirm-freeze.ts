@@ -1354,17 +1354,23 @@ async function main() {
         "现状是大厂稳定工作，月薪足够但成长停滞，房贷按月在还。",
         "硬约束是存款只够撑六个月，孩子学费不能断，父母需要照顾。",
         "风险上最多能接受收入腰斩一年，再差就会回撤。",
+        "不可接受的结果是：家庭现金流断裂、孩子学费中断、或把房子赌进去。",
+        "退出条件是：连续六个月入不敷出，或核心客户全丢就立刻停。",
+        "目标优先级：先保现金流，再看成长，最后才是名义职位。",
         "补充：如果创业，方向是企业咨询，已有两个潜在客户意向。",
-        "补充：转岗的机会大概在下个季度评估窗口。",
+        "补充：转岗评估窗口在下个季度，这是公司排期写明的。",
+        "期望结果是三年内有可逆的独立咨询收入，同时不破坏家庭稳定。",
       ];
       let guard = 0;
+      // M2.3 Catalog scope seeds more critical DIRs; allow enough turns for
+      // partial coverage / hard-budget stop (soft 12 / hard 15).
       while (
         session!.decision_understanding?.readiness.can_ask !== false &&
-        guard < 12
+        guard < 20
       ) {
         const msg =
           answers[guard] ??
-          `继续补充第${guard + 1}点：我会按事实回答当前问题，尽量具体可核验。`;
+          `继续补充第${guard + 1}点：针对当前调查问题，我的明确答复如下——会给出可核验的具体事实说明。`;
         guard += 1;
         stubResponse = `FREEFORM_${guard}`;
         for (const d of session!.decision_context!.dirs) {
@@ -1421,7 +1427,7 @@ async function main() {
 
       const asst = lastAssistant(session);
       assert.notEqual(asst.content, stubResponse);
-      assert.match(asst.content, /已冻结|冻结/);
+      assert.match(asst.content, /【已冻结】/);
 
       const dc = session.decision_context!;
       assert.equal(dc.status, "final");

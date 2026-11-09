@@ -268,12 +268,18 @@ async function planFromState(
     };
   }
 
-  const candidates = buildIntakeCandidatesFromDc(dc).map((c) => {
+  const candidates = buildIntakeCandidatesFromDc(dc, blueprint).map((c) => {
     const dirId = c.dir_ids[0];
     const depth = dirId ? (budget.depth_by_dir[dirId] ?? 0) + 1 : c.depth;
     // Filter completed dirs already handled in builder; enforce depth cap here.
     return { ...c, depth, repetition_count: Math.max(0, depth - 1) };
   }).filter((c) => {
+    if (!c.ddr_ids.length || c.ddr_ids.some((id) => id.startsWith("DDR_FOR_"))) {
+      return false;
+    }
+    for (const dirId of c.dir_ids) {
+      if (!blueprint.dir_ids.includes(dirId)) return false;
+    }
     const dirId = c.dir_ids[0];
     if (!dirId) return true;
     const used = budget.depth_by_dir[dirId] ?? 0;
