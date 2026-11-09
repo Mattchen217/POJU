@@ -28,6 +28,73 @@ import type {
   DecisionContextBinding,
 } from "@/lib/poju/decision-context/types";
 import type { POJUSessionState } from "@/lib/poju/types";
+/** Claim ops shape (KV-backed impl lives in freeze-report-claim.ts, server-only). */
+export type FreezeReportClaimOps = {
+  tryAcquire: (
+    key: string,
+    token: string,
+    ttlSec: number,
+    meta?: { job_id?: string | null },
+  ) => Promise<boolean>;
+  release: (key: string, token: string) => Promise<void>;
+  forceRelease: (key: string) => Promise<void>;
+  load?: (key: string) => Promise<{ token: string; expires_at: number } | null>;
+};
+
+export const M22_REPORT_CLAIM_TTL_SEC = 60 * 90;
+
+export function freezeReportClaimKey(input: {
+  sessionId: string;
+  freezeId: string;
+  reportSchemaVersion: string;
+}): string {
+  return [
+    "poju-m22:freeze-report-claim",
+    input.sessionId,
+    input.freezeId,
+    input.reportSchemaVersion,
+  ].join(":");
+}
+
+function newFreezeReportClaimToken(): string {
+  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+type ProcessLocalClaim = {
+  token: string;
+  expires_at: number;
+};
+
+/** Process-local NX claim with TTL — safe for client bundles; tests/servers inject KV ops. */
+export function createProcessLocalClaimOps(
+  store: Map<string, ProcessLocalClaim> = new Map(),
+): FreezeReportClaimOps {
+  return {
+    async tryAcquire(key, token, ttlSec) {
+      const now = Date.now();
+      const existing = store.get(key);
+      if (existing && existing.expires_at > now) return false;
+      store.set(key, { token, expires_at: now + ttlSec * 1000 });
+      return true;
+    },
+    async release(key, token) {
+      const existing = store.get(key);
+      if (!existing || existing.token !== token) return;
+      store.delete(key);
+    },
+    async forceRelease(key) {
+      store.delete(key);
+    },
+    async load(key) {
+      const existing = store.get(key);
+      if (!existing || existing.expires_at <= Date.now()) return null;
+      return existing;
+    },
+  };
+}
+
+const defaultProcessLocalClaimOps = createProcessLocalClaimOps();
+
 
 /** Stable report schema / prompt family for M2.2 binding uniqueness. */
 export const M22_REPORT_SCHEMA_VERSION = "m2.2-eight-page-v1" as const;
@@ -99,21 +166,6 @@ export class FreezeBoundReportError extends Error {
   }
 }
 
-export type FreezeBoundReportDeps = {
-  /** Injectable page generator (tests mock LLM; production may wrap delivery). */
-  generatePage?: (
-    snapshot: FrozenReportSnapshot,
-    pageId: DecisionPageId,
-  ) => Promise<string>;
-  now?: () => string;
-  persistSession?: (session: POJUSessionState) => Promise<void>;
-  /** Optional reload after persist for durability checks. */
-  loadSession?: (sessionId: string) => Promise<POJUSessionState | null>;
-};
-
-/** Process-local coalescing for concurrent duplicate requests. */
-const inFlightByKey = new Map<string, Promise<FreezeBoundReportResult>>();
-
 export type FreezeBoundReportResult =
   | {
       ok: true;
@@ -131,6 +183,30 @@ export type FreezeBoundReportResult =
       session: POJUSessionState;
     };
 
+export type FreezeBoundReportDeps = {
+  /** Injectable page generator (tests mock LLM; production may wrap delivery). */
+  generatePage?: (
+    snapshot: FrozenReportSnapshot,
+    pageId: DecisionPageId,
+  ) => Promise<string>;
+  now?: () => string;
+  persistSession?: (session: POJUSessionState) => Promise<void>;
+  /** Optional reload after persist for durability checks. */
+  loadSession?: (sessionId: string) => Promise<POJUSessionState | null>;
+  /**
+   * Cross-process claim ops (default: Upstash/MemoryKv SET NX).
+   * Tests inject a shared MemoryKv-backed ops across isolated inFlight maps.
+   */
+  claimOps?: FreezeReportClaimOps;
+  /** Isolate process-local coalescing (cross-process simulation). */
+  inFlightMap?: Map<string, Promise<FreezeBoundReportResult>>;
+  /** Claim TTL override (seconds). */
+  claimTtlSec?: number;
+};
+
+/** Process-local coalescing for concurrent duplicate requests. */
+const inFlightByKey = new Map<string, Promise<FreezeBoundReportResult>>();
+
 export function freezeIdFromBinding(binding: DecisionContextBinding): string {
   return `${binding.context_id}@v${binding.context_version}`;
 }
@@ -145,6 +221,22 @@ export function buildReportIdempotencyKey(input: {
 
 function deepDetachDc(dc: DecisionContext): DecisionContext {
   return JSON.parse(JSON.stringify(dc)) as DecisionContext;
+}
+
+/** Recursive freeze so page generators cannot mutate nested DC / binding. */
+export function deepFreezeValue<T>(value: T): T {
+  if (value === null || typeof value !== "object") return value;
+  if (Object.isFrozen(value)) {
+    // Still walk children in case a prior shallow freeze left nested mutable.
+  } else {
+    Object.freeze(value);
+  }
+  for (const key of Reflect.ownKeys(value as object)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const child = (value as any)[key];
+    if (child && typeof child === "object") deepFreezeValue(child);
+  }
+  return value;
 }
 
 function jobsOf(session: POJUSessionState): FreezeBoundReportJob[] {
@@ -322,8 +414,8 @@ export function createFrozenReportSnapshot(input: {
 }): FrozenReportSnapshot {
   verifyFrozenSnapshot(input.frozen, input.binding);
   const detached = deepDetachDc(input.frozen);
-  Object.freeze(detached);
-  return Object.freeze({
+  const bindingCopy: DecisionContextBinding = { ...input.binding };
+  const snapshot: FrozenReportSnapshot = {
     sessionId: input.sessionId,
     freezeId: freezeIdFromBinding(input.binding),
     decisionContextVersion: input.binding.context_version,
@@ -333,8 +425,9 @@ export function createFrozenReportSnapshot(input: {
     reportSchemaVersion: input.reportSchemaVersion ?? M22_REPORT_SCHEMA_VERSION,
     frozenAt: detached.updated_at,
     decisionContext: detached,
-    binding: { ...input.binding },
-  });
+    binding: bindingCopy,
+  };
+  return deepFreezeValue(snapshot);
 }
 
 export function reportBindingFromSnapshot(
@@ -704,15 +797,60 @@ export async function requestFreezeBoundEightPageReport(input: {
     reportSchemaVersion: snapshot.reportSchemaVersion,
   });
 
-  const existingInflight = inFlightByKey.get(key);
+  const flightMap = input.deps?.inFlightMap ?? inFlightByKey;
+  const existingInflight = flightMap.get(key);
   if (existingInflight) return existingInflight;
 
-  // Register BEFORE any await so concurrent duplicates coalesce.
+  // Register BEFORE any await so concurrent duplicates coalesce (process-local).
   let resolveInflight!: (value: FreezeBoundReportResult) => void;
   const gate = new Promise<FreezeBoundReportResult>((resolve) => {
     resolveInflight = resolve;
   });
-  inFlightByKey.set(key, gate);
+  flightMap.set(key, gate);
+
+  const claimOps = input.deps?.claimOps ?? defaultProcessLocalClaimOps;
+  const claimKey = freezeReportClaimKey({
+    sessionId: snapshot.sessionId,
+    freezeId: snapshot.freezeId,
+    reportSchemaVersion: snapshot.reportSchemaVersion,
+  });
+  const claimTtl = input.deps?.claimTtlSec ?? M22_REPORT_CLAIM_TTL_SEC;
+
+  const completedResult = (
+    job: FreezeBoundReportJob,
+    session: POJUSessionState,
+    reused: boolean,
+  ): FreezeBoundReportResult => {
+    const pages = job.pages
+      .filter((p) => p.status === "completed")
+      .map((p) => ({ pageId: p.pageId, content: p.content }));
+    try {
+      assertCompleteEightPageReport(pages);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        ok: false,
+        code: "INCOMPLETE_COMPLETED_JOB",
+        error: msg,
+        job,
+        session,
+      };
+    }
+    return {
+      ok: true,
+      reused,
+      job,
+      report: {
+        job_id: job.job_id,
+        binding: job.binding,
+        pages,
+        status: "completed",
+        completed_at: job.completed_at ?? job.updated_at,
+      },
+      snapshot,
+      session,
+    };
+  };
 
   const run = (async (): Promise<FreezeBoundReportResult> => {
     let session = input.session;
@@ -722,62 +860,74 @@ export async function requestFreezeBoundEightPageReport(input: {
       if (fresh) session = fresh;
     }
 
-    let created;
-    try {
-      created = await createOrGetReportJob({
-        session,
-        snapshot,
-        deps: input.deps,
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      const code =
-        e instanceof FreezeBoundReportError ? e.code : "JOB_CREATE_FAILED";
-      return { ok: false, code, error: msg, session };
+    const existing = findJobByKey(session, key);
+    if (existing?.status === "completed") {
+      return completedResult(existing, session, true);
     }
 
-    session = created.session;
-    const job = created.job;
-
-    if (job.status === "completed") {
-      const pages = job.pages
-        .filter((p) => p.status === "completed")
-        .map((p) => ({ pageId: p.pageId, content: p.content }));
-      try {
-        assertCompleteEightPageReport(pages);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return {
-          ok: false,
-          code: "INCOMPLETE_COMPLETED_JOB",
-          error: msg,
-          job,
-          session,
-        };
+    // Cross-process atomic claim BEFORE job create + generation.
+    // Only the winner may create/run; losers must not generate again.
+    const token = newFreezeReportClaimToken();
+    const acquired = await claimOps.tryAcquire(claimKey, token, claimTtl);
+    if (!acquired) {
+      if (input.deps?.loadSession) {
+        const fresh = await input.deps.loadSession(sessionId);
+        if (fresh) session = fresh;
+      }
+      const heldJob = findJobByKey(session, key);
+      if (heldJob?.status === "completed") {
+        return completedResult(heldJob, session, true);
       }
       return {
-        ok: true,
-        reused: true,
-        job,
-        report: {
-          job_id: job.job_id,
-          binding: job.binding,
-          pages,
-          status: "completed",
-          completed_at: job.completed_at ?? job.updated_at,
-        },
-        snapshot,
+        ok: false,
+        code: "GENERATION_IN_PROGRESS",
+        error: `Freeze-bound report claim held for ${claimKey}; not generating again`,
+        job: heldJob ?? null,
         session,
       };
     }
 
-    // Generate (or continue/retry) under the original binding.
-    return runGenerationOnJob({
-      session,
-      job,
-      snapshot,
-      deps: input.deps,
-    });
+    try {
+      // Reload under claim so job create sees the latest durable state.
+      if (input.deps?.loadSession) {
+        const fresh = await input.deps.loadSession(sessionId);
+        if (fresh) session = fresh;
+      }
+      const raced = findJobByKey(session, key);
+      if (raced?.status === "completed") {
+        return completedResult(raced, session, true);
+      }
+
+      let created;
+      try {
+        created = await createOrGetReportJob({
+          session,
+          snapshot,
+          deps: input.deps,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const code =
+          e instanceof FreezeBoundReportError ? e.code : "JOB_CREATE_FAILED";
+        return { ok: false, code, error: msg, session };
+      }
+
+      session = created.session;
+      const job = created.job;
+      if (job.status === "completed") {
+        return completedResult(job, session, true);
+      }
+
+      // Generate (or continue/retry) under the original Freeze + binding only.
+      return await runGenerationOnJob({
+        session,
+        job,
+        snapshot,
+        deps: input.deps,
+      });
+    } finally {
+      await claimOps.release(claimKey, token).catch(() => undefined);
+    }
   })();
 
   try {
@@ -794,7 +944,7 @@ export async function requestFreezeBoundEightPageReport(input: {
     resolveInflight(fail);
     return fail;
   } finally {
-    inFlightByKey.delete(key);
+    flightMap.delete(key);
   }
 }
 
@@ -854,7 +1004,203 @@ export function getCompletedFreezeBoundReport(
   };
 }
 
+/**
+ * M2.2 → formal final-delivery bridge:
+ * Load authoritative Freeze → FrozenReportSnapshot → persist Freeze-bound job
+ * → return DC fields for FinalDeliveryJobInput (existing eight-page LLM path).
+ * Does not invent a second report pipeline.
+ */
+export async function prepareFreezeBoundFinalDelivery(input: {
+  session: POJUSessionState;
+  freezeId?: string;
+  context_id?: string;
+  version?: number;
+  expected_hash?: string;
+  reportSchemaVersion?: string;
+  deps?: FreezeBoundReportDeps;
+}): Promise<
+  | {
+      ok: true;
+      snapshot: FrozenReportSnapshot;
+      job: FreezeBoundReportJob;
+      session: POJUSessionState;
+      decision_context_snapshot: DecisionContext;
+      decision_context_binding: DecisionContextBinding;
+      require_decision_context: true;
+    }
+  | { ok: false; code: string; error: string; session: POJUSessionState }
+> {
+  let snapshot: FrozenReportSnapshot;
+  try {
+    const loaded = loadAuthoritativeFreeze(input.session, {
+      freezeId: input.freezeId,
+      context_id: input.context_id,
+      version: input.version,
+      expected_hash: input.expected_hash,
+    });
+    snapshot = createFrozenReportSnapshot({
+      sessionId: input.session.session_id,
+      frozen: loaded.frozen,
+      binding: loaded.binding,
+      reportSchemaVersion:
+        input.reportSchemaVersion ?? M22_REPORT_SCHEMA_VERSION,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const code =
+      e instanceof FreezeBoundReportError
+        ? e.code
+        : e instanceof DcReportBindError
+          ? e.code
+          : "FREEZE_LOAD_FAILED";
+    return { ok: false, code, error: msg, session: input.session };
+  }
+
+  try {
+    const created = await createOrGetReportJob({
+      session: input.session,
+      snapshot,
+      deps: input.deps,
+    });
+    return {
+      ok: true,
+      snapshot,
+      job: created.job,
+      session: created.session,
+      decision_context_snapshot: snapshot.decisionContext as DecisionContext,
+      decision_context_binding: snapshot.binding,
+      require_decision_context: true,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const code =
+      e instanceof FreezeBoundReportError ? e.code : "JOB_CREATE_FAILED";
+    return { ok: false, code, error: msg, session: input.session };
+  }
+}
+
+/**
+ * After existing final-delivery LLM pipeline completes, bind pages onto the
+ * Freeze-bound report job (same Freeze identity). Fail-closed on integrity.
+ */
+export async function completeFreezeBoundReportFromDeliveryPages(input: {
+  session: POJUSessionState;
+  snapshot: FrozenReportSnapshot;
+  jobId: string;
+  pages: Array<{ pageId: DecisionPageId; content: string }>;
+  deps?: FreezeBoundReportDeps;
+}): Promise<FreezeBoundReportResult> {
+  const nowFn = input.deps?.now ?? (() => new Date().toISOString());
+  verifyFrozenSnapshot(
+    input.snapshot.decisionContext as DecisionContext,
+    input.snapshot.binding,
+  );
+  assertCompleteEightPageReport(input.pages);
+  const job = jobsOf(input.session).find((j) => j.job_id === input.jobId);
+  if (!job) {
+    return {
+      ok: false,
+      code: "JOB_NOT_FOUND",
+      error: `No report job ${input.jobId}`,
+      session: input.session,
+    };
+  }
+  const expected = reportBindingFromSnapshot(input.snapshot);
+  if (!bindingsEqual(job.binding, expected)) {
+    return {
+      ok: false,
+      code: "BINDING_MISMATCH",
+      error: "Cannot complete job under a different Freeze binding",
+      job,
+      session: input.session,
+    };
+  }
+  const completed_at = nowFn();
+  const nextPages: FreezeBoundReportPage[] = input.pages.map((p) => ({
+    pageId: p.pageId,
+    content: p.content,
+    status: "completed",
+    generated_at: completed_at,
+    error: null,
+  }));
+  const nextJob: FreezeBoundReportJob = {
+    ...job,
+    pages: nextPages,
+    status: "completed",
+    updated_at: completed_at,
+    completed_at,
+    error: null,
+  };
+  let session = upsertJob(input.session, nextJob);
+  if (input.deps?.persistSession) await input.deps.persistSession(session);
+  return {
+    ok: true,
+    reused: false,
+    job: nextJob,
+    report: {
+      job_id: nextJob.job_id,
+      binding: nextJob.binding,
+      pages: input.pages,
+      status: "completed",
+      completed_at,
+    },
+    snapshot: input.snapshot,
+    session,
+  };
+}
+
 /** Test helper — clear in-flight coalescing map. */
 export function __resetFreezeBoundReportInFlightForTests(): void {
   inFlightByKey.clear();
+}
+
+/** Test helper — build claim ops over an injectable KV-like store (shared across isolates). */
+export function __createClaimOpsForTests(store: {
+  get: <T = unknown>(key: string) => Promise<T | null>;
+  set: (
+    key: string,
+    value: unknown,
+    opts?: { ex?: number; nx?: boolean },
+  ) => Promise<"OK" | null>;
+  del: (...keys: string[]) => Promise<number>;
+}): FreezeReportClaimOps {
+  return {
+    async tryAcquire(key, token, ttlSec, meta) {
+      const existing = await store.get<{ token?: string; expires_at?: number }>(key);
+      const now = Date.now();
+      if (
+        existing &&
+        typeof existing.expires_at === "number" &&
+        existing.expires_at > now &&
+        typeof existing.token === "string"
+      ) {
+        return false;
+      }
+      if (existing) await store.del(key);
+      const setResult = await store.set(
+        key,
+        {
+          token,
+          acquired_at: now,
+          expires_at: now + ttlSec * 1000,
+          job_id: meta?.job_id ?? null,
+        },
+        { nx: true, ex: ttlSec },
+      );
+      return setResult === "OK";
+    },
+    async release(key, token) {
+      const existing = await store.get<{ token?: string }>(key);
+      if (!existing || existing.token !== token) return;
+      await store.del(key);
+    },
+    async forceRelease(key) {
+      await store.del(key);
+    },
+    async load(key) {
+      const existing = await store.get<{ token: string; expires_at: number }>(key);
+      if (!existing || existing.expires_at <= Date.now()) return null;
+      return existing;
+    },
+  };
 }

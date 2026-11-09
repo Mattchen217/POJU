@@ -503,43 +503,75 @@ export async function POST(req: Request) {
     let decision_context_snapshot: import("@/lib/poju/decision-context").DecisionContext | null =
       null;
     try {
+      const { assertSnapshotMatchesBinding } = await import(
+        "@/lib/poju/decision-context"
+      );
       const {
-        assertSnapshotMatchesBinding,
-        resolveDecisionContextForReport,
-      } = await import("@/lib/poju/decision-context");
+        loadAuthoritativeFreeze,
+        createFrozenReportSnapshot,
+      } = await import("@/lib/poju/decision-intake/freeze-bound-report");
       const bindingRaw = body.decision_context_binding;
       const snapRaw = body.decision_context_snapshot;
       const hasSlice =
         body.decision_context != null ||
         (Array.isArray(body.decision_context_versions) &&
           body.decision_context_versions.length > 0);
+      const freezeIdRaw =
+        typeof (body as { freeze_id?: unknown }).freeze_id === "string"
+          ? String((body as { freeze_id?: string }).freeze_id)
+          : undefined;
+
+      const resolveViaM22 = (slice: {
+        decision_context?: import("@/lib/poju/decision-context").DecisionContext | null;
+        decision_context_versions?: import("@/lib/poju/decision-context").DecisionContext[] | null;
+      }) => {
+        const loaded = loadAuthoritativeFreeze(slice, {
+          freezeId: freezeIdRaw,
+          context_id:
+            bindingRaw && typeof bindingRaw === "object"
+              ? (bindingRaw as { context_id?: string }).context_id
+              : undefined,
+          version:
+            bindingRaw && typeof bindingRaw === "object"
+              ? (bindingRaw as { context_version?: number }).context_version
+              : undefined,
+          expected_hash:
+            bindingRaw && typeof bindingRaw === "object"
+              ? (bindingRaw as { context_hash?: string }).context_hash
+              : undefined,
+        });
+        return createFrozenReportSnapshot({
+          sessionId: sessionIdRaw,
+          frozen: loaded.frozen,
+          binding: loaded.binding,
+        });
+      };
+
       if (snapRaw && typeof snapRaw === "object" && bindingRaw && typeof bindingRaw === "object") {
         const snap = snapRaw as import("@/lib/poju/decision-context").DecisionContext;
         const binding = bindingRaw as import("@/lib/poju/decision-context").DecisionContextBinding;
         assertSnapshotMatchesBinding(snap, binding);
-        decision_context_snapshot = snap;
-        decision_context_binding = binding;
+        const frozenSnap = createFrozenReportSnapshot({
+          sessionId: sessionIdRaw,
+          frozen: snap,
+          binding,
+        });
+        decision_context_snapshot =
+          frozenSnap.decisionContext as import("@/lib/poju/decision-context").DecisionContext;
+        decision_context_binding = frozenSnap.binding;
       } else if (hasSlice || requireDecisionContext) {
-        const resolved = resolveDecisionContextForReport(
-          {
-            decision_context:
-              body.decision_context && typeof body.decision_context === "object"
-                ? (body.decision_context as import("@/lib/poju/decision-context").DecisionContext)
-                : null,
-            decision_context_versions: Array.isArray(body.decision_context_versions)
-              ? (body.decision_context_versions as import("@/lib/poju/decision-context").DecisionContext[])
-              : [],
-          },
-          bindingRaw && typeof bindingRaw === "object"
-            ? {
-                context_id: (bindingRaw as { context_id?: string }).context_id,
-                version: (bindingRaw as { context_version?: number }).context_version,
-                expected_hash: (bindingRaw as { context_hash?: string }).context_hash,
-              }
-            : undefined,
-        );
-        decision_context_snapshot = resolved.snapshot;
-        decision_context_binding = resolved.binding;
+        const frozenSnap = resolveViaM22({
+          decision_context:
+            body.decision_context && typeof body.decision_context === "object"
+              ? (body.decision_context as import("@/lib/poju/decision-context").DecisionContext)
+              : null,
+          decision_context_versions: Array.isArray(body.decision_context_versions)
+            ? (body.decision_context_versions as import("@/lib/poju/decision-context").DecisionContext[])
+            : [],
+        });
+        decision_context_snapshot =
+          frozenSnap.decisionContext as import("@/lib/poju/decision-context").DecisionContext;
+        decision_context_binding = frozenSnap.binding;
       } else if (requireDecisionContext) {
         return NextResponse.json(
           {
@@ -549,6 +581,41 @@ export async function POST(req: Request) {
           },
           { status: 400 },
         );
+      }
+
+            // Persist Freeze-bound report job binding before xhigh/final-delivery generation.
+      // Server wrapper injects Upstash/KV claim ops for cross-process idempotency.
+      if (decision_context_snapshot && decision_context_binding) {
+        try {
+          const { loadPOJUSession, savePOJUSession } = await import(
+            "@/lib/poju/session-manager"
+          );
+          const { prepareFreezeBoundFinalDeliveryServer } = await import(
+            "@/lib/poju/decision-intake/freeze-bound-report-server"
+          );
+          const sessionRow = await loadPOJUSession(sessionIdRaw);
+          if (sessionRow) {
+            const prepared = await prepareFreezeBoundFinalDeliveryServer({
+              session: {
+                ...sessionRow,
+                decision_context: decision_context_snapshot,
+                decision_context_versions: [
+                  ...(sessionRow.decision_context_versions ?? []),
+                ],
+              },
+              expected_hash: decision_context_binding.context_hash,
+              deps: { persistSession: savePOJUSession },
+            });
+            if (!prepared.ok && requireDecisionContext) {
+              throw new Error(prepared.error);
+            }
+          }
+        } catch (persistErr) {
+          console.warn("[final-delivery] freeze-bound job persist skipped", persistErr);
+          if (requireDecisionContext) {
+            throw persistErr;
+          }
+        }
       }
     } catch (e) {
       const code =

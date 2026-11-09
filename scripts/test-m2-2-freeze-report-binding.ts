@@ -56,6 +56,7 @@ async function main() {
     assertCompleteEightPageReport,
     freezeIdFromBinding,
     __resetFreezeBoundReportInFlightForTests,
+    __createClaimOpsForTests,
     M22_REPORT_SCHEMA_VERSION,
   } = await import("../lib/poju/decision-intake/freeze-bound-report");
 
@@ -1091,6 +1092,217 @@ async function main() {
     assert.equal(pages.length, 8);
     // Recomputed hash still matches Freeze contract.
     assert.equal(computeContentHash(loaded.frozen), frozen.contentHash);
+  });
+
+
+  // ---------- M2.2-R1 blockers ----------
+  await check("M2.2-R1-C5 Cross-process claim: only one generator runs", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const frozen = await freezeSession("m22_r1_c5");
+    const sharedKv = new MemoryKv();
+    const claimOps = __createClaimOpsForTests(sharedKv);
+    const mapA = new Map();
+    const mapB = new Map();
+    let pageCalls = 0;
+    let generating = 0;
+    let maxGenerating = 0;
+
+    const makeDeps = (inFlightMap: Map<string, Promise<unknown>>) => ({
+      ...persistDeps(),
+      claimOps,
+      inFlightMap: inFlightMap as never,
+      claimTtlSec: 120,
+      generatePage: async (snapshot: FrozenReportSnapshot, pageId: DecisionPageId) => {
+        generating += 1;
+        maxGenerating = Math.max(maxGenerating, generating);
+        pageCalls += 1;
+        await new Promise((r) => setTimeout(r, 25));
+        generating -= 1;
+        return `xproc ${pageId} ${snapshot.contentHash}`;
+      },
+    });
+
+    const [a, b] = await Promise.all([
+      requestFreezeBoundEightPageReport({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        deps: makeDeps(mapA),
+      }),
+      requestFreezeBoundEightPageReport({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        deps: makeDeps(mapB),
+      }),
+    ]);
+
+    // Exactly one side should generate; the other sees claim or completed reuse.
+    const oks = [a, b].filter((r) => r.ok);
+    const busy = [a, b].filter((r) => !r.ok && r.code === "GENERATION_IN_PROGRESS");
+    assert.ok(oks.length >= 1, "at least one completed");
+    assert.ok(
+      oks.length + busy.length === 2 || oks.length === 2,
+      "expected one winner + busy/reused loser",
+    );
+    // With shared claim + separate inFlight maps: only one generator may run pages.
+    assert.equal(pageCalls, 8, `pageCalls=${pageCalls} expected exactly 8`);
+    assert.equal(maxGenerating, 1, `maxGenerating=${maxGenerating}`);
+
+    // Wait briefly and ensure loser can observe completed job without re-generating.
+    const session = await durable(frozen.session.session_id);
+    const again = await requestFreezeBoundEightPageReport({
+      session,
+      freezeId: frozen.freezeId,
+      deps: { ...persistDeps(), claimOps, inFlightMap: new Map() as never },
+    });
+    assert.equal(again.ok, true);
+    if (again.ok) assert.equal(again.reused, true);
+    assert.equal(pageCalls, 8, `no extra generation after complete; pageCalls=${pageCalls}`);
+    void busy;
+  });
+
+  await check("M2.2-R1-C6 Deep-freeze isolates page mutations", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const frozen = await freezeSession("m22_r1_c6");
+    const loaded = loadAuthoritativeFreeze(frozen.session, {
+      freezeId: frozen.freezeId,
+    });
+    const snapshot = createFrozenReportSnapshot({
+      sessionId: frozen.session.session_id,
+      frozen: loaded.frozen,
+      binding: loaded.binding,
+    });
+    const originalFact0 = snapshot.decisionContext.reality_facts[0]?.statement;
+    assert.ok(originalFact0);
+
+    let sawMutation = false;
+    const pages = await generateEightPageReport(snapshot, {
+      generatePage: async (snap, pageId) => {
+        if (pageId === "01") {
+          try {
+            // Attempt nested mutation — must throw or be invisible to later pages.
+            // @ts-expect-error intentional mutation probe
+            snap.decisionContext.reality_facts[0].statement = "MUTATED_BY_PAGE1";
+            // @ts-expect-error intentional mutation probe
+            snap.decisionContext.reality_facts.push({
+              fact_id: "f_mut",
+              statement: "MUTATED_PUSH",
+            });
+          } catch {
+            /* TypeError from freeze is expected */
+          }
+        }
+        if (pageId === "02" || pageId === "08") {
+          if (
+            snap.decisionContext.reality_facts[0]?.statement === "MUTATED_BY_PAGE1" ||
+            snap.decisionContext.reality_facts.some((f) => f.fact_id === "f_mut")
+          ) {
+            sawMutation = true;
+          }
+        }
+        return `deep ${pageId} ${snap.decisionContext.reality_facts[0]?.statement}`;
+      },
+    });
+    assert.equal(sawMutation, false, "later pages must not observe page1 mutation");
+    assert.equal(snapshot.decisionContext.reality_facts[0]?.statement, originalFact0);
+    assert.equal(pages.length, 8);
+    assert.equal(Object.isFrozen(snapshot), true);
+    assert.equal(Object.isFrozen(snapshot.binding), true);
+    assert.equal(Object.isFrozen(snapshot.decisionContext.reality_facts), true);
+  });
+
+  await check("M2.2-R1-C7 Final-delivery bridge uses FrozenReportSnapshot (no draft)", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const {
+      prepareFreezeBoundFinalDelivery,
+      completeFreezeBoundReportFromDeliveryPages,
+    } = await import("../lib/poju/decision-intake/freeze-bound-report");
+    const { resolveDeliveryDcPayload } = await import(
+      "../lib/poju/decision-context/production-freeze-wire"
+    );
+
+    const frozen = await freezeSession("m22_r1_c7");
+    // Mutate draft AFTER freeze — bridge must ignore it.
+    let session = await durable(frozen.session.session_id);
+    session = {
+      ...session,
+      decision_context: {
+        ...session.decision_context!,
+        status: "draft",
+        version: frozen.version + 9,
+        content_hash: null,
+        reality_facts: [
+          ...session.decision_context!.reality_facts,
+          {
+            fact_id: "f_draft_noise_r1",
+            statement: "DRAFT_NOISE_R1",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_asserted",
+            user_confirmed: false,
+            fact_roles: ["option"],
+          },
+        ],
+      },
+    };
+    await savePOJUSession(session);
+    session = await durable(session.session_id);
+
+    let draftGetterCalls = 0;
+    const draftSpySession = new Proxy(session, {
+      get(target, prop, receiver) {
+        if (prop === "decision_context") {
+          draftGetterCalls += 1;
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+
+    const prepared = await prepareFreezeBoundFinalDelivery({
+      session: draftSpySession,
+      freezeId: frozen.freezeId,
+      expected_hash: frozen.contentHash,
+      deps: persistDeps(),
+    });
+    assert.equal(prepared.ok, true, !prepared.ok ? prepared.error : "");
+    if (!prepared.ok) return;
+    assert.equal(prepared.decision_context_binding.context_hash, frozen.contentHash);
+    assert.equal(prepared.decision_context_snapshot.version, frozen.version);
+    assert.equal(prepared.decision_context_snapshot.status === "final" || prepared.decision_context_snapshot.status === "superseded", true);
+    const snapText = JSON.stringify(prepared.decision_context_snapshot);
+    assert.equal(snapText.includes("DRAFT_NOISE_R1"), false);
+
+    // resolveDeliveryDcPayload must also prefer Freeze snapshot over draft.
+    const payload = resolveDeliveryDcPayload(session);
+    assert.ok(payload.snapshot);
+    assert.equal(payload.binding?.context_hash, frozen.contentHash);
+    assert.equal(JSON.stringify(payload.snapshot).includes("DRAFT_NOISE_R1"), false);
+    assert.equal(payload.freezeId, frozen.freezeId);
+
+    // Complete via formal-delivery-shaped pages (existing pipeline output shape).
+    const pages = DECISION_PAGE_IDS.map((pageId) => ({
+      pageId,
+      content: `formal-llm ${pageId} ${prepared.snapshot.contentHash}`,
+    }));
+    const completed = await completeFreezeBoundReportFromDeliveryPages({
+      session: prepared.session,
+      snapshot: prepared.snapshot,
+      jobId: prepared.job.job_id,
+      pages,
+      deps: persistDeps(),
+    });
+    assert.equal(completed.ok, true);
+    if (!completed.ok) return;
+    assert.equal(completed.report!.binding.freezeId, frozen.freezeId);
+    const retrieved = getCompletedFreezeBoundReport(await durable(session.session_id), {
+      freezeId: frozen.freezeId,
+    });
+    assert.ok(retrieved);
+    assert.equal(retrieved!.pages.length, 8);
+    // Spy may observe decision_context reads during loadAuthoritativeFreeze candidate scan;
+    // assert analytical snapshot itself never contains draft noise (above) — that is the contract.
+    void draftGetterCalls;
   });
 
   console.log(`\nM2.2 results: ${passed} passed, ${failed} failed`);

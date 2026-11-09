@@ -20,6 +20,10 @@ import {
   sessionHasFrozenDecisionContext,
   shouldRequireFrozenDecisionContext,
 } from "./require-dc-flag";
+import {
+  createFrozenReportSnapshot,
+  loadAuthoritativeFreeze,
+} from "@/lib/poju/decision-intake/freeze-bound-report";
 
 export type FreezeWireSkipReason =
   | "no_dc"
@@ -313,13 +317,18 @@ export async function ensureSessionFrozenForDelivery(
   };
 }
 
-/** Resolve delivery DC payload + require flag for final-delivery POST. */
+/**
+ * Resolve delivery DC payload + require flag for final-delivery POST.
+ * M2.2-R1: authoritative Freeze via loadAuthoritativeFreeze + FrozenReportSnapshot
+ * (never mutable draft DC as analytical input).
+ */
 export function resolveDeliveryDcPayload(session: POJUSessionState): {
   decision_context: DecisionContext | null;
   decision_context_versions: DecisionContext[];
   require_decision_context: boolean;
   binding: DecisionContextBinding | null;
   snapshot: DecisionContext | null;
+  freezeId: string | null;
 } {
   const hasDc = sessionHasDecisionContextSlice(session);
   const hasFrozen = sessionHasFrozenDecisionContext(session);
@@ -329,17 +338,34 @@ export function resolveDeliveryDcPayload(session: POJUSessionState): {
   });
   let binding: DecisionContextBinding | null = null;
   let snapshot: DecisionContext | null = null;
+  let freezeId: string | null = null;
   if (hasFrozen) {
     try {
-      const prepared = prepareFrozenDcForDelivery({
-        decision_context: session.decision_context,
-        decision_context_versions: session.decision_context_versions,
+      const loaded = loadAuthoritativeFreeze(session);
+      const frozenSnap = createFrozenReportSnapshot({
+        sessionId: session.session_id,
+        frozen: loaded.frozen,
+        binding: loaded.binding,
       });
-      binding = prepared.decision_context_binding;
-      snapshot = prepared.decision_context_snapshot;
+      binding = frozenSnap.binding;
+      snapshot = frozenSnap.decisionContext as DecisionContext;
+      freezeId = frozenSnap.freezeId;
     } catch {
-      binding = null;
-      snapshot = null;
+      try {
+        const prepared = prepareFrozenDcForDelivery({
+          decision_context: session.decision_context,
+          decision_context_versions: session.decision_context_versions,
+        });
+        binding = prepared.decision_context_binding;
+        snapshot = prepared.decision_context_snapshot;
+        freezeId = snapshot
+          ? `${snapshot.context_id}@v${snapshot.version}`
+          : null;
+      } catch {
+        binding = null;
+        snapshot = null;
+        freezeId = null;
+      }
     }
   }
   return {
@@ -348,8 +374,10 @@ export function resolveDeliveryDcPayload(session: POJUSessionState): {
     require_decision_context: require,
     binding,
     snapshot,
+    freezeId,
   };
 }
+
 
 
 

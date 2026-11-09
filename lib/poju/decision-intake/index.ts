@@ -47,6 +47,7 @@ export {
   loadAuthoritativeFreeze,
   verifyFrozenSnapshot,
   createFrozenReportSnapshot,
+  deepFreezeValue,
   reportBindingFromSnapshot,
   defaultGeneratePage,
   assertCompleteEightPageReport,
@@ -55,7 +56,10 @@ export {
   requestFreezeBoundEightPageReport,
   retryFreezeBoundEightPageReport,
   getCompletedFreezeBoundReport,
+  prepareFreezeBoundFinalDelivery,
+  completeFreezeBoundReportFromDeliveryPages,
   __resetFreezeBoundReportInFlightForTests,
+  __createClaimOpsForTests,
   FreezeBoundReportError,
 } from "./freeze-bound-report";
 export type {
@@ -67,4 +71,5 @@ export type {
   EightPageReport,
   FreezeBoundReportDeps,
   FreezeBoundReportResult,
+  FreezeReportClaimOps,
 } from "./freeze-bound-report";

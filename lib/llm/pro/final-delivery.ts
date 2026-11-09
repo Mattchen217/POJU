@@ -945,7 +945,34 @@ export async function runFinalDeliveryForSession(
   const { resolveDeliveryDcPayload } = await import(
     "@/lib/poju/decision-context/production-freeze-wire"
   );
-  const dcPayload = resolveDeliveryDcPayload(sessionForDelivery);
+  let dcPayload = resolveDeliveryDcPayload(sessionForDelivery);
+
+  // M2.2-R1: persist Freeze-bound report job BEFORE formal final-delivery create.
+  // Existing eight-page LLM pipeline consumes the same FrozenReportSnapshot fields.
+  if (dcPayload.snapshot && dcPayload.binding) {
+    const { prepareFreezeBoundFinalDelivery } = await import(
+      "@/lib/poju/decision-intake/freeze-bound-report"
+    );
+    const prepared = await prepareFreezeBoundFinalDelivery({
+      session: sessionForDelivery,
+      freezeId: dcPayload.freezeId ?? undefined,
+      expected_hash: dcPayload.binding.context_hash,
+      deps: { persistSession: savePOJUSession },
+    });
+    if (!prepared.ok) {
+      throw new Error("M22_FREEZE_REPORT_BIND_FAILED:" + prepared.code + ":" + prepared.error);
+    }
+    sessionForDelivery = prepared.session;
+    dcPayload = {
+      ...dcPayload,
+      binding: prepared.decision_context_binding,
+      snapshot: prepared.decision_context_snapshot,
+      freezeId: prepared.snapshot.freezeId,
+      require_decision_context: true,
+      decision_context: sessionForDelivery.decision_context ?? null,
+      decision_context_versions: sessionForDelivery.decision_context_versions ?? [],
+    };
+  }
 
   // Mark awaiting BEFORE create HTTP — if the tab closes mid-request, reopen can still resume_latest.
   const awaitingSession: POJUSessionState = {
