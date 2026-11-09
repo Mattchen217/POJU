@@ -5,6 +5,9 @@ import {
   runCollectingDcTurn,
   runM1ProductionPreLlmTurn,
 } from "@/lib/poju/collecting-dc-turn";
+import type {
+  AdaptiveTurnTestHooks,
+} from "@/lib/poju/decision-intake/adaptive-turn";
 import {
   confirmUnderstandingAndFreeze,
   isFinalUnderstandingAddMoreText,
@@ -160,6 +163,8 @@ export interface HandleInput {
     /** Skip confirmation→delivery pipeline (LAB Stage1–3). */
     skip_delivery_pipeline?: boolean;
   };
+  /** @internal Test-only fault injection for M1 adaptive-loop integration tests. */
+  __testOnlyM1Hooks?: AdaptiveTurnTestHooks;
 }
 
 type LLMApiPayload = {
@@ -1098,6 +1103,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           statement,
           source_turn_id: turnId,
           now: nowPre,
+          test_hooks: input.__testOnlyM1Hooks,
         });
         if (
           m1CollectingTurn.outcome === "persist_failed" ||
@@ -1136,15 +1142,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         // readiness cannot be computed (understanding==null) with no authorized Q.
         const m1UnderstandingFailClosed =
           !m1CollectingTurn.authorized_question &&
-          Boolean(m1CollectingTurn.ask_error) &&
-          (m1CollectingTurn.ask_error!.includes("understanding_exception") ||
-            m1CollectingTurn.ask_error!.includes("planner_exception") ||
-            (m1CollectingTurn.understanding == null &&
-              Boolean(m1CollectingTurn.session.decision_blueprint)));
-        if (
-          m1CollectingTurn.outcome === "planner_blocked" ||
-          m1UnderstandingFailClosed
-        ) {
+          (
+            m1CollectingTurn.outcome === "planner_blocked" ||
+            Boolean(m1CollectingTurn.ask_error?.includes("understanding_exception")) ||
+            Boolean(m1CollectingTurn.ask_error?.includes("planner_exception")) ||
+            (
+              m1CollectingTurn.understanding == null &&
+              Boolean(m1CollectingTurn.session.decision_blueprint)
+            )
+          );
+        if (m1UnderstandingFailClosed) {
           // M2.3-R2-FU / FU3: open P0/P1 or Understanding failure -- no confirm, no free-form ask.
           const blockReason =
             m1CollectingTurn.ask_error?.trim() ||

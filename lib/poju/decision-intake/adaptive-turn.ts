@@ -168,6 +168,12 @@ function tryCatalogFallbackForOpenP0P1(input: {
  * Run one adaptive collecting turn.
  * When `statement` is empty and `init_only`, only ensures Blueprint + first plan.
  */
+
+export type AdaptiveTurnTestHooks = {
+  /** @internal Test-only. Runs immediately before each Understanding build. */
+  beforeUnderstandingBuild?: () => void;
+};
+
 export async function runAdaptiveQuestionTurn(input: {
   session: POJUSessionState;
   statement: string;
@@ -175,8 +181,16 @@ export async function runAdaptiveQuestionTurn(input: {
   now: string;
   /** Skip answer interpretation; plan from current DC (session init / first ask). */
   init_only?: boolean;
+  /** @internal Test-only fault injection. Omitted in production. */
+  test_hooks?: AdaptiveTurnTestHooks;
 }): Promise<AdaptiveTurnResult> {
   let current = input.session;
+  const buildUnderstanding = (
+    args: Parameters<typeof buildUnderstandingState>[0],
+  ): UnderstandingState => {
+    input.test_hooks?.beforeUnderstandingBuild?.();
+    return buildUnderstandingState(args);
+  };
   const dc0 = current.decision_context;
   if (!dc0 || (dc0.status !== "draft" && dc0.status !== "final")) {
     return {
@@ -226,7 +240,7 @@ export async function runAdaptiveQuestionTurn(input: {
         // Idempotent replay: rebuild understanding/plan from existing DC, no dup writes.
         // M2.3-R2-FU2: preserve planner_blocked — do not drop nonterminal protection.
         current = activateNextBlueprintPriorityBand(current, input.now);
-        const understanding = buildUnderstandingState({
+        const understanding = buildUnderstanding({
           session: current,
           blueprint: current.decision_blueprint!,
           now: input.now,
@@ -258,7 +272,7 @@ export async function runAdaptiveQuestionTurn(input: {
       if (!applied.applied) {
         // Off-topic / invalid: still recompute understanding; may keep prior needs.
         current = activateNextBlueprintPriorityBand(current, input.now);
-        const understanding = buildUnderstandingState({
+        const understanding = buildUnderstanding({
           session: current,
           blueprint: current.decision_blueprint!,
           now: input.now,
@@ -346,7 +360,7 @@ export async function runAdaptiveQuestionTurn(input: {
 
   let understanding0: UnderstandingState | null = null;
   try {
-    understanding0 = buildUnderstandingState({
+    understanding0 = buildUnderstanding({
       session: current,
       blueprint: current.decision_blueprint!,
       now: input.now,
@@ -372,7 +386,7 @@ export async function runAdaptiveQuestionTurn(input: {
     let u = understanding0;
     if (!u) {
       try {
-        u = buildUnderstandingState({
+        u = buildUnderstanding({
           session: current,
           blueprint: current.decision_blueprint!,
           now: input.now,
@@ -418,43 +432,30 @@ export async function runAdaptiveQuestionTurn(input: {
       }
     }
 
-    // M2.3-R2-FU3: Understanding rebuild failed (u==null). Cannot infer P0/P1
-    // complete from missing needs. Conservative fail-closed while Blueprint
-    // exists and hard budget may remain -- never ready_no_question / free-ask.
+    // M2.3-R2-FU4: no valid Understanding after exception => never ready_no_question.
+    // Hard-budget exhaustion is not a legal Readiness stop without Understanding.
     if (!u && current.decision_blueprint) {
-      let hardBudgetRemains = true;
-      try {
-        const hard = current.decision_blueprint.question_budget.hard;
-        const asked =
-          current.decision_understanding?.budget?.session_asked_count ?? 0;
-        hardBudgetRemains = hard - asked > 0;
-      } catch {
-        // Cannot read budget either -- treat as remaining (fail-closed).
-        hardBudgetRemains = true;
-      }
-      if (hardBudgetRemains) {
-        return {
-          session: current,
-          outcome: "planner_blocked",
-          ask_error: `understanding_exception:${err}`,
-          answer_event,
-          understanding: null,
-          plan: null,
-          authorized_question: null,
-          persist_error,
-        };
-      }
+      return {
+        session: current,
+        outcome: "planner_blocked",
+        ask_error: `understanding_exception:${err}`,
+        answer_event,
+        understanding: null,
+        plan: null,
+        authorized_question: null,
+        persist_error,
+      };
     }
 
     return {
       session: current,
-      outcome: "ready_no_question",
+      outcome: "planner_blocked",
+      ask_error: `planner_exception:${err}`,
       answer_event,
       understanding: u,
       plan: null,
       authorized_question: null,
       persist_error,
-      ask_error: err,
     };
   }
 }

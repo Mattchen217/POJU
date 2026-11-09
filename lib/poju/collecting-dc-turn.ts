@@ -19,6 +19,9 @@ import type {
   AnswerEvent,
   UnderstandingState,
 } from "@/lib/poju/decision-intake/types";
+import type {
+  AdaptiveTurnTestHooks,
+} from "@/lib/poju/decision-intake/adaptive-turn";
 
 export type CollectingDcTurnOutcome =
   /** DC committed by C1 (or prior commit via idempotent_skip) and adopted. */
@@ -164,6 +167,7 @@ export async function runCollectingDcTurn(
     source_turn_id: string;
     now: string;
     init_only?: boolean;
+    test_hooks?: AdaptiveTurnTestHooks;
   },
 ): Promise<CollectingDcTurnResult> {
   const { runAdaptiveQuestionTurn } = await import(
@@ -175,6 +179,7 @@ export async function runCollectingDcTurn(
     source_turn_id: input.source_turn_id,
     now: input.now,
     init_only: input.init_only,
+    test_hooks: input.test_hooks,
   });
   return mapAdaptiveOutcome(turn, Boolean(input.init_only));
 }
@@ -192,6 +197,7 @@ export async function runM1ProductionPreLlmTurn(
     statement: string;
     source_turn_id: string;
     now: string;
+    test_hooks?: AdaptiveTurnTestHooks;
   },
 ): Promise<CollectingDcTurnResult> {
   const dc = session.decision_context;
@@ -213,5 +219,8 @@ export async function runM1ProductionPreLlmTurn(
   }
 
   // Draft DC already present (seeded tests, Call B, or prior bootstrap): answer path.
-  return runCollectingDcTurn(session, input);
+  return runCollectingDcTurn(session, {
+    ...input,
+    test_hooks: input.test_hooks,
+  });
 }

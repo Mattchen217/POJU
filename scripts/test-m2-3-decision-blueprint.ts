@@ -14,7 +14,7 @@
  *  M2.3-R2  Production priority activation / Readiness ordering via runAdaptiveQuestionTurn
  *  M2.3-R2-FU  Planner cannot bypass open P0/P1 (no selectable / all rejected → blocked)
  *  M2.3-R2-FU2 Preserve planner_blocked across idempotent replay + planner exception
- *  M2.3-R2-FU3 Fail-closed when Understanding cannot be built; Case C false-pass fixed
+ *  M2.3-R2-FU4 Real Agent-chain Understanding fail-closed via test_hooks; Case E proves no ordinary LLM
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
@@ -102,6 +102,8 @@ async function main() {
   };
 
   let stubResponse = "MODEL FREEFORM MUST NEVER REACH USER";
+  /** Counts ordinary POJU LLM endpoint calls (/api/poju/chat). */
+  let pojuLlmFetchCount = 0;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input: RequestInfo | URL): Promise<Response> => {
     const url =
@@ -111,6 +113,7 @@ async function main() {
           ? input.href
           : input.url;
     if (url !== "/api/poju/chat") throw new Error(`unexpected fetch: ${url}`);
+    pojuLlmFetchCount += 1;
     return new Response(
       JSON.stringify({
         response: stubResponse,
@@ -1844,39 +1847,13 @@ async function main() {
       assert.equal(mapped.outcome, "planner_blocked");
       assert.equal(mapped.ask_planned, false);
 
-      // FU3: same throwing depth_per_direction fixture through Agent chain
-      // (runAdaptiveQuestionTurn -> runCollectingDcTurn -> handleUserMessage).
-      // Getter lives only in-memory; persistence would drop it, so we do not save.
-      const agentOut = await handleUserMessage({
-        session: {
-          ...s,
-          agent_v2: {
-            ...(s.agent_v2 ?? out1.agent_v2!),
-            current_phase: "collecting_context" as const,
-          },
-        },
-        userMessage: "关于验证能力我想再想想",
-        locale: "zh",
-      });
-      const last = lastAssistant(agentOut);
-      assert.ok(!last.content.includes("【理解确认】"), "no awaiting confirmation prompt");
-      assert.ok(!last.content.includes(stubResponse), "no unauthorized question");
-      assert.notEqual(agentOut.agent_v2?.current_phase, "awaiting_confirmation");
-      assert.equal(agentOut.agent_v2?.current_phase, "collecting_context");
-      // Same throwing getter + non-empty user statement re-enters answer/persist
-      // before planner catch (persist reads blueprint budget fields) → persist_threw.
-      // Agent still fail-closes (no free-form / no awaiting_confirmation).
-      const metaB = (last as { meta?: { m1_planner_blocked?: boolean; m1_fail_closed?: boolean; m1_outcome?: string } }).meta;
-      assert.ok(
-        metaB?.m1_planner_blocked === true ||
-          (metaB?.m1_fail_closed === true &&
-            (metaB.m1_outcome === "persist_threw" ||
-              metaB.m1_outcome === "persist_failed" ||
-              metaB.m1_outcome === "planner_blocked")),
-        `Agent must fail-closed on same throwing fixture, meta=${JSON.stringify(metaB)}`,
-      );
+      // M2.3-R2-FU4: no precise Planner-entry hook yet (__testOnlyM1Hooks only
+      // covers Understanding build). Do NOT claim Agent planner-exception coverage
+      // via depth_per_direction getter (that path can hit persist_threw first).
+      // Orchestrator + collecting layers above already proved planner_blocked with
+      // actual exception type: controlled_planner_exception_fu2 / planner_exception.
       console.log(
-        `    outcome=${turn.outcome}; ask_error=${turn.ask_error}; phase=${agentOut.agent_v2?.current_phase}`,
+        `    outcome=${turn.outcome}; ask_error=${turn.ask_error}; exception_type=planner_exception (orchestrator/collecting only; Agent planner inject deferred)`,
       );
     });
 
@@ -2068,9 +2045,9 @@ async function main() {
     });
 
 
-    await check("M2.3-R2-FU3 Case E: Understanding build failure -> planner_blocked fail-closed", async () => {
+    await check("M2.3-R2-FU4 Case E: real Agent chain Understanding failure -> planner_blocked; no ordinary LLM", async () => {
       const sid = await createPOJUSession({
-        payment_id: "pay_m23_r2fu3_e",
+        payment_id: "pay_m23_r2fu4_e",
         original_question: Q_CAREER,
       });
       const out1 = await handleUserMessage({
@@ -2083,79 +2060,26 @@ async function main() {
       assert.ok(s.decision_blueprint, "blueprint required");
       assert.ok(s.decision_context, "dc required");
 
-      // Keep P0 unfinished + hard budget remaining. Make question_budget.hard throw
-      // so buildUnderstandingState (defaultBudget) fails on first build and rebuild.
-      // activateNextBlueprintPriorityBand does not read question_budget.hard.
-      const qb = { ...s.decision_blueprint!.question_budget };
-      Object.defineProperty(qb, "hard", {
-        enumerable: true,
-        configurable: true,
-        get() {
-          throw new Error("controlled_understanding_exception_fu3");
-        },
-      });
-      s = {
-        ...s,
-        decision_blueprint: {
-          ...s.decision_blueprint!,
-          question_budget: qb as typeof s.decision_blueprint.question_budget,
-        },
-        decision_understanding: {
-          ...s.decision_understanding!,
-          budget: {
-            ...s.decision_understanding!.budget,
-            session_asked_count: 1,
-            remaining_hard_budget: Math.max(
-              1,
-              s.decision_understanding!.budget.hard_budget_limit - 1,
-            ),
-          },
-        },
-        agent_v2: {
-          ...(s.agent_v2 ?? out1.agent_v2!),
-          current_phase: "collecting_context" as const,
-        },
-      };
-
-      const turn = await runAdaptiveQuestionTurn({
-        session: s,
-        statement: "",
-        source_turn_id: "r2fu3_e_exception",
-        now: new Date().toISOString(),
-        init_only: true,
-      });
-      assert.equal(
-        turn.outcome,
-        "planner_blocked",
-        `expected planner_blocked, got ${turn.outcome} ask_error=${turn.ask_error}`,
-      );
-      assert.notEqual(turn.outcome, "ready_no_question");
-      assert.ok(
-        (turn.ask_error ?? "").includes("understanding_exception") ||
-          (turn.ask_error ?? "").includes("controlled_understanding_exception_fu3"),
-        `ask_error must carry understanding_exception, got ${turn.ask_error}`,
-      );
-      assert.equal(turn.understanding, null, "must not fabricate Understanding");
-      assert.equal(turn.authorized_question, null);
-      assert.equal(turn.plan, null);
-      const unfinished = (s.decision_context!.dirs ?? []).filter(
+      const requiredP0 = p0BandIds(s.decision_blueprint!);
+      assert.ok(requiredP0.length > 0, "fixture must contain P0 obligations");
+      const unfinishedP0 = s.decision_context!.dirs.filter(
         (d) =>
+          requiredP0.includes(d.dir_id) &&
           d.id_lifecycle === "active" &&
           d.current_state !== "known" &&
           d.current_state !== "n_a",
       );
-      assert.ok(unfinished.length > 0, "P0/P1 obligations must remain unfinished on DC");
+      assert.ok(
+        unfinishedP0.length > 0,
+        "P0 must remain unresolved before injected Understanding failure",
+      );
+      const unfinishedP0Snapshot = unfinishedP0.map((d) => ({
+        dir_id: d.dir_id,
+        current_state: d.current_state,
+      }));
 
-      const mapped = await runCollectingDcTurn(s, {
-        statement: "",
-        source_turn_id: "r2fu3_e_exception_map",
-        now: new Date().toISOString(),
-        init_only: true,
-      });
-      assert.equal(mapped.outcome, "planner_blocked");
-      assert.equal(mapped.ask_planned, false);
-      assert.equal(mapped.authorized_question, null);
-      assert.equal(mapped.plan, null);
+      let understandingBuildAttempts = 0;
+      const llmCountBefore = pojuLlmFetchCount;
 
       const agentOut = await handleUserMessage({
         session: {
@@ -2165,27 +2089,94 @@ async function main() {
             current_phase: "collecting_context" as const,
           },
         },
-        userMessage: "continue collecting please",
+        userMessage: "我还需要补充一些关于当前情况的信息",
         locale: "zh",
+        __testOnlyM1Hooks: {
+          beforeUnderstandingBuild() {
+            understandingBuildAttempts += 1;
+            throw new Error(
+              `controlled_understanding_exception_fu4_${understandingBuildAttempts}`,
+            );
+          },
+        },
       });
+
+      const llmCountAfter = pojuLlmFetchCount;
       const last = lastAssistant(agentOut);
-      assert.ok(!last.content.includes(stubResponse), "no unauthorized free-form question");
-      assert.notEqual(agentOut.agent_v2?.current_phase, "awaiting_confirmation");
-      assert.equal(agentOut.agent_v2?.current_phase, "collecting_context");
-      // Non-empty statement through handleUserMessage hits DC persist with the
-      // throwing hard getter → persist_threw fail-closed (not free-form LLM).
-      // Orchestrator/collecting init_only above already proved planner_blocked.
-      const metaE = (last as { meta?: { m1_planner_blocked?: boolean; m1_fail_closed?: boolean; m1_outcome?: string } }).meta;
+      const meta = (
+        last as {
+          meta?: {
+            m1_planner_blocked?: boolean;
+            m1_outcome?: string;
+            m1_ask_error?: string;
+            m1_fail_closed?: boolean;
+            m21_confirm_freeze?: boolean;
+          };
+        }
+      ).meta;
+
+      assert.equal(
+        understandingBuildAttempts,
+        2,
+        "must fail both initial Understanding build and catch rebuild",
+      );
+      assert.equal(meta?.m1_planner_blocked, true);
+      assert.equal(meta?.m1_outcome, "planner_blocked");
       assert.ok(
-        metaE?.m1_planner_blocked === true ||
-          (metaE?.m1_fail_closed === true &&
-            (metaE.m1_outcome === "persist_threw" ||
-              metaE.m1_outcome === "persist_failed" ||
-              metaE.m1_outcome === "planner_blocked")),
-        `Agent must fail-closed, meta=${JSON.stringify(metaE)} content=${last.content.slice(0, 160)}`,
+        (meta?.m1_ask_error ?? "").includes("understanding_exception"),
+        `must expose the actual Understanding failure, got ${meta?.m1_ask_error}`,
+      );
+      assert.ok(
+        (meta?.m1_ask_error ?? "").includes("controlled_understanding_exception_fu4"),
+        `ask_error must carry controlled_understanding_exception_fu4, got ${meta?.m1_ask_error}`,
+      );
+      assert.equal(
+        llmCountAfter,
+        llmCountBefore,
+        `ordinary LLM fetch count must not increase (before=${llmCountBefore} after=${llmCountAfter})`,
+      );
+      assert.equal(agentOut.agent_v2?.current_phase, "collecting_context");
+      assert.notEqual(agentOut.agent_v2?.current_phase, "awaiting_confirmation");
+      assert.ok(
+        !last.content.includes("【理解确认】"),
+        "must not request final understanding confirmation",
+      );
+      assert.ok(
+        !last.content.includes(stubResponse),
+        "must not emit ordinary LLM-generated question",
+      );
+      assert.ok(
+        meta?.m21_confirm_freeze !== true,
+        "must not mark confirm/freeze assistant turn",
+      );
+      assert.equal(
+        (agentOut.freeze_bound_report_jobs ?? []).length,
+        (s.freeze_bound_report_jobs ?? []).length,
+        "must not create freeze-bound report jobs",
+      );
+      assert.equal(
+        agentOut.decision_context?.status,
+        s.decision_context?.status,
+        "DC status must not jump to freeze/final via Understanding failure",
+      );
+
+      // P0 DIRs that were unfinished must not be auto-flipped to known/n_a by fail-closed.
+      for (const snap of unfinishedP0Snapshot) {
+        const after = agentOut.decision_context!.dirs.find(
+          (d) => d.dir_id === snap.dir_id,
+        );
+        assert.ok(after, `P0 dir ${snap.dir_id} must still exist`);
+        assert.ok(
+          after!.current_state !== "known" && after!.current_state !== "n_a",
+          `P0 dir ${snap.dir_id} must not be auto-changed to known/n_a (was ${snap.current_state}, now ${after!.current_state})`,
+        );
+      }
+
+      console.log(
+        `    path=handleUserMessage→runM1ProductionPreLlmTurn→runCollectingDcTurn→runAdaptiveQuestionTurn→Understanding×2→planner_blocked→Agent early return`,
       );
       console.log(
-        `    outcome=${turn.outcome}; ask_error=${turn.ask_error}; phase=${agentOut.agent_v2?.current_phase}`,
+        `    understandingBuildAttempts=${understandingBuildAttempts}; m1_outcome=${meta?.m1_outcome}; m1_ask_error=${meta?.m1_ask_error}; llmDelta=${llmCountAfter - llmCountBefore}; phase=${agentOut.agent_v2?.current_phase}; exception_type=understanding_exception`,
       );
     });
 
