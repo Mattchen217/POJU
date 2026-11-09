@@ -10,8 +10,8 @@
 | Parent (expected starting HEAD) | `0b75716da447d608af392a816e2b23c270ddfc38` |
 | Parent implementation (FU2) | `a56043aecd9d28003573521fe0062e518e0e5637` |
 | Implementation commit | `a8b115803a55df4a644d8d469cd92b0a73c38b89` |
-| Evidence commit | `EVIDENCE_SHA_PLACEHOLDER` |
-| Final branch HEAD / tip | `TIP_SHA_PLACEHOLDER` |
+| Evidence commit | `96221e0b9ebed221509e94faf8eaf29ff91839b4` |
+| Final branch HEAD / tip | `96221e0b9ebed221509e94faf8eaf29ff91839b4` |
 | PR / merge / deploy | none |
 | Self-PASS | **no** |
 
