@@ -1005,8 +1005,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         } else if (confirmResult.outcome === "frozen") {
           const okText =
             "【已冻结】决策上下文已确认并冻结。正式报告将基于本次冻结版本生成。";
-          const assistantMessage = {
-            role: "assistant" as const,
+          const assistantMessage: POJUMessage = {
+            role: "assistant",
             content: okText,
             timestamp: nowConfirm,
             client_id: safeRandomUUID(),
@@ -1036,8 +1036,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
                 (confirmResult.error ? `（${confirmResult.error}）` : "")
               : "【系统】确认/冻结失败，未绕过充分性门禁。" +
                 (confirmResult.error ? `（${confirmResult.error}）` : "");
-          const assistantMessage = {
-            role: "assistant" as const,
+          const assistantMessage: POJUMessage = {
+            role: "assistant",
             content: failText,
             timestamp: nowConfirm,
             client_id: safeRandomUUID(),
@@ -1109,8 +1109,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             (m1CollectingTurn.persist_error
               ? `（${m1CollectingTurn.persist_error}）`
               : "");
-          const failAssistant = {
-            role: "assistant" as const,
+          const failAssistant: POJUMessage = {
+            role: "assistant",
             content: failText,
             timestamp: nowPre,
             client_id: safeRandomUUID(),

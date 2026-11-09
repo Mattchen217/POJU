@@ -133,6 +133,30 @@ export interface POJUMessage {
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;
     report_text?: string;
     report_profile_id?: string;
+    /**
+     * M2.1 — confirm/freeze assistant turn marker (production readiness path).
+     * Optional; ordinary chat must omit.
+     */
+    m21_confirm_freeze?: boolean;
+    m21_outcome?:
+      | "frozen"
+      | "not_ready"
+      | "not_sufficient_after_confirm"
+      | "promote_failed"
+      | "persist_failed"
+      | "freeze_failed"
+      | "add_more"
+      | "not_confirm_text";
+    m21_promoted_facts?: number;
+    m21_error?: string | null;
+    /** Frozen / confirm DC identity on assistant message when available. */
+    context_id?: string | null;
+    context_version?: number | null;
+    content_hash?: string | null;
+    /** M1-R — DC persist fail-closed assistant turn (no free-ask fallback). */
+    m1_fail_closed?: boolean;
+    m1_outcome?: "persist_failed" | "persist_threw";
+    m1_persist_error?: string | null;
   };
   is_rejected?: boolean;
   rejection_type?: "too_long" | "jailbreak" | "spam";

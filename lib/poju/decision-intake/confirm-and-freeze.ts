@@ -1,4 +1,4 @@
-﻿/**
+/**
  * M2.1 — Final understanding confirm → legal fact promotion → sufficiency → Freeze.
  *
  * Closes the broken production chain after M1-R adaptive Q&A:
@@ -192,18 +192,26 @@ async function persistPromotedDc(input: {
         input.next.decision_context!,
         input.next.decision_context_versions ?? [],
       );
-      tx.working.confirmation_events = input.next.confirmation_events ?? [];
+      // Extra session fields already live on input.next; mergeDcPersistSliceIntoSession
+      // keeps them from the memory snapshot. Mirror onto working via widen for clarity.
+      const working = tx.working as typeof tx.working & {
+        confirmation_events?: POJUSessionState["confirmation_events"];
+        decision_understanding?: POJUSessionState["decision_understanding"];
+        decision_blueprint?: POJUSessionState["decision_blueprint"];
+        agent_v2?: POJUSessionState["agent_v2"];
+      };
+      working.confirmation_events = input.next.confirmation_events ?? [];
       if (input.next.control_plane) {
-        tx.working.control_plane = input.next.control_plane;
+        working.control_plane = input.next.control_plane;
       }
       if (input.next.decision_understanding) {
-        tx.working.decision_understanding = input.next.decision_understanding;
+        working.decision_understanding = input.next.decision_understanding;
       }
       if (input.next.decision_blueprint) {
-        tx.working.decision_blueprint = input.next.decision_blueprint;
+        working.decision_blueprint = input.next.decision_blueprint;
       }
       if (input.next.agent_v2) {
-        tx.working.agent_v2 = input.next.agent_v2;
+        working.agent_v2 = input.next.agent_v2;
       }
     },
   });
