@@ -565,6 +565,21 @@ export function assertConfirmationEventProvenance(
 }
 
 /**
+ * Unified authority gate for Confirmation Events (M2.1 R4).
+ * Structure first (actor / event_version / event_type↔target_type / required fields),
+ * then Session provenance. Used by reuse + authority-derive paths so neither can omit
+ * validateConfirmationEvent().
+ */
+export function assertAuthoritativeConfirmationEvent(
+  ctx: ConfirmationProvenanceContext,
+  raw: unknown,
+): ConfirmationEvent {
+  const event = validateConfirmationEvent(raw);
+  assertConfirmationEventProvenance(ctx, event);
+  return event;
+}
+
+/**
  * Append with provenance against a live Session snapshot (P3-112 submit path helper).
  */
 export function appendConfirmationEventWithProvenance(
@@ -572,8 +587,7 @@ export function appendConfirmationEventWithProvenance(
   existing: ConfirmationEvent[] | null | undefined,
   raw: unknown,
 ): AppendConfirmationResult {
-  const event = validateConfirmationEvent(raw);
-  assertConfirmationEventProvenance(ctx, event);
+  const event = assertAuthoritativeConfirmationEvent(ctx, raw);
   return appendConfirmationEvent(existing, event);
 }
 

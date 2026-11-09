@@ -20,7 +20,7 @@
 
 import {
   appendConfirmationEventWithProvenance,
-  assertConfirmationEventProvenance,
+  assertAuthoritativeConfirmationEvent,
   deriveUserConfirmedFromEvents,
   findMatchingUserConfirmEvent,
   hasUserConfirmEventForTarget,
@@ -116,8 +116,9 @@ type PromotePlan = FactPromotePlan | ConstraintPromotePlan;
  * - independently_verified / terminal statuses: ignored
  * - user_estimate + unverified: Confirmation Event (status stays estimate)
  * - user_asserted without source_turn_id: fail-closed
- * - Existing events must match target + source AND pass full provenance (real user
- *   confirmation_turn_id); forged/assistant confirm turns fail-closed (no skip-as-authority)
+ * - Existing events must match target + source AND pass full authority gate
+ *   (validateConfirmationEvent structure + provenance); forged/assistant confirm turns
+ *   or structurally illegal actors/event_types fail-closed (no skip-as-authority)
  * - Stale target-only events do not skip
  * - event append failure: fail-closed (caller discards tentative events)
  */
@@ -210,11 +211,10 @@ function planAndAppendConfirmationEvents(input: {
         { source_turn_id: plan.source_turn_id },
       );
       if (existingFactEvent) {
-        // Reuse path: full provenance on the EXISTING event (session/target/source/
-        // confirmation_turn must be real user turns). Do NOT require confirmation_turn_id
-        // to equal this turn — prior legitimate confirms are allowed.
+        // Reuse path: structure (validateConfirmationEvent) THEN provenance.
+        // confirmation_turn_id must be a real user turn but need not equal this turn.
         try {
-          assertConfirmationEventProvenance(reuseProvenanceCtx, existingFactEvent);
+          assertAuthoritativeConfirmationEvent(reuseProvenanceCtx, existingFactEvent);
         } catch (e) {
           return {
             events: [...(input.session.confirmation_events ?? [])],
@@ -261,7 +261,7 @@ function planAndAppendConfirmationEvents(input: {
     );
     if (existingConstraintEvent) {
       try {
-        assertConfirmationEventProvenance(reuseProvenanceCtx, existingConstraintEvent);
+        assertAuthoritativeConfirmationEvent(reuseProvenanceCtx, existingConstraintEvent);
       } catch (e) {
         return {
           events: [...(input.session.confirmation_events ?? [])],
@@ -676,11 +676,11 @@ export async function confirmUnderstandingAndFreeze(input: {
     };
   }
 
-  // 2) Derive status + user_confirmed only from provenance-valid events.
-  // Invalid injected events (forged/assistant confirmation_turn_id) must not confer authority.
+  // 2) Derive status + user_confirmed only from structure+provenance-valid events.
+  // Structurally illegal (actor/event_type) or forged confirm turns must not confer authority.
   const eventsForAuthority = built.events.filter((event) => {
     try {
-      assertConfirmationEventProvenance(
+      assertAuthoritativeConfirmationEvent(
         {
           session_id: input.session.session_id,
           expected_session_id: input.session.session_id,
