@@ -108,6 +108,22 @@ export function buildUnderstandingState(input: {
   const unconfirmed = dc.reality_facts.filter(
     (f) => f.status === "unverified" || f.status === "unknown" || f.status === "declined",
   );
+  // M2.1: critical DIR partial coverage → ready for final confirm (not Freeze yet).
+  // Does NOT invent DIR known; Freeze still requires sufficiency after user confirm promotion.
+  const criticalActive = dc.dirs.filter(
+    (d) => d.id_lifecycle === "active" && d.may_affect_p5_ranking !== false,
+  );
+  const criticalCovered =
+    criticalActive.length > 0 &&
+    criticalActive.every(
+      (d) =>
+        d.current_state === "known" ||
+        d.current_state === "n_a" ||
+        d.partial_satisfaction === true,
+    );
+  const hasCollectingEvidence =
+    (dc.reality_facts?.length ?? 0) > 0 || (dc.constraints?.length ?? 0) > 0;
+
   const sufficiency = evaluateDecisionSufficiency(dc);
   const remaining = budget.remaining_hard_budget;
   let readiness_verdict: UnderstandingState["readiness"]["verdict"] = "continue";
@@ -125,6 +141,10 @@ export function buildUnderstandingState(input: {
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
     reasons.push("no_open_needs");
+  } else if (criticalCovered && hasCollectingEvidence) {
+    readiness_verdict = "ready_for_final_confirm";
+    can_ask = false;
+    reasons.push("critical_dirs_partial_coverage_ready_for_confirm");
   }
 
   const dq =

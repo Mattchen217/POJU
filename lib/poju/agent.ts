@@ -5,6 +5,12 @@ import {
   runCollectingDcTurn,
   runM1ProductionPreLlmTurn,
 } from "@/lib/poju/collecting-dc-turn";
+import {
+  confirmUnderstandingAndFreeze,
+  isFinalUnderstandingAddMoreText,
+  isFinalUnderstandingConfirmText,
+  sessionReadyForFinalConfirm,
+} from "@/lib/poju/decision-intake/confirm-and-freeze";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
@@ -961,6 +967,97 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
 
+  // M2.1 — Readiness confirm → Freeze (before adaptive ask / LLM).
+  // When Understanding already stopped asking, user confirm promotes facts legally,
+  // reaggregates DIRs, and freezes via sufficiency wire. No fake DIR known.
+  {
+    const phaseForConfirm =
+      normalizeAgentPhase(ensureAgentV2(sessionForLlm).current_phase) ??
+      ensureAgentV2(sessionForLlm).current_phase;
+    const confirmEligible =
+      !isSystemMessage &&
+      !isOpeningSignal &&
+      Boolean(userMessage.trim()) &&
+      sessionReadyForFinalConfirm(sessionForLlm) &&
+      (phaseForConfirm === "awaiting_confirmation" ||
+        phaseForConfirm === "collecting_context") &&
+      (isFinalUnderstandingConfirmText(userMessage) ||
+        isFinalUnderstandingAddMoreText(userMessage));
+    if (confirmEligible) {
+      const lastUser = [...messagesWithUser]
+        .reverse()
+        .find((m) => m.role === "user" && !m.is_rejected);
+      const turnId = lastUser?.client_id?.trim();
+      if (turnId) {
+        const nowConfirm = new Date().toISOString();
+        const confirmResult = await confirmUnderstandingAndFreeze({
+          session: sessionForLlm,
+          statement: userMessage,
+          confirmation_turn_id: turnId,
+          now: nowConfirm,
+        });
+        if (confirmResult.outcome === "add_more") {
+          sessionForLlm = {
+            ...confirmResult.session,
+            messages: messagesWithUser,
+          };
+          // Fall through to M1 adaptive ask with collecting_context restored.
+        } else if (confirmResult.outcome === "frozen") {
+          const okText =
+            "【已冻结】决策上下文已确认并冻结。正式报告将基于本次冻结版本生成。";
+          const assistantMessage = {
+            role: "assistant" as const,
+            content: okText,
+            timestamp: nowConfirm,
+            client_id: safeRandomUUID(),
+            meta: {
+              m21_confirm_freeze: true,
+              m21_outcome: confirmResult.outcome,
+              m21_promoted_facts: confirmResult.promoted_fact_ids.length,
+              context_id: confirmResult.session.decision_context?.context_id ?? null,
+              context_version: confirmResult.session.decision_context?.version ?? null,
+              content_hash: confirmResult.session.decision_context?.content_hash ?? null,
+            },
+          };
+          return withSessionProfileFlags({
+            ...confirmResult.session,
+            messages: [...messagesWithUser, assistantMessage],
+            last_interaction_at: nowConfirm,
+          });
+        } else if (
+          confirmResult.outcome === "not_sufficient_after_confirm" ||
+          confirmResult.outcome === "promote_failed" ||
+          confirmResult.outcome === "persist_failed" ||
+          confirmResult.outcome === "freeze_failed"
+        ) {
+          const failText =
+            confirmResult.outcome === "not_sufficient_after_confirm"
+              ? "【确认未通过充分性】已记录你的确认，但关键信息仍不足，无法冻结。请继续补充。" +
+                (confirmResult.error ? `（${confirmResult.error}）` : "")
+              : "【系统】确认/冻结失败，未绕过充分性门禁。" +
+                (confirmResult.error ? `（${confirmResult.error}）` : "");
+          const assistantMessage = {
+            role: "assistant" as const,
+            content: failText,
+            timestamp: nowConfirm,
+            client_id: safeRandomUUID(),
+            meta: {
+              m21_confirm_freeze: true,
+              m21_outcome: confirmResult.outcome,
+              m21_error: confirmResult.error ?? null,
+            },
+          };
+          return withSessionProfileFlags({
+            ...confirmResult.session,
+            messages: [...messagesWithUser, assistantMessage],
+            last_interaction_at: nowConfirm,
+          });
+        }
+        // not_ready / not_confirm_text → fall through
+      }
+    }
+  }
+
   // M1-R — Adaptive Question Loop BEFORE assistant generation.
   // Fresh session: bootstrap DC + Blueprint + first adaptive Q (not old free ask).
   // Later turns: Answer → Interpretation → DC → Understanding → Plan → authorized Q.
@@ -1170,6 +1267,18 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   );
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
   if (
+    m1CollectingTurn &&
+    m1CollectingTurn.understanding &&
+    m1CollectingTurn.understanding.readiness.can_ask === false &&
+    agent_v2.current_phase !== "delivered"
+  ) {
+    agent_v2 = {
+      ...agent_v2,
+      current_phase: "awaiting_confirmation",
+      stall_offer_pending: false,
+    };
+    // m21_readiness_stop
+  } else if (
     m1CollectingTurn &&
     (m1CollectingTurn.bootstrapped ||
       m1CollectingTurn.plan ||

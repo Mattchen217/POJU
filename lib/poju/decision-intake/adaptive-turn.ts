@@ -257,6 +257,7 @@ async function planFromState(
     const u = {
       ...understanding,
       next_question_plan: null,
+      last_sent_question: null,
       budget,
     };
     return {

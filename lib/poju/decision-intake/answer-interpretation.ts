@@ -150,15 +150,16 @@ function writesFor(
     ];
   }
   if (CONSTRAINT_RE.test(statement)) {
+    const constraintRoles = roles.includes("hard_constraint")
+      ? roles
+      : [...roles, "hard_constraint"];
     return [
       {
         kind: "constraint",
         statement: statement.slice(0, 500),
         status: "unverified",
         verification_level: "user_asserted",
-        fact_roles: roles.includes("hard_constraint")
-          ? roles
-          : [...roles, "hard_constraint"],
+        fact_roles: constraintRoles,
         related_dir_ids: dirs,
         constraint_category: /预算|budget|钱|salary|cost/i.test(statement)
           ? "financial"
@@ -166,6 +167,16 @@ function writesFor(
             ? "time"
             : "responsibility",
         rigidity: "hard",
+      },
+      // m21_constraint_also_fact: Intake role evidence needs a fact contribution for
+      // partial coverage before final confirm (constraints alone stay unresolved until confirmed).
+      {
+        kind: "reality_fact",
+        statement: statement.slice(0, 500),
+        status: "unverified",
+        verification_level: "user_asserted",
+        fact_roles: constraintRoles,
+        related_dir_ids: dirs,
       },
     ];
   }

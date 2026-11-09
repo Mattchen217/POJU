@@ -1,5 +1,5 @@
 /**
- * Decision Intake 2.0 — Mainline M1 public surface.
+ * Decision Intake 2.0 — Mainline M1/M2 public surface.
  */
 
 export * from "./types";
@@ -33,3 +33,9 @@ export {
   __setM1rPersistForTests,
 } from "./fresh-session-bootstrap";
 export { projectAdaptiveQuestionForUi } from "./ui-projection";
+export {
+  confirmUnderstandingAndFreeze,
+  isFinalUnderstandingConfirmText,
+  isFinalUnderstandingAddMoreText,
+  sessionReadyForFinalConfirm,
+} from "./confirm-and-freeze";
