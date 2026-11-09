@@ -55,7 +55,8 @@ export type AnswerEvent = {
   targets: { dir_ids: string[]; ddr_ids: string[]; direction_id?: string };
   proposed_writes: ProposedWrite[];
   notes: string[];
-  interpreter: "deterministic_m1_v1";
+  /** Current writers use deterministic_m2_4_r1; m1_v1 retained for historical session reads. */
+  interpreter: "deterministic_m1_v1" | "deterministic_m2_4_r1";
 };
 
 export type InvestigationDirection = {
@@ -208,6 +209,8 @@ export type UnderstandingState = {
     direction_id: string;
     dir_ids: string[];
     ddr_ids: string[];
+    /** Roles authorized by the actually-sent Plan; optional on historical sessions. */
+    fact_role_codes?: string[];
     turn_id: string;
   } | null;
 };

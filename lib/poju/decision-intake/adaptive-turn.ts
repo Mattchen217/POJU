@@ -765,6 +765,8 @@ export function attachAuthorizedAssistantQuestion(
         direction_id: plan.direction_id,
         dir_ids: plan.dir_ids,
         ddr_ids: plan.ddr_ids,
+        // Must come from the actually-sent Plan — never inferred from DIR.required_fact_roles.
+        fact_role_codes: [...plan.fact_role_codes],
         turn_id: turnId,
       },
     },

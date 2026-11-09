@@ -1,6 +1,7 @@
 /**
  * M1 Answer Interpretation — structured classify before DC write / next ask.
  * M2.4-R1: context-aware classification; last_sent_question is the only answer target.
+ * M2.4-R1-FU1: fact_role_codes from actually-sent Plan; never expand to DIR.required_fact_roles.
  * Never auto-confirm; never chart-as-fact.
  */
 
@@ -19,13 +20,14 @@ const ESTIMATE_RE =
 const CONSTRAINT_RE =
   /(预算|deadline|截止|必须|不能超过|hard\s*limit|budget|只能|不可逆|退出成本|责任上限|最晚|不得低于|不能低于)/i;
 const CORRECTION_RE =
-  /(更正|纠正|之前说错了|说错了|correction|actually\s+i\s+meant|不是.+而是)/i;
+  /(更正|纠正|之前说错了|说错了|correction|actually\s+i\s+meant)/i;
 const CONTRADICTION_RE =
-  /(跟之前(说的|记录)?不一致|与之前不符|互相矛盾|矛盾了|冲突了|actually\s+that'?s\s+wrong|that\s+conflicts)/i;
+  /(与之前不一致|与之前说法矛盾|之前记录错了|之前说的不是事实|实际情况与之前相反|跟之前(说的|记录)?不一致|与之前不符|互相矛盾|矛盾了|冲突了|之前说的不准确|说的不准确|actually\s+that'?s\s+wrong|that\s+conflicts)/i;
 const OFF_TOPIC_RE =
   /^(今天天气|讲个笑话|tell\s+me\s+a\s+joke|无关)/i;
 
-function roleCodesToRoles(codes: string[]): string[] {
+function roleCodesToRoles(codes: string[] | undefined | null): string[] {
+  if (!codes || codes.length === 0) return [];
   return codes
     .map((c) => {
       const m = /\/role\/([^/]+)$/.exec(c);
@@ -34,32 +36,18 @@ function roleCodesToRoles(codes: string[]): string[] {
     .filter(Boolean);
 }
 
-function factRolesFromDirs(
-  session: POJUSessionState,
-  dirIds: string[],
-  fallbackRoles: string[],
-): string[] {
-  const dc = session.decision_context;
-  if (!dc || dirIds.length === 0) return fallbackRoles;
-  const roles: string[] = [];
-  for (const id of dirIds) {
-    const dir = dc.dirs.find((d) => d.dir_id === id);
-    for (const r of dir?.required_fact_roles ?? []) {
-      if (!roles.includes(r)) roles.push(r);
-    }
-  }
-  return roles.length > 0 ? roles : fallbackRoles;
-}
-
 /**
  * Current question is the ONLY answer-target authority.
- * Prefer last_sent_question; else current valid Plan. Never guess Blueprint-first DIR.
+ * Prefer last_sent_question (including its Plan fact_role_codes);
+ * else current valid Plan. Never guess Blueprint-first DIR.
+ * Never expand authorized roles to DIR.required_fact_roles.
  */
 export function activeTargets(session: POJUSessionState): {
   dir_ids: string[];
   ddr_ids: string[];
   direction_id?: string;
   fact_roles: string[];
+  auth_error?: "missing_authorized_fact_roles" | "missing_authorized_answer_target";
 } {
   const understanding = session.decision_understanding;
   const lastSent = understanding?.last_sent_question;
@@ -67,40 +55,65 @@ export function activeTargets(session: POJUSessionState): {
     understanding?.next_question_plan ?? session.adaptive_ask_plan ?? null;
 
   if (lastSent && (lastSent.dir_ids.length > 0 || lastSent.ddr_ids.length > 0)) {
-    const planRoles = plan ? roleCodesToRoles(plan.fact_role_codes) : [];
+    let roles = roleCodesToRoles(lastSent.fact_role_codes);
+    if (roles.length === 0) {
+      // Historical session: restore ONLY when next_question_plan.plan_id matches exactly.
+      const nqp = understanding?.next_question_plan ?? null;
+      if (
+        nqp &&
+        nqp.plan_id === lastSent.plan_id &&
+        Array.isArray(nqp.fact_role_codes) &&
+        nqp.fact_role_codes.length > 0
+      ) {
+        roles = roleCodesToRoles(nqp.fact_role_codes);
+      }
+    }
+    if (roles.length === 0) {
+      return {
+        dir_ids: [],
+        ddr_ids: [],
+        fact_roles: [],
+        auth_error: "missing_authorized_fact_roles",
+      };
+    }
     return {
       dir_ids: [...lastSent.dir_ids],
       ddr_ids: [...lastSent.ddr_ids],
       direction_id: lastSent.direction_id,
-      fact_roles: factRolesFromDirs(session, lastSent.dir_ids, planRoles.length ? planRoles : ["situation"]),
+      fact_roles: roles,
     };
   }
 
   if (plan && (plan.dir_ids.length > 0 || plan.ddr_ids.length > 0)) {
+    const fromCodes = roleCodesToRoles(plan.fact_role_codes);
+    if (fromCodes.length === 0) {
+      return {
+        dir_ids: [],
+        ddr_ids: [],
+        fact_roles: [],
+        auth_error: "missing_authorized_fact_roles",
+      };
+    }
     return {
       dir_ids: [...plan.dir_ids],
       ddr_ids: [...plan.ddr_ids],
       direction_id: plan.direction_id,
-      fact_roles: (() => {
-        const fromCodes = roleCodesToRoles(plan.fact_role_codes);
-        if (fromCodes.length) return fromCodes;
-        return factRolesFromDirs(session, plan.dir_ids, ["situation"]);
-      })(),
+      fact_roles: fromCodes,
     };
   }
 
-  return { dir_ids: [], ddr_ids: [], fact_roles: [] };
+  return {
+    dir_ids: [],
+    ddr_ids: [],
+    fact_roles: [],
+    auth_error: "missing_authorized_answer_target",
+  };
 }
 
 function classifyAnswer(input: {
   session: POJUSessionState;
   statement: string;
-  target: {
-    dir_ids: string[];
-    ddr_ids: string[];
-    direction_id?: string;
-    fact_roles: string[];
-  };
+  target: ReturnType<typeof activeTargets>;
 }): {
   cls: AnswerClass;
   notes: string[];
@@ -108,12 +121,21 @@ function classifyAnswer(input: {
   const t = input.statement.trim();
   const notes: string[] = [];
 
-  // empty / invalid — keep CJK single-ack (嗯/哦) as invalid so they do not write DC
+  // empty / invalid — keep CJK single-ack as invalid so they do not write DC
   if (!t || t.length < 2) return { cls: "invalid_input", notes: ["empty"] };
 
-  // missing authorized target — never guess DIR
-  if (input.target.dir_ids.length === 0 && input.target.ddr_ids.length === 0) {
+  // missing authorized target / roles — never guess DIR or expand roles
+  if (input.target.auth_error === "missing_authorized_fact_roles") {
+    return { cls: "invalid_input", notes: ["missing_authorized_fact_roles"] };
+  }
+  if (
+    input.target.auth_error === "missing_authorized_answer_target" ||
+    (input.target.dir_ids.length === 0 && input.target.ddr_ids.length === 0)
+  ) {
     return { cls: "invalid_input", notes: ["missing_authorized_answer_target"] };
+  }
+  if (input.target.fact_roles.length === 0) {
+    return { cls: "invalid_input", notes: ["missing_authorized_fact_roles"] };
   }
 
   // off_topic
@@ -154,7 +176,7 @@ function classifyAnswer(input: {
   // estimate / uncertain
   if (ESTIMATE_RE.test(t)) return { cls: "estimate", notes: ["estimate"] };
 
-  // constraint language → clear_answer class; ProposedWrite becomes constraint
+  // constraint language — clear_answer class; ProposedWrite becomes constraint
   if (CONSTRAINT_RE.test(t)) {
     notes.push("constraint_signal");
     return { cls: "clear_answer", notes };
@@ -170,7 +192,7 @@ function classifyAnswer(input: {
   if (t.length >= 4) {
     return { cls: "partial_answer", notes: ["partial"] };
   }
-  // Too thin to be a fact write (preserves prior invalid behavior for "嗯" etc.)
+  // Too thin to be a fact write
   return { cls: "invalid_input", notes: ["too_thin"] };
 }
 
@@ -180,7 +202,7 @@ function splitIndependentFacts(statement: string): string[] {
   if (!cleaned) return [];
   // Soft split on clause separators / "另外/还有/以及"
   const parts = cleaned
-    .split(/(?:[。；;！!？?\n]+|(?:另外|还有|以及|并且|同时)[,，:\s]*)/)
+    .split(/(?:[。；;！!？?\n]+|(?:另外|还有|以及|并且|同时)[,，\s]*)/)
     .map((p) => p.trim())
     .filter((p) => p.length >= 2);
   if (parts.length >= 2) return parts;
@@ -190,7 +212,7 @@ function splitIndependentFacts(statement: string): string[] {
 function stripMetaPrefix(text: string): string {
   return text
     .replace(
-      /^(更正一下|更正|纠正|之前说错了|说错了|actually\s+i\s+meant)[:：,\s]*/i,
+      /^(更正一下|更正|纠正|之前说错了|说错了|之前说的不准确|actually\s+i\s+meant)[:：,\s]*/i,
       "",
     )
     .trim();
@@ -203,10 +225,11 @@ function writesFor(
   notes: string[],
 ): ProposedWrite[] {
   const roles =
-    targets.fact_roles.length > 0 ? targets.fact_roles : ["situation"];
+    targets.fact_roles.length > 0 ? targets.fact_roles : [];
   const dirs = targets.dir_ids;
 
   if (cls === "off_topic" || cls === "invalid_input") return [];
+  if (roles.length === 0) return [];
 
   if (cls === "unknown") {
     return [
@@ -330,6 +353,6 @@ export function interpretUserAnswer(input: {
     },
     proposed_writes,
     notes,
-    interpreter: "deterministic_m1_v1",
+    interpreter: ANSWER_INTERPRETATION_VERSION,
   };
 }

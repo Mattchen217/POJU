@@ -3,6 +3,8 @@
  * Never auto-confirm. Same-turn replay is idempotent. Conflicts stay open.
  * M2.4-R1: related_dir_ids + fact_roles matching; correction/contradiction append
  * independent facts; open Conflict only with clear conflicting evidence.
+ * M2.4-R1-FU1: conservative conflict evidence — different text alone is not a conflict;
+ * correction vs contradiction separated; never auto-close open Conflicts.
  */
 
 import { buildRealityFact } from "@/lib/poju/decision-context/fact-combination";
@@ -13,7 +15,7 @@ import type {
   RealityFact,
 } from "@/lib/poju/decision-context/types";
 import type { POJUSessionState } from "@/lib/poju/types";
-import type { AnswerEvent } from "./types";
+import type { AnswerClass, AnswerEvent } from "./types";
 
 export type ApplyAnswerResult = {
   session: POJUSessionState;
@@ -33,16 +35,18 @@ function normalizeComparable(text: string): string {
   return text
     .toLowerCase()
     .replace(
-      /^(更正一下|更正|纠正|之前说错了|说错了|actually\s+i\s+meant)[:：,\s]*/i,
+      /^(更正一下|更正|纠正|之前说错了|说错了|之前说的不准确|actually\s+i\s+meant)[:：,\s]*/i,
       "",
     )
-    .replace(/[\s，,。．.!！？?；;：:、]/g, "")
+    .replace(/[\s，,。．.!！？?；;、]/g, "")
     .trim();
 }
 
 function rolesOverlap(a: string[] | undefined, b: string[]): boolean {
   if (!a || a.length === 0 || b.length === 0) {
-    // If either side lacks roles, allow DIR-only related match.
+    // Same-topic conflict requires a shared fact role when both sides declare roles.
+    // If either side lacks roles, allow DIR-only related match for related-fact lookup,
+    // but mutual-exclusion checks still require overlapping roles when present.
     return true;
   }
   return a.some((r) => b.includes(r));
@@ -61,21 +65,90 @@ function findRelatedOldFacts(
   });
 }
 
-/** Clear conflict = related old fact with different substantive content. */
-function hasClearConflictEvidence(
-  oldFacts: RealityFact[],
+/** Explicit contradiction / denial-of-prior language (conservative list). */
+const EXPLICIT_CONTRADICTION_LANG_RE =
+  /(与之前不一致|与之前说法矛盾|之前记录错了|之前说的不是事实|实际情况与之前相反|之前说的不准确|说的不准确|跟之前(说的|记录)?不一致|与之前不符|互相矛盾|矛盾了|冲突了|actually\s+that'?s\s+wrong|that\s+conflicts)/i;
+
+/**
+ * Same fact-dimension mutual exclusion (deterministic; not NLI).
+ * Different time points / scopes / mere wording differences are NOT conflicts.
+ */
+function hasMutualExclusionOnSameDimension(
+  oldStatement: string,
   newStatement: string,
-): RealityFact[] {
-  const neu = normalizeComparable(newStatement);
-  if (!neu) return [];
-  return oldFacts.filter((f) => {
-    const old = normalizeComparable(f.statement);
-    if (!old) return false;
-    if (old === neu) return false;
-    // Ignore pure meta-correction with no new substance vs empty-ish
-    if (neu.length < 2) return false;
-    return true;
-  });
+): boolean {
+  const a = oldStatement;
+  const b = newStatement;
+
+  // Different explicit calendar years → treat as time-scoped, not same-time conflict.
+  const yearsA = new Set(a.match(/20\d{2}/g) ?? []);
+  const yearsB = new Set(b.match(/20\d{2}/g) ?? []);
+  if (yearsA.size > 0 && yearsB.size > 0) {
+    const overlap = [...yearsA].some((y) => yearsB.has(y));
+    if (!overlap) return false;
+  }
+
+  type Pair = { pos: RegExp; neg: RegExp };
+  const pairs: Pair[] = [
+    // 有 / 没有 (existence)
+    {
+      pos: /(还有|有一份|有\s*|存在|具备)(?!没有)/,
+      neg: /(没有|无|不存在|不具备)/,
+    },
+    // 接受 / 拒绝
+    { pos: /(接受|同意)/, neg: /(拒绝|不接受|不同意)/ },
+    // 在职 / 已离职 — only when no distinct year scopes (handled above)
+    { pos: /(仍在职|目前在职|在职|还在工作)/, neg: /(已经离职|已离职|离职了|不在职)/ },
+    // 单一选项 / 多个选项 (same scope)
+    {
+      pos: /(只有一个选项|只有一个方案|可选方案只有|只有[^，。]{0,12})/,
+      neg: /(还有|多个选项|两个选项|不是只有|还可以)/,
+    },
+  ];
+
+  for (const { pos, neg } of pairs) {
+    const aPos = pos.test(a);
+    const aNeg = neg.test(a);
+    const bPos = pos.test(b);
+    const bNeg = neg.test(b);
+    if ((aPos && bNeg) || (aNeg && bPos)) return true;
+  }
+  return false;
+}
+
+/**
+ * Conservative conflict evidence.
+ * - correction: only when mutual exclusion on the same fact dimension is clear.
+ * - contradiction: explicit contradiction language OR mutual exclusion; same DIR/role.
+ * Different text alone is never enough. Time changes / supplements are not conflicts.
+ */
+function selectConflictingOldFacts(input: {
+  classification: AnswerClass;
+  rawText: string;
+  newStatement: string;
+  oldFacts: RealityFact[];
+}): RealityFact[] {
+  const { classification, rawText, newStatement, oldFacts } = input;
+  if (oldFacts.length === 0) return [];
+
+  const explicitLang = EXPLICIT_CONTRADICTION_LANG_RE.test(rawText);
+  const out: RealityFact[] = [];
+
+  for (const f of oldFacts) {
+    const mutex = hasMutualExclusionOnSameDimension(f.statement, newStatement);
+    if (classification === "correction") {
+      // Default append-only; Conflict only with clear mutual exclusion.
+      if (mutex) out.push(f);
+      continue;
+    }
+    if (classification === "contradiction") {
+      // Explicit contradiction language may enter evaluation; still require same-topic
+      // related old fact (already filtered) and either explicit lang or mutex.
+      if (explicitLang || mutex) out.push(f);
+      continue;
+    }
+  }
+  return out;
 }
 
 export async function applyAnswerEventToSessionDc(
@@ -168,8 +241,6 @@ export async function applyAnswerEventToSessionDc(
         updated_at: now,
       });
 
-      // correction / contradiction: append independent fact; open Conflict only
-      // when related old facts clearly conflict (do not invent from the word alone).
       if (
         event.classification === "correction" ||
         event.classification === "contradiction"
@@ -179,7 +250,12 @@ export async function applyAnswerEventToSessionDc(
           w.related_dir_ids,
           w.fact_roles,
         );
-        const conflicting = hasClearConflictEvidence(related, w.statement);
+        const conflicting = selectConflictingOldFacts({
+          classification: event.classification,
+          rawText: event.raw_text,
+          newStatement: w.statement,
+          oldFacts: related,
+        });
         if (conflicting.length > 0) {
           conflicts.push({
             conflict_id: `cf_m1_${turnId}_${i}`.slice(0, 80),
