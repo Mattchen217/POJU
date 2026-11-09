@@ -6,7 +6,7 @@
 |---|---|
 | Branch | `feat/m1-r-fresh-session-main-loop` |
 | Parent SHA | `9036a944bfc4c84da0397548864ee5bab0582905` |
-| HEAD SHA | 03b4020b70d6aeb3416c625ac07baab3c0947467 |
+| HEAD SHA | 5e27e94883e436bfdec8a40d8dacd952f08f45d5 |
 | Mode | Production implementation on same branch |
 | Tip / promote | Vercel tip only — **no promote / no PR / no merge / no deploy** |
 
