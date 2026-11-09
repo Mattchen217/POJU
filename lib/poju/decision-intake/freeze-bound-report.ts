@@ -1226,6 +1226,64 @@ export async function releaseFreezeBoundReportClaim(input: {
 }
 
 /**
+ * M2.2-R3: release a successfully acquired claim before any pre-handoff early return.
+ * If the request will not hand ownership to a running Final Delivery job, call this
+ * with token CAS before returning so a subsequent valid request can acquire.
+ */
+
+/**
+ * M2.2-R3 Regenerate claim release: only the original owner's token may CAS-delete.
+ * Never force-delete another execution context's claim.
+ * If ownership cannot be proven while a claim is held → fail closed.
+ */
+export type RegenerateClaimReleaseResult =
+  | { ok: true; released: boolean }
+  | { ok: false; code: "CLAIM_OWNED_BY_OTHER"; error: string };
+
+export async function tryReleaseClaimForRegenerate(input: {
+  claimOps?: FreezeReportClaimOps;
+  claimKey: string;
+  ownerToken: string | null | undefined;
+}): Promise<RegenerateClaimReleaseResult> {
+  const claimOps = input.claimOps ?? defaultProcessLocalClaimOps;
+  const held = claimOps.load ? await claimOps.load(input.claimKey) : null;
+  if (!held) {
+    return { ok: true, released: false };
+  }
+  if (!input.ownerToken) {
+    return {
+      ok: false,
+      code: "CLAIM_OWNED_BY_OTHER",
+      error:
+        "Regenerate cannot prove claim ownership; fail closed until lease expiry",
+    };
+  }
+  const released = await claimOps.release(input.claimKey, input.ownerToken);
+  if (!released) {
+    return {
+      ok: false,
+      code: "CLAIM_OWNED_BY_OTHER",
+      error:
+        "Regenerate token does not own the active claim; fail closed (will not steal)",
+    };
+  }
+  return { ok: true, released: true };
+}
+
+export async function releaseClaimBeforePreHandoffReturn(input: {
+  claimKey: string | null | undefined;
+  claimToken: string | null | undefined;
+  deps?: FreezeBoundReportDeps;
+}): Promise<boolean> {
+  if (!input.claimKey || !input.claimToken) return false;
+  return releaseFreezeBoundReportClaim({
+    claimKey: input.claimKey,
+    claimToken: input.claimToken,
+    deps: input.deps,
+  });
+}
+
+/**
  * Mark the Freeze-bound report job failed/retryable (never completed).
  * Preserves original Freeze binding.
  */
@@ -1351,17 +1409,17 @@ export function __createClaimOpsForTests(store: {
         return false;
       }
       if (existing && typeof existing.token === "string") {
-        // Expired only: token-checked delete so we never wipe a racing new owner.
+        // Expired only: atomic token-checked delete (fail closed if CAS unavailable).
         if (
           typeof existing.expires_at === "number" &&
           existing.expires_at <= now
         ) {
-          if (typeof store.compareAndDelete === "function") {
-            await store.compareAndDelete(key, existing.token);
-          } else {
-            const again = await store.get<{ token?: string }>(key);
-            if (again && again.token === existing.token) await store.del(key);
+          if (typeof store.compareAndDelete !== "function") {
+            throw new Error(
+              "CLAIM_CAS_UNAVAILABLE: cannot clear expired claim without compareAndDelete",
+            );
           }
+          await store.compareAndDelete(key, existing.token);
         }
       }
       const setResult = await store.set(
@@ -1380,10 +1438,10 @@ export function __createClaimOpsForTests(store: {
       if (typeof store.compareAndDelete === "function") {
         return store.compareAndDelete(key, token);
       }
-      const existing = await store.get<{ token?: string }>(key);
-      if (!existing || existing.token !== token) return false;
-      await store.del(key);
-      return true;
+      // M2.2-R3: never silently downgrade atomic ownership release to GET+DEL.
+      throw new Error(
+        "CLAIM_CAS_UNAVAILABLE: store provides no compareAndDelete; refusing non-atomic claim release",
+      );
     },
     async forceRelease(key) {
       await store.del(key);

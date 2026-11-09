@@ -206,6 +206,11 @@ async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Pro
  */
 export async function POST(req: Request) {
   let inlineCall: (() => Promise<NextResponse>) | null = null;
+  // M2.2-R3: hoisted so catch / early-return cleanup can CAS-release.
+  let m22_claim_token: string | null = null;
+  let m22_claim_key: string | null = null;
+  let m22_created_job_id: string | null = null;
+  let m22_handed_off = false;
   try {
     if (!isOpenRouterConfigured()) {
       return NextResponse.json(
@@ -502,9 +507,7 @@ export async function POST(req: Request) {
       null;
     let decision_context_snapshot: import("@/lib/poju/decision-context").DecisionContext | null =
       null;
-    let m22_claim_token: string | null = null;
-    let m22_claim_key: string | null = null;
-    let m22_report_job_id: string | null = null;
+        let m22_report_job_id: string | null = null;
     let m22_reused_completed = false;
     try {
       const { assertSnapshotMatchesBinding } = await import(
@@ -647,24 +650,85 @@ export async function POST(req: Request) {
         decision_context_binding = frozenSnap.binding;
 
         // Persist Freeze-bound job + acquire shared KV claim BEFORE xhigh create/start.
-        // M2.2-R2: on regenerate, drop prior generation claim before acquiring a new one.
-        // Comment marker: m22 claim force-release before prepare
+        // M2.2-R3: Regenerate must NOT forceRelease another context's claim.
+        // Stop/resolve prior job; release only with original owner token (CAS).
+        // If ownership cannot be proven while a claim is held → fail closed.
         if (regenerate) {
           try {
-            const { freezeReportClaimKey, defaultFreezeReportClaimOps } = await import(
-              "@/lib/poju/decision-intake/freeze-report-claim"
-            );
-            const { M22_REPORT_SCHEMA_VERSION } = await import(
-              "@/lib/poju/decision-intake/freeze-bound-report"
-            );
+            const {
+              freezeReportClaimKey,
+              defaultFreezeReportClaimOps,
+            } = await import("@/lib/poju/decision-intake/freeze-report-claim");
+            const {
+              M22_REPORT_SCHEMA_VERSION,
+              tryReleaseClaimForRegenerate,
+            } = await import("@/lib/poju/decision-intake/freeze-bound-report");
             const key = freezeReportClaimKey({
               sessionId: sessionIdRaw,
               freezeId: frozenSnap.freezeId,
               reportSchemaVersion: M22_REPORT_SCHEMA_VERSION,
             });
-            await defaultFreezeReportClaimOps.forceRelease(key);
+
+            let ownerToken: string | null = null;
+            const prior = await findLatestXhighJobForSession(
+              "final_delivery",
+              sessionIdRaw,
+            ).catch(() => null);
+            if (prior && isFinalDeliveryJobInput(prior.input)) {
+              if (prior.status === "pending" || prior.status === "running") {
+                await failXhighJob(prior.job_id, "STOP: superseded by regenerate", {
+                  retryable: false,
+                  failure_reason: "stale_running",
+                  current_stage: prior.current_stage,
+                  accumulated_content: "failed:superseded_by_regenerate",
+                }).catch(() => undefined);
+                await forceReleaseDeliveryContinueLease(prior.job_id).catch(() => undefined);
+                await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(
+                  () => undefined,
+                );
+              }
+              if (
+                typeof prior.input.m22_claim_token === "string" &&
+                prior.input.m22_claim_token &&
+                prior.input.m22_claim_key === key
+              ) {
+                ownerToken = prior.input.m22_claim_token;
+              }
+            }
+
+            const releaseResult = await tryReleaseClaimForRegenerate({
+              claimOps: defaultFreezeReportClaimOps,
+              claimKey: key,
+              ownerToken,
+            });
+            if (!releaseResult.ok) {
+              return NextResponse.json(
+                {
+                  ok: false,
+                  error: releaseResult.error,
+                  code: releaseResult.code,
+                  retryable: true,
+                  status: "running",
+                  message:
+                    "An active generation claim is held by another execution context. Wait for lease expiry or the owner to finish.",
+                },
+                { status: 409 },
+              );
+            }
           } catch (e) {
-            console.warn("[final-delivery] m22 claim force-release before prepare skipped", e);
+            console.warn("[final-delivery] m22 regenerate claim release failed closed", e);
+            return NextResponse.json(
+              {
+                ok: false,
+                error:
+                  e instanceof Error
+                    ? e.message
+                    : "Regenerate claim release failed closed",
+                code: "CLAIM_OWNED_BY_OTHER",
+                retryable: true,
+              },
+              { status: 409 },
+            );
           }
         }
 
@@ -882,6 +946,17 @@ export async function POST(req: Request) {
           await forceReleaseDeliveryContinueLease(latest.job_id).catch(() => undefined);
           await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
           // Fall through — only regenerate should create a new chain after redeploy.
+          if (m22_claim_token && m22_claim_key) {
+            const { releaseClaimBeforePreHandoffReturn } = await import(
+              "@/lib/poju/decision-intake/freeze-bound-report"
+            );
+            await releaseClaimBeforePreHandoffReturn({
+              claimKey: m22_claim_key,
+              claimToken: m22_claim_token,
+            }).catch(() => undefined);
+            m22_claim_token = null;
+            m22_claim_key = null;
+          }
           return NextResponse.json({
             ok: false,
             error: "superseded_by_deploy",
@@ -895,9 +970,32 @@ export async function POST(req: Request) {
           Date.now() - latest.updated_at > STALE_RUNNING_MS;
         if (!stale && (latest.status === "pending" || latest.status === "running")) {
           // Do not re-fire work — client keeps polling; status STOPs if truly dead.
+          // M2.2-R3: pre-handoff early return — release owned claim (token CAS).
+          if (m22_claim_token && m22_claim_key) {
+            const { releaseClaimBeforePreHandoffReturn } = await import(
+              "@/lib/poju/decision-intake/freeze-bound-report"
+            );
+            await releaseClaimBeforePreHandoffReturn({
+              claimKey: m22_claim_key,
+              claimToken: m22_claim_token,
+            }).catch(() => undefined);
+            m22_claim_token = null;
+            m22_claim_key = null;
+          }
           return await jobStatusResponse(latest);
         }
         if (latest.status === "completed" && isFinalDeliveryJobResult(latest.result)) {
+          if (m22_claim_token && m22_claim_key) {
+            const { releaseClaimBeforePreHandoffReturn } = await import(
+              "@/lib/poju/decision-intake/freeze-bound-report"
+            );
+            await releaseClaimBeforePreHandoffReturn({
+              claimKey: m22_claim_key,
+              claimToken: m22_claim_token,
+            }).catch(() => undefined);
+            m22_claim_token = null;
+            m22_claim_key = null;
+          }
           return await jobStatusResponse(latest);
         }
       }
@@ -924,6 +1022,19 @@ export async function POST(req: Request) {
 
         const locked = await acquireXhighSessionLock("final_delivery", sessionIdRaw);
     if (!locked) {
+      // M2.2-R3: pre-handoff — release owned claim before returning.
+      if (m22_claim_token && m22_claim_key) {
+        const { releaseClaimBeforePreHandoffReturn } = await import(
+          "@/lib/poju/decision-intake/freeze-bound-report"
+        );
+        await releaseClaimBeforePreHandoffReturn({
+          claimKey: m22_claim_key,
+          claimToken: m22_claim_token,
+        }).catch(() => undefined);
+        m22_claim_token = null;
+        m22_claim_key = null;
+      }
+
       // Never return an old job as if regenerate succeeded.
       return NextResponse.json(
         { ok: false, error: "delivery_job_busy", retryable: false },
@@ -938,6 +1049,7 @@ export async function POST(req: Request) {
       job_input: jobInput,
       deploy_generation: currentDeliveryDeployGeneration(),
     });
+    m22_created_job_id = job.job_id;
 
     if (!isFinalDeliveryJobInput(job.input)) {
       if (m22_claim_token && m22_claim_key) {
@@ -995,6 +1107,7 @@ export async function POST(req: Request) {
     }
 
     await scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
+    m22_handed_off = true;
     logDeliveryStep({
       job_id: job.job_id,
       level: "ok",
@@ -1016,6 +1129,35 @@ export async function POST(req: Request) {
     if (inlineCall && isUpstashPlanLimitError(e)) {
       return inlineCall();
     }
+    // M2.2-R3: if we acquired a claim but never handed off to a running job, CAS-release.
+if (!m22_handed_off) {
+      try {
+        if (m22_created_job_id) {
+          await failXhighJob(
+            m22_created_job_id,
+            e instanceof Error ? e.message : "final-delivery failed before handoff",
+            { retryable: true, failure_reason: "interrupted" },
+          ).catch(() => undefined);
+        }
+        if (
+          typeof m22_claim_token === "string" &&
+          m22_claim_token &&
+          typeof m22_claim_key === "string" &&
+          m22_claim_key
+        ) {
+          const { releaseClaimBeforePreHandoffReturn } = await import(
+            "@/lib/poju/decision-intake/freeze-bound-report"
+          );
+          await releaseClaimBeforePreHandoffReturn({
+            claimKey: m22_claim_key,
+            claimToken: m22_claim_token,
+          }).catch(() => undefined);
+        }
+      } catch {
+        /* ignore cleanup errors */
+      }
+    }
+    
     console.error("[final-delivery]", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "final-delivery failed" },

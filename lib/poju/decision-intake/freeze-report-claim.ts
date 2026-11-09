@@ -9,6 +9,13 @@
 import "server-only";
 
 import { kv, KV_TTL } from "@/lib/kv/client";
+import {
+  ClaimCasUnavailableError,
+  compareAndDeleteClaim,
+} from "@/lib/poju/decision-intake/freeze-report-claim-cas";
+
+export { ClaimCasUnavailableError, compareAndDeleteClaim };
+
 
 /** Cover worst-case eight-page / final-delivery wall clock; crash unlocks after TTL. */
 export const M22_REPORT_CLAIM_TTL_SEC = KV_TTL.POJU_XHIGH_LOCK;
@@ -53,22 +60,6 @@ export type FreezeReportClaimOps = {
   bindJobId: (key: string, token: string, jobId: string) => Promise<boolean>;
 };
 
-const CAS_DELETE_LUA = `
-local raw = redis.call('GET', KEYS[1])
-if not raw then return 0 end
-if type(raw) ~= 'string' then
-  raw = tostring(raw)
-end
-if raw == ARGV[1] then
-  return redis.call('DEL', KEYS[1])
-end
-local ok, obj = pcall(cjson.decode, raw)
-if ok and type(obj) == 'table' and tostring(obj['token']) == ARGV[1] then
-  return redis.call('DEL', KEYS[1])
-end
-return 0
-`;
-
 export function freezeReportClaimKey(input: {
   sessionId: string;
   freezeId: string;
@@ -82,28 +73,6 @@ export function freezeReportClaimKey(input: {
   ].join(":");
 }
 
-export async function compareAndDeleteClaim(
-  store: FreezeReportClaimKv,
-  key: string,
-  token: string,
-): Promise<boolean> {
-  if (typeof store.compareAndDelete === "function") {
-    return store.compareAndDelete(key, token);
-  }
-  if (typeof store.eval === "function") {
-    try {
-      const result = await store.eval(CAS_DELETE_LUA, [key], [token]);
-      return result === 1 || result === true;
-    } catch {
-      /* fall through to get+check+del */
-    }
-  }
-  // Single-threaded fallback (tests / MemoryKv duck type without method).
-  const existing = await store.get<FreezeReportClaimRecord>(key);
-  if (!existing || existing.token !== token) return false;
-  await store.del(key);
-  return true;
-}
 
 export function createFreezeReportClaimOps(
   store: FreezeReportClaimKv = kv as unknown as FreezeReportClaimKv,
@@ -184,6 +153,51 @@ export function createFreezeReportClaimOps(
 /** Default production ops against shared Upstash / MemoryKv. */
 export const defaultFreezeReportClaimOps: FreezeReportClaimOps =
   createFreezeReportClaimOps();
+
+
+/**
+ * M2.2-R3 Regenerate claim release: only the original owner's token may CAS-delete.
+ * Never force-delete another execution context's claim.
+ * If ownership cannot be proven while a claim is held → fail closed.
+ */
+export type RegenerateClaimReleaseResult =
+  | { ok: true; released: boolean }
+  | { ok: false; code: "CLAIM_OWNED_BY_OTHER"; error: string };
+
+export async function tryReleaseClaimForRegenerate(input: {
+  claimOps: FreezeReportClaimOps;
+  claimKey: string;
+  /** Original owner's token from the prior Final Delivery job input, if known. */
+  ownerToken: string | null | undefined;
+}): Promise<RegenerateClaimReleaseResult> {
+  const held = input.claimOps.load
+    ? await input.claimOps.load(input.claimKey)
+    : null;
+  if (!held) {
+    return { ok: true, released: false };
+  }
+  if (!input.ownerToken) {
+    return {
+      ok: false,
+      code: "CLAIM_OWNED_BY_OTHER",
+      error:
+        "Regenerate cannot prove claim ownership; fail closed until lease expiry",
+    };
+  }
+  const released = await input.claimOps.release(
+    input.claimKey,
+    input.ownerToken,
+  );
+  if (!released) {
+    return {
+      ok: false,
+      code: "CLAIM_OWNED_BY_OTHER",
+      error:
+        "Regenerate token does not own the active claim; fail closed (will not steal)",
+    };
+  }
+  return { ok: true, released: true };
+}
 
 export function newFreezeReportClaimToken(): string {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;

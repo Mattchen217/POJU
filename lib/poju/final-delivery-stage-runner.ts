@@ -2382,6 +2382,37 @@ export async function runFinalDeliveryStage(
         timings,
       };
 
+      // M2.2-R3: write-back is part of the real success contract.
+      // Do NOT mark the formal Final Delivery job completed before successful
+      // M2.2 eight-page write-back (when a Freeze-bound report job is bound).
+      if (input.m22_report_job_id) {
+        try {
+          await writeBackFreezeBoundReportOnDeliverySuccess({
+            job_id,
+            input,
+            allReady,
+          });
+        } catch (wbErr) {
+          console.warn(
+            "[final-delivery-stage] m22 freeze-bound write-back failed — formal job not completed",
+            wbErr,
+          );
+          const msg =
+            wbErr instanceof Error ? wbErr.message : String(wbErr);
+          await failXhighJob(job_id, `m22_writeback_failed:${msg}`, {
+            retryable: true,
+            failure_reason: "interrupted",
+            current_stage: "assemble",
+            accumulated_content: "failed:m22_writeback",
+          }).catch(() => undefined);
+          await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+          await releaseXhighSessionLock("final_delivery", input.session_id).catch(
+            () => undefined,
+          );
+          return;
+        }
+      }
+
       await completeXhighJob(job_id, {
         result,
         model,
@@ -2392,18 +2423,6 @@ export async function runFinalDeliveryStage(
       await updateXhighJobStatus(job_id, "completed", {
         current_stage: "completed",
       });
-
-      // M2.2-R2: write eight validated pages into the original Freeze-bound report job.
-      try {
-        await writeBackFreezeBoundReportOnDeliverySuccess({
-          job_id,
-          input,
-          allReady,
-        });
-      } catch (wbErr) {
-        console.warn("[final-delivery-stage] m22 freeze-bound write-back failed", wbErr);
-        // Delivery xhigh job already completed; M2.2 job stays failed/retryable (never silently completed).
-      }
 
       // Release shared KV claim (token-checked CAS) after success.
       await releaseM22ClaimFromJobInput(input).catch(() => undefined);
