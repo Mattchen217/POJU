@@ -6,7 +6,7 @@
 |---|---|
 | Branch | `feat/m1-r-fresh-session-main-loop` |
 | Parent SHA | `1068d0184217f74b5a3d02c2b8aaab2bce99ad84` |
-| HEAD SHA | _(filled after commit)_ |
+| HEAD SHA | 510ce71c28eed0ee638cf065655444251a1f4967 |
 | Mode | Minimal production fix on same branch |
 | Tip / promote | Vercel tip only — **no promote / no PR / no merge / no deploy** |
 
@@ -57,7 +57,7 @@ Career question via `createPOJUSession` + `handleUserMessage`:
 | `pnpm test:decision-context-phase2` | 0 (9 passed) |
 | `pnpm exec next typegen` | 0 |
 | `pnpm exec tsc --noEmit` | 0 |
-| `pnpm build` | _(filled)_ |
+| `pnpm build` | 0 |
 
 ## Limitations / UNTESTED
 
