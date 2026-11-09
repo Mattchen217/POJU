@@ -1131,8 +1131,21 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             last_interaction_at: nowPre,
           });
         }
-        if (m1CollectingTurn.outcome === "planner_blocked") {
-          // M2.3-R2-FU: open P0/P1 remain; do not confirm, do not free-form ask.
+        // M2.3-R2-FU3: also fail-closed when Understanding could not be built
+        // (ask_error carries understanding_exception / planner_exception) or when
+        // readiness cannot be computed (understanding==null) with no authorized Q.
+        const m1UnderstandingFailClosed =
+          !m1CollectingTurn.authorized_question &&
+          Boolean(m1CollectingTurn.ask_error) &&
+          (m1CollectingTurn.ask_error!.includes("understanding_exception") ||
+            m1CollectingTurn.ask_error!.includes("planner_exception") ||
+            (m1CollectingTurn.understanding == null &&
+              Boolean(m1CollectingTurn.session.decision_blueprint)));
+        if (
+          m1CollectingTurn.outcome === "planner_blocked" ||
+          m1UnderstandingFailClosed
+        ) {
+          // M2.3-R2-FU / FU3: open P0/P1 or Understanding failure -- no confirm, no free-form ask.
           const blockReason =
             m1CollectingTurn.ask_error?.trim() ||
             "planner_blocked_open_p0_p1";
@@ -1318,12 +1331,21 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     base_analysis,
   );
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
+  const m1BlockedOrUnderstandingFail =
+    Boolean(m1CollectingTurn) &&
+    (m1CollectingTurn!.outcome === "planner_blocked" ||
+      (!m1CollectingTurn!.authorized_question &&
+        Boolean(m1CollectingTurn!.ask_error) &&
+        (m1CollectingTurn!.ask_error!.includes("understanding_exception") ||
+          m1CollectingTurn!.ask_error!.includes("planner_exception") ||
+          (m1CollectingTurn!.understanding == null &&
+            Boolean(m1CollectingTurn!.session.decision_blueprint)))));
   if (
     m1CollectingTurn &&
-    m1CollectingTurn.outcome === "planner_blocked" &&
+    m1BlockedOrUnderstandingFail &&
     agent_v2.current_phase !== "delivered"
   ) {
-    // Belt-and-suspenders: planner_blocked is nonterminal collecting.
+    // Belt-and-suspenders: planner_blocked / understanding failure is nonterminal collecting.
     agent_v2 = {
       ...agent_v2,
       current_phase: "collecting_context",
@@ -1331,7 +1353,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     };
   } else if (
     m1CollectingTurn &&
-    m1CollectingTurn.outcome !== "planner_blocked" &&
+    !m1BlockedOrUnderstandingFail &&
     m1CollectingTurn.understanding &&
     m1CollectingTurn.understanding.readiness.can_ask === false &&
     agent_v2.current_phase !== "delivered"
@@ -1676,6 +1698,12 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   } else if (
     m1CollectingTurn &&
     m1CollectingTurn.outcome !== "planner_blocked" &&
+    !(
+      !m1CollectingTurn.authorized_question &&
+      Boolean(m1CollectingTurn.ask_error) &&
+      (m1CollectingTurn.ask_error!.includes("understanding_exception") ||
+        m1CollectingTurn.ask_error!.includes("planner_exception"))
+    ) &&
     !m1CollectingTurn.authorized_question &&
     m1CollectingTurn.understanding &&
     m1CollectingTurn.understanding.readiness.can_ask === false

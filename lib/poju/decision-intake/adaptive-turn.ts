@@ -417,6 +417,35 @@ export async function runAdaptiveQuestionTurn(input: {
         };
       }
     }
+
+    // M2.3-R2-FU3: Understanding rebuild failed (u==null). Cannot infer P0/P1
+    // complete from missing needs. Conservative fail-closed while Blueprint
+    // exists and hard budget may remain -- never ready_no_question / free-ask.
+    if (!u && current.decision_blueprint) {
+      let hardBudgetRemains = true;
+      try {
+        const hard = current.decision_blueprint.question_budget.hard;
+        const asked =
+          current.decision_understanding?.budget?.session_asked_count ?? 0;
+        hardBudgetRemains = hard - asked > 0;
+      } catch {
+        // Cannot read budget either -- treat as remaining (fail-closed).
+        hardBudgetRemains = true;
+      }
+      if (hardBudgetRemains) {
+        return {
+          session: current,
+          outcome: "planner_blocked",
+          ask_error: `understanding_exception:${err}`,
+          answer_event,
+          understanding: null,
+          plan: null,
+          authorized_question: null,
+          persist_error,
+        };
+      }
+    }
+
     return {
       session: current,
       outcome: "ready_no_question",
