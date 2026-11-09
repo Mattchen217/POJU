@@ -111,9 +111,9 @@ async function main() {
       assert.match(collecting, /FAIL-CLOSED|fail-closed|persist_failed/);
     });
 
-    await check("M1R-static v1 simplified markers present", async () => {
-      assert.equal(AIV, "deterministic_m1_v1_simplified");
-      assert.equal(QGV, "template_m1_v1_simplified");
+    await check("M1R-static Phase4 answer/ask version markers present", async () => {
+      assert.equal(AIV, "deterministic_m2_4_r1");
+      assert.equal(QGV, "gap_driven_m2_4_r1");
     });
 
     // ---- Real fresh session: createPOJUSession only (NO seedSession DC) ----

@@ -8,7 +8,7 @@
  *   → Scope/Depth/Budget Validation → Generate Next Question → Persist
  *   → (Agent returns assistant from plan)
  * Sole production entry used by collecting-dc-turn / handleUserMessage.
- * Answer Interpretation + Question Generation are **v1 simplified** (see those modules).
+ * M2.4-R1: Answer Interpretation + Question Generation are gap-driven Phase 4 core.
  * Fresh sessions without draft DC enter via bootstrapFreshSessionMainLoop (M1-R).
  */
 
@@ -155,6 +155,8 @@ function tryCatalogFallbackForOpenP0P1(input: {
       budget: input.budget,
       now: input.now,
       scoring_path: input.scoring_path,
+      last_sent_question_text:
+        input.understanding.last_sent_question?.question_text ?? null,
     });
     if (built.validation.ok) {
       return { plan: built.plan, last_reject: null };
@@ -649,7 +651,11 @@ async function planFromState(
     selected: planResult.selected,
     budget,
     now,
-    scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
+    last_sent_question_text:
+        understanding.last_sent_question?.question_text ??
+        session.decision_understanding?.last_sent_question?.question_text ??
+        null,
+      scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
   });
 
   if (!built.validation.ok) {
@@ -661,7 +667,11 @@ async function planFromState(
         selected: ranked,
         budget,
         now,
-        scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
+        last_sent_question_text:
+        understanding.last_sent_question?.question_text ??
+        session.decision_understanding?.last_sent_question?.question_text ??
+        null,
+      scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
       });
       if (alt.validation.ok) {
         const u: UnderstandingState = {

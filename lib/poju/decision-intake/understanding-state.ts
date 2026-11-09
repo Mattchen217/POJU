@@ -1,5 +1,7 @@
 /**
  * Build derived Understanding State from DC + Blueprint (not a second fact DB).
+ * M2.4-R1: retain fact IDs/sources; Understood only for known/n_a; Need lists
+ * unmet roles; summary updates only on substantial content change.
  */
 
 import { evaluateDecisionSufficiency } from "@/lib/poju/decision-context/stop-criteria";
@@ -53,6 +55,57 @@ export function evaluatePersonalPatternInsight(
   };
 }
 
+function briefWithSource(id: string, statement: string): string {
+  return `[${id}] ${statement}`;
+}
+
+function unmetRolesForDir(
+  dir: { dir_id: string; required_fact_roles?: string[] },
+  reality_facts: Array<{
+    related_dir_ids?: string[];
+    fact_roles?: string[];
+    status: string;
+  }>,
+): string[] {
+  const required = dir.required_fact_roles ?? [];
+  if (!required.length) return [];
+  const facts = reality_facts.filter((f) =>
+    (f.related_dir_ids ?? []).includes(dir.dir_id),
+  );
+  return required.filter((role) => {
+    const hit = facts.some(
+      (f) =>
+        (f.fact_roles ?? []).includes(role) &&
+        f.status !== "unknown" &&
+        f.status !== "declined",
+    );
+    return !hit;
+  });
+}
+
+function understandingFingerprint(input: {
+  dq: string | null;
+  confirmed: string[];
+  unconfirmed: string[];
+  analysis: string[];
+  conflicts: string[];
+  needCount: number;
+  understoodCount: number;
+}): string {
+  return [
+    input.dq ?? "",
+    `c:${input.confirmed.length}`,
+    `u:${input.unconfirmed.length}`,
+    `a:${input.analysis.length}`,
+    `x:${input.conflicts.length}`,
+    `n:${input.needCount}`,
+    `k:${input.understoodCount}`,
+    input.confirmed.slice(0, 3).join("|"),
+    input.unconfirmed.slice(0, 3).join("|"),
+    input.conflicts.slice(0, 2).join("|"),
+  ].join("::");
+}
+
 export function buildUnderstandingState(input: {
   session: POJUSessionState;
   blueprint: DecisionBlueprint;
@@ -64,6 +117,7 @@ export function buildUnderstandingState(input: {
   if (!dc) throw new Error("buildUnderstandingState: missing DC");
   const now = input.now ?? new Date().toISOString();
   const budget = defaultBudget(input.session, input.blueprint);
+  const prev = input.session.decision_understanding;
 
   const understood: UnderstoodItem[] = [];
   const needs: NeedItem[] = [];
@@ -74,6 +128,7 @@ export function buildUnderstandingState(input: {
     const relatedFacts = dc.reality_facts.filter((f) =>
       (f.related_dir_ids ?? []).includes(dir.dir_id),
     );
+    // Understood ONLY when DC DIR state is known or n_a — never merely asked/answered.
     if (dir.current_state === "known" || dir.current_state === "n_a") {
       understood.push({
         dir_id: dir.dir_id,
@@ -113,11 +168,24 @@ export function buildUnderstandingState(input: {
       relatedFacts.every((f) => f.status === "declined")
     ) {
       gap_type = "declined";
+    } else if (
+      relatedFacts.some((f) => f.status === "unknown") &&
+      relatedFacts.every(
+        (f) => f.status === "unknown" || f.status === "declined",
+      )
+    ) {
+      gap_type = "unknown";
     } else if (dir.partial_satisfaction || relatedFacts.length > 0) {
       gap_type = "partial";
     }
     const ranking =
       gate?.may_affect_p5_ranking ?? dir.may_affect_p5_ranking !== false;
+    const missingRoles = unmetRolesForDir(dir, dc.reality_facts);
+    // Having any RealityFact does NOT complete the DIR — unmet roles stay open.
+    const missing_content =
+      missingRoles.length > 0
+        ? `missing_roles:${missingRoles.join(",")}; ${dir.need}`
+        : dir.need;
     needs.push({
       kind: "dir_based",
       dir_id: dir.dir_id,
@@ -125,16 +193,14 @@ export function buildUnderstandingState(input: {
       direction_id,
       priority,
       why: dir.why || "Required for decision judgment",
-      missing_content: dir.need,
+      missing_content,
       may_affect_p5_ranking: ranking,
       gap_type,
       must_continue: ranking || priority === "P0" || priority === "P1",
     });
   }
 
-
-  // M2.3-R1: Blueprint-scoped DIRs not yet on DC (deferred P1/P2) remain open
-  // investigation obligations — never treat as known/n_a / complete.
+  // M2.3-R1: Blueprint-scoped DIRs not yet on DC (deferred P1/P2) remain open.
   const onDc = new Set(dc.dirs.map((d) => d.dir_id));
   for (const dirId of input.blueprint.dir_ids) {
     if (onDc.has(dirId)) continue;
@@ -169,12 +235,23 @@ export function buildUnderstandingState(input: {
     });
   }
 
+  // Formal DC only — never put AnalyticalHypotheses into confirmed facts.
   const confirmed = dc.reality_facts.filter((f) => f.status === "confirmed");
   const unconfirmed = dc.reality_facts.filter(
-    (f) => f.status === "unverified" || f.status === "unknown" || f.status === "declined",
+    (f) =>
+      f.status === "unverified" ||
+      f.status === "unknown" ||
+      f.status === "declined",
   );
-  // M2.1: critical DIR partial coverage → ready for final confirm (not Freeze yet).
-  // Does NOT invent DIR known; Freeze still requires sufficiency after user confirm promotion.
+  const constraintBriefs = dc.constraints.map((c) =>
+    briefWithSource(c.constraint_id, c.statement),
+  );
+  const openConflictBriefs = dc.conflicts
+    .filter((c) => c.state === "open")
+    .map((c) =>
+      briefWithSource(c.conflict_id, c.statements_snapshot.join(" vs ")),
+    );
+
   const criticalActive = dc.dirs.filter(
     (d) => d.id_lifecycle === "active" && d.may_affect_p5_ranking !== false,
   );
@@ -189,11 +266,6 @@ export function buildUnderstandingState(input: {
   const hasCollectingEvidence =
     (dc.reality_facts?.length ?? 0) > 0 || (dc.constraints?.length ?? 0) > 0;
 
-  // M2.3-R2: open selected-Blueprint P0/P1 obligations must remain askable while
-  // budget remains. sufficiency.canStop and criticalCovered partial-coverage must
-  // not silently bypass unfinished P0/P1. Hard-budget exhaustion may still end
-  // asking, but remaining DIRs stay visible in need_to_understand. P2 may stay
-  // deferred under soft-budget (never auto-marked known/n_a).
   const openPriorityBandNeeds = needs.filter(
     (n) =>
       n.kind === "dir_based" &&
@@ -223,7 +295,6 @@ export function buildUnderstandingState(input: {
     can_ask = false;
     reasons.push("no_open_needs");
   } else if (criticalCovered && hasCollectingEvidence) {
-    // Only non-P0/P1 open needs remain (typically deferred P2) — soft stop OK.
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
     reasons.push("critical_dirs_partial_coverage_ready_for_confirm");
@@ -235,6 +306,55 @@ export function buildUnderstandingState(input: {
     input.session.original_question ??
     null;
 
+  const confirmed_briefs = confirmed
+    .map((f) => briefWithSource(f.fact_id, f.statement))
+    .slice(0, 8);
+  const unconfirmed_briefs = [
+    ...unconfirmed.map((f) => briefWithSource(f.fact_id, f.statement)),
+    ...constraintBriefs,
+  ].slice(0, 8);
+  // Hypotheses stay in analysis_briefs only — never confirmed.
+  const analysis_briefs = dc.hypotheses.map((h) => h.statement).slice(0, 6);
+
+  const fp = understandingFingerprint({
+    dq,
+    confirmed: confirmed_briefs,
+    unconfirmed: unconfirmed_briefs,
+    analysis: analysis_briefs,
+    conflicts: openConflictBriefs,
+    needCount: needs.length,
+    understoodCount: understood.length,
+  });
+  const prevFp = prev?.current_understanding
+    ? understandingFingerprint({
+        dq: prev.current_understanding.decision_question,
+        confirmed: prev.current_understanding.confirmed_briefs,
+        unconfirmed: prev.current_understanding.unconfirmed_briefs,
+        analysis: prev.current_understanding.analysis_briefs,
+        conflicts: prev.current_understanding.conflict_briefs,
+        needCount: prev.need_to_understand.items.length,
+        understoodCount: prev.understood.items.length,
+      })
+    : null;
+
+  const summary =
+    prevFp === fp && prev?.current_understanding.summary
+      ? prev.current_understanding.summary
+      : [
+          dq ? `Decision: ${dq}` : null,
+          confirmed.length ? `Confirmed facts: ${confirmed.length}` : null,
+          unconfirmed.length ? `Unconfirmed/open: ${unconfirmed.length}` : null,
+          dc.constraints.length
+            ? `Constraints: ${dc.constraints.length}`
+            : null,
+          openConflictBriefs.length
+            ? `Open conflicts: ${openConflictBriefs.length}`
+            : null,
+          needs.length ? `Open needs: ${needs.length}` : "No open DIR needs",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
   return {
     understanding_id: `u_${dc.context_id}_v${dc.version}`,
     session_id: input.session.session_id,
@@ -243,22 +363,12 @@ export function buildUnderstandingState(input: {
     blueprint_version: input.blueprint.blueprint_version,
     built_at: now,
     current_understanding: {
-      summary: [
-        dq ? `Decision: ${dq}` : null,
-        confirmed.length ? `Confirmed facts: ${confirmed.length}` : null,
-        unconfirmed.length ? `Unconfirmed/open: ${unconfirmed.length}` : null,
-        needs.length ? `Open needs: ${needs.length}` : "No open DIR needs",
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      summary,
       decision_question: dq,
-      confirmed_briefs: confirmed.map((f) => f.statement).slice(0, 8),
-      unconfirmed_briefs: unconfirmed.map((f) => f.statement).slice(0, 8),
-      analysis_briefs: dc.hypotheses.map((h) => h.statement).slice(0, 6),
-      conflict_briefs: dc.conflicts
-        .filter((c) => c.state === "open")
-        .map((c) => c.statements_snapshot.join(" vs "))
-        .slice(0, 6),
+      confirmed_briefs,
+      unconfirmed_briefs,
+      analysis_briefs,
+      conflict_briefs: openConflictBriefs.slice(0, 6),
       confidence:
         sufficiency.canStop ? "high" : confirmed.length >= 2 ? "medium" : "low",
     },

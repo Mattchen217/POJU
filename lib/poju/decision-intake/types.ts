@@ -1,5 +1,6 @@
 /**
  * Decision Intake 2.0 — Mainline M1 types.
+ * M2.4-R1: Phase 4 answer interpretation + gap-driven ask (contracts preserved).
  * Understanding State is a derived view (NOT a second fact SoT).
  * Blueprint seeds investigation; live DIR state lives only on DC.dirs.
  */
