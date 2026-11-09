@@ -154,6 +154,7 @@ export type PojuXhighJobFailureReason =
   | "interrupted"
   /** Redeploy invalidated this job — regenerate to start a new chain. */
   | "superseded_by_deploy"
+  | "superseded_by_regenerate"
   /** User Stop in the workspace right rail — do not auto-resume. */
   | "user_cancelled"
   /** v3 generator step failed closed. Do not resume onto the legacy DAG. */

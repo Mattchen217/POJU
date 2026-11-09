@@ -106,6 +106,12 @@ import {
   releaseXhighSessionLock,
 } from "@/lib/poju/xhigh-job-store";
 import {
+  DeliveryExecutionRevokedError,
+  assertDeliveryExecutionAuthority,
+  isDeliveryExecutionRevoked,
+  tryCommitUnderDeliveryAuthority,
+} from "@/lib/poju/final-delivery-execution-authority";
+import {
   isFinalDeliveryJobInput,
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
@@ -367,8 +373,45 @@ async function releaseM22ClaimFromJobInput(
   await releaseFreezeBoundReportClaimServer({ claimKey: key, claimToken: token });
 }
 
+/** M2.2-R4: refuse stage commits after Regenerate/deploy/stop revoked authority. */
+async function saveDeliveryStageCheckpointIfAuthorized(
+  job_id: string,
+  checkpoint: Parameters<typeof saveDeliveryStageCheckpoint>[1],
+): Promise<boolean> {
+  const ok = await tryCommitUnderDeliveryAuthority(job_id);
+  if (!ok) {
+    console.warn("[final-delivery-stage] skip checkpoint — execution revoked", {
+      job_id,
+      stage: (checkpoint as { stage?: string }).stage,
+    });
+    return false;
+  }
+  await saveDeliveryStageCheckpoint(job_id, checkpoint);
+  return true;
+}
+
+async function scheduleDeliveryStageContinueIfAuthorized(
+  job_id: string,
+  stage: Parameters<typeof scheduleDeliveryStageContinue>[1],
+  opts: Parameters<typeof scheduleDeliveryStageContinue>[2],
+): Promise<Awaited<ReturnType<typeof scheduleDeliveryStageContinue>>> {
+  const ok = await tryCommitUnderDeliveryAuthority(job_id);
+  if (!ok) {
+    console.warn("[final-delivery-stage] skip schedule continue — execution revoked", {
+      job_id,
+      stage,
+    });
+    // Map revoked → failed so callers stop advancing without handing off the lease.
+    return "failed";
+  }
+  return scheduleDeliveryStageContinue(job_id, stage, opts);
+}
+
+
+
 /** M2.2-R2: persist exactly eight pages onto the original Freeze-bound report job. */
-async function writeBackFreezeBoundReportOnDeliverySuccess(args: {
+/** Exported for M2.2-R4 production-path tests (Stage Runner write-back contract). */
+export async function writeBackFreezeBoundReportOnDeliverySuccess(args: {
   job_id: string;
   input: FinalDeliveryJobInput;
   allReady: Array<{
@@ -378,9 +421,14 @@ async function writeBackFreezeBoundReportOnDeliverySuccess(args: {
   }>;
 }): Promise<void> {
   const { job_id, input, allReady } = args;
-  if (!input.decision_context_binding || !input.decision_context_snapshot) return;
   const reportJobId = input.m22_report_job_id;
   if (!reportJobId) return;
+  // M2.2-R4: when m22_report_job_id is bound, binding+snapshot+hash MUST hold — fail closed.
+  if (!input.decision_context_binding || !input.decision_context_snapshot) {
+    throw new Error("m22_writeback_missing_binding_or_snapshot");
+  }
+  // Refuse write-back if this formal job no longer holds execution authority.
+  await assertDeliveryExecutionAuthority(job_id);
 
   const { loadPOJUSession, savePOJUSession } = await import(
     "@/lib/poju/session-manager"
@@ -1455,7 +1503,7 @@ async function progressFanoutStage(
         accumulated_content: `v3_skip_finalize:${Date.now()}`,
       });
       stopHeartbeat();
-      const posted = await scheduleDeliveryStageContinue(job_id, "segments", {
+      const posted = await scheduleDeliveryStageContinueIfAuthorized(job_id, "segments", {
         session_id: input.session_id,
         lease_token: leaseToken,
         created_at,
@@ -1474,7 +1522,7 @@ async function progressFanoutStage(
       accumulated_content: `finalize_dispatch:${Date.now()}`,
     });
     stopHeartbeat();
-    const posted = await scheduleDeliveryStageContinue(job_id, "segments", {
+    const posted = await scheduleDeliveryStageContinueIfAuthorized(job_id, "segments", {
       session_id: input.session_id,
       lease_token: leaseToken,
       created_at,
@@ -1489,7 +1537,7 @@ async function progressFanoutStage(
   const handoff = async (nextStage: DeliveryPipelineStage): Promise<"scheduled" | "failed"> => {
     // Stop heartbeat BEFORE release so refresh cannot overwrite the next hop's lease.
     stopHeartbeat();
-    const result = await scheduleDeliveryStageContinue(job_id, nextStage, {
+    const result = await scheduleDeliveryStageContinueIfAuthorized(job_id, nextStage, {
       session_id: input.session_id,
       lease_token: leaseToken,
       created_at: created_at,
@@ -2013,7 +2061,7 @@ async function progressFanoutStage(
     if (prog.marked?.[k]) marked[k] = prog.marked[k];
   }
 
-  await saveDeliveryStageCheckpoint(job_id, {
+  await saveDeliveryStageCheckpointIfAuthorized(job_id, {
     stage: "segments",
     value: marked,
     narrative,
@@ -2139,7 +2187,7 @@ export async function runFinalDeliveryStage(
         current_stage: next,
         accumulated_content: `stage_skip_to:${next}`,
       });
-      const hop = await scheduleDeliveryStageContinue(job_id, next, {
+      const hop = await scheduleDeliveryStageContinueIfAuthorized(job_id, next, {
         session_id: job.input.session_id,
         lease_token: leaseToken,
         created_at: job.created_at,
@@ -2172,11 +2220,8 @@ export async function runFinalDeliveryStage(
     void (async () => {
       try {
         const snap = await getXhighJob(job_id);
-        if (
-          snap?.status === "failed" &&
-          (snap.failure_reason === "user_cancelled" ||
-            String(snap.accumulated_content ?? "").includes("user_cancelled"))
-        ) {
+        // M2.2-R4: abort in-flight LLM when Regenerate/deploy/stop revoked authority.
+        if (snap && isDeliveryExecutionRevoked(snap)) {
           userCancel.abort();
           return;
         }
@@ -2236,7 +2281,7 @@ export async function runFinalDeliveryStage(
         });
         // Intentionally no same-invoke pack of segments/P1 — fresh /continue only.
         stopHeartbeat();
-        const h = await scheduleDeliveryStageContinue(job_id, next, {
+        const h = await scheduleDeliveryStageContinueIfAuthorized(job_id, next, {
           session_id: input.session_id,
           lease_token: leaseToken,
           created_at: job.created_at,
@@ -2337,7 +2382,7 @@ export async function runFinalDeliveryStage(
         total_ms: Date.now() - (job.created_at || t0),
       };
 
-      await saveDeliveryStageCheckpoint(job_id, {
+      await saveDeliveryStageCheckpointIfAuthorized(job_id, {
         stage: "assemble",
         full_text,
         tokens_used,
@@ -2382,9 +2427,25 @@ export async function runFinalDeliveryStage(
         timings,
       };
 
-      // M2.2-R3: write-back is part of the real success contract.
-      // Do NOT mark the formal Final Delivery job completed before successful
-      // M2.2 eight-page write-back (when a Freeze-bound report job is bound).
+      // M2.2-R4: success contract — authority check, then M2.2 write-back, then formal complete.
+      // Superseded workers must not write-back or complete.
+      try {
+        await assertDeliveryExecutionAuthority(job_id);
+      } catch (authErr) {
+        if (authErr instanceof DeliveryExecutionRevokedError) {
+          console.warn("[final-delivery-stage] assemble skip — execution revoked", {
+            job_id,
+            reason: authErr.failure_reason,
+          });
+          await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+          await releaseXhighSessionLock("final_delivery", input.session_id).catch(
+            () => undefined,
+          );
+          return;
+        }
+        throw authErr;
+      }
+
       if (input.m22_report_job_id) {
         try {
           await writeBackFreezeBoundReportOnDeliverySuccess({
@@ -2393,6 +2454,17 @@ export async function runFinalDeliveryStage(
             allReady,
           });
         } catch (wbErr) {
+          if (wbErr instanceof DeliveryExecutionRevokedError) {
+            console.warn("[final-delivery-stage] m22 write-back aborted — revoked", {
+              job_id,
+              reason: wbErr.failure_reason,
+            });
+            await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+            await releaseXhighSessionLock("final_delivery", input.session_id).catch(
+              () => undefined,
+            );
+            return;
+          }
           console.warn(
             "[final-delivery-stage] m22 freeze-bound write-back failed — formal job not completed",
             wbErr,
@@ -2411,6 +2483,24 @@ export async function runFinalDeliveryStage(
           );
           return;
         }
+      }
+
+      // Re-check before formal complete — Regenerate may have won during write-back.
+      try {
+        await assertDeliveryExecutionAuthority(job_id);
+      } catch (authErr) {
+        if (authErr instanceof DeliveryExecutionRevokedError) {
+          console.warn("[final-delivery-stage] complete skipped — execution revoked", {
+            job_id,
+            reason: authErr.failure_reason,
+          });
+          await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+          await releaseXhighSessionLock("final_delivery", input.session_id).catch(
+            () => undefined,
+          );
+          return;
+        }
+        throw authErr;
       }
 
       await completeXhighJob(job_id, {
@@ -2459,6 +2549,68 @@ export async function runFinalDeliveryStage(
       await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
     }
   }
+}
+
+
+
+/**
+ * M2.2-R4 test/production mirror: authority → optional M2.2 write-back → completeXhighJob.
+ * Returns the persisted formal job status via getXhighJob (never a local variable).
+ */
+export async function finalizeFormalDeliverySuccessForTests(args: {
+  job_id: string;
+  input: FinalDeliveryJobInput;
+  allReady: Array<{
+    key: string;
+    body_markdown: string;
+    interleaved_markdown?: string;
+  }>;
+  result: FinalDeliveryJobResult;
+}): Promise<{ formal: Awaited<ReturnType<typeof getXhighJob>>; revoked: boolean }> {
+  const { job_id, input, allReady, result } = args;
+  try {
+    await assertDeliveryExecutionAuthority(job_id);
+  } catch (e) {
+    if (e instanceof DeliveryExecutionRevokedError) {
+      return { formal: await getXhighJob(job_id), revoked: true };
+    }
+    throw e;
+  }
+  if (input.m22_report_job_id) {
+    try {
+      await writeBackFreezeBoundReportOnDeliverySuccess({ job_id, input, allReady });
+    } catch (wbErr) {
+      if (wbErr instanceof DeliveryExecutionRevokedError) {
+        return { formal: await getXhighJob(job_id), revoked: true };
+      }
+      await failXhighJob(job_id, `m22_writeback_failed:${wbErr instanceof Error ? wbErr.message : String(wbErr)}`, {
+        retryable: true,
+        failure_reason: "interrupted",
+        current_stage: "assemble",
+        accumulated_content: "failed:m22_writeback",
+      }).catch(() => undefined);
+      await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+      return { formal: await getXhighJob(job_id), revoked: false };
+    }
+  }
+  try {
+    await assertDeliveryExecutionAuthority(job_id);
+  } catch (e) {
+    if (e instanceof DeliveryExecutionRevokedError) {
+      return { formal: await getXhighJob(job_id), revoked: true };
+    }
+    throw e;
+  }
+  await completeXhighJob(job_id, {
+    result,
+    model: result.model,
+    tokens_used: result.tokens_used,
+    llm_debug: result.llm_debug,
+    accumulated_content: `delivery_done:${result.full_text.length}`,
+  });
+  await updateXhighJobStatus(job_id, "completed", { current_stage: "completed" });
+  await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+  return { formal: await getXhighJob(job_id), revoked: false };
 }
 
 /** Start or resume pipeline from the first incomplete stage. */

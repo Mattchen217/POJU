@@ -14,6 +14,7 @@ import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
 import { runWithEphemeralXhighKv } from "@/lib/poju/xhigh-job-store";
+import { supersedeFinalDeliveryJobForRegenerate } from "@/lib/poju/final-delivery-execution-authority";
 import {
   forceReleaseDeliveryContinueLease,
   loadAllDeliverySegmentReady,
@@ -676,16 +677,9 @@ export async function POST(req: Request) {
             ).catch(() => null);
             if (prior && isFinalDeliveryJobInput(prior.input)) {
               if (prior.status === "pending" || prior.status === "running") {
-                await failXhighJob(prior.job_id, "STOP: superseded by regenerate", {
-                  retryable: false,
-                  failure_reason: "stale_running",
-                  current_stage: prior.current_stage,
-                  accumulated_content: "failed:superseded_by_regenerate",
-                }).catch(() => undefined);
-                await forceReleaseDeliveryContinueLease(prior.job_id).catch(() => undefined);
-                await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(
-                  () => undefined,
-                );
+                // M2.2-R4: real cancel/takeover — supersede strips authority so
+                // in-flight workers stop before stage commits / completion.
+                await supersedeFinalDeliveryJobForRegenerate(prior.job_id);
               }
               if (
                 typeof prior.input.m22_claim_token === "string" &&
@@ -1009,14 +1003,8 @@ export async function POST(req: Request) {
         throw e;
       }
       if (latest && (latest.status === "pending" || latest.status === "running")) {
-        await failXhighJob(latest.job_id, "STOP: superseded by regenerate", {
-          retryable: false,
-          failure_reason: "stale_running",
-          current_stage: latest.current_stage,
-          accumulated_content: "failed:superseded_by_regenerate",
-        }).catch(() => undefined);
-        await forceReleaseDeliveryContinueLease(latest.job_id).catch(() => undefined);
-        await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
+        // M2.2-R4: supersede prior worker authority (not status-flip alone).
+        await supersedeFinalDeliveryJobForRegenerate(latest.job_id);
       }
     }
 

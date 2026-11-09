@@ -312,9 +312,14 @@ export async function updateXhighJobStatus(
   const job = await getXhighJob(job_id);
   if (!job) return;
 
+  const nonRevivable =
+    job.failure_reason === "superseded_by_regenerate" ||
+    job.failure_reason === "superseded_by_deploy" ||
+    job.failure_reason === "user_cancelled";
   const allowInterruptedRevive =
     job.status === "failed" &&
     status === "running" &&
+    !nonRevivable &&
     (job.failure_reason === "interrupted" || job.retryable === true);
   if (
     (job.status === "completed" || job.status === "failed") &&

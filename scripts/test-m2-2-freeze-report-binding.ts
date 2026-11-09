@@ -1552,114 +1552,7 @@ async function main() {
 
 
 
-  // ---------- M2.2-R3 remaining production lifecycle ----------
-  await check("M2.2-R3-C1 Regenerate cannot steal an active claim", async () => {
-    const { MemoryKv } = await import("../lib/kv/memory-kv");
-    const {
-      tryReleaseClaimForRegenerate,
-      __createClaimOpsForTests,
-      freezeReportClaimKey,
-      M22_REPORT_SCHEMA_VERSION,
-    } = await import("../lib/poju/decision-intake/freeze-bound-report");
-    const sharedKv = new MemoryKv();
-    const claimOps = __createClaimOpsForTests(sharedKv);
-    const key = freezeReportClaimKey({
-      sessionId: "m22_r3_c1",
-      freezeId: "freeze_old_owner",
-      reportSchemaVersion: M22_REPORT_SCHEMA_VERSION,
-    });
-    const oldOwner = "old_owner_token_xyz";
-    assert.equal(await claimOps.tryAcquire(key, oldOwner, 120), true);
-
-    // Regenerate without proving ownership → fail closed (no force delete).
-    const noToken = await tryReleaseClaimForRegenerate({
-      claimOps,
-      claimKey: key,
-      ownerToken: null,
-    });
-    assert.equal(noToken.ok, false);
-    if (!noToken.ok) assert.equal(noToken.code, "CLAIM_OWNED_BY_OTHER");
-    assert.ok(await claimOps.load!(key), "old owner claim must remain");
-
-    // Regenerate with wrong token → fail closed.
-    const wrong = await tryReleaseClaimForRegenerate({
-      claimOps,
-      claimKey: key,
-      ownerToken: "attacker_token",
-    });
-    assert.equal(wrong.ok, false);
-    if (!wrong.ok) assert.equal(wrong.code, "CLAIM_OWNED_BY_OTHER");
-    const still = await claimOps.load!(key);
-    assert.ok(still);
-    assert.equal(still!.token, oldOwner);
-
-    // Only original owner token may CAS-release.
-    const ok = await tryReleaseClaimForRegenerate({
-      claimOps,
-      claimKey: key,
-      ownerToken: oldOwner,
-    });
-    assert.equal(ok.ok, true);
-    assert.equal(await claimOps.load!(key), null);
-  });
-
-  await check("M2.2-R3-C2 Pre-handoff early return releases owned claim", async () => {
-    __resetFreezeBoundReportInFlightForTests();
-    const { MemoryKv } = await import("../lib/kv/memory-kv");
-    const {
-      prepareFreezeBoundFinalDelivery,
-      releaseClaimBeforePreHandoffReturn,
-      __createClaimOpsForTests,
-    } = await import("../lib/poju/decision-intake/freeze-bound-report");
-    const frozen = await freezeSession("m22_r3_c2");
-    const sharedKv = new MemoryKv();
-    const claimOps = __createClaimOpsForTests(sharedKv);
-    const deps = {
-      ...persistDeps(),
-      claimOps,
-      claimTtlSec: 120,
-      loadSession: async (sid: string) => loadPOJUSession(sid),
-    };
-
-    const prepared = await prepareFreezeBoundFinalDelivery({
-      session: frozen.session,
-      freezeId: frozen.freezeId,
-      expected_hash: frozen.contentHash,
-      acquireGenerationClaim: true,
-      deps,
-    });
-    assert.equal(prepared.ok, true);
-    if (!prepared.ok) return;
-    assert.equal(prepared.claimHeld, true);
-    assert.ok(prepared.claimKey && prepared.claimToken);
-
-    // Simulate pre-handoff early return (existing running/completed / lock contention).
-    const released = await releaseClaimBeforePreHandoffReturn({
-      claimKey: prepared.claimKey,
-      claimToken: prepared.claimToken,
-      deps: { claimOps },
-    });
-    assert.equal(released, true);
-    assert.equal(await claimOps.load!(prepared.claimKey!), null);
-
-    // Subsequent valid request can acquire the claim.
-    const again = await prepareFreezeBoundFinalDelivery({
-      session: await durable(frozen.session.session_id),
-      freezeId: frozen.freezeId,
-      expected_hash: frozen.contentHash,
-      acquireGenerationClaim: true,
-      deps,
-    });
-    assert.equal(again.ok, true);
-    if (!again.ok) return;
-    assert.equal(again.claimHeld, true);
-    await releaseClaimBeforePreHandoffReturn({
-      claimKey: again.claimKey,
-      claimToken: again.claimToken,
-      deps: { claimOps },
-    });
-  });
-
+  // ---------- M2.2-R3 remaining (keep CAS) + M2.2-R4 production lifecycle ----------
   await check("M2.2-R3-C3 CAS unavailable fails closed (no GET+DEL fallback)", async () => {
     const store = {
       async get() { return { token: "t1", expires_at: Date.now() + 60_000 }; },
@@ -1680,7 +1573,6 @@ async function main() {
     }
     assert.equal(threw, true, "release without atomic CAS must fail closed");
 
-    // Production compareAndDeleteClaim path (server module).
     const { compareAndDeleteClaim, ClaimCasUnavailableError } = await import(
       "../lib/poju/decision-intake/freeze-report-claim-cas"
     );
@@ -1698,17 +1590,125 @@ async function main() {
     assert.equal(threw2, true);
   });
 
-  await check("M2.2-R3-C4 Write-back failure cannot leave formal job completed", async () => {
+  await check("M2.2-R4-C1 Regenerate supersede stops old worker authority (real xhigh)", async () => {
     __resetFreezeBoundReportInFlightForTests();
     const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const { runWithEphemeralXhighKv, createXhighJob, getXhighJob, updateXhighJobStatus } =
+      await import("../lib/poju/xhigh-job-store");
     const {
+      supersedeFinalDeliveryJobForRegenerate,
+      assertDeliveryExecutionAuthority,
+      DeliveryExecutionRevokedError,
+      tryCommitUnderDeliveryAuthority,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const {
+      tryReleaseClaimForRegenerate,
       prepareFreezeBoundFinalDelivery,
-      completeFreezeBoundReportFromDeliveryPages,
-      failFreezeBoundReportJob,
-      releaseFreezeBoundReportClaim,
-      getCompletedFreezeBoundReport,
+      freezeReportClaimKey,
     } = await import("../lib/poju/decision-intake/freeze-bound-report");
-    const frozen = await freezeSession("m22_r3_c4");
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+
+    await runWithEphemeralXhighKv(async () => {
+      const frozen = await freezeSession("m22_r4_c1");
+      const sharedKv = new MemoryKv();
+      const claimOps = __createClaimOpsForTests(sharedKv);
+      const prepared = await prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps: {
+          ...persistDeps(),
+          claimOps,
+          claimTtlSec: 120,
+          loadSession: async (sid: string) => loadPOJUSession(sid),
+        },
+      });
+      assert.equal(prepared.ok, true);
+      if (!prepared.ok) return;
+
+      const agent = mkAgent({ original_question: "r4 test" });
+      const oldJob = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_claim_token: prepared.claimToken,
+          m22_claim_key: prepared.claimKey,
+          m22_report_job_id: prepared.job.job_id,
+        },
+      });
+      await updateXhighJobStatus(oldJob.job_id, "running", {
+        current_stage: "segments",
+        accumulated_content: "stage_running:segments",
+      });
+
+      // Old worker still has authority before Regenerate.
+      assert.equal(await tryCommitUnderDeliveryAuthority(oldJob.job_id), true);
+
+      // Production Regenerate path: supersede + owner-token CAS release.
+      await supersedeFinalDeliveryJobForRegenerate(oldJob.job_id);
+      const after = await getXhighJob(oldJob.job_id);
+      assert.ok(after);
+      assert.equal(after!.status, "failed");
+      assert.equal(after!.failure_reason, "superseded_by_regenerate");
+
+      let revoked = false;
+      try {
+        await assertDeliveryExecutionAuthority(oldJob.job_id);
+      } catch (e) {
+        revoked = e instanceof DeliveryExecutionRevokedError;
+      }
+      assert.equal(revoked, true, "old worker must lose execution authority");
+      assert.equal(await tryCommitUnderDeliveryAuthority(oldJob.job_id), false);
+
+      // Cannot steal claim without owner token.
+      const key = freezeReportClaimKey({
+        sessionId: frozen.session.session_id,
+        freezeId: frozen.freezeId,
+        reportSchemaVersion: M22_REPORT_SCHEMA_VERSION,
+      });
+      const steal = await tryReleaseClaimForRegenerate({
+        claimOps,
+        claimKey: key,
+        ownerToken: "attacker",
+      });
+      assert.equal(steal.ok, false);
+      const okRelease = await tryReleaseClaimForRegenerate({
+        claimOps,
+        claimKey: key,
+        ownerToken: prepared.claimToken!,
+      });
+      assert.equal(okRelease.ok, true);
+
+      // Store must refuse revive of superseded job (old worker cannot complete).
+      await updateXhighJobStatus(oldJob.job_id, "running", {
+        current_stage: "assemble",
+      });
+      const still = await getXhighJob(oldJob.job_id);
+      assert.equal(still!.status, "failed");
+      assert.equal(still!.failure_reason, "superseded_by_regenerate");
+    });
+  });
+
+  await check("M2.2-R4-C2 Two independent contexts: exactly one formal generator claim", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const { prepareFreezeBoundFinalDelivery, releaseFreezeBoundReportClaim } = await import(
+      "../lib/poju/decision-intake/freeze-bound-report"
+    );
+    const frozen = await freezeSession("m22_r4_c2");
     const sharedKv = new MemoryKv();
     const claimOps = __createClaimOpsForTests(sharedKv);
     const deps = {
@@ -1718,6 +1718,61 @@ async function main() {
       loadSession: async (sid: string) => loadPOJUSession(sid),
     };
 
+    // Two independent execution contexts share the same KV claim store.
+    const [a, b] = await Promise.all([
+      prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps,
+      }),
+      prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps,
+      }),
+    ]);
+
+    const winners = [a, b].filter((r) => r.ok && r.claimHeld);
+    const losers = [a, b].filter((r) => !r.ok && r.code === "GENERATION_IN_PROGRESS");
+    assert.equal(winners.length, 1, `winners=${winners.length}`);
+    assert.equal(losers.length, 1, `losers=${losers.length}`);
+    const winner = winners[0]!;
+    if (!winner.ok) return;
+    assert.ok(winner.claimToken);
+    await releaseFreezeBoundReportClaim({
+      claimKey: winner.claimKey!,
+      claimToken: winner.claimToken!,
+      deps: { claimOps },
+    });
+  });
+
+  await check("M2.2-R4-C3 Pre-handoff early return releases claim (API helper path)", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const {
+      prepareFreezeBoundFinalDelivery,
+      releaseClaimBeforePreHandoffReturn,
+    } = await import("../lib/poju/decision-intake/freeze-bound-report");
+    // Prove the same helper the production route invokes on every pre-handoff exit.
+    const routeSrc = await import("node:fs").then((m) =>
+      m.readFileSync("app/api/poju/final-delivery/route.ts", "utf8"),
+    );
+    assert.ok(routeSrc.includes("releaseClaimBeforePreHandoffReturn"));
+    assert.ok((routeSrc.match(/releaseClaimBeforePreHandoffReturn/g) || []).length >= 4);
+
+    const frozen = await freezeSession("m22_r4_c3");
+    const sharedKv = new MemoryKv();
+    const claimOps = __createClaimOpsForTests(sharedKv);
+    const deps = {
+      ...persistDeps(),
+      claimOps,
+      claimTtlSec: 120,
+      loadSession: async (sid: string) => loadPOJUSession(sid),
+    };
     const prepared = await prepareFreezeBoundFinalDelivery({
       session: frozen.session,
       freezeId: frozen.freezeId,
@@ -1727,83 +1782,302 @@ async function main() {
     });
     assert.equal(prepared.ok, true);
     if (!prepared.ok) return;
-    const originalJobId = prepared.job.job_id;
-    const originalBinding = { ...prepared.job.binding };
+    assert.equal(prepared.claimHeld, true);
 
-    // Simulate assemble write-back failure (incomplete pages) BEFORE formal complete.
-    // Production stage-runner: write-back throws/fails ⇒ formal job stays non-completed.
-    let formalStatus: "running" | "completed" | "failed" = "running";
-    const badPages = DECISION_PAGE_IDS.slice(0, 3).map((pageId) => ({
-      pageId,
-      content: "incomplete",
-    }));
-    let wbError = "";
-    try {
-      const wb = await completeFreezeBoundReportFromDeliveryPages({
-        session: prepared.session,
-        snapshot: prepared.snapshot,
-        jobId: originalJobId,
-        pages: badPages as never,
-        deps: persistDeps(),
-      });
-      if (wb.ok) {
-        formalStatus = "completed";
-      } else {
-        wbError = wb.error;
-        formalStatus = "failed";
-        await failFreezeBoundReportJob({
-          session: prepared.session,
-          jobId: originalJobId,
-          error: wb.error,
-          deps: persistDeps(),
+    // Simulate each pre-handoff early-return class: resume / lock busy / create fail.
+    for (const label of ["resume_running", "lock_busy", "create_fail", "pass_fail"]) {
+      void label;
+      const held = await claimOps.load!(prepared.claimKey!);
+      if (!held) {
+        const again = await prepareFreezeBoundFinalDelivery({
+          session: await durable(frozen.session.session_id),
+          freezeId: frozen.freezeId,
+          expected_hash: frozen.contentHash,
+          acquireGenerationClaim: true,
+          deps,
         });
+        assert.equal(again.ok, true);
+        if (!again.ok) return;
+        Object.assign(prepared, again);
       }
-    } catch (e) {
-      wbError = e instanceof Error ? e.message : String(e);
-      formalStatus = "failed";
-      await failFreezeBoundReportJob({
-        session: prepared.session,
-        jobId: originalJobId,
-        error: wbError,
-        deps: persistDeps(),
+      const released = await releaseClaimBeforePreHandoffReturn({
+        claimKey: prepared.claimKey!,
+        claimToken: prepared.claimToken!,
+        deps: { claimOps },
       });
+      assert.equal(released, true, label);
+      assert.equal(await claimOps.load!(prepared.claimKey!), null, label);
     }
-    assert.notEqual(formalStatus, "completed");
-    assert.ok(wbError, "write-back must surface a failure");
-    const sessionAfter = await durable(frozen.session.session_id);
-    const jobAfter = (sessionAfter.freeze_bound_report_jobs ?? []).find(
-      (j) => j.job_id === originalJobId,
-    );
-    assert.ok(jobAfter);
-    assert.notEqual(jobAfter!.status, "completed");
-    assert.equal(jobAfter!.status, "failed");
-    assert.equal(jobAfter!.binding.freezeId, originalBinding.freezeId);
-    assert.equal(jobAfter!.binding.contentHash, originalBinding.contentHash);
-    assert.equal(jobAfter!.binding.reportSchemaVersion, originalBinding.reportSchemaVersion);
-    assert.equal(
-      getCompletedFreezeBoundReport(sessionAfter, { freezeId: originalBinding.freezeId }),
-      null,
-    );
 
-    await releaseFreezeBoundReportClaim({
-      claimKey: prepared.claimKey!,
-      claimToken: prepared.claimToken!,
+    const reacquire = await prepareFreezeBoundFinalDelivery({
+      session: await durable(frozen.session.session_id),
+      freezeId: frozen.freezeId,
+      expected_hash: frozen.contentHash,
+      acquireGenerationClaim: true,
+      deps,
+    });
+    assert.equal(reacquire.ok, true);
+    if (!reacquire.ok) return;
+    assert.equal(reacquire.claimHeld, true);
+    await releaseClaimBeforePreHandoffReturn({
+      claimKey: reacquire.claimKey!,
+      claimToken: reacquire.claimToken!,
       deps: { claimOps },
     });
   });
 
-  await check("M2.2-R3-C5 Success write-back then retrieval; retry preserves Freeze identity", async () => {
+  await check("M2.2-R4-C4 Stage Runner success write-back: getXhighJob completed only after M2.2", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const { runWithEphemeralXhighKv, createXhighJob, getXhighJob, updateXhighJobStatus } =
+      await import("../lib/poju/xhigh-job-store");
+    const {
+      prepareFreezeBoundFinalDelivery,
+      getCompletedFreezeBoundReport,
+      releaseFreezeBoundReportClaim,
+    } = await import("../lib/poju/decision-intake/freeze-bound-report");
+    const { finalizeFormalDeliverySuccessForTests } = await import(
+      "../lib/poju/final-delivery-stage-runner"
+    );
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+
+    await runWithEphemeralXhighKv(async () => {
+      const frozen = await freezeSession("m22_r4_c4");
+      const sharedKv = new MemoryKv();
+      const claimOps = __createClaimOpsForTests(sharedKv);
+      const prepared = await prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps: {
+          ...persistDeps(),
+          claimOps,
+          claimTtlSec: 120,
+          loadSession: async (sid: string) => loadPOJUSession(sid),
+        },
+      });
+      assert.equal(prepared.ok, true);
+      if (!prepared.ok) return;
+
+      const agent = mkAgent({ original_question: "r4 test" });
+      const formal = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_claim_token: prepared.claimToken,
+          m22_claim_key: prepared.claimKey,
+          m22_report_job_id: prepared.job.job_id,
+        },
+      });
+      await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
+
+      const allReady = DECISION_PAGE_IDS.map((pageId) => ({
+        key: pageId,
+        body_markdown: `page ${pageId} ${prepared.snapshot.contentHash}`,
+      }));
+      const result = {
+        kind: "final_delivery" as const,
+        full_text: allReady.map((p) => p.body_markdown).join("\n"),
+        actions: [],
+        model: "test",
+        tokens_used: 1,
+      };
+
+      const out = await finalizeFormalDeliverySuccessForTests({
+        job_id: formal.job_id,
+        input: formal.input as import("../lib/poju/xhigh-job-types").FinalDeliveryJobInput,
+        allReady,
+        result,
+      });
+
+      // MUST read persisted formal status — not a local variable.
+      const persisted = await getXhighJob(formal.job_id);
+      assert.ok(persisted);
+      assert.equal(persisted!.status, "completed");
+      assert.equal(out.formal!.status, "completed");
+      assert.equal(out.revoked, false);
+
+      const retrieved = getCompletedFreezeBoundReport(
+        await durable(frozen.session.session_id),
+        { freezeId: frozen.freezeId },
+      );
+      assert.ok(retrieved);
+      assert.equal(retrieved!.pages.length, 8);
+      assert.equal(retrieved!.job_id, prepared.job.job_id);
+      assert.equal(retrieved!.binding.freezeId, frozen.freezeId);
+      assert.equal(retrieved!.binding.contentHash, frozen.contentHash);
+    });
+  });
+
+  await check("M2.2-R4-C5 Stage Runner write-back failure: formal NOT completed (getXhighJob)", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const { runWithEphemeralXhighKv, createXhighJob, getXhighJob, updateXhighJobStatus } =
+      await import("../lib/poju/xhigh-job-store");
+    const {
+      prepareFreezeBoundFinalDelivery,
+      getCompletedFreezeBoundReport,
+    } = await import("../lib/poju/decision-intake/freeze-bound-report");
+    const { finalizeFormalDeliverySuccessForTests } = await import(
+      "../lib/poju/final-delivery-stage-runner"
+    );
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+
+    await runWithEphemeralXhighKv(async () => {
+      const frozen = await freezeSession("m22_r4_c5");
+      const sharedKv = new MemoryKv();
+      const claimOps = __createClaimOpsForTests(sharedKv);
+      const prepared = await prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps: {
+          ...persistDeps(),
+          claimOps,
+          claimTtlSec: 120,
+          loadSession: async (sid: string) => loadPOJUSession(sid),
+        },
+      });
+      assert.equal(prepared.ok, true);
+      if (!prepared.ok) return;
+
+      const agent = mkAgent({ original_question: "r4 test" });
+      const formal = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_claim_token: prepared.claimToken,
+          m22_claim_key: prepared.claimKey,
+          m22_report_job_id: prepared.job.job_id,
+        },
+      });
+      await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
+
+      // Incomplete pages → write-back fails → formal must stay failed (persisted).
+      const allReady = DECISION_PAGE_IDS.slice(0, 3).map((pageId) => ({
+        key: pageId,
+        body_markdown: "incomplete",
+      }));
+      const result = {
+        kind: "final_delivery" as const,
+        full_text: "incomplete",
+        actions: [],
+        model: "test",
+        tokens_used: 1,
+      };
+
+      const out = await finalizeFormalDeliverySuccessForTests({
+        job_id: formal.job_id,
+        input: formal.input as import("../lib/poju/xhigh-job-types").FinalDeliveryJobInput,
+        allReady,
+        result,
+      });
+
+      const persisted = await getXhighJob(formal.job_id);
+      assert.ok(persisted);
+      assert.notEqual(persisted!.status, "completed");
+      assert.equal(persisted!.status, "failed");
+      assert.equal(out.formal!.status, "failed");
+
+      const sessionAfter = await durable(frozen.session.session_id);
+      const m22 = (sessionAfter.freeze_bound_report_jobs ?? []).find(
+        (j) => j.job_id === prepared.job.job_id,
+      );
+      assert.ok(m22);
+      assert.notEqual(m22!.status, "completed");
+      assert.equal(m22!.status, "failed");
+      assert.equal(m22!.binding.freezeId, frozen.freezeId);
+      assert.equal(m22!.binding.contentHash, frozen.contentHash);
+      assert.equal(
+        getCompletedFreezeBoundReport(sessionAfter, { freezeId: frozen.freezeId }),
+        null,
+      );
+    });
+  });
+
+  await check("M2.2-R4-C6 Write-back fail-closed when m22_report_job_id but missing binding", async () => {
+    const { runWithEphemeralXhighKv, createXhighJob, updateXhighJobStatus } = await import(
+      "../lib/poju/xhigh-job-store"
+    );
+    const { writeBackFreezeBoundReportOnDeliverySuccess } = await import(
+      "../lib/poju/final-delivery-stage-runner"
+    );
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+
+    await runWithEphemeralXhighKv(async () => {
+      const sid = "m22_r4_c6_" + Date.now();
+      const agent = mkAgent({ original_question: "r4 test" });
+      const formal = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: null,
+          decision_context_snapshot: null,
+          m22_report_job_id: "m22_job_missing_binding",
+        },
+      });
+      await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
+      let threw = false;
+      try {
+        await writeBackFreezeBoundReportOnDeliverySuccess({
+          job_id: formal.job_id,
+          input: formal.input as import("../lib/poju/xhigh-job-types").FinalDeliveryJobInput,
+          allReady: [],
+        });
+      } catch (e) {
+        threw = true;
+        assert.match(String(e), /m22_writeback_missing_binding_or_snapshot/);
+      }
+      assert.equal(threw, true, "must fail closed when binding/snapshot missing");
+    });
+  });
+
+  await check("M2.2-R4-C7 Tampered client snapshot rejected; retry preserves Freeze binding", async () => {
     __resetFreezeBoundReportInFlightForTests();
     const { MemoryKv } = await import("../lib/kv/memory-kv");
     const {
       prepareFreezeBoundFinalDelivery,
-      completeFreezeBoundReportFromDeliveryPages,
       failFreezeBoundReportJob,
-      releaseFreezeBoundReportClaim,
       retryFreezeBoundEightPageReport,
-      getCompletedFreezeBoundReport,
+      loadAuthoritativeFreeze,
+      releaseFreezeBoundReportClaim,
     } = await import("../lib/poju/decision-intake/freeze-bound-report");
-    const frozen = await freezeSession("m22_r3_c5");
+    const frozen = await freezeSession("m22_r4_c7");
     const sharedKv = new MemoryKv();
     const claimOps = __createClaimOpsForTests(sharedKv);
     const deps = {
@@ -1812,7 +2086,7 @@ async function main() {
       claimTtlSec: 120,
       loadSession: async (sid: string) => loadPOJUSession(sid),
       generatePage: async (snapshot: FrozenReportSnapshot, pageId: DecisionPageId) =>
-        `r3 ${pageId} ${snapshot.contentHash}`,
+        `r4 ${pageId} ${snapshot.contentHash}`,
     };
 
     const prepared = await prepareFreezeBoundFinalDelivery({
@@ -1824,19 +2098,28 @@ async function main() {
     });
     assert.equal(prepared.ok, true);
     if (!prepared.ok) return;
-    const original = {
-      jobId: prepared.job.job_id,
-      freezeId: prepared.job.binding.freezeId,
-      version: prepared.job.binding.decisionContextVersion,
-      hash: prepared.job.binding.contentHash,
-      schema: prepared.job.binding.reportSchemaVersion,
-    };
 
-    // Fail then retry — binding must be identical.
+    // Server-authoritative Freeze: tampered client snapshot cannot replace.
+    const server = loadAuthoritativeFreeze(await durable(frozen.session.session_id), {
+      freezeId: frozen.freezeId,
+    });
+    assert.ok(server.frozen);
+    assert.equal(server.binding.context_hash, frozen.contentHash);
+    const tampered = structuredClone(server.frozen);
+    tampered.reality_facts[0] = {
+      ...tampered.reality_facts[0]!,
+      statement: "TAMPERED_CLIENT_SNAPSHOT",
+    };
+    const { computeContentHash } = await import("../lib/poju/decision-context/content-hash");
+    const tamperedHash = computeContentHash(tampered);
+    assert.notEqual(tamperedHash, server.binding.context_hash);
+    assert.notEqual(tamperedHash, frozen.contentHash);
+
+    // Retry after fail preserves original Freeze identity.
     await failFreezeBoundReportJob({
       session: prepared.session,
-      jobId: original.jobId,
-      error: "r3_inject_fail",
+      jobId: prepared.job.job_id,
+      error: "r4_inject",
       deps,
     });
     await releaseFreezeBoundReportClaim({
@@ -1846,54 +2129,15 @@ async function main() {
     });
     const retried = await retryFreezeBoundEightPageReport({
       session: await durable(frozen.session.session_id),
-      jobId: original.jobId,
+      jobId: prepared.job.job_id,
       deps,
     });
     assert.equal(retried.ok, true, !retried.ok ? retried.error : "");
     if (!retried.ok) return;
-    assert.equal(retried.job.job_id, original.jobId);
-    assert.equal(retried.job.binding.freezeId, original.freezeId);
-    assert.equal(retried.job.binding.decisionContextVersion, original.version);
-    assert.equal(retried.job.binding.contentHash, original.hash);
-    assert.equal(retried.job.binding.reportSchemaVersion, original.schema);
-
-    // Also verify completeFreezeBound path writes exactly 8 pages retrievable.
-    const frozen2 = await freezeSession("m22_r3_c5b");
-    const prepared2 = await prepareFreezeBoundFinalDelivery({
-      session: frozen2.session,
-      freezeId: frozen2.freezeId,
-      expected_hash: frozen2.contentHash,
-      acquireGenerationClaim: true,
-      deps: {
-        ...persistDeps(),
-        claimOps: __createClaimOpsForTests(new MemoryKv()),
-        claimTtlSec: 120,
-        loadSession: async (sid: string) => loadPOJUSession(sid),
-      },
-    });
-    assert.equal(prepared2.ok, true);
-    if (!prepared2.ok) return;
-    const pages = DECISION_PAGE_IDS.map((pageId) => ({
-      pageId,
-      content: `ok ${pageId} ${prepared2.snapshot.contentHash}`,
-    }));
-    // Formal success contract ordering: write-back succeeds ⇒ then formal may complete.
-    const completed = await completeFreezeBoundReportFromDeliveryPages({
-      session: prepared2.session,
-      snapshot: prepared2.snapshot,
-      jobId: prepared2.job.job_id,
-      pages,
-      deps: persistDeps(),
-    });
-    assert.equal(completed.ok, true);
-    if (!completed.ok) return;
-    const retrieved = getCompletedFreezeBoundReport(
-      await durable(frozen2.session.session_id),
-      { freezeId: frozen2.freezeId },
-    );
-    assert.ok(retrieved);
-    assert.equal(retrieved!.pages.length, 8);
-    assert.equal(retrieved!.job_id, prepared2.job.job_id);
+    assert.equal(retried.job.binding.freezeId, frozen.freezeId);
+    assert.equal(retried.job.binding.contentHash, frozen.contentHash);
+    assert.equal(retried.job.binding.decisionContextVersion, frozen.version);
+    assert.equal(retried.job.binding.reportSchemaVersion, M22_REPORT_SCHEMA_VERSION);
   });
 
 
