@@ -5,12 +5,23 @@
  *   Readiness stop → user confirm → Confirmation Events + confirmed status
  *   → DIR reaggregate → evaluateDecisionSufficiency → ensureSessionFrozenForDelivery
  *
+ * Promotion contract (Max M2.1 REQUEST CHANGES):
+ * - user_estimate + unverified stays unverified + user_estimate (never confirmed/user_asserted)
+ * - user_asserted + unverified → confirmed ONLY after valid Confirmation Event + source + turn
+ * - independently_verified is never converted via user confirm
+ * - unknown / declined / not_applicable never promote
+ * - RealityFact.user_confirmed is derived from Confirmation Events only
+ * - Constraints obey the same source + event rules
+ * - Missing source_turn_id or event-create failure → fail-closed (no partial promotions)
+ *
  * Forbidden: fake DIR.current_state; Freeze when sufficiency.canStop is false;
  * Opening-Gate-style batch without user confirm turn provenance.
  */
 
 import {
   appendConfirmationEventWithProvenance,
+  deriveUserConfirmedFromEvents,
+  hasUserConfirmEventForTarget,
   makeFactConfirmEventId,
   type ConfirmationEvent,
 } from "@/lib/poju/decision-context/confirmation-event";
@@ -54,62 +65,112 @@ export function sessionReadyForFinalConfirm(session: POJUSessionState): boolean 
   );
 }
 
-function promoteFact(f: RealityFact, now: string): RealityFact {
-  if (f.status === "unknown" || f.status === "declined" || f.status === "not_applicable") {
-    return f;
-  }
-  if (f.status === "confirmed" && f.user_confirmed === true) return f;
-  const verification_level =
-    f.verification_level === "none" ? "user_asserted" : f.verification_level;
-  if (
-    verification_level !== "user_asserted" &&
-    verification_level !== "user_estimate" &&
-    verification_level !== "independently_verified"
-  ) {
-    return f;
-  }
-  if (verification_level === "independently_verified") {
-    return {
-      ...f,
-      status: "confirmed",
-      verification_level,
-      user_confirmed: false,
-      updated_at: now,
-    };
-  }
-  return {
-    ...f,
-    status: "confirmed",
-    verification_level:
-      verification_level === "user_estimate" ? "user_asserted" : verification_level,
-    user_confirmed: true,
-    updated_at: now,
-  };
+function isTerminalNonPromoteStatus(
+  status: RealityFact["status"] | Constraint["status"],
+): boolean {
+  return (
+    status === "unknown" ||
+    status === "declined" ||
+    status === "not_applicable"
+  );
 }
 
-function promoteConstraint(c: Constraint, now: string): Constraint {
-  if (c.status === "unknown" || c.status === "declined" || c.status === "not_applicable") {
-    return c;
-  }
-  if (c.status === "confirmed" && c.user_confirmed === true) return c;
-  return {
-    ...c,
-    status: "confirmed",
-    verification_level:
-      c.verification_level === "none" ? "user_asserted" : c.verification_level,
-    user_confirmed: true,
-    updated_at: now,
-  };
+/** Eligible for legal user-confirm promotion to confirmed + user_asserted. */
+function isUserAssertedUnverifiedCandidate(input: {
+  status: RealityFact["status"] | Constraint["status"];
+  verification_level: RealityFact["verification_level"] | Constraint["verification_level"];
+  user_confirmed: boolean;
+}): boolean {
+  if (isTerminalNonPromoteStatus(input.status)) return false;
+  if (input.verification_level === "independently_verified") return false;
+  if (input.verification_level === "user_estimate") return false;
+  if (input.verification_level !== "user_asserted") return false;
+  if (input.status === "confirmed" && input.user_confirmed === true) return false;
+  // Only unverified user_asserted (or confirmed without derived flag) may enter the event path.
+  return input.status === "unverified" || input.status === "confirmed";
 }
 
-function buildEventsForPromotion(input: {
+type FactPromotePlan = {
+  kind: "fact";
+  fact_id: string;
+  source_turn_id: string;
+};
+
+type ConstraintPromotePlan = {
+  kind: "constraint";
+  constraint_id: string;
+  source_turn_id: string;
+};
+
+type PromotePlan = FactPromotePlan | ConstraintPromotePlan;
+
+/**
+ * Build an all-or-nothing Confirmation Event plan.
+ * - user_estimate / independently_verified / terminal statuses: ignored (left unchanged)
+ * - user_asserted without source_turn_id: fail-closed
+ * - event append failure: fail-closed (caller discards tentative events)
+ */
+function planAndAppendConfirmationEvents(input: {
   session: POJUSessionState;
   before: DecisionContext;
-  afterFacts: RealityFact[];
-  afterConstraints: Constraint[];
   confirmationTurnId: string;
   now: string;
-}): { events: ConfirmationEvent[]; error?: string } {
+}): {
+  events: ConfirmationEvent[];
+  plans: PromotePlan[];
+  error?: string;
+  newly_appended: number;
+} {
+  const plans: PromotePlan[] = [];
+
+  for (const f of input.before.reality_facts) {
+    if (
+      !isUserAssertedUnverifiedCandidate({
+        status: f.status,
+        verification_level: f.verification_level,
+        user_confirmed: f.user_confirmed === true,
+      })
+    ) {
+      continue;
+    }
+    const source = f.source_turn_id?.trim() ?? "";
+    if (!source) {
+      return {
+        events: [...(input.session.confirmation_events ?? [])],
+        plans: [],
+        newly_appended: 0,
+        error: `missing_source_turn_id:fact:${f.fact_id}`,
+      };
+    }
+    plans.push({ kind: "fact", fact_id: f.fact_id, source_turn_id: source });
+  }
+
+  for (const c of input.before.constraints) {
+    if (
+      !isUserAssertedUnverifiedCandidate({
+        status: c.status,
+        verification_level: c.verification_level,
+        user_confirmed: c.user_confirmed === true,
+      })
+    ) {
+      continue;
+    }
+    const source = c.source_turn_id?.trim() ?? "";
+    if (!source) {
+      return {
+        events: [...(input.session.confirmation_events ?? [])],
+        plans: [],
+        newly_appended: 0,
+        error: `missing_source_turn_id:constraint:${c.constraint_id}`,
+      };
+    }
+    plans.push({
+      kind: "constraint",
+      constraint_id: c.constraint_id,
+      source_turn_id: source,
+    });
+  }
+
   let events = [...(input.session.confirmation_events ?? [])];
   const ctx = {
     session_id: input.session.session_id,
@@ -117,46 +178,62 @@ function buildEventsForPromotion(input: {
     messages: input.session.messages,
     decision_context: input.before,
   };
+  let newly_appended = 0;
 
-  for (const f of input.afterFacts) {
-    const prev = input.before.reality_facts.find((x) => x.fact_id === f.fact_id);
-    if (!prev) continue;
-    if (prev.status === "confirmed" && prev.user_confirmed === true) continue;
-    if (f.status !== "confirmed" || f.user_confirmed !== true) continue;
-    if (!f.source_turn_id?.trim()) continue;
-    const raw = {
-      event_id: makeFactConfirmEventId(`${f.fact_id}_${input.confirmationTurnId}`),
-      target_type: "fact" as const,
-      fact_id: f.fact_id,
-      source_turn_id: f.source_turn_id,
-      confirmation_turn_id: input.confirmationTurnId,
-      confirmation_action_id: `m21_final_confirm_fact_${f.fact_id}`,
-      event_type: "confirm_fact" as const,
-      actor: "user" as const,
-      confirmed_at: input.now,
-      event_version: 1 as const,
-    };
-    try {
-      const appended = appendConfirmationEventWithProvenance(ctx, events, raw);
-      events = appended.events;
-    } catch (e) {
-      return { events, error: e instanceof Error ? e.message : String(e) };
+  for (const plan of plans) {
+    if (plan.kind === "fact") {
+      if (
+        hasUserConfirmEventForTarget(events, {
+          type: "fact",
+          fact_id: plan.fact_id,
+        })
+      ) {
+        continue;
+      }
+      const raw = {
+        event_id: makeFactConfirmEventId(
+          `${plan.fact_id}_${input.confirmationTurnId}`,
+        ),
+        target_type: "fact" as const,
+        fact_id: plan.fact_id,
+        source_turn_id: plan.source_turn_id,
+        confirmation_turn_id: input.confirmationTurnId,
+        confirmation_action_id: `m21_final_confirm_fact_${plan.fact_id}`,
+        event_type: "confirm_fact" as const,
+        actor: "user" as const,
+        confirmed_at: input.now,
+        event_version: 1 as const,
+      };
+      try {
+        const appended = appendConfirmationEventWithProvenance(ctx, events, raw);
+        events = appended.events;
+        if (appended.outcome === "appended") newly_appended += 1;
+      } catch (e) {
+        return {
+          events: [...(input.session.confirmation_events ?? [])],
+          plans: [],
+          newly_appended: 0,
+          error: e instanceof Error ? e.message : String(e),
+        };
+      }
+      continue;
     }
-  }
 
-  for (const c of input.afterConstraints) {
-    const prev = input.before.constraints.find((x) => x.constraint_id === c.constraint_id);
-    if (!prev) continue;
-    if (prev.status === "confirmed" && prev.user_confirmed === true) continue;
-    if (c.status !== "confirmed" || c.user_confirmed !== true) continue;
-    if (!c.source_turn_id?.trim()) continue;
+    if (
+      hasUserConfirmEventForTarget(events, {
+        type: "constraint",
+        constraint_id: plan.constraint_id,
+      })
+    ) {
+      continue;
+    }
     const raw = {
-      event_id: `constraint_confirm_event_${c.constraint_id}_${input.confirmationTurnId}`,
+      event_id: `constraint_confirm_event_${plan.constraint_id}_${input.confirmationTurnId}`,
       target_type: "constraint" as const,
-      constraint_id: c.constraint_id,
-      source_turn_id: c.source_turn_id,
+      constraint_id: plan.constraint_id,
+      source_turn_id: plan.source_turn_id,
       confirmation_turn_id: input.confirmationTurnId,
-      confirmation_action_id: `m21_final_confirm_constraint_${c.constraint_id}`,
+      confirmation_action_id: `m21_final_confirm_constraint_${plan.constraint_id}`,
       event_type: "confirm_constraint" as const,
       actor: "user" as const,
       confirmed_at: input.now,
@@ -165,12 +242,159 @@ function buildEventsForPromotion(input: {
     try {
       const appended = appendConfirmationEventWithProvenance(ctx, events, raw);
       events = appended.events;
+      if (appended.outcome === "appended") newly_appended += 1;
     } catch (e) {
-      return { events, error: e instanceof Error ? e.message : String(e) };
+      return {
+        events: [...(input.session.confirmation_events ?? [])],
+        plans: [],
+        newly_appended: 0,
+        error: e instanceof Error ? e.message : String(e),
+      };
     }
   }
 
-  return { events };
+  return { events, plans, newly_appended };
+}
+
+/**
+ * Apply legal status promotion ONLY after Confirmation Events exist.
+ * user_confirmed is always derived from events — never written as authority true.
+ */
+function applyLegalPromotionAfterEvents(input: {
+  before: DecisionContext;
+  events: ConfirmationEvent[];
+  now: string;
+}): {
+  reality_facts: RealityFact[];
+  constraints: Constraint[];
+  promoted_fact_ids: string[];
+  promoted_constraint_ids: string[];
+  changed: boolean;
+} {
+  const promoted_fact_ids: string[] = [];
+  const promoted_constraint_ids: string[] = [];
+  let changed = false;
+
+  const reality_facts = input.before.reality_facts.map((f) => {
+    // Estimates: keep unverified + user_estimate; do not convert via user confirm.
+    if (f.verification_level === "user_estimate") {
+      return f;
+    }
+    // Independently verified: never convert via user confirm.
+    if (f.verification_level === "independently_verified") {
+      return f;
+    }
+    if (isTerminalNonPromoteStatus(f.status)) {
+      return f;
+    }
+    if (f.verification_level !== "user_asserted") {
+      return f;
+    }
+
+    const hasEvt = hasUserConfirmEventForTarget(input.events, {
+      type: "fact",
+      fact_id: f.fact_id,
+    });
+    if (!hasEvt) {
+      // No valid Confirmation Event → never mark user_confirmed.
+      if (f.user_confirmed === true) {
+        changed = true;
+        return { ...f, user_confirmed: false, updated_at: input.now };
+      }
+      return f;
+    }
+
+    const nextStatus: RealityFact["status"] = "confirmed";
+    const user_confirmed = deriveUserConfirmedFromEvents({
+      status: nextStatus,
+      verification_level: "user_asserted",
+      events: input.events,
+      target: { type: "fact", fact_id: f.fact_id },
+    });
+
+    if (
+      f.status === nextStatus &&
+      f.verification_level === "user_asserted" &&
+      f.user_confirmed === user_confirmed
+    ) {
+      return f;
+    }
+
+    if (user_confirmed === true && f.user_confirmed !== true) {
+      promoted_fact_ids.push(f.fact_id);
+    }
+    changed = true;
+    return {
+      ...f,
+      status: nextStatus,
+      verification_level: "user_asserted" as const,
+      user_confirmed,
+      updated_at: input.now,
+    };
+  });
+
+  const constraints = input.before.constraints.map((c) => {
+    if (c.verification_level === "user_estimate") {
+      return c;
+    }
+    if (c.verification_level === "independently_verified") {
+      return c;
+    }
+    if (isTerminalNonPromoteStatus(c.status)) {
+      return c;
+    }
+    if (c.verification_level !== "user_asserted") {
+      return c;
+    }
+
+    const hasEvt = hasUserConfirmEventForTarget(input.events, {
+      type: "constraint",
+      constraint_id: c.constraint_id,
+    });
+    if (!hasEvt) {
+      if (c.user_confirmed === true) {
+        changed = true;
+        return { ...c, user_confirmed: false, updated_at: input.now };
+      }
+      return c;
+    }
+
+    const nextStatus: Constraint["status"] = "confirmed";
+    const user_confirmed = deriveUserConfirmedFromEvents({
+      status: nextStatus,
+      verification_level: "user_asserted",
+      events: input.events,
+      target: { type: "constraint", constraint_id: c.constraint_id },
+    });
+
+    if (
+      c.status === nextStatus &&
+      c.verification_level === "user_asserted" &&
+      c.user_confirmed === user_confirmed
+    ) {
+      return c;
+    }
+
+    if (user_confirmed === true && c.user_confirmed !== true) {
+      promoted_constraint_ids.push(c.constraint_id);
+    }
+    changed = true;
+    return {
+      ...c,
+      status: nextStatus,
+      verification_level: "user_asserted" as const,
+      user_confirmed,
+      updated_at: input.now,
+    };
+  });
+
+  return {
+    reality_facts,
+    constraints,
+    promoted_fact_ids,
+    promoted_constraint_ids,
+    changed,
+  };
 }
 
 async function persistPromotedDc(input: {
@@ -192,8 +416,6 @@ async function persistPromotedDc(input: {
         input.next.decision_context!,
         input.next.decision_context_versions ?? [],
       );
-      // Extra session fields already live on input.next; mergeDcPersistSliceIntoSession
-      // keeps them from the memory snapshot. Mirror onto working via widen for clarity.
       const working = tx.working as typeof tx.working & {
         confirmation_events?: POJUSessionState["confirmation_events"];
         decision_understanding?: POJUSessionState["decision_understanding"];
@@ -327,36 +549,10 @@ export async function confirmUnderstandingAndFreeze(input: {
     };
   }
 
-  const promoted_fact_ids: string[] = [];
-  const promoted_constraint_ids: string[] = [];
-  const reality_facts = dc.reality_facts.map((f) => {
-    const next = promoteFact(f, now);
-    if (
-      next.status === "confirmed" &&
-      next.user_confirmed === true &&
-      (f.status !== "confirmed" || f.user_confirmed !== true)
-    ) {
-      promoted_fact_ids.push(next.fact_id);
-    }
-    return next;
-  });
-  const constraints = dc.constraints.map((c) => {
-    const next = promoteConstraint(c, now);
-    if (
-      next.status === "confirmed" &&
-      next.user_confirmed === true &&
-      (c.status !== "confirmed" || c.user_confirmed !== true)
-    ) {
-      promoted_constraint_ids.push(next.constraint_id);
-    }
-    return next;
-  });
-
-  const built = buildEventsForPromotion({
+  // 1) Events first (all-or-nothing). No in-memory promotions before events succeed.
+  const built = planAndAppendConfirmationEvents({
     session: input.session,
     before: dc,
-    afterFacts: reality_facts,
-    afterConstraints: constraints,
     confirmationTurnId: input.confirmation_turn_id,
     now,
   });
@@ -366,26 +562,34 @@ export async function confirmUnderstandingAndFreeze(input: {
       outcome: "promote_failed",
       sufficiency_can_stop: false,
       error: built.error,
-      promoted_fact_ids,
-      promoted_constraint_ids,
+      promoted_fact_ids: [],
+      promoted_constraint_ids: [],
     };
   }
 
+  // 2) Derive status + user_confirmed from events only.
+  const applied = applyLegalPromotionAfterEvents({
+    before: dc,
+    events: built.events,
+    now,
+  });
+
+  const versionBump = applied.changed || built.newly_appended > 0;
   let working: POJUSessionState = {
     ...input.session,
     confirmation_events: built.events,
     decision_context: {
       ...dc,
-      reality_facts,
-      constraints,
-      updated_at: now,
-      version: (dc.version ?? 1) + 1,
+      reality_facts: applied.reality_facts,
+      constraints: applied.constraints,
+      updated_at: versionBump ? now : dc.updated_at,
+      version: versionBump ? (dc.version ?? 1) + 1 : dc.version,
     },
   };
 
   const dirs = await reaggregateDirsOnSession(working, working.decision_context!.dirs, {
-    realityFacts: reality_facts,
-    constraints,
+    realityFacts: applied.reality_facts,
+    constraints: applied.constraints,
     nowIso: now,
   });
   working = {
@@ -435,8 +639,8 @@ export async function confirmUnderstandingAndFreeze(input: {
         outcome: "persist_failed",
         sufficiency_can_stop: false,
         error: persisted.error ?? "persist_failed",
-        promoted_fact_ids,
-        promoted_constraint_ids,
+        promoted_fact_ids: [],
+        promoted_constraint_ids: [],
       };
     }
     return {
@@ -444,8 +648,8 @@ export async function confirmUnderstandingAndFreeze(input: {
       outcome: "not_sufficient_after_confirm",
       sufficiency_can_stop: false,
       error: sufficiency.reasons.join(";"),
-      promoted_fact_ids,
-      promoted_constraint_ids,
+      promoted_fact_ids: applied.promoted_fact_ids,
+      promoted_constraint_ids: applied.promoted_constraint_ids,
     };
   }
 
@@ -460,8 +664,8 @@ export async function confirmUnderstandingAndFreeze(input: {
       outcome: "persist_failed",
       sufficiency_can_stop: true,
       error: persisted.error ?? "persist_failed",
-      promoted_fact_ids,
-      promoted_constraint_ids,
+      promoted_fact_ids: [],
+      promoted_constraint_ids: [],
     };
   }
 
@@ -479,8 +683,8 @@ export async function confirmUnderstandingAndFreeze(input: {
       sufficiency_can_stop: true,
       freeze,
       error: freeze.reason,
-      promoted_fact_ids,
-      promoted_constraint_ids,
+      promoted_fact_ids: applied.promoted_fact_ids,
+      promoted_constraint_ids: applied.promoted_constraint_ids,
     };
   }
   if (freeze.skipped) {
@@ -490,8 +694,8 @@ export async function confirmUnderstandingAndFreeze(input: {
       sufficiency_can_stop: false,
       freeze,
       error: freeze.reason,
-      promoted_fact_ids,
-      promoted_constraint_ids,
+      promoted_fact_ids: applied.promoted_fact_ids,
+      promoted_constraint_ids: applied.promoted_constraint_ids,
     };
   }
 
@@ -527,7 +731,7 @@ export async function confirmUnderstandingAndFreeze(input: {
     outcome: "frozen",
     sufficiency_can_stop: true,
     freeze,
-    promoted_fact_ids,
-    promoted_constraint_ids,
+    promoted_fact_ids: applied.promoted_fact_ids,
+    promoted_constraint_ids: applied.promoted_constraint_ids,
   };
 }
