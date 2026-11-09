@@ -376,6 +376,11 @@ export interface POJUSessionState {
    */
   last_delivery_context_binding?: import("./decision-context").DecisionContextBinding | null;
   /**
+   * M2.2 — Freeze-bound eight-page report jobs (binding pinned before LLM).
+   * One job per sessionId+freezeId+reportSchemaVersion; never retargeted by draft DC.
+   */
+  freeze_bound_report_jobs?: import("./decision-intake/freeze-bound-report").FreezeBoundReportJob[];
+  /**
    * Phase 3 S2 — async Generation TaskContext rows (Contract §6).
    * Hydrate to [] on create/load when absent.
    */

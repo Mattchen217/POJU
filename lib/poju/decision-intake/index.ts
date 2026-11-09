@@ -39,3 +39,32 @@ export {
   isFinalUnderstandingAddMoreText,
   sessionReadyForFinalConfirm,
 } from "./confirm-and-freeze";
+export {
+  M22_REPORT_SCHEMA_VERSION,
+  M22_SNAPSHOT_SCHEMA_VERSION,
+  freezeIdFromBinding,
+  buildReportIdempotencyKey,
+  loadAuthoritativeFreeze,
+  verifyFrozenSnapshot,
+  createFrozenReportSnapshot,
+  reportBindingFromSnapshot,
+  defaultGeneratePage,
+  assertCompleteEightPageReport,
+  generateEightPageReport,
+  createOrGetReportJob,
+  requestFreezeBoundEightPageReport,
+  retryFreezeBoundEightPageReport,
+  getCompletedFreezeBoundReport,
+  __resetFreezeBoundReportInFlightForTests,
+  FreezeBoundReportError,
+} from "./freeze-bound-report";
+export type {
+  FreezeBoundReportJobStatus,
+  ReportBinding,
+  FrozenReportSnapshot,
+  FreezeBoundReportPage,
+  FreezeBoundReportJob,
+  EightPageReport,
+  FreezeBoundReportDeps,
+  FreezeBoundReportResult,
+} from "./freeze-bound-report";
