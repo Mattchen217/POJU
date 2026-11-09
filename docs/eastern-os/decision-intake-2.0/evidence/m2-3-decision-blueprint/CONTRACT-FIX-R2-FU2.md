@@ -9,7 +9,7 @@
 | Branch | `feat/m1-r-fresh-session-main-loop` |
 | Parent | `91a37517dda05a8868af8ba0c3b75088154d0c88` |
 | Impl | `a56043aecd9d28003573521fe0062e518e0e5637` |
-| HEAD / tip | `84e2531304ec82d075c56aac20160115d5c393a2` |
+| HEAD / tip | `9f8001b89ac052400037d5de2e953eb48a7179a2` |
 | PR / merge / deploy | none |
 | Self-PASS | **no** |
 | Note | Branch tip advanced by M2.3-R2-FU3; table tip aligned to final HEAD. FU2 impl remains `a56043aecd9d28003573521fe0062e518e0e5637`. |
