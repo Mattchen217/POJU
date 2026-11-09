@@ -11,7 +11,7 @@
 | Parent implementation (FU2) | `a56043aecd9d28003573521fe0062e518e0e5637` |
 | Implementation commit | `a8b115803a55df4a644d8d469cd92b0a73c38b89` |
 | Evidence commit | `96221e0b9ebed221509e94faf8eaf29ff91839b4` |
-| Final branch HEAD / tip | `TIP_PENDING` |
+| Final branch HEAD / tip | `7f1e5b2907dab06fbe4730675aab57dee6ad4ec4` |
 | PR / merge / deploy | none |
 | Self-PASS | **no** |
 
