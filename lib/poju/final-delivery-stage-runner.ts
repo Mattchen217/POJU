@@ -353,6 +353,133 @@ type FailStageOutcome = "interrupted" | "hard_failed";
  * Stop the job immediately and emit a high-signal server log for diagnosis.
  * Format is stable so Vercel log search can filter on `[final-delivery-STOP]`.
  */
+
+/** M2.2-R2: token-checked CAS release of Freeze-bound generation claim. */
+async function releaseM22ClaimFromJobInput(
+  input: FinalDeliveryJobInput,
+): Promise<void> {
+  const token = input.m22_claim_token;
+  const key = input.m22_claim_key;
+  if (!token || !key) return;
+  const { releaseFreezeBoundReportClaimServer } = await import(
+    "@/lib/poju/decision-intake/freeze-bound-report-server"
+  );
+  await releaseFreezeBoundReportClaimServer({ claimKey: key, claimToken: token });
+}
+
+/** M2.2-R2: persist exactly eight pages onto the original Freeze-bound report job. */
+async function writeBackFreezeBoundReportOnDeliverySuccess(args: {
+  job_id: string;
+  input: FinalDeliveryJobInput;
+  allReady: Array<{
+    key: string;
+    body_markdown: string;
+    interleaved_markdown?: string;
+  }>;
+}): Promise<void> {
+  const { job_id, input, allReady } = args;
+  if (!input.decision_context_binding || !input.decision_context_snapshot) return;
+  const reportJobId = input.m22_report_job_id;
+  if (!reportJobId) return;
+
+  const { loadPOJUSession, savePOJUSession } = await import(
+    "@/lib/poju/session-manager"
+  );
+  const {
+    createFrozenReportSnapshot,
+    completeFreezeBoundReportFromDeliveryPages,
+    failFreezeBoundReportJob,
+  } = await import("@/lib/poju/decision-intake/freeze-bound-report");
+  const { DECISION_PAGE_IDS } = await import(
+    "@/lib/llm/pro/delivery/page-feed-matrix"
+  );
+  const { canonicalFaceId } = await import(
+    "@/lib/llm/pro/delivery/decision-page-bridge"
+  );
+
+  const session = await loadPOJUSession(input.session_id);
+  if (!session) {
+    throw new Error("m22_writeback_session_missing");
+  }
+
+  const snapshot = createFrozenReportSnapshot({
+    sessionId: input.session_id,
+    frozen: input.decision_context_snapshot,
+    binding: input.decision_context_binding,
+  });
+
+  // Verify original job id + Freeze binding + content hash + schema before completion.
+  const existing = (session.freeze_bound_report_jobs ?? []).find(
+    (j) => j.job_id === reportJobId,
+  );
+  if (!existing) {
+    throw new Error("m22_writeback_job_missing:" + reportJobId);
+  }
+  if (
+    existing.binding.contentHash !== snapshot.contentHash ||
+    existing.binding.freezeId !== snapshot.freezeId ||
+    existing.binding.decisionContextVersion !== snapshot.decisionContextVersion ||
+    existing.binding.reportSchemaVersion !== snapshot.reportSchemaVersion
+  ) {
+    await failFreezeBoundReportJob({
+      session,
+      jobId: reportJobId,
+      error: "BINDING_MISMATCH_ON_WRITEBACK",
+      deps: { persistSession: savePOJUSession },
+    });
+    throw new Error("m22_writeback_binding_mismatch");
+  }
+
+  const byPage = new Map<string, string>();
+  for (const ready of allReady) {
+    const pageId = canonicalFaceId(ready.key) ?? ready.key;
+    const content =
+      (ready.interleaved_markdown && ready.interleaved_markdown.trim()) ||
+      (ready.body_markdown && ready.body_markdown.trim()) ||
+      "";
+    if (content) byPage.set(pageId, content);
+  }
+
+  const pages = DECISION_PAGE_IDS.map((pageId) => ({
+    pageId,
+    content: byPage.get(pageId) ?? "",
+  }));
+
+  try {
+    const completed = await completeFreezeBoundReportFromDeliveryPages({
+      session,
+      snapshot,
+      jobId: reportJobId,
+      pages,
+      deps: { persistSession: savePOJUSession },
+    });
+    if (!completed.ok) {
+      await failFreezeBoundReportJob({
+        session,
+        jobId: reportJobId,
+        error: completed.error,
+        deps: { persistSession: savePOJUSession },
+      });
+      throw new Error("m22_writeback_incomplete:" + completed.code);
+    }
+    console.info("[final-delivery-stage] m22 freeze-bound report completed", {
+      job_id,
+      m22_report_job_id: reportJobId,
+      freezeId: snapshot.freezeId,
+      pages: pages.length,
+    });
+  } catch (e) {
+    // Failure must remain failed/retryable, never completed.
+    await failFreezeBoundReportJob({
+      session,
+      jobId: reportJobId,
+      error: e instanceof Error ? e.message : String(e),
+      deps: { persistSession: savePOJUSession },
+    }).catch(() => undefined);
+    throw e;
+  }
+}
+
 async function failStage(
   job_id: string,
   session_id: string,
@@ -409,6 +536,33 @@ async function failStage(
     accumulated_content: `failed:${where}:${reason}`.slice(0, 500),
   });
   await releaseXhighSessionLock("final_delivery", session_id);
+  // M2.2-R2: release generation claim on hard fail (token CAS); mark report failed/retryable.
+  try {
+    const job = await getXhighJob(job_id);
+    if (job && isFinalDeliveryJobInput(job.input)) {
+      // Comment marker: m22 claim release on failStage
+      if (job.input.m22_report_job_id) {
+        const { loadPOJUSession, savePOJUSession } = await import(
+          "@/lib/poju/session-manager"
+        );
+        const { failFreezeBoundReportJobServer } = await import(
+          "@/lib/poju/decision-intake/freeze-bound-report-server"
+        );
+        const session = await loadPOJUSession(session_id);
+        if (session) {
+          await failFreezeBoundReportJobServer({
+            session,
+            jobId: job.input.m22_report_job_id,
+            error: errorMsg,
+            deps: { persistSession: savePOJUSession },
+          });
+        }
+      }
+      await releaseM22ClaimFromJobInput(job.input);
+    }
+  } catch (e) {
+    console.warn("[final-delivery-stage] m22 fail-path cleanup skipped", e);
+  }
   return "hard_failed";
 }
 
@@ -2238,6 +2392,22 @@ export async function runFinalDeliveryStage(
       await updateXhighJobStatus(job_id, "completed", {
         current_stage: "completed",
       });
+
+      // M2.2-R2: write eight validated pages into the original Freeze-bound report job.
+      try {
+        await writeBackFreezeBoundReportOnDeliverySuccess({
+          job_id,
+          input,
+          allReady,
+        });
+      } catch (wbErr) {
+        console.warn("[final-delivery-stage] m22 freeze-bound write-back failed", wbErr);
+        // Delivery xhigh job already completed; M2.2 job stays failed/retryable (never silently completed).
+      }
+
+      // Release shared KV claim (token-checked CAS) after success.
+      await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+
       await releaseXhighSessionLock("final_delivery", input.session_id);
       logDeliveryStep({
         job_id,

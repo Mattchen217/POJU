@@ -76,6 +76,11 @@ export type FinalDeliveryJobInput = {
   decision_context_snapshot?: import("@/lib/poju/decision-context").DecisionContext | null;
   /** Hard-gate Stage 4 path: refuse job without valid frozen DC. */
   require_decision_context?: boolean;
+  /** M2.2-R2: shared KV claim ownership for Freeze-bound generation. */
+  m22_claim_token?: string | null;
+  m22_claim_key?: string | null;
+  /** Original Freeze-bound report job id (session.freeze_bound_report_jobs). */
+  m22_report_job_id?: string | null;
 };
 
 /** 汇总段(第4段)输入:多维真算 + 收集现实 → 收敛。 */

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * M2.2 — Freeze-bound eight-page report delivery.
  *
  * Authority: M2.1 Freeze package (binding triple + immutable version snapshot).
@@ -36,9 +36,11 @@ export type FreezeReportClaimOps = {
     ttlSec: number,
     meta?: { job_id?: string | null },
   ) => Promise<boolean>;
-  release: (key: string, token: string) => Promise<void>;
+  /** Token-checked compare-and-delete. True only when this token owned the key. */
+  release: (key: string, token: string) => Promise<boolean | void>;
   forceRelease: (key: string) => Promise<void>;
   load?: (key: string) => Promise<{ token: string; expires_at: number } | null>;
+  bindJobId?: (key: string, token: string, jobId: string) => Promise<boolean>;
 };
 
 export const M22_REPORT_CLAIM_TTL_SEC = 60 * 90;
@@ -74,13 +76,15 @@ export function createProcessLocalClaimOps(
       const now = Date.now();
       const existing = store.get(key);
       if (existing && existing.expires_at > now) return false;
+      // Expired residue can be overwritten only when still the same token or absent.
       store.set(key, { token, expires_at: now + ttlSec * 1000 });
       return true;
     },
     async release(key, token) {
       const existing = store.get(key);
-      if (!existing || existing.token !== token) return;
+      if (!existing || existing.token !== token) return false;
       store.delete(key);
+      return true;
     },
     async forceRelease(key) {
       store.delete(key);
@@ -89,6 +93,9 @@ export function createProcessLocalClaimOps(
       const existing = store.get(key);
       if (!existing || existing.expires_at <= Date.now()) return null;
       return existing;
+    },
+    async bindJobId() {
+      return true;
     },
   };
 }
@@ -1009,6 +1016,11 @@ export function getCompletedFreezeBoundReport(
  * Load authoritative Freeze → FrozenReportSnapshot → persist Freeze-bound job
  * → return DC fields for FinalDeliveryJobInput (existing eight-page LLM path).
  * Does not invent a second report pipeline.
+ *
+ * When `acquireGenerationClaim` is true (production Final Delivery path):
+ * acquire the shared KV claim BEFORE job create; only the claim owner may
+ * proceed to start generation. Caller MUST release via releaseFreezeBoundReportClaim
+ * on completion/failure (token-checked CAS delete).
  */
 export async function prepareFreezeBoundFinalDelivery(input: {
   session: POJUSessionState;
@@ -1018,6 +1030,8 @@ export async function prepareFreezeBoundFinalDelivery(input: {
   expected_hash?: string;
   reportSchemaVersion?: string;
   deps?: FreezeBoundReportDeps;
+  /** Production Final Delivery: claim before create/start; hold until complete/fail. */
+  acquireGenerationClaim?: boolean;
 }): Promise<
   | {
       ok: true;
@@ -1027,8 +1041,18 @@ export async function prepareFreezeBoundFinalDelivery(input: {
       decision_context_snapshot: DecisionContext;
       decision_context_binding: DecisionContextBinding;
       require_decision_context: true;
+      claimHeld: boolean;
+      claimToken: string | null;
+      claimKey: string | null;
+      reusedCompleted: boolean;
     }
-  | { ok: false; code: string; error: string; session: POJUSessionState }
+  | {
+      ok: false;
+      code: string;
+      error: string;
+      session: POJUSessionState;
+      job?: FreezeBoundReportJob | null;
+    }
 > {
   let snapshot: FrozenReportSnapshot;
   try {
@@ -1056,9 +1080,113 @@ export async function prepareFreezeBoundFinalDelivery(input: {
     return { ok: false, code, error: msg, session: input.session };
   }
 
+  const key = buildReportIdempotencyKey({
+    sessionId: snapshot.sessionId,
+    freezeId: snapshot.freezeId,
+    reportSchemaVersion: snapshot.reportSchemaVersion,
+  });
+  const claimKey = freezeReportClaimKey({
+    sessionId: snapshot.sessionId,
+    freezeId: snapshot.freezeId,
+    reportSchemaVersion: snapshot.reportSchemaVersion,
+  });
+  const claimOps = input.deps?.claimOps ?? defaultProcessLocalClaimOps;
+  const claimTtl = input.deps?.claimTtlSec ?? M22_REPORT_CLAIM_TTL_SEC;
+
+  let session = input.session;
+  if (input.deps?.loadSession) {
+    const fresh = await input.deps.loadSession(session.session_id);
+    if (fresh) session = fresh;
+  }
+
+  const existing = findJobByKey(session, key);
+  if (existing?.status === "completed") {
+    return {
+      ok: true,
+      snapshot,
+      job: existing,
+      session,
+      decision_context_snapshot: snapshot.decisionContext as DecisionContext,
+      decision_context_binding: snapshot.binding,
+      require_decision_context: true,
+      claimHeld: false,
+      claimToken: null,
+      claimKey: null,
+      reusedCompleted: true,
+    };
+  }
+
+  let claimToken: string | null = null;
+  let claimHeld = false;
+  if (input.acquireGenerationClaim) {
+    claimToken = newFreezeReportClaimToken();
+    const acquired = await claimOps.tryAcquire(
+      claimKey,
+      claimToken,
+      claimTtl,
+      existing ? { job_id: existing.job_id } : undefined,
+    );
+    if (!acquired) {
+      if (input.deps?.loadSession) {
+        const fresh = await input.deps.loadSession(session.session_id);
+        if (fresh) session = fresh;
+      }
+      const heldJob = findJobByKey(session, key);
+      if (heldJob?.status === "completed") {
+        return {
+          ok: true,
+          snapshot,
+          job: heldJob,
+          session,
+          decision_context_snapshot: snapshot.decisionContext as DecisionContext,
+          decision_context_binding: snapshot.binding,
+          require_decision_context: true,
+          claimHeld: false,
+          claimToken: null,
+          claimKey: null,
+          reusedCompleted: true,
+        };
+      }
+      return {
+        ok: false,
+        code: "GENERATION_IN_PROGRESS",
+        error: `Freeze-bound report claim held for ${claimKey}; not starting another generator`,
+        job: heldJob ?? null,
+        session,
+      };
+    }
+    claimHeld = true;
+  }
+
   try {
+    if (input.deps?.loadSession && claimHeld) {
+      const fresh = await input.deps.loadSession(session.session_id);
+      if (fresh) session = fresh;
+    }
+    const raced = findJobByKey(session, key);
+    if (raced?.status === "completed") {
+      if (claimHeld && claimToken) {
+        await claimOps.release(claimKey, claimToken).catch(() => undefined);
+        claimHeld = false;
+        claimToken = null;
+      }
+      return {
+        ok: true,
+        snapshot,
+        job: raced,
+        session,
+        decision_context_snapshot: snapshot.decisionContext as DecisionContext,
+        decision_context_binding: snapshot.binding,
+        require_decision_context: true,
+        claimHeld: false,
+        claimToken: null,
+        claimKey: null,
+        reusedCompleted: true,
+      };
+    }
+
     const created = await createOrGetReportJob({
-      session: input.session,
+      session,
       snapshot,
       deps: input.deps,
     });
@@ -1070,13 +1198,58 @@ export async function prepareFreezeBoundFinalDelivery(input: {
       decision_context_snapshot: snapshot.decisionContext as DecisionContext,
       decision_context_binding: snapshot.binding,
       require_decision_context: true,
+      claimHeld,
+      claimToken: claimHeld ? claimToken : null,
+      claimKey: claimHeld ? claimKey : null,
+      reusedCompleted: false,
     };
   } catch (e) {
+    if (claimHeld && claimToken) {
+      await claimOps.release(claimKey, claimToken).catch(() => undefined);
+    }
     const msg = e instanceof Error ? e.message : String(e);
     const code =
       e instanceof FreezeBoundReportError ? e.code : "JOB_CREATE_FAILED";
-    return { ok: false, code, error: msg, session: input.session };
+    return { ok: false, code, error: msg, session };
   }
+}
+
+/** Token-checked compare-and-delete release for a held Final Delivery claim. */
+export async function releaseFreezeBoundReportClaim(input: {
+  claimKey: string;
+  claimToken: string;
+  deps?: FreezeBoundReportDeps;
+}): Promise<boolean> {
+  const claimOps = input.deps?.claimOps ?? defaultProcessLocalClaimOps;
+  const result = await claimOps.release(input.claimKey, input.claimToken);
+  return result !== false;
+}
+
+/**
+ * Mark the Freeze-bound report job failed/retryable (never completed).
+ * Preserves original Freeze binding.
+ */
+export async function failFreezeBoundReportJob(input: {
+  session: POJUSessionState;
+  jobId: string;
+  error: string;
+  deps?: FreezeBoundReportDeps;
+}): Promise<{ session: POJUSessionState; job: FreezeBoundReportJob | null }> {
+  const now = input.deps?.now?.() ?? new Date().toISOString();
+  const job = jobsOf(input.session).find((j) => j.job_id === input.jobId);
+  if (!job) return { session: input.session, job: null };
+  if (job.status === "completed") {
+    return { session: input.session, job };
+  }
+  const next: FreezeBoundReportJob = {
+    ...job,
+    status: "failed",
+    updated_at: now,
+    error: input.error,
+  };
+  let session = upsertJob(input.session, next);
+  if (input.deps?.persistSession) await input.deps.persistSession(session);
+  return { session, job: next };
 }
 
 /**
@@ -1163,6 +1336,7 @@ export function __createClaimOpsForTests(store: {
     opts?: { ex?: number; nx?: boolean },
   ) => Promise<"OK" | null>;
   del: (...keys: string[]) => Promise<number>;
+  compareAndDelete?: (key: string, expectedToken: string) => Promise<boolean>;
 }): FreezeReportClaimOps {
   return {
     async tryAcquire(key, token, ttlSec, meta) {
@@ -1176,7 +1350,20 @@ export function __createClaimOpsForTests(store: {
       ) {
         return false;
       }
-      if (existing) await store.del(key);
+      if (existing && typeof existing.token === "string") {
+        // Expired only: token-checked delete so we never wipe a racing new owner.
+        if (
+          typeof existing.expires_at === "number" &&
+          existing.expires_at <= now
+        ) {
+          if (typeof store.compareAndDelete === "function") {
+            await store.compareAndDelete(key, existing.token);
+          } else {
+            const again = await store.get<{ token?: string }>(key);
+            if (again && again.token === existing.token) await store.del(key);
+          }
+        }
+      }
       const setResult = await store.set(
         key,
         {
@@ -1190,9 +1377,13 @@ export function __createClaimOpsForTests(store: {
       return setResult === "OK";
     },
     async release(key, token) {
+      if (typeof store.compareAndDelete === "function") {
+        return store.compareAndDelete(key, token);
+      }
       const existing = await store.get<{ token?: string }>(key);
-      if (!existing || existing.token !== token) return;
+      if (!existing || existing.token !== token) return false;
       await store.del(key);
+      return true;
     },
     async forceRelease(key) {
       await store.del(key);
@@ -1201,6 +1392,30 @@ export function __createClaimOpsForTests(store: {
       const existing = await store.get<{ token: string; expires_at: number }>(key);
       if (!existing || existing.expires_at <= Date.now()) return null;
       return existing;
+    },
+    async bindJobId(key, token, jobId) {
+      const existing = await store.get<{
+        token?: string;
+        expires_at?: number;
+        acquired_at?: number;
+        job_id?: string | null;
+      }>(key);
+      if (!existing || existing.token !== token) return false;
+      if (typeof existing.expires_at === "number" && existing.expires_at <= Date.now()) {
+        return false;
+      }
+      const ttlSec = Math.max(
+        1,
+        Math.ceil(((existing.expires_at ?? Date.now()) - Date.now()) / 1000),
+      );
+      const again = await store.get<{ token?: string }>(key);
+      if (!again || again.token !== token) return false;
+      await store.set(
+        key,
+        { ...existing, token, job_id: jobId },
+        { ex: ttlSec },
+      );
+      return true;
     },
   };
 }

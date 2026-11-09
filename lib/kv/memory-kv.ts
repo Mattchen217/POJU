@@ -61,6 +61,33 @@ export class MemoryKv {
     return n;
   }
 
+  /**
+   * Token-checked compare-and-delete (atomic in-process).
+   * Value may be a claim record `{ token }` or a bare token string.
+   */
+  async compareAndDelete(key: string, expectedToken: string): Promise<boolean> {
+    const hit = this.store.get(key);
+    if (!hit) return false;
+    if (hit.expiresAt != null && hit.expiresAt <= now()) {
+      this.store.delete(key);
+      return false;
+    }
+    const value = hit.value;
+    let token: string | null = null;
+    if (typeof value === "string") token = value;
+    else if (
+      value &&
+      typeof value === "object" &&
+      typeof (value as { token?: unknown }).token === "string"
+    ) {
+      token = (value as { token: string }).token;
+    }
+    if (!token || token !== expectedToken) return false;
+    this.store.delete(key);
+    this.lists.delete(key);
+    return true;
+  }
+
   async lpush(key: string, ...values: unknown[]): Promise<number> {
     const list = this.lists.get(key) ?? [];
     for (const v of values) list.unshift(v);

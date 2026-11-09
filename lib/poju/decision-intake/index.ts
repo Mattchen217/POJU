@@ -58,6 +58,8 @@ export {
   getCompletedFreezeBoundReport,
   prepareFreezeBoundFinalDelivery,
   completeFreezeBoundReportFromDeliveryPages,
+  releaseFreezeBoundReportClaim,
+  failFreezeBoundReportJob,
   __resetFreezeBoundReportInFlightForTests,
   __createClaimOpsForTests,
   FreezeBoundReportError,

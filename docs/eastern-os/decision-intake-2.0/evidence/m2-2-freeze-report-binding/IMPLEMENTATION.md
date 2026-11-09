@@ -1,7 +1,7 @@
-﻿# M2.2 Implementation Evidence (updated R1)
+# M2.2 Implementation Evidence (updated R1)
 
 **Branch:** `feat/m1-r-fresh-session-main-loop`  
-**See also:** `CONTRACT-FIX-R1.md`  
+**See also:** `CONTRACT-FIX-R1.md`, `CONTRACT-FIX-R2.md`  
 **Not self-PASS.** No PR / merge / deploy.
 
 ## Call chain (authoritative)

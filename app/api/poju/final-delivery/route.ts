@@ -1,4 +1,4 @@
-﻿import { after, NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import {
   resolveDeliveryMode,
@@ -502,6 +502,10 @@ export async function POST(req: Request) {
       null;
     let decision_context_snapshot: import("@/lib/poju/decision-context").DecisionContext | null =
       null;
+    let m22_claim_token: string | null = null;
+    let m22_claim_key: string | null = null;
+    let m22_report_job_id: string | null = null;
+    let m22_reused_completed = false;
     try {
       const { assertSnapshotMatchesBinding } = await import(
         "@/lib/poju/decision-context"
@@ -510,110 +514,216 @@ export async function POST(req: Request) {
         loadAuthoritativeFreeze,
         createFrozenReportSnapshot,
       } = await import("@/lib/poju/decision-intake/freeze-bound-report");
+      const { loadPOJUSession, savePOJUSession } = await import(
+        "@/lib/poju/session-manager"
+      );
+      const { prepareFreezeBoundFinalDeliveryServer } = await import(
+        "@/lib/poju/decision-intake/freeze-bound-report-server"
+      );
+
       const bindingRaw = body.decision_context_binding;
       const snapRaw = body.decision_context_snapshot;
-      const hasSlice =
+      const clientWantsDc =
+        requireDecisionContext ||
+        bindingRaw != null ||
+        snapRaw != null ||
         body.decision_context != null ||
         (Array.isArray(body.decision_context_versions) &&
           body.decision_context_versions.length > 0);
-      const freezeIdRaw =
-        typeof (body as { freeze_id?: unknown }).freeze_id === "string"
-          ? String((body as { freeze_id?: string }).freeze_id)
-          : undefined;
 
-      const resolveViaM22 = (slice: {
-        decision_context?: import("@/lib/poju/decision-context").DecisionContext | null;
-        decision_context_versions?: import("@/lib/poju/decision-context").DecisionContext[] | null;
-      }) => {
-        const loaded = loadAuthoritativeFreeze(slice, {
-          freezeId: freezeIdRaw,
-          context_id:
-            bindingRaw && typeof bindingRaw === "object"
-              ? (bindingRaw as { context_id?: string }).context_id
-              : undefined,
-          version:
-            bindingRaw && typeof bindingRaw === "object"
-              ? (bindingRaw as { context_version?: number }).context_version
-              : undefined,
-          expected_hash:
-            bindingRaw && typeof bindingRaw === "object"
-              ? (bindingRaw as { context_hash?: string }).context_hash
-              : undefined,
-        });
-        return createFrozenReportSnapshot({
+      // M2.2-R2: server-persisted session is the Freeze authority.
+      // Client snapshot/binding may be compared, never replace server Freeze.
+      const sessionRow = await loadPOJUSession(sessionIdRaw);
+      if (!sessionRow) {
+        if (requireDecisionContext || clientWantsDc) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "Session not found for authoritative Freeze",
+              code: "DC_REPORT_MISSING",
+            },
+            { status: 400 },
+          );
+        }
+      } else if (clientWantsDc || requireDecisionContext) {
+        const freezeIdRaw =
+          typeof (body as { freeze_id?: unknown }).freeze_id === "string"
+            ? String((body as { freeze_id?: string }).freeze_id)
+            : undefined;
+        const clientBinding =
+          bindingRaw && typeof bindingRaw === "object"
+            ? (bindingRaw as import("@/lib/poju/decision-context").DecisionContextBinding)
+            : null;
+        const clientSnap =
+          snapRaw && typeof snapRaw === "object"
+            ? (snapRaw as import("@/lib/poju/decision-context").DecisionContext)
+            : null;
+
+        let loaded;
+        try {
+          loaded = loadAuthoritativeFreeze(sessionRow, {
+            freezeId: freezeIdRaw,
+            context_id: clientBinding?.context_id,
+            version: clientBinding?.context_version,
+            expected_hash: clientBinding?.context_hash,
+          });
+        } catch (e) {
+          const code =
+            e && typeof e === "object" && "code" in e
+              ? String((e as { code: string }).code)
+              : "DC_REPORT_MISSING";
+          return NextResponse.json(
+            {
+              ok: false,
+              error: e instanceof Error ? e.message : "Authoritative Freeze load failed",
+              code,
+            },
+            { status: 400 },
+          );
+        }
+
+        const frozenSnap = createFrozenReportSnapshot({
           sessionId: sessionIdRaw,
           frozen: loaded.frozen,
           binding: loaded.binding,
         });
-      };
 
-      if (snapRaw && typeof snapRaw === "object" && bindingRaw && typeof bindingRaw === "object") {
-        const snap = snapRaw as import("@/lib/poju/decision-context").DecisionContext;
-        const binding = bindingRaw as import("@/lib/poju/decision-context").DecisionContextBinding;
-        assertSnapshotMatchesBinding(snap, binding);
-        const frozenSnap = createFrozenReportSnapshot({
-          sessionId: sessionIdRaw,
-          frozen: snap,
-          binding,
-        });
-        decision_context_snapshot =
-          frozenSnap.decisionContext as import("@/lib/poju/decision-context").DecisionContext;
-        decision_context_binding = frozenSnap.binding;
-      } else if (hasSlice || requireDecisionContext) {
-        const frozenSnap = resolveViaM22({
-          decision_context:
-            body.decision_context && typeof body.decision_context === "object"
-              ? (body.decision_context as import("@/lib/poju/decision-context").DecisionContext)
-              : null,
-          decision_context_versions: Array.isArray(body.decision_context_versions)
-            ? (body.decision_context_versions as import("@/lib/poju/decision-context").DecisionContext[])
-            : [],
-        });
-        decision_context_snapshot =
-          frozenSnap.decisionContext as import("@/lib/poju/decision-context").DecisionContext;
-        decision_context_binding = frozenSnap.binding;
-      } else if (requireDecisionContext) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "Stage4 requires frozen Decision Context binding",
-            code: "DC_REPORT_MISSING",
-          },
-          { status: 400 },
-        );
-      }
-
-            // Persist Freeze-bound report job binding before xhigh/final-delivery generation.
-      // Server wrapper injects Upstash/KV claim ops for cross-process idempotency.
-      if (decision_context_snapshot && decision_context_binding) {
-        try {
-          const { loadPOJUSession, savePOJUSession } = await import(
-            "@/lib/poju/session-manager"
-          );
-          const { prepareFreezeBoundFinalDeliveryServer } = await import(
-            "@/lib/poju/decision-intake/freeze-bound-report-server"
-          );
-          const sessionRow = await loadPOJUSession(sessionIdRaw);
-          if (sessionRow) {
-            const prepared = await prepareFreezeBoundFinalDeliveryServer({
-              session: {
-                ...sessionRow,
-                decision_context: decision_context_snapshot,
-                decision_context_versions: [
-                  ...(sessionRow.decision_context_versions ?? []),
-                ],
+        // Compare client payload against server authority — never accept client as Freeze.
+        if (clientBinding) {
+          if (
+            clientBinding.context_id !== frozenSnap.binding.context_id ||
+            clientBinding.context_version !== frozenSnap.binding.context_version ||
+            clientBinding.context_hash !== frozenSnap.binding.context_hash
+          ) {
+            return NextResponse.json(
+              {
+                ok: false,
+                error: "Client Freeze binding does not match server-authoritative Freeze",
+                code: "DC_REPORT_HASH_MISMATCH",
               },
-              expected_hash: decision_context_binding.context_hash,
-              deps: { persistSession: savePOJUSession },
-            });
-            if (!prepared.ok && requireDecisionContext) {
-              throw new Error(prepared.error);
-            }
+              { status: 400 },
+            );
           }
-        } catch (persistErr) {
-          console.warn("[final-delivery] freeze-bound job persist skipped", persistErr);
+        }
+        if (clientSnap) {
+          try {
+            assertSnapshotMatchesBinding(clientSnap, frozenSnap.binding);
+            // Tampered content with matching binding fields still fails hash verify below.
+            const { computeContentHash } = await import(
+              "@/lib/poju/decision-context/content-hash"
+            );
+            const clientHash = computeContentHash(clientSnap);
+            if (clientHash !== frozenSnap.contentHash) {
+              return NextResponse.json(
+                {
+                  ok: false,
+                  error: "Client Freeze snapshot hash does not match server-authoritative Freeze",
+                  code: "DC_REPORT_HASH_MISMATCH",
+                },
+                { status: 400 },
+              );
+            }
+          } catch (e) {
+            const code =
+              e && typeof e === "object" && "code" in e
+                ? String((e as { code: string }).code)
+                : "DC_REPORT_HASH_MISMATCH";
+            return NextResponse.json(
+              {
+                ok: false,
+                error:
+                  e instanceof Error
+                    ? e.message
+                    : "Client Freeze snapshot rejected against server authority",
+                code,
+              },
+              { status: 400 },
+            );
+          }
+        }
+
+        decision_context_snapshot =
+          frozenSnap.decisionContext as import("@/lib/poju/decision-context").DecisionContext;
+        decision_context_binding = frozenSnap.binding;
+
+        // Persist Freeze-bound job + acquire shared KV claim BEFORE xhigh create/start.
+        // M2.2-R2: on regenerate, drop prior generation claim before acquiring a new one.
+        // Comment marker: m22 claim force-release before prepare
+        if (regenerate) {
+          try {
+            const { freezeReportClaimKey, defaultFreezeReportClaimOps } = await import(
+              "@/lib/poju/decision-intake/freeze-report-claim"
+            );
+            const { M22_REPORT_SCHEMA_VERSION } = await import(
+              "@/lib/poju/decision-intake/freeze-bound-report"
+            );
+            const key = freezeReportClaimKey({
+              sessionId: sessionIdRaw,
+              freezeId: frozenSnap.freezeId,
+              reportSchemaVersion: M22_REPORT_SCHEMA_VERSION,
+            });
+            await defaultFreezeReportClaimOps.forceRelease(key);
+          } catch (e) {
+            console.warn("[final-delivery] m22 claim force-release before prepare skipped", e);
+          }
+        }
+
+        const prepared = await prepareFreezeBoundFinalDeliveryServer({
+          session: sessionRow,
+          freezeId: frozenSnap.freezeId,
+          expected_hash: frozenSnap.contentHash,
+          acquireGenerationClaim: true,
+          deps: {
+            persistSession: savePOJUSession,
+            loadSession: loadPOJUSession,
+          },
+        });
+
+        if (!prepared.ok) {
+          if (prepared.code === "GENERATION_IN_PROGRESS") {
+            // Competing request: reuse in-progress xhigh job; do not start another generator.
+            const latest = await findLatestXhighJobForSession(
+              "final_delivery",
+              sessionIdRaw,
+            ).catch(() => null);
+            if (latest) {
+              return await jobStatusResponse(latest);
+            }
+            return NextResponse.json(
+              {
+                ok: false,
+                error: prepared.error,
+                code: prepared.code,
+                retryable: true,
+                status: "running",
+                job_id: prepared.job?.job_id ?? null,
+              },
+              { status: 409 },
+            );
+          }
           if (requireDecisionContext) {
-            throw persistErr;
+            return NextResponse.json(
+              {
+                ok: false,
+                error: prepared.error,
+                code: prepared.code,
+              },
+              { status: 400 },
+            );
+          }
+        } else {
+          decision_context_snapshot = prepared.decision_context_snapshot;
+          decision_context_binding = prepared.decision_context_binding;
+          m22_report_job_id = prepared.job.job_id;
+          m22_reused_completed = prepared.reusedCompleted === true;
+          if (prepared.claimHeld && prepared.claimToken && prepared.claimKey) {
+            m22_claim_token = prepared.claimToken;
+            m22_claim_key = prepared.claimKey;
+          }
+          if (m22_reused_completed) {
+            // Completed Freeze-bound report already exists — still allow formal
+            // delivery resume/reuse via existing xhigh job lookup below, but do
+            // not acquire a new generator claim.
           }
         }
       }
@@ -676,6 +786,9 @@ export async function POST(req: Request) {
       decision_context_binding,
       decision_context_snapshot,
       require_decision_context: requireDecisionContext,
+      m22_claim_token,
+      m22_claim_key,
+      m22_report_job_id,
     };
 
     inlineCall = async () => {
@@ -809,7 +922,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const locked = await acquireXhighSessionLock("final_delivery", sessionIdRaw);
+        const locked = await acquireXhighSessionLock("final_delivery", sessionIdRaw);
     if (!locked) {
       // Never return an old job as if regenerate succeeded.
       return NextResponse.json(
@@ -827,8 +940,33 @@ export async function POST(req: Request) {
     });
 
     if (!isFinalDeliveryJobInput(job.input)) {
+      if (m22_claim_token && m22_claim_key) {
+        const { releaseFreezeBoundReportClaimServer } = await import(
+          "@/lib/poju/decision-intake/freeze-bound-report-server"
+        );
+        await releaseFreezeBoundReportClaimServer({
+          claimKey: m22_claim_key,
+          claimToken: m22_claim_token,
+        }).catch(() => undefined);
+      }
       await releaseXhighSessionLock("final_delivery", sessionIdRaw);
       return NextResponse.json({ ok: false, error: "job_create_failed" }, { status: 500 });
+    }
+
+    // Bind xhigh job id onto the owned M2.2 claim (token-checked).
+    if (m22_claim_token && m22_claim_key) {
+      try {
+        const { defaultFreezeReportClaimOps } = await import(
+          "@/lib/poju/decision-intake/freeze-report-claim"
+        );
+        await defaultFreezeReportClaimOps.bindJobId(
+          m22_claim_key,
+          m22_claim_token,
+          job.job_id,
+        );
+      } catch (bindErr) {
+        console.warn("[final-delivery] m22 claim bindJobId skipped", bindErr);
+      }
     }
 
     if (!skipPass) {
@@ -842,6 +980,15 @@ export async function POST(req: Request) {
           retryable: false,
           failure_reason: "transport_error",
         }).catch(() => undefined);
+        if (m22_claim_token && m22_claim_key) {
+          const { releaseFreezeBoundReportClaimServer } = await import(
+            "@/lib/poju/decision-intake/freeze-bound-report-server"
+          );
+          await releaseFreezeBoundReportClaimServer({
+            claimKey: m22_claim_key,
+            claimToken: m22_claim_token,
+          }).catch(() => undefined);
+        }
         await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
         return charged.response;
       }
