@@ -155,8 +155,10 @@ export interface POJUMessage {
     content_hash?: string | null;
     /** M1-R — DC persist fail-closed assistant turn (no free-ask fallback). */
     m1_fail_closed?: boolean;
-    m1_outcome?: "persist_failed" | "persist_threw";
+    m1_planner_blocked?: boolean;
+    m1_outcome?: "persist_failed" | "persist_threw" | "planner_blocked";
     m1_persist_error?: string | null;
+    m1_ask_error?: string | null;
   };
   is_rejected?: boolean;
   rejection_type?: "too_long" | "jailbreak" | "spam";

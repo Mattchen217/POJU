@@ -1131,6 +1131,58 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             last_interaction_at: nowPre,
           });
         }
+        if (m1CollectingTurn.outcome === "planner_blocked") {
+          // M2.3-R2-FU: open P0/P1 remain; do not confirm, do not free-form ask.
+          const blockReason =
+            m1CollectingTurn.ask_error?.trim() ||
+            "planner_blocked_open_p0_p1";
+          const blockText =
+            "【系统】当前仍有未完成的必要调查项，但本轮未能生成合规的授权提问。会话仍在收集中，请重试或换一种表述。" +
+            `（${blockReason}）`;
+          const blockedSession: POJUSessionState = {
+            ...m1CollectingTurn.session,
+            messages: messagesWithUser,
+            agent_v2: {
+              ...(m1CollectingTurn.session.agent_v2 ??
+                ensureAgentV2(sessionForLlm)),
+              current_phase: "collecting_context",
+              stall_offer_pending: false,
+            },
+          };
+          const blockAssistant: POJUMessage = {
+            role: "assistant",
+            content: blockText,
+            timestamp: nowPre,
+            client_id: safeRandomUUID(),
+            meta: {
+              m1_planner_blocked: true,
+              m1_outcome: "planner_blocked",
+              m1_ask_error: blockReason,
+            },
+          };
+          console.warn(
+            "[agent] M1 planner_blocked (nonterminal; no confirm / no free-ask)",
+            blockReason,
+          );
+          return withSessionProfileFlags({
+            ...blockedSession,
+            messages: [...messagesWithUser, blockAssistant],
+            last_interaction_at: nowPre,
+            decision_context:
+              m1CollectingTurn.session.decision_context ??
+              blockedSession.decision_context,
+            decision_blueprint:
+              m1CollectingTurn.session.decision_blueprint ??
+              blockedSession.decision_blueprint,
+            decision_understanding:
+              m1CollectingTurn.session.decision_understanding ??
+              blockedSession.decision_understanding,
+            adaptive_ask_plan: null,
+            intake_ask_plan:
+              m1CollectingTurn.session.intake_ask_plan ??
+              blockedSession.intake_ask_plan,
+          });
+        }
         // Adopt DC + understanding + plan into the Session the LLM sees.
         sessionForLlm = {
           ...m1CollectingTurn.session,
@@ -1268,6 +1320,18 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
   if (
     m1CollectingTurn &&
+    m1CollectingTurn.outcome === "planner_blocked" &&
+    agent_v2.current_phase !== "delivered"
+  ) {
+    // Belt-and-suspenders: planner_blocked is nonterminal collecting.
+    agent_v2 = {
+      ...agent_v2,
+      current_phase: "collecting_context",
+      stall_offer_pending: false,
+    };
+  } else if (
+    m1CollectingTurn &&
+    m1CollectingTurn.outcome !== "planner_blocked" &&
     m1CollectingTurn.understanding &&
     m1CollectingTurn.understanding.readiness.can_ask === false &&
     agent_v2.current_phase !== "delivered"
@@ -1611,6 +1675,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     );
   } else if (
     m1CollectingTurn &&
+    m1CollectingTurn.outcome !== "planner_blocked" &&
     !m1CollectingTurn.authorized_question &&
     m1CollectingTurn.understanding &&
     m1CollectingTurn.understanding.readiness.can_ask === false

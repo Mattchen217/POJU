@@ -28,7 +28,13 @@ export type CollectingDcTurnOutcome =
   /** C1 rolled back; caller Session returned unchanged, no planning. */
   | "persist_failed"
   /** DC mapper / persist threw; caller Session returned unchanged, no planning. */
-  | "persist_threw";
+  | "persist_threw"
+  /**
+   * Planner could not authorize a Catalog-scoped question while open Blueprint
+   * P0/P1 obligations remain and hard budget remains. Nonterminal — do not
+   * treat as investigation-complete / final-confirm.
+   */
+  | "planner_blocked";
 
 export type CollectingDcTurnResult = {
   session: POJUSessionState;
@@ -108,6 +114,18 @@ function mapAdaptiveOutcome(turn: {
       ask_planned: Boolean(turn.plan) || (turn.understanding != null && !turn.ask_error),
       persist_error: turn.persist_error ?? "turn_already_mapped",
       ...common,
+    };
+  }
+  if (turn.outcome === "planner_blocked") {
+    return {
+      session: turn.session,
+      outcome: "planner_blocked",
+      ask_planned: false,
+      persist_error: turn.persist_error,
+      ...common,
+      ask_error: turn.ask_error ?? "planner_blocked",
+      authorized_question: null,
+      plan: null,
     };
   }
 

@@ -216,6 +216,7 @@ export type AdaptiveTurnResult = {
   outcome:
     | "planned"
     | "ready_no_question"
+    | "planner_blocked"
     | "dc_persist_failed"
     | "dc_persist_threw"
     | "not_applicable_phase"
