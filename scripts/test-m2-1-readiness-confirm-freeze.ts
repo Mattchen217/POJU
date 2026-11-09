@@ -261,7 +261,10 @@ async function main() {
       assert.match(mod, /ensureSessionFrozenForDelivery/);
       assert.match(mod, /evaluateDecisionSufficiency/);
       assert.match(mod, /deriveUserConfirmedFromEvents/);
+      assert.match(mod, /findMatchingUserConfirmEvent/);
       assert.match(mod, /missing_source_turn_id/);
+      assert.match(mod, /require_confirmation_turn_id/);
+      assert.match(mod, /isEligibleForConfirmEvent/);
       assert.doesNotMatch(mod, /current_state:\s*"known"/);
       assert.doesNotMatch(
         mod,
@@ -269,7 +272,7 @@ async function main() {
       );
     });
 
-    await check("M21-C1 estimate stays unverified + user_estimate after confirm", async () => {
+    await check("M21-C1 estimate stays unverified + user_estimate; event derives user_confirmed=true", async () => {
       const session = await craftReadySession({
         payment_id: "pay_m21_c1",
         facts: [
@@ -306,7 +309,17 @@ async function main() {
       )!;
       assert.equal(outEst.status, "unverified");
       assert.equal(outEst.verification_level, "user_estimate");
-      assert.equal(outEst.user_confirmed, false);
+      assert.equal(outEst.user_confirmed, true);
+      assert.ok(
+        (result.session.confirmation_events ?? []).some(
+          (e) =>
+            e.target_type === "fact" &&
+            e.fact_id === "fact_estimate" &&
+            e.source_turn_id === "turn_estimate" &&
+            e.confirmation_turn_id === "turn_confirm",
+        ),
+        "estimate must have Confirmation Event matching source + confirm turn",
+      );
       const outAs = result.session.decision_context!.reality_facts.find(
         (f) => f.fact_id === "fact_asserted",
       )!;
@@ -744,9 +757,236 @@ async function main() {
         result.session.decision_context!.reality_facts[0]!.verification_level,
         "user_estimate",
       );
+      assert.equal(
+        result.session.decision_context!.reality_facts[0]!.user_confirmed,
+        true,
+      );
+      assert.ok(
+        (result.session.confirmation_events ?? []).some(
+          (e) =>
+            e.target_type === "fact" &&
+            e.fact_id === "fact_only_est" &&
+            e.source_turn_id === "turn_estimate",
+        ),
+      );
       assert.equal(result.session.agent_v2?.current_phase, "collecting_context");
       assert.equal(result.session.decision_understanding?.readiness.can_ask, true);
     });
+
+
+    await check("M21-C9 stale event with wrong source cannot confirm new source", async () => {
+      const session0 = await craftReadySession({
+        payment_id: "pay_m21_c9",
+        facts: [
+          buildRealityFact({
+            fact_id: "fact_stale",
+            statement: "旧来源陈述",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_asserted",
+            fact_roles: ["option"],
+            related_dir_ids: ["dir_options"],
+          }),
+          buildRealityFact({
+            fact_id: "fact_peer",
+            statement: "同伴",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_asserted",
+            fact_roles: ["status_quo"],
+            related_dir_ids: ["dir_status_quo"],
+          }),
+          buildRealityFact({
+            fact_id: "fact_peer2",
+            statement: "同伴2",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_constraint",
+            fact_roles: ["hard_constraint"],
+            related_dir_ids: ["dir_hard_constraint"],
+          }),
+        ],
+      });
+      // Inject stale Confirmation Event for old source; fact source then changes.
+      const staleEvent = {
+        event_id: "fact_confirm_event_stale_old_source",
+        target_type: "fact" as const,
+        fact_id: "fact_stale",
+        source_turn_id: "turn_estimate",
+        confirmation_turn_id: "turn_confirm",
+        confirmation_action_id: "m21_final_confirm_fact_fact_stale__turn_estimate",
+        event_type: "confirm_fact" as const,
+        actor: "user" as const,
+        confirmed_at: nowIso,
+        event_version: 1 as const,
+      };
+      const withStale: typeof session0 = {
+        ...session0,
+        confirmation_events: [staleEvent],
+        decision_context: {
+          ...session0.decision_context!,
+          reality_facts: session0.decision_context!.reality_facts.map((f) =>
+            f.fact_id === "fact_stale"
+              ? { ...f, source_turn_id: "turn_asserted", user_confirmed: false }
+              : f,
+          ),
+        },
+      };
+      await savePOJUSession(withStale);
+      const session = await durable(withStale.session_id);
+      const result = await confirmUnderstandingAndFreeze({
+        session,
+        statement: "确认",
+        confirmation_turn_id: "turn_confirm",
+        now: nowIso,
+      });
+      const out = result.session.decision_context!.reality_facts.find(
+        (f) => f.fact_id === "fact_stale",
+      )!;
+      assert.equal(out.source_turn_id, "turn_asserted");
+      assert.equal(out.user_confirmed, true);
+      assert.equal(out.status, "confirmed");
+      // Must have a NEW event matching current source — stale alone is insufficient.
+      assert.ok(
+        (result.session.confirmation_events ?? []).some(
+          (e) =>
+            e.target_type === "fact" &&
+            e.fact_id === "fact_stale" &&
+            e.source_turn_id === "turn_asserted" &&
+            e.confirmation_turn_id === "turn_confirm",
+        ),
+        "must create matching event for current source",
+      );
+      // Stale wrong-source event must not be the sole basis (matching source required).
+      const matching = (result.session.confirmation_events ?? []).filter(
+        (e) =>
+          e.target_type === "fact" &&
+          e.fact_id === "fact_stale" &&
+          e.source_turn_id === "turn_asserted",
+      );
+      assert.ok(matching.length >= 1);
+    });
+
+    await check("M21-C10 confirmation_turn_id must be real user confirm message", async () => {
+      const session = await craftReadySession({
+        payment_id: "pay_m21_c10",
+        facts: [
+          buildRealityFact({
+            fact_id: "fact_prov",
+            statement: "需确认轮次",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_asserted",
+            fact_roles: ["option"],
+            related_dir_ids: ["dir_options"],
+          }),
+          buildRealityFact({
+            fact_id: "fact_prov2",
+            statement: "同伴",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_asserted",
+            fact_roles: ["status_quo"],
+            related_dir_ids: ["dir_status_quo"],
+          }),
+          buildRealityFact({
+            fact_id: "fact_prov3",
+            statement: "同伴3",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_constraint",
+            fact_roles: ["hard_constraint"],
+            related_dir_ids: ["dir_hard_constraint"],
+          }),
+        ],
+      });
+      const before = JSON.stringify({
+        dc: session.decision_context,
+        events: session.confirmation_events ?? [],
+      });
+      const result = await confirmUnderstandingAndFreeze({
+        session,
+        statement: "确认",
+        confirmation_turn_id: "turn_confirm_does_not_exist",
+        now: nowIso,
+      });
+      assert.equal(result.outcome, "promote_failed");
+      assert.match(result.error ?? "", /confirmation_turn_id/);
+      assert.equal(
+        JSON.stringify({
+          dc: result.session.decision_context,
+          events: result.session.confirmation_events ?? [],
+        }),
+        before,
+      );
+    });
+
+    await check("M21-C11 first event ok then later provenance fail → no partial state", async () => {
+      const session = await craftReadySession({
+        payment_id: "pay_m21_c11",
+        facts: [
+          buildRealityFact({
+            fact_id: "fact_first_ok",
+            statement: "先成功",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_asserted",
+            fact_roles: ["option"],
+            related_dir_ids: ["dir_options"],
+          }),
+          buildRealityFact({
+            fact_id: "fact_second_bad",
+            statement: "后失败",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "turn_does_not_exist",
+            fact_roles: ["status_quo"],
+            related_dir_ids: ["dir_status_quo"],
+          }),
+        ],
+      });
+      const before = JSON.stringify({
+        dc: session.decision_context,
+        events: session.confirmation_events ?? [],
+      });
+      const result = await confirmUnderstandingAndFreeze({
+        session,
+        statement: "确认",
+        confirmation_turn_id: "turn_confirm",
+        now: nowIso,
+      });
+      assert.equal(result.outcome, "promote_failed");
+      assert.equal(result.promoted_fact_ids.length, 0);
+      assert.equal((result.session.confirmation_events ?? []).length, 0);
+      assert.equal(
+        result.session.decision_context!.reality_facts.find(
+          (f) => f.fact_id === "fact_first_ok",
+        )!.user_confirmed,
+        false,
+      );
+      assert.equal(
+        result.session.decision_context!.reality_facts.find(
+          (f) => f.fact_id === "fact_first_ok",
+        )!.status,
+        "unverified",
+      );
+      assert.equal(
+        JSON.stringify({
+          dc: result.session.decision_context,
+          events: result.session.confirmation_events ?? [],
+        }),
+        before,
+      );
+    });
+
 
     // ---------- Production entry E2E ----------
 
@@ -878,12 +1118,17 @@ async function main() {
         if (f.user_confirmed !== true) continue;
         assert.ok(
           (session.confirmation_events ?? []).some(
-            (e) => e.target_type === "fact" && e.fact_id === f.fact_id,
+            (e) =>
+              e.target_type === "fact" &&
+              e.fact_id === f.fact_id &&
+              e.source_turn_id === (f.source_turn_id ?? ""),
           ),
-          `user_confirmed fact ${f.fact_id} missing Confirmation Event`,
+          `user_confirmed fact ${f.fact_id} missing Confirmation Event matching source`,
         );
-        assert.notEqual(f.verification_level, "user_estimate");
         assert.notEqual(f.verification_level, "independently_verified");
+        if (f.verification_level === "user_estimate") {
+          assert.equal(f.status, "unverified");
+        }
       }
       for (const before of estimatesBefore) {
         const after = dc.reality_facts.find((f) => f.fact_id === before.fact_id);

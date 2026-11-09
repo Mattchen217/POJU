@@ -6,7 +6,7 @@
  *   → DIR reaggregate → evaluateDecisionSufficiency → ensureSessionFrozenForDelivery
  *
  * Promotion contract (Max M2.1 REQUEST CHANGES):
- * - user_estimate + unverified stays unverified + user_estimate (never confirmed/user_asserted)
+ * - user_estimate + unverified stays unverified + user_estimate; may get Confirmation Event + derived user_confirmed=true (confirming the estimate, not promoting status)
  * - user_asserted + unverified → confirmed ONLY after valid Confirmation Event + source + turn
  * - independently_verified is never converted via user confirm
  * - unknown / declined / not_applicable never promote
@@ -21,6 +21,7 @@
 import {
   appendConfirmationEventWithProvenance,
   deriveUserConfirmedFromEvents,
+  findMatchingUserConfirmEvent,
   hasUserConfirmEventForTarget,
   makeFactConfirmEventId,
   type ConfirmationEvent,
@@ -75,18 +76,23 @@ function isTerminalNonPromoteStatus(
   );
 }
 
-/** Eligible for legal user-confirm promotion to confirmed + user_asserted. */
-function isUserAssertedUnverifiedCandidate(input: {
+/** Eligible for a Confirmation Event on final understanding confirm. */
+function isEligibleForConfirmEvent(input: {
   status: RealityFact["status"] | Constraint["status"];
   verification_level: RealityFact["verification_level"] | Constraint["verification_level"];
   user_confirmed: boolean;
 }): boolean {
   if (isTerminalNonPromoteStatus(input.status)) return false;
   if (input.verification_level === "independently_verified") return false;
-  if (input.verification_level === "user_estimate") return false;
+  if (input.status === "confirmed" && input.user_confirmed === true) {
+    return false;
+  }
+  // user_estimate: event confirms "this is my estimate" without status promotion.
+  // user_asserted: event may promote unverified → confirmed.
+  if (input.verification_level === "user_estimate") {
+    return input.status === "unverified";
+  }
   if (input.verification_level !== "user_asserted") return false;
-  if (input.status === "confirmed" && input.user_confirmed === true) return false;
-  // Only unverified user_asserted (or confirmed without derived flag) may enter the event path.
   return input.status === "unverified" || input.status === "confirmed";
 }
 
@@ -106,8 +112,10 @@ type PromotePlan = FactPromotePlan | ConstraintPromotePlan;
 
 /**
  * Build an all-or-nothing Confirmation Event plan.
- * - user_estimate / independently_verified / terminal statuses: ignored (left unchanged)
+ * - independently_verified / terminal statuses: ignored
+ * - user_estimate + unverified: Confirmation Event (status stays estimate)
  * - user_asserted without source_turn_id: fail-closed
+ * - Existing events must match target + source; stale target-only events do not skip
  * - event append failure: fail-closed (caller discards tentative events)
  */
 function planAndAppendConfirmationEvents(input: {
@@ -125,7 +133,7 @@ function planAndAppendConfirmationEvents(input: {
 
   for (const f of input.before.reality_facts) {
     if (
-      !isUserAssertedUnverifiedCandidate({
+      !isEligibleForConfirmEvent({
         status: f.status,
         verification_level: f.verification_level,
         user_confirmed: f.user_confirmed === true,
@@ -147,7 +155,7 @@ function planAndAppendConfirmationEvents(input: {
 
   for (const c of input.before.constraints) {
     if (
-      !isUserAssertedUnverifiedCandidate({
+      !isEligibleForConfirmEvent({
         status: c.status,
         verification_level: c.verification_level,
         user_confirmed: c.user_confirmed === true,
@@ -177,28 +185,31 @@ function planAndAppendConfirmationEvents(input: {
     expected_session_id: input.session.session_id,
     messages: input.session.messages,
     decision_context: input.before,
+    expected_confirmation_turn_id: input.confirmationTurnId,
+    require_confirmation_turn_id: true,
   };
   let newly_appended = 0;
 
   for (const plan of plans) {
     if (plan.kind === "fact") {
       if (
-        hasUserConfirmEventForTarget(events, {
-          type: "fact",
-          fact_id: plan.fact_id,
-        })
+        findMatchingUserConfirmEvent(
+          events,
+          { type: "fact", fact_id: plan.fact_id },
+          { source_turn_id: plan.source_turn_id },
+        )
       ) {
         continue;
       }
       const raw = {
         event_id: makeFactConfirmEventId(
-          `${plan.fact_id}_${input.confirmationTurnId}`,
+          `${plan.fact_id}_${plan.source_turn_id}_${input.confirmationTurnId}`,
         ),
         target_type: "fact" as const,
         fact_id: plan.fact_id,
         source_turn_id: plan.source_turn_id,
         confirmation_turn_id: input.confirmationTurnId,
-        confirmation_action_id: `m21_final_confirm_fact_${plan.fact_id}`,
+        confirmation_action_id: `m21_final_confirm_fact_${plan.fact_id}__${plan.source_turn_id}`,
         event_type: "confirm_fact" as const,
         actor: "user" as const,
         confirmed_at: input.now,
@@ -220,20 +231,21 @@ function planAndAppendConfirmationEvents(input: {
     }
 
     if (
-      hasUserConfirmEventForTarget(events, {
-        type: "constraint",
-        constraint_id: plan.constraint_id,
-      })
+      findMatchingUserConfirmEvent(
+        events,
+        { type: "constraint", constraint_id: plan.constraint_id },
+        { source_turn_id: plan.source_turn_id },
+      )
     ) {
       continue;
     }
     const raw = {
-      event_id: `constraint_confirm_event_${plan.constraint_id}_${input.confirmationTurnId}`,
+      event_id: `constraint_confirm_event_${plan.constraint_id}_${plan.source_turn_id}_${input.confirmationTurnId}`,
       target_type: "constraint" as const,
       constraint_id: plan.constraint_id,
       source_turn_id: plan.source_turn_id,
       confirmation_turn_id: input.confirmationTurnId,
-      confirmation_action_id: `m21_final_confirm_constraint_${plan.constraint_id}`,
+      confirmation_action_id: `m21_final_confirm_constraint_${plan.constraint_id}__${plan.source_turn_id}`,
       event_type: "confirm_constraint" as const,
       actor: "user" as const,
       confirmed_at: input.now,
@@ -258,7 +270,8 @@ function planAndAppendConfirmationEvents(input: {
 
 /**
  * Apply legal status promotion ONLY after Confirmation Events exist.
- * user_confirmed is always derived from events — never written as authority true.
+ * user_confirmed is always derived from matching events (target + source) — never written as authority true.
+ * user_estimate: status/verification unchanged; user_confirmed may become true from a matching event.
  */
 function applyLegalPromotionAfterEvents(input: {
   before: DecisionContext;
@@ -276,27 +289,56 @@ function applyLegalPromotionAfterEvents(input: {
   let changed = false;
 
   const reality_facts = input.before.reality_facts.map((f) => {
-    // Estimates: keep unverified + user_estimate; do not convert via user confirm.
-    if (f.verification_level === "user_estimate") {
-      return f;
-    }
-    // Independently verified: never convert via user confirm.
-    if (f.verification_level === "independently_verified") {
-      return f;
-    }
     if (isTerminalNonPromoteStatus(f.status)) {
       return f;
     }
+    if (f.verification_level === "independently_verified") {
+      if (f.user_confirmed === true) {
+        changed = true;
+        return { ...f, user_confirmed: false, updated_at: input.now };
+      }
+      return f;
+    }
+
+    const source = f.source_turn_id?.trim() ?? "";
+    const hasEvt =
+      source.length > 0 &&
+      hasUserConfirmEventForTarget(
+        input.events,
+        { type: "fact", fact_id: f.fact_id },
+        { source_turn_id: source },
+      );
+
+    if (f.verification_level === "user_estimate") {
+      const user_confirmed = deriveUserConfirmedFromEvents({
+        status: "unverified",
+        verification_level: "user_estimate",
+        events: input.events,
+        target: { type: "fact", fact_id: f.fact_id },
+        source_turn_id: source || null,
+      });
+      if (
+        f.status === "unverified" &&
+        f.verification_level === "user_estimate" &&
+        f.user_confirmed === user_confirmed
+      ) {
+        return f;
+      }
+      changed = true;
+      return {
+        ...f,
+        status: "unverified" as const,
+        verification_level: "user_estimate" as const,
+        user_confirmed,
+        updated_at: input.now,
+      };
+    }
+
     if (f.verification_level !== "user_asserted") {
       return f;
     }
 
-    const hasEvt = hasUserConfirmEventForTarget(input.events, {
-      type: "fact",
-      fact_id: f.fact_id,
-    });
     if (!hasEvt) {
-      // No valid Confirmation Event → never mark user_confirmed.
       if (f.user_confirmed === true) {
         changed = true;
         return { ...f, user_confirmed: false, updated_at: input.now };
@@ -310,6 +352,7 @@ function applyLegalPromotionAfterEvents(input: {
       verification_level: "user_asserted",
       events: input.events,
       target: { type: "fact", fact_id: f.fact_id },
+      source_turn_id: source || null,
     });
 
     if (
@@ -334,23 +377,55 @@ function applyLegalPromotionAfterEvents(input: {
   });
 
   const constraints = input.before.constraints.map((c) => {
-    if (c.verification_level === "user_estimate") {
-      return c;
-    }
-    if (c.verification_level === "independently_verified") {
-      return c;
-    }
     if (isTerminalNonPromoteStatus(c.status)) {
       return c;
     }
+    if (c.verification_level === "independently_verified") {
+      if (c.user_confirmed === true) {
+        changed = true;
+        return { ...c, user_confirmed: false, updated_at: input.now };
+      }
+      return c;
+    }
+
+    const source = c.source_turn_id?.trim() ?? "";
+    const hasEvt =
+      source.length > 0 &&
+      hasUserConfirmEventForTarget(
+        input.events,
+        { type: "constraint", constraint_id: c.constraint_id },
+        { source_turn_id: source },
+      );
+
+    if (c.verification_level === "user_estimate") {
+      const user_confirmed = deriveUserConfirmedFromEvents({
+        status: "unverified",
+        verification_level: "user_estimate",
+        events: input.events,
+        target: { type: "constraint", constraint_id: c.constraint_id },
+        source_turn_id: source || null,
+      });
+      if (
+        c.status === "unverified" &&
+        c.verification_level === "user_estimate" &&
+        c.user_confirmed === user_confirmed
+      ) {
+        return c;
+      }
+      changed = true;
+      return {
+        ...c,
+        status: "unverified" as const,
+        verification_level: "user_estimate" as const,
+        user_confirmed,
+        updated_at: input.now,
+      };
+    }
+
     if (c.verification_level !== "user_asserted") {
       return c;
     }
 
-    const hasEvt = hasUserConfirmEventForTarget(input.events, {
-      type: "constraint",
-      constraint_id: c.constraint_id,
-    });
     if (!hasEvt) {
       if (c.user_confirmed === true) {
         changed = true;
@@ -365,6 +440,7 @@ function applyLegalPromotionAfterEvents(input: {
       verification_level: "user_asserted",
       events: input.events,
       target: { type: "constraint", constraint_id: c.constraint_id },
+      source_turn_id: source || null,
     });
 
     if (

@@ -261,21 +261,57 @@ export function appendConfirmationEvent(
   return { outcome: "appended", events, event };
 }
 
-/** True when a valid user Confirmation Event exists for this fact/constraint. */
+export type ConfirmEventMatchTarget =
+  | { type: "fact"; fact_id: string }
+  | { type: "constraint"; constraint_id: string };
+
+export type ConfirmEventMatchOpts = {
+  /** When set (non-empty), event.source_turn_id must equal this. */
+  source_turn_id?: string | null;
+  /** When set (non-empty), event.confirmation_turn_id must equal this. */
+  confirmation_turn_id?: string | null;
+};
+
+function targetMatchesEvent(
+  event: ConfirmationEvent,
+  target: ConfirmEventMatchTarget,
+): boolean {
+  if (target.type === "fact") {
+    return event.target_type === "fact" && event.fact_id === target.fact_id;
+  }
+  return (
+    event.target_type === "constraint" &&
+    event.constraint_id === target.constraint_id
+  );
+}
+
+/**
+ * Find a Confirmation Event that matches target and optional source/confirm-turn.
+ * Stale events (wrong source or wrong confirm turn when those are required) do not match.
+ */
+export function findMatchingUserConfirmEvent(
+  events: ConfirmationEvent[] | null | undefined,
+  target: ConfirmEventMatchTarget,
+  opts: ConfirmEventMatchOpts = {},
+): ConfirmationEvent | undefined {
+  const list = events ?? [];
+  const wantSource = opts.source_turn_id?.trim() || "";
+  const wantConfirm = opts.confirmation_turn_id?.trim() || "";
+  return list.find((e) => {
+    if (!targetMatchesEvent(e, target)) return false;
+    if (wantSource && e.source_turn_id !== wantSource) return false;
+    if (wantConfirm && e.confirmation_turn_id !== wantConfirm) return false;
+    return true;
+  });
+}
+
+/** True when a matching user Confirmation Event exists (optional source/confirm-turn). */
 export function hasUserConfirmEventForTarget(
   events: ConfirmationEvent[] | null | undefined,
-  target: { type: "fact"; fact_id: string } | { type: "constraint"; constraint_id: string },
+  target: ConfirmEventMatchTarget,
+  opts: ConfirmEventMatchOpts = {},
 ): boolean {
-  const list = events ?? [];
-  if (target.type === "fact") {
-    return list.some(
-      (e) => e.target_type === "fact" && e.fact_id === target.fact_id,
-    );
-  }
-  return list.some(
-    (e) =>
-      e.target_type === "constraint" && e.constraint_id === target.constraint_id,
-  );
+  return findMatchingUserConfirmEvent(events, target, opts) !== undefined;
 }
 
 /**
@@ -290,11 +326,18 @@ export function deriveUserConfirmedFromEvents(input: {
   status: FactStatus;
   verification_level: VerificationLevel;
   events: ConfirmationEvent[] | null | undefined;
-  target: { type: "fact"; fact_id: string } | { type: "constraint"; constraint_id: string };
+  target: ConfirmEventMatchTarget;
+  /** Prefer matching on current fact/constraint source so stale events cannot confirm. */
+  source_turn_id?: string | null;
+  confirmation_turn_id?: string | null;
 }): boolean {
   const has_user_confirm_event = hasUserConfirmEventForTarget(
     input.events,
     input.target,
+    {
+      source_turn_id: input.source_turn_id,
+      confirmation_turn_id: input.confirmation_turn_id,
+    },
   );
   return deriveUserConfirmed({
     status: input.status,
@@ -395,6 +438,10 @@ export interface ConfirmationProvenanceContext {
   decision_context?: DecisionContext | null;
   /** Optional: expected owning session for cross-session hard-fail. */
   expected_session_id?: string;
+  /** When set, event.confirmation_turn_id must equal this confirm turn. */
+  expected_confirmation_turn_id?: string | null;
+  /** When true, confirmation_turn_id must be a non-null real user message. */
+  require_confirmation_turn_id?: boolean;
 }
 
 /**
@@ -433,6 +480,46 @@ export function assertConfirmationEventProvenance(
       CONFIRMATION_SOURCE_INVALID,
       `source_turn_id must reference a user message, got role=${message.role}`,
     );
+  }
+
+  if (ctx.require_confirmation_turn_id === true && event.confirmation_turn_id == null) {
+    throw new ConfirmationEventError(
+      CONFIRMATION_SOURCE_INVALID,
+      "confirmation_turn_id required for confirmation provenance",
+    );
+  }
+
+  if (event.confirmation_turn_id != null) {
+    const confirmation_turn_id = requireNonEmptyString(
+      event.confirmation_turn_id,
+      "confirmation_turn_id",
+    );
+    const confirmMessage = findSessionMessageByTurnId(
+      ctx.messages,
+      confirmation_turn_id,
+    );
+    if (!confirmMessage) {
+      throw new ConfirmationEventError(
+        CONFIRMATION_SOURCE_INVALID,
+        `confirmation_turn_id does not map to a message in current Session: ${confirmation_turn_id}`,
+      );
+    }
+    if (confirmMessage.role !== "user") {
+      throw new ConfirmationEventError(
+        CONFIRMATION_SOURCE_INVALID,
+        `confirmation_turn_id must reference a user message, got role=${confirmMessage.role}`,
+      );
+    }
+    if (
+      ctx.expected_confirmation_turn_id != null &&
+      ctx.expected_confirmation_turn_id.trim() !== "" &&
+      confirmation_turn_id !== ctx.expected_confirmation_turn_id.trim()
+    ) {
+      throw new ConfirmationEventError(
+        CONFIRMATION_SOURCE_INVALID,
+        `confirmation_turn_id does not match expected confirm turn (${ctx.expected_confirmation_turn_id})`,
+      );
+    }
   }
 
   const dc = ctx.decision_context;
@@ -523,6 +610,7 @@ function applyFactConfirmToDc(
       verification_level: f.verification_level,
       events,
       target: { type: "fact", fact_id },
+      source_turn_id: f.source_turn_id,
     });
     return { ...f, user_confirmed, updated_at: now };
   });
@@ -542,6 +630,7 @@ function applyConstraintConfirmToDc(
       verification_level: c.verification_level,
       events,
       target: { type: "constraint", constraint_id },
+      source_turn_id: c.source_turn_id,
     });
     return { ...c, user_confirmed, updated_at: now };
   });
