@@ -224,6 +224,7 @@ export async function runAdaptiveQuestionTurn(input: {
       });
       if (applied.skipped_reason === "turn_already_mapped") {
         // Idempotent replay: rebuild understanding/plan from existing DC, no dup writes.
+        // M2.3-R2-FU2: preserve planner_blocked — do not drop nonterminal protection.
         current = activateNextBlueprintPriorityBand(current, input.now);
         const understanding = buildUnderstandingState({
           session: current,
@@ -232,6 +233,18 @@ export async function runAdaptiveQuestionTurn(input: {
           last_answer_event_id: answer_event.event_id,
         });
         const planned = await planFromState(current, understanding, input.now);
+        if (planned.planner_block) {
+          return {
+            session: planned.session,
+            outcome: "planner_blocked",
+            ask_error: `${planned.planner_block.reason_code}:${planned.planner_block.detail}`,
+            answer_event,
+            understanding: planned.understanding,
+            plan: planned.plan,
+            authorized_question: planned.authorized_question,
+            persist_error: "turn_already_mapped",
+          };
+        }
         return {
           session: planned.session,
           outcome: "idempotent_replay",
@@ -331,8 +344,9 @@ export async function runAdaptiveQuestionTurn(input: {
   // Do not build Readiness against a DC that band activation later mutates.
   current = activateNextBlueprintPriorityBand(current, input.now);
 
+  let understanding0: UnderstandingState | null = null;
   try {
-    const understanding0 = buildUnderstandingState({
+    understanding0 = buildUnderstandingState({
       session: current,
       blueprint: current.decision_blueprint!,
       now: input.now,
@@ -352,15 +366,66 @@ export async function runAdaptiveQuestionTurn(input: {
       persist_error,
     };
   } catch (e) {
+    // M2.3-R2-FU2: planner/understanding exception must not disguise as investigation complete
+    // while Blueprint P0/P1 obligations remain and hard budget remains.
+    const err = errorText(e);
+    let u = understanding0;
+    if (!u) {
+      try {
+        u = buildUnderstandingState({
+          session: current,
+          blueprint: current.decision_blueprint!,
+          now: input.now,
+          last_answer_event_id: answer_event?.event_id ?? null,
+        });
+      } catch {
+        u = null;
+      }
+    }
+    if (u) {
+      const openP0P1 = openBlueprintP0P1Needs(u);
+      if (openP0P1.length > 0 && u.budget.remaining_hard_budget > 0) {
+        const blockedU: UnderstandingState = {
+          ...u,
+          next_question_plan: null,
+          readiness: {
+            ...u.readiness,
+            verdict: "continue",
+            can_ask: true,
+            reasons: [
+              ...u.readiness.reasons,
+              "open_blueprint_p0_p1_obligations",
+              "planner_blocked",
+              "planner_exception",
+            ],
+          },
+        };
+        return {
+          session: withUnderstanding(
+            current,
+            blockedU,
+            null,
+            current.intake_ask_plan ?? null,
+          ),
+          outcome: "planner_blocked",
+          ask_error: `planner_exception:${err}`,
+          answer_event,
+          understanding: blockedU,
+          plan: null,
+          authorized_question: null,
+          persist_error,
+        };
+      }
+    }
     return {
       session: current,
       outcome: "ready_no_question",
       answer_event,
-      understanding: null,
+      understanding: u,
       plan: null,
       authorized_question: null,
       persist_error,
-      ask_error: errorText(e),
+      ask_error: err,
     };
   }
 }

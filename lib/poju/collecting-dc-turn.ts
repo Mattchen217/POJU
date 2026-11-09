@@ -107,15 +107,7 @@ function mapAdaptiveOutcome(turn: {
       ...common,
     };
   }
-  if (turn.outcome === "idempotent_replay") {
-    return {
-      session: turn.session,
-      outcome: "not_applied",
-      ask_planned: Boolean(turn.plan) || (turn.understanding != null && !turn.ask_error),
-      persist_error: turn.persist_error ?? "turn_already_mapped",
-      ...common,
-    };
-  }
+  // M2.3-R2-FU2: planner_blocked must win over any replay/mapping ambiguity.
   if (turn.outcome === "planner_blocked") {
     return {
       session: turn.session,
@@ -128,7 +120,22 @@ function mapAdaptiveOutcome(turn: {
       plan: null,
     };
   }
-
+  if (turn.outcome === "idempotent_replay") {
+    // Do not treat understanding!=null alone as successful question planning.
+    // Prefer an actual plan, or an explicit readiness-stop (can_ask=false terminal verdict).
+    const readinessStop =
+      turn.understanding != null &&
+      turn.understanding.readiness.can_ask === false &&
+      (turn.understanding.readiness.verdict === "ready_for_final_confirm" ||
+        turn.understanding.readiness.verdict === "hard_budget_exhausted");
+    return {
+      session: turn.session,
+      outcome: "not_applied",
+      ask_planned: Boolean(turn.plan) || (readinessStop && !turn.ask_error),
+      persist_error: turn.persist_error ?? "turn_already_mapped",
+      ...common,
+    };
+  }
   const skipWrite =
     turn.persist_error === "off_topic" ||
     turn.persist_error === "invalid_input" ||

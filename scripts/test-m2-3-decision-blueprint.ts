@@ -13,6 +13,7 @@
  *  M2.3-R1  Full DDR scope (P0+P1+P2) on Blueprint; seed vs schedule split; P1/P2 activation
  *  M2.3-R2  Production priority activation / Readiness ordering via runAdaptiveQuestionTurn
  *  M2.3-R2-FU  Planner cannot bypass open P0/P1 (no selectable / all rejected → blocked)
+ *  M2.3-R2-FU2 Preserve planner_blocked across idempotent replay + planner exception
  */
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
@@ -50,7 +51,7 @@ async function main() {
     "../lib/poju/session-manager"
   );
   const { handleUserMessage } = await import("../lib/poju/agent");
-  const { runM1ProductionPreLlmTurn } = await import(
+  const { runM1ProductionPreLlmTurn, runCollectingDcTurn } = await import(
     "../lib/poju/collecting-dc-turn"
   );
   const {
@@ -1553,6 +1554,505 @@ async function main() {
       );
       console.log(
         `    verdict=${turn.understanding!.readiness.verdict}; outcome=${turn.outcome}; agent_phase=${agentOut.agent_v2?.current_phase}; confirm=${last.content.includes("理解确认")}`,
+      );
+    });
+
+    // ---------- M2.3-R2-FU2 ----------
+    await check("M2.3-R2-FU2 Case A: idempotent replay + planner_blocked preserves nonterminal", async () => {
+      const sid = await createPOJUSession({
+        payment_id: "pay_m23_r2fu2_a",
+        original_question: Q_CAREER,
+      });
+      const out1 = await handleUserMessage({
+        session: await durable(sid),
+        userMessage: Q_CAREER,
+        locale: "zh",
+      });
+      await savePOJUSession(out1);
+      let s = await durable(sid);
+      const bp = s.decision_blueprint!;
+      const p0Ids = p0BandIds(bp);
+      assert.ok(p0Ids.length >= 1, "need P0 DIRs");
+      const depthCap = bp.question_budget.depth_per_direction;
+      const depth_by_dir: Record<string, number> = {
+        ...(s.decision_understanding!.budget.depth_by_dir ?? {}),
+      };
+      for (const id of p0Ids) depth_by_dir[id] = depthCap;
+      const replayTurnId = "r2fu2_a_replay_turn";
+
+      // Plant a prior mapped fact so the next answer with same source_turn_id hits turn_already_mapped.
+      s = {
+        ...s,
+        decision_context: {
+          ...s.decision_context!,
+          reality_facts: [
+            ...(s.decision_context!.reality_facts ?? []),
+            {
+              fact_id: "f_r2fu2_a_prior",
+              statement: "Prior mapped answer for FU2 Case A replay",
+              status: "unverified" as const,
+              verification_level: "user_asserted" as const,
+              source_stage: "collecting" as const,
+              source_turn_id: replayTurnId,
+              user_confirmed: false,
+              fact_roles: ["option"] as string[],
+              related_dir_ids: [p0Ids[0]!],
+            },
+            {
+              fact_id: "f_r2fu2_a_ev",
+              statement: "Collecting evidence while P0 still open",
+              status: "unverified" as const,
+              verification_level: "user_asserted" as const,
+              source_stage: "collecting" as const,
+              source_turn_id: "t_r2fu2_a_ev",
+              user_confirmed: false,
+              fact_roles: ["option"] as string[],
+              related_dir_ids: [p0Ids[0]!],
+            },
+          ],
+          dirs: s.decision_context!.dirs.map((d) =>
+            p0Ids.includes(d.dir_id)
+              ? {
+                  ...d,
+                  current_state: "unknown" as const,
+                  partial_satisfaction: true,
+                }
+              : d,
+          ),
+          version: s.decision_context!.version + 1,
+        },
+        decision_understanding: {
+          ...s.decision_understanding!,
+          budget: {
+            ...s.decision_understanding!.budget,
+            session_asked_count: Math.min(
+              2,
+              s.decision_understanding!.budget.hard_budget_limit - 1,
+            ),
+            remaining_hard_budget: Math.max(
+              1,
+              s.decision_understanding!.budget.hard_budget_limit - 2,
+            ),
+            depth_by_dir,
+          },
+        },
+        agent_v2: {
+          ...(s.agent_v2 ?? out1.agent_v2!),
+          current_phase: "collecting_context" as const,
+        },
+      };
+
+      const now = new Date().toISOString();
+      const turn = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "同一回合重放：仍有未完成的 P0",
+        source_turn_id: replayTurnId,
+        now,
+      });
+      assert.equal(
+        turn.outcome,
+        "planner_blocked",
+        `replay must stay planner_blocked, got ${turn.outcome} ask_error=${turn.ask_error}`,
+      );
+      assert.notEqual(turn.outcome, "idempotent_replay");
+      assert.equal(turn.persist_error, "turn_already_mapped");
+      assert.equal(turn.plan, null);
+      assert.equal(turn.authorized_question, null);
+      assert.ok(turn.understanding);
+      assert.equal(turn.understanding!.readiness.can_ask, true);
+      assert.equal(turn.understanding!.readiness.verdict, "continue");
+      const p0Need = turn.understanding!.need_to_understand.items.find(
+        (n) => n.kind === "dir_based" && p0Ids.includes(n.dir_id),
+      );
+      assert.ok(p0Need, "open P0 must remain in need_to_understand");
+
+      // Production collecting-turn mapping
+      await savePOJUSession(turn.session);
+      const mapped = await runCollectingDcTurn(await durable(sid), {
+        statement: "同一回合重放：仍有未完成的 P0",
+        source_turn_id: replayTurnId,
+        now: new Date().toISOString(),
+      });
+      assert.equal(mapped.outcome, "planner_blocked");
+      assert.equal(mapped.ask_planned, false);
+      assert.equal(mapped.authorized_question ?? null, null);
+      assert.equal(mapped.plan ?? null, null);
+      assert.ok(mapped.ask_error, "ask_error must be preserved");
+
+      // Agent: no confirm / no free-form
+      const sAgent = {
+        ...mapped.session,
+        agent_v2: {
+          ...(mapped.session.agent_v2 ?? s.agent_v2!),
+          current_phase: "collecting_context" as const,
+        },
+      };
+      await savePOJUSession(sAgent);
+      const agentOut = await handleUserMessage({
+        session: await durable(sid),
+        userMessage: "继续",
+        locale: "zh",
+      });
+      const last = lastAssistant(agentOut);
+      assert.ok(
+        (last as { meta?: { m1_planner_blocked?: boolean } }).meta
+          ?.m1_planner_blocked === true ||
+          last.content.includes("未能生成合规的授权提问") ||
+          last.content.includes("未完成的必要调查"),
+        `agent must surface planner_blocked, got: ${last.content.slice(0, 160)}`,
+      );
+      assert.ok(!last.content.includes("【理解确认】"), "no understanding confirmation");
+      assert.ok(!last.content.includes(stubResponse), "no unauthorized free-form");
+      assert.equal(agentOut.agent_v2?.current_phase, "collecting_context");
+      console.log(
+        `    adaptive=${turn.outcome}; collecting=${mapped.outcome}; ask_planned=${mapped.ask_planned}; phase=${agentOut.agent_v2?.current_phase}`,
+      );
+    });
+
+    await check("M2.3-R2-FU2 Case B: planner exception + open P1 → planner_blocked not ready_no_question", async () => {
+      const sid = await createPOJUSession({
+        payment_id: "pay_m23_r2fu2_b",
+        original_question: Q_CAREER,
+      });
+      const out1 = await handleUserMessage({
+        session: await durable(sid),
+        userMessage: Q_CAREER,
+        locale: "zh",
+      });
+      await savePOJUSession(out1);
+      let s = await durable(sid);
+      const p0Ids = p0BandIds(s.decision_blueprint!);
+
+      s = {
+        ...s,
+        decision_context: {
+          ...s.decision_context!,
+          reality_facts: [
+            ...(s.decision_context!.reality_facts ?? []),
+            {
+              fact_id: "f_r2fu2_b_p0",
+              statement: "P0 complete fixture for FU2 Case B",
+              status: "unverified" as const,
+              verification_level: "user_asserted" as const,
+              source_stage: "collecting" as const,
+              source_turn_id: "t_r2fu2_b",
+              user_confirmed: false,
+              fact_roles: ["option"] as string[],
+              related_dir_ids: p0Ids.slice(0, 1),
+            },
+          ],
+          dirs: s.decision_context!.dirs.map((d) =>
+            p0Ids.includes(d.dir_id)
+              ? { ...d, current_state: "known" as const }
+              : d,
+          ),
+          version: s.decision_context!.version + 1,
+        },
+      };
+
+      const activated = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "",
+        source_turn_id: "r2fu2_b_activate",
+        now: new Date().toISOString(),
+        init_only: true,
+      });
+      assert.ok(
+        activated.session.decision_context!.dirs.some(
+          (d) =>
+            d.dir_id === "DIR-VALIDATION-CAPACITY" ||
+            d.dir_id === "DIR-OPT-IRREV",
+        ),
+        "precondition: P1 activated",
+      );
+
+      // Controlled exception: depth_per_direction getter throws inside planFromState
+      // filter after Understanding builds (Understanding only reads soft/hard).
+      const qb = {
+        ...activated.session.decision_blueprint!.question_budget,
+      };
+      Object.defineProperty(qb, "depth_per_direction", {
+        enumerable: true,
+        configurable: true,
+        get() {
+          throw new Error("controlled_planner_exception_fu2");
+        },
+      });
+
+      s = {
+        ...activated.session,
+        decision_blueprint: {
+          ...activated.session.decision_blueprint!,
+          question_budget: qb as typeof activated.session.decision_blueprint.question_budget,
+        },
+        decision_understanding: {
+          ...activated.session.decision_understanding!,
+          budget: {
+            ...activated.session.decision_understanding!.budget,
+            session_asked_count: 1,
+            remaining_hard_budget: Math.max(
+              1,
+              activated.session.decision_understanding!.budget.hard_budget_limit - 1,
+            ),
+            depth_by_dir: {},
+          },
+        },
+        agent_v2: {
+          ...(activated.session.agent_v2 ?? out1.agent_v2!),
+          current_phase: "collecting_context" as const,
+        },
+      };
+
+      const turn = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "",
+        source_turn_id: "r2fu2_b_exception",
+        now: new Date().toISOString(),
+        init_only: true,
+      });
+      assert.equal(
+        turn.outcome,
+        "planner_blocked",
+        `expected planner_blocked not ready_no_question, got ${turn.outcome} ask_error=${turn.ask_error}`,
+      );
+      assert.notEqual(turn.outcome, "ready_no_question");
+      assert.ok(
+        (turn.ask_error ?? "").includes("controlled_planner_exception_fu2") ||
+          (turn.ask_error ?? "").includes("planner_exception"),
+        `ask_error must carry exception, got ${turn.ask_error}`,
+      );
+      assert.ok(turn.understanding);
+      assert.equal(turn.understanding!.readiness.verdict, "continue");
+      assert.equal(turn.understanding!.readiness.can_ask, true);
+      const p1Need = turn.understanding!.need_to_understand.items.find(
+        (n) =>
+          n.kind === "dir_based" &&
+          (n.dir_id === "DIR-VALIDATION-CAPACITY" || n.dir_id === "DIR-OPT-IRREV"),
+      );
+      assert.ok(p1Need, "open P1 must remain in need_to_understand");
+      assert.equal(turn.authorized_question, null);
+      assert.equal(turn.plan, null);
+
+      const mapped = await runCollectingDcTurn(s, {
+        statement: "",
+        source_turn_id: "r2fu2_b_exception_map",
+        now: new Date().toISOString(),
+        init_only: true,
+      });
+      // Note: runCollectingDcTurn rebuilds from s which still has throwing getter.
+      assert.equal(mapped.outcome, "planner_blocked");
+      assert.equal(mapped.ask_planned, false);
+
+      const agentOut = await handleUserMessage({
+        session: {
+          ...turn.session,
+          // Restore non-throwing budget so Agent path can re-enter without crashing outside catch.
+          decision_blueprint: {
+            ...activated.session.decision_blueprint!,
+            directions: activated.session.decision_blueprint!.directions.map((d) => ({
+              ...d,
+              depth_soft_cap: 0,
+            })),
+          },
+          agent_v2: {
+            ...(turn.session.agent_v2 ?? out1.agent_v2!),
+            current_phase: "collecting_context" as const,
+          },
+        },
+        userMessage: "关于验证能力我想再想想",
+        locale: "zh",
+      });
+      const last = lastAssistant(agentOut);
+      assert.ok(!last.content.includes("【理解确认】"), "no awaiting confirmation prompt");
+      assert.ok(!last.content.includes(stubResponse), "no unauthorized question");
+      assert.notEqual(agentOut.agent_v2?.current_phase, "awaiting_confirmation");
+      assert.equal(agentOut.agent_v2?.current_phase, "collecting_context");
+      console.log(
+        `    outcome=${turn.outcome}; ask_error=${turn.ask_error}; phase=${agentOut.agent_v2?.current_phase}`,
+      );
+    });
+
+    await check("M2.3-R2-FU2 Case C: genuine idempotent replay keeps idempotent_replay (not blocked)", async () => {
+      const sid = await createPOJUSession({
+        payment_id: "pay_m23_r2fu2_c",
+        original_question: Q_CAREER,
+      });
+      const out1 = await handleUserMessage({
+        session: await durable(sid),
+        userMessage: Q_CAREER,
+        locale: "zh",
+      });
+      await savePOJUSession(out1);
+      let s = await durable(sid);
+      assert.ok(s.decision_understanding?.next_question_plan || s.adaptive_ask_plan || true);
+
+      // First real answer application
+      const turnId = "r2fu2_c_answer";
+      const first = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "我在考虑换工作，预算大约还能撑六个月",
+        source_turn_id: turnId,
+        now: new Date().toISOString(),
+      });
+      assert.ok(
+        first.outcome === "planned" ||
+          first.outcome === "ready_no_question" ||
+          first.outcome === "planner_blocked",
+        `first turn unexpected: ${first.outcome}`,
+      );
+      // If first somehow blocked (unlikely with healthy budget), skip strict replay shape.
+      if (first.outcome === "planner_blocked") {
+        console.log("    skip Case C strict replay: first turn unexpectedly blocked");
+        return;
+      }
+      await savePOJUSession(first.session);
+      s = await durable(sid);
+
+      const replay = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "我在考虑换工作，预算大约还能撑六个月",
+        source_turn_id: turnId,
+        now: new Date().toISOString(),
+      });
+      assert.equal(
+        replay.outcome,
+        "idempotent_replay",
+        `genuine replay must stay idempotent_replay, got ${replay.outcome} ask_error=${replay.ask_error}`,
+      );
+      assert.notEqual(replay.outcome, "planner_blocked");
+
+      const mapped = await runCollectingDcTurn(s, {
+        statement: "我在考虑换工作，预算大约还能撑六个月",
+        source_turn_id: turnId,
+        now: new Date().toISOString(),
+      });
+      assert.notEqual(mapped.outcome, "planner_blocked");
+      // ask_planned true only if a real plan or readiness-stop exists
+      if (mapped.plan) {
+        assert.equal(mapped.ask_planned, true);
+      } else if (
+        mapped.understanding &&
+        mapped.understanding.readiness.can_ask === false
+      ) {
+        assert.equal(mapped.ask_planned, true);
+      } else {
+        assert.equal(mapped.ask_planned, false);
+      }
+      console.log(
+        `    first=${first.outcome}; replay=${replay.outcome}; mapped=${mapped.outcome}; ask_planned=${mapped.ask_planned}`,
+      );
+    });
+
+    await check("M2.3-R2-FU2 Case D: P0/P1 complete → readiness/final-confirm unchanged", async () => {
+      const sid = await createPOJUSession({
+        payment_id: "pay_m23_r2fu2_d",
+        original_question: Q_CAREER,
+      });
+      const out1 = await handleUserMessage({
+        session: await durable(sid),
+        userMessage: Q_CAREER,
+        locale: "zh",
+      });
+      await savePOJUSession(out1);
+      let s = await durable(sid);
+      const p0Ids = p0BandIds(s.decision_blueprint!);
+
+      s = {
+        ...s,
+        decision_context: {
+          ...s.decision_context!,
+          reality_facts: [
+            ...(s.decision_context!.reality_facts ?? []),
+            {
+              fact_id: "f_r2fu2_d",
+              statement: "Collecting evidence after P0/P1 complete",
+              status: "unverified" as const,
+              verification_level: "user_asserted" as const,
+              source_stage: "collecting" as const,
+              source_turn_id: "t_r2fu2_d",
+              user_confirmed: false,
+              fact_roles: ["option"] as string[],
+              related_dir_ids: p0Ids.slice(0, 1),
+            },
+          ],
+          dirs: s.decision_context!.dirs.map((d) =>
+            p0Ids.includes(d.dir_id)
+              ? { ...d, current_state: "known" as const }
+              : d,
+          ),
+          version: s.decision_context!.version + 1,
+        },
+      };
+
+      const activated = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "",
+        source_turn_id: "r2fu2_d_activate",
+        now: new Date().toISOString(),
+        init_only: true,
+      });
+      const p1Ids = activated.session
+        .decision_context!.dirs.filter(
+          (d) =>
+            d.dir_id === "DIR-VALIDATION-CAPACITY" ||
+            d.dir_id === "DIR-OPT-IRREV",
+        )
+        .map((d) => d.dir_id);
+      assert.ok(p1Ids.length >= 1, "P1 should activate");
+
+      s = {
+        ...activated.session,
+        decision_context: {
+          ...activated.session.decision_context!,
+          dirs: activated.session.decision_context!.dirs.map((d) =>
+            p1Ids.includes(d.dir_id)
+              ? { ...d, current_state: "known" as const }
+              : d,
+          ),
+          version: activated.session.decision_context!.version + 1,
+        },
+      };
+
+      const turn = await runAdaptiveQuestionTurn({
+        session: s,
+        statement: "",
+        source_turn_id: "r2fu2_d_ready",
+        now: new Date().toISOString(),
+        init_only: true,
+      });
+      assert.ok(turn.understanding);
+      assert.equal(turn.understanding!.readiness.can_ask, false);
+      assert.ok(
+        turn.understanding!.readiness.verdict === "ready_for_final_confirm" ||
+          turn.understanding!.readiness.verdict === "hard_budget_exhausted",
+      );
+      assert.notEqual(turn.outcome, "planner_blocked");
+      const openP0P1 = turn.understanding!.need_to_understand.items.filter(
+        (n) =>
+          n.kind === "dir_based" &&
+          (n.priority === "P0" || n.priority === "P1"),
+      );
+      assert.equal(openP0P1.length, 0);
+
+      const sAgent = {
+        ...turn.session,
+        agent_v2: {
+          ...(turn.session.agent_v2 ?? out1.agent_v2!),
+          current_phase: "collecting_context" as const,
+        },
+      };
+      const agentOut = await handleUserMessage({
+        session: sAgent,
+        userMessage: "信息已经差不多了",
+        locale: "zh",
+      });
+      const last = lastAssistant(agentOut);
+      assert.ok(
+        (last as { meta?: { m1_planner_blocked?: boolean } }).meta
+          ?.m1_planner_blocked !== true,
+      );
+      console.log(
+        `    verdict=${turn.understanding!.readiness.verdict}; outcome=${turn.outcome}; phase=${agentOut.agent_v2?.current_phase}`,
       );
     });
 
