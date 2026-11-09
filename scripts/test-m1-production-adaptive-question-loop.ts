@@ -759,17 +759,21 @@ async function main() {
     });
 
     // Static wiring
-    await check("M1-static agent calls runCollectingDcTurn BEFORE LLM; plan drives response", async () => {
+    await check("M1-static agent calls runM1ProductionPreLlmTurn BEFORE LLM; plan drives response", async () => {
       const src = readFileSync(join(REPO, "lib/poju/agent.ts"), "utf8");
-      assert.match(src, /import \{ runCollectingDcTurn \} from "@\/lib\/poju\/collecting-dc-turn";/);
-      assert.match(src, /M1 — Adaptive Question Loop BEFORE/);
-      assert.match(src, /await runCollectingDcTurn\(sessionForLlm,/);
+      assert.match(src, /runCollectingDcTurn/);
+      assert.match(src, /runM1ProductionPreLlmTurn/);
+      assert.match(src, /from "@\/lib\/poju\/collecting-dc-turn"/);
+      assert.match(src, /M1-R — Adaptive Question Loop BEFORE|M1 — Adaptive Question Loop BEFORE/);
+      assert.match(src, /await runM1ProductionPreLlmTurn\(sessionForLlm,/);
       assert.match(src, /assertQuestionMatchesPlan/);
       assert.match(src, /attachAuthorizedAssistantQuestion/);
+      assert.match(src, /FAIL-CLOSED|m1_fail_closed/);
       assert.equal(/persistCollectingUserTurnDc/.test(src), false);
       assert.equal(/selectNextIntakeAskForSession/.test(src), false);
       // Must NOT call collecting turn only after assistant is built (old bug).
       assert.equal(/await runCollectingDcTurn\(sessionOut,/.test(src), false);
+      assert.equal(/await runM1ProductionPreLlmTurn\(sessionOut,/.test(src), false);
     });
 
     // Interpretation unit sanity

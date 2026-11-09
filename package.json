@@ -180,7 +180,8 @@
     "test:decision-context-stage4": "tsx scripts/test-decision-context-stage4.ts",
     "test:pagefeed-bookjudgment-s1-s2": "tsx scripts/test-pagefeed-bookjudgment-s1-s2.ts",
     "test:s5-freeze-s6-observation": "tsx scripts/test-s5-freeze-s6-observation.ts",
-    "test:s7-dc-lifecycle": "tsx scripts/test-s7-dc-lifecycle.ts"
+    "test:s7-dc-lifecycle": "tsx scripts/test-s7-dc-lifecycle.ts",
+    "test:m1-r-fresh-session-main-loop": "tsx scripts/test-m1-r-fresh-session-main-loop.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

@@ -27,4 +27,9 @@ export {
   runAdaptiveQuestionTurn,
   attachAuthorizedAssistantQuestion,
 } from "./adaptive-turn";
+export {
+  bootstrapFreshSessionMainLoop,
+  M1R_STARTER_DIRS,
+  __setM1rPersistForTests,
+} from "./fresh-session-bootstrap";
 export { projectAdaptiveQuestionForUi } from "./ui-projection";

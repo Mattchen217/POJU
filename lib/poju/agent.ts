@@ -1,7 +1,10 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { loadSessionProfileBundle, resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import { logBaseAnalysisPayload } from "@/lib/poju/base-analysis-diagnostics";
-import { runCollectingDcTurn } from "@/lib/poju/collecting-dc-turn";
+import {
+  runCollectingDcTurn,
+  runM1ProductionPreLlmTurn,
+} from "@/lib/poju/collecting-dc-turn";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
@@ -958,21 +961,35 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
 
-  // M1 — Adaptive Question Loop BEFORE assistant generation.
-  // User answer → Interpretation → DC → Understanding → Plan → authorized question.
-  // Plan must drive the question the user sees (not a post-hoc Session side-effect).
+  // M1-R — Adaptive Question Loop BEFORE assistant generation.
+  // Fresh session: bootstrap DC + Blueprint + first adaptive Q (not old free ask).
+  // Later turns: Answer → Interpretation → DC → Understanding → Plan → authorized Q.
+  // Plan must drive the question the user sees. DC persist failure is FAIL-CLOSED.
   let m1CollectingTurn: Awaited<ReturnType<typeof runCollectingDcTurn>> | null = null;
   {
     const phaseBeforeLlm =
       normalizeAgentPhase(ensureAgentV2(sessionForLlm).current_phase) ??
       ensureAgentV2(sessionForLlm).current_phase;
-    const collectingUserTurn =
-      phaseBeforeLlm === "collecting_context" &&
+    const hasDraftDc =
+      sessionForLlm.decision_context?.status === "draft" ||
+      sessionForLlm.decision_context?.status === "final";
+    // Brand-new sessions start in opening with no DC. M1-R allows bootstrap from
+    // opening OR collecting when the user submitted a real decision statement.
+    const m1EligiblePhase =
+      phaseBeforeLlm === "collecting_context" ||
+      phaseBeforeLlm === "opening" ||
+      (!hasDraftDc &&
+        phaseBeforeLlm !== "awaiting_understanding_confirm" &&
+        phaseBeforeLlm !== "awaiting_confirmation" &&
+        phaseBeforeLlm !== "delivered" &&
+        phaseBeforeLlm !== "tracking");
+    const m1UserTurn =
+      m1EligiblePhase &&
       !isSystemMessage &&
       !isOpeningSignal &&
       Boolean(userMessage.trim()) &&
-      sessionForLlm.decision_context?.status === "draft";
-    if (collectingUserTurn) {
+      (hasDraftDc || phaseBeforeLlm === "opening" || phaseBeforeLlm === "collecting_context" || !sessionForLlm.agent_v2);
+    if (m1UserTurn) {
       const lastUser = [...messagesWithUser]
         .reverse()
         .find((m) => m.role === "user" && !m.is_rejected);
@@ -980,7 +997,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       const statement = (userMessage.trim() === "__OPENING__" ? "" : isSystemMessage ? "" : userMessage).trim();
       if (turnId && statement) {
         const nowPre = new Date().toISOString();
-        m1CollectingTurn = await runCollectingDcTurn(sessionForLlm, {
+        m1CollectingTurn = await runM1ProductionPreLlmTurn(sessionForLlm, {
           statement,
           source_turn_id: turnId,
           now: nowPre,
@@ -989,30 +1006,66 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           m1CollectingTurn.outcome === "persist_failed" ||
           m1CollectingTurn.outcome === "persist_threw"
         ) {
-          console.warn(
-            "[agent] M1 collecting DC update failed before LLM (non-fatal)",
+          // FAIL-CLOSED: never silently fall back to old free-form questioning.
+          const failText =
+            "【系统】决策上下文写入失败，本轮无法继续提问。请稍后重试。" +
+            (m1CollectingTurn.persist_error
+              ? `（${m1CollectingTurn.persist_error}）`
+              : "");
+          const failAssistant = {
+            role: "assistant" as const,
+            content: failText,
+            timestamp: nowPre,
+            client_id: safeRandomUUID(),
+            meta: {
+              m1_fail_closed: true,
+              m1_outcome: m1CollectingTurn.outcome,
+              m1_persist_error: m1CollectingTurn.persist_error ?? null,
+            },
+          };
+          console.error(
+            "[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback)",
             m1CollectingTurn.outcome,
             m1CollectingTurn.persist_error,
           );
-        } else {
-          // Adopt DC + understanding + plan into the Session the LLM sees.
+          return withSessionProfileFlags({
+            ...sessionForLlm,
+            messages: [...messagesWithUser, failAssistant],
+            last_interaction_at: nowPre,
+          });
+        }
+        // Adopt DC + understanding + plan into the Session the LLM sees.
+        sessionForLlm = {
+          ...m1CollectingTurn.session,
+          messages: messagesWithUser,
+        };
+        workingSession = {
+          ...workingSession,
+          agent_v2: sessionForLlm.agent_v2 ?? workingSession.agent_v2,
+          decision_context: sessionForLlm.decision_context,
+          decision_context_versions: sessionForLlm.decision_context_versions,
+          decision_context_idempotency_keys:
+            sessionForLlm.decision_context_idempotency_keys,
+          control_plane: sessionForLlm.control_plane,
+          decision_blueprint: sessionForLlm.decision_blueprint,
+          decision_understanding: sessionForLlm.decision_understanding,
+          adaptive_ask_plan: sessionForLlm.adaptive_ask_plan,
+          intake_ask_plan: sessionForLlm.intake_ask_plan,
+          session_revision: sessionForLlm.session_revision,
+          dc_write_revision: sessionForLlm.dc_write_revision,
+        };
+        // M1-R: keep production collecting phase after bootstrap / adaptive plan.
+        if (sessionForLlm.agent_v2) {
           sessionForLlm = {
-            ...m1CollectingTurn.session,
-            messages: messagesWithUser,
+            ...sessionForLlm,
+            agent_v2: {
+              ...sessionForLlm.agent_v2,
+              current_phase: "collecting_context",
+            },
           };
           workingSession = {
             ...workingSession,
-            decision_context: sessionForLlm.decision_context,
-            decision_context_versions: sessionForLlm.decision_context_versions,
-            decision_context_idempotency_keys:
-              sessionForLlm.decision_context_idempotency_keys,
-            control_plane: sessionForLlm.control_plane,
-            decision_blueprint: sessionForLlm.decision_blueprint,
-            decision_understanding: sessionForLlm.decision_understanding,
-            adaptive_ask_plan: sessionForLlm.adaptive_ask_plan,
-            intake_ask_plan: sessionForLlm.intake_ask_plan,
-            session_revision: sessionForLlm.session_revision,
-            dc_write_revision: sessionForLlm.dc_write_revision,
+            agent_v2: sessionForLlm.agent_v2,
           };
         }
       }
@@ -1116,6 +1169,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     base_analysis,
   );
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
+  if (
+    m1CollectingTurn &&
+    (m1CollectingTurn.bootstrapped ||
+      m1CollectingTurn.plan ||
+      m1CollectingTurn.ask_planned) &&
+    agent_v2.current_phase !== "awaiting_confirmation" &&
+    agent_v2.current_phase !== "delivered"
+  ) {
+    agent_v2 = { ...agent_v2, current_phase: "collecting_context" };
+  }
 
   if (advance.trigger_delivery && !workingSession.main_delivery_done) {
     agent_v2 = { ...agent_v2, current_phase: "awaiting_confirmation" };

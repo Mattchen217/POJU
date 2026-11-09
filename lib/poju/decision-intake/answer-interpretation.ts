@@ -1,7 +1,11 @@
 /**
  * M1 Answer Interpretation — structured classify before DC write / next ask.
- * Deterministic v1: model draft optional later; never auto-confirm; never chart-as-fact.
+ * M1-R: marked **v1 simplified** (deterministic heuristics only; not full model interpretation).
+ * Model draft optional later; never auto-confirm; never chart-as-fact.
  */
+
+/** v1 simplified: deterministic heuristic classifier (not full model interpretation). */
+export const ANSWER_INTERPRETATION_VERSION = "deterministic_m1_v1_simplified" as const;
 
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { AnswerClass, AnswerEvent, ProposedWrite } from "./types";

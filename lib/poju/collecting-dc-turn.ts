@@ -1,12 +1,16 @@
 /**
  * Collecting-phase DC turn orchestration for `handleUserMessage`.
  *
- * M1: delegates to runAdaptiveQuestionTurn so the production order is:
- *   Answer Interpretation → DC Update → Understanding → Question Plan
+ * M1 / M1-R: delegates to adaptive loop so the production order is:
+ *   (Fresh session) Bootstrap DC+Blueprint+first plan
+ *   OR Answer Interpretation → DC Update → Understanding → Question Plan
  *   → authorized question (drives assistant), not post-hoc whole-statement dump.
  *
  * Adoption rule unchanged: caller Session takes new DC only when C1 committed
  * (or idempotent_skip). Planning failure keeps committed DC.
+ *
+ * Fail-closed: persist_failed / persist_threw must NOT silently fall back to
+ * old free-form Agent questioning (caller must surface an explicit error).
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -19,7 +23,7 @@ import type {
 export type CollectingDcTurnOutcome =
   /** DC committed by C1 (or prior commit via idempotent_skip) and adopted. */
   | "dc_committed"
-  /** Collecting mapper skipped this turn (no draft DC, empty / duplicate turn…). */
+  /** Collecting mapper skipped this turn (no draft DC, empty / duplicate turn). */
   | "not_applied"
   /** C1 rolled back; caller Session returned unchanged, no planning. */
   | "persist_failed"
@@ -40,43 +44,33 @@ export type CollectingDcTurnResult = {
   plan?: AdaptiveQuestionPlan | null;
   understanding?: UnderstandingState | null;
   answer_event?: AnswerEvent | null;
+  /** M1-R: true when this turn created draft DC from a brand-new session. */
+  bootstrapped?: boolean;
 };
 
-/**
- * Production collecting turn — M1 adaptive loop.
- * `init_only` builds Blueprint + first question without interpreting an answer.
- */
-export async function runCollectingDcTurn(
-  session: POJUSessionState,
-  input: {
-    statement: string;
-    source_turn_id: string;
-    now: string;
-    init_only?: boolean;
-  },
-): Promise<CollectingDcTurnResult> {
-  const { runAdaptiveQuestionTurn } = await import(
-    "@/lib/poju/decision-intake/adaptive-turn"
-  );
-  const turn = await runAdaptiveQuestionTurn({
-    session,
-    statement: input.statement,
-    source_turn_id: input.source_turn_id,
-    now: input.now,
-    init_only: input.init_only,
-  });
-
+function mapAdaptiveOutcome(turn: {
+  session: POJUSessionState;
+  outcome: string;
+  persist_error?: string;
+  ask_error?: string;
+  authorized_question: string | null;
+  plan: AdaptiveQuestionPlan | null;
+  understanding: UnderstandingState | null;
+  answer_event: AnswerEvent | null;
+  bootstrapped?: boolean;
+}, initOnly: boolean): CollectingDcTurnResult {
   const common = {
     authorized_question: turn.authorized_question,
     plan: turn.plan,
     understanding: turn.understanding,
     answer_event: turn.answer_event,
     ask_error: turn.ask_error,
+    bootstrapped: turn.bootstrapped,
   };
 
   if (turn.outcome === "dc_persist_failed") {
     return {
-      session,
+      session: turn.session,
       outcome: "persist_failed",
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -88,7 +82,7 @@ export async function runCollectingDcTurn(
   }
   if (turn.outcome === "dc_persist_threw") {
     return {
-      session,
+      session: turn.session,
       outcome: "persist_threw",
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -117,7 +111,6 @@ export async function runCollectingDcTurn(
     };
   }
 
-  // planned | ready_no_question
   const skipWrite =
     turn.persist_error === "off_topic" ||
     turn.persist_error === "invalid_input" ||
@@ -126,12 +119,74 @@ export async function runCollectingDcTurn(
 
   return {
     session: turn.session,
-    outcome: skipWrite && !input.init_only ? "not_applied" : "dc_committed",
-    // Ask failure (ask_error) must not count as planned — S8-H3.
+    outcome: skipWrite && !initOnly ? "not_applied" : "dc_committed",
     ask_planned:
       Boolean(turn.plan) ||
       (turn.outcome === "ready_no_question" && !turn.ask_error),
     persist_error: turn.persist_error,
     ...common,
   };
+}
+
+/**
+ * Production collecting turn — M1 adaptive loop.
+ * `init_only` builds Blueprint + first question without interpreting an answer.
+ */
+export async function runCollectingDcTurn(
+  session: POJUSessionState,
+  input: {
+    statement: string;
+    source_turn_id: string;
+    now: string;
+    init_only?: boolean;
+  },
+): Promise<CollectingDcTurnResult> {
+  const { runAdaptiveQuestionTurn } = await import(
+    "@/lib/poju/decision-intake/adaptive-turn"
+  );
+  const turn = await runAdaptiveQuestionTurn({
+    session,
+    statement: input.statement,
+    source_turn_id: input.source_turn_id,
+    now: input.now,
+    init_only: input.init_only,
+  });
+  return mapAdaptiveOutcome(turn, Boolean(input.init_only));
+}
+
+/**
+ * M1-R production pre-LLM entry.
+ *
+ * - No draft DC → fresh-session bootstrap (DC + Blueprint + first adaptive Q).
+ * - Draft DC + no last_sent_question yet → init_only first Q (does not treat statement as answer).
+ * - Draft DC + prior sent Q → answer interpretation path.
+ */
+export async function runM1ProductionPreLlmTurn(
+  session: POJUSessionState,
+  input: {
+    statement: string;
+    source_turn_id: string;
+    now: string;
+  },
+): Promise<CollectingDcTurnResult> {
+  const dc = session.decision_context;
+  const hasDraft = dc?.status === "draft" || dc?.status === "final";
+
+  // Brand-new session: no draft DC → bootstrap DC + Blueprint + first adaptive Q.
+  // Do not interpret the decision question as an answer to a prior investigate ask.
+  if (!hasDraft) {
+    const { bootstrapFreshSessionMainLoop } = await import(
+      "@/lib/poju/decision-intake/fresh-session-bootstrap"
+    );
+    const turn = await bootstrapFreshSessionMainLoop({
+      session,
+      statement: input.statement,
+      source_turn_id: input.source_turn_id,
+      now: input.now,
+    });
+    return mapAdaptiveOutcome(turn, true);
+  }
+
+  // Draft DC already present (seeded tests, Call B, or prior bootstrap): answer path.
+  return runCollectingDcTurn(session, input);
 }

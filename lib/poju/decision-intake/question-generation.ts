@@ -3,6 +3,9 @@
  * Plan controls the investigation target; NL may phrase but cannot change DIR/DDR.
  */
 
+/** v1 simplified: template NL from DIR.need/why (not full generative writer). */
+export const QUESTION_GENERATION_VERSION = "template_m1_v1_simplified" as const;
+
 import type { DecisionContext, DIR } from "@/lib/poju/decision-context/types";
 import type { RankedPlanningCandidate } from "@/lib/poju/decision-context/question-plan-cycle";
 import type { DecisionBlueprint, AdaptiveQuestionPlan } from "./types";

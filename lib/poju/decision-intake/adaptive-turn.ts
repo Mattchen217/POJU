@@ -7,6 +7,8 @@
  *   → Generate Next Question → Persist → (Agent returns assistant from plan)
  *
  * Sole production entry used by collecting-dc-turn / handleUserMessage.
+ * Answer Interpretation + Question Generation are **v1 simplified** (see those modules).
+ * Fresh sessions without draft DC enter via bootstrapFreshSessionMainLoop (M1-R).
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
