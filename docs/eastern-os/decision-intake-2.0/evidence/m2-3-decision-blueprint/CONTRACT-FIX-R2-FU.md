@@ -9,7 +9,7 @@
 | Branch | `feat/m1-r-fresh-session-main-loop` |
 | Parent | `adcda6574f13c505aea3cacf59ce5fd852767e61` |
 | Impl | `b7c7b98c989dc7b5240665c92cd7b2345658330b` |
-| HEAD | (filled after evidence commit) |
+| HEAD | 8db221cd06720a0f32f3bb1ebd2732274cf44751 |
 | PR / merge / deploy | none |
 | Self-PASS | **no** |
 
