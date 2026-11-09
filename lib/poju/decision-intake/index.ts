@@ -7,6 +7,7 @@ export { interpretUserAnswer } from "./answer-interpretation";
 export { applyAnswerEventToSessionDc } from "./apply-answer-to-dc";
 export {
   ensureDecisionBlueprint,
+  activateNextBlueprintPriorityBand,
   directionIdForDir,
   blueprintAllowsDir,
   blueprintAllowsDdr,

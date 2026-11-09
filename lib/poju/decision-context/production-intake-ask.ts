@@ -22,6 +22,7 @@ import { snapshotFromDc } from "./question-planning";
 import type { DecisionContext } from "./types";
 import type { DecisionBlueprint } from "@/lib/poju/decision-intake/types";
 import {
+  activateNextBlueprintPriorityBand,
   gateClassForDirFromCatalog,
   resolveDdrIdsForDir,
 } from "@/lib/poju/decision-intake/blueprint";
@@ -146,8 +147,14 @@ export async function selectNextIntakeAskForSession(
     };
   }
 
+  // Activate next Blueprint priority band (P1 after P0, P2 after P1) onto DC.
+  const scheduled = activateNextBlueprintPriorityBand(
+    input.session,
+    input.nowIso,
+  );
+  const dcLive = scheduled.decision_context ?? dc;
   const candidates = [
-    ...buildIntakeCandidatesFromDc(dc, input.session.decision_blueprint),
+    ...buildIntakeCandidatesFromDc(dcLive, scheduled.decision_blueprint),
     ...(input.extraCandidates ?? []),
   ];
 
@@ -155,7 +162,7 @@ export async function selectNextIntakeAskForSession(
 
   const plan = planNextAskFromCandidates({
     candidates,
-    snap: snapshotFromDc(dc),
+    snap: snapshotFromDc(dcLive),
     naValidation,
     softGate: input.softGate,
     p0DdrIncomplete: input.p0DdrIncomplete,
@@ -182,7 +189,7 @@ export async function selectNextIntakeAskForSession(
 
   return {
     session: {
-      ...input.session,
+      ...scheduled,
       intake_ask_plan: snapshot,
     },
     plan,

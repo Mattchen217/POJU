@@ -132,6 +132,43 @@ export function buildUnderstandingState(input: {
     });
   }
 
+
+  // M2.3-R1: Blueprint-scoped DIRs not yet on DC (deferred P1/P2) remain open
+  // investigation obligations — never treat as known/n_a / complete.
+  const onDc = new Set(dc.dirs.map((d) => d.dir_id));
+  for (const dirId of input.blueprint.dir_ids) {
+    if (onDc.has(dirId)) continue;
+    if (needs.some((n) => n.kind === "dir_based" && n.dir_id === dirId)) continue;
+    const direction_id = directionIdForDir(input.blueprint, dirId);
+    const direction = input.blueprint.directions.find(
+      (d) => d.direction_id === direction_id,
+    );
+    const gate = ddrLoad.ok
+      ? gateClassForDirFromCatalog(
+          dirId,
+          ddrLoad.snapshot.by_id,
+          ddrLoad.snapshot.dir_to_ddr,
+        )
+      : null;
+    const ddr_ids = resolveDdrIdsForDir(dirId, input.blueprint);
+    if (ddr_ids.length === 0) continue;
+    const priority =
+      gate?.gate_class ?? direction?.priority ?? "P2";
+    needs.push({
+      kind: "dir_based",
+      dir_id: dirId,
+      ddr_ids,
+      direction_id,
+      priority,
+      why: direction?.needed_info || "Blueprint-scoped DIR not yet activated on DC",
+      missing_content: direction?.needed_info || dirId,
+      may_affect_p5_ranking:
+        gate?.may_affect_p5_ranking ?? direction?.priority === "P0",
+      gap_type: "unknown",
+      must_continue: (gate?.may_affect_p5_ranking ?? false) || priority === "P0",
+    });
+  }
+
   const confirmed = dc.reality_facts.filter((f) => f.status === "confirmed");
   const unconfirmed = dc.reality_facts.filter(
     (f) => f.status === "unverified" || f.status === "unknown" || f.status === "declined",

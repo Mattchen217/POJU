@@ -88,6 +88,11 @@ export type DecisionBlueprint = {
   page_07_emit?: boolean;
   /** catalog = question-specific Catalog scope; starter_fallback = controlled fallback only. */
   scope_source?: "catalog" | "starter_fallback";
+  /**
+   * First-wave DC seed DIRs (P0 DDR required + topic pack).
+   * Distinct from dir_ids (complete Blueprint scope) and from AQE scheduling.
+   */
+  initial_seed_dir_ids?: string[];
   scope_locked: boolean;
   question_budget: { soft: number; hard: number; depth_per_direction: number };
   created_at: string;

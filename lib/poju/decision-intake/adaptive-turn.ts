@@ -23,7 +23,8 @@ import { buildProductionNaValidationContextFromSession } from "@/lib/poju/decisi
 import { persistDcLifecycleChange } from "@/lib/poju/decision-context/production-dc-lifecycle";
 import { interpretUserAnswer } from "./answer-interpretation";
 import { applyAnswerEventToSessionDc } from "./apply-answer-to-dc";
-import { ensureDecisionBlueprint } from "./blueprint";
+import { ensureDecisionBlueprint,
+  activateNextBlueprintPriorityBand } from "./blueprint";
 import { buildAdaptiveQuestionPlan } from "./question-generation";
 import { bumpBudgetAfterAsk } from "./scope-budget";
 import { buildUnderstandingState } from "./understanding-state";
@@ -249,6 +250,8 @@ async function planFromState(
   plan: AdaptiveQuestionPlan | null;
   authorized_question: string | null;
 }> {
+  // After P0 finishes, pull unfinished P1 (then P2) from Blueprint onto DC.
+  session = activateNextBlueprintPriorityBand(session, now);
   const dc = session.decision_context!;
   const blueprint = session.decision_blueprint!;
   let budget = understanding.budget;
