@@ -128,7 +128,7 @@ export function buildUnderstandingState(input: {
       missing_content: dir.need,
       may_affect_p5_ranking: ranking,
       gap_type,
-      must_continue: ranking || priority === "P0",
+      must_continue: ranking || priority === "P0" || priority === "P1",
     });
   }
 
@@ -165,7 +165,7 @@ export function buildUnderstandingState(input: {
       may_affect_p5_ranking:
         gate?.may_affect_p5_ranking ?? direction?.priority === "P0",
       gap_type: "unknown",
-      must_continue: (gate?.may_affect_p5_ranking ?? false) || priority === "P0",
+      must_continue: (gate?.may_affect_p5_ranking ?? false) || priority === "P0" || priority === "P1",
     });
   }
 
@@ -189,24 +189,41 @@ export function buildUnderstandingState(input: {
   const hasCollectingEvidence =
     (dc.reality_facts?.length ?? 0) > 0 || (dc.constraints?.length ?? 0) > 0;
 
+  // M2.3-R2: open selected-Blueprint P0/P1 obligations must remain askable while
+  // budget remains. sufficiency.canStop and criticalCovered partial-coverage must
+  // not silently bypass unfinished P0/P1. Hard-budget exhaustion may still end
+  // asking, but remaining DIRs stay visible in need_to_understand. P2 may stay
+  // deferred under soft-budget (never auto-marked known/n_a).
+  const openPriorityBandNeeds = needs.filter(
+    (n) =>
+      n.kind === "dir_based" &&
+      (n.priority === "P0" || n.priority === "P1"),
+  );
+  const hasOpenP0OrP1 = openPriorityBandNeeds.length > 0;
+
   const sufficiency = evaluateDecisionSufficiency(dc);
   const remaining = budget.remaining_hard_budget;
   let readiness_verdict: UnderstandingState["readiness"]["verdict"] = "continue";
   let can_ask = true;
   const reasons = [...sufficiency.reasons];
-  if (sufficiency.canStop) {
-    readiness_verdict = "ready_for_final_confirm";
-    can_ask = false;
-    reasons.push("sufficiency_can_stop");
-  } else if (remaining <= 0) {
+  if (remaining <= 0) {
     readiness_verdict = "hard_budget_exhausted";
     can_ask = false;
     reasons.push("hard_budget_exhausted");
+  } else if (hasOpenP0OrP1) {
+    readiness_verdict = "continue";
+    can_ask = true;
+    reasons.push("open_blueprint_p0_p1_obligations");
+  } else if (sufficiency.canStop) {
+    readiness_verdict = "ready_for_final_confirm";
+    can_ask = false;
+    reasons.push("sufficiency_can_stop");
   } else if (needs.length === 0) {
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
     reasons.push("no_open_needs");
   } else if (criticalCovered && hasCollectingEvidence) {
+    // Only non-P0/P1 open needs remain (typically deferred P2) — soft stop OK.
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
     reasons.push("critical_dirs_partial_coverage_ready_for_confirm");

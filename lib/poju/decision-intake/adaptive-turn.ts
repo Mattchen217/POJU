@@ -1,11 +1,12 @@
 /**
  * M1 Production Adaptive Question Turn orchestrator.
  *
- * Order (normative):
- *   User Answer → Answer Interpretation → DC Update → Understanding
- *   → Need / Insight → Question Planning → Scope/Depth/Budget Validation
- *   → Generate Next Question → Persist → (Agent returns assistant from plan)
- *
+ * Order (normative, M2.3-R2):
+ *   User Answer → Answer Interpretation → DC Update (persist)
+ *   → Ensure Blueprint → activateNextBlueprintPriorityBand (latest DC)
+ *   → Understanding + Readiness (on activated DC) → Question Planning
+ *   → Scope/Depth/Budget Validation → Generate Next Question → Persist
+ *   → (Agent returns assistant from plan)
  * Sole production entry used by collecting-dc-turn / handleUserMessage.
  * Answer Interpretation + Question Generation are **v1 simplified** (see those modules).
  * Fresh sessions without draft DC enter via bootstrapFreshSessionMainLoop (M1-R).
@@ -111,6 +112,7 @@ export async function runAdaptiveQuestionTurn(input: {
       });
       if (applied.skipped_reason === "turn_already_mapped") {
         // Idempotent replay: rebuild understanding/plan from existing DC, no dup writes.
+        current = activateNextBlueprintPriorityBand(current, input.now);
         const understanding = buildUnderstandingState({
           session: current,
           blueprint: current.decision_blueprint!,
@@ -130,6 +132,7 @@ export async function runAdaptiveQuestionTurn(input: {
       }
       if (!applied.applied) {
         // Off-topic / invalid: still recompute understanding; may keep prior needs.
+        current = activateNextBlueprintPriorityBand(current, input.now);
         const understanding = buildUnderstandingState({
           session: current,
           blueprint: current.decision_blueprint!,
@@ -208,7 +211,11 @@ export async function runAdaptiveQuestionTurn(input: {
   const bp2 = ensureDecisionBlueprint(current, { now: input.now });
   current = bp2.session;
 
-  // 3–8) Understanding → Plan → Validate → Generate
+  // M2.3-R2 authoritative sequence:
+  //   activate priority band on latest DC → build Understanding → Readiness → plan
+  // Do not build Readiness against a DC that band activation later mutates.
+  current = activateNextBlueprintPriorityBand(current, input.now);
+
   try {
     const understanding0 = buildUnderstandingState({
       session: current,
@@ -250,8 +257,8 @@ async function planFromState(
   plan: AdaptiveQuestionPlan | null;
   authorized_question: string | null;
 }> {
-  // After P0 finishes, pull unfinished P1 (then P2) from Blueprint onto DC.
-  session = activateNextBlueprintPriorityBand(session, now);
+  // M2.3-R2: priority-band activation already ran before Understanding/Readiness.
+  // Activating here would mutate DC after Readiness and reuse a stale can_ask.
   const dc = session.decision_context!;
   const blueprint = session.decision_blueprint!;
   let budget = understanding.budget;
