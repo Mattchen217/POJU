@@ -20,6 +20,7 @@
 
 import {
   appendConfirmationEventWithProvenance,
+  assertConfirmationEventProvenance,
   deriveUserConfirmedFromEvents,
   findMatchingUserConfirmEvent,
   hasUserConfirmEventForTarget,
@@ -115,7 +116,9 @@ type PromotePlan = FactPromotePlan | ConstraintPromotePlan;
  * - independently_verified / terminal statuses: ignored
  * - user_estimate + unverified: Confirmation Event (status stays estimate)
  * - user_asserted without source_turn_id: fail-closed
- * - Existing events must match target + source; stale target-only events do not skip
+ * - Existing events must match target + source AND pass full provenance (real user
+ *   confirmation_turn_id); forged/assistant confirm turns fail-closed (no skip-as-authority)
+ * - Stale target-only events do not skip
  * - event append failure: fail-closed (caller discards tentative events)
  */
 function planAndAppendConfirmationEvents(input: {
@@ -188,17 +191,38 @@ function planAndAppendConfirmationEvents(input: {
     expected_confirmation_turn_id: input.confirmationTurnId,
     require_confirmation_turn_id: true,
   };
+  // Existing-event reuse: same provenance rules, but confirmation_turn_id may be a
+  // prior legitimate user confirm turn (not necessarily this turn).
+  const reuseProvenanceCtx = {
+    session_id: input.session.session_id,
+    expected_session_id: input.session.session_id,
+    messages: input.session.messages,
+    decision_context: input.before,
+    require_confirmation_turn_id: true,
+  };
   let newly_appended = 0;
 
   for (const plan of plans) {
     if (plan.kind === "fact") {
-      if (
-        findMatchingUserConfirmEvent(
-          events,
-          { type: "fact", fact_id: plan.fact_id },
-          { source_turn_id: plan.source_turn_id },
-        )
-      ) {
+      const existingFactEvent = findMatchingUserConfirmEvent(
+        events,
+        { type: "fact", fact_id: plan.fact_id },
+        { source_turn_id: plan.source_turn_id },
+      );
+      if (existingFactEvent) {
+        // Reuse path: full provenance on the EXISTING event (session/target/source/
+        // confirmation_turn must be real user turns). Do NOT require confirmation_turn_id
+        // to equal this turn — prior legitimate confirms are allowed.
+        try {
+          assertConfirmationEventProvenance(reuseProvenanceCtx, existingFactEvent);
+        } catch (e) {
+          return {
+            events: [...(input.session.confirmation_events ?? [])],
+            plans: [],
+            newly_appended: 0,
+            error: e instanceof Error ? e.message : String(e),
+          };
+        }
         continue;
       }
       const raw = {
@@ -230,13 +254,22 @@ function planAndAppendConfirmationEvents(input: {
       continue;
     }
 
-    if (
-      findMatchingUserConfirmEvent(
-        events,
-        { type: "constraint", constraint_id: plan.constraint_id },
-        { source_turn_id: plan.source_turn_id },
-      )
-    ) {
+    const existingConstraintEvent = findMatchingUserConfirmEvent(
+      events,
+      { type: "constraint", constraint_id: plan.constraint_id },
+      { source_turn_id: plan.source_turn_id },
+    );
+    if (existingConstraintEvent) {
+      try {
+        assertConfirmationEventProvenance(reuseProvenanceCtx, existingConstraintEvent);
+      } catch (e) {
+        return {
+          events: [...(input.session.confirmation_events ?? [])],
+          plans: [],
+          newly_appended: 0,
+          error: e instanceof Error ? e.message : String(e),
+        };
+      }
       continue;
     }
     const raw = {
@@ -643,10 +676,28 @@ export async function confirmUnderstandingAndFreeze(input: {
     };
   }
 
-  // 2) Derive status + user_confirmed from events only.
+  // 2) Derive status + user_confirmed only from provenance-valid events.
+  // Invalid injected events (forged/assistant confirmation_turn_id) must not confer authority.
+  const eventsForAuthority = built.events.filter((event) => {
+    try {
+      assertConfirmationEventProvenance(
+        {
+          session_id: input.session.session_id,
+          expected_session_id: input.session.session_id,
+          messages: input.session.messages,
+          decision_context: dc,
+          require_confirmation_turn_id: true,
+        },
+        event,
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  });
   const applied = applyLegalPromotionAfterEvents({
     before: dc,
-    events: built.events,
+    events: eventsForAuthority,
     now,
   });
 
