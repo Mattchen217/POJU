@@ -1600,6 +1600,9 @@ async function main() {
       assertDeliveryExecutionAuthority,
       DeliveryExecutionRevokedError,
       tryCommitUnderDeliveryAuthority,
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+      commitUnderDeliveryExecutionFence,
     } = await import("../lib/poju/final-delivery-execution-authority");
     const {
       tryReleaseClaimForRegenerate,
@@ -1628,6 +1631,7 @@ async function main() {
       if (!prepared.ok) return;
 
       const agent = mkAgent({ original_question: "r4 test" });
+      const gen1 = await allocateFinalDeliveryExecutionGeneration(frozen.session.session_id);
       const oldJob = await createXhighJob({
         phase: "final_delivery",
         session_id: frozen.session.session_id,
@@ -1648,17 +1652,25 @@ async function main() {
           m22_claim_key: prepared.claimKey,
           m22_report_job_id: prepared.job.job_id,
         },
+        execution_generation: gen1,
       });
+      await authorizeFinalDeliveryExecution(frozen.session.session_id, gen1, oldJob.job_id);
       await updateXhighJobStatus(oldJob.job_id, "running", {
         current_stage: "segments",
         accumulated_content: "stage_running:segments",
       });
 
       // Old worker still has authority before Regenerate.
-      assert.equal(await tryCommitUnderDeliveryAuthority(oldJob.job_id), true);
+      assert.equal(await tryCommitUnderDeliveryAuthority(oldJob.job_id, gen1), true);
+      const fenceOk = await commitUnderDeliveryExecutionFence(oldJob.job_id, gen1, (j) => ({
+        ...j,
+        accumulated_content: "pre_supersede_touch",
+      }));
+      assert.equal(fenceOk.ok, true);
 
       // Production Regenerate path: supersede + owner-token CAS release.
-      await supersedeFinalDeliveryJobForRegenerate(oldJob.job_id);
+      const revokedMeta = await supersedeFinalDeliveryJobForRegenerate(oldJob.job_id);
+      assert.ok(revokedMeta.new_generation > gen1);
       const after = await getXhighJob(oldJob.job_id);
       assert.ok(after);
       assert.equal(after!.status, "failed");
@@ -1666,12 +1678,21 @@ async function main() {
 
       let revoked = false;
       try {
-        await assertDeliveryExecutionAuthority(oldJob.job_id);
+        await assertDeliveryExecutionAuthority(oldJob.job_id, gen1);
       } catch (e) {
         revoked = e instanceof DeliveryExecutionRevokedError;
       }
       assert.equal(revoked, true, "old worker must lose execution authority");
-      assert.equal(await tryCommitUnderDeliveryAuthority(oldJob.job_id), false);
+      assert.equal(await tryCommitUnderDeliveryAuthority(oldJob.job_id, gen1), false);
+      const staleWrite = await commitUnderDeliveryExecutionFence(oldJob.job_id, gen1, (j) => ({
+        ...j,
+        status: "completed",
+        accumulated_content: "stale_should_not_land",
+      }));
+      assert.equal(staleWrite.ok, false);
+      const afterStale = await getXhighJob(oldJob.job_id);
+      assert.equal(afterStale!.status, "failed");
+      assert.notEqual(afterStale!.accumulated_content, "stale_should_not_land");
 
       // Cannot steal claim without owner token.
       const key = freezeReportClaimKey({
@@ -1861,6 +1882,7 @@ async function main() {
       if (!prepared.ok) return;
 
       const agent = mkAgent({ original_question: "r4 test" });
+      const genC4 = await (await import("../lib/poju/final-delivery-execution-authority")).allocateFinalDeliveryExecutionGeneration(frozen.session.session_id);
       const formal = await createXhighJob({
         phase: "final_delivery",
         session_id: frozen.session.session_id,
@@ -1881,7 +1903,9 @@ async function main() {
           m22_claim_key: prepared.claimKey,
           m22_report_job_id: prepared.job.job_id,
         },
+        execution_generation: genC4,
       });
+      await (await import("../lib/poju/final-delivery-execution-authority")).authorizeFinalDeliveryExecution(frozen.session.session_id, genC4, formal.job_id);
       await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
 
       const allReady = DECISION_PAGE_IDS.map((pageId) => ({
@@ -1956,6 +1980,7 @@ async function main() {
       if (!prepared.ok) return;
 
       const agent = mkAgent({ original_question: "r4 test" });
+      const genC5 = await (await import("../lib/poju/final-delivery-execution-authority")).allocateFinalDeliveryExecutionGeneration(frozen.session.session_id);
       const formal = await createXhighJob({
         phase: "final_delivery",
         session_id: frozen.session.session_id,
@@ -1976,7 +2001,9 @@ async function main() {
           m22_claim_key: prepared.claimKey,
           m22_report_job_id: prepared.job.job_id,
         },
+        execution_generation: genC5,
       });
+      await (await import("../lib/poju/final-delivery-execution-authority")).authorizeFinalDeliveryExecution(frozen.session.session_id, genC5, formal.job_id);
       await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
 
       // Incomplete pages → write-back fails → formal must stay failed (persisted).
@@ -2139,6 +2166,656 @@ async function main() {
     assert.equal(retried.job.binding.decisionContextVersion, frozen.version);
     assert.equal(retried.job.binding.reportSchemaVersion, M22_REPORT_SCHEMA_VERSION);
   });
+
+
+  // ─── M2.2-R5: execution fencing + real Stage Runner ─────────────────────
+
+  await check("M2.2-R5-C1 Failed supersede persistence prevents replacement", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { runWithEphemeralXhighKv, createXhighJob, getXhighJob, getFdExecutionFence } =
+      await import("../lib/poju/xhigh-job-store");
+    const {
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+      supersedeFinalDeliveryJobForRegenerate,
+      __setSupersedePersistFailForTests,
+      SupersedePersistenceError,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+    const { currentDeliveryDeployGeneration } = await import(
+      "../lib/poju/delivery-deploy-generation"
+    );
+
+    await runWithEphemeralXhighKv(async () => {
+      const sid = "m22_r5_c1_" + Date.now();
+      const gen1 = await allocateFinalDeliveryExecutionGeneration(sid);
+      const agent = mkAgent({ original_question: "r5 supersede fail" });
+      const oldJob = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: gen1,
+      });
+      await authorizeFinalDeliveryExecution(sid, gen1, oldJob.job_id);
+
+      __setSupersedePersistFailForTests(true);
+      let threw = false;
+      try {
+        await supersedeFinalDeliveryJobForRegenerate(oldJob.job_id);
+      } catch (e) {
+        threw = e instanceof SupersedePersistenceError;
+      } finally {
+        __setSupersedePersistFailForTests(false);
+      }
+      assert.equal(threw, true, "supersede persistence failure must propagate");
+
+      // Replacement must NOT start: do not authorize a new job after failed revoke confirm.
+      // Fence may have bumped (atomic revoke step) but old authority remains uncertain —
+      // route must fail closed; here we assert supersede threw so caller cannot proceed.
+      const fence = await getFdExecutionFence(sid);
+      assert.ok(fence);
+      // Old job must not be reported as successfully superseded when persist was injected-fail.
+      // Depending on inject point (before persist), job may still be running.
+      const after = await getXhighJob(oldJob.job_id);
+      assert.ok(after);
+      assert.notEqual(after!.failure_reason, "superseded_by_regenerate");
+    });
+  });
+
+  await check("M2.2-R5-C2 Real Stage Runner assemble: 8 pages then formal completed", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const {
+      runWithEphemeralXhighKv,
+      createXhighJob,
+      getXhighJob,
+      updateXhighJobStatus,
+    } = await import("../lib/poju/xhigh-job-store");
+    const {
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const {
+      prepareFreezeBoundFinalDelivery,
+      getCompletedFreezeBoundReport,
+    } = await import("../lib/poju/decision-intake/freeze-bound-report");
+    const {
+      runFinalDeliveryStage,
+      __setAssembleReadyOverrideForTests,
+    } = await import("../lib/poju/final-delivery-stage-runner");
+    const { saveDeliveryStageCheckpoint } = await import(
+      "../lib/llm/pro/delivery/delivery-stage-store"
+    );
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+    const { currentDeliveryDeployGeneration } = await import(
+      "../lib/poju/delivery-deploy-generation"
+    );
+
+    await runWithEphemeralXhighKv(async () => {
+      const frozen = await freezeSession("m22_r5_c2");
+      const sharedKv = new MemoryKv();
+      const claimOps = __createClaimOpsForTests(sharedKv);
+      const prepared = await prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps: {
+          ...persistDeps(),
+          claimOps,
+          claimTtlSec: 120,
+          loadSession: async (sid: string) => loadPOJUSession(sid),
+        },
+      });
+      assert.equal(prepared.ok, true);
+      if (!prepared.ok) return;
+
+      const gen = await allocateFinalDeliveryExecutionGeneration(frozen.session.session_id);
+      const agent = mkAgent({ original_question: "r5 assemble" });
+      const formal = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_claim_token: prepared.claimToken,
+          m22_claim_key: prepared.claimKey,
+          m22_report_job_id: prepared.job.job_id,
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: gen,
+      });
+      await authorizeFinalDeliveryExecution(frozen.session.session_id, gen, formal.job_id);
+      await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
+
+      // Seed upstream checkpoints required by real assemble path.
+      await saveDeliveryStageCheckpoint(formal.job_id, {
+        stage: "finalize",
+        value: {},
+        tokens_used: 0,
+        model: "test",
+      });
+      await saveDeliveryStageCheckpoint(formal.job_id, {
+        stage: "segments",
+        value: {},
+        narrative: {},
+        tokens_used: 0,
+      });
+
+      const readyPages = DECISION_PAGE_IDS.map((pageId) => ({
+        key: pageId,
+        heading: `H ${pageId}`,
+        body_markdown: `page ${pageId} ${prepared.snapshot.contentHash}`,
+        evidence_markdown: "",
+        interleaved_markdown: `page ${pageId} ${prepared.snapshot.contentHash}`,
+        evidence_ready: true,
+        locale: "zh-CN",
+      }));
+      __setAssembleReadyOverrideForTests(readyPages);
+
+      try {
+        await runFinalDeliveryStage(formal.job_id, "assemble");
+      } finally {
+        __setAssembleReadyOverrideForTests(null);
+      }
+
+      const persisted = await getXhighJob(formal.job_id);
+      assert.ok(persisted);
+      assert.equal(persisted!.status, "completed", "formal must complete after write-back");
+      assert.equal(persisted!.execution_generation, gen);
+
+      const retrieved = getCompletedFreezeBoundReport(
+        await durable(frozen.session.session_id),
+        { freezeId: frozen.freezeId },
+      );
+      assert.ok(retrieved);
+      assert.equal(retrieved!.pages.length, 8);
+      assert.equal(retrieved!.job_id, prepared.job.job_id);
+      assert.equal(retrieved!.binding.freezeId, frozen.freezeId);
+      assert.equal(retrieved!.binding.contentHash, frozen.contentHash);
+    });
+  });
+
+  await check("M2.2-R5-C3 Real Stage Runner write-back failure → formal failed", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const {
+      runWithEphemeralXhighKv,
+      createXhighJob,
+      getXhighJob,
+      updateXhighJobStatus,
+    } = await import("../lib/poju/xhigh-job-store");
+    const {
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const {
+      prepareFreezeBoundFinalDelivery,
+      getCompletedFreezeBoundReport,
+    } = await import("../lib/poju/decision-intake/freeze-bound-report");
+    const {
+      runFinalDeliveryStage,
+      __setAssembleReadyOverrideForTests,
+    } = await import("../lib/poju/final-delivery-stage-runner");
+    const { saveDeliveryStageCheckpoint } = await import(
+      "../lib/llm/pro/delivery/delivery-stage-store"
+    );
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+    const { currentDeliveryDeployGeneration } = await import(
+      "../lib/poju/delivery-deploy-generation"
+    );
+
+    await runWithEphemeralXhighKv(async () => {
+      const frozen = await freezeSession("m22_r5_c3");
+      const sharedKv = new MemoryKv();
+      const claimOps = __createClaimOpsForTests(sharedKv);
+      const prepared = await prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps: {
+          ...persistDeps(),
+          claimOps,
+          claimTtlSec: 120,
+          loadSession: async (sid: string) => loadPOJUSession(sid),
+        },
+      });
+      assert.equal(prepared.ok, true);
+      if (!prepared.ok) return;
+
+      const gen = await allocateFinalDeliveryExecutionGeneration(frozen.session.session_id);
+      const agent = mkAgent({ original_question: "r5 wb fail" });
+      const formal = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_claim_token: prepared.claimToken,
+          m22_claim_key: prepared.claimKey,
+          m22_report_job_id: prepared.job.job_id,
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: gen,
+      });
+      await authorizeFinalDeliveryExecution(frozen.session.session_id, gen, formal.job_id);
+      await updateXhighJobStatus(formal.job_id, "running", { current_stage: "assemble" });
+      await saveDeliveryStageCheckpoint(formal.job_id, {
+        stage: "finalize",
+        value: {},
+        tokens_used: 0,
+        model: "test",
+      });
+      await saveDeliveryStageCheckpoint(formal.job_id, {
+        stage: "segments",
+        value: {},
+        narrative: {},
+        tokens_used: 0,
+      });
+
+      // Incomplete pages → write-back fails inside real assemble path.
+      __setAssembleReadyOverrideForTests(
+        DECISION_PAGE_IDS.slice(0, 3).map((pageId) => ({
+          key: pageId,
+          heading: "h",
+          body_markdown: "incomplete",
+          evidence_markdown: "",
+          evidence_ready: true,
+          locale: "zh-CN",
+        })),
+      );
+      try {
+        await runFinalDeliveryStage(formal.job_id, "assemble");
+      } finally {
+        __setAssembleReadyOverrideForTests(null);
+      }
+
+      const persisted = await getXhighJob(formal.job_id);
+      assert.ok(persisted);
+      assert.equal(persisted!.status, "failed");
+      assert.notEqual(persisted!.status, "completed");
+
+      const sessionAfter = await durable(frozen.session.session_id);
+      const m22 = (sessionAfter.freeze_bound_report_jobs ?? []).find(
+        (j) => j.job_id === prepared.job.job_id,
+      );
+      assert.ok(m22);
+      assert.equal(m22!.status, "failed");
+      assert.equal(
+        getCompletedFreezeBoundReport(sessionAfter, { freezeId: frozen.freezeId }),
+        null,
+      );
+    });
+  });
+
+  await check("M2.2-R5-C4 Regenerate mid-flight: stale fence rejects checkpoint/complete", async () => {
+    __resetFreezeBoundReportInFlightForTests();
+    const {
+      runWithEphemeralXhighKv,
+      createXhighJob,
+      getXhighJob,
+      updateXhighJobStatus,
+      getFdExecutionFence,
+    } = await import("../lib/poju/xhigh-job-store");
+    const {
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+      supersedeFinalDeliveryJobForRegenerate,
+      commitUnderDeliveryExecutionFence,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const {
+      runFinalDeliveryStage,
+      __setAssembleReadyOverrideForTests,
+    } = await import("../lib/poju/final-delivery-stage-runner");
+    const { saveDeliveryStageCheckpoint, loadDeliveryStageCheckpoint } = await import(
+      "../lib/llm/pro/delivery/delivery-stage-store"
+    );
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+    const { currentDeliveryDeployGeneration } = await import(
+      "../lib/poju/delivery-deploy-generation"
+    );
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    const { prepareFreezeBoundFinalDelivery } = await import(
+      "../lib/poju/decision-intake/freeze-bound-report"
+    );
+
+    await runWithEphemeralXhighKv(async () => {
+      const frozen = await freezeSession("m22_r5_c4");
+      const sharedKv = new MemoryKv();
+      const claimOps = __createClaimOpsForTests(sharedKv);
+      const prepared = await prepareFreezeBoundFinalDelivery({
+        session: frozen.session,
+        freezeId: frozen.freezeId,
+        expected_hash: frozen.contentHash,
+        acquireGenerationClaim: true,
+        deps: {
+          ...persistDeps(),
+          claimOps,
+          claimTtlSec: 120,
+          loadSession: async (sid: string) => loadPOJUSession(sid),
+        },
+      });
+      assert.equal(prepared.ok, true);
+      if (!prepared.ok) return;
+
+      const genOld = await allocateFinalDeliveryExecutionGeneration(frozen.session.session_id);
+      const agent = mkAgent({ original_question: "r5 race" });
+      const oldJob = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_claim_token: prepared.claimToken,
+          m22_claim_key: prepared.claimKey,
+          m22_report_job_id: prepared.job.job_id,
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: genOld,
+      });
+      await authorizeFinalDeliveryExecution(
+        frozen.session.session_id,
+        genOld,
+        oldJob.job_id,
+      );
+      await updateXhighJobStatus(oldJob.job_id, "running", { current_stage: "assemble" });
+      await saveDeliveryStageCheckpoint(oldJob.job_id, {
+        stage: "finalize",
+        value: {},
+        tokens_used: 0,
+        model: "test",
+      });
+      await saveDeliveryStageCheckpoint(oldJob.job_id, {
+        stage: "segments",
+        value: {},
+        narrative: {},
+        tokens_used: 0,
+      });
+
+      // Regenerate takeover mid-flight.
+      const revoked = await supersedeFinalDeliveryJobForRegenerate(oldJob.job_id);
+      const genNew = revoked.new_generation;
+      const replacement = await createXhighJob({
+        phase: "final_delivery",
+        session_id: frozen.session.session_id,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: frozen.session.session_id,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+          decision_context_binding: prepared.decision_context_binding,
+          decision_context_snapshot: prepared.decision_context_snapshot,
+          require_decision_context: true,
+          m22_report_job_id: prepared.job.job_id,
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: genNew,
+      });
+      await authorizeFinalDeliveryExecution(
+        frozen.session.session_id,
+        genNew,
+        replacement.job_id,
+      );
+
+      // Stale generation writes rejected at commit boundary.
+      const stale = await commitUnderDeliveryExecutionFence(oldJob.job_id, genOld, (j) => ({
+        ...j,
+        status: "completed",
+        accumulated_content: "old_worker_complete_should_fail",
+      }));
+      assert.equal(stale.ok, false);
+
+      __setAssembleReadyOverrideForTests(
+        DECISION_PAGE_IDS.map((pageId) => ({
+          key: pageId,
+          heading: "h",
+          body_markdown: `stale ${pageId}`,
+          evidence_markdown: "",
+          interleaved_markdown: `stale ${pageId}`,
+          evidence_ready: true,
+          locale: "zh-CN",
+        })),
+      );
+      try {
+        await runFinalDeliveryStage(oldJob.job_id, "assemble");
+      } finally {
+        __setAssembleReadyOverrideForTests(null);
+      }
+
+      const oldPersisted = await getXhighJob(oldJob.job_id);
+      assert.equal(oldPersisted!.status, "failed");
+      assert.equal(oldPersisted!.failure_reason, "superseded_by_regenerate");
+      assert.notEqual(oldPersisted!.accumulated_content, "old_worker_complete_should_fail");
+
+      // Replacement job untouched by old worker.
+      const repl = await getXhighJob(replacement.job_id);
+      assert.ok(repl);
+      assert.notEqual(repl!.status, "failed");
+      assert.equal(repl!.execution_generation, genNew);
+      assert.notEqual(repl!.status, "completed"); // not started assemble
+
+      const fence = await getFdExecutionFence(frozen.session.session_id);
+      assert.ok(fence);
+      assert.equal(fence!.generation, genNew);
+      assert.equal(fence!.authorized_job_id, replacement.job_id);
+
+      // Assemble checkpoint from stale worker must not land as completed assemble.
+      const assembleCp = await loadDeliveryStageCheckpoint(oldJob.job_id, "assemble");
+      // May be null (skipped) or present only if saved before revoke; must not complete formal.
+      void assembleCp;
+    });
+  });
+
+  await check("M2.2-R5-C5 Dual contexts shared store: one authorized generation", async () => {
+    const { MemoryKv } = await import("../lib/kv/memory-kv");
+    // Two logical contexts share one ephemeral store (same ALS frame).
+    const {
+      runWithEphemeralXhighKv,
+      createXhighJob,
+      getXhighJob,
+      getFdExecutionFence,
+    } = await import("../lib/poju/xhigh-job-store");
+    const {
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+      supersedeFinalDeliveryJobForRegenerate,
+      commitUnderDeliveryExecutionFence,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+    const { currentDeliveryDeployGeneration } = await import(
+      "../lib/poju/delivery-deploy-generation"
+    );
+
+    await runWithEphemeralXhighKv(async () => {
+      const sid = "m22_r5_c5_" + Date.now();
+      const agent = mkAgent({ original_question: "dual ctx" });
+      const genA = await allocateFinalDeliveryExecutionGeneration(sid);
+      const jobA = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: genA,
+      });
+      await authorizeFinalDeliveryExecution(sid, genA, jobA.job_id);
+
+      // Context B: regenerate takeover (route control-flow functions).
+      const revoked = await supersedeFinalDeliveryJobForRegenerate(jobA.job_id);
+      const genB = revoked.new_generation;
+      const jobB = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: genB,
+      });
+      await authorizeFinalDeliveryExecution(sid, genB, jobB.job_id);
+
+      const fence = await getFdExecutionFence(sid);
+      assert.equal(fence!.generation, genB);
+      assert.equal(fence!.authorized_job_id, jobB.job_id);
+
+      const aWrite = await commitUnderDeliveryExecutionFence(jobA.job_id, genA, (j) => ({
+        ...j,
+        status: "completed",
+        accumulated_content: "ctxA_stale",
+      }));
+      assert.equal(aWrite.ok, false);
+      const bWrite = await commitUnderDeliveryExecutionFence(jobB.job_id, genB, (j) => ({
+        ...j,
+        accumulated_content: "ctxB_ok",
+      }));
+      assert.equal(bWrite.ok, true);
+
+      const a = await getXhighJob(jobA.job_id);
+      const b = await getXhighJob(jobB.job_id);
+      assert.equal(a!.status, "failed");
+      assert.notEqual(a!.accumulated_content, "ctxA_stale");
+      assert.equal(b!.accumulated_content, "ctxB_ok");
+      assert.equal(b!.execution_generation, genB);
+      void MemoryKv;
+    });
+  });
+
+  await check("M2.2-R5-C6 Route-shaped regenerate control flow fail-closed on supersede", async () => {
+    // Isolates the same control flow the route uses: supersede → (on fail) no create.
+    const { runWithEphemeralXhighKv, createXhighJob, getXhighJob, findLatestXhighJobForSession } =
+      await import("../lib/poju/xhigh-job-store");
+    const {
+      allocateFinalDeliveryExecutionGeneration,
+      authorizeFinalDeliveryExecution,
+      supersedeFinalDeliveryJobForRegenerate,
+      __setSupersedePersistFailForTests,
+      SupersedePersistenceError,
+    } = await import("../lib/poju/final-delivery-execution-authority");
+    const { createInitialAgentState: mkAgent } = await import("../lib/poju/agent-state");
+    const { currentDeliveryDeployGeneration } = await import(
+      "../lib/poju/delivery-deploy-generation"
+    );
+
+    await runWithEphemeralXhighKv(async () => {
+      const sid = "m22_r5_c6_" + Date.now();
+      const agent = mkAgent({ original_question: "route regen" });
+      const gen = await allocateFinalDeliveryExecutionGeneration(sid);
+      const prior = await createXhighJob({
+        phase: "final_delivery",
+        session_id: sid,
+        locale: "zh-CN",
+        job_input: {
+          kind: "final_delivery",
+          session_id: sid,
+          locale: "zh-CN",
+          agent_v2: agent,
+          breakthrough_core: null,
+          covered_agenda: [],
+          base_analysis: {},
+          delivery_mode: "full",
+        },
+        deploy_generation: currentDeliveryDeployGeneration(),
+        execution_generation: gen,
+      });
+      await authorizeFinalDeliveryExecution(sid, gen, prior.job_id);
+
+      // Mirror route regenerate branch:
+      const latest = await findLatestXhighJobForSession("final_delivery", sid);
+      assert.ok(latest);
+      __setSupersedePersistFailForTests(true);
+      let replacementStarted = false;
+      try {
+        await supersedeFinalDeliveryJobForRegenerate(latest!.job_id);
+        // Would proceed to createXhighJob — must not reach here.
+        replacementStarted = true;
+        await createXhighJob({
+          phase: "final_delivery",
+          session_id: sid,
+          locale: "zh-CN",
+          job_input: prior.input,
+          deploy_generation: currentDeliveryDeployGeneration(),
+          execution_generation: gen + 1,
+        });
+      } catch (e) {
+        assert.equal(e instanceof SupersedePersistenceError, true);
+        replacementStarted = false;
+      } finally {
+        __setSupersedePersistFailForTests(false);
+      }
+      assert.equal(replacementStarted, false);
+
+      const still = await getXhighJob(prior.job_id);
+      assert.ok(still);
+      assert.notEqual(still!.failure_reason, "superseded_by_regenerate");
+      const latestAfter = await findLatestXhighJobForSession("final_delivery", sid);
+      assert.equal(latestAfter!.job_id, prior.job_id);
+    });
+  });
+
 
 
 console.log(`\nM2.2 results: ${passed} passed, ${failed} failed`);

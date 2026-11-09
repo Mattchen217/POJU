@@ -14,7 +14,12 @@ import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
 import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
 import { runWithEphemeralXhighKv } from "@/lib/poju/xhigh-job-store";
-import { supersedeFinalDeliveryJobForRegenerate } from "@/lib/poju/final-delivery-execution-authority";
+import {
+  allocateFinalDeliveryExecutionGeneration,
+  authorizeFinalDeliveryExecution,
+  supersedeFinalDeliveryJobForRegenerate,
+  SupersedePersistenceError,
+} from "@/lib/poju/final-delivery-execution-authority";
 import {
   forceReleaseDeliveryContinueLease,
   loadAllDeliverySegmentReady,
@@ -210,6 +215,8 @@ export async function POST(req: Request) {
   // M2.2-R3: hoisted so catch / early-return cleanup can CAS-release.
   let m22_claim_token: string | null = null;
   let m22_claim_key: string | null = null;
+  /** M2.2-R5 fencing generation for this create/regenerate. */
+  let fd_execution_generation: number | null = null;
   let m22_created_job_id: string | null = null;
   let m22_handed_off = false;
   try {
@@ -677,9 +684,33 @@ export async function POST(req: Request) {
             ).catch(() => null);
             if (prior && isFinalDeliveryJobInput(prior.input)) {
               if (prior.status === "pending" || prior.status === "running") {
-                // M2.2-R4: real cancel/takeover — supersede strips authority so
-                // in-flight workers stop before stage commits / completion.
-                await supersedeFinalDeliveryJobForRegenerate(prior.job_id);
+                // M2.2-R5: atomic fence revoke — failures propagate; do not take over.
+                try {
+                  const revoked = await supersedeFinalDeliveryJobForRegenerate(
+                    prior.job_id,
+                  );
+                  fd_execution_generation = revoked.new_generation;
+                } catch (superErr) {
+                  console.warn(
+                    "[final-delivery] m22 regenerate supersede failed closed",
+                    superErr,
+                  );
+                  return NextResponse.json(
+                    {
+                      ok: false,
+                      error:
+                        superErr instanceof Error
+                          ? superErr.message
+                          : "Regenerate supersede failed closed",
+                      code:
+                        superErr instanceof SupersedePersistenceError
+                          ? superErr.code
+                          : "SUPERSEDE_FAILED",
+                      retryable: true,
+                    },
+                    { status: 409 },
+                  );
+                }
               }
               if (
                 typeof prior.input.m22_claim_token === "string" &&
@@ -854,13 +885,16 @@ export async function POST(req: Request) {
         sessionId: sessionIdRaw,
       });
       const done = await runWithEphemeralXhighKv(async () => {
+        const inlineGen = await allocateFinalDeliveryExecutionGeneration(sessionIdRaw);
         const created = await createXhighJob({
           phase: "final_delivery",
           session_id: sessionIdRaw,
           locale,
           job_input: jobInput,
           deploy_generation: currentDeliveryDeployGeneration(),
+          execution_generation: inlineGen,
         });
+        await authorizeFinalDeliveryExecution(sessionIdRaw, inlineGen, created.job_id);
         try {
           await runFinalDeliveryJob(created.job_id);
         } catch (err) {
@@ -1002,9 +1036,45 @@ export async function POST(req: Request) {
         if (isUpstashPlanLimitError(e)) return inlineCall();
         throw e;
       }
-      if (latest && (latest.status === "pending" || latest.status === "running")) {
-        // M2.2-R4: supersede prior worker authority (not status-flip alone).
-        await supersedeFinalDeliveryJobForRegenerate(latest.job_id);
+      if (
+        latest &&
+        (latest.status === "pending" || latest.status === "running") &&
+        fd_execution_generation == null
+      ) {
+        // M2.2-R5: atomic fence revoke — fail closed on persistence uncertainty.
+        // Skip when M2.2 claim path already revoked (avoid double bump).
+        try {
+          const revoked = await supersedeFinalDeliveryJobForRegenerate(latest.job_id);
+          fd_execution_generation = revoked.new_generation;
+        } catch (superErr) {
+          console.warn("[final-delivery] regenerate supersede failed closed", superErr);
+          if (m22_claim_token && m22_claim_key) {
+            const { releaseClaimBeforePreHandoffReturn } = await import(
+              "@/lib/poju/decision-intake/freeze-bound-report"
+            );
+            await releaseClaimBeforePreHandoffReturn({
+              claimKey: m22_claim_key,
+              claimToken: m22_claim_token,
+            }).catch(() => undefined);
+            m22_claim_token = null;
+            m22_claim_key = null;
+          }
+          return NextResponse.json(
+            {
+              ok: false,
+              error:
+                superErr instanceof Error
+                  ? superErr.message
+                  : "Regenerate supersede failed closed",
+              code:
+                superErr instanceof SupersedePersistenceError
+                  ? superErr.code
+                  : "SUPERSEDE_FAILED",
+              retryable: true,
+            },
+            { status: 409 },
+          );
+        }
       }
     }
 
@@ -1030,13 +1100,51 @@ export async function POST(req: Request) {
       );
     }
 
+    // M2.2-R5: stamp monotonic execution generation; authorize fence after create.
+    if (fd_execution_generation == null) {
+      fd_execution_generation = await allocateFinalDeliveryExecutionGeneration(
+        sessionIdRaw,
+      );
+    }
     const job = await createXhighJob({
       phase: "final_delivery",
       session_id: sessionIdRaw,
       locale,
       job_input: jobInput,
       deploy_generation: currentDeliveryDeployGeneration(),
+      execution_generation: fd_execution_generation,
     });
+    try {
+      await authorizeFinalDeliveryExecution(
+        sessionIdRaw,
+        fd_execution_generation,
+        job.job_id,
+      );
+    } catch (authFenceErr) {
+      console.warn("[final-delivery] fence authorize failed closed", authFenceErr);
+      if (m22_claim_token && m22_claim_key) {
+        const { releaseFreezeBoundReportClaimServer } = await import(
+          "@/lib/poju/decision-intake/freeze-bound-report-server"
+        );
+        await releaseFreezeBoundReportClaimServer({
+          claimKey: m22_claim_key,
+          claimToken: m22_claim_token,
+        }).catch(() => undefined);
+      }
+      await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            authFenceErr instanceof Error
+              ? authFenceErr.message
+              : "Execution fence authorize failed",
+          code: "FENCE_AUTHORIZE_FAILED",
+          retryable: true,
+        },
+        { status: 409 },
+      );
+    }
     m22_created_job_id = job.job_id;
 
     if (!isFinalDeliveryJobInput(job.input)) {

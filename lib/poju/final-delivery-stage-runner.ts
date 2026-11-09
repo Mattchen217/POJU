@@ -108,6 +108,7 @@ import {
 import {
   DeliveryExecutionRevokedError,
   assertDeliveryExecutionAuthority,
+  commitUnderDeliveryExecutionFence,
   isDeliveryExecutionRevoked,
   tryCommitUnderDeliveryAuthority,
 } from "@/lib/poju/final-delivery-execution-authority";
@@ -373,16 +374,41 @@ async function releaseM22ClaimFromJobInput(
   await releaseFreezeBoundReportClaimServer({ claimKey: key, claimToken: token });
 }
 
-/** M2.2-R4: refuse stage commits after Regenerate/deploy/stop revoked authority. */
+/** M2.2-R5: refuse stage commits unless fence generation still owns the job at write time. */
+async function expectedGenerationOrNull(job_id: string): Promise<number | null> {
+  const job = await getXhighJob(job_id);
+  return typeof job?.execution_generation === "number" ? job.execution_generation : null;
+}
+
 async function saveDeliveryStageCheckpointIfAuthorized(
   job_id: string,
   checkpoint: Parameters<typeof saveDeliveryStageCheckpoint>[1],
 ): Promise<boolean> {
-  const ok = await tryCommitUnderDeliveryAuthority(job_id);
-  if (!ok) {
-    console.warn("[final-delivery-stage] skip checkpoint — execution revoked", {
+  const gen = await expectedGenerationOrNull(job_id);
+  if (gen == null) {
+    // Legacy jobs without generation: fall back to soft authority probe then write.
+    const ok = await tryCommitUnderDeliveryAuthority(job_id);
+    if (!ok) {
+      console.warn("[final-delivery-stage] skip checkpoint — execution revoked", {
+        job_id,
+        stage: (checkpoint as { stage?: string }).stage,
+      });
+      return false;
+    }
+    await saveDeliveryStageCheckpoint(job_id, checkpoint);
+    return true;
+  }
+  // Touch job under fence first — proves generation still authorized at commit boundary.
+  const fenced = await commitUnderDeliveryExecutionFence(job_id, gen, (job) => ({
+    ...job,
+    updated_at: Date.now(),
+    accumulated_content: `checkpoint:${(checkpoint as { stage?: string }).stage ?? "?"}`,
+  }));
+  if (!fenced.ok) {
+    console.warn("[final-delivery-stage] skip checkpoint — fence revoked", {
       job_id,
       stage: (checkpoint as { stage?: string }).stage,
+      reason: fenced.reason,
     });
     return false;
   }
@@ -395,16 +421,51 @@ async function scheduleDeliveryStageContinueIfAuthorized(
   stage: Parameters<typeof scheduleDeliveryStageContinue>[1],
   opts: Parameters<typeof scheduleDeliveryStageContinue>[2],
 ): Promise<Awaited<ReturnType<typeof scheduleDeliveryStageContinue>>> {
-  const ok = await tryCommitUnderDeliveryAuthority(job_id);
-  if (!ok) {
-    console.warn("[final-delivery-stage] skip schedule continue — execution revoked", {
+  const gen = await expectedGenerationOrNull(job_id);
+  if (gen == null) {
+    const ok = await tryCommitUnderDeliveryAuthority(job_id);
+    if (!ok) {
+      console.warn("[final-delivery-stage] skip schedule continue — execution revoked", {
+        job_id,
+        stage,
+      });
+      return "failed";
+    }
+    return scheduleDeliveryStageContinue(job_id, stage, opts);
+  }
+  const fenced = await commitUnderDeliveryExecutionFence(job_id, gen, (job) => ({
+    ...job,
+    status: "running",
+    current_stage: stage,
+    accumulated_content: `handoff_continue_fenced:${stage}:${Date.now()}`,
+    updated_at: Date.now(),
+  }));
+  if (!fenced.ok) {
+    console.warn("[final-delivery-stage] skip schedule continue — fence revoked", {
       job_id,
       stage,
+      reason: fenced.reason,
     });
-    // Map revoked → failed so callers stop advancing without handing off the lease.
     return "failed";
   }
   return scheduleDeliveryStageContinue(job_id, stage, opts);
+}
+
+/** @internal M2.2-R5 — inject assemble ready pages (skip LLM) for Stage Runner tests. */
+let __testAssembleReadyOverride: Array<{
+  key: string;
+  heading: string;
+  body_markdown: string;
+  evidence_markdown: string;
+  interleaved_markdown?: string;
+  evidence_ready: boolean;
+  locale: string;
+}> | null = null;
+
+export function __setAssembleReadyOverrideForTests(
+  pages: typeof __testAssembleReadyOverride,
+): void {
+  __testAssembleReadyOverride = pages;
 }
 
 
@@ -427,8 +488,15 @@ export async function writeBackFreezeBoundReportOnDeliverySuccess(args: {
   if (!input.decision_context_binding || !input.decision_context_snapshot) {
     throw new Error("m22_writeback_missing_binding_or_snapshot");
   }
-  // Refuse write-back if this formal job no longer holds execution authority.
-  await assertDeliveryExecutionAuthority(job_id);
+  // Refuse write-back unless fence generation still owns this formal job.
+  {
+    const formal = await getXhighJob(job_id);
+    const gen =
+      typeof formal?.execution_generation === "number"
+        ? formal.execution_generation
+        : undefined;
+    await assertDeliveryExecutionAuthority(job_id, gen);
+  }
 
   const { loadPOJUSession, savePOJUSession } = await import(
     "@/lib/poju/session-manager"
@@ -2329,7 +2397,10 @@ export async function runFinalDeliveryStage(
 
       const page_structs: NonNullable<DeliveryBookMeta["page_structs"]> = {};
       const page_schemas: NonNullable<DeliveryBookMeta["page_schemas"]> = {};
-      const allReady = await loadAllDeliverySegmentReady(job_id);
+      const allReady = (__testAssembleReadyOverride ??
+        (await loadAllDeliverySegmentReady(job_id))) as Awaited<
+        ReturnType<typeof loadAllDeliverySegmentReady>
+      >;
       const readyByKey = new Map(allReady.map((r) => [r.key, r]));
       for (const k of DELIVERY_SEGMENT_KEYS) {
         const prog = await loadDeliverySegmentProgress(job_id, k);
@@ -2427,10 +2498,19 @@ export async function runFinalDeliveryStage(
         timings,
       };
 
-      // M2.2-R4: success contract — authority check, then M2.2 write-back, then formal complete.
-      // Superseded workers must not write-back or complete.
+      // M2.2-R5: success contract — fence-gated write-back then fenced formal complete.
+      // Stale workers must never overwrite a newer execution.
+      const assembleSnap = await getXhighJob(job_id);
+      const assembleGen =
+        typeof assembleSnap?.execution_generation === "number"
+          ? assembleSnap.execution_generation
+          : null;
+
       try {
-        await assertDeliveryExecutionAuthority(job_id);
+        await assertDeliveryExecutionAuthority(
+          job_id,
+          assembleGen ?? undefined,
+        );
       } catch (authErr) {
         if (authErr instanceof DeliveryExecutionRevokedError) {
           console.warn("[final-delivery-stage] assemble skip — execution revoked", {
@@ -2471,12 +2551,34 @@ export async function runFinalDeliveryStage(
           );
           const msg =
             wbErr instanceof Error ? wbErr.message : String(wbErr);
-          await failXhighJob(job_id, `m22_writeback_failed:${msg}`, {
-            retryable: true,
-            failure_reason: "interrupted",
-            current_stage: "assemble",
-            accumulated_content: "failed:m22_writeback",
-          }).catch(() => undefined);
+          if (assembleGen != null) {
+            const failCommit = await commitUnderDeliveryExecutionFence(
+              job_id,
+              assembleGen,
+              (job) => ({
+                ...job,
+                status: "failed",
+                error: `m22_writeback_failed:${msg}`,
+                failure_reason: "interrupted",
+                retryable: true,
+                current_stage: "assemble",
+                accumulated_content: "failed:m22_writeback",
+              }),
+            );
+            if (!failCommit.ok) {
+              console.warn("[final-delivery-stage] write-back fail stamp fenced out", {
+                job_id,
+                reason: failCommit.reason,
+              });
+            }
+          } else {
+            await failXhighJob(job_id, `m22_writeback_failed:${msg}`, {
+              retryable: true,
+              failure_reason: "interrupted",
+              current_stage: "assemble",
+              accumulated_content: "failed:m22_writeback",
+            }).catch(() => undefined);
+          }
           await releaseM22ClaimFromJobInput(input).catch(() => undefined);
           await releaseXhighSessionLock("final_delivery", input.session_id).catch(
             () => undefined,
@@ -2485,14 +2587,27 @@ export async function runFinalDeliveryStage(
         }
       }
 
-      // Re-check before formal complete — Regenerate may have won during write-back.
-      try {
-        await assertDeliveryExecutionAuthority(job_id);
-      } catch (authErr) {
-        if (authErr instanceof DeliveryExecutionRevokedError) {
-          console.warn("[final-delivery-stage] complete skipped — execution revoked", {
+      // Formal complete at the CAS fence boundary (same generation).
+      if (assembleGen != null) {
+        const completeCommit = await commitUnderDeliveryExecutionFence(
+          job_id,
+          assembleGen,
+          (job) => ({
+            ...job,
+            status: "completed",
+            result,
+            model,
+            tokens_used,
+            llm_debug,
+            accumulated_content: `delivery_done:${full_text.length}`,
+            current_stage: "completed",
+            completed_at: Date.now(),
+          }),
+        );
+        if (!completeCommit.ok) {
+          console.warn("[final-delivery-stage] complete skipped — fence revoked", {
             job_id,
-            reason: authErr.failure_reason,
+            reason: completeCommit.reason,
           });
           await releaseM22ClaimFromJobInput(input).catch(() => undefined);
           await releaseXhighSessionLock("final_delivery", input.session_id).catch(
@@ -2500,19 +2615,34 @@ export async function runFinalDeliveryStage(
           );
           return;
         }
-        throw authErr;
+      } else {
+        try {
+          await assertDeliveryExecutionAuthority(job_id);
+        } catch (authErr) {
+          if (authErr instanceof DeliveryExecutionRevokedError) {
+            console.warn("[final-delivery-stage] complete skipped — execution revoked", {
+              job_id,
+              reason: authErr.failure_reason,
+            });
+            await releaseM22ClaimFromJobInput(input).catch(() => undefined);
+            await releaseXhighSessionLock("final_delivery", input.session_id).catch(
+              () => undefined,
+            );
+            return;
+          }
+          throw authErr;
+        }
+        await completeXhighJob(job_id, {
+          result,
+          model,
+          tokens_used,
+          llm_debug,
+          accumulated_content: `delivery_done:${full_text.length}`,
+        });
+        await updateXhighJobStatus(job_id, "completed", {
+          current_stage: "completed",
+        });
       }
-
-      await completeXhighJob(job_id, {
-        result,
-        model,
-        tokens_used,
-        llm_debug,
-        accumulated_content: `delivery_done:${full_text.length}`,
-      });
-      await updateXhighJobStatus(job_id, "completed", {
-        current_stage: "completed",
-      });
 
       // Release shared KV claim (token-checked CAS) after success.
       await releaseM22ClaimFromJobInput(input).catch(() => undefined);
@@ -2568,8 +2698,11 @@ export async function finalizeFormalDeliverySuccessForTests(args: {
   result: FinalDeliveryJobResult;
 }): Promise<{ formal: Awaited<ReturnType<typeof getXhighJob>>; revoked: boolean }> {
   const { job_id, input, allReady, result } = args;
+  const snap = await getXhighJob(job_id);
+  const gen =
+    typeof snap?.execution_generation === "number" ? snap.execution_generation : null;
   try {
-    await assertDeliveryExecutionAuthority(job_id);
+    await assertDeliveryExecutionAuthority(job_id, gen ?? undefined);
   } catch (e) {
     if (e instanceof DeliveryExecutionRevokedError) {
       return { formal: await getXhighJob(job_id), revoked: true };
@@ -2583,32 +2716,61 @@ export async function finalizeFormalDeliverySuccessForTests(args: {
       if (wbErr instanceof DeliveryExecutionRevokedError) {
         return { formal: await getXhighJob(job_id), revoked: true };
       }
-      await failXhighJob(job_id, `m22_writeback_failed:${wbErr instanceof Error ? wbErr.message : String(wbErr)}`, {
-        retryable: true,
-        failure_reason: "interrupted",
-        current_stage: "assemble",
-        accumulated_content: "failed:m22_writeback",
-      }).catch(() => undefined);
+      if (gen != null) {
+        await commitUnderDeliveryExecutionFence(job_id, gen, (job) => ({
+          ...job,
+          status: "failed",
+          error: `m22_writeback_failed:${wbErr instanceof Error ? wbErr.message : String(wbErr)}`,
+          failure_reason: "interrupted",
+          retryable: true,
+          current_stage: "assemble",
+          accumulated_content: "failed:m22_writeback",
+        }));
+      } else {
+        await failXhighJob(job_id, `m22_writeback_failed:${wbErr instanceof Error ? wbErr.message : String(wbErr)}`, {
+          retryable: true,
+          failure_reason: "interrupted",
+          current_stage: "assemble",
+          accumulated_content: "failed:m22_writeback",
+        }).catch(() => undefined);
+      }
       await releaseM22ClaimFromJobInput(input).catch(() => undefined);
       return { formal: await getXhighJob(job_id), revoked: false };
     }
   }
-  try {
-    await assertDeliveryExecutionAuthority(job_id);
-  } catch (e) {
-    if (e instanceof DeliveryExecutionRevokedError) {
+  if (gen != null) {
+    const done = await commitUnderDeliveryExecutionFence(job_id, gen, (job) => ({
+      ...job,
+      status: "completed",
+      result,
+      model: result.model,
+      tokens_used: result.tokens_used,
+      llm_debug: result.llm_debug,
+      accumulated_content: `delivery_done:${result.full_text.length}`,
+      current_stage: "completed",
+      completed_at: Date.now(),
+    }));
+    if (!done.ok) {
       return { formal: await getXhighJob(job_id), revoked: true };
     }
-    throw e;
+  } else {
+    try {
+      await assertDeliveryExecutionAuthority(job_id);
+    } catch (e) {
+      if (e instanceof DeliveryExecutionRevokedError) {
+        return { formal: await getXhighJob(job_id), revoked: true };
+      }
+      throw e;
+    }
+    await completeXhighJob(job_id, {
+      result,
+      model: result.model,
+      tokens_used: result.tokens_used,
+      llm_debug: result.llm_debug,
+      accumulated_content: `delivery_done:${result.full_text.length}`,
+    });
+    await updateXhighJobStatus(job_id, "completed", { current_stage: "completed" });
   }
-  await completeXhighJob(job_id, {
-    result,
-    model: result.model,
-    tokens_used: result.tokens_used,
-    llm_debug: result.llm_debug,
-    accumulated_content: `delivery_done:${result.full_text.length}`,
-  });
-  await updateXhighJobStatus(job_id, "completed", { current_stage: "completed" });
   await releaseM22ClaimFromJobInput(input).catch(() => undefined);
   return { formal: await getXhighJob(job_id), revoked: false };
 }

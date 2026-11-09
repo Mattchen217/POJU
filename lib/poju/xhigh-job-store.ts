@@ -1,10 +1,12 @@
 import { kv, KV_TTL, runWithEphemeralKv } from "@/lib/kv/client";
 import {
   generateXhighJobId,
+  type FdExecutionFence,
   type PojuXhighJob,
   type PojuXhighJobPhase,
   type PojuXhighJobStatus,
   xhighClientTaskKey,
+  xhighFdExecFenceKey,
   xhighJobKey,
   xhighSessionLatestKey,
   xhighSessionLockKey,
@@ -165,6 +167,8 @@ export async function createXhighJob(input: {
   locale: string;
   job_input: PojuXhighJob["input"];
   deploy_generation?: string;
+  /** M2.2-R5 fencing token — required for final_delivery commit authority. */
+  execution_generation?: number;
   client_task_id?: string;
   generation_type?: PojuXhighJob["generation_type"];
   fingerprint?: string;
@@ -242,6 +246,9 @@ export async function createXhighJob(input: {
       ...(input.deploy_generation?.trim()
         ? { deploy_generation: input.deploy_generation.trim() }
         : {}),
+      ...(typeof input.execution_generation === "number"
+        ? { execution_generation: input.execution_generation }
+        : {}),
       created_at: Date.now(),
       updated_at: Date.now(),
     };
@@ -279,6 +286,9 @@ export async function createXhighJob(input: {
     ...(input.fingerprint_version ? { fingerprint_version: input.fingerprint_version } : {}),
     ...(input.deploy_generation?.trim()
       ? { deploy_generation: input.deploy_generation.trim() }
+      : {}),
+    ...(typeof input.execution_generation === "number"
+      ? { execution_generation: input.execution_generation }
       : {}),
     created_at: Date.now(),
     updated_at: Date.now(),
@@ -416,4 +426,324 @@ export async function releaseXhighSessionLock(
   session_id: string,
 ): Promise<void> {
   await kv.del(xhighSessionLockKey(phase, session_id));
+}
+
+
+// ─── M2.2-R5 Final Delivery execution fencing ───────────────────────────────
+
+export class ExecutionFenceCasUnavailableError extends Error {
+  readonly code = "EXECUTION_FENCE_CAS_UNAVAILABLE" as const;
+  constructor(message = "Atomic execution fence CAS unavailable; refusing non-atomic commit") {
+    super(message);
+    this.name = "ExecutionFenceCasUnavailableError";
+  }
+}
+
+type FenceKv = {
+  get: <T = unknown>(key: string) => Promise<T | null>;
+  set: (
+    key: string,
+    value: unknown,
+    opts?: { ex?: number; nx?: boolean },
+  ) => Promise<"OK" | null>;
+  compareAndSetExact?: (
+    key: string,
+    expectedJson: string | null,
+    nextValue: unknown,
+    opts?: { ex?: number },
+  ) => Promise<boolean>;
+  compareAndSetJobGeneration?: (
+    key: string,
+    expectedGeneration: number,
+    nextValue: unknown,
+    opts?: { ex?: number },
+  ) => Promise<boolean>;
+  eval?: (script: string, keys: string[], args: string[]) => Promise<unknown>;
+};
+
+function fenceStore(): FenceKv {
+  return kv as unknown as FenceKv;
+}
+
+export async function getFdExecutionFence(
+  session_id: string,
+): Promise<FdExecutionFence | null> {
+  return fenceStore().get<FdExecutionFence>(xhighFdExecFenceKey(session_id));
+}
+
+/**
+ * Atomically bump session fence generation and clear authorized_job_id.
+ * Returns the new fence. Fail closed if CAS cannot be confirmed.
+ */
+export async function bumpFdExecutionFence(
+  session_id: string,
+): Promise<FdExecutionFence> {
+  const store = fenceStore();
+  const key = xhighFdExecFenceKey(session_id);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const cur = await store.get<FdExecutionFence>(key);
+    const next: FdExecutionFence = {
+      generation: (cur?.generation ?? 0) + 1,
+      authorized_job_id: null,
+      updated_at: Date.now(),
+    };
+    const expectedJson = cur ? JSON.stringify(cur) : null;
+    if (typeof store.compareAndSetExact === "function") {
+      const ok = await store.compareAndSetExact(key, expectedJson, next, {
+        ex: KV_TTL.POJU_XHIGH_JOB,
+      });
+      if (ok) return next;
+      continue;
+    }
+    if (typeof store.eval === "function") {
+      const result = await store.eval(
+        FD_FENCE_BUMP_LUA,
+        [key],
+        [expectedJson ?? "", JSON.stringify(next), String(KV_TTL.POJU_XHIGH_JOB)],
+      );
+      if (result === 1 || result === true) return next;
+      continue;
+    }
+    throw new ExecutionFenceCasUnavailableError(
+      `bumpFdExecutionFence: no compareAndSetExact/eval for ${key}`,
+    );
+  }
+  throw new Error("bumpFdExecutionFence: CAS retries exhausted");
+}
+
+/**
+ * Authorize a job_id for an already-bumped generation.
+ * Fail closed if generation no longer matches.
+ */
+export async function authorizeFdExecutionFence(
+  session_id: string,
+  generation: number,
+  job_id: string,
+): Promise<FdExecutionFence> {
+  const store = fenceStore();
+  const key = xhighFdExecFenceKey(session_id);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const cur = await store.get<FdExecutionFence>(key);
+    if (!cur || cur.generation !== generation) {
+      throw new Error(
+        `authorizeFdExecutionFence: generation mismatch (want ${generation}, have ${cur?.generation ?? "none"})`,
+      );
+    }
+    if (cur.authorized_job_id === job_id) return cur;
+    if (cur.authorized_job_id && cur.authorized_job_id !== job_id) {
+      throw new Error(
+        `authorizeFdExecutionFence: generation ${generation} already authorized to ${cur.authorized_job_id}`,
+      );
+    }
+    const next: FdExecutionFence = {
+      generation,
+      authorized_job_id: job_id,
+      updated_at: Date.now(),
+    };
+    if (typeof store.compareAndSetExact === "function") {
+      const ok = await store.compareAndSetExact(key, JSON.stringify(cur), next, {
+        ex: KV_TTL.POJU_XHIGH_JOB,
+      });
+      if (ok) return next;
+      continue;
+    }
+    if (typeof store.eval === "function") {
+      const result = await store.eval(
+        FD_FENCE_AUTHORIZE_LUA,
+        [key],
+        [String(generation), job_id, String(KV_TTL.POJU_XHIGH_JOB)],
+      );
+      if (result === 1 || result === true) return next;
+      continue;
+    }
+    throw new ExecutionFenceCasUnavailableError(
+      `authorizeFdExecutionFence: no compareAndSetExact/eval for ${key}`,
+    );
+  }
+  throw new Error("authorizeFdExecutionFence: CAS retries exhausted");
+}
+
+/** Lua: bump fence only when current JSON matches ARGV[1] (empty = absent). */
+const FD_FENCE_BUMP_LUA = `
+local raw = redis.call('GET', KEYS[1])
+local expected = ARGV[1]
+if expected == '' then
+  if raw then return 0 end
+else
+  if not raw then return 0 end
+  if type(raw) ~= 'string' then raw = tostring(raw) end
+  if raw ~= expected then return 0 end
+end
+redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
+return 1
+`;
+
+/** Lua: authorize job when generation matches and authorized_job_id empty/same. */
+const FD_FENCE_AUTHORIZE_LUA = `
+local raw = redis.call('GET', KEYS[1])
+if not raw then return 0 end
+if type(raw) ~= 'string' then raw = tostring(raw) end
+local ok, obj = pcall(cjson.decode, raw)
+if not ok or type(obj) ~= 'table' then return 0 end
+if tonumber(obj['generation']) ~= tonumber(ARGV[1]) then return 0 end
+local auth = obj['authorized_job_id']
+if auth ~= cjson.null and auth ~= nil and tostring(auth) ~= '' and tostring(auth) ~= ARGV[2] then
+  return 0
+end
+obj['authorized_job_id'] = ARGV[2]
+obj['updated_at'] = tonumber(redis.call('TIME')[1]) * 1000
+redis.call('SET', KEYS[1], cjson.encode(obj), 'EX', tonumber(ARGV[3]))
+return 1
+`;
+
+/** Lua: SET job only if execution_generation matches and not revoked. */
+const FD_JOB_GEN_CAS_LUA = `
+local raw = redis.call('GET', KEYS[1])
+if not raw then return 0 end
+if type(raw) ~= 'string' then raw = tostring(raw) end
+local ok, obj = pcall(cjson.decode, raw)
+if not ok or type(obj) ~= 'table' then return 0 end
+if tonumber(obj['execution_generation']) ~= tonumber(ARGV[1]) then return 0 end
+local reason = obj['failure_reason']
+if reason == 'superseded_by_regenerate' or reason == 'superseded_by_deploy' or reason == 'user_cancelled' then
+  return 0
+end
+redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
+return 1
+`;
+
+export type CommitUnderFenceResult =
+  | { ok: true; job: PojuXhighJob }
+  | { ok: false; reason: "missing" | "revoked" | "cas_conflict" | "cas_unavailable" };
+
+/**
+ * Commit a job mutation only if the expected execution generation still owns
+ * both the session fence and the job record at the write boundary (CAS).
+ * Read-check then independent write is intentionally NOT used.
+ */
+export async function commitXhighJobUnderExecutionFence(
+  job_id: string,
+  expected_generation: number,
+  mutate: (job: PojuXhighJob) => PojuXhighJob,
+): Promise<CommitUnderFenceResult> {
+  const store = fenceStore();
+  const job = await getXhighJob(job_id);
+  if (!job) return { ok: false, reason: "missing" };
+
+  if (job.execution_generation !== expected_generation) {
+    return { ok: false, reason: "revoked" };
+  }
+  const reason = job.failure_reason;
+  if (
+    reason === "superseded_by_regenerate" ||
+    reason === "superseded_by_deploy" ||
+    reason === "user_cancelled" ||
+    job.status === "completed" ||
+    job.status === "failed"
+  ) {
+    // Allow mutate only when staying failed with same superseded reason (no-op path);
+    // otherwise revoked.
+    return { ok: false, reason: "revoked" };
+  }
+
+  const fence = await getFdExecutionFence(job.session_id);
+  if (
+    !fence ||
+    fence.generation !== expected_generation ||
+    fence.authorized_job_id !== job_id
+  ) {
+    return { ok: false, reason: "revoked" };
+  }
+
+  const updated = mutate({ ...job });
+  // Preserve fencing token — mutate must not invent a new generation.
+  updated.execution_generation = expected_generation;
+  updated.updated_at = Date.now();
+
+  const jobKey = xhighJobKey(job_id);
+  if (typeof store.compareAndSetJobGeneration === "function") {
+    const ok = await store.compareAndSetJobGeneration(
+      jobKey,
+      expected_generation,
+      updated,
+      { ex: KV_TTL.POJU_XHIGH_JOB },
+    );
+    if (!ok) return { ok: false, reason: "cas_conflict" };
+    return { ok: true, job: updated };
+  }
+  if (typeof store.eval === "function") {
+    const result = await store.eval(
+      FD_JOB_GEN_CAS_LUA,
+      [jobKey],
+      [String(expected_generation), JSON.stringify(updated), String(KV_TTL.POJU_XHIGH_JOB)],
+    );
+    if (result === 1 || result === true) return { ok: true, job: updated };
+    return { ok: false, reason: "cas_conflict" };
+  }
+  return { ok: false, reason: "cas_unavailable" };
+}
+
+/**
+ * Persist a superseded/failed terminal state under the OLD generation, or
+ * unconditionally if the job has no generation (legacy). Used by Regenerate
+ * revocation — must propagate persistence failures.
+ */
+export async function persistSupersededFinalDeliveryJob(
+  job_id: string,
+  patch: {
+    error: string;
+    failure_reason: PojuXhighJob["failure_reason"];
+    current_stage?: string;
+    accumulated_content?: string;
+  },
+): Promise<PojuXhighJob> {
+  const job = await getXhighJob(job_id);
+  if (!job) {
+    throw new Error(`persistSupersededFinalDeliveryJob: missing job ${job_id}`);
+  }
+  if (job.status === "completed" || job.status === "failed") {
+    // Already terminal — overwrite failure_reason only when still missing superseded mark.
+    if (job.failure_reason === patch.failure_reason) return job;
+    const terminal: PojuXhighJob = {
+      ...job,
+      failure_reason: patch.failure_reason,
+      error: patch.error,
+      retryable: false,
+      accumulated_content:
+        patch.accumulated_content ?? job.accumulated_content,
+      updated_at: Date.now(),
+    };
+    await kv.set(xhighJobKey(job_id), terminal, { ex: KV_TTL.POJU_XHIGH_JOB });
+    const again = await getXhighJob(job_id);
+    if (!again || again.failure_reason !== patch.failure_reason) {
+      throw new Error(
+        `persistSupersededFinalDeliveryJob: failed to stamp superseded on terminal ${job_id}`,
+      );
+    }
+    return again;
+  }
+
+  const updated: PojuXhighJob = {
+    ...job,
+    status: "failed",
+    error: patch.error,
+    failure_reason: patch.failure_reason,
+    retryable: false,
+    current_stage: patch.current_stage ?? job.current_stage,
+    accumulated_content:
+      patch.accumulated_content ?? "failed:superseded_by_regenerate",
+    updated_at: Date.now(),
+  };
+  await kv.set(xhighJobKey(job_id), updated, { ex: KV_TTL.POJU_XHIGH_JOB });
+  const persisted = await getXhighJob(job_id);
+  if (
+    !persisted ||
+    persisted.status !== "failed" ||
+    persisted.failure_reason !== patch.failure_reason
+  ) {
+    throw new Error(
+      `persistSupersededFinalDeliveryJob: persistence not confirmed for ${job_id}`,
+    );
+  }
+  return persisted;
 }

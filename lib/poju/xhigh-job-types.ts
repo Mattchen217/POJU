@@ -184,6 +184,12 @@ export interface PojuXhighJob {
    * Continue/status refuse LLM when this ≠ current deploy (redeploy kill-switch).
    */
   deploy_generation?: string;
+  /**
+   * M2.2-R5 — Monotonic Final Delivery execution generation (fencing token).
+   * Stamped at create; Regenerate bumps the session fence and revokes prior generations.
+   * Commit paths must CAS-validate this generation at the write boundary.
+   */
+  execution_generation?: number;
   input: Segment2JobInput | Segment2AgendaJobInput | SynthesisJobInput | FinalDeliveryJobInput;
   result?: Segment2JobResult | SynthesisJobResult | FinalDeliveryJobResult;
   llm_debug?: LLMCallDebug;
@@ -227,6 +233,19 @@ export function xhighSessionLockKey(phase: PojuXhighJobPhase, session_id: string
 export function xhighSessionLatestKey(phase: PojuXhighJobPhase, session_id: string): string {
   return `poju-xhigh:latest:${phase}:${session_id}`;
 }
+
+/** M2.2-R5 — Session-scoped Final Delivery execution fence (shared across workers). */
+export function xhighFdExecFenceKey(session_id: string): string {
+  return `poju-xhigh:fd-exec-fence:${session_id}`;
+}
+
+export type FdExecutionFence = {
+  /** Monotonic fencing generation. */
+  generation: number;
+  /** Job currently authorized for this generation (null while revoked / between takeover). */
+  authorized_job_id: string | null;
+  updated_at: number;
+};
 
 /** Rebuildable (non-authoritative) index — Mapping §2.4 / S0 recovery. */
 export function xhighClientTaskKey(

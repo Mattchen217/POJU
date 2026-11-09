@@ -88,6 +88,78 @@ export class MemoryKv {
     return true;
   }
 
+  /**
+   * M2.2-R5 — Atomic compare-and-set by exact JSON snapshot of current value.
+   * `expectedJson === null` means the key must be absent (or expired).
+   * No await between check and write → atomic for in-process concurrent workers.
+   */
+  async compareAndSetExact(
+    key: string,
+    expectedJson: string | null,
+    nextValue: unknown,
+    opts?: { ex?: number },
+  ): Promise<boolean> {
+    const hit = this.store.get(key);
+    const live =
+      hit && (hit.expiresAt == null || hit.expiresAt > now()) ? hit : null;
+    if (expectedJson === null) {
+      if (live) return false;
+    } else {
+      if (!live) return false;
+      if (JSON.stringify(live.value) !== expectedJson) return false;
+    }
+    const expiresAt =
+      opts?.ex != null && opts.ex > 0 ? now() + opts.ex * 1000 : null;
+    this.store.set(key, { value: nextValue, expiresAt });
+    return true;
+  }
+
+  /**
+   * M2.2-R5 — Atomic job write gated on execution_generation.
+   * Refuses when missing, generation mismatch, or revoked failure_reason.
+   */
+  async compareAndSetJobGeneration(
+    key: string,
+    expectedGeneration: number,
+    nextValue: unknown,
+    opts?: { ex?: number },
+  ): Promise<boolean> {
+    const hit = this.store.get(key);
+    if (!hit) return false;
+    if (hit.expiresAt != null && hit.expiresAt <= now()) {
+      this.store.delete(key);
+      return false;
+    }
+    const cur = hit.value;
+    if (!cur || typeof cur !== "object") return false;
+    const job = cur as {
+      execution_generation?: unknown;
+      failure_reason?: unknown;
+      status?: unknown;
+    };
+    if (job.execution_generation !== expectedGeneration) return false;
+    const reason = job.failure_reason;
+    if (
+      reason === "superseded_by_regenerate" ||
+      reason === "superseded_by_deploy" ||
+      reason === "user_cancelled"
+    ) {
+      return false;
+    }
+    // Stale worker must never flip a terminal job owned by a newer generation.
+    if (job.status === "completed" || job.status === "failed") {
+      const nextStatus =
+        nextValue && typeof nextValue === "object"
+          ? (nextValue as { status?: unknown }).status
+          : undefined;
+      if (nextStatus !== job.status) return false;
+    }
+    const expiresAt =
+      opts?.ex != null && opts.ex > 0 ? now() + opts.ex * 1000 : null;
+    this.store.set(key, { value: nextValue, expiresAt });
+    return true;
+  }
+
   async lpush(key: string, ...values: unknown[]): Promise<number> {
     const list = this.lists.get(key) ?? [];
     for (const v of values) list.unshift(v);
