@@ -49,16 +49,32 @@ export function activeTargets(session: POJUSessionState): {
   ddr_ids: string[];
   direction_id?: string;
   fact_roles: string[];
+  /** Full actually-sent Plan role codes; never expanded from Blueprint.required_fact_roles. */
+  fact_role_codes: string[];
   auth_error?: "missing_authorized_fact_roles" | "missing_authorized_answer_target";
 } {
   const understanding = session.decision_understanding;
   const lastSent = understanding?.last_sent_question;
   const plan =
     understanding?.next_question_plan ?? session.adaptive_ask_plan ?? null;
+  const missingRoles = {
+    dir_ids: [] as string[],
+    ddr_ids: [] as string[],
+    fact_roles: [] as string[],
+    fact_role_codes: [] as string[],
+    auth_error: "missing_authorized_fact_roles" as const,
+  };
+  const missingTarget = {
+    dir_ids: [] as string[],
+    ddr_ids: [] as string[],
+    fact_roles: [] as string[],
+    fact_role_codes: [] as string[],
+    auth_error: "missing_authorized_answer_target" as const,
+  };
 
   if (lastSent && (lastSent.dir_ids.length > 0 || lastSent.ddr_ids.length > 0)) {
-    let roles = roleCodesToRoles(lastSent.fact_role_codes);
-    if (roles.length === 0) {
+    let codes = lastSent.fact_role_codes ? [...lastSent.fact_role_codes] : [];
+    if (codes.length === 0) {
       // Historical session: restore ONLY when next_question_plan.plan_id matches exactly.
       const nqp = understanding?.next_question_plan ?? null;
       if (
@@ -67,49 +83,34 @@ export function activeTargets(session: POJUSessionState): {
         Array.isArray(nqp.fact_role_codes) &&
         nqp.fact_role_codes.length > 0
       ) {
-        roles = roleCodesToRoles(nqp.fact_role_codes);
+        codes = [...nqp.fact_role_codes];
       }
     }
-    if (roles.length === 0) {
-      return {
-        dir_ids: [],
-        ddr_ids: [],
-        fact_roles: [],
-        auth_error: "missing_authorized_fact_roles",
-      };
-    }
+    const roles = roleCodesToRoles(codes);
+    if (roles.length === 0) return missingRoles;
     return {
       dir_ids: [...lastSent.dir_ids],
       ddr_ids: [...lastSent.ddr_ids],
       direction_id: lastSent.direction_id,
       fact_roles: roles,
+      fact_role_codes: codes,
     };
   }
 
   if (plan && (plan.dir_ids.length > 0 || plan.ddr_ids.length > 0)) {
-    const fromCodes = roleCodesToRoles(plan.fact_role_codes);
-    if (fromCodes.length === 0) {
-      return {
-        dir_ids: [],
-        ddr_ids: [],
-        fact_roles: [],
-        auth_error: "missing_authorized_fact_roles",
-      };
-    }
+    const codes = plan.fact_role_codes ? [...plan.fact_role_codes] : [];
+    const fromCodes = roleCodesToRoles(codes);
+    if (fromCodes.length === 0) return missingRoles;
     return {
       dir_ids: [...plan.dir_ids],
       ddr_ids: [...plan.ddr_ids],
       direction_id: plan.direction_id,
       fact_roles: fromCodes,
+      fact_role_codes: codes,
     };
   }
 
-  return {
-    dir_ids: [],
-    ddr_ids: [],
-    fact_roles: [],
-    auth_error: "missing_authorized_answer_target",
-  };
+  return missingTarget;
 }
 
 export function classifyAnswer(input: {
@@ -325,10 +326,23 @@ export function writesFor(
   }));
 }
 
+const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
+
+/**
+ * applyAnswerEventToSessionDc currently persists Constraint.verification_level
+ * as hardcoded "user_asserted" and is intentionally not modified in FU1.
+ * Therefore an estimated Constraint cannot be persisted without being
+ * disguised as user_asserted; it must stay unresolved.
+ */
+function constraintEstimateIsPersistable(): boolean {
+  return false;
+}
+
 /**
  * Convert a validated ModelAnswerDraft into a formal AnswerEvent.
  * Targets always come from activeTargets(); model fields never authorize
  * DIR/DDR/roles or confirmation. explanation is never written as a fact.
+ * role_hint is ignored for authorization; only role_code_hint is used.
  */
 export function answerEventFromModelDraft(input: {
   session: POJUSessionState;
@@ -340,7 +354,7 @@ export function answerEventFromModelDraft(input: {
   const targets = activeTargets(input.session);
   const notes: string[] = [];
   const unresolved: string[] = [...input.draft.unresolved_aspects];
-  const authorizedRoles = targets.fact_roles;
+  const authorizedRoleCodes = targets.fact_role_codes;
   let cls: AnswerClass = input.draft.classification;
 
   const eventShell = (writes: ProposedWrite[], classification: AnswerClass): AnswerEvent => ({
@@ -373,7 +387,7 @@ export function answerEventFromModelDraft(input: {
     notes.push("missing_authorized_answer_target");
     return eventShell([], "invalid_input");
   }
-  if (authorizedRoles.length === 0) {
+  if (authorizedRoleCodes.length === 0 || targets.fact_roles.length === 0) {
     notes.push("missing_authorized_fact_roles");
     return eventShell([], "invalid_input");
   }
@@ -388,31 +402,49 @@ export function answerEventFromModelDraft(input: {
     return eventShell([], cls);
   }
 
-  const acceptedItems: Array<{
+  type AcceptedItem = {
     text: string;
     semantic_kind: "reality_fact" | "constraint" | "definition_patch";
-    roles: string[];
+    authorizedDirId: string;
+    authorizedRole: string;
     certainty: "explicit" | "estimated" | "unclear";
-  }> = [];
+  };
+
+  const acceptedItems: AcceptedItem[] = [];
 
   for (const item of input.draft.extracted_items) {
-    const roleHint = item.role_hint;
-    const acceptedRole =
-      roleHint && authorizedRoles.includes(roleHint) ? roleHint : null;
-    if (roleHint && !acceptedRole) {
-      unresolved.push(`unauthorized_role_hint:${roleHint}:${item.text.slice(0, 40)}`);
-      notes.push("rejected_unauthorized_role_hint");
+    // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
+    const code = item.role_code_hint ?? null;
+
+    if (code && !authorizedRoleCodes.includes(code)) {
+      unresolved.push(`unauthorized_role_code:${code}:${item.text.slice(0, 40)}`);
+      notes.push("rejected_unauthorized_role_code");
       continue;
     }
+
+    if (!code && authorizedRoleCodes.length !== 1) {
+      unresolved.push(`unlocated_role_code:${item.text.slice(0, 100)}`);
+      notes.push("rejected_null_role_code_multi_auth");
+      continue;
+    }
+
+    const acceptedCode = code ?? authorizedRoleCodes[0]!;
+    const match = ROLE_CODE_RE.exec(acceptedCode);
+    if (!match) {
+      unresolved.push(`illegal_role_code:${acceptedCode}:${item.text.slice(0, 40)}`);
+      notes.push("rejected_illegal_role_code");
+      continue;
+    }
+
     acceptedItems.push({
       text: item.text.slice(0, 500),
       semantic_kind: item.semantic_kind,
-      roles: acceptedRole ? [acceptedRole] : [...authorizedRoles],
+      authorizedDirId: match[1]!,
+      authorizedRole: match[2]!,
       certainty: item.certainty,
     });
   }
 
-  const dirs = [...targets.dir_ids];
   const writes: ProposedWrite[] = [];
 
   const constraintCategory = (text: string): ProposedWrite["constraint_category"] =>
@@ -424,17 +456,21 @@ export function answerEventFromModelDraft(input: {
           ? "exit_cost"
           : "responsibility";
 
-  const pushConstraint = (text: string, roles: string[]) => {
-    const constraintRoles = roles.includes("hard_constraint")
-      ? roles
-      : [...roles, "hard_constraint"];
+  const pushConstraintAndCompanion = (
+    text: string,
+    authorizedDirId: string,
+    authorizedRole: string,
+    verification_level: "user_asserted" | "user_estimate",
+  ) => {
+    const fact_roles = [authorizedRole];
+    const related_dir_ids = [authorizedDirId];
     writes.push({
       kind: "constraint",
       statement: text,
       status: "unverified",
-      verification_level: "user_asserted",
-      fact_roles: constraintRoles,
-      related_dir_ids: dirs,
+      verification_level,
+      fact_roles,
+      related_dir_ids,
       constraint_category: constraintCategory(text),
       rigidity: "hard",
     });
@@ -446,41 +482,52 @@ export function answerEventFromModelDraft(input: {
         kind: "reality_fact",
         statement: text,
         status: "unverified",
-        verification_level: "user_asserted",
-        fact_roles: constraintRoles,
-        related_dir_ids: dirs,
+        verification_level,
+        fact_roles,
+        related_dir_ids,
       });
     }
   };
 
   if (cls === "unknown" || cls === "declined") {
-    const sourceItems =
-      acceptedItems.length > 0
-        ? acceptedItems
-        : [
-            {
-              text: statement.slice(0, 500),
-              semantic_kind: "reality_fact" as const,
-              roles: [...authorizedRoles],
-              certainty: "unclear" as const,
-            },
-          ];
-    for (const item of sourceItems) {
+    // Existing unknown/declined DC state rules: status + verification_level none.
+    // Role authorization still uses role_code_hint; null does not expand to all roles.
+    for (const item of acceptedItems) {
       writes.push({
         kind: "reality_fact",
         statement: item.text,
         status: cls,
         verification_level: "none",
-        fact_roles: item.roles,
-        related_dir_ids: dirs,
+        fact_roles: [item.authorizedRole],
+        related_dir_ids: [item.authorizedDirId],
       });
     }
     return eventShell(writes, cls);
   }
 
   for (const item of acceptedItems) {
+    if (item.certainty === "unclear") {
+      unresolved.push(`unclear_certainty:${item.text.slice(0, 100)}`);
+      continue;
+    }
+
+    const verification_level: "user_asserted" | "user_estimate" =
+      item.certainty === "estimated" ? "user_estimate" : "user_asserted";
+
     if (item.semantic_kind === "constraint") {
-      pushConstraint(item.text, item.roles);
+      if (item.certainty === "estimated" && !constraintEstimateIsPersistable()) {
+        unresolved.push(
+          `estimated_constraint_not_persistable:${item.text.slice(0, 100)}`,
+        );
+        notes.push("estimated_constraint_unresolved");
+        continue;
+      }
+      pushConstraintAndCompanion(
+        item.text,
+        item.authorizedDirId,
+        item.authorizedRole,
+        verification_level,
+      );
       continue;
     }
     if (item.semantic_kind === "definition_patch") {
@@ -489,26 +536,20 @@ export function answerEventFromModelDraft(input: {
         kind: "definition_patch",
         statement: item.text,
         status: "unverified",
-        verification_level:
-          item.certainty === "estimated" ? "user_estimate" : "user_asserted",
-        fact_roles: item.roles,
-        related_dir_ids: dirs,
+        verification_level,
+        fact_roles: [item.authorizedRole],
+        related_dir_ids: [item.authorizedDirId],
       });
       continue;
     }
 
-    const notExplicit =
-      cls === "estimate" ||
-      cls === "vague_answer" ||
-      item.certainty === "estimated" ||
-      item.certainty === "unclear";
     writes.push({
       kind: "reality_fact",
       statement: item.text,
       status: "unverified",
-      verification_level: notExplicit ? "user_estimate" : "user_asserted",
-      fact_roles: item.roles,
-      related_dir_ids: dirs,
+      verification_level,
+      fact_roles: [item.authorizedRole],
+      related_dir_ids: [item.authorizedDirId],
     });
   }
 

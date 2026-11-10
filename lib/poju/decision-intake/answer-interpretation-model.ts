@@ -180,7 +180,14 @@ Rules:
 9. Do not classify as unknown just because the answer is short.
 10. Do not infer not_applicable just because a fact was unmentioned.
 
-role_hint may suggest one of the authorized fact roles provided in context, or null. You must not invent DIR ids, DDR ids, or roles outside that authorized set. Unauthorized guesses will be discarded by code.
+Role binding:
+1. Each extracted item must bind the most specific authorized role code when you can determine it.
+2. role_code_hint may only be a complete string that already exists in context.authorized.fact_role_codes, or null.
+3. If you cannot determine the specific role, return null. Do not guess.
+4. Do not select multiple roles for one item because several might be relevant. Pick at most one role_code_hint per item.
+5. Do not invent or output model-inferred DIR ids, DDR ids, or role codes. Do not construct role codes yourself.
+6. Do not copy one fact into multiple extracted items with different roles.
+role_hint is deprecated and is not an authorization basis. Do not use it to claim access to a role.
 
 JSON shape:
 {
@@ -189,7 +196,8 @@ JSON shape:
     {
       "text": "verbatim or close paraphrase of one user-stated item",
       "semantic_kind": "reality_fact" | "constraint" | "definition_patch",
-      "role_hint": "authorized role or null",
+      "role_code_hint": "complete authorized role code from context.authorized.fact_role_codes, or null",
+      "role_hint": null,
       "certainty": "explicit" | "estimated" | "unclear"
     }
   ],
@@ -253,10 +261,9 @@ export function buildModelInterpretationContext(input: {
   const authorizedDir = new Set(targets.dir_ids);
   const authorizedRoles = new Set(targets.fact_roles);
   const lastSent = session.decision_understanding?.last_sent_question ?? null;
-  const factRoleCodes =
-    lastSent?.fact_role_codes && lastSent.fact_role_codes.length > 0
-      ? [...lastSent.fact_role_codes]
-      : targets.fact_roles.map((role) => `role:${role}`);
+  // Authorization codes come only from activeTargets() (actually-sent Plan).
+  // Never invent role:${role} and never expand from Blueprint.required_fact_roles.
+  const factRoleCodes = [...targets.fact_role_codes];
 
   const blueprint_directions = (session.decision_blueprint?.directions ?? [])
     .filter((d) => d.dir_ids.some((id) => authorizedDir.has(id)))
@@ -379,6 +386,9 @@ export function parseAndValidateModelAnswerDraft(
     if (row.role_hint != null && typeof row.role_hint !== "string") {
       return { ok: false, reason: "invalid_schema", detail: "invalid_role_hint" };
     }
+    if (row.role_code_hint != null && typeof row.role_code_hint !== "string") {
+      return { ok: false, reason: "invalid_schema", detail: "invalid_role_code_hint" };
+    }
     if (typeof row.certainty !== "string" || !CERT_SET.has(row.certainty)) {
       return { ok: false, reason: "invalid_schema", detail: "invalid_certainty" };
     }
@@ -391,10 +401,12 @@ export function parseAndValidateModelAnswerDraft(
     }
     if (items.length >= MAX_EXTRACTED_ITEMS) continue;
     const hint = asTrimmedString(row.role_hint);
+    const codeHint = asTrimmedString(row.role_code_hint);
     items.push({
       text,
       semantic_kind,
       role_hint: hint && hint.length > 0 ? hint : null,
+      role_code_hint: codeHint && codeHint.length > 0 ? codeHint : null,
       certainty: row.certainty as ModelCertainty,
     });
   }

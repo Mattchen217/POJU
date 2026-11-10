@@ -69,7 +69,14 @@ export type ModelAnswerDraft = {
   extracted_items: Array<{
     text: string;
     semantic_kind: "reality_fact" | "constraint" | "definition_patch";
+    /** Legacy role-name hint; kept for historical drafts only. Not an authorization basis. */
     role_hint: string | null;
+    /**
+     * Full authorized role code `v1/dir/{dir_id}/role/{role}`.
+     * Optional on historical drafts / test fixtures; missing is treated as null.
+     * Production model output should always include this field (string or null).
+     */
+    role_code_hint?: string | null;
     certainty: "explicit" | "estimated" | "unclear";
   }>;
   unresolved_aspects: string[];
