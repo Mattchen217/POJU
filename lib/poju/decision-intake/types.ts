@@ -141,6 +141,11 @@ export type PersonalPatternInsightBlock = {
   insights: Array<{ text: string; source: string; related_dir_ids: string[] }>;
 };
 
+export type ConflictClarificationTarget = {
+  conflict_id: string;
+  fact_ids: string[];
+};
+
 export type AdaptiveQuestionPlan = {
   plan_id: string;
   candidate_id: string;
@@ -161,6 +166,8 @@ export type AdaptiveQuestionPlan = {
   question_text: string;
   built_at: string;
   scoring_path: string;
+  /** Exact Conflict addressed by this plan, if any. Scheduling metadata only. */
+  conflict_clarification?: ConflictClarificationTarget | null;
 };
 
 export type SessionBudgetSnapshot = {
@@ -212,6 +219,8 @@ export type UnderstandingState = {
     /** Roles authorized by the actually-sent Plan; optional on historical sessions. */
     fact_role_codes?: string[];
     turn_id: string;
+    /** Exact Conflict addressed by this actually-sent question. */
+    conflict_clarification?: ConflictClarificationTarget | null;
   } | null;
 };
 

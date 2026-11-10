@@ -42,26 +42,35 @@ function normalizeComparable(text: string): string {
     .trim();
 }
 
-function rolesOverlap(a: string[] | undefined, b: string[]): boolean {
-  if (!a || a.length === 0 || b.length === 0) {
-    // Same-topic conflict requires a shared fact role when both sides declare roles.
-    // If either side lacks roles, allow DIR-only related match for related-fact lookup,
-    // but mutual-exclusion checks still require overlapping roles when present.
-    return true;
-  }
-  return a.some((r) => b.includes(r));
-}
-
 function findRelatedOldFacts(
-  reality_facts: RealityFact[],
+  realityFacts: RealityFact[],
   relatedDirIds: string[],
   factRoles: string[],
 ): RealityFact[] {
-  return reality_facts.filter((f) => {
-    const dirs = f.related_dir_ids ?? [];
-    const dirHit = relatedDirIds.some((d) => dirs.includes(d));
-    if (!dirHit) return false;
-    return rolesOverlap(f.fact_roles, factRoles);
+  return realityFacts.filter((fact) => {
+    // Unknown / declined / not_applicable are not propositions
+    // and cannot be used as the opposing side of a Conflict.
+    if (
+      fact.status === "unknown" ||
+      fact.status === "declined" ||
+      fact.status === "not_applicable"
+    ) {
+      return false;
+    }
+
+    const dirs = fact.related_dir_ids ?? [];
+    if (!relatedDirIds.some((dirId) => dirs.includes(dirId))) {
+      return false;
+    }
+
+    // Require an actual shared role for conflict evidence.
+    // Missing historical role metadata is insufficient evidence.
+    const oldRoles = fact.fact_roles ?? [];
+    if (oldRoles.length === 0 || factRoles.length === 0) {
+      return false;
+    }
+
+    return oldRoles.some((role) => factRoles.includes(role));
   });
 }
 

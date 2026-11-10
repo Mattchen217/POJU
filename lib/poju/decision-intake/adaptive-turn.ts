@@ -24,6 +24,11 @@ import { buildProductionNaValidationContextFromSession } from "@/lib/poju/decisi
 import { persistDcLifecycleChange } from "@/lib/poju/decision-context/production-dc-lifecycle";
 import { interpretUserAnswer } from "./answer-interpretation";
 import { applyAnswerEventToSessionDc } from "./apply-answer-to-dc";
+import {
+  findClarifiedConflictForTurn,
+  handleConflictClarificationAnswer,
+} from "./conflict-clarification-turn";
+import { bindConflictClarificationToPlan } from "./conflict-clarification";
 import { ensureDecisionBlueprint,
   activateNextBlueprintPriorityBand } from "./blueprint";
 import { buildAdaptiveQuestionPlan } from "./question-generation";
@@ -227,6 +232,64 @@ export async function runAdaptiveQuestionTurn(input: {
         persist_error: "empty_statement",
       };
     }
+    const priorClarify = findClarifiedConflictForTurn(
+      current,
+      input.source_turn_id,
+    );
+    const clarifyKey = `dc_conflict_clarify:${current.session_id}:${input.source_turn_id}`;
+    const keySeen = (current.decision_context_idempotency_keys ?? []).includes(
+      clarifyKey,
+    );
+    const lastSentTarget =
+      current.decision_understanding?.last_sent_question?.conflict_clarification ??
+      null;
+    const clarifyTarget =
+      lastSentTarget ??
+      (priorClarify
+        ? {
+            conflict_id: priorClarify.conflict_id,
+            fact_ids: [...priorClarify.fact_ids],
+          }
+        : null);
+    if (priorClarify || keySeen || lastSentTarget) {
+      if (!clarifyTarget) {
+        // Persist key seen but Conflict record missing: still avoid ordinary writes.
+        current = activateNextBlueprintPriorityBand(current, input.now);
+        const understanding = buildUnderstanding({
+          session: current,
+          blueprint: current.decision_blueprint!,
+          now: input.now,
+          last_answer_event_id: null,
+        });
+        const planned = await planFromState(current, understanding, input.now);
+        return {
+          session: planned.session,
+          outcome: "idempotent_replay",
+          answer_event: null,
+          understanding: planned.understanding,
+          plan: planned.plan,
+          authorized_question: planned.authorized_question,
+          persist_error: "idempotent_skip",
+          ask_error: planned.planner_block
+            ? `${planned.planner_block.reason_code}:${planned.planner_block.detail}`
+            : undefined,
+        };
+      }
+      return handleConflictClarificationAnswer({
+        current,
+        original: input.session,
+        statement,
+        source_turn_id: input.source_turn_id,
+        now: input.now,
+        target: clarifyTarget,
+        buildUnderstanding,
+        planFromState,
+        withUnderstanding,
+        outcomeFromPlanResult,
+        errorText,
+      });
+    }
+
     answer_event = interpretUserAnswer({
       session: current,
       statement,
@@ -478,6 +541,8 @@ async function planFromState(
   const dc = session.decision_context!;
   const blueprint = session.decision_blueprint!;
   let budget = understanding.budget;
+  const finalizePlan = (builtPlan: AdaptiveQuestionPlan): AdaptiveQuestionPlan =>
+    bindConflictClarificationToPlan(session, builtPlan);
 
   if (!understanding.readiness.can_ask) {
     const u = {
@@ -583,10 +648,11 @@ async function planFromState(
       scoring_path: `${INTAKE_ASK_SCORING_PATH}→catalog_fallback_p0_p1→buildAdaptiveQuestionPlan`,
     });
     if (fb.plan) {
+      const finalPlan = finalizePlan(fb.plan);
       const u: UnderstandingState = {
         ...understanding,
         budget,
-        next_question_plan: fb.plan,
+        next_question_plan: finalPlan,
         last_sent_question: null,
         readiness: {
           ...understanding.readiness,
@@ -600,10 +666,10 @@ async function planFromState(
         },
       };
       return {
-        session: withUnderstanding(session, u, fb.plan, askSnap),
+        session: withUnderstanding(session, u, finalPlan, askSnap),
         understanding: u,
-        plan: fb.plan,
-        authorized_question: fb.plan.question_text,
+        plan: finalPlan,
+        authorized_question: finalPlan.question_text,
         planner_block: null as { reason_code: string; detail: string } | null,
       };
     }
@@ -674,17 +740,18 @@ async function planFromState(
       scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
       });
       if (alt.validation.ok) {
+        const finalPlan = finalizePlan(alt.plan);
         const u: UnderstandingState = {
           ...understanding,
           budget,
-          next_question_plan: alt.plan,
+          next_question_plan: finalPlan,
           last_sent_question: null,
         };
         return {
-          session: withUnderstanding(session, u, alt.plan, askSnap),
+          session: withUnderstanding(session, u, finalPlan, askSnap),
           understanding: u,
-          plan: alt.plan,
-          authorized_question: alt.plan.question_text,
+          plan: finalPlan,
+          authorized_question: finalPlan.question_text,
           planner_block: null,
         };
       }
@@ -719,17 +786,18 @@ async function planFromState(
     };
   }
 
+  const finalPlan = finalizePlan(built.plan);
   const u: UnderstandingState = {
     ...understanding,
     budget,
-    next_question_plan: built.plan,
+    next_question_plan: finalPlan,
     last_sent_question: understanding.last_sent_question,
   };
   return {
-    session: withUnderstanding(session, u, built.plan, askSnap),
+    session: withUnderstanding(session, u, finalPlan, askSnap),
     understanding: u,
-    plan: built.plan,
-    authorized_question: built.plan.question_text,
+    plan: finalPlan,
+    authorized_question: finalPlan.question_text,
     planner_block: null,
   };
 }
@@ -768,6 +836,12 @@ export function attachAuthorizedAssistantQuestion(
         // Must come from the actually-sent Plan — never inferred from DIR.required_fact_roles.
         fact_role_codes: [...plan.fact_role_codes],
         turn_id: turnId,
+        conflict_clarification: plan.conflict_clarification
+          ? {
+              conflict_id: plan.conflict_clarification.conflict_id,
+              fact_ids: [...plan.conflict_clarification.fact_ids],
+            }
+          : null,
       },
     },
   };
