@@ -51,10 +51,28 @@ async function main() {
   const { createPOJUSession, loadPOJUSession, savePOJUSession } = await import(
     "../lib/poju/session-manager"
   );
-  const { handleUserMessage } = await import("../lib/poju/agent");
-  const { runM1ProductionPreLlmTurn, runCollectingDcTurn } = await import(
+  const { handleUserMessage: handleUserMessageRaw } = await import("../lib/poju/agent");
+  const {
+    runM1ProductionPreLlmTurn: runM1ProductionPreLlmTurnRaw,
+    runCollectingDcTurn: runCollectingDcTurnRaw,
+  } = await import(
     "../lib/poju/collecting-dc-turn"
   );
+  const { withDeterministicHandleHooks, mergeAnswerInterpretationTestHooks } = await import(
+    "./fixtures/test-answer-interpretation-hook"
+  );
+  const handleUserMessage: typeof handleUserMessageRaw = (input) =>
+    handleUserMessageRaw(withDeterministicHandleHooks(input));
+  const runM1ProductionPreLlmTurn: typeof runM1ProductionPreLlmTurnRaw = (session, input) =>
+    runM1ProductionPreLlmTurnRaw(session, {
+      ...input,
+      test_hooks: mergeAnswerInterpretationTestHooks(input.test_hooks),
+    });
+  const runCollectingDcTurn: typeof runCollectingDcTurnRaw = (session, input) =>
+    runCollectingDcTurnRaw(session, {
+      ...input,
+      test_hooks: mergeAnswerInterpretationTestHooks(input.test_hooks),
+    });
   const {
     buildCatalogBlueprintScope,
     filterCatalogLegalIds,
@@ -64,9 +82,14 @@ async function main() {
     activateNextBlueprintPriorityBand,
     gateClassForDirFromCatalog,
     buildUnderstandingState,
-    runAdaptiveQuestionTurn,
+    runAdaptiveQuestionTurn: runAdaptiveQuestionTurnRaw,
     attachAuthorizedAssistantQuestion,
   } = await import("../lib/poju/decision-intake");
+  const runAdaptiveQuestionTurn: typeof runAdaptiveQuestionTurnRaw = (input) =>
+    runAdaptiveQuestionTurnRaw({
+      ...input,
+      test_hooks: mergeAnswerInterpretationTestHooks(input.test_hooks),
+    });
   const {
     ACTIVE_DDR_CATALOG_VERSION,
     loadDdrCatalog,

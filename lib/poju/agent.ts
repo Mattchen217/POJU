@@ -1104,7 +1104,40 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           source_turn_id: turnId,
           now: nowPre,
           test_hooks: input.__testOnlyM1Hooks,
+          locale: sessionOutputLocale,
+          signal,
         });
+        if (
+          m1CollectingTurn.outcome === "answer_interpretation_failed" ||
+          m1CollectingTurn.outcome === "answer_interpretation_invalid_schema"
+        ) {
+          const failText =
+            "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。" +
+            (m1CollectingTurn.ask_error
+              ? `(${m1CollectingTurn.ask_error})`
+              : "");
+          const failAssistant: POJUMessage = {
+            role: "assistant",
+            content: failText,
+            timestamp: nowPre,
+            client_id: safeRandomUUID(),
+            meta: {
+              m1_fail_closed: true,
+              m1_outcome: m1CollectingTurn.outcome,
+              m1_ask_error: m1CollectingTurn.ask_error ?? null,
+            },
+          };
+          console.error(
+            "[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback)",
+            m1CollectingTurn.outcome,
+            m1CollectingTurn.ask_error,
+          );
+          return withSessionProfileFlags({
+            ...sessionForLlm,
+            messages: [...messagesWithUser, failAssistant],
+            last_interaction_at: nowPre,
+          });
+        }
         if (
           m1CollectingTurn.outcome === "persist_failed" ||
           m1CollectingTurn.outcome === "persist_threw"

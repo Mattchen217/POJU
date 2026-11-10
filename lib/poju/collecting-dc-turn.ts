@@ -37,7 +37,11 @@ export type CollectingDcTurnOutcome =
    * P0/P1 obligations remain and hard budget remains. Nonterminal — do not
    * treat as investigation-complete / final-confirm.
    */
-  | "planner_blocked";
+  | "planner_blocked"
+  /** Model answer interpretation call failed (timeout / transport / throw). */
+  | "answer_interpretation_failed"
+  /** Model returned invalid JSON or a schema-invalid draft. */
+  | "answer_interpretation_invalid_schema";
 
 export type CollectingDcTurnResult = {
   session: POJUSessionState;
@@ -111,6 +115,21 @@ function mapAdaptiveOutcome(turn: {
     };
   }
   // M2.3-R2-FU2: planner_blocked must win over any replay/mapping ambiguity.
+  if (
+    turn.outcome === "answer_interpretation_failed" ||
+    turn.outcome === "answer_interpretation_invalid_schema"
+  ) {
+    return {
+      session: turn.session,
+      outcome: turn.outcome,
+      ask_planned: false,
+      persist_error: turn.persist_error,
+      ...common,
+      authorized_question: null,
+      plan: null,
+      understanding: null,
+    };
+  }
   if (turn.outcome === "planner_blocked") {
     return {
       session: turn.session,
@@ -168,6 +187,8 @@ export async function runCollectingDcTurn(
     now: string;
     init_only?: boolean;
     test_hooks?: AdaptiveTurnTestHooks;
+    locale?: string;
+    signal?: AbortSignal;
   },
 ): Promise<CollectingDcTurnResult> {
   const { runAdaptiveQuestionTurn } = await import(
@@ -180,6 +201,8 @@ export async function runCollectingDcTurn(
     now: input.now,
     init_only: input.init_only,
     test_hooks: input.test_hooks,
+    locale: input.locale,
+    signal: input.signal,
   });
   return mapAdaptiveOutcome(turn, Boolean(input.init_only));
 }
@@ -198,6 +221,8 @@ export async function runM1ProductionPreLlmTurn(
     source_turn_id: string;
     now: string;
     test_hooks?: AdaptiveTurnTestHooks;
+    locale?: string;
+    signal?: AbortSignal;
   },
 ): Promise<CollectingDcTurnResult> {
   const dc = session.decision_context;

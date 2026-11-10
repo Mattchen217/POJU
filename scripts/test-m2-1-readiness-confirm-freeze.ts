@@ -39,7 +39,12 @@ async function main() {
   const { createPOJUSession, loadPOJUSession, savePOJUSession } = await import(
     "../lib/poju/session-manager"
   );
-  const { handleUserMessage } = await import("../lib/poju/agent");
+  const { handleUserMessage: handleUserMessageRaw } = await import("../lib/poju/agent");
+  const { withDeterministicHandleHooks } = await import(
+    "./fixtures/test-answer-interpretation-hook"
+  );
+  const handleUserMessage: typeof handleUserMessageRaw = (input) =>
+    handleUserMessageRaw(withDeterministicHandleHooks(input));
   const { evaluateDecisionSufficiency } = await import(
     "../lib/poju/decision-context/stop-criteria"
   );

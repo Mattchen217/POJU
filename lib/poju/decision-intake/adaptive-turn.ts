@@ -22,7 +22,8 @@ import { planNextAskFromCandidates } from "@/lib/poju/decision-context/question-
 import { snapshotFromDc } from "@/lib/poju/decision-context/question-planning";
 import { buildProductionNaValidationContextFromSession } from "@/lib/poju/decision-context/na-validation-from-session";
 import { persistDcLifecycleChange } from "@/lib/poju/decision-context/production-dc-lifecycle";
-import { interpretUserAnswer } from "./answer-interpretation";
+import { answerEventFromModelDraft } from "./answer-interpretation";
+import { interpretAnswerWithModel } from "./answer-interpretation-model";
 import { applyAnswerEventToSessionDc } from "./apply-answer-to-dc";
 import {
   findClarifiedConflictForTurn,
@@ -189,6 +190,12 @@ export type AdaptiveTurnTestHooks = {
     nextDcSession: POJUSessionState,
     idempotency_key: string,
   ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
+  /**
+   * @internal Test-only model interpretation substitute.
+   * When omitted (production default), interpretAnswerWithModel calls OpenRouter.
+   * Must never be set outside tests. Not an environment bypass switch.
+   */
+  interpretAnswerModel?: import("./answer-interpretation-model").AnswerInterpretationModelHook;
 };
 
 export async function runAdaptiveQuestionTurn(input: {
@@ -200,6 +207,8 @@ export async function runAdaptiveQuestionTurn(input: {
   init_only?: boolean;
   /** @internal Test-only fault injection. Omitted in production. */
   test_hooks?: AdaptiveTurnTestHooks;
+  locale?: string;
+  signal?: AbortSignal;
 }): Promise<AdaptiveTurnResult> {
   let current = input.session;
   const buildUnderstanding = (
@@ -301,11 +310,34 @@ export async function runAdaptiveQuestionTurn(input: {
       });
     }
 
-    answer_event = interpretUserAnswer({
+    const interpreted = await interpretAnswerWithModel({
       session: current,
       statement,
       source_turn_id: input.source_turn_id,
-      now: input.now,
+      locale: input.locale,
+      signal: input.signal,
+      testHook: input.test_hooks?.interpretAnswerModel,
+    });
+    if (!interpreted.ok) {
+      const outcome =
+        interpreted.reason === "invalid_schema" || interpreted.reason === "invalid_json"
+          ? "answer_interpretation_invalid_schema"
+          : "answer_interpretation_failed";
+      return {
+        session: input.session,
+        outcome,
+        answer_event: null,
+        understanding: null,
+        plan: null,
+        authorized_question: null,
+        ask_error: `${interpreted.reason}:${interpreted.detail}`,
+      };
+    }
+    answer_event = answerEventFromModelDraft({
+      session: current,
+      statement,
+      source_turn_id: input.source_turn_id,
+      draft: interpreted.draft,
     });
 
     try {
@@ -332,6 +364,36 @@ export async function runAdaptiveQuestionTurn(input: {
             understanding: planned.understanding,
             plan: planned.plan,
             authorized_question: planned.authorized_question,
+            persist_error: "turn_already_mapped",
+          };
+        }
+        const lastSent =
+          current.decision_understanding?.last_sent_question ??
+          planned.understanding.last_sent_question ??
+          null;
+        const existingPlan =
+          current.adaptive_ask_plan ??
+          current.decision_understanding?.next_question_plan ??
+          null;
+        if (existingPlan && lastSent && lastSent.plan_id === existingPlan.plan_id) {
+          const recovered: UnderstandingState = {
+            ...planned.understanding,
+            next_question_plan: existingPlan,
+            last_sent_question: lastSent,
+            budget: current.decision_understanding?.budget ?? planned.understanding.budget,
+          };
+          return {
+            session: withUnderstanding(
+              current,
+              recovered,
+              existingPlan,
+              current.intake_ask_plan ?? null,
+            ),
+            outcome: "idempotent_replay",
+            answer_event,
+            understanding: recovered,
+            plan: existingPlan,
+            authorized_question: lastSent.question_text,
             persist_error: "turn_already_mapped",
           };
         }

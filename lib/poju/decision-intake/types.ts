@@ -46,6 +46,36 @@ export type ProposedWrite = {
   rigidity?: "hard" | "soft";
 };
 
+export type AnswerInterpreterVersion =
+  | "deterministic_m1_v1"
+  | "deterministic_m2_4_r1"
+  | "model_m2_4_r2";
+
+export type ModelAnswerDraft = {
+  classification:
+    | "clear_answer"
+    | "partial_answer"
+    | "vague_answer"
+    | "unknown"
+    | "declined"
+    | "correction"
+    | "supplement"
+    | "contradiction"
+    | "goal_change"
+    | "insight_mismatch"
+    | "off_topic"
+    | "invalid_input"
+    | "estimate";
+  extracted_items: Array<{
+    text: string;
+    semantic_kind: "reality_fact" | "constraint" | "definition_patch";
+    role_hint: string | null;
+    certainty: "explicit" | "estimated" | "unclear";
+  }>;
+  unresolved_aspects: string[];
+  explanation: string;
+};
+
 export type AnswerEvent = {
   event_id: string;
   session_id: string;
@@ -55,8 +85,8 @@ export type AnswerEvent = {
   targets: { dir_ids: string[]; ddr_ids: string[]; direction_id?: string };
   proposed_writes: ProposedWrite[];
   notes: string[];
-  /** Current writers use deterministic_m2_4_r1; m1_v1 retained for historical session reads. */
-  interpreter: "deterministic_m1_v1" | "deterministic_m2_4_r1";
+  /** Current writers record the interpreter actually used for this event. */
+  interpreter: AnswerInterpreterVersion;
 };
 
 export type InvestigationDirection = {
@@ -232,6 +262,8 @@ export type AdaptiveTurnResult = {
     | "planner_blocked"
     | "dc_persist_failed"
     | "dc_persist_threw"
+    | "answer_interpretation_failed"
+    | "answer_interpretation_invalid_schema"
     | "not_applicable_phase"
     | "idempotent_replay";
   answer_event: AnswerEvent | null;

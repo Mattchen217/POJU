@@ -156,7 +156,12 @@ export interface POJUMessage {
     /** M1-R — DC persist fail-closed assistant turn (no free-ask fallback). */
     m1_fail_closed?: boolean;
     m1_planner_blocked?: boolean;
-    m1_outcome?: "persist_failed" | "persist_threw" | "planner_blocked";
+    m1_outcome?:
+      | "persist_failed"
+      | "persist_threw"
+      | "planner_blocked"
+      | "answer_interpretation_failed"
+      | "answer_interpretation_invalid_schema";
     m1_persist_error?: string | null;
     m1_ask_error?: string | null;
   };

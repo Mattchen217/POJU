@@ -3,7 +3,22 @@
  */
 
 export * from "./types";
-export { interpretUserAnswer } from "./answer-interpretation";
+export {
+  interpretUserAnswer,
+  activeTargets,
+  classifyAnswer,
+  writesFor,
+  answerEventFromModelDraft,
+  ANSWER_INTERPRETATION_VERSION,
+  MODEL_ANSWER_INTERPRETER_VERSION,
+} from "./answer-interpretation";
+export {
+  interpretAnswerWithModel,
+  parseAndValidateModelAnswerDraft,
+  buildModelInterpretationContext,
+  ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS,
+  MODEL_ANSWER_INTERPRETER_VERSION as MODEL_ANSWER_INTERPRETER_VERSION_MODEL,
+} from "./answer-interpretation-model";
 export { applyAnswerEventToSessionDc } from "./apply-answer-to-dc";
 export {
   ensureDecisionBlueprint,
