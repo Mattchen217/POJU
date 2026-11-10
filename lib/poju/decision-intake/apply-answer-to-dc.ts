@@ -31,6 +31,43 @@ function alreadyMapped(dc: DecisionContext, turnId: string): boolean {
   return false;
 }
 
+function writeAlreadyPresent(
+  dc: DecisionContext,
+  turnId: string,
+  kind: "reality_fact" | "constraint",
+  statement: string,
+): boolean {
+  const norm = normalizeComparable(statement);
+  if (kind === "reality_fact") {
+    return dc.reality_facts.some(
+      (f) =>
+        f.source_turn_id === turnId &&
+        normalizeComparable(f.statement) === norm,
+    );
+  }
+  return dc.constraints.some(
+    (c) =>
+      c.source_turn_id === turnId &&
+      normalizeComparable(c.statement) === norm,
+  );
+}
+
+function uniqueRecordId(
+  prefix: string,
+  turnId: string,
+  index: number,
+  existing: Set<string>,
+): string {
+  const base = `${prefix}${turnId}_${index}`.slice(0, 80);
+  if (!existing.has(base)) return base;
+  let n = 1;
+  while (true) {
+    const candidate = `${prefix}${turnId}_${index}_p${n}`.slice(0, 80);
+    if (!existing.has(candidate)) return candidate;
+    n += 1;
+  }
+}
+
 function normalizeComparable(text: string): string {
   return text
     .toLowerCase()
@@ -163,7 +200,7 @@ function selectConflictingOldFacts(input: {
 export async function applyAnswerEventToSessionDc(
   session: POJUSessionState,
   event: AnswerEvent,
-  opts?: { now?: string },
+  opts?: { now?: string; allow_incremental_same_turn?: boolean },
 ): Promise<ApplyAnswerResult> {
   const dc = session.decision_context;
   if (!dc || dc.status !== "draft") {
@@ -185,14 +222,27 @@ export async function applyAnswerEventToSessionDc(
       constraint_ids_written: [],
     };
   }
+  const persistableWrites = event.proposed_writes.filter(
+    (w): w is typeof w & { kind: "reality_fact" | "constraint" } =>
+      w.kind === "reality_fact" || w.kind === "constraint",
+  );
+  const incrementalWrites = persistableWrites.filter(
+    (w) => !writeAlreadyPresent(dc, turnId, w.kind, w.statement),
+  );
+  // Default: same source_turn_id is fully mapped (ordinary replay).
+  // Incremental same-turn writes are only allowed for pending role-resolution
+  // follow-ups (statements not yet written). Do not change Constraint
+  // verification_level hardcoding.
   if (alreadyMapped(dc, turnId)) {
-    return {
-      session,
-      applied: false,
-      skipped_reason: "turn_already_mapped",
-      fact_ids_written: [],
-      constraint_ids_written: [],
-    };
+    if (!opts?.allow_incremental_same_turn || incrementalWrites.length === 0) {
+      return {
+        session,
+        applied: false,
+        skipped_reason: "turn_already_mapped",
+        fact_ids_written: [],
+        constraint_ids_written: [],
+      };
+    }
   }
   if (
     event.classification === "off_topic" ||
@@ -221,8 +271,16 @@ export async function applyAnswerEventToSessionDc(
   const fact_ids_written: string[] = [];
   const constraint_ids_written: string[] = [];
 
+  const existingFactIds = new Set(reality_facts.map((f) => f.fact_id));
+  const existingConstraintIds = new Set(constraints.map((c) => c.constraint_id));
+
   for (let i = 0; i < event.proposed_writes.length; i++) {
     const w = event.proposed_writes[i]!;
+    if (w.kind === "reality_fact" || w.kind === "constraint") {
+      if (writeAlreadyPresent(dc, turnId, w.kind, w.statement)) {
+        continue;
+      }
+    }
     if (w.kind === "reality_fact") {
       // Preserve unknown/declined; never promote to confirmed here (E1 only).
       const status =
@@ -237,8 +295,10 @@ export async function applyAnswerEventToSessionDc(
           : w.verification_level === "none"
             ? "user_asserted"
             : w.verification_level;
+      const factId = uniqueRecordId("fact_m1_", turnId, i, existingFactIds);
+      existingFactIds.add(factId);
       const fact: RealityFact = buildRealityFact({
-        fact_id: `fact_m1_${turnId}_${i}`.slice(0, 80),
+        fact_id: factId,
         statement: w.statement.slice(0, 500),
         status,
         verification_level,
@@ -298,8 +358,10 @@ export async function applyAnswerEventToSessionDc(
       reality_facts.push(fact);
       fact_ids_written.push(fact.fact_id);
     } else if (w.kind === "constraint") {
+      const constraintId = uniqueRecordId("cst_m1_", turnId, i, existingConstraintIds);
+      existingConstraintIds.add(constraintId);
       const c: Constraint = {
-        constraint_id: `cst_m1_${turnId}_${i}`.slice(0, 80),
+        constraint_id: constraintId,
         statement: w.statement.slice(0, 500),
         category: w.constraint_category ?? "responsibility",
         status: "unverified",

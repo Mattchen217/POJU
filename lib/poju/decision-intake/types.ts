@@ -83,6 +83,27 @@ export type ModelAnswerDraft = {
   explanation: string;
 };
 
+export type UnresolvedAnswerReason =
+  | "unlocated_role_code"
+  | "unauthorized_role_code"
+  | "illegal_role_code"
+  | "unclear_certainty"
+  | "estimated_constraint_not_persistable"
+  | "missing_authorized_answer_target"
+  | "missing_authorized_fact_roles";
+
+export type UnresolvedAnswerItem = {
+  source_turn_id: string;
+  text: string;
+  semantic_kind: "reality_fact" | "constraint" | "definition_patch";
+  certainty: "explicit" | "estimated" | "unclear";
+  reason: UnresolvedAnswerReason;
+  /** Actually-sent question plan_id at the time of rejection; empty if none. */
+  sent_question_id: string;
+  authorized_role_codes: string[];
+  raw_role_code_hint?: string | null;
+};
+
 export type AnswerEvent = {
   event_id: string;
   session_id: string;
@@ -92,6 +113,8 @@ export type AnswerEvent = {
   targets: { dir_ids: string[]; ddr_ids: string[]; direction_id?: string };
   proposed_writes: ProposedWrite[];
   notes: string[];
+  /** Structured unresolved items; never enter proposed_writes. */
+  unresolved_items: UnresolvedAnswerItem[];
   /** Current writers record the interpreter actually used for this event. */
   interpreter: AnswerInterpreterVersion;
 };
@@ -205,6 +228,25 @@ export type AdaptiveQuestionPlan = {
   scoring_path: string;
   /** Exact Conflict addressed by this plan, if any. Scheduling metadata only. */
   conflict_clarification?: ConflictClarificationTarget | null;
+};
+
+export type PendingAnswerResolutionStatus = "pending";
+
+/**
+ * Scheduling state only — never a second Decision Context or fact source.
+ * Unresolved items here must not be written as RealityFacts or Constraints
+ * until they pass complete role-code authorization.
+ */
+export type PendingAnswerResolution = {
+  status: PendingAnswerResolutionStatus;
+  source_turn_id: string;
+  original_statement: string;
+  original_classification: AnswerClass;
+  unresolved_items: UnresolvedAnswerItem[];
+  authorized_role_codes: string[];
+  sent_question_id: string;
+  clarification_plan: AdaptiveQuestionPlan | null;
+  clarification_plan_id: string | null;
 };
 
 export type SessionBudgetSnapshot = {

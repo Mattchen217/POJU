@@ -442,6 +442,11 @@ export interface POJUSessionState {
    */
   adaptive_ask_plan?: import("./decision-intake/types").AdaptiveQuestionPlan | null;
   /**
+   * M2.4-R2-FU2 — scheduling state for an extracted answer that could not bind
+   * to an authorized role. Not a second Decision Context or fact source.
+   */
+  pending_answer_resolution?: import("./decision-intake/types").PendingAnswerResolution | null;
+  /**
    * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
    */
   opening_anchors?: import("./decision-context/opening-anchor").OpeningAnchor[];

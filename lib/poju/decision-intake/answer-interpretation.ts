@@ -9,7 +9,7 @@
 export const ANSWER_INTERPRETATION_VERSION = "deterministic_m2_4_r1" as const;
 
 import type { POJUSessionState } from "@/lib/poju/types";
-import type { AnswerClass, AnswerEvent, ModelAnswerDraft, ProposedWrite } from "./types";
+import type { AnswerClass, AnswerEvent, ModelAnswerDraft, ProposedWrite, UnresolvedAnswerItem, UnresolvedAnswerReason } from "./types";
 
 export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
 
@@ -28,21 +28,42 @@ const CONTRADICTION_RE =
 const OFF_TOPIC_RE =
   /^(今天天气|讲个笑话|tell\s+me\s+a\s+joke|无关)/i;
 
-function roleCodesToRoles(codes: string[] | undefined | null): string[] {
-  if (!codes || codes.length === 0) return [];
-  return codes
-    .map((c) => {
-      const m = /\/role\/([^/]+)$/.exec(c);
-      return m?.[1] ?? "";
-    })
-    .filter(Boolean);
+const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
+
+/**
+ * Validate a complete authorization set. Fail closed on malformed, empty,
+ * duplicate, or last-sent DIR-mismatched codes. Do not filter bad items
+ * and continue with the remainder.
+ */
+function validateAuthorizedRoleCodes(
+  codes: string[],
+  lastSentDirIds: string[],
+): { ok: true; codes: string[]; roles: string[] } | { ok: false } {
+  if (codes.length === 0) return { ok: false };
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const roles: string[] = [];
+  for (const code of codes) {
+    const match = ROLE_CODE_RE.exec(code);
+    if (!match) return { ok: false };
+    const dirId = match[1]!;
+    const role = match[2]!;
+    if (!role) return { ok: false };
+    if (!lastSentDirIds.includes(dirId)) return { ok: false };
+    if (seen.has(code)) return { ok: false };
+    seen.add(code);
+    out.push(code);
+    roles.push(role);
+  }
+  if (out.length === 0 || roles.length === 0) return { ok: false };
+  return { ok: true, codes: out, roles };
 }
 
 /**
  * Current question is the ONLY answer-target authority.
- * Prefer last_sent_question (including its Plan fact_role_codes);
- * else current valid Plan. Never guess Blueprint-first DIR.
- * Never expand authorized roles to DIR.required_fact_roles.
+ * last_sent_question is the sole authorization source.
+ * Never use next_question_plan or adaptive_ask_plan as a substitute
+ * when last_sent_question is missing. Never derive from Blueprint.required_fact_roles.
  */
 export function activeTargets(session: POJUSessionState): {
   dir_ids: string[];
@@ -55,8 +76,6 @@ export function activeTargets(session: POJUSessionState): {
 } {
   const understanding = session.decision_understanding;
   const lastSent = understanding?.last_sent_question;
-  const plan =
-    understanding?.next_question_plan ?? session.adaptive_ask_plan ?? null;
   const missingRoles = {
     dir_ids: [] as string[],
     ddr_ids: [] as string[],
@@ -86,27 +105,14 @@ export function activeTargets(session: POJUSessionState): {
         codes = [...nqp.fact_role_codes];
       }
     }
-    const roles = roleCodesToRoles(codes);
-    if (roles.length === 0) return missingRoles;
+    const validated = validateAuthorizedRoleCodes(codes, lastSent.dir_ids);
+    if (!validated.ok) return missingRoles;
     return {
       dir_ids: [...lastSent.dir_ids],
       ddr_ids: [...lastSent.ddr_ids],
       direction_id: lastSent.direction_id,
-      fact_roles: roles,
-      fact_role_codes: codes,
-    };
-  }
-
-  if (plan && (plan.dir_ids.length > 0 || plan.ddr_ids.length > 0)) {
-    const codes = plan.fact_role_codes ? [...plan.fact_role_codes] : [];
-    const fromCodes = roleCodesToRoles(codes);
-    if (fromCodes.length === 0) return missingRoles;
-    return {
-      dir_ids: [...plan.dir_ids],
-      ddr_ids: [...plan.ddr_ids],
-      direction_id: plan.direction_id,
-      fact_roles: fromCodes,
-      fact_role_codes: codes,
+      fact_roles: validated.roles,
+      fact_role_codes: validated.codes,
     };
   }
 
@@ -326,8 +332,6 @@ export function writesFor(
   }));
 }
 
-const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
-
 /**
  * applyAnswerEventToSessionDc currently persists Constraint.verification_level
  * as hardcoded "user_asserted" and is intentionally not modified in FU1.
@@ -354,8 +358,32 @@ export function answerEventFromModelDraft(input: {
   const targets = activeTargets(input.session);
   const notes: string[] = [];
   const unresolved: string[] = [...input.draft.unresolved_aspects];
+  const unresolvedItems: UnresolvedAnswerItem[] = [];
   const authorizedRoleCodes = targets.fact_role_codes;
   let cls: AnswerClass = input.draft.classification;
+  const sentQuestionId =
+    input.session.decision_understanding?.last_sent_question?.plan_id ?? "";
+
+  const pushUnresolvedItem = (item: {
+    text: string;
+    semantic_kind: "reality_fact" | "constraint" | "definition_patch";
+    certainty: "explicit" | "estimated" | "unclear";
+    role_code_hint?: string | null;
+    reason: UnresolvedAnswerReason;
+    note: string;
+  }) => {
+    unresolvedItems.push({
+      source_turn_id: input.source_turn_id,
+      text: item.text.slice(0, 500),
+      semantic_kind: item.semantic_kind,
+      certainty: item.certainty,
+      reason: item.reason,
+      sent_question_id: sentQuestionId,
+      authorized_role_codes: [...authorizedRoleCodes],
+      raw_role_code_hint: item.role_code_hint ?? null,
+    });
+    unresolved.push(item.note);
+  };
 
   const eventShell = (writes: ProposedWrite[], classification: AnswerClass): AnswerEvent => ({
     event_id: `ae_${input.source_turn_id}`.slice(0, 80),
@@ -373,6 +401,7 @@ export function answerEventFromModelDraft(input: {
       ...notes,
       ...unresolved.map((u) => `unresolved:${u}`),
     ].slice(0, 40),
+    unresolved_items: unresolvedItems,
     interpreter: MODEL_ANSWER_INTERPRETER_VERSION,
   });
 
@@ -417,13 +446,27 @@ export function answerEventFromModelDraft(input: {
     const code = item.role_code_hint ?? null;
 
     if (code && !authorizedRoleCodes.includes(code)) {
-      unresolved.push(`unauthorized_role_code:${code}:${item.text.slice(0, 40)}`);
+      pushUnresolvedItem({
+        text: item.text,
+        semantic_kind: item.semantic_kind,
+        certainty: item.certainty,
+        role_code_hint: code,
+        reason: "unauthorized_role_code",
+        note: `unauthorized_role_code:${code}:${item.text.slice(0, 40)}`,
+      });
       notes.push("rejected_unauthorized_role_code");
       continue;
     }
 
     if (!code && authorizedRoleCodes.length !== 1) {
-      unresolved.push(`unlocated_role_code:${item.text.slice(0, 100)}`);
+      pushUnresolvedItem({
+        text: item.text,
+        semantic_kind: item.semantic_kind,
+        certainty: item.certainty,
+        role_code_hint: code,
+        reason: "unlocated_role_code",
+        note: `unlocated_role_code:${item.text.slice(0, 100)}`,
+      });
       notes.push("rejected_null_role_code_multi_auth");
       continue;
     }
@@ -431,7 +474,14 @@ export function answerEventFromModelDraft(input: {
     const acceptedCode = code ?? authorizedRoleCodes[0]!;
     const match = ROLE_CODE_RE.exec(acceptedCode);
     if (!match) {
-      unresolved.push(`illegal_role_code:${acceptedCode}:${item.text.slice(0, 40)}`);
+      pushUnresolvedItem({
+        text: item.text,
+        semantic_kind: item.semantic_kind,
+        certainty: item.certainty,
+        role_code_hint: acceptedCode,
+        reason: "illegal_role_code",
+        note: `illegal_role_code:${acceptedCode}:${item.text.slice(0, 40)}`,
+      });
       notes.push("rejected_illegal_role_code");
       continue;
     }
@@ -507,7 +557,13 @@ export function answerEventFromModelDraft(input: {
 
   for (const item of acceptedItems) {
     if (item.certainty === "unclear") {
-      unresolved.push(`unclear_certainty:${item.text.slice(0, 100)}`);
+      pushUnresolvedItem({
+        text: item.text,
+        semantic_kind: item.semantic_kind,
+        certainty: item.certainty,
+        reason: "unclear_certainty",
+        note: `unclear_certainty:${item.text.slice(0, 100)}`,
+      });
       continue;
     }
 
@@ -516,9 +572,13 @@ export function answerEventFromModelDraft(input: {
 
     if (item.semantic_kind === "constraint") {
       if (item.certainty === "estimated" && !constraintEstimateIsPersistable()) {
-        unresolved.push(
-          `estimated_constraint_not_persistable:${item.text.slice(0, 100)}`,
-        );
+        pushUnresolvedItem({
+          text: item.text,
+          semantic_kind: item.semantic_kind,
+          certainty: item.certainty,
+          reason: "estimated_constraint_not_persistable",
+          note: `estimated_constraint_not_persistable:${item.text.slice(0, 100)}`,
+        });
         notes.push("estimated_constraint_unresolved");
         continue;
       }
@@ -586,6 +646,7 @@ export function interpretUserAnswer(input: {
     },
     proposed_writes,
     notes,
+    unresolved_items: [],
     interpreter: ANSWER_INTERPRETATION_VERSION,
   };
 }
