@@ -2647,6 +2647,31 @@ async function main() {
       assertSelectedClarification("m24z20", result, result.seeded.factA.fact_id);
     });
 
+    await check("M2.4-R1-FU6 Case Z21: 准确率不高 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z21", "第一条准确率不高");
+      assertAmbiguousClarification("m24z21", result);
+    });
+
+    await check("M2.4-R1-FU6 Case Z22: 准确率偏低 second must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z22", "第二条准确率偏低");
+      assertAmbiguousClarification("m24z22", result);
+    });
+
+    await check("M2.4-R1-FU6 Case Z23: 正确率不高 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z23", "第一条正确率不高");
+      assertAmbiguousClarification("m24z23", result);
+    });
+
+    await check("M2.4-R1-FU6 Case Z24: 正确率不足 second must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z24", "第二条正确率不足");
+      assertAmbiguousClarification("m24z24", result);
+    });
+
+    await check("M2.4-R1-FU6 Case Z25: accuracy-rate insufficient first and affirmed second selects the second fact", async () => {
+      const result = await answerSeededConflict("m24z25", "第一条准确率不高，但第二条准确");
+      assertSelectedClarification("m24z25", result, result.seeded.factB.fact_id);
+    });
+
   } finally {
     globalThis.fetch = originalFetch;
   }
