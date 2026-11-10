@@ -179,6 +179,16 @@ function tryCatalogFallbackForOpenP0P1(input: {
 export type AdaptiveTurnTestHooks = {
   /** @internal Test-only. Runs immediately before each Understanding build. */
   beforeUnderstandingBuild?: () => void;
+  /**
+   * @internal Test-only C1 substitute for Conflict-clarification persist.
+   * When omitted (production default), persistDcLifecycleChange is used.
+   * Must never be set outside tests.
+   */
+  conflictClarifyPersist?: (
+    previous: POJUSessionState,
+    nextDcSession: POJUSessionState,
+    idempotency_key: string,
+  ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
 };
 
 export async function runAdaptiveQuestionTurn(input: {
@@ -287,6 +297,7 @@ export async function runAdaptiveQuestionTurn(input: {
         withUnderstanding,
         outcomeFromPlanResult,
         errorText,
+        persistOverride: input.test_hooks?.conflictClarifyPersist,
       });
     }
 

@@ -78,6 +78,15 @@ export async function handleConflictClarificationAnswer(input: {
   source_turn_id: string;
   now: string;
   target: ConflictClarificationTarget;
+  /**
+   * @internal Test-only. Substitutes persistDcLifecycleChange for C1 fault injection.
+   * Production callers must omit this so the official lifecycle persist is used.
+   */
+  persistOverride?: (
+    previous: POJUSessionState,
+    nextDcSession: POJUSessionState,
+    idempotency_key: string,
+  ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
 } & ConflictClarificationTurnDeps): Promise<AdaptiveTurnResult> {
   const {
     statement,
@@ -229,7 +238,8 @@ export async function handleConflictClarificationAnswer(input: {
   };
 
   try {
-    const persisted = await persistDcLifecycleChange(
+    const persistFn = input.persistOverride ?? persistDcLifecycleChange;
+    const persisted = await persistFn(
       input.original,
       nextSession,
       key,

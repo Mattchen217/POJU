@@ -2,6 +2,7 @@
  * M1 — Production Adaptive Question Loop E2E (real production Agent path).
  * M2.4-R1-FU1: role authorization, conservative conflicts, Cases I–M + G/H.
  * M2.4-R1-FU2: formal Conflict Resolution wired into the production answer path (Cases N–T).
+ * M2.4-R1-FU3: negation-safe choice parsing + C1 persist-failure rollback (Cases U–Y).
  *
  *   pnpm test:m1-production-adaptive-question-loop
  *
@@ -2232,6 +2233,236 @@ async function main() {
       assert.equal(dc.version, vBefore + 1);
       console.log(
         `[m24t] bound=${bound!.conflict_id}; other=${otherId}; chosen=${chosen.state}; other_state=${other.state}; selected=${res.selected_fact_id}; dc=${vBefore}->${dc.version}; other_facts=${other.fact_ids.join(",")}; other_refs=${other.source_refs.length}`,
+      );
+    });
+
+
+
+    await check("M2.4-R1-FU3 Case U: negate first fact must not close Conflict", async () => {
+      const seeded = await seedSameDirConflict("m24u");
+      let s = seeded.s;
+      const vBefore = s.decision_context!.version;
+      const factCountBefore = s.decision_context!.reality_facts.length;
+      const inputText = "第一条不准确";
+      s = await handleUserMessage({
+        session: s,
+        userMessage: inputText,
+        locale: "zh-CN",
+      });
+      await savePOJUSession(s);
+      s = await durable(seeded.sid);
+      const dc = s.decision_context!;
+      const hit = dc.conflicts.find((c) => c.conflict_id === seeded.conflict.conflict_id)!;
+      assert.equal(hit.state, "open");
+      assert.equal(hit.user_confirmation, false);
+      assert.equal(hit.resolution, null);
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factA.fact_id), "fact A kept");
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factB.fact_id), "fact B kept");
+      assert.equal(dc.reality_facts.length, factCountBefore);
+      assert.equal(dc.version, vBefore, "must not bump DC version");
+      const nextTarget =
+        s.decision_understanding?.last_sent_question?.conflict_clarification ??
+        s.adaptive_ask_plan?.conflict_clarification ??
+        null;
+      assert.ok(nextTarget, "next question must still target the same Conflict");
+      assert.equal(nextTarget!.conflict_id, seeded.conflict.conflict_id);
+      assert.notEqual(
+        hit.state === "clarified" ? "first" : "none",
+        "first",
+        "must not select the first fact",
+      );
+      console.log(
+        `[m24u] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; resolution=${hit.resolution}; selected=none; facts=${dc.reality_facts.length}; dc=${vBefore}->${dc.version}; next_cf=${nextTarget!.conflict_id}`,
+      );
+    });
+
+    await check("M2.4-R1-FU3 Case V: negate second fact must not close Conflict", async () => {
+      const seeded = await seedSameDirConflict("m24v");
+      let s = seeded.s;
+      const vBefore = s.decision_context!.version;
+      const factCountBefore = s.decision_context!.reality_facts.length;
+      const inputText = "不是第二条";
+      s = await handleUserMessage({
+        session: s,
+        userMessage: inputText,
+        locale: "zh-CN",
+      });
+      await savePOJUSession(s);
+      s = await durable(seeded.sid);
+      const dc = s.decision_context!;
+      const hit = dc.conflicts.find((c) => c.conflict_id === seeded.conflict.conflict_id)!;
+      assert.equal(hit.state, "open");
+      assert.equal(hit.user_confirmation, false);
+      assert.equal(hit.resolution, null);
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factA.fact_id));
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factB.fact_id));
+      assert.equal(dc.reality_facts.length, factCountBefore);
+      assert.equal(dc.version, vBefore, "must not bump DC version");
+      const nextTarget =
+        s.decision_understanding?.last_sent_question?.conflict_clarification ??
+        s.adaptive_ask_plan?.conflict_clarification ??
+        null;
+      assert.ok(nextTarget, "next question must still target the same Conflict");
+      assert.equal(nextTarget!.conflict_id, seeded.conflict.conflict_id);
+      console.log(
+        `[m24v] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; resolution=${hit.resolution}; selected=none; facts=${dc.reality_facts.length}; dc=${vBefore}->${dc.version}; next_cf=${nextTarget!.conflict_id}`,
+      );
+    });
+
+    await check("M2.4-R1-FU3 Case W: negate first and affirm second selects the second fact", async () => {
+      const seeded = await seedSameDirConflict("m24w");
+      let s = seeded.s;
+      const vBefore = s.decision_context!.version;
+      const factCountBefore = s.decision_context!.reality_facts.length;
+      const inputText = "不是第一条，而是第二条准确";
+      s = await handleUserMessage({
+        session: s,
+        userMessage: inputText,
+        locale: "zh-CN",
+      });
+      await savePOJUSession(s);
+      s = await durable(seeded.sid);
+      const dc = s.decision_context!;
+      const hit = dc.conflicts.find((c) => c.conflict_id === seeded.conflict.conflict_id)!;
+      if (hit.state !== "clarified") {
+        // Fail-closed is acceptable if contrast cannot be parsed reliably.
+        // Closing the wrong fact is not.
+        assert.equal(hit.state, "open", "if contrast is not reliable, keep Conflict open");
+        assert.equal(hit.user_confirmation, false);
+        assert.equal(hit.resolution, null);
+        assert.equal(dc.version, vBefore, "ambiguous contrast must not bump DC version");
+        console.log(
+          `[m24w] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; resolution=${hit.resolution}; selected=ambiguous_fail_closed; facts=${dc.reality_facts.length}; dc=${vBefore}->${dc.version}`,
+        );
+        return;
+      }
+      assert.equal(hit.user_confirmation, true);
+      const res = JSON.parse(hit.resolution!) as { selected_fact_id?: string; source_turn_id?: string };
+      assert.equal(res.selected_fact_id, seeded.factB.fact_id, "must select the second fact");
+      assert.notEqual(res.selected_fact_id, seeded.factA.fact_id);
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factA.fact_id));
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factB.fact_id));
+      assert.equal(dc.reality_facts.length, factCountBefore);
+      assert.equal(dc.version, vBefore + 1);
+      console.log(
+        `[m24w] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; selected=${res.selected_fact_id}; expected_second=${seeded.factB.fact_id}; facts=${dc.reality_facts.length}; dc=${vBefore}->${dc.version}`,
+      );
+    });
+
+    await check("M2.4-R1-FU3 Case X: conflicting affirm and negate must stay ambiguous", async () => {
+      const seeded = await seedSameDirConflict("m24x");
+      let s = seeded.s;
+      const vBefore = s.decision_context!.version;
+      const factIdsBefore = s.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+      const inputText = "第一条准确，但我不认可第一条";
+      s = await handleUserMessage({
+        session: s,
+        userMessage: inputText,
+        locale: "zh-CN",
+      });
+      await savePOJUSession(s);
+      s = await durable(seeded.sid);
+      const dc = s.decision_context!;
+      const hit = dc.conflicts.find((c) => c.conflict_id === seeded.conflict.conflict_id)!;
+      assert.equal(hit.state, "open");
+      assert.equal(hit.user_confirmation, false);
+      assert.equal(hit.resolution, null);
+      assert.deepEqual(
+        dc.reality_facts.map((f) => f.fact_id).sort(),
+        factIdsBefore,
+        "must not add, delete, or overwrite RealityFacts",
+      );
+      assert.equal(dc.version, vBefore, "must not bump DC version");
+      const nextTarget =
+        s.decision_understanding?.last_sent_question?.conflict_clarification ??
+        s.adaptive_ask_plan?.conflict_clarification ??
+        null;
+      assert.equal(nextTarget?.conflict_id, seeded.conflict.conflict_id);
+      console.log(
+        `[m24x] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; resolution=${hit.resolution}; selected=none; facts=${dc.reality_facts.length}; dc=${vBefore}->${dc.version}; next_cf=${nextTarget?.conflict_id}`,
+      );
+    });
+
+    await check("M2.4-R1-FU3 Case Y: C1 persist failure returns original uncommitted session", async () => {
+      const seeded = await seedSameDirConflict("m24y");
+      const original = seeded.s;
+      const vBefore = original.decision_context!.version;
+      const factIdsBefore = original.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+      const conflictBefore = original.decision_context!.conflicts.find(
+        (c) => c.conflict_id === seeded.conflict.conflict_id,
+      )!;
+      const lastSentBefore =
+        original.decision_understanding?.last_sent_question?.conflict_clarification ?? null;
+      const askedBefore = original.decision_understanding?.budget.session_asked_count ?? 0;
+      const inputText = "第一条准确";
+      const returned = await handleUserMessage({
+        session: original,
+        userMessage: inputText,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          conflictClarifyPersist: async (previous) => ({
+            session: previous,
+            committed: false,
+            error: "persist_failed",
+          }),
+        },
+      });
+
+      const returnedDc = returned.decision_context!;
+      const returnedHit = returnedDc.conflicts.find(
+        (c) => c.conflict_id === seeded.conflict.conflict_id,
+      )!;
+      assert.equal(returnedHit.state, "open", "returned session must keep original open Conflict");
+      assert.equal(returnedHit.user_confirmation, false);
+      assert.equal(returnedHit.resolution, null);
+      assert.equal(returnedDc.version, vBefore, "returned DC version must be unchanged");
+      assert.deepEqual(
+        returnedDc.reality_facts.map((f) => f.fact_id).sort(),
+        factIdsBefore,
+        "returned RealityFacts must be unchanged",
+      );
+      assert.equal(
+        returnedDc.conflicts.filter((c) => c.state === "clarified").length,
+        0,
+        "must not leak in-memory clarified state to the caller",
+      );
+      assert.equal(conflictBefore.state, "open");
+
+      const failAsst = [...returned.messages].reverse().find((m) => m.role === "assistant");
+      assert.ok(failAsst, "fail-closed assistant message required");
+      const failMeta = (failAsst as { meta?: {
+        m1_fail_closed?: boolean;
+        m1_outcome?: string;
+        m1_persist_error?: string | null;
+      } }).meta;
+      assert.equal(failMeta?.m1_fail_closed, true);
+      assert.equal(failMeta?.m1_outcome, "persist_failed");
+      assert.equal(failMeta?.m1_persist_error, "persist_failed");
+      assert.notEqual(failMeta?.m1_outcome, "idempotent_replay");
+      assert.match(failAsst!.content, /写入失败/);
+      const askedAfter = returned.decision_understanding?.budget.session_asked_count ?? askedBefore;
+      assert.equal(askedAfter, askedBefore, "must not continue next-question planning or consume budget");
+      const lastSentAfter =
+        returned.decision_understanding?.last_sent_question?.conflict_clarification ?? null;
+      assert.equal(lastSentAfter?.conflict_id, lastSentBefore?.conflict_id);
+
+      await savePOJUSession(returned);
+      const durableSession = await durable(seeded.sid);
+      const durableDc = durableSession.decision_context!;
+      const durableHit = durableDc.conflicts.find(
+        (c) => c.conflict_id === seeded.conflict.conflict_id,
+      )!;
+      assert.equal(durableHit.state, "open");
+      assert.equal(durableHit.user_confirmation, false);
+      assert.equal(durableHit.resolution, null);
+      assert.equal(durableDc.version, vBefore);
+      assert.deepEqual(
+        durableDc.reality_facts.map((f) => f.fact_id).sort(),
+        factIdsBefore,
+      );
+      assert.equal(durableDc.conflicts.filter((c) => c.state === "clarified").length, 0);
+      console.log(
+        `[m24y] input=${inputText}; returned_state=${returnedHit.state}; returned_confirm=${returnedHit.user_confirmation}; returned_resolution=${returnedHit.resolution}; clarified_leaked=${returnedDc.conflicts.filter((c) => c.state === "clarified").length}; dc=${vBefore}->${returnedDc.version}; persist_error=${failMeta?.m1_persist_error}; m1_outcome=${failMeta?.m1_outcome}; fail_closed=${failMeta?.m1_fail_closed}; durable_state=${durableHit.state}; durable_dc=${durableDc.version}; facts=${durableDc.reality_facts.length}; asked=${askedBefore}->${askedAfter}`,
       );
     });
 
