@@ -2467,6 +2467,136 @@ async function main() {
     });
 
 
+
+    async function answerSeededConflict(tag: string, inputText: string) {
+      const seeded = await seedSameDirConflict(tag);
+      let s = seeded.s;
+      const vBefore = s.decision_context!.version;
+      const factIdsBefore = s.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+      const factCountBefore = s.decision_context!.reality_facts.length;
+      s = await handleUserMessage({
+        session: s,
+        userMessage: inputText,
+        locale: "zh-CN",
+      });
+      await savePOJUSession(s);
+      s = await durable(seeded.sid);
+      const dc = s.decision_context!;
+      const hit = dc.conflicts.find((c) => c.conflict_id === seeded.conflict.conflict_id)!;
+      const nextTarget =
+        s.decision_understanding?.last_sent_question?.conflict_clarification ??
+        s.adaptive_ask_plan?.conflict_clarification ??
+        null;
+      const selected =
+        hit.resolution != null
+          ? ((JSON.parse(hit.resolution) as { selected_fact_id?: string }).selected_fact_id ?? null)
+          : null;
+      return {
+        seeded,
+        s,
+        dc,
+        hit,
+        vBefore,
+        factIdsBefore,
+        factCountBefore,
+        nextTarget,
+        selected,
+        inputText,
+      };
+    }
+
+    function assertAmbiguousClarification(
+      label: string,
+      result: Awaited<ReturnType<typeof answerSeededConflict>>,
+    ) {
+      const { seeded, dc, hit, vBefore, factIdsBefore, nextTarget, selected, inputText } = result;
+      assert.equal(hit.state, "open");
+      assert.equal(hit.user_confirmation, false);
+      assert.equal(hit.resolution, null);
+      assert.equal(selected, null, "must not wrongly select first or second");
+      assert.deepEqual(
+        dc.reality_facts.map((f) => f.fact_id).sort(),
+        factIdsBefore,
+        "RealityFact count and IDs must be unchanged",
+      );
+      assert.equal(dc.version, vBefore, "must not bump DC version");
+      assert.ok(nextTarget, "next question must still target the same Conflict");
+      assert.equal(nextTarget!.conflict_id, seeded.conflict.conflict_id);
+      assert.deepEqual(nextTarget!.fact_ids, [seeded.factA.fact_id, seeded.factB.fact_id]);
+      console.log(
+        `[${label}] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; resolution=${hit.resolution}; selected=none; facts=${dc.reality_facts.length}; ids=${factIdsBefore.join(",")}; dc=${vBefore}->${dc.version}; next_cf=${nextTarget!.conflict_id}`,
+      );
+    }
+
+    function assertSelectedClarification(
+      label: string,
+      result: Awaited<ReturnType<typeof answerSeededConflict>>,
+      expectedFactId: string,
+    ) {
+      const { seeded, dc, hit, vBefore, factCountBefore, selected, inputText } = result;
+      assert.equal(hit.state, "clarified");
+      assert.equal(hit.user_confirmation, true);
+      assert.ok(hit.resolution, "resolution required");
+      assert.equal(selected, expectedFactId, "selected_fact_id must be the expected fact");
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factA.fact_id), "fact A kept");
+      assert.ok(dc.reality_facts.some((f) => f.fact_id === seeded.factB.fact_id), "fact B kept");
+      assert.equal(dc.reality_facts.length, factCountBefore, "both original RealityFacts must be retained");
+      assert.equal(dc.version, vBefore + 1, "DC version must increment once");
+      console.log(
+        `[${label}] input=${inputText}; cf=${hit.conflict_id}; state=${hit.state}; confirm=${hit.user_confirmation}; resolution=${hit.resolution}; selected=${selected}; expected=${expectedFactId}; facts=${dc.reality_facts.length}; dc=${vBefore}->${dc.version}`,
+      );
+    }
+
+    await check("M2.4-R1-FU4 Case Z1: scoped negate first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z1", "我不认为第一条准确");
+      assertAmbiguousClarification("m24z1", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z2: scoped negate second must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z2", "我不觉得第二条准确");
+      assertAmbiguousClarification("m24z2", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z3: 并不认可 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z3", "我并不认可第一条是正确的");
+      assertAmbiguousClarification("m24z3", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z4: 并不准确 must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z4", "第一条并不准确");
+      assertAmbiguousClarification("m24z4", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z5: 未必准确 must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z5", "第一条未必准确");
+      assertAmbiguousClarification("m24z5", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z6: cannot confirm first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z6", "我不能确认第一条准确");
+      assertAmbiguousClarification("m24z6", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z7: contrast affirms the second fact", async () => {
+      const result = await answerSeededConflict("m24z7", "不是第一条，而是第二条准确");
+      assertSelectedClarification("m24z7", result, result.seeded.factB.fact_id);
+    });
+
+    await check("M2.4-R1-FU4 Case Z8: contrast affirms the first fact", async () => {
+      const result = await answerSeededConflict("m24z8", "不是第二条，而是第一条准确");
+      assertSelectedClarification("m24z8", result, result.seeded.factA.fact_id);
+    });
+
+    await check("M2.4-R1-FU4 Case Z9: affirm then negate same option stays ambiguous", async () => {
+      const result = await answerSeededConflict("m24z9", "第一条准确，但我不认可第一条");
+      assertAmbiguousClarification("m24z9", result);
+    });
+
+    await check("M2.4-R1-FU4 Case Z10: affirming both options stays ambiguous", async () => {
+      const result = await answerSeededConflict("m24z10", "第一条准确，第二条也准确");
+      assertAmbiguousClarification("m24z10", result);
+    });
+
   } finally {
     globalThis.fetch = originalFetch;
   }

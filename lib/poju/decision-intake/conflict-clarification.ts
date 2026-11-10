@@ -146,26 +146,53 @@ const CHOICE_AMBIGUOUS: ExplicitChoice = {
   reason: "user_choice_not_explicit",
 };
 
-const HEDGE_RE =
-  /(可能|也许|大概|好像|似乎|不一定|不好说|不清楚|都不确定|不太确定|不确定|都不准确|两条都不对|两条都不准确|都不是事实|都不是|都错了|都错|都不对|unknown|declined)/i;
-
-const CONTRAST_RE = /但是|但|不过|可是|而是/;
-
 /**
- * Negation must be detected before any affirmative / ordinal selection.
- * Covers punctuation, optional spaces (stripped first), and 第1条 / 第2条 forms.
+ * If parseExplicitChoice already found negation, hedge, or conflicting
+ * option semantics, restatement must not become a backdoor into a selection.
+ * A mere "no explicit option language" result may still try restatement.
  */
-const NEGATED_FIRST_RE =
-  /(?:不是|不选|不认可|不准确|不对|错误|排除|否定)(?:第)?(?:一|1)(?:条|项)|第(?:一|1)(?:条|项)(?:不准确|不对|错误|不认可|不选|是错的|错了|不是)/;
+const BLOCK_RESTATEMENT_REASONS = new Set([
+  "negated_choice",
+  "hedged_choice",
+  "conflicting_choice",
+  "both_selected",
+  "both_inaccurate",
+  "unknown_negation_scope",
+  "contrast_not_resolved",
+]);
 
-const NEGATED_SECOND_RE =
-  /(?:不是|不选|不认可|不准确|不对|错误|排除|否定)(?:第)?(?:二|2)(?:条|项)|第(?:二|2)(?:条|项)(?:不准确|不对|错误|不认可|不选|是错的|错了|不是)/;
+const CONTRAST_SPLIT_RE = /而是|但是|不过|可是|但/;
 
-const AFFIRM_FIRST_RE =
-  /(?:我?选|选择|以)?第(?:一|1)(?:条|项)(?:准确|是对的|是正确的|对的|正确|为准)|以第(?:一|1)(?:条|项)为准|(?:我?选|选择)第(?:一|1)(?:条|项)/;
+const BOTH_INACCURATE_RE =
+  /(都不准确|两条都不对|两条都不准确|都不是事实|都不是|都错了|都错|都不对)/;
 
-const AFFIRM_SECOND_RE =
-  /(?:我?选|选择|以)?第(?:二|2)(?:条|项)(?:准确|是对的|是正确的|对的|正确|为准)|以第(?:二|2)(?:条|项)为准|(?:我?选|选择)第(?:二|2)(?:条|项)/;
+const HEDGE_CUES_RE =
+  /(可能|也许|大概|好像|似乎|不一定|不好说|不清楚|都不确定|不太确定|不确定|不太)/;
+
+// Listed cues only. Do not treat a bare 非 as negation (would false-hit 非常).
+const NEGATION_CUES_RE =
+  /不能确认|无法确认|不认为|不觉得|不认可|不准确|不正确|不确定|不一定|不选|不是|并不|并非|未必|没有|不对|错误|排除|否定|是错的|错了|没选/;
+
+const FIRST_OPT_RE = /第?(?:一|1)(?:条|项)/;
+const SECOND_OPT_RE = /第?(?:二|2)(?:条|项)/;
+
+// Affirmation keywords must not fire on 不准确 / 不正确.
+const AFFIRM_KW_RE = /是对的|是正确的|(?<!不)准确|(?<!不)正确|(?<!不)对的|为准/;
+const SELECT_KW_RE = /我?选|选择/;
+
+type OptionPolarity = {
+  mentioned: boolean;
+  affirmed: boolean;
+  negated: boolean;
+  hedged: boolean;
+};
+
+type FragmentSemantics = {
+  first: OptionPolarity;
+  second: OptionPolarity;
+  bothRejected: boolean;
+  unknownNegationScope: boolean;
+};
 
 function compactChoiceText(text: string): string {
   return text
@@ -180,57 +207,135 @@ function standaloneIndex(compact: string): 1 | 2 | null {
   return null;
 }
 
-function stripAffirmWrappers(compact: string): string {
-  return compact
-    .replace(/^(?:我觉得|我认为|我选|选择|选|以)/, "")
-    .replace(/(?:准确|是对的|是正确的|对的|正确|为准)$/, "");
+function splitContrastFragments(compact: string): string[] {
+  const parts = compact
+    .split(CONTRAST_SPLIT_RE)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return parts.length > 0 ? parts : [compact];
+}
+
+function emptyPolarity(mentioned: boolean): OptionPolarity {
+  return { mentioned, affirmed: false, negated: false, hedged: false };
+}
+
+function analyzeFragment(fragment: string): FragmentSemantics {
+  const mentionsFirst = FIRST_OPT_RE.test(fragment);
+  const mentionsSecond = SECOND_OPT_RE.test(fragment);
+  const hasNeg = NEGATION_CUES_RE.test(fragment);
+  const hasHedge = HEDGE_CUES_RE.test(fragment);
+  const bothRejected = BOTH_INACCURATE_RE.test(fragment);
+
+  const first = emptyPolarity(mentionsFirst);
+  const second = emptyPolarity(mentionsSecond);
+  let unknownNegationScope = false;
+
+  if (hasNeg) {
+    if (mentionsFirst && mentionsSecond) {
+      // Negation and two options in one fragment: scope cannot be assigned safely.
+      unknownNegationScope = true;
+    } else if (mentionsFirst) {
+      first.negated = true;
+    } else if (mentionsSecond) {
+      second.negated = true;
+    } else {
+      unknownNegationScope = true;
+    }
+  }
+
+  if (hasHedge) {
+    if (mentionsFirst && !mentionsSecond) {
+      first.hedged = true;
+    } else if (mentionsSecond && !mentionsFirst) {
+      second.hedged = true;
+    } else {
+      first.hedged = true;
+      second.hedged = true;
+    }
+  }
+
+  const hasAffirmKw = AFFIRM_KW_RE.test(fragment) || SELECT_KW_RE.test(fragment);
+
+  // Affirmative keywords in a fragment cannot override negation or hedge
+  // of the same option in that fragment.
+  if (hasAffirmKw) {
+    if (mentionsFirst && !first.negated && !first.hedged) {
+      first.affirmed = true;
+    }
+    if (mentionsSecond && !second.negated && !second.hedged) {
+      second.affirmed = true;
+    }
+  }
+
+  return { first, second, bothRejected, unknownNegationScope };
+}
+
+function mergePolarity(parts: OptionPolarity[]): OptionPolarity {
+  return {
+    mentioned: parts.some((item) => item.mentioned),
+    affirmed: parts.some((item) => item.affirmed),
+    negated: parts.some((item) => item.negated),
+    hedged: parts.some((item) => item.hedged),
+  };
 }
 
 /**
- * Explicit affirmative choice parser.
- * Order is mandatory: hedges / negation / conflicting affirm+negate first,
- * then only explicit affirmative patterns (including contrast with a clear
- * affirmative on the remaining fact). A bare ordinal mention is not a choice.
+ * Conservative clause-based parser.
+ * Split contrast first, detect negation independently in each fragment,
+ * and require independent affirmative evidence before selecting.
+ * A bare mention of 第一条 / 第二条 is not a choice.
  */
 export function parseExplicitChoice(statement: string): ExplicitChoice {
   const compact = compactChoiceText(statement);
   if (!compact) return CHOICE_AMBIGUOUS;
 
-  if (HEDGE_RE.test(statement) || HEDGE_RE.test(compact)) {
-    return CHOICE_AMBIGUOUS;
-  }
-
-  const negFirst = NEGATED_FIRST_RE.test(compact);
-  const negSecond = NEGATED_SECOND_RE.test(compact);
-  const affFirst = AFFIRM_FIRST_RE.test(compact);
-  const affSecond = AFFIRM_SECOND_RE.test(compact);
-
-  // Affirm and negate the same option, or affirm both options.
-  if ((affFirst && negFirst) || (affSecond && negSecond) || (affFirst && affSecond)) {
-    return CHOICE_AMBIGUOUS;
-  }
-
-  // "不是第一条，而是第二条准确" — select second only with clear affirmation.
-  if (negFirst && affSecond && !affFirst && !negSecond) {
-    return { kind: "selected", index: 1 };
-  }
-  if (negSecond && affFirst && !affSecond && !negFirst) {
-    return { kind: "selected", index: 0 };
-  }
-
-  // Any remaining negation is not an affirmative choice.
-  if (negFirst || negSecond) {
-    return CHOICE_AMBIGUOUS;
-  }
-
-  if (affFirst) return { kind: "selected", index: 0 };
-  if (affSecond) return { kind: "selected", index: 1 };
-
   const standalone = standaloneIndex(compact);
   if (standalone === 1) return { kind: "selected", index: 0 };
   if (standalone === 2) return { kind: "selected", index: 1 };
 
+  const fragments = splitContrastFragments(compact);
+  const analyses = fragments.map(analyzeFragment);
+
+  if (analyses.some((item) => item.bothRejected)) {
+    return { kind: "ambiguous", reason: "both_inaccurate" };
+  }
+  if (analyses.some((item) => item.unknownNegationScope)) {
+    return { kind: "ambiguous", reason: "unknown_negation_scope" };
+  }
+
+  const first = mergePolarity(analyses.map((item) => item.first));
+  const second = mergePolarity(analyses.map((item) => item.second));
+
+  if ((first.affirmed && first.negated) || (second.affirmed && second.negated)) {
+    return { kind: "ambiguous", reason: "conflicting_choice" };
+  }
+  if (first.hedged || second.hedged) {
+    return { kind: "ambiguous", reason: "hedged_choice" };
+  }
+  if (first.affirmed && second.affirmed) {
+    return { kind: "ambiguous", reason: "both_selected" };
+  }
+
+  // Contrast is allowed only when exactly one option has independent
+  // affirmative evidence and that same option is never negated.
+  if (first.affirmed && !first.negated && !second.affirmed) {
+    return { kind: "selected", index: 0 };
+  }
+  if (second.affirmed && !second.negated && !first.affirmed) {
+    return { kind: "selected", index: 1 };
+  }
+
+  if (first.negated || second.negated) {
+    return { kind: "ambiguous", reason: "negated_choice" };
+  }
+
   return CHOICE_AMBIGUOUS;
+}
+
+function stripAffirmWrappers(compact: string): string {
+  return compact
+    .replace(/^(?:我觉得|我认为|我选|选择|选|以)/, "")
+    .replace(/(?:准确|是对的|是正确的|对的|正确|为准)$/, "");
 }
 
 function restatementChoice(
@@ -239,12 +344,11 @@ function restatementChoice(
 ): ExplicitChoice {
   const compact = compactChoiceText(statement);
   if (compact.length < 4) return CHOICE_AMBIGUOUS;
-  if (HEDGE_RE.test(statement) || HEDGE_RE.test(compact)) return CHOICE_AMBIGUOUS;
-  if (CONTRAST_RE.test(compact)) return CHOICE_AMBIGUOUS;
-  if (NEGATED_FIRST_RE.test(compact) || NEGATED_SECOND_RE.test(compact)) {
+  if (HEDGE_CUES_RE.test(statement) || HEDGE_CUES_RE.test(compact)) {
     return CHOICE_AMBIGUOUS;
   }
-  if (/(不准确|不对|不是|不选|不认可|错误|排除|否定|没选|并非)/.test(compact)) {
+  if (CONTRAST_SPLIT_RE.test(compact)) return CHOICE_AMBIGUOUS;
+  if (NEGATION_CUES_RE.test(compact) || BOTH_INACCURATE_RE.test(compact)) {
     return CHOICE_AMBIGUOUS;
   }
 
@@ -252,20 +356,18 @@ function restatementChoice(
     fact,
     hay: compactChoiceText(fact.statement),
   }));
-  const mentioned = hays.filter(
-    (item) => item.hay.length >= 4 && compact.includes(item.hay),
-  );
+  // Exact restatement of one complete RealityFact only.
+  // Do not infer a choice from substring inclusion either way.
+  // Do not treat “准确” inside the fact text as the user's affirmation.
+  const mentioned = hays.filter((item) => {
+    if (item.hay.length < 4) return false;
+    return compact === item.hay || stripAffirmWrappers(compact) === item.hay;
+  });
   if (mentioned.length !== 1) {
     return CHOICE_AMBIGUOUS;
   }
 
   const only = mentioned[0]!;
-  const stripped = stripAffirmWrappers(compact);
-  // Only an exact fact restatement, or that restatement plus a clear
-  // affirmative wrapper, may select. Do not use hay.includes(needle).
-  if (compact !== only.hay && stripped !== only.hay) {
-    return CHOICE_AMBIGUOUS;
-  }
   const index = facts.findIndex((fact) => fact.fact_id === only.fact.fact_id);
   if (index < 0) return CHOICE_AMBIGUOUS;
   return { kind: "selected", index };
@@ -308,7 +410,7 @@ export function resolveConflictChoice(input: {
   }
 
   let choice = parseExplicitChoice(statement);
-  if (choice.kind === "ambiguous") {
+  if (choice.kind === "ambiguous" && !BLOCK_RESTATEMENT_REASONS.has(choice.reason)) {
     choice = restatementChoice(statement, facts);
   }
 
