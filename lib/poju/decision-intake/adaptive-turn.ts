@@ -50,7 +50,7 @@ function withUnderstanding(
   session: POJUSessionState,
   understanding: UnderstandingState,
   plan: AdaptiveQuestionPlan | null,
-  askSnap: IntakeAskPlanSnapshot | null,
+  askSnap: IntakeAskPlanSnapshot | null | undefined,
 ): POJUSessionState {
   return {
     ...session,
