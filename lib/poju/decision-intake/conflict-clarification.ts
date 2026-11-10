@@ -173,11 +173,28 @@ const HEDGE_CUES_RE =
 const NEGATION_CUES_RE =
   /不能确认|无法确认|不认为|不觉得|不认可|不准确|不正确|不确定|不一定|不选|不是|并不|并非|未必|没有|不对|错误|排除|否定|是错的|错了|没选/;
 
+// Family A: insufficient-accuracy constructions. Match the construction as a
+// unit so that 准确 / 正确 inside it cannot be treated as affirmation.
+const INSUFFICIENT_ACCURACY_RE =
+  /(?:不够|不算|不太|不怎么|不完全|谈不上|称不上)(?:第?(?:一|1|二|2)(?:条|项))?(?:准确|正确)|准确(?:度|性|程度)(?:不高|不足|有限)/;
+
+// Family B: uncertain accuracy, including when an option mention sits
+// between the hedge and 准确 / 正确.
+const UNCERTAIN_ACCURACY_RE =
+  /(?:不见得|未必|不一定|不能确定|无法确认|不敢确认|不好判断是否)(?:第?(?:一|1|二|2)(?:条|项))?(?:准确|正确)?/;
+
+// Family C: explicit rejection of an option. Scope is assigned via the
+// option mention in the same fragment, not by inferring the other option.
+const EXPLICIT_REJECTION_RE =
+  /不认可|不接受|不成立|不符合实际|不是事实|有误|存在错误/;
+
 const FIRST_OPT_RE = /第?(?:一|1)(?:条|项)/;
 const SECOND_OPT_RE = /第?(?:二|2)(?:条|项)/;
 
-// Affirmation keywords must not fire on 不准确 / 不正确.
-const AFFIRM_KW_RE = /是对的|是正确的|(?<!不)准确|(?<!不)正确|(?<!不)对的|为准/;
+// Affirmation keywords must not fire on 不准确 / 不正确, and must not treat
+// 准确度 / 准确性 / 准确程度 noun forms as affirmative evidence.
+const AFFIRM_KW_RE =
+  /是对的|是正确的|(?<!不)准确(?![度性]|程度)|(?<!不)正确(?!性)|(?<!不)对的|为准/;
 const SELECT_KW_RE = /我?选|选择/;
 
 type OptionPolarity = {
@@ -222,8 +239,17 @@ function emptyPolarity(mentioned: boolean): OptionPolarity {
 function analyzeFragment(fragment: string): FragmentSemantics {
   const mentionsFirst = FIRST_OPT_RE.test(fragment);
   const mentionsSecond = SECOND_OPT_RE.test(fragment);
-  const hasNeg = NEGATION_CUES_RE.test(fragment);
-  const hasHedge = HEDGE_CUES_RE.test(fragment);
+
+  // Detect negative or insufficient-accuracy constructions before any
+  // affirmative polarity assignment.
+  const insufficientAccuracy = INSUFFICIENT_ACCURACY_RE.test(fragment);
+  const uncertainAccuracy = UNCERTAIN_ACCURACY_RE.test(fragment);
+  const explicitRejection = EXPLICIT_REJECTION_RE.test(fragment);
+  const hasNeg =
+    NEGATION_CUES_RE.test(fragment) ||
+    insufficientAccuracy ||
+    explicitRejection;
+  const hasHedge = HEDGE_CUES_RE.test(fragment) || uncertainAccuracy;
   const bothRejected = BOTH_INACCURATE_RE.test(fragment);
 
   const first = emptyPolarity(mentionsFirst);
@@ -254,7 +280,12 @@ function analyzeFragment(fragment: string): FragmentSemantics {
     }
   }
 
-  const hasAffirmKw = AFFIRM_KW_RE.test(fragment) || SELECT_KW_RE.test(fragment);
+  // Strip insufficient / uncertain accuracy constructions so leftover
+  // 准确 / 正确 cannot override a negative or hedged reading.
+  const residual = fragment
+    .replace(INSUFFICIENT_ACCURACY_RE, "")
+    .replace(UNCERTAIN_ACCURACY_RE, "");
+  const hasAffirmKw = AFFIRM_KW_RE.test(residual) || SELECT_KW_RE.test(residual);
 
   // Affirmative keywords in a fragment cannot override negation or hedge
   // of the same option in that fragment.
@@ -349,6 +380,13 @@ function restatementChoice(
   }
   if (CONTRAST_SPLIT_RE.test(compact)) return CHOICE_AMBIGUOUS;
   if (NEGATION_CUES_RE.test(compact) || BOTH_INACCURATE_RE.test(compact)) {
+    return CHOICE_AMBIGUOUS;
+  }
+  if (
+    INSUFFICIENT_ACCURACY_RE.test(compact) ||
+    UNCERTAIN_ACCURACY_RE.test(compact) ||
+    EXPLICIT_REJECTION_RE.test(compact)
+  ) {
     return CHOICE_AMBIGUOUS;
   }
 

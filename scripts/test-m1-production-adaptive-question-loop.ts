@@ -2597,6 +2597,56 @@ async function main() {
       assertAmbiguousClarification("m24z10", result);
     });
 
+    await check("M2.4-R1-FU5 Case Z11: 不够准确 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z11", "第一条不够准确");
+      assertAmbiguousClarification("m24z11", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z12: 不够准确 second must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z12", "第二条不够准确");
+      assertAmbiguousClarification("m24z12", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z13: 不算准确 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z13", "第一条不算准确");
+      assertAmbiguousClarification("m24z13", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z14: 准确度不高 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z14", "第一条准确度不高");
+      assertAmbiguousClarification("m24z14", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z15: 准确性不足 second must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z15", "第二条准确性不足");
+      assertAmbiguousClarification("m24z15", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z16: 不完全准确 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z16", "第一条不完全准确");
+      assertAmbiguousClarification("m24z16", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z17: 不见得准确 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z17", "第一条不见得准确");
+      assertAmbiguousClarification("m24z17", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z18: 不符合实际 first must stay ambiguous", async () => {
+      const result = await answerSeededConflict("m24z18", "第一条不符合实际");
+      assertAmbiguousClarification("m24z18", result);
+    });
+
+    await check("M2.4-R1-FU5 Case Z19: insufficient first and affirmed second selects the second fact", async () => {
+      const result = await answerSeededConflict("m24z19", "第一条不够准确，但第二条准确");
+      assertSelectedClarification("m24z19", result, result.seeded.factB.fact_id);
+    });
+
+    await check("M2.4-R1-FU5 Case Z20: insufficient second and affirmed first selects the first fact", async () => {
+      const result = await answerSeededConflict("m24z20", "第二条不算准确，而是第一条准确");
+      assertSelectedClarification("m24z20", result, result.seeded.factA.fact_id);
+    });
+
   } finally {
     globalThis.fetch = originalFetch;
   }
