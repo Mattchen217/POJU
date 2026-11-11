@@ -47,9 +47,12 @@ import type {
 } from "./types";
 import {
   answerEventFromPendingBind,
+  asTerminalRejectedPending,
   authorizedRoleOptions,
   buildClarificationPlan,
   continuableUnresolvedItems,
+  isActivePendingAnswerResolution,
+  isPendingClarificationPlan,
   isRoleBindingReason,
   mergePendingResolution,
   nextResolvingItem,
@@ -166,6 +169,82 @@ function pendingOrchestrationResult(input: {
     };
   }
   return restored;
+}
+
+function liveNonClarificationPlan(
+  session: POJUSessionState,
+): AdaptiveQuestionPlan | null {
+  const last = session.decision_understanding?.last_sent_question ?? null;
+  const plan = session.adaptive_ask_plan;
+  if (
+    plan &&
+    last &&
+    last.plan_id === plan.plan_id &&
+    !isPendingClarificationPlan(plan)
+  ) {
+    return plan;
+  }
+  return null;
+}
+
+function replayInactivePendingResolution(input: {
+  session: POJUSessionState;
+  pending: PendingAnswerResolution;
+}): AdaptiveTurnResult {
+  const terminal = isActivePendingAnswerResolution(input.pending)
+    ? input.pending
+    : asTerminalRejectedPending(input.pending);
+  const session = withPendingAnswerResolution(input.session, terminal);
+  const live = liveNonClarificationPlan(session);
+  return {
+    session,
+    outcome: "idempotent_replay",
+    answer_event: null,
+    understanding: session.decision_understanding ?? null,
+    plan: live,
+    authorized_question: live?.question_text ?? null,
+    persist_error: "pending_answer_resolution_replay",
+  };
+}
+
+async function continueInvestigationAfterTerminalRefusal(input: {
+  current: POJUSessionState;
+  pending: PendingAnswerResolution;
+  now: string;
+  answer_event: AnswerEvent | null;
+  buildUnderstanding: (
+    args: Parameters<typeof buildUnderstandingState>[0],
+  ) => UnderstandingState;
+  planFromState: typeof planFromState;
+}): Promise<AdaptiveTurnResult> {
+  const terminal = asTerminalRejectedPending(input.pending);
+  let current = withPendingAnswerResolution(input.current, terminal);
+  const bp2 = ensureDecisionBlueprint(current, { now: input.now });
+  current = bp2.session;
+  current = withPendingAnswerResolution(
+    activateNextBlueprintPriorityBand(current, input.now),
+    terminal,
+  );
+  const understanding = input.buildUnderstanding({
+    session: current,
+    blueprint: current.decision_blueprint!,
+    now: input.now,
+    last_answer_event_id: input.answer_event?.event_id ?? null,
+  });
+  const planned = await input.planFromState(current, understanding, input.now);
+  const session = withPendingAnswerResolution(planned.session, terminal);
+  return {
+    session,
+    outcome: outcomeFromPlanResult(planned),
+    ask_error: planned.planner_block
+      ? `${planned.planner_block.reason_code}:${planned.planner_block.detail}`
+      : undefined,
+    answer_event: input.answer_event,
+    understanding: planned.understanding,
+    plan: planned.plan,
+    authorized_question: planned.authorized_question,
+    persist_error: "pending_answer_resolution_rejected",
+  };
 }
 
 /**
@@ -410,7 +489,7 @@ export async function runAdaptiveQuestionTurn(input: {
     }
 
     const existingPending = current.pending_answer_resolution;
-    if (existingPending) {
+    if (isActivePendingAnswerResolution(existingPending)) {
       return handlePendingAnswerResolutionTurn({
         current,
         original: input.session,
@@ -421,6 +500,17 @@ export async function runAdaptiveQuestionTurn(input: {
         planFromState,
         persist_error: undefined,
         test_hooks: input.test_hooks,
+      });
+    }
+    if (
+      existingPending &&
+      input.source_turn_id === existingPending.source_turn_id
+    ) {
+      // Terminal or inactive pending: replay the original source turn without
+      // restoring a refused clarification or recounting budget.
+      return replayInactivePendingResolution({
+        session: current,
+        pending: existingPending,
       });
     }
 
@@ -1146,17 +1236,30 @@ async function handlePendingAnswerResolutionTurn(input: {
 
   const resolving = nextResolvingItem(pending);
   if (!resolving) {
-    // All items refused or already processed — keep pending, never jump.
-    return pendingOrchestrationResult({
-      session: withPendingAnswerResolution(current, pending),
-      pending,
-      answer_event: null,
-      persist_error:
-        pending.status === "rejected"
-          ? "pending_answer_resolution_rejected"
-          : "pending_answer_resolution_unresolved",
-      outcome: "planned",
+    if ((pending.rejected_items ?? []).length > 0) {
+      return continueInvestigationAfterTerminalRefusal({
+        current,
+        pending,
+        now: input.now,
+        answer_event: null,
+        buildUnderstanding: input.buildUnderstanding,
+        planFromState: input.planFromState,
+      });
+    }
+    const sanitized = asTerminalRejectedPending({
+      ...pending,
+      rejected_items: pending.rejected_items ?? [],
     });
+    return {
+      session: withPendingAnswerResolution(current, sanitized),
+      outcome: "planner_blocked",
+      answer_event: null,
+      understanding: current.decision_understanding ?? null,
+      plan: null,
+      authorized_question: null,
+      persist_error: "pending_answer_resolution_unresolved",
+      ask_error: "pending_clarification_plan_failed",
+    };
   }
 
   const parseChoice = ():
@@ -1208,6 +1311,16 @@ async function handlePendingAnswerResolutionTurn(input: {
         now: input.now,
       });
       current = withPendingAnswerResolution(current, nextPending);
+      if (!isActivePendingAnswerResolution(nextPending)) {
+        return continueInvestigationAfterTerminalRefusal({
+          current,
+          pending: nextPending,
+          now: input.now,
+          answer_event: null,
+          buildUnderstanding: input.buildUnderstanding,
+          planFromState: input.planFromState,
+        });
+      }
       return pendingOrchestrationResult({
         session: current,
         pending: nextPending,
@@ -1489,12 +1602,13 @@ async function handlePendingAnswerResolutionTurn(input: {
         now: input.now,
       });
       current = withPendingAnswerResolution(current, nextPending);
-      return pendingOrchestrationResult({
-        session: current,
+      return continueInvestigationAfterTerminalRefusal({
+        current,
         pending: nextPending,
+        now: input.now,
         answer_event,
-        persist_error: "pending_answer_resolution_rejected",
-        outcome: "planned",
+        buildUnderstanding: input.buildUnderstanding,
+        planFromState: input.planFromState,
       });
     }
 

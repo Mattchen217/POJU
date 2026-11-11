@@ -237,6 +237,11 @@ export type AdaptiveQuestionPlan = {
 };
 
 export type PendingAnswerResolutionStatus = "pending" | "rejected";
+/** "pending" is the active clarification task (unresolved_items nonempty).
+ *  "rejected" is the terminal audit record after every remaining item was
+ *  explicitly refused. It must not keep a resendable clarification_plan,
+ *  is not an unanswered ordinary clarification task, and is not a DC fact.
+ */
 
 /**
  * Auditable refusal of one pending item. Not a known fact and not a DC write.
