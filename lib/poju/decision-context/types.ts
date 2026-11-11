@@ -79,6 +79,11 @@ export interface RealityFact {
   /** Optional role tags used by DIR.required_fact_roles aggregation. */
   fact_roles?: string[];
   related_dir_ids?: string[];
+  /**
+   * User correction link: earlier facts (same DIR/role, other turns) this
+   * fact replaces. The corrected facts are kept, never deleted or promoted.
+   */
+  corrects_fact_ids?: string[];
 }
 
 export interface Constraint {

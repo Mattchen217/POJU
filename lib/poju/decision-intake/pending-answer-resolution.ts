@@ -463,6 +463,19 @@ export function buildRoleClarificationQuestionText(
   ].join("\n");
 }
 
+const CANNOT_DETERMINE_OPTION = "目前无法确定";
+
+/**
+ * The user picked option 3 of the certainty clarification ("cannot determine").
+ * Only the option itself counts; free-form hedges stay unclear and are retried.
+ */
+export function isCannotDetermineSelection(statement: string): boolean {
+  const t = statement.trim().replace(/[。.!！\s]+$/u, "");
+  if (t === "3" || t === CANNOT_DETERMINE_OPTION) return true;
+  const numbered = /^3\s*[.、.)）]?\s*(.*)$/u.exec(t);
+  return Boolean(numbered && (numbered[1] === "" || numbered[1] === CANNOT_DETERMINE_OPTION));
+}
+
 export function buildCertaintyClarificationQuestionText(
   item: UnresolvedAnswerItem,
 ): string {
@@ -475,7 +488,7 @@ export function buildCertaintyClarificationQuestionText(
     "请明确选择其中一项（请回复编号或原文）：",
     "1. 明确事实",
     "2. 个人估计",
-    "3. 目前无法确定",
+    `3. ${CANNOT_DETERMINE_OPTION}`,
     "",
     "如果拒绝处理这条信息，请直接回复「拒绝澄清」。",
   ].join("\n");
@@ -580,12 +593,19 @@ export function buildClarificationPlan(input: {
   }
   const last = input.session.decision_understanding?.last_sent_question;
   const dirIds =
-    input.pending.authorized_dir_ids.length > 0
-      ? [...input.pending.authorized_dir_ids]
+    item.authorized_dir_ids && item.authorized_dir_ids.length > 0
+      ? [...item.authorized_dir_ids]
+      : input.pending.authorized_dir_ids.length > 0
+        ? [...input.pending.authorized_dir_ids]
+        : last
+          ? [...last.dir_ids]
+          : [];
+  const ddrIds =
+    item.authorized_ddr_ids && item.authorized_ddr_ids.length > 0
+      ? [...item.authorized_ddr_ids]
       : last
-        ? [...last.dir_ids]
+        ? [...last.ddr_ids]
         : [];
-  const ddrIds = last ? [...last.ddr_ids] : [];
   if (dirIds.length === 0 && ddrIds.length === 0) {
     return null;
   }
@@ -684,6 +704,7 @@ export function pendingFromAnswerEvent(input: {
     clarification_plan: null,
     clarification_plan_id: null,
     resolving_item_id: resolving.item_id,
+    source_turn_ids: [input.event.client_turn_id],
   };
   const plan = buildClarificationPlan({
     session: input.session,
@@ -703,13 +724,39 @@ function eventUnresolved(event: AnswerEvent): UnresolvedAnswerItem[] {
   return event.unresolved_items ?? [];
 }
 
-/** Merge new continuable unresolved items into an existing pending task (same source only). */
+export function pendingSourceTurnIds(pending: PendingAnswerResolution): string[] {
+  const ids = new Set<string>([pending.source_turn_id, ...(pending.source_turn_ids ?? [])]);
+  for (const item of pending.unresolved_items ?? []) ids.add(item.source_turn_id);
+  for (const item of pending.rejected_items ?? []) ids.add(item.source_turn_id);
+  return [...ids].filter(Boolean);
+}
+
+/**
+ * Queue new continuable unresolved items onto the pending task. Items from a
+ * different source turn are appended (never dropped); each item keeps its own
+ * source statement and authorization. A terminal record is replaced.
+ */
 export function mergePendingResolution(
   existing: PendingAnswerResolution | null | undefined,
   incoming: PendingAnswerResolution,
 ): PendingAnswerResolution {
-  if (!existing || existing.source_turn_id !== incoming.source_turn_id) {
+  if (!existing || !isActivePendingAnswerResolution(existing)) {
     return incoming;
+  }
+  if (existing.source_turn_id !== incoming.source_turn_id) {
+    const existingItems = normalizePendingItems(existing.unresolved_items);
+    const seen = new Set(existingItems.map((i) => i.item_id));
+    const appended = normalizePendingItems(incoming.unresolved_items).filter(
+      (item) => !seen.has(item.item_id),
+    );
+    return {
+      ...existing,
+      status: "pending",
+      unresolved_items: [...existingItems, ...appended],
+      source_turn_ids: [
+        ...new Set([...pendingSourceTurnIds(existing), incoming.source_turn_id]),
+      ],
+    };
   }
   const existingItems = normalizePendingItems(existing.unresolved_items);
   const seen = new Set(existingItems.map((i) => i.item_id));
@@ -803,6 +850,7 @@ export function rejectPendingItem(input: {
   rejected_at_turn_id: string;
   rejected_statement: string;
   now: string;
+  terminal_reason?: PendingRejectedItem["terminal_reason"];
 }): PendingAnswerResolution {
   const rejectedItem: PendingRejectedItem = {
     item_id: input.item.item_id,
@@ -813,6 +861,7 @@ export function rejectPendingItem(input: {
     reason: input.item.reason,
     rejected_at_turn_id: input.rejected_at_turn_id,
     rejected_statement: input.rejected_statement.slice(0, 2000),
+    terminal_reason: input.terminal_reason ?? "refused",
   };
   const remaining = normalizePendingItems(input.pending.unresolved_items).filter(
     (item) => item.item_id !== input.item.item_id,
@@ -826,11 +875,55 @@ export function rejectPendingItem(input: {
   });
 }
 
+/** Unclear clarification replies allowed per item before it becomes terminal. */
+export const PENDING_ITEM_MAX_UNCLEAR_ATTEMPTS = 2;
+
+/**
+ * Record one unclear clarification reply. Below the bound the item stays
+ * pending with a counted attempt (same plan re-presented, no new budget);
+ * at the bound it becomes a terminal rejected item so it is never asked again.
+ */
+export function recordUnclearPendingAttempt(input: {
+  session: POJUSessionState;
+  pending: PendingAnswerResolution;
+  item: UnresolvedAnswerItem;
+  turn_id: string;
+  statement: string;
+  now: string;
+}): { pending: PendingAnswerResolution; terminal: boolean } {
+  const attempts = (input.item.attempts ?? 0) + 1;
+  if (attempts >= PENDING_ITEM_MAX_UNCLEAR_ATTEMPTS) {
+    return {
+      pending: rejectPendingItem({
+        session: input.session,
+        pending: input.pending,
+        item: input.item,
+        rejected_at_turn_id: input.turn_id,
+        rejected_statement: input.statement,
+        now: input.now,
+        terminal_reason: "unclear_after_retries",
+      }),
+      terminal: true,
+    };
+  }
+  return {
+    pending: {
+      ...input.pending,
+      unresolved_items: normalizePendingItems(input.pending.unresolved_items).map((item) =>
+        item.item_id === input.item.item_id ? { ...item, attempts } : item,
+      ),
+    },
+    terminal: false,
+  };
+}
+
 export type PendingBindChoice =
   | { type: "role"; role_code: string }
   | { type: "certainty"; certainty: "explicit" | "estimated" | "unclear" }
   | { type: "constraint_confirm"; confirmed: boolean; still_uncertain: boolean }
-  | { type: "definition_as_fact" };
+  | { type: "definition_as_fact" }
+  /** User selected "cannot determine": recorded as unknown, never as a fact. */
+  | { type: "cannot_determine" };
 
 /**
  * Convert exactly one pending item into an AnswerEvent after a user choice.
@@ -852,7 +945,9 @@ export function answerEventFromPendingBind(input: {
   } else if (input.choice.type === "certainty") {
     certainty = input.choice.certainty;
   } else if (input.choice.type === "constraint_confirm") {
-    semantic_kind = "constraint";
+    // An estimate is never persisted as a Constraint; kept as a user_estimate fact.
+    semantic_kind =
+      input.choice.confirmed || input.choice.still_uncertain ? "constraint" : "reality_fact";
     certainty = input.choice.confirmed
       ? "explicit"
       : input.choice.still_uncertain
@@ -867,16 +962,24 @@ export function answerEventFromPendingBind(input: {
     role_code_hint = item.authorized_role_codes[0]!;
   }
 
+  // The user's clarification decides certainty: an explicit bind is never
+  // re-labelled as an estimate by the original turn's classification.
+  const original = input.pending.original_classification;
   const classification: ModelAnswerDraft["classification"] =
-    input.pending.original_classification === "invalid_input"
-      ? "clear_answer"
+    input.choice.type === "cannot_determine"
+      ? "unknown"
       : certainty === "estimated"
-        ? "estimate"
-        : input.pending.original_classification === "unknown" ||
-            input.pending.original_classification === "declined"
-          ? "clear_answer"
-          : (input.pending.original_classification as ModelAnswerDraft["classification"]);
+      ? "estimate"
+      : original === "invalid_input" ||
+          original === "estimate" ||
+          original === "unknown" ||
+          original === "declined"
+        ? "clear_answer"
+        : (original as ModelAnswerDraft["classification"]);
 
+  // The bind persists the raw answer of the item's own source turn, never the
+  // extraction text; the quote only locates the item inside it.
+  const sourceStatement = pendingItemSourceStatement(input.pending, item, input.session);
   const draft: ModelAnswerDraft = {
     classification,
     extracted_items: [
@@ -886,7 +989,7 @@ export function answerEventFromPendingBind(input: {
         role_hint: null,
         role_code_hint,
         certainty,
-        source_quote: item.text,
+        source_quote: item.source_quote ?? item.text,
       },
     ],
     unresolved_aspects: [],
@@ -894,8 +997,8 @@ export function answerEventFromPendingBind(input: {
   };
   const event = answerEventFromModelDraft({
     session: input.session,
-    statement: item.text,
-    source_turn_id: input.pending.source_turn_id,
+    statement: sourceStatement,
+    source_turn_id: item.source_turn_id,
     draft,
   });
   // Preserve the original item_id on any follow-up unresolved result.
@@ -903,7 +1006,10 @@ export function answerEventFromPendingBind(input: {
     event.unresolved_items = event.unresolved_items.map((u) => ({
       ...u,
       item_id: item.item_id,
-      source_turn_id: input.pending.source_turn_id,
+      source_turn_id: item.source_turn_id,
+      authorized_dir_ids: item.authorized_dir_ids ?? u.authorized_dir_ids,
+      authorized_ddr_ids: item.authorized_ddr_ids ?? u.authorized_ddr_ids,
+      attempts: item.attempts ?? 0,
       authorized_role_codes:
         u.authorized_role_codes.length > 0
           ? u.authorized_role_codes
@@ -912,6 +1018,26 @@ export function answerEventFromPendingBind(input: {
     }));
   }
   return event;
+}
+
+/**
+ * Raw answer of the item's source turn. Never falls back to extraction text:
+ * an item whose source cannot be found yields "" and fails grounding.
+ */
+export function pendingItemSourceStatement(
+  pending: PendingAnswerResolution,
+  item: UnresolvedAnswerItem,
+  session?: POJUSessionState,
+): string {
+  if (item.source_statement && item.source_statement.trim()) return item.source_statement;
+  const record = (session?.intake_answer_sources ?? []).find(
+    (r) => r.source_turn_id === item.source_turn_id,
+  );
+  if (record) return record.raw_user_statement;
+  if (item.source_turn_id === pending.source_turn_id && pending.original_statement.trim()) {
+    return pending.original_statement;
+  }
+  return "";
 }
 
 export function persistKeyForPendingBind(

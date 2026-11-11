@@ -103,12 +103,40 @@ export function validateScopeDepthBudget(input: {
   return { ok: true };
 }
 
+/**
+ * Refund one actually-sent question whose answer carried no usable
+ * information (unknown / declined). Idempotent per plan_id.
+ */
+export function refundIneffectiveQuestion(
+  budget: SessionBudgetSnapshot,
+  sent: { plan_id: string; dir_ids: string[]; budget_cost: number },
+): SessionBudgetSnapshot {
+  const ineffective = budget.ineffective_plan_ids ?? [];
+  if (!sent.plan_id || ineffective.includes(sent.plan_id) || sent.budget_cost === 0) return budget;
+  const depth_by_dir = { ...budget.depth_by_dir };
+  for (const dirId of sent.dir_ids) {
+    depth_by_dir[dirId] = Math.max(0, (depth_by_dir[dirId] ?? 0) - 1);
+  }
+  const session_asked_count = Math.max(0, budget.session_asked_count - sent.budget_cost);
+  return {
+    ...budget,
+    session_asked_count,
+    remaining_hard_budget: Math.max(0, budget.hard_budget_limit - session_asked_count),
+    depth_by_dir,
+    ineffective_plan_ids: [...ineffective, sent.plan_id],
+  };
+}
+
 export function bumpBudgetAfterAsk(
   budget: SessionBudgetSnapshot,
   plan: AdaptiveQuestionPlan,
 ): SessionBudgetSnapshot {
+  if (plan.budget_cost === 0) return budget;
   const depth_by_dir = { ...budget.depth_by_dir };
-  for (const dirId of plan.dir_ids) {
+  // Answer-resolution clarifications bind what the user already said; they
+  // are charged but do not deepen the direction.
+  const deepens = !String(plan.scoring_path ?? "").startsWith("pending_answer_resolution");
+  for (const dirId of deepens ? plan.dir_ids : []) {
     depth_by_dir[dirId] = (depth_by_dir[dirId] ?? 0) + 1;
   }
   const session_asked_count = budget.session_asked_count + plan.budget_cost;

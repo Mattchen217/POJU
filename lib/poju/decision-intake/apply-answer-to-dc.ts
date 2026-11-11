@@ -95,8 +95,10 @@ function findRelatedOldFacts(
   realityFacts: RealityFact[],
   relatedDirIds: string[],
   factRoles: string[],
+  currentTurnId: string,
 ): RealityFact[] {
   return realityFacts.filter((fact) => {
+    if (fact.source_turn_id === currentTurnId) return false;
     // Unknown / declined / not_applicable are not propositions
     // and cannot be used as the opposing side of a Conflict.
     if (
@@ -123,90 +125,19 @@ function findRelatedOldFacts(
   });
 }
 
-/** Explicit contradiction / denial-of-prior language (conservative list). */
-const EXPLICIT_CONTRADICTION_LANG_RE =
-  /(与之前不一致|与之前说法矛盾|之前记录错了|之前说的不是事实|实际情况与之前相反|之前说的不准确|说的不准确|跟之前(说的|记录)?不一致|与之前不符|互相矛盾|矛盾了|冲突了|actually\s+that'?s\s+wrong|that\s+conflicts)/i;
-
 /**
- * Same fact-dimension mutual exclusion (deterministic; not NLI).
- * Different time points / scopes / mere wording differences are NOT conflicts.
- */
-function hasMutualExclusionOnSameDimension(
-  oldStatement: string,
-  newStatement: string,
-): boolean {
-  const a = oldStatement;
-  const b = newStatement;
-
-  // Different explicit calendar years → treat as time-scoped, not same-time conflict.
-  const yearsA = new Set(a.match(/20\d{2}/g) ?? []);
-  const yearsB = new Set(b.match(/20\d{2}/g) ?? []);
-  if (yearsA.size > 0 && yearsB.size > 0) {
-    const overlap = [...yearsA].some((y) => yearsB.has(y));
-    if (!overlap) return false;
-  }
-
-  type Pair = { pos: RegExp; neg: RegExp };
-  const pairs: Pair[] = [
-    // 有 / 没有 (existence)
-    {
-      pos: /(还有|有一份|有\s*|存在|具备)(?!没有)/,
-      neg: /(没有|无|不存在|不具备)/,
-    },
-    // 接受 / 拒绝
-    { pos: /(接受|同意)/, neg: /(拒绝|不接受|不同意)/ },
-    // 在职 / 已离职 — only when no distinct year scopes (handled above)
-    { pos: /(仍在职|目前在职|在职|还在工作)/, neg: /(已经离职|已离职|离职了|不在职)/ },
-    // 单一选项 / 多个选项 (same scope)
-    {
-      pos: /(只有一个选项|只有一个方案|可选方案只有|只有[^，。]{0,12})/,
-      neg: /(还有|多个选项|两个选项|不是只有|还可以)/,
-    },
-  ];
-
-  for (const { pos, neg } of pairs) {
-    const aPos = pos.test(a);
-    const aNeg = neg.test(a);
-    const bPos = pos.test(b);
-    const bNeg = neg.test(b);
-    if ((aPos && bNeg) || (aNeg && bPos)) return true;
-  }
-  return false;
-}
-
-/**
- * Conservative conflict evidence.
- * - correction: only when mutual exclusion on the same fact dimension is clear.
- * - contradiction: explicit contradiction language OR mutual exclusion; same DIR/role.
- * Different text alone is never enough. Time changes / supplements are not conflicts.
+ * Conflict evidence:
+ * - correction: the user explicitly replaces an earlier statement; the new
+ *   fact links the earlier ones (corrects_fact_ids) and no Conflict opens.
+ * - contradiction: every earlier propositional fact on the same DIR + role
+ *   from another turn enters an open Conflict; nothing is silently overwritten.
  */
 function selectConflictingOldFacts(input: {
   classification: AnswerClass;
-  rawText: string;
-  newStatement: string;
   oldFacts: RealityFact[];
 }): RealityFact[] {
-  const { classification, rawText, newStatement, oldFacts } = input;
-  if (oldFacts.length === 0) return [];
-
-  const explicitLang = EXPLICIT_CONTRADICTION_LANG_RE.test(rawText);
-  const out: RealityFact[] = [];
-
-  for (const f of oldFacts) {
-    const mutex = hasMutualExclusionOnSameDimension(f.statement, newStatement);
-    if (classification === "correction") {
-      // Default append-only; Conflict only with clear mutual exclusion.
-      if (mutex) out.push(f);
-      continue;
-    }
-    if (classification === "contradiction") {
-      // Explicit contradiction language may enter evaluation; still require same-topic
-      // related old fact (already filtered) and either explicit lang or mutex.
-      if (explicitLang || mutex) out.push(f);
-      continue;
-    }
-  }
-  return out;
+  if (input.classification !== "contradiction") return [];
+  return input.oldFacts;
 }
 
 export type IncrementalSameTurnOpts = {
@@ -378,20 +309,25 @@ export async function applyAnswerEventToSessionDc(
         related_dir_ids: w.related_dir_ids,
         updated_at: now,
       });
+      if (event.classification === "correction") {
+        const known = new Set(reality_facts.map((f) => f.fact_id));
+        const links = w.corrects_fact_ids?.length
+          ? w.corrects_fact_ids.filter((id) => known.has(id))
+          : findRelatedOldFacts(reality_facts, w.related_dir_ids, w.fact_roles, turnId).map(
+              (f) => f.fact_id,
+            );
+        if (links.length > 0) fact.corrects_fact_ids = links;
+      }
 
-      if (
-        event.classification === "correction" ||
-        event.classification === "contradiction"
-      ) {
+      if (event.classification === "contradiction") {
         const related = findRelatedOldFacts(
           reality_facts,
           w.related_dir_ids,
           w.fact_roles,
+          turnId,
         );
         const conflicting = selectConflictingOldFacts({
           classification: event.classification,
-          rawText: event.raw_text,
-          newStatement: w.statement,
           oldFacts: related,
         });
         if (conflicting.length > 0) {

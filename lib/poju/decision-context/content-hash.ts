@@ -38,6 +38,7 @@ export interface BusinessPayload {
     user_confirmed: boolean;
     fact_roles?: string[];
     related_dir_ids?: string[];
+    corrects_fact_ids?: string[];
   }>;
   constraints: Array<{
     constraint_id: string;
@@ -108,6 +109,9 @@ export function extractBusinessPayload(dc: DecisionContext): BusinessPayload {
       user_confirmed: f.user_confirmed,
       ...(f.fact_roles ? { fact_roles: [...f.fact_roles] } : {}),
       ...(f.related_dir_ids ? { related_dir_ids: [...f.related_dir_ids] } : {}),
+      ...(f.corrects_fact_ids && f.corrects_fact_ids.length > 0
+        ? { corrects_fact_ids: [...f.corrects_fact_ids].sort() }
+        : {}),
     })),
     constraints: dc.constraints.map((c) => ({
       constraint_id: c.constraint_id,

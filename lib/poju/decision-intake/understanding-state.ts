@@ -15,6 +15,7 @@ import {
   ACTIVE_DDR_CATALOG_VERSION,
   loadDdrCatalog,
 } from "@/lib/poju/decision-context/catalog";
+import { dirIntakeAnswerCoverage } from "./intake-answer-coverage";
 import type {
   AdaptiveQuestionPlan,
   DecisionBlueprint,
@@ -41,6 +42,9 @@ export function defaultBudget(
     cycle_base_asked: prev?.cycle_base_asked ?? 0,
     remaining_hard_budget: Math.max(0, hard - session_asked_count),
     depth_by_dir: { ...(prev?.depth_by_dir ?? {}) },
+    ...(prev?.ineffective_plan_ids?.length
+      ? { ineffective_plan_ids: [...prev.ineffective_plan_ids] }
+      : {}),
   };
 }
 
@@ -120,6 +124,7 @@ export function buildUnderstandingState(input: {
   const prev = input.session.decision_understanding;
 
   const understood: UnderstoodItem[] = [];
+  const answered: NonNullable<UnderstandingState["answered_pending_confirmation"]>["items"] = [];
   const needs: NeedItem[] = [];
   const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
 
@@ -141,6 +146,19 @@ export function buildUnderstandingState(input: {
     }
     // Blueprint scope only — never invent needs outside Catalog seed.
     if (!input.blueprint.dir_ids.includes(dir.dir_id)) continue;
+    // Answered but not known: awaits final confirmation (or stays an
+    // information boundary); never re-asked as an open need.
+    const coverage = dirIntakeAnswerCoverage(dc, dir);
+    if (coverage.answered) {
+      answered.push({
+        dir_id: dir.dir_id,
+        label: dir.need,
+        fact_ids: coverage.fact_ids,
+        answer_statuses: coverage.answer_statuses,
+        information_boundary: coverage.information_boundary,
+      });
+      continue;
+    }
     const direction_id = directionIdForDir(input.blueprint, dir.dir_id);
     const direction = input.blueprint.directions.find(
       (d) => d.direction_id === direction_id,
@@ -299,6 +317,9 @@ export function buildUnderstandingState(input: {
     can_ask = false;
     reasons.push("critical_dirs_partial_coverage_ready_for_confirm");
   }
+  for (const item of answered) {
+    if (item.information_boundary) reasons.push(`information_boundary:${item.dir_id}`);
+  }
 
   const dq =
     dc.definition.decision_question ??
@@ -309,8 +330,16 @@ export function buildUnderstandingState(input: {
   const confirmed_briefs = confirmed
     .map((f) => briefWithSource(f.fact_id, f.statement))
     .slice(0, 8);
+  const correctedBy = new Map<string, string>();
+  for (const f of dc.reality_facts) {
+    for (const id of f.corrects_fact_ids ?? []) correctedBy.set(id, f.fact_id);
+  }
   const unconfirmed_briefs = [
-    ...unconfirmed.map((f) => briefWithSource(f.fact_id, f.statement)),
+    ...unconfirmed.map((f) =>
+      correctedBy.has(f.fact_id)
+        ? `${briefWithSource(f.fact_id, f.statement)} (corrected by ${correctedBy.get(f.fact_id)})`
+        : briefWithSource(f.fact_id, f.statement),
+    ),
     ...constraintBriefs,
   ].slice(0, 8);
   // Hypotheses stay in analysis_briefs only — never confirmed.
@@ -373,6 +402,7 @@ export function buildUnderstandingState(input: {
         sufficiency.canStop ? "high" : confirmed.length >= 2 ? "medium" : "low",
     },
     understood: { items: understood },
+    answered_pending_confirmation: { items: answered },
     need_to_understand: { items: needs },
     personal_pattern_insight: evaluatePersonalPatternInsight(input.session),
     next_question_plan: input.next_question_plan ?? null,

@@ -12,9 +12,11 @@ import type { POJUSessionState } from "@/lib/poju/types";
 import type {
   AnswerClass,
   AnswerEvent,
+  AnswerSourceRecord,
   IntakeControlItem,
   ModelAnswerDraft,
   ProposedWrite,
+  ProposedWriteProvenance,
   SourceQuoteRejection,
   SourceQuoteRejectionReason,
   UnresolvedAnswerItem,
@@ -61,7 +63,18 @@ export function intakeControlItemId(
 const MAX_SOURCE_QUOTE_LENGTH = 2000;
 
 /**
- * Character folding for deterministic source-quote grounding:
+ * Longest raw answer that can be persisted verbatim as a fact statement
+ * (DC writers cap statements at this length). A longer answer is never
+ * truncated into a fact: its items fail closed and the user is asked to
+ * restate in shorter parts.
+ */
+export const FACT_STATEMENT_MAX_CHARS = 500;
+
+export const LONG_ANSWER_ASPECT_TEXT =
+  "这段回答较长，无法原样保存为事实；请把关键信息分成几句更短的回答";
+
+/**
+ * Character folding for deterministic source-quote location:
  * Unicode NFKC + zero-width removal + safe punctuation only.
  * No whitespace collapse here and no semantic similarity.
  */
@@ -87,7 +100,7 @@ function foldGroundingChars(text: string): string {
 }
 
 /**
- * Conservative normalization for deterministic source-quote grounding.
+ * Conservative normalization for deterministic source-quote location.
  * Unicode + whitespace + safe punctuation only. No semantic similarity.
  */
 export function normalizeAnswerGroundingText(text: string): string {
@@ -95,14 +108,13 @@ export function normalizeAnswerGroundingText(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Clause-boundary grounding (M2.4-R2-FU10)
+// Source location (M2.4-R2)
 //
-// A model-derived extraction may only cite complete clauses of the user's
-// original statement. Boundaries are computed on the ORIGINAL characters,
-// never on the normalized text, and normalization is used only to locate a
-// candidate match that must start and end on original character clusters.
-// A quote cut from inside a clause, or one that drops a dependent clause
-// attached to it, is rejected; there is no fallback to substring matching.
+// The raw user answer is the only statement a fact may carry. A model
+// extraction proves its relation to that answer by quoting it: the quote must
+// be found in the original characters (cluster-aligned). Location and offsets
+// are audit metadata; they never authorize a write and never become the
+// persisted statement.
 // ---------------------------------------------------------------------------
 
 type GroundableItem = {
@@ -112,7 +124,7 @@ type GroundableItem = {
   source_end?: number | null;
 };
 
-export type GroundedClauseSpan = {
+export type LocatedSourceSpan = {
   /** UTF-16 offsets into the trimmed user statement, end exclusive. */
   start: number;
   end: number;
@@ -120,97 +132,17 @@ export type GroundedClauseSpan = {
   text: string;
 };
 
-export type ClauseSpanResult =
-  | ({ ok: true } & GroundedClauseSpan)
+export type SourceQuoteLocateResult =
+  | ({ ok: true } & LocatedSourceSpan)
   | { ok: false; reason: SourceQuoteRejectionReason };
 
 export type SourceQuoteGroundingResult =
-  | { ok: true; span: GroundedClauseSpan }
+  | { ok: true; span: LocatedSourceSpan }
   | { ok: false; reason: SourceQuoteRejectionReason };
 
-const HARD_BOUNDARY_CHARS = new Set(["。", "｡", "！", "？", "!", "?", "；", ";", "\n", "\r"]);
-const SOFT_BOUNDARY_CHARS = new Set(["，", ",", "﹐"]);
-const BRACKET_PAIRS: Record<string, string> = {
-  "（": "）",
-  "(": ")",
-  "「": "」",
-  "『": "』",
-  "“": "”",
-  "《": "》",
-  "【": "】",
-  "[": "]",
-  "{": "}",
-  "〈": "〉",
-};
-const BRACKET_CLOSERS = new Set(Object.values(BRACKET_PAIRS));
-const ASCII_ABBREVIATIONS = new Set([
-  "mr", "mrs", "ms", "dr", "st", "vs", "etc", "eg", "ie", "jr", "sr", "prof", "inc", "ltd", "co", "no", "approx",
-]);
-const CJK_OR_FULLWIDTH_RE = /[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/;
 /** Separator characters that may be omitted at either edge of a quote. */
 const EDGE_SEPARATOR_RE = /[\s。｡！？!?；;，,﹐.]/;
-const LEADING_OPENERS_RE = /^[\s"“「『《【（(\[{〈]+/;
 const CLUSTER_EXTEND_RE = /[\p{M}\u200C\u200D\uFE00-\uFE0F]/u;
-
-/**
- * Closed-class clause-structure markers. A clause headed by a conjunction,
- * subordinator, or predicate-initial adverb / modal (shared elided subject)
- * is not independent of the clause before it. Over-merging is fail-closed:
- * the model must then quote the larger complete span.
- */
-const ZH_DEPENDENT_HEAD_RE =
-  /^(?:[但却而并且就才也还又再都便仍亦则即乃故或及与和跟同不没未别莫勿无非只仅光唯最至更已将要想能会可应该须必需得愿肯敢是等以因从如若倘除虽尽否然况甚那]|正在|直到|到时|由于|于是|自从|假如|假设|万一|一旦|即使|哪怕|就算|只要|只有|大概|大约|估计|或许|也许|差不多|基本|几乎|顶多|起码|左右|打算|希望|计划|决定|准备)/;
-const EN_DEPENDENT_HEAD_RE =
-  /^(?:but|yet|however|though|although|unless|if|because|since|so|and|or|nor|except|otherwise|while|whereas|until|before|after|when|whenever|once|provided|as|even|only|not|never|no|without|which|who|whom|whose|where|that|then|still|maybe|probably|perhaps|possibly|likely|at|up|about|around|roughly|approximately|just|already|to|too|also|plus|unlike|instead|rather)\b/i;
-/** A clause opened by a subordinator binds to the clause that follows it. */
-const ZH_SUBORDINATOR_RE =
-  /^(?:如果|假如|假设|要是|若|倘若|万一|虽然|虽说|尽管|即使|即便|哪怕|就算|因为|由于|只要|只有|除非|一旦|既然|无论|不管|不论|等到|直到|自从|当(?![前下地然时初年天月日中今场面]))/;
-const EN_SUBORDINATOR_RE =
-  /^(?:if|unless|although|though|because|since|when|whenever|while|once|even if|even though|as long as|provided|whether|before|after|until|given)\b/i;
-/** A clause ending in a connective or clause-taking verb continues into the next clause. */
-const ZH_DANGLING_END_RE =
-  /(?:但是|但|可是|不过|而且|并且|所以|因此|因为|如果|虽然|或者|还是|然后|以及|和|跟|与|及|或|的|地|是|就是|在于|包括|叫|说|讲|想|觉得|认为|以为|知道|确定|决定|打算|希望|担心|害怕|怕|承认|否认|表示|发现|记得|忘|相信|怀疑|考虑|计划|准备|同意|反对|要求|建议|听说|问|时|时候|之前|之后|以前|以后|的话)(?:过|了|着)?$/;
-const EN_DANGLING_END_RE =
-  /(?:^|\s)(?:but|and|or|so|because|if|although|though|unless|yet|then|that|said|say|says|think|thought|know|knew|believe|mean|meant|decided|plan|hope|want|is|was|are|were|be|to|of|the)$/i;
-/**
- * Meaning-neutral discourse / correction framing that explicitly opens a new,
- * independent statement. A clause may begin either at the marker or right
- * after it; a marker-only piece is not a clause.
- */
-const DISCOURSE_ONLY_RE =
-  /^(?:另外|此外|还有|补充一下|补充|更正一下|更正|纠正一下|纠正|之前说错了|说错了|之前说的不准确|also|additionally|besides|plus|by the way|btw|correction|actually i meant)$/i;
-const DISCOURSE_PREFIX_RE =
-  /^(?:(?:另外|此外|补充一下|补充|更正一下|更正|纠正一下|纠正|之前说错了|说错了|之前说的不准确)(?:\s*[:：]\s*|\s+)|另外|此外|(?:also|additionally|besides|by the way|btw|correction)\s*:\s*|actually\s+i\s+meant(?:\s*:\s*|\s+))/i;
-
-function isAsciiSentencePeriod(s: string, i: number): boolean {
-  const prev = s[i - 1] ?? "";
-  const next = s[i + 1] ?? "";
-  if (prev === "." || next === ".") return false;
-  if (/\d/.test(prev) && /\d/.test(next)) return false;
-  if (
-    next &&
-    !/\s/.test(next) &&
-    !CJK_OR_FULLWIDTH_RE.test(next) &&
-    next !== '"' &&
-    !BRACKET_CLOSERS.has(next)
-  ) {
-    return false;
-  }
-  const word = /([A-Za-z]+)$/.exec(s.slice(Math.max(0, i - 16), i))?.[1] ?? "";
-  if (word.length === 1) return false;
-  if (ASCII_ABBREVIATIONS.has(word.toLowerCase())) return false;
-  return true;
-}
-
-function isBoundaryAt(s: string, i: number): boolean {
-  const c = s[i]!;
-  if (HARD_BOUNDARY_CHARS.has(c)) return true;
-  if (c === ".") return isAsciiSentencePeriod(s, i);
-  if (SOFT_BOUNDARY_CHARS.has(c)) {
-    return !(c === "," && /\d/.test(s[i - 1] ?? "") && /\d/.test(s[i + 1] ?? ""));
-  }
-  return false;
-}
 
 function trimEdges(s: string, start: number, end: number): [number, number] {
   let a = start;
@@ -218,161 +150,6 @@ function trimEdges(s: string, start: number, end: number): [number, number] {
   while (a < b && EDGE_SEPARATOR_RE.test(s[a]!)) a++;
   while (b > a && EDGE_SEPARATOR_RE.test(s[b - 1]!)) b--;
   return [a, b];
-}
-
-function trimWhitespace(s: string, start: number, end: number): [number, number] {
-  let a = start;
-  let b = end;
-  while (a < b && /\s/.test(s[a]!)) a++;
-  while (b > a && /\s/.test(s[b - 1]!)) b--;
-  return [a, b];
-}
-
-function startsWithDependentHead(head: string): boolean {
-  return ZH_DEPENDENT_HEAD_RE.test(head) || EN_DEPENDENT_HEAD_RE.test(head);
-}
-
-function startsWithSubordinator(head: string): boolean {
-  return ZH_SUBORDINATOR_RE.test(head) || EN_SUBORDINATOR_RE.test(head);
-}
-
-function endsWithDanglingHead(text: string): boolean {
-  return ZH_DANGLING_END_RE.test(text) || EN_DANGLING_END_RE.test(text);
-}
-
-/** Very short trailing pieces are appended qualifiers, not independent clauses. */
-function isShortTrailingPiece(head: string): boolean {
-  const t = head.trim();
-  if (/^[\x00-\x7f]+$/.test(t)) return t.split(/\s+/).length <= 2;
-  return [...t].length <= 3;
-}
-
-type ClauseUnit = { starts: number[]; end: number };
-type ClauseStructure =
-  | { ok: true; units: ClauseUnit[] }
-  | { ok: false; start: number; end: number };
-
-/**
- * Deterministic clause structure of the original (trimmed) statement.
- * Units are maximal runs of pieces that cannot be proven independent.
- * Unbalanced brackets / quotes make the structure undeterminable.
- */
-function analyzeClauseStructure(s: string): ClauseStructure {
-  type RawPiece = { start: number; end: number; boundaryBefore: string };
-  const raw: RawPiece[] = [];
-  const stack: string[] = [];
-  let broken = false;
-  let unitStart = 0;
-  let boundaryBefore = "";
-  let i = 0;
-  while (i < s.length) {
-    const c = s[i]!;
-    if (c === '"') {
-      if (stack[stack.length - 1] === '"') stack.pop();
-      else stack.push('"');
-      i++;
-      continue;
-    }
-    if (BRACKET_PAIRS[c]) {
-      stack.push(c);
-      i++;
-      continue;
-    }
-    if (BRACKET_CLOSERS.has(c)) {
-      const top = stack.pop();
-      if (top === undefined || BRACKET_PAIRS[top] !== c) broken = true;
-      i++;
-      continue;
-    }
-    if (stack.length > 0 || !isBoundaryAt(s, i)) {
-      i++;
-      continue;
-    }
-    let j = i;
-    while (j < s.length && (isBoundaryAt(s, j) || /\s/.test(s[j]!))) j++;
-    raw.push({ start: unitStart, end: i, boundaryBefore });
-    boundaryBefore = c;
-    unitStart = j;
-    i = j;
-  }
-  raw.push({ start: unitStart, end: s.length, boundaryBefore });
-
-  const [wholeStart, wholeEnd] = trimEdges(s, 0, s.length);
-  if (broken || stack.length > 0) return { ok: false, start: wholeStart, end: wholeEnd };
-
-  type Piece = {
-    start: number;
-    end: number;
-    altStart: number | null;
-    head: string;
-    markerOnly: boolean;
-    boundaryBefore: string;
-  };
-  const pieces: Piece[] = [];
-  for (const r of raw) {
-    const [a, b] = trimEdges(s, r.start, r.end);
-    if (a >= b) continue;
-    const text = s.slice(a, b);
-    const prefix = DISCOURSE_PREFIX_RE.exec(text);
-    let altStart: number | null = null;
-    if (prefix && prefix[0].length < text.length) {
-      const [alt] = trimEdges(s, a + prefix[0].length, b);
-      if (alt < b) altStart = alt;
-    }
-    pieces.push({
-      start: a,
-      end: b,
-      altStart,
-      head: s.slice(altStart ?? a, b).replace(LEADING_OPENERS_RE, ""),
-      markerOnly: DISCOURSE_ONLY_RE.test(text),
-      boundaryBefore: r.boundaryBefore,
-    });
-  }
-
-  type Group = { starts: number[]; end: number; text: string; subordinatorPending: boolean };
-  const groups: Group[] = [];
-  let pendingMarker: { start: number; end: number } | null = null;
-  for (const p of pieces) {
-    if (p.markerOnly) {
-      if (!pendingMarker) pendingMarker = { start: p.start, end: p.end };
-      else pendingMarker.end = p.end;
-      continue;
-    }
-    const prev = groups[groups.length - 1];
-    // An explicit discourse marker proves the piece opens a new statement;
-    // a dangling or subordinate previous clause still absorbs it.
-    const explicitlyIndependent = p.altStart !== null || pendingMarker !== null;
-    const merge =
-      prev !== undefined &&
-      (prev.subordinatorPending ||
-        endsWithDanglingHead(prev.text) ||
-        (!explicitlyIndependent &&
-          (startsWithDependentHead(p.head) ||
-            isShortTrailingPiece(p.head) ||
-            (p.boundaryBefore === "." && /^[a-z]/.test(p.head)))));
-    if (merge) {
-      prev.end = p.end;
-      prev.text = s.slice(Math.min(...prev.starts), p.end);
-      prev.subordinatorPending = false;
-    } else {
-      const starts = [p.start];
-      if (p.altStart !== null) starts.push(p.altStart);
-      if (pendingMarker) starts.push(pendingMarker.start);
-      groups.push({
-        starts,
-        end: p.end,
-        text: p.head,
-        subordinatorPending: startsWithSubordinator(p.head),
-      });
-    }
-    pendingMarker = null;
-  }
-  if (groups.length === 0) return { ok: false, start: wholeStart, end: wholeEnd };
-  if (pendingMarker) groups[groups.length - 1]!.end = pendingMarker.end;
-  return {
-    ok: true,
-    units: groups.map((g) => ({ starts: [...new Set(g.starts)], end: g.end })),
-  };
 }
 
 type NormalizedMap = {
@@ -405,8 +182,7 @@ function segmentClusters(s: string): Array<{ start: number; end: number }> {
 
 /**
  * Normalize per original cluster so every normalized unit maps back to the
- * exact original cluster it came from. Same folding as
- * normalizeAnswerGroundingText, applied cluster by cluster.
+ * exact original cluster it came from.
  */
 function buildNormalizedMap(s: string): NormalizedMap {
   const clusters = segmentClusters(s);
@@ -434,53 +210,22 @@ function buildNormalizedMap(s: string): NormalizedMap {
   return { text, clusterIndex, clusters, clusterStarts };
 }
 
-function checkClauseRegion(
-  s: string,
-  structure: ClauseStructure,
-  start: number,
-  end: number,
-): ClauseSpanResult {
-  const [wa, wb] = trimWhitespace(s, start, end);
-  const [ta, tb] = trimEdges(s, wa, wb);
-  if (ta >= tb) return { ok: false, reason: "source_quote_not_clause_span" };
-  const accepted: ClauseSpanResult = { ok: true, start: wa, end: wb, text: s.slice(wa, wb) };
-  if (!structure.ok) {
-    return ta === structure.start && tb === structure.end
-      ? accepted
-      : { ok: false, reason: "clause_boundary_undeterminable" };
-  }
-  const units = structure.units;
-  for (let i = 0; i < units.length; i++) {
-    if (!units[i]!.starts.includes(ta)) continue;
-    for (let j = i; j < units.length; j++) {
-      if (units[j]!.end === tb) return accepted;
-    }
-  }
-  return { ok: false, reason: "source_quote_not_clause_span" };
-}
-
 /**
- * Resolve source_quote to complete clause(s) of the original statement.
- *
- * - Boundaries are computed on the original characters (sentence enders,
- *   semicolons, newlines, and commas only where the adjacent clauses are
- *   provably independent).
- * - Normalization only locates candidates; a match must start and end on
+ * Locate source_quote inside the original (trimmed) statement.
+ * - Normalization only finds candidates; a match must start and end on
  *   original character clusters.
- * - Model offsets, when present, are a locating hint that must verify
- *   exactly; any mismatch rejects without falling back to search.
- * - Unbalanced brackets / quotes: only the whole statement may be quoted.
+ * - Model offsets, when present, must verify exactly; any mismatch rejects
+ *   without falling back to search.
  */
-export function resolveGroundedClauseSpan(
+export function locateSourceQuote(
   sourceQuote: string,
   statement: string,
   offsets?: { source_start?: number | null; source_end?: number | null },
-): ClauseSpanResult {
+): SourceQuoteLocateResult {
   const s = statement.trim();
   const quoteNorm = buildNormalizedMap(sourceQuote.trim()).text;
   if (!quoteNorm) return { ok: false, reason: "source_quote_empty" };
   const map = buildNormalizedMap(s);
-  const structure = analyzeClauseStructure(s);
 
   const hasStart = offsets?.source_start !== undefined && offsets?.source_start !== null;
   const hasEnd = offsets?.source_end !== undefined && offsets?.source_end !== null;
@@ -499,7 +244,7 @@ export function resolveGroundedClauseSpan(
     if (buildNormalizedMap(s.slice(start, end)).text !== quoteNorm) {
       return { ok: false, reason: "source_offset_quote_mismatch" };
     }
-    return checkClauseRegion(s, structure, start, end);
+    return { ok: true, start, end, text: s.slice(start, end) };
   }
 
   let failure: SourceQuoteRejectionReason | null = null;
@@ -518,23 +263,17 @@ export function resolveGroundedClauseSpan(
       failure ??= "source_quote_unicode_boundary_mismatch";
       continue;
     }
-    const region = checkClauseRegion(
-      s,
-      structure,
-      map.clusters[startCluster]!.start,
-      map.clusters[endCluster]!.end,
-    );
-    if (region.ok) return region;
-    failure = region.reason;
+    const start = map.clusters[startCluster]!.start;
+    const end = map.clusters[endCluster]!.end;
+    return { ok: true, start, end, text: s.slice(start, end) };
   }
   return { ok: false, reason: failure ?? "source_quote_not_grounded" };
 }
 
 /**
- * Single grounding entry for every model-derived DC write and goal-change
- * target. item.text must be source-equivalent to source_quote, and
- * source_quote must resolve to complete clause(s) of the original statement.
- * On success, persist span.text (original user text), never a model paraphrase.
+ * Single grounding entry for every model-derived DC write, pending item and
+ * goal-change target: the item's source_quote must be located in the raw
+ * answer. The persisted statement is always the raw answer itself.
  */
 export function groundExtractedItem(
   item: GroundableItem,
@@ -543,13 +282,7 @@ export function groundExtractedItem(
   if (item.source_quote.length > MAX_SOURCE_QUOTE_LENGTH) {
     return { ok: false, reason: "source_quote_too_long" };
   }
-  const normalizedQuote = normalizeAnswerGroundingText(item.source_quote);
-  if (!normalizedQuote) return { ok: false, reason: "source_quote_empty" };
-  const normalizedText = normalizeAnswerGroundingText(item.text);
-  if (!normalizedText || normalizedText !== normalizedQuote) {
-    return { ok: false, reason: "extraction_text_not_source_equivalent" };
-  }
-  const span = resolveGroundedClauseSpan(item.source_quote, statement, {
+  const span = locateSourceQuote(item.source_quote, statement, {
     source_start: item.source_start,
     source_end: item.source_end,
   });
@@ -576,14 +309,9 @@ export function groundingRejection(
   };
 }
 
-export function persistedSourceStatement(groundedText: string): string {
-  return groundedText.slice(0, 2000);
-}
-
 /**
  * Closed introducer grammar for a goal-change clause ("(我)(想)(把)(决策目标)改成…").
- * Only when the grounded clause itself begins with this grammar is the
- * introducer dropped; any other wording keeps the whole grounded clause.
+ * Only for presenting a candidate target; the user must confirm it explicitly.
  */
 const GOAL_TARGET_INTRODUCER_RE =
   /^(?:我们|我)?(?:想要|想|要|希望|打算|准备)?(?:把)?(?:这个|我的)?(?:决策目标|决策问题|目标|问题|方向|议题)?(?:改成|换成|改为|换为|变成|变为|转成|转为|调整为|调整成|改到|换到)\s*[:：]?\s*/;
@@ -601,10 +329,9 @@ export function goalChangeTargetFromClause(clauseText: string): string {
 }
 
 /**
- * For goal_change only: the first definition_patch whose source_quote
- * resolves to complete clause(s) supplies the proposed target, derived from
- * the grounded original text. Never the whole statement by default and never
- * a phrase cut from inside a clause.
+ * For goal_change only: the first definition_patch whose source_quote is
+ * located in the raw answer supplies the candidate target, taken from the
+ * user's original characters (never a model paraphrase).
  */
 export function extractGroundedProposedDecisionTarget(
   draft: ModelAnswerDraft,
@@ -624,12 +351,11 @@ export function extractGroundedProposedDecisionTarget(
     }
     if (item.semantic_kind === "definition_patch" && !proposed_decision_target) {
       const target = goalChangeTargetFromClause(grounding.span.text);
-      if (target) proposed_decision_target = persistedSourceStatement(target);
+      if (target) proposed_decision_target = target.slice(0, FACT_STATEMENT_MAX_CHARS);
     }
   }
   return { proposed_decision_target, rejections };
 }
-
 
 /**
  * Validate a complete authorization set. Fail closed on malformed, empty,
@@ -934,28 +660,105 @@ export function writesFor(
 }
 
 /**
- * applyAnswerEventToSessionDc currently persists Constraint.verification_level
- * as hardcoded "user_asserted" and is intentionally not modified in FU1.
- * Therefore an estimated Constraint cannot be persisted without being
- * disguised as user_asserted; it must stay unresolved.
+ * applyAnswerEventToSessionDc persists Constraint.verification_level as
+ * "user_asserted". An estimated Constraint therefore cannot be persisted
+ * without being disguised as asserted; it stays pending.
  */
 function constraintEstimateIsPersistable(): boolean {
   return false;
 }
 
+function constraintCategoryFor(text: string): ProposedWrite["constraint_category"] {
+  return /预算|budget|钱|salary|cost|财务/i.test(text)
+    ? "financial"
+    : /deadline|截止|时间|timing|最晚/i.test(text)
+      ? "time"
+      : /不可逆|退出成本|exit/i.test(text)
+        ? "exit_cost"
+        : "responsibility";
+}
+
+/**
+ * Earlier propositional facts (other turns) on the same DIR + role.
+ * Used to link a correction to what it corrects; never deletes them.
+ */
+export function correctableFactIds(
+  session: POJUSessionState,
+  sourceTurnId: string,
+  dirId: string,
+  role: string,
+): string[] {
+  const facts = session.decision_context?.reality_facts ?? [];
+  return facts
+    .filter(
+      (f) =>
+        f.source_turn_id !== sourceTurnId &&
+        (f.status === "unverified" || f.status === "confirmed") &&
+        (f.related_dir_ids ?? []).includes(dirId) &&
+        (f.fact_roles ?? []).includes(role),
+    )
+    .map((f) => f.fact_id);
+}
+
+export type CorrectablePriorAnswer = {
+  role_code: string;
+  fact_ids: string[];
+  statement: string;
+};
+
+/**
+ * Role codes the user already answered in an earlier turn under that turn's
+ * own sent question. A correction may re-bind to these and nothing else: the
+ * earlier question authorized the role, so correcting it is not new scope.
+ */
+export function correctablePriorAnswers(
+  session: POJUSessionState,
+  sourceTurnId: string,
+): CorrectablePriorAnswer[] {
+  const sources = new Map(
+    (session.intake_answer_sources ?? []).map((r) => [r.source_turn_id, r] as const),
+  );
+  const out = new Map<string, CorrectablePriorAnswer>();
+  for (const f of session.decision_context?.reality_facts ?? []) {
+    if (f.source_turn_id === sourceTurnId) continue;
+    if (f.status !== "unverified" && f.status !== "confirmed") continue;
+    const record = f.source_turn_id ? sources.get(f.source_turn_id) : undefined;
+    if (!record) continue;
+    for (const dirId of f.related_dir_ids ?? []) {
+      for (const role of f.fact_roles ?? []) {
+        const code = `v1/dir/${dirId}/role/${role}`;
+        if (!record.authorized_role_codes.includes(code)) continue;
+        const entry = out.get(code) ?? { role_code: code, fact_ids: [], statement: "" };
+        entry.fact_ids.push(f.fact_id);
+        entry.statement = f.statement.slice(0, 300);
+        out.set(code, entry);
+      }
+    }
+  }
+  return [...out.values()];
+}
+
 /**
  * Convert a validated ModelAnswerDraft into a formal AnswerEvent.
+ *
+ * Source authority: every persistable write carries the raw user statement
+ * of source_turn_id verbatim. Model text is never the statement; an item is
+ * persistable only when its source_quote is located in that raw statement
+ * and its role code is authorized by the actually-sent question.
  * Targets always come from activeTargets(); model fields never authorize
  * DIR/DDR/roles or confirmation. explanation is never written as a fact.
- * role_hint is ignored for authorization; only role_code_hint is used.
  */
 export function answerEventFromModelDraft(input: {
   session: POJUSessionState;
   statement: string;
   source_turn_id: string;
   draft: ModelAnswerDraft;
+  source_record?: AnswerSourceRecord | null;
+  model_call?: { provider: string | null; model: string | null } | null;
 }): AnswerEvent {
   const statement = input.statement.trim();
+  const statementTooLong = statement.length > FACT_STATEMENT_MAX_CHARS;
+  const statementFitsFact = statement.length > 0 && !statementTooLong;
   const targets = activeTargets(input.session);
   const notes: string[] = [];
   const unresolved: string[] = [];
@@ -963,43 +766,59 @@ export function answerEventFromModelDraft(input: {
   const groundingRejections: SourceQuoteRejection[] = [];
   const authorizedRoleCodes = targets.fact_role_codes;
   const authorizedDirIds = [...targets.dir_ids];
+  const authorizedDdrIds = [...targets.ddr_ids];
   let cls: AnswerClass = input.draft.classification;
   const sentQuestionId =
     input.session.decision_understanding?.last_sent_question?.plan_id ?? "";
 
-  const structuredAspects: UnresolvedModelAspect[] = input.draft.unresolved_aspects
-    .map((aspectText, aspectIndex) => ({
-      aspect_id: unresolvedAspectId(input.source_turn_id, aspectIndex),
-      source_turn_id: input.source_turn_id,
-      text: aspectText.slice(0, 200),
-      sent_question_id: sentQuestionId,
-      authorized_role_codes: [...authorizedRoleCodes],
-      authorized_dir_ids: [...authorizedDirIds],
-    }))
-    .filter((aspect) => aspect.text.trim().length > 0);
+  const aspectTexts = input.draft.unresolved_aspects
+    .map((text) => text.slice(0, 200))
+    .filter((text) => text.trim().length > 0);
+  const persistableClass =
+    cls !== "off_topic" &&
+    cls !== "invalid_input" &&
+    cls !== "goal_change" &&
+    cls !== "insight_mismatch";
+  const hasPersistableContent =
+    input.draft.extracted_items.length > 0 || cls === "unknown" || cls === "declined";
+  if (statementTooLong && persistableClass && hasPersistableContent) {
+    aspectTexts.push(LONG_ANSWER_ASPECT_TEXT);
+    notes.push("source_statement_exceeds_fact_limit");
+  }
+  const structuredAspects: UnresolvedModelAspect[] = aspectTexts.map((text, aspectIndex) => ({
+    aspect_id: unresolvedAspectId(input.source_turn_id, aspectIndex),
+    source_turn_id: input.source_turn_id,
+    text,
+    sent_question_id: sentQuestionId,
+    authorized_role_codes: [...authorizedRoleCodes],
+    authorized_dir_ids: [...authorizedDirIds],
+  }));
 
   const controlItems: IntakeControlItem[] = [];
-  let goalChangeTarget: string | undefined;
   if (cls === "goal_change") {
     const extractedTarget = extractGroundedProposedDecisionTarget(input.draft, statement);
     groundingRejections.push(...extractedTarget.rejections);
-    goalChangeTarget = extractedTarget.proposed_decision_target;
-    for (const r of extractedTarget.rejections) {
-      notes.push(`rejected_${r.reason}`);
-    }
-    if (!goalChangeTarget) {
-      notes.push("goal_change_target_unresolved");
-    }
+    const goalChangeTarget = extractedTarget.proposed_decision_target;
+    for (const r of extractedTarget.rejections) notes.push(`rejected_${r.reason}`);
+    if (!goalChangeTarget) notes.push("goal_change_target_unresolved");
     controlItems.push({
       item_id: intakeControlItemId(input.source_turn_id, "goal_change"),
       kind: "goal_change",
       source_turn_id: input.source_turn_id,
       text: statement.slice(0, 2000),
-      ...(goalChangeTarget ? { proposed_decision_target: goalChangeTarget } : {}),
+      ...(goalChangeTarget
+        ? {
+            proposed_decision_target: goalChangeTarget,
+            target_source_turn_id: input.source_turn_id,
+            target_source_statement: statement,
+          }
+        : {}),
       sent_question_id: sentQuestionId,
       authorized_role_codes: [...authorizedRoleCodes],
       authorized_dir_ids: [...authorizedDirIds],
       status: "pending",
+      source_statement: statement,
+      attempts: 0,
     });
   } else if (cls === "insight_mismatch") {
     controlItems.push({
@@ -1011,25 +830,29 @@ export function answerEventFromModelDraft(input: {
       authorized_role_codes: [...authorizedRoleCodes],
       authorized_dir_ids: [...authorizedDirIds],
       status: "pending",
+      source_statement: statement,
+      attempts: 0,
     });
-  } else {
-    for (const aspect of structuredAspects) {
-      controlItems.push({
-        item_id: aspect.aspect_id,
-        kind: "unresolved_aspect",
-        source_turn_id: aspect.source_turn_id,
-        text: aspect.text,
-        sent_question_id: aspect.sent_question_id,
-        authorized_role_codes: [...aspect.authorized_role_codes],
-        authorized_dir_ids: [...aspect.authorized_dir_ids],
-        status: "pending",
-      });
-    }
+  }
+  // Unresolved aspects are never dropped, whatever the classification.
+  for (const aspect of structuredAspects) {
+    controlItems.push({
+      item_id: aspect.aspect_id,
+      kind: "unresolved_aspect",
+      source_turn_id: aspect.source_turn_id,
+      text: aspect.text,
+      sent_question_id: aspect.sent_question_id,
+      authorized_role_codes: [...aspect.authorized_role_codes],
+      authorized_dir_ids: [...aspect.authorized_dir_ids],
+      status: "pending",
+      source_statement: statement,
+      attempts: 0,
+    });
   }
 
   const pushUnresolvedItem = (item: {
     extracted_index: number;
-    text: string;
+    span: LocatedSourceSpan;
     semantic_kind: "reality_fact" | "constraint" | "definition_patch";
     certainty: "explicit" | "estimated" | "unclear";
     role_code_hint?: string | null;
@@ -1039,13 +862,21 @@ export function answerEventFromModelDraft(input: {
     unresolvedItems.push({
       item_id: unresolvedItemId(input.source_turn_id, item.extracted_index),
       source_turn_id: input.source_turn_id,
-      text: item.text.slice(0, 500),
+      text: item.span.text.slice(0, 500),
       semantic_kind: item.semantic_kind,
       certainty: item.certainty,
       reason: item.reason,
       sent_question_id: sentQuestionId,
       authorized_role_codes: [...authorizedRoleCodes],
       raw_role_code_hint: item.role_code_hint ?? null,
+      source_statement: statement,
+      source_quote: item.span.text,
+      located_start: item.span.start,
+      located_end: item.span.end,
+      authorized_dir_ids: [...authorizedDirIds],
+      authorized_ddr_ids: [...authorizedDdrIds],
+      status: "pending",
+      attempts: 0,
     });
     unresolved.push(item.note);
   };
@@ -1075,6 +906,8 @@ export function answerEventFromModelDraft(input: {
     grounding_rejections: groundingRejections,
     control_items: controlItems,
     interpreter: MODEL_ANSWER_INTERPRETER_VERSION,
+    source_record: input.source_record ?? null,
+    model_call: input.model_call ?? null,
   });
 
   if (targets.auth_error === "missing_authorized_fact_roles") {
@@ -1098,8 +931,6 @@ export function answerEventFromModelDraft(input: {
     return eventShell([], cls);
   }
   if (cls === "goal_change" || cls === "insight_mismatch") {
-    // Never write DC from these control-plane classifications.
-    // goal_change target extraction already recorded its rejections.
     if (cls === "insight_mismatch") {
       for (let extractedIndex = 0; extractedIndex < input.draft.extracted_items.length; extractedIndex++) {
         const item = input.draft.extracted_items[extractedIndex]!;
@@ -1116,15 +947,19 @@ export function answerEventFromModelDraft(input: {
 
   type AcceptedItem = {
     extracted_index: number;
-    text: string;
-    semantic_kind: "reality_fact" | "constraint" | "definition_patch";
+    span: LocatedSourceSpan;
+    item: ModelAnswerDraft["extracted_items"][number];
     authorizedDirId: string;
     authorizedRole: string;
     bound_role_code: string;
-    certainty: "explicit" | "estimated" | "unclear";
   };
-
   const acceptedItems: AcceptedItem[] = [];
+  const priorCorrectionCodes =
+    cls === "correction"
+      ? correctablePriorAnswers(input.session, input.source_turn_id)
+          .map((p) => p.role_code)
+          .filter((c) => !authorizedRoleCodes.includes(c))
+      : [];
 
   for (let extractedIndex = 0; extractedIndex < input.draft.extracted_items.length; extractedIndex++) {
     const item = input.draft.extracted_items[extractedIndex]!;
@@ -1132,191 +967,219 @@ export function answerEventFromModelDraft(input: {
     if (!grounding.ok) {
       groundingRejections.push(groundingRejection(extractedIndex, item, grounding.reason));
       notes.push(`rejected_${grounding.reason}`);
-      // Do not create a ProposedWrite or assign user_asserted / user_estimate.
       continue;
     }
-    const persistedText = persistedSourceStatement(grounding.span.text);
+    if (!statementFitsFact) {
+      groundingRejections.push(
+        groundingRejection(extractedIndex, item, "source_statement_exceeds_fact_limit"),
+      );
+      continue;
+    }
+    const span = grounding.span;
     // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
     const code = item.role_code_hint ?? null;
-
-    if (code && !authorizedRoleCodes.includes(code)) {
+    if (code && priorCorrectionCodes.includes(code)) {
+      notes.push(`correction_prior_role_code:${code}`.slice(0, 200));
+    } else if (code && !authorizedRoleCodes.includes(code)) {
       pushUnresolvedItem({
         extracted_index: extractedIndex,
-        text: persistedText,
+        span,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
         role_code_hint: code,
         reason: "unauthorized_role_code",
-        note: `unauthorized_role_code:${code}:${item.text.slice(0, 40)}`,
+        note: `unauthorized_role_code:${code}:${span.text.slice(0, 40)}`,
       });
       notes.push("rejected_unauthorized_role_code");
       continue;
     }
-
     if (!code && authorizedRoleCodes.length !== 1) {
       pushUnresolvedItem({
         extracted_index: extractedIndex,
-        text: persistedText,
+        span,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
         role_code_hint: code,
         reason: "unlocated_role_code",
-        note: `unlocated_role_code:${item.text.slice(0, 100)}`,
+        note: `unlocated_role_code:${span.text.slice(0, 100)}`,
       });
       notes.push("rejected_null_role_code_multi_auth");
       continue;
     }
-
     const acceptedCode = code ?? authorizedRoleCodes[0]!;
     const match = ROLE_CODE_RE.exec(acceptedCode);
     if (!match) {
       pushUnresolvedItem({
         extracted_index: extractedIndex,
-        text: persistedText,
+        span,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
         role_code_hint: acceptedCode,
         reason: "illegal_role_code",
-        note: `illegal_role_code:${acceptedCode}:${item.text.slice(0, 40)}`,
+        note: `illegal_role_code:${acceptedCode}:${span.text.slice(0, 40)}`,
       });
       notes.push("rejected_illegal_role_code");
       continue;
     }
-
     acceptedItems.push({
       extracted_index: extractedIndex,
-      text: persistedText,
-      semantic_kind: item.semantic_kind,
+      span,
+      item,
       authorizedDirId: match[1]!,
       authorizedRole: match[2]!,
       bound_role_code: acceptedCode,
-      certainty: item.certainty,
     });
   }
 
+  const provenanceOf = (accepted: AcceptedItem | null): ProposedWriteProvenance => ({
+    source_turn_id: input.source_turn_id,
+    statement_basis: "raw_user_statement",
+    extracted_index: accepted?.extracted_index ?? null,
+    extracted_text: accepted ? accepted.item.text.slice(0, 500) : null,
+    source_quote: accepted ? accepted.span.text : null,
+    located_start: accepted?.span.start ?? null,
+    located_end: accepted?.span.end ?? null,
+    model_source_start: accepted?.item.source_start ?? null,
+    model_source_end: accepted?.item.source_end ?? null,
+  });
+
+  // One write per (kind, DIR, role): several quotes of the same answer that
+  // bind to the same role are one fact whose statement is the raw answer.
   const writes: ProposedWrite[] = [];
-
-  const constraintCategory = (text: string): ProposedWrite["constraint_category"] =>
-    /预算|budget|钱|salary|cost|财务/i.test(text)
-      ? "financial"
-      : /deadline|截止|时间|timing|最晚/i.test(text)
-        ? "time"
-        : /不可逆|退出成本|exit/i.test(text)
-          ? "exit_cost"
-          : "responsibility";
-
-  const pushConstraintAndCompanion = (
-    text: string,
-    authorizedDirId: string,
-    authorizedRole: string,
-    verification_level: "user_asserted" | "user_estimate",
-  ) => {
-    const fact_roles = [authorizedRole];
-    const related_dir_ids = [authorizedDirId];
-    writes.push({
-      kind: "constraint",
-      statement: text,
-      status: "unverified",
-      verification_level,
-      fact_roles,
-      related_dir_ids,
-      constraint_category: constraintCategory(text),
-      rigidity: "hard",
-    });
-    const alreadyCompanion = writes.some(
-      (w) => w.kind === "reality_fact" && w.statement === text,
+  const upsertWrite = (write: ProposedWrite) => {
+    const existing = writes.find(
+      (w) =>
+        w.kind === write.kind &&
+        w.related_dir_ids[0] === write.related_dir_ids[0] &&
+        w.fact_roles[0] === write.fact_roles[0],
     );
-    if (!alreadyCompanion) {
-      writes.push({
-        kind: "reality_fact",
-        statement: text,
-        status: "unverified",
-        verification_level,
-        fact_roles,
-        related_dir_ids,
-      });
+    if (!existing) {
+      writes.push(write);
+      return;
     }
+    existing.provenance = [...(existing.provenance ?? []), ...(write.provenance ?? [])];
+    if (write.verification_level === "user_estimate") existing.verification_level = "user_estimate";
   };
 
   if (cls === "unknown" || cls === "declined") {
-    // Existing unknown/declined DC state rules: status + verification_level none.
-    // Role authorization still uses role_code_hint; null does not expand to all roles.
-    for (const item of acceptedItems) {
-      writes.push({
+    if (!statementFitsFact) return eventShell([], cls);
+    if (input.draft.extracted_items.length === 0) {
+      // The user answered the sent question as a whole with unknown / declined.
+      for (const code of authorizedRoleCodes) {
+        const match = ROLE_CODE_RE.exec(code);
+        if (!match) continue;
+        upsertWrite({
+          kind: "reality_fact",
+          statement,
+          status: cls,
+          verification_level: "none",
+          fact_roles: [match[2]!],
+          related_dir_ids: [match[1]!],
+          provenance: [provenanceOf(null)],
+        });
+      }
+      notes.push(`${cls}_applies_to_sent_question`);
+      return eventShell(writes, cls);
+    }
+    for (const accepted of acceptedItems) {
+      upsertWrite({
         kind: "reality_fact",
-        statement: item.text,
+        statement,
         status: cls,
         verification_level: "none",
-        fact_roles: [item.authorizedRole],
-        related_dir_ids: [item.authorizedDirId],
+        fact_roles: [accepted.authorizedRole],
+        related_dir_ids: [accepted.authorizedDirId],
+        provenance: [provenanceOf(accepted)],
       });
     }
     return eventShell(writes, cls);
   }
 
-  for (const item of acceptedItems) {
+  for (const accepted of acceptedItems) {
+    const { item } = accepted;
     if (item.certainty === "unclear") {
       pushUnresolvedItem({
-        extracted_index: item.extracted_index,
-        text: item.text,
+        extracted_index: accepted.extracted_index,
+        span: accepted.span,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
-        role_code_hint: item.bound_role_code,
+        role_code_hint: accepted.bound_role_code,
         reason: "unclear_certainty",
-        note: `unclear_certainty:${item.text.slice(0, 100)}`,
+        note: `unclear_certainty:${accepted.span.text.slice(0, 100)}`,
       });
       continue;
     }
-
     const verification_level: "user_asserted" | "user_estimate" =
-      item.certainty === "estimated" ? "user_estimate" : "user_asserted";
+      item.certainty === "estimated" || cls === "estimate" ? "user_estimate" : "user_asserted";
+    const fact_roles = [accepted.authorizedRole];
+    const related_dir_ids = [accepted.authorizedDirId];
+    const provenance = [provenanceOf(accepted)];
 
-    if (item.semantic_kind === "constraint") {
-      if (item.certainty === "estimated" && !constraintEstimateIsPersistable()) {
-        pushUnresolvedItem({
-          extracted_index: item.extracted_index,
-          text: item.text,
-          semantic_kind: item.semantic_kind,
-          certainty: item.certainty,
-          role_code_hint: item.bound_role_code,
-          reason: "estimated_constraint_not_persistable",
-          note: `estimated_constraint_not_persistable:${item.text.slice(0, 100)}`,
-        });
-        notes.push("estimated_constraint_unresolved");
-        continue;
-      }
-      pushConstraintAndCompanion(
-        item.text,
-        item.authorizedDirId,
-        item.authorizedRole,
-        verification_level,
-      );
-      continue;
-    }
     if (item.semantic_kind === "definition_patch") {
-      // Current apply-answer-to-dc does not persist definition_patch.
-      // Do not leave this only in notes / proposed_writes — keep it pending.
       pushUnresolvedItem({
-        extracted_index: item.extracted_index,
-        text: item.text,
+        extracted_index: accepted.extracted_index,
+        span: accepted.span,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
-        role_code_hint: item.bound_role_code,
+        role_code_hint: accepted.bound_role_code,
         reason: "definition_patch_not_persistable",
-        note: `definition_patch_not_persistable:${item.text.slice(0, 100)}`,
+        note: `definition_patch_not_persistable:${accepted.span.text.slice(0, 100)}`,
       });
       notes.push("definition_patch_not_mapped_by_apply");
       continue;
     }
-
-    writes.push({
+    if (item.semantic_kind === "constraint") {
+      if (verification_level === "user_estimate" && !constraintEstimateIsPersistable()) {
+        pushUnresolvedItem({
+          extracted_index: accepted.extracted_index,
+          span: accepted.span,
+          semantic_kind: item.semantic_kind,
+          certainty: "estimated",
+          role_code_hint: accepted.bound_role_code,
+          reason: "estimated_constraint_not_persistable",
+          note: `estimated_constraint_not_persistable:${accepted.span.text.slice(0, 100)}`,
+        });
+        notes.push("estimated_constraint_unresolved");
+        continue;
+      }
+      upsertWrite({
+        kind: "constraint",
+        statement,
+        status: "unverified",
+        verification_level,
+        fact_roles,
+        related_dir_ids,
+        constraint_category: constraintCategoryFor(statement),
+        rigidity: "hard",
+        provenance,
+      });
+    }
+    // Constraints also carry a companion fact so role evidence can progress.
+    upsertWrite({
       kind: "reality_fact",
-      statement: item.text,
+      statement,
       status: "unverified",
       verification_level,
-      fact_roles: [item.authorizedRole],
-      related_dir_ids: [item.authorizedDirId],
+      fact_roles,
+      related_dir_ids,
+      provenance,
     });
+  }
+
+  if (cls === "correction") {
+    for (const write of writes) {
+      if (write.kind !== "reality_fact") continue;
+      const corrected = correctableFactIds(
+        input.session,
+        input.source_turn_id,
+        write.related_dir_ids[0]!,
+        write.fact_roles[0]!,
+      );
+      if (corrected.length > 0) {
+        write.corrects_fact_ids = corrected;
+        notes.push(`correction_links:${corrected.join(",")}`.slice(0, 200));
+      }
+    }
   }
 
   return eventShell(writes, cls);

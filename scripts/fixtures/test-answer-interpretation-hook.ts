@@ -6,7 +6,7 @@
 import {
   activeTargets,
   classifyAnswer,
-  resolveGroundedClauseSpan,
+  locateSourceQuote,
   writesFor,
 } from "../../lib/poju/decision-intake/answer-interpretation";
 import type { AdaptiveTurnTestHooks } from "../../lib/poju/decision-intake/adaptive-turn";
@@ -15,18 +15,9 @@ import type { HandleInput } from "../../lib/poju/agent";
 import type { ModelAnswerDraft } from "../../lib/poju/decision-intake/types";
 import type { POJUSessionState } from "../../lib/poju/types";
 
-/**
- * The legacy deterministic splitter may cut inside a sentence (e.g. at 同时).
- * Mirror a prompt-compliant model: when that clause is not a complete clause
- * span, quote the containing sentence, else the whole statement.
- */
+/** Quote the deterministic clause when it locates in the answer, else the whole answer. */
 function completeClauseQuote(statement: string, candidate: string): string {
-  if (resolveGroundedClauseSpan(candidate, statement).ok) return candidate;
-  const core = candidate.replace(/[。！？!?；;，,\s]+$/u, "").trim();
-  const sentences = statement.match(/[^。！？!?；;\n]+[。！？!?；;\n]*/gu) ?? [];
-  const sentence = sentences.map((s) => s.trim()).find((s) => s.includes(core));
-  if (sentence && resolveGroundedClauseSpan(sentence, statement).ok) return sentence;
-  return statement.trim();
+  return locateSourceQuote(candidate, statement).ok ? candidate : statement.trim();
 }
 
 export function deterministicModelAnswerDraft(input: {

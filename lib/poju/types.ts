@@ -161,7 +161,9 @@ export interface POJUMessage {
       | "persist_threw"
       | "planner_blocked"
       | "answer_interpretation_failed"
-      | "answer_interpretation_invalid_schema";
+      | "answer_interpretation_invalid_schema"
+      /** Turn produced neither an authorized question nor a readiness stop. */
+      | "no_authorized_question";
     m1_persist_error?: string | null;
     m1_ask_error?: string | null;
   };
@@ -458,6 +460,15 @@ export interface POJUSessionState {
    * Not a second Decision Context or fact store.
    */
   last_answer_event?: import("./decision-intake/types").AnswerEvent | null;
+  /**
+   * M2.4-R2 — immutable raw answer records (append-only, first write per
+   * source_turn_id wins). Source authority for fact statements.
+   */
+  intake_answer_sources?: import("./decision-intake/types").AnswerSourceRecord[];
+  /** M2.4-R2 — superseded Blueprint versions, append-only (never overwritten). */
+  decision_blueprint_history?: import("./decision-intake/types").DecisionBlueprint[];
+  /** M2.4-R2 — append-only audit of formal Blueprint updates. */
+  blueprint_change_log?: import("./decision-intake/types").BlueprintChangeRecord[];
   /**
    * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
    */

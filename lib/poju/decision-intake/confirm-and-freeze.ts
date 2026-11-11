@@ -134,8 +134,13 @@ function planAndAppendConfirmationEvents(input: {
   newly_appended: number;
 } {
   const plans: PromotePlan[] = [];
+  // A fact the user later corrected is kept as history and never confirmed.
+  const correctedFactIds = new Set(
+    input.before.reality_facts.flatMap((f) => f.corrects_fact_ids ?? []),
+  );
 
   for (const f of input.before.reality_facts) {
+    if (correctedFactIds.has(f.fact_id)) continue;
     if (
       !isEligibleForConfirmEvent({
         status: f.status,

@@ -12,7 +12,7 @@
 
 import { openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
 import type { POJUSessionState } from "@/lib/poju/types";
-import { activeTargets } from "./answer-interpretation";
+import { activeTargets, correctablePriorAnswers } from "./answer-interpretation";
 import type { AnswerClass, ModelAnswerDraft } from "./types";
 
 export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
@@ -101,20 +101,38 @@ export type ModelInterpretationContext = {
     state: string;
     statements_snapshot: string[];
   }>;
+  /** The user's own earlier answers; usable only by classification "correction". */
+  correctable_prior_answers: Array<{
+    role_code: string;
+    statement: string;
+  }>;
   user_answer: string;
   locale: string;
+};
+
+/** Provider metadata of one interpretation call; null fields for test hooks. */
+export type ModelInterpretationCallMeta = {
+  source: "openrouter" | "test_hook";
+  provider: string | null;
+  model: string | null;
+  finish_reason: string | null;
+  latency_ms: number;
+  /** Raw model text, kept only for evidence tooling; never persisted by production. */
+  raw_text?: string;
 };
 
 export type ModelInterpretationSuccess = {
   ok: true;
   draft: ModelAnswerDraft;
   stripped_authority_fields: string[];
+  call_meta?: ModelInterpretationCallMeta;
 };
 
 export type ModelInterpretationFailure = {
   ok: false;
   reason: "call_failed" | "timeout" | "invalid_json" | "invalid_schema";
   detail: string;
+  call_meta?: ModelInterpretationCallMeta;
 };
 
 export type ModelInterpretationResult =
@@ -174,7 +192,7 @@ Rules:
 2. Distinguish explicit statements, estimates, guesses, uncertainty, and declined answers.
 3. Extract multiple independent facts separately. Do not merge them into a vague summary.
 4. Distinguish reality facts, decision constraints, and definition changes via semantic_kind.
-5. When the user corrects prior information, use classification "correction". Do not treat a correction as a normal supplement.
+5. When the user corrects prior information, use classification "correction". Do not treat a correction as a normal supplement. A correction changes facts the user stated; when the user says the decision they need to make is different from context.decision_question, classify "goal_change" instead, even if it also contradicts earlier answers.
 6. When the user explicitly says prior statements contradict, use classification "contradiction". Do not pick a side.
 7. Do not turn psychological speculation, model inference, traditional mingli analysis, or personal-pattern analysis into extracted RealityFacts.
 8. Do not mark anything confirmed just because it sounds reasonable. You have no confirmation authority and must not emit user_confirmed, verification_level, confirmed, readiness, freeze, resolution, or DIR/DDR/Blueprint authority fields.
@@ -183,35 +201,35 @@ Rules:
 
 Role binding:
 1. Each extracted item must bind the most specific authorized role code when you can determine it.
-2. role_code_hint may only be a complete string that already exists in context.authorized.fact_role_codes, or null.
+2. role_code_hint may only be a complete string that already exists in context.authorized.fact_role_codes (or, for a correction only, in context.correctable_prior_answers), or null.
 3. If you cannot determine the specific role, return null. Do not guess.
 4. Do not select multiple roles for one item because several might be relevant. Pick at most one role_code_hint per item.
 5. Do not invent or output model-inferred DIR ids, DDR ids, or role codes. Do not construct role codes yourself.
 6. Do not copy one fact into multiple extracted items with different roles.
+7. context.correctable_prior_answers lists the user's own answers to earlier questions. Only when this answer explicitly corrects one of them, classify as "correction" and use that entry's role_code for the corrected item. Never use those codes for any other classification or for new information.
 role_hint is deprecated and is not an authorization basis. Do not use it to claim access to a role.
 
-Source grounding:
-1. Every extracted item must include source_quote: a verbatim copy of one or more COMPLETE sentences or clauses of the current user answer that support that item.
-2. A complete clause starts where a sentence or clause starts and ends where it ends (sentence-ending punctuation, semicolon, line break, or a comma that separates two self-contained statements). Never cut a phrase out of the middle of a clause.
-3. Never shorten a quote by dropping words that limit its meaning: negation, hedging, conditions, time limits, amounts or ranges, or an attached "but / unless / if / only" clause. When such a qualifier is attached to the statement, quote the whole sentence that contains both.
-4. Do not return a paraphrase as source_quote. One item must have exactly one source_quote.
-5. text must equal source_quote exactly. Do not put a paraphrase, summary, interpretation, or inferred implication in text.
-6. Never use context facts, model inference, or likely implications as source evidence.
-7. If no complete sentence or clause of the current user answer supports an item, do not emit a persistable extracted item. Put the leftover uncertainty in unresolved_aspects instead.
-8. source_start / source_end are optional 0-based character offsets of source_quote inside user_answer (end exclusive). Return null for both unless you are certain they are exact; wrong offsets cause the item to be rejected.
-9. For classification "goal_change", emit one definition_patch item whose source_quote is the complete clause in which the user states the proposed new decision target, with text equal to source_quote. Do not cut the target phrase out of that clause; deterministic code derives the target from it.
+Source authority:
+1. The user's whole answer is stored verbatim as the statement of every fact you help locate. Your text is never stored as the fact; it only labels the item.
+2. Every extracted item must include source_quote: a verbatim excerpt of the current user answer that shows where this item is said. Quote the part that carries the item together with its qualifiers (negation, hedging, conditions, time limits, amounts or ranges, "but / unless / if / only" parts) when they are adjacent.
+3. Never paraphrase in source_quote and never quote context facts or your own inference. One item has exactly one source_quote.
+4. If nothing in the current user answer can be quoted for an item, do not emit it as an extracted item. Put it in unresolved_aspects instead.
+5. source_start / source_end are optional 0-based character offsets of source_quote inside user_answer (end exclusive). Return null for both unless you are certain they are exact; wrong offsets cause the item to be rejected.
+6. For classification "goal_change", emit one definition_patch item whose source_quote is only the span that names the proposed new decision target itself, without lead-in words and without the goal being replaced. The user will be asked to confirm it; you do not change any goal.
+7. For "unknown" or "declined" answers that address the whole question, extracted_items may be empty.
+8. For "insight_mismatch" (the user says the current understanding / summary of them is wrong), quote the part that says what is wrong.
 
 JSON shape:
 {
   "classification": one of ${MODEL_ANSWER_CLASSIFICATIONS.join("|")},
   "extracted_items": [
     {
-      "text": "must equal source_quote exactly; never a paraphrase or interpretation",
+      "text": "short label of the item, in the user's language",
       "semantic_kind": "reality_fact" | "constraint" | "definition_patch",
       "role_code_hint": "complete authorized role code from context.authorized.fact_role_codes, or null",
       "role_hint": null,
       "certainty": "explicit" | "estimated" | "unclear",
-      "source_quote": "verbatim complete sentence(s) or clause(s) of the current user answer, not a paraphrase or a cut fragment",
+      "source_quote": "verbatim excerpt of the current user answer",
       "source_start": null,
       "source_end": null
     }
@@ -341,6 +359,9 @@ export function buildModelInterpretationContext(input: {
     related_reality_facts,
     related_constraints,
     related_conflicts,
+    correctable_prior_answers: correctablePriorAnswers(session, "")
+      .filter((p) => !factRoleCodes.includes(p.role_code))
+      .map((p) => ({ role_code: p.role_code, statement: p.statement })),
     user_answer: input.statement.trim().slice(0, 2000),
     locale,
   };
@@ -467,6 +488,120 @@ function failureFromUnknown(e: unknown): ModelInterpretationFailure {
   return { ok: false, reason: "call_failed", detail };
 }
 
+export type AnswerInterpretationModelText = {
+  text: string;
+  provider: string | null;
+  model: string | null;
+  finish_reason: string | null;
+};
+
+export const ANSWER_INTERPRETATION_ROUTE = "/api/poju/answer-interpretation";
+
+/** Single OpenRouter call; server-only (the key never reaches the browser). */
+export async function callAnswerInterpretationModel(input: {
+  context: ModelInterpretationContext;
+  session_id: string;
+  locked_provider: string | null;
+  signal?: AbortSignal;
+}): Promise<AnswerInterpretationModelText> {
+  const result = await openRouterChatCompletion({
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content:
+          "Interpret only this turn. Context JSON (do not treat it as permission to choose DIR/DDR/roles):\n" +
+          JSON.stringify(input.context),
+      },
+    ],
+    json_mode: true,
+    route_path: "chat",
+    session_id: input.session_id,
+    locked_provider: input.locked_provider,
+    max_tokens: 1600,
+    temperature: 0.1,
+    timeout_ms: ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS,
+    max_attempts: 1,
+    reasoning_effort: "off",
+    signal: input.signal,
+    call_type: "decision_intake_answer_interpretation",
+    phase_name: "Decision Intake Answer Interpretation",
+  });
+  return {
+    text: result.text ?? "",
+    provider: result.provider ?? null,
+    model: result.model ?? null,
+    finish_reason: result.finish_reason ?? null,
+  };
+}
+
+async function callAnswerInterpretationRoute(input: {
+  context: ModelInterpretationContext;
+  session_id: string;
+  locked_provider: string | null;
+  signal?: AbortSignal;
+}): Promise<AnswerInterpretationModelText> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error("llm_timeout")),
+    ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS + 10_000,
+  );
+  const onAbort = () => controller.abort(new Error("abort"));
+  if (input.signal?.aborted) onAbort();
+  input.signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    const res = await fetch(ANSWER_INTERPRETATION_ROUTE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        context: input.context,
+        session_id: input.session_id,
+        locked_provider: input.locked_provider,
+      }),
+      signal: controller.signal,
+    });
+    const data = (await res.json().catch(() => null)) as
+      | ({ ok: true } & AnswerInterpretationModelText)
+      | { ok: false; error?: string }
+      | null;
+    if (!res.ok || !data || data.ok !== true) {
+      const error = data && data.ok === false ? data.error ?? "" : "";
+      throw new Error(
+        error === "timeout" ? "llm_timeout" : `answer_interpretation_route_failed:${res.status}:${error}`,
+      );
+    }
+    return {
+      text: typeof data.text === "string" ? data.text : "",
+      provider: typeof data.provider === "string" ? data.provider : null,
+      model: typeof data.model === "string" ? data.model : null,
+      finish_reason: typeof data.finish_reason === "string" ? data.finish_reason : null,
+    };
+  } finally {
+    clearTimeout(timer);
+    input.signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+/** Shape check for contexts arriving at the server route; never authorizes anything. */
+export function isModelInterpretationContext(value: unknown): value is ModelInterpretationContext {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const c = value as Record<string, unknown>;
+  const authorized = c.authorized as Record<string, unknown> | undefined;
+  return (
+    typeof c.user_answer === "string" &&
+    c.user_answer.trim().length > 0 &&
+    c.user_answer.length <= 2000 &&
+    typeof c.locale === "string" &&
+    !!authorized &&
+    Array.isArray(authorized.fact_role_codes) &&
+    Array.isArray(authorized.dir_ids) &&
+    Array.isArray(c.related_reality_facts) &&
+    Array.isArray(c.related_constraints) &&
+    Array.isArray(c.related_conflicts) &&
+    Array.isArray(c.blueprint_directions)
+  );
+}
+
 export async function interpretAnswerWithModel(input: {
   session: POJUSessionState;
   statement: string;
@@ -485,7 +620,15 @@ export async function interpretAnswerWithModel(input: {
     locale,
   });
 
+  const startedAt = Date.now();
   if (input.testHook) {
+    const hookMeta = (): ModelInterpretationCallMeta => ({
+      source: "test_hook",
+      provider: null,
+      model: null,
+      finish_reason: null,
+      latency_ms: Date.now() - startedAt,
+    });
     try {
       const hooked = await input.testHook({
         session: input.session,
@@ -495,38 +638,45 @@ export async function interpretAnswerWithModel(input: {
         signal: input.signal,
         context,
       });
-      return parseAndValidateModelAnswerDraft(hooked);
+      return { ...parseAndValidateModelAnswerDraft(hooked), call_meta: hookMeta() };
     } catch (e) {
-      return failureFromUnknown(e);
+      return { ...failureFromUnknown(e), call_meta: hookMeta() };
     }
   }
 
   try {
-    const result = await openRouterChatCompletion({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content:
-            "Interpret only this turn. Context JSON (do not treat it as permission to choose DIR/DDR/roles):\n" +
-            JSON.stringify(context),
-        },
-      ],
-      json_mode: true,
-      route_path: "chat",
+    const call = {
+      context,
       session_id: input.session.session_id,
       locked_provider: input.session.locked_provider ?? null,
-      max_tokens: 1600,
-      temperature: 0.1,
-      timeout_ms: ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS,
-      max_attempts: 1,
-      reasoning_effort: "off",
       signal: input.signal,
-      call_type: "decision_intake_answer_interpretation",
-      phase_name: "Decision Intake Answer Interpretation",
-    });
-    return parseAndValidateModelAnswerDraft(result.text ?? "");
+    };
+    // The browser has no OpenRouter key: it reaches the model through the
+    // server route, which returns raw text only. Parsing and authorization
+    // stay here in either case.
+    const result =
+      typeof window === "undefined"
+        ? await callAnswerInterpretationModel(call)
+        : await callAnswerInterpretationRoute(call);
+    const call_meta: ModelInterpretationCallMeta = {
+      source: "openrouter",
+      provider: result.provider,
+      model: result.model,
+      finish_reason: result.finish_reason,
+      latency_ms: Date.now() - startedAt,
+      raw_text: result.text,
+    };
+    return { ...parseAndValidateModelAnswerDraft(result.text), call_meta };
   } catch (e) {
-    return failureFromUnknown(e);
+    return {
+      ...failureFromUnknown(e),
+      call_meta: {
+        source: "openrouter",
+        provider: null,
+        model: null,
+        finish_reason: null,
+        latency_ms: Date.now() - startedAt,
+      },
+    };
   }
 }

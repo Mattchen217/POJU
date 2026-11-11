@@ -29,8 +29,73 @@ export type ProposedWriteKind =
   | "conflict"
   | "none";
 
+/**
+ * Immutable record of one user answer as received, bound to the question that
+ * was actually sent. The only authority for fact statements derived from it.
+ * Append-only on the session (first record per source_turn_id wins).
+ */
+export type AnswerSourceRecord = {
+  source_turn_id: string;
+  /** Trimmed user text exactly as received; never model-rewritten. */
+  raw_user_statement: string;
+  sent_question_id: string;
+  sent_question_text: string;
+  authorized_dir_ids: string[];
+  authorized_ddr_ids: string[];
+  authorized_role_codes: string[];
+  turn_kind:
+    | "ordinary_answer"
+    | "pending_clarification"
+    | "intake_control_follow_up"
+    | "conflict_clarification";
+  received_at: string;
+  /**
+   * Audit of the first successful interpretation of this turn: where each
+   * proposed write was located in raw_user_statement and why items were
+   * rejected. Metadata only; DC stays the single fact store.
+   */
+  interpretation?: AnswerInterpretationAudit;
+};
+
+export type AnswerInterpretationAudit = {
+  classification: AnswerClass;
+  interpreter: string;
+  model_provider: string | null;
+  model: string | null;
+  writes: Array<{
+    kind: ProposedWriteKind;
+    status: ProposedWrite["status"];
+    verification_level: ProposedWrite["verification_level"];
+    fact_role: string;
+    dir_id: string;
+    corrects_fact_ids: string[];
+    locators: ProposedWriteProvenance[];
+  }>;
+  rejections: Array<{ extracted_index: number; reason: string; source_quote: string }>;
+  unresolved: Array<{ item_id: string; reason: string }>;
+  recorded_at: string;
+};
+
+/**
+ * Audit trail from one persisted write back to the model extraction that
+ * proposed it. Offsets locate the quote inside the raw answer; they are
+ * never an authorization basis.
+ */
+export type ProposedWriteProvenance = {
+  source_turn_id: string;
+  statement_basis: "raw_user_statement";
+  extracted_index: number | null;
+  extracted_text: string | null;
+  source_quote: string | null;
+  located_start: number | null;
+  located_end: number | null;
+  model_source_start: number | null;
+  model_source_end: number | null;
+};
+
 export type ProposedWrite = {
   kind: ProposedWriteKind;
+  /** Raw user statement of the source turn (never model paraphrase). */
   statement: string;
   status: "unverified" | "unknown" | "declined" | "confirmed";
   verification_level: "user_asserted" | "user_estimate" | "none";
@@ -44,6 +109,9 @@ export type ProposedWrite = {
     | "exit_cost"
     | "unacceptable_outcome";
   rigidity?: "hard" | "soft";
+  provenance?: ProposedWriteProvenance[];
+  /** correction only: earlier facts (other turns) this write corrects. */
+  corrects_fact_ids?: string[];
 };
 
 export type AnswerInterpreterVersion =
@@ -108,6 +176,8 @@ export type UnresolvedAnswerReason =
   | "missing_authorized_answer_target"
   | "missing_authorized_fact_roles";
 
+export type UnresolvedAnswerItemStatus = "pending";
+
 export type UnresolvedAnswerItem = {
   /**
    * Stable identity for the whole pending lifecycle.
@@ -115,6 +185,7 @@ export type UnresolvedAnswerItem = {
    */
   item_id: string;
   source_turn_id: string;
+  /** Model extraction text (display / clarification prompt only). */
   text: string;
   semantic_kind: "reality_fact" | "constraint" | "definition_patch";
   certainty: "explicit" | "estimated" | "unclear";
@@ -123,16 +194,29 @@ export type UnresolvedAnswerItem = {
   sent_question_id: string;
   authorized_role_codes: string[];
   raw_role_code_hint?: string | null;
+  /** Raw user statement of source_turn_id; the only statement a bind may persist. */
+  source_statement?: string;
+  /** Grounded quote inside source_statement (locator only). */
+  source_quote?: string | null;
+  located_start?: number | null;
+  located_end?: number | null;
+  /** DIR / DDR authorized by the question sent when the item was produced. */
+  authorized_dir_ids?: string[];
+  authorized_ddr_ids?: string[];
+  status?: UnresolvedAnswerItemStatus;
+  /** Unclear clarification replies so far; bounded by the pending policy. */
+  attempts?: number;
 };
 
 export type SourceQuoteRejectionReason =
   | "source_quote_not_grounded"
   | "source_quote_empty"
   | "source_quote_too_long"
+  /** Raw answer exceeds the fact statement limit; nothing from it may persist verbatim. */
+  | "source_statement_exceeds_fact_limit"
+  /** Historical (FU9/FU10) reasons; kept so stored audit records stay typed. */
   | "extraction_text_not_source_equivalent"
-  /** Quote occurs in the statement but does not cover complete clauses. */
   | "source_quote_not_clause_span"
-  /** Statement clause structure is undeterminable; only the whole statement may be quoted. */
   | "clause_boundary_undeterminable"
   /** Normalized match starts or ends inside one original character cluster. */
   | "source_quote_unicode_boundary_mismatch"
@@ -173,11 +257,18 @@ export type IntakeControlItemStatus =
   | "clarified"
   | "confirmed"
   | "declined"
-  | "uncertain";
+  | "uncertain"
+  /** Terminal: user stayed uncertain past the attempt bound; never re-asked. */
+  | "closed_uncertain"
+  /** Terminal: hard question budget reached before this item could be asked. */
+  | "closed_budget_exhausted"
+  /** Terminal: the item's DIR already used its per-direction depth. */
+  | "closed_depth_exhausted";
 
 /**
  * Session scheduling / control metadata only.
- * Never a Decision Context write and never an automatic Blueprint mutation.
+ * Never a Decision Context write by itself. A confirmed goal_change is applied
+ * only through the formal Blueprint update entry (goal-change-blueprint-update).
  */
 export type IntakeControlItem = {
   item_id: string;
@@ -190,6 +281,46 @@ export type IntakeControlItem = {
   authorized_role_codes: string[];
   authorized_dir_ids: string[];
   status: IntakeControlItemStatus;
+  /** Raw user statement of source_turn_id. */
+  source_statement?: string;
+  /** goal_change: turn + raw statement the candidate target was located in. */
+  target_source_turn_id?: string;
+  target_source_statement?: string;
+  /** Uncertain follow-up replies so far. */
+  attempts?: number;
+};
+
+/** Append-only audit of one formal Blueprint update. */
+export type BlueprintChangeRecord = {
+  change_id: string;
+  kind: "goal_change";
+  from_blueprint_version: number;
+  to_blueprint_version: number;
+  old_decision_target: string | null;
+  new_decision_target: string;
+  /** Raw user statement that proposed the change. */
+  proposal_statement: string;
+  proposal_source_turn_id: string;
+  control_item_id: string;
+  confirmed_by_turn_id: string;
+  confirmation_statement: string;
+  changed_at: string;
+  dc_version_before: number;
+  dc_version_after: number;
+  added_dir_ids: string[];
+  deprecated_dir_ids: string[];
+  reactivated_dir_ids: string[];
+  reopened_dir_ids: string[];
+  /** Facts answering the old target, now marked not_applicable (never deleted). */
+  superseded_fact_ids: string[];
+  superseded_fact_prior_states: Array<{
+    fact_id: string;
+    status: string;
+    verification_level: string;
+  }>;
+  new_decision_question_fact_id: string | null;
+  invalidated_understanding_id: string | null;
+  invalidated_plan_id: string | null;
 };
 
 export type IntakeControlResolutionStatus =
@@ -222,16 +353,22 @@ export type PendingIntakeControl = {
   clarification_plan_id: string | null;
   resolving_item_id: string | null;
   /**
-   * Set only after an explicit user confirmation of a proposed goal_change.
-   * Records entry into the controlled Blueprint-update path.
-   * This codebase does not yet have a complete auto-apply authority path;
-   * confirmation must not mutate Blueprint or the confirmed DC definition.
+   * Set only after an explicit user confirmation of a proposed goal_change,
+   * when the formal Blueprint update entry has been invoked.
    */
   entered_controlled_blueprint_update?: boolean;
+  /** Result of the formal Blueprint update for the confirmed goal_change. */
+  blueprint_update?: {
+    change_id: string;
+    from_blueprint_version: number;
+    to_blueprint_version: number;
+  } | null;
   /** Original decision target retained while a goal change is pending or declined. */
   original_decision_target?: string | null;
   /** Follow-up turn that last resolved or confirmed a control item; used for replay. */
   last_resolved_turn_id?: string | null;
+  /** Every source turn contributing items (queue across turns). */
+  source_turn_ids?: string[];
   /**
    * Auditable insight_mismatch clarification resolutions.
    * Scheduling/control metadata only; never a second fact store.
@@ -261,6 +398,10 @@ export type AnswerEvent = {
   control_items: IntakeControlItem[];
   /** Current writers record the interpreter actually used for this event. */
   interpreter: AnswerInterpreterVersion;
+  /** Raw answer record this event was interpreted against. */
+  source_record?: AnswerSourceRecord | null;
+  /** Provider/model that produced the draft (null for test hooks). */
+  model_call?: { provider: string | null; model: string | null } | null;
 };
 
 export type InvestigationDirection = {
@@ -393,6 +534,18 @@ export type PendingRejectedItem = {
   reason: UnresolvedAnswerReason;
   rejected_at_turn_id: string;
   rejected_statement: string;
+  /**
+   * refused = explicit user refusal; unclear_after_retries = attempt bound reached;
+   * user_cannot_determine = user chose "cannot determine" for a role already answered by the same turn;
+   * budget_exhausted = hard question budget reached before the item could be asked;
+   * depth_exhausted = the item's DIR already used its per-direction depth.
+   */
+  terminal_reason?:
+    | "refused"
+    | "unclear_after_retries"
+    | "user_cannot_determine"
+    | "budget_exhausted"
+    | "depth_exhausted";
 };
 
 /**
@@ -416,6 +569,8 @@ export type PendingAnswerResolution = {
   clarification_plan_id: string | null;
   /** The single item this pending clarification is currently resolving. */
   resolving_item_id: string | null;
+  /** Every source turn contributing items (queue across turns). */
+  source_turn_ids?: string[];
 };
 
 export type SessionBudgetSnapshot = {
@@ -426,6 +581,8 @@ export type SessionBudgetSnapshot = {
   cycle_base_asked: number;
   remaining_hard_budget: number;
   depth_by_dir: Record<string, number>;
+  /** Sent plans refunded because the answer carried no usable information. */
+  ineffective_plan_ids?: string[];
 };
 
 export type ReadinessSnapshot = {
@@ -452,6 +609,20 @@ export type UnderstandingState = {
     confidence: "low" | "medium" | "high";
   };
   understood: { items: UnderstoodItem[] };
+  /**
+   * DIRs whose required roles all carry a user answer for this goal
+   * (asserted, estimated, unknown or declined) but are not yet known.
+   * Not "known": they await final confirmation or stay information boundaries.
+   */
+  answered_pending_confirmation?: {
+    items: Array<{
+      dir_id: string;
+      label: string;
+      fact_ids: string[];
+      answer_statuses: string[];
+      information_boundary: boolean;
+    }>;
+  };
   need_to_understand: { items: NeedItem[] };
   personal_pattern_insight: PersonalPatternInsightBlock;
   next_question_plan: AdaptiveQuestionPlan | null;

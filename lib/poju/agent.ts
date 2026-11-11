@@ -213,6 +213,16 @@ type LLMApiPayload = {
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 };
 
+/** Append-only M1 audit fields that must survive every adopt and fail-closed return. */
+function m1AuditFields(m1: POJUSessionState, fallback: POJUSessionState) {
+  return {
+    intake_answer_sources: m1.intake_answer_sources ?? fallback.intake_answer_sources,
+    decision_blueprint_history:
+      m1.decision_blueprint_history ?? fallback.decision_blueprint_history,
+    blueprint_change_log: m1.blueprint_change_log ?? fallback.blueprint_change_log,
+  };
+}
+
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
   const merge = (base: POJUAgentState): POJUAgentState => {
     const defaults = createInitialAgentState({
@@ -1134,6 +1144,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           );
           return withSessionProfileFlags({
             ...sessionForLlm,
+            ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
             messages: [...messagesWithUser, failAssistant],
             last_interaction_at: nowPre,
           });
@@ -1166,6 +1177,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           );
           return withSessionProfileFlags({
             ...sessionForLlm,
+            ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
             messages: [...messagesWithUser, failAssistant],
             last_interaction_at: nowPre,
           });
@@ -1242,6 +1254,38 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
               m1CollectingTurn.session.pending_intake_control !== undefined
                 ? m1CollectingTurn.session.pending_intake_control
                 : blockedSession.pending_intake_control,
+            ...m1AuditFields(m1CollectingTurn.session, blockedSession),
+          });
+        }
+        // Every M1 answer turn ends in an authorized question or a readiness
+        // stop; anything else fails closed instead of falling back to free asking.
+        if (
+          !m1CollectingTurn.authorized_question &&
+          m1CollectingTurn.understanding?.readiness.can_ask !== false
+        ) {
+          const noPlanReason =
+            m1CollectingTurn.ask_error?.trim() ||
+            m1CollectingTurn.persist_error?.trim() ||
+            m1CollectingTurn.outcome;
+          const noPlanAssistant: POJUMessage = {
+            role: "assistant",
+            content:
+              "【系统】本轮未能生成合规的授权提问，会话仍在收集中。请重试或换一种表述。" +
+              `（${noPlanReason}）`,
+            timestamp: nowPre,
+            client_id: safeRandomUUID(),
+            meta: {
+              m1_fail_closed: true,
+              m1_outcome: "no_authorized_question",
+              m1_ask_error: noPlanReason,
+            },
+          };
+          console.warn("[agent] M1 turn without authorized question (fail-closed)", noPlanReason);
+          return withSessionProfileFlags({
+            ...m1CollectingTurn.session,
+            messages: [...messagesWithUser, noPlanAssistant],
+            last_interaction_at: nowPre,
+            adaptive_ask_plan: null,
           });
         }
         // Adopt DC + understanding + plan into the Session the LLM sees.
@@ -1265,6 +1309,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           dc_write_revision: sessionForLlm.dc_write_revision,
           pending_answer_resolution: sessionForLlm.pending_answer_resolution,
           pending_intake_control: sessionForLlm.pending_intake_control,
+          ...m1AuditFields(sessionForLlm, workingSession),
           last_answer_event:
             sessionForLlm.last_answer_event ??
             m1CollectingTurn.answer_event ??
@@ -1752,6 +1797,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           m1CollectingTurn.session.pending_intake_control !== undefined
             ? m1CollectingTurn.session.pending_intake_control
             : sessionOut.pending_intake_control,
+        ...m1AuditFields(m1CollectingTurn.session, sessionOut),
         last_answer_event:
           m1CollectingTurn.session.last_answer_event ??
           m1CollectingTurn.answer_event ??
@@ -1801,6 +1847,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         m1CollectingTurn.session.pending_intake_control !== undefined
           ? m1CollectingTurn.session.pending_intake_control
           : sessionOut.pending_intake_control,
+      ...m1AuditFields(m1CollectingTurn.session, sessionOut),
       last_answer_event:
         m1CollectingTurn.session.last_answer_event ??
         m1CollectingTurn.answer_event ??

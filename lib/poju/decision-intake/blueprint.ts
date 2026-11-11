@@ -21,6 +21,7 @@ import {
   filterCatalogLegalIds,
   type TopicClassifyResult,
 } from "./topic-classify";
+import { isDirAnsweredForIntake } from "./intake-answer-coverage";
 import type { DecisionBlueprint, InvestigationDirection } from "./types";
 
 const SOFT = 12;
@@ -426,7 +427,9 @@ export function activateNextBlueprintPriorityBand(
     if (
       live &&
       live.id_lifecycle !== "deprecated" &&
-      (live.current_state === "known" || live.current_state === "n_a")
+      (live.current_state === "known" ||
+        live.current_state === "n_a" ||
+        isDirAnsweredForIntake(dc0, live))
     ) {
       continue;
     }
@@ -482,6 +485,11 @@ export function ensureDecisionBlueprint(
     recompute_scope?: boolean;
     proposed_dir_ids?: readonly string[];
     proposed_ddr_ids?: readonly string[];
+    /**
+     * Confirmed new decision target (goal change). Scope is recomputed from
+     * this target alone; earlier opening text must not leak old topics in.
+     */
+    goal_target?: string;
   },
 ): {
   session: POJUSessionState;
@@ -494,16 +502,20 @@ export function ensureDecisionBlueprint(
     throw new Error("ensureDecisionBlueprint: requires draft|final DC");
   }
   const now = opts?.now ?? new Date().toISOString();
+  const goalTarget = opts?.goal_target?.trim() || null;
   const decision_question =
+    goalTarget ??
     dc0.definition.decision_question ??
     session.original_question ??
     session.agent_v2?.original_question ??
     null;
-  const extra = [
-    decision_question ?? "",
-    session.agent_v2?.core_dilemma?.concrete_event ?? "",
-    session.agent_v2?.desired_direction?.wants ?? "",
-  ].join("\n");
+  const extra = goalTarget
+    ? goalTarget
+    : [
+        decision_question ?? "",
+        session.agent_v2?.core_dilemma?.concrete_event ?? "",
+        session.agent_v2?.desired_direction?.wants ?? "",
+      ].join("\n");
 
   const existing = session.decision_blueprint;
   if (
@@ -511,7 +523,8 @@ export function ensureDecisionBlueprint(
     existing.context_id === dc0.context_id &&
     existing.session_id === session.session_id &&
     existing.dir_ids.length > 0 &&
-    !opts?.recompute_scope
+    !opts?.recompute_scope &&
+    !goalTarget
   ) {
     const missing = dc0.dirs
       .filter(
@@ -567,7 +580,7 @@ export function ensureDecisionBlueprint(
    * to the full always-on set.
    */
   const useFullCatalogScope =
-    Boolean(opts?.recompute_scope) || activeOnDc.length === 0;
+    Boolean(opts?.recompute_scope) || Boolean(goalTarget) || activeOnDc.length === 0;
 
   let scope_source: BlueprintScopeSource = "catalog";
   let dir_defs: DirDefinitionEntry[] = [];

@@ -37,14 +37,23 @@ import { bindConflictClarificationToPlan } from "./conflict-clarification";
 import { ensureDecisionBlueprint,
   activateNextBlueprintPriorityBand } from "./blueprint";
 import { buildAdaptiveQuestionPlan } from "./question-generation";
-import { bumpBudgetAfterAsk } from "./scope-budget";
+import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
 import { buildUnderstandingState } from "./understanding-state";
 import { resolveDdrIdsForDir } from "./blueprint";
+import {
+  answerSourceFor,
+  recordAnswerInterpretation,
+  recordAnswerSource,
+} from "./answer-source-record";
+import { applyConfirmedGoalChange } from "./goal-change-blueprint-update";
+import { isDirAnsweredForIntake } from "./intake-answer-coverage";
+import type { ModelInterpretationResult } from "./answer-interpretation-model";
 import type { RankedPlanningCandidate } from "@/lib/poju/decision-context/question-plan-cycle";
 import type {
   AdaptiveQuestionPlan,
   AdaptiveTurnResult,
   AnswerEvent,
+  IntakeControlItem,
   IntakeControlResolutionRecord,
   NeedItem,
   PendingAnswerResolution,
@@ -58,6 +67,7 @@ import {
   buildClarificationPlan,
   continuableUnresolvedItems,
   isActivePendingAnswerResolution,
+  isCannotDetermineSelection,
   isPendingClarificationPlan,
   isRoleBindingReason,
   mergePendingResolution,
@@ -68,16 +78,17 @@ import {
   parseConstraintConfirmChoice,
   parseDefinitionPatchChoice,
   pendingFromAnswerEvent,
+  pendingSourceTurnIds,
   pendingWithRemainingItems,
   persistKeyForPendingBind,
+  recordUnclearPendingAttempt,
   rejectPendingItem,
   withPendingAnswerResolution,
   type PendingBindChoice,
 } from "./pending-answer-resolution";
 import {
   attachIntakeControlFromEvent,
-  buildEnteredBlueprintUpdatePlan,
-  buildIntakeControlPlan,
+  controlSourceTurnIds,
   controlWithPlan,
   hasResolvedProposedDecisionTarget,
   isActivePendingIntakeControl,
@@ -85,11 +96,73 @@ import {
   isIntakeControlPlan,
   nextPendingControlItem,
   parseGoalChangeConfirmation,
+  recordUncertainControlAttempt,
   updateControlItemStatus,
   withPendingIntakeControl,
 } from "./pending-intake-control";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** AnswerEvent bound to the raw answer record and the provider/model actually used. */
+function eventFromInterpretation(input: {
+  session: POJUSessionState;
+  statement: string;
+  source_turn_id: string;
+  interpreted: Extract<ModelInterpretationResult, { ok: true }>;
+}): AnswerEvent {
+  const meta = input.interpreted.call_meta;
+  return answerEventFromModelDraft({
+    session: input.session,
+    statement: input.statement,
+    source_turn_id: input.source_turn_id,
+    draft: input.interpreted.draft,
+    source_record: answerSourceFor(input.session, input.source_turn_id),
+    model_call: meta ? { provider: meta.provider, model: meta.model } : null,
+  });
+}
+
+/**
+ * Model failure fails closed: no DC write, no version bump, no budget charge,
+ * last_sent_question untouched. Only the raw answer record is kept so the
+ * turn stays auditable; the caller surfaces a recoverable error.
+ */
+function interpretationFailureResult(
+  failureSession: POJUSessionState,
+  interpreted: Extract<ModelInterpretationResult, { ok: false }>,
+): AdaptiveTurnResult {
+  return {
+    session: failureSession,
+    outcome:
+      interpreted.reason === "invalid_schema" || interpreted.reason === "invalid_json"
+        ? "answer_interpretation_invalid_schema"
+        : "answer_interpretation_failed",
+    answer_event: null,
+    understanding: null,
+    plan: null,
+    authorized_question: null,
+    ask_error: `${interpreted.reason}:${interpreted.detail}`,
+  };
+}
+
+/** Refund the sent question when the answer was unknown / declined (idempotent). */
+function refundSentQuestion(session: POJUSessionState): POJUSessionState {
+  const u = session.decision_understanding;
+  const last = u?.last_sent_question;
+  if (!u || !last) return session;
+  const sentPlan =
+    session.adaptive_ask_plan?.plan_id === last.plan_id
+      ? session.adaptive_ask_plan
+      : u.next_question_plan?.plan_id === last.plan_id
+        ? u.next_question_plan
+        : null;
+  const budget = refundIneffectiveQuestion(u.budget, {
+    plan_id: last.plan_id,
+    dir_ids: last.dir_ids,
+    budget_cost: sentPlan?.budget_cost ?? 1,
+  });
+  if (budget === u.budget) return session;
+  return { ...session, decision_understanding: { ...u, budget } };
+}
 
 function withUnderstanding(
   session: POJUSessionState,
@@ -248,15 +321,6 @@ function replayInactiveIntakeControl(input: {
   control: PendingIntakeControl;
 }): AdaptiveTurnResult {
   const session = withPendingIntakeControl(input.session, input.control);
-  if (input.control.entered_controlled_blueprint_update && input.control.clarification_plan) {
-    return intakeControlOrchestrationResult({
-      session,
-      control: input.control,
-      answer_event: null,
-      persist_error: "pending_intake_control_replay",
-      outcome: "idempotent_replay",
-    });
-  }
   const live =
     liveNonClarificationPlan(session) &&
     !isIntakeControlPlan(liveNonClarificationPlan(session))
@@ -507,7 +571,7 @@ export type AdaptiveTurnTestHooks = {
   ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
 };
 
-export async function runAdaptiveQuestionTurn(input: {
+type AdaptiveTurnInput = {
   session: POJUSessionState;
   statement: string;
   source_turn_id: string;
@@ -518,7 +582,152 @@ export async function runAdaptiveQuestionTurn(input: {
   test_hooks?: AdaptiveTurnTestHooks;
   locale?: string;
   signal?: AbortSignal;
-}): Promise<AdaptiveTurnResult> {
+};
+
+export async function runAdaptiveQuestionTurn(
+  input: AdaptiveTurnInput,
+): Promise<AdaptiveTurnResult> {
+  const result = await runAdaptiveQuestionTurnInner(input);
+  return closeBlockedClarifications(result, input);
+}
+
+type ClarificationBlock = "budget_exhausted" | "depth_exhausted";
+
+function clarificationBlock(
+  session: POJUSessionState,
+  plan: AdaptiveQuestionPlan,
+  answerResolution: boolean,
+): ClarificationBlock | null {
+  const u = session.decision_understanding;
+  const bp = session.decision_blueprint;
+  if (!u || !bp || plan.budget_cost === 0) return null;
+  if (
+    u.budget.remaining_hard_budget < plan.budget_cost ||
+    u.budget.session_asked_count >= u.budget.hard_budget_limit
+  ) {
+    return "budget_exhausted";
+  }
+  // Binding what the user already said is not probing deeper into a direction.
+  if (answerResolution) return null;
+  const direction = bp.directions.find((d) => d.direction_id === plan.direction_id);
+  const cap = direction?.depth_soft_cap ?? bp.question_budget.depth_per_direction;
+  if (plan.dir_ids.some((dirId) => (u.budget.depth_by_dir[dirId] ?? 0) >= cap)) {
+    return "depth_exhausted";
+  }
+  return null;
+}
+
+/**
+ * Clarifications are questions: charged and bound by the hard budget; aspect /
+ * insight follow-ups are also bound by the per-direction depth. A clarification
+ * that would be newly sent past its limit is not asked: its item closes auditably
+ * (never written as fact) and the next clarification or the planner decides,
+ * which reaches readiness once nothing askable is left. Re-presenting an
+ * already-sent question and free goal_change confirmations are never blocked.
+ */
+async function closeBlockedClarifications(
+  result: AdaptiveTurnResult,
+  input: AdaptiveTurnInput,
+): Promise<AdaptiveTurnResult> {
+  let r = result;
+  for (let guard = 0; guard < 64; guard++) {
+    const plan = r.plan;
+    const u = r.session.decision_understanding;
+    if (!plan || !u || !r.session.decision_blueprint) return r;
+    const isPending = isPendingClarificationPlan(plan);
+    if (!isPending && !isIntakeControlPlan(plan)) return r;
+    if (u.last_sent_question?.plan_id === plan.plan_id) return r;
+    const block = clarificationBlock(r.session, plan, isPending);
+    if (!block) return r;
+    const persist_error = result.persist_error;
+
+    let current = r.session;
+    if (isPending) {
+      const pending = current.pending_answer_resolution;
+      const item = pending && isActivePendingAnswerResolution(pending) ? nextResolvingItem(pending) : null;
+      if (!pending || !item) return r;
+      current = withPendingAnswerResolution(
+        current,
+        rejectPendingItem({
+          session: current,
+          pending,
+          item,
+          rejected_at_turn_id: input.source_turn_id,
+          rejected_statement: "",
+          now: input.now,
+          terminal_reason: block,
+        }),
+      );
+    } else {
+      const control = current.pending_intake_control;
+      const item = control && isActivePendingIntakeControl(control) ? nextPendingControlItem(control) : null;
+      if (!control || !item || item.kind === "goal_change") return r;
+      const status = block === "budget_exhausted" ? "closed_budget_exhausted" : "closed_depth_exhausted";
+      current = withPendingIntakeControl(current, {
+        ...control,
+        items: control.items.map((x) => (x.item_id === item.item_id ? { ...x, status } : x)),
+        resolving_item_id: null,
+        clarification_plan: null,
+        clarification_plan_id: null,
+      });
+    }
+
+    const nextPending = current.pending_answer_resolution;
+    if (nextPending && isActivePendingAnswerResolution(nextPending)) {
+      r = pendingOrchestrationResult({
+        session: current,
+        pending: nextPending,
+        answer_event: r.answer_event,
+        persist_error,
+        outcome: "planned",
+      });
+      continue;
+    }
+    const nextControl = current.pending_intake_control;
+    if (nextControl && nextControl.status === "pending") {
+      const prepared = controlWithPlan(current, nextControl, input.now);
+      current = withPendingIntakeControl(current, prepared);
+      if (prepared.status === "pending" && prepared.clarification_plan) {
+        r = intakeControlOrchestrationResult({
+          session: current,
+          control: prepared,
+          answer_event: r.answer_event,
+          persist_error,
+          outcome: "planned",
+        });
+        continue;
+      }
+    }
+    const understanding = buildUnderstandingState({
+      session: current,
+      blueprint: current.decision_blueprint!,
+      now: input.now,
+      last_answer_event_id: r.answer_event?.event_id ?? null,
+    });
+    const planned = await planFromState(current, understanding, input.now);
+    return {
+      ...r,
+      session: {
+        ...planned.session,
+        pending_answer_resolution: current.pending_answer_resolution ?? null,
+        pending_intake_control: current.pending_intake_control ?? null,
+      },
+      outcome: outcomeFromPlanResult(planned),
+      ask_error: planned.planner_block
+        ? `${planned.planner_block.reason_code}:${planned.planner_block.detail}`
+        : undefined,
+      understanding: planned.understanding,
+      plan: planned.plan,
+      authorized_question: planned.authorized_question,
+      persist_error,
+    };
+  }
+  return r;
+}
+
+async function runAdaptiveQuestionTurnInner(
+  input: AdaptiveTurnInput,
+): Promise<AdaptiveTurnResult> {
   let current = input.session;
   const buildUnderstanding = (
     args: Parameters<typeof buildUnderstandingState>[0],
@@ -579,6 +788,23 @@ export async function runAdaptiveQuestionTurn(input: {
             fact_ids: [...priorClarify.fact_ids],
           }
         : null);
+    const turnKind =
+      priorClarify || keySeen || lastSentTarget
+        ? ("conflict_clarification" as const)
+        : isActivePendingAnswerResolution(current.pending_answer_resolution)
+          ? ("pending_clarification" as const)
+          : isActivePendingIntakeControl(current.pending_intake_control)
+            ? ("intake_control_follow_up" as const)
+            : ("ordinary_answer" as const);
+    const sourceInput = {
+      source_turn_id: input.source_turn_id,
+      statement,
+      now: input.now,
+      turn_kind: turnKind,
+    };
+    current = recordAnswerSource(current, sourceInput);
+    // Every failure return keeps the raw answer record and nothing else.
+    const failureSession = recordAnswerSource(input.session, sourceInput);
     if (priorClarify || keySeen || lastSentTarget) {
       if (!clarifyTarget) {
         // Persist key seen but Conflict record missing: still avoid ordinary writes.
@@ -605,7 +831,7 @@ export async function runAdaptiveQuestionTurn(input: {
       }
       return handleConflictClarificationAnswer({
         current,
-        original: input.session,
+        original: failureSession,
         statement,
         source_turn_id: input.source_turn_id,
         now: input.now,
@@ -623,7 +849,7 @@ export async function runAdaptiveQuestionTurn(input: {
     if (isActivePendingAnswerResolution(existingPending)) {
       return handlePendingAnswerResolutionTurn({
         current,
-        original: input.session,
+        original: failureSession,
         statement,
         source_turn_id: input.source_turn_id,
         now: input.now,
@@ -635,7 +861,7 @@ export async function runAdaptiveQuestionTurn(input: {
     }
     if (
       existingPending &&
-      input.source_turn_id === existingPending.source_turn_id
+      pendingSourceTurnIds(existingPending).includes(input.source_turn_id)
     ) {
       // Terminal or inactive pending: replay the original source turn without
       // restoring a refused clarification or recounting budget.
@@ -649,7 +875,7 @@ export async function runAdaptiveQuestionTurn(input: {
     if (isActivePendingIntakeControl(existingControl)) {
       return handlePendingIntakeControlTurn({
         current,
-        original: input.session,
+        original: failureSession,
         statement,
         source_turn_id: input.source_turn_id,
         now: input.now,
@@ -662,7 +888,7 @@ export async function runAdaptiveQuestionTurn(input: {
     }
     if (
       existingControl &&
-      (input.source_turn_id === existingControl.source_turn_id ||
+      (controlSourceTurnIds(existingControl).includes(input.source_turn_id) ||
         input.source_turn_id === existingControl.last_resolved_turn_id)
     ) {
       return replayInactiveIntakeControl({
@@ -680,29 +906,48 @@ export async function runAdaptiveQuestionTurn(input: {
       testHook: input.test_hooks?.interpretAnswerModel,
     });
     if (!interpreted.ok) {
-      const outcome =
-        interpreted.reason === "invalid_schema" || interpreted.reason === "invalid_json"
-          ? "answer_interpretation_invalid_schema"
-          : "answer_interpretation_failed";
-      return {
-        session: input.session,
-        outcome,
-        answer_event: null,
-        understanding: null,
-        plan: null,
-        authorized_question: null,
-        ask_error: `${interpreted.reason}:${interpreted.detail}`,
-      };
+      return interpretationFailureResult(failureSession, interpreted);
     }
-    answer_event = answerEventFromModelDraft({
+    answer_event = eventFromInterpretation({
       session: current,
       statement,
       source_turn_id: input.source_turn_id,
-      draft: interpreted.draft,
+      interpreted,
     });
+    current = recordAnswerInterpretation(current, input.source_turn_id, answer_event, input.now);
     const pendingUnresolved = continuableUnresolvedItems(
       answer_event.unresolved_items,
     );
+
+    // Not an answer to the sent question: write nothing, charge nothing, and
+    // re-present the same authorized question (same plan_id → no new budget).
+    if (
+      answer_event.classification === "off_topic" ||
+      answer_event.classification === "invalid_input"
+    ) {
+      current = attachIntakeControlFromEvent(current, answer_event, statement, input.now);
+      if (isActivePendingIntakeControl(current.pending_intake_control)) {
+        return intakeControlOrchestrationResult({
+          session: current,
+          control: current.pending_intake_control!,
+          answer_event,
+          persist_error: `${answer_event.classification}_no_dc_write`,
+          outcome: "planned",
+        });
+      }
+      const live = liveNonClarificationPlan(current);
+      if (live) {
+        return {
+          session: current,
+          outcome: "planned",
+          answer_event,
+          understanding: current.decision_understanding ?? null,
+          plan: live,
+          authorized_question: live.question_text,
+          persist_error: `${answer_event.classification}_no_dc_write`,
+        };
+      }
+    }
 
     try {
       const applied = await applyAnswerEventToSessionDc(current, answer_event, {
@@ -828,7 +1073,7 @@ export async function runAdaptiveQuestionTurn(input: {
         persist_error = "idempotent_skip";
       } else if (!persisted.committed) {
         return {
-          session: input.session,
+          session: failureSession,
           outcome: "dc_persist_failed",
           answer_event,
           understanding: null,
@@ -859,6 +1104,12 @@ export async function runAdaptiveQuestionTurn(input: {
           dc_write_revision: persisted.session.dc_write_revision,
         };
       }
+      if (
+        answer_event.classification === "unknown" ||
+        answer_event.classification === "declined"
+      ) {
+        current = refundSentQuestion(current);
+      }
 
       current = attachIntakeControlFromEvent(current, answer_event, statement, input.now);
       if (pendingUnresolved.length > 0) {
@@ -882,7 +1133,7 @@ export async function runAdaptiveQuestionTurn(input: {
       }
     } catch (e) {
       return {
-        session: input.session,
+        session: failureSession,
         outcome: "dc_persist_threw",
         answer_event,
         understanding: null,
@@ -1050,6 +1301,9 @@ async function planFromState(
     }
     for (const dirId of c.dir_ids) {
       if (!blueprint.dir_ids.includes(dirId)) return false;
+      // Answered (awaiting confirmation or an information boundary): never re-ask.
+      const dir = dc.dirs.find((d) => d.dir_id === dirId);
+      if (dir && isDirAnsweredForIntake(dc, dir)) return false;
     }
     const dirId = c.dir_ids[0];
     if (!dirId) return true;
@@ -1057,12 +1311,31 @@ async function planFromState(
     return used < blueprint.question_budget.depth_per_direction;
   });
 
+  // When the hard budget cannot cover every open DIR that blocks Freeze
+  // sufficiency, spend it only on those DIRs; a non-blocking question then
+  // could leave the session unable to freeze.
+  const sufficiencyBlocking = new Set(
+    dc.dirs
+      .filter((d) => d.id_lifecycle === "active" && d.may_affect_p5_ranking !== false)
+      .map((d) => d.dir_id),
+  );
+  const blockingCandidates = candidates.filter((c) =>
+    c.dir_ids.some((dirId) => sufficiencyBlocking.has(dirId)),
+  );
+  const openBlockingDirs = new Set(
+    blockingCandidates.flatMap((c) => c.dir_ids.filter((dirId) => sufficiencyBlocking.has(dirId))),
+  );
+  const plannable =
+    blockingCandidates.length > 0 && budget.remaining_hard_budget <= openBlockingDirs.size
+      ? blockingCandidates
+      : candidates;
+
   const naValidation = await buildProductionNaValidationContextFromSession(
     session,
     { nowIso: now },
   );
   const planResult = planNextAskFromCandidates({
-    candidates,
+    candidates: plannable,
     snap: snapshotFromDc(dc),
     naValidation,
     remaining_hard_budget: budget.remaining_hard_budget,
@@ -1340,10 +1613,7 @@ function finishPendingFromEvent(
   });
   if (!incoming) return session;
   const existing = session.pending_answer_resolution;
-  // Same pending task only — never spawn a parallel clarification for a new source.
-  if (existing && existing.status === "pending" && existing.source_turn_id !== incoming.source_turn_id) {
-    return session;
-  }
+  // Items from a new source turn are queued behind the current ones (never dropped).
   const merged = mergePendingResolution(existing, incoming);
   const resolving = nextResolvingItem(merged);
   const plan =
@@ -1400,9 +1670,9 @@ async function handlePendingAnswerResolutionTurn(input: {
     resolving_item_id: pendingRaw.resolving_item_id ?? null,
   };
 
-  // Replay of the original extracted-answer turn: restore the already-sent
+  // Replay of an extracted-answer source turn: restore the already-sent
   // clarification question. Do not regenerate, recount budget, or rewrite DC.
-  if (input.source_turn_id === pending.source_turn_id) {
+  if (pendingSourceTurnIds(pending).includes(input.source_turn_id)) {
     return pendingOrchestrationResult({
       session: current,
       pending,
@@ -1453,6 +1723,9 @@ async function handlePendingAnswerResolutionTurn(input: {
       return { ok: true, choice: { type: "role", role_code: parsed.role_code } };
     }
     if (resolving.reason === "unclear_certainty") {
+      if (isCannotDetermineSelection(input.statement)) {
+        return { ok: true, choice: { type: "cannot_determine" } };
+      }
       const parsed = parseCertaintyChoice(input.statement);
       if (!parsed.ok) return parsed;
       return { ok: true, choice: { type: "certainty", certainty: parsed.certainty } };
@@ -1475,6 +1748,48 @@ async function handlePendingAnswerResolutionTurn(input: {
       return { ok: true, choice: { type: "definition_as_fact" } };
     }
     return { ok: false, reason: "unclear" };
+  };
+
+  const closeOrContinue = (nextPending: PendingAnswerResolution, persist_error: string) => {
+    current = withPendingAnswerResolution(current, nextPending);
+    if (!isActivePendingAnswerResolution(nextPending)) {
+      return continueInvestigationAfterTerminalRefusal({
+        current,
+        pending: nextPending,
+        now: input.now,
+        answer_event: null,
+        buildUnderstanding: input.buildUnderstanding,
+        planFromState: input.planFromState,
+      });
+    }
+    return Promise.resolve(
+      pendingOrchestrationResult({
+        session: current,
+        pending: nextPending,
+        answer_event: null,
+        persist_error,
+        outcome: "planned",
+      }),
+    );
+  };
+
+  // Unparseable clarification replies are bounded: after the retry limit the
+  // item closes as unclear (auditable, never written as fact, never re-asked).
+  const recordUnclearAttempt = () => {
+    const attempt = recordUnclearPendingAttempt({
+      session: current,
+      pending,
+      item: resolving,
+      turn_id: input.source_turn_id,
+      statement: input.statement,
+      now: input.now,
+    });
+    return closeOrContinue(
+      attempt.pending,
+      attempt.terminal
+        ? "pending_answer_resolution_closed_unclear"
+        : "pending_answer_resolution_unresolved",
+    );
   };
 
   const parsed = parseChoice();
@@ -1507,25 +1822,13 @@ async function handlePendingAnswerResolutionTurn(input: {
         outcome: "planned",
       });
     }
-    return pendingOrchestrationResult({
-      session: current,
-      pending,
-      answer_event: null,
-      persist_error: "pending_answer_resolution_unresolved",
-      outcome: "planned",
-    });
+    return recordUnclearAttempt();
   }
 
   if (parsed.choice.type === "role") {
     const authorized = resolving.authorized_role_codes;
     if (!authorized.includes(parsed.choice.role_code)) {
-      return pendingOrchestrationResult({
-        session: current,
-        pending,
-        answer_event: null,
-        persist_error: "pending_answer_resolution_unauthorized",
-        outcome: "planned",
-      });
+      return recordUnclearAttempt();
     }
     const targets = activeTargets(current);
     if (
@@ -1551,19 +1854,21 @@ async function handlePendingAnswerResolutionTurn(input: {
     }
   }
 
-  // Certainty "unclear" after an unclear item is not a legal write — keep pending.
+  // "Cannot tell" is never a fact nor user_asserted; bounded like any unclear reply.
   if (parsed.choice.type === "certainty" && parsed.choice.certainty === "unclear") {
-    return pendingOrchestrationResult({
-      session: current,
-      pending,
-      answer_event: null,
-      persist_error: "pending_answer_resolution_unresolved",
-      outcome: "planned",
-    });
+    return recordUnclearAttempt();
   }
+  // A repeated "still an estimate" is an answer: it binds below as a
+  // user_estimate fact (never a Constraint) instead of being asked again.
+  const keptAsEstimate =
+    parsed.choice.type === "constraint_confirm" &&
+    !parsed.choice.confirmed &&
+    !parsed.choice.still_uncertain &&
+    (resolving.attempts ?? 0) >= 1;
   if (
     parsed.choice.type === "constraint_confirm" &&
-    !parsed.choice.confirmed
+    !parsed.choice.confirmed &&
+    !keptAsEstimate
   ) {
     const stillUncertain = parsed.choice.still_uncertain;
     const nextReason = stillUncertain
@@ -1578,6 +1883,7 @@ async function handlePendingAnswerResolutionTurn(input: {
               ...item,
               reason: nextReason,
               certainty: nextCertainty,
+              attempts: stillUncertain ? item.attempts : (item.attempts ?? 0) + 1,
             }
           : item,
       ),
@@ -1599,6 +1905,36 @@ async function handlePendingAnswerResolutionTurn(input: {
     });
   }
 
+  if (parsed.choice.type === "cannot_determine") {
+    // A sibling item of the same answer already answered this role: the
+    // unknown sub-item adds no record, it only closes (auditably).
+    const code =
+      resolving.raw_role_code_hint ??
+      (resolving.authorized_role_codes.length === 1 ? resolving.authorized_role_codes[0]! : null);
+    const m = code ? /^v1\/dir\/([^/]+)\/role\/([^/]+)$/.exec(code) : null;
+    const roleAnswered = Boolean(
+      m &&
+        (current.decision_context?.reality_facts ?? []).some(
+          (f) =>
+            f.source_turn_id === resolving.source_turn_id &&
+            (f.related_dir_ids ?? []).includes(m[1]!) &&
+            (f.fact_roles ?? []).includes(m[2]!),
+        ),
+    );
+    if (roleAnswered) {
+      const nextPending = rejectPendingItem({
+        session: current,
+        pending,
+        item: resolving,
+        rejected_at_turn_id: input.source_turn_id,
+        rejected_statement: input.statement,
+        now: input.now,
+        terminal_reason: "user_cannot_determine",
+      });
+      return closeOrContinue(nextPending, "pending_item_cannot_determine");
+    }
+  }
+
   const answer_event = answerEventFromPendingBind({
     session: current,
     pending,
@@ -1610,7 +1946,7 @@ async function handlePendingAnswerResolutionTurn(input: {
     (item) => ({
       ...item,
       item_id: resolving.item_id,
-      source_turn_id: pending.source_turn_id,
+      source_turn_id: resolving.source_turn_id,
     }),
   );
   const siblings = pending.unresolved_items.filter(
@@ -1640,12 +1976,14 @@ async function handlePendingAnswerResolutionTurn(input: {
       now: input.now,
       allow_incremental_same_turn: true,
       incremental: {
-        pending_source_turn_id: pending.source_turn_id,
+        pending_source_turn_id: resolving.source_turn_id,
         pending_authorized_role_codes: [...resolving.authorized_role_codes],
         pending_authorized_dir_ids:
-          pending.authorized_dir_ids.length > 0
-            ? [...pending.authorized_dir_ids]
-            : [...(current.decision_understanding?.last_sent_question?.dir_ids ?? [])],
+          (resolving.authorized_dir_ids ?? []).length > 0
+            ? [...resolving.authorized_dir_ids!]
+            : pending.authorized_dir_ids.length > 0
+              ? [...pending.authorized_dir_ids]
+              : [...(current.decision_understanding?.last_sent_question?.dir_ids ?? [])],
         resolving_item_id: resolving.item_id,
       },
     });
@@ -1657,7 +1995,7 @@ async function handlePendingAnswerResolutionTurn(input: {
         if (w.kind === "reality_fact") {
           return dc.reality_facts.some(
             (f) =>
-              f.source_turn_id === pending.source_turn_id &&
+              f.source_turn_id === resolving.source_turn_id &&
               f.statement === w.statement &&
               (f.related_dir_ids ?? []).some((d) => w.related_dir_ids.includes(d)) &&
               (f.fact_roles ?? []).some((r) => w.fact_roles.includes(r)),
@@ -1666,7 +2004,7 @@ async function handlePendingAnswerResolutionTurn(input: {
         if (w.kind === "constraint") {
           return dc.constraints.some(
             (c) =>
-              c.source_turn_id === pending.source_turn_id &&
+              c.source_turn_id === resolving.source_turn_id &&
               c.statement === w.statement &&
               (c.related_dir_ids ?? []).some((d) => w.related_dir_ids.includes(d)),
           );
@@ -1698,7 +2036,7 @@ async function handlePendingAnswerResolutionTurn(input: {
     } else {
       const key = persistKeyForPendingBind(
         current.session_id,
-        pending.source_turn_id,
+        resolving.source_turn_id,
         resolving.item_id,
       );
       const persistFn =
@@ -1942,9 +2280,9 @@ async function handlePendingIntakeControlTurn(input: {
       persist_error: "missing_pending_intake_control",
     };
   }
-  let control = controlRaw;
+  const control = controlRaw;
 
-  if (input.source_turn_id === control.source_turn_id) {
+  if (controlSourceTurnIds(control).includes(input.source_turn_id)) {
     const prepared = controlWithPlan(current, control, input.now);
     current = withPendingIntakeControl(current, prepared);
     return intakeControlOrchestrationResult({
@@ -1960,208 +2298,93 @@ async function handlePendingIntakeControlTurn(input: {
     return replayInactiveIntakeControl({ session: current, control });
   }
 
-  const resolving = nextPendingControlItem(control);
-  if (!resolving) {
-    if (control.entered_controlled_blueprint_update) {
-      const entered =
-        control.clarification_plan &&
-        String(control.clarification_plan.ask_now_reason ?? "").includes(
-          "goal_change_entered",
-        )
-          ? control.clarification_plan
-          : buildEnteredBlueprintUpdatePlan({
-              session: current,
-              control,
-              now: input.now,
-            });
-      if (!entered) {
-        return intakeControlOrchestrationResult({
-          session: current,
-          control,
-          answer_event: null,
-          persist_error: "pending_intake_control_entered",
-        });
-      }
-      const prepared: PendingIntakeControl = {
-        ...control,
-        clarification_plan: entered,
-        clarification_plan_id: entered.plan_id,
-      };
-      current = withPendingIntakeControl(current, prepared);
-      return intakeControlOrchestrationResult({
-        session: current,
-        control: prepared,
-        answer_event: null,
-        persist_error: "pending_intake_control_entered",
-        outcome: "planned",
-      });
-    }
-    return continueOrdinaryAfterIntakeControl({
+  const persistFn = input.test_hooks?.intakeControlPersist ?? persistDcLifecycleChange;
+
+  const continueOrdinary = (answer_event: AnswerEvent | null, persist_error?: string) =>
+    continueOrdinaryAfterIntakeControl({
       current,
       now: input.now,
-      answer_event: null,
+      answer_event,
       buildUnderstanding: input.buildUnderstanding,
       planFromState: input.planFromState,
+      persist_error,
     });
-  }
 
-  if (resolving.kind === "goal_change") {
-    if (!hasResolvedProposedDecisionTarget(resolving)) {
-      if (isControlClarificationUncertain(input.statement)) {
-        const prepared = updateControlItemStatus(control, resolving.item_id, "uncertain");
-        const withPlan = controlWithPlan(current, prepared, input.now, resolving);
-        current = withPendingIntakeControl(current, withPlan);
-        return intakeControlOrchestrationResult({
-          session: current,
-          control: withPlan,
-          answer_event: null,
-          persist_error: "pending_intake_control_goal_change_target_unresolved",
-          outcome: "planned",
-        });
-      }
-      const interpreted = await interpretAnswerWithModel({
-        session: current,
-        statement: input.statement,
-        source_turn_id: input.source_turn_id,
-        locale: input.locale,
-        signal: input.signal,
-        testHook: input.test_hooks?.interpretAnswerModel,
-      });
-      if (!interpreted.ok) {
-        const outcome =
-          interpreted.reason === "invalid_schema" || interpreted.reason === "invalid_json"
-            ? "answer_interpretation_invalid_schema"
-            : "answer_interpretation_failed";
-        return {
-          session: input.original,
-          outcome,
-          answer_event: null,
-          understanding: null,
-          plan: null,
-          authorized_question: null,
-          ask_error: `${interpreted.reason}:${interpreted.detail}`,
-        };
-      }
-      const extracted = extractGroundedProposedDecisionTarget(
-        interpreted.draft,
-        input.statement,
-      );
-      const answer_event = answerEventFromModelDraft({
-        session: current,
-        statement: input.statement,
-        source_turn_id: input.source_turn_id,
-        draft: interpreted.draft,
-      });
-      if (!extracted.proposed_decision_target) {
-        const withPlan = controlWithPlan(current, control, input.now, resolving);
-        current = withPendingIntakeControl(current, withPlan);
-        return intakeControlOrchestrationResult({
-          session: current,
-          control: withPlan,
-          answer_event,
-          persist_error: "pending_intake_control_goal_change_target_unresolved",
-          outcome: "planned",
-        });
-      }
-      const items = control.items.map((item) =>
-        item.item_id === resolving.item_id
-          ? {
-              ...item,
-              proposed_decision_target: extracted.proposed_decision_target,
-              status: "pending" as const,
-            }
-          : item,
-      );
-      const updated = {
-        ...control,
-        items,
-        clarification_plan: null,
-        clarification_plan_id: null,
+  const presentControl = (
+    next: PendingIntakeControl,
+    item: IntakeControlItem,
+    persist_error: string | undefined,
+    answer_event: AnswerEvent | null,
+  ): AdaptiveTurnResult => {
+    const withPlan = controlWithPlan(current, next, input.now, item);
+    current = withPendingIntakeControl(current, withPlan);
+    return intakeControlOrchestrationResult({
+      session: current,
+      control: withPlan,
+      answer_event,
+      persist_error,
+      outcome: "planned",
+    });
+  };
+
+  /**
+   * After the current item closes: queued pending clarifications first (they
+   * own the next turn's routing), then remaining control items, then the
+   * ordinary dynamic loop.
+   */
+  const advance = async (
+    next: PendingIntakeControl,
+    answer_event: AnswerEvent | null,
+    persist_error: string | undefined,
+  ): Promise<AdaptiveTurnResult> => {
+    current = withPendingIntakeControl(current, next);
+    if (answer_event) {
+      // A follow-up answer resolves its item. Its own residual aspects stay in
+      // the turn's audit and are not re-queued, so clarification cannot keep
+      // generating clarification; goal_change / insight_mismatch still queue.
+      const followUpEvent: AnswerEvent = {
+        ...answer_event,
+        control_items: (answer_event.control_items ?? []).filter(
+          (item) => item.kind !== "unresolved_aspect",
+        ),
       };
-      const withPlan = controlWithPlan(
-        current,
-        updated,
-        input.now,
-        items.find((item) => item.item_id === resolving.item_id) ?? resolving,
-      );
-      current = withPendingIntakeControl(current, withPlan);
-      return intakeControlOrchestrationResult({
+      current = attachIntakeControlFromEvent(current, followUpEvent, input.statement, input.now);
+      current = finishPendingFromEvent(current, answer_event, input.statement, input.now);
+    }
+    const pending = current.pending_answer_resolution;
+    if (isActivePendingAnswerResolution(pending)) {
+      return pendingOrchestrationResult({
         session: current,
-        control: withPlan,
+        pending: pending!,
         answer_event,
-        persist_error: undefined,
+        persist_error,
         outcome: "planned",
       });
     }
-    const choice = parseGoalChangeConfirmation(input.statement);
-    if (choice === "uncertain") {
-      const prepared = updateControlItemStatus(control, resolving.item_id, "uncertain");
-      const withPlan = controlWithPlan(current, prepared, input.now, resolving);
-      current = withPendingIntakeControl(current, withPlan);
-      return intakeControlOrchestrationResult({
-        session: current,
-        control: withPlan,
-        answer_event: null,
-        persist_error: "pending_intake_control_uncertain",
-        outcome: "planned",
-      });
+    const ctl = current.pending_intake_control;
+    const remaining = ctl ? nextPendingControlItem(ctl) : null;
+    if (ctl && remaining) {
+      return presentControl(ctl, remaining, persist_error, answer_event);
     }
-    if (choice === "confirm") {
-      let prepared = updateControlItemStatus(control, resolving.item_id, "confirmed", {
-        entered_controlled_blueprint_update: true,
-        last_resolved_turn_id: input.source_turn_id,
-      });
-      const entered = buildEnteredBlueprintUpdatePlan({
-        session: current,
-        control: prepared,
-        now: input.now,
-      });
-      prepared = {
-        ...prepared,
-        status: "resolved",
-        clarification_plan: entered,
-        clarification_plan_id: entered?.plan_id ?? null,
-        resolving_item_id: null,
-      };
-      current = withPendingIntakeControl(current, prepared);
-      // Do not mutate Blueprint or the confirmed DC definition.
-      return intakeControlOrchestrationResult({
-        session: current,
-        control: prepared,
-        answer_event: null,
-        persist_error: "pending_intake_control_goal_change_entered",
-        outcome: "planned",
-      });
-    }
-    // decline: retain original target and resume its investigation.
-    const prepared = updateControlItemStatus(control, resolving.item_id, "declined", {
-      entered_controlled_blueprint_update: false,
-      last_resolved_turn_id: input.source_turn_id,
-    });
-    current = withPendingIntakeControl(current, prepared);
-    return continueOrdinaryAfterIntakeControl({
-      current,
-      now: input.now,
-      answer_event: null,
-      buildUnderstanding: input.buildUnderstanding,
-      planFromState: input.planFromState,
-      persist_error: "pending_intake_control_goal_change_declined",
-    });
-  }
+    return continueOrdinary(answer_event, persist_error);
+  };
 
-  if (resolving.kind === "insight_mismatch") {
-    if (isControlClarificationUncertain(input.statement)) {
-      const prepared = updateControlItemStatus(control, resolving.item_id, "uncertain");
-      const withPlan = controlWithPlan(current, prepared, input.now, resolving);
-      current = withPendingIntakeControl(current, withPlan);
-      return intakeControlOrchestrationResult({
-        session: current,
-        control: withPlan,
-        answer_event: null,
-        persist_error: "pending_intake_control_uncertain",
-        outcome: "planned",
-      });
+  /** Bounded uncertainty: after the retry limit the item closes as closed_uncertain. */
+  const uncertainAttempt = (
+    answer_event: AnswerEvent | null,
+    label: string,
+  ): Promise<AdaptiveTurnResult> => {
+    const attempt = recordUncertainControlAttempt(control, resolving!);
+    if (attempt.terminal) {
+      return advance(attempt.control, null, "pending_intake_control_closed_uncertain");
     }
+    return Promise.resolve(presentControl(attempt.control, resolving!, label, answer_event));
+  };
+
+  const interpret = async (): Promise<
+    | { ok: true; event: AnswerEvent; draft: Extract<ModelInterpretationResult, { ok: true }>["draft"] }
+    | { ok: false; result: AdaptiveTurnResult }
+  > => {
     const interpreted = await interpretAnswerWithModel({
       session: current,
       statement: input.statement,
@@ -2171,27 +2394,133 @@ async function handlePendingIntakeControlTurn(input: {
       testHook: input.test_hooks?.interpretAnswerModel,
     });
     if (!interpreted.ok) {
-      const outcome =
-        interpreted.reason === "invalid_schema" || interpreted.reason === "invalid_json"
-          ? "answer_interpretation_invalid_schema"
-          : "answer_interpretation_failed";
-      return {
-        session: input.original,
-        outcome,
-        answer_event: null,
-        understanding: null,
-        plan: null,
-        authorized_question: null,
-        ask_error: `${interpreted.reason}:${interpreted.detail}`,
-      };
+      return { ok: false, result: interpretationFailureResult(input.original, interpreted) };
     }
-    const answer_event = answerEventFromModelDraft({
+    const event = eventFromInterpretation({
       session: current,
       statement: input.statement,
       source_turn_id: input.source_turn_id,
-      draft: interpreted.draft,
+      interpreted,
     });
-    const persistFn = input.test_hooks?.intakeControlPersist ?? persistDcLifecycleChange;
+    current = recordAnswerInterpretation(current, input.source_turn_id, event, input.now);
+    return { ok: true, draft: interpreted.draft, event };
+  };
+
+  const notAnAnswer = (event: AnswerEvent) =>
+    event.classification === "off_topic" || event.classification === "invalid_input";
+
+  const resolving = nextPendingControlItem(control);
+  if (!resolving) {
+    return continueOrdinary(null);
+  }
+
+  if (resolving.kind === "goal_change") {
+    if (!hasResolvedProposedDecisionTarget(resolving)) {
+      if (isControlClarificationUncertain(input.statement)) {
+        return uncertainAttempt(null, "pending_intake_control_goal_change_target_unresolved");
+      }
+      const r = await interpret();
+      if (!r.ok) return r.result;
+      const extracted = extractGroundedProposedDecisionTarget(r.draft, input.statement);
+      if (!extracted.proposed_decision_target) {
+        return uncertainAttempt(r.event, "pending_intake_control_goal_change_target_unresolved");
+      }
+      const items = control.items.map((item) =>
+        item.item_id === resolving.item_id
+          ? {
+              ...item,
+              proposed_decision_target: extracted.proposed_decision_target,
+              target_source_turn_id: input.source_turn_id,
+              target_source_statement: input.statement,
+              status: "pending" as const,
+            }
+          : item,
+      );
+      const updated: PendingIntakeControl = {
+        ...control,
+        items,
+        clarification_plan: null,
+        clarification_plan_id: null,
+      };
+      return presentControl(
+        updated,
+        items.find((item) => item.item_id === resolving.item_id) ?? resolving,
+        undefined,
+        r.event,
+      );
+    }
+    const choice = parseGoalChangeConfirmation(input.statement);
+    if (choice === "uncertain") {
+      return uncertainAttempt(null, "pending_intake_control_uncertain");
+    }
+    if (choice === "confirm") {
+      let applied: Awaited<ReturnType<typeof applyConfirmedGoalChange>>;
+      try {
+        applied = await applyConfirmedGoalChange({
+          original: input.original,
+          session: current,
+          control,
+          item: resolving,
+          confirm_turn_id: input.source_turn_id,
+          confirmation_statement: input.statement,
+          now: input.now,
+          persist: persistFn,
+        });
+      } catch (e) {
+        return {
+          session: input.original,
+          outcome: "dc_persist_threw",
+          answer_event: null,
+          understanding: null,
+          plan: null,
+          authorized_question: null,
+          persist_error: errorText(e),
+        };
+      }
+      if (!applied.ok) {
+        if (applied.reason.startsWith("persist_failed")) {
+          return {
+            session: input.original,
+            outcome: "dc_persist_failed",
+            answer_event: null,
+            understanding: null,
+            plan: null,
+            authorized_question: null,
+            persist_error: applied.reason,
+          };
+        }
+        return presentControl(
+          control,
+          resolving,
+          `goal_change_blueprint_update_failed:${applied.reason}`,
+          null,
+        );
+      }
+      current = applied.session;
+      return advance(
+        current.pending_intake_control ?? control,
+        null,
+        "goal_change_blueprint_updated",
+      );
+    }
+    // decline: retain the current target and resume its investigation.
+    const declined = updateControlItemStatus(control, resolving.item_id, "declined", {
+      entered_controlled_blueprint_update: false,
+      last_resolved_turn_id: input.source_turn_id,
+    });
+    return advance(declined, null, "pending_intake_control_goal_change_declined");
+  }
+
+  if (resolving.kind === "insight_mismatch") {
+    if (isControlClarificationUncertain(input.statement)) {
+      return uncertainAttempt(null, "pending_intake_control_uncertain");
+    }
+    const r = await interpret();
+    if (!r.ok) return r.result;
+    const answer_event = r.event;
+    if (notAnAnswer(answer_event)) {
+      return uncertainAttempt(answer_event, `${answer_event.classification}_no_dc_write`);
+    }
     const persisted = await applyAndPersistIntakeControlAnswer({
       current,
       original: input.original,
@@ -2212,6 +2541,9 @@ async function handlePendingIntakeControlTurn(input: {
       };
     }
     current = persisted.session;
+    if (answer_event.classification === "unknown" || answer_event.classification === "declined") {
+      current = refundSentQuestion(current);
+    }
     const resolution_status: IntakeControlResolutionRecord["resolution_status"] =
       answer_event.proposed_writes.length > 0 ? "clarified" : "clarified_without_dc_write";
     const record: IntakeControlResolutionRecord = {
@@ -2234,155 +2566,47 @@ async function handlePendingIntakeControlTurn(input: {
       last_resolved_turn_id: input.source_turn_id,
       resolution_records,
     });
-    const remaining = nextPendingControlItem(prepared);
-    if (remaining) {
-      const withPlan = controlWithPlan(current, prepared, input.now, remaining);
-      current = withPendingIntakeControl(current, withPlan);
-      return intakeControlOrchestrationResult({
-        session: current,
-        control: withPlan,
-        answer_event,
-        persist_error: undefined,
-        outcome: "planned",
-      });
-    }
-    current = withPendingIntakeControl(current, prepared);
-    return continueOrdinaryAfterIntakeControl({
-      current,
-      now: input.now,
-      answer_event,
-      buildUnderstanding: input.buildUnderstanding,
-      planFromState: input.planFromState,
-      persist_error: "pending_intake_control_insight_clarified",
-    });
+    return advance(prepared, answer_event, "pending_intake_control_insight_clarified");
   }
 
   // unresolved_aspect follow-up: interpret the clarification under the
-  // originally authorized last_sent_question / plan role codes.
+  // originally authorized question; new unresolved items are queued, not dropped.
   if (isControlClarificationUncertain(input.statement)) {
-    const prepared = updateControlItemStatus(control, resolving.item_id, "uncertain");
-    const withPlan = controlWithPlan(current, prepared, input.now, resolving);
-    current = withPendingIntakeControl(current, withPlan);
-    return intakeControlOrchestrationResult({
-      session: current,
-      control: withPlan,
-      answer_event: null,
-      persist_error: "pending_intake_control_uncertain",
-      outcome: "planned",
-    });
+    return uncertainAttempt(null, "pending_intake_control_uncertain");
   }
-
-  const interpreted = await interpretAnswerWithModel({
-    session: current,
-    statement: input.statement,
+  const r = await interpret();
+  if (!r.ok) return r.result;
+  const answer_event = r.event;
+  if (notAnAnswer(answer_event)) {
+    return uncertainAttempt(answer_event, `${answer_event.classification}_no_dc_write`);
+  }
+  const persisted = await applyAndPersistIntakeControlAnswer({
+    current,
+    original: input.original,
+    answer_event,
     source_turn_id: input.source_turn_id,
-    locale: input.locale,
-    signal: input.signal,
-    testHook: input.test_hooks?.interpretAnswerModel,
+    now: input.now,
+    persist: persistFn,
   });
-  if (!interpreted.ok) {
-    const outcome =
-      interpreted.reason === "invalid_schema" || interpreted.reason === "invalid_json"
-        ? "answer_interpretation_invalid_schema"
-        : "answer_interpretation_failed";
+  if (!persisted.ok) {
     return {
       session: input.original,
-      outcome,
-      answer_event: null,
+      outcome: persisted.outcome,
+      answer_event,
       understanding: null,
       plan: null,
       authorized_question: null,
-      ask_error: `${interpreted.reason}:${interpreted.detail}`,
+      persist_error: persisted.persist_error,
     };
   }
-  const answer_event = answerEventFromModelDraft({
-    session: current,
-    statement: input.statement,
-    source_turn_id: input.source_turn_id,
-    draft: interpreted.draft,
-  });
-  // Resolve only the intended aspect. Do not absorb new model aspects into scope.
-  let prepared = updateControlItemStatus(control, resolving.item_id, "clarified", {
+  current = persisted.session;
+  if (answer_event.classification === "unknown" || answer_event.classification === "declined") {
+    current = refundSentQuestion(current);
+  }
+  const prepared = updateControlItemStatus(control, resolving.item_id, "clarified", {
     last_resolved_turn_id: input.source_turn_id,
   });
-
-  try {
-    const applied = await applyAnswerEventToSessionDc(current, answer_event, {
-      now: input.now,
-    });
-    if (applied.applied) {
-      const key = `dc_collect:${current.session_id}:${input.source_turn_id}`;
-      const persisted = await persistDcLifecycleChange(
-        input.original,
-        applied.session,
-        key,
-      );
-      if (persisted.error === "idempotent_skip") {
-        current = persisted.session;
-      } else if (!persisted.committed) {
-        return {
-          session: input.original,
-          outcome: "dc_persist_failed",
-          answer_event,
-          understanding: null,
-          plan: null,
-          authorized_question: null,
-          persist_error: persisted.error ?? "persist_failed",
-        };
-      } else {
-        current = {
-          ...applied.session,
-          ...persisted.session,
-          decision_context:
-            persisted.session.decision_context ?? applied.session.decision_context,
-          decision_context_versions:
-            persisted.session.decision_context_versions ??
-            applied.session.decision_context_versions,
-          decision_context_idempotency_keys:
-            persisted.session.decision_context_idempotency_keys ??
-            applied.session.decision_context_idempotency_keys,
-          control_plane:
-            persisted.session.control_plane ?? applied.session.control_plane,
-          decision_blueprint: applied.session.decision_blueprint,
-          messages: applied.session.messages,
-          agent_v2: applied.session.agent_v2,
-          session_revision: persisted.session.session_revision,
-          dc_write_revision: persisted.session.dc_write_revision,
-        };
-      }
-    }
-  } catch (e) {
-    return {
-      session: input.original,
-      outcome: "dc_persist_threw",
-      answer_event,
-      understanding: null,
-      plan: null,
-      authorized_question: null,
-      persist_error: errorText(e),
-    };
-  }
-
-  const remaining = nextPendingControlItem(prepared);
-  if (remaining) {
-    const withPlan = controlWithPlan(current, prepared, input.now, remaining);
-    current = withPendingIntakeControl(current, withPlan);
-    return intakeControlOrchestrationResult({
-      session: current,
-      control: withPlan,
-      answer_event,
-      persist_error: undefined,
-      outcome: "planned",
-    });
-  }
-  current = withPendingIntakeControl(current, prepared);
-  return continueOrdinaryAfterIntakeControl({
-    current,
-    now: input.now,
-    answer_event,
-    buildUnderstanding: input.buildUnderstanding,
-    planFromState: input.planFromState,
-  });
+  return advance(prepared, answer_event, undefined);
 }
 
 async function continueOrdinaryAfterIntakeControl(input: {
