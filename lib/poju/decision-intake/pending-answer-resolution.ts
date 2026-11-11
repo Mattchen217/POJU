@@ -254,6 +254,8 @@ function hasExplicitCertaintyAffirm(t: string): boolean {
 }
 
 function confirmNegated(t: string): boolean {
+  // Negation of confirm/write action, including intervening words.
+  // Evaluated before any affirmative keyword such as 可以写入.
   return (
     /不确认/.test(t) ||
     /不能确认/.test(t) ||
@@ -264,7 +266,12 @@ function confirmNegated(t: string): boolean {
     /不能写入/.test(t) ||
     /不可写入/.test(t) ||
     /不要写入/.test(t) ||
-    /不许写入/.test(t)
+    /不许写入/.test(t) ||
+    /不认为.{0,16}(可以写入|写入|确认|作为明确约束|明确约束)/.test(t) ||
+    /不觉得.{0,16}(可以写入|写入|确认|作为明确约束|明确约束)/.test(t) ||
+    /并非.{0,8}(可以写入|写入|确认|明确约束)/.test(t) ||
+    /不同意.{0,16}(将它|把它|这个约束|它)?作为明确约束/.test(t) ||
+    /不接受.{0,16}(这个约束|将它|把它|它)?作为明确约束/.test(t)
   );
 }
 
@@ -372,6 +379,9 @@ export function parseConstraintConfirmChoice(
   if (numbered === 2) return { ok: true, confirmed: false, still_uncertain: false };
   if (numbered === 3) return { ok: true, confirmed: false, still_uncertain: true };
 
+  // Uncertainty and negative intent are evaluated before affirmation.
+  // An earlier negation governing the confirm/write action is never overridden
+  // by a later affirmative substring such as 可以写入 or 确认这是明确约束.
   if (hasUncertaintyExpression(t)) {
     return { ok: true, confirmed: false, still_uncertain: true };
   }
@@ -387,6 +397,30 @@ export function parseConstraintConfirmChoice(
   return { ok: false, reason: "unclear" };
 }
 
+/**
+ * Negation governing the action of recording or converting the item into a fact.
+ * Intervening words are allowed. Evaluated before any affirmative keyword.
+ */
+function hasDefinitionPatchNegativeAction(t: string): boolean {
+  return (
+    /不想.{0,16}(把它|将它|它)?(作为明确事实|作为事实|改为事实|当作事实|记录为事实)/.test(t) ||
+    /不要.{0,16}(把它|将它|它)?(作为明确事实|作为事实|改为事实|当作事实|记录为事实)/.test(t) ||
+    /不认为.{0,20}(作为明确事实|作为事实|改为事实|当作事实|记录为事实)/.test(t) ||
+    /不愿意.{0,16}(把它|将它|它)?(改为事实|作为明确事实|作为事实|当作事实|记录为事实)/.test(t) ||
+    /不应该.{0,12}(记录为事实|作为明确事实|作为事实|改为事实|当作事实)/.test(t) ||
+    /不是要.{0,12}(作为事实记录|作为明确事实|作为事实|记录为事实)/.test(t) ||
+    /不作为|不改为|不当作|不记录|不要作为|不要改为/.test(t) ||
+    /不是明确事实/.test(t) ||
+    /不能.{0,8}(作为明确事实|作为事实|记录为事实)/.test(t) ||
+    /不可.{0,8}(作为明确事实|作为事实|记录为事实)/.test(t) ||
+    /并非.{0,12}(作为明确事实|作为事实|记录为事实)/.test(t)
+  );
+}
+
+function hasDefinitionPatchAffirmativeAction(t: string): boolean {
+  return /(作为明确事实|改为事实|当作事实|记录为事实|作为事实)/i.test(t);
+}
+
 export function parseDefinitionPatchChoice(
   statement: string,
 ): DefinitionPatchChoiceParse {
@@ -398,16 +432,21 @@ export function parseDefinitionPatchChoice(
   const numbered = standaloneNumber(t);
   if (numbered === 1) return { ok: true, as_fact: true };
   if (numbered === 2) return { ok: false, reason: "refused" };
+
+  // Refusal, uncertainty, and negative intent are evaluated before affirmation.
   if (hasUncertaintyExpression(t) || HEDGE_CUES_RE.test(t)) {
     return { ok: false, reason: "unclear" };
   }
-  if (
-    /不作为|不改为|不当作|不记录|不要作为|不要改为/.test(t) ||
-    /不是明确事实/.test(t)
-  ) {
+
+  const negated = hasDefinitionPatchNegativeAction(t);
+  const affirmed = hasDefinitionPatchAffirmativeAction(t);
+  if (negated) {
+    // A meaningful negation of the record-as-fact action must never be
+    // classified as affirmative merely because an affirmative keyword remains
+    // in the sentence. Conflicting or ambiguous polarity stays unclear.
     return { ok: false, reason: "unclear" };
   }
-  if (/(作为明确事实|改为事实|当作事实|记录为事实|作为事实)/i.test(t)) {
+  if (affirmed) {
     return { ok: true, as_fact: true };
   }
   return { ok: false, reason: "unclear" };
