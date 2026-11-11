@@ -5592,6 +5592,166 @@ async function main() {
       }
     });
 
+    // M2.4-R2-FU6: remaining negation-to-affirmation write-path closure.
+    // Negative-action detection must fire before affirmative keyword matching.
+    // Every case below goes through handleUserMessage().
+
+    await check("M2.4-R2-FU6-DP-N: remaining definition-patch negatives never write as fact", async () => {
+      const cases = [
+        { tag: "fu6dpna", phrase: "我不希望把它作为明确事实" },
+        { tag: "fu6dpnb", phrase: "我不打算把它作为明确事实" },
+        { tag: "fu6dpnc", phrase: "我不准备把它作为明确事实" },
+        { tag: "fu6dpnd", phrase: "我不赞成把它作为明确事实" },
+        { tag: "fu6dpne", phrase: "我不接受把它作为明确事实" },
+        { tag: "fu6dpnf", phrase: "我不认可把它作为明确事实" },
+        { tag: "fu6dpng", phrase: "我不希望将它记录为事实" },
+        { tag: "fu6dpnh", phrase: "我不打算改为事实" },
+      ];
+      for (const item of cases) {
+        const ctx = await seedDefinitionPatchPending(`m24r2${item.tag}`);
+        const itemId = ctx.out.pending_answer_resolution?.unresolved_items[0]?.item_id;
+        assert.ok(itemId, `${item.phrase} seed must have a pending item_id`);
+        stubResponse = `${item.tag} FREEFORM MUST NOT WIN`;
+        const out = await handleUserMessage({
+          session: ctx.out,
+          userMessage: item.phrase,
+          locale: "zh-CN",
+        });
+        const dc = out.decision_context!;
+        assert.equal(dc.reality_facts.length, ctx.factsBefore, `${item.phrase} must not write a RealityFact`);
+        assert.equal(dc.constraints.length, ctx.cstBefore, `${item.phrase} must not write a Constraint`);
+        assert.equal(dc.version, ctx.vBefore, `${item.phrase} must not bump DC version`);
+        const pending = out.pending_answer_resolution;
+        assert.ok(pending && pending.status === "pending", `${item.phrase} must keep pending active`);
+        assert.ok(
+          pending!.unresolved_items.some((u) => u.item_id === itemId),
+          `${item.phrase} must not silently remove the pending item`,
+        );
+        assert.equal(
+          pending!.unresolved_items.find((u) => u.item_id === itemId)?.reason,
+          "definition_patch_not_persistable",
+        );
+        const asst = lastAssistant(out);
+        assert.notEqual(asst.content, stubResponse, `${item.phrase} must not be replaced by a free-form model response`);
+        assert.ok(
+          asst.content.includes("待澄清信息") || asst.content.includes("作为明确事实") || asst.content.includes("定义修订"),
+          `${item.phrase} must keep the pending clarification, got=${asst.content.slice(0, 200)}`,
+        );
+        assert.equal(
+          Boolean(out.adaptive_ask_plan && !String(out.adaptive_ask_plan.ask_now_reason ?? "").includes("pending_answer_resolution")),
+          false,
+          `${item.phrase} must not enter ordinary NeedItem planning`,
+        );
+      }
+    });
+
+    await check("M2.4-R2-FU6-DP-M: mixed definition-patch polarity fails closed", async () => {
+      const phrase = "我不希望把它作为明确事实，请作为明确事实记录";
+      const ctx = await seedDefinitionPatchPending("m24r2fu6dpnm");
+      const itemId = ctx.out.pending_answer_resolution?.unresolved_items[0]?.item_id;
+      assert.ok(itemId, `${phrase} seed must have a pending item_id`);
+      stubResponse = "fu6dpnm FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.out,
+        userMessage: phrase,
+        locale: "zh-CN",
+      });
+      const dc = out.decision_context!;
+      assert.equal(dc.reality_facts.length, ctx.factsBefore, `${phrase} must not write a RealityFact`);
+      assert.equal(dc.constraints.length, ctx.cstBefore, `${phrase} must not write a Constraint`);
+      assert.equal(dc.version, ctx.vBefore, `${phrase} must not bump DC version`);
+      const pending = out.pending_answer_resolution;
+      assert.ok(pending && pending.status === "pending", `${phrase} must keep pending active`);
+      assert.ok(
+        pending!.unresolved_items.some((u) => u.item_id === itemId),
+        `${phrase} must not silently remove the pending item`,
+      );
+      assert.equal(
+        pending!.unresolved_items.find((u) => u.item_id === itemId)?.reason,
+        "definition_patch_not_persistable",
+      );
+      const asst = lastAssistant(out);
+      assert.notEqual(asst.content, stubResponse, `${phrase} must not be replaced by a free-form model response`);
+      assert.ok(
+        asst.content.includes("待澄清信息") || asst.content.includes("作为明确事实") || asst.content.includes("定义修订"),
+        `${phrase} must keep the pending clarification, got=${asst.content.slice(0, 200)}`,
+      );
+      assert.equal(
+        Boolean(out.adaptive_ask_plan && !String(out.adaptive_ask_plan.ask_now_reason ?? "").includes("pending_answer_resolution")),
+        false,
+        `${phrase} must not enter ordinary NeedItem planning`,
+      );
+    });
+
+    await check("M2.4-R2-FU6-CC-N: remaining constraint-confirm negatives never confirm a write", async () => {
+      const cases = [
+        { tag: "fu6ccna", phrase: "我不赞成可以写入" },
+        { tag: "fu6ccnb", phrase: "我不希望可以写入" },
+        { tag: "fu6ccnc", phrase: "我不打算确认这是明确约束" },
+        { tag: "fu6ccnd", phrase: "我不接受将它作为明确约束" },
+        { tag: "fu6ccne", phrase: "我不认可把它作为明确约束" },
+        { tag: "fu6ccnf", phrase: "我不准备把它作为明确约束写入" },
+      ];
+      for (const item of cases) {
+        const ctx = await seedEstimatedConstraintPending(`m24r2${item.tag}`);
+        const itemId = ctx.out.pending_answer_resolution?.unresolved_items[0]?.item_id;
+        assert.ok(itemId, `${item.phrase} seed must have a pending item_id`);
+        stubResponse = `${item.tag} FREEFORM MUST NOT WIN`;
+        const out = await handleUserMessage({
+          session: ctx.out,
+          userMessage: item.phrase,
+          locale: "zh-CN",
+        });
+        const dc = out.decision_context!;
+        const cst = dc.constraints.find((c) => c.statement.includes("不能超过五万"));
+        assert.equal(cst, undefined, `${item.phrase} must not write a Constraint`);
+        assert.equal(dc.reality_facts.length, ctx.factsBefore, `${item.phrase} must not write a RealityFact`);
+        assert.equal(dc.version, ctx.vBefore, `${item.phrase} must not bump DC version`);
+        const pending = out.pending_answer_resolution;
+        assert.ok(pending && pending.status === "pending", `${item.phrase} must remain pending`);
+        const kept = pending!.unresolved_items.find((u) => u.item_id === itemId);
+        assert.ok(kept, `${item.phrase} must keep the pending item`);
+        assert.notEqual(kept!.certainty, "explicit", `${item.phrase} must not be marked confirmed`);
+        const asst = lastAssistant(out);
+        assert.notEqual(asst.content, stubResponse, `${item.phrase} must not be replaced by a free-form model response`);
+        assert.equal(
+          Boolean(out.adaptive_ask_plan && !String(out.adaptive_ask_plan.ask_now_reason ?? "").includes("pending_answer_resolution")),
+          false,
+          `${item.phrase} must not enter ordinary NeedItem planning`,
+        );
+      }
+    });
+
+    await check("M2.4-R2-FU6-CC-M: mixed constraint-confirm polarity fails closed", async () => {
+      const phrase = "我不赞成可以写入，确认这是明确约束";
+      const ctx = await seedEstimatedConstraintPending("m24r2fu6ccnm");
+      const itemId = ctx.out.pending_answer_resolution?.unresolved_items[0]?.item_id;
+      assert.ok(itemId, `${phrase} seed must have a pending item_id`);
+      stubResponse = "fu6ccnm FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.out,
+        userMessage: phrase,
+        locale: "zh-CN",
+      });
+      const dc = out.decision_context!;
+      const cst = dc.constraints.find((c) => c.statement.includes("不能超过五万"));
+      assert.equal(cst, undefined, `${phrase} must not write a Constraint`);
+      assert.equal(dc.reality_facts.length, ctx.factsBefore, `${phrase} must not write a RealityFact`);
+      assert.equal(dc.version, ctx.vBefore, `${phrase} must not bump DC version`);
+      const pending = out.pending_answer_resolution;
+      assert.ok(pending && pending.status === "pending", `${phrase} must remain pending`);
+      const kept = pending!.unresolved_items.find((u) => u.item_id === itemId);
+      assert.ok(kept, `${phrase} must keep the pending item`);
+      assert.notEqual(kept!.certainty, "explicit", `${phrase} must not be marked confirmed`);
+      const asst = lastAssistant(out);
+      assert.notEqual(asst.content, stubResponse, `${phrase} must not be replaced by a free-form model response`);
+      assert.equal(
+        Boolean(out.adaptive_ask_plan && !String(out.adaptive_ask_plan.ask_now_reason ?? "").includes("pending_answer_resolution")),
+        false,
+        `${phrase} must not enter ordinary NeedItem planning`,
+      );
+    });
+
     const modelSrc = readFileSync(
         join(process.cwd(), "lib/poju/decision-intake/answer-interpretation-model.ts"),
         "utf8",

@@ -256,6 +256,9 @@ function hasExplicitCertaintyAffirm(t: string): boolean {
 function confirmNegated(t: string): boolean {
   // Negation of confirm/write action, including intervening words.
   // Evaluated before any affirmative keyword such as 可以写入.
+  // Governing verbs include 不赞成 / 不希望 / 不打算 / 不接受 / 不认可 / 不准备
+  // (and existing 不认为 / 不觉得 / 不同意) so a later affirmative substring
+  // cannot override an earlier negative action.
   return (
     /不确认/.test(t) ||
     /不能确认/.test(t) ||
@@ -267,11 +270,8 @@ function confirmNegated(t: string): boolean {
     /不可写入/.test(t) ||
     /不要写入/.test(t) ||
     /不许写入/.test(t) ||
-    /不认为.{0,16}(可以写入|写入|确认|作为明确约束|明确约束)/.test(t) ||
-    /不觉得.{0,16}(可以写入|写入|确认|作为明确约束|明确约束)/.test(t) ||
-    /并非.{0,8}(可以写入|写入|确认|明确约束)/.test(t) ||
-    /不同意.{0,16}(将它|把它|这个约束|它)?作为明确约束/.test(t) ||
-    /不接受.{0,16}(这个约束|将它|把它|它)?作为明确约束/.test(t)
+    /不(认为|觉得|赞成|希望|打算|接受|认可|准备|同意).{0,20}(可以写入|写入|确认|作为明确约束|明确约束)/.test(t) ||
+    /并非.{0,8}(可以写入|写入|确认|明确约束)/.test(t)
   );
 }
 
@@ -402,12 +402,12 @@ export function parseConstraintConfirmChoice(
  * Intervening words are allowed. Evaluated before any affirmative keyword.
  */
 function hasDefinitionPatchNegativeAction(t: string): boolean {
+  // Governing negative verbs before any later record/convert-as-fact action.
+  // Intervening words are allowed. 不希望 / 不打算 / 不准备 / 不赞成 /
+  // 不接受 / 不认可 are included alongside existing 不想 / 不要 / 不认为 /
+  // 不愿意 / 不应该 / 不是要.
   return (
-    /不想.{0,16}(把它|将它|它)?(作为明确事实|作为事实|改为事实|当作事实|记录为事实)/.test(t) ||
-    /不要.{0,16}(把它|将它|它)?(作为明确事实|作为事实|改为事实|当作事实|记录为事实)/.test(t) ||
-    /不认为.{0,20}(作为明确事实|作为事实|改为事实|当作事实|记录为事实)/.test(t) ||
-    /不愿意.{0,16}(把它|将它|它)?(改为事实|作为明确事实|作为事实|当作事实|记录为事实)/.test(t) ||
-    /不应该.{0,12}(记录为事实|作为明确事实|作为事实|改为事实|当作事实)/.test(t) ||
+    /不(想|要|希望|打算|准备|赞成|接受|认可|愿意|应该|认为).{0,20}(作为明确事实|作为事实记录|记录为事实|作为事实|改为事实|当作事实)/.test(t) ||
     /不是要.{0,12}(作为事实记录|作为明确事实|作为事实|记录为事实)/.test(t) ||
     /不作为|不改为|不当作|不记录|不要作为|不要改为/.test(t) ||
     /不是明确事实/.test(t) ||
