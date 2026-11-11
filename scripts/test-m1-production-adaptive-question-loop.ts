@@ -4,6 +4,7 @@
  * M2.4-R1-FU2: formal Conflict Resolution wired into the production answer path (Cases N–T).
  * M2.4-R1-FU3: negation-safe choice parsing + C1 persist-failure rollback (Cases U–Y).
  * M2.4-R2-FU8: source-grounded model extractions, unresolved-aspect scheduling, goal_change / insight_mismatch control flow.
+ * M2.4-R2-FU9: source-content equality, insight_mismatch clarification resolution, goal_change target extraction.
  *
  *   pnpm test:m1-production-adaptive-question-loop
  *
@@ -6515,7 +6516,16 @@ async function main() {
         __testOnlyM1Hooks: {
           interpretAnswerModel: () => ({
             classification: "goal_change",
-            extracted_items: [],
+            extracted_items: [
+              {
+                text: "要不要立刻出国读书",
+                semantic_kind: "definition_patch",
+                role_hint: null,
+                role_code_hint: ctx.legalCode,
+                certainty: "explicit",
+                source_quote: "要不要立刻出国读书",
+              },
+            ],
             unresolved_aspects: [],
             explanation: "proposed target change",
           }),
@@ -6553,7 +6563,16 @@ async function main() {
         __testOnlyM1Hooks: {
           interpretAnswerModel: () => ({
             classification: "goal_change",
-            extracted_items: [],
+            extracted_items: [
+              {
+                text: "要不要立刻出国读书",
+                semantic_kind: "definition_patch",
+                role_hint: null,
+                role_code_hint: ctx.legalCode,
+                certainty: "explicit",
+                source_quote: "要不要立刻出国读书",
+              },
+            ],
             unresolved_aspects: [],
             explanation: "proposed target change",
           }),
@@ -6591,7 +6610,16 @@ async function main() {
         __testOnlyM1Hooks: {
           interpretAnswerModel: () => ({
             classification: "goal_change",
-            extracted_items: [],
+            extracted_items: [
+              {
+                text: "要不要立刻出国读书",
+                semantic_kind: "definition_patch",
+                role_hint: null,
+                role_code_hint: ctx.legalCode,
+                certainty: "explicit",
+                source_quote: "要不要立刻出国读书",
+              },
+            ],
             unresolved_aspects: [],
             explanation: "proposed target change",
           }),
@@ -6630,7 +6658,16 @@ async function main() {
         __testOnlyM1Hooks: {
           interpretAnswerModel: () => ({
             classification: "goal_change",
-            extracted_items: [],
+            extracted_items: [
+              {
+                text: "要不要立刻出国读书",
+                semantic_kind: "definition_patch",
+                role_hint: null,
+                role_code_hint: ctx.legalCode,
+                certainty: "explicit",
+                source_quote: "要不要立刻出国读书",
+              },
+            ],
             unresolved_aspects: [],
             explanation: "proposed target change",
           }),
@@ -6738,11 +6775,19 @@ async function main() {
         apply: () => first,
       });
       const factsBeforeClarify = first.decision_context!.reality_facts.length;
+      const clarify = "不一致的地方是我并不是因为怕风险才犹豫。";
+      const clarifyDraft = {
+        classification: "clear_answer" as const,
+        extracted_items: [] as import("../lib/poju/decision-intake/types").ModelAnswerDraft["extracted_items"],
+        unresolved_aspects: [] as string[],
+        explanation: "no persistable user-authored fact in this clarification",
+      };
       stubResponse = "FU8D2 FREEFORM MUST NOT WIN";
       const clarified = await handleUserMessage({
         session: await durable(first.session_id),
-        userMessage: "不一致的地方是我并不是因为怕风险才犹豫。",
+        userMessage: clarify,
         locale: "zh-CN",
+        __testOnlyM1Hooks: { interpretAnswerModel: () => clarifyDraft },
       });
       assert.equal(
         clarified.decision_context!.reality_facts.length,
@@ -6767,18 +6812,926 @@ async function main() {
             ...committed.messages,
             {
               role: "user" as const,
-              content: "不一致的地方是我并不是因为怕风险才犹豫。",
+              content: clarify,
               timestamp: NOW,
               client_id: turnId,
             },
           ],
         },
-        userMessage: "不一致的地方是我并不是因为怕风险才犹豫。",
+        userMessage: clarify,
         locale: "zh-CN",
         userAlreadyAppended: true,
+        __testOnlyM1Hooks: { interpretAnswerModel: () => clarifyDraft },
       });
       assert.equal(replay.decision_context!.version, v1);
       assert.equal(replay.decision_context!.reality_facts.length, factsBeforeClarify);
+      assert.equal(replay.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
+      assert.equal(lastAssistant(replay).content, q1);
+    });
+
+
+    // M2.4-R2-FU9: persisted content must be user-authored; insight_mismatch
+    // clarifications are interpreted and retained; goal_change extracts an
+    // exact target phrase instead of the entire original sentence.
+    function fu9Item(
+      text: string,
+      opts: {
+        legalCode: string;
+        kind?: "reality_fact" | "constraint" | "definition_patch";
+        source_quote?: string;
+        certainty?: "explicit" | "estimated" | "unclear";
+      },
+    ) {
+      return {
+        text,
+        semantic_kind: opts.kind ?? "reality_fact",
+        role_hint: null,
+        role_code_hint: opts.legalCode,
+        certainty: opts.certainty ?? "explicit",
+        source_quote: opts.source_quote ?? text,
+      };
+    }
+    function fu9Draft(
+      items: ReturnType<typeof fu9Item>[],
+      extra?: Partial<import("../lib/poju/decision-intake/types").ModelAnswerDraft>,
+    ): import("../lib/poju/decision-intake/types").ModelAnswerDraft {
+      return {
+        classification: "clear_answer",
+        extracted_items: items,
+        unresolved_aspects: [],
+        explanation: "fu9",
+        ...extra,
+      };
+    }
+    function groundingRejectionsOf(session: POJUSessionState) {
+      return session.last_answer_event?.grounding_rejections ?? [];
+    }
+    function proposedWritesOf(session: POJUSessionState) {
+      return session.last_answer_event?.proposed_writes ?? [];
+    }
+    async function seedFu9Mismatch(
+      tag: string,
+      statement = "你刚才的分析跟我的实际情况不一致，我并不是怕风险。",
+    ) {
+      const ctx = await seedFu8Ready(tag);
+      stubResponse = `${tag} FREEFORM 1 MUST NOT WIN`;
+      const first = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft(
+              [
+                fu9Item("用户其实是风险偏好型人格", {
+                  legalCode: ctx.legalCode,
+                  source_quote: "我并不是怕风险",
+                }),
+              ],
+              {
+                classification: "insight_mismatch",
+                explanation: "psychological inference",
+              },
+            ),
+        },
+      });
+      await mutatePOJUSession(first.session_id, {
+        operation_id: `op_${tag}_mismatch`,
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => first,
+      });
+      return { ctx, first, committed: await durable(first.session_id) };
+    }
+
+    await check("M2.4-R2-FU9-A1: exact user statement as text and source_quote is accepted", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a1");
+      const statement = "我目前月薪三万。";
+      stubResponse = "FU9A1 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft([fu9Item(statement, { legalCode: ctx.legalCode })]),
+        },
+      });
+      const dc = out.decision_context!;
+      const fact = dc.reality_facts.find((f) => f.statement === statement);
+      assert.ok(fact, "FU9-A1 must persist the original unnormalized quote");
+      assert.equal(fact!.verification_level, "user_asserted");
+      assert.equal(fact!.status, "unverified");
+      assertRolesAndDirs(fact!, ctx.role, ctx.dirId, "FU9-A1");
+      assert.equal(dc.reality_facts.length, ctx.factsBefore + 1);
+      assert.equal(dc.constraints.length, ctx.cstBefore);
+      assert.ok(dc.version > ctx.vBefore);
+      assert.equal(groundingRejectionsOf(out).length, 0);
+    });
+
+    await check("M2.4-R2-FU9-A2: source_quote exists but text changes the meaning is rejected", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a2");
+      const statement = "我并不是怕风险。";
+      stubResponse = "FU9A2 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("我其实愿意承担风险。", {
+                legalCode: ctx.legalCode,
+                source_quote: "我并不是怕风险",
+              }),
+            ]),
+        },
+      });
+      const dc = out.decision_context!;
+      assert.equal(dc.reality_facts.length, ctx.factsBefore, "FU9-A2 must not write a paraphrase");
+      assert.equal(dc.constraints.length, ctx.cstBefore);
+      assert.equal(dc.version, ctx.vBefore);
+      const rejections = groundingRejectionsOf(out);
+      assert.ok(
+        rejections.some((r) => r.reason === "extraction_text_not_source_equivalent"),
+        "FU9-A2 must record extraction_text_not_source_equivalent",
+      );
+      assert.equal(proposedWritesOf(out).length, 0);
+      assert.equal(
+        proposedWritesOf(out).some((w) => w.verification_level === "user_asserted" || w.verification_level === "user_estimate"),
+        false,
+      );
+    });
+
+    await check("M2.4-R2-FU9-A3: inferred personality label is rejected", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a3");
+      const statement = "我并不是怕风险。";
+      stubResponse = "FU9A3 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("用户其实是风险偏好型人格", {
+                legalCode: ctx.legalCode,
+                source_quote: "我并不是怕风险",
+              }),
+            ]),
+        },
+      });
+      const dc = out.decision_context!;
+      assert.equal(dc.reality_facts.length, ctx.factsBefore, "FU9-A3 must not write a personality inference");
+      assert.equal(dc.constraints.length, ctx.cstBefore);
+      assert.equal(dc.version, ctx.vBefore);
+      assert.ok(
+        groundingRejectionsOf(out).some((r) => r.reason === "extraction_text_not_source_equivalent"),
+      );
+      assert.equal(proposedWritesOf(out).length, 0);
+    });
+
+    await check("M2.4-R2-FU9-A4: polarity-flipped substring paraphrase is rejected", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a4");
+      const statement = "我不想离职。";
+      stubResponse = "FU9A4 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("我想离职", {
+                legalCode: ctx.legalCode,
+                source_quote: "想离职",
+              }),
+            ]),
+        },
+      });
+      const dc = out.decision_context!;
+      assert.equal(dc.reality_facts.length, ctx.factsBefore, "FU9-A4 must not write 我想离职");
+      assert.equal(dc.constraints.length, ctx.cstBefore);
+      assert.equal(dc.version, ctx.vBefore);
+      assert.ok(
+        groundingRejectionsOf(out).some((r) => r.reason === "extraction_text_not_source_equivalent"),
+        "FU9-A4 must reject text that is not source-equivalent",
+      );
+      assert.equal(proposedWritesOf(out).length, 0);
+    });
+
+    await check("M2.4-R2-FU9-A5: mixed exact item and paraphrased inference writes only the exact item", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a5");
+      const statement = "我目前月薪三万。我并不是怕风险。";
+      stubResponse = "FU9A5 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("我目前月薪三万。", { legalCode: ctx.legalCode }),
+              fu9Item("用户其实是风险偏好型人格", {
+                legalCode: ctx.legalCode,
+                source_quote: "我并不是怕风险",
+              }),
+            ]),
+        },
+      });
+      const dc = out.decision_context!;
+      const exact = dc.reality_facts.filter((f) => f.statement === "我目前月薪三万。");
+      const inferred = dc.reality_facts.filter((f) => f.statement.includes("风险偏好"));
+      assert.equal(exact.length, 1, "FU9-A5 must persist the exact item");
+      assert.equal(inferred.length, 0, "FU9-A5 must not persist the paraphrase");
+      assert.equal(exact[0]!.verification_level, "user_asserted");
+      assertRolesAndDirs(exact[0]!, ctx.role, ctx.dirId, "FU9-A5");
+      assert.equal(dc.reality_facts.length, ctx.factsBefore + 1);
+      assert.equal(dc.constraints.length, ctx.cstBefore);
+      assert.ok(dc.version > ctx.vBefore);
+      assert.ok(
+        groundingRejectionsOf(out).some((r) => r.reason === "extraction_text_not_source_equivalent"),
+      );
+      assert.equal(
+        proposedWritesOf(out).some((w) => w.statement.includes("风险偏好")),
+        false,
+      );
+    });
+
+    await check("M2.4-R2-FU9-A6: missing, blank, and oversized source quotes never write DC", async () => {
+      const ctxMissing = await seedFu8Ready("m24r2fu9a6m");
+      stubResponse = "FU9A6M FREEFORM MUST NOT WIN";
+      const missing = await handleUserMessage({
+        session: ctxMissing.before,
+        userMessage: "我目前月薪三万。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => ({
+            classification: "clear_answer",
+            extracted_items: [
+              {
+                text: "我目前月薪三万。",
+                semantic_kind: "reality_fact",
+                role_hint: null,
+                role_code_hint: ctxMissing.legalCode,
+                certainty: "explicit",
+              },
+            ],
+            unresolved_aspects: [],
+            explanation: "missing source_quote",
+          }),
+        },
+      });
+      assert.equal(missing.decision_context!.reality_facts.length, ctxMissing.factsBefore);
+      assert.equal(missing.decision_context!.constraints.length, ctxMissing.cstBefore);
+      assert.equal(missing.decision_context!.version, ctxMissing.vBefore);
+
+      const ctxBlank = await seedFu8Ready("m24r2fu9a6b");
+      stubResponse = "FU9A6B FREEFORM MUST NOT WIN";
+      const blank = await handleUserMessage({
+        session: ctxBlank.before,
+        userMessage: "我目前月薪三万。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("我目前月薪三万。", { legalCode: ctxBlank.legalCode, source_quote: "   " }),
+            ]),
+        },
+      });
+      assert.equal(blank.decision_context!.reality_facts.length, ctxBlank.factsBefore);
+      assert.equal(blank.decision_context!.version, ctxBlank.vBefore);
+      assert.ok(groundingRejectionsOf(blank).some((r) => r.reason === "source_quote_empty"));
+      assert.equal(proposedWritesOf(blank).length, 0);
+
+      const ctxLong = await seedFu8Ready("m24r2fu9a6l");
+      const tooLong = `${"x".repeat(2001)}`;
+      stubResponse = "FU9A6L FREEFORM MUST NOT WIN";
+      const oversized = await handleUserMessage({
+        session: ctxLong.before,
+        userMessage: "我目前月薪三万。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("我目前月薪三万。", { legalCode: ctxLong.legalCode, source_quote: tooLong }),
+            ]),
+        },
+      });
+      assert.equal(oversized.decision_context!.reality_facts.length, ctxLong.factsBefore);
+      assert.equal(oversized.decision_context!.version, ctxLong.vBefore);
+      assert.ok(groundingRejectionsOf(oversized).some((r) => r.reason === "source_quote_too_long"));
+      assert.equal(proposedWritesOf(oversized).length, 0);
+    });
+
+    await check("M2.4-R2-FU9-A7: rejected content never receives user_asserted or user_estimate", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a7");
+      const statement = "我并不是怕风险。";
+      stubResponse = "FU9A7 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("用户其实是风险偏好型人格", {
+                legalCode: ctx.legalCode,
+                source_quote: "我并不是怕风险",
+                certainty: "explicit",
+              }),
+            ]),
+        },
+      });
+      assert.equal(out.decision_context!.version, ctx.vBefore);
+      assert.equal(proposedWritesOf(out).length, 0);
+      assert.equal(
+        (out.decision_context!.reality_facts ?? []).some(
+          (f) =>
+            (f.statement.includes("风险偏好") || f.statement.includes("怕风险")) &&
+            (f.verification_level === "user_asserted" || f.verification_level === "user_estimate"),
+        ),
+        false,
+      );
+    });
+
+    await check("M2.4-R2-FU9-A8: rejected items have structured inspectable rejection reasons", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a8");
+      stubResponse = "FU9A8 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: "我并不是怕风险。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("用户其实是风险偏好型人格", {
+                legalCode: ctx.legalCode,
+                source_quote: "我并不是怕风险",
+              }),
+            ]),
+        },
+      });
+      const rejections = groundingRejectionsOf(out);
+      assert.ok(rejections.length >= 1, "FU9-A8 must expose grounding_rejections on the session");
+      assert.equal(rejections[0]!.reason, "extraction_text_not_source_equivalent");
+      assert.equal(rejections[0]!.source_quote, "我并不是怕风险");
+      assert.equal(rejections[0]!.text.includes("风险偏好型人格"), true);
+      assert.equal(typeof rejections[0]!.extracted_index, "number");
+    });
+
+    await check("M2.4-R2-FU9-A9: replay does not duplicate writes or rejection records", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9a9");
+      const statement = "我目前月薪三万。我并不是怕风险。";
+      const draft = fu9Draft([
+        fu9Item("我目前月薪三万。", { legalCode: ctx.legalCode }),
+        fu9Item("用户其实是风险偏好型人格", {
+          legalCode: ctx.legalCode,
+          source_quote: "我并不是怕风险",
+        }),
+      ]);
+      stubResponse = "FU9A9 FREEFORM 1";
+      const first = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+      });
+      await mutatePOJUSession(first.session_id, {
+        operation_id: "op_m24r2fu9a9_first",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => first,
+      });
+      const committed = await durable(first.session_id);
+      const turnId = lastUserId(committed);
+      const facts1 = committed.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+      const rejections1 = groundingRejectionsOf(committed);
+      assert.equal(committed.decision_context!.reality_facts.length, ctx.factsBefore + 1);
+      assert.ok(rejections1.some((r) => r.reason === "extraction_text_not_source_equivalent"));
+      const v1 = committed.decision_context!.version;
+      stubResponse = "FU9A9 FREEFORM 2 MUST NOT WIN";
+      const replay = await handleUserMessage({
+        session: {
+          ...committed,
+          messages: [
+            ...committed.messages,
+            { role: "user" as const, content: statement, timestamp: NOW, client_id: turnId },
+          ],
+        },
+        userMessage: statement,
+        locale: "zh-CN",
+        userAlreadyAppended: true,
+        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+      });
+      const dc = replay.decision_context!;
+      assert.deepEqual(dc.reality_facts.map((f) => f.fact_id).sort(), facts1);
+      assert.equal(dc.version, v1);
+      assert.equal(groundingRejectionsOf(replay).length, rejections1.length);
+    });
+
+    await check("M2.4-R2-FU9-B1: initial mismatch creates a pending control item", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b1");
+      const control = seeded.first.pending_intake_control;
+      assert.ok(control && control.status === "pending", "FU9-B1 must create a pending control item");
+      assert.equal(control!.items[0]!.kind, "insight_mismatch");
+      assert.equal(control!.items[0]!.status, "pending");
+      assert.equal(seeded.first.decision_context!.reality_facts.length, seeded.ctx.factsBefore);
+      assert.equal(seeded.first.decision_context!.version, seeded.ctx.vBefore);
+      assert.equal(isOrdinaryNeedItemPlan(seeded.first.adaptive_ask_plan), false);
+      assert.ok(lastAssistant(seeded.first).content.includes("不一致"));
+    });
+
+    await check("M2.4-R2-FU9-B2: concrete clarification is passed through model interpretation", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b2");
+      const clarify = "我并不是怕风险，我只是还在比较时间窗口。";
+      const hookCalls: string[] = [];
+      stubResponse = "FU9B2 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: ({ statement }) => {
+            hookCalls.push(statement);
+            return fu9Draft(
+              [fu9Item("我只是还在比较时间窗口。", { legalCode: seeded.ctx.legalCode })],
+              { classification: "correction", explanation: "clarification" },
+            );
+          },
+        },
+      });
+      assert.deepEqual(hookCalls, [clarify], "FU9-B2 must interpret the clarification through the model hook");
+      assert.ok(out.last_answer_event, "FU9-B2 must produce an AnswerEvent");
+      assert.equal(out.last_answer_event!.raw_text.includes("比较时间窗口"), true);
+    });
+
+    await check("M2.4-R2-FU9-B3: exact user-authored clarification can enter the legal DC path", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b3");
+      const clarify = "我只是还在比较时间窗口。";
+      stubResponse = "FU9B3 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft([fu9Item(clarify, { legalCode: seeded.ctx.legalCode })]),
+        },
+      });
+      const dc = out.decision_context!;
+      const fact = dc.reality_facts.find((f) => f.statement === clarify);
+      assert.ok(fact, "FU9-B3 must persist the exact clarification quote");
+      assert.equal(fact!.verification_level, "user_asserted");
+      assertRolesAndDirs(fact!, seeded.ctx.role, seeded.ctx.dirId, "FU9-B3");
+      assert.ok(dc.version > seeded.ctx.vBefore);
+      const item = out.pending_intake_control?.items.find((row) => row.kind === "insight_mismatch");
+      assert.equal(item?.status, "clarified");
+    });
+
+    await check("M2.4-R2-FU9-B4: a model-generated inference cannot enter DC", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b4");
+      const clarify = "我并不是怕风险。";
+      stubResponse = "FU9B4 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([
+              fu9Item("用户其实是风险偏好型人格", {
+                legalCode: seeded.ctx.legalCode,
+                source_quote: "我并不是怕风险",
+              }),
+            ]),
+        },
+      });
+      assert.equal(out.decision_context!.reality_facts.length, seeded.ctx.factsBefore);
+      assert.equal(out.decision_context!.version, seeded.ctx.vBefore);
+      assert.ok(
+        groundingRejectionsOf(out).some((r) => r.reason === "extraction_text_not_source_equivalent"),
+      );
+      assert.equal(proposedWritesOf(out).length, 0);
+    });
+
+    await check("M2.4-R2-FU9-B5: clarification text and source turn are retained in the resolution record", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b5");
+      const clarify = "我只是还在比较时间窗口。";
+      stubResponse = "FU9B5 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft([fu9Item(clarify, { legalCode: seeded.ctx.legalCode })]),
+        },
+      });
+      const records = out.pending_intake_control?.resolution_records ?? [];
+      assert.equal(records.length, 1, "FU9-B5 must retain one resolution record");
+      const rec = records[0]!;
+      const mismatch = seeded.first.pending_intake_control!.items[0]!;
+      assert.equal(rec.original_mismatch_item_id, mismatch.item_id);
+      assert.equal(rec.original_mismatch_source_turn_id, mismatch.source_turn_id);
+      assert.equal(rec.clarification_turn_id, lastUserId(out));
+      assert.equal(rec.original_mismatch_text, mismatch.text);
+      assert.equal(rec.clarification_text, clarify);
+      assert.ok(rec.answer_event_id);
+      assert.ok(rec.resolution_status === "clarified" || rec.resolution_status === "clarified_without_dc_write");
+    });
+
+    await check("M2.4-R2-FU9-B6: model call failure leaves the control item pending", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b6");
+      stubResponse = "FU9B6 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "我只是还在比较时间窗口。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => {
+            throw new Error("fu9_model_call_failed");
+          },
+        },
+      });
+      const control = out.pending_intake_control;
+      assert.ok(control && control.status === "pending", "FU9-B6 must keep the control pending");
+      assert.equal(control!.items[0]!.status === "pending" || control!.items[0]!.status === "uncertain", true);
+      assert.equal(out.decision_context!.version, seeded.ctx.vBefore);
+      assert.equal((control!.resolution_records ?? []).length, 0);
+      const failAsst = [...out.messages].reverse().find((m) => m.role === "assistant");
+      const failMeta = (failAsst as { meta?: { m1_fail_closed?: boolean; m1_outcome?: string } } | undefined)?.meta;
+      assert.equal(failMeta?.m1_fail_closed, true);
+      assert.equal(failMeta?.m1_outcome, "answer_interpretation_failed");
+    });
+
+    await check("M2.4-R2-FU9-B7: invalid model schema leaves the control item pending", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b7");
+      stubResponse = "FU9B7 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "我只是还在比较时间窗口。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => ({
+            classification: "not_a_real_class",
+            extracted_items: [],
+            unresolved_aspects: [],
+            explanation: "invalid schema",
+          }),
+        },
+      });
+      const control = out.pending_intake_control;
+      assert.ok(control && control.status === "pending", "FU9-B7 must keep the control pending");
+      assert.equal(control!.items[0]!.kind, "insight_mismatch");
+      assert.notEqual(control!.items[0]!.status, "clarified");
+      assert.equal(out.decision_context!.version, seeded.ctx.vBefore);
+      assert.equal((control!.resolution_records ?? []).length, 0);
+      const failAsst = [...out.messages].reverse().find((m) => m.role === "assistant");
+      const failMeta = (failAsst as { meta?: { m1_fail_closed?: boolean; m1_outcome?: string } } | undefined)?.meta;
+      assert.equal(failMeta?.m1_fail_closed, true);
+      assert.equal(failMeta?.m1_outcome, "answer_interpretation_invalid_schema");
+    });
+
+    await check("M2.4-R2-FU9-B8: DC persistence failure leaves the control item pending", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b8");
+      const clarify = "我只是还在比较时间窗口。";
+      stubResponse = "FU9B8 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft([fu9Item(clarify, { legalCode: seeded.ctx.legalCode })]),
+          intakeControlPersist: async (previous) => ({
+            session: previous,
+            committed: false,
+            error: "persist_failed",
+          }),
+        },
+      });
+      const control = out.pending_intake_control;
+      assert.ok(control && control.status === "pending", "FU9-B8 must keep the control pending");
+      assert.notEqual(control!.items[0]!.status, "clarified");
+      assert.equal(out.decision_context!.version, seeded.ctx.vBefore);
+      assert.equal(out.decision_context!.reality_facts.length, seeded.ctx.factsBefore);
+      assert.equal((control!.resolution_records ?? []).length, 0);
+      const failAsst = [...out.messages].reverse().find((m) => m.role === "assistant");
+      const failMeta = (failAsst as { meta?: { m1_fail_closed?: boolean; m1_outcome?: string } } | undefined)?.meta;
+      assert.equal(failMeta?.m1_fail_closed, true);
+      assert.equal(failMeta?.m1_outcome, "persist_failed");
+    });
+
+    await check("M2.4-R2-FU9-B9: successful clarification resolves only its own mismatch item", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b9");
+      const beforeIds = (seeded.committed.pending_intake_control?.items ?? []).map((item) => item.item_id);
+      assert.equal(beforeIds.length, 1);
+      const clarify = "我只是还在比较时间窗口。";
+      stubResponse = "FU9B9 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft([fu9Item(clarify, { legalCode: seeded.ctx.legalCode })]),
+        },
+      });
+      const items = out.pending_intake_control?.items ?? [];
+      assert.equal(items.length, 1, "FU9-B9 must not invent additional control items");
+      assert.equal(items[0]!.item_id, beforeIds[0]);
+      assert.equal(items[0]!.status, "clarified");
+      assert.equal(items[0]!.kind, "insight_mismatch");
+    });
+
+    await check("M2.4-R2-FU9-B10: ordinary planning resumes only after successful resolution", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b10");
+      assert.equal(isOrdinaryNeedItemPlan(seeded.first.adaptive_ask_plan), false);
+      stubResponse = "FU9B10 FAIL FREEFORM MUST NOT WIN";
+      const failed = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "我只是还在比较时间窗口。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => {
+            throw new Error("fu9_b10_model_failed");
+          },
+        },
+      });
+      assert.ok(failed.pending_intake_control && failed.pending_intake_control.status === "pending");
+      assert.equal(isOrdinaryNeedItemPlan(failed.adaptive_ask_plan), false, "FU9-B10 must not resume after failure");
+
+      const clarify = "我只是还在比较时间窗口。";
+      stubResponse = "FU9B10 OK FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft([fu9Item(clarify, { legalCode: seeded.ctx.legalCode })]),
+        },
+      });
+      const item = out.pending_intake_control?.items[0];
+      assert.equal(item?.status, "clarified");
+      assert.ok(
+        isOrdinaryNeedItemPlan(out.adaptive_ask_plan) || out.adaptive_ask_plan,
+        "FU9-B10 may resume ordinary investigation after success",
+      );
+      assert.equal(
+        String(out.adaptive_ask_plan?.ask_now_reason ?? "").includes("pending_intake_control"),
+        false,
+        "FU9-B10 must leave the mismatch follow-up",
+      );
+    });
+
+    await check("M2.4-R2-FU9-B11: replay does not duplicate DC writes or resolution records", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu9b11");
+      const clarify = "我只是还在比较时间窗口。";
+      const draft = fu9Draft([fu9Item(clarify, { legalCode: seeded.ctx.legalCode })]);
+      stubResponse = "FU9B11 FREEFORM 1";
+      const clarified = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+      });
+      await mutatePOJUSession(clarified.session_id, {
+        operation_id: "op_m24r2fu9b11_clarify",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => clarified,
+      });
+      const committed = await durable(clarified.session_id);
+      const turnId = lastUserId(committed);
+      const facts1 = committed.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+      const v1 = committed.decision_context!.version;
+      const records1 = committed.pending_intake_control?.resolution_records ?? [];
+      assert.equal(records1.length, 1);
+      const q1 = lastAssistant(committed).content;
+      const asked1 = committed.decision_understanding?.budget.session_asked_count ?? 0;
+      stubResponse = "FU9B11 FREEFORM 2 MUST NOT WIN";
+      const replay = await handleUserMessage({
+        session: {
+          ...committed,
+          messages: [
+            ...committed.messages,
+            { role: "user" as const, content: clarify, timestamp: NOW, client_id: turnId },
+          ],
+        },
+        userMessage: clarify,
+        locale: "zh-CN",
+        userAlreadyAppended: true,
+        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+      });
+      assert.deepEqual(replay.decision_context!.reality_facts.map((f) => f.fact_id).sort(), facts1);
+      assert.equal(replay.decision_context!.version, v1);
+      assert.equal((replay.pending_intake_control?.resolution_records ?? []).length, 1);
+      assert.equal(replay.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
+      assert.equal(lastAssistant(replay).content, q1);
+    });
+
+    async function seedFu9GoalChange(
+      tag: string,
+      opts?: {
+        statement?: string;
+        extracted_items?: import("../lib/poju/decision-intake/types").ModelAnswerDraft["extracted_items"];
+      },
+    ) {
+      const ctx = await seedFu8Ready(tag);
+      const statement = opts?.statement ?? "我想换个方向，改成要不要立刻出国读书。";
+      const extracted_items =
+        opts?.extracted_items ??
+        [
+          fu9Item("要不要立刻出国读书", {
+            legalCode: ctx.legalCode,
+            kind: "definition_patch",
+          }),
+        ];
+      stubResponse = `${tag} FREEFORM 1 MUST NOT WIN`;
+      const first = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft(extracted_items, {
+              classification: "goal_change",
+              explanation: "proposed target change",
+            }),
+        },
+      });
+      await mutatePOJUSession(first.session_id, {
+        operation_id: `op_${tag}_goal`,
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => first,
+      });
+      return { ctx, first, committed: await durable(first.session_id), statement };
+    }
+
+    await check("M2.4-R2-FU9-C1: proposed target is extracted separately from introductory wording", async () => {
+      const seeded = await seedFu9GoalChange("m24r2fu9c1");
+      const control = seeded.first.pending_intake_control;
+      assert.ok(control && control.status === "pending");
+      assert.equal(control!.items[0]!.kind, "goal_change");
+      assert.equal(control!.items[0]!.proposed_decision_target, "要不要立刻出国读书");
+      assert.notEqual(control!.items[0]!.proposed_decision_target, seeded.statement);
+      assert.equal(isOrdinaryNeedItemPlan(seeded.first.adaptive_ask_plan), false);
+      assert.ok(lastAssistant(seeded.first).content.includes("要不要立刻出国读书"));
+      assert.ok(lastAssistant(seeded.first).content.includes("确认更换决策目标"));
+      assert.equal(lastAssistant(seeded.first).content.includes("请直接重述"), false);
+    });
+
+    await check("M2.4-R2-FU9-C2: the exact target phrase is retained", async () => {
+      const seeded = await seedFu9GoalChange("m24r2fu9c2");
+      assert.equal(
+        seeded.first.pending_intake_control!.items[0]!.proposed_decision_target,
+        "要不要立刻出国读书",
+      );
+      assert.ok(lastAssistant(seeded.first).content.includes("「要不要立刻出国读书」"));
+    });
+
+    await check("M2.4-R2-FU9-C3: a paraphrased or ungrounded target is not accepted", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9c3");
+      const statement = "我想换个方向，改成要不要立刻出国读书。";
+      stubResponse = "FU9C3 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft(
+              [
+                fu9Item("是否立即赴海外留学", {
+                  legalCode: ctx.legalCode,
+                  kind: "definition_patch",
+                  source_quote: "要不要立刻出国读书",
+                }),
+              ],
+              { classification: "goal_change", explanation: "paraphrased target" },
+            ),
+        },
+      });
+      const item = out.pending_intake_control?.items[0];
+      assert.ok(item && item.kind === "goal_change");
+      assert.equal(item!.proposed_decision_target, undefined, "FU9-C3 must not accept a paraphrased target");
+      assert.ok(groundingRejectionsOf(out).some((r) => r.reason === "extraction_text_not_source_equivalent"));
+      assert.equal(isOrdinaryNeedItemPlan(out.adaptive_ask_plan), false);
+      assert.ok(lastAssistant(out).content.includes("请直接重述"));
+      assert.equal(lastAssistant(out).content.includes("确认更换决策目标"), false);
+      assert.deepEqual(blueprintSnapshot(out), ctx.bpBefore);
+      assert.equal(definitionQuestion(out), ctx.dqBefore);
+    });
+
+    await check("M2.4-R2-FU9-C4: missing target phrase asks the user to restate, not to confirm", async () => {
+      const ctx = await seedFu8Ready("m24r2fu9c4");
+      stubResponse = "FU9C4 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: "我想换一个决策目标。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([], { classification: "goal_change", explanation: "no target phrase" }),
+        },
+      });
+      const item = out.pending_intake_control?.items[0];
+      assert.ok(item && item.kind === "goal_change" && item.status === "pending");
+      assert.equal(item!.proposed_decision_target, undefined);
+      const q = lastAssistant(out).content;
+      assert.ok(q.includes("请直接重述"));
+      assert.equal(q.includes("确认更换决策目标"), false);
+      assert.equal(q.includes("1. 确认更换决策目标"), false);
+      assert.equal(isOrdinaryNeedItemPlan(out.adaptive_ask_plan), false);
+      assert.ok(String(out.adaptive_ask_plan?.ask_now_reason ?? "").includes("goal_change_restate"));
+    });
+
+    await check("M2.4-R2-FU9-C5: explicit confirmation still does not mutate Blueprint or DC definition", async () => {
+      const seeded = await seedFu9GoalChange("m24r2fu9c5");
+      stubResponse = "FU9C5 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "1",
+        locale: "zh-CN",
+      });
+      assert.deepEqual(blueprintSnapshot(out), seeded.ctx.bpBefore);
+      assert.equal(definitionQuestion(out), seeded.ctx.dqBefore);
+      assert.equal(out.pending_intake_control?.entered_controlled_blueprint_update, true);
+      assert.equal(out.pending_intake_control?.items[0]!.status, "confirmed");
+      assert.equal(out.pending_intake_control?.items[0]!.proposed_decision_target, "要不要立刻出国读书");
+      assert.equal(isOrdinaryNeedItemPlan(out.adaptive_ask_plan), false);
+      assert.ok(lastAssistant(out).content.includes("受控的 Blueprint 更新路径"));
+      assert.equal(out.decision_context!.version, seeded.ctx.vBefore);
+    });
+
+    await check("M2.4-R2-FU9-C6: explicit refusal retains the original target", async () => {
+      const seeded = await seedFu9GoalChange("m24r2fu9c6");
+      const oldClarify = lastAssistant(seeded.first).content;
+      stubResponse = "FU9C6 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "2",
+        locale: "zh-CN",
+      });
+      assert.deepEqual(blueprintSnapshot(out), seeded.ctx.bpBefore);
+      assert.equal(definitionQuestion(out), seeded.ctx.dqBefore);
+      assert.equal(out.pending_intake_control?.items[0]!.status, "declined");
+      assert.equal(out.pending_intake_control?.entered_controlled_blueprint_update ?? false, false);
+      assert.notEqual(lastAssistant(out).content, oldClarify);
+      assert.ok(isOrdinaryNeedItemPlan(out.adaptive_ask_plan) || out.adaptive_ask_plan);
+    });
+
+    await check("M2.4-R2-FU9-C7: uncertainty keeps the control item pending", async () => {
+      const seeded = await seedFu9GoalChange("m24r2fu9c7");
+      const oldClarify = lastAssistant(seeded.first).content;
+      const asked1 = seeded.first.decision_understanding?.budget.session_asked_count ?? 0;
+      stubResponse = "FU9C7 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "我不确定",
+        locale: "zh-CN",
+      });
+      const control = out.pending_intake_control;
+      assert.ok(control && control.status === "pending");
+      assert.ok(control!.items[0]!.status === "pending" || control!.items[0]!.status === "uncertain");
+      assert.equal(control!.entered_controlled_blueprint_update ?? false, false);
+      assert.equal(isOrdinaryNeedItemPlan(out.adaptive_ask_plan), false);
+      assert.equal(lastAssistant(out).content, oldClarify);
+      assert.equal(out.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
+      assert.deepEqual(blueprintSnapshot(out), seeded.ctx.bpBefore);
+    });
+
+    await check("M2.4-R2-FU9-C8: replay does not repeat the target-change operation", async () => {
+      const seeded = await seedFu9GoalChange("m24r2fu9c8");
+      const confirmed = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: "1",
+        locale: "zh-CN",
+      });
+      await mutatePOJUSession(confirmed.session_id, {
+        operation_id: "op_m24r2fu9c8_confirm",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => confirmed,
+      });
+      const committed = await durable(confirmed.session_id);
+      const turnId = lastUserId(committed);
+      const q1 = lastAssistant(committed).content;
+      const asked1 = committed.decision_understanding?.budget.session_asked_count ?? 0;
+      stubResponse = "FU9C8 FREEFORM MUST NOT WIN";
+      const replay = await handleUserMessage({
+        session: {
+          ...committed,
+          messages: [
+            ...committed.messages,
+            { role: "user" as const, content: "1", timestamp: NOW, client_id: turnId },
+          ],
+        },
+        userMessage: "1",
+        locale: "zh-CN",
+        userAlreadyAppended: true,
+      });
+      assert.equal(replay.pending_intake_control?.entered_controlled_blueprint_update, true);
+      assert.deepEqual(blueprintSnapshot(replay), seeded.ctx.bpBefore);
+      assert.equal(definitionQuestion(replay), seeded.ctx.dqBefore);
+      assert.equal(replay.decision_context!.version, seeded.ctx.vBefore);
       assert.equal(replay.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
       assert.equal(lastAssistant(replay).content, q1);
     });

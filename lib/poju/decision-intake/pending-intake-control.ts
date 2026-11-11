@@ -102,13 +102,30 @@ export function isControlClarificationUncertain(statement: string): boolean {
   );
 }
 
+export function hasResolvedProposedDecisionTarget(
+  item: IntakeControlItem,
+): boolean {
+  return Boolean(item.proposed_decision_target?.trim());
+}
+
 function questionTextForItem(
   item: IntakeControlItem,
   originalTarget: string | null,
 ): string {
   if (item.kind === "goal_change") {
-    const proposed = (item.proposed_decision_target ?? item.text).trim();
     const current = originalTarget?.trim() || "（当前目标未单独记录）";
+    if (!hasResolvedProposedDecisionTarget(item)) {
+      return [
+        "你提出要更换决策目标，但还没有给出可核对的新目标原文。",
+        "",
+        `当前决策目标仍是：「${current}」`,
+        "",
+        "请直接重述你建议的新决策目标，使用你自己的原话，不要用转述或推断。",
+        "",
+        "在明确新目标之前，系统不会询问是否确认更换，也不会自动修改 Blueprint 或已确认的决策定义。",
+      ].join("\n");
+    }
+    const proposed = item.proposed_decision_target!.trim();
     return [
       "你提出将决策目标改为以下内容：",
       "",
@@ -135,7 +152,11 @@ function questionTextForItem(
 }
 
 function planIdForItem(control: PendingIntakeControl, item: IntakeControlItem): string {
-  return `qp_intake_control_${item.kind}_${control.source_turn_id}_${item.item_id}`.slice(
+  const stage =
+    item.kind === "goal_change" && !hasResolvedProposedDecisionTarget(item)
+      ? "goal_change_restate"
+      : item.kind;
+  return `qp_intake_control_${stage}_${control.source_turn_id}_${item.item_id}`.slice(
     0,
     120,
   );
@@ -250,10 +271,15 @@ export function buildIntakeControlPlan(input: {
     fact_role_codes: [...codes],
     missing_info: item.kind,
     decision_value: "supporting",
-    ask_now_reason: `pending_intake_control_${item.kind}`,
+    ask_now_reason:
+      item.kind === "goal_change" && !hasResolvedProposedDecisionTarget(item)
+        ? "pending_intake_control_goal_change_restate"
+        : `pending_intake_control_${item.kind}`,
     expected_info:
       item.kind === "goal_change"
-        ? "请确认是否更换决策目标"
+        ? hasResolvedProposedDecisionTarget(item)
+          ? "请确认是否更换决策目标"
+          : "请重述建议的新决策目标"
         : "请澄清当前未决项",
     depth: 0,
     budget_cost: 1,

@@ -106,6 +106,62 @@ export function groundSourceQuote(
   return { ok: true };
 }
 
+/**
+ * Canonical user-authored content for a model-derived DC write is source_quote.
+ * item.text must be source-equivalent under the same conservative normalization.
+ * On success, persist the original unnormalized quote, never a model paraphrase.
+ */
+export function groundExtractedItem(
+  item: { text: string; source_quote: string },
+  statement: string,
+): SourceQuoteGroundingResult {
+  const quoteGrounding = groundSourceQuote(item.source_quote, statement);
+  if (!quoteGrounding.ok) return quoteGrounding;
+  const normalizedText = normalizeAnswerGroundingText(item.text);
+  const normalizedQuote = normalizeAnswerGroundingText(item.source_quote);
+  if (!normalizedText || normalizedText !== normalizedQuote) {
+    return { ok: false, reason: "extraction_text_not_source_equivalent" };
+  }
+  return { ok: true };
+}
+
+export function persistedSourceStatement(sourceQuote: string): string {
+  return sourceQuote.slice(0, 2000);
+}
+
+/**
+ * For goal_change only: accept the first grounded definition_patch whose
+ * text is source-equivalent to its quote, and keep the unnormalized quote
+ * as the proposed target. Never use the entire original sentence.
+ */
+export function extractGroundedProposedDecisionTarget(
+  draft: ModelAnswerDraft,
+  statement: string,
+): {
+  proposed_decision_target: string | undefined;
+  rejections: SourceQuoteRejection[];
+} {
+  const rejections: SourceQuoteRejection[] = [];
+  let proposed_decision_target: string | undefined;
+  for (let extractedIndex = 0; extractedIndex < draft.extracted_items.length; extractedIndex++) {
+    const item = draft.extracted_items[extractedIndex]!;
+    const grounding = groundExtractedItem(item, statement);
+    if (!grounding.ok) {
+      rejections.push({
+        extracted_index: extractedIndex,
+        text: item.text.slice(0, 500),
+        source_quote: item.source_quote,
+        reason: grounding.reason,
+      });
+      continue;
+    }
+    if (item.semantic_kind === "definition_patch" && !proposed_decision_target) {
+      proposed_decision_target = persistedSourceStatement(item.source_quote);
+    }
+  }
+  return { proposed_decision_target, rejections };
+}
+
 
 /**
  * Validate a complete authorization set. Fail closed on malformed, empty,
@@ -455,13 +511,23 @@ export function answerEventFromModelDraft(input: {
     .filter((aspect) => aspect.text.trim().length > 0);
 
   const controlItems: IntakeControlItem[] = [];
+  let goalChangeTarget: string | undefined;
   if (cls === "goal_change") {
+    const extractedTarget = extractGroundedProposedDecisionTarget(input.draft, statement);
+    groundingRejections.push(...extractedTarget.rejections);
+    goalChangeTarget = extractedTarget.proposed_decision_target;
+    for (const r of extractedTarget.rejections) {
+      notes.push(`rejected_${r.reason}`);
+    }
+    if (!goalChangeTarget) {
+      notes.push("goal_change_target_unresolved");
+    }
     controlItems.push({
       item_id: intakeControlItemId(input.source_turn_id, "goal_change"),
       kind: "goal_change",
       source_turn_id: input.source_turn_id,
       text: statement.slice(0, 2000),
-      proposed_decision_target: statement.slice(0, 2000),
+      ...(goalChangeTarget ? { proposed_decision_target: goalChangeTarget } : {}),
       sent_question_id: sentQuestionId,
       authorized_role_codes: [...authorizedRoleCodes],
       authorized_dir_ids: [...authorizedDirIds],
@@ -559,12 +625,28 @@ export function answerEventFromModelDraft(input: {
     return eventShell([], "invalid_input");
   }
 
-  if (
-    cls === "off_topic" ||
-    cls === "invalid_input" ||
-    cls === "goal_change" ||
-    cls === "insight_mismatch"
-  ) {
+  if (cls === "off_topic" || cls === "invalid_input") {
+    notes.push(`${cls}_no_dc_write`);
+    return eventShell([], cls);
+  }
+  if (cls === "goal_change" || cls === "insight_mismatch") {
+    // Never write DC from these control-plane classifications.
+    // goal_change target extraction already recorded its rejections.
+    if (cls === "insight_mismatch") {
+      for (let extractedIndex = 0; extractedIndex < input.draft.extracted_items.length; extractedIndex++) {
+        const item = input.draft.extracted_items[extractedIndex]!;
+        const grounding = groundExtractedItem(item, statement);
+        if (!grounding.ok) {
+          groundingRejections.push({
+            extracted_index: extractedIndex,
+            text: item.text.slice(0, 500),
+            source_quote: item.source_quote,
+            reason: grounding.reason,
+          });
+          notes.push(`rejected_${grounding.reason}`);
+        }
+      }
+    }
     notes.push(`${cls}_no_dc_write`);
     return eventShell([], cls);
   }
@@ -583,7 +665,7 @@ export function answerEventFromModelDraft(input: {
 
   for (let extractedIndex = 0; extractedIndex < input.draft.extracted_items.length; extractedIndex++) {
     const item = input.draft.extracted_items[extractedIndex]!;
-    const grounding = groundSourceQuote(item.source_quote, statement);
+    const grounding = groundExtractedItem(item, statement);
     if (!grounding.ok) {
       groundingRejections.push({
         extracted_index: extractedIndex,
@@ -595,6 +677,7 @@ export function answerEventFromModelDraft(input: {
       // Do not create a ProposedWrite or assign user_asserted / user_estimate.
       continue;
     }
+    const persistedText = persistedSourceStatement(item.source_quote);
     // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
     const code = item.role_code_hint ?? null;
 
@@ -644,7 +727,7 @@ export function answerEventFromModelDraft(input: {
 
     acceptedItems.push({
       extracted_index: extractedIndex,
-      text: item.text.slice(0, 500),
+      text: persistedText,
       semantic_kind: item.semantic_kind,
       authorizedDirId: match[1]!,
       authorizedRole: match[2]!,

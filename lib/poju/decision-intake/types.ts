@@ -119,7 +119,8 @@ export type UnresolvedAnswerItem = {
 export type SourceQuoteRejectionReason =
   | "source_quote_not_grounded"
   | "source_quote_empty"
-  | "source_quote_too_long";
+  | "source_quote_too_long"
+  | "extraction_text_not_source_equivalent";
 
 export type SourceQuoteRejection = {
   extracted_index: number;
@@ -170,6 +171,24 @@ export type IntakeControlItem = {
   status: IntakeControlItemStatus;
 };
 
+export type IntakeControlResolutionStatus =
+  | "clarified"
+  | "clarified_without_dc_write";
+
+/**
+ * Structured audit of an insight_mismatch clarification.
+ * Not a Decision Context write and not a second fact store.
+ */
+export type IntakeControlResolutionRecord = {
+  original_mismatch_item_id: string;
+  original_mismatch_source_turn_id: string;
+  clarification_turn_id: string;
+  original_mismatch_text: string;
+  clarification_text: string;
+  answer_event_id: string | null;
+  resolution_status: IntakeControlResolutionStatus;
+};
+
 export type PendingIntakeControlStatus = "pending" | "resolved";
 
 export type PendingIntakeControl = {
@@ -192,6 +211,11 @@ export type PendingIntakeControl = {
   original_decision_target?: string | null;
   /** Follow-up turn that last resolved or confirmed a control item; used for replay. */
   last_resolved_turn_id?: string | null;
+  /**
+   * Auditable insight_mismatch clarification resolutions.
+   * Scheduling/control metadata only; never a second fact store.
+   */
+  resolution_records?: IntakeControlResolutionRecord[];
 };
 
 export type AnswerEvent = {

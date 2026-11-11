@@ -453,6 +453,12 @@ export interface POJUSessionState {
    */
   pending_intake_control?: import("./decision-intake/types").PendingIntakeControl | null;
   /**
+   * Most recent AnswerEvent from the production interpretation path.
+   * Scheduling/audit metadata for inspectable grounding rejections.
+   * Not a second Decision Context or fact store.
+   */
+  last_answer_event?: import("./decision-intake/types").AnswerEvent | null;
+  /**
    * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
    */
   opening_anchors?: import("./decision-context/opening-anchor").OpeningAnchor[];

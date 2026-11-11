@@ -194,15 +194,17 @@ Source grounding:
 1. Every extracted item must include source_quote: the exact user-answer substring that supports that item.
 2. Do not return a paraphrase as source_quote.
 3. One item must have exactly one source_quote.
-4. Never use context facts, model inference, or likely implications as source evidence.
-5. If no exact source quote exists in the current user answer, do not emit a persistable extracted item. Put the leftover uncertainty in unresolved_aspects instead.
+4. text must equal source_quote exactly. Do not put a paraphrase, summary, interpretation, or inferred implication in text.
+5. Never use context facts, model inference, or likely implications as source evidence.
+6. If no exact source quote exists in the current user answer, do not emit a persistable extracted item. Put the leftover uncertainty in unresolved_aspects instead.
+7. For classification "goal_change", put only the exact proposed new decision-target phrase in a definition_patch item, with text equal to source_quote. Do not use the entire introductory sentence as the target.
 
 JSON shape:
 {
   "classification": one of ${MODEL_ANSWER_CLASSIFICATIONS.join("|")},
   "extracted_items": [
     {
-      "text": "verbatim or close paraphrase of one user-stated item",
+      "text": "must equal source_quote exactly; never a paraphrase or interpretation",
       "semantic_kind": "reality_fact" | "constraint" | "definition_patch",
       "role_code_hint": "complete authorized role code from context.authorized.fact_role_codes, or null",
       "role_hint": null,
@@ -401,9 +403,9 @@ export function parseAndValidateModelAnswerDraft(
     if (!text) continue;
     // Preserve the original quote. Do not manufacture one, and do not
     // truncate a too-long quote into a shorter string that might falsely ground.
+    // Blank or oversized quotes stay on the item so the deterministic
+    // grounding gate can record a structured rejection.
     const source_quote = row.source_quote;
-    if (source_quote.trim().length === 0) continue;
-    if (source_quote.length > MAX_SOURCE_QUOTE_LENGTH) continue;
     const semantic_kind = row.semantic_kind as ModelSemanticKind;
     // Same text can be two distinct extracted items (different item_id / role).
     // Do not use text alone as identity or drop the second item.

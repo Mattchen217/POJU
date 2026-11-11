@@ -72,6 +72,10 @@ function mapAdaptiveOutcome(turn: {
   answer_event: AnswerEvent | null;
   bootstrapped?: boolean;
 }, initOnly: boolean): CollectingDcTurnResult {
+  const session = {
+    ...turn.session,
+    last_answer_event: turn.answer_event ?? turn.session.last_answer_event ?? null,
+  };
   const common = {
     authorized_question: turn.authorized_question,
     plan: turn.plan,
@@ -83,7 +87,7 @@ function mapAdaptiveOutcome(turn: {
 
   if (turn.outcome === "dc_persist_failed") {
     return {
-      session: turn.session,
+      session,
       outcome: "persist_failed",
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -95,7 +99,7 @@ function mapAdaptiveOutcome(turn: {
   }
   if (turn.outcome === "dc_persist_threw") {
     return {
-      session: turn.session,
+      session,
       outcome: "persist_threw",
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -107,7 +111,7 @@ function mapAdaptiveOutcome(turn: {
   }
   if (turn.outcome === "not_applicable_phase") {
     return {
-      session: turn.session,
+      session,
       outcome: "not_applied",
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -120,7 +124,7 @@ function mapAdaptiveOutcome(turn: {
     turn.outcome === "answer_interpretation_invalid_schema"
   ) {
     return {
-      session: turn.session,
+      session,
       outcome: turn.outcome,
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -132,7 +136,7 @@ function mapAdaptiveOutcome(turn: {
   }
   if (turn.outcome === "planner_blocked") {
     return {
-      session: turn.session,
+      session,
       outcome: "planner_blocked",
       ask_planned: false,
       persist_error: turn.persist_error,
@@ -151,7 +155,7 @@ function mapAdaptiveOutcome(turn: {
       (turn.understanding.readiness.verdict === "ready_for_final_confirm" ||
         turn.understanding.readiness.verdict === "hard_budget_exhausted");
     return {
-      session: turn.session,
+      session,
       outcome: "not_applied",
       ask_planned: Boolean(turn.plan) || (readinessStop && !turn.ask_error),
       persist_error: turn.persist_error ?? "turn_already_mapped",
@@ -165,7 +169,7 @@ function mapAdaptiveOutcome(turn: {
     turn.persist_error === "empty_statement";
 
   return {
-    session: turn.session,
+    session,
     outcome: skipWrite && !initOnly ? "not_applied" : "dc_committed",
     ask_planned:
       Boolean(turn.plan) ||

@@ -1265,6 +1265,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           dc_write_revision: sessionForLlm.dc_write_revision,
           pending_answer_resolution: sessionForLlm.pending_answer_resolution,
           pending_intake_control: sessionForLlm.pending_intake_control,
+          last_answer_event:
+            sessionForLlm.last_answer_event ??
+            m1CollectingTurn.answer_event ??
+            workingSession.last_answer_event,
         };
         // M1-R: keep production collecting phase after bootstrap / adaptive plan.
         if (sessionForLlm.agent_v2) {
@@ -1748,6 +1752,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           m1CollectingTurn.session.pending_intake_control !== undefined
             ? m1CollectingTurn.session.pending_intake_control
             : sessionOut.pending_intake_control,
+        last_answer_event:
+          m1CollectingTurn.session.last_answer_event ??
+          m1CollectingTurn.answer_event ??
+          sessionOut.last_answer_event,
         messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
       },
       m1CollectingTurn.plan,
@@ -1793,6 +1801,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         m1CollectingTurn.session.pending_intake_control !== undefined
           ? m1CollectingTurn.session.pending_intake_control
           : sessionOut.pending_intake_control,
+      last_answer_event:
+        m1CollectingTurn.session.last_answer_event ??
+        m1CollectingTurn.answer_event ??
+        sessionOut.last_answer_event,
       messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
     };
   }
