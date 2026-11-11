@@ -30,6 +30,12 @@ const OFF_TOPIC_RE =
 
 const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
 
+/** Stable pending item identity: source_turn_id + extracted-item index. Never text alone. */
+export function unresolvedItemId(sourceTurnId: string, extractedIndex: number): string {
+  return `${sourceTurnId}#${extractedIndex}`;
+}
+
+
 /**
  * Validate a complete authorization set. Fail closed on malformed, empty,
  * duplicate, or last-sent DIR-mismatched codes. Do not filter bad items
@@ -365,6 +371,7 @@ export function answerEventFromModelDraft(input: {
     input.session.decision_understanding?.last_sent_question?.plan_id ?? "";
 
   const pushUnresolvedItem = (item: {
+    extracted_index: number;
     text: string;
     semantic_kind: "reality_fact" | "constraint" | "definition_patch";
     certainty: "explicit" | "estimated" | "unclear";
@@ -373,6 +380,7 @@ export function answerEventFromModelDraft(input: {
     note: string;
   }) => {
     unresolvedItems.push({
+      item_id: unresolvedItemId(input.source_turn_id, item.extracted_index),
       source_turn_id: input.source_turn_id,
       text: item.text.slice(0, 500),
       semantic_kind: item.semantic_kind,
@@ -432,21 +440,25 @@ export function answerEventFromModelDraft(input: {
   }
 
   type AcceptedItem = {
+    extracted_index: number;
     text: string;
     semantic_kind: "reality_fact" | "constraint" | "definition_patch";
     authorizedDirId: string;
     authorizedRole: string;
+    bound_role_code: string;
     certainty: "explicit" | "estimated" | "unclear";
   };
 
   const acceptedItems: AcceptedItem[] = [];
 
-  for (const item of input.draft.extracted_items) {
+  for (let extractedIndex = 0; extractedIndex < input.draft.extracted_items.length; extractedIndex++) {
+    const item = input.draft.extracted_items[extractedIndex]!;
     // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
     const code = item.role_code_hint ?? null;
 
     if (code && !authorizedRoleCodes.includes(code)) {
       pushUnresolvedItem({
+        extracted_index: extractedIndex,
         text: item.text,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
@@ -460,6 +472,7 @@ export function answerEventFromModelDraft(input: {
 
     if (!code && authorizedRoleCodes.length !== 1) {
       pushUnresolvedItem({
+        extracted_index: extractedIndex,
         text: item.text,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
@@ -475,6 +488,7 @@ export function answerEventFromModelDraft(input: {
     const match = ROLE_CODE_RE.exec(acceptedCode);
     if (!match) {
       pushUnresolvedItem({
+        extracted_index: extractedIndex,
         text: item.text,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
@@ -487,10 +501,12 @@ export function answerEventFromModelDraft(input: {
     }
 
     acceptedItems.push({
+      extracted_index: extractedIndex,
       text: item.text.slice(0, 500),
       semantic_kind: item.semantic_kind,
       authorizedDirId: match[1]!,
       authorizedRole: match[2]!,
+      bound_role_code: acceptedCode,
       certainty: item.certainty,
     });
   }
@@ -558,9 +574,11 @@ export function answerEventFromModelDraft(input: {
   for (const item of acceptedItems) {
     if (item.certainty === "unclear") {
       pushUnresolvedItem({
+        extracted_index: item.extracted_index,
         text: item.text,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
+        role_code_hint: item.bound_role_code,
         reason: "unclear_certainty",
         note: `unclear_certainty:${item.text.slice(0, 100)}`,
       });
@@ -573,9 +591,11 @@ export function answerEventFromModelDraft(input: {
     if (item.semantic_kind === "constraint") {
       if (item.certainty === "estimated" && !constraintEstimateIsPersistable()) {
         pushUnresolvedItem({
+          extracted_index: item.extracted_index,
           text: item.text,
           semantic_kind: item.semantic_kind,
           certainty: item.certainty,
+          role_code_hint: item.bound_role_code,
           reason: "estimated_constraint_not_persistable",
           note: `estimated_constraint_not_persistable:${item.text.slice(0, 100)}`,
         });
@@ -591,15 +611,18 @@ export function answerEventFromModelDraft(input: {
       continue;
     }
     if (item.semantic_kind === "definition_patch") {
-      notes.push("definition_patch_proposed_not_mapped_by_apply");
-      writes.push({
-        kind: "definition_patch",
-        statement: item.text,
-        status: "unverified",
-        verification_level,
-        fact_roles: [item.authorizedRole],
-        related_dir_ids: [item.authorizedDirId],
+      // Current apply-answer-to-dc does not persist definition_patch.
+      // Do not leave this only in notes / proposed_writes — keep it pending.
+      pushUnresolvedItem({
+        extracted_index: item.extracted_index,
+        text: item.text,
+        semantic_kind: item.semantic_kind,
+        certainty: item.certainty,
+        role_code_hint: item.bound_role_code,
+        reason: "definition_patch_not_persistable",
+        note: `definition_patch_not_persistable:${item.text.slice(0, 100)}`,
       });
+      notes.push("definition_patch_not_mapped_by_apply");
       continue;
     }
 

@@ -209,13 +209,6 @@ function asTrimmedString(value: unknown): string | null {
   return typeof value === "string" ? value.trim() : null;
 }
 
-function normalizeComparable(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[\s，,。．.!！？?；;、]/g, "")
-    .trim();
-}
-
 function stripJsonFences(raw: string): string {
   const trimmed = raw.trim();
   const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
@@ -395,10 +388,8 @@ export function parseAndValidateModelAnswerDraft(
     const text = row.text.trim().slice(0, MAX_ITEM_TEXT_LENGTH);
     if (!text) continue;
     const semantic_kind = row.semantic_kind as ModelSemanticKind;
-    const key = `${semantic_kind}:${normalizeComparable(text)}`;
-    if (items.some((existing) => `${existing.semantic_kind}:${normalizeComparable(existing.text)}` === key)) {
-      continue;
-    }
+    // Same text can be two distinct extracted items (different item_id / role).
+    // Do not use text alone as identity or drop the second item.
     if (items.length >= MAX_EXTRACTED_ITEMS) continue;
     const hint = asTrimmedString(row.role_hint);
     const codeHint = asTrimmedString(row.role_code_hint);

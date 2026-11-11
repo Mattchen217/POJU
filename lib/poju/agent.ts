@@ -1234,6 +1234,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             intake_ask_plan:
               m1CollectingTurn.session.intake_ask_plan ??
               blockedSession.intake_ask_plan,
+            pending_answer_resolution:
+              m1CollectingTurn.session.pending_answer_resolution !== undefined
+                ? m1CollectingTurn.session.pending_answer_resolution
+                : blockedSession.pending_answer_resolution,
           });
         }
         // Adopt DC + understanding + plan into the Session the LLM sees.
@@ -1732,8 +1736,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         dc_write_revision:
           m1CollectingTurn.session.dc_write_revision ?? sessionOut.dc_write_revision,
         pending_answer_resolution:
-          m1CollectingTurn.session.pending_answer_resolution ??
-          sessionOut.pending_answer_resolution,
+          m1CollectingTurn.session.pending_answer_resolution !== undefined
+            ? m1CollectingTurn.session.pending_answer_resolution
+            : sessionOut.pending_answer_resolution,
         messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
       },
       m1CollectingTurn.plan,
@@ -1772,8 +1777,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       intake_ask_plan:
         m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
       pending_answer_resolution:
-        m1CollectingTurn.session.pending_answer_resolution ??
-        sessionOut.pending_answer_resolution,
+        m1CollectingTurn.session.pending_answer_resolution !== undefined
+          ? m1CollectingTurn.session.pending_answer_resolution
+          : sessionOut.pending_answer_resolution,
       messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
     };
   }

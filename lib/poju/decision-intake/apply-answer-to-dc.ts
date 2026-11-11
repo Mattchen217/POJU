@@ -31,24 +31,36 @@ function alreadyMapped(dc: DecisionContext, turnId: string): boolean {
   return false;
 }
 
+function sameIdSet(a: string[] | undefined, b: string[] | undefined): boolean {
+  const left = [...(a ?? [])].slice().sort();
+  const right = [...(b ?? [])].slice().sort();
+  if (left.length !== right.length) return false;
+  return left.every((value, i) => value === right[i]);
+}
+
 function writeAlreadyPresent(
   dc: DecisionContext,
   turnId: string,
   kind: "reality_fact" | "constraint",
   statement: string,
+  relatedDirIds: string[],
+  factRoles: string[],
 ): boolean {
   const norm = normalizeComparable(statement);
   if (kind === "reality_fact") {
     return dc.reality_facts.some(
       (f) =>
         f.source_turn_id === turnId &&
-        normalizeComparable(f.statement) === norm,
+        normalizeComparable(f.statement) === norm &&
+        sameIdSet(f.related_dir_ids, relatedDirIds) &&
+        sameIdSet(f.fact_roles, factRoles),
     );
   }
   return dc.constraints.some(
     (c) =>
       c.source_turn_id === turnId &&
-      normalizeComparable(c.statement) === norm,
+      normalizeComparable(c.statement) === norm &&
+      sameIdSet(c.related_dir_ids, relatedDirIds),
   );
 }
 
@@ -197,10 +209,21 @@ function selectConflictingOldFacts(input: {
   return out;
 }
 
+export type IncrementalSameTurnOpts = {
+  pending_source_turn_id: string;
+  pending_authorized_role_codes: string[];
+  pending_authorized_dir_ids: string[];
+  resolving_item_id: string;
+};
+
 export async function applyAnswerEventToSessionDc(
   session: POJUSessionState,
   event: AnswerEvent,
-  opts?: { now?: string; allow_incremental_same_turn?: boolean },
+  opts?: {
+    now?: string;
+    allow_incremental_same_turn?: boolean;
+    incremental?: IncrementalSameTurnOpts;
+  },
 ): Promise<ApplyAnswerResult> {
   const dc = session.decision_context;
   if (!dc || dc.status !== "draft") {
@@ -227,14 +250,51 @@ export async function applyAnswerEventToSessionDc(
       w.kind === "reality_fact" || w.kind === "constraint",
   );
   const incrementalWrites = persistableWrites.filter(
-    (w) => !writeAlreadyPresent(dc, turnId, w.kind, w.statement),
+    (w) =>
+      !writeAlreadyPresent(
+        dc,
+        turnId,
+        w.kind,
+        w.statement,
+        w.related_dir_ids,
+        w.fact_roles,
+      ),
   );
+
+  const incrementalAuthorized = (writes: typeof incrementalWrites): boolean => {
+    const inc = opts?.incremental;
+    if (!opts?.allow_incremental_same_turn || !inc) return false;
+    if (inc.pending_source_turn_id !== turnId) return false;
+    if (!inc.resolving_item_id) return false;
+    const authorizedCodes = new Set(inc.pending_authorized_role_codes);
+    const authorizedDirs = new Set(inc.pending_authorized_dir_ids);
+    for (const w of writes) {
+      if (!w.related_dir_ids.every((dirId) => authorizedDirs.has(dirId))) {
+        return false;
+      }
+      // Role codes on the write are bare role names; also accept full codes.
+      const writeRolesOk = w.fact_roles.every((role) => {
+        if (authorizedCodes.has(role)) return true;
+        return [...authorizedCodes].some(
+          (code) => code.endsWith(`/role/${role}`) || code === role,
+        );
+      });
+      if (!writeRolesOk) return false;
+    }
+    return true;
+  };
+
   // Default: same source_turn_id is fully mapped (ordinary replay).
-  // Incremental same-turn writes are only allowed for pending role-resolution
-  // follow-ups (statements not yet written). Do not change Constraint
-  // verification_level hardcoding.
+  // Incremental same-turn writes are only allowed for a legal pending bind
+  // of an item identity not yet written, with role/DIR still in the
+  // originally sent authorization set. Do not change Constraint
+  // verification_level hardcoding. Do not loosen ordinary replay.
   if (alreadyMapped(dc, turnId)) {
-    if (!opts?.allow_incremental_same_turn || incrementalWrites.length === 0) {
+    if (
+      !opts?.allow_incremental_same_turn ||
+      incrementalWrites.length === 0 ||
+      !incrementalAuthorized(incrementalWrites)
+    ) {
       return {
         session,
         applied: false,
@@ -277,7 +337,16 @@ export async function applyAnswerEventToSessionDc(
   for (let i = 0; i < event.proposed_writes.length; i++) {
     const w = event.proposed_writes[i]!;
     if (w.kind === "reality_fact" || w.kind === "constraint") {
-      if (writeAlreadyPresent(dc, turnId, w.kind, w.statement)) {
+      if (
+        writeAlreadyPresent(
+          dc,
+          turnId,
+          w.kind,
+          w.statement,
+          w.related_dir_ids,
+          w.fact_roles,
+        )
+      ) {
         continue;
       }
     }
