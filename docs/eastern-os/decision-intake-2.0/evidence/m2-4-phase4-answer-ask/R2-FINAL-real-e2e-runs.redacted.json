@@ -1,0 +1,1419 @@
+{
+  "note": "Real OpenRouter E2E runs in chronological order. Runs before the implementation commit used intermediate code; see the evidence doc for which code fix each run motivated.",
+  "runs": [
+    {
+      "source_record": "temp/m2-4-r2-real-e2e-1794407923212.json (local, not committed)",
+      "ran_at": "2026-11-11T14:38:43.211Z",
+      "transport": "handleUserMessage → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+      "stubbed": [
+        "/api/poju/chat (legacy phase chat; replaced by the authorized plan question on intake turns)"
+      ],
+      "phase5_page_generation": "not run",
+      "openrouter_calls": {
+        "total": 26,
+        "http_200": 25,
+        "routed": 26
+      },
+      "final_budget": {
+        "soft_budget_limit": 12,
+        "hard_budget_limit": 15,
+        "session_asked_count": 41,
+        "review_cycle": 2,
+        "cycle_base_asked": 3,
+        "remaining_hard_budget": 0,
+        "depth_by_dir": {
+          "DIR-BIZ-MODEL": 1,
+          "DIR-DEF-OUTCOME": 1,
+          "DIR-DEF-PRIORITIES": 1,
+          "DIR-DEF-STAKES": 1,
+          "DIR-DEF-UNACCEPTABLE": 1,
+          "DIR-EXIT-CRITERIA": 1,
+          "DIR-JOB-OFFER": 1,
+          "DIR-OPT-CONSTRAINTS": 1,
+          "DIR-OPT-ON-TABLE": 1,
+          "DIR-RISK-TOLERANCE": 30
+        }
+      },
+      "final_readiness_verdict": "continue",
+      "checks": [
+        {
+          "check": "fresh session has no DC",
+          "ok": true
+        },
+        {
+          "check": "Blueprint + draft DC created",
+          "ok": true
+        },
+        {
+          "check": "first question is the authorized adaptive plan",
+          "ok": true
+        },
+        {
+          "check": "pending clarification exercised",
+          "ok": true
+        },
+        {
+          "check": "intake control exercised",
+          "ok": true
+        },
+        {
+          "check": "goal change applied to Blueprint with history",
+          "ok": true,
+          "detail": "v1->v2: 要不要接受杭州那家公司的offer"
+        },
+        {
+          "check": "decision target is the confirmed new target",
+          "ok": true
+        },
+        {
+          "check": "no plan sent twice in a row with a different answer charged",
+          "ok": true
+        },
+        {
+          "check": "budget within hard cap 15",
+          "ok": false,
+          "detail": "asked=41"
+        },
+        {
+          "check": "readiness reached",
+          "ok": false,
+          "detail": "continue dir_unknown_may_affect_p5:DIR-DEF-QUESTION|dir_unknown_may_affect_p5:DIR-DEF-OUTCOME|dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE|dir_unknown_may_affect_p5:DIR-DEF-STAKES|dir_unknown_may_affect_p5:DIR-O"
+        },
+        {
+          "check": "assistant reports freeze",
+          "ok": false,
+          "detail": "刚才这条回答已经提取到，但还不能判断它是明确陈述、个人估计，还是目前无法确定，因此尚未写入决策上下文。\n\n待澄清信息：\n「可能能接受收入短期少一点吧」\n\n请明确选择其中一项（请回复编号或原文）：\n1. 明确事实\n2. 个人估计\n3. 目前无"
+        },
+        {
+          "check": "DC final with content hash",
+          "ok": false
+        },
+        {
+          "check": "freeze bumps version",
+          "ok": false,
+          "detail": "v25->v25"
+        },
+        {
+          "check": "hash recomputes",
+          "ok": false
+        },
+        {
+          "check": "immutable final version snapshot stored",
+          "ok": false
+        },
+        {
+          "check": "run completed without exception",
+          "ok": false,
+          "detail": "FreezeBoundReportError: No immutable frozen DC for freezeId=dc_fdd9f301-1042-42e4-8e97-83ff27345d99@v25"
+        }
+      ]
+    },
+    {
+      "source_record": "temp/m2-4-r2-real-e2e-1794408418666.json (local, not committed)",
+      "ran_at": "2026-11-11T14:46:58.666Z",
+      "transport": "handleUserMessage → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+      "stubbed": [
+        "/api/poju/chat (legacy phase chat; replaced by the authorized plan question on intake turns)"
+      ],
+      "phase5_page_generation": "not run",
+      "openrouter_calls": {
+        "total": 14,
+        "http_200": 13,
+        "routed": 14
+      },
+      "final_budget": {
+        "soft_budget_limit": 12,
+        "hard_budget_limit": 15,
+        "session_asked_count": 15,
+        "review_cycle": 2,
+        "cycle_base_asked": 2,
+        "remaining_hard_budget": 0,
+        "depth_by_dir": {
+          "DIR-BIZ-MODEL": 1,
+          "DIR-DEF-OUTCOME": 1,
+          "DIR-DEF-PRIORITIES": 1,
+          "DIR-DEF-STAKES": 1,
+          "DIR-DEF-UNACCEPTABLE": 1,
+          "DIR-EXIT-CRITERIA": 1,
+          "DIR-JOB-OFFER": 1,
+          "DIR-OPT-CONSTRAINTS": 1,
+          "DIR-OPT-ON-TABLE": 1,
+          "DIR-RISK-TOLERANCE": 4,
+          "DIR-STATUS-QUO": 1
+        }
+      },
+      "final_readiness_verdict": "hard_budget_exhausted",
+      "checks": [
+        {
+          "check": "fresh session has no DC",
+          "ok": true
+        },
+        {
+          "check": "Blueprint + draft DC created",
+          "ok": true
+        },
+        {
+          "check": "first question is the authorized adaptive plan",
+          "ok": true
+        },
+        {
+          "check": "pending clarification exercised",
+          "ok": true
+        },
+        {
+          "check": "intake control exercised",
+          "ok": true
+        },
+        {
+          "check": "goal change applied to Blueprint with history",
+          "ok": true,
+          "detail": "v1->v2: 要不要接受杭州那家公司的offer"
+        },
+        {
+          "check": "decision target is the confirmed new target",
+          "ok": true
+        },
+        {
+          "check": "no plan sent twice in a row with a different answer charged",
+          "ok": true
+        },
+        {
+          "check": "budget within hard cap 15",
+          "ok": true,
+          "detail": "asked=15"
+        },
+        {
+          "check": "readiness reached",
+          "ok": true,
+          "detail": "hard_budget_exhausted dir_unknown_may_affect_p5:DIR-DEF-QUESTION|dir_unknown_may_affect_p5:DIR-DEF-OUTCOME|dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE|dir_unknown_may_affect_p5:DIR-DEF-STAKES|dir_unknown_may_affect_p5:DIR-O"
+        },
+        {
+          "check": "assistant reports freeze",
+          "ok": false,
+          "detail": "【确认未通过充分性】已记录你的确认，但关键信息仍不足，无法冻结。请继续补充。（dir_unknown_may_affect_p5:DIR-DEF-STAKES;dir_unknown_may_affect_p5:DIR-TIMING-WIN"
+        },
+        {
+          "check": "DC final with content hash",
+          "ok": false
+        },
+        {
+          "check": "freeze bumps version",
+          "ok": true,
+          "detail": "v14->v15"
+        },
+        {
+          "check": "hash recomputes",
+          "ok": false
+        },
+        {
+          "check": "immutable final version snapshot stored",
+          "ok": false
+        },
+        {
+          "check": "run completed without exception",
+          "ok": false,
+          "detail": "FreezeBoundReportError: No immutable frozen DC for freezeId=dc_dc63a8a2-b856-47f7-8db5-ef2819004b11@v15"
+        }
+      ]
+    },
+    {
+      "source_record": "temp/m2-4-r2-real-e2e-1794408651641.json (local, not committed)",
+      "ran_at": "2026-11-11T14:50:51.641Z",
+      "transport": "handleUserMessage → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+      "stubbed": [
+        "/api/poju/chat (legacy phase chat; replaced by the authorized plan question on intake turns)"
+      ],
+      "phase5_page_generation": "not run",
+      "openrouter_calls": {
+        "total": 17,
+        "http_200": 15,
+        "routed": 17
+      },
+      "final_budget": {
+        "soft_budget_limit": 12,
+        "hard_budget_limit": 15,
+        "session_asked_count": 15,
+        "review_cycle": 2,
+        "cycle_base_asked": 2,
+        "remaining_hard_budget": 0,
+        "depth_by_dir": {
+          "DIR-BIZ-MODEL": 1,
+          "DIR-DEF-OUTCOME": 1,
+          "DIR-DEF-PRIORITIES": 1,
+          "DIR-DEF-STAKES": 1,
+          "DIR-DEF-UNACCEPTABLE": 1,
+          "DIR-EXIT-CRITERIA": 1,
+          "DIR-JOB-OFFER": 1,
+          "DIR-OPT-CONSTRAINTS": 1,
+          "DIR-OPT-ON-TABLE": 1,
+          "DIR-RISK-TOLERANCE": 3,
+          "DIR-STATUS-QUO": 1,
+          "DIR-TIMING-WINDOW": 1
+        }
+      },
+      "final_readiness_verdict": "hard_budget_exhausted",
+      "checks": [
+        {
+          "check": "fresh session has no DC",
+          "ok": true
+        },
+        {
+          "check": "Blueprint + draft DC created",
+          "ok": true
+        },
+        {
+          "check": "first question is the authorized adaptive plan",
+          "ok": true
+        },
+        {
+          "check": "pending clarification exercised",
+          "ok": false
+        },
+        {
+          "check": "intake control exercised",
+          "ok": true
+        },
+        {
+          "check": "goal change applied to Blueprint with history",
+          "ok": true,
+          "detail": "v1->v2: 要不要接受杭州那家公司的offer"
+        },
+        {
+          "check": "decision target is the confirmed new target",
+          "ok": true
+        },
+        {
+          "check": "no plan sent twice in a row with a different answer charged",
+          "ok": true
+        },
+        {
+          "check": "budget within hard cap 15",
+          "ok": true,
+          "detail": "asked=15"
+        },
+        {
+          "check": "readiness reached",
+          "ok": true,
+          "detail": "hard_budget_exhausted dir_unknown_may_affect_p5:DIR-DEF-QUESTION|dir_unknown_may_affect_p5:DIR-DEF-OUTCOME|dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE|dir_unknown_may_affect_p5:DIR-DEF-STAKES|dir_unknown_may_affect_p5:DIR-O"
+        },
+        {
+          "check": "assistant reports freeze",
+          "ok": true,
+          "detail": "【已冻结】决策上下文已确认并冻结。正式报告将基于本次冻结版本生成。"
+        },
+        {
+          "check": "DC final with content hash",
+          "ok": true
+        },
+        {
+          "check": "freeze bumps version",
+          "ok": true,
+          "detail": "v16->v17"
+        },
+        {
+          "check": "hash recomputes",
+          "ok": true
+        },
+        {
+          "check": "immutable final version snapshot stored",
+          "ok": true
+        },
+        {
+          "check": "authoritative freeze loads and verifies",
+          "ok": true
+        },
+        {
+          "check": "report job bound to the freeze (no page generation)",
+          "ok": true
+        },
+        {
+          "check": "binding matches freeze id / version / hash",
+          "ok": true
+        },
+        {
+          "check": "binding persisted on the session",
+          "ok": true
+        }
+      ],
+      "transcript": [
+        {
+          "n": 1,
+          "label": "bootstrap",
+          "user": "我在犹豫要不要离职去创业，家里还有贷款。",
+          "assistant": "关于「要不要离职去创业？」——商业模式与关键依赖？（这样我才能判断：创业类决策的主题深度）",
+          "openrouter": [],
+          "facts_written": 2,
+          "dc_before": null,
+          "dc_after": {
+            "version": 1,
+            "status": "draft",
+            "facts": 2,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 1,
+            "decision_question": "要不要离职去创业？",
+            "history_len": 0,
+            "change_log_len": 0
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 2,
+          "label": "answer DIR-BIZ-MODEL",
+          "user": "我原本打算做跨境电商代运营，靠给工厂运营海外店铺收服务费。",
+          "assistant": "关于「要不要离职去创业？」——期望达成的结果？（这样我才能判断：用于比较选项与成立条件）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"原本打算做跨境电商代运营，靠给工厂运营海外店铺收服务费\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-BIZ-MODEL/role/biz_model\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"我原本打算做跨境电商代运营，靠给工厂运营海外店铺收服务费。\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确说明了原本计划的商业模式和收入来源，可直接提取为商业模式事实。\"\n}",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 1,
+            "status": "draft",
+            "facts": 2,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 2,
+            "status": "draft",
+            "facts": 3,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 1,
+            "decision_question": "要不要离职去创业？",
+            "history_len": 0,
+            "change_log_len": 0
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 3,
+          "label": "goal change proposal",
+          "user": "其实我现在真正要决定的不是创业，而是要不要接受杭州那家公司的offer。",
+          "assistant": "你提出将决策目标改为以下内容：\n\n「要不要接受杭州那家公司的offer」\n\n当前决策目标仍是：「要不要离职去创业？」\n\n是否确认更换当前决策目标？确认后会按新目标更新调查蓝图（旧版本保留在历史记录中），并重新规划接下来的问题；不确认则保持原目标不变。\n\n1. 确认更换决策目标\n2. 保持原来的决策目标",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"goal_change\",\n  \"extracted_items\": [\n    {\n      \"text\": \"真正要决定的是要不要接受杭州那家公司的offer\",\n      \"semantic_kind\": \"definition_patch\",\n      \"role_code_hint\": null,\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"要不要接受杭州那家公司的offer\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确表示当前真正要决定的不是创业，而是是否接受杭州公司的offer，属于决策目标变更。\"\n}",
+              "error": null
+            }
+          ],
+          "facts_written": 0,
+          "dc_before": {
+            "version": 2,
+            "status": "draft",
+            "facts": 3,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 2,
+            "status": "draft",
+            "facts": 3,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 1,
+            "decision_question": "要不要离职去创业？",
+            "history_len": 0,
+            "change_log_len": 0
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 4,
+          "label": "confirm goal change",
+          "user": "1",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——期望达成的结果？（这样我才能判断：用于比较选项与成立条件）",
+          "openrouter": [],
+          "facts_written": 0,
+          "dc_before": {
+            "version": 2,
+            "status": "draft",
+            "facts": 3,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 3,
+            "status": "draft",
+            "facts": 4,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 5,
+          "label": "answer DIR-DEF-OUTCOME",
+          "user": "我希望两年内年收入稳定在四十万以上，同时工作强度可控。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——目标优先级顺序？（这样我才能判断：驱动选项排序）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"两年内年收入稳定在四十万以上\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-OUTCOME/role/desired_outcome\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"我希望两年内年收入稳定在四十万以上\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"工作强度可控\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-OUTCOME/role/desired_outcome\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"同时工作强度可控\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explana…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 3,
+            "status": "draft",
+            "facts": 4,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 4,
+            "status": "draft",
+            "facts": 5,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 6,
+          "label": "answer DIR-DEF-PRIORITIES",
+          "user": "第一是收入稳定，第二是家庭时间，第三才是职位头衔。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——做错会失去什么？（这样我才能判断：决定风险边界与 hold 条件）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"第一优先级：收入稳定\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-PRIORITIES/role/goal_priority\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"第一是收入稳定\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"第二优先级：家庭时间\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-PRIORITIES/role/goal_priority\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"第二是家庭时间\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"第三优先级：职位头衔\",\n      \"semantic_k…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 4,
+            "status": "draft",
+            "facts": 5,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 5,
+            "status": "draft",
+            "facts": 6,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 7,
+          "label": "answer DIR-DEF-STAKES",
+          "user": "如果选错，我要多花一两年才能回到现在的收入水平，房贷压力也会明显变大。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——不可接受的结果？（这样我才能判断：用于反路径与边界）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"选错会多花一两年才能回到现在的收入水平\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-STAKES/role/stakes\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"如果选错，我要多花一两年才能回到现在的收入水平\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"选错会导致房贷压力明显变大\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-STAKES/role/stakes\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"房贷压力也会明显变大\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explana…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 5,
+            "status": "draft",
+            "facts": 6,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 6,
+            "status": "draft",
+            "facts": 7,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 8,
+          "label": "answer DIR-DEF-UNACCEPTABLE",
+          "user": "不能接受收入断档超过三个月，也不能接受和家人长期两地分居。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——退出/转向触发条件？（这样我才能判断：边界关闭与止损）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"不能接受收入断档超过三个月\",\n      \"semantic_kind\": \"constraint\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-UNACCEPTABLE/role/unacceptable\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"不能接受收入断档超过三个月\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"不能接受和家人长期两地分居\",\n      \"semantic_kind\": \"constraint\",\n      \"role_code_hint\": \"v1/dir/DIR-DEF-UNACCEPTABLE/role/unacceptable\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"也不能接受和家人长期两地分居\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  …[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 6,
+            "status": "draft",
+            "facts": 7,
+            "constraints": 0,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 7,
+            "status": "draft",
+            "facts": 8,
+            "constraints": 1,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 9,
+          "label": "answer DIR-EXIT-CRITERIA [supply-side 429, user resends]",
+          "user": "如果入职半年后发现团队不稳定或者收入没兑现，我就会考虑再换。",
+          "assistant": "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。(call_failed:answer_interpretation_route_failed:502:call_failed)",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 429,
+              "model": null,
+              "provider": null,
+              "finish_reason": null,
+              "content": null,
+              "error": "{\"message\":\"OpenRouter could not verify available credits for this request in time. Retry shortly.\",\"code\":429,\"metadata\":{\"limit_source\":\"openrouter_admission_control\",\"remedy_hint\":\"Slow down the request rate for this account, then retry after the reset (see X-RateLimit-Reset).\",\"headers\":{\"Retry-"
+            }
+          ],
+          "facts_written": 0,
+          "dc_before": {
+            "version": 7,
+            "status": "draft",
+            "facts": 8,
+            "constraints": 1,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 7,
+            "status": "draft",
+            "facts": 8,
+            "constraints": 1,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 10,
+          "label": "answer DIR-EXIT-CRITERIA",
+          "user": "如果入职半年后发现团队不稳定或者收入没兑现，我就会考虑再换。",
+          "assistant": "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。(call_failed:answer_interpretation_route_failed:502:call_failed)",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 429,
+              "model": null,
+              "provider": null,
+              "finish_reason": null,
+              "content": null,
+              "error": "{\"message\":\"OpenRouter could not verify available credits for this request in time. Retry shortly.\",\"code\":429,\"metadata\":{\"limit_source\":\"openrouter_admission_control\",\"remedy_hint\":\"Slow down the request rate for this account, then retry after the reset (see X-RateLimit-Reset).\",\"headers\":{\"Retry-"
+            }
+          ],
+          "facts_written": 0,
+          "dc_before": {
+            "version": 7,
+            "status": "draft",
+            "facts": 8,
+            "constraints": 1,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 7,
+            "status": "draft",
+            "facts": 8,
+            "constraints": 1,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 11,
+          "label": "answer DIR-EXIT-CRITERIA",
+          "user": "如果入职半年后发现团队不稳定或者收入没兑现，我就会考虑再换。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——工作机会/角色条件？（这样我才能判断：职业类决策的主题深度）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"入职半年后发现团队不稳定或收入没兑现，会考虑再换\",\n      \"semantic_kind\": \"constraint\",\n      \"role_code_hint\": \"v1/dir/DIR-EXIT-CRITERIA/role/exit_criterion\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"如果入职半年后发现团队不稳定或者收入没兑现，我就会考虑再换。\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确给出了一个退出/转向触发条件：入职半年后若团队不稳定或收入未兑现，会考虑再换。\"\n}",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 7,
+            "status": "draft",
+            "facts": 8,
+            "constraints": 1,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 8,
+            "status": "draft",
+            "facts": 9,
+            "constraints": 2,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 12,
+          "label": "answer DIR-JOB-OFFER",
+          "user": "杭州那家公司给的是运营副总裁，年薪四十五万，税前，期权还没谈细。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：硬约束直接砍掉不可行选项）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"杭州那家公司给的职位是运营副总裁\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-JOB-OFFER/role/job_offer\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"杭州那家公司给的是运营副总裁\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"年薪四十五万，税前\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-JOB-OFFER/role/job_offer\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"年薪四十五万，税前\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"期权还没谈细\",\n      \"semantic_kind\": \"r…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 8,
+            "status": "draft",
+            "facts": 9,
+            "constraints": 2,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 9,
+            "status": "draft",
+            "facts": 10,
+            "constraints": 2,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 13,
+          "label": "answer DIR-OPT-CONSTRAINTS",
+          "user": "每个月房贷一万二不能断，孩子明年要上小学，学区必须在年底前定下来。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——有哪些真实可选方案（不要只重复决策目标）？（这样我才能判断：没有选项清单无法比较去留）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"每月房贷一万二不能断\",\n      \"semantic_kind\": \"constraint\",\n      \"role_code_hint\": \"v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"每个月房贷一万二不能断\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"孩子明年要上小学\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": null,\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"孩子明年要上小学\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"学区必须在年底前定下来\",\n      \"semantic_kind\": \"constraint\",\n      \"role_code_…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 9,
+            "status": "draft",
+            "facts": 10,
+            "constraints": 2,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 10,
+            "status": "draft",
+            "facts": 11,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 14,
+          "label": "answer DIR-OPT-ON-TABLE",
+          "user": "选项有两个：接受杭州的offer，或者留在现在的上海公司继续做。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——可以接受的最差结果是什么？（这样我才能判断：风险边界决定能否推进高不确定选项）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"接受杭州的offer\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-OPT-ON-TABLE/role/option\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"接受杭州的offer\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"留在现在的上海公司继续做\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-OPT-ON-TABLE/role/option\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"留在现在的上海公司继续做\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确给出了两个…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 10,
+            "status": "draft",
+            "facts": 11,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 11,
+            "status": "draft",
+            "facts": 12,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 15,
+          "label": "answer DIR-RISK-TOLERANCE",
+          "user": "收入短期少两成我能接受，但这种状态能撑多久我也说不准，大概半年吧。",
+          "assistant": "关于「未说明半年后若状态未改善会采取什么行动」，刚才的回答还不够明确。请补充说明这一点。",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"partial_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"可接受收入短期少两成\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-RISK-TOLERANCE/role/risk_tolerance\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"收入短期少两成我能接受\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"这种状态能撑多久说不准，大概半年\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-RISK-TOLERANCE/role/risk_tolerance\",\n      \"role_hint\": null,\n      \"certainty\": \"estimated\",\n      \"source_quote\": \"但这种状态能撑多久我也说不准，大概半年吧\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspec…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 11,
+            "status": "draft",
+            "facts": 12,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 12,
+            "status": "draft",
+            "facts": 13,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 16,
+          "label": "control follow-up (unresolved_aspect)",
+          "user": "收入少两成的状态我最多能撑六个月，超过就必须调整。",
+          "assistant": "关于「未说明收入少两成是否包含奖金、期权等非固定部分」，刚才的回答还不够明确。请补充说明这一点。",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"收入少两成的状态最多能撑六个月，超过就必须调整\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-RISK-TOLERANCE/role/risk_tolerance\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"收入少两成的状态我最多能撑六个月，超过就必须调整。\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确补充了风险承受期限：收入少两成最多撑六个月，超过必须调整。\"\n}",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 12,
+            "status": "draft",
+            "facts": 13,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 13,
+            "status": "draft",
+            "facts": 14,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 17,
+          "label": "control follow-up (unresolved_aspect)",
+          "user": "收入少两成的状态我最多能撑六个月，超过就必须调整。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——如果维持现状，实际成本和影响是什么？（这样我才能判断：需要对照维持现状的代价与收益）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"收入少两成的状态最多能撑六个月，超过就必须调整\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-RISK-TOLERANCE/role/risk_tolerance\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"收入少两成的状态我最多能撑六个月，超过就必须调整。\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确回答了关于收入少两成状态可持续时间的补充问题，给出了六个月上限及超过后必须调整的约束。\"\n}",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 13,
+            "status": "draft",
+            "facts": 14,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 14,
+            "status": "draft",
+            "facts": 15,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 18,
+          "label": "answer DIR-STATUS-QUO",
+          "user": "现在在上海一家公司做运营总监，年薪三十五万，工作稳定但没有上升空间。",
+          "assistant": "关于「要不要接受杭州那家公司的offer」——决策必须落地的时间窗口？（这样我才能判断：影响 hold 条件与节奏）",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"现在在上海一家公司做运营总监\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-STATUS-QUO/role/status_quo\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"现在在上海一家公司做运营总监\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"年薪三十五万\",\n      \"semantic_kind\": \"reality_fact\",\n      \"role_code_hint\": \"v1/dir/DIR-STATUS-QUO/role/status_quo\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"年薪三十五万\",\n      \"source_start\": null,\n      \"source_end\": null\n    },\n    {\n      \"text\": \"工作稳定但没有上升空间\",\n      \"semantic_kind\": \"…[truncated]",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 14,
+            "status": "draft",
+            "facts": 15,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 15,
+            "status": "draft",
+            "facts": 16,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "continue"
+        },
+        {
+          "n": 19,
+          "label": "answer DIR-TIMING-WINDOW",
+          "user": "杭州那边要求月底前答复，最晚下个月十五号入职。",
+          "assistant": "【理解确认】Decision: 要不要接受杭州那家公司的offer · Unconfirmed/open: 15 · Constraints: 4 · Open needs: 3\n\n如果以上理解正确，请回复确认；如需补充，请直接说明。",
+          "openrouter": [
+            {
+              "via_route": true,
+              "http_status": 200,
+              "model": "deepseek/deepseek-v4-pro-0813",
+              "provider": "Sail Research",
+              "finish_reason": "stop",
+              "content": "{\n  \"classification\": \"clear_answer\",\n  \"extracted_items\": [\n    {\n      \"text\": \"杭州公司要求月底前答复，最晚下个月十五号入职\",\n      \"semantic_kind\": \"constraint\",\n      \"role_code_hint\": \"v1/dir/DIR-TIMING-WINDOW/role/timing_window\",\n      \"role_hint\": null,\n      \"certainty\": \"explicit\",\n      \"source_quote\": \"杭州那边要求月底前答复，最晚下个月十五号入职。\",\n      \"source_start\": null,\n      \"source_end\": null\n    }\n  ],\n  \"unresolved_aspects\": [],\n  \"explanation\": \"用户明确给出了决策时间窗口：月底前答复、最晚下月十五号入职，属于时间约束。\"\n}",
+              "error": null
+            }
+          ],
+          "facts_written": 1,
+          "dc_before": {
+            "version": 15,
+            "status": "draft",
+            "facts": 16,
+            "constraints": 3,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 16,
+            "status": "draft",
+            "facts": 17,
+            "constraints": 4,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "hard_budget_exhausted"
+        },
+        {
+          "n": 20,
+          "label": "user confirm → Freeze",
+          "user": "确认",
+          "assistant": "【已冻结】决策上下文已确认并冻结。正式报告将基于本次冻结版本生成。",
+          "openrouter": [],
+          "facts_written": 0,
+          "dc_before": {
+            "version": 16,
+            "status": "draft",
+            "facts": 17,
+            "constraints": 4,
+            "conflicts": 0
+          },
+          "dc_after": {
+            "version": 17,
+            "status": "final",
+            "facts": 17,
+            "constraints": 4,
+            "conflicts": 0
+          },
+          "blueprint_after": {
+            "version": 2,
+            "decision_question": "要不要接受杭州那家公司的offer",
+            "history_len": 1,
+            "change_log_len": 1
+          },
+          "readiness_after": "ready_for_final_confirm"
+        }
+      ]
+    },
+    {
+      "source_record": "temp/m2-4-r2-real-e2e-1794408748776.json (local, not committed)",
+      "ran_at": "2026-11-11T14:52:28.776Z",
+      "transport": "handleUserMessage → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+      "stubbed": [
+        "/api/poju/chat (legacy phase chat; replaced by the authorized plan question on intake turns)"
+      ],
+      "phase5_page_generation": "not run",
+      "openrouter_calls": {
+        "total": 14,
+        "http_200": 14,
+        "routed": 14
+      },
+      "final_budget": {
+        "soft_budget_limit": 12,
+        "hard_budget_limit": 15,
+        "session_asked_count": 15,
+        "review_cycle": 2,
+        "cycle_base_asked": 2,
+        "remaining_hard_budget": 0,
+        "depth_by_dir": {
+          "DIR-BIZ-MODEL": 1,
+          "DIR-DEF-OUTCOME": 1,
+          "DIR-DEF-PRIORITIES": 1,
+          "DIR-DEF-STAKES": 1,
+          "DIR-DEF-UNACCEPTABLE": 1,
+          "DIR-EXIT-CRITERIA": 1,
+          "DIR-JOB-OFFER": 1,
+          "DIR-OPT-CONSTRAINTS": 1,
+          "DIR-OPT-ON-TABLE": 1,
+          "DIR-RISK-TOLERANCE": 2,
+          "DIR-STATUS-QUO": 1,
+          "DIR-TIMING-WINDOW": 1
+        }
+      },
+      "final_readiness_verdict": "hard_budget_exhausted",
+      "checks": [
+        {
+          "check": "fresh session has no DC",
+          "ok": true
+        },
+        {
+          "check": "Blueprint + draft DC created",
+          "ok": true
+        },
+        {
+          "check": "first question is the authorized adaptive plan",
+          "ok": true
+        },
+        {
+          "check": "pending clarification exercised",
+          "ok": true
+        },
+        {
+          "check": "intake control exercised",
+          "ok": true
+        },
+        {
+          "check": "goal change applied to Blueprint with history",
+          "ok": true,
+          "detail": "v1->v2: 要不要接受杭州那家公司的offer"
+        },
+        {
+          "check": "decision target is the confirmed new target",
+          "ok": true
+        },
+        {
+          "check": "no plan sent twice in a row with a different answer charged",
+          "ok": true
+        },
+        {
+          "check": "budget within hard cap 15",
+          "ok": true,
+          "detail": "asked=15"
+        },
+        {
+          "check": "readiness reached",
+          "ok": true,
+          "detail": "hard_budget_exhausted dir_unknown_may_affect_p5:DIR-DEF-QUESTION|dir_unknown_may_affect_p5:DIR-DEF-OUTCOME|dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE|dir_unknown_may_affect_p5:DIR-DEF-STAKES|dir_unknown_may_affect_p5:DIR-O"
+        },
+        {
+          "check": "assistant reports freeze",
+          "ok": false,
+          "detail": "【确认未通过充分性】已记录你的确认，但关键信息仍不足，无法冻结。请继续补充。（dir_unknown_may_affect_p5:DIR-DEF-STAKES;dir_unknown_boundary_ok:DIR-PAST-ATTEMPT"
+        },
+        {
+          "check": "DC final with content hash",
+          "ok": false
+        },
+        {
+          "check": "freeze bumps version",
+          "ok": true,
+          "detail": "v15->v16"
+        },
+        {
+          "check": "hash recomputes",
+          "ok": false
+        },
+        {
+          "check": "immutable final version snapshot stored",
+          "ok": false
+        },
+        {
+          "check": "run completed without exception",
+          "ok": false,
+          "detail": "FreezeBoundReportError: No immutable frozen DC for freezeId=dc_5e510874-158b-4aa6-a3da-1786f32ee349@v16"
+        }
+      ]
+    },
+    {
+      "source_record": "temp/m2-4-r2-real-e2e-1794408986904.json (local, not committed)",
+      "ran_at": "2026-11-11T14:56:26.904Z",
+      "transport": "handleUserMessage → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+      "stubbed": [
+        "/api/poju/chat (legacy phase chat; replaced by the authorized plan question on intake turns)"
+      ],
+      "phase5_page_generation": "not run",
+      "openrouter_calls": {
+        "total": 12,
+        "http_200": 11,
+        "routed": 12
+      },
+      "final_budget": {
+        "soft_budget_limit": 12,
+        "hard_budget_limit": 15,
+        "session_asked_count": 12,
+        "review_cycle": 2,
+        "cycle_base_asked": 2,
+        "remaining_hard_budget": 3,
+        "depth_by_dir": {
+          "DIR-BIZ-MODEL": 1,
+          "DIR-DEF-OUTCOME": 1,
+          "DIR-DEF-PRIORITIES": 1,
+          "DIR-DEF-STAKES": 1,
+          "DIR-DEF-UNACCEPTABLE": 1,
+          "DIR-EXIT-CRITERIA": 1,
+          "DIR-JOB-OFFER": 1,
+          "DIR-OPT-CONSTRAINTS": 1,
+          "DIR-OPT-ON-TABLE": 1,
+          "DIR-RISK-TOLERANCE": 1
+        }
+      },
+      "final_readiness_verdict": "continue",
+      "checks": [
+        {
+          "check": "fresh session has no DC",
+          "ok": true
+        },
+        {
+          "check": "Blueprint + draft DC created",
+          "ok": true
+        },
+        {
+          "check": "first question is the authorized adaptive plan",
+          "ok": true
+        },
+        {
+          "check": "loop progresses (no stall)",
+          "ok": false,
+          "detail": "3 turns without any state change"
+        },
+        {
+          "check": "pending clarification exercised",
+          "ok": true
+        },
+        {
+          "check": "intake control exercised",
+          "ok": true
+        },
+        {
+          "check": "goal change applied to Blueprint with history",
+          "ok": true,
+          "detail": "v1->v2: 要不要接受杭州那家公司的offer"
+        },
+        {
+          "check": "decision target is the confirmed new target",
+          "ok": true
+        },
+        {
+          "check": "no plan sent twice in a row with a different answer charged",
+          "ok": true
+        },
+        {
+          "check": "budget within hard cap 15",
+          "ok": true,
+          "detail": "asked=12"
+        },
+        {
+          "check": "readiness reached",
+          "ok": false,
+          "detail": "continue dir_unknown_may_affect_p5:DIR-DEF-QUESTION|dir_unknown_may_affect_p5:DIR-DEF-OUTCOME|dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE|dir_unknown_may_affect_p5:DIR-DEF-STAKES|dir_unknown_may_affect_p5:DIR-O"
+        },
+        {
+          "check": "assistant reports freeze",
+          "ok": false,
+          "detail": "关于「未说明半年后若收入未恢复会采取什么行动」，刚才的回答还不够明确。请补充说明这一点。"
+        },
+        {
+          "check": "DC final with content hash",
+          "ok": false
+        },
+        {
+          "check": "freeze bumps version",
+          "ok": false,
+          "detail": "v12->v12"
+        },
+        {
+          "check": "hash recomputes",
+          "ok": false
+        },
+        {
+          "check": "immutable final version snapshot stored",
+          "ok": false
+        },
+        {
+          "check": "run completed without exception",
+          "ok": false,
+          "detail": "FreezeBoundReportError: No immutable frozen DC for freezeId=dc_7f223c56-8cc7-44dd-9cae-d99f6588bdcd@v12"
+        }
+      ]
+    },
+    {
+      "source_record": "temp/m2-4-r2-real-e2e-1794409118039.json (local, not committed)",
+      "ran_at": "2026-11-11T14:58:38.039Z",
+      "transport": "handleUserMessage → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+      "stubbed": [
+        "/api/poju/chat (legacy phase chat; replaced by the authorized plan question on intake turns)"
+      ],
+      "phase5_page_generation": "not run",
+      "openrouter_calls": {
+        "total": 17,
+        "http_200": 12,
+        "routed": 17
+      },
+      "final_budget": {
+        "soft_budget_limit": 12,
+        "hard_budget_limit": 15,
+        "session_asked_count": 13,
+        "review_cycle": 2,
+        "cycle_base_asked": 2,
+        "remaining_hard_budget": 2,
+        "depth_by_dir": {
+          "DIR-BIZ-MODEL": 1,
+          "DIR-DEF-OUTCOME": 1,
+          "DIR-DEF-PRIORITIES": 1,
+          "DIR-DEF-STAKES": 3,
+          "DIR-DEF-UNACCEPTABLE": 1,
+          "DIR-EXIT-CRITERIA": 1,
+          "DIR-JOB-OFFER": 1,
+          "DIR-OPT-CONSTRAINTS": 1,
+          "DIR-OPT-ON-TABLE": 1,
+          "DIR-RISK-TOLERANCE": 1
+        }
+      },
+      "final_readiness_verdict": "continue",
+      "checks": [
+        {
+          "check": "fresh session has no DC",
+          "ok": true
+        },
+        {
+          "check": "Blueprint + draft DC created",
+          "ok": true
+        },
+        {
+          "check": "first question is the authorized adaptive plan",
+          "ok": true
+        },
+        {
+          "check": "loop progresses (no stall)",
+          "ok": false,
+          "detail": "3 turns without any state change"
+        },
+        {
+          "check": "pending clarification exercised",
+          "ok": false
+        },
+        {
+          "check": "intake control exercised",
+          "ok": true
+        },
+        {
+          "check": "goal change applied to Blueprint with history",
+          "ok": true,
+          "detail": "v1->v2: 要不要接受杭州那家公司的offer"
+        },
+        {
+          "check": "decision target is the confirmed new target",
+          "ok": true
+        },
+        {
+          "check": "no plan sent twice in a row with a different answer charged",
+          "ok": true
+        },
+        {
+          "check": "budget within hard cap 15",
+          "ok": true,
+          "detail": "asked=13"
+        },
+        {
+          "check": "readiness reached",
+          "ok": false,
+          "detail": "continue dir_unknown_may_affect_p5:DIR-DEF-QUESTION|dir_unknown_may_affect_p5:DIR-DEF-OUTCOME|dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE|dir_unknown_may_affect_p5:DIR-DEF-STAKES|dir_unknown_may_affect_p5:DIR-O"
+        },
+        {
+          "check": "assistant reports freeze",
+          "ok": false,
+          "detail": "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。(call_failed:answer_interpretation_route_failed:502:call_failed)"
+        },
+        {
+          "check": "DC final with content hash",
+          "ok": false
+        },
+        {
+          "check": "freeze bumps version",
+          "ok": false,
+          "detail": "v13->v13"
+        },
+        {
+          "check": "hash recomputes",
+          "ok": false
+        },
+        {
+          "check": "immutable final version snapshot stored",
+          "ok": false
+        },
+        {
+          "check": "run completed without exception",
+          "ok": false,
+          "detail": "FreezeBoundReportError: No immutable frozen DC for freezeId=dc_0588a481-4b74-4211-b767-995358fdbcdf@v13"
+        }
+      ]
+    }
+  ]
+}
