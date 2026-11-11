@@ -447,6 +447,12 @@ export interface POJUSessionState {
    */
   pending_answer_resolution?: import("./decision-intake/types").PendingAnswerResolution | null;
   /**
+   * M2.4-R2-FU8 — scheduling/control metadata for unresolved model aspects,
+   * goal_change confirmation, and insight_mismatch clarification.
+   * Not a second Decision Context or fact source. Never auto-mutates Blueprint.
+   */
+  pending_intake_control?: import("./decision-intake/types").PendingIntakeControl | null;
+  /**
    * Phase 3 S3 — Opening Anchor store (Contract §12). Never delete cleared anchors.
    */
   opening_anchors?: import("./decision-context/opening-anchor").OpeningAnchor[];

@@ -45,6 +45,8 @@ export function deterministicModelAnswerDraft(input: {
     const key = `${write.kind}:${write.statement}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    // write.statement is a clause or slice of the user statement, so it is
+    // a contiguous source quote when the deterministic classifier is used.
     extracted_items.push({
       text: write.statement,
       semantic_kind: write.kind,
@@ -55,6 +57,7 @@ export function deterministicModelAnswerDraft(input: {
           : write.status === "unknown" || write.status === "declined"
             ? "unclear"
             : "explicit",
+      source_quote: write.statement,
     });
   }
   return {

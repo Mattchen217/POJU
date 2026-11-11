@@ -9,7 +9,17 @@
 export const ANSWER_INTERPRETATION_VERSION = "deterministic_m2_4_r1" as const;
 
 import type { POJUSessionState } from "@/lib/poju/types";
-import type { AnswerClass, AnswerEvent, ModelAnswerDraft, ProposedWrite, UnresolvedAnswerItem, UnresolvedAnswerReason } from "./types";
+import type {
+  AnswerClass,
+  AnswerEvent,
+  IntakeControlItem,
+  ModelAnswerDraft,
+  ProposedWrite,
+  SourceQuoteRejection,
+  UnresolvedAnswerItem,
+  UnresolvedAnswerReason,
+  UnresolvedModelAspect,
+} from "./types";
 
 export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
 
@@ -33,6 +43,67 @@ const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
 /** Stable pending item identity: source_turn_id + extracted-item index. Never text alone. */
 export function unresolvedItemId(sourceTurnId: string, extractedIndex: number): string {
   return `${sourceTurnId}#${extractedIndex}`;
+}
+
+export function unresolvedAspectId(sourceTurnId: string, aspectIndex: number): string {
+  return `${sourceTurnId}#aspect#${aspectIndex}`;
+}
+
+export function intakeControlItemId(
+  sourceTurnId: string,
+  kind: IntakeControlItem["kind"],
+  index = 0,
+): string {
+  return `${sourceTurnId}#control#${kind}#${index}`;
+}
+
+const MAX_SOURCE_QUOTE_LENGTH = 2000;
+
+/**
+ * Conservative normalization for deterministic source-quote grounding.
+ * Unicode + whitespace + safe punctuation only. No semantic similarity.
+ */
+export function normalizeAnswerGroundingText(text: string): string {
+  let s = text.normalize("NFKC").replace(/[​-‍﻿]/g, "");
+  s = s
+    .replace(/[“”„«»]/g, '"')
+    .replace(/[‘’‚]/g, "'")
+    .replace(/[–—―−]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/[，]/g, ",")
+    .replace(/[。]/g, ".")
+    .replace(/[；]/g, ";")
+    .replace(/[：]/g, ":")
+    .replace(/[？]/g, "?")
+    .replace(/[！]/g, "!")
+    .replace(/[（]/g, "(")
+    .replace(/[）]/g, ")")
+    .replace(/[【]/g, "[")
+    .replace(/[】]/g, "]")
+    .replace(/[、]/g, ",");
+  return s.replace(/\s+/gu, " ").trim();
+}
+
+export type SourceQuoteGroundingResult =
+  | { ok: true }
+  | { ok: false; reason: SourceQuoteRejection["reason"] };
+
+/**
+ * A model extraction is grounded only when the normalized source_quote is a
+ * contiguous substring of the normalized user statement.
+ */
+export function groundSourceQuote(
+  sourceQuote: string,
+  statement: string,
+): SourceQuoteGroundingResult {
+  if (sourceQuote.length > MAX_SOURCE_QUOTE_LENGTH) {
+    return { ok: false, reason: "source_quote_too_long" };
+  }
+  const quote = normalizeAnswerGroundingText(sourceQuote);
+  const hay = normalizeAnswerGroundingText(statement);
+  if (!quote) return { ok: false, reason: "source_quote_empty" };
+  if (!hay.includes(quote)) return { ok: false, reason: "source_quote_not_grounded" };
+  return { ok: true };
 }
 
 
@@ -363,12 +434,64 @@ export function answerEventFromModelDraft(input: {
   const statement = input.statement.trim();
   const targets = activeTargets(input.session);
   const notes: string[] = [];
-  const unresolved: string[] = [...input.draft.unresolved_aspects];
+  const unresolved: string[] = [];
   const unresolvedItems: UnresolvedAnswerItem[] = [];
+  const groundingRejections: SourceQuoteRejection[] = [];
   const authorizedRoleCodes = targets.fact_role_codes;
+  const authorizedDirIds = [...targets.dir_ids];
   let cls: AnswerClass = input.draft.classification;
   const sentQuestionId =
     input.session.decision_understanding?.last_sent_question?.plan_id ?? "";
+
+  const structuredAspects: UnresolvedModelAspect[] = input.draft.unresolved_aspects
+    .map((aspectText, aspectIndex) => ({
+      aspect_id: unresolvedAspectId(input.source_turn_id, aspectIndex),
+      source_turn_id: input.source_turn_id,
+      text: aspectText.slice(0, 200),
+      sent_question_id: sentQuestionId,
+      authorized_role_codes: [...authorizedRoleCodes],
+      authorized_dir_ids: [...authorizedDirIds],
+    }))
+    .filter((aspect) => aspect.text.trim().length > 0);
+
+  const controlItems: IntakeControlItem[] = [];
+  if (cls === "goal_change") {
+    controlItems.push({
+      item_id: intakeControlItemId(input.source_turn_id, "goal_change"),
+      kind: "goal_change",
+      source_turn_id: input.source_turn_id,
+      text: statement.slice(0, 2000),
+      proposed_decision_target: statement.slice(0, 2000),
+      sent_question_id: sentQuestionId,
+      authorized_role_codes: [...authorizedRoleCodes],
+      authorized_dir_ids: [...authorizedDirIds],
+      status: "pending",
+    });
+  } else if (cls === "insight_mismatch") {
+    controlItems.push({
+      item_id: intakeControlItemId(input.source_turn_id, "insight_mismatch"),
+      kind: "insight_mismatch",
+      source_turn_id: input.source_turn_id,
+      text: statement.slice(0, 2000),
+      sent_question_id: sentQuestionId,
+      authorized_role_codes: [...authorizedRoleCodes],
+      authorized_dir_ids: [...authorizedDirIds],
+      status: "pending",
+    });
+  } else {
+    for (const aspect of structuredAspects) {
+      controlItems.push({
+        item_id: aspect.aspect_id,
+        kind: "unresolved_aspect",
+        source_turn_id: aspect.source_turn_id,
+        text: aspect.text,
+        sent_question_id: aspect.sent_question_id,
+        authorized_role_codes: [...aspect.authorized_role_codes],
+        authorized_dir_ids: [...aspect.authorized_dir_ids],
+        status: "pending",
+      });
+    }
+  }
 
   const pushUnresolvedItem = (item: {
     extracted_index: number;
@@ -408,8 +531,15 @@ export function answerEventFromModelDraft(input: {
     notes: [
       ...notes,
       ...unresolved.map((u) => `unresolved:${u}`),
+      ...groundingRejections.map(
+        (r) =>
+          `grounding_rejected:${r.reason}:${r.extracted_index}:${r.source_quote.slice(0, 80)}`,
+      ),
     ].slice(0, 40),
     unresolved_items: unresolvedItems,
+    unresolved_aspects: structuredAspects,
+    grounding_rejections: groundingRejections,
+    control_items: controlItems,
     interpreter: MODEL_ANSWER_INTERPRETER_VERSION,
   });
 
@@ -453,6 +583,18 @@ export function answerEventFromModelDraft(input: {
 
   for (let extractedIndex = 0; extractedIndex < input.draft.extracted_items.length; extractedIndex++) {
     const item = input.draft.extracted_items[extractedIndex]!;
+    const grounding = groundSourceQuote(item.source_quote, statement);
+    if (!grounding.ok) {
+      groundingRejections.push({
+        extracted_index: extractedIndex,
+        text: item.text.slice(0, 500),
+        source_quote: item.source_quote,
+        reason: grounding.reason,
+      });
+      notes.push(`rejected_${grounding.reason}`);
+      // Do not create a ProposedWrite or assign user_asserted / user_estimate.
+      continue;
+    }
     // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
     const code = item.role_code_hint ?? null;
 
@@ -670,6 +812,9 @@ export function interpretUserAnswer(input: {
     proposed_writes,
     notes,
     unresolved_items: [],
+    unresolved_aspects: [],
+    grounding_rejections: [],
+    control_items: [],
     interpreter: ANSWER_INTERPRETATION_VERSION,
   };
 }

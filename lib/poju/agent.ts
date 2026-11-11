@@ -1238,6 +1238,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
               m1CollectingTurn.session.pending_answer_resolution !== undefined
                 ? m1CollectingTurn.session.pending_answer_resolution
                 : blockedSession.pending_answer_resolution,
+            pending_intake_control:
+              m1CollectingTurn.session.pending_intake_control !== undefined
+                ? m1CollectingTurn.session.pending_intake_control
+                : blockedSession.pending_intake_control,
           });
         }
         // Adopt DC + understanding + plan into the Session the LLM sees.
@@ -1260,6 +1264,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           session_revision: sessionForLlm.session_revision,
           dc_write_revision: sessionForLlm.dc_write_revision,
           pending_answer_resolution: sessionForLlm.pending_answer_resolution,
+          pending_intake_control: sessionForLlm.pending_intake_control,
         };
         // M1-R: keep production collecting phase after bootstrap / adaptive plan.
         if (sessionForLlm.agent_v2) {
@@ -1739,6 +1744,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
           m1CollectingTurn.session.pending_answer_resolution !== undefined
             ? m1CollectingTurn.session.pending_answer_resolution
             : sessionOut.pending_answer_resolution,
+        pending_intake_control:
+          m1CollectingTurn.session.pending_intake_control !== undefined
+            ? m1CollectingTurn.session.pending_intake_control
+            : sessionOut.pending_intake_control,
         messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
       },
       m1CollectingTurn.plan,
@@ -1780,6 +1789,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         m1CollectingTurn.session.pending_answer_resolution !== undefined
           ? m1CollectingTurn.session.pending_answer_resolution
           : sessionOut.pending_answer_resolution,
+      pending_intake_control:
+        m1CollectingTurn.session.pending_intake_control !== undefined
+          ? m1CollectingTurn.session.pending_intake_control
+          : sessionOut.pending_intake_control,
       messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
     };
   }

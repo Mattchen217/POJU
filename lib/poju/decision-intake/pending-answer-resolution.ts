@@ -886,6 +886,7 @@ export function answerEventFromPendingBind(input: {
         role_hint: null,
         role_code_hint,
         certainty,
+        source_quote: item.text,
       },
     ],
     unresolved_aspects: [],
