@@ -19,7 +19,16 @@ import {
 } from "@/lib/poju/final-delivery-stage-runner";
 import { inngest } from "@/lib/inngest/client";
 import { failXhighJob, getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
-import { isFinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
+import {
+  isDeliveryRelayPhase,
+  relayLockPhaseForJob,
+  type PojuXhighJob,
+} from "@/lib/poju/xhigh-job-types";
+
+async function releaseRelayLock(job: PojuXhighJob): Promise<void> {
+  const phase = relayLockPhaseForJob(job);
+  if (phase) await releaseXhighSessionLock(phase, job.session_id).catch(() => undefined);
+}
 
 function isStage(x: unknown): x is DeliveryPipelineStage {
   return typeof x === "string" && (DELIVERY_PIPELINE_STAGES as readonly string[]).includes(x);
@@ -52,7 +61,7 @@ export const pojuFinalDeliveryContinue = inngest.createFunction(
 
     return await step.run(`continue-${stage}`, async () => {
       const job = await getXhighJob(job_id);
-      if (!job || job.phase !== "final_delivery") {
+      if (!job || !isDeliveryRelayPhase(job.phase)) {
         return { skipped: true, reason: "job_not_found" };
       }
       if (job.status === "completed" || job.status === "failed") {
@@ -97,11 +106,7 @@ export const pojuFinalDeliveryContinue = inngest.createFunction(
             accumulated_content: `failed:${reason}`.slice(0, 500),
           }).catch(() => undefined);
           await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
-          if (isFinalDeliveryJobInput(job.input)) {
-            await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
-              () => undefined,
-            );
-          }
+          await releaseRelayLock(job);
           return { skipped: true, reason };
         }
       }
@@ -114,11 +119,7 @@ export const pojuFinalDeliveryContinue = inngest.createFunction(
           accumulated_content: "failed:superseded_by_deploy",
         }).catch(() => undefined);
         await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
-        if (isFinalDeliveryJobInput(job.input)) {
-          await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
-            () => undefined,
-          );
-        }
+        await releaseRelayLock(job);
         return {
           skipped: true,
           reason: "superseded_by_deploy",
@@ -143,11 +144,7 @@ export const pojuFinalDeliveryContinue = inngest.createFunction(
         return { ok: true, job_id, stage };
       } catch (e) {
         console.error("[inngest/poju-final-delivery-continue] stage failed", e);
-        if (isFinalDeliveryJobInput(job.input)) {
-          await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
-            () => undefined,
-          );
-        }
+        await releaseRelayLock(job);
         throw e;
       }
     });

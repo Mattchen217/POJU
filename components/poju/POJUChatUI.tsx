@@ -122,6 +122,16 @@ import {
   startDeliveryRegenerate,
 } from "@/lib/poju/phases/delivery/control";
 import {
+  continueDecisionReportForSession,
+  currentDi2FreezeId,
+  DecisionReportClientError,
+  di2ReportNeedsAutoStart,
+  di2ReportShouldResume,
+  isDecisionIntakeV2Session,
+  runDecisionReportForSession,
+  type DecisionReportProgress,
+} from "@/lib/poju/decision-intake/decision-report-client";
+import {
   deliveryConfirmButtonLabel,
   deliverySupplementButtonLabel,
 } from "@/lib/poju/delivery-confirm-reply";
@@ -605,7 +615,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       phase === "awaiting_confirmation" ||
       phase === "delivered" ||
       phase === "tracking";
-    const shouldProbe = Boolean(pendingId) || hasDelivery || phaseNeedsReconcile;
+    // DI2 sessions own their report via /api/poju/decision-report; only a legacy job
+    // explicitly pending on this session is reconciled here.
+    const shouldProbe = isDecisionIntakeV2Session(session)
+      ? Boolean(pendingId)
+      : Boolean(pendingId) || hasDelivery || phaseNeedsReconcile;
     const resumeKey = `${sid}:${pendingId || "reconcile-or-probe"}:${shouldProbe ? "go" : "skip"}`;
     // Live Continue / final / send already owns the status poll. Starting a second
     // poll races: one path paints INTERRUPTED while the other keeps writing pages.
@@ -719,6 +733,130 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     finalBusy,
     sending,
   ]);
+
+  /** M3 — Decision Intake 2.0: Freeze → Personal Analysis → eight-page report. */
+  const di2BusyRef = useRef(false);
+  const di2AbortRef = useRef<AbortController | null>(null);
+  const di2AutoKeyRef = useRef<string | null>(null);
+  const [di2Busy, setDi2Busy] = useState(false);
+  const [di2Failure, setDi2Failure] = useState<{ code: string; message: string; retryable: boolean } | null>(
+    null,
+  );
+
+  function di2ProgressLine(p: DecisionReportProgress): string {
+    const zh = locale.startsWith("zh");
+    if (p.phase === "starting") return zh ? "正在提交冻结版本，准备个人分析…" : "Submitting the frozen context…";
+    if (p.phase === "analysis") return zh ? "正在生成个人分析…" : "Building your personal analysis…";
+    if (p.phase === "assembling") return zh ? "正在校验并装订八页报告…" : "Checking and assembling the report…";
+    if (p.phase === "pages") {
+      return zh
+        ? `个人分析已完成 · 报告页 ${p.pages_completed}/${p.pages_total}`
+        : `Personal analysis ready · pages ${p.pages_completed}/${p.pages_total}`;
+    }
+    return "";
+  }
+
+  async function runDi2Report(mode: "start" | "resume" | "continue" | "regenerate") {
+    if (di2BusyRef.current) return;
+    if (mode === "regenerate" || mode === "continue") {
+      if (sending || turnInFlightRef.current) return;
+    }
+    di2BusyRef.current = true;
+    setDi2Busy(true);
+    setDi2Failure(null);
+    di2AbortRef.current?.abort();
+    const ac = new AbortController();
+    di2AbortRef.current = ac;
+    setDeliveryRitual("shelf");
+    setSlotActivity("delivering");
+    setThinkingLiveLine(null);
+    if (mode === "regenerate") setStreamedDeliveryMarkdown(null);
+    const persist = async (next: POJUSessionState) => {
+      if (ac.signal.aborted) return;
+      sessionRef.current = next;
+      onSessionUpdate(next);
+      await savePOJUSession(next);
+    };
+    const onProgress = (p: DecisionReportProgress) => {
+      if (ac.signal.aborted) return;
+      const line = di2ProgressLine(p);
+      if (line) setThinkingLiveLine(line);
+      if (p.partial_markdown.trim()) setStreamedDeliveryMarkdown(p.partial_markdown);
+    };
+    try {
+      const base = sessionRef.current;
+      const lang = processLocale(base);
+      const next =
+        mode === "continue"
+          ? await continueDecisionReportForSession(base, lang, { signal: ac.signal, onProgress, persist })
+          : await runDecisionReportForSession(base, lang, {
+              signal: ac.signal,
+              onProgress,
+              persist,
+              regenerate: mode === "regenerate",
+            });
+      if (ac.signal.aborted) return;
+      setStreamedDeliveryMarkdown(null);
+      setDeliveryRitual("shelf");
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      scrollChatToBottom("smooth");
+    } catch (e) {
+      if (ac.signal.aborted) return;
+      console.warn("[poju] decision report failed:", e);
+      const err =
+        e instanceof DecisionReportClientError
+          ? { code: e.code, message: e.message, retryable: e.retryable }
+          : { code: "REPORT_ERROR", message: e instanceof Error ? e.message : String(e), retryable: true };
+      setDi2Failure(err);
+      if (!streamedDeliveryMarkdownRef.current?.trim()) setDeliveryRitual("idle");
+      if (err.code === "pass_required" || err.code === "pass_login_required") {
+        await dialog.alert(
+          locale.startsWith("zh") ? "需要可用的 Pass 才能生成正式报告。" : "A Pass is required to generate the report.",
+        );
+      }
+    } finally {
+      if (di2AbortRef.current === ac) di2AbortRef.current = null;
+      di2BusyRef.current = false;
+      setDi2Busy(false);
+      setSlotActivity(null);
+      setThinkingLiveLine(null);
+    }
+  }
+
+  // Auto-start after Freeze; resume an unfinished job on mount / reopen.
+  useEffect(() => {
+    if (!isDecisionIntakeV2Session(session) || sending || di2BusyRef.current || di2Failure) return;
+    const freezeId = currentDi2FreezeId(session);
+    if (!freezeId) return;
+    const mode = di2ReportShouldResume(session)
+      ? "resume"
+      : di2ReportNeedsAutoStart(session)
+        ? "start"
+        : null;
+    if (!mode) return;
+    const key = `${session.session_id}:${freezeId}:${mode}:${session.pending_decision_report_job_id ?? ""}`;
+    if (di2AutoKeyRef.current === key) return;
+    di2AutoKeyRef.current = key;
+    void runDi2Report(mode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runDi2Report reads sessionRef
+  }, [
+    session.session_id,
+    session.decision_context?.status,
+    session.decision_context?.version,
+    session.pending_decision_report_job_id,
+    session.decision_blueprint,
+    sending,
+    di2Failure,
+  ]);
+
+  useEffect(
+    () => () => {
+      di2AbortRef.current?.abort();
+    },
+    [session.session_id],
+  );
+
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const turnInFlightRef = useRef(false);
@@ -3610,6 +3748,26 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   useEffect(() => {
     const setControls = workspacePrepare?.setDeliveryRailControls;
     if (!setControls) return;
+    if (isDecisionIntakeV2Session(session)) {
+      // DI2: Regenerate = new execution generation for the same Freeze (old report kept).
+      const canDi2 =
+        Boolean(currentDi2FreezeId(session)) &&
+        !di2Busy &&
+        (session.main_delivery_done || Boolean(di2Failure));
+      setControls({
+        regenerateBusy: di2Busy || sending,
+        stopBusy: false,
+        canRegenerate: canDi2,
+        canStop: false,
+        onRegenerate: () => {
+          void runDi2Report("regenerate");
+        },
+        onStop: () => undefined,
+      });
+      return () => {
+        setControls(null);
+      };
+    }
     const canRegenerate = canStartDeliveryRegenerate(session, { ignorePending: true });
     const pending = Boolean(session.pending_delivery_job_id?.trim());
     const canStop =
@@ -3651,6 +3809,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     deliveryInterruptedJobId,
     deliveryRitual,
     streamedDeliveryMarkdown,
+    session.decision_blueprint,
+    session.decision_context?.status,
+    di2Busy,
+    di2Failure,
   ]);
 
   const pojuMessages = useMemo(() => {
@@ -3721,14 +3883,49 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           slots[mid] = <MatrixNarrativeReply payload={payload} locale={locale} />;
         }
       }
+      const di2Session = isDecisionIntakeV2Session(session);
       if (m.meta?.contains_delivery) {
         // SoT16: book is vault-popup only; keep regenerate affordance on the message.
         followUps[mid] = (
           <>
             {followUps[mid]}
             <RegenerateDeliveryAction
+              busy={di2Session ? di2Busy || sending : sending}
+              onRegenerate={() =>
+                void (di2Session ? runDi2Report("regenerate") : handleDeliveryRegenerateClick())
+              }
+            />
+          </>
+        );
+      }
+      // DI2 report failed / interrupted: Continue from checkpoints (or restart for this Freeze).
+      if (
+        di2Session &&
+        di2Failure &&
+        !di2Busy &&
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey &&
+        !m.meta?.contains_delivery
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <RegenerateDeliveryAction
               busy={sending}
-              onRegenerate={() => void handleDeliveryRegenerateClick()}
+              mode="retry"
+              onRegenerate={() =>
+                void runDi2Report(
+                  session.pending_decision_report_job_id && di2Failure.retryable
+                    ? "continue"
+                    : session.main_delivery_done ||
+                        (session.freeze_bound_report_jobs ?? []).some(
+                          (j) => j.source === "decision_intake_v2",
+                        )
+                      ? "regenerate"
+                      : "start",
+                )
+              }
             />
           </>
         );
@@ -3927,6 +4124,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     onInfraBusyRetry,
     prepareShelfOpenRequest,
     tJoint,
+    session.decision_blueprint,
+    session.pending_decision_report_job_id,
+    session.freeze_bound_report_jobs,
+    di2Busy,
+    di2Failure,
   ]);
 
   const activeComposerOptions = useMemo(() => {

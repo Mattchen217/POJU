@@ -801,15 +801,17 @@ export function applyFinalDeliveryResultToSession(
   result: FinalDeliveryResult,
   locale: string,
 ): POJUSessionState {
-  if (!session.agent_v2) throw new Error("agent_v2 required");
-
   const recent_user_messages = session.messages
     .filter((m) => m.role === "user" && !m.is_rejected)
     .map((m) => m.content)
     .slice(-8);
 
   const deliveryLang = resolveDeliveryLanguage({
-    original_question: session.agent_v2.original_question,
+    original_question:
+      session.agent_v2?.original_question ??
+      session.decision_context?.definition.decision_question ??
+      session.original_question ??
+      "",
     locale,
     recent_user_messages,
     locked_output_locale: session.locked_output_locale ?? locale,

@@ -390,6 +390,17 @@ export interface POJUSessionState {
    */
   freeze_bound_report_jobs?: import("./decision-intake/freeze-bound-report").FreezeBoundReportJob[];
   /**
+   * M3 — in-flight Decision Intake 2.0 report xhigh job (decision_report phase).
+   * Persisted before polling so reload / reopen resumes the same execution.
+   */
+  pending_decision_report_job_id?: string | null;
+  /**
+   * M3 — Personal Analysis artifacts mirrored from the server record, keyed by
+   * idempotency_key (session + freeze + context_hash + profile_hash + schema).
+   * Derived from the frozen DC; never a fact source.
+   */
+  personal_analysis_records?: import("./decision-intake/decision-report-types").PersonalAnalysisRecord[];
+  /**
    * Phase 3 S2 — async Generation TaskContext rows (Contract §6).
    * Hydrate to [] on create/load when absent.
    */

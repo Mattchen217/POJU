@@ -42,6 +42,7 @@ type FinalizeInput = {
   timeout_ms?: number;
   page_plan?: DeliveryPagePlan | null;
   question_expectation?: string;
+  decision_context_slice?: string;
 };
 
 function groupMaxTokens(paths: readonly DeliverySegmentKey[]): number {
@@ -132,6 +133,7 @@ export async function runFinalizeGroup(
     paths: group.paths,
     page_plan: input.page_plan,
     question_expectation: input.question_expectation,
+    decision_context_slice: input.decision_context_slice,
   });
 
   let lastReason = "unknown";

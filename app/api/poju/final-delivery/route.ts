@@ -6,11 +6,7 @@ import {
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
-import { getServerUser } from "@/lib/auth/supabase-server";
-import { isSupabaseConfigured } from "@/lib/auth/supabase";
-import { isPassEnforceEnabled } from "@/lib/passes/consume-pass";
-import { consumePassSmart } from "@/lib/passes/consume-pass-smart";
-import { passUsageTopicFromQuestion } from "@/lib/passes/pass-usage-label";
+import { chargeDeliveryPass } from "@/lib/passes/charge-delivery-pass";
 import { isUpstashPlanLimitError } from "@/lib/kv/upstash-plan-limit";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
 import { runWithEphemeralXhighKv } from "@/lib/poju/xhigh-job-store";
@@ -127,45 +123,6 @@ async function jobStatusResponse(job: PojuXhighJob) {
     current_stage: job.current_stage ?? "finalize",
     accumulated_content: job.accumulated_content,
   });
-}
-
-async function chargeDeliveryPass(input: {
-  sessionId: string;
-  question: string;
-  jointPassRef: string | null;
-}): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
-  if (!isPassEnforceEnabled("pivot") || !isSupabaseConfigured()) return { ok: true };
-  const user = await getServerUser();
-  if (!user?.id) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { ok: false, error: "pass_login_required", reason: "unauthorized" },
-        { status: 401 },
-      ),
-    };
-  }
-  const consumed = await consumePassSmart({
-    userId: user.id,
-    product: "pivot",
-    refId: input.jointPassRef || input.sessionId,
-    description: passUsageTopicFromQuestion(input.question),
-  });
-  if (!consumed.ok) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        {
-          ok: false,
-          error: "pass_required",
-          reason: consumed.reason ?? "insufficient_balance",
-          balance_after: consumed.balanceAfter ?? 0,
-        },
-        { status: 402 },
-      ),
-    };
-  }
-  return { ok: true };
 }
 
 async function scheduleFinalDeliveryJob(job_id: string, session_id: string): Promise<void> {

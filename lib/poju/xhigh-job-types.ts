@@ -7,7 +7,9 @@ export type PojuXhighJobPhase =
   | "segment2_breakthrough_core"
   | "segment2_agenda_bridge"
   | "synthesis"
-  | "final_delivery";
+  | "final_delivery"
+  /** M3 — Decision Intake 2.0: Personal Analysis → Freeze-bound eight pages. */
+  | "decision_report";
 
 export type PojuXhighJobStatus = "pending" | "running" | "completed" | "failed";
 
@@ -190,8 +192,17 @@ export interface PojuXhighJob {
    * Commit paths must CAS-validate this generation at the write boundary.
    */
   execution_generation?: number;
-  input: Segment2JobInput | Segment2AgendaJobInput | SynthesisJobInput | FinalDeliveryJobInput;
-  result?: Segment2JobResult | SynthesisJobResult | FinalDeliveryJobResult;
+  input:
+    | Segment2JobInput
+    | Segment2AgendaJobInput
+    | SynthesisJobInput
+    | FinalDeliveryJobInput
+    | import("@/lib/poju/decision-intake/decision-report-types").DecisionReportJobInput;
+  result?:
+    | Segment2JobResult
+    | SynthesisJobResult
+    | FinalDeliveryJobResult
+    | import("@/lib/poju/decision-intake/decision-report-types").DecisionReportJobResult;
   llm_debug?: LLMCallDebug;
   model?: string;
   tokens_used?: number;
@@ -218,7 +229,9 @@ export function generateXhighJobId(phase: PojuXhighJobPhase, session_id: string)
         ? "s2b"
         : phase === "synthesis"
           ? "syn"
-          : "fd";
+          : phase === "decision_report"
+            ? "dr"
+            : "fd";
   return `${prefix}_${slug}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -300,13 +313,22 @@ export function isSynthesisJobResult(
   );
 }
 
+function isDecisionReportInputKind(input: unknown): boolean {
+  return (
+    Boolean(input) &&
+    typeof input === "object" &&
+    (input as { kind?: unknown }).kind === "decision_intake_report"
+  );
+}
+
 export function isSegment2ReportInput(
   input: PojuXhighJob["input"],
 ): input is Segment2JobInput {
   return (
     "base_analysis" in input &&
     !isFinalDeliveryJobInput(input) &&
-    !isSynthesisInput(input)
+    !isSynthesisInput(input) &&
+    !isDecisionReportInputKind(input)
   );
 }
 
@@ -317,8 +339,21 @@ export function isSegment2AgendaInput(
     "breakthrough_core" in input &&
     !("base_analysis" in input) &&
     !isFinalDeliveryJobInput(input) &&
-    !isSynthesisInput(input)
+    !isSynthesisInput(input) &&
+    !isDecisionReportInputKind(input)
   );
+}
+
+/** Phases served by the stage relay (/final-delivery/continue + Inngest). */
+export function isDeliveryRelayPhase(phase: PojuXhighJobPhase): boolean {
+  return phase === "final_delivery" || phase === "decision_report";
+}
+
+/** Session lock phase owned by a relay job (legacy book vs DI2 report). */
+export function relayLockPhaseForJob(job: PojuXhighJob): PojuXhighJobPhase | null {
+  if (job.phase === "decision_report") return "decision_report";
+  if (job.phase === "final_delivery") return "final_delivery";
+  return null;
 }
 
 export function isSegment2JobResult(

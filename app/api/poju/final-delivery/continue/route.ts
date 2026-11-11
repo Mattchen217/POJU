@@ -16,7 +16,16 @@ import {
   DELIVERY_PIPELINE_STAGES,
 } from "@/lib/poju/final-delivery-stage-runner";
 import { failXhighJob, getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
-import { isFinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
+import {
+  isDeliveryRelayPhase,
+  relayLockPhaseForJob,
+  type PojuXhighJob,
+} from "@/lib/poju/xhigh-job-types";
+
+async function releaseRelayLock(job: PojuXhighJob): Promise<void> {
+  const phase = relayLockPhaseForJob(job);
+  if (phase) await releaseXhighSessionLock(phase, job.session_id).catch(() => undefined);
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     const job = await getXhighJob(job_id);
-    if (!job || job.phase !== "final_delivery") {
+    if (!job || !isDeliveryRelayPhase(job.phase)) {
       return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
     }
     if (job.status === "completed" || job.status === "failed") {
@@ -92,11 +101,7 @@ export async function POST(req: Request) {
           accumulated_content: `failed:${reason}`.slice(0, 500),
         }).catch(() => undefined);
         await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
-        if (isFinalDeliveryJobInput(job.input)) {
-          await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
-            () => undefined,
-          );
-        }
+        await releaseRelayLock(job);
         return NextResponse.json({
           ok: false,
           skipped: true,
@@ -121,11 +126,7 @@ export async function POST(req: Request) {
         accumulated_content: "failed:superseded_by_deploy",
       }).catch(() => undefined);
       await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
-      if (isFinalDeliveryJobInput(job.input)) {
-        await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
-          () => undefined,
-        );
-      }
+      await releaseRelayLock(job);
       return NextResponse.json({
         ok: true,
         skipped: true,
@@ -164,11 +165,7 @@ export async function POST(req: Request) {
         await runFinalDeliveryStage(job_id, stage, { lease_token });
       } catch (e) {
         console.error("[final-delivery/continue] stage failed", e);
-        if (isFinalDeliveryJobInput(job.input)) {
-          await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
-            () => undefined,
-          );
-        }
+        await releaseRelayLock(job);
       }
     });
 

@@ -216,6 +216,11 @@ export function verifyDeliveryContinueSecret(job_id: string, secret: string | nu
   return Boolean(secret) && secret === continueSecret(job_id);
 }
 
+/** Relay secret for hops scheduled outside this module (DI2 decision_report runner). */
+export function deliveryContinueSecretForJob(job_id: string): string {
+  return continueSecret(job_id);
+}
+
 /**
  * Job-level fuse: wall clock from created_at OR continue hop count.
  * Independent of per-phase counters — last backstop against ok:true soft-wall thrash.
@@ -546,20 +551,41 @@ export async function writeBackFreezeBoundReportOnDeliverySuccess(args: {
     throw new Error("m22_writeback_binding_mismatch");
   }
 
-  const byPage = new Map<string, string>();
+  if (existing.source === "decision_intake_v2") {
+    // DI2 rows are filled only by the decision_report pipeline from real page records.
+    throw new Error("m22_writeback_source_mismatch:" + reportJobId);
+  }
+
+  // Several shelf keys may fold into one face (alias papers) — keep all, in shelf order.
+  const byPage = new Map<string, string[]>();
   for (const ready of allReady) {
-    const pageId = canonicalFaceId(ready.key) ?? ready.key;
+    const pageId = canonicalFaceId(ready.key);
+    if (!pageId) continue;
     const content =
       (ready.interleaved_markdown && ready.interleaved_markdown.trim()) ||
       (ready.body_markdown && ready.body_markdown.trim()) ||
       "";
-    if (content) byPage.set(pageId, content);
+    if (!content) continue;
+    const list = byPage.get(pageId) ?? [];
+    list.push(content);
+    byPage.set(pageId, list);
   }
 
-  const pages = DECISION_PAGE_IDS.map((pageId) => ({
-    pageId,
-    content: byPage.get(pageId) ?? "",
-  }));
+  const { DI2_PAGE07_NOT_APPLICABLE_NOTE } = await import(
+    "@/lib/poju/decision-intake/decision-report-render"
+  );
+  const pages = DECISION_PAGE_IDS.map((pageId) => {
+    const content = (byPage.get(pageId) ?? []).join("\n\n");
+    if (pageId === "07" && !content) {
+      // Legacy shelf never emits 07 unless topic-gated in; record that explicitly.
+      return {
+        pageId,
+        content: DI2_PAGE07_NOT_APPLICABLE_NOTE(input.locale),
+        applicability: "not_applicable" as const,
+      };
+    }
+    return { pageId, content, applicability: "applies" as const };
+  });
 
   try {
     const completed = await completeFreezeBoundReportFromDeliveryPages({
@@ -761,6 +787,29 @@ function isAbortishReason(reason: string): boolean {
   );
 }
 
+/** Frozen DC slices for the pages a finalize group writes (Stage-4 DC-fed pages only). */
+async function finalizeDecisionContextSlice(
+  input: FinalDeliveryJobInput,
+  paths: readonly string[],
+): Promise<string | undefined> {
+  const dc = input.decision_context_snapshot;
+  if (!dc) return undefined;
+  const [{ canonicalFaceId }, { formatDecisionContextSliceForPage }] = await Promise.all([
+    import("@/lib/llm/pro/delivery/decision-page-bridge"),
+    import("@/lib/poju/decision-context/dc-page-feed"),
+  ]);
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  for (const key of paths) {
+    const pageId = canonicalFaceId(key);
+    if (!pageId || seen.has(pageId)) continue;
+    seen.add(pageId);
+    const slice = formatDecisionContextSliceForPage(dc, pageId);
+    if (slice) parts.push(slice);
+  }
+  return parts.length ? parts.join("\n\n") : undefined;
+}
+
 async function executeFanoutTask(
   job_id: string,
   stage: DeliveryFanoutStage,
@@ -777,6 +826,7 @@ async function executeFanoutTask(
   if (stage === "finalize") {
     const page_plan = resolveDeliveryPagePlan(input);
     const question_expectation = resolveQuestionExpectation(input);
+    const decision_context_slice = await finalizeDecisionContextSlice(input, task.paths);
     const result = await runFinalizeGroup(task, {
       breakthrough_core: input.breakthrough_core,
       covered_agenda: input.covered_agenda,
@@ -787,6 +837,7 @@ async function executeFanoutTask(
       signal,
       page_plan,
       question_expectation,
+      decision_context_slice,
       timeout_ms: (() => {
         const elapsed = Date.now() - invocationStartedAt;
         const hardBudget =
@@ -993,10 +1044,12 @@ async function executeFanoutTask(
   const { buildRealityConstraintsBlock } = await import(
     "@/lib/llm/pro/delivery/reality-constraints"
   );
-  const reality_constraints = buildRealityConstraintsBlock(input.covered_agenda, {
+  const realityFromAgenda = buildRealityConstraintsBlock(input.covered_agenda, {
     original_question: input.agent_v2.original_question,
     desired_outcome: input.agent_v2.context_collected?.desired_outcome,
   });
+  const dcSlice = await finalizeDecisionContextSlice(input, [key]);
+  const reality_constraints = [realityFromAgenda, dcSlice].filter((s) => s?.trim()).join("\n\n");
 
   // Layer A: collect used anchors from ready pages (same path as ActionBrief).
   const prior_chart_anchors = await loadPriorChartAnchors(job_id, key);
@@ -2198,9 +2251,22 @@ export async function runFinalDeliveryStage(
         await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
           () => undefined,
         );
+      } else if (job.phase === "decision_report") {
+        await releaseXhighSessionLock("decision_report", job.session_id).catch(
+          () => undefined,
+        );
       }
       return;
     }
+  }
+  // M3 — Decision Intake 2.0 report: own data sources (Freeze registry + Personal
+  // Analysis); shares relay, lease, fence and job store with the legacy book.
+  if (job.phase === "decision_report") {
+    const { runDecisionReportStage } = await import(
+      "@/lib/poju/decision-intake/decision-report-runner"
+    );
+    await runDecisionReportStage(job_id, stage, opts);
+    return;
   }
   if (!isFinalDeliveryJobInput(job.input)) {
     if (opts?.lease_token) {

@@ -35,6 +35,8 @@ export function buildDeliveryFinalizePrompt(input: {
   paths?: readonly DeliverySegmentKey[];
   page_plan?: DeliveryPagePlan | null;
   question_expectation?: string;
+  /** Frozen Decision Context slice for this page (read-only; empty when not DC-fed). */
+  decision_context_slice?: string;
 }): { system: string; user: string } {
   const { breakthrough_core, covered_agenda, agent_v2, locale, delivery_mode } = input;
   const paths = input.paths;
@@ -110,7 +112,15 @@ ${spine}
 
 【第三阶段收集证据(covered 议程)】
 ${agendaStr}
-
+${
+  input.decision_context_slice?.trim()
+    ? `
+【冻结决策上下文（只读 · 事实以此为准）】
+${input.decision_context_slice.trim()}
+已确认事实与约束可直接作为依据；用户自述未核实 / 估计 / 未知项不得写成确定事实；假设不得升级；未解决冲突须写成待验证条件。此 JSON 仅供依据，禁止原样搬进正文。
+`
+    : ""
+}
 【任务】
 ${keysHint}
 不重算命盘。`;

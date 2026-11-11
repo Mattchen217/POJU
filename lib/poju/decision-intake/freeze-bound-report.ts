@@ -142,7 +142,12 @@ export type FreezeBoundReportPage = {
   status: "completed" | "failed" | "empty";
   generated_at: string;
   error?: string | null;
+  /** DI2: topic-gated page (07) may be explicitly not applicable — still non-empty. */
+  applicability?: "applies" | "not_applicable";
 };
+
+/** Which pipeline produced the pages. Absent = legacy M2.2 rows. */
+export type FreezeBoundReportSource = "legacy_delivery" | "decision_intake_v2";
 
 export type FreezeBoundReportJob = {
   job_id: string;
@@ -154,6 +159,14 @@ export type FreezeBoundReportJob = {
   updated_at: string;
   error?: string | null;
   completed_at?: string | null;
+  source?: FreezeBoundReportSource;
+  /** DI2: server xhigh job that executes this report generation. */
+  xhigh_job_id?: string | null;
+  /** DI2: fencing generation; Regenerate creates a new row with a higher one. */
+  execution_generation?: number | null;
+  /** DI2: Personal Analysis record this report was generated from. */
+  analysis_id?: string | null;
+  profile_hash?: string | null;
 };
 
 export type EightPageReport = {
@@ -1318,7 +1331,11 @@ export async function completeFreezeBoundReportFromDeliveryPages(input: {
   session: POJUSessionState;
   snapshot: FrozenReportSnapshot;
   jobId: string;
-  pages: Array<{ pageId: DecisionPageId; content: string }>;
+  pages: Array<{
+    pageId: DecisionPageId;
+    content: string;
+    applicability?: "applies" | "not_applicable";
+  }>;
   deps?: FreezeBoundReportDeps;
 }): Promise<FreezeBoundReportResult> {
   const nowFn = input.deps?.now ?? (() => new Date().toISOString());
@@ -1333,6 +1350,15 @@ export async function completeFreezeBoundReportFromDeliveryPages(input: {
       ok: false,
       code: "JOB_NOT_FOUND",
       error: `No report job ${input.jobId}`,
+      session: input.session,
+    };
+  }
+  if (job.source === "decision_intake_v2") {
+    return {
+      ok: false,
+      code: "SOURCE_MISMATCH",
+      error: "Decision Intake 2.0 report rows are completed only by the decision_report pipeline",
+      job,
       session: input.session,
     };
   }
@@ -1353,6 +1379,7 @@ export async function completeFreezeBoundReportFromDeliveryPages(input: {
     status: "completed",
     generated_at: completed_at,
     error: null,
+    ...(p.applicability ? { applicability: p.applicability } : {}),
   }));
   const nextJob: FreezeBoundReportJob = {
     ...job,
@@ -1361,6 +1388,7 @@ export async function completeFreezeBoundReportFromDeliveryPages(input: {
     updated_at: completed_at,
     completed_at,
     error: null,
+    source: "legacy_delivery",
   };
   let session = upsertJob(input.session, nextJob);
   if (input.deps?.persistSession) await input.deps.persistSession(session);
