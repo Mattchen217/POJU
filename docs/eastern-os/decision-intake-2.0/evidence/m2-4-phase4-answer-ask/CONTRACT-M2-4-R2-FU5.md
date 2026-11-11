@@ -1,4 +1,4 @@
-# M2.4-R2-FU5 ? Clarification Negation Safety Closure
+# M2.4-R2-FU5 — Clarification Negation Safety Closure
 
 Production-code repair on `feat/m1-r-fresh-session-main-loop`. This is an evidence record, not a product PASS declaration.
 
@@ -20,10 +20,10 @@ Production rule: a clarification response containing a meaningful negation of th
 
 - `lib/poju/decision-intake/pending-answer-resolution.ts`
   - `parseDefinitionPatchChoice()` now uses an explicit polarity classification. Refusal, uncertainty, and `hasDefinitionPatchNegativeAction()` are evaluated before `hasDefinitionPatchAffirmativeAction()`. The negative-action check allows intervening words between a negation cue and the record/convert-as-fact action. A negated response never returns `{ ok: true, as_fact: true }`; it returns unclear and stays pending. Numbered choices are unchanged: `1` records as fact, `2` refuses.
-  - `parseConstraintConfirmChoice()` keeps uncertainty, then negation, then estimate, then affirmation. `confirmNegated()` was extended so later affirmative substrings such as `????` cannot override an earlier governing negation.
+  - `parseConstraintConfirmChoice()` keeps uncertainty, then negation, then estimate, then affirmation. `confirmNegated()` was extended so later affirmative substrings such as `可以写入` cannot override an earlier governing negation.
 
 - `scripts/test-m1-production-adaptive-question-loop.ts`
-  - New real `handleUserMessage()` cases FU5-DP-N, FU5-DP-P, FU5-CC-N, and FU5-CC-P. Existing FU4-A?E, FU4-N1?N3, FU4-T, FU3-A?H, and earlier A?F, G?M, N?T, U?Y, Z1?Z25, FU2-A?H assertions were not deleted or weakened.
+  - New real `handleUserMessage()` cases FU5-DP-N, FU5-DP-P, FU5-CC-N, and FU5-CC-P. Existing FU4-A–E, FU4-N1–N3, FU4-T, FU3-A–H, and earlier A–F, G–M, N–T, U–Y, Z1–Z25, FU2-A–H assertions were not deleted or weakened.
 
 No other production files were changed. Question Generation, Blueprint / DIR / DDR authorization, Conflict Clarification, Readiness / Confirmation / Freeze authority, Phase 5, report generation, session architecture, and Model Answer Interpretation were not modified.
 
@@ -39,19 +39,19 @@ Order is explicit: empty / numbered-choice / uncertainty / negative action / aff
 
 Negative-action phrases must not return `{ ok: true, as_fact: true }`. On the production path they keep the `definition_patch_not_persistable` item pending, do not write RealityFacts or Constraints, do not bump DC version, do not enter ordinary NeedItem planning, and are not replaced by a free-form model response:
 
-- ?????????????
-- ??????????
-- ??????????????
-- ??????????
-- ????????
-- ?????????
+- 我不想把它作为明确事实记录
+- 不要将它作为明确事实
+- 我不认为应该把它作为明确事实
+- 我不愿意把它改为事实
+- 不应该记录为事实
+- 不是要作为事实记录
 
 Explicit affirmatives continue through the existing authorized DC C1 path and write a RealityFact only to the authorized DIR/role:
 
-- ??????????
-- ??????
-- ?????
-- ????
+- 改为作为明确事实记录
+- 作为明确事实
+- 记录为事实
+- 作为事实
 - numbered `1`
 
 Numbered `2` remains a refusal.
@@ -62,24 +62,24 @@ Order is explicit: empty / numbered-choice / uncertainty / `confirmNegated()` / 
 
 These phrases never return `confirmed: true`. On the production path they write no Constraint and no RealityFact, do not bump DC version, keep the pending item, do not mark it confirmed, and do not enter ordinary NeedItem planning:
 
-- ????????
-- ????????
-- ??????
-- ???????
-- ????????????
-- ??????????????
+- 我不认为可以写入
+- 我不觉得可以写入
+- 并非可以写入
+- 我认为不能写入
+- 我不同意将它作为明确约束
+- 我不接受这个约束作为明确约束
 
 Existing protections are preserved:
 
-- ??????????
-- ??????
-- ?????
-- ??????
-- ??????
+- 我不确认这是明确约束
+- 不是明确约束
+- 不可以写入
+- 目前无法确定
+- 仍然只是估计
 
 Explicit confirmation still writes a `user_asserted` Constraint through the existing authorized DC C1 path:
 
-- ????????
+- 确认这是明确约束
 - numbered `1`
 
 ## Production-path test cases
@@ -88,10 +88,10 @@ All new cases go through `handleUserMessage()`. Model drafts are injected only v
 
 | Case | Seed | Phrases | Result on implementation SHA |
 | --- | --- | --- | --- |
-| FU5-DP-N | `definition_patch_not_persistable` pending | ?????????????; ??????????; ??????????????; ??????????; ????????; ????????? | no RealityFact, no Constraint, DC version unchanged, pending item remains active and is not removed, no ordinary NeedItem planning, no free-form model reply |
-| FU5-DP-P | same seed | ??????????; ?????? | converted RealityFact written to the authorized DIR/role through DC C1; pending cleared |
-| FU5-CC-N | `estimated_constraint_not_persistable` pending | ????????; ????????; ??????; ???????; ????????????; ?????????????? | no Constraint, no RealityFact, DC version unchanged, item remains pending and is not marked confirmed, no ordinary NeedItem planning |
-| FU5-CC-P | same seed | ????????; `1` | Constraint written as `user_asserted` through DC C1; pending cleared |
+| FU5-DP-N | `definition_patch_not_persistable` pending | 我不想把它作为明确事实记录; 不要将它作为明确事实; 我不认为应该把它作为明确事实; 我不愿意把它改为事实; 不应该记录为事实; 不是要作为事实记录 | no RealityFact, no Constraint, DC version unchanged, pending item remains active and is not removed, no ordinary NeedItem planning, no free-form model reply |
+| FU5-DP-P | same seed | 改为作为明确事实记录; 作为明确事实 | converted RealityFact written to the authorized DIR/role through DC C1; pending cleared |
+| FU5-CC-N | `estimated_constraint_not_persistable` pending | 我不认为可以写入; 我不觉得可以写入; 并非可以写入; 我认为不能写入; 我不同意将它作为明确约束; 我不接受这个约束作为明确约束 | no Constraint, no RealityFact, DC version unchanged, item remains pending and is not marked confirmed, no ordinary NeedItem planning |
+| FU5-CC-P | same seed | 确认这是明确约束; `1` | Constraint written as `user_asserted` through DC C1; pending cleared |
 
 FU5-CC-P was aligned with existing FU4-N2 confirmation assertions: it requires the authorized Constraint write, `user_asserted` verification, a DC version bump, and pending clear. It does not add a stricter "no RealityFact" prohibition than FU4-N2, because the existing C1 confirmation path may also increment `reality_facts` when a confirmed constraint is persisted.
 
