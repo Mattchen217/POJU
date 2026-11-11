@@ -253,25 +253,24 @@ function hasExplicitCertaintyAffirm(t: string): boolean {
   return /(明确事实|明确陈述|明确约束|这是明确|explicit|user_asserted)/i.test(t);
 }
 
-function confirmNegated(t: string): boolean {
-  // Negation of confirm/write action, including intervening words.
-  // Evaluated before any affirmative keyword such as 可以写入.
-  // Governing verbs include 不赞成 / 不希望 / 不打算 / 不接受 / 不认可 / 不准备
-  // (and existing 不认为 / 不觉得 / 不同意) so a later affirmative substring
-  // cannot override an earlier negative action.
-  return (
-    /不确认/.test(t) ||
-    /不能确认/.test(t) ||
-    /无法确认/.test(t) ||
-    /不是明确约束/.test(t) ||
-    /不是明确/.test(t) ||
-    /不可以写入/.test(t) ||
-    /不能写入/.test(t) ||
-    /不可写入/.test(t) ||
-    /不要写入/.test(t) ||
-    /不许写入/.test(t) ||
-    /不(认为|觉得|赞成|希望|打算|接受|认可|准备|同意).{0,20}(可以写入|写入|确认|作为明确约束|明确约束)/.test(t) ||
-    /并非.{0,8}(可以写入|写入|确认|明确约束)/.test(t)
+function writeActionPolarityBlocked(statement: string): boolean {
+  // Shared conservative polarity gate for definition-patch and
+  // constraint-confirmation write decisions.
+  //
+  // Inspects the complete user response, not a fixed list of complete
+  // negative sentences. Broad negation / refusal / opposition markers
+  // (including the particles 不/没/未/无/非 and compounds such as
+  // 并非/并不/不能/不可/不要, plus 拒绝/反对/否定/排除) block an
+  // affirmative write. Unknown negative verbs such as 不赞同 are
+  // caught by the particle 不; this is not a verb whitelist.
+  //
+  // Whole-response scan in relation to the proposed write action: a
+  // later affirmative substring does not withdraw an earlier marker.
+  // Mixed or uncertain polarity fails closed. False negatives on
+  // complicated legitimate positives are accepted; numbered
+  // clarification choices remain the unambiguous affirmative path.
+  return /并非|并不|不能|不可|不要|拒绝|反对|否定|排除|[不没未无非]/.test(
+    statement,
   );
 }
 
@@ -379,42 +378,23 @@ export function parseConstraintConfirmChoice(
   if (numbered === 2) return { ok: true, confirmed: false, still_uncertain: false };
   if (numbered === 3) return { ok: true, confirmed: false, still_uncertain: true };
 
-  // Uncertainty and negative intent are evaluated before affirmation.
-  // An earlier negation governing the confirm/write action is never overridden
-  // by a later affirmative substring such as 可以写入 or 确认这是明确约束.
+  // Preserve existing uncertainty and estimate handling.
   if (hasUncertaintyExpression(t)) {
     return { ok: true, confirmed: false, still_uncertain: true };
   }
-  if (confirmNegated(t)) {
-    return { ok: true, confirmed: false, still_uncertain: false };
-  }
   if (hasEstimateExpression(t) && !estimateNegated(t)) {
     return { ok: true, confirmed: false, still_uncertain: false };
+  }
+  // Shared polarity gate before any affirmative write decision.
+  // A bare affirmative substring cannot override a governing negative
+  // or opposition marker; mixed polarity fails closed.
+  if (writeActionPolarityBlocked(t)) {
+    return { ok: false, reason: "unclear" };
   }
   if (hasConstraintConfirmAffirm(t)) {
     return { ok: true, confirmed: true, still_uncertain: false };
   }
   return { ok: false, reason: "unclear" };
-}
-
-/**
- * Negation governing the action of recording or converting the item into a fact.
- * Intervening words are allowed. Evaluated before any affirmative keyword.
- */
-function hasDefinitionPatchNegativeAction(t: string): boolean {
-  // Governing negative verbs before any later record/convert-as-fact action.
-  // Intervening words are allowed. 不希望 / 不打算 / 不准备 / 不赞成 /
-  // 不接受 / 不认可 are included alongside existing 不想 / 不要 / 不认为 /
-  // 不愿意 / 不应该 / 不是要.
-  return (
-    /不(想|要|希望|打算|准备|赞成|接受|认可|愿意|应该|认为).{0,20}(作为明确事实|作为事实记录|记录为事实|作为事实|改为事实|当作事实)/.test(t) ||
-    /不是要.{0,12}(作为事实记录|作为明确事实|作为事实|记录为事实)/.test(t) ||
-    /不作为|不改为|不当作|不记录|不要作为|不要改为/.test(t) ||
-    /不是明确事实/.test(t) ||
-    /不能.{0,8}(作为明确事实|作为事实|记录为事实)/.test(t) ||
-    /不可.{0,8}(作为明确事实|作为事实|记录为事实)/.test(t) ||
-    /并非.{0,12}(作为明确事实|作为事实|记录为事实)/.test(t)
-  );
 }
 
 function hasDefinitionPatchAffirmativeAction(t: string): boolean {
@@ -433,20 +413,20 @@ export function parseDefinitionPatchChoice(
   if (numbered === 1) return { ok: true, as_fact: true };
   if (numbered === 2) return { ok: false, reason: "refused" };
 
-  // Refusal, uncertainty, and negative intent are evaluated before affirmation.
+  // Refusal, uncertainty, and conflicting polarity are evaluated
+  // before affirmation. Numbered choices above remain authoritative.
   if (hasUncertaintyExpression(t) || HEDGE_CUES_RE.test(t)) {
     return { ok: false, reason: "unclear" };
   }
 
-  const negated = hasDefinitionPatchNegativeAction(t);
-  const affirmed = hasDefinitionPatchAffirmativeAction(t);
-  if (negated) {
-    // A meaningful negation of the record-as-fact action must never be
-    // classified as affirmative merely because an affirmative keyword remains
-    // in the sentence. Conflicting or ambiguous polarity stays unclear.
+  // Shared polarity gate: any negation / refusal / opposition marker
+  // in the full response blocks an as_fact write, including unknown
+  // verbs such as 不赞同 and mixed sentences that also contain an
+  // affirmative keyword.
+  if (writeActionPolarityBlocked(t)) {
     return { ok: false, reason: "unclear" };
   }
-  if (affirmed) {
+  if (hasDefinitionPatchAffirmativeAction(t)) {
     return { ok: true, as_fact: true };
   }
   return { ok: false, reason: "unclear" };
