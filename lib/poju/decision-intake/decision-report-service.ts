@@ -1,13 +1,13 @@
 /**
  * M3 — server orchestration for Decision Intake 2.0 reports (start / status / continue).
  *
- * Independent of the legacy Stage-2 contract: input is the frozen DC + Blueprint +
- * the user's formal profile structure. No agent_v2 / breakthrough_core / covered_agenda.
+ * Independent of the legacy Stage-2 contract: input is the server-sealed Freeze (DC +
+ * Blueprint) and the server-recomputed profile, both reached only through their signed
+ * receipts. No agent_v2 / breakthrough_core / covered_agenda.
  * Shares the per-session execution fence with the legacy book so a Regenerate on
  * either path revokes the other's in-flight generation.
  */
 
-import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import {
   activeDeliveryJobMaxWallMs,
   isDeliveryJobContinueHopExceeded,
@@ -37,8 +37,26 @@ import {
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
-import type { DecisionContext } from "@/lib/poju/decision-context/types";
-import { coerceBirthInfo, ziweiClosedSetFromBirth } from "@/lib/ziwei/lab-ziwei";
+import {
+  assertFreezeReceiptMatches,
+  loadVerifiedFreezeRecord,
+} from "@/lib/poju/decision-authority/server/freeze-authority";
+import {
+  DcAuthorityError,
+  assertWriter,
+  readLedgerHead,
+} from "@/lib/poju/decision-authority/server/ledger-store";
+import {
+  assertProfileReceiptMatches,
+  loadVerifiedProfileRecord,
+} from "@/lib/poju/decision-authority/server/profile-authority";
+import { AuthoritySigningUnavailableError } from "@/lib/poju/decision-authority/server/signing";
+import type {
+  FreezeReceipt,
+  FreezeRecord,
+  ProfileReceipt,
+  ProfileRecord,
+} from "@/lib/poju/decision-authority/types";
 import {
   DI2_REPORT_SCHEMA_VERSION,
   PERSONAL_ANALYSIS_SCHEMA_VERSION,
@@ -49,15 +67,8 @@ import {
   type DecisionReportStatusPayload,
 } from "./decision-report-types";
 import { resolvePage07Applicability } from "./decision-report-pages";
-import {
-  DecisionReportStoreError,
-  loadAllPages,
-  loadAnalysis,
-  registerFrozenDecisionContext,
-  registerProfile,
-} from "./decision-report-store";
+import { loadAllPages, loadAnalysis, loadCompletedReport } from "./decision-report-store";
 import { firstIncompleteDecisionReportStage, resetDecisionReportBudgets } from "./decision-report-runner";
-import type { DecisionBlueprint } from "./types";
 
 /** Older than one invoke budget with no live lease → the worker died. */
 const STALE_NO_LEASE_MS = 6 * 60_000;
@@ -97,58 +108,89 @@ function isRevivable(job: PojuXhighJob): boolean {
   return job.retryable === true || r === "interrupted";
 }
 
+type AuthorizedSources = {
+  freeze: FreezeRecord;
+  profile: ProfileRecord;
+};
+
 /**
- * Register Freeze + profile and create (or reuse) the report job.
+ * M4 trust boundary: the device presents only its server-signed receipts (+ writer
+ * capability). Everything the job runs on is re-read from the server records: the
+ * Freeze sealed from the ledger and the profile recomputed at that Freeze instant.
+ */
+async function authorizeReportSources(input: {
+  session_id: string;
+  writer_token: unknown;
+  freeze_receipt: unknown;
+  profile_receipt: unknown;
+}): Promise<AuthorizedSources | ServiceFailure> {
+  const held = input.freeze_receipt as FreezeReceipt | null;
+  if (!held || typeof held !== "object" || typeof held.freeze_id !== "string") {
+    return failure(400, "FREEZE_RECEIPT_REQUIRED", "A server Freeze receipt for this session is required");
+  }
+  if (held.session_id !== input.session_id) {
+    return failure(403, "FREEZE_RECEIPT_INVALID", "Freeze receipt belongs to another session");
+  }
+  try {
+    await assertWriter(input.session_id, input.writer_token);
+    const freeze = await loadVerifiedFreezeRecord(input.session_id, held.freeze_id);
+    assertFreezeReceiptMatches(held, freeze);
+    const head = await readLedgerHead(input.session_id);
+    if (!head || head.commit_version !== freeze.freeze_commit_version || head.change_type !== "freeze") {
+      return failure(409, "FREEZE_NOT_CURRENT", "This Freeze is no longer the session's current Freeze");
+    }
+    const profileHeld = input.profile_receipt as ProfileReceipt | null;
+    if (!profileHeld || typeof profileHeld !== "object" || profileHeld.freeze_id !== freeze.freeze_id) {
+      return failure(422, "PROFILE_RECEIPT_REQUIRED", "A server-computed profile for this Freeze is required");
+    }
+    const profile = await loadVerifiedProfileRecord({
+      session_id: input.session_id,
+      freeze_id: freeze.freeze_id,
+      frozen_at: freeze.frozen_at,
+      profile_hash: profileHeld.profile_hash,
+    });
+    assertProfileReceiptMatches(profileHeld, profile);
+    return { freeze, profile };
+  } catch (e) {
+    if (e instanceof DcAuthorityError) {
+      const status =
+        e.code === "DC_AUTHORITY_FORBIDDEN" || e.code.endsWith("RECEIPT_INVALID")
+          ? 403
+          : e.code === "PROFILE_NOT_REGISTERED"
+            ? 422
+            : e.code === "DC_LEDGER_NOT_FOUND" || e.code === "FREEZE_NOT_REGISTERED"
+              ? 404
+              : 409;
+      return failure(status, e.code, e.message);
+    }
+    if (e instanceof AuthoritySigningUnavailableError) return failure(503, e.code, e.message, true);
+    throw e;
+  }
+}
+
+/**
+ * Verify the Freeze + profile authority and create (or reuse) the report job.
  * Does not schedule — the route schedules after the pass charge succeeds.
  */
 export async function startDecisionReportJob(input: {
   session_id: string;
   locale: string;
-  decision_context: unknown;
-  blueprint: unknown;
-  profile_id: string | null;
-  base_analysis: unknown;
-  birth_info: unknown;
+  writer_token: unknown;
+  freeze_receipt: unknown;
+  profile_receipt: unknown;
   regenerate: boolean;
 }): Promise<StartDecisionReportOutcome> {
   const session_id = input.session_id;
-  const dcRaw = input.decision_context as DecisionContext | null;
-  if (!dcRaw || typeof dcRaw !== "object" || typeof dcRaw.context_id !== "string") {
-    return failure(400, "DECISION_CONTEXT_REQUIRED", "A frozen Decision Context for this session is required");
-  }
-
-  let freeze;
-  try {
-    freeze = await registerFrozenDecisionContext({
-      session_id,
-      decision_context: dcRaw,
-      blueprint: (input.blueprint as DecisionBlueprint | null) ?? null,
-    });
-  } catch (e) {
-    if (e instanceof DecisionReportStoreError) {
-      return failure(409, e.code, e.message);
-    }
-    throw e;
-  }
-
-  const structured = tryStructuredFromBaseAnalysis(input.base_analysis);
-  if (!structured) {
-    return failure(
-      422,
-      "PROFILE_STRUCTURE_UNAVAILABLE",
-      "The personal profile has no computed chart structure; recompute the profile first",
-    );
-  }
-  const birth = coerceBirthInfo(input.birth_info);
-  const ziwei = birth
-    ? ziweiClosedSetFromBirth(birth, { asOf: freeze.decision_context.updated_at }) || null
-    : null;
-  const profile = await registerProfile({
-    session_id,
-    profile_id: input.profile_id,
-    structured,
-    ziwei_closed_set: ziwei,
-  });
+  const authorized = await authorizeReportSources(input);
+  if ("ok" in authorized) return authorized;
+  const freezeRec = authorized.freeze;
+  const profile = authorized.profile;
+  const freeze = {
+    freeze_id: freezeRec.freeze_id,
+    context_hash: freezeRec.context_hash,
+    decision_context: freezeRec.frozen_dc,
+    blueprint: freezeRec.blueprint ?? null,
+  };
 
   const page07 = resolvePage07Applicability({
     dc: freeze.decision_context,
@@ -210,8 +252,12 @@ export async function startDecisionReportJob(input: {
       context_hash: freeze.context_hash,
       report_schema_version: DI2_REPORT_SCHEMA_VERSION,
       analysis_schema_version: PERSONAL_ANALYSIS_SCHEMA_VERSION,
-      profile_id: input.profile_id,
+      profile_id: profile.profile_id,
       profile_hash: profile.profile_hash,
+      freeze_receipt_id: freezeRec.receipt.receipt_id,
+      frozen_at: freezeRec.frozen_at,
+      profile_receipt_id: profile.receipt.receipt_id,
+      profile_calculation_schema_version: profile.calculation_schema_version,
       analysis_key: personalAnalysisIdempotencyKey({
         session_id,
         freeze_id: freeze.freeze_id,
@@ -271,6 +317,36 @@ export async function buildDecisionReportStatus(input: {
   session_id: string;
 }): Promise<DecisionReportStatusPayload> {
   let job = await getXhighJob(input.job_id);
+  if (!job) {
+    // The execution job expires with its 2h TTL; a finished book stays under retention.
+    const done = await loadCompletedReport(input.session_id, input.job_id).catch(() => null);
+    if (done) {
+      return {
+        ok: true,
+        job_id: done.job_id,
+        session_id: done.session_id,
+        status: "completed",
+        current_stage: "assemble",
+        execution_generation: done.execution_generation,
+        freeze_id: done.freeze_id,
+        context_hash: done.context_hash,
+        report_job_id: done.report_job_id,
+        profile_hash: done.profile_hash,
+        analysis: {
+          status: done.analysis.status,
+          analysis_id: done.analysis.analysis_id,
+          attempts: done.analysis.attempts,
+          error: done.analysis.error,
+          record: done.analysis,
+        },
+        pages: done.pages,
+        result: done.result,
+        retryable: false,
+        failure_reason: null,
+        error: null,
+      };
+    }
+  }
   if (!job || job.phase !== "decision_report" || !isDecisionReportJobInput(job.input) || job.session_id !== input.session_id) {
     return {
       ok: false,

@@ -211,6 +211,12 @@ export type DecisionReportJobInput = {
   analysis_schema_version: string;
   profile_id: string | null;
   profile_hash: string;
+  /** M4 — server Freeze receipt this job was started from (re-verified every stage). */
+  freeze_receipt_id: string;
+  frozen_at: string;
+  /** M4 — server profile receipt (recomputed at frozen_at under this schema). */
+  profile_receipt_id: string;
+  profile_calculation_schema_version: string;
   analysis_key: string;
   /** Session-side FreezeBoundReportJob id this execution fills. */
   report_job_id: string;

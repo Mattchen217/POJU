@@ -401,6 +401,15 @@ export interface POJUSessionState {
    */
   personal_analysis_records?: import("./decision-intake/decision-report-types").PersonalAnalysisRecord[];
   /**
+   * M4 — mirror of the last server-accepted DC ledger commit (+ per-session writer
+   * capability). Only ever set from a successful server response.
+   */
+  dc_ledger?: import("./decision-authority/types").DcLedgerMirror | null;
+  /** M4 — server-signed Freeze receipts held by the device (all historical Freezes). */
+  dc_freeze_receipts?: import("./decision-authority/types").FreezeReceipt[];
+  /** M4 — server-signed profile receipts, one per Freeze at most. */
+  dc_profile_receipts?: import("./decision-authority/types").ProfileReceipt[];
+  /**
    * Phase 3 S2 — async Generation TaskContext rows (Contract §6).
    * Hydrate to [] on create/load when absent.
    */

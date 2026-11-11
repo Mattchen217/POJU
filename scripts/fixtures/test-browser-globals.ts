@@ -9,6 +9,8 @@
 
 import { webcrypto } from "node:crypto";
 
+import { installInProcessDecisionAuthority } from "./in-process-decision-authority";
+
 function defineGlobal(name: string, value: unknown): void {
   Object.defineProperty(globalThis, name, {
     value,
@@ -51,5 +53,7 @@ export function installIntakeR6TestGlobals(deviceId: string): Map<string, string
   }
   memoryStore.set("pojulife_device_id_v4", deviceId);
   memoryStore.set("pojulife_owner_key_migrated_v1", "1");
+  // M4 — DI2 Session writes sync the server DC ledger; tests run it in-process.
+  installInProcessDecisionAuthority();
   return memoryStore;
 }

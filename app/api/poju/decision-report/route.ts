@@ -59,7 +59,7 @@ async function scheduleDecisionReport(
 
 /**
  * Decision Intake 2.0 report — Freeze → Personal Analysis → eight pages.
- *   action=start     register Freeze + profile, create/reuse job (regenerate=true → new generation)
+ *   action=start     verify server Freeze + profile receipts, create/reuse job (regenerate=true → new generation)
  *   action=status    job + analysis + per-page checkpoints (client mirrors into its session)
  *   action=continue  resume an interrupted job from its checkpoints
  */
@@ -99,11 +99,9 @@ export async function POST(req: Request) {
       const started = await startDecisionReportJob({
         session_id,
         locale: str(body.locale) || "zh",
-        decision_context: body.decision_context,
-        blueprint: body.blueprint ?? null,
-        profile_id: str(body.profile_id) || null,
-        base_analysis: body.base_analysis,
-        birth_info: body.birth_info ?? null,
+        writer_token: body.writer_token ?? null,
+        freeze_receipt: body.freeze_receipt ?? null,
+        profile_receipt: body.profile_receipt ?? null,
         regenerate,
       });
       if (!started.ok) return failureResponse(started);

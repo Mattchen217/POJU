@@ -106,7 +106,10 @@ function parsePillars(chart: GetBaziChartOutput): {
   return { yearPillar, monthPillar, dayPillar, hourPillar };
 }
 
-export async function calculateProfileWithShunshi(input: BirthInfo): Promise<UserProfile> {
+export async function calculateProfileWithShunshi(
+  input: BirthInfo,
+  opts?: { quiet?: boolean },
+): Promise<UserProfile> {
   const now = Date.now();
   const params = shunshiParamsFromBirthInfo(input);
   const id = `profile_${input.year}_${input.month}_${input.day}_${params.hour}`;
@@ -137,7 +140,7 @@ export async function calculateProfileWithShunshi(input: BirthInfo): Promise<Use
       params.usedTrueSolarTime,
     );
 
-    if (tst_meta) {
+    if (tst_meta && !opts?.quiet) {
       console.log("[bazi] Original:", tst_meta.original_date, tst_meta.original_time);
       console.log("[bazi] True Solar:", tst_meta.true_solar_date, tst_meta.true_solar_time);
       console.log("[bazi] Diff:", tst_meta.diff_minutes, "minutes");

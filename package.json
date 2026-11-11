@@ -188,7 +188,8 @@
     "test:m2-1-readiness-confirm-freeze": "tsx scripts/test-m2-1-readiness-confirm-freeze.ts",
     "test:m2-2-freeze-report-binding": "tsx scripts/test-m2-2-freeze-report-binding.ts",
     "test:m2-3-decision-blueprint": "tsx scripts/test-m2-3-decision-blueprint.ts",
-    "test:m3-decision-report": "tsx scripts/test-m3-decision-report.ts"
+    "test:m3-decision-report": "tsx scripts/test-m3-decision-report.ts",
+    "test:m4-decision-authority": "tsx scripts/test-m4-decision-authority.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

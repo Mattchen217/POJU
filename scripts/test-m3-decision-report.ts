@@ -3,14 +3,15 @@
  *
  *   pnpm test:m3-decision-report
  *
- * Real: Freeze / profile registries, local chart calculation, validators, job store,
- * execution fence, stage relay (inline under ephemeral KV), checkpoints, assembly.
+ * Real: M4 server ledger + Freeze seal + server profile recompute (receipts), local chart
+ * calculation, validators, job store, execution fence, stage relay (inline under
+ * ephemeral KV), checkpoints, assembly.
  * Replaced: only the network model call (test hooks feed raw JSON into the
  * production validators). This is NOT a real OpenRouter / model validation.
  */
 import assert from "node:assert/strict";
 
-import { STRUCTURED_STRONG, STRUCTURED_WEAK } from "./_v2-fixtures";
+import { STRUCTURED_STRONG } from "./_v2-fixtures";
 
 let passed = 0;
 let failed = 0;
@@ -44,6 +45,9 @@ async function main() {
   const types = await import("../lib/poju/decision-intake/decision-report-types");
   const fbr = await import("../lib/poju/decision-intake/freeze-bound-report");
   const client = await import("../lib/poju/decision-intake/decision-report-client");
+  const ledger = await import("../lib/poju/decision-authority/server/ledger-store");
+  const freezeAuth = await import("../lib/poju/decision-authority/server/freeze-authority");
+  const { durableKv } = await import("../lib/kv/client");
 
   type DecisionContext = import("../lib/poju/decision-context/types").DecisionContext;
   type DecisionPageId = import("../lib/llm/pro/delivery/page-feed-matrix").DecisionPageId;
@@ -305,16 +309,20 @@ async function main() {
     return { content: pageJson(pageId), model: "test-hook", tokens_used: 5 };
   });
 
-  const projectionStrong = pa.buildProfileProjection(
-    {
-      profile_id: "p_strong",
-      profile_hash: pa.computeProfileHash({ structured: STRUCTURED_STRONG, ziwei_closed_set: null }),
+  const projectionStrong = pa.buildProfileProjection({
+    profile_id: "p_strong",
+    profile_hash: pa.computeProfileHash({
       structured: STRUCTURED_STRONG,
       ziwei_closed_set: null,
-      registered_at: NOW,
-    },
-    { as_of: new Date(NOW) },
-  );
+      calculation_schema_version: "test",
+      calculation_timestamp: NOW,
+    }),
+    structured: STRUCTURED_STRONG,
+    ziwei_closed_set: null,
+    registered_at: NOW,
+    calculation_schema_version: "test",
+    calculation_timestamp: NOW,
+  });
 
   // ─── Part 1: Personal Analysis validator ──────────────────────────────────
 
@@ -449,22 +457,137 @@ async function main() {
 
   const SID = "sess_m3_main";
   const birth = { year: 1985, month: 7, day: 15, hour_period: "chou", gender: "M", timezone: "Asia/Shanghai" };
+  const birthB = { year: 1992, month: 3, day: 2, hour_period: "wu", gender: "F", timezone: "Asia/Shanghai" };
 
-  async function start(opts: {
+  type FreezeReceipt = import("../lib/poju/decision-authority/types").FreezeReceipt;
+  type ProfileReceipt = import("../lib/poju/decision-authority/types").ProfileReceipt;
+  type Sealed = {
+    session_id: string;
     dc: DecisionContext;
-    regenerate?: boolean;
-    structured?: unknown;
+    token: string;
+    receipt: FreezeReceipt;
+    profile_receipt: ProfileReceipt | null;
+  };
+
+  /** Freezable draft of the fixture DC: same content, `draft`, ranking-relevant unknowns cleared. */
+  function sealableDraft(dc: DecisionContext, parent_version?: number): DecisionContext {
+    const d: DecisionContext = {
+      ...structuredClone(dc),
+      status: "draft",
+      ...(parent_version != null ? { parent_version } : {}),
+      dirs: dc.dirs.map((x) => ({ ...x, may_affect_p5_ranking: false })),
+      content_hash: null,
+    };
+    d.content_hash = computeContentHash(d);
+    return d;
+  }
+
+  function userEvents(dc: DecisionContext) {
+    const facts = dc.reality_facts
+      .filter((f) => f.user_confirmed)
+      .map((f) => ({
+        event_id: `e_${f.fact_id}`,
+        target_type: "fact" as const,
+        fact_id: f.fact_id,
+        source_turn_id: f.source_turn_id!,
+        confirmation_turn_id: null,
+        confirmation_action_id: `a_${f.fact_id}`,
+        event_type: "confirm_fact" as const,
+        actor: "user" as const,
+        confirmed_at: NOW,
+        event_version: 1 as const,
+      }));
+    const cons = dc.constraints
+      .filter((c) => c.user_confirmed)
+      .map((c) => ({
+        event_id: `e_${c.constraint_id}`,
+        target_type: "constraint" as const,
+        constraint_id: c.constraint_id,
+        source_turn_id: c.source_turn_id!,
+        confirmation_turn_id: null,
+        confirmation_action_id: `a_${c.constraint_id}`,
+        event_type: "confirm_constraint" as const,
+        actor: "user" as const,
+        confirmed_at: NOW,
+        event_version: 1 as const,
+      }));
+    return [...facts, ...cons] as unknown as import("../lib/poju/decision-context/confirmation-event").ConfirmationEvent[];
+  }
+
+  const tokens = new Map<string, string>();
+
+  /** Commit the DC through the server ledger, then seal it server-side (birth → server profile). */
+  async function seal(opts: {
+    dc: DecisionContext;
     session_id?: string;
-  }) {
+    birth_info?: unknown | null;
+  }): Promise<Sealed> {
+    const session_id = opts.session_id ?? SID;
+    const head = await ledger.readLedgerHead(session_id);
+    const parent = head && head.dc_status === "final" ? head.dc_version : undefined;
+    const draft = sealableDraft(opts.dc, opts.dc.version > 1 ? parent : undefined);
+    const events = userEvents(draft);
+    const app = await ledger.appendDcLedgerCommit({
+      session_id,
+      writer_token: tokens.get(session_id) ?? null,
+      idempotency_key: `test_commit:${session_id}:${draft.context_id}:v${draft.version}:${draft.content_hash}`,
+      source_op: "test",
+      expected_previous: head ? { commit_version: head.commit_version, entry_hash: head.entry_hash } : null,
+      snapshot: draft,
+      blueprint: head ? null : ({
+        blueprint_id: `bp_${session_id}`,
+        blueprint_version: 1,
+        ddr_version: "t",
+        dir_catalog_version: "t",
+        session_id,
+        context_id: draft.context_id,
+        decision_question: draft.definition.decision_question,
+        definition_snapshot: draft.definition,
+        directions: [],
+        dir_ids: draft.dirs.map((d) => d.dir_id),
+      } as unknown as import("../lib/poju/decision-intake/types").DecisionBlueprint),
+      confirmation_events: events,
+    });
+    assert.ok(app.ok, app.ok ? "" : `${app.code}: ${app.error}`);
+    if (!app.ok) return null as never;
+    tokens.set(session_id, app.writer_token);
+    const birthInput = opts.birth_info === undefined ? birth : opts.birth_info;
+    const s = await freezeAuth.sealFreeze({
+      session_id,
+      writer_token: app.writer_token,
+      expected: {
+        commit_version: app.head.commit_version,
+        entry_hash: app.head.entry_hash,
+        context_id: draft.context_id,
+        dc_version: draft.version,
+        content_hash: draft.content_hash!,
+      },
+      authority: {
+        confirmation_events: events,
+        na_declaration_actions: [],
+        topic_applicability_evals: [],
+        profile_state: {
+          selected_stored_profile_id: birthInput ? "p_strong" : null,
+          has_profile: birthInput != null,
+          birth_submitted_in_session: false,
+          profile_skipped: birthInput == null,
+        },
+      },
+      profile: birthInput ? { profile_id: "p_strong", birth_info: birthInput } : null,
+    });
+    assert.ok(s.ok, s.ok ? "" : `${s.code}: ${s.error}`);
+    if (!s.ok) return null as never;
+    return { session_id, dc: s.frozen_dc, token: app.writer_token, receipt: s.receipt, profile_receipt: s.profile_receipt };
+  }
+
+  async function start(sealed: Sealed, opts?: { regenerate?: boolean }) {
     const r = await service.startDecisionReportJob({
-      session_id: opts.session_id ?? SID,
+      session_id: sealed.session_id,
       locale: "zh",
-      decision_context: opts.dc,
-      blueprint: null,
-      profile_id: "p_strong",
-      base_analysis: { structured: opts.structured ?? STRUCTURED_STRONG },
-      birth_info: birth,
-      regenerate: opts.regenerate === true,
+      writer_token: sealed.token,
+      freeze_receipt: sealed.receipt,
+      profile_receipt: sealed.profile_receipt,
+      regenerate: opts?.regenerate === true,
     });
     assert.ok(r.ok, r.ok ? "" : `${r.code}: ${r.error}`);
     return r.ok ? r : (null as never);
@@ -478,17 +601,23 @@ async function main() {
     async () => {
       let firstJobId = "";
       let firstJobPagesSnapshot = "";
+      let sealedA: Sealed = null as never;
 
       await check("Freeze → Personal Analysis → eight pages → fenced completion (inline relay)", async () => {
         analysisCalls = 0;
         pageCalls.length = 0;
-        const dc = makeDc({ context_id: "ctx_a", version: 1, question: QUESTION_PLAIN });
-        const started = await start({ dc });
+        sealedA = await seal({ dc: makeDc({ context_id: "ctx_a", version: 1, question: QUESTION_PLAIN }) });
+        const dc = sealedA.dc;
+        const started = await start(sealedA);
         assert.equal(started.reused, false);
         firstJobId = started.job.job_id;
         const input = started.job.input as import("../lib/poju/decision-intake/decision-report-types").DecisionReportJobInput;
         assert.equal(input.kind, "decision_intake_report");
         assert.equal(input.freeze_id, "ctx_a@v1");
+        assert.equal(input.freeze_receipt_id, sealedA.receipt.receipt_id);
+        assert.equal(input.profile_receipt_id, sealedA.profile_receipt!.receipt_id);
+        assert.equal(input.profile_hash, sealedA.profile_receipt!.profile_hash);
+        assert.equal(input.frozen_at, sealedA.receipt.frozen_at);
         assert.equal(input.page07_applies, false);
         assert.equal(input.analysis_key, types.personalAnalysisIdempotencyKey({
           session_id: SID,
@@ -552,9 +681,16 @@ async function main() {
         assert.equal(other.status, "missing");
       });
 
+      await check("completed report survives the execution TTL as a durable product record", async () => {
+        const rec = await store.loadCompletedReport(SID, firstJobId);
+        assert.ok(rec, "completed report record");
+        assert.equal(rec!.freeze_id, "ctx_a@v1");
+        assert.equal(rec!.freeze_receipt_id, sealedA.receipt.receipt_id);
+        assert.ok(rec!.result.full_text.length > 200);
+      });
+
       await check("same Freeze + profile start is idempotent (no duplicate job)", async () => {
-        const dc = makeDc({ context_id: "ctx_a", version: 1, question: QUESTION_PLAIN });
-        const again = await start({ dc });
+        const again = await start(sealedA);
         assert.equal(again.reused, true);
         assert.equal(again.job.job_id, firstJobId);
       });
@@ -562,9 +698,8 @@ async function main() {
       await check("regenerate → new generation, analysis reused, old Freeze report untouched", async () => {
         analysisCalls = 0;
         pageCalls.length = 0;
-        const dc = makeDc({ context_id: "ctx_a", version: 1, question: QUESTION_PLAIN });
         const old = await getXhighJob(firstJobId);
-        const regen = await start({ dc, regenerate: true });
+        const regen = await start(sealedA, { regenerate: true });
         assert.equal(regen.reused, false);
         assert.notEqual(regen.job.job_id, firstJobId);
         assert.ok((regen.job.execution_generation ?? 0) > (old!.execution_generation ?? 0));
@@ -581,25 +716,17 @@ async function main() {
         assert.notEqual(oldIn.report_job_id, newIn.report_job_id);
       });
 
-      await check("profile change → new profile hash → new analysis (no stale reuse)", async () => {
+      await check("profile change (new Freeze with another birth) → new profile hash → new analysis", async () => {
         analysisCalls = 0;
-        const dc = makeDc({ context_id: "ctx_a", version: 1, question: QUESTION_PLAIN });
-        const r = await start({ dc, structured: STRUCTURED_WEAK });
+        const sealedB = await seal({
+          dc: makeDc({ context_id: "ctx_a", version: 2, question: QUESTION_PLAIN, extraFact: "家人支持换工作" }),
+          birth_info: birthB,
+        });
+        const r = await start(sealedB);
         assert.equal(r.reused, false);
-        const input = r.job.input as { analysis_key: string; profile_hash: string };
-        const strongHash = pa.computeProfileHash({ structured: STRUCTURED_STRONG, ziwei_closed_set: null });
-        assert.notEqual(input.profile_hash, strongHash);
-        await runner.runDecisionReportStage(r.job.job_id, "finalize");
-        assert.equal((await getXhighJob(r.job.job_id))?.status, "completed");
-        assert.equal(analysisCalls, 1);
-      });
-
-      await check("new Freeze version never reuses the previous Freeze's analysis or pages", async () => {
-        analysisCalls = 0;
-        const dc2 = makeDc({ context_id: "ctx_a", version: 2, question: QUESTION_PLAIN, extraFact: "家人支持换工作" });
-        const r = await start({ dc: dc2 });
-        const input = r.job.input as { freeze_id: string; analysis_key: string };
+        const input = r.job.input as { analysis_key: string; profile_hash: string; freeze_id: string };
         assert.equal(input.freeze_id, "ctx_a@v2");
+        assert.notEqual(input.profile_hash, sealedA.profile_receipt!.profile_hash);
         assert.equal(await store.loadAnalysis(input.analysis_key), null);
         await runner.runDecisionReportStage(r.job.job_id, "finalize");
         assert.equal((await getXhighJob(r.job.job_id))?.status, "completed");
@@ -607,69 +734,74 @@ async function main() {
         for (const p of await pagesOf(r.job.job_id)) assert.equal(p.freeze_id, "ctx_a@v2");
       });
 
-      await check("Freeze registry is write-once: same Freeze id with different content is refused", async () => {
-        const dc = makeDc({ context_id: "ctx_a", version: 1, question: QUESTION_PLAIN, extraFact: "被篡改的内容" });
+      await check("superseded Freeze cannot start; its finished report stays readable", async () => {
         const r = await service.startDecisionReportJob({
           session_id: SID,
           locale: "zh",
-          decision_context: dc,
-          blueprint: null,
-          profile_id: "p_strong",
-          base_analysis: { structured: STRUCTURED_STRONG },
-          birth_info: birth,
+          writer_token: sealedA.token,
+          freeze_receipt: sealedA.receipt,
+          profile_receipt: sealedA.profile_receipt,
           regenerate: true,
         });
-        assert.equal(r.ok, false);
-        assert.equal(!r.ok ? r.code : "", "FREEZE_CONFLICT");
+        assert.equal(!r.ok ? r.code : "", "FREEZE_NOT_CURRENT");
+        const st = await service.buildDecisionReportStatus({ job_id: firstJobId, session_id: SID });
+        assert.equal(st.status, "completed");
       });
 
-      await check("draft DC / broken hash cannot start a report", async () => {
-        const draft = { ...makeDc({ context_id: "ctx_d", version: 1, question: QUESTION_PLAIN }), status: "draft" as const };
-        const r1 = await service.startDecisionReportJob({
-          session_id: "sess_m3_draft",
-          locale: "zh",
-          decision_context: draft,
-          blueprint: null,
-          profile_id: null,
-          base_analysis: { structured: STRUCTURED_STRONG },
-          birth_info: null,
-          regenerate: false,
+      await check("server-side tamper of a sealed Freeze record is detected at start", async () => {
+        const sid = "sess_m3_tamper";
+        const s = await seal({ dc: makeDc({ context_id: "ctx_tp", version: 1, question: QUESTION_PLAIN }), session_id: sid });
+        const key = `poju-auth:freeze:${sid}:ctx_tp@v1`;
+        const raw = await durableKv().get<{ frozen_dc: DecisionContext }>(key);
+        assert.ok(raw);
+        await durableKv().set(key, {
+          ...raw,
+          frozen_dc: { ...raw!.frozen_dc, definition: { ...raw!.frozen_dc.definition, stakes: "changed after freeze" } },
         });
-        assert.equal(!r1.ok ? r1.code : "", "FREEZE_NOT_FINAL");
-        const broken = makeDc({ context_id: "ctx_e", version: 1, question: QUESTION_PLAIN });
-        broken.definition.stakes = "changed after freeze";
-        const r2 = await service.startDecisionReportJob({
-          session_id: "sess_m3_broken",
-          locale: "zh",
-          decision_context: broken,
-          blueprint: null,
-          profile_id: null,
-          base_analysis: { structured: STRUCTURED_STRONG },
-          birth_info: null,
-          regenerate: false,
-        });
-        assert.equal(!r2.ok ? r2.code : "", "FREEZE_INTEGRITY");
-      });
-
-      await check("missing chart structure fails explicitly (no model-made profile)", async () => {
         const r = await service.startDecisionReportJob({
-          session_id: "sess_m3_noprof",
+          session_id: sid,
           locale: "zh",
-          decision_context: makeDc({ context_id: "ctx_np", version: 1, question: QUESTION_PLAIN }),
-          blueprint: null,
-          profile_id: null,
-          base_analysis: { nothing: true },
-          birth_info: null,
+          writer_token: s.token,
+          freeze_receipt: s.receipt,
+          profile_receipt: s.profile_receipt,
           regenerate: false,
         });
-        assert.equal(!r.ok ? r.code : "", "PROFILE_STRUCTURE_UNAVAILABLE");
+        assert.equal(r.ok, false);
+        assert.ok(!r.ok && ["FREEZE_INTEGRITY", "FREEZE_RECORD_INVALID", "FREEZE_CONFLICT"].includes(r.code), !r.ok ? r.code : "ok");
+      });
+
+      await check("unsealed / unprofiled Freeze cannot start (no client-supplied DC or chart)", async () => {
+        const sid = "sess_m3_noprof";
+        const s = await seal({
+          dc: makeDc({ context_id: "ctx_np", version: 1, question: QUESTION_PLAIN }),
+          session_id: sid,
+          birth_info: null,
+        });
+        assert.equal(s.profile_receipt, null);
+        const r1 = await service.startDecisionReportJob({
+          session_id: sid,
+          locale: "zh",
+          writer_token: s.token,
+          freeze_receipt: s.receipt,
+          profile_receipt: null,
+          regenerate: false,
+        });
+        assert.equal(!r1.ok ? r1.code : "", "PROFILE_RECEIPT_REQUIRED");
+        const r2 = await service.startDecisionReportJob({
+          session_id: sid,
+          locale: "zh",
+          writer_token: s.token,
+          freeze_receipt: null,
+          profile_receipt: null,
+          regenerate: false,
+        });
+        assert.equal(!r2.ok ? r2.code : "", "FREEZE_RECEIPT_REQUIRED");
       });
 
       await check("topic-gated 07 is generated when the decision topic applies", async () => {
         pageCalls.length = 0;
         const sid = "sess_m3_topic";
-        const dc = makeDc({ context_id: "ctx_t", version: 1, question: QUESTION_TOPIC });
-        const r = await start({ dc, session_id: sid });
+        const r = await start(await seal({ dc: makeDc({ context_id: "ctx_t", version: 1, question: QUESTION_TOPIC }), session_id: sid }));
         assert.equal((r.job.input as { page07_applies: boolean }).page07_applies, true);
         await runner.runDecisionReportStage(r.job.job_id, "finalize");
         assert.equal((await getXhighJob(r.job.job_id))?.status, "completed");
@@ -682,7 +814,7 @@ async function main() {
         analysisCalls = 0;
         analysisFailNext = 1;
         const sid = "sess_m3_retry_analysis";
-        const r = await start({ dc: makeDc({ context_id: "ctx_r", version: 1, question: QUESTION_PLAIN }), session_id: sid });
+        const r = await start(await seal({ dc: makeDc({ context_id: "ctx_r", version: 1, question: QUESTION_PLAIN }), session_id: sid }));
         await runner.runDecisionReportStage(r.job.job_id, "finalize");
         assert.equal((await getXhighJob(r.job.job_id))?.status, "completed");
         assert.equal(analysisCalls, 2);
@@ -694,7 +826,7 @@ async function main() {
         pageCalls.length = 0;
         pageFailures.set("05", 2);
         const sid = "sess_m3_continue";
-        const r = await start({ dc: makeDc({ context_id: "ctx_c", version: 1, question: QUESTION_PLAIN }), session_id: sid });
+        const r = await start(await seal({ dc: makeDc({ context_id: "ctx_c", version: 1, question: QUESTION_PLAIN }), session_id: sid }));
         await runner.runDecisionReportStage(r.job.job_id, "finalize");
         const failedJob = await getXhighJob(r.job.job_id);
         assert.equal(failedJob?.status, "failed");
@@ -726,9 +858,9 @@ async function main() {
         pageCalls.length = 0;
         analysisCalls = 0;
         const sid = "sess_m3_fence";
-        const dc = makeDc({ context_id: "ctx_f", version: 1, question: QUESTION_PLAIN });
-        const a = await start({ dc, session_id: sid });
-        const b = await start({ dc, session_id: sid, regenerate: true });
+        const sealedF = await seal({ dc: makeDc({ context_id: "ctx_f", version: 1, question: QUESTION_PLAIN }), session_id: sid });
+        const a = await start(sealedF);
+        const b = await start(sealedF, { regenerate: true });
         assert.notEqual(a.job.job_id, b.job.job_id);
         const aJob = await getXhighJob(a.job.job_id);
         assert.equal(aJob?.failure_reason, "superseded_by_regenerate");
@@ -743,7 +875,7 @@ async function main() {
 
       await check("stale running job with no live lease → interrupted + retryable (never shown complete)", async () => {
         const sid = "sess_m3_stale";
-        const r = await start({ dc: makeDc({ context_id: "ctx_s", version: 1, question: QUESTION_PLAIN }), session_id: sid });
+        const r = await start(await seal({ dc: makeDc({ context_id: "ctx_s", version: 1, question: QUESTION_PLAIN }), session_id: sid }));
         await updateXhighJobStatus(r.job.job_id, "running", { current_stage: "segments" });
         const { kv } = await import("../lib/kv/client");
         const { xhighJobKey } = await import("../lib/poju/xhigh-job-types");

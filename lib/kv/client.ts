@@ -80,6 +80,14 @@ export const kv = new Proxy(remoteKv as Redis, {
   },
 });
 
+/**
+ * The process-wide store, never a request-scoped ephemeral frame: records that
+ * must outlive the request (ledger, Freeze seals, profile registry) live here.
+ */
+export function durableKv(): Redis | MemoryKv {
+  return remoteKv;
+}
+
 export const KV_TTL = {
   BASE_ANALYSIS_JOB: 60 * 60 * 2,
   /** 分阶段客户端编排：compute+write+finalize 可跨多次请求，需盖住最坏墙钟。 */
@@ -87,4 +95,9 @@ export const KV_TTL = {
   POJU_XHIGH_JOB: 60 * 60 * 2,
   /** Cover full Phase-4 wall (status MAX_JOB_AGE ≈ 90m); was 5m and allowed double-create. */
   POJU_XHIGH_LOCK: 60 * 90,
+  /**
+   * DI2 authority + finished-report retention: 30-day report window + 30-day
+   * companion window. Never the 2h execution TTL.
+   */
+  DECISION_AUTHORITY_RETENTION: 60 * 60 * 24 * 60,
 } as const;

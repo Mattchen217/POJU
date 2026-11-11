@@ -30,7 +30,11 @@ import type {
   NaValidationContext,
   TopicApplicabilityRule,
 } from "./explicit-na-validate";
-import { readLiveCfpSourceState } from "./live-cfp-source";
+import {
+  readLiveCfpSourceState,
+  readServerCfpSourceState,
+  type ServerCfpRecompute,
+} from "./live-cfp-source";
 import type { AuthoritativeTopicEvalRecord } from "./topic-eval-authority";
 import type {
   Conflict,
@@ -227,6 +231,36 @@ export async function buildProductionNaValidationContextFromSession(
     cfpSourceState,
     cfpLiveEvaluation,
     // catalogConditionEvals intentionally omitted (SOURCE_GAP).
+  };
+}
+
+/**
+ * M4 server Freeze authority path. Identical to the production builder (ACTIVE DIR
+ * catalog, ACTIVE topic rules + Session evals, Session confirmation / N/A rows) except
+ * the CFP state, which comes from the server's own profile recomputation instead of the
+ * device-only IndexedDB reader. `session` is the server-assembled authority view
+ * (ledger snapshot + envelope), never a client-supplied NaValidationContext.
+ */
+export async function buildServerFreezeNaValidationContext(
+  session: POJUSessionState,
+  opts: ProductionNaValidationBuildOpts & { cfp: ServerCfpRecompute },
+): Promise<NaValidationContext> {
+  const base = await buildProductionNaValidationContextFromSession(session, {
+    nowIso: opts.nowIso,
+  });
+  const cfpRead = readServerCfpSourceState(session, opts.cfp);
+  return {
+    ...base,
+    cfpSourceState: cfpRead.ok ? cfpRead.state : undefined,
+    cfpLiveEvaluation: cfpRead.ok
+      ? {
+          state: cfpRead.state,
+          eval_id: cfpRead.eval_id,
+          source_code: cfpRead.source_code,
+          profile_id: cfpRead.profile_id,
+          session_id: cfpRead.session_id,
+        }
+      : undefined,
   };
 }
 

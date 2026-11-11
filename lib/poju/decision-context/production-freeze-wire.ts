@@ -15,6 +15,15 @@ import {
   type FrozenDeliveryPackage,
 } from "./freeze-to-delivery";
 import type { DecisionContext, DecisionContextBinding } from "./types";
+import { bindingFromDecisionContext } from "./read-bound";
+import { isDcLedgerSyncError } from "@/lib/poju/decision-authority/client-sync";
+import {
+  sealFreezeWithAuthority,
+  withFreezeReceipts,
+  type FreezeProfileInput,
+  type SealedFreeze,
+} from "@/lib/poju/decision-authority/client-freeze";
+import { isDcLedgerEnrolled } from "@/lib/poju/decision-authority/types";
 import {
   sessionHasDecisionContextSlice,
   sessionHasFrozenDecisionContext,
@@ -49,6 +58,8 @@ const ALLOWLISTED_CODE_SET = new Set<string>(FREEZE_WIRE_ALLOWLISTED_INTERNAL_CO
 
 export const FREEZE_WIRE_GENERIC_FAIL_CODE = "freeze_failed";
 export const FREEZE_WIRE_PERSIST_FAIL_CODE = "dc_freeze_persist_failed";
+/** M4 — the server authority refused or could not be reached; nothing was frozen locally. */
+export const FREEZE_WIRE_AUTHORITY_FAIL_CODE = "dc_freeze_authority_failed";
 
 export type FreezeWireResult =
   | {
@@ -255,6 +266,8 @@ export async function ensureSessionFrozenForDelivery(
     now?: string;
     from_stall_or_max_turns?: boolean;
     from_purchase_or_report_cta?: boolean;
+    /** DI2 only: profile birth input for the server recompute (default: device profile). */
+    profile?: FreezeProfileInput;
   },
 ): Promise<FreezeWireResult> {
   const trigger = opts?.trigger ?? "pre_delivery_safety";
@@ -266,6 +279,10 @@ export async function ensureSessionFrozenForDelivery(
   });
   if (!gate.allowed) {
     return await applySufficiencyFreezeToSession(session, { now: opts?.now });
+  }
+
+  if (isDcLedgerEnrolled(session)) {
+    return await ensureSessionFrozenViaAuthority(session, gate.draft!, opts);
   }
 
   const applied = await applySufficiencyFreezeToSession(session, { now: opts?.now });
@@ -315,6 +332,63 @@ export async function ensureSessionFrozenForDelivery(
     session: commit.session,
     idempotency_key: applied.idempotency_key,
   };
+}
+
+/**
+ * M4 — DI2 Freeze is sealed by the server from its own ledger head. The device only
+ * adopts the returned final snapshot + signed receipts through Session C1.
+ */
+async function ensureSessionFrozenViaAuthority(
+  session: POJUSessionState,
+  draft: DecisionContext,
+  opts?: { now?: string; profile?: FreezeProfileInput },
+): Promise<FreezeWireResult> {
+  let sealed: SealedFreeze;
+  try {
+    sealed = await sealFreezeWithAuthority(session, { now: opts?.now, profile: opts?.profile });
+  } catch (e) {
+    if (isDcLedgerSyncError(e)) {
+      const code = ALLOWLISTED_CODE_SET.has(e.code) ? e.code : FREEZE_WIRE_AUTHORITY_FAIL_CODE;
+      return { ok: false, reason: `${e.code}: ${e.message}`, reason_code: code, session };
+    }
+    return freezeFailWireResult(session, e);
+  }
+  const pack: FrozenDeliveryPackage = {
+    frozen: sealed.frozen_dc,
+    version_snapshot: JSON.parse(JSON.stringify(sealed.frozen_dc)) as DecisionContext,
+    binding: bindingFromDecisionContext(sealed.frozen_dc),
+  };
+  const idempotency_key = freezeIdempotencyKey(session, draft);
+  const { commitDecisionContextChange } = await import("@/lib/poju/session-manager");
+  const { applyDcToWorking } = await import("./persist");
+  const withReceipts: POJUSessionState = {
+    ...session,
+    dc_ledger: sealed.mirror,
+    ...withFreezeReceipts(session, sealed.receipt, sealed.profile_receipt),
+  };
+  const commit = await commitDecisionContextChange({
+    session: withReceipts,
+    idempotency_key,
+    now: opts?.now,
+    require_control_plane: false,
+    apply: (tx) => {
+      const merged = applyFreezeToSessionSlice(
+        {
+          decision_context: tx.working.decision_context,
+          decision_context_versions: tx.working.decision_context_versions,
+        },
+        pack,
+      );
+      applyDcToWorking(tx, pack.frozen, merged.decision_context_versions ?? []);
+    },
+  });
+  if (commit.idempotent_skip) {
+    return { ok: true, skipped: true, reason: "idempotent_skip", session: commit.session, binding: pack.binding };
+  }
+  if (!commit.committed) {
+    return persistFailWireResult(session, commit.error);
+  }
+  return { ok: true, pack, session: commit.session, idempotency_key };
 }
 
 /**

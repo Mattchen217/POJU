@@ -19,6 +19,10 @@ import { countUserTurns } from "@/lib/poju/summary-readiness";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import type { POJUMessage, POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
+import {
+  contentDerivedLedgerKey,
+  syncDcLedgerBeforeWrite,
+} from "@/lib/poju/decision-authority/client-sync";
 
 const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary
 
@@ -585,6 +589,13 @@ export async function mutatePOJUSession(
       }
     }
 
+    // M4 — DI2 DC changes reach the server ledger before the local blob.
+    await syncDcLedgerBeforeWrite({
+      base,
+      candidate,
+      idempotency_key: mutation.operation_id,
+    });
+
     const bumpPolicy = mutation.bump_dc ?? "auto";
     const bumpDc =
       bumpPolicy === true
@@ -695,7 +706,11 @@ export async function createPOJUSessionRecordIfAbsent(
  */
 export async function casWritePOJUSessionFromCandidate(
   candidate: POJUSessionState,
-  opts?: { bump_dc?: boolean | "auto" },
+  opts?: {
+    bump_dc?: boolean | "auto";
+    /** Stable key for the M4 ledger commit (C1 idempotency key); content-derived when absent. */
+    dc_ledger_idempotency_key?: string;
+  },
 ): Promise<CasWritePOJUSessionResult> {
   const db = getPojuDb();
   const ownerKey = await resolveLocalOwnerKey();
@@ -728,6 +743,14 @@ export async function casWritePOJUSessionFromCandidate(
     session_revision: mirror.session_revision,
     dc_write_revision: mirror.dc_write_revision,
   };
+
+  // M4 — DI2 DC changes reach the server ledger before the local blob
+  // (mutates candidate.dc_ledger in place, like the revision mirrors below).
+  await syncDcLedgerBeforeWrite({
+    base: baseForDc,
+    candidate,
+    idempotency_key: opts?.dc_ledger_idempotency_key ?? contentDerivedLedgerKey(candidate),
+  });
   const bumpDc =
     bumpPolicy === true
       ? true

@@ -244,6 +244,45 @@ export async function readLiveCfpSourceState(
   }
 }
 
+export type ServerCfpRecompute =
+  | { outcome: "ok"; profile_hash: string }
+  | { outcome: "calc_failed" }
+  | { outcome: "not_supplied" };
+
+/**
+ * M4 server Freeze path. Same identity / never-supplied priority as the device reader,
+ * but provenance is the server's own recomputation from birth input at the Freeze instant
+ * (not the device IndexedDB record). Birth not sent while the Session claims a profile
+ * → ok:false (fail-closed), never source_absent_not_supplied.
+ */
+export function readServerCfpSourceState(
+  session: POJUSessionState,
+  recompute: ServerCfpRecompute,
+): LiveCfpSourceReadResult {
+  const sessionId = session.session_id?.trim() ?? "";
+  if (!sessionId) return { ok: false, reason_code: "cfp_session_id_missing" };
+  if (identityMismatch(session)) return { ok: false, reason_code: "cfp_identity_mismatch" };
+  const profileId = session.selected_stored_profile_id?.trim() || null;
+  if (neverSupplied(session)) {
+    if (recompute.outcome !== "not_supplied") {
+      return { ok: false, reason_code: "cfp_identity_mismatch" };
+    }
+    return okEval(sessionId, "source_absent_not_supplied", `cfp_eval_server_absent_${sessionId}`, null);
+  }
+  if (recompute.outcome === "not_supplied") {
+    return { ok: false, reason_code: "cfp_reader_unavailable" };
+  }
+  if (recompute.outcome === "calc_failed") {
+    return okEval(sessionId, "source_calc_failed", `cfp_eval_server_calc_fail_${sessionId}`, profileId);
+  }
+  return okEval(
+    sessionId,
+    "source_ok",
+    `cfp_eval_server_ok_${sessionId}_${recompute.profile_hash.slice(0, 16)}`,
+    profileId,
+  );
+}
+
 /** Test helper: build a minimal StoredProfileRecord shell with a real birth_info_hash. */
 export function testStoredProfileRecordShell(
   profileId: string,

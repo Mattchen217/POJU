@@ -14,6 +14,14 @@
 import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
+  freezeReceiptFor,
+  loadFreezeProfileInput,
+  profileReceiptFor,
+  withFreezeReceipts,
+} from "@/lib/poju/decision-authority/client-freeze";
+import { getDecisionAuthorityTransport } from "@/lib/poju/decision-authority/client-transport";
+import type { FreezeReceipt, ProfileReceipt } from "@/lib/poju/decision-authority/types";
+import {
   DI2_REPORT_SCHEMA_VERSION,
   DI2_REPORT_SOURCE,
   type DecisionReportPageRecord,
@@ -379,31 +387,90 @@ function freezeOf(session: POJUSessionState) {
   };
 }
 
+type ReportAuthority = {
+  session: POJUSessionState;
+  writer_token: string;
+  freeze_receipt: FreezeReceipt;
+  profile_receipt: ProfileReceipt;
+};
+
+/**
+ * The report starts only from server-signed receipts. A profile receipt missing for this
+ * Freeze (no birth at seal time, or lost) is obtained by asking the server to recompute
+ * the profile at the Freeze instant — the device never sends a computed chart.
+ */
+async function ensureReportAuthority(
+  initial: POJUSessionState,
+  freeze: { freezeId: string; content_hash: string },
+  opts: DecisionReportRunOpts,
+): Promise<ReportAuthority> {
+  let session = initial;
+  const writer_token = session.dc_ledger?.writer_token ?? "";
+  const freeze_receipt = freezeReceiptFor(session, freeze.freezeId);
+  if (!writer_token || !freeze_receipt) {
+    throw new DecisionReportClientError(
+      "FREEZE_NOT_SERVER_SEALED",
+      "This Freeze has no server receipt; only a server-sealed Freeze can start a report",
+    );
+  }
+  if (freeze_receipt.context_hash !== freeze.content_hash) {
+    throw new DecisionReportClientError("FREEZE_RECEIPT_MISMATCH", "Freeze receipt does not match the session Freeze");
+  }
+  let profile_receipt = profileReceiptFor(session, freeze.freezeId);
+  if (!profile_receipt) {
+    const profile = await loadFreezeProfileInput(session);
+    if (!profile) {
+      throw new DecisionReportClientError(
+        "PROFILE_REQUIRED",
+        "A personal profile with birth data is required for the report",
+      );
+    }
+    let res;
+    try {
+      res = await getDecisionAuthorityTransport().registerProfile({
+        session_id: session.session_id,
+        writer_token,
+        freeze_receipt,
+        profile_id: profile.profile_id,
+        birth_info: profile.birth_info,
+      });
+    } catch (e) {
+      throw new DecisionReportClientError(
+        "DC_AUTHORITY_UNREACHABLE",
+        e instanceof Error ? e.message : "decision authority unreachable",
+        { retryable: true },
+      );
+    }
+    if (!res.ok) {
+      throw new DecisionReportClientError(res.code, res.error, { retryable: res.retryable });
+    }
+    profile_receipt = res.receipt;
+    session = { ...session, ...withFreezeReceipts(session, freeze_receipt, profile_receipt) };
+    await (opts.persist ?? defaultPersist)(session);
+  }
+  return { session, writer_token, freeze_receipt, profile_receipt };
+}
+
 /**
  * Start (or reuse) the report for the current Freeze and follow it to completion.
  * `regenerate` starts a new execution generation; the previous generation's row and
  * pages stay intact in the session.
  */
 export async function runDecisionReportForSession(
-  session: POJUSessionState,
+  initialSession: POJUSessionState,
   locale: string,
   opts: DecisionReportRunOpts = {},
 ): Promise<POJUSessionState> {
-  const { frozen, freeze } = freezeOf(session);
+  let session = initialSession;
+  const { freeze } = freezeOf(session);
   const persist = opts.persist ?? defaultPersist;
 
   if (!opts.regenerate && session.pending_decision_report_job_id) {
     return pollUntilDone(session, session.pending_decision_report_job_id, locale, freeze, opts);
   }
 
-  const { loadSessionProfileBundle } = await import("@/lib/poju/session-profile");
-  const bundle = await loadSessionProfileBundle(session);
-  if (bundle.base_analysis == null) {
-    throw new DecisionReportClientError(
-      "PROFILE_REQUIRED",
-      "A personal profile with a computed chart is required for the report",
-    );
-  }
+  const authority = await ensureReportAuthority(session, freeze, opts);
+  session = authority.session;
 
   opts.onProgress?.({
     job_id: "",
@@ -421,11 +488,9 @@ export async function runDecisionReportForSession(
       session_id: session.session_id,
       locale,
       regenerate: opts.regenerate === true,
-      decision_context: frozen,
-      blueprint: session.decision_blueprint ?? null,
-      profile_id: bundle.resolved_profile_id,
-      base_analysis: bundle.base_analysis,
-      birth_info: bundle.profile?.birth ?? null,
+      writer_token: authority.writer_token,
+      freeze_receipt: authority.freeze_receipt,
+      profile_receipt: authority.profile_receipt,
     },
     opts.signal,
   );

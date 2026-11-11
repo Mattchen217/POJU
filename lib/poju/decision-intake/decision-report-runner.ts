@@ -63,6 +63,7 @@ import {
   loadRegisteredFreeze,
   loadRegisteredProfile,
   saveAnalysis,
+  saveCompletedReport,
   savePage,
   type RegisteredFreeze,
   type StoredAnalysis,
@@ -211,10 +212,14 @@ async function loadSources(input: DecisionReportJobInput): Promise<{
     session_id: input.session_id,
     freeze_id: input.freeze_id,
     context_hash: input.context_hash,
+    receipt_id: input.freeze_receipt_id,
   });
   const projectionProfile = await loadRegisteredProfile({
     session_id: input.session_id,
+    freeze_id: input.freeze_id,
+    frozen_at: freeze.frozen_at,
     profile_hash: input.profile_hash,
+    receipt_id: input.profile_receipt_id,
   });
   return { freeze, projectionProfile };
 }
@@ -573,6 +578,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
       session_id: input.session_id,
       freeze_id: input.freeze_id,
       context_hash: input.context_hash,
+      receipt_id: input.freeze_receipt_id,
     });
   } catch (e) {
     await failDecisionReportJob(ctx, "assemble", `source_unavailable:${e instanceof Error ? e.message : String(e)}`, {
@@ -653,6 +659,25 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     await releaseDeliveryContinueLease(ctx.job.job_id, ctx.lease_token).catch(() => undefined);
     return;
   }
+  await saveCompletedReport({
+    job_id: ctx.job.job_id,
+    session_id: input.session_id,
+    execution_generation: ctx.generation,
+    freeze_id: input.freeze_id,
+    context_hash: input.context_hash,
+    profile_hash: input.profile_hash,
+    freeze_receipt_id: input.freeze_receipt_id,
+    profile_receipt_id: input.profile_receipt_id,
+    report_job_id: input.report_job_id,
+    result,
+    analysis: analysis.record,
+    pages,
+  }).catch((e) => {
+    di2Log("completed report retention write failed", {
+      job_id: ctx.job.job_id,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  });
   di2Log("report completed", { job_id: ctx.job.job_id, freeze_id: input.freeze_id, generation: ctx.generation });
   await releaseRelay(ctx.job.job_id, input.session_id, ctx.lease_token);
 }

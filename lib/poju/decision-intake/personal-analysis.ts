@@ -43,6 +43,10 @@ export type RegisteredProfile = {
   structured: ProfileStructured;
   ziwei_closed_set: string | null;
   registered_at: string;
+  /** Formal calculation chain version the server recomputed with. */
+  calculation_schema_version: string;
+  /** Calculation instant (= the Freeze's frozen_at); time-relative lines use it. */
+  calculation_timestamp: string;
 };
 
 export type ProfileProjection = {
@@ -61,14 +65,18 @@ function hexOf(bytes: Uint8Array): string {
   return out;
 }
 
-/** Stable hash over the formal profile calculation inputs (not over time-relative text). */
+/** Stable hash over the formal profile calculation result, schema and calculation instant. */
 export function computeProfileHash(input: {
   structured: ProfileStructured;
   ziwei_closed_set: string | null;
+  calculation_schema_version: string;
+  calculation_timestamp: string;
 }): string {
   const canonical = canonicalStringify({
-    structured: input.structured,
+    structured: JSON.parse(JSON.stringify(input.structured)) as unknown,
     ziwei_closed_set: input.ziwei_closed_set ?? null,
+    calculation_schema_version: input.calculation_schema_version,
+    calculation_timestamp: input.calculation_timestamp,
   });
   return hexOf(sha256(textEncoder.encode(canonical)));
 }
@@ -91,7 +99,7 @@ export function buildProfileProjection(
   profile: RegisteredProfile,
   opts?: { as_of?: Date },
 ): ProfileProjection {
-  const asOf = opts?.as_of ?? new Date();
+  const asOf = opts?.as_of ?? new Date(profile.calculation_timestamp);
   const pack = buildChartFactPack(profile.structured, { as_of: asOf });
   const seen = new Set<string>();
   const chart_lines: ProfileLine[] = [];

@@ -281,11 +281,19 @@ export async function loadPOJUSession(sessionId: string): Promise<POJUSessionSta
  * C1 core persist: encrypted session blob + cycle index only.
  * Archive / profile sync are intentionally NOT here (post-commit side effects).
  */
-export async function savePOJUSessionCore(state: POJUSessionState): Promise<void> {
+export async function savePOJUSessionCore(
+  state: POJUSessionState,
+  opts?: { dc_ledger_idempotency_key?: string },
+): Promise<void> {
   // Phase 3 S1 W2 — thin wrapper over unified CAS (Contract §7.4–7.5).
   // Prefer mutatePOJUSession for concurrent-safe patches; this bridge keeps
   // legacy whole-state callers on the single encrypted_data write path.
-  await casWritePOJUSessionFromCandidate(state, { bump_dc: "auto" });
+  await casWritePOJUSessionFromCandidate(state, {
+    bump_dc: "auto",
+    ...(opts?.dc_ledger_idempotency_key
+      ? { dc_ledger_idempotency_key: opts.dc_ledger_idempotency_key }
+      : {}),
+  });
 }
 
 /**
@@ -396,7 +404,10 @@ export async function commitDecisionContextChange(
 
   let workingFull: POJUSessionState = memorySnapshot;
 
-  const writeCore = input.writeCore ?? savePOJUSessionCore;
+  const writeCore =
+    input.writeCore ??
+    ((s: POJUSessionState) =>
+      savePOJUSessionCore(s, { dc_ledger_idempotency_key: input.idempotency_key }));
   const sliceResult = await commitPersistTransaction(
     tx,
     async (committedSlice) => {
