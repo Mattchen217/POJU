@@ -6,6 +6,7 @@
 import {
   activeTargets,
   classifyAnswer,
+  resolveGroundedClauseSpan,
   writesFor,
 } from "../../lib/poju/decision-intake/answer-interpretation";
 import type { AdaptiveTurnTestHooks } from "../../lib/poju/decision-intake/adaptive-turn";
@@ -13,6 +14,20 @@ import type { AnswerInterpretationModelHook } from "../../lib/poju/decision-inta
 import type { HandleInput } from "../../lib/poju/agent";
 import type { ModelAnswerDraft } from "../../lib/poju/decision-intake/types";
 import type { POJUSessionState } from "../../lib/poju/types";
+
+/**
+ * The legacy deterministic splitter may cut inside a sentence (e.g. at 同时).
+ * Mirror a prompt-compliant model: when that clause is not a complete clause
+ * span, quote the containing sentence, else the whole statement.
+ */
+function completeClauseQuote(statement: string, candidate: string): string {
+  if (resolveGroundedClauseSpan(candidate, statement).ok) return candidate;
+  const core = candidate.replace(/[。！？!?；;，,\s]+$/u, "").trim();
+  const sentences = statement.match(/[^。！？!?；;\n]+[。！？!?；;\n]*/gu) ?? [];
+  const sentence = sentences.map((s) => s.trim()).find((s) => s.includes(core));
+  if (sentence && resolveGroundedClauseSpan(sentence, statement).ok) return sentence;
+  return statement.trim();
+}
 
 export function deterministicModelAnswerDraft(input: {
   session: POJUSessionState;
@@ -42,13 +57,12 @@ export function deterministicModelAnswerDraft(input: {
       );
       if (hasConstraintTwin) continue;
     }
-    const key = `${write.kind}:${write.statement}`;
+    const quote = completeClauseQuote(input.statement, write.statement);
+    const key = `${write.kind}:${quote}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    // write.statement is a clause or slice of the user statement, so it is
-    // a contiguous source quote when the deterministic classifier is used.
     extracted_items.push({
-      text: write.statement,
+      text: quote,
       semantic_kind: write.kind,
       role_hint: null,
       certainty:
@@ -57,7 +71,7 @@ export function deterministicModelAnswerDraft(input: {
           : write.status === "unknown" || write.status === "declined"
             ? "unclear"
             : "explicit",
-      source_quote: write.statement,
+      source_quote: quote,
     });
   }
   return {

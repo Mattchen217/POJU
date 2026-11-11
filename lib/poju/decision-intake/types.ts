@@ -79,11 +79,20 @@ export type ModelAnswerDraft = {
     role_code_hint?: string | null;
     certainty: "explicit" | "estimated" | "unclear";
     /**
-     * Exact substring of the current user answer that supports this item.
-     * Required for persistable model extractions. Never a paraphrase,
-     * and never manufactured by the parser.
+     * Verbatim copy of one or more complete sentences / clauses of the
+     * current user answer. Required for persistable model extractions.
+     * Never a paraphrase, never a cut from inside a clause, and never
+     * manufactured by the parser.
      */
     source_quote: string;
+    /**
+     * Optional candidate location of source_quote in the trimmed user answer
+     * (UTF-16 offsets, end exclusive). Locating hint only, never authorization:
+     * when present, deterministic code verifies both offsets against the
+     * original statement and rejects the item on any mismatch.
+     */
+    source_start?: number | null;
+    source_end?: number | null;
   }>;
   unresolved_aspects: string[];
   explanation: string;
@@ -120,13 +129,25 @@ export type SourceQuoteRejectionReason =
   | "source_quote_not_grounded"
   | "source_quote_empty"
   | "source_quote_too_long"
-  | "extraction_text_not_source_equivalent";
+  | "extraction_text_not_source_equivalent"
+  /** Quote occurs in the statement but does not cover complete clauses. */
+  | "source_quote_not_clause_span"
+  /** Statement clause structure is undeterminable; only the whole statement may be quoted. */
+  | "clause_boundary_undeterminable"
+  /** Normalized match starts or ends inside one original character cluster. */
+  | "source_quote_unicode_boundary_mismatch"
+  | "source_offset_invalid"
+  | "source_offset_out_of_range"
+  | "source_offset_quote_mismatch";
 
 export type SourceQuoteRejection = {
   extracted_index: number;
   text: string;
   source_quote: string;
   reason: SourceQuoteRejectionReason;
+  /** Model-provided candidate offsets, recorded for audit only. */
+  source_start?: number | null;
+  source_end?: number | null;
 };
 
 /**

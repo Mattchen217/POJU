@@ -16,6 +16,7 @@ import type {
   ModelAnswerDraft,
   ProposedWrite,
   SourceQuoteRejection,
+  SourceQuoteRejectionReason,
   UnresolvedAnswerItem,
   UnresolvedAnswerReason,
   UnresolvedModelAspect,
@@ -60,10 +61,11 @@ export function intakeControlItemId(
 const MAX_SOURCE_QUOTE_LENGTH = 2000;
 
 /**
- * Conservative normalization for deterministic source-quote grounding.
- * Unicode + whitespace + safe punctuation only. No semantic similarity.
+ * Character folding for deterministic source-quote grounding:
+ * Unicode NFKC + zero-width removal + safe punctuation only.
+ * No whitespace collapse here and no semantic similarity.
  */
-export function normalizeAnswerGroundingText(text: string): string {
+function foldGroundingChars(text: string): string {
   let s = text.normalize("NFKC").replace(/[​-‍﻿]/g, "");
   s = s
     .replace(/[“”„«»]/g, '"')
@@ -81,58 +83,528 @@ export function normalizeAnswerGroundingText(text: string): string {
     .replace(/[【]/g, "[")
     .replace(/[】]/g, "]")
     .replace(/[、]/g, ",");
-  return s.replace(/\s+/gu, " ").trim();
+  return s;
 }
+
+/**
+ * Conservative normalization for deterministic source-quote grounding.
+ * Unicode + whitespace + safe punctuation only. No semantic similarity.
+ */
+export function normalizeAnswerGroundingText(text: string): string {
+  return foldGroundingChars(text).replace(/\s+/gu, " ").trim();
+}
+
+// ---------------------------------------------------------------------------
+// Clause-boundary grounding (M2.4-R2-FU10)
+//
+// A model-derived extraction may only cite complete clauses of the user's
+// original statement. Boundaries are computed on the ORIGINAL characters,
+// never on the normalized text, and normalization is used only to locate a
+// candidate match that must start and end on original character clusters.
+// A quote cut from inside a clause, or one that drops a dependent clause
+// attached to it, is rejected; there is no fallback to substring matching.
+// ---------------------------------------------------------------------------
+
+type GroundableItem = {
+  text: string;
+  source_quote: string;
+  source_start?: number | null;
+  source_end?: number | null;
+};
+
+export type GroundedClauseSpan = {
+  /** UTF-16 offsets into the trimmed user statement, end exclusive. */
+  start: number;
+  end: number;
+  /** Original, unnormalized user-authored text of [start, end). */
+  text: string;
+};
+
+export type ClauseSpanResult =
+  | ({ ok: true } & GroundedClauseSpan)
+  | { ok: false; reason: SourceQuoteRejectionReason };
 
 export type SourceQuoteGroundingResult =
-  | { ok: true }
-  | { ok: false; reason: SourceQuoteRejection["reason"] };
+  | { ok: true; span: GroundedClauseSpan }
+  | { ok: false; reason: SourceQuoteRejectionReason };
+
+const HARD_BOUNDARY_CHARS = new Set(["。", "｡", "！", "？", "!", "?", "；", ";", "\n", "\r"]);
+const SOFT_BOUNDARY_CHARS = new Set(["，", ",", "﹐"]);
+const BRACKET_PAIRS: Record<string, string> = {
+  "（": "）",
+  "(": ")",
+  "「": "」",
+  "『": "』",
+  "“": "”",
+  "《": "》",
+  "【": "】",
+  "[": "]",
+  "{": "}",
+  "〈": "〉",
+};
+const BRACKET_CLOSERS = new Set(Object.values(BRACKET_PAIRS));
+const ASCII_ABBREVIATIONS = new Set([
+  "mr", "mrs", "ms", "dr", "st", "vs", "etc", "eg", "ie", "jr", "sr", "prof", "inc", "ltd", "co", "no", "approx",
+]);
+const CJK_OR_FULLWIDTH_RE = /[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/;
+/** Separator characters that may be omitted at either edge of a quote. */
+const EDGE_SEPARATOR_RE = /[\s。｡！？!?；;，,﹐.]/;
+const LEADING_OPENERS_RE = /^[\s"“「『《【（(\[{〈]+/;
+const CLUSTER_EXTEND_RE = /[\p{M}\u200C\u200D\uFE00-\uFE0F]/u;
 
 /**
- * A model extraction is grounded only when the normalized source_quote is a
- * contiguous substring of the normalized user statement.
+ * Closed-class clause-structure markers. A clause headed by a conjunction,
+ * subordinator, or predicate-initial adverb / modal (shared elided subject)
+ * is not independent of the clause before it. Over-merging is fail-closed:
+ * the model must then quote the larger complete span.
  */
-export function groundSourceQuote(
-  sourceQuote: string,
-  statement: string,
-): SourceQuoteGroundingResult {
-  if (sourceQuote.length > MAX_SOURCE_QUOTE_LENGTH) {
-    return { ok: false, reason: "source_quote_too_long" };
+const ZH_DEPENDENT_HEAD_RE =
+  /^(?:[但却而并且就才也还又再都便仍亦则即乃故或及与和跟同不没未别莫勿无非只仅光唯最至更已将要想能会可应该须必需得愿肯敢是等以因从如若倘除虽尽否然况甚那]|正在|直到|到时|由于|于是|自从|假如|假设|万一|一旦|即使|哪怕|就算|只要|只有|大概|大约|估计|或许|也许|差不多|基本|几乎|顶多|起码|左右|打算|希望|计划|决定|准备)/;
+const EN_DEPENDENT_HEAD_RE =
+  /^(?:but|yet|however|though|although|unless|if|because|since|so|and|or|nor|except|otherwise|while|whereas|until|before|after|when|whenever|once|provided|as|even|only|not|never|no|without|which|who|whom|whose|where|that|then|still|maybe|probably|perhaps|possibly|likely|at|up|about|around|roughly|approximately|just|already|to|too|also|plus|unlike|instead|rather)\b/i;
+/** A clause opened by a subordinator binds to the clause that follows it. */
+const ZH_SUBORDINATOR_RE =
+  /^(?:如果|假如|假设|要是|若|倘若|万一|虽然|虽说|尽管|即使|即便|哪怕|就算|因为|由于|只要|只有|除非|一旦|既然|无论|不管|不论|等到|直到|自从|当(?![前下地然时初年天月日中今场面]))/;
+const EN_SUBORDINATOR_RE =
+  /^(?:if|unless|although|though|because|since|when|whenever|while|once|even if|even though|as long as|provided|whether|before|after|until|given)\b/i;
+/** A clause ending in a connective or clause-taking verb continues into the next clause. */
+const ZH_DANGLING_END_RE =
+  /(?:但是|但|可是|不过|而且|并且|所以|因此|因为|如果|虽然|或者|还是|然后|以及|和|跟|与|及|或|的|地|是|就是|在于|包括|叫|说|讲|想|觉得|认为|以为|知道|确定|决定|打算|希望|担心|害怕|怕|承认|否认|表示|发现|记得|忘|相信|怀疑|考虑|计划|准备|同意|反对|要求|建议|听说|问|时|时候|之前|之后|以前|以后|的话)(?:过|了|着)?$/;
+const EN_DANGLING_END_RE =
+  /(?:^|\s)(?:but|and|or|so|because|if|although|though|unless|yet|then|that|said|say|says|think|thought|know|knew|believe|mean|meant|decided|plan|hope|want|is|was|are|were|be|to|of|the)$/i;
+/**
+ * Meaning-neutral discourse / correction framing that explicitly opens a new,
+ * independent statement. A clause may begin either at the marker or right
+ * after it; a marker-only piece is not a clause.
+ */
+const DISCOURSE_ONLY_RE =
+  /^(?:另外|此外|还有|补充一下|补充|更正一下|更正|纠正一下|纠正|之前说错了|说错了|之前说的不准确|also|additionally|besides|plus|by the way|btw|correction|actually i meant)$/i;
+const DISCOURSE_PREFIX_RE =
+  /^(?:(?:另外|此外|补充一下|补充|更正一下|更正|纠正一下|纠正|之前说错了|说错了|之前说的不准确)(?:\s*[:：]\s*|\s+)|另外|此外|(?:also|additionally|besides|by the way|btw|correction)\s*:\s*|actually\s+i\s+meant(?:\s*:\s*|\s+))/i;
+
+function isAsciiSentencePeriod(s: string, i: number): boolean {
+  const prev = s[i - 1] ?? "";
+  const next = s[i + 1] ?? "";
+  if (prev === "." || next === ".") return false;
+  if (/\d/.test(prev) && /\d/.test(next)) return false;
+  if (
+    next &&
+    !/\s/.test(next) &&
+    !CJK_OR_FULLWIDTH_RE.test(next) &&
+    next !== '"' &&
+    !BRACKET_CLOSERS.has(next)
+  ) {
+    return false;
   }
-  const quote = normalizeAnswerGroundingText(sourceQuote);
-  const hay = normalizeAnswerGroundingText(statement);
-  if (!quote) return { ok: false, reason: "source_quote_empty" };
-  if (!hay.includes(quote)) return { ok: false, reason: "source_quote_not_grounded" };
-  return { ok: true };
+  const word = /([A-Za-z]+)$/.exec(s.slice(Math.max(0, i - 16), i))?.[1] ?? "";
+  if (word.length === 1) return false;
+  if (ASCII_ABBREVIATIONS.has(word.toLowerCase())) return false;
+  return true;
+}
+
+function isBoundaryAt(s: string, i: number): boolean {
+  const c = s[i]!;
+  if (HARD_BOUNDARY_CHARS.has(c)) return true;
+  if (c === ".") return isAsciiSentencePeriod(s, i);
+  if (SOFT_BOUNDARY_CHARS.has(c)) {
+    return !(c === "," && /\d/.test(s[i - 1] ?? "") && /\d/.test(s[i + 1] ?? ""));
+  }
+  return false;
+}
+
+function trimEdges(s: string, start: number, end: number): [number, number] {
+  let a = start;
+  let b = end;
+  while (a < b && EDGE_SEPARATOR_RE.test(s[a]!)) a++;
+  while (b > a && EDGE_SEPARATOR_RE.test(s[b - 1]!)) b--;
+  return [a, b];
+}
+
+function trimWhitespace(s: string, start: number, end: number): [number, number] {
+  let a = start;
+  let b = end;
+  while (a < b && /\s/.test(s[a]!)) a++;
+  while (b > a && /\s/.test(s[b - 1]!)) b--;
+  return [a, b];
+}
+
+function startsWithDependentHead(head: string): boolean {
+  return ZH_DEPENDENT_HEAD_RE.test(head) || EN_DEPENDENT_HEAD_RE.test(head);
+}
+
+function startsWithSubordinator(head: string): boolean {
+  return ZH_SUBORDINATOR_RE.test(head) || EN_SUBORDINATOR_RE.test(head);
+}
+
+function endsWithDanglingHead(text: string): boolean {
+  return ZH_DANGLING_END_RE.test(text) || EN_DANGLING_END_RE.test(text);
+}
+
+/** Very short trailing pieces are appended qualifiers, not independent clauses. */
+function isShortTrailingPiece(head: string): boolean {
+  const t = head.trim();
+  if (/^[\x00-\x7f]+$/.test(t)) return t.split(/\s+/).length <= 2;
+  return [...t].length <= 3;
+}
+
+type ClauseUnit = { starts: number[]; end: number };
+type ClauseStructure =
+  | { ok: true; units: ClauseUnit[] }
+  | { ok: false; start: number; end: number };
+
+/**
+ * Deterministic clause structure of the original (trimmed) statement.
+ * Units are maximal runs of pieces that cannot be proven independent.
+ * Unbalanced brackets / quotes make the structure undeterminable.
+ */
+function analyzeClauseStructure(s: string): ClauseStructure {
+  type RawPiece = { start: number; end: number; boundaryBefore: string };
+  const raw: RawPiece[] = [];
+  const stack: string[] = [];
+  let broken = false;
+  let unitStart = 0;
+  let boundaryBefore = "";
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i]!;
+    if (c === '"') {
+      if (stack[stack.length - 1] === '"') stack.pop();
+      else stack.push('"');
+      i++;
+      continue;
+    }
+    if (BRACKET_PAIRS[c]) {
+      stack.push(c);
+      i++;
+      continue;
+    }
+    if (BRACKET_CLOSERS.has(c)) {
+      const top = stack.pop();
+      if (top === undefined || BRACKET_PAIRS[top] !== c) broken = true;
+      i++;
+      continue;
+    }
+    if (stack.length > 0 || !isBoundaryAt(s, i)) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < s.length && (isBoundaryAt(s, j) || /\s/.test(s[j]!))) j++;
+    raw.push({ start: unitStart, end: i, boundaryBefore });
+    boundaryBefore = c;
+    unitStart = j;
+    i = j;
+  }
+  raw.push({ start: unitStart, end: s.length, boundaryBefore });
+
+  const [wholeStart, wholeEnd] = trimEdges(s, 0, s.length);
+  if (broken || stack.length > 0) return { ok: false, start: wholeStart, end: wholeEnd };
+
+  type Piece = {
+    start: number;
+    end: number;
+    altStart: number | null;
+    head: string;
+    markerOnly: boolean;
+    boundaryBefore: string;
+  };
+  const pieces: Piece[] = [];
+  for (const r of raw) {
+    const [a, b] = trimEdges(s, r.start, r.end);
+    if (a >= b) continue;
+    const text = s.slice(a, b);
+    const prefix = DISCOURSE_PREFIX_RE.exec(text);
+    let altStart: number | null = null;
+    if (prefix && prefix[0].length < text.length) {
+      const [alt] = trimEdges(s, a + prefix[0].length, b);
+      if (alt < b) altStart = alt;
+    }
+    pieces.push({
+      start: a,
+      end: b,
+      altStart,
+      head: s.slice(altStart ?? a, b).replace(LEADING_OPENERS_RE, ""),
+      markerOnly: DISCOURSE_ONLY_RE.test(text),
+      boundaryBefore: r.boundaryBefore,
+    });
+  }
+
+  type Group = { starts: number[]; end: number; text: string; subordinatorPending: boolean };
+  const groups: Group[] = [];
+  let pendingMarker: { start: number; end: number } | null = null;
+  for (const p of pieces) {
+    if (p.markerOnly) {
+      if (!pendingMarker) pendingMarker = { start: p.start, end: p.end };
+      else pendingMarker.end = p.end;
+      continue;
+    }
+    const prev = groups[groups.length - 1];
+    // An explicit discourse marker proves the piece opens a new statement;
+    // a dangling or subordinate previous clause still absorbs it.
+    const explicitlyIndependent = p.altStart !== null || pendingMarker !== null;
+    const merge =
+      prev !== undefined &&
+      (prev.subordinatorPending ||
+        endsWithDanglingHead(prev.text) ||
+        (!explicitlyIndependent &&
+          (startsWithDependentHead(p.head) ||
+            isShortTrailingPiece(p.head) ||
+            (p.boundaryBefore === "." && /^[a-z]/.test(p.head)))));
+    if (merge) {
+      prev.end = p.end;
+      prev.text = s.slice(Math.min(...prev.starts), p.end);
+      prev.subordinatorPending = false;
+    } else {
+      const starts = [p.start];
+      if (p.altStart !== null) starts.push(p.altStart);
+      if (pendingMarker) starts.push(pendingMarker.start);
+      groups.push({
+        starts,
+        end: p.end,
+        text: p.head,
+        subordinatorPending: startsWithSubordinator(p.head),
+      });
+    }
+    pendingMarker = null;
+  }
+  if (groups.length === 0) return { ok: false, start: wholeStart, end: wholeEnd };
+  if (pendingMarker) groups[groups.length - 1]!.end = pendingMarker.end;
+  return {
+    ok: true,
+    units: groups.map((g) => ({ starts: [...new Set(g.starts)], end: g.end })),
+  };
+}
+
+type NormalizedMap = {
+  text: string;
+  /** For each UTF-16 unit of `text`, the index of its source cluster. */
+  clusterIndex: number[];
+  clusters: Array<{ start: number; end: number }>;
+  clusterStarts: Set<number>;
+};
+
+/** Base character plus following combining marks / joiners / variation selectors. */
+function segmentClusters(s: string): Array<{ start: number; end: number }> {
+  const clusters: Array<{ start: number; end: number }> = [];
+  let i = 0;
+  while (i < s.length) {
+    const cp = s.codePointAt(i)!;
+    let end = i + (cp > 0xffff ? 2 : 1);
+    while (end < s.length) {
+      const next = s.codePointAt(end)!;
+      const extends_ =
+        CLUSTER_EXTEND_RE.test(String.fromCodePoint(next)) || (next >= 0xe0100 && next <= 0xe01ef);
+      if (!extends_) break;
+      end += next > 0xffff ? 2 : 1;
+    }
+    clusters.push({ start: i, end });
+    i = end;
+  }
+  return clusters;
 }
 
 /**
- * Canonical user-authored content for a model-derived DC write is source_quote.
- * item.text must be source-equivalent under the same conservative normalization.
- * On success, persist the original unnormalized quote, never a model paraphrase.
+ * Normalize per original cluster so every normalized unit maps back to the
+ * exact original cluster it came from. Same folding as
+ * normalizeAnswerGroundingText, applied cluster by cluster.
+ */
+function buildNormalizedMap(s: string): NormalizedMap {
+  const clusters = segmentClusters(s);
+  let text = "";
+  const clusterIndex: number[] = [];
+  clusters.forEach((cluster, ci) => {
+    const folded = foldGroundingChars(s.slice(cluster.start, cluster.end));
+    for (const ch of folded) {
+      if (/\s/u.test(ch)) {
+        if (text.length === 0 || text.endsWith(" ")) continue;
+        text += " ";
+        clusterIndex.push(ci);
+        continue;
+      }
+      text += ch;
+      for (let k = 0; k < ch.length; k++) clusterIndex.push(ci);
+    }
+  });
+  while (text.endsWith(" ")) {
+    text = text.slice(0, -1);
+    clusterIndex.pop();
+  }
+  const clusterStarts = new Set(clusters.map((c) => c.start));
+  clusterStarts.add(s.length);
+  return { text, clusterIndex, clusters, clusterStarts };
+}
+
+function checkClauseRegion(
+  s: string,
+  structure: ClauseStructure,
+  start: number,
+  end: number,
+): ClauseSpanResult {
+  const [wa, wb] = trimWhitespace(s, start, end);
+  const [ta, tb] = trimEdges(s, wa, wb);
+  if (ta >= tb) return { ok: false, reason: "source_quote_not_clause_span" };
+  const accepted: ClauseSpanResult = { ok: true, start: wa, end: wb, text: s.slice(wa, wb) };
+  if (!structure.ok) {
+    return ta === structure.start && tb === structure.end
+      ? accepted
+      : { ok: false, reason: "clause_boundary_undeterminable" };
+  }
+  const units = structure.units;
+  for (let i = 0; i < units.length; i++) {
+    if (!units[i]!.starts.includes(ta)) continue;
+    for (let j = i; j < units.length; j++) {
+      if (units[j]!.end === tb) return accepted;
+    }
+  }
+  return { ok: false, reason: "source_quote_not_clause_span" };
+}
+
+/**
+ * Resolve source_quote to complete clause(s) of the original statement.
+ *
+ * - Boundaries are computed on the original characters (sentence enders,
+ *   semicolons, newlines, and commas only where the adjacent clauses are
+ *   provably independent).
+ * - Normalization only locates candidates; a match must start and end on
+ *   original character clusters.
+ * - Model offsets, when present, are a locating hint that must verify
+ *   exactly; any mismatch rejects without falling back to search.
+ * - Unbalanced brackets / quotes: only the whole statement may be quoted.
+ */
+export function resolveGroundedClauseSpan(
+  sourceQuote: string,
+  statement: string,
+  offsets?: { source_start?: number | null; source_end?: number | null },
+): ClauseSpanResult {
+  const s = statement.trim();
+  const quoteNorm = buildNormalizedMap(sourceQuote.trim()).text;
+  if (!quoteNorm) return { ok: false, reason: "source_quote_empty" };
+  const map = buildNormalizedMap(s);
+  const structure = analyzeClauseStructure(s);
+
+  const hasStart = offsets?.source_start !== undefined && offsets?.source_start !== null;
+  const hasEnd = offsets?.source_end !== undefined && offsets?.source_end !== null;
+  if (hasStart || hasEnd) {
+    if (!hasStart || !hasEnd) return { ok: false, reason: "source_offset_invalid" };
+    const start = offsets!.source_start!;
+    const end = offsets!.source_end!;
+    if (!Number.isInteger(start) || !Number.isInteger(end)) {
+      return { ok: false, reason: "source_offset_invalid" };
+    }
+    if (start < 0 || end > s.length) return { ok: false, reason: "source_offset_out_of_range" };
+    if (start >= end) return { ok: false, reason: "source_offset_invalid" };
+    if (!map.clusterStarts.has(start) || !map.clusterStarts.has(end)) {
+      return { ok: false, reason: "source_quote_unicode_boundary_mismatch" };
+    }
+    if (buildNormalizedMap(s.slice(start, end)).text !== quoteNorm) {
+      return { ok: false, reason: "source_offset_quote_mismatch" };
+    }
+    return checkClauseRegion(s, structure, start, end);
+  }
+
+  let failure: SourceQuoteRejectionReason | null = null;
+  for (
+    let idx = map.text.indexOf(quoteNorm);
+    idx >= 0;
+    idx = map.text.indexOf(quoteNorm, idx + 1)
+  ) {
+    const last = idx + quoteNorm.length - 1;
+    const startCluster = map.clusterIndex[idx]!;
+    const endCluster = map.clusterIndex[last]!;
+    const startsOnCluster = idx === 0 || map.clusterIndex[idx - 1] !== startCluster;
+    const endsOnCluster =
+      last + 1 === map.text.length || map.clusterIndex[last + 1] !== endCluster;
+    if (!startsOnCluster || !endsOnCluster) {
+      failure ??= "source_quote_unicode_boundary_mismatch";
+      continue;
+    }
+    const region = checkClauseRegion(
+      s,
+      structure,
+      map.clusters[startCluster]!.start,
+      map.clusters[endCluster]!.end,
+    );
+    if (region.ok) return region;
+    failure = region.reason;
+  }
+  return { ok: false, reason: failure ?? "source_quote_not_grounded" };
+}
+
+/**
+ * Single grounding entry for every model-derived DC write and goal-change
+ * target. item.text must be source-equivalent to source_quote, and
+ * source_quote must resolve to complete clause(s) of the original statement.
+ * On success, persist span.text (original user text), never a model paraphrase.
  */
 export function groundExtractedItem(
-  item: { text: string; source_quote: string },
+  item: GroundableItem,
   statement: string,
 ): SourceQuoteGroundingResult {
-  const quoteGrounding = groundSourceQuote(item.source_quote, statement);
-  if (!quoteGrounding.ok) return quoteGrounding;
-  const normalizedText = normalizeAnswerGroundingText(item.text);
+  if (item.source_quote.length > MAX_SOURCE_QUOTE_LENGTH) {
+    return { ok: false, reason: "source_quote_too_long" };
+  }
   const normalizedQuote = normalizeAnswerGroundingText(item.source_quote);
+  if (!normalizedQuote) return { ok: false, reason: "source_quote_empty" };
+  const normalizedText = normalizeAnswerGroundingText(item.text);
   if (!normalizedText || normalizedText !== normalizedQuote) {
     return { ok: false, reason: "extraction_text_not_source_equivalent" };
   }
-  return { ok: true };
+  const span = resolveGroundedClauseSpan(item.source_quote, statement, {
+    source_start: item.source_start,
+    source_end: item.source_end,
+  });
+  if (!span.ok) return span;
+  return { ok: true, span: { start: span.start, end: span.end, text: span.text } };
 }
 
-export function persistedSourceStatement(sourceQuote: string): string {
-  return sourceQuote.slice(0, 2000);
+export function groundingRejection(
+  extractedIndex: number,
+  item: GroundableItem,
+  reason: SourceQuoteRejectionReason,
+): SourceQuoteRejection {
+  return {
+    extracted_index: extractedIndex,
+    text: item.text.slice(0, 500),
+    source_quote: item.source_quote,
+    reason,
+    ...(item.source_start !== undefined && item.source_start !== null
+      ? { source_start: item.source_start }
+      : {}),
+    ...(item.source_end !== undefined && item.source_end !== null
+      ? { source_end: item.source_end }
+      : {}),
+  };
+}
+
+export function persistedSourceStatement(groundedText: string): string {
+  return groundedText.slice(0, 2000);
 }
 
 /**
- * For goal_change only: accept the first grounded definition_patch whose
- * text is source-equivalent to its quote, and keep the unnormalized quote
- * as the proposed target. Never use the entire original sentence.
+ * Closed introducer grammar for a goal-change clause ("(我)(想)(把)(决策目标)改成…").
+ * Only when the grounded clause itself begins with this grammar is the
+ * introducer dropped; any other wording keeps the whole grounded clause.
+ */
+const GOAL_TARGET_INTRODUCER_RE =
+  /^(?:我们|我)?(?:想要|想|要|希望|打算|准备)?(?:把)?(?:这个|我的)?(?:决策目标|决策问题|目标|问题|方向|议题)?(?:改成|换成|改为|换为|变成|变为|转成|转为|调整为|调整成|改到|换到)\s*[:：]?\s*/;
+
+export function goalChangeTargetFromClause(clauseText: string): string {
+  const [a, b] = trimEdges(clauseText, 0, clauseText.length);
+  const clause = clauseText.slice(a, b);
+  const intro = GOAL_TARGET_INTRODUCER_RE.exec(clause);
+  if (intro && intro[0].length < clause.length) {
+    const rest = clause.slice(intro[0].length);
+    const [ra, rb] = trimEdges(rest, 0, rest.length);
+    if (ra < rb) return rest.slice(ra, rb);
+  }
+  return clause;
+}
+
+/**
+ * For goal_change only: the first definition_patch whose source_quote
+ * resolves to complete clause(s) supplies the proposed target, derived from
+ * the grounded original text. Never the whole statement by default and never
+ * a phrase cut from inside a clause.
  */
 export function extractGroundedProposedDecisionTarget(
   draft: ModelAnswerDraft,
@@ -147,16 +619,12 @@ export function extractGroundedProposedDecisionTarget(
     const item = draft.extracted_items[extractedIndex]!;
     const grounding = groundExtractedItem(item, statement);
     if (!grounding.ok) {
-      rejections.push({
-        extracted_index: extractedIndex,
-        text: item.text.slice(0, 500),
-        source_quote: item.source_quote,
-        reason: grounding.reason,
-      });
+      rejections.push(groundingRejection(extractedIndex, item, grounding.reason));
       continue;
     }
     if (item.semantic_kind === "definition_patch" && !proposed_decision_target) {
-      proposed_decision_target = persistedSourceStatement(item.source_quote);
+      const target = goalChangeTargetFromClause(grounding.span.text);
+      if (target) proposed_decision_target = persistedSourceStatement(target);
     }
   }
   return { proposed_decision_target, rejections };
@@ -637,12 +1105,7 @@ export function answerEventFromModelDraft(input: {
         const item = input.draft.extracted_items[extractedIndex]!;
         const grounding = groundExtractedItem(item, statement);
         if (!grounding.ok) {
-          groundingRejections.push({
-            extracted_index: extractedIndex,
-            text: item.text.slice(0, 500),
-            source_quote: item.source_quote,
-            reason: grounding.reason,
-          });
+          groundingRejections.push(groundingRejection(extractedIndex, item, grounding.reason));
           notes.push(`rejected_${grounding.reason}`);
         }
       }
@@ -667,24 +1130,19 @@ export function answerEventFromModelDraft(input: {
     const item = input.draft.extracted_items[extractedIndex]!;
     const grounding = groundExtractedItem(item, statement);
     if (!grounding.ok) {
-      groundingRejections.push({
-        extracted_index: extractedIndex,
-        text: item.text.slice(0, 500),
-        source_quote: item.source_quote,
-        reason: grounding.reason,
-      });
+      groundingRejections.push(groundingRejection(extractedIndex, item, grounding.reason));
       notes.push(`rejected_${grounding.reason}`);
       // Do not create a ProposedWrite or assign user_asserted / user_estimate.
       continue;
     }
-    const persistedText = persistedSourceStatement(item.source_quote);
+    const persistedText = persistedSourceStatement(grounding.span.text);
     // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
     const code = item.role_code_hint ?? null;
 
     if (code && !authorizedRoleCodes.includes(code)) {
       pushUnresolvedItem({
         extracted_index: extractedIndex,
-        text: item.text,
+        text: persistedText,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
         role_code_hint: code,
@@ -698,7 +1156,7 @@ export function answerEventFromModelDraft(input: {
     if (!code && authorizedRoleCodes.length !== 1) {
       pushUnresolvedItem({
         extracted_index: extractedIndex,
-        text: item.text,
+        text: persistedText,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
         role_code_hint: code,
@@ -714,7 +1172,7 @@ export function answerEventFromModelDraft(input: {
     if (!match) {
       pushUnresolvedItem({
         extracted_index: extractedIndex,
-        text: item.text,
+        text: persistedText,
         semantic_kind: item.semantic_kind,
         certainty: item.certainty,
         role_code_hint: acceptedCode,

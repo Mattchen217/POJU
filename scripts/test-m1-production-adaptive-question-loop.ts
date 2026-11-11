@@ -6479,12 +6479,12 @@ async function main() {
             classification: "goal_change",
             extracted_items: [
               {
-                text: "要不要立刻出国读书",
+                text: "我想把决策目标改成要不要立刻出国读书",
                 semantic_kind: "definition_patch",
                 role_hint: null,
                 role_code_hint: ctx.legalCode,
                 certainty: "explicit",
-                source_quote: "要不要立刻出国读书",
+                source_quote: "我想把决策目标改成要不要立刻出国读书",
               },
             ],
             unresolved_aspects: [],
@@ -6518,12 +6518,12 @@ async function main() {
             classification: "goal_change",
             extracted_items: [
               {
-                text: "要不要立刻出国读书",
+                text: "我想把决策目标改成要不要立刻出国读书",
                 semantic_kind: "definition_patch",
                 role_hint: null,
                 role_code_hint: ctx.legalCode,
                 certainty: "explicit",
-                source_quote: "要不要立刻出国读书",
+                source_quote: "我想把决策目标改成要不要立刻出国读书",
               },
             ],
             unresolved_aspects: [],
@@ -6565,12 +6565,12 @@ async function main() {
             classification: "goal_change",
             extracted_items: [
               {
-                text: "要不要立刻出国读书",
+                text: "我想把决策目标改成要不要立刻出国读书",
                 semantic_kind: "definition_patch",
                 role_hint: null,
                 role_code_hint: ctx.legalCode,
                 certainty: "explicit",
-                source_quote: "要不要立刻出国读书",
+                source_quote: "我想把决策目标改成要不要立刻出国读书",
               },
             ],
             unresolved_aspects: [],
@@ -6612,12 +6612,12 @@ async function main() {
             classification: "goal_change",
             extracted_items: [
               {
-                text: "要不要立刻出国读书",
+                text: "我想把决策目标改成要不要立刻出国读书",
                 semantic_kind: "definition_patch",
                 role_hint: null,
                 role_code_hint: ctx.legalCode,
                 certainty: "explicit",
-                source_quote: "要不要立刻出国读书",
+                source_quote: "我想把决策目标改成要不要立刻出国读书",
               },
             ],
             unresolved_aspects: [],
@@ -6660,12 +6660,12 @@ async function main() {
             classification: "goal_change",
             extracted_items: [
               {
-                text: "要不要立刻出国读书",
+                text: "我想把决策目标改成要不要立刻出国读书",
                 semantic_kind: "definition_patch",
                 role_hint: null,
                 role_code_hint: ctx.legalCode,
                 certainty: "explicit",
-                source_quote: "要不要立刻出国读书",
+                source_quote: "我想把决策目标改成要不要立刻出国读书",
               },
             ],
             unresolved_aspects: [],
@@ -7538,7 +7538,7 @@ async function main() {
       const extracted_items =
         opts?.extracted_items ??
         [
-          fu9Item("要不要立刻出国读书", {
+          fu9Item("改成要不要立刻出国读书", {
             legalCode: ctx.legalCode,
             kind: "definition_patch",
           }),
@@ -7734,6 +7734,409 @@ async function main() {
       assert.equal(replay.decision_context!.version, seeded.ctx.vBefore);
       assert.equal(replay.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
       assert.equal(lastAssistant(replay).content, q1);
+    });
+
+    // M2.4-R2-FU10: every model-derived DC write and goal-change target must
+    // cite complete clauses of the ORIGINAL statement. Model offsets are a
+    // locating hint that must verify exactly. All cases run the real
+    // handleUserMessage() path with the test-only interpretAnswerModel hook.
+    function fu10Item(
+      text: string,
+      opts: {
+        legalCode: string;
+        kind?: "reality_fact" | "constraint" | "definition_patch";
+        source_quote?: string;
+        certainty?: "explicit" | "estimated" | "unclear";
+        source_start?: number | null;
+        source_end?: number | null;
+      },
+    ) {
+      return {
+        ...fu9Item(text, opts),
+        ...(opts.source_start !== undefined ? { source_start: opts.source_start } : {}),
+        ...(opts.source_end !== undefined ? { source_end: opts.source_end } : {}),
+      };
+    }
+    async function runFu10Turn(
+      tag: string,
+      statement: string,
+      items: (legalCode: string) => ReturnType<typeof fu10Item>[],
+      extra?: Partial<import("../lib/poju/decision-intake/types").ModelAnswerDraft>,
+    ) {
+      const ctx = await seedFu8Ready(tag);
+      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => fu9Draft(items(ctx.legalCode), extra),
+        },
+      });
+      return { ctx, out, dc: out.decision_context! };
+    }
+    function assertNoFu10Write(run: Awaited<ReturnType<typeof runFu10Turn>>, label: string) {
+      assert.equal(run.dc.reality_facts.length, run.ctx.factsBefore, `${label} must not write a RealityFact`);
+      assert.equal(run.dc.constraints.length, run.ctx.cstBefore, `${label} must not write a Constraint`);
+      assert.equal(run.dc.version, run.ctx.vBefore, `${label} must not bump DC version`);
+      assert.equal(proposedWritesOf(run.out).length, 0, `${label} must not create a ProposedWrite`);
+      assert.equal(
+        run.dc.reality_facts.some(
+          (f) =>
+            !run.ctx.before.decision_context!.reality_facts.some((b) => b.fact_id === f.fact_id) &&
+            (f.verification_level === "user_asserted" || f.verification_level === "user_estimate"),
+        ),
+        false,
+        `${label} rejected content must not receive user_asserted / user_estimate`,
+      );
+    }
+    function fu10Reasons(session: POJUSessionState) {
+      return groundingRejectionsOf(session).map((r) => r.reason);
+    }
+
+    await check("M2.4-R2-FU10-A1: 我不想离职 → 想离职 is rejected as a non-clause cut", async () => {
+      const run = await runFu10Turn("m24r2fu10a1", "我不想离职。", (code) => [
+        fu10Item("想离职", { legalCode: code }),
+      ]);
+      assertNoFu10Write(run, "FU10-A1");
+      assert.deepEqual(fu10Reasons(run.out), ["source_quote_not_clause_span"]);
+      assert.equal(run.dc.reality_facts.some((f) => f.statement === "想离职"), false);
+    });
+
+    await check("M2.4-R2-FU10-A2: 我并不打算创业 → 打算创业 is rejected", async () => {
+      const run = await runFu10Turn("m24r2fu10a2", "我并不打算创业。", (code) => [
+        fu10Item("打算创业", { legalCode: code }),
+      ]);
+      assertNoFu10Write(run, "FU10-A2");
+      assert.deepEqual(fu10Reasons(run.out), ["source_quote_not_clause_span"]);
+    });
+
+    await check("M2.4-R2-FU10-A3: 我没有决定是否搬家 → 决定搬家 / 决定是否搬家 are rejected", async () => {
+      const run = await runFu10Turn("m24r2fu10a3", "我没有决定是否搬家。", (code) => [
+        fu10Item("决定搬家", { legalCode: code }),
+        fu10Item("决定是否搬家", { legalCode: code }),
+      ]);
+      assertNoFu10Write(run, "FU10-A3");
+      assert.deepEqual(fu10Reasons(run.out), ["source_quote_not_grounded", "source_quote_not_clause_span"]);
+    });
+
+    await check("M2.4-R2-FU10-A4: the complete clause 我不想离职 proceeds to authorization and writes", async () => {
+      const run = await runFu10Turn("m24r2fu10a4", "我不想离职。", (code) => [
+        fu10Item("我不想离职", { legalCode: code }),
+      ]);
+      const fact = run.dc.reality_facts.find((f) => f.statement === "我不想离职");
+      assert.ok(fact, "FU10-A4 must persist the complete clause");
+      assert.equal(fact!.verification_level, "user_asserted");
+      assert.equal(fact!.status, "unverified");
+      assertRolesAndDirs(fact!, run.ctx.role, run.ctx.dirId, "FU10-A4");
+      assert.ok(run.dc.version > run.ctx.vBefore);
+      assert.equal(groundingRejectionsOf(run.out).length, 0);
+    });
+
+    await check("M2.4-R2-FU10-B1: 我想离职 cannot be split from its 但… qualifier; the full sentence writes", async () => {
+      const statement = "我想离职，但还没有决定时间。";
+      const cut = await runFu10Turn("m24r2fu10b1c", statement, (code) => [
+        fu10Item("我想离职", { legalCode: code }),
+      ]);
+      assertNoFu10Write(cut, "FU10-B1 cut");
+      assert.deepEqual(fu10Reasons(cut.out), ["source_quote_not_clause_span"]);
+
+      const full = await runFu10Turn("m24r2fu10b1f", statement, (code) => [
+        fu10Item("我想离职，但还没有决定时间", { legalCode: code }),
+      ]);
+      const fact = full.dc.reality_facts.find((f) => f.statement === "我想离职，但还没有决定时间");
+      assert.ok(fact, "FU10-B1 must persist the whole qualified sentence");
+      assert.equal(full.dc.reality_facts.some((f) => f.statement === "我想离职"), false);
+      assert.equal(fact!.verification_level, "user_asserted");
+    });
+
+    await check("M2.4-R2-FU10-B2: 接受降薪 cannot drop its 不能超过百分之十 limit", async () => {
+      const statement = "我可以接受降薪，但不能超过百分之十。";
+      const cut = await runFu10Turn("m24r2fu10b2c", statement, (code) => [
+        fu10Item("我可以接受降薪", { legalCode: code, kind: "constraint" }),
+        fu10Item("不能超过百分之十", { legalCode: code, kind: "constraint" }),
+      ]);
+      assertNoFu10Write(cut, "FU10-B2 cut");
+      assert.deepEqual(fu10Reasons(cut.out), [
+        "source_quote_not_clause_span",
+        "source_quote_not_clause_span",
+      ]);
+
+      const full = await runFu10Turn("m24r2fu10b2f", statement, (code) => [
+        fu10Item("我可以接受降薪，但不能超过百分之十。", { legalCode: code, kind: "constraint" }),
+      ]);
+      const cst = full.dc.constraints.find((c) => c.statement.includes("但不能超过百分之十"));
+      assert.ok(cst, "FU10-B2 must persist the whole constraint sentence");
+      assert.ok(cst!.statement.includes("我可以接受降薪"));
+      const companion = full.dc.reality_facts.find((f) => f.statement === "我可以接受降薪，但不能超过百分之十。");
+      assert.ok(companion, "FU10-B2 companion RealityFact keeps the original full text");
+    });
+
+    await check("M2.4-R2-FU10-B3: 我可能会搬家 cannot be split from 但目前没有决定", async () => {
+      const statement = "我可能会搬家，但目前没有决定。";
+      const cut = await runFu10Turn("m24r2fu10b3c", statement, (code) => [
+        fu10Item("我可能会搬家", { legalCode: code, certainty: "estimated" }),
+      ]);
+      assertNoFu10Write(cut, "FU10-B3 cut");
+      assert.deepEqual(fu10Reasons(cut.out), ["source_quote_not_clause_span"]);
+
+      const full = await runFu10Turn("m24r2fu10b3f", statement, (code) => [
+        fu10Item(statement, { legalCode: code, certainty: "estimated" }),
+      ]);
+      const fact = full.dc.reality_facts.find((f) => f.statement === statement);
+      assert.ok(fact, "FU10-B3 must persist the whole sentence");
+      assert.equal(fact!.verification_level, "user_estimate");
+    });
+
+    await check("M2.4-R2-FU10-C1: two independent clauses write separately", async () => {
+      const run = await runFu10Turn("m24r2fu10c1", "我目前月薪三万，预算上限五万。", (code) => [
+        fu10Item("我目前月薪三万", { legalCode: code }),
+        fu10Item("预算上限五万。", { legalCode: code, kind: "constraint" }),
+      ]);
+      assert.equal(groundingRejectionsOf(run.out).length, 0);
+      const salary = run.dc.reality_facts.find((f) => f.statement === "我目前月薪三万");
+      const budgetCst = run.dc.constraints.find((c) => c.statement.includes("预算上限五万"));
+      const budgetFact = run.dc.reality_facts.find((f) => f.statement === "预算上限五万。");
+      assert.ok(salary, "FU10-C1 must write the salary clause");
+      assert.ok(budgetCst, "FU10-C1 must write the budget constraint");
+      assert.ok(budgetFact, "FU10-C1 must write the budget companion RealityFact");
+      assert.equal(salary!.verification_level, "user_asserted");
+      assert.equal(budgetFact!.verification_level, "user_asserted");
+      assertRolesAndDirs(salary!, run.ctx.role, run.ctx.dirId, "FU10-C1 salary");
+      assert.equal(run.dc.reality_facts.length, run.ctx.factsBefore + 2);
+      assert.equal(run.dc.constraints.length, run.ctx.cstBefore + 1);
+      assert.ok(run.dc.version > run.ctx.vBefore);
+    });
+
+    await check("M2.4-R2-FU10-C2: mixed turn — rejected 月薪三万 cut does not drop the legal budget clause", async () => {
+      const run = await runFu10Turn("m24r2fu10c2", "我目前月薪三万，预算上限五万。", (code) => [
+        fu10Item("月薪三万", { legalCode: code }),
+        fu10Item("预算上限五万", { legalCode: code, kind: "constraint" }),
+      ]);
+      assert.deepEqual(fu10Reasons(run.out), ["source_quote_not_clause_span"]);
+      assert.equal(groundingRejectionsOf(run.out)[0]!.extracted_index, 0);
+      assert.equal(run.dc.reality_facts.some((f) => f.statement.includes("月薪三万")), false);
+      assert.ok(run.dc.constraints.some((c) => c.statement.includes("预算上限五万")), "FU10-C2 legal clause must write");
+      assert.equal(run.dc.constraints.length, run.ctx.cstBefore + 1);
+      assert.equal(run.dc.reality_facts.length, run.ctx.factsBefore + 1, "only the budget companion fact is new");
+      assert.equal(
+        proposedWritesOf(run.out).some((w) => w.statement === "月薪三万"),
+        false,
+      );
+    });
+
+    await check("M2.4-R2-FU10-D1: undeterminable clause structure fails closed", async () => {
+      const statement = "我目前月薪三万（税前，预算上限五万。";
+      const run = await runFu10Turn("m24r2fu10d1", statement, (code) => [
+        fu10Item("预算上限五万", { legalCode: code, kind: "constraint" }),
+      ]);
+      assertNoFu10Write(run, "FU10-D1");
+      assert.deepEqual(fu10Reasons(run.out), ["clause_boundary_undeterminable"]);
+    });
+
+    await check("M2.4-R2-FU10-D2: out-of-range offsets are rejected and audited", async () => {
+      const run = await runFu10Turn("m24r2fu10d2", "我目前月薪三万，预算上限五万。", (code) => [
+        fu10Item("预算上限五万", { legalCode: code, source_start: 8, source_end: 999 }),
+      ]);
+      assertNoFu10Write(run, "FU10-D2");
+      const rejection = groundingRejectionsOf(run.out)[0]!;
+      assert.equal(rejection.reason, "source_offset_out_of_range");
+      assert.equal(rejection.source_start, 8);
+      assert.equal(rejection.source_end, 999);
+    });
+
+    await check("M2.4-R2-FU10-D3: offsets that do not match source_quote are rejected without search fallback", async () => {
+      const run = await runFu10Turn("m24r2fu10d3", "我目前月薪三万，预算上限五万。", (code) => [
+        fu10Item("预算上限五万", { legalCode: code, source_start: 0, source_end: 7 }),
+        fu10Item("我目前月薪三万", { legalCode: code, source_start: 0, source_end: 7 }),
+      ]);
+      assert.deepEqual(fu10Reasons(run.out), ["source_offset_quote_mismatch"]);
+      assert.equal(run.dc.reality_facts.some((f) => f.statement.includes("预算上限五万")), false);
+      const verified = run.dc.reality_facts.find((f) => f.statement === "我目前月薪三万");
+      assert.ok(verified, "FU10-D3 verified offsets on a complete clause may write");
+      assert.equal(run.dc.reality_facts.length, run.ctx.factsBefore + 1);
+    });
+
+    await check("M2.4-R2-FU10-D4: an arbitrary in-clause substring is rejected", async () => {
+      const run = await runFu10Turn("m24r2fu10d4", "我目前月薪三万，预算上限五万。", (code) => [
+        fu10Item("上限五万", { legalCode: code, kind: "constraint" }),
+      ]);
+      assertNoFu10Write(run, "FU10-D4");
+      assert.deepEqual(fu10Reasons(run.out), ["source_quote_not_clause_span"]);
+    });
+
+    await check("M2.4-R2-FU10-D5: NFKC-only matches that break original boundaries are rejected", async () => {
+      const midCluster = await runFu10Turn("m24r2fu10d5a", "我每年发⑫个月工资。", (code) => [
+        fu10Item("2个月工资", { legalCode: code }),
+      ]);
+      assertNoFu10Write(midCluster, "FU10-D5 mid-cluster");
+      assert.deepEqual(fu10Reasons(midCluster.out), ["source_quote_unicode_boundary_mismatch"]);
+
+      const foldedStop = await runFu10Turn("m24r2fu10d5b", "我目前月薪三万﹒预算上限五万", (code) => [
+        fu10Item("预算上限五万", { legalCode: code, kind: "constraint" }),
+      ]);
+      assertNoFu10Write(foldedStop, "FU10-D5 folded stop");
+      assert.deepEqual(fu10Reasons(foldedStop.out), ["source_quote_not_clause_span"]);
+    });
+
+    await check("M2.4-R2-FU10-D6: a normalized quote of complete clauses persists the original user text", async () => {
+      const run = await runFu10Turn("m24r2fu10d6", "我目前月薪三万，预算上限五万。", (code) => [
+        fu10Item("我目前月薪三万,预算上限五万", { legalCode: code }),
+      ]);
+      assert.equal(groundingRejectionsOf(run.out).length, 0);
+      const fact = run.dc.reality_facts.find((f) => f.statement === "我目前月薪三万，预算上限五万");
+      assert.ok(fact, "FU10-D6 must persist the original full-width text");
+      assert.equal(run.dc.reality_facts.some((f) => f.statement === "我目前月薪三万,预算上限五万"), false);
+    });
+
+    await check("M2.4-R2-FU10-D7: non-numeric offsets fail the draft closed", async () => {
+      const ctx = await seedFu8Ready("m24r2fu10d7");
+      stubResponse = "FU10D7 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: ctx.before,
+        userMessage: "我目前月薪三万。",
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () => ({
+            ...fu9Draft([fu9Item("我目前月薪三万。", { legalCode: ctx.legalCode })]),
+            extracted_items: [
+              { ...fu9Item("我目前月薪三万。", { legalCode: ctx.legalCode }), source_start: "0", source_end: "8" },
+            ],
+          }),
+        },
+      });
+      assert.equal(out.decision_context!.version, ctx.vBefore);
+      assert.equal(out.decision_context!.reality_facts.length, ctx.factsBefore);
+      const failAsst = [...out.messages].reverse().find((m) => m.role === "assistant");
+      const failMeta = (failAsst as { meta?: { m1_fail_closed?: boolean; m1_outcome?: string } } | undefined)?.meta;
+      assert.equal(failMeta?.m1_fail_closed, true);
+      assert.equal(failMeta?.m1_outcome, "answer_interpretation_invalid_schema");
+    });
+
+    await check("M2.4-R2-FU10-D8: English negation cut is rejected; the qualified sentence is not split", async () => {
+      const neg = await runFu10Turn("m24r2fu10d8a", "I don't want to quit.", (code) => [
+        fu10Item("want to quit", { legalCode: code }),
+      ]);
+      assertNoFu10Write(neg, "FU10-D8 negation");
+      assert.deepEqual(fu10Reasons(neg.out), ["source_quote_not_clause_span"]);
+
+      const qualified = await runFu10Turn("m24r2fu10d8b", "I want to quit, but I haven't decided when.", (code) => [
+        fu10Item("I want to quit", { legalCode: code }),
+      ]);
+      assertNoFu10Write(qualified, "FU10-D8 qualified");
+      assert.deepEqual(fu10Reasons(qualified.out), ["source_quote_not_clause_span"]);
+    });
+
+    await check("M2.4-R2-FU10-E1: goal_change target cut from inside its clause is rejected", async () => {
+      const run = await runFu10Turn(
+        "m24r2fu10e1",
+        "我想换个方向，改成要不要立刻出国读书。",
+        (code) => [fu10Item("要不要立刻出国读书", { legalCode: code, kind: "definition_patch" })],
+        { classification: "goal_change", explanation: "cut target" },
+      );
+      const item = run.out.pending_intake_control?.items[0];
+      assert.ok(item && item.kind === "goal_change");
+      assert.equal(item!.proposed_decision_target, undefined, "FU10-E1 must not accept an in-clause cut target");
+      assert.deepEqual(fu10Reasons(run.out), ["source_quote_not_clause_span"]);
+      assert.ok(lastAssistant(run.out).content.includes("请直接重述"));
+      assert.equal(lastAssistant(run.out).content.includes("确认更换决策目标"), false);
+      assert.deepEqual(blueprintSnapshot(run.out), run.ctx.bpBefore);
+      assert.equal(definitionQuestion(run.out), run.ctx.dqBefore);
+      assert.equal(run.dc.version, run.ctx.vBefore);
+    });
+
+    await check("M2.4-R2-FU10-E2: negated goal_change clause cannot yield the bare target phrase", async () => {
+      const statement = "我不想把决策目标改成要不要立刻出国读书。";
+      const cut = await runFu10Turn(
+        "m24r2fu10e2c",
+        statement,
+        (code) => [fu10Item("要不要立刻出国读书", { legalCode: code, kind: "definition_patch" })],
+        { classification: "goal_change", explanation: "negated cut target" },
+      );
+      assert.equal(cut.out.pending_intake_control?.items[0]?.proposed_decision_target, undefined);
+      assert.deepEqual(fu10Reasons(cut.out), ["source_quote_not_clause_span"]);
+
+      const whole = await runFu10Turn(
+        "m24r2fu10e2w",
+        statement,
+        (code) => [
+          fu10Item("我不想把决策目标改成要不要立刻出国读书", { legalCode: code, kind: "definition_patch" }),
+        ],
+        { classification: "goal_change", explanation: "whole negated clause" },
+      );
+      assert.equal(
+        whole.out.pending_intake_control?.items[0]?.proposed_decision_target,
+        "我不想把决策目标改成要不要立刻出国读书",
+        "FU10-E2 a clause outside the closed introducer grammar keeps its full original text",
+      );
+      assert.deepEqual(blueprintSnapshot(whole.out), whole.ctx.bpBefore);
+      assert.equal(definitionQuestion(whole.out), whole.ctx.dqBefore);
+      assert.equal(whole.dc.version, whole.ctx.vBefore);
+    });
+
+    await check("M2.4-R2-FU10-E3: insight_mismatch clarification fragment cannot enter DC", async () => {
+      const seeded = await seedFu9Mismatch("m24r2fu10e3");
+      const clarify = "我并不是怕风险，我只是还在比较时间窗口。";
+      stubResponse = "FU10E3 FREEFORM MUST NOT WIN";
+      const out = await handleUserMessage({
+        session: seeded.committed,
+        userMessage: clarify,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: {
+          interpretAnswerModel: () =>
+            fu9Draft([fu9Item("还在比较时间窗口", { legalCode: seeded.ctx.legalCode })]),
+        },
+      });
+      assert.equal(out.decision_context!.reality_facts.some((f) => f.statement.includes("比较时间窗口")), false);
+      assert.equal(out.decision_context!.version, seeded.ctx.vBefore);
+      assert.deepEqual(fu10Reasons(out), ["source_quote_not_clause_span"]);
+      assert.equal(proposedWritesOf(out).length, 0);
+    });
+
+    await check("M2.4-R2-FU10-E4: replay of a mixed grounded/rejected turn does not duplicate", async () => {
+      const ctx = await seedFu8Ready("m24r2fu10e4");
+      const statement = "我目前月薪三万，预算上限五万。";
+      const draft = fu9Draft([
+        fu10Item("月薪三万", { legalCode: ctx.legalCode }),
+        fu10Item("我目前月薪三万", { legalCode: ctx.legalCode }),
+      ]);
+      stubResponse = "FU10E4 FREEFORM 1";
+      const first = await handleUserMessage({
+        session: ctx.before,
+        userMessage: statement,
+        locale: "zh-CN",
+        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+      });
+      await mutatePOJUSession(first.session_id, {
+        operation_id: "op_m24r2fu10e4_first",
+        kind: "session_patch",
+        bump_dc: true,
+        apply: () => first,
+      });
+      const committed = await durable(first.session_id);
+      const turnId = lastUserId(committed);
+      const facts1 = committed.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+      const v1 = committed.decision_context!.version;
+      const rejections1 = groundingRejectionsOf(committed);
+      assert.equal(committed.decision_context!.reality_facts.length, ctx.factsBefore + 1);
+      assert.deepEqual(rejections1.map((r) => r.reason), ["source_quote_not_clause_span"]);
+      stubResponse = "FU10E4 FREEFORM 2 MUST NOT WIN";
+      const replay = await handleUserMessage({
+        session: {
+          ...committed,
+          messages: [
+            ...committed.messages,
+            { role: "user" as const, content: statement, timestamp: NOW, client_id: turnId },
+          ],
+        },
+        userMessage: statement,
+        locale: "zh-CN",
+        userAlreadyAppended: true,
+        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+      });
+      assert.deepEqual(replay.decision_context!.reality_facts.map((f) => f.fact_id).sort(), facts1);
+      assert.equal(replay.decision_context!.version, v1);
+      assert.equal(groundingRejectionsOf(replay).length, rejections1.length);
     });
 
     const modelSrc = readFileSync(

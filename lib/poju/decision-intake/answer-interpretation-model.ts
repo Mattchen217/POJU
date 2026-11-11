@@ -191,13 +191,15 @@ Role binding:
 role_hint is deprecated and is not an authorization basis. Do not use it to claim access to a role.
 
 Source grounding:
-1. Every extracted item must include source_quote: the exact user-answer substring that supports that item.
-2. Do not return a paraphrase as source_quote.
-3. One item must have exactly one source_quote.
-4. text must equal source_quote exactly. Do not put a paraphrase, summary, interpretation, or inferred implication in text.
-5. Never use context facts, model inference, or likely implications as source evidence.
-6. If no exact source quote exists in the current user answer, do not emit a persistable extracted item. Put the leftover uncertainty in unresolved_aspects instead.
-7. For classification "goal_change", put only the exact proposed new decision-target phrase in a definition_patch item, with text equal to source_quote. Do not use the entire introductory sentence as the target.
+1. Every extracted item must include source_quote: a verbatim copy of one or more COMPLETE sentences or clauses of the current user answer that support that item.
+2. A complete clause starts where a sentence or clause starts and ends where it ends (sentence-ending punctuation, semicolon, line break, or a comma that separates two self-contained statements). Never cut a phrase out of the middle of a clause.
+3. Never shorten a quote by dropping words that limit its meaning: negation, hedging, conditions, time limits, amounts or ranges, or an attached "but / unless / if / only" clause. When such a qualifier is attached to the statement, quote the whole sentence that contains both.
+4. Do not return a paraphrase as source_quote. One item must have exactly one source_quote.
+5. text must equal source_quote exactly. Do not put a paraphrase, summary, interpretation, or inferred implication in text.
+6. Never use context facts, model inference, or likely implications as source evidence.
+7. If no complete sentence or clause of the current user answer supports an item, do not emit a persistable extracted item. Put the leftover uncertainty in unresolved_aspects instead.
+8. source_start / source_end are optional 0-based character offsets of source_quote inside user_answer (end exclusive). Return null for both unless you are certain they are exact; wrong offsets cause the item to be rejected.
+9. For classification "goal_change", emit one definition_patch item whose source_quote is the complete clause in which the user states the proposed new decision target, with text equal to source_quote. Do not cut the target phrase out of that clause; deterministic code derives the target from it.
 
 JSON shape:
 {
@@ -209,7 +211,9 @@ JSON shape:
       "role_code_hint": "complete authorized role code from context.authorized.fact_role_codes, or null",
       "role_hint": null,
       "certainty": "explicit" | "estimated" | "unclear",
-      "source_quote": "exact substring of the current user answer, not a paraphrase"
+      "source_quote": "verbatim complete sentence(s) or clause(s) of the current user answer, not a paraphrase or a cut fragment",
+      "source_start": null,
+      "source_end": null
     }
   ],
   "unresolved_aspects": ["aspects that cannot be safely extracted"],
@@ -399,6 +403,12 @@ export function parseAndValidateModelAnswerDraft(
     if (typeof row.source_quote !== "string") {
       return { ok: false, reason: "invalid_schema", detail: "source_quote_not_string" };
     }
+    if (row.source_start != null && typeof row.source_start !== "number") {
+      return { ok: false, reason: "invalid_schema", detail: "invalid_source_start" };
+    }
+    if (row.source_end != null && typeof row.source_end !== "number") {
+      return { ok: false, reason: "invalid_schema", detail: "invalid_source_end" };
+    }
     const text = row.text.trim().slice(0, MAX_ITEM_TEXT_LENGTH);
     if (!text) continue;
     // Preserve the original quote. Do not manufacture one, and do not
@@ -419,6 +429,10 @@ export function parseAndValidateModelAnswerDraft(
       role_code_hint: codeHint && codeHint.length > 0 ? codeHint : null,
       certainty: row.certainty as ModelCertainty,
       source_quote,
+      // Candidate offsets are kept verbatim for deterministic verification;
+      // they are never trusted, clamped, or repaired here.
+      source_start: typeof row.source_start === "number" ? row.source_start : null,
+      source_end: typeof row.source_end === "number" ? row.source_end : null,
     });
   }
 
