@@ -21,7 +21,7 @@ export const DI2_FIXTURE_BIRTH = {
   hour_period: "chou",
   gender: "M",
   timezone: "Asia/Shanghai",
-};
+} as const satisfies import("../../lib/profile/types").BirthInfo;
 
 /** Draft DC ready to freeze (ranking-relevant unknowns cleared). */
 export function di2DraftDc(context_id: string, question = DI2_FIXTURE_QUESTION): DecisionContext {

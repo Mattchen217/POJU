@@ -90,10 +90,10 @@ export async function loadSessionProfileBundle(session: POJUSessionState): Promi
 }> {
   for (const id of collectSessionProfileCandidateIds(session)) {
     const data = await getStoredProfile(id);
-    if (data?.base_analysis != null) {
+    if (data) {
       return {
         profile: data.user_profile ?? null,
-        base_analysis: data.base_analysis,
+        base_analysis: data.base_analysis ?? null,
         resolved_profile_id: id,
       };
     }
