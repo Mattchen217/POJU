@@ -10,8 +10,10 @@
  *                        └── claim older than CLAIM_MS: abandoned, re-claimable
  *
  * Every transition is a compare-and-set on the exact record, so two requests can
- * never both hold a claim. `charge_ref` (the pass ledger idempotency ref) is fixed at
- * the first claim and reused by every later attempt: a reconcile of a charge whose
+ * never both hold a claim, and a claimant whose claim was taken over (its attempt_id is
+ * no longer the record's) can neither write its outcome nor act on it. `charge_ref` (the
+ * pass ledger idempotency ref) is fixed at the first claim and reused by every later
+ * attempt: a reconcile of a charge whose
  * outcome was lost (RPC error, record write failure, killed invoke) returns
  * `already_consumed` instead of debiting again.
  *
@@ -63,8 +65,16 @@ export type ChargeSettlement =
   | { state: "authorized"; record: ChargeAuthorization }
   /** Another request holds a live claim; nothing may run until it resolves. */
   | { state: "pending"; record: ChargeAuthorization }
-  /** `response` is the pass refusal when this call made the attempt. */
-  | { state: "refused"; record: ChargeAuthorization | null; response: Response | null }
+  /**
+   * The current record is `refused`. `record.attempt_id` names the attempt that recorded
+   * it; `response` is the pass refusal when that attempt was this call's.
+   */
+  | { state: "refused"; record: ChargeAuthorization; response: Response | null }
+  /**
+   * This call's claim was taken over (its attempt_id is no longer the record's) before it
+   * could record its outcome. Its own result decides nothing: the current claimant's does.
+   */
+  | { state: "stale_claim"; record: ChargeAuthorization }
   /** Outcome unknown (or not recorded); the next claim reconciles with the same ref. */
   | { state: "uncertain"; reason: string }
   /** No record and this caller may not open a charge. */
@@ -165,17 +175,39 @@ async function chargeUnderClaim(claim: ChargeAuthorization, charge: DecisionRepo
   } catch (e) {
     console.error("[decision-report] charge authorization write failed", { session_id: claim.session_id, e });
   }
-  if (!wrote) {
-    const latest = await loadChargeAuthorization(claim.session_id).catch(() => null);
-    if (latest?.state === "authorized") return { state: "authorized", record: latest };
-    // A charge that went through without its record stays unconfirmed: nothing runs, and
-    // the claim's expiry lets the next request reconcile it with the same ref.
-    if (state === "refused") return { state: "refused", record: latest, response };
-    return { state: "uncertain", reason: "authorization_write_unconfirmed" };
+  if (wrote) {
+    if (state === "authorized") return { state: "authorized", record: final };
+    if (state === "refused") return { state: "refused", record: final, response };
+    return { state: "uncertain", reason: reason ?? "charge_unconfirmed" };
   }
-  if (state === "authorized") return { state: "authorized", record: final };
-  if (state === "refused") return { state: "refused", record: final, response };
-  return { state: "uncertain", reason: reason ?? "charge_unconfirmed" };
+  return settleLostWrite(claim, state, response);
+}
+
+/**
+ * This call's outcome was not recorded. Only the server record decides what it means:
+ *  - unreadable → uncertain (fail closed);
+ *  - authorized → authorized (terminal; never downgraded);
+ *  - another attempt_id → the claim was taken over: stale, this outcome decides nothing;
+ *  - still this attempt and pending → the outcome is unrecorded: uncertain, reconciled
+ *    with the same ref once the claim expires;
+ *  - this attempt, terminal (the write landed but was not acknowledged) → that state.
+ */
+async function settleLostWrite(
+  claim: ChargeAuthorization,
+  outcome: ChargeAuthorizationState,
+  response: Response | null,
+): Promise<ChargeSettlement> {
+  let latest: ChargeAuthorization | null;
+  try {
+    latest = await loadChargeAuthorization(claim.session_id);
+  } catch {
+    return { state: "uncertain", reason: "authorization_unreadable" };
+  }
+  if (!latest) return { state: "uncertain", reason: "authorization_missing_after_charge" };
+  if (latest.state === "authorized") return { state: "authorized", record: latest };
+  if (latest.attempt_id !== claim.attempt_id) return { state: "stale_claim", record: latest };
+  if (latest.state === "refused" && outcome === "refused") return { state: "refused", record: latest, response };
+  return { state: "uncertain", reason: "authorization_write_unconfirmed" };
 }
 
 /**
@@ -245,6 +277,22 @@ export async function settleDecisionReportCharge(input: {
   const last = await loadChargeAuthorization(session_id).catch(() => null);
   if (last?.state === "authorized") return { state: "authorized", record: last };
   return last ? { state: "pending", record: last } : { state: "uncertain", reason: "authorization_contended" };
+}
+
+/**
+ * Abort authority for a refusal: the current record must still be `refused` and recorded
+ * by the attempt this settlement carries. A stale claimant, a newer pending / uncertain /
+ * authorized record, or an unreadable record never confirms a refusal.
+ */
+export async function confirmCurrentChargeRefusal(s: ChargeSettlement): Promise<boolean> {
+  if (s.state !== "refused") return false;
+  let latest: ChargeAuthorization | null;
+  try {
+    latest = await loadChargeAuthorization(s.record.session_id);
+  } catch {
+    return false;
+  }
+  return latest?.state === "refused" && latest.attempt_id === s.record.attempt_id;
 }
 
 // ─── per-job execution grant ───────────────────────────────────────────────

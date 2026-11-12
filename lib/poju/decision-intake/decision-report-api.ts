@@ -31,8 +31,8 @@ import {
 } from "./decision-report-service";
 import { clearDecisionReportDispatch, loadCompletedReport } from "./decision-report-store";
 import {
+  confirmCurrentChargeRefusal,
   grantDecisionReportExecution,
-  loadChargeAuthorization,
   settleDecisionReportCharge,
   type ChargeSettlement,
   type DecisionReportCharge,
@@ -194,20 +194,22 @@ export async function handleDecisionReportAction(
 
     // New or reused, nothing runs before the session's charge is confirmed. A historical
     // job is not a historical charge: only an `authorized` record makes a generation free.
-    const settled = await settleDecisionReportCharge({
+    let settled = await settleDecisionReportCharge({
       session_id,
       question: started.question,
       joint_pass_ref: str(body.joint_pass_ref) || null,
       allowNewCharge: true,
       charge: deps.charge,
     });
+    // Only the current claimant's recorded refusal may stop the job. A refusal from a claim
+    // that was taken over, a newer pending / uncertain / authorized record, or a record
+    // that cannot be read leaves the job to whoever holds the charge now.
     if (settled.state === "refused") {
-      // A concurrent request may have authorized the session meanwhile; its job runs.
-      const now = await loadChargeAuthorization(session_id).catch(() => null);
-      if (now?.state !== "authorized") await abortDecisionReportJob(job, "pass_required");
+      if (await confirmCurrentChargeRefusal(settled)) await abortDecisionReportJob(job, "pass_required");
+      else settled = { state: "uncertain", reason: "refusal_not_current" };
     }
     if (settled.state !== "authorized") {
-      if (settled.state === "pending") {
+      if (settled.state === "pending" || settled.state === "stale_claim") {
         // Another request owns the session's charge: follow the job, do not run it.
         return json(200, {
           ok: true,
