@@ -48,6 +48,14 @@ const nextConfig = {
   // VPS / Docker 用 standalone；Vercel 必须走默认 .next（否则易 NEXT_NO_ROUTES_MANIFEST）
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
   /**
+   * 自定义 `webpack` 会关掉 Next 默认的 build worker，整次编译挤在主进程里，
+   * Vercel 构建容器会被 OOM SIGKILL（随后报 NEXT_NO_ROUTES_MANIFEST）。显式开回 worker 并压峰值。
+   */
+  experimental: {
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
+  },
+  /**
    * Windows：终端 cwd 与编辑器打开路径大小写不一致（如 pojulife vs POJULIFE）时，
    * Webpack 会把同一物理目录当成两套模块，Next/React 加载两份 → App Router 报错
    * 「invariant expected layout router to be mounted」。统一解析到真实路径。
