@@ -24,6 +24,8 @@ import {
   type FreezeAuthorityEnvelope,
   type FreezeReceipt,
   type FreezeRecord,
+  type FreezeRecoverRequest,
+  type FreezeRecoverResponse,
   type FreezeSealRequest,
   type FreezeSealResponse,
 } from "../types";
@@ -94,6 +96,56 @@ async function loadFreezeRecordRaw(session_id: string, freeze_id: string): Promi
   return got ? normalizeJson(got) : null;
 }
 
+function anchorMismatch(what: string): never {
+  throw new DcAuthorityError("FREEZE_ANCHOR_MISMATCH", `Freeze record does not match its ledger commit: ${what}`);
+}
+
+/**
+ * The ledger commit a Freeze record claims must exist, verify, and describe exactly this
+ * Freeze. A record without its anchor is not authoritative.
+ */
+async function assertFreezeLedgerAnchor(session_id: string, rec: FreezeRecord): Promise<void> {
+  const r = rec.receipt;
+  if (r.ledger_commit_version !== rec.freeze_commit_version) anchorMismatch("receipt ledger_commit_version");
+  let anchor: DcLedgerEntry | null;
+  try {
+    anchor = await loadLedgerEntry(session_id, rec.freeze_commit_version);
+  } catch (e) {
+    throw new DcAuthorityError(
+      "FREEZE_ANCHOR_CORRUPT",
+      `Freeze ledger commit ${rec.freeze_commit_version} failed verification: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+  if (!anchor) {
+    throw new DcAuthorityError("FREEZE_ANCHOR_MISSING", `Freeze ledger commit ${rec.freeze_commit_version} does not exist`);
+  }
+  const f = anchor.provenance?.freeze;
+  if (anchor.session_id !== session_id) anchorMismatch("session_id");
+  if (anchor.change_type !== "freeze" || anchor.dc_status !== "final" || !f) anchorMismatch("change_type");
+  const snap = dcSnapshotHash(anchor.snapshot);
+  if (anchor.snapshot_hash !== snap || snap !== dcSnapshotHash(rec.frozen_dc)) anchorMismatch("snapshot_hash");
+  if (anchor.content_hash !== rec.context_hash) anchorMismatch("content_hash");
+  if (anchor.context_id !== rec.context_id || anchor.dc_version !== rec.context_version) anchorMismatch("context identity");
+  if ((anchor.blueprint_hash ?? null) !== (rec.blueprint_hash ?? null)) anchorMismatch("blueprint_hash");
+  if (anchor.committed_at !== rec.frozen_at) anchorMismatch("committed_at");
+  if (
+    anchor.previous_commit_version !== rec.source_commit_version ||
+    anchor.previous_entry_hash !== rec.source_entry_hash
+  ) {
+    anchorMismatch("source commit");
+  }
+  if (
+    f.freeze_id !== rec.freeze_id ||
+    f.source_commit_version !== rec.source_commit_version ||
+    f.source_entry_hash !== rec.source_entry_hash ||
+    f.frozen_at !== rec.frozen_at ||
+    f.receipt_id !== r.receipt_id ||
+    (f.profile_hash ?? null) !== (rec.profile_hash ?? null)
+  ) {
+    anchorMismatch("freeze provenance");
+  }
+}
+
 /** Load a Freeze record and re-verify signature, integrity and its ledger anchor. */
 export async function loadVerifiedFreezeRecord(session_id: string, freeze_id: string): Promise<FreezeRecord> {
   const rec = await loadFreezeRecordRaw(session_id, freeze_id);
@@ -101,6 +153,13 @@ export async function loadVerifiedFreezeRecord(session_id: string, freeze_id: st
   const r = rec.receipt;
   if (!verifyFreezeReceiptSignature(r)) {
     throw new DcAuthorityError("FREEZE_RECEIPT_INVALID", "stored Freeze receipt does not verify");
+  }
+  if (
+    rec.schema_version !== FREEZE_RECORD_SCHEMA_VERSION ||
+    rec.session_id !== session_id ||
+    rec.freeze_id !== freeze_id
+  ) {
+    throw new DcAuthorityError("FREEZE_RECORD_MISMATCH", "Freeze record is not stored under its own identity");
   }
   try {
     assertFrozenDcIntegrity(rec.frozen_dc);
@@ -115,15 +174,13 @@ export async function loadVerifiedFreezeRecord(session_id: string, freeze_id: st
     r.freeze_id !== freeze_id ||
     r.context_hash !== rec.context_hash ||
     r.context_version !== rec.context_version ||
+    r.context_id !== rec.context_id ||
     r.frozen_at !== rec.frozen_at ||
     (r.blueprint_hash ?? null) !== (rec.blueprint_hash ?? null)
   ) {
     throw new DcAuthorityError("FREEZE_RECORD_MISMATCH", "Freeze record does not match its receipt");
   }
-  const anchor = await loadLedgerEntry(session_id, rec.freeze_commit_version).catch(() => null);
-  if (anchor && (anchor.change_type !== "freeze" || anchor.snapshot_hash !== dcSnapshotHash(rec.frozen_dc))) {
-    throw new DcAuthorityError("FREEZE_RECORD_MISMATCH", "Freeze record does not match its ledger commit");
-  }
+  await assertFreezeLedgerAnchor(session_id, rec);
   await durableKv().expire(freezeKey(session_id, freeze_id), AUTHORITY_RETENTION_SECONDS);
   return rec;
 }
@@ -196,41 +253,58 @@ async function putFreezeRecord(record: FreezeRecord): Promise<void> {
  * Replay of an already-sealed Freeze. The record (and, when birth is re-sent, the
  * profile) is re-materialized from the ledger commit if a crash lost it after the seal.
  */
+/**
+ * Verified Freeze record for a ledger freeze commit. A record lost after the commit is
+ * re-materialized deterministically from the commit itself, then fully re-verified.
+ */
+async function verifiedRecordForFreezeEntry(session_id: string, entry: DcLedgerEntry): Promise<FreezeRecord> {
+  const f = entry.provenance.freeze;
+  if (entry.change_type !== "freeze" || !f) {
+    throw new DcAuthorityError("FREEZE_ANCHOR_MISMATCH", "ledger commit is not a Freeze");
+  }
+  if (!(await loadFreezeRecordRaw(session_id, f.freeze_id))) {
+    await putFreezeRecord(recordFromFreezeEntry(entry));
+  }
+  const rec = await loadVerifiedFreezeRecord(session_id, f.freeze_id);
+  if (rec.freeze_commit_version !== entry.commit_version) {
+    throw new DcAuthorityError("FREEZE_ANCHOR_MISMATCH", "Freeze record points at a different ledger commit");
+  }
+  return rec;
+}
+
+/** Registered profile receipt of a Freeze, or null when none is registered yet. */
+async function registeredProfileReceipt(session_id: string, rec: FreezeRecord) {
+  try {
+    return (await loadVerifiedProfileRecord({ session_id, freeze: rec })).receipt;
+  } catch (e) {
+    if (e instanceof DcAuthorityError && e.code === "PROFILE_NOT_REGISTERED") return null;
+    throw e;
+  }
+}
+
 async function duplicateResponse(
   session_id: string,
   entry: DcLedgerEntry,
   profileInput: FreezeSealRequest["profile"],
 ): Promise<FreezeSealResponse> {
-  const f = entry.provenance.freeze;
-  if (!f) throw new DcAuthorityError("FREEZE_RECORD_MISMATCH", "ledger freeze commit lacks freeze provenance");
-  if (!(await loadFreezeRecordRaw(session_id, f.freeze_id))) {
-    await putFreezeRecord(recordFromFreezeEntry(entry));
-  }
-  const rec = await loadVerifiedFreezeRecord(session_id, f.freeze_id);
-  let profile_receipt = null;
-  if (rec.profile_hash) {
-    try {
-      profile_receipt = (
-        await loadVerifiedProfileRecord({ session_id, freeze_id: f.freeze_id, frozen_at: rec.frozen_at })
-      ).receipt;
-    } catch (e) {
-      if (!(e instanceof DcAuthorityError) || e.code !== "PROFILE_NOT_REGISTERED" || profileInput?.birth_info == null) {
-        throw e;
-      }
-      const computation = await computeServerProfile(profileInput.birth_info, rec.frozen_at);
-      if (!computation.ok || computation.profile_hash !== rec.profile_hash) {
-        throw new DcAuthorityError("PROFILE_HASH_MISMATCH", "re-sent birth input does not reproduce the sealed profile");
-      }
-      profile_receipt = (
-        await registerServerProfile({
-          session_id,
-          freeze_receipt: rec.receipt,
-          profile_id: profileInput.profile_id ?? null,
-          computation,
-          now: rec.frozen_at,
-        })
-      ).record.receipt;
+  const rec = await verifiedRecordForFreezeEntry(session_id, entry);
+  let profile_receipt = await registeredProfileReceipt(session_id, rec);
+  // Profile sealed with the Freeze but its record was lost: re-register only when the
+  // re-sent birth input reproduces exactly the sealed profile.
+  if (!profile_receipt && rec.profile_hash && profileInput?.birth_info != null) {
+    const computation = await computeServerProfile(profileInput.birth_info, rec.frozen_at);
+    if (!computation.ok || computation.profile_hash !== rec.profile_hash) {
+      throw new DcAuthorityError("PROFILE_HASH_MISMATCH", "re-sent birth input does not reproduce the sealed profile");
     }
+    profile_receipt = (
+      await registerServerProfile({
+        session_id,
+        freeze_receipt: rec.receipt,
+        profile_id: profileInput.profile_id ?? null,
+        computation,
+        now: rec.frozen_at,
+      })
+    ).record.receipt;
   }
   return {
     ok: true,
@@ -386,6 +460,96 @@ export async function sealFreeze(req: FreezeSealRequest, opts?: { now?: string }
     frozen_dc: frozen,
     receipt: record.receipt,
     head: headRefFromEntry(written),
+    profile_receipt,
+  };
+}
+
+function assertExpectedAnchor(expected: FreezeRecoverRequest["expected"] | null | undefined): void {
+  if (
+    !expected ||
+    !Number.isSafeInteger(expected.commit_version) ||
+    expected.commit_version < 1 ||
+    typeof expected.entry_hash !== "string" ||
+    !expected.entry_hash ||
+    typeof expected.context_id !== "string" ||
+    !expected.context_id ||
+    !Number.isSafeInteger(expected.dc_version) ||
+    typeof expected.content_hash !== "string" ||
+    !expected.content_hash
+  ) {
+    throw new DcAuthorityError("DC_AUTHORITY_BAD_REQUEST", "expected draft anchor required");
+  }
+}
+
+/**
+ * Freeze recovery: the device still holds the draft it asked to freeze (its local
+ * adoption of the sealed Freeze failed). Everything returned is rebuilt from the
+ * server's own ledger; the request only names the draft commit. Recovery succeeds only
+ * when that draft commit exists unchanged, the very next commit is the Freeze sealed
+ * from it, and that Freeze is still the ledger head.
+ */
+export async function recoverFreeze(req: FreezeRecoverRequest): Promise<FreezeRecoverResponse> {
+  assertSessionId(req.session_id);
+  const sid = req.session_id;
+  await assertWriter(sid, req.writer_token);
+  assertExpectedAnchor(req.expected);
+  const expected = req.expected;
+
+  const head = await readLedgerHead(sid);
+  if (!head) throw new DcAuthorityError("DC_LEDGER_NOT_FOUND", "No ledger exists for this session");
+
+  const source = await loadLedgerEntry(sid, expected.commit_version);
+  if (
+    !source ||
+    source.entry_hash !== expected.entry_hash ||
+    source.dc_status !== "draft" ||
+    source.context_id !== expected.context_id ||
+    source.dc_version !== expected.dc_version ||
+    source.content_hash !== expected.content_hash
+  ) {
+    throw new DcAuthorityError(
+      "FREEZE_RECOVERY_SOURCE_MISMATCH",
+      "the draft anchor does not match a draft commit in this ledger",
+      { head },
+    );
+  }
+
+  const sealed = await loadLedgerEntry(sid, source.commit_version + 1);
+  const f = sealed?.provenance.freeze;
+  if (
+    !sealed ||
+    sealed.change_type !== "freeze" ||
+    !f ||
+    f.source_commit_version !== source.commit_version ||
+    f.source_entry_hash !== source.entry_hash ||
+    sealed.previous_entry_hash !== source.entry_hash
+  ) {
+    throw new DcAuthorityError("FREEZE_RECOVERY_NOT_FOUND", "no Freeze was sealed from this draft commit", { head });
+  }
+  if (
+    sealed.context_id !== source.context_id ||
+    sealed.dc_version !== source.dc_version ||
+    sealed.previous_content_hash !== source.content_hash ||
+    f.freeze_id !== `${source.context_id}@v${source.dc_version}`
+  ) {
+    throw new DcAuthorityError("FREEZE_ANCHOR_MISMATCH", "sealed Freeze does not describe the draft it claims to seal");
+  }
+  if (head.commit_version !== sealed.commit_version || head.entry_hash !== sealed.entry_hash) {
+    throw new DcAuthorityError(
+      "FREEZE_NOT_CURRENT",
+      `Freeze ${f.freeze_id} is no longer the ledger head (head is commit ${head.commit_version}, ${head.change_type})`,
+      { head },
+    );
+  }
+
+  const rec = await verifiedRecordForFreezeEntry(sid, sealed);
+  const profile_receipt = await registeredProfileReceipt(sid, rec);
+  return {
+    ok: true,
+    outcome: "recovered",
+    frozen_dc: rec.frozen_dc,
+    receipt: rec.receipt,
+    head: headRefFromEntry(sealed),
     profile_receipt,
   };
 }

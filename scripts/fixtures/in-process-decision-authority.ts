@@ -25,6 +25,7 @@ export function inProcessDecisionAuthorityTransport(): DecisionAuthorityTranspor
   return {
     append: (req) => call("append", req),
     freeze: (req) => call("freeze", req),
+    recoverFreeze: (req) => call("recover_freeze", req),
     registerProfile: (req) => call("register_profile", req),
     head: (req) => call("head", req),
   };

@@ -145,8 +145,7 @@ async function authorizeReportSources(input: {
     }
     const profile = await loadVerifiedProfileRecord({
       session_id: input.session_id,
-      freeze_id: freeze.freeze_id,
-      frozen_at: freeze.frozen_at,
+      freeze,
       profile_hash: profileHeld.profile_hash,
     });
     assertProfileReceiptMatches(profileHeld, profile);

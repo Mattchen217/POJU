@@ -21,6 +21,7 @@ import {
   PROFILE_CALC_SCHEMA_VERSION,
   PROFILE_RECORD_SCHEMA_VERSION,
   type FreezeReceipt,
+  type FreezeRecord,
   type ProfileReceipt,
   type ProfileRecord,
   type ProfileSourceMetadata,
@@ -172,18 +173,33 @@ async function loadProfileRecordRaw(session_id: string, freeze_id: string): Prom
 }
 
 /**
- * Load + re-verify a profile record for a Freeze: signature, schema, binding to the
- * Freeze instant and a hash recomputed over the stored result.
+ * Load + re-verify the profile record of a verified Freeze: identity binding to that
+ * Freeze (session, freeze_id, the profile sealed with it), signature, schema, the Freeze
+ * instant and a hash recomputed over the stored result.
  */
 export async function loadVerifiedProfileRecord(input: {
   session_id: string;
-  freeze_id: string;
-  frozen_at: string;
+  /** Already-verified Freeze record this profile belongs to. */
+  freeze: Pick<FreezeRecord, "session_id" | "freeze_id" | "frozen_at" | "profile_hash">;
   profile_hash?: string;
 }): Promise<ProfileRecord> {
-  const rec = await loadProfileRecordRaw(input.session_id, input.freeze_id);
+  const { freeze } = input;
+  if (freeze.session_id !== input.session_id) {
+    throw new DcAuthorityError("PROFILE_FREEZE_MISMATCH", "Freeze belongs to another session");
+  }
+  const rec = await loadProfileRecordRaw(input.session_id, freeze.freeze_id);
   if (!rec) {
     throw new DcAuthorityError("PROFILE_NOT_REGISTERED", "no server-computed profile is registered for this Freeze");
+  }
+  if (
+    rec.schema_version !== PROFILE_RECORD_SCHEMA_VERSION ||
+    rec.session_id !== input.session_id ||
+    rec.freeze_id !== freeze.freeze_id
+  ) {
+    throw new DcAuthorityError("PROFILE_FREEZE_MISMATCH", "profile record is not bound to this Freeze");
+  }
+  if (freeze.profile_hash && rec.profile_hash !== freeze.profile_hash) {
+    throw new DcAuthorityError("PROFILE_FREEZE_MISMATCH", "registered profile differs from the profile sealed with the Freeze");
   }
   if (input.profile_hash && rec.profile_hash !== input.profile_hash) {
     throw new DcAuthorityError("PROFILE_HASH_MISMATCH", "registered profile differs from the requested profile");
@@ -191,7 +207,7 @@ export async function loadVerifiedProfileRecord(input: {
   if (rec.calculation_schema_version !== PROFILE_CALC_SCHEMA_VERSION) {
     throw new DcAuthorityError("PROFILE_SCHEMA_STALE", `profile schema ${rec.calculation_schema_version} is not current`);
   }
-  if (rec.calculation_timestamp !== input.frozen_at) {
+  if (rec.calculation_timestamp !== freeze.frozen_at) {
     throw new DcAuthorityError("PROFILE_TIME_MISMATCH", "profile calculation time differs from the Freeze instant");
   }
   const recomputed = computeProfileHash({
@@ -206,15 +222,17 @@ export async function loadVerifiedProfileRecord(input: {
   const r = rec.receipt;
   if (
     !verifyProfileReceiptSignature(r) ||
+    r.schema_version !== PROFILE_RECORD_SCHEMA_VERSION ||
     r.session_id !== rec.session_id ||
     r.freeze_id !== rec.freeze_id ||
+    r.profile_id !== rec.profile_id ||
     r.profile_hash !== rec.profile_hash ||
     r.calculation_timestamp !== rec.calculation_timestamp ||
     r.calculation_schema_version !== rec.calculation_schema_version
   ) {
     throw new DcAuthorityError("PROFILE_RECEIPT_INVALID", "stored profile receipt does not verify");
   }
-  await durableKv().expire(profileKey(input.session_id, input.freeze_id), AUTHORITY_RETENTION_SECONDS);
+  await durableKv().expire(profileKey(input.session_id, freeze.freeze_id), AUTHORITY_RETENTION_SECONDS);
   return rec;
 }
 

@@ -6,16 +6,17 @@
 
 import { AuthoritySigningUnavailableError } from "./signing";
 import { DcAuthorityError, appendDcLedgerCommit, assertSessionId, assertWriter, readLedgerHead } from "./ledger-store";
-import { registerProfileForFreeze, sealFreeze } from "./freeze-authority";
+import { recoverFreeze, registerProfileForFreeze, sealFreeze } from "./freeze-authority";
 import {
   headRefFromEntry,
   type DcAuthorityFailure,
   type DcLedgerAppendRequest,
   type DcLedgerHeadRef,
+  type FreezeRecoverRequest,
   type FreezeSealRequest,
 } from "../types";
 
-export type DecisionAuthorityAction = "append" | "freeze" | "register_profile" | "head";
+export type DecisionAuthorityAction = "append" | "freeze" | "recover_freeze" | "register_profile" | "head";
 
 export type DecisionAuthorityResult = { status: number; body: unknown };
 
@@ -26,7 +27,10 @@ function failureBody(e: unknown): { status: number; body: DcAuthorityFailure } {
         ? 403
         : e.code === "DC_AUTHORITY_BAD_REQUEST" || e.code === "DC_LEDGER_SNAPSHOT_INVALID"
           ? 400
-          : e.code === "DC_LEDGER_NOT_FOUND" || e.code === "FREEZE_NOT_REGISTERED" || e.code === "PROFILE_NOT_REGISTERED"
+          : e.code === "DC_LEDGER_NOT_FOUND" ||
+              e.code === "FREEZE_NOT_REGISTERED" ||
+              e.code === "FREEZE_RECOVERY_NOT_FOUND" ||
+              e.code === "PROFILE_NOT_REGISTERED"
             ? 404
             : e.code.startsWith("PROFILE_BIRTH") || e.code === "PROFILE_CALC_FAILED"
               ? 422
@@ -61,6 +65,10 @@ export async function handleDecisionAuthority(
       case "freeze": {
         const res = await sealFreeze(body as unknown as FreezeSealRequest);
         return { status: res.ok ? 200 : 409, body: res };
+      }
+      case "recover_freeze": {
+        const res = await recoverFreeze(body as unknown as FreezeRecoverRequest);
+        return { status: 200, body: res };
       }
       case "register_profile": {
         const res = await registerProfileForFreeze({

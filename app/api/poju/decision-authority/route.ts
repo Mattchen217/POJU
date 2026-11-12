@@ -8,12 +8,13 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ACTIONS = new Set<DecisionAuthorityAction>(["append", "freeze", "register_profile", "head"]);
+const ACTIONS = new Set<DecisionAuthorityAction>(["append", "freeze", "recover_freeze", "register_profile", "head"]);
 
 /**
  * Decision Intake 2.0 authority records.
  *   action=append            commit one DC change to the server ledger
  *   action=freeze            seal the ledger head as a Freeze (signed receipt)
+ *   action=recover_freeze    re-read a Freeze already sealed from the caller's draft commit
  *   action=register_profile  recompute + register the profile for an existing Freeze
  *   action=head              current ledger head (writer token required)
  */

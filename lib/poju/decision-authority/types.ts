@@ -47,6 +47,8 @@ export type DcLedgerHeadRef = {
   blueprint_hash: string | null;
   change_type: DcLedgerChangeType;
   committed_at: string;
+  /** Freeze commits only: the draft commit this Freeze sealed. */
+  freeze_source?: { commit_version: number; entry_hash: string } | null;
 };
 
 export type DcLedgerProvenance = {
@@ -239,6 +241,28 @@ export type FreezeSealResponse =
     }
   | DcAuthorityFailure;
 
+/**
+ * Recover a Freeze the server already sealed from the device's draft head (the device's
+ * local adoption failed). Only the draft anchor is sent; the server rebuilds everything
+ * else from its own ledger.
+ */
+export type FreezeRecoverRequest = {
+  session_id: string;
+  writer_token: string;
+  expected: FreezeSealRequest["expected"];
+};
+
+export type FreezeRecoverResponse =
+  | {
+      ok: true;
+      outcome: "recovered";
+      frozen_dc: DecisionContext;
+      receipt: FreezeReceipt;
+      head: DcLedgerHeadRef;
+      profile_receipt: ProfileReceipt | null;
+    }
+  | DcAuthorityFailure;
+
 export type ProfileRegisterRequest = {
   session_id: string;
   writer_token: string;
@@ -283,6 +307,14 @@ export function headRefFromEntry(entry: DcLedgerEntry): DcLedgerHeadRef {
     blueprint_hash: entry.blueprint_hash,
     change_type: entry.change_type,
     committed_at: entry.committed_at,
+    ...(entry.change_type === "freeze" && entry.provenance.freeze
+      ? {
+          freeze_source: {
+            commit_version: entry.provenance.freeze.source_commit_version,
+            entry_hash: entry.provenance.freeze.source_entry_hash,
+          },
+        }
+      : {}),
   };
 }
 

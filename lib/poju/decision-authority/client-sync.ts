@@ -9,16 +9,22 @@
 import type { POJUSessionState } from "@/lib/poju/types";
 import { blueprintHash, dcSnapshotHash } from "./hash";
 import { DecisionAuthorityUnreachableError, getDecisionAuthorityTransport } from "./client-transport";
-import { DC_LEDGER_SCHEMA_VERSION, isDcLedgerEnrolled, type DcLedgerMirror } from "./types";
+import { DC_LEDGER_SCHEMA_VERSION, isDcLedgerEnrolled, type DcLedgerHeadRef, type DcLedgerMirror } from "./types";
+
+/** The server ledger head is already a Freeze; a draft write can never land on it. */
+export const DC_LEDGER_REMOTE_FROZEN = "DC_LEDGER_REMOTE_FROZEN";
 
 export class DcLedgerSyncError extends Error {
   readonly code: string;
   readonly retryable: boolean;
-  constructor(code: string, message: string, retryable = false) {
+  /** Server head reported with a sequencing refusal (e.g. a Freeze already sealed). */
+  readonly head: DcLedgerHeadRef | null;
+  constructor(code: string, message: string, retryable = false, head: DcLedgerHeadRef | null = null) {
     super(message);
     this.name = "DcLedgerSyncError";
     this.code = code;
     this.retryable = retryable;
+    this.head = head;
   }
 }
 
@@ -142,5 +148,13 @@ export async function syncDcLedgerBeforeWrite(input: {
     candidate.dc_ledger = { ...anchor, head: eff.head, synced_at: now };
     return;
   }
-  throw new DcLedgerSyncError(res.code, res.error, res.retryable);
+  if (res.code === "DC_LEDGER_HEAD_MISMATCH" && res.head?.change_type === "freeze") {
+    throw new DcLedgerSyncError(
+      DC_LEDGER_REMOTE_FROZEN,
+      `server ledger head is Freeze ${res.head.context_id}@v${res.head.dc_version}; the local draft is behind it`,
+      false,
+      res.head,
+    );
+  }
+  throw new DcLedgerSyncError(res.code, res.error, res.retryable, res.head ?? null);
 }

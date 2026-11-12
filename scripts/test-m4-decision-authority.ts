@@ -611,11 +611,8 @@ async function main() {
   });
 
   await check("profile registry: no raw birth stored; tampered chart fails its hash; one profile per Freeze", async () => {
-    const rec = await profileAuth.loadVerifiedProfileRecord({
-      session_id: FSID,
-      freeze_id: "ctx_f1@v1",
-      frozen_at: firstSeal.receipt.frozen_at,
-    });
+    const freezeRec = await freezeAuth.loadVerifiedFreezeRecord(FSID, "ctx_f1@v1");
+    const rec = await profileAuth.loadVerifiedProfileRecord({ session_id: FSID, freeze: freezeRec });
     const json = JSON.stringify(rec);
     assert.ok(!json.includes("hour_period") && !json.includes("Asia/Shanghai"), "raw birth input must not be stored");
     assert.equal(rec.source.kind, "server_recompute_from_birth");
@@ -624,7 +621,7 @@ async function main() {
     const raw = await durableKv().get<Record<string, unknown>>(key);
     await durableKv().set(key, { ...raw, chart_structure: { ...(raw!.chart_structure as object), day_master: "篡改" } });
     assert.equal(
-      await failCode(profileAuth.loadVerifiedProfileRecord({ session_id: FSID, freeze_id: "ctx_f1@v1", frozen_at: firstSeal.receipt.frozen_at })),
+      await failCode(profileAuth.loadVerifiedProfileRecord({ session_id: FSID, freeze: freezeRec })),
       "PROFILE_HASH_MISMATCH",
     );
     await durableKv().set(key, raw);

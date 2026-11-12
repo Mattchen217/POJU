@@ -114,10 +114,13 @@ export async function loadRegisteredProfile(input: {
   profile_hash: string;
   receipt_id?: string;
 }): Promise<RegisteredProfile> {
+  const freeze = await loadVerifiedFreezeRecord(input.session_id, input.freeze_id).catch(authorityFailure);
+  if (freeze.frozen_at !== input.frozen_at) {
+    throw new DecisionReportStoreError("PROFILE_TIME_MISMATCH", "job Freeze instant differs from the Freeze record");
+  }
   const rec = await loadVerifiedProfileRecord({
     session_id: input.session_id,
-    freeze_id: input.freeze_id,
-    frozen_at: input.frozen_at,
+    freeze,
     profile_hash: input.profile_hash,
   }).catch(authorityFailure);
   if (input.receipt_id && rec.receipt.receipt_id !== input.receipt_id) {

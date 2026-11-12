@@ -10,6 +10,8 @@ import type {
   DcLedgerAppendRequest,
   DcLedgerAppendResponse,
   DcLedgerHeadRef,
+  FreezeRecoverRequest,
+  FreezeRecoverResponse,
   FreezeSealRequest,
   FreezeSealResponse,
   ProfileRegisterRequest,
@@ -19,6 +21,7 @@ import type {
 export type DecisionAuthorityTransport = {
   append(req: DcLedgerAppendRequest): Promise<DcLedgerAppendResponse>;
   freeze(req: FreezeSealRequest): Promise<FreezeSealResponse>;
+  recoverFreeze(req: FreezeRecoverRequest): Promise<FreezeRecoverResponse>;
   registerProfile(req: ProfileRegisterRequest): Promise<ProfileRegisterResponse>;
   head(req: { session_id: string; writer_token: string }): Promise<
     { ok: true; head: DcLedgerHeadRef | null } | DcAuthorityFailure
@@ -61,6 +64,7 @@ async function post<T>(action: string, body: object): Promise<T> {
 const httpTransport: DecisionAuthorityTransport = {
   append: (req) => post("append", req),
   freeze: (req) => post("freeze", req),
+  recoverFreeze: (req) => post("recover_freeze", req),
   registerProfile: (req) => post("register_profile", req),
   head: (req) => post("head", req),
 };
