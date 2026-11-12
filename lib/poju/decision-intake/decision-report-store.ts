@@ -419,18 +419,3 @@ export async function loadDecisionReportDispatch(job_id: string): Promise<Decisi
 export async function clearDecisionReportDispatch(job_id: string): Promise<void> {
   await kv.del(di2DispatchKey(job_id));
 }
-
-// ─── Charge marker ─────────────────────────────────────────────────────────
-
-export function di2ChargedKey(session_id: string): string {
-  return `poju-di2:charged:${safe(session_id)}`;
-}
-
-/** The session's report was charged once; later generations for it are not charged again. */
-export async function hasDecisionReportCharge(session_id: string): Promise<boolean> {
-  return (await durableKv().get(di2ChargedKey(session_id))) != null;
-}
-
-export async function markDecisionReportCharged(session_id: string): Promise<void> {
-  await durableKv().set(di2ChargedKey(session_id), { at: Date.now() }, { ex: RETENTION });
-}

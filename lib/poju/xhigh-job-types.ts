@@ -158,6 +158,8 @@ export type PojuXhighJobFailureReason =
   | "quality_exhausted"
   /** DI2 final report record could not be persisted — Continue re-runs the commit only. */
   | "report_persist_failed"
+  /** DI2 report job whose session charge was refused — it never runs; a new start re-charges. */
+  | "charge_refused"
   /** Redeploy invalidated this job — regenerate to start a new chain. */
   | "superseded_by_deploy"
   | "superseded_by_regenerate"

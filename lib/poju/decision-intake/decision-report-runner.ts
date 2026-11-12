@@ -76,6 +76,7 @@ import {
   type StoredPage,
 } from "./decision-report-store";
 import { assertCompleteEightPageReport } from "./freeze-bound-report";
+import { verifyDecisionReportExecution } from "./decision-report-charge";
 import {
   buildProfileProjection,
   runPersonalAnalysisModel,
@@ -138,8 +139,16 @@ async function failDecisionReportJob(
   await releaseRelay(ctx.job.job_id, ctx.input.session_id, ctx.lease_token);
 }
 
-/** Touch the job under the fence immediately before a checkpoint write. */
+/**
+ * Touch the job under the fence immediately before a checkpoint write. Every model call
+ * follows one, so a job whose execution grant was revoked (charge refused) stops here.
+ */
 async function fenceTouch(ctx: Ctx, stage: DeliveryPipelineStage, note: string): Promise<boolean> {
+  const granted = await verifyDecisionReportExecution(ctx.job);
+  if (!granted.ok) {
+    di2Log("execution grant revoked", { job_id: ctx.job.job_id, stage, reason: granted.reason });
+    return false;
+  }
   const r = await commitUnderDeliveryExecutionFence(ctx.job.job_id, ctx.generation, (job) => ({
     ...job,
     status: "running",
@@ -783,6 +792,14 @@ export async function runDecisionReportStage(
   const input = job.input;
   const generation = job.execution_generation;
   if (typeof generation !== "number") {
+    if (opts?.lease_token) await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+    return;
+  }
+  // Every hop (background, relay, inline hand-off, legacy continue route) enters here:
+  // no execution grant for this job under an authorized charge → nothing runs.
+  const granted = await verifyDecisionReportExecution(job);
+  if (!granted.ok) {
+    di2Log("not authorized — worker refused", { job_id, stage, reason: granted.reason });
     if (opts?.lease_token) await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
     return;
   }

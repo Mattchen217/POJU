@@ -33,6 +33,7 @@ import {
 import { getDecisionAuthorityTransport } from "@/lib/poju/decision-authority/client-transport";
 import type { FreezeReceipt, ProfileReceipt } from "@/lib/poju/decision-authority/types";
 import {
+  di2ReportJobId,
   DI2_REPORT_SCHEMA_VERSION,
   DI2_REPORT_SOURCE,
   type DecisionReportPageRecord,
@@ -66,7 +67,7 @@ const REGENERATE_FALLBACK_CODES = new Set([
 ]);
 
 /** Continue answers that mean "keep polling" (a revived job without a worker is re-ensured by polling). */
-const POLL_ON_CODES = new Set(["JOB_RUNNING", "REPORT_JOB_BUSY", "ALREADY_COMPLETED", "DISPATCH_FAILED"]);
+const POLL_ON_CODES = new Set(["JOB_RUNNING", "REPORT_JOB_BUSY", "ALREADY_COMPLETED", "DISPATCH_FAILED", "CHARGE_PENDING"]);
 /** Worker re-dispatch requests per driver run before the run stops as retryable. */
 const MAX_WORKER_ENSURES = 6;
 
@@ -353,15 +354,23 @@ function bindingMismatch(message: string): never {
  */
 function verifyCompletedReport(
   payload: DecisionReportStatusPayload,
-  expected: { job_id: string; freeze: FreezeRef; profile_hash: string | null },
+  expected: { session_id: string; job_id: string; freeze: FreezeRef; profile_hash: string | null },
 ): void {
   const { freeze } = expected;
   const result = payload.result;
   if (!result) throw new DecisionReportClientError("REPORT_RESULT_MISSING", "Completed job has no result", { retryable: true });
   const gen = payload.execution_generation;
-  if (payload.job_id !== expected.job_id) bindingMismatch("Report belongs to another job");
+  if (!expected.job_id || payload.job_id !== expected.job_id) bindingMismatch("Report belongs to another job");
+  if (payload.session_id !== expected.session_id) bindingMismatch("Report belongs to another session");
   if (typeof gen !== "number" || result.execution_generation !== gen) bindingMismatch("Report generation mismatch");
   if (result.report_job_id !== payload.report_job_id) bindingMismatch("Report row mismatch");
+  const expectedReportJobId = di2ReportJobId({
+    session_id: expected.session_id,
+    freeze_id: freeze.freezeId,
+    profile_hash: expected.profile_hash ?? payload.profile_hash ?? "",
+    execution_generation: gen,
+  });
+  if (result.report_job_id !== expectedReportJobId) bindingMismatch("Report row belongs to another report");
   if (
     result.freeze_id !== freeze.freezeId ||
     result.context_hash !== freeze.content_hash ||
@@ -402,11 +411,13 @@ function verifyCompletedReport(
 /**
  * One local write for the delivered report: analysis, eight-page row (completed),
  * delivery body (existing display / archive path), Freeze binding, pending cleared.
- * If it fails the report is not delivered on this device; the pending job id stays
- * in storage so the next open fetches it again.
+ * `polled_job_id` is the job this driver asked about — the payload must answer for it.
+ * If anything fails the report is not delivered on this device; the pending job id
+ * stays in storage so the next open fetches it again.
  */
 async function commitCompletedReportToSession(
   session: POJUSessionState,
+  polled_job_id: string,
   payload: DecisionReportStatusPayload,
   locale: string,
   freeze: FreezeRef,
@@ -414,7 +425,8 @@ async function commitCompletedReportToSession(
   reload: (session_id: string) => Promise<POJUSessionState | null>,
 ): Promise<POJUSessionState> {
   verifyCompletedReport(payload, {
-    job_id: payload.job_id ?? "",
+    session_id: session.session_id,
+    job_id: polled_job_id,
     freeze,
     profile_hash: profileReceiptFor(session, freeze.freezeId)?.profile_hash ?? null,
   });
@@ -710,7 +722,7 @@ async function pollUntilDone(
 
       const cls = classifyDecisionReportStatus(payload);
       if (cls === "completed") {
-        return await commitCompletedReportToSession(session, payload, locale, freeze, persist, opts.reload ?? defaultReload);
+        return await commitCompletedReportToSession(session, job_id, payload, locale, freeze, persist, opts.reload ?? defaultReload);
       }
 
       session = mirrorAnalysis(session, payload.analysis.record);
@@ -777,7 +789,13 @@ async function pollUntilDone(
       // Stopped: the row keeps job id, generation and Freeze binding; the pending id stays.
       await saveCheckpoint(session);
       throw new DecisionReportClientError(
-        cls === "missing" ? "JOB_MISSING" : cls === "needs_user_continue" ? "REPORT_QUALITY_EXHAUSTED" : "REPORT_FAILED",
+        cls === "missing"
+          ? "JOB_MISSING"
+          : cls === "needs_user_continue"
+            ? "REPORT_QUALITY_EXHAUSTED"
+            : payload.failure_reason === "charge_refused"
+              ? "pass_required"
+              : "REPORT_FAILED",
         payload.error ?? "Report generation failed",
         { retryable: cls !== "permanent_failed" },
       );

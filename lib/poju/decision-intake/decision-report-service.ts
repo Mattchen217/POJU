@@ -70,6 +70,7 @@ import {
 } from "./decision-report-types";
 import { resolvePage07Applicability } from "./decision-report-pages";
 import {
+  clearDecisionReportDispatch,
   commitCompletedReport,
   DecisionReportStoreError,
   loadAllPages,
@@ -77,6 +78,7 @@ import {
   loadCompletedReport,
   type CompletedReportRecord,
 } from "./decision-report-store";
+import { revokeDecisionReportExecution } from "./decision-report-charge";
 import {
   completedReportDraft,
   firstIncompleteDecisionReportStage,
@@ -109,7 +111,7 @@ export type ServiceFailure = {
 };
 
 export type StartDecisionReportOutcome =
-  | { ok: true; job: PojuXhighJob; reused: boolean; question: string; had_prior_job: boolean }
+  | { ok: true; job: PojuXhighJob; reused: boolean; question: string }
   | ServiceFailure;
 
 function failure(status: number, code: string, error: string, retryable = false): ServiceFailure {
@@ -237,7 +239,7 @@ export async function startDecisionReportJob(input: {
   if (latest && latestInput && !input.regenerate && sameIdentity(latestInput, identity)) {
     const live = latest.status === "pending" || latest.status === "running";
     if (live || latest.status === "completed" || isRevivable(latest)) {
-      return { ok: true, job: latest, reused: true, question, had_prior_job: true };
+      return { ok: true, job: latest, reused: true, question };
     }
   }
 
@@ -326,18 +328,27 @@ export async function startDecisionReportJob(input: {
         true,
       );
     }
-    return { ok: true, job, reused: false, question, had_prior_job: Boolean(latest) };
+    return { ok: true, job, reused: false, question };
   } catch (e) {
     await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
     throw e;
   }
 }
 
-/** Pass-charge refusal after create: the job must not run. */
+/**
+ * Pass-charge refusal after create: the job must never run. The execution grant goes
+ * first, so a worker already queued for it (relay redelivery, a background task, an
+ * older dispatch) is refused at its entry and at every checkpoint, before the job is
+ * stamped failed and its marker / lock are released.
+ */
 export async function abortDecisionReportJob(job: PojuXhighJob, reason: string): Promise<void> {
-  await failXhighJob(job.job_id, reason, { retryable: false, failure_reason: "transport_error" }).catch(
+  await revokeDecisionReportExecution(job.job_id).catch((e) => {
+    console.error("[decision-report] grant revoke failed", { job_id: job.job_id, e });
+  });
+  await failXhighJob(job.job_id, reason, { retryable: false, failure_reason: "charge_refused" }).catch(
     () => undefined,
   );
+  await clearDecisionReportDispatch(job.job_id).catch(() => undefined);
   await releaseXhighSessionLock("decision_report", job.session_id).catch(() => undefined);
 }
 

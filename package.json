@@ -191,7 +191,8 @@
     "test:m3-decision-report": "tsx scripts/test-m3-decision-report.ts",
     "test:m4-decision-authority": "tsx scripts/test-m4-decision-authority.ts",
     "test:m4-1-freeze-recovery": "tsx scripts/test-m4-1-freeze-recovery.ts",
-    "test:m5-di2-main-path": "tsx scripts/test-m5-di2-main-path.ts"
+    "test:m5-di2-main-path": "tsx scripts/test-m5-di2-main-path.ts",
+    "test:m5-r1-authorization": "tsx scripts/test-m5-r1-authorization.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

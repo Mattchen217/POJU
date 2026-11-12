@@ -42,6 +42,7 @@ async function main() {
   const store = await import("../lib/poju/decision-intake/decision-report-store");
   const service = await import("../lib/poju/decision-intake/decision-report-service");
   const runner = await import("../lib/poju/decision-intake/decision-report-runner");
+  const chargeAuth = await import("../lib/poju/decision-intake/decision-report-charge");
   const types = await import("../lib/poju/decision-intake/decision-report-types");
   const fbr = await import("../lib/poju/decision-intake/freeze-bound-report");
   const client = await import("../lib/poju/decision-intake/decision-report-client");
@@ -590,7 +591,21 @@ async function main() {
       regenerate: opts?.regenerate === true,
     });
     assert.ok(r.ok, r.ok ? "" : `${r.code}: ${r.error}`);
-    return r.ok ? r : (null as never);
+    if (!r.ok) return null as never;
+    // M5-R1: below the route, a job runs only once its session's charge is authorized and
+    // the job is granted — the step the route performs after a confirmed charge.
+    if (r.job.status === "pending" || r.job.status === "running") {
+      const settled = await chargeAuth.settleDecisionReportCharge({
+        session_id: sealed.session_id,
+        question: r.question,
+        joint_pass_ref: null,
+        allowNewCharge: true,
+        charge: async () => ({ ok: true }),
+      });
+      assert.equal(settled.state, "authorized");
+      assert.equal((await chargeAuth.grantDecisionReportExecution(r.job)).ok, true);
+    }
+    return r;
   }
 
   async function pagesOf(job_id: string) {

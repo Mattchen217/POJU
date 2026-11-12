@@ -34,6 +34,11 @@ import {
   DI2_DISPATCH_GRACE_S,
 } from "./decision-report-store";
 import { firstIncompleteDecisionReportStage, runDecisionReportStage } from "./decision-report-runner";
+import {
+  DecisionReportNotAuthorizedError,
+  grantDecisionReportExecution,
+  verifyDecisionReportExecution,
+} from "./decision-report-charge";
 
 /** How the caller hosts a background invoke (`after()` in the route). */
 export type DecisionReportBackground = (task: () => Promise<void>) => void;
@@ -70,6 +75,9 @@ export async function dispatchDecisionReportStage(
   stage: DeliveryPipelineStage,
   deps: DecisionReportDispatchDeps,
 ): Promise<"relay" | "background"> {
+  const job = await getXhighJob(job_id);
+  const granted = job ? await verifyDecisionReportExecution(job) : { ok: false as const, reason: "job_missing" };
+  if (!granted.ok) throw new DecisionReportNotAuthorizedError(job_id, granted.reason);
   await markDecisionReportDispatch(job_id, stage);
   await updateXhighJobStatus(job_id, "pending", {
     current_stage: stage,
@@ -146,6 +154,10 @@ export async function ensureDecisionReportWorker(input: {
   }
   if (Date.now() - job.created_at > activeDeliveryJobMaxWallMs()) {
     return refuse(409, "JOB_BUDGET_EXHAUSTED", "Report job time budget exhausted", true);
+  }
+  const granted = await grantDecisionReportExecution(job);
+  if (!granted.ok) {
+    return refuse(402, "CHARGE_NOT_AUTHORIZED", `Report job is not authorized to run (${granted.reason})`, true);
   }
 
   if (await loadDeliveryContinueLease(job.job_id).catch(() => null)) {

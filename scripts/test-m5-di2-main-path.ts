@@ -66,6 +66,7 @@ async function main() {
   const service = await import("../lib/poju/decision-intake/decision-report-service");
   const runner = await import("../lib/poju/decision-intake/decision-report-runner");
   const api = await import("../lib/poju/decision-intake/decision-report-api");
+  const chargeAuth = await import("../lib/poju/decision-intake/decision-report-charge");
   const client = await import("../lib/poju/decision-intake/decision-report-client");
   const { inngest } = await import("../lib/inngest/client");
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import("../lib/db/poju-db");
@@ -499,6 +500,8 @@ async function main() {
         assert.notEqual((await getXhighJob(jobA))?.status, "completed");
         assert.equal(await store.loadCompletedReport(s.session_id, jobA), null, "old generation withdrew its record");
         assert.notEqual((await status(s, jobA)).status, "completed");
+        // M5-R1: a job created outside the API runs only once granted under the paid session.
+        assert.equal((await chargeAuth.grantDecisionReportExecution((await getXhighJob(jobB))!)).ok, true);
         await runner.runDecisionReportStage(jobB, "finalize");
         const b = await getXhighJob(jobB);
         assert.equal(b?.status, "completed");
@@ -624,7 +627,7 @@ async function main() {
         const counts = new Map<string, number>();
         for (const c of charges) counts.set(c, (counts.get(c) ?? 0) + 1);
         for (const [sid, n] of counts) assert.equal(n, 1, `session ${sid} charged ${n}×`);
-        assert.equal(await store.hasDecisionReportCharge(s.session_id), true);
+        assert.equal((await chargeAuth.loadChargeAuthorization(s.session_id))?.state, "authorized");
       });
 
       await check("B6 concurrent recovery requests → one dispatch; racing workers → one commit", async () => {
