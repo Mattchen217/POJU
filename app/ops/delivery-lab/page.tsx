@@ -276,6 +276,11 @@ export default function DeliveryLabCreatePage() {
               ← Ops 首页
             </Link>
           </p>
+          <p className="mt-2 text-sm">
+            <Link href="/ops/delivery-lab/di2" className="text-cyan-300 underline-offset-2 hover:underline">
+              DI2 Fresh Session Lifecycle Lab
+            </Link>
+          </p>
         </header>
 
         {authed === null ? (
