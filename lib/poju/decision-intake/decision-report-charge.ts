@@ -10,8 +10,10 @@
  *                        └── claim older than CLAIM_MS: abandoned, re-claimable
  *
  *   refused         a later start may re-claim it (then the refusal's abort is lost to it)
- *   abort_claimed   owned by the refusal's abort of one job (`abort_job_id`): no claim, no
- *                   charge, no run for the session until that abort is finished
+ *   abort_claimed   owned by the refusal's abort of one job (`abort_job_id`), claimed under
+ *                   the claimant's session lock (`abort_lock_*`): no claim, no charge, no
+ *                   run for the session until that abort is finished; abandoned past the
+ *                   window, it is resumed only by whoever takes the resume right (CAS)
  *   abort_completed the refused job is terminated; a later start re-claims (same ref)
  *
  * Every transition is a compare-and-set on the exact record, so two requests can
@@ -79,6 +81,15 @@ export type ChargeAuthorization = {
   abort_attempt_id?: string | null;
   abort_claimed_at?: number | null;
   abort_completed_at?: number | null;
+  /**
+   * The session lock the abort was claimed under (the claimant start's owner identity).
+   * Its release step deletes only this lock; null on pre-FU3 records (never deleted).
+   */
+  abort_lock_token?: string | null;
+  abort_lock_owner_attempt_id?: string | null;
+  /** Last request that took the resume right of an abandoned abort (CAS on the record). */
+  abort_resumer_id?: string | null;
+  abort_resumed_at?: number | null;
 };
 
 export type ChargeSettlement =
@@ -104,6 +115,17 @@ export type ChargeSettlement =
   | { state: "uncertain"; reason: string }
   /** No record and this caller may not open a charge. */
   | { state: "required" };
+
+const NO_ABORT = {
+  abort_job_id: null,
+  abort_attempt_id: null,
+  abort_claimed_at: null,
+  abort_completed_at: null,
+  abort_lock_token: null,
+  abort_lock_owner_attempt_id: null,
+  abort_resumer_id: null,
+  abort_resumed_at: null,
+} as const satisfies Partial<ChargeAuthorization>;
 
 function safe(s: string): string {
   return s.replace(/[^a-zA-Z0-9@_.:-]/g, "_");
@@ -280,10 +302,7 @@ export async function settleDecisionReportCharge(input: {
           reason: null,
           updated_at: now,
           authorized_at: null,
-          abort_job_id: null,
-          abort_attempt_id: null,
-          abort_claimed_at: null,
-          abort_completed_at: null,
+          ...NO_ABORT,
         }
       : {
           version: 1,
@@ -298,10 +317,7 @@ export async function settleDecisionReportCharge(input: {
           reason: null,
           updated_at: now,
           authorized_at: null,
-          abort_job_id: null,
-          abort_attempt_id: null,
-          abort_claimed_at: null,
-          abort_completed_at: null,
+          ...NO_ABORT,
         };
     let won: boolean;
     try {
@@ -355,6 +371,7 @@ function classifyAbortClaim(latest: ChargeAuthorization | null, refusal: ChargeA
 export async function claimDecisionReportRefusalAbort(
   s: ChargeSettlement,
   job_id: string,
+  lock: { lock_token: string; owner_attempt_id: string },
 ): Promise<RefusalAbortClaim> {
   if (s.state !== "refused") return { kind: "stale", record: null };
   const refusal = s.record;
@@ -380,6 +397,10 @@ export async function claimDecisionReportRefusalAbort(
     abort_attempt_id: crypto.randomUUID(),
     abort_claimed_at: now,
     abort_completed_at: null,
+    abort_lock_token: lock.lock_token,
+    abort_lock_owner_attempt_id: lock.owner_attempt_id,
+    abort_resumer_id: null,
+    abort_resumed_at: null,
     updated_at: now,
   };
   try {
@@ -398,6 +419,53 @@ export async function claimDecisionReportRefusalAbort(
     return { kind: "claimed", record: latest };
   }
   return classifyAbortClaim(latest, refusal);
+}
+
+/** Last time the abort was claimed or its resume right taken: it is held for the window after. */
+export function abortHeldSince(rec: ChargeAuthorization): number {
+  return Math.max(rec.abort_claimed_at ?? 0, rec.abort_resumed_at ?? 0);
+}
+
+export type RefusalAbortResumeRight =
+  /** This call owns the resume of `record.abort_job_id` (CAS landed). */
+  | { kind: "taken"; record: ChargeAuthorization }
+  /** Another request claimed or resumed it inside the window, or it moved on. */
+  | { kind: "lost"; record: ChargeAuthorization | null }
+  | { kind: "uncertain"; reason: string };
+
+/**
+ * The right to resume an abandoned abort, taken atomically: CAS on the exact
+ * `abort_claimed` record read (idle past the window) → same abort (job, attempt, lock
+ * identity) with this resumer's id and a fresh `abort_resumed_at`. Two resumers of the
+ * same record are exclusive; a record completed or re-claimed meanwhile is not resumed.
+ */
+export async function claimRefusalAbortResume(rec: ChargeAuthorization): Promise<RefusalAbortResumeRight> {
+  if (rec.state !== "abort_claimed" || !rec.abort_job_id || !rec.abort_attempt_id) {
+    return { kind: "lost", record: rec };
+  }
+  if (Date.now() - abortHeldSince(rec) < DI2_ABORT_CLAIM_MS) return { kind: "lost", record: rec };
+  const now = Date.now();
+  const next: ChargeAuthorization = {
+    ...rec,
+    abort_resumer_id: crypto.randomUUID(),
+    abort_resumed_at: now,
+    updated_at: now,
+  };
+  try {
+    if (await casAuthorization(rec.session_id, rec, next)) return { kind: "taken", record: next };
+  } catch (e) {
+    console.error("[decision-report] abort resume claim write failed", { session_id: rec.session_id, e });
+  }
+  let latest: ChargeAuthorization | null;
+  try {
+    latest = await loadChargeAuthorization(rec.session_id);
+  } catch {
+    return { kind: "uncertain", reason: "authorization_unreadable" };
+  }
+  if (latest?.state === "abort_claimed" && latest.abort_resumer_id === next.abort_resumer_id) {
+    return { kind: "taken", record: latest };
+  }
+  return { kind: "lost", record: latest };
 }
 
 /**

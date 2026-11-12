@@ -34,7 +34,8 @@ import {
   commitUnderDeliveryExecutionFence,
   DeliveryExecutionRevokedError,
 } from "@/lib/poju/final-delivery-execution-authority";
-import { getFdExecutionFence, getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
+import { getFdExecutionFence, getXhighJob } from "@/lib/poju/xhigh-job-store";
+import { releaseReportJobLock } from "./decision-report-lock";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
 import {
   DI2_MAX_UNIT_ATTEMPTS,
@@ -104,7 +105,7 @@ function di2Log(event: string, detail: Record<string, unknown>): void {
 
 async function releaseRelay(job_id: string, session_id: string, lease_token: string | null): Promise<void> {
   if (lease_token) await releaseDeliveryContinueLease(job_id, lease_token).catch(() => undefined);
-  await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
+  await releaseReportJobLock(session_id, job_id).catch(() => undefined);
 }
 
 /**

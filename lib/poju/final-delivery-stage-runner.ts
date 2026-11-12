@@ -2252,9 +2252,8 @@ export async function runFinalDeliveryStage(
           () => undefined,
         );
       } else if (job.phase === "decision_report") {
-        await releaseXhighSessionLock("decision_report", job.session_id).catch(
-          () => undefined,
-        );
+        const { releaseReportJobLock } = await import("@/lib/poju/decision-intake/decision-report-lock");
+        await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
       }
       return;
     }

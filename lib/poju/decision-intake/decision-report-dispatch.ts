@@ -18,12 +18,8 @@ import {
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { isDeliveryJobFromCurrentDeploy } from "@/lib/poju/delivery-deploy-generation";
-import {
-  getFdExecutionFence,
-  getXhighJob,
-  releaseXhighSessionLock,
-  updateXhighJobStatus,
-} from "@/lib/poju/xhigh-job-store";
+import { getFdExecutionFence, getXhighJob, updateXhighJobStatus } from "@/lib/poju/xhigh-job-store";
+import { releaseReportJobLock } from "./decision-report-lock";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
 import { isDecisionReportJobInput } from "./decision-report-types";
 import {
@@ -99,7 +95,7 @@ export async function dispatchDecisionReportStage(
       await runDecisionReportStage(job_id, stage);
     } catch (e) {
       console.error("[decision-report] background stage failed", e);
-      await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
+      await releaseReportJobLock(session_id, job_id).catch(() => undefined);
     }
   });
   return "background";

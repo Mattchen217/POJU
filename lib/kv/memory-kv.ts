@@ -115,6 +115,22 @@ export class MemoryKv {
   }
 
   /**
+   * Delete only when the live value's JSON equals `expectedJson` (atomic in-process).
+   * Mirrors the Redis Lua compare-and-delete used for owner-checked lock release.
+   */
+  async compareAndDeleteExact(key: string, expectedJson: string): Promise<boolean> {
+    const hit = this.store.get(key);
+    if (!hit) return false;
+    if (hit.expiresAt != null && hit.expiresAt <= now()) {
+      this.store.delete(key);
+      return false;
+    }
+    if (JSON.stringify(hit.value) !== expectedJson) return false;
+    this.store.delete(key);
+    return true;
+  }
+
+  /**
    * M2.2-R5 — Atomic job write gated on execution_generation.
    * Refuses when missing, generation mismatch, or revoked failure_reason.
    */

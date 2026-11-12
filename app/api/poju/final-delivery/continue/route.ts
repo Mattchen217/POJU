@@ -16,6 +16,7 @@ import {
   DELIVERY_PIPELINE_STAGES,
 } from "@/lib/poju/final-delivery-stage-runner";
 import { failXhighJob, getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
+import { releaseReportJobLock } from "@/lib/poju/decision-intake/decision-report-lock";
 import {
   isDeliveryRelayPhase,
   relayLockPhaseForJob,
@@ -24,7 +25,11 @@ import {
 
 async function releaseRelayLock(job: PojuXhighJob): Promise<void> {
   const phase = relayLockPhaseForJob(job);
-  if (phase) await releaseXhighSessionLock(phase, job.session_id).catch(() => undefined);
+  if (phase === "decision_report") {
+    await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
+  } else if (phase) {
+    await releaseXhighSessionLock(phase, job.session_id).catch(() => undefined);
+  }
 }
 
 export const runtime = "nodejs";

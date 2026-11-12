@@ -27,14 +27,11 @@ import {
   isDeliveryJobFromCurrentDeploy,
 } from "@/lib/poju/delivery-deploy-generation";
 import {
-  acquireXhighSessionLock,
   createXhighJob,
   failXhighJob,
   findLatestXhighJobForSession,
   getFdExecutionFence,
   getXhighJob,
-  reclaimStaleXhighSessionLock,
-  releaseXhighSessionLock,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
@@ -79,12 +76,28 @@ import {
   type CompletedReportRecord,
 } from "./decision-report-store";
 import {
+  abortHeldSince,
+  claimRefusalAbortResume,
   completeRefusalAbortRecord,
   DI2_ABORT_CLAIM_MS,
   loadChargeAuthorization,
   revokeDecisionReportExecution,
   type ChargeAuthorization,
 } from "./decision-report-charge";
+import {
+  LEGACY_REPORT_LOCK_ORPHAN_MS,
+  newReportLockOwner,
+  readReportSessionLock,
+  releaseOwnedReportLock,
+  releaseReportJobLock,
+  REPORT_START_LOCK_IDLE_MS,
+  reportLockOwnerOf,
+  takeOverReportLock,
+  tryCreateReportLock,
+  updateOwnedReportLock,
+  type ReportLockOwner,
+  type ReportSessionLock,
+} from "./decision-report-lock";
 import {
   completedReportDraft,
   firstIncompleteDecisionReportStage,
@@ -94,19 +107,6 @@ import { decisionReportWorkerState } from "./decision-report-dispatch";
 
 /** Older than one invoke budget with no live lease → the worker died. */
 const STALE_NO_LEASE_MS = 6 * 60_000;
-
-/** A start holds the session lock only for its create window when no job is live. */
-const ORPHAN_LOCK_MS = 2 * 60_000;
-
-/**
- * The session lock outlived its job (job record lost before the lock TTL). With no live
- * job for the session and the lock older than any create window, take it over.
- */
-async function reclaimOrphanReportLock(session_id: string): Promise<boolean> {
-  const ok = await reclaimStaleXhighSessionLock("decision_report", session_id, ORPHAN_LOCK_MS).catch(() => false);
-  if (ok) console.warn("[decision-report] reclaimed orphan session lock", { session_id });
-  return ok;
-}
 
 export type ServiceFailure = {
   ok: false;
@@ -124,7 +124,7 @@ function failure(status: number, code: string, error: string, retryable = false)
   return { ok: false, status, code, error, retryable };
 }
 
-function sameIdentity(a: DecisionReportJobInput, b: Pick<DecisionReportJobInput, "freeze_id" | "context_hash" | "profile_hash" | "report_schema_version" | "analysis_schema_version">): boolean {
+export function sameIdentity(a: DecisionReportJobInput, b: Pick<DecisionReportJobInput, "freeze_id" | "context_hash" | "profile_hash" | "report_schema_version" | "analysis_schema_version">): boolean {
   return (
     a.freeze_id === b.freeze_id &&
     a.context_hash === b.context_hash &&
@@ -202,55 +202,201 @@ async function authorizeReportSources(input: {
   }
 }
 
+export type ReportStartHookPoint =
+  | "before_lock"
+  | "after_lock"
+  | "precheck"
+  | "before_create"
+  | "after_create"
+  | "before_settle"
+  | "before_handoff"
+  | "before_resume_claim";
+
+let reportStartHook:
+  | ((point: ReportStartHookPoint, ctx: { session_id: string; owner_attempt_id: string | null }) => Promise<void> | void)
+  | null = null;
+
+/** Tests only: runs at each start / resume boundary (pause with a gate, or throw to stop there). */
+export function __setReportStartHookForTests(fn: typeof reportStartHook): void {
+  reportStartHook = fn;
+}
+
+export async function runReportStartHook(
+  point: ReportStartHookPoint,
+  ctx: { session_id: string; owner_attempt_id: string | null },
+): Promise<void> {
+  await reportStartHook?.(point, ctx);
+}
+
+function isLiveJob(job: PojuXhighJob): boolean {
+  return job.status === "pending" || job.status === "running";
+}
+
+export type DecisionReportStartPlan = {
+  session_id: string;
+  locale: string;
+  regenerate: boolean;
+  question: string;
+  identity: Pick<
+    DecisionReportJobInput,
+    "freeze_id" | "context_hash" | "profile_hash" | "report_schema_version" | "analysis_schema_version"
+  >;
+  freezeRec: FreezeRecord;
+  profile: ProfileRecord;
+  page07: ReturnType<typeof resolvePage07Applicability>;
+};
+
 /**
- * Verify the Freeze + profile authority and create (or reuse) the report job.
- * Does not schedule — the route schedules after the pass charge succeeds.
+ * Verify the Freeze + profile authority (read-only; no job, no lock, no charge record).
+ * Everything that depends on the session's state is decided later, under the start lock.
  */
-export async function startDecisionReportJob(input: {
+export async function planDecisionReportStart(input: {
   session_id: string;
   locale: string;
   writer_token: unknown;
   freeze_receipt: unknown;
   profile_receipt: unknown;
   regenerate: boolean;
-}): Promise<StartDecisionReportOutcome> {
-  const session_id = input.session_id;
+}): Promise<DecisionReportStartPlan | ServiceFailure> {
   const authorized = await authorizeReportSources(input);
   if ("ok" in authorized) return authorized;
   const freezeRec = authorized.freeze;
   const profile = authorized.profile;
-  const freeze = {
-    freeze_id: freezeRec.freeze_id,
-    context_hash: freezeRec.context_hash,
-    decision_context: freezeRec.frozen_dc,
-    blueprint: freezeRec.blueprint ?? null,
+  const dc = freezeRec.frozen_dc;
+  const blueprint = freezeRec.blueprint ?? null;
+  return {
+    session_id: input.session_id,
+    locale: input.locale,
+    regenerate: input.regenerate,
+    question: dc.definition.decision_question ?? blueprint?.decision_question ?? "",
+    identity: {
+      freeze_id: freezeRec.freeze_id,
+      context_hash: freezeRec.context_hash,
+      profile_hash: profile.profile_hash,
+      report_schema_version: DI2_REPORT_SCHEMA_VERSION,
+      analysis_schema_version: PERSONAL_ANALYSIS_SCHEMA_VERSION,
+    },
+    freezeRec,
+    profile,
+    page07: resolvePage07Applicability({ dc, blueprint }),
   };
+}
 
-  const page07 = resolvePage07Applicability({
-    dc: freeze.decision_context,
-    blueprint: freeze.blueprint,
-  });
-  const question =
-    freeze.decision_context.definition.decision_question ?? freeze.blueprint?.decision_question ?? "";
-  const identity = {
-    freeze_id: freeze.freeze_id,
-    context_hash: freeze.context_hash,
-    profile_hash: profile.profile_hash,
-    report_schema_version: DI2_REPORT_SCHEMA_VERSION,
-    analysis_schema_version: PERSONAL_ANALYSIS_SCHEMA_VERSION,
+export type ReportStartLock =
+  /** This start owns the session lock (holder `start`). */
+  | { kind: "locked"; lock: ReportSessionLock }
+  /** An authorized live job of this Freeze holds the lock: follow it, nothing to create. */
+  | { kind: "follow"; job: PojuXhighJob }
+  /** Another start is inside its window (its job, once bound): read-only, never advance it. */
+  | { kind: "observe"; job: PojuXhighJob | null }
+  | { kind: "busy" }
+  /** The lock could not be read / written with certainty: fail closed. */
+  | { kind: "unconfirmed"; reason: string };
+
+/**
+ * Take the session lock before anything about the session is decided. A live job's lock
+ * is taken over only to replace that job (Regenerate / another Freeze); an idle start's,
+ * a terminal job's or an aged legacy lock only by CAS on the exact value read.
+ */
+export async function acquireDecisionReportStartLock(
+  plan: DecisionReportStartPlan,
+  owner: ReportLockOwner,
+): Promise<ReportStartLock> {
+  const sid = plan.session_id;
+  const takeOver = async (raw: unknown, why: string): Promise<ReportSessionLock | null> => {
+    const taken = await takeOverReportLock(raw, owner, "start", null);
+    if (taken) console.warn("[decision-report] took over session lock", { session_id: sid, why });
+    return taken;
   };
+  const liveJobLock = async (raw: unknown, job: PojuXhighJob): Promise<ReportStartLock | null> => {
+    const ji = isDecisionReportJobInput(job.input) ? job.input : null;
+    const latest = await findLatestXhighJobForSession("decision_report", sid);
+    if (!plan.regenerate && ji && sameIdentity(ji, plan.identity) && latest?.job_id === job.job_id) {
+      return { kind: "follow", job };
+    }
+    const taken = await takeOver(raw, "replace_live_job");
+    return taken ? { kind: "locked", lock: taken } : null;
+  };
+  try {
+    for (let round = 0; round < 3; round++) {
+      const created = await tryCreateReportLock(owner, "start", null);
+      if (created) return { kind: "locked", lock: created };
+      const cur = await readReportSessionLock(sid);
+      if (cur.kind === "absent") continue;
+      if (cur.kind === "invalid") return { kind: "unconfirmed", reason: "lock_unrecognised" };
+      if (cur.kind === "legacy") {
+        const latest = await findLatestXhighJobForSession("decision_report", sid);
+        if (latest && isLiveJob(latest)) {
+          const r = await liveJobLock(cur.raw, latest);
+          if (r) return r;
+          continue;
+        }
+        if (Date.now() - cur.at < LEGACY_REPORT_LOCK_ORPHAN_MS) return { kind: "busy" };
+        const taken = await takeOver(cur.raw, "legacy_orphan");
+        if (taken) return { kind: "locked", lock: taken };
+        continue;
+      }
+      const held = cur.lock;
+      if (held.holder === "start") {
+        if (Date.now() - held.touched_at < REPORT_START_LOCK_IDLE_MS) {
+          const job = held.job_id ? await getXhighJob(held.job_id) : null;
+          return { kind: "observe", job: job && job.session_id === sid ? job : null };
+        }
+        const taken = await takeOver(cur.raw, "idle_start");
+        if (taken) return { kind: "locked", lock: taken };
+        continue;
+      }
+      const job = held.job_id ? await getXhighJob(held.job_id) : null;
+      if (job && job.session_id === sid && isLiveJob(job)) {
+        const r = await liveJobLock(cur.raw, job);
+        if (r) return r;
+        continue;
+      }
+      const taken = await takeOver(cur.raw, "job_not_live");
+      if (taken) return { kind: "locked", lock: taken };
+    }
+    return { kind: "busy" };
+  } catch (e) {
+    console.error("[decision-report] start lock unconfirmed", { session_id: sid, e });
+    return { kind: "unconfirmed", reason: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export type PreparedReportJob =
+  | { ok: true; job: PojuXhighJob; reused: boolean; question: string; lock: ReportSessionLock }
+  | ServiceFailure;
+
+const LOCK_LOST = (): ServiceFailure =>
+  failure(409, "REPORT_JOB_BUSY", "This report start no longer holds the session lock", true);
+
+/**
+ * Under the start lock (after the authorization pre-check): reuse the session's job for
+ * this Freeze, or create one, and bind the lock to it. Does not schedule or charge. On a
+ * failure the caller releases its own lock.
+ */
+export async function createOrReuseDecisionReportJob(
+  plan: DecisionReportStartPlan,
+  lock: ReportSessionLock,
+): Promise<PreparedReportJob> {
+  const owner = reportLockOwnerOf(lock);
+  const session_id = plan.session_id;
+  const { freezeRec, profile, page07, question, identity } = plan;
 
   const latest = await findLatestXhighJobForSession("decision_report", session_id);
   const latestInput = latest && isDecisionReportJobInput(latest.input) ? latest.input : null;
-  if (latest && latestInput && !input.regenerate && sameIdentity(latestInput, identity)) {
-    const live = latest.status === "pending" || latest.status === "running";
-    if (live || latest.status === "completed" || isRevivable(latest)) {
-      return { ok: true, job: latest, reused: true, question };
+  if (latest && latestInput && !plan.regenerate && sameIdentity(latestInput, identity)) {
+    if (isLiveJob(latest) || latest.status === "completed" || isRevivable(latest)) {
+      const bound = await updateOwnedReportLock(owner, { job_id: latest.job_id });
+      if (!bound) return LOCK_LOST();
+      return { ok: true, job: latest, reused: true, question, lock: bound };
     }
   }
 
-  let generation: number | null = null;
-  if (latest && (latest.status === "pending" || latest.status === "running")) {
+  await runReportStartHook("before_create", { session_id, owner_attempt_id: owner.owner_attempt_id });
+  // Generations are bumped only by the lock's current owner (re-checked after the window).
+  if (!(await updateOwnedReportLock(owner))) return LOCK_LOST();
+  let generation: number;
+  if (latest && isLiveJob(latest)) {
     // Different Freeze / profile, or explicit Regenerate: revoke the in-flight generation.
     // Its pages stay under its own job_id; nothing it wrote is overwritten.
     try {
@@ -264,25 +410,19 @@ export async function startDecisionReportJob(input: {
         true,
       );
     }
-    await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
+  } else {
+    generation = await allocateFinalDeliveryExecutionGeneration(session_id);
   }
-
-  let locked = await acquireXhighSessionLock("decision_report", session_id);
-  if (!locked && !(latest && (latest.status === "pending" || latest.status === "running"))) {
-    locked = await reclaimOrphanReportLock(session_id);
-  }
-  if (!locked) {
-    return failure(409, "REPORT_JOB_BUSY", "Another report start is in progress for this session", true);
-  }
-
-  try {
-    if (generation == null) {
-      generation = await allocateFinalDeliveryExecutionGeneration(session_id);
-    }
+  {
+    const freeze = {
+      freeze_id: freezeRec.freeze_id,
+      context_hash: freezeRec.context_hash,
+      decision_context: freezeRec.frozen_dc,
+    };
     const job_input: DecisionReportJobInput = {
       kind: "decision_intake_report",
       session_id,
-      locale: input.locale,
+      locale: plan.locale,
       freeze_id: freeze.freeze_id,
       context_id: freeze.decision_context.context_id,
       context_version: freeze.decision_context.version,
@@ -309,16 +449,26 @@ export async function startDecisionReportJob(input: {
       }),
       page07_applies: page07.applies,
       page07_topic: page07.topic,
-      regenerate: input.regenerate,
+      regenerate: plan.regenerate,
     };
     const job = await createXhighJob({
       phase: "decision_report",
       session_id,
-      locale: input.locale,
+      locale: plan.locale,
       job_input,
       deploy_generation: currentDeliveryDeployGeneration(),
       execution_generation: generation,
     });
+    await runReportStartHook("after_create", { session_id, owner_attempt_id: owner.owner_attempt_id });
+    const bound = await updateOwnedReportLock(owner, { job_id: job.job_id }).catch(() => null);
+    if (!bound) {
+      // Another start owns the session now: this job must not linger as a second chain.
+      await failXhighJob(job.job_id, "STOP: report start lost its session lock", {
+        retryable: false,
+        failure_reason: "superseded_by_regenerate",
+      }).catch(() => undefined);
+      return LOCK_LOST();
+    }
     try {
       await authorizeFinalDeliveryExecution(session_id, generation, job.job_id);
     } catch (e) {
@@ -326,7 +476,6 @@ export async function startDecisionReportJob(input: {
         retryable: false,
         failure_reason: "transport_error",
       }).catch(() => undefined);
-      await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
       return failure(
         409,
         "FENCE_AUTHORIZE_FAILED",
@@ -334,11 +483,71 @@ export async function startDecisionReportJob(input: {
         true,
       );
     }
-    return { ok: true, job, reused: false, question };
+    return { ok: true, job, reused: false, question, lock: bound };
+  }
+}
+
+/**
+ * Service-level start (no charge): lock → refusal-abort pre-check → create / reuse →
+ * hand the lock to the job. The route uses the same steps with the charge in between
+ * (`decision-report-api.ts`). Does not schedule.
+ */
+export async function startDecisionReportJob(input: {
+  session_id: string;
+  locale: string;
+  writer_token: unknown;
+  freeze_receipt: unknown;
+  profile_receipt: unknown;
+  regenerate: boolean;
+}): Promise<StartDecisionReportOutcome> {
+  const plan = await planDecisionReportStart(input);
+  if ("ok" in plan) return plan;
+  const owner = newReportLockOwner(input.session_id);
+  const acq = await acquireDecisionReportStartLock(plan, owner);
+  if (acq.kind === "follow") return { ok: true, job: acq.job, reused: true, question: plan.question };
+  if (acq.kind === "unconfirmed") return failure(503, "REPORT_LOCK_UNCONFIRMED", acq.reason, true);
+  if (acq.kind !== "locked") {
+    return failure(409, "REPORT_JOB_BUSY", "Another report start is in progress for this session", true);
+  }
+  const release = () => releaseOwnedReportLock(owner).catch(() => undefined);
+  try {
+    const pre = await resumeDecisionReportRefusalAbort(input.session_id);
+    if (pre.kind === "unreadable") {
+      await release();
+      return failure(503, "CHARGE_UNCONFIRMED", "Charge authorization unreadable", true);
+    }
+    if (pre.kind !== "none") {
+      await release();
+      return failure(409, "CHARGE_ABORT_IN_PROGRESS", "A refused charge owns this session", true);
+    }
+    const prepared = await createOrReuseDecisionReportJob(plan, acq.lock);
+    if (!prepared.ok) {
+      await release();
+      return prepared;
+    }
+    if (isLiveJob(prepared.job)) {
+      await updateOwnedReportLock(owner, { holder: "job", job_id: prepared.job.job_id });
+    } else {
+      await release();
+    }
+    return { ok: true, job: prepared.job, reused: prepared.reused, question: prepared.question };
   } catch (e) {
-    await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
+    await release();
     throw e;
   }
+}
+
+/**
+ * The job a start created that cannot proceed because a refusal's abort owns the
+ * session: it never runs (same terminal state as a refused job; a later start re-charges).
+ */
+export async function abandonDecisionReportStartJob(job_id: string, session_id: string, reason: string): Promise<void> {
+  await revokeDecisionReportExecution(job_id);
+  const job = await getXhighJob(job_id);
+  if (job && job.session_id === session_id && isLiveJob(job)) {
+    await failXhighJob(job_id, reason, { retryable: false, failure_reason: "charge_refused" });
+  }
+  await clearDecisionReportDispatch(job_id);
 }
 
 export type RefusalAbortStep = "revoke_grant" | "fail_job" | "clear_dispatch" | "release_lock" | "mark_completed";
@@ -360,10 +569,35 @@ export function __setRefusalAbortStepHookForTests(
  * the sequence (throws), so a repeat from the start converges on the same end state.
  */
 export async function abortDecisionReportJob(job: PojuXhighJob, reason: string): Promise<void> {
-  await terminateRefusedJob(job.job_id, job.session_id, reason);
+  await terminateRefusedJob(job.job_id, job.session_id, reason, { kind: "job" });
 }
 
-async function terminateRefusedJob(job_id: string, session_id: string, reason: string): Promise<void> {
+/**
+ * Which lock the termination releases: the one the abort was claimed under (owner-checked),
+ * the lock handed to the job itself, or none when that owner cannot be established.
+ */
+type AbortLockRelease = { kind: "owner"; owner: ReportLockOwner } | { kind: "job" } | { kind: "none" };
+
+function abortLockOf(claimed: ChargeAuthorization): AbortLockRelease {
+  if (claimed.abort_lock_token && claimed.abort_lock_owner_attempt_id) {
+    return {
+      kind: "owner",
+      owner: {
+        session_id: claimed.session_id,
+        lock_token: claimed.abort_lock_token,
+        owner_attempt_id: claimed.abort_lock_owner_attempt_id,
+      },
+    };
+  }
+  return { kind: "none" };
+}
+
+async function terminateRefusedJob(
+  job_id: string,
+  session_id: string,
+  reason: string,
+  lock: AbortLockRelease,
+): Promise<void> {
   await refusalAbortStepHook?.("revoke_grant", job_id);
   await revokeDecisionReportExecution(job_id);
 
@@ -382,7 +616,10 @@ async function terminateRefusedJob(job_id: string, session_id: string, reason: s
   await clearDecisionReportDispatch(job_id);
 
   await refusalAbortStepHook?.("release_lock", job_id);
-  await releaseXhighSessionLock("decision_report", session_id);
+  // Only the abort's own lock (or the job's): a lock any later request holds stays. A read
+  // failure throws — the abort stays incomplete and resumable, nothing is deleted.
+  if (lock.kind === "owner") await releaseOwnedReportLock(lock.owner);
+  else if (lock.kind === "job") await releaseReportJobLock(session_id, job_id);
 }
 
 export type RefusalAbortOutcome = { ok: true } | { ok: false; reason: string };
@@ -398,7 +635,7 @@ export async function finishDecisionReportRefusalAbort(claimed: ChargeAuthorizat
   if (claimed.state === "abort_completed") return { ok: true };
   if (claimed.state !== "abort_claimed" || !claimed.abort_job_id) return { ok: false, reason: "not_abort_claimed" };
   try {
-    await terminateRefusedJob(claimed.abort_job_id, claimed.session_id, "pass_required");
+    await terminateRefusedJob(claimed.abort_job_id, claimed.session_id, "pass_required", abortLockOf(claimed));
     await refusalAbortStepHook?.("mark_completed", claimed.abort_job_id);
   } catch (e) {
     console.error("[decision-report] refusal abort incomplete", { job_id: claimed.abort_job_id, e });
@@ -412,16 +649,36 @@ export type RefusalAbortResume =
   | { kind: "unreadable" }
   /** Claimed by a request still inside its window: the abort stays that request's. */
   | { kind: "held"; record: ChargeAuthorization }
-  | { kind: "resumed"; record: ChargeAuthorization; outcome: RefusalAbortOutcome };
+  /** This call took the resume right and drove the same abort (`outcome`). */
+  | { kind: "resumed"; record: ChargeAuthorization; outcome: RefusalAbortOutcome }
+  /** The abort read here was finished by another request meanwhile. */
+  | { kind: "completed"; record: ChargeAuthorization };
 
 /**
- * A claimed abort belongs to its claimant while the claim is fresh; once older than the
- * claim window (the claimant died mid-abort) any request resumes the same abort.
+ * A claimed abort belongs to its claimant (or last resumer) while fresh; once idle past
+ * the window, a request resumes it only after winning the resume right (CAS on the exact
+ * record read), and then drives that same `abort_job_id` — never another job. Losing the
+ * right leaves it to the winner. Never creates a job, charges or dispatches.
  */
 export async function resumeRefusalAbortRecord(rec: ChargeAuthorization): Promise<RefusalAbortResume> {
   if (rec.state !== "abort_claimed") return { kind: "none" };
-  if (Date.now() - (rec.abort_claimed_at ?? 0) < DI2_ABORT_CLAIM_MS) return { kind: "held", record: rec };
-  return { kind: "resumed", record: rec, outcome: await finishDecisionReportRefusalAbort(rec) };
+  if (Date.now() - abortHeldSince(rec) < DI2_ABORT_CLAIM_MS) return { kind: "held", record: rec };
+  await runReportStartHook("before_resume_claim", { session_id: rec.session_id, owner_attempt_id: null });
+  const right = await claimRefusalAbortResume(rec);
+  if (right.kind === "uncertain") return { kind: "unreadable" };
+  if (right.kind === "taken") {
+    return { kind: "resumed", record: right.record, outcome: await finishDecisionReportRefusalAbort(right.record) };
+  }
+  const latest = right.record;
+  if (latest?.state === "abort_claimed") return { kind: "held", record: latest };
+  if (
+    latest?.state === "abort_completed" &&
+    latest.abort_attempt_id === rec.abort_attempt_id &&
+    latest.abort_job_id === rec.abort_job_id
+  ) {
+    return { kind: "completed", record: latest };
+  }
+  return { kind: "none" };
 }
 
 /** The session's refusal abort, if one is claimed and unfinished (see `resumeRefusalAbortRecord`). */
@@ -566,7 +823,7 @@ export async function buildDecisionReportStatus(input: {
         current_stage: job.current_stage,
         accumulated_content: "failed:stale_no_lease",
       }).catch(() => undefined);
-      await releaseXhighSessionLock("decision_report", job.session_id).catch(() => undefined);
+      await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
       job = (await getXhighJob(job.job_id)) ?? job;
     }
   }
@@ -657,8 +914,8 @@ export async function continueDecisionReportJob(input: {
   if (!fence || fence.generation !== job.execution_generation || fence.authorized_job_id !== job.job_id) {
     return failure(409, "SUPERSEDED", "A newer report generation owns this session", true);
   }
-  const locked = await acquireXhighSessionLock("decision_report", job.session_id);
-  if (!locked) {
+  const owner = await acquireReportJobLockForContinue(job);
+  if (!owner) {
     return failure(409, "REPORT_JOB_BUSY", "Another report run is in progress for this session", true);
   }
   await resetDecisionReportBudgets(job);
@@ -674,8 +931,43 @@ export async function continueDecisionReportJob(input: {
   });
   const revived = await getXhighJob(job.job_id);
   if (!revived || revived.status !== "running") {
-    await releaseXhighSessionLock("decision_report", job.session_id).catch(() => undefined);
+    await releaseOwnedReportLock(owner).catch(() => undefined);
     return failure(409, "REVIVE_FAILED", "Report job could not be resumed", true);
   }
   return { ok: true, job: revived, stage };
+}
+
+/**
+ * Continue runs the job it revives under a lock handed straight to that job. It takes over
+ * only that job's own leftover lock, a terminal / missing job's, or an aged legacy value
+ * with no live job; a start inside its window or another live job keeps the session.
+ * Unreadable → no lock (busy; nothing revived).
+ */
+async function acquireReportJobLockForContinue(job: PojuXhighJob): Promise<ReportLockOwner | null> {
+  const owner = newReportLockOwner(job.session_id);
+  try {
+    for (let round = 0; round < 3; round++) {
+      if (await tryCreateReportLock(owner, "job", job.job_id)) return owner;
+      const cur = await readReportSessionLock(job.session_id);
+      if (cur.kind === "absent") continue;
+      if (cur.kind === "invalid") return null;
+      let abandoned: boolean;
+      if (cur.kind === "legacy") {
+        const latest = await findLatestXhighJobForSession("decision_report", job.session_id);
+        abandoned = !(latest && isLiveJob(latest)) && Date.now() - cur.at >= LEGACY_REPORT_LOCK_ORPHAN_MS;
+      } else if (cur.lock.holder === "start") {
+        abandoned = Date.now() - cur.lock.touched_at >= REPORT_START_LOCK_IDLE_MS;
+      } else if (cur.lock.job_id === job.job_id) {
+        abandoned = true;
+      } else {
+        const other = cur.lock.job_id ? await getXhighJob(cur.lock.job_id) : null;
+        abandoned = !(other && other.session_id === job.session_id && isLiveJob(other));
+      }
+      if (!abandoned) return null;
+      if (await takeOverReportLock(cur.raw, owner, "job", job.job_id)) return owner;
+    }
+  } catch (e) {
+    console.error("[decision-report] continue lock unconfirmed", { job_id: job.job_id, e });
+  }
+  return null;
 }
