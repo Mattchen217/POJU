@@ -154,6 +154,10 @@ export type PojuXhighJobFailureReason =
   | "spine_readiness_failed"
   /** Segment transport exhausted — user may Continue from checkpoint. */
   | "interrupted"
+  /** DI2 unit spent its production 1+1 on output quality — only a user Continue re-arms it. */
+  | "quality_exhausted"
+  /** DI2 final report record could not be persisted — Continue re-runs the commit only. */
+  | "report_persist_failed"
   /** Redeploy invalidated this job — regenerate to start a new chain. */
   | "superseded_by_deploy"
   | "superseded_by_regenerate"

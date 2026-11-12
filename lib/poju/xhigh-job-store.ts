@@ -428,6 +428,32 @@ export async function releaseXhighSessionLock(
   await kv.del(xhighSessionLockKey(phase, session_id));
 }
 
+/**
+ * Take over a session lock acquired more than `olderThanMs` ago (atomic on the exact
+ * value read, so two reclaimers cannot both win). The caller must have established
+ * that no job of this phase is live for the session.
+ */
+export async function reclaimStaleXhighSessionLock(
+  phase: PojuXhighJobPhase,
+  session_id: string,
+  olderThanMs: number,
+): Promise<boolean> {
+  const store = fenceStore();
+  const key = xhighSessionLockKey(phase, session_id);
+  const at = await store.get<number>(key);
+  if (typeof at !== "number" || Date.now() - at < olderThanMs) return false;
+  const expectedJson = JSON.stringify(at);
+  const next = Date.now();
+  if (typeof store.compareAndSetExact === "function") {
+    return store.compareAndSetExact(key, expectedJson, next, { ex: KV_TTL.POJU_XHIGH_LOCK });
+  }
+  if (typeof store.eval === "function") {
+    const r = await store.eval(FD_FENCE_BUMP_LUA, [key], [expectedJson, JSON.stringify(next), String(KV_TTL.POJU_XHIGH_LOCK)]);
+    return r === 1 || r === true;
+  }
+  return false;
+}
+
 
 // ─── M2.2-R5 Final Delivery execution fencing ───────────────────────────────
 

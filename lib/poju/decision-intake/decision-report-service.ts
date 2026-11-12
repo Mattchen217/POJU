@@ -33,6 +33,7 @@ import {
   findLatestXhighJobForSession,
   getFdExecutionFence,
   getXhighJob,
+  reclaimStaleXhighSessionLock,
   releaseXhighSessionLock,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
@@ -62,16 +63,42 @@ import {
   PERSONAL_ANALYSIS_SCHEMA_VERSION,
   di2ReportJobId,
   isDecisionReportJobInput,
+  isDecisionReportJobResult,
   personalAnalysisIdempotencyKey,
   type DecisionReportJobInput,
   type DecisionReportStatusPayload,
 } from "./decision-report-types";
 import { resolvePage07Applicability } from "./decision-report-pages";
-import { loadAllPages, loadAnalysis, loadCompletedReport } from "./decision-report-store";
-import { firstIncompleteDecisionReportStage, resetDecisionReportBudgets } from "./decision-report-runner";
+import {
+  commitCompletedReport,
+  DecisionReportStoreError,
+  loadAllPages,
+  loadAnalysis,
+  loadCompletedReport,
+  type CompletedReportRecord,
+} from "./decision-report-store";
+import {
+  completedReportDraft,
+  firstIncompleteDecisionReportStage,
+  resetDecisionReportBudgets,
+} from "./decision-report-runner";
+import { decisionReportWorkerState } from "./decision-report-dispatch";
 
 /** Older than one invoke budget with no live lease → the worker died. */
 const STALE_NO_LEASE_MS = 6 * 60_000;
+
+/** A start holds the session lock only for its create window when no job is live. */
+const ORPHAN_LOCK_MS = 2 * 60_000;
+
+/**
+ * The session lock outlived its job (job record lost before the lock TTL). With no live
+ * job for the session and the lock older than any create window, take it over.
+ */
+async function reclaimOrphanReportLock(session_id: string): Promise<boolean> {
+  const ok = await reclaimStaleXhighSessionLock("decision_report", session_id, ORPHAN_LOCK_MS).catch(() => false);
+  if (ok) console.warn("[decision-report] reclaimed orphan session lock", { session_id });
+  return ok;
+}
 
 export type ServiceFailure = {
   ok: false;
@@ -232,7 +259,10 @@ export async function startDecisionReportJob(input: {
     await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
   }
 
-  const locked = await acquireXhighSessionLock("decision_report", session_id);
+  let locked = await acquireXhighSessionLock("decision_report", session_id);
+  if (!locked && !(latest && (latest.status === "pending" || latest.status === "running"))) {
+    locked = await reclaimOrphanReportLock(session_id);
+  }
   if (!locked) {
     return failure(409, "REPORT_JOB_BUSY", "Another report start is in progress for this session", true);
   }
@@ -311,6 +341,85 @@ export async function abortDecisionReportJob(job: PojuXhighJob, reason: string):
   await releaseXhighSessionLock("decision_report", job.session_id).catch(() => undefined);
 }
 
+function statusFromRecord(done: CompletedReportRecord): DecisionReportStatusPayload {
+  return {
+    ok: true,
+    job_id: done.job_id,
+    session_id: done.session_id,
+    status: "completed",
+    current_stage: "assemble",
+    execution_generation: done.execution_generation,
+    freeze_id: done.freeze_id,
+    context_hash: done.context_hash,
+    report_job_id: done.report_job_id,
+    profile_hash: done.profile_hash,
+    analysis: {
+      status: done.analysis.status,
+      analysis_id: done.analysis.analysis_id,
+      attempts: done.analysis.attempts,
+      error: done.analysis.error,
+      record: done.analysis,
+    },
+    pages: done.pages,
+    result: done.result,
+    retryable: false,
+    failure_reason: null,
+    error: null,
+    worker: null,
+  };
+}
+
+/**
+ * The committed record of a completed job. Jobs completed by this pipeline always have
+ * one (it is written first); for a job that lost it (expiry / older build) it is rebuilt
+ * once from the job result and the immutable checkpoints, through the same commit.
+ */
+async function ensureCompletedReportRecord(job: PojuXhighJob): Promise<CompletedReportRecord> {
+  const ji = job.input as DecisionReportJobInput;
+  const existing = await loadCompletedReport(job.session_id, job.job_id);
+  if (existing) return existing;
+  if (!isDecisionReportJobResult(job.result) || typeof job.execution_generation !== "number") {
+    throw new DecisionReportStoreError("REPORT_RECORD_INVALID", "completed job has no report result");
+  }
+  const analysis = await loadAnalysis(ji.analysis_key);
+  if (!analysis || analysis.record.status !== "completed") {
+    throw new DecisionReportStoreError("REPORT_RECORD_INVALID", "completed job has no completed Personal Analysis");
+  }
+  const pages = (await loadAllPages(job.job_id)).map((p) => p.record);
+  const draft = completedReportDraft(
+    ji,
+    job.job_id,
+    job.execution_generation,
+    analysis.record,
+    pages,
+    job.result,
+    job.result.completed_at,
+  );
+  return (await commitCompletedReport(draft)).record;
+}
+
+function missingPayload(input: { job_id: string; session_id: string }): DecisionReportStatusPayload {
+  return {
+    ok: false,
+    job_id: input.job_id,
+    session_id: input.session_id,
+    status: "missing",
+    current_stage: null,
+    execution_generation: null,
+    freeze_id: null,
+    context_hash: null,
+    report_job_id: null,
+    profile_hash: null,
+    analysis: { status: "missing", analysis_id: null, attempts: 0, error: null, record: null },
+    pages: [],
+    result: null,
+    retryable: true,
+    failure_reason: "job_missing",
+    error: "Report job not found or expired",
+    worker: null,
+  };
+}
+
 export async function buildDecisionReportStatus(input: {
   job_id: string;
   session_id: string;
@@ -318,53 +427,39 @@ export async function buildDecisionReportStatus(input: {
   let job = await getXhighJob(input.job_id);
   if (!job) {
     // The execution job expires with its 2h TTL; a finished book stays under retention.
-    const done = await loadCompletedReport(input.session_id, input.job_id).catch(() => null);
-    if (done) {
+    let done: CompletedReportRecord | null = null;
+    try {
+      done = await loadCompletedReport(input.session_id, input.job_id);
+    } catch (e) {
+      console.error("[decision-report] completed report record unreadable", { job_id: input.job_id, e });
+    }
+    return done ? statusFromRecord(done) : missingPayload(input);
+  }
+  if (job.phase !== "decision_report" || !isDecisionReportJobInput(job.input) || job.session_id !== input.session_id) {
+    return missingPayload(input);
+  }
+
+  if (job.status === "completed") {
+    // Completed is reported only from the committed record — never from the job alone.
+    try {
+      return statusFromRecord(await ensureCompletedReportRecord(job));
+    } catch (e) {
+      const code = e instanceof DecisionReportStoreError ? e.code : "REPORT_PERSIST_FAILED";
+      const ji = job.input as DecisionReportJobInput;
       return {
-        ok: true,
-        job_id: done.job_id,
-        session_id: done.session_id,
-        status: "completed",
+        ...missingPayload(input),
+        status: "failed",
         current_stage: "assemble",
-        execution_generation: done.execution_generation,
-        freeze_id: done.freeze_id,
-        context_hash: done.context_hash,
-        report_job_id: done.report_job_id,
-        profile_hash: done.profile_hash,
-        analysis: {
-          status: done.analysis.status,
-          analysis_id: done.analysis.analysis_id,
-          attempts: done.analysis.attempts,
-          error: done.analysis.error,
-          record: done.analysis,
-        },
-        pages: done.pages,
-        result: done.result,
-        retryable: false,
-        failure_reason: null,
-        error: null,
+        execution_generation: job.execution_generation ?? null,
+        freeze_id: ji.freeze_id,
+        context_hash: ji.context_hash,
+        report_job_id: ji.report_job_id,
+        profile_hash: ji.profile_hash,
+        retryable: code !== "REPORT_RECORD_CONFLICT" && code !== "REPORT_RECORD_INVALID",
+        failure_reason: "report_persist_failed",
+        error: `${code}: ${e instanceof Error ? e.message : String(e)}`,
       };
     }
-  }
-  if (!job || job.phase !== "decision_report" || !isDecisionReportJobInput(job.input) || job.session_id !== input.session_id) {
-    return {
-      ok: false,
-      job_id: input.job_id,
-      session_id: input.session_id,
-      status: "missing",
-      current_stage: null,
-      execution_generation: null,
-      freeze_id: null,
-      context_hash: null,
-      report_job_id: null,
-      profile_hash: null,
-      analysis: { status: "missing", analysis_id: null, attempts: 0, error: null, record: null },
-      pages: [],
-      result: null,
-      retryable: true,
-      failure_reason: "job_missing",
-      error: "Report job not found or expired",
-    };
   }
 
   if (job.status === "pending" || job.status === "running") {
@@ -386,10 +481,7 @@ export async function buildDecisionReportStatus(input: {
   const analysis = await loadAnalysis(ji.analysis_key);
   const pages = (await loadAllPages(job.job_id)).map((p) => p.record);
   const failed = job.status === "failed";
-  const result =
-    job.status === "completed" && job.result && (job.result as { kind?: string }).kind === "decision_intake_report"
-      ? (job.result as DecisionReportStatusPayload["result"])
-      : null;
+  const live = job.status === "pending" || job.status === "running";
 
   return {
     ok: !failed,
@@ -412,10 +504,11 @@ export async function buildDecisionReportStatus(input: {
         }
       : { status: "missing", analysis_id: null, attempts: 0, error: null, record: null },
     pages,
-    result,
+    result: null,
     retryable: failed ? isRevivable(job) : false,
     failure_reason: job.failure_reason ?? null,
     error: failed ? job.error ?? "report job failed" : null,
+    worker: live ? await decisionReportWorkerState(job.job_id) : null,
   };
 }
 
@@ -438,6 +531,17 @@ export async function continueDecisionReportJob(input: {
     return failure(404, "JOB_MISSING", "Report job not found or expired", true);
   }
   if (job.status === "completed") {
+    try {
+      await ensureCompletedReportRecord(job);
+    } catch (e) {
+      const code = e instanceof DecisionReportStoreError ? e.code : "REPORT_PERSIST_FAILED";
+      return failure(
+        503,
+        "REPORT_PERSIST_FAILED",
+        `${code}: ${e instanceof Error ? e.message : String(e)}`,
+        code !== "REPORT_RECORD_CONFLICT" && code !== "REPORT_RECORD_INVALID",
+      );
+    }
     return failure(409, "ALREADY_COMPLETED", "Report already completed");
   }
   if (job.status === "pending" || job.status === "running") {

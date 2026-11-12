@@ -316,4 +316,6 @@ export type DecisionReportStatusPayload = {
   retryable: boolean;
   failure_reason: string | null;
   error: string | null;
+  /** M5 — pending/running only: lease held (live), hand-off in flight (dispatching), or nobody (none). */
+  worker?: "live" | "dispatching" | "none" | null;
 };

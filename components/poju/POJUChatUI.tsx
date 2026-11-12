@@ -773,9 +773,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (mode === "regenerate") setStreamedDeliveryMarkdown(null);
     const persist = async (next: POJUSessionState) => {
       if (ac.signal.aborted) return;
+      // Device storage first: the UI never shows a state that a reload would lose.
+      await savePOJUSession(next);
+      if (ac.signal.aborted) return;
       sessionRef.current = next;
       onSessionUpdate(next);
-      await savePOJUSession(next);
     };
     const onProgress = (p: DecisionReportProgress) => {
       if (ac.signal.aborted) return;

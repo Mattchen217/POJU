@@ -5,7 +5,8 @@
  *   segments  → eight pages in dependency waves, one model wave per invoke,
  *               per-page KV checkpoint (completed pages are never rewritten)
  *   assemble  → integrity check of all eight pages against the job binding,
- *               then fenced formal completion of the xhigh job
+ *               durable report record (idempotent), then fenced formal completion
+ *               of the xhigh job
  *
  * Reuses the legacy relay (continue route / Inngest / QStash), continue lease +
  * ACK, job fuse, deploy kill-switch and the session execution fence. Data comes
@@ -33,7 +34,7 @@ import {
   commitUnderDeliveryExecutionFence,
   DeliveryExecutionRevokedError,
 } from "@/lib/poju/final-delivery-execution-authority";
-import { getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
+import { getFdExecutionFence, getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
 import {
   DI2_MAX_UNIT_ATTEMPTS,
@@ -57,14 +58,19 @@ import {
   type Di2PageStructured,
 } from "./decision-report-render";
 import {
+  commitCompletedReport,
+  DecisionReportStoreError,
   loadAllPages,
   loadAnalysis,
   loadPage,
   loadRegisteredFreeze,
   loadRegisteredProfile,
+  markDecisionReportDispatch,
   saveAnalysis,
-  saveCompletedReport,
   savePage,
+  withdrawCompletedReport,
+  type CompletedReportDraft,
+  type CompletedReportRecord,
   type RegisteredFreeze,
   type StoredAnalysis,
   type StoredPage,
@@ -100,19 +106,29 @@ async function releaseRelay(job_id: string, session_id: string, lease_token: str
   await releaseXhighSessionLock("decision_report", session_id).catch(() => undefined);
 }
 
+/**
+ * How a stopped run may be resumed:
+ *  - interrupted / report_persist_failed: infrastructure; Continue (also automatic) resumes
+ *    from checkpoints;
+ *  - quality_exhausted: a unit spent its production 1+1; only a user Continue re-arms it;
+ *  - fatal: Continue cannot help (sources gone, integrity broken) — Regenerate.
+ */
+type FailureKind = "interrupted" | "report_persist_failed" | "quality_exhausted" | "fatal";
+
 /** Fenced terminal failure. Stale generations cannot stamp a newer execution. */
 async function failDecisionReportJob(
   ctx: Ctx,
   stage: DeliveryPipelineStage,
   error: string,
-  opts: { retryable: boolean },
+  opts: { kind: FailureKind },
 ): Promise<void> {
+  const retryable = opts.kind !== "fatal";
   const committed = await commitUnderDeliveryExecutionFence(ctx.job.job_id, ctx.generation, (job) => ({
     ...job,
     status: "failed",
     error: error.slice(0, 500),
-    retryable: opts.retryable,
-    failure_reason: opts.retryable ? "interrupted" : "parse_failed",
+    retryable,
+    failure_reason: retryable ? opts.kind as Exclude<FailureKind, "fatal"> : "parse_failed",
     current_stage: stage,
     accumulated_content: `failed:${stage}`,
   }));
@@ -146,7 +162,7 @@ async function scheduleNext(ctx: Ctx, stage: DeliveryPipelineStage): Promise<voi
       ctx,
       stage,
       `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`,
-      { retryable: true },
+      { kind: "interrupted" },
     );
     return;
   }
@@ -158,7 +174,7 @@ async function scheduleNext(ctx: Ctx, stage: DeliveryPipelineStage): Promise<voi
         ctx,
         stage,
         `job_time_budget_exhausted:age_ms=${Date.now() - ctx.job.created_at}:max_ms=${wall.limit_ms}`,
-        { retryable: true },
+        { kind: "interrupted" },
       );
       return;
     }
@@ -167,13 +183,16 @@ async function scheduleNext(ctx: Ctx, stage: DeliveryPipelineStage): Promise<voi
     await releaseDeliveryContinueLease(job_id, ctx.lease_token).catch(() => undefined);
     return;
   }
+  const inline = isEphemeralKvActive();
+  // Before the lease drops: the hand-off window must not look like a dead worker.
+  if (!inline) await markDecisionReportDispatch(job_id, stage).catch(() => undefined);
   await releaseDeliveryContinueLease(job_id, ctx.lease_token).catch(() => undefined);
 
-  if (isEphemeralKvActive()) {
+  if (inline) {
     const remain = ephemeralRemainingMs();
     if (remain != null && remain < 20_000) {
       await failDecisionReportJob(ctx, stage, "inline report stopped before completion", {
-        retryable: true,
+        kind: "interrupted",
       });
       return;
     }
@@ -193,7 +212,7 @@ async function scheduleNext(ctx: Ctx, stage: DeliveryPipelineStage): Promise<voi
     ctx,
     stage,
     posted === "loop_blocked" ? "continue_schedule_failed:vercel_508_loop" : "continue_schedule_failed",
-    { retryable: true },
+    { kind: "interrupted" },
   );
 }
 
@@ -256,7 +275,7 @@ async function runAnalysisStage(ctx: Ctx): Promise<void> {
     sources = await loadSources(input);
   } catch (e) {
     await failDecisionReportJob(ctx, "finalize", `source_unavailable:${e instanceof Error ? e.message : String(e)}`, {
-      retryable: false,
+      kind: "fatal",
     });
     return;
   }
@@ -270,7 +289,7 @@ async function runAnalysisStage(ctx: Ctx): Promise<void> {
   const prior = existing?.record ?? null;
   if (prior && prior.attempts >= DI2_MAX_UNIT_ATTEMPTS) {
     await failDecisionReportJob(ctx, "finalize", `personal_analysis_failed:${prior.error ?? "attempts_exhausted"}`, {
-      retryable: true,
+      kind: "quality_exhausted",
     });
     return;
   }
@@ -339,7 +358,7 @@ async function runAnalysisStage(ctx: Ctx): Promise<void> {
   });
   if (exhausted) {
     await failDecisionReportJob(ctx, "finalize", `personal_analysis_failed:${outcome.reason}`, {
-      retryable: true,
+      kind: "quality_exhausted",
     });
     return;
   }
@@ -383,7 +402,7 @@ async function runPagesStage(ctx: Ctx): Promise<void> {
     sources = await loadSources(input);
   } catch (e) {
     await failDecisionReportJob(ctx, "segments", `source_unavailable:${e instanceof Error ? e.message : String(e)}`, {
-      retryable: false,
+      kind: "fatal",
     });
     return;
   }
@@ -472,11 +491,13 @@ async function runPagesStage(ctx: Ctx): Promise<void> {
 
     const exhausted = model.filter((id) => (pages.get(id)?.record.attempts ?? 0) >= DI2_MAX_UNIT_ATTEMPTS);
     if (exhausted.length) {
+      // Attempts burned by killed invokes leave the page pending, not failed.
+      const qualitySpent = exhausted.some((id) => pages.get(id)?.record.status === "failed");
       await failDecisionReportJob(
         ctx,
         "segments",
         `page_failed:${exhausted.map((id) => `${id}:${pages.get(id)?.record.error ?? "?"}`).join("|")}`,
-        { retryable: true },
+        { kind: qualitySpent ? "quality_exhausted" : "interrupted" },
       );
       return;
     }
@@ -547,7 +568,7 @@ async function runPagesStage(ctx: Ctx): Promise<void> {
           ctx,
           "segments",
           `page_failed:${exhaustedNow.map((id) => `${id}:${pages.get(id)?.record.error ?? "?"}`).join("|")}`,
-          { retryable: true },
+          { kind: "quality_exhausted" },
         );
         return;
       }
@@ -569,7 +590,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
   const { input } = ctx;
   const analysis = await loadAnalysis(input.analysis_key);
   if (!analysis || analysis.record.status !== "completed") {
-    await failDecisionReportJob(ctx, "assemble", "assemble_without_completed_analysis", { retryable: true });
+    await failDecisionReportJob(ctx, "assemble", "assemble_without_completed_analysis", { kind: "interrupted" });
     return;
   }
   let freeze: RegisteredFreeze;
@@ -582,7 +603,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     });
   } catch (e) {
     await failDecisionReportJob(ctx, "assemble", `source_unavailable:${e instanceof Error ? e.message : String(e)}`, {
-      retryable: false,
+      kind: "fatal",
     });
     return;
   }
@@ -591,7 +612,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
   for (const id of DECISION_PAGE_IDS) {
     const p = await loadPage(ctx.job.job_id, id);
     if (!p) {
-      await failDecisionReportJob(ctx, "assemble", `missing_page:${id}`, { retryable: true });
+      await failDecisionReportJob(ctx, "assemble", `missing_page:${id}`, { kind: "interrupted" });
       return;
     }
     const r = p.record;
@@ -605,7 +626,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
       r.analysis_id !== analysis.record.analysis_id ||
       !r.content_markdown.trim();
     if (mismatch) {
-      await failDecisionReportJob(ctx, "assemble", `page_integrity:${id}:${r.status}`, { retryable: true });
+      await failDecisionReportJob(ctx, "assemble", `page_integrity:${id}:${r.status}`, { kind: "fatal" });
       return;
     }
     pages.push(r);
@@ -614,7 +635,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     assertCompleteEightPageReport(pages.map((p) => ({ pageId: p.page_id, content: p.content_markdown })));
   } catch (e) {
     await failDecisionReportJob(ctx, "assemble", `report_integrity:${e instanceof Error ? e.message : String(e)}`, {
-      retryable: true,
+      kind: "fatal",
     });
     return;
   }
@@ -643,11 +664,78 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     tokens_used: analysis.record.tokens_used ?? 0,
     completed_at: t,
   };
-  const committed = await commitUnderDeliveryExecutionFence(ctx.job.job_id, ctx.generation, (job) => ({
+  await commitFinalReport(ctx, completedReportDraft(input, ctx.job.job_id, ctx.generation, analysis.record, pages, result, t));
+}
+
+export function completedReportDraft(
+  input: DecisionReportJobInput,
+  job_id: string,
+  generation: number,
+  analysis: PersonalAnalysisRecord,
+  pages: DecisionReportPageRecord[],
+  result: DecisionReportJobResult,
+  committed_at: string,
+): CompletedReportDraft {
+  return {
+    job_id,
+    session_id: input.session_id,
+    execution_generation: generation,
+    report_job_id: input.report_job_id,
+    freeze_id: input.freeze_id,
+    context_id: input.context_id,
+    context_version: input.context_version,
+    context_hash: input.context_hash,
+    profile_id: input.profile_id,
+    profile_hash: input.profile_hash,
+    freeze_receipt_id: input.freeze_receipt_id,
+    profile_receipt_id: input.profile_receipt_id,
+    report_schema_version: input.report_schema_version,
+    analysis_schema_version: input.analysis_schema_version,
+    analysis_id: analysis.analysis_id,
+    result,
+    analysis,
+    pages,
+    committed_at,
+  };
+}
+
+/**
+ * Final delivery commit, in this order:
+ *  1. the generation must still own the fence (a revoked generation writes nothing);
+ *  2. the durable report record is committed (first write wins; a retry reuses it, so
+ *     the analysis and pages are never regenerated and the content never changes);
+ *  3. the job is marked completed under the fence CAS with the committed result.
+ * A record without a completed job is resumable (Continue → assemble reuses it). A
+ * completed job without a record does not occur. A persistence failure fails the job
+ * as resumable — it is never reported completed.
+ */
+async function commitFinalReport(ctx: Ctx, draft: CompletedReportDraft): Promise<void> {
+  const { job_id } = ctx.job;
+  const session_id = ctx.input.session_id;
+  if (!(await fenceTouch(ctx, "assemble", "final_commit"))) {
+    await releaseDeliveryContinueLease(job_id, ctx.lease_token).catch(() => undefined);
+    return;
+  }
+
+  let record: CompletedReportRecord;
+  try {
+    record = (await commitCompletedReport(draft)).record;
+  } catch (e) {
+    const code = e instanceof DecisionReportStoreError ? e.code : "REPORT_PERSIST_FAILED";
+    const message = e instanceof Error ? e.message : String(e);
+    di2Log("final report persist failed", { job_id, code, message });
+    const fatal = code === "REPORT_RECORD_CONFLICT" || code === "REPORT_RECORD_INVALID";
+    await failDecisionReportJob(ctx, "assemble", `report_persist_failed:${code}:${message}`, {
+      kind: fatal ? "fatal" : "report_persist_failed",
+    });
+    return;
+  }
+
+  const committed = await commitUnderDeliveryExecutionFence(job_id, ctx.generation, (job) => ({
     ...job,
     status: "completed",
     current_stage: "assemble",
-    result,
+    result: record.result,
     completed_at: Date.now(),
     accumulated_content: "completed",
     error: undefined,
@@ -655,31 +743,25 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     retryable: undefined,
   }));
   if (!committed.ok) {
-    di2Log("complete fenced out", { job_id: ctx.job.job_id, reason: committed.reason });
-    await releaseDeliveryContinueLease(ctx.job.job_id, ctx.lease_token).catch(() => undefined);
+    // Another hop of this generation may have completed the job with the same record;
+    // only a generation that lost the fence takes its record back.
+    const job = await getXhighJob(job_id).catch(() => null);
+    const completedHere = job?.status === "completed" && job.execution_generation === ctx.generation;
+    let fenceLost = false;
+    try {
+      const fence = await getFdExecutionFence(session_id);
+      fenceLost = !fence || fence.generation !== ctx.generation || fence.authorized_job_id !== job_id;
+    } catch {
+      fenceLost = false;
+    }
+    const withdraw = !completedHere && fenceLost;
+    if (withdraw) await withdrawCompletedReport(session_id, job_id, ctx.generation).catch(() => undefined);
+    di2Log("complete fenced out", { job_id, reason: committed.reason, withdrawn: withdraw });
+    await releaseDeliveryContinueLease(job_id, ctx.lease_token).catch(() => undefined);
     return;
   }
-  await saveCompletedReport({
-    job_id: ctx.job.job_id,
-    session_id: input.session_id,
-    execution_generation: ctx.generation,
-    freeze_id: input.freeze_id,
-    context_hash: input.context_hash,
-    profile_hash: input.profile_hash,
-    freeze_receipt_id: input.freeze_receipt_id,
-    profile_receipt_id: input.profile_receipt_id,
-    report_job_id: input.report_job_id,
-    result,
-    analysis: analysis.record,
-    pages,
-  }).catch((e) => {
-    di2Log("completed report retention write failed", {
-      job_id: ctx.job.job_id,
-      error: e instanceof Error ? e.message : String(e),
-    });
-  });
-  di2Log("report completed", { job_id: ctx.job.job_id, freeze_id: input.freeze_id, generation: ctx.generation });
-  await releaseRelay(ctx.job.job_id, input.session_id, ctx.lease_token);
+  di2Log("report completed", { job_id, freeze_id: draft.freeze_id, generation: ctx.generation });
+  await releaseRelay(job_id, session_id, ctx.lease_token);
 }
 
 // ─── entry ─────────────────────────────────────────────────────────────────
@@ -735,7 +817,7 @@ export async function runDecisionReportStage(
   } catch (e) {
     console.error("[decision-report] stage crashed", { job_id, stage, e });
     await failDecisionReportJob(ctx, stage, `stage_crashed:${e instanceof Error ? e.message : String(e)}`, {
-      retryable: true,
+      kind: "interrupted",
     });
   } finally {
     stopHeartbeat();

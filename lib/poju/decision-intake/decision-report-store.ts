@@ -6,7 +6,8 @@
  * every stage re-reads and re-verifies them — nothing from a request body is trusted.
  *  - Personal Analysis records keyed by the idempotency key.
  *  - Page records keyed by job_id (an execution generation never writes another's pages).
- *  - Completed report record per job (retention window; status fallback).
+ *  - Completed report record per job: the commit point of a report (written before the
+ *    job is marked completed; retention window; status fallback).
  * In-flight artifacts use the xhigh execution TTL; completed ones the product retention.
  */
 
@@ -15,6 +16,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { durableKv, kv, KV_TTL } from "@/lib/kv/client";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import { canonicalHash } from "@/lib/poju/decision-authority/hash";
 import { loadVerifiedFreezeRecord } from "@/lib/poju/decision-authority/server/freeze-authority";
 import { DcAuthorityError } from "@/lib/poju/decision-authority/server/ledger-store";
 import { loadVerifiedProfileRecord } from "@/lib/poju/decision-authority/server/profile-authority";
@@ -208,35 +210,227 @@ export async function loadAllPages(job_id: string): Promise<StoredPage[]> {
 
 // ─── Completed report (retention record) ───────────────────────────────────
 
+export const DI2_COMPLETED_REPORT_RECORD_VERSION = 1 as const;
+
 /**
- * The finished book outlives the 2h xhigh job: status falls back to this record once
- * the job itself has expired. Only the minimum the device needs to re-hydrate.
+ * The finished book. Written once per job (first write wins) before the job is marked
+ * completed, so a completed job always has it; it also outlives the 2h xhigh job and
+ * status falls back to it. Only what the device needs to re-hydrate the report.
  */
 export type CompletedReportRecord = {
+  record_version: typeof DI2_COMPLETED_REPORT_RECORD_VERSION;
   job_id: string;
   session_id: string;
   execution_generation: number;
+  report_job_id: string;
   freeze_id: string;
+  context_id: string;
+  context_version: number;
   context_hash: string;
+  profile_id: string | null;
   profile_hash: string;
   freeze_receipt_id: string;
   profile_receipt_id: string;
-  report_job_id: string;
+  report_schema_version: string;
+  analysis_schema_version: string;
+  analysis_id: string;
   result: DecisionReportJobResult;
   analysis: PersonalAnalysisRecord;
   pages: DecisionReportPageRecord[];
+  committed_at: string;
+  /** canonicalHash of every other field. */
+  record_hash: string;
 };
+
+export type CompletedReportDraft = Omit<CompletedReportRecord, "record_version" | "record_hash">;
 
 export function di2CompletedReportKey(session_id: string, job_id: string): string {
   return `poju-di2:report:${safe(session_id)}:${safe(job_id)}`;
 }
 
-export async function saveCompletedReport(rec: CompletedReportRecord): Promise<void> {
-  await durableKv().set(di2CompletedReportKey(rec.session_id, rec.job_id), rec, { ex: RETENTION });
+function recordHashOf(rec: Omit<CompletedReportRecord, "record_hash">): string {
+  return canonicalHash(rec);
 }
 
+function invalid(message: string): never {
+  throw new DecisionReportStoreError("REPORT_RECORD_INVALID", message);
+}
+
+/**
+ * A record is a report only if every part is bound to the same job, generation, Freeze,
+ * profile and Personal Analysis, and all eight pages are complete.
+ */
+export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
+  if (!rec || rec.record_version !== DI2_COMPLETED_REPORT_RECORD_VERSION) invalid("unknown record version");
+  const { record_hash, ...body } = rec;
+  if (record_hash !== recordHashOf(body)) invalid("record hash mismatch");
+  const r = rec.result;
+  if (
+    !r ||
+    r.kind !== "decision_intake_report" ||
+    r.report_job_id !== rec.report_job_id ||
+    r.freeze_id !== rec.freeze_id ||
+    r.context_hash !== rec.context_hash ||
+    r.execution_generation !== rec.execution_generation ||
+    r.analysis_id !== rec.analysis_id ||
+    r.report_schema_version !== rec.report_schema_version ||
+    !r.full_text.trim()
+  ) {
+    invalid("result is not bound to this record");
+  }
+  const a = rec.analysis;
+  if (
+    !a ||
+    a.status !== "completed" ||
+    !a.analysis_result ||
+    a.analysis_id !== rec.analysis_id ||
+    a.session_id !== rec.session_id ||
+    a.freeze_id !== rec.freeze_id ||
+    a.context_hash !== rec.context_hash ||
+    a.profile_hash !== rec.profile_hash ||
+    a.analysis_schema_version !== rec.analysis_schema_version
+  ) {
+    invalid("Personal Analysis is incomplete or bound elsewhere");
+  }
+  if (!Array.isArray(rec.pages) || rec.pages.length !== DECISION_PAGE_IDS.length) invalid("page count");
+  for (const id of DECISION_PAGE_IDS) {
+    const p = rec.pages.find((x) => x.page_id === id);
+    if (
+      !p ||
+      p.status !== "completed" ||
+      p.job_id !== rec.job_id ||
+      p.execution_generation !== rec.execution_generation ||
+      p.freeze_id !== rec.freeze_id ||
+      p.context_hash !== rec.context_hash ||
+      p.analysis_id !== rec.analysis_id ||
+      p.report_schema_version !== rec.report_schema_version ||
+      !p.content_markdown.trim()
+    ) {
+      invalid(`page ${id} is incomplete or bound elsewhere`);
+    }
+  }
+  if (r.page_ids.length !== DECISION_PAGE_IDS.length || DECISION_PAGE_IDS.some((id) => !r.page_ids.includes(id))) {
+    invalid("result page list");
+  }
+}
+
+/** Same report: identity plus page and analysis content (timestamps of a retry are ignored). */
+function sameReport(a: CompletedReportRecord, b: CompletedReportDraft): boolean {
+  const pageSig = (pages: readonly DecisionReportPageRecord[]) =>
+    canonicalHash(DECISION_PAGE_IDS.map((id) => pages.find((p) => p.page_id === id)?.content_markdown ?? null));
+  return (
+    a.job_id === b.job_id &&
+    a.session_id === b.session_id &&
+    a.execution_generation === b.execution_generation &&
+    a.report_job_id === b.report_job_id &&
+    a.freeze_id === b.freeze_id &&
+    a.context_hash === b.context_hash &&
+    a.profile_hash === b.profile_hash &&
+    a.freeze_receipt_id === b.freeze_receipt_id &&
+    a.profile_receipt_id === b.profile_receipt_id &&
+    a.analysis_id === b.analysis_id &&
+    canonicalHash(a.analysis.analysis_result) === canonicalHash(b.analysis.analysis_result) &&
+    pageSig(a.pages) === pageSig(b.pages)
+  );
+}
+
+export function sealCompletedReportRecord(draft: CompletedReportDraft): CompletedReportRecord {
+  const body = { ...draft, record_version: DI2_COMPLETED_REPORT_RECORD_VERSION };
+  return { ...body, record_hash: recordHashOf(body) };
+}
+
+/** Verified read. Corrupt or foreign records are errors, absence is null. */
 export async function loadCompletedReport(session_id: string, job_id: string): Promise<CompletedReportRecord | null> {
   const got = await durableKv().get<CompletedReportRecord>(di2CompletedReportKey(session_id, job_id));
-  if (!got || got.session_id !== session_id || got.job_id !== job_id) return null;
+  if (!got) return null;
+  if (got.session_id !== session_id || got.job_id !== job_id) invalid("record stored under another identity");
+  verifyCompletedReportRecord(got);
   return got;
+}
+
+/**
+ * Idempotent final commit. The first record written for a job is final: a retry of the
+ * same report returns it unchanged; a different report for the same job is refused.
+ * Success means the record was read back from the durable store.
+ */
+export async function commitCompletedReport(
+  draft: CompletedReportDraft,
+): Promise<{ record: CompletedReportRecord; outcome: "written" | "existing" }> {
+  const candidate = sealCompletedReportRecord(draft);
+  verifyCompletedReportRecord(candidate);
+  const key = di2CompletedReportKey(candidate.session_id, candidate.job_id);
+  const store = durableKv();
+
+  const reuse = (existing: CompletedReportRecord) => {
+    if (!sameReport(existing, draft)) {
+      throw new DecisionReportStoreError("REPORT_RECORD_CONFLICT", "a different report is already committed for this job");
+    }
+    return { record: existing, outcome: "existing" as const };
+  };
+
+  const prior = await loadCompletedReport(candidate.session_id, candidate.job_id);
+  if (prior) return reuse(prior);
+
+  const set = await store.set(key, candidate, { ex: RETENTION, nx: true });
+  const back = await loadCompletedReport(candidate.session_id, candidate.job_id);
+  if (!back) {
+    throw new DecisionReportStoreError("REPORT_PERSIST_UNCONFIRMED", "report record not readable after write");
+  }
+  if (set !== "OK" || back.record_hash !== candidate.record_hash) return reuse(back);
+  return { record: back, outcome: "written" };
+}
+
+/** A generation that lost the fence after writing its record takes it back. */
+export async function withdrawCompletedReport(session_id: string, job_id: string, execution_generation: number): Promise<void> {
+  const key = di2CompletedReportKey(session_id, job_id);
+  const got = await durableKv().get<CompletedReportRecord>(key);
+  if (got && got.execution_generation === execution_generation) await durableKv().del(key);
+}
+
+// ─── Worker dispatch marker ────────────────────────────────────────────────
+
+/**
+ * A stage hand-off is in flight for this many seconds: long enough to cover a relay
+ * publish + attach wait, so recovery never doubles a hop that is about to start.
+ */
+export const DI2_DISPATCH_GRACE_S = 45;
+
+export type DecisionReportDispatchMarker = { stage: string; at: number };
+
+export function di2DispatchKey(job_id: string): string {
+  return `poju-di2:dispatch:${safe(job_id)}`;
+}
+
+export async function markDecisionReportDispatch(job_id: string, stage: string): Promise<void> {
+  await kv.set(di2DispatchKey(job_id), { stage, at: Date.now() }, { ex: DI2_DISPATCH_GRACE_S });
+}
+
+/** Single-flight: only one caller may dispatch a recovery hop per grace window. */
+export async function claimDecisionReportDispatch(job_id: string, stage: string): Promise<boolean> {
+  const set = await kv.set(di2DispatchKey(job_id), { stage, at: Date.now() }, { ex: DI2_DISPATCH_GRACE_S, nx: true });
+  return set === "OK";
+}
+
+export async function loadDecisionReportDispatch(job_id: string): Promise<DecisionReportDispatchMarker | null> {
+  return kv.get<DecisionReportDispatchMarker>(di2DispatchKey(job_id));
+}
+
+/** A dispatch known to have failed must not hold off the next recovery for the grace window. */
+export async function clearDecisionReportDispatch(job_id: string): Promise<void> {
+  await kv.del(di2DispatchKey(job_id));
+}
+
+// ─── Charge marker ─────────────────────────────────────────────────────────
+
+export function di2ChargedKey(session_id: string): string {
+  return `poju-di2:charged:${safe(session_id)}`;
+}
+
+/** The session's report was charged once; later generations for it are not charged again. */
+export async function hasDecisionReportCharge(session_id: string): Promise<boolean> {
+  return (await durableKv().get(di2ChargedKey(session_id))) != null;
+}
+
+export async function markDecisionReportCharged(session_id: string): Promise<void> {
+  await durableKv().set(di2ChargedKey(session_id), { at: Date.now() }, { ex: RETENTION });
 }
