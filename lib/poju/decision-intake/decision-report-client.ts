@@ -67,7 +67,14 @@ const REGENERATE_FALLBACK_CODES = new Set([
 ]);
 
 /** Continue answers that mean "keep polling" (a revived job without a worker is re-ensured by polling). */
-const POLL_ON_CODES = new Set(["JOB_RUNNING", "REPORT_JOB_BUSY", "ALREADY_COMPLETED", "DISPATCH_FAILED", "CHARGE_PENDING"]);
+const POLL_ON_CODES = new Set([
+  "JOB_RUNNING",
+  "REPORT_JOB_BUSY",
+  "ALREADY_COMPLETED",
+  "DISPATCH_FAILED",
+  "CHARGE_PENDING",
+  "CHARGE_ABORT_IN_PROGRESS",
+]);
 /** Worker re-dispatch requests per driver run before the run stops as retryable. */
 const MAX_WORKER_ENSURES = 6;
 

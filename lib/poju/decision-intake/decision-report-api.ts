@@ -12,6 +12,9 @@
  *
  * M5-R1 — no job runs on an unconfirmed charge: a pending / uncertain / refused
  * authorization never dispatches, whichever request reaches the job.
+ * M5-R1-FU2 — a refusal terminates its job only after winning `refused → abort_claimed`;
+ * while that abort is unfinished no request charges, creates, revives or dispatches, and
+ * an abandoned one is resumed (same job) by the next start / status / continue.
  */
 
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -23,17 +26,21 @@ import {
   type DecisionReportDispatchDeps,
 } from "./decision-report-dispatch";
 import {
-  abortDecisionReportJob,
   buildDecisionReportStatus,
   continueDecisionReportJob,
+  finishDecisionReportRefusalAbort,
+  resumeDecisionReportRefusalAbort,
+  resumeRefusalAbortRecord,
   startDecisionReportJob,
+  type RefusalAbortResume,
   type ServiceFailure,
 } from "./decision-report-service";
 import { clearDecisionReportDispatch, loadCompletedReport } from "./decision-report-store";
 import {
-  confirmCurrentChargeRefusal,
+  claimDecisionReportRefusalAbort,
   grantDecisionReportExecution,
   settleDecisionReportCharge,
+  type ChargeAuthorization,
   type ChargeSettlement,
   type DecisionReportCharge,
 } from "./decision-report-charge";
@@ -70,16 +77,45 @@ function unauthorizedReply(job_id: string, s: Exclude<ChargeSettlement, { state:
   if (s.state === "required") {
     return json(402, { ok: false, job_id, code: "CHARGE_REQUIRED", error: "Report has no charge for this session", retryable: false });
   }
-  if (s.state === "uncertain") {
-    return json(503, {
-      ok: false,
-      job_id,
-      code: "CHARGE_UNCONFIRMED",
-      error: `Charge could not be confirmed (${s.reason}); retry to reconcile`,
-      retryable: true,
-    });
-  }
+  if (s.state === "uncertain") return chargeUnconfirmed(job_id, s.reason);
+  if (s.state === "abort_in_progress") return abortInProgress(s.record, "claimed");
   return json(409, { ok: false, job_id, code: "CHARGE_PENDING", error: "Charge for this session is in progress", retryable: true });
+}
+
+function chargeUnconfirmed(job_id: string | null, reason: string): DecisionReportApiReply {
+  return json(503, {
+    ok: false,
+    job_id,
+    code: "CHARGE_UNCONFIRMED",
+    error: `Charge could not be confirmed (${reason}); retry to reconcile`,
+    retryable: true,
+  });
+}
+
+function abortInProgress(record: ChargeAuthorization, reason: string): DecisionReportApiReply {
+  return json(409, {
+    ok: false,
+    job_id: record.abort_job_id ?? null,
+    code: "CHARGE_ABORT_IN_PROGRESS",
+    error: `A refused charge is still terminating its report job (${reason})`,
+    retryable: true,
+  });
+}
+
+/** The refusal's job is terminated and recorded: the refusal is final for that job. */
+function refusalFinal(record: ChargeAuthorization, response: Response | null): DecisionReportApiReply {
+  if (response) return { kind: "response", response };
+  return json(402, { ok: false, job_id: record.abort_job_id ?? null, code: "CHARGE_REFUSED", error: "pass_required", retryable: false });
+}
+
+/**
+ * A refusal's abort owns the session. This request never charges, creates, revives or
+ * dispatches: it either leaves a live claimant's abort alone or resumes an abandoned one
+ * (same `abort_job_id`), and says which.
+ */
+function abortResumeReply(r: Exclude<RefusalAbortResume, { kind: "none" } | { kind: "unreadable" }>): DecisionReportApiReply {
+  if (r.kind === "held") return abortInProgress(r.record, "claimed");
+  return r.outcome.ok ? refusalFinal(r.record, null) : abortInProgress(r.record, r.outcome.reason);
 }
 
 async function continueAction(job_id: string, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
@@ -93,6 +129,10 @@ async function continueAction(job_id: string, session_id: string, deps: Decision
       allowNewCharge: false,
       charge: deps.charge,
     });
+    if (settled.state === "abort_in_progress") {
+      const r = await resumeRefusalAbortRecord(settled.record);
+      if (r.kind === "held" || r.kind === "resumed") return abortResumeReply(r);
+    }
     if (settled.state !== "authorized") return unauthorizedReply(job_id, settled);
   }
 
@@ -155,6 +195,8 @@ export async function handleDecisionReportAction(
   if (action === "status") {
     const job_id = str(body.job_id);
     if (!job_id) return json(400, { ok: false, error: "job_id required" });
+    // A refusal abort abandoned mid-way is finished here too (same job; no charge, no run).
+    await resumeDecisionReportRefusalAbort(session_id).catch(() => undefined);
     return json(200, (await buildDecisionReportStatus({ job_id, session_id })) as unknown as Record<string, unknown>);
   }
 
@@ -170,6 +212,12 @@ export async function handleDecisionReportAction(
 
   if (action === "start") {
     const regenerate = body.regenerate === true;
+    // Before any job is created or revived (Regenerate included): an unfinished refusal
+    // abort owns the session. Unreadable authorization fails closed.
+    const pre = await resumeDecisionReportRefusalAbort(session_id);
+    if (pre.kind === "unreadable") return chargeUnconfirmed(null, "authorization_unreadable");
+    if (pre.kind !== "none") return abortResumeReply(pre);
+
     const started = await startDecisionReportJob({
       session_id,
       locale: str(body.locale) || "zh",
@@ -201,12 +249,36 @@ export async function handleDecisionReportAction(
       allowNewCharge: true,
       charge: deps.charge,
     });
-    // Only the current claimant's recorded refusal may stop the job. A refusal from a claim
-    // that was taken over, a newer pending / uncertain / authorized record, or a record
-    // that cannot be read leaves the job to whoever holds the charge now.
+    // A refusal stops the job only through the atomic `refused → abort_claimed` CAS on the
+    // record this attempt wrote. A start that re-claims the same record CASes against the
+    // same value, so either this job is aborted or the session is charged again — never
+    // both. Losing the CAS (re-claimed, authorized, unreadable) leaves the job alone.
     if (settled.state === "refused") {
-      if (await confirmCurrentChargeRefusal(settled)) await abortDecisionReportJob(job, "pass_required");
-      else settled = { state: "uncertain", reason: "refusal_not_current" };
+      const claim = await claimDecisionReportRefusalAbort(settled, job.job_id);
+      switch (claim.kind) {
+        case "claimed": {
+          const done = await finishDecisionReportRefusalAbort(claim.record);
+          return done.ok ? refusalFinal(claim.record, settled.response) : abortInProgress(claim.record, done.reason);
+        }
+        case "in_progress": {
+          const r = await resumeRefusalAbortRecord(claim.record);
+          if (r.kind === "held" || r.kind === "resumed") return abortResumeReply(r);
+          return abortInProgress(claim.record, "claimed");
+        }
+        case "completed":
+          return refusalFinal(claim.record, settled.response);
+        case "superseded":
+        case "stale":
+          settled = { state: "stale_claim", record: claim.record ?? settled.record };
+          break;
+        case "uncertain":
+          settled = { state: "uncertain", reason: claim.reason };
+          break;
+      }
+    }
+    if (settled.state === "abort_in_progress") {
+      const r = await resumeRefusalAbortRecord(settled.record);
+      if (r.kind === "held" || r.kind === "resumed") return abortResumeReply(r);
     }
     if (settled.state !== "authorized") {
       if (settled.state === "pending" || settled.state === "stale_claim") {

@@ -13,9 +13,11 @@
  * charge — a ledger stub with the consume RPC's semantics: idempotent on the ref
  * (`already_consumed` before the balance check), one debit per new ref, refusal on an
  * empty balance; it can be paused, can lose its answer after debiting (RPC error) or
- * fail before reaching the ledger.
+ * fail before reaching the ledger. A test-only step hook pauses or stops (simulated
+ * process death) the refusal abort between its termination steps; claim windows are
+ * crossed by shifting `Date.now`, not by waiting.
  * Storage: process-memory KV (`durableKv()` MemoryKv / ephemeral MemoryKv) with
- * method patches for write faults. This is NOT an Upstash, Supabase RPC, real HTTP,
+ * method patches for read / write faults. This is NOT an Upstash, Supabase RPC, real HTTP,
  * real Inngest/QStash, multi-browser or real OpenRouter validation.
  */
 import "fake-indexeddb/auto";
@@ -96,6 +98,7 @@ async function main() {
   const auth = await import("../lib/poju/decision-intake/decision-report-charge");
   const client = await import("../lib/poju/decision-intake/decision-report-client");
   const fdRunner = await import("../lib/poju/final-delivery-stage-runner");
+  const { xhighSessionLockKey } = await import("../lib/poju/xhigh-job-types");
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import("../lib/db/poju-db");
   const sm = await import("../lib/poju/session-manager");
   const wire = await import("../lib/poju/decision-context/production-freeze-wire");
@@ -286,6 +289,7 @@ async function main() {
     ledger.debits.length = 0;
     ledger.modes.length = 0;
     ledger.gates.length = 0;
+    service.__setRefusalAbortStepHookForTests(null);
   }
 
   await runWithEphemeralXhighKv(
@@ -325,7 +329,9 @@ async function main() {
         assert.equal(job?.status, "failed");
         assert.equal(job?.failure_reason, "charge_refused");
         assert.equal(job?.retryable, false);
-        assert.equal((await authOf(s))?.state, "refused");
+        const refusedRec = (await authOf(s))!;
+        assert.equal(refusedRec.state, "abort_completed", "refusal final: its abort completed");
+        assert.equal(refusedRec.abort_job_id, job_id);
         assert.equal((await auth.verifyDecisionReportExecution(job!)).ok, false);
 
         // A previously queued worker starts after the refusal.
@@ -870,8 +876,9 @@ async function main() {
         assert.equal(rB.status, 402, JSON.stringify(rB.body));
         assert.equal(rB.body.error, "pass_required");
         const rec = (await authOf(s))!;
-        assert.equal(rec.state, "refused", "B's refusal is the final one");
+        assert.equal(rec.state, "abort_completed", "B's refusal is the final one");
         assert.equal(rec.attempt_id, claimB.attempt_id);
+        assert.equal(rec.abort_job_id, job_id);
         const job = await getXhighJob(job_id);
         assert.equal(job?.status, "failed");
         assert.equal(job?.failure_reason, "charge_refused");
@@ -948,7 +955,7 @@ async function main() {
         assert.deepEqual(ledger.calls, [s.session_id], "no new charge_ref");
       });
 
-      await check("FU1-05 own refusal written but the abort confirmation read fails → no abort (uncertain); a later confirmed refusal aborts", async () => {
+      await check("FU1-05 own refusal written but the abort claim cannot read the record → no abort (uncertain); a later claimed refusal aborts", async () => {
         reset(0);
         const s = await deviceSession("fu105");
         const key = auth.di2ChargeAuthorizationKey(s.session_id);
@@ -983,7 +990,7 @@ async function main() {
         assert.equal(r1.status, 503, JSON.stringify(r1.body));
         assert.equal(r1.body.code, "CHARGE_UNCONFIRMED");
         const job_id = await latestJobId(s);
-        assert.notEqual((await getXhighJob(job_id))?.status, "failed", "unconfirmed refusal does not abort");
+        assert.notEqual((await getXhighJob(job_id))?.status, "failed", "unclaimed refusal does not abort");
         assert.equal((await authOf(s))?.state, "refused");
         assert.equal(bg.hosted, 0);
 
@@ -993,6 +1000,455 @@ async function main() {
         assert.equal(await hasGrant(job_id), false);
         assert.deepEqual(ledger.calls, [s.session_id, s.session_id], "same ref");
         await assertNeverRan(s, job_id);
+      });
+
+      // ═══ FU2 — refusal → abort is an atomic claim, resumable and idempotent ═══
+
+      type CasPatch = {
+        compareAndSetExact: (k: string, e: string | null, n: unknown, o?: { ex?: number }) => Promise<boolean>;
+        get: <T>(k: string) => Promise<T | null>;
+      };
+      /** Patch the durable KV for one test; always restored by the returned function. */
+      function patchDurable(p: Partial<{ [K in keyof CasPatch]: (orig: CasPatch[K]) => CasPatch[K] }>): () => void {
+        const d = durableKv() as unknown as CasPatch;
+        const origCas = d.compareAndSetExact;
+        const origGet = d.get;
+        const boundCas: CasPatch["compareAndSetExact"] = (k, e, n, o) => origCas.call(durableKv(), k, e, n, o);
+        const boundGet: CasPatch["get"] = <T,>(k: string) => origGet.call(durableKv(), k) as Promise<T | null>;
+        if (p.compareAndSetExact) d.compareAndSetExact = p.compareAndSetExact(boundCas);
+        if (p.get) d.get = p.get(boundGet);
+        return () => {
+          d.compareAndSetExact = origCas;
+          d.get = origGet;
+        };
+      }
+
+      const lockKey = (s: POJUSessionState) => xhighSessionLockKey("decision_report", s.session_id);
+
+      /** Abort fully applied to `job_id` and recorded, nothing charged, run or created. */
+      async function assertAbortFinal(s: POJUSessionState, job_id: string, abort_attempt_id: string, label: string): Promise<void> {
+        const job = await getXhighJob(job_id);
+        assert.equal(job?.status, "failed", `${label}: job failed`);
+        assert.equal(job?.failure_reason, "charge_refused", `${label}: charge_refused`);
+        assert.equal(job?.retryable, false, `${label}: not retryable`);
+        assert.equal(await kv.get(auth.di2ExecutionGrantKey(job_id)), null, `${label}: grant gone`);
+        assert.equal(await store.loadDecisionReportDispatch(job_id), null, `${label}: dispatch marker cleared`);
+        assert.equal(await kv.get(lockKey(s)), null, `${label}: session lock released`);
+        const rec = (await authOf(s))!;
+        assert.equal(rec.state, "abort_completed", `${label}: abort_completed`);
+        assert.equal(rec.abort_job_id, job_id, `${label}: bound to the original abort_job_id`);
+        assert.equal(rec.abort_attempt_id, abort_attempt_id, `${label}: same abort claim`);
+        assert.equal(typeof rec.abort_completed_at, "number", `${label}: abort_completed_at`);
+        assert.equal(rec.charge_ref, s.session_id, `${label}: same charge_ref`);
+        assert.equal(await latestJobId(s), job_id, `${label}: no second job`);
+        assert.equal(bg.hosted, 0, `${label}: nothing dispatched`);
+        assert.equal(ledger.debits.length, 0, `${label}: nothing debited`);
+      }
+
+      await check("FU2-01 refusal wins the abort CAS: a concurrent start / Regenerate / Continue cannot claim, charge, authorize or create a job; A finishes; a later start charges again", async () => {
+        reset(0);
+        const s = await deviceSession("fu201");
+        const hold = deferred();
+        let paused = 0;
+        service.__setRefusalAbortStepHookForTests(async (step) => {
+          if (step === "revoke_grant" && paused === 0) {
+            paused += 1;
+            await hold.promise;
+          }
+        });
+        const pA = call(startBody(s));
+        await until(() => paused === 1, "A claimed the abort and paused before terminating");
+        const job_id = await latestJobId(s);
+        const claimed = (await authOf(s))!;
+        assert.equal(claimed.state, "abort_claimed");
+        assert.equal(claimed.abort_job_id, job_id);
+        assert.ok(claimed.abort_attempt_id);
+        assert.equal(typeof claimed.abort_claimed_at, "number");
+        assert.equal(claimed.abort_completed_at, null);
+
+        ledger.balance = 1; // C could pay now: it still must not charge
+        for (const regenerate of [false, true]) {
+          const rC = await call(startBody(s, regenerate));
+          assert.equal(rC.status, 409, `regenerate=${regenerate}: ${JSON.stringify(rC.body)}`);
+          assert.equal(rC.body.code, "CHARGE_ABORT_IN_PROGRESS");
+          assert.equal(rC.body.job_id, job_id);
+        }
+        const cC = await call({ action: "continue", session_id: s.session_id, job_id });
+        assert.equal(cC.body.code, "CHARGE_ABORT_IN_PROGRESS", JSON.stringify(cC.body));
+        await statusOf(s, job_id);
+        assert.deepEqual(await authOf(s), claimed, "C neither re-claimed nor touched the abort claim");
+        assert.equal(ledger.calls.length, 1, "C did not charge");
+        assert.equal(await latestJobId(s), job_id, "C created no job");
+        assert.equal(bg.hosted, 0);
+        assert.notEqual((await getXhighJob(job_id))?.status, "failed", "A has not terminated yet");
+
+        hold.resolve();
+        const rA = await pA;
+        assert.equal(rA.status, 402, JSON.stringify(rA.body));
+        assert.equal(rA.body.error, "pass_required");
+        service.__setRefusalAbortStepHookForTests(null);
+        await assertAbortFinal(s, job_id, claimed.abort_attempt_id!, "after A");
+        await assertNeverRan(s, job_id);
+
+        const rN = await call(startBody(s));
+        assert.equal(rN.status, 200, JSON.stringify(rN.body));
+        assert.notEqual(rN.body.job_id, job_id, "a new job for the new charge");
+        await drain();
+        assert.equal((await getXhighJob(rN.body.job_id as string))?.status, "completed");
+        assert.deepEqual(ledger.calls, [s.session_id, s.session_id], "re-charged with the same ref");
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal((await authOf(s))?.state, "authorized");
+        assert.equal((await getXhighJob(job_id))?.failure_reason, "charge_refused", "the refused job stays terminated");
+      });
+
+      await check("FU2-02 re-claim wins the CAS: A's abort CAS fails (no abort); C charges, authorizes, the worker completes the report", async () => {
+        reset(0);
+        const s = await deviceSession("fu202");
+        const key = auth.di2ChargeAuthorizationKey(s.session_id);
+        const casGate = deferred();
+        let abortCasArrived = false;
+        let abortCasResult: boolean | null = null;
+        const restore = patchDurable({
+          compareAndSetExact: (orig) => async (k, e, n, o) => {
+            if (k === key && (n as ChargeAuthorization).state === "abort_claimed") {
+              abortCasArrived = true;
+              await casGate.promise;
+              abortCasResult = await orig(k, e, n, o);
+              return abortCasResult;
+            }
+            return orig(k, e, n, o);
+          },
+        });
+        try {
+          const gateC = deferred();
+          ledger.gates.push(Promise.resolve(), gateC.promise);
+          const pA = call(startBody(s));
+          await until(() => abortCasArrived, "A read refused and is at its abort CAS");
+          const job_id = await latestJobId(s);
+          const refusedA = (await authOf(s))!;
+          assert.equal(refusedA.state, "refused");
+
+          ledger.balance = 1;
+          const pC = call(startBody(s));
+          await until(() => ledger.calls.length === 2, "C re-claimed the refused record and is charging");
+          const claimC = (await authOf(s))!;
+          assert.equal(claimC.state, "pending");
+          assert.notEqual(claimC.attempt_id, refusedA.attempt_id);
+          assert.equal(claimC.charge_ref, refusedA.charge_ref);
+
+          casGate.resolve();
+          const rA = await pA;
+          assert.equal(abortCasResult, false, "A's abort CAS lost");
+          assert.equal(rA.status, 200, JSON.stringify(rA.body));
+          assert.equal(rA.body.worker, "awaiting_charge");
+          assert.notEqual((await getXhighJob(job_id))?.status, "failed", "A did not abort");
+          assert.equal((await authOf(s))?.attempt_id, claimC.attempt_id);
+
+          gateC.resolve();
+          const rC = await pC;
+          assert.equal(rC.status, 200, JSON.stringify(rC.body));
+          assert.equal(rC.body.worker, "dispatched");
+          await drain();
+          const job = await getXhighJob(job_id);
+          assert.equal(job?.status, "completed");
+          assert.notEqual(job?.failure_reason, "charge_refused");
+          assert.ok(await store.loadCompletedReport(s.session_id, job_id));
+          assert.equal((await store.loadAllPages(job_id)).length, 8);
+          const rec = (await authOf(s))!;
+          assert.equal(rec.state, "authorized");
+          assert.equal(rec.attempt_id, claimC.attempt_id);
+          assert.equal(rec.abort_job_id ?? null, null);
+          assert.deepEqual(ledger.debits, [s.session_id]);
+          assert.equal(analysisCalls, 1);
+        } finally {
+          restore();
+        }
+      });
+
+      const STEPS = ["revoke_grant", "fail_job", "clear_dispatch", "release_lock", "mark_completed"] as const;
+      const ENTRIES = ["start_regenerate", "status", "continue", "start", "status"] as const;
+      for (let i = 0; i < STEPS.length; i++) {
+        const crashAt = STEPS[i];
+        const entry = ENTRIES[i];
+        await check(`FU2-03.${i + 1} abort crashes before ${crashAt} → ${entry} resumes the same abort to abort_completed; no charge, no dispatch, no second job`, async () => {
+          reset(0);
+          const s = await deviceSession(`fu203_${i}`);
+          let crashed = false;
+          let planted = false;
+          const seen = new Set<string>();
+          service.__setRefusalAbortStepHookForTests(async (step, jid) => {
+            seen.add(jid);
+            if (!planted) {
+              // Something for every step to undo: a stray grant and a dispatch marker.
+              planted = true;
+              await kv.set(auth.di2ExecutionGrantKey(jid), { job_id: jid, session_id: s.session_id, execution_generation: 0, charge_ref: s.session_id, granted_at: Date.now() }, { ex: 3600 });
+              await kv.set(store.di2DispatchKey(jid), { stage: "finalize", at: Date.now() }, { ex: 3600 });
+            }
+            if (step === crashAt && !crashed) {
+              crashed = true;
+              throw new Error(`test: process died before ${step}`);
+            }
+          });
+          const r1 = await call(startBody(s));
+          assert.equal(r1.status, 409, JSON.stringify(r1.body));
+          assert.equal(r1.body.code, "CHARGE_ABORT_IN_PROGRESS");
+          const job_id = await latestJobId(s);
+          const claimed = (await authOf(s))!;
+          assert.equal(claimed.state, "abort_claimed");
+          assert.equal(claimed.abort_job_id, job_id);
+
+          // The crash left exactly the steps before `crashAt` done.
+          const done = STEPS.indexOf(crashAt);
+          assert.equal((await kv.get(auth.di2ExecutionGrantKey(job_id))) !== null, done <= 0, "grant at crash");
+          assert.equal((await getXhighJob(job_id))?.failure_reason === "charge_refused", done >= 2, "job stamped at crash");
+          assert.equal((await store.loadDecisionReportDispatch(job_id)) !== null, done <= 2, "marker at crash");
+          assert.equal((await kv.get(lockKey(s))) !== null, done <= 3, "lock at crash");
+
+          // Inside the claim window the abort is still the claimant's: nobody else touches it.
+          const early = await call(startBody(s));
+          assert.equal(early.body.code, "CHARGE_ABORT_IN_PROGRESS");
+          assert.deepEqual(await authOf(s), claimed);
+
+          seen.clear();
+          const restoreClock = advanceClock(STALE);
+          try {
+            if (entry === "status") {
+              const st = await statusOf(s, job_id);
+              assert.equal(st.status, "failed");
+              assert.equal(st.failure_reason, "charge_refused");
+            } else if (entry === "continue") {
+              const c = await call({ action: "continue", session_id: s.session_id, job_id });
+              assert.equal(c.status, 402, JSON.stringify(c.body));
+              assert.equal(c.body.code, "CHARGE_REFUSED");
+            } else {
+              const r = await call(startBody(s, entry === "start_regenerate"));
+              assert.equal(r.status, 402, JSON.stringify(r.body));
+              assert.equal(r.body.code, "CHARGE_REFUSED");
+              assert.equal(r.body.job_id, job_id);
+            }
+          } finally {
+            restoreClock();
+          }
+          assert.deepEqual([...seen], [job_id], "recovery handled only the original abort_job_id");
+          await assertAbortFinal(s, job_id, claimed.abort_attempt_id!, `crash before ${crashAt}`);
+          assert.deepEqual(ledger.calls, [s.session_id], "no charge during recovery");
+          await assertNeverRan(s, job_id);
+        });
+      }
+
+      await check("FU2-04 unreadable / unwritable authorization fails closed: no abort, no dispatch, no refusal, no new charge_ref, no job before the record is readable", async () => {
+        // (a) the abort CAS fails and the re-read throws
+        reset(0);
+        let s = await deviceSession("fu204a");
+        let key = auth.di2ChargeAuthorizationKey(s.session_id);
+        let casLost = false;
+        let restore = patchDurable({
+          compareAndSetExact: (orig) => async (k, e, n, o) => {
+            if (k === key && (n as ChargeAuthorization).state === "abort_claimed") {
+              casLost = true;
+              return false;
+            }
+            return orig(k, e, n, o);
+          },
+          get: (orig) => async <T,>(k: string) => {
+            if (k === key && casLost) throw new Error("test: KV read failed");
+            return orig<T>(k);
+          },
+        });
+        let r;
+        try {
+          r = await call(startBody(s));
+        } finally {
+          restore();
+        }
+        assert.ok(casLost);
+        assert.equal(r.status, 503, JSON.stringify(r.body));
+        assert.equal(r.body.code, "CHARGE_UNCONFIRMED", "uncertain, not a refusal");
+        let job_id = await latestJobId(s);
+        assert.notEqual((await getXhighJob(job_id))?.status, "failed", "no abort");
+        assert.equal(bg.hosted, 0);
+        assert.equal(await kv.get(auth.di2ExecutionGrantKey(job_id)), null);
+        let rec = (await authOf(s))!;
+        assert.equal(rec.state, "refused");
+        assert.equal(rec.abort_job_id ?? null, null, "no abort claimed");
+        assert.equal(rec.charge_ref, s.session_id);
+        assert.deepEqual(ledger.calls, [s.session_id]);
+        await assertNeverRan(s, job_id);
+
+        // (b) the abort claim's first read throws
+        reset(0);
+        s = await deviceSession("fu204b");
+        key = auth.di2ChargeAuthorizationKey(s.session_id);
+        let refusedWritten = false;
+        restore = patchDurable({
+          compareAndSetExact: (orig) => async (k, e, n, o) => {
+            const ok = await orig(k, e, n, o);
+            if (ok && k === key && (n as ChargeAuthorization).state === "refused") refusedWritten = true;
+            return ok;
+          },
+          get: (orig) => async <T,>(k: string) => {
+            if (k === key && refusedWritten) throw new Error("test: KV read failed");
+            return orig<T>(k);
+          },
+        });
+        try {
+          r = await call(startBody(s));
+        } finally {
+          restore();
+        }
+        assert.equal(r.status, 503, JSON.stringify(r.body));
+        job_id = await latestJobId(s);
+        assert.notEqual((await getXhighJob(job_id))?.status, "failed");
+        rec = (await authOf(s))!;
+        assert.equal(rec.state, "refused");
+        assert.equal(rec.abort_job_id ?? null, null);
+        assert.equal(bg.hosted, 0);
+
+        // (c) the record is unreadable before the start: no job is created at all
+        reset(1);
+        s = await deviceSession("fu204c");
+        key = auth.di2ChargeAuthorizationKey(s.session_id);
+        restore = patchDurable({
+          get: (orig) => async <T,>(k: string) => {
+            if (k === key) throw new Error("test: KV read failed");
+            return orig<T>(k);
+          },
+        });
+        try {
+          r = await call(startBody(s));
+        } finally {
+          restore();
+        }
+        assert.equal(r.status, 503, JSON.stringify(r.body));
+        assert.equal(r.body.code, "CHARGE_UNCONFIRMED");
+        assert.equal(await findLatestXhighJobForSession("decision_report", s.session_id), null, "no job created");
+        assert.equal(ledger.calls.length, 0);
+        assert.equal(await authOf(s), null);
+        assert.equal(bg.hosted, 0);
+      });
+
+      await check("FU2-05 two requests race for the same refusal's abort → one CAS wins, one abort_job_id; the loser only finishes that job's abort", async () => {
+        reset(0);
+        const s = await deviceSession("fu205");
+        const base = startBody(s);
+        const startInput = {
+          session_id: s.session_id,
+          locale: "zh",
+          writer_token: base.writer_token,
+          freeze_receipt: base.freeze_receipt,
+          profile_receipt: base.profile_receipt,
+        };
+        const st1 = await service.startDecisionReportJob({ ...startInput, regenerate: false });
+        const st2 = await service.startDecisionReportJob({ ...startInput, regenerate: true });
+        assert.ok(st1.ok && st2.ok);
+        const jobs = [st1.ok ? st1.job.job_id : "", st2.ok ? st2.job.job_id : ""];
+        assert.notEqual(jobs[0], jobs[1]);
+        const refusal = await auth.settleDecisionReportCharge({
+          session_id: s.session_id,
+          question: "q",
+          joint_pass_ref: null,
+          allowNewCharge: true,
+          charge: async () => ({ ok: false, response: passRefusal() }),
+        });
+        assert.equal(refusal.state, "refused");
+
+        const key = auth.di2ChargeAuthorizationKey(s.session_id);
+        let arrivals = 0;
+        const restore = patchDurable({
+          compareAndSetExact: (orig) => async (k, e, n, o) => {
+            if (k === key && (n as ChargeAuthorization).state === "abort_claimed") {
+              arrivals += 1;
+              await until(() => arrivals >= 2, "both claimants at the CAS");
+            }
+            return orig(k, e, n, o);
+          },
+        });
+        let claims;
+        try {
+          claims = await Promise.all(jobs.map((j) => auth.claimDecisionReportRefusalAbort(refusal, j)));
+        } finally {
+          restore();
+        }
+        assert.equal(arrivals, 2, "both read refused and tried the CAS");
+        const kinds = claims.map((c) => c.kind).sort();
+        assert.deepEqual(kinds, ["claimed", "in_progress"], JSON.stringify(kinds));
+        const winner = claims.find((c) => c.kind === "claimed")! as { kind: "claimed"; record: ChargeAuthorization };
+        const loser = claims.find((c) => c.kind === "in_progress")! as { kind: "in_progress"; record: ChargeAuthorization };
+        const winnerJob = winner.record.abort_job_id!;
+        const loserJob = jobs.find((j) => j !== winnerJob)!;
+        assert.equal(loser.record.abort_job_id, winnerJob, "the loser sees the winner's job");
+        assert.equal(loser.record.abort_attempt_id, winner.record.abort_attempt_id);
+
+        const before = await getXhighJob(loserJob);
+        const outs = await Promise.all([
+          service.finishDecisionReportRefusalAbort(winner.record),
+          service.finishDecisionReportRefusalAbort(loser.record),
+        ]);
+        assert.deepEqual(outs, [{ ok: true }, { ok: true }]);
+        const rec = (await authOf(s))!;
+        assert.equal(rec.state, "abort_completed");
+        assert.equal(rec.abort_job_id, winnerJob);
+        assert.equal(rec.abort_attempt_id, winner.record.abort_attempt_id);
+        assert.equal((await getXhighJob(winnerJob))?.failure_reason, "charge_refused");
+        const after = await getXhighJob(loserJob);
+        assert.notEqual(after?.failure_reason, "charge_refused", "the other job was not terminated");
+        assert.equal(after?.status, before?.status);
+        const again = await auth.claimDecisionReportRefusalAbort(refusal, loserJob);
+        assert.equal(again.kind, "completed");
+        assert.equal(again.kind === "completed" && again.record.abort_job_id, winnerJob, "no second abort");
+      });
+
+      await check("FU2-06 abandoned abort vs new authorization: before abort_completed no start / Regenerate / Continue gets past it; after it a start re-charges normally", async () => {
+        reset(0);
+        const s = await deviceSession("fu206");
+        let crashed = false;
+        service.__setRefusalAbortStepHookForTests((step) => {
+          if (step === "fail_job" && !crashed) {
+            crashed = true;
+            throw new Error("test: process died mid-abort");
+          }
+        });
+        const r1 = await call(startBody(s));
+        assert.equal(r1.body.code, "CHARGE_ABORT_IN_PROGRESS");
+        const job_id = await latestJobId(s);
+        const claimed = (await authOf(s))!;
+        ledger.balance = 1;
+
+        for (const body of [startBody(s), startBody(s, true), { action: "continue", session_id: s.session_id, job_id }]) {
+          const r = await call(body);
+          assert.equal(r.status, 409, JSON.stringify(r.body));
+          assert.equal(r.body.code, "CHARGE_ABORT_IN_PROGRESS");
+        }
+        assert.equal((await statusOf(s, job_id)).status, "pending", "status inside the window leaves the claimant's abort alone");
+        assert.deepEqual(await authOf(s), claimed);
+        assert.equal(ledger.calls.length, 1, "no charge before abort_completed");
+        assert.equal(await latestJobId(s), job_id, "no job before abort_completed");
+        assert.equal(bg.hosted, 0);
+
+        const restoreClock = advanceClock(STALE);
+        let rRecover;
+        try {
+          rRecover = await call(startBody(s));
+        } finally {
+          restoreClock();
+        }
+        assert.equal(rRecover.status, 402, "the recovering start finishes the abort and does not charge");
+        assert.equal(rRecover.body.code, "CHARGE_REFUSED");
+        await assertAbortFinal(s, job_id, claimed.abort_attempt_id!, "recovered");
+        assert.equal(ledger.calls.length, 1);
+
+        const rN = await call(startBody(s));
+        assert.equal(rN.status, 200, JSON.stringify(rN.body));
+        const j2 = rN.body.job_id as string;
+        assert.notEqual(j2, job_id);
+        await drain();
+        assert.equal((await getXhighJob(j2))?.status, "completed");
+        assert.deepEqual(ledger.calls, [s.session_id, s.session_id], "re-charged with the same ref");
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        const rec = (await authOf(s))!;
+        assert.equal(rec.state, "authorized");
+        assert.equal(rec.charge_ref, claimed.charge_ref);
+        assert.equal((await getXhighJob(job_id))?.failure_reason, "charge_refused");
       });
     },
     { deadlineMs: 20 * 60_000 },

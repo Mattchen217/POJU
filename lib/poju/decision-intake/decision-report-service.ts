@@ -78,7 +78,13 @@ import {
   loadCompletedReport,
   type CompletedReportRecord,
 } from "./decision-report-store";
-import { revokeDecisionReportExecution } from "./decision-report-charge";
+import {
+  completeRefusalAbortRecord,
+  DI2_ABORT_CLAIM_MS,
+  loadChargeAuthorization,
+  revokeDecisionReportExecution,
+  type ChargeAuthorization,
+} from "./decision-report-charge";
 import {
   completedReportDraft,
   firstIncompleteDecisionReportStage,
@@ -335,21 +341,98 @@ export async function startDecisionReportJob(input: {
   }
 }
 
+export type RefusalAbortStep = "revoke_grant" | "fail_job" | "clear_dispatch" | "release_lock" | "mark_completed";
+
+let refusalAbortStepHook: ((step: RefusalAbortStep, job_id: string) => Promise<void> | void) | null = null;
+
+/** Tests only: runs before each termination step (pause with a gate, or throw to stop there). */
+export function __setRefusalAbortStepHookForTests(
+  fn: ((step: RefusalAbortStep, job_id: string) => Promise<void> | void) | null,
+): void {
+  refusalAbortStepHook = fn;
+}
+
 /**
- * Pass-charge refusal after create: the job must never run. The execution grant goes
- * first, so a worker already queued for it (relay redelivery, a background task, an
- * older dispatch) is refused at its entry and at every checkpoint, before the job is
- * stamped failed and its marker / lock are released.
+ * Pass-charge refusal: the job must never run. The execution grant goes first, so a
+ * worker already queued for it (relay redelivery, a background task, an older dispatch)
+ * is refused at its entry and at every checkpoint, before the job is stamped failed and
+ * its marker / lock are released. Every step is idempotent and the first failure stops
+ * the sequence (throws), so a repeat from the start converges on the same end state.
  */
 export async function abortDecisionReportJob(job: PojuXhighJob, reason: string): Promise<void> {
-  await revokeDecisionReportExecution(job.job_id).catch((e) => {
-    console.error("[decision-report] grant revoke failed", { job_id: job.job_id, e });
-  });
-  await failXhighJob(job.job_id, reason, { retryable: false, failure_reason: "charge_refused" }).catch(
-    () => undefined,
-  );
-  await clearDecisionReportDispatch(job.job_id).catch(() => undefined);
-  await releaseXhighSessionLock("decision_report", job.session_id).catch(() => undefined);
+  await terminateRefusedJob(job.job_id, job.session_id, reason);
+}
+
+async function terminateRefusedJob(job_id: string, session_id: string, reason: string): Promise<void> {
+  await refusalAbortStepHook?.("revoke_grant", job_id);
+  await revokeDecisionReportExecution(job_id);
+
+  await refusalAbortStepHook?.("fail_job", job_id);
+  const job = await getXhighJob(job_id);
+  if (job && job.session_id !== session_id) throw new Error(`abort job ${job_id} belongs to another session`);
+  if (job && job.status !== "completed" && !(job.status === "failed" && job.failure_reason === "charge_refused")) {
+    await failXhighJob(job_id, reason, { retryable: false, failure_reason: "charge_refused" });
+    const after = await getXhighJob(job_id);
+    if (after && !(after.status === "failed" && after.failure_reason === "charge_refused")) {
+      throw new Error(`abort job ${job_id} was not stamped charge_refused (${after.status})`);
+    }
+  }
+
+  await refusalAbortStepHook?.("clear_dispatch", job_id);
+  await clearDecisionReportDispatch(job_id);
+
+  await refusalAbortStepHook?.("release_lock", job_id);
+  await releaseXhighSessionLock("decision_report", session_id);
+}
+
+export type RefusalAbortOutcome = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Drive a claimed refusal abort to its end: terminate exactly `abort_job_id` (never
+ * another job), then CAS `abort_claimed → abort_completed` on the claimed record. Safe
+ * to call from any request (the claimant, or a later start / status / continue resuming
+ * after a crash): every step is idempotent and the completion is bound to the claim.
+ * Never creates a job, charges or dispatches.
+ */
+export async function finishDecisionReportRefusalAbort(claimed: ChargeAuthorization): Promise<RefusalAbortOutcome> {
+  if (claimed.state === "abort_completed") return { ok: true };
+  if (claimed.state !== "abort_claimed" || !claimed.abort_job_id) return { ok: false, reason: "not_abort_claimed" };
+  try {
+    await terminateRefusedJob(claimed.abort_job_id, claimed.session_id, "pass_required");
+    await refusalAbortStepHook?.("mark_completed", claimed.abort_job_id);
+  } catch (e) {
+    console.error("[decision-report] refusal abort incomplete", { job_id: claimed.abort_job_id, e });
+    return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+  }
+  return (await completeRefusalAbortRecord(claimed)) ? { ok: true } : { ok: false, reason: "abort_completion_unconfirmed" };
+}
+
+export type RefusalAbortResume =
+  | { kind: "none" }
+  | { kind: "unreadable" }
+  /** Claimed by a request still inside its window: the abort stays that request's. */
+  | { kind: "held"; record: ChargeAuthorization }
+  | { kind: "resumed"; record: ChargeAuthorization; outcome: RefusalAbortOutcome };
+
+/**
+ * A claimed abort belongs to its claimant while the claim is fresh; once older than the
+ * claim window (the claimant died mid-abort) any request resumes the same abort.
+ */
+export async function resumeRefusalAbortRecord(rec: ChargeAuthorization): Promise<RefusalAbortResume> {
+  if (rec.state !== "abort_claimed") return { kind: "none" };
+  if (Date.now() - (rec.abort_claimed_at ?? 0) < DI2_ABORT_CLAIM_MS) return { kind: "held", record: rec };
+  return { kind: "resumed", record: rec, outcome: await finishDecisionReportRefusalAbort(rec) };
+}
+
+/** The session's refusal abort, if one is claimed and unfinished (see `resumeRefusalAbortRecord`). */
+export async function resumeDecisionReportRefusalAbort(session_id: string): Promise<RefusalAbortResume> {
+  let rec: ChargeAuthorization | null;
+  try {
+    rec = await loadChargeAuthorization(session_id);
+  } catch {
+    return { kind: "unreadable" };
+  }
+  return rec ? resumeRefusalAbortRecord(rec) : { kind: "none" };
 }
 
 function statusFromRecord(done: CompletedReportRecord): DecisionReportStatusPayload {

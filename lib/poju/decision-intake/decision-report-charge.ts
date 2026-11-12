@@ -5,17 +5,23 @@
  * only proof of payment the report chain accepts — a job's existence is not:
  *
  *   (none) ──claim──▶ pending ──charge ok──────────▶ authorized   (terminal)
- *                        │    ──charge refused─────▶ refused      (a later start re-claims)
+ *                        │    ──charge refused─────▶ refused ──abort claim──▶ abort_claimed
  *                        │    ──charge unknown─────▶ uncertain    (reconciled by re-claim)
  *                        └── claim older than CLAIM_MS: abandoned, re-claimable
  *
+ *   refused         a later start may re-claim it (then the refusal's abort is lost to it)
+ *   abort_claimed   owned by the refusal's abort of one job (`abort_job_id`): no claim, no
+ *                   charge, no run for the session until that abort is finished
+ *   abort_completed the refused job is terminated; a later start re-claims (same ref)
+ *
  * Every transition is a compare-and-set on the exact record, so two requests can
  * never both hold a claim, and a claimant whose claim was taken over (its attempt_id is
- * no longer the record's) can neither write its outcome nor act on it. `charge_ref` (the
- * pass ledger idempotency ref) is fixed at the first claim and reused by every later
- * attempt: a reconcile of a charge whose
- * outcome was lost (RPC error, record write failure, killed invoke) returns
- * `already_consumed` instead of debiting again.
+ * no longer the record's) can neither write its outcome nor act on it. A refusal stops
+ * a job only through the `refused → abort_claimed` CAS, which a re-claim of the same
+ * record excludes. `charge_ref` (the pass ledger idempotency ref) is fixed at the first
+ * claim and reused by every later attempt: a reconcile of a charge whose outcome was
+ * lost (RPC error, record write failure, killed invoke) returns `already_consumed`
+ * instead of debiting again.
  *
  * A job runs only under an execution grant: written for that job (id, session,
  * generation) once its session is authorized, re-checked by the worker at entry and
@@ -30,6 +36,8 @@ const GRANT_TTL = KV_TTL.POJU_XHIGH_JOB;
 
 /** A claim older than this is abandoned (its request died mid-charge) and may be re-claimed. */
 export const DI2_CHARGE_CLAIM_MS = 60_000;
+/** A refusal abort claim older than this was abandoned mid-abort; any request may resume it. */
+export const DI2_ABORT_CLAIM_MS = DI2_CHARGE_CLAIM_MS;
 
 export type DecisionReportChargeResult =
   | { ok: true }
@@ -41,7 +49,13 @@ export type DecisionReportCharge = (input: {
   jointPassRef: string | null;
 }) => Promise<DecisionReportChargeResult>;
 
-export type ChargeAuthorizationState = "pending" | "authorized" | "refused" | "uncertain";
+export type ChargeAuthorizationState =
+  | "pending"
+  | "authorized"
+  | "refused"
+  | "uncertain"
+  | "abort_claimed"
+  | "abort_completed";
 
 export type ChargeAuthorization = {
   version: 1;
@@ -59,6 +73,12 @@ export type ChargeAuthorization = {
   reason: string | null;
   updated_at: number;
   authorized_at: number | null;
+  /** The one job a refusal's abort terminates (set by the `refused → abort_claimed` CAS). */
+  abort_job_id?: string | null;
+  /** Identity of that abort claim; the completion CAS is bound to it. */
+  abort_attempt_id?: string | null;
+  abort_claimed_at?: number | null;
+  abort_completed_at?: number | null;
 };
 
 export type ChargeSettlement =
@@ -75,6 +95,11 @@ export type ChargeSettlement =
    * could record its outcome. Its own result decides nothing: the current claimant's does.
    */
   | { state: "stale_claim"; record: ChargeAuthorization }
+  /**
+   * A refusal's abort owns the session (`record.abort_job_id`): nothing may be claimed,
+   * charged or run until that abort is finished.
+   */
+  | { state: "abort_in_progress"; record: ChargeAuthorization }
   /** Outcome unknown (or not recorded); the next claim reconciles with the same ref. */
   | { state: "uncertain"; reason: string }
   /** No record and this caller may not open a charge. */
@@ -206,6 +231,7 @@ async function settleLostWrite(
   if (!latest) return { state: "uncertain", reason: "authorization_missing_after_charge" };
   if (latest.state === "authorized") return { state: "authorized", record: latest };
   if (latest.attempt_id !== claim.attempt_id) return { state: "stale_claim", record: latest };
+  if (latest.state === "abort_claimed") return { state: "abort_in_progress", record: latest };
   if (latest.state === "refused" && outcome === "refused") return { state: "refused", record: latest, response };
   return { state: "uncertain", reason: "authorization_write_unconfirmed" };
 }
@@ -214,7 +240,9 @@ async function settleLostWrite(
  * Bring the session's authorization to a settled answer for this request.
  *  - authorized: nothing to charge (first charge done; later generations are free);
  *  - live pending: another request is charging — do not run, do not charge;
- *  - none / refused: open a charge only when `allowNewCharge` (a start);
+ *  - abort_claimed: a refusal's abort owns the session — no claim, no charge, whatever
+ *    the caller (start, Regenerate, Continue);
+ *  - none / refused / abort_completed: open a charge only when `allowNewCharge` (a start);
  *  - uncertain / abandoned pending: reconcile — re-claim and charge the same ref.
  */
 export async function settleDecisionReportCharge(input: {
@@ -233,10 +261,11 @@ export async function settleDecisionReportCharge(input: {
       return { state: "uncertain", reason: "authorization_unreadable" };
     }
     if (cur?.state === "authorized") return { state: "authorized", record: cur };
+    if (cur?.state === "abort_claimed") return { state: "abort_in_progress", record: cur };
     if (cur?.state === "pending" && Date.now() - cur.claimed_at < DI2_CHARGE_CLAIM_MS) {
       return { state: "pending", record: cur };
     }
-    if (!input.allowNewCharge && (!cur || cur.state === "refused")) {
+    if (!input.allowNewCharge && (!cur || cur.state === "refused" || cur.state === "abort_completed")) {
       return cur ? { state: "refused", record: cur, response: null } : { state: "required" };
     }
     const now = Date.now();
@@ -251,6 +280,10 @@ export async function settleDecisionReportCharge(input: {
           reason: null,
           updated_at: now,
           authorized_at: null,
+          abort_job_id: null,
+          abort_attempt_id: null,
+          abort_claimed_at: null,
+          abort_completed_at: null,
         }
       : {
           version: 1,
@@ -265,6 +298,10 @@ export async function settleDecisionReportCharge(input: {
           reason: null,
           updated_at: now,
           authorized_at: null,
+          abort_job_id: null,
+          abort_attempt_id: null,
+          abort_claimed_at: null,
+          abort_completed_at: null,
         };
     let won: boolean;
     try {
@@ -276,23 +313,119 @@ export async function settleDecisionReportCharge(input: {
   }
   const last = await loadChargeAuthorization(session_id).catch(() => null);
   if (last?.state === "authorized") return { state: "authorized", record: last };
+  if (last?.state === "abort_claimed") return { state: "abort_in_progress", record: last };
   return last ? { state: "pending", record: last } : { state: "uncertain", reason: "authorization_contended" };
 }
 
+// ─── refusal → job abort (atomic claim, resumable completion) ──────────────
+
+export type RefusalAbortClaim =
+  /** This call's CAS moved the refusal to `abort_claimed` for `job_id`: it owns the abort. */
+  | { kind: "claimed"; record: ChargeAuthorization }
+  /** An abort is already claimed: only `record.abort_job_id` may be (resumed and) terminated. */
+  | { kind: "in_progress"; record: ChargeAuthorization }
+  /** This refusal's abort already finished (`record.abort_job_id`). */
+  | { kind: "completed"; record: ChargeAuthorization }
+  /** The session was authorized meanwhile: no abort. */
+  | { kind: "superseded"; record: ChargeAuthorization }
+  /** Another attempt owns the record (re-claimed, re-charged): this refusal decides nothing. */
+  | { kind: "stale"; record: ChargeAuthorization | null }
+  /** The record could not be read or written with certainty: no abort (fail closed). */
+  | { kind: "uncertain"; reason: string };
+
+function classifyAbortClaim(latest: ChargeAuthorization | null, refusal: ChargeAuthorization): RefusalAbortClaim {
+  if (!latest) return { kind: "uncertain", reason: "authorization_missing" };
+  if (latest.state === "authorized") return { kind: "superseded", record: latest };
+  if (latest.state === "abort_claimed") return { kind: "in_progress", record: latest };
+  if (latest.attempt_id !== refusal.attempt_id || latest.charge_ref !== refusal.charge_ref) {
+    return { kind: "stale", record: latest };
+  }
+  if (latest.state === "abort_completed") return { kind: "completed", record: latest };
+  // Same attempt, still `refused`, yet the claim did not land: unknown, not a refusal to act on.
+  return { kind: "uncertain", reason: "abort_claim_unconfirmed" };
+}
+
 /**
- * Abort authority for a refusal: the current record must still be `refused` and recorded
- * by the attempt this settlement carries. A stale claimant, a newer pending / uncertain /
- * authorized record, or an unreadable record never confirms a refusal.
+ * The right to terminate `job_id` for a refusal, taken atomically: `refused` (recorded by
+ * this settlement's attempt, same session and charge ref) → `abort_claimed` by CAS on the
+ * exact record. A start that re-claims the same `refused` record CASes against the same
+ * value, so exactly one of them wins: either the job is aborted, or it is charged again —
+ * never "confirmed refused" and then charged by someone else before the abort.
  */
-export async function confirmCurrentChargeRefusal(s: ChargeSettlement): Promise<boolean> {
-  if (s.state !== "refused") return false;
+export async function claimDecisionReportRefusalAbort(
+  s: ChargeSettlement,
+  job_id: string,
+): Promise<RefusalAbortClaim> {
+  if (s.state !== "refused") return { kind: "stale", record: null };
+  const refusal = s.record;
+  let cur: ChargeAuthorization | null;
+  try {
+    cur = await loadChargeAuthorization(refusal.session_id);
+  } catch {
+    return { kind: "uncertain", reason: "authorization_unreadable" };
+  }
+  const eligible =
+    cur !== null &&
+    cur.state === "refused" &&
+    cur.attempt_id === refusal.attempt_id &&
+    cur.session_id === refusal.session_id &&
+    cur.charge_ref === refusal.charge_ref;
+  if (!eligible) return classifyAbortClaim(cur, refusal);
+
+  const now = Date.now();
+  const next: ChargeAuthorization = {
+    ...cur!,
+    state: "abort_claimed",
+    abort_job_id: job_id,
+    abort_attempt_id: crypto.randomUUID(),
+    abort_claimed_at: now,
+    abort_completed_at: null,
+    updated_at: now,
+  };
+  try {
+    if (await casAuthorization(refusal.session_id, cur, next)) return { kind: "claimed", record: next };
+  } catch (e) {
+    console.error("[decision-report] abort claim write failed", { session_id: refusal.session_id, e });
+  }
   let latest: ChargeAuthorization | null;
   try {
-    latest = await loadChargeAuthorization(s.record.session_id);
+    latest = await loadChargeAuthorization(refusal.session_id);
   } catch {
-    return false;
+    return { kind: "uncertain", reason: "authorization_unreadable" };
   }
-  return latest?.state === "refused" && latest.attempt_id === s.record.attempt_id;
+  // The write landed but its acknowledgement was lost.
+  if (latest?.state === "abort_claimed" && latest.abort_attempt_id === next.abort_attempt_id) {
+    return { kind: "claimed", record: latest };
+  }
+  return classifyAbortClaim(latest, refusal);
+}
+
+/**
+ * Close a claimed abort once every termination step is done: `abort_claimed` →
+ * `abort_completed`, CAS on the exact claimed record (so bound to its abort_attempt_id
+ * and abort_job_id). True when this call wrote it or the same abort was already
+ * completed; false when the record moved elsewhere or could not be confirmed.
+ */
+export async function completeRefusalAbortRecord(claimed: ChargeAuthorization): Promise<boolean> {
+  if (claimed.state !== "abort_claimed" || !claimed.abort_job_id || !claimed.abort_attempt_id) return false;
+  const now = Date.now();
+  const done: ChargeAuthorization = {
+    ...claimed,
+    state: "abort_completed",
+    abort_completed_at: now,
+    updated_at: now,
+  };
+  try {
+    if (await casAuthorization(claimed.session_id, claimed, done)) return true;
+  } catch (e) {
+    console.error("[decision-report] abort completion write failed", { session_id: claimed.session_id, e });
+  }
+  const latest = await loadChargeAuthorization(claimed.session_id).catch(() => null);
+  return (
+    latest?.state === "abort_completed" &&
+    latest.abort_attempt_id === claimed.abort_attempt_id &&
+    latest.abort_job_id === claimed.abort_job_id
+  );
 }
 
 // ─── per-job execution grant ───────────────────────────────────────────────
