@@ -77,7 +77,7 @@ import {
   type StoredPage,
 } from "./decision-report-store";
 import { assertCompleteEightPageReport } from "./freeze-bound-report";
-import { verifyDecisionReportExecution } from "./decision-report-charge";
+import { sealDecisionReportDelivery, verifyDecisionReportExecution } from "./decision-report-charge";
 import {
   buildProfileProjection,
   runPersonalAnalysisModel,
@@ -712,6 +712,7 @@ export function completedReportDraft(
 /**
  * Final delivery commit, in this order:
  *  1. the generation must still own the fence (a revoked generation writes nothing);
+ *  1b. the job's delivery right is sealed (recorded, retained past the record's window);
  *  2. the durable report record is committed (first write wins; a retry reuses it, so
  *     the analysis and pages are never regenerated and the content never changes);
  *  3. the job is marked completed under the fence CAS with the committed result.
@@ -724,6 +725,19 @@ async function commitFinalReport(ctx: Ctx, draft: CompletedReportDraft): Promise
   const session_id = ctx.input.session_id;
   if (!(await fenceTouch(ctx, "assemble", "final_commit"))) {
     await releaseDeliveryContinueLease(job_id, ctx.lease_token).catch(() => undefined);
+    return;
+  }
+  // The record is committed only under this job's delivery right, retained to outlive it.
+  const sealed = await sealDecisionReportDelivery(ctx.job);
+  if (!sealed.ok) {
+    di2Log("delivery seal refused", { job_id, reason: sealed.reason });
+    if (sealed.unreadable) {
+      await failDecisionReportJob(ctx, "assemble", `delivery_seal_unconfirmed:${sealed.reason}`, {
+        kind: "report_persist_failed",
+      });
+    } else {
+      await releaseDeliveryContinueLease(job_id, ctx.lease_token).catch(() => undefined);
+    }
     return;
   }
 

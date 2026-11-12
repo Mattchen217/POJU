@@ -18,6 +18,8 @@
  * M5-R1-FU3 — start takes the owner-checked session lock before it reads the abort state,
  * and holds it through create / charge until it hands the lock to the job (authorized) or
  * to the refusal's abort, or releases it (owner-checked) on every other exit.
+ * M5-R1-FU4 — a report (analysis, pages, result) is returned, continued or reused only
+ * under the job's own durable delivery authorization; a refusal revokes it for good.
  */
 
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
@@ -34,6 +36,7 @@ import {
   buildDecisionReportStatus,
   continueDecisionReportJob,
   createOrReuseDecisionReportJob,
+  deliveryDeniedFailure,
   finishDecisionReportRefusalAbort,
   planDecisionReportStart,
   resumeDecisionReportRefusalAbort,
@@ -51,6 +54,7 @@ import {
   grantDecisionReportExecution,
   loadChargeAuthorization,
   settleDecisionReportCharge,
+  verifyDecisionReportDelivery,
   type ChargeAuthorization,
   type ChargeSettlement,
   type DecisionReportCharge,
@@ -205,7 +209,11 @@ async function continueAction(job_id: string, session_id: string, deps: Decision
   if (!ensured.ok && ensured.code === "JOB_MISSING") {
     // The execution job expired; a committed report outlives it.
     const done = await loadCompletedReport(session_id, job_id).catch(() => null);
-    if (done) return json(409, { ok: false, code: "ALREADY_COMPLETED", error: "Report already completed", retryable: false });
+    if (done) {
+      const delivery = await verifyDecisionReportDelivery(done);
+      if (!delivery.ok) return failureReply(deliveryDeniedFailure(delivery));
+      return json(409, { ok: false, code: "ALREADY_COMPLETED", error: "Report already completed", retryable: false });
+    }
   }
   if (!ensured.ok && ensured.code !== "JOB_NOT_RUNNING") return failureReply(ensured);
 
@@ -230,6 +238,11 @@ async function startReusedJob(job: PojuXhighJob, session_id: string, deps: Decis
   const ensured = await ensureDecisionReportWorker({ job_id: job.job_id, session_id, deps });
   // The job id is still the one to follow; status polling recovers the worker.
   if (!ensured.ok && ensured.code !== "DISPATCH_FAILED") return failureReply(ensured);
+  if (ensured.ok && ensured.state === "completed") {
+    // A finished job is a result to follow only under its own delivery authorization.
+    const delivery = await verifyDecisionReportDelivery(ensured.job);
+    if (!delivery.ok) return failureReply(deliveryDeniedFailure(delivery));
+  }
   return json(200, {
     ok: true,
     job_id: job.job_id,

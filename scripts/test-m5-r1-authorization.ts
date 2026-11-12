@@ -1796,8 +1796,13 @@ async function main() {
         assert.equal(await lockMod.releaseReportJobLock(s.session_id, j1), "not_owner", "A's job-bound release");
         await runner.runDecisionReportStage(j1, "assemble");
         await service.abortDecisionReportJob((await getXhighJob(j1))!, "late cleanup");
+        // FU4: the refusal termination revokes J1's delivery right for good; J1 stays
+        // completed (immutable record) but is no longer served.
         const st = await statusOf(s, j1);
-        assert.equal(st.status, "completed");
+        assert.equal(st.status, "failed");
+        assert.equal(st.failure_reason, "charge_refused");
+        assert.equal(st.result, null);
+        assert.equal((await getXhighJob(j1))?.status, "completed");
         assert.deepEqual(await lockNow(s), lockB, "B's lock intact after all of A's cleanups");
 
         gB.release();
@@ -2177,6 +2182,515 @@ async function main() {
         assert.equal(fence?.authorized_job_id, j2, "the fence authorizes only the latest generation");
         assert.equal(await lockNow(s), null);
         await assertNoLiveJob(s, "end");
+      });
+
+      // ═══ FU4 — a report is served only under its job's own delivery authorization ═══
+
+      type DeliveryRec = import("../lib/poju/decision-intake/decision-report-charge").DecisionReportDeliveryAuthorization;
+      type DurableMem = { store: Map<string, { value: unknown; expiresAt: number | null }> };
+      const deliveryKey = (job_id: string) => auth.di2DeliveryAuthorizationKey(job_id);
+      const deliveryOf = (job_id: string) => durableKv().get<DeliveryRec>(deliveryKey(job_id));
+      const chargeKeyOf = (s: POJUSessionState) => auth.di2ChargeAuthorizationKey(s.session_id);
+      const expiresAtOf = (key: string) => (durableKv() as unknown as DurableMem).store.get(key)?.expiresAt ?? null;
+      const DAY = 24 * 60 * 60_000;
+
+      /** Nothing of the report is in the body: no analysis record, no page, no result. */
+      function assertNoReport(body: Json, s: POJUSessionState, job_id: string, label: string): void {
+        assert.equal(body.job_id, job_id, `${label}: job_id`);
+        assert.equal(body.session_id, s.session_id, `${label}: session_id`);
+        assert.notEqual(body.status, "completed", `${label}: not reported completed`);
+        assert.equal((body.analysis as { record?: unknown } | undefined)?.record ?? null, null, `${label}: no analysis`);
+        assert.deepEqual(body.pages ?? [], [], `${label}: no pages`);
+        assert.equal(body.result ?? null, null, `${label}: no result`);
+        assert.ok(!JSON.stringify(body).includes("full_text"), `${label}: no report text`);
+      }
+      /** The full committed report of `job_id` is served. */
+      function assertReport(body: Json, s: POJUSessionState, job_id: string, generation: number, label: string): void {
+        assert.equal(body.status, "completed", `${label}: ${JSON.stringify(body).slice(0, 300)}`);
+        assert.equal(body.job_id, job_id, `${label}: job_id`);
+        assert.equal(body.session_id, s.session_id, `${label}: session_id`);
+        assert.equal(body.execution_generation, generation, `${label}: generation`);
+        assert.equal(typeof (body.result as { full_text?: unknown } | null)?.full_text, "string", `${label}: result`);
+        assert.equal((body.pages as unknown[]).length, 8, `${label}: pages`);
+        assert.ok((body.analysis as { record?: unknown }).record, `${label}: analysis`);
+      }
+      async function genOf(job_id: string): Promise<number> {
+        const rec = await store.loadCompletedReport((await getXhighJob(job_id))!.session_id, job_id);
+        return rec!.execution_generation;
+      }
+      /** A paid report, run by the production start → charge → grant → worker chain. */
+      async function paidReport(s: POJUSessionState, regenerate = false): Promise<string> {
+        const r = await call(startBody(s, regenerate));
+        assert.equal(r.status, 200, JSON.stringify(r.body));
+        await drain();
+        const job_id = r.body.job_id as string;
+        assert.equal((await getXhighJob(job_id))?.status, "completed");
+        return job_id;
+      }
+      /** Pre-M5-R1 data shape: the job completed, no payment evidence survives anywhere. */
+      async function toLegacy(s: POJUSessionState, job_id: string): Promise<void> {
+        await durableKv().del(deliveryKey(job_id));
+        await durableKv().del(chargeKeyOf(s));
+        ledger.consumed.clear();
+      }
+      /** A completed job whose refusal was claimed and finished by the production abort. */
+      async function refuseCompleted(s: POJUSessionState, job_id: string): Promise<ChargeAuthorization> {
+        ledger.balance = 0;
+        const settled = await auth.settleDecisionReportCharge({
+          session_id: s.session_id,
+          question: "q",
+          joint_pass_ref: null,
+          allowNewCharge: true,
+          charge: deps.charge,
+        });
+        assert.equal(settled.state, "refused");
+        const claim = await auth.claimDecisionReportRefusalAbort(settled, job_id, lockMod.newReportLockOwner(s.session_id));
+        assert.equal(claim.kind, "claimed");
+        const done = await service.finishDecisionReportRefusalAbort((claim as { record: ChargeAuthorization }).record);
+        assert.equal(done.ok, true, JSON.stringify(done));
+        const rec = (await authOf(s))!;
+        assert.equal(rec.state, "abort_completed");
+        assert.equal(rec.abort_job_id, job_id);
+        return rec;
+      }
+
+      await check("FU4-01 legacy completed job without any charge authorization → status / continue serve nothing; start does not reuse it for free", async () => {
+        reset(1);
+        const s = await deviceSession("fu401");
+        const j0 = await paidReport(s);
+        const g0 = await genOf(j0);
+        await toLegacy(s, j0);
+        const rec0 = (await store.loadCompletedReport(s.session_id, j0))!;
+        assert.equal(await authOf(s), null, "no charge authorization");
+        assert.equal(await deliveryOf(j0), null, "no delivery authorization");
+
+        const st = await statusOf(s, j0);
+        assertNoReport(st, s, j0, "status");
+        assert.equal(st.status, "failed");
+        assert.equal(st.failure_reason, "delivery_not_authorized");
+        assert.equal(st.retryable, false);
+        assert.equal(st.execution_generation, g0);
+        const c = await call({ action: "continue", session_id: s.session_id, job_id: j0 });
+        assert.equal(c.status, 403, JSON.stringify(c.body));
+        assert.equal(c.body.code, "DELIVERY_NOT_AUTHORIZED");
+        assertNoReport({ ...c.body, job_id: j0, session_id: s.session_id }, s, j0, "continue");
+        assert.equal((await getXhighJob(j0))?.status, "completed", "job left completed");
+        assert.equal((await store.loadCompletedReport(s.session_id, j0))?.record_hash, rec0.record_hash, "record untouched");
+
+        // A start for the same Freeze: the legacy job is not a free result; a new job is charged.
+        const r = await call(startBody(s));
+        assert.equal(r.status, 402, JSON.stringify(r.body));
+        const j1 = await latestJobId(s);
+        assert.notEqual(j1, j0, "legacy job not reused");
+        assert.equal((await getXhighJob(j1))?.failure_reason, "charge_refused");
+        assert.equal((await deliveryOf(j1))?.state, "revoked");
+        assert.equal((await authOf(s))?.abort_job_id, j1, "the refusal aborts the new job only");
+        assert.deepEqual(ledger.calls, [s.session_id, s.session_id]);
+        assert.deepEqual(ledger.debits, [s.session_id], "only the original run's debit");
+        assert.equal(bg.hosted, 1, "no worker for the refused job");
+        assert.equal(analysisCalls, 1);
+        assertNoReport(await statusOf(s, j0), s, j0, "status after start");
+
+        // The execution job expires (2 h); the record path is gated the same way.
+        const restore = advanceClock(3 * 60 * 60_000);
+        try {
+          assert.equal(await getXhighJob(j0), null, "job expired");
+          assert.ok(await store.loadCompletedReport(s.session_id, j0), "record retained");
+          const late = await statusOf(s, j0);
+          assertNoReport(late, s, j0, "expired-job status");
+          assert.equal(late.failure_reason, "delivery_not_authorized");
+          const lc = await call({ action: "continue", session_id: s.session_id, job_id: j0 });
+          assert.equal(lc.body.code, "DELIVERY_NOT_AUTHORIZED");
+        } finally {
+          restore();
+        }
+      });
+
+      await check("FU4-02 refusal abort of a completed job → its delivery right is revoked (job and record stay immutable); status / continue refuse", async () => {
+        // (a) legacy completed job (no delivery record): the abort writes a revoked one.
+        reset(1);
+        let s = await deviceSession("fu402a");
+        let j0 = await paidReport(s);
+        let g0 = await genOf(j0);
+        await toLegacy(s, j0);
+        let rec0 = (await store.loadCompletedReport(s.session_id, j0))!;
+        let abort = await refuseCompleted(s, j0);
+        let d = (await deliveryOf(j0))!;
+        assert.deepEqual(
+          [d.state, d.job_id, d.session_id, d.execution_generation, d.charge_ref],
+          ["revoked", j0, s.session_id, g0, abort.charge_ref],
+        );
+        assert.equal((await getXhighJob(j0))?.status, "completed", "completed job not rewritten");
+        assert.equal((await store.loadCompletedReport(s.session_id, j0))?.record_hash, rec0.record_hash, "record immutable");
+        let st = await statusOf(s, j0);
+        assertNoReport(st, s, j0, "a status");
+        assert.equal(st.failure_reason, "charge_refused");
+        assert.equal(st.retryable, false);
+        let c = await call({ action: "continue", session_id: s.session_id, job_id: j0 });
+        assert.equal(c.status, 402, JSON.stringify(c.body));
+        assert.equal(c.body.code, "CHARGE_REFUSED");
+        assert.deepEqual(ledger.calls, [s.session_id, s.session_id]);
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 1);
+
+        // (b) a delivered job (granted record) whose session record was lost, then refused:
+        // granted → revoked by CAS, binding kept.
+        reset(1);
+        s = await deviceSession("fu402b");
+        j0 = await paidReport(s);
+        g0 = await genOf(j0);
+        assertReport(await statusOf(s, j0), s, j0, g0, "b before");
+        const granted = (await deliveryOf(j0))!;
+        assert.equal(granted.state, "granted");
+        await durableKv().del(chargeKeyOf(s));
+        ledger.consumed.clear();
+        rec0 = (await store.loadCompletedReport(s.session_id, j0))!;
+        abort = await refuseCompleted(s, j0);
+        d = (await deliveryOf(j0))!;
+        assert.equal(d.state, "revoked");
+        assert.equal(d.granted_at, granted.granted_at, "granted binding kept");
+        assert.equal(d.execution_generation, g0);
+        assert.equal(d.charge_ref, granted.charge_ref);
+        st = await statusOf(s, j0);
+        assertNoReport(st, s, j0, "b status");
+        assert.equal(st.failure_reason, "charge_refused");
+        c = await call({ action: "continue", session_id: s.session_id, job_id: j0 });
+        assert.equal(c.body.code, "CHARGE_REFUSED");
+        assert.equal((await getXhighJob(j0))?.status, "completed");
+        assert.equal((await store.loadCompletedReport(s.session_id, j0))?.record_hash, rec0.record_hash);
+        assert.equal(abort.abort_job_id, j0);
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 1);
+
+        // (c) the revocation cannot be written: the abort stays claimed (never completed
+        // first), the job is still not served, and a later request finishes it.
+        reset(1);
+        s = await deviceSession("fu402c");
+        j0 = await paidReport(s);
+        await durableKv().del(chargeKeyOf(s));
+        ledger.consumed.clear();
+        ledger.balance = 0;
+        const settled = await auth.settleDecisionReportCharge({
+          session_id: s.session_id,
+          question: "q",
+          joint_pass_ref: null,
+          allowNewCharge: true,
+          charge: deps.charge,
+        });
+        const claim = await auth.claimDecisionReportRefusalAbort(settled, j0, lockMod.newReportLockOwner(s.session_id));
+        assert.equal(claim.kind, "claimed");
+        const claimed = (claim as { record: ChargeAuthorization }).record;
+        const restore = patchDurable({
+          get: (orig) => async <T,>(k: string) => {
+            if (k === deliveryKey(j0)) throw new Error("test: delivery record unwritable");
+            return orig<T>(k);
+          },
+        });
+        let outcome;
+        try {
+          outcome = await service.finishDecisionReportRefusalAbort(claimed);
+        } finally {
+          restore();
+        }
+        assert.equal(outcome.ok, false);
+        assert.equal((await authOf(s))?.state, "abort_claimed", "not completed before the revocation");
+        assert.equal((await deliveryOf(j0))?.state, "granted", "revocation did not land");
+        st = await statusOf(s, j0);
+        assertNoReport(st, s, j0, "c while claimed");
+        const restoreClock = advanceClock(STALE);
+        try {
+          st = await statusOf(s, j0);
+        } finally {
+          restoreClock();
+        }
+        assertNoReport(st, s, j0, "c resumed");
+        assert.equal(st.failure_reason, "charge_refused");
+        const after = (await authOf(s))!;
+        assert.equal(after.state, "abort_completed");
+        assert.equal(after.abort_job_id, j0);
+        assert.equal(after.abort_attempt_id, claimed.abort_attempt_id);
+        assert.equal((await deliveryOf(j0))?.state, "revoked");
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 1);
+      });
+
+      await check("FU4-03 after FU4-02 a new start re-charges (same ref) → a new job completes and is served; the refused job stays blocked, also after Regenerate", async () => {
+        reset(1);
+        const s = await deviceSession("fu403");
+        const j0 = await paidReport(s);
+        await toLegacy(s, j0);
+        const abort = await refuseCompleted(s, j0);
+        const calls0 = ledger.calls.length;
+        const debits0 = ledger.debits.length;
+        const hosted0 = bg.hosted;
+        const pages0 = pageCalls.length;
+
+        ledger.balance = 1;
+        const r = await call(startBody(s));
+        assert.equal(r.status, 200, JSON.stringify(r.body));
+        const j1 = r.body.job_id as string;
+        assert.notEqual(j1, j0, "refused job not reused");
+        assert.equal(r.body.reused, false);
+        await drain();
+        const g1 = await genOf(j1);
+        assertReport(await statusOf(s, j1), s, j1, g1, "new job");
+        const rec = (await authOf(s))!;
+        assert.equal(rec.state, "authorized");
+        assert.equal(rec.charge_ref, abort.charge_ref, "same charge_ref");
+        assert.equal(rec.abort_job_id ?? null, null, "abort fields cleared by the re-claim");
+        const d1 = (await deliveryOf(j1))!;
+        assert.deepEqual([d1.state, d1.job_id, d1.execution_generation, d1.charge_ref], ["granted", j1, g1, rec.charge_ref]);
+        assert.equal((await deliveryOf(j0))?.state, "revoked", "j0 stays revoked");
+        const st0 = await statusOf(s, j0);
+        assertNoReport(st0, s, j0, "old job after re-authorization");
+        assert.equal(st0.failure_reason, "charge_refused");
+        // Nothing re-grants it: the production grant refuses a revoked job.
+        const regrant = await auth.grantDecisionReportDelivery((await getXhighJob(j0))!, rec);
+        assert.equal(regrant.ok, false);
+        assert.equal((regrant as { reason: string }).reason, "delivery_revoked");
+        assert.equal(ledger.calls.length - calls0, 1, "one charge call");
+        assert.equal(ledger.debits.length - debits0, 1, "one debit");
+        assert.equal(bg.hosted - hosted0, 1, "one worker");
+        assert.ok(pageCalls.length > pages0, "the new job ran");
+
+        const j2 = await paidReport(s, true);
+        assertReport(await statusOf(s, j2), s, j2, await genOf(j2), "regenerate");
+        assertReport(await statusOf(s, j1), s, j1, g1, "previous paid generation");
+        assertNoReport(await statusOf(s, j0), s, j0, "old job after Regenerate");
+        assert.equal(ledger.calls.length - calls0, 1, "Regenerate free");
+        assert.equal(ledger.debits.length - debits0, 1);
+        await assertNoLiveJob(s, "end");
+      });
+
+      await check("FU4-04 session authorized but bound to another job / generation → the old completed job is not served", async () => {
+        reset(1);
+        const s = await deviceSession("fu404");
+        const j0 = await paidReport(s);
+        const g0 = await genOf(j0);
+        // Pre-FU4 shape: the job finished before delivery records existed.
+        await durableKv().del(deliveryKey(j0));
+        assert.equal((await authOf(s))?.state, "authorized");
+        let st = await statusOf(s, j0);
+        assertNoReport(st, s, j0, "no own record");
+        assert.equal(st.failure_reason, "delivery_not_authorized");
+
+        const j1 = await paidReport(s, true);
+        const g1 = await genOf(j1);
+        assertReport(await statusOf(s, j1), s, j1, g1, "j1");
+        assertNoReport(await statusOf(s, j0), s, j0, "j0 after j1");
+        const d1 = (await deliveryOf(j1))!;
+        const tampered: Array<[string, DeliveryRec]> = [
+          ["j1's record under j0", d1],
+          ["generation of j1", { ...d1, job_id: j0 }],
+          ["foreign charge_ref", { ...d1, job_id: j0, execution_generation: g0, charge_ref: "other_ref" }],
+          ["foreign session", { ...d1, job_id: j0, execution_generation: g0, session_id: "other_session" }],
+        ];
+        for (const [label, rec] of tampered) {
+          await durableKv().set(deliveryKey(j0), rec, { ex: 3600 });
+          st = await statusOf(s, j0);
+          assertNoReport(st, s, j0, label);
+          assert.equal(st.failure_reason, "delivery_not_authorized", label);
+        }
+        await durableKv().del(deliveryKey(j0));
+        // The same Freeze: the start follows the delivered latest job (no charge, no run).
+        const r = await call(startBody(s));
+        assert.equal(r.status, 200);
+        assert.equal(r.body.job_id, j1);
+        assert.equal(r.body.reused, true);
+        assert.deepEqual(ledger.calls, [s.session_id]);
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 2);
+        assertReport(await statusOf(s, j1), s, j1, g1, "j1 end");
+      });
+
+      await check("FU4-05 authorization / delivery-record reads fail → status, continue and start fail closed (no report, no job, no charge)", async () => {
+        reset(1);
+        const s = await deviceSession("fu405");
+        const j1 = await paidReport(s);
+        const g1 = await genOf(j1);
+        const jobs0 = (await sessionJobs(s)).length;
+        const faults: Array<[string, string]> = [
+          ["charge authorization", chargeKeyOf(s)],
+          ["delivery / revocation record", deliveryKey(j1)],
+        ];
+        const faulty = (key: string, label: string) =>
+          patchDurable({
+            get: (orig) => async <T,>(k: string) => {
+              if (k === key) throw new Error(`test: ${label} unreadable`);
+              return orig<T>(k);
+            },
+          });
+        for (const [label, key] of faults) {
+          const restore = faulty(key, label);
+          try {
+            const st = await statusOf(s, j1);
+            assertNoReport(st, s, j1, `${label} status`);
+            assert.equal(st.failure_reason, "delivery_unconfirmed", label);
+            assert.equal(st.retryable, true, label);
+            const c = await call({ action: "continue", session_id: s.session_id, job_id: j1 });
+            assert.equal(c.status, 503, `${label}: ${JSON.stringify(c.body)}`);
+            const r = await call(startBody(s));
+            assert.equal(r.status, 503, `${label}: ${JSON.stringify(r.body)}`);
+          } finally {
+            restore();
+          }
+          assert.equal((await sessionJobs(s)).length, jobs0, `${label}: no job created`);
+        }
+        // The execution job expired (record path), same faults.
+        for (const [label, key] of faults) {
+          const restore = faulty(key, label);
+          const restoreClock = advanceClock(3 * 60 * 60_000);
+          try {
+            const late = await statusOf(s, j1);
+            assertNoReport(late, s, j1, `${label} record path`);
+            assert.equal(late.failure_reason, "delivery_unconfirmed");
+          } finally {
+            restoreClock();
+            restore();
+          }
+        }
+        assert.deepEqual(ledger.calls, [s.session_id], "no charge");
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 1, "no worker");
+        assertReport(await statusOf(s, j1), s, j1, g1, "served again once readable");
+      });
+
+      await check("FU4-06 completed record present but the job's delivery record is missing, expired or mismatched → no report", async () => {
+        reset(1);
+        const s = await deviceSession("fu406");
+        const j1 = await paidReport(s);
+        const g1 = await genOf(j1);
+        const good = (await deliveryOf(j1))!;
+        const rec = (await store.loadCompletedReport(s.session_id, j1))!;
+        const cases: Array<[string, () => Promise<void>]> = [
+          ["missing", () => durableKv().del(deliveryKey(j1)).then(() => undefined)],
+          ["other job", () => durableKv().set(deliveryKey(j1), { ...good, job_id: "dr_other" }).then(() => undefined)],
+          ["other generation", () => durableKv().set(deliveryKey(j1), { ...good, execution_generation: g1 + 1 }).then(() => undefined)],
+          ["other charge_ref", () => durableKv().set(deliveryKey(j1), { ...good, charge_ref: "other_ref" }).then(() => undefined)],
+          ["no charge_ref", () => durableKv().set(deliveryKey(j1), { ...good, charge_ref: null }).then(() => undefined)],
+          ["unknown state", () => durableKv().set(deliveryKey(j1), { ...good, state: "maybe" }).then(() => undefined)],
+        ];
+        for (const [label, plant] of cases) {
+          await plant();
+          const st = await statusOf(s, j1);
+          assertNoReport(st, s, j1, label);
+          assert.equal(st.failure_reason, "delivery_not_authorized", label);
+          assert.ok(await store.loadCompletedReport(s.session_id, j1), `${label}: record still there`);
+          await durableKv().set(deliveryKey(j1), good, { ex: 3600 });
+          assertReport(await statusOf(s, j1), s, j1, g1, `${label} restored`);
+        }
+        // Expired: the record outlives a delivery right written with a short window.
+        await durableKv().set(deliveryKey(j1), good, { ex: 1 });
+        const restore = advanceClock(5_000);
+        try {
+          const st = await statusOf(s, j1);
+          assertNoReport(st, s, j1, "expired");
+          assert.equal(st.failure_reason, "delivery_not_authorized");
+          assert.equal((await store.loadCompletedReport(s.session_id, j1))?.record_hash, rec.record_hash);
+        } finally {
+          restore();
+        }
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 1);
+      });
+
+      await check("FU4-07 start / Regenerate / status / continue interleaved around a refused completed job → it is never reopened; the new job runs only after its own authorization", async () => {
+        reset(1);
+        const s = await deviceSession("fu407");
+        const j0 = await paidReport(s);
+        await toLegacy(s, j0);
+        await refuseCompleted(s, j0);
+        const calls0 = ledger.calls.length;
+        const debits0 = ledger.debits.length;
+        const hosted0 = bg.hosted;
+        const pages0 = pageCalls.length;
+
+        ledger.balance = 1;
+        const chargeGate = deferred();
+        ledger.gates.push(chargeGate.promise);
+        const pA = call(startBody(s));
+        await until(() => ledger.calls.length === calls0 + 1, "A charging for a new job");
+        const j1 = await latestJobId(s);
+        assert.notEqual(j1, j0);
+        assert.equal((await authOf(s))?.state, "pending");
+
+        const [st0, st1, c0, c1, rB] = await Promise.all([
+          statusOf(s, j0),
+          statusOf(s, j1),
+          call({ action: "continue", session_id: s.session_id, job_id: j0 }),
+          call({ action: "continue", session_id: s.session_id, job_id: j1 }),
+          call(startBody(s, true)),
+        ]);
+        assertNoReport(st0, s, j0, "j0 during A's charge");
+        assert.equal(st0.failure_reason, "charge_refused");
+        assertNoReport(st1, s, j1, "j1 before authorization");
+        assert.equal(c0.body.code, "CHARGE_REFUSED", JSON.stringify(c0.body));
+        assert.equal(c1.body.code, "CHARGE_PENDING", JSON.stringify(c1.body));
+        assert.equal(rB.status, 409, JSON.stringify(rB.body));
+        assert.equal(rB.body.code, "REPORT_JOB_BUSY");
+        await runner.runDecisionReportStage(j1, "finalize");
+        await runner.runDecisionReportStage(j0, "assemble");
+        assert.equal(pageCalls.length, pages0, "nothing ran before the authorization");
+        assert.equal(bg.hosted, hosted0, "nothing dispatched before the authorization");
+        assert.equal(await deliveryOf(j1), null, "no delivery right before the authorization");
+
+        chargeGate.resolve();
+        const rA = await pA;
+        assert.equal(rA.status, 200, JSON.stringify(rA.body));
+        assert.equal(rA.body.job_id, j1);
+        await drain();
+        const g1 = await genOf(j1);
+        assertReport(await statusOf(s, j1), s, j1, g1, "j1 after authorization");
+        const [late0, lateC0] = await Promise.all([
+          statusOf(s, j0),
+          call({ action: "continue", session_id: s.session_id, job_id: j0 }),
+        ]);
+        assertNoReport(late0, s, j0, "j0 after the new authorization");
+        assert.equal(lateC0.body.code, "CHARGE_REFUSED");
+        assert.equal((await deliveryOf(j0))?.state, "revoked");
+        assert.equal((await getXhighJob(j0))?.status, "completed");
+        assert.equal(ledger.calls.length - calls0, 1);
+        assert.equal(ledger.debits.length - debits0, 1);
+        assert.equal(bg.hosted - hosted0, 1);
+        assert.ok(pageCalls.length > pages0);
+
+        const j2 = await paidReport(s, true);
+        assertReport(await statusOf(s, j2), s, j2, await genOf(j2), "j2");
+        assertNoReport(await statusOf(s, j0), s, j0, "j0 after Regenerate");
+        assert.equal(ledger.debits.length - debits0, 1, "Regenerate free");
+        await assertNoLiveJob(s, "end");
+      });
+
+      await check("FU4-08 a paid report is served after its 2 h execution grant and job expire, for the retention window; its rights outlive the record", async () => {
+        reset(1);
+        const s = await deviceSession("fu408");
+        const j1 = await paidReport(s);
+        const g1 = await genOf(j1);
+        const recKey = store.di2CompletedReportKey(s.session_id, j1);
+        const recExp = expiresAtOf(recKey)!;
+        assert.ok(recExp, "record has a retention");
+        assert.ok(expiresAtOf(deliveryKey(j1))! >= recExp, "delivery right outlives the record");
+        assert.ok(expiresAtOf(chargeKeyOf(s))! >= recExp, "session authorization outlives the record");
+
+        await kv.del(auth.di2ExecutionGrantKey(j1));
+        assertReport(await statusOf(s, j1), s, j1, g1, "grant deleted");
+        for (const [label, ms] of [
+          ["3 h", 3 * 60 * 60_000],
+          ["59 days", 59 * DAY],
+        ] as const) {
+          const restore = advanceClock(ms);
+          try {
+            assert.equal(await getXhighJob(j1), null, `${label}: job expired`);
+            assert.equal(await kv.get(auth.di2ExecutionGrantKey(j1)), null, `${label}: grant gone`);
+            assertReport(await statusOf(s, j1), s, j1, g1, label);
+          } finally {
+            restore();
+          }
+        }
+        assert.deepEqual(ledger.calls, [s.session_id]);
+        assert.deepEqual(ledger.debits, [s.session_id]);
+        assert.equal(bg.hosted, 1, "no re-run");
+        assert.equal(analysisCalls, 1);
       });
     },
     { deadlineMs: 20 * 60_000 },

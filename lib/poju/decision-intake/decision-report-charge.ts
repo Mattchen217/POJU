@@ -28,6 +28,10 @@
  * A job runs only under an execution grant: written for that job (id, session,
  * generation) once its session is authorized, re-checked by the worker at entry and
  * before every checkpoint, deleted when the job is aborted.
+ *
+ * A job's report is served only under its own durable delivery authorization (job,
+ * session, generation, charge ref), recorded when it is granted and sealed at commit;
+ * a refusal abort revokes it permanently. See `verifyDecisionReportDelivery`.
  */
 
 import { durableKv, kv, KV_TTL } from "@/lib/kv/client";
@@ -165,24 +169,29 @@ export async function loadChargeAuthorization(session_id: string): Promise<Charg
   return got && typeof got === "object" && got.session_id === session_id ? got : null;
 }
 
+/** Exact-value CAS on any durable key (null = must be absent). */
+async function casExact(key: string, expected: unknown | null, next: unknown, ttl: number): Promise<boolean> {
+  const s = store();
+  if (expected === null) return (await s.set(key, next, { ex: ttl, nx: true })) === "OK";
+  const expectedJson = JSON.stringify(expected);
+  if (typeof s.compareAndSetExact === "function") {
+    return s.compareAndSetExact(key, expectedJson, next, { ex: ttl });
+  }
+  if (typeof s.eval === "function") {
+    const r = await s.eval(CAS_EXACT_LUA, [key], [expectedJson, JSON.stringify(next), String(ttl)]);
+    return r === 1 || r === true;
+  }
+  throw new Error(`durable CAS unavailable for ${key}`);
+}
+
 /** Replace `expected` (null = absent) with `next`, atomically. */
 async function casAuthorization(
   session_id: string,
   expected: ChargeAuthorization | null,
   next: ChargeAuthorization,
+  ttl: number = RETENTION,
 ): Promise<boolean> {
-  const s = store();
-  const key = di2ChargeAuthorizationKey(session_id);
-  if (expected === null) return (await s.set(key, next, { ex: RETENTION, nx: true })) === "OK";
-  const expectedJson = JSON.stringify(expected);
-  if (typeof s.compareAndSetExact === "function") {
-    return s.compareAndSetExact(key, expectedJson, next, { ex: RETENTION });
-  }
-  if (typeof s.eval === "function") {
-    const r = await s.eval(CAS_EXACT_LUA, [key], [expectedJson, JSON.stringify(next), String(RETENTION)]);
-    return r === 1 || r === true;
-  }
-  throw new Error("charge authorization CAS unavailable");
+  return casExact(di2ChargeAuthorizationKey(session_id), expected, next, ttl);
 }
 
 async function chargeUnderClaim(claim: ChargeAuthorization, charge: DecisionReportCharge): Promise<ChargeSettlement> {
@@ -548,6 +557,10 @@ export async function grantDecisionReportExecution(job: PojuXhighJob): Promise<E
     return { ok: false, reason: "authorization_unreadable" };
   }
   if (!auth || auth.state !== "authorized") return { ok: false, reason: `charge_${auth?.state ?? "missing"}` };
+  // The job's delivery right is recorded (durably, bound to this job) before it may run;
+  // a job whose delivery was revoked by a refusal never runs again.
+  const delivery = await grantDecisionReportDelivery(job, auth);
+  if (!delivery.ok) return { ok: false, reason: delivery.reason };
   const grant: DecisionReportExecutionGrant = {
     job_id: job.job_id,
     session_id: job.session_id,
@@ -565,6 +578,240 @@ export async function grantDecisionReportExecution(job: PojuXhighJob): Promise<E
 
 export async function revokeDecisionReportExecution(job_id: string): Promise<void> {
   await kv.del(di2ExecutionGrantKey(job_id));
+}
+
+// ─── per-job delivery authorization (durable) ──────────────────────────────
+
+/**
+ * Outlives the completed report record it gates: written / refreshed before that record
+ * is committed, with the report retention plus one execution window of margin.
+ */
+const DELIVERY_TTL = RETENTION + KV_TTL.POJU_XHIGH_JOB;
+
+/**
+ * The right to deliver one job's report, bound to that job's paid authorization. The
+ * execution grant (2 h) only lets a job run; this record is what a finished report is
+ * served under for the whole retention window.
+ *
+ *   (absent) ──grant (NX)──▶ granted ──refresh (same binding)──▶ granted
+ *   (absent | granted) ──refusal abort──▶ revoked                (terminal)
+ *
+ * A revoked record is never written back to `granted` (grants only create an absent
+ * record or refresh an identical one), so a later authorization of the session — same
+ * `charge_ref`, abort fields cleared — cannot reopen a refused job. An absent record
+ * denies delivery (legacy jobs without payment evidence, expired records).
+ */
+export type DecisionReportDeliveryAuthorization = {
+  version: 1;
+  job_id: string;
+  session_id: string;
+  execution_generation: number | null;
+  charge_ref: string | null;
+  state: "granted" | "revoked";
+  granted_at: number | null;
+  revoked_at: number | null;
+  reason: string | null;
+};
+
+export type DeliveryCheck =
+  | { ok: true; record: DecisionReportDeliveryAuthorization }
+  /** `unreadable`: a store read failed (retry); `revoked`: a refusal ended this job's delivery. */
+  | { ok: false; reason: string; unreadable: boolean; revoked: boolean };
+
+export type DeliveryTarget = { job_id: string; session_id: string; execution_generation?: number | null };
+
+export function di2DeliveryAuthorizationKey(job_id: string): string {
+  return `poju-di2:delivery-auth:${safe(job_id)}`;
+}
+
+function denied(reason: string, extra: { unreadable?: boolean; revoked?: boolean } = {}): DeliveryCheck {
+  return { ok: false, reason, unreadable: extra.unreadable ?? false, revoked: extra.revoked ?? false };
+}
+
+async function loadDeliveryRecord(job_id: string): Promise<DecisionReportDeliveryAuthorization | null> {
+  const got = await store().get<DecisionReportDeliveryAuthorization>(di2DeliveryAuthorizationKey(job_id));
+  return got && typeof got === "object" ? got : null;
+}
+
+function sameDeliveryBinding(
+  rec: DecisionReportDeliveryAuthorization,
+  job: { job_id: string; session_id: string; execution_generation?: number | null },
+  charge_ref: string,
+): boolean {
+  return (
+    rec.job_id === job.job_id &&
+    rec.session_id === job.session_id &&
+    rec.execution_generation === (job.execution_generation ?? null) &&
+    rec.charge_ref === charge_ref
+  );
+}
+
+/**
+ * May this job's report (analysis, pages, result) be returned? Only when its own delivery
+ * record is `granted` for exactly this job / session / generation, and the session's
+ * charge is `authorized` under the same `charge_ref`. Every other state — revoked,
+ * absent, mismatched, session not authorized, or any read failure — denies.
+ */
+export async function verifyDecisionReportDelivery(target: DeliveryTarget): Promise<DeliveryCheck> {
+  let rec: DecisionReportDeliveryAuthorization | null;
+  try {
+    rec = await loadDeliveryRecord(target.job_id);
+  } catch {
+    return denied("delivery_unreadable", { unreadable: true });
+  }
+  if (!rec) return denied("delivery_missing");
+  if (rec.job_id !== target.job_id || rec.session_id !== target.session_id) return denied("delivery_mismatch");
+  if (rec.state === "revoked") return denied("delivery_revoked", { revoked: true });
+  if (rec.state !== "granted") return denied("delivery_invalid");
+  if (rec.execution_generation !== (target.execution_generation ?? null)) return denied("delivery_generation_mismatch");
+  let auth: ChargeAuthorization | null;
+  try {
+    auth = await loadChargeAuthorization(target.session_id);
+  } catch {
+    return denied("authorization_unreadable", { unreadable: true });
+  }
+  if (!auth) return denied("authorization_missing");
+  if (auth.state !== "authorized") return denied(`charge_${auth.state}`);
+  if (!rec.charge_ref || auth.charge_ref !== rec.charge_ref) return denied("delivery_charge_mismatch");
+  return { ok: true, record: rec };
+}
+
+/**
+ * Record (or confirm) the delivery right of a job of an authorized session: NX create,
+ * or an identical record already there. A revoked or differently bound record refuses.
+ * `refresh` re-writes the identical record to restart its retention.
+ */
+export async function grantDecisionReportDelivery(
+  job: PojuXhighJob,
+  auth: ChargeAuthorization,
+  opts: { refresh?: boolean } = {},
+): Promise<DeliveryCheck> {
+  if (typeof job.execution_generation !== "number") return denied("job_without_generation");
+  if (auth.state !== "authorized" || auth.session_id !== job.session_id) return denied(`charge_${auth.state}`);
+  const key = di2DeliveryAuthorizationKey(job.job_id);
+  for (let round = 0; round < 4; round++) {
+    let cur: DecisionReportDeliveryAuthorization | null;
+    try {
+      cur = await loadDeliveryRecord(job.job_id);
+    } catch {
+      return denied("delivery_unreadable", { unreadable: true });
+    }
+    if (cur?.state === "revoked") return denied("delivery_revoked", { revoked: true });
+    if (cur) {
+      if (cur.state !== "granted" || !sameDeliveryBinding(cur, job, auth.charge_ref)) return denied("delivery_mismatch");
+      if (!opts.refresh) return { ok: true, record: cur };
+      try {
+        if (await casExact(key, cur, cur, DELIVERY_TTL)) return { ok: true, record: cur };
+      } catch {
+        return denied("delivery_unwritable", { unreadable: true });
+      }
+      continue;
+    }
+    const rec: DecisionReportDeliveryAuthorization = {
+      version: 1,
+      job_id: job.job_id,
+      session_id: job.session_id,
+      execution_generation: job.execution_generation,
+      charge_ref: auth.charge_ref,
+      state: "granted",
+      granted_at: Date.now(),
+      revoked_at: null,
+      reason: null,
+    };
+    try {
+      if (await casExact(key, null, rec, DELIVERY_TTL)) return { ok: true, record: rec };
+    } catch {
+      return denied("delivery_unwritable", { unreadable: true });
+    }
+  }
+  return denied("delivery_contended", { unreadable: true });
+}
+
+/**
+ * End a job's delivery right for good (refusal abort): any current record — absent or
+ * granted — becomes `revoked`, by NX create or CAS on the exact value. Idempotent. Throws
+ * when the write cannot be confirmed, so the abort stays incomplete and resumable.
+ */
+export async function revokeDecisionReportDelivery(input: {
+  job_id: string;
+  session_id: string;
+  execution_generation: number | null;
+  charge_ref: string | null;
+  reason: string;
+}): Promise<void> {
+  const key = di2DeliveryAuthorizationKey(input.job_id);
+  for (let round = 0; round < 4; round++) {
+    const cur = await loadDeliveryRecord(input.job_id);
+    if (cur && cur.session_id !== input.session_id) {
+      throw new Error(`delivery record of ${input.job_id} belongs to another session`);
+    }
+    if (cur?.state === "revoked") return;
+    const now = Date.now();
+    const next: DecisionReportDeliveryAuthorization = {
+      version: 1,
+      job_id: input.job_id,
+      session_id: input.session_id,
+      execution_generation: cur ? cur.execution_generation : input.execution_generation,
+      charge_ref: cur ? cur.charge_ref : input.charge_ref,
+      state: "revoked",
+      granted_at: cur?.granted_at ?? null,
+      revoked_at: now,
+      reason: input.reason,
+    };
+    if (await casExact(key, cur, next, DELIVERY_TTL)) return;
+  }
+  throw new Error(`delivery revocation of ${input.job_id} contended`);
+}
+
+/**
+ * At report commit: the job ran under a valid execution grant, so its delivery right is
+ * recorded (created for a job granted before delivery records existed) and both it and
+ * the session authorization are re-written to outlive the report record about to be
+ * committed. Any failure refuses the commit.
+ */
+export async function sealDecisionReportDelivery(job: PojuXhighJob): Promise<DeliveryCheck> {
+  const exec = await verifyDecisionReportExecution(job);
+  if (!exec.ok) return denied(exec.reason, { unreadable: exec.reason.startsWith("grant_unreadable") });
+  let auth: ChargeAuthorization | null;
+  try {
+    auth = await loadChargeAuthorization(job.session_id);
+  } catch {
+    return denied("authorization_unreadable", { unreadable: true });
+  }
+  if (!auth || auth.state !== "authorized") return denied(`charge_${auth?.state ?? "missing"}`);
+  const granted = await grantDecisionReportDelivery(job, auth, { refresh: true });
+  if (!granted.ok) return granted;
+  if (!(await retainChargeAuthorization(auth))) return denied("authorization_unretained", { unreadable: true });
+  return verifyDecisionReportDelivery(job);
+}
+
+/**
+ * Restart the retention of an existing delivery right and of its session authorization
+ * (a report record rebuilt for a job that lost it). Never creates either record.
+ */
+export async function retainDecisionReportDelivery(target: DeliveryTarget): Promise<DeliveryCheck> {
+  const check = await verifyDecisionReportDelivery(target);
+  if (!check.ok) return check;
+  try {
+    if (!(await casExact(di2DeliveryAuthorizationKey(target.job_id), check.record, check.record, DELIVERY_TTL))) {
+      return denied("delivery_unretained", { unreadable: true });
+    }
+    const auth = await loadChargeAuthorization(target.session_id);
+    if (!auth || !(await retainChargeAuthorization(auth))) return denied("authorization_unretained", { unreadable: true });
+  } catch {
+    return denied("delivery_unwritable", { unreadable: true });
+  }
+  return check;
+}
+
+/** Re-write an `authorized` record unchanged (its terminal state) to restart its retention. */
+async function retainChargeAuthorization(auth: ChargeAuthorization): Promise<boolean> {
+  if (auth.state !== "authorized") return false;
+  try {
+    return await casAuthorization(auth.session_id, auth, auth, DELIVERY_TTL);
+  } catch {
+    return false;
+  }
 }
 
 /** Thrown by the dispatcher for a job without a valid execution grant. */

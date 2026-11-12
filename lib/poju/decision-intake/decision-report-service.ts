@@ -81,8 +81,12 @@ import {
   completeRefusalAbortRecord,
   DI2_ABORT_CLAIM_MS,
   loadChargeAuthorization,
+  retainDecisionReportDelivery,
+  revokeDecisionReportDelivery,
   revokeDecisionReportExecution,
+  verifyDecisionReportDelivery,
   type ChargeAuthorization,
+  type DeliveryCheck,
 } from "./decision-report-charge";
 import {
   LEGACY_REPORT_LOCK_ORPHAN_MS,
@@ -385,7 +389,18 @@ export async function createOrReuseDecisionReportJob(
   const latest = await findLatestXhighJobForSession("decision_report", session_id);
   const latestInput = latest && isDecisionReportJobInput(latest.input) ? latest.input : null;
   if (latest && latestInput && !plan.regenerate && sameIdentity(latestInput, identity)) {
-    if (isLiveJob(latest) || latest.status === "completed" || isRevivable(latest)) {
+    // A completed job is a free result only under its own delivery authorization; one
+    // without it (refused, legacy, mismatched) is never reused — a new generation runs
+    // under this start's charge instead.
+    let deliverable = false;
+    if (latest.status === "completed") {
+      const delivery = await verifyDecisionReportDelivery(latest);
+      if (!delivery.ok && delivery.unreadable) {
+        return failure(503, "DELIVERY_UNCONFIRMED", `Report delivery could not be confirmed (${delivery.reason})`, true);
+      }
+      deliverable = delivery.ok;
+    }
+    if (isLiveJob(latest) || deliverable || isRevivable(latest)) {
       const bound = await updateOwnedReportLock(owner, { job_id: latest.job_id });
       if (!bound) return LOCK_LOST();
       return { ok: true, job: latest, reused: true, question, lock: bound };
@@ -542,8 +557,15 @@ export async function startDecisionReportJob(input: {
  * session: it never runs (same terminal state as a refused job; a later start re-charges).
  */
 export async function abandonDecisionReportStartJob(job_id: string, session_id: string, reason: string): Promise<void> {
-  await revokeDecisionReportExecution(job_id);
   const job = await getXhighJob(job_id);
+  await revokeDecisionReportDelivery({
+    job_id,
+    session_id,
+    execution_generation: job?.execution_generation ?? null,
+    charge_ref: null,
+    reason: "start_abandoned",
+  });
+  await revokeDecisionReportExecution(job_id);
   if (job && job.session_id === session_id && isLiveJob(job)) {
     await failXhighJob(job_id, reason, { retryable: false, failure_reason: "charge_refused" });
   }
@@ -562,14 +584,16 @@ export function __setRefusalAbortStepHookForTests(
 }
 
 /**
- * Pass-charge refusal: the job must never run. The execution grant goes first, so a
- * worker already queued for it (relay redelivery, a background task, an older dispatch)
- * is refused at its entry and at every checkpoint, before the job is stamped failed and
- * its marker / lock are released. Every step is idempotent and the first failure stops
+ * Pass-charge refusal: the job must never run, and its report is never served. Its
+ * delivery right is revoked for good and its execution grant deleted first, so a worker
+ * already queued for it (relay redelivery, a background task, an older dispatch) is
+ * refused at its entry and at every checkpoint, before the job is stamped failed and
+ * its marker / lock are released. A job that already completed stays completed (its
+ * report record is immutable) but is denied by the revoked delivery right. Every step is idempotent and the first failure stops
  * the sequence (throws), so a repeat from the start converges on the same end state.
  */
 export async function abortDecisionReportJob(job: PojuXhighJob, reason: string): Promise<void> {
-  await terminateRefusedJob(job.job_id, job.session_id, reason, { kind: "job" });
+  await terminateRefusedJob(job.job_id, job.session_id, reason, { kind: "job" }, null);
 }
 
 /**
@@ -597,8 +621,20 @@ async function terminateRefusedJob(
   session_id: string,
   reason: string,
   lock: AbortLockRelease,
+  charge_ref: string | null,
 ): Promise<void> {
+  // Step 1 revokes both rights of the job: delivery (durable, permanent — a completed job
+  // keeps its immutable record but is never served again) and execution.
   await refusalAbortStepHook?.("revoke_grant", job_id);
+  const target = await getXhighJob(job_id);
+  if (target && target.session_id !== session_id) throw new Error(`abort job ${job_id} belongs to another session`);
+  await revokeDecisionReportDelivery({
+    job_id,
+    session_id,
+    execution_generation: target?.execution_generation ?? null,
+    charge_ref,
+    reason: `refusal_abort:${reason}`,
+  });
   await revokeDecisionReportExecution(job_id);
 
   await refusalAbortStepHook?.("fail_job", job_id);
@@ -635,7 +671,13 @@ export async function finishDecisionReportRefusalAbort(claimed: ChargeAuthorizat
   if (claimed.state === "abort_completed") return { ok: true };
   if (claimed.state !== "abort_claimed" || !claimed.abort_job_id) return { ok: false, reason: "not_abort_claimed" };
   try {
-    await terminateRefusedJob(claimed.abort_job_id, claimed.session_id, "pass_required", abortLockOf(claimed));
+    await terminateRefusedJob(
+      claimed.abort_job_id,
+      claimed.session_id,
+      "pass_required",
+      abortLockOf(claimed),
+      claimed.charge_ref,
+    );
     await refusalAbortStepHook?.("mark_completed", claimed.abort_job_id);
   } catch (e) {
     console.error("[decision-report] refusal abort incomplete", { job_id: claimed.abort_job_id, e });
@@ -729,6 +771,11 @@ async function ensureCompletedReportRecord(job: PojuXhighJob): Promise<Completed
   const ji = job.input as DecisionReportJobInput;
   const existing = await loadCompletedReport(job.session_id, job.job_id);
   if (existing) return existing;
+  // A rebuilt record starts a new retention window: its delivery right must cover it.
+  const retained = await retainDecisionReportDelivery(job);
+  if (!retained.ok) {
+    throw new DecisionReportStoreError("REPORT_PERSIST_FAILED", `delivery right not retained (${retained.reason})`);
+  }
   if (!isDecisionReportJobResult(job.result) || typeof job.execution_generation !== "number") {
     throw new DecisionReportStoreError("REPORT_RECORD_INVALID", "completed job has no report result");
   }
@@ -771,27 +818,79 @@ function missingPayload(input: { job_id: string; session_id: string }): Decision
   };
 }
 
+/**
+ * The job's report may not be served (see `verifyDecisionReportDelivery`): its binding
+ * and state, never its analysis, pages or result. A refusal reads as `charge_refused`;
+ * an unconfirmed read is retryable.
+ */
+function deliveryDeniedPayload(
+  input: { job_id: string; session_id: string },
+  binding: {
+    execution_generation: number | null;
+    freeze_id: string | null;
+    context_hash: string | null;
+    report_job_id: string | null;
+    profile_hash: string | null;
+  },
+  check: Extract<DeliveryCheck, { ok: false }>,
+): DecisionReportStatusPayload {
+  return {
+    ...missingPayload(input),
+    status: "failed",
+    ...binding,
+    retryable: check.unreadable,
+    failure_reason: check.revoked ? "charge_refused" : check.unreadable ? "delivery_unconfirmed" : "delivery_not_authorized",
+    error: `Report delivery is not authorized (${check.reason})`,
+  };
+}
+
 export async function buildDecisionReportStatus(input: {
   job_id: string;
   session_id: string;
 }): Promise<DecisionReportStatusPayload> {
   let job = await getXhighJob(input.job_id);
   if (!job) {
-    // The execution job expires with its 2h TTL; a finished book stays under retention.
+    // The execution job expires with its 2h TTL; a finished book stays under retention,
+    // served only under the job's own delivery authorization.
     let done: CompletedReportRecord | null = null;
     try {
       done = await loadCompletedReport(input.session_id, input.job_id);
     } catch (e) {
       console.error("[decision-report] completed report record unreadable", { job_id: input.job_id, e });
     }
-    return done ? statusFromRecord(done) : missingPayload(input);
+    if (!done) return missingPayload(input);
+    const delivery = await verifyDecisionReportDelivery(done);
+    if (!delivery.ok) {
+      return deliveryDeniedPayload(
+        input,
+        {
+          execution_generation: done.execution_generation,
+          freeze_id: done.freeze_id,
+          context_hash: done.context_hash,
+          report_job_id: done.report_job_id,
+          profile_hash: done.profile_hash,
+        },
+        delivery,
+      );
+    }
+    return statusFromRecord(done);
   }
   if (job.phase !== "decision_report" || !isDecisionReportJobInput(job.input) || job.session_id !== input.session_id) {
     return missingPayload(input);
   }
+  const jobBinding = {
+    execution_generation: job.execution_generation ?? null,
+    freeze_id: job.input.freeze_id,
+    context_hash: job.input.context_hash,
+    report_job_id: job.input.report_job_id,
+    profile_hash: job.input.profile_hash,
+  };
 
   if (job.status === "completed") {
-    // Completed is reported only from the committed record — never from the job alone.
+    // Completed is reported only from the committed record — never from the job alone —
+    // and only under this job's delivery authorization (never the session's alone).
+    const delivery = await verifyDecisionReportDelivery(job);
+    if (!delivery.ok) return deliveryDeniedPayload(input, jobBinding, delivery);
     try {
       return statusFromRecord(await ensureCompletedReportRecord(job));
     } catch (e) {
@@ -829,8 +928,11 @@ export async function buildDecisionReportStatus(input: {
   }
 
   const ji = job.input as DecisionReportJobInput;
-  const analysis = await loadAnalysis(ji.analysis_key);
-  const pages = (await loadAllPages(job.job_id)).map((p) => p.record);
+  // In-progress content (the analysis is shared by every generation of this Freeze) is
+  // shown only for a job holding its own delivery authorization.
+  const delivery = await verifyDecisionReportDelivery(job);
+  const analysis = delivery.ok ? await loadAnalysis(ji.analysis_key) : null;
+  const pages = delivery.ok ? (await loadAllPages(job.job_id)).map((p) => p.record) : [];
   const failed = job.status === "failed";
   const live = job.status === "pending" || job.status === "running";
 
@@ -863,6 +965,15 @@ export async function buildDecisionReportStatus(input: {
   };
 }
 
+/** A completed job whose report may not be served: nothing to continue, nothing to return. */
+export function deliveryDeniedFailure(check: Extract<DeliveryCheck, { ok: false }>): ServiceFailure {
+  if (check.unreadable) {
+    return failure(503, "DELIVERY_UNCONFIRMED", `Report delivery could not be confirmed (${check.reason})`, true);
+  }
+  if (check.revoked) return failure(402, "CHARGE_REFUSED", "pass_required", false);
+  return failure(403, "DELIVERY_NOT_AUTHORIZED", `Report delivery is not authorized (${check.reason})`, false);
+}
+
 export type ContinueDecisionReportOutcome =
   | { ok: true; job: PojuXhighJob; stage: "finalize" | "segments" | "assemble" }
   | ServiceFailure;
@@ -882,6 +993,8 @@ export async function continueDecisionReportJob(input: {
     return failure(404, "JOB_MISSING", "Report job not found or expired", true);
   }
   if (job.status === "completed") {
+    const delivery = await verifyDecisionReportDelivery(job);
+    if (!delivery.ok) return deliveryDeniedFailure(delivery);
     try {
       await ensureCompletedReportRecord(job);
     } catch (e) {
