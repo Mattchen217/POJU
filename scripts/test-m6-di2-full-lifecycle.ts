@@ -38,7 +38,7 @@ async function main() {
   const { withDeterministicHandleHooks } = await import("./fixtures/test-answer-interpretation-hook");
   const handleUserMessage: typeof rawHandle = (input) => rawHandle(withDeterministicHandleHooks(input));
   const { evaluateDecisionSufficiency } = await import("../lib/poju/decision-context/stop-criteria");
-  const wire = await import("../lib/poju/decision-context/production-freeze-wire");
+  const { loadFreezeProfileInput } = await import("../lib/poju/decision-authority/client-freeze");
   const { runWithEphemeralXhighKv, getXhighJob } = await import("../lib/poju/xhigh-job-store");
   const pa = await import("../lib/poju/decision-intake/personal-analysis");
   const pages = await import("../lib/poju/decision-intake/decision-report-pages");
@@ -144,6 +144,7 @@ async function main() {
         const profileBundle = await loadSessionProfileBundle(session);
         assert.equal(profileBundle.resolved_profile_id, profile.profile_id);
         assert.ok(profileBundle.profile?.birth, "stored birth profile is available even before base analysis exists");
+         assert.equal(profileBundle.base_analysis, null, "the selected stored profile intentionally has no base analysis");
       });
 
       await check("Fresh Session DC persistence failure is fail-closed without a freeform question", async () => {
@@ -161,53 +162,118 @@ async function main() {
       });
 
       await check("multi-turn answers update DC/Understanding and replan without repeating", async () => {
-        let previousPlan = session.adaptive_ask_plan?.plan_id;
-        const answers = [
-          "目前桌上真实选项是：留任、内部转岗、出去创业做咨询。",
-          "现状是大厂稳定工作，月薪足够但成长停滞，房贷按月在还。",
-          "硬约束是存款只够撑六个月，孩子学费不能断，父母需要照顾。",
-          "风险上最多能接受收入大约腰斩一年（这是我的估计），再差就会回撤。",
-          "不可接受的结果是：家庭现金流断裂、孩子学费中断、或把房子赌进去。",
-          "退出条件是：连续六个月入不敷出，或核心客户全丢就立刻停。",
-          "目标优先级：先保现金流，再看成长，最后才是名义职位。",
-          "补充：如果创业，方向是企业咨询，已有两个潜在客户意向。",
-          "补充：转岗评估窗口在下个季度，这是公司排期写明的。",
-          "期望结果是三年内有可逆的独立咨询收入，同时不破坏家庭稳定。",
-        ];
+        let previousPlan = session.adaptive_ask_plan;
+        let previousQuestionText = [...session.messages].reverse().find((m) => m.role === "assistant")?.content;
+        assert.ok(previousPlan && previousQuestionText);
+        assert.equal(previousQuestionText, previousPlan!.question_text);
+        const answerCounts: Record<string, number> = {};
+        const targetedAnswers: Record<string, (count: number) => string> = {
+          biz_model: () => "企业咨询按项目收费，先从运营改善和现金流诊断切入；已有两名潜在客户意向，启动成本主要是时间和差旅。",
+          desired_outcome: () => "期望三年内形成稳定的独立咨询收入，同时家庭现金流和照护安排保持稳定。",
+          goal_priority: () => "目标优先顺序是先保家庭现金流，再看成长空间，最后才考虑名义职位。",
+          stakes: (count) => count === 1
+            ? "如果判断错，可能损失六个月生活储备，还会影响孩子学费和父母照护。"
+            : "具体来说，最坏是储蓄耗尽后仍没有客户收入，届时要停止创业并恢复受雇收入。",
+          unacceptable: () => "不可接受家庭现金流中断、孩子学费断供，或拿住房抵押去赌创业。",
+          exit_criterion: () => "退出条件是连续六个月入不敷出，或核心客户全丢就立刻停止并回到受雇工作。",
+          hard_constraint: () => "硬约束是存款仅够撑六个月，孩子学费不能中断，父母照护必须落实。",
+          option: () => "现实选项是继续留任、申请内部转岗、先兼职试做企业咨询再考虑离职。",
+          risk_tolerance: () => "明确的风险上限是家庭月收入最多下降一半、持续不超过十二个月；若低于月开支底线就立即回撤。",
+          status_quo: () => "目前大厂工作稳定、月薪覆盖房贷与家用但成长停滞；维持一年大概还能继续储蓄。",
+          timing_window: () => "公司下季度会完成转岗评估，我需要在季度末前决定是否启动创业试点。",
+          past_attempt: () => "过去没有正式创业；做过一次周末咨询试单，花两周找到客户需求但没有收费。",
+          irreversibility: () => "离职会失去固定工资和福利；先不辞职、用周末做付费试点，仍然可以撤回。",
+          validation_capacity: () => "我可以用四周分别访谈两名意向客户，争取拿到一份付费小单，投入上限两万元。",
+        };
+        const assertPlanHasBlueprintTarget = (plan: NonNullable<typeof session.adaptive_ask_plan>) => {
+          const blueprint = session.decision_blueprint!;
+          const direction = blueprint.directions.find((item) => item.direction_id === plan.direction_id);
+          assert.ok(direction, `plan direction ${plan.direction_id} must exist in the current Blueprint`);
+          assert.ok(plan.dir_ids.length > 0, "plan must target at least one DIR");
+          assert.ok(plan.dir_ids.every((id) => blueprint.dir_ids.includes(id) && direction!.dir_ids.includes(id)),
+            `plan DIRs must trace through Blueprint direction: ${JSON.stringify(plan)}`);
+          assert.ok(plan.ddr_ids.length > 0, "plan must target at least one DDR");
+          assert.ok(plan.ddr_ids.every((id) => (blueprint.ddr_ids ?? []).includes(id) || (direction!.ddr_ids ?? []).includes(id)),
+            `plan DDRs must trace through Blueprint: ${JSON.stringify(plan)}`);
+        };
+        assertPlanHasBlueprintTarget(previousPlan!);
         for (let turn = 0; turn < 20; turn++) {
           if (session.decision_understanding?.readiness.can_ask === false) break;
-          const answer = answers[turn] ?? `继续补充第${turn + 1}点：针对当前调查问题，我给出可核验的具体事实说明，期限是月底，若照护无法落实就不接受。`;
+          const currentPlan = session.adaptive_ask_plan!;
+          const assistantQuestion = [...session.messages].reverse().find((m) => m.role === "assistant");
+          assert.equal(assistantQuestion?.content, currentPlan.question_text, "displayed question must match the authorized plan");
+          assert.equal(assistantQuestion?.content, previousQuestionText, "carry forward the exact question the user is answering");
+          assertPlanHasBlueprintTarget(currentPlan);
+          const role = currentPlan.fact_role_codes.map((code) => code.split("/role/").pop() ?? "").find((item) => item in targetedAnswers);
+          assert.ok(role, `no targeted answer fixture for ${currentPlan.fact_role_codes.join(",")}; refusing a generic filler answer`);
+          const answerCount = answerCounts[role!] ?? 0;
+          const answer = targetedAnswers[role!]!(answerCount);
+          answerCounts[role!] = answerCount + 1;
+          const priorDcVersion = session.decision_context!.version;
           const out = await handleUserMessage({ session, userMessage: answer, locale: "zh" });
           await sm.savePOJUSession(out);
           session = (await sm.loadPOJUSession(sid))!;
           assert.ok(session.decision_context && session.decision_understanding);
+          assert.ok(session.decision_context!.version > priorDcVersion, `targeted answer for ${role} must update the DC`);
+          const userTurnId = [...session.messages].reverse().find((m) => m.role === "user")?.client_id;
+          assert.ok(userTurnId, "each handled user answer must have a stable turn id");
+          const writtenFacts = session.decision_context!.reality_facts.filter((fact) => fact.source_turn_id === userTurnId);
+          const writtenConstraints = session.decision_context!.constraints.filter((item) => item.source_turn_id === userTurnId);
+          assert.ok([...writtenFacts, ...writtenConstraints].some((item) => item.related_dir_ids?.some((id) => currentPlan.dir_ids.includes(id))),
+            `answer must write evidence for its active plan target ${currentPlan.dir_ids.join(",")}`);
+          assert.equal(session.decision_understanding!.context_version, session.decision_context!.version,
+            "Understanding must be rebuilt from the just-updated DC");
           if (session.adaptive_ask_plan) {
-            assert.notEqual(session.adaptive_ask_plan.plan_id, previousPlan);
+            const nextPlan = session.adaptive_ask_plan;
+            assert.notEqual(nextPlan.plan_id, currentPlan.plan_id, "replanning must produce a new plan identity");
+            const sameQuestionClarification = Boolean(
+              nextPlan.conflict_clarification &&
+              currentPlan.conflict_clarification?.conflict_id === nextPlan.conflict_clarification.conflict_id,
+            );
+            assert.ok(nextPlan.question_text !== previousQuestionText || sameQuestionClarification,
+              `changed plan_id cannot mask a repeated question outside an explicit same-Conflict clarification: ${nextPlan.question_text}`);
             const assistant = [...session.messages].reverse().find((m) => m.role === "assistant");
-            assert.equal(assistant?.content, session.adaptive_ask_plan.question_text);
-            previousPlan = session.adaptive_ask_plan.plan_id;
+            assert.equal(assistant?.content, nextPlan.question_text, "new assistant message must exactly match the new plan question_text");
+            assertPlanHasBlueprintTarget(nextPlan);
+            previousPlan = nextPlan;
+            previousQuestionText = assistant?.content;
           }
         }
         assert.equal(session.agent_v2?.current_phase, "awaiting_confirmation");
         assert.equal(session.decision_understanding?.readiness.can_ask, false);
+        assert.equal(session.decision_understanding?.readiness.verdict, "ready_for_final_confirm");
+        console.log(`[M6 readiness] verdict=${session.decision_understanding?.readiness.verdict}; can_ask=false; answered_targets=${Object.keys(answerCounts).length}`);
       });
 
       await check("explicit user confirmation through handleUserMessage reaches authority Freeze", async () => {
         const before = session;
+        const freezeProfile = await loadFreezeProfileInput(before);
+        assert.equal(freezeProfile?.profile_id, profile.profile_id, "formal Freeze profile loader must resolve the selected stored profile");
+        assert.ok(freezeProfile?.birth_info, "formal Freeze profile loader must return birth input without base_analysis");
+        assert.equal((await loadSessionProfileBundle(before)).base_analysis, null);
         const out = await handleUserMessage({ session, userMessage: "确认", locale: "zh" });
+        assert.equal(out.decision_context?.status, "final", "the confirmation entry itself must complete Freeze");
+        assert.ok(out.decision_context?.content_hash);
+        const freezeReceipt = out.dc_freeze_receipts?.find((receipt) => receipt.session_id === sid);
+        assert.ok(freezeReceipt, "confirmation-returned Session must include its Freeze Receipt");
+        const profileReceipt = out.dc_profile_receipts?.find((receipt) => receipt.freeze_id === freezeReceipt!.freeze_id);
+        assert.ok(profileReceipt, "confirmation-returned Session must include the Profile Receipt for that Freeze");
+        assert.equal(freezeReceipt!.session_id, sid);
+        assert.equal(profileReceipt!.session_id, sid);
+        assert.equal(profileReceipt!.freeze_id, freezeReceipt!.freeze_id);
+        assert.equal(profileReceipt!.profile_id, profile.profile_id,
+          "Profile Receipt must bind the originally selected stored profile");
+        console.log(`[M6 confirmation] Freeze=${freezeReceipt!.freeze_id}; Profile=${profileReceipt!.profile_id}; Session=${profileReceipt!.session_id}; sufficiency=${evaluateDecisionSufficiency(out.decision_context!).canStop}`);
         await sm.savePOJUSession(out);
         session = (await sm.loadPOJUSession(sid))!;
         assert.ok(session.decision_context);
         assert.equal(session.decision_context!.status, "final");
         assert.ok(session.decision_context!.content_hash);
         assert.ok(session.confirmation_events!.length > (before.confirmation_events?.length ?? 0));
-        const freeze = await wire.ensureSessionFrozenForDelivery(session, {
-          trigger: "sufficiency_end_confirm",
-          profile: { profile_id: "m6-profile", birth_info: DI2_FIXTURE_BIRTH },
-        });
-        assert.ok(freeze.ok, JSON.stringify(freeze));
-        session = (await sm.loadPOJUSession(sid))!;
         assert.ok(session.dc_freeze_receipts?.length && session.dc_profile_receipts?.length);
+        assert.ok(session.dc_freeze_receipts!.some((receipt) => receipt.freeze_id === freezeReceipt!.freeze_id));
+        assert.ok(session.dc_profile_receipts!.some((receipt) =>
+          receipt.session_id === sid && receipt.freeze_id === freezeReceipt!.freeze_id && receipt.profile_id === profile.profile_id));
         assert.equal(evaluateDecisionSufficiency(session.decision_context!).canStop, true);
         const dc = session.decision_context!;
         const factIds = dc.reality_facts.map((f) => f.fact_id);
@@ -318,6 +384,18 @@ async function main() {
         const priorCharges = charges.length;
         const priorAnalysis = analysisCalls;
         const priorPages = pageCalls.length;
+        const deliveredHtml = session.deliverable_html?.delivery;
+        assert.ok(deliveredHtml, "client delivery must persist the filled report HTML");
+        const { decisionReportSlotIds } = await import("../lib/deliverables/fill-delivery");
+        const { deliveryTopicFromSignals } = await import("../lib/llm/pro/delivery/slice-for-page");
+        const topic = deliveryTopicFromSignals({
+          question: session.agent_v2?.original_question ?? session.original_question,
+        });
+        const expectedPaneIds = decisionReportSlotIds(topic);
+        const deliveredPaneIds = Array.from(deliveredHtml!.matchAll(/<section\b[^>]*data-slot-pane="([^"]+)"/g), (match) => match[1]);
+        const deliveredTocIds = Array.from(deliveredHtml!.matchAll(/<button\b[^>]*data-slot="([^"]+)"/g), (match) => match[1]);
+        assert.deepEqual(deliveredPaneIds, expectedPaneIds, "delivered HTML must retain the expected report page order");
+        assert.deepEqual(deliveredTocIds, expectedPaneIds, "delivered contents must link each page exactly once");
         assert.equal(client.di2ReportNeedsAutoStart(session), false);
         const again = await client.runDecisionReportForSession(session, "zh", { pollMs: 5 });
         await drain();

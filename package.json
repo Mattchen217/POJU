@@ -193,6 +193,7 @@
     "test:m4-1-freeze-recovery": "tsx scripts/test-m4-1-freeze-recovery.ts",
     "test:m5-di2-main-path": "tsx scripts/test-m5-di2-main-path.ts",
     "test:m6-di2-full-lifecycle": "tsx scripts/test-m6-di2-full-lifecycle.ts",
+    "test:deliverable-skeleton": "tsx scripts/test-deliverable-skeleton.ts",
     "test:m5-r1-authorization": "tsx scripts/test-m5-r1-authorization.ts",
     "test:m5-r1-fu1": "tsx scripts/test-m5-r1-authorization.ts --only=FU1",
     "test:m5-r1-fu2": "tsx scripts/test-m5-r1-authorization.ts --only=FU2",

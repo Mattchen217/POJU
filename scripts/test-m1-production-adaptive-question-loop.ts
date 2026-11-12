@@ -458,7 +458,7 @@ async function main() {
     await check("M1-07 estimate/unknown/declined not promoted to confirmed", async () => {
       const sid = await seedSession("07", jobDirs);
       await persistAttachedInitAsk(sid, "op_m1_07", "init_07");
-      const cases: Array<{ msg: string; expectStatus: string; expectVer?: string }> = [
+      const cases: Array<{ msg: string; expectStatus: string; expectVer: string }> = [
         { msg: "大概还有四个月存款。", expectStatus: "unverified", expectVer: "user_estimate" },
         { msg: "不知道", expectStatus: "unknown", expectVer: "none" },
         { msg: "不想说", expectStatus: "declined", expectVer: "none" },
@@ -477,7 +477,7 @@ async function main() {
         );
         assert.ok(fact, `fact for ${c.msg}`);
         assert.equal(fact!.status, c.expectStatus);
-        if (c.expectVer) assert.equal(fact!.verification_level, c.expectVer);
+        assert.equal(fact!.verification_level, c.expectVer);
         assert.equal(fact!.user_confirmed, false);
         assert.notEqual(fact!.status, "confirmed");
       }
@@ -1754,6 +1754,9 @@ async function main() {
     const { openConflict, markOpenConflictsUnresolvedInFinal } = await import(
       "../lib/poju/decision-context/conflict-lifecycle"
     );
+    const { buildRealityFact, isLegalFactCombination } = await import(
+      "../lib/poju/decision-context/fact-combination"
+    );
     const { reaggregateDirsOnSession } = await import(
       "../lib/poju/decision-context/na-validation-from-session"
     );
@@ -1768,19 +1771,53 @@ async function main() {
       source_turn_id: string;
       status?: RealityFact["status"];
     }): RealityFact {
-      return {
+      const status = input.status ?? "unverified";
+      const verification_level = status === "unknown" || status === "declined" || status === "not_applicable"
+        ? "none"
+        : "user_asserted";
+      return buildRealityFact({
         fact_id: input.fact_id,
         statement: input.statement,
-        status: input.status ?? "unverified",
-        verification_level: "user_asserted",
+        status,
+        verification_level,
         source_stage: "collecting",
         source_turn_id: input.source_turn_id,
-        user_confirmed: false,
+        has_user_confirm_event: false,
         fact_roles: [input.role],
         related_dir_ids: [input.dir_id],
         updated_at: NOW,
-      };
+      });
     }
+
+    await check("M2.4-R1-FU2 fact status × verification state contract", async () => {
+      const matrix = [
+        { status: "unknown", verification_level: "none", confirmed: false },
+        { status: "declined", verification_level: "none", confirmed: false },
+        { status: "unverified", verification_level: "user_estimate", confirmed: false },
+        { status: "unverified", verification_level: "user_asserted", confirmed: false },
+        { status: "confirmed", verification_level: "user_asserted", confirmed: true },
+        { status: "confirmed", verification_level: "independently_verified", confirmed: false },
+      ] as const;
+      for (const [index, row] of matrix.entries()) {
+        const fact = buildRealityFact({
+          fact_id: `fact_status_matrix_${index}`,
+          statement: `status matrix ${row.status}/${row.verification_level}`,
+          status: row.status,
+          verification_level: row.verification_level,
+          source_stage: "collecting",
+          source_turn_id: `turn_status_matrix_${index}`,
+          has_user_confirm_event: row.status === "confirmed" && row.verification_level === "user_asserted",
+          fact_roles: ["option"],
+          related_dir_ids: [jobDirs[0]!],
+          updated_at: NOW,
+        });
+        assert.equal(isLegalFactCombination(fact.status, fact.verification_level), true);
+        assert.equal(fact.user_confirmed, row.confirmed);
+        if (row.status === "unknown" || row.status === "declined") assert.equal(fact.user_confirmed, false);
+      }
+      assert.equal(isLegalFactCombination("unknown", "user_asserted"), false);
+      assert.equal(isLegalFactCombination("declined", "user_estimate"), false);
+    });
 
     async function persistFactsAndConflicts(
       sid: string,
@@ -1901,6 +1938,8 @@ async function main() {
           source_turn_id: `seed_ud_${status}`,
           status,
         });
+        assert.equal(old.verification_level, "none", `${status} seed must use its legal epistemic level`);
+        assert.equal(old.user_confirmed, false);
         s = await persistFactsAndConflicts(sid, [old], [], `op_ud_${status}_seed`);
         const contra = interpretUserAnswer({
           session: s,

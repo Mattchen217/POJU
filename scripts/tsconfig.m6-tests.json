@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "../next-env.d.ts",
+    "./test-m6-di2-full-lifecycle.ts",
+    "./test-deliverable-skeleton.ts"
+  ],
+  "exclude": []
+}

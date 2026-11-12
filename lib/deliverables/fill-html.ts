@@ -47,18 +47,53 @@ export function listTemplateSlots(template: string): string[] {
 }
 
 /**
+ * Blank the content of each deliverable slot while retaining its wrapper.
+ * Slot bodies are generated HTML and may contain nested divs, so a non-greedy
+ * `.*?</div>` matcher would stop at the first child rather than the slot end.
+ */
+function blankDeliverableSlotBodies(html: string): string {
+  const openingDiv = /<div\b[^>]*>/gi;
+  const divTags = /<\/?div\b[^>]*>/gi;
+  let cursor = 0;
+  let output = "";
+  let match: RegExpExecArray | null;
+
+  while ((match = openingDiv.exec(html)) !== null) {
+    const openTag = match[0];
+    const classMatch = openTag.match(/\bclass\s*=\s*(["'])(.*?)\1/i);
+    if (!classMatch || !classMatch[2].split(/\s+/).includes("deliverable-slot")) continue;
+
+    divTags.lastIndex = openingDiv.lastIndex;
+    let depth = 1;
+    let closingStart = -1;
+    let closingEnd = -1;
+    let tag: RegExpExecArray | null;
+    while ((tag = divTags.exec(html)) !== null) {
+      if (/^<\s*\//.test(tag[0])) depth--;
+      else if (!/\/\s*>$/.test(tag[0])) depth++;
+      if (depth === 0) {
+        closingStart = tag.index;
+        closingEnd = divTags.lastIndex;
+        break;
+      }
+    }
+    if (closingStart < 0) continue;
+
+    output += html.slice(cursor, openingDiv.lastIndex) + html.slice(closingStart, closingEnd);
+    cursor = closingEnd;
+    openingDiv.lastIndex = closingEnd;
+  }
+  return output + html.slice(cursor);
+}
+
+/**
  * Assert fill did not change the chrome/tag skeleton outside slot bodies.
  * Slot containers (`.deliverable-slot`) and {{SLOT_*}} tokens are blanked first
  * so filled HTML fragments inside slots do not count as structure drift.
  */
 export function assertSkeletonUnchanged(before: string, after: string): void {
-  const tagSkeleton = (html: string): string =>
-    html
-      // Ignore filled bodies inside dedicated slot wrappers.
-      .replace(
-        /<div class="deliverable-slot"[^>]*>[\s\S]*?<\/div>/gi,
-        '<div class="deliverable-slot"></div>',
-      )
+  const normalized = (html: string): string =>
+    blankDeliverableSlotBodies(html)
       .replace(/\{\{[A-Z][A-Z0-9_]*\}\}/g, "")
       .replace(/<p class="slot-empty">—<\/p>/g, "")
       // Drop script payloads (glossary JSON, etc.) — content-only.
@@ -68,7 +103,7 @@ export function assertSkeletonUnchanged(before: string, after: string): void {
       .replace(/>[^<]*</g, "><")
       .replace(/\s+/g, "");
 
-  if (tagSkeleton(before) !== tagSkeleton(after)) {
+  if (normalized(before) !== normalized(after)) {
     throw new Error(
       "Deliverable HTML tag skeleton changed during fill (chrome/structure drift)",
     );
