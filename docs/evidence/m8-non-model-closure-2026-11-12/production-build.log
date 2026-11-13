@@ -1,0 +1,344 @@
+
+> pojulife@0.1.0 build D:\POJU\pojulife
+> next build --webpack
+
+▲ Next.js 16.2.4 (webpack)
+- Environments: .env.local
+- Experiments (use with caution):
+  ✓ webpackBuildWorker
+  ✓ webpackMemoryOptimizations
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+⚠ Compiled with warnings in 28.6s
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/poju/breakthrough-core/route.ts
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/poju/breakthrough-core/route.ts
+
+✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+⚠ Compiled with warnings in 9.0s
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+/_next/static/media/hana-ui.3e760c2e.wasm is 3.35 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+✓ Compiled successfully in 38.3s
+  Running TypeScript ...
+  Finished TypeScript in 28.7s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/210) ...
+  Generating static pages using 15 workers (52/210) 
+  Generating static pages using 15 workers (104/210) 
+  Generating static pages using 15 workers (157/210) 
+✓ Generating static pages using 15 workers (210/210) in 2.7s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /_not-found
+├ ● /[locale]
+│ ├ /en
+│ ├ /es
+│ ├ /fr
+│ └ /zh
+├ ● /[locale]/account/household/accept
+│ ├ /en/account/household/accept
+│ ├ /es/account/household/accept
+│ ├ /fr/account/household/accept
+│ └ /zh/account/household/accept
+├ ● /[locale]/app
+│ ├ /en/app
+│ ├ /es/app
+│ ├ /fr/app
+│ └ /zh/app
+├ ● /[locale]/archive
+│ ├ /en/archive
+│ ├ /es/archive
+│ ├ /fr/archive
+│ └ /zh/archive
+├ ƒ /[locale]/archive/[id]
+├ ● /[locale]/base-analysis-audit
+│ ├ /en/base-analysis-audit
+│ ├ /es/base-analysis-audit
+│ ├ /fr/base-analysis-audit
+│ └ /zh/base-analysis-audit
+├ ƒ /[locale]/base-analysis-audit/[id]
+├ ƒ /[locale]/chat
+├ ƒ /[locale]/classic
+├ ● /[locale]/complete-email
+│ ├ /en/complete-email
+│ ├ /es/complete-email
+│ ├ /fr/complete-email
+│ └ /zh/complete-email
+├ ƒ /[locale]/contact
+├ ƒ /[locale]/cookies
+├ ● /[locale]/dev/delivery-slots
+│ ├ /en/dev/delivery-slots
+│ ├ /es/dev/delivery-slots
+│ ├ /fr/dev/delivery-slots
+│ └ /zh/dev/delivery-slots
+├ ƒ /[locale]/disclaimer
+├ ● /[locale]/five-wind-cards
+│ ├ /en/five-wind-cards
+│ ├ /es/five-wind-cards
+│ ├ /fr/five-wind-cards
+│ └ /zh/five-wind-cards
+├ ● /[locale]/forgot-password
+│ ├ /en/forgot-password
+│ ├ /es/forgot-password
+│ ├ /fr/forgot-password
+│ └ /zh/forgot-password
+├ ƒ /[locale]/glossary
+├ ƒ /[locale]/login
+├ ● /[locale]/modal-pwa-install
+│ ├ /en/modal-pwa-install
+│ ├ /es/modal-pwa-install
+│ ├ /fr/modal-pwa-install
+│ └ /zh/modal-pwa-install
+├ ● /[locale]/oauth-popup
+│ ├ /en/oauth-popup
+│ ├ /es/oauth-popup
+│ ├ /fr/oauth-popup
+│ └ /zh/oauth-popup
+├ ● /[locale]/oracle
+│ ├ /en/oracle
+│ ├ /es/oracle
+│ ├ /fr/oracle
+│ └ /zh/oracle
+├ ● /[locale]/oracle/reading
+│ ├ /en/oracle/reading
+│ ├ /es/oracle/reading
+│ ├ /fr/oracle/reading
+│ └ /zh/oracle/reading
+├ ● /[locale]/oracle/stage-1
+│ ├ /en/oracle/stage-1
+│ ├ /es/oracle/stage-1
+│ ├ /fr/oracle/stage-1
+│ └ /zh/oracle/stage-1
+├ ƒ /[locale]/poju
+├ ● /[locale]/poju/archive
+│ ├ /en/poju/archive
+│ ├ /es/poju/archive
+│ ├ /fr/poju/archive
+│ └ /zh/poju/archive
+├ ● /[locale]/poju/payment-success
+│ ├ /en/poju/payment-success
+│ ├ /es/poju/payment-success
+│ ├ /fr/poju/payment-success
+│ └ /zh/poju/payment-success
+├ ƒ /[locale]/poju/session/[sessionId]
+├ ƒ /[locale]/poju/session/[sessionId]/prepare
+├ ƒ /[locale]/poju/session/[sessionId]/preparing
+├ ƒ /[locale]/poju/session/[sessionId]/refund
+├ ƒ /[locale]/privacy
+├ ƒ /[locale]/profile/[profileId]
+├ ● /[locale]/profile/setup
+│ ├ /en/profile/setup
+│ ├ /es/profile/setup
+│ ├ /fr/profile/setup
+│ └ /zh/profile/setup
+├ ƒ /[locale]/refund
+├ ● /[locale]/reset-password
+│ ├ /en/reset-password
+│ ├ /es/reset-password
+│ ├ /fr/reset-password
+│ └ /zh/reset-password
+├ ƒ /[locale]/signup
+├ ● /[locale]/start
+│ ├ /en/start
+│ ├ /es/start
+│ ├ /fr/start
+│ └ /zh/start
+├ ƒ /[locale]/terms
+├ ● /[locale]/thinking-pulse-demo
+│ ├ /en/thinking-pulse-demo
+│ ├ /es/thinking-pulse-demo
+│ ├ /fr/thinking-pulse-demo
+│ └ /zh/thinking-pulse-demo
+├ ● /[locale]/verify
+│ ├ /en/verify
+│ ├ /es/verify
+│ ├ /fr/verify
+│ └ /zh/verify
+├ ○ /500
+├ ƒ /api/account/delete
+├ ƒ /api/account/pass-refund
+├ ƒ /api/account/portal
+├ ƒ /api/account/preferences
+├ ƒ /api/account/subscription
+├ ƒ /api/account/summary
+├ ƒ /api/atmos/daily
+├ ƒ /api/auth/callback
+├ ƒ /api/auth/complete-email
+├ ƒ /api/auth/complete-email/verify
+├ ƒ /api/auth/confirm
+├ ƒ /api/auth/forgot-password
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/otp/send
+├ ƒ /api/auth/otp/verify
+├ ƒ /api/auth/resend-signup
+├ ƒ /api/auth/signup
+├ ƒ /api/auth/update-password
+├ ƒ /api/auth/verify-recovery
+├ ƒ /api/auth/verify-signup
+├ ƒ /api/checkout/confirm
+├ ƒ /api/checkout/create
+├ ƒ /api/companion/job
+├ ƒ /api/dev/base-analysis-audit
+├ ƒ /api/dev/base-analysis-audit/[id]
+├ ƒ /api/email/send
+├ ƒ /api/household/accept-seat
+├ ƒ /api/household/bind-oauth/callback
+├ ƒ /api/household/bind-seat
+├ ƒ /api/household/bind-seat-signup
+├ ƒ /api/household/bind-seat-verify
+├ ƒ /api/household/invite-seat
+├ ƒ /api/household/me
+├ ƒ /api/household/unbind-seat
+├ ƒ /api/inngest
+├ ƒ /api/joint/[id]
+├ ƒ /api/joint/[id]/cancel
+├ ƒ /api/joint/[id]/retry-start
+├ ƒ /api/joint/[id]/start
+├ ƒ /api/joint/accept
+├ ƒ /api/joint/agree
+├ ƒ /api/joint/bound-peer
+├ ƒ /api/joint/create
+├ ƒ /api/joint/list
+├ ƒ /api/joint/lookup-partner
+├ ƒ /api/location/ip-locate
+├ ƒ /api/location/reverse-geocode
+├ ƒ /api/location/search-city
+├ ƒ /api/ops/candidates
+├ ƒ /api/ops/delivery-lab/[lab_id]
+├ ƒ /api/ops/delivery-lab/[lab_id]/approve
+├ ƒ /api/ops/delivery-lab/[lab_id]/chat
+├ ƒ /api/ops/delivery-lab/[lab_id]/chat/rerun
+├ ƒ /api/ops/delivery-lab/[lab_id]/chat/undo
+├ ƒ /api/ops/delivery-lab/[lab_id]/gate
+├ ƒ /api/ops/delivery-lab/[lab_id]/jobs/segment2
+├ ƒ /api/ops/delivery-lab/[lab_id]/jobs/synthesis
+├ ƒ /api/ops/delivery-lab/[lab_id]/rerun
+├ ƒ /api/ops/delivery-lab/[lab_id]/run
+├ ƒ /api/ops/delivery-lab/create
+├ ƒ /api/ops/login
+├ ƒ /api/ops/refund-session-ping
+├ ƒ /api/oracle/draw
+├ ƒ /api/oracle/full-reading
+├ ƒ /api/passes/atmos-status
+├ ƒ /api/passes/unlock
+├ ƒ /api/payments/create
+├ ƒ /api/payments/refund
+├ ƒ /api/payments/verify
+├ ƒ /api/poju
+├ ƒ /api/poju/answer-interpretation
+├ ƒ /api/poju/breakthrough-core
+├ ƒ /api/poju/breakthrough-core/agenda
+├ ƒ /api/poju/breakthrough-core/status
+├ ƒ /api/poju/chat
+├ ƒ /api/poju/decision-authority
+├ ƒ /api/poju/decision-report
+├ ƒ /api/poju/delivery-email
+├ ƒ /api/poju/delivery-tts
+├ ƒ /api/poju/final-delivery
+├ ƒ /api/poju/final-delivery/cancel
+├ ƒ /api/poju/final-delivery/continue
+├ ƒ /api/poju/final-delivery/status
+├ ƒ /api/poju/final-delivery/task
+├ ƒ /api/poju/matrix-narrative
+├ ƒ /api/poju/situation-analysis
+├ ƒ /api/poju/synthesis
+├ ƒ /api/poju/synthesis/status
+├ ƒ /api/profile/base-analysis-v2/phase/abort
+├ ƒ /api/profile/base-analysis-v2/phase/compute
+├ ƒ /api/profile/base-analysis-v2/phase/evidence
+├ ƒ /api/profile/base-analysis-v2/phase/finalize
+├ ƒ /api/profile/base-analysis-v2/phase/narrative
+├ ƒ /api/profile/base-analysis-v2/stream
+├ ƒ /api/profile/base-analysis/status
+├ ƒ /api/profile/base-analysis/stream
+├ ƒ /api/profile/calculate
+├ ƒ /api/profile/regenerate-chart
+├ ƒ /api/pwa-icon
+├ ƒ /api/webhooks/stripe
+├ ○ /apple-icon
+├ ○ /icon
+├ ○ /kv
+├ ƒ /llms.txt
+├ ○ /ops
+├ ○ /ops/delivery-lab
+├ ƒ /ops/delivery-lab/[lab_id]
+├ ○ /ops/delivery-lab/di2
+├ ƒ /ops/refund-check
+├ ○ /oracle-fronts-preview
+├ ○ /oracle-test
+├ ○ /robots.txt
+├ ○ /sitemap.xml
+├ ○ /unsubscribe
+└ ƒ /v2-landing
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

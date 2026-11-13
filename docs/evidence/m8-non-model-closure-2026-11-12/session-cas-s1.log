@@ -1,0 +1,44 @@
+
+> pojulife@0.1.0 test:session-cas-s1 D:\POJU\pojulife
+> tsx scripts/test-session-cas-s1.ts
+
+phase3-s1-session-cas
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+  PASS  dual-rev: both absent → logical 0
+  PASS  dual-rev: mismatch → REVISION_MIRROR_MISMATCH
+  PASS  dual-rev: one-sided → REVISION_MIRROR_MISMATCH
+  PASS  dual-rev: illegal type → REVISION_MIRROR_MISMATCH
+  PASS  message client_id identical → idempotent
+  PASS  message client_id conflict → hard fail
+  PASS  message different client_id → both kept
+  PASS  didDecisionContextChange detects DC content only
+  PASS  create-if-absent inits dual rev 0; second create does not overwrite
+  PASS  createPOJUSession production path is create-if-absent
+  PASS  non-DC write bumps session_revision only
+  PASS  DC write bumps both revisions
+  PASS  CAS conflict replays same operation_id
+  PASS  revision mirror hard-fail on load/mutate path
+  PASS  loadPOJUSession: corrupted row mirror → REVISION_MIRROR_MISMATCH
+  PASS  savePOJUSessionCore thin CAS wrapper bumps session rev
+  PASS  message append idempotent across mutate retries
+
+phase3-s1-session-cas: 17 passed

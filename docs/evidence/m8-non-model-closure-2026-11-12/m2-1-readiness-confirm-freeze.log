@@ -1,0 +1,269 @@
+
+> pojulife@0.1.0 test:m2-1-readiness-confirm-freeze D:\POJU\pojulife
+> tsx scripts/test-m2-1-readiness-confirm-freeze.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M2.1 readiness confirm → Freeze + promotion contract
+  PASS  M21-static agent wires confirmUnderstandingAndFreeze
+  PASS  M21-C1 estimate stays unverified + user_estimate; event derives user_confirmed=true
+  PASS  M21-C2 user_asserted + constraint promote with Confirmation Events
+  PASS  M21-C3 missing source_turn_id → fail-closed, not user_confirmed
+  PASS  M21-C4 independently_verified / declined / unknown never promote
+  PASS  M21-C5 every user_confirmed fact/constraint has Confirmation Event
+  PASS  M21-C6 repeat confirm does not duplicate events or versions
+  PASS  M21-C7 event provenance failure → fail-closed, no partial state
+  PASS  M21-C8 insufficient sufficiency → cannot Freeze; can continue collecting
+  PASS  M21-C9 stale event with wrong source cannot confirm new source
+  PASS  M21-C10 confirmation_turn_id must be real user confirm message
+  PASS  M21-C11 first event ok then later provenance fail → no partial state
+  PASS  M21-C12 reuse existing event with forged confirmation_turn_id → fail-closed
+  PASS  M21-C13 reuse prior legitimate confirmation_turn_id (not this turn) allowed
+  PASS  M21-C14 reuse structurally illegal existing event → fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M21-01 fresh session → adaptive first Q
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 4,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 5,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 6,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 7,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 8,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 9,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 10,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 11,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 12,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 13,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 14,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 15,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M21-02 answer until readiness ready_for_final_confirm (no forged known)
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f788eead-968c-4e0e-a529-23529fef15d7","has_profile":false}
+  PASS  M21-03 user 确认 → promote → Freeze final + hash + contract
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"698ff33e-3a20-41a5-9f40-696f1cce2d84","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"698ff33e-3a20-41a5-9f40-696f1cce2d84","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M21-04 freeze is fail-closed without readiness
+
+M2.1 result: 19 passed, 0 failed

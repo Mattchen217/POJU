@@ -1,0 +1,137 @@
+
+> pojulife@0.1.0 test:m3-decision-report D:\POJU\pojulife
+> tsx scripts/test-m3-decision-report.ts
+
+M3 Decision Intake 2.0 — Personal Analysis + eight-page report
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+  PASS  chart projection is real local calculation with citeable lines
+  PASS  valid analysis → artifact with deterministic target, refs and boundaries
+  PASS  analysis may not upgrade an unverified statement to confirmed_fact
+  PASS  unresolved DIR / conflict must be carried into unresolved_conditions
+  PASS  hypothesis class without a hypothesis ref is refused
+  PASS  pattern sections must anchor to the local chart
+  PASS  P5 paths validate with conditions/cost/risk/reversibility/exit/ranking
+  PASS  P5 must cite unresolved items that may change ranking
+  PASS  P6 is one experiment, not a day-by-day schedule
+  PASS  P8 needs continue / adjust / stop / rerun
+  PASS  visible body may not carry raw DC JSON
+[decision-report] analysis completed {
+  job_id: 'dr_sess_m3_main_1794540759860_yjnddp',
+  analysis_id: 'pa_ctxav1_14fa77a2454c'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_main_1794540759860_yjnddp',
+  freeze_id: 'ctx_a@v1',
+  generation: 1
+}
+  PASS  Freeze → Personal Analysis → eight pages → fenced completion (inline relay)
+  PASS  status payload exposes analysis + pages + result for client mirroring
+  PASS  completed report survives the execution TTL as a durable product record
+  PASS  same Freeze + profile start is idempotent (no duplicate job)
+[decision-report] analysis reused {
+  job_id: 'dr_sess_m3_main_1794540759977_uv2pro',
+  analysis_id: 'pa_ctxav1_14fa77a2454c'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_main_1794540759977_uv2pro',
+  freeze_id: 'ctx_a@v1',
+  generation: 2
+}
+  PASS  regenerate → new generation, analysis reused, old Freeze report untouched
+[decision-report] analysis completed {
+  job_id: 'dr_sess_m3_main_1794540760172_9i0yeg',
+  analysis_id: 'pa_ctxav2_295484e05ff5'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_main_1794540760172_9i0yeg',
+  freeze_id: 'ctx_a@v2',
+  generation: 3
+}
+  PASS  profile change (new Freeze with another birth) → new profile hash → new analysis
+  PASS  superseded Freeze cannot start; its finished report stays readable
+  PASS  server-side tamper of a sealed Freeze record is detected at start
+  PASS  unsealed / unprofiled Freeze cannot start (no client-supplied DC or chart)
+[decision-report] analysis completed {
+  job_id: 'dr_sess_m3_topic_1794540760510_h02uhb',
+  analysis_id: 'pa_ctxtv1_0c22d7bf3b78'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_topic_1794540760510_h02uhb',
+  freeze_id: 'ctx_t@v1',
+  generation: 1
+}
+  PASS  topic-gated 07 is generated when the decision topic applies
+[decision-report] analysis attempt failed {
+  job_id: 'dr_sess_m3_retry_analysis_1794540760674_6m0ubs',
+  attempt: 1,
+  reason: 'missing_section:personal_pattern_analysis',
+  transport: false
+}
+[decision-report] analysis completed {
+  job_id: 'dr_sess_m3_retry_analysis_1794540760674_6m0ubs',
+  analysis_id: 'pa_ctxrv1_53982fbce046'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_retry_analysis_1794540760674_6m0ubs',
+  freeze_id: 'ctx_r@v1',
+  generation: 1
+}
+  PASS  analysis 1+1: first invalid output retried once, then completes
+[decision-report] analysis completed {
+  job_id: 'dr_sess_m3_continue_1794540760838_ral4gz',
+  analysis_id: 'pa_ctxcv1_ee1d2371c857'
+}
+[decision-report] page attempt failed {
+  job_id: 'dr_sess_m3_continue_1794540760838_ral4gz',
+  page: '05',
+  attempt: 1,
+  reason: 'parse_failed'
+}
+[decision-report] page attempt failed {
+  job_id: 'dr_sess_m3_continue_1794540760838_ral4gz',
+  page: '05',
+  attempt: 2,
+  reason: 'parse_failed'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_continue_1794540760838_ral4gz',
+  freeze_id: 'ctx_c@v1',
+  generation: 1
+}
+  PASS  page failure exhausts 1+1 → retryable stop; Continue resumes from checkpoints
+[decision-report] took over session lock { session_id: 'sess_m3_fence', why: 'replace_live_job' }
+[decision-report] analysis completed {
+  job_id: 'dr_sess_m3_fence_1794540761018_ehhcph',
+  analysis_id: 'pa_ctxfv1_64444771437b'
+}
+[decision-report] report completed {
+  job_id: 'dr_sess_m3_fence_1794540761018_ehhcph',
+  freeze_id: 'ctx_f@v1',
+  generation: 2
+}
+  PASS  superseded generation cannot write pages or complete
+  PASS  stale running job with no live lease → interrupted + retryable (never shown complete)
+  PASS  legacy delivery write-back refuses DI2 report rows
+  PASS  client selectors: DI2 detection, auto-start only once per Freeze, resume when pending
+
+27 passed, 0 failed
