@@ -229,17 +229,17 @@ async function main() {
     });
   }
 
-  function pageJson(pageId: DecisionPageId, opts?: { scheduleLeak?: boolean; skipUnknown?: boolean }): string {
+  function pageJson(pageId: DecisionPageId, opts?: { scheduleLeak?: boolean; skipUnknown?: boolean; extraRefs?: string[] }): string {
     const blocks = DECISION_PAGE_SCHEMAS[pageId].segments.map((seg) => ({
       segment_id: seg.id,
       heading: "",
       body: "这一段给出与当前决策直接相关的白话结论和理由，并说明它依赖哪些已确认的情况。",
       basis: "依据冻结事实与个人分析",
-      evidence_refs: ["DEF", "PA-pattern-1"],
+      evidence_refs: ["DEF", "PA-pattern-1", "dir_status_quo", ...(opts?.extraRefs ?? [])],
     }));
     const out: Record<string, unknown> = { title: `${DECISION_PAGE_SCHEMAS[pageId].title}`, blocks };
     if (pageId === "05") {
-      const refs = opts?.skipUnknown ? ["f_conf"] : ["f_conf", "dir_options", "cf1"];
+      const refs = opts?.skipUnknown ? ["DEF", "PA-pattern-1", "f_conf"] : ["DEF", "PA-pattern-1", "f_conf", "dir_options", "dir_status_quo", "cf1", ...(opts?.extraRefs ?? [])];
       out.paths = [
         {
           path_id: "P1",
@@ -263,7 +263,7 @@ async function main() {
           reversibility: "可在下个机会出现时再评估",
           exit_condition: "现岗出现裁员信号",
           ranking_basis: "稳定性已知但收入目标落空",
-          evidence_refs: ["f_conf", "c1"],
+          evidence_refs: ["DEF", "PA-pattern-1", "f_conf", "c1", "dir_status_quo", ...(opts?.extraRefs ?? [])],
         },
       ];
     }
@@ -276,7 +276,7 @@ async function main() {
         success: "职责描述具体且与预期一致",
         if_fail: "转向维持现岗路径",
         defer_costs: "等待正式合同再做职责确认",
-        evidence_refs: ["dir_options", "c1"],
+        evidence_refs: ["DEF", "PA-pattern-1", "dir_options", "c1"],
       };
     }
     if (pageId === "08") {
@@ -286,7 +286,7 @@ async function main() {
         adjust_when: "通勤成本高于估计",
         stop_when: "出现不可接受结果的迹象",
         rerun_when: "出现新的工作邀请或家庭情况变化",
-        evidence_refs: ["c1", "dir_options"],
+        evidence_refs: ["DEF", "PA-pattern-1", "c1", "dir_options"],
       };
     }
     return JSON.stringify(out);
@@ -300,14 +300,15 @@ async function main() {
     }
     return { content: goodAnalysisJson(analysisVariant), model: "test-hook", tokens_used: 10 };
   });
-  pages.__setDecisionReportPageModelForTests(async ({ pageId }) => {
+  pages.__setDecisionReportPageModelForTests(async ({ pageId, user }) => {
     pageCalls.push(pageId);
     const left = pageFailures.get(pageId) ?? 0;
     if (left > 0) {
       pageFailures.set(pageId, left - 1);
       return { content: "not json", model: "test-hook", tokens_used: 1 };
     }
-    return { content: pageJson(pageId), model: "test-hook", tokens_used: 5 };
+    const extraRefs = user.includes("f_extra") ? ["f_extra"] : [];
+    return { content: pageJson(pageId, { extraRefs }), model: "test-hook", tokens_used: 5 };
   });
 
   const projectionStrong = pa.buildProfileProjection({

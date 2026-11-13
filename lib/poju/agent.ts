@@ -13,6 +13,7 @@ import {
   isFinalUnderstandingAddMoreText,
   isFinalUnderstandingConfirmText,
   sessionReadyForFinalConfirm,
+  sessionEligibleForFinalConfirm,
 } from "@/lib/poju/decision-intake/confirm-and-freeze";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
@@ -165,6 +166,11 @@ export interface HandleInput {
   };
   /** @internal Test-only fault injection for M1 adaptive-loop integration tests. */
   __testOnlyM1Hooks?: AdaptiveTurnTestHooks;
+}
+
+function isInternalSystemTurn(text: string): boolean {
+  if (text === DYAD_CONTINUE_SYSTEM) return true;
+  return /^\[SYSTEM: User (?:completed the action|modified the action|chose not to do this action|updated this action): "[\s\S]*"(?:\. Feedback: "[\s\S]*")?\. Please acknowledge and continue\.\]$/.test(text);
 }
 
 type LLMApiPayload = {
@@ -806,9 +812,40 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
   const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal, attachment } = input;
+  if (typeof userMessage !== "string" || !userMessage.trim()) {
+    return sessionIn;
+  }
+  if (userMessage.startsWith("[SYSTEM:") && !isInternalSystemTurn(userMessage)) {
+    return handleRuleRejection(sessionIn, userMessage, "jailbreak", locale);
+  }
+  const internalSystemTurn = isInternalSystemTurn(userMessage);
+  const currentFreeze = sessionIn.decision_context && (sessionIn.dc_freeze_receipts ?? []).some((r) =>
+    r.session_id === sessionIn.session_id &&
+    r.context_id === sessionIn.decision_context?.context_id &&
+    r.context_version === sessionIn.decision_context?.version &&
+    r.context_hash === sessionIn.decision_context?.content_hash);
+  const expired = Number.isFinite(Date.parse(sessionIn.expires_at)) && Date.parse(sessionIn.expires_at) <= Date.now();
+  const terminalReason = !internalSystemTurn
+    ? currentFreeze ? "context_frozen" as const : expired ? "session_expired" as const : null
+    : null;
+  if (terminalReason) {
+    return {
+      ...sessionIn,
+      messages: [...sessionIn.messages, {
+        role: "assistant",
+        content: terminalReason === "context_frozen"
+          ? "This decision context is frozen. Start a new decision session to add information."
+          : "This session has expired. Start a new session to continue.",
+        timestamp: new Date().toISOString(),
+        meta: { di2_input_rejection: terminalReason },
+      }],
+    };
+  }
+  // A frozen DI2 Session is immutable input state. Report recovery is handled by
+  // the report client/status APIs; feeding another chat turn cannot reopen intake.
   const session = ensureSessionCycles(sessionIn);
   const isOpeningSignal = userMessage.trim() === "__OPENING__";
-  const isSystemMessage = userMessage.startsWith("[SYSTEM:") || isOpeningSignal;
+  const isSystemMessage = internalSystemTurn || isOpeningSignal;
 
   const externalHandoffPending = findPendingToolInjection(session);
   const injectionPrep = prepareToolInjectionTurn(session, {
@@ -986,18 +1023,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   // When Understanding already stopped asking, user confirm promotes facts legally,
   // reaggregates DIRs, and freezes via sufficiency wire. No fake DIR known.
   {
-    const phaseForConfirm =
-      normalizeAgentPhase(ensureAgentV2(sessionForLlm).current_phase) ??
-      ensureAgentV2(sessionForLlm).current_phase;
     const confirmEligible =
       !isSystemMessage &&
       !isOpeningSignal &&
       Boolean(userMessage.trim()) &&
-      sessionReadyForFinalConfirm(sessionForLlm) &&
-      (phaseForConfirm === "awaiting_confirmation" ||
-        phaseForConfirm === "collecting_context") &&
-      (isFinalUnderstandingConfirmText(userMessage) ||
-        isFinalUnderstandingAddMoreText(userMessage));
+      sessionEligibleForFinalConfirm(sessionForLlm, userMessage);
     if (confirmEligible) {
       const lastUser = [...messagesWithUser]
         .reverse()

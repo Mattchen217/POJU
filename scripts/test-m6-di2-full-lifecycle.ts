@@ -72,7 +72,17 @@ async function main() {
   });
   pages.__setDecisionReportPageModelForTests(async ({ pageId }) => {
     pageCalls.push(pageId);
-    return { content: JSON.stringify(remapEvidenceIds(JSON.parse(di2PageJson(pageId)))), model: "m6-test-hook", tokens_used: 1 };
+    const page = JSON.parse(di2PageJson(pageId)) as Record<string, unknown>;
+    const requiredRefs = [...new Set(["DEF", "PA-pattern-1", ...Object.values(evidenceIdMap)])];
+    const attachRefs = (value: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      if (Array.isArray(value)) { value.forEach(attachRefs); return; }
+      const row = value as Record<string, unknown>;
+      if (Array.isArray(row.evidence_refs)) row.evidence_refs = [...new Set([...row.evidence_refs, ...requiredRefs])];
+      Object.values(row).forEach(attachRefs);
+    };
+    attachRefs(page);
+    return { content: JSON.stringify(remapEvidenceIds(page)), model: "m6-test-hook", tokens_used: 1 };
   });
 
   const charges: string[] = [];
@@ -282,7 +292,15 @@ async function main() {
         const constraintId = dc.constraints[0]?.constraint_id ?? confirmedId;
         const hypothesisId = dc.hypotheses[0]?.hypothesis_id ?? confirmedId;
         const dirId = dc.dirs[0]?.dir_id ?? confirmedId;
-        evidenceIdMap = { f_unv: estimateId, f_conf: confirmedId, f_est: estimateId, c1: constraintId, h1: hypothesisId, dir_options: dirId, cf1: dirId };
+        evidenceIdMap = {
+          ...Object.fromEntries(dc.reality_facts.map((f) => [f.fact_id, f.fact_id])),
+          ...Object.fromEntries(dc.constraints.map((c) => [c.constraint_id, c.constraint_id])),
+          ...Object.fromEntries(dc.hypotheses.map((h) => [h.hypothesis_id, h.hypothesis_id])),
+          ...Object.fromEntries(dc.dirs.map((d) => [d.dir_id, d.dir_id])),
+          ...Object.fromEntries(dc.conflicts.map((c) => [c.conflict_id, c.conflict_id])),
+          f_unv: estimateId, f_conf: confirmedId, f_est: estimateId, c1: constraintId,
+          h1: hypothesisId, dir_options: dirId, cf1: dirId,
+        };
         const analysisDraft = JSON.parse(di2AnalysisJson()) as {
           decision_tendencies: Array<{ basis_class: string; evidence_refs: string[] }>;
           decision_path_implications: Array<{ basis_class: string; evidence_refs: string[] }>;

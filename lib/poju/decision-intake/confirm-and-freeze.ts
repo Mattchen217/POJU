@@ -40,6 +40,7 @@ import type {
   RealityFact,
 } from "@/lib/poju/decision-context/types";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 
 const CONFIRM_RE =
   /^(确认|同意|没问题|可以|正确|好的|是的|确认无误|yes|y|confirm|ok|okay|looks\s*good)([。.!！\s]|$)/i;
@@ -64,6 +65,19 @@ export function sessionReadyForFinalConfirm(session: POJUSessionState): boolean 
   return (
     u.readiness.verdict === "ready_for_final_confirm" ||
     u.readiness.verdict === "hard_budget_exhausted"
+  );
+}
+
+/** Shared contract for the production confirm turn and the manual DI2 LAB control. */
+export function sessionEligibleForFinalConfirm(
+  session: POJUSessionState,
+  text: string,
+): boolean {
+  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
+  return (
+    sessionReadyForFinalConfirm(session) &&
+    (phase === "awaiting_confirmation" || phase === "collecting_context") &&
+    (isFinalUnderstandingConfirmText(text) || isFinalUnderstandingAddMoreText(text))
   );
 }
 

@@ -481,7 +481,7 @@ export type NeedItem =
     };
 
 export type PersonalPatternInsightBlock = {
-  status: "unavailable" | "none" | "available";
+  status: "unavailable" | "pending" | "none" | "available";
   reason?: string;
   insights: Array<{ text: string; source: string; related_dir_ids: string[] }>;
 };

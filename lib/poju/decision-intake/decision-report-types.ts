@@ -238,6 +238,20 @@ export type DecisionReportJobResult = {
   model: string;
   tokens_used: number;
   completed_at: string;
+  evidence_coverage_matrix?: ReportEvidenceCoverageEntry[];
+};
+
+export type ReportEvidenceCoverageEntry = {
+  source_id: string;
+  source_type: string;
+  status: string;
+  related_direction_id: string | null;
+  expected_sections: string[];
+  actual_sections: string[];
+  evidence_reference: string | null;
+  coverage_result: "covered" | "not_applicable" | "missing";
+  missing_reason: string | null;
+  applicability_reason?: string | null;
 };
 
 export function personalAnalysisIdempotencyKey(input: {

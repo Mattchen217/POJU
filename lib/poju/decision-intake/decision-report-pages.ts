@@ -24,6 +24,8 @@ import {
   PERSONAL_ANALYSIS_SECTIONS,
   type EvidenceReference,
   type PersonalAnalysisArtifact,
+  type ReportEvidenceCoverageEntry,
+  type DecisionReportPageRecord,
 } from "./decision-report-types";
 import {
   renderDi2PageBody,
@@ -80,6 +82,209 @@ export function buildReportEvidenceIndex(input: {
     }
   }
   return idx;
+}
+
+/**
+ * Deterministic two-way report evidence audit. Page metadata has already been
+ * bound to the current Job / Freeze / Analysis by the runner before this runs.
+ */
+export function buildReportEvidenceCoverage(input: {
+  dc: DecisionContext;
+  artifact: PersonalAnalysisArtifact;
+  pages: ReadonlyArray<DecisionReportPageRecord>;
+  binding?: { job_id: string; execution_generation: number; freeze_id: string; context_hash: string; analysis_id: string };
+  blueprint?: DecisionBlueprint | null;
+}): { ok: boolean; matrix: ReportEvidenceCoverageEntry[]; reason: string | null } {
+  const referencesByPage = new Map<string, Set<string>>();
+  const pageRefs = (value: unknown): string[] => {
+    if (!value || typeof value !== "object") return [];
+    const row = value as Record<string, unknown>;
+    const refs: string[] = [];
+    if (Array.isArray(row.evidence_refs)) refs.push(...row.evidence_refs.filter((x): x is string => typeof x === "string"));
+    return refs;
+  };
+  for (const p of input.pages) {
+    const refs = new Set<string>();
+    const structured = p.structured as Record<string, unknown> | null;
+    if (structured && Array.isArray(structured.blocks)) for (const b of structured.blocks) pageRefs(b).forEach((r) => refs.add(r));
+    if (structured && Array.isArray(structured.paths)) for (const x of structured.paths) pageRefs(x).forEach((r) => refs.add(r));
+    if (structured?.experiment) pageRefs(structured.experiment).forEach((r) => refs.add(r));
+    if (structured?.review) pageRefs(structured.review).forEach((r) => refs.add(r));
+    referencesByPage.set(p.page_id, refs);
+  }
+  const bindingFailures = input.binding
+    ? input.pages.filter((p) => p.job_id !== input.binding!.job_id ||
+        p.execution_generation !== input.binding!.execution_generation ||
+        p.freeze_id !== input.binding!.freeze_id || p.context_hash !== input.binding!.context_hash ||
+        p.analysis_id !== input.binding!.analysis_id)
+    : [];
+  const analysisItems = PERSONAL_ANALYSIS_SECTIONS.flatMap((key) => input.artifact[key]);
+  const analysisById = new Map(analysisItems.map((item) => [item.item_id, item]));
+  const dcEvidence = buildDcEvidenceIndex(input.dc);
+  const entries: ReportEvidenceCoverageEntry[] = [];
+
+  // Every substantive generated page must use both analysis and frozen-context
+  // evidence. Page 03 is a code-built chart appendix, so it is checked separately
+  // through its exact chart anchors below.
+  for (const p of input.pages) {
+    if (p.page_id === "03" || p.applicability === "not_applicable") continue;
+    const refs = referencesByPage.get(p.page_id) ?? new Set<string>();
+    const hasAnalysis = [...refs].some((id) => analysisById.has(id));
+    const hasContext = [...refs].some((id) => dcEvidence.has(id) || id === "DEF");
+    entries.push({
+      source_id: `page:${p.page_id}`, source_type: "report_section", status: "substantive",
+      related_direction_id: null, expected_sections: [p.page_id], actual_sections: [p.page_id],
+      evidence_reference: [...refs].join(",") || null,
+      coverage_result: hasAnalysis && hasContext ? "covered" : "missing",
+      missing_reason: hasAnalysis && hasContext ? null : "section_requires_personal_analysis_and_frozen_context_evidence",
+    });
+  }
+  for (const p of bindingFailures) entries.push({
+    source_id: `page:${p.page_id}`, source_type: "page_binding", status: "mismatched",
+    related_direction_id: null, expected_sections: [p.page_id], actual_sections: [p.page_id],
+    evidence_reference: null, coverage_result: "missing",
+    missing_reason: "page_job_generation_freeze_context_or_analysis_binding_mismatch",
+  });
+
+  const evidenceById = new Map(input.artifact.evidence_references.map((ref) => [ref.ref_id, ref]));
+  for (const p of input.pages.filter((page) => page.page_id === "03" && page.applicability !== "not_applicable")) {
+    const structured = p.structured as Record<string, unknown> | null;
+    const appendix = structured?.appendix as Record<string, unknown> | undefined;
+    const lines = [
+      ...(Array.isArray(appendix?.bazi_lines) ? appendix!.bazi_lines as Array<Record<string, unknown>> : []),
+      ...(Array.isArray(appendix?.ziwei_lines) ? appendix!.ziwei_lines as Array<Record<string, unknown>> : []),
+    ];
+    const bad = lines.find((line) => typeof line.ref_id !== "string" ||
+      !["chart_line", "ziwei_line"].includes(evidenceById.get(line.ref_id)?.kind ?? ""));
+    if (bad) entries.push({
+      source_id: `page:03:${String(bad.ref_id ?? "missing_ref")}`, source_type: "chart_appendix",
+      status: "invalid", related_direction_id: null, expected_sections: ["03"], actual_sections: ["03"],
+      evidence_reference: typeof bad.ref_id === "string" ? bad.ref_id : null,
+      coverage_result: "missing", missing_reason: "appendix_line_is_not_a_valid_chart_calculation_reference",
+    });
+    const actualIds = new Set(lines.flatMap((line) => typeof line.ref_id === "string" ? [line.ref_id] : []));
+    const requiredIds = new Set(input.artifact.personal_pattern_analysis.flatMap((item) =>
+      item.evidence_refs.filter((id) => ["chart_line", "ziwei_line"].includes(evidenceById.get(id)?.kind ?? "")),
+    ));
+    for (const ref of requiredIds) if (!actualIds.has(ref)) entries.push({
+      source_id: ref, source_type: "chart_appendix", status: "cited_by_personal_pattern",
+      related_direction_id: null, expected_sections: ["03"], actual_sections: ["03"],
+      evidence_reference: ref, coverage_result: "missing", missing_reason: "cited_chart_anchor_missing_from_report_appendix",
+    });
+  }
+  const validPageRefs = new Set(["DEF", ...dcEvidence.keys(), ...evidenceById.keys(), ...analysisById.keys()]);
+  for (const [page, refs] of referencesByPage) {
+    for (const ref of refs) if (!validPageRefs.has(ref)) entries.push({
+      source_id: ref, source_type: "fabricated_evidence_reference", status: "invalid",
+      related_direction_id: null, expected_sections: [page], actual_sections: [page],
+      evidence_reference: ref, coverage_result: "missing", missing_reason: "evidence_reference_not_in_frozen_context_or_validated_analysis",
+    });
+  }
+  for (const page of input.pages) {
+    if (page.page_id === "03" || page.applicability === "not_applicable") continue;
+    const structured = page.structured as Record<string, unknown> | null;
+    const nodes: Array<{ id: string; data: Record<string, unknown> }> = [];
+    if (Array.isArray(structured?.blocks)) (structured!.blocks as Array<Record<string, unknown>>).forEach((data, index) => nodes.push({ id: String(data.segment_id ?? index), data }));
+    if (Array.isArray(structured?.paths)) (structured!.paths as Array<Record<string, unknown>>).forEach((data, index) => nodes.push({ id: String(data.path_id ?? `path-${index}`), data }));
+    if (structured?.experiment && typeof structured.experiment === "object") nodes.push({ id: "experiment", data: structured.experiment as Record<string, unknown> });
+    if (structured?.review && typeof structured.review === "object") nodes.push({ id: "review", data: structured.review as Record<string, unknown> });
+    for (const { id, data: block } of nodes) {
+      const body = Object.entries(block).filter(([key, value]) => key !== "evidence_refs" && typeof value === "string").map(([, value]) => value as string).join(" ").trim();
+      if (!body) continue;
+      const refs = Array.isArray(block.evidence_refs) ? block.evidence_refs.filter((x): x is string => typeof x === "string") : [];
+      const hasAnalysis = refs.some((id) => analysisById.has(id));
+      const hasDc = refs.some((id) => id === "DEF" || dcEvidence.has(id));
+      if (!hasAnalysis || !hasDc) entries.push({
+        source_id: `conclusion:${page.page_id}:${id}`, source_type: "unreferenced_conclusion",
+        status: "substantive", related_direction_id: null, expected_sections: [page.page_id], actual_sections: [page.page_id],
+        evidence_reference: refs.join(",") || null, coverage_result: "missing",
+        missing_reason: "each_substantive_conclusion_requires_analysis_and_frozen_dc_evidence",
+      });
+    }
+  }
+  const conflictIds = new Set(input.dc.conflicts.filter((c) => c.state !== "clarified").map((c) => c.conflict_id));
+  for (const page of input.pages) {
+    const structured = page.structured as Record<string, unknown> | null;
+    const nodes: Array<{ id: string; data: Record<string, unknown> }> = [];
+    if (Array.isArray(structured?.blocks)) (structured!.blocks as Array<Record<string, unknown>>).forEach((data, index) => nodes.push({ id: String(data.segment_id ?? index), data }));
+    if (Array.isArray(structured?.paths)) (structured!.paths as Array<Record<string, unknown>>).forEach((data, index) => nodes.push({ id: String(data.path_id ?? `path-${index}`), data }));
+    if (structured?.experiment && typeof structured.experiment === "object") nodes.push({ id: "experiment", data: structured.experiment as Record<string, unknown> });
+    if (structured?.review && typeof structured.review === "object") nodes.push({ id: "review", data: structured.review as Record<string, unknown> });
+    for (const { id, data: block } of nodes) {
+      const refs = Array.isArray(block.evidence_refs) ? block.evidence_refs.filter((x): x is string => typeof x === "string") : [];
+      if (!refs.some((ref) => conflictIds.has(ref))) continue;
+      const text = Object.entries(block).filter(([key, value]) => key !== "evidence_refs" && typeof value === "string").map(([, value]) => value as string).join(" ");
+      const resolvedClaim = /(?:已(?:经)?(?:明确)?(?:解决|澄清|消除)|被(?:明确)?(?:解决|澄清|消除)|\b(?:resolved|settled)\b)/i.test(text) &&
+        !/(尚未|未|没有|not\s+(?:yet\s+)?|unresolved)\s+(?:clearly\s+)?(?:resolved|settled|解决|澄清|消除)/i.test(text);
+      if (resolvedClaim) entries.push({
+        source_id: `conclusion:${page.page_id}:${id}`, source_type: "open_conflict_claim",
+        status: "conflict_open", related_direction_id: null, expected_sections: [page.page_id], actual_sections: [page.page_id],
+        evidence_reference: refs.filter((ref) => conflictIds.has(ref)).join(","),
+        coverage_result: "missing", missing_reason: "open_conflict_described_as_resolved",
+      });
+    }
+  }
+  for (const item of input.artifact.personal_pattern_analysis) {
+    const hasChartAnchor = item.evidence_refs.some((id) => {
+      const ref = evidenceById.get(id);
+      return ref && (ref.kind === "chart_line" || ref.kind === "ziwei_line");
+    });
+    const validRefs = item.evidence_refs.every((id) => evidenceById.has(id));
+    if (!hasChartAnchor || !validRefs) entries.push({
+      source_id: item.item_id, source_type: "personal_pattern_analysis", status: item.basis_class,
+      related_direction_id: null, expected_sections: ["01", "02", "04"], actual_sections: [],
+      evidence_reference: item.evidence_refs.join(",") || null, coverage_result: "missing",
+      missing_reason: !hasChartAnchor ? "pattern_judgment_missing_chart_anchor" : "analysis_item_has_invalid_evidence_reference",
+    });
+  }
+
+  const sourceRows: Array<{ id: string; type: string; status: string; direction: string | null; expected: string[]; naReason: string | null }> = [
+    { id: "DEF", type: "decision_definition", status: "frozen", direction: null, expected: ["01", "02", "05"], naReason: null },
+    ...input.dc.reality_facts.filter((f) => f.status === "confirmed" && f.user_confirmed).map((f) => ({ id: f.fact_id, type: "reality_fact", status: f.status, direction: null, expected: ["01", "02", "04", "05", "06", "08"], naReason: null })),
+    ...input.dc.constraints.filter((c) => c.rigidity === "hard" || c.user_confirmed).map((c) => ({ id: c.constraint_id, type: "constraint", status: c.status, direction: null, expected: ["02", "05", "06", "08"], naReason: null })),
+    ...input.dc.hypotheses.filter((h) => h.state !== "rejected" && h.related_dir_ids.some((id) => input.dc.dirs.some((d) => d.dir_id === id && d.may_affect_p5_ranking))).map((h) => ({ id: h.hypothesis_id, type: "hypothesis", status: h.state, direction: h.related_dir_ids[0] ?? null, expected: ["04", "05", "06"], naReason: null })),
+    ...input.dc.dirs.filter((d) => d.id_lifecycle === "active" && (d.required_fact_roles.length > 0 || d.may_affect_p5_ranking)).map((d) => {
+      const na = input.dc.explicit_na_classifications?.find((e) => e.dir_id === d.dir_id && !e.revoked);
+      return { id: d.dir_id, type: "dir", status: d.current_state, direction: d.dir_id, expected: ["04", "05", "06", "08"], naReason: d.current_state === "n_a" && na ? na.na_condition_code : null };
+    }),
+    ...input.dc.conflicts.filter((c) => c.state !== "clarified").map((c) => ({ id: c.conflict_id, type: "conflict", status: c.state, direction: null, expected: ["04", "05", "08"], naReason: null })),
+  ];
+  const citeSections = new Map<string, Set<string>>();
+  for (const [page, refs] of referencesByPage) {
+    for (const id of refs) {
+      citeSections.get(id)?.add(page) ?? citeSections.set(id, new Set([page]));
+      const item = analysisById.get(id);
+      for (const source of item?.evidence_refs ?? []) citeSections.get(source)?.add(page) ?? citeSections.set(source, new Set([page]));
+    }
+  }
+  for (const row of sourceRows) {
+    const actual = [...(citeSections.get(row.id) ?? [])];
+    const covered = actual.length > 0 && actual.some((page) => row.expected.includes(page));
+    const isNa = row.type === "dir" && row.status === "n_a";
+    const n_a = row.type === "dir" && row.status === "n_a" && Boolean(row.naReason) &&
+      actual.some((page) => row.expected.includes(page)) &&
+      input.pages.some((p) => actual.includes(p.page_id) && p.content_markdown.includes(row.naReason!));
+    entries.push({
+      source_id: row.id, source_type: row.type, status: row.status, related_direction_id: row.direction,
+      expected_sections: row.expected, actual_sections: actual, evidence_reference: actual.length ? row.id : null,
+      coverage_result: n_a ? "not_applicable" : isNa ? "missing" : covered ? "covered" : "missing",
+      missing_reason: n_a ? null : isNa ? "not_applicable_source_missing_explicit_report_reason" : covered ? null : "material_frozen_source_not_cited_by_report_or_linked_analysis",
+      applicability_reason: n_a ? row.naReason : null,
+    });
+  }
+  for (const direction of (input.blueprint?.directions ?? []).filter((d) => d.priority === "P0" || d.priority === "P1")) {
+    const actual = [...new Set(direction.dir_ids.flatMap((id) => [...(citeSections.get(id) ?? [])]))];
+    const expected = ["01", "02", "04", "05", "06", "08"];
+    const covered = actual.some((section) => expected.includes(section));
+    entries.push({
+      source_id: direction.direction_id, source_type: "blueprint_direction", status: direction.priority,
+      related_direction_id: direction.direction_id, expected_sections: expected, actual_sections: actual,
+      evidence_reference: direction.dir_ids.join(",") || null, coverage_result: covered ? "covered" : "missing",
+      missing_reason: covered ? null : "important_blueprint_direction_not_addressed",
+    });
+  }
+  const missing = entries.filter((e) => e.coverage_result === "missing");
+  return { ok: missing.length === 0, matrix: entries, reason: missing.length ? `coverage_missing:${missing.map((e) => e.source_id).join(",")}` : null };
 }
 
 // ─── Prompt ────────────────────────────────────────────────────────────────

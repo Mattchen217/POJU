@@ -72,6 +72,8 @@ export interface POJUMessage {
     tool_suggestion?: ToolSuggestionPayload;
     /** Correlates with `POJUCycle.tool_suggestions[].suggested_in_message_id`. */
     tool_suggestion_message_id?: string;
+    /** DI2 terminal input refusal; inspectable without reopening the frozen DC. */
+    di2_input_rejection?: "session_expired" | "context_frozen";
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
     /** Debug panel — agent state machine flags after this turn. */

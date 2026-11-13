@@ -49,14 +49,46 @@ export function defaultBudget(
 }
 
 export function evaluatePersonalPatternInsight(
-  _session: POJUSessionState,
+  session: POJUSessionState,
 ): PersonalPatternInsightBlock {
-  // Phase 5 production gate not claimed in M1 — unavailable is correct, never forge.
-  return {
-    status: "unavailable",
-    reason: "phase5_personal_analysis_not_wired_for_m1",
-    insights: [],
+  const dc = session.decision_context;
+  const freeze = [...(session.dc_freeze_receipts ?? [])].reverse()
+    .find((r) => r.session_id === session.session_id);
+  if (!dc || !freeze || freeze.context_id !== dc.context_id || freeze.context_version !== dc.version || freeze.context_hash !== dc.content_hash) {
+    return { status: "unavailable", reason: "current_freeze_unavailable", insights: [] };
+  }
+  const profile = [...(session.dc_profile_receipts ?? [])].reverse()
+    .find((r) => r.session_id === session.session_id && r.freeze_id === freeze.freeze_id);
+  if (!profile) return { status: "unavailable", reason: "current_profile_receipt_unavailable", insights: [] };
+
+  const matching = (session.personal_analysis_records ?? []).filter((r) =>
+    r.session_id === session.session_id && r.freeze_id === freeze.freeze_id &&
+    r.context_id === dc.context_id && r.context_version === dc.version &&
+    r.context_hash === freeze.context_hash && r.profile_id === profile.profile_id &&
+    r.profile_hash === profile.profile_hash);
+  if (matching.some((r) => r.status === "pending" || r.status === "running")) {
+    return { status: "pending", reason: "personal_analysis_in_progress", insights: [] };
+  }
+  const record = [...matching].reverse().find((r) => r.status === "completed" && r.analysis_result);
+  const artifact = record?.analysis_result;
+  if (!artifact) return { status: "unavailable", reason: "validated_personal_analysis_unavailable", insights: [] };
+
+  const references = new Map(artifact.evidence_references.map((ref) => [ref.ref_id, ref]));
+  const patterns = artifact.personal_pattern_analysis;
+  if (!patterns.length) return { status: "none", reason: "empty_pattern_analysis", insights: [] };
+  const validItem = (item: (typeof patterns)[number]) => {
+    if (!item.item_id?.trim() || !item.text?.trim() || !item.evidence_refs.length) return false;
+    const linked = item.evidence_refs.map((id) => references.get(id));
+    return !linked.some((ref) => !ref) && linked.some((ref) => ref && ["chart_line", "ziwei_line"].includes(ref.kind));
   };
+  if (patterns.some((item) => !validItem(item))) {
+    return { status: "unavailable", reason: "pattern_analysis_evidence_invalid", insights: [] };
+  }
+  const insights = patterns.map((item) => {
+    const related_dir_ids = [...new Set(item.evidence_refs.filter((id) => id.startsWith("DIR-") || id.startsWith("dir_") || id.startsWith("DIR_")))];
+    return { text: item.text, source: item.item_id, related_dir_ids };
+  });
+  return { status: "available", insights };
 }
 
 function briefWithSource(id: string, statement: string): string {

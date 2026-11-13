@@ -12,6 +12,8 @@ import type { POJUSessionState } from "@/lib/poju/types";
 import { listStoredProfilesForSessionPrep } from "@/lib/profile/stored-profiles-service";
 import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 import { runDecisionReportForSession } from "@/lib/poju/decision-intake/decision-report-client";
+import { sessionEligibleForFinalConfirm } from "@/lib/poju/decision-intake/confirm-and-freeze";
+import { projectAdaptiveQuestionForUi } from "@/lib/poju/decision-intake/ui-projection";
 
 type Stage = { label: string; detail: string };
 
@@ -89,10 +91,10 @@ export default function Di2DeliveryLabPage() {
   }, [authed, restore]);
 
   const stages = useMemo(() => getStages(session), [session]);
-  const readiness = session?.decision_understanding?.readiness;
-  const canConfirm = Boolean(session && readiness?.can_ask === false &&
-    (readiness.verdict === "ready_for_final_confirm" || readiness.verdict === "hard_budget_exhausted"));
-  const hasFreeze = Boolean(session?.dc_freeze_receipts?.some((r) => r.session_id === session.session_id));
+  const canConfirm = Boolean(session && sessionEligibleForFinalConfirm(session, "确认"));
+  const hasFreeze = Boolean(session?.decision_context && session.dc_freeze_receipts?.some((r) =>
+    r.session_id === session.session_id && r.context_id === session.decision_context?.context_id &&
+    r.context_version === session.decision_context?.version && r.context_hash === session.decision_context?.content_hash));
 
   async function onCreate(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError(""); setNotice("");
@@ -185,7 +187,7 @@ export default function Di2DeliveryLabPage() {
         <aside className="space-y-5">
           <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5"><h2 className="text-lg font-medium">阶段与权威状态</h2><ol className="mt-3 space-y-2">{stages.map((s, i) => <li key={s.label} className="grid grid-cols-[1.6rem_9.5rem_1fr] gap-2 border-b border-white/5 pb-2 text-sm"><span className="text-white/35">{String(i + 1).padStart(2, "0")}</span><strong className="font-medium">{s.label}</strong><span className="break-all text-white/65">{s.detail}</span></li>)}</ol><div className="mt-4 flex flex-wrap gap-2"><button disabled={busy || !hasFreeze} onClick={() => void onReport()} className="rounded bg-violet-700 px-4 py-2 text-sm disabled:opacity-40">{session.pending_decision_report_job_id ? "恢复 / 查看报告 Job" : "启动 M5 报告任务"}</button><span className="self-center text-xs text-white/50">使用正式交付授权与扣费规则；若需有效 pass，服务端会按生产逻辑要求。</span></div></section>
           {session.freeze_bound_report_jobs?.some((job) => job.source === "decision_intake_v2") && <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5"><h2 className="text-lg font-medium">八页报告交付</h2><div className="mt-3 space-y-3">{session.freeze_bound_report_jobs.filter((job) => job.source === "decision_intake_v2").flatMap((job) => job.pages.map((page) => ({ job, page }))).map(({ job, page }) => <article key={`${job.job_id}-${page.pageId}`} className="rounded border border-white/10 bg-black/20 p-3"><div className="flex flex-wrap justify-between gap-2 text-xs text-white/55"><strong>Page {page.pageId}</strong><span>{page.status} · {page.applicability ?? "applies"} · job {job.job_id}</span></div><div className="mt-2 whitespace-pre-wrap text-sm">{page.content || page.error || "等待此页生成"}</div></article>)}</div></section>}
-          <details open className="rounded-xl border border-white/10 bg-white/[0.03] p-5"><summary className="cursor-pointer text-lg font-medium">可审查的生产状态快照</summary><pre className="mt-3 max-h-[36rem] overflow-auto whitespace-pre-wrap break-all rounded bg-black/30 p-3 text-[11px] leading-relaxed text-white/75">{JSON.stringify({ answer_interpretation: session.last_answer_event ?? null, decision_context: session.decision_context ?? null, blueprint: session.decision_blueprint ?? null, understanding: session.decision_understanding ?? null, adaptive_plan: session.adaptive_ask_plan ?? null, freeze_receipts: session.dc_freeze_receipts ?? [], profile_receipts: session.dc_profile_receipts ?? [], personal_analysis: session.personal_analysis_records ?? [], report_jobs: session.freeze_bound_report_jobs ?? [], report_messages: session.messages.filter((m) => m.meta?.kind === "report" || Boolean(m.meta?.report_text)), }, null, 2)}</pre></details>
+          <details open className="rounded-xl border border-white/10 bg-white/[0.03] p-5"><summary className="cursor-pointer text-lg font-medium">可审查的生产状态快照</summary><pre className="mt-3 max-h-[36rem] overflow-auto whitespace-pre-wrap break-all rounded bg-black/30 p-3 text-[11px] leading-relaxed text-white/75">{JSON.stringify({ ui_projection: projectAdaptiveQuestionForUi(session), answer_interpretation: session.last_answer_event ?? null, decision_context: session.decision_context ?? null, blueprint: session.decision_blueprint ?? null, understanding: session.decision_understanding ?? null, adaptive_plan: session.adaptive_ask_plan ?? null, freeze_receipts: session.dc_freeze_receipts ?? [], profile_receipts: session.dc_profile_receipts ?? [], personal_analysis: session.personal_analysis_records ?? [], report_jobs: session.freeze_bound_report_jobs ?? [], report_messages: session.messages.filter((m) => m.meta?.kind === "report" || Boolean(m.meta?.report_text)), }, null, 2)}</pre></details>
         </aside>
       </div>}
       <p className="text-xs text-white/40">LAB 的浏览器本地 IndexedDB 与服务端冻结/报告存储各自有边界。正式 M5 API 可能产生实际 pass 消耗；本页不提供绕过扣费的测试开关。</p>

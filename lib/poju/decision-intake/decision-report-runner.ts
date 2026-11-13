@@ -50,6 +50,7 @@ import {
 import {
   buildAppendixPage,
   buildReportEvidenceIndex,
+  buildReportEvidenceCoverage,
   renderPageMarkdown,
   runDecisionReportPageModel,
 } from "./decision-report-pages";
@@ -650,6 +651,24 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     return;
   }
 
+  const artifact = analysis.record.analysis_result;
+  if (!artifact) {
+    await failDecisionReportJob(ctx, "assemble", "assemble_without_analysis_artifact", { kind: "fatal" });
+    return;
+  }
+  const coverage = buildReportEvidenceCoverage({
+    dc: freeze.decision_context, artifact, pages, blueprint: freeze.blueprint,
+    binding: {
+      job_id: ctx.job.job_id, execution_generation: ctx.generation, freeze_id: input.freeze_id,
+      context_hash: input.context_hash, analysis_id: analysis.record.analysis_id,
+    },
+  });
+  if (!coverage.ok) {
+    di2Log("evidence coverage rejected", { job_id: ctx.job.job_id, reason: coverage.reason });
+    await failDecisionReportJob(ctx, "assemble", coverage.reason ?? "report_evidence_coverage_failed", { kind: "fatal" });
+    return;
+  }
+
   const t = nowIso();
   const dc = freeze.decision_context;
   const full_text = renderDi2BookMarkdown({
@@ -670,6 +689,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     execution_generation: ctx.generation,
     page_ids: pages.map((p) => p.page_id),
     full_text,
+    evidence_coverage_matrix: coverage.matrix,
     model: analysis.record.model ?? "",
     tokens_used: analysis.record.tokens_used ?? 0,
     completed_at: t,
