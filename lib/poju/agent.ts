@@ -114,7 +114,6 @@ import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import {
   buildDyadContinueModelUserCue,
   buildDyadGateTurn,
-  DYAD_CONTINUE_SYSTEM,
   resolveDyadSpecificOther,
   shouldPresentDyadGate,
   shouldResumeUnderstandingConfirmAfterDyad,
@@ -124,6 +123,7 @@ import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { resolveAskedAgendaItem } from "@/lib/poju/agenda-focus-match";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
+import { getLocalIntakeTerminalReason } from "@/lib/poju/intake-terminal";
 
 export { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding, isOpeningControlPhase };
 /** Segment-2 / synthesis handlers live in phases/segment2 — prefer phase-router. */
@@ -168,10 +168,22 @@ export interface HandleInput {
   __testOnlyM1Hooks?: AdaptiveTurnTestHooks;
 }
 
-function isInternalSystemTurn(text: string): boolean {
-  if (text === DYAD_CONTINUE_SYSTEM) return true;
-  return /^\[SYSTEM: User (?:completed the action|modified the action|chose not to do this action|updated this action): "[\s\S]*"(?:\. Feedback: "[\s\S]*")?\. Please acknowledge and continue\.\]$/.test(text);
-}
+export type ActionUpdateInput = {
+  session: POJUSessionState;
+  action_id: string;
+  status: POJUAction["status"];
+  feedback?: string;
+  locale: string;
+  signal?: AbortSignal;
+  server_invoke?: HandleInput["server_invoke"];
+  __testOnlyM1Hooks?: AdaptiveTurnTestHooks;
+};
+
+type InternalTurn =
+  | { kind: "user" }
+  | { kind: "dyad_continue" }
+  | { kind: "action_update"; action_id: string; status: POJUAction["status"]; feedback?: string };
+
 
 type LLMApiPayload = {
   response?: string;
@@ -811,41 +823,97 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
-  const { session: sessionIn, userMessage, locale, userAlreadyAppended, signal, attachment } = input;
-  if (typeof userMessage !== "string" || !userMessage.trim()) {
+  return runAgentTurn(input, { kind: "user" });
+}
+
+/** Explicit continuation after the user closes the Dyad gate. No user-supplied text chooses this path. */
+export async function handleDyadContinuation(
+  input: Omit<HandleInput, "userMessage" | "userAlreadyAppended">,
+): Promise<POJUSessionState> {
+  return runAgentTurn({ ...input, userMessage: "" }, { kind: "dyad_continue" });
+}
+
+/** Apply a real action update as a user operation, with a normal user-role audit turn. */
+export async function handleUserActionUpdate(input: ActionUpdateInput): Promise<POJUSessionState> {
+  if (!input.session || typeof input.session !== "object" || !Array.isArray(input.session.actions)) {
+    throw new Error("invalid_session");
+  }
+  const terminalReason = getLocalIntakeTerminalReason(input.session);
+  if (terminalReason) return appendIntakeRejection(input.session, terminalReason);
+  const validStatuses = new Set<POJUAction["status"]>(["pending", "completed", "modified", "skipped"]);
+  const action = input.session.actions.find((item) => item.action_id === input.action_id);
+  if (!action || !validStatuses.has(input.status)) {
+    return appendIntakeRejection(input.session, "invalid_action_update");
+  }
+  const feedback = typeof input.feedback === "string" ? input.feedback.trim().slice(0, 2000) : "";
+  const userMessage = [
+    `我将行动「${action.text}」的状态更新为「${input.status}」。`,
+    feedback ? `补充反馈：${feedback}` : "",
+  ].filter(Boolean).join("\n");
+  return runAgentTurn({ ...input, userMessage }, {
+    kind: "action_update",
+    action_id: action.action_id,
+    status: input.status,
+    feedback: feedback || undefined,
+  });
+}
+
+function appendIntakeRejection(
+  session: POJUSessionState,
+  reason: NonNullable<POJUMessage["meta"]>["di2_input_rejection"],
+): POJUSessionState {
+  return {
+    ...session,
+    messages: [...(Array.isArray(session.messages) ? session.messages : []), {
+      role: "assistant",
+      content: "This operation is not valid for the current session.",
+      timestamp: new Date().toISOString(),
+      meta: { di2_input_rejection: reason },
+    }],
+  };
+}
+
+async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Promise<POJUSessionState> {
+  const { session: sessionIn, locale, userAlreadyAppended, signal, attachment } = input;
+  const userMessage = internalTurn.kind === "dyad_continue" ? "" : input.userMessage;
+  if (!sessionIn || typeof sessionIn !== "object" || typeof sessionIn.session_id !== "string" || !Array.isArray(sessionIn.messages)) {
+    throw new Error("invalid_session");
+  }
+  if (internalTurn.kind === "user" && (typeof userMessage !== "string" || !userMessage.trim())) {
     return sessionIn;
   }
-  if (userMessage.startsWith("[SYSTEM:") && !isInternalSystemTurn(userMessage)) {
+  const terminalReason = getLocalIntakeTerminalReason(sessionIn);
+  if (terminalReason) {
+    const messages = [...sessionIn.messages, {
+      role: "assistant" as const,
+      content: terminalReason === "context_frozen"
+        ? "This decision context is frozen. Start a new decision session to add information."
+        : terminalReason === "session_expiry_invalid"
+          ? "This session has an invalid expiration time. Start a new session to continue."
+          : "This session has expired. Start a new session to continue.",
+      timestamp: new Date().toISOString(),
+      meta: { di2_input_rejection: terminalReason },
+    }];
+    return { ...sessionIn, messages };
+  }
+  if (internalTurn.kind === "dyad_continue") {
+    if (
+      !["skipped", "collected"].includes(sessionIn.dyad_offer_status ?? "") ||
+      !["solo", "dyad"].includes(sessionIn.pivot_chart_path ?? "") ||
+      !Number.isFinite(Date.parse(sessionIn.charts_locked_at ?? ""))
+    ) return appendIntakeRejection(sessionIn, "dyad_continuation_not_ready");
+  }
+  if (internalTurn.kind === "user" && (userMessage.startsWith("[SYSTEM:") || userMessage.trim() === "__OPENING__")) {
     return handleRuleRejection(sessionIn, userMessage, "jailbreak", locale);
   }
-  const internalSystemTurn = isInternalSystemTurn(userMessage);
-  const currentFreeze = sessionIn.decision_context && (sessionIn.dc_freeze_receipts ?? []).some((r) =>
-    r.session_id === sessionIn.session_id &&
-    r.context_id === sessionIn.decision_context?.context_id &&
-    r.context_version === sessionIn.decision_context?.version &&
-    r.context_hash === sessionIn.decision_context?.content_hash);
-  const expired = Number.isFinite(Date.parse(sessionIn.expires_at)) && Date.parse(sessionIn.expires_at) <= Date.now();
-  const terminalReason = !internalSystemTurn
-    ? currentFreeze ? "context_frozen" as const : expired ? "session_expired" as const : null
-    : null;
-  if (terminalReason) {
-    return {
-      ...sessionIn,
-      messages: [...sessionIn.messages, {
-        role: "assistant",
-        content: terminalReason === "context_frozen"
-          ? "This decision context is frozen. Start a new decision session to add information."
-          : "This session has expired. Start a new session to continue.",
-        timestamp: new Date().toISOString(),
-        meta: { di2_input_rejection: terminalReason },
-      }],
-    };
+  if (internalTurn.kind === "action_update" && !sessionIn.actions.some((a) => a.action_id === internalTurn.action_id)) {
+    return appendIntakeRejection(sessionIn, "invalid_action_update");
   }
   // A frozen DI2 Session is immutable input state. Report recovery is handled by
   // the report client/status APIs; feeding another chat turn cannot reopen intake.
   const session = ensureSessionCycles(sessionIn);
-  const isOpeningSignal = userMessage.trim() === "__OPENING__";
-  const isSystemMessage = internalSystemTurn || isOpeningSignal;
+  const isOpeningSignal = false;
+  const isSystemMessage = internalTurn.kind === "dyad_continue";
 
   const externalHandoffPending = findPendingToolInjection(session);
   const injectionPrep = prepareToolInjectionTurn(session, {
@@ -896,11 +964,35 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     }
   }
 
+  let actionUpdateSession = sessionBase;
+  let actionUpdateFromStatus: POJUAction["status"] | undefined;
+  if (internalTurn.kind === "action_update") {
+    const prior = sessionBase.actions.find((a) => a.action_id === internalTurn.action_id)!;
+    actionUpdateFromStatus = prior.status;
+    actionUpdateSession = {
+      ...sessionBase,
+      actions: sessionBase.actions.map((action) => action.action_id === prior.action_id
+        ? { ...action, status: internalTurn.status, user_feedback: internalTurn.feedback ?? action.user_feedback, updated_at: new Date().toISOString() }
+        : action),
+    };
+    sessionBase = actionUpdateSession;
+  }
+
   const newUserMessage: POJUMessage = {
     role: isSystemMessage ? "system" : "user",
-    content: userMessage,
+    content: internalTurn.kind === "dyad_continue"
+      ? `Dyad gate closed by user action: ${sessionBase.dyad_offer_status}.`
+      : userMessage,
     timestamp: new Date().toISOString(),
     client_id: safeRandomUUID(),
+    ...(internalTurn.kind === "action_update" ? { meta: {
+      action_status_update: {
+        action_id: internalTurn.action_id,
+        from_status: actionUpdateFromStatus,
+        to_status: internalTurn.status,
+        feedback: internalTurn.feedback ?? null,
+      },
+    } } : {}),
   };
 
   let messagesWithUser: POJUMessage[];
@@ -964,7 +1056,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locked_output_locale: persistLocked,
   };
 
-  if (userMessage.trim() === DYAD_CONTINUE_SYSTEM) {
+  if (internalTurn.kind === "dyad_continue") {
     // Persist system audit row only; model history strips role:system — inject explicit user cue.
     sessionForLlm = {
       ...sessionForLlm,

@@ -126,7 +126,23 @@ async function main() {
   });
   pagesMod.__setDecisionReportPageModelForTests(async ({ pageId }) => {
     pageCalls.push(pageId);
-    return { content: di2PageJson(pageId), model: "test-hook", tokens_used: 5 };
+    // M8 coverage: every substantive conclusion needs Personal Analysis +
+    // frozen-context evidence, and material DIR dir_status_quo must be cited.
+    // M5 fixtures use di2DraftDc (stable IDs). Do not change authorization
+    // assertions. M6 already injects live remapped IDs in its own hook.
+    const page = JSON.parse(di2PageJson(pageId)) as Record<string, unknown>;
+    const requiredRefs = ["DEF", "PA-pattern-1", "dir_status_quo"];
+    const attachRefs = (value: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      if (Array.isArray(value)) { value.forEach(attachRefs); return; }
+      const row = value as Record<string, unknown>;
+      if (Array.isArray(row.evidence_refs)) {
+        row.evidence_refs = [...new Set([...row.evidence_refs, ...requiredRefs])];
+      }
+      Object.values(row).forEach(attachRefs);
+    };
+    attachRefs(page);
+    return { content: JSON.stringify(page), model: "test-hook", tokens_used: 5 };
   });
 
   // ─── pass ledger stub (consume RPC semantics) ─────────────────────────────

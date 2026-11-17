@@ -73,7 +73,14 @@ export interface POJUMessage {
     /** Correlates with `POJUCycle.tool_suggestions[].suggested_in_message_id`. */
     tool_suggestion_message_id?: string;
     /** DI2 terminal input refusal; inspectable without reopening the frozen DC. */
-    di2_input_rejection?: "session_expired" | "context_frozen";
+    di2_input_rejection?: "session_expired" | "session_expiry_invalid" | "context_frozen" | "context_state_unverified" | "invalid_action_update" | "dyad_continuation_not_ready" | "invalid_session";
+    /** User-authored audit of a structured action status update. */
+    action_status_update?: {
+      action_id: string;
+      from_status?: POJUAction["status"];
+      to_status: POJUAction["status"];
+      feedback: string | null;
+    };
     /** DeepSeek / OpenRouter reasoning tokens + POJU thought digest for this turn. */
     thinking_process?: string;
     /** Debug panel — agent state machine flags after this turn. */

@@ -153,7 +153,7 @@ test("Report evidence coverage requires both analysis + context and material sou
 async function main() {
   await asyncTest("Production handleUserMessage ignores empty input and refuses a post-Freeze turn", async () => {
     const { handleUserMessage } = await import("../lib/poju/agent");
-    const session = { ...base, messages: [] } as POJUSessionState;
+    const session = { ...base, messages: [], dc_freeze_receipts: [], expires_at: "2099-01-01T00:00:00.000Z" } as POJUSessionState;
     assert.strictEqual(await handleUserMessage({ session, userMessage: "", locale: "zh" }), session);
     assert.strictEqual(await handleUserMessage({ session, userMessage: "   ", locale: "zh" }), session);
     assert.strictEqual(await handleUserMessage({ session, userMessage: null as unknown as string, locale: "zh" }), session);

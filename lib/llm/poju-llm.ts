@@ -13,6 +13,7 @@ import { getOpenRouterDefaultModel, isOpenRouterConfigured, resolveSessionLocked
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { getLocalIntakeTerminalReason, POJUIntakeTerminalError } from "@/lib/poju/intake-terminal";
 
 interface CallInput {
   session: POJUSessionState;
@@ -104,6 +105,15 @@ export interface POJULLMResponse {
 
 export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
   const { session } = input;
+  const localReason = getLocalIntakeTerminalReason(session);
+  if (localReason) throw new POJUIntakeTerminalError(localReason);
+  if (typeof window === "undefined") {
+    const { assertSessionCanEnterIntake } = await import(
+      /* webpackIgnore: true */
+      "@/lib/poju/decision-authority/server/intake-guard"
+    );
+    await assertSessionCanEnterIntake(session);
+  }
 
   try {
     if (!isOpenRouterConfigured() && !getGeminiClient()) {
@@ -116,6 +126,7 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
 
     return finalizeLockFields(await callPOJULLMPhasePath(input), session);
   } catch (error: unknown) {
+    if (error instanceof POJUIntakeTerminalError) throw error;
     logPojuError("poju-llm:callPOJULLM", error);
     if (error instanceof OpenRouterProviderQueueError) {
       throw error;

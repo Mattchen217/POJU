@@ -9,6 +9,7 @@ import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { POJUIntakeTerminalError } from "@/lib/poju/decision-authority/server/intake-guard";
 
 type ChatBody = {
   locale?: string;
@@ -74,6 +75,11 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
         });
       } catch (e) {
         logPojuError("poju-chat-stream:callPOJULLM", e);
+        if (e instanceof POJUIntakeTerminalError) {
+          send({ type: "error", code: "poju_intake_terminal", reason: e.reason });
+          controller.close();
+          return;
+        }
         const message = e instanceof Error ? e.message : String(e);
         if (message.includes("abort") || message.includes("AbortError")) {
           send({ type: "aborted" });

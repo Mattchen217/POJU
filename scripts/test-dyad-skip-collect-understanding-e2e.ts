@@ -12,7 +12,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  DYAD_CONTINUE_SYSTEM,
   dyadSkipPatch,
   shouldResumeUnderstandingConfirmAfterDyad,
   type DyadOfferStatus,
@@ -142,14 +141,7 @@ function resolvePhaseAfterDyadContinue(input: {
   assert.equal(noHold.held, false);
 }
 
-// --- hasInput gap: DYAD_CONTINUE_SYSTEM is a system turn (empty phase user input) ---
-assert.equal(DYAD_CONTINUE_SYSTEM, "[SYSTEM: dyad_continue]");
-assert.ok(DYAD_CONTINUE_SYSTEM.startsWith("[SYSTEM:"), "dyad_continue must be system-prefixed");
-assert.equal(
-  DYAD_CONTINUE_SYSTEM.startsWith("[SYSTEM:") ? "" : DYAD_CONTINUE_SYSTEM,
-  "",
-  "system dyad_continue yields empty phaseUserMessage / missing hasInput",
-);
+// Continuation is a typed operation, not a special text passed through the user-message API.
 
 // --- Static source contracts: agent + ChatUI + lab gate ---
 const agentSrc = readFileSync(
@@ -184,8 +176,8 @@ const chatUiSrc = readFileSync(
   "utf8",
 );
 assert.ok(
-  /userMessage:\s*DYAD_CONTINUE_SYSTEM/.test(chatUiSrc),
-  "ChatUI must send DYAD_CONTINUE_SYSTEM after dyad gate",
+  /handleDyadContinuation\(/.test(chatUiSrc),
+  "ChatUI must use the explicit Dyad continuation operation",
 );
 assert.ok(
   /handleDyadSkip[\s\S]{0,500}?clearDyadGateUi[\s\S]{0,200}?dyadSkipPatch\(\)[\s\S]{0,400}?continueAfterDyadGate/.test(chatUiSrc),
@@ -216,5 +208,5 @@ assert.ok(
 console.log("ok dyad-skip-collect-understanding-e2e", {
   skip_lab: "lab_mv873uyn_7407b956",
   collect_lab: "lab_mv876ff9_e3508224",
-  continue_system: DYAD_CONTINUE_SYSTEM,
+  continuation: "typed operation",
 });

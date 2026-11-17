@@ -3,9 +3,8 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { handleUserMessage } from "@/lib/poju/agent";
+import { handleDyadContinuation, handleUserMessage } from "@/lib/poju/agent";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
-import { DYAD_CONTINUE_SYSTEM } from "@/lib/poju/dyad-compat";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { buildLabObservation } from "@/lib/llm/pro/delivery/lab/observation";
 import {
@@ -116,6 +115,13 @@ export async function runLabPipelineChatTurn(input: {
   lab: DeliveryLabSession;
   userMessage: string;
 }): Promise<DeliveryLabSession> {
+  return runLabPipelineChatOperation(input, "user");
+}
+
+async function runLabPipelineChatOperation(
+  input: { lab: DeliveryLabSession; userMessage: string },
+  operation: "user" | "dyad_continue",
+): Promise<DeliveryLabSession> {
   if (input.lab.mode !== "full_pipeline" || !input.lab.chat_session) {
     throw new Error("lab_not_full_pipeline");
   }
@@ -129,19 +135,21 @@ export async function runLabPipelineChatTurn(input: {
   const phaseBefore =
     normalizeAgentPhase(input.lab.chat_session.agent_v2?.current_phase) ?? "opening";
 
-  const nextSession = await handleUserMessage({
+  const handleOptions = {
     session: input.lab.chat_session,
-    userMessage: input.userMessage,
     locale,
     server_invoke: {
       base_analysis: input.lab.source.base_analysis,
       profile: null,
       skip_delivery_pipeline: true,
-      lab_prompt_capture: (p) => {
+      lab_prompt_capture: (p: { system: string; user: string }) => {
         captured = p;
       },
     },
-  });
+  };
+  const nextSession = operation === "dyad_continue"
+    ? await handleDyadContinuation(handleOptions)
+    : await handleUserMessage({ ...handleOptions, userMessage: input.userMessage });
 
   const phaseAfter =
     normalizeAgentPhase(nextSession.agent_v2?.current_phase) ?? phaseBefore;
@@ -239,10 +247,10 @@ export async function runLabPipelineChatTurn(input: {
 export async function labContinueAfterDyadGate(
   lab: DeliveryLabSession,
 ): Promise<DeliveryLabSession> {
-  return runLabPipelineChatTurn({
+  return runLabPipelineChatOperation({
     lab,
-    userMessage: DYAD_CONTINUE_SYSTEM,
-  });
+    userMessage: "",
+  }, "dyad_continue");
 }
 
 /**

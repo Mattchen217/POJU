@@ -93,6 +93,21 @@ async function main() {
     analysisCalls += 1;
     return { content: di2AnalysisJson(), model: "test-hook", tokens_used: 10 };
   });
+  const attachCoverageRefs = (pageId: DecisionPageId): string => {
+    const page = JSON.parse(di2PageJson(pageId)) as Record<string, unknown>;
+    const requiredRefs = ["DEF", "PA-pattern-1", "dir_status_quo"];
+    const attachRefs = (value: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      if (Array.isArray(value)) { value.forEach(attachRefs); return; }
+      const row = value as Record<string, unknown>;
+      if (Array.isArray(row.evidence_refs)) {
+        row.evidence_refs = [...new Set([...row.evidence_refs, ...requiredRefs])];
+      }
+      Object.values(row).forEach(attachRefs);
+    };
+    attachRefs(page);
+    return JSON.stringify(page);
+  };
   pagesMod.__setDecisionReportPageModelForTests(async ({ pageId }) => {
     pageCalls.push(pageId);
     const left = pageFailures.get(pageId) ?? 0;
@@ -100,7 +115,8 @@ async function main() {
       pageFailures.set(pageId, left - 1);
       return { content: "not json", model: "test-hook", tokens_used: 1 };
     }
-    return { content: di2PageJson(pageId), model: "test-hook", tokens_used: 5 };
+    // M8 coverage: M5 fixtures use di2DraftDc stable IDs. Assertions unchanged.
+    return { content: attachCoverageRefs(pageId), model: "test-hook", tokens_used: 5 };
   });
 
   // ─── background host (the route's `after()`) + charge ─────────────────────

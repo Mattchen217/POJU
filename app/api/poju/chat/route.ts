@@ -9,6 +9,7 @@ import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
+import { POJUIntakeTerminalError } from "@/lib/poju/decision-authority/server/intake-guard";
 
 /**
  * POJU v5: phase-routed chat (`opening` → `collecting` → `confirmation` → `delivered` → `tracking`).
@@ -58,6 +59,12 @@ export async function POST(req: Request) {
     const payload = pojuLlmToChatPayload(llm);
     return NextResponse.json(attachDevStateLedger(payload, body.session));
   } catch (error: unknown) {
+    if (error instanceof POJUIntakeTerminalError) {
+      return NextResponse.json(
+        { error: "poju_intake_terminal", reason: error.reason },
+        { status: 409 },
+      );
+    }
     console.error("[poju/chat] unhandled error:", error);
     if (
       error instanceof OpenRouterProviderQueueError ||

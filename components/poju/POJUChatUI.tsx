@@ -53,9 +53,8 @@ import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-deliv
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import { handleUserMessage, handleUserActionUpdate, handleDyadContinuation, tryHandleRuleRejection } from "@/lib/poju/phase-router";
 import {
-  DYAD_CONTINUE_SYSTEM,
   buildDyadCompatSummary,
   dyadCollectedPatch,
   dyadSkipPatch,
@@ -3469,34 +3468,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   async function handleActionUpdate(actionId: string, status: POJUAction["status"], feedback?: string) {
     const s = sessionRef.current;
-    const action = s.actions.find((a) => a.action_id === actionId);
-    const updatedActions = s.actions.map((a) =>
-      a.action_id === actionId
-        ? {
-            ...a,
-            status,
-            user_feedback: feedback,
-            updated_at: new Date().toISOString(),
-          }
-        : a,
-    );
-    const updatedSession: POJUSessionState = { ...s, actions: updatedActions };
-    onSessionUpdate(updatedSession);
-    await savePOJUSession(updatedSession);
-
-    if (action) {
-      const systemNote = buildActionUpdateSystemNote(action.text, status, feedback);
-      try {
-        const finalSession = await handleUserMessage({
-          session: updatedSession,
-          userMessage: systemNote,
-          locale: processLocale(updatedSession),
-        });
-        onSessionUpdate(finalSession);
-        await savePOJUSession(finalSession);
-      } catch (err) {
-        console.error("[poju] Action follow-up failed:", err);
-      }
+    try {
+      const finalSession = await handleUserActionUpdate({
+        session: s,
+        action_id: actionId,
+        status,
+        feedback,
+        locale: processLocale(s),
+      });
+      onSessionUpdate(finalSession);
+      await savePOJUSession(finalSession);
+    } catch (err) {
+      console.error("[poju] Action follow-up failed:", err);
     }
   }
 
@@ -4193,9 +4176,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }
 
   async function continueAfterDyadGate(nextSession: POJUSessionState) {
-    const continued = await handleUserMessage({
+    const continued = await handleDyadContinuation({
       session: nextSession,
-      userMessage: DYAD_CONTINUE_SYSTEM,
       locale: sessionLang,
     });
     await savePOJUSession(continued);
@@ -4711,15 +4693,5 @@ function buildAttachmentNote(attachment: ComposerAttachment | null): string {
   if (attachment.kind === "image") return `[Image attached: ${attachment.name}]`;
   if (attachment.kind === "pdf") return `[PDF attached: ${attachment.name}]`;
   return `[Document attached: ${attachment.name}]`;
-}
-
-function buildActionUpdateSystemNote(actionText: string, status: string, feedback?: string): string {
-  const map: Record<string, string> = {
-    completed: "completed this action",
-    modified: "modified the action",
-    skipped: "chose not to do this action",
-  };
-  const verb = map[status] ?? "updated this action";
-  return `[SYSTEM: User ${verb}: "${actionText}"${feedback ? `. Feedback: "${feedback}"` : ""}. Please acknowledge and continue.]`;
 }
 

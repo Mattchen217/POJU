@@ -26,13 +26,9 @@ export type PartnerBaziPresence = "absent" | "present";
 
 export type DyadGateAction = "collect_partner_bazi" | "skip_partner_bazi";
 
-/** System continue after skip/collect — agent treats as system turn (no user bubble). */
-export const DYAD_CONTINUE_SYSTEM = "[SYSTEM: dyad_continue]";
-
 /**
  * Model-facing user cue for dyad continue.
- * `formatPhaseMessageHistory` strips `role:system`, so the LLM never saw DYAD_CONTINUE_SYSTEM —
- * only a weak “(Continue…)” stub. This cue is injected into the LLM session only (not persisted
+ * This cue is injected into the LLM session only (not persisted
  * as a user bubble) so opening actually resumes with path + partner structure.
  */
 export function buildDyadContinueModelUserCue(input: {

@@ -5,6 +5,8 @@
  */
 export {
   handleUserMessage,
+  handleUserActionUpdate,
+  handleDyadContinuation,
   tryHandleRuleRejection,
   countSubstantiveOpeningTurns,
   extractOpeningProblem,
