@@ -1,0 +1,80 @@
+[
+  {
+    "command": "pnpm test:m8-r1-internal-turn-trust-boundary",
+    "exit_code": 0,
+    "elapsed_sec": 2.833,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/01-test-m8-r1-internal-turn-trust-boundary.log"
+  },
+  {
+    "command": "pnpm test:m6-di2-full-lifecycle",
+    "exit_code": 0,
+    "elapsed_sec": 9.967,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/02-test-m6-di2-full-lifecycle.log"
+  },
+  {
+    "command": "pnpm test:m5-r1-authorization",
+    "exit_code": 0,
+    "elapsed_sec": 18.432,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/03-test-m5-r1-authorization.log"
+  },
+  {
+    "command": "pnpm test:m1-production-adaptive-question-loop",
+    "exit_code": 0,
+    "elapsed_sec": 21.815,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/04-test-m1-production-adaptive-question-loop.log"
+  },
+  {
+    "command": "pnpm test:m2-1-readiness-confirm-freeze",
+    "exit_code": 0,
+    "elapsed_sec": 3.942,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/05-test-m2-1-readiness-confirm-freeze.log"
+  },
+  {
+    "command": "pnpm test:m2-2-freeze-report-binding",
+    "exit_code": 0,
+    "elapsed_sec": 5.542,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/06-test-m2-2-freeze-report-binding.log"
+  },
+  {
+    "command": "pnpm test:m3-decision-report",
+    "exit_code": 0,
+    "elapsed_sec": 3.652,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/07-test-m3-decision-report.log"
+  },
+  {
+    "command": "pnpm test:m4-decision-authority",
+    "exit_code": 0,
+    "elapsed_sec": 4.335,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/08-test-m4-decision-authority.log"
+  },
+  {
+    "command": "pnpm test:m4-1-freeze-recovery",
+    "exit_code": 0,
+    "elapsed_sec": 3.613,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/09-test-m4-1-freeze-recovery.log"
+  },
+  {
+    "command": "pnpm test:m5-di2-main-path",
+    "exit_code": 0,
+    "elapsed_sec": 47.649,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/10-test-m5-di2-main-path.log"
+  },
+  {
+    "command": "pnpm test:m8-di2-non-model-closure",
+    "exit_code": 0,
+    "elapsed_sec": 1.987,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/11-test-m8-di2-non-model-closure.log"
+  },
+  {
+    "command": "pnpm exec tsc --noEmit --pretty false",
+    "exit_code": 0,
+    "elapsed_sec": 15.867,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/12-tsc-noemit.log"
+  },
+  {
+    "command": "pnpm build",
+    "exit_code": 0,
+    "elapsed_sec": 113.044,
+    "log": "docs/evidence/m8-r1-fu1-r2-assistant-history-provenance-2026-11-17/13-production-build.log"
+  }
+]
