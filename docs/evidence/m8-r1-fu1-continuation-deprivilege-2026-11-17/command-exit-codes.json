@@ -1,0 +1,136 @@
+[
+  {
+    "name": "m8-r1-internal-turn-trust-boundary",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m8-r1-internal-turn-trust-boundary"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 3.231,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m8-r1-internal-turn-trust-boundary.log"
+  },
+  {
+    "name": "m6-di2-full-lifecycle",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m6-di2-full-lifecycle"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 13.033,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m6-di2-full-lifecycle.log"
+  },
+  {
+    "name": "m5-r1-authorization",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m5-r1-authorization"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 19.78,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m5-r1-authorization.log"
+  },
+  {
+    "name": "m1-production-adaptive-question-loop",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m1-production-adaptive-question-loop"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 23.146,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m1-production-adaptive-question-loop.log"
+  },
+  {
+    "name": "m2-1-readiness-confirm-freeze",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m2-1-readiness-confirm-freeze"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 4.089,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m2-1-readiness-confirm-freeze.log"
+  },
+  {
+    "name": "m2-2-freeze-report-binding",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m2-2-freeze-report-binding"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 5.787,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m2-2-freeze-report-binding.log"
+  },
+  {
+    "name": "m3-decision-report",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m3-decision-report"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 3.785,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m3-decision-report.log"
+  },
+  {
+    "name": "m4-decision-authority",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m4-decision-authority"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 4.445,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m4-decision-authority.log"
+  },
+  {
+    "name": "m4-1-freeze-recovery",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m4-1-freeze-recovery"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 3.692,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m4-1-freeze-recovery.log"
+  },
+  {
+    "name": "m5-di2-main-path",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m5-di2-main-path"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 49.413,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m5-di2-main-path.log"
+  },
+  {
+    "name": "m8-di2-non-model-closure",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m8-di2-non-model-closure"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 2.012,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/m8-di2-non-model-closure.log"
+  },
+  {
+    "name": "typescript",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--pretty",
+      "false"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 16.454,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/typescript.log"
+  },
+  {
+    "name": "production-build",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "build"
+    ],
+    "exit_code": 0,
+    "elapsed_sec": 119.088,
+    "log": "docs/evidence/m8-r1-fu1-continuation-deprivilege-2026-11-17/production-build.log"
+  }
+]
