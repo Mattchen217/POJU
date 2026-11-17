@@ -50,6 +50,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "action_status_updates",
   "conversion_envelope_failed",
   "llm_debug",
+  "assistant_history_attestation",
 ] as const;
 
 export type ChatPayloadField = (typeof CHAT_PAYLOAD_FIELDS)[number];
@@ -121,6 +122,7 @@ export function pojuLlmToChatPayload(
     action_status_updates: llm.action_status_updates ?? undefined,
     conversion_envelope_failed: llm.conversion_envelope_failed,
     llm_debug: llm.llm_debug,
+    assistant_history_attestation: (llm as { assistant_history_attestation?: unknown }).assistant_history_attestation,
     ...overrides,
   });
 }
@@ -230,5 +232,23 @@ export function chatPayloadFromWire(
       data.llm_debug && typeof data.llm_debug === "object" && !Array.isArray(data.llm_debug)
         ? (data.llm_debug as import("@/lib/llm/llm-debug").LLMCallDebug)
         : undefined,
+    assistant_history_attestation: parseAssistantHistoryAttestationFromWire(
+      data.assistant_history_attestation,
+    ),
   });
+}
+
+function parseAssistantHistoryAttestationFromWire(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const rec = value as Record<string, unknown>;
+  if (rec.v !== 1 || rec.alg !== "hmac-sha256" || typeof rec.sig !== "string" || !rec.sig.trim()) {
+    return undefined;
+  }
+  const parsed: { v: 1; alg: "hmac-sha256"; sig: string; content?: string } = {
+    v: 1,
+    alg: "hmac-sha256",
+    sig: rec.sig.trim(),
+  };
+  if (typeof rec.content === "string") parsed.content = rec.content;
+  return parsed;
 }

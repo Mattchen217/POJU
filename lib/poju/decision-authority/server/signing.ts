@@ -78,3 +78,19 @@ export function signProfileReceipt(r: Unsigned<ProfileReceipt>): ProfileReceipt 
 export function verifyProfileReceiptSignature(r: ProfileReceipt): boolean {
   return Boolean(r?.signature) && safeEqualHex(hmac("poju-profile-receipt", signedPayload(r)), r.signature);
 }
+
+/** Domain-separated HMAC under the same server-only authority secret. */
+export function signAuthorityDomain(domain: string, payload: string): string {
+  return hmac(domain, payload);
+}
+
+export function verifyAuthorityDomain(domain: string, payload: string, signature: unknown): boolean {
+  if (typeof signature !== "string" || signature.length === 0) return false;
+  try {
+    return safeEqualHex(hmac(domain, payload), signature);
+  } catch (error) {
+    if (error instanceof AuthoritySigningUnavailableError) return false;
+    throw error;
+  }
+}
+

@@ -26,6 +26,14 @@ export type PojuV4UserIntent =
 
 export type PojuV4ActionRequested = "continue_chat" | "show_birth_form" | "deliver_main" | "track_progress";
 
+export interface AssistantHistoryAttestation {
+  v: 1;
+  alg: "hmac-sha256";
+  sig: string;
+  /** Exact signed text when it differs from `content`. */
+  content?: string;
+}
+
 export interface POJUMessage {
   role: "user" | "assistant" | "system";
   content: string;
@@ -72,6 +80,12 @@ export interface POJUMessage {
     tool_suggestion?: ToolSuggestionPayload;
     /** Correlates with `POJUCycle.tool_suggestions[].suggested_in_message_id`. */
     tool_suggestion_message_id?: string;
+    /**
+     * Server HMAC attestation for this assistant turn (M8-R1-FU1-R2).
+     * Presence is not proof; Prompt construction verifies the signature
+     * with the server-only authority secret. Clients must not mint this.
+     */
+    assistant_history_attestation?: AssistantHistoryAttestation;
     /** DI2 terminal input refusal; inspectable without reopening the frozen DC. */
     di2_input_rejection?: "session_expired" | "session_expiry_invalid" | "context_frozen" | "context_state_unverified" | "invalid_action_update" | "dyad_continuation_not_ready" | "invalid_session";
     /** User-authored audit of a structured action status update. */

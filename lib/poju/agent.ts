@@ -16,7 +16,7 @@ import {
   sessionEligibleForFinalConfirm,
 } from "@/lib/poju/decision-intake/confirm-and-freeze";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
-import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
+import type { AssistantHistoryAttestation, POJUAction, POJUSessionState, POJUMessage, ToolSuggestionPayload } from "@/lib/poju/types";
 import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
 import {
@@ -107,9 +107,9 @@ import {
   stripAgendaFieldsFromContextUpdates,
 } from "@/lib/poju/investigation-agenda";
 import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
-import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
+import { bindStoredAssistantAttestation } from "@/lib/poju/shared/assistant-history-provenance";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import {
   buildDyadGateTurn,
@@ -227,6 +227,7 @@ type LLMApiPayload = {
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
   conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+  assistant_history_attestation?: AssistantHistoryAttestation;
 };
 
 /** Append-only M1 audit fields that must survive every adopt and fail-closed return. */
@@ -1746,6 +1747,24 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     };
   }
 
+  let storedAttestation = bindStoredAssistantAttestation(
+    llmResponse.assistant_history_attestation,
+    llmResponse.response,
+    finalContent,
+  );
+  if (input.server_invoke && typeof window === "undefined") {
+    try {
+      const { signAssistantHistoryAttestation } = await import(
+        /* webpackIgnore: true */
+        "@/lib/poju/decision-authority/server/assistant-history-attestation"
+      );
+      storedAttestation =
+        signAssistantHistoryAttestation(sessionForLlm.session_id, finalContent) ?? storedAttestation;
+    } catch {
+      /* keep the API-bound attestation if re-signing is unavailable */
+    }
+  }
+
   const assistantMessage: POJUMessage = {
     role: "assistant",
     content: finalContent,
@@ -1797,6 +1816,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         : isPojuInfrastructureFailureMessage(finalContent)
           ? { kind: "infra_busy" as const }
           : {}),
+      ...(storedAttestation ? { assistant_history_attestation: storedAttestation } : {}),
     },
   };
 
@@ -2057,6 +2077,16 @@ async function callPOJULLMDirect(input: {
     attachment: input.attachment ?? null,
     lab_prompt_capture: input.lab_prompt_capture,
   });
+  let assistant_history_attestation: AssistantHistoryAttestation | undefined;
+  try {
+    const { signAssistantHistoryAttestation } = await import(
+      /* webpackIgnore: true */
+      "@/lib/poju/decision-authority/server/assistant-history-attestation"
+    );
+    assistant_history_attestation = signAssistantHistoryAttestation(input.session.session_id, r.response) ?? undefined;
+  } catch {
+    assistant_history_attestation = undefined;
+  }
   return {
     response: r.response,
     model: r.model,
@@ -2105,6 +2135,7 @@ async function callPOJULLMDirect(input: {
     action_status_updates: r.action_status_updates,
     conversion_envelope_failed: r.conversion_envelope_failed,
     llm_debug: r.llm_debug,
+    assistant_history_attestation,
   };
 }
 
@@ -2165,6 +2196,7 @@ async function callLLMViaAPI(input: {
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
   conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+  assistant_history_attestation?: AssistantHistoryAttestation;
 }> {
   // base_analysis + full session stringify is often multi‑MB sync work — yield so
   // the optimistic user bubble can paint before we freeze the main thread.
@@ -2352,6 +2384,11 @@ function mapLlmApiPayload(
       wire.llm_debug && typeof wire.llm_debug === "object" && !Array.isArray(wire.llm_debug)
         ? (wire.llm_debug as import("@/lib/llm/llm-debug").LLMCallDebug)
         : undefined,
+    assistant_history_attestation: bindStoredAssistantAttestation(
+      wire.assistant_history_attestation,
+      text,
+      text,
+    ),
   };
 }
 

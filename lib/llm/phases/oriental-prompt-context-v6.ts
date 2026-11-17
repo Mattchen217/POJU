@@ -61,6 +61,7 @@ import {
   formatPhaseMessageHistory,
   sanitizeClientPromptHistory,
 } from "@/lib/llm/phases/phase-transport";
+import { resolveTrustedPromptHistory } from "@/lib/poju/shared/assistant-history-provenance";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
 import { buildAnchoredFactsExclusionBlock } from "@/lib/poju/anchored-fact-tracking";
@@ -162,6 +163,7 @@ export function buildPojuSystemPromptV6Sync(): string {
 export async function buildPhaseTurnContextV6(
   input: PhaseLLMInput,
   taskBlock: string,
+  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<string> {
   // Output language ≡ website UI locale (single SSOT).
   const outLoc = resolvePivotSessionLang(input.session, input.locale);
@@ -170,7 +172,7 @@ export async function buildPhaseTurnContextV6(
   const langDirective = getPojuChatLanguageDirective({
     locale: uiLocale,
     userInput: input.user_message,
-    conversationHistory: sanitizeClientPromptHistory(
+    conversationHistory: conversationHistory ?? sanitizeClientPromptHistory(
       input.session.messages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -314,10 +316,13 @@ export async function buildPhaseTransportInputV6(
   messages: Array<{ role: "user" | "assistant"; content: string }>;
 }> {
   const system = buildPojuSystemPromptV6Sync();
-  const turnContext = await buildPhaseTurnContextV6(input, taskBlock);
-  const base = sanitizeClientPromptHistory(
-    messageHistory ?? formatPhaseMessageHistory(input.session.messages),
+  const base = await resolveTrustedPromptHistory(
+    input.session,
+    sanitizeClientPromptHistory(
+      messageHistory ?? formatPhaseMessageHistory(input.session.messages),
+    ),
   );
+  const turnContext = await buildPhaseTurnContextV6(input, taskBlock, base);
 
   const baseAnalysis = await loadBaseAnalysisForSessionV6(input);
   logBaseAnalysisPayload("buildPhaseTransportInputV6", baseAnalysis, {

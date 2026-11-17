@@ -4,6 +4,7 @@ import { callPOJULLM } from "@/lib/llm/poju-llm";
 import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 import { createPojuChatStreamResponse } from "@/lib/poju/poju-chat-stream";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
+import { attestChatPayload } from "@/lib/poju/decision-authority/server/assistant-history-attestation";
 import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       attachment: body.attachment ?? null,
     });
 
-    const payload = pojuLlmToChatPayload(llm);
+    const payload = attestChatPayload(pojuLlmToChatPayload(llm), body.session.session_id);
     return NextResponse.json(attachDevStateLedger(payload, body.session));
   } catch (error: unknown) {
     if (error instanceof POJUIntakeTerminalError) {

@@ -32,6 +32,7 @@ import {
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { buildPojuOutputRedLinesBlock } from "@/lib/llm/compliance/output-policy";
 import type { PhaseLLMInput } from "@/lib/llm/phases/types";
+import { resolveTrustedPromptHistory } from "@/lib/poju/shared/assistant-history-provenance";
 
 /** Byte-stable output red lines — cached in system prompt (INV-1). */
 export function buildOutputRedLinesBlock(): string {
@@ -95,13 +96,17 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput): Promise<strin
 }
 
 /** Per-turn dynamic context — prepended to the latest user message (not in system). */
-export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): string {
+export function buildPhaseTurnContext(
+  input: PhaseLLMInput,
+  taskBlock: string,
+  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>,
+): string {
   const uiLocale = parseAppLocale(input.locale);
   const outLoc = resolvePivotSessionLang(input.session, input.locale);
   const langDirective = getPojuChatLanguageDirective({
     locale: uiLocale,
     userInput: input.user_message,
-    conversationHistory: sanitizeClientPromptHistory(
+    conversationHistory: conversationHistory ?? sanitizeClientPromptHistory(
       input.session.messages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -146,10 +151,13 @@ export async function buildPhaseTransportInput(
   messages: Array<{ role: "user" | "assistant"; content: string }>;
 }> {
   const system = await buildPojuSystemPrompt(input);
-  const turnContext = buildPhaseTurnContext(input, taskBlock);
-  const base = sanitizeClientPromptHistory(
-    messageHistory ?? formatPhaseMessageHistory(input.session.messages),
+  const base = await resolveTrustedPromptHistory(
+    input.session,
+    sanitizeClientPromptHistory(
+      messageHistory ?? formatPhaseMessageHistory(input.session.messages),
+    ),
   );
+  const turnContext = buildPhaseTurnContext(input, taskBlock, base);
   return {
     system,
     messages: applyTurnContext(base, turnContext),

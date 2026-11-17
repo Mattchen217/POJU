@@ -4,6 +4,7 @@ import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
+import { attestChatPayload } from "@/lib/poju/decision-authority/server/assistant-history-attestation";
 import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
@@ -63,13 +64,16 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
         send({
           type: "complete",
           ...attachDevStateLedger(
-            pojuLlmToChatPayload(llm, {
-              response: resolveStreamedCompleteResponse(
-                llm.response,
-                lastContentText,
-                sessionLang,
-              ),
-            }),
+            attestChatPayload(
+              pojuLlmToChatPayload(llm, {
+                response: resolveStreamedCompleteResponse(
+                  llm.response,
+                  lastContentText,
+                  sessionLang,
+                ),
+              }),
+              body.session.session_id,
+            ),
             body.session,
           ),
         });
