@@ -3,7 +3,8 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { handleDyadContinuation, handleUserMessage } from "@/lib/poju/agent";
+import { handleUserMessage } from "@/lib/poju/agent";
+import { dyadContinuationUserMessage } from "@/lib/poju/dyad-compat";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { buildLabObservation } from "@/lib/llm/pro/delivery/lab/observation";
@@ -115,12 +116,11 @@ export async function runLabPipelineChatTurn(input: {
   lab: DeliveryLabSession;
   userMessage: string;
 }): Promise<DeliveryLabSession> {
-  return runLabPipelineChatOperation(input, "user");
+  return runLabPipelineChatOperation(input);
 }
 
 async function runLabPipelineChatOperation(
   input: { lab: DeliveryLabSession; userMessage: string },
-  operation: "user" | "dyad_continue",
 ): Promise<DeliveryLabSession> {
   if (input.lab.mode !== "full_pipeline" || !input.lab.chat_session) {
     throw new Error("lab_not_full_pipeline");
@@ -147,9 +147,10 @@ async function runLabPipelineChatOperation(
       },
     },
   };
-  const nextSession = operation === "dyad_continue"
-    ? await handleDyadContinuation(handleOptions)
-    : await handleUserMessage({ ...handleOptions, userMessage: input.userMessage });
+  const nextSession = await handleUserMessage({
+    ...handleOptions,
+    userMessage: input.userMessage,
+  });
 
   const phaseAfter =
     normalizeAgentPhase(nextSession.agent_v2?.current_phase) ?? phaseBefore;
@@ -241,7 +242,7 @@ async function runLabPipelineChatOperation(
 }
 
 /**
- * Production parity after dyad collect/skip: system continue turn so opening
+ * Production parity after dyad collect/skip: ordinary user operation so opening
  * re-runs with dual-chart feed (dyad_compat_summary / matrix) already on session.
  */
 export async function labContinueAfterDyadGate(
@@ -249,8 +250,8 @@ export async function labContinueAfterDyadGate(
 ): Promise<DeliveryLabSession> {
   return runLabPipelineChatOperation({
     lab,
-    userMessage: "",
-  }, "dyad_continue");
+    userMessage: dyadContinuationUserMessage(lab.chat_session?.dyad_offer_status),
+  });
 }
 
 /**

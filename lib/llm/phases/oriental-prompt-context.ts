@@ -27,6 +27,7 @@ import { buildTurnContextSnapshot } from "@/lib/poju/state-machine";
 import {
   applyTurnContext,
   formatPhaseMessageHistory,
+  sanitizeClientPromptHistory,
 } from "@/lib/llm/phases/phase-transport";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import { buildPojuOutputRedLinesBlock } from "@/lib/llm/compliance/output-policy";
@@ -100,10 +101,12 @@ export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): 
   const langDirective = getPojuChatLanguageDirective({
     locale: uiLocale,
     userInput: input.user_message,
-    conversationHistory: input.session.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
+    conversationHistory: sanitizeClientPromptHistory(
+      input.session.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    ),
     forcedOutputLocale: outLoc,
   });
   const structured =
@@ -144,7 +147,9 @@ export async function buildPhaseTransportInput(
 }> {
   const system = await buildPojuSystemPrompt(input);
   const turnContext = buildPhaseTurnContext(input, taskBlock);
-  const base = messageHistory ?? formatPhaseMessageHistory(input.session.messages);
+  const base = sanitizeClientPromptHistory(
+    messageHistory ?? formatPhaseMessageHistory(input.session.messages),
+  );
   return {
     system,
     messages: applyTurnContext(base, turnContext),

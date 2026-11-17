@@ -53,10 +53,11 @@ import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-deliv
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUserMessage, handleUserActionUpdate, handleDyadContinuation, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import { handleUserMessage, handleUserActionUpdate, tryHandleRuleRejection } from "@/lib/poju/phase-router";
 import {
   buildDyadCompatSummary,
   dyadCollectedPatch,
+  dyadContinuationUserMessage,
   dyadSkipPatch,
   dyadGateChipsLocked,
   matchDyadGateAction,
@@ -4176,8 +4177,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }
 
   async function continueAfterDyadGate(nextSession: POJUSessionState) {
-    const continued = await handleDyadContinuation({
+    const continued = await handleUserMessage({
       session: nextSession,
+      userMessage: dyadContinuationUserMessage(nextSession.dyad_offer_status),
       locale: sessionLang,
     });
     await savePOJUSession(continued);
@@ -4192,8 +4194,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         ...session,
         ...dyadSkipPatch(),
       });
-      await savePOJUSession(next);
-      onSessionUpdate(next);
       await continueAfterDyadGate(next);
     } catch (e) {
       console.error("[dyad] skip failed", e);
@@ -4238,8 +4238,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           matrix_pack,
         }),
       });
-      await savePOJUSession(next);
-      onSessionUpdate(next);
       setPartnerBirthBusy(false);
       await continueAfterDyadGate(next);
     } catch (e) {

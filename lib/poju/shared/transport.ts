@@ -472,6 +472,26 @@ export function resolveStreamedCompleteResponse(
 }
 
 /**
+ * Client-submitted conversation history may only use ordinary chat roles.
+ * Server system instructions are supplied separately by prompt construction
+ * and must not be taken from session.messages.
+ *
+ * role: "system", "developer", "tool", and any other disallowed role are
+ * dropped by this safe-filter and are never rewritten into trusted history
+ * or into the server system prompt.
+ */
+export function sanitizeClientPromptHistory(
+  messages: Array<{ role: string; content: string }>,
+): Array<{ role: "user" | "assistant"; content: string }> {
+  return messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
+}
+
+/**
  * History for the model: role + content only.
  * Assistant `options` chips are display helpers and must never enter the prompt
  * (unchosen options would pollute context).
@@ -479,13 +499,14 @@ export function resolveStreamedCompleteResponse(
 export function formatPhaseMessageHistory(
   messages: Array<{ role: string; content: string; is_rejected?: boolean }>,
 ): Array<{ role: "user" | "assistant"; content: string }> {
-  return messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .filter((m) => !m.is_rejected)
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: stripGlossTokensForPrompt(m.content),
-    }));
+  return sanitizeClientPromptHistory(
+    messages
+      .filter((m) => !m.is_rejected)
+      .map((m) => ({
+        role: m.role,
+        content: stripGlossTokensForPrompt(m.content),
+      })),
+  );
 }
 
 /**

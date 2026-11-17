@@ -112,7 +112,6 @@ import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import {
-  buildDyadContinueModelUserCue,
   buildDyadGateTurn,
   resolveDyadSpecificOther,
   shouldPresentDyadGate,
@@ -181,7 +180,6 @@ export type ActionUpdateInput = {
 
 type InternalTurn =
   | { kind: "user" }
-  | { kind: "dyad_continue" }
   | { kind: "action_update"; action_id: string; status: POJUAction["status"]; feedback?: string };
 
 
@@ -360,7 +358,6 @@ function finalizeAgentV2(
     attachments_unlocked?: boolean;
   },
   userMessage: string,
-  isSystemMessage: boolean,
   loadedBaseAnalysis?: unknown | null,
 ): {
   agent: POJUAgentState;
@@ -460,12 +457,10 @@ function finalizeAgentV2(
   const phaseUserMessage =
     userMessage.trim() === "__OPENING__"
       ? "__OPENING__"
-      : isSystemMessage
-        ? ""
-        : userMessage;
+      : userMessage;
 
   const collectionProgress = parseCollectionProgress(llm.collection_progress);
-  const isCollectingTurn = currentPhase === "collecting_context" && !isSystemMessage;
+  const isCollectingTurn = currentPhase === "collecting_context";
   const counters = applyCollectingTurnCounters(base, {
     isCollectingTurn,
     collection_progress: collectionProgress,
@@ -518,7 +513,6 @@ function finalizeAgentV2(
 
   const pickedOption =
     Boolean(phaseUserMessage.trim()) &&
-    !isSystemMessage &&
     userPickedProvidedOption(session, phaseUserMessage);
 
   const lastAskedForCollect =
@@ -629,8 +623,7 @@ function finalizeAgentV2(
   } else if (
     currentPhase === "opening" &&
     phaseUserMessage.trim() &&
-    phaseUserMessage !== "__OPENING__" &&
-    !isSystemMessage
+    phaseUserMessage !== "__OPENING__"
   ) {
     // 1阶段:用当前缺失必填项作 question_key(切字段即重置)。
     const missing = getUnderstandingMissingFields(merged);
@@ -817,20 +810,13 @@ function normalizeNewActions(raw: unknown[] | undefined): POJUAction[] {
 
 /**
  * Step 3 dynamic agent skeleton:
- * - appends user/system message
+ * - appends user message
  * - prepares profile context
  * - calls /api/poju/chat (Gemini via server, same models as Glyph oracle full-reading)
  * - appends assistant message
  */
 export async function handleUserMessage(input: HandleInput): Promise<POJUSessionState> {
   return runAgentTurn(input, { kind: "user" });
-}
-
-/** Explicit continuation after the user closes the Dyad gate. No user-supplied text chooses this path. */
-export async function handleDyadContinuation(
-  input: Omit<HandleInput, "userMessage" | "userAlreadyAppended">,
-): Promise<POJUSessionState> {
-  return runAgentTurn({ ...input, userMessage: "" }, { kind: "dyad_continue" });
 }
 
 /** Apply a real action update as a user operation, with a normal user-role audit turn. */
@@ -875,7 +861,7 @@ function appendIntakeRejection(
 
 async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Promise<POJUSessionState> {
   const { session: sessionIn, locale, userAlreadyAppended, signal, attachment } = input;
-  const userMessage = internalTurn.kind === "dyad_continue" ? "" : input.userMessage;
+  const userMessage = input.userMessage;
   if (!sessionIn || typeof sessionIn !== "object" || typeof sessionIn.session_id !== "string" || !Array.isArray(sessionIn.messages)) {
     throw new Error("invalid_session");
   }
@@ -896,13 +882,6 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     }];
     return { ...sessionIn, messages };
   }
-  if (internalTurn.kind === "dyad_continue") {
-    if (
-      !["skipped", "collected"].includes(sessionIn.dyad_offer_status ?? "") ||
-      !["solo", "dyad"].includes(sessionIn.pivot_chart_path ?? "") ||
-      !Number.isFinite(Date.parse(sessionIn.charts_locked_at ?? ""))
-    ) return appendIntakeRejection(sessionIn, "dyad_continuation_not_ready");
-  }
   if (internalTurn.kind === "user" && (userMessage.startsWith("[SYSTEM:") || userMessage.trim() === "__OPENING__")) {
     return handleRuleRejection(sessionIn, userMessage, "jailbreak", locale);
   }
@@ -913,11 +892,10 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   // the report client/status APIs; feeding another chat turn cannot reopen intake.
   const session = ensureSessionCycles(sessionIn);
   const isOpeningSignal = false;
-  const isSystemMessage = internalTurn.kind === "dyad_continue";
 
   const externalHandoffPending = findPendingToolInjection(session);
   const injectionPrep = prepareToolInjectionTurn(session, {
-    skipWhenSystemTurn: isSystemMessage && !externalHandoffPending,
+    skipWhenSystemTurn: false,
   });
   let sessionBase = injectionPrep.session;
 
@@ -926,7 +904,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   // After this turn merges updates, force back to the understanding gate when fields
   // are still complete (model often just says「好」with sufficient=false).
   let revisingUnderstandingGate = false;
-  if (!isSystemMessage && userMessage.trim()) {
+  if (userMessage.trim()) {
     const phase0 =
       normalizeAgentPhase(sessionBase.agent_v2?.current_phase) ??
       sessionBase.agent_v2?.current_phase;
@@ -957,7 +935,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     }
   }
 
-  if (!isSystemMessage && !userAlreadyAppended) {
+  if (!userAlreadyAppended) {
     const ruleCheck = checkRuleViolation(userMessage, sessionBase);
     if (ruleCheck.violated && ruleCheck.type) {
       return handleRuleRejection(sessionBase, userMessage, ruleCheck.type, locale);
@@ -979,10 +957,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   }
 
   const newUserMessage: POJUMessage = {
-    role: isSystemMessage ? "system" : "user",
-    content: internalTurn.kind === "dyad_continue"
-      ? `Dyad gate closed by user action: ${sessionBase.dyad_offer_status}.`
-      : userMessage,
+    role: "user",
+    content: userMessage,
     timestamp: new Date().toISOString(),
     client_id: safeRandomUUID(),
     ...(internalTurn.kind === "action_update" ? { meta: {
@@ -998,7 +974,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   let messagesWithUser: POJUMessage[];
   if (isOpeningSignal) {
     messagesWithUser = sessionBase.messages;
-  } else if (!isSystemMessage && userAlreadyAppended) {
+  } else if (userAlreadyAppended) {
     const last = sessionBase.messages[sessionBase.messages.length - 1];
     if (last?.role === "user" && last.content.trim() === userMessage.trim()) {
       messagesWithUser = sessionBase.messages;
@@ -1021,7 +997,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
 
   const uiLocale = parseAppLocale(locale);
   const langSwitch = classifyLanguageSwitchRequest(
-    isSystemMessage || isOpeningSignal ? undefined : userMessage,
+    isOpeningSignal ? undefined : userMessage,
   );
 
   // Out-of-range language request: fixed notice, keep website language, skip LLM.
@@ -1055,25 +1031,6 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     ...sessionForLlm,
     locked_output_locale: persistLocked,
   };
-
-  if (internalTurn.kind === "dyad_continue") {
-    // Persist system audit row only; model history strips role:system — inject explicit user cue.
-    sessionForLlm = {
-      ...sessionForLlm,
-      messages: [
-        ...sessionForLlm.messages,
-        {
-          role: "user",
-          content: buildDyadContinueModelUserCue({
-            partner_bazi: sessionForLlm.partner_bazi,
-            pivot_chart_path: sessionForLlm.pivot_chart_path,
-            locale: sessionOutputLocale,
-          }),
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-  }
 
   let workingSession = sessionBase;
 
@@ -1116,7 +1073,6 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   // reaggregates DIRs, and freezes via sufficiency wire. No fake DIR known.
   {
     const confirmEligible =
-      !isSystemMessage &&
       !isOpeningSignal &&
       Boolean(userMessage.trim()) &&
       sessionEligibleForFinalConfirm(sessionForLlm, userMessage);
@@ -1219,7 +1175,6 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         phaseBeforeLlm !== "tracking");
     const m1UserTurn =
       m1EligiblePhase &&
-      !isSystemMessage &&
       !isOpeningSignal &&
       Boolean(userMessage.trim()) &&
       (hasDraftDc || phaseBeforeLlm === "opening" || phaseBeforeLlm === "collecting_context" || !sessionForLlm.agent_v2);
@@ -1228,7 +1183,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         .reverse()
         .find((m) => m.role === "user" && !m.is_rejected);
       const turnId = lastUser?.client_id?.trim();
-      const statement = (userMessage.trim() === "__OPENING__" ? "" : isSystemMessage ? "" : userMessage).trim();
+      const statement = (userMessage.trim() === "__OPENING__" ? "" : userMessage).trim();
       if (turnId && statement) {
         const nowPre = new Date().toISOString();
         m1CollectingTurn = await runM1ProductionPreLlmTurn(sessionForLlm, {
@@ -1511,9 +1466,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   const phaseUserMessage =
     userMessage.trim() === "__OPENING__"
       ? "__OPENING__"
-      : isSystemMessage
-        ? ""
-        : userMessage;
+      : userMessage;
   const phaseForWire =
     normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening";
   const openingTurn = isOpeningControlPhase(phaseForWire);
@@ -1548,7 +1501,6 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       attachments_unlocked: llmResponse.attachments_unlocked === true,
     },
     userMessage,
-    isSystemMessage,
     base_analysis,
   );
   let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
@@ -1626,7 +1578,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   let dyadGatePending = false;
 
   // Case C / S1-D-2: dyad chips held understanding confirm at opening; after skip/collect resume it.
-  // System dyad_continue has empty hasInput so the state machine alone cannot re-enter the gate.
+  // Continuation now enters as an ordinary non-empty user operation; the held flag
+  // still re-enters the confirm gate because the state machine alone may not.
   if (
     shouldResumeUnderstandingConfirmAfterDyad({
       held: workingSession.understanding_confirm_held_for_dyad === true,
@@ -1685,7 +1638,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   // often complete the three fields in one turn; NL "skip chart" must not bypass chips.
   const dyadHit = resolveDyadSpecificOther({
     modelFlag: llmResponse.dyad_specific_other,
-    userText: isSystemMessage ? "" : userMessage,
+    userText: userMessage,
     // LAB often keeps original_question as "(lab pipeline)"; still OR recent user turns.
     assistText: [
       workingSession.original_question,
@@ -1726,7 +1679,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   }
 
   // Collecting: chip/短答被模型忽略时，至少在正文前点名接住（不整段改写）。
-  if (phaseForWire === "collecting_context" && !isSystemMessage && phaseUserMessage.trim()) {
+  if (phaseForWire === "collecting_context" && phaseUserMessage.trim()) {
     const pickedForCatch = userPickedProvidedOption(sessionForAgent, phaseUserMessage);
     const beforeCatch = finalContent;
     finalContent = ensureCollectingCatchPrefix(finalContent, phaseUserMessage, {

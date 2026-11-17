@@ -104,6 +104,25 @@ function clipKeys(keys: string[], max = MAX_KEYS): string[] {
  * Run Match local matrix and compress to Pivot-safe summary.
  * Does not call Match LLM / does not build full report.
  */
+export const DYAD_SKIP_CONTINUE_USER_MESSAGE =
+  "用户选择跳过 Dyad Gate，继续当前决策分析。";
+
+export const DYAD_COLLECT_CONTINUE_USER_MESSAGE =
+  "用户完成 Dyad 信息提供，继续当前决策分析。";
+
+/**
+ * Ordinary user-authored record of a Dyad Gate choice.
+ * This is visible conversation text, not an identity token and not a system role.
+ * Skip vs complete is distinguished by existing Dyad state fields, not message role.
+ */
+export function dyadContinuationUserMessage(
+  offerStatus: DyadOfferStatus | string | null | undefined,
+): string {
+  return offerStatus === "collected"
+    ? DYAD_COLLECT_CONTINUE_USER_MESSAGE
+    : DYAD_SKIP_CONTINUE_USER_MESSAGE;
+}
+
 export function buildDyadCompatSummary(
   input: BuildDyadCompatSummaryInput,
 ): DyadCompatSummary {

@@ -141,7 +141,7 @@ function resolvePhaseAfterDyadContinue(input: {
   assert.equal(noHold.held, false);
 }
 
-// Continuation is a typed operation, not a special text passed through the user-message API.
+// Continuation is an ordinary user-message operation after Dyad state is applied.
 
 // --- Static source contracts: agent + ChatUI + lab gate ---
 const agentSrc = readFileSync(
@@ -160,10 +160,15 @@ assert.ok(
   ),
   "agent must set awaiting_understanding_confirm and clear held only inside resume-true branch",
 );
+assert.equal(
+  /export async function handleDyadContinuation\(/.test(agentSrc),
+  false,
+  "agent must not export a privileged Dyad continuation entry",
+);
 assert.ok(
-  agentSrc.includes("System dyad_continue has empty hasInput") ||
-    agentSrc.includes("empty hasInput"),
-  "agent must document empty hasInput gap for dyad_continue",
+  agentSrc.includes("ordinary non-empty user operation") ||
+    agentSrc.includes("shouldResumeUnderstandingConfirmAfterDyad"),
+  "agent must keep held-flag resume after ordinary Dyad user operations",
 );
 assert.equal(
   (agentSrc.match(/understanding_confirm_held_for_dyad:\s*false/g) ?? []).length,
@@ -175,9 +180,15 @@ const chatUiSrc = readFileSync(
   fileURLToPath(new URL("../components/poju/POJUChatUI.tsx", import.meta.url)),
   "utf8",
 );
-assert.ok(
+assert.equal(
   /handleDyadContinuation\(/.test(chatUiSrc),
-  "ChatUI must use the explicit Dyad continuation operation",
+  false,
+  "ChatUI must not import or call handleDyadContinuation",
+);
+assert.ok(
+  /continueAfterDyadGate[\s\S]{0,600}?handleUserMessage\(/.test(chatUiSrc) &&
+    chatUiSrc.includes("dyadContinuationUserMessage"),
+  "ChatUI continueAfterDyadGate must call the ordinary user-message entry",
 );
 assert.ok(
   /handleDyadSkip[\s\S]{0,500}?clearDyadGateUi[\s\S]{0,200}?dyadSkipPatch\(\)[\s\S]{0,400}?continueAfterDyadGate/.test(chatUiSrc),
@@ -208,5 +219,5 @@ assert.ok(
 console.log("ok dyad-skip-collect-understanding-e2e", {
   skip_lab: "lab_mv873uyn_7407b956",
   collect_lab: "lab_mv876ff9_e3508224",
-  continuation: "typed operation",
+  continuation: "ordinary user message",
 });
