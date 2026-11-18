@@ -1,0 +1,23 @@
+command	exit	seconds	notes
+pnpm test:di2-understanding-composer-flow	0	1.9	Passed 10 checks
+pnpm test:di2-feature-landing-main-path	0	2.7	22 passed
+pnpm test:m1-r-fresh-session-main-loop	0	4.0	PASS=8 FAIL=0
+pnpm test:m1-production-adaptive-question-loop	0	23.0	PASS=188 FAIL=0
+pnpm test:m2-1-readiness-confirm-freeze	0	4.1	19 passed, 0 failed
+pnpm test:m2-2-freeze-report-binding	0	5.8	43 passed, 0 failed
+pnpm test:m2-3-decision-blueprint	0	4.0	18 passed, 0 failed
+pnpm test:m2-4-r2-production-closure	0	9.8	PASS=20 FAIL=0
+pnpm test:m3-decision-report	0	3.8	27 passed, 0 failed
+pnpm test:m4-decision-authority	0	4.5	27 passed, 0 failed
+pnpm test:m4-1-freeze-recovery	0	3.7	10 passed, 0 failed
+pnpm test:m5-di2-main-path	0	49.3	29 passed, 0 failed
+pnpm test:m6-di2-full-lifecycle	0	10.3	7 passed, 0 failed
+pnpm test:m8-di2-non-model-closure	0	2.0	checks complete
+pnpm test:m8-r1-internal-turn-trust-boundary	0	2.9	checks complete
+pnpm test:m9-server-authoritative-session	0	3.5	checks complete
+pnpm test:m9-r1-session-authority-remediation	0	3.2	checks complete
+pnpm test:m9-r1-fu1-redis-lua-integrity-parity	0	3.2	REAL_REDIS_LUA_EXECUTED=no
+pnpm test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding	0	3.7	REAL_REDIS_LUA_EXECUTED=no
+pnpm test:m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding	0	3.6	REAL_REDIS_LUA_EXECUTED=no
+pnpm exec tsc --noEmit --pretty false	0	16.4	no compiler output
+pnpm build	0	127.6	Compiled successfully in 51s
