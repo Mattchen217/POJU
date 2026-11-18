@@ -1,0 +1,1158 @@
+{
+  "kind": "m2_4_r2_real_openrouter_smoke",
+  "ran_at": "2026-11-18T12:56:15.662Z",
+  "transport": "handleUserMessage → interpretAnswerWithModel → POST /api/poju/answer-interpretation (real route handler) → OpenRouter",
+  "stubbed": [
+    "/api/poju/chat (legacy phase chat; no Next server in this process)"
+  ],
+  "redaction": "Evidence copy is slimmed: no user texts, no prompt excerpts, no headers, no env, no secrets. Original local report stayed in temp/ and was not committed.",
+  "expectations": {
+    "met": 43,
+    "total": 55,
+    "reported": {
+      "met": 43,
+      "total": 55
+    }
+  },
+  "usage_totals": {
+    "prompt_tokens": 10430,
+    "completion_tokens": 1914,
+    "cost": 0.01157778
+  },
+  "cases": [
+    {
+      "id": "C01",
+      "title": "plain fact",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "one real OpenRouter call via server route",
+          "met": true
+        },
+        {
+          "check": "DC version +1",
+          "met": true
+        },
+        {
+          "check": "facts carry the raw answer verbatim",
+          "met": true
+        },
+        {
+          "check": "next authorized question sent",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "answer",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1472,
+                  "completion_tokens": 264,
+                  "total_tokens": 1736,
+                  "cost": 0.0026208
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "clear_answer",
+                "item_count": 2
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "title": "negation",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "real call ok",
+          "met": true
+        },
+        {
+          "check": "negated statement stored verbatim (no positive rewrite)",
+          "met": true,
+          "detail": "facts=1"
+        },
+        {
+          "check": "no model text stored as statement",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "answer",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1469,
+                  "completion_tokens": 341,
+                  "total_tokens": 1810,
+                  "cost": 0.00161883
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "clear_answer",
+                "item_count": 3
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "title": "condition and time limit",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "real call ok",
+          "met": true
+        },
+        {
+          "check": "conditions kept inside raw statement",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "answer",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1478,
+                  "completion_tokens": 274,
+                  "total_tokens": 1752,
+                  "cost": 0.00147018
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "clear_answer",
+                "item_count": 2
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "title": "multiple facts in one answer",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "real call ok",
+          "met": true
+        },
+        {
+          "check": "each item keeps its own locator (>=2 locators persisted)",
+          "met": true,
+          "detail": "locators=2"
+        },
+        {
+          "check": "raw statement only",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "answer",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1476,
+                  "completion_tokens": 265,
+                  "total_tokens": 1741,
+                  "cost": 0.00144588
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "clear_answer",
+                "item_count": 2
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "title": "uncertain answer",
+      "notes": [
+        "pending items after vague answer: 1",
+        "facts from the vague answer after the queue: unverified/user_estimate"
+      ],
+      "expectations": [
+        {
+          "check": "real call ok",
+          "met": true
+        },
+        {
+          "check": "never stored as user_asserted",
+          "met": true,
+          "detail": "unverified/user_estimate"
+        },
+        {
+          "check": "pending item 105f7910-88c7-41fc-8ed7-0ef6c3e4f3c5#0 left the queue",
+          "met": true
+        },
+        {
+          "check": "pending queue fully drained",
+          "met": true
+        },
+        {
+          "check": "estimate choice stored as user_estimate",
+          "met": true
+        },
+        {
+          "check": "unclear items never user_asserted",
+          "met": true
+        },
+        {
+          "check": "ordinary loop resumes with a next question",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "answer",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1474,
+                  "completion_tokens": 346,
+                  "total_tokens": 1820,
+                  "cost": 0.00163758
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "vague_answer",
+                "item_count": 3
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        },
+        {
+          "label": "pending choice 1 (2)",
+          "route_hits": 0,
+          "openrouter_calls": [],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "title": "correction of an earlier answer",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "both calls ok",
+          "met": true
+        },
+        {
+          "check": "classified as correction",
+          "met": true,
+          "detail": "correction"
+        },
+        {
+          "check": "new fact links the corrected fact (before/after kept)",
+          "met": true
+        },
+        {
+          "check": "no Conflict opened for a correction",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "first answer",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1467,
+                  "completion_tokens": 248,
+                  "total_tokens": 1715,
+                  "cost": 0.00139293
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "clear_answer",
+                "item_count": 2
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 2,
+            "fact_count": 3,
+            "status": "draft"
+          }
+        },
+        {
+          "label": "correction",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 1566,
+                  "completion_tokens": 163,
+                  "total_tokens": 1729,
+                  "cost": 0.00132258
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": true,
+                "reason": null,
+                "classification": "correction",
+                "item_count": 1
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 3,
+            "fact_count": 4,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "title": "goal change with confirmation and Blueprint update",
+      "notes": [
+        "next question after Blueprint update: 关于「要不要离职去创业？」——商业模式与关键依赖？（这样我才能判断：创业类决策的主题深度）"
+      ],
+      "expectations": [
+        {
+          "check": "real call ok",
+          "met": false
+        },
+        {
+          "check": "goal_change control item created, no DC write",
+          "met": false
+        },
+        {
+          "check": "candidate target extracted from user wording",
+          "met": false
+        },
+        {
+          "check": "Blueprint unchanged before confirmation",
+          "met": true
+        },
+        {
+          "check": "confirm turn makes no model call",
+          "met": false
+        },
+        {
+          "check": "Blueprint version +1",
+          "met": false
+        },
+        {
+          "check": "history + change log recorded",
+          "met": false
+        },
+        {
+          "check": "DC version +1 (definition updated)",
+          "met": false
+        },
+        {
+          "check": "Understanding rebuilt on new Blueprint",
+          "met": true
+        },
+        {
+          "check": "next question sent in new scope",
+          "met": false
+        },
+        {
+          "check": "answer in new scope committed",
+          "met": false
+        }
+      ],
+      "turns": [
+        {
+          "label": "goal change",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 402,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "{\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-fli"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        },
+        {
+          "label": "confirm",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 402,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "{\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-fli"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        },
+        {
+          "label": "answer in new scope",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 402,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "{\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-fli"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "title": "insight mismatch",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "real call ok",
+          "met": false
+        },
+        {
+          "check": "insight_mismatch captured (not dropped)",
+          "met": false
+        }
+      ],
+      "turns": [
+        {
+          "label": "mismatch",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 402,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "{\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-fli"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C09a",
+      "title": "prompt-injection answer (real model, production path)",
+      "notes": [
+        "stopped by the pre-existing identity/scope guard before Decision Intake; no interpretation call"
+      ],
+      "expectations": [
+        {
+          "check": "no DC write",
+          "met": true
+        },
+        {
+          "check": "no confirmed fact anywhere",
+          "met": true
+        },
+        {
+          "check": "question unchanged",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "injection",
+          "route_hits": 0,
+          "openrouter_calls": [],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C09b",
+      "title": "invalid model output (real non-JSON text)",
+      "notes": [
+        "real_probe provider=Sail Research model=deepseek/deepseek-v4-pro-0813 parse=invalid_json",
+        "C09b orchestrator turn uses a test hook that returns the real probe text; it is not a real-model validation of the orchestrator."
+      ],
+      "expectations": [
+        {
+          "check": "real model returned non-JSON; production parser rejects it",
+          "met": true,
+          "detail": "invalid_json"
+        },
+        {
+          "check": "fail-closed: no DC write",
+          "met": true
+        },
+        {
+          "check": "fail-closed: last_sent_question unchanged",
+          "met": true
+        },
+        {
+          "check": "fail-closed: no budget charge",
+          "met": true
+        },
+        {
+          "check": "recoverable error surfaced",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "orchestrator replay (HOOK: replays the real text above)",
+          "route_hits": 0,
+          "openrouter_calls": [
+            {
+              "via_route": false,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.2,
+                "max_tokens": 120,
+                "response_format": null,
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 81
+              },
+              "response": {
+                "http_status": 200,
+                "provider": "Sail Research",
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "finish_reason": "stop",
+                "usage": {
+                  "prompt_tokens": 28,
+                  "completion_tokens": 13,
+                  "total_tokens": 41,
+                  "cost": 6.9e-05
+                },
+                "error": null
+              },
+              "parse": {
+                "ok": false,
+                "reason": "invalid_json",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C10a",
+      "title": "abort during a real call",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "request reached the route",
+          "met": true
+        },
+        {
+          "check": "no DC write",
+          "met": true
+        },
+        {
+          "check": "last_sent_question unchanged",
+          "met": true
+        },
+        {
+          "check": "no budget charge",
+          "met": true
+        },
+        {
+          "check": "recoverable error",
+          "met": true,
+          "detail": "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。(timeout:llm_timeout)"
+        },
+        {
+          "check": "retry succeeds with one real call",
+          "met": false
+        }
+      ],
+      "turns": [
+        {
+          "label": "aborted",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": null,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "AbortError:This operation was aborted"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        },
+        {
+          "label": "retry after abort",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 402,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "{\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in_flight_budget_exhausted\",\"limit_source\":\"openrouter_in_flight_budget\",\"remedy_hint\":\"Retry after your in-fli"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C10b",
+      "title": "provider failure (rejected credential)",
+      "notes": [],
+      "expectations": [
+        {
+          "check": "real OpenRouter rejected the call",
+          "met": true,
+          "detail": "http=401"
+        },
+        {
+          "check": "single attempt (no second call)",
+          "met": true
+        },
+        {
+          "check": "no DC write",
+          "met": true
+        },
+        {
+          "check": "last_sent_question unchanged",
+          "met": true
+        },
+        {
+          "check": "no budget charge",
+          "met": true
+        }
+      ],
+      "turns": [
+        {
+          "label": "provider rejects",
+          "route_hits": 1,
+          "openrouter_calls": [
+            {
+              "via_route": true,
+              "request": {
+                "model": "deepseek/deepseek-v4-pro-0813",
+                "temperature": 0.1,
+                "max_tokens": 1600,
+                "response_format": {
+                  "type": "json_object"
+                },
+                "provider_pref": {
+                  "order": [
+                    "sail-research",
+                    "streamlake"
+                  ],
+                  "allow_fallbacks": false,
+                  "ignore": [
+                    "siliconflow"
+                  ]
+                },
+                "system_prompt_chars": 5055
+              },
+              "response": {
+                "http_status": 401,
+                "provider": null,
+                "model": null,
+                "finish_reason": null,
+                "usage": null,
+                "error": "{\"message\":\"User not found.\",\"code\":401}"
+              },
+              "parse": {
+                "ok": false,
+                "reason": "no_content",
+                "classification": null,
+                "item_count": 0
+              }
+            }
+          ],
+          "after": {
+            "phase": "collecting_context",
+            "dc_version": 1,
+            "fact_count": 2,
+            "status": "draft"
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This smoke covers production Answer Interpretation via /api/poju/answer-interpretation only.",
+    "It does not cover a full live Initial Decision Understanding, Blueprint init, Adaptive Question, Personal Analysis, or eight-page report model run.",
+    "/api/poju/chat was stubbed because no Next server ran in the smoke process.",
+    "Later cases hit OpenRouter HTTP 402 in_flight_budget_exhausted; those cases are not successes.",
+    "C09b orchestrator replay uses a test hook after a real probe; the hook is not real-model validation of the orchestrator.",
+    "C10b uses a rejected credential path to assert fail-closed behavior.",
+    "The smoke printed in-memory KV because UPSTASH Redis REST was not used by this process; MemoryKv is not production Redis/Lua evidence."
+  ]
+}

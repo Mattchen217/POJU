@@ -1,0 +1,83 @@
+
+> pojulife@0.1.0 test:m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M9-R1-FU1-FU2-FU3 Session Record integrity atomic binding tests starting
+HARNESS=MemoryKv + RedisEvalHarness (TypeScript raw-binding predicate; does not execute Lua)
+REAL_REDIS_LUA_EXECUTED=no
+REAL_REDIS_DETAIL=redis-cli=no; redis-server=no; REDIS_URL=unset; docker_daemon=down; upstash_configured=no
+LIMITATION: SESSION_AUTHORITY_CAS_LUA remains unexecuted in a real Redis server.
+NOTE: the assertions above are static source checks, not Redis Lua execution.
+PASS Static Lua source contract (NOT execution proof): Session Record raw binding and result code 11
+PASS A. Valid Session Record, unchanged before EVAL: commit remains eligible [MemoryKv]
+PASS A. Valid Session Record, unchanged before EVAL: commit remains eligible [RedisEvalHarness]
+PASS B. Session Record raw bytes changed between validation and EVAL: session_snapshot_changed [RedisEvalHarness]
+PASS C. Session Snapshot changed while preserving the old snapshot_hash: rejected [RedisEvalHarness]
+PASS D. snapshot_hash changed while preserving the original Snapshot: rejected [RedisEvalHarness]
+PASS E. Session revision changed between validation and EVAL: reject without overwrite [RedisEvalHarness]
+PASS F. Session identity changed between validation and EVAL: rejected [RedisEvalHarness]
+PASS G. Session Record deleted between validation and EVAL: rejected [RedisEvalHarness]
+PASS H. Session Record absent during validation but created before EVAL: rejected [RedisEvalHarness]
+PASS I. Ledger raw value changes before EVAL: ledger_snapshot_changed remains intact [RedisEvalHarness]
+PASS K. Both Session Record and Ledger change before EVAL: reject without writing proposed record [RedisEvalHarness]
+PASS B-H, I, K. MemoryKv has no pre-validation-to-commit window; Session Record races are harness/Redis-path cases
+PASS J. New Freeze races Intake: Intake must not be accepted [MemoryKv]
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7757c4e3-9ffb-40b1-b7be-2f7327edde02","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS L. Existing idempotency behavior remains unchanged [MemoryKv]
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f7616510-b288-4b0a-acee-fbf65a83aefb","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS L2. Different-content idempotency still returns session_turn_conflict [MemoryKv only, skipped on harness if MemoryKv]
+PASS M. Existing lifecycle and revision conflict behavior remains unchanged [MemoryKv]
+PASS J. New Freeze races Intake: Intake must not be accepted [RedisEvalHarness]
+PASS L. Existing idempotency behavior remains unchanged [RedisEvalHarness]
+PASS L2. Different-content idempotency still returns session_turn_conflict [MemoryKv only, skipped on harness if RedisEvalHarness]
+PASS M. Existing lifecycle and revision conflict behavior remains unchanged [RedisEvalHarness]
+PASS commitAuthoritativeSessionUpdate maps session_snapshot_changed without a generic CAS conflict
+PASS Missing record remains fail-closed and is never turned into a successful create
+Existing M9, M9-R1, FU1, and FU2 regressions are executed by the required command suite, not this file.
+M9-R1-FU1-FU2-FU3 Session Record integrity atomic binding checks complete
+REAL_REDIS_LUA_EXECUTED=no

@@ -1,0 +1,280 @@
+{
+  "note": "exit_source=pass_footer means the original process exit was not separately captured; the log footer shows a clean pass and no failure. exit_source=captured means the process return code was recorded in this delivery pass.",
+  "implementation_commit": "c72b81a7121ef2d18568ea86cfc310a4912c57b0",
+  "implementation_parent": "ee9ef36617779f7c1d8a140d27f80772c6c009e0",
+  "baseline_head_at_start": "ee9ef36617779f7c1d8a140d27f80772c6c009e0",
+  "baseline_unchanged": true,
+  "sw_js": {
+    "required_pre_build_sha256": "38ce6db5fb144844e7089222cb0ed6ea71d54bdff8bd9035def4b25d2e170980",
+    "after_build_sha256": "377530ca9931d2d0c30da03775ff993e063559e36900a2b380c27bdef4934c5c",
+    "after_restore_sha256": "38ce6db5fb144844e7089222cb0ed6ea71d54bdff8bd9035def4b25d2e170980",
+    "staged": false
+  },
+  "commands": [
+    {
+      "command": "pnpm test:di2-feature-landing-main-path",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "01-test-di2-feature-landing-main-path.log",
+      "result": "22 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m1-production-adaptive-question-loop",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "02-test-m1-production-adaptive-question-loop.log",
+      "result": "PASS=188 FAIL=0"
+    },
+    {
+      "command": "pnpm test:m1-r-fresh-session-main-loop",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "03-test-m1-r-fresh-session-main-loop.log",
+      "result": "PASS=8 FAIL=0"
+    },
+    {
+      "command": "pnpm test:m2-1-readiness-confirm-freeze",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "04-test-m2-1-readiness-confirm-freeze.log",
+      "result": "19 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m2-2-freeze-report-binding",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "05-test-m2-2-freeze-report-binding.log",
+      "result": "43 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m2-3-decision-blueprint",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "06-test-m2-3-decision-blueprint.log",
+      "result": "18 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m2-4-r2-production-closure",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "07-test-m2-4-r2-production-closure.log",
+      "result": "PASS=20 FAIL=0"
+    },
+    {
+      "command": "pnpm test:m3-decision-report",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "08-test-m3-decision-report.log",
+      "result": "27 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m4-decision-authority",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "09-test-m4-decision-authority.log",
+      "result": "27 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m4-1-freeze-recovery",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "10-test-m4-1-freeze-recovery.log",
+      "result": "10 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m5-di2-main-path",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "11-test-m5-di2-main-path.log",
+      "result": "29 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m6-di2-full-lifecycle",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "12-test-m6-di2-full-lifecycle.log",
+      "result": "7 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m8-di2-non-model-closure",
+      "exit_code": 0,
+      "exit_source": "captured",
+      "log": "13-test-m8-di2-non-model-closure.log",
+      "result": "deterministic non-model closure checks complete",
+      "note": "Re-run after the implementation commit; process exit captured as 0."
+    },
+    {
+      "command": "pnpm test:m8-r1-internal-turn-trust-boundary",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "14-test-m8-r1-internal-turn-trust-boundary.log",
+      "result": "M8-R1 / M8-R1-FU1 / R2 / R2-R1 internal turn trust boundary checks complete"
+    },
+    {
+      "command": "pnpm test:m9-server-authoritative-session",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "15-test-m9-server-authoritative-session.log",
+      "result": "M9 server-authoritative session checks complete"
+    },
+    {
+      "command": "pnpm test:m9-r1-session-authority-remediation",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "16-test-m9-r1-session-authority-remediation.log",
+      "result": "M9-R1 session authority remediation checks complete"
+    },
+    {
+      "command": "pnpm test:m9-r1-fu1-redis-lua-integrity-parity",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "17-test-m9-r1-fu1-redis-lua-integrity-parity.log",
+      "result": "complete; REAL_REDIS_LUA_EXECUTED=no"
+    },
+    {
+      "command": "pnpm test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "18-test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding.log",
+      "result": "complete; REAL_REDIS_LUA_EXECUTED=no"
+    },
+    {
+      "command": "pnpm test:m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding",
+      "exit_code": 0,
+      "exit_source": "pass_footer",
+      "log": "19-test-m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding.log",
+      "result": "complete; REAL_REDIS_LUA_EXECUTED=no"
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --pretty false",
+      "exit_code": 0,
+      "exit_source": "captured",
+      "log": "20-tsc-noemit.log",
+      "result": "empty stdout, exit 0",
+      "note": "Re-run after the implementation commit; process exit captured as 0."
+    },
+    {
+      "command": "pnpm build",
+      "exit_code": 0,
+      "exit_source": "captured",
+      "log": "21-pnpm-build.log",
+      "result": "production build exit 0",
+      "note": "Re-run after the implementation commit. public/sw.js was rewritten to sha256 377530ca9931d2d0c30da03775ff993e063559e36900a2b380c27bdef4934c5c and restored byte-for-byte to 38ce6db5fb144844e7089222cb0ed6ea71d54bdff8bd9035def4b25d2e170980. The file was left unstaged."
+    },
+    {
+      "command": "pnpm smoke:m2-4-r2-openrouter",
+      "exit_code": 0,
+      "exit_source": "captured",
+      "log": "22-openrouter-smoke-redacted-summary.json",
+      "result": "process exit 0, expectations met 43/55",
+      "note": "Process exit 0 is the smoke runner exit, not a claim that every case passed. C07, C08, and the C10a retry failed on OpenRouter HTTP 402 in_flight_budget_exhausted. Full unredacted local report remains uncommitted in temp/."
+    }
+  ],
+  "copied_logs": [
+    {
+      "file": "01-test-di2-feature-landing-main-path.log",
+      "sha256": "17f336c2427c5319da850dc85b120c4849e467bc55658f5491a144fb017466a6",
+      "bytes": 3911
+    },
+    {
+      "file": "02-test-m1-production-adaptive-question-loop.log",
+      "sha256": "dded5a9a0e0a1612c39799e6bbcf7e4da4cde22a86da6e5fcee47490d0936a8a",
+      "bytes": 216210
+    },
+    {
+      "file": "03-test-m1-r-fresh-session-main-loop.log",
+      "sha256": "222f1450c21db27a01e6cbbd10c4c1dff41a23d6a6876dbfa735ac59ef850f3a",
+      "bytes": 12525
+    },
+    {
+      "file": "04-test-m2-1-readiness-confirm-freeze.log",
+      "sha256": "7193190fed7a706913c5bb9fd9e10f71eac21e42032e2543ec449524c286a89f",
+      "bytes": 13091
+    },
+    {
+      "file": "05-test-m2-2-freeze-report-binding.log",
+      "sha256": "4c18f7d7979f96c847a1c62aa637860f3feb8e45b9657ea2595edb12c1aea56b",
+      "bytes": 7778
+    },
+    {
+      "file": "06-test-m2-3-decision-blueprint.log",
+      "sha256": "64b20add89c93ffe664ffdb8ad3cd906f2334e3d780c5c41fc38d47ef70b6344",
+      "bytes": 17095
+    },
+    {
+      "file": "07-test-m2-4-r2-production-closure.log",
+      "sha256": "b180056ed35b04b1bcbc7ab7790b41d9d7e11d10d5db46da19b9bf65de93a179",
+      "bytes": 61666
+    },
+    {
+      "file": "08-test-m3-decision-report.log",
+      "sha256": "a85ddaace6496ca896d6701608ef9c35284203d9042bb9342857eba377526fe5",
+      "bytes": 7297
+    },
+    {
+      "file": "09-test-m4-decision-authority.log",
+      "sha256": "79f3dcc2556eadfba022e5b676d6f27a316651b107bcc0edffd056f584f46da6",
+      "bytes": 5130
+    },
+    {
+      "file": "10-test-m4-1-freeze-recovery.log",
+      "sha256": "cd6d7d9890f074de59d5df05632da8b461ec29f4d7c2ac0351849cc2f7b52aaa",
+      "bytes": 3771
+    },
+    {
+      "file": "11-test-m5-di2-main-path.log",
+      "sha256": "0daea136765c27ed292144ec47f195f7d48f41f9a17f813a6974de9c5d290126",
+      "bytes": 32914
+    },
+    {
+      "file": "12-test-m6-di2-full-lifecycle.log",
+      "sha256": "0458ba7bb3b9a28eb76794b47c2f085f3ea6595cd9f5d2b660fb5aae13a14fc6",
+      "bytes": 13000
+    },
+    {
+      "file": "13-test-m8-di2-non-model-closure.log",
+      "sha256": "359ea66f701b740fe0ebe6662f396e98d6332c493eade56dbd4f36130478ab54",
+      "bytes": 3098
+    },
+    {
+      "file": "14-test-m8-r1-internal-turn-trust-boundary.log",
+      "sha256": "ff44d6836e3bbbb2878e60b6e9f6b7b3a0f3894b646b238789476b110230f551",
+      "bytes": 15382
+    },
+    {
+      "file": "15-test-m9-server-authoritative-session.log",
+      "sha256": "40a49662c761db3f178ebef4b81f955c1de70018be48b04bb37dce9cae1e9dce",
+      "bytes": 10531
+    },
+    {
+      "file": "16-test-m9-r1-session-authority-remediation.log",
+      "sha256": "0afbb102fc0f7937c4e93b194dcc858738f451cf37c3081197f5f4243f805671",
+      "bytes": 7694
+    },
+    {
+      "file": "17-test-m9-r1-fu1-redis-lua-integrity-parity.log",
+      "sha256": "e3dcb4026eba3e8db010393ea6a9995d040bbdd8746a1a87036da13f91bfc2a4",
+      "bytes": 7258
+    },
+    {
+      "file": "18-test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding.log",
+      "sha256": "c195d36c5c8d5da831a0e10b3093474983ee12b66685a3832b72f363f1531596",
+      "bytes": 7199
+    },
+    {
+      "file": "19-test-m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding.log",
+      "sha256": "f64a32000cf3a596f5b8276736a603362b7f5f677bab5ca466496eceb17fad24",
+      "bytes": 6756
+    },
+    {
+      "file": "20-tsc-noemit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "file": "21-pnpm-build.log",
+      "sha256": "7e6e168f018bf6b7b25398fb6ac049e11477665a40ef13bd01ac6ed685e416b7",
+      "bytes": 11233
+    }
+  ]
+}
