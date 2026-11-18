@@ -46,7 +46,8 @@ export type SessionAuthorityErrorCode =
   | "invalid_session_record"
   | "ledger_integrity_failure"
   | "ledger_probe_incomplete"
-  | "ledger_snapshot_changed";
+  | "ledger_snapshot_changed"
+  | "session_snapshot_changed";
 
 export const SESSION_AUTHORITY_KEY_PREFIX = "poju-auth:session:";
 

@@ -21,6 +21,13 @@
  * binds the exact raw entries into Redis Lua CAS. Lua compares live GET bytes
  * against that snapshot and fail-closes on a changed or newly visible entry.
  * Lua still does not recompute JavaScript canonicalHash.
+ *
+ * M9-R1-FU1-FU2-FU3: TypeScript validates the current Session Record with
+ * inspectStoredSessionRecord (canonicalHash) and binds the exact original
+ * raw Redis value into Redis Lua CAS. Lua compares live GET bytes against
+ * that exact raw string immediately after reading KEYS[1] and fail-closes
+ * on a changed, deleted, or newly created record. Lua still does not
+ * recompute JavaScript canonicalHash.
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -70,7 +77,8 @@ export type SessionCasReason =
   | "terminated"
   | "ledger_integrity"
   | "ledger_probe_incomplete"
-  | "ledger_snapshot_changed";
+  | "ledger_snapshot_changed"
+  | "session_snapshot_changed";
 
 export type SessionCasResult = { ok: true } | { ok: false; reason: SessionCasReason };
 
@@ -494,21 +502,56 @@ export function encodeLedgerBindingArgs(snapshot: LedgerBindingSnapshot): string
   ];
 }
 
+/**
+ * 0-based eval args index of the exact TypeScript-validated Session Record
+ * raw string (Lua ARGV[10]). An empty string means the record was absent
+ * during validation. Ledger binding args, when present, start immediately
+ * after this slot (Lua ARGV[11], 0-based index 10).
+ */
+export const VALIDATED_SESSION_RAW_ARGV_INDEX = 9;
+export const LEDGER_BINDING_ARGV_OFFSET = 10;
+
+/**
+ * Compare the exact TypeScript-validated Session Record raw value with the
+ * live Redis GET bytes. An empty validatedRaw means the record was absent.
+ * A mismatch, appearance, or disappearance is session_snapshot_changed.
+ * Absent-and-still-absent is missing and must not create a record.
+ */
+export function evaluateSessionRecordRawBinding(input: {
+  validatedRaw: string;
+  liveRaw: string | null;
+}): { ok: true } | { ok: false; reason: "session_snapshot_changed" | "missing" } {
+  if (input.validatedRaw === "") {
+    if (input.liveRaw != null) return { ok: false, reason: "session_snapshot_changed" };
+    return { ok: false, reason: "missing" };
+  }
+  if (input.liveRaw == null || input.liveRaw !== input.validatedRaw) {
+    return { ok: false, reason: "session_snapshot_changed" };
+  }
+  return { ok: true };
+}
+
+export function decodeValidatedSessionRawArg(args: string[]): string | undefined {
+  if (args.length <= VALIDATED_SESSION_RAW_ARGV_INDEX) return undefined;
+  return args[VALIDATED_SESSION_RAW_ARGV_INDEX] ?? "";
+}
+
 export function decodeLedgerBindingArgs(args: string[]): LedgerBindingSnapshot | null {
-  if (args.length < 13) return null;
-  const hintRaw = args[9] ?? "";
-  const startVersion = Number(args[10]);
-  const endVersion = Number(args[11]);
-  const count = Number(args[12]);
+  const offset = LEDGER_BINDING_ARGV_OFFSET;
+  if (args.length < offset + 4) return null;
+  const hintRaw = args[offset] ?? "";
+  const startVersion = Number(args[offset + 1]);
+  const endVersion = Number(args[offset + 2]);
+  const count = Number(args[offset + 3]);
   if (!Number.isSafeInteger(startVersion) || !Number.isSafeInteger(endVersion) || !Number.isSafeInteger(count) || count < 0) {
     return null;
   }
-  if (args.length < 13 + count) return null;
+  if (args.length < offset + 4 + count) return null;
   return {
     hintRaw: hintRaw.length === 0 ? null : hintRaw,
     startVersion,
     endVersion,
-    entryRaws: args.slice(13, 13 + count),
+    entryRaws: args.slice(offset + 4, offset + 4 + count),
     frozen: false,
   };
 }
@@ -773,10 +816,12 @@ export function applySessionAuthorityCas(input: {
  *   8  ledger integrity failure
  *   9  ledger probe incomplete
  *   10 ledger snapshot changed (retryable binding mismatch or new entry)
+ *   11 session snapshot changed (retryable raw Session Record binding mismatch)
  *
  * KEYS[1] = session record key
  * ARGV: expectedRevision, nextJson, ttlSeconds, sessionId, nowIso, intakeCommit (0/1),
  *       ledgerHeadKey, ledgerEntryPrefix, probeLimit,
+ *       validatedSessionRaw (exact TypeScript-validated raw, or empty if absent),
  *       [intake] hintRaw, startVersion, endVersion, entryCount, entryRaw...
  *
  * Hash policy: this script does not recompute canonicalHash / SHA-256 of
@@ -784,19 +829,21 @@ export function applySessionAuthorityCas(input: {
  * parity cannot be implemented safely in Redis Lua. The production Redis
  * adapter runs inspectStoredSessionRecord (canonicalHash) on the current
  * and proposed records before EVAL, and validates ledger entry hashes with
- * the same canonicalHash implementation. The exact validated ledger raw
- * values are passed into this script; Lua compares live GET bytes against
- * those values and rejects the commit if they changed or a new entry
- * appeared. Lua still fail-closes on version, required fields, identity,
- * snapshot.session_id, and snapshot revision mismatches, and never treats a
- * corrupted Record as missing.
+ * the same canonicalHash implementation. The exact validated Session Record
+ * raw value and ledger raw values are passed into this script; Lua compares
+ * live GET bytes against those values and rejects the commit if they changed,
+ * disappeared, appeared, or a new ledger entry appeared. Lua still
+ * fail-closes on version, required fields, identity, snapshot.session_id,
+ * and snapshot revision mismatches, and never treats a corrupted Record as
+ * missing.
  */
 export const SESSION_AUTHORITY_CAS_LUA = `
 -- Hash policy: this script does not recompute canonicalHash / SHA-256 of
 -- session_snapshot or ledger entry_hash. The production adapter validates
--- those hashes with canonicalHash and binds the exact raw ledger values.
--- Lua compares live GET bytes against that snapshot and fail-closes on a
--- change or newly visible entry. Lua still fail-closes on structural
+-- those hashes with canonicalHash and binds the exact raw Session Record
+-- and ledger values. Lua compares live GET bytes against those exact
+-- validated raw values and fail-closes on a change, deletion, appearance,
+-- or newly visible ledger entry. Lua still fail-closes on structural
 -- Record integrity and never treats a corrupted Record as missing.
 local function decode(raw)
   if not raw then return nil, false end
@@ -838,7 +885,18 @@ local function inspect_record(obj, sessionId, fail_code)
 end
 
 local raw = redis.call('GET', KEYS[1])
-if not raw then return 5 end
+local validatedSessionRaw = ARGV[10]
+if type(validatedSessionRaw) ~= 'string' then return 6 end
+-- Bind the exact TypeScript-validated raw Session Record. Lua does not
+-- recompute canonicalHash. A byte-level mismatch, deletion, or appearance
+-- is session_snapshot_changed (11), never success, cas_conflict, malformed,
+-- or a successful create.
+if validatedSessionRaw == '' then
+  if raw then return 11 end
+  if not raw then return 5 end
+end
+if (not raw) or raw ~= validatedSessionRaw then return 11 end
+
 local obj, ok = decode(raw)
 if not ok then return 6 end
 
@@ -877,10 +935,10 @@ if intake then
   -- the exact raw values. Lua compares live Redis GET bytes against those
   -- raw values and never interprets an unbound or changed entry as a valid
   -- non-Freeze head. Lua does not recompute canonicalHash / entry_hash.
-  local validatedHintRaw = ARGV[10]
-  local startVersion = tonumber(ARGV[11]) or 0
-  local endVersion = tonumber(ARGV[12]) or 0
-  local entryCount = tonumber(ARGV[13]) or 0
+  local validatedHintRaw = ARGV[11]
+  local startVersion = tonumber(ARGV[12]) or 0
+  local endVersion = tonumber(ARGV[13]) or 0
+  local entryCount = tonumber(ARGV[14]) or 0
   if type(validatedHintRaw) ~= 'string' then return 8 end
   if entryCount ~= math.floor(entryCount) or entryCount < 0 then return 8 end
   if endVersion > limit then return 9 end
@@ -898,7 +956,7 @@ if intake then
   end
 
   for i = 1, entryCount do
-    local expectedRaw = ARGV[13 + i]
+    local expectedRaw = ARGV[14 + i]
     if type(expectedRaw) ~= 'string' or string.len(expectedRaw) == 0 then return 8 end
     local live = redis.call('GET', prefix .. tostring(startVersion + i - 1))
     if (not live) or live ~= expectedRaw then return 10 end
@@ -908,7 +966,7 @@ if intake then
   if nextLive then return 10 end
 
   if endVersion > 0 then
-    local headRaw = ARGV[13 + entryCount]
+    local headRaw = ARGV[14 + entryCount]
     local head, headOk = decode(headRaw)
     if not headOk then return 8 end
     if head['change_type'] == 'freeze' or head['dc_status'] == 'final' then
@@ -932,6 +990,7 @@ export function luaCasCodeToResult(code: unknown): SessionCasResult {
   if (code === 8) return { ok: false, reason: "ledger_integrity" };
   if (code === 9) return { ok: false, reason: "ledger_probe_incomplete" };
   if (code === 10) return { ok: false, reason: "ledger_snapshot_changed" };
+  if (code === 11) return { ok: false, reason: "session_snapshot_changed" };
   return { ok: false, reason: "cas_conflict" };
 }
 
@@ -956,6 +1015,8 @@ export function sessionCasResultToLuaCode(result: SessionCasResult): number {
       return 9;
     case "ledger_snapshot_changed":
       return 10;
+    case "session_snapshot_changed":
+      return 11;
     default:
       return 0;
   }
@@ -1008,15 +1069,18 @@ async function runLuaSessionCas(
   } catch {
     return { ok: false, reason: "identity" };
   }
-  // Authoritative canonicalHash of the live record. Redis Lua does not recompute
-  // this hash; a corrupted current record must fail closed here and never be
-  // overwritten. Lua still enforces structural integrity atomically.
+  // Authoritative canonicalHash of the live record, bound by the exact raw
+  // Redis bytes. Redis Lua does not recompute this hash; a corrupted current
+  // record must fail closed here and never be overwritten. The exact original
+  // raw string (not a JSON.stringify reconstruction) is passed to Lua, which
+  // compares live GET bytes against it atomically. A genuinely absent record
+  // still falls through to EVAL so the Lua path cannot recreate a missing key.
+  let validatedSessionRaw = "";
   try {
-    const currentRaw = await readKvValue(kv, serverSessionKey(sessionId));
-    const current = inspectStoredSessionRecord(sessionId, currentRaw);
-    if (!current) {
-      // Fall through to EVAL so the Lua path cannot recreate a missing key.
-    }
+    const [currentRaw] = await readRawKvValues(kv, [serverSessionKey(sessionId)]);
+    inspectStoredSessionRecord(sessionId, currentRaw);
+    // Preserve the exact original raw string. Empty means validated-absent.
+    validatedSessionRaw = currentRaw ?? "";
   } catch (error) {
     if (error instanceof SessionRecordIntegrityError) {
       return { ok: false, reason: "malformed" };
@@ -1036,6 +1100,7 @@ async function runLuaSessionCas(
     dcLedgerHeadKey(sessionId),
     ledgerEntryPrefix(sessionId),
     String(LEDGER_CAS_PROBE_LIMIT),
+    validatedSessionRaw,
   ];
 
   if (intakeCommit) {
