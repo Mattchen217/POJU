@@ -53,7 +53,7 @@ function readyUnderstanding(overrides: Partial<UnderstandingState> = {}): Unders
     },
     understood: {
       items: [
-        { kind: "dir_based", label: "Has a written offer", dir_id: "DIR_TIME", direction_id: "dir_primary", user_confirmed_any: true },
+        { dir_id: "DIR_TIME", label: "Has a written offer", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
       ],
     },
     need_to_understand: {
@@ -271,6 +271,105 @@ function main() {
     assert.match(client, /pending_decision_report_job_id/);
     assert.match(client, /freeze_bound_report_jobs/);
     assert.match(client, /reused/);
+  });
+
+  function sessionWithUnderstoodItems(items: UnderstandingState["understood"]["items"]) {
+    return readySession({
+      decision_understanding: readyUnderstanding({
+        understood: { items },
+        personal_pattern_insight: {
+          status: "available",
+          insights: [{ text: "A helpful career pattern", source: "bazi_dir_primary", related_dir_ids: ["DIR_TIME"] }],
+        },
+      } as Partial<UnderstandingState>),
+    });
+  }
+
+  wrap("H/filter: known + user_confirmed_any true enters already_understood", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_TIME", label: "Has a written offer", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
+      ]),
+    );
+    assert.deepEqual(box.already_understood, ["Has a written offer"]);
+  });
+
+  wrap("H/filter: known + user_confirmed_any false must not enter already_understood", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_INFERRED", label: "Model inferred the team is unstable", fact_ids: ["f2"], status: "known", user_confirmed_any: false },
+      ]),
+    );
+    assert.deepEqual(box.already_understood, []);
+    assert.ok(!box.already_understood.includes("Model inferred the team is unstable"));
+  });
+
+  wrap("H/filter: n_a + user_confirmed_any true is confirmed not-applicable, not an ordinary fact", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_VISA", label: "Visa requirement", fact_ids: ["f_na"], status: "n_a", user_confirmed_any: true },
+      ]),
+    );
+    assert.equal(box.already_understood.length, 1);
+    assert.ok(box.already_understood.includes("Visa requirement"));
+    // Keep the existing string-list contract. Do not substitute a confirmed RealityFact
+    // sentence, so this n_a item is not disguised as "Has a written offer" or similar.
+    assert.ok(!box.already_understood.includes("Has a written offer"));
+    assert.ok(!box.already_understood.includes("Might relocate"));
+    assert.ok(!box.already_understood.some((label) => /confirmed fact/i.test(label)));
+  });
+
+  wrap("H/filter: n_a + user_confirmed_any false must not enter already_understood", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_VISA", label: "Visa requirement", fact_ids: [], status: "n_a", user_confirmed_any: false },
+      ]),
+    );
+    assert.deepEqual(box.already_understood, []);
+    assert.ok(!box.already_understood.includes("Visa requirement"));
+  });
+
+  wrap("H/filter: mixed items output only confirmation-eligible labels", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_TIME", label: "Has a written offer", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
+        { dir_id: "DIR_INFERRED", label: "Model inferred the team is unstable", fact_ids: ["f2"], status: "known", user_confirmed_any: false },
+        { dir_id: "DIR_VISA", label: "Visa requirement", fact_ids: ["f_na"], status: "n_a", user_confirmed_any: true },
+        { dir_id: "DIR_SKIP", label: "Covered but unconfirmed skip", fact_ids: [], status: "n_a", user_confirmed_any: false },
+        { dir_id: "DIR_BLANK", label: "   \n\t  ", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
+      ]),
+    );
+    assert.deepEqual(box.already_understood, ["Has a written offer", "Visa requirement"]);
+    assert.ok(!box.already_understood.includes("Model inferred the team is unstable"));
+    assert.ok(!box.already_understood.includes("Covered but unconfirmed skip"));
+    assert.ok(!box.already_understood.some((label) => label.trim() === ""));
+  });
+
+  wrap("H/filter: still_need, conflicts, progress, insight, and current question are preserved", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_INFERRED", label: "Model inferred the team is unstable", fact_ids: ["f2"], status: "known", user_confirmed_any: false },
+        { dir_id: "DIR_TIME", label: "Has a written offer", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
+      ]),
+    );
+    assert.deepEqual(box.already_understood, ["Has a written offer"]);
+    assert.ok(box.still_need.some((item) => item.includes("latest date")));
+    assert.ok(box.conflicts.some((item) => item.includes("May") && item.includes("August")));
+    assert.equal(box.progress_percent, 91);
+    assert.equal(box.progress_complete, false);
+    assert.equal(box.show_personal_pattern, true);
+    assert.deepEqual(box.personal_pattern_insights, ["A helpful career pattern"]);
+    assert.equal(box.current_question, "What is the latest date you must decide?");
+  });
+
+  wrap("H/filter: empty cleaned labels are omitted even when otherwise eligible", () => {
+    const box = projectDecisionUnderstandingBox(
+      sessionWithUnderstoodItems([
+        { dir_id: "DIR_BLANK", label: " \n  \t ", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
+        { dir_id: "DIR_TIME", label: "Has a written offer", fact_ids: ["f1"], status: "known", user_confirmed_any: true },
+      ]),
+    );
+    assert.deepEqual(box.already_understood, ["Has a written offer"]);
   });
 
   console.log(`Passed ${passed} checks`);

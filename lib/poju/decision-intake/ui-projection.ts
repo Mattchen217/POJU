@@ -28,6 +28,22 @@ export type AdaptiveQuestionUiProjection = {
   readiness_progress_complete: boolean | null;
 };
 
+
+function userFacingText(value: string | null | undefined): string {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function userFacingUnderstoodLabel(item: {
+  label?: string;
+  status?: string;
+  user_confirmed_any?: boolean;
+}): string | null {
+  if (item.user_confirmed_any !== true) return null;
+  if (item.status !== "known" && item.status !== "n_a") return null;
+  const label = userFacingText(item.label);
+  return label || null;
+}
+
 export function projectAdaptiveQuestionForUi(
   session: POJUSessionState,
 ): AdaptiveQuestionUiProjection {
@@ -41,7 +57,9 @@ export function projectAdaptiveQuestionForUi(
     current_question:
       u?.last_sent_question?.question_text ?? plan?.question_text ?? null,
     understanding_summary: u?.current_understanding.summary ?? null,
-    understood_labels: (u?.understood.items ?? []).map((i) => i.label),
+    understood_labels: (u?.understood.items ?? [])
+      .map((item) => userFacingUnderstoodLabel(item))
+      .filter((label): label is string => Boolean(label)),
     need_labels: (u?.need_to_understand.items ?? []).map((i) =>
       i.kind === "dir_based" ? i.missing_content : i.why,
     ),
@@ -86,10 +104,6 @@ export type DecisionUnderstandingBoxView = {
   show_personal_pattern: boolean;
   current_question: string | null;
 };
-
-function userFacingText(value: string | null | undefined): string {
-  return (value ?? "").replace(/\s+/g, " ").trim();
-}
 
 /**
  * User-facing 7.2 box projection. No DIR / DDR / field IDs or debug labels.
