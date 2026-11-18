@@ -1,0 +1,4 @@
+pnpm exec tsc --noEmit --pretty false
+exit=0
+elapsed=7.6s
+(no compiler output)

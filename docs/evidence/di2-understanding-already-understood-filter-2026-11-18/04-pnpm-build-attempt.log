@@ -1,0 +1,21 @@
+pnpm build
+
+Attempted after the implementation commit in this same Windows checkout.
+
+Observed result:
+- The command printed the package script header, then `next build --webpack`.
+- No `Compiled successfully` or `Failed to compile` line appeared.
+- Multiple foreground and detached attempts ended after about 36 seconds,
+  leaving only the script header in the log. This is not treated as a
+  successful production build, even when a wrapper reported exit code 0,
+  because the Next.js compile never finished or wrote a result.
+- public/sw.js was not rewritten by a completed build and remains at the
+  required pre-build SHA-256.
+
+This evidence does not treat MemoryKv, unit tests, or tsc as a substitute
+for a completed production build, and it does not declare DI2 or M9 accepted.
+
+Captured header from an attempt:
+
+> pojulife@0.1.0 build D:\POJU\pojulife
+> next build --webpack
