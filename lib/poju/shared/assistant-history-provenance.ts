@@ -115,8 +115,10 @@ function sessionHasServerAttestedAssistant(
  * - unsigned assistant text in a pre-R2 / all-unsigned session is kept for
  *   restore continuity, but prefixed so it is not treated as server-attested
  *
- * When the verifier is unavailable, nothing is treated as signed or invalid;
- * unsigned compatibility filtering is used instead. Session records are not
+ * When this helper is called with `available: false`, unsigned compatibility
+ * filtering is used. That policy is reserved for the browser Prompt path.
+ * A server verifier/load/key failure must not call this helper with
+ * `available: false`; it must fail closed instead. Session records are not
  * mutated.
  */
 export function applyAssistantHistoryProvenance(
@@ -191,33 +193,138 @@ export function isServerAttestedAssistantPromptTurn(turn: PromptHistoryTurn): bo
 }
 
 /**
- * Load the server verifier when running on the server. This is a dynamic
- * import so client bundles do not pull in Node crypto.
+ * Detect the real runtime for Prompt-history policy.
+ * Browser-only clients must not pull Node crypto. jsdom / test shims define
+ * `window` inside Node, so Node process detection is the source of truth.
+ * A test hook may override the detected environment; a server import failure
+ * must never be treated as a browser environment.
  */
-function canLoadServerAttestationModule(): boolean {
-  // Browser-only clients must not pull Node crypto. jsdom / test shims define
-  // `window` inside Node, so Node process detection is the source of truth.
+function isNodeServerRuntime(): boolean {
   return typeof process !== "undefined" && Boolean(process.versions?.node);
 }
 
+export type AssistantHistoryPromptEnvironment = "server" | "browser";
+
+export type ServerVerifierUnavailableReason =
+  | "module_load_failed"
+  | "verifier_unavailable"
+  | "signing_key_unavailable";
+
+export type PromptHistoryProvenance =
+  | { status: "server_hmac" }
+  | { status: "browser_compatibility" }
+  | { status: "server_verification_unavailable"; reason: ServerVerifierUnavailableReason };
+
+export type TrustedPromptHistoryResolution = {
+  messages: PromptHistoryTurn[];
+  provenance: PromptHistoryProvenance;
+};
+
+type ServerAttestationModuleLike = {
+  applyTrustedPromptHistory?: (
+    session: { session_id: string; messages: POJUMessage[] },
+    promptMessages: PromptHistoryTurn[],
+  ) => PromptHistoryTurn[];
+  isAssistantHistorySigningAvailable?: () => boolean;
+};
+
+let promptEnvironmentOverride: AssistantHistoryPromptEnvironment | undefined;
+let serverAttestationLoaderOverride: (() => Promise<ServerAttestationModuleLike>) | undefined;
+
+/** Test-only hooks. Production Prompt construction never sets these. */
+export function setAssistantHistoryProvenanceTestHooks(hooks: {
+  environment?: AssistantHistoryPromptEnvironment | null;
+  loader?: (() => Promise<ServerAttestationModuleLike>) | null;
+}): void {
+  if ("environment" in hooks) {
+    promptEnvironmentOverride = hooks.environment ?? undefined;
+  }
+  if ("loader" in hooks) {
+    serverAttestationLoaderOverride = hooks.loader ?? undefined;
+  }
+}
+
+export function detectAssistantHistoryPromptEnvironment(): AssistantHistoryPromptEnvironment {
+  if (promptEnvironmentOverride) return promptEnvironmentOverride;
+  return isNodeServerRuntime() ? "server" : "browser";
+}
+
+/**
+ * Server cannot verify assistant provenance: keep user turns only and drop
+ * every assistant turn. This is not the old-Session compatibility policy.
+ */
+export function applyServerVerifierFailClosed(
+  promptMessages: PromptHistoryTurn[],
+): PromptHistoryTurn[] {
+  return promptMessages.filter((turn) => turn.role === "user");
+}
+
+function serverVerificationUnavailable(
+  promptMessages: PromptHistoryTurn[],
+  reason: ServerVerifierUnavailableReason,
+): TrustedPromptHistoryResolution {
+  return {
+    messages: applyServerVerifierFailClosed(promptMessages),
+    provenance: { status: "server_verification_unavailable", reason },
+  };
+}
+
+async function loadServerAttestationModule(): Promise<ServerAttestationModuleLike> {
+  if (serverAttestationLoaderOverride) return serverAttestationLoaderOverride();
+  return import(
+    /* webpackIgnore: true */
+    "@/lib/poju/decision-authority/server/assistant-history-attestation"
+  );
+}
+
+export async function resolveTrustedPromptHistoryWithProvenance(
+  session: { session_id: string; messages: POJUMessage[] },
+  promptMessages: PromptHistoryTurn[],
+): Promise<TrustedPromptHistoryResolution> {
+  if (detectAssistantHistoryPromptEnvironment() === "browser") {
+    return {
+      messages: applyAssistantHistoryProvenance(session.session_id, session.messages, promptMessages, {
+        available: false,
+      }),
+      provenance: { status: "browser_compatibility" },
+    };
+  }
+
+  try {
+    const attestationModule = await loadServerAttestationModule();
+    if (typeof attestationModule.applyTrustedPromptHistory !== "function") {
+      return serverVerificationUnavailable(promptMessages, "verifier_unavailable");
+    }
+    if (
+      typeof attestationModule.isAssistantHistorySigningAvailable === "function" &&
+      !attestationModule.isAssistantHistorySigningAvailable()
+    ) {
+      return serverVerificationUnavailable(promptMessages, "signing_key_unavailable");
+    }
+    return {
+      messages: attestationModule.applyTrustedPromptHistory(session, promptMessages),
+      provenance: { status: "server_hmac" },
+    };
+  } catch {
+    // Server load/verifier failure must fail closed. Never fall back to the
+    // browser old-Session compatibility policy.
+    return serverVerificationUnavailable(promptMessages, "module_load_failed");
+  }
+}
+
+/**
+ * Load the server verifier when running on the server. This is a dynamic
+ * import so client bundles do not pull in Node crypto.
+ *
+ * The returned messages are safe to send to the model: a server verification
+ * failure drops all assistant turns instead of silently succeeding as
+ * old-Session compatibility. Inspect `resolveTrustedPromptHistoryWithProvenance`
+ * when the caller needs the explicit provenance status.
+ */
 export async function resolveTrustedPromptHistory(
   session: { session_id: string; messages: POJUMessage[] },
   promptMessages: PromptHistoryTurn[],
 ): Promise<PromptHistoryTurn[]> {
-  if (!canLoadServerAttestationModule()) {
-    return applyAssistantHistoryProvenance(session.session_id, session.messages, promptMessages, {
-      available: false,
-    });
-  }
-  try {
-    const { applyTrustedPromptHistory } = await import(
-      /* webpackIgnore: true */
-      "@/lib/poju/decision-authority/server/assistant-history-attestation"
-    );
-    return applyTrustedPromptHistory(session, promptMessages);
-  } catch {
-    return applyAssistantHistoryProvenance(session.session_id, session.messages, promptMessages, {
-      available: false,
-    });
-  }
+  const resolved = await resolveTrustedPromptHistoryWithProvenance(session, promptMessages);
+  return resolved.messages;
 }

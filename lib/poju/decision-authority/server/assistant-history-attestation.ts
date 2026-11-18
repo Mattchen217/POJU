@@ -9,6 +9,7 @@
 
 import {
   applyAssistantHistoryProvenance,
+  applyServerVerifierFailClosed,
   parseAssistantHistoryAttestation,
   type AssistantHistoryAttestation,
   type PromptHistoryTurn,
@@ -73,10 +74,27 @@ export function attestChatPayload(
   return { ...payload, assistant_history_attestation: attestation };
 }
 
+/**
+ * Probe whether the existing Decision Authority signing secret can be used.
+ * Does not change HMAC format, key material, or the signing domain.
+ */
+export function isAssistantHistorySigningAvailable(): boolean {
+  try {
+    void signAuthorityDomain(ASSISTANT_HISTORY_ATTESTATION_DOMAIN, '{"probe":true}');
+    return true;
+  } catch (error) {
+    if (error instanceof AuthoritySigningUnavailableError) return false;
+    throw error;
+  }
+}
+
 export function applyTrustedPromptHistory(
   session: { session_id: string; messages: POJUMessage[] },
   promptMessages: PromptHistoryTurn[],
 ): PromptHistoryTurn[] {
+  if (!isAssistantHistorySigningAvailable()) {
+    return applyServerVerifierFailClosed(promptMessages);
+  }
   return applyAssistantHistoryProvenance(
     session.session_id,
     Array.isArray(session.messages) ? session.messages : [],
