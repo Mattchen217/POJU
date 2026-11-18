@@ -1,8 +1,6 @@
-import { callPOJULLM } from "@/lib/llm/poju-llm";
 import { OpenRouterProviderQueueError } from "@/lib/llm/openrouter-retry";
 import { logPojuError } from "@/lib/poju/base-analysis-diagnostics";
 import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transport";
-import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
 import { attestChatPayload } from "@/lib/poju/decision-authority/server/assistant-history-attestation";
 import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
@@ -10,7 +8,9 @@ import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
-import { POJUIntakeTerminalError } from "@/lib/poju/decision-authority/server/intake-guard";
+import { POJUIntakeTerminalError } from "@/lib/poju/intake-terminal";
+import { executeAuthoritativeChatTurn } from "@/lib/poju/session-authority/chat";
+import { SessionAuthorityError } from "@/lib/poju/session-authority/lifecycle";
 
 type ChatBody = {
   locale?: string;
@@ -21,6 +21,9 @@ type ChatBody = {
   archive_data?: POJUActionRecommendationsData | null;
   tool_injection_context?: string | null;
   attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
+  user_message?: string | null;
+  client_turn_id?: string | null;
+  expected_revision?: number | null;
 };
 
 function sseEncode(encoder: TextEncoder, payload: Record<string, unknown>): Uint8Array {
@@ -49,17 +52,12 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
           body.session,
           String(body.locale ?? "en"),
         );
-        const llm = await callPOJULLM({
-          session: body.session,
-          profile: body.profile ?? body.userProfile ?? null,
-          base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
-          archive_data: body.archive_data === undefined ? null : body.archive_data,
-          locale: sessionLang,
-          tool_injection_context:
-            typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
-          signal: reqSignal,
-          attachment: body.attachment ?? null,
-        });
+        const turn = await executeAuthoritativeChatTurn(body, { signal: reqSignal });
+        if (!turn.ok) {
+          send({ type: "aborted" });
+          return;
+        }
+        const llm = turn.llm;
 
         send({
           type: "complete",
@@ -74,11 +72,20 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
               }),
               body.session.session_id,
             ),
-            body.session,
+            turn.session,
           ),
+          authoritative_session: turn.session,
+          session_authority: turn.envelope,
+          session_revision: turn.envelope.revision,
+          turn_idempotent: turn.idempotent,
         });
       } catch (e) {
         logPojuError("poju-chat-stream:callPOJULLM", e);
+        if (e instanceof SessionAuthorityError) {
+          send({ type: "error", ...e.toBody() });
+          controller.close();
+          return;
+        }
         if (e instanceof POJUIntakeTerminalError) {
           send({ type: "error", code: "poju_intake_terminal", reason: e.reason });
           controller.close();

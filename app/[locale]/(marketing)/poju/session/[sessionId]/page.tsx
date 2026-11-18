@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { loadPOJUSession, restoreAuthoritativePOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { setPOJUV4SessionStatus } from "@/lib/poju/v4-lifecycle";
 import { isUnlockReportReturnRoute } from "@/lib/poju/unlock-report-gate";
 import { PojuSessionChatShell } from "@/components/poju/PojuSessionChatShell";
@@ -27,6 +27,7 @@ export default function PojuSessionDeepLinkPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pausedOnly, setPausedOnly] = useState(false);
+  const [authorityNotice, setAuthorityNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -36,28 +37,51 @@ export default function PojuSessionDeepLinkPage() {
       setLoading(false);
       return;
     }
+    setAuthorityNotice(null);
     const row = await getPojuDb().pojuSessionRecords.get(sessionId);
-    if (!row) {
-      setError("session_not_found");
-      setLoading(false);
-      return;
-    }
-    if (row.status === "archived" || row.status === "resolved") {
+    if (row?.status === "archived" || row?.status === "resolved") {
       setError("session_closed");
       setLoading(false);
       return;
     }
-    if (row.status === "paused") {
+    if (row?.status === "paused") {
       setPausedOnly(true);
       setLoading(false);
       return;
     }
 
-    let local = await loadPOJUSession(sessionId);
+    const restored = await restoreAuthoritativePOJUSession(sessionId);
+    if (restored.authority_sync === "server_missing") {
+      setError("session_not_found");
+      setLoading(false);
+      return;
+    }
+    if (restored.authority_sync === "server_expired") {
+      setError("session_expired");
+      setSession(restored.session);
+      setAuthorityNotice(restored.message);
+      setLoading(false);
+      return;
+    }
+    if (restored.authority_sync === "server_terminated") {
+      setError("session_terminated");
+      setSession(restored.session);
+      setAuthorityNotice(restored.message);
+      setLoading(false);
+      return;
+    }
+    if (restored.authority_sync === "offline_cache") {
+      setAuthorityNotice(restored.message);
+    }
+
+    let local = restored.session ?? (await loadPOJUSession(sessionId));
     if (!local) {
       setError("session_not_found");
       setLoading(false);
       return;
+    }
+    if (restored.authority_sync === "server_frozen") {
+      setAuthorityNotice(restored.message);
     }
 
     const { backfillSessionProfileBinding } = await import("@/lib/poju/session-profile");
@@ -139,8 +163,15 @@ export default function PojuSessionDeepLinkPage() {
     return (
       <main className="flex min-h-[50vh] flex-col items-center justify-center bg-bg-deep px-4 text-text-body">
         <p className="text-text-primary">
-          {closed ? "This session is archived or marked as ended." : "Session not available."}
+          {closed
+            ? "This session is archived or marked as ended."
+            : error === "session_expired"
+              ? "This session has expired on the server. Intake cannot continue."
+              : error === "session_terminated"
+                ? "This session has been terminated on the server and cannot be restored locally."
+                : "Session not available."}
         </p>
+        {authorityNotice ? <p className="mt-2 max-w-md text-center text-sm text-white/60">{authorityNotice}</p> : null}
         <div className="mt-4 flex flex-col gap-2 text-sm">
           {closed ? (
             <Link href="/poju/archive" className="text-violet-300 underline">
@@ -186,6 +217,9 @@ export default function PojuSessionDeepLinkPage() {
 
   return (
     <AppDialogProvider>
+      {authorityNotice ? (
+        <p className="bg-amber-950/40 px-4 py-2 text-center text-sm text-amber-100">{authorityNotice}</p>
+      ) : null}
       <PojuSessionChatShell
         session={session}
         onSessionUpdate={setSession}

@@ -14,6 +14,10 @@ import type { POJUActionRecommendationsData } from "@/lib/archive/archive-servic
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { getLocalIntakeTerminalReason, POJUIntakeTerminalError } from "@/lib/poju/intake-terminal";
+import {
+  captureAuthoritativeLlmResult,
+  getTestChatModel,
+} from "@/lib/poju/session-authority/chat-hook-bridge";
 
 interface CallInput {
   session: POJUSessionState;
@@ -115,16 +119,35 @@ export async function callPOJULLM(input: CallInput): Promise<POJULLMResponse> {
     await assertSessionCanEnterIntake(session);
   }
 
+  const testModel = getTestChatModel();
+  if (testModel) {
+    const response = finalizeLockFields(
+      await testModel({
+        session,
+        profile: input.profile,
+        locale: input.locale,
+        signal: input.signal,
+      }),
+      session,
+    );
+    captureAuthoritativeLlmResult(response);
+    return response;
+  }
+
   try {
     if (!isOpenRouterConfigured() && !getGeminiClient()) {
-      return emptyFailureResponse(
+      const failure = emptyFailureResponse(
         session,
         input.locale,
         GEMINI_PRIMARY_MODEL,
       );
+      captureAuthoritativeLlmResult(failure);
+      return failure;
     }
 
-    return finalizeLockFields(await callPOJULLMPhasePath(input), session);
+    const response = finalizeLockFields(await callPOJULLMPhasePath(input), session);
+    captureAuthoritativeLlmResult(response);
+    return response;
   } catch (error: unknown) {
     if (error instanceof POJUIntakeTerminalError) throw error;
     logPojuError("poju-llm:callPOJULLM", error);

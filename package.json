@@ -196,6 +196,7 @@
     "test:m6-di2-full-lifecycle": "tsx scripts/test-m6-di2-full-lifecycle.ts",
     "test:m8-di2-non-model-closure": "tsx scripts/test-m8-di2-non-model-closure.ts",
     "test:m8-r1-internal-turn-trust-boundary": "tsx scripts/test-m8-r1-internal-turn-trust-boundary.ts",
+    "test:m9-server-authoritative-session": "tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-server-authoritative-session.ts",
     "test:deliverable-skeleton": "tsx scripts/test-deliverable-skeleton.ts",
     "test:m5-r1-authorization": "tsx scripts/test-m5-r1-authorization.ts",
     "test:m5-r1-fu1": "tsx scripts/test-m5-r1-authorization.ts --only=FU1",

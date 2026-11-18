@@ -26,6 +26,59 @@ import {
 
 const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary
 
+type MemorySessionPersistFrame = {
+  sessions: Map<string, POJUSessionState>;
+};
+
+type MemorySessionPersistRuntime = {
+  getStore(): MemorySessionPersistFrame | undefined;
+};
+
+let memorySessionPersistRuntime: MemorySessionPersistRuntime | null = null;
+
+/** Bound by the server-only memory-persist module so this file stays client-safe. */
+export function bindMemorySessionPersistRuntime(runtime: MemorySessionPersistRuntime): void {
+  memorySessionPersistRuntime = runtime;
+}
+
+function memoryPersistedSession(sessionId: string): POJUSessionState | undefined {
+  return memorySessionPersistRuntime?.getStore()?.sessions.get(sessionId);
+}
+
+function writeMemoryPersistedSession(state: POJUSessionState): void {
+  memorySessionPersistRuntime?.getStore()?.sessions.set(state.session_id, state);
+}
+
+function isMemorySessionPersistActive(): boolean {
+  return memorySessionPersistRuntime?.getStore() != null;
+}
+
+function memorySessionRow(state: POJUSessionState): POJUSessionRecord {
+  return {
+    session_id: state.session_id,
+    device_id: state.device_id,
+    owner_key: "memory-session-authority",
+    encrypted_data: "",
+    iv: "",
+    session_revision: state.session_revision ?? 0,
+    dc_write_revision: state.dc_write_revision ?? 0,
+    status: "active",
+    original_question: state.original_question,
+    created_at: new Date(state.created_at),
+    last_interaction_at: new Date(state.last_interaction_at),
+    expires_at: new Date(state.expires_at),
+    payment_id: "memory-session-authority",
+    payment_processor: "dodopayments",
+    renewals: [],
+    tokens_used: state.tokens_used,
+    turn_count: countUserTurns(state),
+    current_state_hint: "opening",
+    main_delivery_done: state.main_delivery_done,
+    active_cycle_id: state.active_cycle_id,
+  };
+}
+
+
 /** Contract §3.4 / §7 — row/blob revision mirror hard-fail. */
 export const REVISION_MIRROR_MISMATCH = "REVISION_MIRROR_MISMATCH";
 /** Session CAS expected revision did not match latest row. */
@@ -317,6 +370,23 @@ export async function casWritePOJUSession(
     dc_write_revision: nextDcWriteRevision,
   };
 
+  if (isMemorySessionPersistActive()) {
+    const current = memoryPersistedSession(sessionId);
+    const currentRev = current?.session_revision ?? 0;
+    if (current && currentRev !== input.expected_session_revision) {
+      throw new SessionCasError(
+        SESSION_CAS_CONFLICT,
+        `memory persist stale revision=${input.expected_session_revision} latest=${currentRev}`,
+      );
+    }
+    writeMemoryPersistedSession(committedState);
+    return {
+      state: committedState,
+      session_revision: nextSessionRevision,
+      dc_write_revision: nextDcWriteRevision,
+    };
+  }
+
   // §7.5 step 6 — encrypt OUTSIDE the Dexie transaction
   const encrypt = input.encrypt ?? encryptJson;
   const payload = await encrypt(SESSION_SECRET, committedState);
@@ -516,6 +586,13 @@ export interface MutatePOJUSessionOptions {
 async function defaultLoad(
   sessionId: string,
 ): Promise<{ row: POJUSessionRecord; state: POJUSessionState } | null> {
+  if (isMemorySessionPersistActive()) {
+    const state = memoryPersistedSession(sessionId);
+    if (!state) return null;
+    const row = memorySessionRow(state);
+    resolveRevisionMirror(row, state);
+    return { row, state };
+  }
   const db = getPojuDb();
   const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
@@ -712,6 +789,50 @@ export async function casWritePOJUSessionFromCandidate(
     dc_ledger_idempotency_key?: string;
   },
 ): Promise<CasWritePOJUSessionResult> {
+  if (isMemorySessionPersistActive()) {
+    const blob = memoryPersistedSession(candidate.session_id) ?? candidate;
+    const mirror = {
+      session_revision: blob.session_revision ?? 0,
+      dc_write_revision: blob.dc_write_revision ?? 0,
+    };
+    if (
+      candidate.session_revision !== undefined &&
+      candidate.session_revision !== null &&
+      candidate.session_revision !== mirror.session_revision
+    ) {
+      throw new SessionCasError(
+        SESSION_CAS_CONFLICT,
+        `stale candidate session_revision=${candidate.session_revision} latest=${mirror.session_revision}`,
+      );
+    }
+    const bumpPolicy = opts?.bump_dc ?? "auto";
+    const baseForDc: POJUSessionState = {
+      ...blob,
+      session_revision: mirror.session_revision,
+      dc_write_revision: mirror.dc_write_revision,
+    };
+    await syncDcLedgerBeforeWrite({
+      base: baseForDc,
+      candidate,
+      idempotency_key: opts?.dc_ledger_idempotency_key ?? contentDerivedLedgerKey(candidate),
+    });
+    const bumpDc =
+      bumpPolicy === true
+        ? true
+        : bumpPolicy === false
+          ? false
+          : didDecisionContextChange(baseForDc, candidate);
+    const result = await casWritePOJUSession({
+      candidate,
+      expected_session_revision: mirror.session_revision,
+      expected_dc_write_revision: mirror.dc_write_revision,
+      bump_dc_write_revision: bumpDc,
+    });
+    candidate.session_revision = result.session_revision;
+    candidate.dc_write_revision = result.dc_write_revision;
+    return result;
+  }
+
   const db = getPojuDb();
   const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(candidate.session_id);

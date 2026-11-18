@@ -150,7 +150,7 @@ export async function createPOJUSession(input: {
     typeof input.session_id === "string" && input.session_id.trim().length >= 8
       ? input.session_id.trim()
       : null;
-  const sessionId = override ?? safeRandomUUID();
+  let sessionId = override ?? safeRandomUUID();
   const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS);
 
   const storedId =
@@ -163,7 +163,7 @@ export async function createPOJUSession(input: {
     cycle_index: 1,
   });
 
-  const sessionState: POJUSessionState = {
+  let sessionState: POJUSessionState = {
     session_id: sessionId,
     device_id: deviceId,
     original_question: input.original_question.trim(),
@@ -207,6 +207,43 @@ export async function createPOJUSession(input: {
   // Phase 3 S1 W1 — create-if-absent; dual revision init 0; never overwrite.
   sessionState.session_revision = 0;
   sessionState.dc_write_revision = 0;
+
+  // M9: a new Session must first obtain the server-authoritative record.
+  // Node / tests initialize in-process (no HTTP). The real browser fetches
+  // /api/poju/session. webpackIgnore keeps the server store out of the client bundle.
+  const isNodeRuntime = typeof process !== "undefined" && Boolean(process.versions?.node);
+  const isBrowserDocument = typeof document !== "undefined";
+  if (isNodeRuntime && !isBrowserDocument) {
+    const { initializeAuthoritativeSession, toAuthoritativeEnvelope } = await import(
+      /* webpackIgnore: true */
+      "@/lib/poju/session-authority/lifecycle"
+    );
+    const record = await initializeAuthoritativeSession({
+      session_id: sessionId,
+      original_question: input.original_question.trim(),
+      device_id: deviceId,
+      selected_stored_profile_id: storedId,
+    });
+    const envelope = toAuthoritativeEnvelope(record);
+    sessionState = envelope.session;
+    sessionId = envelope.session_id;
+    sessionState.session_revision = envelope.revision;
+    sessionState.expires_at = envelope.expires_at;
+  } else if (typeof window !== "undefined") {
+    const { initializeServerSessionFromClient } = await import(
+      "@/lib/poju/session-authority/client"
+    );
+    const envelope = await initializeServerSessionFromClient({
+      session_id: sessionId,
+      original_question: input.original_question.trim(),
+      device_id: deviceId,
+      selected_stored_profile_id: storedId,
+    });
+    sessionState = envelope.session;
+    sessionId = envelope.session_id;
+    sessionState.session_revision = envelope.revision;
+    sessionState.expires_at = envelope.expires_at;
+  }
   const { created } = await createPOJUSessionRecordIfAbsent({
     session_id: sessionId,
     device_id: deviceId,
@@ -591,6 +628,20 @@ export async function deletePOJUSession(sessionId: string): Promise<void> {
   if (!isRowOwnedBy(row, ownerKey)) return;
   if (getPojuDeviceId() !== row.device_id) return;
   await db.pojuSessionRecords.delete(sessionId);
+}
+
+
+export async function restoreAuthoritativePOJUSession(
+  sessionId: string,
+): Promise<import("@/lib/poju/session-authority/mirror").AuthoritativeMirrorResult> {
+  const { restoreAuthoritativeSessionFromClient } = await import(
+    "@/lib/poju/session-authority/client"
+  );
+  return restoreAuthoritativeSessionFromClient({
+    sessionId,
+    loadLocal: loadPOJUSession,
+    saveLocal: savePOJUSession,
+  });
 }
 
 // Re-export apply helpers so Call sites can use one module for DC session commits.

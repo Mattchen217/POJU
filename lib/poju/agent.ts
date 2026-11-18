@@ -1383,6 +1383,9 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           decision_understanding: sessionForLlm.decision_understanding,
           adaptive_ask_plan: sessionForLlm.adaptive_ask_plan,
           intake_ask_plan: sessionForLlm.intake_ask_plan,
+          dc_ledger: sessionForLlm.dc_ledger ?? workingSession.dc_ledger,
+          dc_freeze_receipts: sessionForLlm.dc_freeze_receipts ?? workingSession.dc_freeze_receipts,
+          dc_profile_receipts: sessionForLlm.dc_profile_receipts ?? workingSession.dc_profile_receipts,
           session_revision: sessionForLlm.session_revision,
           dc_write_revision: sessionForLlm.dc_write_revision,
           pending_answer_resolution: sessionForLlm.pending_answer_resolution,
@@ -1434,6 +1437,10 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         tool_injection_context: injectionPrep.tool_injection_context,
         attachment: attachment ?? null,
       });
+
+  if (llmResponse.authoritative_session) {
+    return ensureSessionCycles(llmResponse.authoritative_session);
+  }
 
   workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
 
@@ -2197,6 +2204,7 @@ async function callLLMViaAPI(input: {
   conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
   assistant_history_attestation?: AssistantHistoryAttestation;
+  authoritative_session?: POJUSessionState;
 }> {
   // base_analysis + full session stringify is often multi‑MB sync work — yield so
   // the optimistic user bubble can paint before we freeze the main thread.
@@ -2218,22 +2226,38 @@ async function callLLMViaAPI(input: {
     signal: input.signal,
   });
 
-  const data = (await response.json().catch(() => ({}))) as LLMApiPayload & { error?: string };
+  const data = (await response.json().catch(() => ({}))) as LLMApiPayload & {
+    error?: string;
+    code?: string;
+    message?: string;
+    authoritative_session?: POJUSessionState;
+  };
   if (
     data.error === "openrouter_provider_queue" ||
-    (!response.ok && response.status === 503)
+    (!response.ok && response.status === 503 && data.error !== "session_authority")
   ) {
     const err = new Error("openrouter_provider_queue");
     err.name = "OpenRouterProviderQueueError";
     throw err;
   }
   if (!response.ok) {
-    throw new Error(`/api/poju/chat returned HTTP ${response.status}`);
+    const err = new Error(
+      data.message || data.error || `/api/poju/chat returned HTTP ${response.status}`,
+    );
+    if (data.error === "session_authority" && typeof data.code === "string") {
+      err.name = "SessionAuthorityError";
+      (err as Error & { code?: string }).code = data.code;
+    }
+    throw err;
   }
   if (data.error) {
     throw new Error(String(data.error));
   }
-  return mapLlmApiPayload(data, input.session);
+  const mapped = mapLlmApiPayload(data, data.authoritative_session ?? input.session);
+  if (data.authoritative_session && typeof data.authoritative_session === "object") {
+    return { ...mapped, authoritative_session: data.authoritative_session };
+  }
+  return mapped;
 }
 
 function mapLlmApiPayload(

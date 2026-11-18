@@ -6,6 +6,7 @@ import { handleUserMessage } from "@/lib/poju/agent";
 import {
   createPOJUSession,
   loadPOJUSession,
+  restoreAuthoritativePOJUSession,
   savePOJUSession,
 } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -30,6 +31,7 @@ function getStages(session: POJUSessionState | null): Stage[] {
   const latestJob = jobs.at(-1);
   return [
     { label: "Fresh Session", detail: session.session_id },
+    { label: "Server Session", detail: typeof session.session_revision === "number" ? `revision ${session.session_revision}` : "awaiting server restore" },
     { label: "Blueprint", detail: session.decision_blueprint?.blueprint_id ?? (session.decision_blueprint ? "initialized" : "waiting") },
     { label: "Decision Context", detail: session.decision_context ? `${session.decision_context.context_id} · v${session.decision_context.version} · ${session.decision_context.reality_facts.length} facts` : "not initialized" },
     { label: "Adaptive Question", detail: session.adaptive_ask_plan?.question_text ?? "waiting" },
@@ -64,12 +66,28 @@ export default function Di2DeliveryLabPage() {
   }, []);
 
   const restore = useCallback(async (id: string) => {
-    const loaded = await loadPOJUSession(id.trim());
-    if (!loaded) throw new Error("本浏览器 IndexedDB 中没有该 Session，或当前用户无权读取。");
+    const restored = await restoreAuthoritativePOJUSession(id.trim());
+    if (restored.authority_sync === "server_missing" && !restored.session) {
+      throw new Error("服务端没有该 Session，本机缓存也无法读取。");
+    }
+    const loaded = restored.session;
+    if (!loaded) throw new Error("无法恢复 Session。");
     setSession(loaded);
     setSessionId(loaded.session_id);
     setQuestion(loaded.original_question);
-    setNotice("Session 已从本机 IndexedDB 恢复；恢复不会自动启动模型或报告任务。");
+    if (restored.authority_sync === "offline_cache") {
+      setNotice("网络不可用，正在展示本机缓存。离线修改不是已提交的服务端权威状态。");
+    } else if (restored.authority_sync === "server_missing") {
+      setNotice("服务端 Session 不存在。本机缓存不能作为权威状态继续 Intake。");
+    } else if (restored.authority_sync === "server_expired") {
+      setNotice("服务端 Session 已过期，不允许继续 Intake。");
+    } else if (restored.authority_sync === "server_frozen") {
+      setNotice("服务端 Session 已 Freeze，不能重新进入 Intake。报告恢复仍走独立 Report Recovery 路径。");
+    } else if (restored.authority_sync === "server_terminated") {
+      setNotice("服务端 Session 已终止，不能通过本地恢复或改字段解除。");
+    } else {
+      setNotice(`已从服务端权威 Session 恢复（revision ${restored.revision ?? "?"}）。本地 IndexedDB 已更新为服务端镜像。`);
+    }
     return loaded;
   }, []);
 
@@ -165,8 +183,8 @@ export default function Di2DeliveryLabPage() {
           </div>
         </form>
         <div className="mt-5 border-t border-white/10 pt-4">
-          <label className="block text-sm">恢复已有 Session ID<input className="mt-1 w-full rounded border border-white/15 bg-black/20 p-3 font-mono text-sm" value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="IndexedDB 中的 Session ID" /></label>
-          <button disabled={busy || !sessionId.trim()} onClick={() => void restore(sessionId).catch((e) => setError(e instanceof Error ? e.message : "恢复失败"))} className="mt-2 rounded border border-white/20 px-3 py-2 text-sm disabled:opacity-50">从 IndexedDB 恢复</button>
+          <label className="block text-sm">恢复已有 Session ID<input className="mt-1 w-full rounded border border-white/15 bg-black/20 p-3 font-mono text-sm" value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="先恢复 Session ID，再拉取服务端权威快照" /></label>
+          <button disabled={busy || !sessionId.trim()} onClick={() => void restore(sessionId).catch((e) => setError(e instanceof Error ? e.message : "恢复失败"))} className="mt-2 rounded border border-white/20 px-3 py-2 text-sm disabled:opacity-50">从服务端权威 Session 恢复</button>
         </div>
       </section>
 
