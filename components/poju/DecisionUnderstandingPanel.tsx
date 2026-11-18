@@ -21,6 +21,7 @@ export function DecisionUnderstandingPanel({
   const needTitle = isZh ? "仍需弄清" : "Need to understand";
   const understoodTitle = isZh ? "已掌握" : "Understood";
   const qTitle = isZh ? "当前问题" : "Current question";
+  const progress = ui.readiness_progress_percent;
   const stateLabel: Record<string, string> = isZh
     ? { known: "已知", unknown: "未知", conflict: "有冲突", n_a: "不适用" }
     : { known: "Known", unknown: "Unknown", conflict: "Conflict", n_a: "Not applicable" };
@@ -34,12 +35,22 @@ export function DecisionUnderstandingPanel({
         aria-expanded={expanded}
       >
         <span className="truncate">
-          {title}: {ui.understanding_summary ?? "—"}
+          {title}{progress != null ? `: ${progress}%` : ""}: {ui.understanding_summary ?? "—"}
         </span>
         {expanded ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
       </button>
       {expanded ? (
         <div className="mt-1 space-y-2 border-l border-border/60 pl-3">
+          {progress != null ? (
+            <div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-full bg-foreground/70" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {isZh ? "信息准备程度（基于 DDR / DIR / Sufficiency Gate，不是提问次数）" : "Information readiness (DDR / DIR / Sufficiency Gate, not question count)"}
+              </div>
+            </div>
+          ) : null}
           {ui.current_question ? (
             <div>
               <div className="font-medium text-foreground/80">{qTitle}</div>
@@ -66,7 +77,7 @@ export function DecisionUnderstandingPanel({
               </ul>
             </div>
           ) : null}
-          {ui.personal_pattern_status && ui.personal_pattern_status !== "unavailable" ? (
+          {ui.personal_pattern_status === "available" && ui.personal_pattern_insights.length > 0 ? (
             <div className="space-y-1">
               <div>{isZh ? "个人模式洞察" : "Personal pattern"}: {ui.personal_pattern_status}</div>
               {ui.personal_pattern_insights.map((insight) => <div key={insight.source} className="rounded bg-muted/40 p-2 text-foreground">

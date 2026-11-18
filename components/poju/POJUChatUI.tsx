@@ -113,6 +113,7 @@ import {
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { DecisionUnderstandingPanel } from "@/components/poju/DecisionUnderstandingPanel";
+import { INTAKE_CONTINUE_TOKEN } from "@/lib/poju/decision-intake/intake-protection";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAction";
@@ -1006,6 +1007,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     [locale],
   );
   const escalationLocked = Boolean(session.agent_v2?.escalation_locked_at);
+  const intakeProtection = session.intake_protection;
+  const intakeLockedUntil = intakeProtection?.lockout_until ? Date.parse(intakeProtection.lockout_until) : 0;
+  const intakeCooldownActive =
+    intakeProtection?.status === "locked" && Number.isFinite(intakeLockedUntil) && intakeLockedUntil > Date.now();
+  const intakeSessionBlocked =
+    intakeProtection?.status === "terminated" ||
+    intakeProtection?.status === "expired" ||
+    intakeCooldownActive;
+  const intakeContinueReady =
+    intakeProtection?.status === "locked" && Number.isFinite(intakeLockedUntil) && intakeLockedUntil <= Date.now();
   const composerLocked =
     expired ||
     previewComposerBlocked ||
@@ -1015,7 +1026,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     Boolean(segment2JobId) ||
     Boolean(synthesisJobId) ||
     session.agent_v2?.synthesis_status === "pending" ||
-    escalationLocked;
+    escalationLocked ||
+    intakeSessionBlocked;
 
   /** Phase-4 delivery and after: no more chat ? hide bottom composer. */
   const hideComposer =
@@ -4598,6 +4610,28 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
               ) : null}
               {session.agent_v2 ? (
                 <>
+                    {intakeProtection && (intakeSessionBlocked || intakeContinueReady || intakeProtection.status === "warned") ? (
+                      <div className="px-1 py-2 text-xs text-muted-foreground">
+                        {intakeProtection.status === "terminated"
+                          ? (sessionLang.startsWith("zh") ? "???????????????" : "This session was terminated after three lockout events.")
+                          : intakeProtection.status === "expired"
+                            ? (sessionLang.startsWith("zh") ? "?????????????????" : "This session expired. Expiry does not count as a third lockout.")
+                            : intakeCooldownActive
+                              ? (sessionLang.startsWith("zh") ? "??????10 ???????????" : "The session is locked. You can continue after the 10-minute cooldown.")
+                              : intakeContinueReady
+                                ? (sessionLang.startsWith("zh") ? "???????????????" : "The cooldown has ended. You can continue the current question.")
+                                : (sessionLang.startsWith("zh") ? "刚才的输入无效。请针对原问题重新回答。" : "That input was invalid. Please answer the original question.")}
+                        {intakeContinueReady ? (
+                          <button
+                            type="button"
+                            className="ml-2 rounded border border-border px-2 py-0.5 text-foreground"
+                            onClick={() => void runUserTurn(session, INTAKE_CONTINUE_TOKEN)}
+                          >
+                            {sessionLang.startsWith("zh") ? "继续" : "Continue"}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {!session.decision_understanding && <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />}
                     <DecisionUnderstandingPanel session={session} locale={sessionLang} />
                   </>

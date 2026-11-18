@@ -64,6 +64,16 @@ export {
 } from "./fresh-session-bootstrap";
 export { projectAdaptiveQuestionForUi } from "./ui-projection";
 export {
+  applyIntakeProtection,
+  classifyIntakeInput,
+  INTAKE_CONTINUE_TOKEN,
+  INTAKE_LOCKOUT_COOLDOWN_MS,
+  INTAKE_LOCKOUT_LIMIT,
+  INTAKE_SESSION_RETENTION_MS,
+} from "./intake-protection";
+export { bindPersonalAnalysisProfile, evaluateQaPersonalPatternInsight } from "./personal-analysis-profile";
+export { computeReadinessProgress } from "./understanding-state";
+export {
   confirmUnderstandingAndFreeze,
   isFinalUnderstandingConfirmText,
   isFinalUnderstandingAddMoreText,

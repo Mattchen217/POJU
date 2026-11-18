@@ -9,6 +9,7 @@ export type PivotPaywallCopy = {
   unlockWithPass: string;
   deepDialogueTitle: string;
   consumePassDesc: string;
+  intakeAbuseDisclosure: string;
   passDeducted: (n: number) => string;
   buyOrSubscribePass: string;
   working: string;
@@ -25,6 +26,7 @@ const BY_LOCALE: Record<
     deepDialogueTitle: "与 Pivot 深入对话",
     consumePassDesc: "消耗 1 个 Pass（优先订阅额度），解锁完整Pivot对话与交付。",
     passDeductedTpl: "已经扣除 {n} Pass",
+        intakeAbuseDisclosure: "开始付费问答前请了解：需要提供与本次决策有关的有效信息；连续无效输入可能锁定会话；累计三次锁定事件将终止当前会话；仅对符合已披露滥用规则的终止按相应 PASS 政策处理。平台故障、模型故障、系统错误或服务未交付不视为用户滥用。",
     buyOrSubscribePass: "购买 / 订阅 Pass",
     working: "处理中…",
     passPerSession: " Pass / 次",
@@ -36,6 +38,7 @@ const BY_LOCALE: Record<
     consumePassDesc:
       "Consume 1 Pass (subscription quota prioritized) to unlock full Pivot dialogue and deliverables.",
     passDeductedTpl: "{n} Pass deducted",
+        intakeAbuseDisclosure: "Before paid Q&A starts: you need to provide decision-relevant valid information; consecutive invalid input may lock the session; three lockout events terminate the current session; the disclosed PASS policy applies only to termination that matches those abuse rules. Platform, model, system, or undelivered-service failures are not treated as user abuse.",
     buyOrSubscribePass: "Buy / Subscribe to Pass",
     working: "Working…",
     passPerSession: " Pass / session",
@@ -47,6 +50,7 @@ const BY_LOCALE: Record<
     consumePassDesc:
       "Consume 1 Pass (prioridad de cuota de suscripción) para desbloquear la conversación completa y los entregables de Pivot.",
     passDeductedTpl: "Se ha deducido {n} Pass",
+        intakeAbuseDisclosure: "Before paid Q&A starts: you need to provide decision-relevant valid information; consecutive invalid input may lock the session; three lockout events terminate the current session; the disclosed PASS policy applies only to termination that matches those abuse rules. Platform, model, system, or undelivered-service failures are not treated as user abuse.",
     buyOrSubscribePass: "Comprar / Suscribirse a Pass",
     working: "Procesando…",
     passPerSession: " Pass / sesión",
@@ -58,6 +62,7 @@ const BY_LOCALE: Record<
     consumePassDesc:
       "Consomme 1 Pass (quota d'abonnement prioritaire) pour débloquer l'intégralité de la conversation et des livrables Pivot.",
     passDeductedTpl: "{n} Pass déduit(s)",
+        intakeAbuseDisclosure: "Before paid Q&A starts: you need to provide decision-relevant valid information; consecutive invalid input may lock the session; three lockout events terminate the current session; the disclosed PASS policy applies only to termination that matches those abuse rules. Platform, model, system, or undelivered-service failures are not treated as user abuse.",
     buyOrSubscribePass: "Acheter / S'abonner à un Pass",
     working: "Traitement…",
     passPerSession: " Pass / session",

@@ -237,6 +237,9 @@ function m1AuditFields(m1: POJUSessionState, fallback: POJUSessionState) {
     decision_blueprint_history:
       m1.decision_blueprint_history ?? fallback.decision_blueprint_history,
     blueprint_change_log: m1.blueprint_change_log ?? fallback.blueprint_change_log,
+    intake_protection: m1.intake_protection ?? fallback.intake_protection,
+    personal_analysis_profile:
+      m1.personal_analysis_profile ?? fallback.personal_analysis_profile,
   };
 }
 
@@ -1412,6 +1415,43 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         }
       }
     }
+  }
+
+  const intakeProtectionOutcome =
+    m1CollectingTurn?.outcome === "intake_warned" ||
+    m1CollectingTurn?.outcome === "intake_locked" ||
+    m1CollectingTurn?.outcome === "intake_terminated" ||
+    m1CollectingTurn?.outcome === "intake_expired" ||
+    m1CollectingTurn?.outcome === "intake_continued";
+  if (input.server_invoke && m1CollectingTurn && intakeProtectionOutcome) {
+    const nowProtect = new Date().toISOString();
+    const protectText =
+      m1CollectingTurn.user_visible_message?.trim() ||
+      "This session cannot continue the current question right now.";
+    const protectAssistant: POJUMessage = {
+      role: "assistant",
+      content: protectText,
+      timestamp: nowProtect,
+      client_id: safeRandomUUID(),
+      meta: {
+        m1_outcome: m1CollectingTurn.outcome as
+          | "intake_warned"
+          | "intake_locked"
+          | "intake_terminated"
+          | "intake_expired"
+          | "intake_continued",
+      },
+    };
+    return withSessionProfileFlags({
+      ...m1CollectingTurn.session,
+      messages: [...messagesWithUser, protectAssistant],
+      last_interaction_at: nowProtect,
+      decision_context: m1CollectingTurn.session.decision_context,
+      decision_blueprint: m1CollectingTurn.session.decision_blueprint,
+      decision_understanding: m1CollectingTurn.session.decision_understanding,
+      adaptive_ask_plan: m1CollectingTurn.session.adaptive_ask_plan ?? m1CollectingTurn.plan ?? null,
+      ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
+    });
   }
 
   const llmResponse = input.server_invoke

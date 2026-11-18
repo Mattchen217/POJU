@@ -201,6 +201,7 @@
     "test:m9-r1-fu1-redis-lua-integrity-parity": "tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-fu1-redis-lua-integrity-parity.ts",
     "test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding": "tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding.ts",
     "test:m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding": "tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding.ts",
+    "test:di2-feature-landing-main-path": "tsx scripts/test-di2-feature-landing-main-path.ts",
     "test:deliverable-skeleton": "tsx scripts/test-deliverable-skeleton.ts",
     "test:m5-r1-authorization": "tsx scripts/test-m5-r1-authorization.ts",
     "test:m5-r1-fu1": "tsx scripts/test-m5-r1-authorization.ts --only=FU1",

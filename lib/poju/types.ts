@@ -186,7 +186,12 @@ export interface POJUMessage {
       | "answer_interpretation_failed"
       | "answer_interpretation_invalid_schema"
       /** Turn produced neither an authorized question nor a readiness stop. */
-      | "no_authorized_question";
+      | "no_authorized_question"
+      | "intake_warned"
+      | "intake_locked"
+      | "intake_terminated"
+      | "intake_expired"
+      | "intake_continued";
     m1_persist_error?: string | null;
     m1_ask_error?: string | null;
   };
@@ -497,6 +502,16 @@ export interface POJUSessionState {
    * Not a second Decision Context or fact source. Never auto-mutates Blueprint.
    */
   pending_intake_control?: import("./decision-intake/types").PendingIntakeControl | null;
+  /**
+   * Intake 2.0 input protection / lockout. Persisted on this Session snapshot
+   * and committed through the existing Session CAS. Not a second fact store.
+   */
+  intake_protection?: import("./decision-intake/intake-protection").IntakeProtectionState;
+  /**
+   * Q&A-phase Personal Analysis Profile bound at session init.
+   * Not recomputed every turn and never a RealityFacts source.
+   */
+  personal_analysis_profile?: import("./decision-intake/personal-analysis-profile").PersonalAnalysisProfile;
   /**
    * Most recent AnswerEvent from the production interpretation path.
    * Scheduling/audit metadata for inspectable grounding rejections.

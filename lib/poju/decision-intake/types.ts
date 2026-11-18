@@ -483,7 +483,13 @@ export type NeedItem =
 export type PersonalPatternInsightBlock = {
   status: "unavailable" | "pending" | "none" | "available";
   reason?: string;
-  insights: Array<{ text: string; source: string; related_dir_ids: string[] }>;
+  insights: Array<{
+    text: string;
+    source: string;
+    related_dir_ids: string[];
+    profile_version?: string;
+    epistemic?: "traditional_interpretation" | "unverified_hypothesis";
+  }>;
 };
 
 export type ConflictClarificationTarget = {
@@ -627,6 +633,24 @@ export type UnderstandingState = {
   personal_pattern_insight: PersonalPatternInsightBlock;
   next_question_plan: AdaptiveQuestionPlan | null;
   readiness: ReadinessSnapshot;
+  /**
+   * Information readiness, not question count or Agenda coverage.
+   * 100% only when required DDR, key P0 DIR, key P1 conditions, conflict
+   * handling, and the Sufficiency Gate all pass.
+   */
+  readiness_progress?: {
+    percent: number;
+    complete: boolean;
+    basis: "ddr_dir_gate";
+    components: {
+      ddr: number;
+      p0_dir: number;
+      p1_dir: number;
+      constraints: number;
+      conflicts: number;
+      sufficiency: number;
+    };
+  };
   budget: SessionBudgetSnapshot;
   last_answer_event_id: string | null;
   last_sent_question: {
@@ -654,8 +678,15 @@ export type AdaptiveTurnResult = {
     | "answer_interpretation_failed"
     | "answer_interpretation_invalid_schema"
     | "not_applicable_phase"
-    | "idempotent_replay";
+    | "idempotent_replay"
+    | "intake_warned"
+    | "intake_locked"
+    | "intake_terminated"
+    | "intake_expired"
+    | "intake_continued";
   answer_event: AnswerEvent | null;
+  /** Template assistant text for intake-protection outcomes. */
+  user_visible_message?: string;
   understanding: UnderstandingState | null;
   plan: AdaptiveQuestionPlan | null;
   authorized_question: string | null;

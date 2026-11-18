@@ -86,6 +86,7 @@ export function PojuPaywallInline({
           {copy.deepDialogueTitle}
         </h2>
         <p className="pwall__sub">{copy.consumePassDesc}</p>
+        <p className="pwall__sub pwall__sub--policy">{copy.intakeAbuseDisclosure}</p>
         <div className="pwall__price">
           <span className="pwall__num">1</span>
           <span className="pwall__unit">{copy.passPerSession}</span>

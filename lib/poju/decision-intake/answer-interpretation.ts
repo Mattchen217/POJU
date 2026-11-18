@@ -26,6 +26,8 @@ import type {
 
 export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
 
+import { classifyIntakeInput } from "./intake-protection";
+
 const UNKNOWN_RE =
   /^(i\s*don'?t\s*know|不知道|不清楚|不了解|没印象|不确定|unsure|no\s*idea)(\b|$|[!。！?\s])/i;
 const DECLINED_RE =
@@ -474,6 +476,14 @@ export function classifyAnswer(input: {
     return { cls: "invalid_input", notes: ["missing_authorized_fact_roles"] };
   }
 
+  // Intake 2.0 statement-level invalid/off-topic. Short relevant answers,
+  // unknown, declined, skip, and uncertainty are not invalid.
+  const intakeKind = classifyIntakeInput(t);
+  if (intakeKind === "invalid_off_topic") return { cls: "off_topic", notes: ["off_topic"] };
+  if (intakeKind === "invalid_gibberish" || intakeKind === "invalid_unusable" || intakeKind === "invalid_empty") {
+    return { cls: "invalid_input", notes: [intakeKind] };
+  }
+
   // off_topic
   if (OFF_TOPIC_RE.test(t)) return { cls: "off_topic", notes: ["off_topic"] };
 
@@ -528,8 +538,8 @@ export function classifyAnswer(input: {
   if (t.length >= 4) {
     return { cls: "partial_answer", notes: ["partial"] };
   }
-  // Too thin to be a fact write
-  return { cls: "invalid_input", notes: ["too_thin"] };
+  // Short answers are valid but may only be partial facts, not abuse.
+  return { cls: "partial_answer", notes: ["short_relevant"] };
 }
 
 /** Split one user turn into independent factual clauses (same source_turn_id). */

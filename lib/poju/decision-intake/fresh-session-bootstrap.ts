@@ -25,6 +25,7 @@ import {
 } from "@/lib/poju/decision-context/production-dc-lifecycle";
 import { ensureDecisionBlueprint } from "./blueprint";
 import { runAdaptiveQuestionTurn } from "./adaptive-turn";
+import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
 import type { AdaptiveTurnResult } from "./types";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -327,7 +328,7 @@ export async function bootstrapFreshSessionMainLoop(input: {
     };
   }
 
-  let current = ensureCollectingAgent({ ...input.session }, statement);
+  let current = bindPersonalAnalysisProfile(ensureCollectingAgent({ ...input.session }, statement), input.now);
   let scope_source: "catalog" | "starter_fallback" = "catalog";
 
   const existing = current.decision_context;

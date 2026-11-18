@@ -24,6 +24,8 @@ export type AdaptiveQuestionUiProjection = {
   budget_remaining: number | null;
   need_details: Array<{ label: string; priority: string; direction_id: string | null; gap_type: string }>;
   personal_pattern_insights: Array<{ text: string; source: string; related_dir_ids: string[] }>;
+  readiness_progress_percent: number | null;
+  readiness_progress_complete: boolean | null;
 };
 
 export function projectAdaptiveQuestionForUi(
@@ -69,5 +71,7 @@ export function projectAdaptiveQuestionForUi(
       gap_type: i.gap_type,
     })),
     personal_pattern_insights: u?.personal_pattern_insight.insights ?? [],
+    readiness_progress_percent: u?.readiness_progress?.percent ?? null,
+    readiness_progress_complete: u?.readiness_progress?.complete ?? null,
   };
 }

@@ -39,6 +39,15 @@ import { ensureDecisionBlueprint,
 import { buildAdaptiveQuestionPlan } from "./question-generation";
 import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
 import { buildUnderstandingState } from "./understanding-state";
+import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
+import {
+  applyIntakeProtection,
+  classifyIntakeInput,
+  intakeProtectionUserMessage,
+  mapIntakeProtectionOutcome,
+  readIntakeProtection,
+  withIntakeProtection,
+} from "./intake-protection";
 import { resolveDdrIdsForDir } from "./blueprint";
 import {
   answerSourceFor,
@@ -728,7 +737,7 @@ async function closeBlockedClarifications(
 async function runAdaptiveQuestionTurnInner(
   input: AdaptiveTurnInput,
 ): Promise<AdaptiveTurnResult> {
-  let current = input.session;
+  let current = bindPersonalAnalysisProfile(input.session, input.now);
   const buildUnderstanding = (
     args: Parameters<typeof buildUnderstandingState>[0],
   ): UnderstandingState => {
@@ -767,6 +776,35 @@ async function runAdaptiveQuestionTurnInner(
         plan: null,
         authorized_question: null,
         persist_error: "empty_statement",
+      };
+    }
+    const intakeDecision = applyIntakeProtection({
+      state: readIntakeProtection(current),
+      kind: classifyIntakeInput(statement),
+      nowIso: input.now,
+      turnId: input.source_turn_id,
+    });
+    current = withIntakeProtection(current, intakeDecision.state);
+    const protectionOutcome = mapIntakeProtectionOutcome(intakeDecision.action);
+    if (protectionOutcome) {
+      const live = liveNonClarificationPlan(current);
+      const originalQuestion =
+        current.decision_understanding?.last_sent_question?.question_text ??
+        live?.question_text ??
+        null;
+      return {
+        session: current,
+        outcome: protectionOutcome,
+        answer_event: null,
+        understanding: current.decision_understanding ?? null,
+        plan: live,
+        authorized_question: originalQuestion,
+        persist_error: protectionOutcome,
+        user_visible_message: intakeProtectionUserMessage(
+          intakeDecision,
+          input.locale ?? current.locked_output_locale ?? "zh",
+          originalQuestion,
+        ),
       };
     }
     const priorClarify = findClarifiedConflictForTurn(

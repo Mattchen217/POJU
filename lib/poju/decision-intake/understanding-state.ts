@@ -25,6 +25,7 @@ import type {
   UnderstandingState,
   UnderstoodItem,
 } from "./types";
+import { evaluateQaPersonalPatternInsight } from "./personal-analysis-profile";
 
 export function defaultBudget(
   session: POJUSessionState,
@@ -48,13 +49,80 @@ export function defaultBudget(
   };
 }
 
+export function computeReadinessProgress(input: {
+  dc: NonNullable<POJUSessionState["decision_context"]>;
+  blueprint: DecisionBlueprint;
+  sufficiency: ReturnType<typeof evaluateDecisionSufficiency>;
+}): NonNullable<UnderstandingState["readiness_progress"]> {
+  const { dc, blueprint, sufficiency } = input;
+  const dirPriority = (dirId: string): "P0" | "P1" | "P2" => {
+    const hit = (blueprint.directions ?? []).find((d) => d.dir_ids.includes(dirId));
+    return hit?.priority === "P0" || hit?.priority === "P1" ? hit.priority : "P2";
+  };
+  const roleScore = (state: string | undefined): number => {
+    if (state === "known" || state === "n_a") return 1;
+    return 0;
+  };
+  const activeDirs = (dc.dirs ?? []).filter((d) => d.id_lifecycle === "active" || d.id_lifecycle == null);
+  const scored = (priority: "P0" | "P1" | "P2") => {
+    const list = activeDirs.filter((d) => dirPriority(d.dir_id) === priority);
+    if (!list.length) return 1;
+    return list.reduce((sum, d) => sum + roleScore(d.current_state), 0) / list.length;
+  };
+  const ddrTargets = (blueprint.directions ?? []).flatMap((d) =>
+    (d.dir_ids ?? []).map((dirId) => ({ priority: d.priority, dirId })),
+  );
+  const requiredDdrDirs = ddrTargets.filter((d) => d.priority === "P0" || d.priority === "P1");
+  const ddr = requiredDdrDirs.length
+    ? requiredDdrDirs.reduce((sum, item) => {
+        const dir = activeDirs.find((d) => d.dir_id === item.dirId);
+        return sum + roleScore(dir?.current_state);
+      }, 0) / requiredDdrDirs.length
+    : scored("P0");
+  const constraints = (dc.constraints ?? []).length
+    ? dc.constraints.filter((c) => c.status === "confirmed").length / dc.constraints.length
+    : 1;
+  const openConflicts = (dc.conflicts ?? []).filter((c) => c.state !== "clarified" && c.state !== "unresolved_in_final");
+  const conflicts = openConflicts.length === 0 ? 1 : 0;
+  const sufficiencyScore =
+    sufficiency.verdict === "sufficient" ? 1 : sufficiency.verdict === "sufficient_with_boundaries" ? 0.85 : 0;
+  const p0 = scored("P0");
+  const p1 = scored("P1");
+  const percentRaw =
+    (ddr * 3 + p0 * 3 + p1 * 2 + constraints * 1 + conflicts * 2 + sufficiencyScore * 3) / 14;
+  const complete =
+    ddr >= 1 &&
+    p0 >= 1 &&
+    p1 >= 1 &&
+    conflicts >= 1 &&
+    (sufficiency.verdict === "sufficient" || sufficiency.verdict === "sufficient_with_boundaries") &&
+    Boolean(sufficiency.canStop);
+  const percent = complete ? 100 : Math.min(99, Math.round(percentRaw * 100));
+  return {
+    percent,
+    complete,
+    basis: "ddr_dir_gate",
+    components: {
+      ddr: Math.round(ddr * 100),
+      p0_dir: Math.round(p0 * 100),
+      p1_dir: Math.round(p1 * 100),
+      constraints: Math.round(constraints * 100),
+      conflicts: Math.round(conflicts * 100),
+      sufficiency: Math.round(sufficiencyScore * 100),
+    },
+  };
+}
+
 export function evaluatePersonalPatternInsight(
   session: POJUSessionState,
 ): PersonalPatternInsightBlock {
+  const qa = evaluateQaPersonalPatternInsight(session, session.locked_output_locale ?? "zh");
+  if (qa.status === "available") return qa;
   const dc = session.decision_context;
   const freeze = [...(session.dc_freeze_receipts ?? [])].reverse()
     .find((r) => r.session_id === session.session_id);
   if (!dc || !freeze || freeze.context_id !== dc.context_id || freeze.context_version !== dc.version || freeze.context_hash !== dc.content_hash) {
+    if (qa.status === "none") return qa;
     return { status: "unavailable", reason: "current_freeze_unavailable", insights: [] };
   }
   const profile = [...(session.dc_profile_receipts ?? [])].reverse()
@@ -444,6 +512,11 @@ export function buildUnderstandingState(input: {
       reasons,
       sufficiency_verdict: sufficiency.verdict,
     },
+    readiness_progress: computeReadinessProgress({
+      dc,
+      blueprint: input.blueprint,
+      sufficiency,
+    }),
     budget,
     last_answer_event_id: input.last_answer_event_id ?? null,
     last_sent_question:

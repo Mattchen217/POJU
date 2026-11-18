@@ -41,7 +41,12 @@ export type CollectingDcTurnOutcome =
   /** Model answer interpretation call failed (timeout / transport / throw). */
   | "answer_interpretation_failed"
   /** Model returned invalid JSON or a schema-invalid draft. */
-  | "answer_interpretation_invalid_schema";
+  | "answer_interpretation_invalid_schema"
+  | "intake_warned"
+  | "intake_locked"
+  | "intake_terminated"
+  | "intake_expired"
+  | "intake_continued";
 
 export type CollectingDcTurnResult = {
   session: POJUSessionState;
@@ -59,6 +64,7 @@ export type CollectingDcTurnResult = {
   answer_event?: AnswerEvent | null;
   /** M1-R: true when this turn created draft DC from a brand-new session. */
   bootstrapped?: boolean;
+  user_visible_message?: string;
 };
 
 function mapAdaptiveOutcome(turn: {
@@ -71,6 +77,7 @@ function mapAdaptiveOutcome(turn: {
   understanding: UnderstandingState | null;
   answer_event: AnswerEvent | null;
   bootstrapped?: boolean;
+  user_visible_message?: string;
 }, initOnly: boolean): CollectingDcTurnResult {
   const session = {
     ...turn.session,
@@ -83,6 +90,7 @@ function mapAdaptiveOutcome(turn: {
     answer_event: turn.answer_event,
     ask_error: turn.ask_error,
     bootstrapped: turn.bootstrapped,
+    user_visible_message: turn.user_visible_message,
   };
 
   if (turn.outcome === "dc_persist_failed") {
@@ -132,6 +140,21 @@ function mapAdaptiveOutcome(turn: {
       authorized_question: null,
       plan: null,
       understanding: null,
+    };
+  }
+  if (
+    turn.outcome === "intake_warned" ||
+    turn.outcome === "intake_locked" ||
+    turn.outcome === "intake_terminated" ||
+    turn.outcome === "intake_expired" ||
+    turn.outcome === "intake_continued"
+  ) {
+    return {
+      session,
+      outcome: turn.outcome,
+      ask_planned: turn.outcome === "intake_warned" || turn.outcome === "intake_continued",
+      persist_error: turn.persist_error ?? turn.outcome,
+      ...common,
     };
   }
   if (turn.outcome === "planner_blocked") {
