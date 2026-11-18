@@ -1,0 +1,90 @@
+{
+  "baseline_sha": "786b470bcf2816dfdef966c43460872e45840495",
+  "implementation_sha": "c2e35fc7d0edbce0a9e6ee287535d02d87a6fd99",
+  "parent_sha": "786b470bcf2816dfdef966c43460872e45840495",
+  "branch": "feat/m1-r-fresh-session-main-loop",
+  "date": "2026-11-17",
+  "timezone": "America/Chicago",
+  "commands": [
+    {
+      "command": "pnpm test:m8-r1-internal-turn-trust-boundary",
+      "exit_code": 0,
+      "log": "01-test-m8-r1-internal-turn-trust-boundary.log",
+      "bytes": 15384
+    },
+    {
+      "command": "pnpm test:m6-di2-full-lifecycle",
+      "exit_code": 0,
+      "log": "02-test-m6-di2-full-lifecycle.log",
+      "bytes": 13002
+    },
+    {
+      "command": "pnpm test:m5-r1-authorization",
+      "exit_code": 0,
+      "log": "03-test-m5-r1-authorization.log",
+      "bytes": 52050
+    },
+    {
+      "command": "pnpm test:m1-production-adaptive-question-loop",
+      "exit_code": 0,
+      "log": "04-test-m1-production-adaptive-question-loop.log",
+      "bytes": 216212
+    },
+    {
+      "command": "pnpm test:m2-1-readiness-confirm-freeze",
+      "exit_code": 0,
+      "log": "05-test-m2-1-readiness-confirm-freeze.log",
+      "bytes": 13093
+    },
+    {
+      "command": "pnpm test:m2-2-freeze-report-binding",
+      "exit_code": 0,
+      "log": "06-test-m2-2-freeze-report-binding.log",
+      "bytes": 7780
+    },
+    {
+      "command": "pnpm test:m3-decision-report",
+      "exit_code": 0,
+      "log": "07-test-m3-decision-report.log",
+      "bytes": 7299
+    },
+    {
+      "command": "pnpm test:m4-decision-authority",
+      "exit_code": 0,
+      "log": "08-test-m4-decision-authority.log",
+      "bytes": 5132
+    },
+    {
+      "command": "pnpm test:m4-1-freeze-recovery",
+      "exit_code": 0,
+      "log": "09-test-m4-1-freeze-recovery.log",
+      "bytes": 3773
+    },
+    {
+      "command": "pnpm test:m5-di2-main-path",
+      "exit_code": 0,
+      "log": "10-test-m5-di2-main-path.log",
+      "bytes": 32841
+    },
+    {
+      "command": "pnpm test:m8-di2-non-model-closure",
+      "exit_code": 0,
+      "log": "11-test-m8-di2-non-model-closure.log",
+      "bytes": 3100
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --pretty false",
+      "exit_code": 0,
+      "log": "12-tsc-noemit.log",
+      "bytes": 0
+    },
+    {
+      "command": "pnpm build",
+      "exit_code": 0,
+      "log": "13-production-build.log",
+      "bytes": 11499
+    }
+  ],
+  "sw_js_restored_sha256": "38ce6db5fb144844e7089222cb0ed6ea71d54bdff8bd9035def4b25d2e170980",
+  "notes": "Evidence SHA is not recorded in this file to avoid a self-referential tip SHA. It is the commit that adds this directory."
+}
