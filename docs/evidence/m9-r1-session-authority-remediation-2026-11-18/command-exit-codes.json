@@ -1,0 +1,141 @@
+{
+  "recorded_at": "2026-11-18 03:22:46 -06:00 (America/Chicago)",
+  "branch": "feat/m1-r-fresh-session-main-loop",
+  "baseline_sha": "565380ae19e6f48505102bd0dccdc14d9e9e3cec",
+  "implementation_sha": "d9c6434e630573014f82803a395ea45a8adacbc3",
+  "implementation_parent_sha": "565380ae19e6f48505102bd0dccdc14d9e9e3cec",
+  "m9_implementation_sha": "ca3a68a3fb3c06789997678208d40b24ef7177e6",
+  "note": "This file does not record the evidence commit SHA, to avoid a self-referential tip SHA.",
+  "live_upstash_configured": false,
+  "sw_js": {
+    "pre_build_sha256": "38ce6db5fb144844e7089222cb0ed6ea71d54bdff8bd9035def4b25d2e170980",
+    "pre_build_bytes": 139053,
+    "post_build_sha256": "d2160279291e3ce6e9a8c3ba12d20d196601c39b4a8dbee5861d434bb8b44042",
+    "post_build_bytes": 139220,
+    "restored_to_pre_build": true,
+    "committed": false,
+    "note": "If pnpm build rewrote public/sw.js, the pre-build bytes were restored and the file was left unstaged. It is not part of the implementation or evidence commit."
+  },
+  "commands": [
+    {
+      "command": "pnpm test:m9-server-authoritative-session",
+      "log": "01-test-m9-server-authoritative-session.log",
+      "exit_code": 0,
+      "elapsed_s": 3.54,
+      "log_bytes": 10334,
+      "result": "20 PASS lines; required cases 1-19 covered; checks complete"
+    },
+    {
+      "command": "pnpm test:m9-r1-session-authority-remediation",
+      "log": "02-test-m9-r1-session-authority-remediation.log",
+      "exit_code": 0,
+      "elapsed_s": 3.16,
+      "log_bytes": 7558,
+      "result": "17 PASS lines; checks complete"
+    },
+    {
+      "command": "pnpm test:m8-r1-internal-turn-trust-boundary",
+      "log": "03-test-m8-r1-internal-turn-trust-boundary.log",
+      "exit_code": 0,
+      "elapsed_s": 2.85,
+      "log_bytes": 15194,
+      "result": "42 PASS lines; checks complete"
+    },
+    {
+      "command": "pnpm test:m6-di2-full-lifecycle",
+      "log": "04-test-m6-di2-full-lifecycle.log",
+      "exit_code": 0,
+      "elapsed_s": 10.34,
+      "log_bytes": 12725,
+      "result": "M6 result: 7 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m5-r1-authorization",
+      "log": "05-test-m5-r1-authorization.log",
+      "exit_code": 0,
+      "elapsed_s": 19.01,
+      "log_bytes": 51097,
+      "result": "49 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m1-production-adaptive-question-loop",
+      "log": "06-test-m1-production-adaptive-question-loop.log",
+      "exit_code": 0,
+      "elapsed_s": 22.72,
+      "log_bytes": 211469,
+      "result": "188 PASS lines; exit 0"
+    },
+    {
+      "command": "pnpm test:m2-1-readiness-confirm-freeze",
+      "log": "07-test-m2-1-readiness-confirm-freeze.log",
+      "exit_code": 0,
+      "elapsed_s": 4.02,
+      "log_bytes": 12822,
+      "result": "M2.1 result: 19 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m2-2-freeze-report-binding",
+      "log": "08-test-m2-2-freeze-report-binding.log",
+      "exit_code": 0,
+      "elapsed_s": 5.74,
+      "log_bytes": 7668,
+      "result": "43 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m3-decision-report",
+      "log": "09-test-m3-decision-report.log",
+      "exit_code": 0,
+      "elapsed_s": 3.71,
+      "log_bytes": 7160,
+      "result": "27 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m4-decision-authority",
+      "log": "10-test-m4-decision-authority.log",
+      "exit_code": 0,
+      "elapsed_s": 4.37,
+      "log_bytes": 5075,
+      "result": "27 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m4-1-freeze-recovery",
+      "log": "11-test-m4-1-freeze-recovery.log",
+      "exit_code": 0,
+      "elapsed_s": 3.64,
+      "log_bytes": 3733,
+      "result": "10 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m5-di2-main-path",
+      "log": "12-test-m5-di2-main-path.log",
+      "exit_code": 0,
+      "elapsed_s": 48.91,
+      "log_bytes": 32318,
+      "result": "29 passed, 0 failed"
+    },
+    {
+      "command": "pnpm test:m8-di2-non-model-closure",
+      "log": "13-test-m8-di2-non-model-closure.log",
+      "exit_code": 0,
+      "elapsed_s": 2.02,
+      "log_bytes": 3067,
+      "result": "6 PASS lines; checks complete"
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --pretty false",
+      "log": "14-tsc-noemit.log",
+      "exit_code": 0,
+      "elapsed_s": 6.2,
+      "log_bytes": 0,
+      "result": "exit 0, empty log"
+    },
+    {
+      "command": "pnpm build",
+      "log": "15-pnpm-build.log",
+      "exit_code": 0,
+      "elapsed_s": 121.34,
+      "log_bytes": 12354,
+      "result": "Compiled successfully in 46s; exit 0"
+    }
+  ]
+}
