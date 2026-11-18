@@ -1,0 +1,38 @@
+
+> pojulife@0.1.0 test:m4-1-freeze-recovery D:\POJU\pojulife
+> tsx scripts/test-m4-1-freeze-recovery.ts
+
+M4.1 Freeze commit recovery + strict ledger anchor
+  PASS  1 server sealed, C1 aborted, wire retry → recovered via recover_freeze; one Freeze entry
+  PASS  1b a draft write landing on the unadopted Freeze fails as REMOTE_FROZEN (not a draft conflict); wire then recovers
+  PASS  2 recovering the same old draft twice → identical receipts, no extra ledger entry
+  PASS  3 wrong source commit / entry hash / context / version / token → refused; local state unchanged
+  PASS  4 Freeze V1, V2 opened + committed elsewhere → old V1 draft gets FREEZE_NOT_CURRENT; V2 kept
+  PASS  5 Freeze record without / with a corrupted / mismatching ledger anchor is never verified
+  PASS  6a Freeze sealed without birth → recovery returns profile_receipt null (nothing invented)
+  PASS  6b profile registered after the seal but never stored locally → recovery returns that receipt
+  PASS  6c profile record not bound to this Freeze is refused (session / freeze / sealed hash)
+  PASS  7 after recovery the M3 client starts with the recovered Freeze + profile receipts
+
+10 passed, 0 failed
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
