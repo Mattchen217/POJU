@@ -73,7 +73,12 @@ export class SessionAuthorityError extends Error {
 }
 
 function isRecoverable(code: SessionAuthorityErrorCode): boolean {
-  return code === "session_revision_conflict" || code === "session_cas_conflict";
+  return (
+    code === "session_revision_conflict" ||
+    code === "session_cas_conflict" ||
+    code === "ledger_snapshot_changed" ||
+    code === "ledger_probe_incomplete"
+  );
 }
 
 export function hashSessionSnapshot(snapshot: POJUSessionState): string {
@@ -650,6 +655,13 @@ export async function commitAuthoritativeSessionUpdate(input: {
         { session_id: input.sessionId, recoverable: true },
       );
     }
+    if (result.reason === "ledger_snapshot_changed") {
+      throw new SessionAuthorityError(
+        "ledger_snapshot_changed",
+        "Decision Authority ledger changed during intake commit; retry is required",
+        { session_id: input.sessionId, recoverable: true },
+      );
+    }
     throw new SessionAuthorityError(
       "session_cas_conflict",
       `CAS conflict committing revision ${input.expectedRevision}`,
@@ -670,6 +682,6 @@ export function httpStatusForAuthorityError(error: SessionAuthorityError): numbe
   if (error.code === "invalid_session_request" || error.code === "session_turn_missing") return 400;
   if (error.code === "session_already_exists") return 409;
   if (error.code === "session_turn_conflict" || error.code === "invalid_session_record") return 409;
-  if (error.code === "ledger_integrity_failure" || error.code === "ledger_probe_incomplete") return 409;
+  if (error.code === "ledger_integrity_failure" || error.code === "ledger_probe_incomplete" || error.code === "ledger_snapshot_changed") return 409;
   return 409;
 }

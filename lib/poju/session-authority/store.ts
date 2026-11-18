@@ -16,6 +16,11 @@
  * Lua does not recompute canonicalHash; the production Redis adapter runs
  * inspectStoredSessionRecord before EVAL. Reason codes distinguish ledger
  * integrity and incomplete probes from ordinary CAS conflicts.
+ *
+ * M9-R1-FU1-FU2: TypeScript validates ledger entry_hash with canonicalHash and
+ * binds the exact raw entries into Redis Lua CAS. Lua compares live GET bytes
+ * against that snapshot and fail-closes on a changed or newly visible entry.
+ * Lua still does not recompute JavaScript canonicalHash.
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -27,6 +32,7 @@ import {
   dcLedgerEntryKey,
   dcLedgerHeadKey,
 } from "@/lib/poju/decision-authority/server/ledger-store";
+import { DC_LEDGER_SCHEMA_VERSION } from "@/lib/poju/decision-authority/types";
 import {
   SERVER_SESSION_RECORD_VERSION,
   serverSessionKey,
@@ -63,7 +69,8 @@ export type SessionCasReason =
   | "frozen"
   | "terminated"
   | "ledger_integrity"
-  | "ledger_probe_incomplete";
+  | "ledger_probe_incomplete"
+  | "ledger_snapshot_changed";
 
 export type SessionCasResult = { ok: true } | { ok: false; reason: SessionCasReason };
 
@@ -109,6 +116,7 @@ type KvLike = {
     opts?: { ex?: number },
   ) => Promise<boolean>;
   eval?: (script: string, keys: string[], args: string[]) => Promise<unknown>;
+  getRaw?: (key: string) => Promise<string | null> | string | null;
   getSync?: (key: string) => unknown | null;
   setSync?: (
     key: string,
@@ -245,7 +253,23 @@ function asJsonObject(
   return { ok: true, value: value as Record<string, unknown> };
 }
 
-function inspectLedgerEntryValue(
+const LEDGER_CHANGE_TYPES = new Set([
+  "genesis",
+  "draft_update",
+  "user_confirm",
+  "version_open",
+  "blueprint_update",
+  "freeze",
+]);
+
+const LEDGER_DC_STATUSES = new Set(["draft", "final", "superseded"]);
+
+/**
+ * Inspect one ledger slot. A missing key is not an integrity failure.
+ * Hash, identity, schema, and previous-pointer shape failures are integrity.
+ * canonicalHash is the only hash used; this does not invent another algorithm.
+ */
+export function inspectLedgerEntryValue(
   raw: unknown,
   sessionId: string,
   expectedVersion: number,
@@ -256,34 +280,97 @@ function inspectLedgerEntryValue(
     return "missing" in parsed && parsed.missing ? { kind: "missing" } : { kind: "integrity" };
   }
   const entry = parsed.value;
+  if (entry.schema_version !== DC_LEDGER_SCHEMA_VERSION) return { kind: "integrity" };
   if (typeof entry.session_id !== "string" || entry.session_id !== sessionId) {
     return { kind: "integrity" };
   }
-  if (entry.commit_version !== expectedVersion) {
+  if (!Number.isSafeInteger(entry.commit_version) || entry.commit_version !== expectedVersion) {
     return { kind: "integrity" };
   }
-  if (typeof entry.entry_hash === "string" && entry.entry_hash.length > 0) {
-    try {
-      const copy = normalizeJson(entry);
-      const { entry_hash, ...rest } = copy;
-      if (canonicalHash(rest) !== entry_hash) return { kind: "integrity" };
-    } catch {
+  if (typeof entry.change_type !== "string" || !LEDGER_CHANGE_TYPES.has(entry.change_type)) {
+    return { kind: "integrity" };
+  }
+  if (typeof entry.dc_status !== "string" || !LEDGER_DC_STATUSES.has(entry.dc_status)) {
+    return { kind: "integrity" };
+  }
+  if (expectedVersion === 1) {
+    if (entry.previous_commit_version !== null || entry.previous_entry_hash !== null) {
+      return { kind: "integrity" };
+    }
+  } else {
+    if (entry.previous_commit_version !== expectedVersion - 1) return { kind: "integrity" };
+    if (typeof entry.previous_entry_hash !== "string" || entry.previous_entry_hash.length === 0) {
       return { kind: "integrity" };
     }
   }
+  if (typeof entry.entry_hash !== "string" || entry.entry_hash.length === 0) {
+    return { kind: "integrity" };
+  }
+  try {
+    const copy = normalizeJson(entry) as Record<string, unknown>;
+    const { entry_hash, ...rest } = copy;
+    if (canonicalHash(rest) !== entry_hash) return { kind: "integrity" };
+  } catch {
+    return { kind: "integrity" };
+  }
   return { kind: "ok", entry };
+}
+
+function isFrozenLedgerHead(entry: Record<string, unknown>): boolean {
+  return entry.change_type === "freeze" || entry.dc_status === "final";
+}
+
+function validateLoadedLedgerChain(
+  loaded: Map<number, Record<string, unknown>>,
+  headVersion: number,
+  read: (key: string) => unknown | null,
+  sessionId: string,
+  probeLimit: number,
+): LedgerProbeResult {
+  let backwardReads = 0;
+  const loadVersion = (
+    version: number,
+  ): { kind: "ok"; entry: Record<string, unknown> } | { kind: "integrity" } | { kind: "incomplete" } => {
+    const cached = loaded.get(version);
+    if (cached) return { kind: "ok", entry: cached };
+    if (backwardReads >= probeLimit) return { kind: "incomplete" };
+    backwardReads += 1;
+    const got = inspectLedgerEntryValue(read(dcLedgerEntryKey(sessionId, version)), sessionId, version);
+    if (got.kind !== "ok") return { kind: "integrity" };
+    loaded.set(version, got.entry);
+    return { kind: "ok", entry: got.entry };
+  };
+
+  for (let version = headVersion; version >= 1; version -= 1) {
+    const current = loadVersion(version);
+    if (current.kind === "incomplete") return { ok: false, reason: "ledger_probe_incomplete" };
+    if (current.kind !== "ok") return { ok: false, reason: "ledger_integrity" };
+    if (version === 1) break;
+    const previous = loadVersion(version - 1);
+    if (previous.kind === "incomplete") return { ok: false, reason: "ledger_probe_incomplete" };
+    if (previous.kind !== "ok") return { ok: false, reason: "ledger_integrity" };
+    if (current.entry.previous_commit_version !== version - 1) {
+      return { ok: false, reason: "ledger_integrity" };
+    }
+    if (current.entry.previous_entry_hash !== previous.entry.entry_hash) {
+      return { ok: false, reason: "ledger_integrity" };
+    }
+  }
+  return { ok: true, frozen: false };
 }
 
 /**
  * Probe the Decision Authority ledger in the same KV as the Session record.
  * This is the same forward-scan used by readLedgerHead, kept synchronous so it
- * can run inside MemoryKv's atomic section or the matching Redis Lua script.
+ * can run inside MemoryKv's atomic section or a TypeScript contract harness.
  *
- * Fail closed on malformed JSON, structurally invalid entries, an unusable
- * head hint, or probe-limit exhaustion. A genuinely missing ledger (no hint
- * and no entry 1) is not frozen. Freeze becomes effective only after the
- * NX-written ledger entry itself is visible; a head hint that has not been
- * written yet is still discovered by the forward scan.
+ * Every consumed entry is hash-checked with canonicalHash. The chain from
+ * genesis (commit 1) through the effective head is validated: previous
+ * commit_version, previous_entry_hash, session identity, and monotonic slots.
+ * The head hint is only a hint. A missing entry, invalid hash, invalid chain,
+ * unusable hint, or probe-limit exhaustion fails closed. A genuinely missing
+ * ledger (no hint and no entry 1) is not frozen. Freeze becomes effective
+ * only after the NX-written ledger entry itself is visible.
  */
 export function probeSameKvLedger(
   read: (key: string) => unknown | null,
@@ -302,10 +389,12 @@ export function probeSameKvLedger(
     n = version;
   }
 
+  const loaded = new Map<number, Record<string, unknown>>();
   let head: Record<string, unknown> | null = null;
   if (n > 0) {
     const got = inspectLedgerEntryValue(read(dcLedgerEntryKey(sessionId, n)), sessionId, n);
     if (got.kind !== "ok") return { ok: false, reason: "ledger_integrity" };
+    loaded.set(n, got.entry);
     head = got.entry;
   }
 
@@ -317,6 +406,7 @@ export function probeSameKvLedger(
     );
     if (got.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
     if (got.kind === "missing") break;
+    loaded.set(n + 1, got.entry);
     head = got.entry;
     n += 1;
     if (i === probeLimit - 1) {
@@ -331,9 +421,243 @@ export function probeSameKvLedger(
   }
 
   if (!head) return { ok: true, frozen: false };
+
+  const chain = validateLoadedLedgerChain(loaded, n, read, sessionId, probeLimit);
+  if (!chain.ok) return chain;
+  return { ok: true, frozen: isFrozenLedgerHead(head) };
+}
+
+export type LedgerBindingSnapshot = {
+  hintRaw: string | null;
+  startVersion: number;
+  endVersion: number;
+  entryRaws: string[];
+  frozen: boolean;
+};
+
+export type LedgerRawBindingLive = {
+  hintRaw: string | null;
+  startVersion: number;
+  endVersion: number;
+  entryRaws: string[];
+  liveHintRaw: string | null;
+  liveEntryRaw: (version: number) => string | null;
+};
+
+/**
+ * Lua-equivalent raw binding check. Live Redis GET bytes must equal the exact
+ * TypeScript-validated raw strings. A changed or newly visible value is
+ * ledger_snapshot_changed, never a valid non-Freeze head.
+ */
+export function evaluateLedgerRawBinding(
+  input: LedgerRawBindingLive,
+): { ok: true; frozen: boolean } | { ok: false; reason: "ledger_snapshot_changed" | "ledger_integrity" } {
+  const { startVersion, endVersion, entryRaws } = input;
+  if (endVersion === 0) {
+    if (startVersion !== 0 || entryRaws.length !== 0) return { ok: false, reason: "ledger_integrity" };
+  } else if (startVersion !== 1 || entryRaws.length !== endVersion || endVersion < 1) {
+    return { ok: false, reason: "ledger_integrity" };
+  }
+
+  if (input.hintRaw == null) {
+    if (input.liveHintRaw != null) return { ok: false, reason: "ledger_snapshot_changed" };
+  } else if (input.liveHintRaw !== input.hintRaw) {
+    return { ok: false, reason: "ledger_snapshot_changed" };
+  }
+
+  for (let i = 0; i < entryRaws.length; i += 1) {
+    const expected = entryRaws[i];
+    if (typeof expected !== "string" || expected.length === 0) {
+      return { ok: false, reason: "ledger_integrity" };
+    }
+    const live = input.liveEntryRaw(startVersion + i);
+    if (live !== expected) return { ok: false, reason: "ledger_snapshot_changed" };
+  }
+
+  if (input.liveEntryRaw(endVersion + 1) != null) {
+    return { ok: false, reason: "ledger_snapshot_changed" };
+  }
+
+  if (endVersion === 0) return { ok: true, frozen: false };
+  const parsed = asJsonObject(entryRaws[entryRaws.length - 1]);
+  if (!parsed.ok) return { ok: false, reason: "ledger_integrity" };
+  return { ok: true, frozen: isFrozenLedgerHead(parsed.value) };
+}
+
+export function encodeLedgerBindingArgs(snapshot: LedgerBindingSnapshot): string[] {
+  return [
+    snapshot.hintRaw ?? "",
+    String(snapshot.startVersion),
+    String(snapshot.endVersion),
+    String(snapshot.entryRaws.length),
+    ...snapshot.entryRaws,
+  ];
+}
+
+export function decodeLedgerBindingArgs(args: string[]): LedgerBindingSnapshot | null {
+  if (args.length < 13) return null;
+  const hintRaw = args[9] ?? "";
+  const startVersion = Number(args[10]);
+  const endVersion = Number(args[11]);
+  const count = Number(args[12]);
+  if (!Number.isSafeInteger(startVersion) || !Number.isSafeInteger(endVersion) || !Number.isSafeInteger(count) || count < 0) {
+    return null;
+  }
+  if (args.length < 13 + count) return null;
+  return {
+    hintRaw: hintRaw.length === 0 ? null : hintRaw,
+    startVersion,
+    endVersion,
+    entryRaws: args.slice(13, 13 + count),
+    frozen: false,
+  };
+}
+
+function hexToRaw(value: unknown): string | null {
+  if (value === false || value == null) return null;
+  if (typeof value !== "string" || value.length % 2 !== 0 || !/^[0-9a-f]*$/i.test(value)) {
+    throw new SessionRecordIntegrityError("ledger raw snapshot encoding is invalid");
+  }
+  return Buffer.from(value, "hex").toString("utf8");
+}
+
+export const SESSION_AUTHORITY_RAW_MGET_LUA = `
+local function tohex(s)
+  return (string.gsub(s, '.', function(c)
+    return string.format('%02x', string.byte(c))
+  end))
+end
+local out = {}
+for i = 1, #KEYS do
+  local raw = redis.call('GET', KEYS[i])
+  if raw then
+    out[i] = tohex(raw)
+  else
+    out[i] = false
+  end
+end
+return out
+`;
+
+async function readRawKvValues(kv: KvLike, keys: string[]): Promise<(string | null)[]> {
+  if (keys.length === 0) return [];
+  if (typeof kv.getRaw === "function") {
+    const values = await Promise.all(keys.map((key) => Promise.resolve(kv.getRaw!(key))));
+    return values.map((value) => (value == null ? null : String(value)));
+  }
+  if (typeof kv.eval !== "function") {
+    throw new SessionPersistenceUnavailableError("raw ledger reads require Redis eval or getRaw");
+  }
+  const result = await kv.eval(SESSION_AUTHORITY_RAW_MGET_LUA, keys, []);
+  const rows = Array.isArray(result) ? result : [result];
+  return keys.map((_, index) => hexToRaw(rows[index] ?? null));
+}
+
+export async function collectLedgerBindingSnapshot(
+  readRaw: (keys: string[]) => Promise<(string | null)[]>,
+  sessionId: string,
+  probeLimit = LEDGER_CAS_PROBE_LIMIT,
+): Promise<{ ok: true; snapshot: LedgerBindingSnapshot } | { ok: false; reason: LedgerProbeFailure }> {
+  const cache = new Map<string, string | null>();
+  const fill = async (keys: string[]): Promise<(string | null)[]> => {
+    const missing = keys.filter((key) => !cache.has(key));
+    if (missing.length > 0) {
+      const values = await readRaw(missing);
+      missing.forEach((key, index) => cache.set(key, values[index] ?? null));
+    }
+    return keys.map((key) => cache.get(key) ?? null);
+  };
+  const rawOf = (key: string): string | null => cache.get(key) ?? null;
+  const readOne = (key: string): unknown | null => {
+    const raw = rawOf(key);
+    if (raw == null) return null;
+    const parsed = asJsonObject(raw);
+    if (!parsed.ok) return raw;
+    return parsed.value;
+  };
+
+  const hintKey = dcLedgerHeadKey(sessionId);
+  await fill([hintKey]);
+  const hintRaw = rawOf(hintKey);
+  let n = 0;
+  if (hintRaw != null) {
+    const hint = asJsonObject(hintRaw);
+    if (!hint.ok) return { ok: false, reason: "ledger_integrity" };
+    const version = hint.value.commit_version;
+    if (typeof version !== "number" || !Number.isSafeInteger(version) || version <= 0) {
+      return { ok: false, reason: "ledger_integrity" };
+    }
+    n = version;
+  }
+
+  const loaded = new Map<number, Record<string, unknown>>();
+  let head: Record<string, unknown> | null = null;
+  if (n > 0) {
+    const key = dcLedgerEntryKey(sessionId, n);
+    await fill([key]);
+    const got = inspectLedgerEntryValue(readOne(key), sessionId, n);
+    if (got.kind !== "ok") return { ok: false, reason: "ledger_integrity" };
+    loaded.set(n, got.entry);
+    head = got.entry;
+  }
+
+  for (let i = 0; i < probeLimit; i += 1) {
+    const key = dcLedgerEntryKey(sessionId, n + 1);
+    await fill([key]);
+    const got = inspectLedgerEntryValue(readOne(key), sessionId, n + 1);
+    if (got.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
+    if (got.kind === "missing") break;
+    loaded.set(n + 1, got.entry);
+    head = got.entry;
+    n += 1;
+    if (i === probeLimit - 1) {
+      const moreKey = dcLedgerEntryKey(sessionId, n + 1);
+      await fill([moreKey]);
+      const more = inspectLedgerEntryValue(readOne(moreKey), sessionId, n + 1);
+      if (more.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
+      if (more.kind === "ok") return { ok: false, reason: "ledger_probe_incomplete" };
+    }
+  }
+
+  if (!head) {
+    return {
+      ok: true,
+      snapshot: { hintRaw, startVersion: 0, endVersion: 0, entryRaws: [], frozen: false },
+    };
+  }
+
+  const missingVersions: number[] = [];
+  for (let version = 1; version <= n; version += 1) {
+    if (!loaded.has(version)) missingVersions.push(version);
+  }
+  if (missingVersions.length > 0) {
+    await fill(missingVersions.map((version) => dcLedgerEntryKey(sessionId, version)));
+  }
+
+  const chain = validateLoadedLedgerChain(
+    loaded,
+    n,
+    (key) => readOne(key),
+    sessionId,
+    probeLimit,
+  );
+  if (!chain.ok) return chain;
+
+  const entryRaws: string[] = [];
+  for (let version = 1; version <= n; version += 1) {
+    const raw = rawOf(dcLedgerEntryKey(sessionId, version));
+    if (raw == null) return { ok: false, reason: "ledger_integrity" };
+    entryRaws.push(raw);
+  }
   return {
     ok: true,
-    frozen: head.change_type === "freeze" || head.dc_status === "final",
+    snapshot: {
+      hintRaw,
+      startVersion: 1,
+      endVersion: n,
+      entryRaws,
+      frozen: isFrozenLedgerHead(head),
+    },
   };
 }
 
@@ -356,6 +680,7 @@ export function evaluateSessionAuthorityCas(input: {
   read: (key: string) => unknown | null;
   intakeCommit: boolean;
   nowIso: string;
+  ledgerBinding?: LedgerRawBindingLive;
 }): SessionCasResult {
   const key = serverSessionKey(input.sessionId);
   let current: ServerSessionRecord | null;
@@ -403,9 +728,15 @@ export function evaluateSessionAuthorityCas(input: {
     if (current.lifecycle_status === "frozen") {
       return { ok: false, reason: "frozen" };
     }
-    const probe = probeSameKvLedger(input.read, input.sessionId);
-    if (!probe.ok) return { ok: false, reason: probe.reason };
-    if (probe.frozen) return { ok: false, reason: "frozen" };
+    if (input.ledgerBinding) {
+      const bind = evaluateLedgerRawBinding(input.ledgerBinding);
+      if (!bind.ok) return { ok: false, reason: bind.reason };
+      if (bind.frozen) return { ok: false, reason: "frozen" };
+    } else {
+      const probe = probeSameKvLedger(input.read, input.sessionId);
+      if (!probe.ok) return { ok: false, reason: probe.reason };
+      if (probe.frozen) return { ok: false, reason: "frozen" };
+    }
   }
 
   return { ok: true };
@@ -420,6 +751,7 @@ export function applySessionAuthorityCas(input: {
   intakeCommit: boolean;
   nowIso: string;
   ttlSeconds: number;
+  ledgerBinding?: LedgerRawBindingLive;
 }): SessionCasResult {
   const decision = evaluateSessionAuthorityCas(input);
   if (!decision.ok) return decision;
@@ -440,28 +772,32 @@ export function applySessionAuthorityCas(input: {
  *   7  invalid identity / contract on the proposed Record
  *   8  ledger integrity failure
  *   9  ledger probe incomplete
+ *   10 ledger snapshot changed (retryable binding mismatch or new entry)
  *
  * KEYS[1] = session record key
  * ARGV: expectedRevision, nextJson, ttlSeconds, sessionId, nowIso, intakeCommit (0/1),
- *       ledgerHeadKey, ledgerEntryPrefix, probeLimit
+ *       ledgerHeadKey, ledgerEntryPrefix, probeLimit,
+ *       [intake] hintRaw, startVersion, endVersion, entryCount, entryRaw...
  *
  * Hash policy: this script does not recompute canonicalHash / SHA-256 of
- * session_snapshot. Exact JS JSON.stringify + SHA-256 parity cannot be
- * implemented safely in Redis Lua (cjson cannot faithfully distinguish []
- * from {}, and number/unicode encoding may diverge). The production Redis
+ * session_snapshot or ledger entry_hash. Exact JS JSON.stringify + SHA-256
+ * parity cannot be implemented safely in Redis Lua. The production Redis
  * adapter runs inspectStoredSessionRecord (canonicalHash) on the current
- * and proposed records before EVAL. Lua still fail-closes on version,
- * required fields, identity, snapshot.session_id, and snapshot revision
- * mismatches, and never treats a corrupted Record as missing.
+ * and proposed records before EVAL, and validates ledger entry hashes with
+ * the same canonicalHash implementation. The exact validated ledger raw
+ * values are passed into this script; Lua compares live GET bytes against
+ * those values and rejects the commit if they changed or a new entry
+ * appeared. Lua still fail-closes on version, required fields, identity,
+ * snapshot.session_id, and snapshot revision mismatches, and never treats a
+ * corrupted Record as missing.
  */
 export const SESSION_AUTHORITY_CAS_LUA = `
 -- Hash policy: this script does not recompute canonicalHash / SHA-256 of
--- session_snapshot. Exact JS JSON.stringify + SHA-256 parity cannot be
--- implemented safely in Redis Lua (cjson cannot faithfully distinguish []
--- from {}, and number/unicode encoding may diverge). The production Redis
--- adapter runs inspectStoredSessionRecord (canonicalHash) before EVAL.
--- Lua still fail-closes on structural Record integrity and ledger probe
--- failures and never treats a corrupted Record as missing.
+-- session_snapshot or ledger entry_hash. The production adapter validates
+-- those hashes with canonicalHash and binds the exact raw ledger values.
+-- Lua compares live GET bytes against that snapshot and fail-closes on a
+-- change or newly visible entry. Lua still fail-closes on structural
+-- Record integrity and never treats a corrupted Record as missing.
 local function decode(raw)
   if not raw then return nil, false end
   if type(raw) ~= 'string' then raw = tostring(raw) end
@@ -536,47 +872,48 @@ if intake then
   local headKey = ARGV[7]
   local prefix = ARGV[8]
   local limit = tonumber(ARGV[9]) or 512
-  local hintRaw = redis.call('GET', headKey)
-  local n = 0
-  if hintRaw then
-    local hint, hintOk = decode(hintRaw)
-    if not hintOk then return 8 end
-    local cv = hint['commit_version']
-    if type(cv) ~= 'number' or cv ~= math.floor(cv) or cv <= 0 then return 8 end
-    n = cv
+
+  -- Ledger binding: TypeScript validated canonical entry hashes and passed
+  -- the exact raw values. Lua compares live Redis GET bytes against those
+  -- raw values and never interprets an unbound or changed entry as a valid
+  -- non-Freeze head. Lua does not recompute canonicalHash / entry_hash.
+  local validatedHintRaw = ARGV[10]
+  local startVersion = tonumber(ARGV[11]) or 0
+  local endVersion = tonumber(ARGV[12]) or 0
+  local entryCount = tonumber(ARGV[13]) or 0
+  if type(validatedHintRaw) ~= 'string' then return 8 end
+  if entryCount ~= math.floor(entryCount) or entryCount < 0 then return 8 end
+  if endVersion > limit then return 9 end
+  if endVersion == 0 then
+    if startVersion ~= 0 or entryCount ~= 0 then return 8 end
+  else
+    if startVersion ~= 1 or entryCount ~= endVersion or endVersion < 1 then return 8 end
   end
 
-  local function load_entry(idx)
-    if idx < 1 then return nil, 'missing' end
-    local eraw = redis.call('GET', prefix .. tostring(idx))
-    if not eraw then return nil, 'missing' end
-    local e, eok = decode(eraw)
-    if not eok then return nil, 'integrity' end
-    if type(e['session_id']) ~= 'string' or e['session_id'] ~= sessionId then return nil, 'integrity' end
-    if type(e['commit_version']) ~= 'number' or e['commit_version'] ~= idx then return nil, 'integrity' end
-    return e, 'ok'
+  local liveHint = redis.call('GET', headKey)
+  if validatedHintRaw == '' then
+    if liveHint then return 10 end
+  else
+    if (not liveHint) or liveHint ~= validatedHintRaw then return 10 end
   end
 
-  local head = nil
-  if n > 0 then
-    local e, st = load_entry(n)
-    if st ~= 'ok' then return 8 end
-    head = e
+  for i = 1, entryCount do
+    local expectedRaw = ARGV[13 + i]
+    if type(expectedRaw) ~= 'string' or string.len(expectedRaw) == 0 then return 8 end
+    local live = redis.call('GET', prefix .. tostring(startVersion + i - 1))
+    if (not live) or live ~= expectedRaw then return 10 end
   end
-  for i = 1, limit do
-    local nxt, st = load_entry(n + 1)
-    if st == 'integrity' then return 8 end
-    if st == 'missing' then break end
-    head = nxt
-    n = n + 1
-    if i == limit then
-      local more, mst = load_entry(n + 1)
-      if mst == 'integrity' then return 8 end
-      if mst == 'ok' then return 9 end
+
+  local nextLive = redis.call('GET', prefix .. tostring(endVersion + 1))
+  if nextLive then return 10 end
+
+  if endVersion > 0 then
+    local headRaw = ARGV[13 + entryCount]
+    local head, headOk = decode(headRaw)
+    if not headOk then return 8 end
+    if head['change_type'] == 'freeze' or head['dc_status'] == 'final' then
+      return 3
     end
-  end
-  if head and (head['change_type'] == 'freeze' or head['dc_status'] == 'final') then
-    return 3
   end
 end
 
@@ -594,6 +931,7 @@ export function luaCasCodeToResult(code: unknown): SessionCasResult {
   if (code === 7) return { ok: false, reason: "identity" };
   if (code === 8) return { ok: false, reason: "ledger_integrity" };
   if (code === 9) return { ok: false, reason: "ledger_probe_incomplete" };
+  if (code === 10) return { ok: false, reason: "ledger_snapshot_changed" };
   return { ok: false, reason: "cas_conflict" };
 }
 
@@ -616,6 +954,8 @@ export function sessionCasResultToLuaCode(result: SessionCasResult): number {
       return 8;
     case "ledger_probe_incomplete":
       return 9;
+    case "ledger_snapshot_changed":
+      return 10;
     default:
       return 0;
   }
@@ -683,22 +1023,35 @@ async function runLuaSessionCas(
     }
     throw error;
   }
+
   const nowIso = opts?.nowIso ?? new Date().toISOString();
-  const result = await kv.eval(
-    SESSION_AUTHORITY_CAS_LUA,
-    [serverSessionKey(sessionId)],
-    [
-      String(expectedRevision),
-      JSON.stringify(next),
-      String(SERVER_SESSION_TTL_SECONDS),
+  const intakeCommit = Boolean(opts?.intakeCommit);
+  const evalArgs: string[] = [
+    String(expectedRevision),
+    JSON.stringify(next),
+    String(SERVER_SESSION_TTL_SECONDS),
+    sessionId,
+    nowIso,
+    intakeCommit ? "1" : "0",
+    dcLedgerHeadKey(sessionId),
+    ledgerEntryPrefix(sessionId),
+    String(LEDGER_CAS_PROBE_LIMIT),
+  ];
+
+  if (intakeCommit) {
+    // TypeScript validates canonical ledger hashes, then binds the exact raw
+    // values into EVAL. This is not a GET-hash-EVAL window: Lua compares the
+    // live Redis bytes against those exact validated raw values and rejects
+    // the commit if anything changed or a new entry appeared.
+    const snapshot = await collectLedgerBindingSnapshot(
+      (keys) => readRawKvValues(kv, keys),
       sessionId,
-      nowIso,
-      opts?.intakeCommit ? "1" : "0",
-      dcLedgerHeadKey(sessionId),
-      ledgerEntryPrefix(sessionId),
-      String(LEDGER_CAS_PROBE_LIMIT),
-    ],
-  );
+    );
+    if (!snapshot.ok) return { ok: false, reason: snapshot.reason };
+    evalArgs.push(...encodeLedgerBindingArgs(snapshot.snapshot));
+  }
+
+  const result = await kv.eval(SESSION_AUTHORITY_CAS_LUA, [serverSessionKey(sessionId)], evalArgs);
   return luaCasCodeToResult(result);
 }
 

@@ -17,10 +17,12 @@ import type { POJUMessage, POJUSessionState } from "../lib/poju/types";
 import { POST as postChat } from "../app/api/poju/chat/route";
 import { POST as postSession } from "../app/api/poju/session/route";
 import { MemoryKv, isRemoteKvConfigured } from "../lib/kv/memory-kv";
+import { canonicalHash, normalizeJson } from "../lib/poju/decision-authority/hash";
 import {
   dcLedgerEntryKey,
   dcLedgerHeadKey,
 } from "../lib/poju/decision-authority/server/ledger-store";
+import { DC_LEDGER_SCHEMA_VERSION } from "../lib/poju/decision-authority/types";
 import {
   SERVER_SESSION_TTL_SECONDS,
   SESSION_AUTHORITY_CAS_LUA,
@@ -161,12 +163,16 @@ function bumpSnapshot(record: ServerSessionRecord, patch: Partial<ServerSessionR
 }
 
 async function writeLedgerFreeze(kv: MemoryKv | RedisEvalHarness, sessionId: string): Promise<void> {
-  const entry = {
+  const rest = normalizeJson({
+    schema_version: DC_LEDGER_SCHEMA_VERSION,
     change_type: "freeze",
     dc_status: "final",
     commit_version: 1,
+    previous_commit_version: null,
+    previous_entry_hash: null,
     session_id: sessionId,
-  };
+  }) as Record<string, unknown>;
+  const entry = { ...rest, entry_hash: canonicalHash(rest) };
   await kv.set(dcLedgerEntryKey(sessionId, 1), entry);
   await kv.set(dcLedgerHeadKey(sessionId), { commit_version: 1 });
 }
@@ -182,6 +188,10 @@ class RedisEvalHarness {
   private readonly data = new Map<string, string>();
   lastEvalScript: string | null = null;
   lastEvalTtl: string | null = null;
+
+  getRaw(key: string): string | null {
+    return this.data.get(key) ?? null;
+  }
 
   async get<T = unknown>(key: string): Promise<T | null> {
     const raw = this.data.get(key);

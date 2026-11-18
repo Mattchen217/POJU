@@ -28,10 +28,12 @@ import type { POJULLMResponse } from "../lib/llm/poju-llm";
 import type { POJUMessage, POJUSessionState } from "../lib/poju/types";
 import { POST as postChat } from "../app/api/poju/chat/route";
 import { MemoryKv, isRemoteKvConfigured } from "../lib/kv/memory-kv";
+import { canonicalHash, normalizeJson } from "../lib/poju/decision-authority/hash";
 import {
   dcLedgerEntryKey,
   dcLedgerHeadKey,
 } from "../lib/poju/decision-authority/server/ledger-store";
+import { DC_LEDGER_SCHEMA_VERSION } from "../lib/poju/decision-authority/types";
 import {
   LEDGER_CAS_PROBE_LIMIT,
   SESSION_AUTHORITY_CAS_LUA,
@@ -170,6 +172,7 @@ type KvSurface = {
   set: (key: string, value: unknown, opts?: { ex?: number; nx?: boolean }) => Promise<"OK" | null>;
   del?: (...keys: string[]) => Promise<number>;
   rawGet?: (key: string) => string | undefined;
+  getRaw?: (key: string) => string | null;
 };
 
 /**
@@ -190,6 +193,10 @@ class RedisEvalHarness implements KvSurface {
 
   rawGet(key: string): string | undefined {
     return this.data.get(key);
+  }
+
+  getRaw(key: string): string | null {
+    return this.data.get(key) ?? null;
   }
 
   async get<T = unknown>(key: string): Promise<T | null> {
@@ -277,6 +284,30 @@ async function peek(kv: KvSurface, key: string): Promise<unknown> {
   return kv.get(key);
 }
 
+function sealTestLedgerEntry(body: Record<string, unknown>): Record<string, unknown> {
+  const rest = normalizeJson(body) as Record<string, unknown>;
+  delete rest.entry_hash;
+  return { ...rest, entry_hash: canonicalHash(rest) };
+}
+
+function validTestLedgerEntry(
+  sessionId: string,
+  version: number,
+  patch: Record<string, unknown> = {},
+  previousHash: string | null = null,
+): Record<string, unknown> {
+  return sealTestLedgerEntry({
+    schema_version: DC_LEDGER_SCHEMA_VERSION,
+    session_id: sessionId,
+    commit_version: version,
+    previous_commit_version: version === 1 ? null : version - 1,
+    previous_entry_hash: version === 1 ? null : previousHash,
+    change_type: version === 1 ? "genesis" : "draft_update",
+    dc_status: "draft",
+    ...patch,
+  });
+}
+
 async function writeLedgerEntry(
   kv: KvSurface,
   sessionId: string,
@@ -290,24 +321,23 @@ async function writeLedgerHint(kv: KvSurface, sessionId: string, version: number
   await kv.set(dcLedgerHeadKey(sessionId), { commit_version: version });
 }
 
-async function writeValidNonFreeze(kv: KvSurface, sessionId: string, version = 1): Promise<void> {
-  await writeLedgerEntry(kv, sessionId, version, {
-    change_type: "revise",
-    dc_status: "open",
-    commit_version: version,
-    session_id: sessionId,
-  });
+async function writeValidNonFreeze(kv: KvSurface, sessionId: string, version = 1): Promise<string> {
+  const entry = validTestLedgerEntry(sessionId, version, {}, null);
+  await writeLedgerEntry(kv, sessionId, version, entry);
   await writeLedgerHint(kv, sessionId, version);
+  return String(entry.entry_hash);
 }
 
-async function writeValidFreeze(kv: KvSurface, sessionId: string): Promise<void> {
-  await writeLedgerEntry(kv, sessionId, 1, {
-    change_type: "freeze",
-    dc_status: "final",
-    commit_version: 1,
-    session_id: sessionId,
-  });
+async function writeValidFreeze(kv: KvSurface, sessionId: string): Promise<string> {
+  const entry = validTestLedgerEntry(
+    sessionId,
+    1,
+    { change_type: "freeze", dc_status: "final" },
+    null,
+  );
+  await writeLedgerEntry(kv, sessionId, 1, entry);
   await writeLedgerHint(kv, sessionId, 1);
+  return String(entry.entry_hash);
 }
 
 function reasonOf(result: SessionCasResult): string {
@@ -516,13 +546,11 @@ async function main() {
         const record = await initRecord(`h-ledger-limit:${label}`);
         // No hint: scan starts at 0. LIMIT+1 visible entries means the probe
         // cannot establish that it has reached the authoritative end.
+        let previousHash: string | null = null;
         for (let n = 1; n <= LEDGER_CAS_PROBE_LIMIT + 1; n += 1) {
-          await writeLedgerEntry(kv, record.session_id, n, {
-            change_type: "revise",
-            dc_status: "open",
-            commit_version: n,
-            session_id: record.session_id,
-          });
+          const entry = validTestLedgerEntry(record.session_id, n, {}, previousHash);
+          await writeLedgerEntry(kv, record.session_id, n, entry);
+          previousHash = String(entry.entry_hash);
         }
         const result = await store.compareAndSetDetailed(
           record.session_id,
