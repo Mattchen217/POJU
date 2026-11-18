@@ -1,0 +1,90 @@
+
+> pojulife@0.1.0 test:m9-r1-fu1-redis-lua-integrity-parity D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-fu1-redis-lua-integrity-parity.ts
+
+M9-R1-FU1 Redis Lua integrity parity tests starting
+HARNESS=RedisEvalHarness (TypeScript predicate; does not execute Lua)
+REAL_REDIS_LUA_EXECUTED=no
+REAL_REDIS_DETAIL=no redis-server, no REDIS_URL, Docker daemon not running, and no UPSTASH/KV credentials; Lua was not executed on a real Redis server
+LIMITATION: SESSION_AUTHORITY_CAS_LUA remains unexecuted in a real Redis server.
+NOTE: the assertions above are static source checks, not Redis Lua execution.
+PASS Static Lua source contract (NOT execution proof): structural integrity and ledger fail-closed codes
+PASS A. Stored snapshot ID mismatch during CAS [MemoryKv production adapter]
+PASS B. Stored snapshot revision mismatch during CAS [MemoryKv production adapter]
+PASS C. Stored snapshot hash mismatch during CAS [MemoryKv production adapter]
+PASS D. Malformed current Record during CAS is not overwritten [MemoryKv production adapter]
+PASS E. Malformed proposed Record is rejected [MemoryKv production adapter]
+PASS F. Same-key ledger malformed JSON: Intake fail-closed [MemoryKv production adapter]
+PASS G. Ledger structurally invalid entry: Intake fail-closed [MemoryKv production adapter]
+PASS H. Ledger scan limit exhausted: Intake fail-closed [MemoryKv production adapter]
+PASS I. Valid non-Freeze ledger remains eligible for Intake [MemoryKv production adapter]
+PASS J. Valid Freeze ledger rejects Intake [MemoryKv production adapter]
+PASS K. Missing Session Record is not recreated [MemoryKv production adapter]
+PASS L. Revision CAS conflict cannot overwrite the winner [MemoryKv production adapter]
+PASS M. Terminal lifecycle still rejects commit [MemoryKv production adapter]
+PASS A. Stored snapshot ID mismatch during CAS [Redis eval contract harness (does NOT execute Lua)]
+PASS B. Stored snapshot revision mismatch during CAS [Redis eval contract harness (does NOT execute Lua)]
+PASS C. Stored snapshot hash mismatch during CAS [Redis eval contract harness (does NOT execute Lua)]
+PASS D. Malformed current Record during CAS is not overwritten [Redis eval contract harness (does NOT execute Lua)]
+PASS E. Malformed proposed Record is rejected [Redis eval contract harness (does NOT execute Lua)]
+PASS F. Same-key ledger malformed JSON: Intake fail-closed [Redis eval contract harness (does NOT execute Lua)]
+PASS G. Ledger structurally invalid entry: Intake fail-closed [Redis eval contract harness (does NOT execute Lua)]
+PASS H. Ledger scan limit exhausted: Intake fail-closed [Redis eval contract harness (does NOT execute Lua)]
+PASS I. Valid non-Freeze ledger remains eligible for Intake [Redis eval contract harness (does NOT execute Lua)]
+PASS J. Valid Freeze ledger rejects Intake [Redis eval contract harness (does NOT execute Lua)]
+PASS K. Missing Session Record is not recreated [Redis eval contract harness (does NOT execute Lua)]
+PASS L. Revision CAS conflict cannot overwrite the winner [Redis eval contract harness (does NOT execute Lua)]
+PASS M. Terminal lifecycle still rejects commit [Redis eval contract harness (does NOT execute Lua)]
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"77654f5d-675f-4486-bac3-0ec6961cc983","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS N. Same-content idempotency remains successful without rerunning the model
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"418fc962-5be2-40a6-ba49-98f8d634feb8","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS O. Different-content idempotency still returns session_turn_conflict
+PASS Reason contract maps Lua codes without collapsing integrity into cas_conflict
+PASS commitAuthoritativeSessionUpdate maps ledger integrity without a generic CAS conflict
+M9-R1-FU1 Redis Lua integrity parity checks complete
+REAL_REDIS_LUA_EXECUTED=no
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })

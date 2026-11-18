@@ -1,0 +1,177 @@
+{
+  "recorded_at": "2026-11-18 04:57:29 -0600 (America/Chicago)",
+  "branch": "feat/m1-r-fresh-session-main-loop",
+  "baseline_sha": "e2a0c22415e03bfd110cf75b196cf6f38d6a9a21",
+  "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+  "implementation_parent_sha": "e2a0c22415e03bfd110cf75b196cf6f38d6a9a21",
+  "fu1_implementation_sha": "b4081335892005d30f8818eae957f324d12f64ba",
+  "fu1_evidence_sha": "e2a0c22415e03bfd110cf75b196cf6f38d6a9a21",
+  "note": "This file does not record the evidence commit SHA, to avoid a self-referential tip SHA.",
+  "live_upstash_configured": false,
+  "real_redis_lua_executed": false,
+  "real_redis_detail": "redis-cli=no; redis-server=no; REDIS_URL=unset; docker_daemon=down; upstash_configured=no; SESSION_AUTHORITY_CAS_LUA was not executed on a real Redis server. Upstash credentials were not added and were not used.",
+  "sw_js": {
+    "pre_build_sha256": "38ce6db5fb144844e7089222cb0ed6ea71d54bdff8bd9035def4b25d2e170980",
+    "pre_build_bytes": 139053,
+    "post_build_sha256": "c76b9c03326bef54501a07596e1768bee3f6418fc1d7570a24c4e78e414ab183",
+    "post_build_bytes": null,
+    "restored_to_pre_build": true,
+    "committed": false,
+    "note": "pnpm build rewrote public/sw.js. The pre-build bytes were restored and the file was left unstaged. It is not part of the implementation or evidence commit. The post-build file was not retained after restore; only its SHA-256 was recorded."
+  },
+  "commands": [
+    {
+      "command": "pnpm test:m9-server-authoritative-session",
+      "log": "01-test-m9-server-authoritative-session.log",
+      "exit_code": 0,
+      "elapsed_s": 3.48,
+      "log_bytes": 10334,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "20 PASS lines; required M9 cases remain covered"
+    },
+    {
+      "command": "pnpm test:m9-r1-session-authority-remediation",
+      "log": "02-test-m9-r1-session-authority-remediation.log",
+      "exit_code": 0,
+      "elapsed_s": 3.26,
+      "log_bytes": 7558,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "17 PASS lines; M9-R1 cases A-N remain covered"
+    },
+    {
+      "command": "pnpm test:m9-r1-fu1-redis-lua-integrity-parity",
+      "log": "03-test-m9-r1-fu1-redis-lua-integrity-parity.log",
+      "exit_code": 0,
+      "elapsed_s": 3.27,
+      "log_bytes": 7168,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "31 PASS lines; FU1 cases A-O remain covered after fixture hash/chain updates"
+    },
+    {
+      "command": "pnpm test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding",
+      "log": "04-test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding.log",
+      "exit_code": 0,
+      "elapsed_s": 3.68,
+      "log_bytes": 7104,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "35 PASS lines; cases A-R plus binding/mapping contracts; REAL_REDIS_LUA_EXECUTED=no"
+    },
+    {
+      "command": "pnpm test:m8-r1-internal-turn-trust-boundary",
+      "log": "05-test-m8-r1-internal-turn-trust-boundary.log",
+      "exit_code": 0,
+      "elapsed_s": 2.85,
+      "log_bytes": 15194,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m6-di2-full-lifecycle",
+      "log": "06-test-m6-di2-full-lifecycle.log",
+      "exit_code": 0,
+      "elapsed_s": 10.2,
+      "log_bytes": 12725,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m5-r1-authorization",
+      "log": "07-test-m5-r1-authorization.log",
+      "exit_code": 0,
+      "elapsed_s": 18.87,
+      "log_bytes": 51097,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m1-production-adaptive-question-loop",
+      "log": "08-test-m1-production-adaptive-question-loop.log",
+      "exit_code": 0,
+      "elapsed_s": 22.95,
+      "log_bytes": 211469,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m2-1-readiness-confirm-freeze",
+      "log": "09-test-m2-1-readiness-confirm-freeze.log",
+      "exit_code": 0,
+      "elapsed_s": 4.09,
+      "log_bytes": 12822,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m2-2-freeze-report-binding",
+      "log": "10-test-m2-2-freeze-report-binding.log",
+      "exit_code": 0,
+      "elapsed_s": 5.66,
+      "log_bytes": 7668,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m3-decision-report",
+      "log": "11-test-m3-decision-report.log",
+      "exit_code": 0,
+      "elapsed_s": 3.73,
+      "log_bytes": 7160,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m4-decision-authority",
+      "log": "12-test-m4-decision-authority.log",
+      "exit_code": 0,
+      "elapsed_s": 4.31,
+      "log_bytes": 5075,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m4-1-freeze-recovery",
+      "log": "13-test-m4-1-freeze-recovery.log",
+      "exit_code": 0,
+      "elapsed_s": 3.61,
+      "log_bytes": 3733,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m5-di2-main-path",
+      "log": "14-test-m5-di2-main-path.log",
+      "exit_code": 0,
+      "elapsed_s": 49.51,
+      "log_bytes": 32243,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm test:m8-di2-non-model-closure",
+      "log": "15-test-m8-di2-non-model-closure.log",
+      "exit_code": 0,
+      "elapsed_s": 2.02,
+      "log_bytes": 3067,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "exit 0"
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --pretty false",
+      "log": "16-tsc-noemit.log",
+      "exit_code": 0,
+      "elapsed_s": 16.07,
+      "log_bytes": 0,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "empty stdout; tsc succeeded"
+    },
+    {
+      "command": "pnpm build",
+      "log": "17-pnpm-build.log",
+      "exit_code": 0,
+      "elapsed_s": 121.24,
+      "log_bytes": 12350,
+      "implementation_sha": "a9ae8294e2b51efc3ec3f99c4195f7f7d1e521e6",
+      "result": "production build succeeded; public/sw.js was rewritten and then restored"
+    }
+  ]
+}
