@@ -41,15 +41,30 @@ import type {
 } from "@/lib/poju/decision-context/types";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { deliveryConfirmButtonLabel } from "@/lib/poju/delivery-confirm-reply";
+import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 
 const CONFIRM_RE =
   /^(确认|同意|没问题|可以|正确|好的|是的|确认无误|yes|y|confirm|ok|okay|looks\s*good)([。.!！\s]|$)/i;
 const ADD_MORE_RE =
   /(补充|修改|不对|还有|更正|不正确|再问|继续问|add\s*more|incorrect|not\s*right|change)/i;
 
+const OFFICIAL_CONFIRM_LOCALES = ["zh", "en", "es", "fr"] as const;
+
+export function isOfficialFinalConfirmLabel(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  return OFFICIAL_CONFIRM_LOCALES.some(
+    (locale) =>
+      t === deliveryConfirmButtonLabel(locale) ||
+      t === understandingGateConfirmButtonLabel(locale),
+  );
+}
+
 export function isFinalUnderstandingConfirmText(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
+  if (isOfficialFinalConfirmLabel(t)) return true;
   if (ADD_MORE_RE.test(t) && !CONFIRM_RE.test(t)) return false;
   return CONFIRM_RE.test(t) || t === "确认" || t === "同意";
 }
@@ -79,6 +94,23 @@ export function sessionEligibleForFinalConfirm(
     (phase === "awaiting_confirmation" || phase === "collecting_context") &&
     (isFinalUnderstandingConfirmText(text) || isFinalUnderstandingAddMoreText(text))
   );
+}
+
+/**
+ * After readiness stops asking, a non-confirm user turn is a supplement:
+ * restore collecting_context and return to the existing Adaptive Question Engine.
+ * Confirmed Decision Context facts are left intact.
+ */
+export function isDi2FinalUnderstandingSupplementTurn(
+  session: POJUSessionState,
+  text: string,
+): boolean {
+  const statement = text.trim();
+  if (!statement || isFinalUnderstandingConfirmText(statement)) return false;
+  if (!session.decision_blueprint) return false;
+  if (!sessionReadyForFinalConfirm(session)) return false;
+  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
+  return phase === "awaiting_confirmation" || phase === "collecting_context";
 }
 
 function isTerminalNonPromoteStatus(

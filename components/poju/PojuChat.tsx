@@ -205,6 +205,11 @@ export interface PojuChatProps {
   messageFollowUpActionsText?: Record<string, string>;
   /** Paywall / unlock sheet rendered above the composer (not in message list). */
   paywallOverlay?: ReactNode;
+  /**
+   * Unified Decision Understanding (and related status) fixed above the
+   * composer unit. Not a chat message, and not hidden by centerSlot.
+   */
+  composerTop?: ReactNode;
   /** First session open: "top" (matrix header); return visits: "bottom". */
   initialScrollPosition?: "top" | "bottom";
   /** Fired once the pending-reply UI (slots + text) has painted — parent may dismiss activity. */
@@ -293,6 +298,7 @@ export default function PojuChat(props: PojuChatProps) {
     composerDisabled,
     composerInputDisabled,
     hideComposer = false,
+    composerTop,
     centerSlot,
     documentSlot,
     brandName = "Pivot",
@@ -371,7 +377,7 @@ export default function PojuChat(props: PojuChatProps) {
     const ro = new ResizeObserver(apply);
     ro.observe(bar);
     return () => ro.disconnect();
-  }, [hideComposer, composerOptions, textareaValue]);
+  }, [hideComposer, composerOptions, textareaValue, composerTop]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -1239,6 +1245,9 @@ export default function PojuChat(props: PojuChatProps) {
         {/* Glass composer: options + input layer + action toolbar */}
         {!hideComposer ? (
         <div className="pchat__inputbar" ref={inputbarRef}>
+          {composerTop ? (
+            <div className="pchat__composer-top">{composerTop}</div>
+          ) : null}
           <div
             className={
               composerOptions && composerOptions.length >= 2

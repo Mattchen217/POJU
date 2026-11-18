@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { POJUSessionState } from "@/lib/poju/types";
-import { projectAdaptiveQuestionForUi } from "@/lib/poju/decision-intake/ui-projection";
+import { projectDecisionUnderstandingBox } from "@/lib/poju/decision-intake/ui-projection";
 
-/** M1 — core Understanding / Need / current Q panel. Reads Session SoT only. */
+/** Unified Decision Understanding box — Session SoT only; no second fact store. */
 export function DecisionUnderstandingPanel({
   session,
   locale,
@@ -15,84 +15,106 @@ export function DecisionUnderstandingPanel({
 }) {
   const [expanded, setExpanded] = useState(true);
   if (!session?.decision_understanding) return null;
-  const ui = projectAdaptiveQuestionForUi(session);
-  const isZh = locale.startsWith("zh");
-  const title = isZh ? "当前理解" : "Current understanding";
-  const needTitle = isZh ? "仍需弄清" : "Need to understand";
-  const understoodTitle = isZh ? "已掌握" : "Understood";
-  const qTitle = isZh ? "当前问题" : "Current question";
-  const progress = ui.readiness_progress_percent;
-  const stateLabel: Record<string, string> = isZh
-    ? { known: "已知", unknown: "未知", conflict: "有冲突", n_a: "不适用" }
-    : { known: "Known", unknown: "Unknown", conflict: "Conflict", n_a: "Not applicable" };
+  const box = projectDecisionUnderstandingBox(session);
+  const isZh = locale.toLowerCase().startsWith("zh");
+  const title = isZh ? "\u51b3\u7b56\u7406\u89e3" : "DECISION UNDERSTANDING";
+  const currentTitle = isZh ? "\u5f53\u524d\u7406\u89e3" : "Current understanding";
+  const understoodTitle = isZh ? "\u5df2\u7ecf\u4e86\u89e3" : "Already understood";
+  const needTitle = isZh ? "\u8fd8\u9700\u8981\u4e86\u89e3" : "Still need to understand";
+  const insightTitle = isZh ? "\u4e2a\u4eba\u6a21\u5f0f\u6d1e\u5bdf" : "Personal Pattern Insight";
+  const insightNature = isZh
+    ? "\u4e3a\u4f20\u7edf\u89e3\u91ca\u6216\u5f85\u9a8c\u8bc1\u5047\u8bbe\uff0c\u4e0d\u662f\u5df2\u786e\u8ba4\u4e8b\u5b9e"
+    : "Traditional interpretation or an unverified hypothesis, not a confirmed fact";
+  const qTitle = isZh ? "\u5f53\u524d\u95ee\u9898" : "Current question";
+  const conflictTitle = isZh ? "\u5c1a\u5f85\u6f84\u6e05\u7684\u77db\u76fe" : "Open conflicts";
+  const progressHint = isZh
+    ? "\u4fe1\u606f\u51c6\u5907\u7a0b\u5ea6\uff08\u57fa\u4e8e\u8c03\u67e5\u5b8c\u6210\u6761\u4ef6\u4e0e\u4fe1\u606f\u7f3a\u53e3\uff0c\u4e0d\u662f\u63d0\u95ee\u6b21\u6570\uff09"
+    : "Information readiness (completion conditions and remaining gaps, not question count)";
+  const confirmHint =
+    session.agent_v2?.current_phase === "awaiting_confirmation" &&
+    session.decision_understanding.readiness.can_ask === false
+      ? isZh
+        ? "\u82e5\u5f53\u524d\u7406\u89e3\u51c6\u786e\uff0c\u8bf7\u5728\u4e0b\u65b9\u8f93\u5165\u6846\u5185\u9009\u62e9\u786e\u8ba4\uff1b\u82e5\u6709\u9057\u6f0f\u6216\u9700\u8981\u8865\u5145\uff0c\u8bf7\u76f4\u63a5\u5728\u8f93\u5165\u6846\u91cc\u8bf4\u660e\u3002"
+        : "If this understanding is accurate, choose confirm in the input box below. To point out a gap or add something, type it directly in the input box."
+      : null;
+  const percent = box.progress_percent;
 
   return (
-    <div className="px-1 text-xs text-muted-foreground">
+    <section className="pchat__understanding-box" aria-label={title}>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-md py-1 text-left hover:text-foreground"
+        className="pchat__understanding-box__toggle"
         aria-expanded={expanded}
       >
-        <span className="truncate">
-          {title}{progress != null ? `: ${progress}%` : ""}: {ui.understanding_summary ?? "—"}
+        <span className="pchat__understanding-box__title">
+          {title}
+          {percent != null ? <span className="pchat__understanding-box__pct">{percent}%</span> : null}
         </span>
         {expanded ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
       </button>
-      {expanded ? (
-        <div className="mt-1 space-y-2 border-l border-border/60 pl-3">
-          {progress != null ? (
-            <div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className="h-full bg-foreground/70" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
-              </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {isZh ? "信息准备程度（基于 DDR / DIR / Sufficiency Gate，不是提问次数）" : "Information readiness (DDR / DIR / Sufficiency Gate, not question count)"}
-              </div>
-            </div>
-          ) : null}
-          {ui.current_question ? (
-            <div>
-              <div className="font-medium text-foreground/80">{qTitle}</div>
-              <div className="text-foreground">{ui.current_question}</div>
-            </div>
-          ) : null}
-          {ui.understood_labels.length > 0 ? (
-            <div>
-              <div className="font-medium text-foreground/80">{understoodTitle}</div>
-              <ul className="list-disc pl-4">
-                {ui.understood_labels.map((l) => (
-                  <li key={l}>{l}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {ui.need_labels.length > 0 ? (
-            <div>
-              <div className="font-medium text-foreground/80">{needTitle}</div>
-              <ul className="list-disc pl-4">
-                {ui.need_labels.map((l) => (
-                  <li key={l}>{l}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {ui.personal_pattern_status === "available" && ui.personal_pattern_insights.length > 0 ? (
-            <div className="space-y-1">
-              <div>{isZh ? "个人模式洞察" : "Personal pattern"}: {ui.personal_pattern_status}</div>
-              {ui.personal_pattern_insights.map((insight) => <div key={insight.source} className="rounded bg-muted/40 p-2 text-foreground">
-                {insight.text}<span className="ml-2 text-[10px] text-muted-foreground">{insight.source}</span>
-              </div>)}
-            </div>
-          ) : null}
-          {ui.investigation_directions.length > 0 ? <div><div className="font-medium text-foreground/80">{isZh ? "调查方向" : "Investigation directions"}</div><ul className="list-disc pl-4">{ui.investigation_directions.map((d) => <li key={d.direction_id}>{d.priority} · {d.label}</li>)}</ul></div> : null}
-          {ui.dir_states.length > 0 ? <div><div className="font-medium text-foreground/80">{isZh ? "决策信息状态" : "Decision information state"}</div><ul className="list-disc pl-4">{ui.dir_states.map((d) => <li key={d.dir_id}>{stateLabel[d.state] ?? d.state} · {d.need}{d.may_affect_ranking ? (isZh ? " · 可能影响排序" : " · may affect ranking") : ""}</li>)}</ul></div> : null}
-          {ui.open_conflicts.length > 0 ? <div><div className="font-medium text-foreground/80">{isZh ? "待澄清矛盾" : "Open conflicts"}</div><ul className="list-disc pl-4">{ui.open_conflicts.map((c) => <li key={c.conflict_id}>{c.field}: {c.statements.join(" ↔ ")}</li>)}</ul></div> : null}
-          {ui.readiness_verdict ? <div><div className="font-medium text-foreground/80">{isZh ? "就绪判断" : "Readiness"}: {ui.readiness_verdict}</div><ul className="list-disc pl-4">{ui.readiness_reasons.map((reason, i) => <li key={i}>{reason}</li>)}</ul></div> : null}
-          {ui.budget_asked !== null && ui.budget_hard !== null ? <div>{isZh ? "已提问 / 上限 / 剩余" : "Questions / limit / remaining"}: {ui.budget_asked} / {ui.budget_hard} / {ui.budget_remaining ?? "—"}</div> : null}
-          {ui.readiness_can_ask !== null ? <div>{isZh ? "是否允许继续提问" : "May ask another question"}: {ui.readiness_can_ask ? (isZh ? "是" : "Yes") : (isZh ? "否" : "No")}</div> : null}
+      {percent != null ? (
+        <div className="pchat__understanding-box__meter" aria-hidden={!expanded}>
+          <div className="pchat__understanding-box__bar">
+            <div
+              className="pchat__understanding-box__bar-fill"
+              style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+            />
+          </div>
         </div>
       ) : null}
-    </div>
+      {expanded ? (
+        <div className="pchat__understanding-box__body">
+          {percent != null ? <div className="pchat__understanding-box__hint">{progressHint}</div> : null}
+          <div>
+            <div className="pchat__understanding-box__label">{currentTitle}</div>
+            <div className="pchat__understanding-box__text">{box.current_understanding ?? "\u2014"}</div>
+          </div>
+          {box.already_understood.length > 0 ? (
+            <div>
+              <div className="pchat__understanding-box__label">{understoodTitle}</div>
+              <ul>
+                {box.already_understood.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {box.still_need.length > 0 || box.conflicts.length > 0 ? (
+            <div>
+              <div className="pchat__understanding-box__label">{needTitle}</div>
+              <ul>
+                {box.still_need.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+                {box.conflicts.map((item) => (
+                  <li key={`conflict:${item}`}>
+                    {conflictTitle}: {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {box.show_personal_pattern ? (
+            <div>
+              <div className="pchat__understanding-box__label">{insightTitle}</div>
+              <div className="pchat__understanding-box__hint">{insightNature}</div>
+              <ul>
+                {box.personal_pattern_insights.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {box.current_question ? (
+            <div>
+              <div className="pchat__understanding-box__label">{qTitle}</div>
+              <div className="pchat__understanding-box__text">{box.current_question}</div>
+            </div>
+          ) : null}
+          {confirmHint ? <div className="pchat__understanding-box__hint">{confirmHint}</div> : null}
+        </div>
+      ) : null}
+    </section>
   );
 }

@@ -10,6 +10,7 @@ import type {
 } from "@/lib/poju/decision-intake/adaptive-turn";
 import {
   confirmUnderstandingAndFreeze,
+  isDi2FinalUnderstandingSupplementTurn,
   isFinalUnderstandingAddMoreText,
   isFinalUnderstandingConfirmText,
   sessionReadyForFinalConfirm,
@@ -1152,6 +1153,26 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         }
         // not_ready / not_confirm_text → fall through
       }
+    }
+    // DI2: any non-confirm turn at the final-understanding gate is a supplement.
+    // Restore collecting_context and fall through to the existing Adaptive Question Engine.
+    if (
+      !isOpeningSignal &&
+      Boolean(userMessage.trim()) &&
+      isDi2FinalUnderstandingSupplementTurn(sessionForLlm, userMessage)
+    ) {
+      const supplementAgent = sessionForLlm.agent_v2;
+      sessionForLlm = {
+        ...sessionForLlm,
+        messages: messagesWithUser,
+        agent_v2: supplementAgent
+          ? {
+              ...supplementAgent,
+              current_phase: "collecting_context",
+              stall_offer_pending: false,
+            }
+          : supplementAgent,
+      };
     }
   }
 

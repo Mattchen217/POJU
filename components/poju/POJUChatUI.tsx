@@ -113,7 +113,7 @@ import {
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { DecisionUnderstandingPanel } from "@/components/poju/DecisionUnderstandingPanel";
-import { INTAKE_CONTINUE_TOKEN } from "@/lib/poju/decision-intake/intake-protection";
+import { INTAKE_CONTINUE_TOKEN, intakeProtectionBannerMessage } from "@/lib/poju/decision-intake/intake-protection";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAction";
@@ -1030,12 +1030,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     intakeSessionBlocked;
 
   /** Phase-4 delivery and after: no more chat ? hide bottom composer. */
+  const di2ReportSurfaceActive =
+    isDecisionIntakeV2Session(session) &&
+    (di2Busy ||
+      Boolean(session.pending_decision_report_job_id?.trim()) ||
+      Boolean(session.main_delivery_done) ||
+      Boolean(currentDi2FreezeId(session)));
   const hideComposer =
     shelfActive ||
     Boolean(session.pending_delivery_job_id?.trim()) ||
     Boolean(session.main_delivery_done) ||
     Boolean(synthesisJobId) ||
-    session.agent_v2?.synthesis_status === "pending";
+    session.agent_v2?.synthesis_status === "pending" ||
+    di2ReportSurfaceActive;
 
   useEffect(() => {
     if (composerLocked || hideComposer) stopVoiceInput();
@@ -3743,6 +3750,45 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     return null;
   }, []);
 
+  const showIntakeBanner = Boolean(
+    intakeProtection && (intakeSessionBlocked || intakeContinueReady || intakeProtection.status === "warned"),
+  );
+  const showUnderstandingDock = Boolean(session.agent_v2) && !di2ReportSurfaceActive;
+  const composerTopNode =
+    showIntakeBanner || showUnderstandingDock ? (
+      <>
+        {showIntakeBanner && intakeProtection ? (
+          <div className="px-1 py-2 text-xs text-muted-foreground">
+            {intakeProtectionBannerMessage(intakeProtection, sessionLang, {
+              allow_continue: intakeContinueReady,
+              original_question:
+                session.decision_understanding?.last_sent_question?.question_text ??
+                session.adaptive_ask_plan?.question_text ??
+                session.pending_question ??
+                null,
+            })}
+            {intakeContinueReady ? (
+              <button
+                type="button"
+                className="ml-2 rounded border border-border px-2 py-0.5 text-foreground"
+                onClick={() => void runUserTurn(session, INTAKE_CONTINUE_TOKEN)}
+              >
+                {sessionLang.startsWith("zh") ? "\u7ee7\u7eed" : "Continue"}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {showUnderstandingDock ? (
+          <>
+            {!session.decision_understanding ? (
+              <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
+            ) : null}
+            <DecisionUnderstandingPanel session={session} locale={sessionLang} />
+          </>
+        ) : null}
+      </>
+    ) : undefined;
+
   useEffect(() => {
     const setControls = workspacePrepare?.setDeliveryRailControls;
     if (!setControls) return;
@@ -4320,6 +4366,23 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
     }
     if (
+      isDecisionIntakeV2Session(session) &&
+      session.agent_v2?.current_phase === "awaiting_confirmation" &&
+      !session.agent_v2?.stall_offer_pending
+    ) {
+      const confirm = deliveryConfirmButtonLabel(sessionLang);
+      if (opt === confirm) {
+        // Official confirm chip must enter confirm-and-freeze, not the legacy synthesis path.
+        void handlePojuSend(opt);
+        return;
+      }
+      const supplement = deliverySupplementButtonLabel(sessionLang);
+      if (opt === supplement) {
+        setGateSupplementPrompt(true);
+        return;
+      }
+    }
+    if (
       session.agent_v2?.current_phase === "awaiting_confirmation" &&
       !session.agent_v2?.stall_offer_pending
     ) {
@@ -4467,6 +4530,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         composerDisabled={composerLocked}
         composerInputDisabled={false}
         hideComposer={hideComposer}
+        composerTop={composerTopNode}
         centerSlot={deliveryShelfNode}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
@@ -4591,53 +4655,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                 setDriftReason("");
               }}
             />
-          ) : (
-            <>
-              {segment2JobId ? (
-                <Segment2AnalysisPreparing
-                  key={segment2JobId}
-                  job_id={segment2JobId}
-                  locale={locale}
-                  onProgress={(snapshot) => {
-                    if (segment2Stage === "agenda") return;
-                    const label = segment2ReportPreparingLabel(locale);
-                    const step = segment2ReportPreparingStep(locale, snapshot.current_stage);
-                    setThinkingLiveLine(`${label}\n${step}`);
-                  }}
-                  onComplete={(result) => void handleSegment2JobComplete(result)}
-                  onError={(error, reason) => void handleSegment2JobError(error, reason)}
-                />
-              ) : null}
-              {session.agent_v2 ? (
-                <>
-                    {intakeProtection && (intakeSessionBlocked || intakeContinueReady || intakeProtection.status === "warned") ? (
-                      <div className="px-1 py-2 text-xs text-muted-foreground">
-                        {intakeProtection.status === "terminated"
-                          ? (sessionLang.startsWith("zh") ? "???????????????" : "This session was terminated after three lockout events.")
-                          : intakeProtection.status === "expired"
-                            ? (sessionLang.startsWith("zh") ? "?????????????????" : "This session expired. Expiry does not count as a third lockout.")
-                            : intakeCooldownActive
-                              ? (sessionLang.startsWith("zh") ? "??????10 ???????????" : "The session is locked. You can continue after the 10-minute cooldown.")
-                              : intakeContinueReady
-                                ? (sessionLang.startsWith("zh") ? "???????????????" : "The cooldown has ended. You can continue the current question.")
-                                : (sessionLang.startsWith("zh") ? "刚才的输入无效。请针对原问题重新回答。" : "That input was invalid. Please answer the original question.")}
-                        {intakeContinueReady ? (
-                          <button
-                            type="button"
-                            className="ml-2 rounded border border-border px-2 py-0.5 text-foreground"
-                            onClick={() => void runUserTurn(session, INTAKE_CONTINUE_TOKEN)}
-                          >
-                            {sessionLang.startsWith("zh") ? "继续" : "Continue"}
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {!session.decision_understanding && <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />}
-                    <DecisionUnderstandingPanel session={session} locale={sessionLang} />
-                  </>
-              ) : null}
-            </>
-          )
+          ) : segment2JobId ? (
+            <Segment2AnalysisPreparing
+              key={segment2JobId}
+              job_id={segment2JobId}
+              locale={locale}
+              onProgress={(snapshot) => {
+                if (segment2Stage === "agenda") return;
+                const label = segment2ReportPreparingLabel(locale);
+                const step = segment2ReportPreparingStep(locale, snapshot.current_stage);
+                setThinkingLiveLine(`${label}\n${step}`);
+              }}
+              onComplete={(result) => void handleSegment2JobComplete(result)}
+              onError={(error, reason) => void handleSegment2JobError(error, reason)}
+            />
+          ) : null
         }
         editDialog={
           editDialog

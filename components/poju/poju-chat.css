@@ -817,6 +817,107 @@
   background: linear-gradient(transparent, rgba(9, 6, 17, 0.55) 26%, var(--pchat-space-fade) 100%);
 }
 
+/* Unified Understanding box: fixed above the input, outside the message list. */
+.pchat__composer-top {
+  width: min(640px, 100%);
+  max-width: var(--pchat-read-max);
+  margin: 0 auto 10px;
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pchat__understanding-box {
+  padding: 10px 12px 8px;
+  border-radius: 14px;
+  background: var(--pchat-glass-bg);
+  backdrop-filter: var(--pchat-glass-blur);
+  -webkit-backdrop-filter: var(--pchat-glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--pchat-glass-shadow);
+  color: var(--muted-foreground, rgba(255, 255, 255, 0.72));
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pchat__understanding-box__toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pchat__understanding-box__title {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground, #fff);
+}
+
+.pchat__understanding-box__pct {
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.pchat__understanding-box__meter {
+  margin-top: 8px;
+}
+
+.pchat__understanding-box__bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pchat__understanding-box__bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(242, 202, 80, 0.85);
+}
+
+.pchat__understanding-box__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.pchat__understanding-box__label {
+  margin-bottom: 2px;
+  font-weight: 600;
+  color: var(--foreground, rgba(255, 255, 255, 0.88));
+}
+
+.pchat__understanding-box__text,
+.pchat__understanding-box__body ul {
+  color: inherit;
+}
+
+.pchat__understanding-box__body ul {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.pchat__understanding-box__hint {
+  font-size: 10px;
+  opacity: 0.78;
+}
+
 /* ---------- 支付弹层（输入框上方，非消息流） ---------- */
 .pchat__paywall-dock {
   flex: 0 0 auto;
@@ -1633,6 +1734,7 @@
     overflow-y: auto;
   }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
+  .pchat__composer-top { width: 100%; max-width: 100%; max-height: min(36vh, 280px); }
   .pchat__paywall-dock { padding: 0 12px 4px; }
   .pchat__composer-unit { width: 100%; max-width: 100%; }
   .pchat__inputbar .pchat__thinking { max-width: 100% !important; }

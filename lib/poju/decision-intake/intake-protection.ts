@@ -456,6 +456,97 @@ export function intakeProtectionUserMessage(
   }
 }
 
+export function intakeProtectionBannerMessage(
+  state: IntakeProtectionState,
+  locale: string,
+  input?: { allow_continue?: boolean; original_question?: string | null },
+): string {
+  const question = input?.original_question;
+  if (state.status === "terminated" || state.terminal_reason === "third_lockout") {
+    return intakeProtectionUserMessage(
+      {
+        state,
+        action: "terminate",
+        kind: "invalid_empty",
+        block_model: true,
+        block_dc_write: true,
+        block_pass_charge: true,
+        allow_continue: false,
+        idempotent_replay: false,
+        recoverable: false,
+      },
+      locale,
+      question,
+    );
+  }
+  if (state.status === "expired" || state.terminal_reason === "session_expired") {
+    return intakeProtectionUserMessage(
+      {
+        state,
+        action: "expire",
+        kind: "invalid_empty",
+        block_model: true,
+        block_dc_write: true,
+        block_pass_charge: true,
+        allow_continue: false,
+        idempotent_replay: false,
+        recoverable: false,
+      },
+      locale,
+      question,
+    );
+  }
+  if (state.status === "locked" && input?.allow_continue) {
+    return intakeProtectionUserMessage(
+      {
+        state,
+        action: "resume",
+        kind: "valid_correction",
+        block_model: false,
+        block_dc_write: false,
+        block_pass_charge: false,
+        allow_continue: true,
+        idempotent_replay: false,
+        recoverable: true,
+      },
+      locale,
+      question,
+    );
+  }
+  if (state.status === "locked") {
+    return intakeProtectionUserMessage(
+      {
+        state,
+        action: "lock",
+        kind: "invalid_empty",
+        block_model: true,
+        block_dc_write: true,
+        block_pass_charge: true,
+        allow_continue: false,
+        idempotent_replay: false,
+        recoverable: true,
+      },
+      locale,
+      question,
+    );
+  }
+  return intakeProtectionUserMessage(
+    {
+      state,
+      action: "warn_and_reask",
+      kind: "invalid_off_topic",
+      block_model: true,
+      block_dc_write: true,
+      block_pass_charge: true,
+      allow_continue: false,
+      idempotent_replay: false,
+      recoverable: true,
+    },
+    locale,
+    question,
+  );
+}
+
 export function mapIntakeProtectionOutcome(
   action: IntakeProtectionAction,
 ):
