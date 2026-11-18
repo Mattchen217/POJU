@@ -14,6 +14,7 @@ import {
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 import {
   SessionPersistenceUnavailableError,
+  SessionRecordIntegrityError,
   getSessionAuthorityStore,
 } from "@/lib/poju/session-authority/store";
 import {
@@ -309,6 +310,12 @@ export async function readAuthoritativeSession(
   try {
     record = await getSessionAuthorityStore().get(sessionId.trim());
   } catch (error) {
+    if (error instanceof SessionRecordIntegrityError) {
+      throw new SessionAuthorityError("invalid_session_record", error.message, {
+        session_id: sessionId,
+        recoverable: false,
+      });
+    }
     if (error instanceof SessionPersistenceUnavailableError) {
       throw new SessionAuthorityError("server_persistence_unavailable", error.message, {
         session_id: sessionId,
@@ -398,12 +405,6 @@ export function extractIncomingUserTurn(input: {
   const serverMessages = Array.isArray(input.serverSnapshot.messages)
     ? input.serverSnapshot.messages
     : [];
-  const serverIds = new Set(
-    serverMessages
-      .map((message) => (typeof message.client_id === "string" ? message.client_id : ""))
-      .filter(Boolean),
-  );
-
   const explicitTurnId =
     typeof input.client_turn_id === "string" && input.client_turn_id.trim()
       ? input.client_turn_id.trim()
@@ -434,8 +435,21 @@ export function extractIncomingUserTurn(input: {
     messages: [...serverMessages, { role: "user", content, timestamp: "" }],
   } as POJUSessionState).slice(0, 16)}`;
 
-  if (serverIds.has(client_turn_id)) {
-    return { idempotent: true, client_turn_id };
+  const existing = serverMessages.find(
+    (message) => typeof message.client_id === "string" && message.client_id === client_turn_id,
+  );
+  if (existing) {
+    if (existing.role === "user" && existing.content === content) {
+      return { idempotent: true, client_turn_id };
+    }
+    throw new SessionAuthorityError(
+      "session_turn_conflict",
+      `idempotency identity ${client_turn_id} is already bound to different content`,
+      {
+        session_id: input.serverSnapshot.session_id,
+        recoverable: false,
+      },
+    );
   }
 
   const message: POJUMessage = {
@@ -466,15 +480,26 @@ export function bindAuthoritativeChatSession(
 export async function commitAuthoritativeSessionUpdate(input: {
   sessionId: string;
   expectedRevision: number;
+  expectedGeneration?: number;
   snapshot: POJUSessionState;
   last_committed_turn_id: string | null;
   now?: Date;
 }): Promise<ServerSessionRecord> {
   const current = await requireAuthoritativeSession(input.sessionId);
-  if (current.revision !== input.expectedRevision) {
+  if (current.session_id !== input.sessionId) {
+    throw new SessionAuthorityError(
+      "invalid_session_record",
+      "authoritative session id does not match the commit request",
+      { session_id: input.sessionId, recoverable: false },
+    );
+  }
+  if (
+    input.expectedGeneration != null &&
+    current.session_generation !== input.expectedGeneration
+  ) {
     throw new SessionAuthorityError(
       "session_cas_conflict",
-      `CAS refused stale revision ${input.expectedRevision}; server is ${current.revision}`,
+      `CAS refused unexpected generation ${input.expectedGeneration}; server is ${current.session_generation}`,
       {
         session_id: input.sessionId,
         current_revision: current.revision,
@@ -485,29 +510,73 @@ export async function commitAuthoritativeSessionUpdate(input: {
     );
   }
   const now = input.now ?? new Date();
-  const snapshot = applyServerExpiryToSnapshot(input.snapshot, current);
+  const status = await deriveEffectiveLifecycle(current, now.getTime());
+  if (status === "terminated") {
+    throw new SessionAuthorityError("session_terminated", "This session has been terminated.", {
+      session_id: current.session_id,
+      current_revision: current.revision,
+      lifecycle_status: status,
+    });
+  }
+  if (status === "expired") {
+    throw new SessionAuthorityError("session_expired", "This session has expired.", {
+      session_id: current.session_id,
+      current_revision: current.revision,
+      lifecycle_status: status,
+    });
+  }
+  if (status === "frozen") {
+    throw new SessionAuthorityError("session_frozen", "This session is frozen and cannot re-enter Intake.", {
+      session_id: current.session_id,
+      current_revision: current.revision,
+      lifecycle_status: status,
+    });
+  }
+  if (current.revision !== input.expectedRevision) {
+    throw new SessionAuthorityError(
+      "session_cas_conflict",
+      `CAS refused stale revision ${input.expectedRevision}; server is ${current.revision}`,
+      {
+        session_id: input.sessionId,
+        current_revision: current.revision,
+        expected_revision: input.expectedRevision,
+        lifecycle_status: status,
+        recoverable: true,
+      },
+    );
+  }
+  // Commit only a still-active record. Never persist the model turn under a terminal status.
+  const snapshot = applyServerExpiryToSnapshot(input.snapshot, {
+    session_id: current.session_id,
+    expires_at: current.expires_at,
+    created_at: current.created_at,
+    revision: current.revision + 1,
+    session_generation: current.session_generation,
+  });
+  snapshot.session_id = current.session_id;
   snapshot.session_revision = current.revision + 1;
-  const nextStatus = mergeLifecycleStatus(
-    await deriveEffectiveLifecycle({ ...current, session_snapshot: snapshot }, now.getTime()),
-    current.lifecycle_status,
-  );
+  snapshot.expires_at = current.expires_at;
   const next: ServerSessionRecord = {
     ...current,
+    v: current.v,
+    session_id: current.session_id,
+    session_generation: current.session_generation,
     revision: current.revision + 1,
     updated_at: now.toISOString(),
     expires_at: current.expires_at,
-    lifecycle_status: nextStatus,
+    lifecycle_status: "active",
     snapshot_hash: hashSessionSnapshot(snapshot),
     session_snapshot: snapshot,
     last_committed_turn_id: input.last_committed_turn_id,
     ...associationsFromSnapshot(snapshot),
   };
-  let ok: boolean;
+  let result;
   try {
-    ok = await getSessionAuthorityStore().compareAndSet(
+    result = await getSessionAuthorityStore().compareAndSetDetailed(
       input.sessionId,
       input.expectedRevision,
       next,
+      { intakeCommit: true, nowIso: now.toISOString() },
     );
   } catch (error) {
     if (error instanceof SessionPersistenceUnavailableError) {
@@ -522,8 +591,44 @@ export async function commitAuthoritativeSessionUpdate(input: {
       { session_id: input.sessionId, expected_revision: input.expectedRevision },
     );
   }
-  if (!ok) {
-    const winner = await readAuthoritativeSession(input.sessionId);
+  if (!result.ok) {
+    const winner = await readAuthoritativeSession(input.sessionId).catch(() => null);
+    const lifecycle = winner?.lifecycle_status;
+    if (result.reason === "expired") {
+      throw new SessionAuthorityError("session_expired", "This session has expired.", {
+        session_id: input.sessionId,
+        current_revision: winner?.revision ?? current.revision,
+        lifecycle_status: lifecycle ?? "expired",
+      });
+    }
+    if (result.reason === "frozen") {
+      throw new SessionAuthorityError("session_frozen", "This session is frozen and cannot re-enter Intake.", {
+        session_id: input.sessionId,
+        current_revision: winner?.revision ?? current.revision,
+        lifecycle_status: lifecycle ?? "frozen",
+      });
+    }
+    if (result.reason === "terminated") {
+      throw new SessionAuthorityError("session_terminated", "This session has been terminated.", {
+        session_id: input.sessionId,
+        current_revision: winner?.revision ?? current.revision,
+        lifecycle_status: lifecycle ?? "terminated",
+      });
+    }
+    if (result.reason === "malformed") {
+      throw new SessionAuthorityError(
+        "invalid_session_record",
+        "authoritative session record failed integrity checks during commit",
+        { session_id: input.sessionId, recoverable: false },
+      );
+    }
+    if (result.reason === "missing") {
+      throw new SessionAuthorityError("session_not_found", `server session not found: ${input.sessionId}`, {
+        session_id: input.sessionId,
+        expected_revision: input.expectedRevision,
+        recoverable: false,
+      });
+    }
     throw new SessionAuthorityError(
       "session_cas_conflict",
       `CAS conflict committing revision ${input.expectedRevision}`,
@@ -531,7 +636,7 @@ export async function commitAuthoritativeSessionUpdate(input: {
         session_id: input.sessionId,
         current_revision: winner?.revision,
         expected_revision: input.expectedRevision,
-        lifecycle_status: winner?.lifecycle_status,
+        lifecycle_status: lifecycle,
         recoverable: true,
       },
     );
@@ -543,5 +648,6 @@ export function httpStatusForAuthorityError(error: SessionAuthorityError): numbe
   if (error.code === "server_persistence_unavailable") return 503;
   if (error.code === "invalid_session_request" || error.code === "session_turn_missing") return 400;
   if (error.code === "session_already_exists") return 409;
+  if (error.code === "session_turn_conflict" || error.code === "invalid_session_record") return 409;
   return 409;
 }

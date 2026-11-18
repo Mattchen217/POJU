@@ -62,6 +62,15 @@ const k = {
   meta: (sid: string) => `poju-auth:ledger:${safe(sid)}:meta`,
 };
 
+/** Production ledger keys, exported so Session CAS can probe them in the same KV. */
+export function dcLedgerHeadKey(session_id: string): string {
+  return k.head(session_id);
+}
+
+export function dcLedgerEntryKey(session_id: string, n: number): string {
+  return k.entry(session_id, n);
+}
+
 type LedgerMeta = { genesis_entry_hash: string };
 
 const ex = { ex: AUTHORITY_RETENTION_SECONDS };

@@ -26,6 +26,7 @@ import {
   SessionAuthorityError,
   commitAuthoritativeSessionUpdate,
   extractIncomingUserTurn,
+  hashSessionSnapshot,
   initializeAuthoritativeSession,
   readAuthoritativeSession,
   requireAuthoritativeSession,
@@ -252,6 +253,7 @@ async function main() {
           ...record,
           lifecycle_status: "frozen",
           session_snapshot: frozenSnap,
+          snapshot_hash: hashSessionSnapshot(frozenSnap),
         };
         assert.equal(await getAndReplace(record.session_id, frozen), true);
         const result = await postChatJson(
@@ -499,7 +501,14 @@ async function main() {
   await asyncTest("15. Server CAS conflict is explicit and recoverable", async () => {
     await withStore(async (store) => {
       const record = await initRecord("cas-direct");
-      const next = { ...record, revision: 1, updated_at: new Date().toISOString() };
+      const nextSnap = { ...record.session_snapshot, session_revision: 1 };
+      const next = {
+        ...record,
+        revision: 1,
+        updated_at: new Date().toISOString(),
+        session_snapshot: nextSnap,
+        snapshot_hash: hashSessionSnapshot(nextSnap),
+      };
       const ok = await store.compareAndSet(record.session_id, 0, next);
       assert.equal(ok, true);
       const stale = await store.compareAndSet(record.session_id, 0, {

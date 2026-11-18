@@ -176,6 +176,28 @@ export class MemoryKv {
     return true;
   }
 
+  /**
+   * Synchronous reads/writes for in-process atomic CAS sections.
+   * These must not await; they are the MemoryKv counterpart to a Redis Lua script.
+   */
+  getSync(key: string): unknown | null {
+    return this.read(key);
+  }
+
+  setSync(
+    key: string,
+    value: unknown,
+    opts?: { ex?: number; nx?: boolean },
+  ): "OK" | null {
+    if (opts?.nx && this.read(key) != null) {
+      return null;
+    }
+    const expiresAt =
+      opts?.ex != null && opts.ex > 0 ? now() + opts.ex * 1000 : null;
+    this.store.set(key, { value, expiresAt });
+    return "OK";
+  }
+
   async lpush(key: string, ...values: unknown[]): Promise<number> {
     const list = this.lists.get(key) ?? [];
     for (const v of values) list.unshift(v);

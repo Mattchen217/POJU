@@ -41,7 +41,9 @@ export type SessionAuthorityErrorCode =
   | "server_persistence_unavailable"
   | "session_already_exists"
   | "invalid_session_request"
-  | "session_turn_missing";
+  | "session_turn_missing"
+  | "session_turn_conflict"
+  | "invalid_session_record";
 
 export const SESSION_AUTHORITY_KEY_PREFIX = "poju-auth:session:";
 

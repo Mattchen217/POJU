@@ -106,11 +106,7 @@ export async function executeAuthoritativeChatTurn(
     user_message: body.user_message,
     client_turn_id: body.client_turn_id,
   });
-  const alreadyCommitted =
-    incoming != null &&
-    ("idempotent" in incoming ||
-      (!("idempotent" in incoming) && record.last_committed_turn_id === incoming.client_turn_id));
-  if (alreadyCommitted) {
+  if (incoming != null && "idempotent" in incoming && incoming.idempotent) {
     return {
       ok: true,
       idempotent: true,
@@ -124,7 +120,7 @@ export async function executeAuthoritativeChatTurn(
   await assertRecordAllowsIntake(record, expectedRevision, Date.now());
   throwIfAborted(opts?.signal);
 
-  if (!incoming) {
+  if (!incoming || "idempotent" in incoming) {
     throw new SessionAuthorityError(
       "session_turn_missing",
       "a user turn bound to the current session is required",
@@ -167,6 +163,7 @@ export async function executeAuthoritativeChatTurn(
     committed = await commitAuthoritativeSessionUpdate({
       sessionId,
       expectedRevision: record.revision,
+      expectedGeneration: record.session_generation,
       snapshot: sessionOut,
       last_committed_turn_id: incoming.client_turn_id,
     });
