@@ -8,13 +8,21 @@
  * or Redis Lua), will not create a record when the key is missing or malformed,
  * and the intake-commit path probes Decision Authority ledger keys in the same KV
  * when they are present. Two independent KV operations are not treated as atomic.
+ *
+ * M9-R1-FU1: Redis Lua CAS now fail-closes on the same structural Record
+ * integrity contract as inspectStoredSessionRecord (version, required fields,
+ * identity, snapshot id, snapshot revision). Ledger probes fail closed on
+ * malformed or structurally invalid data and on probe-limit exhaustion.
+ * Lua does not recompute canonicalHash; the production Redis adapter runs
+ * inspectStoredSessionRecord before EVAL. Reason codes distinguish ledger
+ * integrity and incomplete probes from ordinary CAS conflicts.
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { durableKv, KV_TTL } from "@/lib/kv/client";
 import { MemoryKv } from "@/lib/kv/memory-kv";
-import { canonicalHash } from "@/lib/poju/decision-authority/hash";
+import { canonicalHash, normalizeJson } from "@/lib/poju/decision-authority/hash";
 import {
   dcLedgerEntryKey,
   dcLedgerHeadKey,
@@ -53,7 +61,9 @@ export type SessionCasReason =
   | "identity"
   | "expired"
   | "frozen"
-  | "terminated";
+  | "terminated"
+  | "ledger_integrity"
+  | "ledger_probe_incomplete";
 
 export type SessionCasResult = { ok: true } | { ok: false; reason: SessionCasReason };
 
@@ -189,56 +199,142 @@ export function inspectStoredSessionRecord(
   return value;
 }
 
-function isLedgerFrozenValue(raw: unknown): boolean {
-  if (raw == null) return false;
-  let value: unknown = raw;
-  if (typeof raw === "string") {
-    try {
-      value = JSON.parse(raw) as unknown;
-    } catch {
-      return false;
-    }
-  }
-  if (!value || typeof value !== "object") return false;
-  const entry = value as { change_type?: unknown; dc_status?: unknown };
-  return entry.change_type === "freeze" || entry.dc_status === "final";
+function isJsonParseError(error: unknown): boolean {
+  if (error instanceof SyntaxError) return true;
+  if (error instanceof SessionRecordIntegrityError) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  return /unexpected token|unterminated string|json/i.test(message);
 }
 
-function readHintVersion(raw: unknown): number {
-  if (raw == null) return 0;
+async function readKvValue(kv: KvLike, key: string): Promise<unknown> {
+  try {
+    return await kv.get(key);
+  } catch (error) {
+    if (error instanceof SessionRecordIntegrityError) throw error;
+    if (isJsonParseError(error)) {
+      throw new SessionRecordIntegrityError("session record JSON is malformed");
+    }
+    throw error;
+  }
+}
+
+export type LedgerProbeFailure = "ledger_integrity" | "ledger_probe_incomplete";
+
+export type LedgerProbeResult =
+  | { ok: true; frozen: boolean }
+  | { ok: false; reason: LedgerProbeFailure };
+
+function asJsonObject(
+  raw: unknown,
+):
+  | { ok: true; value: Record<string, unknown> }
+  | { ok: false; missing: true }
+  | { ok: false; integrity: true } {
+  if (raw == null) return { ok: false, missing: true };
   let value: unknown = raw;
   if (typeof raw === "string") {
     try {
       value = JSON.parse(raw) as unknown;
     } catch {
-      return 0;
+      return { ok: false, integrity: true };
     }
   }
-  if (!value || typeof value !== "object") return 0;
-  const n = (value as { commit_version?: unknown }).commit_version;
-  return typeof n === "number" && Number.isSafeInteger(n) && n > 0 ? n : 0;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ok: false, integrity: true };
+  }
+  return { ok: true, value: value as Record<string, unknown> };
+}
+
+function inspectLedgerEntryValue(
+  raw: unknown,
+  sessionId: string,
+  expectedVersion: number,
+): { kind: "missing" } | { kind: "ok"; entry: Record<string, unknown> } | { kind: "integrity" } {
+  if (raw == null) return { kind: "missing" };
+  const parsed = asJsonObject(raw);
+  if (!parsed.ok) {
+    return "missing" in parsed && parsed.missing ? { kind: "missing" } : { kind: "integrity" };
+  }
+  const entry = parsed.value;
+  if (typeof entry.session_id !== "string" || entry.session_id !== sessionId) {
+    return { kind: "integrity" };
+  }
+  if (entry.commit_version !== expectedVersion) {
+    return { kind: "integrity" };
+  }
+  if (typeof entry.entry_hash === "string" && entry.entry_hash.length > 0) {
+    try {
+      const copy = normalizeJson(entry);
+      const { entry_hash, ...rest } = copy;
+      if (canonicalHash(rest) !== entry_hash) return { kind: "integrity" };
+    } catch {
+      return { kind: "integrity" };
+    }
+  }
+  return { kind: "ok", entry };
 }
 
 /**
  * Probe the Decision Authority ledger in the same KV as the Session record.
  * This is the same forward-scan used by readLedgerHead, kept synchronous so it
  * can run inside MemoryKv's atomic section or the matching Redis Lua script.
+ *
+ * Fail closed on malformed JSON, structurally invalid entries, an unusable
+ * head hint, or probe-limit exhaustion. A genuinely missing ledger (no hint
+ * and no entry 1) is not frozen. Freeze becomes effective only after the
+ * NX-written ledger entry itself is visible; a head hint that has not been
+ * written yet is still discovered by the forward scan.
  */
-export function probeSameKvLedgerFrozen(
+export function probeSameKvLedger(
   read: (key: string) => unknown | null,
   sessionId: string,
-): boolean {
-  const headKey = dcLedgerHeadKey(sessionId);
-  let n = readHintVersion(read(headKey));
-  let head = n > 0 ? read(dcLedgerEntryKey(sessionId, n)) : null;
-  if (n > 0 && head == null) n = 0;
-  for (let i = 0; i < LEDGER_CAS_PROBE_LIMIT; i += 1) {
-    const next = read(dcLedgerEntryKey(sessionId, n + 1));
-    if (next == null) break;
-    head = next;
-    n += 1;
+  probeLimit = LEDGER_CAS_PROBE_LIMIT,
+): LedgerProbeResult {
+  const hintRaw = read(dcLedgerHeadKey(sessionId));
+  let n = 0;
+  if (hintRaw != null) {
+    const hint = asJsonObject(hintRaw);
+    if (!hint.ok) return { ok: false, reason: "ledger_integrity" };
+    const version = hint.value.commit_version;
+    if (typeof version !== "number" || !Number.isSafeInteger(version) || version <= 0) {
+      return { ok: false, reason: "ledger_integrity" };
+    }
+    n = version;
   }
-  return isLedgerFrozenValue(head);
+
+  let head: Record<string, unknown> | null = null;
+  if (n > 0) {
+    const got = inspectLedgerEntryValue(read(dcLedgerEntryKey(sessionId, n)), sessionId, n);
+    if (got.kind !== "ok") return { ok: false, reason: "ledger_integrity" };
+    head = got.entry;
+  }
+
+  for (let i = 0; i < probeLimit; i += 1) {
+    const got = inspectLedgerEntryValue(
+      read(dcLedgerEntryKey(sessionId, n + 1)),
+      sessionId,
+      n + 1,
+    );
+    if (got.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
+    if (got.kind === "missing") break;
+    head = got.entry;
+    n += 1;
+    if (i === probeLimit - 1) {
+      const more = inspectLedgerEntryValue(
+        read(dcLedgerEntryKey(sessionId, n + 1)),
+        sessionId,
+        n + 1,
+      );
+      if (more.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
+      if (more.kind === "ok") return { ok: false, reason: "ledger_probe_incomplete" };
+    }
+  }
+
+  if (!head) return { ok: true, frozen: false };
+  return {
+    ok: true,
+    frozen: head.change_type === "freeze" || head.dc_status === "final",
+  };
 }
 
 function assertNextIntegrity(sessionId: string, next: ServerSessionRecord): void {
@@ -246,8 +342,12 @@ function assertNextIntegrity(sessionId: string, next: ServerSessionRecord): void
 }
 
 /**
- * Shared CAS predicate used by the in-process atomic path and by the Redis eval
- * contract harness. Redis production uses the Lua translation of this predicate.
+ * Shared CAS predicate used by the in-process atomic path and by any Redis eval
+ * contract harness that deliberately executes TypeScript instead of Lua.
+ * Production Redis uses SESSION_AUTHORITY_CAS_LUA, which must return the same
+ * explicit reason codes. Lua does not recompute canonicalHash; the production
+ * Redis adapter runs inspectStoredSessionRecord (authoritative hash) before
+ * EVAL, and Lua still fail-closes on structural integrity failures.
  */
 export function evaluateSessionAuthorityCas(input: {
   sessionId: string;
@@ -303,9 +403,9 @@ export function evaluateSessionAuthorityCas(input: {
     if (current.lifecycle_status === "frozen") {
       return { ok: false, reason: "frozen" };
     }
-    if (probeSameKvLedgerFrozen(input.read, input.sessionId)) {
-      return { ok: false, reason: "frozen" };
-    }
+    const probe = probeSameKvLedger(input.read, input.sessionId);
+    if (!probe.ok) return { ok: false, reason: probe.reason };
+    if (probe.frozen) return { ok: false, reason: "frozen" };
   }
 
   return { ok: true };
@@ -328,21 +428,40 @@ export function applySessionAuthorityCas(input: {
 }
 
 /**
- * Lua: atomic Session CAS. Returns:
+ * Lua: atomic Session CAS. Returns one explicit result contract, shared with
+ * TypeScript evaluateSessionAuthorityCas():
  *   1  accepted
  *   0  revision conflict
- *   2  intake commit rejected because the session is expired
- *   3  intake commit rejected because the session is frozen (record or ledger)
- *   4  intake commit rejected because the session is terminated
+ *   2  expired
+ *   3  frozen (record lifecycle or valid Freeze/final ledger head)
+ *   4  terminated
  *   5  record missing (must not create)
- *   6  record malformed (must not create)
- *   7  identity / generation / expires_at / revision-increment violation
+ *   6  malformed / integrity-failed current Record
+ *   7  invalid identity / contract on the proposed Record
+ *   8  ledger integrity failure
+ *   9  ledger probe incomplete
  *
  * KEYS[1] = session record key
  * ARGV: expectedRevision, nextJson, ttlSeconds, sessionId, nowIso, intakeCommit (0/1),
  *       ledgerHeadKey, ledgerEntryPrefix, probeLimit
+ *
+ * Hash policy: this script does not recompute canonicalHash / SHA-256 of
+ * session_snapshot. Exact JS JSON.stringify + SHA-256 parity cannot be
+ * implemented safely in Redis Lua (cjson cannot faithfully distinguish []
+ * from {}, and number/unicode encoding may diverge). The production Redis
+ * adapter runs inspectStoredSessionRecord (canonicalHash) on the current
+ * and proposed records before EVAL. Lua still fail-closes on version,
+ * required fields, identity, snapshot.session_id, and snapshot revision
+ * mismatches, and never treats a corrupted Record as missing.
  */
 export const SESSION_AUTHORITY_CAS_LUA = `
+-- Hash policy: this script does not recompute canonicalHash / SHA-256 of
+-- session_snapshot. Exact JS JSON.stringify + SHA-256 parity cannot be
+-- implemented safely in Redis Lua (cjson cannot faithfully distinguish []
+-- from {}, and number/unicode encoding may diverge). The production Redis
+-- adapter runs inspectStoredSessionRecord (canonicalHash) before EVAL.
+-- Lua still fail-closes on structural Record integrity and ledger probe
+-- failures and never treats a corrupted Record as missing.
 local function decode(raw)
   if not raw then return nil, false end
   if type(raw) ~= 'string' then raw = tostring(raw) end
@@ -351,17 +470,52 @@ local function decode(raw)
   return obj, true
 end
 
+local function is_number(v)
+  return type(v) == 'number' and v == v and v ~= math.huge and v ~= -math.huge
+end
+
+local function is_nonempty_string(v)
+  return type(v) == 'string' and string.len(v) > 0
+end
+
+local function lifecycle_ok(v)
+  return v == 'active' or v == 'expired' or v == 'frozen' or v == 'terminated'
+end
+
+local function inspect_record(obj, sessionId, fail_code)
+  if type(obj) ~= 'table' then return false, fail_code end
+  if obj['v'] ~= 1 then return false, fail_code end
+  if not is_nonempty_string(obj['session_id']) then return false, fail_code end
+  if obj['session_id'] ~= sessionId then return false, fail_code end
+  if not is_number(obj['session_generation']) then return false, fail_code end
+  if not is_number(obj['revision']) or obj['revision'] < 0 then return false, fail_code end
+  if type(obj['created_at']) ~= 'string' then return false, fail_code end
+  if type(obj['updated_at']) ~= 'string' then return false, fail_code end
+  if type(obj['expires_at']) ~= 'string' then return false, fail_code end
+  if not lifecycle_ok(obj['lifecycle_status']) then return false, fail_code end
+  if type(obj['snapshot_hash']) ~= 'string' or string.len(obj['snapshot_hash']) == 0 then return false, fail_code end
+  local snap = obj['session_snapshot']
+  if type(snap) ~= 'table' then return false, fail_code end
+  if type(snap['session_id']) ~= 'string' or snap['session_id'] ~= obj['session_id'] then return false, fail_code end
+  if not is_number(snap['session_revision']) or snap['session_revision'] ~= obj['revision'] then return false, fail_code end
+  return true, nil
+end
+
 local raw = redis.call('GET', KEYS[1])
 if not raw then return 5 end
 local obj, ok = decode(raw)
 if not ok then return 6 end
 
+local sessionId = ARGV[4]
+local current_ok, current_fail = inspect_record(obj, sessionId, 6)
+if not current_ok then return current_fail end
+
 local expected = tonumber(ARGV[1])
 local nextObj, nextOk = decode(ARGV[2])
 if not nextOk then return 7 end
+local next_ok, next_fail = inspect_record(nextObj, sessionId, 7)
+if not next_ok then return next_fail end
 
-local sessionId = ARGV[4]
-if type(obj['session_id']) ~= 'string' or obj['session_id'] ~= sessionId then return 6 end
 if tonumber(obj['revision']) ~= expected then return 0 end
 if type(nextObj['session_id']) ~= 'string' or nextObj['session_id'] ~= sessionId then return 7 end
 if tonumber(nextObj['session_generation']) ~= tonumber(obj['session_generation']) then return 7 end
@@ -384,24 +538,42 @@ if intake then
   local limit = tonumber(ARGV[9]) or 512
   local hintRaw = redis.call('GET', headKey)
   local n = 0
-  local hint, hintOk = decode(hintRaw)
-  if hintOk and tonumber(hint['commit_version']) and tonumber(hint['commit_version']) > 0 then
-    n = tonumber(hint['commit_version'])
+  if hintRaw then
+    local hint, hintOk = decode(hintRaw)
+    if not hintOk then return 8 end
+    local cv = hint['commit_version']
+    if type(cv) ~= 'number' or cv ~= math.floor(cv) or cv <= 0 then return 8 end
+    n = cv
   end
+
   local function load_entry(idx)
-    if idx < 1 then return nil end
+    if idx < 1 then return nil, 'missing' end
     local eraw = redis.call('GET', prefix .. tostring(idx))
+    if not eraw then return nil, 'missing' end
     local e, eok = decode(eraw)
-    if not eok then return nil end
-    return e
+    if not eok then return nil, 'integrity' end
+    if type(e['session_id']) ~= 'string' or e['session_id'] ~= sessionId then return nil, 'integrity' end
+    if type(e['commit_version']) ~= 'number' or e['commit_version'] ~= idx then return nil, 'integrity' end
+    return e, 'ok'
   end
-  local head = load_entry(n)
-  if n > 0 and not head then n = 0 end
+
+  local head = nil
+  if n > 0 then
+    local e, st = load_entry(n)
+    if st ~= 'ok' then return 8 end
+    head = e
+  end
   for i = 1, limit do
-    local nxt = load_entry(n + 1)
-    if not nxt then break end
+    local nxt, st = load_entry(n + 1)
+    if st == 'integrity' then return 8 end
+    if st == 'missing' then break end
     head = nxt
     n = n + 1
+    if i == limit then
+      local more, mst = load_entry(n + 1)
+      if mst == 'integrity' then return 8 end
+      if mst == 'ok' then return 9 end
+    end
   end
   if head and (head['change_type'] == 'freeze' or head['dc_status'] == 'final') then
     return 3
@@ -412,7 +584,7 @@ redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
 return 1
 `;
 
-function casCodeToResult(code: unknown): SessionCasResult {
+export function luaCasCodeToResult(code: unknown): SessionCasResult {
   if (code === 1 || code === true) return { ok: true };
   if (code === 2) return { ok: false, reason: "expired" };
   if (code === 3) return { ok: false, reason: "frozen" };
@@ -420,6 +592,8 @@ function casCodeToResult(code: unknown): SessionCasResult {
   if (code === 5) return { ok: false, reason: "missing" };
   if (code === 6) return { ok: false, reason: "malformed" };
   if (code === 7) return { ok: false, reason: "identity" };
+  if (code === 8) return { ok: false, reason: "ledger_integrity" };
+  if (code === 9) return { ok: false, reason: "ledger_probe_incomplete" };
   return { ok: false, reason: "cas_conflict" };
 }
 
@@ -438,6 +612,10 @@ export function sessionCasResultToLuaCode(result: SessionCasResult): number {
       return 6;
     case "identity":
       return 7;
+    case "ledger_integrity":
+      return 8;
+    case "ledger_probe_incomplete":
+      return 9;
     default:
       return 0;
   }
@@ -484,6 +662,27 @@ async function runLuaSessionCas(
   if (typeof kv.eval !== "function") {
     throw new SessionPersistenceUnavailableError("session CAS Lua eval is unavailable");
   }
+  // Authoritative hash + record integrity for the proposed next record.
+  try {
+    inspectStoredSessionRecord(sessionId, next);
+  } catch {
+    return { ok: false, reason: "identity" };
+  }
+  // Authoritative canonicalHash of the live record. Redis Lua does not recompute
+  // this hash; a corrupted current record must fail closed here and never be
+  // overwritten. Lua still enforces structural integrity atomically.
+  try {
+    const currentRaw = await readKvValue(kv, serverSessionKey(sessionId));
+    const current = inspectStoredSessionRecord(sessionId, currentRaw);
+    if (!current) {
+      // Fall through to EVAL so the Lua path cannot recreate a missing key.
+    }
+  } catch (error) {
+    if (error instanceof SessionRecordIntegrityError) {
+      return { ok: false, reason: "malformed" };
+    }
+    throw error;
+  }
   const nowIso = opts?.nowIso ?? new Date().toISOString();
   const result = await kv.eval(
     SESSION_AUTHORITY_CAS_LUA,
@@ -500,7 +699,7 @@ async function runLuaSessionCas(
       String(LEDGER_CAS_PROBE_LIMIT),
     ],
   );
-  return casCodeToResult(result);
+  return luaCasCodeToResult(result);
 }
 
 export function createKvSessionAuthorityStore(kv: KvLike): SessionAuthorityStore {
@@ -551,7 +750,7 @@ export function createKvSessionAuthorityStore(kv: KvLike): SessionAuthorityStore
   return {
     async get(sessionId: string): Promise<ServerSessionRecord | null> {
       try {
-        const raw = await kv.get<unknown>(serverSessionKey(sessionId));
+        const raw = await readKvValue(kv, serverSessionKey(sessionId));
         return inspectStoredSessionRecord(sessionId, raw);
       } catch (error) {
         if (error instanceof SessionRecordIntegrityError) throw error;

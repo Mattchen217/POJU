@@ -629,6 +629,27 @@ export async function commitAuthoritativeSessionUpdate(input: {
         recoverable: false,
       });
     }
+    if (result.reason === "identity") {
+      throw new SessionAuthorityError(
+        "invalid_session_record",
+        "authoritative session record failed identity or contract checks during commit",
+        { session_id: input.sessionId, recoverable: false },
+      );
+    }
+    if (result.reason === "ledger_integrity") {
+      throw new SessionAuthorityError(
+        "ledger_integrity_failure",
+        "Decision Authority ledger data failed integrity checks during intake commit",
+        { session_id: input.sessionId, recoverable: false },
+      );
+    }
+    if (result.reason === "ledger_probe_incomplete") {
+      throw new SessionAuthorityError(
+        "ledger_probe_incomplete",
+        "Decision Authority ledger probe could not establish the authoritative head within its limit",
+        { session_id: input.sessionId, recoverable: true },
+      );
+    }
     throw new SessionAuthorityError(
       "session_cas_conflict",
       `CAS conflict committing revision ${input.expectedRevision}`,
@@ -649,5 +670,6 @@ export function httpStatusForAuthorityError(error: SessionAuthorityError): numbe
   if (error.code === "invalid_session_request" || error.code === "session_turn_missing") return 400;
   if (error.code === "session_already_exists") return 409;
   if (error.code === "session_turn_conflict" || error.code === "invalid_session_record") return 409;
+  if (error.code === "ledger_integrity_failure" || error.code === "ledger_probe_incomplete") return 409;
   return 409;
 }
