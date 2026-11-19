@@ -1,0 +1,5 @@
+command	exit	seconds	notes
+pnpm test:di2-understanding-composer-flow	0	2.7	Passed 19 checks, including structured status and panel render cases
+pnpm test:di2-feature-landing-main-path	0	3.7	22 passed
+pnpm exec tsc --noEmit --pretty false	0	7.2	no compiler output
+pnpm build	0	133.7	Compiled successfully

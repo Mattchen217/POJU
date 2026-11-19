@@ -1,0 +1,44 @@
+
+> pojulife@0.1.0 test:di2-understanding-composer-flow D:\POJU\pojulife
+> tsx scripts/test-di2-understanding-composer-flow.ts
+
+PASS A/layout: composerTop slot sits in the input bar above the composer unit
+PASS A/layout: composerTop is not a message and is not hidden by centerSlot
+PASS A/layout: three quick replies stay inside the composer unit, not in the Understanding box
+PASS B/7.2: panel order and no internal IDs or debug fields
+PASS C/data: confirmed facts only; unknown/declined/unverified stay out of already understood
+PASS C/data: progress never shows 100% before completion; insights only when substantive
+PASS D/confirm: official in-input confirm labels enter the existing Freeze path
+PASS E/supplement: non-confirm text at the readiness gate returns to Adaptive Question, keeping DC
+PASS F/UI: DI2 confirm chip is not routed to legacy synthesis; report surface hides Q&A
+PASS G/report chain: confirm-and-freeze auto-starts the existing Freeze-bound report client
+PASS H/filter: known + user_confirmed_any true keeps status known and enters already_understood
+PASS H/filter: known + user_confirmed_any false must not enter already_understood
+PASS H/filter: n_a + user_confirmed_any true keeps status n_a and is not rewritten as a fact
+PASS H/filter: n_a + user_confirmed_any false must not enter already_understood
+PASS H/filter: unknown or other illegal status is excluded
+PASS H/filter: empty cleaned labels are omitted even when otherwise eligible
+PASS H/filter: mixed items keep one-to-one label and status correspondence
+PASS H/filter: still_need, conflicts, progress, insight, and current question are preserved
+PASS H/render: panel shows not-applicable marker for n_a only, not for known
+Passed 19 checks
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
