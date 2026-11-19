@@ -833,6 +833,183 @@ async function main() {
       });
     });
 
+    await check("P0-canonical. non-canonical Session binding IDs fail closed (no agent fallback)", async () => {
+      await withAuthStore(async () => {
+        const canonicalId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+        const baseAnalysis = {
+          generated_at: "2026-01-01T00:00:00.000Z",
+          model: "fixture",
+          tokens_used: 1,
+          content: "canonical-binding fixture",
+        };
+
+        async function seedSession(payment: string, selected: string | null, agentSelected?: string) {
+          const sid = await createPOJUSession({
+            payment_id: payment,
+            original_question: "要不要换赛道？",
+            selected_stored_profile_id: canonicalId,
+          });
+          const server = await requireAuthoritativeSession(sid);
+          const agentBase = server.session_snapshot.agent_v2 ?? {
+            current_phase: "collecting_context" as const,
+            original_question: server.session_snapshot.original_question,
+            has_base_analysis: false,
+            selected_profile_id: null as string | null,
+            profile_skipped: false,
+          };
+          const mutated = await commitAuthoritativeSessionUpdate({
+            sessionId: sid,
+            expectedRevision: server.revision,
+            expectedGeneration: server.session_generation,
+            snapshot: {
+              ...server.session_snapshot,
+              selected_stored_profile_id: selected,
+              has_profile: Boolean(selected) || Boolean(agentSelected),
+              agent_v2: {
+                ...agentBase,
+                selected_profile_id:
+                  agentSelected === undefined
+                    ? (agentBase.selected_profile_id ?? null)
+                    : agentSelected,
+              } as NonNullable<POJUSessionState["agent_v2"]>,
+            },
+            last_committed_turn_id: server.last_committed_turn_id,
+          });
+          const local = await mirrorAuthoritativeSessionLocally(
+            toAuthoritativeEnvelope(mutated).session,
+          );
+          return { sid, serverBefore: mutated, local };
+        }
+
+        async function expectReject(opts: {
+          payment: string;
+          selected: string | null;
+          agentSelected?: string;
+          profileId: string;
+          claimed: string;
+          turnId: string;
+        }) {
+          const { sid, serverBefore, local } = await seedSession(
+            opts.payment,
+            opts.selected,
+            opts.agentSelected,
+          );
+          const capture: { current?: AuthoritativeModelInputCapture } = {};
+          let rejected: unknown = null;
+          try {
+            await runWithAuthoritativeModelInputCapture(capture, () =>
+              submitAuthoritativeChatTurn({
+                session: {
+                  ...local,
+                  messages: [
+                    ...local.messages,
+                    {
+                      role: "user",
+                      content: `canonical probe ${opts.turnId}`,
+                      timestamp: new Date().toISOString(),
+                      client_id: opts.turnId,
+                    },
+                  ],
+                },
+                user_message: `canonical probe ${opts.turnId}`,
+                client_turn_id: opts.turnId,
+                expected_revision: serverBefore.revision,
+                locale: "zh",
+                profile: fixtureUserProfile(opts.profileId),
+                base_analysis: baseAnalysis,
+                claimed_stored_profile_id: opts.claimed,
+              }),
+            );
+          } catch (e) {
+            rejected = e;
+          }
+          assert.ok(rejected instanceof ClientSessionAuthorityError, opts.turnId);
+          assert.equal(
+            (rejected as ClientSessionAuthorityError).body.code,
+            "invalid_session_request",
+            opts.turnId,
+          );
+          assert.equal(capture.current, undefined, opts.turnId);
+          const serverAfter = await requireAuthoritativeSession(sid);
+          assert.equal(serverAfter.revision, serverBefore.revision, opts.turnId);
+          assert.equal(serverAfter.session_snapshot.messages.length, 0, opts.turnId);
+          assert.equal(
+            serverAfter.session_snapshot.selected_stored_profile_id,
+            serverBefore.session_snapshot.selected_stored_profile_id,
+            opts.turnId,
+          );
+        }
+
+        // A. Session " A "; Profile + claimed " A " → reject
+        const padded = ` ${canonicalId} `;
+        await expectReject({
+          payment: "pay_di2_browser_auth_p0_can_a",
+          selected: padded,
+          profileId: padded,
+          claimed: padded,
+          turnId: "turn_p0_can_a",
+        });
+
+        // B. Session whitespace-only; Profile + claimed whitespace-only → reject
+        await expectReject({
+          payment: "pay_di2_browser_auth_p0_can_b",
+          selected: "   ",
+          profileId: "   ",
+          claimed: "   ",
+          turnId: "turn_p0_can_b",
+        });
+
+        // C. Malformed selected; agent has valid ID → reject, no fallback
+        await expectReject({
+          payment: "pay_di2_browser_auth_p0_can_c",
+          selected: padded,
+          agentSelected: canonicalId,
+          profileId: canonicalId,
+          claimed: canonicalId,
+          turnId: "turn_p0_can_c",
+        });
+
+        // D. Canonical Session + Profile + claimed → accept
+        const { sid, serverBefore, local } = await seedSession(
+          "pay_di2_browser_auth_p0_can_d",
+          canonicalId,
+        );
+        const captureOk: { current?: AuthoritativeModelInputCapture } = {};
+        const profile = fixtureUserProfile(canonicalId);
+        const accepted = await runWithAuthoritativeModelInputCapture(captureOk, () =>
+          submitAuthoritativeChatTurn({
+            session: {
+              ...local,
+              messages: [
+                ...local.messages,
+                {
+                  role: "user",
+                  content: "我在考虑要不要换赛道。",
+                  timestamp: new Date().toISOString(),
+                  client_id: "turn_p0_can_d",
+                },
+              ],
+            },
+            user_message: "我在考虑要不要换赛道。",
+            client_turn_id: "turn_p0_can_d",
+            expected_revision: serverBefore.revision,
+            locale: "zh",
+            profile,
+            base_analysis: baseAnalysis,
+            claimed_stored_profile_id: canonicalId,
+          }),
+        );
+        assert.equal(accepted.ok, true);
+        assert.ok(captureOk.current);
+        assert.equal(captureOk.current!.profile?.id, canonicalId);
+        assert.equal(captureOk.current!.claimed_stored_profile_id, canonicalId);
+        assert.equal(captureOk.current!.session_selected_stored_profile_id, canonicalId);
+        assert.ok(accepted.session_revision > serverBefore.revision);
+        const serverAfter = await requireAuthoritativeSession(sid);
+        assert.equal(serverAfter.revision, accepted.session_revision);
+      });
+    });
+
     await check("P0b. no-profile and profile_skipped paths stay null without fabrication", async () => {
       await withAuthStore(async () => {
         const sid = await createPOJUSession({
@@ -1011,6 +1188,9 @@ async function main() {
         false,
         "authoritative bound id must not be trimmed for comparison",
       );
+      assert.match(profileSrc, /isCanonicalAuthoritativeProfileId/);
+      assert.match(profileSrc, /fails closed and must not/);
+      assert.match(profileSrc, /fall back to `agent_v2\.selected_profile_id`/);
     });
 
     await check("E. Readiness confirm path remains server-authoritative (wire present)", async () => {

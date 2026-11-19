@@ -47,14 +47,48 @@ function assertPayloadSize(label: string, value: unknown, maxBytes: number): voi
 }
 
 /**
+ * Canonical authoritative profile id: non-empty, no leading/trailing whitespace.
+ * Detection may inspect trimmed length, but the returned value is never rewritten.
+ */
+function isCanonicalAuthoritativeProfileId(id: string): boolean {
+  if (id.length === 0) return false;
+  if (id.trim().length === 0) return false;
+  if (id !== id.trim()) return false;
+  return true;
+}
+
+function rejectNonCanonicalAuthoritativeBinding(field: string): never {
+  throw new SessionAuthorityError(
+    "invalid_session_request",
+    `authoritative Session ${field} is non-canonical`,
+  );
+}
+
+/**
  * Exact Session binding id for identity comparison — no trim / rewrite.
- * Legacy non-canonical values fail closed at comparison time.
+ * Non-canonical non-empty `selected_stored_profile_id` fails closed and must not
+ * fall back to `agent_v2.selected_profile_id`.
  */
 function authoritativeBoundProfileId(session: POJUSessionState): string | null {
   const selected = session.selected_stored_profile_id;
-  if (typeof selected === "string" && selected.length > 0) return selected;
+  if (typeof selected === "string") {
+    if (selected.length === 0) {
+      // Absent → may consult agent_v2.
+    } else if (!isCanonicalAuthoritativeProfileId(selected)) {
+      rejectNonCanonicalAuthoritativeBinding("selected_stored_profile_id");
+    } else {
+      return selected;
+    }
+  }
+
   const agent = session.agent_v2?.selected_profile_id;
-  if (typeof agent === "string" && agent.length > 0) return agent;
+  if (typeof agent === "string") {
+    if (agent.length === 0) return null;
+    if (!isCanonicalAuthoritativeProfileId(agent)) {
+      rejectNonCanonicalAuthoritativeBinding("agent_v2.selected_profile_id");
+    }
+    return agent;
+  }
   return null;
 }
 
@@ -132,14 +166,15 @@ export function resolveAuthoritativeChatProfileInputs(input: {
 }): AuthoritativeChatProfileInputs {
   const rawProfile = input.profile !== undefined ? input.profile : input.userProfile;
   const rawBase = input.base_analysis === undefined ? null : input.base_analysis;
-  const claimed = readClaimedStoredProfileId(input.claimed_stored_profile_id);
 
   assertBaseAnalysisShape(rawBase);
   assertPayloadSize("profile", rawProfile, AUTHORITATIVE_CHAT_MAX_PROFILE_BYTES);
   assertPayloadSize("base_analysis", rawBase, AUTHORITATIVE_CHAT_MAX_BASE_ANALYSIS_BYTES);
 
   const server = input.serverSnapshot;
+  // Session binding canonicity is checked before client claim / payload identity.
   const boundId = authoritativeBoundProfileId(server);
+  const claimed = readClaimedStoredProfileId(input.claimed_stored_profile_id);
   const skipped = server.profile_skipped === true;
   const hasBinding =
     Boolean(boundId) ||
