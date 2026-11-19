@@ -541,6 +541,182 @@ async function main() {
       });
     });
 
+    await check("P0-A. profile.id spoofing with matching claimed id is rejected", async () => {
+      await withAuthStore(async () => {
+        const boundId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+        const spoofedId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0a",
+          original_question: "要不要接受新 offer？",
+          selected_stored_profile_id: boundId,
+        });
+        const before = (await loadPOJUSession(sid))!;
+        const serverBefore = await requireAuthoritativeSession(sid);
+        const capture: { current?: AuthoritativeModelInputCapture } = {};
+        let rejected: unknown = null;
+        try {
+          await runWithAuthoritativeModelInputCapture(capture, () =>
+            submitAuthoritativeChatTurn({
+              session: {
+                ...before,
+                messages: [
+                  ...before.messages,
+                  {
+                    role: "user",
+                    content: "我在犹豫要不要接受 offer。",
+                    timestamp: new Date().toISOString(),
+                    client_id: "turn_p0a_spoof",
+                  },
+                ],
+              },
+              user_message: "我在犹豫要不要接受 offer。",
+              client_turn_id: "turn_p0a_spoof",
+              expected_revision: before.session_revision ?? 0,
+              locale: "zh",
+              // Structurally valid Profile whose id is B while claiming A.
+              profile: fixtureUserProfile(spoofedId),
+              base_analysis: {
+                generated_at: "2026-01-01T00:00:00.000Z",
+                model: "fixture",
+                tokens_used: 1,
+                content: "legitimate-shaped analysis",
+              },
+              claimed_stored_profile_id: boundId,
+            }),
+          );
+        } catch (e) {
+          rejected = e;
+        }
+        assert.ok(rejected instanceof ClientSessionAuthorityError);
+        assert.equal(
+          (rejected as ClientSessionAuthorityError).body.code,
+          "invalid_session_request",
+        );
+        assert.equal(
+          capture.current,
+          undefined,
+          "model input capture must not run after identity rejection",
+        );
+        const serverAfter = await requireAuthoritativeSession(sid);
+        assert.equal(serverAfter.revision, serverBefore.revision);
+        assert.equal(serverAfter.session_snapshot.messages.length, 0);
+        assert.deepEqual(
+          serverAfter.session_snapshot.selected_stored_profile_id,
+          serverBefore.session_snapshot.selected_stored_profile_id,
+        );
+      });
+    });
+
+    await check("P0-B. malformed base_analysis shapes are rejected", async () => {
+      await withAuthStore(async () => {
+        const profileId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+        const profile = fixtureUserProfile(profileId);
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0b_shape",
+          original_question: "要不要换城市？",
+          selected_stored_profile_id: profileId,
+        });
+        const before = (await loadPOJUSession(sid))!;
+        const serverBefore = await requireAuthoritativeSession(sid);
+        const malformed = ["not-an-object", 42, true, ["array", "payload"]] as const;
+        for (const [i, bad] of malformed.entries()) {
+          const capture: { current?: AuthoritativeModelInputCapture } = {};
+          let rejected: unknown = null;
+          try {
+            await runWithAuthoritativeModelInputCapture(capture, () =>
+              submitAuthoritativeChatTurn({
+                session: {
+                  ...before,
+                  messages: [
+                    ...before.messages,
+                    {
+                      role: "user",
+                      content: `malformed base ${i}`,
+                      timestamp: new Date().toISOString(),
+                      client_id: `turn_p0b_shape_${i}`,
+                    },
+                  ],
+                },
+                user_message: `malformed base ${i}`,
+                client_turn_id: `turn_p0b_shape_${i}`,
+                expected_revision: before.session_revision ?? 0,
+                locale: "zh",
+                profile,
+                base_analysis: bad,
+                claimed_stored_profile_id: profileId,
+              }),
+            );
+          } catch (e) {
+            rejected = e;
+          }
+          assert.ok(
+            rejected instanceof ClientSessionAuthorityError,
+            `expected rejection for ${typeof bad === "object" ? "array" : typeof bad}`,
+          );
+          assert.equal(
+            (rejected as ClientSessionAuthorityError).body.code,
+            "invalid_session_request",
+          );
+          assert.equal(capture.current, undefined);
+        }
+        const serverAfter = await requireAuthoritativeSession(sid);
+        assert.equal(serverAfter.revision, serverBefore.revision);
+        assert.equal(serverAfter.session_snapshot.messages.length, 0);
+      });
+    });
+
+    await check("P0-C. matching profile.id + plain-object base_analysis is accepted", async () => {
+      await withAuthStore(async () => {
+        const profileId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+        const profile = fixtureUserProfile(profileId);
+        const baseAnalysis = {
+          generated_at: "2026-01-01T00:00:00.000Z",
+          model: "v5_structured_judgments_display",
+          tokens_used: 12,
+          content: "persisted layer-1 compatible object",
+          computation_version: "v5_structured_judgments_display",
+        };
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0c",
+          original_question: "要不要接受调岗？",
+          selected_stored_profile_id: profileId,
+        });
+        const before = (await loadPOJUSession(sid))!;
+        const capture: { current?: AuthoritativeModelInputCapture } = {};
+        const result = await runWithAuthoritativeModelInputCapture(capture, () =>
+          submitAuthoritativeChatTurn({
+            session: {
+              ...before,
+              messages: [
+                ...before.messages,
+                {
+                  role: "user",
+                  content: "我在考虑要不要接受内部调岗。",
+                  timestamp: new Date().toISOString(),
+                  client_id: "turn_p0c_ok",
+                },
+              ],
+            },
+            user_message: "我在考虑要不要接受内部调岗。",
+            client_turn_id: "turn_p0c_ok",
+            expected_revision: before.session_revision ?? 0,
+            locale: "zh",
+            profile,
+            base_analysis: baseAnalysis,
+            claimed_stored_profile_id: profileId,
+          }),
+        );
+        assert.equal(result.ok, true);
+        assert.ok(capture.current);
+        assert.equal(capture.current!.profile?.id, profileId);
+        assert.equal(capture.current!.claimed_stored_profile_id, profileId);
+        assert.equal(capture.current!.session_selected_stored_profile_id, profileId);
+        assert.deepEqual(capture.current!.profile, profile);
+        assert.deepEqual(capture.current!.base_analysis, baseAnalysis);
+        assert.ok(result.session_revision > (before.session_revision ?? 0));
+      });
+    });
+
     await check("P0b. no-profile and profile_skipped paths stay null without fabrication", async () => {
       await withAuthStore(async () => {
         const sid = await createPOJUSession({
@@ -702,6 +878,12 @@ async function main() {
       assert.match(chatSrc, /runWithInProcessDecisionAuthority/);
       assert.match(chatSrc, /resolveAuthoritativeChatProfileInputs/);
       assert.match(chatSrc, /applyAuthoritativeFirstTurnDisplayTitle/);
+      const profileSrc = readFileSync(
+        join(process.cwd(), "lib/poju/session-authority/chat-profile-inputs.ts"),
+        "utf8",
+      );
+      assert.match(profileSrc, /profile\.id must equal claimed_stored_profile_id/);
+      assert.match(profileSrc, /base_analysis must be a plain JSON object/);
     });
 
     await check("E. Readiness confirm path remains server-authoritative (wire present)", async () => {

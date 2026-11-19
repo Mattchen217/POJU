@@ -51,14 +51,38 @@ function authoritativeBoundProfileId(session: POJUSessionState): string | null {
   return null;
 }
 
+function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.prototype.toString.call(value) === "[object Object]"
+  );
+}
+
 function isLikelyUserProfile(value: unknown): value is UserProfile {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (!isPlainJsonObject(value)) return false;
   const p = value as Record<string, unknown>;
   if (typeof p.id !== "string" || !p.id.trim()) return false;
   if (!p.birth || typeof p.birth !== "object" || Array.isArray(p.birth)) return false;
   if (!p.bazi || typeof p.bazi !== "object" || Array.isArray(p.bazi)) return false;
   if (!p.diagnosis || typeof p.diagnosis !== "object" || Array.isArray(p.diagnosis)) return false;
   return true;
+}
+
+/**
+ * Fail-closed structural gate for persisted Base Analysis payloads.
+ * Accepts plain objects only (legacy DeepSeek / Layer-1 / stream shapes).
+ * Does not invent fields or replace invalid payloads with `{}`.
+ */
+function assertBaseAnalysisShape(value: unknown): void {
+  if (value == null) return;
+  if (!isPlainJsonObject(value)) {
+    throw new SessionAuthorityError(
+      "invalid_session_request",
+      "base_analysis must be a plain JSON object",
+    );
+  }
 }
 
 function normalizeClaimedId(value: unknown): string | null {
@@ -70,6 +94,9 @@ function normalizeClaimedId(value: unknown): string | null {
 /**
  * Validate client-supplied personal-analysis inputs against the authoritative
  * Session binding. Returns normalized inputs for `server_invoke`.
+ *
+ * Required identity when a profile payload is present:
+ *   profile.id === claimed_stored_profile_id === authoritativeBoundProfileId(server)
  */
 export function resolveAuthoritativeChatProfileInputs(input: {
   serverSnapshot: POJUSessionState;
@@ -82,6 +109,7 @@ export function resolveAuthoritativeChatProfileInputs(input: {
   const rawBase = input.base_analysis === undefined ? null : input.base_analysis;
   const claimed = normalizeClaimedId(input.claimed_stored_profile_id);
 
+  assertBaseAnalysisShape(rawBase);
   assertPayloadSize("profile", rawProfile, AUTHORITATIVE_CHAT_MAX_PROFILE_BYTES);
   assertPayloadSize("base_analysis", rawBase, AUTHORITATIVE_CHAT_MAX_BASE_ANALYSIS_BYTES);
 
@@ -138,6 +166,17 @@ export function resolveAuthoritativeChatProfileInputs(input: {
       throw new SessionAuthorityError(
         "invalid_session_request",
         "profile binding does not match the authoritative Session",
+      );
+    }
+  }
+
+  // Payload identity must match the claimed and authoritative binding exactly.
+  // Do not normalize or silently rewrite profile.id.
+  if (profile != null) {
+    if (!claimed || !boundId || profile.id !== claimed || claimed !== boundId) {
+      throw new SessionAuthorityError(
+        "invalid_session_request",
+        "profile.id must equal claimed_stored_profile_id and the authoritative Session binding",
       );
     }
   }

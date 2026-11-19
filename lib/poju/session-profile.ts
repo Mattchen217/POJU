@@ -82,6 +82,20 @@ async function loadStoredBaseAnalysis(session: POJUSessionState): Promise<unknow
   return data?.base_analysis ?? null;
 }
 
+/**
+ * Bind the chart UserProfile payload identity to the stored-profile row id.
+ * Authoritative chat requires:
+ *   profile.id === claimed_stored_profile_id === Session.selected_stored_profile_id
+ * Chart engines mint a birth-derived id; the stored row UUID is the Session binding.
+ */
+function bindProfilePayloadIdentity(
+  profile: UserProfile | null,
+  storedProfileId: string,
+): UserProfile | null {
+  if (!profile) return null;
+  return { ...profile, id: storedProfileId };
+}
+
 /** Browser-only: profile + Step 7 base analysis for `/api/poju/chat`. */
 export async function loadSessionProfileBundle(session: POJUSessionState): Promise<{
   profile: UserProfile | null;
@@ -92,7 +106,7 @@ export async function loadSessionProfileBundle(session: POJUSessionState): Promi
     const data = await getStoredProfile(id);
     if (data) {
       return {
-        profile: data.user_profile ?? null,
+        profile: bindProfilePayloadIdentity(data.user_profile ?? null, id),
         base_analysis: data.base_analysis ?? null,
         resolved_profile_id: id,
       };
@@ -102,10 +116,12 @@ export async function loadSessionProfileBundle(session: POJUSessionState): Promi
   if (session.birth_submitted_in_session) {
     const base_analysis = await loadStoredBaseAnalysis(session);
     if (base_analysis != null) {
+      const resolved = resolveStoredProfileIdForSession(session);
+      const profile = await getUserProfile();
       return {
-        profile: await getUserProfile(),
+        profile: resolved ? bindProfilePayloadIdentity(profile, resolved) : profile,
         base_analysis,
-        resolved_profile_id: resolveStoredProfileIdForSession(session),
+        resolved_profile_id: resolved,
       };
     }
   }
