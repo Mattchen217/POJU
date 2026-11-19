@@ -13,7 +13,8 @@
 import { openRouterChatCompletion } from "@/lib/llm/openrouter-shared";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { activeTargets, correctablePriorAnswers } from "./answer-interpretation";
-import type { AnswerClass, ModelAnswerDraft } from "./types";
+import type { AnswerClass, ModelAnswerDraft, UnderstandingState } from "./types";
+import { refreshDecisionUnderstanding } from "./understanding-state";
 
 export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
 
@@ -57,7 +58,20 @@ export type ModelCertainty = (typeof MODEL_CERTAINTIES)[number];
 
 export type { ModelAnswerDraft };
 
-export type ModelInterpretationContext = {
+export type ModelInterpretationContextVersions = {
+  understanding_id: string | null;
+  context_id: string | null;
+  context_version: number | null;
+  blueprint_version: number | null;
+};
+
+export type ModelInterpretationContext = ModelInterpretationContextVersions & {
+  /**
+   * Read-only structured Understanding State, copied from
+   * session.decision_understanding (the same object the UI projects).
+   * Not a second fact database and not authorization to confirm, plan, or freeze.
+   */
+  understanding: UnderstandingState | null;
   decision_question: string | null;
   last_sent_question: {
     question_text: string;
@@ -130,7 +144,7 @@ export type ModelInterpretationSuccess = {
 
 export type ModelInterpretationFailure = {
   ok: false;
-  reason: "call_failed" | "timeout" | "invalid_json" | "invalid_schema";
+  reason: "call_failed" | "timeout" | "invalid_json" | "invalid_schema" | "context_version_mismatch";
   detail: string;
   call_meta?: ModelInterpretationCallMeta;
 };
@@ -172,6 +186,9 @@ const AUTHORITY_FIELD_NAMES = new Set([
   "freeze_state",
   "resolution",
   "blueprint_scope",
+  "budget",
+  "question_budget",
+  "next_question_plan",
   "truth",
   "truth_judgment",
   "has_user_confirm_event",
@@ -198,6 +215,9 @@ Rules:
 8. Do not mark anything confirmed just because it sounds reasonable. You have no confirmation authority and must not emit user_confirmed, verification_level, confirmed, readiness, freeze, resolution, or DIR/DDR/Blueprint authority fields.
 9. Do not classify as unknown just because the answer is short.
 10. Do not infer not_applicable just because a fact was unmentioned.
+11. context.understanding is a read-only structured snapshot of the current Decision Understanding State (the same object the UI reads). Use it only to interpret THIS TURN's user answer in light of what is already understood, still needed, pending confirmation, personal-pattern insight, readiness, and budget. You must not mutate it, confirm facts, change verification, change Readiness, expand Blueprint scope, choose the next question, change the question budget, freeze, or trigger delivery.
+12. context.understanding_id, context_id, context_version, and blueprint_version identify this snapshot. They are not facts and are not a second fact database.
+13. Keep using context.last_sent_question and the question-scoped related RealityFacts / Constraints / Conflicts as the authorized fact context. The Understanding snapshot does not expand your authorized DIR/DDR/role codes.
 
 Role binding:
 1. Each extracted item must bind the most specific authorized role code when you can determine it.
@@ -277,12 +297,87 @@ function lastSentForContext(session: POJUSessionState): ModelInterpretationConte
   };
 }
 
+function structuredCopy<T>(value: T): T {
+  return value == null ? value : (JSON.parse(JSON.stringify(value)) as T);
+}
+
+function versionsFromSession(session: POJUSessionState): ModelInterpretationContextVersions {
+  const dc = session.decision_context;
+  const bp = session.decision_blueprint;
+  const u = session.decision_understanding;
+  const context_id = u?.context_id ?? dc?.context_id ?? null;
+  const context_version = u?.context_version ?? dc?.version ?? null;
+  const blueprint_version = u?.blueprint_version ?? bp?.blueprint_version ?? null;
+  const understanding_id =
+    u?.understanding_id ??
+    (context_id != null && context_version != null ? 'u_' + context_id + '_v' + String(context_version) : null);
+  return { understanding_id, context_id, context_version, blueprint_version };
+}
+
+/** In-process session stamps the interpretation must still match after the model returns. */
+export function sessionInterpretationVersions(
+  session: POJUSessionState,
+): ModelInterpretationContextVersions | null {
+  const dc = session.decision_context;
+  const bp = session.decision_blueprint;
+  if (!dc || !bp) return null;
+  const understanding_id = 'u_' + dc.context_id + '_v' + String(dc.version);
+  return {
+    understanding_id,
+    context_id: dc.context_id,
+    context_version: dc.version,
+    blueprint_version: bp.blueprint_version,
+  };
+}
+
+export function interpretationContextMatchesSession(
+  context: ModelInterpretationContext,
+  session: POJUSessionState,
+): { ok: true } | { ok: false; detail: string } {
+  const expected = sessionInterpretationVersions(session);
+  const u = session.decision_understanding ?? null;
+  const mismatches: string[] = [];
+  if (!expected) {
+    if (!session.decision_context) mismatches.push('missing_decision_context');
+    if (!session.decision_blueprint) mismatches.push('missing_blueprint');
+  } else {
+    if (context.understanding_id !== expected.understanding_id) mismatches.push('understanding_id');
+    if (context.context_id !== expected.context_id) mismatches.push('context_id');
+    if (context.context_version !== expected.context_version) mismatches.push('context_version');
+    if (context.blueprint_version !== expected.blueprint_version) mismatches.push('blueprint_version');
+  }
+  if (!u) {
+    mismatches.push('missing_understanding');
+  } else {
+    if (context.understanding_id !== u.understanding_id) mismatches.push('understanding.understanding_id');
+    if (context.context_id !== u.context_id) mismatches.push('understanding.context_id');
+    if (context.context_version !== u.context_version) mismatches.push('understanding.context_version');
+    if (context.blueprint_version !== u.blueprint_version) mismatches.push('understanding.blueprint_version');
+    if (expected && u.understanding_id !== expected.understanding_id) {
+      mismatches.push('understanding_stale_vs_dc');
+    }
+  }
+  if (mismatches.length > 0) {
+    return { ok: false, detail: 'context_version_mismatch:' + mismatches.join(',') };
+  }
+  return { ok: true };
+}
+
 export function buildModelInterpretationContext(input: {
   session: POJUSessionState;
   statement: string;
   locale?: string;
 }): ModelInterpretationContext {
-  const session = input.session;
+  const session =
+    input.session.decision_context && input.session.decision_blueprint
+      ? input.session.decision_understanding &&
+        input.session.decision_understanding.context_id === input.session.decision_context.context_id &&
+        input.session.decision_understanding.context_version === input.session.decision_context.version &&
+        input.session.decision_understanding.blueprint_version ===
+          input.session.decision_blueprint.blueprint_version
+        ? input.session
+        : refreshDecisionUnderstanding(input.session)
+      : input.session;
   const targets = activeTargets(session);
   const authorizedDir = new Set(targets.dir_ids);
   const authorizedRoles = new Set(targets.fact_roles);
@@ -346,7 +441,12 @@ export function buildModelInterpretationContext(input: {
     session.locked_output_locale ||
     "zh";
 
+  const versions = versionsFromSession(session);
   return {
+    ...versions,
+    understanding: session.decision_understanding
+      ? structuredCopy(session.decision_understanding)
+      : null,
     decision_question: dc?.definition?.decision_question ?? session.original_question ?? null,
     last_sent_question: lastSentForContext(session),
     authorized: {
@@ -587,6 +687,14 @@ export function isModelInterpretationContext(value: unknown): value is ModelInte
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const c = value as Record<string, unknown>;
   const authorized = c.authorized as Record<string, unknown> | undefined;
+  const understandingOk =
+    c.understanding === null ||
+    (!!c.understanding && typeof c.understanding === "object" && !Array.isArray(c.understanding));
+  const versionOk =
+    (c.understanding_id === null || typeof c.understanding_id === "string") &&
+    (c.context_id === null || typeof c.context_id === "string") &&
+    (c.context_version === null || typeof c.context_version === "number") &&
+    (c.blueprint_version === null || typeof c.blueprint_version === "number");
   return (
     typeof c.user_answer === "string" &&
     c.user_answer.trim().length > 0 &&
@@ -598,7 +706,9 @@ export function isModelInterpretationContext(value: unknown): value is ModelInte
     Array.isArray(c.related_reality_facts) &&
     Array.isArray(c.related_constraints) &&
     Array.isArray(c.related_conflicts) &&
-    Array.isArray(c.blueprint_directions)
+    Array.isArray(c.blueprint_directions) &&
+    understandingOk &&
+    versionOk
   );
 }
 
@@ -638,7 +748,14 @@ export async function interpretAnswerWithModel(input: {
         signal: input.signal,
         context,
       });
-      return { ...parseAndValidateModelAnswerDraft(hooked), call_meta: hookMeta() };
+      const parsed = parseAndValidateModelAnswerDraft(hooked);
+      const meta = hookMeta();
+      if (!parsed.ok) return { ...parsed, call_meta: meta };
+      const match = interpretationContextMatchesSession(context, input.session);
+      if (!match.ok) {
+        return { ok: false, reason: "context_version_mismatch", detail: match.detail, call_meta: meta };
+      }
+      return { ...parsed, call_meta: meta };
     } catch (e) {
       return { ...failureFromUnknown(e), call_meta: hookMeta() };
     }
@@ -666,7 +783,13 @@ export async function interpretAnswerWithModel(input: {
       latency_ms: Date.now() - startedAt,
       raw_text: result.text,
     };
-    return { ...parseAndValidateModelAnswerDraft(result.text), call_meta };
+    const parsed = parseAndValidateModelAnswerDraft(result.text);
+    if (!parsed.ok) return { ...parsed, call_meta };
+    const match = interpretationContextMatchesSession(context, input.session);
+    if (!match.ok) {
+      return { ok: false, reason: "context_version_mismatch", detail: match.detail, call_meta };
+    }
+    return { ...parsed, call_meta };
   } catch (e) {
     return {
       ...failureFromUnknown(e),

@@ -523,3 +523,26 @@ export function buildUnderstandingState(input: {
       input.session.decision_understanding?.last_sent_question ?? null,
   };
 }
+
+
+/**
+ * Rebuild session.decision_understanding from the latest in-process DC + Blueprint.
+ * Used immediately before Answer Interpretation so the model and UI read the
+ * same structured snapshot. This is a derived view, not a second fact store.
+ */
+export function refreshDecisionUnderstanding(
+  session: POJUSessionState,
+  input?: { now?: string; last_answer_event_id?: string | null },
+): POJUSessionState {
+  const blueprint = session.decision_blueprint;
+  if (!session.decision_context || !blueprint) return session;
+  const prev = session.decision_understanding;
+  const understanding = buildUnderstandingState({
+    session,
+    blueprint,
+    now: input?.now,
+    last_answer_event_id: input?.last_answer_event_id ?? prev?.last_answer_event_id ?? null,
+    next_question_plan: prev?.next_question_plan ?? session.adaptive_ask_plan ?? null,
+  });
+  return { ...session, decision_understanding: understanding };
+}

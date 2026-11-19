@@ -666,11 +666,22 @@ async function main() {
       context.related_reality_facts.some((f) => f.statement.includes("Latest confirmed option set")),
       "related facts must come from the latest DC behind Understanding",
     );
-    assert.equal("current_understanding" in context, false);
-    assert.equal("understood" in context, false);
-    assert.equal("need_to_understand" in context, false);
-    assert.equal("personal_pattern_insight" in context, false);
-
+    const u = withUnderstanding.decision_understanding;
+    assert.ok(context.understanding, "model context must include the full Understanding State");
+    assert.equal(context.understanding_id, u!.understanding_id);
+    assert.equal(context.context_id, u!.context_id);
+    assert.equal(context.context_version, u!.context_version);
+    assert.equal(context.blueprint_version, u!.blueprint_version);
+    assert.deepEqual(context.understanding!.current_understanding, u!.current_understanding);
+    assert.deepEqual(context.understanding!.understood, u!.understood);
+    assert.deepEqual(context.understanding!.answered_pending_confirmation, u!.answered_pending_confirmation);
+    assert.deepEqual(context.understanding!.need_to_understand, u!.need_to_understand);
+    assert.deepEqual(context.understanding!.personal_pattern_insight, u!.personal_pattern_insight);
+    assert.deepEqual(context.understanding!.readiness, u!.readiness);
+    assert.deepEqual(context.understanding!.readiness_progress, u!.readiness_progress);
+    assert.deepEqual(context.understanding!.budget, u!.budget);
+    assert.equal(context.understanding!.last_answer_event_id, u!.last_answer_event_id);
+    assert.deepEqual(context.understanding!.last_sent_question, u!.last_sent_question);
     const box = projectDecisionUnderstandingBox(withUnderstanding);
     const ui = projectAdaptiveQuestionForUi(withUnderstanding);
     assert.equal(box.current_understanding, understanding.current_understanding.summary);

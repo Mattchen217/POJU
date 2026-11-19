@@ -16,6 +16,8 @@ export {
   interpretAnswerWithModel,
   parseAndValidateModelAnswerDraft,
   buildModelInterpretationContext,
+  interpretationContextMatchesSession,
+  sessionInterpretationVersions,
   ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS,
   MODEL_ANSWER_INTERPRETER_VERSION as MODEL_ANSWER_INTERPRETER_VERSION_MODEL,
 } from "./answer-interpretation-model";
@@ -38,6 +40,7 @@ export {
 } from "./topic-classify";
 export {
   buildUnderstandingState,
+  refreshDecisionUnderstanding,
   evaluatePersonalPatternInsight,
   defaultBudget,
 } from "./understanding-state";

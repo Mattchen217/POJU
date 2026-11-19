@@ -38,7 +38,7 @@ import { ensureDecisionBlueprint,
   activateNextBlueprintPriorityBand } from "./blueprint";
 import { buildAdaptiveQuestionPlan } from "./question-generation";
 import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
-import { buildUnderstandingState } from "./understanding-state";
+import { buildUnderstandingState, refreshDecisionUnderstanding } from "./understanding-state";
 import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
 import {
   applyIntakeProtection,
@@ -935,6 +935,7 @@ async function runAdaptiveQuestionTurnInner(
       });
     }
 
+    current = refreshDecisionUnderstanding(current, { now: input.now });
     const interpreted = await interpretAnswerWithModel({
       session: current,
       statement,
@@ -2423,6 +2424,7 @@ async function handlePendingIntakeControlTurn(input: {
     | { ok: true; event: AnswerEvent; draft: Extract<ModelInterpretationResult, { ok: true }>["draft"] }
     | { ok: false; result: AdaptiveTurnResult }
   > => {
+    current = refreshDecisionUnderstanding(current, { now: input.now });
     const interpreted = await interpretAnswerWithModel({
       session: current,
       statement: input.statement,

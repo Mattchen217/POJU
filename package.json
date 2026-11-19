@@ -204,6 +204,7 @@
     "test:di2-feature-landing-main-path": "tsx scripts/test-di2-feature-landing-main-path.ts",
     "test:di2-understanding-composer-flow": "tsx scripts/test-di2-understanding-composer-flow.ts",
     "test:di2-understanding-adaptive-engine-alignment": "tsx scripts/test-di2-understanding-adaptive-engine-alignment.ts",
+    "test:di2-understanding-answer-interpretation-context": "tsx scripts/test-di2-understanding-answer-interpretation-context.ts",
     "test:deliverable-skeleton": "tsx scripts/test-deliverable-skeleton.ts",
     "test:m5-r1-authorization": "tsx scripts/test-m5-r1-authorization.ts",
     "test:m5-r1-fu1": "tsx scripts/test-m5-r1-authorization.ts --only=FU1",
