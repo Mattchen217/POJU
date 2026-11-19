@@ -46,14 +46,28 @@ import {
   type PojuActivity,
 } from "@/lib/poju/activity";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { createPOJUSession, loadPOJUSession, savePOJUSession, confirmSessionAfterCorePersist } from "@/lib/poju/session-manager";
+import {
+  createPOJUSession,
+  loadPOJUSession,
+  savePOJUSession,
+  confirmSessionAfterCorePersist,
+  mirrorAuthoritativeSessionLocally,
+} from "@/lib/poju/session-manager";
 import { hydratePersistIdempotencyFromKeys } from "@/lib/poju/decision-context/persist";
 import { confirmTopicApplicabilityEvalFromUiClick } from "@/lib/poju/decision-context/topic-applicability-write";
 import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-delivery-vault";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
-import { handleUserMessage, handleUserActionUpdate, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import { handleUserActionUpdate, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import {
+  submitAuthoritativeChatTurn,
+  isRecoverableSessionAuthorityCode,
+} from "@/lib/poju/session-authority/chat-client";
+import {
+  ClientSessionAuthorityError,
+  restoreAuthoritativeSessionFromClient,
+} from "@/lib/poju/session-authority/client";
 import {
   buildDyadCompatSummary,
   dyadCollectedPatch,
@@ -1437,16 +1451,48 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             data_url: errorRestore.attachment.data_url,
           }
         : null;
-      const updatedSession = await handleUserMessage({
-        session: baseSession,
-        userMessage,
-        locale: processLocale(baseSession),
-        userAlreadyAppended: true,
-        signal: ac.signal,
-        attachment: attachWire,
-      });
+      const lastUser = [...baseSession.messages]
+        .reverse()
+        .find((m) => m.role === "user" && !m.is_rejected);
+      const clientTurnId =
+        (typeof lastUser?.client_id === "string" && lastUser.client_id.trim()) ||
+        safeRandomUUID();
+      const expectedRevision =
+        errorRestore?.rollbackSession.session_revision ??
+        baseSession.session_revision ??
+        0;
+      let authoritative;
+      try {
+        authoritative = await submitAuthoritativeChatTurn({
+          session: baseSession,
+          user_message: userMessage,
+          client_turn_id: clientTurnId,
+          expected_revision: expectedRevision,
+          locale: processLocale(baseSession),
+          signal: ac.signal,
+          attachment: attachWire,
+        });
+      } catch (authErr) {
+        if (
+          authErr instanceof ClientSessionAuthorityError &&
+          isRecoverableSessionAuthorityCode(authErr.body.code)
+        ) {
+          const restored = await restoreAuthoritativeSessionFromClient({
+            sessionId: baseSession.session_id,
+            loadLocal: loadPOJUSession,
+            saveLocal: async (s) => {
+              await mirrorAuthoritativeSessionLocally(s);
+            },
+          });
+          if (restored.session) {
+            onSessionUpdate(restored.session);
+          }
+        }
+        throw authErr;
+      }
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
+      const updatedSession = authoritative.session;
       const userCount = updatedSession.messages.filter((m) => m.role === "user").length;
       let toPersist = updatedSession;
       if (
@@ -1510,7 +1556,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         revealReplyFromActivity(activityForReveal, { messages: toPersist.messages });
       }
       syncDebugStateLedger(toPersist);
-      await savePOJUSession(toPersist);
+      // Adopt the committed server snapshot into the local mirror (exact revisions).
+      toPersist = await mirrorAuthoritativeSessionLocally(toPersist);
+      onSessionUpdate(toPersist);
       if (toPersist.main_delivery_done && !baseSession.main_delivery_done) {
         setSituationNotice(t("final_delivery_done"));
         notifyPivotDeliveryVaultItem(toPersist.session_id);
@@ -2192,8 +2240,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       messages: [...baseSession.messages, optimisticUser],
       locked_output_locale: parseAppLocale(locale),
     };
+    // Optimistic paint only — do not bump local session_revision before the
+    // server-authoritative CAS commit returns.
     onSessionUpdate(withUser);
-    void savePOJUSession(withUser).catch(() => undefined);
 
     await runUserTurn(withUser, userMessage, {
       rollbackSession: baseSession,
@@ -4235,13 +4284,30 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }
 
   async function continueAfterDyadGate(nextSession: POJUSessionState) {
-    const continued = await handleUserMessage({
-      session: nextSession,
-      userMessage: dyadContinuationUserMessage(nextSession.dyad_offer_status),
+    const content = dyadContinuationUserMessage(nextSession.dyad_offer_status);
+    const clientTurnId = safeRandomUUID();
+    const withUser: POJUSessionState = {
+      ...nextSession,
+      messages: [
+        ...nextSession.messages,
+        {
+          role: "user",
+          content,
+          timestamp: new Date().toISOString(),
+          client_id: clientTurnId,
+        },
+      ],
+    };
+    onSessionUpdate(withUser);
+    const continued = await submitAuthoritativeChatTurn({
+      session: withUser,
+      user_message: content,
+      client_turn_id: clientTurnId,
+      expected_revision: nextSession.session_revision ?? 0,
       locale: sessionLang,
     });
-    await savePOJUSession(continued);
-    onSessionUpdate(continued);
+    const mirrored = await mirrorAuthoritativeSessionLocally(continued.session);
+    onSessionUpdate(mirrored);
   }
 
   async function handleDyadSkip() {

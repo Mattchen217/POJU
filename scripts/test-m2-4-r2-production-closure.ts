@@ -437,51 +437,59 @@ async function main() {
       assert.ok(sent(s2) && s2.decision_blueprint!.dir_ids.some((d) => sent(s2)!.dir_ids.includes(d)));
     });
 
-    // ---------- Browser transport + route ----------
-    await check("R2C-11 browser transport posts context to the server route and parses its text", async () => {
+    // ---------- Retired public proxy (Answer Interpretation is server-only) ----------
+    await check("R2C-11 browser path refuses the retired answer-interpretation proxy", async () => {
       const sid = await fresh("c11");
       const s = await load(sid);
-      fetchMode = "route_ok";
       routeBodies.length = 0;
-      const ok = await interpretAnswerWithModel({ session: s, statement: "我打算做代运营。", source_turn_id: "t11" });
-      assert.equal(ok.ok, true);
-      assert.equal(ok.call_meta?.source, "openrouter");
-      assert.equal(routeBodies.length, 1);
-      const body = routeBodies[0] as { context: Ctx; session_id: string };
-      assert.equal(body.session_id, s.session_id);
-      assert.equal(body.context.user_answer, "我打算做代运营。");
-      assert.equal(JSON.stringify(body).includes("OPENROUTER"), false);
-      fetchMode = "route_timeout";
-      const to = await interpretAnswerWithModel({ session: s, statement: "x答", source_turn_id: "t11b" });
-      assert.equal(to.ok, false);
-      if (!to.ok) assert.equal(to.reason, "timeout");
-      fetchMode = "route_502";
-      const cf = await interpretAnswerWithModel({ session: s, statement: "x答", source_turn_id: "t11c" });
-      assert.equal(cf.ok, false);
-      if (!cf.ok) assert.equal(cf.reason, "call_failed");
+      // installIntakeR6TestGlobals defines window → production browser fail-closed.
+      const refused = await interpretAnswerWithModel({
+        session: s,
+        statement: "我打算做代运营。",
+        source_turn_id: "t11",
+      });
+      assert.equal(refused.ok, false);
+      if (!refused.ok) {
+        assert.equal(refused.reason, "call_failed");
+        assert.match(String(refused.detail ?? ""), /answer_interpretation_must_run_server_side/);
+      }
+      assert.equal(routeBodies.length, 0, "browser must not POST the retired proxy");
+      assert.equal(ANSWER_INTERPRETATION_ROUTE, "/api/poju/answer-interpretation");
       fetchMode = "stub";
     });
 
-    await check("R2C-12 server route validates input and fails closed without a key", async () => {
-      const bad = await route.POST(new Request("http://localhost/api/poju/answer-interpretation", { method: "POST", body: "{}" }));
-      assert.equal(bad.status, 400);
+    await check("R2C-12 retired answer-interpretation route returns 410 without OpenRouter spend", async () => {
+      const bad = await route.POST(
+        new Request("http://localhost/api/poju/answer-interpretation", { method: "POST", body: "{}" }),
+      );
+      assert.equal(bad.status, 410);
+      const badJson = (await bad.json()) as { ok: boolean; error: string };
+      assert.equal(badJson.ok, false);
+      assert.equal(badJson.error, "endpoint_retired");
+
       const sid = await fresh("c12");
       const s = await load(sid);
       const context = buildModelInterpretationContext({ session: s, statement: "我打算做代运营。" });
       const saved = process.env.OPENROUTER_API_KEY;
-      delete process.env.OPENROUTER_API_KEY;
+      process.env.OPENROUTER_API_KEY = saved ?? "must-not-be-spent";
       try {
         const res = await route.POST(
           new Request("http://localhost/api/poju/answer-interpretation", {
             method: "POST",
-            body: JSON.stringify({ context, session_id: s.session_id }),
+            body: JSON.stringify({
+              context,
+              session_id: s.session_id,
+              locked_provider: "forged-provider",
+            }),
           }),
         );
-        assert.equal(res.status, 502);
+        assert.equal(res.status, 410);
         const json = (await res.json()) as { ok: boolean; error: string };
-        assert.deepEqual(json, { ok: false, error: "call_failed" });
+        assert.equal(json.ok, false);
+        assert.equal(json.error, "endpoint_retired");
       } finally {
-        if (saved !== undefined) process.env.OPENROUTER_API_KEY = saved;
+        if (saved === undefined) delete process.env.OPENROUTER_API_KEY;
+        else process.env.OPENROUTER_API_KEY = saved;
       }
     });
 

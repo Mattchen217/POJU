@@ -200,7 +200,11 @@ async function main() {
         assert.equal(afterSecond.revision, 2);
         const users = afterSecond.session_snapshot.messages.filter((m) => m.role === "user").map((m) => m.content);
         assert.deepEqual(users, ["first turn", "second turn"]);
-        assert.equal(modelCalls >= 2, true);
+        // DI2 M1 authorized questions / readiness confirms skip the generic Chat
+        // LLM (callPOJULLMDirect). Session CAS still advances; modelCalls may be 0.
+        const asst = afterSecond.session_snapshot.messages.filter((m) => m.role === "assistant");
+        assert.ok(asst.length >= 1, "assistant replies must be persisted on the server Session");
+        assert.equal(afterSecond.revision >= 2, true);
       });
     });
   });
@@ -540,30 +544,23 @@ async function main() {
     await withStore(async () => {
       const record = await initRecord("stream-abort");
       const controller = new AbortController();
-      await runWithTestChatModel(async ({ signal }) => {
+      // Fresh-session DI2 bootstrap can finish before the generic Chat LLM is
+      // reached. Abort the signal before the stream starts so the authoritative
+      // turn fail-closes without a CAS commit.
+      controller.abort();
+      await runWithTestChatModel(async () => {
         modelCalls += 1;
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(() => resolve(), 2000);
-          const onAbort = () => {
-            clearTimeout(timer);
-            const error = new Error("aborted");
-            error.name = "AbortError";
-            reject(error);
-          };
-          if (signal?.aborted) onAbort();
-          signal?.addEventListener("abort", onAbort, { once: true });
-        });
         return cannedLlm("should-not-commit");
       }, async () => {
         const streamPromise = createPojuChatStreamResponse(
           {
             locale: "zh",
-            session: clientSessionFrom(record, { messages: [userMessage("stream me", "turn_stream_1")] }),
+            session: clientSessionFrom(record, {
+              messages: [userMessage("stream me", "turn_stream_1")],
+            }),
           },
           controller.signal,
         );
-        await new Promise((r) => setTimeout(r, 30));
-        controller.abort();
         const events = await readSse(streamPromise);
         assert.ok(events.some((event) => event.type === "aborted" || event.type === "error"));
         assert.equal(events.some((event) => event.type === "complete"), false);
@@ -664,7 +661,13 @@ async function main() {
         const current = await requireAuthoritativeSession(record.session_id);
         assert.equal(current.revision, 1);
         assert.equal(current.session_snapshot.messages.filter((m) => m.role === "user").length, 1);
-        assert.equal(modelCalls - before, 1);
+        // Fresh DI2 turns may early-return after M1 without the generic Chat LLM.
+        // Idempotency must not double-advance revision/messages either way.
+        assert.equal(
+          current.session_snapshot.messages.filter((m) => m.role === "assistant").length,
+          first.body.authoritative_session.messages.filter((m: { role: string }) => m.role === "assistant").length,
+        );
+        assert.ok(modelCalls - before <= 1);
       });
     });
   });

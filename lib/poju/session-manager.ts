@@ -22,6 +22,7 @@ import {
   createPOJUSessionRecordIfAbsent,
   mutatePOJUSession,
   resolveRevisionMirror,
+  writeLocalAuthorityMirror,
   SessionCasError,
   SESSION_CREATE_EXISTS,
 } from "@/lib/poju/session-mutation";
@@ -359,6 +360,18 @@ export async function runPOJUSessionPostCommitSideEffects(state: POJUSessionStat
 export async function savePOJUSession(state: POJUSessionState): Promise<void> {
   await savePOJUSessionCore(state);
   await runPOJUSessionPostCommitSideEffects(state);
+}
+
+/**
+ * Persist a server-committed authoritative Session into the local mirror.
+ * Exact revisions are kept (no local CAS bump / no ledger re-append).
+ */
+export async function mirrorAuthoritativeSessionLocally(
+  state: POJUSessionState,
+): Promise<POJUSessionState> {
+  const mirrored = await writeLocalAuthorityMirror(state);
+  await runPOJUSessionPostCommitSideEffects(mirrored);
+  return mirrored;
 }
 
 export interface CommitDecisionContextChangeInput {

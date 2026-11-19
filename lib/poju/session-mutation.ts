@@ -892,3 +892,86 @@ export async function casWritePOJUSessionFromCandidate(
   candidate.dc_write_revision = result.dc_write_revision;
   return result;
 }
+
+/**
+ * Replace the local IndexedDB mirror with an already-committed server Session
+ * snapshot. Does not bump revisions and does not re-append the DC ledger —
+ * the server CAS + ledger commit already happened. The blob and row mirrors
+ * are set to the exact server `session_revision` / `dc_write_revision`.
+ */
+export async function writeLocalAuthorityMirror(
+  authoritative: POJUSessionState,
+): Promise<POJUSessionState> {
+  const sessionId = authoritative.session_id;
+  if (!sessionId || sessionId.trim().length < 8) {
+    throw new SessionCasError("INVALID_SESSION_ID", "session_id missing or too short");
+  }
+  const session_revision =
+    typeof authoritative.session_revision === "number" &&
+    Number.isFinite(authoritative.session_revision)
+      ? authoritative.session_revision
+      : 0;
+  const dc_write_revision =
+    typeof authoritative.dc_write_revision === "number" &&
+    Number.isFinite(authoritative.dc_write_revision)
+      ? authoritative.dc_write_revision
+      : 0;
+  if (!isNonNegativeSafeInt(session_revision) || !isNonNegativeSafeInt(dc_write_revision)) {
+    throw new SessionCasError(REVISION_MIRROR_MISMATCH, "authoritative revision illegal");
+  }
+
+  const committedState: POJUSessionState = {
+    ...authoritative,
+    session_revision,
+    dc_write_revision,
+  };
+
+  if (isMemorySessionPersistActive()) {
+    writeMemoryPersistedSession(committedState);
+    return committedState;
+  }
+
+  const payload = await encryptJson(SESSION_SECRET, committedState);
+  const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
+  const lastInteraction = new Date(committedState.last_interaction_at);
+  const expiresAt = new Date(committedState.expires_at);
+
+  const run = async () => {
+    const row = await db.pojuSessionRecords.get(sessionId);
+    if (!row) {
+      throw new SessionCasError(SESSION_CAS_CONFLICT, `session row missing: ${sessionId}`);
+    }
+    if (!isRowOwnedBy(row, ownerKey)) {
+      throw new SessionCasError(SESSION_CAS_CONFLICT, "owner partition mismatch");
+    }
+    const updated = await db.pojuSessionRecords.update(sessionId, {
+      encrypted_data: payload.cipher,
+      iv: payload.iv,
+      session_revision,
+      dc_write_revision,
+      original_question: committedState.original_question.trim(),
+      last_interaction_at: lastInteraction,
+      expires_at: expiresAt,
+      tokens_used: committedState.tokens_used,
+      turn_count: countUserTurns(committedState),
+      current_state_hint: getCurrentStateHint(committedState),
+      main_delivery_done: committedState.main_delivery_done,
+      main_delivery_at: committedState.main_delivery_done ? new Date() : undefined,
+      active_cycle_id: committedState.active_cycle_id,
+    });
+    if (updated !== 1) {
+      throw new SessionCasError(
+        SESSION_CAS_CONFLICT,
+        `pojuSessionRecords authority mirror update expected 1 row, got ${updated}`,
+      );
+    }
+  };
+
+  if (typeof window !== "undefined" && typeof db.transaction === "function") {
+    await db.transaction("rw", db.pojuSessionRecords, run);
+  } else {
+    await run();
+  }
+  return committedState;
+}

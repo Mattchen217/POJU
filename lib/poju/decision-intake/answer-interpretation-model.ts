@@ -595,6 +595,11 @@ export type AnswerInterpretationModelText = {
   finish_reason: string | null;
 };
 
+/**
+ * Retired public proxy. Production Answer Interpretation runs only inside the
+ * server-authoritative chat turn (`executeAuthoritativeChatTurn` → server
+ * `callAnswerInterpretationModel`). The HTTP route must not spend OpenRouter.
+ */
 export const ANSWER_INTERPRETATION_ROUTE = "/api/poju/answer-interpretation";
 
 /** Single OpenRouter call; server-only (the key never reaches the browser). */
@@ -604,6 +609,11 @@ export async function callAnswerInterpretationModel(input: {
   locked_provider: string | null;
   signal?: AbortSignal;
 }): Promise<AnswerInterpretationModelText> {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "answer_interpretation_must_run_server_side: browser cannot call OpenRouter or the retired public proxy",
+    );
+  }
   const result = await openRouterChatCompletion({
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
@@ -633,53 +643,6 @@ export async function callAnswerInterpretationModel(input: {
     model: result.model ?? null,
     finish_reason: result.finish_reason ?? null,
   };
-}
-
-async function callAnswerInterpretationRoute(input: {
-  context: ModelInterpretationContext;
-  session_id: string;
-  locked_provider: string | null;
-  signal?: AbortSignal;
-}): Promise<AnswerInterpretationModelText> {
-  const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(new Error("llm_timeout")),
-    ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS + 10_000,
-  );
-  const onAbort = () => controller.abort(new Error("abort"));
-  if (input.signal?.aborted) onAbort();
-  input.signal?.addEventListener("abort", onAbort, { once: true });
-  try {
-    const res = await fetch(ANSWER_INTERPRETATION_ROUTE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        context: input.context,
-        session_id: input.session_id,
-        locked_provider: input.locked_provider,
-      }),
-      signal: controller.signal,
-    });
-    const data = (await res.json().catch(() => null)) as
-      | ({ ok: true } & AnswerInterpretationModelText)
-      | { ok: false; error?: string }
-      | null;
-    if (!res.ok || !data || data.ok !== true) {
-      const error = data && data.ok === false ? data.error ?? "" : "";
-      throw new Error(
-        error === "timeout" ? "llm_timeout" : `answer_interpretation_route_failed:${res.status}:${error}`,
-      );
-    }
-    return {
-      text: typeof data.text === "string" ? data.text : "",
-      provider: typeof data.provider === "string" ? data.provider : null,
-      model: typeof data.model === "string" ? data.model : null,
-      finish_reason: typeof data.finish_reason === "string" ? data.finish_reason : null,
-    };
-  } finally {
-    clearTimeout(timer);
-    input.signal?.removeEventListener("abort", onAbort);
-  }
 }
 
 /** Shape check for contexts arriving at the server route; never authorizes anything. */
@@ -762,19 +725,14 @@ export async function interpretAnswerWithModel(input: {
   }
 
   try {
-    const call = {
+    // Production DI2 Answer Interpretation runs only on the server-authoritative
+    // chat path. There is no browser OpenRouter key and no public proxy.
+    const result = await callAnswerInterpretationModel({
       context,
       session_id: input.session.session_id,
       locked_provider: input.session.locked_provider ?? null,
       signal: input.signal,
-    };
-    // The browser has no OpenRouter key: it reaches the model through the
-    // server route, which returns raw text only. Parsing and authorization
-    // stay here in either case.
-    const result =
-      typeof window === "undefined"
-        ? await callAnswerInterpretationModel(call)
-        : await callAnswerInterpretationRoute(call);
+    });
     const call_meta: ModelInterpretationCallMeta = {
       source: "openrouter",
       provider: result.provider,

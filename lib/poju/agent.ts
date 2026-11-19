@@ -1528,6 +1528,20 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         summary +
         "\n\n如果以上理解正确，请回复确认；如需补充，请直接说明。";
     }
+    let m1Attestation: import("@/lib/poju/types").AssistantHistoryAttestation | undefined;
+    if (input.server_invoke) {
+      // Authoritative server turns must sign even when test shims define `window`.
+      try {
+        const { signAssistantHistoryAttestation } = await import(
+          /* webpackIgnore: true */
+          "@/lib/poju/decision-authority/server/assistant-history-attestation",
+        );
+        m1Attestation =
+          signAssistantHistoryAttestation(sessionForLlm.session_id, finalContent) ?? undefined;
+      } catch {
+        m1Attestation = undefined;
+      }
+    }
     const assistantMessage: POJUMessage = {
       role: "assistant",
       content: finalContent,
@@ -1537,6 +1551,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         m1_skipped_generic_chat_llm: true,
         ...(m1HasAuthorizedQuestion ? { m1_authorized_question: true as const } : {}),
         ...(m1HasReadinessConfirm ? { m21_readiness_stop: true as const } : {}),
+        ...(m1Attestation ? { assistant_history_attestation: m1Attestation } : {}),
       },
     };
     let sessionOut = withSessionProfileFlags({

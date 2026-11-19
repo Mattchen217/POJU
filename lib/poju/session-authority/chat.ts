@@ -11,6 +11,7 @@
 
 import { handleUserMessage } from "@/lib/poju/agent";
 import { runWithMemorySessionPersist } from "@/lib/poju/session-authority/memory-persist";
+import { runWithInProcessDecisionAuthority } from "@/lib/poju/decision-authority/server/in-process-transport";
 import type { POJULLMResponse } from "@/lib/llm/poju-llm";
 import {
   getAuthoritativeChatTestHooks,
@@ -132,21 +133,24 @@ export async function executeAuthoritativeChatTurn(
   const capture: { current?: POJULLMResponse } = {};
   let sessionOut: POJUSessionState;
   try {
-    sessionOut = await runWithMemorySessionPersist(boundSession, () =>
-      runWithLlmCapture(capture, () =>
-        handleUserMessage({
-        session: boundSession,
-        userMessage: incoming.content,
-        locale: String(body.locale ?? "en"),
-        userAlreadyAppended: true,
-        signal: opts?.signal,
-        attachment: body.attachment ?? null,
-        server_invoke: {
-          base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
-          profile: body.profile ?? body.userProfile ?? null,
-        },
-        __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
-      }),
+    // In-process DC ledger transport for this turn only (no relative HTTP self-fetch).
+    sessionOut = await runWithInProcessDecisionAuthority(() =>
+      runWithMemorySessionPersist(boundSession, () =>
+        runWithLlmCapture(capture, () =>
+          handleUserMessage({
+            session: boundSession,
+            userMessage: incoming.content,
+            locale: String(body.locale ?? "en"),
+            userAlreadyAppended: true,
+            signal: opts?.signal,
+            attachment: body.attachment ?? null,
+            server_invoke: {
+              base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
+              profile: body.profile ?? body.userProfile ?? null,
+            },
+            __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
+          }),
+        ),
       ),
     );
   } catch (error) {

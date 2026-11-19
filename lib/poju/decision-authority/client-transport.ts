@@ -71,7 +71,26 @@ const httpTransport: DecisionAuthorityTransport = {
 
 let active: DecisionAuthorityTransport = httpTransport;
 
+/**
+ * Optional request-scoped override (server ALS). Bound from
+ * `decision-authority/server/in-process-transport.ts` so concurrent authoritative
+ * turns never swap a process-global transport.
+ */
+type DecisionAuthorityTransportRuntime = {
+  getRequestTransport: () => DecisionAuthorityTransport | null;
+};
+
+let transportRuntime: DecisionAuthorityTransportRuntime | null = null;
+
+export function bindDecisionAuthorityTransportRuntime(
+  runtime: DecisionAuthorityTransportRuntime,
+): void {
+  transportRuntime = runtime;
+}
+
 export function getDecisionAuthorityTransport(): DecisionAuthorityTransport {
+  const scoped = transportRuntime?.getRequestTransport() ?? null;
+  if (scoped) return scoped;
   return active;
 }
 
