@@ -194,6 +194,10 @@ export interface POJUMessage {
       | "intake_continued";
     m1_persist_error?: string | null;
     m1_ask_error?: string | null;
+    /** Successful M1 ask/confirm returned the authorized text without a generic Chat LLM call. */
+    m1_skipped_generic_chat_llm?: boolean;
+    m1_authorized_question?: boolean;
+    m21_readiness_stop?: boolean;
   };
   is_rejected?: boolean;
   rejection_type?: "too_long" | "jailbreak" | "spam";

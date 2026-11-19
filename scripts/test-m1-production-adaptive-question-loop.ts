@@ -308,7 +308,11 @@ async function main() {
         userMessage: "我目前月薪大约 3 万，大概还能撑。",
         locale: "zh-CN",
       });
-      assert.deepEqual(fetchCalls, ["/api/poju/chat"]);
+      assert.deepEqual(
+        fetchCalls,
+        [],
+        "authorized M1 question must not call the generic Chat LLM",
+      );
       assert.ok(out.decision_context);
       assert.ok(out.decision_context!.reality_facts.length > beforeFacts);
       const fact = out.decision_context!.reality_facts.find(
@@ -322,6 +326,8 @@ async function main() {
       assert.ok(out.adaptive_ask_plan);
       assert.equal(asst.content, out.adaptive_ask_plan!.question_text);
       assert.notEqual(asst.content, stubResponse);
+      assert.equal(asst.meta?.m1_skipped_generic_chat_llm, true);
+      assert.equal(asst.meta?.m1_authorized_question, true);
       q1 = asst.content;
       // Need ↔ plan DIR link
       const needDirs = new Set(

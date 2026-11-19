@@ -1475,6 +1475,129 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     });
   }
 
+  // DI2 Phase 2 precheck: after a successful M1 authorized question or
+  // readiness confirm, do not call the generic Chat LLM. That call does not
+  // plan the next question, and handleUserMessage later discarded its text
+  // in favor of plan.question_text or the confirm prompt. A wasted generic
+  // LLM call must not be treated as model-driven adaptive Q&A.
+  const m1HasAuthorizedQuestion = Boolean(
+    m1CollectingTurn?.plan && m1CollectingTurn.authorized_question,
+  );
+  const m1HasReadinessConfirm =
+    Boolean(m1CollectingTurn) &&
+    m1CollectingTurn!.outcome !== "planner_blocked" &&
+    !m1CollectingTurn!.authorized_question &&
+    Boolean(m1CollectingTurn!.understanding) &&
+    m1CollectingTurn!.understanding!.readiness.can_ask === false &&
+    !(
+      Boolean(m1CollectingTurn!.ask_error) &&
+      (m1CollectingTurn!.ask_error!.includes("understanding_exception") ||
+        m1CollectingTurn!.ask_error!.includes("planner_exception"))
+    );
+  if (m1CollectingTurn && (m1HasAuthorizedQuestion || m1HasReadinessConfirm)) {
+    const nowIso = new Date().toISOString();
+    const rollingExpiry = new Date(Date.now() + THIRTY_DAYS_MS).toISOString();
+    const lastUser = [...messagesWithUser]
+      .reverse()
+      .find((m) => m.role === "user" && !m.is_rejected);
+    const turnId = lastUser?.client_id?.trim() || "unknown_turn";
+    const agent_v2 = {
+      ...ensureAgentV2({
+        ...m1CollectingTurn.session,
+        messages: messagesWithUser,
+      }),
+      current_phase: m1HasAuthorizedQuestion
+        ? ("collecting_context" as const)
+        : ("awaiting_confirmation" as const),
+      stall_offer_pending: false,
+    };
+    let finalContent: string;
+    if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
+      const { assertQuestionMatchesPlan } = await import("@/lib/poju/decision-intake");
+      const matched = assertQuestionMatchesPlan(
+        m1CollectingTurn.authorized_question!,
+        m1CollectingTurn.plan,
+      );
+      finalContent = matched.text;
+    } else {
+      const summary =
+        m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+        "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+      finalContent =
+        "【理解确认】" +
+        summary +
+        "\n\n如果以上理解正确，请回复确认；如需补充，请直接说明。";
+    }
+    const assistantMessage: POJUMessage = {
+      role: "assistant",
+      content: finalContent,
+      timestamp: nowIso,
+      client_id: safeRandomUUID(),
+      meta: {
+        m1_skipped_generic_chat_llm: true,
+        ...(m1HasAuthorizedQuestion ? { m1_authorized_question: true as const } : {}),
+        ...(m1HasReadinessConfirm ? { m21_readiness_stop: true as const } : {}),
+      },
+    };
+    let sessionOut = withSessionProfileFlags({
+      ...m1CollectingTurn.session,
+      messages: [...messagesWithUser, assistantMessage],
+      agent_v2,
+      last_interaction_at: nowIso,
+      expires_at: rollingExpiry,
+      locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
+      decision_context:
+        m1CollectingTurn.session.decision_context ?? sessionForLlm.decision_context,
+      decision_context_versions:
+        m1CollectingTurn.session.decision_context_versions ??
+        sessionForLlm.decision_context_versions,
+      decision_context_idempotency_keys:
+        m1CollectingTurn.session.decision_context_idempotency_keys ??
+        sessionForLlm.decision_context_idempotency_keys,
+      control_plane:
+        m1CollectingTurn.session.control_plane ?? sessionForLlm.control_plane,
+      decision_blueprint:
+        m1CollectingTurn.session.decision_blueprint ?? sessionForLlm.decision_blueprint,
+      decision_understanding:
+        m1CollectingTurn.session.decision_understanding ??
+        sessionForLlm.decision_understanding,
+      adaptive_ask_plan: m1HasAuthorizedQuestion
+        ? (m1CollectingTurn.plan ?? sessionForLlm.adaptive_ask_plan)
+        : null,
+      intake_ask_plan:
+        m1CollectingTurn.session.intake_ask_plan ?? sessionForLlm.intake_ask_plan,
+      session_revision:
+        m1CollectingTurn.session.session_revision ?? sessionForLlm.session_revision,
+      dc_write_revision:
+        m1CollectingTurn.session.dc_write_revision ?? sessionForLlm.dc_write_revision,
+      pending_answer_resolution:
+        m1CollectingTurn.session.pending_answer_resolution !== undefined
+          ? m1CollectingTurn.session.pending_answer_resolution
+          : sessionForLlm.pending_answer_resolution,
+      pending_intake_control:
+        m1CollectingTurn.session.pending_intake_control !== undefined
+          ? m1CollectingTurn.session.pending_intake_control
+          : sessionForLlm.pending_intake_control,
+      last_answer_event:
+        m1CollectingTurn.session.last_answer_event ??
+        m1CollectingTurn.answer_event ??
+        sessionForLlm.last_answer_event,
+      ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
+    });
+    if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
+      const { attachAuthorizedAssistantQuestion } = await import(
+        "@/lib/poju/decision-intake"
+      );
+      sessionOut = attachAuthorizedAssistantQuestion(
+        sessionOut,
+        m1CollectingTurn.plan,
+        turnId,
+      );
+    }
+    if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
+    return sessionOut;
+  }
+
   const llmResponse = input.server_invoke
     ? await callPOJULLMDirect({
         session: sessionForLlm,
