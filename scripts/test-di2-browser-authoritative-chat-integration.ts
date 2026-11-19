@@ -20,24 +20,64 @@ import {
   runWithSessionAuthorityStore,
 } from "../lib/poju/session-authority/store";
 import {
+  commitAuthoritativeSessionUpdate,
   initializeAuthoritativeSession,
   requireAuthoritativeSession,
   toAuthoritativeEnvelope,
 } from "../lib/poju/session-authority/lifecycle";
 import {
   runWithAuthoritativeChatTestHooks,
+  runWithAuthoritativeModelInputCapture,
+  type AuthoritativeModelInputCapture,
 } from "../lib/poju/session-authority/chat-hooks";
 import {
   submitAuthoritativeChatTurn,
   AUTHORITATIVE_CHAT_ROUTE,
 } from "../lib/poju/session-authority/chat-client";
+import { ClientSessionAuthorityError } from "../lib/poju/session-authority/client";
 import {
   createPOJUSession,
   loadPOJUSession,
   mirrorAuthoritativeSessionLocally,
 } from "../lib/poju/session-manager";
+import {
+  DEFAULT_NEW_SESSION_TITLE,
+  topicFromFirstUserMessage,
+} from "../lib/poju/session-list-label";
 import { __resetPojuDbForTests, ensurePojuDbReady } from "../lib/db/poju-db";
 import type { POJUSessionState } from "../lib/poju/types";
+import type { UserProfile } from "../lib/profile/types";
+
+function fixtureUserProfile(id: string): UserProfile {
+  return {
+    id,
+    birth: {
+      year: 1990,
+      month: 5,
+      day: 15,
+      hour_period: "si",
+      hour: 10,
+      minute: 0,
+      gender: "F",
+      timezone: "Asia/Shanghai",
+    },
+    bazi: {
+      yearPillar: "庚午",
+      monthPillar: "辛巳",
+      dayPillar: "甲子",
+      hourPillar: "己巳",
+    },
+    diagnosis: {
+      dayMaster: "甲",
+      favorableElements: ["水", "木"],
+      challengingElements: ["金"],
+      patternSummary: "fixture profile",
+    },
+    createdAt: 1,
+    updatedAt: 1,
+    source: "fallback",
+  };
+}
 
 installIntakeR6TestGlobals("dev_di2_browser_auth_chat");
 if (!process.env.POJU_AUTHORITY_SIGNING_SECRET?.trim()) {
@@ -414,20 +454,254 @@ async function main() {
       });
     });
 
+    await check("P0. profile + base_analysis reach server model path; mismatch rejected", async () => {
+      await withAuthStore(async () => {
+        const profileId = "11111111-1111-4111-8111-111111111111";
+        const profile = fixtureUserProfile(profileId);
+        const baseAnalysis = {
+          _meta: { generated_at: "2026-01-01T00:00:00.000Z", model: "fixture", tokens_used: 1 },
+          深度洞察: ["fixture insight"],
+        };
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0",
+          original_question: "要不要接受新 offer？",
+          selected_stored_profile_id: profileId,
+        });
+        const before = (await loadPOJUSession(sid))!;
+        assert.equal(before.selected_stored_profile_id, profileId);
+
+        const capture: { current?: AuthoritativeModelInputCapture } = {};
+        const turnId = "turn_p0_ok";
+        const msg = "我在犹豫要不要接受杭州那家公司的 offer。";
+        const result = await runWithAuthoritativeModelInputCapture(capture, () =>
+          submitAuthoritativeChatTurn({
+            session: {
+              ...before,
+              messages: [
+                ...before.messages,
+                {
+                  role: "user",
+                  content: msg,
+                  timestamp: new Date().toISOString(),
+                  client_id: turnId,
+                },
+              ],
+            },
+            user_message: msg,
+            client_turn_id: turnId,
+            expected_revision: before.session_revision ?? 0,
+            locale: "zh",
+            profile,
+            base_analysis: baseAnalysis,
+            claimed_stored_profile_id: profileId,
+          }),
+        );
+        assert.equal(result.ok, true);
+        assert.ok(capture.current, "server must capture model inputs");
+        assert.deepEqual(capture.current!.profile, profile);
+        assert.deepEqual(capture.current!.base_analysis, baseAnalysis);
+        assert.equal(capture.current!.claimed_stored_profile_id, profileId);
+        assert.equal(capture.current!.session_selected_stored_profile_id, profileId);
+        assert.equal(result.session.selected_stored_profile_id, profileId);
+
+        const mismatchTurn = "turn_p0_mismatch";
+        let rejected: unknown = null;
+        try {
+          await submitAuthoritativeChatTurn({
+            session: {
+              ...result.session,
+              messages: [
+                ...result.session.messages,
+                {
+                  role: "user",
+                  content: "可选方案是留任或接受 offer。",
+                  timestamp: new Date().toISOString(),
+                  client_id: mismatchTurn,
+                },
+              ],
+            },
+            user_message: "可选方案是留任或接受 offer。",
+            client_turn_id: mismatchTurn,
+            expected_revision: result.session_revision,
+            locale: "zh",
+            profile,
+            base_analysis: baseAnalysis,
+            claimed_stored_profile_id: "22222222-2222-4222-8222-222222222222",
+          });
+        } catch (e) {
+          rejected = e;
+        }
+        assert.ok(rejected instanceof ClientSessionAuthorityError);
+        assert.equal(
+          (rejected as ClientSessionAuthorityError).body.code,
+          "invalid_session_request",
+        );
+        const serverAfter = await requireAuthoritativeSession(sid);
+        assert.equal(serverAfter.revision, result.session_revision);
+      });
+    });
+
+    await check("P0b. no-profile and profile_skipped paths stay null without fabrication", async () => {
+      await withAuthStore(async () => {
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0b",
+          original_question: "要不要换工作？",
+        });
+        const before = (await loadPOJUSession(sid))!;
+        assert.equal(before.selected_stored_profile_id ?? null, null);
+
+        const capture: { current?: AuthoritativeModelInputCapture } = {};
+        const turnId = "turn_p0b_none";
+        const msg = "我在考虑要不要换工作。";
+        await runWithAuthoritativeModelInputCapture(capture, () =>
+          submitAuthoritativeChatTurn({
+            session: {
+              ...before,
+              messages: [
+                ...before.messages,
+                {
+                  role: "user",
+                  content: msg,
+                  timestamp: new Date().toISOString(),
+                  client_id: turnId,
+                },
+              ],
+            },
+            user_message: msg,
+            client_turn_id: turnId,
+            expected_revision: before.session_revision ?? 0,
+            locale: "zh",
+          }),
+        );
+        assert.equal(capture.current?.profile ?? null, null);
+        assert.equal(capture.current?.base_analysis ?? null, null);
+
+        const skipSid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0b_skip",
+          original_question: "要不要创业？",
+        });
+        const serverSkip = await requireAuthoritativeSession(skipSid);
+        const skippedRecord = await commitAuthoritativeSessionUpdate({
+          sessionId: skipSid,
+          expectedRevision: serverSkip.revision,
+          expectedGeneration: serverSkip.session_generation,
+          snapshot: {
+            ...serverSkip.session_snapshot,
+            profile_skipped: true,
+            has_profile: false,
+            selected_stored_profile_id: null,
+          },
+          last_committed_turn_id: serverSkip.last_committed_turn_id,
+        });
+        const mirroredSkip = await mirrorAuthoritativeSessionLocally(
+          toAuthoritativeEnvelope(skippedRecord).session,
+        );
+        assert.equal(mirroredSkip.profile_skipped, true);
+        let forged: unknown = null;
+        try {
+          await submitAuthoritativeChatTurn({
+            session: {
+              ...mirroredSkip,
+              messages: [
+                ...mirroredSkip.messages,
+                {
+                  role: "user",
+                  content: "我想创业。",
+                  timestamp: new Date().toISOString(),
+                  client_id: "turn_p0b_skip",
+                },
+              ],
+            },
+            user_message: "我想创业。",
+            client_turn_id: "turn_p0b_skip",
+            expected_revision: skippedRecord.revision,
+            locale: "zh",
+            profile: fixtureUserProfile("33333333-3333-4333-8333-333333333333"),
+            base_analysis: { forged: true },
+            claimed_stored_profile_id: "33333333-3333-4333-8333-333333333333",
+          });
+        } catch (e) {
+          forged = e;
+        }
+        assert.ok(forged instanceof ClientSessionAuthorityError);
+        assert.equal(
+          (forged as ClientSessionAuthorityError).body.code,
+          "invalid_session_request",
+        );
+      });
+    });
+
+    await check("P1. first-turn original_question is CAS-committed; local mirror matches", async () => {
+      await withAuthStore(async () => {
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p1",
+          original_question: DEFAULT_NEW_SESSION_TITLE,
+        });
+        const before = (await loadPOJUSession(sid))!;
+        assert.equal(before.original_question, DEFAULT_NEW_SESSION_TITLE);
+        const userMessage = "我在犹豫要不要离职去创业，家里还有贷款。";
+        const expectedTitle = topicFromFirstUserMessage(userMessage);
+        assert.ok(expectedTitle);
+        const turnId = "turn_p1_title";
+        const result = await submitAuthoritativeChatTurn({
+          session: {
+            ...before,
+            messages: [
+              ...before.messages,
+              {
+                role: "user",
+                content: userMessage,
+                timestamp: new Date().toISOString(),
+                client_id: turnId,
+              },
+            ],
+          },
+          user_message: userMessage,
+          client_turn_id: turnId,
+          expected_revision: before.session_revision ?? 0,
+          locale: "zh",
+        });
+        assert.equal(result.session.original_question, expectedTitle);
+        const mirrored = await mirrorAuthoritativeSessionLocally(result.session);
+        assert.equal(mirrored.original_question, result.session.original_question);
+        assert.equal(mirrored.original_question, expectedTitle);
+        const local = await loadPOJUSession(sid);
+        assert.equal(local?.original_question, expectedTitle);
+        assert.equal(local?.session_revision, result.session_revision);
+
+        const server = await requireAuthoritativeSession(sid);
+        assert.equal(server.session_snapshot.original_question, expectedTitle);
+        assert.equal(server.revision, result.session_revision);
+        // Reload from server envelope — fields must not diverge.
+        const restored = toAuthoritativeEnvelope(server).session;
+        assert.equal(restored.original_question, expectedTitle);
+        assert.equal(restored.session_revision, result.session_revision);
+      });
+    });
+
     await check("static: POJUChatUI production path uses authoritative chat transport", async () => {
       const src = readFileSync(join(process.cwd(), "components/poju/POJUChatUI.tsx"), "utf8");
       assert.match(src, /submitAuthoritativeChatTurn/);
       assert.match(src, /mirrorAuthoritativeSessionLocally/);
+      assert.match(src, /loadSessionProfileBundle/);
+      assert.match(src, /claimed_stored_profile_id/);
       assert.equal(
         /handleUserMessage\s*\(/.test(src),
         false,
         "production UI must not call handleUserMessage for turns",
+      );
+      assert.equal(
+        /toPersist\s*=\s*\{\s*\.\.\.updatedSession,\s*original_question/.test(src),
+        false,
+        "must not locally mutate original_question after authoritative commit",
       );
       const chatSrc = readFileSync(
         join(process.cwd(), "lib/poju/session-authority/chat.ts"),
         "utf8",
       );
       assert.match(chatSrc, /runWithInProcessDecisionAuthority/);
+      assert.match(chatSrc, /resolveAuthoritativeChatProfileInputs/);
+      assert.match(chatSrc, /applyAuthoritativeFirstTurnDisplayTitle/);
     });
 
     await check("E. Readiness confirm path remains server-authoritative (wire present)", async () => {

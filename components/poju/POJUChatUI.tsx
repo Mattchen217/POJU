@@ -64,6 +64,7 @@ import {
   submitAuthoritativeChatTurn,
   isRecoverableSessionAuthorityCode,
 } from "@/lib/poju/session-authority/chat-client";
+import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
 import {
   ClientSessionAuthorityError,
   restoreAuthoritativeSessionFromClient,
@@ -1461,6 +1462,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         errorRestore?.rollbackSession.session_revision ??
         baseSession.session_revision ??
         0;
+      // Local-first PWA: load IndexedDB personal analysis for the server model path.
+      // Lifecycle / DC / Freeze / CAS remain server-authoritative.
+      const profileBundle = await loadSessionProfileBundle(baseSession);
       let authoritative;
       try {
         authoritative = await submitAuthoritativeChatTurn({
@@ -1471,6 +1475,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           locale: processLocale(baseSession),
           signal: ac.signal,
           attachment: attachWire,
+          profile: profileBundle.profile,
+          base_analysis: profileBundle.base_analysis,
+          claimed_stored_profile_id: profileBundle.resolved_profile_id,
         });
       } catch (authErr) {
         if (
@@ -1492,21 +1499,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
-      const updatedSession = authoritative.session;
-      const userCount = updatedSession.messages.filter((m) => m.role === "user").length;
-      let toPersist = updatedSession;
-      if (
-        userCount === 1 &&
-        isDefaultNewSessionTitle(updatedSession.original_question)
-      ) {
-        const topic = topicFromFirstUserMessage(userMessage);
-        if (topic) {
-          toPersist = { ...updatedSession, original_question: topic };
-          setSessionRows((prev) =>
-            prev.map((x) => (x.session_id === toPersist.session_id ? { ...x, original_question: topic } : x)),
-          );
-        }
-      }
+      // Mirror only the CAS-committed snapshot — never mutate fields locally first.
+      let toPersist = authoritative.session;
+      setSessionRows((prev) =>
+        prev.map((x) =>
+          x.session_id === toPersist.session_id
+            ? { ...x, original_question: toPersist.original_question }
+            : x,
+        ),
+      );
 
       const lastAssistantPreview = [...toPersist.messages]
         .reverse()
@@ -4299,12 +4300,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       ],
     };
     onSessionUpdate(withUser);
+    const profileBundle = await loadSessionProfileBundle(withUser);
     const continued = await submitAuthoritativeChatTurn({
       session: withUser,
       user_message: content,
       client_turn_id: clientTurnId,
       expected_revision: nextSession.session_revision ?? 0,
       locale: sessionLang,
+      profile: profileBundle.profile,
+      base_analysis: profileBundle.base_analysis,
+      claimed_stored_profile_id: profileBundle.resolved_profile_id,
     });
     const mirrored = await mirrorAuthoritativeSessionLocally(continued.session);
     onSessionUpdate(mirrored);

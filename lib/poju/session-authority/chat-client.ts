@@ -25,6 +25,12 @@ export type AuthoritativeChatClientInput = {
   profile?: UserProfile | null;
   userProfile?: UserProfile | null;
   base_analysis?: unknown | null;
+  /**
+   * Attests which local stored-profile row the browser loaded.
+   * Required when profile or base_analysis is supplied; must match the
+   * authoritative Session binding on the server.
+   */
+  claimed_stored_profile_id?: string | null;
   archive_data?: POJUActionRecommendationsData | null;
   tool_injection_context?: string | null;
   attachment?: PojuChatAttachment | null;
@@ -74,6 +80,7 @@ export async function submitAuthoritativeChatTurn(
     profile: input.profile ?? input.userProfile ?? null,
     userProfile: input.userProfile ?? input.profile ?? null,
     base_analysis: input.base_analysis ?? null,
+    claimed_stored_profile_id: input.claimed_stored_profile_id ?? null,
     archive_data: input.archive_data ?? null,
     tool_injection_context: input.tool_injection_context ?? null,
     attachment: input.attachment ?? null,

@@ -15,8 +15,11 @@ import { runWithInProcessDecisionAuthority } from "@/lib/poju/decision-authority
 import type { POJULLMResponse } from "@/lib/llm/poju-llm";
 import {
   getAuthoritativeChatTestHooks,
+  noteAuthoritativeModelInputs,
   runWithLlmCapture,
 } from "@/lib/poju/session-authority/chat-hooks";
+import { resolveAuthoritativeChatProfileInputs } from "@/lib/poju/session-authority/chat-profile-inputs";
+import { applyAuthoritativeFirstTurnDisplayTitle } from "@/lib/poju/session-list-label";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -37,6 +40,8 @@ export type AuthoritativeChatBody = {
   session?: POJUSessionState;
   profile?: UserProfile | null;
   base_analysis?: unknown | null;
+  /** Local load attestation — must match authoritative Session binding when payloads are present. */
+  claimed_stored_profile_id?: string | null;
   archive_data?: POJUActionRecommendationsData | null;
   tool_injection_context?: string | null;
   attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
@@ -130,6 +135,23 @@ export async function executeAuthoritativeChatTurn(
   }
 
   const boundSession = bindAuthoritativeChatSession(record, incoming);
+  const profileInputs = resolveAuthoritativeChatProfileInputs({
+    serverSnapshot: record.session_snapshot,
+    profile: body.profile,
+    userProfile: body.userProfile,
+    base_analysis: body.base_analysis,
+    claimed_stored_profile_id: body.claimed_stored_profile_id,
+  });
+  noteAuthoritativeModelInputs({
+    profile: profileInputs.profile,
+    base_analysis: profileInputs.base_analysis,
+    claimed_stored_profile_id: profileInputs.claimed_stored_profile_id,
+    session_selected_stored_profile_id:
+      record.session_snapshot.selected_stored_profile_id?.trim() ||
+      record.session_snapshot.agent_v2?.selected_profile_id?.trim() ||
+      null,
+  });
+
   const capture: { current?: POJULLMResponse } = {};
   let sessionOut: POJUSessionState;
   try {
@@ -145,8 +167,8 @@ export async function executeAuthoritativeChatTurn(
             signal: opts?.signal,
             attachment: body.attachment ?? null,
             server_invoke: {
-              base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
-              profile: body.profile ?? body.userProfile ?? null,
+              base_analysis: profileInputs.base_analysis,
+              profile: profileInputs.profile,
             },
             __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
           }),
@@ -161,6 +183,10 @@ export async function executeAuthoritativeChatTurn(
   }
 
   throwIfAborted(opts?.signal);
+
+  // Display title for a first real user turn must be CAS-committed — never
+  // invented only in the browser after a successful authoritative response.
+  sessionOut = applyAuthoritativeFirstTurnDisplayTitle(sessionOut, incoming.content);
 
   let committed;
   try {

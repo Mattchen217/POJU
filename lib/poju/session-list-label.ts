@@ -1,9 +1,46 @@
+import type { POJUSessionState } from "@/lib/poju/types";
+
 /** Default title for a new POJU session before the user sends a first message. */
 export const DEFAULT_NEW_SESSION_TITLE = "I'd like to begin a POJU session.";
 
 export function isDefaultNewSessionTitle(question: string | undefined | null): boolean {
   const q = question?.trim() || "";
   return !q || q === DEFAULT_NEW_SESSION_TITLE;
+}
+
+/**
+ * Server-authoritative first-turn display title.
+ * When the Session still carries the default placeholder and this is the first
+ * real user message, replace `original_question` with a deterministic topic
+ * derived from that message. Must run before Session CAS commit.
+ */
+export function applyAuthoritativeFirstTurnDisplayTitle(
+  session: POJUSessionState,
+  userMessage: string,
+): POJUSessionState {
+  if (!isDefaultNewSessionTitle(session.original_question)) return session;
+  const userCount = (session.messages ?? []).filter(
+    (m) => m.role === "user" && !m.is_rejected,
+  ).length;
+  if (userCount !== 1) return session;
+  const topic = topicFromFirstUserMessage(userMessage);
+  if (!topic) return session;
+  const agent = session.agent_v2;
+  return {
+    ...session,
+    original_question: topic,
+    ...(agent
+      ? {
+          agent_v2: {
+            ...agent,
+            original_question:
+              isDefaultNewSessionTitle(agent.original_question) || !agent.original_question?.trim()
+                ? topic
+                : agent.original_question,
+          },
+        }
+      : {}),
+  };
 }
 
 /** Max chars for sidebar / session list display titles. */

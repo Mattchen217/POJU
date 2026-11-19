@@ -18,6 +18,7 @@ type ChatBody = {
   session?: POJUSessionState;
   profile?: UserProfile | null;
   base_analysis?: unknown | null;
+  claimed_stored_profile_id?: string | null;
   archive_data?: POJUActionRecommendationsData | null;
   tool_injection_context?: string | null;
   attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;

@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { POJULLMResponse } from "@/lib/llm/poju-llm";
 import type { AdaptiveTurnTestHooks } from "@/lib/poju/decision-intake/adaptive-turn";
+import type { UserProfile } from "@/lib/profile/types";
 import {
   bindAuthoritativeChatHookRuntime,
   type TestChatModel,
@@ -14,8 +15,16 @@ import {
 
 export type { TestChatModel } from "@/lib/poju/session-authority/chat-hook-bridge";
 
+export type AuthoritativeModelInputCapture = {
+  profile: UserProfile | null;
+  base_analysis: unknown | null;
+  claimed_stored_profile_id: string | null;
+  session_selected_stored_profile_id: string | null;
+};
+
 const llmCaptureAls = new AsyncLocalStorage<{ current?: POJULLMResponse }>();
 const testModelAls = new AsyncLocalStorage<TestChatModel>();
+const modelInputCaptureAls = new AsyncLocalStorage<{ current?: AuthoritativeModelInputCapture }>();
 
 export function runWithLlmCapture<T>(
   slot: { current?: POJULLMResponse },
@@ -36,6 +45,19 @@ export function getTestChatModel(): TestChatModel | undefined {
 export function runWithTestChatModel<T>(model: TestChatModel, fn: () => T | Promise<T>): Promise<T> {
   return Promise.resolve(testModelAls.run(model, fn));
 }
+
+export function runWithAuthoritativeModelInputCapture<T>(
+  slot: { current?: AuthoritativeModelInputCapture },
+  fn: () => T | Promise<T>,
+): Promise<T> {
+  return Promise.resolve(modelInputCaptureAls.run(slot, fn));
+}
+
+export function noteAuthoritativeModelInputs(input: AuthoritativeModelInputCapture): void {
+  const slot = modelInputCaptureAls.getStore();
+  if (slot) slot.current = input;
+}
+
 const testHooksAls = new AsyncLocalStorage<AdaptiveTurnTestHooks>();
 
 export function getAuthoritativeChatTestHooks(): AdaptiveTurnTestHooks | undefined {
