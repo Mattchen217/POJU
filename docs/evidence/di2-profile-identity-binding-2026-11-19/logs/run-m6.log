@@ -1,0 +1,83 @@
+
+> pojulife@0.1.0 test:m6-di2-full-lifecycle D:\POJU\pojulife
+> tsx scripts/test-m6-di2-full-lifecycle.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M6 Decision Intake 2.0 full lifecycle
+[bazi] Original: 1985-07-15 02:00
+[bazi] True Solar: 1985-07-15 02:00
+[bazi] Diff: 0.28 minutes
+[createStoredProfile] writing birth_location: {
+  profile_id: '(new)',
+  birth_info: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  },
+  user_profile: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  }
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52b85050-1728-4784-b6df-adc91113057d","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+  PASS  fresh Session bootstraps DC + Blueprint + authorized first adaptive question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0d506555-659d-4d7f-a22b-03c62f87e46d","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed m6_forced_dc_write_failure
+  PASS  Fresh Session DC persistence failure is fail-closed without a freeform question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[M6 readiness] verdict=ready_for_final_confirm; can_ask=false; answered_targets=14
+  PASS  multi-turn answers update DC/Understanding and replan without repeating
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b8191de-d836-4374-b104-724b81ea61b6","has_profile":true}
+[M6 confirmation] Freeze=dc_2b8191de-d836-4374-b104-724b81ea61b6@v16; Profile=a885a847-d99e-43e2-aad2-53f7c0e98653; Session=2b8191de-d836-4374-b104-724b81ea61b6; sufficiency=true
+  PASS  explicit user confirmation through handleUserMessage reaches authority Freeze
+[decision-report] analysis completed {
+  job_id: 'dr_2b8191de-d836-4374-b104-_1795097451439_hendjt',
+  analysis_id: 'pa_dc2b8191ded8364374b104724b81ea61b6v16_7ad7b0155de6'
+}
+[decision-report] report completed {
+  job_id: 'dr_2b8191de-d836-4374-b104-_1795097451439_hendjt',
+  freeze_id: 'dc_2b8191de-d836-4374-b104-724b81ea61b6@v16',
+  generation: 1
+}
+  PASS  report client starts one authorized job and completes eight bound pages
+  PASS  delivered Session does not auto-start again or regenerate analysis/pages
+  PASS  status after refresh returns the completed report bound to the same Job
+
+M6 result: 7 passed, 0 failed
