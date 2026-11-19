@@ -717,6 +717,122 @@ async function main() {
       });
     });
 
+    await check("P0-exact. whitespace-padded claimed/profile ids are rejected; exact match accepted", async () => {
+      await withAuthStore(async () => {
+        const profileId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+        const baseAnalysis = {
+          generated_at: "2026-01-01T00:00:00.000Z",
+          model: "fixture",
+          tokens_used: 1,
+          content: "exact-id fixture",
+        };
+        const sid = await createPOJUSession({
+          payment_id: "pay_di2_browser_auth_p0_exact",
+          original_question: "要不要换城市工作？",
+          selected_stored_profile_id: profileId,
+        });
+        const before = (await loadPOJUSession(sid))!;
+        const serverBefore = await requireAuthoritativeSession(sid);
+        assert.equal(serverBefore.session_snapshot.selected_stored_profile_id, profileId);
+
+        async function expectIdentityReject(opts: {
+          turnId: string;
+          profile: ReturnType<typeof fixtureUserProfile>;
+          claimed: string;
+        }) {
+          const capture: { current?: AuthoritativeModelInputCapture } = {};
+          let rejected: unknown = null;
+          try {
+            await runWithAuthoritativeModelInputCapture(capture, () =>
+              submitAuthoritativeChatTurn({
+                session: {
+                  ...before,
+                  messages: [
+                    ...before.messages,
+                    {
+                      role: "user",
+                      content: `exact id probe ${opts.turnId}`,
+                      timestamp: new Date().toISOString(),
+                      client_id: opts.turnId,
+                    },
+                  ],
+                },
+                user_message: `exact id probe ${opts.turnId}`,
+                client_turn_id: opts.turnId,
+                expected_revision: before.session_revision ?? 0,
+                locale: "zh",
+                profile: opts.profile,
+                base_analysis: baseAnalysis,
+                claimed_stored_profile_id: opts.claimed,
+              }),
+            );
+          } catch (e) {
+            rejected = e;
+          }
+          assert.ok(rejected instanceof ClientSessionAuthorityError);
+          assert.equal(
+            (rejected as ClientSessionAuthorityError).body.code,
+            "invalid_session_request",
+          );
+          assert.equal(capture.current, undefined);
+          const serverAfter = await requireAuthoritativeSession(sid);
+          assert.equal(serverAfter.revision, serverBefore.revision);
+          assert.equal(serverAfter.session_snapshot.messages.length, 0);
+          assert.equal(
+            serverAfter.session_snapshot.selected_stored_profile_id,
+            serverBefore.session_snapshot.selected_stored_profile_id,
+          );
+        }
+
+        // A. Session A, Profile A, claimed " A " → reject (no trim)
+        await expectIdentityReject({
+          turnId: "turn_p0_exact_a",
+          profile: fixtureUserProfile(profileId),
+          claimed: ` ${profileId} `,
+        });
+
+        // B. Session A, Profile " A ", claimed A → reject
+        await expectIdentityReject({
+          turnId: "turn_p0_exact_b",
+          profile: fixtureUserProfile(` ${profileId} `),
+          claimed: profileId,
+        });
+
+        // C. Session A, Profile A, claimed A → accept
+        const captureOk: { current?: AuthoritativeModelInputCapture } = {};
+        const profileExact = fixtureUserProfile(profileId);
+        const accepted = await runWithAuthoritativeModelInputCapture(captureOk, () =>
+          submitAuthoritativeChatTurn({
+            session: {
+              ...before,
+              messages: [
+                ...before.messages,
+                {
+                  role: "user",
+                  content: "我在考虑要不要换城市工作。",
+                  timestamp: new Date().toISOString(),
+                  client_id: "turn_p0_exact_c",
+                },
+              ],
+            },
+            user_message: "我在考虑要不要换城市工作。",
+            client_turn_id: "turn_p0_exact_c",
+            expected_revision: before.session_revision ?? 0,
+            locale: "zh",
+            profile: profileExact,
+            base_analysis: baseAnalysis,
+            claimed_stored_profile_id: profileId,
+          }),
+        );
+        assert.equal(accepted.ok, true);
+        assert.ok(captureOk.current);
+        assert.equal(captureOk.current!.profile?.id, profileId);
+        assert.equal(captureOk.current!.claimed_stored_profile_id, profileId);
+        assert.deepEqual(captureOk.current!.profile, profileExact);
+        assert.ok(accepted.session_revision > serverBefore.revision);
+      });
+    });
+
     await check("P0b. no-profile and profile_skipped paths stay null without fabrication", async () => {
       await withAuthStore(async () => {
         const sid = await createPOJUSession({
@@ -884,6 +1000,17 @@ async function main() {
       );
       assert.match(profileSrc, /profile\.id must equal claimed_stored_profile_id/);
       assert.match(profileSrc, /base_analysis must be a plain JSON object/);
+      assert.match(profileSrc, /Exact Session binding id for identity comparison/);
+      assert.equal(
+        /normalizeClaimedId/.test(profileSrc),
+        false,
+        "claimed id must not be trim-normalized before comparison",
+      );
+      assert.equal(
+        /selected_stored_profile_id\?\.trim\(\)/.test(profileSrc),
+        false,
+        "authoritative bound id must not be trimmed for comparison",
+      );
     });
 
     await check("E. Readiness confirm path remains server-authoritative (wire present)", async () => {

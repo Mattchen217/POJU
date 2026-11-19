@@ -4,6 +4,9 @@
  * The browser may supply locally stored personal-analysis payloads as model
  * inputs. Binding and lifecycle authority always come from the server Session
  * snapshot — never from client-supplied profile flags or forged ids.
+ *
+ * Identity comparison is exact (no trim / rewrite):
+ *   profile.id === claimed_stored_profile_id === authoritativeBoundProfileId(server)
  */
 
 import type { UserProfile } from "@/lib/profile/types";
@@ -43,11 +46,15 @@ function assertPayloadSize(label: string, value: unknown, maxBytes: number): voi
   }
 }
 
+/**
+ * Exact Session binding id for identity comparison — no trim / rewrite.
+ * Legacy non-canonical values fail closed at comparison time.
+ */
 function authoritativeBoundProfileId(session: POJUSessionState): string | null {
-  const selected = session.selected_stored_profile_id?.trim();
-  if (selected) return selected;
-  const agent = session.agent_v2?.selected_profile_id?.trim();
-  if (agent) return agent;
+  const selected = session.selected_stored_profile_id;
+  if (typeof selected === "string" && selected.length > 0) return selected;
+  const agent = session.agent_v2?.selected_profile_id;
+  if (typeof agent === "string" && agent.length > 0) return agent;
   return null;
 }
 
@@ -63,7 +70,8 @@ function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
 function isLikelyUserProfile(value: unknown): value is UserProfile {
   if (!isPlainJsonObject(value)) return false;
   const p = value as Record<string, unknown>;
-  if (typeof p.id !== "string" || !p.id.trim()) return false;
+  // id must be a non-empty string; exact value is compared later without trim.
+  if (typeof p.id !== "string" || p.id.length === 0) return false;
   if (!p.birth || typeof p.birth !== "object" || Array.isArray(p.birth)) return false;
   if (!p.bazi || typeof p.bazi !== "object" || Array.isArray(p.bazi)) return false;
   if (!p.diagnosis || typeof p.diagnosis !== "object" || Array.isArray(p.diagnosis)) return false;
@@ -85,17 +93,34 @@ function assertBaseAnalysisShape(value: unknown): void {
   }
 }
 
-function normalizeClaimedId(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+/**
+ * Read claimed id without normalizing. Whitespace-padded values are kept as-is
+ * for exact comparison; whitespace-only values are rejected when supplied.
+ */
+function readClaimedStoredProfileId(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") {
+    throw new SessionAuthorityError(
+      "invalid_session_request",
+      "claimed_stored_profile_id must be a string when supplied",
+    );
+  }
+  if (value.length === 0) return null;
+  // Detect whitespace-only without rewriting the comparison value.
+  if (value.trim().length === 0) {
+    throw new SessionAuthorityError(
+      "invalid_session_request",
+      "claimed_stored_profile_id must not be whitespace-only",
+    );
+  }
+  return value;
 }
 
 /**
  * Validate client-supplied personal-analysis inputs against the authoritative
  * Session binding. Returns normalized inputs for `server_invoke`.
  *
- * Required identity when a profile payload is present:
+ * Required identity when a profile payload is present (exact string equality):
  *   profile.id === claimed_stored_profile_id === authoritativeBoundProfileId(server)
  */
 export function resolveAuthoritativeChatProfileInputs(input: {
@@ -107,7 +132,7 @@ export function resolveAuthoritativeChatProfileInputs(input: {
 }): AuthoritativeChatProfileInputs {
   const rawProfile = input.profile !== undefined ? input.profile : input.userProfile;
   const rawBase = input.base_analysis === undefined ? null : input.base_analysis;
-  const claimed = normalizeClaimedId(input.claimed_stored_profile_id);
+  const claimed = readClaimedStoredProfileId(input.claimed_stored_profile_id);
 
   assertBaseAnalysisShape(rawBase);
   assertPayloadSize("profile", rawProfile, AUTHORITATIVE_CHAT_MAX_PROFILE_BYTES);
@@ -170,8 +195,7 @@ export function resolveAuthoritativeChatProfileInputs(input: {
     }
   }
 
-  // Payload identity must match the claimed and authoritative binding exactly.
-  // Do not normalize or silently rewrite profile.id.
+  // Exact identity — do not trim, pad-strip, or silently rewrite any id.
   if (profile != null) {
     if (!claimed || !boundId || profile.id !== claimed || claimed !== boundId) {
       throw new SessionAuthorityError(
