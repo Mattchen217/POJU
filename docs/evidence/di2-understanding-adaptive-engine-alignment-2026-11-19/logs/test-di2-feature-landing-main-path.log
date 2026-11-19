@@ -1,0 +1,51 @@
+START di2-feature-landing-main-path 2026-11-19 01:09:44 -0600
+CMD C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:di2-feature-landing-main-path
+
+> pojulife@0.1.0 test:di2-feature-landing-main-path D:\POJU\pojulife
+> tsx scripts/test-di2-feature-landing-main-path.ts
+
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+PASS A/classify: short relevant, unknown, declined, skip, uncertainty are not invalid
+PASS A/classify: off-topic, gibberish, empty, unusable are invalid
+PASS A/classifyAnswer: short relevant is partial, not invalid_input
+PASS A1 first invalid warns and reasks
+PASS A2 second consecutive invalid locks for 10 minutes
+PASS A3 continue within 10 minutes is rejected
+PASS A4 continue after 10 minutes resumes
+PASS A5 valid answer resets streak
+PASS A6 lock again after resume
+PASS A7 third lockout permanently terminates
+PASS A8/A9 24h expiry does not increment lockout_count
+PASS A10 unknown and declined do not lock
+PASS A11 repeat submit is idempotent
+PASS A12 concurrent invalid uses latest state, no double count on same turn
+PASS A13 refresh cannot forge cooldown end
+PASS A14/A15 lockout blocks model, DC write, and PASS charge
+PASS A14 production turn: first invalid does not call the model hook
+PASS A14 production turn: second invalid locks and still skips the model
+PASS B progress is from DDR/DIR/Gate, not question count, and 100% is capped until complete
+PASS C missing profile stays unavailable and does not fabricate insights
+PASS C available BaZi+ZiWei profile can surface a decision-relevant unverified insight once
+PASS D existing confirm eligibility is unchanged and does not invent Freeze success
+DI2 feature landing tests passed: 22
+
+END di2-feature-landing-main-path 2026-11-19 01:09:47 -0600 exit=0 elapsed_s=2.6
