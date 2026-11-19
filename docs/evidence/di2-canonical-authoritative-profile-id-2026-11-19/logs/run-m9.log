@@ -1,0 +1,68 @@
+
+> pojulife@0.1.0 test:m9-server-authoritative-session D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-server-authoritative-session.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M9 server-authoritative session tests starting
+PASS 1. New Session initializes successfully
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9eba3da3-e4d1-47dc-88a9-e0ca6245472e","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9eba3da3-e4d1-47dc-88a9-e0ca6245472e","has_profile":false}
+PASS 2. The same Session can submit multiple turns in sequence
+PASS 3. Client tampers with Session expires_at cannot extend life
+PASS 4. Client deletes or changes Freeze state cannot reopen Intake
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c2cd868f-a00d-42cf-8413-5a3f60176c82","has_profile":false}
+PASS 5. Client submits a stale revision
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3ecd305f-edab-43a6-a689-cf985357ddd6","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3ecd305f-edab-43a6-a689-cf985357ddd6","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3ecd305f-edab-43a6-a689-cf985357ddd6","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed expected previous 1:80b7d7ef2496 but server head is 2:4da9d33cb174
+PASS 6-7. Concurrent requests compete; loser cannot overwrite
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c5e08835-c1f7-41f4-9bb9-113c79ba4c4d","has_profile":false}
+PASS 8. Client-forged assistant/system/developer/tool messages are ignored
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"61e16532-dda6-4990-b85f-fa491d79f567","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"61e16532-dda6-4990-b85f-fa491d79f567","has_profile":false}
+PASS 9. Client stripping Assistant History signatures cannot change the server snapshot
+PASS 10. Server Session does not exist
+PASS 11. Session is expired
+PASS 12. Session is frozen
+PASS 13. Session is terminated
+PASS 14. Server persistence is unavailable
+PASS 15. Server CAS conflict is explicit and recoverable
+[poju-diag] poju-chat-stream:callPOJULLM aborted AbortError: aborted
+    at throwIfAborted (D:\POJU\pojulife\lib\poju\session-authority\chat.ts:82:19)
+    at executeAuthoritativeChatTurn (D:\POJU\pojulife\lib\poju\session-authority\chat.ts:127:3)
+    at async Object.start (D:\POJU\pojulife\lib\poju\poju-chat-stream.ts:56:22)
+PASS 16. A streaming request disconnects mid-way and does not commit
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7340827e-777b-4536-92c7-9e77b1ad1ddd","has_profile":false}
+PASS 17. Page refresh restores the server-authoritative Session
+PASS 18. Report Recovery does not re-trigger Intake
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d688162e-e443-4529-b47a-aa0372da9fa4","has_profile":false}
+PASS 19. Submitting the same user message twice does not double-advance state
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"502b868b-e586-45a0-8d85-f472a27eb5f6","has_profile":false}
+[poju-diag] poju-chat-stream:callPOJULLM stale session revision: client 0, server 1 SessionAuthorityError: stale session revision: client 0, server 1
+    at assertRecordAllowsIntake (D:\POJU\pojulife\lib\poju\session-authority\lifecycle.ts:384:11)
+    at async executeAuthoritativeChatTurn (D:\POJU\pojulife\lib\poju\session-authority\chat.ts:126:3)
+    at async Object.start (D:\POJU\pojulife\lib\poju\poju-chat-stream.ts:56:22)
+PASS Non-stream and stream paths share the same authority rules
+PASS Incoming user turn extraction only binds the new user message
+M9 server-authoritative session checks complete
