@@ -1,0 +1,9 @@
+﻿command,exit_code,note
+pnpm test:di2-understanding-answer-interpretation-context,0,10 passed 0 failed
+pnpm test:di2-understanding-adaptive-engine-alignment,0,7 passed 0 failed
+pnpm test:m1-production-adaptive-question-loop,0,PASS=188 FAIL=0
+pnpm test:di2-feature-landing-main-path,0,22 passed
+pnpm test:m5-di2-main-path,0,29 passed 0 failed
+pnpm test:m6-di2-full-lifecycle,0,7 passed 0 failed
+pnpm exec tsc --noEmit --pretty false,0,no diagnostics
+pnpm build,0,succeeded; public/sw.js restored to HEAD after build
