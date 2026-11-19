@@ -1,0 +1,226 @@
+[
+  {
+    "id": "test-di2-understanding-composer-flow",
+    "args": [
+      "test:di2-understanding-composer-flow"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 2022,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-di2-understanding-composer-flow.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-di2-feature-landing-main-path",
+    "args": [
+      "test:di2-feature-landing-main-path"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 2620,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-di2-feature-landing-main-path.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m1-r-fresh-session-main-loop",
+    "args": [
+      "test:m1-r-fresh-session-main-loop"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 4036,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m1-r-fresh-session-main-loop.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m1-production-adaptive-question-loop",
+    "args": [
+      "test:m1-production-adaptive-question-loop"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 23321,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m1-production-adaptive-question-loop.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m2-1-readiness-confirm-freeze",
+    "args": [
+      "test:m2-1-readiness-confirm-freeze"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 4165,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m2-1-readiness-confirm-freeze.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m2-2-freeze-report-binding",
+    "args": [
+      "test:m2-2-freeze-report-binding"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 6017,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m2-2-freeze-report-binding.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m2-3-decision-blueprint",
+    "args": [
+      "test:m2-3-decision-blueprint"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 4119,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m2-3-decision-blueprint.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m3-decision-report",
+    "args": [
+      "test:m3-decision-report"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 3859,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m3-decision-report.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m4-decision-authority",
+    "args": [
+      "test:m4-decision-authority"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 4451,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m4-decision-authority.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m4-1-freeze-recovery",
+    "args": [
+      "test:m4-1-freeze-recovery"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 3721,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m4-1-freeze-recovery.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m5-di2-main-path",
+    "args": [
+      "test:m5-di2-main-path"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 49953,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m5-di2-main-path.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m6-di2-full-lifecycle",
+    "args": [
+      "test:m6-di2-full-lifecycle"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 10299,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m6-di2-full-lifecycle.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m8-di2-non-model-closure",
+    "args": [
+      "test:m8-di2-non-model-closure"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 2115,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m8-di2-non-model-closure.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m8-r1-internal-turn-trust-boundary",
+    "args": [
+      "test:m8-r1-internal-turn-trust-boundary"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 2855,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m8-r1-internal-turn-trust-boundary.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m9-server-authoritative-session",
+    "args": [
+      "test:m9-server-authoritative-session"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 3544,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m9-server-authoritative-session.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m9-r1-session-authority-remediation",
+    "args": [
+      "test:m9-r1-session-authority-remediation"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 3235,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m9-r1-session-authority-remediation.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m5-r1-authorization",
+    "args": [
+      "test:m5-r1-authorization"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 19554,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m5-r1-authorization.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "test-m2-4-r2-production-closure",
+    "args": [
+      "test:m2-4-r2-production-closure"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 9928,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\test-m2-4-r2-production-closure.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "tsc-noEmit",
+    "args": [
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--pretty",
+      "false"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 6260,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\tsc-noEmit.log",
+    "compiledSuccessfully": false
+  },
+  {
+    "id": "pnpm-build",
+    "args": [
+      "build"
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "ms": 113502,
+    "logPath": "D:\\POJU\\pojulife\\docs\\evidence\\di2-main-path-integration-audit-2026-11-19\\logs\\pnpm-build.log",
+    "compiledSuccessfully": true
+  }
+]

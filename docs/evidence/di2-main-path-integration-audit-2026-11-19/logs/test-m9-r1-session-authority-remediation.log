@@ -1,0 +1,146 @@
+COMMAND: pnpm test:m9-r1-session-authority-remediation
+STARTED: 2026-11-19T06:14:12.338Z
+
+
+> pojulife@0.1.0 test:m9-r1-session-authority-remediation D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-session-authority-remediation.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M9-R1 session authority remediation tests starting
+live_upstash_configured=no (tests use in-process MemoryKv / eval harness only)
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a601e6f9-3851-4129-8c08-f49a617c1024","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS A. Session Frozen during model execution; commit is rejected
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7bec596c-9d9a-4c30-aea0-d03ca129c276","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS B. Session Terminated during model execution; commit is rejected
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"61332b71-6016-437a-beba-7c8e22643d71","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS C. Session expires during model execution; commit is rejected
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e05b22d4-6e73-4354-a7f5-18a23be4e25c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS D. Concurrent Freeze and Session CAS cannot commit an Intake turn after Freeze
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e812ab29-e45f-43bf-bab2-89dd0bcb6ea7","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS E. Same turn ID + same content is idempotent
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e892bd19-9f57-490c-badd-c7607ef8e569","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS F. Same turn ID + different content is a conflict
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7d978f7d-5877-488d-8105-64111b50b26a","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS G. Replaying the same turn does not call the model again
+PASS H. Record session_id vs storage key mismatch fails closed
+PASS I. Snapshot session_id vs Record mismatch fails closed
+PASS J. Snapshot hash mismatch fails closed
+PASS K. Revision vs snapshot revision mismatch fails closed
+PASS L. CAS revision race: loser does not overwrite winner (MemoryKv and eval harness)
+PASS M. CAS does not recreate a Session that no longer exists
+PASS N. After Expiry / Freeze / Terminate, no new turn can be committed
+PASS CAS contract: generation, session id, expires_at, and backward revision are rejected
+PASS Production Lua source includes atomic compare, no-create, and ledger probe
+PASS Idempotency extractor binds content and ignores meta/timestamp/revision edits
+M9-R1 session authority remediation checks complete
+
+
+EXIT_CODE=0
+SIGNAL=null
+ELAPSED_MS=3235
+COMPILED_SUCCESSFULLY=false
+FINISHED: 2026-11-19T06:14:15.573Z
