@@ -5,6 +5,11 @@
 
 import type { POJUSessionState } from "@/lib/poju/types";
 
+export type AlreadyUnderstoodItem = {
+  label: string;
+  status: "known" | "n_a";
+};
+
 export type AdaptiveQuestionUiProjection = {
   current_question: string | null;
   understanding_summary: string | null;
@@ -33,15 +38,22 @@ function userFacingText(value: string | null | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
 }
 
-function userFacingUnderstoodLabel(item: {
-  label?: string;
-  status?: string;
-  user_confirmed_any?: boolean;
-}): string | null {
-  if (item.user_confirmed_any !== true) return null;
-  if (item.status !== "known" && item.status !== "n_a") return null;
-  const label = userFacingText(item.label);
-  return label || null;
+function projectAlreadyUnderstoodItems(
+  items: Array<{
+    label?: string;
+    status?: string;
+    user_confirmed_any?: boolean;
+  }> | null | undefined,
+): AlreadyUnderstoodItem[] {
+  const result: AlreadyUnderstoodItem[] = [];
+  for (const item of items ?? []) {
+    if (item.user_confirmed_any !== true) continue;
+    if (item.status !== "known" && item.status !== "n_a") continue;
+    const label = userFacingText(item.label);
+    if (!label) continue;
+    result.push({ label, status: item.status });
+  }
+  return result;
 }
 
 export function projectAdaptiveQuestionForUi(
@@ -53,13 +65,12 @@ export function projectAdaptiveQuestionForUi(
   const directionByDir = new Map((session.decision_blueprint?.directions ?? []).flatMap((d) =>
     d.dir_ids.map((id) => [id, { priority: d.priority, direction_id: d.direction_id }] as const),
   ));
+  const understoodItems = projectAlreadyUnderstoodItems(u?.understood.items);
   return {
     current_question:
       u?.last_sent_question?.question_text ?? plan?.question_text ?? null,
     understanding_summary: u?.current_understanding.summary ?? null,
-    understood_labels: (u?.understood.items ?? [])
-      .map((item) => userFacingUnderstoodLabel(item))
-      .filter((label): label is string => Boolean(label)),
+    understood_labels: understoodItems.map((item) => item.label),
     need_labels: (u?.need_to_understand.items ?? []).map((i) =>
       i.kind === "dir_based" ? i.missing_content : i.why,
     ),
@@ -97,7 +108,7 @@ export type DecisionUnderstandingBoxView = {
   progress_percent: number | null;
   progress_complete: boolean;
   current_understanding: string | null;
-  already_understood: string[];
+  already_understood: AlreadyUnderstoodItem[];
   still_need: string[];
   conflicts: string[];
   personal_pattern_insights: string[];
@@ -120,7 +131,7 @@ export function projectDecisionUnderstandingBox(
   } else {
     percent = null;
   }
-  const already = ui.understood_labels.map(userFacingText).filter(Boolean);
+  const already = projectAlreadyUnderstoodItems(session.decision_understanding?.understood.items);
   const stillNeed = ui.need_labels.map(userFacingText).filter(Boolean);
   const conflicts = ui.open_conflicts
     .map((c) => userFacingText(c.statements.filter(Boolean).join(" \u2194 ")))

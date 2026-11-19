@@ -27,6 +27,7 @@ export function DecisionUnderstandingPanel({
     : "Traditional interpretation or an unverified hypothesis, not a confirmed fact";
   const qTitle = isZh ? "\u5f53\u524d\u95ee\u9898" : "Current question";
   const conflictTitle = isZh ? "\u5c1a\u5f85\u6f84\u6e05\u7684\u77db\u76fe" : "Open conflicts";
+  const naMarker = isZh ? "\u5df2\u786e\u8ba4\u4e0d\u9002\u7528" : "Not applicable";
   const progressHint = isZh
     ? "\u4fe1\u606f\u51c6\u5907\u7a0b\u5ea6\uff08\u57fa\u4e8e\u8c03\u67e5\u5b8c\u6210\u6761\u4ef6\u4e0e\u4fe1\u606f\u7f3a\u53e3\uff0c\u4e0d\u662f\u63d0\u95ee\u6b21\u6570\uff09"
     : "Information readiness (completion conditions and remaining gaps, not question count)";
@@ -75,7 +76,12 @@ export function DecisionUnderstandingPanel({
               <div className="pchat__understanding-box__label">{understoodTitle}</div>
               <ul>
                 {box.already_understood.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={`${item.status}:${item.label}`}>
+                    {item.label}
+                    {item.status === "n_a" ? (
+                      <span className="pchat__understanding-box__hint"> {naMarker}</span>
+                    ) : null}
+                  </li>
                 ))}
               </ul>
             </div>
