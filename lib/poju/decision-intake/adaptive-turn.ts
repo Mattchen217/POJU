@@ -34,12 +34,21 @@ import {
   handleConflictClarificationAnswer,
 } from "./conflict-clarification-turn";
 import { bindConflictClarificationToPlan } from "./conflict-clarification";
-import { ensureDecisionBlueprint,
-  activateNextBlueprintPriorityBand } from "./blueprint";
+import {
+  ensureDecisionBlueprint,
+  activateNextBlueprintPriorityBand,
+  directionIdForDir,
+  resolveDdrIdsForDir,
+} from "./blueprint";
 import { buildAdaptiveQuestionPlan } from "./question-generation";
 import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
 import { buildUnderstandingState, refreshDecisionUnderstanding } from "./understanding-state";
 import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
+import {
+  applyUnderstandingModelToState,
+  generateDecisionUnderstandingTurn,
+  type UnderstandingModelTestHook,
+} from "./understanding-response-model";
 import {
   applyIntakeProtection,
   classifyIntakeInput,
@@ -48,7 +57,6 @@ import {
   readIntakeProtection,
   withIntakeProtection,
 } from "./intake-protection";
-import { resolveDdrIdsForDir } from "./blueprint";
 import {
   answerSourceFor,
   recordAnswerInterpretation,
@@ -578,6 +586,11 @@ export type AdaptiveTurnTestHooks = {
     nextDcSession: POJUSessionState,
     idempotency_key: string,
   ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
+  /**
+   * @internal Test-only Understanding / response model substitute.
+   * When omitted (production default), generateDecisionUnderstandingTurn calls OpenRouter.
+   */
+  understandingResponseModel?: UnderstandingModelTestHook;
 };
 
 type AdaptiveTurnInput = {
@@ -597,7 +610,224 @@ export async function runAdaptiveQuestionTurn(
   input: AdaptiveTurnInput,
 ): Promise<AdaptiveTurnResult> {
   const result = await runAdaptiveQuestionTurnInner(input);
-  return closeBlockedClarifications(result, input);
+  const closed = await closeBlockedClarifications(result, input);
+  return enrichOrdinaryTurnWithUnderstandingModel(closed, input);
+}
+
+function shouldEnrichWithUnderstandingModel(result: AdaptiveTurnResult): boolean {
+  if (
+    result.outcome !== "planned" &&
+    result.outcome !== "ready_no_question"
+  ) {
+    return false;
+  }
+  if (!result.understanding) return false;
+  const plan = result.plan;
+  if (plan && (isPendingClarificationPlan(plan) || isIntakeControlPlan(plan))) {
+    return false;
+  }
+  // Conflict-clarification plans keep code wording; ordinary investigation must be model-authored.
+  if (plan?.conflict_clarification) return false;
+  return true;
+}
+
+function buildLegalCandidatesForUnderstanding(input: {
+  session: POJUSessionState;
+  plan: AdaptiveQuestionPlan | null;
+}): Array<{
+  candidate_id: string;
+  direction_id: string;
+  dir_ids: string[];
+  missing_info: string;
+  decision_value: string;
+  expected_info: string;
+  template_question: string;
+}> {
+  const dc = input.session.decision_context;
+  const blueprint = input.session.decision_blueprint;
+  if (!dc || !blueprint) {
+    if (!input.plan) return [];
+    return [
+      {
+        candidate_id: input.plan.candidate_id,
+        direction_id: input.plan.direction_id,
+        dir_ids: [...input.plan.dir_ids],
+        missing_info: input.plan.missing_info,
+        decision_value: input.plan.decision_value,
+        expected_info: input.plan.expected_info,
+        template_question: input.plan.question_text,
+      },
+    ];
+  }
+  const rankedIds = input.session.intake_ask_plan?.ranked_candidate_ids ?? [];
+  const candidates = buildIntakeCandidatesFromDc(dc, blueprint);
+  const byId = new Map(candidates.map((c) => [c.candidate_id, c]));
+  const orderedIds =
+    rankedIds.length > 0
+      ? rankedIds
+      : input.plan
+        ? [input.plan.candidate_id, ...candidates.map((c) => c.candidate_id)]
+        : candidates.map((c) => c.candidate_id);
+  const seen = new Set<string>();
+  const out: Array<{
+    candidate_id: string;
+    direction_id: string;
+    dir_ids: string[];
+    missing_info: string;
+    decision_value: string;
+    expected_info: string;
+    template_question: string;
+  }> = [];
+  for (const id of orderedIds) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    if (input.plan && id === input.plan.candidate_id) {
+      out.push({
+        candidate_id: input.plan.candidate_id,
+        direction_id: input.plan.direction_id,
+        dir_ids: [...input.plan.dir_ids],
+        missing_info: input.plan.missing_info,
+        decision_value: input.plan.decision_value,
+        expected_info: input.plan.expected_info,
+        template_question: input.plan.question_text,
+      });
+      continue;
+    }
+    const c = byId.get(id);
+    if (!c) continue;
+    const dirId = c.dir_ids[0] ?? "";
+    out.push({
+      candidate_id: c.candidate_id,
+      direction_id: dirId ? directionIdForDir(blueprint, dirId) : "DIRN-DEFINITION",
+      dir_ids: [...c.dir_ids],
+      missing_info: c.kind,
+      decision_value: c.impact.decision_critical
+        ? "decision_critical"
+        : c.impact.may_affect_p5_ranking
+          ? "may_affect_p5"
+          : "supporting",
+      expected_info: dirId
+        ? dc.dirs.find((d) => d.dir_id === dirId)?.need ?? dirId
+        : c.fact_role_codes.join(","),
+      template_question: "",
+    });
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+async function enrichOrdinaryTurnWithUnderstandingModel(
+  result: AdaptiveTurnResult,
+  input: AdaptiveTurnInput,
+): Promise<AdaptiveTurnResult> {
+  if (!shouldEnrichWithUnderstandingModel(result)) return result;
+  const understanding = result.understanding!;
+  const legal_candidates = buildLegalCandidatesForUnderstanding({
+    session: result.session,
+    plan: result.plan,
+  });
+  const legal_candidate_ids = legal_candidates.map((c) => c.candidate_id);
+  if (result.plan && !legal_candidate_ids.includes(result.plan.candidate_id)) {
+    legal_candidates.unshift({
+      candidate_id: result.plan.candidate_id,
+      direction_id: result.plan.direction_id,
+      dir_ids: [...result.plan.dir_ids],
+      missing_info: result.plan.missing_info,
+      decision_value: result.plan.decision_value,
+      expected_info: result.plan.expected_info,
+      template_question: result.plan.question_text,
+    });
+    legal_candidate_ids.unshift(result.plan.candidate_id);
+  }
+
+  const modelResult = await generateDecisionUnderstandingTurn({
+    session: result.session,
+    understanding,
+    plan: result.plan,
+    legal_candidate_ids,
+    legal_candidates,
+    locale: input.locale,
+    init_only: Boolean(input.init_only),
+    user_statement: input.statement,
+    signal: input.signal,
+    testHook: input.test_hooks?.understandingResponseModel,
+  });
+
+  if (!modelResult.ok) {
+    return {
+      ...result,
+      outcome: "understanding_model_failed",
+      ask_error: `understanding_model_failed:${modelResult.reason}${
+        modelResult.detail ? `:${modelResult.detail}` : ""
+      }`,
+      model_response_text: undefined,
+      suggested_replies: undefined,
+      profile_hash: modelResult.profile.profile_hash,
+      // Keep plan for audit but do not authorize template question as user reply.
+      authorized_question: null,
+    };
+  }
+
+  const applied = applyUnderstandingModelToState(
+    understanding,
+    result.plan,
+    modelResult.output,
+  );
+  // If model selected a different legal candidate, keep code plan binding but
+  // still require question_text to match the authorized candidate_id.
+  let nextPlan = applied.plan;
+  if (
+    result.plan &&
+    modelResult.output.next_question.selected_candidate_id &&
+    modelResult.output.next_question.selected_candidate_id !== result.plan.candidate_id
+  ) {
+    // Scope: only rephrase within the already-validated code plan this turn.
+    // Candidate switching requires a full re-plan; reject rather than widen scope.
+    return {
+      ...result,
+      outcome: "understanding_model_failed",
+      ask_error: "understanding_model_failed:candidate_mismatch",
+      authorized_question: null,
+      profile_hash: modelResult.profile.profile_hash,
+    };
+  }
+  if (
+    nextPlan &&
+    modelResult.output.next_question.question_text &&
+    nextPlan.candidate_id ===
+      (modelResult.output.next_question.selected_candidate_id ?? nextPlan.candidate_id)
+  ) {
+    nextPlan = {
+      ...nextPlan,
+      question_text: modelResult.output.next_question.question_text,
+      ask_now_reason:
+        modelResult.output.next_question.rationale || nextPlan.ask_now_reason,
+    };
+  }
+
+  const nextUnderstanding = {
+    ...applied.understanding,
+    next_question_plan: nextPlan,
+  };
+  const askSnap = result.session.intake_ask_plan ?? null;
+  const nextSession = withUnderstanding(
+    result.session,
+    nextUnderstanding,
+    nextPlan,
+    askSnap,
+  );
+
+  return {
+    ...result,
+    session: nextSession,
+    understanding: nextUnderstanding,
+    plan: nextPlan,
+    authorized_question: nextPlan?.question_text ?? null,
+    model_response_text: modelResult.output.response_text,
+    suggested_replies: modelResult.output.suggested_replies,
+    profile_hash: modelResult.profile.profile_hash,
+    outcome: nextPlan ? "planned" : "ready_no_question",
+  };
 }
 
 type ClarificationBlock = "budget_exhausted" | "depth_exhausted";

@@ -16,6 +16,7 @@
 import type { POJUSessionState } from "@/lib/poju/types";
 import type {
   AdaptiveQuestionPlan,
+  AdaptiveTurnSuggestedReply,
   AnswerEvent,
   UnderstandingState,
 } from "@/lib/poju/decision-intake/types";
@@ -38,6 +39,8 @@ export type CollectingDcTurnOutcome =
    * treat as investigation-complete / final-confirm.
    */
   | "planner_blocked"
+  /** Understanding / response model failed; do not fall back to template chat. */
+  | "understanding_model_failed"
   /** Model answer interpretation call failed (timeout / transport / throw). */
   | "answer_interpretation_failed"
   /** Model returned invalid JSON or a schema-invalid draft. */
@@ -65,6 +68,14 @@ export type CollectingDcTurnResult = {
   /** M1-R: true when this turn created draft DC from a brand-new session. */
   bootstrapped?: boolean;
   user_visible_message?: string;
+  /** Model-authored chat reply for ordinary investigation turns. */
+  model_response_text?: string;
+  suggested_replies?: [
+    AdaptiveTurnSuggestedReply,
+    AdaptiveTurnSuggestedReply,
+    AdaptiveTurnSuggestedReply,
+  ];
+  profile_hash?: string | null;
 };
 
 function mapAdaptiveOutcome(turn: {
@@ -78,6 +89,13 @@ function mapAdaptiveOutcome(turn: {
   answer_event: AnswerEvent | null;
   bootstrapped?: boolean;
   user_visible_message?: string;
+  model_response_text?: string;
+  suggested_replies?: [
+    AdaptiveTurnSuggestedReply,
+    AdaptiveTurnSuggestedReply,
+    AdaptiveTurnSuggestedReply,
+  ];
+  profile_hash?: string | null;
 }, initOnly: boolean): CollectingDcTurnResult {
   const session = {
     ...turn.session,
@@ -91,6 +109,9 @@ function mapAdaptiveOutcome(turn: {
     ask_error: turn.ask_error,
     bootstrapped: turn.bootstrapped,
     user_visible_message: turn.user_visible_message,
+    model_response_text: turn.model_response_text,
+    suggested_replies: turn.suggested_replies,
+    profile_hash: turn.profile_hash,
   };
 
   if (turn.outcome === "dc_persist_failed") {
@@ -167,6 +188,21 @@ function mapAdaptiveOutcome(turn: {
       ask_error: turn.ask_error ?? "planner_blocked",
       authorized_question: null,
       plan: null,
+      model_response_text: undefined,
+      suggested_replies: undefined,
+    };
+  }
+  if (turn.outcome === "understanding_model_failed") {
+    return {
+      session,
+      outcome: "understanding_model_failed",
+      ask_planned: false,
+      persist_error: turn.persist_error,
+      ...common,
+      ask_error: turn.ask_error ?? "understanding_model_failed",
+      authorized_question: null,
+      model_response_text: undefined,
+      suggested_replies: undefined,
     };
   }
   if (turn.outcome === "idempotent_replay") {

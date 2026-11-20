@@ -38,6 +38,20 @@ function userFacingText(value: string | null | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** Strip internal role/DIR debug prefixes from user-facing need labels. */
+function sanitizeNeedLabel(value: string | null | undefined): string {
+  let text = userFacingText(value);
+  if (!text) return "";
+  text = text
+    .replace(/^missing_roles:\s*/i, "")
+    .replace(/\bDIR_[A-Z0-9_]+\b/g, "")
+    .replace(/\bDDR_[A-Z0-9_]+\b/g, "")
+    .replace(/\s*;\s*/g, " · ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text;
+}
+
 function projectAlreadyUnderstoodItems(
   items: Array<{
     label?: string;
@@ -71,9 +85,9 @@ export function projectAdaptiveQuestionForUi(
       u?.last_sent_question?.question_text ?? plan?.question_text ?? null,
     understanding_summary: u?.current_understanding.summary ?? null,
     understood_labels: understoodItems.map((item) => item.label),
-    need_labels: (u?.need_to_understand.items ?? []).map((i) =>
-      i.kind === "dir_based" ? i.missing_content : i.why,
-    ),
+    need_labels: (u?.need_to_understand.items ?? [])
+      .map((i) => sanitizeNeedLabel(i.kind === "dir_based" ? i.missing_content : i.why))
+      .filter(Boolean),
     personal_pattern_status: u?.personal_pattern_insight.status ?? null,
     readiness_verdict: u?.readiness.verdict ?? null,
     budget_asked: u?.budget.session_asked_count ?? null,
@@ -93,12 +107,14 @@ export function projectAdaptiveQuestionForUi(
     readiness_reasons: u?.readiness.reasons ?? [],
     readiness_can_ask: u?.readiness.can_ask ?? null,
     budget_remaining: u?.budget.remaining_hard_budget ?? null,
-    need_details: (u?.need_to_understand.items ?? []).map((i) => ({
-      label: i.kind === "dir_based" ? i.missing_content : i.why,
-      priority: i.priority,
-      direction_id: i.kind === "dir_based" ? i.direction_id : null,
-      gap_type: i.gap_type,
-    })),
+    need_details: (u?.need_to_understand.items ?? [])
+      .map((i) => ({
+        label: sanitizeNeedLabel(i.kind === "dir_based" ? i.missing_content : i.why),
+        priority: i.priority,
+        direction_id: i.kind === "dir_based" ? i.direction_id : null,
+        gap_type: i.gap_type,
+      }))
+      .filter((i) => Boolean(i.label)),
     personal_pattern_insights: u?.personal_pattern_insight.insights ?? [],
     readiness_progress_percent: u?.readiness_progress?.percent ?? null,
     readiness_progress_complete: u?.readiness_progress?.complete ?? null,
@@ -132,7 +148,9 @@ export function projectDecisionUnderstandingBox(
     percent = null;
   }
   const already = projectAlreadyUnderstoodItems(session.decision_understanding?.understood.items);
-  const stillNeed = ui.need_labels.map(userFacingText).filter(Boolean);
+  const stillNeed = Array.from(
+    new Set(ui.need_labels.map(sanitizeNeedLabel).filter(Boolean)),
+  );
   const conflicts = ui.open_conflicts
     .map((c) => userFacingText(c.statements.filter(Boolean).join(" \u2194 ")))
     .filter((text) => text && !stillNeed.includes(text));

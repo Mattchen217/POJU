@@ -25,7 +25,6 @@ export function DecisionUnderstandingPanel({
   const insightNature = isZh
     ? "\u4e3a\u4f20\u7edf\u89e3\u91ca\u6216\u5f85\u9a8c\u8bc1\u5047\u8bbe\uff0c\u4e0d\u662f\u5df2\u786e\u8ba4\u4e8b\u5b9e"
     : "Traditional interpretation or an unverified hypothesis, not a confirmed fact";
-  const qTitle = isZh ? "\u5f53\u524d\u95ee\u9898" : "Current question";
   const conflictTitle = isZh ? "\u5c1a\u5f85\u6f84\u6e05\u7684\u77db\u76fe" : "Open conflicts";
   const naMarker = isZh ? "\u5df2\u786e\u8ba4\u4e0d\u9002\u7528" : "Not applicable";
   const progressHint = isZh
@@ -112,12 +111,7 @@ export function DecisionUnderstandingPanel({
               </ul>
             </div>
           ) : null}
-          {box.current_question ? (
-            <div>
-              <div className="pchat__understanding-box__label">{qTitle}</div>
-              <div className="pchat__understanding-box__text">{box.current_question}</div>
-            </div>
-          ) : null}
+          {/* Current question lives in the chat bubble (model response), not duplicated here. */}
           {confirmHint ? <div className="pchat__understanding-box__hint">{confirmHint}</div> : null}
         </div>
       ) : null}

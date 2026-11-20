@@ -1291,8 +1291,10 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           !m1CollectingTurn.authorized_question &&
           (
             m1CollectingTurn.outcome === "planner_blocked" ||
+            m1CollectingTurn.outcome === "understanding_model_failed" ||
             Boolean(m1CollectingTurn.ask_error?.includes("understanding_exception")) ||
             Boolean(m1CollectingTurn.ask_error?.includes("planner_exception")) ||
+            Boolean(m1CollectingTurn.ask_error?.includes("understanding_model_failed")) ||
             (
               m1CollectingTurn.understanding == null &&
               Boolean(m1CollectingTurn.session.decision_blueprint)
@@ -1475,24 +1477,24 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     });
   }
 
-  // DI2 Phase 2 precheck: after a successful M1 authorized question or
-  // readiness confirm, do not call the generic Chat LLM. That call does not
-  // plan the next question, and handleUserMessage later discarded its text
-  // in favor of plan.question_text or the confirm prompt. A wasted generic
-  // LLM call must not be treated as model-driven adaptive Q&A.
+  // DI2 Personalized Understanding path: after M1 authorized question or
+  // readiness confirm, skip the generic Chat LLM. User-visible reply must come
+  // from the Understanding model (model_response_text), not template plan text.
   const m1HasAuthorizedQuestion = Boolean(
     m1CollectingTurn?.plan && m1CollectingTurn.authorized_question,
   );
   const m1HasReadinessConfirm =
     Boolean(m1CollectingTurn) &&
     m1CollectingTurn!.outcome !== "planner_blocked" &&
+    m1CollectingTurn!.outcome !== "understanding_model_failed" &&
     !m1CollectingTurn!.authorized_question &&
     Boolean(m1CollectingTurn!.understanding) &&
     m1CollectingTurn!.understanding!.readiness.can_ask === false &&
     !(
       Boolean(m1CollectingTurn!.ask_error) &&
       (m1CollectingTurn!.ask_error!.includes("understanding_exception") ||
-        m1CollectingTurn!.ask_error!.includes("planner_exception"))
+        m1CollectingTurn!.ask_error!.includes("planner_exception") ||
+        m1CollectingTurn!.ask_error!.includes("understanding_model_failed"))
     );
   if (m1CollectingTurn && (m1HasAuthorizedQuestion || m1HasReadinessConfirm)) {
     const nowIso = new Date().toISOString();
@@ -1512,7 +1514,25 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       stall_offer_pending: false,
     };
     let finalContent: string;
-    if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
+    const modelReply = m1CollectingTurn.model_response_text?.trim() || "";
+    if (modelReply) {
+      finalContent = modelReply;
+      if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
+        const { assertQuestionMatchesPlan } = await import("@/lib/poju/decision-intake");
+        // Ensure authorized question text is present in the model reply (or equals it).
+        const matched = assertQuestionMatchesPlan(
+          m1CollectingTurn.authorized_question!,
+          m1CollectingTurn.plan,
+        );
+        if (
+          matched.ok &&
+          !finalContent.includes(matched.text.slice(0, Math.min(16, matched.text.length)))
+        ) {
+          finalContent = `${finalContent.trim()}\n\n${matched.text}`;
+        }
+      }
+    } else if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
+      // Clarification / intake-control turns may still use authorized plan text.
       const { assertQuestionMatchesPlan } = await import("@/lib/poju/decision-intake");
       const matched = assertQuestionMatchesPlan(
         m1CollectingTurn.authorized_question!,
@@ -1528,6 +1548,12 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         summary +
         "\n\n如果以上理解正确，请回复确认；如需补充，请直接说明。";
     }
+    const suggested =
+      m1CollectingTurn.suggested_replies?.map((r) => r.value.trim()).filter(Boolean) ?? [];
+    const replyOptions =
+      suggested.length === 3
+        ? suggested
+        : undefined;
     let m1Attestation: import("@/lib/poju/types").AssistantHistoryAttestation | undefined;
     if (input.server_invoke) {
       // Authoritative server turns must sign even when test shims define `window`.
@@ -1547,11 +1573,16 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       content: finalContent,
       timestamp: nowIso,
       client_id: safeRandomUUID(),
+      ...(replyOptions ? { options: replyOptions } : {}),
       meta: {
         m1_skipped_generic_chat_llm: true,
+        ...(modelReply ? { di2_understanding_model_reply: true as const } : {}),
         ...(m1HasAuthorizedQuestion ? { m1_authorized_question: true as const } : {}),
         ...(m1HasReadinessConfirm ? { m21_readiness_stop: true as const } : {}),
         ...(m1Attestation ? { assistant_history_attestation: m1Attestation } : {}),
+        ...(m1CollectingTurn.profile_hash
+          ? { di2_profile_hash: m1CollectingTurn.profile_hash }
+          : {}),
       },
     };
     let sessionOut = withSessionProfileFlags({

@@ -667,6 +667,11 @@ export type UnderstandingState = {
   } | null;
 };
 
+export type AdaptiveTurnSuggestedReply = {
+  label: string;
+  value: string;
+};
+
 export type AdaptiveTurnResult = {
   session: import("@/lib/poju/types").POJUSessionState;
   outcome:
@@ -677,6 +682,7 @@ export type AdaptiveTurnResult = {
     | "dc_persist_threw"
     | "answer_interpretation_failed"
     | "answer_interpretation_invalid_schema"
+    | "understanding_model_failed"
     | "not_applicable_phase"
     | "idempotent_replay"
     | "intake_warned"
@@ -692,4 +698,17 @@ export type AdaptiveTurnResult = {
   authorized_question: string | null;
   persist_error?: string;
   ask_error?: string;
+  /**
+   * Model-authored chat reply for ordinary investigation turns.
+   * When set, agent must use this instead of plan.question_text alone.
+   */
+  model_response_text?: string;
+  /** Exactly three suggested replies from the Understanding model (ordinary turns). */
+  suggested_replies?: [
+    AdaptiveTurnSuggestedReply,
+    AdaptiveTurnSuggestedReply,
+    AdaptiveTurnSuggestedReply,
+  ];
+  /** Profile hash fed into the Understanding model this turn (audit). */
+  profile_hash?: string | null;
 };

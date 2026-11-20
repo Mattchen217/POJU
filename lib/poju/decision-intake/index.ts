@@ -75,7 +75,17 @@ export {
   INTAKE_SESSION_RETENTION_MS,
 } from "./intake-protection";
 export { bindPersonalAnalysisProfile, evaluateQaPersonalPatternInsight } from "./personal-analysis-profile";
+export {
+  buildPersonalProfileContext,
+  personalProfileContextForPrompt,
+} from "./personal-profile-context";
+export {
+  generateDecisionUnderstandingTurn,
+  applyUnderstandingModelToState,
+  UNDERSTANDING_RESPONSE_MODEL_VERSION,
+} from "./understanding-response-model";
 export { computeReadinessProgress } from "./understanding-state";
+export { projectDecisionUnderstandingBox } from "./ui-projection";
 export {
   confirmUnderstandingAndFreeze,
   isFinalUnderstandingConfirmText,

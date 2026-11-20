@@ -64,50 +64,65 @@ export function computeReadinessProgress(input: {
     return 0;
   };
   const activeDirs = (dc.dirs ?? []).filter((d) => d.id_lifecycle === "active" || d.id_lifecycle == null);
-  const scored = (priority: "P0" | "P1" | "P2") => {
+  const scoredOrNull = (priority: "P0" | "P1" | "P2"): number | null => {
     const list = activeDirs.filter((d) => dirPriority(d.dir_id) === priority);
-    if (!list.length) return 1;
+    // Empty priority band is absent from the weighted average (not full credit).
+    if (!list.length) return null;
     return list.reduce((sum, d) => sum + roleScore(d.current_state), 0) / list.length;
   };
   const ddrTargets = (blueprint.directions ?? []).flatMap((d) =>
     (d.dir_ids ?? []).map((dirId) => ({ priority: d.priority, dirId })),
   );
   const requiredDdrDirs = ddrTargets.filter((d) => d.priority === "P0" || d.priority === "P1");
-  const ddr = requiredDdrDirs.length
+  const ddr: number | null = requiredDdrDirs.length
     ? requiredDdrDirs.reduce((sum, item) => {
         const dir = activeDirs.find((d) => d.dir_id === item.dirId);
         return sum + roleScore(dir?.current_state);
       }, 0) / requiredDdrDirs.length
-    : scored("P0");
-  const constraints = (dc.constraints ?? []).length
+    : null;
+  // Empty constraint list is "not yet surveyed", not "all constraints satisfied".
+  const constraintsScore: number | null = (dc.constraints ?? []).length
     ? dc.constraints.filter((c) => c.status === "confirmed").length / dc.constraints.length
-    : 1;
+    : null;
   const openConflicts = (dc.conflicts ?? []).filter((c) => c.state !== "clarified" && c.state !== "unresolved_in_final");
-  const conflicts = openConflicts.length === 0 ? 1 : 0;
+  const investigationStarted =
+    activeDirs.some((d) => roleScore(d.current_state) > 0) ||
+    (dc.reality_facts ?? []).some((f) => f.user_confirmed === true);
+  // No open conflicts only counts after investigation has started; otherwise Fresh = absent.
+  const conflictsScore: number | null =
+    openConflicts.length > 0 ? 0 : investigationStarted ? 1 : null;
   const sufficiencyScore =
     sufficiency.verdict === "sufficient" ? 1 : sufficiency.verdict === "sufficient_with_boundaries" ? 0.85 : 0;
-  const p0 = scored("P0");
-  const p1 = scored("P1");
-  const percentRaw =
-    (ddr * 3 + p0 * 3 + p1 * 2 + constraints * 1 + conflicts * 2 + sufficiencyScore * 3) / 14;
+  const p0 = scoredOrNull("P0");
+  const p1 = scoredOrNull("P1");
+  const parts: Array<{ w: number; v: number }> = [];
+  if (ddr != null) parts.push({ w: 3, v: ddr });
+  if (p0 != null) parts.push({ w: 3, v: p0 });
+  if (p1 != null) parts.push({ w: 2, v: p1 });
+  if (constraintsScore != null) parts.push({ w: 1, v: constraintsScore });
+  if (conflictsScore != null) parts.push({ w: 2, v: conflictsScore });
+  parts.push({ w: 3, v: sufficiencyScore });
+  const weightSum = parts.reduce((s, p) => s + p.w, 0) || 1;
+  const percentRaw = parts.reduce((s, p) => s + p.w * p.v, 0) / weightSum;
   const complete =
-    ddr >= 1 &&
-    p0 >= 1 &&
-    p1 >= 1 &&
-    conflicts >= 1 &&
+    (ddr == null || ddr >= 1) &&
+    (p0 == null || p0 >= 1) &&
+    (p1 == null || p1 >= 1) &&
+    (conflictsScore == null || conflictsScore >= 1) &&
     (sufficiency.verdict === "sufficient" || sufficiency.verdict === "sufficient_with_boundaries") &&
-    Boolean(sufficiency.canStop);
+    Boolean(sufficiency.canStop) &&
+    investigationStarted;
   const percent = complete ? 100 : Math.min(99, Math.round(percentRaw * 100));
   return {
     percent,
     complete,
     basis: "ddr_dir_gate",
     components: {
-      ddr: Math.round(ddr * 100),
-      p0_dir: Math.round(p0 * 100),
-      p1_dir: Math.round(p1 * 100),
-      constraints: Math.round(constraints * 100),
-      conflicts: Math.round(conflicts * 100),
+      ddr: Math.round((ddr ?? 0) * 100),
+      p0_dir: Math.round((p0 ?? 0) * 100),
+      p1_dir: Math.round((p1 ?? 0) * 100),
+      constraints: Math.round((constraintsScore ?? 0) * 100),
+      conflicts: Math.round((conflictsScore ?? 0) * 100),
       sufficiency: Math.round(sufficiencyScore * 100),
     },
   };

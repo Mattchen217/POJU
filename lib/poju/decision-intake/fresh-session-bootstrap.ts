@@ -338,7 +338,7 @@ export async function bootstrapFreshSessionMainLoop(input: {
     scope_source = applied.scope_source;
     const turn = await runAdaptiveQuestionTurn({
       session: current,
-      statement: "",
+      statement,
       source_turn_id: input.source_turn_id,
       now: input.now,
       init_only: true,
@@ -436,7 +436,8 @@ export async function bootstrapFreshSessionMainLoop(input: {
 
   const turn = await runAdaptiveQuestionTurn({
     session: current,
-    statement: "",
+    // Keep statement for Understanding model context; init_only skips answer write.
+    statement: statement,
     source_turn_id: input.source_turn_id,
     now: input.now,
     init_only: true,
