@@ -701,7 +701,6 @@ export async function generateDecisionUnderstandingTurn(input: {
             locale,
             init_only,
             user_statement,
-            session: input.session,
             understanding: input.understanding,
             plan: input.plan,
             previous_plan: input.previous_plan ?? null,
