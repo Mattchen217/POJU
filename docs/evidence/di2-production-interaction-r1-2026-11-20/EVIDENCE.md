@@ -2,7 +2,10 @@
 
 Date: 2026-11-20 (America/Chicago)  
 Parent SHA: `6427903331a00d2a613f06cba87a14d6552b5bc8`  
-Implementation SHA: `39a5b583b0243ad322cd86bff738984f4ea823f5`  
+Implementation SHAs:
+- `39a5b583b0243ad322cd86bff738984f4ea823f5` (main R1 fix)
+- `fba78ae43a69349840e49914c869bb4dc2768c9c` (hide DQ blob from Understood)
+Evidence SHA: `b4981cbc8c6e5e87d8460a9de733e9eb7432d98c` (plus this note if amended)  
 Branch: `feat/di2-production-interaction-r1`  
 **Not product PASS. Not merged. Not deployed.**
 
