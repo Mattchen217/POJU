@@ -12,26 +12,34 @@
 | `pnpm exec tsc --noEmit` (filtered DI2/agent files clean) | `0` |
 | `pnpm exec tsx scripts/test-di2-personalized-understanding-path.ts` | `0` |
 | `pnpm exec tsx scripts/test-di2-personalized-understanding-openrouter.ts` | `0` |
+| `pnpm exec tsx scripts/test-di2-personalized-understanding-full-path.ts` | `0` |
 
 ## Live OpenRouter
 
+### Smoke (no matrix)
+
 - Log: `logs/openrouter-understanding-smoke.log`
-- Provider: Sail Research
-- Model: `deepseek/deepseek-v4-pro-0813`
-- Latency: ~12810 ms
-- Result markers: `ok: true`, narrative is not `Decision:` stats summary, `response_text` present, exactly 3 suggested replies, `LIVE_SMOKE_OK`
+- Provider: Sail Research / `deepseek/deepseek-v4-pro-0813` ~12.8s
+- Markers: `LIVE_SMOKE_OK`
+
+### Full path (real ProfileStructured)
+
+- Log: `logs/full-path-run.log` + `logs/full-path-evidence.json`
+- Two local charts (1990-F / 1985-M): distinct `day_master` + `profile_hash`; field coverage includes four_pillars / da_yun / ziwei
+- 3× `handleUserMessage` turns: `model_response_text` + exactly 3 `options`; Understanding hook saw non-null profile each turn
+- Live OpenRouter with matrix: non-null `profile_hash` + structured day_master; narrative not `Decision:` stats; 3 suggested replies
+- Markers: `FULL_PATH_OK`
 
 ## What this proves
 
-1. Understanding model path calls real OpenRouter and returns structured narrative + chat reply + 3 suggested replies.
-2. Fresh readiness progress no longer inflates empty constraints/conflicts (unit: 0%).
-3. Model narrative/question overrides template stats summary (unit).
-4. UI need labels strip `missing_roles:` debug prefixes (unit).
+1. Full local ProfileStructured can enter every Understanding model turn (with rebuild-from-birth if structured stripped).
+2. Ordinary adaptive turns return model chat + 3 suggested replies (not template Q / not generic chat LLM).
+3. Fresh readiness empty-set inflation fixed; need labels sanitized.
+4. Code still owns Blueprint/DC/budget; incomplete birth+missing chart fails closed (`profile_incomplete`).
 
-## Known limits (not claimed done)
+## Known limits (not claimed product PASS)
 
-- Full multi-turn Fresh Session e2e with two real Profiles still pending.
-- Suggested-reply click path through `/api/poju/chat` still pending in this evidence pack.
-- ProfileStructured coverage in the live smoke used a null matrix (profile_hash null) — proves model path, not full chart personalization yet.
+- Browser `/api/poju/chat` production deploy not exercised in this pack.
+- Independent review acceptance still required.
 
 **Do not treat this document as product acceptance PASS.**

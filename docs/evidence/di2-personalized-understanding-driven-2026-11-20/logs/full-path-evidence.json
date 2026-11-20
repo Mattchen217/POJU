@@ -1,0 +1,102 @@
+{
+  "started_at": "2026-11-20T07:12:19.910Z",
+  "checks": [
+    "PASS two real profiles have distinct day_master / hash",
+    "PASS rebuild from birth when structured stripped",
+    "PASS turn 1 model reply + 3 options (no generic chat)",
+    "PASS turn 2 model reply + 3 options (no generic chat)",
+    "PASS turn 3 model reply + 3 options (no generic chat)",
+    "PASS understanding hook saw profile every turn",
+    "PASS live OpenRouter with non-null ProfileStructured"
+  ],
+  "profile_a": {
+    "day_master": "庚",
+    "hash": "177ebf27edf8cf61a4369f10cc17a32ab6cdc69aeb85848d51efde66ff8427db",
+    "coverage": {
+      "four_pillars": true,
+      "pillars_detail": true,
+      "day_master": true,
+      "strength": true,
+      "pattern": true,
+      "yong_xi_ji": true,
+      "da_yun": true,
+      "bazi_enrichment": true,
+      "ziwei_closed_set": true
+    },
+    "ziwei": true
+  },
+  "profile_b": {
+    "day_master": "乙",
+    "hash": "63e13f5b5a10b790b13a1e7a92db99e927af1dcfc6326cce777bcfc6fe566516",
+    "coverage": {
+      "four_pillars": true,
+      "pillars_detail": true,
+      "day_master": true,
+      "strength": true,
+      "pattern": true,
+      "yong_xi_ji": true,
+      "da_yun": true,
+      "bazi_enrichment": true,
+      "ziwei_closed_set": true
+    },
+    "ziwei": true
+  },
+  "turn_1": {
+    "content_preview": "我听到了你的处境（第1轮）。\n\n模型问：关于「我从上个项目失败后，已经好几年没有任何收入了，都不知道做什么好，我该怎么办？」——期望达成的结果？（这样我才能判断：用于比较选项与成立条件）",
+    "options": [
+      "回答A：我想尽快恢复收入（回合1）",
+      "回答B：我想先找长期方向（回合1）",
+      "回答C：我还不清楚自己适合什么（回合1）"
+    ],
+    "understanding": "综合理解（第1轮）：结合你的能量画像与现实处境，当前优先弄清目标与约束。日主锚点已读取。",
+    "profile_meta": "623d3d7c2a28d09993b690581fa56ffde0092313b4952a58328b7f22b68a2470"
+  },
+  "turn_2": {
+    "content_preview": "我听到了你的处境（第2轮）。\n\n模型问：关于「我从上个项目失败后，已经好几年没有任何收入了，都不知道做什么好，我该怎么办？」——目标优先级顺序？（这样我才能判断：驱动选项排序）",
+    "options": [
+      "回答A：我想尽快恢复收入（回合2）",
+      "回答B：我想先找长期方向（回合2）",
+      "回答C：我还不清楚自己适合什么（回合2）"
+    ],
+    "understanding": "综合理解（第2轮）：结合你的能量画像与现实处境，当前优先弄清目标与约束。日主锚点已读取。",
+    "profile_meta": "623d3d7c2a28d09993b690581fa56ffde0092313b4952a58328b7f22b68a2470"
+  },
+  "turn_3": {
+    "content_preview": "我听到了你的处境（第3轮）。\n\n模型问：关于「我从上个项目失败后，已经好几年没有任何收入了，都不知道做什么好，我该怎么办？」——做错会失去什么？（这样我才能判断：决定风险边界与 hold 条件）",
+    "options": [
+      "回答A：我想尽快恢复收入（回合3）",
+      "回答B：我想先找长期方向（回合3）",
+      "回答C：我还不清楚自己适合什么（回合3）"
+    ],
+    "understanding": "综合理解（第3轮）：结合你的能量画像与现实处境，当前优先弄清目标与约束。日主锚点已读取。",
+    "profile_meta": "623d3d7c2a28d09993b690581fa56ffde0092313b4952a58328b7f22b68a2470"
+  },
+  "live_openrouter": {
+    "ok": true,
+    "reason": null,
+    "provider": "Sail Research",
+    "model": "deepseek/deepseek-v4-pro-0813",
+    "latency_ms": 15361,
+    "profile_hash": "b3fa85c111eed7957497210ffae84b06667e1d53f092d84d8201bbd0c06c2c2e",
+    "coverage": {
+      "four_pillars": true,
+      "pillars_detail": true,
+      "day_master": true,
+      "strength": true,
+      "pattern": true,
+      "yong_xi_ji": true,
+      "da_yun": true,
+      "bazi_enrichment": true,
+      "ziwei_closed_set": true
+    },
+    "narrative": "用户刚经历创业失败，目前没有收入，处于决策迷茫期，需要明确下一步的优先目标。从个人能量结构看，用户属于偏强类型，在压力下容易内耗，因此需要先理清期望结果，再结合恢复与行动节奏给出建议。",
+    "suggested": [
+      "先解决基本收入",
+      "找到新方向",
+      "先调整状态"
+    ]
+  },
+  "finished_at": "2026-11-20T07:12:36.614Z",
+  "passed": 7,
+  "failed": 0
+}
