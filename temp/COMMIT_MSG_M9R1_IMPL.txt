@@ -1,0 +1,7 @@
+Fix M9-R1 session authority review findings
+
+Reject terminal Session commits after model execution, bind idempotency
+to user message content, fail closed on corrupt server records, and
+strengthen the production Session CAS contract including same-KV ledger
+probes. Adds M9-R1 regression coverage. This does not declare M9 or
+Decision Intake 2.0 accepted.

@@ -1,0 +1,86 @@
+==================== out_m24fu5_typegen.txt size=64
+Generating route types...
+✓ Types generated successfully
+
+==================== out_m24fu5_tsc.txt size=0
+
+==================== out_m24fu5_build.txt size=11402
+b_id]/approve
+├ ƒ /api/ops/delivery-lab/[lab_id]/chat
+├ ƒ /api/ops/delivery-lab/[lab_id]/chat/rerun
+├ ƒ /api/ops/delivery-lab/[lab_id]/chat/undo
+├ ƒ /api/ops/delivery-lab/[lab_id]/gate
+├ ƒ /api/ops/delivery-lab/[lab_id]/jobs/segment2
+├ ƒ /api/ops/delivery-lab/[lab_id]/jobs/synthesis
+├ ƒ /api/ops/delivery-lab/[lab_id]/rerun
+├ ƒ /api/ops/delivery-lab/[lab_id]/run
+├ ƒ /api/ops/delivery-lab/create
+├ ƒ /api/ops/login
+├ ƒ /api/ops/refund-session-ping
+├ ƒ /api/oracle/draw
+├ ƒ /api/oracle/full-reading
+├ ƒ /api/passes/atmos-status
+├ ƒ /api/passes/unlock
+├ ƒ /api/payments/create
+├ ƒ /api/payments/refund
+├ ƒ /api/payments/verify
+├ ƒ /api/poju
+├ ƒ /api/poju/breakthrough-core
+├ ƒ /api/poju/breakthrough-core/agenda
+├ ƒ /api/poju/breakthrough-core/status
+├ ƒ /api/poju/chat
+├ ƒ /api/poju/delivery-email
+├ ƒ /api/poju/delivery-tts
+├ ƒ /api/poju/final-delivery
+├ ƒ /api/poju/final-delivery/cancel
+├ ƒ /api/poju/final-delivery/continue
+├ ƒ /api/poju/final-delivery/status
+├ ƒ /api/poju/final-delivery/task
+├ ƒ /api/poju/matrix-narrative
+├ ƒ /api/poju/situation-analysis
+├ ƒ /api/poju/synthesis
+├ ƒ /api/poju/synthesis/status
+├ ƒ /api/profile/base-analysis-v2/phase/abort
+├ ƒ /api/profile/base-analysis-v2/phase/compute
+├ ƒ /api/profile/base-analysis-v2/phase/evidence
+├ ƒ /api/profile/base-analysis-v2/phase/finalize
+├ ƒ /api/profile/base-analysis-v2/phase/narrative
+├ ƒ /api/profile/base-analysis-v2/stream
+├ ƒ /api/profile/base-analysis/status
+├ ƒ /api/profile/base-analysis/stream
+├ ƒ /api/profile/calculate
+├ ƒ /api/profile/regenerate-chart
+├ ƒ /api/pwa-icon
+├ ƒ /api/webhooks/stripe
+├ ○ /apple-icon
+├ ○ /icon
+├ ○ /kv
+├ ƒ /llms.txt
+├ ○ /ops
+├ ○ /ops/delivery-lab
+├ ƒ /ops/delivery-lab/[lab_id]
+├ ƒ /ops/refund-check
+├ ○ /oracle-fronts-preview
+├ ○ /oracle-test
+├ ○ /robots.txt
+├ ○ /sitemap.xml
+├ ○ /unsubscribe
+└ ƒ /v2-landing
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+==================== out_m24fu5_regression_summary.txt size=68
+m1r=0
+m23=0
+m21=0
+m22=0
+phase2=0
+typegen=0
+tsc=0
+build=0

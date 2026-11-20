@@ -1,0 +1,65 @@
+[
+  {
+    "name": "pnpm_test_m1_production_adaptive_question_loop",
+    "cmd": "test:m1-production-adaptive-question-loop",
+    "exit": 0,
+    "elapsed_s": 3.6,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_test_m1_production_adaptive_question_loop.txt"
+  },
+  {
+    "name": "pnpm_test_m1_r_fresh_session_main_loop",
+    "cmd": "test:m1-r-fresh-session-main-loop",
+    "exit": 0,
+    "elapsed_s": 3.0,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_test_m1_r_fresh_session_main_loop.txt"
+  },
+  {
+    "name": "pnpm_test_m2_3_decision_blueprint",
+    "cmd": "test:m2-3-decision-blueprint",
+    "exit": 0,
+    "elapsed_s": 3.3,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_test_m2_3_decision_blueprint.txt"
+  },
+  {
+    "name": "pnpm_test_m2_1_readiness_confirm_freeze",
+    "cmd": "test:m2-1-readiness-confirm-freeze",
+    "exit": 0,
+    "elapsed_s": 3.3,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_test_m2_1_readiness_confirm_freeze.txt"
+  },
+  {
+    "name": "pnpm_test_m2_2_freeze_report_binding",
+    "cmd": "test:m2-2-freeze-report-binding",
+    "exit": 0,
+    "elapsed_s": 5.5,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_test_m2_2_freeze_report_binding.txt"
+  },
+  {
+    "name": "pnpm_test_decision_context_phase2",
+    "cmd": "test:decision-context-phase2",
+    "exit": 0,
+    "elapsed_s": 1.8,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_test_decision_context_phase2.txt"
+  },
+  {
+    "name": "pnpm_exec_next_typegen",
+    "cmd": "exec next typegen",
+    "exit": 0,
+    "elapsed_s": 1.5,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_exec_next_typegen.txt"
+  },
+  {
+    "name": "pnpm_exec_tsc_noEmit",
+    "cmd": "exec tsc --noEmit",
+    "exit": 2,
+    "elapsed_s": 15.1,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_exec_tsc_noEmit.txt"
+  },
+  {
+    "name": "pnpm_build",
+    "cmd": "build",
+    "exit": 1,
+    "elapsed_s": 71.2,
+    "log": "D:\\POJU\\pojulife\\temp\\fu2\\pnpm_build.txt"
+  }
+]

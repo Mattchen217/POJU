@@ -1,0 +1,10 @@
+Record already-understood confirmation filter evidence
+
+Verification record for implementation 3e501e33d81614d0dc95255ffc9e2e070fbc7433
+on feat/m1-r-fresh-session-main-loop. Composer-flow, feature-landing, and tsc
+exited 0. Production pnpm build did not complete in this session and is not
+recorded as success.
+
+Logs and exit codes are in
+docs/evidence/di2-understanding-already-understood-filter-2026-11-18/.
+This commit does not declare DI2 or M9 accepted.

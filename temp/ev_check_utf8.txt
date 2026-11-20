@@ -1,0 +1,7 @@
+title=# M2.4-R2-FU1 ? Answer Item Authorization & Certainty Boundary
+has_chinese=False
+has_unclear_zh=False
+has_replacement=False
+tip_line=**Evidence tip SHA:** *(empty / pending Max review ? this file must not contain a self-referential tip SHA)*  
+has_ad1b=False
+len=16910

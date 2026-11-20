@@ -1,0 +1,3 @@
+﻿Require exact profile ID equality without trim normalization
+
+Reject whitespace-padded claimed or profile ids; compare authoritative Session bound id as stored.

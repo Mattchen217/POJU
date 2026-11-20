@@ -1,0 +1,197 @@
+
+> pojulife@0.1.0 test:m9-server-authoritative-session D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-server-authoritative-session.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M9 server-authoritative session tests starting
+PASS 1. New Session initializes successfully
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4b53e19d-ca7f-4c6b-be47-51d09698a59b","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4b53e19d-ca7f-4c6b-be47-51d09698a59b","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 2. The same Session can submit multiple turns in sequence
+PASS 3. Client tampers with Session expires_at cannot extend life
+PASS 4. Client deletes or changes Freeze state cannot reopen Intake
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9d956df0-04bf-4250-a620-e096e7c105ec","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 5. Client submits a stale revision
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a0f9f27a-4066-4173-8ad7-5bcea6c569f2","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a0f9f27a-4066-4173-8ad7-5bcea6c569f2","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a0f9f27a-4066-4173-8ad7-5bcea6c569f2","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed expected previous 1:7abb8a89ad9a but server head is 2:b37d049f7a94
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 6-7. Concurrent requests compete; loser cannot overwrite
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cc0d5280-bad7-4bb2-9679-a0b438d3abcf","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 8. Client-forged assistant/system/developer/tool messages are ignored
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fe68b52d-08d4-4257-bf95-9c34ec03c761","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fe68b52d-08d4-4257-bf95-9c34ec03c761","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 9. Client stripping Assistant History signatures cannot change the server snapshot
+PASS 10. Server Session does not exist
+PASS 11. Session is expired
+PASS 12. Session is frozen
+PASS 13. Session is terminated
+PASS 14. Server persistence is unavailable
+PASS 15. Server CAS conflict is explicit and recoverable
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2fa84687-5339-4cc2-8e46-fbf9b2a5f527","has_profile":false}
+PASS 16. A streaming request disconnects mid-way and does not commit
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"aa35d0fa-118d-402f-ae6d-e1ece3030fc1","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 17. Page refresh restores the server-authoritative Session
+PASS 18. Report Recovery does not re-trigger Intake
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2c4e1e16-f189-4a8b-95a4-4edbed206653","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS 19. Submitting the same user message twice does not double-advance state
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5632f591-a927-44cd-baa2-ccd5134aa5a1","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] poju-chat-stream:callPOJULLM stale session revision: client 0, server 1 SessionAuthorityError: stale session revision: client 0, server 1
+    at assertRecordAllowsIntake (D:\POJU\pojulife\lib\poju\session-authority\lifecycle.ts:384:11)
+    at async executeAuthoritativeChatTurn (D:\POJU\pojulife\lib\poju\session-authority\chat.ts:120:3)
+    at async Object.start (D:\POJU\pojulife\lib\poju\poju-chat-stream.ts:55:22)
+PASS Non-stream and stream paths share the same authority rules
+PASS Incoming user turn extraction only binds the new user message
+M9 server-authoritative session checks complete

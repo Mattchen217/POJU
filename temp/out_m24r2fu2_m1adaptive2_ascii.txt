@@ -1,0 +1,1298 @@
+
+> pojulife@0.1.0 test:m1-production-adaptive-question-loop D:\POJU\pojulife
+> tsx scripts/test-m1-production-adaptive-question-loop.ts
+
+M1 production adaptive question loop
+[terms] pojuTermByTraditional("\u6362\u8fd0") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u8d35\u4eba\u8fd0") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u547d\u8fd0") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u547d\u5b9a") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u547d\u7406") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5bbf\u547d") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5929\u6ce8\u5b9a") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u7a7a\u4ea1") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u9b41\u7f61") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5341\u6076\u5927\u8d25") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5b64\u9e3e") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5b64\u9e3e\u715e") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u9634\u9633\u5dee\u9519") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u9634\u5dee\u9633\u9519") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5143\u8fb0") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u516d\u79c0\u65e5") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5927\u8017") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u5c0f\u8017") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u4e94\u9b3c") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("\u4e27\u95e8") called without namespace \u2014 migrate to resolvePojuTerm(input, { namespace })
+  PASS  M1-01 init Blueprint + first legal question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"47d07475-c26e-4fcb-8f87-55e76b6138b1","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-02/03 first answer updates DC+Understanding; next Q from Need
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"47d07475-c26e-4fcb-8f87-55e76b6138b1","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-04 second answer changes understanding + different next Q
+  PASS  M1-05 different decision contexts \u2192 different paths
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e42443c0-b50d-4e79-b091-71c16a41deb0","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-06 sent question traces Plan/Direction/DDR/DIR
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f71981db-89cf-48c4-ac76-1004f6750aef","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f71981db-89cf-48c4-ac76-1004f6750aef","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f71981db-89cf-48c4-ac76-1004f6750aef","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-07 estimate/unknown/declined not promoted to confirmed
+  PASS  M1-08 completed DIR not re-asked
+  PASS  M1-09 out-of-scope plan rejected by scope validation
+  PASS  M1-10 depth/budget hard cap enforced
+  PASS  M1-11 Readiness stops questions when dirs known
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1cf0f84c-e2d3-43d2-9ce6-4523bc6802f3","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-12 same turn replay no dup facts/Qs/budget
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"dfef0bc5-0123-4609-947a-b7b9819798a4","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-13 refresh/restore consistency
+  PASS  M1-14 concurrent CAS conflict explicit
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d63d1b90-cbe0-4a23-866a-7eb49d6e09da","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-15 UI/Session Q == Agent sent+persisted Q
+  PASS  M1-static agent calls runM1ProductionPreLlmTurn BEFORE LLM; plan drives response
+  PASS  M1-interp classifier covers estimate/unknown/declined/constraint
+[m24a] cls=clear_answer; writes=2; dirs=DIR-OPT-CONSTRAINTS
+[m24a] applied facts=fact_m1_turn_m24a_0,fact_m1_turn_m24a_1; dc_version=2
+  PASS  M2.4-R1 Case A: multi-fact answer \u2192 multiple ProposedWrites; no unrelated DIR
+[m24b] verification_level=user_estimate; status=unverified
+  PASS  M2.4-R1 Case B: estimate \u2192 user_estimate + unverified (not confirmed)
+[m24c] unknown_status=unknown; declined_status=declined; askedBefore=1; asked2=1
+  PASS  M2.4-R1 Case C: unknown/declined statuses; no effective ask-budget charge on answer
+[m24d] old=fact_m1_turn_m24d_1_0; new=fact_m1_turn_m24d_2_0; open_conflicts=1; cls=correction
+  PASS  M2.4-R1 Case D: correction keeps old fact; open Conflict on clear clash
+[m24e] qA=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u79bb\u804c\u53bb\u521b\u4e1a\uff1f\u300d\u2014\u2014\u8d44\u91d1\u3001\u65f6\u95f4\u3001\u8d23\u4efb\u65b9\u9762\u6709\u54ea\u4e9b\u5177\u4f53\u786c\u9650\u5236\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-CONSTRAINTS\uff09; qB=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u642c\u53bb\u4e0a\u6d77\uff1f\u300d\u2014\u2014\u8d44\u91d1\u3001\u65f6\u95f4\u3001\u8d23\u4efb\u65b9\u9762\u6709\u54ea\u4e9b\u5177\u4f53\u786c\u9650\u5236\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-CONSTRAINTS\uff09; dirsA=DIR-OPT-CONSTRAINTS; dirsB=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case E: dynamic question text differs across decision gaps
+[m24f] targetDir=DIR-OPT-ON-TABLE; role0=option; need=missing_roles:status_quo; \u6709\u54ea\u4e9b\u771f\u5b9e\u53ef\u9009\u65b9\u6848; nextQ=\u521a\u624d\u8fd9\u6761\u56de\u7b54\u8fd8\u4e0d\u80fd\u5bf9\u5e94\u5230\u5f53\u524d\u5df2\u6388\u6743\u7684\u8c03\u67e5\u89d2\u8272\uff0c\u56e0\u6b64\u5c1a\u672a\u5199\u5165\u51b3\u7b56\u4e0a\u4e0b\u6587\u3002\u8bf7\u660e\u786e\u4e0b\u9762\u7684\u4fe1\u606f\u5c5e\u4e8e\u54ea\u4e00\u9879\uff08\u8bf7\u56de\u590d\u7f16\u53f7\u6216\u89d2\u8272\u540d\u79f0\uff09\uff1a
+
+\u5f85\u6f84\u6e05\u4fe1\u606f\uff1a
+1. \u300c\u8865\u5145\u4e00\u70b9\uff1a\u5bb6\u5ead\u5e0c\u671b\u6211\u7a33\u5b9a\u300d
+
+\u53ef\u9009\u89d2\u8272\uff08\u4ec5\u9650\u5f53\u524d\u5df2\u6388
+  PASS  M2.4-R1 Case F: satisfied role not re-asked; next role gap
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a7de688-664f-4a4f-bbcb-d8740c79a00e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24g] conflict_briefs=1; gap=conflict; clarifyQ=\u6211\u53d1\u73b0\u8fd9\u9879\u4fe1\u606f\u5b58\u5728\u4e24\u6761\u4e0d\u4e00\u81f4\u7684\u8bb0\u5f55\uff1a
+1. \u53ea\u6709\u4e00\u4e2a\u9009\u9879\uff1a\u7559\u4efb
+2. \u5176\u5b9e\u8fd8\u6709\u521b\u4e1a\u9009\u9879
+\u8bf7\u660e\u786e\u9009\u62e9\u54ea\u4e00\u6761\u51c6\u786e\u3002\u4e5f\u53ef\u4ee5\u8bf4\u660e\u4e24\u6761\u90fd\u4e0d\u51c6\u786e\uff0c\u6211\u4f1a\u7ee7\u7eed\u6838\u5b9e\uff0c\u4e0d\u4f1a\u81ea\u884c\u66ff\u4f60; last_roles=v1/dir/DIR-OPT-ON-TABLE/role/option; added=0; open_after=1; path=wired_ambiguous; next_cf=cf_g_open
+  PASS  M2.4-R1 Case G: open Conflict \u2192 Understanding conflict; DIR not known; ask resolves
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"bbe7d03c-c3c1-4f8d-ba12-27872bc6c72d","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24h-t1] phase=collecting_context; dc_v=2; q=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u6709\u54ea\u4e9b\u771f\u5b9e\u53ef\u9009\u65b9\u6848\uff08\u4e0d\u8981\u53ea\u91cd\u590d\u51b3\u7b56\u76ee\u6807\uff09\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-ON-TABLE\uff09; llmDelta=1; roles=v1/dir/DIR-OPT-ON-TABLE/role/option
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"bbe7d03c-c3c1-4f8d-ba12-27872bc6c72d","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24h-t2] dc_v=3; phase=collecting_context; authQ=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u53ef\u4ee5\u63a5\u53d7\u7684\u6700\u5dee\u7ed3\u679c\u662f\u4ec0\u4e48\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-RISK-TOLERANCE\uff09; llmDelta=1; prevQ_same=false; targets=DIR-OPT-ON-TABLE; write_roles=option
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"bbe7d03c-c3c1-4f8d-ba12-27872bc6c72d","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24h-t3] dc_v=4; phase=collecting_context; authQ=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u5982\u679c\u7ef4\u6301\u73b0\u72b6\uff0c\u5b9e\u9645\u6210\u672c\u548c\u5f71\u54cd\u662f\u4ec0\u4e48\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-STATUS-QUO\uff09; llmDelta=1; dirs=DIR-STATUS-QUO; roles=v1/dir/DIR-STATUS-QUO/role/status_quo
+[m24h] path=handleUserMessage\xd73; versions=2->3->4; total_llm_fetches=3; q0=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u8d44\u91d1\u3001\u65f6\u95f4\u3001\u8d23\u4efb\u65b9\u9762\u6709\u54ea\u4e9b\u5177\u4f53\u786c\u9650\u5236\uff1f\uff08\u8fd9; plan0_dirs=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case H: real Agent main path \u22653 turns; Understanding advances
+[m24i] dirs=DIR-OPT-ON-TABLE; write_roles=option; need=missing_roles:status_quo,risk; \u6709\u54ea\u4e9b\u771f\u5b9e\u53ef\u9009\u65b9\u6848; next_roles=option,status_quo,risk
+  PASS  M2.4-R1-FU1 Case I: Plan-authorized option only; other roles remain needs
+[m24j] cls=invalid_input; notes=missing_authorized_fact_roles; writes=0; dc_v=1
+  PASS  M2.4-R1-FU1 Case J: historical last_sent missing fact_role_codes + mismatched plan_id \u2192 invalid
+[m24k] old=fact_m1_turn_m24k_1_0; new_facts=fact_m1_turn_m24k_2_0; open=0; cls=correction
+  PASS  M2.4-R1-FU1 Case K: correction supplement must not create Conflict
+[m24l] old=fact_m1_turn_m24l_1_0; new=fact_m1_turn_m24l_2_0; open=1; source_refs=2; cls=contradiction
+  PASS  M2.4-R1-FU1 Case L: explicit contradiction creates open Conflict
+[m24m] old=fact_m1_turn_m24m_1_0; open=0; cls=correction
+  PASS  M2.4-R1-FU1 Case M: time change must not create Conflict
+[m24ud] status=unknown; cls=contradiction; open=0; facts=2
+[m24ud] status=declined; cls=contradiction; open=0; facts=2
+  PASS  M2.4-R1-FU2 unknown/declined old fact must not create Conflict
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"762421c5-a560-4a4c-b82a-d09c076c3bb2","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24n] cf=conflict_fact_m24n_a+fact_m24n_b_720e112d; facts=fact_m24n_a,fact_m24n_b; state=clarified; confirm=true; selected=fact_m24n_a; turn=6201202f-3fa0-40bb-bedf-5c0ba08961fc; dc=2->3; fact_count=2; briefs=0
+  PASS  M2.4-R1-FU2 Case N: explicit choice of the first fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f585e2d0-e92b-4fb7-b3d9-f55bf00c6c0f","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24o] cf=conflict_fact_m24o_a+fact_m24o_b_14891126; selected=fact_m24o_b; expected_second=fact_m24o_b; first=fact_m24o_a; confirm=true; dc=2->3
+  PASS  M2.4-R1-FU2 Case O: explicit choice of the second fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f48959a0-5d30-42bc-b360-6983b8ade271","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24p] cf=conflict_fact_m24p_a+fact_m24p_b_e211d0ea; state=open; confirm=false; resolution=null; facts=2; dc=2->2; next_cf=conflict_fact_m24p_a+fact_m24p_b_e211d0ea
+  PASS  M2.4-R1-FU2 Case P: vague answer must not close Conflict
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b01bf75a-6916-4be2-9e4d-53e82cf99030","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24q] cf=conflict_fact_m24q_a+fact_m24q_b_69fb6d9d; state=open; confirm=false; resolution=null; facts=2; dc=2->2
+  PASS  M2.4-R1-FU2 Case Q: both-inaccurate must not auto-select or close
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e03d06fa-9faa-4d84-816b-c6eaa3af4ad1","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r] turn=c60f6f15-b1a7-4ca5-b435-83e032a73c50; outcome=not_applied; persist=idempotent_skip; dc=2->3->3; asked=3->3; clarified=1; key_skip=idempotent_skip
+  PASS  M2.4-R1-FU2 Case R: replay same source_turn_id is idempotent
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4c376a38-b028-4432-ac02-33f475911cd5","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24s] cf=conflict_fact_m24s_a+fact_m24s_b_f5e186cf; state=unresolved_in_final; confirm=false; resolution=null; dc=3->3; target=conflict_fact_m24s_a+fact_m24s_b_f5e186cf; persist=stale_conflict_target
+  PASS  M2.4-R1-FU2 Case S: stale non-open Conflict is a safe no-op
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"604308a9-9000-40d9-945a-ec59539686ab","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24t] bound=conflict_fact_t_opt_a+fact_t_opt_b_af21720f; other=conflict_fact_t_sq_a+fact_t_sq_b_aa6879b4; chosen=clarified; other_state=open; selected=fact_t_opt_a; dc=2->3; other_facts=fact_t_sq_a,fact_t_sq_b; other_refs=2
+  PASS  M2.4-R1-FU2 Case T: other DIR Conflict is untouched
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cd17cd1f-8725-4884-8516-297ad47d5ecd","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24u] input=\u7b2c\u4e00\u6761\u4e0d\u51c6\u786e; cf=conflict_fact_m24u_a+fact_m24u_b_c95a2602; state=open; confirm=false; resolution=null; selected=none; facts=2; dc=2->2; next_cf=conflict_fact_m24u_a+fact_m24u_b_c95a2602
+  PASS  M2.4-R1-FU3 Case U: negate first fact must not close Conflict
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"8adfe1ec-bdbd-457a-8a42-b1f2cb461c23","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 0,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24v] input=\u4e0d\u662f\u7b2c\u4e8c\u6761; cf=conflict_fact_m24v_a+fact_m24v_b_42b3c805; state=open; confirm=false; resolution=null; selected=none; facts=2; dc=2->2; next_cf=conflict_fact_m24v_a+fact_m24v_b_42b3c805
+  PASS  M2.4-R1-FU3 Case V: negate second fact must not close Conflict
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2fdddf28-35a8-4e86-af20-0a6fa4e5c5eb","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24w] input=\u4e0d\u662f\u7b2c\u4e00\u6761\uff0c\u800c\u662f\u7b2c\u4e8c\u6761\u51c6\u786e; cf=conflict_fact_m24w_a+fact_m24w_b_997f80a8; state=clarified; confirm=true; selected=fact_m24w_b; expected_second=fact_m24w_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU3 Case W: negate first and affirm second selects the second fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1dc4d4b2-fc50-4cbe-be57-2602d5298e05","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24x] input=\u7b2c\u4e00\u6761\u51c6\u786e\uff0c\u4f46\u6211\u4e0d\u8ba4\u53ef\u7b2c\u4e00\u6761; cf=conflict_fact_m24x_a+fact_m24x_b_2e628f02; state=open; confirm=false; resolution=null; selected=none; facts=2; dc=2->2; next_cf=conflict_fact_m24x_a+fact_m24x_b_2e628f02
+  PASS  M2.4-R1-FU3 Case X: conflicting affirm and negate must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"804e974e-9f8b-4326-9d26-58508f8ab65d","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed persist_failed
+[m24y] input=\u7b2c\u4e00\u6761\u51c6\u786e; returned_state=open; returned_confirm=false; returned_resolution=null; clarified_leaked=0; dc=2->2; persist_error=persist_failed; m1_outcome=persist_failed; fail_closed=true; durable_state=open; durable_dc=2; facts=2; asked=2->2
+  PASS  M2.4-R1-FU3 Case Y: C1 persist failure returns original uncommitted session
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"803b7cd7-797d-4cc4-aded-281d9f8dbf14","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z1] input=\u6211\u4e0d\u8ba4\u4e3a\u7b2c\u4e00\u6761\u51c6\u786e; cf=conflict_fact_m24z1_a+fact_m24z1_b_2e096433; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z1_a,fact_m24z1_b; dc=2->2; next_cf=conflict_fact_m24z1_a+fact_m24z1_b_2e096433
+  PASS  M2.4-R1-FU4 Case Z1: scoped negate first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a9c712fd-d289-49b1-be14-4037127860e3","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z2] input=\u6211\u4e0d\u89c9\u5f97\u7b2c\u4e8c\u6761\u51c6\u786e; cf=conflict_fact_m24z2_a+fact_m24z2_b_980d9002; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z2_a,fact_m24z2_b; dc=2->2; next_cf=conflict_fact_m24z2_a+fact_m24z2_b_980d9002
+  PASS  M2.4-R1-FU4 Case Z2: scoped negate second must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a5dfbd7f-68cd-4111-97b2-998622bc7295","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z3] input=\u6211\u5e76\u4e0d\u8ba4\u53ef\u7b2c\u4e00\u6761\u662f\u6b63\u786e\u7684; cf=conflict_fact_m24z3_a+fact_m24z3_b_7a2fd89a; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z3_a,fact_m24z3_b; dc=2->2; next_cf=conflict_fact_m24z3_a+fact_m24z3_b_7a2fd89a
+  PASS  M2.4-R1-FU4 Case Z3: \u5e76\u4e0d\u8ba4\u53ef first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2e71a6ed-3610-4f89-9018-7b85be4a66e4","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z4] input=\u7b2c\u4e00\u6761\u5e76\u4e0d\u51c6\u786e; cf=conflict_fact_m24z4_a+fact_m24z4_b_ea05088a; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z4_a,fact_m24z4_b; dc=2->2; next_cf=conflict_fact_m24z4_a+fact_m24z4_b_ea05088a
+  PASS  M2.4-R1-FU4 Case Z4: \u5e76\u4e0d\u51c6\u786e must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0628e6e7-f6b5-42e4-9ff3-130013b3b6fd","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z5] input=\u7b2c\u4e00\u6761\u672a\u5fc5\u51c6\u786e; cf=conflict_fact_m24z5_a+fact_m24z5_b_95804cfd; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z5_a,fact_m24z5_b; dc=2->2; next_cf=conflict_fact_m24z5_a+fact_m24z5_b_95804cfd
+  PASS  M2.4-R1-FU4 Case Z5: \u672a\u5fc5\u51c6\u786e must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4490c88e-1745-42a1-9d83-f478189b54b2","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z6] input=\u6211\u4e0d\u80fd\u786e\u8ba4\u7b2c\u4e00\u6761\u51c6\u786e; cf=conflict_fact_m24z6_a+fact_m24z6_b_8dad8612; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z6_a,fact_m24z6_b; dc=2->2; next_cf=conflict_fact_m24z6_a+fact_m24z6_b_8dad8612
+  PASS  M2.4-R1-FU4 Case Z6: cannot confirm first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2603c9c7-3a3e-4bf0-b3a5-f0f36b119ac9","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z7] input=\u4e0d\u662f\u7b2c\u4e00\u6761\uff0c\u800c\u662f\u7b2c\u4e8c\u6761\u51c6\u786e; cf=conflict_fact_m24z7_a+fact_m24z7_b_3bb1b738; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z7_b","source_turn_id":"334eb242-01f4-46e6-a94d-72338d023965","user_statement":"\u4e0d\u662f\u7b2c\u4e00\u6761\uff0c\u800c\u662f\u7b2c\u4e8c\u6761\u51c6\u786e"}; selected=fact_m24z7_b; expected=fact_m24z7_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU4 Case Z7: contrast affirms the second fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f63c2cb5-06ee-45fc-a104-2c4e2ce55fa6","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z8] input=\u4e0d\u662f\u7b2c\u4e8c\u6761\uff0c\u800c\u662f\u7b2c\u4e00\u6761\u51c6\u786e; cf=conflict_fact_m24z8_a+fact_m24z8_b_181fddb9; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z8_a","source_turn_id":"cefce2a2-f102-46c2-a8a2-4784930863c2","user_statement":"\u4e0d\u662f\u7b2c\u4e8c\u6761\uff0c\u800c\u662f\u7b2c\u4e00\u6761\u51c6\u786e"}; selected=fact_m24z8_a; expected=fact_m24z8_a; facts=2; dc=2->3
+  PASS  M2.4-R1-FU4 Case Z8: contrast affirms the first fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f219147d-48ef-4d17-8054-8fe1c4e63899","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z9] input=\u7b2c\u4e00\u6761\u51c6\u786e\uff0c\u4f46\u6211\u4e0d\u8ba4\u53ef\u7b2c\u4e00\u6761; cf=conflict_fact_m24z9_a+fact_m24z9_b_36a0b85d; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z9_a,fact_m24z9_b; dc=2->2; next_cf=conflict_fact_m24z9_a+fact_m24z9_b_36a0b85d
+  PASS  M2.4-R1-FU4 Case Z9: affirm then negate same option stays ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5c181fae-b44b-4ca7-9daf-ea40dafd50e9","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z10] input=\u7b2c\u4e00\u6761\u51c6\u786e\uff0c\u7b2c\u4e8c\u6761\u4e5f\u51c6\u786e; cf=conflict_fact_m24z10_a+fact_m24z10_b_266ee72d; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z10_a,fact_m24z10_b; dc=2->2; next_cf=conflict_fact_m24z10_a+fact_m24z10_b_266ee72d
+  PASS  M2.4-R1-FU4 Case Z10: affirming both options stays ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc65462-99b6-4406-9635-761f85379f91","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z11] input=\u7b2c\u4e00\u6761\u4e0d\u591f\u51c6\u786e; cf=conflict_fact_m24z11_a+fact_m24z11_b_1e7149ab; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z11_a,fact_m24z11_b; dc=2->2; next_cf=conflict_fact_m24z11_a+fact_m24z11_b_1e7149ab
+  PASS  M2.4-R1-FU5 Case Z11: \u4e0d\u591f\u51c6\u786e first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b66e0c66-ae44-4db8-b51a-c42f60601d8d","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z12] input=\u7b2c\u4e8c\u6761\u4e0d\u591f\u51c6\u786e; cf=conflict_fact_m24z12_a+fact_m24z12_b_cfdf7bcb; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z12_a,fact_m24z12_b; dc=2->2; next_cf=conflict_fact_m24z12_a+fact_m24z12_b_cfdf7bcb
+  PASS  M2.4-R1-FU5 Case Z12: \u4e0d\u591f\u51c6\u786e second must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2e4a4586-59d5-4b1d-bb1d-0d8842b52a20","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z13] input=\u7b2c\u4e00\u6761\u4e0d\u7b97\u51c6\u786e; cf=conflict_fact_m24z13_a+fact_m24z13_b_2594d1d3; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z13_a,fact_m24z13_b; dc=2->2; next_cf=conflict_fact_m24z13_a+fact_m24z13_b_2594d1d3
+  PASS  M2.4-R1-FU5 Case Z13: \u4e0d\u7b97\u51c6\u786e first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d0698284-0dad-4b16-964e-7dd14f53941e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z14] input=\u7b2c\u4e00\u6761\u51c6\u786e\u5ea6\u4e0d\u9ad8; cf=conflict_fact_m24z14_a+fact_m24z14_b_d1cfca50; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z14_a,fact_m24z14_b; dc=2->2; next_cf=conflict_fact_m24z14_a+fact_m24z14_b_d1cfca50
+  PASS  M2.4-R1-FU5 Case Z14: \u51c6\u786e\u5ea6\u4e0d\u9ad8 first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4c0bb31d-9a12-4282-a64b-06d4fc59b428","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z15] input=\u7b2c\u4e8c\u6761\u51c6\u786e\u6027\u4e0d\u8db3; cf=conflict_fact_m24z15_a+fact_m24z15_b_892e7b37; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z15_a,fact_m24z15_b; dc=2->2; next_cf=conflict_fact_m24z15_a+fact_m24z15_b_892e7b37
+  PASS  M2.4-R1-FU5 Case Z15: \u51c6\u786e\u6027\u4e0d\u8db3 second must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3a18ab42-6a50-43b9-85a2-5ae96f5f44f3","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z16] input=\u7b2c\u4e00\u6761\u4e0d\u5b8c\u5168\u51c6\u786e; cf=conflict_fact_m24z16_a+fact_m24z16_b_90a36fee; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z16_a,fact_m24z16_b; dc=2->2; next_cf=conflict_fact_m24z16_a+fact_m24z16_b_90a36fee
+  PASS  M2.4-R1-FU5 Case Z16: \u4e0d\u5b8c\u5168\u51c6\u786e first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b4bbcb4-b083-4a03-b61f-1a6e5ba3133b","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z17] input=\u7b2c\u4e00\u6761\u4e0d\u89c1\u5f97\u51c6\u786e; cf=conflict_fact_m24z17_a+fact_m24z17_b_19e247ed; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z17_a,fact_m24z17_b; dc=2->2; next_cf=conflict_fact_m24z17_a+fact_m24z17_b_19e247ed
+  PASS  M2.4-R1-FU5 Case Z17: \u4e0d\u89c1\u5f97\u51c6\u786e first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"983a30cd-5c09-4418-b964-66a72b05eeff","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z18] input=\u7b2c\u4e00\u6761\u4e0d\u7b26\u5408\u5b9e\u9645; cf=conflict_fact_m24z18_a+fact_m24z18_b_707f5d2e; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z18_a,fact_m24z18_b; dc=2->2; next_cf=conflict_fact_m24z18_a+fact_m24z18_b_707f5d2e
+  PASS  M2.4-R1-FU5 Case Z18: \u4e0d\u7b26\u5408\u5b9e\u9645 first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"13c4d241-a4cf-4eed-9474-c3850bb54165","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z19] input=\u7b2c\u4e00\u6761\u4e0d\u591f\u51c6\u786e\uff0c\u4f46\u7b2c\u4e8c\u6761\u51c6\u786e; cf=conflict_fact_m24z19_a+fact_m24z19_b_b0fab9eb; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z19_b","source_turn_id":"68b452fd-e6b2-4980-a91d-704c41c3423d","user_statement":"\u7b2c\u4e00\u6761\u4e0d\u591f\u51c6\u786e\uff0c\u4f46\u7b2c\u4e8c\u6761\u51c6\u786e"}; selected=fact_m24z19_b; expected=fact_m24z19_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU5 Case Z19: insufficient first and affirmed second selects the second fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0a415172-4434-4797-9d31-94363ba15d79","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z20] input=\u7b2c\u4e8c\u6761\u4e0d\u7b97\u51c6\u786e\uff0c\u800c\u662f\u7b2c\u4e00\u6761\u51c6\u786e; cf=conflict_fact_m24z20_a+fact_m24z20_b_5f4a16da; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z20_a","source_turn_id":"70a57538-edbf-4354-bc79-2be3fe9cc212","user_statement":"\u7b2c\u4e8c\u6761\u4e0d\u7b97\u51c6\u786e\uff0c\u800c\u662f\u7b2c\u4e00\u6761\u51c6\u786e"}; selected=fact_m24z20_a; expected=fact_m24z20_a; facts=2; dc=2->3
+  PASS  M2.4-R1-FU5 Case Z20: insufficient second and affirmed first selects the first fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ba4f4ff2-839a-47a5-91fa-4dbaad7cb869","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z21] input=\u7b2c\u4e00\u6761\u51c6\u786e\u7387\u4e0d\u9ad8; cf=conflict_fact_m24z21_a+fact_m24z21_b_1052d32b; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z21_a,fact_m24z21_b; dc=2->2; next_cf=conflict_fact_m24z21_a+fact_m24z21_b_1052d32b
+  PASS  M2.4-R1-FU6 Case Z21: \u51c6\u786e\u7387\u4e0d\u9ad8 first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"158840f6-d3a8-4aa4-a131-a52c9d23e26c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z22] input=\u7b2c\u4e8c\u6761\u51c6\u786e\u7387\u504f\u4f4e; cf=conflict_fact_m24z22_a+fact_m24z22_b_ab66158b; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z22_a,fact_m24z22_b; dc=2->2; next_cf=conflict_fact_m24z22_a+fact_m24z22_b_ab66158b
+  PASS  M2.4-R1-FU6 Case Z22: \u51c6\u786e\u7387\u504f\u4f4e second must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"824a64ab-c3da-446e-9475-64f806085f7c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z23] input=\u7b2c\u4e00\u6761\u6b63\u786e\u7387\u4e0d\u9ad8; cf=conflict_fact_m24z23_a+fact_m24z23_b_c31fee38; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z23_a,fact_m24z23_b; dc=2->2; next_cf=conflict_fact_m24z23_a+fact_m24z23_b_c31fee38
+  PASS  M2.4-R1-FU6 Case Z23: \u6b63\u786e\u7387\u4e0d\u9ad8 first must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a2ed3b11-d57b-46eb-adb5-464394fbcf37","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z24] input=\u7b2c\u4e8c\u6761\u6b63\u786e\u7387\u4e0d\u8db3; cf=conflict_fact_m24z24_a+fact_m24z24_b_9542f710; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z24_a,fact_m24z24_b; dc=2->2; next_cf=conflict_fact_m24z24_a+fact_m24z24_b_9542f710
+  PASS  M2.4-R1-FU6 Case Z24: \u6b63\u786e\u7387\u4e0d\u8db3 second must stay ambiguous
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ab51c4b3-f4cb-4c06-9aba-2b22caafeeba","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24z25] input=\u7b2c\u4e00\u6761\u51c6\u786e\u7387\u4e0d\u9ad8\uff0c\u4f46\u7b2c\u4e8c\u6761\u51c6\u786e; cf=conflict_fact_m24z25_a+fact_m24z25_b_c994a9d2; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z25_b","source_turn_id":"2cb17308-309d-4cf2-8fbb-82b6a4fcd3ab","user_statement":"\u7b2c\u4e00\u6761\u51c6\u786e\u7387\u4e0d\u9ad8\uff0c\u4f46\u7b2c\u4e8c\u6761\u51c6\u786e"}; selected=fact_m24z25_b; expected=fact_m24z25_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU6 Case Z25: accuracy-rate insufficient first and affirmed second selects the second fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"786dd475-fc05-47c0-8e91-678b6524c7fa","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"786dd475-fc05-47c0-8e91-678b6524c7fa","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"786dd475-fc05-47c0-8e91-678b6524c7fa","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2a] round=1 input=\u6211\u76ee\u524d\u4ecd\u5728\u804c\uff0c\u6708\u85aa\u4e09\u4e07\u3002\u53e6\u5916\u5bb6\u91cc\u6709\u4e00\u4e2a\u5b69\u5b50\u3002; facts=2; written=fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_0:unverified:user_asserted:hard_constraint|fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_1:unverified:user_asserted:hard_constraint; dc=1->2; ctx_ver=2; next_q=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u79bb\u804c\u53bb\u521b\u4e1a\uff1f\u300d\u2014\u2014\u6709\u54ea\u4e9b\u771f\u5b9e\u53ef\u9009\u65b9\u6848\uff08\u4e0d\u8981\u53ea\u91cd\u590d\u51b3\u7b56\u76ee\u6807\uff09\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-ON-TABLE\uff09; next_dirs=DIR-OPT-ON-TABLE; next_roles=v1/dir/DIR-OPT-ON-TABLE/role/option; asked=1->2
+[m24r2a] round=2 input=\u5927\u6982\u8fd8\u80fd\u6491 6 \u4e2a\u6708\u3002\u786c\u7ea6\u675f\u662f\u5fc5\u987b\u4fdd\u7559\u793e\u4fdd\u3002; estimate=fact_m1_3971ae03-a6ca-45d8-b16a-785ab328ca5f_0:unverified:user_estimate; constraint=cst_m1_3971ae03-a6ca-45d8-b16a-785ab328ca5f_1:unverified; facts=4; constraints=1; dc=2->3; ctx_ver=3; next_q=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u79bb\u804c\u53bb\u521b\u4e1a\uff1f\u300d\u2014\u2014\u53ef\u4ee5\u63a5\u53d7\u7684\u6700\u5dee\u7ed3\u679c\u662f\u4ec0\u4e48\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-RISK-TOLERANCE\uff09; next_dirs=DIR-RISK-TOLERANCE; next_roles=v1/dir/DIR-RISK-TOLERANCE/role/risk; asked=2->3
+[m24r2a] round=3 input=\u66f4\u6b63\u4e00\u4e0b\uff0c\u6211\u5df2\u7ecf\u79bb\u804c\u4e86\uff0c\u4e0d\u662f\u4ecd\u5728\u804c\u3002\u53e6\u5916\u8fd8\u6709\u4e00\u4e2a\u5907\u9009\u662f\u5185\u90e8\u8f6c\u5c97\u3002; kept_original=fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_0; correction=fact_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_0; supplement=fact_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_1; conflicts=cf_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_0:open:fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_0+fact_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_0; fact_ids_before=fact_m1_3971ae03-a6ca-45d8-b16a-785ab328ca5f_0,fact_m1_3971ae03-a6ca-45d8-b16a-785ab328ca5f_2,fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_0,fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_1; fact_ids_after=fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_0,fact_m1_dec5e6d7-ab60-452e-a809-86b7e8fb93a6_1,fact_m1_3971ae03-a6ca-45d8-b16a-785ab328ca5f_0,fact_m1_3971ae03-a6ca-45d8-b16a-785ab328ca5f_2,fact_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_0,fact_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_1; dc=3->4; ctx_ver=4; next_q=\u6211\u53d1\u73b0\u8fd9\u9879\u4fe1\u606f\u5b58\u5728\u4e24\u6761\u4e0d\u4e00\u81f4\u7684\u8bb0\u5f55\uff1a
+1. \u6211\u76ee\u524d\u4ecd\u5728\u804c\uff0c\u6708\u85aa\u4e09\u4e07\u3002
+2. \u6211\u5df2\u7ecf\u79bb\u804c\u4e86\uff0c\u4e0d\u662f\u4ecd\u5728\u804c\u3002
+\u8bf7\u660e\u786e\u9009\u62e9\u54ea\u4e00\u6761\u51c6\u786e\u3002\u4e5f\u53ef\u4ee5\u8bf4\u660e\u4e24\u6761\u90fd\u4e0d\u51c6\u786e\uff0c\u6211\u4f1a\u7ee7\u7eed\u6838\u5b9e\uff0c\u4e0d\u4f1a\u81ea\u884c\u66ff\u4f60\u5224\u65ad\u3002; next_dirs=DIR-OPT-CONSTRAINTS; next_cf=cf_m1_b2308585-4f45-4ddb-b2bc-946f3d07889a_0
+  PASS  M2.4-R2 Case A: three consecutive real handleUserMessage rounds
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4451324b-1b5f-4309-be17-19c06de1bde3","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2b] auth_dirs=DIR-OPT-CONSTRAINTS; auth_roles=hard_constraint; overreach_facts=0; legal_facts=1; dc=1->2
+  PASS  M2.4-R2 Case B: unauthorized model role/DIR/DDR is rejected
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b62c093c-53e5-4be8-95fb-8ca1b8ae7c5e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2c] facts=fact_m1_c6032af4-706f-4486-aac3-3ef0bc7986f4_0:unverified:user_asserted:confirm=undefined
+  PASS  M2.4-R2 Case C: model confirmation fields cannot become confirmed facts
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"70146319-889f-400c-b86c-cfdafe367bee","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_failed timeout:llm_timeout
+[m24r2d_timeout] outcome=answer_interpretation_failed; dc=1->1; facts=0; constraints=0; asked=1; last_sent=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; asst=\u3010\u7cfb\u7edf\u3011\u672c\u8f6e\u56de\u7b54\u672a\u80fd\u5b8c\u6210\u8bed\u4e49\u7406\u89e3\uff0c\u51b3\u7b56\u4e0a\u4e0b\u6587\u672a\u5199\u5165\u3002\u8bf7\u7a0d\u540e\u91cd\u8bd5\uff0c\u6216\u6362\u4e00\u79cd\u8868\u8ff0\u3002(timeout:llm_timeout)
+  PASS  M2.4-R2 Case D: timeout is fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5da9dbbf-55e6-467b-b64d-9b6773b8e8d7","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_invalid_schema invalid_json:Unexpected token 'h', "this is not json {" is not valid JSON
+[m24r2d_json] outcome=answer_interpretation_invalid_schema; dc=1->1; facts=0; constraints=0; asked=1; last_sent=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; asst=\u3010\u7cfb\u7edf\u3011\u672c\u8f6e\u56de\u7b54\u672a\u80fd\u5b8c\u6210\u8bed\u4e49\u7406\u89e3\uff0c\u51b3\u7b56\u4e0a\u4e0b\u6587\u672a\u5199\u5165\u3002\u8bf7\u7a0d\u540e\u91cd\u8bd5\uff0c\u6216\u6362\u4e00\u79cd\u8868\u8ff0\u3002(invalid_json:Unexpected token 'h', "this is not json {" is not valid JSON)
+  PASS  M2.4-R2 Case D: invalid JSON is fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"062e5f5a-3516-40d4-ab2a-68d4160e43c7","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_invalid_schema invalid_schema:extracted_items_not_array
+[m24r2d_schema] outcome=answer_interpretation_invalid_schema; dc=1->1; facts=0; constraints=0; asked=1; last_sent=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; asst=\u3010\u7cfb\u7edf\u3011\u672c\u8f6e\u56de\u7b54\u672a\u80fd\u5b8c\u6210\u8bed\u4e49\u7406\u89e3\uff0c\u51b3\u7b56\u4e0a\u4e0b\u6587\u672a\u5199\u5165\u3002\u8bf7\u7a0d\u540e\u91cd\u8bd5\uff0c\u6216\u6362\u4e00\u79cd\u8868\u8ff0\u3002(invalid_schema:extracted_items_not_array)
+  PASS  M2.4-R2 Case D: missing fields are fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0739b469-4d2b-4f07-9d8c-d4c356d3d63b","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2e] tag=m24r2e_estimate; input=\u8fd9\u4e2a\u6570\u5b57\u53ea\u662f\u4f30\u8ba1\u3002; writes=unverified:user_estimate
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"91c423b8-1ad5-4274-8f1d-9329ec881fa6","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2e] tag=m24r2e_unknown; input=\u6211\u73b0\u5728\u8fd8\u65e0\u6cd5\u786e\u5b9a\u3002; writes=unknown:none
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9deda8a4-39cd-4724-85d4-bf329d52ab1e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2e] tag=m24r2e_declined; input=\u8fd9\u90e8\u5206\u6211\u4e0d\u60f3\u56de\u7b54\u3002; writes=declined:none
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"88158fad-0680-49c9-8dec-deeb950e0a11","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2e] tag=m24r2e_unverified; input=\u6211\u9700\u8981\u518d\u6838\u5b9e\u4e00\u4e0b\u3002; writes=none
+  PASS  M2.4-R2 Case E: uncertainty and decline are not explicit facts
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fe9d7681-a091-49f5-b52e-2ab0846a2b09","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fe9d7681-a091-49f5-b52e-2ab0846a2b09","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2f] turn=978d5129-b8aa-4e19-9981-a3451e646969; facts=1; constraints=1; dc=2->2; asked=2; q_recovered=true
+  PASS  M2.4-R2 Case F: real persist + same source_turn_id resubmit is idempotent
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0754505f-96ae-43e5-9349-2e36f450e117","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2g] codes=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint|v1/dir/DIR-OPT-ON-TABLE/role/option; facts=0->0; constraints=0->0; dc=1->1; asked=1->2; unresolved=rejected_null_role_code_multi_auth,unresolved:unlocated_role_code:\u6211\u76ee\u524d\u4ecd\u5728\u804c\u3002; writes=0; next_q=\u521a\u624d\u8fd9\u6761\u56de\u7b54\u8fd8\u4e0d\u80fd\u5bf9\u5e94\u5230\u5f53\u524d\u5df2\u6388\u6743\u7684\u8c03\u67e5\u89d2\u8272\uff0c\u56e0\u6b64\u5c1a\u672a\u5199\u5165\u51b3\u7b56\u4e0a\u4e0b\u6587\u3002\u8bf7\u660e\u786e\u4e0b\u9762\u7684\u4fe1\u606f\u5c5e\u4e8e\u54ea\u4e00\u9879\uff08\u8bf7\u56de\u590d\u7f16\u53f7\u6216\u89d2\u8272\u540d\u79f0\uff09\uff1a
+
+\u5f85\u6f84\u6e05\u4fe1\u606f\uff1a
+1. \u300c\u6211\u76ee\u524d\u4ecd\u5728\u804c\u3002\u300d
+
+\u53ef\u9009\u89d2\u8272\uff08\u4ec5\u9650\u5f53\u524d\u5df2\u6388\u6743\u8303\u56f4\uff0c\u4e0d\u53ef\u6269\u5927\uff09\uff1a
+1. hard_constraint \u2014 \u786c\u6027\u7ea6\u675f\uff08\u94b1/\u65f6\u95f4/\u8d23\u4efb\uff09\uff08DIR-OPT-CONSTRAINTS\uff09
+2. option \u2014 \u6709\u54ea\u4e9b\u771f\u5b9e\u53ef\u9009\u65b9\u6848\uff08DIR-OPT-ON-TABLE\uff09
+
+\u5982\u679c\u6682\u65f6\u65e0\u6cd5\u786e\u5b9a\uff0c\u8bf7\u76f4\u63a5\u56de\u590d\u300c\u4e0d\u786e\u5b9a\u300d\u3002; next_dirs=DIR-OPT-CONSTRAINTS,DIR-OPT-ON-TABLE; last_sent=qp_role_clarify_cb1c6aaf-e7f8-424a-b590-88b8321f807b; pending=pending:unlocated_role_code
+  PASS  M2.4-R2-FU1 Case G: multi-role auth + null role_code_hint writes nothing
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f1b38e24-d730-4eb6-9ca1-b3fdc5c7744f","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2h] codeA=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; codeB=v1/dir/DIR-OPT-ON-TABLE/role/option; factA=fact_m1_afe73004-78ca-4b11-a94b-8635186233cf_0:hard_constraint:DIR-OPT-CONSTRAINTS; factB=fact_m1_afe73004-78ca-4b11-a94b-8635186233cf_1:option:DIR-OPT-ON-TABLE; dc=1->2
+  PASS  M2.4-R2-FU1 Case H: exact role codes bind independently
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b32371b0-7aec-4bef-93e7-a0008949fadd","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2i] legal=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; forged=v1/dir/DIR-FORGED/role/forged_role; overreach=0; legal_facts=1; legal_bind=fact_m1_13f80907-b032-4c1d-a1e6-25989f83122a_0:hard_constraint:DIR-OPT-CONSTRAINTS; dc=1->2; notes=rejected_unauthorized_role_code,unresolved:unauthorized_role_code:v1/dir/DIR-FORGED/role/forged_role:\u4f2a\u9020\u89d2\u8272\u4e0d\u5e94\u5199\u5165\u3002; plan=qp_role_clarify_13f80907-b032-4c1d-a1e6-25989f83122a
+  PASS  M2.4-R2-FU1 Case I: forged role code is rejected; legal item still writes
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"531e30c4-eb03-46f0-b65b-56fbd4c94bc3","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2j] code=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; facts=0->0; constraints=0->0; dc=1->1; writes=0; unresolved=unresolved:unclear_certainty:\u7528\u6237\u53ef\u80fd\u6709\u4e00\u5b9a\u8d44\u91d1\u50a8\u5907
+  PASS  M2.4-R2-FU1 Case J: unclear must not become estimate
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"f4943abc-c771-4415-bc3d-5494125c0c03","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2k] code=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; fact=fact_m1_66e4d113-94bb-4cde-a5bb-588427de0f9c_0:unverified:user_estimate:hard_constraint:DIR-OPT-CONSTRAINTS; dc=1->2
+  PASS  M2.4-R2-FU1 Case K: estimated is kept as user_estimate
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"45f3afd6-aeb9-4ec9-90ee-85191fc1015e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2l] code=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; fact=fact_m1_a4f31aaa-43ac-4490-9497-fd6f48303329_0:unverified:user_asserted:confirmed=false:user_confirmed=false:hard_constraint:DIR-OPT-CONSTRAINTS; dc=1->2
+  PASS  M2.4-R2-FU1 Case L: explicit is kept as user_asserted and not confirmed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7e594aef-60c2-4c91-acd9-e5dfdb56eb11","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2m] tag=m24r2m_explicit; certainty=explicit; code=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; cst=cst_m1_2e88bae7-afec-4a59-999b-b26ba787c52f_0:unverified:user_asserted:DIR-OPT-CONSTRAINTS; companion=fact_m1_2e88bae7-afec-4a59-999b-b26ba787c52f_1:unverified:user_asserted:hard_constraint:DIR-OPT-CONSTRAINTS; same_level=true; same_dir=true; dc=1->2; notes=
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5a1617e6-8df5-4e63-a7a6-3e2925de3ffa","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2m] tag=m24r2m_estimated; certainty=estimated; code=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; cst=none; companion=none; same_level=n/a; same_dir=n/a; dc=1->1; notes=estimated_constraint_unresolved,unresolved:estimated_constraint_not_persistable:\u4f30\u8ba1\u5fc5\u987b\u4fdd\u7559\u793e\u4fdd\u3002
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c199e286-695e-4501-ba2a-36746dadf91f","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2m] tag=m24r2m_unclear; certainty=unclear; code=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; cst=none; companion=none; same_level=n/a; same_dir=n/a; dc=1->1; notes=unresolved:unclear_certainty:\u53ef\u80fd\u6709\u5fc5\u987b\u4fdd\u7559\u793e\u4fdd\u7684\u7ea6\u675f\u3002
+  PASS  M2.4-R2-FU1 Case M: constraint certainty semantics
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"67f96cdd-88fb-43f1-8366-531a68af2b5c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2a] auth=missing_authorized_answer_target; plan_id=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; last_sent_before=null; last_sent_after=qp_cq_dir_DIR-OPT-ON-TABLE_2026-11-10T13:02:58.492Z; facts=0->0; dc=1->1; writes=0; notes=missing_authorized_answer_target
+  PASS  M2.4-R2-FU2-A: no last_sent_question cannot authorize from next plan
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"79ff8dc2-b7b4-443e-98a4-d80317be41bd","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2b] codes=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint|v1/dir/DIR-OPT-ON-TABLE/role/option; facts=0->0; constraints=0->0; dc=1->1; asked=1->2; pending=pending:unlocated_role_code; next_q=\u521a\u624d\u8fd9\u6761\u56de\u7b54\u8fd8\u4e0d\u80fd\u5bf9\u5e94\u5230\u5f53\u524d\u5df2\u6388\u6743\u7684\u8c03\u67e5\u89d2\u8272\uff0c\u56e0\u6b64\u5c1a\u672a\u5199\u5165\u51b3\u7b56\u4e0a\u4e0b\u6587\u3002\u8bf7\u660e\u786e\u4e0b\u9762\u7684\u4fe1\u606f\u5c5e\u4e8e\u54ea\u4e00\u9879\uff08\u8bf7\u56de\u590d\u7f16\u53f7\u6216\u89d2\u8272\u540d\u79f0\uff09\uff1a /  / \u5f85\u6f84\u6e05\u4fe1\u606f\uff1a / 1. \u300c\u6211\u76ee\u524d\u4ecd\u5728\u804c\u3002\u300d /  / \u53ef\u9009\u89d2\u8272\uff08\u4ec5\u9650\u5f53\u524d\u5df2\u6388\u6743\u8303\u56f4\uff0c\u4e0d\u53ef\u6269\u5927\uff09\uff1a / 1. hard_constraint \u2014 \u786c\u6027\u7ea6\u675f\uff08\u94b1/\u65f6\u95f4/\u8d23\u4efb\uff09\uff08DIR-OPT-CONSTRAINTS\uff09 / 2. o; next_dirs=DIR-OPT-CONSTRAINTS,DIR-OPT-ON-TABLE; last_sent=qp_role_clarify_35075d72-9fd8-48ec-b70c-7ee34dc22e50
+  PASS  M2.4-R2-FU2-B: null role_code_hint under multi-role keeps pending clarification
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"42a03b13-3f86-450e-ba24-af64e8499a5d","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"42a03b13-3f86-450e-ba24-af64e8499a5d","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2c] chosen=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; other=v1/dir/DIR-OPT-ON-TABLE/role/option; fact=fact_m1_b84640d4-d155-4e1c-8835-689f3b4848a4_0:hard_constraint:DIR-OPT-CONSTRAINTS; pending=null; dc=1->2; next=qp_cq_dir_DIR-RISK-TOLERANCE_2026-11-10T13:02:58.627Z
+  PASS  M2.4-R2-FU2-C: clarification binds only the chosen role and clears pending
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e8a39358-f1d4-4f45-9e6e-f8f219934636","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e8a39358-f1d4-4f45-9e6e-f8f219934636","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2d] facts=0->0; dc=1->1; asked=1->2->2; pending=pending:90ca43a1-8dc1-4854-93dc-c934815bc2dd; last_sent=qp_role_clarify_90ca43a1-8dc1-4854-93dc-c934815bc2dd
+  PASS  M2.4-R2-FU2-D: unclear clarification keeps pending and does not jump NeedItem
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cfbb162b-15f2-403e-8e6e-90cda981fb94","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2e] legal=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; forged=v1/dir/DIR-FORGED/role/forged_role; overreach=0; legal_facts=1; pending=pending:unauthorized_role_code; dc=1->2; last_sent=qp_role_clarify_b82d9125-38ec-4214-8caf-2b9238c44877
+  PASS  M2.4-R2-FU2-E: illegal role stays pending; legal item writes; plan not polluted
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e345c67c-1f89-4bb5-bfd2-dd1b3499587d","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2f] legal=v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; other=v1/dir/DIR-OPT-ON-TABLE/role/option; wrote=fact_m1_49c71ae1-2459-4b39-9435-4eea5ceabc05_0:hard_constraint; unbound_written=false; pending=pending:unlocated_role_code; dc=1->2; last_sent=qp_role_clarify_49c71ae1-2459-4b39-9435-4eea5ceabc05
+  PASS  M2.4-R2-FU2-F: partial success writes legal item and keeps unbound pending first
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"669cac6b-a41e-4be8-80ff-33f1b82230cd","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"669cac6b-a41e-4be8-80ff-33f1b82230cd","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2g] turn=c0f9f3f2-4973-49f2-9b5c-8e73590b23c4; pending_reloaded=true; pending_after=pending; facts=0->0; dc=1->1; asked=1->2->2; q_recovered=true
+  PASS  M2.4-R2-FU2-G: pending survives reload; replay does not duplicate write/pending/budget
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"151c2960-07b1-4a87-b16a-b463d6782f84","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7769d5b1-23ac-4a80-b571-78e8e2d8b3f0","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ecd0d049-fa0f-45a4-8bb2-7c92efcbf95b","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2fu2h] match_auth=ok:v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint; match_write=true; match_dc=1->2; mismatch_auth=missing_authorized_fact_roles; mismatch_dc=1->1; none_auth=missing_authorized_answer_target; none_dc=1->1
+  PASS  M2.4-R2-FU2-H: last_sent historical recovery only when plan_id matches
+  PASS  M2.4-R2 static: production path uses model interpretation before DC write
+
+M1 done. PASS=91 FAIL=0

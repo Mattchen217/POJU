@@ -1,0 +1,14 @@
+test:m1-r-fresh-session-main-loop exit=0 M1-R done. PASS=8 FAIL=0
+test:m2-1-readiness-confirm-freeze exit=0 M2.1 result: 19 passed, 0 failed
+test:m2-2-freeze-report-binding exit=0 M2.2 results: 43 passed, 0 failed
+test:m2-3-decision-blueprint exit=0 M2.3 results: 18 passed, 0 failed
+test:m2-4-r2-production-closure exit=0 PASS=20 FAIL=0
+test:m3-decision-report exit=0 27 passed, 0 failed
+test:m4-decision-authority exit=0 27 passed, 0 failed
+test:m4-1-freeze-recovery exit=0 10 passed, 0 failed
+test:m5-di2-main-path exit=0 29 passed, 0 failed
+test:m5-r1-authorization exit=0 49 passed, 0 failed
+test:m5-r1-fu1 exit=0 5 passed, 0 failed
+test:m5-r1-fu2 exit=0 10 passed, 0 failed
+test:m5-r1-fu3 exit=0 13 passed, 0 failed
+test:m5-r1-fu4 exit=0 8 passed, 0 failed

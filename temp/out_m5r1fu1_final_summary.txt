@@ -1,0 +1,19 @@
+﻿HEAD=2d74bafb70e3b7fb162d2896d1555bee22d72017
+[test-m5-r1-authorization] exit=0 :: 18 passed, 0 failed
+[test-m5-di2-main-path] exit=0 :: 29 passed, 0 failed
+[test-m4-1-freeze-recovery] exit=0 :: 10 passed, 0 failed
+[test-m4-decision-authority] exit=0 :: 27 passed, 0 failed
+[test-m3-decision-report] exit=0 :: 27 passed, 0 failed
+[test-m2-1-readiness-confirm-freeze] exit=0 :: M2.1 result: 19 passed, 0 failed
+[test-m2-2-freeze-report-binding] exit=0 :: M2.2 results: 43 passed, 0 failed
+[test-m2-3-decision-blueprint] exit=0 :: M2.3 results: 18 passed, 0 failed
+[test-m2-4-r2-production-closure] exit=0 :: PASS=20 FAIL=0
+[test-m1-r-fresh-session-main-loop] exit=0 :: M1-R done. PASS=8 FAIL=0
+[test-intake-r6-freeze-versioning] exit=0 :: All intake-r6-freeze-versioning (A閳ユ張) checks passed.
+[test-intake-r6-freeze-authority-regression] exit=0 :: S5 freeze-authority-regression done. PASS=8 FAIL=0
+[test-intake-r6-freeze-wire-reason] exit=0 :: S3 wire-reason done. passed=25 failed=0 untested=0
+[test-intake-r6-freeze-persist-disclose] exit=0 :: S8 freeze-persist-disclose done. PASS=5 FAIL=0
+[test-s7-dc-lifecycle] exit=1 :: S7 result: 5 passed, 3 failed
+[test-m5-r1-fu1] exit=0 :: 5 passed, 0 failed
+[tsc] exit=0
+[tsc m5 + m5-r1 test files] exit=0

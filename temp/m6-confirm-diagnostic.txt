@@ -1,0 +1,334 @@
+
+> pojulife@0.1.0 test:m6-di2-full-lifecycle D:\POJU\pojulife
+> tsx scripts/test-m6-di2-full-lifecycle.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M6 Decision Intake 2.0 full lifecycle
+[bazi] Original: 1985-07-15 02:00
+[bazi] True Solar: 1985-07-15 02:00
+[bazi] Diff: 0.28 minutes
+[createStoredProfile] writing birth_location: {
+  profile_id: '(new)',
+  birth_info: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  },
+  user_profile: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  }
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ba85dc96-a4e1-4fa5-abbe-fac6be169889","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  fresh Session bootstraps DC + Blueprint + authorized first adaptive question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7e09ba9a-3b4f-481a-8eed-58e4c6aa9780","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed m6_forced_dc_write_failure
+  PASS  Fresh Session DC persistence failure is fail-closed without a freeform question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 4,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 5,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 6,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 7,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 8,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 9,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 10,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 11,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 12,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 13,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 14,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 15,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 16,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  multi-turn answers update DC/Understanding and replan without repeating
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"60e6e70b-1b89-4899-a4d8-5c356ff72927","has_profile":true}
+[M6 confirm trace] {"phase":"collecting_context","readiness":{"verdict":"continue","can_ask":true,"reasons":["dir_unknown_may_affect_p5:DIR-DEF-QUESTION","dir_unknown_may_affect_p5:DIR-DEF-OUTCOME","dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE","dir_unknown_may_affect_p5:DIR-DEF-STAKES","dir_unknown_may_affect_p5:DIR-OPT-CONSTRAINTS","dir_unknown_may_affect_p5:DIR-TIMING-WINDOW","dir_unknown_may_affect_p5:DIR-DEF-UNACCEPTABLE","dir_unknown_may_affect_p5:DIR-RISK-TOLERANCE","dir_unknown_may_affect_p5:DIR-DEF-PRIORITIES","dir_unknown_may_affect_p5:DIR-EXIT-CRITERIA","dir_unknown_may_affect_p5:DIR-BIZ-MODEL","dir_unknown_may_affect_p5:DIR-OPT-IRREV","dir_unknown_boundary_ok:DIR-STATUS-QUO","dir_unknown_boundary_ok:DIR-PAST-ATTEMPTS","dir_unknown_boundary_ok:DIR-VALIDATION-CAPACITY","hard_budget_exhausted","confirm_not_sufficient_resume_collecting","dir_unknown_may_affect_p5:DIR-RISK-TOLERANCE","dir_unknown_boundary_ok:DIR-STATUS-QUO"],"sufficiency_verdict":"continue_collecting"},"canStop":false,"lastAssistant":{"m21_confirm_freeze":true,"m21_outcome":"not_sufficient_after_confirm","m21_error":"dir_unknown_may_affect_p5:DIR-RISK-TOLERANCE;dir_unknown_boundary_ok:DIR-STATUS-QUO"},"confirmationEvents":18}
+  FAIL  explicit user confirmation through handleUserMessage reaches authority Freeze
+AssertionError [ERR_ASSERTION]: the confirmation entry itself must complete Freeze
+
+'draft' !== 'final'
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:262:16)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async check (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:26:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:246:7)
+    at async main (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:115:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'draft',
+  expected: 'final',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  report client starts one authorized job and completes eight bound pages
+DecisionReportClientError: This session has no confirmed Freeze yet
+    at freezeOf (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:528:11)
+    at Object.runDecisionReportForSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:826:22)
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:307:42)
+    at check (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:26:15)
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:304:13)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async main (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:115:5) {
+  code: 'FREEZE_REQUIRED',
+  retryable: false,
+  status: 0
+}
+  FAIL  delivered Session does not auto-start again or regenerate analysis/pages
+AssertionError [ERR_ASSERTION]: client delivery must persist the filled report HTML
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:394:16)
+    at check (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:26:15)
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:389:13)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async main (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:115:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+  FAIL  status after refresh returns the completed report bound to the same Job
+TypeError: Cannot read properties of null (reading 'xhigh_job_id')
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:417:111)
+    at check (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:26:15)
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:414:13)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async main (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:115:5)
+
+M6 result: 3 passed, 4 failed
+ ELIFECYCLE  Command failed with exit code 1.

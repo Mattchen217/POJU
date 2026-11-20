@@ -2534,7 +2534,12 @@
   bottom: 0;
   z-index: 45;
   display: flex;
-  justify-content: center;
+  /* Stack Understanding dock above the field; never sit beside it (that shoved the box right). */
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  box-sizing: border-box;
   padding: 12px 24px calc(20px + env(safe-area-inset-bottom, 0px));
   /* No full-width fade veil — composer card sits on the page; empty bar must not steal scroll. */
   background: transparent;
@@ -2542,7 +2547,11 @@
   pointer-events: none;
 }
 
+.workspace-poju-opening .pchat--workspace .pchat__inputbar .pchat__composer-top,
 .workspace-poju-opening .pchat--workspace .pchat__inputbar .pchat__composer-unit {
+  width: min(640px, 100%);
+  max-width: min(100%, var(--ws-poju-chat-col)) !important;
+  margin-inline: auto;
   pointer-events: auto;
 }
 
@@ -2683,7 +2692,11 @@
   bottom: 0;
   z-index: 45;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: auto;
+  box-sizing: border-box;
   padding: 12px 24px calc(20px + env(safe-area-inset-bottom, 0px));
   background: transparent;
   box-shadow: none;

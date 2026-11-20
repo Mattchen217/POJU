@@ -1,0 +1,52 @@
+
+> pojulife@0.1.0 test:di2-browser-authoritative-chat-integration D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-di2-browser-authoritative-chat-integration.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+DI2 browser ↔ authoritative chat integration
+  PASS  G. retired answer-interpretation proxy returns 410 and spends nothing
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"41122392-4c95-428b-852a-d4032f802c48","has_profile":false}
+  PASS  A. Fresh Session first decision statement reaches /api/poju/chat
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d927877b-ec3c-4669-9ff4-498e46f1b725","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d927877b-ec3c-4669-9ff4-498e46f1b725","has_profile":false}
+  PASS  B. Adaptive answer updates DC ledger + Session CAS; UI shows authorized question
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"eafc6386-7ea4-470b-b7dd-6282b6f250c2","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"eafc6386-7ea4-470b-b7dd-6282b6f250c2","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"eafc6386-7ea4-470b-b7dd-6282b6f250c2","has_profile":false}
+  PASS  C. Input protection lockout survives and blocks model/DC writes
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a0086cd0-357f-4e3d-b0e8-f8c34d4606bb","has_profile":false}
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"a0086cd0-357f-4e3d-b0e8-f8c34d4606bb","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed writer token does not match this session ledger
+  PASS  D. Concurrent same-revision turns: only one commits
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b04adf3e-4358-47df-9969-498a428b7c7b","has_profile":false}
+  PASS  F. Reload restores complete DI2 state from server snapshot
+[poju-diag] server_invoke:before-llm {"present":true,"has_structured":false,"display_text_len":0,"session_id":"a17bc040-ec38-4e93-ae57-6dbe3254f38e","has_profile":true}
+  PASS  P0. profile + base_analysis reach server model path; mismatch rejected
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"67f719fd-8f55-4116-a276-65dc6304e9f9","has_profile":false}
+  PASS  P0b. no-profile and profile_skipped paths stay null without fabrication
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"8b7df575-a04b-4bb0-a062-04db0237e7ee","has_profile":false}
+  PASS  P1. first-turn original_question is CAS-committed; local mirror matches
+  PASS  static: POJUChatUI production path uses authoritative chat transport
+  PASS  E. Readiness confirm path remains server-authoritative (wire present)
+
+11 passed, 0 failed

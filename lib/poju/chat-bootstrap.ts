@@ -21,6 +21,13 @@ export function isMatrixWelcomeMessage(m: POJUMessage): boolean {
   return m.role === "assistant" && m.meta?.kind === "welcome" && m.meta.matrix_welcome === true;
 }
 
+/** Any seeded welcome row that must render as the fixed hero, never an AI bubble. */
+export function isWelcomeHeroMessage(m: POJUMessage): boolean {
+  if (m.role !== "assistant") return false;
+  if (m.meta?.kind === "welcome") return true;
+  return isFixedWelcomeContent(m.content);
+}
+
 export function hasMatrixWelcomeMessage(session: POJUSessionState): boolean {
   return session.messages.some(isMatrixWelcomeMessage);
 }

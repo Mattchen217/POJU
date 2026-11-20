@@ -1,0 +1,36 @@
+M5-R1-FU1: stale charge claim cannot refuse or abort the current claimant's job
+
+A charge request whose claim expired and was taken over (same session, same
+charge_ref, new attempt_id) used to return `refused` after its CAS failed, and the
+start handler aborted the job whenever the latest record was not authorized - so an
+old refusal could kill the job the new claimant was still charging for.
+
+decision-report-charge.ts
+- chargeUnderClaim: a written outcome returns that outcome; a lost write goes to
+  settleLostWrite, which decides only from the latest server record:
+  unreadable -> uncertain (fail closed); authorized -> authorized (never
+  downgraded); different attempt_id -> new `stale_claim` settlement; same attempt
+  and refused -> refused; otherwise uncertain.
+- ChargeSettlement: `refused` always carries the record that recorded it;
+  new `stale_claim` variant.
+- confirmCurrentChargeRefusal: abort authority = the latest record is refused AND
+  was recorded by the settlement's attempt_id; unreadable / newer record -> false.
+
+decision-report-api.ts
+- start aborts (revoke grant, fail job charge_refused, clear dispatch marker,
+  release lock) only when confirmCurrentChargeRefusal holds; an unconfirmed
+  refusal answers 503 CHARGE_UNCONFIRMED and leaves the job alone.
+- stale_claim follows the job like pending (200 awaiting_charge; continue: 409
+  CHARGE_PENDING).
+
+scripts/test-m5-r1-authorization.ts
+- ledger stub takes gate and mode on entry; `refuse` mode; controllable clock
+  (Date.now shifted past DI2_CHARGE_CLAIM_MS only while B re-claims); --only filter.
+- FU1-01..FU1-05 (stale refusal while B charges; B authorized then stale
+  refusal/success; stale refusal then B's real refusal; CAS lost + unreadable record;
+  own refusal written + confirmation read lost).
+
+package.json: test:m5-r1-fu1.
+
+Storage in tests is process-memory KV and a ledger stub: not Upstash or Supabase
+validation. No real OpenRouter, no E2E, no browser.

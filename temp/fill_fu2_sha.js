@@ -1,0 +1,23 @@
+const fs = require("fs");
+const { execSync } = require("child_process");
+const p = "docs/eastern-os/decision-intake-2.0/evidence/m2-3-decision-blueprint/CONTRACT-FIX-R2-FU2.md";
+let t = fs.readFileSync(p, "utf8");
+const impl = "a56043aecd9d28003573521fe0062e518e0e5637";
+t = t.split("PLACEHOLDER_IMPL_SHA").join(impl);
+t = t.split("PLACEHOLDER_TIP_SHA").join(impl); // temporary; evidence commit will bump tip
+fs.writeFileSync(p, t);
+execSync("git add " + p, { stdio: "inherit" });
+execSync('git commit -m "M2.3-R2-FU2: fill evidence impl/tip SHA"', { stdio: "inherit" });
+const tip = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+t = fs.readFileSync(p, "utf8");
+t = t.replace(/\| HEAD \/ tip \| `[^`]+` \|/, "| HEAD / tip | `" + tip + "` |");
+fs.writeFileSync(p, t);
+execSync("git add " + p, { stdio: "inherit" });
+execSync('git commit -m "M2.3-R2-FU2: record evidence tip HEAD"', { stdio: "inherit" });
+const tip2 = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+t = fs.readFileSync(p, "utf8");
+const documented = (t.match(/\| HEAD \/ tip \| `([^`]+)`/) || [])[1];
+console.log("impl", impl);
+console.log("documented tip", documented);
+console.log("actual HEAD", tip2);
+console.log("note: documented tip is previous evidence commit; actual HEAD is tip2");

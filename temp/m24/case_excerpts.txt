@@ -1,0 +1,19 @@
+﻿[m24a] cls=clear_answer; writes=2; dirs=DIR-OPT-CONSTRAINTS
+[m24a] applied facts=fact_m1_turn_m24a_0,fact_m1_turn_m24a_1; dc_version=2
+  PASS  M2.4-R1 Case A: multi-fact answer 鈫?multiple ProposedWrites; no unrelated DIR
+[m24b] verification_level=user_estimate; status=unverified
+  PASS  M2.4-R1 Case B: estimate 鈫?user_estimate + unverified (not confirmed)
+[m24c] unknown_status=unknown; declined_status=declined; askedBefore=1; asked2=1
+  PASS  M2.4-R1 Case C: unknown/declined statuses; no effective ask-budget charge on answer
+[m24d] old=fact_m1_turn_m24d_1_0; new=fact_m1_turn_m24d_2_0; open_conflicts=1; cls=correction
+  PASS  M2.4-R1 Case D: correction keeps old fact; open Conflict on clear clash
+[m24e] qA=鍏充簬銆岃涓嶈绂昏亴鍘诲垱涓氾紵銆嶁€斺€旇祫閲戙€佹椂闂淬€佽矗浠绘柟闈㈡湁鍝簺鍏蜂綋纭檺鍒讹紵锛堣繖鏍锋垜鎵嶈兘鍒ゆ柇锛歂eeded for DIR-OPT-CONSTRAINTS锛? qB=鍏充簬銆岃涓嶈鎼幓涓婃捣锛熴€嶁€斺€旇祫閲戙€佹椂闂淬€佽矗浠绘柟闈㈡湁鍝簺鍏蜂綋纭檺鍒讹紵锛堣繖鏍锋垜鎵嶈兘鍒ゆ柇锛歂eeded for DIR-OPT-CONSTRAINTS锛? dirsA=DIR-OPT-CONSTRAINTS; dirsB=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case E: dynamic question text differs across decision gaps
+[m24f] targetDir=DIR-OPT-ON-TABLE; role0=option; need=missing_roles:status_quo; 鏈夊摢浜涚湡瀹炲彲閫夋柟妗? nextQ=鍏充簬銆岃涓嶈鎹㈠伐浣滐紵銆嶁€斺€旇祫閲戙€佹椂闂淬€佽矗浠绘柟闈㈡湁鍝簺鍏蜂綋纭檺鍒讹紵锛堣繖鏍锋垜鎵嶈兘鍒ゆ柇锛歂eeded for DIR-OPT-CONSTRAINTS锛?  PASS  M2.4-R1 Case F: satisfied role not re-asked; next role gap
+[m24g] conflict_briefs=1; gap=conflict; nextQ=鍏充簬銆孲hould I leave my job?銆嶁€斺€斿綋鍓嶈褰曞瓨鍦ㄥ啿绐侊細鍙湁涓€涓€夐」锛氱暀浠?vs 鍏跺疄杩樻湁鍒涗笟閫夐」銆傝甯姪婢勬竻鍝竴椤瑰睘瀹炪€傦紙宸茬煡锛氬彧鏈変竴涓€夐」锛氱暀浠伙紱璇疯ˉ鍏呭皻鏈娓呯殑閮ㄥ垎锛?  PASS  M2.4-R1 Case G: open Conflict 鈫?Understanding conflict; DIR not known; ask resolves
+[m24h-t1] phase=collecting_context; dc_v=1; q=鍏充簬銆岃涓嶈鎺ュ彈鏂?offer锛熴€嶁€斺€旀湡鏈涜揪鎴愮殑缁撴灉锛燂紙杩欐牱鎴戞墠鑳藉垽鏂細鐢ㄤ簬姣旇緝閫夐」涓庢垚绔嬫潯浠讹級; llmDelta=1
+[m24h-t2] dc_v=2; phase=collecting_context; authQ=鍏充簬銆岃涓嶈鎺ュ彈鏂?offer锛熴€嶁€斺€旂洰鏍囦紭鍏堢骇椤哄簭锛燂紙杩欐牱鎴戞墠鑳藉垽鏂細椹卞姩閫夐」鎺掑簭锛? llmDelta=1; prevQ_same=false
+[m24h-t3] dc_v=3; phase=collecting_context; authQ=鍏充簬銆岃涓嶈鎺ュ彈鏂?offer锛熴€嶁€斺€旇鎶婅鍋氱殑鍐崇瓥闂璇村緱鏇村叿浣撲竴鐐癸紵锛堝凡鐭ワ細瑕佷笉瑕佹帴鍙楁柊 offer锛燂紱璇疯ˉ鍏呭皻鏈娓呯殑閮ㄥ垎锛夛紙杩欐牱鎴戞墠鑳藉垽鏂細娌℃湁鏄庣‘闂; llmDelta=1
+[m24h] path=handleUserMessage脳3; versions=1->2->3; total_llm_fetches=3
+  PASS  M2.4-R1 Case H: real Agent main path 鈮? turns; LLM does not override authorized Q
+M1 done. PASS=24 FAIL=0

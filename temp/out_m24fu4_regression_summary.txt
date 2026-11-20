@@ -1,0 +1,9 @@
+﻿
+m1r EXIT=0
+m23 EXIT=0
+m21 EXIT=0
+m22 EXIT=0
+phase2 EXIT=0
+typegen EXIT=0
+tsc EXIT=0
+build EXIT=0

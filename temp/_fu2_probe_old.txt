@@ -1,0 +1,92 @@
+function inspectLedgerEntryValue(
+  raw: unknown,
+  sessionId: string,
+  expectedVersion: number,
+): { kind: "missing" } | { kind: "ok"; entry: Record<string, unknown> } | { kind: "integrity" } {
+  if (raw == null) return { kind: "missing" };
+  const parsed = asJsonObject(raw);
+  if (!parsed.ok) {
+    return "missing" in parsed && parsed.missing ? { kind: "missing" } : { kind: "integrity" };
+  }
+  const entry = parsed.value;
+  if (typeof entry.session_id !== "string" || entry.session_id !== sessionId) {
+    return { kind: "integrity" };
+  }
+  if (entry.commit_version !== expectedVersion) {
+    return { kind: "integrity" };
+  }
+  if (typeof entry.entry_hash === "string" && entry.entry_hash.length > 0) {
+    try {
+      const copy = normalizeJson(entry);
+      const { entry_hash, ...rest } = copy;
+      if (canonicalHash(rest) !== entry_hash) return { kind: "integrity" };
+    } catch {
+      return { kind: "integrity" };
+    }
+  }
+  return { kind: "ok", entry };
+}
+
+/**
+ * Probe the Decision Authority ledger in the same KV as the Session record.
+ * This is the same forward-scan used by readLedgerHead, kept synchronous so it
+ * can run inside MemoryKv's atomic section or the matching Redis Lua script.
+ *
+ * Fail closed on malformed JSON, structurally invalid entries, an unusable
+ * head hint, or probe-limit exhaustion. A genuinely missing ledger (no hint
+ * and no entry 1) is not frozen. Freeze becomes effective only after the
+ * NX-written ledger entry itself is visible; a head hint that has not been
+ * written yet is still discovered by the forward scan.
+ */
+export function probeSameKvLedger(
+  read: (key: string) => unknown | null,
+  sessionId: string,
+  probeLimit = LEDGER_CAS_PROBE_LIMIT,
+): LedgerProbeResult {
+  const hintRaw = read(dcLedgerHeadKey(sessionId));
+  let n = 0;
+  if (hintRaw != null) {
+    const hint = asJsonObject(hintRaw);
+    if (!hint.ok) return { ok: false, reason: "ledger_integrity" };
+    const version = hint.value.commit_version;
+    if (typeof version !== "number" || !Number.isSafeInteger(version) || version <= 0) {
+      return { ok: false, reason: "ledger_integrity" };
+    }
+    n = version;
+  }
+
+  let head: Record<string, unknown> | null = null;
+  if (n > 0) {
+    const got = inspectLedgerEntryValue(read(dcLedgerEntryKey(sessionId, n)), sessionId, n);
+    if (got.kind !== "ok") return { ok: false, reason: "ledger_integrity" };
+    head = got.entry;
+  }
+
+  for (let i = 0; i < probeLimit; i += 1) {
+    const got = inspectLedgerEntryValue(
+      read(dcLedgerEntryKey(sessionId, n + 1)),
+      sessionId,
+      n + 1,
+    );
+    if (got.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
+    if (got.kind === "missing") break;
+    head = got.entry;
+    n += 1;
+    if (i === probeLimit - 1) {
+      const more = inspectLedgerEntryValue(
+        read(dcLedgerEntryKey(sessionId, n + 1)),
+        sessionId,
+        n + 1,
+      );
+      if (more.kind === "integrity") return { ok: false, reason: "ledger_integrity" };
+      if (more.kind === "ok") return { ok: false, reason: "ledger_probe_incomplete" };
+    }
+  }
+
+  if (!head) return { ok: true, frozen: false };
+  return {
+    ok: true,
+    frozen: head.change_type === "freeze" || head.dc_status === "final",
+  };
+}
+

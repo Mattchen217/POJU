@@ -1,0 +1,2 @@
+lib/poju/agent.ts(1143,15): error TS2367: This comparison appears to be unintentional because the types '"planner_blocked" | "dc_committed" | "not_applied"' and '"ready_no_question"' have no overlap.
+lib/poju/agent.ts(1343,13): error TS2367: This comparison appears to be unintentional because the types '"persist_failed" | "dc_committed" | "not_applied" | "persist_threw"' and '"ready_no_question"' have no overlap.

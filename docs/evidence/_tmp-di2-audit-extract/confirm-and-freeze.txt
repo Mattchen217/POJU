@@ -1,0 +1,928 @@
+FILE lib/poju/decision-intake/confirm-and-freeze.ts
+
+==== 1-200 ====
+    1|/**
+    2| * M2.1 — Final understanding confirm → legal fact promotion → sufficiency → Freeze.
+    3| *
+    4| * Closes the broken production chain after M1-R adaptive Q&A:
+    5| *   Readiness stop → user confirm → Confirmation Events + confirmed status
+    6| *   → DIR reaggregate → evaluateDecisionSufficiency → ensureSessionFrozenForDelivery
+    7| *
+    8| * Promotion contract (Max M2.1 REQUEST CHANGES):
+    9| * - user_estimate + unverified stays unverified + user_estimate; may get Confirmation Event + derived user_confirmed=true (confirming the estimate, not promoting status)
+   10| * - user_asserted + unverified → confirmed ONLY after valid Confirmation Event + source + turn
+   11| * - independently_verified is never converted via user confirm
+   12| * - unknown / declined / not_applicable never promote
+   13| * - RealityFact.user_confirmed is derived from Confirmation Events only
+   14| * - Constraints obey the same source + event rules
+   15| * - Missing source_turn_id or event-create failure → fail-closed (no partial promotions)
+   16| *
+   17| * Forbidden: fake DIR.current_state; Freeze when sufficiency.canStop is false;
+   18| * Opening-Gate-style batch without user confirm turn provenance.
+   19| */
+   20|
+   21|import {
+   22|  appendConfirmationEventWithProvenance,
+   23|  assertAuthoritativeConfirmationEvent,
+   24|  deriveUserConfirmedFromEvents,
+   25|  findMatchingUserConfirmEvent,
+   26|  hasUserConfirmEventForTarget,
+   27|  makeFactConfirmEventId,
+   28|  type ConfirmationEvent,
+   29|} from "@/lib/poju/decision-context/confirmation-event";
+   30|import { evaluateDecisionSufficiency } from "@/lib/poju/decision-context/stop-criteria";
+   31|import { reaggregateDirsOnSession } from "@/lib/poju/decision-context/na-validation-from-session";
+   32|import { applyDcToWorking } from "@/lib/poju/decision-context/persist";
+   33|import {
+   34|  ensureSessionFrozenForDelivery,
+   35|  type FreezeWireResult,
+   36|} from "@/lib/poju/decision-context/production-freeze-wire";
+   37|import type {
+   38|  Constraint,
+   39|  DecisionContext,
+   40|  RealityFact,
+   41|} from "@/lib/poju/decision-context/types";
+   42|import type { POJUSessionState } from "@/lib/poju/types";
+   43|import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+   44|import { deliveryConfirmButtonLabel } from "@/lib/poju/delivery-confirm-reply";
+   45|import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
+   46|
+   47|const CONFIRM_RE =
+   48|  /^(确认|同意|没问题|可以|正确|好的|是的|确认无误|yes|y|confirm|ok|okay|looks\s*good)([。.!！\s]|$)/i;
+   49|const ADD_MORE_RE =
+   50|  /(补充|修改|不对|还有|更正|不正确|再问|继续问|add\s*more|incorrect|not\s*right|change)/i;
+   51|
+   52|const OFFICIAL_CONFIRM_LOCALES = ["zh", "en", "es", "fr"] as const;
+   53|
+   54|export function isOfficialFinalConfirmLabel(text: string): boolean {
+   55|  const t = text.trim();
+   56|  if (!t) return false;
+   57|  return OFFICIAL_CONFIRM_LOCALES.some(
+   58|    (locale) =>
+   59|      t === deliveryConfirmButtonLabel(locale) ||
+   60|      t === understandingGateConfirmButtonLabel(locale),
+   61|  );
+   62|}
+   63|
+   64|export function isFinalUnderstandingConfirmText(text: string): boolean {
+   65|  const t = text.trim();
+   66|  if (!t) return false;
+   67|  if (isOfficialFinalConfirmLabel(t)) return true;
+   68|  if (ADD_MORE_RE.test(t) && !CONFIRM_RE.test(t)) return false;
+   69|  return CONFIRM_RE.test(t) || t === "确认" || t === "同意";
+   70|}
+   71|
+   72|export function isFinalUnderstandingAddMoreText(text: string): boolean {
+   73|  return ADD_MORE_RE.test(text.trim());
+   74|}
+   75|
+   76|export function sessionReadyForFinalConfirm(session: POJUSessionState): boolean {
+   77|  const u = session.decision_understanding;
+   78|  if (!u) return false;
+   79|  if (u.readiness.can_ask !== false) return false;
+   80|  return (
+   81|    u.readiness.verdict === "ready_for_final_confirm" ||
+   82|    u.readiness.verdict === "hard_budget_exhausted"
+   83|  );
+   84|}
+   85|
+   86|/** Shared contract for the production confirm turn and the manual DI2 LAB control. */
+   87|export function sessionEligibleForFinalConfirm(
+   88|  session: POJUSessionState,
+   89|  text: string,
+   90|): boolean {
+   91|  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
+   92|  return (
+   93|    sessionReadyForFinalConfirm(session) &&
+   94|    (phase === "awaiting_confirmation" || phase === "collecting_context") &&
+   95|    (isFinalUnderstandingConfirmText(text) || isFinalUnderstandingAddMoreText(text))
+   96|  );
+   97|}
+   98|
+   99|/**
+  100| * After readiness stops asking, a non-confirm user turn is a supplement:
+  101| * restore collecting_context and return to the existing Adaptive Question Engine.
+  102| * Confirmed Decision Context facts are left intact.
+  103| */
+  104|export function isDi2FinalUnderstandingSupplementTurn(
+  105|  session: POJUSessionState,
+  106|  text: string,
+  107|): boolean {
+  108|  const statement = text.trim();
+  109|  if (!statement || isFinalUnderstandingConfirmText(statement)) return false;
+  110|  if (!session.decision_blueprint) return false;
+  111|  if (!sessionReadyForFinalConfirm(session)) return false;
+  112|  const phase = normalizeAgentPhase(session.agent_v2?.current_phase);
+  113|  return phase === "awaiting_confirmation" || phase === "collecting_context";
+  114|}
+  115|
+  116|function isTerminalNonPromoteStatus(
+  117|  status: RealityFact["status"] | Constraint["status"],
+  118|): boolean {
+  119|  return (
+  120|    status === "unknown" ||
+  121|    status === "declined" ||
+  122|    status === "not_applicable"
+  123|  );
+  124|}
+  125|
+  126|/** Eligible for a Confirmation Event on final understanding confirm. */
+  127|function isEligibleForConfirmEvent(input: {
+  128|  status: RealityFact["status"] | Constraint["status"];
+  129|  verification_level: RealityFact["verification_level"] | Constraint["verification_level"];
+  130|  user_confirmed: boolean;
+  131|}): boolean {
+  132|  if (isTerminalNonPromoteStatus(input.status)) return false;
+  133|  if (input.verification_level === "independently_verified") return false;
+  134|  if (input.status === "confirmed" && input.user_confirmed === true) {
+  135|    return false;
+  136|  }
+  137|  // user_estimate: event confirms "this is my estimate" without status promotion.
+  138|  // user_asserted: event may promote unverified → confirmed.
+  139|  if (input.verification_level === "user_estimate") {
+  140|    return input.status === "unverified";
+  141|  }
+  142|  if (input.verification_level !== "user_asserted") return false;
+  143|  return input.status === "unverified" || input.status === "confirmed";
+  144|}
+  145|
+  146|type FactPromotePlan = {
+  147|  kind: "fact";
+  148|  fact_id: string;
+  149|  source_turn_id: string;
+  150|};
+  151|
+  152|type ConstraintPromotePlan = {
+  153|  kind: "constraint";
+  154|  constraint_id: string;
+  155|  source_turn_id: string;
+  156|};
+  157|
+  158|type PromotePlan = FactPromotePlan | ConstraintPromotePlan;
+  159|
+  160|/**
+  161| * Build an all-or-nothing Confirmation Event plan.
+  162| * - independently_verified / terminal statuses: ignored
+  163| * - user_estimate + unverified: Confirmation Event (status stays estimate)
+  164| * - user_asserted without source_turn_id: fail-closed
+  165| * - Existing events must match target + source AND pass full authority gate
+  166| *   (validateConfirmationEvent structure + provenance); forged/assistant confirm turns
+  167| *   or structurally illegal actors/event_types fail-closed (no skip-as-authority)
+  168| * - Stale target-only events do not skip
+  169| * - event append failure: fail-closed (caller discards tentative events)
+  170| */
+  171|function planAndAppendConfirmationEvents(input: {
+  172|  session: POJUSessionState;
+  173|  before: DecisionContext;
+  174|  confirmationTurnId: string;
+  175|  now: string;
+  176|}): {
+  177|  events: ConfirmationEvent[];
+  178|  plans: PromotePlan[];
+  179|  error?: string;
+  180|  newly_appended: number;
+  181|} {
+  182|  const plans: PromotePlan[] = [];
+  183|  // A fact the user later corrected is kept as history and never confirmed.
+  184|  const correctedFactIds = new Set(
+  185|    input.before.reality_facts.flatMap((f) => f.corrects_fact_ids ?? []),
+  186|  );
+  187|
+  188|  for (const f of input.before.reality_facts) {
+  189|    if (correctedFactIds.has(f.fact_id)) continue;
+  190|    if (
+  191|      !isEligibleForConfirmEvent({
+  192|        status: f.status,
+  193|        verification_level: f.verification_level,
+  194|        user_confirmed: f.user_confirmed === true,
+  195|      })
+  196|    ) {
+  197|      continue;
+  198|    }
+  199|    const source = f.source_turn_id?.trim() ?? "";
+  200|    if (!source) {
+
+==== 200-450 ====
+  200|    if (!source) {
+  201|      return {
+  202|        events: [...(input.session.confirmation_events ?? [])],
+  203|        plans: [],
+  204|        newly_appended: 0,
+  205|        error: `missing_source_turn_id:fact:${f.fact_id}`,
+  206|      };
+  207|    }
+  208|    plans.push({ kind: "fact", fact_id: f.fact_id, source_turn_id: source });
+  209|  }
+  210|
+  211|  for (const c of input.before.constraints) {
+  212|    if (
+  213|      !isEligibleForConfirmEvent({
+  214|        status: c.status,
+  215|        verification_level: c.verification_level,
+  216|        user_confirmed: c.user_confirmed === true,
+  217|      })
+  218|    ) {
+  219|      continue;
+  220|    }
+  221|    const source = c.source_turn_id?.trim() ?? "";
+  222|    if (!source) {
+  223|      return {
+  224|        events: [...(input.session.confirmation_events ?? [])],
+  225|        plans: [],
+  226|        newly_appended: 0,
+  227|        error: `missing_source_turn_id:constraint:${c.constraint_id}`,
+  228|      };
+  229|    }
+  230|    plans.push({
+  231|      kind: "constraint",
+  232|      constraint_id: c.constraint_id,
+  233|      source_turn_id: source,
+  234|    });
+  235|  }
+  236|
+  237|  let events = [...(input.session.confirmation_events ?? [])];
+  238|  const ctx = {
+  239|    session_id: input.session.session_id,
+  240|    expected_session_id: input.session.session_id,
+  241|    messages: input.session.messages,
+  242|    decision_context: input.before,
+  243|    expected_confirmation_turn_id: input.confirmationTurnId,
+  244|    require_confirmation_turn_id: true,
+  245|  };
+  246|  // Existing-event reuse: same provenance rules, but confirmation_turn_id may be a
+  247|  // prior legitimate user confirm turn (not necessarily this turn).
+  248|  const reuseProvenanceCtx = {
+  249|    session_id: input.session.session_id,
+  250|    expected_session_id: input.session.session_id,
+  251|    messages: input.session.messages,
+  252|    decision_context: input.before,
+  253|    require_confirmation_turn_id: true,
+  254|  };
+  255|  let newly_appended = 0;
+  256|
+  257|  for (const plan of plans) {
+  258|    if (plan.kind === "fact") {
+  259|      const existingFactEvent = findMatchingUserConfirmEvent(
+  260|        events,
+  261|        { type: "fact", fact_id: plan.fact_id },
+  262|        { source_turn_id: plan.source_turn_id },
+  263|      );
+  264|      if (existingFactEvent) {
+  265|        // Reuse path: structure (validateConfirmationEvent) THEN provenance.
+  266|        // confirmation_turn_id must be a real user turn but need not equal this turn.
+  267|        try {
+  268|          assertAuthoritativeConfirmationEvent(reuseProvenanceCtx, existingFactEvent);
+  269|        } catch (e) {
+  270|          return {
+  271|            events: [...(input.session.confirmation_events ?? [])],
+  272|            plans: [],
+  273|            newly_appended: 0,
+  274|            error: e instanceof Error ? e.message : String(e),
+  275|          };
+  276|        }
+  277|        continue;
+  278|      }
+  279|      const raw = {
+  280|        event_id: makeFactConfirmEventId(
+  281|          `${plan.fact_id}_${plan.source_turn_id}_${input.confirmationTurnId}`,
+  282|        ),
+  283|        target_type: "fact" as const,
+  284|        fact_id: plan.fact_id,
+  285|        source_turn_id: plan.source_turn_id,
+  286|        confirmation_turn_id: input.confirmationTurnId,
+  287|        confirmation_action_id: `m21_final_confirm_fact_${plan.fact_id}__${plan.source_turn_id}`,
+  288|        event_type: "confirm_fact" as const,
+  289|        actor: "user" as const,
+  290|        confirmed_at: input.now,
+  291|        event_version: 1 as const,
+  292|      };
+  293|      try {
+  294|        const appended = appendConfirmationEventWithProvenance(ctx, events, raw);
+  295|        events = appended.events;
+  296|        if (appended.outcome === "appended") newly_appended += 1;
+  297|      } catch (e) {
+  298|        return {
+  299|          events: [...(input.session.confirmation_events ?? [])],
+  300|          plans: [],
+  301|          newly_appended: 0,
+  302|          error: e instanceof Error ? e.message : String(e),
+  303|        };
+  304|      }
+  305|      continue;
+  306|    }
+  307|
+  308|    const existingConstraintEvent = findMatchingUserConfirmEvent(
+  309|      events,
+  310|      { type: "constraint", constraint_id: plan.constraint_id },
+  311|      { source_turn_id: plan.source_turn_id },
+  312|    );
+  313|    if (existingConstraintEvent) {
+  314|      try {
+  315|        assertAuthoritativeConfirmationEvent(reuseProvenanceCtx, existingConstraintEvent);
+  316|      } catch (e) {
+  317|        return {
+  318|          events: [...(input.session.confirmation_events ?? [])],
+  319|          plans: [],
+  320|          newly_appended: 0,
+  321|          error: e instanceof Error ? e.message : String(e),
+  322|        };
+  323|      }
+  324|      continue;
+  325|    }
+  326|    const raw = {
+  327|      event_id: `constraint_confirm_event_${plan.constraint_id}_${plan.source_turn_id}_${input.confirmationTurnId}`,
+  328|      target_type: "constraint" as const,
+  329|      constraint_id: plan.constraint_id,
+  330|      source_turn_id: plan.source_turn_id,
+  331|      confirmation_turn_id: input.confirmationTurnId,
+  332|      confirmation_action_id: `m21_final_confirm_constraint_${plan.constraint_id}__${plan.source_turn_id}`,
+  333|      event_type: "confirm_constraint" as const,
+  334|      actor: "user" as const,
+  335|      confirmed_at: input.now,
+  336|      event_version: 1 as const,
+  337|    };
+  338|    try {
+  339|      const appended = appendConfirmationEventWithProvenance(ctx, events, raw);
+  340|      events = appended.events;
+  341|      if (appended.outcome === "appended") newly_appended += 1;
+  342|    } catch (e) {
+  343|      return {
+  344|        events: [...(input.session.confirmation_events ?? [])],
+  345|        plans: [],
+  346|        newly_appended: 0,
+  347|        error: e instanceof Error ? e.message : String(e),
+  348|      };
+  349|    }
+  350|  }
+  351|
+  352|  return { events, plans, newly_appended };
+  353|}
+  354|
+  355|/**
+  356| * Apply legal status promotion ONLY after Confirmation Events exist.
+  357| * user_confirmed is always derived from matching events (target + source) — never written as authority true.
+  358| * user_estimate: status/verification unchanged; user_confirmed may become true from a matching event.
+  359| */
+  360|function applyLegalPromotionAfterEvents(input: {
+  361|  before: DecisionContext;
+  362|  events: ConfirmationEvent[];
+  363|  now: string;
+  364|}): {
+  365|  reality_facts: RealityFact[];
+  366|  constraints: Constraint[];
+  367|  promoted_fact_ids: string[];
+  368|  promoted_constraint_ids: string[];
+  369|  changed: boolean;
+  370|} {
+  371|  const promoted_fact_ids: string[] = [];
+  372|  const promoted_constraint_ids: string[] = [];
+  373|  let changed = false;
+  374|
+  375|  const reality_facts = input.before.reality_facts.map((f) => {
+  376|    if (isTerminalNonPromoteStatus(f.status)) {
+  377|      return f;
+  378|    }
+  379|    if (f.verification_level === "independently_verified") {
+  380|      if (f.user_confirmed === true) {
+  381|        changed = true;
+  382|        return { ...f, user_confirmed: false, updated_at: input.now };
+  383|      }
+  384|      return f;
+  385|    }
+  386|
+  387|    const source = f.source_turn_id?.trim() ?? "";
+  388|    const hasEvt =
+  389|      source.length > 0 &&
+  390|      hasUserConfirmEventForTarget(
+  391|        input.events,
+  392|        { type: "fact", fact_id: f.fact_id },
+  393|        { source_turn_id: source },
+  394|      );
+  395|
+  396|    if (f.verification_level === "user_estimate") {
+  397|      const user_confirmed = deriveUserConfirmedFromEvents({
+  398|        status: "unverified",
+  399|        verification_level: "user_estimate",
+  400|        events: input.events,
+  401|        target: { type: "fact", fact_id: f.fact_id },
+  402|        source_turn_id: source || null,
+  403|      });
+  404|      if (
+  405|        f.status === "unverified" &&
+  406|        f.verification_level === "user_estimate" &&
+  407|        f.user_confirmed === user_confirmed
+  408|      ) {
+  409|        return f;
+  410|      }
+  411|      changed = true;
+  412|      return {
+  413|        ...f,
+  414|        status: "unverified" as const,
+  415|        verification_level: "user_estimate" as const,
+  416|        user_confirmed,
+  417|        updated_at: input.now,
+  418|      };
+  419|    }
+  420|
+  421|    if (f.verification_level !== "user_asserted") {
+  422|      return f;
+  423|    }
+  424|
+  425|    if (!hasEvt) {
+  426|      if (f.user_confirmed === true) {
+  427|        changed = true;
+  428|        return { ...f, user_confirmed: false, updated_at: input.now };
+  429|      }
+  430|      return f;
+  431|    }
+  432|
+  433|    const nextStatus: RealityFact["status"] = "confirmed";
+  434|    const user_confirmed = deriveUserConfirmedFromEvents({
+  435|      status: nextStatus,
+  436|      verification_level: "user_asserted",
+  437|      events: input.events,
+  438|      target: { type: "fact", fact_id: f.fact_id },
+  439|      source_turn_id: source || null,
+  440|    });
+  441|
+  442|    if (
+  443|      f.status === nextStatus &&
+  444|      f.verification_level === "user_asserted" &&
+  445|      f.user_confirmed === user_confirmed
+  446|    ) {
+  447|      return f;
+  448|    }
+  449|
+  450|    if (user_confirmed === true && f.user_confirmed !== true) {
+
+==== 450-700 ====
+  450|    if (user_confirmed === true && f.user_confirmed !== true) {
+  451|      promoted_fact_ids.push(f.fact_id);
+  452|    }
+  453|    changed = true;
+  454|    return {
+  455|      ...f,
+  456|      status: nextStatus,
+  457|      verification_level: "user_asserted" as const,
+  458|      user_confirmed,
+  459|      updated_at: input.now,
+  460|    };
+  461|  });
+  462|
+  463|  const constraints = input.before.constraints.map((c) => {
+  464|    if (isTerminalNonPromoteStatus(c.status)) {
+  465|      return c;
+  466|    }
+  467|    if (c.verification_level === "independently_verified") {
+  468|      if (c.user_confirmed === true) {
+  469|        changed = true;
+  470|        return { ...c, user_confirmed: false, updated_at: input.now };
+  471|      }
+  472|      return c;
+  473|    }
+  474|
+  475|    const source = c.source_turn_id?.trim() ?? "";
+  476|    const hasEvt =
+  477|      source.length > 0 &&
+  478|      hasUserConfirmEventForTarget(
+  479|        input.events,
+  480|        { type: "constraint", constraint_id: c.constraint_id },
+  481|        { source_turn_id: source },
+  482|      );
+  483|
+  484|    if (c.verification_level === "user_estimate") {
+  485|      const user_confirmed = deriveUserConfirmedFromEvents({
+  486|        status: "unverified",
+  487|        verification_level: "user_estimate",
+  488|        events: input.events,
+  489|        target: { type: "constraint", constraint_id: c.constraint_id },
+  490|        source_turn_id: source || null,
+  491|      });
+  492|      if (
+  493|        c.status === "unverified" &&
+  494|        c.verification_level === "user_estimate" &&
+  495|        c.user_confirmed === user_confirmed
+  496|      ) {
+  497|        return c;
+  498|      }
+  499|      changed = true;
+  500|      return {
+  501|        ...c,
+  502|        status: "unverified" as const,
+  503|        verification_level: "user_estimate" as const,
+  504|        user_confirmed,
+  505|        updated_at: input.now,
+  506|      };
+  507|    }
+  508|
+  509|    if (c.verification_level !== "user_asserted") {
+  510|      return c;
+  511|    }
+  512|
+  513|    if (!hasEvt) {
+  514|      if (c.user_confirmed === true) {
+  515|        changed = true;
+  516|        return { ...c, user_confirmed: false, updated_at: input.now };
+  517|      }
+  518|      return c;
+  519|    }
+  520|
+  521|    const nextStatus: Constraint["status"] = "confirmed";
+  522|    const user_confirmed = deriveUserConfirmedFromEvents({
+  523|      status: nextStatus,
+  524|      verification_level: "user_asserted",
+  525|      events: input.events,
+  526|      target: { type: "constraint", constraint_id: c.constraint_id },
+  527|      source_turn_id: source || null,
+  528|    });
+  529|
+  530|    if (
+  531|      c.status === nextStatus &&
+  532|      c.verification_level === "user_asserted" &&
+  533|      c.user_confirmed === user_confirmed
+  534|    ) {
+  535|      return c;
+  536|    }
+  537|
+  538|    if (user_confirmed === true && c.user_confirmed !== true) {
+  539|      promoted_constraint_ids.push(c.constraint_id);
+  540|    }
+  541|    changed = true;
+  542|    return {
+  543|      ...c,
+  544|      status: nextStatus,
+  545|      verification_level: "user_asserted" as const,
+  546|      user_confirmed,
+  547|      updated_at: input.now,
+  548|    };
+  549|  });
+  550|
+  551|  return {
+  552|    reality_facts,
+  553|    constraints,
+  554|    promoted_fact_ids,
+  555|    promoted_constraint_ids,
+  556|    changed,
+  557|  };
+  558|}
+  559|
+  560|async function persistPromotedDc(input: {
+  561|  previous: POJUSessionState;
+  562|  next: POJUSessionState;
+  563|  idempotency_key: string;
+  564|}): Promise<{ session: POJUSessionState; committed: boolean; error?: string }> {
+  565|  const { commitDecisionContextChange } = await import("@/lib/poju/session-manager");
+  566|  if (!input.next.decision_context) {
+  567|    return { session: input.next, committed: false, error: "missing_dc" };
+  568|  }
+  569|  const commit = await commitDecisionContextChange({
+  570|    session: input.next,
+  571|    idempotency_key: input.idempotency_key,
+  572|    require_control_plane: false,
+  573|    apply: (tx) => {
+  574|      applyDcToWorking(
+  575|        tx,
+  576|        input.next.decision_context!,
+  577|        input.next.decision_context_versions ?? [],
+  578|      );
+  579|      const working = tx.working as typeof tx.working & {
+  580|        confirmation_events?: POJUSessionState["confirmation_events"];
+  581|        decision_understanding?: POJUSessionState["decision_understanding"];
+  582|        decision_blueprint?: POJUSessionState["decision_blueprint"];
+  583|        agent_v2?: POJUSessionState["agent_v2"];
+  584|      };
+  585|      working.confirmation_events = input.next.confirmation_events ?? [];
+  586|      if (input.next.control_plane) {
+  587|        working.control_plane = input.next.control_plane;
+  588|      }
+  589|      if (input.next.decision_understanding) {
+  590|        working.decision_understanding = input.next.decision_understanding;
+  591|      }
+  592|      if (input.next.decision_blueprint) {
+  593|        working.decision_blueprint = input.next.decision_blueprint;
+  594|      }
+  595|      if (input.next.agent_v2) {
+  596|        working.agent_v2 = input.next.agent_v2;
+  597|      }
+  598|    },
+  599|  });
+  600|  if (commit.idempotent_skip) {
+  601|    return {
+  602|      session: {
+  603|        ...input.next,
+  604|        decision_context:
+  605|          commit.session.decision_context ?? input.next.decision_context,
+  606|        decision_context_versions:
+  607|          commit.session.decision_context_versions ??
+  608|          input.next.decision_context_versions,
+  609|        confirmation_events:
+  610|          commit.session.confirmation_events ?? input.next.confirmation_events,
+  611|        session_revision: commit.session.session_revision,
+  612|        dc_write_revision: commit.session.dc_write_revision,
+  613|      },
+  614|      committed: false,
+  615|      error: "idempotent_skip",
+  616|    };
+  617|  }
+  618|  if (!commit.committed) {
+  619|    return {
+  620|      session: input.previous,
+  621|      committed: false,
+  622|      error: commit.error ?? "persist_failed",
+  623|    };
+  624|  }
+  625|  return {
+  626|    session: {
+  627|      ...input.next,
+  628|      ...commit.session,
+  629|      confirmation_events:
+  630|        commit.session.confirmation_events ?? input.next.confirmation_events,
+  631|      decision_context:
+  632|        commit.session.decision_context ?? input.next.decision_context,
+  633|      messages: input.next.messages,
+  634|      agent_v2: input.next.agent_v2 ?? commit.session.agent_v2,
+  635|      decision_blueprint:
+  636|        input.next.decision_blueprint ?? commit.session.decision_blueprint,
+  637|      decision_understanding:
+  638|        input.next.decision_understanding ?? commit.session.decision_understanding,
+  639|    },
+  640|    committed: true,
+  641|  };
+  642|}
+  643|
+  644|export type ConfirmAndFreezeResult = {
+  645|  session: POJUSessionState;
+  646|  outcome:
+  647|    | "frozen"
+  648|    | "not_ready"
+  649|    | "not_sufficient_after_confirm"
+  650|    | "promote_failed"
+  651|    | "persist_failed"
+  652|    | "freeze_failed"
+  653|    | "add_more"
+  654|    | "not_confirm_text";
+  655|  sufficiency_can_stop: boolean;
+  656|  freeze?: FreezeWireResult;
+  657|  error?: string;
+  658|  promoted_fact_ids: string[];
+  659|  promoted_constraint_ids: string[];
+  660|};
+  661|
+  662|/**
+  663| * Production M2.1 entry: user confirmed final understanding.
+  664| * Mutates only via Confirmation Events + legal status promotion + Freeze wire.
+  665| */
+  666|export async function confirmUnderstandingAndFreeze(input: {
+  667|  session: POJUSessionState;
+  668|  statement: string;
+  669|  confirmation_turn_id: string;
+  670|  now?: string;
+  671|}): Promise<ConfirmAndFreezeResult> {
+  672|  const now = input.now ?? new Date().toISOString();
+  673|  const statement = input.statement.trim();
+  674|  const empty = {
+  675|    promoted_fact_ids: [] as string[],
+  676|    promoted_constraint_ids: [] as string[],
+  677|    sufficiency_can_stop: false,
+  678|  };
+  679|
+  680|  if (isFinalUnderstandingAddMoreText(statement) && !isFinalUnderstandingConfirmText(statement)) {
+  681|    const agent = input.session.agent_v2;
+  682|    return {
+  683|      ...empty,
+  684|      session: {
+  685|        ...input.session,
+  686|        agent_v2: agent
+  687|          ? { ...agent, current_phase: "collecting_context", stall_offer_pending: false }
+  688|          : agent,
+  689|      },
+  690|      outcome: "add_more",
+  691|    };
+  692|  }
+  693|
+  694|  if (!isFinalUnderstandingConfirmText(statement)) {
+  695|    return { ...empty, session: input.session, outcome: "not_confirm_text" };
+  696|  }
+  697|
+  698|  if (!sessionReadyForFinalConfirm(input.session)) {
+  699|    return { ...empty, session: input.session, outcome: "not_ready" };
+  700|  }
+
+==== 700-916 ====
+  700|  }
+  701|
+  702|  const dc = input.session.decision_context;
+  703|  if (!dc || dc.status !== "draft") {
+  704|    return {
+  705|      ...empty,
+  706|      session: input.session,
+  707|      outcome: "not_ready",
+  708|      error: "no_draft_dc",
+  709|    };
+  710|  }
+  711|
+  712|  // 1) Events first (all-or-nothing). No in-memory promotions before events succeed.
+  713|  const built = planAndAppendConfirmationEvents({
+  714|    session: input.session,
+  715|    before: dc,
+  716|    confirmationTurnId: input.confirmation_turn_id,
+  717|    now,
+  718|  });
+  719|  if (built.error) {
+  720|    return {
+  721|      session: input.session,
+  722|      outcome: "promote_failed",
+  723|      sufficiency_can_stop: false,
+  724|      error: built.error,
+  725|      promoted_fact_ids: [],
+  726|      promoted_constraint_ids: [],
+  727|    };
+  728|  }
+  729|
+  730|  // 2) Derive status + user_confirmed only from structure+provenance-valid events.
+  731|  // Structurally illegal (actor/event_type) or forged confirm turns must not confer authority.
+  732|  const eventsForAuthority = built.events.filter((event) => {
+  733|    try {
+  734|      assertAuthoritativeConfirmationEvent(
+  735|        {
+  736|          session_id: input.session.session_id,
+  737|          expected_session_id: input.session.session_id,
+  738|          messages: input.session.messages,
+  739|          decision_context: dc,
+  740|          require_confirmation_turn_id: true,
+  741|        },
+  742|        event,
+  743|      );
+  744|      return true;
+  745|    } catch {
+  746|      return false;
+  747|    }
+  748|  });
+  749|  const applied = applyLegalPromotionAfterEvents({
+  750|    before: dc,
+  751|    events: eventsForAuthority,
+  752|    now,
+  753|  });
+  754|
+  755|  const versionBump = applied.changed || built.newly_appended > 0;
+  756|  let working: POJUSessionState = {
+  757|    ...input.session,
+  758|    confirmation_events: built.events,
+  759|    decision_context: {
+  760|      ...dc,
+  761|      reality_facts: applied.reality_facts,
+  762|      constraints: applied.constraints,
+  763|      updated_at: versionBump ? now : dc.updated_at,
+  764|      version: versionBump ? (dc.version ?? 1) + 1 : dc.version,
+  765|    },
+  766|  };
+  767|
+  768|  const dirs = await reaggregateDirsOnSession(working, working.decision_context!.dirs, {
+  769|    realityFacts: applied.reality_facts,
+  770|    constraints: applied.constraints,
+  771|    nowIso: now,
+  772|  });
+  773|  working = {
+  774|    ...working,
+  775|    decision_context: {
+  776|      ...working.decision_context!,
+  777|      dirs,
+  778|      updated_at: now,
+  779|    },
+  780|  };
+  781|
+  782|  const sufficiency = evaluateDecisionSufficiency(working.decision_context!);
+  783|  const key = `dc_m21_confirm_promote:${working.session_id}:${input.confirmation_turn_id}`;
+  784|
+  785|  if (!sufficiency.canStop) {
+  786|    const persisted = await persistPromotedDc({
+  787|      previous: input.session,
+  788|      next: {
+  789|        ...working,
+  790|        agent_v2: working.agent_v2
+  791|          ? { ...working.agent_v2, current_phase: "collecting_context" }
+  792|          : working.agent_v2,
+  793|        decision_understanding: working.decision_understanding
+  794|          ? {
+  795|              ...working.decision_understanding,
+  796|              readiness: {
+  797|                ...working.decision_understanding.readiness,
+  798|                can_ask: true,
+  799|                verdict: "continue",
+  800|                reasons: [
+  801|                  ...working.decision_understanding.readiness.reasons,
+  802|                  "confirm_not_sufficient_resume_collecting",
+  803|                  ...sufficiency.reasons,
+  804|                ],
+  805|                sufficiency_verdict: sufficiency.verdict,
+  806|              },
+  807|              last_sent_question: null,
+  808|              next_question_plan: null,
+  809|            }
+  810|          : working.decision_understanding,
+  811|      },
+  812|      idempotency_key: key,
+  813|    });
+  814|    if (!persisted.committed && persisted.error !== "idempotent_skip") {
+  815|      return {
+  816|        session: input.session,
+  817|        outcome: "persist_failed",
+  818|        sufficiency_can_stop: false,
+  819|        error: persisted.error ?? "persist_failed",
+  820|        promoted_fact_ids: [],
+  821|        promoted_constraint_ids: [],
+  822|      };
+  823|    }
+  824|    return {
+  825|      session: persisted.session,
+  826|      outcome: "not_sufficient_after_confirm",
+  827|      sufficiency_can_stop: false,
+  828|      error: sufficiency.reasons.join(";"),
+  829|      promoted_fact_ids: applied.promoted_fact_ids,
+  830|      promoted_constraint_ids: applied.promoted_constraint_ids,
+  831|    };
+  832|  }
+  833|
+  834|  const persisted = await persistPromotedDc({
+  835|    previous: input.session,
+  836|    next: working,
+  837|    idempotency_key: key,
+  838|  });
+  839|  if (!persisted.committed && persisted.error !== "idempotent_skip") {
+  840|    return {
+  841|      session: input.session,
+  842|      outcome: "persist_failed",
+  843|      sufficiency_can_stop: true,
+  844|      error: persisted.error ?? "persist_failed",
+  845|      promoted_fact_ids: [],
+  846|      promoted_constraint_ids: [],
+  847|    };
+  848|  }
+  849|
+  850|  const freeze = await ensureSessionFrozenForDelivery(persisted.session, {
+  851|    trigger: "sufficiency_end_confirm",
+  852|    now,
+  853|    from_stall_or_max_turns: false,
+  854|    from_purchase_or_report_cta: false,
+  855|  });
+  856|
+  857|  if (!freeze.ok) {
+  858|    return {
+  859|      session: persisted.session,
+  860|      outcome: "freeze_failed",
+  861|      sufficiency_can_stop: true,
+  862|      freeze,
+  863|      error: freeze.reason,
+  864|      promoted_fact_ids: applied.promoted_fact_ids,
+  865|      promoted_constraint_ids: applied.promoted_constraint_ids,
+  866|    };
+  867|  }
+  868|  if (freeze.skipped) {
+  869|    return {
+  870|      session: freeze.session,
+  871|      outcome: "not_sufficient_after_confirm",
+  872|      sufficiency_can_stop: false,
+  873|      freeze,
+  874|      error: freeze.reason,
+  875|      promoted_fact_ids: applied.promoted_fact_ids,
+  876|      promoted_constraint_ids: applied.promoted_constraint_ids,
+  877|    };
+  878|  }
+  879|
+  880|  const agent = freeze.session.agent_v2;
+  881|  return {
+  882|    session: {
+  883|      ...freeze.session,
+  884|      agent_v2: agent
+  885|        ? {
+  886|            ...agent,
+  887|            current_phase: "awaiting_confirmation",
+  888|            stall_offer_pending: false,
+  889|          }
+  890|        : agent,
+  891|      decision_understanding: freeze.session.decision_understanding
+  892|        ? {
+  893|            ...freeze.session.decision_understanding,
+  894|            readiness: {
+  895|              verdict: "ready_for_final_confirm",
+  896|              can_ask: false,
+  897|              reasons: [
+  898|                ...(freeze.session.decision_understanding.readiness?.reasons ?? []),
+  899|                "frozen_after_user_confirm",
+  900|              ],
+  901|              sufficiency_verdict: sufficiency.verdict,
+  902|            },
+  903|            next_question_plan: null,
+  904|            last_sent_question: null,
+  905|          }
+  906|        : freeze.session.decision_understanding,
+  907|      adaptive_ask_plan: null,
+  908|    },
+  909|    outcome: "frozen",
+  910|    sufficiency_can_stop: true,
+  911|    freeze,
+  912|    promoted_fact_ids: applied.promoted_fact_ids,
+  913|    promoted_constraint_ids: applied.promoted_constraint_ids,
+  914|  };
+  915|}
+  916|

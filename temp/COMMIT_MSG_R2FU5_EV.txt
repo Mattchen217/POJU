@@ -1,0 +1,3 @@
+docs(evidence): M2.4-R2-FU5 clarification negation safety
+
+Record implementation SHA 8baca929f1f5b3107d3776386650f3dda334efb9 and official regression results. Tip SHA left empty pending Max review. Does not self-declare product PASS.

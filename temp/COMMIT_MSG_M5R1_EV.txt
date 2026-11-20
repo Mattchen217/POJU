@@ -1,0 +1,9 @@
+M5-R1 evidence: charge authorization & client job binding
+
+Evidence record for implementation 07b29553 (parent b34c01ea):
+authorization state machine, job grant and every execution entry,
+PASS ledger idempotency (code reading), concurrency / unauthorized
+worker / client tamper tests, regression commands with exit codes,
+unverified real-environment boundaries.
+
+Not a PASS declaration; handed to independent review.

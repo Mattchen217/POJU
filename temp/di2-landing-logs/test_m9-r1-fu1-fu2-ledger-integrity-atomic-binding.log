@@ -1,0 +1,95 @@
+
+> pojulife@0.1.0 test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding D:\POJU\pojulife
+> tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M9-R1-FU1-FU2 ledger integrity atomic binding tests starting
+HARNESS=MemoryKv + RedisEvalHarness (TypeScript raw-binding predicate; does not execute Lua)
+REAL_REDIS_LUA_EXECUTED=no
+REAL_REDIS_DETAIL=redis-cli=no; redis-server=no; REDIS_URL=unset; docker_daemon=down; upstash_configured=no
+LIMITATION: SESSION_AUTHORITY_CAS_LUA remains unexecuted in a real Redis server.
+NOTE: the assertions above are static source checks, not Redis Lua execution.
+PASS Static Lua source contract (NOT execution proof): raw ledger binding and new result code
+PASS A. Valid Freeze entry: Intake rejected [MemoryKv]
+PASS B. Valid non-Freeze entry: Intake eligible [MemoryKv]
+PASS C. Freeze entry with corrupted change_type but original entry_hash: integrity [MemoryKv]
+PASS D. Freeze entry with corrupted dc_status but original entry_hash: integrity [MemoryKv]
+PASS E. Corrupted entry_hash: rejected [MemoryKv]
+PASS F. Incorrect previous_entry_hash: rejected [MemoryKv]
+PASS G. Missing intermediate Ledger entry: fail closed [MemoryKv]
+PASS H. Invalid commit_version sequence: fail closed [MemoryKv]
+PASS I. Invalid head hint that conceals an entry: fail closed [MemoryKv]
+PASS J/K/L. MemoryKv has no pre-validation-to-commit window; races are harness/Redis-path cases
+PASS M. Probe limit exhaustion: fail closed [MemoryKv]
+PASS N. No Ledger genuinely exists: Intake remains eligible [MemoryKv]
+PASS O. Existing Session integrity failures remain rejected [MemoryKv]
+PASS P. Existing Session lifecycle and revision conflicts remain correct [MemoryKv]
+PASS A. Valid Freeze entry: Intake rejected [RedisEvalHarness]
+PASS B. Valid non-Freeze entry: Intake eligible [RedisEvalHarness]
+PASS C. Freeze entry with corrupted change_type but original entry_hash: integrity [RedisEvalHarness]
+PASS D. Freeze entry with corrupted dc_status but original entry_hash: integrity [RedisEvalHarness]
+PASS E. Corrupted entry_hash: rejected [RedisEvalHarness]
+PASS F. Incorrect previous_entry_hash: rejected [RedisEvalHarness]
+PASS G. Missing intermediate Ledger entry: fail closed [RedisEvalHarness]
+PASS H. Invalid commit_version sequence: fail closed [RedisEvalHarness]
+PASS I. Invalid head hint that conceals an entry: fail closed [RedisEvalHarness]
+PASS J. Validated raw entry changes between pre-validation and EVAL: CAS rejects [RedisEvalHarness]
+PASS K. New entry appears between pre-validation and EVAL: CAS rejects [RedisEvalHarness]
+PASS L. New Freeze entry races Intake commit: Freeze is not silently missed [RedisEvalHarness]
+PASS M. Probe limit exhaustion: fail closed [RedisEvalHarness]
+PASS N. No Ledger genuinely exists: Intake remains eligible [RedisEvalHarness]
+PASS O. Existing Session integrity failures remain rejected [RedisEvalHarness]
+PASS P. Existing Session lifecycle and revision conflicts remain correct [RedisEvalHarness]
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"20f8109d-aeb8-4b67-98fa-695848cbd64a","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS Q. Same-content idempotency remains successful without rerunning the model [MemoryKv]
+[poju-diag] server_invoke:before-llm {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d5a42a38-617a-4c99-8cad-e97c7d2789cf","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS R. Different-content idempotency still returns session_turn_conflict [MemoryKv]
+PASS commitAuthoritativeSessionUpdate maps ledger_snapshot_changed without a generic CAS conflict
+PASS collectLedgerBindingSnapshot covers the chain, not only the head hint
+S. Existing M9, M9-R1, and FU1 regressions are executed by the required command suite, not this file.
+M9-R1-FU1-FU2 ledger integrity atomic binding checks complete
+REAL_REDIS_LUA_EXECUTED=no

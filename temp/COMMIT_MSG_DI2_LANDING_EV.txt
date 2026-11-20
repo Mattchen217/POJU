@@ -1,0 +1,7 @@
+Record DI2 feature-landing main-path evidence
+
+Capture the production-code audit, implementation locations, regression and
+new test logs, command exit records, restored public/sw.js hashes, and a
+redacted OpenRouter Answer Interpretation smoke summary. This is not a DI2
+PASS declaration. Real Redis/Lua, deployed browser E2E, and the remaining
+live model main-path jobs are still unverified.

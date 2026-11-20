@@ -1,0 +1,72 @@
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of D:\POJU\pojulife\node_modules\.pnpm\next-intl@4.11.0_next@16.2._693195eff0c4620ab04c831617d63343\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of D:\POJU\pojulife\node_modules\.pnpm\next-intl@4.11.0_next@16.2._693195eff0c4620ab04c831617d63343\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (106kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (254kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of D:\POJU\pojulife\node_modules\.pnpm\next-intl@4.11.0_next@16.2._693195eff0c4620ab04c831617d63343\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+⚠ Compiled with warnings in 73s
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+/_next/static/media/hana-ui.3e760c2e.wasm is 3.35 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/ops/delivery-lab/create/route.ts
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/ops/delivery-lab/create/route.ts
+

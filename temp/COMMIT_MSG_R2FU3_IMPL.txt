@@ -1,0 +1,16 @@
+fix(m2.4): FU3 unresolved item lifecycle completion
+
+Keep extracted answers that cannot legally be written to Decision
+Context as structured pending items, clarify them one item_id at a
+time, and never drop remaining siblings or skip to an unrelated
+NeedItem. last_sent_question remains the only answer authorization
+source. Clarification questions stay deterministic.
+
+- Bind and persist one resolving item per turn; remaining items keep
+  their original identity, authorization, and reason
+- Extend pending to unclear_certainty, estimated constraints, and
+  unwritable definition patches; record explicit refusals
+- Fail closed when a clarification question cannot be generated
+- Distinguish same-text items by item_id, DIR, and role on incremental
+  writes; do not loosen ordinary replay
+- Tests: FU3-A through FU3-H via handleUserMessage

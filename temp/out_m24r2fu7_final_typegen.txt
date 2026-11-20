@@ -1,0 +1,7 @@
+command: C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec next typegen
+head: a1c0f5363e372d4d507191c2b177ef28b1fd072f
+exit_code: 0
+elapsed_sec: 1.5
+--- output ---
+Generating route types...
+✓ Types generated successfully

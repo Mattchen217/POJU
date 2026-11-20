@@ -1,0 +1,70 @@
+ 1 L2775 M2.4-R2 Case A: three consecutive real handleUserMessage rounds
+   item_texts: ['我目前仍在职，月薪三万。', '家里有一个孩子。']
+ 2 L2852 M2.4-R2 Case A: three consecutive real handleUserMessage rounds
+   item_texts: ['大概还能撑 6 个月。', '硬约束是必须保留社保。']
+ 3 L2968 ?
+   item_texts: ['我已经离职了，不是仍在职。', '还有一个备选是内部转岗。']
+ 4 L3044 M2.4-R2 Case B: unauthorized model role/DIR/DDR is rejected
+   item_texts: ['越权角色不应写入。', '我有一个方案是留任。']
+ 5 L3101 M2.4-R2 Case C: model confirmation fields cannot become confirmed facts
+   item_texts: ['我目前月薪三万。']
+ 6 L3223 M2.4-R2 Case E: uncertainty and decline are not explicit facts
+   item_texts: ['这个数字只是估计。', '我现在还无法确定。', '我现在还无法确定。', '这部分我不想回答。', '这部分我不想回答。']
+ 7 L3241 M2.4-R2 Case E: uncertainty and decline are not explicit facts
+   item_texts: ['我现在还无法确定。', '这部分我不想回答。', '这部分我不想回答。', '我需要再核实一下。', '我需要再核实一下。']
+ 8 L3259 M2.4-R2 Case E: uncertainty and decline are not explicit facts
+   item_texts: ['这部分我不想回答。', '我需要再核实一下。', '我需要再核实一下。']
+ 9 L3277 M2.4-R2 Case E: uncertainty and decline are not explicit facts
+   item_texts: ['我需要再核实一下。']
+10 L3296 M2.4-R2 Case E: uncertainty and decline are not explicit facts
+   item_texts: []
+11 L3344 M2.4-R2 Case F: real persist + same source_turn_id resubmit is idempotent
+   item_texts: ['硬约束是必须保留社保，预算不能低于现在的 70%。']
+12 L3392 M2.4-R2 Case F: real persist + same source_turn_id resubmit is idempotent
+   item_texts: ['硬约束是必须保留社保，预算不能低于现在的 70%。']
+13 L3435 M2.4-R2-FU1 Case G: multi-role auth + null role_code_hint writes nothing
+   item_texts: ['我目前仍在职。']
+14 L3511 M2.4-R2-FU1 Case H: exact role codes bind independently
+   item_texts: ['事实A绑定角色A。', '事实B绑定角色B。']
+15 L3572 M2.4-R2-FU1 Case I: forged role code is rejected; legal item still writes
+   item_texts: ['伪造角色不应写入。', '这是合法授权条目。']
+16 L3647 M2.4-R2-FU1 Case J: unclear must not become estimate
+   item_texts: ['用户可能有一定资金储备']
+17 L3701 M2.4-R2-FU1 Case K: estimated is kept as user_estimate
+   item_texts: ['大概还能撑 6 个月。']
+18 L3741 M2.4-R2-FU1 Case L: explicit is kept as user_asserted and not confirmed
+   item_texts: ['我目前月薪三万。']
+19 L3794 M2.4-R2-FU1 Case M: constraint certainty semantics
+   item_texts: []
+20 L3880 fn:runFu2NullRolePending
+   item_texts: ['我目前仍在职。']
+21 L3938 M2.4-R2-FU2-A: no last_sent_question cannot authorize from next plan
+   item_texts: ['我目前仍在职。']
+22 L4100 M2.4-R2-FU2-E: illegal role stays pending; legal item writes; plan not polluted
+   item_texts: ['伪造角色不应写入。', '这是合法授权条目。']
+23 L4154 M2.4-R2-FU2-F: partial success writes legal item and keeps unbound pending first
+   item_texts: ['合法事实已能绑定。', '这条还无法定位角色。']
+24 L4280 M2.4-R2-FU2-H: last_sent historical recovery only when plan_id matches
+   item_texts: ['历史恢复后写入合法事实。']
+25 L4335 M2.4-R2-FU2-H: last_sent historical recovery only when plan_id matches
+   item_texts: ['历史恢复失败不应写入。']
+26 L4380 ?
+   item_texts: ['没有已发送问题不得授权。']
+27 L4463 M2.4-R2-FU3-A: three unresolved items are bound one at a time
+   item_texts: []
+28 L4557 M2.4-R2-FU3-B: same text different item_id writes both DIR/role
+   item_texts: []
+29 L4622 M2.4-R2-FU3-C: unclear certainty stays pending and does not jump
+   item_texts: ['目前大概还在职吧。']
+30 L4684 M2.4-R2-FU3-D: estimated constraint writes only after explicit confirm
+   item_texts: ['预算大概不能超过五万。']
+31 L4837 M2.4-R2-FU3-G: pending fields survive persist/reload between item binds
+   item_texts: []
+32 L4960 fn:seedDefinitionPatchPending
+   item_texts: ['把决策问题改成是否立刻辞职。', '目前大概还在职吧。']
+33 L4991 fn:seedUnclearCertaintyPending
+   item_texts: ['目前大概还在职吧。', '预算大概不能超过五万。']
+34 L5022 fn:seedEstimatedConstraintPending
+   item_texts: ['预算大概不能超过五万。']
+35 L5301 fn:runFu4WorkRolePending
+   item_texts: ['我目前仍在职。']

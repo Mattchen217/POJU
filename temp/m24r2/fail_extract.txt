@@ -1,0 +1,15 @@
+  FAIL  M2.4-R2 Case A: three consecutive real handleUserMessage rounds
+AssertionError [ERR_ASSERTION]: mutex correction must keep both facts and create an open Conflict
+  actual: false,
+  expected: true,
+  operator: '==',
+  FAIL  M2.4-R2 Case C: model confirmation fields cannot become confirmed facts
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  actual: undefined,
+  expected: false,
+  operator: 'strictEqual',
+  FAIL  M2.4-R2 Case F: real persist + same source_turn_id resubmit is idempotent
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  actual: 'f1aa52a5-f123-4a0c-84e8-cd309ca1fdf1',
+  expected: 'aa0e9719-50b6-4f94-be4a-5c13eefdaca1',
+  operator: 'strictEqual',

@@ -1,0 +1,50 @@
+  FAIL  M1-07 estimate/unknown/declined not promoted to confirmed
+AssertionError [ERR_ASSERTION]: fact for \u5927\u6982\u8fd8\u6709\u56db\u4e2a\u6708\u5b58\u6b3e\u3002
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:477:16)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:446:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+  PASS  M1-08 completed DIR not re-asked
+  PASS  M1-09 out-of-scope plan rejected by scope validation
+  PASS  M1-10 depth/budget hard cap enforced
+  PASS  M1-11 Readiness stops questions when dirs known
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"93792d66-6762-43b8-a714-fcfe217f0a48","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  FAIL  M1-12 same turn replay no dup facts/Qs/budget
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'dc_committed'
+- 'not_applied'
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:681:14)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:650:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'dc_committed',
+  expected: 'not_applied',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6e2acca8-039b-4ce0-8c66-9c4075994f40","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,

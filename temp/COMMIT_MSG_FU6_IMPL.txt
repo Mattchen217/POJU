@@ -1,0 +1,3 @@
+fix(m2.4): FU6 treat accuracy-rate insufficiency as negative polarity
+
+Recognize accuracy-rate insufficiency constructions in analyzeFragment() before affirmation, tighten AFFIRM_KW_RE so 准确率 / 正确率 cannot confirm a RealityFact, fail-close restatementChoice() on the same constructions, and add production-path Cases Z21-Z25.

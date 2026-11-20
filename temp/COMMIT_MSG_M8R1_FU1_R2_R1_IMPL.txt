@@ -1,0 +1,15 @@
+Complete M8-R1-FU1-R2-R1 server verifier fail-closed
+
+When the server cannot load or use the assistant-history attestation
+module, Prompt construction now fails closed: user turns are kept and
+all unverifiable assistant turns are dropped. A server load, verifier,
+or signing-key failure no longer falls back to the old-Session
+compatibility policy.
+
+Browser Prompt construction may still use the unsigned compatibility
+prefix, but only when the runtime is explicitly a browser environment.
+That path is not triggered by a server dynamic-import exception.
+
+HMAC format, signing key, and signing domain are unchanged. Existing
+M8-R1 / FU1 / R2 tests are retained, with additional Prompt-path cases
+for this fail-closed behavior.

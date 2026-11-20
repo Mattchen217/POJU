@@ -1,0 +1,3 @@
+﻿Bind profile payload identity to authoritative Session binding
+
+Require profile.id === claimed_stored_profile_id === Session bound id, and reject non-object base_analysis before model/CAS.

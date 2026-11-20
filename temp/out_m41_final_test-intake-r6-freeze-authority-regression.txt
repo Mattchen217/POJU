@@ -1,0 +1,40 @@
+﻿node.exe : [terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace
+ })
+所在位置 行:1 字符: 1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([terms] pojuTer... { namespace }):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+intake-r6-freeze-authority-regression (S5 F1闁炽儲寮? 鐠?S7 Pure/Production split)
+  ACTIVE fixture pair: DIR-DEF-UNACCEPTABLE + explicit_no_hard_red_lines
+  PASS  F1 Session N/A + forged caller authority 闁?DIR n_a
+  PASS  F2 Session missing action + forged matching action 闁?not n_a
+  PASS  F3-Pure rule + matching eval (catalog version current) 闁?DIR n_a
+  PASS  F3-Pure catalog-version-mismatched eval 闁?not n_a (direct cause: topic_catalog_version_stale)
+  PASS  F3-Production forged topicRules + forged eval/version via Freeze 闁?not n_a (direct cause: topic_rule_missing)
+  PASS  F3-Production-Source builder + Freeze ctx read topic eval/version only from Session
+  PASS  F4-Pure rule's embedded eval claim without authority row 闁?not n_a (direct cause: topic_eval_id_unknown)
+  PASS  F4-Production Session missing eval + forged matching eval via Freeze 闁?not n_a; ctx authority = Session
+
+S5 freeze-authority-regression done. PASS=8 FAIL=0
+

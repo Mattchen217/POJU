@@ -1,0 +1,3 @@
+pnpm exec next typegen EXIT=0 1.5s
+pnpm exec tsc --noEmit EXIT=0 15.3s
+pnpm build EXIT=0 98.9s

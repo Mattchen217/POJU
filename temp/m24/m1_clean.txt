@@ -1,0 +1,220 @@
+
+> pojulife@0.1.0 test:m1-production-adaptive-question-loop D:\POJU\pojulife
+> tsx scripts/test-m1-production-adaptive-question-loop.ts
+
+M1 production adaptive question loop
+  PASS  M1-01 init Blueprint + first legal question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3983102a-7f2f-4a6e-a94e-f42714d0907d","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-02/03 first answer updates DC+Understanding; next Q from Need
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3983102a-7f2f-4a6e-a94e-f42714d0907d","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-04 second answer changes understanding + different next Q
+  PASS  M1-05 different decision contexts → different paths
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0b16f67e-047d-4743-8804-4aba0474813c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-06 sent question traces Plan/Direction/DDR/DIR
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9e841120-ded4-4baa-967c-da3b507077ca","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9e841120-ded4-4baa-967c-da3b507077ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"9e841120-ded4-4baa-967c-da3b507077ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-07 estimate/unknown/declined not promoted to confirmed
+  PASS  M1-08 completed DIR not re-asked
+  PASS  M1-09 out-of-scope plan rejected by scope validation
+  PASS  M1-10 depth/budget hard cap enforced
+  PASS  M1-11 Readiness stops questions when dirs known
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"26c262ea-2bd8-4862-b390-4ad2124bb8ca","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-12 same turn replay no dup facts/Qs/budget
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1fd5ec90-7158-4932-9040-f1235b635a8f","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-13 refresh/restore consistency
+  PASS  M1-14 concurrent CAS conflict explicit
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"bda9ca52-ff32-4479-afb5-7fba690005f3","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-15 UI/Session Q == Agent sent+persisted Q
+  PASS  M1-static agent calls runM1ProductionPreLlmTurn BEFORE LLM; plan drives response
+  PASS  M1-interp classifier covers estimate/unknown/declined/constraint
+[m24a] cls=clear_answer; writes=2; dirs=DIR-OPT-CONSTRAINTS
+[m24a] applied facts=fact_m1_turn_m24a_0,fact_m1_turn_m24a_1; dc_version=2
+  PASS  M2.4-R1 Case A: multi-fact answer → multiple ProposedWrites; no unrelated DIR
+[m24b] verification_level=user_estimate; status=unverified
+  PASS  M2.4-R1 Case B: estimate → user_estimate + unverified (not confirmed)
+[m24c] unknown_status=unknown; declined_status=declined; askedBefore=1; asked2=1
+  PASS  M2.4-R1 Case C: unknown/declined statuses; no effective ask-budget charge on answer
+[m24d] old=fact_m1_turn_m24d_1_0; new=fact_m1_turn_m24d_2_0; open_conflicts=1; cls=correction
+  PASS  M2.4-R1 Case D: correction keeps old fact; open Conflict on clear clash
+[m24e] qA=关于「要不要离职去创业？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：Needed for DIR-OPT-CONSTRAINTS）; qB=关于「要不要搬去上海？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：Needed for DIR-OPT-CONSTRAINTS）; dirsA=DIR-OPT-CONSTRAINTS; dirsB=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case E: dynamic question text differs across decision gaps
+[m24f] targetDir=DIR-OPT-ON-TABLE; role0=option; need=missing_roles:status_quo; 有哪些真实可选方案; nextQ=关于「要不要换工作？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：Needed for DIR-OPT-CONSTRAINTS）
+  PASS  M2.4-R1 Case F: satisfied role not re-asked; next role gap
+[m24g] conflict_briefs=1; gap=conflict; nextQ=关于「Should I leave my job?」——当前记录存在冲突：只有一个选项：留任 vs 其实还有创业选项。请帮助澄清哪一项属实。（已知：只有一个选项：留任；请补充尚未说清的部分）
+  PASS  M2.4-R1 Case G: open Conflict → Understanding conflict; DIR not known; ask resolves
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ab0355c3-b9cd-49ca-ada2-9f105198e483","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24h-t1] phase=collecting_context; dc_v=1; q=关于「要不要接受新 offer？」——期望达成的结果？（这样我才能判断：用于比较选项与成立条件）; llmDelta=1
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ab0355c3-b9cd-49ca-ada2-9f105198e483","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24h-t2] dc_v=2; phase=collecting_context; authQ=关于「要不要接受新 offer？」——目标优先级顺序？（这样我才能判断：驱动选项排序）; llmDelta=1; prevQ_same=false
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ab0355c3-b9cd-49ca-ada2-9f105198e483","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24h-t3] dc_v=3; phase=collecting_context; authQ=关于「要不要接受新 offer？」——请把要做的决策问题说得更具体一点？（已知：要不要接受新 offer？；请补充尚未说清的部分）（这样我才能判断：没有明确问题; llmDelta=1
+[m24h] path=handleUserMessage×3; versions=1->2->3; total_llm_fetches=3
+  PASS  M2.4-R1 Case H: real Agent main path ≥3 turns; LLM does not override authorized Q
+
+M1 done. PASS=24 FAIL=0
+
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })

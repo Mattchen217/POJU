@@ -1,0 +1,11 @@
+SHA=e2b0a84ff26dec5305a1a79be24a75940faccd6f
+WHEN=2026-11-11T01:24:03.571526
+pnpm_test_m1_production_adaptive_question_loop	exit=0	sec=10.6	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_test_m1_production_adaptive_question_loop.txt
+pnpm_test_m1_r_fresh_session_main_loop	exit=0	sec=3.0	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_test_m1_r_fresh_session_main_loop.txt
+pnpm_test_m2_3_decision_blueprint	exit=0	sec=3.3	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_test_m2_3_decision_blueprint.txt
+pnpm_test_m2_1_readiness_confirm_freeze	exit=0	sec=3.4	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_test_m2_1_readiness_confirm_freeze.txt
+pnpm_test_m2_2_freeze_report_binding	exit=0	sec=6.1	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_test_m2_2_freeze_report_binding.txt
+pnpm_test_decision_context_phase2	exit=0	sec=2.0	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_test_decision_context_phase2.txt
+pnpm_exec_next_typegen	exit=0	sec=1.5	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_exec_next_typegen.txt
+pnpm_exec_tsc_noEmit	exit=0	sec=15.2	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_exec_tsc_noEmit.txt
+pnpm_build	exit=0	sec=97.5	log=D:\POJU\pojulife\temp\out_m24r2fu4_final_pnpm_build.txt

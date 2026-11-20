@@ -1,0 +1,11 @@
+docs(evidence): M2.4-R2 final production closure — results on a2be6096
+
+- Regressions on implementation a2be6096: adaptive 187, closure 20, m1-r 8,
+  m2-3 18, m2-1 19, m2-2 43, phase2 9; typegen, tsc, build exit 0.
+  All suites are hook-based (orchestration only).
+- Real OpenRouter (redacted extracts): smoke 55/60 over 12 cases (C05 5/10,
+  fixed in code, not real-verified); E2E run 1794408651641 reached
+  goal change -> readiness -> confirm -> Freeze -> hash -> immutable
+  snapshot -> bound report job; other runs and the fix each motivated.
+- Blocker: OpenRouter credits exhausted (402), so smoke/E2E not rerun on
+  a2be6096. Not a PASS declaration.

@@ -1,0 +1,9 @@
+M5-R1-FU3 evidence: serialized start, abort ownership and owner-checked lock
+
+docs/eastern-os/decision-intake-2.0/evidence/m5-r1-fu3-serialized-start-lock/
+CONTRACT-M5-R1-FU3.md: lock record and release rules, start ordering, abort
+ownership / resume right, residual interleavings, FU3-01..08 results, FU2-02 /
+FU2-05 test adaptations, six mutation checks, regression commands on ff704471,
+and the MemoryKv / Upstash / Supabase / serverless validation boundaries.
+
+Evidence only; no code change. Not a PASS declaration; awaiting independent review.

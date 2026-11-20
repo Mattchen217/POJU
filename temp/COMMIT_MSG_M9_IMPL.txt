@@ -1,0 +1,14 @@
+Complete M9 server-authoritative session lifecycle
+
+Move full Session create, update, expiry, and restore onto a server
+authoritative record with atomic CAS. POST /api/poju/chat and
+createPojuChatStreamResponse() share the same load, validate, bind,
+handleUserMessage, and persist-before-confirm path. Client IndexedDB
+is retained as a mirror only.
+
+Production persistence reuses durableKv() (Upstash Redis when
+configured). Tests inject the same adapter contract, including an
+in-memory CAS store. Existing M1-M8 tests keep passing without
+weakened Freeze, Readiness, Fact Verification, or CAS checks.
+
+This commit does not declare M9 or Decision Intake 2.0 accepted.

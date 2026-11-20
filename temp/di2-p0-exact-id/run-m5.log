@@ -1,0 +1,596 @@
+
+> pojulife@0.1.0 test:m5-di2-main-path D:\POJU\pojulife
+> tsx scripts/test-m5-di2-main-path.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M5 Decision Intake 2.0 — main-path integration closure
+[decision-report] analysis completed {
+  job_id: 'dr_9ea41f18-46df-4a2d-8a20-_1795098004034_muuf9t',
+  analysis_id: 'pa_ctxa1v1_53087e09e090'
+}
+[decision-report] report completed {
+  job_id: 'dr_9ea41f18-46df-4a2d-8a20-_1795098004034_muuf9t',
+  freeze_id: 'ctx_a1@v1',
+  generation: 1
+}
+  PASS  A1 durable write: job completes only after the record commits; record carries full identity
+[decision-report] analysis completed {
+  job_id: 'dr_e02f324a-c38c-4d43-81e1-_1795098004457_pp8tft',
+  analysis_id: 'pa_ctxa2v1_51a57ec898b0'
+}
+[decision-report] final report persist failed {
+  job_id: 'dr_e02f324a-c38c-4d43-81e1-_1795098004457_pp8tft',
+  code: 'REPORT_PERSIST_FAILED',
+  message: 'test: durable store write rejected'
+}
+[decision-report] report completed {
+  job_id: 'dr_e02f324a-c38c-4d43-81e1-_1795098004457_pp8tft',
+  freeze_id: 'ctx_a2@v1',
+  generation: 1
+}
+  PASS  A2 durable write failure → never completed, retryable; Continue commits without model calls
+  PASS  A3 repeated final commit reuses the record; divergent content refused; replay is a no-op
+[decision-report] analysis completed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  analysis_id: 'pa_ctxa4v1_f5ecffdee4fb'
+}
+[decision-report] stage crashed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  stage: 'assemble',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async commitFinalReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:778:21)
+      at async runAssembleStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:697:3)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:868:10)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:592:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:592:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:347:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:866:31)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  stage: 'finalize',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:347:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:866:31)
+      at async runKilledAfterRecordWrite (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:254:7)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:443:9)
+      at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+}
+  PASS  A4 process killed after the record write → running, never completed; recovery reuses the record
+  PASS  A5 job completed, client never received it, execution job expired → status serves the record
+[decision-report] analysis completed {
+  job_id: 'dr_f77b912b-28c6-49eb-8493-_1795098004975_8v6nj4',
+  analysis_id: 'pa_ctxa5bv1_23b434e1ca49'
+}
+[decision-report] report completed {
+  job_id: 'dr_f77b912b-28c6-49eb-8493-_1795098004975_8v6nj4',
+  freeze_id: 'ctx_a5b@v1',
+  generation: 1
+}
+  PASS  A5b completed job whose record went missing → status rebuilds the record from the job
+[decision-report] analysis completed {
+  job_id: 'dr_915fd7c6-2e2b-40ce-a8d0-_1795098005207_u9l536',
+  analysis_id: 'pa_ctxa6v1_72c52e287aa8'
+}
+[decision-report] took over session lock {
+  session_id: '915fd7c6-2e2b-40ce-a8d0-ec08ee0f6d72',
+  why: 'replace_live_job'
+}
+[decision-report] complete fenced out {
+  job_id: 'dr_915fd7c6-2e2b-40ce-a8d0-_1795098005207_u9l536',
+  reason: 'revoked',
+  withdrawn: true
+}
+[decision-report] analysis reused {
+  job_id: 'dr_915fd7c6-2e2b-40ce-a8d0-_1795098005256_u44y8s',
+  analysis_id: 'pa_ctxa6v1_72c52e287aa8'
+}
+[decision-report] report completed {
+  job_id: 'dr_915fd7c6-2e2b-40ce-a8d0-_1795098005256_u44y8s',
+  freeze_id: 'ctx_a6@v1',
+  generation: 2
+}
+  PASS  A6 old generation loses the fence after its record write → record withdrawn; new generation intact
+[decision-report] first dispatch failed {
+  job_id: 'dr_e80a25c0-01e0-4bb8-8ab8-_1795098005443_eyre4h',
+  e: Error: test: background host unavailable
+      at Object.background (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:130:38)
+      at dispatchDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-dispatch.ts:93:8)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:469:7)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:162:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:170:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:535:20)
+      at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:531:7)
+      at async main (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:325:3)
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_e80a25c0-01e0-4bb8-8ab8-_1795098005443_eyre4h',
+  stage: 'finalize',
+  recorded_stage: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_e80a25c0-01e0-4bb8-8ab8-_1795098005443_eyre4h',
+  analysis_id: 'pa_ctxb1v1_1e8a5aa8ce23'
+}
+[decision-report] report completed {
+  job_id: 'dr_e80a25c0-01e0-4bb8-8ab8-_1795098005443_eyre4h',
+  freeze_id: 'ctx_b1@v1',
+  generation: 1
+}
+  PASS  B1 first dispatch failed → second start re-dispatches the same job; one charge
+[final-delivery] Inngest continue published {
+  job_id: 'dr_aae015fe-349f-4ef1-b458-_1795098005651_gm57qb',
+  stage: 'finalize'
+}
+[decision-report] relay published but no worker attached — hosting here {
+  job_id: 'dr_aae015fe-349f-4ef1-b458-_1795098005651_gm57qb',
+  stage: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_aae015fe-349f-4ef1-b458-_1795098005651_gm57qb',
+  analysis_id: 'pa_ctxb2av1_6311ee569955'
+}
+[decision-report] report completed {
+  job_id: 'dr_aae015fe-349f-4ef1-b458-_1795098005651_gm57qb',
+  freeze_id: 'ctx_b2a@v1',
+  generation: 1
+}
+[final-delivery] Inngest continue published {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  stage: 'finalize'
+}
+[decision-report] relay published but no worker attached — hosting here {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  stage: 'finalize'
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  stage: 'finalize',
+  recorded_stage: 'finalize'
+}
+[final-delivery] Inngest continue published {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  stage: 'finalize'
+}
+[decision-report] relay published but no worker attached — hosting here {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  stage: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  analysis_id: 'pa_ctxb2bv1_68e055321545'
+}
+[decision-report] report completed {
+  job_id: 'dr_36765625-e86c-472f-b99c-_1795098006332_5u4pne',
+  freeze_id: 'ctx_b2b@v1',
+  generation: 1
+}
+  PASS  B2 Inngest published but no worker attached → hosted fallback; dead host → recovered after grace
+[decision-report] lease busy — skip overlap {
+  job_id: 'dr_dd1c0e8b-f336-45fe-87cc-_1795098007550_b4dm22',
+  stage: 'finalize',
+  holder: 'finalize'
+}
+  PASS  B3 live lease → no second worker (continue / start / status)
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  stage: 'assemble',
+  recorded_stage: 'assemble'
+}
+[decision-report] report completed {
+  job_id: 'dr_cb8b627d-78e5-4491-b8d7-_1795098004752_aag9bk',
+  freeze_id: 'ctx_a4@v1',
+  generation: 1
+}
+  PASS  B4 expired lease of a killed worker → re-dispatch from checkpoints, same generation, no model calls
+[decision-report] analysis reused {
+  job_id: 'dr_9ea41f18-46df-4a2d-8a20-_1795098007612_a0hzwg',
+  analysis_id: 'pa_ctxa1v1_53087e09e090'
+}
+[decision-report] report completed {
+  job_id: 'dr_9ea41f18-46df-4a2d-8a20-_1795098007612_a0hzwg',
+  freeze_id: 'ctx_a1@v1',
+  generation: 2
+}
+  PASS  B5 no double charge: reuse / continue / regenerate / second job after the first charge
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_2a678207-0b3d-4730-a43e-_1795098007786_h2ncj9',
+  stage: 'finalize',
+  recorded_stage: 'finalize'
+}
+[decision-report] lease busy — skip overlap {
+  job_id: 'dr_2a678207-0b3d-4730-a43e-_1795098007786_h2ncj9',
+  stage: 'finalize',
+  holder: 'finalize'
+}
+[decision-report] lease busy — skip overlap {
+  job_id: 'dr_2a678207-0b3d-4730-a43e-_1795098007786_h2ncj9',
+  stage: 'finalize',
+  holder: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_2a678207-0b3d-4730-a43e-_1795098007786_h2ncj9',
+  analysis_id: 'pa_ctxb6v1_c4fbcb76b322'
+}
+[decision-report] report completed {
+  job_id: 'dr_2a678207-0b3d-4730-a43e-_1795098007786_h2ncj9',
+  freeze_id: 'ctx_b6@v1',
+  generation: 1
+}
+  PASS  B6 concurrent recovery requests → one dispatch; racing workers → one commit
+[decision-report] took over session lock {
+  session_id: '30655435-f4d4-4259-a97f-1a45255a8621',
+  why: 'legacy_orphan'
+}
+  PASS  B7 session lock with no live job: young lock is respected, aged lock is reclaimed
+[decision-report] analysis completed {
+  job_id: 'dr_caa774e0-a5b2-4397-a8df-_1795098008097_97q83u',
+  analysis_id: 'pa_ctxc1v1_8eed932c2136'
+}
+[decision-report] report completed {
+  job_id: 'dr_caa774e0-a5b2-4397-a8df-_1795098008097_97q83u',
+  freeze_id: 'ctx_c1@v1',
+  generation: 1
+}
+  PASS  C1 refresh while running → polls the same job; no new job, no charge; delivered + persisted
+[decision-report] analysis completed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  analysis_id: 'pa_ctxc2v1_52877367b666'
+}
+[decision-report] stage crashed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  stage: 'assemble',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async commitFinalReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:778:21)
+      at async runAssembleStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:697:3)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:868:10)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:592:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:592:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:494:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:867:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:347:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:866:31)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  stage: 'finalize',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:249:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:129:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:871:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:210:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:347:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:866:31)
+      at async runKilledAfterRecordWrite (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:254:7)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:721:9)
+      at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  stage: 'assemble',
+  recorded_stage: 'assemble'
+}
+[decision-report] report completed {
+  job_id: 'dr_f9ca9a0f-74ee-4d51-a045-_1795098010583_97uzg9',
+  freeze_id: 'ctx_c2@v1',
+  generation: 1
+}
+  PASS  C2 refresh after the worker was killed (lease expired) → client gets a worker; no restart
+[decision-report] analysis completed {
+  job_id: 'dr_5605d554-10d8-4e32-9c1a-_1795098012844_c5f15u',
+  analysis_id: 'pa_ctxc3v1_cb2c6b2dd9b0'
+}
+[decision-report] report completed {
+  job_id: 'dr_5605d554-10d8-4e32-9c1a-_1795098012844_c5f15u',
+  freeze_id: 'ctx_c3@v1',
+  generation: 1
+}
+  PASS  C3 retryable interruption → automatic Continue from checkpoints (same job)
+  PASS  C4 permanent failure → explicit error, no automatic retry; identifiers kept
+[decision-report] analysis completed {
+  job_id: 'dr_f1ade210-fc5a-4dad-99bf-_1795098015219_m8jf1o',
+  analysis_id: 'pa_ctxc4bv1_6cc51520483a'
+}
+[decision-report] page attempt failed {
+  job_id: 'dr_f1ade210-fc5a-4dad-99bf-_1795098015219_m8jf1o',
+  page: '05',
+  attempt: 1,
+  reason: 'parse_failed'
+}
+[decision-report] page attempt failed {
+  job_id: 'dr_f1ade210-fc5a-4dad-99bf-_1795098015219_m8jf1o',
+  page: '05',
+  attempt: 2,
+  reason: 'parse_failed'
+}
+[decision-report] report completed {
+  job_id: 'dr_f1ade210-fc5a-4dad-99bf-_1795098015219_m8jf1o',
+  freeze_id: 'ctx_c4b@v1',
+  generation: 1
+}
+  PASS  C4b quality 1+1 spent → stops without auto-Continue; user Continue resumes only the failed unit
+[decision-report] analysis completed {
+  job_id: 'dr_c74640c1-57d1-42a1-b7e5-_1795098017457_ove105',
+  analysis_id: 'pa_ctxc5v1_622839b854fc'
+}
+[decision-report] report completed {
+  job_id: 'dr_c74640c1-57d1-42a1-b7e5-_1795098017457_ove105',
+  freeze_id: 'ctx_c5@v1',
+  generation: 1
+}
+  PASS  C5 job completed but never received, job expired → refresh reads the committed report
+[decision-report] took over session lock {
+  session_id: '0128d478-b578-4c1a-a06e-f7b5f649d144',
+  why: 'legacy_orphan'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_0128d478-b578-4c1a-a06e-_1795098019671_tpiqds',
+  analysis_id: 'pa_ctxc5bv1_5dcd86f61868'
+}
+[decision-report] report completed {
+  job_id: 'dr_0128d478-b578-4c1a-a06e-_1795098019671_tpiqds',
+  freeze_id: 'ctx_c5b@v1',
+  generation: 2
+}
+  PASS  C5b job lost early (no report, session lock left behind) → one new generation, no new charge
+  PASS  C6 complete report on the device → reload neither starts nor resumes generation
+[poju] report checkpoint save failed SessionCasError: stale candidate session_revision=4 latest=5
+    at casWritePOJUSessionFromCandidate (D:\POJU\pojulife\lib\poju\session-mutation.ts:855:11)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async savePOJUSessionCore (D:\POJU\pojulife\lib\poju\session-manager.ts:329:3)
+    at async savePOJUSession (D:\POJU\pojulife\lib\poju\session-manager.ts:361:3)
+    at async defaultPersist (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:181:3)
+    at async saveCheckpoint (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:698:5)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:742:9)
+    at async Promise.allSettled (index 1) {
+  code: 'SESSION_CAS_CONFLICT'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_31bbc481-8be1-4220-a70f-_1795098021888_dhywsp',
+  analysis_id: 'pa_ctxc7v1_9c75d07bf8d6'
+}
+[poju] report checkpoint save failed SessionCasError: stale candidate session_revision=4 latest=5
+    at casWritePOJUSessionFromCandidate (D:\POJU\pojulife\lib\poju\session-mutation.ts:855:11)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async savePOJUSessionCore (D:\POJU\pojulife\lib\poju\session-manager.ts:329:3)
+    at async savePOJUSession (D:\POJU\pojulife\lib\poju\session-manager.ts:361:3)
+    at async defaultPersist (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:181:3)
+    at async saveCheckpoint (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:698:5)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:742:9)
+    at async Promise.allSettled (index 1) {
+  code: 'SESSION_CAS_CONFLICT'
+}
+[decision-report] report completed {
+  job_id: 'dr_31bbc481-8be1-4220-a70f-_1795098021888_dhywsp',
+  freeze_id: 'ctx_c7@v1',
+  generation: 1
+}
+[poju] report checkpoint save failed SessionCasError: stale candidate session_revision=4 latest=6
+    at casWritePOJUSessionFromCandidate (D:\POJU\pojulife\lib\poju\session-mutation.ts:855:11)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async savePOJUSessionCore (D:\POJU\pojulife\lib\poju\session-manager.ts:329:3)
+    at async savePOJUSession (D:\POJU\pojulife\lib\poju\session-manager.ts:361:3)
+    at async defaultPersist (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:181:3)
+    at async saveCheckpoint (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:698:5)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:742:9)
+    at async Promise.allSettled (index 1) {
+  code: 'SESSION_CAS_CONFLICT'
+}
+  PASS  C7 two tabs resume the same interrupted job → one Continue; both end delivered
+[decision-report] analysis completed {
+  job_id: 'dr_0a98501e-524c-4169-9838-_1795098026102_pkqclb',
+  analysis_id: 'pa_ctxd1v1_c129c5402a7b'
+}
+[decision-report] report completed {
+  job_id: 'dr_0a98501e-524c-4169-9838-_1795098026102_pkqclb',
+  freeze_id: 'ctx_d1@v1',
+  generation: 1
+}
+  PASS  D1 missing page → not completed locally; refetch delivers
+[decision-report] analysis completed {
+  job_id: 'dr_8d0b633c-9925-43db-8b36-_1795098028337_xs9bt7',
+  analysis_id: 'pa_ctxd2av1_5bac16f4faff'
+}
+[decision-report] report completed {
+  job_id: 'dr_8d0b633c-9925-43db-8b36-_1795098028337_xs9bt7',
+  freeze_id: 'ctx_d2a@v1',
+  generation: 1
+}
+[decision-report] analysis completed {
+  job_id: 'dr_343a5f59-141f-44d6-9b7c-_1795098030513_30jqx9',
+  analysis_id: 'pa_ctxd2bv1_ace668a15e27'
+}
+[decision-report] report completed {
+  job_id: 'dr_343a5f59-141f-44d6-9b7c-_1795098030513_30jqx9',
+  freeze_id: 'ctx_d2b@v1',
+  generation: 1
+}
+[decision-report] analysis completed {
+  job_id: 'dr_335edbca-6bf4-443b-a16f-_1795098032701_jy1lc3',
+  analysis_id: 'pa_ctxd2cv1_0ec6f95fad44'
+}
+[decision-report] report completed {
+  job_id: 'dr_335edbca-6bf4-443b-a16f-_1795098032701_jy1lc3',
+  freeze_id: 'ctx_d2c@v1',
+  generation: 1
+}
+  PASS  D2 Freeze binding mismatch (page / payload) → not completed
+[decision-report] analysis completed {
+  job_id: 'dr_122ec09a-3142-4f6f-90d9-_1795098034873_atfu54',
+  analysis_id: 'pa_ctxd3av1_96912f119fce'
+}
+[decision-report] report completed {
+  job_id: 'dr_122ec09a-3142-4f6f-90d9-_1795098034873_atfu54',
+  freeze_id: 'ctx_d3a@v1',
+  generation: 1
+}
+[decision-report] analysis completed {
+  job_id: 'dr_3987cad9-7a56-44e7-bfba-_1795098037018_h0q9dl',
+  analysis_id: 'pa_ctxd3bv1_686fff0e0c68'
+}
+[decision-report] report completed {
+  job_id: 'dr_3987cad9-7a56-44e7-bfba-_1795098037018_h0q9dl',
+  freeze_id: 'ctx_d3b@v1',
+  generation: 1
+}
+  PASS  D3 incomplete / foreign Personal Analysis → not completed
+[decision-report] analysis completed {
+  job_id: 'dr_97d26224-5b50-40e1-bbf3-_1795098039158_n865nx',
+  analysis_id: 'pa_ctxd4v1_56b4d15d38a1'
+}
+[decision-report] report completed {
+  job_id: 'dr_97d26224-5b50-40e1-bbf3-_1795098039158_n865nx',
+  freeze_id: 'ctx_d4@v1',
+  generation: 1
+}
+  PASS  D4 delivered Session survives a reload (one write: analysis, 8 pages, body, binding, pending cleared)
+[decision-report] analysis completed {
+  job_id: 'dr_90efa79e-a9a6-415f-b66f-_1795098041300_qd3a26',
+  analysis_id: 'pa_ctxd5v1_4b7df1834bf1'
+}
+[decision-report] report completed {
+  job_id: 'dr_90efa79e-a9a6-415f-b66f-_1795098041300_qd3a26',
+  freeze_id: 'ctx_d5@v1',
+  generation: 1
+}
+  PASS  D5 local save failure → not delivered, job id kept; next open refetches the full report
+[decision-report] analysis completed {
+  job_id: 'dr_31e366b8-70ac-48d7-88b8-_1795098045370_jgjx9w',
+  analysis_id: 'pa_ctxd6v1_a8fb5032c761'
+}
+[decision-report] report completed {
+  job_id: 'dr_31e366b8-70ac-48d7-88b8-_1795098045370_jgjx9w',
+  freeze_id: 'ctx_d6@v1',
+  generation: 1
+}
+  PASS  D6 final write loses a revision race (another writer) → re-applied onto the latest Session
+
+29 passed, 0 failed

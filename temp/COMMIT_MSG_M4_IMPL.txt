@@ -1,0 +1,42 @@
+feat(di2): M4 server-authoritative DC ledger, Freeze seal and profile provenance
+
+Decision Intake 2.0 DC changes, Freeze and the personal chart now have verifiable
+server records; M3 report start consumes only sealed Freeze + registered Profile.
+
+DC Commit Ledger (lib/poju/decision-authority/server/ledger-store.ts)
+- Every DI2 Session write that changes DC / Blueprint is appended to a per-session
+  hash-chained ledger inside the existing Session CAS transactions
+  (mutatePOJUSession / casWritePOJUSessionFromCandidate) before the local blob write.
+- Entry: commit_version, previous entry hash, dc_version / previous, content /
+  snapshot hash, idempotency key, change_type (server-classified), committed_at,
+  full snapshot, Blueprint version / hash, provenance (source op, backing user
+  Confirmation Events, promoted ids, freeze info).
+- Rules (ledger-rules.ts): genesis draft only; same context; no version regression;
+  frozen versions immutable (only V(n+1) opened from it); device never writes final;
+  user confirmation must be backed by a structurally valid user Confirmation Event.
+- Expected-previous CAS, NX entry write, one effective commit per idempotency key,
+  duplicate / conflict / concurrent outcomes typed; writer token (HMAC) per session.
+
+Freeze seal (server/freeze-authority.ts)
+- Server re-reads the ledger head, runs freezeDecisionContext with the production
+  N/A authority builder + server-recomputed CFP state, appends the freeze entry and
+  stores a signed receipt (session, freeze_id, context id/version/hash, blueprint
+  hash, frozen_at, receipt_id). Replays return the identical receipt; history kept;
+  record + receipt re-materialized deterministically from the ledger after a crash.
+- Device adopts the server-frozen DC through C1 (production-freeze-wire) and keeps
+  receipts in the Session; legacy (non-DI2) Freeze path unchanged.
+
+Profile trust chain (server/profile-authority.ts)
+- Server recomputes from birth with shunshi-bazi-core + iztro (no client chart),
+  calculation_timestamp = frozen_at, schema-versioned profile_hash, signed receipt;
+  raw birth input is not stored (only its hash).
+
+M3 start (decision-report-service.ts)
+- Verifies writer token, Freeze receipt signature + record + ledger anchor, Freeze is
+  the current head, Profile receipt + record (hash / schema / time); job input built
+  only from server records. Completed reports kept under product retention; job
+  execution data keeps the 2h TTL.
+
+Tests: scripts/test-m4-decision-authority.ts (new), test-m3-decision-report.ts
+reworked onto the authority path; in-process transport fixture for device tests.
+No real OpenRouter / model calls; full regression deferred.

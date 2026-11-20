@@ -1,0 +1,11 @@
+M5-R1-FU1 evidence: stale charge claim race closure
+
+Evidence record for implementation 2d74bafb (baseline d637d171):
+- how a taken-over attempt_id is recognised as stale (exact-JSON CAS + attempt_id
+  comparison in settleLostWrite) and why it has no abort authority
+  (confirmCurrentChargeRefusal re-reads the record: refused AND same attempt_id);
+- FU1-01..05 results and the mutation run against the pre-FU1 production code;
+- regression, tsc and build on 2d74bafb (s7 unchanged: same 3 pre-existing failures);
+- residual check-then-act window and unverified real-environment boundaries.
+
+MemoryKv and the ledger stub only: not Upstash or Supabase validation. No PASS claim.

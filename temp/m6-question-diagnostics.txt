@@ -1,0 +1,323 @@
+
+> pojulife@0.1.0 test:m6-di2-full-lifecycle D:\POJU\pojulife
+> tsx scripts/test-m6-di2-full-lifecycle.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M6 Decision Intake 2.0 full lifecycle
+[bazi] Original: 1985-07-15 02:00
+[bazi] True Solar: 1985-07-15 02:00
+[bazi] Diff: 0.28 minutes
+[createStoredProfile] writing birth_location: {
+  profile_id: '(new)',
+  birth_info: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  },
+  user_profile: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  }
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"bab1a288-13fd-45be-a2c9-7f7418f7b9df","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  fresh Session bootstraps DC + Blueprint + authorized first adaptive question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"45596463-24d1-450c-a3de-6c982cef52d6","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed m6_forced_dc_write_failure
+  PASS  Fresh Session DC persistence failure is fail-closed without a freeform question
+[M6 question 1] {"question":"关于「要不要离职去创业？」——商业模式与关键依赖？（这样我才能判断：创业类决策的主题深度）","direction_id":"DIRN-TOPIC","dir_ids":["DIR-BIZ-MODEL"],"ddr_ids":["DDR-07-TOPIC-DEPTH"],"fact_role_codes":["v1/dir/DIR-BIZ-MODEL/role/biz_model"],"expected_info":"商业模式与关键依赖","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 2] {"question":"关于「要不要离职去创业？」——期望达成的结果？（这样我才能判断：用于比较选项与成立条件）","direction_id":"DIRN-DEFINITION","dir_ids":["DIR-DEF-OUTCOME"],"ddr_ids":["DDR-01-PRIMARY","DDR-05-RANKING","DDR-06-VALIDATION"],"fact_role_codes":["v1/dir/DIR-DEF-OUTCOME/role/desired_outcome"],"expected_info":"期望达成的结果","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 3] {"question":"关于「要不要离职去创业？」——目标优先级顺序？（这样我才能判断：驱动选项排序）","direction_id":"DIRN-DEFINITION","dir_ids":["DIR-DEF-PRIORITIES"],"ddr_ids":["DDR-05-RANKING"],"fact_role_codes":["v1/dir/DIR-DEF-PRIORITIES/role/goal_priority"],"expected_info":"目标优先级顺序","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 4,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 4] {"question":"关于「要不要离职去创业？」——做错会失去什么？（这样我才能判断：决定风险边界与 hold 条件）","direction_id":"DIRN-DEFINITION","dir_ids":["DIR-DEF-STAKES"],"ddr_ids":["DDR-01-HOLD-CONDITIONS"],"fact_role_codes":["v1/dir/DIR-DEF-STAKES/role/stakes"],"expected_info":"做错会失去什么","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 5,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 5] {"question":"关于「要不要离职去创业？」——不可接受的结果？（这样我才能判断：用于反路径与边界）","direction_id":"DIRN-DEFINITION","dir_ids":["DIR-DEF-UNACCEPTABLE"],"ddr_ids":["DDR-01-ANTI-PATH","DDR-08-BOUNDARIES"],"fact_role_codes":["v1/dir/DIR-DEF-UNACCEPTABLE/role/unacceptable"],"expected_info":"不可接受的结果","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 6,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 6] {"question":"关于「要不要离职去创业？」——退出/转向触发条件？（这样我才能判断：边界关闭与止损）","direction_id":"DIRN-RISK-EXIT","dir_ids":["DIR-EXIT-CRITERIA"],"ddr_ids":["DDR-05-SWITCH-STOP","DDR-08-BOUNDARIES"],"fact_role_codes":["v1/dir/DIR-EXIT-CRITERIA/role/exit_criterion"],"expected_info":"退出/转向触发条件","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 7,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 7] {"question":"关于「要不要离职去创业？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：硬约束直接砍掉不可行选项）","direction_id":"DIRN-CONSTRAINTS","dir_ids":["DIR-OPT-CONSTRAINTS"],"ddr_ids":["DDR-01-HOLD-CONDITIONS","DDR-02-SCIENCE-BRIDGE","DDR-04-BLOCKERS","DDR-05-RANKING"],"fact_role_codes":["v1/dir/DIR-OPT-CONSTRAINTS/role/hard_constraint"],"expected_info":"硬性/软性约束（钱/时间/责任）","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 8,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 8] {"question":"关于「要不要离职去创业？」——有哪些真实可选方案（不要只重复决策目标）？（这样我才能判断：没有选项清单无法比较去留）","direction_id":"DIRN-OPTIONS","dir_ids":["DIR-OPT-ON-TABLE"],"ddr_ids":["DDR-01-PRIMARY","DDR-01-ANTI-PATH","DDR-05-RANKING"],"fact_role_codes":["v1/dir/DIR-OPT-ON-TABLE/role/option"],"expected_info":"有哪些真实可选方案","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 9,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 9] {"question":"关于「要不要离职去创业？」——可以接受的最差结果是什么？（这样我才能判断：风险边界决定能否推进高不确定选项）","direction_id":"DIRN-RISK-EXIT","dir_ids":["DIR-RISK-TOLERANCE"],"ddr_ids":["DDR-04-BLOCKERS","DDR-05-SWITCH-STOP","DDR-08-BOUNDARIES"],"fact_role_codes":["v1/dir/DIR-RISK-TOLERANCE/role/risk_tolerance"],"expected_info":"可承受的最差结果","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 10,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 10] {"question":"关于「要不要离职去创业？」——如果维持现状，实际成本和影响是什么？（这样我才能判断：需要对照维持现状的代价与收益）","direction_id":"DIRN-OPTIONS","dir_ids":["DIR-STATUS-QUO"],"ddr_ids":["DDR-01-PRIMARY","DDR-02-ATTRIBUTION"],"fact_role_codes":["v1/dir/DIR-STATUS-QUO/role/status_quo"],"expected_info":"当前工作与生活基线","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 11,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 11] {"question":"关于「要不要离职去创业？」——决策必须落地的时间窗口？（这样我才能判断：影响 hold 条件与节奏）","direction_id":"DIRN-CONSTRAINTS","dir_ids":["DIR-TIMING-WINDOW"],"ddr_ids":["DDR-01-HOLD-CONDITIONS","DDR-05-SWITCH-STOP","DDR-06-RHYTHM"],"fact_role_codes":["v1/dir/DIR-TIMING-WINDOW/role/timing_window"],"expected_info":"决策必须落地的时间窗口","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 12,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 12] {"question":"关于「要不要离职去创业？」——做错会失去什么？（已知：风险上最多能接受收入大约腰斩一年（这是我的估计），再差就会回撤。；请补充尚未说清的部分）（这样我才能判断：决定风险边界与 hold 条件 请比上一问更具体。）","direction_id":"DIRN-DEFINITION","dir_ids":["DIR-DEF-STAKES"],"ddr_ids":["DDR-01-HOLD-CONDITIONS"],"fact_role_codes":["v1/dir/DIR-DEF-STAKES/role/stakes"],"expected_info":"做错会失去什么","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 13,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 13] {"question":"关于「要不要离职去创业？」——过去尝试与教训？（这样我才能判断：归因与避免重复失败路径）","direction_id":"DIRN-OPTIONS","dir_ids":["DIR-PAST-ATTEMPTS"],"ddr_ids":["DDR-02-ATTRIBUTION"],"fact_role_codes":["v1/dir/DIR-PAST-ATTEMPTS/role/past_attempt"],"expected_info":"过去尝试与教训","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 14,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 14] {"question":"关于「要不要离职去创业？」——不可逆/切换成本？（这样我才能判断：判断锁死风险与验证窗口）","direction_id":"DIRN-CONSTRAINTS","dir_ids":["DIR-OPT-IRREV"],"ddr_ids":["DDR-04-BLOCKERS","DDR-06-VALIDATION"],"fact_role_codes":["v1/dir/DIR-OPT-IRREV/role/irreversibility"],"expected_info":"不可逆/切换成本","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 15,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 question 15] {"question":"关于「要不要离职去创业？」——能低成本验证什么？（这样我才能判断：决定先试后锁的空间）","direction_id":"DIRN-RISK-EXIT","dir_ids":["DIR-VALIDATION-CAPACITY"],"ddr_ids":["DDR-02-SCIENCE-BRIDGE","DDR-06-VALIDATION"],"fact_role_codes":["v1/dir/DIR-VALIDATION-CAPACITY/role/validation_capacity"],"expected_info":"能低成本验证什么","missing_info":"unknown"}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 16,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  multi-turn answers update DC/Understanding and replan without repeating
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c3df3e40-f14c-4109-bfc8-abb43546636a","has_profile":true}
+  PASS  explicit user confirmation through handleUserMessage reaches authority Freeze
+[decision-report] analysis completed {
+  job_id: 'dr_c3df3e40-f14c-4109-bfc8-_1794502183097_oi8h60',
+  analysis_id: 'pa_dcc3df3e40f14c4109bfc8abb43546636av17_aba50213197d'
+}
+[decision-report] report completed {
+  job_id: 'dr_c3df3e40-f14c-4109-bfc8-_1794502183097_oi8h60',
+  freeze_id: 'dc_c3df3e40-f14c-4109-bfc8-abb43546636a@v17',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async waitForActual (node:assert:644:5)
+    at async Function.rejects (node:assert:767:25)
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:281:27)
+    at async check (D:\POJU\pojulife\scripts\test-m6-di2-full-lifecycle.ts:26:9)
+  PASS  report client starts one authorized job and completes eight bound pages
+  PASS  delivered Session does not auto-start again or regenerate analysis/pages
+  PASS  status after refresh returns the completed report bound to the same Job
+
+M6 result: 7 passed, 0 failed

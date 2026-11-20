@@ -1,0 +1,346 @@
+﻿
+> pojulife@0.1.0 build D:\POJU\pojulife
+> next build --webpack
+
+鈻?Next.js 16.2.4 (webpack)
+- Environments: .env.local
+
+node.exe : 鈿?The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org
+/docs/messages/middleware-to-proxy
+所在位置 C:\Users\13306\AppData\Roaming\npm\pnpm.ps1:24 字符: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (鈿?The "middlewa...leware-to-proxy:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Creating an optimized production build ...
+鉁?(serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+鈿?Compiled with warnings in 33.2s
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default e
+xport is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default e
+xport is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+/_next/static/media/hana-ui.3e760c2e.wasm is 3.35 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes t
+o change this limit.
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default e
+xport is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default e
+xport is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default e
+xport is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/ops/delivery-lab/create/route.ts
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default e
+xport is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/ops/delivery-lab/create/route.ts
+
+  Running TypeScript ...
+  Finished TypeScript in 26.8s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/208) ...
+  Generating static pages using 15 workers (52/208) 
+  Generating static pages using 15 workers (104/208) 
+  Generating static pages using 15 workers (156/208) 
+鉁?Generating static pages using 15 workers (208/208) in 2.5s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+鈹?鈼?/_not-found
+鈹?鈼?/[locale]
+鈹?鈹?/en
+鈹?鈹?/es
+鈹?鈹?/fr
+鈹?鈹?/zh
+鈹?鈼?/[locale]/account/household/accept
+鈹?鈹?/en/account/household/accept
+鈹?鈹?/es/account/household/accept
+鈹?鈹?/fr/account/household/accept
+鈹?鈹?/zh/account/household/accept
+鈹?鈼?/[locale]/app
+鈹?鈹?/en/app
+鈹?鈹?/es/app
+鈹?鈹?/fr/app
+鈹?鈹?/zh/app
+鈹?鈼?/[locale]/archive
+鈹?鈹?/en/archive
+鈹?鈹?/es/archive
+鈹?鈹?/fr/archive
+鈹?鈹?/zh/archive
+鈹?茠 /[locale]/archive/[id]
+鈹?鈼?/[locale]/base-analysis-audit
+鈹?鈹?/en/base-analysis-audit
+鈹?鈹?/es/base-analysis-audit
+鈹?鈹?/fr/base-analysis-audit
+鈹?鈹?/zh/base-analysis-audit
+鈹?茠 /[locale]/base-analysis-audit/[id]
+鈹?茠 /[locale]/chat
+鈹?茠 /[locale]/classic
+鈹?鈼?/[locale]/complete-email
+鈹?鈹?/en/complete-email
+鈹?鈹?/es/complete-email
+鈹?鈹?/fr/complete-email
+鈹?鈹?/zh/complete-email
+鈹?茠 /[locale]/contact
+鈹?茠 /[locale]/cookies
+鈹?鈼?/[locale]/dev/delivery-slots
+鈹?鈹?/en/dev/delivery-slots
+鈹?鈹?/es/dev/delivery-slots
+鈹?鈹?/fr/dev/delivery-slots
+鈹?鈹?/zh/dev/delivery-slots
+鈹?茠 /[locale]/disclaimer
+鈹?鈼?/[locale]/five-wind-cards
+鈹?鈹?/en/five-wind-cards
+鈹?鈹?/es/five-wind-cards
+鈹?鈹?/fr/five-wind-cards
+鈹?鈹?/zh/five-wind-cards
+鈹?鈼?/[locale]/forgot-password
+鈹?鈹?/en/forgot-password
+鈹?鈹?/es/forgot-password
+鈹?鈹?/fr/forgot-password
+鈹?鈹?/zh/forgot-password
+鈹?茠 /[locale]/glossary
+鈹?茠 /[locale]/login
+鈹?鈼?/[locale]/modal-pwa-install
+鈹?鈹?/en/modal-pwa-install
+鈹?鈹?/es/modal-pwa-install
+鈹?鈹?/fr/modal-pwa-install
+鈹?鈹?/zh/modal-pwa-install
+鈹?鈼?/[locale]/oauth-popup
+鈹?鈹?/en/oauth-popup
+鈹?鈹?/es/oauth-popup
+鈹?鈹?/fr/oauth-popup
+鈹?鈹?/zh/oauth-popup
+鈹?鈼?/[locale]/oracle
+鈹?鈹?/en/oracle
+鈹?鈹?/es/oracle
+鈹?鈹?/fr/oracle
+鈹?鈹?/zh/oracle
+鈹?鈼?/[locale]/oracle/reading
+鈹?鈹?/en/oracle/reading
+鈹?鈹?/es/oracle/reading
+鈹?鈹?/fr/oracle/reading
+鈹?鈹?/zh/oracle/reading
+鈹?鈼?/[locale]/oracle/stage-1
+鈹?鈹?/en/oracle/stage-1
+鈹?鈹?/es/oracle/stage-1
+鈹?鈹?/fr/oracle/stage-1
+鈹?鈹?/zh/oracle/stage-1
+鈹?茠 /[locale]/poju
+鈹?鈼?/[locale]/poju/archive
+鈹?鈹?/en/poju/archive
+鈹?鈹?/es/poju/archive
+鈹?鈹?/fr/poju/archive
+鈹?鈹?/zh/poju/archive
+鈹?鈼?/[locale]/poju/payment-success
+鈹?鈹?/en/poju/payment-success
+鈹?鈹?/es/poju/payment-success
+鈹?鈹?/fr/poju/payment-success
+鈹?鈹?/zh/poju/payment-success
+鈹?茠 /[locale]/poju/session/[sessionId]
+鈹?茠 /[locale]/poju/session/[sessionId]/prepare
+鈹?茠 /[locale]/poju/session/[sessionId]/preparing
+鈹?茠 /[locale]/poju/session/[sessionId]/refund
+鈹?茠 /[locale]/privacy
+鈹?茠 /[locale]/profile/[profileId]
+鈹?鈼?/[locale]/profile/setup
+鈹?鈹?/en/profile/setup
+鈹?鈹?/es/profile/setup
+鈹?鈹?/fr/profile/setup
+鈹?鈹?/zh/profile/setup
+鈹?茠 /[locale]/refund
+鈹?鈼?/[locale]/reset-password
+鈹?鈹?/en/reset-password
+鈹?鈹?/es/reset-password
+鈹?鈹?/fr/reset-password
+鈹?鈹?/zh/reset-password
+鈹?茠 /[locale]/signup
+鈹?鈼?/[locale]/start
+鈹?鈹?/en/start
+鈹?鈹?/es/start
+鈹?鈹?/fr/start
+鈹?鈹?/zh/start
+鈹?茠 /[locale]/terms
+鈹?鈼?/[locale]/thinking-pulse-demo
+鈹?鈹?/en/thinking-pulse-demo
+鈹?鈹?/es/thinking-pulse-demo
+鈹?鈹?/fr/thinking-pulse-demo
+鈹?鈹?/zh/thinking-pulse-demo
+鈹?鈼?/[locale]/verify
+鈹?鈹?/en/verify
+鈹?鈹?/es/verify
+鈹?鈹?/fr/verify
+鈹?鈹?/zh/verify
+鈹?鈼?/500
+鈹?茠 /api/account/delete
+鈹?茠 /api/account/pass-refund
+鈹?茠 /api/account/portal
+鈹?茠 /api/account/preferences
+鈹?茠 /api/account/subscription
+鈹?茠 /api/account/summary
+鈹?茠 /api/atmos/daily
+鈹?茠 /api/auth/callback
+鈹?茠 /api/auth/complete-email
+鈹?茠 /api/auth/complete-email/verify
+鈹?茠 /api/auth/confirm
+鈹?茠 /api/auth/forgot-password
+鈹?茠 /api/auth/login
+鈹?茠 /api/auth/logout
+鈹?茠 /api/auth/me
+鈹?茠 /api/auth/otp/send
+鈹?茠 /api/auth/otp/verify
+鈹?茠 /api/auth/resend-signup
+鈹?茠 /api/auth/signup
+鈹?茠 /api/auth/update-password
+鈹?茠 /api/auth/verify-recovery
+鈹?茠 /api/auth/verify-signup
+鈹?茠 /api/checkout/confirm
+鈹?茠 /api/checkout/create
+鈹?茠 /api/companion/job
+鈹?茠 /api/dev/base-analysis-audit
+鈹?茠 /api/dev/base-analysis-audit/[id]
+鈹?茠 /api/email/send
+鈹?茠 /api/household/accept-seat
+鈹?茠 /api/household/bind-oauth/callback
+鈹?茠 /api/household/bind-seat
+鈹?茠 /api/household/bind-seat-signup
+鈹?茠 /api/household/bind-seat-verify
+鈹?茠 /api/household/invite-seat
+鈹?茠 /api/household/me
+鈹?茠 /api/household/unbind-seat
+鈹?茠 /api/inngest
+鈹?茠 /api/joint/[id]
+鈹?茠 /api/joint/[id]/cancel
+鈹?茠 /api/joint/[id]/retry-start
+鈹?茠 /api/joint/[id]/start
+鈹?茠 /api/joint/accept
+鈹?茠 /api/joint/agree
+鈹?茠 /api/joint/bound-peer
+鈹?茠 /api/joint/create
+鈹?茠 /api/joint/list
+鈹?茠 /api/joint/lookup-partner
+鈹?茠 /api/location/ip-locate
+鈹?茠 /api/location/reverse-geocode
+鈹?茠 /api/location/search-city
+鈹?茠 /api/ops/candidates
+鈹?茠 /api/ops/delivery-lab/[lab_id]
+鈹?茠 /api/ops/delivery-lab/[lab_id]/approve
+鈹?茠 /api/ops/delivery-lab/[lab_id]/chat
+鈹?茠 /api/ops/delivery-lab/[lab_id]/chat/rerun
+鈹?茠 /api/ops/delivery-lab/[lab_id]/chat/undo
+鈹?茠 /api/ops/delivery-lab/[lab_id]/gate
+鈹?茠 /api/ops/delivery-lab/[lab_id]/jobs/segment2
+鈹?茠 /api/ops/delivery-lab/[lab_id]/jobs/synthesis
+鈹?茠 /api/ops/delivery-lab/[lab_id]/rerun
+鈹?茠 /api/ops/delivery-lab/[lab_id]/run
+鈹?茠 /api/ops/delivery-lab/create
+鈹?茠 /api/ops/login
+鈹?茠 /api/ops/refund-session-ping
+鈹?茠 /api/oracle/draw
+鈹?茠 /api/oracle/full-reading
+鈹?茠 /api/passes/atmos-status
+鈹?茠 /api/passes/unlock
+鈹?茠 /api/payments/create
+鈹?茠 /api/payments/refund
+鈹?茠 /api/payments/verify
+鈹?茠 /api/poju
+鈹?茠 /api/poju/breakthrough-core
+鈹?茠 /api/poju/breakthrough-core/agenda
+鈹?茠 /api/poju/breakthrough-core/status
+鈹?茠 /api/poju/chat
+鈹?茠 /api/poju/delivery-email
+鈹?茠 /api/poju/delivery-tts
+鈹?茠 /api/poju/final-delivery
+鈹?茠 /api/poju/final-delivery/cancel
+鈹?茠 /api/poju/final-delivery/continue
+鈹?茠 /api/poju/final-delivery/status
+鈹?茠 /api/poju/final-delivery/task
+鈹?茠 /api/poju/matrix-narrative
+鈹?茠 /api/poju/situation-analysis
+鈹?茠 /api/poju/synthesis
+鈹?茠 /api/poju/synthesis/status
+鈹?茠 /api/profile/base-analysis-v2/phase/abort
+鈹?茠 /api/profile/base-analysis-v2/phase/compute
+鈹?茠 /api/profile/base-analysis-v2/phase/evidence
+鈹?茠 /api/profile/base-analysis-v2/phase/finalize
+鈹?茠 /api/profile/base-analysis-v2/phase/narrative
+鈹?茠 /api/profile/base-analysis-v2/stream
+鈹?茠 /api/profile/base-analysis/status
+鈹?茠 /api/profile/base-analysis/stream
+鈹?茠 /api/profile/calculate
+鈹?茠 /api/profile/regenerate-chart
+鈹?茠 /api/pwa-icon
+鈹?茠 /api/webhooks/stripe
+鈹?鈼?/apple-icon
+鈹?鈼?/icon
+鈹?鈼?/kv
+鈹?茠 /llms.txt
+鈹?鈼?/ops
+鈹?鈼?/ops/delivery-lab
+鈹?茠 /ops/delivery-lab/[lab_id]
+鈹?茠 /ops/refund-check
+鈹?鈼?/oracle-fronts-preview
+鈹?鈼?/oracle-test
+鈹?鈼?/robots.txt
+鈹?鈼?/sitemap.xml
+鈹?鈼?/unsubscribe
+鈹?茠 /v2-landing
+
+
+茠 Proxy (Middleware)
+
+鈼? (Static)   prerendered as static content
+鈼? (SSG)      prerendered as static HTML (uses generateStaticParams)
+茠  (Dynamic)  server-rendered on demand
+

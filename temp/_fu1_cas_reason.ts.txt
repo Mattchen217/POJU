@@ -1,0 +1,10 @@
+export type SessionCasReason =
+  | "missing"
+  | "malformed"
+  | "cas_conflict"
+  | "identity"
+  | "expired"
+  | "frozen"
+  | "terminated"
+  | "ledger_integrity"
+  | "ledger_probe_incomplete";

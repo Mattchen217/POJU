@@ -1,0 +1,5 @@
+Record M8-R1-FU1-R2-R1 verification evidence
+
+Verification record for the server assistant-history verifier fail-closed
+change. Includes command logs, exit codes, Prompt-path notes, and known
+limits. This commit does not declare R2, R2-R1, or DI2 accepted.

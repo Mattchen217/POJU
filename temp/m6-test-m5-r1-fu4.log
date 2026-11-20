@@ -1,0 +1,189 @@
+
+> pojulife@0.1.0 test:m5-r1-fu4 D:\POJU\pojulife
+> tsx scripts/test-m5-r1-authorization.ts --only=FU4
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M5-R1 — report charge authorization & client job binding
+[decision-report] analysis completed {
+  job_id: 'dr_2f04223c-3546-432d-852a-_1794474682660_goupbs',
+  analysis_id: 'pa_ctxr1fu401v1_061b443503c6'
+}
+[decision-report] report completed {
+  job_id: 'dr_2f04223c-3546-432d-852a-_1794474682660_goupbs',
+  freeze_id: 'ctx_r1_fu401@v1',
+  generation: 1
+}
+  PASS  FU4-01 legacy completed job without any charge authorization → status / continue serve nothing; start does not reuse it for free
+[decision-report] analysis completed {
+  job_id: 'dr_d42c32f5-77ab-45f4-bd16-_1794474682939_u2wtlb',
+  analysis_id: 'pa_ctxr1fu402av1_df582e0b02a8'
+}
+[decision-report] report completed {
+  job_id: 'dr_d42c32f5-77ab-45f4-bd16-_1794474682939_u2wtlb',
+  freeze_id: 'ctx_r1_fu402a@v1',
+  generation: 1
+}
+[decision-report] analysis completed {
+  job_id: 'dr_d8afc457-ec89-47a3-ab53-_1794474683169_tt6toq',
+  analysis_id: 'pa_ctxr1fu402bv1_eae950d49b48'
+}
+[decision-report] report completed {
+  job_id: 'dr_d8afc457-ec89-47a3-ab53-_1794474683169_tt6toq',
+  freeze_id: 'ctx_r1_fu402b@v1',
+  generation: 1
+}
+[decision-report] analysis completed {
+  job_id: 'dr_332931b3-339a-4160-a4c5-_1794474683367_b3vj7o',
+  analysis_id: 'pa_ctxr1fu402cv1_78854855f5c5'
+}
+[decision-report] report completed {
+  job_id: 'dr_332931b3-339a-4160-a4c5-_1794474683367_b3vj7o',
+  freeze_id: 'ctx_r1_fu402c@v1',
+  generation: 1
+}
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_332931b3-339a-4160-a4c5-_1794474683367_b3vj7o',
+  e: Error: test: delivery record unwritable
+      at MemoryKv.get (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:2385:46)
+      at loadDeliveryRecord (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-charge.ts:632:29)
+      at revokeDecisionReportDelivery (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-charge.ts:744:23)
+      at terminateRefusedJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:631:9)
+      at async Object.finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:674:5)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:2391:21)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:2309:7)
+      at async main (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:322:3)
+}
+  PASS  FU4-02 refusal abort of a completed job → its delivery right is revoked (job and record stay immutable); status / continue refuse
+[decision-report] analysis completed {
+  job_id: 'dr_c6bb3af5-3985-49fe-a279-_1794474683571_e35zv3',
+  analysis_id: 'pa_ctxr1fu403v1_1be936429fce'
+}
+[decision-report] report completed {
+  job_id: 'dr_c6bb3af5-3985-49fe-a279-_1794474683571_e35zv3',
+  freeze_id: 'ctx_r1_fu403@v1',
+  generation: 1
+}
+[decision-report] analysis reused {
+  job_id: 'dr_c6bb3af5-3985-49fe-a279-_1794474683635_jyfbqw',
+  analysis_id: 'pa_ctxr1fu403v1_1be936429fce'
+}
+[decision-report] report completed {
+  job_id: 'dr_c6bb3af5-3985-49fe-a279-_1794474683635_jyfbqw',
+  freeze_id: 'ctx_r1_fu403@v1',
+  generation: 2
+}
+[decision-report] analysis reused {
+  job_id: 'dr_c6bb3af5-3985-49fe-a279-_1794474683710_w7vltt',
+  analysis_id: 'pa_ctxr1fu403v1_1be936429fce'
+}
+[decision-report] report completed {
+  job_id: 'dr_c6bb3af5-3985-49fe-a279-_1794474683710_w7vltt',
+  freeze_id: 'ctx_r1_fu403@v1',
+  generation: 3
+}
+  PASS  FU4-03 after FU4-02 a new start re-charges (same ref) → a new job completes and is served; the refused job stays blocked, also after Regenerate
+[decision-report] analysis completed {
+  job_id: 'dr_04c0157e-3114-434a-b7e5-_1794474683916_3q59mf',
+  analysis_id: 'pa_ctxr1fu404v1_78e29b08b9a2'
+}
+[decision-report] report completed {
+  job_id: 'dr_04c0157e-3114-434a-b7e5-_1794474683916_3q59mf',
+  freeze_id: 'ctx_r1_fu404@v1',
+  generation: 1
+}
+[decision-report] analysis reused {
+  job_id: 'dr_04c0157e-3114-434a-b7e5-_1794474683972_x2ourb',
+  analysis_id: 'pa_ctxr1fu404v1_78e29b08b9a2'
+}
+[decision-report] report completed {
+  job_id: 'dr_04c0157e-3114-434a-b7e5-_1794474683972_x2ourb',
+  freeze_id: 'ctx_r1_fu404@v1',
+  generation: 2
+}
+  PASS  FU4-04 session authorized but bound to another job / generation → the old completed job is not served
+[decision-report] analysis completed {
+  job_id: 'dr_19453025-a6f0-4c0b-a336-_1794474684170_nqsvrk',
+  analysis_id: 'pa_ctxr1fu405v1_736455a8c3ba'
+}
+[decision-report] report completed {
+  job_id: 'dr_19453025-a6f0-4c0b-a336-_1794474684170_nqsvrk',
+  freeze_id: 'ctx_r1_fu405@v1',
+  generation: 1
+}
+  PASS  FU4-05 authorization / delivery-record reads fail → status, continue and start fail closed (no report, no job, no charge)
+[decision-report] analysis completed {
+  job_id: 'dr_c8ace6ef-7177-4bc5-a1da-_1794474684388_7n6yak',
+  analysis_id: 'pa_ctxr1fu406v1_25b5d9e969d8'
+}
+[decision-report] report completed {
+  job_id: 'dr_c8ace6ef-7177-4bc5-a1da-_1794474684388_7n6yak',
+  freeze_id: 'ctx_r1_fu406@v1',
+  generation: 1
+}
+  PASS  FU4-06 completed record present but the job's delivery record is missing, expired or mismatched → no report
+[decision-report] analysis completed {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684660_raooq7',
+  analysis_id: 'pa_ctxr1fu407v1_65de9d04b507'
+}
+[decision-report] report completed {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684660_raooq7',
+  freeze_id: 'ctx_r1_fu407@v1',
+  generation: 1
+}
+[decision-report] not authorized — worker refused {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684724_a3k1jr',
+  stage: 'finalize',
+  reason: 'grant_missing'
+}
+[decision-report] analysis reused {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684724_a3k1jr',
+  analysis_id: 'pa_ctxr1fu407v1_65de9d04b507'
+}
+[decision-report] report completed {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684724_a3k1jr',
+  freeze_id: 'ctx_r1_fu407@v1',
+  generation: 2
+}
+[decision-report] analysis reused {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684796_t5ts89',
+  analysis_id: 'pa_ctxr1fu407v1_65de9d04b507'
+}
+[decision-report] report completed {
+  job_id: 'dr_e1553e32-e8d9-4519-b484-_1794474684796_t5ts89',
+  freeze_id: 'ctx_r1_fu407@v1',
+  generation: 3
+}
+  PASS  FU4-07 start / Regenerate / status / continue interleaved around a refused completed job → it is never reopened; the new job runs only after its own authorization
+[decision-report] analysis completed {
+  job_id: 'dr_1a2b6538-2f48-47e0-ba19-_1794474684978_natofj',
+  analysis_id: 'pa_ctxr1fu408v1_6fb8d7b9723e'
+}
+[decision-report] report completed {
+  job_id: 'dr_1a2b6538-2f48-47e0-ba19-_1794474684978_natofj',
+  freeze_id: 'ctx_r1_fu408@v1',
+  generation: 1
+}
+  PASS  FU4-08 a paid report is served after its 2 h execution grant and job expire, for the retention window; its rights outlive the record
+
+8 passed, 0 failed

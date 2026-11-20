@@ -1,0 +1,48 @@
+M5-R1: report charge authorization + client job binding
+
+A report job no longer runs on an unconfirmed charge, and the client
+binds a completed payload to the job it actually polled.
+
+Charge authorization (new decision-report-charge.ts):
+- Per-session durable record pending / authorized / refused /
+  uncertain; every transition is a CAS on the exact record
+  (MemoryKv compareAndSetExact, Upstash Lua), so one claimant charges.
+- charge_ref (pass ledger idempotency ref) is fixed at the first claim
+  and reused by every reconcile; the consume RPC returns
+  already_consumed for a known ref, so a lost answer or a failed
+  record write is reconciled without a second debit.
+- Abandoned claims (60s) and uncertain outcomes are re-claimed and
+  reconciled; Continue never opens a first charge.
+- Per-job execution grant (job id, session, generation, charge_ref)
+  written only for jobs of an authorized session.
+
+Gates:
+- start (new and reused) settles the authorization before any
+  dispatch; a pending charge returns the job with
+  worker=awaiting_charge; uncertain -> 503 CHARGE_UNCONFIRMED;
+  refused -> abort + pass refusal.
+- continue reconciles, then grants before reviving / dispatching.
+- dispatchDecisionReportStage and ensureDecisionReportWorker refuse
+  ungranted jobs (CHARGE_NOT_AUTHORIZED).
+- runDecisionReportStage checks the grant at entry (every hop:
+  background, relay, inline hand-off, legacy stage router) and
+  fenceTouch re-checks it before every checkpoint / model call.
+- abortDecisionReportJob revokes the grant first, stamps
+  charge_refused (non-revivable), clears the dispatch marker.
+- had_prior_job removed: a historical job is not a historical charge;
+  Regenerate is free only with an authorized record.
+
+chargeDeliveryPass marks rpc_error refusals as uncertain (legacy
+callers unaffected).
+
+Client: commitCompletedReportToSession takes the polled job_id;
+verifyCompletedReport checks it, the session, and recomputes
+report_job_id from session / Freeze / profile receipt / generation.
+charge_refused surfaces as pass_required; CHARGE_PENDING keeps polling.
+
+Tests: new scripts/test-m5-r1-authorization.ts
+(pnpm test:m5-r1-authorization). M5 suite: A6 grants its directly
+created job, B5 asserts the authorization record instead of the
+removed charge marker. M3 suite drives the service + runner below
+the route: its start() helper now authorizes the session and grants
+the job (the step the route performs after a confirmed charge).

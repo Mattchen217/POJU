@@ -1,0 +1,9 @@
+Record DI2 Understanding composer-flow evidence
+
+Verification record for implementation 2509983008b8474b3edd8ed8c39e5ce071be43d8
+on feat/m1-r-fresh-session-main-loop. Required composer-flow, DI2 feature-landing,
+M1-M9, tsc, and production build commands exited 0. Raw logs and exit codes are
+in docs/evidence/di2-understanding-composer-flow-2026-11-18/.
+
+Real OpenRouter main-path jobs, browser E2E, and Redis/Lua were not executed.
+This commit does not declare DI2, M9, or M9-R1 accepted.

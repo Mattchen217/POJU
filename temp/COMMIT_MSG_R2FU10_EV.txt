@@ -1,0 +1,1 @@
+﻿docs(evidence): M2.4-R2-FU10 deterministic clause-boundary grounding

@@ -1,0 +1,11 @@
+Fix M9-R1-FU1 Redis Lua and shared CAS integrity parity
+
+Close the production Redis Lua CAS gap found in the M9-R1 independent review. SESSION_AUTHORITY_CAS_LUA now fail-closes on the same structural Record integrity checks as inspectStoredSessionRecord: supported version, required fields and types, storage-key identity, snapshot session_id, and snapshot revision. Proposed records are inspected the same way. CAS still will not recreate a missing or corrupted Record, and integrity failures stay distinct from missing records and ordinary revision conflicts.
+
+Exact canonicalHash / SHA-256 parity is not computed inside Lua. Redis cjson cannot faithfully distinguish [] from {}, and JS JSON.stringify number and unicode encoding cannot be reproduced safely in Lua 5.1. The production Redis adapter therefore runs inspectStoredSessionRecord (the existing canonicalHash contract) on the current and proposed records before EVAL. Lua source comments state this hash policy explicitly. Do not treat a precomputed client-controlled hash as proof of integrity.
+
+Same-KV ledger Freeze probes now distinguish a missing ledger, a valid non-Freeze entry, a valid Freeze/final entry, malformed JSON, structurally invalid entries, an unusable head hint, and probe-limit exhaustion. Malformed or incomplete ledger state fail-closes intake instead of meaning "not frozen." TypeScript also verifies a present entry_hash with the existing canonicalHash contract. NX-write semantics and ledger schema are unchanged.
+
+TypeScript and Lua share one explicit result contract: accepted, revision conflict, expired, frozen, terminated, missing, malformed Record, invalid identity/contract, ledger integrity failure, and ledger probe incomplete.
+
+Adds pnpm test:m9-r1-fu1-redis-lua-integrity-parity covering cases A-O on the MemoryKv production adapter and a clearly labeled Redis eval contract harness that does not execute Lua.

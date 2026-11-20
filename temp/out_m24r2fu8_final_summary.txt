@@ -1,0 +1,8 @@
+﻿m1r exit=0 log=temp\out_m24r2fu8_final_m1r.txt
+m23 exit=0 log=temp\out_m24r2fu8_final_m23.txt
+m21 exit=0 log=temp\out_m24r2fu8_final_m21.txt
+m22 exit=0 log=temp\out_m24r2fu8_final_m22.txt
+phase2 exit=0 log=temp\out_m24r2fu8_final_phase2.txt
+typegen exit=0 log=temp\out_m24r2fu8_final_typegen.txt
+tsc exit=0 log=temp\out_m24r2fu8_final_tsc.txt
+build exit=0 log=temp\out_m24r2fu8_final_build.txt

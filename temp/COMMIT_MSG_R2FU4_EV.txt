@@ -1,0 +1,4 @@
+docs(evidence): M2.4-R2-FU4 clarification safety and terminal pending
+
+Record implementation SHA e2b0a84ff26dec5305a1a79be24a75940faccd6f and
+official regression results. Tip SHA left empty pending Max review.

@@ -1,0 +1,70 @@
+﻿node.exe : [kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_R
+EST_TOKEN (or KV_REST_API_*) to match Vercel.
+所在位置 行:1 字符: 1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([kv] UPSTASH/KV...o match Vercel.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+intake-r6-freeze-versioning
+
+== A. Freeze Intake aggregation ==
+  PASS  Freeze uses Intake 鈫?known with linked confirmed fact
+  PASS  CTA / stall still blocked
+  PASS  critical unknown (no role/DIR facts) blocks Freeze
+  PASS  no DIR link 鈫?Intake unknown; legacy OR would be known
+  PASS  Scheme A hard_constraint satisfies role
+  PASS  [A-Pure] N/A fail-closed without catalog (direct cause: na_condition_not_in_catalog); valid+catalog 鈫?n_a
+  PASS  [A-Pure] revoked (direct cause: revoked) / cross-context (direct cause: explicit_na_classification_missing) N/A ineffective
+  PASS  [A-Prod] ACTIVE legal pair 鈫?n_a via production reaggregation
+  PASS  [A-Prod] forged caller catalog for non-ACTIVE DIR-A 鈫?not n_a (direct cause: na_condition_not_in_catalog)
+  PASS  [A-Prod] revoked (direct cause: revoked) / cross-context (direct cause: explicit_na_classification_missing) N/A ineffective
+  PASS  blocking conflict blocks Freeze (post-agg gate)
+  PASS  Session/DC mismatch rejected
+
+== B. Versioning Intake aggregation ==
+  PASS  V1 superseded + hash stable; V2 draft; deep clone
+  PASS  Versioning Session mismatch rejected
+  PASS  V2 add_conflicts 鈫?Intake conflict state
+
+== C. Production Freeze / V2 persist ==
+  PASS  ensureSessionFrozenForDelivery persist + reload
+  PASS  persistV2FromFinalOnSession + reload; V1 history intact
+  PASS  CAS conflict retry no duplicate boundary
+
+== D. Planner / Aggregator / Freeze consistency ==
+  PASS  Planner / Production agg / Freeze agree on role_states + current_state
+
+== E. freezeDraftForDelivery Session/DC snapshot binding ==
+  PASS  context_id mismatch 鈫?reject
+  PASS  version mismatch 鈫?reject
+  PASS  session final + draft draft 鈫?reject
+  PASS  facts diverge 鈫?reject
+  PASS  Explicit N/A Evidence diverge 鈫?reject
+  PASS  constraints / conflicts diverge 鈫?reject
+  PASS  identical snapshot 鈫?Freeze OK
+  PASS  matching Freeze 鈫?version snapshot + content_hash consistent
+
+All intake-r6-freeze-versioning (A鈥揈) checks passed.
+  (F1鈥揊4 鈫?test:intake-r6-freeze-authority-regression)
+

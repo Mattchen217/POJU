@@ -1,0 +1,3 @@
+fix(m2.4): FU5 clarification negation safety closure
+
+Close remaining negative-polarity false positives in parseDefinitionPatchChoice and parseConstraintConfirmChoice. A governing negation of the record-as-fact or confirm/write action is evaluated before any affirmative keyword and never yields a confirmed write. Add handleUserMessage() coverage for the required definition-patch and constraint-confirmation phrases while keeping existing FU4 and FU3 assertions.

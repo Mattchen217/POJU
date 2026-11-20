@@ -1,0 +1,65 @@
+M5-R1-FU3: serialize report start, refusal abort and lock ownership
+
+FU2 left two gaps: (1) start pre-checked an unfinished abort before taking the
+session lock, so a start could pass the pre-check, wait, and create a job after
+another request had claimed the refusal abort; (2) releaseXhighSessionLock
+deleted the session lock unconditionally, so a delayed cleanup could delete a
+lock now held by a different start or job.
+
+decision-report-lock.ts (new)
+- Owned lock record on the same key: { version, session_id, lock_token,
+  owner_attempt_id, holder: start | job, job_id, created_at, touched_at }.
+- Every write is an exact-value CAS (MemoryKv compareAndSetExact / Redis Lua),
+  every delete an exact-value compare-and-delete (MemoryKv compareAndDeleteExact
+  / Redis Lua); creation is SET NX. No CAS available -> ReportLockUnavailableError.
+- updateOwnedReportLock (owner-verified touch / hand-off), releaseOwnedReportLock
+  (owner-checked), releaseReportJobLock(session, job) (only holder=job of that
+  job). Read failure throws; unrecognised value -> unconfirmed (fail closed).
+- An idle start lock (no touch for REPORT_START_LOCK_IDLE_MS = 60 s, the charge
+  claim window) can be taken over by CAS on its exact value; legacy bare
+  timestamp locks: live job -> that job's, else busy for 2 min then takeover.
+
+decision-report-service.ts
+- Start split into planDecisionReportStart (read-only verification),
+  acquireDecisionReportStartLock (locked / follow / observe / busy / unconfirmed)
+  and createOrReuseDecisionReportJob(plan, lock): owner touch-verified before the
+  generation bump; job bound to the lock after creation; lost lock -> the new job
+  is failed and 409 REPORT_JOB_BUSY.
+- startDecisionReportJob composes the same steps (abort pre-check under the lock).
+- terminateRefusedJob release_lock step releases only the abort's own lock
+  (releaseOwnedReportLock with the lock identity stored on the abort claim);
+  pre-FU3 abort records release nothing. abortDecisionReportJob releases only the
+  lock bound to its job.
+- Resume after the claim window takes the atomic resume right first
+  (claimRefusalAbortResume CAS); lost -> held / completed / none; uncertain ->
+  unreadable. No termination step without the right.
+- Continue takes the lock as holder=job; takes over only its own leftover lock,
+  an idle start lock, a terminal or missing job's lock or an aged legacy lock.
+- Removed acquire/release/reclaim of the generic session lock from report paths;
+  test-only start hook points (__setReportStartHookForTests).
+
+decision-report-charge.ts
+- Abort claim records abort_lock_token / abort_lock_owner_attempt_id; resume
+  right fields abort_resumer_id / abort_resumed_at; abortHeldSince.
+
+decision-report-api.ts
+- start: plan -> lock -> pre-check (unfinished abort held / resumed, unreadable
+  -> 503) -> create / reuse -> settle, all inside the lock. Refused: owner
+  touch-verify (lost -> 503 CHARGE_UNCONFIRMED, nothing touched) -> abort claim
+  bound to the lock -> the abort releases it. Authorized: hand the lock to the job
+  (CAS lost -> worker none, no dispatch) -> grant -> dispatch. Others release
+  their own lock.
+
+Job-lifetime releases (runner relay, dispatch catch, FD stage runner, Inngest
+continue, continue route) use releaseReportJobLock for decision_report; the
+generic lock API is unchanged for final_delivery.
+lib/kv/memory-kv.ts: compareAndDeleteExact.
+
+scripts/test-m5-r1-authorization.ts: FU3-01..08 (FU3-06 x6 crash points) with
+deferred gates at production hook points; FU2-02 adapted (a start inside
+another start's lock window now observes and only re-claims after the idle
+window); FU2-05 passes the lock owner to the claim.
+package.json: test:m5-r1-fu3.
+
+Process-memory KV and a ledger stub only: not Upstash or Supabase validation.
+No real OpenRouter, no E2E, no browser.

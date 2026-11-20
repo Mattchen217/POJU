@@ -1,0 +1,424 @@
+FILE lib/poju/decision-intake/apply-answer-to-dc.ts
+
+==== 1-421 ====
+    1|/**
+    2| * Apply validated AnswerEvent writes onto formal Decision Context.
+    3| * Never auto-confirm. Same-turn replay is idempotent. Conflicts stay open.
+    4| * M2.4-R1: related_dir_ids + fact_roles matching; correction/contradiction append
+    5| * independent facts; open Conflict only with clear conflicting evidence.
+    6| * M2.4-R1-FU1: conservative conflict evidence — different text alone is not a conflict;
+    7| * correction vs contradiction separated; never auto-close open Conflicts.
+    8| */
+    9|
+   10|import { buildRealityFact } from "@/lib/poju/decision-context/fact-combination";
+   11|import { reaggregateDirsOnSession } from "@/lib/poju/decision-context/na-validation-from-session";
+   12|import type {
+   13|  Constraint,
+   14|  DecisionContext,
+   15|  RealityFact,
+   16|} from "@/lib/poju/decision-context/types";
+   17|import type { POJUSessionState } from "@/lib/poju/types";
+   18|import type { AnswerClass, AnswerEvent } from "./types";
+   19|
+   20|export type ApplyAnswerResult = {
+   21|  session: POJUSessionState;
+   22|  applied: boolean;
+   23|  skipped_reason?: string;
+   24|  fact_ids_written: string[];
+   25|  constraint_ids_written: string[];
+   26|};
+   27|
+   28|function alreadyMapped(dc: DecisionContext, turnId: string): boolean {
+   29|  if (dc.reality_facts.some((f) => f.source_turn_id === turnId)) return true;
+   30|  if (dc.constraints.some((c) => c.source_turn_id === turnId)) return true;
+   31|  return false;
+   32|}
+   33|
+   34|function sameIdSet(a: string[] | undefined, b: string[] | undefined): boolean {
+   35|  const left = [...(a ?? [])].slice().sort();
+   36|  const right = [...(b ?? [])].slice().sort();
+   37|  if (left.length !== right.length) return false;
+   38|  return left.every((value, i) => value === right[i]);
+   39|}
+   40|
+   41|function writeAlreadyPresent(
+   42|  dc: DecisionContext,
+   43|  turnId: string,
+   44|  kind: "reality_fact" | "constraint",
+   45|  statement: string,
+   46|  relatedDirIds: string[],
+   47|  factRoles: string[],
+   48|): boolean {
+   49|  const norm = normalizeComparable(statement);
+   50|  if (kind === "reality_fact") {
+   51|    return dc.reality_facts.some(
+   52|      (f) =>
+   53|        f.source_turn_id === turnId &&
+   54|        normalizeComparable(f.statement) === norm &&
+   55|        sameIdSet(f.related_dir_ids, relatedDirIds) &&
+   56|        sameIdSet(f.fact_roles, factRoles),
+   57|    );
+   58|  }
+   59|  return dc.constraints.some(
+   60|    (c) =>
+   61|      c.source_turn_id === turnId &&
+   62|      normalizeComparable(c.statement) === norm &&
+   63|      sameIdSet(c.related_dir_ids, relatedDirIds),
+   64|  );
+   65|}
+   66|
+   67|function uniqueRecordId(
+   68|  prefix: string,
+   69|  turnId: string,
+   70|  index: number,
+   71|  existing: Set<string>,
+   72|): string {
+   73|  const base = `${prefix}${turnId}_${index}`.slice(0, 80);
+   74|  if (!existing.has(base)) return base;
+   75|  let n = 1;
+   76|  while (true) {
+   77|    const candidate = `${prefix}${turnId}_${index}_p${n}`.slice(0, 80);
+   78|    if (!existing.has(candidate)) return candidate;
+   79|    n += 1;
+   80|  }
+   81|}
+   82|
+   83|function normalizeComparable(text: string): string {
+   84|  return text
+   85|    .toLowerCase()
+   86|    .replace(
+   87|      /^(更正一下|更正|纠正|之前说错了|说错了|之前说的不准确|actually\s+i\s+meant)[:：,\s]*/i,
+   88|      "",
+   89|    )
+   90|    .replace(/[\s，,。．.!！？?；;、]/g, "")
+   91|    .trim();
+   92|}
+   93|
+   94|function findRelatedOldFacts(
+   95|  realityFacts: RealityFact[],
+   96|  relatedDirIds: string[],
+   97|  factRoles: string[],
+   98|  currentTurnId: string,
+   99|): RealityFact[] {
+  100|  return realityFacts.filter((fact) => {
+  101|    if (fact.source_turn_id === currentTurnId) return false;
+  102|    // Unknown / declined / not_applicable are not propositions
+  103|    // and cannot be used as the opposing side of a Conflict.
+  104|    if (
+  105|      fact.status === "unknown" ||
+  106|      fact.status === "declined" ||
+  107|      fact.status === "not_applicable"
+  108|    ) {
+  109|      return false;
+  110|    }
+  111|
+  112|    const dirs = fact.related_dir_ids ?? [];
+  113|    if (!relatedDirIds.some((dirId) => dirs.includes(dirId))) {
+  114|      return false;
+  115|    }
+  116|
+  117|    // Require an actual shared role for conflict evidence.
+  118|    // Missing historical role metadata is insufficient evidence.
+  119|    const oldRoles = fact.fact_roles ?? [];
+  120|    if (oldRoles.length === 0 || factRoles.length === 0) {
+  121|      return false;
+  122|    }
+  123|
+  124|    return oldRoles.some((role) => factRoles.includes(role));
+  125|  });
+  126|}
+  127|
+  128|/**
+  129| * Conflict evidence:
+  130| * - correction: the user explicitly replaces an earlier statement; the new
+  131| *   fact links the earlier ones (corrects_fact_ids) and no Conflict opens.
+  132| * - contradiction: every earlier propositional fact on the same DIR + role
+  133| *   from another turn enters an open Conflict; nothing is silently overwritten.
+  134| */
+  135|function selectConflictingOldFacts(input: {
+  136|  classification: AnswerClass;
+  137|  oldFacts: RealityFact[];
+  138|}): RealityFact[] {
+  139|  if (input.classification !== "contradiction") return [];
+  140|  return input.oldFacts;
+  141|}
+  142|
+  143|export type IncrementalSameTurnOpts = {
+  144|  pending_source_turn_id: string;
+  145|  pending_authorized_role_codes: string[];
+  146|  pending_authorized_dir_ids: string[];
+  147|  resolving_item_id: string;
+  148|};
+  149|
+  150|export async function applyAnswerEventToSessionDc(
+  151|  session: POJUSessionState,
+  152|  event: AnswerEvent,
+  153|  opts?: {
+  154|    now?: string;
+  155|    allow_incremental_same_turn?: boolean;
+  156|    incremental?: IncrementalSameTurnOpts;
+  157|  },
+  158|): Promise<ApplyAnswerResult> {
+  159|  const dc = session.decision_context;
+  160|  if (!dc || dc.status !== "draft") {
+  161|    return {
+  162|      session,
+  163|      applied: false,
+  164|      skipped_reason: "no_draft_dc",
+  165|      fact_ids_written: [],
+  166|      constraint_ids_written: [],
+  167|    };
+  168|  }
+  169|  const turnId = event.client_turn_id.trim();
+  170|  if (!turnId) {
+  171|    return {
+  172|      session,
+  173|      applied: false,
+  174|      skipped_reason: "missing_source_turn",
+  175|      fact_ids_written: [],
+  176|      constraint_ids_written: [],
+  177|    };
+  178|  }
+  179|  const persistableWrites = event.proposed_writes.filter(
+  180|    (w): w is typeof w & { kind: "reality_fact" | "constraint" } =>
+  181|      w.kind === "reality_fact" || w.kind === "constraint",
+  182|  );
+  183|  const incrementalWrites = persistableWrites.filter(
+  184|    (w) =>
+  185|      !writeAlreadyPresent(
+  186|        dc,
+  187|        turnId,
+  188|        w.kind,
+  189|        w.statement,
+  190|        w.related_dir_ids,
+  191|        w.fact_roles,
+  192|      ),
+  193|  );
+  194|
+  195|  const incrementalAuthorized = (writes: typeof incrementalWrites): boolean => {
+  196|    const inc = opts?.incremental;
+  197|    if (!opts?.allow_incremental_same_turn || !inc) return false;
+  198|    if (inc.pending_source_turn_id !== turnId) return false;
+  199|    if (!inc.resolving_item_id) return false;
+  200|    const authorizedCodes = new Set(inc.pending_authorized_role_codes);
+  201|    const authorizedDirs = new Set(inc.pending_authorized_dir_ids);
+  202|    for (const w of writes) {
+  203|      if (!w.related_dir_ids.every((dirId) => authorizedDirs.has(dirId))) {
+  204|        return false;
+  205|      }
+  206|      // Role codes on the write are bare role names; also accept full codes.
+  207|      const writeRolesOk = w.fact_roles.every((role) => {
+  208|        if (authorizedCodes.has(role)) return true;
+  209|        return [...authorizedCodes].some(
+  210|          (code) => code.endsWith(`/role/${role}`) || code === role,
+  211|        );
+  212|      });
+  213|      if (!writeRolesOk) return false;
+  214|    }
+  215|    return true;
+  216|  };
+  217|
+  218|  // Default: same source_turn_id is fully mapped (ordinary replay).
+  219|  // Incremental same-turn writes are only allowed for a legal pending bind
+  220|  // of an item identity not yet written, with role/DIR still in the
+  221|  // originally sent authorization set. Do not change Constraint
+  222|  // verification_level hardcoding. Do not loosen ordinary replay.
+  223|  if (alreadyMapped(dc, turnId)) {
+  224|    if (
+  225|      !opts?.allow_incremental_same_turn ||
+  226|      incrementalWrites.length === 0 ||
+  227|      !incrementalAuthorized(incrementalWrites)
+  228|    ) {
+  229|      return {
+  230|        session,
+  231|        applied: false,
+  232|        skipped_reason: "turn_already_mapped",
+  233|        fact_ids_written: [],
+  234|        constraint_ids_written: [],
+  235|      };
+  236|    }
+  237|  }
+  238|  if (
+  239|    event.classification === "off_topic" ||
+  240|    event.classification === "invalid_input" ||
+  241|    event.proposed_writes.length === 0
+  242|  ) {
+  243|    return {
+  244|      session,
+  245|      applied: false,
+  246|      skipped_reason:
+  247|        event.classification === "off_topic"
+  248|          ? "off_topic"
+  249|          : event.classification === "invalid_input"
+  250|            ? "invalid_input"
+  251|            : "no_writes",
+  252|      fact_ids_written: [],
+  253|      constraint_ids_written: [],
+  254|    };
+  255|  }
+  256|
+  257|  const now = opts?.now ?? new Date().toISOString();
+  258|  const reality_facts = [...dc.reality_facts];
+  259|  const constraints = [...dc.constraints];
+  260|  // Never auto-clear open Conflicts by appending a new fact.
+  261|  const conflicts = [...dc.conflicts];
+  262|  const fact_ids_written: string[] = [];
+  263|  const constraint_ids_written: string[] = [];
+  264|
+  265|  const existingFactIds = new Set(reality_facts.map((f) => f.fact_id));
+  266|  const existingConstraintIds = new Set(constraints.map((c) => c.constraint_id));
+  267|
+  268|  for (let i = 0; i < event.proposed_writes.length; i++) {
+  269|    const w = event.proposed_writes[i]!;
+  270|    if (w.kind === "reality_fact" || w.kind === "constraint") {
+  271|      if (
+  272|        writeAlreadyPresent(
+  273|          dc,
+  274|          turnId,
+  275|          w.kind,
+  276|          w.statement,
+  277|          w.related_dir_ids,
+  278|          w.fact_roles,
+  279|        )
+  280|      ) {
+  281|        continue;
+  282|      }
+  283|    }
+  284|    if (w.kind === "reality_fact") {
+  285|      // Preserve unknown/declined; never promote to confirmed here (E1 only).
+  286|      const status =
+  287|        w.status === "confirmed"
+  288|          ? "unverified"
+  289|          : w.status === "unknown" || w.status === "declined"
+  290|            ? w.status
+  291|            : w.status;
+  292|      const verification_level =
+  293|        status === "unknown" || status === "declined"
+  294|          ? "none"
+  295|          : w.verification_level === "none"
+  296|            ? "user_asserted"
+  297|            : w.verification_level;
+  298|      const factId = uniqueRecordId("fact_m1_", turnId, i, existingFactIds);
+  299|      existingFactIds.add(factId);
+  300|      const fact: RealityFact = buildRealityFact({
+  301|        fact_id: factId,
+  302|        statement: w.statement.slice(0, 500),
+  303|        status,
+  304|        verification_level,
+  305|        source_stage: "collecting",
+  306|        source_turn_id: turnId,
+  307|        has_user_confirm_event: false,
+  308|        fact_roles: w.fact_roles,
+  309|        related_dir_ids: w.related_dir_ids,
+  310|        updated_at: now,
+  311|      });
+  312|      if (event.classification === "correction") {
+  313|        const known = new Set(reality_facts.map((f) => f.fact_id));
+  314|        const links = w.corrects_fact_ids?.length
+  315|          ? w.corrects_fact_ids.filter((id) => known.has(id))
+  316|          : findRelatedOldFacts(reality_facts, w.related_dir_ids, w.fact_roles, turnId).map(
+  317|              (f) => f.fact_id,
+  318|            );
+  319|        if (links.length > 0) fact.corrects_fact_ids = links;
+  320|      }
+  321|
+  322|      if (event.classification === "contradiction") {
+  323|        const related = findRelatedOldFacts(
+  324|          reality_facts,
+  325|          w.related_dir_ids,
+  326|          w.fact_roles,
+  327|          turnId,
+  328|        );
+  329|        const conflicting = selectConflictingOldFacts({
+  330|          classification: event.classification,
+  331|          oldFacts: related,
+  332|        });
+  333|        if (conflicting.length > 0) {
+  334|          conflicts.push({
+  335|            conflict_id: `cf_m1_${turnId}_${i}`.slice(0, 80),
+  336|            fact_ids: [...conflicting.map((f) => f.fact_id), fact.fact_id],
+  337|            conflict_field: "statement",
+  338|            statements_snapshot: [
+  339|              ...conflicting.map((f) => f.statement),
+  340|              fact.statement,
+  341|            ],
+  342|            source_refs: [
+  343|              ...conflicting.map((f) => ({
+  344|                fact_id: f.fact_id,
+  345|                source_stage: f.source_stage,
+  346|                source_turn_id: f.source_turn_id,
+  347|              })),
+  348|              {
+  349|                fact_id: fact.fact_id,
+  350|                source_stage: fact.source_stage,
+  351|                source_turn_id: fact.source_turn_id,
+  352|              },
+  353|            ],
+  354|            state: "open",
+  355|            resolution: null,
+  356|            user_confirmation: false,
+  357|            affects_preferred_path: true,
+  358|            updated_at: now,
+  359|          });
+  360|        }
+  361|      }
+  362|
+  363|      reality_facts.push(fact);
+  364|      fact_ids_written.push(fact.fact_id);
+  365|    } else if (w.kind === "constraint") {
+  366|      const constraintId = uniqueRecordId("cst_m1_", turnId, i, existingConstraintIds);
+  367|      existingConstraintIds.add(constraintId);
+  368|      const c: Constraint = {
+  369|        constraint_id: constraintId,
+  370|        statement: w.statement.slice(0, 500),
+  371|        category: w.constraint_category ?? "responsibility",
+  372|        status: "unverified",
+  373|        verification_level: "user_asserted",
+  374|        source_stage: "collecting",
+  375|        source_turn_id: turnId,
+  376|        rigidity: w.rigidity ?? "hard",
+  377|        user_confirmed: false,
+  378|        updated_at: now,
+  379|        related_dir_ids: w.related_dir_ids,
+  380|      };
+  381|      constraints.push(c);
+  382|      constraint_ids_written.push(c.constraint_id);
+  383|    }
+  384|  }
+  385|
+  386|  if (fact_ids_written.length === 0 && constraint_ids_written.length === 0) {
+  387|    return {
+  388|      session,
+  389|      applied: false,
+  390|      skipped_reason: "no_legal_writes",
+  391|      fact_ids_written: [],
+  392|      constraint_ids_written: [],
+  393|    };
+  394|  }
+  395|
+  396|  const dirs = await reaggregateDirsOnSession(session, dc.dirs, {
+  397|    realityFacts: reality_facts,
+  398|    constraints,
+  399|    conflicts,
+  400|    nowIso: now,
+  401|  });
+  402|
+  403|  return {
+  404|    session: {
+  405|      ...session,
+  406|      decision_context: {
+  407|        ...dc,
+  408|        reality_facts,
+  409|        constraints,
+  410|        conflicts,
+  411|        dirs,
+  412|        updated_at: now,
+  413|        version: (dc.version ?? 1) + 1,
+  414|      },
+  415|    },
+  416|    applied: true,
+  417|    fact_ids_written,
+  418|    constraint_ids_written,
+  419|  };
+  420|}
+  421|

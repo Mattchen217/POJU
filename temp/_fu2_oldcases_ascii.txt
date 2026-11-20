@@ -1,0 +1,362 @@
+
+===== 300-360 =====
+ 300:       assert.equal(asst.content, out.adaptive_ask_plan!.question_text);
+ 301:       assert.notEqual(asst.content, stubResponse);
+ 302:       q1 = asst.content;
+ 303:       // Need \u2194 plan DIR link
+ 304:       const needDirs = new Set(
+ 305:         out.decision_understanding!.need_to_understand.items
+ 306:           .filter((n) => n.kind === "dir_based")
+ 307:           .map((n) => n.dir_id),
+ 308:       );
+ 309:       for (const d of out.adaptive_ask_plan!.dir_ids) {
+ 310:         assert.ok(needDirs.has(d) || out.decision_context!.dirs.some((x) => x.dir_id === d));
+ 311:       }
+ 312:       // Persist via CAS mutate so revision mirrors from C1 are respected.
+ 313:       await mutatePOJUSession(sidTurn, {
+ 314:         operation_id: "op_m1_02_save",
+ 315:         kind: "session_patch",
+ 316:         bump_dc: true,
+ 317:         apply: () => out,
+ 318:       });
+ 319:     });
+ 320: 
+ 321:     // M1-04
+ 322:     await check("M1-04 second answer changes understanding + different next Q", async () => {
+ 323:       const before = await durable(sidTurn);
+ 324:       stubResponse = "ANOTHER FREEFORM";
+ 325:       const out = await handleUserMessage({
+ 326:         session: before,
+ 327:         userMessage: "\u786c\u7ea6\u675f\u662f\u5fc5\u987b\u4fdd\u7559\u793e\u4fdd\uff0c\u9884\u7b97\u4e0d\u80fd\u4f4e\u4e8e\u73b0\u5728\u7684 70%\u3002",
+ 328:         locale: "zh-CN",
+ 329:       });
+ 330:       assert.ok(out.decision_understanding);
+ 331:       assert.ok(out.adaptive_ask_plan);
+ 332:       const q2 = lastAssistant(out).content;
+ 333:       assert.equal(q2, out.adaptive_ask_plan!.question_text);
+ 334:       // DC must absorb the second answer (facts and/or constraints).
+ 335:       const dcGrew =
+ 336:         out.decision_context!.reality_facts.length >
+ 337:           before.decision_context!.reality_facts.length ||
+ 338:         out.decision_context!.constraints.length >
+ 339:           before.decision_context!.constraints.length;
+ 340:       assert.equal(dcGrew, true, "second answer must write DC");
+ 341:       assert.notEqual(
+ 342:         out.decision_understanding!.last_answer_event_id,
+ 343:         before.decision_understanding!.last_answer_event_id,
+ 344:       );
+ 345:       assert.ok(out.decision_understanding!.built_at >= before.decision_understanding!.built_at);
+ 346:       // Plan must remain authorized from latest state (not a fixed script).
+ 347:       assert.ok(out.adaptive_ask_plan!.plan_id);
+ 348:       assert.ok(out.adaptive_ask_plan!.dir_ids.length >= 1);
+ 349:       const sameQ = q2 === q1;
+ 350:       if (sameQ) {
+ 351:         assert.ok(
+ 352:           (out.adaptive_ask_plan!.depth ?? 0) >=
+ 353:             (before.adaptive_ask_plan?.depth ?? 0) ||
+ 354:             out.adaptive_ask_plan!.candidate_id !==
+ 355:               before.adaptive_ask_plan?.candidate_id ||
+ 356:             JSON.stringify(out.decision_understanding!.need_to_understand.items) !==
+ 357:               JSON.stringify(before.decision_understanding!.need_to_understand.items),
+ 358:           "second turn must recompute plan/need even if question phrasing matches",
+ 359:         );
+ 360:       } else {
+
+===== 410-530 =====
+ 410:       );
+ 411:     });
+ 412: 
+ 413:     // M1-06
+ 414:     await check("M1-06 sent question traces Plan/Direction/DDR/DIR", async () => {
+ 415:       const sid = await seedSession("06", jobDirs);
+ 416:       const seeded = await runCollectingDcTurn(await durable(sid), {
+ 417:         statement: "",
+ 418:         source_turn_id: "init_06",
+ 419:         now: NOW,
+ 420:         init_only: true,
+ 421:       });
+ 422:       await mutatePOJUSession(sid, {
+ 423:         operation_id: "op_m1_06",
+ 424:         kind: "session_patch",
+ 425:         bump_dc: true,
+ 426:         apply: () => seeded.session,
+ 427:       });
+ 428:       const out = await handleUserMessage({
+ 429:         session: await durable(sid),
+ 430:         userMessage: "\u53ef\u9009\u65b9\u6848\u662f\u7559\u4efb\u3001\u5185\u90e8\u8f6c\u5c97\u3001\u6216\u5916\u90e8\u521b\u4e1a\u3002",
+ 431:         locale: "zh-CN",
+ 432:       });
+ 433:       const plan = out.adaptive_ask_plan!;
+ 434:       assert.ok(plan.plan_id);
+ 435:       assert.ok(plan.direction_id);
+ 436:       assert.ok(plan.ddr_ids.length);
+ 437:       assert.ok(plan.dir_ids.length);
+ 438:       assert.equal(lastAssistant(out).content, plan.question_text);
+ 439:       assert.equal(
+ 440:         out.decision_understanding!.last_sent_question?.question_text,
+ 441:         plan.question_text,
+ 442:       );
+ 443:     });
+ 444: 
+ 445:     // M1-07
+ 446:     await check("M1-07 estimate/unknown/declined not promoted to confirmed", async () => {
+ 447:       const sid = await seedSession("07", jobDirs);
+ 448:       const seeded = await runCollectingDcTurn(await durable(sid), {
+ 449:         statement: "",
+ 450:         source_turn_id: "init_07",
+ 451:         now: NOW,
+ 452:         init_only: true,
+ 453:       });
+ 454:       await mutatePOJUSession(sid, {
+ 455:         operation_id: "op_m1_07",
+ 456:         kind: "session_patch",
+ 457:         bump_dc: true,
+ 458:         apply: () => seeded.session,
+ 459:       });
+ 460:       const cases: Array<{ msg: string; expectStatus: string; expectVer?: string }> = [
+ 461:         { msg: "\u5927\u6982\u8fd8\u6709\u56db\u4e2a\u6708\u5b58\u6b3e\u3002", expectStatus: "unverified", expectVer: "user_estimate" },
+ 462:         { msg: "\u4e0d\u77e5\u9053", expectStatus: "unknown", expectVer: "none" },
+ 463:         { msg: "\u4e0d\u60f3\u8bf4", expectStatus: "declined", expectVer: "none" },
+ 464:       ];
+ 465:       let session = await durable(sid);
+ 466:       for (const c of cases) {
+ 467:         // Force fresh turn ids via handleUserMessage
+ 468:         session = await handleUserMessage({
+ 469:           session,
+ 470:           userMessage: c.msg,
+ 471:           locale: "zh-CN",
+ 472:         });
+ 473:         const turnId = lastUserId(session);
+ 474:         const fact = session.decision_context!.reality_facts.find(
+ 475:           (f) => f.source_turn_id === turnId,
+ 476:         );
+ 477:         assert.ok(fact, `fact for ${c.msg}`);
+ 478:         assert.equal(fact!.status, c.expectStatus);
+ 479:         if (c.expectVer) assert.equal(fact!.verification_level, c.expectVer);
+ 480:         assert.equal(fact!.user_confirmed, false);
+ 481:         assert.notEqual(fact!.status, "confirmed");
+ 482:       }
+ 483:     });
+ 484: 
+ 485:     // M1-08
+ 486:     await check("M1-08 completed DIR not re-asked", async () => {
+ 487:       const sid = await seedSession("08", [
+ 488:         dir("DIR-OPT-ON-TABLE", "\u9009\u9879", ["option"]),
+ 489:         dir("DIR-RISK-TOLERANCE", "\u98ce\u9669", ["risk"]),
+ 490:       ]);
+ 491:       // Mark first DIR known with evidence roles satisfied via adaptive writes + manual state
+ 492:       let s = await durable(sid);
+ 493:       const init = await runCollectingDcTurn(s, {
+ 494:         statement: "",
+ 495:         source_turn_id: "init_08",
+ 496:         now: NOW,
+ 497:         init_only: true,
+ 498:       });
+ 499:       s = init.session;
+ 500:       // Force DIR-OPT-ON-TABLE known
+ 501:       s = {
+ 502:         ...s,
+ 503:         decision_context: {
+ 504:           ...s.decision_context!,
+ 505:           dirs: s.decision_context!.dirs.map((d) =>
+ 506:             d.dir_id === "DIR-OPT-ON-TABLE"
+ 507:               ? { ...d, current_state: "known" as const }
+ 508:               : d,
+ 509:           ),
+ 510:         },
+ 511:       };
+ 512:       const planned = await runCollectingDcTurn(s, {
+ 513:         statement: "",
+ 514:         source_turn_id: "init_08b",
+ 515:         now: NOW,
+ 516:         init_only: true,
+ 517:       });
+ 518:       assert.ok(planned.plan);
+ 519:       assert.ok(!planned.plan!.dir_ids.includes("DIR-OPT-ON-TABLE"));
+ 520:       assert.ok(planned.plan!.dir_ids.includes("DIR-RISK-TOLERANCE"));
+ 521:     });
+ 522: 
+ 523:     // M1-09
+ 524:     await check("M1-09 out-of-scope plan rejected by scope validation", async () => {
+ 525:       const { validateScopeDepthBudget } = await import(
+ 526:         "../lib/poju/decision-intake/scope-budget"
+ 527:       );
+ 528:       const sid = await seedSession("09", jobDirs);
+ 529:       const s = await durable(sid);
+ 530:       const bp = s.decision_blueprint!;
+
+===== 630-720 =====
+ 630:           ],
+ 631:           dirs: s.decision_context!.dirs.map((d) => ({
+ 632:             ...d,
+ 633:             current_state: "known" as const,
+ 634:           })),
+ 635:         },
+ 636:       };
+ 637:       const turn = await runCollectingDcTurn(s, {
+ 638:         statement: "",
+ 639:         source_turn_id: "init_11",
+ 640:         now: NOW,
+ 641:         init_only: true,
+ 642:       });
+ 643:       assert.equal(turn.outcome, "dc_committed");
+ 644:       assert.equal(turn.authorized_question, null);
+ 645:       assert.ok(turn.understanding);
+ 646:       assert.equal(turn.understanding!.readiness.can_ask, false);
+ 647:     });
+ 648: 
+ 649:     // M1-12
+ 650:     await check("M1-12 same turn replay no dup facts/Qs/budget", async () => {
+ 651:       const sid = await seedSession("12", jobDirs);
+ 652:       const seeded = await runCollectingDcTurn(await durable(sid), {
+ 653:         statement: "",
+ 654:         source_turn_id: "init_12",
+ 655:         now: NOW,
+ 656:         init_only: true,
+ 657:       });
+ 658:       await mutatePOJUSession(sid, {
+ 659:         operation_id: "op_m1_12",
+ 660:         kind: "session_patch",
+ 661:         bump_dc: true,
+ 662:         apply: () => seeded.session,
+ 663:       });
+ 664:       const first = await handleUserMessage({
+ 665:         session: await durable(sid),
+ 666:         userMessage: "\u6211\u53ef\u4ee5\u63a5\u53d7\u6700\u591a\u4e8f\u6389\u4e09\u4e2a\u6708\u5b58\u6b3e\u3002",
+ 667:         locale: "zh-CN",
+ 668:       });
+ 669:       const turnId = lastUserId(first);
+ 670:       const facts1 = first.decision_context!.reality_facts.filter(
+ 671:         (f) => f.source_turn_id === turnId,
+ 672:       ).length;
+ 673:       const asked1 =
+ 674:         first.decision_understanding?.budget.session_asked_count ?? 0;
+ 675:       // Replay adaptive turn with same turn id
+ 676:       const replay = await runCollectingDcTurn(first, {
+ 677:         statement: "\u6211\u53ef\u4ee5\u63a5\u53d7\u6700\u591a\u4e8f\u6389\u4e09\u4e2a\u6708\u5b58\u6b3e\u3002",
+ 678:         source_turn_id: turnId,
+ 679:         now: NOW,
+ 680:       });
+ 681:       assert.equal(replay.outcome, "not_applied");
+ 682:       const facts2 = replay.session.decision_context!.reality_facts.filter(
+ 683:         (f) => f.source_turn_id === turnId,
+ 684:       ).length;
+ 685:       assert.equal(facts2, facts1);
+ 686:       const asked2 =
+ 687:         replay.session.decision_understanding?.budget.session_asked_count ?? asked1;
+ 688:       assert.equal(asked2, asked1);
+ 689:     });
+ 690: 
+ 691:     // M1-13
+ 692:     await check("M1-13 refresh/restore consistency", async () => {
+ 693:       const sid = await seedSession("13", jobDirs);
+ 694:       const seeded = await runCollectingDcTurn(await durable(sid), {
+ 695:         statement: "",
+ 696:         source_turn_id: "init_13",
+ 697:         now: NOW,
+ 698:         init_only: true,
+ 699:       });
+ 700:       await mutatePOJUSession(sid, {
+ 701:         operation_id: "op_m1_13",
+ 702:         kind: "session_patch",
+ 703:         bump_dc: true,
+ 704:         apply: () => seeded.session,
+ 705:       });
+ 706:       const out = await handleUserMessage({
+ 707:         session: await durable(sid),
+ 708:         userMessage: "\u73b0\u72b6\u662f\u671d\u4e5d\u665a\u516d\uff0c\u6ca1\u4ec0\u4e48\u6210\u957f\u3002",
+ 709:         locale: "zh-CN",
+ 710:       });
+ 711:       await mutatePOJUSession(sid, {
+ 712:         operation_id: "op_m1_13_save",
+ 713:         kind: "session_patch",
+ 714:         bump_dc: true,
+ 715:         apply: () => out,
+ 716:       });
+ 717:       const reloaded = await durable(sid);
+ 718:       assert.deepEqual(
+ 719:         reloaded.decision_understanding?.current_understanding,
+ 720:         out.decision_understanding?.current_understanding,
+
+===== 810-890 =====
+ 810:       assert.equal(/selectNextIntakeAskForSession/.test(src), false);
+ 811:       // Must NOT call collecting turn only after assistant is built (old bug).
+ 812:       assert.equal(/await runCollectingDcTurn\(sessionOut,/.test(src), false);
+ 813:       assert.equal(/await runM1ProductionPreLlmTurn\(sessionOut,/.test(src), false);
+ 814:     });
+ 815: 
+ 816:     // Interpretation unit sanity (requires authorized answer target = last_sent / plan)
+ 817:     await check("M1-interp classifier covers estimate/unknown/declined/constraint", async () => {
+ 818:       const sid = await seedSession("interp", jobDirs);
+ 819:       const init = await runCollectingDcTurn(await durable(sid), {
+ 820:         statement: "",
+ 821:         source_turn_id: "init_interp",
+ 822:         now: NOW,
+ 823:         init_only: true,
+ 824:       });
+ 825:       await mutatePOJUSession(sid, {
+ 826:         operation_id: "op_m1_interp_init",
+ 827:         kind: "session_patch",
+ 828:         bump_dc: true,
+ 829:         apply: () => init.session,
+ 830:       });
+ 831:       const s = await durable(sid);
+ 832:       assert.ok(s.adaptive_ask_plan || s.decision_understanding?.next_question_plan);
+ 833:       const e1 = interpretUserAnswer({
+ 834:         session: s,
+ 835:         statement: "\u5927\u6982\u4e09\u4e2a\u6708\u3002",
+ 836:         source_turn_id: "t1",
+ 837:       });
+ 838:       assert.equal(e1.classification, "estimate");
+ 839:       const e2 = interpretUserAnswer({
+ 840:         session: s,
+ 841:         statement: "\u4e0d\u77e5\u9053",
+ 842:         source_turn_id: "t2",
+ 843:       });
+ 844:       assert.equal(e2.classification, "unknown");
+ 845:       const e3 = interpretUserAnswer({
+ 846:         session: s,
+ 847:         statement: "\u9884\u7b97\u4e0d\u80fd\u4f4e\u4e8e\u4e24\u4e07",
+ 848:         source_turn_id: "t3",
+ 849:       });
+ 850:       assert.ok(e3.proposed_writes.some((w) => w.kind === "constraint"));
+ 851:     });
+ 852: 
+ 853:     // ---------- M2.4-R1 Cases A\u2013H ----------
+ 854:     async function withAuthorizedAsk(
+ 855:       tag: string,
+ 856:       dirs: DecisionContext["dirs"],
+ 857:       definition?: Partial<DecisionContext["definition"]>,
+ 858:     ) {
+ 859:       const sid = await seedSession(tag, dirs, definition);
+ 860:       const init = await runCollectingDcTurn(await durable(sid), {
+ 861:         statement: "",
+ 862:         source_turn_id: `init_${tag}`,
+ 863:         now: NOW,
+ 864:         init_only: true,
+ 865:       });
+ 866:       assert.ok(init.plan && init.authorized_question, `${tag} first plan`);
+ 867:       // Attach last_sent so answer targeting uses the real current question.
+ 868:       const { attachAuthorizedAssistantQuestion } = await import(
+ 869:         "../lib/poju/decision-intake/adaptive-turn"
+ 870:       );
+ 871:       const attached = attachAuthorizedAssistantQuestion(
+ 872:         init.session,
+ 873:         init.plan!,
+ 874:         `ask_${tag}`,
+ 875:       );
+ 876:       await mutatePOJUSession(sid, {
+ 877:         operation_id: `op_m24_${tag}_init`,
+ 878:         kind: "session_patch",
+ 879:         bump_dc: true,
+ 880:         apply: () => attached,
+ 881:       });
+ 882:       return { sid, plan: init.plan!, q0: init.authorized_question! };
+ 883:     }
+ 884: 
+ 885:     await check("M2.4-R1 Case A: multi-fact answer \u2192 multiple ProposedWrites; no unrelated DIR", async () => {
+ 886:       const { sid, plan } = await withAuthorizedAsk("m24a", jobDirs, {
+ 887:         decision_question: "\u8981\u4e0d\u8981\u79bb\u804c\u53bb\u521b\u4e1a\uff1f",
+ 888:       });
+ 889:       const s = await durable(sid);
+ 890:       const stmt =

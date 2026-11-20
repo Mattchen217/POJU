@@ -1,0 +1,49 @@
+M5-R1-FU4: completed reports are served only under the job's delivery authorization
+
+buildDecisionReportStatus returned a completed job's report (analysis, pages,
+result) from the committed record with no authorization check, and the start
+path reused a completed job as a free result. A legacy job without payment
+evidence, or a completed job whose charge was refused, stayed readable; a later
+re-authorization of the session (same charge_ref, abort fields cleared) could not
+be told apart from that job's own payment.
+
+decision-report-charge.ts
+- Durable per-job delivery authorization (poju-di2:delivery-auth:<job_id>):
+  { job_id, session_id, execution_generation, charge_ref, state granted|revoked }.
+  Writes are NX create, granted -> granted refresh (identical value), and
+  absent|granted -> revoked (CAS); revoked never returns to granted. Absent denies.
+- verifyDecisionReportDelivery: own record granted for this job / session /
+  generation, and the session authorized under the same charge_ref; revoked,
+  absent, mismatched, session not authorized or any read failure -> denied.
+- grantDecisionReportExecution records the delivery right before the execution
+  grant (a revoked job is never granted again).
+- sealDecisionReportDelivery (at report commit): requires a valid execution grant,
+  creates / confirms the delivery right and re-writes it and the session
+  authorization with retention + one execution window, so both outlive the report
+  record; not tied to the 2 h execution grant.
+- revokeDecisionReportDelivery; retainDecisionReportDelivery (record rebuild).
+
+decision-report-service.ts
+- status: the completed branch, the expired-job record branch and in-progress
+  analysis / pages are returned only when the job's delivery is verified; denied
+  -> status failed without analysis / pages / result (charge_refused for a
+  refusal, delivery_unconfirmed + retryable on read failure).
+- Refusal termination step 1 (revoke_grant) revokes the delivery right (durable)
+  and the execution grant; a completed job keeps its status and immutable record.
+  abort_completed is still written only after every step succeeded.
+- Start reuses a completed job only if its delivery is verified; otherwise a new
+  generation runs under the start's charge; unreadable -> 503.
+- Continue on a completed job: delivery checked first (403 / 402 / 503).
+- Abandoned start jobs are revoked too; a rebuilt report record retains the right.
+
+decision-report-api.ts: startReusedJob and continue on an expired job check the
+delivery right before reporting a completed job.
+decision-report-runner.ts: commitFinalReport seals the delivery right before the
+record commit (unconfirmed -> resumable failure; denied -> nothing committed).
+
+scripts/test-m5-r1-authorization.ts: FU4-01..08; FU3-04 now expects the job its
+late cleanup aborted (abortDecisionReportJob = refusal termination) to be denied.
+package.json: test:m5-r1-fu4.
+
+Process-memory KV and a ledger stub only: not Upstash or Supabase validation.
+No real OpenRouter, no E2E, no browser.

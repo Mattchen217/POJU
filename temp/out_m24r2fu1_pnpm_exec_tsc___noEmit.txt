@@ -1,0 +1,4 @@
+CMD=pnpm exec tsc --noEmit
+EXIT=0
+SECONDS=15.3
+

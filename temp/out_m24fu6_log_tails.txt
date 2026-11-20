@@ -1,0 +1,108 @@
+[m24a] cls=clear_answer; writes=2; dirs=DIR-OPT-CONSTRAINTS
+[m24a] applied facts=fact_m1_turn_m24a_0,fact_m1_turn_m24a_1; dc_version=2
+  PASS  M2.4-R1 Case A: multi-fact answer → multiple ProposedWrites; no unrelated DIR
+[m24b] verification_level=user_estimate; status=unverified
+  PASS  M2.4-R1 Case B: estimate → user_estimate + unverified (not confirmed)
+[m24c] unknown_status=unknown; declined_status=declined; askedBefore=1; asked2=1
+  PASS  M2.4-R1 Case C: unknown/declined statuses; no effective ask-budget charge on answer
+[m24d] old=fact_m1_turn_m24d_1_0; new=fact_m1_turn_m24d_2_0; open_conflicts=1; cls=correction
+  PASS  M2.4-R1 Case D: correction keeps old fact; open Conflict on clear clash
+[m24e] qA=关于「要不要离职去创业？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：Needed for DIR-OPT-CONSTRAINTS）; qB=关于「要不要搬去上海？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：Needed for DIR-OPT-CONSTRAINTS）; dirsA=DIR-OPT-CONSTRAINTS; dirsB=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case E: dynamic question text differs across decision gaps
+[m24f] targetDir=DIR-OPT-ON-TABLE; role0=option; need=missing_roles:status_quo; 有哪些真实可选方案; nextQ=关于「要不要换工作？」——资金、时间、责任方面有哪些具体硬限制？（这样我才能判断：Needed for DIR-OPT-CONSTRAINTS）
+  PASS  M2.4-R1 Case F: satisfied role not re-asked; next role gap
+[m24g] conflict_briefs=1; gap=conflict; clarifyQ=我发现这项信息存在两条不一致的记录：
+  PASS  M2.4-R1 Case G: open Conflict → Understanding conflict; DIR not known; ask resolves
+[m24h-t1] phase=collecting_context; dc_v=2; q=关于「要不要接受新 offer？」——有哪些真实可选方案（不要只重复决策目标）？（这样我才能判断：Needed for DIR-OPT-ON-TABLE）; llmDelta=1; roles=v1/dir/DIR-OPT-ON-TABLE/role/option
+[m24h-t2] dc_v=3; phase=collecting_context; authQ=关于「要不要接受新 offer？」——可以接受的最差结果是什么？（这样我才能判断：Needed for DIR-RISK-TOLERANCE）; llmDelta=1; prevQ_same=false; targets=DIR-OPT-ON-TABLE; write_roles=option
+[m24h-t3] dc_v=4; phase=collecting_context; authQ=关于「要不要接受新 offer？」——如果维持现状，实际成本和影响是什么？（这样我才能判断：Needed for DIR-STATUS-QUO）; llmDelta=1; dirs=DIR-STATUS-QUO; roles=v1/dir/DIR-STATUS-QUO/role/status_quo
+[m24h] path=handleUserMessage×3; versions=2->3->4; total_llm_fetches=3; q0=关于「要不要接受新 offer？」——资金、时间、责任方面有哪些具体硬限制？（这; plan0_dirs=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case H: real Agent main path ≥3 turns; Understanding advances
+[m24i] dirs=DIR-OPT-ON-TABLE; write_roles=option; need=missing_roles:status_quo,risk; 有哪些真实可选方案; next_roles=option,status_quo,risk
+  PASS  M2.4-R1-FU1 Case I: Plan-authorized option only; other roles remain needs
+[m24j] cls=invalid_input; notes=missing_authorized_fact_roles; writes=0; dc_v=1
+  PASS  M2.4-R1-FU1 Case J: historical last_sent missing fact_role_codes + mismatched plan_id → invalid
+[m24k] old=fact_m1_turn_m24k_1_0; new_facts=fact_m1_turn_m24k_2_0; open=0; cls=correction
+  PASS  M2.4-R1-FU1 Case K: correction supplement must not create Conflict
+[m24l] old=fact_m1_turn_m24l_1_0; new=fact_m1_turn_m24l_2_0; open=1; source_refs=2; cls=contradiction
+  PASS  M2.4-R1-FU1 Case L: explicit contradiction creates open Conflict
+[m24m] old=fact_m1_turn_m24m_1_0; open=0; cls=correction
+  PASS  M2.4-R1-FU1 Case M: time change must not create Conflict
+[m24ud] status=unknown; cls=contradiction; open=0; facts=2
+[m24ud] status=declined; cls=contradiction; open=0; facts=2
+  PASS  M2.4-R1-FU2 unknown/declined old fact must not create Conflict
+[m24n] cf=conflict_fact_m24n_a+fact_m24n_b_b7493bb2; facts=fact_m24n_a,fact_m24n_b; state=clarified; confirm=true; selected=fact_m24n_a; turn=eead8aa3-1d27-47b5-b978-bfefffea6961; dc=2->3; fact_count=2; briefs=0
+  PASS  M2.4-R1-FU2 Case N: explicit choice of the first fact
+[m24o] cf=conflict_fact_m24o_a+fact_m24o_b_8a67fd2e; selected=fact_m24o_b; expected_second=fact_m24o_b; first=fact_m24o_a; confirm=true; dc=2->3
+  PASS  M2.4-R1-FU2 Case O: explicit choice of the second fact
+[m24p] cf=conflict_fact_m24p_a+fact_m24p_b_2aa8e5e1; state=open; confirm=false; resolution=null; facts=2; dc=2->2; next_cf=conflict_fact_m24p_a+fact_m24p_b_2aa8e5e1
+  PASS  M2.4-R1-FU2 Case P: vague answer must not close Conflict
+[m24q] cf=conflict_fact_m24q_a+fact_m24q_b_3907160c; state=open; confirm=false; resolution=null; facts=2; dc=2->2
+  PASS  M2.4-R1-FU2 Case Q: both-inaccurate must not auto-select or close
+[m24r] turn=644f6177-287b-4e89-ad4a-ce029d23ade0; outcome=not_applied; persist=idempotent_skip; dc=2->3->3; asked=3->3; clarified=1; key_skip=idempotent_skip
+  PASS  M2.4-R1-FU2 Case R: replay same source_turn_id is idempotent
+[m24s] cf=conflict_fact_m24s_a+fact_m24s_b_522d2c03; state=unresolved_in_final; confirm=false; resolution=null; dc=3->3; target=conflict_fact_m24s_a+fact_m24s_b_522d2c03; persist=stale_conflict_target
+  PASS  M2.4-R1-FU2 Case S: stale non-open Conflict is a safe no-op
+[m24t] bound=conflict_fact_t_opt_a+fact_t_opt_b_8672f396; other=conflict_fact_t_sq_a+fact_t_sq_b_d12d09a1; chosen=clarified; other_state=open; selected=fact_t_opt_a; dc=2->3; other_facts=fact_t_sq_a,fact_t_sq_b; other_refs=2
+  PASS  M2.4-R1-FU2 Case T: other DIR Conflict is untouched
+[m24u] input=第一条不准确; cf=conflict_fact_m24u_a+fact_m24u_b_1ff08e38; state=open; confirm=false; resolution=null; selected=none; facts=2; dc=2->2; next_cf=conflict_fact_m24u_a+fact_m24u_b_1ff08e38
+  PASS  M2.4-R1-FU3 Case U: negate first fact must not close Conflict
+[m24v] input=不是第二条; cf=conflict_fact_m24v_a+fact_m24v_b_b00106db; state=open; confirm=false; resolution=null; selected=none; facts=2; dc=2->2; next_cf=conflict_fact_m24v_a+fact_m24v_b_b00106db
+  PASS  M2.4-R1-FU3 Case V: negate second fact must not close Conflict
+[m24w] input=不是第一条，而是第二条准确; cf=conflict_fact_m24w_a+fact_m24w_b_6e26effa; state=clarified; confirm=true; selected=fact_m24w_b; expected_second=fact_m24w_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU3 Case W: negate first and affirm second selects the second fact
+[m24x] input=第一条准确，但我不认可第一条; cf=conflict_fact_m24x_a+fact_m24x_b_fa4e84d7; state=open; confirm=false; resolution=null; selected=none; facts=2; dc=2->2; next_cf=conflict_fact_m24x_a+fact_m24x_b_fa4e84d7
+  PASS  M2.4-R1-FU3 Case X: conflicting affirm and negate must stay ambiguous
+[m24y] input=第一条准确; returned_state=open; returned_confirm=false; returned_resolution=null; clarified_leaked=0; dc=2->2; persist_error=persist_failed; m1_outcome=persist_failed; fail_closed=true; durable_state=open; durable_dc=2; facts=2; asked=2->2
+  PASS  M2.4-R1-FU3 Case Y: C1 persist failure returns original uncommitted session
+[m24z1] input=我不认为第一条准确; cf=conflict_fact_m24z1_a+fact_m24z1_b_5f0b7a54; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z1_a,fact_m24z1_b; dc=2->2; next_cf=conflict_fact_m24z1_a+fact_m24z1_b_5f0b7a54
+  PASS  M2.4-R1-FU4 Case Z1: scoped negate first must stay ambiguous
+[m24z2] input=我不觉得第二条准确; cf=conflict_fact_m24z2_a+fact_m24z2_b_14b3d823; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z2_a,fact_m24z2_b; dc=2->2; next_cf=conflict_fact_m24z2_a+fact_m24z2_b_14b3d823
+  PASS  M2.4-R1-FU4 Case Z2: scoped negate second must stay ambiguous
+[m24z3] input=我并不认可第一条是正确的; cf=conflict_fact_m24z3_a+fact_m24z3_b_b1458a6c; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z3_a,fact_m24z3_b; dc=2->2; next_cf=conflict_fact_m24z3_a+fact_m24z3_b_b1458a6c
+  PASS  M2.4-R1-FU4 Case Z3: 并不认可 first must stay ambiguous
+[m24z4] input=第一条并不准确; cf=conflict_fact_m24z4_a+fact_m24z4_b_ef80cd96; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z4_a,fact_m24z4_b; dc=2->2; next_cf=conflict_fact_m24z4_a+fact_m24z4_b_ef80cd96
+  PASS  M2.4-R1-FU4 Case Z4: 并不准确 must stay ambiguous
+[m24z5] input=第一条未必准确; cf=conflict_fact_m24z5_a+fact_m24z5_b_01f6514c; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z5_a,fact_m24z5_b; dc=2->2; next_cf=conflict_fact_m24z5_a+fact_m24z5_b_01f6514c
+  PASS  M2.4-R1-FU4 Case Z5: 未必准确 must stay ambiguous
+[m24z6] input=我不能确认第一条准确; cf=conflict_fact_m24z6_a+fact_m24z6_b_7dee7a81; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z6_a,fact_m24z6_b; dc=2->2; next_cf=conflict_fact_m24z6_a+fact_m24z6_b_7dee7a81
+  PASS  M2.4-R1-FU4 Case Z6: cannot confirm first must stay ambiguous
+[m24z7] input=不是第一条，而是第二条准确; cf=conflict_fact_m24z7_a+fact_m24z7_b_f6c0d118; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z7_b","source_turn_id":"9c4dd144-7658-4e17-b886-2bed8ed3a2f8","user_statement":"不是第一条，而是第二条准确"}; selected=fact_m24z7_b; expected=fact_m24z7_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU4 Case Z7: contrast affirms the second fact
+[m24z8] input=不是第二条，而是第一条准确; cf=conflict_fact_m24z8_a+fact_m24z8_b_85c28ead; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z8_a","source_turn_id":"f81cd2a1-280b-44ce-92a2-4ad6e0945716","user_statement":"不是第二条，而是第一条准确"}; selected=fact_m24z8_a; expected=fact_m24z8_a; facts=2; dc=2->3
+  PASS  M2.4-R1-FU4 Case Z8: contrast affirms the first fact
+[m24z9] input=第一条准确，但我不认可第一条; cf=conflict_fact_m24z9_a+fact_m24z9_b_c9ee81b3; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z9_a,fact_m24z9_b; dc=2->2; next_cf=conflict_fact_m24z9_a+fact_m24z9_b_c9ee81b3
+  PASS  M2.4-R1-FU4 Case Z9: affirm then negate same option stays ambiguous
+[m24z10] input=第一条准确，第二条也准确; cf=conflict_fact_m24z10_a+fact_m24z10_b_6be05023; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z10_a,fact_m24z10_b; dc=2->2; next_cf=conflict_fact_m24z10_a+fact_m24z10_b_6be05023
+  PASS  M2.4-R1-FU4 Case Z10: affirming both options stays ambiguous
+[m24z11] input=第一条不够准确; cf=conflict_fact_m24z11_a+fact_m24z11_b_ab97b6a4; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z11_a,fact_m24z11_b; dc=2->2; next_cf=conflict_fact_m24z11_a+fact_m24z11_b_ab97b6a4
+  PASS  M2.4-R1-FU5 Case Z11: 不够准确 first must stay ambiguous
+[m24z12] input=第二条不够准确; cf=conflict_fact_m24z12_a+fact_m24z12_b_d2e731e4; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z12_a,fact_m24z12_b; dc=2->2; next_cf=conflict_fact_m24z12_a+fact_m24z12_b_d2e731e4
+  PASS  M2.4-R1-FU5 Case Z12: 不够准确 second must stay ambiguous
+[m24z13] input=第一条不算准确; cf=conflict_fact_m24z13_a+fact_m24z13_b_45217470; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z13_a,fact_m24z13_b; dc=2->2; next_cf=conflict_fact_m24z13_a+fact_m24z13_b_45217470
+  PASS  M2.4-R1-FU5 Case Z13: 不算准确 first must stay ambiguous
+[m24z14] input=第一条准确度不高; cf=conflict_fact_m24z14_a+fact_m24z14_b_30f6181c; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z14_a,fact_m24z14_b; dc=2->2; next_cf=conflict_fact_m24z14_a+fact_m24z14_b_30f6181c
+  PASS  M2.4-R1-FU5 Case Z14: 准确度不高 first must stay ambiguous
+[m24z15] input=第二条准确性不足; cf=conflict_fact_m24z15_a+fact_m24z15_b_a335a1d6; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z15_a,fact_m24z15_b; dc=2->2; next_cf=conflict_fact_m24z15_a+fact_m24z15_b_a335a1d6
+  PASS  M2.4-R1-FU5 Case Z15: 准确性不足 second must stay ambiguous
+[m24z16] input=第一条不完全准确; cf=conflict_fact_m24z16_a+fact_m24z16_b_469cd727; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z16_a,fact_m24z16_b; dc=2->2; next_cf=conflict_fact_m24z16_a+fact_m24z16_b_469cd727
+  PASS  M2.4-R1-FU5 Case Z16: 不完全准确 first must stay ambiguous
+[m24z17] input=第一条不见得准确; cf=conflict_fact_m24z17_a+fact_m24z17_b_7b952880; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z17_a,fact_m24z17_b; dc=2->2; next_cf=conflict_fact_m24z17_a+fact_m24z17_b_7b952880
+  PASS  M2.4-R1-FU5 Case Z17: 不见得准确 first must stay ambiguous
+[m24z18] input=第一条不符合实际; cf=conflict_fact_m24z18_a+fact_m24z18_b_b5bd98ea; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z18_a,fact_m24z18_b; dc=2->2; next_cf=conflict_fact_m24z18_a+fact_m24z18_b_b5bd98ea
+  PASS  M2.4-R1-FU5 Case Z18: 不符合实际 first must stay ambiguous
+[m24z19] input=第一条不够准确，但第二条准确; cf=conflict_fact_m24z19_a+fact_m24z19_b_9c4733eb; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z19_b","source_turn_id":"d8c2270c-ccd7-4d7d-a974-dad3e4c239c5","user_statement":"第一条不够准确，但第二条准确"}; selected=fact_m24z19_b; expected=fact_m24z19_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU5 Case Z19: insufficient first and affirmed second selects the second fact
+[m24z20] input=第二条不算准确，而是第一条准确; cf=conflict_fact_m24z20_a+fact_m24z20_b_1d0063b4; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z20_a","source_turn_id":"5d79218d-0528-4aab-93f7-b1c8dbd925df","user_statement":"第二条不算准确，而是第一条准确"}; selected=fact_m24z20_a; expected=fact_m24z20_a; facts=2; dc=2->3
+  PASS  M2.4-R1-FU5 Case Z20: insufficient second and affirmed first selects the first fact
+[m24z21] input=第一条准确率不高; cf=conflict_fact_m24z21_a+fact_m24z21_b_dfd37493; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z21_a,fact_m24z21_b; dc=2->2; next_cf=conflict_fact_m24z21_a+fact_m24z21_b_dfd37493
+  PASS  M2.4-R1-FU6 Case Z21: 准确率不高 first must stay ambiguous
+[m24z22] input=第二条准确率偏低; cf=conflict_fact_m24z22_a+fact_m24z22_b_08ebe8b9; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z22_a,fact_m24z22_b; dc=2->2; next_cf=conflict_fact_m24z22_a+fact_m24z22_b_08ebe8b9
+  PASS  M2.4-R1-FU6 Case Z22: 准确率偏低 second must stay ambiguous
+[m24z23] input=第一条正确率不高; cf=conflict_fact_m24z23_a+fact_m24z23_b_f0bff2ee; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z23_a,fact_m24z23_b; dc=2->2; next_cf=conflict_fact_m24z23_a+fact_m24z23_b_f0bff2ee
+  PASS  M2.4-R1-FU6 Case Z23: 正确率不高 first must stay ambiguous
+[m24z24] input=第二条正确率不足; cf=conflict_fact_m24z24_a+fact_m24z24_b_05813025; state=open; confirm=false; resolution=null; selected=none; facts=2; ids=fact_m24z24_a,fact_m24z24_b; dc=2->2; next_cf=conflict_fact_m24z24_a+fact_m24z24_b_05813025
+  PASS  M2.4-R1-FU6 Case Z24: 正确率不足 second must stay ambiguous
+[m24z25] input=第一条准确率不高，但第二条准确; cf=conflict_fact_m24z25_a+fact_m24z25_b_48c30944; state=clarified; confirm=true; resolution={"selected_fact_id":"fact_m24z25_b","source_turn_id":"66a09000-ebba-4744-b849-e5a5a50404b5","user_statement":"第一条准确率不高，但第二条准确"}; selected=fact_m24z25_b; expected=fact_m24z25_b; facts=2; dc=2->3
+  PASS  M2.4-R1-FU6 Case Z25: accuracy-rate insufficient first and affirmed second selects the second fact
+M1 done. PASS=67 FAIL=0

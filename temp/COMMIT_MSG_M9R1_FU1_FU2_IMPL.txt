@@ -1,0 +1,11 @@
+Fix M9-R1-FU1-FU2 ledger integrity atomic binding
+
+Close the production Redis intake CAS gap found in the M9-R1-FU1 independent review. TypeScript now validates every Ledger Entry consumed by the Intake Freeze probe with the existing canonicalHash implementation, plus required schema fields, session identity, commit_version, previous_commit_version, previous_entry_hash, change_type, and dc_status. A corrupted entry is never treated as a valid non-Freeze head.
+
+The Redis path no longer uses a GET-hash-EVAL window. After the canonical hashes are validated, the exact raw ledger values and probe metadata are passed into SESSION_AUTHORITY_CAS_LUA. Lua compares live Redis GET bytes against those exact raw values. If a validated value changed, or a new entry appeared after the snapshot, the intake commit is rejected with ledger_snapshot_changed. Lua still does not recompute JavaScript canonicalHash or entry_hash.
+
+The validated snapshot covers the chain from genesis through the effective head, not only the head-hint entry. A missing intermediate, invalid hash, invalid chain, concealing hint, or probe-limit exhaustion fail-closes. The head hint remains a hint, not unquestioned authority. NX-write semantics and the ledger schema are unchanged.
+
+Result codes stay compatible and add ledger_snapshot_changed (Lua 10). Integrity failures never become ordinary revision conflict, a missing ledger, "not frozen," or a successful intake. commitAuthoritativeSessionUpdate maps the new reason to an explicit recoverable Session Authority error.
+
+Adds pnpm test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding covering cases A-R on the MemoryKv production adapter and a clearly labeled Redis eval contract harness that does not execute Lua. Existing M9, M9-R1, and FU1 fixtures now write canonical ledger hashes so the strengthened TypeScript path remains covered without weakening those assertions.

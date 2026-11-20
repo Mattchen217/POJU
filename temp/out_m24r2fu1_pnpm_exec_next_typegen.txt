@@ -1,0 +1,6 @@
+CMD=pnpm exec next typegen
+EXIT=0
+SECONDS=1.5
+Generating route types...
+✓ Types generated successfully
+

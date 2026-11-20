@@ -1,0 +1,49 @@
+
+> pojulife@0.1.0 test:decision-context-phase2 D:\POJU\pojulife
+> tsx scripts/test-decision-context-phase2.ts
+
+node.exe : [terms] pojuTermByTraditional("鎹㈣繍") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespac
+e })
+所在位置 C:\Users\13306\AppData\Roaming\npm\pnpm.ps1:24 字符: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([terms] pojuTer... { namespace }):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[terms] pojuTermByTraditional("璐典汉杩?) called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("鍛借繍") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("鍛藉畾") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("鍛界悊") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("瀹垮懡") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("澶╂敞瀹?) called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("绌轰骸") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("榄佺健") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("鍗佹伓澶ц触") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("瀛ら妇") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("瀛ら妇鐓?) called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("闃撮槼宸敊") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("闃村樊闃抽敊") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("鍏冭景") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("鍏鏃?) called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("澶ц€?) called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("灏忚€?) called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("浜旈") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("涓ч棬") called without namespace 鈥?migrate to resolvePojuTerm(input, { namespace })
+decision-context phase2
+  PASS  C1 successful commit writes DC + durable key + control plane
+  PASS  C1 failure rolls back memory; blob unchanged; no durable key
+  PASS  control-plane missing fails before blob write and rolls back
+  PASS  durable idempotency survives reload (process registry cleared)
+  PASS  restore prefers persisted DC over agent_v2 buffers
+[poju] DC post-commit side effects failed (core kept): Error: archive side effect failed
+    at Object.afterCommit (D:\POJU\pojulife\scripts\test-decision-context-phase2.ts:130:15)
+    at afterCommit (D:\POJU\pojulife\scripts\test-decision-context-phase2.ts:398:33)
+    at commitDecisionContextChange (D:\POJU\pojulife\lib\poju\session-manager.ts:424:11)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-decision-context-phase2.ts:394:20)
+    at async main (D:\POJU\pojulife\scripts\test-decision-context-phase2.ts:378:3)
+  PASS  post-commit side effect failure does NOT roll back core
+  PASS  confirmSessionAfterCorePersist adopts only after core write
+  PASS  cross-session idempotency isolation: same op_1 does not skip other session
+  PASS  mergeDcPersistSliceIntoSession does not elevate buffers to DC
+
+phase2: 9 passed

@@ -7,7 +7,10 @@ import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
-import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
+import {
+  FixedEasternOsWelcome,
+  MatrixNarrativeReply,
+} from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { ToolSuggestionCard } from "@/components/poju/ToolSuggestionCard";
 import "@/styles/poju-energy-matrix.css";
@@ -82,18 +85,7 @@ export const MessageBubble = memo(function MessageBubble({
     );
   }
   if (isWelcomePanel) {
-    const paragraphs = splitWelcomeParagraphs(message.content);
-    return (
-      <div className="pchat__msg pchat__msg--ai">
-        <div className="pchat__panel">
-          <p className="pchat__welcome-title">Welcome to Eastern OS</p>
-          {paragraphs.map((p) => (
-            <p key={p}>{p}</p>
-          ))}
-          <p>Type below to begin, or tap the microphone to speak.</p>
-        </div>
-      </div>
-    );
+    return <FixedEasternOsWelcome locale={locale} />;
   }
 
   if (message.role === "assistant" && message.meta?.contains_delivery) {
@@ -172,16 +164,6 @@ function isAssistantWelcomeMessage(message: POJUMessage): boolean {
   if (message.role !== "assistant") return false;
   const text = message.content.toLowerCase();
   return text.includes("this is a focused space for one question") || text.includes("这里只围绕你今天带来的那一个核心问题");
-}
-
-function splitWelcomeParagraphs(content: string): string[] {
-  const blocks = content
-    .split(/\n\s*\n/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .filter((s) => !/^welcome to poju\.?$/i.test(s));
-  if (blocks.length >= 3) return blocks.slice(0, 3);
-  return blocks;
 }
 
 function renderPlainContent(content: string) {

@@ -1,0 +1,449 @@
+START intake-r6-agent-collecting-failure 2026-11-19 01:10:52 -0600
+CMD C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec tsx scripts/test-intake-r6-agent-collecting-failure.ts
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+intake-r6-agent-collecting-failure (S8-C)
+
+== H. runCollectingDcTurn (real IDB + C1) ==
+  FAIL  H1 persist OK + Ask OK 閳?committed DC + fresh plan adopted; IDB == memory DC; input Session not mutated
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'answer_interpretation_failed'
+- 'dc_committed'
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:217:12)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:208:3) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'answer_interpretation_failed',
+  expected: 'dc_committed',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  H2 DC persist fails (IDB tx abort) 閳?uncommitted DC not adopted, no plan; Session + IDB unchanged; retry commits (not idempotent_skip)
+AssertionError [ERR_ASSERTION]: storage fault must hit the C1 write exactly once
+
+0 !== 1
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:243:12)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:231:3) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  H3 Ask fails after DC commit 閳?committed DC kept (== IDB), no new plan (prior plan untouched)
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:274:12)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:264:3) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  H4 exception inside persist (DC mapper throws) 閳?Session returned as-is, IDB unchanged, no key
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(fault.hits() >= 1)
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:302:12)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:286:3) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+  FAIL  H5 mapper skip (turn already mapped) 閳?not_applied; Ask still plans on unchanged DC (pre-S8 behavior)
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'answer_interpretation_failed'
+- 'dc_committed'
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:318:12)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:311:3) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'answer_interpretation_failed',
+  expected: 'dc_committed',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+== P. handleUserMessage 閳?runCollectingDcTurn (fetch stub, no network) ==
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4013569c-6dd6-4b8d-890e-319777fc42a7","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_failed call_failed:unexpected fetch in test: /api/poju/answer-interpretation
+  FAIL  P1 normal turn 閳?DC committed via C1 (key present), fresh plan; generic Chat LLM is not fetched
+AssertionError [ERR_ASSERTION]: authorized M1 question must not call the generic Chat LLM
++ actual - expected
+
++ [
++   '/api/poju/answer-interpretation'
++ ]
+- []
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:362:14)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:357:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"759583a5-0118-4b0b-a18a-f0752b859f94","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_failed call_failed:unexpected fetch in test: /api/poju/answer-interpretation
+  FAIL  P2 C1 write aborted 閳?returned Session keeps pre-turn DC + plan; UI savePOJUSession writes no uncommitted DC
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:384:14)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:378:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5696699f-3f6b-44c6-91e2-cb7d366f7b8f","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_failed call_failed:unexpected fetch in test: /api/poju/answer-interpretation
+  FAIL  P3 Ask fails after commit 閳?returned Session has committed DC (== IDB), prior plan untouched
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(catalogHits >= 1)
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:411:14)
+    at async check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:5)
+    at async main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:405:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+== S. Static wiring ==
+  FAIL  S1 agent.ts reaches collecting persist / Ask only through runCollectingDcTurn (M1: before LLM)
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /import \{ runCollectingDcTurn \} from "@\/lib\/poju\/collecting-dc-turn";/. Input:
+
+'import { safeRandomUUID } from "@/lib/client/safe-crypto";\n' +
+  'import { loadSessionProfileBundle, resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";\n' +
+  'import { logBaseAnalysisPayload } from "@/lib/poju/base-analysis-diagnostics";\n' +
+  'import {\n' +
+  '  runCollectingDcTurn,\n' +
+  '  runM1ProductionPreLlmTurn,\n' +
+  '} from "@/lib/poju/collecting-dc-turn";\n' +
+  'import type {\n' +
+  '  AdaptiveTurnTestHooks,\n' +
+  '} from "@/lib/poju/decision-intake/adaptive-turn";\n' +
+  'import {\n' +
+  '  confirmUnderstandingAndFreeze,\n' +
+  '  isDi2FinalUnderstandingSupplementTurn,\n' +
+  '  isFinalUnderstandingAddMoreText,\n' +
+  '  isFinalUnderstandingConfirmText,\n' +
+  '  sessionReadyForFinalConfirm,\n' +
+  '  sessionEligibleForFinalConfirm,\n' +
+  '} from "@/lib/poju/decision-intake/confirm-and-freeze";\n' +
+  'import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";\n' +
+  'import type { AssistantHistoryAttestation, POJUAction, POJUSessionState, POJUMessage, ToolSuggestionPayload } from "@/lib/poju/types";\n' +
+  'import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";\n' +
+  'import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";\n' +
+  'import {\n' +
+  '  applyPhaseTransition,\n' +
+  '  calculateCompleteness,\n' +
+  '  createInitialAgentState,\n' +
+  '  getUnderstandingMissingFields,\n' +
+  '  isUnderstandingComplete,\n' +
+  '  isUnderstandingFieldFilled,\n' +
+  '  mergeBreakthroughCoreUpdates,\n' +
+  '  normalizeAgentPhase,\n' +
+  '  type AgentPhase,\n' +
+  '  type ContextSummary,\n' +
+  '  type POJUAgentState,\n' +
+  '} from "@/lib/poju/agent-state";\n' +
+  'import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";\n' +
+  'import {\n' +
+  '  advanceStateMachine,\n' +
+  '  buildActiveQuestionState,\n' +
+  '  extractModelTurnSignals,\n' +
+  '  type AdvanceResult,\n' +
+  '} from "@/lib/poju/state-machine";\n' +
+  'import {\n' +
+  '  countSubstantiveOpeningTurns as countSubstantiveOpeningTurnsGate,\n' +
+  '  isMinimumInteractionGateMet,\n' +
+  '} from "@/lib/poju/opening-interaction-gate";\n' +
+  'import {\n' +
+  '  clampQuestionSignals,\n' +
+  '  ensureCollectingCatchPrefix,\n' +
+  '  nextEscalationStage,\n' +
+  '  TERMINATE_REFUND_WIPE_MS,\n' +
+  '  userPickedProvidedOption,\n' +
+  '  type QuestionStatus,\n' +
+  '  type SessionAction,\n' +
+  '} from "@/lib/poju/question-status";\n' +
+  'import { countUserTurns } from "@/lib/poju/summary-readiness";\n' +
+  'import {\n' +
+  '  applyCollectingTurnCounters,\n' +
+  '  evaluateStopLoss,\n' +
+  '  parseCollectionProgress,\n' +
+  '} from "@/lib/poju/collection-progress";\n' +
+  'import { ensureSessionCycles } from "@/lib/poju/cycle-manager";\n' +
+  'import { finalizeToolInjectionTurn, prepareToolInjectionTurn } from "@/lib/poju/prepare-tool-injection-turn";\n' +
+  'import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";\n' +
+  'import {\n' +
+  '  extractAnchoredFactIdsFromAssistant,\n' +
+  '  mergeAnchoredFactIds,\n' +
+  '} from "@/lib/poju/anchored-fact-tracking";\n' +
+  'import {\n' +
+  '  isPojuEmptyGenerationMessage,\n' +
+  '  isPojuFailurePlaceholderMessage,\n' +
+  '  isPojuInfrastructureFailureMessage,\n' +
+  '} from "@/lib/llm/poju-service-busy-message";\n' +
+  'import {\n' +
+  '  appendForwardMove,\n' +
+  '  hasQuestionCue,\n' +
+  '} from "@/lib/poju/collecting-focus-reply";\n' +
+  'import {\n' +
+  '  openingReplyIsComplete,\n' +
+  '  resolveOpeningTurnReply,\n' +
+  '} from "@/lib/poju/phases/opening/display";\n' +
+  'import {\n' +
+  '  applyUnderstandingGateSupplement,\n' +
+  '  handleRetryOpeningUnderstanding,\n' +
+  '  isOpeningControlPhase,\n' +
+  '} from "@/lib/poju/phases/opening/control";\n' +
+  'import {\n' +
+  '  extractUsedMetaphorsFromAssistant,\n' +
+  '  mergeUsedMetaphors,\n' +
+  '} from "@/lib/poju/reply-metaphor-extract";\n' +
+  'import {\n' +
+  '  extractQuestionCategory,\n' +
+  '  mergeContextUpdates,\n' +
+  '  recordToLLMContextUpdates,\n' +
+  '} from "@/lib/poju/context-extractor";\n' +
+  'import {\n' +
+  '  classifyLanguageSwitchRequest,\n' +
+  '  parseAppLocale,\n' +
+  '} from "@/lib/prompts/language-directive";\n' +
+  'import { nextLockedOutputLocale, resolvePivotSessionLang } from "@/lib/poju/session-lang";\n' +
+  'import {\n' +
+  '  applyAgendaStatusUpdates,\n' +
+  '  captureAgendaAnswer,\n' +
+  '  extractAgendaStatusUpdates,\n' +
+  '  getNextAgendaFocus,\n' +
+  '  parseInvestigationAgenda,\n' +
+  '  selectCurrentAgendaFocus,\n' +
+  '  stripAgendaFieldsFromContextUpdates,\n' +
+  '} from "@/lib/poju/investigation-agenda";\n' +
+  'import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";\n' +
+  'import type { UserProfile } from "@/lib/profile/types";\n' +
+  'import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";\n' +
+  'import { bindStoredAssistantAttestation } from "@/lib/poju/shared/assistant-history-provenance";\n' +
+  'import { sanitizeReplyOptions } from "@/lib/poju/reply-options";\n' +
+  'import {\n' +
+  '  buildDyadGateTurn,\n' +
+  '  resolveDyadSpecificOther,\n' +
+  '  shouldPresentDyadGate,\n' +
+  '  shouldResumeUnderstandingConfirmAfterDyad,\n' +
+  '} from "@/lib/poju/dyad-compat";\n' +
+  'import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";\n' +
+  'import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";\n' +
+  'import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";\n' +
+  'import { resolveAskedAgendaItem } from "@/lib/poju/agenda-focus-match";\n' +
+  'import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";\n' +
+  'import { getLocalIntakeTerminalReason } from "@/lib/poju/intake-terminal";\n' +
+  '\n' +
+  'export { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding, isOpeningControlPhase };\n' +
+  '/** Segment-2 / synthesis handlers live in phases/segment2 — prefer phase-router. */\n' +
+  'export {\n' +
+  '  startSegment2AfterGateConfirm as handleUnderstandingGateActionAsync,\n' +
+  '  startSegment2Regenerate as handleRegenerateBreakthroughCoreAsync,\n' +
+  '  startSynthesisAfterGateConfirm as handleDeliveryGateActionAsync,\n' +
+  '} from "@/lib/poju/phases/segment2/control";\n' +
+  '\n' +
+  '\n' +
+  'const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;\n' +
+  '/** Session uses default `userProfiles` slot from device. */\n' +
+  'const SESSION_PROFILE_SLOT = "active_user_profile";\n' +
+  '\n' +
+  'function resolveSelectedProfileId(session: POJUSessionState, agent: POJUAgentState): string | null {\n' +
+  '  const sid = session.selected_stored_profile_id?.trim();\n' +
+  '  if (sid) return sid;\n' +
+  '  if (session.has_profile) return agent.selected_profile_id ?? SESSION_PROFILE_SLOT;\n' +
+  '  return null;\n' +
+  '}\n' +
+  '\n' +
+  'export interface HandleInput {\n' +
+  '  session: POJUSessionState;\n' +
+  '  userMessage: string;\n' +
+  '  locale: string;\n' +
+  '  /** Session already includes this user turn (optimistic UI); skip rule re-check and duplicate append. */\n' +
+  '  userAlreadyAppended?: boolean;\n' +
+  '  signal?: AbortSignal;\n' +
+  '  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;\n' +
+  '  /**\n' +
+  '   * Ops/LAB: call `callPOJULLM` in-process with provided base_analysis (no IndexedDB / browser fetch).\n' +
+  '   * Production chat must leave this unset.\n' +
+  '   */\n' +
+  '  server_invoke?: {\n' +
+  '    base_analysis: unknown | null;\n' +
+  '    profile?: import("@/lib/profile/types").UserProfile | null;\n' +
+  '    lab_prompt_capture?: import("@/lib/llm/phases/types").PhaseLLMInput["lab_prompt_capture"];\n' +
+  '    /** Skip confirmation→delivery pipeline (LAB Stage1–3). */\n' +
+  '    skip_delivery_pipeline?: boolean;\n' +
+  '  };\n' +
+  '  /** @internal Test-only fault injection for M1 adaptive-loop integration tests. */\n' +
+  '  __testOnlyM1Hooks?: AdaptiveTurnTestHooks;\n' +
+  '}\n' +
+  '\n' +
+  'export type ActionUpdateInput = {\n' +
+  '  session: POJUSessionState;\n' +
+  '  action_id: string;\n' +
+  '  status: POJUAction["status"];\n' +
+  '  feedback?: string;\n' +
+  '  locale: string;\n' +
+  '  signal?: AbortSignal;\n' +
+  '  server_invoke?: HandleInput["server_invoke"];\n' +
+  '  __testOnlyM1Hooks?: AdaptiveTurnTestHooks;\n' +
+  '};\n' +
+  '\n' +
+  'type InternalTurn =\n' +
+  '  | { kind: "user" }\n' +
+  '  | { kind: "action_update"; action_id: string; status: POJUAction["status"]; feedback?: string };\n' +
+  '\n' +
+  '\n' +
+  'type LLMApiPayload = {\n' +
+  '  response?: string;\n' +
+  '  reply?: string;\n' +
+  '  model?: string;\n' +
+  '  tokens_used?: number;\n' +
+  '  user_intent?: POJUMessage["meta"] extends { user_intent?: infer U } ? U : string;\n' +
+  '  current_state?: string;\n' +
+  '  action_requested?: string;\n' +
+  '  topic_drift_detected?: boolean;\n' +
+  '  topic_drift_signal?: "none" | "edge" | "off_topic";\n' +
+  '  drift_reason?: string | null;\n' +
+  '  should_show_new_session_button?: boolean;\n' +
+  '  context_updates?: Record<string, unknown>;\n' +
+  '  contains_delivery?: boolean;\n' +
+  '  main_delivery?: unknown;\n' +
+  '  new_actions?: unknown[];\n' +
+  '  error?: string;\n' +
+  '  agent_suggested_phase?: string;\n' +
+  '  current_summary?: ContextSummary | null;\n' +
+  '  question_category?: string | null;\n' +
+  '  thinking_process?: string;\n' +
+  '  tool_suggestion?: ToolSuggestionPayload | null;\n' +
+  '  start_new_cycle?: boolean;\n' +
+  '  new_cycle_question?: string | null;\n' +
+  '  collection_progress?: "advancing" | "stalled" | "resistant" | null;\n' +
+  '  stall_offer?: boolean;\n' +
+  '  investigation_agenda?: unknown;\n' +
+  '  suggest_refund?: boolean;\n' +
+  '  scope_signal?: "in_scope" | "unclear" | "out_of_scope" | null;\n' +
+  '  attachments_unlocked?: boolean;\n' +
+  '  locked_provider?: string;\n' +
+  '  understanding?: { sufficient: boolean; missing: string } | null;\n' +
+  '  understanding_sufficient?: boolean;\n' +
+  '  understanding_generation_failed?: boolean;\n' +
+  '  agenda_updates?: { completed_in_this_turn?: string[] };\n' +
+  '  reply_quality?: "clear" | "vague";\n' +
+  '  question_status?: QuestionStatus;\n' +
+  '  session_action?: SessionAction | null;\n' +
+  '  options?: string[];\n' +
+  '  user_confirms_delivery?: boolean;\n' +
+  '  breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;\n' +
+  '  action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];\n' +
+  '  conversion_envelope_failed?: boolean;\n' +
+  '  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;\n' +
+  '  assistant_history_attestation?: AssistantHistoryAttestation;\n' +
+  '};\n' +
+  '\n' +
+  '/** Append-only M1 audit fields that must survive every adopt and fail-closed return. */\n' +
+  'function m1AuditFields(m1: POJUSessionState, fallback: POJUSessionState) {\n' +
+  '  return {\n' +
+  '    intake_answer_sources: m1.intake_answer_sources ?? fallback.intake_answer_sources,\n' +
+  '    decision_blueprint_history:\n' +
+  '      m1.decision_blueprint_history ?? fallback.decision_blueprint_history,\n' +
+  '    blueprint_change_log: m1.blueprint_change_log ?? fallback.blueprint_change_log,\n' +
+  '    intake_protection: m1.intake_protection ?? fallback.intake_protection,\n' +
+  '    personal_analysis_profile:\n' +
+  '      m1.personal_analysis_profile ?? fallback.personal_analysis_profile,\n' +
+  '  };\n' +
+  '}\n' +
+  '\n' +
+  'function ensureAgentV2(session: POJUSessionState): POJUAgentState {\n' +
+  '  const merge = (base: POJUAgentState): POJUAgentState => {\n' +
+  '    const defaults = createInitialAgentState({\n' +
+  '      original_question: base.original_question || session.original_question,\n' +
+  '      selected_profile_id: base.selected_profile_id ?? session.selected_stored_profile_id,\n' +
+  '    });\n' +
+  '    const phase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;\n' +
+  '    return {\n' +
+  '      ...defaults,\n' +
+  '      ...base,\n' +
+  '      current_phase: phase,\n'... 94560 more characters
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:426:12)
+    at check (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:45:11)
+    at main (D:\POJU\pojulife\scripts\test-intake-r6-agent-collecting-failure.ts:424:9) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'import { safeRandomUUID } from "@/lib/client/safe-crypto";\n' +
+    'import { loadSessionProfileBundle, resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";\n' +
+    'import { logBaseAnalysisPayload } from "@/lib/poju/base-analysis-diagnostics";\n' +
+    'import {\n' +
+    '  runCollectingDcTurn,\n' +
+    '  runM1ProductionPreLlmTurn,\n' +
+    '} from "@/lib/poju/collecting-dc-turn";\n' +
+    'import type {\n' +
+    '  AdaptiveTurnTestHooks,\n' +
+    '} from "@/lib/poju/decision-intake/adaptive-turn";\n' +
+    '...',
+  expected: /import \{ runCollectingDcTurn \} from "@\/lib\/poju\/collecting-dc-turn";/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+S8 agent-collecting-failure done. PASS=0 FAIL=9
+
+END intake-r6-agent-collecting-failure 2026-11-19 01:10:54 -0600 exit=1 elapsed_s=2.9

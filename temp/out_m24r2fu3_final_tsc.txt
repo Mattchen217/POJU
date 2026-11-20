@@ -1,0 +1,2 @@
+# SHA 1ee64f13f3bf8dad8f1aac297d0167edffe9bf1a
+# CMD C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec tsc --noEmit

@@ -1,0 +1,27 @@
+6|runM1ProductionPreLlmTurn,
+12|confirmUnderstandingAndFreeze,
+13|isDi2FinalUnderstandingSupplementTurn,
+14|isFinalUnderstandingAddMoreText,
+15|isFinalUnderstandingConfirmText,
+16|sessionReadyForFinalConfirm,
+1091|const confirmResult = await confirmUnderstandingAndFreeze({
+1162|isDi2FinalUnderstandingSupplementTurn(sessionForLlm, userMessage)
+1214|m1CollectingTurn = await runM1ProductionPreLlmTurn(sessionForLlm, {
+1291|!m1CollectingTurn.authorized_question &&
+1344|decision_understanding:
+1345|m1CollectingTurn.session.decision_understanding ??
+1346|blockedSession.decision_understanding,
+1365|!m1CollectingTurn.authorized_question &&
+1381|m1_outcome: "no_authorized_question",
+1407|decision_understanding: sessionForLlm.decision_understanding,
+1472|decision_understanding: m1CollectingTurn.session.decision_understanding,
+1579|(!m1CollectingTurn!.authorized_question &&
+1919|if (m1CollectingTurn?.plan && m1CollectingTurn.authorized_question) {
+1944|decision_understanding:
+1945|m1CollectingTurn.session.decision_understanding ??
+1946|sessionOut.decision_understanding,
+1977|!m1CollectingTurn.authorized_question &&
+1982|!m1CollectingTurn.authorized_question &&
+1999|decision_understanding:
+2000|m1CollectingTurn.session.decision_understanding ??
+2001|sessionOut.decision_understanding,

@@ -1,0 +1,3 @@
+Wire POJU browser DI2 turns through server-authoritative chat
+
+Submit UI turns to /api/poju/chat, sync DC ledger in-process on the server, and retire the public answer-interpretation OpenRouter proxy.

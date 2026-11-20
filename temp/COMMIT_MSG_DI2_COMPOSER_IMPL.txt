@@ -1,0 +1,13 @@
+Land DI2 Understanding composer-top box and confirm/supplement flow
+
+Move the unified Decision Understanding information box out of the chat
+message list and into a composer-top slot fixed above the input. Keep the
+three authorized quick replies inside the composer unit.
+
+Route DI2 final-confirm chips through the existing confirm-and-freeze path
+instead of legacy synthesis, treat official confirm labels as confirm text,
+and return non-confirm supplement turns to the Adaptive Question Engine
+without dropping confirmed Decision Context facts. Hide the Q&A surface
+while a Freeze-bound report is in progress or already delivered.
+
+This is product-flow wiring, not a DI2 or M9 acceptance declaration.

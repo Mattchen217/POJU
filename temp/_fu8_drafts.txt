@@ -1,0 +1,2695 @@
+count 35
+==================== DRAFT 1 line 2775 ====================
+2730:        statement: "",
+2731:        source_turn_id: `init_${tag}`,
+2732:        now: NOW,
+2733:        init_only: true,
+2734:      });
+2735:      assert.ok(seeded.plan && seeded.authorized_question, `${tag} first plan required`);
+2736:      const { attachAuthorizedAssistantQuestion } = await import(
+2737:        "../lib/poju/decision-intake/adaptive-turn"
+2738:      );
+2739:      const attached = attachAuthorizedAssistantQuestion(
+2740:        seeded.session,
+2741:        seeded.plan!,
+2742:        `ask_${tag}`,
+2743:      );
+2744:      await mutatePOJUSession(sid, {
+2745:        operation_id: `op_${tag}_init`,
+2746:        kind: "session_patch",
+2747:        bump_dc: true,
+2748:        apply: () => attached,
+2749:      });
+2750:      return durable(sid);
+2751:    }
+2752:
+2753:    await check("M2.4-R2 Case A: three consecutive real handleUserMessage rounds", async () => {
+2754:      let s = await seedAnswerReadySession("m24r2a");
+2755:      const logs: string[] = [];
+2756:
+2757:      const hookFor = (draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft) => ({
+2758:        interpretAnswerModel: () => draft,
+2759:      });
+2760:
+2761:      // Round 1: two explicit facts
+2762:      const auth1 = authorizedFrom(s);
+2763:      assert.ok(auth1.dir_ids.length >= 1 && auth1.fact_roles.length >= 1, "round1 must have authorized targets");
+2764:      const v0 = s.decision_context!.version;
+2765:      const asked0 = s.decision_understanding?.budget.session_asked_count ?? 0;
+2766:      fetchCalls.length = 0;
+2767:      stubResponse = "R2A FREEFORM ROUND 1";
+2768:      const r1Text = "我目前仍在职，月薪三万。另外家里有一个孩子。";
+2769:      const out1 = await handleUserMessage({
+2770:        session: s,
+2771:        userMessage: r1Text,
+2772:        locale: "zh-CN",
+2773:        __testOnlyM1Hooks: hookFor({
+2774:          classification: "clear_answer",
+2775:          extracted_items: [
+2776:            {
+2777:              text: "我目前仍在职，月薪三万。",
+2778:              semantic_kind: "reality_fact",
+2779:              role_hint: null,
+2780:              role_code_hint: auth1.fact_role_codes[0] ?? null,
+2781:              certainty: "explicit",
+2782:            },
+2783:            {
+2784:              text: "家里有一个孩子。",
+2785:              semantic_kind: "reality_fact",
+2786:              role_hint: null,
+2787:              role_code_hint: auth1.fact_role_codes[0] ?? null,
+2788:              certainty: "explicit",
+2789:            },
+2790:          ],
+2791:          unresolved_aspects: [],
+2792:          explanation: "two explicit facts",
+2793:        }),
+2794:      });
+2795:      await mutatePOJUSession(s.session_id, {
+2796:        operation_id: "op_m24r2a_r1",
+2797:        kind: "session_patch",
+2798:        bump_dc: true,
+2799:        apply: () => out1,
+2800:      });
+2801:      s = await durable(s.session_id);
+2802:      const facts1 = s.decision_context!.reality_facts.filter((f) => f.statement.includes("仍在职") || f.statement.includes("孩子"));
+2803:      assert.ok(facts1.length >= 2, `round1 must write two facts, got ${facts1.length}`);
+2804:      for (const fact of facts1) {
+
+==================== DRAFT 2 line 2852 ====================
+2807:        assert.ok(fact.related_dir_ids.some((id) => auth1.dir_ids.includes(id)));
+2808:        assert.ok(fact.fact_roles.some((role) => auth1.fact_roles.includes(role)));
+2809:        assert.equal(fact.statement.includes("two explicit facts"), false, "explanation must not become a fact");
+2810:      }
+2811:      assert.ok(s.decision_context!.version > v0, "round1 DC version must increase");
+2812:      assert.ok(s.decision_understanding);
+2813:      assert.equal(
+2814:        s.decision_understanding!.context_version,
+2815:        s.decision_context!.version,
+2816:        "round1 Understanding.context_version must match DC.version",
+2817:      );
+2818:      const asst1 = lastAssistant(s);
+2819:      assert.ok(s.adaptive_ask_plan, "round1 next question required");
+2820:      assert.equal(asst1.content, s.adaptive_ask_plan!.question_text);
+2821:      assert.notEqual(asst1.content, stubResponse);
+2822:      const needDirs1 = new Set(
+2823:        s.decision_understanding!.need_to_understand.items
+2824:          .filter((n) => n.kind === "dir_based")
+2825:          .map((n) => n.dir_id),
+2826:      );
+2827:      for (const d of s.adaptive_ask_plan!.dir_ids) {
+2828:        assert.ok(
+2829:          needDirs1.has(d) || s.decision_context!.dirs.some((x) => x.dir_id === d),
+2830:          `round1 next Q dir ${d} must come from latest NeedItem or live DIR`,
+2831:        );
+2832:      }
+2833:      const q1 = asst1.content;
+2834:      const roles1Satisfied = new Set(facts1.flatMap((f) => f.fact_roles));
+2835:      logs.push(
+2836:        `[m24r2a] round=1 input=${r1Text}; facts=${s.decision_context!.reality_facts.length}; written=${facts1.map((f) => `${f.fact_id}:${f.status}:${f.verification_level}:${f.fact_roles.join(",")}`).join("|")}; dc=${v0}->${s.decision_context!.version}; ctx_ver=${s.decision_understanding!.context_version}; next_q=${q1}; next_dirs=${s.adaptive_ask_plan!.dir_ids.join(",")}; next_roles=${(s.adaptive_ask_plan!.fact_role_codes ?? []).join(",")}; asked=${asked0}->${s.decision_understanding!.budget.session_asked_count}`,
+2837:      );
+2838:
+2839:      // Round 2: estimate + explicit constraint
+2840:      const auth2 = authorizedFrom(s);
+2841:      const v1 = s.decision_context!.version;
+2842:      const asked1 = s.decision_understanding!.budget.session_asked_count;
+2843:      fetchCalls.length = 0;
+2844:      stubResponse = "R2A FREEFORM ROUND 2";
+2845:      const r2Text = "大概还能撑 6 个月。硬约束是必须保留社保。";
+2846:      const out2 = await handleUserMessage({
+2847:        session: s,
+2848:        userMessage: r2Text,
+2849:        locale: "zh-CN",
+2850:        __testOnlyM1Hooks: hookFor({
+2851:          classification: "partial_answer",
+2852:          extracted_items: [
+2853:            {
+2854:              text: "大概还能撑 6 个月。",
+2855:              semantic_kind: "reality_fact",
+2856:              role_hint: null,
+2857:              role_code_hint: auth2.fact_role_codes[0] ?? null,
+2858:              certainty: "estimated",
+2859:            },
+2860:            {
+2861:              text: "硬约束是必须保留社保。",
+2862:              semantic_kind: "constraint",
+2863:              role_hint: null,
+2864:              role_code_hint: auth2.fact_role_codes[0] ?? null,
+2865:              certainty: "explicit",
+2866:            },
+2867:          ],
+2868:          unresolved_aspects: [],
+2869:          explanation: "estimate plus constraint",
+2870:        }),
+2871:      });
+2872:      await mutatePOJUSession(s.session_id, {
+2873:        operation_id: "op_m24r2a_r2",
+2874:        kind: "session_patch",
+2875:        bump_dc: true,
+2876:        apply: () => out2,
+2877:      });
+2878:      s = await durable(s.session_id);
+2879:      const estimateFact = s.decision_context!.reality_facts.find((f) => f.statement.includes("撑 6 个月") || f.statement.includes("撑6个月"));
+2880:      assert.ok(estimateFact, "round2 estimate fact missing");
+2881:      assert.equal(estimateFact!.verification_level, "user_estimate");
+
+==================== DRAFT 3 line 2968 ====================
+2923:      const originalStay = s.decision_context!.reality_facts.find((f) => f.statement.includes("仍在职"));
+2924:      assert.ok(originalStay, "original 仍在职 fact must exist before correction");
+2925:      const lastSent = s.decision_understanding?.last_sent_question;
+2926:      if (lastSent && originalStay) {
+2927:        const roleDir = (originalStay.related_dir_ids ?? lastSent.dir_ids)[0] ?? lastSent.direction_id;
+2928:        const mergedDirs = Array.from(new Set([...lastSent.dir_ids, ...(originalStay.related_dir_ids ?? [])]));
+2929:        const extraCodes = (originalStay.fact_roles ?? []).map(
+2930:          (role) => `v1/dir/${roleDir}/role/${role}`,
+2931:        );
+2932:        const mergedCodes = Array.from(new Set([...(lastSent.fact_role_codes ?? []), ...extraCodes]));
+2933:        // FU1: capture codes after merge for role_code_hint injection below.
+2934:        s = {
+2935:          ...s,
+2936:          decision_understanding: s.decision_understanding
+2937:            ? {
+2938:                ...s.decision_understanding,
+2939:                last_sent_question: {
+2940:                  ...lastSent,
+2941:                  dir_ids: mergedDirs,
+2942:                  fact_role_codes: mergedCodes,
+2943:                },
+2944:              }
+2945:            : s.decision_understanding,
+2946:        };
+2947:      }
+2948:      const auth3 = authorizedFrom(s);
+2949:      const correctionCode =
+2950:        auth3.fact_role_codes.find((c) => (originalStay.fact_roles ?? []).some((r) => c.endsWith("/role/" + r))) ??
+2951:        auth3.fact_role_codes[0] ??
+2952:        null;
+2953:      const supplementCode =
+2954:        auth3.fact_role_codes.find((c) => c !== correctionCode && c.includes("/role/option")) ??
+2955:        auth3.fact_role_codes.find((c) => c !== correctionCode) ??
+2956:        correctionCode;
+2957:      const v2 = s.decision_context!.version;
+2958:      const factIdsBefore = s.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+2959:      fetchCalls.length = 0;
+2960:      stubResponse = "R2A FREEFORM ROUND 3";
+2961:      const r3Text = "更正一下，我已经离职了，不是仍在职。另外还有一个备选是内部转岗。";
+2962:      const out3 = await handleUserMessage({
+2963:        session: s,
+2964:        userMessage: r3Text,
+2965:        locale: "zh-CN",
+2966:        __testOnlyM1Hooks: hookFor({
+2967:          classification: "correction",
+2968:          extracted_items: [
+2969:            {
+2970:              text: "我已经离职了，不是仍在职。",
+2971:              semantic_kind: "reality_fact",
+2972:              role_hint: null,
+2973:              role_code_hint: correctionCode,
+2974:              certainty: "explicit",
+2975:            },
+2976:            {
+2977:              text: "还有一个备选是内部转岗。",
+2978:              semantic_kind: "reality_fact",
+2979:              role_hint: null,
+2980:              role_code_hint: supplementCode,
+2981:              certainty: "explicit",
+2982:            },
+2983:          ],
+2984:          unresolved_aspects: [],
+2985:          explanation: "correction plus supplement",
+2986:        }),
+2987:      });
+2988:      await mutatePOJUSession(s.session_id, {
+2989:        operation_id: "op_m24r2a_r3",
+2990:        kind: "session_patch",
+2991:        bump_dc: true,
+2992:        apply: () => out3,
+2993:      });
+2994:      s = await durable(s.session_id);
+2995:      const stillOriginal = s.decision_context!.reality_facts.find((f) => f.fact_id === originalStay!.fact_id);
+2996:      assert.ok(stillOriginal, "original fact must not be silently deleted");
+2997:      const correctionFact = s.decision_context!.reality_facts.find((f) => f.statement.includes("已经离职"));
+
+==================== DRAFT 4 line 3044 ====================
+2999:      assert.ok(correctionFact, "correction fact missing");
+3000:      assert.ok(supplementFact, "supplement fact missing");
+3001:      assert.notEqual(correctionFact!.fact_id, originalStay!.fact_id);
+3002:      assert.ok(s.decision_context!.version > v2);
+3003:      assert.equal(s.decision_understanding!.context_version, s.decision_context!.version);
+3004:      const openConflicts = s.decision_context!.conflicts.filter((c) => c.state === "open");
+3005:      assert.ok(
+3006:        openConflicts.some((c) => c.fact_ids.includes(originalStay!.fact_id) && c.fact_ids.includes(correctionFact!.fact_id)),
+3007:        "mutex correction must keep both facts and create an open Conflict",
+3008:      );
+3009:      const asst3 = lastAssistant(s);
+3010:      assert.ok(s.adaptive_ask_plan, "round3 next question required");
+3011:      assert.equal(asst3.content, s.adaptive_ask_plan!.question_text);
+3012:      assert.notEqual(asst3.content, stubResponse);
+3013:      const nextCf = s.decision_understanding?.last_sent_question?.conflict_clarification
+3014:        ?? s.adaptive_ask_plan?.conflict_clarification
+3015:        ?? null;
+3016:      const needOrConflictBound =
+3017:        Boolean(nextCf) ||
+3018:        s.adaptive_ask_plan!.dir_ids.some((d) =>
+3019:          s.decision_understanding!.need_to_understand.items.some(
+3020:            (n) => n.kind === "dir_based" && n.dir_id === d,
+3021:          ),
+3022:        );
+3023:      assert.equal(needOrConflictBound, true, "round3 next Q must bind remaining need or Conflict");
+3024:      logs.push(
+3025:        `[m24r2a] round=3 input=${r3Text}; kept_original=${stillOriginal!.fact_id}; correction=${correctionFact!.fact_id}; supplement=${supplementFact!.fact_id}; conflicts=${s.decision_context!.conflicts.map((c) => `${c.conflict_id}:${c.state}:${c.fact_ids.join("+")}`).join("|")}; fact_ids_before=${factIdsBefore.join(",")}; fact_ids_after=${s.decision_context!.reality_facts.map((f) => f.fact_id).join(",")}; dc=${v2}->${s.decision_context!.version}; ctx_ver=${s.decision_understanding!.context_version}; next_q=${asst3.content}; next_dirs=${s.adaptive_ask_plan!.dir_ids.join(",")}; next_cf=${nextCf?.conflict_id ?? "none"}`,
+3026:      );
+3027:
+3028:      for (const line of logs) console.log(line);
+3029:    });
+3030:
+3031:    await check("M2.4-R2 Case B: unauthorized model role/DIR/DDR is rejected", async () => {
+3032:      const before = await seedAnswerReadySession("m24r2b");
+3033:      const auth = authorizedFrom(before);
+3034:      const vBefore = before.decision_context!.version;
+3035:      const factIdsBefore = before.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+3036:      stubResponse = "R2B FREEFORM";
+3037:      const out = await handleUserMessage({
+3038:        session: before,
+3039:        userMessage: "我有一个方案是留任。",
+3040:        locale: "zh-CN",
+3041:        __testOnlyM1Hooks: {
+3042:          interpretAnswerModel: () => ({
+3043:            classification: "clear_answer",
+3044:            extracted_items: [
+3045:              {
+3046:                text: "越权角色不应写入。",
+3047:                semantic_kind: "reality_fact",
+3048:                role_hint: "not_a_real_authorized_role",
+3049:                role_code_hint: "v1/dir/DIR-NOT-AUTHORIZED/role/not_a_real_authorized_role",
+3050:                certainty: "explicit",
+3051:              },
+3052:              {
+3053:                text: "我有一个方案是留任。",
+3054:                semantic_kind: "reality_fact",
+3055:                role_hint: auth.fact_roles[0] ?? null,
+3056:                role_code_hint: auth.fact_role_codes[0] ?? null,
+3057:                certainty: "explicit",
+3058:              },
+3059:            ],
+3060:            unresolved_aspects: [],
+3061:            explanation: "overreach",
+3062:            dir_ids: ["DIR-NOT-AUTHORIZED"],
+3063:            ddr_ids: ["DDR-NOT-AUTHORIZED"],
+3064:            user_confirmed: true,
+3065:          }),
+3066:        },
+3067:      });
+3068:      const dc = out.decision_context!;
+3069:      const overreach = dc.reality_facts.filter((f) => f.statement.includes("越权角色不应写入"));
+3070:      assert.equal(overreach.length, 0, "unauthorized role must not write a fact");
+3071:      const legal = dc.reality_facts.filter((f) => f.statement.includes("留任"));
+3072:      assert.ok(legal.length >= 1, "authorized item may still write");
+3073:      for (const fact of legal) {
+
+==================== DRAFT 5 line 3101 ====================
+3056:                role_code_hint: auth.fact_role_codes[0] ?? null,
+3057:                certainty: "explicit",
+3058:              },
+3059:            ],
+3060:            unresolved_aspects: [],
+3061:            explanation: "overreach",
+3062:            dir_ids: ["DIR-NOT-AUTHORIZED"],
+3063:            ddr_ids: ["DDR-NOT-AUTHORIZED"],
+3064:            user_confirmed: true,
+3065:          }),
+3066:        },
+3067:      });
+3068:      const dc = out.decision_context!;
+3069:      const overreach = dc.reality_facts.filter((f) => f.statement.includes("越权角色不应写入"));
+3070:      assert.equal(overreach.length, 0, "unauthorized role must not write a fact");
+3071:      const legal = dc.reality_facts.filter((f) => f.statement.includes("留任"));
+3072:      assert.ok(legal.length >= 1, "authorized item may still write");
+3073:      for (const fact of legal) {
+3074:        assert.ok(fact.related_dir_ids.every((id) => auth.dir_ids.includes(id)));
+3075:        assert.ok(fact.fact_roles.every((role) => auth.fact_roles.includes(role)));
+3076:        assert.equal(fact.related_dir_ids.includes("DIR-NOT-AUTHORIZED"), false);
+3077:      }
+3078:      assert.equal(
+3079:        out.decision_understanding?.last_sent_question?.dir_ids.includes("DIR-NOT-AUTHORIZED") ?? false,
+3080:        false,
+3081:      );
+3082:      assert.ok(dc.version >= vBefore);
+3083:      assert.deepEqual(
+3084:        dc.reality_facts.filter((f) => factIdsBefore.includes(f.fact_id)).map((f) => f.fact_id).sort(),
+3085:        factIdsBefore,
+3086:      );
+3087:      console.log(
+3088:        `[m24r2b] auth_dirs=${auth.dir_ids.join(",")}; auth_roles=${auth.fact_roles.join(",")}; overreach_facts=${overreach.length}; legal_facts=${legal.length}; dc=${vBefore}->${dc.version}`,
+3089:      );
+3090:    });
+3091:
+3092:    await check("M2.4-R2 Case C: model confirmation fields cannot become confirmed facts", async () => {
+3093:      const before = await seedAnswerReadySession("m24r2c");
+3094:      const out = await handleUserMessage({
+3095:        session: before,
+3096:        userMessage: "我目前月薪三万。",
+3097:        locale: "zh-CN",
+3098:        __testOnlyM1Hooks: {
+3099:          interpretAnswerModel: () => ({
+3100:            classification: "clear_answer",
+3101:            extracted_items: [
+3102:              {
+3103:                text: "我目前月薪三万。",
+3104:                semantic_kind: "reality_fact",
+3105:                role_hint: null,
+3106:                role_code_hint: authorizedFrom(before).fact_role_codes[0] ?? null,
+3107:                certainty: "explicit",
+3108:                user_confirmed: true,
+3109:                verification_level: "confirmed",
+3110:                confirmed: true,
+3111:              },
+3112:            ],
+3113:            unresolved_aspects: [],
+3114:            explanation: "sounds reasonable so confirmed",
+3115:            user_confirmed: true,
+3116:            confirmed: true,
+3117:            verification_level: "confirmed",
+3118:            readiness: "ready_for_final_confirm",
+3119:          }),
+3120:        },
+3121:      });
+3122:      const facts = out.decision_context!.reality_facts.filter((f) => f.statement.includes("月薪三万"));
+3123:      assert.ok(facts.length >= 1, "fact should be written");
+3124:      for (const fact of facts) {
+3125:        assert.equal(fact.status, "unverified");
+3126:        assert.notEqual(fact.status, "confirmed");
+3127:        assert.ok(fact.has_user_confirm_event !== true);
+3128:        assert.notEqual(fact.verification_level, "confirmed" as string);
+3129:      }
+3130:      const asst = lastAssistant(out);
+
+==================== DRAFT 6 line 3223 ====================
+3178:        dc.constraints.map((c) => `${c.constraint_id}:${c.statement}`).sort(),
+3179:        cstBefore,
+3180:      );
+3181:      assert.equal(
+3182:        out.decision_understanding?.budget.session_asked_count ?? askedBefore,
+3183:        askedBefore,
+3184:        `${tag} must not spend question budget`,
+3185:      );
+3186:      assert.equal(
+3187:        out.decision_understanding?.last_sent_question?.plan_id ?? lastSentBefore?.plan_id,
+3188:        lastSentBefore?.plan_id,
+3189:        `${tag} must not change last_sent_question authorization`,
+3190:      );
+3191:      assert.equal(
+3192:        fetchCalls.includes("/api/poju/chat"),
+3193:        false,
+3194:        `${tag} must not fall back to free-form LLM questioning`,
+3195:      );
+3196:      console.log(
+3197:        `[${tag}] outcome=${meta?.m1_outcome}; dc=${vBefore}->${dc.version}; facts=${dc.reality_facts.length}; constraints=${dc.constraints.length}; asked=${askedBefore}; last_sent=${lastSentBefore?.plan_id}; asst=${asst.content}`,
+3198:      );
+3199:    }
+3200:
+3201:    await check("M2.4-R2 Case D: timeout is fail-closed", async () => {
+3202:      await assertInterpretationFailClosed("m24r2d_timeout", new Error("llm_timeout"));
+3203:    });
+3204:    await check("M2.4-R2 Case D: invalid JSON is fail-closed", async () => {
+3205:      await assertInterpretationFailClosed("m24r2d_json", "this is not json {");
+3206:    });
+3207:    await check("M2.4-R2 Case D: missing fields are fail-closed", async () => {
+3208:      await assertInterpretationFailClosed("m24r2d_schema", { classification: "clear_answer" });
+3209:    });
+3210:
+3211:    await check("M2.4-R2 Case E: uncertainty and decline are not explicit facts", async () => {
+3212:      const cases: Array<{
+3213:        tag: string;
+3214:        text: string;
+3215:        draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft;
+3216:        expect: "estimate" | "unknown" | "declined" | "unverified";
+3217:      }> = [
+3218:        {
+3219:          tag: "m24r2e_estimate",
+3220:          text: "这个数字只是估计。",
+3221:          draft: {
+3222:            classification: "estimate",
+3223:            extracted_items: [
+3224:              {
+3225:                text: "这个数字只是估计。",
+3226:                semantic_kind: "reality_fact",
+3227:                role_hint: null,
+3228:                certainty: "estimated",
+3229:              },
+3230:            ],
+3231:            unresolved_aspects: [],
+3232:            explanation: "estimate",
+3233:          },
+3234:          expect: "estimate",
+3235:        },
+3236:        {
+3237:          tag: "m24r2e_unknown",
+3238:          text: "我现在还无法确定。",
+3239:          draft: {
+3240:            classification: "unknown",
+3241:            extracted_items: [
+3242:              {
+3243:                text: "我现在还无法确定。",
+3244:                semantic_kind: "reality_fact",
+3245:                role_hint: null,
+3246:                certainty: "unclear",
+3247:              },
+3248:            ],
+3249:            unresolved_aspects: [],
+3250:            explanation: "unknown",
+3251:          },
+3252:          expect: "unknown",
+
+==================== DRAFT 7 line 3241 ====================
+3196:      console.log(
+3197:        `[${tag}] outcome=${meta?.m1_outcome}; dc=${vBefore}->${dc.version}; facts=${dc.reality_facts.length}; constraints=${dc.constraints.length}; asked=${askedBefore}; last_sent=${lastSentBefore?.plan_id}; asst=${asst.content}`,
+3198:      );
+3199:    }
+3200:
+3201:    await check("M2.4-R2 Case D: timeout is fail-closed", async () => {
+3202:      await assertInterpretationFailClosed("m24r2d_timeout", new Error("llm_timeout"));
+3203:    });
+3204:    await check("M2.4-R2 Case D: invalid JSON is fail-closed", async () => {
+3205:      await assertInterpretationFailClosed("m24r2d_json", "this is not json {");
+3206:    });
+3207:    await check("M2.4-R2 Case D: missing fields are fail-closed", async () => {
+3208:      await assertInterpretationFailClosed("m24r2d_schema", { classification: "clear_answer" });
+3209:    });
+3210:
+3211:    await check("M2.4-R2 Case E: uncertainty and decline are not explicit facts", async () => {
+3212:      const cases: Array<{
+3213:        tag: string;
+3214:        text: string;
+3215:        draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft;
+3216:        expect: "estimate" | "unknown" | "declined" | "unverified";
+3217:      }> = [
+3218:        {
+3219:          tag: "m24r2e_estimate",
+3220:          text: "这个数字只是估计。",
+3221:          draft: {
+3222:            classification: "estimate",
+3223:            extracted_items: [
+3224:              {
+3225:                text: "这个数字只是估计。",
+3226:                semantic_kind: "reality_fact",
+3227:                role_hint: null,
+3228:                certainty: "estimated",
+3229:              },
+3230:            ],
+3231:            unresolved_aspects: [],
+3232:            explanation: "estimate",
+3233:          },
+3234:          expect: "estimate",
+3235:        },
+3236:        {
+3237:          tag: "m24r2e_unknown",
+3238:          text: "我现在还无法确定。",
+3239:          draft: {
+3240:            classification: "unknown",
+3241:            extracted_items: [
+3242:              {
+3243:                text: "我现在还无法确定。",
+3244:                semantic_kind: "reality_fact",
+3245:                role_hint: null,
+3246:                certainty: "unclear",
+3247:              },
+3248:            ],
+3249:            unresolved_aspects: [],
+3250:            explanation: "unknown",
+3251:          },
+3252:          expect: "unknown",
+3253:        },
+3254:        {
+3255:          tag: "m24r2e_declined",
+3256:          text: "这部分我不想回答。",
+3257:          draft: {
+3258:            classification: "declined",
+3259:            extracted_items: [
+3260:              {
+3261:                text: "这部分我不想回答。",
+3262:                semantic_kind: "reality_fact",
+3263:                role_hint: null,
+3264:                certainty: "unclear",
+3265:              },
+3266:            ],
+3267:            unresolved_aspects: [],
+3268:            explanation: "declined",
+3269:          },
+3270:          expect: "declined",
+
+==================== DRAFT 8 line 3259 ====================
+3214:        text: string;
+3215:        draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft;
+3216:        expect: "estimate" | "unknown" | "declined" | "unverified";
+3217:      }> = [
+3218:        {
+3219:          tag: "m24r2e_estimate",
+3220:          text: "这个数字只是估计。",
+3221:          draft: {
+3222:            classification: "estimate",
+3223:            extracted_items: [
+3224:              {
+3225:                text: "这个数字只是估计。",
+3226:                semantic_kind: "reality_fact",
+3227:                role_hint: null,
+3228:                certainty: "estimated",
+3229:              },
+3230:            ],
+3231:            unresolved_aspects: [],
+3232:            explanation: "estimate",
+3233:          },
+3234:          expect: "estimate",
+3235:        },
+3236:        {
+3237:          tag: "m24r2e_unknown",
+3238:          text: "我现在还无法确定。",
+3239:          draft: {
+3240:            classification: "unknown",
+3241:            extracted_items: [
+3242:              {
+3243:                text: "我现在还无法确定。",
+3244:                semantic_kind: "reality_fact",
+3245:                role_hint: null,
+3246:                certainty: "unclear",
+3247:              },
+3248:            ],
+3249:            unresolved_aspects: [],
+3250:            explanation: "unknown",
+3251:          },
+3252:          expect: "unknown",
+3253:        },
+3254:        {
+3255:          tag: "m24r2e_declined",
+3256:          text: "这部分我不想回答。",
+3257:          draft: {
+3258:            classification: "declined",
+3259:            extracted_items: [
+3260:              {
+3261:                text: "这部分我不想回答。",
+3262:                semantic_kind: "reality_fact",
+3263:                role_hint: null,
+3264:                certainty: "unclear",
+3265:              },
+3266:            ],
+3267:            unresolved_aspects: [],
+3268:            explanation: "declined",
+3269:          },
+3270:          expect: "declined",
+3271:        },
+3272:        {
+3273:          tag: "m24r2e_unverified",
+3274:          text: "我需要再核实一下。",
+3275:          draft: {
+3276:            classification: "vague_answer",
+3277:            extracted_items: [
+3278:              {
+3279:                text: "我需要再核实一下。",
+3280:                semantic_kind: "reality_fact",
+3281:                role_hint: null,
+3282:                certainty: "unclear",
+3283:              },
+3284:            ],
+3285:            unresolved_aspects: [],
+3286:            explanation: "needs verification",
+3287:          },
+3288:          expect: "unverified",
+
+==================== DRAFT 9 line 3277 ====================
+3232:            explanation: "estimate",
+3233:          },
+3234:          expect: "estimate",
+3235:        },
+3236:        {
+3237:          tag: "m24r2e_unknown",
+3238:          text: "我现在还无法确定。",
+3239:          draft: {
+3240:            classification: "unknown",
+3241:            extracted_items: [
+3242:              {
+3243:                text: "我现在还无法确定。",
+3244:                semantic_kind: "reality_fact",
+3245:                role_hint: null,
+3246:                certainty: "unclear",
+3247:              },
+3248:            ],
+3249:            unresolved_aspects: [],
+3250:            explanation: "unknown",
+3251:          },
+3252:          expect: "unknown",
+3253:        },
+3254:        {
+3255:          tag: "m24r2e_declined",
+3256:          text: "这部分我不想回答。",
+3257:          draft: {
+3258:            classification: "declined",
+3259:            extracted_items: [
+3260:              {
+3261:                text: "这部分我不想回答。",
+3262:                semantic_kind: "reality_fact",
+3263:                role_hint: null,
+3264:                certainty: "unclear",
+3265:              },
+3266:            ],
+3267:            unresolved_aspects: [],
+3268:            explanation: "declined",
+3269:          },
+3270:          expect: "declined",
+3271:        },
+3272:        {
+3273:          tag: "m24r2e_unverified",
+3274:          text: "我需要再核实一下。",
+3275:          draft: {
+3276:            classification: "vague_answer",
+3277:            extracted_items: [
+3278:              {
+3279:                text: "我需要再核实一下。",
+3280:                semantic_kind: "reality_fact",
+3281:                role_hint: null,
+3282:                certainty: "unclear",
+3283:              },
+3284:            ],
+3285:            unresolved_aspects: [],
+3286:            explanation: "needs verification",
+3287:          },
+3288:          expect: "unverified",
+3289:        },
+3290:      ];
+3291:      for (const item of cases) {
+3292:        const before = await seedAnswerReadySession(item.tag);
+3293:        const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3294:        const draft = {
+3295:          ...item.draft,
+3296:          extracted_items: item.draft.extracted_items.map((row) => ({
+3297:            ...row,
+3298:            role_code_hint: row.role_code_hint ?? legalCode,
+3299:          })),
+3300:        };
+3301:        const out = await handleUserMessage({
+3302:          session: before,
+3303:          userMessage: item.text,
+3304:          locale: "zh-CN",
+3305:          __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3306:        });
+
+==================== DRAFT 10 line 3296 ====================
+3251:          },
+3252:          expect: "unknown",
+3253:        },
+3254:        {
+3255:          tag: "m24r2e_declined",
+3256:          text: "这部分我不想回答。",
+3257:          draft: {
+3258:            classification: "declined",
+3259:            extracted_items: [
+3260:              {
+3261:                text: "这部分我不想回答。",
+3262:                semantic_kind: "reality_fact",
+3263:                role_hint: null,
+3264:                certainty: "unclear",
+3265:              },
+3266:            ],
+3267:            unresolved_aspects: [],
+3268:            explanation: "declined",
+3269:          },
+3270:          expect: "declined",
+3271:        },
+3272:        {
+3273:          tag: "m24r2e_unverified",
+3274:          text: "我需要再核实一下。",
+3275:          draft: {
+3276:            classification: "vague_answer",
+3277:            extracted_items: [
+3278:              {
+3279:                text: "我需要再核实一下。",
+3280:                semantic_kind: "reality_fact",
+3281:                role_hint: null,
+3282:                certainty: "unclear",
+3283:              },
+3284:            ],
+3285:            unresolved_aspects: [],
+3286:            explanation: "needs verification",
+3287:          },
+3288:          expect: "unverified",
+3289:        },
+3290:      ];
+3291:      for (const item of cases) {
+3292:        const before = await seedAnswerReadySession(item.tag);
+3293:        const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3294:        const draft = {
+3295:          ...item.draft,
+3296:          extracted_items: item.draft.extracted_items.map((row) => ({
+3297:            ...row,
+3298:            role_code_hint: row.role_code_hint ?? legalCode,
+3299:          })),
+3300:        };
+3301:        const out = await handleUserMessage({
+3302:          session: before,
+3303:          userMessage: item.text,
+3304:          locale: "zh-CN",
+3305:          __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3306:        });
+3307:        const written = out.decision_context!.reality_facts.filter((f) =>
+3308:          f.statement.includes(item.text.replace(/。$/, "")) || f.statement === item.text,
+3309:        );
+3310:        if (item.expect === "declined") {
+3311:          assert.ok(written.length >= 1);
+3312:          assert.ok(written.every((f) => f.status === "declined" && f.verification_level === "none"));
+3313:        } else if (item.expect === "unknown") {
+3314:          assert.ok(written.length >= 1);
+3315:          assert.ok(written.every((f) => f.status === "unknown" && f.verification_level === "none"));
+3316:        } else if (item.expect === "estimate") {
+3317:          assert.ok(written.length >= 1);
+3318:          assert.ok(written.every((f) => f.status === "unverified" && f.verification_level === "user_estimate"));
+3319:        } else {
+3320:          // FU1: certainty=unclear must not become user_estimate or user_asserted.
+3321:          assert.equal(
+3322:            written.length,
+3323:            0,
+3324:            `${item.tag} unclear certainty must not write a RealityFact`,
+3325:          );
+
+==================== DRAFT 11 line 3344 ====================
+3299:          })),
+3300:        };
+3301:        const out = await handleUserMessage({
+3302:          session: before,
+3303:          userMessage: item.text,
+3304:          locale: "zh-CN",
+3305:          __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3306:        });
+3307:        const written = out.decision_context!.reality_facts.filter((f) =>
+3308:          f.statement.includes(item.text.replace(/。$/, "")) || f.statement === item.text,
+3309:        );
+3310:        if (item.expect === "declined") {
+3311:          assert.ok(written.length >= 1);
+3312:          assert.ok(written.every((f) => f.status === "declined" && f.verification_level === "none"));
+3313:        } else if (item.expect === "unknown") {
+3314:          assert.ok(written.length >= 1);
+3315:          assert.ok(written.every((f) => f.status === "unknown" && f.verification_level === "none"));
+3316:        } else if (item.expect === "estimate") {
+3317:          assert.ok(written.length >= 1);
+3318:          assert.ok(written.every((f) => f.status === "unverified" && f.verification_level === "user_estimate"));
+3319:        } else {
+3320:          // FU1: certainty=unclear must not become user_estimate or user_asserted.
+3321:          assert.equal(
+3322:            written.length,
+3323:            0,
+3324:            `${item.tag} unclear certainty must not write a RealityFact`,
+3325:          );
+3326:        }
+3327:        assert.ok(written.every((f) => f.status !== "confirmed"));
+3328:        console.log(
+3329:          `[m24r2e] tag=${item.tag}; input=${item.text}; writes=${written.map((f) => `${f.status}:${f.verification_level}`).join("|") || "none"}`,
+3330:        );
+3331:      }
+3332:    });
+3333:
+3334:    await check("M2.4-R2 Case F: real persist + same source_turn_id resubmit is idempotent", async () => {
+3335:      const before = await seedAnswerReadySession("m24r2f");
+3336:      stubResponse = "R2F FREEFORM 1";
+3337:      const first = await handleUserMessage({
+3338:        session: before,
+3339:        userMessage: "硬约束是必须保留社保，预算不能低于现在的 70%。",
+3340:        locale: "zh-CN",
+3341:        __testOnlyM1Hooks: {
+3342:          interpretAnswerModel: () => ({
+3343:            classification: "clear_answer",
+3344:            extracted_items: [
+3345:              {
+3346:                text: "硬约束是必须保留社保，预算不能低于现在的 70%。",
+3347:                semantic_kind: "constraint",
+3348:                role_hint: null,
+3349:                role_code_hint: authorizedFrom(before).fact_role_codes[0] ?? null,
+3350:                certainty: "explicit",
+3351:              },
+3352:            ],
+3353:            unresolved_aspects: [],
+3354:            explanation: "constraint",
+3355:          }),
+3356:        },
+3357:      });
+3358:      await mutatePOJUSession(first.session_id, {
+3359:        operation_id: "op_m24r2f_first",
+3360:        kind: "session_patch",
+3361:        bump_dc: true,
+3362:        apply: () => first,
+3363:      });
+3364:      const committed = await durable(first.session_id);
+3365:      const turnId = lastUserId(committed);
+3366:      const facts1 = committed.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+3367:      const cst1 = committed.decision_context!.constraints.map((c) => c.constraint_id).sort();
+3368:      const v1 = committed.decision_context!.version;
+3369:      const asked1 = committed.decision_understanding?.budget.session_asked_count ?? 0;
+3370:      const q1 = lastAssistant(committed).content;
+3371:      stubResponse = "R2F FREEFORM 2 MUST NOT WIN";
+3372:      const replaySession = {
+3373:        ...committed,
+
+==================== DRAFT 12 line 3392 ====================
+3347:                semantic_kind: "constraint",
+3348:                role_hint: null,
+3349:                role_code_hint: authorizedFrom(before).fact_role_codes[0] ?? null,
+3350:                certainty: "explicit",
+3351:              },
+3352:            ],
+3353:            unresolved_aspects: [],
+3354:            explanation: "constraint",
+3355:          }),
+3356:        },
+3357:      });
+3358:      await mutatePOJUSession(first.session_id, {
+3359:        operation_id: "op_m24r2f_first",
+3360:        kind: "session_patch",
+3361:        bump_dc: true,
+3362:        apply: () => first,
+3363:      });
+3364:      const committed = await durable(first.session_id);
+3365:      const turnId = lastUserId(committed);
+3366:      const facts1 = committed.decision_context!.reality_facts.map((f) => f.fact_id).sort();
+3367:      const cst1 = committed.decision_context!.constraints.map((c) => c.constraint_id).sort();
+3368:      const v1 = committed.decision_context!.version;
+3369:      const asked1 = committed.decision_understanding?.budget.session_asked_count ?? 0;
+3370:      const q1 = lastAssistant(committed).content;
+3371:      stubResponse = "R2F FREEFORM 2 MUST NOT WIN";
+3372:      const replaySession = {
+3373:        ...committed,
+3374:        messages: [
+3375:          ...committed.messages,
+3376:          {
+3377:            role: "user" as const,
+3378:            content: "硬约束是必须保留社保，预算不能低于现在的 70%。",
+3379:            timestamp: NOW,
+3380:            client_id: turnId,
+3381:          },
+3382:        ],
+3383:      };
+3384:      const replay = await handleUserMessage({
+3385:        session: replaySession,
+3386:        userMessage: "硬约束是必须保留社保，预算不能低于现在的 70%。",
+3387:        locale: "zh-CN",
+3388:        userAlreadyAppended: true,
+3389:        __testOnlyM1Hooks: {
+3390:          interpretAnswerModel: () => ({
+3391:            classification: "clear_answer",
+3392:            extracted_items: [
+3393:              {
+3394:                text: "硬约束是必须保留社保，预算不能低于现在的 70%。",
+3395:                semantic_kind: "constraint",
+3396:                role_hint: null,
+3397:                role_code_hint: authorizedFrom(committed).fact_role_codes[0] ?? null,
+3398:                certainty: "explicit",
+3399:              },
+3400:            ],
+3401:            unresolved_aspects: [],
+3402:            explanation: "constraint replay",
+3403:          }),
+3404:        },
+3405:      });
+3406:      assert.equal(lastUserId(replay), turnId);
+3407:      const dc = replay.decision_context!;
+3408:      assert.deepEqual(dc.reality_facts.map((f) => f.fact_id).sort(), facts1);
+3409:      assert.deepEqual(dc.constraints.map((c) => c.constraint_id).sort(), cst1);
+3410:      assert.equal(dc.version, v1, "replay must not bump DC version");
+3411:      assert.equal(replay.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
+3412:      const asst = lastAssistant(replay);
+3413:      assert.notEqual(asst.content, stubResponse);
+3414:      if (replay.adaptive_ask_plan) {
+3415:        assert.equal(asst.content, replay.adaptive_ask_plan.question_text);
+3416:      }
+3417:      // Recovered question should be the already-authorized one, not a second logical question.
+3418:      assert.equal(asst.content, q1, "replay must recover the existing authorized question");
+3419:      console.log(
+3420:        `[m24r2f] turn=${turnId}; facts=${facts1.length}; constraints=${cst1.length}; dc=${v1}->${dc.version}; asked=${asked1}; q_recovered=${asst.content === q1}`,
+3421:      );
+
+==================== DRAFT 13 line 3435 ====================
+3390:          interpretAnswerModel: () => ({
+3391:            classification: "clear_answer",
+3392:            extracted_items: [
+3393:              {
+3394:                text: "硬约束是必须保留社保，预算不能低于现在的 70%。",
+3395:                semantic_kind: "constraint",
+3396:                role_hint: null,
+3397:                role_code_hint: authorizedFrom(committed).fact_role_codes[0] ?? null,
+3398:                certainty: "explicit",
+3399:              },
+3400:            ],
+3401:            unresolved_aspects: [],
+3402:            explanation: "constraint replay",
+3403:          }),
+3404:        },
+3405:      });
+3406:      assert.equal(lastUserId(replay), turnId);
+3407:      const dc = replay.decision_context!;
+3408:      assert.deepEqual(dc.reality_facts.map((f) => f.fact_id).sort(), facts1);
+3409:      assert.deepEqual(dc.constraints.map((c) => c.constraint_id).sort(), cst1);
+3410:      assert.equal(dc.version, v1, "replay must not bump DC version");
+3411:      assert.equal(replay.decision_understanding?.budget.session_asked_count ?? asked1, asked1);
+3412:      const asst = lastAssistant(replay);
+3413:      assert.notEqual(asst.content, stubResponse);
+3414:      if (replay.adaptive_ask_plan) {
+3415:        assert.equal(asst.content, replay.adaptive_ask_plan.question_text);
+3416:      }
+3417:      // Recovered question should be the already-authorized one, not a second logical question.
+3418:      assert.equal(asst.content, q1, "replay must recover the existing authorized question");
+3419:      console.log(
+3420:        `[m24r2f] turn=${turnId}; facts=${facts1.length}; constraints=${cst1.length}; dc=${v1}->${dc.version}; asked=${asked1}; q_recovered=${asst.content === q1}`,
+3421:      );
+3422:    });
+3423:
+3424:    await check("M2.4-R2-FU1 Case G: multi-role auth + null role_code_hint writes nothing", async () => {
+3425:      const seeded = await seedAnswerReadySession("m24r2g");
+3426:      const { session: before, codeA, codeB } = withTwoAuthorizedRoleCodes(seeded);
+3427:      assert.notEqual(codeA, codeB, "Case G needs two distinct authorized role codes");
+3428:      const vBefore = before.decision_context!.version;
+3429:      const factsBefore = before.decision_context!.reality_facts.length;
+3430:      const cstBefore = before.decision_context!.constraints.length;
+3431:      const askedBefore = before.decision_understanding?.budget.session_asked_count ?? 0;
+3432:      const lastSentBefore = before.decision_understanding?.last_sent_question ?? null;
+3433:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3434:        classification: "clear_answer",
+3435:        extracted_items: [
+3436:          {
+3437:            text: "我目前仍在职。",
+3438:            semantic_kind: "reality_fact",
+3439:            role_hint: null,
+3440:            role_code_hint: null,
+3441:            certainty: "explicit",
+3442:          },
+3443:        ],
+3444:        unresolved_aspects: [],
+3445:        explanation: "null role under multi-role auth",
+3446:      };
+3447:      fetchCalls.length = 0;
+3448:      stubResponse = "R2G FREEFORM MUST NOT WIN";
+3449:      const out = await handleUserMessage({
+3450:        session: before,
+3451:        userMessage: "我目前仍在职。",
+3452:        locale: "zh-CN",
+3453:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3454:      });
+3455:      const dc = out.decision_context!;
+3456:      assert.equal(dc.reality_facts.length, factsBefore, "Case G must not write RealityFacts");
+3457:      assert.equal(dc.constraints.length, cstBefore, "Case G must not write Constraints");
+3458:      assert.equal(dc.version, vBefore, "Case G must not bump DC version");
+3459:      const bothFilled = [codeA, codeB].every((code) => {
+3460:        const role = code.split("/role/")[1] ?? "";
+3461:        const dir = roleCodeDir(code);
+3462:        return dc.reality_facts.some(
+3463:          (f) => (f.fact_roles ?? []).includes(role) && (f.related_dir_ids ?? []).includes(dir),
+3464:        );
+
+==================== DRAFT 14 line 3511 ====================
+3466:      assert.equal(bothFilled, false, "Case G must not fill both authorized roles");
+3467:      const probe = answerEventFromModelDraft({
+3468:        session: before,
+3469:        statement: "我目前仍在职。",
+3470:        source_turn_id: "probe_m24r2g",
+3471:        draft,
+3472:      });
+3473:      assert.equal(probe.proposed_writes.length, 0);
+3474:      assert.ok(
+3475:        probe.notes.some((n) => n.includes("unlocated_role_code") || n.includes("unresolved:unlocated_role_code")),
+3476:        `Case G must keep unresolved aspect, notes=${probe.notes.join("|")}`,
+3477:      );
+3478:      const asst = lastAssistant(out);
+3479:      assert.notEqual(asst.content, stubResponse);
+3480:      if (out.adaptive_ask_plan) {
+3481:        assert.equal(asst.content, out.adaptive_ask_plan.question_text);
+3482:      }
+3483:      // FU2 behavior change: a no-write role-binding failure must keep pending
+3484:      // clarification and must NOT jump to the next unrelated NeedItem.
+3485:      const pending = out.pending_answer_resolution ?? null;
+3486:      assert.ok(pending && pending.status === "pending", "Case G must persist pending_answer_resolution");
+3487:      assert.ok(
+3488:        asst.content.includes("已授权的调查角色") || asst.content.includes("可选角色"),
+3489:        `Case G must ask a role clarification, got=${asst.content.slice(0, 120)}`,
+3490:      );
+3491:      const sentCodes = out.decision_understanding?.last_sent_question?.fact_role_codes ?? [];
+3492:      assert.deepEqual([...sentCodes].sort(), [codeA, codeB].sort(), "clarification must keep the original authorized role codes");
+3493:      const originalDirs = [...(lastSentBefore?.dir_ids ?? [])].sort();
+3494:      const nextDirs = [...(out.adaptive_ask_plan?.dir_ids ?? [])].sort();
+3495:      assert.deepEqual(nextDirs, originalDirs, "Case G must not jump to a different NeedItem DIR set");
+3496:      assert.ok(
+3497:        (out.decision_understanding?.last_sent_question?.plan_id ?? "").startsWith("qp_role_clarify_"),
+3498:        "Case G last_sent must be the clarification plan",
+3499:      );
+3500:      console.log(
+3501:        `[m24r2g] codes=${codeA}|${codeB}; facts=${factsBefore}->${dc.reality_facts.length}; constraints=${cstBefore}->${dc.constraints.length}; dc=${vBefore}->${dc.version}; asked=${askedBefore}->${out.decision_understanding?.budget.session_asked_count ?? askedBefore}; unresolved=${probe.notes.join(",")}; writes=${probe.proposed_writes.length}; next_q=${asst.content}; next_dirs=${(out.adaptive_ask_plan?.dir_ids ?? []).join(",")}; last_sent=${out.decision_understanding?.last_sent_question?.plan_id}; pending=${pending?.status}:${pending?.unresolved_items.map((i)=>i.reason).join(",")}`,
+3502:      );
+3503:    });
+3504:
+3505:    await check("M2.4-R2-FU1 Case H: exact role codes bind independently", async () => {
+3506:      const seeded = await seedAnswerReadySession("m24r2h");
+3507:      const { session: before, codeA, codeB } = withTwoAuthorizedRoleCodes(seeded);
+3508:      const vBefore = before.decision_context!.version;
+3509:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3510:        classification: "clear_answer",
+3511:        extracted_items: [
+3512:          {
+3513:            text: "事实A绑定角色A。",
+3514:            semantic_kind: "reality_fact",
+3515:            role_hint: null,
+3516:            role_code_hint: codeA,
+3517:            certainty: "explicit",
+3518:          },
+3519:          {
+3520:            text: "事实B绑定角色B。",
+3521:            semantic_kind: "reality_fact",
+3522:            role_hint: null,
+3523:            role_code_hint: codeB,
+3524:            certainty: "explicit",
+3525:          },
+3526:        ],
+3527:        unresolved_aspects: [],
+3528:        explanation: "exact role codes",
+3529:      };
+3530:      stubResponse = "R2H FREEFORM MUST NOT WIN";
+3531:      const out = await handleUserMessage({
+3532:        session: before,
+3533:        userMessage: "事实A绑定角色A。另外事实B绑定角色B。",
+3534:        locale: "zh-CN",
+3535:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3536:      });
+3537:      const dc = out.decision_context!;
+3538:      const factA = dc.reality_facts.find((f) => f.statement.includes("事实A绑定角色A"));
+3539:      const factB = dc.reality_facts.find((f) => f.statement.includes("事实B绑定角色B"));
+3540:      assert.ok(factA, "fact A missing");
+
+==================== DRAFT 15 line 3572 ====================
+3527:        unresolved_aspects: [],
+3528:        explanation: "exact role codes",
+3529:      };
+3530:      stubResponse = "R2H FREEFORM MUST NOT WIN";
+3531:      const out = await handleUserMessage({
+3532:        session: before,
+3533:        userMessage: "事实A绑定角色A。另外事实B绑定角色B。",
+3534:        locale: "zh-CN",
+3535:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3536:      });
+3537:      const dc = out.decision_context!;
+3538:      const factA = dc.reality_facts.find((f) => f.statement.includes("事实A绑定角色A"));
+3539:      const factB = dc.reality_facts.find((f) => f.statement.includes("事实B绑定角色B"));
+3540:      assert.ok(factA, "fact A missing");
+3541:      assert.ok(factB, "fact B missing");
+3542:      const dirA = roleCodeDir(codeA);
+3543:      const dirB = roleCodeDir(codeB);
+3544:      const roleA = codeA.split("/role/")[1]!;
+3545:      const roleB = codeB.split("/role/")[1]!;
+3546:      assert.deepEqual(factA!.fact_roles, [roleA]);
+3547:      assert.deepEqual(factA!.related_dir_ids, [dirA]);
+3548:      assert.deepEqual(factB!.fact_roles, [roleB]);
+3549:      assert.deepEqual(factB!.related_dir_ids, [dirB]);
+3550:      assert.equal(factA!.fact_roles.includes(roleB) && dirA !== dirB, false);
+3551:      assert.equal((factA!.related_dir_ids ?? []).includes(dirB) && dirA !== dirB, false);
+3552:      assert.equal((factB!.related_dir_ids ?? []).includes(dirA) && dirA !== dirB, false);
+3553:      assert.equal((factA!.related_dir_ids ?? []).includes("DIR-NOT-AUTHORIZED"), false);
+3554:      assert.equal((factB!.related_dir_ids ?? []).includes("DIR-NOT-AUTHORIZED"), false);
+3555:      assert.equal(dc.version, vBefore + 1, "DC version must increment once");
+3556:      console.log(
+3557:        `[m24r2h] codeA=${codeA}; codeB=${codeB}; factA=${factA!.fact_id}:${factA!.fact_roles.join(",")}:${(factA!.related_dir_ids ?? []).join(",")}; factB=${factB!.fact_id}:${factB!.fact_roles.join(",")}:${(factB!.related_dir_ids ?? []).join(",")}; dc=${vBefore}->${dc.version}`,
+3558:      );
+3559:    });
+3560:
+3561:    await check("M2.4-R2-FU1 Case I: forged role code is rejected; legal item still writes", async () => {
+3562:      const before = await seedAnswerReadySession("m24r2i");
+3563:      const auth = authorizedFrom(before);
+3564:      const legalCode = auth.fact_role_codes[0] ?? null;
+3565:      assert.ok(legalCode, "Case I needs a legal authorized role code");
+3566:      const forged = "v1/dir/DIR-FORGED/role/forged_role";
+3567:      const vBefore = before.decision_context!.version;
+3568:      const lastPlan = before.decision_understanding?.last_sent_question?.plan_id;
+3569:      const lastCodes = [...(before.decision_understanding?.last_sent_question?.fact_role_codes ?? [])];
+3570:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3571:        classification: "clear_answer",
+3572:        extracted_items: [
+3573:          {
+3574:            text: "伪造角色不应写入。",
+3575:            semantic_kind: "reality_fact",
+3576:            role_hint: null,
+3577:            role_code_hint: forged,
+3578:            certainty: "explicit",
+3579:          },
+3580:          {
+3581:            text: "这是合法授权条目。",
+3582:            semantic_kind: "reality_fact",
+3583:            role_hint: null,
+3584:            role_code_hint: legalCode,
+3585:            certainty: "explicit",
+3586:          },
+3587:        ],
+3588:        unresolved_aspects: [],
+3589:        explanation: "forged role code",
+3590:      };
+3591:      stubResponse = "R2I FREEFORM MUST NOT WIN";
+3592:      const out = await handleUserMessage({
+3593:        session: before,
+3594:        userMessage: "伪造角色不应写入。另外这是合法授权条目。",
+3595:        locale: "zh-CN",
+3596:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3597:      });
+3598:      const dc = out.decision_context!;
+3599:      const overreach = dc.reality_facts.filter((f) => f.statement.includes("伪造角色不应写入"));
+3600:      const legal = dc.reality_facts.filter((f) => f.statement.includes("合法授权条目"));
+3601:      assert.equal(overreach.length, 0, "forged role must not write");
+
+==================== DRAFT 16 line 3647 ====================
+3602:      assert.ok(legal.length >= 1, "legal item should still write");
+3603:      for (const fact of legal) {
+3604:        assert.deepEqual(fact.fact_roles, [legalCode.split("/role/")[1]]);
+3605:        assert.deepEqual(fact.related_dir_ids, [roleCodeDir(legalCode)]);
+3606:        assert.equal((fact.fact_roles ?? []).includes("forged_role"), false);
+3607:        assert.equal((fact.related_dir_ids ?? []).includes("DIR-FORGED"), false);
+3608:      }
+3609:      assert.equal(
+3610:        (out.decision_understanding?.last_sent_question?.fact_role_codes ?? []).includes(forged),
+3611:        false,
+3612:      );
+3613:      // FU2: the illegal item stays pending; the next question is a role
+3614:      // clarification and must not absorb the forged role code into the Plan.
+3615:      assert.equal((lastCodes).includes(forged), false);
+3616:      assert.ok(out.pending_answer_resolution, "Case I must keep the illegal item pending");
+3617:      assert.equal(
+3618:        (out.decision_understanding?.last_sent_question?.fact_role_codes ?? []).includes(forged),
+3619:        false,
+3620:        "new last_sent must not absorb the forged role code",
+3621:      );
+3622:      assert.equal(
+3623:        (out.adaptive_ask_plan?.fact_role_codes ?? []).includes(forged),
+3624:        false,
+3625:        "next Plan must not absorb the forged role code",
+3626:      );
+3627:      const probe = answerEventFromModelDraft({
+3628:        session: before,
+3629:        statement: "伪造角色不应写入。另外这是合法授权条目。",
+3630:        source_turn_id: "probe_m24r2i",
+3631:        draft,
+3632:      });
+3633:      console.log(
+3634:        `[m24r2i] legal=${legalCode}; forged=${forged}; overreach=${overreach.length}; legal_facts=${legal.length}; legal_bind=${legal.map((f) => `${f.fact_id}:${(f.fact_roles ?? []).join(",")}:${(f.related_dir_ids ?? []).join(",")}`).join("|")}; dc=${vBefore}->${dc.version}; notes=${probe.notes.join(",")}; plan=${out.decision_understanding?.last_sent_question?.plan_id}`,
+3635:      );
+3636:    });
+3637:
+3638:    await check("M2.4-R2-FU1 Case J: unclear must not become estimate", async () => {
+3639:      const before = await seedAnswerReadySession("m24r2j");
+3640:      const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3641:      assert.ok(legalCode, "Case J needs a legal authorized role code");
+3642:      const vBefore = before.decision_context!.version;
+3643:      const factsBefore = before.decision_context!.reality_facts.length;
+3644:      const cstBefore = before.decision_context!.constraints.length;
+3645:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3646:        classification: "partial_answer",
+3647:        extracted_items: [
+3648:          {
+3649:            text: "用户可能有一定资金储备",
+3650:            semantic_kind: "reality_fact",
+3651:            role_hint: null,
+3652:            role_code_hint: legalCode,
+3653:            certainty: "unclear",
+3654:          },
+3655:        ],
+3656:        unresolved_aspects: [],
+3657:        explanation: "unclear certainty test",
+3658:      };
+3659:      stubResponse = "R2J FREEFORM MUST NOT WIN";
+3660:      const out = await handleUserMessage({
+3661:        session: before,
+3662:        userMessage: "用户可能有一定资金储备",
+3663:        locale: "zh-CN",
+3664:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3665:      });
+3666:      const dc = out.decision_context!;
+3667:      assert.equal(dc.reality_facts.length, factsBefore);
+3668:      assert.equal(dc.constraints.length, cstBefore);
+3669:      assert.equal(dc.version, vBefore);
+3670:      assert.equal(
+3671:        dc.reality_facts.some((f) => f.verification_level === "user_estimate"),
+3672:        false,
+3673:      );
+3674:      assert.equal(
+3675:        dc.reality_facts.some((f) => f.verification_level === "user_asserted" && f.statement.includes("资金储备")),
+3676:        false,
+
+==================== DRAFT 17 line 3701 ====================
+3656:        unresolved_aspects: [],
+3657:        explanation: "unclear certainty test",
+3658:      };
+3659:      stubResponse = "R2J FREEFORM MUST NOT WIN";
+3660:      const out = await handleUserMessage({
+3661:        session: before,
+3662:        userMessage: "用户可能有一定资金储备",
+3663:        locale: "zh-CN",
+3664:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3665:      });
+3666:      const dc = out.decision_context!;
+3667:      assert.equal(dc.reality_facts.length, factsBefore);
+3668:      assert.equal(dc.constraints.length, cstBefore);
+3669:      assert.equal(dc.version, vBefore);
+3670:      assert.equal(
+3671:        dc.reality_facts.some((f) => f.verification_level === "user_estimate"),
+3672:        false,
+3673:      );
+3674:      assert.equal(
+3675:        dc.reality_facts.some((f) => f.verification_level === "user_asserted" && f.statement.includes("资金储备")),
+3676:        false,
+3677:      );
+3678:      const probe = answerEventFromModelDraft({
+3679:        session: before,
+3680:        statement: "用户可能有一定资金储备",
+3681:        source_turn_id: "probe_m24r2j",
+3682:        draft,
+3683:      });
+3684:      assert.equal(probe.proposed_writes.length, 0, "only-unclear turn must have empty proposed_writes");
+3685:      assert.ok(
+3686:        probe.notes.some((n) => n.includes("unclear_certainty")),
+3687:        `Case J must keep unclear unresolved, notes=${probe.notes.join("|")}`,
+3688:      );
+3689:      console.log(
+3690:        `[m24r2j] code=${legalCode}; facts=${factsBefore}->${dc.reality_facts.length}; constraints=${cstBefore}->${dc.constraints.length}; dc=${vBefore}->${dc.version}; writes=${probe.proposed_writes.length}; unresolved=${probe.notes.join(",")}`,
+3691:      );
+3692:    });
+3693:
+3694:    await check("M2.4-R2-FU1 Case K: estimated is kept as user_estimate", async () => {
+3695:      const before = await seedAnswerReadySession("m24r2k");
+3696:      const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3697:      assert.ok(legalCode, "Case K needs a legal authorized role code");
+3698:      const vBefore = before.decision_context!.version;
+3699:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3700:        classification: "estimate",
+3701:        extracted_items: [
+3702:          {
+3703:            text: "大概还能撑 6 个月。",
+3704:            semantic_kind: "reality_fact",
+3705:            role_hint: null,
+3706:            role_code_hint: legalCode,
+3707:            certainty: "estimated",
+3708:          },
+3709:        ],
+3710:        unresolved_aspects: [],
+3711:        explanation: "estimated fact",
+3712:      };
+3713:      stubResponse = "R2K FREEFORM MUST NOT WIN";
+3714:      const out = await handleUserMessage({
+3715:        session: before,
+3716:        userMessage: "大概还能撑 6 个月。",
+3717:        locale: "zh-CN",
+3718:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3719:      });
+3720:      const fact = out.decision_context!.reality_facts.find((f) => f.statement.includes("撑 6 个月"));
+3721:      assert.ok(fact, "estimated fact missing");
+3722:      assert.equal(fact!.status, "unverified");
+3723:      assert.equal(fact!.verification_level, "user_estimate");
+3724:      assert.notEqual(fact!.verification_level, "user_asserted");
+3725:      assert.notEqual(fact!.status, "confirmed");
+3726:      assert.deepEqual(fact!.fact_roles, [legalCode.split("/role/")[1]]);
+3727:      assert.deepEqual(fact!.related_dir_ids, [roleCodeDir(legalCode)]);
+3728:      assert.ok(out.decision_context!.version > vBefore);
+3729:      console.log(
+3730:        `[m24r2k] code=${legalCode}; fact=${fact!.fact_id}:${fact!.status}:${fact!.verification_level}:${(fact!.fact_roles ?? []).join(",")}:${(fact!.related_dir_ids ?? []).join(",")}; dc=${vBefore}->${out.decision_context!.version}`,
+
+==================== DRAFT 18 line 3741 ====================
+3696:      const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3697:      assert.ok(legalCode, "Case K needs a legal authorized role code");
+3698:      const vBefore = before.decision_context!.version;
+3699:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3700:        classification: "estimate",
+3701:        extracted_items: [
+3702:          {
+3703:            text: "大概还能撑 6 个月。",
+3704:            semantic_kind: "reality_fact",
+3705:            role_hint: null,
+3706:            role_code_hint: legalCode,
+3707:            certainty: "estimated",
+3708:          },
+3709:        ],
+3710:        unresolved_aspects: [],
+3711:        explanation: "estimated fact",
+3712:      };
+3713:      stubResponse = "R2K FREEFORM MUST NOT WIN";
+3714:      const out = await handleUserMessage({
+3715:        session: before,
+3716:        userMessage: "大概还能撑 6 个月。",
+3717:        locale: "zh-CN",
+3718:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3719:      });
+3720:      const fact = out.decision_context!.reality_facts.find((f) => f.statement.includes("撑 6 个月"));
+3721:      assert.ok(fact, "estimated fact missing");
+3722:      assert.equal(fact!.status, "unverified");
+3723:      assert.equal(fact!.verification_level, "user_estimate");
+3724:      assert.notEqual(fact!.verification_level, "user_asserted");
+3725:      assert.notEqual(fact!.status, "confirmed");
+3726:      assert.deepEqual(fact!.fact_roles, [legalCode.split("/role/")[1]]);
+3727:      assert.deepEqual(fact!.related_dir_ids, [roleCodeDir(legalCode)]);
+3728:      assert.ok(out.decision_context!.version > vBefore);
+3729:      console.log(
+3730:        `[m24r2k] code=${legalCode}; fact=${fact!.fact_id}:${fact!.status}:${fact!.verification_level}:${(fact!.fact_roles ?? []).join(",")}:${(fact!.related_dir_ids ?? []).join(",")}; dc=${vBefore}->${out.decision_context!.version}`,
+3731:      );
+3732:    });
+3733:
+3734:    await check("M2.4-R2-FU1 Case L: explicit is kept as user_asserted and not confirmed", async () => {
+3735:      const before = await seedAnswerReadySession("m24r2l");
+3736:      const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3737:      assert.ok(legalCode, "Case L needs a legal authorized role code");
+3738:      const vBefore = before.decision_context!.version;
+3739:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3740:        classification: "clear_answer",
+3741:        extracted_items: [
+3742:          {
+3743:            text: "我目前月薪三万。",
+3744:            semantic_kind: "reality_fact",
+3745:            role_hint: null,
+3746:            role_code_hint: legalCode,
+3747:            certainty: "explicit",
+3748:          },
+3749:        ],
+3750:        unresolved_aspects: [],
+3751:        explanation: "explicit fact",
+3752:      };
+3753:      stubResponse = "R2L FREEFORM MUST NOT WIN";
+3754:      const out = await handleUserMessage({
+3755:        session: before,
+3756:        userMessage: "我目前月薪三万。",
+3757:        locale: "zh-CN",
+3758:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3759:      });
+3760:      const fact = out.decision_context!.reality_facts.find((f) => f.statement.includes("月薪三万"));
+3761:      assert.ok(fact, "explicit fact missing");
+3762:      assert.equal(fact!.status, "unverified");
+3763:      assert.equal(fact!.verification_level, "user_asserted");
+3764:      assert.notEqual(fact!.status, "confirmed");
+3765:      assert.equal(fact!.user_confirmed, false);
+3766:      assert.ok(fact!.has_user_confirm_event !== true);
+3767:      assert.deepEqual(fact!.fact_roles, [legalCode.split("/role/")[1]]);
+3768:      assert.deepEqual(fact!.related_dir_ids, [roleCodeDir(legalCode)]);
+3769:      assert.ok(out.decision_context!.version > vBefore);
+3770:      console.log(
+
+==================== DRAFT 19 line 3794 ====================
+3749:        ],
+3750:        unresolved_aspects: [],
+3751:        explanation: "explicit fact",
+3752:      };
+3753:      stubResponse = "R2L FREEFORM MUST NOT WIN";
+3754:      const out = await handleUserMessage({
+3755:        session: before,
+3756:        userMessage: "我目前月薪三万。",
+3757:        locale: "zh-CN",
+3758:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3759:      });
+3760:      const fact = out.decision_context!.reality_facts.find((f) => f.statement.includes("月薪三万"));
+3761:      assert.ok(fact, "explicit fact missing");
+3762:      assert.equal(fact!.status, "unverified");
+3763:      assert.equal(fact!.verification_level, "user_asserted");
+3764:      assert.notEqual(fact!.status, "confirmed");
+3765:      assert.equal(fact!.user_confirmed, false);
+3766:      assert.ok(fact!.has_user_confirm_event !== true);
+3767:      assert.deepEqual(fact!.fact_roles, [legalCode.split("/role/")[1]]);
+3768:      assert.deepEqual(fact!.related_dir_ids, [roleCodeDir(legalCode)]);
+3769:      assert.ok(out.decision_context!.version > vBefore);
+3770:      console.log(
+3771:        `[m24r2l] code=${legalCode}; fact=${fact!.fact_id}:${fact!.status}:${fact!.verification_level}:confirmed=${fact!.status === "confirmed"}:user_confirmed=${fact!.user_confirmed}:${(fact!.fact_roles ?? []).join(",")}:${(fact!.related_dir_ids ?? []).join(",")}; dc=${vBefore}->${out.decision_context!.version}`,
+3772:      );
+3773:    });
+3774:
+3775:    await check("M2.4-R2-FU1 Case M: constraint certainty semantics", async () => {
+3776:      const variants: Array<{
+3777:        tag: string;
+3778:        certainty: "explicit" | "estimated" | "unclear";
+3779:        text: string;
+3780:      }> = [
+3781:        { tag: "m24r2m_explicit", certainty: "explicit", text: "硬约束是必须保留社保。" },
+3782:        { tag: "m24r2m_estimated", certainty: "estimated", text: "估计必须保留社保。" },
+3783:        { tag: "m24r2m_unclear", certainty: "unclear", text: "可能有必须保留社保的约束。" },
+3784:      ];
+3785:      for (const item of variants) {
+3786:        const before = await seedAnswerReadySession(item.tag);
+3787:        const legalCode = authorizedFrom(before).fact_role_codes[0] ?? null;
+3788:        assert.ok(legalCode, `${item.tag} needs a legal authorized role code`);
+3789:        const vBefore = before.decision_context!.version;
+3790:        const factsBefore = before.decision_context!.reality_facts.length;
+3791:        const cstBefore = before.decision_context!.constraints.length;
+3792:        const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3793:          classification: "partial_answer",
+3794:          extracted_items: [
+3795:            {
+3796:              text: item.text,
+3797:              semantic_kind: "constraint",
+3798:              role_hint: null,
+3799:              role_code_hint: legalCode,
+3800:              certainty: item.certainty,
+3801:            },
+3802:          ],
+3803:          unresolved_aspects: [],
+3804:          explanation: `constraint ${item.certainty}`,
+3805:        };
+3806:        stubResponse = `${item.tag} FREEFORM MUST NOT WIN`;
+3807:        const out = await handleUserMessage({
+3808:          session: before,
+3809:          userMessage: item.text,
+3810:          locale: "zh-CN",
+3811:          __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3812:        });
+3813:        const dc = out.decision_context!;
+3814:        const cst = dc.constraints.find((c) => c.statement.includes(item.text.replace(/。$/, "")) || c.statement === item.text);
+3815:        const companion = dc.reality_facts.find(
+3816:          (f) => f.statement.includes(item.text.replace(/。$/, "")) || f.statement === item.text,
+3817:        );
+3818:        const probe = answerEventFromModelDraft({
+3819:          session: before,
+3820:          statement: item.text,
+3821:          source_turn_id: `probe_${item.tag}`,
+3822:          draft,
+3823:        });
+
+==================== DRAFT 20 line 3880 ====================
+3835:          assert.ok(dc.version > vBefore);
+3836:        } else if (item.certainty === "estimated") {
+3837:          // applyAnswerEventToSessionDc hardcodes Constraint verification_level
+3838:          // to user_asserted; estimated Constraint is not legally persistable
+3839:          // on this path, so FU1 fail-closes to unresolved (no disguise).
+3840:          assert.equal(cst, undefined, "estimated constraint must not persist as user_asserted");
+3841:          assert.equal(companion, undefined, "estimated constraint must not write a mismatched companion");
+3842:          assert.equal(dc.version, vBefore);
+3843:          assert.equal(dc.reality_facts.length, factsBefore);
+3844:          assert.equal(dc.constraints.length, cstBefore);
+3845:          assert.equal(probe.proposed_writes.length, 0);
+3846:          assert.ok(
+3847:            probe.notes.some((n) => n.includes("estimated_constraint_not_persistable")),
+3848:            `estimated constraint must stay unresolved, notes=${probe.notes.join("|")}`,
+3849:          );
+3850:        } else {
+3851:          assert.equal(cst, undefined, "unclear must not write a Constraint");
+3852:          assert.equal(companion, undefined, "unclear must not write a companion RealityFact");
+3853:          assert.equal(dc.version, vBefore);
+3854:          assert.equal(dc.reality_facts.length, factsBefore);
+3855:          assert.equal(dc.constraints.length, cstBefore);
+3856:          assert.equal(probe.proposed_writes.length, 0);
+3857:          assert.ok(
+3858:            probe.notes.some((n) => n.includes("unclear_certainty")),
+3859:            `unclear constraint must stay unresolved, notes=${probe.notes.join("|")}`,
+3860:          );
+3861:        }
+3862:        console.log(
+3863:          `[m24r2m] tag=${item.tag}; certainty=${item.certainty}; code=${legalCode}; cst=${cst ? `${cst.constraint_id}:${cst.status}:${cst.verification_level}:${(cst.related_dir_ids ?? []).join(",")}` : "none"}; companion=${companion ? `${companion.fact_id}:${companion.status}:${companion.verification_level}:${(companion.fact_roles ?? []).join(",")}:${(companion.related_dir_ids ?? []).join(",")}` : "none"}; same_level=${cst && companion ? cst.verification_level === companion.verification_level : "n/a"}; same_dir=${cst && companion ? JSON.stringify(cst.related_dir_ids) === JSON.stringify(companion.related_dir_ids) : "n/a"}; dc=${vBefore}->${dc.version}; notes=${probe.notes.join(",")}`,
+3864:        );
+3865:      }
+3866:    });
+3867:
+3868:
+3869:
+3870:    async function runFu2NullRolePending(tag: string) {
+3871:      const seeded = await seedAnswerReadySession(tag);
+3872:      const { session: before, codeA, codeB } = withTwoAuthorizedRoleCodes(seeded);
+3873:      const lastSentBefore = before.decision_understanding?.last_sent_question ?? null;
+3874:      const askedBefore = before.decision_understanding?.budget.session_asked_count ?? 0;
+3875:      const vBefore = before.decision_context!.version;
+3876:      const factsBefore = before.decision_context!.reality_facts.length;
+3877:      const cstBefore = before.decision_context!.constraints.length;
+3878:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3879:        classification: "clear_answer",
+3880:        extracted_items: [
+3881:          {
+3882:            text: "我目前仍在职。",
+3883:            semantic_kind: "reality_fact",
+3884:            role_hint: null,
+3885:            role_code_hint: null,
+3886:            certainty: "explicit",
+3887:          },
+3888:        ],
+3889:        unresolved_aspects: [],
+3890:        explanation: "null role under multi-role auth",
+3891:      };
+3892:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+3893:      const out = await handleUserMessage({
+3894:        session: before,
+3895:        userMessage: "我目前仍在职。",
+3896:        locale: "zh-CN",
+3897:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3898:      });
+3899:      return {
+3900:        before,
+3901:        out,
+3902:        codeA,
+3903:        codeB,
+3904:        lastSentBefore,
+3905:        askedBefore,
+3906:        vBefore,
+3907:        factsBefore,
+3908:        cstBefore,
+3909:        draft,
+
+==================== DRAFT 21 line 3938 ====================
+3893:      const out = await handleUserMessage({
+3894:        session: before,
+3895:        userMessage: "我目前仍在职。",
+3896:        locale: "zh-CN",
+3897:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3898:      });
+3899:      return {
+3900:        before,
+3901:        out,
+3902:        codeA,
+3903:        codeB,
+3904:        lastSentBefore,
+3905:        askedBefore,
+3906:        vBefore,
+3907:        factsBefore,
+3908:        cstBefore,
+3909:        draft,
+3910:      };
+3911:    }
+3912:
+3913:    await check("M2.4-R2-FU2-A: no last_sent_question cannot authorize from next plan", async () => {
+3914:      const seeded = await seedAnswerReadySession("m24r2fu2a");
+3915:      const plan =
+3916:        seeded.decision_understanding?.next_question_plan ?? seeded.adaptive_ask_plan ?? null;
+3917:      assert.ok(plan, "FU2-A needs a next_question_plan");
+3918:      assert.ok(seeded.decision_understanding?.last_sent_question, "seed should start with last_sent");
+3919:      const before = {
+3920:        ...seeded,
+3921:        decision_understanding: {
+3922:          ...seeded.decision_understanding!,
+3923:          last_sent_question: null,
+3924:          next_question_plan: plan,
+3925:        },
+3926:        adaptive_ask_plan: plan,
+3927:      };
+3928:      const targets = activeTargets(before);
+3929:      assert.equal(targets.auth_error, "missing_authorized_answer_target");
+3930:      assert.equal(targets.fact_role_codes.length, 0);
+3931:      const legalCode = plan.fact_role_codes[0] ?? null;
+3932:      assert.ok(legalCode, "FU2-A plan should have a role code that must not authorize this turn");
+3933:      const vBefore = before.decision_context!.version;
+3934:      const factsBefore = before.decision_context!.reality_facts.length;
+3935:      const cstBefore = before.decision_context!.constraints.length;
+3936:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+3937:        classification: "clear_answer",
+3938:        extracted_items: [
+3939:          {
+3940:            text: "我目前仍在职。",
+3941:            semantic_kind: "reality_fact",
+3942:            role_hint: null,
+3943:            role_code_hint: legalCode,
+3944:            certainty: "explicit",
+3945:          },
+3946:        ],
+3947:        unresolved_aspects: [],
+3948:        explanation: "should not authorize from unsent plan",
+3949:      };
+3950:      stubResponse = "FU2A FREEFORM MUST NOT WIN";
+3951:      const out = await handleUserMessage({
+3952:        session: before,
+3953:        userMessage: "我目前仍在职。",
+3954:        locale: "zh-CN",
+3955:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+3956:      });
+3957:      const dc = out.decision_context!;
+3958:      assert.equal(dc.reality_facts.length, factsBefore, "FU2-A must not write RealityFacts");
+3959:      assert.equal(dc.constraints.length, cstBefore, "FU2-A must not write Constraints");
+3960:      assert.equal(dc.version, vBefore, "FU2-A must not bump DC version");
+3961:      const probe = answerEventFromModelDraft({
+3962:        session: before,
+3963:        statement: "我目前仍在职。",
+3964:        source_turn_id: "probe_m24r2fu2a",
+3965:        draft,
+3966:      });
+3967:      assert.equal(probe.proposed_writes.length, 0);
+
+==================== DRAFT 22 line 4100 ====================
+4055:    await check("M2.4-R2-FU2-D: unclear clarification keeps pending and does not jump NeedItem", async () => {
+4056:      const ctx = await runFu2NullRolePending("m24r2fu2d");
+4057:      const { out: pendingSession, lastSentBefore, vBefore, factsBefore, cstBefore, askedBefore } = ctx;
+4058:      const pendingBefore = pendingSession.pending_answer_resolution!;
+4059:      const clarifyPlanId = pendingSession.decision_understanding?.last_sent_question?.plan_id;
+4060:      const askedMid = pendingSession.decision_understanding?.budget.session_asked_count ?? 0;
+4061:      stubResponse = "FU2D FREEFORM MUST NOT WIN";
+4062:      const out = await handleUserMessage({
+4063:        session: pendingSession,
+4064:        userMessage: "不确定",
+4065:        locale: "zh-CN",
+4066:      });
+4067:      const dc = out.decision_context!;
+4068:      assert.equal(dc.reality_facts.length, factsBefore);
+4069:      assert.equal(dc.constraints.length, cstBefore);
+4070:      assert.equal(dc.version, vBefore);
+4071:      const pending = out.pending_answer_resolution ?? null;
+4072:      assert.ok(pending && pending.status === "pending", "FU2-D must keep pending");
+4073:      assert.equal(pending!.source_turn_id, pendingBefore.source_turn_id);
+4074:      const asst = lastAssistant(out);
+4075:      assert.notEqual(asst.content, stubResponse);
+4076:      assert.ok(
+4077:        asst.content.includes("已授权的调查角色") || asst.content.includes("可选角色"),
+4078:        "FU2-D must stay on the role clarification question",
+4079:      );
+4080:      const originalDirs = [...(lastSentBefore?.dir_ids ?? [])].sort();
+4081:      const nextDirs = [...(out.adaptive_ask_plan?.dir_ids ?? pendingSession.adaptive_ask_plan?.dir_ids ?? [])].sort();
+4082:      assert.deepEqual(nextDirs, originalDirs, "FU2-D must not jump to the next unrelated NeedItem");
+4083:      assert.equal(out.decision_understanding?.last_sent_question?.plan_id, clarifyPlanId);
+4084:      const askedAfter = out.decision_understanding?.budget.session_asked_count ?? askedMid;
+4085:      assert.equal(askedAfter, askedMid, "FU2-D must not deduct budget again for the same clarification");
+4086:      console.log(
+4087:        `[m24r2fu2d] facts=${factsBefore}->${dc.reality_facts.length}; dc=${vBefore}->${dc.version}; asked=${askedBefore}->${askedMid}->${askedAfter}; pending=${pending!.status}:${pending!.source_turn_id}; last_sent=${out.decision_understanding?.last_sent_question?.plan_id}`,
+4088:      );
+4089:    });
+4090:
+4091:    await check("M2.4-R2-FU2-E: illegal role stays pending; legal item writes; plan not polluted", async () => {
+4092:      const before = await seedAnswerReadySession("m24r2fu2e");
+4093:      const auth = authorizedFrom(before);
+4094:      const legalCode = auth.fact_role_codes[0] ?? null;
+4095:      assert.ok(legalCode, "FU2-E needs a legal authorized role code");
+4096:      const forged = "v1/dir/DIR-FORGED/role/forged_role";
+4097:      const vBefore = before.decision_context!.version;
+4098:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4099:        classification: "clear_answer",
+4100:        extracted_items: [
+4101:          {
+4102:            text: "伪造角色不应写入。",
+4103:            semantic_kind: "reality_fact",
+4104:            role_hint: null,
+4105:            role_code_hint: forged,
+4106:            certainty: "explicit",
+4107:          },
+4108:          {
+4109:            text: "这是合法授权条目。",
+4110:            semantic_kind: "reality_fact",
+4111:            role_hint: null,
+4112:            role_code_hint: legalCode,
+4113:            certainty: "explicit",
+4114:          },
+4115:        ],
+4116:        unresolved_aspects: [],
+4117:        explanation: "illegal + legal",
+4118:      };
+4119:      stubResponse = "FU2E FREEFORM MUST NOT WIN";
+4120:      const out = await handleUserMessage({
+4121:        session: before,
+4122:        userMessage: "伪造角色不应写入。另外这是合法授权条目。",
+4123:        locale: "zh-CN",
+4124:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4125:      });
+4126:      const dc = out.decision_context!;
+4127:      const overreach = dc.reality_facts.filter((f) => f.statement.includes("伪造角色不应写入"));
+4128:      const legal = dc.reality_facts.filter((f) => f.statement.includes("合法授权条目"));
+4129:      assert.equal(overreach.length, 0, "illegal item must not write");
+
+==================== DRAFT 23 line 4154 ====================
+4109:            text: "这是合法授权条目。",
+4110:            semantic_kind: "reality_fact",
+4111:            role_hint: null,
+4112:            role_code_hint: legalCode,
+4113:            certainty: "explicit",
+4114:          },
+4115:        ],
+4116:        unresolved_aspects: [],
+4117:        explanation: "illegal + legal",
+4118:      };
+4119:      stubResponse = "FU2E FREEFORM MUST NOT WIN";
+4120:      const out = await handleUserMessage({
+4121:        session: before,
+4122:        userMessage: "伪造角色不应写入。另外这是合法授权条目。",
+4123:        locale: "zh-CN",
+4124:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4125:      });
+4126:      const dc = out.decision_context!;
+4127:      const overreach = dc.reality_facts.filter((f) => f.statement.includes("伪造角色不应写入"));
+4128:      const legal = dc.reality_facts.filter((f) => f.statement.includes("合法授权条目"));
+4129:      assert.equal(overreach.length, 0, "illegal item must not write");
+4130:      assert.ok(legal.length >= 1, "legal item should write");
+4131:      assert.ok(dc.version > vBefore);
+4132:      const pending = out.pending_answer_resolution ?? null;
+4133:      assert.ok(pending && pending.status === "pending", "illegal item must stay pending");
+4134:      assert.ok(pending!.unresolved_items.some((i) => i.reason === "unauthorized_role_code" || i.reason === "illegal_role_code"));
+4135:      assert.equal((out.adaptive_ask_plan?.fact_role_codes ?? []).includes(forged), false);
+4136:      assert.equal((out.decision_understanding?.last_sent_question?.fact_role_codes ?? []).includes(forged), false);
+4137:      const asst = lastAssistant(out);
+4138:      assert.ok(
+4139:        asst.content.includes("已授权的调查角色") || asst.content.includes("可选角色"),
+4140:        "FU2-E next question must address the pending illegal item",
+4141:      );
+4142:      assert.ok((out.decision_understanding?.last_sent_question?.plan_id ?? "").startsWith("qp_role_clarify_"));
+4143:      console.log(
+4144:        `[m24r2fu2e] legal=${legalCode}; forged=${forged}; overreach=${overreach.length}; legal_facts=${legal.length}; pending=${pending!.status}:${pending!.unresolved_items.map((i)=>i.reason).join(",")}; dc=${vBefore}->${dc.version}; last_sent=${out.decision_understanding?.last_sent_question?.plan_id}`,
+4145:      );
+4146:    });
+4147:
+4148:    await check("M2.4-R2-FU2-F: partial success writes legal item and keeps unbound pending first", async () => {
+4149:      const seeded = await seedAnswerReadySession("m24r2fu2f");
+4150:      const { session: before, codeA, codeB } = withTwoAuthorizedRoleCodes(seeded);
+4151:      const vBefore = before.decision_context!.version;
+4152:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4153:        classification: "clear_answer",
+4154:        extracted_items: [
+4155:          {
+4156:            text: "合法事实已能绑定。",
+4157:            semantic_kind: "reality_fact",
+4158:            role_hint: null,
+4159:            role_code_hint: codeA,
+4160:            certainty: "explicit",
+4161:          },
+4162:          {
+4163:            text: "这条还无法定位角色。",
+4164:            semantic_kind: "reality_fact",
+4165:            role_hint: null,
+4166:            role_code_hint: null,
+4167:            certainty: "explicit",
+4168:          },
+4169:        ],
+4170:        unresolved_aspects: [],
+4171:        explanation: "partial success",
+4172:      };
+4173:      stubResponse = "FU2F FREEFORM MUST NOT WIN";
+4174:      const out = await handleUserMessage({
+4175:        session: before,
+4176:        userMessage: "合法事实已能绑定。另外这条还无法定位角色。",
+4177:        locale: "zh-CN",
+4178:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4179:      });
+4180:      const dc = out.decision_context!;
+4181:      const legal = dc.reality_facts.find((f) => f.statement.includes("合法事实已能绑定"));
+4182:      const unbound = dc.reality_facts.find((f) => f.statement.includes("这条还无法定位角色"));
+4183:      assert.ok(legal, "FU2-F legal item must write");
+
+==================== DRAFT 24 line 4280 ====================
+4235:        session: replaySession,
+4236:        userMessage: "我目前仍在职。",
+4237:        locale: "zh-CN",
+4238:        userAlreadyAppended: true,
+4239:      });
+4240:      const dc = replay.decision_context!;
+4241:      assert.equal(dc.reality_facts.length, factsBefore, "replay must not write DC");
+4242:      assert.equal(dc.constraints.length, cstBefore);
+4243:      assert.equal(dc.version, vBefore);
+4244:      assert.ok(replay.pending_answer_resolution, "replay must not drop pending");
+4245:      assert.equal(replay.pending_answer_resolution!.source_turn_id, pendingFirst.source_turn_id);
+4246:      const asked2 = replay.decision_understanding?.budget.session_asked_count ?? 0;
+4247:      assert.equal(asked2, asked1, "replay must not deduct budget again");
+4248:      const asst = lastAssistant(replay);
+4249:      assert.equal(asst.content, q1, "replay must restore the already-sent clarification");
+4250:      console.log(
+4251:        `[m24r2fu2g] turn=${turnId}; pending_reloaded=${Boolean(reloaded.pending_answer_resolution)}; pending_after=${replay.pending_answer_resolution?.status}; facts=${factsBefore}->${dc.reality_facts.length}; dc=${vBefore}->${dc.version}; asked=${askedBefore}->${asked1}->${asked2}; q_recovered=${asst.content === q1}`,
+4252:      );
+4253:    });
+4254:
+4255:    await check("M2.4-R2-FU2-H: last_sent historical recovery only when plan_id matches", async () => {
+4256:      const matchSeeded = await seedAnswerReadySession("m24r2fu2h_match");
+4257:      const matchLast = matchSeeded.decision_understanding!.last_sent_question!;
+4258:      const matchPlan =
+4259:        matchSeeded.decision_understanding?.next_question_plan ?? matchSeeded.adaptive_ask_plan!;
+4260:      assert.equal(matchPlan.plan_id, matchLast.plan_id, "seeded last_sent and plan should share plan_id");
+4261:      const legalCode = matchPlan.fact_role_codes[0] ?? null;
+4262:      assert.ok(legalCode);
+4263:      const { fact_role_codes: _ignored, ...lastNoCodes } = matchLast;
+4264:      const matchBefore = {
+4265:        ...matchSeeded,
+4266:        decision_understanding: {
+4267:          ...matchSeeded.decision_understanding!,
+4268:          last_sent_question: lastNoCodes,
+4269:          next_question_plan: matchPlan,
+4270:        },
+4271:        adaptive_ask_plan: matchPlan,
+4272:      };
+4273:      const matchTargets = activeTargets(matchBefore);
+4274:      assert.equal(matchTargets.auth_error, undefined);
+4275:      assert.ok(matchTargets.fact_role_codes.includes(legalCode));
+4276:      const matchFactsBefore = matchBefore.decision_context!.reality_facts.length;
+4277:      const matchVBefore = matchBefore.decision_context!.version;
+4278:      const matchDraft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4279:        classification: "clear_answer",
+4280:        extracted_items: [
+4281:          {
+4282:            text: "历史恢复后写入合法事实。",
+4283:            semantic_kind: "reality_fact",
+4284:            role_hint: null,
+4285:            role_code_hint: legalCode,
+4286:            certainty: "explicit",
+4287:          },
+4288:        ],
+4289:        unresolved_aspects: [],
+4290:        explanation: "historical recover",
+4291:      };
+4292:      stubResponse = "FU2H MATCH FREEFORM MUST NOT WIN";
+4293:      const matchOut = await handleUserMessage({
+4294:        session: matchBefore,
+4295:        userMessage: "历史恢复后写入合法事实。",
+4296:        locale: "zh-CN",
+4297:        __testOnlyM1Hooks: { interpretAnswerModel: () => matchDraft },
+4298:      });
+4299:      const matchFact = matchOut.decision_context!.reality_facts.find((f) =>
+4300:        f.statement.includes("历史恢复后写入合法事实"),
+4301:      );
+4302:      assert.ok(matchFact, "matching plan_id must allow historical role-code recovery and write");
+4303:      assert.ok(matchOut.decision_context!.version > matchVBefore);
+4304:      assert.ok(matchOut.decision_context!.reality_facts.length > matchFactsBefore);
+4305:
+4306:      const mismatchSeeded = await seedAnswerReadySession("m24r2fu2h_mismatch");
+4307:      const mismatchLast = mismatchSeeded.decision_understanding!.last_sent_question!;
+4308:      const mismatchPlan =
+4309:        mismatchSeeded.decision_understanding?.next_question_plan ?? mismatchSeeded.adaptive_ask_plan!;
+
+==================== DRAFT 25 line 4335 ====================
+4290:        explanation: "historical recover",
+4291:      };
+4292:      stubResponse = "FU2H MATCH FREEFORM MUST NOT WIN";
+4293:      const matchOut = await handleUserMessage({
+4294:        session: matchBefore,
+4295:        userMessage: "历史恢复后写入合法事实。",
+4296:        locale: "zh-CN",
+4297:        __testOnlyM1Hooks: { interpretAnswerModel: () => matchDraft },
+4298:      });
+4299:      const matchFact = matchOut.decision_context!.reality_facts.find((f) =>
+4300:        f.statement.includes("历史恢复后写入合法事实"),
+4301:      );
+4302:      assert.ok(matchFact, "matching plan_id must allow historical role-code recovery and write");
+4303:      assert.ok(matchOut.decision_context!.version > matchVBefore);
+4304:      assert.ok(matchOut.decision_context!.reality_facts.length > matchFactsBefore);
+4305:
+4306:      const mismatchSeeded = await seedAnswerReadySession("m24r2fu2h_mismatch");
+4307:      const mismatchLast = mismatchSeeded.decision_understanding!.last_sent_question!;
+4308:      const mismatchPlan =
+4309:        mismatchSeeded.decision_understanding?.next_question_plan ?? mismatchSeeded.adaptive_ask_plan!;
+4310:      const { fact_role_codes: _ignored2, ...mismatchLastNoCodes } = mismatchLast;
+4311:      const mismatchBefore = {
+4312:        ...mismatchSeeded,
+4313:        decision_understanding: {
+4314:          ...mismatchSeeded.decision_understanding!,
+4315:          last_sent_question: {
+4316:            ...mismatchLastNoCodes,
+4317:            plan_id: "historical_plan_without_roles",
+4318:          },
+4319:          next_question_plan: { ...mismatchPlan, plan_id: "different_current_plan_id" },
+4320:        },
+4321:        adaptive_ask_plan: { ...mismatchPlan, plan_id: "different_current_plan_id" },
+4322:      };
+4323:      const mismatchTargets = activeTargets(mismatchBefore);
+4324:      assert.equal(mismatchTargets.auth_error, "missing_authorized_fact_roles");
+4325:      const mmFactsBefore = mismatchBefore.decision_context!.reality_facts.length;
+4326:      const mmVBefore = mismatchBefore.decision_context!.version;
+4327:      stubResponse = "FU2H MISMATCH FREEFORM MUST NOT WIN";
+4328:      const mismatchOut = await handleUserMessage({
+4329:        session: mismatchBefore,
+4330:        userMessage: "历史恢复失败不应写入。",
+4331:        locale: "zh-CN",
+4332:        __testOnlyM1Hooks: {
+4333:          interpretAnswerModel: () => ({
+4334:            classification: "clear_answer",
+4335:            extracted_items: [
+4336:              {
+4337:                text: "历史恢复失败不应写入。",
+4338:                semantic_kind: "reality_fact",
+4339:                role_hint: null,
+4340:                role_code_hint: mismatchPlan.fact_role_codes[0] ?? null,
+4341:                certainty: "explicit" as const,
+4342:              },
+4343:            ],
+4344:            unresolved_aspects: [],
+4345:            explanation: "mismatch must not recover",
+4346:          }),
+4347:        },
+4348:      });
+4349:      assert.equal(mismatchOut.decision_context!.version, mmVBefore);
+4350:      assert.equal(mismatchOut.decision_context!.reality_facts.length, mmFactsBefore);
+4351:      assert.equal(
+4352:        mismatchOut.decision_context!.reality_facts.some((f) => f.statement.includes("历史恢复失败不应写入")),
+4353:        false,
+4354:      );
+4355:
+4356:      const noneSeeded = await seedAnswerReadySession("m24r2fu2h_none");
+4357:      const nonePlan =
+4358:        noneSeeded.decision_understanding?.next_question_plan ?? noneSeeded.adaptive_ask_plan!;
+4359:      const noneBefore = {
+4360:        ...noneSeeded,
+4361:        decision_understanding: {
+4362:          ...noneSeeded.decision_understanding!,
+4363:          last_sent_question: null,
+4364:          next_question_plan: nonePlan,
+
+==================== DRAFT 26 line 4380 ====================
+4335:            extracted_items: [
+4336:              {
+4337:                text: "历史恢复失败不应写入。",
+4338:                semantic_kind: "reality_fact",
+4339:                role_hint: null,
+4340:                role_code_hint: mismatchPlan.fact_role_codes[0] ?? null,
+4341:                certainty: "explicit" as const,
+4342:              },
+4343:            ],
+4344:            unresolved_aspects: [],
+4345:            explanation: "mismatch must not recover",
+4346:          }),
+4347:        },
+4348:      });
+4349:      assert.equal(mismatchOut.decision_context!.version, mmVBefore);
+4350:      assert.equal(mismatchOut.decision_context!.reality_facts.length, mmFactsBefore);
+4351:      assert.equal(
+4352:        mismatchOut.decision_context!.reality_facts.some((f) => f.statement.includes("历史恢复失败不应写入")),
+4353:        false,
+4354:      );
+4355:
+4356:      const noneSeeded = await seedAnswerReadySession("m24r2fu2h_none");
+4357:      const nonePlan =
+4358:        noneSeeded.decision_understanding?.next_question_plan ?? noneSeeded.adaptive_ask_plan!;
+4359:      const noneBefore = {
+4360:        ...noneSeeded,
+4361:        decision_understanding: {
+4362:          ...noneSeeded.decision_understanding!,
+4363:          last_sent_question: null,
+4364:          next_question_plan: nonePlan,
+4365:        },
+4366:        adaptive_ask_plan: nonePlan,
+4367:      };
+4368:      const noneTargets = activeTargets(noneBefore);
+4369:      assert.equal(noneTargets.auth_error, "missing_authorized_answer_target");
+4370:      const noneVBefore = noneBefore.decision_context!.version;
+4371:      const noneFactsBefore = noneBefore.decision_context!.reality_facts.length;
+4372:      stubResponse = "FU2H NONE FREEFORM MUST NOT WIN";
+4373:      const noneOut = await handleUserMessage({
+4374:        session: noneBefore,
+4375:        userMessage: "没有已发送问题不得授权。",
+4376:        locale: "zh-CN",
+4377:        __testOnlyM1Hooks: {
+4378:          interpretAnswerModel: () => ({
+4379:            classification: "clear_answer",
+4380:            extracted_items: [
+4381:              {
+4382:                text: "没有已发送问题不得授权。",
+4383:                semantic_kind: "reality_fact",
+4384:                role_hint: null,
+4385:                role_code_hint: nonePlan.fact_role_codes[0] ?? null,
+4386:                certainty: "explicit" as const,
+4387:              },
+4388:            ],
+4389:            unresolved_aspects: [],
+4390:            explanation: "no last_sent",
+4391:          }),
+4392:        },
+4393:      });
+4394:      assert.equal(noneOut.decision_context!.version, noneVBefore);
+4395:      assert.equal(noneOut.decision_context!.reality_facts.length, noneFactsBefore);
+4396:
+4397:      console.log(
+4398:        `[m24r2fu2h] match_auth=${matchTargets.auth_error ?? "ok"}:${matchTargets.fact_role_codes.join("|")}; match_write=${Boolean(matchFact)}; match_dc=${matchVBefore}->${matchOut.decision_context!.version}; mismatch_auth=${mismatchTargets.auth_error}; mismatch_dc=${mmVBefore}->${mismatchOut.decision_context!.version}; none_auth=${noneTargets.auth_error}; none_dc=${noneVBefore}->${noneOut.decision_context!.version}`,
+4399:      );
+4400:    });
+4401:
+4402:
+4403:    await check("M2.4-R2 static: production path uses model interpretation before DC write", async () => {
+4404:      const adaptive = readFileSync(join(process.cwd(), "lib/poju/decision-intake/adaptive-turn.ts"), "utf8");
+4405:      assert.match(adaptive, /interpretAnswerWithModel/);
+4406:      assert.match(adaptive, /answerEventFromModelDraft/);
+4407:      assert.match(adaptive, /answer_interpretation_failed/);
+4408:      const agentSrc = readFileSync(join(process.cwd(), "lib/poju/agent.ts"), "utf8");
+4409:      assert.match(agentSrc, /answer_interpretation_failed|未能完成语义理解/);
+
+==================== DRAFT 27 line 4463 ====================
+4418:        new Set(
+4419:          [...last.dir_ids, ...codes.map((c) => roleCodeDir(c))].filter((d) => d.length > 0),
+4420:        ),
+4421:      );
+4422:      return {
+4423:        ...session,
+4424:        decision_understanding: session.decision_understanding
+4425:          ? {
+4426:              ...session.decision_understanding,
+4427:              last_sent_question: {
+4428:                ...last,
+4429:                dir_ids: dirs,
+4430:                fact_role_codes: [...codes],
+4431:              },
+4432:            }
+4433:          : session.decision_understanding,
+4434:      };
+4435:    }
+4436:
+4437:    function roleName(code: string): string {
+4438:      return code.split("/role/")[1] ?? "";
+4439:    }
+4440:
+4441:    function factForRole(
+4442:      dc: NonNullable<POJUSessionState["decision_context"]>,
+4443:      code: string,
+4444:      text: string,
+4445:    ) {
+4446:      const role = roleName(code);
+4447:      const dir = roleCodeDir(code);
+4448:      return dc.reality_facts.find(
+4449:        (f) =>
+4450:          f.statement.includes(text) &&
+4451:          (f.fact_roles ?? []).includes(role) &&
+4452:          (f.related_dir_ids ?? []).includes(dir),
+4453:      );
+4454:    }
+4455:
+4456:    await check("M2.4-R2-FU3-A: three unresolved items are bound one at a time", async () => {
+4457:      const seeded = await seedAnswerReadySession("m24r2fu3a");
+4458:      const codes = [...EXTRA_JOB_ROLE_CODES.slice(0, 3)];
+4459:      const before = withAuthorizedRoleCodes(seeded, codes);
+4460:      const texts = ["第一条待绑定事实。", "第二条待绑定事实。", "第三条待绑定事实。"];
+4461:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4462:        classification: "clear_answer",
+4463:        extracted_items: texts.map((text) => ({
+4464:          text,
+4465:          semantic_kind: "reality_fact" as const,
+4466:          role_hint: null,
+4467:          role_code_hint: null,
+4468:          certainty: "explicit" as const,
+4469:        })),
+4470:        unresolved_aspects: [],
+4471:        explanation: "three unlocated items",
+4472:      };
+4473:      stubResponse = "FU3A FREEFORM MUST NOT WIN";
+4474:      let s = await handleUserMessage({
+4475:        session: before,
+4476:        userMessage: texts.join("另外"),
+4477:        locale: "zh-CN",
+4478:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4479:      });
+4480:      const pending0 = s.pending_answer_resolution;
+4481:      assert.ok(pending0 && pending0.status === "pending", "FU3-A must create pending");
+4482:      assert.equal(pending0!.unresolved_items.length, 3, "FU3-A must keep all three unresolved items");
+4483:      const itemIds = pending0!.unresolved_items.map((i) => i.item_id);
+4484:      assert.equal(new Set(itemIds).size, 3, "FU3-A item_id values must be unique");
+4485:      assert.equal(
+4486:        s.decision_context!.reality_facts.length,
+4487:        before.decision_context!.reality_facts.length,
+4488:        "FU3-A first turn must not write DC",
+4489:      );
+4490:      const asst0 = lastAssistant(s);
+4491:      assert.ok(
+4492:        asst0.content.includes("已授权的调查角色") || asst0.content.includes("可选角色"),
+
+==================== DRAFT 28 line 4557 ====================
+4512:        });
+4513:        const dc = s.decision_context!;
+4514:        assert.equal(dc.reality_facts.length, factsBefore + 1, `FU3-A turn ${i} must write exactly one fact`);
+4515:        const written = factForRole(dc, chosen, texts[i]!);
+4516:        assert.ok(written, `FU3-A must write item ${i} to ${chosen}`);
+4517:        const nextPending = s.pending_answer_resolution ?? null;
+4518:        if (i < 2) {
+4519:          assert.ok(nextPending && nextPending.status === "pending", `FU3-A after item ${i} must keep pending`);
+4520:          assert.equal(
+4521:            nextPending!.unresolved_items.length,
+4522:            remainingBefore - 1,
+4523:            `FU3-A after item ${i} must shrink pending by one`,
+4524:          );
+4525:          assert.equal(
+4526:            nextPending!.unresolved_items.some((item) => item.text === texts[i]),
+4527:            false,
+4528:            `FU3-A resolved item ${i} must leave pending`,
+4529:          );
+4530:          assert.ok(
+4531:            texts.slice(i + 1).every((text) =>
+4532:              nextPending!.unresolved_items.some((item) => item.text === text),
+4533:            ),
+4534:            `FU3-A remaining texts after item ${i} must be preserved`,
+4535:          );
+4536:          const asst = lastAssistant(s);
+4537:          assert.ok(
+4538:            asst.content.includes("已授权的调查角色") || asst.content.includes("可选角色"),
+4539:            `FU3-A next question after item ${i} must stay on role clarification`,
+4540:          );
+4541:          assert.ok(
+4542:            asst.content.includes(texts[i + 1]!),
+4543:            `FU3-A next question must address the next unresolved item`,
+4544:          );
+4545:        } else {
+4546:          assert.equal(nextPending, null, "FU3-A must clear pending only after the last item");
+4547:        }
+4548:      }
+4549:    });
+4550:
+4551:    await check("M2.4-R2-FU3-B: same text different item_id writes both DIR/role", async () => {
+4552:      const seeded = await seedAnswerReadySession("m24r2fu3b");
+4553:      const { session: before, codeA, codeB } = withTwoAuthorizedRoleCodes(seeded);
+4554:      const shared = "同一条文本需要分别写入两个角色。";
+4555:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4556:        classification: "clear_answer",
+4557:        extracted_items: [
+4558:          {
+4559:            text: shared,
+4560:            semantic_kind: "reality_fact",
+4561:            role_hint: null,
+4562:            role_code_hint: null,
+4563:            certainty: "explicit",
+4564:          },
+4565:          {
+4566:            text: shared,
+4567:            semantic_kind: "reality_fact",
+4568:            role_hint: null,
+4569:            role_code_hint: null,
+4570:            certainty: "explicit",
+4571:          },
+4572:        ],
+4573:        unresolved_aspects: [],
+4574:        explanation: "same text two items",
+4575:      };
+4576:      stubResponse = "FU3B FREEFORM MUST NOT WIN";
+4577:      let s = await handleUserMessage({
+4578:        session: before,
+4579:        userMessage: shared,
+4580:        locale: "zh-CN",
+4581:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4582:      });
+4583:      const pending0 = s.pending_answer_resolution;
+4584:      assert.ok(pending0 && pending0.unresolved_items.length === 2, "FU3-B must keep both same-text items");
+4585:      assert.notEqual(
+4586:        pending0!.unresolved_items[0]!.item_id,
+
+==================== DRAFT 29 line 4622 ====================
+4577:      let s = await handleUserMessage({
+4578:        session: before,
+4579:        userMessage: shared,
+4580:        locale: "zh-CN",
+4581:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4582:      });
+4583:      const pending0 = s.pending_answer_resolution;
+4584:      assert.ok(pending0 && pending0.unresolved_items.length === 2, "FU3-B must keep both same-text items");
+4585:      assert.notEqual(
+4586:        pending0!.unresolved_items[0]!.item_id,
+4587:        pending0!.unresolved_items[1]!.item_id,
+4588:        "FU3-B same text must still have distinct item_id values",
+4589:      );
+4590:      s = await handleUserMessage({
+4591:        session: s,
+4592:        userMessage: `这条信息属于 ${codeA}`,
+4593:        locale: "zh-CN",
+4594:      });
+4595:      const first = factForRole(s.decision_context!, codeA, shared);
+4596:      assert.ok(first, "FU3-B first clarification must write role A");
+4597:      assert.ok(s.pending_answer_resolution, "FU3-B must keep the second item pending");
+4598:      s = await handleUserMessage({
+4599:        session: s,
+4600:        userMessage: `这条信息属于 ${codeB}`,
+4601:        locale: "zh-CN",
+4602:      });
+4603:      const dc = s.decision_context!;
+4604:      const second = factForRole(dc, codeB, shared);
+4605:      assert.ok(second, "FU3-B second clarification must write role B");
+4606:      assert.ok(factForRole(dc, codeA, shared), "FU3-B first write must still be present");
+4607:      assert.notEqual(first!.fact_id, second!.fact_id);
+4608:      assert.equal(s.pending_answer_resolution ?? null, null, "FU3-B must clear pending after both writes");
+4609:    });
+4610:
+4611:    await check("M2.4-R2-FU3-C: unclear certainty stays pending and does not jump", async () => {
+4612:      const before = await seedAnswerReadySession("m24r2fu3c");
+4613:      const auth = authorizedFrom(before);
+4614:      const legalCode = auth.fact_role_codes[0];
+4615:      assert.ok(legalCode, "FU3-C needs an authorized role code");
+4616:      const vBefore = before.decision_context!.version;
+4617:      const factsBefore = before.decision_context!.reality_facts.length;
+4618:      const cstBefore = before.decision_context!.constraints.length;
+4619:      const lastSentBefore = before.decision_understanding?.last_sent_question ?? null;
+4620:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4621:        classification: "partial_answer",
+4622:        extracted_items: [
+4623:          {
+4624:            text: "目前大概还在职吧。",
+4625:            semantic_kind: "reality_fact",
+4626:            role_hint: null,
+4627:            role_code_hint: legalCode,
+4628:            certainty: "unclear",
+4629:          },
+4630:        ],
+4631:        unresolved_aspects: [],
+4632:        explanation: "unclear certainty",
+4633:      };
+4634:      stubResponse = "FU3C FREEFORM MUST NOT WIN";
+4635:      const out = await handleUserMessage({
+4636:        session: before,
+4637:        userMessage: "目前大概还在职吧。",
+4638:        locale: "zh-CN",
+4639:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4640:      });
+4641:      const dc = out.decision_context!;
+4642:      assert.equal(dc.reality_facts.length, factsBefore, "FU3-C must not write RealityFacts");
+4643:      assert.equal(dc.constraints.length, cstBefore, "FU3-C must not write Constraints");
+4644:      assert.equal(dc.version, vBefore, "FU3-C must not bump DC version");
+4645:      const pending = out.pending_answer_resolution;
+4646:      assert.ok(pending && pending.status === "pending", "FU3-C must create pending");
+4647:      assert.equal(pending!.unresolved_items[0]?.reason, "unclear_certainty");
+4648:      const asst = lastAssistant(out);
+4649:      assert.ok(
+4650:        asst.content.includes("明确事实") && asst.content.includes("个人估计"),
+4651:        `FU3-C must ask a certainty clarification, got=${asst.content.slice(0, 200)}`,
+
+==================== DRAFT 30 line 4684 ====================
+4639:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4640:      });
+4641:      const dc = out.decision_context!;
+4642:      assert.equal(dc.reality_facts.length, factsBefore, "FU3-C must not write RealityFacts");
+4643:      assert.equal(dc.constraints.length, cstBefore, "FU3-C must not write Constraints");
+4644:      assert.equal(dc.version, vBefore, "FU3-C must not bump DC version");
+4645:      const pending = out.pending_answer_resolution;
+4646:      assert.ok(pending && pending.status === "pending", "FU3-C must create pending");
+4647:      assert.equal(pending!.unresolved_items[0]?.reason, "unclear_certainty");
+4648:      const asst = lastAssistant(out);
+4649:      assert.ok(
+4650:        asst.content.includes("明确事实") && asst.content.includes("个人估计"),
+4651:        `FU3-C must ask a certainty clarification, got=${asst.content.slice(0, 200)}`,
+4652:      );
+4653:      assert.deepEqual(
+4654:        [...(out.adaptive_ask_plan?.dir_ids ?? [])].sort(),
+4655:        [...(lastSentBefore?.dir_ids ?? [])].sort(),
+4656:        "FU3-C must not jump to another NeedItem",
+4657:      );
+4658:
+4659:      stubResponse = "FU3C STILL FREEFORM";
+4660:      const again = await handleUserMessage({
+4661:        session: out,
+4662:        userMessage: "不确定",
+4663:        locale: "zh-CN",
+4664:      });
+4665:      assert.equal(again.decision_context!.version, vBefore, "FU3-C uncertain follow-up must not write");
+4666:      assert.ok(again.pending_answer_resolution, "FU3-C pending must remain when still uncertain");
+4667:      assert.equal(again.pending_answer_resolution!.status, "pending");
+4668:      assert.deepEqual(
+4669:        [...(again.adaptive_ask_plan?.dir_ids ?? [])].sort(),
+4670:        [...(lastSentBefore?.dir_ids ?? [])].sort(),
+4671:        "FU3-C must still not jump after an uncertain reply",
+4672:      );
+4673:    });
+4674:
+4675:    await check("M2.4-R2-FU3-D: estimated constraint writes only after explicit confirm", async () => {
+4676:      const before = await seedAnswerReadySession("m24r2fu3d");
+4677:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+4678:      assert.ok(legalCode, "FU3-D needs an authorized role code");
+4679:      const vBefore = before.decision_context!.version;
+4680:      const factsBefore = before.decision_context!.reality_facts.length;
+4681:      const cstBefore = before.decision_context!.constraints.length;
+4682:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4683:        classification: "estimate",
+4684:        extracted_items: [
+4685:          {
+4686:            text: "预算大概不能超过五万。",
+4687:            semantic_kind: "constraint",
+4688:            role_hint: null,
+4689:            role_code_hint: legalCode,
+4690:            certainty: "estimated",
+4691:          },
+4692:        ],
+4693:        unresolved_aspects: [],
+4694:        explanation: "estimated constraint",
+4695:      };
+4696:      stubResponse = "FU3D FREEFORM MUST NOT WIN";
+4697:      let s = await handleUserMessage({
+4698:        session: before,
+4699:        userMessage: "预算大概不能超过五万。",
+4700:        locale: "zh-CN",
+4701:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4702:      });
+4703:      let dc = s.decision_context!;
+4704:      assert.equal(dc.constraints.length, cstBefore, "FU3-D must not write the estimated Constraint");
+4705:      assert.equal(dc.reality_facts.length, factsBefore, "FU3-D must not disguise an estimated constraint as a fact");
+4706:      assert.equal(dc.version, vBefore, "FU3-D must not bump DC version before confirm");
+4707:      const pending = s.pending_answer_resolution;
+4708:      assert.ok(pending && pending.status === "pending", "FU3-D must create pending");
+4709:      assert.equal(pending!.unresolved_items[0]?.reason, "estimated_constraint_not_persistable");
+4710:      assert.ok(
+4711:        lastAssistant(s).content.includes("明确约束") || lastAssistant(s).content.includes("明确陈述"),
+4712:        "FU3-D must ask the user to confirm the constraint as an explicit assertion",
+4713:      );
+
+==================== DRAFT 31 line 4837 ====================
+4792:        session: pendingSession,
+4793:        userMessage: `这条信息属于 ${chosen}`,
+4794:        locale: "zh-CN",
+4795:        __testOnlyM1Hooks: {
+4796:          pendingBindPersist: async (previous) => ({
+4797:            session: previous,
+4798:            committed: false,
+4799:            error: "persist_failed",
+4800:          }),
+4801:        },
+4802:      });
+4803:      const failedDc = failed.decision_context!;
+4804:      assert.equal(failedDc.version, vBefore, "FU3-F failed persist must not commit DC");
+4805:      assert.equal(failedDc.reality_facts.length, factsBefore, "FU3-F must not leave a half-committed fact");
+4806:      assert.ok(failed.pending_answer_resolution, "FU3-F pending must not be lost on persist failure");
+4807:      const failAsst = [...failed.messages].reverse().find((m) => m.role === "assistant");
+4808:      const failMeta = (failAsst as { meta?: { m1_fail_closed?: boolean; m1_outcome?: string } } | undefined)?.meta;
+4809:      assert.equal(failMeta?.m1_fail_closed, true);
+4810:      assert.equal(failMeta?.m1_outcome, "persist_failed");
+4811:
+4812:      await savePOJUSession(failed);
+4813:      const reloaded = await durable(failed.session_id);
+4814:      assert.ok(reloaded.pending_answer_resolution, "FU3-F pending must survive the failed persist");
+4815:      assert.equal(reloaded.decision_context!.version, vBefore);
+4816:
+4817:      const retried = await handleUserMessage({
+4818:        session: reloaded,
+4819:        userMessage: `这条信息属于 ${chosen}`,
+4820:        locale: "zh-CN",
+4821:      });
+4822:      const written = retried.decision_context!.reality_facts.filter((f) =>
+4823:        f.statement.includes("我目前仍在职"),
+4824:      );
+4825:      assert.equal(written.length, 1, "FU3-F retry must write the fact once, not twice");
+4826:      assert.ok(retried.decision_context!.version > vBefore);
+4827:      assert.equal(retried.pending_answer_resolution ?? null, null);
+4828:    });
+4829:
+4830:    await check("M2.4-R2-FU3-G: pending fields survive persist/reload between item binds", async () => {
+4831:      const seeded = await seedAnswerReadySession("m24r2fu3g");
+4832:      const codes = [...EXTRA_JOB_ROLE_CODES.slice(0, 3)];
+4833:      const before = withAuthorizedRoleCodes(seeded, codes);
+4834:      const texts = ["重载条目一。", "重载条目二。", "重载条目三。"];
+4835:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4836:        classification: "clear_answer",
+4837:        extracted_items: texts.map((text) => ({
+4838:          text,
+4839:          semantic_kind: "reality_fact" as const,
+4840:          role_hint: null,
+4841:          role_code_hint: null,
+4842:          certainty: "explicit" as const,
+4843:        })),
+4844:        unresolved_aspects: [],
+4845:        explanation: "reload lifecycle",
+4846:      };
+4847:      stubResponse = "FU3G FREEFORM MUST NOT WIN";
+4848:      let s = await handleUserMessage({
+4849:        session: before,
+4850:        userMessage: texts.join("另外"),
+4851:        locale: "zh-CN",
+4852:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4853:      });
+4854:      await savePOJUSession(s);
+4855:      s = await durable(s.session_id);
+4856:      const pending0 = s.pending_answer_resolution;
+4857:      assert.ok(pending0, "FU3-G pending must persist after the first turn");
+4858:      const originalIds = pending0!.unresolved_items.map((i) => i.item_id);
+4859:      const asked0 = s.decision_understanding?.budget.session_asked_count ?? 0;
+4860:      const plan0 = s.pending_answer_resolution!.clarification_plan_id;
+4861:
+4862:      for (let i = 0; i < 2; i++) {
+4863:        const remainingBefore = s.pending_answer_resolution!.unresolved_items.map((item) => item.item_id);
+4864:        const askedBefore = s.decision_understanding?.budget.session_asked_count ?? 0;
+4865:        s = await handleUserMessage({
+4866:          session: s,
+
+==================== DRAFT 32 line 4960 ====================
+4915:              next_question_plan: null,
+4916:            }
+4917:          : ctx.out.decision_understanding,
+4918:        adaptive_ask_plan: null,
+4919:      };
+4920:      const vBefore = broken.decision_context!.version;
+4921:      const factsBefore = broken.decision_context!.reality_facts.length;
+4922:      stubResponse = "FU3H FREEFORM MUST NOT WIN";
+4923:      const out = await handleUserMessage({
+4924:        session: broken,
+4925:        userMessage: "继续下一个问题",
+4926:        locale: "zh-CN",
+4927:      });
+4928:      assert.ok(out.pending_answer_resolution, "FU3-H must keep pending");
+4929:      assert.equal(out.decision_context!.version, vBefore, "FU3-H must not write DC");
+4930:      assert.equal(out.decision_context!.reality_facts.length, factsBefore);
+4931:      const asst = lastAssistant(out);
+4932:      const meta = (asst as { meta?: { m1_planner_blocked?: boolean; m1_outcome?: string; m1_ask_error?: string; m1_fail_closed?: boolean } }).meta;
+4933:      assert.ok(
+4934:        meta?.m1_planner_blocked === true || meta?.m1_outcome === "planner_blocked" || asst.content.includes("未能生成合规的授权提问"),
+4935:        `FU3-H must return an explicit fail-closed status, got=${asst.content.slice(0, 200)} meta=${JSON.stringify(meta)}`,
+4936:      );
+4937:      assert.notEqual(asst.content, stubResponse);
+4938:      assert.equal(
+4939:        Boolean(out.adaptive_ask_plan && !String(out.adaptive_ask_plan.ask_now_reason ?? "").includes("pending_answer_resolution")),
+4940:        false,
+4941:        "FU3-H must not call ordinary planFromState for an unrelated NeedItem",
+4942:      );
+4943:    });
+4944:
+4945:    // M2.4-R2-FU4: clarification semantic safety + terminal pending lifecycle.
+4946:    // FU3-E was updated honestly: after the last item is refused, a new legal
+4947:    // NeedItem may be sent. The refusal remains auditable, writes nothing to DC,
+4948:    // survives reload, and must not resend the old clarification plan.
+4949:
+4950:    async function seedDefinitionPatchPending(tag: string) {
+4951:      const before = await seedAnswerReadySession(tag);
+4952:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+4953:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+4954:      const vBefore = before.decision_context!.version;
+4955:      const factsBefore = before.decision_context!.reality_facts.length;
+4956:      const cstBefore = before.decision_context!.constraints.length;
+4957:      const askedBefore = before.decision_understanding?.budget.session_asked_count ?? 0;
+4958:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4959:        classification: "clear_answer",
+4960:        extracted_items: [
+4961:          {
+4962:            text: "把决策问题改成是否立刻辞职。",
+4963:            semantic_kind: "definition_patch",
+4964:            role_hint: null,
+4965:            role_code_hint: legalCode,
+4966:            certainty: "explicit",
+4967:          },
+4968:        ],
+4969:        unresolved_aspects: [],
+4970:        explanation: "definition patch cannot persist",
+4971:      };
+4972:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+4973:      const out = await handleUserMessage({
+4974:        session: before,
+4975:        userMessage: "把决策问题改成是否立刻辞职。",
+4976:        locale: "zh-CN",
+4977:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4978:      });
+4979:      return { before, out, legalCode, vBefore, factsBefore, cstBefore, askedBefore, draft };
+4980:    }
+4981:
+4982:    async function seedUnclearCertaintyPending(tag: string) {
+4983:      const before = await seedAnswerReadySession(tag);
+4984:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+4985:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+4986:      const vBefore = before.decision_context!.version;
+4987:      const factsBefore = before.decision_context!.reality_facts.length;
+4988:      const cstBefore = before.decision_context!.constraints.length;
+4989:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+
+==================== DRAFT 33 line 4991 ====================
+4946:    // FU3-E was updated honestly: after the last item is refused, a new legal
+4947:    // NeedItem may be sent. The refusal remains auditable, writes nothing to DC,
+4948:    // survives reload, and must not resend the old clarification plan.
+4949:
+4950:    async function seedDefinitionPatchPending(tag: string) {
+4951:      const before = await seedAnswerReadySession(tag);
+4952:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+4953:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+4954:      const vBefore = before.decision_context!.version;
+4955:      const factsBefore = before.decision_context!.reality_facts.length;
+4956:      const cstBefore = before.decision_context!.constraints.length;
+4957:      const askedBefore = before.decision_understanding?.budget.session_asked_count ?? 0;
+4958:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4959:        classification: "clear_answer",
+4960:        extracted_items: [
+4961:          {
+4962:            text: "把决策问题改成是否立刻辞职。",
+4963:            semantic_kind: "definition_patch",
+4964:            role_hint: null,
+4965:            role_code_hint: legalCode,
+4966:            certainty: "explicit",
+4967:          },
+4968:        ],
+4969:        unresolved_aspects: [],
+4970:        explanation: "definition patch cannot persist",
+4971:      };
+4972:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+4973:      const out = await handleUserMessage({
+4974:        session: before,
+4975:        userMessage: "把决策问题改成是否立刻辞职。",
+4976:        locale: "zh-CN",
+4977:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4978:      });
+4979:      return { before, out, legalCode, vBefore, factsBefore, cstBefore, askedBefore, draft };
+4980:    }
+4981:
+4982:    async function seedUnclearCertaintyPending(tag: string) {
+4983:      const before = await seedAnswerReadySession(tag);
+4984:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+4985:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+4986:      const vBefore = before.decision_context!.version;
+4987:      const factsBefore = before.decision_context!.reality_facts.length;
+4988:      const cstBefore = before.decision_context!.constraints.length;
+4989:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4990:        classification: "partial_answer",
+4991:        extracted_items: [
+4992:          {
+4993:            text: "目前大概还在职吧。",
+4994:            semantic_kind: "reality_fact",
+4995:            role_hint: null,
+4996:            role_code_hint: legalCode,
+4997:            certainty: "unclear",
+4998:          },
+4999:        ],
+5000:        unresolved_aspects: [],
+5001:        explanation: "unclear certainty",
+5002:      };
+5003:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+5004:      const out = await handleUserMessage({
+5005:        session: before,
+5006:        userMessage: "目前大概还在职吧。",
+5007:        locale: "zh-CN",
+5008:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+5009:      });
+5010:      return { before, out, legalCode, vBefore, factsBefore, cstBefore };
+5011:    }
+5012:
+5013:    async function seedEstimatedConstraintPending(tag: string) {
+5014:      const before = await seedAnswerReadySession(tag);
+5015:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+5016:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+5017:      const vBefore = before.decision_context!.version;
+5018:      const factsBefore = before.decision_context!.reality_facts.length;
+5019:      const cstBefore = before.decision_context!.constraints.length;
+5020:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+
+==================== DRAFT 34 line 5022 ====================
+4977:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+4978:      });
+4979:      return { before, out, legalCode, vBefore, factsBefore, cstBefore, askedBefore, draft };
+4980:    }
+4981:
+4982:    async function seedUnclearCertaintyPending(tag: string) {
+4983:      const before = await seedAnswerReadySession(tag);
+4984:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+4985:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+4986:      const vBefore = before.decision_context!.version;
+4987:      const factsBefore = before.decision_context!.reality_facts.length;
+4988:      const cstBefore = before.decision_context!.constraints.length;
+4989:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+4990:        classification: "partial_answer",
+4991:        extracted_items: [
+4992:          {
+4993:            text: "目前大概还在职吧。",
+4994:            semantic_kind: "reality_fact",
+4995:            role_hint: null,
+4996:            role_code_hint: legalCode,
+4997:            certainty: "unclear",
+4998:          },
+4999:        ],
+5000:        unresolved_aspects: [],
+5001:        explanation: "unclear certainty",
+5002:      };
+5003:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+5004:      const out = await handleUserMessage({
+5005:        session: before,
+5006:        userMessage: "目前大概还在职吧。",
+5007:        locale: "zh-CN",
+5008:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+5009:      });
+5010:      return { before, out, legalCode, vBefore, factsBefore, cstBefore };
+5011:    }
+5012:
+5013:    async function seedEstimatedConstraintPending(tag: string) {
+5014:      const before = await seedAnswerReadySession(tag);
+5015:      const legalCode = authorizedFrom(before).fact_role_codes[0];
+5016:      assert.ok(legalCode, `${tag} needs an authorized role code`);
+5017:      const vBefore = before.decision_context!.version;
+5018:      const factsBefore = before.decision_context!.reality_facts.length;
+5019:      const cstBefore = before.decision_context!.constraints.length;
+5020:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+5021:        classification: "estimate",
+5022:        extracted_items: [
+5023:          {
+5024:            text: "预算大概不能超过五万。",
+5025:            semantic_kind: "constraint",
+5026:            role_hint: null,
+5027:            role_code_hint: legalCode,
+5028:            certainty: "estimated",
+5029:          },
+5030:        ],
+5031:        unresolved_aspects: [],
+5032:        explanation: "estimated constraint",
+5033:      };
+5034:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+5035:      const out = await handleUserMessage({
+5036:        session: before,
+5037:        userMessage: "预算大概不能超过五万。",
+5038:        locale: "zh-CN",
+5039:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+5040:      });
+5041:      return { before, out, legalCode, vBefore, factsBefore, cstBefore };
+5042:    }
+5043:
+5044:    function factWritten(
+5045:      dc: NonNullable<POJUSessionState["decision_context"]>,
+5046:      text: string,
+5047:    ) {
+5048:      return dc.reality_facts.find((f) => f.statement.includes(text));
+5049:    }
+5050:
+5051:    await check("M2.4-R2-FU4-A: definition_patch creates pending and does not write DC", async () => {
+
+==================== DRAFT 35 line 5301 ====================
+5256:        } else {
+5257:          assert.equal(cst, undefined, `${item.phrase} must not confirm or write the Constraint`);
+5258:          assert.equal(dc.version, ctx.vBefore, `${item.phrase} must not bump DC`);
+5259:          assert.equal(dc.reality_facts.length, ctx.factsBefore);
+5260:          assert.ok(out.pending_answer_resolution, `${item.phrase} must keep pending`);
+5261:          assert.equal(out.pending_answer_resolution!.status, "pending");
+5262:        }
+5263:      }
+5264:    });
+5265:
+5266:    async function runFu4WorkRolePending(tag: string) {
+5267:      const seeded = await seedAnswerReadySession(tag);
+5268:      const last = seeded.decision_understanding?.last_sent_question;
+5269:      assert.ok(last, `${tag} needs last_sent_question`);
+5270:      const workCode = "v1/dir/DIR-STATUS-QUO/role/status_quo";
+5271:      const otherCode =
+5272:        (last.fact_role_codes ?? []).find((c) => c !== workCode) ??
+5273:        EXTRA_JOB_ROLE_CODES.find((c) => c !== workCode) ??
+5274:        "v1/dir/DIR-OPT-ON-TABLE/role/option";
+5275:      assert.ok(otherCode && otherCode !== workCode, `${tag} needs a second authorized role`);
+5276:      const dirs = Array.from(
+5277:        new Set(
+5278:          [...last.dir_ids, roleCodeDir(workCode), roleCodeDir(otherCode)].filter((d) => d.length > 0),
+5279:        ),
+5280:      );
+5281:      const before: POJUSessionState = {
+5282:        ...seeded,
+5283:        decision_understanding: seeded.decision_understanding
+5284:          ? {
+5285:              ...seeded.decision_understanding,
+5286:              last_sent_question: {
+5287:                ...last,
+5288:                dir_ids: dirs,
+5289:                fact_role_codes: [workCode, otherCode],
+5290:              },
+5291:            }
+5292:          : seeded.decision_understanding,
+5293:      };
+5294:      const lastSentBefore = before.decision_understanding?.last_sent_question ?? null;
+5295:      const askedBefore = before.decision_understanding?.budget.session_asked_count ?? 0;
+5296:      const vBefore = before.decision_context!.version;
+5297:      const factsBefore = before.decision_context!.reality_facts.length;
+5298:      const cstBefore = before.decision_context!.constraints.length;
+5299:      const draft: import("../lib/poju/decision-intake/types").ModelAnswerDraft = {
+5300:        classification: "clear_answer",
+5301:        extracted_items: [
+5302:          {
+5303:            text: "我目前仍在职。",
+5304:            semantic_kind: "reality_fact",
+5305:            role_hint: null,
+5306:            role_code_hint: null,
+5307:            certainty: "explicit",
+5308:          },
+5309:        ],
+5310:        unresolved_aspects: [],
+5311:        explanation: "null role under work/other authorization",
+5312:      };
+5313:      stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+5314:      const out = await handleUserMessage({
+5315:        session: before,
+5316:        userMessage: "我目前仍在职。",
+5317:        locale: "zh-CN",
+5318:        __testOnlyM1Hooks: { interpretAnswerModel: () => draft },
+5319:      });
+5320:      return {
+5321:        before,
+5322:        out,
+5323:        codeA: workCode,
+5324:        codeB: otherCode,
+5325:        lastSentBefore,
+5326:        askedBefore,
+5327:        vBefore,
+5328:        factsBefore,
+5329:        cstBefore,
+5330:        draft,

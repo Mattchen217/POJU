@@ -1,0 +1,613 @@
+FILE lib/poju/agent.ts
+
+==== 1070-1220 ====
+ 1070|  if (!input.server_invoke && sessionForLlm.main_delivery_done && sessionForLlm.session_id) {
+ 1071|    const { loadArchiveDataForSession } = await import("@/lib/archive/archive-service");
+ 1072|    archive_data = await loadArchiveDataForSession(sessionForLlm.session_id);
+ 1073|  }
+ 1074|
+ 1075|
+ 1076|  // M2.1 — Readiness confirm → Freeze (before adaptive ask / LLM).
+ 1077|  // When Understanding already stopped asking, user confirm promotes facts legally,
+ 1078|  // reaggregates DIRs, and freezes via sufficiency wire. No fake DIR known.
+ 1079|  {
+ 1080|    const confirmEligible =
+ 1081|      !isOpeningSignal &&
+ 1082|      Boolean(userMessage.trim()) &&
+ 1083|      sessionEligibleForFinalConfirm(sessionForLlm, userMessage);
+ 1084|    if (confirmEligible) {
+ 1085|      const lastUser = [...messagesWithUser]
+ 1086|        .reverse()
+ 1087|        .find((m) => m.role === "user" && !m.is_rejected);
+ 1088|      const turnId = lastUser?.client_id?.trim();
+ 1089|      if (turnId) {
+ 1090|        const nowConfirm = new Date().toISOString();
+ 1091|        const confirmResult = await confirmUnderstandingAndFreeze({
+ 1092|          session: sessionForLlm,
+ 1093|          statement: userMessage,
+ 1094|          confirmation_turn_id: turnId,
+ 1095|          now: nowConfirm,
+ 1096|        });
+ 1097|        if (confirmResult.outcome === "add_more") {
+ 1098|          sessionForLlm = {
+ 1099|            ...confirmResult.session,
+ 1100|            messages: messagesWithUser,
+ 1101|          };
+ 1102|          // Fall through to M1 adaptive ask with collecting_context restored.
+ 1103|        } else if (confirmResult.outcome === "frozen") {
+ 1104|          const okText =
+ 1105|            "【已冻结】决策上下文已确认并冻结。正式报告将基于本次冻结版本生成。";
+ 1106|          const assistantMessage: POJUMessage = {
+ 1107|            role: "assistant",
+ 1108|            content: okText,
+ 1109|            timestamp: nowConfirm,
+ 1110|            client_id: safeRandomUUID(),
+ 1111|            meta: {
+ 1112|              m21_confirm_freeze: true,
+ 1113|              m21_outcome: confirmResult.outcome,
+ 1114|              m21_promoted_facts: confirmResult.promoted_fact_ids.length,
+ 1115|              context_id: confirmResult.session.decision_context?.context_id ?? null,
+ 1116|              context_version: confirmResult.session.decision_context?.version ?? null,
+ 1117|              content_hash: confirmResult.session.decision_context?.content_hash ?? null,
+ 1118|            },
+ 1119|          };
+ 1120|          return withSessionProfileFlags({
+ 1121|            ...confirmResult.session,
+ 1122|            messages: [...messagesWithUser, assistantMessage],
+ 1123|            last_interaction_at: nowConfirm,
+ 1124|          });
+ 1125|        } else if (
+ 1126|          confirmResult.outcome === "not_sufficient_after_confirm" ||
+ 1127|          confirmResult.outcome === "promote_failed" ||
+ 1128|          confirmResult.outcome === "persist_failed" ||
+ 1129|          confirmResult.outcome === "freeze_failed"
+ 1130|        ) {
+ 1131|          const failText =
+ 1132|            confirmResult.outcome === "not_sufficient_after_confirm"
+ 1133|              ? "【确认未通过充分性】已记录你的确认，但关键信息仍不足，无法冻结。请继续补充。" +
+ 1134|                (confirmResult.error ? `（${confirmResult.error}）` : "")
+ 1135|              : "【系统】确认/冻结失败，未绕过充分性门禁。" +
+ 1136|                (confirmResult.error ? `（${confirmResult.error}）` : "");
+ 1137|          const assistantMessage: POJUMessage = {
+ 1138|            role: "assistant",
+ 1139|            content: failText,
+ 1140|            timestamp: nowConfirm,
+ 1141|            client_id: safeRandomUUID(),
+ 1142|            meta: {
+ 1143|              m21_confirm_freeze: true,
+ 1144|              m21_outcome: confirmResult.outcome,
+ 1145|              m21_error: confirmResult.error ?? null,
+ 1146|            },
+ 1147|          };
+ 1148|          return withSessionProfileFlags({
+ 1149|            ...confirmResult.session,
+ 1150|            messages: [...messagesWithUser, assistantMessage],
+ 1151|            last_interaction_at: nowConfirm,
+ 1152|          });
+ 1153|        }
+ 1154|        // not_ready / not_confirm_text → fall through
+ 1155|      }
+ 1156|    }
+ 1157|    // DI2: any non-confirm turn at the final-understanding gate is a supplement.
+ 1158|    // Restore collecting_context and fall through to the existing Adaptive Question Engine.
+ 1159|    if (
+ 1160|      !isOpeningSignal &&
+ 1161|      Boolean(userMessage.trim()) &&
+ 1162|      isDi2FinalUnderstandingSupplementTurn(sessionForLlm, userMessage)
+ 1163|    ) {
+ 1164|      const supplementAgent = sessionForLlm.agent_v2;
+ 1165|      sessionForLlm = {
+ 1166|        ...sessionForLlm,
+ 1167|        messages: messagesWithUser,
+ 1168|        agent_v2: supplementAgent
+ 1169|          ? {
+ 1170|              ...supplementAgent,
+ 1171|              current_phase: "collecting_context",
+ 1172|              stall_offer_pending: false,
+ 1173|            }
+ 1174|          : supplementAgent,
+ 1175|      };
+ 1176|    }
+ 1177|  }
+ 1178|
+ 1179|  // M1-R — Adaptive Question Loop BEFORE assistant generation.
+ 1180|  // Fresh session: bootstrap DC + Blueprint + first adaptive Q (not old free ask).
+ 1181|  // Later turns: Answer → Interpretation → DC → Understanding → Plan → authorized Q.
+ 1182|  // Plan must drive the question the user sees. DC persist failure is FAIL-CLOSED.
+ 1183|  let m1CollectingTurn: Awaited<ReturnType<typeof runCollectingDcTurn>> | null = null;
+ 1184|  {
+ 1185|    const phaseBeforeLlm =
+ 1186|      normalizeAgentPhase(ensureAgentV2(sessionForLlm).current_phase) ??
+ 1187|      ensureAgentV2(sessionForLlm).current_phase;
+ 1188|    const hasDraftDc =
+ 1189|      sessionForLlm.decision_context?.status === "draft" ||
+ 1190|      sessionForLlm.decision_context?.status === "final";
+ 1191|    // Brand-new sessions start in opening with no DC. M1-R allows bootstrap from
+ 1192|    // opening OR collecting when the user submitted a real decision statement.
+ 1193|    const m1EligiblePhase =
+ 1194|      phaseBeforeLlm === "collecting_context" ||
+ 1195|      phaseBeforeLlm === "opening" ||
+ 1196|      (!hasDraftDc &&
+ 1197|        phaseBeforeLlm !== "awaiting_understanding_confirm" &&
+ 1198|        phaseBeforeLlm !== "awaiting_confirmation" &&
+ 1199|        phaseBeforeLlm !== "delivered" &&
+ 1200|        phaseBeforeLlm !== "tracking");
+ 1201|    const m1UserTurn =
+ 1202|      m1EligiblePhase &&
+ 1203|      !isOpeningSignal &&
+ 1204|      Boolean(userMessage.trim()) &&
+ 1205|      (hasDraftDc || phaseBeforeLlm === "opening" || phaseBeforeLlm === "collecting_context" || !sessionForLlm.agent_v2);
+ 1206|    if (m1UserTurn) {
+ 1207|      const lastUser = [...messagesWithUser]
+ 1208|        .reverse()
+ 1209|        .find((m) => m.role === "user" && !m.is_rejected);
+ 1210|      const turnId = lastUser?.client_id?.trim();
+ 1211|      const statement = (userMessage.trim() === "__OPENING__" ? "" : userMessage).trim();
+ 1212|      if (turnId && statement) {
+ 1213|        const nowPre = new Date().toISOString();
+ 1214|        m1CollectingTurn = await runM1ProductionPreLlmTurn(sessionForLlm, {
+ 1215|          statement,
+ 1216|          source_turn_id: turnId,
+ 1217|          now: nowPre,
+ 1218|          test_hooks: input.__testOnlyM1Hooks,
+ 1219|          locale: sessionOutputLocale,
+ 1220|          signal,
+
+==== 1280-1520 ====
+ 1280|          return withSessionProfileFlags({
+ 1281|            ...sessionForLlm,
+ 1282|            ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
+ 1283|            messages: [...messagesWithUser, failAssistant],
+ 1284|            last_interaction_at: nowPre,
+ 1285|          });
+ 1286|        }
+ 1287|        // M2.3-R2-FU3: also fail-closed when Understanding could not be built
+ 1288|        // (ask_error carries understanding_exception / planner_exception) or when
+ 1289|        // readiness cannot be computed (understanding==null) with no authorized Q.
+ 1290|        const m1UnderstandingFailClosed =
+ 1291|          !m1CollectingTurn.authorized_question &&
+ 1292|          (
+ 1293|            m1CollectingTurn.outcome === "planner_blocked" ||
+ 1294|            Boolean(m1CollectingTurn.ask_error?.includes("understanding_exception")) ||
+ 1295|            Boolean(m1CollectingTurn.ask_error?.includes("planner_exception")) ||
+ 1296|            (
+ 1297|              m1CollectingTurn.understanding == null &&
+ 1298|              Boolean(m1CollectingTurn.session.decision_blueprint)
+ 1299|            )
+ 1300|          );
+ 1301|        if (m1UnderstandingFailClosed) {
+ 1302|          // M2.3-R2-FU / FU3: open P0/P1 or Understanding failure -- no confirm, no free-form ask.
+ 1303|          const blockReason =
+ 1304|            m1CollectingTurn.ask_error?.trim() ||
+ 1305|            "planner_blocked_open_p0_p1";
+ 1306|          const blockText =
+ 1307|            "【系统】当前仍有未完成的必要调查项，但本轮未能生成合规的授权提问。会话仍在收集中，请重试或换一种表述。" +
+ 1308|            `（${blockReason}）`;
+ 1309|          const blockedSession: POJUSessionState = {
+ 1310|            ...m1CollectingTurn.session,
+ 1311|            messages: messagesWithUser,
+ 1312|            agent_v2: {
+ 1313|              ...(m1CollectingTurn.session.agent_v2 ??
+ 1314|                ensureAgentV2(sessionForLlm)),
+ 1315|              current_phase: "collecting_context",
+ 1316|              stall_offer_pending: false,
+ 1317|            },
+ 1318|          };
+ 1319|          const blockAssistant: POJUMessage = {
+ 1320|            role: "assistant",
+ 1321|            content: blockText,
+ 1322|            timestamp: nowPre,
+ 1323|            client_id: safeRandomUUID(),
+ 1324|            meta: {
+ 1325|              m1_planner_blocked: true,
+ 1326|              m1_outcome: "planner_blocked",
+ 1327|              m1_ask_error: blockReason,
+ 1328|            },
+ 1329|          };
+ 1330|          console.warn(
+ 1331|            "[agent] M1 planner_blocked (nonterminal; no confirm / no free-ask)",
+ 1332|            blockReason,
+ 1333|          );
+ 1334|          return withSessionProfileFlags({
+ 1335|            ...blockedSession,
+ 1336|            messages: [...messagesWithUser, blockAssistant],
+ 1337|            last_interaction_at: nowPre,
+ 1338|            decision_context:
+ 1339|              m1CollectingTurn.session.decision_context ??
+ 1340|              blockedSession.decision_context,
+ 1341|            decision_blueprint:
+ 1342|              m1CollectingTurn.session.decision_blueprint ??
+ 1343|              blockedSession.decision_blueprint,
+ 1344|            decision_understanding:
+ 1345|              m1CollectingTurn.session.decision_understanding ??
+ 1346|              blockedSession.decision_understanding,
+ 1347|            adaptive_ask_plan: null,
+ 1348|            intake_ask_plan:
+ 1349|              m1CollectingTurn.session.intake_ask_plan ??
+ 1350|              blockedSession.intake_ask_plan,
+ 1351|            pending_answer_resolution:
+ 1352|              m1CollectingTurn.session.pending_answer_resolution !== undefined
+ 1353|                ? m1CollectingTurn.session.pending_answer_resolution
+ 1354|                : blockedSession.pending_answer_resolution,
+ 1355|            pending_intake_control:
+ 1356|              m1CollectingTurn.session.pending_intake_control !== undefined
+ 1357|                ? m1CollectingTurn.session.pending_intake_control
+ 1358|                : blockedSession.pending_intake_control,
+ 1359|            ...m1AuditFields(m1CollectingTurn.session, blockedSession),
+ 1360|          });
+ 1361|        }
+ 1362|        // Every M1 answer turn ends in an authorized question or a readiness
+ 1363|        // stop; anything else fails closed instead of falling back to free asking.
+ 1364|        if (
+ 1365|          !m1CollectingTurn.authorized_question &&
+ 1366|          m1CollectingTurn.understanding?.readiness.can_ask !== false
+ 1367|        ) {
+ 1368|          const noPlanReason =
+ 1369|            m1CollectingTurn.ask_error?.trim() ||
+ 1370|            m1CollectingTurn.persist_error?.trim() ||
+ 1371|            m1CollectingTurn.outcome;
+ 1372|          const noPlanAssistant: POJUMessage = {
+ 1373|            role: "assistant",
+ 1374|            content:
+ 1375|              "【系统】本轮未能生成合规的授权提问，会话仍在收集中。请重试或换一种表述。" +
+ 1376|              `（${noPlanReason}）`,
+ 1377|            timestamp: nowPre,
+ 1378|            client_id: safeRandomUUID(),
+ 1379|            meta: {
+ 1380|              m1_fail_closed: true,
+ 1381|              m1_outcome: "no_authorized_question",
+ 1382|              m1_ask_error: noPlanReason,
+ 1383|            },
+ 1384|          };
+ 1385|          console.warn("[agent] M1 turn without authorized question (fail-closed)", noPlanReason);
+ 1386|          return withSessionProfileFlags({
+ 1387|            ...m1CollectingTurn.session,
+ 1388|            messages: [...messagesWithUser, noPlanAssistant],
+ 1389|            last_interaction_at: nowPre,
+ 1390|            adaptive_ask_plan: null,
+ 1391|          });
+ 1392|        }
+ 1393|        // Adopt DC + understanding + plan into the Session the LLM sees.
+ 1394|        sessionForLlm = {
+ 1395|          ...m1CollectingTurn.session,
+ 1396|          messages: messagesWithUser,
+ 1397|        };
+ 1398|        workingSession = {
+ 1399|          ...workingSession,
+ 1400|          agent_v2: sessionForLlm.agent_v2 ?? workingSession.agent_v2,
+ 1401|          decision_context: sessionForLlm.decision_context,
+ 1402|          decision_context_versions: sessionForLlm.decision_context_versions,
+ 1403|          decision_context_idempotency_keys:
+ 1404|            sessionForLlm.decision_context_idempotency_keys,
+ 1405|          control_plane: sessionForLlm.control_plane,
+ 1406|          decision_blueprint: sessionForLlm.decision_blueprint,
+ 1407|          decision_understanding: sessionForLlm.decision_understanding,
+ 1408|          adaptive_ask_plan: sessionForLlm.adaptive_ask_plan,
+ 1409|          intake_ask_plan: sessionForLlm.intake_ask_plan,
+ 1410|          dc_ledger: sessionForLlm.dc_ledger ?? workingSession.dc_ledger,
+ 1411|          dc_freeze_receipts: sessionForLlm.dc_freeze_receipts ?? workingSession.dc_freeze_receipts,
+ 1412|          dc_profile_receipts: sessionForLlm.dc_profile_receipts ?? workingSession.dc_profile_receipts,
+ 1413|          session_revision: sessionForLlm.session_revision,
+ 1414|          dc_write_revision: sessionForLlm.dc_write_revision,
+ 1415|          pending_answer_resolution: sessionForLlm.pending_answer_resolution,
+ 1416|          pending_intake_control: sessionForLlm.pending_intake_control,
+ 1417|          ...m1AuditFields(sessionForLlm, workingSession),
+ 1418|          last_answer_event:
+ 1419|            sessionForLlm.last_answer_event ??
+ 1420|            m1CollectingTurn.answer_event ??
+ 1421|            workingSession.last_answer_event,
+ 1422|        };
+ 1423|        // M1-R: keep production collecting phase after bootstrap / adaptive plan.
+ 1424|        if (sessionForLlm.agent_v2) {
+ 1425|          sessionForLlm = {
+ 1426|            ...sessionForLlm,
+ 1427|            agent_v2: {
+ 1428|              ...sessionForLlm.agent_v2,
+ 1429|              current_phase: "collecting_context",
+ 1430|            },
+ 1431|          };
+ 1432|          workingSession = {
+ 1433|            ...workingSession,
+ 1434|            agent_v2: sessionForLlm.agent_v2,
+ 1435|          };
+ 1436|        }
+ 1437|      }
+ 1438|    }
+ 1439|  }
+ 1440|
+ 1441|  const intakeProtectionOutcome =
+ 1442|    m1CollectingTurn?.outcome === "intake_warned" ||
+ 1443|    m1CollectingTurn?.outcome === "intake_locked" ||
+ 1444|    m1CollectingTurn?.outcome === "intake_terminated" ||
+ 1445|    m1CollectingTurn?.outcome === "intake_expired" ||
+ 1446|    m1CollectingTurn?.outcome === "intake_continued";
+ 1447|  if (input.server_invoke && m1CollectingTurn && intakeProtectionOutcome) {
+ 1448|    const nowProtect = new Date().toISOString();
+ 1449|    const protectText =
+ 1450|      m1CollectingTurn.user_visible_message?.trim() ||
+ 1451|      "This session cannot continue the current question right now.";
+ 1452|    const protectAssistant: POJUMessage = {
+ 1453|      role: "assistant",
+ 1454|      content: protectText,
+ 1455|      timestamp: nowProtect,
+ 1456|      client_id: safeRandomUUID(),
+ 1457|      meta: {
+ 1458|        m1_outcome: m1CollectingTurn.outcome as
+ 1459|          | "intake_warned"
+ 1460|          | "intake_locked"
+ 1461|          | "intake_terminated"
+ 1462|          | "intake_expired"
+ 1463|          | "intake_continued",
+ 1464|      },
+ 1465|    };
+ 1466|    return withSessionProfileFlags({
+ 1467|      ...m1CollectingTurn.session,
+ 1468|      messages: [...messagesWithUser, protectAssistant],
+ 1469|      last_interaction_at: nowProtect,
+ 1470|      decision_context: m1CollectingTurn.session.decision_context,
+ 1471|      decision_blueprint: m1CollectingTurn.session.decision_blueprint,
+ 1472|      decision_understanding: m1CollectingTurn.session.decision_understanding,
+ 1473|      adaptive_ask_plan: m1CollectingTurn.session.adaptive_ask_plan ?? m1CollectingTurn.plan ?? null,
+ 1474|      ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
+ 1475|    });
+ 1476|  }
+ 1477|
+ 1478|  const llmResponse = input.server_invoke
+ 1479|    ? await callPOJULLMDirect({
+ 1480|        session: sessionForLlm,
+ 1481|        profile,
+ 1482|        base_analysis,
+ 1483|        archive_data,
+ 1484|        locale: sessionOutputLocale,
+ 1485|        signal,
+ 1486|        tool_injection_context: injectionPrep.tool_injection_context,
+ 1487|        attachment: attachment ?? null,
+ 1488|        lab_prompt_capture: input.server_invoke.lab_prompt_capture,
+ 1489|      })
+ 1490|    : await callLLMViaAPI({
+ 1491|        session: sessionForLlm,
+ 1492|        profile,
+ 1493|        base_analysis,
+ 1494|        archive_data,
+ 1495|        // Process language SSOT — never the website UI locale once lock/sample resolves.
+ 1496|        locale: sessionOutputLocale,
+ 1497|        signal,
+ 1498|        tool_injection_context: injectionPrep.tool_injection_context,
+ 1499|        attachment: attachment ?? null,
+ 1500|      });
+ 1501|
+ 1502|  if (llmResponse.authoritative_session) {
+ 1503|    return ensureSessionCycles(llmResponse.authoritative_session);
+ 1504|  }
+ 1505|
+ 1506|  workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
+ 1507|
+ 1508|  const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
+ 1509|  const assistantMessageId = safeRandomUUID();
+ 1510|  const trackingPhase =
+ 1511|    normalizeAgentPhase(ensureAgentV2(workingSession).current_phase) === "tracking";
+ 1512|
+ 1513|  const linking = applyToolLinkingFromLlm(
+ 1514|    { ...workingSession, messages: messagesWithUser },
+ 1515|    {
+ 1516|      tool_suggestion: llmResponse.tool_suggestion ?? null,
+ 1517|      start_new_cycle: trackingPhase ? false : llmResponse.start_new_cycle,
+ 1518|      new_cycle_question: trackingPhase ? null : llmResponse.new_cycle_question ?? null,
+ 1519|      question_category: llmResponse.question_category,
+ 1520|    },
+
+==== 1550-1620 ====
+ 1550|      question_category: llmResponse.question_category,
+ 1551|      contains_delivery: llmResponse.contains_delivery,
+ 1552|      main_delivery: llmResponse.main_delivery,
+ 1553|      collection_progress: llmResponse.collection_progress,
+ 1554|      stall_offer: llmResponse.stall_offer,
+ 1555|      investigation_agenda: openingTurn ? null : llmResponse.investigation_agenda,
+ 1556|      understanding: llmResponse.understanding ?? null,
+ 1557|      understanding_sufficient: llmResponse.understanding_sufficient,
+ 1558|      agenda_updates: openingTurn ? undefined : llmResponse.agenda_updates,
+ 1559|      reply_quality: llmResponse.reply_quality,
+ 1560|      question_status: llmResponse.question_status,
+ 1561|      session_action: llmResponse.session_action ?? null,
+ 1562|      user_confirms_delivery: llmResponse.user_confirms_delivery,
+ 1563|      confirmation_signal: llmResponse.confirmation_signal,
+ 1564|      topic_drift_signal: llmResponse.topic_drift_signal,
+ 1565|      breakthrough_core_updates: openingTurn ? null : (llmResponse.breakthrough_core_updates ?? null),
+ 1566|      breakthrough_core: openingTurn ? null : (llmResponse.breakthrough_core ?? null),
+ 1567|      core_dilemma: llmResponse.core_dilemma ?? null,
+ 1568|      desired_direction: llmResponse.desired_direction ?? null,
+ 1569|      problem_summary: openingTurn ? null : llmResponse.problem_summary ?? null,
+ 1570|      attachments_unlocked: llmResponse.attachments_unlocked === true,
+ 1571|    },
+ 1572|    userMessage,
+ 1573|    base_analysis,
+ 1574|  );
+ 1575|  let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
+ 1576|  const m1BlockedOrUnderstandingFail =
+ 1577|    Boolean(m1CollectingTurn) &&
+ 1578|    (m1CollectingTurn!.outcome === "planner_blocked" ||
+ 1579|      (!m1CollectingTurn!.authorized_question &&
+ 1580|        Boolean(m1CollectingTurn!.ask_error) &&
+ 1581|        (m1CollectingTurn!.ask_error!.includes("understanding_exception") ||
+ 1582|          m1CollectingTurn!.ask_error!.includes("planner_exception") ||
+ 1583|          (m1CollectingTurn!.understanding == null &&
+ 1584|            Boolean(m1CollectingTurn!.session.decision_blueprint)))));
+ 1585|  if (
+ 1586|    m1CollectingTurn &&
+ 1587|    m1BlockedOrUnderstandingFail &&
+ 1588|    agent_v2.current_phase !== "delivered"
+ 1589|  ) {
+ 1590|    // Belt-and-suspenders: planner_blocked / understanding failure is nonterminal collecting.
+ 1591|    agent_v2 = {
+ 1592|      ...agent_v2,
+ 1593|      current_phase: "collecting_context",
+ 1594|      stall_offer_pending: false,
+ 1595|    };
+ 1596|  } else if (
+ 1597|    m1CollectingTurn &&
+ 1598|    !m1BlockedOrUnderstandingFail &&
+ 1599|    m1CollectingTurn.understanding &&
+ 1600|    m1CollectingTurn.understanding.readiness.can_ask === false &&
+ 1601|    agent_v2.current_phase !== "delivered"
+ 1602|  ) {
+ 1603|    agent_v2 = {
+ 1604|      ...agent_v2,
+ 1605|      current_phase: "awaiting_confirmation",
+ 1606|      stall_offer_pending: false,
+ 1607|    };
+ 1608|    // m21_readiness_stop
+ 1609|  } else if (
+ 1610|    m1CollectingTurn &&
+ 1611|    (m1CollectingTurn.bootstrapped ||
+ 1612|      m1CollectingTurn.plan ||
+ 1613|      m1CollectingTurn.ask_planned) &&
+ 1614|    agent_v2.current_phase !== "awaiting_confirmation" &&
+ 1615|    agent_v2.current_phase !== "delivered"
+ 1616|  ) {
+ 1617|    agent_v2 = { ...agent_v2, current_phase: "collecting_context" };
+ 1618|  }
+ 1619|
+ 1620|  if (advance.trigger_delivery && !workingSession.main_delivery_done) {
+
+==== 1900-2040 ====
+ 1900|    context_collected: {
+ 1901|      ...sessionBase.context_collected,
+ 1902|      ...(llmResponse.context_updates ?? {}),
+ 1903|    },
+ 1904|    actions: mergedActions,
+ 1905|    agent_v2,
+ 1906|    main_delivery_done: llmResponse.contains_delivery || workingSession.main_delivery_done,
+ 1907|    main_delivery:
+ 1908|      (llmResponse.main_delivery as POJUSessionState["main_delivery"]) || workingSession.main_delivery,
+ 1909|    tokens_used: workingSession.tokens_used + (llmResponse.tokens_used || 0),
+ 1910|    last_interaction_at: nowIso,
+ 1911|    expires_at: rollingExpiry,
+ 1912|    locked_provider:
+ 1913|      llmResponse.locked_provider ?? workingSession.locked_provider,
+ 1914|    locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
+ 1915|  });
+ 1916|
+ 1917|  // M1 — Plan controls the actual sent question (post-LLM enforce / attach).
+ 1918|  // DC + Understanding + Plan already ran BEFORE the LLM call.
+ 1919|  if (m1CollectingTurn?.plan && m1CollectingTurn.authorized_question) {
+ 1920|    const { assertQuestionMatchesPlan, attachAuthorizedAssistantQuestion } = await import(
+ 1921|      "@/lib/poju/decision-intake"
+ 1922|    );
+ 1923|    const matched = assertQuestionMatchesPlan(finalContent, m1CollectingTurn.plan);
+ 1924|    finalContent = matched.text;
+ 1925|    const lastUser = [...messagesWithUser]
+ 1926|      .reverse()
+ 1927|      .find((m) => m.role === "user" && !m.is_rejected);
+ 1928|    const turnId = lastUser?.client_id?.trim() || "unknown_turn";
+ 1929|    sessionOut = attachAuthorizedAssistantQuestion(
+ 1930|      {
+ 1931|        ...sessionOut,
+ 1932|        decision_context:
+ 1933|          m1CollectingTurn.session.decision_context ?? sessionOut.decision_context,
+ 1934|        decision_context_versions:
+ 1935|          m1CollectingTurn.session.decision_context_versions ??
+ 1936|          sessionOut.decision_context_versions,
+ 1937|        decision_context_idempotency_keys:
+ 1938|          m1CollectingTurn.session.decision_context_idempotency_keys ??
+ 1939|          sessionOut.decision_context_idempotency_keys,
+ 1940|        control_plane:
+ 1941|          m1CollectingTurn.session.control_plane ?? sessionOut.control_plane,
+ 1942|        decision_blueprint:
+ 1943|          m1CollectingTurn.session.decision_blueprint ?? sessionOut.decision_blueprint,
+ 1944|        decision_understanding:
+ 1945|          m1CollectingTurn.session.decision_understanding ??
+ 1946|          sessionOut.decision_understanding,
+ 1947|        adaptive_ask_plan:
+ 1948|          m1CollectingTurn.plan ?? sessionOut.adaptive_ask_plan,
+ 1949|        intake_ask_plan:
+ 1950|          m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
+ 1951|        session_revision:
+ 1952|          m1CollectingTurn.session.session_revision ?? sessionOut.session_revision,
+ 1953|        dc_write_revision:
+ 1954|          m1CollectingTurn.session.dc_write_revision ?? sessionOut.dc_write_revision,
+ 1955|        pending_answer_resolution:
+ 1956|          m1CollectingTurn.session.pending_answer_resolution !== undefined
+ 1957|            ? m1CollectingTurn.session.pending_answer_resolution
+ 1958|            : sessionOut.pending_answer_resolution,
+ 1959|        pending_intake_control:
+ 1960|          m1CollectingTurn.session.pending_intake_control !== undefined
+ 1961|            ? m1CollectingTurn.session.pending_intake_control
+ 1962|            : sessionOut.pending_intake_control,
+ 1963|        ...m1AuditFields(m1CollectingTurn.session, sessionOut),
+ 1964|        last_answer_event:
+ 1965|          m1CollectingTurn.session.last_answer_event ??
+ 1966|          m1CollectingTurn.answer_event ??
+ 1967|          sessionOut.last_answer_event,
+ 1968|        messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
+ 1969|      },
+ 1970|      m1CollectingTurn.plan,
+ 1971|      turnId,
+ 1972|    );
+ 1973|  } else if (
+ 1974|    m1CollectingTurn &&
+ 1975|    m1CollectingTurn.outcome !== "planner_blocked" &&
+ 1976|    !(
+ 1977|      !m1CollectingTurn.authorized_question &&
+ 1978|      Boolean(m1CollectingTurn.ask_error) &&
+ 1979|      (m1CollectingTurn.ask_error!.includes("understanding_exception") ||
+ 1980|        m1CollectingTurn.ask_error!.includes("planner_exception"))
+ 1981|    ) &&
+ 1982|    !m1CollectingTurn.authorized_question &&
+ 1983|    m1CollectingTurn.understanding &&
+ 1984|    m1CollectingTurn.understanding.readiness.can_ask === false
+ 1985|  ) {
+ 1986|    // Readiness stop — replace free-form ask with final understanding confirm.
+ 1987|    const summary =
+ 1988|      m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+ 1989|      "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+ 1990|    finalContent = `【理解确认】${summary}
+ 1991|
+ 1992|如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+ 1993|    sessionOut = {
+ 1994|      ...sessionOut,
+ 1995|      decision_context:
+ 1996|        m1CollectingTurn.session.decision_context ?? sessionOut.decision_context,
+ 1997|      decision_blueprint:
+ 1998|        m1CollectingTurn.session.decision_blueprint ?? sessionOut.decision_blueprint,
+ 1999|      decision_understanding:
+ 2000|        m1CollectingTurn.session.decision_understanding ??
+ 2001|        sessionOut.decision_understanding,
+ 2002|      adaptive_ask_plan: null,
+ 2003|      intake_ask_plan:
+ 2004|        m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
+ 2005|      pending_answer_resolution:
+ 2006|        m1CollectingTurn.session.pending_answer_resolution !== undefined
+ 2007|          ? m1CollectingTurn.session.pending_answer_resolution
+ 2008|          : sessionOut.pending_answer_resolution,
+ 2009|      pending_intake_control:
+ 2010|        m1CollectingTurn.session.pending_intake_control !== undefined
+ 2011|          ? m1CollectingTurn.session.pending_intake_control
+ 2012|          : sessionOut.pending_intake_control,
+ 2013|      ...m1AuditFields(m1CollectingTurn.session, sessionOut),
+ 2014|      last_answer_event:
+ 2015|        m1CollectingTurn.session.last_answer_event ??
+ 2016|        m1CollectingTurn.answer_event ??
+ 2017|        sessionOut.last_answer_event,
+ 2018|      messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
+ 2019|    };
+ 2020|  }
+ 2021|if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
+ 2022|  return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);
+ 2023|}
+ 2024|
+ 2025|/** Return to opening for user-typed supplement — owned by phases/opening/control. */
+ 2026|// applyUnderstandingGateSupplement — re-exported from opening/control above
+ 2027|
+ 2028|async function maybeRunDeliveryPipeline(
+ 2029|  session: POJUSessionState,
+ 2030|  advance: AdvanceResult,
+ 2031|  locale: string,
+ 2032|): Promise<POJUSessionState> {
+ 2033|  if (!advance.trigger_delivery || session.main_delivery_done) return session;
+ 2034|  if (session.agent_v2?.delivery_mode === "degraded") return session;
+ 2035|  try {
+ 2036|    return await runConfirmationPipeline(session, locale);
+ 2037|  } catch (e) {
+ 2038|    const msg = e instanceof Error ? e.message : String(e);
+ 2039|    console.warn("[agent] delivery pipeline failed, staying in confirmation:", e);
+ 2040|    if (!session.agent_v2) return session;

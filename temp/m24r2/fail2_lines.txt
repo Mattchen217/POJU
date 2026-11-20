@@ -1,0 +1,7 @@
+[m24r2a] round=1 input=我目前仍在职，月薪三万。另外家里有一个孩子�? facts=2; written=fact_m1_a7f879c4-c90f-40cd-9d98-fc21e58221ee_0:unverified:user_asserted:hard_constraint|fact_m1_a7f879c4-c90f-40cd-9d98-fc21e58221ee_1:unverified:user_asserted:hard_constraint; dc=1->2; ctx_ver=2; next_q=关于「要不要离职去创业？」——有哪些真实可选方案（不要只重复决策
+[m24r2a] round=2 input=大概还能�?6 个月。硬约束是必须保留社保�? estimate=fact_m1_88bb887d-c272-43c8-a943-ad9851ae9178_0:unverified:user_estimate; constraint=cst_m1_88bb887d-c272-43c8-a943-ad9851ae9178_1:unverified; facts=4; constraints=1; dc=2->3; ctx_ver=3; next_q=关于「要不要离职去创业？」——可以接受的最差结果是什么？（这样我才能判断：Needed for DIR
+[m24r2a] round=3 input=更正一下，我已经离职了，不是仍在职。另外还有一个备选是内部转岗�? kept_original=fact_m1_a7f879c4-c90f-40cd-9d98-fc21e58221ee_0; correction=fact_m1_57485c5f-804d-4eaf-a88d-df1d561e127a_0; supplement=fact_m1_57485c5f-804d-4eaf-a88d-df1d561e127a_1; conflicts=cf_m1_57485c5f-804d-4eaf-a88d-df1d561e127a_0:open:fac
+[m24r2c] facts=fact_m1_e81be417-fab1-4a09-ab60-09cdc0bee378_0:unverified:user_asserted:confirm=undefined
+  FAIL  M2.4-R2 Case F: real persist + same source_turn_id resubmit is idempotent
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+M1 done. PASS=75 FAIL=1

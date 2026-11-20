@@ -1,0 +1,7 @@
+feat(m2.4): R2 model-backed answer interpretation on the production main path
+
+Ordinary collecting answers now go through model interpretation, schema
+validation, and code-built AnswerEvents before C1 DC persist. Conflict
+clarification still runs first. Model failures are fail-closed with a
+retry prompt and do not write DC, spend budget, or fall back to free-form
+questions. Tests inject drafts only through __testOnlyM1Hooks.

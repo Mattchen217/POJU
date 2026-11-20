@@ -20,11 +20,11 @@ import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import {
   PivotFirstPassGateModal,
   passGateMinSpinMs,
-  passGateSuccessHoldMs,
   type PivotFirstPassGatePhase,
 } from "@/components/poju/PivotFirstPassGateModal";
 import {
   PASS_AUTO_UNLOCKED_EVENT,
+  dispatchPassSpendToast,
   type PassAutoUnlockedDetail,
 } from "@/lib/passes/pass-client-events";
 import {
@@ -122,7 +122,7 @@ import {
   dedupeWelcomeMessages,
   hasFixedWelcomeMessage,
   hasMatrixWelcomeMessage,
-  isMatrixWelcomeMessage,
+  isWelcomeHeroMessage,
   seedFixedWelcomeMessages,
   seedMatrixWelcomeMessage,
 } from "@/lib/poju/chat-bootstrap";
@@ -206,7 +206,10 @@ import {
   setExpiryReminderSnoozed,
   shouldShowExpiryWarning,
 } from "@/lib/poju/expiry-reminder";
-import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
+import {
+  FixedEasternOsWelcome,
+  MatrixNarrativeReply,
+} from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
 import { requestJointPassRetry } from "@/lib/poju/joint-client-events";
@@ -231,6 +234,7 @@ import {
   hasPreviewMatrixMessage,
   isEnergyMatrixMessage,
   isPreviewSession,
+  markReleasePendingQuestion,
   POJU_RELEASE_PENDING_QUESTION_FLAG,
   readReleasePendingGen,
 } from "@/lib/poju/preview-unlock";
@@ -1650,6 +1654,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         return;
       }
 
+      const authorityCode =
+        err instanceof ClientSessionAuthorityError
+          ? err.body.code
+          : err instanceof Error && typeof (err as Error & { code?: string }).code === "string"
+            ? (err as Error & { code?: string }).code
+            : null;
+      console.error("[poju] Send failed detail:", {
+        name: err instanceof Error ? err.name : typeof err,
+        message: err instanceof Error ? err.message : String(err),
+        authorityCode,
+      });
       await dialog.alert(
         isProviderQueue ? t("dialog_provider_queue") : t("dialog_connection_error"),
       );
@@ -1916,11 +1931,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
 
     if (layout === "workspace-opening" && workspacePrepare) {
-      try {
-        sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, base.session_id);
-      } catch {
-        /* ignore */
-      }
+      markReleasePendingQuestion(base.session_id);
       workspacePrepare.startUnlockRitual();
       return;
     }
@@ -2159,9 +2170,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const spend = await unlockWithPass({
           product: "pivot",
           refId: baseSession.session_id,
-          description: passUsageTopicFromQuestion(
-            baseSession.pending_question ?? baseSession.original_question,
-          ),
+          description: passUsageTopicFromQuestion(userMessage),
         });
         const spinLeft = passGateMinSpinMs() - (Date.now() - gateStartedAt);
         if (spinLeft > 0) {
@@ -2169,10 +2178,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
 
         if (spend.ok) {
-          if (!spend.already_entitled) {
-            setPassGatePhase("success");
-            await new Promise<void>((r) => window.setTimeout(r, passGateSuccessHoldMs()));
+          // Soft unlock (enforce off / no admin) must not pretend a Pass was spent.
+          const softUnlock =
+            spend.reason === "enforce_off" || spend.reason === "admin_unconfigured";
+          if (!spend.already_entitled && !softUnlock) {
+            dispatchPassSpendToast({ amount: 1, locale: processLocale(withPending) });
           }
+          // Paint avatar + spinner immediately — never wait for success-hold / unlock effect.
+          flushSync(() => {
+            if (!spend.already_entitled) setPassGatePhase("success");
+            setSlotActivity(resolveActivityForSend(withPending));
+            setSlotActivityFading(false);
+            setThinkingLiveLine(null);
+            setPendingActivityPlacement("trailing");
+          });
+          await yieldToBrowserPaint();
           setPassGateOpen(false);
           await applyPreviewUnlock("payment", withPending);
           return;
@@ -3970,12 +3990,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const mid = m.client_id ?? m.timestamp;
       // energy_matrix → vault modal only (not center transcript)
       if (isEnergyMatrixMessage(m)) continue;
-      if (isMatrixWelcomeMessage(m)) {
+      // Welcome = fixed Eastern OS hero (centered copy), never an AI chat bubble.
+      if (isWelcomeHeroMessage(m)) {
+        bareIds.add(mid);
         const payload = m.meta?.matrix_payload ?? session.matrix_payload;
-        if (payload) {
-          bareIds.add(mid);
-          slots[mid] = <MatrixNarrativeReply payload={payload} locale={locale} />;
-        }
+        slots[mid] = payload ? (
+          <MatrixNarrativeReply payload={payload} locale={locale} />
+        ) : (
+          <FixedEasternOsWelcome locale={locale} />
+        );
       }
       const di2Session = isDecisionIntakeV2Session(session);
       if (m.meta?.contains_delivery) {

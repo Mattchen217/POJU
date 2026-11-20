@@ -1,0 +1,6 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": ["../next-env.d.ts", "../scripts/test-m6-di2-full-lifecycle.ts"],
+  "exclude": []
+}

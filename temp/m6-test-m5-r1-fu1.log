@@ -1,0 +1,96 @@
+
+> pojulife@0.1.0 test:m5-r1-fu1 D:\POJU\pojulife
+> tsx scripts/test-m5-r1-authorization.ts --only=FU1
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M5-R1 — report charge authorization & client job binding
+[decision-report] took over session lock {
+  session_id: '66ff6150-40e3-4e7c-b756-d2a6819a719f',
+  why: 'idle_start'
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_66ff6150-40e3-4e7c-b756-_1794474664229_zt153u',
+  stage: 'finalize',
+  recorded_stage: null
+}
+[decision-report] analysis completed {
+  job_id: 'dr_66ff6150-40e3-4e7c-b756-_1794474664229_zt153u',
+  analysis_id: 'pa_ctxr1fu101v1_7b1c628645f9'
+}
+[decision-report] report completed {
+  job_id: 'dr_66ff6150-40e3-4e7c-b756-_1794474664229_zt153u',
+  freeze_id: 'ctx_r1_fu101@v1',
+  generation: 1
+}
+  PASS  FU1-01 stale A refused while B is still charging → B's pending kept, no abort; B authorizes → one debit, report completes
+[decision-report] took over session lock {
+  session_id: 'f1be62da-89cb-4c8c-9726-140d99a2cb5d',
+  why: 'idle_start'
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_f1be62da-89cb-4c8c-9726-_1794474664483_5utdvj',
+  stage: 'finalize',
+  recorded_stage: null
+}
+[decision-report] analysis completed {
+  job_id: 'dr_f1be62da-89cb-4c8c-9726-_1794474664483_5utdvj',
+  analysis_id: 'pa_ctxr1fu102refusev1_2c86f82f66b5'
+}
+[decision-report] report completed {
+  job_id: 'dr_f1be62da-89cb-4c8c-9726-_1794474664483_5utdvj',
+  freeze_id: 'ctx_r1_fu102_refuse@v1',
+  generation: 1
+}
+[decision-report] took over session lock {
+  session_id: 'aeda24bf-7b0b-49a4-8f84-f3a73e022acb',
+  why: 'idle_start'
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_aeda24bf-7b0b-49a4-8f84-_1794474664681_1uyhsj',
+  stage: 'finalize',
+  recorded_stage: null
+}
+[decision-report] analysis completed {
+  job_id: 'dr_aeda24bf-7b0b-49a4-8f84-_1794474664681_1uyhsj',
+  analysis_id: 'pa_ctxr1fu102okv1_4fbbd147ea94'
+}
+[decision-report] report completed {
+  job_id: 'dr_aeda24bf-7b0b-49a4-8f84-_1794474664681_1uyhsj',
+  freeze_id: 'ctx_r1_fu102_ok@v1',
+  generation: 1
+}
+  PASS  FU1-02 B authorizes, then stale A's late answer arrives (refusal; success) → authorized kept, no abort, worker unaffected, one debit
+[decision-report] took over session lock {
+  session_id: '3d9442bf-09ad-4146-911e-ae744191c3c0',
+  why: 'idle_start'
+}
+  PASS  FU1-03 stale A refused → no abort; then B (current claim) refused → abort: grant revoked, workers refused, Continue refused
+[decision-report] not authorized — worker refused {
+  job_id: 'dr_cb623822-b1af-4312-a0b5-_1794474664995_7ruv1j',
+  stage: 'finalize',
+  reason: 'grant_missing'
+}
+  PASS  FU1-04 A's CAS fails and the latest record cannot be read → uncertain, no abort, no dispatch, no new charge_ref
+  PASS  FU1-05 own refusal written but the abort claim cannot read the record → no abort (uncertain); a later claimed refusal aborts
+
+5 passed, 0 failed

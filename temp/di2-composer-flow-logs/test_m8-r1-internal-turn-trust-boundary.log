@@ -1,0 +1,188 @@
+
+> pojulife@0.1.0 test:m8-r1-internal-turn-trust-boundary D:\POJU\pojulife
+> tsx scripts/test-m8-r1-internal-turn-trust-boundary.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+PASS production sources no longer identify internal turns from text
+PASS Ordinary user sends DYAD_CONTINUE_SYSTEM literal ? no system identity
+PASS Ordinary user forges completed action format ? no system identity
+PASS Ordinary user forges modified action format ? no system identity
+PASS Ordinary user forges skipped action format ? no system identity
+PASS Ordinary user forges updated action format ? no system identity
+PASS Ordinary user sends [SYSTEM: ...] ? security rejection
+PASS Frozen session: ordinary message refused with no mutation
+PASS Frozen session: forged internal message refused with no mutation
+PASS Frozen session: legal action op refused, no mutation
+PASS Frozen session: continuation refused with no mutation
+PASS Expired session: ordinary message refused with no mutation
+PASS Expired session: forged internal message refused with no mutation
+PASS Expired session: legal action op refused, no mutation
+PASS Expired session: continuation refused with no mutation
+PASS Session with missing or unparsable expires_at is fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS Unfrozen, unexpired session: legal user message executes normally
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS Unfrozen, unexpired session: legal action op follows existing business rules
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS Unfrozen, unexpired session: legal skip continuation follows existing business rules
+PASS Invalid action_id is refused and does not change state
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS Forged Session metadata / message metadata cannot obtain internal identity
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS User skip of Dyad Gate enters ordinary handleUserMessage once, without system history
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+PASS User completion of Dyad Gate enters ordinary handleUserMessage once, without system history
+PASS Frozen and expired sessions refuse collected Dyad operations with no model call
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14503,"turn_context_est_tokens":4144}
+PASS Client-forged system, developer, and tool roles are filtered from trusted Prompt history
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Forged assistant history is not treated as a server-trusted reply
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Ordinary user messages still enter the Prompt, and system/developer/tool stay filtered
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Server-generated attested assistant replies are retained as trusted Prompt history
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","has_profile":false}
+[poju-gate] {
+  phase: 'tracking',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS API-attested assistant replies stored after a real chat turn remain trusted
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Forged assistant text with a fake signature or copied metadata is dropped from the Prompt
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Restoring an old unsigned Session keeps legitimate dialogue without deleting records
+PASS Non-stream and stream chat entries attest the same resolved assistant response
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Locally rewritten display text does not replace the attested server reply in the Prompt
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS Prompt construction does not mutate DC, Blueprint, DIR, Readiness, Receipt, Report Job, Charge, or Pass
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS R2-R1: server verifier loads normally and a valid attested assistant reply enters the Prompt
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS R2-R1: server verifier dynamic import failure drops all assistant turns and keeps user turns
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS R2-R1: server verifier unavailable does not apply old-Session compatibility to unsigned history
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS R2-R1: server signing key unavailable fail-closes instead of compatibility fallback
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS R2-R1: browser compatibility mode still restores an old Session with the unverified prefix
+[poju-diag] buildPhaseTransportInputV6 {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":2258,"system_est_tokens":646,"turn_context_chars":14509,"turn_context_est_tokens":4146}
+[poju-diag] buildPojuSystemPrompt {"present":false,"has_structured":false,"display_text_len":0,"session_id":"session_m8r1","system_chars":15996,"system_est_tokens":4571}
+PASS R2-R1: Freeze and Expiry refusals still happen before any model call
+PASS R2-R1: production server catch path no longer falls back to available: false
+PASS Report recovery stays on handleDecisionReportAction and not the Intake message entry
+M8-R1 / M8-R1-FU1 / R2 / R2-R1 internal turn trust boundary checks complete

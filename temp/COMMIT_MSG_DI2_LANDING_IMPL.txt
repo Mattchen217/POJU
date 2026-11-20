@@ -1,0 +1,10 @@
+Land DI2 intake protection, Q&A personal insight, and readiness progress
+
+Add the missing Intake 2.0 input-protection and lockout state to the existing
+Session snapshot and Adaptive Question turn, so invalid input is classified
+without treating short, unknown, declined, or uncertain answers as abuse.
+
+Bind a Personal Analysis Profile once at session init for the Q&A phase,
+derive Decision Understanding progress from DDR/DIR/Gate, and disclose the
+lockout policy on the paid-start paywall. Keep Freeze and eight-page report
+paths unchanged.

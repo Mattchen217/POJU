@@ -1,0 +1,50 @@
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_failed timeout:llm_timeout
+[m24r2d_timeout] outcome=answer_interpretation_failed; dc=1->1; facts=0; constraints=0; asked=1; last_sent=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; asst=\u3010\u7cfb\u7edf\u3011\u672c\u8f6e\u56de\u7b54\u672a\u80fd\u5b8c\u6210\u8bed\u4e49\u7406\u89e3\uff0c\u51b3\u7b56\u4e0a\u4e0b\u6587\u672a\u5199\u5165\u3002\u8bf7\u7a0d\u540e\u91cd\u8bd5\uff0c\u6216\u6362\u4e00\u79cd\u8868\u8ff0\u3002(timeout:llm_timeout)
+  PASS  M2.4-R2 Case D: timeout is fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"136959c1-f4a2-47c0-bffe-7816a181a92e","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_invalid_schema invalid_json:Unexpected token 'h', "this is not json {" is not valid JSON
+[m24r2d_json] outcome=answer_interpretation_invalid_schema; dc=1->1; facts=0; constraints=0; asked=1; last_sent=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; asst=\u3010\u7cfb\u7edf\u3011\u672c\u8f6e\u56de\u7b54\u672a\u80fd\u5b8c\u6210\u8bed\u4e49\u7406\u89e3\uff0c\u51b3\u7b56\u4e0a\u4e0b\u6587\u672a\u5199\u5165\u3002\u8bf7\u7a0d\u540e\u91cd\u8bd5\uff0c\u6216\u6362\u4e00\u79cd\u8868\u8ff0\u3002(invalid_json:Unexpected token 'h', "this is not json {" is not valid JSON)
+  PASS  M2.4-R2 Case D: invalid JSON is fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"906086f5-3d90-4185-9b1c-f32548d24e54","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_invalid_schema invalid_schema:extracted_items_not_array
+[m24r2d_schema] outcome=answer_interpretation_invalid_schema; dc=1->1; facts=0; constraints=0; asked=1; last_sent=qp_cq_dir_DIR-OPT-CONSTRAINTS_2026-11-08T12:00:00.000Z; asst=\u3010\u7cfb\u7edf\u3011\u672c\u8f6e\u56de\u7b54\u672a\u80fd\u5b8c\u6210\u8bed\u4e49\u7406\u89e3\uff0c\u51b3\u7b56\u4e0a\u4e0b\u6587\u672a\u5199\u5165\u3002\u8bf7\u7a0d\u540e\u91cd\u8bd5\uff0c\u6216\u6362\u4e00\u79cd\u8868\u8ff0\u3002(invalid_schema:extracted_items_not_array)
+  PASS  M2.4-R2 Case D: missing fields are fail-closed
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"42db3ae0-87f1-4084-acdf-27f954214dc9","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2e] tag=m24r2e_estimate; input=\u8fd9\u4e2a\u6570\u5b57\u53ea\u662f\u4f30\u8ba1\u3002; writes=unverified:user_estimate
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"af11066c-584a-424e-a883-103743561478","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[m24r2e] tag=m24r2e_unknown; input=\u6211\u73b0\u5728\u8fd8\u65e0\u6cd5\u786e\u5b9a\u3002; writes=unknown:none
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"096d7c4e-2cca-42b0-90cd-7caae863191e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,

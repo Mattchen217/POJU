@@ -1,0 +1,8 @@
+﻿HEAD=ff70447117dc92309f9462421e616940674da0a2
+[M1_precheck_before_lock] exit=1 :: 33 passed, 8 failed :: killed by FU3-02, FU3-03, FU3-06.revoke_grant, FU3-06.fail_job, FU3-06.clear_dispatch, FU3-06.release_lock, FU3-06.mark_completed, FU3-06.complete_cas
+[M2_unchecked_owner_release] exit=1 :: 29 passed, 12 failed :: killed by FU1-01, FU1-03, FU2-02, FU3-02, FU3-04, FU3-06.revoke_grant, FU3-06.fail_job, FU3-06.clear_dispatch, FU3-06.release_lock, FU3-06.mark_completed, FU3-06.complete_cas, FU3-07
+[M3_resume_without_right] exit=1 :: 39 passed, 2 failed :: killed by FU3-02, FU3-07
+[M4_job_release_ignores_binding] exit=1 :: 39 passed, 2 failed :: killed by FU3-04, FU3-07
+[M5_dispatch_on_lost_handoff] exit=1 :: 39 passed, 2 failed :: killed by FU3-07, FU3-08
+[M6_claim_without_owner_check] exit=1 :: 40 passed, 1 failed :: killed by FU3-07
+restored clean: True

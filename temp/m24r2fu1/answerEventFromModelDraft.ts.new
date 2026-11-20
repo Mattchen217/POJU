@@ -1,0 +1,230 @@
+const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
+
+/**
+ * applyAnswerEventToSessionDc currently persists Constraint.verification_level
+ * as hardcoded "user_asserted" and is intentionally not modified in FU1.
+ * Therefore an estimated Constraint cannot be persisted without being
+ * disguised as user_asserted; it must stay unresolved.
+ */
+function constraintEstimateIsPersistable(): boolean {
+  return false;
+}
+
+/**
+ * Convert a validated ModelAnswerDraft into a formal AnswerEvent.
+ * Targets always come from activeTargets(); model fields never authorize
+ * DIR/DDR/roles or confirmation. explanation is never written as a fact.
+ * role_hint is ignored for authorization; only role_code_hint is used.
+ */
+export function answerEventFromModelDraft(input: {
+  session: POJUSessionState;
+  statement: string;
+  source_turn_id: string;
+  draft: ModelAnswerDraft;
+}): AnswerEvent {
+  const statement = input.statement.trim();
+  const targets = activeTargets(input.session);
+  const notes: string[] = [];
+  const unresolved: string[] = [...input.draft.unresolved_aspects];
+  const authorizedRoleCodes = targets.fact_role_codes;
+  let cls: AnswerClass = input.draft.classification;
+
+  const eventShell = (writes: ProposedWrite[], classification: AnswerClass): AnswerEvent => ({
+    event_id: `ae_${input.source_turn_id}`.slice(0, 80),
+    session_id: input.session.session_id,
+    client_turn_id: input.source_turn_id,
+    raw_text: statement.slice(0, 2000),
+    classification,
+    targets: {
+      dir_ids: [...targets.dir_ids],
+      ddr_ids: [...targets.ddr_ids],
+      direction_id: targets.direction_id,
+    },
+    proposed_writes: writes,
+    notes: [
+      ...notes,
+      ...unresolved.map((u) => `unresolved:${u}`),
+    ].slice(0, 40),
+    interpreter: MODEL_ANSWER_INTERPRETER_VERSION,
+  });
+
+  if (targets.auth_error === "missing_authorized_fact_roles") {
+    notes.push("missing_authorized_fact_roles");
+    return eventShell([], "invalid_input");
+  }
+  if (
+    targets.auth_error === "missing_authorized_answer_target" ||
+    (targets.dir_ids.length === 0 && targets.ddr_ids.length === 0)
+  ) {
+    notes.push("missing_authorized_answer_target");
+    return eventShell([], "invalid_input");
+  }
+  if (authorizedRoleCodes.length === 0 || targets.fact_roles.length === 0) {
+    notes.push("missing_authorized_fact_roles");
+    return eventShell([], "invalid_input");
+  }
+
+  if (
+    cls === "off_topic" ||
+    cls === "invalid_input" ||
+    cls === "goal_change" ||
+    cls === "insight_mismatch"
+  ) {
+    notes.push(`${cls}_no_dc_write`);
+    return eventShell([], cls);
+  }
+
+  type AcceptedItem = {
+    text: string;
+    semantic_kind: "reality_fact" | "constraint" | "definition_patch";
+    authorizedDirId: string;
+    authorizedRole: string;
+    certainty: "explicit" | "estimated" | "unclear";
+  };
+
+  const acceptedItems: AcceptedItem[] = [];
+
+  for (const item of input.draft.extracted_items) {
+    // Production authorization uses role_code_hint only. Legacy role_hint is ignored.
+    const code = item.role_code_hint ?? null;
+
+    if (code && !authorizedRoleCodes.includes(code)) {
+      unresolved.push(`unauthorized_role_code:${code}:${item.text.slice(0, 40)}`);
+      notes.push("rejected_unauthorized_role_code");
+      continue;
+    }
+
+    if (!code && authorizedRoleCodes.length !== 1) {
+      unresolved.push(`unlocated_role_code:${item.text.slice(0, 100)}`);
+      notes.push("rejected_null_role_code_multi_auth");
+      continue;
+    }
+
+    const acceptedCode = code ?? authorizedRoleCodes[0]!;
+    const match = ROLE_CODE_RE.exec(acceptedCode);
+    if (!match) {
+      unresolved.push(`illegal_role_code:${acceptedCode}:${item.text.slice(0, 40)}`);
+      notes.push("rejected_illegal_role_code");
+      continue;
+    }
+
+    acceptedItems.push({
+      text: item.text.slice(0, 500),
+      semantic_kind: item.semantic_kind,
+      authorizedDirId: match[1]!,
+      authorizedRole: match[2]!,
+      certainty: item.certainty,
+    });
+  }
+
+  const writes: ProposedWrite[] = [];
+
+  const constraintCategory = (text: string): ProposedWrite["constraint_category"] =>
+    /预算|budget|钱|salary|cost|财务/i.test(text)
+      ? "financial"
+      : /deadline|截止|时间|timing|最晚/i.test(text)
+        ? "time"
+        : /不可逆|退出成本|exit/i.test(text)
+          ? "exit_cost"
+          : "responsibility";
+
+  const pushConstraintAndCompanion = (
+    text: string,
+    authorizedDirId: string,
+    authorizedRole: string,
+    verification_level: "user_asserted" | "user_estimate",
+  ) => {
+    const fact_roles = [authorizedRole];
+    const related_dir_ids = [authorizedDirId];
+    writes.push({
+      kind: "constraint",
+      statement: text,
+      status: "unverified",
+      verification_level,
+      fact_roles,
+      related_dir_ids,
+      constraint_category: constraintCategory(text),
+      rigidity: "hard",
+    });
+    const alreadyCompanion = writes.some(
+      (w) => w.kind === "reality_fact" && w.statement === text,
+    );
+    if (!alreadyCompanion) {
+      writes.push({
+        kind: "reality_fact",
+        statement: text,
+        status: "unverified",
+        verification_level,
+        fact_roles,
+        related_dir_ids,
+      });
+    }
+  };
+
+  if (cls === "unknown" || cls === "declined") {
+    // Existing unknown/declined DC state rules: status + verification_level none.
+    // Role authorization still uses role_code_hint; null does not expand to all roles.
+    for (const item of acceptedItems) {
+      writes.push({
+        kind: "reality_fact",
+        statement: item.text,
+        status: cls,
+        verification_level: "none",
+        fact_roles: [item.authorizedRole],
+        related_dir_ids: [item.authorizedDirId],
+      });
+    }
+    return eventShell(writes, cls);
+  }
+
+  for (const item of acceptedItems) {
+    if (item.certainty === "unclear") {
+      unresolved.push(`unclear_certainty:${item.text.slice(0, 100)}`);
+      continue;
+    }
+
+    const verification_level: "user_asserted" | "user_estimate" =
+      item.certainty === "estimated" ? "user_estimate" : "user_asserted";
+
+    if (item.semantic_kind === "constraint") {
+      if (item.certainty === "estimated" && !constraintEstimateIsPersistable()) {
+        unresolved.push(
+          `estimated_constraint_not_persistable:${item.text.slice(0, 100)}`,
+        );
+        notes.push("estimated_constraint_unresolved");
+        continue;
+      }
+      pushConstraintAndCompanion(
+        item.text,
+        item.authorizedDirId,
+        item.authorizedRole,
+        verification_level,
+      );
+      continue;
+    }
+    if (item.semantic_kind === "definition_patch") {
+      notes.push("definition_patch_proposed_not_mapped_by_apply");
+      writes.push({
+        kind: "definition_patch",
+        statement: item.text,
+        status: "unverified",
+        verification_level,
+        fact_roles: [item.authorizedRole],
+        related_dir_ids: [item.authorizedDirId],
+      });
+      continue;
+    }
+
+    writes.push({
+      kind: "reality_fact",
+      statement: item.text,
+      status: "unverified",
+      verification_level,
+      fact_roles: [item.authorizedRole],
+      related_dir_ids: [item.authorizedDirId],
+    });
+  }
+
+  return eventShell(writes, cls);
+}
+

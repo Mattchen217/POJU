@@ -1,0 +1,5 @@
+Record M9-R1-FU1 Redis Lua integrity parity evidence
+
+Verification record for implementation b4081335892005d30f8818eae957f324d12f64ba on feat/m1-r-fresh-session-main-loop. Required M9, M9-R1, M9-R1-FU1, M1-M8, tsc, and production build commands exited 0. Raw logs, exit codes, and the implementation SHA are in docs/evidence/m9-r1-fu1-redis-lua-integrity-parity-2026-11-18/.
+
+Real Redis/Lua was not executed. SESSION_AUTHORITY_CAS_LUA remains unexecuted in a real Redis server. This commit does not declare M9 or Decision Intake 2.0 accepted.

@@ -1,0 +1,88 @@
+
+> pojulife@0.1.0 build D:\POJU\pojulife
+> next build --webpack
+
+▲ Next.js 16.2.4 (webpack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+⚠ Compiled with warnings in 34.6s
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+/_next/static/media/hana-ui.3e760c2e.wasm is 3.35 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/poju/breakthrough-core/route.ts
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/poju/breakthrough-core/route.ts
+
+  Running TypeScript ...
+Failed to type check.
+
+./lib/poju/agent.ts:1143:15
+Type error: This comparison appears to be unintentional because the types '"planner_blocked" | "dc_committed" | "not_applied"' and '"ready_no_question"' have no overlap.
+
+  [90m1141 |[0m             m1CollectingTurn.ask_error!.includes([32m"planner_exception"[0m) ||
+  [90m1142 |[0m             (m1CollectingTurn.understanding == [36mnull[0m &&
+[31m[1m>[0m [90m1143 |[0m               m1CollectingTurn.outcome === [32m"ready_no_question"[0m &&
+  [90m     |[0m               [31m[1m^[0m
+  [90m1144 |[0m               [33mBoolean[0m(m1CollectingTurn.session.decision_blueprint)));
+  [90m1145 |[0m         [36mif[0m (
+  [90m1146 |[0m           m1CollectingTurn.outcome === [32m"planner_blocked"[0m ||
+Next.js build worker exited with code: 1 and signal: null
+ ELIFECYCLE  Command failed with exit code 1.

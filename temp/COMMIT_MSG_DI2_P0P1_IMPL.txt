@@ -1,0 +1,3 @@
+﻿Restore personal profile delivery and server-commit first-turn titles
+
+Load local profile/base_analysis for authoritative chat with binding validation, and stop browser-only original_question mutation after CAS.

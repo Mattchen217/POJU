@@ -1,0 +1,21 @@
+[m24a] cls=clear_answer; writes=2; dirs=DIR-OPT-CONSTRAINTS
+[m24a] applied facts=fact_m1_turn_m24a_0,fact_m1_turn_m24a_1; dc_version=2
+  PASS  M2.4-R1 Case A: multi-fact answer \u2192 multiple ProposedWrites; no unrelated DIR
+[m24b] verification_level=user_estimate; status=unverified
+  PASS  M2.4-R1 Case B: estimate \u2192 user_estimate + unverified (not confirmed)
+[m24c] unknown_status=unknown; declined_status=declined; askedBefore=1; asked2=1
+  PASS  M2.4-R1 Case C: unknown/declined statuses; no effective ask-budget charge on answer
+[m24d] old=fact_m1_turn_m24d_1_0; new=fact_m1_turn_m24d_2_0; open_conflicts=1; cls=correction
+  PASS  M2.4-R1 Case D: correction keeps old fact; open Conflict on clear clash
+[m24e] qA=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u79bb\u804c\u53bb\u521b\u4e1a\uff1f\u300d\u2014\u2014\u8d44\u91d1\u3001\u65f6\u95f4\u3001\u8d23\u4efb\u65b9\u9762\u6709\u54ea\u4e9b\u5177\u4f53\u786c\u9650\u5236\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-CONSTRAINTS\uff09; qB=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u642c\u53bb\u4e0a\u6d77\uff1f\u300d\u2014\u2014\u8d44\u91d1\u3001\u65f6\u95f4\u3001\u8d23\u4efb\u65b9\u9762\u6709\u54ea\u4e9b\u5177\u4f53\u786c\u9650\u5236\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-CONSTRAINTS\uff09; dirsA=DIR-OPT-CONSTRAINTS; dirsB=DIR-OPT-CONSTRAINTS
+  PASS  M2.4-R1 Case E: dynamic question text differs across decision gaps
+[m24f] targetDir=DIR-OPT-ON-TABLE; role0=option; need=missing_roles:status_quo; \u6709\u54ea\u4e9b\u771f\u5b9e\u53ef\u9009\u65b9\u6848; nextQ=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u6362\u5de5\u4f5c\uff1f\u300d\u2014\u2014\u8d44\u91d1\u3001\u65f6\u95f4\u3001\u8d23\u4efb\u65b9\u9762\u6709\u54ea\u4e9b\u5177\u4f53\u786c\u9650\u5236\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1aNeeded for DIR-OPT-CONSTRAINTS\uff09
+  PASS  M2.4-R1 Case F: satisfied role not re-asked; next role gap
+[m24g] conflict_briefs=1; gap=conflict; nextQ=\u5173\u4e8e\u300cShould I leave my job?\u300d\u2014\u2014\u5f53\u524d\u8bb0\u5f55\u5b58\u5728\u51b2\u7a81\uff1a\u53ea\u6709\u4e00\u4e2a\u9009\u9879\uff1a\u7559\u4efb vs \u5176\u5b9e\u8fd8\u6709\u521b\u4e1a\u9009\u9879\u3002\u8bf7\u5e2e\u52a9\u6f84\u6e05\u54ea\u4e00\u9879\u5c5e\u5b9e\u3002\uff08\u5df2\u77e5\uff1a\u53ea\u6709\u4e00\u4e2a\u9009\u9879\uff1a\u7559\u4efb\uff1b\u8bf7\u8865\u5145\u5c1a\u672a\u8bf4\u6e05\u7684\u90e8\u5206\uff09
+  PASS  M2.4-R1 Case G: open Conflict \u2192 Understanding conflict; DIR not known; ask resolves
+[m24h-t1] phase=collecting_context; dc_v=1; q=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u671f\u671b\u8fbe\u6210\u7684\u7ed3\u679c\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1a\u7528\u4e8e\u6bd4\u8f83\u9009\u9879\u4e0e\u6210\u7acb\u6761\u4ef6\uff09; llmDelta=1
+[m24h-t2] dc_v=2; phase=collecting_context; authQ=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u76ee\u6807\u4f18\u5148\u7ea7\u987a\u5e8f\uff1f\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1a\u9a71\u52a8\u9009\u9879\u6392\u5e8f\uff09; llmDelta=1; prevQ_same=false
+[m24h-t3] dc_v=3; phase=collecting_context; authQ=\u5173\u4e8e\u300c\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\u300d\u2014\u2014\u8bf7\u628a\u8981\u505a\u7684\u51b3\u7b56\u95ee\u9898\u8bf4\u5f97\u66f4\u5177\u4f53\u4e00\u70b9\uff1f\uff08\u5df2\u77e5\uff1a\u8981\u4e0d\u8981\u63a5\u53d7\u65b0 offer\uff1f\uff1b\u8bf7\u8865\u5145\u5c1a\u672a\u8bf4\u6e05\u7684\u90e8\u5206\uff09\uff08\u8fd9\u6837\u6211\u624d\u80fd\u5224\u65ad\uff1a\u6ca1\u6709\u660e\u786e\u95ee\u9898; llmDelta=1
+[m24h] path=handleUserMessage\xd73; versions=1->2->3; total_llm_fetches=3
+  PASS  M2.4-R1 Case H: real Agent main path \u22653 turns; LLM does not override authorized Q
+M1 done. PASS=24 FAIL=0

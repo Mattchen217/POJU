@@ -1,0 +1,7 @@
+HEAD=4468347e58f55151ecad2cc47871534b86c937b5
+CMD=pnpm exec next typegen
+EXIT=0
+ELAPSED_MS=1506
+==========
+Generating route types...
+✓ Types generated successfully

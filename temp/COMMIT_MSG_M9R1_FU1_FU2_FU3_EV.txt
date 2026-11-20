@@ -1,0 +1,5 @@
+Record M9-R1-FU1-FU2-FU3 Session Record integrity atomic binding evidence
+
+Verification record for implementation c9a318a64f5f570df1f903fb3d128d5486b43c2f on feat/m1-r-fresh-session-main-loop. Required M9, M9-R1, M9-R1-FU1, M9-R1-FU1-FU2, M9-R1-FU1-FU2-FU3, M1-M8, tsc, and production build commands exited 0. Raw logs, exit codes, and the implementation SHA are in docs/evidence/m9-r1-fu1-fu2-fu3-session-record-integrity-atomic-binding-2026-11-18/.
+
+Real Redis/Lua was not executed. SESSION_AUTHORITY_CAS_LUA remains unexecuted in a real Redis server. This commit does not declare FU3, M9, M9-R1, or Decision Intake 2.0 accepted.

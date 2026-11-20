@@ -1,0 +1,1490 @@
+
+FILE lib/poju/decision-intake/answer-interpretation.ts lines=1235
+    9: export const ANSWER_INTERPRETATION_VERSION = "deterministic_m2_4_r1" as const;
+   27: export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
+   31: const UNKNOWN_RE =
+   33: const DECLINED_RE =
+   35: const ESTIMATE_RE =
+   37: const CONSTRAINT_RE =
+   39: const CORRECTION_RE =
+   41: const CONTRADICTION_RE =
+   43: const OFF_TOPIC_RE =
+   46: const ROLE_CODE_RE = /^v1\/dir\/([^/]+)\/role\/([^/]+)$/;
+   49: export function unresolvedItemId(sourceTurnId: string, extractedIndex: number): string {
+   53: export function unresolvedAspectId(sourceTurnId: string, aspectIndex: number): string {
+   57: export function intakeControlItemId(
+   65: const MAX_SOURCE_QUOTE_LENGTH = 2000;
+   73: export const FACT_STATEMENT_MAX_CHARS = 500;
+   75: export const LONG_ANSWER_ASPECT_TEXT =
+   83: function foldGroundingChars(text: string): string {
+  108: export function normalizeAnswerGroundingText(text: string): string {
+  122: type GroundableItem = {
+  129: export type LocatedSourceSpan = {
+  137: export type SourceQuoteLocateResult =
+  141: export type SourceQuoteGroundingResult =
+  146: const EDGE_SEPARATOR_RE = /[\s。｡！？!?；;，,﹐.]/;
+  147: const CLUSTER_EXTEND_RE = /[\p{M}\u200C\u200D\uFE00-\uFE0F]/u;
+  149: function trimEdges(s: string, start: number, end: number): [number, number] {
+  157: type NormalizedMap = {
+  166: function segmentClusters(s: string): Array<{ start: number; end: number }> {
+  167: const clusters: Array<{ start: number; end: number }> = [];
+  170: const cp = s.codePointAt(i)!;
+  173: const next = s.codePointAt(end)!;
+  174: const extends_ =
+  189: function buildNormalizedMap(s: string): NormalizedMap {
+  190: const clusters = segmentClusters(s);
+  192: const clusterIndex: number[] = [];
+  194: const folded = foldGroundingChars(s.slice(cluster.start, cluster.end));
+  210: const clusterStarts = new Set(clusters.map((c) => c.start));
+  222: export function locateSourceQuote(
+  227: const s = statement.trim();
+  228: const quoteNorm = buildNormalizedMap(sourceQuote.trim()).text;
+  230: const map = buildNormalizedMap(s);
+  232: const hasStart = offsets?.source_start !== undefined && offsets?.source_start !== null;
+  233: const hasEnd = offsets?.source_end !== undefined && offsets?.source_end !== null;
+  236: const start = offsets!.source_start!;
+  237: const end = offsets!.source_end!;
+  258: const last = idx + quoteNorm.length - 1;
+  259: const startCluster = map.clusterIndex[idx]!;
+  260: const endCluster = map.clusterIndex[last]!;
+  261: const startsOnCluster = idx === 0 || map.clusterIndex[idx - 1] !== startCluster;
+  262: const endsOnCluster =
+  268: const start = map.clusters[startCluster]!.start;
+  269: const end = map.clusters[endCluster]!.end;
+  280: export function groundExtractedItem(
+  287: const span = locateSourceQuote(item.source_quote, statement, {
+  295: export function groundingRejection(
+  318: const GOAL_TARGET_INTRODUCER_RE =
+  321: export function goalChangeTargetFromClause(clauseText: string): string {
+  322: const [a, b] = trimEdges(clauseText, 0, clauseText.length);
+  323: const clause = clauseText.slice(a, b);
+  324: const intro = GOAL_TARGET_INTRODUCER_RE.exec(clause);
+  326: const rest = clause.slice(intro[0].length);
+  327: const [ra, rb] = trimEdges(rest, 0, rest.length);
+  338: export function extractGroundedProposedDecisionTarget(
+  345: const rejections: SourceQuoteRejection[] = [];
+  348: const item = draft.extracted_items[extractedIndex]!;
+  349: const grounding = groundExtractedItem(item, statement);
+  355: const target = goalChangeTargetFromClause(grounding.span.text);
+  367: function validateAuthorizedRoleCodes(
+  372: const seen = new Set<string>();
+  373: const out: string[] = [];
+  374: const roles: string[] = [];
+  376: const match = ROLE_CODE_RE.exec(code);
+  378: const dirId = match[1]!;
+  379: const role = match[2]!;
+  397: export function activeTargets(session: POJUSessionState): {
+  406: const understanding = session.decision_understanding;
+  407: const lastSent = understanding?.last_sent_question;
+  408: const missingRoles = {
+  415: const missingTarget = {
+  427: const nqp = understanding?.next_question_plan ?? null;
+  437: const validated = validateAuthorizedRoleCodes(codes, lastSent.dir_ids);
+  451: export function classifyAnswer(input: {
+  459: const t = input.statement.trim();
+  460: const notes: string[] = [];
+  481: const intakeKind = classifyIntakeInput(t);
+  532: const hasConcrete =
+  546: function splitIndependentFacts(statement: string): string[] {
+  547: const cleaned = statement.trim();
+  550: const parts = cleaned
+  558: function stripMetaPrefix(text: string): string {
+  567: export function writesFor(
+  573: const roles =
+  575: const dirs = targets.dir_ids;
+  605: const wantsConstraint =
+  609: const constraintRoles = roles.includes("hard_constraint")
+  620: constraint_category: /预算|budget|钱|salary|cost|财务/i.test(statement)
+  656: const clauses =
+  661: const uniqueClauses = Array.from(new Set(clauses.map((c) => c.slice(0, 500))));
+  677: function constraintEstimateIsPersistable(): boolean {
+  681: function constraintCategoryFor(text: string): ProposedWrite["constraint_category"] {
+  695: export function correctableFactIds(
+  701: const facts = session.decision_context?.reality_facts ?? [];
+  713: export type CorrectablePriorAnswer = {
+  724: export function correctablePriorAnswers(
+  728: const sources = new Map(
+  731: const out = new Map<string, CorrectablePriorAnswer>();
+  735: const record = f.source_turn_id ? sources.get(f.source_turn_id) : undefined;
+  739: const code = `v1/dir/${dirId}/role/${role}`;
+  741: const entry = out.get(code) ?? { role_code: code, fact_ids: [], statement: "" };
+  761: export function answerEventFromModelDraft(input: {
+  769: const statement = input.statement.trim();
+  770: const statementTooLong = statement.length > FACT_STATEMENT_MAX_CHARS;
+  771: const statementFitsFact = statement.length > 0 && !statementTooLong;
+  772: const targets = activeTargets(input.session);
+  773: const notes: string[] = [];
+  774: const unresolved: string[] = [];
+  775: const unresolvedItems: UnresolvedAnswerItem[] = [];
+  776: const groundingRejections: SourceQuoteRejection[] = [];
+  777: const authorizedRoleCodes = targets.fact_role_codes;
+  778: const authorizedDirIds = [...targets.dir_ids];
+  779: const authorizedDdrIds = [...targets.ddr_ids];
+  781: const sentQuestionId =
+  784: const aspectTexts = input.draft.unresolved_aspects
+  787: const persistableClass =
+  792: const hasPersistableContent =
+  798: const structuredAspects: UnresolvedModelAspect[] = aspectTexts.map((text, aspectIndex) => ({
+  807: const controlItems: IntakeControlItem[] = [];
+  809: const extractedTarget = extractGroundedProposedDecisionTarget(input.draft, statement);
+  811: const goalChangeTarget = extractedTarget.proposed_decision_target;
+  863: const pushUnresolvedItem = (item: {
+  894: const eventShell = (writes: ProposedWrite[], classification: AnswerClass): AnswerEvent => ({
+  946: const item = input.draft.extracted_items[extractedIndex]!;
+  947: const grounding = groundExtractedItem(item, statement);
+  958: type AcceptedItem = {
+  966: const acceptedItems: AcceptedItem[] = [];
+  967: const priorCorrectionCodes =
+  975: const item = input.draft.extracted_items[extractedIndex]!;
+  976: const grounding = groundExtractedItem(item, statement);
+  988: const span = grounding.span;
+  990: const code = item.role_code_hint ?? null;
+ 1019: const acceptedCode = code ?? authorizedRoleCodes[0]!;
+ 1020: const match = ROLE_CODE_RE.exec(acceptedCode);
+ 1044: const provenanceOf = (accepted: AcceptedItem | null): ProposedWriteProvenance => ({
+ 1058: const writes: ProposedWrite[] = [];
+ 1059: const upsertWrite = (write: ProposedWrite) => {
+ 1060: const existing = writes.find(
+ 1079: const match = ROLE_CODE_RE.exec(code);
+ 1109: const { item } = accepted;
+ 1122: const verification_level: "user_asserted" | "user_estimate" =
+ 1124: const fact_roles = [accepted.authorizedRole];
+ 1125: const related_dir_ids = [accepted.authorizedDirId];
+ 1126: const provenance = [provenanceOf(accepted)];
+ 1162: constraint_category: constraintCategoryFor(statement),
+ 1182: const corrected = correctableFactIds(
+ 1201: export function interpretUserAnswer(input: {
+ 1207: const statement = input.statement.trim();
+ 1208: const targets = activeTargets(input.session);
+ 1209: const { cls, notes } = classifyAnswer({
+ 1214: const proposed_writes = writesFor(cls, statement, targets, notes);
+
+FILE lib/poju/decision-intake/answer-interpretation-model.ts lines=683
+   18: export const MODEL_ANSWER_INTERPRETER_VERSION = "model_m2_4_r2" as const;
+   21: export const ANSWER_INTERPRETATION_MODEL_TIMEOUT_MS = 60_000;
+   23: export const MAX_EXTRACTED_ITEMS = 8;
+   24: export const MAX_ITEM_TEXT_LENGTH = 500;
+   25: export const MAX_SOURCE_QUOTE_LENGTH = 2000;
+   26: export const MAX_UNRESOLVED_ASPECTS = 16;
+   27: export const MAX_ASPECT_TEXT_LENGTH = 200;
+   28: export const MAX_EXPLANATION_LENGTH = 2000;
+   30: export const MODEL_ANSWER_CLASSIFICATIONS = [
+   46: export const MODEL_SEMANTIC_KINDS = [
+   52: export const MODEL_CERTAINTIES = ["explicit", "estimated", "unclear"] as const;
+   54: export type ModelAnswerClassification = (typeof MODEL_ANSWER_CLASSIFICATIONS)[number];
+   55: export type ModelSemanticKind = (typeof MODEL_SEMANTIC_KINDS)[number];
+   56: export type ModelCertainty = (typeof MODEL_CERTAINTIES)[number];
+   58: export type { ModelAnswerDraft };
+   60: export type ModelInterpretationContext = {
+   91: constraint_id: string;
+  114: export type ModelInterpretationCallMeta = {
+  124: export type ModelInterpretationSuccess = {
+  131: export type ModelInterpretationFailure = {
+  138: export type ModelInterpretationResult =
+  146: export type AnswerInterpretationModelHook = (input: {
+  155: const CLASS_SET = new Set<string>(MODEL_ANSWER_CLASSIFICATIONS);
+  156: const KIND_SET = new Set<string>(MODEL_SEMANTIC_KINDS);
+  157: const CERT_SET = new Set<string>(MODEL_CERTAINTIES);
+  159: const AUTHORITY_FIELD_NAMES = new Set([
+  185: const SYSTEM_PROMPT = `You are the Decision Intake Answer Interpretation module.
+  241: function asTrimmedString(value: unknown): string | null {
+  245: function stripJsonFences(raw: string): string {
+  246: const trimmed = raw.trim();
+  247: const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  251: function collectAuthorityFields(value: unknown, found: Set<string>, prefix = ""): void {
+  254: const path = prefix ? `${prefix}.${key}` : key;
+  256: const child = (value as Record<string, unknown>)[key];
+  267: function lastSentForContext(session: POJUSessionState): ModelInterpretationContext["last_sent_question"] {
+  268: const last = session.decision_understanding?.last_sent_question;
+  280: export function buildModelInterpretationContext(input: {
+  285: const session = input.session;
+  286: const targets = activeTargets(session);
+  287: const authorizedDir = new Set(targets.dir_ids);
+  288: const authorizedRoles = new Set(targets.fact_roles);
+  289: const lastSent = session.decision_understanding?.last_sent_question ?? null;
+  292: const factRoleCodes = [...targets.fact_role_codes];
+  294: const blueprint_directions = (session.decision_blueprint?.directions ?? [])
+  304: const dc = session.decision_context;
+  305: const related_reality_facts = (dc?.reality_facts ?? [])
+  307: const dirs = f.related_dir_ids ?? [];
+  308: const roles = f.fact_roles ?? [];
+  322: const relatedFactIds = new Set(related_reality_facts.map((f) => f.fact_id));
+  324: const related_constraints = (dc?.constraints ?? [])
+  327: constraint_id: c.constraint_id,
+  335: const related_conflicts = (dc?.conflicts ?? [])
+  344: const locale =
+  370: export function parseAndValidateModelAnswerDraft(
+  378: const detail = e instanceof Error ? e.message : String(e);
+  386: const rec = value as Record<string, unknown>;
+  387: const stripped = new Set<string>();
+  403: const items: ModelAnswerDraft["extracted_items"] = [];
+  408: const row = item as Record<string, unknown>;
+  433: const text = row.text.trim().slice(0, MAX_ITEM_TEXT_LENGTH);
+  439: const source_quote = row.source_quote;
+  440: const semantic_kind = row.semantic_kind as ModelSemanticKind;
+  444: const hint = asTrimmedString(row.role_hint);
+  445: const codeHint = asTrimmedString(row.role_code_hint);
+  460: const unresolved_aspects = rec.unresolved_aspects
+  478: function failureFromUnknown(e: unknown): ModelInterpretationFailure {
+  479: const detail = e instanceof Error ? e.message : String(e);
+  480: const lower = detail.toLowerCase();
+  491: export type AnswerInterpretationModelText = {
+  498: export const ANSWER_INTERPRETATION_ROUTE = "/api/poju/answer-interpretation";
+  501: export async function callAnswerInterpretationModel(input: {
+  507: const result = await openRouterChatCompletion({
+  538: async function callAnswerInterpretationRoute(input: {
+  544: const controller = new AbortController();
+  545: const timer = setTimeout(
+  549: const onAbort = () => controller.abort(new Error("abort"));
+  553: const res = await fetch(ANSWER_INTERPRETATION_ROUTE, {
+  563: const data = (await res.json().catch(() => null)) as
+  568: const error = data && data.ok === false ? data.error ?? "" : "";
+  586: export function isModelInterpretationContext(value: unknown): value is ModelInterpretationContext {
+  588: const c = value as Record<string, unknown>;
+  589: const authorized = c.authorized as Record<string, unknown> | undefined;
+  591: typeof c.user_answer === "string" &&
+  594: typeof c.locale === "string" &&
+  605: export async function interpretAnswerWithModel(input: {
+  613: const locale =
+  617: const context = buildModelInterpretationContext({
+  623: const startedAt = Date.now();
+  625: const hookMeta = (): ModelInterpretationCallMeta => ({
+  633: const hooked = await input.testHook({
+  648: const call = {
+  657: const result =
+  658: typeof window === "undefined"
+  661: const call_meta: ModelInterpretationCallMeta = {
+
+FILE lib/poju/decision-intake/blueprint.ts lines=793
+   15: type DdrDefinitionEntry,
+   16: type DdrPriority,
+   17: type DirDefinitionEntry,
+   22: type TopicClassifyResult,
+   27: const SOFT = 12;
+   28: const HARD = 15;
+   29: const DEPTH = 3;
+   31: const PRIORITY_RANK: Record<DdrPriority, number> = { P0: 0, P1: 1, P2: 2 };
+   33: export type BlueprintScopeSource = "catalog" | "starter_fallback";
+   35: export type BlueprintInitMeta = {
+   43: export function highestDdrPriority(
+   54: export function catalogDdrIdsForDir(
+   62: const index = opts?.dir_to_ddr;
+   63: const base = index ? [...(index.get(dirId) ?? [])] : [];
+   75: export function gateClassForDirFromCatalog(
+   85: const ddr_ids = [...(dirToDdr.get(dirId) ?? [])];
+   86: const prios: DdrPriority[] = [];
+   90: const ddr = ddrById.get(id);
+   96: const gate_class = prios.length ? highestDdrPriority(prios) : "P2";
+  105: function directionMetaForCategory(
+  151: function buildDirectionsFromDefinitions(
+  156: const map = new Map<string, InvestigationDirection>();
+  158: const meta = directionMetaForCategory(def.category);
+  159: const ddr_ids = catalogDdrIdsForDir(def.dir_id, { dir_to_ddr: dirToDdr });
+  160: const gate = gateClassForDirFromCatalog(def.dir_id, ddrById, dirToDdr);
+  161: const priority = highestDdrPriority([
+  165: const prev = map.get(meta.id);
+  181: const prevDdr = prev.ddr_ids ?? (prev.ddr_ids = []);
+  193: export function seedDirFromDefinition(def: DirDefinitionEntry): DIR {
+  209: export type BuildCatalogBlueprintScopeResult =
+  235: export function buildCatalogBlueprintScope(input: {
+  243: const topic = classifyDecisionTopic({
+  248: const dirLoad = loadDirDefinitionCatalog(ACTIVE_DIR_DEFINITION_CATALOG_VERSION);
+  249: const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
+  267: const legalDirs = new Set(
+  270: const legalDdrs = new Set([...ddrLoad.snapshot.by_id.keys()]);
+  272: const filtered = filterCatalogLegalIds({
+  279: const selectedDdrs: DdrDefinitionEntry[] = [];
+  285: const ddr07 = ddrLoad.snapshot.by_id.get("DDR-07-TOPIC-DEPTH");
+  297: const dirIdSet = new Set<string>();
+  314: const initialSeedSet = new Set<string>();
+  325: const dir_defs: DirDefinitionEntry[] = [];
+  327: const def = dirLoad.snapshot.by_id.get(id);
+  340: const initial_seed_dir_ids = [...initialSeedSet].filter((id) =>
+  359: export function mergeCatalogDirsIntoDc(
+  364: const byId = new Map(dc.dirs.map((d) => [d.dir_id, d]));
+  366: const existing = byId.get(def.dir_id);
+  397: function stakeholdersHint(text: string): boolean {
+  410: export function activateNextBlueprintPriorityBand(
+  414: const bp = session.decision_blueprint;
+  415: const dc0 = session.decision_context;
+  419: const ts = now ?? new Date().toISOString();
+  420: const dirLoad = loadDirDefinitionCatalog(ACTIVE_DIR_DEFINITION_CATALOG_VERSION);
+  421: const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
+  424: const unfinished: Record<DdrPriority, string[]> = { P0: [], P1: [], P2: [] };
+  426: const live = dc0.dirs.find((d) => d.dir_id === dirId);
+  436: const gate = gateClassForDirFromCatalog(
+  461: const missingDefs: DirDefinitionEntry[] = [];
+  464: const def = dirLoad.snapshot.by_id.get(id);
+  469: const dc = mergeCatalogDirsIntoDc(dc0, missingDefs, ts);
+  480: export function ensureDecisionBlueprint(
+  500: const dc0 = session.decision_context;
+  504: const now = opts?.now ?? new Date().toISOString();
+  505: const goalTarget = opts?.goal_target?.trim() || null;
+  506: const decision_question =
+  512: const extra = goalTarget
+  520: const existing = session.decision_blueprint;
+  529: const missing = dc0.dirs
+  537: const activated = activateNextBlueprintPriorityBand(session, now);
+  562: const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
+  563: const dirLoad = loadDirDefinitionCatalog(ACTIVE_DIR_DEFINITION_CATALOG_VERSION);
+  570: const topic = classifyDecisionTopic({
+  575: const activeOnDc = dc0.dirs.filter((d) => d.id_lifecycle === "active");
+  582: const useFullCatalogScope =
+  595: const scope = buildCatalogBlueprintScope({
+  613: const fallbackIds = [
+  620: const def = dirLoad.snapshot.by_id.get(id);
+  623: const set = new Set<string>();
+  633: const legal = new Set(dirLoad.snapshot.by_id.keys());
+  639: const def = dirLoad.snapshot.by_id.get(dir.dir_id)!;
+  651: const def = dirLoad.snapshot.by_id.get(id);
+  657: const set = new Set<string>();
+  669: const filtered = filterCatalogLegalIds({
+  690: const directions = buildDirectionsFromDefinitions(
+  697: const seedDefs = dir_defs.filter((d) =>
+  702: const blueprint: DecisionBlueprint = {
+  745: export function directionIdForDir(
+  749: const hit = blueprint.directions.find((d) => d.dir_ids.includes(dirId));
+  753: export function blueprintAllowsDir(
+  760: export function blueprintAllowsDdr(
+  769: export function resolveDdrIdsForDir(
+  773: const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
+  777: const topicDirs = blueprint.directions.find((d) => d.direction_id === "DIRN-TOPIC")
+
+FILE lib/poju/decision-intake/scope-budget.ts lines=153
+    7: export const DEFAULT_SOFT_BUDGET = 12;
+    8: export const DEFAULT_HARD_BUDGET = 15;
+    9: export const DEFAULT_DEPTH_CAP = 3;
+   11: export type ScopeBudgetVerdict =
+   15: export function validateScopeDepthBudget(input: {
+   23: const { blueprint, plan, budget } = input;
+   39: const direction = blueprint.directions.find(
+   58: const depthCap =
+   68: const used = budget.depth_by_dir[dirId] ?? 0;
+  110: export function refundIneffectiveQuestion(
+  114: const ineffective = budget.ineffective_plan_ids ?? [];
+  116: const depth_by_dir = { ...budget.depth_by_dir };
+  120: const session_asked_count = Math.max(0, budget.session_asked_count - sent.budget_cost);
+  130: export function bumpBudgetAfterAsk(
+  135: const depth_by_dir = { ...budget.depth_by_dir };
+  138: const deepens = !String(plan.scoring_path ?? "").startsWith("pending_answer_resolution");
+  142: const session_asked_count = budget.session_asked_count + plan.budget_cost;
+
+FILE lib/poju/decision-intake/personal-analysis.ts lines=735
+   27: type EpistemicClass,
+   28: type EvidenceReference,
+   29: type PersonalAnalysisArtifact,
+   30: type PersonalAnalysisItem,
+   31: type PersonalAnalysisSectionKey,
+   37: export type ProfileLine = { ref_id: string; text: string };
+   40: export type RegisteredProfile = {
+   52: export type ProfileProjection = {
+   60: const textEncoder = new TextEncoder();
+   62: function hexOf(bytes: Uint8Array): string {
+   69: export function computeProfileHash(input: {
+   75: const canonical = canonicalStringify({
+   84: function pad2(n: number): string {
+   88: function ziweiLinesFromClosedSet(block: string | null): ProfileLine[] {
+   90: const rows = block
+   98: export function buildProfileProjection(
+  102: const asOf = opts?.as_of ?? new Date(profile.calculation_timestamp);
+  103: const pack = buildChartFactPack(profile.structured, { as_of: asOf });
+  104: const seen = new Set<string>();
+  105: const chart_lines: ProfileLine[] = [];
+  107: const text = raw.trim();
+  123: export function factEvidenceStatus(
+  132: export function buildDcEvidenceIndex(dc: DecisionContext): Map<string, EvidenceReference> {
+  133: const idx = new Map<string, EvidenceReference>();
+  134: const d = dc.definition;
+  135: const defText = [d.decision_question, d.concrete_event, d.desired_outcome, d.stakes]
+  197: const ref_id = `IB-${i + 1}`;
+  203: export function addProfileEvidence(
+  217: export function requiredUnresolvedRefs(dc: DecisionContext): string[] {
+  218: const out: string[] = [];
+  231: export function informationBoundariesFromDc(dc: DecisionContext): string[] {
+  232: const out = [...(dc.information_boundaries ?? [])];
+  249: function line(ref: string, text: string, tail?: string): string {
+  254: export function formatAnalysisInputBlock(input: {
+  259: const { dc, blueprint, projection } = input;
+  260: const idx = buildDcEvidenceIndex(dc);
+  261: const sections: string[] = [];
+  262: const d = dc.definition;
+  275: const byStatus = (status: EvidenceReference["status"]) =>
+  277: const factBlock = (title: string, status: EvidenceReference["status"]) => {
+  278: const rows = byStatus(status);
+  303: const liveHyp = dc.hypotheses.filter((h) => h.state !== "rejected");
+  315: const directionByDir = new Map<string, { label: string; priority: string }>();
+  319: const activeDirs = dc.dirs.filter((x) => x.id_lifecycle === "active");
+  325: const dirn = directionByDir.get(x.dir_id);
+  357: const boundaries = dc.information_boundaries ?? [];
+  384: function languageInstruction(locale: string): string {
+  385: const l = (locale || "zh").toLowerCase();
+  392: export function buildPersonalAnalysisPrompt(input: {
+  398: const contract = buildUserFacingExpressionContractBlock({
+  402: const required = requiredUnresolvedRefs(input.dc);
+  403: const system = [
+  454: const user = [
+  464: const SECTION_SHORT: Record<PersonalAnalysisSectionKey, string> = {
+  469: constraint_interaction: "constraint",
+  474: const CHART_ANCHORED: ReadonlySet<PersonalAnalysisSectionKey> = new Set([
+  480: const DC_ANCHORED: ReadonlySet<PersonalAnalysisSectionKey> = new Set([
+  487: function asString(x: unknown): string {
+  491: function isChartRef(r: EvidenceReference | undefined): boolean {
+  495: function isDcRef(r: EvidenceReference | undefined): boolean {
+  499: export type PersonalAnalysisValidation =
+  504: function classConsistent(
+  508: const factLike = refs.filter((r) => r.kind === "reality_fact" || r.kind === "constraint");
+  511: const bad = refs.find(
+  537: export function validatePersonalAnalysisOutput(input: {
+  543: const parsed = tryParseJsonObject(input.raw.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
+  546: const idx = addProfileEvidence(buildDcEvidenceIndex(input.dc), input.projection);
+  547: const zh = (input.locale || "").toLowerCase().startsWith("zh");
+  548: const hasChart = input.projection.chart_lines.length + input.projection.ziwei_lines.length > 0;
+  549: const cited = new Set<string>();
+  550: const sections = {} as Record<PersonalAnalysisSectionKey, PersonalAnalysisItem[]>;
+  552: const minCount: Record<PersonalAnalysisSectionKey, number> = {
+  557: constraint_interaction: input.dc.constraints.length ? 1 : 0,
+  563: const arr = parsed[key];
+  566: const items: PersonalAnalysisItem[] = [];
+  568: const o = arr[i] as Record<string, unknown> | null;
+  570: const text = asString(o.text);
+  571: const traditional_basis = asString(o.traditional_basis);
+  572: const science = asString(o.science_note);
+  573: const basis_class = asString(o.basis_class) as EpistemicClass;
+  574: const refsRaw = Array.isArray(o.evidence_refs) ? o.evidence_refs : [];
+  575: const evidence_refs = [...new Set(refsRaw.map((r) => asString(r)).filter(Boolean))];
+  576: const where = `${key}[${i}]`;
+  580: const unknown = evidence_refs.find((r) => !idx.has(r));
+  582: const refs = evidence_refs.map((r) => idx.get(r)!);
+  592: const clsErr = classConsistent(basis_class, refs);
+  595: const bare = bareMingliWordInPlain(text);
+  611: const required = requiredUnresolvedRefs(input.dc);
+  612: const openCited = new Set(sections.unresolved_conditions.flatMap((i) => i.evidence_refs));
+  613: const missing = required.filter((r) => !openCited.has(r));
+  619: const conf = (parsed.confidence ?? {}) as Record<string, unknown>;
+  620: const overall = asString(conf.overall);
+  624: const limits = Array.isArray(conf.limits)
+  629: const d = input.dc.definition;
+  630: const artifact: PersonalAnalysisArtifact = {
+  652: export type PersonalAnalysisModelOutcome =
+  656: type RawModelFn = (prompt: { system: string; user: string }) => Promise<{
+  668: export function __setPersonalAnalysisModelForTests(fn: RawModelFn | null): void {
+  672: export async function runPersonalAnalysisModel(input: {
+  681: const prompt = buildPersonalAnalysisPrompt(input);
+  688: const out = await __testAnalysisModel(prompt);
+  694: const { callLLM } = await import("@/lib/llm/router");
+  695: const res = await callLLM({
+  715: const msg = e instanceof Error ? e.message : String(e);
+  724: const v = validatePersonalAnalysisOutput({
+
+FILE lib/poju/decision-intake/personal-analysis-profile.ts lines=193
+   12: export const QA_PERSONAL_PROFILE_VERSION = "poju-qa-profile-v1";
+   14: export type PersonalAnalysisAvailability = "available" | "missing" | "incomplete" | "failed";
+   16: export type PersonalAnalysisDataAvailability = {
+   21: export type PersonalAnalysisProfile = {
+   37: const DECISION_RELEVANCE_RE =
+   40: function unavailable(profileId: string | null, nowIso: string): PersonalAnalysisProfile {
+   54: export function bindPersonalAnalysisProfile(
+   58: const existing = session.personal_analysis_profile;
+   61: const matrix = session.matrix_payload;
+   62: const structured = matrix?.structured;
+   63: const profileId =
+   68: const birth = matrix?.user_profile?.birth ?? null;
+   69: const birthPresent = Boolean(birth) || Boolean(session.birth_submitted_in_session);
+   70: const baziAvailable = Boolean(structured?.day_master?.trim());
+   81: const { buildZiweiFactPack } = require("@/lib/ziwei/fact-pack") as typeof import("@/lib/ziwei/fact-pack");
+   82: const { formatZiweiClosedSetForPrompt } = require("@/lib/ziwei/lab-ziwei") as typeof import("@/lib/ziwei/lab-ziwei");
+   83: const block = formatZiweiClosedSetForPrompt(buildZiweiFactPack(birth, { asOf: nowIso }));
+   91: const baziStatus: PersonalAnalysisAvailability = baziAvailable
+   97: const profile: PersonalAnalysisProfile = {
+  123: function insightFingerprint(block: PersonalPatternInsightBlock): string {
+  127: export function evaluateQaPersonalPatternInsight(
+  131: const profile = session.personal_analysis_profile;
+  133: const baziMissing = !profile || profile.data_availability.bazi !== "available";
+  134: const ziweiMissing = !profile || profile.data_availability.ziwei !== "available";
+  139: const available =
+  146: const dq =
+  154: const related = (session.decision_blueprint?.directions ?? [])
+  159: const rawParts = [
+  169: const raw =
+  172: const text = sanitizePlainExport(raw, locale, "copy").content.trim();
+  173: const block: PersonalPatternInsightBlock = {
+  187: const prev = session.decision_understanding?.personal_pattern_insight;
+
+FILE lib/poju/decision-intake/freeze-bound-report.ts lines=1508
+   11: type DecisionPageId,
+   23: type DecisionContextSessionSlice,
+   32: export type FreezeReportClaimOps = {
+   46: export const M22_REPORT_CLAIM_TTL_SEC = 60 * 90;
+   48: export function freezeReportClaimKey(input: {
+   61: function newFreezeReportClaimToken(): string {
+   65: type ProcessLocalClaim = {
+   71: export function createProcessLocalClaimOps(
+   76: const now = Date.now();
+   77: const existing = store.get(key);
+   84: const existing = store.get(key);
+   93: const existing = store.get(key);
+  103: const defaultProcessLocalClaimOps = createProcessLocalClaimOps();
+  107: export const M22_REPORT_SCHEMA_VERSION = "m2.2-eight-page-v1" as const;
+  108: export const M22_SNAPSHOT_SCHEMA_VERSION = 1 as const;
+  110: export type FreezeBoundReportJobStatus =
+  117: export type ReportBinding = Readonly<{
+  127: export type FrozenReportSnapshot = Readonly<{
+  139: export type FreezeBoundReportPage = {
+  150: export type FreezeBoundReportSource = "legacy_delivery" | "decision_intake_v2";
+  152: export type FreezeBoundReportJob = {
+  172: export type EightPageReport = {
+  182: constructor(code: string, message: string) {
+  189: export type FreezeBoundReportResult =
+  206: export type FreezeBoundReportDeps = {
+  228: const inFlightByKey = new Map<string, Promise<FreezeBoundReportResult>>();
+  230: export function freezeIdFromBinding(binding: DecisionContextBinding): string {
+  234: export function buildReportIdempotencyKey(input: {
+  242: function deepDetachDc(dc: DecisionContext): DecisionContext {
+  247: export function deepFreezeValue<T>(value: T): T {
+  256: const child = (value as any)[key];
+  262: function jobsOf(session: POJUSessionState): FreezeBoundReportJob[] {
+  266: function upsertJob(
+  270: const rest = jobsOf(session).filter((j) => j.job_id !== job.job_id);
+  282: function findJobByKey(
+  293: export function loadAuthoritativeFreeze(
+  309: const m = /^(.+)@v(\d+)$/.exec(opts.freezeId.trim());
+  320: const versions = [...(slice.decision_context_versions ?? [])];
+  321: const current = slice.decision_context ?? null;
+  323: const pool: DecisionContext[] = [];
+  338: const key = `${current.context_id}@v${current.version}`;
+  360: const inVersions = versions.some(
+  366: const chosenInVersions = versions.some(
+  392: const binding = bindingFromDecisionContext(chosen);
+  407: export function verifyFrozenSnapshot(
+  419: const recomputed = computeContentHash(frozen);
+  428: export function createFrozenReportSnapshot(input: {
+  436: const detached = deepDetachDc(input.frozen);
+  437: const bindingCopy: DecisionContextBinding = { ...input.binding };
+  438: const snapshot: FrozenReportSnapshot = {
+  453: export function reportBindingFromSnapshot(
+  467: function bindingsEqual(a: ReportBinding, b: ReportBinding): boolean {
+  479: export async function defaultGeneratePage(
+  483: const feed = formatDecisionContextSliceForPage(
+  487: const body = [
+  507: export function assertCompleteEightPageReport(
+  516: const ids = pages.map((p) => p.pageId);
+  545: export async function generateEightPageReport(
+  549: const generatePage = deps?.generatePage ?? defaultGeneratePage;
+  550: const pages: Array<{ pageId: DecisionPageId; content: string }> = [];
+  552: const content = await generatePage(snapshot, pageId);
+  559: function makeJobId(key: string, now: string): string {
+  566: export async function createOrGetReportJob(input: {
+  575: const now = input.deps?.now?.() ?? new Date().toISOString();
+  576: const binding = reportBindingFromSnapshot(input.snapshot);
+  577: const key = buildReportIdempotencyKey({
+  583: const existing = findJobByKey(input.session, key);
+  600: const retrying: FreezeBoundReportJob = {
+  611: const job: FreezeBoundReportJob = {
+  628: function completedPagesReusable(
+  632: const map = new Map<DecisionPageId, FreezeBoundReportPage>();
+  633: const expected = reportBindingFromSnapshot(snapshot);
+  648: async function runGenerationOnJob(input: {
+  654: const nowFn = input.deps?.now ?? (() => new Date().toISOString());
+  672: const msg = e instanceof Error ? e.message : String(e);
+  673: const code =
+  686: const generatePage = input.deps?.generatePage ?? defaultGeneratePage;
+  687: const reusable = completedPagesReusable(job, input.snapshot);
+  688: const nextPages: FreezeBoundReportPage[] = [];
+  692: const prior = reusable.get(pageId);
+  697: const content = await generatePage(input.snapshot, pageId);
+  730: const completed_at = nowFn();
+  742: const report: EightPageReport = {
+  758: const msg = e instanceof Error ? e.message : String(e);
+  759: const code =
+  778: export async function requestFreezeBoundEightPageReport(input: {
+  787: const sessionId = input.session.session_id;
+  790: const loaded = loadAuthoritativeFreeze(input.session, {
+  804: const msg = e instanceof Error ? e.message : String(e);
+  805: const code =
+  814: const key = buildReportIdempotencyKey({
+  820: const flightMap = input.deps?.inFlightMap ?? inFlightByKey;
+  821: const existingInflight = flightMap.get(key);
+  826: const gate = new Promise<FreezeBoundReportResult>((resolve) => {
+  831: const claimOps = input.deps?.claimOps ?? defaultProcessLocalClaimOps;
+  832: const claimKey = freezeReportClaimKey({
+  837: const claimTtl = input.deps?.claimTtlSec ?? M22_REPORT_CLAIM_TTL_SEC;
+  839: const completedResult = (
+  844: const pages = job.pages
+  850: const msg = e instanceof Error ? e.message : String(e);
+  875: const run = (async (): Promise<FreezeBoundReportResult> => {
+  879: const fresh = await input.deps.loadSession(sessionId);
+  883: const existing = findJobByKey(session, key);
+  890: const token = newFreezeReportClaimToken();
+  891: const acquired = await claimOps.tryAcquire(claimKey, token, claimTtl);
+  894: const fresh = await input.deps.loadSession(sessionId);
+  897: const heldJob = findJobByKey(session, key);
+  913: const fresh = await input.deps.loadSession(sessionId);
+  916: const raced = findJobByKey(session, key);
+  929: const msg = e instanceof Error ? e.message : String(e);
+  930: const code =
+  936: const job = created.job;
+  954: const result = await run;
+  958: const fail: FreezeBoundReportResult = {
+  972: export async function retryFreezeBoundEightPageReport(input: {
+  977: const job = jobsOf(input.session).find((j) => j.job_id === input.jobId);
+  996: export function getCompletedFreezeBoundReport(
+ 1000: const jobs = jobsOf(session);
+ 1001: const job = opts?.jobId
+ 1010: const pages = job.pages
+ 1038: export async function prepareFreezeBoundFinalDelivery(input: {
+ 1072: const loaded = loadAuthoritativeFreeze(input.session, {
+ 1086: const msg = e instanceof Error ? e.message : String(e);
+ 1087: const code =
+ 1096: const key = buildReportIdempotencyKey({
+ 1101: const claimKey = freezeReportClaimKey({
+ 1106: const claimOps = input.deps?.claimOps ?? defaultProcessLocalClaimOps;
+ 1107: const claimTtl = input.deps?.claimTtlSec ?? M22_REPORT_CLAIM_TTL_SEC;
+ 1111: const fresh = await input.deps.loadSession(session.session_id);
+ 1115: const existing = findJobByKey(session, key);
+ 1136: const acquired = await claimOps.tryAcquire(
+ 1144: const fresh = await input.deps.loadSession(session.session_id);
+ 1147: const heldJob = findJobByKey(session, key);
+ 1176: const fresh = await input.deps.loadSession(session.session_id);
+ 1179: const raced = findJobByKey(session, key);
+ 1201: const created = await createOrGetReportJob({
+ 1223: const msg = e instanceof Error ? e.message : String(e);
+ 1224: const code =
+ 1231: export async function releaseFreezeBoundReportClaim(input: {
+ 1236: const claimOps = input.deps?.claimOps ?? defaultProcessLocalClaimOps;
+ 1237: const result = await claimOps.release(input.claimKey, input.claimToken);
+ 1252: export type RegenerateClaimReleaseResult =
+ 1256: export async function tryReleaseClaimForRegenerate(input: {
+ 1261: const claimOps = input.claimOps ?? defaultProcessLocalClaimOps;
+ 1262: const held = claimOps.load ? await claimOps.load(input.claimKey) : null;
+ 1274: const released = await claimOps.release(input.claimKey, input.ownerToken);
+ 1286: export async function releaseClaimBeforePreHandoffReturn(input: {
+ 1303: export async function failFreezeBoundReportJob(input: {
+ 1309: const now = input.deps?.now?.() ?? new Date().toISOString();
+ 1310: const job = jobsOf(input.session).find((j) => j.job_id === input.jobId);
+ 1315: const next: FreezeBoundReportJob = {
+ 1330: export async function completeFreezeBoundReportFromDeliveryPages(input: {
+ 1341: const nowFn = input.deps?.now ?? (() => new Date().toISOString());
+ 1347: const job = jobsOf(input.session).find((j) => j.job_id === input.jobId);
+ 1365: const expected = reportBindingFromSnapshot(input.snapshot);
+ 1375: const completed_at = nowFn();
+ 1376: const nextPages: FreezeBoundReportPage[] = input.pages.map((p) => ({
+ 1384: const nextJob: FreezeBoundReportJob = {
+ 1412: export function __resetFreezeBoundReportInFlightForTests(): void {
+ 1417: export function __createClaimOpsForTests(store: {
+ 1429: const existing = await store.get<{ token?: string; expires_at?: number }>(key);
+ 1430: const now = Date.now();
+ 1433: typeof existing.expires_at === "number" &&
+ 1435: typeof existing.token === "string"
+ 1442: typeof existing.expires_at === "number" &&
+ 1453: const setResult = await store.set(
+ 1478: const existing = await store.get<{ token: string; expires_at: number }>(key);
+ 1483: const existing = await store.get<{
+ 1493: const ttlSec = Math.max(
+ 1497: const again = await store.get<{ token?: string }>(key);
+
+FILE lib/poju/decision-intake/freeze-bound-report-server.ts lines=73
+   13: type FreezeBoundReportDeps,
+   14: type FreezeBoundReportResult,
+   18: function withKvClaim(deps?: FreezeBoundReportDeps): FreezeBoundReportDeps {
+   25: export async function requestFreezeBoundEightPageReportServer(
+   34: export async function prepareFreezeBoundFinalDeliveryServer(
+   45: export async function completeFreezeBoundReportFromDeliveryPagesServer(
+   54: export async function releaseFreezeBoundReportClaimServer(
+   63: export async function failFreezeBoundReportJobServer(
+   72: export type { POJUSessionState };
+
+FILE lib/poju/decision-intake/decision-report-api.ts lines=515
+   31: type DecisionReportDispatchDeps,
+   46: type DecisionReportStartPlan,
+   47: type RefusalAbortResume,
+   48: type ServiceFailure,
+   58: type ChargeAuthorization,
+   59: type ChargeSettlement,
+   60: type DecisionReportCharge,
+   67: type ReportLockOwner,
+   68: type ReportSessionLock,
+   71: export type { DecisionReportChargeResult } from "./decision-report-charge";
+   73: export type DecisionReportApiDeps = DecisionReportDispatchDeps & {
+   78: export type DecisionReportApiReply =
+   82: function str(x: unknown): string {
+   86: function json(status: number, body: Record<string, unknown>): DecisionReportApiReply {
+   90: function failureReply(f: { status: number; code: string; error: string; retryable: boolean }): DecisionReportApiReply {
+   95: function unauthorizedReply(job_id: string, s: Exclude<ChargeSettlement, { state: "authorized" }>): DecisionReportApiReply {
+  108: function chargeUnconfirmed(job_id: string | null, reason: string): DecisionReportApiReply {
+  118: function abortInProgress(record: ChargeAuthorization, reason: string): DecisionReportApiReply {
+  129: function refusalFinal(record: ChargeAuthorization, response: Response | null): DecisionReportApiReply {
+  139: type OwnedAbortResume = Exclude<RefusalAbortResume, { kind: "none" } | { kind: "unreadable" }>;
+  141: function abortOwnsSession(r: RefusalAbortResume): r is OwnedAbortResume {
+  145: function abortResumeReply(r: OwnedAbortResume): DecisionReportApiReply {
+  151: function lockUnconfirmed(reason: string): DecisionReportApiReply {
+  161: function busyReply(): DecisionReportApiReply {
+  170: function awaitingCharge(job: PojuXhighJob, reused: boolean): DecisionReportApiReply {
+  181: async function continueAction(job_id: string, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+  182: const job = await getXhighJob(job_id).catch(() => null);
+  185: const settled = await settleDecisionReportCharge({
+  193: const r = await resumeRefusalAbortRecord(settled.record);
+  199: const ensured = await ensureDecisionReportWorker({ job_id, session_id, deps });
+  211: const done = await loadCompletedReport(session_id, job_id).catch(() => null);
+  213: const delivery = await verifyDecisionReportDelivery(done);
+  220: const cont = await continueDecisionReportJob({ job_id, session_id });
+  222: const granted = await grantDecisionReportExecution(cont.job);
+  237: async function startReusedJob(job: PojuXhighJob, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+  238: const ensured = await ensureDecisionReportWorker({ job_id: job.job_id, session_id, deps });
+  243: const delivery = await verifyDecisionReportDelivery(ensured.job);
+  263: async function startAction(body: Record<string, unknown>, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+  264: const plan = await planDecisionReportStart({
+  274: const owner = newReportLockOwner(session_id);
+  276: const acq = await acquireDecisionReportStartLock(plan, owner);
+  290: const exit = { handedOff: false };
+  303: async function observeStart(plan: DecisionReportStartPlan, job: PojuXhighJob | null): Promise<DecisionReportApiReply> {
+  304: const pre = await resumeDecisionReportRefusalAbort(plan.session_id);
+  307: const ji = job && isDecisionReportJobInput(job.input) ? job.input : null;
+  308: const live = job && (job.status === "pending" || job.status === "running");
+  314: async function followStart(job: PojuXhighJob, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+  323: const r = await resumeRefusalAbortRecord(rec);
+  330: async function lockedStart(
+  337: const session_id = plan.session_id;
+  338: const owner: ReportLockOwner = reportLockOwnerOf(lock);
+  339: const ctx = { session_id, owner_attempt_id: owner.owner_attempt_id };
+  340: const release = async () => {
+  350: const pre = await resumeDecisionReportRefusalAbort(session_id);
+  360: const prepared = await createOrReuseDecisionReportJob(plan, lock);
+  365: const job = prepared.job;
+  366: const live = job.status === "pending" || job.status === "running";
+  379: const abandonOwnJob = async (abort_job_id: string | null | undefined) => {
+  401: const stillOwned = await updateOwnedReportLock(owner).catch(() => null);
+  406: const claim = await claimDecisionReportRefusalAbort(settled, job.job_id, owner);
+  410: const done = await finishDecisionReportRefusalAbort(claim.record);
+  416: const r = await resumeRefusalAbortRecord(claim.record);
+  435: const r = await resumeRefusalAbortRecord(settled.record);
+  447: const handed = await updateOwnedReportLock(owner, { holder: "job", job_id: job.job_id }).catch(() => null);
+  463: const granted = await grantDecisionReportExecution((await getXhighJob(job.job_id)) ?? job);
+  485: export async function handleDecisionReportAction(
+  489: const action = str(body.action);
+  490: const session_id = str(body.session_id);
+  494: const job_id = str(body.job_id);
+  506: const job_id = str(body.job_id);
+
+FILE lib/poju/decision-intake/decision-report-service.ts lines=1087
+   65: type DecisionReportJobInput,
+   66: type DecisionReportStatusPayload,
+   76: type CompletedReportRecord,
+   88: type ChargeAuthorization,
+   89: type DeliveryCheck,
+  102: type ReportLockOwner,
+  103: type ReportSessionLock,
+  113: const STALE_NO_LEASE_MS = 6 * 60_000;
+  115: export type ServiceFailure = {
+  123: export type StartDecisionReportOutcome =
+  127: function failure(status: number, code: string, error: string, retryable = false): ServiceFailure {
+  131: export function sameIdentity(a: DecisionReportJobInput, b: Pick<DecisionReportJobInput, "freeze_id" | "context_hash" | "profile_hash" | "report_schema_version" | "analysis_schema_version">): boolean {
+  141: function isRevivable(job: PojuXhighJob): boolean {
+  143: const r = job.failure_reason;
+  150: type AuthorizedSources = {
+  160: async function authorizeReportSources(input: {
+  166: const held = input.freeze_receipt as FreezeReceipt | null;
+  175: const freeze = await loadVerifiedFreezeRecord(input.session_id, held.freeze_id);
+  177: const head = await readLedgerHead(input.session_id);
+  181: const profileHeld = input.profile_receipt as ProfileReceipt | null;
+  185: const profile = await loadVerifiedProfileRecord({
+  194: const status =
+  209: export type ReportStartHookPoint =
+  224: export function __setReportStartHookForTests(fn: typeof reportStartHook): void {
+  228: export async function runReportStartHook(
+  235: function isLiveJob(job: PojuXhighJob): boolean {
+  239: export type DecisionReportStartPlan = {
+  257: export async function planDecisionReportStart(input: {
+  265: const authorized = await authorizeReportSources(input);
+  267: const freezeRec = authorized.freeze;
+  268: const profile = authorized.profile;
+  269: const dc = freezeRec.frozen_dc;
+  270: const blueprint = freezeRec.blueprint ?? null;
+  289: export type ReportStartLock =
+  305: export async function acquireDecisionReportStartLock(
+  309: const sid = plan.session_id;
+  310: const takeOver = async (raw: unknown, why: string): Promise<ReportSessionLock | null> => {
+  311: const taken = await takeOverReportLock(raw, owner, "start", null);
+  315: const liveJobLock = async (raw: unknown, job: PojuXhighJob): Promise<ReportStartLock | null> => {
+  316: const ji = isDecisionReportJobInput(job.input) ? job.input : null;
+  317: const latest = await findLatestXhighJobForSession("decision_report", sid);
+  321: const taken = await takeOver(raw, "replace_live_job");
+  326: const created = await tryCreateReportLock(owner, "start", null);
+  328: const cur = await readReportSessionLock(sid);
+  332: const latest = await findLatestXhighJobForSession("decision_report", sid);
+  334: const r = await liveJobLock(cur.raw, latest);
+  339: const taken = await takeOver(cur.raw, "legacy_orphan");
+  343: const held = cur.lock;
+  346: const job = held.job_id ? await getXhighJob(held.job_id) : null;
+  349: const taken = await takeOver(cur.raw, "idle_start");
+  353: const job = held.job_id ? await getXhighJob(held.job_id) : null;
+  355: const r = await liveJobLock(cur.raw, job);
+  359: const taken = await takeOver(cur.raw, "job_not_live");
+  369: export type PreparedReportJob =
+  373: const LOCK_LOST = (): ServiceFailure =>
+  381: export async function createOrReuseDecisionReportJob(
+  385: const owner = reportLockOwnerOf(lock);
+  386: const session_id = plan.session_id;
+  387: const { freezeRec, profile, page07, question, identity } = plan;
+  389: const latest = await findLatestXhighJobForSession("decision_report", session_id);
+  390: const latestInput = latest && isDecisionReportJobInput(latest.input) ? latest.input : null;
+  397: const delivery = await verifyDecisionReportDelivery(latest);
+  404: const bound = await updateOwnedReportLock(owner, { job_id: latest.job_id });
+  418: const revoked = await supersedeFinalDeliveryJobForRegenerate(latest.job_id);
+  432: const freeze = {
+  437: const job_input: DecisionReportJobInput = {
+  469: const job = await createXhighJob({
+  478: const bound = await updateOwnedReportLock(owner, { job_id: job.job_id }).catch(() => null);
+  510: export async function startDecisionReportJob(input: {
+  518: const plan = await planDecisionReportStart(input);
+  520: const owner = newReportLockOwner(input.session_id);
+  521: const acq = await acquireDecisionReportStartLock(plan, owner);
+  527: const release = () => releaseOwnedReportLock(owner).catch(() => undefined);
+  529: const pre = await resumeDecisionReportRefusalAbort(input.session_id);
+  538: const prepared = await createOrReuseDecisionReportJob(plan, acq.lock);
+  559: export async function abandonDecisionReportStartJob(job_id: string, session_id: string, reason: string): Promise<void> {
+  560: const job = await getXhighJob(job_id);
+  575: export type RefusalAbortStep = "revoke_grant" | "fail_job" | "clear_dispatch" | "release_lock" | "mark_completed";
+  580: export function __setRefusalAbortStepHookForTests(
+  595: export async function abortDecisionReportJob(job: PojuXhighJob, reason: string): Promise<void> {
+  603: type AbortLockRelease = { kind: "owner"; owner: ReportLockOwner } | { kind: "job" } | { kind: "none" };
+  605: function abortLockOf(claimed: ChargeAuthorization): AbortLockRelease {
+  619: async function terminateRefusedJob(
+  629: const target = await getXhighJob(job_id);
+  641: const job = await getXhighJob(job_id);
+  645: const after = await getXhighJob(job_id);
+  661: export type RefusalAbortOutcome = { ok: true } | { ok: false; reason: string };
+  670: export async function finishDecisionReportRefusalAbort(claimed: ChargeAuthorization): Promise<RefusalAbortOutcome> {
+  689: export type RefusalAbortResume =
+  705: export async function resumeRefusalAbortRecord(rec: ChargeAuthorization): Promise<RefusalAbortResume> {
+  709: const right = await claimRefusalAbortResume(rec);
+  714: const latest = right.record;
+  727: export async function resumeDecisionReportRefusalAbort(session_id: string): Promise<RefusalAbortResume> {
+  737: function statusFromRecord(done: CompletedReportRecord): DecisionReportStatusPayload {
+  770: async function ensureCompletedReportRecord(job: PojuXhighJob): Promise<CompletedReportRecord> {
+  771: const ji = job.input as DecisionReportJobInput;
+  772: const existing = await loadCompletedReport(job.session_id, job.job_id);
+  775: const retained = await retainDecisionReportDelivery(job);
+  782: const analysis = await loadAnalysis(ji.analysis_key);
+  786: const pages = (await loadAllPages(job.job_id)).map((p) => p.record);
+  787: const draft = completedReportDraft(
+  799: function missingPayload(input: { job_id: string; session_id: string }): DecisionReportStatusPayload {
+  826: function deliveryDeniedPayload(
+  847: export async function buildDecisionReportStatus(input: {
+  862: const delivery = await verifyDecisionReportDelivery(done);
+  881: const jobBinding = {
+  892: const delivery = await verifyDecisionReportDelivery(job);
+  897: const code = e instanceof DecisionReportStoreError ? e.code : "REPORT_PERSIST_FAILED";
+  898: const ji = job.input as DecisionReportJobInput;
+  916: const lease = await loadDeliveryContinueLease(job.job_id).catch(() => null);
+  917: const leaseLive = Boolean(lease && lease.expires_at > Date.now());
+  930: const ji = job.input as DecisionReportJobInput;
+  933: const delivery = await verifyDecisionReportDelivery(job);
+  934: const analysis = delivery.ok ? await loadAnalysis(ji.analysis_key) : null;
+  935: const pages = delivery.ok ? (await loadAllPages(job.job_id)).map((p) => p.record) : [];
+  936: const failed = job.status === "failed";
+  937: const live = job.status === "pending" || job.status === "running";
+  969: export function deliveryDeniedFailure(check: Extract<DeliveryCheck, { ok: false }>): ServiceFailure {
+  977: export type ContinueDecisionReportOutcome =
+  987: export async function continueDecisionReportJob(input: {
+  991: const job = await getXhighJob(input.job_id);
+  996: const delivery = await verifyDecisionReportDelivery(job);
+ 1001: const code = e instanceof DecisionReportStoreError ? e.code : "REPORT_PERSIST_FAILED";
+ 1026: const fence = await getFdExecutionFence(job.session_id);
+ 1030: const owner = await acquireReportJobLockForContinue(job);
+ 1036: const stage = await firstIncompleteDecisionReportStage(job);
+ 1045: const revived = await getXhighJob(job.job_id);
+ 1059: async function acquireReportJobLockForContinue(job: PojuXhighJob): Promise<ReportLockOwner | null> {
+ 1060: const owner = newReportLockOwner(job.session_id);
+ 1064: const cur = await readReportSessionLock(job.session_id);
+ 1069: const latest = await findLatestXhighJobForSession("decision_report", job.session_id);
+ 1076: const other = cur.lock.job_id ? await getXhighJob(cur.lock.job_id) : null;
+
+FILE lib/poju/decision-intake/decision-report-charge.ts lines=827
+   40: const RETENTION = KV_TTL.DECISION_AUTHORITY_RETENTION;
+   41: const GRANT_TTL = KV_TTL.POJU_XHIGH_JOB;
+   44: export const DI2_CHARGE_CLAIM_MS = 60_000;
+   46: export const DI2_ABORT_CLAIM_MS = DI2_CHARGE_CLAIM_MS;
+   48: export type DecisionReportChargeResult =
+   52: export type DecisionReportCharge = (input: {
+   58: export type ChargeAuthorizationState =
+   66: export type ChargeAuthorization = {
+   99: export type ChargeSettlement =
+  123: const NO_ABORT = {
+  134: function safe(s: string): string {
+  138: export function di2ChargeAuthorizationKey(session_id: string): string {
+  142: export function di2ExecutionGrantKey(job_id: string): string {
+  146: type CasKv = {
+  154: const CAS_EXACT_LUA = `
+  163: function store(): CasKv {
+  167: export async function loadChargeAuthorization(session_id: string): Promise<ChargeAuthorization | null> {
+  168: const got = await store().get<ChargeAuthorization>(di2ChargeAuthorizationKey(session_id));
+  173: async function casExact(key: string, expected: unknown | null, next: unknown, ttl: number): Promise<boolean> {
+  174: const s = store();
+  176: const expectedJson = JSON.stringify(expected);
+  181: const r = await s.eval(CAS_EXACT_LUA, [key], [expectedJson, JSON.stringify(next), String(ttl)]);
+  188: async function casAuthorization(
+  197: async function chargeUnderClaim(claim: ChargeAuthorization, charge: DecisionReportCharge): Promise<ChargeSettlement> {
+  202: const r = await charge({
+  220: const now = Date.now();
+  221: const final: ChargeAuthorization = {
+  251: async function settleLostWrite(
+  279: export async function settleDecisionReportCharge(input: {
+  286: const { session_id } = input;
+  302: const now = Date.now();
+  303: const claim: ChargeAuthorization = cur
+  339: const last = await loadChargeAuthorization(session_id).catch(() => null);
+  347: export type RefusalAbortClaim =
+  361: function classifyAbortClaim(latest: ChargeAuthorization | null, refusal: ChargeAuthorization): RefusalAbortClaim {
+  380: export async function claimDecisionReportRefusalAbort(
+  386: const refusal = s.record;
+  393: const eligible =
+  401: const now = Date.now();
+  402: const next: ChargeAuthorization = {
+  434: export function abortHeldSince(rec: ChargeAuthorization): number {
+  438: export type RefusalAbortResumeRight =
+  451: export async function claimRefusalAbortResume(rec: ChargeAuthorization): Promise<RefusalAbortResumeRight> {
+  456: const now = Date.now();
+  457: const next: ChargeAuthorization = {
+  486: export async function completeRefusalAbortRecord(claimed: ChargeAuthorization): Promise<boolean> {
+  488: const now = Date.now();
+  489: const done: ChargeAuthorization = {
+  500: const latest = await loadChargeAuthorization(claimed.session_id).catch(() => null);
+  510: export type DecisionReportExecutionGrant = {
+  518: export type ExecutionGrantCheck = { ok: true } | { ok: false; reason: string };
+  524: export async function verifyDecisionReportExecution(job: PojuXhighJob): Promise<ExecutionGrantCheck> {
+  526: const grant = await kv.get<DecisionReportExecutionGrant>(di2ExecutionGrantKey(job.job_id));
+  535: const auth = await loadChargeAuthorization(job.session_id);
+  548: export async function grantDecisionReportExecution(job: PojuXhighJob): Promise<ExecutionGrantCheck> {
+  551: const existing = await verifyDecisionReportExecution(job);
+  562: const delivery = await grantDecisionReportDelivery(job, auth);
+  564: const grant: DecisionReportExecutionGrant = {
+  579: export async function revokeDecisionReportExecution(job_id: string): Promise<void> {
+  589: const DELIVERY_TTL = RETENTION + KV_TTL.POJU_XHIGH_JOB;
+  604: export type DecisionReportDeliveryAuthorization = {
+  616: export type DeliveryCheck =
+  621: export type DeliveryTarget = { job_id: string; session_id: string; execution_generation?: number | null };
+  623: export function di2DeliveryAuthorizationKey(job_id: string): string {
+  627: function denied(reason: string, extra: { unreadable?: boolean; revoked?: boolean } = {}): DeliveryCheck {
+  631: async function loadDeliveryRecord(job_id: string): Promise<DecisionReportDeliveryAuthorization | null> {
+  632: const got = await store().get<DecisionReportDeliveryAuthorization>(di2DeliveryAuthorizationKey(job_id));
+  636: function sameDeliveryBinding(
+  655: export async function verifyDecisionReportDelivery(target: DeliveryTarget): Promise<DeliveryCheck> {
+  684: export async function grantDecisionReportDelivery(
+  691: const key = di2DeliveryAuthorizationKey(job.job_id);
+  710: const rec: DecisionReportDeliveryAuthorization = {
+  735: export async function revokeDecisionReportDelivery(input: {
+  742: const key = di2DeliveryAuthorizationKey(input.job_id);
+  744: const cur = await loadDeliveryRecord(input.job_id);
+  749: const now = Date.now();
+  750: const next: DecisionReportDeliveryAuthorization = {
+  772: export async function sealDecisionReportDelivery(job: PojuXhighJob): Promise<DeliveryCheck> {
+  773: const exec = await verifyDecisionReportExecution(job);
+  782: const granted = await grantDecisionReportDelivery(job, auth, { refresh: true });
+  792: export async function retainDecisionReportDelivery(target: DeliveryTarget): Promise<DeliveryCheck> {
+  793: const check = await verifyDecisionReportDelivery(target);
+  799: const auth = await loadChargeAuthorization(target.session_id);
+  808: async function retainChargeAuthorization(auth: ChargeAuthorization): Promise<boolean> {
+  821: constructor(job_id: string, reason: string) {
+
+FILE lib/poju/decision-intake/decision-report-store.ts lines=422
+   35: const TTL = KV_TTL.POJU_XHIGH_JOB;
+   37: const RETENTION = KV_TTL.DECISION_AUTHORITY_RETENTION;
+   38: const textEncoder = new TextEncoder();
+   40: function shortHash(s: string): string {
+   46: function safe(s: string): string {
+   52: constructor(code: string, message: string) {
+   61: export type RegisteredFreeze = {
+   72: function authorityFailure(e: unknown): never {
+   81: export async function loadRegisteredFreeze(input: {
+   87: const rec = await loadVerifiedFreezeRecord(input.session_id, input.freeze_id).catch(authorityFailure);
+   94: const blueprint = rec.blueprint ?? null;
+  112: export async function loadRegisteredProfile(input: {
+  119: const freeze = await loadVerifiedFreezeRecord(input.session_id, input.freeze_id).catch(authorityFailure);
+  123: const rec = await loadVerifiedProfileRecord({
+  144: export type StoredAnalysis = {
+  150: export function di2AnalysisKey(idempotency_key: string): string {
+  154: export async function loadAnalysis(idempotency_key: string): Promise<StoredAnalysis | null> {
+  155: const got = await kv.get<StoredAnalysis>(di2AnalysisKey(idempotency_key));
+  164: export async function saveAnalysis(next: StoredAnalysis): Promise<StoredAnalysis> {
+  165: const key = di2AnalysisKey(next.record.idempotency_key);
+  166: const cur = await kv.get<StoredAnalysis>(key);
+  176: export type StoredPage = {
+  181: export function di2PageKey(job_id: string, page_id: DecisionPageId): string {
+  185: export async function loadPage(job_id: string, page_id: DecisionPageId): Promise<StoredPage | null> {
+  186: const got = await kv.get<StoredPage>(di2PageKey(job_id, page_id));
+  192: export async function savePage(next: StoredPage): Promise<StoredPage> {
+  193: const key = di2PageKey(next.record.job_id, next.record.page_id);
+  194: const cur = await kv.get<StoredPage>(key);
+  202: export async function loadAllPages(job_id: string): Promise<StoredPage[]> {
+  203: const out: StoredPage[] = [];
+  205: const p = await loadPage(job_id, id);
+  213: export const DI2_COMPLETED_REPORT_RECORD_VERSION = 1 as const;
+  220: export type CompletedReportRecord = {
+  245: export type CompletedReportDraft = Omit<CompletedReportRecord, "record_version" | "record_hash">;
+  247: export function di2CompletedReportKey(session_id: string, job_id: string): string {
+  251: function recordHashOf(rec: Omit<CompletedReportRecord, "record_hash">): string {
+  255: function invalid(message: string): never {
+  263: export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
+  265: const { record_hash, ...body } = rec;
+  267: const r = rec.result;
+  281: const a = rec.analysis;
+  297: const p = rec.pages.find((x) => x.page_id === id);
+  318: function sameReport(a: CompletedReportRecord, b: CompletedReportDraft): boolean {
+  319: const pageSig = (pages: readonly DecisionReportPageRecord[]) =>
+  337: export function sealCompletedReportRecord(draft: CompletedReportDraft): CompletedReportRecord {
+  338: const body = { ...draft, record_version: DI2_COMPLETED_REPORT_RECORD_VERSION };
+  343: export async function loadCompletedReport(session_id: string, job_id: string): Promise<CompletedReportRecord | null> {
+  344: const got = await durableKv().get<CompletedReportRecord>(di2CompletedReportKey(session_id, job_id));
+  356: export async function commitCompletedReport(
+  359: const candidate = sealCompletedReportRecord(draft);
+  361: const key = di2CompletedReportKey(candidate.session_id, candidate.job_id);
+  362: const store = durableKv();
+  364: const reuse = (existing: CompletedReportRecord) => {
+  371: const prior = await loadCompletedReport(candidate.session_id, candidate.job_id);
+  374: const set = await store.set(key, candidate, { ex: RETENTION, nx: true });
+  375: const back = await loadCompletedReport(candidate.session_id, candidate.job_id);
+  384: export async function withdrawCompletedReport(session_id: string, job_id: string, execution_generation: number): Promise<void> {
+  385: const key = di2CompletedReportKey(session_id, job_id);
+  386: const got = await durableKv().get<CompletedReportRecord>(key);
+  396: export const DI2_DISPATCH_GRACE_S = 45;
+  398: export type DecisionReportDispatchMarker = { stage: string; at: number };
+  400: export function di2DispatchKey(job_id: string): string {
+  404: export async function markDecisionReportDispatch(job_id: string, stage: string): Promise<void> {
+  409: export async function claimDecisionReportDispatch(job_id: string, stage: string): Promise<boolean> {
+  410: const set = await kv.set(di2DispatchKey(job_id), { stage, at: Date.now() }, { ex: DI2_DISPATCH_GRACE_S, nx: true });
+  414: export async function loadDecisionReportDispatch(job_id: string): Promise<DecisionReportDispatchMarker | null> {
+  419: export async function clearDecisionReportDispatch(job_id: string): Promise<void> {
+
+FILE lib/poju/decision-intake/decision-report-dispatch.ts lines=183
+   18: type DeliveryPipelineStage,
+   40: export type DecisionReportBackground = (task: () => Promise<void>) => void;
+   42: export type DecisionReportDispatchDeps = {
+   48: const DEFAULT_ATTACH_WAIT_MS = 30_000;
+   50: export type DecisionReportWorkerState = "live" | "dispatching" | "none";
+   53: export async function decisionReportWorkerState(job_id: string): Promise<DecisionReportWorkerState> {
+   54: const lease = await loadDeliveryContinueLease(job_id).catch(() => null);
+   56: const ack = await loadDeliveryContinueAck(job_id).catch(() => null);
+   58: const marker = await loadDecisionReportDispatch(job_id).catch(() => null);
+   68: export async function dispatchDecisionReportStage(
+   74: const job = await getXhighJob(job_id);
+   75: const granted = job ? await verifyDecisionReportExecution(job) : { ok: false as const, reason: "job_missing" };
+   82: const { shouldDispatchContinueViaInngest, publishContinueViaInngest, waitForDeliveryWorker } = await import(
+   86: const published = await publishContinueViaInngest(job_id, stage);
+  104: export type EnsureWorkerOutcome =
+  114: function refuse(status: number, code: string, error: string, retryable: boolean): EnsureWorkerOutcome {
+  126: export async function ensureDecisionReportWorker(input: {
+  131: const job = await getXhighJob(input.job_id);
+  147: const fence = await getFdExecutionFence(job.session_id);
+  154: const granted = await grantDecisionReportExecution(job);
+  165: const stage = await firstIncompleteDecisionReportStage(job);
+
+FILE lib/poju/decision-intake/decision-report-runner.ts lines=910
+   25: type DeliveryPipelineStage,
+   45: type DecisionReportJobInput,
+   46: type DecisionReportJobResult,
+   47: type DecisionReportPageRecord,
+   48: type PersonalAnalysisRecord,
+   60: type Di2PageStructured,
+   74: type CompletedReportDraft,
+   75: type CompletedReportRecord,
+   76: type RegisteredFreeze,
+   77: type StoredAnalysis,
+   78: type StoredPage,
+   85: type ProfileProjection,
+   88: const HEARTBEAT_MS = 12_000;
+   90: type StageOpts = { lease_token?: string };
+   92: type Ctx = {
+   99: function nowIso(): string {
+  103: function di2Log(event: string, detail: Record<string, unknown>): void {
+  107: async function releaseRelay(job_id: string, session_id: string, lease_token: string | null): Promise<void> {
+  119: type FailureKind = "interrupted" | "report_persist_failed" | "quality_exhausted" | "fatal";
+  122: async function failDecisionReportJob(
+  128: const retryable = opts.kind !== "fatal";
+  129: const committed = await commitUnderDeliveryExecutionFence(ctx.job.job_id, ctx.generation, (job) => ({
+  148: async function fenceTouch(ctx: Ctx, stage: DeliveryPipelineStage, note: string): Promise<boolean> {
+  149: const granted = await verifyDecisionReportExecution(ctx.job);
+  154: const r = await commitUnderDeliveryExecutionFence(ctx.job.job_id, ctx.generation, (job) => ({
+  168: async function scheduleNext(ctx: Ctx, stage: DeliveryPipelineStage): Promise<void> {
+  169: const job_id = ctx.job.job_id;
+  170: const hops = await bumpDeliveryJobContinueHop(job_id);
+  181: const { resolveDeliveryWallFuse } = await import("@/lib/llm/pro/delivery/pipeline-v3/wall-tail");
+  182: const wall = await resolveDeliveryWallFuse({ job_id, created_at: ctx.job.created_at, stage });
+  197: const inline = isEphemeralKvActive();
+  203: const remain = ephemeralRemainingMs();
+  214: const { dispatchDeliveryContinue } = await import("@/lib/poju/delivery-continue-dispatch");
+  215: const { deliveryContinueSecretForJob } = await import("@/lib/poju/final-delivery-stage-runner");
+  216: const posted = await dispatchDeliveryContinue(job_id, stage, deliveryContinueSecretForJob(job_id));
+  230: function startHeartbeat(job_id: string, lease_token: string): () => void {
+  231: const t = setInterval(() => {
+  237: async function loadSources(input: DecisionReportJobInput): Promise<{
+  241: const freeze = await loadRegisteredFreeze({
+  247: const projectionProfile = await loadRegisteredProfile({
+  257: function newAnalysisRecord(input: DecisionReportJobInput, prior: PersonalAnalysisRecord | null): PersonalAnalysisRecord {
+  258: const t = nowIso();
+  282: async function runAnalysisStage(ctx: Ctx): Promise<void> {
+  283: const { input } = ctx;
+  294: const existing = await loadAnalysis(input.analysis_key);
+  300: const prior = existing?.record ?? null;
+  308: const projection: ProfileProjection = buildProfileProjection(sources.projectionProfile);
+  309: const running: StoredAnalysis = {
+  321: const outcome = await runPersonalAnalysisModel({
+  332: const t = nowIso();
+  351: const exhausted = running.record.attempts >= DI2_MAX_UNIT_ATTEMPTS;
+  381: function pageRecordBase(
+  405: function isDeterministicPage(input: DecisionReportJobInput, pageId: DecisionPageId): boolean {
+  409: async function runPagesStage(ctx: Ctx): Promise<void> {
+  410: const { input } = ctx;
+  420: const analysis = await loadAnalysis(input.analysis_key);
+  431: const artifact = analysis.record.analysis_result;
+  432: const projection = analysis.projection;
+  433: const analysis_id = analysis.record.analysis_id;
+  434: const dc = sources.freeze.decision_context;
+  435: const idx = buildReportEvidenceIndex({ dc, projection, artifact });
+  437: const pages = new Map<DecisionPageId, StoredPage>();
+  439: const done = (id: DecisionPageId) => pages.get(id)?.record.status === "completed";
+  441: const completedStructured = (): Di2PageStructured[] =>
+  446: const writeDeterministic = async (pageId: DecisionPageId): Promise<boolean> => {
+  448: const base = pageRecordBase(ctx, pageId, analysis_id, pages.get(pageId)?.record ?? null);
+  449: const t = nowIso();
+  451: const stored = await savePage({
+  464: const appendix = buildAppendixPage({
+  470: const stored = await savePage({
+  486: const pending = wave.filter((id) => !done(id));
+  489: const deterministic = pending.filter((id) => isDeterministicPage(input, id));
+  490: const model = pending.filter((id) => !isDeterministicPage(input, id));
+  503: const exhausted = model.filter((id) => (pages.get(id)?.record.attempts ?? 0) >= DI2_MAX_UNIT_ATTEMPTS);
+  506: const qualitySpent = exhausted.some((id) => pages.get(id)?.record.status === "failed");
+  519: const prior = pages.get(id)?.record ?? null;
+  520: const rec = { ...pageRecordBase(ctx, id, analysis_id, prior), attempts: (prior?.attempts ?? 0) + 1 };
+  524: const outcomes = await Promise.all(
+  526: const upstream = new Map<DecisionPageId, Di2PageStructured>();
+  528: const s = pages.get(up);
+  531: const out = await runDecisionReportPageModel({
+  548: const prior = pages.get(id)!.record;
+  550: const stored = await savePage({
+  564: const exhaustedNow = prior.attempts >= DI2_MAX_UNIT_ATTEMPTS;
+  576: const exhaustedNow = model.filter((id) => pages.get(id)?.record.status === "failed");
+  600: async function runAssembleStage(ctx: Ctx): Promise<void> {
+  601: const { input } = ctx;
+  602: const analysis = await loadAnalysis(input.analysis_key);
+  622: const pages: DecisionReportPageRecord[] = [];
+  624: const p = await loadPage(ctx.job.job_id, id);
+  629: const r = p.record;
+  630: const mismatch =
+  654: const artifact = analysis.record.analysis_result;
+  659: const coverage = buildReportEvidenceCoverage({
+  672: const t = nowIso();
+  673: const dc = freeze.decision_context;
+  674: const full_text = renderDi2BookMarkdown({
+  682: const result: DecisionReportJobResult = {
+  700: export function completedReportDraft(
+  743: async function commitFinalReport(ctx: Ctx, draft: CompletedReportDraft): Promise<void> {
+  744: const { job_id } = ctx.job;
+  745: const session_id = ctx.input.session_id;
+  751: const sealed = await sealDecisionReportDelivery(ctx.job);
+  768: const code = e instanceof DecisionReportStoreError ? e.code : "REPORT_PERSIST_FAILED";
+  769: const message = e instanceof Error ? e.message : String(e);
+  771: const fatal = code === "REPORT_RECORD_CONFLICT" || code === "REPORT_RECORD_INVALID";
+  778: const committed = await commitUnderDeliveryExecutionFence(job_id, ctx.generation, (job) => ({
+  792: const job = await getXhighJob(job_id).catch(() => null);
+  793: const completedHere = job?.status === "completed" && job.execution_generation === ctx.generation;
+  796: const fence = await getFdExecutionFence(session_id);
+  801: const withdraw = !completedHere && fenceLost;
+  813: export async function runDecisionReportStage(
+  818: const job = await getXhighJob(job_id);
+  827: const input = job.input;
+  828: const generation = job.execution_generation;
+  835: const granted = await verifyDecisionReportExecution(job);
+  844: const acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
+  863: const ctx: Ctx = { job, input, generation, lease_token };
+  864: const stopHeartbeat = startHeartbeat(job_id, lease_token);
+  880: export async function resetDecisionReportBudgets(job: PojuXhighJob): Promise<void> {
+  882: const input = job.input;
+  883: const analysis = await loadAnalysis(input.analysis_key);
+  891: const p = await loadPage(job.job_id, id);
+  900: export async function firstIncompleteDecisionReportStage(job: PojuXhighJob): Promise<DeliveryPipelineStage> {
+  902: const analysis = await loadAnalysis(job.input.analysis_key);
+  904: const pages = await loadAllPages(job.job_id);
+  905: const complete = DECISION_PAGE_IDS.every((id) =>
+
+FILE lib/poju/session-authority/chat.ts lines=200
+   33: export type AuthoritativeChatBody = {
+   47: export type AuthoritativeChatSuccess = {
+   56: export type AuthoritativeChatAbort = {
+   63: export type { TestChatModel } from "@/lib/poju/session-authority/chat-hooks";
+   65: function requestedRevision(body: AuthoritativeChatBody): number | null {
+   69: const hint = body.session?.session_revision;
+   74: function throwIfAborted(signal?: AbortSignal): void {
+   76: const error = new Error("aborted");
+   82: function isAbortError(error: unknown): boolean {
+   85: const message = error instanceof Error ? error.message : String(error);
+   93: export async function executeAuthoritativeChatTurn(
+  101: const sessionId = body.session.session_id;
+  102: const record = await requireAuthoritativeSession(sessionId);
+  103: const incoming = extractIncomingUserTurn({
+  119: const expectedRevision = requestedRevision(body);
+  131: const boundSession = bindAuthoritativeChatSession(record, incoming);
+  132: const capture: { current?: POJULLMResponse } = {};
+  177: const llm = capture.current ?? llmFromCommittedSession(committed.session_snapshot);
+  188: function llmFromCommittedSession(session: POJUSessionState): POJULLMResponse {
+  189: const last = [...(session.messages ?? [])].reverse().find((message) => message.role === "assistant");
+
+FILE lib/poju/session-authority/lifecycle.ts lines=695
+   22: type AuthoritativeSessionEnvelope,
+   23: type ServerSessionAssociations,
+   24: type ServerSessionRecord,
+   25: type SessionAuthorityConflictBody,
+   26: type SessionAuthorityErrorCode,
+   27: type SessionLifecycleStatus,
+   30: export const SERVER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+   40: constructor(
+   75: function isRecoverable(code: SessionAuthorityErrorCode): boolean {
+   85: export function hashSessionSnapshot(snapshot: POJUSessionState): string {
+   89: export function associationsFromSnapshot(snapshot: POJUSessionState): ServerSessionAssociations {
+   90: const ledger = snapshot.dc_ledger?.head ?? null;
+   91: const receipts = snapshot.dc_freeze_receipts ?? [];
+   92: const latest = receipts.length > 0 ? receipts[receipts.length - 1] : null;
+  101: export function toAuthoritativeEnvelope(record: ServerSessionRecord): AuthoritativeSessionEnvelope {
+  120: function snapshotAppearsFrozen(session: POJUSessionState): boolean {
+  124: function snapshotAppearsTerminated(session: POJUSessionState): boolean {
+  125: const messages = Array.isArray(session.messages) ? session.messages : [];
+  127: const meta = message.meta;
+  132: const STATUS_RANK: Record<SessionLifecycleStatus, number> = {
+  139: export function mergeLifecycleStatus(
+  146: export async function deriveEffectiveLifecycle(
+  151: const expiry = Date.parse(record.expires_at);
+  162: const head = await readLedgerHead(record.session_id);
+  173: export function applyServerExpiryToSnapshot(
+  186: export function buildInitialAuthoritativeSnapshot(input: {
+  194: const storedId =
+  195: typeof input.selected_stored_profile_id === "string" &&
+  199: const firstCycle = createNewCycle({
+  246: function normalizeProposedSessionId(value: unknown): string | null {
+  248: const trimmed = value.trim();
+  252: export async function initializeAuthoritativeSession(input: {
+  259: const now = input.now ?? new Date();
+  260: const nowIso = now.toISOString();
+  261: const sessionId = normalizeProposedSessionId(input.session_id) ?? randomUUID();
+  262: const expiresAt = new Date(now.getTime() + SERVER_SESSION_TTL_MS).toISOString();
+  263: const originalQuestion =
+  264: typeof input.original_question === "string" ? input.original_question.trim() : "";
+  265: const deviceId = typeof input.device_id === "string" && input.device_id.trim() ? input.device_id.trim() : "server";
+  266: const snapshot = buildInitialAuthoritativeSnapshot({
+  274: const record: ServerSessionRecord = {
+  310: export async function readAuthoritativeSession(
+  337: const effective = await deriveEffectiveLifecycle(record, now);
+  342: export async function requireAuthoritativeSession(
+  346: const record = await readAuthoritativeSession(sessionId, now);
+  356: export async function assertRecordAllowsIntake(
+  361: const status = await deriveEffectiveLifecycle(record, now);
+  399: export type IncomingUserTurn = {
+  405: export function extractIncomingUserTurn(input: {
+  411: const serverMessages = Array.isArray(input.serverSnapshot.messages)
+  414: const explicitTurnId =
+  415: typeof input.client_turn_id === "string" && input.client_turn_id.trim()
+  418: const explicitContent =
+  419: typeof input.user_message === "string" && input.user_message.trim()
+  423: const clientMessages = Array.isArray(input.clientSession?.messages)
+  426: const clientUser = [...clientMessages]
+  430: const content = explicitContent ?? (clientUser ? clientUser.content : null);
+  431: const turnId =
+  439: const client_turn_id = turnId ?? `turn_${hashSessionSnapshot({
+  444: const existing = serverMessages.find(
+  461: const message: POJUMessage = {
+  465: typeof clientUser?.timestamp === "string" && clientUser.timestamp
+  474: export function bindAuthoritativeChatSession(
+  478: const snapshot = applyServerExpiryToSnapshot(record.session_snapshot, record);
+  479: const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
+  486: export async function commitAuthoritativeSessionUpdate(input: {
+  494: const current = await requireAuthoritativeSession(input.sessionId);
+  518: const now = input.now ?? new Date();
+  519: const status = await deriveEffectiveLifecycle(current, now.getTime());
+  555: const snapshot = applyServerExpiryToSnapshot(input.snapshot, {
+  565: const next: ServerSessionRecord = {
+  601: const winner = await readAuthoritativeSession(input.sessionId).catch(() => null);
+  602: const lifecycle = winner?.lifecycle_status;
+  688: export function httpStatusForAuthorityError(error: SessionAuthorityError): number {
+
+FILE lib/poju/decision-context/production-freeze-wire.ts lines=458
+   15: type FrozenDeliveryPackage,
+   23: type FreezeProfileInput,
+   24: type SealedFreeze,
+   37: export type FreezeWireSkipReason =
+   46: export const FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES = [
+   54: export type FreezeWireAllowlistedInternalCode =
+   57: const ALLOWLISTED_CODE_SET = new Set<string>(FREEZE_WIRE_ALLOWLISTED_INTERNAL_CODES);
+   59: export const FREEZE_WIRE_GENERIC_FAIL_CODE = "freeze_failed";
+   60: export const FREEZE_WIRE_PERSIST_FAIL_CODE = "dc_freeze_persist_failed";
+   62: export const FREEZE_WIRE_AUTHORITY_FAIL_CODE = "dc_freeze_authority_failed";
+   64: export type FreezeWireResult =
+   90: export function mapCaughtFreezeFailure(e: unknown): {
+   95: const message = e.message;
+  108: export function freezeFailWireResult(
+  112: const mapped = mapCaughtFreezeFailure(e);
+  122: export function persistFailWireResult(
+  126: const reason =
+  138: export type FreezeWireTrigger =
+  143: function isStallOrDegradedPath(session: POJUSessionState): boolean {
+  144: const agent = session.agent_v2;
+  154: export function canFreezeSessionOnSufficiency(input: {
+  172: const dc = input.session.decision_context ?? null;
+  182: const suf = evaluateDecisionSufficiency(dc);
+  189: export function freezeIdempotencyKey(
+  199: export async function applySufficiencyFreezeToSession(
+  203: const gate = canFreezeSessionOnSufficiency({
+  213: const prepared = prepareFrozenDcForDelivery({
+  231: const pack = await freezeDraftForDelivery(gate.draft!, {
+  235: const slice = applyFreezeToSessionSlice(
+  242: const next: POJUSessionState = {
+  262: export async function ensureSessionFrozenForDelivery(
+  273: const trigger = opts?.trigger ?? "pre_delivery_safety";
+  274: const gate = canFreezeSessionOnSufficiency({
+  288: const applied = await applySufficiencyFreezeToSession(session, { now: opts?.now });
+  291: const { commitDecisionContextChange } = await import(
+  294: const { applyDcToWorking } = await import("./persist");
+  295: const commit = await commitDecisionContextChange({
+  302: const merged = applyFreezeToSessionSlice(
+  341: async function ensureSessionFrozenViaAuthority(
+  351: const code = ALLOWLISTED_CODE_SET.has(e.code) ? e.code : FREEZE_WIRE_AUTHORITY_FAIL_CODE;
+  356: const pack: FrozenDeliveryPackage = {
+  361: const idempotency_key = freezeIdempotencyKey(session, draft);
+  362: const { commitDecisionContextChange } = await import("@/lib/poju/session-manager");
+  363: const { applyDcToWorking } = await import("./persist");
+  364: const withReceipts: POJUSessionState = {
+  369: const commit = await commitDecisionContextChange({
+  375: const merged = applyFreezeToSessionSlice(
+  399: export function resolveDeliveryDcPayload(session: POJUSessionState): {
+  407: const hasDc = sessionHasDecisionContextSlice(session);
+  408: const hasFrozen = sessionHasFrozenDecisionContext(session);
+  409: const require = shouldRequireFrozenDecisionContext({
+  418: const loaded = loadAuthoritativeFreeze(session);
+  419: const frozenSnap = createFrozenReportSnapshot({
+  429: const prepared = prepareFrozenDcForDelivery({
+
+FILE lib/poju/decision-context/production-intake-ask.ts lines=202
+   17: type PlanNextAskResult,
+   18: type RankablePlanningCandidate,
+   19: type RankedPlanningCandidate,
+   34: export const INTAKE_ASK_SCORING_PATH =
+   37: export type IntakeAskPlanSnapshot = {
+   47: export function buildIntakeCandidatesFromDc(
+   51: const out: RankablePlanningCandidate[] = [];
+   52: const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
+   57: const roles = dir.required_fact_roles ?? [];
+   59: const ddr_ids = resolveDdrIdsForDir(dir.dir_id, blueprint);
+   63: const fact_role_codes = roles.map(
+   66: const gateInfo = ddrLoad.ok
+   74: const may_affect_p5_ranking =
+  108: export type SelectNextIntakeAskInput = {
+  119: export type SelectNextIntakeAskResult = {
+  132: export async function selectNextIntakeAskForSession(
+  135: const dc = input.session.decision_context;
+  151: const scheduled = activateNextBlueprintPriorityBand(
+  155: const dcLive = scheduled.decision_context ?? dc;
+  156: const candidates = [
+  161: const naValidation = await buildProductionNaValidationContextFromSession(input.session, { nowIso: input.nowIso });
+  163: const plan = planNextAskFromCandidates({
+  173: const now = input.nowIso ?? new Date().toISOString();
+  174: const snapshot: IntakeAskPlanSnapshot = {
+
+FILE lib/poju/decision-authority/server/freeze-authority.ts lines=592
+   23: type DcLedgerEntry,
+   24: type FreezeAuthorityEnvelope,
+   25: type FreezeReceipt,
+   26: type FreezeRecord,
+   27: type FreezeRecoverRequest,
+   28: type FreezeRecoverResponse,
+   29: type FreezeSealRequest,
+   30: type FreezeSealResponse,
+   45: function safe(s: string): string {
+   49: function freezeKey(session_id: string, freeze_id: string): string {
+   53: function asArray<T>(v: unknown): T[] {
+   57: function sanitizeEnvelope(raw: FreezeAuthorityEnvelope | null | undefined): FreezeAuthorityEnvelope {
+   58: const p = raw?.profile_state;
+   65: typeof p?.selected_stored_profile_id === "string" && p.selected_stored_profile_id.trim()
+   76: function authoritySession(session_id: string, dc: DecisionContext, env: FreezeAuthorityEnvelope): POJUSessionState {
+   90: function receiptId(session_id: string, freeze_id: string, context_hash: string): string {
+   94: async function loadFreezeRecordRaw(session_id: string, freeze_id: string): Promise<FreezeRecord | null> {
+   95: const got = await durableKv().get<FreezeRecord>(freezeKey(session_id, freeze_id));
+   99: function anchorMismatch(what: string): never {
+  107: async function assertFreezeLedgerAnchor(session_id: string, rec: FreezeRecord): Promise<void> {
+  108: const r = rec.receipt;
+  122: const f = anchor.provenance?.freeze;
+  125: const snap = dcSnapshotHash(anchor.snapshot);
+  150: export async function loadVerifiedFreezeRecord(session_id: string, freeze_id: string): Promise<FreezeRecord> {
+  151: const rec = await loadFreezeRecordRaw(session_id, freeze_id);
+  153: const r = rec.receipt;
+  169: const binding = bindingFromDecisionContext(rec.frozen_dc);
+  189: export function assertFreezeReceiptMatches(held: unknown, rec: FreezeRecord): void {
+  190: const r = held as FreezeReceipt | null;
+  199: function signReceiptForEntry(entry: DcLedgerEntry): FreezeReceipt {
+  200: const f = entry.provenance.freeze!;
+  201: const binding = bindingFromDecisionContext(entry.snapshot);
+  217: function recordFromFreezeEntry(entry: DcLedgerEntry): FreezeRecord {
+  218: const f = entry.provenance.freeze!;
+  219: const receipt = signReceiptForEntry(entry);
+  240: async function putFreezeRecord(record: FreezeRecord): Promise<void> {
+  241: const claimed = await durableKv().set(freezeKey(record.session_id, record.freeze_id), record, {
+  246: const existing = await loadFreezeRecordRaw(record.session_id, record.freeze_id);
+  260: async function verifiedRecordForFreezeEntry(session_id: string, entry: DcLedgerEntry): Promise<FreezeRecord> {
+  261: const f = entry.provenance.freeze;
+  268: const rec = await loadVerifiedFreezeRecord(session_id, f.freeze_id);
+  276: async function registeredProfileReceipt(session_id: string, rec: FreezeRecord) {
+  285: async function duplicateResponse(
+  290: const rec = await verifiedRecordForFreezeEntry(session_id, entry);
+  295: const computation = await computeServerProfile(profileInput.birth_info, rec.frozen_at);
+  319: export async function sealFreeze(req: FreezeSealRequest, opts?: { now?: string }): Promise<FreezeSealResponse> {
+  321: const sid = req.session_id;
+  323: const expected = req.expected;
+  328: const head = await readLedgerHead(sid);
+  357: const prospectiveFreezeId = `${head.context_id}@v${head.dc_version}`;
+  362: const frozen_at = opts?.now ?? new Date().toISOString();
+  363: const envelope = sanitizeEnvelope(req.authority);
+  373: const cfp = !computation
+  379: const authSession = authoritySession(sid, head.snapshot, envelope);
+  382: const naValidation = await buildServerFreezeNaValidationContext(authSession, { nowIso: frozen_at, cfp });
+  401: const binding = bindingFromDecisionContext(frozen);
+  402: const freeze_id = freezeIdFromBinding(binding);
+  404: const profileHash = computation?.ok ? computation.profile_hash : null;
+  405: const entry = buildLedgerEntry({
+  428: const written = await writeLedgerEntryNx(entry);
+  430: const winner = await loadLedgerEntry(sid, entry.commit_version);
+  442: const record = recordFromFreezeEntry(written);
+  447: const reg = await registerServerProfile({
+  467: function assertExpectedAnchor(expected: FreezeRecoverRequest["expected"] | null | undefined): void {
+  472: typeof expected.entry_hash !== "string" ||
+  474: typeof expected.context_id !== "string" ||
+  477: typeof expected.content_hash !== "string" ||
+  491: export async function recoverFreeze(req: FreezeRecoverRequest): Promise<FreezeRecoverResponse> {
+  493: const sid = req.session_id;
+  496: const expected = req.expected;
+  498: const head = await readLedgerHead(sid);
+  501: const source = await loadLedgerEntry(sid, expected.commit_version);
+  517: const sealed = await loadLedgerEntry(sid, source.commit_version + 1);
+  518: const f = sealed?.provenance.freeze;
+  545: const rec = await verifiedRecordForFreezeEntry(sid, sealed);
+  546: const profile_receipt = await registeredProfileReceipt(sid, rec);
+  561: export async function registerProfileForFreeze(req: {
+  570: const held = req.freeze_receipt as FreezeReceipt | null;
+  574: const rec = await loadVerifiedFreezeRecord(req.session_id, held.freeze_id);
+  576: const computation = await computeServerProfile(req.birth_info, rec.frozen_at);
+  584: const reg = await registerServerProfile({
+
+FILE components/poju/DecisionUnderstandingPanel.tsx lines=127
+    9: export function DecisionUnderstandingPanel({
+   16: const [expanded, setExpanded] = useState(true);
+   18: const box = projectDecisionUnderstandingBox(session);
+   19: const isZh = locale.toLowerCase().startsWith("zh");
+   20: const title = isZh ? "\u51b3\u7b56\u7406\u89e3" : "DECISION UNDERSTANDING";
+   21: const currentTitle = isZh ? "\u5f53\u524d\u7406\u89e3" : "Current understanding";
+   22: const understoodTitle = isZh ? "\u5df2\u7ecf\u4e86\u89e3" : "Already understood";
+   23: const needTitle = isZh ? "\u8fd8\u9700\u8981\u4e86\u89e3" : "Still need to understand";
+   24: const insightTitle = isZh ? "\u4e2a\u4eba\u6a21\u5f0f\u6d1e\u5bdf" : "Personal Pattern Insight";
+   25: const insightNature = isZh
+   28: const qTitle = isZh ? "\u5f53\u524d\u95ee\u9898" : "Current question";
+   29: const conflictTitle = isZh ? "\u5c1a\u5f85\u6f84\u6e05\u7684\u77db\u76fe" : "Open conflicts";
+   30: const naMarker = isZh ? "\u5df2\u786e\u8ba4\u4e0d\u9002\u7528" : "Not applicable";
+   31: const progressHint = isZh
+   34: const confirmHint =
+   41: const percent = box.progress_percent;
+   46: type="button"

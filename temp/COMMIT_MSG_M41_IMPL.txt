@@ -1,0 +1,33 @@
+fix(di2): M4.1 Freeze commit recovery + strict Freeze ledger anchor
+
+Recovery when the server sealed a Freeze but the device's C1 adoption failed:
+- Server: new writer-token-checked `recover_freeze` action (recoverFreeze). The
+  request names only the device's draft anchor (commit_version, entry_hash,
+  context_id, dc_version, content_hash). The server re-reads its own ledger: the
+  draft commit must exist unchanged, the next commit must be the Freeze sealed from
+  it (provenance source + previous hash + identity), and that Freeze must still be
+  the head (FREEZE_NOT_CURRENT otherwise). frozen_dc, receipt, head and any
+  registered profile receipt are rebuilt from the ledger / registry; a missing
+  profile stays null. Typed refusals: FREEZE_RECOVERY_SOURCE_MISMATCH,
+  FREEZE_RECOVERY_NOT_FOUND, FREEZE_NOT_CURRENT, DC_AUTHORITY_FORBIDDEN, anchor codes.
+- Head refs of freeze commits carry `freeze_source` (additive).
+- Device: client-sync reports a frozen server head as DC_LEDGER_REMOTE_FROZEN (with the
+  head) instead of a generic draft conflict. sealFreezeWithAuthority checks the server
+  head; when it is not the device's draft commit it calls recover_freeze with the
+  draft anchor and accepts only a Freeze sealed from that anchor (response verified:
+  integrity, receipt identity, freeze_source, profile binding). production-freeze-wire
+  adopts sealed and recovered Freezes through the same C1 commit.
+
+Strict anchor:
+- loadVerifiedFreezeRecord requires the freeze ledger commit to exist and verify
+  (FREEZE_ANCHOR_MISSING / FREEZE_ANCHOR_CORRUPT) and to match the record and receipt
+  (entry hash, change type, final status, snapshot / content hash, context identity,
+  blueprint hash, committed_at, source commit, freeze provenance, receipt
+  ledger_commit_version) — FREEZE_ANCHOR_MISMATCH otherwise.
+- loadVerifiedProfileRecord takes the verified Freeze record and binds the profile to
+  it (session, freeze_id, profile hash sealed with the Freeze, record/receipt schema,
+  profile_id, calculation time) — PROFILE_FREEZE_MISMATCH otherwise.
+
+Tests: scripts/test-m4-1-freeze-recovery.ts (real IndexedDB abort of the C1 write,
+production Freeze wire, in-process transport, process-memory KV); M4 test updated to
+the new profile verifier signature. No real model calls; full regression deferred.

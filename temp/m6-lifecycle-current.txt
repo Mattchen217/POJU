@@ -1,0 +1,275 @@
+
+> pojulife@0.1.0 test:m6-di2-full-lifecycle D:\POJU\pojulife
+> tsx scripts/test-m6-di2-full-lifecycle.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M6 Decision Intake 2.0 full lifecycle
+[bazi] Original: 1985-07-15 02:00
+[bazi] True Solar: 1985-07-15 02:00
+[bazi] Diff: 0.28 minutes
+[createStoredProfile] writing birth_location: {
+  profile_id: '(new)',
+  birth_info: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  },
+  user_profile: {
+    name: 'Shanghai',
+    longitude: 121.47,
+    latitude: 31.23,
+    timezone: 'Asia/Shanghai'
+  }
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"446901ea-d1e6-475f-a1d1-2e60c4607e91","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  fresh Session bootstraps DC + Blueprint + authorized first adaptive question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"83329793-1ea4-4103-81df-d575184a78a3","has_profile":false}
+[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed m6_forced_dc_write_failure
+  PASS  Fresh Session DC persistence failure is fail-closed without a freeform question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 3,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 4,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 5,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 6,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 7,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 8,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 9,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 10,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 11,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 12,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 13,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 14,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: true,
+  substantive_opening_turns: 15,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[M6 readiness trace] {"readiness":{"verdict":"ready_for_final_confirm","can_ask":false,"reasons":["dir_unknown_may_affect_p5:DIR-DEF-QUESTION","dir_unknown_may_affect_p5:DIR-DEF-OUTCOME","dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE","dir_unknown_may_affect_p5:DIR-DEF-STAKES","dir_unknown_may_affect_p5:DIR-OPT-CONSTRAINTS","dir_unknown_may_affect_p5:DIR-TIMING-WINDOW","dir_unknown_may_affect_p5:DIR-DEF-UNACCEPTABLE","dir_unknown_may_affect_p5:DIR-RISK-TOLERANCE","dir_unknown_may_affect_p5:DIR-DEF-PRIORITIES","dir_unknown_may_affect_p5:DIR-EXIT-CRITERIA","dir_unknown_may_affect_p5:DIR-BIZ-MODEL","dir_unknown_may_affect_p5:DIR-OPT-IRREV","dir_unknown_boundary_ok:DIR-STATUS-QUO","dir_unknown_boundary_ok:DIR-PAST-ATTEMPTS","dir_unknown_boundary_ok:DIR-VALIDATION-CAPACITY","no_open_needs"],"sufficiency_verdict":"continue_collecting"},"dirs":[{"dir_id":"DIR-DEF-QUESTION","state":"unknown"},{"dir_id":"DIR-DEF-OUTCOME","state":"unknown"},{"dir_id":"DIR-OPT-ON-TABLE","state":"unknown"},{"dir_id":"DIR-STATUS-QUO","state":"unknown"},{"dir_id":"DIR-DEF-STAKES","state":"unknown"},{"dir_id":"DIR-OPT-CONSTRAINTS","state":"unknown"},{"dir_id":"DIR-TIMING-WINDOW","state":"unknown"},{"dir_id":"DIR-DEF-UNACCEPTABLE","state":"unknown"},{"dir_id":"DIR-PAST-ATTEMPTS","state":"unknown"},{"dir_id":"DIR-RISK-TOLERANCE","state":"unknown"},{"dir_id":"DIR-DEF-PRIORITIES","state":"unknown"},{"dir_id":"DIR-EXIT-CRITERIA","state":"unknown"},{"dir_id":"DIR-BIZ-MODEL","state":"unknown"},{"dir_id":"DIR-VALIDATION-CAPACITY","state":"unknown"},{"dir_id":"DIR-OPT-IRREV","state":"unknown"}],"facts":[{"fact_id":"fact_opening_0_6fa4c7dd-8153-4e51-856d-e0ec375e209d","status":"unverified","verification_level":"user_asserted","roles":["opening_user_statement"],"source":"93f3f8e8-5b60-46fd-9565-7d4a770d49f2"},{"fact_id":"fact_dq_dc_37a74d91-b662-498c-9d47-ee5503d522ca","status":"unverified","verification_level":"user_asserted","roles":["decision_question"],"dirs":["DIR-DEF-QUESTION"],"source":"93f3f8e8-5b60-46fd-9565-7d4a770d49f2"},{"fact_id":"fact_m1_4d0c5743-e31f-4b16-bb85-cb9e0d34e53a_0","status":"unverified","verification_level":"user_asserted","roles":["biz_model"],"dirs":["DIR-BIZ-MODEL"],"source":"4d0c5743-e31f-4b16-bb85-cb9e0d34e53a"},{"fact_id":"fact_m1_227ed705-ae47-472a-84e0-0616890cbeaa_0","status":"unverified","verification_level":"user_asserted","roles":["desired_outcome"],"dirs":["DIR-DEF-OUTCOME"],"source":"227ed705-ae47-472a-84e0-0616890cbeaa"},{"fact_id":"fact_m1_5f818676-1078-48cb-a3fb-f9e36abe9ba6_0","status":"unverified","verification_level":"user_asserted","roles":["goal_priority"],"dirs":["DIR-DEF-PRIORITIES"],"source":"5f818676-1078-48cb-a3fb-f9e36abe9ba6"},{"fact_id":"fact_m1_78bae8cc-ca98-4cdd-b108-3f3ff3e39f22_0","status":"unverified","verification_level":"user_asserted","roles":["stakes"],"dirs":["DIR-DEF-STAKES"],"source":"78bae8cc-ca98-4cdd-b108-3f3ff3e39f22"},{"fact_id":"fact_m1_f5c4488d-377c-4212-a088-5248bb6603b1_0","status":"unverified","verification_level":"user_asserted","roles":["unacceptable"],"dirs":["DIR-DEF-UNACCEPTABLE"],"source":"f5c4488d-377c-4212-a088-5248bb6603b1"},{"fact_id":"fact_m1_a170af41-37e3-476f-a9b7-f573c107fb6d_0","status":"unverified","verification_level":"user_asserted","roles":["exit_criterion"],"dirs":["DIR-EXIT-CRITERIA"],"source":"a170af41-37e3-476f-a9b7-f573c107fb6d"},{"fact_id":"fact_m1_5fd39415-2bc8-45f0-8bac-a43d67db95b9_1","status":"unverified","verification_level":"user_asserted","roles":["hard_constraint"],"dirs":["DIR-OPT-CONSTRAINTS"],"source":"5fd39415-2bc8-45f0-8bac-a43d67db95b9"},{"fact_id":"fact_m1_a575982e-8f30-4e19-9eea-4edac1992981_0","status":"unverified","verification_level":"user_asserted","roles":["option"],"dirs":["DIR-OPT-ON-TABLE"],"source":"a575982e-8f30-4e19-9eea-4edac1992981"},{"fact_id":"fact_m1_c319979f-2c83-4bc2-b42d-579d281ab4f8_0","status":"unverified","verification_level":"user_asserted","roles":["risk_tolerance"],"dirs":["DIR-RISK-TOLERANCE"],"source":"c319979f-2c83-4bc2-b42d-579d281ab4f8"},{"fact_id":"fact_m1_5df0733b-d698-4330-aa83-cb95c405c3b8_0","status":"unverified","verification_level":"user_estimate","roles":["status_quo"],"dirs":["DIR-STATUS-QUO"],"source":"5df0733b-d698-4330-aa83-cb95c405c3b8"},{"fact_id":"fact_m1_5c505347-a811-441f-b89e-de25f842614a_0","status":"unverified","verification_level":"user_asserted","roles":["timing_window"],"dirs":["DIR-TIMING-WINDOW"],"source":"5c505347-a811-441f-b89e-de25f842614a"},{"fact_id":"fact_m1_142351af-9e6f-44bb-8082-5d7f86c5c16f_0","status":"unverified","verification_level":"user_asserted","roles":["past_attempt"],"dirs":["DIR-PAST-ATTEMPTS"],"source":"142351af-9e6f-44bb-8082-5d7f86c5c16f"},{"fact_id":"fact_m1_60a8a7e1-4a24-4e2e-b0f6-9d6008bee173_0","status":"unverified","verification_level":"user_asserted","roles":["irreversibility"],"dirs":["DIR-OPT-IRREV"],"source":"60a8a7e1-4a24-4e2e-b0f6-9d6008bee173"},{"fact_id":"fact_m1_4e814e4a-0815-41d3-b641-7f3c7a274eed_0","status":"unverified","verification_level":"user_asserted","roles":["validation_capacity"],"dirs":["DIR-VALIDATION-CAPACITY"],"source":"4e814e4a-0815-41d3-b641-7f3c7a274eed"}]}
+  PASS  multi-turn answers update DC/Understanding and replan without repeating
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"37a74d91-b662-498c-9d47-ee5503d522ca","has_profile":true}
+[M6 confirm trace] {"phase":"awaiting_confirmation","readiness":{"verdict":"ready_for_final_confirm","can_ask":false,"reasons":["dir_unknown_may_affect_p5:DIR-DEF-QUESTION","dir_unknown_may_affect_p5:DIR-DEF-OUTCOME","dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE","dir_unknown_may_affect_p5:DIR-DEF-STAKES","dir_unknown_may_affect_p5:DIR-OPT-CONSTRAINTS","dir_unknown_may_affect_p5:DIR-TIMING-WINDOW","dir_unknown_may_affect_p5:DIR-DEF-UNACCEPTABLE","dir_unknown_may_affect_p5:DIR-RISK-TOLERANCE","dir_unknown_may_affect_p5:DIR-DEF-PRIORITIES","dir_unknown_may_affect_p5:DIR-EXIT-CRITERIA","dir_unknown_may_affect_p5:DIR-BIZ-MODEL","dir_unknown_may_affect_p5:DIR-OPT-IRREV","dir_unknown_boundary_ok:DIR-STATUS-QUO","dir_unknown_boundary_ok:DIR-PAST-ATTEMPTS","dir_unknown_boundary_ok:DIR-VALIDATION-CAPACITY","no_open_needs","frozen_after_user_confirm"],"sufficiency_verdict":"sufficient_with_boundaries"},"canStop":true,"lastAssistant":{"m21_confirm_freeze":true,"m21_outcome":"frozen","m21_promoted_facts":15,"context_id":"dc_37a74d91-b662-498c-9d47-ee5503d522ca","context_version":16,"content_hash":"cf3d68a9080254c82cc9cc50243c59fba7f19bdd29de702e398156e8bf8c224a"},"confirmationEvents":17,"freezeReceipts":1,"profileReceipts":1}
+  PASS  explicit user confirmation through handleUserMessage reaches authority Freeze
+[decision-report] analysis completed {
+  job_id: 'dr_37a74d91-b662-498c-9d47-_1794502921981_dny1pl',
+  analysis_id: 'pa_dc37a74d91b662498c9d47ee5503d522cav16_7cf37860c0ff'
+}
+[decision-report] report completed {
+  job_id: 'dr_37a74d91-b662-498c-9d47-_1794502921981_dny1pl',
+  freeze_id: 'dc_37a74d91-b662-498c-9d47-ee5503d522ca@v16',
+  generation: 1
+}
+  PASS  report client starts one authorized job and completes eight bound pages
+  PASS  delivered Session does not auto-start again or regenerate analysis/pages
+  PASS  status after refresh returns the completed report bound to the same Job
+
+M6 result: 7 passed, 0 failed

@@ -1,0 +1,5 @@
+Record M9-R1 session authority remediation evidence
+
+Raw command logs, exit codes, and the verification README for the
+M9-R1 implementation commit d9c6434e630573014f82803a395ea45a8adacbc3.
+This record does not declare M9 or Decision Intake 2.0 accepted.

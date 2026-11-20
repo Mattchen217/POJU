@@ -1,0 +1,320 @@
+
+######## lib/poju/decision-intake/answer-interpretation.ts (1235 lines) ########
+   49: export function unresolvedItemId(sourceTurnId: string, extractedIndex: number): string {
+   53: export function unresolvedAspectId(sourceTurnId: string, aspectIndex: number): string {
+   57: export function intakeControlItemId(
+  108: export function normalizeAnswerGroundingText(text: string): string {
+  129: export type LocatedSourceSpan = {
+  137: export type SourceQuoteLocateResult =
+  141: export type SourceQuoteGroundingResult =
+  222: export function locateSourceQuote(
+  280: export function groundExtractedItem(
+  295: export function groundingRejection(
+  321: export function goalChangeTargetFromClause(clauseText: string): string {
+  338: export function extractGroundedProposedDecisionTarget(
+  397: export function activeTargets(session: POJUSessionState): {
+  451: export function classifyAnswer(input: {
+  567: export function writesFor(
+  695: export function correctableFactIds(
+  713: export type CorrectablePriorAnswer = {
+  724: export function correctablePriorAnswers(
+  761: export function answerEventFromModelDraft(input: {
+ 1201: export function interpretUserAnswer(input: {
+
+######## lib/poju/decision-intake/answer-interpretation-model.ts (683 lines) ########
+   54: export type ModelAnswerClassification = (typeof MODEL_ANSWER_CLASSIFICATIONS)[number];
+   55: export type ModelSemanticKind = (typeof MODEL_SEMANTIC_KINDS)[number];
+   56: export type ModelCertainty = (typeof MODEL_CERTAINTIES)[number];
+   58: export type { ModelAnswerDraft };
+   60: export type ModelInterpretationContext = {
+  114: export type ModelInterpretationCallMeta = {
+  124: export type ModelInterpretationSuccess = {
+  131: export type ModelInterpretationFailure = {
+  138: export type ModelInterpretationResult =
+  146: export type AnswerInterpretationModelHook = (input: {
+  280: export function buildModelInterpretationContext(input: {
+  370: export function parseAndValidateModelAnswerDraft(
+  491: export type AnswerInterpretationModelText = {
+  501: export async function callAnswerInterpretationModel(input: {
+  586: export function isModelInterpretationContext(value: unknown): value is ModelInterpretationContext {
+  605: export async function interpretAnswerWithModel(input: {
+
+######## lib/poju/decision-intake/blueprint.ts (793 lines) ########
+   33: export type BlueprintScopeSource = "catalog" | "starter_fallback";
+   35: export type BlueprintInitMeta = {
+   43: export function highestDdrPriority(
+   54: export function catalogDdrIdsForDir(
+   75: export function gateClassForDirFromCatalog(
+  193: export function seedDirFromDefinition(def: DirDefinitionEntry): DIR {
+  209: export type BuildCatalogBlueprintScopeResult =
+  235: export function buildCatalogBlueprintScope(input: {
+  359: export function mergeCatalogDirsIntoDc(
+  410: export function activateNextBlueprintPriorityBand(
+  480: export function ensureDecisionBlueprint(
+  745: export function directionIdForDir(
+  753: export function blueprintAllowsDir(
+  760: export function blueprintAllowsDdr(
+  769: export function resolveDdrIdsForDir(
+
+######## lib/poju/decision-intake/scope-budget.ts (153 lines) ########
+   11: export type ScopeBudgetVerdict =
+   15: export function validateScopeDepthBudget(input: {
+  110: export function refundIneffectiveQuestion(
+  130: export function bumpBudgetAfterAsk(
+
+######## lib/poju/decision-intake/personal-analysis.ts (735 lines) ########
+   37: export type ProfileLine = { ref_id: string; text: string };
+   40: export type RegisteredProfile = {
+   52: export type ProfileProjection = {
+   69: export function computeProfileHash(input: {
+   98: export function buildProfileProjection(
+  123: export function factEvidenceStatus(
+  132: export function buildDcEvidenceIndex(dc: DecisionContext): Map<string, EvidenceReference> {
+  203: export function addProfileEvidence(
+  217: export function requiredUnresolvedRefs(dc: DecisionContext): string[] {
+  231: export function informationBoundariesFromDc(dc: DecisionContext): string[] {
+  254: export function formatAnalysisInputBlock(input: {
+  392: export function buildPersonalAnalysisPrompt(input: {
+  499: export type PersonalAnalysisValidation =
+  537: export function validatePersonalAnalysisOutput(input: {
+  652: export type PersonalAnalysisModelOutcome =
+  668: export function __setPersonalAnalysisModelForTests(fn: RawModelFn | null): void {
+  672: export async function runPersonalAnalysisModel(input: {
+
+######## lib/poju/decision-intake/personal-analysis-profile.ts (193 lines) ########
+   14: export type PersonalAnalysisAvailability = "available" | "missing" | "incomplete" | "failed";
+   16: export type PersonalAnalysisDataAvailability = {
+   21: export type PersonalAnalysisProfile = {
+   54: export function bindPersonalAnalysisProfile(
+  127: export function evaluateQaPersonalPatternInsight(
+
+######## lib/poju/decision-intake/freeze-bound-report.ts (1508 lines) ########
+   32: export type FreezeReportClaimOps = {
+   48: export function freezeReportClaimKey(input: {
+   71: export function createProcessLocalClaimOps(
+  110: export type FreezeBoundReportJobStatus =
+  117: export type ReportBinding = Readonly<{
+  127: export type FrozenReportSnapshot = Readonly<{
+  139: export type FreezeBoundReportPage = {
+  150: export type FreezeBoundReportSource = "legacy_delivery" | "decision_intake_v2";
+  152: export type FreezeBoundReportJob = {
+  172: export type EightPageReport = {
+  189: export type FreezeBoundReportResult =
+  206: export type FreezeBoundReportDeps = {
+  230: export function freezeIdFromBinding(binding: DecisionContextBinding): string {
+  234: export function buildReportIdempotencyKey(input: {
+  247: export function deepFreezeValue<T>(value: T): T {
+  293: export function loadAuthoritativeFreeze(
+  407: export function verifyFrozenSnapshot(
+  428: export function createFrozenReportSnapshot(input: {
+  453: export function reportBindingFromSnapshot(
+  479: export async function defaultGeneratePage(
+  507: export function assertCompleteEightPageReport(
+  545: export async function generateEightPageReport(
+  566: export async function createOrGetReportJob(input: {
+  778: export async function requestFreezeBoundEightPageReport(input: {
+  972: export async function retryFreezeBoundEightPageReport(input: {
+  996: export function getCompletedFreezeBoundReport(
+ 1038: export async function prepareFreezeBoundFinalDelivery(input: {
+ 1231: export async function releaseFreezeBoundReportClaim(input: {
+ 1252: export type RegenerateClaimReleaseResult =
+ 1256: export async function tryReleaseClaimForRegenerate(input: {
+ 1286: export async function releaseClaimBeforePreHandoffReturn(input: {
+ 1303: export async function failFreezeBoundReportJob(input: {
+ 1330: export async function completeFreezeBoundReportFromDeliveryPages(input: {
+ 1412: export function __resetFreezeBoundReportInFlightForTests(): void {
+ 1417: export function __createClaimOpsForTests(store: {
+
+######## lib/poju/decision-intake/freeze-bound-report-server.ts (73 lines) ########
+   25: export async function requestFreezeBoundEightPageReportServer(
+   34: export async function prepareFreezeBoundFinalDeliveryServer(
+   45: export async function completeFreezeBoundReportFromDeliveryPagesServer(
+   54: export async function releaseFreezeBoundReportClaimServer(
+   63: export async function failFreezeBoundReportJobServer(
+   72: export type { POJUSessionState };
+
+######## lib/poju/decision-intake/decision-report-api.ts (515 lines) ########
+   71: export type { DecisionReportChargeResult } from "./decision-report-charge";
+   73: export type DecisionReportApiDeps = DecisionReportDispatchDeps & {
+   78: export type DecisionReportApiReply =
+  485: export async function handleDecisionReportAction(
+
+######## lib/poju/decision-intake/decision-report-service.ts (1087 lines) ########
+  115: export type ServiceFailure = {
+  123: export type StartDecisionReportOutcome =
+  131: export function sameIdentity(a: DecisionReportJobInput, b: Pick<DecisionReportJobInput, "freeze_id" | "context_hash" | "profile_hash" | "report_schema_version" | "analysis_schema_version">): boolean {
+  209: export type ReportStartHookPoint =
+  224: export function __setReportStartHookForTests(fn: typeof reportStartHook): void {
+  228: export async function runReportStartHook(
+  239: export type DecisionReportStartPlan = {
+  257: export async function planDecisionReportStart(input: {
+  289: export type ReportStartLock =
+  305: export async function acquireDecisionReportStartLock(
+  369: export type PreparedReportJob =
+  381: export async function createOrReuseDecisionReportJob(
+  510: export async function startDecisionReportJob(input: {
+  559: export async function abandonDecisionReportStartJob(job_id: string, session_id: string, reason: string): Promise<void> {
+  575: export type RefusalAbortStep = "revoke_grant" | "fail_job" | "clear_dispatch" | "release_lock" | "mark_completed";
+  580: export function __setRefusalAbortStepHookForTests(
+  595: export async function abortDecisionReportJob(job: PojuXhighJob, reason: string): Promise<void> {
+  661: export type RefusalAbortOutcome = { ok: true } | { ok: false; reason: string };
+  670: export async function finishDecisionReportRefusalAbort(claimed: ChargeAuthorization): Promise<RefusalAbortOutcome> {
+  689: export type RefusalAbortResume =
+  705: export async function resumeRefusalAbortRecord(rec: ChargeAuthorization): Promise<RefusalAbortResume> {
+  727: export async function resumeDecisionReportRefusalAbort(session_id: string): Promise<RefusalAbortResume> {
+  847: export async function buildDecisionReportStatus(input: {
+  969: export function deliveryDeniedFailure(check: Extract<DeliveryCheck, { ok: false }>): ServiceFailure {
+  977: export type ContinueDecisionReportOutcome =
+  987: export async function continueDecisionReportJob(input: {
+
+######## lib/poju/decision-intake/decision-report-charge.ts (827 lines) ########
+   48: export type DecisionReportChargeResult =
+   52: export type DecisionReportCharge = (input: {
+   58: export type ChargeAuthorizationState =
+   66: export type ChargeAuthorization = {
+   99: export type ChargeSettlement =
+  138: export function di2ChargeAuthorizationKey(session_id: string): string {
+  142: export function di2ExecutionGrantKey(job_id: string): string {
+  167: export async function loadChargeAuthorization(session_id: string): Promise<ChargeAuthorization | null> {
+  279: export async function settleDecisionReportCharge(input: {
+  347: export type RefusalAbortClaim =
+  380: export async function claimDecisionReportRefusalAbort(
+  434: export function abortHeldSince(rec: ChargeAuthorization): number {
+  438: export type RefusalAbortResumeRight =
+  451: export async function claimRefusalAbortResume(rec: ChargeAuthorization): Promise<RefusalAbortResumeRight> {
+  486: export async function completeRefusalAbortRecord(claimed: ChargeAuthorization): Promise<boolean> {
+  510: export type DecisionReportExecutionGrant = {
+  518: export type ExecutionGrantCheck = { ok: true } | { ok: false; reason: string };
+  524: export async function verifyDecisionReportExecution(job: PojuXhighJob): Promise<ExecutionGrantCheck> {
+  548: export async function grantDecisionReportExecution(job: PojuXhighJob): Promise<ExecutionGrantCheck> {
+  579: export async function revokeDecisionReportExecution(job_id: string): Promise<void> {
+  604: export type DecisionReportDeliveryAuthorization = {
+  616: export type DeliveryCheck =
+  621: export type DeliveryTarget = { job_id: string; session_id: string; execution_generation?: number | null };
+  623: export function di2DeliveryAuthorizationKey(job_id: string): string {
+  655: export async function verifyDecisionReportDelivery(target: DeliveryTarget): Promise<DeliveryCheck> {
+  684: export async function grantDecisionReportDelivery(
+  735: export async function revokeDecisionReportDelivery(input: {
+  772: export async function sealDecisionReportDelivery(job: PojuXhighJob): Promise<DeliveryCheck> {
+  792: export async function retainDecisionReportDelivery(target: DeliveryTarget): Promise<DeliveryCheck> {
+
+######## lib/poju/decision-intake/decision-report-store.ts (422 lines) ########
+   61: export type RegisteredFreeze = {
+   81: export async function loadRegisteredFreeze(input: {
+  112: export async function loadRegisteredProfile(input: {
+  144: export type StoredAnalysis = {
+  150: export function di2AnalysisKey(idempotency_key: string): string {
+  154: export async function loadAnalysis(idempotency_key: string): Promise<StoredAnalysis | null> {
+  164: export async function saveAnalysis(next: StoredAnalysis): Promise<StoredAnalysis> {
+  176: export type StoredPage = {
+  181: export function di2PageKey(job_id: string, page_id: DecisionPageId): string {
+  185: export async function loadPage(job_id: string, page_id: DecisionPageId): Promise<StoredPage | null> {
+  192: export async function savePage(next: StoredPage): Promise<StoredPage> {
+  202: export async function loadAllPages(job_id: string): Promise<StoredPage[]> {
+  220: export type CompletedReportRecord = {
+  245: export type CompletedReportDraft = Omit<CompletedReportRecord, "record_version" | "record_hash">;
+  247: export function di2CompletedReportKey(session_id: string, job_id: string): string {
+  263: export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
+  337: export function sealCompletedReportRecord(draft: CompletedReportDraft): CompletedReportRecord {
+  343: export async function loadCompletedReport(session_id: string, job_id: string): Promise<CompletedReportRecord | null> {
+  356: export async function commitCompletedReport(
+  384: export async function withdrawCompletedReport(session_id: string, job_id: string, execution_generation: number): Promise<void> {
+  398: export type DecisionReportDispatchMarker = { stage: string; at: number };
+  400: export function di2DispatchKey(job_id: string): string {
+  404: export async function markDecisionReportDispatch(job_id: string, stage: string): Promise<void> {
+  409: export async function claimDecisionReportDispatch(job_id: string, stage: string): Promise<boolean> {
+  414: export async function loadDecisionReportDispatch(job_id: string): Promise<DecisionReportDispatchMarker | null> {
+  419: export async function clearDecisionReportDispatch(job_id: string): Promise<void> {
+
+######## lib/poju/decision-intake/decision-report-dispatch.ts (183 lines) ########
+   40: export type DecisionReportBackground = (task: () => Promise<void>) => void;
+   42: export type DecisionReportDispatchDeps = {
+   50: export type DecisionReportWorkerState = "live" | "dispatching" | "none";
+   53: export async function decisionReportWorkerState(job_id: string): Promise<DecisionReportWorkerState> {
+   68: export async function dispatchDecisionReportStage(
+  104: export type EnsureWorkerOutcome =
+  126: export async function ensureDecisionReportWorker(input: {
+
+######## lib/poju/decision-intake/decision-report-runner.ts (910 lines) ########
+  700: export function completedReportDraft(
+  813: export async function runDecisionReportStage(
+  880: export async function resetDecisionReportBudgets(job: PojuXhighJob): Promise<void> {
+  900: export async function firstIncompleteDecisionReportStage(job: PojuXhighJob): Promise<DeliveryPipelineStage> {
+
+######## lib/poju/session-authority/chat.ts (200 lines) ########
+   33: export type AuthoritativeChatBody = {
+   47: export type AuthoritativeChatSuccess = {
+   56: export type AuthoritativeChatAbort = {
+   63: export type { TestChatModel } from "@/lib/poju/session-authority/chat-hooks";
+   93: export async function executeAuthoritativeChatTurn(
+
+######## lib/poju/session-authority/lifecycle.ts (695 lines) ########
+   85: export function hashSessionSnapshot(snapshot: POJUSessionState): string {
+   89: export function associationsFromSnapshot(snapshot: POJUSessionState): ServerSessionAssociations {
+  101: export function toAuthoritativeEnvelope(record: ServerSessionRecord): AuthoritativeSessionEnvelope {
+  139: export function mergeLifecycleStatus(
+  146: export async function deriveEffectiveLifecycle(
+  173: export function applyServerExpiryToSnapshot(
+  186: export function buildInitialAuthoritativeSnapshot(input: {
+  252: export async function initializeAuthoritativeSession(input: {
+  310: export async function readAuthoritativeSession(
+  342: export async function requireAuthoritativeSession(
+  356: export async function assertRecordAllowsIntake(
+  399: export type IncomingUserTurn = {
+  405: export function extractIncomingUserTurn(input: {
+  474: export function bindAuthoritativeChatSession(
+  486: export async function commitAuthoritativeSessionUpdate(input: {
+  688: export function httpStatusForAuthorityError(error: SessionAuthorityError): number {
+
+######## lib/poju/decision-context/production-freeze-wire.ts (458 lines) ########
+   37: export type FreezeWireSkipReason =
+   54: export type FreezeWireAllowlistedInternalCode =
+   64: export type FreezeWireResult =
+   90: export function mapCaughtFreezeFailure(e: unknown): {
+  108: export function freezeFailWireResult(
+  122: export function persistFailWireResult(
+  138: export type FreezeWireTrigger =
+  154: export function canFreezeSessionOnSufficiency(input: {
+  189: export function freezeIdempotencyKey(
+  199: export async function applySufficiencyFreezeToSession(
+  262: export async function ensureSessionFrozenForDelivery(
+  399: export function resolveDeliveryDcPayload(session: POJUSessionState): {
+
+######## lib/poju/decision-context/production-intake-ask.ts (202 lines) ########
+   37: export type IntakeAskPlanSnapshot = {
+   47: export function buildIntakeCandidatesFromDc(
+  108: export type SelectNextIntakeAskInput = {
+  119: export type SelectNextIntakeAskResult = {
+  132: export async function selectNextIntakeAskForSession(
+
+######## lib/poju/decision-authority/server/freeze-authority.ts (592 lines) ########
+  150: export async function loadVerifiedFreezeRecord(session_id: string, freeze_id: string): Promise<FreezeRecord> {
+  189: export function assertFreezeReceiptMatches(held: unknown, rec: FreezeRecord): void {
+  319: export async function sealFreeze(req: FreezeSealRequest, opts?: { now?: string }): Promise<FreezeSealResponse> {
+  491: export async function recoverFreeze(req: FreezeRecoverRequest): Promise<FreezeRecoverResponse> {
+  561: export async function registerProfileForFreeze(req: {
+
+######## components/poju/DecisionUnderstandingPanel.tsx (127 lines) ########
+    9: export function DecisionUnderstandingPanel({
+
+######## components/poju/POJUChatUI.tsx (4762 lines) ########
+  281: export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }: Props) {
+
+######## lib/poju/decision-intake/intake-protection.ts (576 lines) ########
+   15: export type IntakeProtectionStatus =
+   22: export type IntakeProtectionTerminalReason = "third_lockout" | "session_expired";
+   24: export type IntakeProtectionState = {
+   36: export type IntakeInputKind =
+   50: export type IntakeProtectionAction =
+   60: export type IntakeProtectionDecision = {
+   95: export function emptyIntakeProtectionState(): IntakeProtectionState {
+   99: export function readIntakeProtection(session: POJUSessionState | null | undefined): IntakeProtectionState {
+  139: export function isInvalidIntakeKind(kind: IntakeInputKind): boolean {
+  143: export function isIntakeContinueStatement(statement: string): boolean {
+  147: export function classifyIntakeInput(statement: string): IntakeInputKind {
+  195: export function inspectIntakeProtectionGate(
+  222: export function applyIntakeProtection(input: {
+  399: export function withIntakeProtection(
+  406: export function intakeProtectionUserMessage(
+  459: export function intakeProtectionBannerMessage(
+  550: export function mapIntakeProtectionOutcome(

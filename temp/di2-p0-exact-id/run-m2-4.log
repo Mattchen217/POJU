@@ -1,0 +1,163 @@
+
+> pojulife@0.1.0 test:m2-4-r2-production-closure D:\POJU\pojulife
+> tsx scripts/test-m2-4-r2-production-closure.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M2.4-R2 production closure (hook-based orchestration tests)
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"20cd115b-645d-4ba3-b5bb-430d6df4866d","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"20cd115b-645d-4ba3-b5bb-430d6df4866d","has_profile":false}
+  PASS  R2C-01 raw answer record per turn + persisted locators, statement = raw answer
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"546f08a7-9b5b-44d0-8fda-bbab6a67bf86","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"546f08a7-9b5b-44d0-8fda-bbab6a67bf86","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_failed timeout:llm_timeout
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"546f08a7-9b5b-44d0-8fda-bbab6a67bf86","has_profile":false}
+[agent] M1 Answer Interpretation FAIL-CLOSED (no free-ask fallback) answer_interpretation_invalid_schema invalid_json:Unexpected token '这', "这不是JSON" is not valid JSON
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"546f08a7-9b5b-44d0-8fda-bbab6a67bf86","has_profile":false}
+  PASS  R2C-02 model failure: no write, no version bump, no charge, same question, raw kept
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"18ff8b14-75d3-4fb2-be38-896e358fcb9c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"18ff8b14-75d3-4fb2-be38-896e358fcb9c","has_profile":false}
+  PASS  R2C-03 exactly one model call per ordinary turn (no second judge)
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1483656e-f39f-4e3b-b0ea-db53fd8cfb9c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1483656e-f39f-4e3b-b0ea-db53fd8cfb9c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1483656e-f39f-4e3b-b0ea-db53fd8cfb9c","has_profile":false}
+  PASS  R2C-04 correction of an earlier turn binds to that turn's role and links the old fact
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7e1de4bf-0ddf-49b2-accc-3415327b8c5c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7e1de4bf-0ddf-49b2-accc-3415327b8c5c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"7e1de4bf-0ddf-49b2-accc-3415327b8c5c","has_profile":false}
+  PASS  R2C-05 a prior role code is NOT authorized for non-correction classes (no role widening)
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fd14377a-212e-4888-86a4-8cfc35d49187","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fd14377a-212e-4888-86a4-8cfc35d49187","has_profile":false}
+  PASS  R2C-06 unknown answer: no fact claim, budget refunded, DIR not re-asked
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2552cc25-e4c6-4dfb-b3b7-d79b7c37d514","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2552cc25-e4c6-4dfb-b3b7-d79b7c37d514","has_profile":false}
+  PASS  R2C-07 off_topic: no write, same question re-presented, no new charge
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c88c28b9-bef5-4f34-a1ee-7a1f9768c91e","has_profile":false}
+  PASS  R2C-08 replaying the same turn id: no second write, no second charge, raw record unchanged
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"26971a48-6406-49d2-b325-fbda578bf4ab","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"26971a48-6406-49d2-b325-fbda578bf4ab","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"26971a48-6406-49d2-b325-fbda578bf4ab","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"26971a48-6406-49d2-b325-fbda578bf4ab","has_profile":false}
+  PASS  R2C-09 multi-item pending: one at a time, priority over planning, fully drained
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d9078e24-0af3-4394-82d3-48ff0a05d16a","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d9078e24-0af3-4394-82d3-48ff0a05d16a","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d9078e24-0af3-4394-82d3-48ff0a05d16a","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"d9078e24-0af3-4394-82d3-48ff0a05d16a","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"24ae19da-b2d8-4c46-be04-c742f3e94bb4","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"24ae19da-b2d8-4c46-be04-c742f3e94bb4","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"24ae19da-b2d8-4c46-be04-c742f3e94bb4","has_profile":false}
+  PASS  R2C-09b selecting "3 目前无法确定" is an answer: unknown record, item closed, never asserted
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3a7cd115-d4c4-4948-8345-f793948a9a37","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3a7cd115-d4c4-4948-8345-f793948a9a37","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"3a7cd115-d4c4-4948-8345-f793948a9a37","has_profile":false}
+  PASS  R2C-10 goal change: explicit confirm → Blueprint vN+1, history, DC definition, Understanding rebuilt
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4a1c62d2-3114-43cf-975d-f2ed1804fa82","has_profile":false}
+  PASS  R2C-11 browser path refuses the retired answer-interpretation proxy
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0a173f96-dea2-4555-a7cb-11955bb92059","has_profile":false}
+  PASS  R2C-12 retired answer-interpretation route returns 410 without OpenRouter spend
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1976e3f2-ba59-4167-ae05-aae5620fac1f","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1976e3f2-ba59-4167-ae05-aae5620fac1f","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1976e3f2-ba59-4167-ae05-aae5620fac1f","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"1976e3f2-ba59-4167-ae05-aae5620fac1f","has_profile":false}
+  PASS  R2C-14 an unresolved aspect already handled is never queued again; follow-ups add no aspects
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6a902cb1-dcbd-40b6-8760-1326c4544958","has_profile":false}
+  PASS  R2C-15 clarifications obey hard budget and per-DIR depth: unasked items close auditably, readiness reached
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2dc76012-b399-4a22-bb67-9dfbbbeef874","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2dc76012-b399-4a22-bb67-9dfbbbeef874","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2dc76012-b399-4a22-bb67-9dfbbbeef874","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2dc76012-b399-4a22-bb67-9dfbbbeef874","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2dc76012-b399-4a22-bb67-9dfbbbeef874","has_profile":false}
+  PASS  R2C-16 scarce hard budget goes to Freeze-blocking DIRs; answer-resolution clarifications do not deepen a DIR
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cdc81f94-8a3a-49f5-afec-06ef8a303bac","has_profile":false}
+  PASS  R2C-17 an estimate on a Freeze-blocking DIR gets one follow-up; an explicit reply lets the session freeze
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"0f99e596-3a4e-441e-afba-a91e84b04a72","has_profile":false}
+  PASS  R2C-18 a second estimate closes the follow-up: no third ask of the same DIR
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c63fbb87-db01-4c57-b359-9adc2dade97c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c63fbb87-db01-4c57-b359-9adc2dade97c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c63fbb87-db01-4c57-b359-9adc2dade97c","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"c63fbb87-db01-4c57-b359-9adc2dade97c","has_profile":false}
+  PASS  R2C-19 estimated constraint: "still an estimate" twice resolves as a user_estimate fact, never a Constraint, no endless re-ask
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"52322e1d-1837-4ea3-83e4-f6a994b00bec","has_profile":false}
+  PASS  R2C-13 loop to readiness: one question per turn, no DIR re-asked, budget ≤ 15, then 确认 → Freeze → bound job
+
+PASS=20 FAIL=0

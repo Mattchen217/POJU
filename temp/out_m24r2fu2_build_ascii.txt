@@ -1,0 +1,89 @@
+
+> pojulife@0.1.0 build D:\POJU\pojulife
+> next build --webpack
+
+\u25b2 Next.js 16.2.4 (webpack)
+- Environments: .env.local
+
+\u26a0 The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+\u2713 (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+\u26a0 Compiled with warnings in 34.7s
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+/_next/static/media/hana-ui.3e760c2e.wasm is 3.35 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./components/poju/BaselineZiweiLens.tsx
+./components/workspace/WorkspaceDocVaultModal.tsx
+./components/workspace/WorkspaceShell.tsx
+./app/[locale]/(workspace)/app/page.tsx
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/poju/breakthrough-core/route.ts
+
+./lib/ziwei/fact-pack.ts
+Should not import the named export 'version' (imported as 'iztroVersion') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./lib/ziwei/fact-pack.ts
+./lib/ziwei/lab-ziwei.ts
+./app/api/poju/breakthrough-core/route.ts
+
+  Running TypeScript ...
+Failed to type check.
+
+./lib/poju/decision-intake/apply-answer-to-dc.ts:229:45
+Type error: Argument of type 'ProposedWriteKind' is not assignable to parameter of type '"reality_fact" | "constraint"'.
+  Type '"none"' is not assignable to type '"reality_fact" | "constraint"'.
+
+  [90m227 |[0m   );
+  [90m228 |[0m   [36mconst[0m incrementalWrites = persistableWrites.filter(
+[31m[1m>[0m [90m229 |[0m     (w) => !writeAlreadyPresent(dc, turnId, w.kind, w.statement),
+  [90m    |[0m                                             [31m[1m^[0m
+  [90m230 |[0m   );
+  [90m231 |[0m   [90m// Same source_turn_id may legally add previously unresolved statements[0m
+  [90m232 |[0m   [90m// after role clarification. Replay of already-written statements stays[0m
+Next.js build worker exited with code: 1 and signal: null
+\u2009ELIFECYCLE\u2009 Command failed with exit code 1.

@@ -1,0 +1,5 @@
+command: C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec tsc --noEmit
+head: a1c0f5363e372d4d507191c2b177ef28b1fd072f
+exit_code: 0
+elapsed_sec: 6.0
+--- output ---

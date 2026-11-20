@@ -1,0 +1,330 @@
+
+> pojulife@0.1.0 test:m2-3-decision-blueprint D:\POJU\pojulife
+> tsx scripts/test-m2-3-decision-blueprint.ts
+
+M2.3 decision-specific Blueprint
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ce8022ef-2d41-4ba6-9f79-0d7d8c55bb01","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"68cc90c6-1118-4258-9e76-a2439b4dafb0","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    career dirs sample: DIR-OPT-ON-TABLE,DIR-OPT-CONSTRAINTS,DIR-OPT-IRREV,DIR-JOB-OFFER
+    rel dirs sample: DIR-OPT-ON-TABLE,DIR-OPT-CONSTRAINTS,DIR-OPT-IRREV,DIR-REL-DYNAMICS
+  PASS  M2.3-01 different questions → different Catalog scopes
+  PASS  M2.3-02 Catalog authority rejects illegal ids + uncertain fallback
+  PASS  M2.3-03 Planner constrained to Blueprint + real DDR trace
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ce8022ef-2d41-4ba6-9f79-0d7d8c55bb01","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    DC v1→v2; plan qp_cq_dir_DIR-DEF-OUTCOME_2026-11-10T09:58:08.379Z→qp_cq_dir_DIR-DEF-PRIORITIES_2026-11-10T09:58:08.526Z
+  PASS  M2.3-04 answer updates DC version + next Q from new gaps
+  PASS  M2.3-05 fact safety: estimate/unknown/refuse/contradiction
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"76e4d171-29d7-43a2-9188-6d8d20ca2d4c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"76e4d171-29d7-43a2-9188-6d8d20ca2d4c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M2.3-06 fresh-session E2E from createPOJUSession (no seedSession)
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"498cf33b-f70f-41f5-9551-b50e9ad6b185","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    scope=15 seed=13 p0Ask=P0 p1Cands=2
+  PASS  M2.3-R1 full DDR scope P0+P1+P2 + seed/schedule split + activation
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"cda93a7d-59f1-4d52-9478-e5fa4e677169","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    can_ask=true gate=P0 reasons=open_blueprint_p0_p1_obligations
+  PASS  M2.3-R2 Case A: P0 partial — no premature stop; stay in P0; P1 not activated
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"4a5de154-7d16-44a8-b833-e5cef92cd1a1","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    P1 activated; plan=P1; ctx_v=2; Q matched assistant
+  PASS  M2.3-R2 Case B: P0 complete → production orchestrator activates P1 + plans P1
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b04bb240-ea7c-4b7b-a949-3e7ebf91ceae","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    p1Need=DIR-VALIDATION-CAPACITY; can_ask=true; remaining=14
+  PASS  M2.3-R2 Case C: unfinished P1 stays in need_to_understand; Readiness continues
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"8ec02405-0a41-4099-afd5-30d415170328","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"8ec02405-0a41-4099-afd5-30d415170328","has_profile":false}
+[agent] M1 planner_blocked (nonterminal; no confirm / no free-ask) no_selectable_candidate:open_p0_p1_no_selectable_candidate|fallback_dir_missing:DIR-VALIDATION-CAPACITY
+    orchestrator=planner_blocked; pre=planner_blocked; agent_phase=collecting_context; p0Need=DIR-DEF-QUESTION
+  PASS  M2.3-R2-FU Case A: open P0 + budget + no selectable candidate → blocked, not final-confirm
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e7390355-1fe6-4a5a-9691-cf4c3a392fdb","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"e7390355-1fe6-4a5a-9691-cf4c3a392fdb","has_profile":false}
+[agent] M1 planner_blocked (nonterminal; no confirm / no free-ask) all_candidates_rejected:direction_depth_exceeded:1>0|fallback_reject:direction_depth_exceeded:DIR-VALIDATION-CAPACITY
+    outcome=planner_blocked; reasons=planner_blocked|scope_budget_reject:direction_depth_exceeded; agent_phase=collecting_context
+  PASS  M2.3-R2-FU Case B: open P1 + budget + all candidates rejected → blocked
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b1d95a68-b5ca-4359-87d7-fb073f0d6d1c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"b1d95a68-b5ca-4359-87d7-fb073f0d6d1c","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    verdict=ready_for_final_confirm; outcome=ready_no_question; agent_phase=awaiting_confirmation; confirm=true
+  PASS  M2.3-R2-FU Case C: P0/P1 genuinely complete → readiness/final-confirm unchanged
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"ad2349e6-b1b9-488e-b71b-0cb80fe96f49","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  FAIL  M2.3-R2-FU2 Case A: idempotent replay + planner_blocked preserves nonterminal
+AssertionError [ERR_ASSERTION]: replay must stay planner_blocked, got idempotent_replay ask_error=undefined
++ actual - expected
+
++ 'idempotent_replay'
+- 'planner_blocked'
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m2-3-decision-blueprint.ts:1679:14)
+    at async check (D:\POJU\pojulife\scripts\test-m2-3-decision-blueprint.ts:35:5)
+    at async main (D:\POJU\pojulife\scripts\test-m2-3-decision-blueprint.ts:1588:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'idempotent_replay',
+  expected: 'planner_blocked',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"18d1f7a7-9dce-4d2e-93c6-4776ee8eb40e","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    outcome=planner_blocked; ask_error=planner_exception:controlled_planner_exception_fu2; exception_type=planner_exception (orchestrator/collecting only; Agent planner inject deferred)
+  PASS  M2.3-R2-FU2 Case B: planner exception + open P1 → planner_blocked not ready_no_question
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"699f0258-4b86-476d-b655-2f1567d9e38a","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    first=planned; replay=idempotent_replay; mapped=not_applied; ask_planned=true
+  PASS  M2.3-R2-FU2 Case C: genuine idempotent replay keeps idempotent_replay (not blocked)
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"70cd98ed-289d-4ff0-9eaa-f9ecc51eb033","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"70cd98ed-289d-4ff0-9eaa-f9ecc51eb033","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 2,
+  minimum_interaction_met: true,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+    verdict=ready_for_final_confirm; outcome=ready_no_question; phase=awaiting_confirmation
+  PASS  M2.3-R2-FU2 Case D: P0/P1 complete → readiness/final-confirm unchanged
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"534c4757-3de5-466a-bd85-eec218a17316","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: false,
+  base_analysis_ready: false,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"534c4757-3de5-466a-bd85-eec218a17316","has_profile":false}
+[agent] M1 planner_blocked (nonterminal; no confirm / no free-ask) understanding_exception:controlled_understanding_exception_fu4_1
+    path=handleUserMessage→runM1ProductionPreLlmTurn→runCollectingDcTurn→runAdaptiveQuestionTurn→Understanding×2→planner_blocked→Agent early return
+    understandingBuildAttempts=2; m1_outcome=planner_blocked; m1_ask_error=understanding_exception:controlled_understanding_exception_fu4_1; llmDelta=0; phase=collecting_context; exception_type=understanding_exception
+  PASS  M2.3-R2-FU4 Case E: real Agent chain Understanding failure -> planner_blocked; no ordinary LLM
+
+M2.3 results: 17 passed, 1 failed
+ ELIFECYCLE  Command failed with exit code 1.

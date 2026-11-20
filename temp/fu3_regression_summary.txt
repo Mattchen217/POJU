@@ -1,0 +1,9 @@
+pnpm test:m2-3-decision-blueprint => 0 (18 passed, pre-verified)
+pnpm test:m1-r-fresh-session-main-loop => 0
+pnpm test:m1-production-adaptive-question-loop => 0
+pnpm test:m2-1-readiness-confirm-freeze => 0
+pnpm test:m2-2-freeze-report-binding => 0
+pnpm test:decision-context-phase2 => 0
+pnpm exec next typegen => 0
+pnpm exec tsc --noEmit => 2
+pnpm build => 1

@@ -1,0 +1,50 @@
+  FAIL  M1-12 same turn replay no dup facts/Qs/budget
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'dc_committed'
+- 'not_applied'
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:681:14)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:650:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'dc_committed',
+  expected: 'not_applied',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"6e2acca8-039b-4ce0-8c66-9c4075994f40","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-13 refresh/restore consistency
+  PASS  M1-14 concurrent CAS conflict explicit
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"8d75070a-f07a-4067-8bdc-7d27a5b6a1c9","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-15 UI/Session Q == Agent sent+persisted Q
+  PASS  M1-static agent calls runM1ProductionPreLlmTurn BEFORE LLM; plan drives response
+  FAIL  M1-interp classifier covers estimate/unknown/declined/constraint
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected

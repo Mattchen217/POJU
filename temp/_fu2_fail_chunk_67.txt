@@ -1,0 +1,50 @@
+  FAIL  M1-04 second answer changes understanding + different next Q
+AssertionError [ERR_ASSERTION]: second answer must write DC
+
+false !== true
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:340:14)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:322:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  PASS  M1-05 different decision contexts \u2192 different paths
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"caa36415-8be3-44f9-a347-aa48f62e7fac","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  PASS  M1-06 sent question traces Plan/Direction/DDR/DIR
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"fe1b61b2-c28f-47b6-bcc6-ce6d97fb70c0","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  FAIL  M1-07 estimate/unknown/declined not promoted to confirmed
+AssertionError [ERR_ASSERTION]: fact for \u5927\u6982\u8fd8\u6709\u56db\u4e2a\u6708\u5b58\u6b3e\u3002
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:477:16)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:446:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',

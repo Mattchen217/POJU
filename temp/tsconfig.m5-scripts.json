@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "../next-env.d.ts",
+    "../scripts/test-m5-di2-main-path.ts",
+    "../scripts/fixtures/di2-report-fixture.ts"
+  ],
+  "exclude": []
+}

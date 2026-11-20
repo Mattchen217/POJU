@@ -1,0 +1,14 @@
+M5-R1-FU2 evidence: atomic refusal claim & job abort closure
+
+Evidence record for implementation 1ca49e5e (baseline b29e73ba):
+- state machine (abort_claimed / abort_completed) and why the abort claim and a
+  re-claim of the same refused record are mutually exclusive (both CAS the same
+  exact value): both orders tested (FU2-01, FU2-02);
+- abort steps, idempotence, fail-stop, recovery points (FU2-03 x5 via start /
+  Regenerate / status / continue), final states;
+- FU2-01..06 results and mutation runs (M1b, M2, M3, M5);
+- regression, tsc and build on 1ca49e5e (s7 unchanged: same 3 pre-existing failures);
+- residual interleavings (pre-check vs Regenerate create, ownerless session lock)
+  and unverified real-environment boundaries.
+
+MemoryKv and the ledger stub only: not Upstash or Supabase validation. No PASS claim.

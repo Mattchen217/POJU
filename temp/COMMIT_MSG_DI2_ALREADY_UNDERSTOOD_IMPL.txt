@@ -1,0 +1,9 @@
+Filter already-understood labels to user-confirmed known or n_a items
+
+Only project UnderstoodItem labels into already_understood when
+user_confirmed_any is true, status is known or n_a, and the cleaned label
+is non-empty. Unconfirmed, inferred, or merely covered items stay out of
+the Decision Understanding already-understood list.
+
+This does not change UnderstoodItem, Readiness, or Freeze rules, and does
+not declare DI2 or M9 accepted.

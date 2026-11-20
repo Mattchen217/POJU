@@ -1,0 +1,48 @@
+  local headKey = ARGV[7]
+  local prefix = ARGV[8]
+  local limit = tonumber(ARGV[9]) or 512
+
+  -- Ledger binding: TypeScript validated canonical entry hashes and passed
+  -- the exact raw values. Lua compares live Redis GET bytes against those
+  -- raw values and never interprets an unbound or changed entry as a valid
+  -- non-Freeze head. Lua does not recompute canonicalHash / entry_hash.
+  local validatedHintRaw = ARGV[10]
+  local startVersion = tonumber(ARGV[11]) or 0
+  local endVersion = tonumber(ARGV[12]) or 0
+  local entryCount = tonumber(ARGV[13]) or 0
+  if type(validatedHintRaw) ~= 'string' then return 8 end
+  if entryCount ~= math.floor(entryCount) or entryCount < 0 then return 8 end
+  if endVersion > limit then return 9 end
+  if endVersion == 0 then
+    if startVersion ~= 0 or entryCount ~= 0 then return 8 end
+  else
+    if startVersion ~= 1 or entryCount ~= endVersion or endVersion < 1 then return 8 end
+  end
+
+  local liveHint = redis.call('GET', headKey)
+  if validatedHintRaw == '' then
+    if liveHint then return 10 end
+  else
+    if (not liveHint) or liveHint ~= validatedHintRaw then return 10 end
+  end
+
+  for i = 1, entryCount do
+    local expectedRaw = ARGV[13 + i]
+    if type(expectedRaw) ~= 'string' or string.len(expectedRaw) == 0 then return 8 end
+    local live = redis.call('GET', prefix .. tostring(startVersion + i - 1))
+    if (not live) or live ~= expectedRaw then return 10 end
+  end
+
+  local nextLive = redis.call('GET', prefix .. tostring(endVersion + 1))
+  if nextLive then return 10 end
+
+  if endVersion > 0 then
+    local headRaw = ARGV[13 + entryCount]
+    local head, headOk = decode(headRaw)
+    if not headOk then return 8 end
+    if head['change_type'] == 'freeze' or head['dc_status'] == 'final' then
+      return 3
+    end
+  end
+end
+

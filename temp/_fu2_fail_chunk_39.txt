@@ -1,0 +1,50 @@
+  FAIL  M1-02/03 first answer updates DC+Understanding; next Q from Need
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(out.decision_context!.reality_facts.length > beforeFacts)
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:290:14)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:262:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"48dbb62a-442b-493f-a895-27d9fa5c19ae","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,
+  substantive_opening_turns: 1,
+  minimum_interaction_met: false,
+  reply_quality: 'clear',
+  question_status: 'satisfied',
+  session_action: null,
+  picked_option: false
+}
+  FAIL  M1-04 second answer changes understanding + different next Q
+AssertionError [ERR_ASSERTION]: second answer must write DC
+
+false !== true
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:340:14)
+    at async check (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:33:5)
+    at async main (D:\POJU\pojulife\scripts\test-m1-production-adaptive-question-loop.ts:322:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  PASS  M1-05 different decision contexts \u2192 different paths
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"caa36415-8be3-44f9-a347-aa48f62e7fac","has_profile":false}
+[poju-gate] {
+  phase: 'collecting_context',
+  understanding_sufficient: undefined,
+  understanding_struct_complete: true,
+  base_analysis_ready: true,

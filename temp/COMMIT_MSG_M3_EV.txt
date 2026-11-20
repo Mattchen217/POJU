@@ -1,0 +1,11 @@
+docs(evidence): M3 Personal Analysis + Freeze-bound report — results on dce6fd19
+
+Evidence only. Checks ran on implementation commit dce6fd19:
+tsc, next typegen, build, M3 suite 27/0, M2.1/M2.2/M2.3/M2.4-R2,
+stage4, phase3 idempotency, kv plan limit, lint guard. Two pre-existing
+failures (delivery-page-plan, final-delivery-degraded) reproduce on
+parent b59959ad.
+
+Model outputs in the M3 suite are test-hook fixtures. No real
+OpenRouter call, real model validation or full E2E was executed.
+Not a PASS declaration. No PR, no merge, no deploy, no force-push.

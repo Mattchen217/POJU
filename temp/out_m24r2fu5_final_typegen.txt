@@ -1,0 +1,9 @@
+SHA=8baca929f1f5b3107d3776386650f3dda334efb9
+CMD=C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec next typegen
+STARTED=2026-11-11T01:47:39.487821
+
+Generating route types...
+✓ Types generated successfully
+
+EXIT=0
+ENDED=2026-11-11T01:47:40.955235

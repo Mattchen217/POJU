@@ -1,0 +1,3 @@
+docs(evidence): record DI2 production cutover deploy evidence
+
+Capture FF-merge SHAs, Production deployment ID, env presence checklist, and post-deploy smoke probes. Does not claim DI2 acceptance.

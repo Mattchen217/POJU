@@ -1,0 +1,47 @@
+if (applied.skipped_reason === "turn_already_mapped") {
+        // Idempotent replay: rebuild understanding/plan from existing DC, no dup writes.
+        // M2.3-R2-FU2: preserve planner_blocked — do not drop nonterminal protection.
+        current = activateNextBlueprintPriorityBand(current, input.now);
+        const understanding = buildUnderstanding({
+          session: current,
+          blueprint: current.decision_blueprint!,
+          now: input.now,
+          last_answer_event_id: answer_event.event_id,
+        });
+        const planned = await planFromState(current, understanding, input.now);
+        if (planned.planner_block) {
+          return {
+            session: planned.session,
+            outcome: "planner_blocked",
+            ask_error: `${planned.planner_block.reason_code}:${planned.planner_block.detail}`,
+            answer_event,
+            understanding: planned.understanding,
+            plan: planned.plan,
+            authorized_question: planned.authorized_question,
+            persist_error: "turn_already_mapped",
+          };
+        }
+        return {
+          session: planned.session,
+          outcome: "idempotent_replay",
+          answer_event,
+          understanding: planned.understanding,
+          plan: planned.plan,
+          authorized_question: planned.authorized_question,
+          persist_error: "turn_already_mapped",
+        };
+      }
+      if (!applied.applied) {
+        // Off-topic / invalid: still recompute understanding; may keep prior needs.
+        current = activateNextBlueprintPriorityBand(current, input.now);
+        const understanding = buildUnderstanding({
+          session: current,
+          blueprint: current.decision_blueprint!,
+          now: input.now,
+          last_answer_event_id: answer_event.event_id,
+        });
+        const planned = await planFromState(current, understanding, input.now);
+        return {
+          session: planned.session,
+          outcome: outcomeFromPlanResult(planned),
+    

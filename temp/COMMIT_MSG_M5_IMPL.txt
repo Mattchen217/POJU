@@ -1,0 +1,38 @@
+feat(di2): M5 main-path integration closure — durable report commit, worker recovery, client recovery state machine
+
+Server (report persistence):
+- Final commit order: execution fence check -> durable report record (NX, read-back
+  confirmed, identity + analysis + 8 pages + receipts + generation, record hash) ->
+  job completed under the fence CAS with the committed result. A persistence failure
+  fails the job as report_persist_failed (retryable, Continue re-runs assemble only).
+- Repeated commits reuse the record; divergent content is refused; a generation that
+  lost the fence after writing withdraws its record. Completed status is served only
+  from the record (rebuilt from the completed job when missing).
+- Failure kinds: interrupted / report_persist_failed (auto-recoverable),
+  quality_exhausted (1+1 spent, user Continue only), fatal.
+
+Server (scheduling recovery):
+- decision-report-dispatch: worker liveness from continue lease, hand-off ACK and a
+  dispatch marker (45s grace, NX claim). A reused pending/running job without a worker
+  is re-dispatched from its checkpoints: same job, same generation, no charge, never
+  a second worker while a lease is live. Failed dispatches clear their marker.
+- decision-report-api: route body (start / status / continue) with injectable
+  background host and charge; one charge per session (durable marker on top of the
+  pass refId idempotency).
+- Orphan session lock (job lost before the lock TTL, no live job, older than the
+  create window) is reclaimed atomically.
+
+Client:
+- Status classes: pending / running / completed / retryable_failed /
+  needs_user_continue / permanent_failed / missing. Bounded automatic Continue for
+  interruptions, one Regenerate when the job can no longer run, no automatic retry for
+  quality or permanent failures. One driver per session (Web Locks, in-realm fallback).
+- Completion verified against job, generation, Freeze, context hash, profile hash,
+  completed Personal Analysis and all eight pages; then one local write (analysis,
+  rows, delivery body, binding, pending cleared). A failed local write keeps the job id
+  and reports LOCAL_SAVE_FAILED; a revision race is re-applied onto the latest Session.
+- POJUChatUI: device storage is written before UI state.
+
+Tests: scripts/test-m5-di2-main-path.ts (+ fixtures/di2-report-fixture.ts) — model,
+background host, inngest.send and charge replaced; process-memory KV and fake-indexeddb
+faults. Not an Upstash / real relay / real HTTP / real model validation.

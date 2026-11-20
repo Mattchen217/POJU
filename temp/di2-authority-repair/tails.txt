@@ -1,0 +1,94 @@
+﻿=== run-di2-browser.log ===
+  PASS  F. Reload restores complete DI2 state from server snapshot
+  PASS  static: POJUChatUI production path uses authoritative chat transport
+  PASS  E. Readiness confirm path remains server-authoritative (wire present)
+
+8 passed, 0 failed
+
+=== run-di2-browser-post-tsc.log ===
+  PASS  F. Reload restores complete DI2 state from server snapshot
+  PASS  static: POJUChatUI production path uses authoritative chat transport
+  PASS  E. Readiness confirm path remains server-authoritative (wire present)
+
+8 passed, 0 failed
+
+=== run-di2-landing.log ===
+PASS B progress is from DDR/DIR/Gate, not question count, and 100% is capped until complete
+PASS C missing profile stays unavailable and does not fabricate insights
+PASS C available BaZi+ZiWei profile can surface a decision-relevant unverified insight once
+PASS D existing confirm eligibility is unchanged and does not invent Freeze success
+DI2 feature landing tests passed: 22
+
+=== run-m1-prod.log ===
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"2b9b4978-c292-41e9-8897-95c7623cd968","has_profile":false}
+  PASS  M2.4-R2-SA-E4: replay of a mixed grounded/rejected turn does not duplicate
+  PASS  M2.4-R2 static: production path uses model interpretation before DC write
+
+M1 done. PASS=188 FAIL=0
+
+=== run-m2-1.log ===
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5c9ccb61-8ae6-46f0-969b-22cd3426cb83","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"5c9ccb61-8ae6-46f0-969b-22cd3426cb83","has_profile":false}
+  PASS  M21-04 freeze is fail-closed without readiness
+
+M2.1 result: 19 passed, 0 failed
+
+=== run-m2-2.log ===
+  PASS  M2.2-R5-C4 Regenerate mid-flight: stale fence rejects checkpoint/complete
+  PASS  M2.2-R5-C5 Dual contexts shared store: one authorized generation
+  PASS  M2.2-R5-C6 Route-shaped regenerate control flow fail-closed on supersede
+
+M2.2 results: 43 passed, 0 failed
+
+=== run-m2-3.log ===
+    path=handleUserMessage→runM1ProductionPreLlmTurn→runCollectingDcTurn→runAdaptiveQuestionTurn→Understanding×2→planner_blocked→Agent early return
+    understandingBuildAttempts=2; m1_outcome=planner_blocked; m1_ask_error=understanding_exception:controlled_understanding_exception_fu4_1; llmDelta=0; phase=collecting_context; exception_type=understanding_exception
+  PASS  M2.3-R2-FU4 Case E: real Agent chain Understanding failure -> planner_blocked; no ordinary LLM
+
+M2.3 results: 18 passed, 0 failed
+
+=== run-m2-4.log ===
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"df328417-5eea-42d5-b804-3580bf883937","has_profile":false}
+[poju-diag] callLLMViaAPI:before-fetch {"present":false,"has_structured":false,"display_text_len":0,"session_id":"df328417-5eea-42d5-b804-3580bf883937","has_profile":false}
+  PASS  R2C-13 loop to readiness: one question per turn, no DIR re-asked, budget ≤ 15, then 确认 → Freeze → bound job
+
+PASS=20 FAIL=0
+
+=== run-m5.log ===
+  generation: 1
+}
+  PASS  D6 final write loses a revision race (another writer) → re-applied onto the latest Session
+
+29 passed, 0 failed
+
+=== run-m5-r1.log ===
+  generation: 1
+}
+  PASS  FU4-08 a paid report is served after its 2 h execution grant and job expire, for the retention window; its rights outlive the record
+
+49 passed, 0 failed
+
+=== run-m6.log ===
+  PASS  report client starts one authorized job and completes eight bound pages
+  PASS  delivered Session does not auto-start again or regenerate analysis/pages
+  PASS  status after refresh returns the completed report bound to the same Job
+
+M6 result: 7 passed, 0 failed
+
+=== run-m9.log ===
+    at async executeAuthoritativeChatTurn (D:\POJU\pojulife\lib\poju\session-authority\chat.ts:121:3)
+    at async Object.start (D:\POJU\pojulife\lib\poju\poju-chat-stream.ts:55:22)
+PASS Non-stream and stream paths share the same authority rules
+PASS Incoming user turn extraction only binds the new user message
+M9 server-authoritative session checks complete
+
+=== run-tsc.log ===
+lib/poju/session-authority/chat-client.ts(104,5): error TS2367: This comparison appears to be unintentional because the types '"session_authority" | undefined' and '"openrouter_provider_queue"' have no overlap.
+
+=== run-build.log ===
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+

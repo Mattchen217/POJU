@@ -1,0 +1,45 @@
+M5-R1-FU2: refusal abort is an atomic claim; abort resumable and idempotent
+
+FU1 left a check-then-act window: a refusal was confirmed by a read, then the job
+was aborted; a request re-claiming the refused record and authorizing in between
+ended with the session authorized and its job terminated.
+
+decision-report-charge.ts
+- New states abort_claimed / abort_completed; record fields abort_job_id,
+  abort_attempt_id, abort_claimed_at, abort_completed_at.
+- claimDecisionReportRefusalAbort(settlement, job_id) replaces
+  confirmCurrentChargeRefusal: verifies refused + same attempt_id / session /
+  charge_ref, then CAS refused -> abort_claimed on the exact record. A start
+  re-claiming the same refused record CASes against the same value: exactly one
+  wins. Lost CAS -> re-read: authorized = superseded, other attempt = stale,
+  abort_claimed = in_progress (that abort_job_id only), unreadable = uncertain.
+- completeRefusalAbortRecord: CAS abort_claimed -> abort_completed on the exact
+  claimed record (bound to abort_attempt_id + abort_job_id).
+- settleDecisionReportCharge: abort_claimed -> abort_in_progress (no claim, no
+  charge, no new ref, for start / Regenerate / continue); abort_completed is
+  re-claimable by a start (same ref), refused for continue. Claims reset abort_*.
+
+decision-report-service.ts
+- Termination steps (revoke grant, fail job charge_refused, clear dispatch marker,
+  release lock) are idempotent and fail-stop; finishDecisionReportRefusalAbort
+  runs them for abort_job_id only, then the completion CAS.
+- resumeRefusalAbortRecord / resumeDecisionReportRefusalAbort: a fresh claim stays
+  its claimant's (held); older than DI2_ABORT_CLAIM_MS it is resumed by any request.
+- Test-only step hook (__setRefusalAbortStepHookForTests) to pause / stop between
+  steps.
+
+decision-report-api.ts
+- start: before startDecisionReportJob, an unfinished abort is held (409
+  CHARGE_ABORT_IN_PROGRESS) or resumed (402 CHARGE_REFUSED); unreadable record
+  -> 503 before any job is created. Refused settlement -> atomic claim -> finish.
+- continue: abort_in_progress -> held / resumed, never re-claimed.
+- status: resumes an abandoned abort before building the payload.
+
+decision-report-client.ts: CHARGE_ABORT_IN_PROGRESS keeps polling.
+
+scripts/test-m5-r1-authorization.ts: FU2-01..06 (FU2-03 x5 crash points);
+R1-01 / FU1-03 now assert abort_completed bound to the job (was refused).
+package.json: test:m5-r1-fu2.
+
+Process-memory KV and a ledger stub only: not Upstash or Supabase validation.
+No real OpenRouter, no E2E, no browser.

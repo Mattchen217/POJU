@@ -1,0 +1,8 @@
+typegen=0
+tsc=2
+m1r=0
+m23=1
+m21=0
+m22=0
+phase2=0
+build=1

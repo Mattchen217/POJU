@@ -1,0 +1,3 @@
+Record M9 server-authoritative session verification evidence
+
+Raw command logs, exit codes, and the verification README for the M9 implementation commit ca3a68a3fb3c06789997678208d40b24ef7177e6. This record does not declare M9 or Decision Intake 2.0 accepted.

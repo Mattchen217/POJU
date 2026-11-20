@@ -1,0 +1,11 @@
+const fs = require("fs");
+const s = JSON.parse(fs.readFileSync("temp/m2-4-r2-openrouter-smoke-1794407635967.json", "utf8"));
+const t = s.cases[0].turns[0];
+console.log("smoke turn keys:", Object.keys(t).join(","));
+console.log(JSON.stringify(t).slice(0, 1500));
+const e = JSON.parse(fs.readFileSync("temp/m2-4-r2-real-e2e-1794408651641.json", "utf8"));
+const u = e.transcript[2];
+console.log("e2e turn keys:", Object.keys(u).join(","));
+console.log("openrouter[0] keys:", u.openrouter[0] ? Object.keys(u.openrouter[0]).join(",") : "none");
+console.log("after keys:", u.after ? Object.keys(u.after).join(",") : "none");
+console.log(JSON.stringify(u.after).slice(0, 800));

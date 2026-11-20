@@ -31,6 +31,21 @@ function WelcomeBlock({ text, className }: { text: string; className: string }) 
   );
 }
 
+/** Fixed centered Eastern OS welcome — never a chat bubble / model output. */
+export function FixedEasternOsWelcome({ locale }: { locale: string }) {
+  return (
+    <section className="pmw" aria-label={tMatrix(locale, "card.welcome.title")}>
+      <div className="pmw__mark" aria-hidden>
+        <AtmosThinkingAvatar className="pmw__mark-avatar" />
+      </div>
+      <h2 className="pmw__title">{tMatrix(locale, "card.welcome.title")}</h2>
+      <WelcomeBlock className="pmw__body" text={tMatrix(locale, "card.welcome.body")} />
+      <WelcomeBlock className="pmw__guide" text={tMatrix(locale, "card.welcome.guide")} />
+      <WelcomeBlock className="pmw__note" text={tMatrix(locale, "card.welcome.note")} />
+    </section>
+  );
+}
+
 /** Fixed centered welcome — not a chat-style matrix synopsis. */
 export function MatrixNarrativeReply({ payload, locale }: Props) {
   const display = resolveMatrixDisplay(payload, locale);
@@ -47,17 +62,7 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
     );
   }
 
-  return (
-    <section className="pmw" aria-label={tMatrix(locale, "card.welcome.title")}>
-      <div className="pmw__mark" aria-hidden>
-        <AtmosThinkingAvatar className="pmw__mark-avatar" />
-      </div>
-      <h2 className="pmw__title">{tMatrix(locale, "card.welcome.title")}</h2>
-      <WelcomeBlock className="pmw__body" text={tMatrix(locale, "card.welcome.body")} />
-      <WelcomeBlock className="pmw__guide" text={tMatrix(locale, "card.welcome.guide")} />
-      <WelcomeBlock className="pmw__note" text={tMatrix(locale, "card.welcome.note")} />
-    </section>
-  );
+  return <FixedEasternOsWelcome locale={locale} />;
 }
 
 export function matrixNarrativeActionsText(

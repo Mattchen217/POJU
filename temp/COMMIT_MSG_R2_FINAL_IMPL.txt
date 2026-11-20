@@ -1,0 +1,44 @@
+feat(intake): M2.4-R2 Phase 4 production closure — real model loop to Freeze
+
+Ordinary answers now run the full production chain on one path:
+handleUserMessage -> runM1ProductionPreLlmTurn -> runAdaptiveQuestionTurn ->
+interpretAnswerWithModel (single OpenRouter call) -> parse/validate ->
+deterministic authorization -> AnswerEvent -> DC write (C1 persist) ->
+Understanding rebuild -> next authorized question.
+
+Transport
+- POST /api/poju/answer-interpretation: server-only OpenRouter call that
+  returns raw model text; parsing and authorization stay deterministic on the
+  caller. Browser uses the route, server callers call directly. 400 on
+  invalid input, 502/504 fail closed; no key or env leaves the server.
+
+Source authority
+- Immutable raw answer record per turn; DC statement = raw answer.
+- Interpretation audit (classification, writes, per-item locators,
+  rejections, unresolved) persisted on the answer source record, write-once.
+
+Answer classes
+- Correction may bind to a role the user answered earlier under that turn's
+  own authorized question (correction only; other classes stay
+  unauthorized). Prompt separates correction from goal_change.
+- Pending certainty option "3 目前无法确定" is an answer (unknown record or
+  auditable close), free-form hedges stay bounded retries.
+- Estimated constraint: a repeated "still an estimate" resolves as a
+  user_estimate fact (never a Constraint) instead of re-asking forever.
+
+Loop, budget, dedupe
+- Clarifications are charged; a clarification that would be newly sent past
+  the hard budget, or (aspect/insight) past per-DIR depth, closes its item
+  auditably (budget_exhausted / depth_exhausted) and the planner decides.
+- Answer-resolution clarifications do not deepen a DIR.
+- Goal-change confirmations are not charged (confirm intent, not facts).
+- Unresolved aspects are deduped by text across controls; control follow-ups
+  never spawn new aspects; handled items are kept for audit.
+- Scarce hard budget is spent only on Freeze-blocking DIRs.
+- An estimate on a Freeze-blocking DIR gets exactly one deeper follow-up
+  (estimates can never become known); a second estimate closes it.
+
+Tests
+- New hook-based suite test:m2-4-r2-production-closure (orchestration only,
+  not real-model evidence).
+- Real-model scripts: smoke:m2-4-r2-openrouter, e2e:m2-4-r2-real.

@@ -1,0 +1,434 @@
+FILE lib/poju/decision-intake/question-generation.ts
+
+==== 1-431 ====
+    1|/**
+    2| * Generate / validate the actual NL question from a selected planning candidate.
+    3| * Plan controls the investigation target; NL may phrase but cannot change DIR/DDR.
+    4| * M2.4-R1: generate from unmet fact-role gaps (not fixed DIR.need template).
+    5| */
+    6|
+    7|/** Phase 4: gap-driven NL from unmet roles + DC evidence. */
+    8|export const QUESTION_GENERATION_VERSION = "gap_driven_m2_4_r1" as const;
+    9|
+   10|import type { DecisionContext, DIR } from "@/lib/poju/decision-context/types";
+   11|import type { RankedPlanningCandidate } from "@/lib/poju/decision-context/question-plan-cycle";
+   12|import type { DecisionBlueprint, AdaptiveQuestionPlan } from "./types";
+   13|import { directionIdForDir } from "./blueprint";
+   14|import {
+   15|  bumpBudgetAfterAsk,
+   16|  validateScopeDepthBudget,
+   17|  type ScopeBudgetVerdict,
+   18|} from "./scope-budget";
+   19|import type { SessionBudgetSnapshot } from "./types";
+   20|
+   21|function roleCodesToRoles(codes: string[]): string[] {
+   22|  return codes
+   23|    .map((c) => {
+   24|      const m = /\/role\/([^/]+)$/.exec(c);
+   25|      return m?.[1] ?? c;
+   26|    })
+   27|    .filter(Boolean);
+   28|}
+   29|
+   30|function factsForDir(dc: DecisionContext, dirId: string) {
+   31|  return dc.reality_facts.filter((f) =>
+   32|    (f.related_dir_ids ?? []).includes(dirId),
+   33|  );
+   34|}
+   35|
+   36|function roleAdequatelyAnswered(
+   37|  dc: DecisionContext,
+   38|  dirId: string,
+   39|  role: string,
+   40|): boolean {
+   41|  const facts = factsForDir(dc, dirId).filter((f) => {
+   42|    const roles = f.fact_roles ?? [];
+   43|    return roles.includes(role) || roles.length === 0;
+   44|  });
+   45|  // Adequately answered = has non-unknown/declined evidence for this role.
+   46|  return facts.some(
+   47|    (f) =>
+   48|      f.status !== "unknown" &&
+   49|      f.status !== "declined" &&
+   50|      (f.fact_roles ?? []).includes(role),
+   51|  );
+   52|}
+   53|
+   54|function focusForRole(role: string, dir: DIR | undefined): string {
+   55|  switch (role) {
+   56|    case "option":
+   57|      return "有哪些真实可选方案（不要只重复决策目标）";
+   58|    case "status_quo":
+   59|      return "如果维持现状，实际成本和影响是什么";
+   60|    case "hard_constraint":
+   61|      return "资金、时间、责任方面有哪些具体硬限制";
+   62|    case "risk_tolerance":
+   63|    case "risk":
+   64|      return "可以接受的最差结果是什么";
+   65|    case "timing":
+   66|      return "决策期限和不可延迟的时间节点是什么";
+   67|    case "responsibility":
+   68|      return "这项决策的责任边界和承担方是谁";
+   69|    case "decision_question":
+   70|      return "请把要做的决策问题说得更具体一点";
+   71|    case "stakeholder":
+   72|      return "哪些人会受到这个决策的影响，他们的态度如何";
+   73|    default:
+   74|      return dir?.need?.trim() || `请补充与「${role}」相关的关键信息`;
+   75|  }
+   76|}
+   77|
+   78|/**
+   79| * Resolve unmet fact roles from the Plan against current DC evidence.
+   80| * V1 covers common roles; other roles come from Catalog required_fact_roles.
+   81| */
+   82|function resolveMissingRoleQuestions(input: {
+   83|  dc: DecisionContext;
+   84|  plan: Pick<AdaptiveQuestionPlan, "dir_ids" | "fact_role_codes" | "missing_info">;
+   85|}): {
+   86|  role: string;
+   87|  question_focus: string;
+   88|  known_evidence: string[];
+   89|}[] {
+   90|  const dirId = input.plan.dir_ids[0];
+   91|  const dir = dirId
+   92|    ? input.dc.dirs.find((d) => d.dir_id === dirId)
+   93|    : undefined;
+   94|  const rolesFromPlan = roleCodesToRoles(input.plan.fact_role_codes);
+   95|  const roles =
+   96|    rolesFromPlan.length > 0
+   97|      ? rolesFromPlan
+   98|      : dir?.required_fact_roles?.length
+   99|        ? [...dir.required_fact_roles]
+  100|        : ["situation"];
+  101|
+  102|  const out: {
+  103|    role: string;
+  104|    question_focus: string;
+  105|    known_evidence: string[];
+  106|  }[] = [];
+  107|
+  108|  for (const role of roles) {
+  109|    if (dirId && roleAdequatelyAnswered(input.dc, dirId, role)) continue;
+  110|    const known = dirId
+  111|      ? factsForDir(input.dc, dirId)
+  112|          .filter((f) => (f.fact_roles ?? []).includes(role))
+  113|          .map((f) => f.statement)
+  114|      : [];
+  115|    out.push({
+  116|      role,
+  117|      question_focus: focusForRole(role, dir),
+  118|      known_evidence: known,
+  119|    });
+  120|  }
+  121|  return out;
+  122|}
+  123|
+  124|function normalizeQ(text: string): string {
+  125|  return text.toLowerCase().replace(/[\s，,。．.!！？?；;：:、？]/g, "");
+  126|}
+  127|
+  128|/** Strip shared decision-question prefix so dedupe compares the ask focus. */
+  129|function focusKey(text: string): string {
+  130|  const n = normalizeQ(text);
+  131|  return n
+  132|    .replace(/^关于[^—\-]+[—\-]{1,2}/, "")
+  133|    .replace(/^about[^?？]{0,40}/, "");
+  134|}
+  135|
+  136|function isSubstantialDuplicate(
+  137|  candidate: string,
+  138|  prior: string | null | undefined,
+  139|): boolean {
+  140|  if (!prior) return false;
+  141|  const a = focusKey(candidate);
+  142|  const b = focusKey(prior);
+  143|  if (!a || !b) return false;
+  144|  if (a === b) return true;
+  145|  const stemLen = 20;
+  146|  if (a.length >= stemLen && b.includes(a.slice(0, stemLen))) return true;
+  147|  if (b.length >= stemLen && a.includes(b.slice(0, stemLen))) return true;
+  148|  return false;
+  149|}
+  150|
+  151|function composeQuestion(input: {
+  152|  dc: DecisionContext;
+  153|  blueprint: DecisionBlueprint;
+  154|  dir: DIR | undefined;
+  155|  roleFocus: { role: string; question_focus: string; known_evidence: string[] };
+  156|  gap_type: string;
+  157|  decision_value: string;
+  158|  ask_now_reason: string;
+  159|  depth: number;
+  160|  openConflictHint?: string | null;
+  161|}): string {
+  162|  const dq =
+  163|    input.dc.definition.decision_question ?? input.blueprint.decision_question;
+  164|  const prefix = dq ? `关于「${dq}」——` : "";
+  165|  const why = input.dir?.why?.trim();
+  166|  const knownNote =
+  167|    input.roleFocus.known_evidence.length > 0
+  168|      ? `（已知：${input.roleFocus.known_evidence[0]!.slice(0, 40)}；请补充尚未说清的部分）`
+  169|      : "";
+  170|  const conflictNote = input.openConflictHint
+  171|    ? `当前记录存在冲突：${input.openConflictHint.slice(0, 60)}。请帮助澄清哪一项属实。`
+  172|    : "";
+  173|  const depthNote =
+  174|    input.depth > 1 ? "请比上一问更具体。" : "";
+  175|
+  176|  if (conflictNote) {
+  177|    return `${prefix}${conflictNote}${knownNote}`.slice(0, 500);
+  178|  }
+  179|
+  180|  const main = `${prefix}${input.roleFocus.question_focus}？`;
+  181|  const supplement = [why ? `这样我才能判断：${why}` : null, depthNote || null]
+  182|    .filter(Boolean)
+  183|    .join(" ");
+  184|  if (supplement) {
+  185|    return `${main}${knownNote}（${supplement}）`.slice(0, 500);
+  186|  }
+  187|  return `${main}${knownNote}`.slice(0, 500);
+  188|}
+  189|
+  190|export function generateQuestionText(input: {
+  191|  dc: DecisionContext;
+  192|  blueprint: DecisionBlueprint;
+  193|  selected: RankedPlanningCandidate;
+  194|  last_sent_question_text?: string | null;
+  195|  /** Historical question texts for the same DIR (optional). */
+  196|  prior_dir_questions?: string[];
+  197|}): string | null {
+  198|  const dirId = input.selected.candidate.dir_ids[0];
+  199|  const dir = dirId
+  200|    ? input.dc.dirs.find((d) => d.dir_id === dirId)
+  201|    : undefined;
+  202|  const planLike = {
+  203|    dir_ids: [...input.selected.candidate.dir_ids],
+  204|    fact_role_codes: [...input.selected.candidate.fact_role_codes],
+  205|    missing_info: input.selected.score.gap_type,
+  206|  };
+  207|  const missing = resolveMissingRoleQuestions({
+  208|    dc: input.dc,
+  209|    plan: planLike,
+  210|  });
+  211|
+  212|  const openConflicts = input.dc.conflicts.filter((c) => c.state === "open");
+  213|  const conflictOnDir = dirId
+  214|    ? openConflicts.find((c) => {
+  215|        const factIds = new Set(c.fact_ids);
+  216|        return input.dc.reality_facts.some(
+  217|          (f) =>
+  218|            factIds.has(f.fact_id) &&
+  219|            (f.related_dir_ids ?? []).includes(dirId),
+  220|        );
+  221|      })
+  222|    : undefined;
+  223|
+  224|  // Prefer conflict-resolution ask when open conflict on this DIR.
+  225|  if (conflictOnDir && dir) {
+  226|    const q = composeQuestion({
+  227|      dc: input.dc,
+  228|      blueprint: input.blueprint,
+  229|      dir,
+  230|      roleFocus: {
+  231|        role: "conflict_resolve",
+  232|        question_focus: "请澄清相互冲突的说法，哪一项是正确的",
+  233|        known_evidence: conflictOnDir.statements_snapshot.slice(0, 2),
+  234|      },
+  235|      gap_type: "conflict",
+  236|      decision_value: "decision_critical",
+  237|      ask_now_reason: "open_conflict",
+  238|      depth: input.selected.candidate.depth,
+  239|      openConflictHint: conflictOnDir.statements_snapshot.join(" vs "),
+  240|    });
+  241|    if (
+  242|      !isSubstantialDuplicate(q, input.last_sent_question_text) &&
+  243|      !(input.prior_dir_questions ?? []).some((p) => isSubstantialDuplicate(q, p))
+  244|    ) {
+  245|      return q;
+  246|    }
+  247|  }
+  248|
+  249|  // Roles may all have some evidence while DIR remains unknown/partial/conflict —
+  250|  // still produce a depth follow-up rather than falsely reporting no remaining need.
+  251|  const followUps =
+  252|    missing.length > 0
+  253|      ? missing
+  254|      : dir && dir.current_state !== "known" && dir.current_state !== "n_a"
+  255|        ? [
+  256|            {
+  257|              role: input.selected.score.gap_type || "follow_up",
+  258|              question_focus:
+  259|                input.selected.score.gap_type === "conflict"
+  260|                  ? "请澄清相互冲突的说法，哪一项是正确的"
+  261|                  : input.selected.score.gap_type === "partial"
+  262|                    ? `关于「${dir.need}」，还有哪些关键细节没说清`
+  263|                    : focusForRole(
+  264|                        (dir.required_fact_roles ?? [])[0] ?? "situation",
+  265|                        dir,
+  266|                      ),
+  267|              known_evidence: factsForDir(input.dc, dir.dir_id)
+  268|                .map((f) => f.statement)
+  269|                .slice(0, 2),
+  270|            },
+  271|          ]
+  272|        : [];
+  273|
+  274|  if (followUps.length === 0) {
+  275|    return null;
+  276|  }
+  277|
+  278|  for (const roleFocus of followUps) {
+  279|    const q = composeQuestion({
+  280|      dc: input.dc,
+  281|      blueprint: input.blueprint,
+  282|      dir,
+  283|      roleFocus,
+  284|      gap_type: input.selected.score.gap_type,
+  285|      decision_value: input.selected.candidate.impact.decision_critical
+  286|        ? "decision_critical"
+  287|        : "supporting",
+  288|      ask_now_reason: `role=${roleFocus.role}`,
+  289|      depth: input.selected.candidate.depth,
+  290|    });
+  291|    // Dedupe against last sent / same-DIR history / existing fact statements
+  292|    if (isSubstantialDuplicate(q, input.last_sent_question_text)) continue;
+  293|    if ((input.prior_dir_questions ?? []).some((p) => isSubstantialDuplicate(q, p))) {
+  294|      continue;
+  295|    }
+  296|    // Do not treat existing fact statements as question duplicates — facts are answers, not asks.
+  297|    return q;
+  298|  }
+  299|
+  300|  // No remaining non-duplicate info need
+  301|  return null;
+  302|}
+  303|
+  304|export function buildAdaptiveQuestionPlan(input: {
+  305|  dc: DecisionContext;
+  306|  blueprint: DecisionBlueprint;
+  307|  selected: RankedPlanningCandidate;
+  308|  budget: SessionBudgetSnapshot;
+  309|  now: string;
+  310|  scoring_path: string;
+  311|  last_sent_question_text?: string | null;
+  312|  prior_dir_questions?: string[];
+  313|}): { plan: AdaptiveQuestionPlan; validation: ScopeBudgetVerdict } {
+  314|  const c = input.selected.candidate;
+  315|  const dirId = c.dir_ids[0] ?? "";
+  316|  const direction_id = dirId
+  317|    ? directionIdForDir(input.blueprint, dirId)
+  318|    : c.kind === "source_only"
+  319|      ? "DIRN-TOPIC"
+  320|      : "DIRN-DEFINITION";
+  321|  const direction = input.blueprint.directions.find(
+  322|    (d) => d.direction_id === direction_id,
+  323|  );
+  324|  const depth = (input.budget.depth_by_dir[dirId] ?? 0) + 1;
+  325|  const question_text = generateQuestionText({
+  326|    dc: input.dc,
+  327|    blueprint: input.blueprint,
+  328|    selected: input.selected,
+  329|    last_sent_question_text: input.last_sent_question_text,
+  330|    prior_dir_questions: input.prior_dir_questions,
+  331|  });
+  332|
+  333|  if (!question_text) {
+  334|    const shell: AdaptiveQuestionPlan = {
+  335|      plan_id: `qp_${c.candidate_id}_${input.now}`.slice(0, 120),
+  336|      candidate_id: c.candidate_id,
+  337|      direction_id,
+  338|      ddr_ids: [...c.ddr_ids],
+  339|      dir_ids: [...c.dir_ids],
+  340|      fact_role_codes: [...c.fact_role_codes],
+  341|      missing_info: input.selected.score.gap_type,
+  342|      decision_value: c.impact.decision_critical
+  343|        ? "decision_critical"
+  344|        : c.impact.may_affect_p5_ranking
+  345|          ? "may_affect_p5"
+  346|          : "supporting",
+  347|      ask_now_reason: `gate=${c.impact.gate_class}; gain=${input.selected.score.information_gain_est}; unresolved=${input.selected.score.unresolved_count}`,
+  348|      expected_info: dirId
+  349|        ? input.dc.dirs.find((d) => d.dir_id === dirId)?.need ?? dirId
+  350|        : c.fact_role_codes.join(","),
+  351|      depth,
+  352|      budget_cost: c.budget_cost,
+  353|      remaining_hard_budget: input.budget.remaining_hard_budget,
+  354|      gate_class: c.impact.gate_class,
+  355|      scope_boundary:
+  356|        direction?.scope_boundary ??
+  357|        "Only Blueprint DIR/DDR; no model scope expansion",
+  358|      rationale: `Selected ${c.candidate_id} via ${input.scoring_path}`,
+  359|      question_text: "",
+  360|      built_at: input.now,
+  361|      scoring_path: input.scoring_path,
+  362|    };
+  363|    return {
+  364|      plan: shell,
+  365|      validation: {
+  366|        ok: false,
+  367|        reason_code: "no_remaining_info_need",
+  368|        detail: "generated question rejected as duplicate or no unmet role",
+  369|      },
+  370|    };
+  371|  }
+  372|
+  373|  const plan: AdaptiveQuestionPlan = {
+  374|    plan_id: `qp_${c.candidate_id}_${input.now}`.slice(0, 120),
+  375|    candidate_id: c.candidate_id,
+  376|    direction_id,
+  377|    ddr_ids: [...c.ddr_ids],
+  378|    dir_ids: [...c.dir_ids],
+  379|    fact_role_codes: [...c.fact_role_codes],
+  380|    missing_info: input.selected.score.gap_type,
+  381|    decision_value: c.impact.decision_critical
+  382|      ? "decision_critical"
+  383|      : c.impact.may_affect_p5_ranking
+  384|        ? "may_affect_p5"
+  385|        : "supporting",
+  386|    ask_now_reason: `gate=${c.impact.gate_class}; gain=${input.selected.score.information_gain_est}; unresolved=${input.selected.score.unresolved_count}`,
+  387|    expected_info: dirId
+  388|      ? input.dc.dirs.find((d) => d.dir_id === dirId)?.need ?? dirId
+  389|      : c.fact_role_codes.join(","),
+  390|    depth,
+  391|    budget_cost: c.budget_cost,
+  392|    remaining_hard_budget: input.budget.remaining_hard_budget,
+  393|    gate_class: c.impact.gate_class,
+  394|    scope_boundary:
+  395|      direction?.scope_boundary ??
+  396|      "Only Blueprint DIR/DDR; no model scope expansion",
+  397|    rationale: `Selected ${c.candidate_id} via ${input.scoring_path}`,
+  398|    question_text,
+  399|    built_at: input.now,
+  400|    scoring_path: input.scoring_path,
+  401|  };
+  402|  const validation = validateScopeDepthBudget({
+  403|    blueprint: input.blueprint,
+  404|    plan,
+  405|    budget: input.budget,
+  406|  });
+  407|  return { plan, validation };
+  408|}
+  409|
+  410|/** Reject model phrasing that changes investigation target (DIR/need). */
+  411|export function assertQuestionMatchesPlan(
+  412|  assistantText: string,
+  413|  plan: AdaptiveQuestionPlan,
+  414|): { ok: true; text: string } | { ok: false; reason: string; text: string } {
+  415|  const text = assistantText.trim();
+  416|  if (!text) {
+  417|    return { ok: false, reason: "empty_assistant", text: plan.question_text };
+  418|  }
+  419|  // Authoritative: always use plan.question_text as the sent question.
+  420|  const dirHit = plan.dir_ids.some((id) => text.includes(id));
+  421|  const needHint = plan.expected_info.slice(0, 12);
+  422|  const needHit = needHint.length >= 4 && text.includes(needHint);
+  423|  const planHit = text.includes(plan.question_text.slice(0, 16));
+  424|  if (dirHit || needHit || planHit) {
+  425|    return { ok: true, text: plan.question_text };
+  426|  }
+  427|  return { ok: false, reason: "target_mismatch", text: plan.question_text };
+  428|}
+  429|
+  430|export { bumpBudgetAfterAsk };
+  431|

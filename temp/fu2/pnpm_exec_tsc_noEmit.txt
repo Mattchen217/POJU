@@ -1,0 +1,4 @@
+lib/poju/decision-intake/adaptive-turn.ts(287,9): error TS2322: Type '(session: POJUSessionState, understanding: UnderstandingState, plan: AdaptiveQuestionPlan | null, askSnap: IntakeAskPlanSnapshot | null) => POJUSessionState' is not assignable to type '(session: POJUSessionState, understanding: UnderstandingState, plan: AdaptiveQuestionPlan | null, askSnap: IntakeAskPlanSnapshot | null | undefined) => POJUSessionState'.
+  Types of parameters 'askSnap' and 'askSnap' are incompatible.
+    Type 'IntakeAskPlanSnapshot | null | undefined' is not assignable to type 'IntakeAskPlanSnapshot | null'.
+      Type 'undefined' is not assignable to type 'IntakeAskPlanSnapshot | null'.

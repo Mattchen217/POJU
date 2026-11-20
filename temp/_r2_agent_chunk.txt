@@ -1,0 +1,534 @@
+===== 1400-1820 =====
+1400:              ...sessionForLlm.agent_v2,
+1401:              current_phase: "collecting_context",
+1402:            },
+1403:          };
+1404:          workingSession = {
+1405:            ...workingSession,
+1406:            agent_v2: sessionForLlm.agent_v2,
+1407:          };
+1408:        }
+1409:      }
+1410:    }
+1411:  }
+1412:
+1413:  const llmResponse = input.server_invoke
+1414:    ? await callPOJULLMDirect({
+1415:        session: sessionForLlm,
+1416:        profile,
+1417:        base_analysis,
+1418:        archive_data,
+1419:        locale: sessionOutputLocale,
+1420:        signal,
+1421:        tool_injection_context: injectionPrep.tool_injection_context,
+1422:        attachment: attachment ?? null,
+1423:        lab_prompt_capture: input.server_invoke.lab_prompt_capture,
+1424:      })
+1425:    : await callLLMViaAPI({
+1426:        session: sessionForLlm,
+1427:        profile,
+1428:        base_analysis,
+1429:        archive_data,
+1430:        // Process language SSOT — never the website UI locale once lock/sample resolves.
+1431:        locale: sessionOutputLocale,
+1432:        signal,
+1433:        tool_injection_context: injectionPrep.tool_injection_context,
+1434:        attachment: attachment ?? null,
+1435:      });
+1436:
+1437:  workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
+1438:
+1439:  const normalizedNewActions = normalizeNewActions(llmResponse.new_actions);
+1440:  const assistantMessageId = safeRandomUUID();
+1441:  const trackingPhase =
+1442:    normalizeAgentPhase(ensureAgentV2(workingSession).current_phase) === "tracking";
+1443:
+1444:  const linking = applyToolLinkingFromLlm(
+1445:    { ...workingSession, messages: messagesWithUser },
+1446:    {
+1447:      tool_suggestion: llmResponse.tool_suggestion ?? null,
+1448:      start_new_cycle: trackingPhase ? false : llmResponse.start_new_cycle,
+1449:      new_cycle_question: trackingPhase ? null : llmResponse.new_cycle_question ?? null,
+1450:      question_category: llmResponse.question_category,
+1451:    },
+1452:    assistantMessageId,
+1453:  );
+1454:
+1455:  workingSession = linking.session;
+1456:  const baseActions =
+1457:    normalizedNewActions.length > 0
+1458:      ? [...workingSession.actions, ...normalizedNewActions]
+1459:      : workingSession.actions;
+1460:  const mergedActions = applyActionStatusUpdates(
+1461:    baseActions,
+1462:    llmResponse.action_status_updates,
+1463:  );
+1464:
+1465:  const sessionForAgent: POJUSessionState = { ...workingSession, messages: messagesWithUser };
+1466:  const phaseUserMessage =
+1467:    userMessage.trim() === "__OPENING__"
+1468:      ? "__OPENING__"
+1469:      : userMessage;
+1470:  const phaseForWire =
+1471:    normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening";
+1472:  const openingTurn = isOpeningControlPhase(phaseForWire);
+1473:  const { agent: agentCore, advance, clampedSignals } = finalizeAgentV2(
+1474:    ensureAgentV2(sessionForAgent),
+1475:    sessionForAgent,
+1476:    {
+1477:      context_updates: llmResponse.context_updates ?? {},
+1478:      tokens_used: llmResponse.tokens_used,
+1479:      current_state: llmResponse.current_state,
+1480:      agent_suggested_phase: llmResponse.agent_suggested_phase,
+1481:      question_category: llmResponse.question_category,
+1482:      contains_delivery: llmResponse.contains_delivery,
+1483:      main_delivery: llmResponse.main_delivery,
+1484:      collection_progress: llmResponse.collection_progress,
+1485:      stall_offer: llmResponse.stall_offer,
+1486:      investigation_agenda: openingTurn ? null : llmResponse.investigation_agenda,
+1487:      understanding: llmResponse.understanding ?? null,
+1488:      understanding_sufficient: llmResponse.understanding_sufficient,
+1489:      agenda_updates: openingTurn ? undefined : llmResponse.agenda_updates,
+1490:      reply_quality: llmResponse.reply_quality,
+1491:      question_status: llmResponse.question_status,
+1492:      session_action: llmResponse.session_action ?? null,
+1493:      user_confirms_delivery: llmResponse.user_confirms_delivery,
+1494:      confirmation_signal: llmResponse.confirmation_signal,
+1495:      topic_drift_signal: llmResponse.topic_drift_signal,
+1496:      breakthrough_core_updates: openingTurn ? null : (llmResponse.breakthrough_core_updates ?? null),
+1497:      breakthrough_core: openingTurn ? null : (llmResponse.breakthrough_core ?? null),
+1498:      core_dilemma: llmResponse.core_dilemma ?? null,
+1499:      desired_direction: llmResponse.desired_direction ?? null,
+1500:      problem_summary: openingTurn ? null : llmResponse.problem_summary ?? null,
+1501:      attachments_unlocked: llmResponse.attachments_unlocked === true,
+1502:    },
+1503:    userMessage,
+1504:    base_analysis,
+1505:  );
+1506:  let agent_v2: POJUAgentState = { ...agentCore, actions: mergedActions };
+1507:  const m1BlockedOrUnderstandingFail =
+1508:    Boolean(m1CollectingTurn) &&
+1509:    (m1CollectingTurn!.outcome === "planner_blocked" ||
+1510:      (!m1CollectingTurn!.authorized_question &&
+1511:        Boolean(m1CollectingTurn!.ask_error) &&
+1512:        (m1CollectingTurn!.ask_error!.includes("understanding_exception") ||
+1513:          m1CollectingTurn!.ask_error!.includes("planner_exception") ||
+1514:          (m1CollectingTurn!.understanding == null &&
+1515:            Boolean(m1CollectingTurn!.session.decision_blueprint)))));
+1516:  if (
+1517:    m1CollectingTurn &&
+1518:    m1BlockedOrUnderstandingFail &&
+1519:    agent_v2.current_phase !== "delivered"
+1520:  ) {
+1521:    // Belt-and-suspenders: planner_blocked / understanding failure is nonterminal collecting.
+1522:    agent_v2 = {
+1523:      ...agent_v2,
+1524:      current_phase: "collecting_context",
+1525:      stall_offer_pending: false,
+1526:    };
+1527:  } else if (
+1528:    m1CollectingTurn &&
+1529:    !m1BlockedOrUnderstandingFail &&
+1530:    m1CollectingTurn.understanding &&
+1531:    m1CollectingTurn.understanding.readiness.can_ask === false &&
+1532:    agent_v2.current_phase !== "delivered"
+1533:  ) {
+1534:    agent_v2 = {
+1535:      ...agent_v2,
+1536:      current_phase: "awaiting_confirmation",
+1537:      stall_offer_pending: false,
+1538:    };
+1539:    // m21_readiness_stop
+1540:  } else if (
+1541:    m1CollectingTurn &&
+1542:    (m1CollectingTurn.bootstrapped ||
+1543:      m1CollectingTurn.plan ||
+1544:      m1CollectingTurn.ask_planned) &&
+1545:    agent_v2.current_phase !== "awaiting_confirmation" &&
+1546:    agent_v2.current_phase !== "delivered"
+1547:  ) {
+1548:    agent_v2 = { ...agent_v2, current_phase: "collecting_context" };
+1549:  }
+1550:
+1551:  if (advance.trigger_delivery && !workingSession.main_delivery_done) {
+1552:    agent_v2 = { ...agent_v2, current_phase: "awaiting_confirmation" };
+1553:  }
+1554:
+1555:  // Segment-2 xhigh is async (phases/segment2 + Segment2AnalysisPreparing).
+1556:  // Gate confirm must not sync-block here — UI creates job + polls + display onComplete.
+1557:  if (advance.trigger_breakthrough_core) {
+1558:    console.info(
+1559:      "[agent] trigger_breakthrough_core in handleUserMessage — segment2 owned by phases/segment2 async job, skipping sync await",
+1560:    );
+1561:  }
+1562:  if (advance.trigger_synthesis) {
+1563:    console.info(
+1564:      "[agent] trigger_synthesis in handleUserMessage — synthesis owned by phases/segment2 async job + UI poll, skipping sync await",
+1565:    );
+1566:  }
+1567:
+1568:  let finalContent = llmResponse.response;
+1569:  let escalationMeta: {
+1570:    escalation_lock?: boolean;
+1571:    wipe_after_ms?: number;
+1572:    unqualified_level?: number;
+1573:    paused?: boolean;
+1574:    refund_pass?: boolean;
+1575:  } = {};
+1576:  let replyOptions = sanitizeReplyOptions(llmResponse.options);
+1577:  let suggestRefund = Boolean(llmResponse.suggest_refund);
+1578:  let dyadGatePending = false;
+1579:
+1580:  // Case C / S1-D-2: dyad chips held understanding confirm at opening; after skip/collect resume it.
+1581:  // Continuation now enters as an ordinary non-empty user operation; the held flag
+1582:  // still re-enters the confirm gate because the state machine alone may not.
+1583:  if (
+1584:    shouldResumeUnderstandingConfirmAfterDyad({
+1585:      held: workingSession.understanding_confirm_held_for_dyad === true,
+1586:      dyadOfferStatus: workingSession.dyad_offer_status,
+1587:      phase: normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase,
+1588:      understandingComplete: isUnderstandingComplete(agent_v2),
+1589:    })
+1590:  ) {
+1591:    agent_v2 = {
+1592:      ...agent_v2,
+1593:      current_phase: "awaiting_understanding_confirm",
+1594:      active_question_state: null,
+1595:    };
+1596:    workingSession = { ...workingSession, understanding_confirm_held_for_dyad: false };
+1597:  }
+1598:
+1599:  // Stage-1 gate revise: user typed a correction while on the confirm card.
+1600:  // After Opening absorbs it, re-show the deterministic gate (don't leave a lone「好」bubble).
+1601:  if (
+1602:    revisingUnderstandingGate &&
+1603:    (normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) === "opening" &&
+1604:    isUnderstandingComplete(agent_v2) &&
+1605:    resolveSessionHasProfile(workingSession)
+1606:  ) {
+1607:    agent_v2 = {
+1608:      ...agent_v2,
+1609:      current_phase: "awaiting_understanding_confirm",
+1610:      active_question_state: null,
+1611:    };
+1612:  }
+1613:
+1614:  const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
+1615:  const envelopeFailedStayedOpening =
+1616:    advance.trigger_breakthrough_core && phaseAfter === "opening";
+1617:  const understandingGenerationFailed = Boolean(llmResponse.understanding_generation_failed);
+1618:
+1619:  const openingReplyInput = {
+1620:    locale: sessionOutputLocale,
+1621:    agent: agent_v2,
+1622:    llmResponse: finalContent,
+1623:    understandingGenerationFailed,
+1624:    phaseAfter,
+1625:    envelopeFailedStayedOpening,
+1626:    dyadPath: {
+1627:      partner_bazi: workingSession.partner_bazi ?? null,
+1628:      pivot_chart_path: workingSession.pivot_chart_path ?? null,
+1629:      dyad_offer_status: workingSession.dyad_offer_status ?? null,
+1630:    },
+1631:  };
+1632:
+1633:  const openingOwned = resolveOpeningTurnReply(openingReplyInput);
+1634:  if (openingOwned != null) finalContent = openingOwned;
+1635:
+1636:  // Stage-1 dyad gate: after opening-owned rewrite; short-circuit free reply once per session.
+1637:  // S1-D-2 / Case C: do NOT require understanding_sufficient===false — rich binary prompts
+1638:  // often complete the three fields in one turn; NL "skip chart" must not bypass chips.
+1639:  const dyadHit = resolveDyadSpecificOther({
+1640:    modelFlag: llmResponse.dyad_specific_other,
+1641:    userText: userMessage,
+1642:    // LAB often keeps original_question as "(lab pipeline)"; still OR recent user turns.
+1643:    assistText: [
+1644:      workingSession.original_question,
+1645:      ...messagesWithUser
+1646:        .filter((m) => m.role === "user")
+1647:        .slice(-3)
+1648:        .map((m) => m.content),
+1649:    ]
+1650:      .filter((s) => typeof s === "string" && s.trim() && s.trim() !== "(lab pipeline)")
+1651:      .join("\n"),
+1652:  });
+1653:  if (
+1654:    shouldPresentDyadGate({
+1655:      openingTurn,
+1656:      understandingGenerationFailed,
+1657:      scopeSignal: llmResponse.scope_signal,
+1658:      dyadOfferStatus: workingSession.dyad_offer_status,
+1659:      dyadHit,
+1660:      jointDecision: workingSession.joint_decision === true,
+1661:    })
+1662:  ) {
+1663:    const gate = buildDyadGateTurn(sessionOutputLocale);
+1664:    finalContent = gate.response;
+1665:    replyOptions = [...gate.options];
+1666:    const heldConfirm =
+1667:      (normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) ===
+1668:      "awaiting_understanding_confirm";
+1669:    workingSession = {
+1670:      ...workingSession,
+1671:      dyad_offer_status: gate.dyad_offer_status,
+1672:      ...(heldConfirm ? { understanding_confirm_held_for_dyad: true } : {}),
+1673:    };
+1674:    // Hold understanding confirm until collect/skip locks path (S1-D-2 / S1-D-5).
+1675:    if (heldConfirm) {
+1676:      agent_v2 = { ...agent_v2, current_phase: "opening" };
+1677:    }
+1678:    dyadGatePending = true;
+1679:  }
+1680:
+1681:  // Collecting: chip/短答被模型忽略时，至少在正文前点名接住（不整段改写）。
+1682:  if (phaseForWire === "collecting_context" && phaseUserMessage.trim()) {
+1683:    const pickedForCatch = userPickedProvidedOption(sessionForAgent, phaseUserMessage);
+1684:    const beforeCatch = finalContent;
+1685:    finalContent = ensureCollectingCatchPrefix(finalContent, phaseUserMessage, {
+1686:      pickedOption: pickedForCatch,
+1687:      locale: sessionOutputLocale,
+1688:    });
+1689:    if (finalContent !== beforeCatch) {
+1690:      console.warn("[poju-collecting] prepended catch prefix — model reply lacked user-answer echo", {
+1691:        picked_option: pickedForCatch,
+1692:        question_status: clampedSignals.question_status,
+1693:      });
+1694:    }
+1695:  }
+1696:
+1697:  // 单问题小状态机终局:session_action 驱动物理动作(锁/wipe);话术由模型按 stage 直出,不再盖固定文案。
+1698:  if (clampedSignals.session_action === "terminate_refund") {
+1699:    escalationMeta = {
+1700:      escalation_lock: true,
+1701:      wipe_after_ms: TERMINATE_REFUND_WIPE_MS,
+1702:      unqualified_level: 4,
+1703:      refund_pass: true,
+1704:    };
+1705:    agent_v2 = {
+1706:      ...agent_v2,
+1707:      escalation_locked_at: agent_v2.escalation_locked_at ?? new Date().toISOString(),
+1708:      escalation_lock_reason: "unqualified_l4",
+1709:    };
+1710:    replyOptions = undefined;
+1711:    suggestRefund = true;
+1712:  } else if (clampedSignals.session_action === "user_paused") {
+1713:    escalationMeta = {
+1714:      escalation_lock: false,
+1715:      paused: true,
+1716:    };
+1717:  }
+1718:
+1719:  const advancedCleanly =
+1720:    dyadGatePending ||
+1721:    openingReplyIsComplete(openingReplyInput) ||
+1722:    Boolean(escalationMeta.unqualified_level) ||
+1723:    Boolean(escalationMeta.paused) ||
+1724:    (!envelopeFailedStayedOpening &&
+1725:      (phaseAfter === "awaiting_confirmation" ||
+1726:        phaseAfter === "delivered" ||
+1727:        phaseAfter === "tracking" ||
+1728:        (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
+1729:  if (!advancedCleanly && !isPojuFailurePlaceholderMessage(finalContent)) {
+1730:    finalContent = appendForwardMove(finalContent, agent_v2, sessionOutputLocale, "continue");
+1731:  }
+1732:
+1733:  const anchoredFromReply = extractAnchoredFactIdsFromAssistant(finalContent);
+1734:  if (anchoredFromReply.length > 0) {
+1735:    agent_v2 = {
+1736:      ...agent_v2,
+1737:      anchored_fact_ids: mergeAnchoredFactIds(agent_v2.anchored_fact_ids, anchoredFromReply),
+1738:    };
+1739:  }
+1740:
+1741:  const metaphorsFromReply = extractUsedMetaphorsFromAssistant(finalContent);
+1742:  if (metaphorsFromReply.length > 0) {
+1743:    agent_v2 = {
+1744:      ...agent_v2,
+1745:      used_metaphors: mergeUsedMetaphors(agent_v2.used_metaphors, metaphorsFromReply),
+1746:    };
+1747:  }
+1748:
+1749:  const assistantMessage: POJUMessage = {
+1750:    role: "assistant",
+1751:    content: finalContent,
+1752:    timestamp: new Date().toISOString(),
+1753:    options: replyOptions,
+1754:    meta: {
+1755:      llm_model: llmResponse.model,
+1756:      tokens_used: llmResponse.tokens_used,
+1757:      user_intent: llmResponse.user_intent,
+1758:      current_state: llmResponse.current_state,
+1759:      action_requested: llmResponse.action_requested,
+1760:      topic_drift_detected: llmResponse.topic_drift_detected,
+1761:      topic_drift_signal: llmResponse.topic_drift_signal,
+1762:      drift_reason: llmResponse.drift_reason ?? undefined,
+1763:      should_show_new_session_button: llmResponse.should_show_new_session_button,
+1764:      suggest_refund: suggestRefund,
+1765:      scope_mismatch: llmResponse.scope_signal === "out_of_scope" || undefined,
+1766:      ...(llmResponse.scope_signal === "out_of_scope" ? { kind: "scope_mismatch" as const } : {}),
+1767:      ...(escalationMeta.escalation_lock
+1768:        ? {
+1769:            escalation_lock: true as const,
+1770:            wipe_after_ms: escalationMeta.wipe_after_ms,
+1771:            unqualified_level: escalationMeta.unqualified_level,
+1772:            ...(escalationMeta.refund_pass ? { refund_pass: true as const } : {}),
+1773:          }
+1774:        : escalationMeta.paused
+1775:          ? { session_paused: true as const }
+1776:          : escalationMeta.unqualified_level
+1777:            ? { unqualified_level: escalationMeta.unqualified_level }
+1778:            : {}),
+1779:      contains_delivery: llmResponse.contains_delivery,
+1780:      tool_suggestion: linking.tool_suggestion ?? undefined,
+1781:      tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
+1782:      thinking_process: llmResponse.thinking_process,
+1783:      state_snapshot: buildAgentStateSnapshot(
+1784:        agent_v2,
+1785:        llmResponse.contains_delivery || workingSession.main_delivery_done,
+1786:      ),
+1787:      llm_debug: llmResponse.llm_debug,
+1788:      ...(understandingGenerationFailed ? { understanding_generation_failed: true as const } : {}),
+1789:      ...(!dyadGatePending &&
+1790:      (normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) ===
+1791:        "awaiting_understanding_confirm"
+1792:        ? { understanding_gate_pending: true as const }
+1793:        : {}),
+1794:      ...(dyadGatePending ? { dyad_gate_pending: true as const } : {}),
+1795:      ...(isPojuEmptyGenerationMessage(finalContent)
+1796:        ? { kind: "generation_incomplete" as const }
+1797:        : isPojuInfrastructureFailureMessage(finalContent)
+1798:          ? { kind: "infra_busy" as const }
+1799:          : {}),
+1800:    },
+1801:  };
+1802:
+1803:  const nowIso = new Date().toISOString();
+1804:  const rollingExpiry = new Date(Date.now() + THIRTY_DAYS_MS).toISOString();
+1805:  const resolvedOriginalQuestion =
+1806:    agent_v2.original_question?.trim() || workingSession.original_question;
+1807:
+1808:  let sessionOut = withSessionProfileFlags({
+1809:    ...workingSession,
+1810:    original_question: resolvedOriginalQuestion,
+1811:    messages: [...messagesWithUser, assistantMessage],
+1812:    context_collected: {
+1813:      ...sessionBase.context_collected,
+1814:      ...(llmResponse.context_updates ?? {}),
+1815:    },
+1816:    actions: mergedActions,
+1817:    agent_v2,
+1818:    main_delivery_done: llmResponse.contains_delivery || workingSession.main_delivery_done,
+1819:    main_delivery:
+1820:      (llmResponse.main_delivery as POJUSessionState["main_delivery"]) || workingSession.main_delivery,
+===== 2110-2220 =====
+2110:
+2111:async function callLLMViaAPI(input: {
+2112:  session: POJUSessionState;
+2113:  profile: UserProfile | null;
+2114:  base_analysis?: unknown | null;
+2115:  archive_data?: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null;
+2116:  locale: string;
+2117:  signal?: AbortSignal;
+2118:  tool_injection_context?: string | null;
+2119:  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
+2120:}): Promise<{
+2121:  response: string;
+2122:  model: string;
+2123:  tokens_used: number;
+2124:  user_intent: NonNullable<POJUMessage["meta"]>["user_intent"];
+2125:  current_state: NonNullable<POJUMessage["meta"]>["current_state"];
+2126:  action_requested: NonNullable<POJUMessage["meta"]>["action_requested"];
+2127:  topic_drift_detected: boolean;
+2128:  topic_drift_signal?: "none" | "edge" | "off_topic";
+2129:  drift_reason?: string | null;
+2130:  should_show_new_session_button?: boolean;
+2131:  context_updates: Record<string, unknown>;
+2132:  contains_delivery: boolean;
+2133:  main_delivery?: unknown;
+2134:  new_actions?: unknown[];
+2135:  agent_suggested_phase?: string;
+2136:  current_summary?: ContextSummary | null;
+2137:  question_category?: string | null;
+2138:  thinking_process?: string;
+2139:  tool_suggestion?: ToolSuggestionPayload | null;
+2140:  start_new_cycle?: boolean;
+2141:  new_cycle_question?: string | null;
+2142:  collection_progress?: "advancing" | "stalled" | "resistant" | null;
+2143:  stall_offer?: boolean;
+2144:  investigation_agenda?: unknown;
+2145:  suggest_refund?: boolean;
+2146:  scope_signal?: "in_scope" | "unclear" | "out_of_scope" | null;
+2147:  attachments_unlocked?: boolean;
+2148:  locked_provider?: string;
+2149:  understanding?: { sufficient: boolean; missing: string } | null;
+2150:  understanding_sufficient?: boolean;
+2151:  understanding_generation_failed?: boolean;
+2152:  agenda_updates?: { completed_in_this_turn?: string[] };
+2153:  reply_quality?: "clear" | "vague";
+2154:  question_status?: QuestionStatus;
+2155:  session_action?: SessionAction | null;
+2156:  options?: string[];
+2157:  dyad_specific_other?: boolean;
+2158:  user_confirms_delivery?: boolean;
+2159:  confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
+2160:  breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
+2161:  breakthrough_core?: import("@/lib/poju/agent-state").BreakthroughCore | null;
+2162:  core_dilemma?: import("@/lib/poju/agent-state").CoreDilemma | null;
+2163:  desired_direction?: import("@/lib/poju/agent-state").DesiredDirection | null;
+2164:  problem_summary?: string | null;
+2165:  action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
+2166:  conversion_envelope_failed?: boolean;
+2167:  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+2168:}> {
+2169:  // base_analysis + full session stringify is often multi‑MB sync work — yield so
+2170:  // the optimistic user bubble can paint before we freeze the main thread.
+2171:  await yieldToBrowserPaint();
+2172:  const body = JSON.stringify({
+2173:    session: input.session,
+2174:    profile: input.profile,
+2175:    base_analysis: input.base_analysis ?? null,
+2176:    archive_data: input.archive_data ?? null,
+2177:    locale: input.locale,
+2178:    tool_injection_context: input.tool_injection_context ?? null,
+2179:    attachment: input.attachment ?? null,
+2180:  });
+2181:
+2182:  const response = await fetch("/api/poju/chat", {
+2183:    method: "POST",
+2184:    headers: { "Content-Type": "application/json" },
+2185:    body,
+2186:    signal: input.signal,
+2187:  });
+2188:
+2189:  const data = (await response.json().catch(() => ({}))) as LLMApiPayload & { error?: string };
+2190:  if (
+2191:    data.error === "openrouter_provider_queue" ||
+2192:    (!response.ok && response.status === 503)
+2193:  ) {
+2194:    const err = new Error("openrouter_provider_queue");
+2195:    err.name = "OpenRouterProviderQueueError";
+2196:    throw err;
+2197:  }
+2198:  if (!response.ok) {
+2199:    throw new Error(`/api/poju/chat returned HTTP ${response.status}`);
+2200:  }
+2201:  if (data.error) {
+2202:    throw new Error(String(data.error));
+2203:  }
+2204:  return mapLlmApiPayload(data, input.session);
+2205:}
+2206:
+2207:function mapLlmApiPayload(
+2208:  data: LLMApiPayload,
+2209:  session: POJUSessionState,
+2210:): Awaited<ReturnType<typeof callLLMViaAPI>> {
+2211:  const text = data.response ?? data.reply;
+2212:  if (!text || typeof text !== "string") {
+2213:    throw new Error("missing `response` in /api/poju/chat JSON");
+2214:  }
+2215:
+2216:  const wire = chatPayloadFromWire(data as Record<string, unknown>, {
+2217:    response: text,
+2218:    current_state: sessionStateHint(session),
+2219:  });
+2220:

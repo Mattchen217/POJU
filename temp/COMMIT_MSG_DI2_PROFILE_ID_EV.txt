@@ -1,0 +1,3 @@
+﻿Record DI2 profile identity binding evidence
+
+Captures exit codes and logs for profile.id spoofing and base_analysis shape gates. Does not declare DI2 acceptance.

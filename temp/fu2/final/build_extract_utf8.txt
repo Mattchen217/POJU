@@ -1,0 +1,115 @@
+﻿==== temp/fu2/final/pnpm_exec_next_typegen.txt lines 2 empty= False
+Generating route types...
+鉁?Types generated successfully
+
+
+==== temp/fu2/final/pnpm_exec_tsc_noEmit.txt lines 0 empty= True
+
+
+==== BUILD lines 332
+鈹?茠 /api/inngest
+鈹?茠 /api/joint/[id]
+鈹?茠 /api/joint/[id]/cancel
+鈹?茠 /api/joint/[id]/retry-start
+鈹?茠 /api/joint/[id]/start
+鈹?茠 /api/joint/accept
+鈹?茠 /api/joint/agree
+鈹?茠 /api/joint/bound-peer
+鈹?茠 /api/joint/create
+鈹?茠 /api/joint/list
+鈹?茠 /api/joint/lookup-partner
+鈹?茠 /api/location/ip-locate
+鈹?茠 /api/location/reverse-geocode
+鈹?茠 /api/location/search-city
+鈹?茠 /api/ops/candidates
+鈹?茠 /api/ops/delivery-lab/[lab_id]
+鈹?茠 /api/ops/delivery-lab/[lab_id]/approve
+鈹?茠 /api/ops/delivery-lab/[lab_id]/chat
+鈹?茠 /api/ops/delivery-lab/[lab_id]/chat/rerun
+鈹?茠 /api/ops/delivery-lab/[lab_id]/chat/undo
+鈹?茠 /api/ops/delivery-lab/[lab_id]/gate
+鈹?茠 /api/ops/delivery-lab/[lab_id]/jobs/segment2
+鈹?茠 /api/ops/delivery-lab/[lab_id]/jobs/synthesis
+鈹?茠 /api/ops/delivery-lab/[lab_id]/rerun
+鈹?茠 /api/ops/delivery-lab/[lab_id]/run
+鈹?茠 /api/ops/delivery-lab/create
+鈹?茠 /api/ops/login
+鈹?茠 /api/ops/refund-session-ping
+鈹?茠 /api/oracle/draw
+鈹?茠 /api/oracle/full-reading
+鈹?茠 /api/passes/atmos-status
+鈹?茠 /api/passes/unlock
+鈹?茠 /api/payments/create
+鈹?茠 /api/payments/refund
+鈹?茠 /api/payments/verify
+鈹?茠 /api/poju
+鈹?茠 /api/poju/breakthrough-core
+鈹?茠 /api/poju/breakthrough-core/agenda
+鈹?茠 /api/poju/breakthrough-core/status
+鈹?茠 /api/poju/chat
+鈹?茠 /api/poju/delivery-email
+鈹?茠 /api/poju/delivery-tts
+鈹?茠 /api/poju/final-delivery
+鈹?茠 /api/poju/final-delivery/cancel
+鈹?茠 /api/poju/final-delivery/continue
+鈹?茠 /api/poju/final-delivery/status
+鈹?茠 /api/poju/final-delivery/task
+鈹?茠 /api/poju/matrix-narrative
+鈹?茠 /api/poju/situation-analysis
+鈹?茠 /api/poju/synthesis
+鈹?茠 /api/poju/synthesis/status
+鈹?茠 /api/profile/base-analysis-v2/phase/abort
+鈹?茠 /api/profile/base-analysis-v2/phase/compute
+鈹?茠 /api/profile/base-analysis-v2/phase/evidence
+鈹?茠 /api/profile/base-analysis-v2/phase/finalize
+鈹?茠 /api/profile/base-analysis-v2/phase/narrative
+鈹?茠 /api/profile/base-analysis-v2/stream
+鈹?茠 /api/profile/base-analysis/status
+鈹?茠 /api/profile/base-analysis/stream
+鈹?茠 /api/profile/calculate
+鈹?茠 /api/profile/regenerate-chart
+鈹?茠 /api/pwa-icon
+鈹?茠 /api/webhooks/stripe
+鈹?鈼?/apple-icon
+鈹?鈼?/icon
+鈹?鈼?/kv
+鈹?茠 /llms.txt
+鈹?鈼?/ops
+鈹?鈼?/ops/delivery-lab
+鈹?茠 /ops/delivery-lab/[lab_id]
+鈹?茠 /ops/refund-check
+鈹?鈼?/oracle-fronts-preview
+鈹?鈼?/oracle-test
+鈹?鈼?/robots.txt
+鈹?鈼?/sitemap.xml
+鈹?鈼?/unsubscribe
+鈹?茠 /v2-landing
+茠 Proxy (Middleware)
+鈼? (Static)   prerendered as static content
+茠  (Dynamic)  server-rendered on demand
+--tail--
+鈹?茠 /api/profile/regenerate-chart
+鈹?茠 /api/pwa-icon
+鈹?茠 /api/webhooks/stripe
+鈹?鈼?/apple-icon
+鈹?鈼?/icon
+鈹?鈼?/kv
+鈹?茠 /llms.txt
+鈹?鈼?/ops
+鈹?鈼?/ops/delivery-lab
+鈹?茠 /ops/delivery-lab/[lab_id]
+鈹?茠 /ops/refund-check
+鈹?鈼?/oracle-fronts-preview
+鈹?鈼?/oracle-test
+鈹?鈼?/robots.txt
+鈹?鈼?/sitemap.xml
+鈹?鈼?/unsubscribe
+鈹?茠 /v2-landing
+
+
+茠 Proxy (Middleware)
+
+鈼? (Static)   prerendered as static content
+鈼? (SSG)      prerendered as static HTML (uses generateStaticParams)
+茠  (Dynamic)  server-rendered on demand
+

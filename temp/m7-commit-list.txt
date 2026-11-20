@@ -1,0 +1,159 @@
+a995b43d 2026-11-04 docs(decision-intake): add Phase 3.1 Adaptive Question Engine design
+9c21aeea 2026-11-04 docs(decision-intake): Phase 3.1-R1 independent review corrections
+5f6d99e9 2026-11-04 docs(decision-intake): Phase 3.1-R2 soft-budget, source_only, Commit B, N/A, sort
+431389c8 2026-11-04 docs(decision-intake): Phase 3.1-R3 budget cycles, ShowReceipt, N/A hash, sort identity
+c0c248f6 2026-11-04 docs(decision-intake): Phase 3.1-R4 close N/A evidence, gain inputs, canon id
+f9dcc8f5 2026-11-04 docs(decision-intake): Phase 3.1-R5 DDR-03 N/A allowlist and role resolve
+225aed71 2026-11-04 docs(decision-intake): Phase 3.1-R6 canonical role resolver and N/A E1
+6a606059 2026-11-04 docs(decision-intake): bind R6 N/A and resolver semantics for Stage 3.2
+7d607a0e 2026-11-04 feat(decision-intake): Stage 3.2 vertical slice for R6 role resolver
+a69a7673 2026-11-04 fix(decision-intake): Stage 3.2 acceptance — user_confirmed, full N/A, planner wiring
+6bc995d1 2026-11-04 fix(decision-intake): Stage 3.2 round-2 — N/A classification, topic DIR, plan cycle
+79422721 2026-11-04 fix(decision-intake): Stage 3.2 round-3 — N/A declaration create, topic eval, agent ask wire
+830e67e1 2026-11-04 fix(decision-intake): Stage 3.2 round-4 — declareDirNotApplicable persist + topic authority
+c059a4b5 2026-11-04 fix(decision-intake): Stage 3.2 round-5 — N/A idempotency binding + CAS IT + tsc
+4c504b5a 2026-11-04 fix(decision-intake): Stage 3.2 round-6 — N/A idempotency Session/DC binding
+825fab4b 2026-11-04 feat(decision-intake): Stage 3.2 wire production DIR agg to Intake resolver
+dad2030b 2026-11-04 feat(decision-intake): Stage 3.2 unify Freeze/Versioning on Intake resolver
+6fa4c66b 2026-11-04 fix(decision-intake): bind Freeze draft to Session DC business snapshot
+69d8f0f7 2026-11-04 fix(decision-intake): lock Freeze NaValidation to Session event SoT
+3035646b 2026-11-04 test(decision-intake): Freeze Session authority via runtime N/A Gates
+5012e114 2026-11-04 test(decision-intake): isolate F2 forged N/A action rejection
+cb7a807d 2026-11-04 docs(decision-intake): audit N/A authority production sources
+eb0698e6 2026-11-04 docs(decision-intake): supplement N/A authority audit isolation contracts
+ce914225 2026-11-04 docs(decision-intake): DIR Catalog vertical slice design (no impl)
+51f625e7 2026-11-04 docs(decision-intake): DIR Catalog vertical slice design revision 1
+6efd0b1f 2026-11-05 docs(decision-intake): DIR Catalog vertical slice design revision 1.1
+e8c16f0c 2026-11-05 docs(decision-intake): DIR Catalog vertical slice design revision 1.2
+fec0d7a3 2026-11-05 docs(decision-intake): DIR Catalog vertical slice design revision 1.3
+db019cbd 2026-11-05 feat(decision-intake): S0 DIR N/A catalog SSOT and loader
+11808856 2026-11-05 fix(decision-intake): S0 catalog resolver exception boundary
+202e6d44 2026-11-05 feat(decision-intake): S1 wire declare write to DIR N/A catalog loader
+7eda9bd4 2026-11-05 test(decision-intake): S1 tighten DC-2/3 and loader reason mapping asserts
+9411c83f 2026-11-05 feat(decision-intake): S2 Freeze compose loads ACTIVE DIR N/A catalog
+0e09531c 2026-11-05 feat(decision-intake): S3 Wire reason_code for Freeze failures
+eff73fd1 2026-11-05 feat(decision-intake): S4 Write/Freeze consistency + N/A validate binds
+b1a1f024 2026-11-05 test(decision-intake): S4 C25 prove real casWritePOJUSession persist fail
+76fa70bd 2026-11-05 test(decision-intake): S5 F1–F4 Freeze authority regression isolation
+f1454b87 2026-11-05 docs(decision-intake): complete Stage 3.2 final audit
+a9f89c75 2026-11-05 docs(decision-intake): S6 supplement — regress at audit SHA + DC §7 cite
+13e51159 2026-11-05 docs(decision-intake): fix DC matrix header cite to design §7
+8048aaae 2026-11-08 S7: production NaValidation authority boundary hardening
+ed608c90 2026-11-08 docs(decision-intake): S7 evidence — production NaValidation authority boundary
+b5d93816 2026-11-08 S8-A: close NaValidation fixture barrel exposure
+d1a6790a 2026-11-08 S8-B: strict typecheck for Intake R6 tests
+6f675606 2026-11-08 S8-C: collecting DC turn adopts only C1-committed DC
+165429ed 2026-11-08 S8-D: Versioning V1->V2 under real IndexedDB write failure
+3dcdf9a1 2026-11-08 S8-E: freeze persist failure (IDB tx abort) + S4 F1 disclosure executed
+be80b8be 2026-11-08 S8-F: Delivery/Report N/A compatibility F1-F8 (production freeze -> payload -> route binding -> page feed -> Stage4)
+5da7e2bb 2026-11-08 S8: drop remaining non-null / const assertions from S8-touched test lines
+b4c5dd63 2026-11-08 docs(decision-intake): S8 evidence — NA authority regression closure
+9254ffdd 2026-11-08 ci(decision-intake): enforce S7-S8 integration regression
+6af573ea 2026-11-08 S9: wire production N/A authority sources (topic rules, live CFP, composer)
+b240f747 2026-11-08 S9-R1..R5: fix topic confirm CAS, ACTIVE version, CFP provenance+eval bind
+684ddc89 2026-11-08 S9-R4/R2: align production-agg + freeze-authority tests with live CFP bind and ACTIVE current version
+db4c6c7c 2026-11-08 S9-R4: widen cfpLiveEvaluation.source_code to string for fixture DDR-03 binds
+eed7155e 2026-11-08 M1: production adaptive question loop (interpret→DC→plan→sent Q)
+68b96cca 2026-11-08 M1-fix: CAS revision merge after C1 + CJK unknown classify
+6fbbe15e 2026-11-08 M1-fix: assert M1-04 on DC growth + recomputed plan, not summary equality
+657d591d 2026-11-08 M1-fix: ask_planned false when Ask/planning throws (S8-H3)
+c6d961bd 2026-11-08 M1-fix: JSX fragment for Understanding panel; readiness stop typecheck
+5552c186 2026-11-08 docs(m1): evidence logs for adaptive question loop
+ef36c772 2026-11-08 M1-R: fresh-session bootstrap + fail-closed main loop
+924a8194 2026-11-08 M2.1: readiness confirm → legal promote → Freeze on mainline
+3c8b16a3 2026-11-08 fix(m2.1): type POJUMessage meta for confirm/freeze and M1 fail-closed
+d3d808d8 2026-11-08 fix(m2.1): legal fact promotion contract + regression tests
+5a53d3aa 2026-11-08 fix(m2.1): estimate confirm events + source-matched provenance (r2)
+ebe98910 2026-11-08 fix(m2.1): validate provenance before reusing confirmation events (r3)
+2526c98e 2026-11-08 fix(m2.1): validate Confirmation Event structure before reuse/authority (r4)
+aa5f512c 2026-11-08 feat(m2.2): bind M2.1 Freeze snapshot to eight-page report delivery
+b80718c5 2026-11-08 fix(m2.2-r1): cross-process claim + wire Freeze snapshot into final-delivery
+220b5c76 2026-11-08 fix(m2.2-r2): production lifecycle — claim on final-delivery, write-back, server Freeze
+5adb7b17 2026-11-08 fix(m2.2-r3): close remaining production lifecycle defects
+12ef9ac0 2026-11-09 fix(m2.2-r4): supersede old delivery workers, fail-closed write-back, prod-path tests
+9036a944 2026-11-09 M2.2-R5: execution fencing + real stage runner verification
+5e27e948 2026-11-09 M2.3: production decision-specific Blueprint + AQE drive
+1068d018 2026-11-09 M2.3: fill evidence HEAD SHA
+510ce71c 2026-11-09 M2.3-R1: preserve full DDR investigation scope in Blueprint
+76860178 2026-11-09 M2.3-R1: fill evidence HEAD SHA
+b5a372dc 2026-11-09 M2.3-R2: fix production priority activation / Readiness ordering
+adcda657 2026-11-09 M2.3-R2: fill evidence HEAD SHA
+b7c7b98c 2026-11-09 M2.3-R2-FU: block planner false-complete on open P0/P1
+8db221cd 2026-11-09 M2.3-R2-FU: add contract-fix evidence note
+91a37517 2026-11-09 M2.3-R2-FU: fill evidence HEAD SHA
+a56043ae 2026-11-09 M2.3-R2-FU2: preserve planner_blocked on replay and planner exceptions
+c9de85c3 2026-11-09 M2.3-R2-FU2: fill evidence impl/tip SHA
+7e9480f5 2026-11-09 M2.3-R2-FU2: set evidence tip to fill commit
+0b75716d 2026-11-09 M2.3-R2-FU2: align evidence tip to branch HEAD
+a8b11580 2026-11-09 M2.3-R2-FU3: fail-closed when Understanding cannot be built
+96221e0b 2026-11-09 M2.3-R2-FU3: add evidence draft with impl SHA
+06836d71 2026-11-09 M2.3-R2-FU3: fill evidence SHAs; align FU2 tip to branch HEAD
+5e49ebae 2026-11-09 M2.3-R2-FU3: set evidence tip placeholder for tip-align
+84e25313 2026-11-09 M2.3-R2-FU3: align evidence tip to branch HEAD
+9f8001b8 2026-11-09 M2.3-R2-FU3: set evidence tip to prior tip-align HEAD
+f4a415bb 2026-11-09 M2.3-R2-FU3: sync evidence tip fields to 9f8001b8
+babd9f5b 2026-11-09 M2.3-R2-FU4: Understanding fail-closed via real Agent test_hooks
+6ceb0d0c 2026-11-09 M2.3-R2-FU4: evidence for Agent-chain Understanding fail-closed
+738b6d2d 2026-11-09 feat(intake): M2.4-R1 Phase 4 answer interpretation + gap-driven ask
+f9ee9f97 2026-11-09 docs(evidence): M2.4-R1 Phase 4 answer/ask contract evidence
+5d4d5e0b 2026-11-09 fix(m2.4): FU1 role auth from sent Plan + conservative conflicts
+9e6d64d4 2026-11-09 docs(evidence): M2.4-R1-FU1 role auth and conflict contract evidence
+4e900f91 2026-11-10 fix(m2.4): FU2 wire clarifyConflict into production answer path
+0146df4f 2026-11-10 fix(m2.4): widen withUnderstanding askSnap for conflict typings
+a76c6a31 2026-11-10 docs(evidence): M2.4-R1-FU2 wire clarifyConflict into production answer path
+4468347e 2026-11-10 fix(m2.4): FU3 reject negated conflict choices; prove C1 fail rollback
+4199e7d2 2026-11-10 docs(evidence): M2.4-R1-FU3 negation-safe choice and C1 fail rollback
+7fbbdd9a 2026-11-10 fix(m2.4): FU4 clause-based conflict choice parser
+0114d38a 2026-11-10 docs(evidence): M2.4-R1-FU4 clause-based negation-safe choice parsing
+b9822ffc 2026-11-10 fix(m2.4): FU5 reject accuracy-insufficiency as conflict affirmation
+ee1f601a 2026-11-10 docs(evidence): M2.4-R1-FU5 accuracy-insufficiency choice polarity
+d382f2e4 2026-11-10 fix(m2.4): FU6 treat accuracy-rate insufficiency as negative polarity
+8b3f8488 2026-11-10 docs(evidence): M2.4-R1-FU6 accuracy-rate choice polarity
+7aff7580 2026-11-10 feat(m2.4): R2 model-backed answer interpretation on the production main path
+646c521e 2026-11-10 docs(evidence): M2.4-R2 model-backed answer interpretation
+2f04035c 2026-11-10 fix(m2.4): FU1 role-code authorization and certainty boundary
+c6404df4 2026-11-10 docs(evidence): M2.4-R2-FU1 role-code authorization and certainty
+d8b36497 2026-11-10 fix(m2.4): FU2 unresolved answer continuation and sent-plan authorization
+528960e1 2026-11-10 docs(evidence): M2.4-R2-FU2 unresolved continuation and sent-plan authorization
+1ee64f13 2026-11-11 fix(m2.4): FU3 unresolved item lifecycle completion
+15ab21e2 2026-11-11 docs(evidence): M2.4-R2-FU3 unresolved item lifecycle
+e2b0a84f 2026-11-11 fix(m2.4): FU4 clarification semantic safety and terminal pending lifecycle
+b7e6c9b9 2026-11-11 docs(evidence): M2.4-R2-FU4 clarification safety and terminal pending
+8baca929 2026-11-11 fix(m2.4): FU5 clarification negation safety closure
+0eae31fa 2026-11-11 docs(evidence): M2.4-R2-FU5 clarification negation safety
+0fd83950 2026-11-11 fix(decision-intake): M2.4-R2-FU6 close remaining negation-to-affirmation write paths
+f4749736 2026-11-11 docs(evidence): restore UTF-8 Chinese in CONTRACT-M2-4-R2-FU5.md
+a1c0f536 2026-11-11 fix(decision-intake): M2.4-R2-FU7 conservative action polarity gate
+e47420cd 2026-11-11 docs(evidence): M2.4-R2-FU7 conservative action polarity gate
+a7fd728f 2026-11-11 fix(decision-intake): M2.4-R2-FU8 source grounding and intake control flow
+ed987b11 2026-11-11 docs(evidence): M2.4-R2-FU8 source grounding and intake control flow
+b2c4c624 2026-11-11 fix(decision-intake): M2.4-R2-FU9 source-content grounding and insight-mismatch resolution
+1f9309d4 2026-11-11 docs(evidence): M2.4-R2-FU9 source-content grounding and insight-mismatch resolution
+e5e21457 2026-11-11 fix(decision-intake): M2.4-R2-FU10 deterministic clause-boundary grounding
+b0e370c1 2026-11-11 ﻿docs(evidence): M2.4-R2-FU10 deterministic clause-boundary grounding
+a2be6096 2026-11-11 feat(intake): M2.4-R2 Phase 4 production closure — real model loop to Freeze
+b59959ad 2026-11-11 docs(evidence): M2.4-R2 final production closure — results on a2be6096
+dce6fd19 2026-11-11 feat(m3): DI2 Personal Analysis + Freeze-bound eight-page report production chain
+b6565dee 2026-11-11 docs(evidence): M3 Personal Analysis + Freeze-bound report — results on dce6fd19
+103172a9 2026-11-11 feat(di2): M4 server-authoritative DC ledger, Freeze seal and profile provenance
+785f7be2 2026-11-11 docs(evidence): M4 decision authority ledger / Freeze seal / profile provenance — results on 103172a9
+f1be9ec1 2026-11-11 fix(di2): M4.1 Freeze commit recovery + strict Freeze ledger anchor
+d62b78b8 2026-11-11 docs(di2): M4.1 evidence — Freeze commit recovery + strict ledger anchor
+7b113268 2026-11-11 feat(di2): M5 main-path integration closure — durable report commit, worker recovery, client recovery state machine
+b34c01ea 2026-11-11 docs(di2): M5 evidence — main-path integration closure
+07b29553 2026-11-11 M5-R1: report charge authorization + client job binding
+d637d171 2026-11-11 M5-R1 evidence: charge authorization & client job binding
+2d74bafb 2026-11-11 M5-R1-FU1: stale charge claim cannot refuse or abort the current claimant's job
+b29e73ba 2026-11-11 M5-R1-FU1 evidence: stale charge claim race closure
+1ca49e5e 2026-11-11 M5-R1-FU2: refusal abort is an atomic claim; abort resumable and idempotent
+4f29075f 2026-11-11 M5-R1-FU2 evidence: atomic refusal claim & job abort closure
+04f3509c 2026-11-11 fix(build): re-enable webpack build worker to stop Vercel OOM SIGKILL
+ff704471 2026-11-12 M5-R1-FU3: serialize report start, refusal abort and lock ownership
+8719aec5 2026-11-12 M5-R1-FU3 evidence: serialized start, abort ownership and owner-checked lock
+2114c0b7 2026-11-12 M5-R1-FU4: completed reports are served only under the job's delivery authorization
+ae37b116 2026-11-12 test: add FU4 delivery authorization mutation checks
+f36a3f06 2026-11-12 docs: record FU4 delivery authorization evidence
+5c193959 2026-11-12 feat: add DI2 full lifecycle integration coverage
+6a2bd676 2026-11-12 docs: record M6 lifecycle verification evidence
+5769eb06 2026-11-12 fix: close M6 lifecycle review evidence gaps
+851132d7 2026-11-12 docs: record M6 independent review fix evidence

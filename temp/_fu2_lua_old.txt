@@ -1,0 +1,47 @@
+  local headKey = ARGV[7]
+  local prefix = ARGV[8]
+  local limit = tonumber(ARGV[9]) or 512
+  local hintRaw = redis.call('GET', headKey)
+  local n = 0
+  if hintRaw then
+    local hint, hintOk = decode(hintRaw)
+    if not hintOk then return 8 end
+    local cv = hint['commit_version']
+    if type(cv) ~= 'number' or cv ~= math.floor(cv) or cv <= 0 then return 8 end
+    n = cv
+  end
+
+  local function load_entry(idx)
+    if idx < 1 then return nil, 'missing' end
+    local eraw = redis.call('GET', prefix .. tostring(idx))
+    if not eraw then return nil, 'missing' end
+    local e, eok = decode(eraw)
+    if not eok then return nil, 'integrity' end
+    if type(e['session_id']) ~= 'string' or e['session_id'] ~= sessionId then return nil, 'integrity' end
+    if type(e['commit_version']) ~= 'number' or e['commit_version'] ~= idx then return nil, 'integrity' end
+    return e, 'ok'
+  end
+
+  local head = nil
+  if n > 0 then
+    local e, st = load_entry(n)
+    if st ~= 'ok' then return 8 end
+    head = e
+  end
+  for i = 1, limit do
+    local nxt, st = load_entry(n + 1)
+    if st == 'integrity' then return 8 end
+    if st == 'missing' then break end
+    head = nxt
+    n = n + 1
+    if i == limit then
+      local more, mst = load_entry(n + 1)
+      if mst == 'integrity' then return 8 end
+      if mst == 'ok' then return 9 end
+    end
+  end
+  if head and (head['change_type'] == 'freeze' or head['dc_status'] == 'final') then
+    return 3
+  end
+end
+

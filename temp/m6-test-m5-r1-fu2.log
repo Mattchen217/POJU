@@ -1,0 +1,174 @@
+
+> pojulife@0.1.0 test:m5-r1-fu2 D:\POJU\pojulife
+> tsx scripts/test-m5-r1-authorization.ts --only=FU2
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M5-R1 — report charge authorization & client job binding
+[decision-report] analysis completed {
+  job_id: 'dr_01949df4-fd85-404f-9ec1-_1794474669343_7g8kxc',
+  analysis_id: 'pa_ctxr1fu201v1_86897f57025a'
+}
+[decision-report] report completed {
+  job_id: 'dr_01949df4-fd85-404f-9ec1-_1794474669343_7g8kxc',
+  freeze_id: 'ctx_r1_fu201@v1',
+  generation: 2
+}
+  PASS  FU2-01 refusal wins the abort CAS: a concurrent start / Regenerate / Continue cannot claim, charge, authorize or create a job; A finishes; a later start charges again
+[decision-report] took over session lock {
+  session_id: '151466d7-a67e-443b-a005-a391ac3f47f3',
+  why: 'idle_start'
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_151466d7-a67e-443b-a005-_1794474669558_gn8nhp',
+  stage: 'finalize',
+  recorded_stage: null
+}
+[decision-report] analysis completed {
+  job_id: 'dr_151466d7-a67e-443b-a005-_1794474669558_gn8nhp',
+  analysis_id: 'pa_ctxr1fu202v1_ec8acacfa7f7'
+}
+[decision-report] report completed {
+  job_id: 'dr_151466d7-a67e-443b-a005-_1794474669558_gn8nhp',
+  freeze_id: 'ctx_r1_fu202@v1',
+  generation: 1
+}
+  PASS  FU2-02 re-claim wins the CAS: A's abort CAS fails (no abort); C charges, authorizes, the worker completes the report
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_9b703c68-883d-45ba-8484-_1794474669769_vuf943',
+  e: Error: test: process died before revoke_grant
+      at <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1229:21)
+      at async terminateRefusedJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:628:3)
+      at async finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:674:5)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:410:22)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:199:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:207:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1232:22)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1213:9)
+}
+[decision-report] took over session lock {
+  session_id: '9b703c68-883d-45ba-8484-fe151b310f04',
+  why: 'idle_start'
+}
+  PASS  FU2-03.1 abort crashes before revoke_grant → start_regenerate resumes the same abort to abort_completed; no charge, no dispatch, no second job
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_c9738f0d-d798-4aad-9cd8-_1794474669913_02pxnd',
+  e: Error: test: process died before fail_job
+      at <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1229:21)
+      at terminateRefusedJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:640:9)
+      at async finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:674:5)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:410:22)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:199:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:207:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1232:22)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1213:9)
+}
+  PASS  FU2-03.2 abort crashes before fail_job → status resumes the same abort to abort_completed; no charge, no dispatch, no second job
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_fd7975f3-2966-4e8e-9180-_1794474670043_itbjjf',
+  e: Error: test: process died before clear_dispatch
+      at <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1229:21)
+      at terminateRefusedJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:651:9)
+      at async finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:674:5)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:410:22)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:199:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:207:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1232:22)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1213:9)
+}
+  PASS  FU2-03.3 abort crashes before clear_dispatch → continue resumes the same abort to abort_completed; no charge, no dispatch, no second job
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_7214bdd6-bc2d-44a3-9d04-_1794474670175_76y494',
+  e: Error: test: process died before release_lock
+      at <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1229:21)
+      at terminateRefusedJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:654:9)
+      at async finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:674:5)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:410:22)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:199:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:207:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1232:22)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1213:9)
+}
+[decision-report] took over session lock {
+  session_id: '7214bdd6-bc2d-44a3-9d04-f30d0afa8c88',
+  why: 'idle_start'
+}
+  PASS  FU2-03.4 abort crashes before release_lock → start resumes the same abort to abort_completed; no charge, no dispatch, no second job
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_bd721a66-bcaa-472c-843f-_1794474670304_9l14qc',
+  e: Error: test: process died before mark_completed
+      at <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1229:21)
+      at finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:681:11)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:410:22)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:199:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:207:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1232:22)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1213:9)
+      at async main (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:322:3)
+}
+  PASS  FU2-03.5 abort crashes before mark_completed → status resumes the same abort to abort_completed; no charge, no dispatch, no second job
+  PASS  FU2-04 unreadable / unwritable authorization fails closed: no abort, no dispatch, no refusal, no new charge_ref, no job before the record is readable
+[decision-report] took over session lock {
+  session_id: '0f1490e6-261a-4d10-8278-9fa2a180d55a',
+  why: 'replace_live_job'
+}
+  PASS  FU2-05 two requests race for the same refusal's abort → one CAS wins, one abort_job_id; the loser only finishes that job's abort
+[decision-report] refusal abort incomplete {
+  job_id: 'dr_ed6ba7dc-975e-41c7-98f9-_1794474670926_txvt57',
+  e: Error: test: process died mid-abort
+      at <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1450:19)
+      at terminateRefusedJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:640:9)
+      at async finishDecisionReportRefusalAbort (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-service.ts:674:5)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:410:22)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:199:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:207:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1453:20)
+      at async check (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:49:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-r1-authorization.ts:1443:7)
+}
+[decision-report] took over session lock {
+  session_id: 'ed6ba7dc-975e-41c7-98f9-7cffc741cb35',
+  why: 'idle_start'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_ed6ba7dc-975e-41c7-98f9-_1794474670942_w28v06',
+  analysis_id: 'pa_ctxr1fu206v1_bb81049c59ac'
+}
+[decision-report] report completed {
+  job_id: 'dr_ed6ba7dc-975e-41c7-98f9-_1794474670942_w28v06',
+  freeze_id: 'ctx_r1_fu206@v1',
+  generation: 2
+}
+  PASS  FU2-06 abandoned abort vs new authorization: before abort_completed no start / Regenerate / Continue gets past it; after it a start re-charges normally
+
+10 passed, 0 failed

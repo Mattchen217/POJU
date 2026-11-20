@@ -94,16 +94,15 @@ export async function POST(req: Request) {
         { status: 503 },
       );
     }
+    // DI2 client requires authoritative_session + session_authority. A soft 200
+    // without the envelope surfaces as a generic "连接异常" with no server code.
     const locale = resolvePivotSessionLang(body.session, String(body.locale ?? "en"));
-    return NextResponse.json({
-      response: getPojuServiceBusyMessage(locale),
-      model: "",
-      tokens_used: 0,
-      user_intent: "unclear",
-      current_state: body.session.main_delivery_done ? "tracking" : "collecting_context",
-      topic_drift_detected: false,
-      contains_delivery: false,
-      context_updates: {},
-    });
+    return NextResponse.json(
+      {
+        error: "poju_chat_unhandled",
+        message: getPojuServiceBusyMessage(locale),
+      },
+      { status: 503 },
+    );
   }
 }

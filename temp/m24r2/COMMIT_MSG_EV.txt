@@ -1,0 +1,5 @@
+docs(evidence): M2.4-R2 model-backed answer interpretation
+
+Record baseline, implementation SHA, production call chain, Case A-F
+logs, fail-closed results, and regression exit codes. Evidence tip SHA
+is left empty pending review.

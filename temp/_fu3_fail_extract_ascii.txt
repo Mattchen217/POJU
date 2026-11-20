@@ -1,0 +1,172 @@
+================================================================================
+02-test-m9-r1-session-authority-remediation.log
+INTERESTING:
+41:PASS A. Session Frozen during model execution; commit is rejected
+55:PASS B. Session Terminated during model execution; commit is rejected
+69:PASS C. Session expires during model execution; commit is rejected
+83:PASS D. Concurrent Freeze and Session CAS cannot commit an Intake turn after Freeze
+97:PASS E. Same turn ID + same content is idempotent
+111:PASS F. Same turn ID + different content is a conflict
+125:PASS G. Replaying the same turn does not call the model again
+126:PASS H. Record session_id vs storage key mismatch fails closed
+127:PASS I. Snapshot session_id vs Record mismatch fails closed
+128:PASS J. Snapshot hash mismatch fails closed
+129:PASS K. Revision vs snapshot revision mismatch fails closed
+130:PASS L. CAS revision race: loser does not overwrite winner (MemoryKv and eval harness)
+131:PASS M. CAS does not recreate a Session that no longer exists
+132:PASS N. After Expiry / Freeze / Terminate, no new turn can be committed
+133:PASS CAS contract: generation, session id, expires_at, and backward revision are rejected
+134:AssertionError [ERR_ASSERTION]: The input did not match the regular expression /if not raw then return 5 end/. Input:
+138:  '-- session_snapshot or ledger entry_hash. The production adapter validates\n' +
+148:  "  if not ok or type(obj) ~= 'table' then return nil, false end\n" +
+176:  "  local snap = obj['session_snapshot']\n" +
+188:  '-- is session_snapshot_changed (11), never success, cas_conflict, malformed,\n' +
+197:  'if not ok then return 6 end\n' +
+277:    at <anonymous> (D:\POJU\pojulife\scripts\test-m9-r1-session-authority-remediation.ts:691:12)
+278:    at asyncTest (D:\POJU\pojulife\scripts\test-m9-r1-session-authority-remediation.ts:58:9)
+279:    at main (D:\POJU\pojulife\scripts\test-m9-r1-session-authority-remediation.ts:688:9) {
+284:    '-- session_snapshot or ledger entry_hash. The production adapter validates\n' +
+297:?ELIFECYCLE? Command failed with exit code 1.
+--- LAST 60 ---
+238:  "  if type(validatedHintRaw) ~= 'string' then return 8 end\n" +
+239:  '  if entryCount ~= math.floor(entryCount) or entryCount < 0 then return 8 end\n' +
+240:  '  if endVersion > limit then return 9 end\n' +
+241:  '  if endVersion == 0 then\n' +
+242:  '    if startVersion ~= 0 or entryCount ~= 0 then return 8 end\n' +
+243:  '  else\n' +
+244:  '    if startVersion ~= 1 or entryCount ~= endVersion or endVersion < 1 then return 8 end\n' +
+245:  '  end\n' +
+246:  '\n' +
+247:  "  local liveHint = redis.call('GET', headKey)\n" +
+248:  "  if validatedHintRaw == '' then\n" +
+249:  '    if liveHint then return 10 end\n' +
+250:  '  else\n' +
+251:  '    if (not liveHint) or liveHint ~= validatedHintRaw then return 10 end\n' +
+252:  '  end\n' +
+253:  '\n' +
+254:  '  for i = 1, entryCount do\n' +
+255:  '    local expectedRaw = ARGV[14 + i]\n' +
+256:  "    if type(expectedRaw) ~= 'string' or string.len(expectedRaw) == 0 then return 8 end\n" +
+257:  "    local live = redis.call('GET', prefix .. tostring(startVersion + i - 1))\n" +
+258:  '    if (not live) or live ~= expectedRaw then return 10 end\n' +
+259:  '  end\n' +
+260:  '\n' +
+261:  "  local nextLive = redis.call('GET', prefix .. tostring(endVersion + 1))\n" +
+262:  '  if nextLive then return 10 end\n' +
+263:  '\n' +
+264:  '  if endVersion > 0 then\n' +
+265:  '    local headRaw = ARGV[14 + entryCount]\n' +
+266:  '    local head, headOk = decode(headRaw)\n' +
+267:  '    if not headOk then return 8 end\n' +
+268:  "    if head['change_type'] == 'freeze' or head['dc_status'] == 'final' then\n" +
+269:  '      return 3\n' +
+270:  '    end\n' +
+271:  '  end\n' +
+272:  'end\n' +
+273:  '\n' +
+274:  "redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))\n" +
+275:  'return 1\n'
+276:
+277:    at <anonymous> (D:\POJU\pojulife\scripts\test-m9-r1-session-authority-remediation.ts:691:12)
+278:    at asyncTest (D:\POJU\pojulife\scripts\test-m9-r1-session-authority-remediation.ts:58:9)
+279:    at main (D:\POJU\pojulife\scripts\test-m9-r1-session-authority-remediation.ts:688:9) {
+280:  generatedMessage: true,
+281:  code: 'ERR_ASSERTION',
+282:  actual: '\n' +
+283:    '-- Hash policy: this script does not recompute canonicalHash / SHA-256 of\n' +
+284:    '-- session_snapshot or ledger entry_hash. The production adapter validates\n' +
+285:    '-- those hashes with canonicalHash and binds the exact raw Session Record\n' +
+286:    '-- and ledger values. Lua compares live GET bytes against those exact\n' +
+287:    '-- validated raw values and fail-closes on a change, deletion, appearance,\n' +
+288:    '-- or newly visible ledger entry. Lua still fail-closes on structural\n' +
+289:    '-- Record integrity and never treats a corrupted Record as missing.\n' +
+290:    'local function decode(raw)\n' +
+291:    '  if not raw then return nil, false end\n' +
+292:    '...',
+293:  expected: /if not raw then return 5 end/,
+294:  operator: 'match',
+295:  diff: 'simple'
+296:}
+297:?ELIFECYCLE? Command failed with exit code 1.
+================================================================================
+03-test-m9-r1-fu1-redis-lua-integrity-parity.log
+INTERESTING:
+31:AssertionError [ERR_ASSERTION]: The input did not match the regular expression /if not raw then return 5 end/. Input:
+35:  '-- session_snapshot or ledger entry_hash. The production adapter validates\n' +
+45:  "  if not ok or type(obj) ~= 'table' then return nil, false end\n" +
+73:  "  local snap = obj['session_snapshot']\n" +
+85:  '-- is session_snapshot_changed (11), never success, cas_conflict, malformed,\n' +
+94:  'if not ok then return 6 end\n' +
+174:    at <anonymous> (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:363:12)
+175:    at asyncTest (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:69:9)
+176:    at main (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:357:9)
+177:    at assert (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:776:6)
+178:    at Object.<anonymous> (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:779:2)
+179:    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+180:    at Object.transformer (D:\POJU\pojulife\node_modules\.pnpm\tsx@4.21.0\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+181:    at Module.load (node:internal/modules/cjs/loader:1441:32)
+182:    at Function._load (node:internal/modules/cjs/loader:1263:12)
+183:    at TracingChannel.traceSync (node:diagnostics_channel:328:14) {
+188:    '-- session_snapshot or ledger entry_hash. The production adapter validates\n' +
+201:?ELIFECYCLE? Command failed with exit code 1.
+--- LAST 60 ---
+142:  '  end\n' +
+143:  '\n' +
+144:  "  local liveHint = redis.call('GET', headKey)\n" +
+145:  "  if validatedHintRaw == '' then\n" +
+146:  '    if liveHint then return 10 end\n' +
+147:  '  else\n' +
+148:  '    if (not liveHint) or liveHint ~= validatedHintRaw then return 10 end\n' +
+149:  '  end\n' +
+150:  '\n' +
+151:  '  for i = 1, entryCount do\n' +
+152:  '    local expectedRaw = ARGV[14 + i]\n' +
+153:  "    if type(expectedRaw) ~= 'string' or string.len(expectedRaw) == 0 then return 8 end\n" +
+154:  "    local live = redis.call('GET', prefix .. tostring(startVersion + i - 1))\n" +
+155:  '    if (not live) or live ~= expectedRaw then return 10 end\n' +
+156:  '  end\n' +
+157:  '\n' +
+158:  "  local nextLive = redis.call('GET', prefix .. tostring(endVersion + 1))\n" +
+159:  '  if nextLive then return 10 end\n' +
+160:  '\n' +
+161:  '  if endVersion > 0 then\n' +
+162:  '    local headRaw = ARGV[14 + entryCount]\n' +
+163:  '    local head, headOk = decode(headRaw)\n' +
+164:  '    if not headOk then return 8 end\n' +
+165:  "    if head['change_type'] == 'freeze' or head['dc_status'] == 'final' then\n" +
+166:  '      return 3\n' +
+167:  '    end\n' +
+168:  '  end\n' +
+169:  'end\n' +
+170:  '\n' +
+171:  "redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))\n" +
+172:  'return 1\n'
+173:
+174:    at <anonymous> (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:363:12)
+175:    at asyncTest (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:69:9)
+176:    at main (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:357:9)
+177:    at assert (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:776:6)
+178:    at Object.<anonymous> (D:\POJU\pojulife\scripts\test-m9-r1-fu1-redis-lua-integrity-parity.ts:779:2)
+179:    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+180:    at Object.transformer (D:\POJU\pojulife\node_modules\.pnpm\tsx@4.21.0\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+181:    at Module.load (node:internal/modules/cjs/loader:1441:32)
+182:    at Function._load (node:internal/modules/cjs/loader:1263:12)
+183:    at TracingChannel.traceSync (node:diagnostics_channel:328:14) {
+184:  generatedMessage: true,
+185:  code: 'ERR_ASSERTION',
+186:  actual: '\n' +
+187:    '-- Hash policy: this script does not recompute canonicalHash / SHA-256 of\n' +
+188:    '-- session_snapshot or ledger entry_hash. The production adapter validates\n' +
+189:    '-- those hashes with canonicalHash and binds the exact raw Session Record\n' +
+190:    '-- and ledger values. Lua compares live GET bytes against those exact\n' +
+191:    '-- validated raw values and fail-closes on a change, deletion, appearance,\n' +
+192:    '-- or newly visible ledger entry. Lua still fail-closes on structural\n' +
+193:    '-- Record integrity and never treats a corrupted Record as missing.\n' +
+194:    'local function decode(raw)\n' +
+195:    '  if not raw then return nil, false end\n' +
+196:    '...',
+197:  expected: /if not raw then return 5 end/,
+198:  operator: 'match',
+199:  diff: 'simple'
+200:}
+201:?ELIFECYCLE? Command failed with exit code 1.

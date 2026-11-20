@@ -1,0 +1,9 @@
+fix(m2.4): FU4 clarification semantic safety and terminal pending lifecycle
+
+Recognize negation and uncertainty before affirmation in pending
+clarification parsers. After the last pending item is refused, enter an
+explicit terminal rejected state, clear the old clarification_plan, keep
+an auditable rejection record that is not a DC fact, and allow formal
+investigation to plan the next legal NeedItem. Add FU4-A-E, negation
+production-path cases, and terminal-resume coverage through
+handleUserMessage().

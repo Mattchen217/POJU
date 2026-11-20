@@ -1,0 +1,8 @@
+sha256=51179f4c2628e47ecd5be34094b467a56acd790f2f05638a563508bbfc01ec7c
+len=17964
+cn1=True
+cn2=True
+emdash=True
+tip_pending=True
+no_ad1b=True
+bom=False

@@ -1,0 +1,3 @@
+Record Answer Interpretation full-Understanding context evidence
+
+Captures command exit codes and logs for the Understanding State context contract change. Does not declare DI2 or Phase 2 acceptance.

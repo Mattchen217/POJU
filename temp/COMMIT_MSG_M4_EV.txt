@@ -1,0 +1,6 @@
+docs(evidence): M4 decision authority ledger / Freeze seal / profile provenance — results on 103172a9
+
+Evidence record for the M4 implementation commit 103172a9: ledger write path,
+receipt generation and verification, server profile recompute + registry, M3 start
+verification, history / duplicate / concurrency / retry handling, KV retention,
+trust boundaries and tests not executed. No PASS claim; no real model calls.

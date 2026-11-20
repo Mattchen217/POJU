@@ -1,0 +1,36 @@
+export function luaCasCodeToResult(code: unknown): SessionCasResult {
+  if (code === 1 || code === true) return { ok: true };
+  if (code === 2) return { ok: false, reason: "expired" };
+  if (code === 3) return { ok: false, reason: "frozen" };
+  if (code === 4) return { ok: false, reason: "terminated" };
+  if (code === 5) return { ok: false, reason: "missing" };
+  if (code === 6) return { ok: false, reason: "malformed" };
+  if (code === 7) return { ok: false, reason: "identity" };
+  if (code === 8) return { ok: false, reason: "ledger_integrity" };
+  if (code === 9) return { ok: false, reason: "ledger_probe_incomplete" };
+  return { ok: false, reason: "cas_conflict" };
+}
+
+export function sessionCasResultToLuaCode(result: SessionCasResult): number {
+  if (result.ok) return 1;
+  switch (result.reason) {
+    case "expired":
+      return 2;
+    case "frozen":
+      return 3;
+    case "terminated":
+      return 4;
+    case "missing":
+      return 5;
+    case "malformed":
+      return 6;
+    case "identity":
+      return 7;
+    case "ledger_integrity":
+      return 8;
+    case "ledger_probe_incomplete":
+      return 9;
+    default:
+      return 0;
+  }
+}

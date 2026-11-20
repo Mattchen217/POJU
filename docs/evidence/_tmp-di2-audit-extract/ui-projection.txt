@@ -1,0 +1,158 @@
+FILE lib/poju/decision-intake/ui-projection.ts
+
+==== 1-155 ====
+    1|/**
+    2| * M1 UI projection — read the same structured Session state the model uses.
+    3| * No re-inference of facts; no progress-from-question-count.
+    4| */
+    5|
+    6|import type { POJUSessionState } from "@/lib/poju/types";
+    7|
+    8|export type AlreadyUnderstoodItem = {
+    9|  label: string;
+   10|  status: "known" | "n_a";
+   11|};
+   12|
+   13|export type AdaptiveQuestionUiProjection = {
+   14|  current_question: string | null;
+   15|  understanding_summary: string | null;
+   16|  understood_labels: string[];
+   17|  need_labels: string[];
+   18|  personal_pattern_status: string | null;
+   19|  readiness_verdict: string | null;
+   20|  budget_asked: number | null;
+   21|  budget_hard: number | null;
+   22|  plan_direction_id: string | null;
+   23|  plan_dir_ids: string[];
+   24|  investigation_directions: Array<{ direction_id: string; label: string; priority: string; dir_ids: string[] }>;
+   25|  dir_states: Array<{ dir_id: string; need: string; state: string; priority: string; may_affect_ranking: boolean }>;
+   26|  open_conflicts: Array<{ conflict_id: string; field: string; statements: string[] }>;
+   27|  readiness_reasons: string[];
+   28|  readiness_can_ask: boolean | null;
+   29|  budget_remaining: number | null;
+   30|  need_details: Array<{ label: string; priority: string; direction_id: string | null; gap_type: string }>;
+   31|  personal_pattern_insights: Array<{ text: string; source: string; related_dir_ids: string[] }>;
+   32|  readiness_progress_percent: number | null;
+   33|  readiness_progress_complete: boolean | null;
+   34|};
+   35|
+   36|
+   37|function userFacingText(value: string | null | undefined): string {
+   38|  return (value ?? "").replace(/\s+/g, " ").trim();
+   39|}
+   40|
+   41|function projectAlreadyUnderstoodItems(
+   42|  items: Array<{
+   43|    label?: string;
+   44|    status?: string;
+   45|    user_confirmed_any?: boolean;
+   46|  }> | null | undefined,
+   47|): AlreadyUnderstoodItem[] {
+   48|  const result: AlreadyUnderstoodItem[] = [];
+   49|  for (const item of items ?? []) {
+   50|    if (item.user_confirmed_any !== true) continue;
+   51|    if (item.status !== "known" && item.status !== "n_a") continue;
+   52|    const label = userFacingText(item.label);
+   53|    if (!label) continue;
+   54|    result.push({ label, status: item.status });
+   55|  }
+   56|  return result;
+   57|}
+   58|
+   59|export function projectAdaptiveQuestionForUi(
+   60|  session: POJUSessionState,
+   61|): AdaptiveQuestionUiProjection {
+   62|  const u = session.decision_understanding;
+   63|  const plan = session.adaptive_ask_plan ?? u?.next_question_plan ?? null;
+   64|  const dc = session.decision_context;
+   65|  const directionByDir = new Map((session.decision_blueprint?.directions ?? []).flatMap((d) =>
+   66|    d.dir_ids.map((id) => [id, { priority: d.priority, direction_id: d.direction_id }] as const),
+   67|  ));
+   68|  const understoodItems = projectAlreadyUnderstoodItems(u?.understood.items);
+   69|  return {
+   70|    current_question:
+   71|      u?.last_sent_question?.question_text ?? plan?.question_text ?? null,
+   72|    understanding_summary: u?.current_understanding.summary ?? null,
+   73|    understood_labels: understoodItems.map((item) => item.label),
+   74|    need_labels: (u?.need_to_understand.items ?? []).map((i) =>
+   75|      i.kind === "dir_based" ? i.missing_content : i.why,
+   76|    ),
+   77|    personal_pattern_status: u?.personal_pattern_insight.status ?? null,
+   78|    readiness_verdict: u?.readiness.verdict ?? null,
+   79|    budget_asked: u?.budget.session_asked_count ?? null,
+   80|    budget_hard: u?.budget.hard_budget_limit ?? null,
+   81|    plan_direction_id: plan?.direction_id ?? null,
+   82|    plan_dir_ids: plan?.dir_ids ?? [],
+   83|    investigation_directions: (session.decision_blueprint?.directions ?? []).map((d) => ({
+   84|      direction_id: d.direction_id, label: d.label, priority: d.priority, dir_ids: d.dir_ids,
+   85|    })),
+   86|    dir_states: (dc?.dirs ?? []).filter((d) => d.id_lifecycle === "active").map((d) => ({
+   87|      dir_id: d.dir_id, need: d.need, state: d.current_state, priority: directionByDir.get(d.dir_id)?.priority ?? "P2",
+   88|      may_affect_ranking: d.may_affect_p5_ranking ?? false,
+   89|    })),
+   90|    open_conflicts: (dc?.conflicts ?? []).filter((c) => c.state !== "clarified").map((c) => ({
+   91|      conflict_id: c.conflict_id, field: c.conflict_field, statements: c.statements_snapshot,
+   92|    })),
+   93|    readiness_reasons: u?.readiness.reasons ?? [],
+   94|    readiness_can_ask: u?.readiness.can_ask ?? null,
+   95|    budget_remaining: u?.budget.remaining_hard_budget ?? null,
+   96|    need_details: (u?.need_to_understand.items ?? []).map((i) => ({
+   97|      label: i.kind === "dir_based" ? i.missing_content : i.why,
+   98|      priority: i.priority,
+   99|      direction_id: i.kind === "dir_based" ? i.direction_id : null,
+  100|      gap_type: i.gap_type,
+  101|    })),
+  102|    personal_pattern_insights: u?.personal_pattern_insight.insights ?? [],
+  103|    readiness_progress_percent: u?.readiness_progress?.percent ?? null,
+  104|    readiness_progress_complete: u?.readiness_progress?.complete ?? null,
+  105|  };
+  106|}
+  107|export type DecisionUnderstandingBoxView = {
+  108|  progress_percent: number | null;
+  109|  progress_complete: boolean;
+  110|  current_understanding: string | null;
+  111|  already_understood: AlreadyUnderstoodItem[];
+  112|  still_need: string[];
+  113|  conflicts: string[];
+  114|  personal_pattern_insights: string[];
+  115|  show_personal_pattern: boolean;
+  116|  current_question: string | null;
+  117|};
+  118|
+  119|/**
+  120| * User-facing 7.2 box projection. No DIR / DDR / field IDs or debug labels.
+  121| * Progress is never 100% until completion conditions are met.
+  122| */
+  123|export function projectDecisionUnderstandingBox(
+  124|  session: POJUSessionState,
+  125|): DecisionUnderstandingBoxView {
+  126|  const ui = projectAdaptiveQuestionForUi(session);
+  127|  const complete = ui.readiness_progress_complete === true;
+  128|  let percent = ui.readiness_progress_percent;
+  129|  if (percent != null && Number.isFinite(percent)) {
+  130|    percent = complete ? 100 : Math.min(99, Math.max(0, Math.round(percent)));
+  131|  } else {
+  132|    percent = null;
+  133|  }
+  134|  const already = projectAlreadyUnderstoodItems(session.decision_understanding?.understood.items);
+  135|  const stillNeed = ui.need_labels.map(userFacingText).filter(Boolean);
+  136|  const conflicts = ui.open_conflicts
+  137|    .map((c) => userFacingText(c.statements.filter(Boolean).join(" \u2194 ")))
+  138|    .filter((text) => text && !stillNeed.includes(text));
+  139|  const insights =
+  140|    ui.personal_pattern_status === "available"
+  141|      ? ui.personal_pattern_insights.map((item) => userFacingText(item.text)).filter(Boolean)
+  142|      : [];
+  143|  return {
+  144|    progress_percent: percent,
+  145|    progress_complete: complete,
+  146|    current_understanding: userFacingText(ui.understanding_summary) || null,
+  147|    already_understood: already,
+  148|    still_need: stillNeed,
+  149|    conflicts,
+  150|    personal_pattern_insights: insights,
+  151|    show_personal_pattern: insights.length > 0,
+  152|    current_question: userFacingText(ui.current_question) || null,
+  153|  };
+  154|}
+  155|

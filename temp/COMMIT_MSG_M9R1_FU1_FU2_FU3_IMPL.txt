@@ -1,0 +1,5 @@
+Implement M9-R1-FU1-FU2-FU3 Session Record integrity atomic binding
+
+Bind the exact TypeScript-validated current Session Record raw value into Redis Lua CAS. Lua compares live GET bytes against that raw string immediately after reading KEYS[1] and rejects a changed, deleted, or newly created record with recoverable session_snapshot_changed (code 11). Missing records remain fail-closed and are never turned into a successful create. Existing FU1 structural checks, FU2 ledger raw binding, revision CAS, lifecycle, and idempotency are preserved.
+
+This commit does not declare FU3, M9, M9-R1, or Decision Intake 2.0 accepted.

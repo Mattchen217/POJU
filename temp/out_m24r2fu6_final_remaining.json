@@ -1,0 +1,17 @@
+{
+  "head": "0fd8395081ef04e9bbaf5e6433f12ae5e0a57f3c",
+  "results": [
+    {
+      "name": "tsc",
+      "exit": 0,
+      "elapsed_sec": 6.2,
+      "out": "D:\\POJU\\pojulife\\temp\\out_m24r2fu6_final_tsc.txt"
+    },
+    {
+      "name": "build",
+      "exit": 0,
+      "elapsed_sec": 97.1,
+      "out": "D:\\POJU\\pojulife\\temp\\out_m24r2fu6_final_build.txt"
+    }
+  ]
+}

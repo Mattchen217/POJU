@@ -1,0 +1,5 @@
+CMD: C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec tsc --noEmit
+EXIT: 0
+ELAPSED_SEC: 6.2
+HEAD: 0fd8395081ef04e9bbaf5e6433f12ae5e0a57f3c
+

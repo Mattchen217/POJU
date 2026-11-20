@@ -1,0 +1,997 @@
+FILE lib/poju/decision-intake/adaptive-turn.ts
+
+==== 540-650 ====
+  540| */
+  541|
+  542|export type AdaptiveTurnTestHooks = {
+  543|  /** @internal Test-only. Runs immediately before each Understanding build. */
+  544|  beforeUnderstandingBuild?: () => void;
+  545|  /**
+  546|   * @internal Test-only C1 substitute for Conflict-clarification persist.
+  547|   * When omitted (production default), persistDcLifecycleChange is used.
+  548|   * Must never be set outside tests.
+  549|   */
+  550|  conflictClarifyPersist?: (
+  551|    previous: POJUSessionState,
+  552|    nextDcSession: POJUSessionState,
+  553|    idempotency_key: string,
+  554|  ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
+  555|  /**
+  556|   * @internal Test-only C1 substitute for pending-bind persist.
+  557|   * When omitted (production default), persistDcLifecycleChange is used.
+  558|   * Must never be set outside tests.
+  559|   */
+  560|  pendingBindPersist?: (
+  561|    previous: POJUSessionState,
+  562|    nextDcSession: POJUSessionState,
+  563|    idempotency_key: string,
+  564|  ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
+  565|  /**
+  566|   * @internal Test-only model interpretation substitute.
+  567|   * When omitted (production default), interpretAnswerWithModel calls OpenRouter.
+  568|   * Must never be set outside tests. Not an environment bypass switch.
+  569|   */
+  570|  interpretAnswerModel?: import("./answer-interpretation-model").AnswerInterpretationModelHook;
+  571|  /**
+  572|   * @internal Test-only C1 substitute for intake-control clarification persist.
+  573|   * When omitted (production default), persistDcLifecycleChange is used.
+  574|   * Must never be set outside tests. Not a production bypass.
+  575|   */
+  576|  intakeControlPersist?: (
+  577|    previous: POJUSessionState,
+  578|    nextDcSession: POJUSessionState,
+  579|    idempotency_key: string,
+  580|  ) => Promise<{ session: POJUSessionState; committed: boolean; error?: string }>;
+  581|};
+  582|
+  583|type AdaptiveTurnInput = {
+  584|  session: POJUSessionState;
+  585|  statement: string;
+  586|  source_turn_id: string;
+  587|  now: string;
+  588|  /** Skip answer interpretation; plan from current DC (session init / first ask). */
+  589|  init_only?: boolean;
+  590|  /** @internal Test-only fault injection. Omitted in production. */
+  591|  test_hooks?: AdaptiveTurnTestHooks;
+  592|  locale?: string;
+  593|  signal?: AbortSignal;
+  594|};
+  595|
+  596|export async function runAdaptiveQuestionTurn(
+  597|  input: AdaptiveTurnInput,
+  598|): Promise<AdaptiveTurnResult> {
+  599|  const result = await runAdaptiveQuestionTurnInner(input);
+  600|  return closeBlockedClarifications(result, input);
+  601|}
+  602|
+  603|type ClarificationBlock = "budget_exhausted" | "depth_exhausted";
+  604|
+  605|function clarificationBlock(
+  606|  session: POJUSessionState,
+  607|  plan: AdaptiveQuestionPlan,
+  608|  answerResolution: boolean,
+  609|): ClarificationBlock | null {
+  610|  const u = session.decision_understanding;
+  611|  const bp = session.decision_blueprint;
+  612|  if (!u || !bp || plan.budget_cost === 0) return null;
+  613|  if (
+  614|    u.budget.remaining_hard_budget < plan.budget_cost ||
+  615|    u.budget.session_asked_count >= u.budget.hard_budget_limit
+  616|  ) {
+  617|    return "budget_exhausted";
+  618|  }
+  619|  // Binding what the user already said is not probing deeper into a direction.
+  620|  if (answerResolution) return null;
+  621|  const direction = bp.directions.find((d) => d.direction_id === plan.direction_id);
+  622|  const cap = direction?.depth_soft_cap ?? bp.question_budget.depth_per_direction;
+  623|  if (plan.dir_ids.some((dirId) => (u.budget.depth_by_dir[dirId] ?? 0) >= cap)) {
+  624|    return "depth_exhausted";
+  625|  }
+  626|  return null;
+  627|}
+  628|
+  629|/**
+  630| * Clarifications are questions: charged and bound by the hard budget; aspect /
+  631| * insight follow-ups are also bound by the per-direction depth. A clarification
+  632| * that would be newly sent past its limit is not asked: its item closes auditably
+  633| * (never written as fact) and the next clarification or the planner decides,
+  634| * which reaches readiness once nothing askable is left. Re-presenting an
+  635| * already-sent question and free goal_change confirmations are never blocked.
+  636| */
+  637|async function closeBlockedClarifications(
+  638|  result: AdaptiveTurnResult,
+  639|  input: AdaptiveTurnInput,
+  640|): Promise<AdaptiveTurnResult> {
+  641|  let r = result;
+  642|  for (let guard = 0; guard < 64; guard++) {
+  643|    const plan = r.plan;
+  644|    const u = r.session.decision_understanding;
+  645|    if (!plan || !u || !r.session.decision_blueprint) return r;
+  646|    const isPending = isPendingClarificationPlan(plan);
+  647|    if (!isPending && !isIntakeControlPlan(plan)) return r;
+  648|    if (u.last_sent_question?.plan_id === plan.plan_id) return r;
+  649|    const block = clarificationBlock(r.session, plan, isPending);
+  650|    if (!block) return r;
+
+==== 737-1310 ====
+  737|async function runAdaptiveQuestionTurnInner(
+  738|  input: AdaptiveTurnInput,
+  739|): Promise<AdaptiveTurnResult> {
+  740|  let current = bindPersonalAnalysisProfile(input.session, input.now);
+  741|  const buildUnderstanding = (
+  742|    args: Parameters<typeof buildUnderstandingState>[0],
+  743|  ): UnderstandingState => {
+  744|    input.test_hooks?.beforeUnderstandingBuild?.();
+  745|    return buildUnderstandingState(args);
+  746|  };
+  747|  const dc0 = current.decision_context;
+  748|  if (!dc0 || (dc0.status !== "draft" && dc0.status !== "final")) {
+  749|    return {
+  750|      session: current,
+  751|      outcome: "not_applicable_phase",
+  752|      answer_event: null,
+  753|      understanding: null,
+  754|      plan: null,
+  755|      authorized_question: null,
+  756|      persist_error: "no_dc",
+  757|    };
+  758|  }
+  759|
+  760|  // 1) Blueprint
+  761|  const bp = ensureDecisionBlueprint(current, { now: input.now });
+  762|  current = bp.session;
+  763|
+  764|  let answer_event: AnswerEvent | null = null;
+  765|  let persist_error: string | undefined;
+  766|
+  767|  // 2) Answer Interpretation → DC Update (unless init_only)
+  768|  if (!input.init_only) {
+  769|    const statement = input.statement.trim();
+  770|    if (!statement) {
+  771|      return {
+  772|        session: current,
+  773|        outcome: "not_applicable_phase",
+  774|        answer_event: null,
+  775|        understanding: null,
+  776|        plan: null,
+  777|        authorized_question: null,
+  778|        persist_error: "empty_statement",
+  779|      };
+  780|    }
+  781|    const intakeDecision = applyIntakeProtection({
+  782|      state: readIntakeProtection(current),
+  783|      kind: classifyIntakeInput(statement),
+  784|      nowIso: input.now,
+  785|      turnId: input.source_turn_id,
+  786|    });
+  787|    current = withIntakeProtection(current, intakeDecision.state);
+  788|    const protectionOutcome = mapIntakeProtectionOutcome(intakeDecision.action);
+  789|    if (protectionOutcome) {
+  790|      const live = liveNonClarificationPlan(current);
+  791|      const originalQuestion =
+  792|        current.decision_understanding?.last_sent_question?.question_text ??
+  793|        live?.question_text ??
+  794|        null;
+  795|      return {
+  796|        session: current,
+  797|        outcome: protectionOutcome,
+  798|        answer_event: null,
+  799|        understanding: current.decision_understanding ?? null,
+  800|        plan: live,
+  801|        authorized_question: originalQuestion,
+  802|        persist_error: protectionOutcome,
+  803|        user_visible_message: intakeProtectionUserMessage(
+  804|          intakeDecision,
+  805|          input.locale ?? current.locked_output_locale ?? "zh",
+  806|          originalQuestion,
+  807|        ),
+  808|      };
+  809|    }
+  810|    const priorClarify = findClarifiedConflictForTurn(
+  811|      current,
+  812|      input.source_turn_id,
+  813|    );
+  814|    const clarifyKey = `dc_conflict_clarify:${current.session_id}:${input.source_turn_id}`;
+  815|    const keySeen = (current.decision_context_idempotency_keys ?? []).includes(
+  816|      clarifyKey,
+  817|    );
+  818|    const lastSentTarget =
+  819|      current.decision_understanding?.last_sent_question?.conflict_clarification ??
+  820|      null;
+  821|    const clarifyTarget =
+  822|      lastSentTarget ??
+  823|      (priorClarify
+  824|        ? {
+  825|            conflict_id: priorClarify.conflict_id,
+  826|            fact_ids: [...priorClarify.fact_ids],
+  827|          }
+  828|        : null);
+  829|    const turnKind =
+  830|      priorClarify || keySeen || lastSentTarget
+  831|        ? ("conflict_clarification" as const)
+  832|        : isActivePendingAnswerResolution(current.pending_answer_resolution)
+  833|          ? ("pending_clarification" as const)
+  834|          : isActivePendingIntakeControl(current.pending_intake_control)
+  835|            ? ("intake_control_follow_up" as const)
+  836|            : ("ordinary_answer" as const);
+  837|    const sourceInput = {
+  838|      source_turn_id: input.source_turn_id,
+  839|      statement,
+  840|      now: input.now,
+  841|      turn_kind: turnKind,
+  842|    };
+  843|    current = recordAnswerSource(current, sourceInput);
+  844|    // Every failure return keeps the raw answer record and nothing else.
+  845|    const failureSession = recordAnswerSource(input.session, sourceInput);
+  846|    if (priorClarify || keySeen || lastSentTarget) {
+  847|      if (!clarifyTarget) {
+  848|        // Persist key seen but Conflict record missing: still avoid ordinary writes.
+  849|        current = activateNextBlueprintPriorityBand(current, input.now);
+  850|        const understanding = buildUnderstanding({
+  851|          session: current,
+  852|          blueprint: current.decision_blueprint!,
+  853|          now: input.now,
+  854|          last_answer_event_id: null,
+  855|        });
+  856|        const planned = await planFromState(current, understanding, input.now);
+  857|        return {
+  858|          session: planned.session,
+  859|          outcome: "idempotent_replay",
+  860|          answer_event: null,
+  861|          understanding: planned.understanding,
+  862|          plan: planned.plan,
+  863|          authorized_question: planned.authorized_question,
+  864|          persist_error: "idempotent_skip",
+  865|          ask_error: planned.planner_block
+  866|            ? `${planned.planner_block.reason_code}:${planned.planner_block.detail}`
+  867|            : undefined,
+  868|        };
+  869|      }
+  870|      return handleConflictClarificationAnswer({
+  871|        current,
+  872|        original: failureSession,
+  873|        statement,
+  874|        source_turn_id: input.source_turn_id,
+  875|        now: input.now,
+  876|        target: clarifyTarget,
+  877|        buildUnderstanding,
+  878|        planFromState,
+  879|        withUnderstanding,
+  880|        outcomeFromPlanResult,
+  881|        errorText,
+  882|        persistOverride: input.test_hooks?.conflictClarifyPersist,
+  883|      });
+  884|    }
+  885|
+  886|    const existingPending = current.pending_answer_resolution;
+  887|    if (isActivePendingAnswerResolution(existingPending)) {
+  888|      return handlePendingAnswerResolutionTurn({
+  889|        current,
+  890|        original: failureSession,
+  891|        statement,
+  892|        source_turn_id: input.source_turn_id,
+  893|        now: input.now,
+  894|        buildUnderstanding,
+  895|        planFromState,
+  896|        persist_error: undefined,
+  897|        test_hooks: input.test_hooks,
+  898|      });
+  899|    }
+  900|    if (
+  901|      existingPending &&
+  902|      pendingSourceTurnIds(existingPending).includes(input.source_turn_id)
+  903|    ) {
+  904|      // Terminal or inactive pending: replay the original source turn without
+  905|      // restoring a refused clarification or recounting budget.
+  906|      return replayInactivePendingResolution({
+  907|        session: current,
+  908|        pending: existingPending,
+  909|      });
+  910|    }
+  911|
+  912|    const existingControl = current.pending_intake_control;
+  913|    if (isActivePendingIntakeControl(existingControl)) {
+  914|      return handlePendingIntakeControlTurn({
+  915|        current,
+  916|        original: failureSession,
+  917|        statement,
+  918|        source_turn_id: input.source_turn_id,
+  919|        now: input.now,
+  920|        locale: input.locale,
+  921|        signal: input.signal,
+  922|        buildUnderstanding,
+  923|        planFromState,
+  924|        test_hooks: input.test_hooks,
+  925|      });
+  926|    }
+  927|    if (
+  928|      existingControl &&
+  929|      (controlSourceTurnIds(existingControl).includes(input.source_turn_id) ||
+  930|        input.source_turn_id === existingControl.last_resolved_turn_id)
+  931|    ) {
+  932|      return replayInactiveIntakeControl({
+  933|        session: current,
+  934|        control: existingControl,
+  935|      });
+  936|    }
+  937|
+  938|    const interpreted = await interpretAnswerWithModel({
+  939|      session: current,
+  940|      statement,
+  941|      source_turn_id: input.source_turn_id,
+  942|      locale: input.locale,
+  943|      signal: input.signal,
+  944|      testHook: input.test_hooks?.interpretAnswerModel,
+  945|    });
+  946|    if (!interpreted.ok) {
+  947|      return interpretationFailureResult(failureSession, interpreted);
+  948|    }
+  949|    answer_event = eventFromInterpretation({
+  950|      session: current,
+  951|      statement,
+  952|      source_turn_id: input.source_turn_id,
+  953|      interpreted,
+  954|    });
+  955|    current = recordAnswerInterpretation(current, input.source_turn_id, answer_event, input.now);
+  956|    const pendingUnresolved = continuableUnresolvedItems(
+  957|      answer_event.unresolved_items,
+  958|    );
+  959|
+  960|    // Not an answer to the sent question: write nothing, charge nothing, and
+  961|    // re-present the same authorized question (same plan_id → no new budget).
+  962|    if (
+  963|      answer_event.classification === "off_topic" ||
+  964|      answer_event.classification === "invalid_input"
+  965|    ) {
+  966|      current = attachIntakeControlFromEvent(current, answer_event, statement, input.now);
+  967|      if (isActivePendingIntakeControl(current.pending_intake_control)) {
+  968|        return intakeControlOrchestrationResult({
+  969|          session: current,
+  970|          control: current.pending_intake_control!,
+  971|          answer_event,
+  972|          persist_error: `${answer_event.classification}_no_dc_write`,
+  973|          outcome: "planned",
+  974|        });
+  975|      }
+  976|      const live = liveNonClarificationPlan(current);
+  977|      if (live) {
+  978|        return {
+  979|          session: current,
+  980|          outcome: "planned",
+  981|          answer_event,
+  982|          understanding: current.decision_understanding ?? null,
+  983|          plan: live,
+  984|          authorized_question: live.question_text,
+  985|          persist_error: `${answer_event.classification}_no_dc_write`,
+  986|        };
+  987|      }
+  988|    }
+  989|
+  990|    try {
+  991|      const applied = await applyAnswerEventToSessionDc(current, answer_event, {
+  992|        now: input.now,
+  993|      });
+  994|      if (applied.skipped_reason === "turn_already_mapped") {
+  995|        // Idempotent replay: rebuild understanding/plan from existing DC, no dup writes.
+  996|        // M2.3-R2-FU2: preserve planner_blocked — do not drop nonterminal protection.
+  997|        current = activateNextBlueprintPriorityBand(current, input.now);
+  998|        const understanding = buildUnderstanding({
+  999|          session: current,
+ 1000|          blueprint: current.decision_blueprint!,
+ 1001|          now: input.now,
+ 1002|          last_answer_event_id: answer_event.event_id,
+ 1003|        });
+ 1004|        const planned = await planFromState(current, understanding, input.now);
+ 1005|        if (planned.planner_block) {
+ 1006|          return {
+ 1007|            session: planned.session,
+ 1008|            outcome: "planner_blocked",
+ 1009|            ask_error: `${planned.planner_block.reason_code}:${planned.planner_block.detail}`,
+ 1010|            answer_event,
+ 1011|            understanding: planned.understanding,
+ 1012|            plan: planned.plan,
+ 1013|            authorized_question: planned.authorized_question,
+ 1014|            persist_error: "turn_already_mapped",
+ 1015|          };
+ 1016|        }
+ 1017|        const lastSent =
+ 1018|          current.decision_understanding?.last_sent_question ??
+ 1019|          planned.understanding.last_sent_question ??
+ 1020|          null;
+ 1021|        const existingPlan =
+ 1022|          current.adaptive_ask_plan ??
+ 1023|          current.decision_understanding?.next_question_plan ??
+ 1024|          null;
+ 1025|        if (existingPlan && lastSent && lastSent.plan_id === existingPlan.plan_id) {
+ 1026|          const recovered: UnderstandingState = {
+ 1027|            ...planned.understanding,
+ 1028|            next_question_plan: existingPlan,
+ 1029|            last_sent_question: lastSent,
+ 1030|            budget: current.decision_understanding?.budget ?? planned.understanding.budget,
+ 1031|          };
+ 1032|          return {
+ 1033|            session: withUnderstanding(
+ 1034|              current,
+ 1035|              recovered,
+ 1036|              existingPlan,
+ 1037|              current.intake_ask_plan ?? null,
+ 1038|            ),
+ 1039|            outcome: "idempotent_replay",
+ 1040|            answer_event,
+ 1041|            understanding: recovered,
+ 1042|            plan: existingPlan,
+ 1043|            authorized_question: lastSent.question_text,
+ 1044|            persist_error: "turn_already_mapped",
+ 1045|          };
+ 1046|        }
+ 1047|        return {
+ 1048|          session: planned.session,
+ 1049|          outcome: "idempotent_replay",
+ 1050|          answer_event,
+ 1051|          understanding: planned.understanding,
+ 1052|          plan: planned.plan,
+ 1053|          authorized_question: planned.authorized_question,
+ 1054|          persist_error: "turn_already_mapped",
+ 1055|        };
+ 1056|      }
+ 1057|      if (!applied.applied) {
+ 1058|        if (pendingUnresolved.length > 0 && applied.skipped_reason !== "turn_already_mapped") {
+ 1059|          current = finishPendingFromEvent(current, answer_event, statement, input.now);
+ 1060|          current = attachIntakeControlFromEvent(current, answer_event, statement, input.now);
+ 1061|          return pendingOrchestrationResult({
+ 1062|            session: current,
+ 1063|            pending: current.pending_answer_resolution!,
+ 1064|            answer_event,
+ 1065|            persist_error: "pending_answer_resolution",
+ 1066|            outcome: "planned",
+ 1067|          });
+ 1068|        }
+ 1069|        current = attachIntakeControlFromEvent(current, answer_event, statement, input.now);
+ 1070|        if (isActivePendingIntakeControl(current.pending_intake_control)) {
+ 1071|          return intakeControlOrchestrationResult({
+ 1072|            session: current,
+ 1073|            control: current.pending_intake_control!,
+ 1074|            answer_event,
+ 1075|            persist_error: applied.skipped_reason,
+ 1076|            outcome: "planned",
+ 1077|          });
+ 1078|        }
+ 1079|        // Off-topic / invalid / non-role unresolved: still recompute understanding.
+ 1080|        current = activateNextBlueprintPriorityBand(current, input.now);
+ 1081|        const understanding = buildUnderstanding({
+ 1082|          session: current,
+ 1083|          blueprint: current.decision_blueprint!,
+ 1084|          now: input.now,
+ 1085|          last_answer_event_id: answer_event.event_id,
+ 1086|        });
+ 1087|        const planned = await planFromState(current, understanding, input.now);
+ 1088|        return {
+ 1089|          session: planned.session,
+ 1090|          outcome: outcomeFromPlanResult(planned),
+ 1091|      ask_error: planned.planner_block
+ 1092|        ? `${planned.planner_block.reason_code}:${planned.planner_block.detail}`
+ 1093|        : undefined,
+ 1094|          answer_event,
+ 1095|          understanding: planned.understanding,
+ 1096|          plan: planned.plan,
+ 1097|          authorized_question: planned.authorized_question,
+ 1098|          persist_error: applied.skipped_reason,
+ 1099|        };
+ 1100|      }
+ 1101|
+ 1102|      // Persist DC via C1
+ 1103|      const key = `dc_collect:${current.session_id}:${input.source_turn_id}`;
+ 1104|      const persisted = await persistDcLifecycleChange(
+ 1105|        input.session,
+ 1106|        applied.session,
+ 1107|        key,
+ 1108|      );
+ 1109|      if (persisted.error === "idempotent_skip") {
+ 1110|        current = persisted.session;
+ 1111|        persist_error = "idempotent_skip";
+ 1112|      } else if (!persisted.committed) {
+ 1113|        return {
+ 1114|          session: failureSession,
+ 1115|          outcome: "dc_persist_failed",
+ 1116|          answer_event,
+ 1117|          understanding: null,
+ 1118|          plan: null,
+ 1119|          authorized_question: null,
+ 1120|          persist_error: persisted.error ?? "persist_failed",
+ 1121|        };
+ 1122|      } else {
+ 1123|        // Keep C1 revision mirrors from commit.session — caller/savePOJUSession
+ 1124|        // must not see a stale session_revision after DC write.
+ 1125|        current = {
+ 1126|          ...applied.session,
+ 1127|          ...persisted.session,
+ 1128|          decision_context:
+ 1129|            persisted.session.decision_context ?? applied.session.decision_context,
+ 1130|          decision_context_versions:
+ 1131|            persisted.session.decision_context_versions ??
+ 1132|            applied.session.decision_context_versions,
+ 1133|          decision_context_idempotency_keys:
+ 1134|            persisted.session.decision_context_idempotency_keys ??
+ 1135|            applied.session.decision_context_idempotency_keys,
+ 1136|          control_plane:
+ 1137|            persisted.session.control_plane ?? applied.session.control_plane,
+ 1138|          decision_blueprint: applied.session.decision_blueprint,
+ 1139|          messages: applied.session.messages,
+ 1140|          agent_v2: applied.session.agent_v2,
+ 1141|          session_revision: persisted.session.session_revision,
+ 1142|          dc_write_revision: persisted.session.dc_write_revision,
+ 1143|        };
+ 1144|      }
+ 1145|      if (
+ 1146|        answer_event.classification === "unknown" ||
+ 1147|        answer_event.classification === "declined"
+ 1148|      ) {
+ 1149|        current = refundSentQuestion(current);
+ 1150|      }
+ 1151|
+ 1152|      current = attachIntakeControlFromEvent(current, answer_event, statement, input.now);
+ 1153|      if (pendingUnresolved.length > 0) {
+ 1154|        current = finishPendingFromEvent(current, answer_event, statement, input.now);
+ 1155|        return pendingOrchestrationResult({
+ 1156|          session: current,
+ 1157|          pending: current.pending_answer_resolution!,
+ 1158|          answer_event,
+ 1159|          persist_error,
+ 1160|          outcome: "planned",
+ 1161|        });
+ 1162|      }
+ 1163|      if (isActivePendingIntakeControl(current.pending_intake_control)) {
+ 1164|        return intakeControlOrchestrationResult({
+ 1165|          session: current,
+ 1166|          control: current.pending_intake_control!,
+ 1167|          answer_event,
+ 1168|          persist_error,
+ 1169|          outcome: "planned",
+ 1170|        });
+ 1171|      }
+ 1172|    } catch (e) {
+ 1173|      return {
+ 1174|        session: failureSession,
+ 1175|        outcome: "dc_persist_threw",
+ 1176|        answer_event,
+ 1177|        understanding: null,
+ 1178|        plan: null,
+ 1179|        authorized_question: null,
+ 1180|        persist_error: errorText(e),
+ 1181|      };
+ 1182|    }
+ 1183|  }
+ 1184|
+ 1185|  // Ensure blueprint present after persist merge
+ 1186|  const bp2 = ensureDecisionBlueprint(current, { now: input.now });
+ 1187|  current = bp2.session;
+ 1188|
+ 1189|  // M2.3-R2 authoritative sequence:
+ 1190|  //   activate priority band on latest DC → build Understanding → Readiness → plan
+ 1191|  // Do not build Readiness against a DC that band activation later mutates.
+ 1192|  current = activateNextBlueprintPriorityBand(current, input.now);
+ 1193|
+ 1194|  let understanding0: UnderstandingState | null = null;
+ 1195|  try {
+ 1196|    understanding0 = buildUnderstanding({
+ 1197|      session: current,
+ 1198|      blueprint: current.decision_blueprint!,
+ 1199|      now: input.now,
+ 1200|      last_answer_event_id: answer_event?.event_id ?? null,
+ 1201|    });
+ 1202|    const planned = await planFromState(current, understanding0, input.now);
+ 1203|    return {
+ 1204|      session: planned.session,
+ 1205|      outcome: outcomeFromPlanResult(planned),
+ 1206|      ask_error: planned.planner_block
+ 1207|        ? `${planned.planner_block.reason_code}:${planned.planner_block.detail}`
+ 1208|        : undefined,
+ 1209|      answer_event,
+ 1210|      understanding: planned.understanding,
+ 1211|      plan: planned.plan,
+ 1212|      authorized_question: planned.authorized_question,
+ 1213|      persist_error,
+ 1214|    };
+ 1215|  } catch (e) {
+ 1216|    // M2.3-R2-FU2: planner/understanding exception must not disguise as investigation complete
+ 1217|    // while Blueprint P0/P1 obligations remain and hard budget remains.
+ 1218|    const err = errorText(e);
+ 1219|    let u = understanding0;
+ 1220|    if (!u) {
+ 1221|      try {
+ 1222|        u = buildUnderstanding({
+ 1223|          session: current,
+ 1224|          blueprint: current.decision_blueprint!,
+ 1225|          now: input.now,
+ 1226|          last_answer_event_id: answer_event?.event_id ?? null,
+ 1227|        });
+ 1228|      } catch {
+ 1229|        u = null;
+ 1230|      }
+ 1231|    }
+ 1232|    if (u) {
+ 1233|      const openP0P1 = openBlueprintP0P1Needs(u);
+ 1234|      if (openP0P1.length > 0 && u.budget.remaining_hard_budget > 0) {
+ 1235|        const blockedU: UnderstandingState = {
+ 1236|          ...u,
+ 1237|          next_question_plan: null,
+ 1238|          readiness: {
+ 1239|            ...u.readiness,
+ 1240|            verdict: "continue",
+ 1241|            can_ask: true,
+ 1242|            reasons: [
+ 1243|              ...u.readiness.reasons,
+ 1244|              "open_blueprint_p0_p1_obligations",
+ 1245|              "planner_blocked",
+ 1246|              "planner_exception",
+ 1247|            ],
+ 1248|          },
+ 1249|        };
+ 1250|        return {
+ 1251|          session: withUnderstanding(
+ 1252|            current,
+ 1253|            blockedU,
+ 1254|            null,
+ 1255|            current.intake_ask_plan ?? null,
+ 1256|          ),
+ 1257|          outcome: "planner_blocked",
+ 1258|          ask_error: `planner_exception:${err}`,
+ 1259|          answer_event,
+ 1260|          understanding: blockedU,
+ 1261|          plan: null,
+ 1262|          authorized_question: null,
+ 1263|          persist_error,
+ 1264|        };
+ 1265|      }
+ 1266|    }
+ 1267|
+ 1268|    // M2.3-R2-FU4: no valid Understanding after exception => never ready_no_question.
+ 1269|    // Hard-budget exhaustion is not a legal Readiness stop without Understanding.
+ 1270|    if (!u && current.decision_blueprint) {
+ 1271|      return {
+ 1272|        session: current,
+ 1273|        outcome: "planner_blocked",
+ 1274|        ask_error: `understanding_exception:${err}`,
+ 1275|        answer_event,
+ 1276|        understanding: null,
+ 1277|        plan: null,
+ 1278|        authorized_question: null,
+ 1279|        persist_error,
+ 1280|      };
+ 1281|    }
+ 1282|
+ 1283|    return {
+ 1284|      session: current,
+ 1285|      outcome: "planner_blocked",
+ 1286|      ask_error: `planner_exception:${err}`,
+ 1287|      answer_event,
+ 1288|      understanding: u,
+ 1289|      plan: null,
+ 1290|      authorized_question: null,
+ 1291|      persist_error,
+ 1292|    };
+ 1293|  }
+ 1294|}
+ 1295|
+ 1296|async function planFromState(
+ 1297|  session: POJUSessionState,
+ 1298|  understanding: UnderstandingState,
+ 1299|  now: string,
+ 1300|): Promise<{
+ 1301|  session: POJUSessionState;
+ 1302|  understanding: UnderstandingState;
+ 1303|  plan: AdaptiveQuestionPlan | null;
+ 1304|  authorized_question: string | null;
+ 1305|  planner_block: { reason_code: string; detail: string } | null;
+ 1306|}> {
+ 1307|  // M2.3-R2: priority-band activation already ran before Understanding/Readiness.
+ 1308|  // Activating here would mutate DC after Readiness and reuse a stale can_ask.
+ 1309|  const dc = session.decision_context!;
+ 1310|  const blueprint = session.decision_blueprint!;
+
+==== 1296-1600 ====
+ 1296|async function planFromState(
+ 1297|  session: POJUSessionState,
+ 1298|  understanding: UnderstandingState,
+ 1299|  now: string,
+ 1300|): Promise<{
+ 1301|  session: POJUSessionState;
+ 1302|  understanding: UnderstandingState;
+ 1303|  plan: AdaptiveQuestionPlan | null;
+ 1304|  authorized_question: string | null;
+ 1305|  planner_block: { reason_code: string; detail: string } | null;
+ 1306|}> {
+ 1307|  // M2.3-R2: priority-band activation already ran before Understanding/Readiness.
+ 1308|  // Activating here would mutate DC after Readiness and reuse a stale can_ask.
+ 1309|  const dc = session.decision_context!;
+ 1310|  const blueprint = session.decision_blueprint!;
+ 1311|  let budget = understanding.budget;
+ 1312|  const finalizePlan = (builtPlan: AdaptiveQuestionPlan): AdaptiveQuestionPlan =>
+ 1313|    bindConflictClarificationToPlan(session, builtPlan);
+ 1314|
+ 1315|  if (!understanding.readiness.can_ask) {
+ 1316|    const u = {
+ 1317|      ...understanding,
+ 1318|      next_question_plan: null,
+ 1319|      last_sent_question: null,
+ 1320|      budget,
+ 1321|    };
+ 1322|    return {
+ 1323|      session: withUnderstanding(session, u, null, session.intake_ask_plan ?? null),
+ 1324|      understanding: u,
+ 1325|      plan: null,
+ 1326|      authorized_question: null,
+ 1327|      planner_block: null,
+ 1328|    };
+ 1329|  }
+ 1330|
+ 1331|  const candidates = buildIntakeCandidatesFromDc(dc, blueprint).map((c) => {
+ 1332|    const dirId = c.dir_ids[0];
+ 1333|    const depth = dirId ? (budget.depth_by_dir[dirId] ?? 0) + 1 : c.depth;
+ 1334|    // Filter completed dirs already handled in builder; enforce depth cap here.
+ 1335|    return { ...c, depth, repetition_count: Math.max(0, depth - 1) };
+ 1336|  }).filter((c) => {
+ 1337|    if (!c.ddr_ids.length || c.ddr_ids.some((id) => id.startsWith("DDR_FOR_"))) {
+ 1338|      return false;
+ 1339|    }
+ 1340|    for (const dirId of c.dir_ids) {
+ 1341|      if (!blueprint.dir_ids.includes(dirId)) return false;
+ 1342|      // Answered (awaiting confirmation or an information boundary): never re-ask.
+ 1343|      const dir = dc.dirs.find((d) => d.dir_id === dirId);
+ 1344|      if (dir && isDirAnsweredForIntake(dc, dir)) return false;
+ 1345|    }
+ 1346|    const dirId = c.dir_ids[0];
+ 1347|    if (!dirId) return true;
+ 1348|    const used = budget.depth_by_dir[dirId] ?? 0;
+ 1349|    return used < blueprint.question_budget.depth_per_direction;
+ 1350|  });
+ 1351|
+ 1352|  // When the hard budget cannot cover every open DIR that blocks Freeze
+ 1353|  // sufficiency, spend it only on those DIRs; a non-blocking question then
+ 1354|  // could leave the session unable to freeze.
+ 1355|  const sufficiencyBlocking = new Set(
+ 1356|    dc.dirs
+ 1357|      .filter((d) => d.id_lifecycle === "active" && d.may_affect_p5_ranking !== false)
+ 1358|      .map((d) => d.dir_id),
+ 1359|  );
+ 1360|  const blockingCandidates = candidates.filter((c) =>
+ 1361|    c.dir_ids.some((dirId) => sufficiencyBlocking.has(dirId)),
+ 1362|  );
+ 1363|  const openBlockingDirs = new Set(
+ 1364|    blockingCandidates.flatMap((c) => c.dir_ids.filter((dirId) => sufficiencyBlocking.has(dirId))),
+ 1365|  );
+ 1366|  const plannable =
+ 1367|    blockingCandidates.length > 0 && budget.remaining_hard_budget <= openBlockingDirs.size
+ 1368|      ? blockingCandidates
+ 1369|      : candidates;
+ 1370|
+ 1371|  const naValidation = await buildProductionNaValidationContextFromSession(
+ 1372|    session,
+ 1373|    { nowIso: now },
+ 1374|  );
+ 1375|  const planResult = planNextAskFromCandidates({
+ 1376|    candidates: plannable,
+ 1377|    snap: snapshotFromDc(dc),
+ 1378|    naValidation,
+ 1379|    remaining_hard_budget: budget.remaining_hard_budget,
+ 1380|  });
+ 1381|
+ 1382|  const askSnap: IntakeAskPlanSnapshot = {
+ 1383|    scored_at: now,
+ 1384|    scoring_path: INTAKE_ASK_SCORING_PATH,
+ 1385|    selected_candidate_id: planResult.selected?.candidate.candidate_id ?? null,
+ 1386|    ranked_candidate_ids: planResult.ranked.map((r) => r.candidate.candidate_id),
+ 1387|    unresolved_counts: Object.fromEntries(
+ 1388|      planResult.ranked.map((r) => [
+ 1389|        r.candidate.candidate_id,
+ 1390|        r.score.unresolved_count,
+ 1391|      ]),
+ 1392|    ),
+ 1393|    gap_types: Object.fromEntries(
+ 1394|      planResult.ranked.map((r) => [r.candidate.candidate_id, r.score.gap_type]),
+ 1395|    ),
+ 1396|  };
+ 1397|
+ 1398|  const openP0P1 = openBlueprintP0P1Needs(understanding);
+ 1399|  const protectOpenP0P1 =
+ 1400|    openP0P1.length > 0 && budget.remaining_hard_budget > 0;
+ 1401|
+ 1402|  const blockOpenObligations = (
+ 1403|    reason_code: string,
+ 1404|    detail: string,
+ 1405|    extraReasons: string[],
+ 1406|  ) => {
+ 1407|    const u: UnderstandingState = {
+ 1408|      ...understanding,
+ 1409|      next_question_plan: null,
+ 1410|      readiness: {
+ 1411|        ...understanding.readiness,
+ 1412|        verdict: "continue",
+ 1413|        can_ask: true,
+ 1414|        reasons: [
+ 1415|          ...understanding.readiness.reasons,
+ 1416|          "open_blueprint_p0_p1_obligations",
+ 1417|          "planner_blocked",
+ 1418|          ...extraReasons,
+ 1419|        ],
+ 1420|      },
+ 1421|    };
+ 1422|    return {
+ 1423|      session: withUnderstanding(session, u, null, askSnap),
+ 1424|      understanding: u,
+ 1425|      plan: null as AdaptiveQuestionPlan | null,
+ 1426|      authorized_question: null as string | null,
+ 1427|      planner_block: { reason_code, detail },
+ 1428|    };
+ 1429|  };
+ 1430|
+ 1431|  const tryFallbackOrBlock = (reason_code: string, detail: string, extraReasons: string[]) => {
+ 1432|    const fb = tryCatalogFallbackForOpenP0P1({
+ 1433|      dc,
+ 1434|      blueprint,
+ 1435|      understanding,
+ 1436|      budget,
+ 1437|      now,
+ 1438|      scoring_path: `${INTAKE_ASK_SCORING_PATH}→catalog_fallback_p0_p1→buildAdaptiveQuestionPlan`,
+ 1439|    });
+ 1440|    if (fb.plan) {
+ 1441|      const finalPlan = finalizePlan(fb.plan);
+ 1442|      const u: UnderstandingState = {
+ 1443|        ...understanding,
+ 1444|        budget,
+ 1445|        next_question_plan: finalPlan,
+ 1446|        last_sent_question: null,
+ 1447|        readiness: {
+ 1448|          ...understanding.readiness,
+ 1449|          verdict: "continue",
+ 1450|          can_ask: true,
+ 1451|          reasons: [
+ 1452|            ...understanding.readiness.reasons,
+ 1453|            "catalog_fallback_p0_p1",
+ 1454|            ...extraReasons,
+ 1455|          ],
+ 1456|        },
+ 1457|      };
+ 1458|      return {
+ 1459|        session: withUnderstanding(session, u, finalPlan, askSnap),
+ 1460|        understanding: u,
+ 1461|        plan: finalPlan,
+ 1462|        authorized_question: finalPlan.question_text,
+ 1463|        planner_block: null as { reason_code: string; detail: string } | null,
+ 1464|      };
+ 1465|    }
+ 1466|    const rejectDetail = fb.last_reject ? `${detail}|${fb.last_reject}` : detail;
+ 1467|    return blockOpenObligations(reason_code, rejectDetail, extraReasons);
+ 1468|  };
+ 1469|
+ 1470|  if (!planResult.selected) {
+ 1471|    // M2.3-R2-FU: open P0/P1 + remaining hard budget must not become false completion.
+ 1472|    if (protectOpenP0P1) {
+ 1473|      return tryFallbackOrBlock(
+ 1474|        "no_selectable_candidate",
+ 1475|        "open_p0_p1_no_selectable_candidate",
+ 1476|        ["no_selectable_candidate"],
+ 1477|      );
+ 1478|    }
+ 1479|    const u: UnderstandingState = {
+ 1480|      ...understanding,
+ 1481|      next_question_plan: null,
+ 1482|      readiness: {
+ 1483|        ...understanding.readiness,
+ 1484|        verdict:
+ 1485|          budget.remaining_hard_budget <= 0
+ 1486|            ? "hard_budget_exhausted"
+ 1487|            : "ready_for_final_confirm",
+ 1488|        can_ask: false,
+ 1489|        reasons: [
+ 1490|          ...understanding.readiness.reasons,
+ 1491|          "no_selectable_candidate",
+ 1492|        ],
+ 1493|      },
+ 1494|    };
+ 1495|    return {
+ 1496|      session: withUnderstanding(session, u, null, askSnap),
+ 1497|      understanding: u,
+ 1498|      plan: null,
+ 1499|      authorized_question: null,
+ 1500|      planner_block: null,
+ 1501|    };
+ 1502|  }
+ 1503|
+ 1504|  const built = buildAdaptiveQuestionPlan({
+ 1505|    dc,
+ 1506|    blueprint,
+ 1507|    selected: planResult.selected,
+ 1508|    budget,
+ 1509|    now,
+ 1510|    last_sent_question_text:
+ 1511|        understanding.last_sent_question?.question_text ??
+ 1512|        session.decision_understanding?.last_sent_question?.question_text ??
+ 1513|        null,
+ 1514|      scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
+ 1515|  });
+ 1516|
+ 1517|  if (!built.validation.ok) {
+ 1518|    // Try next ranked candidates within budget/scope.
+ 1519|    for (const ranked of planResult.ranked.slice(1)) {
+ 1520|      const alt = buildAdaptiveQuestionPlan({
+ 1521|        dc,
+ 1522|        blueprint,
+ 1523|        selected: ranked,
+ 1524|        budget,
+ 1525|        now,
+ 1526|        last_sent_question_text:
+ 1527|        understanding.last_sent_question?.question_text ??
+ 1528|        session.decision_understanding?.last_sent_question?.question_text ??
+ 1529|        null,
+ 1530|      scoring_path: `${INTAKE_ASK_SCORING_PATH}→buildAdaptiveQuestionPlan`,
+ 1531|      });
+ 1532|      if (alt.validation.ok) {
+ 1533|        const finalPlan = finalizePlan(alt.plan);
+ 1534|        const u: UnderstandingState = {
+ 1535|          ...understanding,
+ 1536|          budget,
+ 1537|          next_question_plan: finalPlan,
+ 1538|          last_sent_question: null,
+ 1539|        };
+ 1540|        return {
+ 1541|          session: withUnderstanding(session, u, finalPlan, askSnap),
+ 1542|          understanding: u,
+ 1543|          plan: finalPlan,
+ 1544|          authorized_question: finalPlan.question_text,
+ 1545|          planner_block: null,
+ 1546|        };
+ 1547|      }
+ 1548|    }
+ 1549|    // M2.3-R2-FU: all candidates rejected — preserve exact reason; never false-complete.
+ 1550|    const rejectReason = `scope_budget_reject:${built.validation.reason_code}`;
+ 1551|    if (protectOpenP0P1) {
+ 1552|      return tryFallbackOrBlock(
+ 1553|        "all_candidates_rejected",
+ 1554|        `${built.validation.reason_code}:${built.validation.detail}`,
+ 1555|        [rejectReason],
+ 1556|      );
+ 1557|    }
+ 1558|    const u: UnderstandingState = {
+ 1559|      ...understanding,
+ 1560|      next_question_plan: null,
+ 1561|      readiness: {
+ 1562|        verdict: "ready_for_final_confirm",
+ 1563|        can_ask: false,
+ 1564|        reasons: [
+ 1565|          ...understanding.readiness.reasons,
+ 1566|          rejectReason,
+ 1567|        ],
+ 1568|      },
+ 1569|    };
+ 1570|    return {
+ 1571|      session: withUnderstanding(session, u, null, askSnap),
+ 1572|      understanding: u,
+ 1573|      plan: null,
+ 1574|      authorized_question: null,
+ 1575|      planner_block: null,
+ 1576|    };
+ 1577|  }
+ 1578|
+ 1579|  const finalPlan = finalizePlan(built.plan);
+ 1580|  const u: UnderstandingState = {
+ 1581|    ...understanding,
+ 1582|    budget,
+ 1583|    next_question_plan: finalPlan,
+ 1584|    last_sent_question: understanding.last_sent_question,
+ 1585|  };
+ 1586|  return {
+ 1587|    session: withUnderstanding(session, u, finalPlan, askSnap),
+ 1588|    understanding: u,
+ 1589|    plan: finalPlan,
+ 1590|    authorized_question: finalPlan.question_text,
+ 1591|    planner_block: null,
+ 1592|  };
+ 1593|}
+ 1594|
+ 1595|/** Mark a plan as actually shown without double-counting (restore same plan_id). */
+ 1596|export function attachAuthorizedAssistantQuestion(
+ 1597|  session: POJUSessionState,
+ 1598|  plan: AdaptiveQuestionPlan,
+ 1599|  turnId: string,
+ 1600|): POJUSessionState {

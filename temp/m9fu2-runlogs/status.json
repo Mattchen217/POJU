@@ -1,0 +1,159 @@
+{
+  "done": true,
+  "results": [
+    {
+      "name": "01-test-m9-server-authoritative-session",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m9-server-authoritative-session",
+      "display_command": "pnpm test:m9-server-authoritative-session",
+      "exit_code": 0,
+      "duration_ms": 3479,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\01-test-m9-server-authoritative-session.log",
+      "log_bytes": 10334
+    },
+    {
+      "name": "02-test-m9-r1-session-authority-remediation",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m9-r1-session-authority-remediation",
+      "display_command": "pnpm test:m9-r1-session-authority-remediation",
+      "exit_code": 0,
+      "duration_ms": 3264,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\02-test-m9-r1-session-authority-remediation.log",
+      "log_bytes": 7558
+    },
+    {
+      "name": "03-test-m9-r1-fu1-redis-lua-integrity-parity",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m9-r1-fu1-redis-lua-integrity-parity",
+      "display_command": "pnpm test:m9-r1-fu1-redis-lua-integrity-parity",
+      "exit_code": 0,
+      "duration_ms": 3273,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\03-test-m9-r1-fu1-redis-lua-integrity-parity.log",
+      "log_bytes": 7168
+    },
+    {
+      "name": "04-test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding",
+      "display_command": "pnpm test:m9-r1-fu1-fu2-ledger-integrity-atomic-binding",
+      "exit_code": 0,
+      "duration_ms": 3679,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\04-test-m9-r1-fu1-fu2-ledger-integrity-atomic-binding.log",
+      "log_bytes": 7104
+    },
+    {
+      "name": "05-test-m8-r1-internal-turn-trust-boundary",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m8-r1-internal-turn-trust-boundary",
+      "display_command": "pnpm test:m8-r1-internal-turn-trust-boundary",
+      "exit_code": 0,
+      "duration_ms": 2846,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\05-test-m8-r1-internal-turn-trust-boundary.log",
+      "log_bytes": 15194
+    },
+    {
+      "name": "06-test-m6-di2-full-lifecycle",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m6-di2-full-lifecycle",
+      "display_command": "pnpm test:m6-di2-full-lifecycle",
+      "exit_code": 0,
+      "duration_ms": 10202,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\06-test-m6-di2-full-lifecycle.log",
+      "log_bytes": 12725
+    },
+    {
+      "name": "07-test-m5-r1-authorization",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m5-r1-authorization",
+      "display_command": "pnpm test:m5-r1-authorization",
+      "exit_code": 0,
+      "duration_ms": 18869,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\07-test-m5-r1-authorization.log",
+      "log_bytes": 51097
+    },
+    {
+      "name": "08-test-m1-production-adaptive-question-loop",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m1-production-adaptive-question-loop",
+      "display_command": "pnpm test:m1-production-adaptive-question-loop",
+      "exit_code": 0,
+      "duration_ms": 22953,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\08-test-m1-production-adaptive-question-loop.log",
+      "log_bytes": 211469
+    },
+    {
+      "name": "09-test-m2-1-readiness-confirm-freeze",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m2-1-readiness-confirm-freeze",
+      "display_command": "pnpm test:m2-1-readiness-confirm-freeze",
+      "exit_code": 0,
+      "duration_ms": 4086,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\09-test-m2-1-readiness-confirm-freeze.log",
+      "log_bytes": 12822
+    },
+    {
+      "name": "10-test-m2-2-freeze-report-binding",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m2-2-freeze-report-binding",
+      "display_command": "pnpm test:m2-2-freeze-report-binding",
+      "exit_code": 0,
+      "duration_ms": 5660,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\10-test-m2-2-freeze-report-binding.log",
+      "log_bytes": 7668
+    },
+    {
+      "name": "11-test-m3-decision-report",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m3-decision-report",
+      "display_command": "pnpm test:m3-decision-report",
+      "exit_code": 0,
+      "duration_ms": 3727,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\11-test-m3-decision-report.log",
+      "log_bytes": 7160
+    },
+    {
+      "name": "12-test-m4-decision-authority",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m4-decision-authority",
+      "display_command": "pnpm test:m4-decision-authority",
+      "exit_code": 0,
+      "duration_ms": 4309,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\12-test-m4-decision-authority.log",
+      "log_bytes": 5075
+    },
+    {
+      "name": "13-test-m4-1-freeze-recovery",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m4-1-freeze-recovery",
+      "display_command": "pnpm test:m4-1-freeze-recovery",
+      "exit_code": 0,
+      "duration_ms": 3606,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\13-test-m4-1-freeze-recovery.log",
+      "log_bytes": 3733
+    },
+    {
+      "name": "14-test-m5-di2-main-path",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m5-di2-main-path",
+      "display_command": "pnpm test:m5-di2-main-path",
+      "exit_code": 0,
+      "duration_ms": 49513,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\14-test-m5-di2-main-path.log",
+      "log_bytes": 32243
+    },
+    {
+      "name": "15-test-m8-di2-non-model-closure",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m8-di2-non-model-closure",
+      "display_command": "pnpm test:m8-di2-non-model-closure",
+      "exit_code": 0,
+      "duration_ms": 2015,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\15-test-m8-di2-non-model-closure.log",
+      "log_bytes": 3067
+    },
+    {
+      "name": "16-tsc-noEmit",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd exec tsc --noEmit --pretty false",
+      "display_command": "pnpm exec tsc --noEmit --pretty false",
+      "exit_code": 0,
+      "duration_ms": 16072,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\16-tsc-noEmit.log",
+      "log_bytes": 0
+    },
+    {
+      "name": "17-pnpm-build",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd build",
+      "display_command": "pnpm build",
+      "exit_code": 0,
+      "duration_ms": 121238,
+      "log": "D:\\POJU\\pojulife\\temp\\m9fu2-runlogs\\17-pnpm-build.log",
+      "log_bytes": 12350
+    }
+  ],
+  "extra": "complete"
+}

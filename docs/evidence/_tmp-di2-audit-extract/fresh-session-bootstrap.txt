@@ -1,0 +1,453 @@
+FILE lib/poju/decision-intake/fresh-session-bootstrap.ts
+
+==== 1-450 ====
+    1|/**
+    2| * M1-R / M2.3 — Fresh-session bootstrap for the adaptive main loop.
+    3| *
+    4| * Production chain:
+    5| *   createPOJUSession → handleUserMessage → runM1ProductionPreLlmTurn
+    6| *   → bootstrapFreshSessionMainLoop → Catalog Blueprint init → AQE → authorized Q
+    7| *
+    8| * M2.3: investigation scope comes from Phase 2 DDR/DIR Catalog + Topic Applicability.
+    9| * M1R_STARTER_DIRS is only an explicit controlled fallback when Catalog scope cannot
+   10| * be built — never the default full scope for every decision question.
+   11| */
+   12|
+   13|import type { DIR } from "@/lib/poju/decision-context/types";
+   14|import { buildRealityFact } from "@/lib/poju/decision-context/fact-combination";
+   15|import { reaggregateDirs } from "@/lib/poju/decision-context/dir-aggregator";
+   16|import type { POJUSessionState } from "@/lib/poju/types";
+   17|import { createInitialAgentState } from "@/lib/poju/agent-state";
+   18|import {
+   19|  createDefaultControlPlane,
+   20|  mergeControlPlanePatch,
+   21|} from "@/lib/poju/decision-context/control-plane";
+   22|import {
+   23|  persistDcLifecycleChange,
+   24|  seedOpeningDraftDcOnSession,
+   25|} from "@/lib/poju/decision-context/production-dc-lifecycle";
+   26|import { ensureDecisionBlueprint } from "./blueprint";
+   27|import { runAdaptiveQuestionTurn } from "./adaptive-turn";
+   28|import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
+   29|import type { AdaptiveTurnResult } from "./types";
+   30|
+   31|const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+   32|
+   33|/**
+   34| * Controlled fallback DIR seed only — Catalog-validated ids.
+   35| * NOT the default investigation scope for every decision question (M2.3-B).
+   36| */
+   37|export const M1R_STARTER_DIRS: DIR[] = [
+   38|  {
+   39|    dir_id: "DIR-OPT-ON-TABLE",
+   40|    need: "有哪些真实可选方案",
+   41|    why: "没有选项清单无法比较去留",
+   42|    required_fact_roles: ["option"],
+   43|    current_state: "unknown",
+   44|    partial_satisfaction: false,
+   45|    agenda_item_ids: [],
+   46|    id_lifecycle: "active",
+   47|    may_affect_p5_ranking: true,
+   48|  },
+   49|  {
+   50|    dir_id: "DIR-STATUS-QUO",
+   51|    need: "当前工作与生活基线",
+   52|    why: "需要对照维持现状的代价与收益",
+   53|    required_fact_roles: ["status_quo"],
+   54|    current_state: "unknown",
+   55|    partial_satisfaction: false,
+   56|    agenda_item_ids: [],
+   57|    id_lifecycle: "active",
+   58|    may_affect_p5_ranking: false,
+   59|  },
+   60|  {
+   61|    dir_id: "DIR-OPT-CONSTRAINTS",
+   62|    need: "硬性约束（钱/时间/责任）",
+   63|    why: "硬约束直接砍掉不可行选项",
+   64|    required_fact_roles: ["hard_constraint"],
+   65|    current_state: "unknown",
+   66|    partial_satisfaction: false,
+   67|    agenda_item_ids: [],
+   68|    id_lifecycle: "active",
+   69|    may_affect_p5_ranking: true,
+   70|  },
+   71|  {
+   72|    dir_id: "DIR-RISK-TOLERANCE",
+   73|    need: "可承受的最差结果",
+   74|    why: "风险边界决定能否推进高不确定选项",
+   75|    required_fact_roles: ["risk_tolerance"],
+   76|    current_state: "unknown",
+   77|    partial_satisfaction: false,
+   78|    agenda_item_ids: [],
+   79|    id_lifecycle: "active",
+   80|    may_affect_p5_ranking: true,
+   81|  },
+   82|];
+   83|
+   84|export type FreshSessionBootstrapResult = AdaptiveTurnResult & {
+   85|  bootstrapped: boolean;
+   86|  bootstrap_error?: string;
+   87|  blueprint_scope_source?: "catalog" | "starter_fallback";
+   88|};
+   89|
+   90|type PersistFn = typeof persistDcLifecycleChange;
+   91|
+   92|/** Test-only seam for fail-closed proof. Never use in production callers. */
+   93|let persistOverrideForTests: PersistFn | null = null;
+   94|
+   95|export function __setM1rPersistForTests(fn: PersistFn | null): void {
+   96|  persistOverrideForTests = fn;
+   97|}
+   98|
+   99|async function persistDc(
+  100|  previous: POJUSessionState,
+  101|  next: POJUSessionState,
+  102|  key: string,
+  103|) {
+  104|  const impl = persistOverrideForTests ?? persistDcLifecycleChange;
+  105|  return impl(previous, next, key);
+  106|}
+  107|
+  108|function ensureCollectingAgent(
+  109|  session: POJUSessionState,
+  110|  statement: string,
+  111|): POJUSessionState {
+  112|  const q =
+  113|    session.original_question?.trim() ||
+  114|    session.agent_v2?.original_question?.trim() ||
+  115|    statement.trim();
+  116|  const base =
+  117|    session.agent_v2 ??
+  118|    createInitialAgentState({
+  119|      original_question: q || statement.trim() || "decision",
+  120|    });
+  121|  const agent = {
+  122|    ...base,
+  123|    current_phase: "collecting_context" as const,
+  124|    original_question: q || base.original_question,
+  125|    delivery_mode: base.delivery_mode ?? ("full" as const),
+  126|    stall_offer_pending: false,
+  127|    core_dilemma: base.core_dilemma ?? {
+  128|      concrete_event: (statement || q).slice(0, 200) || null,
+  129|      stakes: null,
+  130|      sticking_point: null,
+  131|    },
+  132|    desired_direction: base.desired_direction ?? {
+  133|      wants: null,
+  134|      priority: null,
+  135|    },
+  136|  };
+  137|  const control =
+  138|    session.control_plane ??
+  139|    createDefaultControlPlane("collecting_context");
+  140|  return {
+  141|    ...session,
+  142|    original_question: q || session.original_question,
+  143|    agent_v2: agent,
+  144|    control_plane: mergeControlPlanePatch(control, {
+  145|      current_phase: "collecting_context",
+  146|    }),
+  147|  };
+  148|}
+  149|
+  150|
+  151|function seedDecisionQuestionFact(
+  152|  session: POJUSessionState,
+  153|  statement: string,
+  154|  source_turn_id: string,
+  155|  now: string,
+  156|): POJUSessionState {
+  157|  const dc = session.decision_context;
+  158|  if (!dc || dc.status !== "draft") return session;
+  159|  const q =
+  160|    dc.definition.decision_question?.trim() ||
+  161|    session.original_question?.trim() ||
+  162|    statement.trim();
+  163|  if (!q) return session;
+  164|  const hasRole = (dc.reality_facts ?? []).some((f) =>
+  165|    (f.fact_roles ?? []).includes("decision_question"),
+  166|  );
+  167|  if (hasRole) return session;
+  168|  if (!dc.dirs.some((d) => d.dir_id === "DIR-DEF-QUESTION")) return session;
+  169|  const fact = buildRealityFact({
+  170|    fact_id: `fact_dq_${dc.context_id}`,
+  171|    statement: q.slice(0, 500),
+  172|    status: "unverified",
+  173|    verification_level: "user_asserted",
+  174|    source_stage: "opening",
+  175|    source_turn_id,
+  176|    fact_roles: ["decision_question"],
+  177|    related_dir_ids: ["DIR-DEF-QUESTION"],
+  178|    updated_at: now,
+  179|  });
+  180|  const reality_facts = [...(dc.reality_facts ?? []), fact];
+  181|  const dirs = reaggregateDirs(
+  182|    dc.dirs,
+  183|    reality_facts,
+  184|    dc.conflicts ?? [],
+  185|  );
+  186|  return {
+  187|    ...session,
+  188|    decision_context: {
+  189|      ...dc,
+  190|      reality_facts,
+  191|      dirs,
+  192|      updated_at: now,
+  193|    },
+  194|  };
+  195|}
+  196|
+  197|/** Last-resort only: attach starter DIRs when DC has zero active dirs after Catalog init. */
+  198|function attachStarterDirsFallback(
+  199|  session: POJUSessionState,
+  200|  now: string,
+  201|): POJUSessionState {
+  202|  const dc = session.decision_context;
+  203|  if (!dc || dc.status !== "draft") return session;
+  204|  if (dc.dirs.some((d) => d.id_lifecycle === "active")) return session;
+  205|  return {
+  206|    ...session,
+  207|    decision_context: {
+  208|      ...dc,
+  209|      dirs: M1R_STARTER_DIRS.map((d) => ({ ...d })),
+  210|      updated_at: now,
+  211|    },
+  212|  };
+  213|}
+  214|
+  215|function withDecisionQuestion(
+  216|  session: POJUSessionState,
+  217|  statement: string,
+  218|  now: string,
+  219|): POJUSessionState {
+  220|  const dc = session.decision_context;
+  221|  if (!dc || dc.status !== "draft") return session;
+  222|  const q =
+  223|    dc.definition.decision_question?.trim() ||
+  224|    session.original_question?.trim() ||
+  225|    session.agent_v2?.original_question?.trim() ||
+  226|    statement.trim() ||
+  227|    null;
+  228|  if (!q) return session;
+  229|  if (dc.definition.decision_question === q) return session;
+  230|  return {
+  231|    ...session,
+  232|    decision_context: {
+  233|      ...dc,
+  234|      definition: {
+  235|        ...dc.definition,
+  236|        decision_question: q,
+  237|      },
+  238|      updated_at: now,
+  239|    },
+  240|    original_question: session.original_question || q,
+  241|  };
+  242|}
+  243|
+  244|function applyBlueprintInit(
+  245|  session: POJUSessionState,
+  246|  statement: string,
+  247|  now: string,
+  248|  recompute: boolean,
+  249|  source_turn_id?: string,
+  250|): { session: POJUSessionState; scope_source: "catalog" | "starter_fallback" } {
+  251|  let current = withDecisionQuestion(session, statement, now);
+  252|  try {
+  253|    const bp = ensureDecisionBlueprint(current, {
+  254|      now,
+  255|      recompute_scope: recompute,
+  256|    });
+  257|    current = bp.session;
+  258|    current = seedDecisionQuestionFact(
+  259|      current,
+  260|      statement,
+  261|      source_turn_id ?? `opening:${current.session_id}`,
+  262|      now,
+  263|    );
+  264|    // If Catalog path somehow left zero active dirs, controlled starter fallback.
+  265|    if (
+  266|      !(current.decision_context?.dirs ?? []).some(
+  267|        (d) => d.id_lifecycle === "active",
+  268|      )
+  269|    ) {
+  270|      current = attachStarterDirsFallback(current, now);
+  271|      const bp2 = ensureDecisionBlueprint(current, {
+  272|        now,
+  273|        recompute_scope: true,
+  274|      });
+  275|      current = bp2.session;
+  276|      return {
+  277|        session: current,
+  278|        scope_source: current.decision_blueprint?.scope_source ?? "starter_fallback",
+  279|      };
+  280|    }
+  281|    return {
+  282|      session: current,
+  283|      scope_source: bp.meta.scope_source,
+  284|    };
+  285|  } catch {
+  286|    current = attachStarterDirsFallback(current, now);
+  287|    const bp = ensureDecisionBlueprint(current, {
+  288|      now,
+  289|      recompute_scope: true,
+  290|    });
+  291|    let fallbackSession = bp.session;
+  292|    fallbackSession = seedDecisionQuestionFact(
+  293|      fallbackSession,
+  294|      statement,
+  295|      source_turn_id ?? `opening:${fallbackSession.session_id}`,
+  296|      now,
+  297|    );
+  298|    return {
+  299|      session: fallbackSession,
+  300|      scope_source: "starter_fallback",
+  301|    };
+  302|  }
+  303|}
+  304|
+  305|/**
+  306| * Brand-new session entry: create/persist draft DC + Catalog Blueprint + first adaptive plan.
+  307| * Does NOT interpret `statement` as an answer to a prior investigate question
+  308| * (that is the decision question / opening statement).
+  309| */
+  310|export async function bootstrapFreshSessionMainLoop(input: {
+  311|  session: POJUSessionState;
+  312|  statement: string;
+  313|  source_turn_id: string;
+  314|  now: string;
+  315|}): Promise<FreshSessionBootstrapResult> {
+  316|  const statement = input.statement.trim();
+  317|  if (!statement) {
+  318|    return {
+  319|      session: input.session,
+  320|      outcome: "not_applicable_phase",
+  321|      answer_event: null,
+  322|      understanding: null,
+  323|      plan: null,
+  324|      authorized_question: null,
+  325|      persist_error: "empty_statement",
+  326|      bootstrapped: false,
+  327|      bootstrap_error: "empty_statement",
+  328|    };
+  329|  }
+  330|
+  331|  let current = bindPersonalAnalysisProfile(ensureCollectingAgent({ ...input.session }, statement), input.now);
+  332|  let scope_source: "catalog" | "starter_fallback" = "catalog";
+  333|
+  334|  const existing = current.decision_context;
+  335|  if (existing && (existing.status === "draft" || existing.status === "final")) {
+  336|    const applied = applyBlueprintInit(current, statement, input.now, false, input.source_turn_id);
+  337|    current = applied.session;
+  338|    scope_source = applied.scope_source;
+  339|    const turn = await runAdaptiveQuestionTurn({
+  340|      session: current,
+  341|      statement: "",
+  342|      source_turn_id: input.source_turn_id,
+  343|      now: input.now,
+  344|      init_only: true,
+  345|    });
+  346|    return { ...turn, bootstrapped: false, blueprint_scope_source: scope_source };
+  347|  }
+  348|
+  349|  const seeded = seedOpeningDraftDcOnSession(current, { now: input.now });
+  350|  if (!seeded.created && !seeded.session.decision_context) {
+  351|    return {
+  352|      session: current,
+  353|      outcome: "dc_persist_failed",
+  354|      answer_event: null,
+  355|      understanding: null,
+  356|      plan: null,
+  357|      authorized_question: null,
+  358|      persist_error: seeded.skipped_reason ?? "seed_failed",
+  359|      bootstrapped: false,
+  360|      bootstrap_error: seeded.skipped_reason ?? "seed_failed",
+  361|    };
+  362|  }
+  363|
+  364|  // Catalog Blueprint scope BEFORE the single C1 write so first persist is complete.
+  365|  current = ensureCollectingAgent(seeded.session, statement);
+  366|  {
+  367|    const applied = applyBlueprintInit(current, statement, input.now, true, input.source_turn_id);
+  368|    current = applied.session;
+  369|    scope_source = applied.scope_source;
+  370|  }
+  371|
+  372|  const key = `dc_seed:m1r:${current.session_id}:${input.source_turn_id}`;
+  373|  try {
+  374|    const persisted = await persistDc(input.session, current, key);
+  375|    if (!persisted.committed && persisted.error !== "idempotent_skip") {
+  376|      return {
+  377|        session: input.session,
+  378|        outcome: "dc_persist_failed",
+  379|        answer_event: null,
+  380|        understanding: null,
+  381|        plan: null,
+  382|        authorized_question: null,
+  383|        persist_error: persisted.error ?? "persist_failed",
+  384|        bootstrapped: false,
+  385|        bootstrap_error: persisted.error ?? "persist_failed",
+  386|      };
+  387|    }
+  388|    current = {
+  389|      ...current,
+  390|      ...persisted.session,
+  391|      decision_context:
+  392|        persisted.session.decision_context ?? current.decision_context,
+  393|      decision_context_versions:
+  394|        persisted.session.decision_context_versions ??
+  395|        current.decision_context_versions,
+  396|      decision_context_idempotency_keys:
+  397|        persisted.session.decision_context_idempotency_keys ??
+  398|        current.decision_context_idempotency_keys,
+  399|      control_plane: persisted.session.control_plane ?? current.control_plane,
+  400|      // Keep bootstrap phase / blueprint / messages — C1 restores DC authority only.
+  401|      agent_v2: current.agent_v2,
+  402|      decision_blueprint: current.decision_blueprint,
+  403|      messages: current.messages,
+  404|      session_revision: persisted.session.session_revision,
+  405|      dc_write_revision: persisted.session.dc_write_revision,
+  406|    };
+  407|  } catch (e) {
+  408|    return {
+  409|      session: input.session,
+  410|      outcome: "dc_persist_threw",
+  411|      answer_event: null,
+  412|      understanding: null,
+  413|      plan: null,
+  414|      authorized_question: null,
+  415|      persist_error: errorText(e),
+  416|      bootstrapped: false,
+  417|      bootstrap_error: errorText(e),
+  418|    };
+  419|  }
+  420|
+  421|  // Re-apply collecting + Catalog Blueprint after C1 restore (DC wins; dirs must remain).
+  422|  current = ensureCollectingAgent(current, statement);
+  423|  {
+  424|    const applied = applyBlueprintInit(
+  425|      current,
+  426|      statement,
+  427|      input.now,
+  428|      !(current.decision_context?.dirs ?? []).some(
+  429|        (d) => d.id_lifecycle === "active",
+  430|      ),
+  431|      input.source_turn_id,
+  432|    );
+  433|    current = applied.session;
+  434|    scope_source = applied.scope_source;
+  435|  }
+  436|
+  437|  const turn = await runAdaptiveQuestionTurn({
+  438|    session: current,
+  439|    statement: "",
+  440|    source_turn_id: input.source_turn_id,
+  441|    now: input.now,
+  442|    init_only: true,
+  443|  });
+  444|
+  445|  return {
+  446|    ...turn,
+  447|    bootstrapped: true,
+  448|    blueprint_scope_source: scope_source,
+  449|  };
+  450|}

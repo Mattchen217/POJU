@@ -1,0 +1,55 @@
+
+> pojulife@0.1.0 test:m4-decision-authority D:\POJU\pojulife
+> tsx scripts/test-m4-decision-authority.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M4 decision authority — ledger / Freeze seal / profile provenance / M3 start
+  PASS  genesis commit: draft accepted, writer token issued, server-classified change type
+  PASS  duplicate request (network retry) returns the same effective commit, no second entry
+  PASS  same idempotency key with different content is refused, effective commit returned
+  PASS  model-made confirmation (no user Confirmation Event) is refused
+  PASS  version transitions: no regression, no context swap, no client-written final; draft bumps coalesce
+  PASS  writer token, stale expected head and Blueprint ownership are enforced
+  PASS  concurrent commits from the same head: exactly one wins; parallel duplicates collapse
+  PASS  ledger chain is continuous and tamper-evident
+  PASS  server seals the ledger head: final snapshot commit + signed receipt + profile receipt
+  PASS  repeated Freeze request returns the identical receipt (no second seal)
+  PASS  forged / altered receipts never verify against the server record
+  PASS  frozen version is immutable; a goal change opens V2; historical Freeze stays intact
+  PASS  Freeze target must be the latest committed head with matching hash; insufficient DC refused
+  PASS  crash after the seal commit: replay re-materializes the identical record and receipt
+  PASS  concurrent Freeze requests for the same head yield one seal and one receipt
+  PASS  server profile: real engines, deterministic, bound to schema + calculation time
+  PASS  profile registry: no raw birth stored; tampered chart fails its hash; one profile per Freeze
+  PASS  Freeze without birth → profile registered later at the Freeze instant (idempotent)
+  PASS  start verifies receipts and builds the job only from server records
+  PASS  start refuses missing / altered / foreign receipts and a wrong writer
+  PASS  a historical Freeze cannot start a report once V2 is open
+  PASS  runner sources: projection time is the profile calculation time, not wall clock
+  PASS  DI2 Session write commits the DC to the ledger before the local blob; mirror only from server
+  PASS  authority unreachable → local DC write fails (retryable); nothing half-applied
+  PASS  lost local mirror write self-heals onto the server head holding the same base
+  PASS  legacy sessions (no Blueprint) never touch the ledger
+  PASS  DI2 Freeze wire: server seal adopted through C1 with receipts; device cannot self-freeze
+
+27 passed, 0 failed

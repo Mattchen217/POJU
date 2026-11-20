@@ -1,0 +1,529 @@
+FILE lib/poju/decision-intake/understanding-state.ts
+
+==== 1-526 ====
+    1|/**
+    2| * Build derived Understanding State from DC + Blueprint (not a second fact DB).
+    3| * M2.4-R1: retain fact IDs/sources; Understood only for known/n_a; Need lists
+    4| * unmet roles; summary updates only on substantial content change.
+    5| */
+    6|
+    7|import { evaluateDecisionSufficiency } from "@/lib/poju/decision-context/stop-criteria";
+    8|import type { POJUSessionState } from "@/lib/poju/types";
+    9|import {
+   10|  directionIdForDir,
+   11|  gateClassForDirFromCatalog,
+   12|  resolveDdrIdsForDir,
+   13|} from "./blueprint";
+   14|import {
+   15|  ACTIVE_DDR_CATALOG_VERSION,
+   16|  loadDdrCatalog,
+   17|} from "@/lib/poju/decision-context/catalog";
+   18|import { dirIntakeAnswerCoverage } from "./intake-answer-coverage";
+   19|import type {
+   20|  AdaptiveQuestionPlan,
+   21|  DecisionBlueprint,
+   22|  NeedItem,
+   23|  PersonalPatternInsightBlock,
+   24|  SessionBudgetSnapshot,
+   25|  UnderstandingState,
+   26|  UnderstoodItem,
+   27|} from "./types";
+   28|import { evaluateQaPersonalPatternInsight } from "./personal-analysis-profile";
+   29|
+   30|export function defaultBudget(
+   31|  session: POJUSessionState,
+   32|  blueprint: DecisionBlueprint,
+   33|): SessionBudgetSnapshot {
+   34|  const prev = session.decision_understanding?.budget;
+   35|  const soft = blueprint.question_budget.soft;
+   36|  const hard = blueprint.question_budget.hard;
+   37|  const session_asked_count = prev?.session_asked_count ?? 0;
+   38|  return {
+   39|    soft_budget_limit: soft,
+   40|    hard_budget_limit: hard,
+   41|    session_asked_count,
+   42|    review_cycle: prev?.review_cycle ?? 1,
+   43|    cycle_base_asked: prev?.cycle_base_asked ?? 0,
+   44|    remaining_hard_budget: Math.max(0, hard - session_asked_count),
+   45|    depth_by_dir: { ...(prev?.depth_by_dir ?? {}) },
+   46|    ...(prev?.ineffective_plan_ids?.length
+   47|      ? { ineffective_plan_ids: [...prev.ineffective_plan_ids] }
+   48|      : {}),
+   49|  };
+   50|}
+   51|
+   52|export function computeReadinessProgress(input: {
+   53|  dc: NonNullable<POJUSessionState["decision_context"]>;
+   54|  blueprint: DecisionBlueprint;
+   55|  sufficiency: ReturnType<typeof evaluateDecisionSufficiency>;
+   56|}): NonNullable<UnderstandingState["readiness_progress"]> {
+   57|  const { dc, blueprint, sufficiency } = input;
+   58|  const dirPriority = (dirId: string): "P0" | "P1" | "P2" => {
+   59|    const hit = (blueprint.directions ?? []).find((d) => d.dir_ids.includes(dirId));
+   60|    return hit?.priority === "P0" || hit?.priority === "P1" ? hit.priority : "P2";
+   61|  };
+   62|  const roleScore = (state: string | undefined): number => {
+   63|    if (state === "known" || state === "n_a") return 1;
+   64|    return 0;
+   65|  };
+   66|  const activeDirs = (dc.dirs ?? []).filter((d) => d.id_lifecycle === "active" || d.id_lifecycle == null);
+   67|  const scored = (priority: "P0" | "P1" | "P2") => {
+   68|    const list = activeDirs.filter((d) => dirPriority(d.dir_id) === priority);
+   69|    if (!list.length) return 1;
+   70|    return list.reduce((sum, d) => sum + roleScore(d.current_state), 0) / list.length;
+   71|  };
+   72|  const ddrTargets = (blueprint.directions ?? []).flatMap((d) =>
+   73|    (d.dir_ids ?? []).map((dirId) => ({ priority: d.priority, dirId })),
+   74|  );
+   75|  const requiredDdrDirs = ddrTargets.filter((d) => d.priority === "P0" || d.priority === "P1");
+   76|  const ddr = requiredDdrDirs.length
+   77|    ? requiredDdrDirs.reduce((sum, item) => {
+   78|        const dir = activeDirs.find((d) => d.dir_id === item.dirId);
+   79|        return sum + roleScore(dir?.current_state);
+   80|      }, 0) / requiredDdrDirs.length
+   81|    : scored("P0");
+   82|  const constraints = (dc.constraints ?? []).length
+   83|    ? dc.constraints.filter((c) => c.status === "confirmed").length / dc.constraints.length
+   84|    : 1;
+   85|  const openConflicts = (dc.conflicts ?? []).filter((c) => c.state !== "clarified" && c.state !== "unresolved_in_final");
+   86|  const conflicts = openConflicts.length === 0 ? 1 : 0;
+   87|  const sufficiencyScore =
+   88|    sufficiency.verdict === "sufficient" ? 1 : sufficiency.verdict === "sufficient_with_boundaries" ? 0.85 : 0;
+   89|  const p0 = scored("P0");
+   90|  const p1 = scored("P1");
+   91|  const percentRaw =
+   92|    (ddr * 3 + p0 * 3 + p1 * 2 + constraints * 1 + conflicts * 2 + sufficiencyScore * 3) / 14;
+   93|  const complete =
+   94|    ddr >= 1 &&
+   95|    p0 >= 1 &&
+   96|    p1 >= 1 &&
+   97|    conflicts >= 1 &&
+   98|    (sufficiency.verdict === "sufficient" || sufficiency.verdict === "sufficient_with_boundaries") &&
+   99|    Boolean(sufficiency.canStop);
+  100|  const percent = complete ? 100 : Math.min(99, Math.round(percentRaw * 100));
+  101|  return {
+  102|    percent,
+  103|    complete,
+  104|    basis: "ddr_dir_gate",
+  105|    components: {
+  106|      ddr: Math.round(ddr * 100),
+  107|      p0_dir: Math.round(p0 * 100),
+  108|      p1_dir: Math.round(p1 * 100),
+  109|      constraints: Math.round(constraints * 100),
+  110|      conflicts: Math.round(conflicts * 100),
+  111|      sufficiency: Math.round(sufficiencyScore * 100),
+  112|    },
+  113|  };
+  114|}
+  115|
+  116|export function evaluatePersonalPatternInsight(
+  117|  session: POJUSessionState,
+  118|): PersonalPatternInsightBlock {
+  119|  const qa = evaluateQaPersonalPatternInsight(session, session.locked_output_locale ?? "zh");
+  120|  if (qa.status === "available") return qa;
+  121|  const dc = session.decision_context;
+  122|  const freeze = [...(session.dc_freeze_receipts ?? [])].reverse()
+  123|    .find((r) => r.session_id === session.session_id);
+  124|  if (!dc || !freeze || freeze.context_id !== dc.context_id || freeze.context_version !== dc.version || freeze.context_hash !== dc.content_hash) {
+  125|    if (qa.status === "none") return qa;
+  126|    return { status: "unavailable", reason: "current_freeze_unavailable", insights: [] };
+  127|  }
+  128|  const profile = [...(session.dc_profile_receipts ?? [])].reverse()
+  129|    .find((r) => r.session_id === session.session_id && r.freeze_id === freeze.freeze_id);
+  130|  if (!profile) return { status: "unavailable", reason: "current_profile_receipt_unavailable", insights: [] };
+  131|
+  132|  const matching = (session.personal_analysis_records ?? []).filter((r) =>
+  133|    r.session_id === session.session_id && r.freeze_id === freeze.freeze_id &&
+  134|    r.context_id === dc.context_id && r.context_version === dc.version &&
+  135|    r.context_hash === freeze.context_hash && r.profile_id === profile.profile_id &&
+  136|    r.profile_hash === profile.profile_hash);
+  137|  if (matching.some((r) => r.status === "pending" || r.status === "running")) {
+  138|    return { status: "pending", reason: "personal_analysis_in_progress", insights: [] };
+  139|  }
+  140|  const record = [...matching].reverse().find((r) => r.status === "completed" && r.analysis_result);
+  141|  const artifact = record?.analysis_result;
+  142|  if (!artifact) return { status: "unavailable", reason: "validated_personal_analysis_unavailable", insights: [] };
+  143|
+  144|  const references = new Map(artifact.evidence_references.map((ref) => [ref.ref_id, ref]));
+  145|  const patterns = artifact.personal_pattern_analysis;
+  146|  if (!patterns.length) return { status: "none", reason: "empty_pattern_analysis", insights: [] };
+  147|  const validItem = (item: (typeof patterns)[number]) => {
+  148|    if (!item.item_id?.trim() || !item.text?.trim() || !item.evidence_refs.length) return false;
+  149|    const linked = item.evidence_refs.map((id) => references.get(id));
+  150|    return !linked.some((ref) => !ref) && linked.some((ref) => ref && ["chart_line", "ziwei_line"].includes(ref.kind));
+  151|  };
+  152|  if (patterns.some((item) => !validItem(item))) {
+  153|    return { status: "unavailable", reason: "pattern_analysis_evidence_invalid", insights: [] };
+  154|  }
+  155|  const insights = patterns.map((item) => {
+  156|    const related_dir_ids = [...new Set(item.evidence_refs.filter((id) => id.startsWith("DIR-") || id.startsWith("dir_") || id.startsWith("DIR_")))];
+  157|    return { text: item.text, source: item.item_id, related_dir_ids };
+  158|  });
+  159|  return { status: "available", insights };
+  160|}
+  161|
+  162|function briefWithSource(id: string, statement: string): string {
+  163|  return `[${id}] ${statement}`;
+  164|}
+  165|
+  166|function unmetRolesForDir(
+  167|  dir: { dir_id: string; required_fact_roles?: string[] },
+  168|  reality_facts: Array<{
+  169|    related_dir_ids?: string[];
+  170|    fact_roles?: string[];
+  171|    status: string;
+  172|  }>,
+  173|): string[] {
+  174|  const required = dir.required_fact_roles ?? [];
+  175|  if (!required.length) return [];
+  176|  const facts = reality_facts.filter((f) =>
+  177|    (f.related_dir_ids ?? []).includes(dir.dir_id),
+  178|  );
+  179|  return required.filter((role) => {
+  180|    const hit = facts.some(
+  181|      (f) =>
+  182|        (f.fact_roles ?? []).includes(role) &&
+  183|        f.status !== "unknown" &&
+  184|        f.status !== "declined",
+  185|    );
+  186|    return !hit;
+  187|  });
+  188|}
+  189|
+  190|function understandingFingerprint(input: {
+  191|  dq: string | null;
+  192|  confirmed: string[];
+  193|  unconfirmed: string[];
+  194|  analysis: string[];
+  195|  conflicts: string[];
+  196|  needCount: number;
+  197|  understoodCount: number;
+  198|}): string {
+  199|  return [
+  200|    input.dq ?? "",
+  201|    `c:${input.confirmed.length}`,
+  202|    `u:${input.unconfirmed.length}`,
+  203|    `a:${input.analysis.length}`,
+  204|    `x:${input.conflicts.length}`,
+  205|    `n:${input.needCount}`,
+  206|    `k:${input.understoodCount}`,
+  207|    input.confirmed.slice(0, 3).join("|"),
+  208|    input.unconfirmed.slice(0, 3).join("|"),
+  209|    input.conflicts.slice(0, 2).join("|"),
+  210|  ].join("::");
+  211|}
+  212|
+  213|export function buildUnderstandingState(input: {
+  214|  session: POJUSessionState;
+  215|  blueprint: DecisionBlueprint;
+  216|  now?: string;
+  217|  last_answer_event_id?: string | null;
+  218|  next_question_plan?: AdaptiveQuestionPlan | null;
+  219|}): UnderstandingState {
+  220|  const dc = input.session.decision_context;
+  221|  if (!dc) throw new Error("buildUnderstandingState: missing DC");
+  222|  const now = input.now ?? new Date().toISOString();
+  223|  const budget = defaultBudget(input.session, input.blueprint);
+  224|  const prev = input.session.decision_understanding;
+  225|
+  226|  const understood: UnderstoodItem[] = [];
+  227|  const answered: NonNullable<UnderstandingState["answered_pending_confirmation"]>["items"] = [];
+  228|  const needs: NeedItem[] = [];
+  229|  const ddrLoad = loadDdrCatalog(ACTIVE_DDR_CATALOG_VERSION);
+  230|
+  231|  for (const dir of dc.dirs) {
+  232|    if (dir.id_lifecycle !== "active") continue;
+  233|    const relatedFacts = dc.reality_facts.filter((f) =>
+  234|      (f.related_dir_ids ?? []).includes(dir.dir_id),
+  235|    );
+  236|    // Understood ONLY when DC DIR state is known or n_a — never merely asked/answered.
+  237|    if (dir.current_state === "known" || dir.current_state === "n_a") {
+  238|      understood.push({
+  239|        dir_id: dir.dir_id,
+  240|        label: dir.need,
+  241|        fact_ids: relatedFacts.map((f) => f.fact_id),
+  242|        status: dir.current_state,
+  243|        user_confirmed_any: relatedFacts.some((f) => f.user_confirmed === true),
+  244|      });
+  245|      continue;
+  246|    }
+  247|    // Blueprint scope only — never invent needs outside Catalog seed.
+  248|    if (!input.blueprint.dir_ids.includes(dir.dir_id)) continue;
+  249|    // Answered but not known: awaits final confirmation (or stays an
+  250|    // information boundary); never re-asked as an open need.
+  251|    const coverage = dirIntakeAnswerCoverage(dc, dir);
+  252|    if (coverage.answered) {
+  253|      answered.push({
+  254|        dir_id: dir.dir_id,
+  255|        label: dir.need,
+  256|        fact_ids: coverage.fact_ids,
+  257|        answer_statuses: coverage.answer_statuses,
+  258|        information_boundary: coverage.information_boundary,
+  259|      });
+  260|      continue;
+  261|    }
+  262|    const direction_id = directionIdForDir(input.blueprint, dir.dir_id);
+  263|    const direction = input.blueprint.directions.find(
+  264|      (d) => d.direction_id === direction_id,
+  265|    );
+  266|    const gate = ddrLoad.ok
+  267|      ? gateClassForDirFromCatalog(
+  268|          dir.dir_id,
+  269|          ddrLoad.snapshot.by_id,
+  270|          ddrLoad.snapshot.dir_to_ddr,
+  271|        )
+  272|      : null;
+  273|    const ddr_ids = resolveDdrIdsForDir(dir.dir_id, input.blueprint);
+  274|    if (ddr_ids.length === 0) {
+  275|      // No legal Catalog DDR link — do not disguise as formal DDR investigation need.
+  276|      continue;
+  277|    }
+  278|    const priority =
+  279|      gate?.gate_class ??
+  280|      direction?.priority ??
+  281|      "P2";
+  282|    let gap_type: "unknown" | "partial" | "conflict" | "declined" = "unknown";
+  283|    if (dir.current_state === "conflict") gap_type = "conflict";
+  284|    else if (
+  285|      relatedFacts.length > 0 &&
+  286|      relatedFacts.every((f) => f.status === "declined")
+  287|    ) {
+  288|      gap_type = "declined";
+  289|    } else if (
+  290|      relatedFacts.some((f) => f.status === "unknown") &&
+  291|      relatedFacts.every(
+  292|        (f) => f.status === "unknown" || f.status === "declined",
+  293|      )
+  294|    ) {
+  295|      gap_type = "unknown";
+  296|    } else if (dir.partial_satisfaction || relatedFacts.length > 0) {
+  297|      gap_type = "partial";
+  298|    }
+  299|    const ranking =
+  300|      gate?.may_affect_p5_ranking ?? dir.may_affect_p5_ranking !== false;
+  301|    const missingRoles = unmetRolesForDir(dir, dc.reality_facts);
+  302|    // Having any RealityFact does NOT complete the DIR — unmet roles stay open.
+  303|    const missing_content =
+  304|      missingRoles.length > 0
+  305|        ? `missing_roles:${missingRoles.join(",")}; ${dir.need}`
+  306|        : dir.need;
+  307|    needs.push({
+  308|      kind: "dir_based",
+  309|      dir_id: dir.dir_id,
+  310|      ddr_ids,
+  311|      direction_id,
+  312|      priority,
+  313|      why: dir.why || "Required for decision judgment",
+  314|      missing_content,
+  315|      may_affect_p5_ranking: ranking,
+  316|      gap_type,
+  317|      must_continue: ranking || priority === "P0" || priority === "P1",
+  318|    });
+  319|  }
+  320|
+  321|  // M2.3-R1: Blueprint-scoped DIRs not yet on DC (deferred P1/P2) remain open.
+  322|  const onDc = new Set(dc.dirs.map((d) => d.dir_id));
+  323|  for (const dirId of input.blueprint.dir_ids) {
+  324|    if (onDc.has(dirId)) continue;
+  325|    if (needs.some((n) => n.kind === "dir_based" && n.dir_id === dirId)) continue;
+  326|    const direction_id = directionIdForDir(input.blueprint, dirId);
+  327|    const direction = input.blueprint.directions.find(
+  328|      (d) => d.direction_id === direction_id,
+  329|    );
+  330|    const gate = ddrLoad.ok
+  331|      ? gateClassForDirFromCatalog(
+  332|          dirId,
+  333|          ddrLoad.snapshot.by_id,
+  334|          ddrLoad.snapshot.dir_to_ddr,
+  335|        )
+  336|      : null;
+  337|    const ddr_ids = resolveDdrIdsForDir(dirId, input.blueprint);
+  338|    if (ddr_ids.length === 0) continue;
+  339|    const priority =
+  340|      gate?.gate_class ?? direction?.priority ?? "P2";
+  341|    needs.push({
+  342|      kind: "dir_based",
+  343|      dir_id: dirId,
+  344|      ddr_ids,
+  345|      direction_id,
+  346|      priority,
+  347|      why: direction?.needed_info || "Blueprint-scoped DIR not yet activated on DC",
+  348|      missing_content: direction?.needed_info || dirId,
+  349|      may_affect_p5_ranking:
+  350|        gate?.may_affect_p5_ranking ?? direction?.priority === "P0",
+  351|      gap_type: "unknown",
+  352|      must_continue: (gate?.may_affect_p5_ranking ?? false) || priority === "P0" || priority === "P1",
+  353|    });
+  354|  }
+  355|
+  356|  // Formal DC only — never put AnalyticalHypotheses into confirmed facts.
+  357|  const confirmed = dc.reality_facts.filter((f) => f.status === "confirmed");
+  358|  const unconfirmed = dc.reality_facts.filter(
+  359|    (f) =>
+  360|      f.status === "unverified" ||
+  361|      f.status === "unknown" ||
+  362|      f.status === "declined",
+  363|  );
+  364|  const constraintBriefs = dc.constraints.map((c) =>
+  365|    briefWithSource(c.constraint_id, c.statement),
+  366|  );
+  367|  const openConflictBriefs = dc.conflicts
+  368|    .filter((c) => c.state === "open")
+  369|    .map((c) =>
+  370|      briefWithSource(c.conflict_id, c.statements_snapshot.join(" vs ")),
+  371|    );
+  372|
+  373|  const criticalActive = dc.dirs.filter(
+  374|    (d) => d.id_lifecycle === "active" && d.may_affect_p5_ranking !== false,
+  375|  );
+  376|  const criticalCovered =
+  377|    criticalActive.length > 0 &&
+  378|    criticalActive.every(
+  379|      (d) =>
+  380|        d.current_state === "known" ||
+  381|        d.current_state === "n_a" ||
+  382|        d.partial_satisfaction === true,
+  383|    );
+  384|  const hasCollectingEvidence =
+  385|    (dc.reality_facts?.length ?? 0) > 0 || (dc.constraints?.length ?? 0) > 0;
+  386|
+  387|  const openPriorityBandNeeds = needs.filter(
+  388|    (n) =>
+  389|      n.kind === "dir_based" &&
+  390|      (n.priority === "P0" || n.priority === "P1"),
+  391|  );
+  392|  const hasOpenP0OrP1 = openPriorityBandNeeds.length > 0;
+  393|
+  394|  const sufficiency = evaluateDecisionSufficiency(dc);
+  395|  const remaining = budget.remaining_hard_budget;
+  396|  let readiness_verdict: UnderstandingState["readiness"]["verdict"] = "continue";
+  397|  let can_ask = true;
+  398|  const reasons = [...sufficiency.reasons];
+  399|  if (remaining <= 0) {
+  400|    readiness_verdict = "hard_budget_exhausted";
+  401|    can_ask = false;
+  402|    reasons.push("hard_budget_exhausted");
+  403|  } else if (hasOpenP0OrP1) {
+  404|    readiness_verdict = "continue";
+  405|    can_ask = true;
+  406|    reasons.push("open_blueprint_p0_p1_obligations");
+  407|  } else if (sufficiency.canStop) {
+  408|    readiness_verdict = "ready_for_final_confirm";
+  409|    can_ask = false;
+  410|    reasons.push("sufficiency_can_stop");
+  411|  } else if (needs.length === 0) {
+  412|    readiness_verdict = "ready_for_final_confirm";
+  413|    can_ask = false;
+  414|    reasons.push("no_open_needs");
+  415|  } else if (criticalCovered && hasCollectingEvidence) {
+  416|    readiness_verdict = "ready_for_final_confirm";
+  417|    can_ask = false;
+  418|    reasons.push("critical_dirs_partial_coverage_ready_for_confirm");
+  419|  }
+  420|  for (const item of answered) {
+  421|    if (item.information_boundary) reasons.push(`information_boundary:${item.dir_id}`);
+  422|  }
+  423|
+  424|  const dq =
+  425|    dc.definition.decision_question ??
+  426|    input.blueprint.decision_question ??
+  427|    input.session.original_question ??
+  428|    null;
+  429|
+  430|  const confirmed_briefs = confirmed
+  431|    .map((f) => briefWithSource(f.fact_id, f.statement))
+  432|    .slice(0, 8);
+  433|  const correctedBy = new Map<string, string>();
+  434|  for (const f of dc.reality_facts) {
+  435|    for (const id of f.corrects_fact_ids ?? []) correctedBy.set(id, f.fact_id);
+  436|  }
+  437|  const unconfirmed_briefs = [
+  438|    ...unconfirmed.map((f) =>
+  439|      correctedBy.has(f.fact_id)
+  440|        ? `${briefWithSource(f.fact_id, f.statement)} (corrected by ${correctedBy.get(f.fact_id)})`
+  441|        : briefWithSource(f.fact_id, f.statement),
+  442|    ),
+  443|    ...constraintBriefs,
+  444|  ].slice(0, 8);
+  445|  // Hypotheses stay in analysis_briefs only — never confirmed.
+  446|  const analysis_briefs = dc.hypotheses.map((h) => h.statement).slice(0, 6);
+  447|
+  448|  const fp = understandingFingerprint({
+  449|    dq,
+  450|    confirmed: confirmed_briefs,
+  451|    unconfirmed: unconfirmed_briefs,
+  452|    analysis: analysis_briefs,
+  453|    conflicts: openConflictBriefs,
+  454|    needCount: needs.length,
+  455|    understoodCount: understood.length,
+  456|  });
+  457|  const prevFp = prev?.current_understanding
+  458|    ? understandingFingerprint({
+  459|        dq: prev.current_understanding.decision_question,
+  460|        confirmed: prev.current_understanding.confirmed_briefs,
+  461|        unconfirmed: prev.current_understanding.unconfirmed_briefs,
+  462|        analysis: prev.current_understanding.analysis_briefs,
+  463|        conflicts: prev.current_understanding.conflict_briefs,
+  464|        needCount: prev.need_to_understand.items.length,
+  465|        understoodCount: prev.understood.items.length,
+  466|      })
+  467|    : null;
+  468|
+  469|  const summary =
+  470|    prevFp === fp && prev?.current_understanding.summary
+  471|      ? prev.current_understanding.summary
+  472|      : [
+  473|          dq ? `Decision: ${dq}` : null,
+  474|          confirmed.length ? `Confirmed facts: ${confirmed.length}` : null,
+  475|          unconfirmed.length ? `Unconfirmed/open: ${unconfirmed.length}` : null,
+  476|          dc.constraints.length
+  477|            ? `Constraints: ${dc.constraints.length}`
+  478|            : null,
+  479|          openConflictBriefs.length
+  480|            ? `Open conflicts: ${openConflictBriefs.length}`
+  481|            : null,
+  482|          needs.length ? `Open needs: ${needs.length}` : "No open DIR needs",
+  483|        ]
+  484|          .filter(Boolean)
+  485|          .join(" · ");
+  486|
+  487|  return {
+  488|    understanding_id: `u_${dc.context_id}_v${dc.version}`,
+  489|    session_id: input.session.session_id,
+  490|    context_id: dc.context_id,
+  491|    context_version: dc.version,
+  492|    blueprint_version: input.blueprint.blueprint_version,
+  493|    built_at: now,
+  494|    current_understanding: {
+  495|      summary,
+  496|      decision_question: dq,
+  497|      confirmed_briefs,
+  498|      unconfirmed_briefs,
+  499|      analysis_briefs,
+  500|      conflict_briefs: openConflictBriefs.slice(0, 6),
+  501|      confidence:
+  502|        sufficiency.canStop ? "high" : confirmed.length >= 2 ? "medium" : "low",
+  503|    },
+  504|    understood: { items: understood },
+  505|    answered_pending_confirmation: { items: answered },
+  506|    need_to_understand: { items: needs },
+  507|    personal_pattern_insight: evaluatePersonalPatternInsight(input.session),
+  508|    next_question_plan: input.next_question_plan ?? null,
+  509|    readiness: {
+  510|      verdict: readiness_verdict,
+  511|      can_ask,
+  512|      reasons,
+  513|      sufficiency_verdict: sufficiency.verdict,
+  514|    },
+  515|    readiness_progress: computeReadinessProgress({
+  516|      dc,
+  517|      blueprint: input.blueprint,
+  518|      sufficiency,
+  519|    }),
+  520|    budget,
+  521|    last_answer_event_id: input.last_answer_event_id ?? null,
+  522|    last_sent_question:
+  523|      input.session.decision_understanding?.last_sent_question ?? null,
+  524|  };
+  525|}
+  526|

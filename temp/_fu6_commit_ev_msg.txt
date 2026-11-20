@@ -1,0 +1,1 @@
+docs(evidence): restore UTF-8 Chinese in CONTRACT-M2-4-R2-FU5.md

@@ -1,0 +1,103 @@
+{
+  "failed": 0,
+  "results": [
+    {
+      "log": "01-test-m9-server-authoritative-session.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m9-server-authoritative-session",
+      "exit_code": 0,
+      "elapsed_s": 3.41,
+      "log_bytes": 10531
+    },
+    {
+      "log": "02-test-m8-r1-internal-turn-trust-boundary.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m8-r1-internal-turn-trust-boundary",
+      "exit_code": 0,
+      "elapsed_s": 2.79,
+      "log_bytes": 15382
+    },
+    {
+      "log": "03-test-m6-di2-full-lifecycle.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m6-di2-full-lifecycle",
+      "exit_code": 0,
+      "elapsed_s": 10.02,
+      "log_bytes": 13000
+    },
+    {
+      "log": "04-test-m5-r1-authorization.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m5-r1-authorization",
+      "exit_code": 0,
+      "elapsed_s": 18.82,
+      "log_bytes": 52048
+    },
+    {
+      "log": "05-test-m1-production-adaptive-question-loop.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m1-production-adaptive-question-loop",
+      "exit_code": 0,
+      "elapsed_s": 22.82,
+      "log_bytes": 216210
+    },
+    {
+      "log": "06-test-m2-1-readiness-confirm-freeze.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m2-1-readiness-confirm-freeze",
+      "exit_code": 0,
+      "elapsed_s": 4.01,
+      "log_bytes": 13091
+    },
+    {
+      "log": "07-test-m2-2-freeze-report-binding.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m2-2-freeze-report-binding",
+      "exit_code": 0,
+      "elapsed_s": 5.62,
+      "log_bytes": 7778
+    },
+    {
+      "log": "08-test-m3-decision-report.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m3-decision-report",
+      "exit_code": 0,
+      "elapsed_s": 3.71,
+      "log_bytes": 7297
+    },
+    {
+      "log": "09-test-m4-decision-authority.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m4-decision-authority",
+      "exit_code": 0,
+      "elapsed_s": 4.41,
+      "log_bytes": 5130
+    },
+    {
+      "log": "10-test-m4-1-freeze-recovery.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m4-1-freeze-recovery",
+      "exit_code": 0,
+      "elapsed_s": 3.61,
+      "log_bytes": 3771
+    },
+    {
+      "log": "11-test-m5-di2-main-path.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m5-di2-main-path",
+      "exit_code": 0,
+      "elapsed_s": 49.54,
+      "log_bytes": 32839
+    },
+    {
+      "log": "12-test-m8-di2-non-model-closure.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd test:m8-di2-non-model-closure",
+      "exit_code": 0,
+      "elapsed_s": 2.03,
+      "log_bytes": 3098
+    },
+    {
+      "log": "13-tsc-noemit.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd exec tsc --noEmit --pretty false",
+      "exit_code": 0,
+      "elapsed_s": 27.64,
+      "log_bytes": 0
+    },
+    {
+      "log": "14-pnpm-build.log",
+      "command": "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd build",
+      "exit_code": 0,
+      "elapsed_s": 114.71,
+      "log_bytes": 11523
+    }
+  ]
+}

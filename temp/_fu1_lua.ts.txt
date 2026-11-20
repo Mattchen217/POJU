@@ -1,0 +1,149 @@
+/**
+ * Lua: atomic Session CAS. Returns one explicit result contract, shared with
+ * TypeScript evaluateSessionAuthorityCas():
+ *   1  accepted
+ *   0  revision conflict
+ *   2  expired
+ *   3  frozen (record lifecycle or valid Freeze/final ledger head)
+ *   4  terminated
+ *   5  record missing (must not create)
+ *   6  malformed / integrity-failed current Record
+ *   7  invalid identity / contract on the proposed Record
+ *   8  ledger integrity failure
+ *   9  ledger probe incomplete
+ *
+ * KEYS[1] = session record key
+ * ARGV: expectedRevision, nextJson, ttlSeconds, sessionId, nowIso, intakeCommit (0/1),
+ *       ledgerHeadKey, ledgerEntryPrefix, probeLimit
+ *
+ * Hash policy: this script does not recompute canonicalHash / SHA-256 of
+ * session_snapshot. Exact JS JSON.stringify + SHA-256 parity cannot be
+ * implemented safely in Redis Lua (cjson cannot faithfully distinguish []
+ * from {}, and number/unicode encoding may diverge). The production Redis
+ * adapter runs inspectStoredSessionRecord (canonicalHash) on the current
+ * and proposed records before EVAL. Lua still fail-closes on version,
+ * required fields, identity, snapshot.session_id, and snapshot revision
+ * mismatches, and never treats a corrupted Record as missing.
+ */
+export const SESSION_AUTHORITY_CAS_LUA = `
+local function decode(raw)
+  if not raw then return nil, false end
+  if type(raw) ~= 'string' then raw = tostring(raw) end
+  local ok, obj = pcall(cjson.decode, raw)
+  if not ok or type(obj) ~= 'table' then return nil, false end
+  return obj, true
+end
+
+local function is_number(v)
+  return type(v) == 'number' and v == v and v ~= math.huge and v ~= -math.huge
+end
+
+local function is_nonempty_string(v)
+  return type(v) == 'string' and string.len(v) > 0
+end
+
+local function lifecycle_ok(v)
+  return v == 'active' or v == 'expired' or v == 'frozen' or v == 'terminated'
+end
+
+local function inspect_record(obj, sessionId, fail_code)
+  if type(obj) ~= 'table' then return false, fail_code end
+  if obj['v'] ~= 1 then return false, fail_code end
+  if not is_nonempty_string(obj['session_id']) then return false, fail_code end
+  if obj['session_id'] ~= sessionId then return false, fail_code end
+  if not is_number(obj['session_generation']) then return false, fail_code end
+  if not is_number(obj['revision']) or obj['revision'] < 0 then return false, fail_code end
+  if type(obj['created_at']) ~= 'string' then return false, fail_code end
+  if type(obj['updated_at']) ~= 'string' then return false, fail_code end
+  if type(obj['expires_at']) ~= 'string' then return false, fail_code end
+  if not lifecycle_ok(obj['lifecycle_status']) then return false, fail_code end
+  if type(obj['snapshot_hash']) ~= 'string' or string.len(obj['snapshot_hash']) == 0 then return false, fail_code end
+  local snap = obj['session_snapshot']
+  if type(snap) ~= 'table' then return false, fail_code end
+  if type(snap['session_id']) ~= 'string' or snap['session_id'] ~= obj['session_id'] then return false, fail_code end
+  if not is_number(snap['session_revision']) or snap['session_revision'] ~= obj['revision'] then return false, fail_code end
+  return true, nil
+end
+
+local raw = redis.call('GET', KEYS[1])
+if not raw then return 5 end
+local obj, ok = decode(raw)
+if not ok then return 6 end
+
+local sessionId = ARGV[4]
+local current_ok, current_fail = inspect_record(obj, sessionId, 6)
+if not current_ok then return current_fail end
+
+local expected = tonumber(ARGV[1])
+local nextObj, nextOk = decode(ARGV[2])
+if not nextOk then return 7 end
+local next_ok, next_fail = inspect_record(nextObj, sessionId, 7)
+if not next_ok then return next_fail end
+
+if tonumber(obj['revision']) ~= expected then return 0 end
+if type(nextObj['session_id']) ~= 'string' or nextObj['session_id'] ~= sessionId then return 7 end
+if tonumber(nextObj['session_generation']) ~= tonumber(obj['session_generation']) then return 7 end
+local nextRev = tonumber(nextObj['revision'])
+if nextRev ~= expected and nextRev ~= expected + 1 then return 7 end
+if type(nextObj['expires_at']) ~= 'string' or type(obj['expires_at']) ~= 'string' or nextObj['expires_at'] > obj['expires_at'] then return 7 end
+
+local intake = tonumber(ARGV[6]) == 1
+if intake then
+  local status = obj['lifecycle_status']
+  local nowIso = ARGV[5]
+  if status == 'expired' or (type(obj['expires_at']) == 'string' and obj['expires_at'] <= nowIso) then
+    return 2
+  end
+  if status == 'terminated' then return 4 end
+  if status == 'frozen' then return 3 end
+
+  local headKey = ARGV[7]
+  local prefix = ARGV[8]
+  local limit = tonumber(ARGV[9]) or 512
+  local hintRaw = redis.call('GET', headKey)
+  local n = 0
+  if hintRaw then
+    local hint, hintOk = decode(hintRaw)
+    if not hintOk then return 8 end
+    local cv = hint['commit_version']
+    if type(cv) ~= 'number' or cv ~= math.floor(cv) or cv <= 0 then return 8 end
+    n = cv
+  end
+
+  local function load_entry(idx)
+    if idx < 1 then return nil, 'missing' end
+    local eraw = redis.call('GET', prefix .. tostring(idx))
+    if not eraw then return nil, 'missing' end
+    local e, eok = decode(eraw)
+    if not eok then return nil, 'integrity' end
+    if type(e['session_id']) ~= 'string' or e['session_id'] ~= sessionId then return nil, 'integrity' end
+    if type(e['commit_version']) ~= 'number' or e['commit_version'] ~= idx then return nil, 'integrity' end
+    return e, 'ok'
+  end
+
+  local head = nil
+  if n > 0 then
+    local e, st = load_entry(n)
+    if st ~= 'ok' then return 8 end
+    head = e
+  end
+  for i = 1, limit do
+    local nxt, st = load_entry(n + 1)
+    if st == 'integrity' then return 8 end
+    if st == 'missing' then break end
+    head = nxt
+    n = n + 1
+    if i == limit then
+      local more, mst = load_entry(n + 1)
+      if mst == 'integrity' then return 8 end
+      if mst == 'ok' then return 9 end
+    end
+  end
+  if head and (head['change_type'] == 'freeze' or head['dc_status'] == 'final') then
+    return 3
+  end
+end
+
+redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
+return 1
+`;

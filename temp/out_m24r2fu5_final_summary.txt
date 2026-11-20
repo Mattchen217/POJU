@@ -1,0 +1,14 @@
+IMPL_SHA=8baca929f1f5b3107d3776386650f3dda334efb9
+ENDED=2026-11-11T01:49:24.695228
+
+m1adaptive	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:m1-production-adaptive-question-loop	D:\POJU\pojulife\temp\out_m24r2fu5_final_m1adaptive.txt
+m1r	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:m1-r-fresh-session-main-loop	D:\POJU\pojulife\temp\out_m24r2fu5_final_m1r.txt
+m23	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:m2-3-decision-blueprint	D:\POJU\pojulife\temp\out_m24r2fu5_final_m23.txt
+m21	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:m2-1-readiness-confirm-freeze	D:\POJU\pojulife\temp\out_m24r2fu5_final_m21.txt
+m22	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:m2-2-freeze-report-binding	D:\POJU\pojulife\temp\out_m24r2fu5_final_m22.txt
+phase2	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd test:decision-context-phase2	D:\POJU\pojulife\temp\out_m24r2fu5_final_phase2.txt
+typegen	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec next typegen	D:\POJU\pojulife\temp\out_m24r2fu5_final_typegen.txt
+tsc	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd exec tsc --noEmit	D:\POJU\pojulife\temp\out_m24r2fu5_final_tsc.txt
+build	EXIT=0	C:\Users\13306\AppData\Roaming\npm\pnpm.cmd build	D:\POJU\pojulife\temp\out_m24r2fu5_final_build.txt
+
+ALL_OK=true

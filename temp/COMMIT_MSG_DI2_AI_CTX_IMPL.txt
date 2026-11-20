@@ -1,0 +1,3 @@
+Pass full Understanding State into Answer Interpretation as read-only context
+
+Close the DI2 supplement gap so the model and UI read the same session.decision_understanding snapshot, with version fail-closed and no planning LLM.

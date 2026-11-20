@@ -1,0 +1,42 @@
+﻿[
+    {
+        "cmd":  "pnpm test:m1-r-fresh-session-main-loop",
+        "exit":  0,
+        "out":  "temp\\out_m24fu1_pnpm_test_m1_r_fresh_session_main_loop.txt"
+    },
+    {
+        "cmd":  "pnpm test:m2-3-decision-blueprint",
+        "exit":  0,
+        "out":  "temp\\out_m24fu1_pnpm_test_m2_3_decision_blueprint.txt"
+    },
+    {
+        "cmd":  "pnpm test:m2-1-readiness-confirm-freeze",
+        "exit":  0,
+        "out":  "temp\\out_m24fu1_pnpm_test_m2_1_readiness_confirm_freeze.txt"
+    },
+    {
+        "cmd":  "pnpm test:m2-2-freeze-report-binding",
+        "exit":  0,
+        "out":  "temp\\out_m24fu1_pnpm_test_m2_2_freeze_report_binding.txt"
+    },
+    {
+        "cmd":  "pnpm test:decision-context-phase2",
+        "exit":  0,
+        "out":  "temp\\out_m24fu1_pnpm_test_decision_context_phase2.txt"
+    },
+    {
+        "cmd":  "pnpm exec next typegen",
+        "exit":  0,
+        "out":  "temp\\out_m24fu1_pnpm_exec_next_typegen.txt"
+    },
+    {
+        "cmd":  "pnpm exec tsc --noEmit",
+        "exit":  2,
+        "out":  "temp\\out_m24fu1_pnpm_exec_tsc_noEmit.txt"
+    },
+    {
+        "cmd":  "pnpm build",
+        "exit":  1,
+        "out":  "temp\\out_m24fu1_pnpm_build.txt"
+    }
+]

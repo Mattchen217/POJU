@@ -1,0 +1,16 @@
+fix(build): re-enable webpack build worker to stop Vercel OOM SIGKILL
+
+The custom `webpack` hook in next.config.mjs silently disables Next's
+default webpack build worker, so the whole production compilation ran in
+the main process. On Vercel (Preview 4f29075) the build container hit an
+OOM event, `next build --webpack` was SIGKILLed, and the deploy then
+failed with NEXT_NO_ROUTES_MANIFEST.
+
+Enable `experimental.webpackBuildWorker` and
+`experimental.webpackMemoryOptimizations` (Next 16 memory-usage guide).
+
+Local measurement (Windows, clean .next, peak sum of node working sets):
+  before: total ~5175 MB, largest single process ~3768 MB
+  after:  total ~3644 MB, largest single process ~3465 MB
+Build succeeds, 209/209 static pages, routes-manifest.json present.
+Vercel build not yet re-verified.

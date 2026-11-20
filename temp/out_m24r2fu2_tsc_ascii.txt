@@ -1,0 +1,2 @@
+lib/poju/decision-intake/apply-answer-to-dc.ts(229,45): error TS2345: Argument of type 'ProposedWriteKind' is not assignable to parameter of type '"reality_fact" | "constraint"'.
+  Type '"definition_patch"' is not assignable to type '"reality_fact" | "constraint"'.

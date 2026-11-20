@@ -1,0 +1,150 @@
+1571:         userMessage: "信息已经差不多了",
+1572:         locale: "zh",
+1573:       });
+1574:       // After P0/P1 complete, Agent may show confirm OR stay collecting if answer re-opens needs.
+1575:       // At minimum: must NOT be planner_blocked, and if can_ask false path fires, confirm appears.
+1576:       const last = lastAssistant(agentOut);
+1577:       assert.ok(
+1578:         (last as { meta?: { m1_planner_blocked?: boolean } }).meta
+1579:           ?.m1_planner_blocked !== true,
+1580:         "must not planner_block when P0/P1 genuinely complete",
+1581:       );
+1582:       console.log(
+1583:         `    verdict=${turn.understanding!.readiness.verdict}; outcome=${turn.outcome}; agent_phase=${agentOut.agent_v2?.current_phase}; confirm=${last.content.includes("理解确认")}`,
+1584:       );
+1585:     });
+1586: 
+1587:     // ---------- M2.3-R2-FU2 ----------
+1588:     await check("M2.3-R2-FU2 Case A: idempotent replay + planner_blocked preserves nonterminal", async () => {
+1589:       const sid = await createPOJUSession({
+1590:         payment_id: "pay_m23_r2fu2_a",
+1591:         original_question: Q_CAREER,
+1592:       });
+1593:       const out1 = await handleUserMessage({
+1594:         session: await durable(sid),
+1595:         userMessage: Q_CAREER,
+1596:         locale: "zh",
+1597:       });
+1598:       await savePOJUSession(out1);
+1599:       let s = await durable(sid);
+1600:       const bp = s.decision_blueprint!;
+1601:       const p0Ids = p0BandIds(bp);
+1602:       assert.ok(p0Ids.length >= 1, "need P0 DIRs");
+1603:       const depthCap = bp.question_budget.depth_per_direction;
+1604:       const depth_by_dir: Record<string, number> = {
+1605:         ...(s.decision_understanding!.budget.depth_by_dir ?? {}),
+1606:       };
+1607:       for (const id of p0Ids) depth_by_dir[id] = depthCap;
+1608:       const replayTurnId = "r2fu2_a_replay_turn";
+1609: 
+1610:       // Plant a prior mapped fact so the next answer with same source_turn_id hits turn_already_mapped.
+1611:       s = {
+1612:         ...s,
+1613:         decision_context: {
+1614:           ...s.decision_context!,
+1615:           reality_facts: [
+1616:             ...(s.decision_context!.reality_facts ?? []),
+1617:             {
+1618:               fact_id: "f_r2fu2_a_prior",
+1619:               statement: "Prior mapped answer for FU2 Case A replay",
+1620:               status: "unverified" as const,
+1621:               verification_level: "user_asserted" as const,
+1622:               source_stage: "collecting" as const,
+1623:               source_turn_id: replayTurnId,
+1624:               user_confirmed: false,
+1625:               fact_roles: ["option"] as string[],
+1626:               related_dir_ids: [p0Ids[0]!],
+1627:             },
+1628:             {
+1629:               fact_id: "f_r2fu2_a_ev",
+1630:               statement: "Collecting evidence while P0 still open",
+1631:               status: "unverified" as const,
+1632:               verification_level: "user_asserted" as const,
+1633:               source_stage: "collecting" as const,
+1634:               source_turn_id: "t_r2fu2_a_ev",
+1635:               user_confirmed: false,
+1636:               fact_roles: ["option"] as string[],
+1637:               related_dir_ids: [p0Ids[0]!],
+1638:             },
+1639:           ],
+1640:           dirs: s.decision_context!.dirs.map((d) =>
+1641:             p0Ids.includes(d.dir_id)
+1642:               ? {
+1643:                   ...d,
+1644:                   current_state: "unknown" as const,
+1645:                   partial_satisfaction: true,
+1646:                 }
+1647:               : d,
+1648:           ),
+1649:           version: s.decision_context!.version + 1,
+1650:         },
+1651:         decision_understanding: {
+1652:           ...s.decision_understanding!,
+1653:           budget: {
+1654:             ...s.decision_understanding!.budget,
+1655:             session_asked_count: Math.min(
+1656:               2,
+1657:               s.decision_understanding!.budget.hard_budget_limit - 1,
+1658:             ),
+1659:             remaining_hard_budget: Math.max(
+1660:               1,
+1661:               s.decision_understanding!.budget.hard_budget_limit - 2,
+1662:             ),
+1663:             depth_by_dir,
+1664:           },
+1665:         },
+1666:         agent_v2: {
+1667:           ...(s.agent_v2 ?? out1.agent_v2!),
+1668:           current_phase: "collecting_context" as const,
+1669:         },
+1670:       };
+1671: 
+1672:       const now = new Date().toISOString();
+1673:       const turn = await runAdaptiveQuestionTurn({
+1674:         session: s,
+1675:         statement: "同一回合重放：仍有未完成的 P0",
+1676:         source_turn_id: replayTurnId,
+1677:         now,
+1678:       });
+1679:       assert.equal(
+1680:         turn.outcome,
+1681:         "planner_blocked",
+1682:         `replay must stay planner_blocked, got ${turn.outcome} ask_error=${turn.ask_error}`,
+1683:       );
+1684:       assert.notEqual(turn.outcome, "idempotent_replay");
+1685:       assert.equal(turn.persist_error, "turn_already_mapped");
+1686:       assert.equal(turn.plan, null);
+1687:       assert.equal(turn.authorized_question, null);
+1688:       assert.ok(turn.understanding);
+1689:       assert.equal(turn.understanding!.readiness.can_ask, true);
+1690:       assert.equal(turn.understanding!.readiness.verdict, "continue");
+1691:       const p0Need = turn.understanding!.need_to_understand.items.find(
+1692:         (n) => n.kind === "dir_based" && p0Ids.includes(n.dir_id),
+1693:       );
+1694:       assert.ok(p0Need, "open P0 must remain in need_to_understand");
+1695: 
+1696:       // Production collecting-turn mapping
+1697:       await savePOJUSession(turn.session);
+1698:       const mapped = await runCollectingDcTurn(await durable(sid), {
+1699:         statement: "同一回合重放：仍有未完成的 P0",
+1700:         source_turn_id: replayTurnId,
+1701:         now: new Date().toISOString(),
+1702:       });
+1703:       assert.equal(mapped.outcome, "planner_blocked");
+1704:       assert.equal(mapped.ask_planned, false);
+1705:       assert.equal(mapped.authorized_question ?? null, null);
+1706:       assert.equal(mapped.plan ?? null, null);
+1707:       assert.ok(mapped.ask_error, "ask_error must be preserved");
+1708: 
+1709:       // Agent: no confirm / no free-form
+1710:       const sAgent = {
+1711:         ...mapped.session,
+1712:         agent_v2: {
+1713:           ...(mapped.session.agent_v2 ?? s.agent_v2!),
+1714:           current_phase: "collecting_context" as const,
+1715:         },
+1716:       };
+1717:       await savePOJUSession(sAgent);
+1718:       const agentOut = await handleUserMessage({
+1719:         session: await durable(sid),
+1720:         userMessage: "继续",

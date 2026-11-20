@@ -1,0 +1,120 @@
+ 5266|    await check("M2.4-R2-FU4-N3: role choice does not bind a role named only in a negated clause", async () => {
+ 5267|      const { authorizedRoleOptions } = await import("../lib/poju/decision-intake/pending-answer-resolution");
+ 5268|      const ctx = await runFu2NullRolePending("m24r2fu4n3seed");
+ 5269|      const options = authorizedRoleOptions(ctx.out, [ctx.codeA, ctx.codeB]);
+ 5270|      const work = options.find((o) => o.aliases.includes("工作角色"));
+ 5271|      const other = options.find((o) => o.role_code !== work?.role_code) ?? options.find((o) => o.role_code === ctx.codeB);
+ 5272|      assert.ok(work, "FU4-N3 needs a unique work-role option among the authorized codes");
+ 5273|      assert.ok(other && other.role_code !== work!.role_code, "FU4-N3 needs a second authorized role");
+ 5274|
+ 5275|      async function roleReply(tag: string, phrase: string) {
+ 5276|        const seeded = await runFu2NullRolePending(tag);
+ 5277|        stubResponse = `${tag} FREEFORM MUST NOT WIN`;
+ 5278|        return handleUserMessage({
+ 5279|          session: seeded.out,
+ 5280|          userMessage: phrase,
+ 5281|          locale: "zh-CN",
+ 5282|        });
+ 5283|      }
+ 5284|
+ 5285|      const bindWork = await roleReply("m24r2fu4n3a", "工作角色");
+ 5286|      const workFact = factForRole(bindWork.decision_context!, work!.role_code, "我目前仍在职");
+ 5287|      assert.ok(workFact, "工作角色 must bind the unique work role");
+ 5288|      assert.equal(factForRole(bindWork.decision_context!, other!.role_code, "我目前仍在职"), undefined);
+ 5289|
+ 5290|      const notWork = await roleReply("m24r2fu4n3b", "不是工作角色");
+ 5291|      assert.equal(notWork.decision_context!.version, ctx.vBefore, "不是工作角色 must not write DC");
+ 5292|      assert.ok(notWork.pending_answer_resolution && notWork.pending_answer_resolution.status === "pending");
+ 5293|      assert.equal(factWritten(notWork.decision_context!, "我目前仍在职"), undefined);
+ 5294|
+ 5295|      const contrast = await roleReply("m24r2fu4n3c", `不是${work!.role}，是${other!.role}`);
+ 5296|      assert.ok(factForRole(contrast.decision_context!, other!.role_code, "我目前仍在职"), "不是A，是B must bind only B");
+ 5297|      assert.equal(factForRole(contrast.decision_context!, work!.role_code, "我目前仍在职"), undefined);
+ 5298|
+ 5299|      const unsure = await roleReply("m24r2fu4n3d", `我不确定是不是${work!.role}`);
+ 5300|      assert.equal(unsure.decision_context!.version, ctx.vBefore, "我不确定是不是A must not write DC");
+ 5301|      assert.ok(unsure.pending_answer_resolution && unsure.pending_answer_resolution.status === "pending");
+ 5302|
+ 5303|      const both = await roleReply("m24r2fu4n3e", `${work!.role}和${other!.role}`);
+ 5304|      assert.equal(both.decision_context!.version, ctx.vBefore, "mentioning two authorized roles must stay unclear");
+ 5305|      assert.ok(both.pending_answer_resolution && both.pending_answer_resolution.status === "pending");
+ 5306|    });
+ 5307|
+ 5308|    await check("M2.4-R2-FU4-T: last-item refusal completes terminal processing and can resume investigation", async () => {
+ 5309|      const ctx = await runFu2NullRolePending("m24r2fu4t");
+ 5310|      const pendingSession = ctx.out;
+ 5311|      const oldClarify = lastAssistant(pendingSession).content;
+ 5312|      const originalTurnId = lastUserId(pendingSession);
+ 5313|      const askedAfterClarify = pendingSession.decision_understanding?.budget.session_asked_count ?? 0;
+ 5314|      stubResponse = "FU4T FREEFORM MUST NOT WIN";
+ 5315|      const out = await handleUserMessage({
+ 5316|        session: pendingSession,
+ 5317|        userMessage: "拒绝澄清",
+ 5318|        locale: "zh-CN",
+ 5319|      });
+ 5320|      const dc = out.decision_context!;
+ 5321|      assert.equal(dc.reality_facts.length, ctx.factsBefore, "FU4-T refusal must not write a fact");
+ 5322|      assert.equal(dc.constraints.length, ctx.cstBefore);
+ 5323|      assert.equal(dc.version, ctx.vBefore);
+ 5324|      const pending = out.pending_answer_resolution;
+ 5325|      assert.ok(pending, "FU4-T must keep the auditable rejection record");
+ 5326|      assert.equal(pending!.status, "rejected");
+ 5327|      assert.equal(pending!.clarification_plan, null);
+ 5328|      assert.equal(pending!.unresolved_items.length, 0);
+ 5329|      assert.ok((pending!.rejected_items ?? []).length >= 1);
+ 5330|      const asst = lastAssistant(out);
+ 5331|      assert.notEqual(asst.content, oldClarify, "FU4-T must not resend the old clarification");
+ 5332|      assert.equal(asst.content.includes("待澄清信息"), false);
+ 5333|      assert.notEqual(asst.content, stubResponse);
+ 5334|      assert.equal(asst.content.includes("【理解确认】"), false, "FU4-T must not trigger readiness confirm");
+ 5335|      const nextPlan = out.adaptive_ask_plan;
+ 5336|      assert.ok(nextPlan, "FU4-T may resume ordinary investigation after terminal refusal");
+ 5337|      assert.equal(String(nextPlan!.ask_now_reason ?? "").includes("pending_answer_resolution"), false);
+ 5338|      assert.equal(asst.content, nextPlan!.question_text);
+ 5339|      const lastSent = out.decision_understanding?.last_sent_question;
+ 5340|      assert.ok(lastSent && lastSent.plan_id === nextPlan!.plan_id);
+ 5341|      const askedAfterTerminal = out.decision_understanding?.budget.session_asked_count ?? 0;
+ 5342|      assert.ok(
+ 5343|        askedAfterTerminal === askedAfterClarify || askedAfterTerminal === askedAfterClarify + 1,
+ 5344|        "FU4-T may deduct budget once for the newly sent NeedItem",
+ 5345|      );
+ 5346|
+ 5347|      await savePOJUSession(out);
+ 5348|      const reloaded = await durable(out.session_id);
+ 5349|      assert.equal(reloaded.pending_answer_resolution!.status, "rejected");
+ 5350|      assert.equal(reloaded.pending_answer_resolution!.clarification_plan, null);
+ 5351|
+ 5352|      const replaySession = {
+ 5353|        ...reloaded,
+ 5354|        messages: [
+ 5355|          ...reloaded.messages,
+ 5356|          {
+ 5357|            role: "user" as const,
+ 5358|            content: "我目前仍在职。",
+ 5359|            timestamp: NOW,
+ 5360|            client_id: originalTurnId,
+ 5361|          },
+ 5362|        ],
+ 5363|      };
+ 5364|      stubResponse = "FU4T REPLAY FREEFORM MUST NOT WIN";
+ 5365|      const replay = await handleUserMessage({
+ 5366|        session: replaySession,
+ 5367|        userMessage: "我目前仍在职。",
+ 5368|        locale: "zh-CN",
+ 5369|        userAlreadyAppended: true,
+ 5370|      });
+ 5371|      assert.equal(replay.decision_context!.version, ctx.vBefore, "FU4-T original-turn replay must not write DC");
+ 5372|      assert.equal(replay.decision_context!.reality_facts.length, ctx.factsBefore);
+ 5373|      const askedReplay = replay.decision_understanding?.budget.session_asked_count ?? 0;
+ 5374|      assert.equal(askedReplay, askedAfterTerminal, "FU4-T original pending replay must not recount budget");
+ 5375|      const replayAsst = lastAssistant(replay);
+ 5376|      assert.notEqual(replayAsst.content, oldClarify, "FU4-T replay must not restore the refused clarification");
+ 5377|      assert.equal(replayAsst.content.includes("待澄清信息"), false);
+ 5378|      if (replay.adaptive_ask_plan) {
+ 5379|        assert.equal(String(replay.adaptive_ask_plan.ask_now_reason ?? "").includes("pending_answer_resolution"), false);
+ 5380|      }
+ 5381|    });
+ 5382|
+ 5383|    const modelSrc = readFileSync(
+ 5384|        join(process.cwd(), "lib/poju/decision-intake/answer-interpretation-model.ts"),
+ 5385|        "utf8",

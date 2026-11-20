@@ -1,0 +1,7 @@
+docs(di2): M5 evidence — main-path integration closure
+
+CONTRACT-M5.md for implementation 7b113268c3424542fe5ace31870c0e6016aaedd0:
+final report commit order, scheduling recovery, client recovery state machine,
+fault injection methods, per-case test table with layer split, checks executed on
+the implementation SHA, and what was not executed (real HTTP, Upstash, real
+Inngest/QStash, browser, multi-device, real model, full E2E). Not a PASS declaration.

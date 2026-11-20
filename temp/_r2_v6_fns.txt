@@ -1,0 +1,88 @@
+==================== 160-200 
+160: * 6. 当前 phase 专属 taskBlock
+161: */
+162:export async function buildPhaseTurnContextV6(
+163:  input: PhaseLLMInput,
+164:  taskBlock: string,
+165:): Promise<string> {
+166:  // Output language ≡ website UI locale (single SSOT).
+167:  const outLoc = resolvePivotSessionLang(input.session, input.locale);
+168:  const uiLocale = parseAppLocale(input.locale);
+169:
+170:  const langDirective = getPojuChatLanguageDirective({
+171:    locale: uiLocale,
+172:    userInput: input.user_message,
+173:    conversationHistory: sanitizeClientPromptHistory(
+174:      input.session.messages.map((m) => ({
+175:        role: m.role,
+176:        content: m.content,
+177:      })),
+178:    ),
+179:    forcedOutputLocale: outLoc,
+180:  });
+181:
+182:  const baseAnalysis = await loadBaseAnalysisForSessionV6(input);
+183:  const structured =
+184:    normalizeBaseAnalysisInput(baseAnalysis ?? null).structured ?? null;
+185:  const injectionBlock = input.tool_injection_context?.trim() ?? "";
+186:  const snapshotBlock = buildTurnContextSnapshot(input.agent_state);
+187:
+188:  const phase = input.agent_state?.current_phase;
+189:  const slimChartDataPlane =
+190:    phase != null && PHASES_SLIM_CHART_DATAPLANE.has(phase);
+191:
+192:  const injectDirected = Boolean(
+193:    structured && shouldInjectDirectedRelationsV6(input) && !slimChartDataPlane,
+194:  );
+195:  const liunian = injectDirected ? getCurrentLiunian() : null;
+196:  const questionCategory =
+197:    input.agent_state?.question_category ??
+198:    inferQuestionCategoryFromText(
+199:      input.agent_state?.original_question ??
+200:        input.session.original_question ??
+==================== 300-344 
+300:    minimumInteractionBlock,
+301:    forceConvergeBlock,
+302:    agendaCatchupBlock,
+303:    taskBlock,
+304:  );
+305:}
+306:
+307:/** v6 完整 transport：恒定 system + 动态 user prepend */
+308:export async function buildPhaseTransportInputV6(
+309:  input: PhaseLLMInput,
+310:  taskBlock: string,
+311:  messageHistory?: Array<{ role: "user" | "assistant"; content: string }>,
+312:): Promise<{
+313:  system: string;
+314:  messages: Array<{ role: "user" | "assistant"; content: string }>;
+315:}> {
+316:  const system = buildPojuSystemPromptV6Sync();
+317:  const turnContext = await buildPhaseTurnContextV6(input, taskBlock);
+318:  const base = sanitizeClientPromptHistory(
+319:    messageHistory ?? formatPhaseMessageHistory(input.session.messages),
+320:  );
+321:
+322:  const baseAnalysis = await loadBaseAnalysisForSessionV6(input);
+323:  logBaseAnalysisPayload("buildPhaseTransportInputV6", baseAnalysis, {
+324:    session_id: input.session.session_id,
+325:    system_chars: system.length,
+326:    system_est_tokens: estimatePromptTokens(system.length),
+327:    turn_context_chars: turnContext.length,
+328:    turn_context_est_tokens: estimatePromptTokens(turnContext.length),
+329:  });
+330:
+331:  const messages = applyTurnContext(base, turnContext);
+332:  if (typeof input.lab_prompt_capture === "function") {
+333:    const user = messages.map((m) => `${m.role}:\n${m.content}`).join("\n\n---\n\n");
+334:    try {
+335:      input.lab_prompt_capture({ system, user });
+336:    } catch {
+337:      /* ops capture must never break the turn */
+338:    }
+339:  }
+340:  return {
+341:    system,
+342:    messages,
+343:  };
+344:}

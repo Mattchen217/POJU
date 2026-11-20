@@ -1,0 +1,114 @@
+[
+  {
+    "name": "m1adaptive",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m1-production-adaptive-question-loop"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 15.0,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_m1adaptive.txt",
+    "tail": "[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"aa6f75c6-33ff-4364-adf0-9568d6141986\",\"has_profile\":false}\n[poju-gate] {\n  phase: 'collecting_context',\n  understanding_sufficient: undefined,\n  understanding_struct_complete: true,\n  base_analysis_ready: true,\n  substantive_opening_turns: 1,\n  minimum_interaction_met: false,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"aa6f75c6-33ff-4364-adf0-9568d6141986\",\"has_profile\":true}\n[poju-gate] {\n  phase: 'collecting_context',\n  understanding_sufficient: undefined,\n  understanding_struct_complete: true,\n  base_analysis_ready: true,\n  substantive_opening_turns: 1,\n  minimum_interaction_met: false,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n  PASS  M2.4-R2-FU7-CC-P: clearly affirmative natural language still writes user_asserted\n  PASS  M2.4-R2 static: production path uses model interpretation before DC write\n\nM1 done. PASS=120 FAIL=0"
+  },
+  {
+    "name": "m1r",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m1-r-fresh-session-main-loop"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 3.0,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_m1r.txt",
+    "tail": "  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"47275ba2-1e68-4231-b834-f4e39c568ca9\",\"has_profile\":false}\n[poju-gate] {\n  phase: 'collecting_context',\n  understanding_sufficient: undefined,\n  understanding_struct_complete: false,\n  base_analysis_ready: false,\n  substantive_opening_turns: 16,\n  minimum_interaction_met: true,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n    stopped: hard_budget_exhausted [\n  'dir_unknown_may_affect_p5:DIR-DEF-QUESTION',\n  'dir_unknown_may_affect_p5:DIR-DEF-OUTCOME',\n  'dir_unknown_may_affect_p5:DIR-OPT-ON-TABLE'\n]\n  PASS  M1R-04 basic end condition can stop further asks\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"b556ad1c-4db1-439b-a7d8-90a97272c9d2\",\"has_profile\":false}\n[agent] M1 DC persist FAIL-CLOSED (no free-ask fallback) persist_failed forced_persist_fail_for_m1r\n    fail-closed content: 【系统】决策上下文写入失败，本轮无法继续提问。请稍后重试。（forced_persist_fail_for_m1r）\n  PASS  M1R-05 DC persist failure is fail-closed (no free-ask)\n  PASS  M1R-06 prior M1 seeded path still reachable via runCollectingDcTurn\n\nM1-R done. PASS=8 FAIL=0"
+  },
+  {
+    "name": "m23",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m2-3-decision-blueprint"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 3.1,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_m23.txt",
+    "tail": "  base_analysis_ready: false,\n  substantive_opening_turns: 2,\n  minimum_interaction_met: true,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n    verdict=ready_for_final_confirm; outcome=ready_no_question; phase=awaiting_confirmation\n  PASS  M2.3-R2-FU2 Case D: P0/P1 complete → readiness/final-confirm unchanged\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"7a950d91-e9b7-4c55-b3d0-8e47434fee7e\",\"has_profile\":false}\n[poju-gate] {\n  phase: 'collecting_context',\n  understanding_sufficient: undefined,\n  understanding_struct_complete: false,\n  base_analysis_ready: false,\n  substantive_opening_turns: 1,\n  minimum_interaction_met: false,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"7a950d91-e9b7-4c55-b3d0-8e47434fee7e\",\"has_profile\":false}\n[agent] M1 planner_blocked (nonterminal; no confirm / no free-ask) understanding_exception:controlled_understanding_exception_fu4_1\n    path=handleUserMessage→runM1ProductionPreLlmTurn→runCollectingDcTurn→runAdaptiveQuestionTurn→Understanding×2→planner_blocked→Agent early return\n    understandingBuildAttempts=2; m1_outcome=planner_blocked; m1_ask_error=understanding_exception:controlled_understanding_exception_fu4_1; llmDelta=0; phase=collecting_context; exception_type=understanding_exception\n  PASS  M2.3-R2-FU4 Case E: real Agent chain Understanding failure -> planner_blocked; no ordinary LLM\n\nM2.3 results: 18 passed, 0 failed"
+  },
+  {
+    "name": "m21",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m2-1-readiness-confirm-freeze"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 3.2,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_m21.txt",
+    "tail": "  PASS  M21-03 user 确认 → promote → Freeze final + hash + contract\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"575dae46-9899-40ea-855e-c71fb58870f8\",\"has_profile\":false}\n[poju-gate] {\n  phase: 'collecting_context',\n  understanding_sufficient: undefined,\n  understanding_struct_complete: false,\n  base_analysis_ready: false,\n  substantive_opening_turns: 1,\n  minimum_interaction_met: false,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n[poju-diag] callLLMViaAPI:before-fetch {\"present\":false,\"has_structured\":false,\"display_text_len\":0,\"session_id\":\"575dae46-9899-40ea-855e-c71fb58870f8\",\"has_profile\":false}\n[poju-gate] {\n  phase: 'collecting_context',\n  understanding_sufficient: undefined,\n  understanding_struct_complete: false,\n  base_analysis_ready: false,\n  substantive_opening_turns: 1,\n  minimum_interaction_met: false,\n  reply_quality: 'clear',\n  question_status: 'satisfied',\n  session_action: null,\n  picked_option: false\n}\n  PASS  M21-04 freeze is fail-closed without readiness\n\nM2.1 result: 19 passed, 0 failed"
+  },
+  {
+    "name": "m22",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:m2-2-freeze-report-binding"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 5.4,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_m22.txt",
+    "tail": "}\n[FD] fd_93e4e5e5-b1… · ok · book complete · 359 chars (27ms)\n[final-delivery-stage] stage timing {\n  job_id: 'fd_93e4e5e5-b130-4627-a28f-_1794386673014_7ovua1',\n  stage: 'assemble',\n  stage_ms: 30,\n  translate_ms: 0,\n  tokens_used: 0,\n  chars: 359,\n  job_latency_ms: 27,\n  status: 'completed'\n}\n  PASS  M2.2-R5-C2 Real Stage Runner assemble: 8 pages then formal completed\n[final-delivery-stage] m22 freeze-bound write-back failed — formal job not completed FreezeBoundReportError: Empty report page 04\n    at assertCompleteEightPageReport (D:\\POJU\\pojulife\\lib\\poju\\decision-intake\\freeze-bound-report.ts:520:13)\n    at completeFreezeBoundReportFromDeliveryPages (D:\\POJU\\pojulife\\lib\\poju\\decision-intake\\freeze-bound-report.ts:1329:3)\n    at writeBackFreezeBoundReportOnDeliverySuccess (D:\\POJU\\pojulife\\lib\\poju\\final-delivery-stage-runner.ts:565:29)\n    at async runFinalDeliveryStage (D:\\POJU\\pojulife\\lib\\poju\\final-delivery-stage-runner.ts:2531:11)\n    at async <anonymous> (D:\\POJU\\pojulife\\scripts\\test-m2-2-freeze-report-binding.ts:2460:9)\n    at async <anonymous> (D:\\POJU\\pojulife\\scripts\\test-m2-2-freeze-report-binding.ts:2389:5)\n    at async check (D:\\POJU\\pojulife\\scripts\\test-m2-2-freeze-report-binding.ts:24:5)\n    at async main (D:\\POJU\\pojulife\\scripts\\test-m2-2-freeze-report-binding.ts:2360:3) {\n  code: 'EMPTY_REPORT_PAGE'\n}\n  PASS  M2.2-R5-C3 Real Stage Runner write-back failure → formal failed\n  PASS  M2.2-R5-C4 Regenerate mid-flight: stale fence rejects checkpoint/complete\n  PASS  M2.2-R5-C5 Dual contexts shared store: one authorized generation\n  PASS  M2.2-R5-C6 Route-shaped regenerate control flow fail-closed on supersede\n\nM2.2 results: 43 passed, 0 failed"
+  },
+  {
+    "name": "phase2",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "test:decision-context-phase2"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 1.8,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_phase2.txt",
+    "tail": "[terms] pojuTermByTraditional(\"魁罡\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"十恶大败\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"孤鸾\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"孤鸾煞\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"阴阳差错\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"阴差阳错\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"元辰\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"六秀日\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"大耗\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"小耗\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"五鬼\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\n[terms] pojuTermByTraditional(\"丧门\") called without namespace — migrate to resolvePojuTerm(input, { namespace })\ndecision-context phase2\n  PASS  C1 successful commit writes DC + durable key + control plane\n  PASS  C1 failure rolls back memory; blob unchanged; no durable key\n  PASS  control-plane missing fails before blob write and rolls back\n  PASS  durable idempotency survives reload (process registry cleared)\n  PASS  restore prefers persisted DC over agent_v2 buffers\n[poju] DC post-commit side effects failed (core kept): Error: archive side effect failed\n    at Object.afterCommit (D:\\POJU\\pojulife\\scripts\\test-decision-context-phase2.ts:130:15)\n    at afterCommit (D:\\POJU\\pojulife\\scripts\\test-decision-context-phase2.ts:398:33)\n    at commitDecisionContextChange (D:\\POJU\\pojulife\\lib\\poju\\session-manager.ts:424:11)\n    at async <anonymous> (D:\\POJU\\pojulife\\scripts\\test-decision-context-phase2.ts:394:20)\n    at async main (D:\\POJU\\pojulife\\scripts\\test-decision-context-phase2.ts:378:3)\n  PASS  post-commit side effect failure does NOT roll back core\n  PASS  confirmSessionAfterCorePersist adopts only after core write\n  PASS  cross-session idempotency isolation: same op_1 does not skip other session\n  PASS  mergeDcPersistSliceIntoSession does not elevate buffers to DC\n\nphase2: 9 passed"
+  },
+  {
+    "name": "typegen",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "exec",
+      "next",
+      "typegen"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 1.5,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_typegen.txt",
+    "tail": "Generating route types...\n✓ Types generated successfully"
+  },
+  {
+    "name": "tsc",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "exec",
+      "tsc",
+      "--noEmit"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 6.0,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_tsc.txt",
+    "tail": ""
+  },
+  {
+    "name": "build",
+    "cmd": [
+      "C:\\Users\\13306\\AppData\\Roaming\\npm\\pnpm.cmd",
+      "build"
+    ],
+    "head": "a1c0f5363e372d4d507191c2b177ef28b1fd072f",
+    "exit_code": 0,
+    "elapsed_sec": 98.0,
+    "log": "D:\\POJU\\pojulife\\temp\\out_m24r2fu7_final_build.txt",
+    "tail": "├ ƒ /api/profile/base-analysis-v2/phase/narrative\n├ ƒ /api/profile/base-analysis-v2/stream\n├ ƒ /api/profile/base-analysis/status\n├ ƒ /api/profile/base-analysis/stream\n├ ƒ /api/profile/calculate\n├ ƒ /api/profile/regenerate-chart\n├ ƒ /api/pwa-icon\n├ ƒ /api/webhooks/stripe\n├ ○ /apple-icon\n├ ○ /icon\n├ ○ /kv\n├ ƒ /llms.txt\n├ ○ /ops\n├ ○ /ops/delivery-lab\n├ ƒ /ops/delivery-lab/[lab_id]\n├ ƒ /ops/refund-check\n├ ○ /oracle-fronts-preview\n├ ○ /oracle-test\n├ ○ /robots.txt\n├ ○ /sitemap.xml\n├ ○ /unsubscribe\n└ ƒ /v2-landing\n\n\nƒ Proxy (Middleware)\n\n○  (Static)   prerendered as static content\n●  (SSG)      prerendered as static HTML (uses generateStaticParams)\nƒ  (Dynamic)  server-rendered on demand\n"
+  }
+]

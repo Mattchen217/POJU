@@ -1,0 +1,9 @@
+docs(di2): M4.1 evidence — Freeze commit recovery + strict ledger anchor
+
+Evidence for implementation f1be9ec1723db8935eae3d0fc268aa12a599deb0: baseline
+reproduction finding, server recover_freeze contract, device call chain, failure
+injection (real IndexedDB abort of the C1 write), recovery / idempotency / non-current
+refusal / anchor / profile binding results, which checks use the in-process transport
+vs direct server calls (all on process-memory KV), checks run on f1be9ec1, and the
+untested real HTTP, Upstash, multi-device, browser and model boundaries.
+Not a PASS declaration.

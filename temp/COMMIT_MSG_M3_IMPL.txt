@@ -1,0 +1,51 @@
+feat(m3): DI2 Personal Analysis + Freeze-bound eight-page report production chain
+
+Decision Intake 2.0 sessions now go Freeze -> Personal Analysis -> eight pages ->
+fenced completion -> device session, without legacy Stage-2 (no agent_v2 /
+breakthrough_core / covered_agenda as fact source; no Call A/B).
+
+Personal Analysis (lib/poju/decision-intake/personal-analysis.ts)
+- Inputs: frozen DC + Blueprint (server Freeze registry), locally computed chart
+  lines (ChartFactPack) + Ziwei closed set from the formal profile.
+- Artifact: decision_target (deterministic), pattern / strengths / risks /
+  tendencies / constraint interaction / path implications / unresolved
+  conditions, evidence_references with frozen statuses, confidence + limits.
+- Validator: epistemic class must match cited status (no upgrade of unverified /
+  estimate / hypothesis), chart anchors for pattern sections, DC anchors for
+  decision sections, unresolved DIR/conflict coverage, zh bare-term category check.
+
+Persistence + execution (decision-report-store / -runner / -service)
+- New xhigh phase "decision_report"; stages finalize=analysis,
+  segments=page waves, assemble=integrity + fenced completion.
+- Write-once Freeze registry and hash-verified profile registry (server KV).
+- Analysis keyed by session+freeze+context_hash+profile_hash+schema; reused on
+  regenerate, never across Freezes, re-run on profile change.
+- Per-page checkpoints keyed by job_id; completed pages never rewritten;
+  1+1 per unit; exhausted -> retryable failure; Continue resumes checkpoints.
+- Shares relay (continue route / Inngest / QStash), lease+ACK, job fuse, deploy
+  kill-switch and per-session execution fence with the legacy book.
+
+Report (decision-report-pages / -render)
+- Pages 01/02/04/05/06/08 from dc-page-feed + analysis + chart lines; 07 by topic
+  gate (explicit not_applicable page otherwise); 03 deterministic appendix.
+- P5 ranked paths with conditions/cost/risk/reversibility/exit/ranking basis and
+  required unknown citation; P6 single low-cost experiment (schedule refused);
+  P8 continue/adjust/stop/rerun. Visible body refuses raw JSON / code fences.
+
+API + client + UI
+- POST /api/poju/decision-report (start / status / continue); shared pass charge
+  helper (lib/passes/charge-delivery-pass.ts) used by both routes.
+- decision-report-client mirrors analysis + page checkpoints into
+  personal_analysis_records / freeze_bound_report_jobs (source DI2), verifies
+  all eight pages against the Freeze before applying the book.
+- POJUChatUI: auto-start after Freeze, resume on reopen, progress lines,
+  Regenerate (new generation, old report kept), Continue/retry on failure.
+
+Legacy fixes
+- Legacy finalize + segments now receive the frozen DC page slice.
+- Delivery write-back: aggregates by canonicalFaceId, explicit 07
+  not_applicable, refuses DI2 rows (SOURCE_MISMATCH), stamps legacy source.
+- applyFinalDeliveryResultToSession no longer requires agent_v2.
+
+Tests: scripts/test-m3-decision-report.ts (test hooks replace only the network
+model call; NOT a real model validation).

@@ -1,0 +1,80 @@
+﻿node.exe : [terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace
+ })
+所在位置 行:1 字符: 1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([terms] pojuTer... { namespace }):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+
+S7 Draft DC lifecycle + Chat observation
+
+  PASS  Opening seed: draft DC + definition + user facts, no hyp/dirs
+  PASS  Opening seed is idempotent when draft already present
+  PASS  Call A writes hypotheses only (not Facts/Constraints from core)
+  FAIL  Call B maps Agenda → DIR and keeps fingerprint
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:185:10)
+    at check (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:25:11)
+    at main (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:181:7) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  Collecting appends unverified fact and never auto-confirms
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+
+    at <anonymous> (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:207:10)
+    at check (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:25:11)
+    at main (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:199:7) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+  FAIL  Freeze still blocked without Stage3 sufficiency (S5 invariant)
+TypeError: Cannot read properties of undefined (reading 'agent_v2')
+    at isStallOrDegradedPath (D:\POJU\pojulife\lib\poju\decision-context\production-freeze-wire.ts:144:25)
+    at canFreezeSessionOnSufficiency (D:\POJU\pojulife\lib\poju\decision-context\production-freeze-wire.ts:169:7)
+    at <anonymous> (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:221:16)
+    at check (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:25:11)
+    at main (D:\POJU\pojulife\scripts\test-s7-dc-lifecycle.ts:217:7)
+  PASS  Legacy no-DC session: soft require still allows delivery
+  PASS  Chat full_pipeline observation exposes nine layers from real trace
+
+S7 result: 5 passed, 3 failed
+
+

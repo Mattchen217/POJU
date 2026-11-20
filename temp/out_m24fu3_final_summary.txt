@@ -1,0 +1,10 @@
+HEAD=4468347e58f55151ecad2cc47871534b86c937b5
+CMD=m1adaptive EXIT=0 ELAPSED_MS=3853 LOG=temp\out_m24fu3_final_m1adaptive.txt
+CMD=m1r EXIT=0 ELAPSED_MS=2964 LOG=temp\out_m24fu3_final_m1r.txt
+CMD=m23 EXIT=0 ELAPSED_MS=3289 LOG=temp\out_m24fu3_final_m23.txt
+CMD=m21 EXIT=0 ELAPSED_MS=3265 LOG=temp\out_m24fu3_final_m21.txt
+CMD=m22 EXIT=0 ELAPSED_MS=5399 LOG=temp\out_m24fu3_final_m22.txt
+CMD=phase2 EXIT=0 ELAPSED_MS=1875 LOG=temp\out_m24fu3_final_phase2.txt
+CMD=typegen EXIT=0 ELAPSED_MS=1506 LOG=temp\out_m24fu3_final_typegen.txt
+CMD=tsc EXIT=0 ELAPSED_MS=5928 LOG=temp\out_m24fu3_final_tsc.txt
+CMD=build EXIT=0 ELAPSED_MS=97034 LOG=temp\out_m24fu3_final_build.txt

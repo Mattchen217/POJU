@@ -1,0 +1,1 @@
+docs(evidence): M2.4-R2-FU9 source-content grounding and insight-mismatch resolution

@@ -1,0 +1,5 @@
+docs(evidence): M2.4-R2-FU3 unresolved item lifecycle
+
+Record the production call chain, FU3-A through FU3-H results, and
+official regression exit codes for implementation SHA 1ee64f13. Tip
+SHA is left empty pending review. Does not self-declare product PASS.

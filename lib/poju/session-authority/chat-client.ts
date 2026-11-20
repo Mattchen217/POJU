@@ -89,6 +89,7 @@ export async function submitAuthoritativeChatTurn(
   const response = await fetch(AUTHORITATIVE_CHAT_ROUTE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify(body),
     signal: input.signal,
   });

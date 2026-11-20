@@ -1,0 +1,63 @@
+async function runLuaSessionCas(
+  kv: KvLike,
+  sessionId: string,
+  expectedRevision: number,
+  next: ServerSessionRecord,
+  opts?: SessionCasOptions,
+): Promise<SessionCasResult> {
+  if (typeof kv.eval !== "function") {
+    throw new SessionPersistenceUnavailableError("session CAS Lua eval is unavailable");
+  }
+  // Authoritative hash + record integrity for the proposed next record.
+  try {
+    inspectStoredSessionRecord(sessionId, next);
+  } catch {
+    return { ok: false, reason: "identity" };
+  }
+  // Authoritative canonicalHash of the live record. Redis Lua does not recompute
+  // this hash; a corrupted current record must fail closed here and never be
+  // overwritten. Lua still enforces structural integrity atomically.
+  try {
+    const currentRaw = await readKvValue(kv, serverSessionKey(sessionId));
+    const current = inspectStoredSessionRecord(sessionId, currentRaw);
+    if (!current) {
+      // Fall through to EVAL so the Lua path cannot recreate a missing key.
+    }
+  } catch (error) {
+    if (error instanceof SessionRecordIntegrityError) {
+      return { ok: false, reason: "malformed" };
+    }
+    throw error;
+  }
+
+  const nowIso = opts?.nowIso ?? new Date().toISOString();
+  const intakeCommit = Boolean(opts?.intakeCommit);
+  const evalArgs: string[] = [
+    String(expectedRevision),
+    JSON.stringify(next),
+    String(SERVER_SESSION_TTL_SECONDS),
+    sessionId,
+    nowIso,
+    intakeCommit ? "1" : "0",
+    dcLedgerHeadKey(sessionId),
+    ledgerEntryPrefix(sessionId),
+    String(LEDGER_CAS_PROBE_LIMIT),
+  ];
+
+  if (intakeCommit) {
+    // TypeScript validates canonical ledger hashes, then binds the exact raw
+    // values into EVAL. This is not a GET-hash-EVAL window: Lua compares the
+    // live Redis bytes against those exact validated raw values and rejects
+    // the commit if anything changed or a new entry appeared.
+    const snapshot = await collectLedgerBindingSnapshot(
+      (keys) => readRawKvValues(kv, keys),
+      sessionId,
+    );
+    if (!snapshot.ok) return { ok: false, reason: snapshot.reason };
+    evalArgs.push(...encodeLedgerBindingArgs(snapshot.snapshot));
+  }
+
+  const result = await kv.eval(SESSION_AUTHORITY_CAS_LUA, [serverSessionKey(sessionId)], evalArgs);
+  return luaCasCodeToResult(result);
+}
+

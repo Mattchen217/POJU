@@ -1,0 +1,805 @@
+
+> pojulife@0.1.0 test:m5-di2-main-path D:\POJU\pojulife
+> tsx scripts/test-m5-di2-main-path.ts
+
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+M5 Decision Intake 2.0 — main-path integration closure
+[decision-report] analysis completed {
+  job_id: 'dr_bfb069d5-0511-4ee6-aec8-_1794474595982_8lhfcf',
+  analysis_id: 'pa_ctxa1v1_16a6bb2ae572'
+}
+[decision-report] report completed {
+  job_id: 'dr_bfb069d5-0511-4ee6-aec8-_1794474595982_8lhfcf',
+  freeze_id: 'ctx_a1@v1',
+  generation: 1
+}
+  PASS  A1 durable write: job completes only after the record commits; record carries full identity
+[decision-report] analysis completed {
+  job_id: 'dr_a08180f6-a38f-45ed-97c2-_1794474596414_x6sa91',
+  analysis_id: 'pa_ctxa2v1_92e85e56d855'
+}
+[decision-report] final report persist failed {
+  job_id: 'dr_a08180f6-a38f-45ed-97c2-_1794474596414_x6sa91',
+  code: 'REPORT_PERSIST_FAILED',
+  message: 'test: durable store write rejected'
+}
+[decision-report] report completed {
+  job_id: 'dr_a08180f6-a38f-45ed-97c2-_1794474596414_x6sa91',
+  freeze_id: 'ctx_a2@v1',
+  generation: 1
+}
+  PASS  A2 durable write failure → never completed, retryable; Continue commits without model calls
+  PASS  A3 repeated final commit reuses the record; divergent content refused; replay is a no-op
+[decision-report] analysis completed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  analysis_id: 'pa_ctxa4v1_9cdb11fc1588'
+}
+[decision-report] stage crashed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  stage: 'assemble',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async commitFinalReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:758:21)
+      at async runAssembleStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:677:3)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:848:10)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:591:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:591:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:346:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:846:31)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  stage: 'finalize',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:346:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:846:31)
+      at async runKilledAfterRecordWrite (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:238:7)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:427:9)
+      at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+}
+  PASS  A4 process killed after the record write → running, never completed; recovery reuses the record
+  PASS  A5 job completed, client never received it, execution job expired → status serves the record
+[decision-report] analysis completed {
+  job_id: 'dr_a39461b8-43b9-47b1-907d-_1794474596909_u8q195',
+  analysis_id: 'pa_ctxa5bv1_532f8a00e658'
+}
+[decision-report] report completed {
+  job_id: 'dr_a39461b8-43b9-47b1-907d-_1794474596909_u8q195',
+  freeze_id: 'ctx_a5b@v1',
+  generation: 1
+}
+  PASS  A5b completed job whose record went missing → status rebuilds the record from the job
+[decision-report] analysis completed {
+  job_id: 'dr_d6c9f137-e763-4c6f-bc49-_1794474597113_fcegs1',
+  analysis_id: 'pa_ctxa6v1_b2dabd2e8f09'
+}
+[decision-report] took over session lock {
+  session_id: 'd6c9f137-e763-4c6f-bc49-a13e6ee646c8',
+  why: 'replace_live_job'
+}
+[decision-report] complete fenced out {
+  job_id: 'dr_d6c9f137-e763-4c6f-bc49-_1794474597113_fcegs1',
+  reason: 'revoked',
+  withdrawn: true
+}
+[decision-report] analysis reused {
+  job_id: 'dr_d6c9f137-e763-4c6f-bc49-_1794474597158_ii7nhc',
+  analysis_id: 'pa_ctxa6v1_b2dabd2e8f09'
+}
+[decision-report] report completed {
+  job_id: 'dr_d6c9f137-e763-4c6f-bc49-_1794474597158_ii7nhc',
+  freeze_id: 'ctx_a6@v1',
+  generation: 2
+}
+  PASS  A6 old generation loses the fence after its record write → record withdrawn; new generation intact
+[decision-report] first dispatch failed {
+  job_id: 'dr_106c7db6-2ff4-4c93-9abd-_1794474597333_l91tj3',
+  e: Error: test: background host unavailable
+      at Object.background (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:114:38)
+      at dispatchDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-dispatch.ts:93:8)
+      at async lockedStart (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:469:7)
+      at async startAction (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-api.ts:292:12)
+      at async globalThis.fetch (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:146:19)
+      at async call (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:154:15)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:519:20)
+      at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+      at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:515:7)
+      at async main (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:309:3)
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_106c7db6-2ff4-4c93-9abd-_1794474597333_l91tj3',
+  stage: 'finalize',
+  recorded_stage: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_106c7db6-2ff4-4c93-9abd-_1794474597333_l91tj3',
+  analysis_id: 'pa_ctxb1v1_94f16f05eb65'
+}
+[decision-report] report completed {
+  job_id: 'dr_106c7db6-2ff4-4c93-9abd-_1794474597333_l91tj3',
+  freeze_id: 'ctx_b1@v1',
+  generation: 1
+}
+  PASS  B1 first dispatch failed → second start re-dispatches the same job; one charge
+[final-delivery] Inngest continue published {
+  job_id: 'dr_639c4dca-ba48-4da2-bc04-_1794474597519_xpqwos',
+  stage: 'finalize'
+}
+[decision-report] relay published but no worker attached — hosting here {
+  job_id: 'dr_639c4dca-ba48-4da2-bc04-_1794474597519_xpqwos',
+  stage: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_639c4dca-ba48-4da2-bc04-_1794474597519_xpqwos',
+  analysis_id: 'pa_ctxb2av1_ab2c941181d0'
+}
+[decision-report] report completed {
+  job_id: 'dr_639c4dca-ba48-4da2-bc04-_1794474597519_xpqwos',
+  freeze_id: 'ctx_b2a@v1',
+  generation: 1
+}
+[final-delivery] Inngest continue published {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  stage: 'finalize'
+}
+[decision-report] relay published but no worker attached — hosting here {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  stage: 'finalize'
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  stage: 'finalize',
+  recorded_stage: 'finalize'
+}
+[final-delivery] Inngest continue published {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  stage: 'finalize'
+}
+[decision-report] relay published but no worker attached — hosting here {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  stage: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  analysis_id: 'pa_ctxb2bv1_4187c53d4db7'
+}
+[decision-report] report completed {
+  job_id: 'dr_0f927e65-e560-4d68-87c8-_1794474598202_trob3o',
+  freeze_id: 'ctx_b2b@v1',
+  generation: 1
+}
+  PASS  B2 Inngest published but no worker attached → hosted fallback; dead host → recovered after grace
+[decision-report] lease busy — skip overlap {
+  job_id: 'dr_3f651226-6f82-434a-8a3a-_1794474599382_99j1uh',
+  stage: 'finalize',
+  holder: 'finalize'
+}
+  PASS  B3 live lease → no second worker (continue / start / status)
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  stage: 'assemble',
+  recorded_stage: 'assemble'
+}
+[decision-report] report completed {
+  job_id: 'dr_5c276ba3-8b7e-4bd6-9e35-_1794474596701_ojs5vg',
+  freeze_id: 'ctx_a4@v1',
+  generation: 1
+}
+  PASS  B4 expired lease of a killed worker → re-dispatch from checkpoints, same generation, no model calls
+[decision-report] analysis reused {
+  job_id: 'dr_bfb069d5-0511-4ee6-aec8-_1794474599426_hh9rf4',
+  analysis_id: 'pa_ctxa1v1_16a6bb2ae572'
+}
+[decision-report] report completed {
+  job_id: 'dr_bfb069d5-0511-4ee6-aec8-_1794474599426_hh9rf4',
+  freeze_id: 'ctx_a1@v1',
+  generation: 2
+}
+  PASS  B5 no double charge: reuse / continue / regenerate / second job after the first charge
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_afc6ad7f-bed0-47e7-a8f9-_1794474599596_dp22ea',
+  stage: 'finalize',
+  recorded_stage: 'finalize'
+}
+[decision-report] lease busy — skip overlap {
+  job_id: 'dr_afc6ad7f-bed0-47e7-a8f9-_1794474599596_dp22ea',
+  stage: 'finalize',
+  holder: 'finalize'
+}
+[decision-report] lease busy — skip overlap {
+  job_id: 'dr_afc6ad7f-bed0-47e7-a8f9-_1794474599596_dp22ea',
+  stage: 'finalize',
+  holder: 'finalize'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_afc6ad7f-bed0-47e7-a8f9-_1794474599596_dp22ea',
+  analysis_id: 'pa_ctxb6v1_924f701323bb'
+}
+[decision-report] report completed {
+  job_id: 'dr_afc6ad7f-bed0-47e7-a8f9-_1794474599596_dp22ea',
+  freeze_id: 'ctx_b6@v1',
+  generation: 1
+}
+  PASS  B6 concurrent recovery requests → one dispatch; racing workers → one commit
+[decision-report] took over session lock {
+  session_id: '36ead279-2e6a-4655-b54e-022d952dabed',
+  why: 'legacy_orphan'
+}
+  PASS  B7 session lock with no live job: young lock is respected, aged lock is reclaimed
+[decision-report] analysis completed {
+  job_id: 'dr_12ab975b-4a5d-41f4-a01e-_1794474599911_97qc22',
+  analysis_id: 'pa_ctxc1v1_939e5d631a7b'
+}
+[decision-report] report completed {
+  job_id: 'dr_12ab975b-4a5d-41f4-a01e-_1794474599911_97qc22',
+  freeze_id: 'ctx_c1@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:690:22)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  C1 refresh while running → polls the same job; no new job, no charge; delivered + persisted
+[decision-report] analysis completed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  analysis_id: 'pa_ctxc2v1_e456bd3fa5e8'
+}
+[decision-report] stage crashed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  stage: 'assemble',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async commitFinalReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:758:21)
+      at async runAssembleStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:677:3)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:848:10)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:591:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:591:5)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  stage: 'segments',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runPagesStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:493:7)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:847:36)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:346:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:846:31)
+}
+[decision-report] stage crashed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  stage: 'finalize',
+  e: Error: test: process killed
+      at MemoryKv.patched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:233:24)
+      at commitXhighJobUnderExecutionFence (D:\POJU\pojulife\lib\poju\xhigh-job-store.ts:664:28)
+      at async failDecisionReportJob (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:128:21)
+      at async runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:851:5)
+      at async scheduleNext (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:209:5)
+      at async runAnalysisStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:346:5)
+      at async Object.runDecisionReportStage (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-runner.ts:846:31)
+      at async runKilledAfterRecordWrite (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:238:7)
+      at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:705:9)
+      at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+}
+[decision-report] no live worker — re-dispatching from checkpoints {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  stage: 'assemble',
+  recorded_stage: 'assemble'
+}
+[decision-report] report completed {
+  job_id: 'dr_61f7d45c-c989-4c0e-bf7d-_1794474602370_5qewm6',
+  freeze_id: 'ctx_c2@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:711:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  C2 refresh after the worker was killed (lease expired) → client gets a worker; no restart
+[decision-report] analysis completed {
+  job_id: 'dr_893a3e2e-fdd1-470f-8378-_1794474604589_7x6vn3',
+  analysis_id: 'pa_ctxc3v1_6ce10d73ddb2'
+}
+[decision-report] report completed {
+  job_id: 'dr_893a3e2e-fdd1-470f-8378-_1794474604589_7x6vn3',
+  freeze_id: 'ctx_c3@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:733:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  C3 retryable interruption → automatic Continue from checkpoints (same job)
+  PASS  C4 permanent failure → explicit error, no automatic retry; identifiers kept
+[decision-report] analysis completed {
+  job_id: 'dr_a7354e6f-01ea-4830-8dbc-_1794474606916_8zveqc',
+  analysis_id: 'pa_ctxc4bv1_f4e7ebe55289'
+}
+[decision-report] page attempt failed {
+  job_id: 'dr_a7354e6f-01ea-4830-8dbc-_1794474606916_8zveqc',
+  page: '05',
+  attempt: 1,
+  reason: 'parse_failed'
+}
+[decision-report] page attempt failed {
+  job_id: 'dr_a7354e6f-01ea-4830-8dbc-_1794474606916_8zveqc',
+  page: '05',
+  attempt: 2,
+  reason: 'parse_failed'
+}
+[decision-report] report completed {
+  job_id: 'dr_a7354e6f-01ea-4830-8dbc-_1794474606916_8zveqc',
+  freeze_id: 'ctx_c4b@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:775:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  C4b quality 1+1 spent → stops without auto-Continue; user Continue resumes only the failed unit
+[decision-report] analysis completed {
+  job_id: 'dr_d594b3e4-6434-4599-b8ce-_1794474609130_5ns6f6',
+  analysis_id: 'pa_ctxc5v1_b153ab0088de'
+}
+[decision-report] report completed {
+  job_id: 'dr_d594b3e4-6434-4599-b8ce-_1794474609130_5ns6f6',
+  freeze_id: 'ctx_c5@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:792:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  C5 job completed but never received, job expired → refresh reads the committed report
+[decision-report] took over session lock {
+  session_id: 'fef56d9e-0fbf-4931-a6f9-87a7a64eca3e',
+  why: 'legacy_orphan'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_fef56d9e-0fbf-4931-a6f9-_1794474611298_ctj5f5',
+  analysis_id: 'pa_ctxc5bv1_95aef9808118'
+}
+[decision-report] report completed {
+  job_id: 'dr_fef56d9e-0fbf-4931-a6f9-_1794474611298_ctj5f5',
+  freeze_id: 'ctx_c5b@v1',
+  generation: 2
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:808:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  C5b job lost early (no report, session lock left behind) → one new generation, no new charge
+  PASS  C6 complete report on the device → reload neither starts nor resumes generation
+[poju] report checkpoint save failed SessionCasError: stale candidate session_revision=4 latest=5
+    at casWritePOJUSessionFromCandidate (D:\POJU\pojulife\lib\poju\session-mutation.ts:734:11)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async savePOJUSessionCore (D:\POJU\pojulife\lib\poju\session-manager.ts:291:3)
+    at async savePOJUSession (D:\POJU\pojulife\lib\poju\session-manager.ts:323:3)
+    at async defaultPersist (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:181:3)
+    at async saveCheckpoint (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:698:5)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:742:9)
+    at async Promise.allSettled (index 1) {
+  code: 'SESSION_CAS_CONFLICT'
+}
+[decision-report] analysis completed {
+  job_id: 'dr_d5874dd2-6ab8-41f5-b85b-_1794474613453_7xfqdx',
+  analysis_id: 'pa_ctxc7v1_781330d72041'
+}
+[poju] report checkpoint save failed SessionCasError: stale candidate session_revision=4 latest=5
+    at casWritePOJUSessionFromCandidate (D:\POJU\pojulife\lib\poju\session-mutation.ts:734:11)
+    at async savePOJUSessionCore (D:\POJU\pojulife\lib\poju\session-manager.ts:291:3)
+    at async savePOJUSession (D:\POJU\pojulife\lib\poju\session-manager.ts:323:3)
+    at async defaultPersist (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:181:3)
+    at async saveCheckpoint (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:698:5)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:742:9)
+    at async Promise.allSettled (index 1)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:837:25)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+    at async runWithEphemeralXhighKv.deadlineMs (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:826:7) {
+  code: 'SESSION_CAS_CONFLICT'
+}
+[decision-report] report completed {
+  job_id: 'dr_d5874dd2-6ab8-41f5-b85b-_1794474613453_7xfqdx',
+  freeze_id: 'ctx_c7@v1',
+  generation: 1
+}
+[poju] report checkpoint save failed SessionCasError: stale candidate session_revision=4 latest=6
+    at casWritePOJUSessionFromCandidate (D:\POJU\pojulife\lib\poju\session-mutation.ts:734:11)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+    at async savePOJUSessionCore (D:\POJU\pojulife\lib\poju\session-manager.ts:291:3)
+    at async savePOJUSession (D:\POJU\pojulife\lib\poju\session-manager.ts:323:3)
+    at async defaultPersist (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:181:3)
+    at async saveCheckpoint (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:698:5)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:742:9)
+    at async Promise.allSettled (index 1) {
+  code: 'SESSION_CAS_CONFLICT'
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async Promise.allSettled (index 1)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:837:25)
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async Promise.allSettled (index 0)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:837:25)
+  PASS  C7 two tabs resume the same interrupted job → one Continue; both end delivered
+[decision-report] analysis completed {
+  job_id: 'dr_96ae67e7-1150-42ee-ad2d-_1794474617609_x7byfw',
+  analysis_id: 'pa_ctxd1v1_f46fcb6cfe8e'
+}
+[decision-report] report completed {
+  job_id: 'dr_96ae67e7-1150-42ee-ad2d-_1794474617609_x7byfw',
+  freeze_id: 'ctx_d1@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async refusedThenRefetched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:880:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:886:9)
+  PASS  D1 missing page → not completed locally; refetch delivers
+[decision-report] analysis completed {
+  job_id: 'dr_699bb1eb-cc33-41a1-873a-_1794474619791_y71fd5',
+  analysis_id: 'pa_ctxd2av1_51bec5ece9f7'
+}
+[decision-report] report completed {
+  job_id: 'dr_699bb1eb-cc33-41a1-873a-_1794474619791_y71fd5',
+  freeze_id: 'ctx_d2a@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async refusedThenRefetched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:880:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:894:9)
+[decision-report] analysis completed {
+  job_id: 'dr_d8360131-64fb-40ed-9978-_1794474621951_yvjj96',
+  analysis_id: 'pa_ctxd2bv1_a65bf25f1ba7'
+}
+[decision-report] report completed {
+  job_id: 'dr_d8360131-64fb-40ed-9978-_1794474621951_yvjj96',
+  freeze_id: 'ctx_d2b@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async refusedThenRefetched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:880:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:899:9)
+[decision-report] analysis completed {
+  job_id: 'dr_9c61a575-c703-4c59-8774-_1794474624089_nuxk7c',
+  analysis_id: 'pa_ctxd2cv1_868183b1dbac'
+}
+[decision-report] report completed {
+  job_id: 'dr_9c61a575-c703-4c59-8774-_1794474624089_nuxk7c',
+  freeze_id: 'ctx_d2c@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async refusedThenRefetched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:880:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:900:9)
+  PASS  D2 Freeze binding mismatch (page / payload) → not completed
+[decision-report] analysis completed {
+  job_id: 'dr_ba0e120f-f58d-4764-bb91-_1794474626321_snjfdp',
+  analysis_id: 'pa_ctxd3av1_bdc68e8cf840'
+}
+[decision-report] report completed {
+  job_id: 'dr_ba0e120f-f58d-4764-bb91-_1794474626321_snjfdp',
+  freeze_id: 'ctx_d3a@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async refusedThenRefetched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:880:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:908:9)
+[decision-report] analysis completed {
+  job_id: 'dr_7a5685bf-1c84-47fa-8b0d-_1794474628496_xeg1zg',
+  analysis_id: 'pa_ctxd3bv1_391aed5f5425'
+}
+[decision-report] report completed {
+  job_id: 'dr_7a5685bf-1c84-47fa-8b0d-_1794474628496_xeg1zg',
+  freeze_id: 'ctx_d3b@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async refusedThenRefetched (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:880:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:916:9)
+  PASS  D3 incomplete / foreign Personal Analysis → not completed
+[decision-report] analysis completed {
+  job_id: 'dr_29ee2172-0ef8-4551-83b8-_1794474630713_iel4dn',
+  analysis_id: 'pa_ctxd4v1_a23c6e1e31a4'
+}
+[decision-report] report completed {
+  job_id: 'dr_29ee2172-0ef8-4551-83b8-_1794474630713_iel4dn',
+  freeze_id: 'ctx_d4@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:928:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  D4 delivered Session survives a reload (one write: analysis, 8 pages, body, binding, pending cleared)
+[decision-report] analysis completed {
+  job_id: 'dr_499f82b5-e7c2-4842-bfa1-_1794474632875_7bgfoj',
+  analysis_id: 'pa_ctxd5v1_cfcb69c7dfac'
+}
+[decision-report] report completed {
+  job_id: 'dr_499f82b5-e7c2-4842-bfa1-_1794474632875_7bgfoj',
+  freeze_id: 'ctx_d5@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async waitForActual (node:assert:644:5)
+    at async Function.rejects (node:assert:767:25)
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:959:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  D5 local save failure → not delivered, job id kept; next open refetches the full report
+[decision-report] analysis completed {
+  job_id: 'dr_9138703a-04d0-4b60-9920-_1794474637030_zwq83a',
+  analysis_id: 'pa_ctxd6v1_278b6523ce4f'
+}
+[decision-report] report completed {
+  job_id: 'dr_9138703a-04d0-4b60-9920-_1794474637030_zwq83a',
+  freeze_id: 'ctx_d6@v1',
+  generation: 1
+}
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:441:14)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:969:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+[fill-delivery] skeleton assert: Error: Deliverable HTML tag skeleton changed during fill (chrome/structure drift)
+    at assertSkeletonUnchanged (D:\POJU\pojulife\lib\deliverables\fill-html.ts:72:11)
+    at maybeAssertSkeleton (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:54:5)
+    at fillDecisionReportHtml (D:\POJU\pojulife\lib\deliverables\fill-delivery.ts:195:3)
+    at ensureDeliveryFilledHtml (D:\POJU\pojulife\lib\deliverables\persist.ts:78:16)
+    at applyFinalDeliveryResultToSession (D:\POJU\pojulife\lib\llm\pro\final-delivery.ts:879:12)
+    at withCompletedReport (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:508:10)
+    at async commitCompletedReportToSession (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:462:10)
+    at async pollUntilDone (D:\POJU\pojulife\lib\poju\decision-intake\decision-report-client.ts:732:16)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:969:9)
+    at async check (D:\POJU\pojulife\scripts\test-m5-di2-main-path.ts:43:5)
+  PASS  D6 final write loses a revision race (another writer) → re-applied onto the latest Session
+
+29 passed, 0 failed

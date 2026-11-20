@@ -1,0 +1,114 @@
+CMD=pnpm test:m2-2-freeze-report-binding
+EXIT=0
+SECONDS=5.4
+
+> pojulife@0.1.0 test:m2-2-freeze-report-binding D:\POJU\pojulife
+> tsx scripts/test-m2-2-freeze-report-binding.ts
+
+M2.2 Freeze-bound eight-page report binding
+  PASS  M2.2-A1 Correct Freeze version
+  PASS  M2.2-A2 Draft changes after Freeze do not affect report
+  PASS  M2.2-A3 Missing frozen version fail-closed
+  PASS  M2.2-A4 Hash mismatch rejected before page generation
+  PASS  M2.2-A5 Invalid Freeze fail-closed
+  PASS  M2.2-B1 Same snapshot across all pages
+  PASS  M2.2-B2 No mutable draft DC reads in page path
+  PASS  M2.2-B3 Exactly eight pages
+  PASS  M2.2-B4 Empty page cannot complete
+  PASS  M2.2-C1 Duplicate completed request reuses report
+  PASS  M2.2-C2 Concurrent duplicate requests converge
+  PASS  M2.2-C3 Different Freeze are distinct report identities
+  PASS  M2.2-C4 Binding mismatch rejected
+  PASS  M2.2-D1 Retry after partial failure keeps original Freeze
+  PASS  M2.2-D2 Page reuse on retry when binding matches
+  PASS  M2.2-D3 Retry hash mismatch fail-closed
+  PASS  M2.2-E1 Binding persistence survives reload
+  PASS  M2.2-E2 Failed report not presented as completed
+  PASS  M2.2-E3 Finalization integrity rejects bad page sets
+  PASS  M2.2-E2E fresh confirm Freeze mutate draft report idempotent
+  PASS  M2.2-unit generateEightPageReport + snapshot helpers
+  PASS  M2.2-R1-C5 Cross-process claim: only one generator runs
+  PASS  M2.2-R1-C6 Deep-freeze isolates page mutations
+  PASS  M2.2-R1-C7 Final-delivery bridge uses FrozenReportSnapshot (no draft)
+  PASS  M2.2-R2-C1 Token CAS: stale owner cannot release newer claim
+  PASS  M2.2-R2-C2 Production prepare claim: exactly one generator owner
+  PASS  M2.2-R2-C3 Production-shaped success write-back + retrieval
+  PASS  M2.2-R2-C4 Tampered client snapshot cannot replace server Freeze
+  PASS  M2.2-R2-C5 Retry preserves original Freeze binding under claim recovery
+  PASS  M2.2-R3-C3 CAS unavailable fails closed (no GET+DEL fallback)
+  PASS  M2.2-R4-C1 Regenerate supersede stops old worker authority (real xhigh)
+  PASS  M2.2-R4-C2 Two independent contexts: exactly one formal generator claim
+  PASS  M2.2-R4-C3 Pre-handoff early return releases claim (API helper path)
+[final-delivery-stage] m22 freeze-bound report completed {
+  job_id: 'fd_3d41fbb6-f933-4446-96bf-_1794307109154_lgf4jm',
+  m22_report_job_id: 'm22_report_3d41fbb6-f933-4446-96bf-efd004ce29e1:dc_3d41fbb6-f933-4446-96bf-efd004ce29e1@v2:m2.2-eight-page-v1_2026-11-08T223000000Z',
+  freezeId: 'dc_3d41fbb6-f933-4446-96bf-efd004ce29e1@v2',
+  pages: 8
+}
+  PASS  M2.2-R4-C4 Stage Runner success write-back: getXhighJob completed only after M2.2
+  PASS  M2.2-R4-C5 Stage Runner write-back failure: formal NOT completed (getXhighJob)
+  PASS  M2.2-R4-C6 Write-back fail-closed when m22_report_job_id but missing binding
+  PASS  M2.2-R4-C7 Tampered client snapshot rejected; retry preserves Freeze binding
+  PASS  M2.2-R5-C1 Failed supersede persistence prevents replacement
+[final-delivery-stage] m22 freeze-bound report completed {
+  job_id: 'fd_4c945038-e9fb-41f4-a489-_1794307109316_bg9i65',
+  m22_report_job_id: 'm22_report_4c945038-e9fb-41f4-a489-6a952294e45e:dc_4c945038-e9fb-41f4-a489-6a952294e45e@v2:m2.2-eight-page-v1_2026-11-08T223000000Z',
+  freezeId: 'dc_4c945038-e9fb-41f4-a489-6a952294e45e@v2',
+  pages: 8
+}
+[FD] fd_4c945038-e9… · ok · book complete · 359 chars (28ms)
+[final-delivery-stage] stage timing {
+  job_id: 'fd_4c945038-e9fb-41f4-a489-_1794307109316_bg9i65',
+  stage: 'assemble',
+  stage_ms: 31,
+  translate_ms: 0,
+  tokens_used: 0,
+  chars: 359,
+  job_latency_ms: 28,
+  status: 'completed'
+}
+  PASS  M2.2-R5-C2 Real Stage Runner assemble: 8 pages then formal completed
+  PASS  M2.2-R5-C3 Real Stage Runner write-back failure → formal failed
+  PASS  M2.2-R5-C4 Regenerate mid-flight: stale fence rejects checkpoint/complete
+  PASS  M2.2-R5-C5 Dual contexts shared store: one authorized generation
+  PASS  M2.2-R5-C6 Route-shaped regenerate control flow fail-closed on supersede
+
+M2.2 results: 43 passed, 0 failed
+
+[terms] pojuTermByTraditional("换运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("贵人运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命运") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("命理") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("宿命") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("天注定") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("空亡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("魁罡") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("十恶大败") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("孤鸾煞") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴阳差错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("阴差阳错") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("元辰") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("六秀日") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("大耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("小耗") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("五鬼") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[terms] pojuTermByTraditional("丧门") called without namespace — migrate to resolvePojuTerm(input, { namespace })
+[kv] UPSTASH/KV env missing — using in-memory KV for local dev. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_*) to match Vercel.
+[xhigh-job] ignore status transition from terminal {
+  job_id: 'fd_d27069b0-d4f6-457d-bcdc-_1794307107384_8g2jjz',
+  from: 'failed',
+  to: 'running'
+}
+[final-delivery-stage] m22 freeze-bound write-back failed — formal job not completed FreezeBoundReportError: Empty report page 04
+    at assertCompleteEightPageReport (D:\POJU\pojulife\lib\poju\decision-intake\freeze-bound-report.ts:520:13)
+    at completeFreezeBoundReportFromDeliveryPages (D:\POJU\pojulife\lib\poju\decision-intake\freeze-bound-report.ts:1329:3)
+    at writeBackFreezeBoundReportOnDeliverySuccess (D:\POJU\pojulife\lib\poju\final-delivery-stage-runner.ts:565:29)
+    at async runFinalDeliveryStage (D:\POJU\pojulife\lib\poju\final-delivery-stage-runner.ts:2531:11)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m2-2-freeze-report-binding.ts:2460:9)
+    at async <anonymous> (D:\POJU\pojulife\scripts\test-m2-2-freeze-report-binding.ts:2389:5)
+    at async check (D:\POJU\pojulife\scripts\test-m2-2-freeze-report-binding.ts:24:5)
+    at async main (D:\POJU\pojulife\scripts\test-m2-2-freeze-report-binding.ts:2360:3) {
+  code: 'EMPTY_REPORT_PAGE'
+}
