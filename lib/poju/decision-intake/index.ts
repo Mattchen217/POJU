@@ -65,7 +65,20 @@ export {
   M1R_STARTER_DIRS,
   __setM1rPersistForTests,
 } from "./fresh-session-bootstrap";
-export { projectAdaptiveQuestionForUi } from "./ui-projection";
+export { projectAdaptiveQuestionForUi, projectDecisionUnderstandingBox } from "./ui-projection";
+export {
+  reportMappingForDir,
+  candidateHasReportPurpose,
+  formatReportPurposeForPrompt,
+  INVESTIGATION_REPORT_MAP,
+} from "./investigation-report-map";
+export {
+  evaluateProblemUnderstandingGate,
+  evaluateDesiredOutcomeGate,
+  buildIntakeLayerGateSnapshot,
+} from "./intake-layer-gates";
+export { computeReportSectionCoverage } from "./report-section-coverage";
+export { seedOpeningAssertedFacts, matchOpeningClaims } from "./opening-asserted-facts";
 export {
   applyIntakeProtection,
   classifyIntakeInput,
@@ -87,7 +100,6 @@ export {
   UNDERSTANDING_RESPONSE_MODEL_VERSION,
 } from "./understanding-response-model";
 export { computeReadinessProgress } from "./understanding-state";
-export { projectDecisionUnderstandingBox } from "./ui-projection";
 export {
   confirmUnderstandingAndFreeze,
   isFinalUnderstandingConfirmText,

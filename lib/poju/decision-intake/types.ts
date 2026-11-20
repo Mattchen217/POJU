@@ -598,6 +598,21 @@ export type ReadinessSnapshot = {
   sufficiency_verdict?: string;
 };
 
+/** Report-driven intake scheduling focus (not a second fact store). */
+export type IntakeLayerFocus =
+  | "problem_understanding"
+  | "desired_outcome"
+  | "report_details"
+  | "final_understanding_review";
+
+export type IntakeGateVerdictSnapshot = {
+  passed: boolean;
+  reasons: string[];
+  supporting_fact_ids: string[];
+  missing_dir_ids: string[];
+  critical_ambiguities: string[];
+};
+
 export type UnderstandingState = {
   understanding_id: string;
   session_id: string;
@@ -613,6 +628,30 @@ export type UnderstandingState = {
     analysis_briefs: string[];
     conflict_briefs: string[];
     confidence: "low" | "medium" | "high";
+  };
+  /**
+   * Code-derived investigation focus after problem/desired gates + report coverage.
+   * Scheduling only — DC remains sole fact authority.
+   */
+  current_intake_layer?: IntakeLayerFocus;
+  intake_layer_gates?: {
+    problem_understanding: IntakeGateVerdictSnapshot;
+    desired_outcome: IntakeGateVerdictSnapshot;
+  };
+  /** Computed DDR/section coverage for 8-page report readiness. */
+  report_coverage?: {
+    missing_required_count: number;
+    optional_missing_count: number;
+    delivery_ready: boolean;
+    reasons: string[];
+    items: Array<{
+      page_id: string;
+      section_id: string;
+      ddr_id: string;
+      status: string;
+      missing_dir_ids: string[];
+      asks_user: boolean;
+    }>;
   };
   understood: { items: UnderstoodItem[] };
   /**
