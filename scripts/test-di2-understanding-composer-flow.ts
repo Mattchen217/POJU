@@ -140,25 +140,27 @@ function main() {
   const panel = read("components/poju/DecisionUnderstandingPanel.tsx");
   const css = read("components/poju/poju-chat.css");
 
-  wrap("A/layout: composerTop slot sits in the input bar above the composer unit", () => {
+  wrap("A/layout: scrollHeader hosts welcome+Understanding above chat; composerTop stays short", () => {
+    assert.match(chat, /scrollHeader\?: ReactNode/);
     assert.match(chat, /composerTop\?: ReactNode/);
+    assert.match(chat, /pchat__scroll-header/);
     const inputbar = chat.slice(chat.indexOf("pchat__inputbar"));
     const top = inputbar.indexOf("pchat__composer-top");
     const unit = inputbar.indexOf("pchat__composer-unit");
     assert.ok(top >= 0 && unit > top, "composer-top must be rendered before composer-unit inside the input bar");
     assert.doesNotMatch(inputbar.slice(unit, unit + 800), /composerTop/);
     assert.match(css, /\.pchat__composer-top\s*\{/);
-    assert.match(css, /max-height:\s*min\(42vh/);
+    assert.match(css, /\.pchat__scroll-header\s*\{/);
   });
 
-  wrap("A/layout: composerTop is not a message and is not hidden by centerSlot", () => {
-    assert.doesNotMatch(chat, /composerTop[\s\S]{0,200}hidden=\{Boolean\(centerSlot\)\}/);
-    const notice = chat.slice(chat.indexOf("pchat__inline-notice") >= 0 ? chat.indexOf("className=\"pchat__inline-notice\"") : 0);
-    assert.match(chat, /hidden=\{Boolean\(centerSlot\)\}/);
-    assert.doesNotMatch(chat.slice(chat.indexOf("pchat__composer-top"), chat.indexOf("pchat__composer-top") + 200), /centerSlot/);
+  wrap("A/layout: Understanding is in scrollHeader, not crowding suggested replies", () => {
+    assert.match(ui, /scrollHeader=\{deliveryPageActive \? undefined : scrollHeaderNode\}/);
+    assert.match(ui, /scrollHeaderNode[\s\S]*DecisionUnderstandingPanel/);
+    assert.doesNotMatch(
+      ui.slice(ui.indexOf("const composerTopNode"), ui.indexOf("const composerTopNode") + 900),
+      /DecisionUnderstandingPanel/,
+    );
     assert.match(ui, /composerTop=\{composerTopNode\}/);
-    assert.doesNotMatch(ui.slice(ui.indexOf("inlineNotice={"), ui.indexOf("editDialog={")), /DecisionUnderstandingPanel/);
-    assert.match(ui, /composerTopNode[\s\S]*DecisionUnderstandingPanel/);
   });
 
   wrap("A/layout: three quick replies stay inside the composer unit, not in the Understanding box", () => {
@@ -180,8 +182,8 @@ function main() {
     const alreadyIdx = panel.indexOf("Already understood");
     const needIdx = panel.indexOf("Still need to understand");
     const insightIdx = panel.indexOf("Personal Pattern Insight");
-    const qIdx = panel.indexOf("Current question");
-    assert.ok(titleIdx < currentIdx && currentIdx < alreadyIdx && alreadyIdx < needIdx && needIdx < insightIdx && insightIdx < qIdx);
+    assert.ok(titleIdx < currentIdx && currentIdx < alreadyIdx && alreadyIdx < needIdx && needIdx < insightIdx);
+    assert.match(panel, /Current question lives in the chat bubble/);
     assert.match(panel, /projectDecisionUnderstandingBox/);
     assert.doesNotMatch(panel, /dir_id|direction_id|ddr_id|readiness_verdict|budget_asked|readiness_can_ask|investigation_directions|personal_pattern_status/);
   });
@@ -450,10 +452,11 @@ function main() {
     assert.match(zhMarkup, /The latest date a decision must be made/);
     assert.match(zhMarkup, /Wants to move in May/);
     assert.match(zhMarkup, /A helpful career pattern/);
-    assert.match(zhMarkup, /What is the latest date you must decide\?/);
+    // Current question lives in the chat bubble / composer replies, not the Understanding box.
+    assert.doesNotMatch(zhMarkup, /What is the latest date you must decide\?/);
     assert.match(enMarkup, /Still need to understand/);
     assert.match(enMarkup, /Personal Pattern Insight/);
-    assert.match(enMarkup, /Current question/);
+    assert.match(enMarkup, /Already understood/);
   });
 
   console.log(`Passed ${passed} checks`);

@@ -208,8 +208,15 @@ export interface PojuChatProps {
   /**
    * Unified Decision Understanding (and related status) fixed above the
    * composer unit. Not a chat message, and not hidden by centerSlot.
+   * Prefer `scrollHeader` for Understanding so suggested replies keep the
+   * composer slot; keep composerTop for short intake banners only.
    */
   composerTop?: ReactNode;
+  /**
+   * Pinned region at the top of the message scroll (welcome + Understanding).
+   * Not part of the chat bubble stream and not hidden by centerSlot.
+   */
+  scrollHeader?: ReactNode;
   /** First session open: "top" (matrix header); return visits: "bottom". */
   initialScrollPosition?: "top" | "bottom";
   /** Fired once the pending-reply UI (slots + text) has painted — parent may dismiss activity. */
@@ -299,6 +306,7 @@ export default function PojuChat(props: PojuChatProps) {
     composerInputDisabled,
     hideComposer = false,
     composerTop,
+    scrollHeader,
     centerSlot,
     documentSlot,
     brandName = "Pivot",
@@ -1044,6 +1052,9 @@ export default function PojuChat(props: PojuChatProps) {
             fixedThumbPx={52}
           >
             <div className="pchat__messages">
+            {scrollHeader ? (
+              <div className="pchat__scroll-header">{scrollHeader}</div>
+            ) : null}
             {centerSlot ? (
               <div className="pchat__center-slot">{centerSlot}</div>
             ) : (
@@ -1137,6 +1148,9 @@ export default function PojuChat(props: PojuChatProps) {
         ) : (
         <div className="pchat__scroll" ref={scrollRef}>
           <div className="pchat__messages">
+            {scrollHeader ? (
+              <div className="pchat__scroll-header">{scrollHeader}</div>
+            ) : null}
             {centerSlot ? (
               <div className="pchat__center-slot">{centerSlot}</div>
             ) : (

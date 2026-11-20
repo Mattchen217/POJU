@@ -822,9 +822,33 @@
   width: min(640px, 100%);
   max-width: var(--pchat-read-max);
   margin: 0 auto 10px;
-  max-height: min(42vh, 360px);
+  max-height: min(28vh, 160px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.pchat__scroll-header {
+  width: min(640px, 100%);
+  max-width: var(--pchat-read-max);
+  margin: 0 auto 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pchat__welcome-pin {
+  width: 100%;
+}
+
+.pchat__welcome-pin--compact .pmw__body,
+.pchat__welcome-pin--compact .pmw__guide,
+.pchat__welcome-pin--compact .pmw__note {
+  display: none;
+}
+
+.pchat__welcome-pin--compact .pmw__title {
+  font-size: 1rem;
+  margin-bottom: 0;
 }
 
 .pchat__understanding-box {

@@ -49,6 +49,7 @@ import {
   generateDecisionUnderstandingTurn,
   type UnderstandingModelTestHook,
 } from "./understanding-response-model";
+import { candidateHasReportPurpose } from "./investigation-report-map";
 import {
   candidateAllowedForIntakeLayer,
   candidateHasReportPurpose,
@@ -750,6 +751,8 @@ function buildLegalCandidatesForUnderstanding(input: {
     }
     const c = byId.get(id);
     if (!c) continue;
+    // Drop candidates that cannot map to 8-page report requirements.
+    if (!candidateHasReportPurpose(c.dir_ids)) continue;
     const dirId = c.dir_ids[0] ?? "";
     const purpose = formatReportPurposeForPrompt(c.dir_ids, locale);
     out.push({
@@ -838,6 +841,8 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
     result.plan,
     modelResult.output,
   );
+  // Model chooses among legal candidates; code only validates membership +
+  // intake-layer / scope / budget. Code rank is a hint — not a hard preselection.
   let nextPlan = applied.plan;
   const selectedId =
     modelResult.output.next_question.selected_candidate_id?.trim() || null;

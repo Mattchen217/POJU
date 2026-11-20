@@ -1,0 +1,82 @@
+{
+  "ok": true,
+  "parent_sha": "6427903331a00d2a613f06cba87a14d6552b5bc8",
+  "statement": "我从上一次的创业失败后，已经好几年没有收入了，一直找不到事情做，怎么办？",
+  "outcome": "planned",
+  "ask_error": null,
+  "opening_claim_keys": [
+    "past_venture_failure",
+    "prolonged_no_income",
+    "no_clear_next_work"
+  ],
+  "open_fact_ids": [
+    "fact_open_past_venture_failure_dc_di2_r1_1795169732784",
+    "fact_open_prolonged_no_income_dc_di2_r1_1795169732784",
+    "fact_open_no_clear_next_work_dc_di2_r1_1795169732784"
+  ],
+  "open_fact_statements": [
+    "过去有创业失败经历",
+    "已经好几年没有收入",
+    "当前找不到明确可以做的事情"
+  ],
+  "understood_labels": [
+    {
+      "label": "我从上一次的创业失败后，已经好几年没有收入了，一直找不到事情做，怎么办？",
+      "status": "asserted"
+    },
+    {
+      "label": "过去有创业失败经历",
+      "status": "asserted"
+    },
+    {
+      "label": "已经好几年没有收入",
+      "status": "asserted"
+    },
+    {
+      "label": "当前找不到明确可以做的事情",
+      "status": "asserted"
+    }
+  ],
+  "progress_percent": 18,
+  "current_understanding": "你提到自己在上一次创业失败后，已经好几年没有收入，并且一直找不到可以做的事情。这说明你正处在一个长期没有明确方向、经济压力较大的阶段，过去创业失败的经历可能也让你对下一步行动更加谨慎。",
+  "still_need": [
+    "期望达成的结果",
+    "有哪些真实可选方案",
+    "做错会失去什么",
+    "硬性/软性约束（钱/时间/责任）",
+    "决策必须落地的时间窗口",
+    "unacceptable · 不可接受的结果",
+    "可承受的最差结果",
+    "目标优先级顺序",
+    "退出/转向触发条件",
+    "商业模式与关键依赖",
+    "能低成本验证什么 · 可承受的最差结果 · 退出/转向触发条件",
+    "硬性/软性约束（钱/时间/责任） · 决策必须落地的时间窗口 · 不可逆/切换成本"
+  ],
+  "personal_pattern": [],
+  "show_personal_pattern": false,
+  "model_response_text": "听起来你已经卡在这个状态里好几年了，经济压力加上找不到方向，确实会让人很焦虑。在帮你分析具体怎么做之前，我想先确认一下：如果这个问题解决了，你希望最终达到一个什么样的结果？是尽快有稳定收入，还是重新做成一件事，或者先找回方向感？",
+  "authorized_question": "如果这个问题得到解决，你希望最终达到一个什么样的结果？比如是尽快有一份稳定收入，还是重新做成一件事，或者先找回方向感？",
+  "suggested_replies": [
+    {
+      "label": "尽快有稳定收入",
+      "value": "我希望尽快有一份稳定的收入，先解决经济压力。"
+    },
+    {
+      "label": "重新做成一件事",
+      "value": "我希望重新做成一件事，证明自己还能行。"
+    },
+    {
+      "label": "先找回方向感",
+      "value": "我希望先找回方向感，知道自己适合做什么。"
+    }
+  ],
+  "code_rank_hint_candidate": "cq_dir_DIR-BIZ-MODEL",
+  "model_selected_candidate": "cq_dir_DIR-DEF-OUTCOME",
+  "model_chose_differently": true,
+  "plan_dir_ids": [
+    "DIR-DEF-OUTCOME"
+  ],
+  "scoring_path": "selectNextIntakeAskForSession→planNextAskFromCandidates→scorePlanningCandidate→resolveDirRoleEvidence→buildAdaptiveQuestionPlan→model_selected",
+  "profile_hash": null
+}

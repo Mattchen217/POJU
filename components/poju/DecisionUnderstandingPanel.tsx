@@ -87,9 +87,9 @@ export function DecisionUnderstandingPanel({
             <div className="pchat__understanding-box__label">{currentTitle}</div>
             <div className="pchat__understanding-box__text">{box.current_understanding ?? "\u2014"}</div>
           </div>
-          {box.already_understood.length > 0 ? (
-            <div>
-              <div className="pchat__understanding-box__label">{understoodTitle}</div>
+          <div>
+            <div className="pchat__understanding-box__label">{understoodTitle}</div>
+            {box.already_understood.length > 0 ? (
               <ul>
                 {box.already_understood.map((item) => (
                   <li key={`${item.status}:${item.label}`}>
@@ -100,8 +100,10 @@ export function DecisionUnderstandingPanel({
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : null}
+            ) : (
+              <div className="pchat__understanding-box__text">{"\u2014"}</div>
+            )}
+          </div>
           {box.still_need.length > 0 || box.conflicts.length > 0 ? (
             <div>
               <div className="pchat__understanding-box__label">{needTitle}</div>
