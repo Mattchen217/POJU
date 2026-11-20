@@ -16,6 +16,8 @@ import {
   loadDdrCatalog,
 } from "@/lib/poju/decision-context/catalog";
 import { dirIntakeAnswerCoverage } from "./intake-answer-coverage";
+import { buildIntakeLayerGateSnapshot } from "./intake-layer-gates";
+import { computeReportSectionCoverage } from "./report-section-coverage";
 import type {
   AdaptiveQuestionPlan,
   DecisionBlueprint,
@@ -407,22 +409,60 @@ export function buildUnderstandingState(input: {
   const hasOpenP0OrP1 = openPriorityBandNeeds.length > 0;
 
   const sufficiency = evaluateDecisionSufficiency(dc);
+  const report_coverage = computeReportSectionCoverage({
+    dc,
+    blueprint: input.blueprint,
+    now,
+  });
+  const layerGates = buildIntakeLayerGateSnapshot({
+    dc,
+    report_coverage,
+    previous_layer: prev?.current_intake_layer ?? null,
+  });
   const remaining = budget.remaining_hard_budget;
   let readiness_verdict: UnderstandingState["readiness"]["verdict"] = "continue";
   let can_ask = true;
   const reasons = [...sufficiency.reasons];
+  reasons.push(`intake_layer:${layerGates.current_intake_layer}`);
+  if (!layerGates.problem_understanding.passed) {
+    reasons.push("problem_understanding_gate_open");
+  } else {
+    reasons.push("problem_understanding_gate_passed");
+  }
+  if (!layerGates.desired_outcome.passed) {
+    reasons.push("desired_outcome_gate_open");
+  } else {
+    reasons.push("desired_outcome_gate_passed");
+  }
   if (remaining <= 0) {
     readiness_verdict = "hard_budget_exhausted";
     can_ask = false;
     reasons.push("hard_budget_exhausted");
-  } else if (hasOpenP0OrP1) {
-    readiness_verdict = "continue";
-    can_ask = true;
-    reasons.push("open_blueprint_p0_p1_obligations");
-  } else if (sufficiency.canStop) {
+  } else if (layerGates.current_intake_layer === "final_understanding_review") {
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
-    reasons.push("sufficiency_can_stop");
+    reasons.push("intake_layer_final_review");
+  } else if (
+    layerGates.current_intake_layer === "problem_understanding" ||
+    layerGates.current_intake_layer === "desired_outcome"
+  ) {
+    // Layer gates force continue; do not jump to detail P0/P1 or false-complete.
+    readiness_verdict = "continue";
+    can_ask = true;
+    reasons.push("intake_layer_gate_continue");
+  } else if (hasOpenP0OrP1 || report_coverage.missing_required_count > 0) {
+    readiness_verdict = "continue";
+    can_ask = true;
+    if (hasOpenP0OrP1) reasons.push("open_blueprint_p0_p1_obligations");
+    if (report_coverage.missing_required_count > 0) {
+      reasons.push("report_required_sections_missing");
+    }
+  } else if (sufficiency.canStop || report_coverage.delivery_ready) {
+    readiness_verdict = "ready_for_final_confirm";
+    can_ask = false;
+    reasons.push(
+      sufficiency.canStop ? "sufficiency_can_stop" : "report_coverage_delivery_ready",
+    );
   } else if (needs.length === 0) {
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
@@ -515,6 +555,25 @@ export function buildUnderstandingState(input: {
       conflict_briefs: openConflictBriefs.slice(0, 6),
       confidence:
         sufficiency.canStop ? "high" : confirmed.length >= 2 ? "medium" : "low",
+    },
+    current_intake_layer: layerGates.current_intake_layer,
+    intake_layer_gates: {
+      problem_understanding: layerGates.problem_understanding,
+      desired_outcome: layerGates.desired_outcome,
+    },
+    report_coverage: {
+      missing_required_count: report_coverage.missing_required_count,
+      optional_missing_count: report_coverage.optional_missing_count,
+      delivery_ready: report_coverage.delivery_ready,
+      reasons: report_coverage.reasons,
+      items: report_coverage.items.map((i) => ({
+        page_id: i.page_id,
+        section_id: i.section_id,
+        ddr_id: i.ddr_id,
+        status: i.status,
+        missing_dir_ids: i.missing_dir_ids,
+        asks_user: i.asks_user,
+      })),
     },
     understood: { items: understood },
     answered_pending_confirmation: { items: answered },

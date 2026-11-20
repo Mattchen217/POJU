@@ -50,6 +50,12 @@ import {
   type UnderstandingModelTestHook,
 } from "./understanding-response-model";
 import {
+  candidateAllowedForIntakeLayer,
+  candidateHasReportPurpose,
+  formatReportPurposeForPrompt,
+} from "./investigation-report-map";
+import type { IntakeLayerFocus } from "./types";
+import {
   applyIntakeProtection,
   classifyIntakeInput,
   intakeProtectionUserMessage,
@@ -634,33 +640,61 @@ function shouldEnrichWithUnderstandingModel(result: AdaptiveTurnResult): boolean
 function buildLegalCandidatesForUnderstanding(input: {
   session: POJUSessionState;
   plan: AdaptiveQuestionPlan | null;
+  intake_layer?: IntakeLayerFocus | null;
+  locale?: string;
 }): Array<{
   candidate_id: string;
   direction_id: string;
   dir_ids: string[];
+  ddr_ids: string[];
+  intake_layer: string | null;
+  report_page_ids: string[];
+  report_section_ids: string[];
   missing_info: string;
   decision_value: string;
   expected_info: string;
+  decision_value_detail: string;
+  evidence_requirements: string;
+  why_it_matters: string;
   template_question: string;
 }> {
   const dc = input.session.decision_context;
   const blueprint = input.session.decision_blueprint;
+  const locale = input.locale ?? input.session.locked_output_locale ?? "zh";
+  const layer =
+    input.intake_layer ??
+    input.session.decision_understanding?.current_intake_layer ??
+    null;
   if (!dc || !blueprint) {
     if (!input.plan) return [];
+    const purpose = formatReportPurposeForPrompt(input.plan.dir_ids, locale);
     return [
       {
         candidate_id: input.plan.candidate_id,
         direction_id: input.plan.direction_id,
         dir_ids: [...input.plan.dir_ids],
+        ddr_ids: [...input.plan.ddr_ids],
+        intake_layer: purpose.intake_layer,
+        report_page_ids: purpose.report_pages,
+        report_section_ids: purpose.report_section_ids,
         missing_info: input.plan.missing_info,
         decision_value: input.plan.decision_value,
         expected_info: input.plan.expected_info,
+        decision_value_detail: input.plan.decision_value,
+        evidence_requirements: purpose.required_precondition
+          ? "user_evidence_required"
+          : "optional_or_bounded",
+        why_it_matters: purpose.report_purpose || input.plan.ask_now_reason,
         template_question: input.plan.question_text,
       },
     ];
   }
   const rankedIds = input.session.intake_ask_plan?.ranked_candidate_ids ?? [];
-  const candidates = buildIntakeCandidatesFromDc(dc, blueprint);
+  const candidates = buildIntakeCandidatesFromDc(dc, blueprint).filter((c) => {
+    if (!candidateHasReportPurpose(c.dir_ids)) return false;
+    if (layer && !candidateAllowedForIntakeLayer(c.dir_ids, layer)) return false;
+    return true;
+  });
   const byId = new Map(candidates.map((c) => [c.candidate_id, c]));
   const orderedIds =
     rankedIds.length > 0
@@ -673,22 +707,43 @@ function buildLegalCandidatesForUnderstanding(input: {
     candidate_id: string;
     direction_id: string;
     dir_ids: string[];
+    ddr_ids: string[];
+    intake_layer: string | null;
+    report_page_ids: string[];
+    report_section_ids: string[];
     missing_info: string;
     decision_value: string;
     expected_info: string;
+    decision_value_detail: string;
+    evidence_requirements: string;
+    why_it_matters: string;
     template_question: string;
   }> = [];
   for (const id of orderedIds) {
     if (!id || seen.has(id)) continue;
     seen.add(id);
     if (input.plan && id === input.plan.candidate_id) {
+      if (!candidateHasReportPurpose(input.plan.dir_ids)) continue;
+      if (layer && !candidateAllowedForIntakeLayer(input.plan.dir_ids, layer)) {
+        continue;
+      }
+      const purpose = formatReportPurposeForPrompt(input.plan.dir_ids, locale);
       out.push({
         candidate_id: input.plan.candidate_id,
         direction_id: input.plan.direction_id,
         dir_ids: [...input.plan.dir_ids],
+        ddr_ids: [...input.plan.ddr_ids],
+        intake_layer: purpose.intake_layer,
+        report_page_ids: purpose.report_pages,
+        report_section_ids: purpose.report_section_ids,
         missing_info: input.plan.missing_info,
         decision_value: input.plan.decision_value,
         expected_info: input.plan.expected_info,
+        decision_value_detail: input.plan.decision_value,
+        evidence_requirements: purpose.required_precondition
+          ? "user_evidence_required"
+          : "optional_or_bounded",
+        why_it_matters: purpose.report_purpose || input.plan.ask_now_reason,
         template_question: input.plan.question_text,
       });
       continue;
@@ -696,10 +751,15 @@ function buildLegalCandidatesForUnderstanding(input: {
     const c = byId.get(id);
     if (!c) continue;
     const dirId = c.dir_ids[0] ?? "";
+    const purpose = formatReportPurposeForPrompt(c.dir_ids, locale);
     out.push({
       candidate_id: c.candidate_id,
       direction_id: dirId ? directionIdForDir(blueprint, dirId) : "DIRN-DEFINITION",
       dir_ids: [...c.dir_ids],
+      ddr_ids: [...c.ddr_ids],
+      intake_layer: purpose.intake_layer,
+      report_page_ids: purpose.report_pages,
+      report_section_ids: purpose.report_section_ids,
       missing_info: c.kind,
       decision_value: c.impact.decision_critical
         ? "decision_critical"
@@ -709,6 +769,15 @@ function buildLegalCandidatesForUnderstanding(input: {
       expected_info: dirId
         ? dc.dirs.find((d) => d.dir_id === dirId)?.need ?? dirId
         : c.fact_role_codes.join(","),
+      decision_value_detail: c.impact.decision_critical
+        ? "decision_critical"
+        : c.impact.may_affect_p5_ranking
+          ? "may_affect_p5"
+          : "supporting",
+      evidence_requirements: purpose.required_precondition
+        ? "user_evidence_required"
+        : "optional_or_bounded",
+      why_it_matters: purpose.report_purpose || c.kind,
       template_question: "",
     });
     if (out.length >= 8) break;
@@ -722,28 +791,24 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
 ): Promise<AdaptiveTurnResult> {
   if (!shouldEnrichWithUnderstandingModel(result)) return result;
   const understanding = result.understanding!;
+  const intake_layer = understanding.current_intake_layer ?? null;
   const legal_candidates = buildLegalCandidatesForUnderstanding({
     session: result.session,
     plan: result.plan,
+    intake_layer,
+    locale: input.locale,
   });
   const legal_candidate_ids = legal_candidates.map((c) => c.candidate_id);
-  if (result.plan && !legal_candidate_ids.includes(result.plan.candidate_id)) {
-    legal_candidates.unshift({
-      candidate_id: result.plan.candidate_id,
-      direction_id: result.plan.direction_id,
-      dir_ids: [...result.plan.dir_ids],
-      missing_info: result.plan.missing_info,
-      decision_value: result.plan.decision_value,
-      expected_info: result.plan.expected_info,
-      template_question: result.plan.question_text,
-    });
-    legal_candidate_ids.unshift(result.plan.candidate_id);
-  }
+  // Code rank hint may be outside the current layer after gate filtering — do not force it in.
 
   const modelResult = await generateDecisionUnderstandingTurn({
     session: result.session,
     understanding,
     plan: result.plan,
+    previous_plan: understanding.last_sent_question
+      ? result.session.adaptive_ask_plan ?? result.plan
+      : null,
+    code_rank_hint_candidate_id: result.plan?.candidate_id ?? null,
     legal_candidate_ids,
     legal_candidates,
     locale: input.locale,
@@ -763,7 +828,7 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
       model_response_text: undefined,
       suggested_replies: undefined,
       profile_hash: modelResult.profile.profile_hash,
-      // Keep plan for audit but do not authorize template question as user reply.
+      // Keep DC writes; do NOT authorize code-ranked #1 as a successful model turn.
       authorized_question: null,
     };
   }
@@ -773,29 +838,111 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
     result.plan,
     modelResult.output,
   );
-  // If model selected a different legal candidate, keep code plan binding but
-  // still require question_text to match the authorized candidate_id.
   let nextPlan = applied.plan;
-  if (
-    result.plan &&
-    modelResult.output.next_question.selected_candidate_id &&
-    modelResult.output.next_question.selected_candidate_id !== result.plan.candidate_id
-  ) {
-    // Scope: only rephrase within the already-validated code plan this turn.
-    // Candidate switching requires a full re-plan; reject rather than widen scope.
-    return {
-      ...result,
-      outcome: "understanding_model_failed",
-      ask_error: "understanding_model_failed:candidate_mismatch",
-      authorized_question: null,
-      profile_hash: modelResult.profile.profile_hash,
-    };
-  }
-  if (
+  const selectedId =
+    modelResult.output.next_question.selected_candidate_id?.trim() || null;
+
+  if (selectedId) {
+    const hit = legal_candidates.find((c) => c.candidate_id === selectedId);
+    if (!hit) {
+      return {
+        ...result,
+        outcome: "understanding_model_failed",
+        ask_error: "understanding_model_failed:illegal_candidate",
+        authorized_question: null,
+        profile_hash: modelResult.profile.profile_hash,
+      };
+    }
+    if (
+      intake_layer &&
+      hit.intake_layer &&
+      !candidateAllowedForIntakeLayer(hit.dir_ids, intake_layer)
+    ) {
+      return {
+        ...result,
+        outcome: "understanding_model_failed",
+        ask_error: "understanding_model_failed:intake_layer_mismatch",
+        authorized_question: null,
+        profile_hash: modelResult.profile.profile_hash,
+      };
+    }
+
+    // Rebuild formal plan from model-selected candidate (full scope/budget validation).
+    const dc = result.session.decision_context;
+    const blueprint = result.session.decision_blueprint;
+    if (!dc || !blueprint) {
+      return {
+        ...result,
+        outcome: "understanding_model_failed",
+        ask_error: "understanding_model_failed:missing_dc_or_blueprint",
+        authorized_question: null,
+        profile_hash: modelResult.profile.profile_hash,
+      };
+    }
+    const naValidation = await buildProductionNaValidationContextFromSession(
+      result.session,
+      { nowIso: new Date().toISOString() },
+    );
+    const layerFiltered = buildIntakeCandidatesFromDc(dc, blueprint).filter((c) => {
+      if (!candidateHasReportPurpose(c.dir_ids)) return false;
+      if (intake_layer && !candidateAllowedForIntakeLayer(c.dir_ids, intake_layer)) {
+        return false;
+      }
+      return true;
+    });
+    const ranked = planNextAskFromCandidates({
+      candidates: layerFiltered,
+      snap: snapshotFromDc(dc),
+      naValidation,
+      remaining_hard_budget: understanding.budget.remaining_hard_budget,
+    });
+    const selectedRanked =
+      ranked.ranked.find((r) => r.candidate.candidate_id === selectedId) ?? null;
+    if (!selectedRanked) {
+      return {
+        ...result,
+        outcome: "understanding_model_failed",
+        ask_error: "understanding_model_failed:candidate_not_in_ranked_set",
+        authorized_question: null,
+        profile_hash: modelResult.profile.profile_hash,
+      };
+    }
+    const built = buildAdaptiveQuestionPlan({
+      dc,
+      blueprint,
+      selected: selectedRanked,
+      budget: understanding.budget,
+      now: new Date().toISOString(),
+      last_sent_question_text:
+        understanding.last_sent_question?.question_text ?? null,
+      scoring_path: `${INTAKE_ASK_SCORING_PATH}→model_selected→buildAdaptiveQuestionPlan`,
+    });
+    if (!built.validation.ok) {
+      return {
+        ...result,
+        outcome: "understanding_model_failed",
+        ask_error: `understanding_model_failed:scope_budget_reject:${built.validation.reason_code}`,
+        authorized_question: null,
+        profile_hash: modelResult.profile.profile_hash,
+      };
+    }
+    nextPlan = bindConflictClarificationToPlan(result.session, built.plan);
+    const modelQ = modelResult.output.next_question.question_text?.trim();
+    if (modelQ) {
+      nextPlan = {
+        ...nextPlan,
+        question_text: modelQ,
+        ask_now_reason:
+          modelResult.output.next_question.rationale || nextPlan.ask_now_reason,
+        rationale: `model_selected:${selectedId}`,
+        scoring_path: `${nextPlan.scoring_path}→model_wording`,
+      };
+    }
+  } else if (
     nextPlan &&
     modelResult.output.next_question.question_text &&
     nextPlan.candidate_id ===
-      (modelResult.output.next_question.selected_candidate_id ?? nextPlan.candidate_id)
+      (selectedId ?? nextPlan.candidate_id)
   ) {
     nextPlan = {
       ...nextPlan,
@@ -805,8 +952,10 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
     };
   }
 
+  // Persist code-validated intake layer (model proposal cannot advance gates).
   const nextUnderstanding = {
     ...applied.understanding,
+    current_intake_layer: intake_layer ?? applied.understanding.current_intake_layer,
     next_question_plan: nextPlan,
   };
   const askSnap = result.session.intake_ask_plan ?? null;
@@ -829,7 +978,6 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
     outcome: nextPlan ? "planned" : "ready_no_question",
   };
 }
-
 type ClarificationBlock = "budget_exhausted" | "depth_exhausted";
 
 function clarificationBlock(
@@ -1559,6 +1707,7 @@ async function planFromState(
     };
   }
 
+  const intakeLayer = understanding.current_intake_layer ?? null;
   const candidates = buildIntakeCandidatesFromDc(dc, blueprint).map((c) => {
     const dirId = c.dir_ids[0];
     const depth = dirId ? (budget.depth_by_dir[dirId] ?? 0) + 1 : c.depth;
@@ -1566,6 +1715,10 @@ async function planFromState(
     return { ...c, depth, repetition_count: Math.max(0, depth - 1) };
   }).filter((c) => {
     if (!c.ddr_ids.length || c.ddr_ids.some((id) => id.startsWith("DDR_FOR_"))) {
+      return false;
+    }
+    if (!candidateHasReportPurpose(c.dir_ids)) return false;
+    if (intakeLayer && !candidateAllowedForIntakeLayer(c.dir_ids, intakeLayer)) {
       return false;
     }
     for (const dirId of c.dir_ids) {
@@ -1610,6 +1763,7 @@ async function planFromState(
     remaining_hard_budget: budget.remaining_hard_budget,
   });
 
+  // selected_candidate_id is a code rank hint only — model chooses among legal candidates.
   const askSnap: IntakeAskPlanSnapshot = {
     scored_at: now,
     scoring_path: INTAKE_ASK_SCORING_PATH,
@@ -1627,8 +1781,13 @@ async function planFromState(
   };
 
   const openP0P1 = openBlueprintP0P1Needs(understanding);
+  // Catalog P0/P1 fallback must not skip problem/desired gates by injecting detail DIRs.
+  const earlyIntakeLayer =
+    intakeLayer === "problem_understanding" || intakeLayer === "desired_outcome";
   const protectOpenP0P1 =
-    openP0P1.length > 0 && budget.remaining_hard_budget > 0;
+    openP0P1.length > 0 &&
+    budget.remaining_hard_budget > 0 &&
+    !earlyIntakeLayer;
 
   const blockOpenObligations = (
     reason_code: string,
@@ -1706,6 +1865,32 @@ async function planFromState(
         "open_p0_p1_no_selectable_candidate",
         ["no_selectable_candidate"],
       );
+    }
+    if (earlyIntakeLayer && budget.remaining_hard_budget > 0) {
+      const u: UnderstandingState = {
+        ...understanding,
+        next_question_plan: null,
+        readiness: {
+          ...understanding.readiness,
+          verdict: "continue",
+          can_ask: true,
+          reasons: [
+            ...understanding.readiness.reasons,
+            "intake_layer_no_selectable_candidate",
+            `intake_layer:${intakeLayer}`,
+          ],
+        },
+      };
+      return {
+        session: withUnderstanding(session, u, null, askSnap),
+        understanding: u,
+        plan: null,
+        authorized_question: null,
+        planner_block: {
+          reason_code: "intake_layer_no_selectable_candidate",
+          detail: String(intakeLayer),
+        },
+      };
     }
     const u: UnderstandingState = {
       ...understanding,

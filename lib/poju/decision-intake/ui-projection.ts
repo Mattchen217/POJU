@@ -7,7 +7,7 @@ import type { POJUSessionState } from "@/lib/poju/types";
 
 export type AlreadyUnderstoodItem = {
   label: string;
-  status: "known" | "n_a";
+  status: "known" | "n_a" | "asserted";
 };
 
 export type AdaptiveQuestionUiProjection = {
@@ -31,6 +31,10 @@ export type AdaptiveQuestionUiProjection = {
   personal_pattern_insights: Array<{ text: string; source: string; related_dir_ids: string[] }>;
   readiness_progress_percent: number | null;
   readiness_progress_complete: boolean | null;
+  current_intake_layer: string | null;
+  problem_gate_passed: boolean | null;
+  desired_gate_passed: boolean | null;
+  report_missing_required_count: number | null;
 };
 
 
@@ -52,20 +56,45 @@ function sanitizeNeedLabel(value: string | null | undefined): string {
   return text;
 }
 
+function projectUserAssertedFacts(session: POJUSessionState): AlreadyUnderstoodItem[] {
+  const facts = session.decision_context?.reality_facts ?? [];
+  const out: AlreadyUnderstoodItem[] = [];
+  const seen = new Set<string>();
+  for (const f of facts) {
+    if (f.verification_level !== "user_asserted") continue;
+    if (f.status === "declined") continue;
+    const label = userFacingText(f.statement);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push({ label, status: "asserted" });
+  }
+  return out;
+}
+
 function projectAlreadyUnderstoodItems(
   items: Array<{
     label?: string;
     status?: string;
     user_confirmed_any?: boolean;
   }> | null | undefined,
+  session?: POJUSessionState,
 ): AlreadyUnderstoodItem[] {
   const result: AlreadyUnderstoodItem[] = [];
+  const seen = new Set<string>();
   for (const item of items ?? []) {
     if (item.user_confirmed_any !== true) continue;
     if (item.status !== "known" && item.status !== "n_a") continue;
     const label = userFacingText(item.label);
-    if (!label) continue;
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
     result.push({ label, status: item.status });
+  }
+  if (session) {
+    for (const asserted of projectUserAssertedFacts(session)) {
+      if (seen.has(asserted.label)) continue;
+      seen.add(asserted.label);
+      result.push(asserted);
+    }
   }
   return result;
 }
@@ -79,7 +108,7 @@ export function projectAdaptiveQuestionForUi(
   const directionByDir = new Map((session.decision_blueprint?.directions ?? []).flatMap((d) =>
     d.dir_ids.map((id) => [id, { priority: d.priority, direction_id: d.direction_id }] as const),
   ));
-  const understoodItems = projectAlreadyUnderstoodItems(u?.understood.items);
+  const understoodItems = projectAlreadyUnderstoodItems(u?.understood.items, session);
   return {
     current_question:
       u?.last_sent_question?.question_text ?? plan?.question_text ?? null,
@@ -118,6 +147,11 @@ export function projectAdaptiveQuestionForUi(
     personal_pattern_insights: u?.personal_pattern_insight.insights ?? [],
     readiness_progress_percent: u?.readiness_progress?.percent ?? null,
     readiness_progress_complete: u?.readiness_progress?.complete ?? null,
+    current_intake_layer: u?.current_intake_layer ?? null,
+    problem_gate_passed: u?.intake_layer_gates?.problem_understanding.passed ?? null,
+    desired_gate_passed: u?.intake_layer_gates?.desired_outcome.passed ?? null,
+    report_missing_required_count:
+      u?.report_coverage?.missing_required_count ?? null,
   };
 }
 export type DecisionUnderstandingBoxView = {
@@ -130,6 +164,7 @@ export type DecisionUnderstandingBoxView = {
   personal_pattern_insights: string[];
   show_personal_pattern: boolean;
   current_question: string | null;
+  current_intake_layer: string | null;
 };
 
 /**
@@ -147,9 +182,17 @@ export function projectDecisionUnderstandingBox(
   } else {
     percent = null;
   }
-  const already = projectAlreadyUnderstoodItems(session.decision_understanding?.understood.items);
+  const already = projectAlreadyUnderstoodItems(
+    session.decision_understanding?.understood.items,
+    session,
+  );
+  const alreadyLabels = new Set(already.map((i) => i.label));
   const stillNeed = Array.from(
-    new Set(ui.need_labels.map(sanitizeNeedLabel).filter(Boolean)),
+    new Set(
+      ui.need_labels
+        .map(sanitizeNeedLabel)
+        .filter((label) => Boolean(label) && !alreadyLabels.has(label)),
+    ),
   );
   const conflicts = ui.open_conflicts
     .map((c) => userFacingText(c.statements.filter(Boolean).join(" \u2194 ")))
@@ -158,6 +201,16 @@ export function projectDecisionUnderstandingBox(
     ui.personal_pattern_status === "available"
       ? ui.personal_pattern_insights.map((item) => userFacingText(item.text)).filter(Boolean)
       : [];
+  // Fresh 0% with no understood content is misleading empty chrome — hide it.
+  if (
+    percent === 0 &&
+    !complete &&
+    already.length === 0 &&
+    stillNeed.length === 0 &&
+    (ui.budget_asked ?? 0) === 0
+  ) {
+    percent = null;
+  }
   return {
     progress_percent: percent,
     progress_complete: complete,
@@ -168,5 +221,6 @@ export function projectDecisionUnderstandingBox(
     personal_pattern_insights: insights,
     show_personal_pattern: insights.length > 0,
     current_question: userFacingText(ui.current_question) || null,
+    current_intake_layer: ui.current_intake_layer,
   };
 }

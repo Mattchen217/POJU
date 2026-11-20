@@ -30,6 +30,22 @@ export function DecisionUnderstandingPanel({
   const progressHint = isZh
     ? "\u4fe1\u606f\u51c6\u5907\u7a0b\u5ea6\uff08\u57fa\u4e8e\u8c03\u67e5\u5b8c\u6210\u6761\u4ef6\u4e0e\u4fe1\u606f\u7f3a\u53e3\uff0c\u4e0d\u662f\u63d0\u95ee\u6b21\u6570\uff09"
     : "Information readiness (completion conditions and remaining gaps, not question count)";
+  const layerHint = (() => {
+    const layer = box.current_intake_layer;
+    if (!layer) return null;
+    if (isZh) {
+      if (layer === "problem_understanding") return "当前焦点：先把问题弄清楚";
+      if (layer === "desired_outcome") return "当前焦点：弄清你期望的结果";
+      if (layer === "report_details") return "当前焦点：按报告需要补齐关键细节";
+      if (layer === "final_understanding_review") return "当前焦点：确认理解后可进入交付";
+      return null;
+    }
+    if (layer === "problem_understanding") return "Focus: clarify the real problem";
+    if (layer === "desired_outcome") return "Focus: clarify desired outcomes";
+    if (layer === "report_details") return "Focus: gather report-critical details";
+    if (layer === "final_understanding_review") return "Focus: confirm understanding before delivery";
+    return null;
+  })();
   const confirmHint =
     session.agent_v2?.current_phase === "awaiting_confirmation" &&
     session.decision_understanding.readiness.can_ask === false
@@ -66,6 +82,7 @@ export function DecisionUnderstandingPanel({
       {expanded ? (
         <div className="pchat__understanding-box__body">
           {percent != null ? <div className="pchat__understanding-box__hint">{progressHint}</div> : null}
+          {layerHint ? <div className="pchat__understanding-box__hint">{layerHint}</div> : null}
           <div>
             <div className="pchat__understanding-box__label">{currentTitle}</div>
             <div className="pchat__understanding-box__text">{box.current_understanding ?? "\u2014"}</div>

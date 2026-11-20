@@ -26,6 +26,7 @@ import {
 import { ensureDecisionBlueprint } from "./blueprint";
 import { runAdaptiveQuestionTurn } from "./adaptive-turn";
 import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
+import { seedOpeningAssertedFacts } from "./opening-asserted-facts";
 import type { AdaptiveTurnResult } from "./types";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -255,6 +256,13 @@ function applyBlueprintInit(
       recompute_scope: recompute,
     });
     current = bp.session;
+    current = seedOpeningAssertedFacts(
+      current,
+      statement,
+      source_turn_id ?? `open_${now}`,
+      now,
+      current.locked_output_locale ?? "zh",
+    );
     current = seedDecisionQuestionFact(
       current,
       statement,
@@ -289,6 +297,13 @@ function applyBlueprintInit(
       recompute_scope: true,
     });
     let fallbackSession = bp.session;
+    fallbackSession = seedOpeningAssertedFacts(
+      fallbackSession,
+      statement,
+      source_turn_id ?? `open_${now}`,
+      now,
+      fallbackSession.locked_output_locale ?? "zh",
+    );
     fallbackSession = seedDecisionQuestionFact(
       fallbackSession,
       statement,
