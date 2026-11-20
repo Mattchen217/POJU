@@ -14,6 +14,7 @@ import {
   personalProfileContextForPrompt,
   type PersonalProfileContext,
 } from "./personal-profile-context";
+import { formatReportPurposeForPrompt } from "./investigation-report-map";
 
 export const UNDERSTANDING_RESPONSE_MODEL_VERSION = "understanding_response_m1" as const;
 export const UNDERSTANDING_RESPONSE_TIMEOUT_MS = 90_000;
@@ -85,10 +86,14 @@ const SYSTEM_PROMPT = [
   "每一轮你必须结合：用户现实决策信息（Decision Context）+ 本地真算个人命理资料（ProfileStructured / 紫微闭集）。",
   "",
   "## 职责边界（硬）",
-  "- 代码已经给出合法调查候选（candidate_id）与 Blueprint 范围；你只能从合法候选中选下一题。",
+  "- 代码给出合法调查候选（candidate_id）与每条候选的报告用途；你必须自主比较后选择下一题，禁止照抄 code_rank_hint。",
+  "- 调查只服务 8 页交付报告真正需要的信息：用户问题 / 用户期望 / 相关细节。无报告用途的候选不要选。",
+  "- 首轮若期望结果尚未明确、且会改变后续调查与报告分析，优先选期望/结果类候选，而不是细节深挖（如商业模式）。",
   "- 命理资料只作传统分析框架与待核实假设；禁止写成已确认现实事实；禁止自行推算或改写干支/星曜。",
+  "- 没有足够 Profile 字段支撑时，personal_pattern_insight.status 必须为 none；禁止为了显示而编造行为比较结论。",
   "- Current Understanding 必须是综合理解，禁止只重复用户原话，禁止输出 Decision:/Open needs: 统计摘要。",
-  "- 聊天气泡用 response_text：先回应本轮处境与判断，再自然衔接下一个问题；不要把信息框整段粘进聊天。",
+  "- understood_labels 必须从用户已给出的明确现实信息提取，并尽量引用 DC 已有 fact_ids；有有效事实时不得无理由返回空数组。",
+  "- 聊天气泡用 response_text：先回应本轮处境与判断，再自然衔接下一个问题；不要把信息框整段粘进聊天；不要输出内部推理过程。",
   "- suggested_replies 必须恰好 3 个，彼此有实质区别，可点击当作用户回答。",
   "- 用户可见正文零命理专名（十神/干支报幕/用喜忌/合冲刑害/神煞宫星原名）；传统依据只放 traditional_basis。",
   "",
@@ -99,7 +104,7 @@ const SYSTEM_PROMPT = [
   '  "understood_labels": [{"label":"……","fact_ids":["…"]}],',
   '  "need_to_understand": [{"label":"……","priority":"P0|P1|P2","necessity":"required|optional","why_it_matters":"……","related_dir_ids":["…"]}],',
   '  "personal_pattern_insight": {"status":"available|none|unavailable","insights":[{"text":"……","traditional_basis":"……","source_fields":["…"]}]},',
-  '  "next_question": {"selected_candidate_id":"候选id或null","question_text":"下一题或null","rationale":"……"},',
+  '  "next_question": {"selected_candidate_id":"候选id或null","question_text":"下一题或null","rationale":"简短结论性理由（非推理过程）"},',
   '  "suggested_replies": [{"label":"短标签","value":"完整可发送回答"}, {"label":"…","value":"…"}, {"label":"…","value":"…"}],',
   '  "response_text": "给用户看的自然语言回应（含衔接下题）"',
   "}",
@@ -301,6 +306,7 @@ function buildUserPayload(input: {
   locale: string;
   init_only: boolean;
   user_statement: string;
+  session: POJUSessionState;
   understanding: UnderstandingState;
   plan: AdaptiveQuestionPlan | null;
   legal_candidates: Array<{
@@ -318,10 +324,35 @@ function buildUserPayload(input: {
     locale: input.locale,
     preset: "collecting",
   });
+  const realityFacts = (input.session?.decision_context?.reality_facts ?? [])
+    .filter(
+      (f) =>
+        f.verification_level === "user_asserted" &&
+        f.status !== "declined" &&
+        f.status !== "unknown",
+    )
+    .slice(0, 24)
+    .map((f) => ({
+      fact_id: f.fact_id,
+      statement: f.statement,
+      fact_roles: f.fact_roles,
+      related_dir_ids: f.related_dir_ids,
+    }));
+  const candidatesWithPurpose = input.legal_candidates.map((c) => {
+    const purpose = formatReportPurposeForPrompt(c.dir_ids, input.locale);
+    return {
+      ...c,
+      investigation_layer: purpose.layer,
+      report_pages: purpose.report_pages,
+      report_purpose: purpose.report_purpose,
+      required_precondition: purpose.required_precondition,
+    };
+  });
   const dc = {
     understanding_id: input.understanding.understanding_id,
     decision_question: input.understanding.current_understanding.decision_question,
     code_summary_do_not_copy: input.understanding.current_understanding.summary,
+    reality_facts_user_asserted: realityFacts,
     understood_items: input.understanding.understood.items.slice(0, 20).map((i) => ({
       label: i.label,
       fact_ids: i.fact_ids,
@@ -356,16 +387,16 @@ function buildUserPayload(input: {
     contract,
     "",
     input.init_only
-      ? "本轮是 Fresh Session 首问：用户刚提出决策问题，请形成初始理解并选第一道调查问题。"
-      : "本轮是用户回答之后：请更新理解，并选下一道调查问题。",
+      ? "本轮是 Fresh Session 首问：用户刚提出决策问题。先从 user_statement 提取明确现实信息到 understood_labels（引用 reality_facts_user_asserted 的 fact_ids），再自主选第一道调查问题。若期望结果未明，优先期望层候选。"
+      : "本轮是用户回答之后：请更新理解（补齐 understood_labels），并自主选下一道调查问题。",
     "",
     "user_statement:",
     input.user_statement.slice(0, 2000),
     "",
-    "legal_candidates (你只能从这些 candidate_id 中选择):",
-    JSON.stringify(input.legal_candidates),
+    "legal_candidates (只能从这些 candidate_id 中选择；含报告用途):",
+    JSON.stringify(candidatesWithPurpose),
     "",
-    "code_selected_plan (参考，措辞可改，目标不可改):",
+    "code_rank_hint (仅供参考排序，目标可改；你必须自主选择):",
     JSON.stringify(
       input.plan
         ? {
@@ -516,6 +547,7 @@ export async function generateDecisionUnderstandingTurn(input: {
             locale,
             init_only,
             user_statement,
+            session: input.session,
             understanding: input.understanding,
             plan: input.plan,
             legal_candidates: input.legal_candidates,
@@ -609,6 +641,34 @@ export function applyUnderstandingModelToState(
           must_continue: n.necessity === "required",
         }));
 
+  const labelOverlays = output.understood_labels
+    .map((item) => ({
+      label: (item.label ?? "").trim(),
+      fact_ids: (item.fact_ids ?? []).filter((id) => typeof id === "string" && id.trim()),
+    }))
+    .filter((item) => item.label.length > 0);
+  // Merge model labels onto existing Understood DIR items only.
+  // Opening user_asserted facts are projected from DC RealityFacts (not invented here).
+  const mergedUnderstood = understanding.understood.items.map((item) => {
+    const overlay = labelOverlays.find(
+      (o) =>
+        o.label.toLowerCase() === item.label.trim().toLowerCase() ||
+        o.fact_ids.some((id) => item.fact_ids.includes(id)),
+    );
+    if (!overlay) return item;
+    return {
+      ...item,
+      fact_ids: [...new Set([...item.fact_ids, ...overlay.fact_ids])],
+    };
+  });
+
+  const ppiInsights = output.personal_pattern_insight.insights.filter(
+    (ins) =>
+      Boolean(ins.text?.trim()) &&
+      Array.isArray(ins.source_fields) &&
+      ins.source_fields.length > 0 &&
+      Boolean(ins.traditional_basis?.trim()),
+  );
   const nextUnderstanding: UnderstandingState = {
     ...understanding,
     current_understanding: {
@@ -616,14 +676,14 @@ export function applyUnderstandingModelToState(
       summary: output.current_understanding_narrative,
       confidence: understanding.current_understanding.confidence,
     },
+    understood: { items: mergedUnderstood },
     need_to_understand: { items: projectedNeeds },
     personal_pattern_insight:
-      output.personal_pattern_insight.status === "available" &&
-      output.personal_pattern_insight.insights.length > 0
+      output.personal_pattern_insight.status === "available" && ppiInsights.length > 0
         ? {
             status: "available" as const,
-            insights: output.personal_pattern_insight.insights.map((ins) => ({
-              source: "personal_analysis_profile",
+            insights: ppiInsights.map((ins) => ({
+              source: ins.source_fields.join(","),
               text: ins.text,
               related_dir_ids: [] as string[],
               epistemic: "traditional_interpretation" as const,
@@ -638,7 +698,9 @@ export function applyUnderstandingModelToState(
             reason:
               output.personal_pattern_insight.status === "unavailable"
                 ? "profile_unavailable"
-                : "no_new_insight",
+                : ppiInsights.length === 0
+                  ? "insufficient_profile_evidence"
+                  : "no_new_insight",
           },
   };
 

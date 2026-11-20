@@ -87,7 +87,13 @@ export function computeReadinessProgress(input: {
   const openConflicts = (dc.conflicts ?? []).filter((c) => c.state !== "clarified" && c.state !== "unresolved_in_final");
   const investigationStarted =
     activeDirs.some((d) => roleScore(d.current_state) > 0) ||
-    (dc.reality_facts ?? []).some((f) => f.user_confirmed === true);
+    (dc.reality_facts ?? []).some(
+      (f) =>
+        f.user_confirmed === true ||
+        (f.verification_level === "user_asserted" &&
+          f.status !== "declined" &&
+          f.status !== "unknown"),
+    );
   // No open conflicts only counts after investigation has started; otherwise Fresh = absent.
   const conflictsScore: number | null =
     openConflicts.length > 0 ? 0 : investigationStarted ? 1 : null;

@@ -104,18 +104,19 @@ export function upsertMatrixWelcomeMessage(
   const idx = session.messages.findIndex((m) => isMatrixWelcomeMessage(m));
   let messages: POJUMessage[];
   if (idx < 0) {
-    messages = [...session.messages, fresh];
+    // Welcome must stay at the top of the transcript, never appended after chat.
+    messages = [fresh, ...session.messages];
   } else {
     const existing = session.messages[idx]!;
-    messages = session.messages.map((m, i) =>
-      i === idx
-        ? {
-            ...fresh,
-            timestamp: existing.timestamp,
-            client_id: existing.client_id ?? fresh.client_id,
-          }
-        : m,
-    );
+    const updated = {
+      ...fresh,
+      timestamp: existing.timestamp,
+      client_id: existing.client_id ?? fresh.client_id,
+    };
+    messages = [
+      updated,
+      ...session.messages.filter((_, i) => i !== idx),
+    ];
   }
   return dedupeWelcomeMessages({ ...session, messages });
 }
@@ -138,6 +139,22 @@ export function seedFixedWelcomeMessages(session: POJUSessionState, locale: stri
   if (hasFixedWelcomeMessage(session)) return dedupeWelcomeMessages(session);
   return dedupeWelcomeMessages({
     ...session,
-    messages: [...session.messages, createWelcomeAssistantMessage(locale)],
+    // Fixed Eastern OS welcome is a pinned header source — always index 0.
+    messages: [createWelcomeAssistantMessage(locale), ...session.messages],
   });
+}
+
+/** Keep a single welcome hero at messages[0] after any chat append. */
+export function ensureWelcomePinnedFirst(session: POJUSessionState): POJUSessionState {
+  const deduped = dedupeWelcomeMessages(session);
+  const welcomeIdx = deduped.messages.findIndex(isWelcomeHeroMessage);
+  if (welcomeIdx <= 0) return deduped;
+  const welcome = deduped.messages[welcomeIdx]!;
+  return {
+    ...deduped,
+    messages: [
+      welcome,
+      ...deduped.messages.filter((_, i) => i !== welcomeIdx),
+    ],
+  };
 }

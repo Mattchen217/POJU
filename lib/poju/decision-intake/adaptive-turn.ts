@@ -49,6 +49,7 @@ import {
   generateDecisionUnderstandingTurn,
   type UnderstandingModelTestHook,
 } from "./understanding-response-model";
+import { candidateHasReportPurpose } from "./investigation-report-map";
 import {
   applyIntakeProtection,
   classifyIntakeInput,
@@ -695,6 +696,8 @@ function buildLegalCandidatesForUnderstanding(input: {
     }
     const c = byId.get(id);
     if (!c) continue;
+    // Drop candidates that cannot map to 8-page report requirements.
+    if (!candidateHasReportPurpose(c.dir_ids)) continue;
     const dirId = c.dir_ids[0] ?? "";
     out.push({
       candidate_id: c.candidate_id,
@@ -773,29 +776,57 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
     result.plan,
     modelResult.output,
   );
-  // If model selected a different legal candidate, keep code plan binding but
-  // still require question_text to match the authorized candidate_id.
+  // Model chooses among legal candidates; code only validates membership.
+  // Code rank is a hint — not a hard preselection of the next question.
   let nextPlan = applied.plan;
-  if (
-    result.plan &&
-    modelResult.output.next_question.selected_candidate_id &&
-    modelResult.output.next_question.selected_candidate_id !== result.plan.candidate_id
-  ) {
-    // Scope: only rephrase within the already-validated code plan this turn.
-    // Candidate switching requires a full re-plan; reject rather than widen scope.
-    return {
-      ...result,
-      outcome: "understanding_model_failed",
-      ask_error: "understanding_model_failed:candidate_mismatch",
-      authorized_question: null,
-      profile_hash: modelResult.profile.profile_hash,
+  const selectedId =
+    modelResult.output.next_question.selected_candidate_id?.trim() || null;
+  if (selectedId && selectedId !== (result.plan?.candidate_id ?? null)) {
+    const hit = legal_candidates.find((c) => c.candidate_id === selectedId);
+    if (!hit) {
+      return {
+        ...result,
+        outcome: "understanding_model_failed",
+        ask_error: "understanding_model_failed:illegal_candidate",
+        authorized_question: null,
+        profile_hash: modelResult.profile.profile_hash,
+      };
+    }
+    const base = result.plan;
+    nextPlan = {
+      plan_id: `qp_model_${hit.candidate_id}_${Date.now()}`.slice(0, 120),
+      candidate_id: hit.candidate_id,
+      direction_id: hit.direction_id,
+      ddr_ids: [...(base?.ddr_ids ?? [])],
+      dir_ids: [...hit.dir_ids],
+      fact_role_codes: [...(base?.fact_role_codes ?? [])],
+      missing_info: hit.missing_info,
+      decision_value: hit.decision_value,
+      ask_now_reason:
+        modelResult.output.next_question.rationale ||
+        `model_selected:${hit.candidate_id}`,
+      expected_info: hit.expected_info,
+      depth: base?.depth ?? 1,
+      budget_cost: base?.budget_cost ?? 1,
+      remaining_hard_budget: base?.remaining_hard_budget ?? understanding.budget.remaining_hard_budget,
+      gate_class: (base?.gate_class === "P0" || base?.gate_class === "P2"
+        ? base.gate_class
+        : "P1") as "P0" | "P1" | "P2",
+      scope_boundary:
+        base?.scope_boundary ?? "Only Blueprint DIR/DDR; no model scope expansion",
+      rationale: `model_selected:${hit.candidate_id}`,
+      question_text:
+        modelResult.output.next_question.question_text?.trim() ||
+        hit.template_question ||
+        "",
+      built_at: new Date().toISOString(),
+      scoring_path: `${base?.scoring_path ?? "legal_candidates"}→model_selected`,
     };
-  }
-  if (
+  } else if (
     nextPlan &&
     modelResult.output.next_question.question_text &&
     nextPlan.candidate_id ===
-      (modelResult.output.next_question.selected_candidate_id ?? nextPlan.candidate_id)
+      (selectedId ?? nextPlan.candidate_id)
   ) {
     nextPlan = {
       ...nextPlan,
