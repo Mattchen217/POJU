@@ -426,7 +426,13 @@ export async function generateDecisionUnderstandingTurn(input: {
     legalSet.size > 0;
   const startedAt = Date.now();
 
-  if (typeof window !== "undefined" && !input.testHook) {
+  // Real browsers cannot hold the OpenRouter key. Node test shims may define
+  // `window` (fake-indexeddb / jsdom); allow those via process.versions.node.
+  const isRealBrowser =
+    typeof window !== "undefined" &&
+    typeof (globalThis as { process?: { versions?: { node?: string } } }).process
+      ?.versions?.node !== "string";
+  if (isRealBrowser && !input.testHook) {
     return {
       ok: false,
       reason: "must_run_server_side",
@@ -436,6 +442,23 @@ export async function generateDecisionUnderstandingTurn(input: {
         provider: null,
         model: null,
         latency_ms: 0,
+      },
+    };
+  }
+
+  // Birth/profile claimed but authority chart incomplete → fail closed.
+  // Sessions with no birth (profile skipped) may continue without personalization.
+  if (profile.personalization_incomplete) {
+    return {
+      ok: false,
+      reason: "profile_incomplete",
+      detail: JSON.stringify(profile.field_coverage),
+      profile,
+      call_meta: {
+        source: input.testHook ? "test_hook" : "openrouter",
+        provider: null,
+        model: null,
+        latency_ms: Date.now() - startedAt,
       },
     };
   }

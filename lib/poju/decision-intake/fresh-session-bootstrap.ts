@@ -312,6 +312,9 @@ export async function bootstrapFreshSessionMainLoop(input: {
   statement: string;
   source_turn_id: string;
   now: string;
+  test_hooks?: import("./adaptive-turn").AdaptiveTurnTestHooks;
+  locale?: string;
+  signal?: AbortSignal;
 }): Promise<FreshSessionBootstrapResult> {
   const statement = input.statement.trim();
   if (!statement) {
@@ -342,6 +345,9 @@ export async function bootstrapFreshSessionMainLoop(input: {
       source_turn_id: input.source_turn_id,
       now: input.now,
       init_only: true,
+      test_hooks: input.test_hooks,
+      locale: input.locale,
+      signal: input.signal,
     });
     return { ...turn, bootstrapped: false, blueprint_scope_source: scope_source };
   }
@@ -441,6 +447,9 @@ export async function bootstrapFreshSessionMainLoop(input: {
     source_turn_id: input.source_turn_id,
     now: input.now,
     init_only: true,
+    test_hooks: input.test_hooks,
+    locale: input.locale,
+    signal: input.signal,
   });
 
   return {

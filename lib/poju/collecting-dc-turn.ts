@@ -302,6 +302,9 @@ export async function runM1ProductionPreLlmTurn(
       statement: input.statement,
       source_turn_id: input.source_turn_id,
       now: input.now,
+      test_hooks: input.test_hooks,
+      locale: input.locale,
+      signal: input.signal,
     });
     return mapAdaptiveOutcome(turn, true);
   }
