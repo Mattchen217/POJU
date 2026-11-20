@@ -1,0 +1,65 @@
+﻿{
+  "ok": true,
+  "results": [
+    {
+      "name": "home",
+      "status": 200,
+      "headers": {
+        "inngest": null,
+        "matched": "/en",
+        "vercel_id": "hnd1::2dlvq-1795148861004-359c9cebb878"
+      },
+      "body": "<!DOCTYPE html><html lang=\"en\" translate=\"no\" class=\"__variable_245d8d __variable_65423c __variable_0f30ec __variable_dd6ea7 __variable_626b1b __variable_3badf7 h-full antialiased notranslate\"><head><meta charSet=\"utf-8\"/><meta name=\"viewpo"
+    },
+    {
+      "name": "app_entry",
+      "status": 200,
+      "headers": {
+        "inngest": null,
+        "matched": "/[locale]/login",
+        "vercel_id": "hnd1::iad1::c5v82-1795148862982-d39874998e7a"
+      },
+      "body": "<!DOCTYPE html><html lang=\"en\" translate=\"no\" class=\"__variable_245d8d __variable_65423c __variable_0f30ec __variable_dd6ea7 __variable_626b1b __variable_3badf7 h-full antialiased notranslate\"><head><meta charSet=\"utf-8\"/><meta name=\"viewpo"
+    },
+    {
+      "name": "chat_empty",
+      "status": 400,
+      "headers": {
+        "inngest": null,
+        "matched": "/api/poju/chat",
+        "vercel_id": "hnd1::iad1::f8tlh-1795148864672-7daba70eb702"
+      },
+      "body": "{\"error\":\"v4 session required: send { session: POJUSessionState, profile?, locale? }\"}"
+    },
+    {
+      "name": "inngest",
+      "status": 401,
+      "headers": {
+        "inngest": "true",
+        "matched": "/api/inngest",
+        "vercel_id": "hnd1::iad1::8jqld-1795148865353-5b5a030a3108"
+      },
+      "body": "{\"message\":\"Unauthorized\"}"
+    },
+    {
+      "name": "ops_login_configured",
+      "status": 401,
+      "headers": {
+        "inngest": null,
+        "matched": "/api/ops/login",
+        "vercel_id": "hnd1::iad1::7cmwx-1795148866343-6f7c37beb8c2"
+      },
+      "body": "{\"ok\":false,\"error\":\"invalid_credentials\"}"
+    },
+    {
+      "name": "chat_minimal_session",
+      "status": 400,
+      "headers": {
+        "inngest": null,
+        "matched": "/api/poju/chat",
+        "vercel_id": "hnd1::iad1::2dlvq-1795148867106-094298cb68cb"
+      },
+      "body": "{\"error\":\"v4 session required: send { session: POJUSessionState, profile?, locale? }\"}"
+    }
+  ]
+}

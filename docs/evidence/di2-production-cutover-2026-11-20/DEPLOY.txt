@@ -1,0 +1,10 @@
+﻿pre_main=ee8c96e8a7a128fa8e059c2a9f81c9f0d2127688
+pre_feature=4c8d2d4eca7e85d7dbdf53dc44bdf6722ca76e1f
+post_main=4c8d2d4eca7e85d7dbdf53dc44bdf6722ca76e1f
+merge=fast-forward
+deployment_id=dpl_6AuMLE8qDaGX53LK32tkZpAbREXb
+deployment_url=https://www.easternos.com
+inspector=https://vercel.com/yangwu11214-1009s-projects/easternos/6AuMLE8qDaGX53LK32tkZpAbREXb
+readyState=READY
+node=22.x
+pnpm=10.33.2
