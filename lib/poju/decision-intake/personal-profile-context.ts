@@ -5,6 +5,7 @@
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeProfileHash } from "@/lib/poju/decision-intake/personal-analysis";
+import type { UserProfile } from "@/lib/profile/types";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
   bindPersonalAnalysisProfile,
@@ -124,6 +125,47 @@ function resolveStructuredFromSession(
     };
   } catch {
     return { structured: null, rebuilt: false, rebuild_failed: true };
+  }
+}
+
+/**
+ * Ensure Session.matrix_payload carries a locally computed ProfileStructured
+ * before Understanding / adaptive turns. Uses the authoritative UserProfile
+ * when matrix is missing or incomplete — never invents chart data.
+ */
+export function ensureMatrixPayloadOnSession(
+  session: POJUSessionState,
+  profile: UserProfile | null,
+  locale?: string,
+): POJUSessionState {
+  if (session.matrix_payload?.structured?.day_master?.trim()) {
+    return session;
+  }
+  const profileId =
+    session.selected_stored_profile_id?.trim() ||
+    session.agent_v2?.selected_profile_id?.trim() ||
+    session.matrix_payload?.profile_id?.trim() ||
+    profile?.id?.trim() ||
+    null;
+  const userProfile = profile ?? session.matrix_payload?.user_profile ?? null;
+  if (!profileId || !userProfile?.birth) {
+    return session;
+  }
+  try {
+    const { buildMatrixPayloadFromProfile } =
+      require("@/lib/poju/build-matrix-payload") as typeof import("@/lib/poju/build-matrix-payload");
+    const payload = buildMatrixPayloadFromProfile(profileId, userProfile, {
+      locale: locale ?? session.locked_output_locale ?? "zh",
+      display_name: session.matrix_payload?.display_name,
+    });
+    return {
+      ...session,
+      matrix_payload: payload,
+      selected_stored_profile_id:
+        session.selected_stored_profile_id?.trim() || profileId,
+    };
+  } catch {
+    return session;
   }
 }
 

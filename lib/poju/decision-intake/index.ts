@@ -77,7 +77,9 @@ export {
 export { bindPersonalAnalysisProfile, evaluateQaPersonalPatternInsight } from "./personal-analysis-profile";
 export {
   buildPersonalProfileContext,
+  ensureMatrixPayloadOnSession,
   personalProfileContextForPrompt,
+  computePersonalProfileFieldCoverage,
 } from "./personal-profile-context";
 export {
   generateDecisionUnderstandingTurn,

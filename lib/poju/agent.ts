@@ -1057,6 +1057,24 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       });
     }
   }
+  // DI2 personalization: Understanding model reads Session.matrix_payload.
+  // Authoritative chat may supply UserProfile without a matrix — attach local
+  // authority chart here so every M1 turn can see full ProfileStructured.
+  {
+    const { ensureMatrixPayloadOnSession } = await import(
+      "@/lib/poju/decision-intake/personal-profile-context"
+    );
+    sessionForLlm = ensureMatrixPayloadOnSession(
+      sessionForLlm,
+      profile,
+      sessionOutputLocale,
+    );
+    workingSession = ensureMatrixPayloadOnSession(
+      workingSession,
+      profile,
+      sessionOutputLocale,
+    );
+  }
   logBaseAnalysisPayload(
     input.server_invoke ? "server_invoke:before-llm" : "callLLMViaAPI:before-fetch",
     base_analysis,
@@ -1592,6 +1610,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       last_interaction_at: nowIso,
       expires_at: rollingExpiry,
       locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
+      matrix_payload:
+        m1CollectingTurn.session.matrix_payload ?? sessionForLlm.matrix_payload,
       decision_context:
         m1CollectingTurn.session.decision_context ?? sessionForLlm.decision_context,
       decision_context_versions:
