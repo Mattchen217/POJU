@@ -49,26 +49,15 @@ function sanitizeNeedLabel(value: string | null | undefined): string {
   text = text
     .replace(/^missing_roles:\s*/i, "")
     .replace(/\bDIR_[A-Z0-9_]+\b/g, "")
+    .replace(/\bDIR-[A-Z0-9-]+\b/g, "")
     .replace(/\bDDR_[A-Z0-9_]+\b/g, "")
+    .replace(/\b[a-z]+_[a-z_]+\b/g, "")
     .replace(/\s*;\s*/g, " · ")
+    .replace(/\s*·\s*·+/g, " · ")
+    .replace(/^\s*·\s*|\s*·\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
   return text;
-}
-
-function projectUserAssertedFacts(session: POJUSessionState): AlreadyUnderstoodItem[] {
-  const facts = session.decision_context?.reality_facts ?? [];
-  const out: AlreadyUnderstoodItem[] = [];
-  const seen = new Set<string>();
-  for (const f of facts) {
-    if (f.verification_level !== "user_asserted") continue;
-    if (f.status === "declined") continue;
-    const label = userFacingText(f.statement);
-    if (!label || seen.has(label)) continue;
-    seen.add(label);
-    out.push({ label, status: "asserted" });
-  }
-  return out;
 }
 
 function projectAlreadyUnderstoodItems(
@@ -76,27 +65,80 @@ function projectAlreadyUnderstoodItems(
     label?: string;
     status?: string;
     user_confirmed_any?: boolean;
+    fact_ids?: string[];
   }> | null | undefined,
-  session?: POJUSessionState,
 ): AlreadyUnderstoodItem[] {
   const result: AlreadyUnderstoodItem[] = [];
-  const seen = new Set<string>();
   for (const item of items ?? []) {
+    // DIR-level Understood still requires a user-confirm signal on related facts.
+    // Opening user_asserted claims are projected separately from RealityFacts.
     if (item.user_confirmed_any !== true) continue;
     if (item.status !== "known" && item.status !== "n_a") continue;
     const label = userFacingText(item.label);
-    if (!label || seen.has(label)) continue;
-    seen.add(label);
-    result.push({ label, status: item.status });
-  }
-  if (session) {
-    for (const asserted of projectUserAssertedFacts(session)) {
-      if (seen.has(asserted.label)) continue;
-      seen.add(asserted.label);
-      result.push(asserted);
-    }
+    if (!label) continue;
+    result.push({
+      label,
+      status: item.status,
+    });
   }
   return result;
+}
+
+/** Discrete user_asserted RealityFacts (opening claims) for the Understood section. */
+function projectUserAssertedFacts(
+  session: POJUSessionState,
+): AlreadyUnderstoodItem[] {
+  const facts = session.decision_context?.reality_facts ?? [];
+  const dq = userFacingText(
+    session.decision_context?.definition?.decision_question ??
+      session.original_question ??
+      "",
+  ).toLowerCase();
+  const out: AlreadyUnderstoodItem[] = [];
+  const seen = new Set<string>();
+  for (const f of facts) {
+    if (f.verification_level !== "user_asserted") continue;
+    if (f.status === "declined" || f.status === "unknown") continue;
+    // Skip the raw full-question blob — discrete opening claims use fact_open_*.
+    if ((f.fact_roles ?? []).includes("decision_question") && !f.fact_id.startsWith("fact_open_")) {
+      continue;
+    }
+    if (f.fact_id.startsWith("fact_dq_")) continue;
+    const label = userFacingText(f.statement);
+    if (!label || seen.has(label)) continue;
+    if (dq && label.toLowerCase() === dq) continue;
+    seen.add(label);
+    out.push({
+      label,
+      status: f.status === "confirmed" || f.user_confirmed ? "known" : "asserted",
+    });
+  }
+  return out;
+}
+
+function mergeUnderstood(
+  a: AlreadyUnderstoodItem[],
+  b: AlreadyUnderstoodItem[],
+): AlreadyUnderstoodItem[] {
+  const byLabel = new Map<string, AlreadyUnderstoodItem>();
+  for (const item of [...a, ...b]) {
+    const key = item.label.toLowerCase();
+    const prev = byLabel.get(key);
+    if (!prev) {
+      byLabel.set(key, item);
+      continue;
+    }
+    byLabel.set(key, {
+      label: prev.label,
+      status:
+        prev.status === "known" || item.status === "known"
+          ? "known"
+          : prev.status === "n_a" || item.status === "n_a"
+            ? "n_a"
+            : "asserted",
+    });
+  }
+  return [...byLabel.values()];
 }
 
 export function projectAdaptiveQuestionForUi(
@@ -108,7 +150,10 @@ export function projectAdaptiveQuestionForUi(
   const directionByDir = new Map((session.decision_blueprint?.directions ?? []).flatMap((d) =>
     d.dir_ids.map((id) => [id, { priority: d.priority, direction_id: d.direction_id }] as const),
   ));
-  const understoodItems = projectAlreadyUnderstoodItems(u?.understood.items, session);
+  const understoodItems = mergeUnderstood(
+    projectAlreadyUnderstoodItems(u?.understood.items),
+    projectUserAssertedFacts(session),
+  );
   return {
     current_question:
       u?.last_sent_question?.question_text ?? plan?.question_text ?? null,
@@ -170,6 +215,7 @@ export type DecisionUnderstandingBoxView = {
 /**
  * User-facing 7.2 box projection. No DIR / DDR / field IDs or debug labels.
  * Progress is never 100% until completion conditions are met.
+ * Hide percent when Fresh and no asserted/known progress yet (avoid fake 0%).
  */
 export function projectDecisionUnderstandingBox(
   session: POJUSessionState,
@@ -177,46 +223,43 @@ export function projectDecisionUnderstandingBox(
   const ui = projectAdaptiveQuestionForUi(session);
   const complete = ui.readiness_progress_complete === true;
   let percent = ui.readiness_progress_percent;
+  const already = mergeUnderstood(
+    projectAlreadyUnderstoodItems(session.decision_understanding?.understood.items),
+    projectUserAssertedFacts(session),
+  );
+  const investigationStarted =
+    already.length > 0 ||
+    (session.decision_context?.dirs ?? []).some(
+      (d) => d.current_state === "known" || d.current_state === "n_a",
+    );
   if (percent != null && Number.isFinite(percent)) {
     percent = complete ? 100 : Math.min(99, Math.max(0, Math.round(percent)));
+    // Misleading Fresh 0% with no asserted/known content → hide.
+    if (!investigationStarted && percent === 0) percent = null;
   } else {
     percent = null;
   }
-  const already = projectAlreadyUnderstoodItems(
-    session.decision_understanding?.understood.items,
-    session,
-  );
-  const alreadyLabels = new Set(already.map((i) => i.label));
   const stillNeed = Array.from(
-    new Set(
-      ui.need_labels
-        .map(sanitizeNeedLabel)
-        .filter((label) => Boolean(label) && !alreadyLabels.has(label)),
-    ),
+    new Set(ui.need_labels.map(sanitizeNeedLabel).filter(Boolean)),
+  );
+  // Drop need labels that duplicate already-understood wording.
+  const understoodSet = new Set(already.map((i) => i.label.toLowerCase()));
+  const stillNeedFiltered = stillNeed.filter(
+    (label) => !understoodSet.has(label.toLowerCase()),
   );
   const conflicts = ui.open_conflicts
     .map((c) => userFacingText(c.statements.filter(Boolean).join(" \u2194 ")))
-    .filter((text) => text && !stillNeed.includes(text));
+    .filter((text) => text && !stillNeedFiltered.includes(text));
   const insights =
     ui.personal_pattern_status === "available"
       ? ui.personal_pattern_insights.map((item) => userFacingText(item.text)).filter(Boolean)
       : [];
-  // Fresh 0% with no understood content is misleading empty chrome — hide it.
-  if (
-    percent === 0 &&
-    !complete &&
-    already.length === 0 &&
-    stillNeed.length === 0 &&
-    (ui.budget_asked ?? 0) === 0
-  ) {
-    percent = null;
-  }
   return {
     progress_percent: percent,
     progress_complete: complete,
     current_understanding: userFacingText(ui.understanding_summary) || null,
     already_understood: already,
-    still_need: stillNeed,
+    still_need: stillNeedFiltered,
     conflicts,
     personal_pattern_insights: insights,
     show_personal_pattern: insights.length > 0,

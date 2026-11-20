@@ -121,6 +121,7 @@ import {
 } from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,
+  ensureWelcomePinnedFirst,
   hasFixedWelcomeMessage,
   hasMatrixWelcomeMessage,
   isWelcomeHeroMessage,
@@ -1233,7 +1234,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     ) {
       next = seedMatrixWelcomeMessage(next, locale);
     }
-    next = dedupeWelcomeMessages(next);
+    next = ensureWelcomePinnedFirst(dedupeWelcomeMessages(next));
     if (next !== session) {
       onSessionUpdate(next);
       void savePOJUSessionLocalMirror(next);
@@ -3855,39 +3856,54 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     intakeProtection && (intakeSessionBlocked || intakeContinueReady || intakeProtection.status === "warned"),
   );
   const showUnderstandingDock = Boolean(session.agent_v2) && !di2ReportSurfaceActive;
+  // Welcome + Understanding live in the scroll header (above chat), not in composerTop —
+  // composerTop was crowding out the 3 suggested replies above the input.
+  const scrollHeaderNode = (
+    <>
+      <div
+        className={
+          hasUserMessage
+            ? "pchat__welcome-pin pchat__welcome-pin--compact"
+            : "pchat__welcome-pin"
+        }
+      >
+        {session.matrix_payload ? (
+          <MatrixNarrativeReply payload={session.matrix_payload} locale={locale} />
+        ) : (
+          <FixedEasternOsWelcome locale={locale} />
+        )}
+      </div>
+      {showUnderstandingDock ? (
+        <>
+          {!session.decision_understanding ? (
+            <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
+          ) : null}
+          <DecisionUnderstandingPanel session={session} locale={sessionLang} />
+        </>
+      ) : null}
+    </>
+  );
   const composerTopNode =
-    showIntakeBanner || showUnderstandingDock ? (
-      <>
-        {showIntakeBanner && intakeProtection ? (
-          <div className="px-1 py-2 text-xs text-muted-foreground">
-            {intakeProtectionBannerMessage(intakeProtection, sessionLang, {
-              allow_continue: intakeContinueReady,
-              original_question:
-                session.decision_understanding?.last_sent_question?.question_text ??
-                session.adaptive_ask_plan?.question_text ??
-                session.pending_question ??
-                null,
-            })}
-            {intakeContinueReady ? (
-              <button
-                type="button"
-                className="ml-2 rounded border border-border px-2 py-0.5 text-foreground"
-                onClick={() => void runUserTurn(session, INTAKE_CONTINUE_TOKEN)}
-              >
-                {sessionLang.startsWith("zh") ? "\u7ee7\u7eed" : "Continue"}
-              </button>
-            ) : null}
-          </div>
+    showIntakeBanner && intakeProtection ? (
+      <div className="px-1 py-2 text-xs text-muted-foreground">
+        {intakeProtectionBannerMessage(intakeProtection, sessionLang, {
+          allow_continue: intakeContinueReady,
+          original_question:
+            session.decision_understanding?.last_sent_question?.question_text ??
+            session.adaptive_ask_plan?.question_text ??
+            session.pending_question ??
+            null,
+        })}
+        {intakeContinueReady ? (
+          <button
+            type="button"
+            className="ml-2 rounded border border-border px-2 py-0.5 text-foreground"
+            onClick={() => void runUserTurn(session, INTAKE_CONTINUE_TOKEN)}
+          >
+            {sessionLang.startsWith("zh") ? "\u7ee7\u7eed" : "Continue"}
+          </button>
         ) : null}
-        {showUnderstandingDock ? (
-          <>
-            {!session.decision_understanding ? (
-              <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
-            ) : null}
-            <DecisionUnderstandingPanel session={session} locale={sessionLang} />
-          </>
-        ) : null}
-      </>
+      </div>
     ) : undefined;
 
   useEffect(() => {
@@ -3966,6 +3982,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const list = visibleMessages
       // Baseline opens as vault modal on first entry — never a center chat bubble.
       .filter((m) => !isEnergyMatrixMessage(m))
+      // Welcome is pinned in scrollHeader — never a bubble after user/AI turns.
+      .filter((m) => !isWelcomeHeroMessage(m))
       .map((m) => ({
         id: m.client_id ?? m.timestamp,
         role: m.role as "user" | "assistant",
@@ -4655,6 +4673,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         composerDisabled={composerLocked}
         composerInputDisabled={false}
         hideComposer={hideComposer}
+        scrollHeader={deliveryPageActive ? undefined : scrollHeaderNode}
         composerTop={composerTopNode}
         centerSlot={deliveryShelfNode}
         messageSlots={messageSlots}
