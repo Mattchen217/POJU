@@ -4305,7 +4305,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (deliveryConfirmPending) {
       return [deliveryConfirmButtonLabel(sessionLang)];
     }
-    const last = [...visibleMessages].reverse().find((m) => m.role === "assistant" && !m.is_rejected);
+    // Skip welcome heroes — a late-seeded welcome must never steal chips from the DI2 reply.
+    const last = [...visibleMessages]
+      .reverse()
+      .find(
+        (m) =>
+          m.role === "assistant" &&
+          !m.is_rejected &&
+          !isWelcomeHeroMessage(m),
+      );
     if (
       !last ||
       last.meta?.options_consumed ||
