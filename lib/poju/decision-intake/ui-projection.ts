@@ -85,6 +85,11 @@ function projectUserAssertedFacts(
   session: POJUSessionState,
 ): AlreadyUnderstoodItem[] {
   const facts = session.decision_context?.reality_facts ?? [];
+  const dq = userFacingText(
+    session.decision_context?.definition?.decision_question ??
+      session.original_question ??
+      "",
+  ).toLowerCase();
   const out: AlreadyUnderstoodItem[] = [];
   const seen = new Set<string>();
   for (const f of facts) {
@@ -94,8 +99,10 @@ function projectUserAssertedFacts(
     if ((f.fact_roles ?? []).includes("decision_question") && !f.fact_id.startsWith("fact_open_")) {
       continue;
     }
+    if (f.fact_id.startsWith("fact_dq_")) continue;
     const label = userFacingText(f.statement);
     if (!label || seen.has(label)) continue;
+    if (dq && label.toLowerCase() === dq) continue;
     seen.add(label);
     out.push({
       label,
