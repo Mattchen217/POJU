@@ -13,6 +13,7 @@
 | `pnpm exec tsx scripts/test-di2-personalized-understanding-path.ts` | `0` |
 | `pnpm exec tsx scripts/test-di2-personalized-understanding-openrouter.ts` | `0` |
 | `pnpm exec tsx scripts/test-di2-personalized-understanding-full-path.ts` | `0` |
+| `pnpm exec tsx scripts/test-di2-personalized-understanding-auth-chat-profile.ts` | `0` |
 
 ## Live OpenRouter
 
@@ -37,9 +38,17 @@
 3. Fresh readiness empty-set inflation fixed; need labels sanitized.
 4. Code still owns Blueprint/DC/budget; incomplete birth+missing chart fails closed (`profile_incomplete`).
 
+### Auth-chat Profile handoff (no preloaded matrix)
+
+- Log: `logs/auth-chat-profile-handoff.log` + `logs/auth-chat-profile-handoff.json`
+- Session starts with `selected_stored_profile_id` + `server_invoke.profile` and **no** `matrix_payload`
+- `ensureMatrixPayloadOnSession` builds local ProfileStructured before M1
+- Understanding hook receives non-null `profile_hash` + day_master; assistant has 3 options; `sessionOut.matrix_payload` retained
+- Markers: `AUTH_CHAT_PROFILE_OK`
+
 ## Known limits (not claimed product PASS)
 
-- Browser `/api/poju/chat` production deploy not exercised in this pack.
+- Live Vercel browser deploy not exercised in this pack.
 - Independent review acceptance still required.
 
 **Do not treat this document as product acceptance PASS.**

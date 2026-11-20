@@ -1,0 +1,32 @@
+{
+  "checks": [
+    "PASS ensureMatrixPayloadOnSession",
+    "PASS handleUserMessage without preloaded matrix"
+  ],
+  "ensured": {
+    "day_master": "庚",
+    "hash": "37f7dc13c32a798da4de26637166f7df67e3f490fb7ee40204332eafda219778",
+    "coverage": {
+      "four_pillars": true,
+      "pillars_detail": true,
+      "day_master": true,
+      "strength": true,
+      "pattern": true,
+      "yong_xi_ji": true,
+      "da_yun": true,
+      "bazi_enrichment": true,
+      "ziwei_closed_set": true
+    }
+  },
+  "turn": {
+    "seenHash": "678509d1818185dd8f2b8b5f63eaac1c6d7ff51da424f38d8aa7c65079831303",
+    "seenDayMaster": "庚",
+    "options": [
+      "我想尽快恢复收入",
+      "我想先找长期方向",
+      "我还不清楚适合做什么"
+    ],
+    "content_preview": "已读取你的能量画像（日主已绑定）。\n\n模型问：关于「创业失败后没收入怎么办？」——商业模式与关键依赖？（这样我才能判断：创业类决策的主题深度）",
+    "session_matrix_day_master": "庚"
+  }
+}
