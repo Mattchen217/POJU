@@ -50,6 +50,7 @@ import {
   createPOJUSession,
   loadPOJUSession,
   savePOJUSession,
+  savePOJUSessionLocalMirror,
   confirmSessionAfterCorePersist,
   mirrorAuthoritativeSessionLocally,
 } from "@/lib/poju/session-manager";
@@ -1217,7 +1218,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const seeded = seedFixedWelcomeMessages(session, locale);
     if (seeded !== session) {
       onSessionUpdate(seeded);
-      void savePOJUSession(seeded);
+      void savePOJUSessionLocalMirror(seeded);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per profile-less session
   }, [session.session_id, session.messages, session.matrix_payload]);
@@ -1235,7 +1236,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     next = dedupeWelcomeMessages(next);
     if (next !== session) {
       onSessionUpdate(next);
-      void savePOJUSession(next);
+      void savePOJUSessionLocalMirror(next);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dedupe / migrate welcome when messages change
   }, [session.session_id, session.messages, session.matrix_payload, locale]);
@@ -1300,7 +1301,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       // Joint + solo: paint question + thinking immediately. PASS tip is a parallel
       // 3s overlay (already dispatched) — never gate the model send on that timer.
       onSessionUpdate(cleared);
-      await savePOJUSession(cleared);
+      await savePOJUSessionLocalMirror(cleared);
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
@@ -1469,37 +1470,67 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       // Local-first PWA: load IndexedDB personal analysis for the server model path.
       // Lifecycle / DC / Freeze / CAS remain server-authoritative.
       const profileBundle = await loadSessionProfileBundle(baseSession);
+      const chatLocale = processLocale(baseSession);
+      const chatTurnInput = {
+        user_message: userMessage,
+        client_turn_id: clientTurnId,
+        locale: chatLocale,
+        signal: ac.signal,
+        attachment: attachWire,
+        profile: profileBundle.profile,
+        base_analysis: profileBundle.base_analysis,
+        claimed_stored_profile_id: profileBundle.resolved_profile_id,
+      } as const;
       let authoritative;
       try {
         authoritative = await submitAuthoritativeChatTurn({
           session: baseSession,
-          user_message: userMessage,
-          client_turn_id: clientTurnId,
           expected_revision: expectedRevision,
-          locale: processLocale(baseSession),
-          signal: ac.signal,
-          attachment: attachWire,
-          profile: profileBundle.profile,
-          base_analysis: profileBundle.base_analysis,
-          claimed_stored_profile_id: profileBundle.resolved_profile_id,
+          ...chatTurnInput,
         });
       } catch (authErr) {
         if (
-          authErr instanceof ClientSessionAuthorityError &&
-          isRecoverableSessionAuthorityCode(authErr.body.code)
+          !(authErr instanceof ClientSessionAuthorityError) ||
+          !isRecoverableSessionAuthorityCode(authErr.body.code)
         ) {
-          const restored = await restoreAuthoritativeSessionFromClient({
-            sessionId: baseSession.session_id,
-            loadLocal: loadPOJUSession,
-            saveLocal: async (s) => {
-              await mirrorAuthoritativeSessionLocally(s);
-            },
-          });
-          if (restored.session) {
-            onSessionUpdate(restored.session);
-          }
+          throw authErr;
         }
-        throw authErr;
+
+        // Local welcome/unlock saves used to CAS-bump session_revision while the
+        // server stayed at 0 → "stale session revision: client N, server 0".
+        // Resync to server revision and retry the same turn once.
+        const serverRevHint =
+          typeof authErr.body.current_revision === "number" &&
+          Number.isFinite(authErr.body.current_revision)
+            ? authErr.body.current_revision
+            : null;
+        const restored = await restoreAuthoritativeSessionFromClient({
+          sessionId: baseSession.session_id,
+          loadLocal: loadPOJUSession,
+          saveLocal: async (s) => {
+            await mirrorAuthoritativeSessionLocally(s);
+          },
+        });
+        const serverSession = restored.session;
+        if (!serverSession) throw authErr;
+        const retryRevision =
+          serverRevHint ??
+          (typeof serverSession.session_revision === "number"
+            ? serverSession.session_revision
+            : typeof restored.revision === "number"
+              ? restored.revision
+              : 0);
+        const retrySession = {
+          ...serverSession,
+          session_revision: retryRevision,
+        };
+        onSessionUpdate(retrySession);
+        await savePOJUSessionLocalMirror(retrySession).catch(() => undefined);
+        authoritative = await submitAuthoritativeChatTurn({
+          session: retrySession,
+          expected_revision: retryRevision,
+          ...chatTurnInput,
+        });
       }
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
@@ -1923,7 +1954,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       messages: base.messages.filter((m) => m.meta?.kind !== "paywall"),
     };
     onSessionUpdate(unlocked);
-    await savePOJUSession(unlocked);
+    await savePOJUSessionLocalMirror(unlocked);
 
     if (!profileId) {
       console.warn("[poju] preview unlock: Pass spent but no stored profile ? paywall cleared");
@@ -2150,9 +2181,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         messages: [...baseSession.messages, optimisticUser],
         locked_output_locale: parseAppLocale(locale),
       };
-      // Session write after paint ? may hitch, but bubble is already on screen.
+      // Session write after paint — keep authority revision (no local CAS bump).
       onSessionUpdate(withPending);
-      void savePOJUSession(withPending).catch(() => undefined);
+      void savePOJUSessionLocalMirror(withPending).catch(() => undefined);
       if (isDefaultNewSessionTitle(baseSession.original_question) && topic) {
         setSessionRows((prev) =>
           prev.map((x) =>
@@ -2210,7 +2241,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
         const withPaywall: POJUSessionState = { ...withPending, messages };
         onSessionUpdate(withPaywall);
-        await savePOJUSession(withPaywall);
+        await savePOJUSessionLocalMirror(withPaywall);
       } catch (e) {
         console.error("[poju] preview pass check failed:", e);
         setPassGateOpen(false);
@@ -2220,7 +2251,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
         const withPaywall: POJUSessionState = { ...withPending, messages };
         onSessionUpdate(withPaywall);
-        await savePOJUSession(withPaywall);
+        await savePOJUSessionLocalMirror(withPaywall);
       } finally {
         setUnlockBusy(false);
       }

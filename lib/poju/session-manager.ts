@@ -374,6 +374,28 @@ export async function mirrorAuthoritativeSessionLocally(
   return mirrored;
 }
 
+/**
+ * Local UI / preview writes (welcome, unlock flags, pending question paint).
+ * Keeps the exact authority `session_revision` — does NOT CAS-bump.
+ * Bumping here desyncs IndexedDB from the server (client N, server 0) and
+ * makes the first `/api/poju/chat` fail with session_revision_conflict.
+ */
+export async function savePOJUSessionLocalMirror(state: POJUSessionState): Promise<void> {
+  const session_revision =
+    typeof state.session_revision === "number" && Number.isFinite(state.session_revision)
+      ? state.session_revision
+      : 0;
+  const dc_write_revision =
+    typeof state.dc_write_revision === "number" && Number.isFinite(state.dc_write_revision)
+      ? state.dc_write_revision
+      : 0;
+  await writeLocalAuthorityMirror({
+    ...state,
+    session_revision,
+    dc_write_revision,
+  });
+}
+
 export interface CommitDecisionContextChangeInput {
   session: POJUSessionState;
   idempotency_key: string;
