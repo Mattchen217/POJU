@@ -16,6 +16,53 @@ export function isPreviewSession(session: POJUSessionState): boolean {
   return getUnlockStatus(session) === "preview";
 }
 
+/**
+ * Pass unlock is local-first. Server snapshots often stay `preview` until the
+ * unlocked flag is carried into a CAS commit — never let a restore/adopt wipe
+ * a paid unlock back to the Pass gate.
+ */
+export function preserveClientUnlockStatus(
+  previous: POJUSessionState | null | undefined,
+  next: POJUSessionState,
+): POJUSessionState {
+  if (!previous || previous.unlock_status !== "unlocked") return next;
+  if (next.unlock_status === "unlocked") return next;
+  return {
+    ...next,
+    unlock_status: "unlocked",
+    unlock_via: previous.unlock_via ?? next.unlock_via,
+  };
+}
+
+/** Ensure the in-flight user bubble stays visible while authority retries. */
+export function withOptimisticUserTurn(
+  session: POJUSessionState,
+  userMessage: string,
+  clientTurnId: string,
+): POJUSessionState {
+  const content = userMessage.trim();
+  if (!content) return session;
+  const already = session.messages.some(
+    (m) =>
+      m.role === "user" &&
+      !m.is_rejected &&
+      (m.client_id === clientTurnId || m.content.trim() === content),
+  );
+  if (already) return session;
+  return {
+    ...session,
+    messages: [
+      ...session.messages,
+      {
+        role: "user" as const,
+        content,
+        timestamp: new Date().toISOString(),
+        client_id: clientTurnId,
+      },
+    ],
+  };
+}
+
 export const ENERGY_MATRIX_MESSAGE_CLIENT_ID = "poju-energy-matrix-preview";
 
 /** Assistant bubble that carries the cosmic energy matrix (incl. legacy rows with payload only). */

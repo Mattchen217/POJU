@@ -471,17 +471,35 @@ export function extractIncomingUserTurn(input: {
   return { client_turn_id, content, message };
 }
 
+/**
+ * Bind the incoming user turn onto the server snapshot.
+ * Client Pass unlock is local-first (`unlock_status: unlocked`); server init is
+ * always `preview`. Without carrying the client's unlock forward, the first
+ * successful chat commit would downgrade the session back to preview and the
+ * next turn would re-open the Pass gate.
+ */
 export function bindAuthoritativeChatSession(
   record: ServerSessionRecord,
   turn: IncomingUserTurn,
+  clientSession?: POJUSessionState | null,
 ): POJUSessionState {
   const snapshot = applyServerExpiryToSnapshot(record.session_snapshot, record);
   const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
+  const clientUnlocked = clientSession?.unlock_status === "unlocked";
+  const serverUnlocked = snapshot.unlock_status === "unlocked";
   return {
     ...snapshot,
+    ...(clientUnlocked || serverUnlocked
+      ? {
+          unlock_status: "unlocked" as const,
+          unlock_via:
+            clientSession?.unlock_via ?? snapshot.unlock_via ?? undefined,
+        }
+      : {}),
     messages: [...messages, turn.message],
   };
 }
+
 
 export async function commitAuthoritativeSessionUpdate(input: {
   sessionId: string;
@@ -586,9 +604,12 @@ export async function commitAuthoritativeSessionUpdate(input: {
     );
   } catch (error) {
     if (error instanceof SessionPersistenceUnavailableError) {
+      const timedOut = /timed out|BUSY|SCRIPT/i.test(error.message);
       throw new SessionAuthorityError("server_persistence_unavailable", error.message, {
         session_id: input.sessionId,
         expected_revision: input.expectedRevision,
+        // Redis Lua script timeout is transient — client may retry the same turn once.
+        recoverable: timedOut,
       });
     }
     throw new SessionAuthorityError(
