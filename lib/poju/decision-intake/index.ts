@@ -65,7 +65,11 @@ export {
   M1R_STARTER_DIRS,
   __setM1rPersistForTests,
 } from "./fresh-session-bootstrap";
-export { projectAdaptiveQuestionForUi, projectDecisionUnderstandingBox } from "./ui-projection";
+export {
+  projectAdaptiveQuestionForUi,
+  projectDecisionUnderstandingBox,
+  stampDecisionUnderstandingBoxOnLastUser,
+} from "./ui-projection";
 export {
   reportMappingForDir,
   candidateHasReportPurpose,

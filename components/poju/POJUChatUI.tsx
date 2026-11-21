@@ -3856,32 +3856,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     intakeProtection && (intakeSessionBlocked || intakeContinueReady || intakeProtection.status === "warned"),
   );
   const showUnderstandingDock = Boolean(session.agent_v2) && !di2ReportSurfaceActive;
-  // Welcome + Understanding live in the scroll header (above chat), not in composerTop —
-  // composerTop was crowding out the 3 suggested replies above the input.
+  // Fixed welcome stays in scrollHeader; Decision Understanding is per user turn
+  // (messageAfterUser) so transcript order is welcome → user → box → assistant.
   const scrollHeaderNode = (
-    <>
-      <div
-        className={
-          hasUserMessage
-            ? "pchat__welcome-pin pchat__welcome-pin--compact"
-            : "pchat__welcome-pin"
-        }
-      >
-        {session.matrix_payload ? (
-          <MatrixNarrativeReply payload={session.matrix_payload} locale={locale} />
-        ) : (
-          <FixedEasternOsWelcome locale={locale} />
-        )}
-      </div>
-      {showUnderstandingDock ? (
-        <>
-          {!session.decision_understanding ? (
-            <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
-          ) : null}
-          <DecisionUnderstandingPanel session={session} locale={sessionLang} />
-        </>
-      ) : null}
-    </>
+    <div
+      className={
+        hasUserMessage
+          ? "pchat__welcome-pin pchat__welcome-pin--compact"
+          : "pchat__welcome-pin"
+      }
+    >
+      {session.matrix_payload ? (
+        <MatrixNarrativeReply payload={session.matrix_payload} locale={locale} />
+      ) : (
+        <FixedEasternOsWelcome locale={locale} />
+      )}
+    </div>
   );
   const composerTopNode =
     showIntakeBanner && intakeProtection ? (
@@ -4011,7 +4001,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     return list;
   }, [visibleMessages, deliveryPageActive, paintPendingUser]);
 
-  const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText } =
+  const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText, messageAfterUser } =
     useMemo(() => {
       // Delivery page: no chat message slots (centerSlot owns the UI).
       if (deliveryPageActive) {
@@ -4021,6 +4011,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           messageFooters: {} as Record<string, ReactNode>,
           messageFollowUps: {} as Record<string, ReactNode>,
           messageFollowUpActionsText: {} as Record<string, string>,
+          messageAfterUser: {} as Record<string, ReactNode>,
         };
       }
       const slots: Record<string, ReactNode> = {};
@@ -4028,12 +4019,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const footers: Record<string, ReactNode> = {};
       const followUps: Record<string, ReactNode> = {};
       const followUpActions: Record<string, string> = {};
+      const afterUser: Record<string, ReactNode> = {};
       const lastAssistantMid = [...visibleMessages]
         .reverse()
         .find((m) => m.role === "assistant" && !m.is_rejected);
       const lastAssistantKey = lastAssistantMid
         ? (lastAssistantMid.client_id ?? lastAssistantMid.timestamp)
         : null;
+      const lastUserMid = [...visibleMessages]
+        .reverse()
+        .find((m) => m.role === "user" && !m.is_rejected);
+      const lastUserKey = lastUserMid
+        ? (lastUserMid.client_id ?? lastUserMid.timestamp)
+        : paintPendingUser?.id ?? null;
 
       for (const m of visibleMessages) {
         const mid = m.client_id ?? m.timestamp;
@@ -4259,6 +4257,44 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           );
         }
       }
+      if (m.role === "user" && !m.is_rejected && showUnderstandingDock) {
+        const snap = m.meta?.decision_understanding_box;
+        if (snap) {
+          afterUser[mid] = (
+            <DecisionUnderstandingPanel key={`du:${mid}`} box={snap} locale={sessionLang} />
+          );
+        } else if (mid === lastUserKey) {
+          afterUser[mid] = !session.decision_understanding ? (
+            <AgendaProgressPanel key={`ag:${mid}`} agent={session.agent_v2} locale={sessionLang} />
+          ) : (
+            <DecisionUnderstandingPanel
+              key={`du-live:${mid}`}
+              session={session}
+              locale={sessionLang}
+            />
+          );
+        }
+      }
+    }
+
+    if (
+      paintPendingUser &&
+      showUnderstandingDock &&
+      !afterUser[paintPendingUser.id]
+    ) {
+      afterUser[paintPendingUser.id] = !session.decision_understanding ? (
+        <AgendaProgressPanel
+          key={`ag:${paintPendingUser.id}`}
+          agent={session.agent_v2}
+          locale={sessionLang}
+        />
+      ) : (
+        <DecisionUnderstandingPanel
+          key={`du-live:${paintPendingUser.id}`}
+          session={session}
+          locale={sessionLang}
+        />
+      );
     }
 
     return {
@@ -4267,6 +4303,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       messageFooters: footers,
       messageFollowUps: followUps,
       messageFollowUpActionsText: followUpActions,
+      messageAfterUser: afterUser,
     };
   }, [
     shelfActive,
@@ -4291,10 +4328,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     prepareShelfOpenRequest,
     tJoint,
     session.decision_blueprint,
+    session.decision_understanding,
     session.pending_decision_report_job_id,
     session.freeze_bound_report_jobs,
     di2Busy,
     di2Failure,
+    showUnderstandingDock,
+    paintPendingUser,
   ]);
 
   const activeComposerOptions = useMemo(() => {
@@ -4689,6 +4729,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         messageFooters={messageFooters}
         messageFollowUps={messageFollowUps}
         messageFollowUpActionsText={messageFollowUpActionsText}
+        messageAfterUser={messageAfterUser}
         paywallOverlay={
           paywallOpen ? (
             <PojuPaywallInline

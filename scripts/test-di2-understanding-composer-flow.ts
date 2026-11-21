@@ -140,10 +140,12 @@ function main() {
   const panel = read("components/poju/DecisionUnderstandingPanel.tsx");
   const css = read("components/poju/poju-chat.css");
 
-  wrap("A/layout: scrollHeader hosts welcome+Understanding above chat; composerTop stays short", () => {
+  wrap("A/layout: scrollHeader hosts welcome; Understanding is per user turn; composerTop stays short", () => {
     assert.match(chat, /scrollHeader\?: ReactNode/);
     assert.match(chat, /composerTop\?: ReactNode/);
+    assert.match(chat, /messageAfterUser\?: Record<string, ReactNode>/);
     assert.match(chat, /pchat__scroll-header/);
+    assert.match(chat, /pchat__understanding-dock/);
     const inputbar = chat.slice(chat.indexOf("pchat__inputbar"));
     const top = inputbar.indexOf("pchat__composer-top");
     const unit = inputbar.indexOf("pchat__composer-unit");
@@ -151,11 +153,17 @@ function main() {
     assert.doesNotMatch(inputbar.slice(unit, unit + 800), /composerTop/);
     assert.match(css, /\.pchat__composer-top\s*\{/);
     assert.match(css, /\.pchat__scroll-header\s*\{/);
+    assert.match(css, /\.pchat__understanding-dock\s*\{/);
   });
 
-  wrap("A/layout: Understanding is in scrollHeader, not crowding suggested replies", () => {
+  wrap("A/layout: Understanding is under each user turn, not crowding suggested replies", () => {
     assert.match(ui, /scrollHeader=\{deliveryPageActive \? undefined : scrollHeaderNode\}/);
-    assert.match(ui, /scrollHeaderNode[\s\S]*DecisionUnderstandingPanel/);
+    assert.match(ui, /messageAfterUser=\{messageAfterUser\}/);
+    assert.match(ui, /afterUser\[mid\][\s\S]*DecisionUnderstandingPanel/);
+    assert.doesNotMatch(
+      ui.slice(ui.indexOf("const scrollHeaderNode"), ui.indexOf("const scrollHeaderNode") + 900),
+      /DecisionUnderstandingPanel/,
+    );
     assert.doesNotMatch(
       ui.slice(ui.indexOf("const composerTopNode"), ui.indexOf("const composerTopNode") + 900),
       /DecisionUnderstandingPanel/,
@@ -185,6 +193,8 @@ function main() {
     assert.ok(titleIdx < currentIdx && currentIdx < alreadyIdx && alreadyIdx < needIdx && needIdx < insightIdx);
     assert.match(panel, /Current question lives in the chat bubble/);
     assert.match(panel, /projectDecisionUnderstandingBox/);
+    assert.match(panel, /Show details|Hide details|\\u5c55\\u5f00\\u8be6\\u60c5|\\u6536\\u8d77\\u8be6\\u60c5/);
+    assert.match(panel, /defaultExpanded = false/);
     assert.doesNotMatch(panel, /dir_id|direction_id|ddr_id|readiness_verdict|budget_asked|readiness_can_ask|investigation_directions|personal_pattern_status/);
   });
 
@@ -428,11 +438,26 @@ function main() {
       { dir_id: "DIR_VISA", label: "Visa requirement", fact_ids: ["f_na"], status: "n_a", user_confirmed_any: true },
     ]);
     const zhMarkup = renderToStaticMarkup(
-      createElement(DecisionUnderstandingPanel, { session, locale: "zh" }),
+      createElement(DecisionUnderstandingPanel, {
+        session,
+        locale: "zh",
+        defaultExpanded: true,
+      }),
     );
     const enMarkup = renderToStaticMarkup(
+      createElement(DecisionUnderstandingPanel, {
+        session,
+        locale: "en",
+        defaultExpanded: true,
+      }),
+    );
+    const collapsedMarkup = renderToStaticMarkup(
       createElement(DecisionUnderstandingPanel, { session, locale: "en" }),
     );
+    assert.match(collapsedMarkup, /Show details/);
+    assert.doesNotMatch(collapsedMarkup, /Personal Pattern Insight/);
+    assert.doesNotMatch(collapsedMarkup, /Already understood/);
+    assert.match(collapsedMarkup, /Information readiness/);
     const zhNa = "\u5df2\u786e\u8ba4\u4e0d\u9002\u7528";
     const zhAlready = "\u5df2\u7ecf\u4e86\u89e3";
     const zhItems = listItemsAfterHeading(zhMarkup, zhAlready);

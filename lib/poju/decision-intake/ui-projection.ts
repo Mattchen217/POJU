@@ -267,3 +267,28 @@ export function projectDecisionUnderstandingBox(
     current_intake_layer: ui.current_intake_layer,
   };
 }
+
+/**
+ * Freeze the user-facing Understanding box onto the latest user turn so the
+ * chat transcript can show one box per Q&A (not a single docked panel).
+ */
+export function stampDecisionUnderstandingBoxOnLastUser(
+  session: POJUSessionState,
+): POJUSessionState {
+  if (!session.decision_understanding) return session;
+  const box = projectDecisionUnderstandingBox(session);
+  const messages = session.messages.slice();
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const m = messages[i];
+    if (!m || m.role !== "user" || m.is_rejected) continue;
+    messages[i] = {
+      ...m,
+      meta: {
+        ...m.meta,
+        decision_understanding_box: box,
+      },
+    };
+    return { ...session, messages };
+  }
+  return session;
+}

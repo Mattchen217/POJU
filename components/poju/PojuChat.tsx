@@ -203,17 +203,20 @@ export interface PojuChatProps {
   messageFollowUps?: Record<string, ReactNode>;
   /** Plain text for copy/actions on follow-up blocks. */
   messageFollowUpActionsText?: Record<string, string>;
+  /**
+   * Blocks rendered directly under a user bubble (e.g. per-turn Decision
+   * Understanding). Kept in the transcript order: user → afterUser → assistant.
+   */
+  messageAfterUser?: Record<string, ReactNode>;
   /** Paywall / unlock sheet rendered above the composer (not in message list). */
   paywallOverlay?: ReactNode;
   /**
-   * Unified Decision Understanding (and related status) fixed above the
-   * composer unit. Not a chat message, and not hidden by centerSlot.
-   * Prefer `scrollHeader` for Understanding so suggested replies keep the
-   * composer slot; keep composerTop for short intake banners only.
+   * Short banners above the composer unit (intake protection, etc.).
+   * Keep Decision Understanding out of here — it belongs under each user turn.
    */
   composerTop?: ReactNode;
   /**
-   * Pinned region at the top of the message scroll (welcome + Understanding).
+   * Pinned region at the top of the message scroll (fixed welcome only).
    * Not part of the chat bubble stream and not hidden by centerSlot.
    */
   scrollHeader?: ReactNode;
@@ -318,6 +321,7 @@ export default function PojuChat(props: PojuChatProps) {
     messageFooters,
     messageFollowUps,
     messageFollowUpActionsText,
+    messageAfterUser,
     paywallOverlay,
     initialScrollPosition = "bottom",
     onActivityRenderReady,
@@ -1092,6 +1096,9 @@ export default function PojuChat(props: PojuChatProps) {
                     renderAssistantMessage(m)
                   )}
                 </div>
+                {m.role === "user" && messageAfterUser?.[m.id] ? (
+                  <div className="pchat__understanding-dock">{messageAfterUser[m.id]}</div>
+                ) : null}
                 {messageFollowUps?.[m.id] ? (
                   <div className="pchat__msg pchat__msg--ai">
                     <div className="pchat__ai-row">
@@ -1188,6 +1195,9 @@ export default function PojuChat(props: PojuChatProps) {
                     renderAssistantMessage(m)
                   )}
                 </div>
+                {m.role === "user" && messageAfterUser?.[m.id] ? (
+                  <div className="pchat__understanding-dock">{messageAfterUser[m.id]}</div>
+                ) : null}
                 {messageFollowUps?.[m.id] ? (
                   <div className="pchat__msg pchat__msg--ai">
                     <div className="pchat__ai-row">

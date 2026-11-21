@@ -198,6 +198,11 @@ export interface POJUMessage {
     m1_skipped_generic_chat_llm?: boolean;
     m1_authorized_question?: boolean;
     m21_readiness_stop?: boolean;
+    /**
+     * Per-turn Decision Understanding box snapshot (user message).
+     * Rendered under that user bubble; not a second fact store.
+     */
+    decision_understanding_box?: import("./decision-intake/ui-projection").DecisionUnderstandingBoxView;
   };
   is_rejected?: boolean;
   rejection_type?: "too_long" | "jailbreak" | "spam";
