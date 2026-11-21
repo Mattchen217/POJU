@@ -863,16 +863,16 @@
 .pchat__understanding-box {
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 12px 8px;
+  padding: 12px 14px 10px;
   border-radius: 14px;
   background: var(--pchat-glass-bg);
   backdrop-filter: var(--pchat-glass-blur);
   -webkit-backdrop-filter: var(--pchat-glass-blur);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--pchat-glass-shadow);
-  color: var(--muted-foreground, rgba(255, 255, 255, 0.72));
-  font-size: 12px;
-  line-height: 1.45;
+  color: var(--muted-foreground, rgba(255, 255, 255, 0.78));
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
 .pchat__understanding-box__summary {
@@ -886,9 +886,9 @@
   min-width: 0;
   align-items: baseline;
   gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 650;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--foreground, #fff);
 }
@@ -924,7 +924,7 @@
   border: 0;
   background: transparent;
   color: rgba(242, 202, 80, 0.92);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -939,31 +939,41 @@
 .pchat__understanding-box__body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin-top: 10px;
-  padding-top: 8px;
+  padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
 .pchat__understanding-box__label {
-  margin-bottom: 2px;
-  font-weight: 600;
-  color: var(--foreground, rgba(255, 255, 255, 0.88));
+  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--foreground, rgba(255, 255, 255, 0.9));
 }
 
 .pchat__understanding-box__text,
 .pchat__understanding-box__body ul {
   color: inherit;
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
 .pchat__understanding-box__body ul {
   margin: 0;
-  padding-left: 1.15rem;
+  padding-left: 1.2rem;
+}
+
+.pchat__understanding-box__body li {
+  margin: 0.2em 0;
 }
 
 .pchat__understanding-box__hint {
-  font-size: 10px;
-  opacity: 0.78;
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.82;
 }
 
 /* ---------- 支付弹层（输入框上方，非消息流） ---------- */

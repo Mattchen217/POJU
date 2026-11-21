@@ -113,6 +113,7 @@ import {
   segment2RegenerateButtonLabel,
   SHOW_SEGMENT2_TEST_REGENERATE,
   SEGMENT2_INPUT_LOCK_HARD_MS,
+  clearPendingSegment2Job,
   withPendingSegment2Job,
 } from "@/lib/poju/phases/segment2";
 import {
@@ -979,6 +980,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     [session],
   );
 
+  const di2SessionActive = isDecisionIntakeV2Session(displaySession);
   const visibleMessages = useMemo(
     () =>
       displaySession.messages.filter(
@@ -986,9 +988,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           m.role !== "system" &&
           !m.content.trim().startsWith("[SYSTEM:") &&
           m.meta?.kind !== "paywall" &&
-          !isCenterChatReportDump(m),
+          !isCenterChatReportDump(m) &&
+          // DI2 transcript must not show legacy Segment-2 spine bubbles (你卡在哪里…).
+          !(
+            di2SessionActive &&
+            (m.meta?.segment2_analysis ||
+              m.meta?.segment2_bridge_question ||
+              m.meta?.segment2_agenda_bridge_failed)
+          ),
       ),
-    [displaySession.messages],
+    [displaySession.messages, di2SessionActive],
   );
   const paywallOpen = isPreviewSession(session) && hasPaywallMessage(session);
   const initialScrollPosition = useMemo(
@@ -2821,8 +2830,45 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     await savePOJUSession(next);
   }
 
+  /**
+   * DI2 sessions must never carry legacy Segment-2 resume markers or spine bubbles.
+   * A prior remount probe could have injected "### 你卡在哪里" into IndexedDB — strip on load.
+   */
+  const di2Segment2PurgeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isDecisionIntakeV2Session(session)) return;
+    if (di2Segment2PurgeRef.current === session.session_id) return;
+    const pollutedMsgs = session.messages.some(
+      (m) =>
+        m.meta?.segment2_analysis ||
+        m.meta?.segment2_bridge_question ||
+        m.meta?.segment2_agenda_bridge_failed,
+    );
+    const pendingSeg = Boolean(session.pending_segment2_job_id?.trim());
+    if (!pollutedMsgs && !pendingSeg) {
+      di2Segment2PurgeRef.current = session.session_id;
+      return;
+    }
+    di2Segment2PurgeRef.current = session.session_id;
+    const cleanedMsgs = session.messages.filter(
+      (m) =>
+        !m.meta?.segment2_analysis &&
+        !m.meta?.segment2_bridge_question &&
+        !m.meta?.segment2_agenda_bridge_failed,
+    );
+    const next = clearPendingSegment2Job({
+      ...session,
+      messages: cleanedMsgs,
+    });
+    onSessionUpdate(next);
+    void savePOJUSession(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot purge per session id
+  }, [session.session_id, session.pending_segment2_job_id, session.messages]);
+
   /** Resume Segment-2 Call A/B poll after refresh / reopen (job id in local IndexedDB session). */
   useEffect(() => {
+    // DI2 owns collecting via Adaptive Question — never resume legacy Segment-2 here.
+    if (isDecisionIntakeV2Session(session)) return;
     const pending = session.pending_segment2_job_id?.trim() || "";
     const stage = session.pending_segment2_stage;
     if (!pending || (stage !== "report" && stage !== "agenda")) return;
@@ -2861,6 +2907,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (segment2KvProbeRef.current) return;
     if (segment2JobId) return;
     if (session.pending_segment2_job_id?.trim()) return;
+    // DI2 collecting_context is healthy without breakthrough_core — do not treat as stuck Call A.
+    if (isDecisionIntakeV2Session(session)) return;
     const agent = session.agent_v2;
     if (!agent || agent.current_phase !== "collecting_context") return;
 

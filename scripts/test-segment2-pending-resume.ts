@@ -37,6 +37,10 @@ const ui = readFileSync(resolve(__dirname, "../components/poju/POJUChatUI.tsx"),
 assert.ok(ui.includes("resume pending job after remount"));
 assert.ok(ui.includes("persistPendingSegment2Job"));
 assert.ok(ui.includes("KV probe Call A"));
+// DI2 collecting must not be misread as stuck Segment-2 Call A on remount.
+assert.ok(ui.includes("DI2 collecting_context is healthy without breakthrough_core"));
+assert.ok(ui.includes("never resume legacy Segment-2 here"));
+assert.ok(ui.includes("legacy Segment-2 spine bubbles"));
 
 const control = readFileSync(
   resolve(__dirname, "../lib/poju/phases/segment2/control.ts"),
