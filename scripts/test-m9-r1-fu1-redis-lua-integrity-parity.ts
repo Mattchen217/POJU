@@ -363,8 +363,10 @@ async function main() {
     assert.match(lua, /if not raw then return 5 end/);
     assert.match(lua, /if not ok then return 6 end/);
     assert.match(lua, /tonumber\(obj\['revision'\]\) ~= expected/);
-    assert.match(lua, /nextObj\['session_generation'\]/);
-    assert.match(lua, /nextObj\['expires_at'\] > obj\['expires_at'\]/);
+    // Next identity is scalar ARGV (no cjson.decode of opaque ARGV[2] nextJson).
+    assert.match(lua, /tonumber\(ARGV\[11\]\)/);
+    assert.match(lua, /nextExpires > obj\['expires_at'\]/);
+    assert.doesNotMatch(lua, /decode\(ARGV\[2\]\)/);
     assert.match(lua, /change_type'\] == 'freeze'/);
     assert.match(lua, /return 8/);
     assert.match(lua, /return 9/);

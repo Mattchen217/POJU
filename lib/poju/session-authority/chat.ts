@@ -188,20 +188,48 @@ export async function executeAuthoritativeChatTurn(
   // invented only in the browser after a successful authoritative response.
   sessionOut = applyAuthoritativeFirstTurnDisplayTitle(sessionOut, incoming.content);
 
-  let committed;
-  try {
-    committed = await commitAuthoritativeSessionUpdate({
-      sessionId,
-      expectedRevision: record.revision,
-      expectedGeneration: record.session_generation,
-      snapshot: sessionOut,
-      last_committed_turn_id: incoming.client_turn_id,
-    });
-  } catch (error) {
-    if (error instanceof SessionAuthorityError && error.code === "session_cas_conflict") {
-      throw error;
+  // Understanding / adaptive models already ran above. If Redis CAS times out,
+  // retry ONLY the commit — never re-run the model (that was the user-visible
+  // failure mode: OpenRouter had a valid JSON, the page still showed 连接异常).
+  const COMMIT_ATTEMPTS = 3;
+  let committed: Awaited<ReturnType<typeof commitAuthoritativeSessionUpdate>> | null = null;
+  let lastCommitError: unknown = null;
+  for (let attempt = 1; attempt <= COMMIT_ATTEMPTS; attempt += 1) {
+    throwIfAborted(opts?.signal);
+    try {
+      committed = await commitAuthoritativeSessionUpdate({
+        sessionId,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: sessionOut,
+        last_committed_turn_id: incoming.client_turn_id,
+      });
+      lastCommitError = null;
+      break;
+    } catch (error) {
+      lastCommitError = error;
+      const timedOut =
+        error instanceof SessionAuthorityError &&
+        error.code === "server_persistence_unavailable" &&
+        /timed out|BUSY|SCRIPT/i.test(error.message);
+      if (!timedOut || attempt >= COMMIT_ATTEMPTS) {
+        throw error;
+      }
+      console.warn(
+        `[poju/chat] session CAS timed out after model success — commit-only retry ${attempt}/${COMMIT_ATTEMPTS}`,
+        { sessionId, revision: record.revision },
+      );
+      await new Promise<void>((resolve) => setTimeout(resolve, 80 * attempt));
     }
-    throw error;
+  }
+  if (!committed) {
+    throw lastCommitError instanceof Error
+      ? lastCommitError
+      : new SessionAuthorityError(
+          "server_persistence_unavailable",
+          "session CAS failed after model success",
+          { session_id: sessionId, expected_revision: record.revision },
+        );
   }
 
   const llm = capture.current ?? llmFromCommittedSession(committed.session_snapshot);

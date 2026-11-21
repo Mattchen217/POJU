@@ -504,12 +504,37 @@ export function encodeLedgerBindingArgs(snapshot: LedgerBindingSnapshot): string
 
 /**
  * 0-based eval args index of the exact TypeScript-validated Session Record
- * raw string (Lua ARGV[10]). An empty string means the record was absent
- * during validation. Ledger binding args, when present, start immediately
- * after this slot (Lua ARGV[11], 0-based index 10).
+ * raw string (Lua ARGV[14]). An empty string means the record was absent
+ * during validation.
+ *
+ * ARGV layout (1-based in Lua):
+ *  1 expectedRevision
+ *  2 nextJson (opaque — TypeScript already inspected; Lua must NOT cjson.decode it)
+ *  3 ttlSeconds
+ *  4 sessionId
+ *  5 nowIso
+ *  6 intakeCommit (0/1)
+ *  7 ledgerHeadKey
+ *  8 ledgerEntryPrefix
+ *  9 probeLimit
+ * 10 nextRevision
+ * 11 nextGeneration
+ * 12 nextExpiresAt
+ * 13 nextSnapshotHash
+ * 14 validatedSessionRaw
+ * 15+ [intake] hintRaw, startVersion, endVersion, entryCount, entryRaw...
+ *
+ * Why scalars for next: DI2 session_snapshot grows large (DC + understanding +
+ * messages). Decoding ARGV[2] inside Redis Lua is what timed out after the
+ * Understanding model already succeeded — the user saw "连接异常" despite a
+ * valid model JSON.
  */
-export const VALIDATED_SESSION_RAW_ARGV_INDEX = 9;
-export const LEDGER_BINDING_ARGV_OFFSET = 10;
+export const NEXT_REVISION_ARGV_INDEX = 9;
+export const NEXT_GENERATION_ARGV_INDEX = 10;
+export const NEXT_EXPIRES_ARGV_INDEX = 11;
+export const NEXT_SNAPSHOT_HASH_ARGV_INDEX = 12;
+export const VALIDATED_SESSION_RAW_ARGV_INDEX = 13;
+export const LEDGER_BINDING_ARGV_OFFSET = 14;
 
 /**
  * Compare the exact TypeScript-validated Session Record raw value with the
@@ -821,6 +846,7 @@ export function applySessionAuthorityCas(input: {
  * KEYS[1] = session record key
  * ARGV: expectedRevision, nextJson, ttlSeconds, sessionId, nowIso, intakeCommit (0/1),
  *       ledgerHeadKey, ledgerEntryPrefix, probeLimit,
+ *       nextRevision, nextGeneration, nextExpiresAt, nextSnapshotHash,
  *       validatedSessionRaw (exact TypeScript-validated raw, or empty if absent),
  *       [intake] hintRaw, startVersion, endVersion, entryCount, entryRaw...
  *
@@ -836,6 +862,11 @@ export function applySessionAuthorityCas(input: {
  * fail-closes on version, required fields, identity, snapshot.session_id,
  * and snapshot revision mismatches, and never treats a corrupted Record as
  * missing.
+ *
+ * CRITICAL: ARGV[2] (nextJson) is treated as an opaque blob. TypeScript already
+ * ran inspectStoredSessionRecord on it. Lua must not cjson.decode ARGV[2] —
+ * DI2 snapshots are large enough that decode alone times out on Upstash after
+ * the Understanding model has already succeeded.
  */
 export const SESSION_AUTHORITY_CAS_LUA = `
 -- Hash policy: this script does not recompute canonicalHash / SHA-256 of
@@ -845,6 +876,7 @@ export const SESSION_AUTHORITY_CAS_LUA = `
 -- validated raw values and fail-closes on a change, deletion, appearance,
 -- or newly visible ledger entry. Lua still fail-closes on structural
 -- Record integrity and never treats a corrupted Record as missing.
+-- ARGV[2] nextJson is opaque (no cjson.decode) — identity comes from ARGV[10..13].
 local function decode(raw)
   if not raw then return nil, false end
   if type(raw) ~= 'string' then raw = tostring(raw) end
@@ -885,7 +917,7 @@ local function inspect_record(obj, sessionId, fail_code)
 end
 
 local raw = redis.call('GET', KEYS[1])
-local validatedSessionRaw = ARGV[10]
+local validatedSessionRaw = ARGV[14]
 if type(validatedSessionRaw) ~= 'string' then return 6 end
 -- Bind the exact TypeScript-validated raw Session Record. Lua does not
 -- recompute canonicalHash. A byte-level mismatch, deletion, or appearance
@@ -905,17 +937,21 @@ local current_ok, current_fail = inspect_record(obj, sessionId, 6)
 if not current_ok then return current_fail end
 
 local expected = tonumber(ARGV[1])
-local nextObj, nextOk = decode(ARGV[2])
-if not nextOk then return 7 end
-local next_ok, next_fail = inspect_record(nextObj, sessionId, 7)
-if not next_ok then return next_fail end
+-- Next record identity: scalars from TypeScript-prevalidated next (no decode of ARGV[2]).
+local nextRev = tonumber(ARGV[10])
+local nextGen = tonumber(ARGV[11])
+local nextExpires = ARGV[12]
+local nextSnapHash = ARGV[13]
+if not is_number(nextRev) or nextRev < 0 then return 7 end
+if not is_number(nextGen) then return 7 end
+if type(nextExpires) ~= 'string' or string.len(nextExpires) == 0 then return 7 end
+if type(nextSnapHash) ~= 'string' or string.len(nextSnapHash) == 0 then return 7 end
+if type(ARGV[2]) ~= 'string' or string.len(ARGV[2]) == 0 then return 7 end
 
 if tonumber(obj['revision']) ~= expected then return 0 end
-if type(nextObj['session_id']) ~= 'string' or nextObj['session_id'] ~= sessionId then return 7 end
-if tonumber(nextObj['session_generation']) ~= tonumber(obj['session_generation']) then return 7 end
-local nextRev = tonumber(nextObj['revision'])
+if nextGen ~= tonumber(obj['session_generation']) then return 7 end
 if nextRev ~= expected and nextRev ~= expected + 1 then return 7 end
-if type(nextObj['expires_at']) ~= 'string' or type(obj['expires_at']) ~= 'string' or nextObj['expires_at'] > obj['expires_at'] then return 7 end
+if type(obj['expires_at']) ~= 'string' or nextExpires > obj['expires_at'] then return 7 end
 
 local intake = tonumber(ARGV[6]) == 1
 if intake then
@@ -935,10 +971,10 @@ if intake then
   -- the exact raw values. Lua compares live Redis GET bytes against those
   -- raw values and never interprets an unbound or changed entry as a valid
   -- non-Freeze head. Lua does not recompute canonicalHash / entry_hash.
-  local validatedHintRaw = ARGV[11]
-  local startVersion = tonumber(ARGV[12]) or 0
-  local endVersion = tonumber(ARGV[13]) or 0
-  local entryCount = tonumber(ARGV[14]) or 0
+  local validatedHintRaw = ARGV[15]
+  local startVersion = tonumber(ARGV[16]) or 0
+  local endVersion = tonumber(ARGV[17]) or 0
+  local entryCount = tonumber(ARGV[18]) or 0
   if type(validatedHintRaw) ~= 'string' then return 8 end
   if entryCount ~= math.floor(entryCount) or entryCount < 0 then return 8 end
   if endVersion > limit then return 9 end
@@ -956,7 +992,7 @@ if intake then
   end
 
   for i = 1, entryCount do
-    local expectedRaw = ARGV[14 + i]
+    local expectedRaw = ARGV[18 + i]
     if type(expectedRaw) ~= 'string' or string.len(expectedRaw) == 0 then return 8 end
     local live = redis.call('GET', prefix .. tostring(startVersion + i - 1))
     if (not live) or live ~= expectedRaw then return 10 end
@@ -966,7 +1002,7 @@ if intake then
   if nextLive then return 10 end
 
   if endVersion > 0 then
-    local headRaw = ARGV[14 + entryCount]
+    local headRaw = ARGV[18 + entryCount]
     local head, headOk = decode(headRaw)
     if not headOk then return 8 end
     if head['change_type'] == 'freeze' or head['dc_status'] == 'final' then
@@ -1100,6 +1136,11 @@ async function runLuaSessionCas(
     dcLedgerHeadKey(sessionId),
     ledgerEntryPrefix(sessionId),
     String(LEDGER_CAS_PROBE_LIMIT),
+    // Next identity scalars — Lua must not cjson.decode the opaque nextJson.
+    String(next.revision),
+    String(next.session_generation),
+    String(next.expires_at),
+    String(next.snapshot_hash),
     validatedSessionRaw,
   ];
 
