@@ -454,9 +454,13 @@ async function main() {
     assert.match(lua, /validatedSessionRaw/);
     assert.match(lua, /raw ~= validatedSessionRaw/);
     assert.match(lua, /return 11/);
-    assert.match(lua, /ARGV\[10\]/);
-    assert.match(lua, /validatedHintRaw = ARGV\[11\]/);
-    assert.match(lua, /ARGV\[14 \+ i\]/);
+    assert.match(lua, /ARGV\[14\]/);
+    assert.match(lua, /validatedHintRaw = ARGV\[15\]/);
+    assert.match(lua, /ARGV\[18 \+ i\]/);
+    // Next identity is scalar ARGV — Lua must not cjson.decode the opaque nextJson.
+    assert.match(lua, /tonumber\(ARGV\[10\]\)/);
+    assert.match(lua, /opaque|ARGV\[2\] nextJson is opaque|no cjson\.decode/);
+    assert.doesNotMatch(lua, /decode\(ARGV\[2\]\)/);
     assert.match(lua, /return 10/);
     assert.match(lua, /liveHint ~= validatedHintRaw/);
     assert.match(SESSION_AUTHORITY_RAW_MGET_LUA, /redis\.call\('GET', KEYS\[i\]\)/);
@@ -494,7 +498,24 @@ async function main() {
       entryRaws: ['{"entry":1}'],
       frozen: false,
     });
-    const prefix = ["0", "{}", "60", "sid", "now", "1", "head", "entry:", "512", '{"session":true}'];
+    // ARGV 0..13: expected, nextJson, ttl, sid, now, intake, head, prefix, limit,
+    // nextRev, nextGen, nextExpires, nextSnapHash, validatedSessionRaw
+    const prefix = [
+      "0",
+      "{}",
+      "60",
+      "sid",
+      "now",
+      "1",
+      "head",
+      "entry:",
+      "512",
+      "1",
+      "1",
+      "2099-01-01T00:00:00.000Z",
+      "snap-hash",
+      '{"session":true}',
+    ];
     const decoded = decodeLedgerBindingArgs([...prefix, ...ledgerSlice]);
     assert.ok(decoded);
     assert.equal(decoded?.endVersion, 1);
