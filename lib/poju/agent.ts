@@ -16,6 +16,7 @@ import {
   sessionReadyForFinalConfirm,
   sessionEligibleForFinalConfirm,
 } from "@/lib/poju/decision-intake/confirm-and-freeze";
+import { stampDecisionUnderstandingBoxOnLastUser } from "@/lib/poju/decision-intake/ui-projection";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import type { AssistantHistoryAttestation, POJUAction, POJUSessionState, POJUMessage, ToolSuggestionPayload } from "@/lib/poju/types";
 import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
@@ -1483,16 +1484,18 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           | "intake_continued",
       },
     };
-    return withSessionProfileFlags({
-      ...m1CollectingTurn.session,
-      messages: [...messagesWithUser, protectAssistant],
-      last_interaction_at: nowProtect,
-      decision_context: m1CollectingTurn.session.decision_context,
-      decision_blueprint: m1CollectingTurn.session.decision_blueprint,
-      decision_understanding: m1CollectingTurn.session.decision_understanding,
-      adaptive_ask_plan: m1CollectingTurn.session.adaptive_ask_plan ?? m1CollectingTurn.plan ?? null,
-      ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
-    });
+    return stampDecisionUnderstandingBoxOnLastUser(
+      withSessionProfileFlags({
+        ...m1CollectingTurn.session,
+        messages: [...messagesWithUser, protectAssistant],
+        last_interaction_at: nowProtect,
+        decision_context: m1CollectingTurn.session.decision_context,
+        decision_blueprint: m1CollectingTurn.session.decision_blueprint,
+        decision_understanding: m1CollectingTurn.session.decision_understanding,
+        adaptive_ask_plan: m1CollectingTurn.session.adaptive_ask_plan ?? m1CollectingTurn.plan ?? null,
+        ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
+      }),
+    );
   }
 
   // DI2 Personalized Understanding path: after M1 authorized question or
@@ -1660,6 +1663,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         turnId,
       );
     }
+    sessionOut = stampDecisionUnderstandingBoxOnLastUser(sessionOut);
     if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
     return sessionOut;
   }
@@ -2207,7 +2211,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
     };
   }
-if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
+  sessionOut = stampDecisionUnderstandingBoxOnLastUser(sessionOut);
+  if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
   return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);
 }
 

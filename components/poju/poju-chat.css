@@ -828,9 +828,10 @@
 }
 
 .pchat__scroll-header {
-  width: min(640px, 100%);
-  max-width: var(--pchat-read-max);
-  margin: 0 auto 14px;
+  /* Match AI reply column (messages width), not the narrower 640px composer. */
+  width: 100%;
+  max-width: none;
+  margin: 0 0 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -838,6 +839,14 @@
 
 .pchat__welcome-pin {
   width: 100%;
+}
+
+/* Per-turn Understanding: align with AI glass (avatar + gap offset). */
+.pchat__understanding-dock {
+  box-sizing: border-box;
+  width: 100%;
+  margin: -18px 0 46px;
+  padding-left: calc(2.5rem + 0.75rem);
 }
 
 .pchat__welcome-pin--compact .pmw__body,
@@ -852,6 +861,8 @@
 }
 
 .pchat__understanding-box {
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px 8px;
   border-radius: 14px;
   background: var(--pchat-glass-bg);
@@ -864,18 +875,10 @@
   line-height: 1.45;
 }
 
-.pchat__understanding-box__toggle {
+.pchat__understanding-box__summary {
   display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
 .pchat__understanding-box__title {
@@ -898,7 +901,7 @@
 }
 
 .pchat__understanding-box__meter {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .pchat__understanding-box__bar {
@@ -914,11 +917,32 @@
   background: rgba(242, 202, 80, 0.85);
 }
 
+.pchat__understanding-box__details-toggle {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(242, 202, 80, 0.92);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pchat__understanding-box__details-toggle:hover {
+  color: #f2ca50;
+}
+
 .pchat__understanding-box__body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .pchat__understanding-box__label {
@@ -1756,6 +1780,9 @@
     max-width: 78% !important;
     max-height: var(--pchat-user-bubble-max-height);
     overflow-y: auto;
+  }
+  .pchat__understanding-dock {
+    padding-left: calc(2.5rem + 0.75rem);
   }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
   .pchat__composer-top { width: 100%; max-width: 100%; max-height: min(36vh, 280px); }

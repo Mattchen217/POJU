@@ -87,7 +87,10 @@ export {
   UNDERSTANDING_RESPONSE_MODEL_VERSION,
 } from "./understanding-response-model";
 export { computeReadinessProgress } from "./understanding-state";
-export { projectDecisionUnderstandingBox } from "./ui-projection";
+export {
+  projectDecisionUnderstandingBox,
+  stampDecisionUnderstandingBoxOnLastUser,
+} from "./ui-projection";
 export {
   confirmUnderstandingAndFreeze,
   isFinalUnderstandingConfirmText,

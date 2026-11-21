@@ -1,21 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { POJUSessionState } from "@/lib/poju/types";
-import { projectDecisionUnderstandingBox } from "@/lib/poju/decision-intake/ui-projection";
+import {
+  projectDecisionUnderstandingBox,
+  type DecisionUnderstandingBoxView,
+} from "@/lib/poju/decision-intake/ui-projection";
 
-/** Unified Decision Understanding box — Session SoT only; no second fact store. */
+/** Unified Decision Understanding box — Session SoT or a per-turn snapshot. */
 export function DecisionUnderstandingPanel({
   session,
   locale,
+  box: boxProp,
+  defaultExpanded = false,
 }: {
-  session: POJUSessionState | null | undefined;
+  session?: POJUSessionState | null;
   locale: string;
+  /** Frozen per-turn projection; when set, session is not required. */
+  box?: DecisionUnderstandingBoxView | null;
+  defaultExpanded?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
-  if (!session?.decision_understanding) return null;
-  const box = projectDecisionUnderstandingBox(session);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const box =
+    boxProp ??
+    (session?.decision_understanding ? projectDecisionUnderstandingBox(session) : null);
+
+  useEffect(() => {
+    if (!expanded || !box) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const root = rootRef.current;
+      if (!root) return;
+      const target = event.target;
+      if (target instanceof Node && root.contains(target)) return;
+      setExpanded(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [expanded, box]);
+
+  if (!box) return null;
+
   const isZh = locale.toLowerCase().startsWith("zh");
   const title = isZh ? "\u51b3\u7b56\u7406\u89e3" : "DECISION UNDERSTANDING";
   const currentTitle = isZh ? "\u5f53\u524d\u7406\u89e3" : "Current understanding";
@@ -30,9 +55,11 @@ export function DecisionUnderstandingPanel({
   const progressHint = isZh
     ? "\u4fe1\u606f\u51c6\u5907\u7a0b\u5ea6\uff08\u57fa\u4e8e\u8c03\u67e5\u5b8c\u6210\u6761\u4ef6\u4e0e\u4fe1\u606f\u7f3a\u53e3\uff0c\u4e0d\u662f\u63d0\u95ee\u6b21\u6570\uff09"
     : "Information readiness (completion conditions and remaining gaps, not question count)";
+  const expandLabel = isZh ? "\u5c55\u5f00\u8be6\u60c5" : "Show details";
+  const collapseLabel = isZh ? "\u6536\u8d77\u8be6\u60c5" : "Hide details";
   const confirmHint =
-    session.agent_v2?.current_phase === "awaiting_confirmation" &&
-    session.decision_understanding.readiness.can_ask === false
+    session?.agent_v2?.current_phase === "awaiting_confirmation" &&
+    session.decision_understanding?.readiness.can_ask === false
       ? isZh
         ? "\u82e5\u5f53\u524d\u7406\u89e3\u51c6\u786e\uff0c\u8bf7\u5728\u4e0b\u65b9\u8f93\u5165\u6846\u5185\u9009\u62e9\u786e\u8ba4\uff1b\u82e5\u6709\u9057\u6f0f\u6216\u9700\u8981\u8865\u5145\uff0c\u8bf7\u76f4\u63a5\u5728\u8f93\u5165\u6846\u91cc\u8bf4\u660e\u3002"
         : "If this understanding is accurate, choose confirm in the input box below. To point out a gap or add something, type it directly in the input box."
@@ -40,32 +67,39 @@ export function DecisionUnderstandingPanel({
   const percent = box.progress_percent;
 
   return (
-    <section className="pchat__understanding-box" aria-label={title}>
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="pchat__understanding-box__toggle"
-        aria-expanded={expanded}
-      >
-        <span className="pchat__understanding-box__title">
+    <section
+      ref={rootRef}
+      className="pchat__understanding-box"
+      aria-label={title}
+      data-expanded={expanded ? "true" : "false"}
+    >
+      <div className="pchat__understanding-box__summary">
+        <div className="pchat__understanding-box__title">
           {title}
           {percent != null ? <span className="pchat__understanding-box__pct">{percent}%</span> : null}
-        </span>
-        {expanded ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
-      </button>
-      {percent != null ? (
-        <div className="pchat__understanding-box__meter" aria-hidden={!expanded}>
-          <div className="pchat__understanding-box__bar">
-            <div
-              className="pchat__understanding-box__bar-fill"
-              style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
-            />
-          </div>
         </div>
-      ) : null}
+        {percent != null ? (
+          <div className="pchat__understanding-box__meter">
+            <div className="pchat__understanding-box__bar">
+              <div
+                className="pchat__understanding-box__bar-fill"
+                style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+        {percent != null ? <div className="pchat__understanding-box__hint">{progressHint}</div> : null}
+        <button
+          type="button"
+          className="pchat__understanding-box__details-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? collapseLabel : expandLabel}
+        </button>
+      </div>
       {expanded ? (
         <div className="pchat__understanding-box__body">
-          {percent != null ? <div className="pchat__understanding-box__hint">{progressHint}</div> : null}
           <div>
             <div className="pchat__understanding-box__label">{currentTitle}</div>
             <div className="pchat__understanding-box__text">{box.current_understanding ?? "\u2014"}</div>
