@@ -172,13 +172,18 @@ export async function submitAuthoritativeChatTurn(
 
 export function isRecoverableSessionAuthorityCode(
   code: SessionAuthorityErrorCode | string | undefined,
+  opts?: { recoverable?: boolean },
 ): boolean {
-  return (
+  if (
     code === "session_revision_conflict" ||
     code === "session_cas_conflict" ||
     code === "ledger_integrity_failure" ||
     code === "ledger_probe_incomplete" ||
     code === "ledger_snapshot_changed" ||
     code === "session_snapshot_changed"
-  );
+  ) {
+    return true;
+  }
+  // Redis Lua script timeout is marked recoverable on the server.
+  return code === "server_persistence_unavailable" && opts?.recoverable === true;
 }

@@ -134,7 +134,7 @@ export async function executeAuthoritativeChatTurn(
     );
   }
 
-  const boundSession = bindAuthoritativeChatSession(record, incoming);
+  const boundSession = bindAuthoritativeChatSession(record, incoming, body.session);
   const profileInputs = resolveAuthoritativeChatProfileInputs({
     serverSnapshot: record.session_snapshot,
     profile: body.profile,

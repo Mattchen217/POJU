@@ -239,7 +239,9 @@ import {
   isPreviewSession,
   markReleasePendingQuestion,
   POJU_RELEASE_PENDING_QUESTION_FLAG,
+  preserveClientUnlockStatus,
   readReleasePendingGen,
+  withOptimisticUserTurn,
 } from "@/lib/poju/preview-unlock";
 import {
   getUnlockReportMessage,
@@ -959,17 +961,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     revealReplyFromActivity(slotActivity);
   }, [revealReplyFromActivity, slotActivity]);
 
-  /** Empty lines = spinner only (stages 1 & 3). Stage 2 copy rides on thinkingLiveLine. */
-  const ACTIVITY_SPINNER_ONLY: ReadonlySet<PojuActivity> = useMemo(
-    () => new Set(["understanding", "collecting", "summarizing", "deep_reckoning"]),
-    [],
-  );
-
+  /** Stage captions (understanding/collecting/…) ride on activity lines + avatar. */
   const pendingActivityLines = useMemo(() => {
     if (!slotActivity) return null;
-    if (ACTIVITY_SPINNER_ONLY.has(slotActivity)) return [] as string[];
     return getActivityLines(slotActivity);
-  }, [slotActivity, getActivityLines, ACTIVITY_SPINNER_ONLY]);
+  }, [slotActivity, getActivityLines]);
 
   const scrollChatToBottom = useCallback((_behavior: ScrollBehavior = "smooth") => {
     /* PojuChat scrolls internally */
@@ -1016,7 +1012,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     isPendingUnlockQuestionRelease(session.session_id) &&
     !unlockReportGateDismissed;
   const unlockReportGateBlocking = unlockReportGatePending;
-  const hasUserMessage = visibleMessages.some((m) => m.role === "user");
+  const hasUserMessage =
+    visibleMessages.some((m) => m.role === "user") || Boolean(paintPendingUser);
   const expired = isSessionExpired(session.expires_at);
   const previewComposerBlocked = isPreviewSession(session) && hasPaywallMessage(session);
   /** Joint: no free chat / model until PASS charged (preview shell + welcome only). */
@@ -1501,51 +1498,74 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       } catch (authErr) {
         if (
           !(authErr instanceof ClientSessionAuthorityError) ||
-          !isRecoverableSessionAuthorityCode(authErr.body.code)
+          !isRecoverableSessionAuthorityCode(authErr.body.code, {
+            recoverable: authErr.body.recoverable,
+          })
         ) {
           throw authErr;
         }
 
-        // Local welcome/unlock saves used to CAS-bump session_revision while the
-        // server stayed at 0 → "stale session revision: client N, server 0".
-        // Resync to server revision and retry the same turn once.
-        const serverRevHint =
-          typeof authErr.body.current_revision === "number" &&
-          Number.isFinite(authErr.body.current_revision)
-            ? authErr.body.current_revision
-            : null;
-        const restored = await restoreAuthoritativeSessionFromClient({
-          sessionId: baseSession.session_id,
-          loadLocal: loadPOJUSession,
-          saveLocal: async (s) => {
-            await mirrorAuthoritativeSessionLocally(s);
-          },
+        // Keep the optimistic user bubble + Pass unlock visible during retry.
+        flushSync(() => {
+          setPaintPendingUser({ id: clientTurnId, content: userMessage });
         });
-        const serverSession = restored.session;
-        if (!serverSession) throw authErr;
-        const retryRevision =
-          serverRevHint ??
-          (typeof serverSession.session_revision === "number"
-            ? serverSession.session_revision
-            : typeof restored.revision === "number"
-              ? restored.revision
-              : 0);
-        const retrySession = {
-          ...serverSession,
-          session_revision: retryRevision,
-        };
-        onSessionUpdate(retrySession);
-        await savePOJUSessionLocalMirror(retrySession).catch(() => undefined);
-        authoritative = await submitAuthoritativeChatTurn({
-          session: retrySession,
-          expected_revision: retryRevision,
-          ...chatTurnInput,
-        });
+
+        if (authErr.body.code === "server_persistence_unavailable") {
+          // Redis Lua script timeout — same revision, do not wipe the transcript.
+          await sleep(150);
+          if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
+          authoritative = await submitAuthoritativeChatTurn({
+            session: baseSession,
+            expected_revision: expectedRevision,
+            ...chatTurnInput,
+          });
+        } else {
+          // Local welcome/unlock saves used to CAS-bump session_revision while the
+          // server stayed at 0 → "stale session revision: client N, server 0".
+          // Resync to server revision and retry the same turn once.
+          const serverRevHint =
+            typeof authErr.body.current_revision === "number" &&
+            Number.isFinite(authErr.body.current_revision)
+              ? authErr.body.current_revision
+              : null;
+          const restored = await restoreAuthoritativeSessionFromClient({
+            sessionId: baseSession.session_id,
+            loadLocal: loadPOJUSession,
+            saveLocal: async (s) => {
+              await mirrorAuthoritativeSessionLocally(s);
+            },
+          });
+          const serverSession = restored.session;
+          if (!serverSession) throw authErr;
+          const retryRevision =
+            serverRevHint ??
+            (typeof serverSession.session_revision === "number"
+              ? serverSession.session_revision
+              : typeof restored.revision === "number"
+                ? restored.revision
+                : 0);
+          const retrySession = withOptimisticUserTurn(
+            preserveClientUnlockStatus(baseSession, {
+              ...serverSession,
+              session_revision: retryRevision,
+            }),
+            userMessage,
+            clientTurnId,
+          );
+          onSessionUpdate(retrySession);
+          await savePOJUSessionLocalMirror(retrySession).catch(() => undefined);
+          authoritative = await submitAuthoritativeChatTurn({
+            session: retrySession,
+            expected_revision: retryRevision,
+            ...chatTurnInput,
+          });
+        }
       }
       if (ac.signal.aborted || gen !== sendGenerationRef.current) return;
 
       // Mirror only the CAS-committed snapshot — never mutate fields locally first.
-      let toPersist = authoritative.session;
+      // Keep Pass unlock if the server snapshot still says preview.
+      let toPersist = preserveClientUnlockStatus(baseSession, authoritative.session);
       setSessionRows((prev) =>
         prev.map((x) =>
           x.session_id === toPersist.session_id
@@ -1667,12 +1687,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
-      if (errorRestore) {
-        setPaintPendingUser(null);
-        onSessionUpdate(errorRestore.rollbackSession);
-        setInput(errorRestore.typed);
-        if (errorRestore.attachment) setComposerAttachment(errorRestore.attachment);
-      }
       const isProviderQueue =
         err instanceof Error &&
         (err.name === "OpenRouterProviderQueueError" ||
@@ -1684,6 +1698,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           console.warn(
             `[poju] provider queue ? silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
           );
+          // Keep optimistic user visible across silent retries.
+          flushSync(() => {
+            setPaintPendingUser({
+              id:
+                [...sessionRef.current.messages]
+                  .reverse()
+                  .find((m) => m.role === "user" && m.content.trim() === userMessage.trim())
+                  ?.client_id ?? safeRandomUUID(),
+              content: userMessage,
+            });
+          });
           pendingSilentRetryRef.current = {
             rollbackSession: errorRestore.rollbackSession,
             userMessage,
@@ -1693,6 +1718,26 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
         await persistInfraBusyTurn(errorRestore, userMessage);
         return;
+      }
+
+      // Connection / authority failures: keep the user bubble in the transcript.
+      // Rolling back made the send look like it never happened until a later reply.
+      if (errorRestore) {
+        setPaintPendingUser(null);
+        const kept = withOptimisticUserTurn(
+          preserveClientUnlockStatus(
+            sessionRef.current,
+            errorRestore.rollbackSession,
+          ),
+          userMessage,
+          [...sessionRef.current.messages]
+            .reverse()
+            .find((m) => m.role === "user" && m.content.trim() === userMessage.trim())
+            ?.client_id ??
+            safeRandomUUID(),
+        );
+        onSessionUpdate(kept);
+        await savePOJUSessionLocalMirror(kept).catch(() => undefined);
       }
 
       const authorityCode =

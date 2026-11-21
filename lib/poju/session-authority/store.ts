@@ -1116,8 +1116,20 @@ async function runLuaSessionCas(
     evalArgs.push(...encodeLedgerBindingArgs(snapshot.snapshot));
   }
 
-  const result = await kv.eval(SESSION_AUTHORITY_CAS_LUA, [serverSessionKey(sessionId)], evalArgs);
-  return luaCasCodeToResult(result);
+  // Upstash/Redis may time out on large session_snapshot JSON + ledger bind.
+  // One quiet retry absorbs transient SCRIPT timeouts without failing the turn.
+  const evalOnce = () =>
+    kv.eval!(SESSION_AUTHORITY_CAS_LUA, [serverSessionKey(sessionId)], evalArgs);
+  try {
+    const result = await evalOnce();
+    return luaCasCodeToResult(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/timed out|BUSY|SCRIPT/i.test(message)) throw error;
+    await new Promise<void>((resolve) => setTimeout(resolve, 80));
+    const result = await evalOnce();
+    return luaCasCodeToResult(result);
+  }
 }
 
 export function createKvSessionAuthorityStore(kv: KvLike): SessionAuthorityStore {

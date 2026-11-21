@@ -77,6 +77,13 @@ export function prepareUnlockReleaseSession(
   userQuestion: string,
 ): POJUSessionState {
   const q = userQuestion.trim();
+  // Keep the optimistic bubble's client_id so paintPendingUser / turn idempotency
+  // stay stable across the strip-and-reappend.
+  const priorUser = q
+    ? [...session.messages]
+        .reverse()
+        .find((m) => m.role === "user" && m.content.trim() === q)
+    : undefined;
   const messages = session.messages.filter((m) => {
     if (m.meta?.kind === "paywall") return false;
     if (q && m.role === "user" && m.content.trim() === q) return false;
@@ -86,7 +93,14 @@ export function prepareUnlockReleaseSession(
   const userMsg: POJUMessage = {
     role: "user",
     content: q,
-    timestamp: new Date().toISOString(),
+    timestamp:
+      typeof priorUser?.timestamp === "string" && priorUser.timestamp
+        ? priorUser.timestamp
+        : new Date().toISOString(),
+    ...(typeof priorUser?.client_id === "string" && priorUser.client_id.trim()
+      ? { client_id: priorUser.client_id.trim() }
+      : {}),
+    ...(priorUser?.meta ? { meta: priorUser.meta } : {}),
   };
 
   return {
