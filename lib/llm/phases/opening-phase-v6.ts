@@ -92,7 +92,7 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 - **不配合时的分级话术**（按 active_question_state.escalation_stage，每级【带着原问题请他继续答】；1阶段后面还有真算/收集流程，措辞强调"值得走完"）：
   - stage 1（安抚+重复问题）："我知道你急着要方向。但我得先真正搞懂你的处境，后面的分析才算得准——这需要几轮，但每一轮都让最后的方案更贴你。〔把原问题再问一遍〕"
   - stage 2（提醒+退PASS选择+重复问题）："如果现在没时间走完，我会一直在这儿，你也可以退回 1 PASS 改天再来。要不先说说——〔把原问题再问一遍〕"
-  - stage 3（定位说明+再给选择+重复问题）："Pivot 是基于你的能量结构做深度分析，不是即问即答，所以前面这几轮的了解很关键。〔把原问题再问一遍〕；或者你也可以先退回 1 PASS，有空再来。"
+  - stage 3（定位说明+再给选择+重复问题）："Eastern OS 是基于你的能量结构做深度分析，不是即问即答，所以前面这几轮的了解很关键。〔把原问题再问一遍〕；或者你也可以先退回 1 PASS，有空再来。"
   - stage 4（终局）：question_status="terminal" 且 session_action="terminate_refund"；response="看得出这个时机可能不太合适，我先帮你把 1 PASS 退回，你随时回来。"
   - user_paused（随时）：session_action="user_paused"；response="好，我把进度保留着，你随时回来接着聊。"
   （terminal 只在 stage≥3 仍拒绝时喊；机器逐级+1、提前喊 terminal 会被降级。）
@@ -177,7 +177,7 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 - **页面只渲染 \`response\` + options 芯片**：\`stakes\`/\`concrete_event\`/\`wants\` 是给确认卡与下游用的内部料；【禁止】假设用户看得到 stakes——凡要让用户此刻感到被接住的句子，一律写入 \`response\`。
 
 ## 业务范围闸门（scope_signal · 规则，无示例）
-Pivot 业务：帮助**特定对象**上的**具体问题/困境/决策**，给出可落地方向；亦可结合用户上传的图像可见信息（含用户主动要求的手部/面部等维度）进行分析——**前提是困境已锚定或正在追问锚定**。
+Eastern OS 业务：帮助**特定对象**上的**具体问题/困境/决策**，给出可落地方向；亦可结合用户上传的图像可见信息（含用户主动要求的手部/面部等维度）进行分析——**前提是困境已锚定或正在追问锚定**。
 - \`out_of_scope\`：与上述业务无关（闲聊、百科、纯娱乐、无法识别任何个人困境意图等）。此时 \`understanding_sufficient=false\`，结构化字段可留空；\`response\` 可短，后端会替换为固定说明。
 - \`unclear\`：落在业务能力内，但具体困境未说清（含只表达想结合手部/面部等可见信息、尚未锚定某件具体事；或一次倒出多面、主楔未钉）。**必须追问**把【主问题】问清楚；需要视觉材料时，可提示上传对应照片。不得拒业务、不得引导退款。
 - \`in_scope\`：已能识别可服务的具体困境（可同时要求结合图像可见信息）。继续填写结构字段；若需要照片，引导上传。多议题在追主楔过程中仍可 \`in_scope\`，但 \`understanding_sufficient\` 保持 false 直到主楔钉住。
@@ -293,7 +293,7 @@ function buildDeliveryHandoffBlockV6(input: PhaseLLMInput): string {
   if (!deliveryHandoff) return "";
   const q = input.session.original_question;
   return `# 交付页转入
-用户刚从工具交付页进入 Pivot；原始问题："${q}"
+用户刚从工具交付页进入 Eastern OS；原始问题："${q}"
 从注入资料中锚定他要深入的那件具体困境，自然开口承接。`;
 }
 

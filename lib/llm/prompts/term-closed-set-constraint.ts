@@ -40,14 +40,14 @@ export function buildClosedSetConstraintPromptBlock(_locale: string): string {
 export function buildChatPhaseTermBindingBlock(locale: string): string {
   const isZh = locale.startsWith("zh");
   if (isZh) {
-    return `# Pivot 聊天 \`response\` · 术语绑定（硬规则）
+    return `# Eastern OS 聊天 \`response\` · 术语绑定（硬规则）
 
 - \`response\` 是用户可见**白话正文**：**禁止**传统命理真词、**严禁** \`⟦t:…⟧\` / \`?t:…\` 打标、**严禁**自造软译。
 - 需要命理举证时：只用双层结构的「依据与推理」块写闭集【多字/复合】传统真词；软译由后端 autoMark/SSOT 处理。
 - **禁止**孤立单字命理词硬塞进 \`response\`。
 - 未在 structured 出现的神煞/十神/长生/本盘动态关系**不得**写进 \`response\`。`;
   }
-  return `# Pivot chat \`response\` · term binding (hard rules)
+  return `# Eastern OS chat \`response\` · term binding (hard rules)
 
 - \`response\` is user-visible **vernacular body**: **no** traditional metaphysical jargon, **never** \`⟦t:…⟧\` / \`?t:…\` markers, **never** coined soft labels.
 - If evidence is needed: only inside a dual-layer **Evidence & reasoning** block, write closed-set multi-char traditional forms; soft-translate is code-side (autoMark + SSOT).

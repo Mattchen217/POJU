@@ -1325,8 +1325,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
             m1CollectingTurn.ask_error?.trim() ||
             "planner_blocked_open_p0_p1";
           const blockText =
-            "【系统】当前仍有未完成的必要调查项，但本轮未能生成合规的授权提问。会话仍在收集中，请重试或换一种表述。" +
-            `（${blockReason}）`;
+            "【系统】当前仍有未完成的必要调查项，但本轮未能生成合规的授权提问。会话仍在收集中，请重试或换一种表述。";
+          // Keep technical reason in logs / meta only — never surface codes to users.
           const blockedSession: POJUSessionState = {
             ...m1CollectingTurn.session,
             messages: messagesWithUser,
@@ -1393,8 +1393,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           const noPlanAssistant: POJUMessage = {
             role: "assistant",
             content:
-              "【系统】本轮未能生成合规的授权提问，会话仍在收集中。请重试或换一种表述。" +
-              `（${noPlanReason}）`,
+              "【系统】本轮未能生成合规的授权提问，会话仍在收集中。请重试或换一种表述。",
             timestamp: nowPre,
             client_id: safeRandomUUID(),
             meta: {

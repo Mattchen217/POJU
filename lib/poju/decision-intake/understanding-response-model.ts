@@ -120,22 +120,61 @@ function languageLine(locale: string): string {
   return "Output language: English.";
 }
 
-function parseJsonObject(text: string): Record<string, unknown> | null {
-  const raw = text.trim();
-  if (!raw) return null;
-  try {
-    const v = JSON.parse(raw) as unknown;
-    if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
-  } catch {
-    /* try fence strip */
+function stripJsonFences(text: string): string {
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return fenced?.[1]?.trim() || trimmed;
+}
+
+/** Extract the outermost `{...}` by brace balance (tolerates leading prose). */
+function extractBalancedObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inString) {
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
   }
-  const m = /\{[\s\S]*\}/.exec(raw);
-  if (!m) return null;
-  try {
-    const v = JSON.parse(m[0]!) as unknown;
-    if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
-  } catch {
-    return null;
+  return null;
+}
+
+function parseJsonObject(text: string): Record<string, unknown> | null {
+  const raw = stripJsonFences(text);
+  if (!raw) return null;
+  const candidates = [raw, extractBalancedObject(raw)].filter(
+    (x): x is string => typeof x === "string" && x.length > 0,
+  );
+  for (const candidate of candidates) {
+    try {
+      const v = JSON.parse(candidate) as unknown;
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        return v as Record<string, unknown>;
+      }
+    } catch {
+      /* try next */
+    }
   }
   return null;
 }
@@ -537,66 +576,110 @@ export async function generateDecisionUnderstandingTurn(input: {
     }
   }
 
-  try {
-    const result = await openRouterChatCompletion({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: buildUserPayload({
-            locale,
-            init_only,
-            user_statement,
-            session: input.session,
-            understanding: input.understanding,
-            plan: input.plan,
-            legal_candidates: input.legal_candidates,
-            profile,
-          }),
-        },
-      ],
-      json_mode: true,
-      route_path: "chat",
-      session_id: input.session.session_id,
-      locked_provider: input.session.locked_provider ?? null,
-      max_tokens: 3200,
-      temperature: 0.3,
-      timeout_ms: UNDERSTANDING_RESPONSE_TIMEOUT_MS,
-      max_attempts: 1,
-      reasoning_effort: "medium",
-      signal: input.signal,
-      call_type: "decision_intake_understanding_response",
-      phase_name: "Decision Intake Understanding Response",
-    });
-    const call_meta: UnderstandingModelCallMeta = {
-      source: "openrouter",
-      provider: result.provider ?? null,
-      model: result.model ?? null,
-      latency_ms: Date.now() - startedAt,
-    };
-    const parsed = parseJsonObject(result.text ?? "");
-    if (!parsed) {
-      return { ok: false, reason: "invalid_json", profile, call_meta };
-    }
-    const validated = validateOutput(parsed, legalSet, readinessCanAsk);
-    if (!validated.ok) {
-      return { ok: false, reason: validated.reason, detail: validated.detail, profile, call_meta };
-    }
-    return { ok: true, output: validated.output, profile, call_meta };
-  } catch (e) {
-    return {
-      ok: false,
-      reason: "openrouter_failed",
-      detail: e instanceof Error ? e.message : String(e),
-      profile,
-      call_meta: {
+  const userPayload = buildUserPayload({
+    locale,
+    init_only,
+    user_statement,
+    session: input.session,
+    understanding: input.understanding,
+    plan: input.plan,
+    legal_candidates: input.legal_candidates,
+    profile,
+  });
+  const messages = [
+    { role: "system" as const, content: SYSTEM_PROMPT },
+    { role: "user" as const, content: userPayload },
+  ];
+
+  // JSON must be parseable on first usable attempt. StreamLake + medium reasoning
+  // often burns tokens / wraps prose → invalid_json; keep effort low and retry once.
+  const maxModelAttempts = 2;
+  let lastFail: {
+    reason: string;
+    detail?: string;
+    call_meta: UnderstandingModelCallMeta;
+  } | null = null;
+
+  for (let attempt = 1; attempt <= maxModelAttempts; attempt++) {
+    try {
+      const result = await openRouterChatCompletion({
+        messages,
+        json_mode: true,
+        route_path: "chat",
+        session_id: input.session.session_id,
+        locked_provider: input.session.locked_provider ?? null,
+        max_tokens: 6000,
+        temperature: attempt === 1 ? 0.3 : 0.2,
+        timeout_ms: UNDERSTANDING_RESPONSE_TIMEOUT_MS,
+        max_attempts: 1,
+        reasoning_effort: "low",
+        signal: input.signal,
+        call_type: "decision_intake_understanding_response",
+        phase_name: "Decision Intake Understanding Response",
+      });
+      const call_meta: UnderstandingModelCallMeta = {
+        source: "openrouter",
+        provider: result.provider ?? null,
+        model: result.model ?? null,
+        latency_ms: Date.now() - startedAt,
+      };
+      const parsed = parseJsonObject(result.text ?? "");
+      if (!parsed) {
+        const snippet = String(result.text ?? "")
+          .slice(0, 240)
+          .replace(/\s+/g, " ")
+          .trim();
+        console.warn(
+          `[di2-understanding] invalid_json attempt=${attempt}/${maxModelAttempts}`,
+          snippet || "(empty)",
+        );
+        lastFail = { reason: "invalid_json", detail: snippet || undefined, call_meta };
+        continue;
+      }
+      const validated = validateOutput(parsed, legalSet, readinessCanAsk);
+      if (!validated.ok) {
+        console.warn(
+          `[di2-understanding] validate_fail attempt=${attempt}/${maxModelAttempts}`,
+          validated.reason,
+          validated.detail ?? "",
+        );
+        lastFail = {
+          reason: validated.reason,
+          detail: validated.detail,
+          call_meta,
+        };
+        // Schema / candidate membership errors can recover on a fresh sample.
+        continue;
+      }
+      return { ok: true, output: validated.output, profile, call_meta };
+    } catch (e) {
+      const call_meta: UnderstandingModelCallMeta = {
         source: "openrouter",
         provider: null,
         model: null,
         latency_ms: Date.now() - startedAt,
-      },
-    };
+      };
+      lastFail = {
+        reason: "openrouter_failed",
+        detail: e instanceof Error ? e.message : String(e),
+        call_meta,
+      };
+      if (attempt >= maxModelAttempts) break;
+    }
   }
+
+  return {
+    ok: false,
+    reason: lastFail?.reason ?? "invalid_json",
+    detail: lastFail?.detail,
+    profile,
+    call_meta: lastFail?.call_meta ?? {
+      source: "openrouter",
+      provider: null,
+      model: null,
+      latency_ms: Date.now() - startedAt,
+    },
+  };
 }
 
 /**

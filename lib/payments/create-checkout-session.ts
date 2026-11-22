@@ -136,7 +136,7 @@ export async function createCheckoutSession(params: {
       ? "5 Passes / month + limited-time +2 bonus (7 first month)"
       : intent.plan === "team_plan"
         ? "15 Passes / month + limited-time +5 bonus (20 first month)"
-        : "1 Pass — valid across Atmos / Pivot / Match / Syncro / Glyph";
+        : "1 Pass — valid across Atmos / Eastern OS / Match / Syncro / Glyph";
 
   // Path A (Max 2026-10-19): 1 PASS = 1 transaction. Never put qty>1 on one charge.
   // Flex qty N => N one-PASS Checkout Sessions (Creem will mirror this). Mock still uses one redirect + N txn rows on confirm.

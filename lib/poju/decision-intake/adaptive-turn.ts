@@ -757,6 +757,30 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
   });
 
   if (!modelResult.ok) {
+    // Prefer keeping the code-ranked plan ask alive over a system fail-closed
+    // bubble. Model reply is still primary; this only covers exhausted retries.
+    const planAsk = result.plan?.question_text?.trim() || "";
+    const canFallbackAsk =
+      Boolean(result.plan) &&
+      planAsk.length >= 4 &&
+      result.understanding?.readiness.can_ask !== false;
+    if (canFallbackAsk && result.plan) {
+      console.warn(
+        "[di2-understanding] model failed after retries; authorizing plan ask fallback",
+        modelResult.reason,
+      );
+      return {
+        ...result,
+        outcome: "planned",
+        ask_error: `understanding_model_degraded:${modelResult.reason}${
+          modelResult.detail ? `:${modelResult.detail}` : ""
+        }`,
+        model_response_text: planAsk,
+        suggested_replies: undefined,
+        profile_hash: modelResult.profile.profile_hash,
+        authorized_question: planAsk,
+      };
+    }
     return {
       ...result,
       outcome: "understanding_model_failed",
@@ -766,7 +790,6 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
       model_response_text: undefined,
       suggested_replies: undefined,
       profile_hash: modelResult.profile.profile_hash,
-      // Keep plan for audit but do not authorize template question as user reply.
       authorized_question: null,
     };
   }

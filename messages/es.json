@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Inicio",
-    "poju": "Pivot",
+    "poju": "Eastern OS",
     "glyph": "Glyph",
     "syncro": "Syncro",
     "match": "Match",
@@ -114,11 +114,11 @@
     },
     "products": {
       "poju": {
-        "name": "Pivot",
+        "name": "Eastern OS",
         "line1": "Navegación de transiciones específicas. 30 días de mentoría inmersiva y profunda para ofrecer estrategias claras y accionables que te guíen a través de tus puntos ciegos cognitivos.",
         "line2": "",
         "badge": "$9.99",
-        "cta": "Ir a Pivot →"
+        "cta": "Ir a Eastern OS →"
       },
       "glyph": {
         "name": "Glyph",
@@ -148,7 +148,7 @@
       "card1": {
         "title": "Frente a una Encrucijada Crítica",
         "text": "Transiciones profesionales, rumbos en relaciones clave o reubicaciones estratégicas. Tras deliberar sin cesar, POJU cambia tus coordenadas cognitivas para vislumbrar el camino.",
-        "cta": "Ir a Pivot →"
+        "cta": "Ir a Eastern OS →"
       },
       "card2": {
         "title": "Navegando por Incertidumbres Persistentes",
@@ -197,7 +197,7 @@
       "read_with_wink": "Léelo con una sonrisa. Los patrones reflejan, no predicen."
     },
     "nav": {
-      "poju": "Pivot",
+      "poju": "Eastern OS",
       "glyph": "Glyph",
       "syncro": "Syncro",
       "archive": "Archivo",
@@ -414,7 +414,7 @@
         "intro": "A light touch for the moments that don't need a 30-day conversation.",
         "quick_read": {
           "title": "You need a read, not a deep-dive",
-          "description": "One question, sixty seconds. For when Pivot is more than this moment asks for."
+          "description": "One question, sixty seconds. For when Eastern OS is more than this moment asks for."
         },
         "circling": {
           "title": "Something's circling and won't name itself",
@@ -879,7 +879,7 @@
       "session_menu_label": "Opciones de la sesión",
       "session_menu_rename": "Cambiar nombre",
       "session_menu_delete": "Eliminar",
-      "sidebar_brand_name": "Pivot",
+      "sidebar_brand_name": "Eastern OS",
       "sidebar_sessions_label": "Sesiones recientes",
       "sidebar_session_active": "ACTIVA AHORA",
       "active_session_title": "Reanudar la sesión de POJU",
@@ -909,7 +909,7 @@
       "unlock_report_view_full": "Ver informe completo",
       "session_picker": {
         "close": "Cerrar",
-        "new_poju": "+ New Pivot",
+        "new_poju": "+ New Eastern OS",
         "price": "$9.99",
         "existing_label": "Tus sesiones activas",
         "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
@@ -1061,8 +1061,8 @@
     "tool_handoff": {
       "banner_free": "Desde POJU · Gratis esta vez en tu sesión",
       "banner_paid": "Desde POJU · Se aplica el precio estándar de la herramienta",
-      "return_banner": "Vuelve a Pivot con este resultado",
-      "return_footer": "Volver a Pivot · Continuar la conversación",
+      "return_banner": "Vuelve a Eastern OS con este resultado",
+      "return_footer": "Volver a Eastern OS · Continuar la conversación",
       "returning": "Volviendo a POJU…",
       "prefill_relationship": "Sobre tu relación con: {name}",
       "tool_result_resume_user": "Ya volví de la herramienta — sigamos."
@@ -1157,7 +1157,7 @@
     "poju_session_active_until": "Ventana activa — quedan {days} días en el selector",
     "poju_session_no_messages": "Aún no hay mensajes — abre esta sesión para empezar.",
     "poju_role_user": "Tú",
-    "poju_role_assistant": "Pivot",
+    "poju_role_assistant": "Eastern OS",
     "poju_session_continue": "Continuar este tema",
     "poju_session_expired_body": "Esta sesión superó su ventana de 30 días. Para continuar, paga $9.99 y reábrela.",
     "poju_session_pay_cta": "Continuar — $9.99",
@@ -1755,7 +1755,7 @@
       "status_complete": "12/12 listos · abrir brújula",
       "expires": "Termina {when}",
       "pwa_continue_label": "Continuar la última lectura",
-      "pwa_storage_hint": "Las lecturas se guardan en este dispositivo 24 h—puedes ir a Pivot y volver aquí.",
+      "pwa_storage_hint": "Las lecturas se guardan en este dispositivo 24 h—puedes ir a Eastern OS y volver aquí.",
       "start_new_link": "Nueva lectura",
       "empty_pwa": "No hay lectura en curso. Tras tu primer Syncro, aparecerá aquí."
     },
@@ -2444,7 +2444,7 @@
     "decoder": {
       "poju": "Es una lectura densa y en capas — un poco de fricción intelectual y emocional en la primera pasada es normal, y forma parte del valor. Durante 30 días, toca cualquier línea que quieras desplegar y POJU la traducirá a lenguaje claro y a tu vida real.",
       "others": "Esta lectura premia una segunda mirada — sus capas se abren con el tiempo. ¿Quieres que te la desglosen línea a línea, en lenguaje llano y aplicada a tu vida? Sigue en el diálogo profundo de POJU.",
-      "poju_hint": "Toca cualquier párrafo de tu informe para pedir a Pivot que lo despliegue.",
+      "poju_hint": "Toca cualquier párrafo de tu informe para pedir a Eastern OS que lo despliegue.",
       "dismiss": "Cerrar",
       "ack": "Entendido"
     }
@@ -2756,7 +2756,7 @@
   "workspace": {
     "tabs": {
       "atmos": "Atmos",
-      "poju": "Pivot",
+      "poju": "Eastern OS",
       "match": "Match",
       "syncro": "Syncro",
       "glyph": "Glyph",
@@ -2894,7 +2894,7 @@
       "empty": "Las entregas que generes aparecerán aquí.",
       "section_empty": "Ninguna aún",
       "section_foundation": "Base",
-      "section_pivot": "Pivot",
+      "section_pivot": "Eastern OS",
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",
@@ -3046,7 +3046,7 @@
       },
       "methodology": {
         "poju": {
-          "title": "Por qué Pivot",
+          "title": "Por qué Eastern OS",
           "body": "POJU acompaña una sola encrucijada vital con lógica de carta en capas y diálogo estructurado — no consejos genéricos. Convierte un punto muerto en una secuencia de decisión accionable hoy."
         },
         "match": {
