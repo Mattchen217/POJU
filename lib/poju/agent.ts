@@ -1149,10 +1149,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         ) {
           const failText =
             confirmResult.outcome === "not_sufficient_after_confirm"
-              ? "【确认未通过充分性】已记录你的确认，但关键信息仍不足，无法冻结。请继续补充。" +
-                (confirmResult.error ? `（${confirmResult.error}）` : "")
-              : "【系统】确认/冻结失败，未绕过充分性门禁。" +
-                (confirmResult.error ? `（${confirmResult.error}）` : "");
+              ? "【确认未通过充分性】已记录你的确认，但关键信息仍不足，无法冻结。请继续补充。"
+              : "【系统】确认/冻结失败，未绕过充分性门禁。请稍后重试或继续补充关键信息。";
           const assistantMessage: POJUMessage = {
             role: "assistant",
             content: failText,
@@ -1243,10 +1241,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           m1CollectingTurn.outcome === "answer_interpretation_invalid_schema"
         ) {
           const failText =
-            "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。" +
-            (m1CollectingTurn.ask_error
-              ? `(${m1CollectingTurn.ask_error})`
-              : "");
+            "【系统】本轮回答未能完成语义理解，决策上下文未写入。请稍后重试，或换一种表述。";
           const failAssistant: POJUMessage = {
             role: "assistant",
             content: failText,
@@ -1276,10 +1271,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         ) {
           // FAIL-CLOSED: never silently fall back to old free-form questioning.
           const failText =
-            "【系统】决策上下文写入失败，本轮无法继续提问。请稍后重试。" +
-            (m1CollectingTurn.persist_error
-              ? `（${m1CollectingTurn.persist_error}）`
-              : "");
+            "【系统】决策上下文写入失败，本轮无法继续提问。请稍后重试。";
           const failAssistant: POJUMessage = {
             role: "assistant",
             content: failText,
@@ -1324,9 +1316,12 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           const blockReason =
             m1CollectingTurn.ask_error?.trim() ||
             "planner_blocked_open_p0_p1";
+          // Natural-language only in the bubble; keep codes in meta/logs.
           const blockText =
-            "【系统】当前仍有未完成的必要调查项，但本轮未能生成合规的授权提问。会话仍在收集中，请重试或换一种表述。" +
-            `（${blockReason}）`;
+            m1CollectingTurn.outcome === "understanding_model_failed" ||
+            Boolean(m1CollectingTurn.ask_error?.includes("understanding_model_failed"))
+              ? "【系统】本轮理解引擎未能给出合规回复。你的回答已保存，会话仍在收集中——请重试一次，或换一种表述。"
+              : "【系统】当前仍有未完成的必要调查项，但本轮未能生成合规的授权提问。会话仍在收集中，请重试或换一种表述。";
           const blockedSession: POJUSessionState = {
             ...m1CollectingTurn.session,
             messages: messagesWithUser,
@@ -1344,8 +1339,19 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
             client_id: safeRandomUUID(),
             meta: {
               m1_planner_blocked: true,
-              m1_outcome: "planner_blocked",
+              m1_outcome:
+                m1CollectingTurn.outcome === "understanding_model_failed"
+                  ? ("understanding_model_failed" as const)
+                  : ("planner_blocked" as const),
               m1_ask_error: blockReason,
+              ...(m1CollectingTurn.understanding_model_status
+                ? {
+                    di2_understanding_model_status:
+                      m1CollectingTurn.understanding_model_status,
+                  }
+                : m1CollectingTurn.outcome === "understanding_model_failed"
+                  ? { di2_understanding_model_status: "model_failed" as const }
+                  : {}),
             },
           };
           console.warn(
@@ -1393,8 +1399,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           const noPlanAssistant: POJUMessage = {
             role: "assistant",
             content:
-              "【系统】本轮未能生成合规的授权提问，会话仍在收集中。请重试或换一种表述。" +
-              `（${noPlanReason}）`,
+              "【系统】本轮未能生成合规的授权提问，会话仍在收集中。请重试或换一种表述。",
             timestamp: nowPre,
             client_id: safeRandomUUID(),
             meta: {
@@ -1598,6 +1603,12 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       meta: {
         m1_skipped_generic_chat_llm: true,
         ...(modelReply ? { di2_understanding_model_reply: true as const } : {}),
+        ...(m1CollectingTurn.understanding_model_status
+          ? {
+              di2_understanding_model_status:
+                m1CollectingTurn.understanding_model_status,
+            }
+          : {}),
         ...(m1HasAuthorizedQuestion ? { m1_authorized_question: true as const } : {}),
         ...(m1HasReadinessConfirm ? { m21_readiness_stop: true as const } : {}),
         ...(m1Attestation ? { assistant_history_attestation: m1Attestation } : {}),

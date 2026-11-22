@@ -264,11 +264,14 @@ export async function createPOJUSession(input: {
 
   await syncSessionCyclesToDb(sessionState);
 
-  try {
-    await syncPojuSessionVaultArchive(sessionState);
-  } catch (e) {
-    console.error("[poju] Initial archive vault sync failed:", e);
-    notifySessionListUpdated();
+  // Vault archive uses browser IndexedDB — skip on server invoke.
+  if (typeof window !== "undefined") {
+    try {
+      await syncPojuSessionVaultArchive(sessionState);
+    } catch (e) {
+      console.error("[poju] Initial archive vault sync failed:", e);
+      notifySessionListUpdated();
+    }
   }
 
   return sessionId;
@@ -339,11 +342,14 @@ export async function savePOJUSessionCore(
  * core session blob (C1 / v1.3 Archive·Profile rule).
  */
 export async function runPOJUSessionPostCommitSideEffects(state: POJUSessionState): Promise<void> {
-  try {
-    await syncPojuSessionVaultArchive(state);
-  } catch (e) {
-    console.error("[poju] Archive vault sync failed:", e);
-    notifySessionListUpdated();
+  // Vault archive uses browser IndexedDB — skip on server invoke.
+  if (typeof window !== "undefined") {
+    try {
+      await syncPojuSessionVaultArchive(state);
+    } catch (e) {
+      console.error("[poju] Archive vault sync failed:", e);
+      notifySessionListUpdated();
+    }
   }
 
   try {

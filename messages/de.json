@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Startseite",
-    "poju": "Pivot",
+    "poju": "Eastern OS",
     "glyph": "Glyph",
     "syncro": "Syncro",
     "match": "Match",
@@ -110,7 +110,7 @@
     },
     "products": {
       "poju": {
-        "name": "Pivot",
+        "name": "Eastern OS",
         "line1": "Bewältigung spezifischer Übergänge. 30 Tage immersives, interaktives Tiefencoaching für klare, umsetzbare Strategien, die Sie durch kognitive blinde Flecken führen.",
         "line2": "",
         "badge": "$9.99",
@@ -193,7 +193,7 @@
       "read_with_wink": "Lies mit einem Augenzwinkern. Die Muster spiegeln, sie sagen nicht voraus."
     },
     "nav": {
-      "poju": "Pivot",
+      "poju": "Eastern OS",
       "glyph": "Glyph",
       "syncro": "Syncro",
       "archive": "Archiv",
@@ -410,7 +410,7 @@
         "intro": "A light touch for the moments that don't need a 30-day conversation.",
         "quick_read": {
           "title": "You need a read, not a deep-dive",
-          "description": "One question, sixty seconds. For when Pivot is more than this moment asks for."
+          "description": "One question, sixty seconds. For when Eastern OS is more than this moment asks for."
         },
         "circling": {
           "title": "Something's circling and won't name itself",
@@ -623,7 +623,7 @@
     "footer": {
       "disclaimers": {
         "home": "Zur Selbstreflexion und Unterhaltung. Eastern OS bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
-        "poju": "Pivot ist ein Denkpartner. Es bietet Perspektiven, keine Prophezeiungen. Alle Entscheidungen liegen bei dir.",
+        "poju": "Eastern OS ist ein Denkpartner. Es bietet Perspektiven, keine Prophezeiungen. Alle Entscheidungen liegen bei dir.",
         "glyph": "Lies mit einem Augenzwinkern. Die Muster spiegeln, sie sagen nicht voraus. Alle Entscheidungen liegen bei dir.",
         "syncro": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir."
       },
@@ -829,7 +829,7 @@
         "title": "Bevor wir beginnen — wie POJU dich begleitet",
         "intro": "Vier Dinge, die du vorab wissen solltest:",
         "item_one_title": "Immer nur eine zentrale Frage",
-        "item_one_body": "Pivot ist für dich da und konzentriert sich auf die eine wichtigste Frage, die dich gerade beschäftigt. Nenne ihm das, was du am dringendsten klären möchtest — Tiefe entsteht durch Fokus.",
+        "item_one_body": "Eastern OS ist für dich da und konzentriert sich auf die eine wichtigste Frage, die dich gerade beschäftigt. Nenne ihm das, was du am dringendsten klären möchtest — Tiefe entsteht durch Fokus.",
         "item_two_title": "Je konkreter du bist, desto genauer kann POJU auf dich eingehen",
         "item_two_body": "Je klarer du deine Situation, deine Gefühle und die Details deines Anliegens schilderst, desto passgenauer sind POJUs Reflexionen und vorgeschlagene Richtungen — statt allgemeiner Ratschläge.",
         "item_three_title": "Eine langsamere Antwort bedeutet, dass es sorgfältig für dich nachdenkt",
@@ -872,7 +872,7 @@
       "session_menu_label": "Sitzungsoptionen",
       "session_menu_rename": "Umbenennen",
       "session_menu_delete": "Löschen",
-      "sidebar_brand_name": "Pivot",
+      "sidebar_brand_name": "Eastern OS",
       "sidebar_sessions_label": "Letzte Sitzungen",
       "sidebar_session_active": "JETZT AKTIV",
       "active_session_title": "POJU-Sitzung fortsetzen",
@@ -902,7 +902,7 @@
       "unlock_report_view_full": "Vollständigen Bericht ansehen",
       "session_picker": {
         "close": "Schließen",
-        "new_poju": "+ New Pivot",
+        "new_poju": "+ New Eastern OS",
         "price": "$9.99",
         "existing_label": "Deine aktiven Sitzungen",
         "days_left": "{count, plural, one {# Tag übrig} other {# Tage übrig}}"
@@ -1121,7 +1121,7 @@
     "poju_session_active_until": "Aktives Fenster — noch {days} Tage im Sitzungsauswahl",
     "poju_session_no_messages": "Noch keine Nachrichten — öffne diese Sitzung zum Starten.",
     "poju_role_user": "Du",
-    "poju_role_assistant": "Pivot",
+    "poju_role_assistant": "Eastern OS",
     "poju_session_continue": "Dieses Thema fortsetzen",
     "poju_session_expired_body": "Diese Sitzung hat ihr 30-Tage-Fenster überschritten. Zum Fortsetzen $9.99 zahlen und erneut öffnen.",
     "poju_session_pay_cta": "Weiter — $9.99",
@@ -1203,8 +1203,8 @@
     "loading": "Wird geladen…",
     "preparing": "Ihr Horoskop wird vorbereitet…",
     "preparing_done": "Sitzung wird geöffnet…",
-    "welcome_title": "Willkommen bei Pivot.",
-    "welcome_desc": "Pivot ist Ihr Denkpartner für die Bewältigung komplexer Übergänge im Leben — er verbindet umsetzbare strategische Weisheit aus den zeitlosen Traditionen des I-Ging und den Balance-Prinzipien der Fünf Elemente. Um Ihre persönliche Energiematrix zu kalibrieren, geben Sie bitte unten Ihre grundlegenden Zeitdaten ein.",
+    "welcome_title": "Willkommen bei Eastern OS.",
+    "welcome_desc": "Eastern OS ist Ihr Denkpartner für die Bewältigung komplexer Übergänge im Leben — er verbindet umsetzbare strategische Weisheit aus den zeitlosen Traditionen des I-Ging und den Balance-Prinzipien der Fünf Elemente. Um Ihre persönliche Energiematrix zu kalibrieren, geben Sie bitte unten Ihre grundlegenden Zeitdaten ein.",
     "list_title": "Wählen Sie Ihre Basis",
     "list_description": "Wählen Sie ein gespeichertes Profil oder geben Sie neue Geburtsdaten ein.",
     "add_new_person": "Neue Person hinzufügen",
@@ -1945,7 +1945,7 @@
       "faq_q3": "Kann ich mehr als zwei Personen auf einmal matchen?",
       "faq_a3": "Match konzentriert sich auf Zweier-Dynamiken — so bleibt die Lesung tief und klar. Bei komplexen Situationen (z. B. du + Partner + Elternteil) empfehlen wir separate Matches pro Beziehung.",
       "faq_q4": "Worin unterscheidet sich Match von POJU?",
-      "faq_a4": "Pivot ist ein 30-tägiges Tiefengespräch über deine Situation. Match ist eine einmalige, fokussierte Zwei-Chart-Lesung zu einer bestimmten Beziehung. Verschiedene Werkzeuge — viele nutzen beides.",
+      "faq_a4": "Eastern OS ist ein 30-tägiges Tiefengespräch über deine Situation. Match ist eine einmalige, fokussierte Zwei-Chart-Lesung zu einer bestimmten Beziehung. Verschiedene Werkzeuge — viele nutzen beides.",
       "not_title": "What Match is not",
       "not_items": [
         "A predictor of relationship outcomes",
@@ -2633,7 +2633,7 @@
   "workspace": {
     "tabs": {
       "atmos": "Atmos",
-      "poju": "Pivot",
+      "poju": "Eastern OS",
       "match": "Match",
       "syncro": "Syncro",
       "glyph": "Glyph",
@@ -2771,7 +2771,7 @@
       "empty": "Erzeugte Lieferungen erscheinen hier.",
       "section_empty": "Noch keine",
       "section_foundation": "Fundament",
-      "section_pivot": "Pivot",
+      "section_pivot": "Eastern OS",
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",

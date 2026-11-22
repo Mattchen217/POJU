@@ -183,6 +183,7 @@ export interface POJUMessage {
       | "persist_failed"
       | "persist_threw"
       | "planner_blocked"
+      | "understanding_model_failed"
       | "answer_interpretation_failed"
       | "answer_interpretation_invalid_schema"
       /** Turn produced neither an authorized question nor a readiness stop. */
@@ -194,6 +195,10 @@ export interface POJUMessage {
       | "intake_continued";
     m1_persist_error?: string | null;
     m1_ask_error?: string | null;
+    di2_understanding_model_status?:
+      | "model_success"
+      | "model_retry_succeeded"
+      | "model_failed";
     /** Successful M1 ask/confirm returned the authorized text without a generic Chat LLM call. */
     m1_skipped_generic_chat_llm?: boolean;
     m1_authorized_question?: boolean;

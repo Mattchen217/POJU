@@ -1,0 +1,46 @@
+{
+  "at": "2026-11-22T17:38:55.533Z",
+  "wall_ms": 17816,
+  "ok": true,
+  "reason": null,
+  "detail": null,
+  "model_status": "model_success",
+  "attempt_count": 1,
+  "provider": "StreamLake",
+  "model": "deepseek/deepseek-v4-pro-0813",
+  "latency_ms": 17814,
+  "narrative": "你正在两个创业项目中做选择：一个是按次收费的小型SaaS咨询类产品，另一个是面向AI时代的全球化扁平化组织平台。你提到自己已经失败过多次，因此这次对结果的确定性要求很高，不能再次失败。目前最关键的是先明确你心中‘成功’的具体含义，这会直接决定哪个项目更符合你的底线和期待。",
+  "response_text": "明白，你面临两个方向，而且经历过失败，所以这次对‘成功’的定义会直接影响哪个选择更适合你。我们先不急着比较项目，先说说你希望最终达成什么结果——是尽快稳定盈利，还是想做一个有长期影响力的事情？",
+  "question": "你希望这个项目最终达成什么样的结果？比如是尽快稳定盈利、建立长期影响力，还是其他具体的标准？",
+  "selected_candidate_id": "cand_desired_outcome",
+  "suggested": [
+    "稳定盈利，不再亏损",
+    "打造长期影响力",
+    "先验证可行性"
+  ],
+  "problem_assessment": {
+    "statement": "用户需要在两个创业项目中选择一个，且存在强烈的风险规避需求。",
+    "supporting_fact_ids": [],
+    "unresolved_ambiguities": [
+      "尚未了解用户对两个项目的具体认知、资源、时间投入等情境边界",
+      "尚未了解过去失败的具体原因"
+    ],
+    "sufficient_proposal": false
+  },
+  "desired_assessment": {
+    "statement": "期望结果尚未明确，只知道不能再失败，但‘成功’的具体标准未知。",
+    "supporting_fact_ids": [],
+    "unresolved_ambiguities": [
+      "期望的收入规模、时间周期、个人成就感、社会影响等指标均未说明",
+      "不可接受的结果是什么也没有明确"
+    ],
+    "sufficient_proposal": false
+  },
+  "report_coverage_assessment": {
+    "missing_required_sections": [
+      "01:A"
+    ],
+    "notes": "期望结果部分缺失，是当前最关键的决策缺口。"
+  },
+  "current_intake_layer": "desired_outcome"
+}

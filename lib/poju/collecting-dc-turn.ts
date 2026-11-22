@@ -76,6 +76,10 @@ export type CollectingDcTurnResult = {
     AdaptiveTurnSuggestedReply,
   ];
   profile_hash?: string | null;
+  understanding_model_status?:
+    | "model_success"
+    | "model_retry_succeeded"
+    | "model_failed";
 };
 
 function mapAdaptiveOutcome(turn: {
@@ -96,6 +100,10 @@ function mapAdaptiveOutcome(turn: {
     AdaptiveTurnSuggestedReply,
   ];
   profile_hash?: string | null;
+  understanding_model_status?:
+    | "model_success"
+    | "model_retry_succeeded"
+    | "model_failed";
 }, initOnly: boolean): CollectingDcTurnResult {
   const session = {
     ...turn.session,
@@ -112,6 +120,7 @@ function mapAdaptiveOutcome(turn: {
     model_response_text: turn.model_response_text,
     suggested_replies: turn.suggested_replies,
     profile_hash: turn.profile_hash,
+    understanding_model_status: turn.understanding_model_status,
   };
 
   if (turn.outcome === "dc_persist_failed") {

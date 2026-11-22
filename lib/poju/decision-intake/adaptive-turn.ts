@@ -821,6 +821,11 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
   });
 
   if (!modelResult.ok) {
+    console.warn(
+      "[di2-understanding] model failed; keeping DC + user answer; no code-plan ask masquerade",
+      modelResult.reason,
+      modelResult.call_meta.model_status ?? "model_failed",
+    );
     return {
       ...result,
       outcome: "understanding_model_failed",
@@ -830,6 +835,7 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
       model_response_text: undefined,
       suggested_replies: undefined,
       profile_hash: modelResult.profile.profile_hash,
+      understanding_model_status: "model_failed",
       // Keep DC writes; do NOT authorize code-ranked #1 as a successful model turn.
       authorized_question: null,
     };
@@ -979,6 +985,10 @@ async function enrichOrdinaryTurnWithUnderstandingModel(
     model_response_text: modelResult.output.response_text,
     suggested_replies: modelResult.output.suggested_replies,
     profile_hash: modelResult.profile.profile_hash,
+    understanding_model_status:
+      modelResult.call_meta.model_status === "model_retry_succeeded"
+        ? "model_retry_succeeded"
+        : "model_success",
     outcome: nextPlan ? "planned" : "ready_no_question",
   };
 }

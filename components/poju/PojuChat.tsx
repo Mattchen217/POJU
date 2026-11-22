@@ -312,10 +312,10 @@ export default function PojuChat(props: PojuChatProps) {
     scrollHeader,
     centerSlot,
     documentSlot,
-    brandName = "Pivot",
+    brandName = "Eastern OS",
     brandTooltip,
     sessionsLabel = "Recent Sessions",
-    newSessionLabel = "+ New Pivot",
+    newSessionLabel = "+ New Eastern OS",
     messageSlots,
     bareMessageSlotIds,
     messageFooters,
@@ -846,7 +846,7 @@ export default function PojuChat(props: PojuChatProps) {
   };
 
   const activeTitle =
-    sessions.find((s) => s.id === currentSessionId)?.title || "Pivot";
+    sessions.find((s) => s.id === currentSessionId)?.title || "Eastern OS";
 
   function openSessionDialog(kind: "rename" | "delete", session: PojuSession) {
     const btn = menuBtnRefs.current.get(session.id);

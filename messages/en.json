@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Home",
-    "poju": "Pivot",
+    "poju": "Eastern OS",
     "glyph": "Glyph",
     "syncro": "Syncro",
     "match": "Match",
@@ -38,7 +38,7 @@
   "workspace": {
     "tabs": {
       "atmos": "Atmos",
-      "poju": "Pivot",
+      "poju": "Eastern OS",
       "match": "Match",
       "syncro": "Syncro",
       "glyph": "Glyph",
@@ -176,7 +176,7 @@
       "empty": "Deliveries you generate will appear here.",
       "section_empty": "None yet",
       "section_foundation": "Foundation",
-      "section_pivot": "Pivot",
+      "section_pivot": "Eastern OS",
       "section_atmos": "Atmos",
       "section_match": "Match",
       "section_syncro": "Syncro",
@@ -331,7 +331,7 @@
       },
       "methodology": {
         "poju": {
-          "title": "Why Pivot",
+          "title": "Why Eastern OS",
           "body": "POJU walks a single life crossroads with multi-layer chart logic and structured dialogue — not generic advice. It turns a deadlock into a sequenced decision path you can act on today."
         },
         "match": {
@@ -414,7 +414,7 @@
       "subtitle": "Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context."
     },
     "cta": {
-      "startSession": "Start a Pivot session · $9.99",
+      "startSession": "Start a Eastern OS session · $9.99",
       "tryGlyph": "Try Glyph · Free",
       "yoursToDecide": "No account · No subscription · Yours to decide"
     },
@@ -476,7 +476,7 @@
       "readyHeading": "Ready to begin?",
       "readySubheading": "Four gateways to cognitive velocity. Choose the vector that fits this moment.",
       "poju": {
-        "title": "Initialize Pivot Session",
+        "title": "Initialize Eastern OS Session",
         "sub": "$9.99 · One Strategic Inquiry · 30 Days"
       },
       "glyph": {
@@ -494,11 +494,11 @@
     },
     "products": {
       "poju": {
-        "name": "Pivot",
+        "name": "Eastern OS",
         "line1": "Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.",
         "line2": "",
         "badge": "$9.99",
-        "cta": "Go to Pivot →"
+        "cta": "Go to Eastern OS →"
       },
       "glyph": {
         "name": "Glyph",
@@ -527,8 +527,8 @@
       "subtitle": "Unfolding a holistic perspective at your real-world turning points.",
       "card1": {
         "title": "Standing at a Critical Crossroads",
-        "text": "Career transitions, core relationship directions, or strategic relocations. After endless deliberation, Pivot shifts your cognitive coordinates to see a way forward.",
-        "cta": "Go to Pivot →"
+        "text": "Career transitions, core relationship directions, or strategic relocations. After endless deliberation, Eastern OS shifts your cognitive coordinates to see a way forward.",
+        "cta": "Go to Eastern OS →"
       },
       "card2": {
         "title": "Navigating Lingering Uncertainties",
@@ -559,7 +559,7 @@
       "read_with_wink": "Read with a wink. The patterns mirror what's happening."
     },
     "nav": {
-      "poju": "Pivot",
+      "poju": "Eastern OS",
       "glyph": "Glyph",
       "syncro": "Syncro",
       "match": "Match",
@@ -568,7 +568,7 @@
     "home": {
       "hero": {
         "subtitle": "Where AI meets a thousand years of wisdom.",
-        "cta_primary": "Start a Pivot session · $9.99",
+        "cta_primary": "Start a Eastern OS session · $9.99",
         "cta_secondary": "Try Glyph · Free"
       },
       "three_ways": {
@@ -720,7 +720,7 @@
           ]
         },
         "tagline": "Eastern OS is a thinking partner. The decisions remain yours.",
-        "cta": "Start a Pivot session — $9.99",
+        "cta": "Start a Eastern OS session — $9.99",
         "footnote": "One question · Unlimited depth · Deletes when you close"
       },
       "pricing": {
@@ -776,7 +776,7 @@
         "intro": "A light touch for the moments that don't need a 30-day conversation.",
         "quick_read": {
           "title": "You need a read, not a deep-dive",
-          "description": "One question, sixty seconds. For when Pivot is more than this moment asks for."
+          "description": "One question, sixty seconds. For when Eastern OS is more than this moment asks for."
         },
         "circling": {
           "title": "Something's circling and won't name itself",
@@ -989,7 +989,7 @@
     "footer": {
       "disclaimers": {
         "home": "For self-reflection and entertainment. Eastern OS offers insight and perspective. All decisions are yours alone.",
-        "poju": "Pivot is a thinking partner. It offers perspectives, not assertions. All decisions are yours alone.",
+        "poju": "Eastern OS is a thinking partner. It offers perspectives, not assertions. All decisions are yours alone.",
         "glyph": "Read with a wink. The patterns mirror what's happening. All decisions are yours alone.",
         "syncro": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
       },
@@ -1118,7 +1118,7 @@
       "title": "Want to go deeper into this relationship?",
       "description": "This Match shows you the structure. POJU helps you find what to do about it.",
       "value_prop": "Up to 30 days of deep analysis around this specific relationship",
-      "button": "Open Pivot",
+      "button": "Open Eastern OS",
       "starting": "Starting…",
       "payment_failed": "Could not start payment. Please try again."
     },
@@ -1126,24 +1126,24 @@
       "title": "Want to think through this decision?",
       "description": "Syncro tells you when. POJU helps you decide whether and how.",
       "value_prop": "Up to 30 days of deep counseling around your situation",
-      "button": "Open Pivot"
+      "button": "Open Eastern OS"
     },
     "glyph_to_poju": {
       "title": "Want to unpack what this reflected?",
       "description": "Glyph offered an image. POJU helps you understand and act on it.",
       "value_prop": "Up to 30 days of deep conversation around what you're processing",
-      "button": "Open Pivot",
+      "button": "Open Eastern OS",
       "starting": "Starting…",
       "payment_failed": "Could not start payment. Please try again."
     },
     "session_picker": {
       "title": "How do you want to continue?",
-      "subtitle": "You have ongoing Pivot sessions. This new analysis can join one of them, or start fresh.",
+      "subtitle": "You have ongoing Eastern OS sessions. This new analysis can join one of them, or start fresh.",
       "existing_sessions": "Add to existing session",
       "join_this": "Join this conversation",
       "free": "Free",
       "or": "OR",
-      "start_new": "Start a new Pivot session",
+      "start_new": "Start a new Eastern OS session",
       "start_new_subtitle": "If this is a separate topic, give it its own session",
       "days_left": "{count, plural, one {# day left} other {# days left}}"
     },
@@ -1168,7 +1168,7 @@
       "syncro": "What comes next isn't a lucky-day pick — it's a timing map tuned to your task."
     },
     "value_frame": {
-      "poju": "Pivot doesn't produce fast-food predictions. What's arriving is a behavioral blueprint drawn from a 3,000-year space-time matrix and modern psychology. It reads like a mirror — the words carry an echo. Sit with it over the next 30 days; each time you return, you'll meet a slightly different version of yourself.",
+      "poju": "Eastern OS doesn't produce fast-food predictions. What's arriving is a behavioral blueprint drawn from a 3,000-year space-time matrix and modern psychology. It reads like a mirror — the words carry an echo. Sit with it over the next 30 days; each time you return, you'll meet a slightly different version of yourself.",
       "glyph": "This isn't a quick horoscope. Your Glyph reading is a single, precise mirror struck from a 3,000-year symbolic tradition and modern psychology. Its lines are meant to be sat with — read it once for the shape, again for what it points to in you.",
       "match": "This isn't a compatibility score. It's an energetic map of how two people actually meet — drawn from a 3,000-year framework and modern relational psychology. Read it slowly, together or alone; the insight lands on the second pass.",
       "syncro": "This isn't a lucky-day calendar. It's a fine-grained map of how time and direction move with your task — read the windows, then feel which one matches your moment."
@@ -1191,7 +1191,7 @@
       "skip": "Continue without the ritual"
     },
     "decoder": {
-      "poju": "This is a dense, multi-layered reading — a little intellectual and emotional friction on the first pass is normal, and it's the point. Over the next 30 days, tap any line you want unpacked and Pivot will translate it into plain language and your real-life situations.",
+      "poju": "This is a dense, multi-layered reading — a little intellectual and emotional friction on the first pass is normal, and it's the point. Over the next 30 days, tap any line you want unpacked and Eastern OS will translate it into plain language and your real-life situations.",
       "others": "This reading rewards a second look — its layers open over time. Want it unpacked line by line, in plain language and applied to your life? Continue the conversation in POJU's deep dialogue.",
       "poju_hint": "Tap any paragraph in your report to ask POJU to unpack it.",
       "dismiss": "Dismiss",
@@ -1280,42 +1280,42 @@
     },
     "activity": {
       "understanding": [
-        "Pivot is parsing your current situation…",
+        "Eastern OS is parsing your current situation…",
         "Locking onto the core conflict in your setup…",
-        "Pivot is loading your underlying design map…",
+        "Eastern OS is loading your underlying design map…",
         "Mapping how this issue connects to your behavior patterns…"
       ],
       "deep_reckoning": [
-        "Pivot is integrating your full multidimensional profile…",
+        "Eastern OS is integrating your full multidimensional profile…",
         "Running deep structured variable analysis…",
         "Reasoning through optimal systemic breakthrough paths…",
         "Building your tailored real-world verification agenda…"
       ],
       "collecting": [
-        "Pivot is depositing your real-world feedback into the core data pool…",
+        "Eastern OS is depositing your real-world feedback into the core data pool…",
         "Cross-checking against your underlying behavior tendency model…"
       ],
       "summarizing": [
-        "Pivot is structurally consolidating information from multiple rounds…",
+        "Eastern OS is structurally consolidating information from multiple rounds…",
         "Surfacing the core issue hidden behind the surface pattern…"
       ],
       "delivering": [
-        "Pivot is weaving your design and reality into the final breakthrough report…",
+        "Eastern OS is weaving your design and reality into the final breakthrough report…",
         "Translating strategic judgment into actionable, measurable guidance…"
       ],
       "tracking": [
-        "Pivot is tracking your real-world execution feedback and data drift…",
+        "Eastern OS is tracking your real-world execution feedback and data drift…",
         "Dynamically adjusting the rhythm of your next strategic push…"
       ],
       "degraded_delivering": [
-        "Pivot is extracting the most viable strategy from your current data anchor…"
+        "Eastern OS is extracting the most viable strategy from your current data anchor…"
       ]
     },
     "tool_handoff": {
       "banner_free": "From POJU · Free this time in your session",
       "banner_paid": "From POJU · Standard tool pricing applies",
       "return_banner": "Return to POJU with this result",
-      "return_footer": "Back to Pivot · Continue conversation",
+      "return_footer": "Back to Eastern OS · Continue conversation",
       "returning": "Returning to POJU…",
       "prefill_relationship": "About your relationship with: {name}",
       "tool_result_resume_user": "I'm back from the tool — let's continue."
@@ -1414,7 +1414,7 @@
         "title": "Before we begin — how POJU works with you",
         "intro": "Four things to know before we start:",
         "item_one_title": "One core question at a time",
-        "item_one_body": "Pivot is here for you, focused on the single most important question you're facing right now. Tell it the one thing you most want to work through — depth comes from focus.",
+        "item_one_body": "Eastern OS is here for you, focused on the single most important question you're facing right now. Tell it the one thing you most want to work through — depth comes from focus.",
         "item_two_title": "The more specific you are, the closer POJU can meet you",
         "item_two_body": "The more clearly you share your situation, your feelings, and the details of what you're wrestling with, the more tailored POJU's reflections and suggested directions will be — not generic advice.",
         "item_three_title": "A slower reply means it's thinking carefully for you",
@@ -1437,7 +1437,7 @@
       "dialog_cancel": "Cancel",
       "dialog_connection_error": "Connection issue. Please try again.",
       "infra_busy_retry": "Try again",
-      "dialog_provider_queue": "System Notice: To ensure the deduction quality of your deep consultation report, Pivot is currently conducting complex background data fusion calculations. The server is experiencing a high load and requests are being queued. Please wait 1-2 minutes before retrying your submission. We sincerely apologize for any inconvenience caused.",
+      "dialog_provider_queue": "System Notice: To ensure the deduction quality of your deep consultation report, Eastern OS is currently conducting complex background data fusion calculations. The server is experiencing a high load and requests are being queued. Please wait 1-2 minutes before retrying your submission. We sincerely apologize for any inconvenience caused.",
       "dialog_create_session_error": "Unable to create a new session right now. Please try again.",
       "session_list_new": "New session",
       "dialog_payment_redirect_failed": "Could not open the payment page. Please try again.",
@@ -1457,11 +1457,11 @@
       "session_menu_label": "Session options",
       "session_menu_rename": "Rename",
       "session_menu_delete": "Delete",
-      "sidebar_brand_name": "Pivot",
+      "sidebar_brand_name": "Eastern OS",
       "sidebar_sessions_label": "Recent Sessions",
       "sidebar_session_active": "ACTIVE NOW",
-      "active_session_title": "Resume Pivot session",
-      "active_session_body": "You already have an active Pivot session on this device. Open it now, or stay on this page.",
+      "active_session_title": "Resume Eastern OS session",
+      "active_session_body": "You already have an active Eastern OS session on this device. Open it now, or stay on this page.",
       "active_session_open": "Open session",
       "pipeline_busy": "Running analysis pipeline…",
       "advanced_pipeline": "Advanced (manual steps)",
@@ -1487,7 +1487,7 @@
       "unlock_report_view_full": "View full report",
       "session_picker": {
         "close": "Close",
-        "new_poju": "+ New Pivot",
+        "new_poju": "+ New Eastern OS",
         "price": "$9.99",
         "existing_label": "Your active sessions",
         "days_left": "{count, plural, one {# day left} other {# days left}}"
@@ -1495,11 +1495,11 @@
     },
     "topic_drift": {
       "title": "Different topic detected",
-      "start_new_session": "Open a new Pivot Session",
+      "start_new_session": "Open a new Eastern OS Session",
       "continue_current": "Continue with the original topic"
     },
     "scope_mismatch": {
-      "body": "Pivot is for a specific person and a concrete dilemma or decision — with actionable next steps. What you sent doesn’t look like that. Please restate your situation in words; if you’d rather not continue, you can request a refund."
+      "body": "Eastern OS is for a specific person and a concrete dilemma or decision — with actionable next steps. What you sent doesn’t look like that. Please restate your situation in words; if you’d rather not continue, you can request a refund."
     },
     "refund_offer": {
       "hint": "If this isn't the right time to go deeper, you can request a refund and come back when you're ready.",
@@ -1552,7 +1552,7 @@
       "redirecting_payment": "Redirecting to payment…"
     },
     "delivery": {
-      "badge": "Pivot delivery book",
+      "badge": "Eastern OS delivery book",
       "intro": "Cover · contents · seven chapters · appendix — built on your chart spine and confirmed facts.",
       "reminder": "One-time delivery. The map is yours to walk."
     },
@@ -1597,12 +1597,12 @@
       "status_skipped": "Skipped"
     },
     "message": {
-      "thinking": "Pivot is thinking…"
+      "thinking": "Eastern OS is thinking…"
     },
     "archive": {
       "title": "POJU sessions",
       "subtitle": "Sessions are stored on this device in encrypted form.",
-      "back": "Back to Pivot",
+      "back": "Back to Eastern OS",
       "section_active": "Active",
       "section_paused": "Paused",
       "section_resolved": "Ended",
@@ -1675,7 +1675,7 @@
     "poju_session_active_until": "Active window — {days} days left in session picker",
     "poju_session_no_messages": "No messages yet — open this session to start chatting.",
     "poju_role_user": "You",
-    "poju_role_assistant": "Pivot",
+    "poju_role_assistant": "Eastern OS",
     "poju_session_continue": "Continue this topic",
     "poju_session_expired_body": "This session has passed its 30-day window. To continue the conversation, pay $9.99 to reopen it.",
     "poju_session_pay_cta": "Continue — $9.99",
@@ -1786,9 +1786,9 @@
     "loading": "Loading…",
     "not_found": "No saved analysis found.",
     "closing": "This is your energy-config readout. How you use it is up to you.",
-    "poju_cta_title": "Take this report into Pivot",
+    "poju_cta_title": "Take this report into Eastern OS",
     "poju_cta_description": "Ask follow-up questions with your energy readout already in context.",
-    "poju_cta_button": "Open Pivot",
+    "poju_cta_button": "Open Eastern OS",
     "sections": {
       "section_1": "Personality &\nInner Traits",
       "section_2": "Work Style &\nDecision Logic",
@@ -1815,7 +1815,7 @@
     "success_title": "Refund Confirmed",
     "success_message": "{amount} has been refunded. It will appear in your account within {days} business days.",
     "refund_id_label": "Refund ID",
-    "back_to_home": "Back to Pivot",
+    "back_to_home": "Back to Eastern OS",
     "error_title": "Refund Failed",
     "error_message": "We couldn't process your refund automatically. Please contact us.",
     "retry": "Retry",
@@ -2632,7 +2632,7 @@
       "faq_q3": "Can I do more than two people at once?",
       "faq_a3": "Currently Match focuses on two-person dynamics — this keeps the reading deep and clear. For complex situations (e.g., you + spouse + parent), we suggest running separate Matches to map each relationship cleanly.",
       "faq_q4": "How is this different from POJU?",
-      "faq_a4": "Pivot is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both.",
+      "faq_a4": "Eastern OS is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both.",
       "not_title": "What Match is not",
       "not_items": [
         "A guarantee of relationship outcomes",

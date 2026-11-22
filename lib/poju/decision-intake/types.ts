@@ -750,4 +750,12 @@ export type AdaptiveTurnResult = {
   ];
   /** Profile hash fed into the Understanding model this turn (audit). */
   profile_hash?: string | null;
+  /**
+   * Understanding-model audit status for this turn.
+   * Never treat model_failed / degraded plan text as model_success.
+   */
+  understanding_model_status?:
+    | "model_success"
+    | "model_retry_succeeded"
+    | "model_failed";
 };
