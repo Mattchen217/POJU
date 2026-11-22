@@ -18,6 +18,7 @@ import { DECISION_PAGE_IDS, type DecisionPageId } from "@/lib/llm/pro/delivery/p
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { POJU_TERMS } from "@/lib/glossary/pojulife-terms";
 import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
+import { face01BodyTextBlob } from "@/lib/llm/pro/delivery/decision-report-v2/page01/body-blob";
 
 export const FACE_BODY_SURFACE_RULE_ID = "gate_face_body_visible_soft_or_destiny";
 
@@ -27,6 +28,14 @@ const EVIDENCE_LAYER_KEYS = new Set([
   "evidence_fold",
   "evidence_pointer",
   "chart_anchors",
+  // Face01 v2 id bags — not user-visible prose
+  "claim_ids",
+  "evidence_ids",
+  "target_evidence_ids",
+  "source_ids",
+  "page02_evidence_ids",
+  "page08_review_refs",
+  "term_ids",
 ]);
 
 /**
@@ -164,18 +173,40 @@ export function faceVisibleBodyBlob(
     String(p.page_title ?? ""),
     String(p.page_subtitle ?? ""),
   ];
-  // Face 03 appendix slices are chart dumps (soft OK there); only chrome + contrast are body.
+  // Face 03 glossary: reading_note is body; term_ids resolved at render (not scanned as prose).
   const appendixSkip =
     faceId === "03"
-      ? new Set(["bazi_slice", "ziwei_slice"])
+      ? new Set(["bazi_slice", "ziwei_slice", "term_ids"])
       : null;
+  if (faceId === "01") {
+    return face01BodyTextBlob(p);
+  }
   if (faceId) {
     for (const { key: field } of FACE_SEGMENT_FIELDS[faceId]) {
       if (EVIDENCE_LAYER_KEYS.has(field)) continue;
       if (appendixSkip?.has(field)) continue;
       const v = p[field];
       if (Array.isArray(v)) {
-        for (const item of v) parts.push(String(item ?? ""));
+        for (const item of v) {
+          if (item && typeof item === "object") {
+            const o = item as Record<string, unknown>;
+            for (const [ik, iv] of Object.entries(o)) {
+              if (EVIDENCE_LAYER_KEYS.has(ik)) continue;
+              if (typeof iv === "string") parts.push(iv);
+            }
+          } else {
+            parts.push(String(item ?? ""));
+          }
+        }
+      } else if (v && typeof v === "object") {
+        const o = v as Record<string, unknown>;
+        for (const [ik, iv] of Object.entries(o)) {
+          if (EVIDENCE_LAYER_KEYS.has(ik)) continue;
+          if (typeof iv === "string") parts.push(iv);
+          else if (Array.isArray(iv)) {
+            for (const x of iv) if (typeof x === "string") parts.push(x);
+          }
+        }
       } else {
         parts.push(String(v ?? ""));
       }

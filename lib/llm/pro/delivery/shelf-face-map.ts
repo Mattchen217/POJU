@@ -21,6 +21,14 @@ export function shelfFaceForHeading(title: string | null | undefined): string | 
   for (const schema of Object.values(DECISION_PAGE_SCHEMAS)) {
     if (raw.includes(schema.title)) return schema.pageId;
   }
+  // Legacy / alias titles (Batch 0: 01 renamed; keep historical markdown readable)
+  if (/本题断语|决策简报|Decision Brief|core judgment|本题决策结论/i.test(raw)) {
+    return "01";
+  }
+  if (/盘面附录|chart appendix/i.test(raw)) return "03";
+  if (/本报告使用的术语|Terms used in this report|Términos usados/i.test(raw)) {
+    return "03";
+  }
   if (/场域与关系|场域判断/.test(raw)) return "07";
 
   const guessed = guessDeliverySegmentKey(title ?? "");

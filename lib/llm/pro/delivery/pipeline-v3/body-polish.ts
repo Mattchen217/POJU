@@ -518,12 +518,40 @@ function face01VisibleParts(page: DeliveryPageData): {
   pointer: string;
   blob: string;
 } {
-  const p = page as {
-    main_recommendation?: string;
-    conditions?: string;
-    not_choosing?: string;
-    evidence_pointer?: string;
-  };
+  const p = page as Record<string, unknown>;
+  // Face01 v2
+  if (p.core_judgment && typeof p.core_judgment === "object") {
+    const core = p.core_judgment as { text?: string };
+    const why = Array.isArray(p.why_this_path)
+      ? (p.why_this_path as Array<{ text?: string }>).map((w) => w.text ?? "").join("\n")
+      : "";
+    const conds = Array.isArray(p.recommendation_conditions)
+      ? (p.recommendation_conditions as Array<{ condition?: string }>)
+          .map((c) => c.condition ?? "")
+          .join("\n")
+      : "";
+    const notRec = Array.isArray(p.not_recommended)
+      ? (p.not_recommended as Array<{ option?: string }>)
+          .map((n) => n.option ?? "")
+          .join("\n")
+      : "";
+    const pointer = Array.isArray(
+      (p.applicability_boundary as { page02_evidence_ids?: string[] } | undefined)
+        ?.page02_evidence_ids,
+    )
+      ? (
+          p.applicability_boundary as { page02_evidence_ids: string[] }
+        ).page02_evidence_ids.join(" ")
+      : "";
+    const main = String(core.text ?? "");
+    return {
+      main,
+      conditions: conds,
+      not_choosing: notRec,
+      pointer,
+      blob: [main, why, conds, notRec].join("\n"),
+    };
+  }
   const main = String(p.main_recommendation ?? "");
   const conditions = String(p.conditions ?? "");
   const not_choosing = String(p.not_choosing ?? "");

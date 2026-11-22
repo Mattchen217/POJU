@@ -17,8 +17,13 @@ export const MAIN_NARRATIVE_PAGE_ORDER = ["01", "02", "04", "05", "06", "07", "0
 /** 必出主叙事（不含题相关 07、不含附录 03）。 */
 export const REQUIRED_MAIN_PAGE_IDS = ["01", "02", "04", "05", "06", "08"] as const;
 
-/** 包尾附录。固定生成，不进主翻页。 */
+/**
+ * 包尾附录内部 id（保留 03 以免大规模 remap）。
+ * 产品职责 = 术语索引（glossary），不再是盘面列表。
+ */
 export const APPENDIX_PAGE_ID = "03" as const;
+/** @deprecated alias — chart appendix retired; use glossary appendix role. */
+export const APPENDIX_IS_GLOSSARY = true as const;
 
 export const TOPIC_CONDITIONAL_PAGE_IDS = ["07"] as const;
 
@@ -97,8 +102,9 @@ export const PAGE_UNION_ALLOWLISTS: Record<DecisionPageId, PageUnionAllowlist> =
   "01": {
     pageId: "01",
     user: [U.Q, U.expect],
-    cfp: [C.pathTags, C.yongJi, C.dayunNow, C.conflictAnchors],
-    zfp: [Z.topicPalace, Z.daxian],
+    // Thin legacy CFP hints only — V2 page01 slice is the authority for DC/readings.
+    cfp: [C.pathTags, C.conflictAnchors],
+    zfp: [],
     sci: false,
   },
   "02": {
@@ -145,9 +151,10 @@ export const PAGE_UNION_ALLOWLISTS: Record<DecisionPageId, PageUnionAllowlist> =
   },
   "03": {
     pageId: "03",
+    // Glossary appendix: no chart / DC dump. Terms collected post-render from evidence.
     user: [],
-    cfp: [C.dayMaster, C.yongJi, C.shishenHit, C.dayunNow],
-    zfp: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
+    cfp: [],
+    zfp: [],
     sci: false,
   },
 };
@@ -156,32 +163,40 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
   "01": [
     {
       id: "A",
-      label: "主推荐",
-      fields: [C.pathTags, C.yongJi, Z.topicPalace, U.Q],
+      label: "核心判断",
+      fields: [C.pathTags, U.Q],
       optionalFields: [],
       facts: "required",
+      note: "V2 主喂料走 decision-report-v2 page01 slice（DC+readings+registry）；此处仅薄兼容。",
     },
     {
       id: "B",
-      label: "成立条件",
-      fields: [C.dayunNow, Z.daxian, U.expect],
+      label: "为什么优先选这条路",
+      fields: [U.expect, C.pathTags],
       optionalFields: [],
       facts: "required",
     },
     {
       id: "C",
-      label: "不选什么",
-      fields: [C.conflictAnchors, Z.topicPalace],
+      label: "推荐成立的条件",
+      fields: [C.conflictAnchors, U.expect],
       optionalFields: [],
       facts: "required",
     },
     {
       id: "D",
-      label: "依据指针",
+      label: "当前不建议什么",
+      fields: [C.conflictAnchors],
+      optionalFields: [],
+      facts: "required",
+    },
+    {
+      id: "E",
+      label: "判断适用边界",
       fields: [],
       optionalFields: [],
       facts: "none",
-      note: "一句指回 02，本段不喂盘面字段。",
+      note: "指向 02 依据与 08 复盘；本段不喂盘面字段。",
     },
   ],
   "02": [
@@ -372,26 +387,18 @@ export const PAGE_SEGMENT_ALLOWLISTS: Record<DecisionPageId, readonly SegmentAll
   "03": [
     {
       id: "A",
-      label: "八字本题切片",
-      fields: [C.dayMaster, C.yongJi, C.shishenHit, C.dayunNow],
-      optionalFields: [],
-      facts: "required",
-    },
-    {
-      id: "B",
-      label: "紫微本题切片",
-      fields: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
-      optionalFields: [Z.mingShen, Z.topicPalace, Z.sihua, Z.daxian, Z.patternHits],
-      facts: "optional",
-      note: "紫微未稳则整段跳过，不注水。",
-    },
-    {
-      id: "C",
-      label: "对照一句",
+      label: "阅读说明",
       fields: [],
       optionalFields: [],
       facts: "none",
-      note: "只对照 A/B 已列内容。",
+      note: "术语附录：无盘面喂料；由最终依据层 term_id 汇总。",
+    },
+    {
+      id: "B",
+      label: "术语列表",
+      fields: [],
+      optionalFields: [],
+      facts: "none",
     },
   ],
 };

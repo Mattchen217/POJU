@@ -19,7 +19,7 @@ import { gateFaceFormat } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-for
 
 for (const id of DECISION_PAGE_IDS) {
   const schema = DECISION_PAGE_SCHEMAS[id];
-  assert.ok(schema.segments.length >= 3, `${id} has segments`);
+  assert.ok(schema.segments.length >= 2, `${id} has segments`);
   assert.equal(FACE_SEGMENT_FIELDS[id].length, schema.segments.length, `${id} field count`);
   const shape = faceFillShapeSkeleton(id);
   assert.equal(shape.page, id);
@@ -37,16 +37,55 @@ for (const id of DECISION_PAGE_IDS) {
   assert.match(system, new RegExp(`dualTrack=${schema.dualTrack}`));
 }
 
-// Sample filled 01 passes gate + argument bodies
+assert.equal(DECISION_PAGE_SCHEMAS["03"].title, "本报告使用的术语");
+
+// Sample filled Face01 v2 passes gate + argument bodies
 const face01 = {
   page: "01" as const,
   face: "01" as const,
+  schema_version: "face01-v2" as const,
   page_title: "The call",
   page_subtitle: "",
-  main_recommendation: "Hold the line remotely this quarter.",
-  conditions: "Only if cash runway stays above 6 months.",
-  not_choosing: "Do not resign into a cold market.",
-  evidence_pointer: "See face 02 for why this holds.",
+  core_judgment: {
+    text: "Hold the line remotely this quarter while cash runway stays stable.",
+    claim_ids: ["claim_core"],
+  },
+  why_this_path: [
+    {
+      text: "Cash runway supports a staged move.",
+      claim_ids: ["claim_core"],
+      evidence_ids: ["ev_1"],
+      target_page: "02" as const,
+      target_evidence_ids: ["ev_1"],
+    },
+  ],
+  recommendation_conditions: [
+    {
+      condition: "Cash runway stays above 6 months.",
+      status: "satisfied" as const,
+      source_ids: ["fact_cash"],
+    },
+    {
+      condition: "Partner terms remain unknown.",
+      status: "unconfirmed" as const,
+      source_ids: ["fact_partner"],
+    },
+  ],
+  not_recommended: [
+    {
+      option: "Resign into a cold market.",
+      reason: "Irreversible cash burn before demand is proven.",
+      cost_or_conflict: "High option cost.",
+      claim_ids: ["claim_core"],
+      evidence_ids: ["ev_1"],
+    },
+  ],
+  applicability_boundary: {
+    current_basis: ["Confirmed runway and staged pacing."],
+    invalidation_conditions: ["Runway drops below four months."],
+    page02_evidence_ids: ["ev_1"],
+    page08_review_refs: [],
+  },
 };
 assert.ok(facePageSchema("01").safeParse(face01).success);
 assert.ok(gateFaceFormat({ key: "01", page_schema: face01 }).passed);
@@ -57,6 +96,16 @@ assert.equal(
   gateFaceFormat({ key: "01", page_schema: legacy }).failed_rule,
   "gate_legacy_primary_backup",
 );
+
+const face03 = {
+  page: "03" as const,
+  face: "03" as const,
+  kind: "glossary_appendix" as const,
+  page_title: "Terms used",
+  reading_note: "Soft labels only; meanings follow evidence context.",
+  term_ids: ["day_master"],
+};
+assert.ok(facePageSchema("03").safeParse(face03).success);
 
 for (const k of FACE_DELIVERY_PAGE_KEYS) {
   assert.ok(

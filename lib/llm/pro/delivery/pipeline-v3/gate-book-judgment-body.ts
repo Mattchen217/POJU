@@ -10,6 +10,10 @@ import { FACE_SEGMENT_FIELDS } from "@/lib/llm/pro/delivery/page-schema/face-typ
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import { DECISION_PAGE_IDS } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
+import {
+  face01BodyTextBlob,
+  face01EvidenceCiteBlob,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page01/body-blob";
 
 export const BOOK_BODY_PACK_UNIT_MISS_RULE = "gate_body_pack_unit_miss";
 export const BOOK_BODY_PACK_TRACK_DROP_RULE = "gate_body_pack_track_drop";
@@ -59,7 +63,7 @@ function faceVisibleBlob(faceId: DecisionPageId, page: Record<string, unknown>):
 function evidenceBlob(faceId: DecisionPageId, page: Record<string, unknown>): string {
   switch (faceId) {
     case "01":
-      return String(page.evidence_pointer ?? "");
+      return face01EvidenceCiteBlob(page);
     case "02":
       // D only — A/B/C vernacular must not be the cite surface (Lab Face 02 #7).
       return Array.isArray(page.verifiable_anchors)
@@ -79,11 +83,7 @@ const REQUIRE_ALL_UNIT_IDS_IN_EVIDENCE = new Set<DecisionPageId>(["01", "02", "0
 function claimBlob(faceId: DecisionPageId, page: Record<string, unknown>): string {
   switch (faceId) {
     case "01":
-      return [
-        String(page.main_recommendation ?? ""),
-        String(page.conditions ?? ""),
-        String(page.not_choosing ?? ""),
-      ].join("\n");
+      return face01BodyTextBlob(page);
     case "02":
       return [
         String(page.destiny_reason ?? ""),

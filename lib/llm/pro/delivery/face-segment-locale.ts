@@ -14,30 +14,40 @@ const FACE_SEGMENT_LABELS: Record<
   Record<DeliveryLocaleBucket, SegLabels>
 > = {
   "01": {
-    zh: { A: "主推荐", B: "成立条件", C: "不选什么", D: "依据指针" },
+    zh: {
+      A: "核心判断",
+      B: "为什么优先选这条路",
+      C: "推荐成立的条件",
+      D: "当前不建议什么",
+      E: "判断适用边界",
+    },
     en: {
-      A: "Main recommendation",
-      B: "Conditions",
-      C: "What not to choose",
-      D: "Evidence pointer",
+      A: "Core judgment",
+      B: "Why this path",
+      C: "Conditions for the recommendation",
+      D: "What not to choose now",
+      E: "Applicability boundary",
     },
     es: {
-      A: "Recomendación principal",
-      B: "Condiciones",
-      C: "Qué no elegir",
-      D: "Puntero de evidencia",
+      A: "Juicio central",
+      B: "Por qué este camino",
+      C: "Condiciones de la recomendación",
+      D: "Qué no elegir ahora",
+      E: "Límite de aplicabilidad",
     },
     de: {
-      A: "Hauptempfehlung",
-      B: "Bedingungen",
-      C: "Was nicht wählen",
-      D: "Hinweis auf Belege",
+      A: "Kernurteil",
+      B: "Warum dieser Weg",
+      C: "Bedingungen der Empfehlung",
+      D: "Was jetzt nicht wählen",
+      E: "Anwendungsgrenze",
     },
     fr: {
-      A: "Recommandation principale",
-      B: "Conditions",
-      C: "Ce qu'il ne faut pas choisir",
-      D: "Pointeur de preuves",
+      A: "Jugement central",
+      B: "Pourquoi ce chemin",
+      C: "Conditions de la recommandation",
+      D: "Ce qu'il ne faut pas choisir",
+      E: "Limite d'applicabilité",
     },
   },
   "02": {
@@ -203,27 +213,11 @@ const FACE_SEGMENT_LABELS: Record<
     },
   },
   "03": {
-    zh: { A: "八字本题切片", B: "紫微本题切片", C: "对照一句" },
-    en: {
-      A: "Bazi slice for this question",
-      B: "Ziwei slice for this question",
-      C: "One-line contrast",
-    },
-    es: {
-      A: "Corte Bazi de esta pregunta",
-      B: "Corte Ziwei de esta pregunta",
-      C: "Contraste en una línea",
-    },
-    de: {
-      A: "Bazi-Schnitt zu dieser Frage",
-      B: "Ziwei-Schnitt zu dieser Frage",
-      C: "Einzeiliger Kontrast",
-    },
-    fr: {
-      A: "Tranche Bazi pour cette question",
-      B: "Tranche Ziwei pour cette question",
-      C: "Contraste en une ligne",
-    },
+    zh: { A: "阅读说明", B: "术语列表" },
+    en: { A: "How to read", B: "Terms used" },
+    es: { A: "Cómo leer", B: "Términos usados" },
+    de: { A: "Lesehinweis", B: "Verwendete Begriffe" },
+    fr: { A: "Mode d'emploi", B: "Termes utilisés" },
   },
 };
 

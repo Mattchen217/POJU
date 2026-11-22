@@ -413,7 +413,7 @@ export function buildV3BodyPrompt(input: {
           `- 可见主张必须从 pack unit.claim **白话改写**装配（claim 若含传统/软投影 → 正文译成日常说法；传统/软词只进依据折层/指针/D 锚）；删掉 pack 后主张须垮。`,
           `- 三轨 destiny / science / convergence：本页凡有 unit 的轨都必须进主张或依据（禁丢 science）。`,
           `- 依据指针/折层/D锚须点名 USER_FEED 中 required_unit_ids 列出的全部 id（含 science/convergence；按本页切片抄写，勿写死其它页/他案 id；禁只写在 A/B/C 散文里交差）。`,
-          `- 禁复述题面/期望/议程原句当 main_recommendation / conditions / 等价主张段。`,
+          `- 禁复述题面/期望/议程原句当 core_judgment / why_this_path / recommendation_conditions / 等价主张段。`,
           `- 禁再发明批断；禁再锁主辅；可见层禁命理专名与软投影（双层：传统/软只进折层/锚）。`,
           `- **禁手段处方（与 pack means_prescription 同口径）**：解释页 destiny/science/**convergence** 只写为何如此/张力同向；禁「更宜…」「可收费小试点」「先拿一次」「付费后再切」等行动处方（05/06/08 路径页另论）。`,
         ].join("\n")

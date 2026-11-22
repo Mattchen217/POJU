@@ -2,7 +2,9 @@
  * Reader shelf. cover → toc → 01 → 02 → 04 → 05 → 06 → (07) → 08 → 03.
  *
  * 07 is inserted only when the topic is 换场 / 迁移 / 合伙 / 亲密 / joint.
- * Cover and TOC are not prose pages. 03 is the package-end appendix.
+ * Cover and TOC are not prose pages.
+ * 03 is the package-end glossary appendix (internal id retained; not a chart dump).
+ * User-facing prose numbers are continuous via deliveryProsePageNumber.
  * Internal generators still use v1 segment keys; those papers fold onto these faces.
  */
 

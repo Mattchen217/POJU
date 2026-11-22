@@ -2,6 +2,9 @@
  * Face-native delivery page schemas (01–08).
  * Field names = DECISION_PAGE_SCHEMAS segment duties (EN keys).
  * New books emit these shapes — no primary/backup on face 01.
+ *
+ * Batch 0 (2026-11): Face01 = structured decision conclusion (v2);
+ * Face03 = glossary appendix (no chart dump). Legacy shapes kept for history open.
  */
 
 import { z } from "zod";
@@ -9,6 +12,16 @@ import {
   DECISION_PAGE_IDS,
   type DecisionPageId,
 } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import {
+  Face01LegacySchema,
+  Face01V2Schema,
+  Face03ChartLegacySchema,
+  Face03GlossarySchema,
+  type Face01Legacy,
+  type Face01V2,
+  type Face03ChartLegacy,
+  type Face03Glossary,
+} from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 const NonEmpty = z.string().trim().min(1);
 
@@ -18,18 +31,10 @@ const FaceChromeSchema = z.object({
   face: z.enum(DECISION_PAGE_IDS),
 });
 
-/** 01 · 本题断语 · dualTrack=pointer */
-export const Face01Schema = z.object({
-  page: z.literal("01"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("01"),
-  main_recommendation: NonEmpty.max(480),
-  conditions: NonEmpty.max(720),
-  not_choosing: NonEmpty.max(480),
-  /** Pointer only — no chart facts. */
-  evidence_pointer: NonEmpty.max(240),
-});
-export type Face01 = z.infer<typeof Face01Schema>;
+/** 01 · 本题决策结论 · dualTrack=pointer · schema_version face01-v2 */
+export const Face01Schema = Face01V2Schema;
+export type Face01 = Face01V2;
+export { Face01LegacySchema, type Face01Legacy };
 
 /** 02 · 为何如此 · dualTrack=abc */
 export const Face02Schema = z.object({
@@ -132,17 +137,13 @@ export const Face08Schema = z.object({
 });
 export type Face08 = z.infer<typeof Face08Schema>;
 
-/** 03 · 盘面附录 · dualTrack=appendix */
-export const Face03Schema = z.object({
-  page: z.literal("03"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("03"),
-  bazi_slice: NonEmpty.max(1600),
-  /** Omit / empty when ziwei unstable — do not invent palaces. */
-  ziwei_slice: z.string().trim().max(1600).optional().default(""),
-  contrast: z.string().trim().max(320).optional().default(""),
-});
-export type Face03 = z.infer<typeof Face03Schema>;
+/**
+ * 03 · 本报告术语索引（glossary appendix）· dualTrack=appendix
+ * No chart dump; term_ids resolved from SSOT at render.
+ */
+export const Face03Schema = Face03GlossarySchema;
+export type Face03 = Face03Glossary;
+export { Face03ChartLegacySchema, type Face03ChartLegacy };
 
 export const FACE_PAGE_SCHEMAS = {
   "01": Face01Schema,
@@ -175,10 +176,11 @@ export const FACE_SEGMENT_FIELDS: Record<
   readonly { key: string; segmentId: string }[]
 > = {
   "01": [
-    { key: "main_recommendation", segmentId: "A" },
-    { key: "conditions", segmentId: "B" },
-    { key: "not_choosing", segmentId: "C" },
-    { key: "evidence_pointer", segmentId: "D" },
+    { key: "core_judgment", segmentId: "A" },
+    { key: "why_this_path", segmentId: "B" },
+    { key: "recommendation_conditions", segmentId: "C" },
+    { key: "not_recommended", segmentId: "D" },
+    { key: "applicability_boundary", segmentId: "E" },
   ],
   "02": [
     { key: "destiny_reason", segmentId: "A" },
@@ -217,9 +219,8 @@ export const FACE_SEGMENT_FIELDS: Record<
     { key: "when_to_rerun", segmentId: "C" },
   ],
   "03": [
-    { key: "bazi_slice", segmentId: "A" },
-    { key: "ziwei_slice", segmentId: "B" },
-    { key: "contrast", segmentId: "C" },
+    { key: "reading_note", segmentId: "A" },
+    { key: "term_ids", segmentId: "B" },
   ],
 };
 
@@ -230,10 +231,36 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
     case "01":
       return {
         ...base,
-        main_recommendation: "",
-        conditions: "",
-        not_choosing: "",
-        evidence_pointer: "",
+        schema_version: "face01-v2",
+        core_judgment: { text: "", claim_ids: [""] },
+        why_this_path: [
+          {
+            text: "",
+            claim_ids: [""],
+            evidence_ids: [""],
+            target_page: "02",
+            target_evidence_ids: [""],
+          },
+        ],
+        recommendation_conditions: [
+          { condition: "", status: "unconfirmed", source_ids: [""] },
+          { condition: "", status: "unconfirmed", source_ids: [""] },
+        ],
+        not_recommended: [
+          {
+            option: "",
+            reason: "",
+            cost_or_conflict: "",
+            claim_ids: [""],
+            evidence_ids: [""],
+          },
+        ],
+        applicability_boundary: {
+          current_basis: [""],
+          invalidation_conditions: [""],
+          page02_evidence_ids: [""],
+          page08_review_refs: [],
+        },
       };
     case "02":
       return {
@@ -300,9 +327,9 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
     case "03":
       return {
         ...base,
-        bazi_slice: "",
-        ziwei_slice: "",
-        contrast: "",
+        kind: "glossary_appendix",
+        reading_note: "",
+        term_ids: [],
       };
   }
 }

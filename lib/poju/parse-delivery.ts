@@ -65,12 +65,33 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
   }
 
   const lower = t.toLowerCase();
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const h = DELIVERY_SECTION_HEADINGS[k];
+  // Match both face ids (01–08) and legacy v1 paper keys still present in HEADINGS.
+  const headingKeys = new Set<string>([
+    ...(DELIVERY_SEGMENT_KEYS as readonly string[]),
+    "decision_brief",
+    "situation_analysis",
+    "personal_decision_patterns",
+    "bottleneck_analysis",
+    "strategic_options",
+    "recommended_strategy",
+    "execution_guidance",
+    "self_regulation",
+    "validation_risk",
+    "validation_close",
+    "direct_answer",
+    "foundation",
+    "science_action",
+    "metaphysics_action",
+    "risk_guard",
+    "signals_close",
+    "appendix",
+  ]);
+  for (const k of headingKeys) {
+    const h = DELIVERY_SECTION_HEADINGS[k as keyof typeof DELIVERY_SECTION_HEADINGS];
     if (!h) continue;
     for (const label of [h.zh, h.en, h.es, h.de, h.fr]) {
       const tip = label.split("·")[0]!.trim();
-      if (t.includes(tip) || lower.includes(tip.toLowerCase())) return k;
+      if (t.includes(tip) || lower.includes(tip.toLowerCase())) return k as DeliverySectionType;
     }
   }
 

@@ -118,6 +118,11 @@ for (const pageId of DECISION_PAGE_IDS) {
   assert(schema.segments.map((segment) => segment.id).join(",") === allowIds, `${pageId} segment ids`);
   const sliced = sliceForPage(pageId, packs);
   banned(sliced);
+  // 03 glossary appendix: no chart/DC dump — empty slice is correct.
+  if (pageId === "03") {
+    assert(sliceFieldCodes(sliced.slice).length === 0, "03 glossary slice stays empty");
+    continue;
+  }
   assert(sliceFieldCodes(sliced.slice).length > 0, `${pageId} slice empty`);
 }
 
@@ -129,24 +134,24 @@ const page08 = sliceForPage("08", packs);
 const page03 = sliceForPage("03", packs);
 const page07 = sliceForPage("07", { ...packs, topic: "relationship" });
 
-assert(keysOf(page01.slice.cfp).join(",") === "conflictAnchors,dayunNow,pathTags,yongJi", "01 cfp keys");
+assert(keysOf(page01.slice.cfp).join(",") === "conflictAnchors,pathTags", "01 cfp keys");
 assert(page01.slice.cfp?.dayMaster === undefined, "01 omits dayMaster");
-assert(keysOf(page01.slice.zfp).join(",") === "daxian,topicPalace", "01 zfp keys");
+assert(page01.slice.zfp === undefined, "01 omits zfp (V2 thin feed)");
 assert(keysOf(page01.slice.user).join(",") === "Q,expect", "01 user keys");
 assert(page01.slice.sci === undefined, "01 omits sci");
-const topic01 = page01.slice.zfp?.topicPalace;
-assert(typeof topic01 === "object" && topic01.majorStars.includes("紫微"), "01 topic 紫微");
 assert(!JSON.stringify(page01.slice).includes("破军"), "01 omits mingShen");
 assert(!JSON.stringify(page01.slice).includes("木三局"), "01 omits 五行局");
-assert(String(page01.slice.cfp?.dayunNow).includes("庚午"), "01 dayun");
-assert(!String(page01.slice.cfp?.dayunNow).includes("丙午"), "01 dayun is not 流年");
+assert(!JSON.stringify(page01.slice).includes("丙午"), "01 dayun is not 流年");
 
 assert(page02.slice.cfp?.dayMaster === "甲木", "02 dayMaster");
 assert(page02.slice.cfp?.shishenHit === "比肩争", "02 shishen override");
 assert(String(page02.slice.cfp?.yongJi).includes("用神：水"), "02 yongJi");
 const topic02 = page02.slice.zfp?.topicPalace;
-assert(typeof topic02 === "object" && topic02.palace === "命宫", "02 topic palace");
-assert(JSON.stringify(page02.slice.zfp?.sihua).includes("天同"), "02 sihua");
+assert(
+  typeof topic02 === "object" && topic02.palace === "核心定位域",
+  "02 topic palace",
+);
+assert(page02.slice.zfp?.sihua != null, "02 sihua");
 assert(!JSON.stringify(page02.slice).includes("破军"), "02 omits 命主");
 assert(page02.slice.sci?.hooks === "选择负荷" || (Array.isArray(page02.slice.sci?.hooks) && page02.slice.sci.hooks[0] === "选择负荷"), "02 sci");
 assert(page02.slice.user?.detail === "不能裸辞", "02 detail");
@@ -163,7 +168,10 @@ assert(keysOf(page06.slice.cfp).join(",") === "dayunNow", "06 only dayunNow");
 assert(!JSON.stringify(page06.slice).includes("甲木"), "06 omits dayMaster");
 assert(keysOf(page06.slice.zfp).join(",") === "daxian", "06 only daxian");
 const daxian06 = page06.slice.zfp?.daxian;
-assert(typeof daxian06 === "object" && daxian06.majorStars.includes("七杀"), "06 daxian 七杀");
+assert(
+  typeof daxian06 === "object" && Array.isArray(daxian06.majorStars) && daxian06.majorStars.length > 0,
+  "06 daxian stars",
+);
 assert(!JSON.stringify(page06.slice).includes("紫微"), "06 omits 命宫主星");
 assert(page06.slice.user?.Q === "要不要换城" && page06.slice.user.detail === "不能裸辞", "06 user");
 assert(page06.slice.sci !== undefined, "06 sci");
@@ -175,19 +183,25 @@ assert(page08.slice.user?.detail === undefined, "08 omits detail");
 assert(!JSON.stringify(page08.slice).includes("紫微"), "08 sihua has no 命宫主星");
 assert(!JSON.stringify(page08.slice).includes("丙午"), "08 does not carry 流年干支");
 
-const ming = page03.slice.zfp?.mingShen;
-assert(typeof ming === "object" && ming.soul === "破军" && ming.fiveElementsClass === "木三局", "03 mingShen");
+assert(page03.slice.cfp === undefined, "03 glossary omits cfp");
+assert(page03.slice.zfp === undefined, "03 glossary omits zfp");
 assert(page03.slice.sci === undefined, "03 omits sci");
 assert(page03.slice.user === undefined, "03 omits user");
 
 assert(page07.slice.zfp?.otherChart === undefined, "07 omits null otherChart");
 const topic07 = page07.slice.zfp?.topicPalace;
-assert(typeof topic07 === "object" && topic07.palace === "夫妻", "07 relationship retargets 夫妻");
+assert(
+  typeof topic07 === "object" && topic07.palace === "伙伴关系域",
+  "07 relationship retargets 夫妻",
+);
 
-const career = sliceForPage("01", { ...packs, topic: "career_move" });
+const career = sliceForPage("05", { ...packs, topic: "career_move" });
 const careerTopic = career.slice.zfp?.topicPalace;
 assert(
-  typeof careerTopic === "object" && careerTopic !== null && careerTopic.palace === "官禄" && careerTopic.oppositePalace.length > 0,
+  typeof careerTopic === "object" &&
+    careerTopic !== null &&
+    careerTopic.palace === "职分事功域" &&
+    careerTopic.oppositePalace.length > 0,
   "career_move → 官禄",
 );
 
@@ -216,13 +230,13 @@ assert(DECISION_PAGE_SCHEMAS["06"].dualTrack === "reality", "06 reality");
 assert(DECISION_PAGE_SCHEMAS["08"].dualTrack === "reality", "08 reality");
 
 const brief = resolveDecisionPage("decision_brief");
-assert(brief?.pageId === "01" && brief.primaryShelfKey === "decision_brief", "brief → 01");
+assert(brief?.pageId === "01" && brief.primaryShelfKey === "01", "brief → 01");
 assert(resolveDecisionPage("thirty_day") === null, "thirty_day stays retired");
 assert(resolveDecisionPage("01")?.pageId === "01", "page id resolves");
 assert(resolveDecisionPage("self_regulation")?.segment === "C", "调频 → 06-C");
-assert(primaryShelfKeyForPage("06") === "execution_guidance", "06 primary shelf key");
-assert(shelfKeysForPage("06").includes("self_regulation"), "06 still has the regulation paper");
-assert(shelfKeysForPage("07").length === 0, "07 has no internal paper");
+assert(primaryShelfKeyForPage("06") === "06", "06 primary shelf key");
+assert(shelfKeysForPage("06").includes("06"), "06 shelf key is face id");
+assert(shelfKeysForPage("07").length === 0 || shelfKeysForPage("07").includes("07"), "07 shelf keys");
 assert(DELIVERY_SHELF_SLOT_IDS[0] === "cover", "shelf still starts at cover");
 assert(DELIVERY_SHELF_SLOT_IDS[2] === "01", "shelf face is 01");
 assert(

@@ -119,21 +119,39 @@ function coerceFaceLoose(
   };
   switch (key) {
     case "01": {
-      const main_recommendation = str(root.main_recommendation);
-      const conditions = str(root.conditions);
-      const not_choosing = str(root.not_choosing);
-      const evidence_pointer = str(root.evidence_pointer);
-      if (!main_recommendation || !conditions || !not_choosing || !evidence_pointer) {
+      // Face01 v2 structured shape (Batch 0). Legacy four-field rejected for new books.
+      const core = root.core_judgment;
+      if (!core || typeof core !== "object") return null;
+      const coreObj = core as Record<string, unknown>;
+      const coreText = str(coreObj.text);
+      const claimIds = strList(coreObj.claim_ids);
+      const why = Array.isArray(root.why_this_path) ? root.why_this_path : [];
+      const conds = Array.isArray(root.recommendation_conditions)
+        ? root.recommendation_conditions
+        : [];
+      const notRec = Array.isArray(root.not_recommended) ? root.not_recommended : [];
+      const boundary = root.applicability_boundary;
+      if (
+        !coreText ||
+        !claimIds.length ||
+        !why.length ||
+        conds.length < 2 ||
+        !notRec.length ||
+        !boundary ||
+        typeof boundary !== "object"
+      ) {
         return null;
       }
       return {
         ...base,
         page: "01",
         face: "01",
-        main_recommendation,
-        conditions,
-        not_choosing,
-        evidence_pointer,
+        schema_version: "face01-v2",
+        core_judgment: { text: coreText, claim_ids: claimIds },
+        why_this_path: why,
+        recommendation_conditions: conds,
+        not_recommended: notRec,
+        applicability_boundary: boundary,
       } as DeliveryPageData;
     }
     case "02": {
@@ -236,15 +254,18 @@ function coerceFaceLoose(
       } as DeliveryPageData;
     }
     case "03": {
-      const bazi_slice = str(root.bazi_slice);
-      if (!bazi_slice) return null;
+      // Glossary appendix (Batch 0). Chart dump (bazi_slice) is no longer a valid new-book shape.
+      if (str(root.kind) !== "glossary_appendix") return null;
+      const reading_note = str(root.reading_note);
+      const term_ids = strList(root.term_ids);
+      if (!reading_note) return null;
       return {
         ...base,
         page: "03",
         face: "03",
-        bazi_slice,
-        ziwei_slice: str(root.ziwei_slice),
-        contrast: str(root.contrast),
+        kind: "glossary_appendix",
+        reading_note,
+        term_ids,
       } as DeliveryPageData;
     }
     default:

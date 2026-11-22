@@ -3,7 +3,7 @@
  *
  * 这是内容页职责表，也是书架脸的读路径。生成填槽 zod = face-types.ts（一脸一段字段）。
  * 双轨挂在页上（指针 / A+B+C / 折叠 / 现实偏重 / 附录），不嵌进每一句。
- * 07 题相关才进入阅读序。03 固定包尾附录。
+ * 07 题相关才进入阅读序。03 固定包尾术语附录（非盘面列表）。
  */
 
 import type { DecisionPageId, PageSegmentId } from "@/lib/llm/pro/delivery/page-feed-matrix";
@@ -33,18 +33,19 @@ export type DecisionPageSchema = {
 export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> = {
   "01": {
     pageId: "01",
-    title: "本题断语",
-    question: "到底怎么走？",
+    title: "本题决策结论",
+    question: "这件事现在到底应该怎么走？",
     placement: "main",
     required: true,
     topicGated: false,
     dualTrack: "pointer",
-    dualTrackNote: "不展开论证。一句指回 02，须点名本页全部 pack unit id（含 science）。",
+    dualTrackNote: "不展开完整论证；理由与边界指向 02 依据单元。正文零命理专名、零软译术语。",
     segments: [
-      { id: "A", label: "主推荐", duty: "一两句方向；从批断包 claim 装配，禁复述题面。" },
-      { id: "B", label: "成立条件", duty: "这条路成立的条件（贴 pack 机制/偏差，非议程复述）。" },
-      { id: "C", label: "不选什么", duty: "眼下不走的方向。" },
-      { id: "D", label: "依据指针", duty: "一句指向 02，列出本页全部 unit id（destiny+science+convergence）。本段不喂盘面字段。" },
+      { id: "A", label: "核心判断", duty: "1–3 句直接回答决策问题；claim_ids 必填。" },
+      { id: "B", label: "为什么优先选这条路", duty: "最多三条摘要理由；每条关联 claim/evidence 并指向 02。" },
+      { id: "C", label: "推荐成立的条件", duty: "2–4 项；标明 satisfied/unconfirmed/conflicted/not_applicable。" },
+      { id: "D", label: "当前不建议什么", duty: "1–2 个不建议选项，写清冲突与代价。" },
+      { id: "E", label: "判断适用边界", duty: "当前依据 + 失效条件；指向 02 与 08。" },
     ],
   },
   "02": {
@@ -145,17 +146,16 @@ export const DECISION_PAGE_SCHEMAS: Record<DecisionPageId, DecisionPageSchema> =
   },
   "03": {
     pageId: "03",
-    title: "盘面附录",
-    question: "还想核对更细盘？",
+    title: "本报告使用的术语",
+    question: "本报告依据层用了哪些软译术语？",
     placement: "appendix",
-    required: true,
+    required: false,
     topicGated: false,
     dualTrack: "appendix",
-    dualTrackNote: "包尾附录。命理核对为主，不要求科学双段。",
+    dualTrackNote: "包尾元信息附录。从最终依据层实际 term_id 汇总；无术语则整页省略。不喂盘面、不调模型。",
     segments: [
-      { id: "A", label: "八字本题切片", duty: "只列本题用到的八字短锚。" },
-      { id: "B", label: "紫微本题切片", duty: "只列本题用到的紫微短锚；未进切片整段跳过，不补假宫、不灌十二宫。" },
-      { id: "C", label: "对照一句", duty: "只对照 A/B 已经列出的内容。" },
+      { id: "A", label: "阅读说明", duty: "软译标签用途说明；不以科学概念伪装。" },
+      { id: "B", label: "术语列表", duty: "本报告实际使用的 term_id；渲染时从 SSOT 取软译名与解释。" },
     ],
   },
 };

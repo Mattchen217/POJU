@@ -122,7 +122,7 @@ function listField(v: unknown): string[] {
 }
 
 /**
- * Face-native Brief source: Face 01 main_recommendation + Face 05 paths.
+ * Face-native Brief source: Face 01 (v2 core_judgment or legacy main_recommendation) + Face 05 paths.
  * Keeps CompanionBrief primary/backup slots for 30-day product compatibility
  * (no product rewrite) — names/claims come from face fields, not P1 主辅纸.
  */
@@ -130,9 +130,32 @@ function tracksFromFace01And05(
   face01: Record<string, unknown>,
   face05: Record<string, unknown>,
 ): { primary: CompanionTrackBrief; backup: CompanionTrackBrief } | null {
-  const main = str(face01.main_recommendation);
-  const conditions = str(face01.conditions);
-  const notChoosing = str(face01.not_choosing);
+  const core = asRecord(face01.core_judgment);
+  const main =
+    str(core?.text) ||
+    str(face01.main_recommendation);
+  const condRows = Array.isArray(face01.recommendation_conditions)
+    ? face01.recommendation_conditions
+    : [];
+  const conditions =
+    condRows
+      .map((row) => {
+        const r = asRecord(row);
+        return r ? str(r.condition) : "";
+      })
+      .filter(Boolean)
+      .join("；") || str(face01.conditions);
+  const notRows = Array.isArray(face01.not_recommended)
+    ? face01.not_recommended
+    : [];
+  const notChoosing =
+    notRows
+      .map((row) => {
+        const r = asRecord(row);
+        return r ? str(r.option) : "";
+      })
+      .filter(Boolean)
+      .join("；") || str(face01.not_choosing);
   if (!main) return null;
 
   const paths = Array.isArray(face05.paths)

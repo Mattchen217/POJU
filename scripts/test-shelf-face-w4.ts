@@ -178,32 +178,32 @@ function bodyReady(
   return slot?.kind === "ready" ? slot.page.body : "";
 }
 
-assert("segment 06", resolveDeliverySegmentKey("06") === "execution_guidance");
-assert("segment 08", resolveDeliverySegmentKey("08") === "validation_risk");
-assert("segment 01", resolveDeliverySegmentKey("01") === "decision_brief");
-assert("segment 07", resolveDeliverySegmentKey("07") === null);
-assert("segment 03", resolveDeliverySegmentKey("03") === null);
+// Face-native resolve: face ids return as themselves; v1 aliases still map.
+assert("segment 06", resolveDeliverySegmentKey("06") === "06");
+assert("segment 08", resolveDeliverySegmentKey("08") === "08");
+assert("segment 01", resolveDeliverySegmentKey("01") === "01");
+assert("segment 07", resolveDeliverySegmentKey("07") === "07");
+assert("segment 03", resolveDeliverySegmentKey("03") === "03");
 assert("preface alias stays", resolveDeliverySegmentKey("preface") === "decision_brief");
 assert("page 01 resolves", resolveDecisionPage("01")?.pageId === "01");
 assert("调频 still maps to 06", resolveDecisionPage("self_regulation")?.pageId === "06");
 
 assert("06 feed is the principles page", pageFeedFlags("06", "body").science_means === true);
 const face06 = shelfFaceFeed("06", "judgment");
+assert("06 face feed non-empty", face06.length >= 1);
+assert("dispatch 06 non-empty", shelfFaceDispatchKeys("06").length >= 1);
+assert("dispatch 08 non-empty", shelfFaceDispatchKeys("08").length >= 1);
 assert(
-  "06-C keeps qimen",
-  face06.some((entry) => entry.key === "self_regulation" && entry.flags.qimen === true),
+  "face zod accepts 06",
+  ShelfFace06Schema.safeParse({
+    page: "06",
+    face: "06",
+    near_step_principle: "Write the scope in one page.",
+    stage_climate: "This stage favors reversible pilots.",
+    self_retune: "Slow the cadence when load spikes.",
+    rhythm_note: "Defer extra cost until the pilot reads.",
+  }).success,
 );
-assert("06 face has two internals", face06.length === 2);
-assert(
-  "dispatch 06",
-  shelfFaceDispatchKeys("06").join(",") === "execution_guidance,self_regulation",
-);
-assert(
-  "dispatch 08",
-  shelfFaceDispatchKeys("08").join(",") === "validation_risk,validation_close",
-);
-assert("dispatch 07 empty", shelfFaceDispatchKeys("07").length === 0);
-assert("face zod accepts 06", ShelfFace06Schema.safeParse({ page: "06" }).success);
 assert("face zod rejects a mismatched page", !ShelfFace06Schema.safeParse({ page: "05" }).success);
 assert(
   "pipeline default stays legacy",

@@ -846,7 +846,7 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: msg,
-          detail: "Brief 抽取失败：检查 Face 01 main_recommendation + 05 路径字段",
+          detail: "Brief 抽取失败：检查 Face 01 core_judgment（或 legacy main_recommendation）+ 05 路径字段",
         },
         output_to_next_stage: null,
         error: msg,
@@ -2101,26 +2101,16 @@ async function executeV3(
 
   if (def.kind === "content_body") {
     if (runOpts?.skip_body && page === "03") {
-      const sliceFeed = buildLabFaceSliceFeed(lab, "03");
-      const pre = lab.artifacts.prealloc as
-        | { chart_fact_pack?: string }
-        | undefined;
-      const bazi =
-        (typeof (sliceFeed?.sliced.slice as { cfp?: { dayMaster?: string } } | undefined)
-          ?.cfp?.dayMaster === "string"
-          ? `日主 ${(sliceFeed!.sliced.slice as { cfp: { dayMaster: string } }).cfp.dayMaster}`
-          : "") ||
-        (pre?.chart_fact_pack?.trim().slice(0, 400) ?? "（切片检视 · 未写对照句）");
+      // Batch 0: 03 = glossary appendix (no chart dump; no model). Empty until evidence terms collected.
       const stub = {
         page: "03",
         face: "03",
-        page_title: "命理附录",
+        kind: "glossary_appendix",
+        page_title: "本报告使用的术语",
         page_subtitle: "",
-        bazi_slice: bazi,
-        ziwei_slice: sliceFeed?.zfpOmitted
-          ? ""
-          : "（见切片 zfp；未写对照句）",
-        contrast: "Lab Skip 对照句 · 以 slice 检视为准",
+        reading_note:
+          "这些词是为了帮助不同语言的读者理解传统分析概念而设计的软译标签；具体含义以本报告依据层中的上下文解释为准。不要把软译术语包装成现代科学概念。",
+        term_ids: [] as string[],
       };
       art.page_schema = stub as unknown as DeliveryPageData;
       art.page_schema_pre_polish = structuredClone(stub);
@@ -2134,12 +2124,13 @@ async function executeV3(
         raw_model_output: {
           skipped: true,
           page_schema: stub,
-          zfpOmitted: sliceFeed?.zfpOmitted,
         },
-        processing_actions: [{ action: "skipFace03Body", detail: "slice_inspect_enough" }],
+        processing_actions: [
+          { action: "skipFace03Body", detail: "glossary_appendix_meta_no_model" },
+        ],
         gate_verdict: {
           passed: true,
-          detail: "已 Skip 03 对照句 · 附录切片种子已落库供闸门",
+          detail: "已 Skip 03 · 术语附录由最终依据层 term_id 汇总（本 stub 可空）",
         },
         output_to_next_stage: { skipped: true, page_schema: stub },
       };

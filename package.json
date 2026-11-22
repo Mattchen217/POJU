@@ -49,6 +49,8 @@
     "test:book-judgment-pack": "tsx scripts/test-book-judgment-pack.ts",
     "test:page-slice-w2": "tsx scripts/test-page-slice-w2.ts",
     "test:scare-gate-w3": "tsx scripts/test-scare-gate-w3.ts",
+    "test:decision-report-v2-batch0": "tsx scripts/test-decision-report-v2-batch0-page01.ts",
+    "test:face-native-contract": "tsx scripts/test-face-native-contract.ts",
     "test:shelf-face-w4": "tsx scripts/test-shelf-face-w4.ts",
     "test:shelf-surface-w5": "tsx scripts/test-shelf-surface-w5.ts",
     "test:shelf-surface-w6": "tsx scripts/test-shelf-surface-w6.ts",

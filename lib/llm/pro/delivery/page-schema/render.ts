@@ -100,12 +100,67 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
     if (arg) out.push(arg);
   };
   switch (face) {
-    case "01":
-      add("主推荐", "main_recommendation");
-      add("成立条件", "conditions");
-      add("不选什么", "not_choosing");
-      add("依据指针", "evidence_pointer");
+    case "01": {
+      const core = p.core_judgment as { text?: string } | undefined;
+      if (core?.text) {
+        const arg = push("核心判断", core.text);
+        if (arg) out.push(arg);
+      } else {
+        add("主推荐", "main_recommendation");
+        add("成立条件", "conditions");
+        add("不选什么", "not_choosing");
+        add("依据指针", "evidence_pointer");
+        break;
+      }
+      const why = Array.isArray(p.why_this_path) ? p.why_this_path : [];
+      for (const row of why) {
+        const text = typeof row === "object" && row && "text" in row
+          ? String((row as { text?: unknown }).text ?? "")
+          : "";
+        const arg = push("为什么优先选这条路", text);
+        if (arg) out.push(arg);
+      }
+      const conds = Array.isArray(p.recommendation_conditions)
+        ? p.recommendation_conditions
+        : [];
+      for (const row of conds) {
+        const text =
+          typeof row === "object" && row && "condition" in row
+            ? String((row as { condition?: unknown }).condition ?? "")
+            : "";
+        const arg = push("推荐成立的条件", text);
+        if (arg) out.push(arg);
+      }
+      const notRec = Array.isArray(p.not_recommended) ? p.not_recommended : [];
+      for (const row of notRec) {
+        if (!row || typeof row !== "object") continue;
+        const r = row as {
+          option?: unknown;
+          reason?: unknown;
+          cost_or_conflict?: unknown;
+        };
+        const text = [r.option, r.reason, r.cost_or_conflict]
+          .map((x) => String(x ?? "").trim())
+          .filter(Boolean)
+          .join(" — ");
+        const arg = push("当前不建议什么", text);
+        if (arg) out.push(arg);
+      }
+      const boundary = p.applicability_boundary as
+        | { current_basis?: unknown; invalidation_conditions?: unknown }
+        | undefined;
+      if (boundary) {
+        const basis = Array.isArray(boundary.current_basis)
+          ? boundary.current_basis.map((x) => String(x)).join("\n")
+          : "";
+        const inv = Array.isArray(boundary.invalidation_conditions)
+          ? boundary.invalidation_conditions.map((x) => String(x)).join("\n")
+          : "";
+        const arg = push("判断适用边界", [basis, inv].filter(Boolean).join("\n"));
+        if (arg) out.push(arg);
+      }
       break;
+    }
     case "02":
       add("命理理由", "destiny_reason");
       add("科学机制", "science_mechanism");
@@ -143,9 +198,15 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       add("何时重跑本题", "when_to_rerun");
       break;
     case "03":
-      add("八字本题切片", "bazi_slice");
-      add("紫微本题切片", "ziwei_slice");
-      add("对照一句", "contrast");
+      if (p.kind === "glossary_appendix") {
+        add("阅读说明", "reading_note");
+        add("术语列表", "term_ids");
+      } else {
+        // Historical chart appendix open path
+        add("八字本题切片", "bazi_slice");
+        add("紫微本题切片", "ziwei_slice");
+        add("对照一句", "contrast");
+      }
       break;
   }
   return out;

@@ -23,6 +23,13 @@ import { FACE_SEGMENT_FIELDS } from "@/lib/llm/pro/delivery/page-schema/face-typ
 import { faceSegmentLabel } from "@/lib/llm/pro/delivery/face-segment-locale";
 import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
 import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
+import { Face01PageSlots } from "@/components/poju/delivery-pages/faces/Face01PageSlots";
+import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
+import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
+import {
+  isGlossaryAppendixPage,
+  isLegacyChartAppendixPage,
+} from "@/lib/llm/pro/delivery/decision-report-v2/reading-order";
 
 function asText(value: unknown): string {
   if (typeof value === "string") return value;
@@ -221,6 +228,22 @@ export function FacePageSlots({
   const id = (faceId ??
     ("face" in page ? page.face : undefined) ??
     page.page) as DecisionPageId;
+
+  if (id === "01" && (isFace01V2(page) || isFace01Legacy(page))) {
+    return <Face01PageSlots page={page as never} locale={locale} />;
+  }
+  if (
+    id === "03" &&
+    (isGlossaryAppendixPage(page) || isLegacyChartAppendixPage(page))
+  ) {
+    return (
+      <Face03GlossarySlots
+        page={page as unknown as Record<string, unknown>}
+        locale={locale}
+      />
+    );
+  }
+
   const dual = DECISION_PAGE_SCHEMAS[id]?.dualTrack ?? "reality";
   const fields = FACE_SEGMENT_FIELDS[id] ?? [];
   const isFace02 = id === "02";
