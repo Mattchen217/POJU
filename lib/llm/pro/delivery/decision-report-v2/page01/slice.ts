@@ -53,7 +53,7 @@ export type Page01FeedSlice = {
 };
 
 function mapDcFacts(dc: DecisionContext): DecisionReportRealityFact[] {
-  return (dc.realityFacts ?? []).map((f) => ({
+  return (dc.reality_facts ?? []).map((f) => ({
     fact_id: f.fact_id,
     content: f.statement,
     status: f.status,

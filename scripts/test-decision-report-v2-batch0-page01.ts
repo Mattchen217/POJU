@@ -178,7 +178,7 @@ assert.ok(
 
 // Minimal DC stub
 const dc = {
-  realityFacts: [
+  reality_facts: [
     {
       fact_id: "fact_cash_ok",
       statement: "Runway is about 8 months.",
