@@ -16,19 +16,23 @@ export const GLOSSARY_APPENDIX_PAGE_ID = APPENDIX_PAGE_ID;
 
 export type ReadingOrderOptions = {
   includePage07?: boolean;
-  /** When false, omit glossary appendix (no terms used). */
+  /**
+   * Glossary appendix only when true.
+   * Default **false** — SoT: omit when no evidence-layer term_ids were used.
+   * Callers must set true only after assembleGlossaryAppendixFromEvidence().include.
+   */
   includeGlossaryAppendix?: boolean;
 };
 
 /**
  * Internal generation / shelf order for new Decision Report V2 books.
- * Chart appendix is never included.
+ * Chart appendix is never included. Glossary is opt-in (default omitted).
  */
 export function decisionReportV2InternalOrder(
   opts: ReadingOrderOptions = {},
 ): DecisionPageId[] {
   const include07 = opts.includePage07 === true;
-  const includeGlossary = opts.includeGlossaryAppendix !== false;
+  const includeGlossary = opts.includeGlossaryAppendix === true;
   const order = (MAIN_NARRATIVE_PAGE_ORDER as readonly DecisionPageId[]).filter(
     (id) => id !== "07" || include07,
   );

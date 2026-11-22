@@ -125,9 +125,13 @@ assert.ok(allow && allow.includes("face 02") && allow.includes("CFP."), allow ??
 
 const order = readingOrderForTopic("迁移");
 assert.deepEqual(order.slice(0, 6), ["01", "02", "04", "05", "06", "07"]);
-assert.equal(order[order.length - 1], "03");
+assert.equal(order[order.length - 1], "08");
+assert.equal(
+  readingOrderForTopic("迁移", { includeAppendix03: true }).at(-1),
+  "03",
+);
 const no07 = readingOrderForTopic(null);
-assert.deepEqual(no07, ["01", "02", "04", "05", "06", "08", "03"]);
+assert.deepEqual(no07, ["01", "02", "04", "05", "06", "08"]);
 
 assert.equal(labUsesV3Executor("legacy"), false);
 

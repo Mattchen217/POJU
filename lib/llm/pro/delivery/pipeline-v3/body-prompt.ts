@@ -395,8 +395,22 @@ export function buildV3BodyPrompt(input: {
   zfpOmitted?: boolean;
   /** Product Stage 4 — formal frozen Decision Context feed block. */
   decision_context_feed?: string | null;
+  /**
+   * Face 01 V2 production prompts (Batch 0 closure).
+   * When set, replaces generic buildFacePromptPair for key=01.
+   */
+  face01_production?: { system: string; user: string } | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
+
+  // Face 01 production path — structured Page01FeedSlice prompt (no legacy face stub).
+  if (faceId === "01" && input.face01_production?.system && input.face01_production?.user) {
+    return {
+      system: `${BODY_SYSTEM_FACE}\n\n${input.face01_production.system}`,
+      user: input.face01_production.user,
+    };
+  }
+
   if (faceId) {
     const { system, user: faceUser } = buildFacePromptPair({
       faceId,

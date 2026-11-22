@@ -222,6 +222,10 @@ export function planProductionV3Book(lab: DeliveryLabSession): ProductionV3BookP
   for (const key of FACE_DELIVERY_PAGE_KEYS) {
     const art = lab.artifacts.by_page[key];
     const schema = art?.page_schema;
+    // 03 glossary is optional — omit when no evidence-layer term_ids (SoT).
+    if (key === "03" && !isPageData(schema)) {
+      continue;
+    }
     if (!isPageData(schema)) {
       return { ok: false, reason: `v3_missing_page_schema:${key}` };
     }
@@ -258,7 +262,10 @@ export async function persistProductionV3Book(
 
   for (const key of FACE_DELIVERY_PAGE_KEYS) {
     const schema = plan.schemas[key];
-    if (!schema) return { ok: false, reason: `v3_missing_page_schema:${key}` };
+    if (!schema) {
+      if (key === "03") continue; // glossary omitted
+      return { ok: false, reason: `v3_missing_page_schema:${key}` };
+    }
     const bodies = plan.narrative[key] ?? [];
     const evidence = plan.marked[key] ?? [];
     const progress: SegmentChainProgress = {

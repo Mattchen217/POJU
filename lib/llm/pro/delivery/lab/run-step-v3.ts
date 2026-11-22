@@ -732,11 +732,108 @@ async function executeV3(
   }
 
   if (def.kind === "assemble") {
+    const {
+      assembleFace01Page02References,
+      assembleGlossaryAppendixFromEvidence,
+      collectFace01Page02TargetIds,
+      isFace01V2,
+    } = await import("@/lib/llm/pro/delivery/decision-report-v2");
+
+    const face01Schema = lab.artifacts.by_page["01" as DeliverySegmentKey]
+      ?.page_schema;
+    let page02Assembly: ReturnType<typeof assembleFace01Page02References> = {
+      status: "ok",
+    };
+    if (isFace01V2(face01Schema)) {
+      // Page 02 V2 evidence realization is not shipped yet → deferred (no fake Page02).
+      // When realized ids are later persisted on artifacts, switch to orphan fail-closed.
+      const realizedRaw = (
+        lab.artifacts as {
+          page02_realized_evidence_ids?: string[] | null;
+        }
+      ).page02_realized_evidence_ids;
+      const realized =
+        realizedRaw === undefined
+          ? null
+          : realizedRaw === null
+            ? null
+            : new Set(realizedRaw);
+      page02Assembly = assembleFace01Page02References({
+        page01: face01Schema,
+        page02RealizedEvidenceIds: realized,
+      });
+      if (page02Assembly.status === "fail") {
+        return {
+          input_payload: {
+            pipeline: "face01_v2",
+            page02_targets: collectFace01Page02TargetIds(face01Schema),
+            missing_ids: page02Assembly.missing_ids,
+          },
+          raw_model_output: null,
+          processing_actions: [
+            {
+              action: "assembleFace01Page02References",
+              detail: "orphan_page02_refs",
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: "orphan_page02_refs",
+            detail: `Face01→Page02 引用未解析：${page02Assembly.missing_ids.join(",")} · 禁止静默删除`,
+          },
+          output_to_next_stage: null,
+          error: "orphan_page02_refs",
+        };
+      }
+    }
+
+    // Glossary only from evidence-layer term_ids that actually entered rendering.
+    const evidenceTermLists: string[][] = [];
+    const face01Meta = (
+      lab.artifacts.by_page["01" as DeliverySegmentKey] as
+        | { face01_production_meta?: { cited_term_ids?: string[] } }
+        | undefined
+    )?.face01_production_meta;
+    if (face01Meta?.cited_term_ids?.length) {
+      evidenceTermLists.push(face01Meta.cited_term_ids);
+    }
+    const storedTerms = (
+      lab.artifacts as { evidence_term_id_lists?: string[][] }
+    ).evidence_term_id_lists;
+    if (Array.isArray(storedTerms)) {
+      for (const list of storedTerms) {
+        if (Array.isArray(list) && list.length) evidenceTermLists.push(list);
+      }
+    }
+    const glossary = assembleGlossaryAppendixFromEvidence({
+      locale: lab.source.locale || "zh",
+      evidenceTermIdLists: evidenceTermLists,
+    });
+    if (glossary.include && glossary.page) {
+      const art03 =
+        lab.artifacts.by_page["03" as DeliverySegmentKey] ??
+        (lab.artifacts.by_page["03" as DeliverySegmentKey] = {});
+      art03.page_schema = glossary.page as unknown as DeliveryPageData;
+      art03.page_schema_pre_polish = structuredClone(glossary.page);
+    } else {
+      const art03 = lab.artifacts.by_page["03" as DeliverySegmentKey];
+      if (art03?.page_schema) {
+        const o = art03.page_schema as Record<string, unknown>;
+        // Clear empty glossary stubs; never keep blank appendix in order.
+        if (o.kind === "glossary_appendix") {
+          art03.page_schema = undefined;
+          art03.page_schema_pre_polish = undefined;
+        }
+      }
+    }
+
     const assembled = collectAssembleFacePages(lab);
     const previewLines = [
       "# Delivery Lab · Face shelf preview",
       `topic=${assembled.topic ?? "(none → no face 07)"}`,
       `order=${assembled.order.join(" → ")}`,
+      `glossary=${glossary.include ? glossary.term_ids.join(",") : "omitted"}`,
+      `page02_refs=${page02Assembly.status}`,
       "",
       ...assembled.pages.map((p) => {
         const filled = p.page_schema ? "filled" : "empty";
@@ -751,21 +848,41 @@ async function executeV3(
         pipeline: lab.pipeline ?? "decision_shelf",
         shelf_order: assembled.order,
         topic: assembled.topic,
+        glossary_include: glossary.include,
+        page02_assembly: page02Assembly.status,
       },
       raw_model_output: {
         shelf_order: assembled.order,
         faces: assembled.pages,
         preview_chars: preview.length,
+        glossary_term_ids: glossary.include ? glossary.term_ids : [],
+        page02_assembly: page02Assembly,
       },
-      processing_actions: [{ action: "assemble_face_slots" }],
+      processing_actions: [
+        { action: "assemble_face_slots" },
+        {
+          action: "assembleGlossaryAppendixFromEvidence",
+          detail: glossary.include
+            ? `terms=${glossary.term_ids.length}`
+            : "omitted_no_terms",
+        },
+        {
+          action: "assembleFace01Page02References",
+          detail: page02Assembly.status,
+        },
+      ],
       gate_verdict: {
         passed: true,
-        detail: `Face shelf · ${assembled.order.join("→")}`,
+        detail: `Face shelf · ${assembled.order.join("→")} · glossary=${
+          glossary.include ? "on" : "off"
+        } · page02=${page02Assembly.status}`,
       },
       output_to_next_stage: {
         preview,
         faces: assembled.pages,
         shelf_order: assembled.order,
+        glossary_include: glossary.include,
+        page02_assembly: page02Assembly,
       },
     };
   }
@@ -2101,38 +2218,34 @@ async function executeV3(
 
   if (def.kind === "content_body") {
     if (runOpts?.skip_body && page === "03") {
-      // Batch 0: 03 = glossary appendix (no chart dump; no model). Empty until evidence terms collected.
-      const stub = {
-        page: "03",
-        face: "03",
-        kind: "glossary_appendix",
-        page_title: "本报告使用的术语",
-        page_subtitle: "",
-        reading_note:
-          "这些词是为了帮助不同语言的读者理解传统分析概念而设计的软译标签；具体含义以本报告依据层中的上下文解释为准。不要把软译术语包装成现代科学概念。",
-        term_ids: [] as string[],
-      };
-      art.page_schema = stub as unknown as DeliveryPageData;
-      art.page_schema_pre_polish = structuredClone(stub);
+      // SoT: do not materialize empty glossary. Assemble fills 03 only when term_ids used.
+      art.page_schema = undefined;
+      art.page_schema_pre_polish = undefined;
       return {
         input_payload: {
           key: page,
           pipeline: "decision_shelf",
           phase: "content_body",
           skip_body: true,
+          glossary_deferred_to_assemble: true,
         },
         raw_model_output: {
           skipped: true,
-          page_schema: stub,
+          page_schema: null,
+          reason: "glossary_omitted_until_evidence_terms",
         },
         processing_actions: [
-          { action: "skipFace03Body", detail: "glossary_appendix_meta_no_model" },
+          {
+            action: "skipFace03Body",
+            detail: "omit_empty_glossary_until_assemble",
+          },
         ],
         gate_verdict: {
           passed: true,
-          detail: "已 Skip 03 · 术语附录由最终依据层 term_id 汇总（本 stub 可空）",
+          detail:
+            "已 Skip 03 · 无空附录占位 · 仅当最终依据层出现 term_id 时由 assemble 写入",
         },
-        output_to_next_stage: { skipped: true, page_schema: stub },
+        output_to_next_stage: { skipped: true, page_schema: null },
       };
     }
     const packOn = isBookJudgmentPackEnabled();
@@ -2200,7 +2313,10 @@ async function executeV3(
         error: "missing_judgment_plan",
       };
     }
-    if (faceBody && page !== "03" && !plan?.units?.length) {
+    // Face 01 V2 production path needs DC (+ optional pack for registry); not the old judgment plan.
+    const face01V2Path =
+      page === "01" && Boolean(lab.source.decision_context_snapshot);
+    if (faceBody && page !== "03" && !plan?.units?.length && !face01V2Path) {
       return {
         input_payload: { key: page },
         raw_model_output: null,
@@ -2215,6 +2331,20 @@ async function executeV3(
         error: bookPack ? "missing_book_judgment_slice" : "missing_judgment_plan",
       };
     }
+    if (page === "01" && !lab.source.decision_context_snapshot) {
+      return {
+        input_payload: { key: page, pipeline: "face01_v2" },
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "face01_missing_decision_context",
+          detail: "Face01 V2 生产路径需要冻结 Decision Context；禁止旧正文 fallback。",
+        },
+        output_to_next_stage: null,
+        error: "face01_missing_decision_context",
+      };
+    }
     const finalize = labSyntheticFinalize(lab);
     const preallocArt = lab.artifacts.prealloc as
       | { chart_fact_pack?: string }
@@ -2222,10 +2352,12 @@ async function executeV3(
     const escapeArmedBody = v3EscapeArmed(art, "body");
     const acceptanceArmedBody = v3AcceptanceArmed(art, "body");
     const topic = lab.artifacts.topic_gate_07?.topic ?? null;
-    const dcFeed = lab.source.decision_context_snapshot
-      ? formatDecisionContextSliceForPage(lab.source.decision_context_snapshot, page) ||
-        null
-      : null;
+    const dcFeed = face01V2Path
+      ? null
+      : lab.source.decision_context_snapshot
+        ? formatDecisionContextSliceForPage(lab.source.decision_context_snapshot, page) ||
+          null
+        : null;
     const body = await runContentBodyGenerate({
       key: page,
       finalize,
@@ -2234,8 +2366,8 @@ async function executeV3(
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       thinking_effort: "high",
       dispatch_attempt: escapeArmedBody ? 2 : 1,
-      deep_evidence_plan: plan,
-      book_judgment_pack_block: packBlock,
+      deep_evidence_plan: face01V2Path ? null : plan,
+      book_judgment_pack_block: face01V2Path ? null : packBlock,
       action_brief: action_brief ?? null,
       chart_thesis_block: opts.chart_thesis_block,
       chart_fact_pack: preallocArt?.chart_fact_pack,
@@ -2256,8 +2388,15 @@ async function executeV3(
       topic,
       pivot_chart_path: lab.source.pivot_chart_path ?? null,
       partner_bazi: lab.source.partner_bazi ?? null,
-      acceptance_corrective: v3AcceptanceCorrective(art, "body"),
+      acceptance_corrective: face01V2Path
+        ? null
+        : v3AcceptanceCorrective(art, "body"),
       decision_context_feed: dcFeed,
+      decision_context_snapshot: face01V2Path
+        ? lab.source.decision_context_snapshot ?? null
+        : null,
+      book_judgment_pack: face01V2Path ? bookPack : null,
+      report_id: session_id,
     });
     if (!body.ok) {
       if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {
@@ -2273,10 +2412,14 @@ async function executeV3(
       }
       if (escapeArmedBody) setV3Escape(art, "body", false);
       if (acceptanceArmedBody) clearV3Acceptance(art, "body");
+      const face01ValidationFail =
+        face01V2Path &&
+        (body.reason.startsWith("face01_") ||
+          body.reason === "scare_redline");
       return {
         input_payload: {
           key: page,
-          pipeline: "v3",
+          pipeline: face01V2Path ? "face01_v2" : "v3",
           phase: "body",
           has_call_trace: Boolean(body.call_trace),
           provider_escape_used: escapeArmedBody,
@@ -2287,16 +2430,25 @@ async function executeV3(
             lab.source.decision_context_binding?.context_hash ??
             lab.source.decision_context_snapshot?.content_hash ??
             null,
+          face01_meta: body.face01_meta ?? null,
         },
         raw_model_output: body.last_raw_text
           ? { _raw_text: body.last_raw_text }
           : null,
-        processing_actions: [{ action: "runContentBodyGenerate", detail: body.reason }],
+        processing_actions: [
+          {
+            action: face01V2Path
+              ? "runContentBodyGenerate_face01_v2"
+              : "runContentBodyGenerate",
+            detail: body.reason,
+          },
+        ],
         gate_verdict: {
           passed: false,
           failed_rule: body.reason,
-          detail:
-            body.reason === "scare_redline"
+          detail: face01ValidationFail
+            ? "Face01 V2 校验失败（含一次定向修复已用尽）· 禁止旧正文 fallback · 改生成侧后重跑。"
+            : body.reason === "scare_redline"
               ? "恐吓红线命中。改成带条件的明确主推后重跑本步。"
               : escapeArmedBody
                 ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
@@ -2326,35 +2478,47 @@ async function executeV3(
     art.page_schema_pre_polish = structuredClone(bodyPage);
     art.page_schema_by_locale = undefined;
     art.polish_skipped = undefined;
+    if (face01V2Path && body.face01_meta) {
+      (art as { face01_production_meta?: unknown }).face01_production_meta =
+        body.face01_meta;
+    }
     const realityBlob = v3BodyRealityBlob(opts);
     /** 六页均有润色步：正文只硬拦事实/门槛；表面类 defer 到 polish（Skip 时回退 full）。 */
     const deferSurfaceToPolish = true;
-    const bodyGate = gateBodyCategoryB({
-      key: page,
-      page_schema: bodyPage,
-      reality_blob: realityBlob,
-      surface: deferSurfaceToPolish ? "substance_only" : "full",
-      partner_bazi: lab.source.partner_bazi ?? null,
-      pivot_chart_path: lab.source.pivot_chart_path ?? null,
-    });
-    const packUnits =
-      bookPack && isFaceDeliveryKey(page) ? unitsForFace(bookPack, page) : [];
-    const packBodyGate = gateBookJudgmentBodyConsume({
-      key: page,
-      page_schema: bodyPage,
-      pack_units: packUnits,
-      question: opts.question_expectation ?? null,
-    });
-    const surfacePreview = deferSurfaceToPolish
-      ? gateBodyCategoryB({
+    // Face01 V2 already ran schema+evidence+body compliance; skip legacy substance gates.
+    const bodyGate = face01V2Path
+      ? { passed: true as const, detail: "face01_v2_validated" }
+      : gateBodyCategoryB({
           key: page,
           page_schema: bodyPage,
           reality_blob: realityBlob,
-          surface: "full",
+          surface: deferSurfaceToPolish ? "substance_only" : "full",
           partner_bazi: lab.source.partner_bazi ?? null,
           pivot_chart_path: lab.source.pivot_chart_path ?? null,
-        })
-      : null;
+        });
+    const packUnits =
+      bookPack && isFaceDeliveryKey(page) && !face01V2Path
+        ? unitsForFace(bookPack, page)
+        : [];
+    const packBodyGate = face01V2Path
+      ? null
+      : gateBookJudgmentBodyConsume({
+          key: page,
+          page_schema: bodyPage,
+          pack_units: packUnits,
+          question: opts.question_expectation ?? null,
+        });
+    const surfacePreview =
+      face01V2Path || !deferSurfaceToPolish
+        ? null
+        : gateBodyCategoryB({
+            key: page,
+            page_schema: bodyPage,
+            reality_blob: realityBlob,
+            surface: "full",
+            partner_bazi: lab.source.partner_bazi ?? null,
+            pivot_chart_path: lab.source.pivot_chart_path ?? null,
+          });
     const effectiveBodyGate =
       bodyGate && !bodyGate.passed
         ? bodyGate
@@ -2487,15 +2651,23 @@ async function executeV3(
     return {
       input_payload: {
         key: page,
-        pipeline: packBlock ? "book_judgment_pack" : "v3",
+        pipeline: face01V2Path
+          ? "face01_v2"
+          : packBlock
+            ? "book_judgment_pack"
+            : "v3",
         phase: "content_body",
-        book_judgment_slice: Boolean(packBlock),
+        book_judgment_slice: Boolean(packBlock) && !face01V2Path,
         per_page_judgment: false,
-        pack_unit_ids: packPlan?.units.map((u) => u.calc_cite ?? u.path) ?? [],
-        quality_gates: deferSurfaceToPolish
-          ? "substance_only_surface_at_polish"
-          : "shape_only_human",
-        surface_deferred: surfaceDeferred,
+        pack_unit_ids: face01V2Path
+          ? []
+          : packPlan?.units.map((u) => u.calc_cite ?? u.path) ?? [],
+        quality_gates: face01V2Path
+          ? "face01_v2_schema_evidence_body"
+          : deferSurfaceToPolish
+            ? "substance_only_surface_at_polish"
+            : "shape_only_human",
+        surface_deferred: face01V2Path ? null : surfaceDeferred,
         acceptance_retry_used: acceptanceArmedBody,
         decision_context_feed_present: Boolean(dcFeed),
         decision_context_binding: lab.source.decision_context_binding ?? null,
@@ -2503,6 +2675,7 @@ async function executeV3(
           lab.source.decision_context_binding?.context_hash ??
           lab.source.decision_context_snapshot?.content_hash ??
           null,
+        face01_meta: body.face01_meta ?? null,
         prompt_chars: {
           system: body.call_trace.system.length,
           user: body.call_trace.user.length,
@@ -2512,8 +2685,27 @@ async function executeV3(
       },
       raw_model_output: bodyPage,
       processing_actions: [
-        { action: "runContentBodyGenerate", detail: "parse_only" },
-        ...(packBlock
+        {
+          action: face01V2Path
+            ? "runContentBodyGenerate_face01_v2"
+            : "runContentBodyGenerate",
+          detail: face01V2Path
+            ? body.face01_meta?.validation ?? "validated"
+            : "parse_only",
+        },
+        ...(face01V2Path
+          ? [
+              {
+                action: "validateFace01ProductionOutput",
+                detail: "schema+evidence+body_compliance",
+              },
+              {
+                action: "assembleFace01Page02References",
+                detail: "deferred_until_page02",
+              },
+            ]
+          : []),
+        ...(!face01V2Path && packBlock
           ? [
               {
                 action: "sliceBookJudgmentForFace",
@@ -2521,14 +2713,18 @@ async function executeV3(
               },
             ]
           : []),
-        {
-          action: "gateBodyCategoryB",
-          detail: deferSurfaceToPolish
-            ? surfaceDeferred
-              ? `substance_pass·surface_deferred:${surfaceDeferred}`
-              : "substance_pass·surface_clean"
-            : "pass",
-        },
+        ...(!face01V2Path
+          ? [
+              {
+                action: "gateBodyCategoryB",
+                detail: deferSurfaceToPolish
+                  ? surfaceDeferred
+                    ? `substance_pass·surface_deferred:${surfaceDeferred}`
+                    : "substance_pass·surface_clean"
+                  : "pass",
+              },
+            ]
+          : []),
         ...(packBodyGate
           ? [
               {
@@ -2545,13 +2741,15 @@ async function executeV3(
       ],
       gate_verdict: {
         passed: true,
-        detail: deferSurfaceToPolish
-          ? surfaceDeferred
-            ? `正文已落库 · 事实/门槛过 · 表面类（${surfaceDeferred}）留给润色步清 · 请 gate 人审真准价值`
-            : acceptanceArmedBody
-              ? "正文已落库 · 验收第2枪过 · 表面已干净 · 请 gate 人审真准价值后进润色"
-              : "正文已落库 · 事实/门槛过 · 表面已干净 · 请 gate 人审真准价值后进润色"
-          : "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
+        detail: face01V2Path
+          ? `Face01 V2 已落库 · ${body.face01_meta?.validation ?? "validated"} · Page02 引用延后装配 · 禁止旧正文 fallback`
+          : deferSurfaceToPolish
+            ? surfaceDeferred
+              ? `正文已落库 · 事实/门槛过 · 表面类（${surfaceDeferred}）留给润色步清 · 请 gate 人审真准价值`
+              : acceptanceArmedBody
+                ? "正文已落库 · 验收第2枪过 · 表面已干净 · 请 gate 人审真准价值后进润色"
+                : "正文已落库 · 事实/门槛过 · 表面已干净 · 请 gate 人审真准价值后进润色"
+            : "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
       },
       output_to_next_stage: bodyPage,
       tokens_used: body.tokens_used,

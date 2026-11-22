@@ -625,11 +625,19 @@ export function deliveryTopicFromSignals(input: DeliveryShelfTopicSignals): stri
   return explicit || null;
 }
 
-/** 主叙事阅读序，07 按题插入，03 固定在包尾。 */
-export function readingOrderForTopic(topic?: string | null): DecisionPageId[] {
+/**
+ * 主叙事阅读序，07 按题插入。
+ * 03 术语附录默认不进序（SoT：仅当依据层实际使用 term_id 时由装配层加入）。
+ * 历史盘面附录：调用方在确认 legacy chart 03 存在时传 includeAppendix03: true。
+ */
+export function readingOrderForTopic(
+  topic?: string | null,
+  opts?: { includeAppendix03?: boolean },
+): DecisionPageId[] {
   const order: DecisionPageId[] = ["01", "02", "04", "05", "06"];
   if (page07Applies(topic)) order.push("07");
-  order.push("08", "03");
+  order.push("08");
+  if (opts?.includeAppendix03 === true) order.push("03");
   return order;
 }
 

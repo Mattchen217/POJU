@@ -217,8 +217,13 @@ assert(noSci.slice.sci === undefined, "blank hooks omitted");
 const forced = sliceForPage("01", { ...packs, sci: { hooks: ["不该出现"] } });
 assert(forced.slice.sci === undefined, "sci false drops hooks");
 
-assert(readingOrderForTopic("general").join(",") === "01,02,04,05,06,08,03", "general order");
-assert(readingOrderForTopic("relationship").join(",") === "01,02,04,05,06,07,08,03", "relationship inserts 07");
+assert(readingOrderForTopic("general").join(",") === "01,02,04,05,06,08", "general order omits empty glossary");
+assert(
+  readingOrderForTopic("general", { includeAppendix03: true }).join(",") ===
+    "01,02,04,05,06,08,03",
+  "glossary appendix opt-in",
+);
+assert(readingOrderForTopic("relationship").join(",") === "01,02,04,05,06,07,08", "relationship inserts 07");
 assert(page07Applies("career_move") && page07Applies("迁移") && page07Applies("joint"), "07 topics");
 assert(!page07Applies("general") && !page07Applies("官禄") && !page07Applies(null), "07 stays shut");
 

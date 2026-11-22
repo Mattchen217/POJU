@@ -148,21 +148,48 @@ export function sliceForPage01(input: {
     return readings.some((r) => r.anchor_ids.includes(a.anchor_id));
   });
 
-  const claimIds = Object.keys(registry.claims);
-  const evidence = Object.values(registry.evidence).map((e) => ({
-    evidence_id: e.evidence_id,
-    source_type: e.source_type,
-    source_id: e.source_id,
-    supports_claim_ids: e.supports_claim_ids,
-    limits_claim_ids: e.limits_claim_ids,
-    explanation: e.explanation,
-    term_ids: e.term_ids,
-    verification_status: e.verification_status,
-  }));
+  const keyClaims = (report.report_analysis.key_claims ?? []).filter((c) => {
+    // Only claims that cite remaining evidence or are in registry.
+    if (!c.evidence_ids?.length) return registry.claims[c.claim_id] != null;
+    return c.evidence_ids.some((id) => registry.evidence[id] != null);
+  });
+  const claimIdSet = new Set([
+    ...Object.keys(registry.claims),
+    ...keyClaims.map((c) => c.claim_id),
+  ]);
+  const claimIds = [...claimIdSet];
 
-  // Ensure we don't leak readings that were filtered out via evidence source ids silently —
-  // evidence stays; model must not invent new reading ids beyond personal_analysis.
-  void readingIdSet;
+  // Evidence: reality facts + readings still in slice; mechanism/planned keep if registry-present
+  // (caller must already trim irrelevant registry entries — do not dump full book).
+  const factIdSet = new Set(facts.map((f) => f.fact_id));
+  const evidence = Object.values(registry.evidence)
+    .filter((e) => {
+      if (e.source_type === "reality_fact") {
+        return factIdSet.has(e.source_id);
+      }
+      if (e.source_type === "personal_reading") {
+        return readingIdSet.has(e.source_id);
+      }
+      return (
+        e.supports_claim_ids.some((id) => claimIdSet.has(id)) ||
+        e.limits_claim_ids.some((id) => claimIdSet.has(id)) ||
+        e.source_type === "reality_mechanism"
+      );
+    })
+    .map((e) => ({
+      evidence_id: e.evidence_id,
+      source_type: e.source_type,
+      source_id: e.source_id,
+      supports_claim_ids: e.supports_claim_ids,
+      limits_claim_ids: e.limits_claim_ids,
+      explanation: e.explanation,
+      term_ids: e.term_ids,
+      verification_status: e.verification_status,
+    }));
+
+  // Conflicts/hypotheses: only unresolved / decision-bound (cap), not whole DC dump.
+  const conflicts = (report.reality_context.conflicts ?? []).slice(0, 6);
+  const hypotheses = (report.reality_context.hypotheses ?? []).slice(0, 6);
 
   return {
     report_id: report.report_id,
@@ -170,8 +197,8 @@ export function sliceForPage01(input: {
     decision: report.decision,
     reality_context: {
       facts,
-      conflicts: report.reality_context.conflicts,
-      hypotheses: report.reality_context.hypotheses,
+      conflicts,
+      hypotheses,
     },
     personal_analysis: {
       profile_version: report.personal_analysis.profile_version,
@@ -179,25 +206,61 @@ export function sliceForPage01(input: {
       relevant_anchors: anchors,
       approved_readings: readings,
     },
-    report_analysis: report.report_analysis,
+    report_analysis: {
+      decision_synthesis: report.report_analysis.decision_synthesis,
+      candidate_paths: (report.report_analysis.candidate_paths ?? []).slice(
+        0,
+        4,
+      ),
+      key_claims: keyClaims.slice(0, 8),
+      unresolved_issues: (report.report_analysis.unresolved_issues ?? []).slice(
+        0,
+        6,
+      ),
+    },
     evidence_registry: {
-      claim_ids: claimIds,
+      claim_ids: claimIds.slice(0, 12),
       evidence,
     },
   };
 }
 
-/** Detect whether a slice accidentally contains a full dump signal. */
+/**
+ * Hard limits for Page 01 model context.
+ * Oversized = fail closed (do not send to model).
+ */
+export const PAGE01_SLICE_LIMITS = {
+  facts: 16,
+  readings: 16,
+  anchors: 20,
+  evidence: 32,
+  claims: 12,
+} as const;
+
+/** Detect whether a slice exceeds safe Page 01 feed limits. */
 export function page01SliceLooksOversized(slice: Page01FeedSlice): string[] {
-  const warnings: string[] = [];
-  if (slice.reality_context.facts.length > 40) {
-    warnings.push("too_many_facts");
+  const hits: string[] = [];
+  if (slice.reality_context.facts.length > PAGE01_SLICE_LIMITS.facts) {
+    hits.push("too_many_facts");
   }
-  if (slice.personal_analysis.approved_readings.length > 20) {
-    warnings.push("too_many_readings");
+  if (
+    slice.personal_analysis.approved_readings.length >
+    PAGE01_SLICE_LIMITS.readings
+  ) {
+    hits.push("too_many_readings");
   }
-  if (slice.personal_analysis.relevant_anchors.length > 30) {
-    warnings.push("too_many_anchors");
+  if (
+    slice.personal_analysis.relevant_anchors.length > PAGE01_SLICE_LIMITS.anchors
+  ) {
+    hits.push("too_many_anchors");
   }
-  return warnings;
+  if (
+    slice.evidence_registry.evidence.length > PAGE01_SLICE_LIMITS.evidence
+  ) {
+    hits.push("too_many_evidence");
+  }
+  if (slice.evidence_registry.claim_ids.length > PAGE01_SLICE_LIMITS.claims) {
+    hits.push("too_many_claims");
+  }
+  return hits;
 }

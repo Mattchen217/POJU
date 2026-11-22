@@ -184,7 +184,17 @@ export function collectAssembleFacePages(lab: DeliveryLabSession): {
   }>;
 } {
   const topic = labTopic(lab);
-  const order = readingOrderForTopic(topic);
+  const art03 = lab.artifacts.by_page["03" as DeliverySegmentKey]?.page_schema;
+  const includeAppendix03 = (() => {
+    if (!art03 || typeof art03 !== "object") return false;
+    const o = art03 as Record<string, unknown>;
+    if (o.kind === "glossary_appendix") {
+      return Array.isArray(o.term_ids) && o.term_ids.length > 0;
+    }
+    // Legacy chart appendix (historical open).
+    return typeof o.bazi_slice === "string" && o.bazi_slice.trim().length > 0;
+  })();
+  const order = readingOrderForTopic(topic, { includeAppendix03 });
   const pages = order.map((faceId) => {
     const schema = DECISION_PAGE_SCHEMAS[faceId];
     const art = lab.artifacts.by_page[faceId as DeliverySegmentKey];

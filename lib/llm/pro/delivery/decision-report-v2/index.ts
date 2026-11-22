@@ -14,3 +14,6 @@ export * from "./page01/slice";
 export * from "./page01/prompt";
 export * from "./page01/validate";
 export * from "./page01/legacy-adapter";
+export * from "./page01/production";
+export * from "./registry-from-sources";
+export * from "./assembly";

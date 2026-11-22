@@ -26,7 +26,7 @@ import {
 import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
 import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
 
-/** Default reader order. 07 is absent until a topic asks for it. */
+/** Default reader order. 07 is absent until a topic asks for it. 03 only when glossary/legacy present. */
 export const DELIVERY_SHELF_SLOT_IDS = [
   "cover",
   "toc",
@@ -36,16 +36,27 @@ export const DELIVERY_SHELF_SLOT_IDS = [
   "05",
   "06",
   "08",
-  "03",
 ] as const;
 
-export type DeliveryShelfSlotId = (typeof DELIVERY_SHELF_SLOT_IDS)[number] | "07";
+export type DeliveryShelfSlotId =
+  | (typeof DELIVERY_SHELF_SLOT_IDS)[number]
+  | "07"
+  | "03";
 
 export const DELIVERY_SHELF_SLOT_COUNT = DELIVERY_SHELF_SLOT_IDS.length;
 
-/** Shelf order for this topic. 07 sits between 06 and 08 only when the topic gate opens. */
-export function deliveryShelfSlotIds(topic?: string | null): readonly DeliveryShelfSlotId[] {
-  return ["cover", "toc", ...readingOrderForTopic(topic)];
+/** Shelf order for this topic. 07 between 06/08 when gated; 03 only when appendix opted in. */
+export function deliveryShelfSlotIds(
+  topic?: string | null,
+  opts?: { includeAppendix03?: boolean },
+): readonly DeliveryShelfSlotId[] {
+  return [
+    "cover",
+    "toc",
+    ...readingOrderForTopic(topic, {
+      includeAppendix03: opts?.includeAppendix03 === true,
+    }),
+  ];
 }
 
 /** Prose pages shown to the reader — excludes cover + TOC. */
@@ -166,8 +177,16 @@ export function buildDeliveryShelfSlots(
   opts: { locale: string; complete?: boolean; topic?: string | null; question?: string | null },
 ): DeliveryShelfSlotState[] {
   const topic = deliveryTopicFromSignals({ topic: opts.topic, question: opts.question });
-  const order = deliveryShelfSlotIds(topic);
   const pages = fullText?.trim() ? buildDeliveryBookPages(fullText) : [];
+  // Detect whether appendix 03 content exists before fixing order (SoT: omit empty glossary).
+  let hasAppendix03 = false;
+  for (const page of pages) {
+    if (shelfFaceForPage(page) === "03") {
+      hasAppendix03 = true;
+      break;
+    }
+  }
+  const order = deliveryShelfSlotIds(topic, { includeAppendix03: hasAppendix03 });
   const slots: DeliveryShelfSlotState[] = order.map((slotId) => ({
     kind: "empty" as const,
     slotId,

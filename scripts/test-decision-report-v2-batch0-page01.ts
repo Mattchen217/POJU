@@ -419,7 +419,12 @@ assert.equal(DECISION_PAGE_SCHEMAS["03"].title, "本报告使用的术语");
 assert.deepEqual(PAGE_UNION_ALLOWLISTS["03"].cfp, []);
 assert.deepEqual(PAGE_UNION_ALLOWLISTS["03"].zfp, []);
 
-const order = decisionReportV2InternalOrder({ includePage07: false });
+const orderNoGlossary = decisionReportV2InternalOrder({ includePage07: false });
+assert.deepEqual(orderNoGlossary, ["01", "02", "04", "05", "06", "08"]);
+const order = decisionReportV2InternalOrder({
+  includePage07: false,
+  includeGlossaryAppendix: true,
+});
 assert.deepEqual(order, ["01", "02", "04", "05", "06", "08", "03"]);
 assert.equal(userFacingPageNumber("01", order), 1);
 assert.equal(userFacingPageNumber("04", order), 3);
