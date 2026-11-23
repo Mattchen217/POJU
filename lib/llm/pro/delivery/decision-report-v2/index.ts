@@ -24,6 +24,7 @@ export * from "./page02/body-blob";
 export * from "./page02/fact-id";
 export * from "./page02/credible-fact-claim";
 export * from "./page02/content-units";
+export * from "./page02/architecture";
 export * from "./registry-from-sources";
 export * from "./fact-relevance";
 export * from "./personal-domains";

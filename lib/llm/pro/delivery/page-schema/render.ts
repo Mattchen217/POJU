@@ -162,6 +162,14 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       break;
     }
     case "02": {
+      // Titles from PAGE02_SECTION_DEFINITIONS — same SSOT as Reader.
+      const PAGE02_PDF_TITLES = {
+        page_summary: "本页摘要",
+        relevant_personal_factors: "与本题相关的个人结构",
+        personal_reality_interplay: "个人与现实的交汇",
+        why_judgment_fits: "为何适合本题判断",
+        explanation_boundary: "解释边界",
+      } as const;
       const units = Array.isArray(p.content_units) ? p.content_units : [];
       const byId = new Map<string, { kind?: string; text?: unknown; title?: unknown }>();
       for (const u of units) {
@@ -182,21 +190,33 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
           })
           .filter(Boolean);
       };
+      // Surface program missing_inputs in PDF so gaps are not silently dropped.
+      const gapNotes = Array.isArray(p.missing_inputs)
+        ? (p.missing_inputs as Array<{ status?: unknown; field_id?: unknown; affects_content?: unknown }>)
+            .map((g) => {
+              const status = String(g.status ?? "").trim();
+              const field = String(g.field_id ?? "").trim();
+              const affects = String(g.affects_content ?? "").trim();
+              if (!status || !field) return "";
+              return `[${status}] ${field}${affects ? `: ${affects}` : ""}`;
+            })
+            .filter(Boolean)
+        : [];
       if (byId.size) {
         for (const t of textsFor(p.page_summary_unit_ids)) {
-          const arg = push("本页摘要", t);
+          const arg = push(PAGE02_PDF_TITLES.page_summary, t);
           if (arg) out.push(arg);
         }
         for (const t of textsFor(p.relevant_personal_factor_unit_ids)) {
-          const arg = push("与本题相关的个人结构", t);
+          const arg = push(PAGE02_PDF_TITLES.relevant_personal_factors, t);
           if (arg) out.push(arg);
         }
         for (const t of textsFor(p.personal_reality_interplay_unit_ids)) {
-          const arg = push("个人与现实的交汇", t);
+          const arg = push(PAGE02_PDF_TITLES.personal_reality_interplay, t);
           if (arg) out.push(arg);
         }
         for (const t of textsFor(p.why_judgment_fits_unit_ids)) {
-          const arg = push("为何适合本题判断", t);
+          const arg = push(PAGE02_PDF_TITLES.why_judgment_fits, t);
           if (arg) out.push(arg);
         }
         const boundary = p.explanation_boundary as
@@ -223,7 +243,10 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
           if (uncertainty.length) {
             parts.push(`不确定性：\n${uncertainty.join("\n")}`);
           }
-          const arg = push("解释边界", parts.join("\n\n"));
+          if (gapNotes.length) {
+            parts.push(`数据缺口（不可当作已确认事实）：\n${gapNotes.join("\n")}`);
+          }
+          const arg = push(PAGE02_PDF_TITLES.explanation_boundary, parts.join("\n\n"));
           if (arg) out.push(arg);
         }
       } else if (p.schema_version === "face02-v2" || p.why_judgment_fits) {

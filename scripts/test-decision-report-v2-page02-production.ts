@@ -117,6 +117,9 @@ function overlaySyntheticAuthority(
     trusted_claim_dir_bindings: trusted,
     credible_fact_claim_pairs: credible.pairs,
     credible_fact_claim_keys: credible.pairKeys,
+    // Preserve architecture envelope from production build (Batch 1).
+    architecture: base.architecture,
+    may_invoke_llm: base.may_invoke_llm,
   };
 }
 

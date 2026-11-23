@@ -57,6 +57,8 @@ export function buildFace02PromptPair(input: {
     evidence_id: string;
     related_dir_ids: string[];
   }>;
+  /** Architecture SSOT: sections / input_manifest / missing_inputs / gap rules. */
+  architecturePromptBundle?: string | null;
 }): { system: string; user: string } {
   const system = [
     DECISION_REPORT_V2_SYSTEM_PROMPT,
@@ -64,7 +66,14 @@ export function buildFace02PromptPair(input: {
     FACE02_TASK_PROMPT,
     "",
     "输出必须符合 Face02 JSON schema（schema_version=face02-v2 · content_units 权威）。",
-  ].join("\n");
+    "",
+    "缺口规则：missing/unknown/conflict/unverified/declined/not_applicable 由程序列在 architecture bundle；禁止用常识或臆造补写用户事实。",
+    input.architecturePromptBundle?.trim()
+      ? input.architecturePromptBundle.trim()
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const pairs = (input.credibleFactClaimPairs ?? []).map((p) => ({
     claim_id: p.claim_id,

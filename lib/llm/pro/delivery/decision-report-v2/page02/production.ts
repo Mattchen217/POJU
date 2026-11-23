@@ -38,6 +38,12 @@ import {
   type CredibleFactClaimPair,
   type TrustedClaimDirBinding,
 } from "./credible-fact-claim";
+import {
+  attachPage02ArchitectureToPage,
+  buildPage02ArchitectureEnvelope,
+  buildPage02ArchitecturePromptBundle,
+  type Page02ArchitectureEnvelope,
+} from "./architecture";
 
 export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23e" as const;
 export const FACE02_SCHEMA_VERSION = "face02-v2" as const;
@@ -66,6 +72,10 @@ export type Face02ProductionContext = {
   credible_fact_claim_keys: Set<string>;
   /** Program-certified Claim→DIR trust root (not model anchors). */
   trusted_claim_dir_bindings: Map<string, TrustedClaimDirBinding>;
+  /** Architecture envelope: sections / input_manifest / missing_inputs. */
+  architecture: Page02ArchitectureEnvelope;
+  /** False when required inputs are missing — caller must not treat as complete. */
+  may_invoke_llm: boolean;
 };
 
 export type Face02ProductionBuildFail = {
@@ -255,12 +265,33 @@ export function buildFace02ProductionContext(input: {
   });
 
   const shape = faceFillShapeSkeleton("02");
-  const { system, user } = buildFace02PromptPair({
+  const architecture = buildPage02ArchitectureEnvelope(
+    {
+      report_id: input.report_id,
+      locale: input.locale,
+      dc: input.dc,
+      pack,
+      page01_core_judgment: page01_core,
+      available_domains: domains.available_domains,
+      approved_reading_count: slice.personal_analysis.approved_readings.length,
+      registry_claim_count: Object.keys(restricted.registry.claims).length,
+    },
+    { has_generated_page: false, structure_ok: true, llm_invoked: false },
+  );
+  const architecturePrompt = buildPage02ArchitecturePromptBundle({
+    input_manifest: architecture.input_manifest,
+    missing_inputs: architecture.missing_inputs,
+    generation_status: architecture.generation_status,
+  });
+
+  const { system: baseSystem, user } = buildFace02PromptPair({
     slice,
     termAllowlist: allowlist,
     jsonSchemaHint: JSON.stringify(shape, null, 2),
     credibleFactClaimPairs: credible.pairs,
+    architecturePromptBundle: architecturePrompt,
   });
+  const system = baseSystem;
 
   const factStatusById = new Map<string, string>();
   const factContentById = new Map<string, string>();
@@ -290,6 +321,9 @@ export function buildFace02ProductionContext(input: {
       credible_fact_claim_pairs: credible.pairs,
       credible_fact_claim_keys: credible.pairKeys,
       trusted_claim_dir_bindings: trustedBindings,
+      architecture,
+      may_invoke_llm:
+        architecture.generation_status !== "blocked_on_required_inputs",
     },
   };
 }
@@ -340,14 +374,28 @@ export function validateFace02ProductionOutput(input: {
       reason: "face02_validation_failed",
     };
   }
+  // Attach architecture envelope onto canonical page (program-owned; not model).
+  const envelope: Page02ArchitectureEnvelope = {
+    ...input.ctx.architecture,
+    generation_status:
+      input.ctx.architecture.missing_inputs.length > 0
+        ? "generated_with_gaps"
+        : "generated_complete",
+    generation_metadata: {
+      ...input.ctx.architecture.generation_metadata,
+      llm_invoked: true,
+      built_at: new Date().toISOString(),
+    },
+  };
+  const page = attachPage02ArchitectureToPage(result.page, envelope);
   return {
     ok: true,
-    page: result.page,
+    page,
     cited_term_ids: collectCitedTermIdsFromFace02(
-      result.page,
+      page,
       input.ctx.registry,
     ),
-    realized_evidence_ids: collectFace02RealizedEvidenceIds(result.page),
+    realized_evidence_ids: collectFace02RealizedEvidenceIds(page),
   };
 }
 
@@ -416,6 +464,13 @@ export function face02SliceSummary(
       excluded: ctx.fact_selection.excluded_fact_ids.length,
     },
     question: ctx.slice.decision.question.slice(0, 160),
+    architecture: {
+      generation_status: ctx.architecture.generation_status,
+      may_invoke_llm: ctx.may_invoke_llm,
+      missing_inputs: ctx.architecture.missing_inputs.length,
+      input_manifest: ctx.architecture.input_manifest.length,
+      sections: ctx.architecture.sections.map((s) => s.section_id),
+    },
   };
 }
 

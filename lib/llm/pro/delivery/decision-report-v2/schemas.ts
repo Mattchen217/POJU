@@ -325,6 +325,115 @@ export const Face02V2Schema = z.object({
       "why_judgment_fits",
       "explanation_boundary",
     ]),
+  /**
+   * Architecture envelope (Batch 1) — optional for historical pages.
+   * Program attaches these; model must not invent gap closure.
+   */
+  generation_status: z
+    .enum([
+      "blocked_on_required_inputs",
+      "ready_for_generation",
+      "generated_with_gaps",
+      "generated_complete",
+      "failed_structure",
+      "incomplete",
+    ])
+    .optional(),
+  input_manifest: z
+    .array(
+      z.object({
+        field_id: NonEmpty.max(80),
+        section_id: z.enum([
+          "page_summary",
+          "relevant_personal_factors",
+          "personal_reality_interplay",
+          "why_judgment_fits",
+          "explanation_boundary",
+        ]),
+        source_kind: z.enum([
+          "personal_analysis",
+          "reality_context",
+          "analytical_result",
+          "system_metadata",
+          "derived_data",
+        ]),
+        present: z.boolean(),
+        collection_status: z.enum([
+          "ready",
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        value_summary: z.string().trim().max(240).nullable(),
+      }),
+    )
+    .max(40)
+    .optional(),
+  missing_inputs: z
+    .array(
+      z.object({
+        gap_id: NonEmpty.max(120),
+        page_id: z.literal("02"),
+        section_id: z.enum([
+          "page_summary",
+          "relevant_personal_factors",
+          "personal_reality_interplay",
+          "why_judgment_fits",
+          "explanation_boundary",
+        ]),
+        field_id: NonEmpty.max(120),
+        status: z.enum([
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        why_needed: NonEmpty.max(400),
+        affects_content: NonEmpty.max(400),
+        follow_up_collect_hint: NonEmpty.max(400),
+        handling: z.enum([
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ]),
+      }),
+    )
+    .max(48)
+    .optional(),
+  sections: z
+    .array(
+      z.object({
+        section_id: z.enum([
+          "page_summary",
+          "relevant_personal_factors",
+          "personal_reality_interplay",
+          "why_judgment_fits",
+          "explanation_boundary",
+        ]),
+        segment_letter: NonEmpty.max(4),
+        title_zh: NonEmpty.max(80),
+        title_en: NonEmpty.max(80),
+        required: z.boolean(),
+        reading_rank: z.number().int().min(1).max(8),
+        information_level: NonEmpty.max(32),
+      }),
+    )
+    .max(8)
+    .optional(),
+  generation_metadata: z
+    .object({
+      task_id: NonEmpty.max(80),
+      prompt_bundle_chars: z.number().int().min(0),
+      built_at: NonEmpty.max(64),
+      llm_invoked: z.boolean(),
+    })
+    .optional(),
 });
 
 export type Face02V2 = z.infer<typeof Face02V2Schema>;
