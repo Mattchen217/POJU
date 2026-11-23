@@ -91,7 +91,11 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
       personal_unit_ids: ["legacy_personal"],
       confirmed_fact_unit_ids: [],
       hypothesis_unit_ids: [],
-      uncertainty_notes: ["此为历史报告兼容投影，非 v2 认证产出"],
+      // Display-only: preserve historical verifiable_anchors (not a new production cert).
+      uncertainty_notes: [
+        "此为历史报告兼容投影，非 v2 认证产出",
+        ...leg.verifiable_anchors.map((a) => `可核对锚：${a}`),
+      ].slice(0, 6),
     },
     reading_order: [
       "page_summary",

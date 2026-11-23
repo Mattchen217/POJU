@@ -892,6 +892,111 @@ async function runAsyncClosureChecks() {
     assert.ok(renderEn[0]?.body.includes("### Page summary"));
     console.log("O PASS — legacy compat + locale from canonical page for PDF");
   }
+
+  // P: RAW historical Face02 → pageSchemaToArgumentBodies (no pre-project)
+  // Call chain must be: legacy → projectLegacyFace02ForDisplay → assemblePage02PdfArgumentBodies
+  {
+    const rawLegacy = {
+      page: "02",
+      face: "02",
+      destiny_reason: "Legacy destiny prose about structure under pressure.",
+      science_mechanism: "Legacy science mechanism about runway buffers.",
+      convergence: "Legacy convergence note for fit.",
+      verifiable_anchors: ["anchor one", "anchor two"],
+    };
+    assert.equal(isFace02Legacy(rawLegacy), true);
+    // Direct PDF entry — must NOT call projectLegacyFace02ForDisplay in the test first.
+    const pdfBodies = pageSchemaToArgumentBodies(rawLegacy as never);
+    assert.equal(pdfBodies.length, PAGE02_SECTION_IDS.length);
+    for (let i = 0; i < PAGE02_SECTION_DEFINITIONS.length; i++) {
+      const def = PAGE02_SECTION_DEFINITIONS[i]!;
+      // Default locale for unstamped legacy PDF is zh (render fallback).
+      assert.ok(
+        pdfBodies[i]!.body.startsWith(`### ${def.title_zh}`),
+        `PDF section ${i} title must be ${def.title_zh} from PAGE02_SECTION_DEFINITIONS`,
+      );
+    }
+    const joined = pdfBodies.map((b) => b.body).join("\n");
+    assert.ok(joined.includes("Legacy destiny prose about structure under pressure."));
+    assert.ok(joined.includes("Legacy science mechanism about runway buffers."));
+    assert.ok(joined.includes("Legacy convergence note for fit."));
+    assert.ok(joined.includes("anchor one"));
+    assert.ok(joined.includes("anchor two"));
+
+    // Reader (via same projector) section_id sequence must match PDF order
+    const projected = projectLegacyFace02ForDisplay(rawLegacy)!;
+    const reader = assemblePage02SectionsForDisplay(projected, "zh");
+    assert.deepEqual(
+      reader.map((s) => s.section_id),
+      PAGE02_SECTION_DEFINITIONS.map((d) => d.section_id),
+    );
+    assert.equal(reader.length, pdfBodies.length);
+    const optionalEmpty = reader.find(
+      (s) => s.section_id === "explanation_boundary",
+    );
+    assert.ok(optionalEmpty);
+    // empty optional sections (if any with no texts) still have empty_display rule
+    for (const s of reader) {
+      if (!s.texts.length) {
+        assert.ok(s.empty_display.length > 0);
+      }
+    }
+
+    // Canonical Face02V2 still uses content_units path (not re-projected as legacy)
+    const canonical = {
+      page: "02",
+      face: "02",
+      schema_version: "face02-v2",
+      locale: "en",
+      content_units: [
+        {
+          unit_id: "u_summary",
+          kind: "conditional_explanation",
+          text: "Canonical summary unit.",
+          claim_ids: ["claim_u_science_02"],
+          evidence_ids: [],
+          related_reality_fact_unit_ids: [],
+        },
+        {
+          unit_id: "u_why",
+          kind: "conditional_explanation",
+          text: "Canonical why unit.",
+          claim_ids: ["claim_u_science_02"],
+          evidence_ids: [],
+          related_reality_fact_unit_ids: [],
+        },
+      ],
+      page_summary_unit_ids: ["u_summary"],
+      relevant_personal_factor_unit_ids: [],
+      personal_reality_interplay_unit_ids: [],
+      why_judgment_fits_unit_ids: ["u_why"],
+      explanation_boundary: {
+        claim_ids: ["claim_u_science_02"],
+        personal_unit_ids: [],
+        confirmed_fact_unit_ids: [],
+        hypothesis_unit_ids: [],
+        uncertainty_notes: ["canonical boundary"],
+      },
+      reading_order: [...PAGE02_SECTION_IDS],
+    } as Face02V2;
+    const canonBodies = pageSchemaToArgumentBodies(canonical as never);
+    assert.equal(canonBodies.length, PAGE02_SECTION_IDS.length);
+    assert.ok(canonBodies[0]!.body.includes("### Page summary"));
+    assert.ok(canonBodies[0]!.body.includes("Canonical summary unit."));
+
+    // Projection failure fails closed (no silent incomplete PDF)
+    assert.throws(
+      () =>
+        pageSchemaToArgumentBodies({
+          page: "02",
+          face: "02",
+        } as never),
+      /face02_pdf_legacy_project_failed/,
+    );
+    console.log(
+      "P PASS — raw historical Face02 PDF entry uses projectLegacy→section-assembly",
+    );
+  }
 }
 
 runAsyncClosureChecks()

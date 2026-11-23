@@ -6,6 +6,7 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryArgument } from "@/lib/llm/pro/delivery/delivery-schema";
 import { assemblePage02PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page02/architecture/section-assembly";
+import { projectLegacyFace02ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
 import type { Face02V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
@@ -164,28 +165,27 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       break;
     }
     case "02": {
-      // Reader + PDF share assemblePage02PdfArgumentBodies (section SSOT).
-      // Locale comes from stamped Face02V2.locale (production attach); legacy
-      // pages without locale keep zh so titles stay stable for historical PDFs.
+      // Same path as Reader Face02PageSlots.resolvePage:
+      // content_units canonical OR projectLegacyFace02ForDisplay → section-assembly.
+      // Never re-implement a second PDF-only title/order table; never persist projection.
+      let canonical: Face02V2 | null = null;
       if (Array.isArray(p.content_units) && p.content_units.length) {
-        const locale = String(
-          (p as { locale?: unknown }).locale ?? "zh",
-        );
-        for (const arg of assemblePage02PdfArgumentBodies(
-          p as unknown as Face02V2,
-          locale,
-        )) {
-          out.push(arg);
-        }
-        break;
-      }
-      if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
-        add("本页摘要", "page_summary");
+        canonical = p as unknown as Face02V2;
       } else {
-        add("命理理由", "destiny_reason");
-        add("科学机制", "science_mechanism");
-        add("汇合", "convergence");
-        add("可核对锚", "verifiable_anchors");
+        canonical = projectLegacyFace02ForDisplay(p);
+      }
+      if (!canonical) {
+        throw new Error(
+          "face02_pdf_legacy_project_failed: historical/incomplete Face02 could not be projected for PDF assembly",
+        );
+      }
+      const locale = String(
+        (canonical as { locale?: unknown }).locale ??
+          (p as { locale?: unknown }).locale ??
+          "zh",
+      );
+      for (const arg of assemblePage02PdfArgumentBodies(canonical, locale)) {
+        out.push(arg);
       }
       break;
     }
