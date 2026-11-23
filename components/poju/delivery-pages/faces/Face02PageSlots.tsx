@@ -137,19 +137,52 @@ export function Face02PageSlots({
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh" ? "个人分析依据" : "Personal analysis basis"}
         </p>
-        <ul className="dps-face-list">
-          {data.explanation_boundary.personal_analysis_basis.map((t, i) => (
-            <li key={`p-${i}`}>{t}</li>
-          ))}
-        </ul>
+        {(data.explanation_boundary.personal_analysis_basis?.length ?? 0) ===
+        0 ? (
+          <p className="dps-face-prose">
+            {localeBucket(locale) === "zh"
+              ? "（本题无可用个人分析依据）"
+              : "(No personal-analysis basis for this decision)"}
+          </p>
+        ) : (
+          <ul className="dps-face-list">
+            {data.explanation_boundary.personal_analysis_basis.map((t, i) => (
+              <li key={`p-${i}`}>{t}</li>
+            ))}
+          </ul>
+        )}
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh" ? "已确认事实依据" : "Confirmed fact basis"}
         </p>
-        <ul className="dps-face-list">
-          {data.explanation_boundary.confirmed_fact_basis.map((t, i) => (
-            <li key={`f-${i}`}>{t}</li>
-          ))}
-        </ul>
+        {(data.explanation_boundary.confirmed_fact_basis?.length ?? 0) === 0 ? (
+          <p className="dps-face-prose">
+            {localeBucket(locale) === "zh"
+              ? "（本题无已确认事实可列）"
+              : "(No confirmed facts to list)"}
+          </p>
+        ) : (
+          <ul className="dps-face-list">
+            {data.explanation_boundary.confirmed_fact_basis.map((t, i) => (
+              <li key={`f-${i}`}>{t}</li>
+            ))}
+          </ul>
+        )}
+        <p className="dps-face-prose">
+          {localeBucket(locale) === "zh"
+            ? "解释性假设（非已确认事实）"
+            : "Explanatory hypotheses (not confirmed facts)"}
+        </p>
+        {(data.explanation_boundary.hypothesis_notes?.length ?? 0) === 0 ? (
+          <p className="dps-face-prose">
+            {localeBucket(locale) === "zh" ? "（无额外假设说明）" : "(No hypothesis notes)"}
+          </p>
+        ) : (
+          <ul className="dps-face-list">
+            {data.explanation_boundary.hypothesis_notes.map((t, i) => (
+              <li key={`h-${i}`}>{t}</li>
+            ))}
+          </ul>
+        )}
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh" ? "不确定性" : "Uncertainty"}
         </p>

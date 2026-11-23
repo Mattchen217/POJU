@@ -58,6 +58,9 @@ export type Page01FeedSlice = {
       explanation: string;
       term_ids: string[];
       verification_status?: string;
+      source_domain?: string | null;
+      source_version?: string | null;
+      mechanism_kind?: string | null;
     }>;
   };
 };
@@ -213,6 +216,9 @@ export function sliceForPage01(input: {
       explanation: e.explanation,
       term_ids: e.term_ids,
       verification_status: e.verification_status,
+      source_domain: e.source_domain ?? null,
+      source_version: e.source_version ?? null,
+      mechanism_kind: e.mechanism_kind ?? null,
     }));
 
   // Conflicts/hypotheses: only unresolved / decision-bound (cap), not whole DC dump.

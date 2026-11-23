@@ -127,6 +127,9 @@ function seedEvidenceRegistryForFace(input: {
       supports_claim_ids: [],
       limits_claim_ids: [],
       verification_status: `${f.status}/${f.verification}`,
+      source_domain: "reality",
+      source_version: null,
+      mechanism_kind: null,
     };
     registerEvidence(registry, ev, {
       facts: factMap,
@@ -211,6 +214,18 @@ function seedEvidenceRegistryForFace(input: {
           : ("personal_reading" as const);
 
     const evidence_id = unit.id;
+    const trustedDomain =
+      sourceType === "personal_reading"
+        ? prov.source_domain === "unavailable"
+          ? null
+          : prov.source_domain
+        : unit.track === "convergence"
+          ? "convergence"
+          : "science";
+    const trustedVersion =
+      sourceType === "personal_reading"
+        ? prov.source_version
+        : null;
     const ev: ReportEvidence = {
       evidence_id,
       source_type: sourceType,
@@ -222,6 +237,15 @@ function seedEvidenceRegistryForFace(input: {
         : unit.claim,
       supports_claim_ids: [],
       limits_claim_ids: [],
+      // Program-derived only — never model declared_* fields.
+      source_domain: trustedDomain,
+      source_version: trustedVersion,
+      mechanism_kind:
+        sourceType === "reality_mechanism"
+          ? unit.track === "convergence"
+            ? "convergence"
+            : "science"
+          : null,
     };
     if (sourceType === "personal_reading") {
       registerEvidence(registry, ev, { facts: factMap, readings: readingMap });

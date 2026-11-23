@@ -82,6 +82,10 @@ export const ReportEvidenceSchema = z.object({
   supports_claim_ids: z.array(NonEmpty.max(80)).max(24),
   limits_claim_ids: z.array(NonEmpty.max(80)).max(24),
   verification_status: z.string().trim().max(80).optional(),
+  /** Program-certified; optional for historical evidence rows. */
+  source_domain: z.string().trim().max(80).nullable().optional(),
+  source_version: z.string().trim().max(120).nullable().optional(),
+  mechanism_kind: z.string().trim().max(80).nullable().optional(),
 });
 
 export const ReportSegmentBodySchema = z.object({
@@ -274,10 +278,19 @@ export const Face02V2Schema = z.object({
     page01_judgment_ref: z.string().trim().max(240).optional().default(""),
   }),
   explanation_boundary: z.object({
-    personal_analysis_basis: z.array(NonEmpty.max(240)).min(1).max(6),
-    confirmed_fact_basis: z.array(NonEmpty.max(240)).min(1).max(6),
+    /** Empty when no certified personal evidence exists — do not invent. */
+    personal_analysis_basis: z.array(NonEmpty.max(240)).max(6).default([]),
+    /** Empty when no confirmed DC facts exist — do not invent. */
+    confirmed_fact_basis: z.array(NonEmpty.max(240)).max(6).default([]),
     hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
     uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(6),
+    /** Structured refs — validated against restricted Page02 registry/slice. */
+    personal_analysis_evidence_ids: z
+      .array(NonEmpty.max(80))
+      .max(12)
+      .default([]),
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    hypothesis_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
   }),
   /** Explicit reading order of content blocks. */
   reading_order: z

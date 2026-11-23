@@ -61,6 +61,14 @@ export type ReportEvidence = {
   supports_claim_ids: string[];
   limits_claim_ids: string[];
   verification_status?: string;
+  /**
+   * Program-certified provenance (optional for historical records).
+   * Never trust model-declared domain/version over these fields.
+   */
+  source_domain?: string | null;
+  source_version?: string | null;
+  /** For reality_mechanism: science | convergence | etc. */
+  mechanism_kind?: string | null;
 };
 
 export type ReportSegmentBody = {

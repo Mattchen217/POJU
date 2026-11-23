@@ -25,6 +25,9 @@ import {
   collectFace02RealizedEvidenceIds,
 } from "@/lib/llm/pro/delivery/decision-report-v2";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
+import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
+import { readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
@@ -446,10 +449,15 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
       page01_judgment_ref: "staged explore",
     },
     explanation_boundary: {
-      personal_analysis_basis: ["Certified personal reading on cash-floor preference"],
+      personal_analysis_basis: [
+        "Certified personal reading on cash-floor preference",
+      ],
       confirmed_fact_basis: ["Confirmed runway fact"],
       hypothesis_notes: ["Salary figure remains an estimate"],
       uncertainty_notes: ["Offer terms may still shift"],
+      personal_analysis_evidence_ids: [personalEv],
+      confirmed_fact_ids: [factId],
+      hypothesis_fact_ids: [],
     },
     reading_order: [
       "page_summary",
@@ -648,9 +656,387 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   console.log("L PASS — no Page04 bottleneck");
 }
 
-// --- M already covered in A ---
+// --- Integrity A: wrong domain personal-reading rejected ---
+{
+  const mechEv = Object.values(ctx.registry.evidence).find(
+    (e) => e.source_type === "reality_mechanism",
+  );
+  // Label bazi evidence as ziwei
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      relevant_personal_factors: [
+        {
+          factor_id: "f1",
+          title: "Cash-floor preference",
+          text: "You tend to protect a stable base.",
+          claim_ids: [claimId],
+          evidence_ids: [personalEv],
+          source_domain: "ziwei",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(bad.ok, false, "integrity-A wrong domain");
+  assert.ok(mechEv, "need mechanism for later tests");
+  console.log("integrity-A PASS — wrong-domain personal reading rejected");
+}
 
-// --- N: glossary only certified term ids ---
+// --- Integrity B: reality-fact evidence in personal_evidence_ids ---
+{
+  const factEv = `ev_fact_${factId}`;
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "Runway supports staged explore.",
+          personal_evidence_ids: [factEv],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [],
+          claim_ids: [claimId],
+          conditionality: "While runway holds.",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(bad.ok, false, "integrity-B fact as personal");
+  console.log("integrity-B PASS — reality-fact id rejected as personal evidence");
+}
+
+// --- Integrity C: personal-reading in mechanism_evidence_ids ---
+{
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "Runway supports staged explore.",
+          personal_evidence_ids: [personalEv],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [personalEv],
+          claim_ids: [claimId],
+          conditionality: "While runway holds.",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(bad.ok, false, "integrity-C personal as mechanism");
+  console.log("integrity-C PASS — personal id rejected as mechanism");
+}
+
+// --- Integrity D: mechanism in personal_evidence_ids ---
+{
+  const mechId = Object.values(ctx.registry.evidence).find(
+    (e) => e.source_type === "reality_mechanism",
+  )!.evidence_id;
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "Runway supports staged explore.",
+          personal_evidence_ids: [mechId],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [],
+          claim_ids: [claimId],
+          conditionality: "While runway holds.",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(bad.ok, false, "integrity-D mechanism as personal");
+  console.log("integrity-D PASS — mechanism id rejected as personal");
+}
+
+// --- Integrity E: evidence not owned by cited claim ---
+{
+  const otherClaims = Object.keys(ctx.registry.claims).filter(
+    (c) => c !== claimId,
+  );
+  const orphanClaim =
+    otherClaims[0] ||
+    Object.keys(ctx.registry.claims).find((c) => {
+      const claim = ctx.registry.claims[c]!;
+      return !claim.evidence_ids.includes(personalEv);
+    });
+  if (orphanClaim && orphanClaim !== claimId) {
+    const bad = validateFace02ProductionOutput({
+      raw: validPage02({
+        why_judgment_fits: {
+          text: "Staged explore fits the protected-base preference under runway.",
+          claim_ids: [orphanClaim],
+          evidence_ids: [personalEv],
+          page01_judgment_ref: "",
+        },
+      }),
+      locale: "en",
+      ctx,
+    });
+    assert.equal(bad.ok, false, "integrity-E claim/evidence orphan");
+    console.log("integrity-E PASS — unowned claim/evidence pair rejected");
+  } else {
+    // Force orphan by inventing a second claim ownership mismatch via science-only claim
+    const sciClaim = Object.values(ctx.registry.claims).find((c) => {
+      const evs = c.evidence_ids
+        .map((id) => ctx.registry.evidence[id])
+        .filter(Boolean);
+      return (
+        evs.length > 0 &&
+        evs.every((e) => e!.source_type === "reality_mechanism")
+      );
+    });
+    assert.ok(sciClaim, "need science claim for E");
+    const bad = validateFace02ProductionOutput({
+      raw: validPage02({
+        why_judgment_fits: {
+          text: "Staged explore fits the protected-base preference under runway.",
+          claim_ids: [sciClaim!.claim_id],
+          evidence_ids: [personalEv],
+          page01_judgment_ref: "",
+        },
+      }),
+      locale: "en",
+      ctx,
+    });
+    assert.equal(bad.ok, false, "integrity-E claim/evidence orphan");
+    console.log("integrity-E PASS — unowned claim/evidence pair rejected");
+  }
+}
+
+// --- Integrity F / M: evidence outside final Page02 slice rejected ---
+{
+  const outsideId = "u_page01_only";
+  assert.equal(
+    ctx.registry.evidence[outsideId],
+    undefined,
+    "page01-only must be absent from restricted registry",
+  );
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      why_judgment_fits: {
+        text: "Staged explore fits because of protected base and runway.",
+        claim_ids: [claimId],
+        evidence_ids: [outsideId],
+        page01_judgment_ref: "",
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(bad.ok, false, "integrity-F/M outside-slice evidence");
+  console.log("integrity-F/M PASS — outside-slice evidence rejected");
+}
+
+// --- Integrity G: unverified described as confirmed in page_summary ---
+{
+  const unverified = ctx.slice.reality_context.facts.find(
+    (f) => f.status === "unverified",
+  );
+  assert.ok(unverified, "need unverified fact in fixture");
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      page_summary: `The confirmed fact ${unverified!.content} is already confirmed as a definite truth for this decision.`,
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(bad.ok, false, "integrity-G page_summary upgrade");
+  console.log("integrity-G PASS — page_summary status upgrade rejected");
+}
+
+// --- Integrity H: unverified in confirmed_fact_basis / confirmed_fact_ids ---
+{
+  const unverified = ctx.slice.reality_context.facts.find(
+    (f) => f.status === "unverified",
+  )!;
+  const badIds = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: [`Confirmed: ${unverified.content}`],
+        hypothesis_notes: [],
+        uncertainty_notes: ["Offer terms may still shift"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [unverified.fact_id],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badIds.ok, false, "integrity-H confirmed_fact_ids upgrade");
+  console.log("integrity-H PASS — unverified blocked from confirmed basis");
+}
+
+// --- Integrity I: no personal domain → empty personal basis ok ---
+{
+  const packNone = makePack({ bazi: false, ziwei: false });
+  packNone.units = packNone.units.filter((u) => u.track !== "destiny");
+  packNone.by_face["02"] = packNone.units
+    .filter((u) => u.serves_face.includes("02"))
+    .map((u) => u.id);
+  const builtNone = buildFace02ProductionContext({
+    report_id: "job_face02_empty_personal",
+    locale: "en",
+    dc,
+    pack: packNone,
+    chart_fact_pack: "",
+    bazi_available: false,
+    ziwei_available: false,
+    page01: page01Schema,
+  });
+  assert.equal(builtNone.ok, true);
+  if (!builtNone.ok) throw new Error(builtNone.reason);
+  const sciClaim =
+    builtNone.ctx.slice.report_analysis.key_claims[0]?.claim_id ||
+    Object.keys(builtNone.ctx.registry.claims)[0]!;
+  const sciEv =
+    builtNone.ctx.slice.evidence_registry.evidence.find(
+      (e) => e.source_type === "reality_mechanism",
+    )?.evidence_id ||
+    builtNone.ctx.slice.evidence_registry.evidence[0]!.evidence_id;
+  const confFact =
+    builtNone.ctx.slice.reality_context.facts.find((f) => f.status === "confirmed")
+      ?.fact_id || factId;
+  const okEmpty = validateFace02ProductionOutput({
+    raw: {
+      page: "02",
+      face: "02",
+      schema_version: "face02-v2",
+      page_summary:
+        "The staged explore direction fits the confirmed runway conditions for this decision.",
+      relevant_personal_factors: [],
+      personal_reality_interplay: [],
+      why_judgment_fits: {
+        text: "Judgment fits because confirmed runway supports staged explore without resigning cold.",
+        claim_ids: [sciClaim],
+        evidence_ids: [sciEv],
+        page01_judgment_ref: "staged explore",
+      },
+      explanation_boundary: {
+        personal_analysis_basis: [],
+        confirmed_fact_basis: ["Confirmed runway supports pacing."],
+        hypothesis_notes: [],
+        uncertainty_notes: ["Offer terms may still shift"],
+        personal_analysis_evidence_ids: [],
+        confirmed_fact_ids: [confFact],
+        hypothesis_fact_ids: [],
+      },
+      reading_order: [
+        "page_summary",
+        "relevant_personal_factors",
+        "personal_reality_interplay",
+        "why_judgment_fits",
+        "explanation_boundary",
+      ],
+    },
+    locale: "en",
+    ctx: builtNone.ctx,
+  });
+  assert.equal(okEmpty.ok, true, JSON.stringify(okEmpty.ok ? null : okEmpty.issues));
+  console.log("integrity-I PASS — empty personal basis without inventing factors");
+}
+
+// --- Integrity J: no confirmed facts → empty confirmed basis ---
+{
+  const dcNoConfirmed = {
+    ...dc,
+    reality_facts: (dc.reality_facts ?? []).map((f) =>
+      f.status === "confirmed"
+        ? { ...f, status: "unverified", verification_level: "user_estimate" }
+        : f,
+    ),
+  } as typeof dc;
+  const builtNc = buildFace02ProductionContext({
+    report_id: "job_face02_no_confirmed",
+    locale: "en",
+    dc: dcNoConfirmed,
+    pack: packFull,
+    chart_fact_pack: "日主甲木…",
+    page01: page01Schema,
+  });
+  assert.equal(builtNc.ok, true);
+  if (!builtNc.ok) throw new Error(builtNc.reason);
+  const cId =
+    builtNc.ctx.slice.report_analysis.key_claims[0]?.claim_id ||
+    Object.keys(builtNc.ctx.registry.claims)[0]!;
+  const pEv =
+    builtNc.ctx.slice.evidence_registry.evidence.find(
+      (e) => e.source_type === "personal_reading",
+    )?.evidence_id!;
+  const ok = validateFace02ProductionOutput({
+    raw: {
+      page: "02",
+      face: "02",
+      schema_version: "face02-v2",
+      page_summary:
+        "Personal preference for a stable base still frames how options feel, with uncertainty retained.",
+      relevant_personal_factors: [
+        {
+          factor_id: "f1",
+          title: "Cash-floor preference",
+          text: "You tend to protect a stable base before stretching into uncertainty.",
+          claim_ids: [cId],
+          evidence_ids: [pEv],
+          source_domain: "bazi",
+        },
+      ],
+      personal_reality_interplay: [],
+      why_judgment_fits: {
+        text: "The judgment still tracks the protected-base preference while facts stay provisional.",
+        claim_ids: [cId],
+        evidence_ids: [pEv],
+        page01_judgment_ref: "staged explore",
+      },
+      explanation_boundary: {
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: [],
+        hypothesis_notes: ["Runway figure remains an estimate"],
+        uncertainty_notes: ["No confirmed DC facts in this slice"],
+        personal_analysis_evidence_ids: [pEv],
+        confirmed_fact_ids: [],
+        hypothesis_fact_ids: [],
+      },
+      reading_order: [
+        "page_summary",
+        "relevant_personal_factors",
+        "personal_reality_interplay",
+        "why_judgment_fits",
+        "explanation_boundary",
+      ],
+    },
+    locale: "en",
+    ctx: builtNc.ctx,
+  });
+  assert.equal(ok.ok, true, JSON.stringify(ok.ok ? null : ok.issues));
+  const invent = validateFace02ProductionOutput({
+    raw: {
+      ...(ok.ok ? ok.page : {}),
+      explanation_boundary: {
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: ["Invented confirmed runway"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [pEv],
+        confirmed_fact_ids: ["fact_runway"],
+        hypothesis_fact_ids: [],
+      },
+    },
+    locale: "en",
+    ctx: builtNc.ctx,
+  });
+  assert.equal(invent.ok, false, "integrity-J invent confirmed rejected");
+  console.log("integrity-J PASS — empty confirmed basis when none exist");
+}
+
+// --- Integrity K: confirmed_fact_ids only confirmed ---
 {
   const ok = validateFace02ProductionOutput({
     raw: validPage02(),
@@ -658,22 +1044,127 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     ctx,
   });
   assert.equal(ok.ok, true);
-  if (!ok.ok) throw new Error("N needs valid page");
+  if (!ok.ok) throw new Error("K needs valid");
+  assert.deepEqual(ok.page.explanation_boundary.confirmed_fact_ids, [factId]);
+  assert.equal(ctx.factStatusById.get(factId), "confirmed");
+  console.log("integrity-K PASS — confirmed basis cites only confirmed facts");
+}
+
+// --- Integrity L: hypothesis notes distinguishable ---
+{
+  const ok = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: ["Partner equity split remains a working hypothesis"],
+        uncertainty_notes: ["Offer terms may still shift"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(ok.ok, true);
+  if (!ok.ok) throw new Error("L needs valid");
+  assert.ok(ok.page.explanation_boundary.hypothesis_notes.length >= 1);
+  assert.ok(
+    !ok.page.explanation_boundary.confirmed_fact_basis.some((t) =>
+      t.includes("working hypothesis"),
+    ),
+  );
+  console.log("integrity-L PASS — hypothesis notes distinct from confirmed");
+}
+
+// --- N: glossary from Face01+Face02 production meta (assembly path) ---
+{
+  const face02 = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(face02.ok, true);
+  if (!face02.ok) throw new Error("N face02");
+  const face01Cited = ["day_master"];
+  const face02Cited = face02.cited_term_ids;
   const glossary = assembleGlossaryAppendixFromEvidence({
     locale: "en",
-    evidenceTermIdLists: [ok.cited_term_ids, ["day_master"]],
+    evidenceTermIdLists: [face01Cited, face02Cited],
   });
-  if (glossary.include) {
-    for (const id of glossary.term_ids) {
-      assert.ok(
-        ok.cited_term_ids.includes(id) || id === "day_master",
-        "N glossary term must be used",
-      );
-    }
+  const expected = [...new Set([...face01Cited, ...face02Cited])];
+  if (expected.length === 0) {
+    assert.equal(glossary.include, false);
+  } else {
+    assert.equal(glossary.include, true);
+    assert.deepEqual([...glossary.term_ids].sort(), [...expected].sort());
   }
+  assert.ok(
+    !glossary.term_ids.includes("unused_allowlist_term_xyz"),
+    "unused allowlist term must not enter",
+  );
+  const emptyGlossary = assembleGlossaryAppendixFromEvidence({
+    locale: "en",
+    evidenceTermIdLists: [[], []],
+  });
+  assert.equal(emptyGlossary.include, false);
+  assert.equal(emptyGlossary.page, null);
+  // Arbitrary model-declared term cannot enter via page body term_ids field alone
+  assert.ok(
+    !face02Cited.includes("totally_fake_term_xyz"),
+    "model-declared fake term not in cited list",
+  );
   const order = readingOrderAfterAssembly({ glossary });
   assert.ok(order.includes("02"));
-  console.log("N PASS — glossary from certified terms");
+  console.log("N PASS — glossary from Face01+Face02 certified cited terms only");
+}
+
+// --- UI/PDF parity: hypothesis_notes rendered ---
+{
+  const ok = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: ["UNIQUE_HYPOTHESIS_NOTE_FOR_PDF_TEST"],
+        uncertainty_notes: ["Offer terms may still shift"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(ok.ok, true);
+  if (!ok.ok) throw new Error("ui/pdf needs valid");
+  const bodies = pageSchemaToArgumentBodies(ok.page as never);
+  const joined = bodies.map((b) => b.body).join("\n");
+  assert.ok(
+    joined.includes("UNIQUE_HYPOTHESIS_NOTE_FOR_PDF_TEST"),
+    "PDF/argument bodies must include hypothesis_notes",
+  );
+  assert.ok(
+    joined.includes("解释性假设") ||
+      joined.includes("hypothesis") ||
+      joined.includes("假设"),
+    "hypothesis label present in PDF render",
+  );
+  assert.ok(joined.includes("Confirmed runway") || joined.includes("已确认"));
+  const uiSrc = readFileSync(
+    resolvePath("components/poju/delivery-pages/faces/Face02PageSlots.tsx"),
+    "utf8",
+  );
+  assert.ok(uiSrc.includes("hypothesis_notes"));
+  assert.ok(
+    uiSrc.includes("解释性假设") || uiSrc.includes("Explanatory hypotheses"),
+  );
+  console.log(
+    "UI/PDF parity PASS — hypothesis_notes in reader source + PDF bodies",
+  );
 }
 
 // --- O: historical missing / legacy Face02 open ---

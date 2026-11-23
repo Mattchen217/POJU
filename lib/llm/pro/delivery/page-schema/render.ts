@@ -199,25 +199,37 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
           | {
               personal_analysis_basis?: unknown;
               confirmed_fact_basis?: unknown;
+              hypothesis_notes?: unknown;
               uncertainty_notes?: unknown;
             }
           | undefined;
         if (boundary) {
-          const text = [
-            ...(Array.isArray(boundary.personal_analysis_basis)
-              ? boundary.personal_analysis_basis
-              : []),
-            ...(Array.isArray(boundary.confirmed_fact_basis)
-              ? boundary.confirmed_fact_basis
-              : []),
-            ...(Array.isArray(boundary.uncertainty_notes)
-              ? boundary.uncertainty_notes
-              : []),
-          ]
-            .map((x) => String(x ?? "").trim())
-            .filter(Boolean)
-            .join("\n");
-          const arg = push("解释边界", text);
+          const parts: string[] = [];
+          const personal = Array.isArray(boundary.personal_analysis_basis)
+            ? boundary.personal_analysis_basis.map((x) => String(x)).filter(Boolean)
+            : [];
+          if (personal.length) {
+            parts.push(`个人分析依据：\n${personal.join("\n")}`);
+          }
+          const confirmed = Array.isArray(boundary.confirmed_fact_basis)
+            ? boundary.confirmed_fact_basis.map((x) => String(x)).filter(Boolean)
+            : [];
+          if (confirmed.length) {
+            parts.push(`已确认事实：\n${confirmed.join("\n")}`);
+          }
+          const hypotheses = Array.isArray(boundary.hypothesis_notes)
+            ? boundary.hypothesis_notes.map((x) => String(x)).filter(Boolean)
+            : [];
+          if (hypotheses.length) {
+            parts.push(`解释性假设（非已确认事实）：\n${hypotheses.join("\n")}`);
+          }
+          const uncertainty = Array.isArray(boundary.uncertainty_notes)
+            ? boundary.uncertainty_notes.map((x) => String(x)).filter(Boolean)
+            : [];
+          if (uncertainty.length) {
+            parts.push(`不确定性：\n${uncertainty.join("\n")}`);
+          }
+          const arg = push("解释边界", parts.join("\n\n"));
           if (arg) out.push(arg);
         }
       } else {

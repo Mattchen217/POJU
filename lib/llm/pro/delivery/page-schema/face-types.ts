@@ -293,10 +293,13 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
           page01_judgment_ref: "",
         },
         explanation_boundary: {
-          personal_analysis_basis: [""],
-          confirmed_fact_basis: [""],
+          personal_analysis_basis: [],
+          confirmed_fact_basis: [],
           hypothesis_notes: [],
           uncertainty_notes: [""],
+          personal_analysis_evidence_ids: [],
+          confirmed_fact_ids: [],
+          hypothesis_fact_ids: [],
         },
         reading_order: [
           "page_summary",

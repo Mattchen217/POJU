@@ -73,8 +73,11 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
     explanation_boundary: {
       personal_analysis_basis: ["历史稿个人层投影"],
       confirmed_fact_basis: ["历史稿未拆分事实状态"],
-      hypothesis_notes: [],
+      hypothesis_notes: ["历史稿未区分假设与事实"],
       uncertainty_notes: ["此为历史报告兼容投影，非 v2 认证产出"],
+      personal_analysis_evidence_ids: [],
+      confirmed_fact_ids: [],
+      hypothesis_fact_ids: [],
     },
     reading_order: [
       "page_summary",

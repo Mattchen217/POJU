@@ -51,6 +51,7 @@ export function face02EvidenceIdBlob(page: unknown): string[] {
       ...r.mechanism_evidence_ids,
     ]),
     ...p.why_judgment_fits.evidence_ids,
+    ...(p.explanation_boundary.personal_analysis_evidence_ids ?? []),
   ];
 }
 

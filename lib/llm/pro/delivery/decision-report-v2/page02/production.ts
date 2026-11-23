@@ -38,6 +38,7 @@ export type Face02ProductionContext = {
   registry: EvidenceRegistry;
   knownFactIds: Set<string>;
   factStatusById: Map<string, string>;
+  factContentById: Map<string, string>;
   termAllowlistSize: number;
   prompt_version: typeof FACE02_PROMPT_VERSION;
   schema_version: typeof FACE02_SCHEMA_VERSION;
@@ -213,8 +214,10 @@ export function buildFace02ProductionContext(input: {
   });
 
   const factStatusById = new Map<string, string>();
+  const factContentById = new Map<string, string>();
   for (const f of slice.reality_context.facts) {
     factStatusById.set(f.fact_id, f.status);
+    factContentById.set(f.fact_id, f.content);
   }
 
   return {
@@ -224,6 +227,7 @@ export function buildFace02ProductionContext(input: {
       registry: restricted.registry,
       knownFactIds: restricted.knownFactIds,
       factStatusById,
+      factContentById,
       termAllowlistSize: allowlist.length,
       prompt_version: FACE02_PROMPT_VERSION,
       schema_version: FACE02_SCHEMA_VERSION,
@@ -271,7 +275,9 @@ export function validateFace02ProductionOutput(input: {
     registry: input.ctx.registry,
     knownFactIds: input.ctx.knownFactIds,
     factStatusById: input.ctx.factStatusById,
+    factContentById: input.ctx.factContentById,
     available_domains: input.ctx.available_domains,
+    domain_versions: input.ctx.domain_versions,
     page01_core_judgment: input.ctx.page01_core_judgment,
   });
   if (!result.ok) {
