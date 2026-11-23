@@ -1,6 +1,9 @@
 /**
  * Build Page02 input_manifest + missing_inputs from production inputs.
  * Deterministic — no LLM. Never invents reality facts.
+ *
+ * Every PAGE02_INPUT_FIELD_CONTRACTS.field_id MUST have an assembler entry.
+ * Silent fallback to missing is forbidden (coverage asserted at module load).
  */
 
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
@@ -35,9 +38,45 @@ export type Page02ArchitectureInputSnapshot = {
     domain?: string;
     excerpt?: string;
   }>;
+  /** Statistics only — must NOT substitute for approved_readings objects. */
   approved_reading_count: number;
   registry_claim_count: number;
   reality_mechanism_evidence_count?: number;
+};
+
+export type Page02FieldAssemblyRow = {
+  present: boolean;
+  status: Page02InputManifestEntry["collection_status"];
+  summary: string | null;
+};
+
+type Page02FieldAssembler = (
+  ctx: Page02AssemblyContext,
+) => Page02FieldAssemblyRow;
+
+type Page02AssemblyContext = {
+  snap: Page02ArchitectureInputSnapshot;
+  question: string;
+  confirmedFacts: NonNullable<DecisionContext["reality_facts"]>;
+  unverifiedFacts: NonNullable<DecisionContext["reality_facts"]>;
+  declinedUnknown: NonNullable<DecisionContext["reality_facts"]>;
+  openConflicts: NonNullable<DecisionContext["conflicts"]>;
+  constraints: NonNullable<DecisionContext["constraints"]>;
+  validReadings: Array<{
+    reading_id: string;
+    domain: string;
+    excerpt: string;
+  }>;
+  destinyUnits: NonNullable<BookJudgmentPack["units"]>;
+  scienceUnits: NonNullable<BookJudgmentPack["units"]>;
+  whyPaths: readonly string[];
+  conditions: NonNullable<Page02ArchitectureInputSnapshot["page01_conditions"]>;
+  mechCount: number;
+  profile: string | null;
+  confirmedSummary: string;
+  unverifiedSummary: string;
+  readingSummary: string;
+  condDepsPresent: boolean;
 };
 
 function summaryOrNull(
@@ -49,9 +88,161 @@ function summaryOrNull(
   return t.length > max ? `${t.slice(0, max)}…` : t;
 }
 
-export function assemblePage02InputManifest(
+/** Valid approved reading objects only (id + domain + excerpt). */
+export function filterValidApprovedReadings(
+  readings: Page02ArchitectureInputSnapshot["approved_readings"],
+): Array<{ reading_id: string; domain: string; excerpt: string }> {
+  const out: Array<{ reading_id: string; domain: string; excerpt: string }> =
+    [];
+  for (const r of readings ?? []) {
+    const reading_id = (r.reading_id ?? "").trim();
+    const domain = (r.domain ?? "").trim();
+    const excerpt = (r.excerpt ?? "").trim();
+    if (!reading_id || !domain || !excerpt) continue;
+    out.push({ reading_id, domain, excerpt });
+  }
+  return out;
+}
+
+/**
+ * Explicit field_id → assembler map. Must cover every contract field_id.
+ * Adding a contract without an entry fails module-load coverage check.
+ */
+export const PAGE02_FIELD_ASSEMBLERS: Record<string, Page02FieldAssembler> = {
+  page01_core_judgment: (ctx) => ({
+    present: Boolean(ctx.snap.page01_core_judgment?.trim()),
+    status: ctx.snap.page01_core_judgment?.trim() ? "ready" : "missing",
+    summary: summaryOrNull(ctx.snap.page01_core_judgment),
+  }),
+  page01_why_paths: (ctx) => ({
+    present: ctx.whyPaths.length > 0,
+    status: ctx.whyPaths.length > 0 ? "ready" : "missing",
+    summary: ctx.whyPaths.length ? `why_paths=${ctx.whyPaths.length}` : null,
+  }),
+  decision_question: (ctx) => ({
+    present: Boolean(ctx.question),
+    status: ctx.question ? "ready" : "missing",
+    summary: summaryOrNull(ctx.question),
+  }),
+  report_locale: (ctx) => ({
+    present: Boolean(ctx.snap.locale?.trim()),
+    status: ctx.snap.locale?.trim() ? "ready" : "missing",
+    summary: ctx.snap.locale || null,
+  }),
+  available_personal_domains: (ctx) => ({
+    present: ctx.snap.available_domains.length > 0,
+    status: ctx.snap.available_domains.length > 0 ? "ready" : "missing",
+    summary: ctx.snap.available_domains.join(",") || null,
+  }),
+  personal_profile_version: (ctx) => ({
+    present: Boolean(ctx.profile),
+    status: ctx.profile ? "ready" : "missing",
+    summary: ctx.profile,
+  }),
+  personal_readings_payload: (ctx) => ({
+    // Count alone never marks present — only valid reading objects.
+    present: ctx.validReadings.length > 0,
+    status: ctx.validReadings.length > 0 ? "ready" : "missing",
+    summary: ctx.validReadings.length
+      ? ctx.readingSummary || `readings=${ctx.validReadings.length}`
+      : null,
+  }),
+  book_judgment_destiny_units: (ctx) => ({
+    present: ctx.destinyUnits.length > 0,
+    status: ctx.destinyUnits.length > 0 ? "ready" : "missing",
+    summary: ctx.destinyUnits.length
+      ? `destiny_units=${ctx.destinyUnits.length}`
+      : null,
+  }),
+  confirmed_reality_facts_payload: (ctx) => ({
+    present: ctx.confirmedFacts.length > 0,
+    status: ctx.confirmedFacts.length > 0 ? "ready" : "missing",
+    summary: ctx.confirmedSummary || null,
+  }),
+  reality_mechanism_inputs: (ctx) => ({
+    present: ctx.constraints.length > 0 || ctx.mechCount > 0,
+    status:
+      ctx.constraints.length > 0 || ctx.mechCount > 0 ? "ready" : "missing",
+    summary: `constraints=${ctx.constraints.length};mech_ev=${ctx.mechCount}`,
+  }),
+  book_judgment_science_units: (ctx) => ({
+    present: ctx.scienceUnits.length > 0,
+    status: ctx.scienceUnits.length > 0 ? "ready" : "missing",
+    summary: ctx.scienceUnits.length
+      ? `science_units=${ctx.scienceUnits.length}`
+      : null,
+  }),
+  evidence_registry_claims: (ctx) => ({
+    present: ctx.snap.registry_claim_count > 0,
+    status: ctx.snap.registry_claim_count > 0 ? "ready" : "missing",
+    summary: `claims=${ctx.snap.registry_claim_count}`,
+  }),
+  page01_recommendation_conditions: (ctx) => ({
+    present: ctx.conditions.length > 0,
+    status: ctx.conditions.length > 0 ? "ready" : "missing",
+    summary: ctx.conditions.length
+      ? ctx.conditions
+          .slice(0, 3)
+          .map((c) => `${c.status}:${c.condition.slice(0, 32)}`)
+          .join(" || ")
+      : null,
+  }),
+  conditional_explanation_deps: (ctx) => ({
+    present: ctx.condDepsPresent,
+    status: ctx.condDepsPresent ? "ready" : "missing",
+    summary: `confirmed=${ctx.confirmedFacts.length};unverified=${ctx.unverifiedFacts.length};p01_conds=${ctx.conditions.length}`,
+  }),
+  unverified_reality_facts_payload: (ctx) => ({
+    present: ctx.unverifiedFacts.length > 0,
+    status: ctx.unverifiedFacts.length > 0 ? "unverified" : "not_applicable",
+    summary:
+      ctx.unverifiedSummary || `unverified=${ctx.unverifiedFacts.length}`,
+  }),
+  declined_or_unknown_facts: (ctx) => ({
+    present: ctx.declinedUnknown.length > 0,
+    status: ctx.declinedUnknown.length
+      ? (gapStatusFromDcFactStatus(ctx.declinedUnknown[0]!.status) ?? "unknown")
+      : "not_applicable",
+    summary: ctx.declinedUnknown.length
+      ? ctx.declinedUnknown.map((f) => `${f.fact_id}:${f.status}`).join(",")
+      : null,
+  }),
+  open_conflicts: (ctx) => ({
+    present: ctx.openConflicts.length > 0,
+    status: ctx.openConflicts.length > 0 ? "conflict" : "not_applicable",
+    summary: `open_conflicts=${ctx.openConflicts.length}`,
+  }),
+};
+
+/** Contract field_ids that have a real assembler (must equal contract set). */
+export function page02AssembledFieldIds(): string[] {
+  return Object.keys(PAGE02_FIELD_ASSEMBLERS).sort();
+}
+
+export function assertPage02InputAssemblyCoverage(): {
+  ok: true;
+  field_ids: string[];
+} {
+  const contractIds = PAGE02_INPUT_FIELD_CONTRACTS.map((c) => c.field_id).sort();
+  const assembledIds = page02AssembledFieldIds();
+  const missing = contractIds.filter((id) => !PAGE02_FIELD_ASSEMBLERS[id]);
+  const extra = assembledIds.filter(
+    (id) => !PAGE02_INPUT_FIELD_CONTRACTS.some((c) => c.field_id === id),
+  );
+  if (missing.length || extra.length) {
+    throw new Error(
+      `Page02 input assembly coverage broken: missing=[${missing.join(",")}] extra=[${extra.join(",")}]`,
+    );
+  }
+  return { ok: true, field_ids: contractIds };
+}
+
+// Fail closed at module load — new contract without assembler cannot ship silently.
+assertPage02InputAssemblyCoverage();
+
+function buildAssemblyContext(
   snap: Page02ArchitectureInputSnapshot,
-): Page02InputManifestEntry[] {
+): Page02AssemblyContext {
   const dc = snap.dc;
   const question = dc?.definition?.decision_question?.trim() ?? "";
   const confirmedFacts = (dc?.reality_facts ?? []).filter(
@@ -67,11 +258,7 @@ export function assemblePage02InputManifest(
     (c) => c.state !== "clarified",
   );
   const constraints = dc?.constraints ?? [];
-  const readings = snap.approved_readings ?? [];
-  const readingCount = Math.max(
-    snap.approved_reading_count,
-    readings.length,
-  );
+  const validReadings = filterValidApprovedReadings(snap.approved_readings);
   const packUnits = snap.pack?.units ?? [];
   const destinyUnits = packUnits.filter(
     (u) =>
@@ -104,12 +291,9 @@ export function assemblePage02InputManifest(
         `${f.fact_id}|${f.status}|${f.verification_level ?? "?"}|${(f.statement ?? "").slice(0, 40)}`,
     )
     .join(" || ");
-  const readingSummary = readings
+  const readingSummary = validReadings
     .slice(0, 3)
-    .map(
-      (r) =>
-        `${r.reading_id ?? "?"}|${r.domain ?? "?"}|${(r.excerpt ?? "").slice(0, 40)}`,
-    )
+    .map((r) => `${r.reading_id}|${r.domain}|${r.excerpt.slice(0, 40)}`)
     .join(" || ");
 
   const condDepsPresent =
@@ -117,125 +301,40 @@ export function assemblePage02InputManifest(
     unverifiedFacts.length > 0 ||
     conditions.length > 0;
 
-  const values: Record<
-    string,
-    {
-      present: boolean;
-      status: Page02InputManifestEntry["collection_status"];
-      summary: string | null;
-    }
-  > = {
-    page01_core_judgment: {
-      present: Boolean(snap.page01_core_judgment?.trim()),
-      status: snap.page01_core_judgment?.trim() ? "ready" : "missing",
-      summary: summaryOrNull(snap.page01_core_judgment),
-    },
-    page01_why_paths: {
-      present: whyPaths.length > 0,
-      status: whyPaths.length > 0 ? "ready" : "missing",
-      summary: whyPaths.length
-        ? `why_paths=${whyPaths.length}`
-        : null,
-    },
-    decision_question: {
-      present: Boolean(question),
-      status: question ? "ready" : "missing",
-      summary: summaryOrNull(question),
-    },
-    report_locale: {
-      present: Boolean(snap.locale?.trim()),
-      status: snap.locale?.trim() ? "ready" : "missing",
-      summary: snap.locale || null,
-    },
-    available_personal_domains: {
-      present: snap.available_domains.length > 0,
-      status: snap.available_domains.length > 0 ? "ready" : "missing",
-      summary: snap.available_domains.join(",") || null,
-    },
-    personal_profile_version: {
-      present: Boolean(profile),
-      status: profile ? "ready" : "missing",
-      summary: profile,
-    },
-    personal_readings_payload: {
-      present: readingCount > 0,
-      status: readingCount > 0 ? "ready" : "missing",
-      summary:
-        readingSummary ||
-        (readingCount > 0 ? `readings=${readingCount}` : null),
-    },
-    book_judgment_destiny_units: {
-      present: destinyUnits.length > 0,
-      status: destinyUnits.length > 0 ? "ready" : "missing",
-      summary: destinyUnits.length
-        ? `destiny_units=${destinyUnits.length}`
-        : null,
-    },
-    confirmed_reality_facts_payload: {
-      present: confirmedFacts.length > 0,
-      status: confirmedFacts.length > 0 ? "ready" : "missing",
-      summary: confirmedSummary || null,
-    },
-    reality_mechanism_inputs: {
-      present: constraints.length > 0 || mechCount > 0,
-      status:
-        constraints.length > 0 || mechCount > 0 ? "ready" : "missing",
-      summary: `constraints=${constraints.length};mech_ev=${mechCount}`,
-    },
-    book_judgment_science_units: {
-      present: scienceUnits.length > 0,
-      status: scienceUnits.length > 0 ? "ready" : "missing",
-      summary: scienceUnits.length
-        ? `science_units=${scienceUnits.length}`
-        : null,
-    },
-    evidence_registry_claims: {
-      present: snap.registry_claim_count > 0,
-      status: snap.registry_claim_count > 0 ? "ready" : "missing",
-      summary: `claims=${snap.registry_claim_count}`,
-    },
-    page01_recommendation_conditions: {
-      present: conditions.length > 0,
-      status: conditions.length > 0 ? "ready" : "missing",
-      summary: conditions.length
-        ? conditions
-            .slice(0, 3)
-            .map((c) => `${c.status}:${c.condition.slice(0, 32)}`)
-            .join(" || ")
-        : null,
-    },
-    conditional_explanation_deps: {
-      present: condDepsPresent,
-      status: condDepsPresent ? "ready" : "missing",
-      summary: `confirmed=${confirmedFacts.length};unverified=${unverifiedFacts.length};p01_conds=${conditions.length}`,
-    },
-    unverified_reality_facts_payload: {
-      present: unverifiedFacts.length > 0,
-      status: unverifiedFacts.length > 0 ? "unverified" : "not_applicable",
-      summary: unverifiedSummary || `unverified=${unverifiedFacts.length}`,
-    },
-    declined_or_unknown_facts: {
-      present: declinedUnknown.length > 0,
-      status: declinedUnknown.length
-        ? (gapStatusFromDcFactStatus(declinedUnknown[0]!.status) ?? "unknown")
-        : "not_applicable",
-      summary: declinedUnknown.length
-        ? declinedUnknown.map((f) => `${f.fact_id}:${f.status}`).join(",")
-        : null,
-    },
-    open_conflicts: {
-      present: openConflicts.length > 0,
-      status: openConflicts.length > 0 ? "conflict" : "not_applicable",
-      summary: `open_conflicts=${openConflicts.length}`,
-    },
+  return {
+    snap,
+    question,
+    confirmedFacts,
+    unverifiedFacts,
+    declinedUnknown,
+    openConflicts,
+    constraints,
+    validReadings,
+    destinyUnits,
+    scienceUnits,
+    whyPaths,
+    conditions,
+    mechCount,
+    profile,
+    confirmedSummary,
+    unverifiedSummary,
+    readingSummary,
+    condDepsPresent,
   };
+}
 
+export function assemblePage02InputManifest(
+  snap: Page02ArchitectureInputSnapshot,
+): Page02InputManifestEntry[] {
+  const ctx = buildAssemblyContext(snap);
   return PAGE02_INPUT_FIELD_CONTRACTS.map((c) => {
-    const row = values[c.field_id] ?? {
-      present: false,
-      status: "missing" as const,
-      summary: null,
-    };
+    const assembler = PAGE02_FIELD_ASSEMBLERS[c.field_id];
+    if (!assembler) {
+      throw new Error(
+        `Page02 field assembler missing for contract field_id=${c.field_id}`,
+      );
+    }
+    const row = assembler(ctx);
     return {
       field_id: c.field_id,
       section_id: c.section_id,

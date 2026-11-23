@@ -156,7 +156,10 @@ export function resolveFace02Units(
 ): Face02ContentUnit[] {
   const index = indexFace02ContentUnits(page.content_units);
   const out: Face02ContentUnit[] = [];
+  const seen = new Set<string>();
   for (const id of unitIds) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
     const u = index.get(id);
     if (u) out.push(u);
   }

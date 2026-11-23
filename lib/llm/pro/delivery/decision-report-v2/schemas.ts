@@ -312,6 +312,12 @@ export const Face02V2Schema = z.object({
     /** Non-authoritative uncertainty notes — must not alter DC status. */
     uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(6),
   }),
+  /**
+   * Preferred reading order. Assembly always normalizes via
+   * normalizePage02ReadingOrder (unique; drops unknown; never omits defined
+   * sections). Schema still rejects duplicate ids in the stored array.
+   * Historical pages may omit optional slots; Reader/PDF rehydrate the full set.
+   */
   reading_order: z
     .array(
       z.enum([
@@ -330,7 +336,32 @@ export const Face02V2Schema = z.object({
       "personal_reality_interplay",
       "why_judgment_fits",
       "explanation_boundary",
-    ]),
+    ])
+    .superRefine((order, ctx) => {
+      const seen = new Set<string>();
+      for (const id of order) {
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `duplicate reading_order section_id: ${id}`,
+          });
+          return;
+        }
+        seen.add(id);
+      }
+      for (const required of [
+        "page_summary",
+        "why_judgment_fits",
+        "explanation_boundary",
+      ] as const) {
+        if (!seen.has(required)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `reading_order missing required section: ${required}`,
+          });
+        }
+      }
+    }),
   /**
    * Architecture envelope (Batch 1) — optional for historical pages.
    * Program attaches these; model must not invent gap closure.

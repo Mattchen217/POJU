@@ -56,8 +56,10 @@ export function Face02PageSlots({
     status === "blocked_on_required_inputs" ||
     status === "incomplete" ||
     status === "failed_structure";
-  const sections = assemblePage02SectionsForDisplay(data, locale);
-  const zh = localeBucket(locale) === "zh";
+  // Prefer stamped canonical locale (same source PDF uses); UI prop is fallback.
+  const displayLocale = data.locale?.trim() || locale;
+  const sections = assemblePage02SectionsForDisplay(data, displayLocale);
+  const zh = localeBucket(displayLocale) === "zh";
 
   return (
     <div

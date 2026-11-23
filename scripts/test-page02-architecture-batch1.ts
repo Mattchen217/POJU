@@ -24,7 +24,16 @@ import {
   assemblePage02PdfArgumentBodies,
   page02InputContractsForSection,
   PAGE02_SECTION_IDS as SECTION_IDS,
+  normalizePage02ReadingOrder,
+  page02RequiredSectionIds,
+  assemblePage02InputManifest,
+  buildPage02MissingInputs,
+  assertPage02InputAssemblyCoverage,
+  page02AssembledFieldIds,
+  filterValidApprovedReadings,
+  PAGE02_FIELD_ASSEMBLERS,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page02/architecture";
+import { isFace02Legacy, projectLegacyFace02ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
 import { buildFace02ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page02/production";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
@@ -530,7 +539,7 @@ async function runAsyncClosureChecks() {
     console.log("K PASS — Reader/PDF shared section assembly");
   }
 
-  // L: every section has ≥1 input contract
+  // L: every section has ≥1 input contract + assembler coverage 1:1
   {
     for (const id of SECTION_IDS) {
       assert.ok(
@@ -538,19 +547,350 @@ async function runAsyncClosureChecks() {
         `section ${id} needs input contracts`,
       );
     }
+    const coverage = assertPage02InputAssemblyCoverage();
+    assert.deepEqual(
+      coverage.field_ids,
+      PAGE02_INPUT_FIELD_CONTRACTS.map((c) => c.field_id).sort(),
+    );
+    assert.deepEqual(
+      page02AssembledFieldIds(),
+      PAGE02_INPUT_FIELD_CONTRACTS.map((c) => c.field_id).sort(),
+    );
+    for (const c of PAGE02_INPUT_FIELD_CONTRACTS) {
+      assert.ok(
+        typeof PAGE02_FIELD_ASSEMBLERS[c.field_id] === "function",
+        `assembler missing for ${c.field_id}`,
+      );
+      assert.ok(c.source_path.trim().length > 0, `${c.field_id} needs source_path`);
+      assert.ok(c.affects_content.trim().length > 0);
+      assert.ok(c.follow_up_collect_hint.trim().length > 0);
+    }
+    console.log(
+      "L PASS — every field_id has contract + assembler (no silent missing fallback)",
+    );
+  }
+
+  // M: reading_order normalize — required never omitted; dupes/unknowns dropped
+  {
+    const required = page02RequiredSectionIds();
+    assert.ok(required.includes("page_summary"));
+    assert.ok(required.includes("why_judgment_fits"));
+    assert.ok(required.includes("explanation_boundary"));
+
+    assert.deepEqual(
+      normalizePage02ReadingOrder([]),
+      [...PAGE02_SECTION_IDS],
+    );
+    assert.deepEqual(
+      normalizePage02ReadingOrder(undefined),
+      [...PAGE02_SECTION_IDS],
+    );
+    // Missing required → keep custom prefix, append omitted (incl. required) in SSOT order
+    const missingRequired = normalizePage02ReadingOrder([
+      "relevant_personal_factors",
+      "personal_reality_interplay",
+    ]);
+    assert.deepEqual(missingRequired, [
+      "relevant_personal_factors",
+      "personal_reality_interplay",
+      "page_summary",
+      "why_judgment_fits",
+      "explanation_boundary",
+    ]);
+    assert.equal(missingRequired.length, PAGE02_SECTION_IDS.length);
+    for (const id of required) {
+      assert.ok(missingRequired.includes(id));
+    }
+    // Dupes + unknown
+    const dupUnknown = normalizePage02ReadingOrder([
+      "why_judgment_fits",
+      "page_summary",
+      "page_summary",
+      "not_a_real_section",
+      "explanation_boundary",
+    ]);
+    assert.equal(new Set(dupUnknown).size, dupUnknown.length);
+    assert.ok(!dupUnknown.includes("not_a_real_section" as never));
+    assert.equal(dupUnknown.length, PAGE02_SECTION_IDS.length);
+    assert.equal(dupUnknown[0], "why_judgment_fits");
+    assert.equal(dupUnknown[1], "page_summary");
+
+    const pageIncomplete = {
+      page: "02",
+      face: "02",
+      schema_version: "face02-v2",
+      locale: "en",
+      content_units: [
+        {
+          unit_id: "u_summary",
+          kind: "conditional_explanation",
+          text: "Summary once.",
+          claim_ids: ["claim_u_science_02"],
+          evidence_ids: [],
+          related_reality_fact_unit_ids: [],
+        },
+        {
+          unit_id: "u_why",
+          kind: "conditional_explanation",
+          text: "Why once.",
+          claim_ids: ["claim_u_science_02"],
+          evidence_ids: [],
+          related_reality_fact_unit_ids: [],
+        },
+      ],
+      page_summary_unit_ids: ["u_summary", "u_summary"],
+      relevant_personal_factor_unit_ids: [],
+      personal_reality_interplay_unit_ids: [],
+      why_judgment_fits_unit_ids: ["u_why"],
+      explanation_boundary: {
+        claim_ids: ["claim_u_science_02"],
+        personal_unit_ids: [],
+        confirmed_fact_unit_ids: [],
+        hypothesis_unit_ids: [],
+        uncertainty_notes: ["note"],
+      },
+      reading_order: ["page_summary", "why_judgment_fits"],
+    } as Face02V2;
+
+    const validated = validatePage02CanonicalPage(pageIncomplete);
+    assert.equal(validated.ok, true);
+    if (!validated.ok) throw new Error(validated.detail);
+    const expectedOrder = normalizePage02ReadingOrder([
+      "page_summary",
+      "why_judgment_fits",
+    ]);
+    assert.deepEqual(validated.page.reading_order, expectedOrder);
+    assert.equal(validated.page.reading_order!.length, PAGE02_SECTION_IDS.length);
+    for (const id of required) {
+      assert.ok(validated.page.reading_order!.includes(id));
+    }
+
+    const reader = assemblePage02SectionsForDisplay(validated.page, "en");
+    const pdf = assemblePage02PdfArgumentBodies(validated.page, "en");
+    const render = pageSchemaToArgumentBodies({
+      ...validated.page,
+      locale: "en",
+    } as never);
+    assert.equal(reader.length, PAGE02_SECTION_IDS.length);
+    assert.equal(reader.length, pdf.length);
+    assert.equal(reader.length, render.length);
+    assert.deepEqual(
+      reader.map((s) => s.section_id),
+      expectedOrder,
+    );
+    // Optional empty sections still emit empty_display
+    const optionalEmpty = reader.find(
+      (s) => s.section_id === "relevant_personal_factors",
+    );
+    assert.ok(optionalEmpty);
+    assert.equal(optionalEmpty!.texts.length, 0);
+    assert.ok(optionalEmpty!.empty_display.length > 0);
     assert.ok(
-      PAGE02_INPUT_FIELD_CONTRACTS.some(
-        (c) => c.field_id === "personal_readings_payload",
+      pdf.some((b) => b.body.includes(optionalEmpty!.empty_display)),
+    );
+    // Duplicate unit_id does not double-render
+    const summary = reader.find((s) => s.section_id === "page_summary")!;
+    assert.equal(summary.texts.length, 1);
+    assert.equal(summary.texts[0], "Summary once.");
+    console.log(
+      "M PASS — reading_order normalize + empty optional + unit dedupe (Reader/PDF)",
+    );
+  }
+
+  // N: every field_id maps to real snapshot inputs; gap statuses wired
+  {
+    const baseSnap = {
+      report_id: "field_map",
+      locale: "en",
+      dc,
+      pack,
+      page01_core_judgment: page01.core_judgment.text,
+      page01_why_paths: ["why path A"],
+      page01_conditions: [
+        { condition: "runway holds", status: "assumed", source_ids: ["fact_runway"] },
+      ],
+      available_domains: ["bazi"],
+      profile_version: "cfp_arch",
+      approved_readings: [
+        {
+          reading_id: "r_day",
+          domain: "bazi",
+          excerpt: "Cash-floor preference under pressure.",
+        },
+      ],
+      approved_reading_count: 1,
+      registry_claim_count: 2,
+      reality_mechanism_evidence_count: 1,
+    };
+    const manifest = assemblePage02InputManifest(baseSnap);
+    assert.equal(manifest.length, PAGE02_INPUT_FIELD_CONTRACTS.length);
+    for (const c of PAGE02_INPUT_FIELD_CONTRACTS) {
+      const entry = manifest.find((m) => m.field_id === c.field_id);
+      assert.ok(entry, `manifest missing ${c.field_id}`);
+      assert.equal(entry!.section_id, c.section_id);
+      assert.equal(entry!.source_kind, c.source_kind);
+    }
+    // Ready fields from fixture
+    assert.equal(
+      manifest.find((m) => m.field_id === "page01_core_judgment")!.present,
+      true,
+    );
+    assert.equal(
+      manifest.find((m) => m.field_id === "decision_question")!.present,
+      true,
+    );
+    assert.equal(
+      manifest.find((m) => m.field_id === "personal_readings_payload")!.present,
+      true,
+    );
+    assert.equal(
+      manifest.find((m) => m.field_id === "confirmed_reality_facts_payload")!
+        .present,
+      true,
+    );
+    assert.equal(
+      manifest.find((m) => m.field_id === "unverified_reality_facts_payload")!
+        .collection_status,
+      "unverified",
+    );
+    assert.equal(
+      manifest.find((m) => m.field_id === "open_conflicts")!.collection_status,
+      "conflict",
+    );
+
+    // Count-only readings must NOT mark present
+    const countOnly = assemblePage02InputManifest({
+      ...baseSnap,
+      approved_readings: [],
+      approved_reading_count: 9,
+    });
+    const payload = countOnly.find(
+      (m) => m.field_id === "personal_readings_payload",
+    )!;
+    assert.equal(payload.present, false);
+    assert.equal(payload.collection_status, "missing");
+
+    // Incomplete reading objects → missing
+    const incompleteObjs = assemblePage02InputManifest({
+      ...baseSnap,
+      approved_readings: [
+        { reading_id: "r1", domain: "bazi" },
+        { reading_id: "", domain: "bazi", excerpt: "x" },
+        { domain: "bazi", excerpt: "no id" },
+      ],
+      approved_reading_count: 3,
+    });
+    assert.equal(
+      incompleteObjs.find((m) => m.field_id === "personal_readings_payload")!
+        .present,
+      false,
+    );
+    assert.equal(filterValidApprovedReadings([{ reading_id: "a" }]).length, 0);
+    assert.equal(
+      filterValidApprovedReadings([
+        { reading_id: "a", domain: "bazi", excerpt: "ok" },
+      ]).length,
+      1,
+    );
+
+    // Declined / unknown / not_applicable status path
+    const dcStatuses = {
+      ...dc,
+      reality_facts: [
+        {
+          ...dc.reality_facts![0],
+          fact_id: "fact_declined",
+          status: "declined",
+        },
+        {
+          ...dc.reality_facts![0],
+          fact_id: "fact_unknown",
+          status: "unknown",
+        },
+        {
+          ...dc.reality_facts![0],
+          fact_id: "fact_na",
+          status: "not_applicable",
+        },
+      ],
+      conflicts: [],
+    } as DecisionContext;
+    const statusManifest = assemblePage02InputManifest({
+      ...baseSnap,
+      dc: dcStatuses,
+    });
+    const declinedEntry = statusManifest.find(
+      (m) => m.field_id === "declined_or_unknown_facts",
+    )!;
+    assert.equal(declinedEntry.present, true);
+    assert.ok(
+      ["declined", "unknown", "not_applicable"].includes(
+        declinedEntry.collection_status,
       ),
     );
+    // Confirmed payload must NOT treat declined as confirmed
+    assert.equal(
+      statusManifest.find(
+        (m) => m.field_id === "confirmed_reality_facts_payload",
+      )!.present,
+      false,
+    );
+
+    const gaps = buildPage02MissingInputs(statusManifest);
+    for (const g of gaps) {
+      assert.ok(g.section_id);
+      assert.ok(g.affects_content.trim().length > 0);
+      assert.ok(g.why_needed.trim().length > 0);
+      assert.ok(g.follow_up_collect_hint.trim().length > 0);
+      assert.ok(
+        [
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ].includes(g.handling),
+      );
+    }
     assert.ok(
-      PAGE02_INPUT_FIELD_CONTRACTS.some(
-        (c) => c.field_id === "confirmed_reality_facts_payload",
-      ),
+      gaps.some((g) => g.field_id === "declined_or_unknown_facts"),
+      "declined/unknown facts must produce gap notes",
     );
     console.log(
-      "L PASS — per-section input contracts complete enough for DI2 hints",
+      "N PASS — field_id assembly mapping + readings object gate + gap statuses",
     );
+  }
+
+  // O: legacy Face02 still projects; Reader/PDF share assembly; locale from page
+  {
+    const legacy = {
+      page: "02",
+      face: "02",
+      destiny_reason: "Legacy destiny prose about structure under pressure.",
+      science_mechanism: "Legacy science mechanism about runway buffers.",
+      convergence: "Legacy convergence note for fit.",
+      verifiable_anchors: ["anchor one"],
+    };
+    assert.equal(isFace02Legacy(legacy), true);
+    const projected = projectLegacyFace02ForDisplay(legacy);
+    assert.ok(projected);
+    assert.equal(projected!.schema_version, "face02-v2");
+    assert.deepEqual(
+      normalizePage02ReadingOrder(projected!.reading_order),
+      [...PAGE02_SECTION_IDS],
+    );
+    const reader = assemblePage02SectionsForDisplay(projected!, "zh");
+    const pdf = assemblePage02PdfArgumentBodies(projected!, "zh");
+    assert.equal(reader.length, pdf.length);
+    assert.equal(reader.length, PAGE02_SECTION_IDS.length);
+
+    // locale stamped on canonical page drives PDF titles
+    const withLocale = {
+      ...projected!,
+      locale: "en" as const,
+    };
+    const renderEn = pageSchemaToArgumentBodies(withLocale as never);
+    assert.ok(renderEn[0]?.body.includes("### Page summary"));
+    console.log("O PASS — legacy compat + locale from canonical page for PDF");
   }
 }
 

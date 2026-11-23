@@ -7,6 +7,9 @@ export {
   PAGE02_SECTION_DEFINITIONS,
   page02SectionById,
   page02DefaultReadingOrder,
+  page02RequiredSectionIds,
+  isPage02SectionId,
+  normalizePage02ReadingOrder,
   type Page02SectionId,
   type Page02SectionDefinition,
 } from "./sections";
@@ -56,7 +59,12 @@ export {
   buildPage02MissingInputs,
   resolvePage02GenerationStatus,
   page02FactGapsFromDc,
+  filterValidApprovedReadings,
+  page02AssembledFieldIds,
+  assertPage02InputAssemblyCoverage,
+  PAGE02_FIELD_ASSEMBLERS,
   type Page02ArchitectureInputSnapshot,
+  type Page02FieldAssemblyRow,
 } from "./assemble-inputs";
 
 export {

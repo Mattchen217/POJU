@@ -132,3 +132,43 @@ export function page02SectionById(
 export function page02DefaultReadingOrder(): Page02SectionId[] {
   return [...PAGE02_SECTION_IDS];
 }
+
+/** Required section_ids from PAGE02_SECTION_DEFINITIONS (sole authority). */
+export function page02RequiredSectionIds(): Page02SectionId[] {
+  return PAGE02_SECTION_DEFINITIONS.filter((s) => s.required).map(
+    (s) => s.section_id,
+  );
+}
+
+export function isPage02SectionId(id: string): id is Page02SectionId {
+  return PAGE02_SECTION_DEFINITIONS.some((s) => s.section_id === id);
+}
+
+/**
+ * Canonical reading-order normalize (Reader + PDF + persist stamp).
+ * - drops unknown ids
+ * - dedupes
+ * - never omits a defined section (required or optional) — missing ones append
+ *   in PAGE02_SECTION_DEFINITIONS order
+ */
+export function normalizePage02ReadingOrder(
+  order: readonly string[] | null | undefined,
+): Page02SectionId[] {
+  const seen = new Set<Page02SectionId>();
+  const out: Page02SectionId[] = [];
+  if (Array.isArray(order)) {
+    for (const raw of order) {
+      if (!isPage02SectionId(raw)) continue;
+      if (seen.has(raw)) continue;
+      seen.add(raw);
+      out.push(raw);
+    }
+  }
+  for (const id of PAGE02_SECTION_IDS) {
+    if (!seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
+}

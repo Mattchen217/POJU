@@ -29,7 +29,7 @@ import {
 } from "./prompt-templates";
 import {
   PAGE02_SECTION_DEFINITIONS,
-  page02DefaultReadingOrder,
+  normalizePage02ReadingOrder,
   type Page02SectionId,
 } from "./sections";
 import { page02TaskById, type Page02TaskId } from "./tasks";
@@ -238,9 +238,8 @@ export function attachPage02ArchitectureToPage(
 
   const merged: Face02V2 = {
     ...page,
-    reading_order: page.reading_order?.length
-      ? page.reading_order
-      : page02DefaultReadingOrder(),
+    // Stamp normalized order so Reader/PDF/persist share one complete sequence.
+    reading_order: normalizePage02ReadingOrder(page.reading_order),
     explanation_boundary: {
       ...page.explanation_boundary,
       uncertainty_notes:
@@ -267,7 +266,18 @@ export function attachPage02ArchitectureToPage(
 export function validatePage02CanonicalPage(raw: unknown):
   | { ok: true; page: Face02V2 }
   | { ok: false; reason: string; detail?: string } {
-  const parsed = Face02V2Schema.safeParse(raw);
+  // Normalize reading_order before schema so historical/incomplete orders
+  // rehydrate to the full unique section set (required never omitted).
+  const patched =
+    raw && typeof raw === "object"
+      ? {
+          ...(raw as Record<string, unknown>),
+          reading_order: normalizePage02ReadingOrder(
+            (raw as { reading_order?: readonly string[] }).reading_order,
+          ),
+        }
+      : raw;
+  const parsed = Face02V2Schema.safeParse(patched);
   if (!parsed.success) {
     return {
       ok: false,

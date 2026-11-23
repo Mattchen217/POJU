@@ -4,6 +4,7 @@
  */
 
 import { Face02V2Schema, type Face02ContentUnit, type Face02V2 } from "../schemas";
+import { normalizePage02ReadingOrder } from "./architecture/sections";
 import {
   validateFace02BodyCompliance,
   type BodyComplianceIssue,
@@ -461,7 +462,16 @@ export function validateFace02Output(input: {
     registry: input.registry,
     credibleFactClaimKeys: input.credibleFactClaimKeys,
   });
-  const parsed = Face02V2Schema.safeParse(assembled);
+  const assembledWithOrder =
+    assembled && typeof assembled === "object"
+      ? {
+          ...(assembled as Record<string, unknown>),
+          reading_order: normalizePage02ReadingOrder(
+            (assembled as { reading_order?: readonly string[] }).reading_order,
+          ),
+        }
+      : assembled;
+  const parsed = Face02V2Schema.safeParse(assembledWithOrder);
   if (!parsed.success) {
     return {
       ok: false,

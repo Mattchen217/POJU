@@ -8,8 +8,7 @@
 
 import type { Face02V2 } from "../../schemas";
 import {
-  PAGE02_SECTION_DEFINITIONS,
-  page02DefaultReadingOrder,
+  normalizePage02ReadingOrder,
   page02SectionById,
   type Page02SectionId,
 } from "./sections";
@@ -42,16 +41,26 @@ export function page02SectionTitle(
   return localeBucket(locale) === "zh" ? def.title_zh : def.title_en;
 }
 
+/**
+ * Reader/PDF shared reading order — always normalized (required+optional complete,
+ * unique, unknown dropped). Custom order only reorders; it cannot omit sections.
+ */
 export function resolvePage02ReadingOrder(
   page: Pick<Face02V2, "reading_order"> | null | undefined,
 ): Page02SectionId[] {
-  const order = page?.reading_order;
-  if (Array.isArray(order) && order.length) {
-    return order.filter((id): id is Page02SectionId =>
-      PAGE02_SECTION_DEFINITIONS.some((s) => s.section_id === id),
-    );
+  return normalizePage02ReadingOrder(page?.reading_order);
+}
+
+/** Deduped unit_id list — same unit never displays twice in one section. */
+function dedupeUnitIds(ids: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
   }
-  return page02DefaultReadingOrder();
+  return out;
 }
 
 /** Resolve unit texts for a section from Face02V2 unit_id lists (sole content map). */
@@ -65,21 +74,24 @@ export function resolvePage02SectionUnitTexts(
   if (def.unit_ids_field === "explanation_boundary") {
     const b = page.explanation_boundary;
     const parts: string[] = [];
-    const personal = resolveFace02Units(page, b.personal_unit_ids).map(
-      face02UnitDisplayText,
-    );
+    const personal = resolveFace02Units(
+      page,
+      dedupeUnitIds(b.personal_unit_ids),
+    ).map(face02UnitDisplayText);
     if (personal.length) {
       parts.push(`PERSONAL_BASIS:\n${personal.join("\n")}`);
     }
-    const confirmed = resolveFace02Units(page, b.confirmed_fact_unit_ids).map(
-      face02UnitDisplayText,
-    );
+    const confirmed = resolveFace02Units(
+      page,
+      dedupeUnitIds(b.confirmed_fact_unit_ids),
+    ).map(face02UnitDisplayText);
     if (confirmed.length) {
       parts.push(`CONFIRMED_FACTS:\n${confirmed.join("\n")}`);
     }
-    const hyp = resolveFace02Units(page, b.hypothesis_unit_ids).map(
-      face02UnitDisplayText,
-    );
+    const hyp = resolveFace02Units(
+      page,
+      dedupeUnitIds(b.hypothesis_unit_ids),
+    ).map(face02UnitDisplayText);
     if (hyp.length) {
       parts.push(`HYPOTHESES:\n${hyp.join("\n")}`);
     }
@@ -97,7 +109,7 @@ export function resolvePage02SectionUnitTexts(
         : sectionId === "personal_reality_interplay"
           ? page.personal_reality_interplay_unit_ids
           : page.why_judgment_fits_unit_ids;
-  return resolveFace02Units(page, ids).map(face02UnitDisplayText);
+  return resolveFace02Units(page, dedupeUnitIds(ids)).map(face02UnitDisplayText);
 }
 
 function localizeBoundaryParts(parts: string[], locale: string): string[] {
