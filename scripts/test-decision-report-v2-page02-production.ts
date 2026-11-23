@@ -41,8 +41,17 @@ import {
 import {
   tryBuildProgramOwnedUnitSlotPlan,
   programOwnedUnitSlotPlanCanAuthorize,
+  authorityEdgesFromSlotPlan,
   collectPage02DdrDirObligationSet,
 } from "@/lib/llm/pro/delivery/book-judgment/program-owned-unit-slots";
+import {
+  loadPage02UnitRequirementsFromDdrCatalog,
+  page02UnitRequirementById,
+} from "@/lib/llm/pro/delivery/book-judgment/page02-unit-requirement-ssot";
+import {
+  canonicalProgramUnitSlotBindingRef,
+} from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import { coerceBookJudgmentUnits } from "@/lib/llm/pro/delivery/book-judgment/generate";
 import { validateRelatedDirEnrichmentCertificate } from "@/lib/llm/pro/delivery/decision-report-v2/page02/credible-fact-claim";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
@@ -1546,7 +1555,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   }
   console.log("R3-G PASS — nonempty + none basis");
 
-  // H: non Page02 science/convergence unit in certificate
+  // H: non Page02 bindable unit (face 01 only) in certificate
   {
     const { pack } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
@@ -1554,19 +1563,23 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     });
     const forged = structuredClone(pack);
     forged.related_dir_enrichment!.bindings.push({
-      unit_id: "u_destiny_02",
+      unit_id: "u_page01_only",
       related_dir_ids: [],
       source_ref: MISSING_UNIT_DIR_AUTHORITY_REF,
       association_basis: "none",
-      reasons: ["forged_destiny"],
+      reasons: ["forged_page01"],
     });
     const v = validatePack(forged);
     assert.equal(v.ok, false);
     assert.ok(
-      v.reasons.some((r) => r.includes("reject:unit_not_page02_science")),
+      v.reasons.some(
+        (r) =>
+          r.includes("reject:unit_not_page02_bindable") ||
+          r.includes("reject:unit_not_page02_science"),
+      ),
     );
   }
-  console.log("R3-H PASS — non Page02 science unit rejected");
+  console.log("R3-H PASS — non Page02 bindable unit rejected");
 
   // I: hand-built edges cannot authorize via production entry
   {
@@ -1747,92 +1760,431 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   );
 }
 
-// --- R5 Program-Owned Unit Slot Plan: stop at missing exclusive SSOT ---
-// Must NOT invent slot→DIR from page-level DDR DIR sets.
+// --- R6 Explicit Unit↔DIR Authority (many-to-many + production closure) ---
+// SYNTHETIC catalog-aligned DC for Slot Plan positive path (not real-user E2E).
 {
-  const gapDoc = resolvePath(".cursor/docs/Page02-Unit-DIR-slot-plan-缺口-R5.md");
-  assert.equal(existsSync(gapDoc), true, "R5 gap SSOT doc must exist");
-  const gapText = readFileSync(gapDoc, "utf8");
-  assert.ok(gapText.includes("missing_exclusive_slot_dir_ssot") || gapText.includes("独占"));
-  assert.ok(gapText.includes("不得") || gapText.includes("未建立非空"));
+  const PAGE02_DIR_ROLES: Record<string, string> = {
+    "DIR-DEF-QUESTION": "decision_question",
+    "DIR-STATUS-QUO": "status_quo",
+    "DIR-PAST-ATTEMPTS": "past_attempt",
+    "DIR-OPT-CONSTRAINTS": "hard_constraint",
+    "DIR-VALIDATION-CAPACITY": "validation_capacity",
+  };
 
-  // N / core: tryBuild refuses inventorship even when page-02 DIR obligations exist
+  const dcCatalog: DecisionContext = {
+    ...dc,
+    context_id: "dc_face02_r6_catalog",
+    content_hash: "hash_face02_r6_catalog",
+    reality_facts: Object.entries(PAGE02_DIR_ROLES).map(([dirId, role], i) => ({
+      fact_id: `fact_r6_${i}`,
+      statement: `SYNTHETIC fact for ${dirId}`,
+      status: "confirmed" as const,
+      verification_level: "user_asserted" as const,
+      source_stage: "collecting" as const,
+      source_turn_id: `t_r6_${i}`,
+      user_confirmed: true,
+      fact_roles: [role],
+      related_dir_ids: [dirId],
+    })),
+    dirs: Object.entries(PAGE02_DIR_ROLES).map(([dirId, role]) => ({
+      dir_id: dirId,
+      need: dirId,
+      why: "SYNTHETIC catalog DIR for R6",
+      required_fact_roles: [role],
+      current_state: "known" as const,
+      partial_satisfaction: false,
+      agenda_item_ids: [],
+      id_lifecycle: "active" as const,
+    })),
+  } as unknown as DecisionContext;
+
+  const reqs = loadPage02UnitRequirementsFromDdrCatalog();
+  assert.equal(reqs.length, 2, "two Page02 DDR requirements");
+  const attr = page02UnitRequirementById("req_DDR-02-ATTRIBUTION")!;
+  const sci = page02UnitRequirementById("req_DDR-02-SCIENCE-BRIDGE")!;
+  assert.ok(attr.dir_ids.length > 1, "1: multi-DIR unit requirement");
+  assert.ok(sci.dir_ids.length > 1, "1: multi-DIR science requirement");
+  assert.ok(
+    attr.dir_ids.includes("DIR-DEF-QUESTION") &&
+      sci.dir_ids.includes("DIR-DEF-QUESTION"),
+    "2: shared DIR across requirements",
+  );
+  // Page union must NOT equal every requirement's dirs
+  const pageUnion = collectPage02DdrDirObligationSet();
+  assert.notDeepEqual(attr.dir_ids, pageUnion);
+  assert.notDeepEqual(sci.dir_ids, pageUnion);
+  console.log("R6-1/2/15 PASS — multi-DIR + shared DIR; no page-union bulk");
+
+  const slotAttempt = tryBuildProgramOwnedUnitSlotPlan({
+    dc: dcCatalog,
+    blueprint: null,
+  });
+  assert.equal(slotAttempt.ok, true, "3: Slot Plan before LLM from SSOT");
+  if (!slotAttempt.ok) throw new Error(slotAttempt.reason);
+  assert.equal(programOwnedUnitSlotPlanCanAuthorize(slotAttempt), true);
+  const plan = slotAttempt.plan;
+  assert.equal(plan.slots.length, 2);
+  assert.equal(plan.dc_content_hash, dcCatalog.content_hash);
+  console.log("R6-3 PASS — pre-LLM Slot Plan from requirement SSOT");
+
+  // Coerce: model cannot mutate ids / dirs; unknown/dup/missing rejected
+  const goodModel = {
+    units: plan.slots.map((s) => ({
+      slot_id: s.slot_id,
+      claim: `Program slot fill for ${s.requirement_id}`,
+      anchors: ["mech_anchor"],
+    })),
+  };
+  const coercedOk = coerceBookJudgmentUnits(goodModel, plan);
+  assert.equal(coercedOk.ok, true);
+  if (!coercedOk.ok) throw new Error(coercedOk.reason);
+  assert.deepEqual(
+    coercedOk.units.map((u) => u.id).sort(),
+    plan.slots.map((s) => s.unit_id).sort(),
+  );
+
+  assert.equal(
+    coerceBookJudgmentUnits(
+      {
+        units: [
+          {
+            slot_id: plan.slots[0]!.slot_id,
+            id: "forged_unit",
+            claim: "x",
+            anchors: ["a"],
+          },
+          ...plan.slots.slice(1).map((s) => ({
+            slot_id: s.slot_id,
+            claim: "x",
+            anchors: ["a"],
+          })),
+        ],
+      },
+      plan,
+    ).ok,
+    false,
+  );
+  assert.equal(
+    coerceBookJudgmentUnits(
+      { units: [{ slot_id: "slot_unknown", claim: "x", anchors: ["a"] }] },
+      plan,
+    ).reason,
+    "slot_plan_unknown_slot",
+  );
+  assert.equal(
+    coerceBookJudgmentUnits(
+      {
+        units: [
+          {
+            slot_id: plan.slots[0]!.slot_id,
+            claim: "x",
+            anchors: ["a"],
+          },
+          {
+            slot_id: plan.slots[0]!.slot_id,
+            claim: "y",
+            anchors: ["b"],
+          },
+        ],
+      },
+      plan,
+    ).reason,
+    "slot_plan_duplicate_slot",
+  );
+  assert.equal(
+    coerceBookJudgmentUnits(
+      {
+        units: [
+          {
+            slot_id: plan.slots[0]!.slot_id,
+            claim: "x",
+            anchors: ["a"],
+          },
+        ],
+      },
+      plan,
+    ).reason,
+    "slot_plan_required_slot_missing",
+  );
+  assert.equal(
+    coerceBookJudgmentUnits(
+      {
+        units: plan.slots.map((s) => ({
+          slot_id: s.slot_id,
+          dir_ids: ["DIR-FORGED"],
+          claim: "x",
+          anchors: ["a"],
+        })),
+      },
+      plan,
+    ).reason,
+    "slot_plan_model_mutated_dir_ids",
+  );
+  console.log("R6-4/5/6/7/8 PASS — coerce rejects mutate/unknown/dup/missing/dirs");
+
+  const edges = authorityEdgesFromSlotPlan(plan);
+  assert.ok(edges.length >= 6, "edges expand multi-DIR");
+  const packFromPlan: BookJudgmentPack = {
+    ...makePack({ bazi: false, ziwei: false }),
+    page02_unit_slot_plan: plan,
+    units: [
+      ...coercedOk.units,
+      {
+        id: "u_page01_only",
+        track: "science",
+        claim: "Page01-only recommendation support.",
+        anchors: ["p01"],
+        serves_face: ["01"],
+        source_domain: "science",
+      } as never,
+    ],
+  };
+  // Drop makePack default face02 science units — only slot units for face 02
+  packFromPlan.units = packFromPlan.units.filter(
+    (u) => !u.serves_face.includes("02") || plan.slots.some((s) => s.unit_id === u.id),
+  );
+  packFromPlan.by_face = {
+    "01": packFromPlan.units.filter((u) => u.serves_face.includes("01")).map((u) => u.id),
+    "02": packFromPlan.units.filter((u) => u.serves_face.includes("02")).map((u) => u.id),
+  };
+
+  const { pack: enrichedPlan, certificate } = enrichBookJudgmentRelatedDirIds({
+    pack: packFromPlan,
+    dc: dcCatalog,
+    authority_edges: edges,
+  });
+  assert.equal(certificate.missing_authority, null);
+  const sciUnitId = plan.slots.find((s) => s.unit_kind === "science")!.unit_id;
+  const destUnitId = plan.slots.find((s) => s.unit_kind === "destiny")!.unit_id;
+  const sciBind = certificate.bindings.find((b) => b.unit_id === sciUnitId)!;
+  const destBind = certificate.bindings.find((b) => b.unit_id === destUnitId)!;
+  assert.ok(sciBind.related_dir_ids.length > 1, "multi-DIR on science unit");
+  assert.ok(destBind.related_dir_ids.length > 1, "multi-DIR on destiny unit");
+  assert.ok(
+    sciBind.related_dir_ids.includes("DIR-DEF-QUESTION") &&
+      destBind.related_dir_ids.includes("DIR-DEF-QUESTION"),
+    "shared DIR across units",
+  );
+  assert.equal(sciBind.association_basis, "program_owned_unit_slot");
+
+  const certOk = validateRelatedDirEnrichmentCertificate({
+    pack: enrichedPlan,
+    dc: dcCatalog,
+    fact_selection: seedEvidenceRegistryForFace02({
+      dc: dcCatalog,
+      pack: enrichedPlan,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    }).fact_selection,
+    enrich: enrichedPlan.related_dir_enrichment,
+  });
+  assert.equal(certOk.ok, true, `R3 cert: ${certOk.ok ? "" : certOk.reasons.join(",")}`);
+  console.log("R6-R3 PASS — certificate validates Slot Plan multi-DIR authority");
+
+  // source_version / source_hash mismatch
   {
-    const attempt = tryBuildProgramOwnedUnitSlotPlan({ dc, blueprint: null });
-    assert.equal(attempt.ok, false);
-    if (attempt.ok) throw new Error("unreachable");
-    assert.equal(attempt.reason, "missing_exclusive_slot_dir_ssot");
-    assert.equal(programOwnedUnitSlotPlanCanAuthorize(attempt), false);
-    const obligations = collectPage02DdrDirObligationSet();
-    assert.ok(obligations.length >= 3, "page-02 DDR DIR set exists as obligations");
-    assert.deepEqual(attempt.page02_dir_obligation_set, obligations);
-    // Obligation set must NOT become non-empty enrich edges
-    const { certificate } = enrichBookJudgmentRelatedDirIds({
-      pack: makePack({ bazi: true, ziwei: false }),
-      dc,
+    const forged = structuredClone(enrichedPlan);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === sciUnitId,
+    )!;
+    b.source_version = "tampered_ver";
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc: dcCatalog,
+      fact_selection: seedEvidenceRegistryForFace02({
+        dc: dcCatalog,
+        pack: forged,
+        chart_fact_pack: "日主甲木…",
+        bazi_available: true,
+      }).fact_selection,
+      enrich: forged.related_dir_enrichment,
     });
-    assert.equal(certificate.missing_authority, "no_program_unit_dir_edges");
-    assert.ok(certificate.bindings.every((b) => b.related_dir_ids.length === 0));
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("source_version_mismatch")));
   }
-  console.log("R5-N PASS — no exclusive SSOT ⇒ no Slot Plan / empty bindings");
-
-  // H: model anchors / related_dir_ids still cannot authorize (production)
   {
-    const pack = makePack({ bazi: true, ziwei: false });
-    for (const u of pack.units) {
-      if (u.track === "science") {
-        u.anchors = ["DIR_STATUS_QUO", "dir:DIR-STATUS-QUO"];
-        u.declared_related_dir_ids = collectPage02DdrDirObligationSet().slice(0, 2);
-        u.related_dir_ids = collectPage02DdrDirObligationSet().slice(0, 1);
-      }
-    }
+    const forged = structuredClone(enrichedPlan);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === sciUnitId,
+    )!;
+    b.source_hash = "deadbeef";
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc: dcCatalog,
+      fact_selection: seedEvidenceRegistryForFace02({
+        dc: dcCatalog,
+        pack: forged,
+        chart_fact_pack: "日主甲木…",
+        bazi_available: true,
+      }).fact_selection,
+      enrich: forged.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("source_hash_mismatch")));
+  }
+  console.log("R6-9/10 PASS — source_version/hash mismatch rejected");
+
+  // DC hash change invalidates
+  {
+    const dcTampered = { ...dcCatalog, content_hash: "hash_tampered_r6" };
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: enrichedPlan,
+      dc: dcTampered,
+      fact_selection: seedEvidenceRegistryForFace02({
+        dc: dcTampered,
+        pack: enrichedPlan,
+        chart_fact_pack: "日主甲木…",
+        bazi_available: true,
+      }).fact_selection,
+      enrich: enrichedPlan.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(
+      v.reasons.some(
+        (r) =>
+          r.includes("dc_content_hash_mismatch") ||
+          r.includes("slot_plan_dc_hash_mismatch"),
+      ),
+    );
+  }
+  console.log("R6-11 PASS — DC hash change invalidates certificate");
+
+  // Unauthorized DIR in binding rejected
+  {
+    const forged = structuredClone(enrichedPlan);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === sciUnitId,
+    )!;
+    b.related_dir_ids = [...b.related_dir_ids, "DIR-FORGED-X"];
+    b.source_ref = canonicalProgramUnitSlotBindingRef({
+      slot_id: b.slot_id!,
+      requirement_id: b.requirement_id!,
+      unit_id: sciUnitId,
+      dir_ids: b.related_dir_ids,
+    });
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc: dcCatalog,
+      fact_selection: seedEvidenceRegistryForFace02({
+        dc: dcCatalog,
+        pack: forged,
+        chart_fact_pack: "日主甲木…",
+        bazi_available: true,
+      }).fact_selection,
+      enrich: forged.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+  }
+  console.log("R6-8b PASS — unauthorized DIR rejected");
+
+  // Production: pack WITH plan authorizes; anchors / related_dir_ids alone do not
+  {
     const built = buildFace02ProductionContext({
-      report_id: "r5_no_fake_slot_from_anchors",
+      report_id: "r6_prod_with_plan",
       locale: "en",
-      dc,
-      pack,
+      dc: dcCatalog,
+      pack: enrichedPlan,
       chart_fact_pack: "日主甲木…",
       page01: page01Schema,
     });
     assert.equal(built.ok, true);
     if (!built.ok) throw new Error(built.reason);
-    assert.equal(built.ctx.credible_fact_claim_keys.size, 0);
+    const sciClaim = `claim_${sciUnitId}`;
+    const bind = built.ctx.trusted_claim_dir_bindings.get(sciClaim);
+    assert.ok(
+      (bind?.related_dir_ids.length ?? 0) > 1,
+      "production rebuilds multi-DIR from Slot Plan",
+    );
   }
-  console.log("R5-H PASS — anchors cannot mint Slot Plan authority");
-
-  // M: pre-injected cert wiped (production entry)
+  {
+    const packAnchors = makePack({ bazi: true, ziwei: false });
+    for (const u of packAnchors.units) {
+      if (u.track === "science") {
+        u.anchors = ["DIR-DEF-QUESTION", "dir:DIR-STATUS-QUO"];
+        u.declared_related_dir_ids = ["DIR-DEF-QUESTION", "DIR-STATUS-QUO"];
+        u.related_dir_ids = ["DIR-DEF-QUESTION"];
+      }
+    }
+    const built = buildFace02ProductionContext({
+      report_id: "r6_anchors_no_plan",
+      locale: "en",
+      dc: dcCatalog,
+      pack: packAnchors,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(built.ok, true);
+    if (!built.ok) throw new Error(built.reason);
+    assert.ok(
+      [...built.ctx.trusted_claim_dir_bindings.values()].every(
+        (b) => b.related_dir_ids.length === 0,
+      ),
+      "12/13: anchors/related_dir_ids cannot create authority",
+    );
+  }
   {
     const pre = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
-      dc,
-      authority_edges: syntheticSemanticEdges,
+      dc: dcCatalog,
+      authority_edges: [
+        syntheticProgramEdge("u_science_02", "DIR-DEF-QUESTION"),
+      ],
     }).pack;
     const built = buildFace02ProductionContext({
-      report_id: "r5_wipe",
+      report_id: "r6_wipe_preinject",
       locale: "en",
-      dc,
+      dc: dcCatalog,
       pack: pre,
       chart_fact_pack: "日主甲木…",
       page01: page01Schema,
     });
     assert.equal(built.ok, true);
     if (!built.ok) throw new Error(built.reason);
-    assert.equal(built.ctx.credible_fact_claim_keys.size, 0);
+    assert.ok(
+      [...built.ctx.trusted_claim_dir_bindings.values()].every(
+        (b) => b.related_dir_ids.length === 0,
+      ),
+      "14: pre-injected edges without Slot Plan wiped",
+    );
   }
-  console.log("R5-M PASS — pre-injected cert cannot bypass production");
+  console.log("R6-12/13/14 PASS — anchors/related_dir_ids/preinject cannot bypass");
 
-  // A–G deferred: cannot assert legal slot→unit without exclusive SSOT.
-  // Document that positive slot tests are intentionally unavailable.
-  assert.ok(
-    gapText.includes("1:1") || gapText.includes("独占"),
-    "gap doc must state 1:1 SSOT requirement for future YES",
-  );
-  console.log(
-    "R5-A–G DEFERRED — no legal Slot Plan SSOT (refuse forged allocator)",
-  );
+  // 16: no Slot Plan on pack → empty production bindings (fail-closed)
+  {
+    const { certificate: emptyCert } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc: dcCatalog,
+    });
+    assert.equal(emptyCert.missing_authority, "no_program_unit_dir_edges");
+    assert.ok(emptyCert.bindings.every((b) => b.related_dir_ids.length === 0));
+  }
+  console.log("R6-16 PASS — no edges without Slot Plan (fail-closed)");
+
+  // 19: persistence/reload — certificate + associations survive JSON roundtrip
+  {
+    const reloaded = JSON.parse(JSON.stringify(enrichedPlan)) as BookJudgmentPack;
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: reloaded,
+      dc: dcCatalog,
+      fact_selection: seedEvidenceRegistryForFace02({
+        dc: dcCatalog,
+        pack: reloaded,
+        chart_fact_pack: "日主甲木…",
+        bazi_available: true,
+      }).fact_selection,
+      enrich: reloaded.related_dir_enrichment,
+    });
+    assert.equal(v.ok, true, "reload cert must remain valid");
+    assert.equal(reloaded.page02_unit_slot_plan?.slots.length, plan.slots.length);
+    const sciRel = reloaded.related_dir_enrichment!.bindings.find(
+      (b) => b.unit_id === sciUnitId,
+    )!;
+    assert.deepEqual(sciRel.related_dir_ids, sciBind.related_dir_ids);
+  }
+  console.log("R6-19 PASS — persist/reload certificate associations consistent");
 
   console.log(
-    "R5 stop PASS — Program-Owned Unit Slots blocked on missing exclusive SSOT",
+    "R6 PASS — Unit Requirement SSOT + Slot Plan + multi-DIR authority (SYNTHETIC fixture)",
   );
 }
 

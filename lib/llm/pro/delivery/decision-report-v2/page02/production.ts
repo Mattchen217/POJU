@@ -7,6 +7,7 @@
 
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import { enrichBookJudgmentRelatedDirIds } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import { authorityEdgesFromSlotPlan } from "@/lib/llm/pro/delivery/book-judgment/program-owned-unit-slots";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { Face02V2Schema, type Face02V2 } from "../schemas";
@@ -94,12 +95,18 @@ export function buildFace02ProductionContext(input: {
     return { ok: false, reason: "face02_missing_decision_context" };
   }
 
-  // Production enrich: never accepts caller/model edges (no Unit→DIR authority yet).
-  // Pre-enriched non-empty certificates on the pack are overwritten to empty.
+  // Production enrich: rebuild edges ONLY from pack.page02_unit_slot_plan.
+  // Caller/model edges and pre-injected certificates are never trusted.
+  const slotPlan = input.pack?.page02_unit_slot_plan ?? null;
+  const authority_edges =
+    slotPlan && slotPlan.slots.length > 0
+      ? authorityEdgesFromSlotPlan(slotPlan)
+      : [];
   const pack = input.pack
     ? enrichBookJudgmentRelatedDirIds({
         pack: input.pack,
         dc: input.dc,
+        authority_edges,
       }).pack
     : null;
 

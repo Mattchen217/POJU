@@ -106,7 +106,15 @@ export const RelatedDirEnrichmentCertificateSchema = z.object({
         related_dir_ids: z.array(z.string().trim().min(1).max(80)).max(16),
         /** Canonical authority ref; missing:* when unbound. */
         source_ref: z.string().trim().min(1).max(240),
-        association_basis: z.enum(["none", "program_authority_edge"]),
+        association_basis: z.enum([
+          "none",
+          "program_authority_edge",
+          "program_owned_unit_slot",
+        ]),
+        slot_id: z.string().trim().min(1).max(80).optional(),
+        requirement_id: z.string().trim().min(1).max(80).optional(),
+        source_version: z.string().trim().max(64).optional(),
+        source_hash: z.string().trim().max(128).optional(),
         reasons: z.array(z.string().trim().min(1).max(160)).max(24),
       }),
     )
@@ -141,6 +149,38 @@ export const BookJudgmentPackSchema = z.object({
    * Absent/invalid ⇒ Page02 must not treat unit.related_dir_ids as certified.
    */
   related_dir_enrichment: RelatedDirEnrichmentCertificateSchema.optional(),
+  /**
+   * Program-Owned Unit Slot Plan for Page02 (built pre-LLM).
+   * Authority edges rebuild from this plan only — never from model output.
+   */
+  page02_unit_slot_plan: z
+    .object({
+      version: z.literal(1),
+      face: z.literal("02"),
+      requirement_ssot_version: z.literal("1"),
+      dc_content_hash: z.string().trim().max(128).nullable(),
+      missing_reason: z.null(),
+      slots: z
+        .array(
+          z.object({
+            slot_id: z.string().trim().min(1).max(80),
+            unit_id: z.string().trim().min(1).max(80),
+            requirement_id: z.string().trim().min(1).max(80),
+            dir_ids: z.array(z.string().trim().min(1).max(80)).min(1).max(16),
+            unit_kind: z.enum(["destiny", "science"]),
+            serves_face: z.literal("02"),
+            source_type: z.literal("ddr_catalog"),
+            source_id: z.string().trim().min(1).max(80),
+            source_version: z.string().trim().min(1).max(64),
+            source_hash: z.string().trim().min(1).max(128),
+            dc_content_hash: z.string().trim().max(128).nullable(),
+            association_basis: z.literal("program_owned_unit_slot"),
+          }),
+        )
+        .min(1)
+        .max(32),
+    })
+    .optional(),
 });
 
 export type BookJudgmentPack = z.infer<typeof BookJudgmentPackSchema>;

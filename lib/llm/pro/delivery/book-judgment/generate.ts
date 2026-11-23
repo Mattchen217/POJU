@@ -49,6 +49,9 @@ import { enrichBookJudgmentRelatedDirIds } from "./related-dir-enrichment";
 import {
   tryBuildProgramOwnedUnitSlotPlan,
   programOwnedUnitSlotPlanCanAuthorize,
+  authorityEdgesFromSlotPlan,
+  formatSlotPlanForBookJudgmentFeed,
+  type ProgramOwnedUnitSlotPlan,
 } from "./program-owned-unit-slots";
 
 const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmentPack）。
@@ -90,9 +93,15 @@ const JSON_SHAPE = `输出 JSON：
 {
   "units": [
     {
+      "slot_id": "slot_req_DDR-02-…",  // Page02 槽位：必须用喂料 Slot Plan 的 slot_id；禁止改 unit_id/dir_ids
+      "claim": "短句",
+      "anchors": ["机制句或旁证"],
+      "caveat": "可选"
+    },
+    {
       "id": "d01",
       "track": "destiny"|"science"|"convergence",
-      "serves_face": ["01"] | ["02"] | … | ["08"],  // 全书分脸，非仅 02
+      "serves_face": ["01"] | ["03"] | … | ["08"],  // 非 02 脸仍自由产出
       "serves_segment": "A"|"B"|"C"|"D"|"E",
       "claim": "短句（destiny 若用紫微 hit，须含 hit:<id>:<level> 结构化引用）",
       "anchors": ["机制句或 closed hit 旁证；可用 cfp:dayMaster / hit:<id>:<level>"],
@@ -141,20 +150,135 @@ export function patternHitsFromZiwei(
   return canonicalPatternHitRefsFromZiwei(ziwei);
 }
 
-function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
-  if (!raw || typeof raw !== "object") return null;
+type CoerceUnitsOk = { ok: true; units: BookJudgmentUnit[] };
+type CoerceUnitsFail = { ok: false; reason: string; detail?: string };
+
+/** Exported for Slot Plan coerce unit tests (R6). */
+export function coerceBookJudgmentUnits(
+  raw: unknown,
+  slotPlan: ProgramOwnedUnitSlotPlan | null,
+): CoerceUnitsOk | CoerceUnitsFail {
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, reason: "coerce_failed", detail: "not_object" };
+  }
   const obj = raw as Record<string, unknown>;
   const list = Array.isArray(obj.units)
     ? obj.units
     : Array.isArray(raw)
       ? raw
       : null;
-  if (!list?.length) return null;
+  if (!list?.length) {
+    return { ok: false, reason: "coerce_failed", detail: "empty_units" };
+  }
+
+  const slotsById = new Map(
+    (slotPlan?.slots ?? []).map((s) => [s.slot_id, s] as const),
+  );
+  const filledSlots = new Set<string>();
   const units: BookJudgmentUnit[] = [];
+
   for (let i = 0; i < list.length; i++) {
     const u = list[i];
     if (!u || typeof u !== "object") continue;
     const row = u as Record<string, unknown>;
+    const slot_id = String(row.slot_id ?? "").trim();
+
+    // Page02 Slot Plan path: model fills by slot_id; program owns ids/dirs.
+    if (slotPlan && slot_id) {
+      if (!slotsById.has(slot_id)) {
+        return {
+          ok: false,
+          reason: "slot_plan_unknown_slot",
+          detail: slot_id,
+        };
+      }
+      if (filledSlots.has(slot_id)) {
+        return {
+          ok: false,
+          reason: "slot_plan_duplicate_slot",
+          detail: slot_id,
+        };
+      }
+      const slot = slotsById.get(slot_id)!;
+      filledSlots.add(slot_id);
+      const anchors = Array.isArray(row.anchors)
+        ? row.anchors.map((x) => String(x).trim()).filter(Boolean).slice(0, 8)
+        : [];
+      const claim = String(row.claim ?? "").trim();
+      if (!claim || !anchors.length) {
+        return {
+          ok: false,
+          reason: "slot_plan_slot_content_incomplete",
+          detail: slot_id,
+        };
+      }
+      // Model must not rewrite program fields — ignore any model id/track/dirs.
+      const modelDirs = Array.isArray(row.dir_ids)
+        ? row.dir_ids.map((x) => String(x).trim()).filter(Boolean)
+        : [];
+      const modelUnitId = String(row.id ?? row.unit_id ?? "").trim();
+      const modelReq = String(row.requirement_id ?? "").trim();
+      if (modelUnitId && modelUnitId !== slot.unit_id) {
+        return {
+          ok: false,
+          reason: "slot_plan_model_mutated_unit_id",
+          detail: `${slot_id}:${modelUnitId}`,
+        };
+      }
+      if (modelReq && modelReq !== slot.requirement_id) {
+        return {
+          ok: false,
+          reason: "slot_plan_model_mutated_requirement_id",
+          detail: `${slot_id}:${modelReq}`,
+        };
+      }
+      if (modelDirs.length) {
+        const expected = [...slot.dir_ids].sort().join(",");
+        const got = [...modelDirs].sort().join(",");
+        if (got !== expected) {
+          return {
+            ok: false,
+            reason: "slot_plan_model_mutated_dir_ids",
+            detail: `${slot_id}:got=${got}`,
+          };
+        }
+      }
+      const caveat = String(row.caveat ?? "").trim();
+      const declared_related_dir_ids = [
+        ...(Array.isArray(row.related_dir_ids)
+          ? row.related_dir_ids.map((x) => String(x).trim()).filter(Boolean)
+          : []),
+        ...(Array.isArray(row.declared_related_dir_ids)
+          ? row.declared_related_dir_ids
+              .map((x) => String(x).trim())
+              .filter(Boolean)
+          : []),
+        ...anchors.filter(
+          (a) =>
+            /^(dir:|role:)/i.test(a) ||
+            /^DIR[_-]/i.test(a) ||
+            /^dir[_-]/i.test(a),
+        ),
+      ]
+        .filter(Boolean)
+        .slice(0, 16);
+      units.push({
+        id: slot.unit_id,
+        track: slot.unit_kind,
+        serves_face: ["02"],
+        claim: claim.slice(0, 400),
+        anchors: anchors as [string, ...string[]],
+        ...(caveat ? { caveat: caveat.slice(0, 240) } : {}),
+        term_ids: [],
+        related_dir_ids: [],
+        ...(declared_related_dir_ids.length
+          ? { declared_related_dir_ids }
+          : {}),
+      });
+      continue;
+    }
+
+    // Freeform units (non-Page02 slots). Face 02 without slot_id is rejected when plan exists.
     const track = String(row.track ?? "").trim();
     if (track !== "destiny" && track !== "science" && track !== "convergence") {
       continue;
@@ -165,12 +289,21 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
           .filter((x) => (BOOK_FACE_IDS as readonly string[]).includes(x))
       : [];
     if (!serves.length) continue;
+    if (slotPlan && serves.includes("02")) {
+      return {
+        ok: false,
+        reason: "slot_plan_face02_missing_slot_id",
+        detail: String(row.id ?? `idx_${i}`),
+      };
+    }
     const anchors = Array.isArray(row.anchors)
       ? row.anchors.map((x) => String(x).trim()).filter(Boolean).slice(0, 8)
       : [];
     const claim = String(row.claim ?? "").trim();
     if (!claim || !anchors.length) continue;
-    const id = String(row.id ?? `${track}_${i + 1}`).trim().slice(0, 64) || `${track}_${i + 1}`;
+    const id =
+      String(row.id ?? `${track}_${i + 1}`).trim().slice(0, 64) ||
+      `${track}_${i + 1}`;
     const caveat = String(row.caveat ?? "").trim();
     const segRaw = String(row.serves_segment ?? "").trim().toUpperCase();
     const serves_segment = (["A", "B", "C", "D", "E"] as const).includes(
@@ -178,10 +311,6 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     )
       ? (segRaw as BookJudgmentSegmentId)
       : undefined;
-    // Model output is DECLARATION only — coerce into declared_* fields.
-    // Certified term_ids / source_domain / source_version are written later by
-    // enrichUnitsWithProvenance from structured cites + real CFP/ZFP.
-    // related_dir_ids is NEVER taken from model — Page02 trust root is program-only.
     const declared_term_ids = Array.isArray(row.term_ids)
       ? row.term_ids
           .map((x) => String(x).trim())
@@ -202,7 +331,6 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     const declared_source_version = String(row.source_version ?? "")
       .trim()
       .slice(0, 128);
-    // Audit-only DIR suggestions from model related_dir_ids / anchors tokens.
     const declared_related_dir_ids = [
       ...(Array.isArray(row.related_dir_ids)
         ? row.related_dir_ids.map((x) => String(x).trim()).filter(Boolean)
@@ -212,8 +340,11 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
             .map((x) => String(x).trim())
             .filter(Boolean)
         : []),
-      ...anchors.filter((a) =>
-        /^(dir:|role:)/i.test(a) || /^DIR[_-]/i.test(a) || /^dir[_-]/i.test(a),
+      ...anchors.filter(
+        (a) =>
+          /^(dir:|role:)/i.test(a) ||
+          /^DIR[_-]/i.test(a) ||
+          /^dir[_-]/i.test(a),
       ),
     ]
       .filter(Boolean)
@@ -227,21 +358,33 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
       anchors: anchors as [string, ...string[]],
       ...(caveat ? { caveat: caveat.slice(0, 240) } : {}),
       term_ids: [],
-      // Program-certified DIR bindings stay empty at coerce — never model trust root.
       related_dir_ids: [],
       ...(declared_term_ids.length ? { declared_term_ids } : {}),
-      ...(declared_source_domain
-        ? { declared_source_domain }
-        : {}),
-      ...(declared_source_version
-        ? { declared_source_version }
-        : {}),
+      ...(declared_source_domain ? { declared_source_domain } : {}),
+      ...(declared_source_version ? { declared_source_version } : {}),
       ...(declared_related_dir_ids.length
         ? { declared_related_dir_ids }
         : {}),
     });
   }
-  return units.length ? units : null;
+
+  if (slotPlan) {
+    const missing = slotPlan.slots
+      .map((s) => s.slot_id)
+      .filter((id) => !filledSlots.has(id));
+    if (missing.length) {
+      return {
+        ok: false,
+        reason: "slot_plan_required_slot_missing",
+        detail: missing.join(","),
+      };
+    }
+  }
+
+  if (!units.length) {
+    return { ok: false, reason: "coerce_failed", detail: "no_valid_units" };
+  }
+  return { ok: true, units };
 }
 
 function stringList(raw: unknown, key: string): string[] {
@@ -720,6 +863,18 @@ export async function runBookJudgmentPackGenerate(input: {
   let tokens_used = 0;
   const single = Boolean(input.single_provider_call);
 
+  // R6: Slot Plan BEFORE LLM — program owns unit_id / requirement / dir_ids.
+  const slotAttempt = tryBuildProgramOwnedUnitSlotPlan({
+    dc: input.decision_context_snapshot ?? null,
+    blueprint: null,
+  });
+  const slotPlan = programOwnedUnitSlotPlanCanAuthorize(slotAttempt)
+    ? slotAttempt.plan
+    : null;
+  const slotPlanFeed = slotPlan
+    ? formatSlotPlanForBookJudgmentFeed(slotPlan)
+    : "";
+
   const user_feed = feedBlock({
     chartText,
     ziwei,
@@ -735,13 +890,16 @@ export async function runBookJudgmentPackGenerate(input: {
     `## BookJudgmentPack · 一枪双轨 locale=${input.locale}`,
     `按配额表产出；total_min_units=${quota.total_min_units}；每脸 dual-track + serves_segment。`,
     quotaBlock,
+    slotPlanFeed,
     user_feed,
-  ].join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const shot = await callPackShot({
     phase: "book_judgment_pack_one",
     system: PACK_SYSTEM,
     user,
-    user_feed,
+    user_feed: [slotPlanFeed, user_feed].filter(Boolean).join("\n\n"),
     session_id: input.session_id,
     timeout_ms: input.timeout_ms,
     dispatch_attempt: input.dispatch_attempt,
@@ -759,11 +917,12 @@ export async function runBookJudgmentPackGenerate(input: {
       shot_mode: "one",
     };
   }
-  const units = coerceUnits(shot.parsed);
-  if (!units) {
+  const coerced = coerceBookJudgmentUnits(shot.parsed, slotPlan);
+  if (!coerced.ok) {
     return {
       ok: false,
-      reason: "coerce_failed",
+      reason: coerced.reason,
+      detail: coerced.detail,
       tokens_used,
       last_raw_text: shot.text.slice(0, 12_000),
       call_trace: shot.call_trace,
@@ -777,27 +936,22 @@ export async function runBookJudgmentPackGenerate(input: {
     chartText,
     ziwei,
     shot_mode: "one",
-    units,
+    units: coerced.units,
     declared_pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
     science_tags_used: stringList(shot.parsed, "science_tags_used"),
   });
-  // R5: probe Program-Owned Unit Slot Plan. Today always unavailable —
-  // missing exclusive 1-slot→1-DIR SSOT. Do NOT invent from DDR DIR sets.
-  // See `.cursor/docs/Page02-Unit-DIR-slot-plan-缺口-R5.md`.
-  const slotAttempt = tryBuildProgramOwnedUnitSlotPlan({
-    dc: input.decision_context_snapshot ?? null,
-    blueprint: null,
-  });
-  if (programOwnedUnitSlotPlanCanAuthorize(slotAttempt)) {
-    // Reserved: map plan.slots → ProgramUnitDirAuthorityEdge when SSOT exists.
-    // Until then this branch is unreachable in production.
-  }
+  const draftWithPlan: BookJudgmentPack = slotPlan
+    ? { ...draft, page02_unit_slot_plan: slotPlan }
+    : draft;
 
-  // Program Claim–DIR enrichment (never model anchors). Idempotent.
-  // No exclusive Slot Plan ⇒ omit authority_edges (empty cert). R4+R5.
+  // Program Claim–DIR enrichment from Slot Plan edges only (never model).
+  const authority_edges = slotPlan
+    ? authorityEdgesFromSlotPlan(slotPlan)
+    : [];
   const enriched = enrichBookJudgmentRelatedDirIds({
-    pack: draft,
+    pack: draftWithPlan,
     dc: input.decision_context_snapshot ?? null,
+    authority_edges,
   }).pack;
   const classicalNames = (ziwei?.patternHits ?? [])
     .map((h) => (h.name ?? "").trim())

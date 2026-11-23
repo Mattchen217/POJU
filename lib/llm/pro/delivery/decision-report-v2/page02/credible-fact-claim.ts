@@ -15,10 +15,13 @@ import {
   MISSING_UNIT_DIR_AUTHORITY_REF,
   isAllowedAssociationBasis,
   canonicalProgramUnitDirEdgeRef,
+  canonicalProgramUnitSlotBindingRef,
+  parseProgramUnitSlotBindingRef,
   computeLinkedDirIdsForRelatedDirEnrichment,
   type RelatedDirEnrichmentCertificate,
   type RelatedDirEnrichmentBinding,
 } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import { page02UnitRequirementById } from "@/lib/llm/pro/delivery/book-judgment/page02-unit-requirement-ssot";
 import type { EvidenceRegistry, ReportClaim } from "../types";
 import type { FactSelectionResult } from "../fact-relevance";
 import { factEvidenceIdFor } from "./fact-id";
@@ -204,6 +207,16 @@ function isPage02ScienceOrConvergenceUnit(unit: BookJudgmentUnit): boolean {
   );
 }
 
+/** Certificate bindable: face-02 destiny/science/convergence (Slot Plan may authorize destiny). */
+function isPage02RelatedDirCertUnit(unit: BookJudgmentUnit): boolean {
+  return (
+    (unit.track === "science" ||
+      unit.track === "convergence" ||
+      unit.track === "destiny") &&
+    unit.serves_face.includes("02")
+  );
+}
+
 function sortedUniqueStrings(values: readonly string[]): string[] {
   return [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b),
@@ -296,7 +309,8 @@ export function validateRelatedDirEnrichmentCertificate(input: {
   const dirsById = activeDirsById(input.dc);
   const linkedDirs = new Set(expectedLinked);
   const seenUnits = new Set<string>();
-  const dirOwners = new Map<string, string>();
+  /** Exclusive ownership only for synthetic program_authority_edge. */
+  const synthDirOwners = new Map<string, string>();
   const bindingsByUnit = new Map<string, RelatedDirEnrichmentBinding>();
   let nonemptyBindingCount = 0;
 
@@ -322,8 +336,8 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       reasons.push(`reject:unknown_unit:${unit_id}`);
       continue;
     }
-    if (!isPage02ScienceOrConvergenceUnit(unit)) {
-      reasons.push(`reject:unit_not_page02_science:${unit_id}`);
+    if (!isPage02RelatedDirCertUnit(unit)) {
+      reasons.push(`reject:unit_not_page02_bindable:${unit_id}`);
       continue;
     }
 
@@ -375,13 +389,133 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       continue;
     }
 
-    // Non-empty: singleton DIR + exact canonical source_ref (shape ≠ provenance proof).
     if (association_basis === "none") {
       reasons.push(`reject:nonempty_with_none_basis:${unit_id}`);
       continue;
     }
+
+    // --- Production Slot Plan basis: multi-DIR + shared DIR OK ---
+    if (association_basis === "program_owned_unit_slot") {
+      const parsed = parseProgramUnitSlotBindingRef(source_ref);
+      const slot_id =
+        typeof b.slot_id === "string" ? b.slot_id.trim() : "";
+      const requirement_id =
+        typeof b.requirement_id === "string" ? b.requirement_id.trim() : "";
+      if (
+        !parsed ||
+        parsed.unit_id !== unit_id ||
+        (slot_id && parsed.slot_id !== slot_id) ||
+        (requirement_id && parsed.requirement_id !== requirement_id)
+      ) {
+        reasons.push(
+          `reject:slot_source_ref_mismatch:${unit_id}:got=${source_ref}`,
+        );
+        continue;
+      }
+      const expectedRef = canonicalProgramUnitSlotBindingRef({
+        slot_id: parsed.slot_id,
+        requirement_id: parsed.requirement_id,
+        unit_id,
+        dir_ids: parsed.dir_ids,
+      });
+      if (source_ref !== expectedRef) {
+        reasons.push(
+          `reject:slot_source_ref_canonical:${unit_id}:got=${source_ref}`,
+        );
+        continue;
+      }
+      const refDirSet = new Set(parsed.dir_ids);
+      let slotDirsOk = true;
+      for (const dirId of rawDirs) {
+        if (!refDirSet.has(dirId)) {
+          reasons.push(`reject:dir_not_in_slot_ref:${unit_id}:${dirId}`);
+          slotDirsOk = false;
+          continue;
+        }
+        if (!dirsById.has(dirId)) {
+          reasons.push(`reject_inactive_or_missing:${dirId}`);
+          slotDirsOk = false;
+          continue;
+        }
+        if (!linkedDirs.has(dirId)) {
+          reasons.push(`reject_not_linked:${dirId}`);
+          slotDirsOk = false;
+        }
+      }
+      if (!slotDirsOk) continue;
+
+      const req = page02UnitRequirementById(parsed.requirement_id);
+      if (!req) {
+        reasons.push(
+          `reject:unknown_requirement:${unit_id}:${parsed.requirement_id}`,
+        );
+        continue;
+      }
+      const source_version =
+        typeof b.source_version === "string" ? b.source_version.trim() : "";
+      const source_hash =
+        typeof b.source_hash === "string" ? b.source_hash.trim() : "";
+      if (source_version && source_version !== req.source_version) {
+        reasons.push(
+          `reject:source_version_mismatch:${unit_id}:got=${source_version}`,
+        );
+        continue;
+      }
+      if (source_hash && source_hash !== req.source_hash) {
+        reasons.push(
+          `reject:source_hash_mismatch:${unit_id}:got=${source_hash}`,
+        );
+        continue;
+      }
+      let ssotDirsOk = true;
+      for (const dirId of rawDirs) {
+        if (!req.dir_ids.includes(dirId)) {
+          reasons.push(
+            `reject:dir_not_in_requirement_ssot:${unit_id}:${dirId}`,
+          );
+          ssotDirsOk = false;
+        }
+      }
+      if (!ssotDirsOk) continue;
+
+      const plan = input.pack.page02_unit_slot_plan;
+      if (!plan?.slots?.length) {
+        reasons.push(`reject:missing_page02_unit_slot_plan:${unit_id}`);
+        continue;
+      }
+      const planSlot = plan.slots.find((s) => s.slot_id === parsed.slot_id);
+      if (!planSlot || planSlot.unit_id !== unit_id) {
+        reasons.push(`reject:slot_not_in_plan:${unit_id}:${parsed.slot_id}`);
+        continue;
+      }
+      if (plan.dc_content_hash !== (input.dc.content_hash ?? null)) {
+        reasons.push(
+          `reject:slot_plan_dc_hash_mismatch:plan=${plan.dc_content_hash ?? "null"}:dc=${input.dc.content_hash ?? "null"}`,
+        );
+        continue;
+      }
+      nonemptyBindingCount += 1;
+      bindingsByUnit.set(unit_id, {
+        unit_id,
+        related_dir_ids: sortedUniqueStrings(rawDirs),
+        source_ref,
+        association_basis,
+        slot_id: parsed.slot_id,
+        requirement_id: parsed.requirement_id,
+        source_version: source_version || req.source_version,
+        source_hash: source_hash || req.source_hash,
+        reasons: bindingReasons,
+      });
+      continue;
+    }
+
+    // --- Synthetic exclusive single-DIR (resolver tests only) ---
     if (association_basis !== "program_authority_edge") {
       reasons.push(`reject:unsupported_basis:${unit_id}:${association_basis}`);
+      continue;
+    }
+    if (!isPage02ScienceOrConvergenceUnit(unit)) {
+      reasons.push(`reject:unit_not_page02_science:${unit_id}`);
       continue;
     }
     if (rawDirs.length !== 1) {
@@ -410,14 +544,14 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       reasons.push(`reject_not_linked:${dirId}`);
       continue;
     }
-    const priorOwner = dirOwners.get(dirId);
+    const priorOwner = synthDirOwners.get(dirId);
     if (priorOwner && priorOwner !== unit_id) {
       reasons.push(
         `reject:illegal_multi_claim_dir:${dirId}:units=${priorOwner},${unit_id}`,
       );
       continue;
     }
-    dirOwners.set(dirId, unit_id);
+    synthDirOwners.set(dirId, unit_id);
     nonemptyBindingCount += 1;
 
     bindingsByUnit.set(unit_id, {

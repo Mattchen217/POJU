@@ -64,6 +64,8 @@ export {
   isRelatedDirEnrichmentCertificate,
   isAllowedAssociationBasis,
   canonicalProgramUnitDirEdgeRef,
+  canonicalProgramUnitSlotBindingRef,
+  parseProgramUnitSlotBindingRef,
   RELATED_DIR_ENRICHMENT_ALGORITHM,
   RELATED_DIR_ENRICHMENT_VERSION,
   RELATED_DIR_ASSOCIATION_BASES,
@@ -76,6 +78,8 @@ export {
 export {
   tryBuildProgramOwnedUnitSlotPlan,
   programOwnedUnitSlotPlanCanAuthorize,
+  authorityEdgesFromSlotPlan,
+  formatSlotPlanForBookJudgmentFeed,
   collectPage02DdrDirObligationSet,
   PROGRAM_OWNED_UNIT_SLOT_PLAN_VERSION,
   type ProgramOwnedUnitSlot,
@@ -83,3 +87,10 @@ export {
   type ProgramOwnedUnitSlotPlanOk,
   type ProgramOwnedUnitSlotPlanUnavailable,
 } from "./program-owned-unit-slots";
+export {
+  loadPage02UnitRequirementsFromDdrCatalog,
+  page02UnitRequirementById,
+  PAGE02_UNIT_REQUIREMENT_SSOT_VERSION,
+  type Page02UnitRequirement,
+  type Page02UnitKind,
+} from "./page02-unit-requirement-ssot";

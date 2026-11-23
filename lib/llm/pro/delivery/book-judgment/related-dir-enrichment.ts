@@ -3,21 +3,15 @@
  *
  * Algorithm: program_unit_dir_authority_v1
  *
- * Binding requires an explicit program authority edge:
- *   BookJudgment unit_id → active linked DIR
- * with a canonical source_ref + association_basis.
+ * R6: bindings come from Program-Owned Unit Slot Plan edges
+ * (association_basis = program_owned_unit_slot). Many-to-many allowed:
+ * one unit → many DIRs; one DIR → many units — each edge independently
+ * sourced from the Slot Plan / DDR requirement SSOT.
  *
- * R4 investigation (`.cursor/docs/Page02-Unit-DIR-provenance-缺口-R4.md`):
- * Production generate has NO per-unit Unit→DIR provenance. Callers must omit
- * authority_edges. Fact→DIR on DC is not Unit→DIR. Empty certificate is correct.
+ * Synthetic `program_authority_edge` remains for resolver unit tests only.
+ * Face02 production rebuilds edges only from pack.page02_unit_slot_plan.
  *
- * Forbidden as proof (never used to invent edges):
- * - model anchors / declared_related_dir_ids / claim / explanation
- * - track / serves_face / serves_segment
- * - unit-id sort / DIR-id sort / ordinal or round-robin assignment
- * - “same page / same face” co-membership
- * - DIR count ≈ unit count
- * - synthetic / hand-built edges via production entry
+ * Forbidden: model anchors, ordinal pairing, page-union bulk grant, etc.
  */
 
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
@@ -33,10 +27,11 @@ export const RELATED_DIR_ENRICHMENT_VERSION = 1 as const;
 export const RELATED_DIR_ENRICHMENT_ALGORITHM =
   "program_unit_dir_authority_v1" as const;
 
-/** Closed association bases that may accompany a non-empty binding. */
 export const RELATED_DIR_ASSOCIATION_BASES = [
-  /** Explicit program edge supplied to enricher (tests / future seed). */
+  /** SYNTHETIC resolver tests only. */
   "program_authority_edge",
+  /** Production Slot Plan → DDR requirement SSOT. */
+  "program_owned_unit_slot",
 ] as const;
 export type RelatedDirAssociationBasis =
   | (typeof RELATED_DIR_ASSOCIATION_BASES)[number]
@@ -48,12 +43,15 @@ export const MISSING_UNIT_DIR_AUTHORITY_REF =
 export type ProgramUnitDirAuthorityEdge = {
   unit_id: string;
   dir_id: string;
-  /**
-   * Canonical program reference, e.g.
-   * `program_unit_dir_edge:{unit_id}:{dir_id}:{basis_token}`
-   */
   source_ref: string;
   association_basis: (typeof RELATED_DIR_ASSOCIATION_BASES)[number];
+  slot_id?: string;
+  requirement_id?: string;
+  source_type?: string;
+  source_id?: string;
+  source_version?: string;
+  source_hash?: string;
+  dc_content_hash?: string | null;
 };
 
 export type RelatedDirEnrichmentBinding = {
@@ -61,6 +59,10 @@ export type RelatedDirEnrichmentBinding = {
   related_dir_ids: string[];
   source_ref: string;
   association_basis: RelatedDirAssociationBasis;
+  slot_id?: string;
+  requirement_id?: string;
+  source_version?: string;
+  source_hash?: string;
   reasons: string[];
 };
 
@@ -69,9 +71,7 @@ export type RelatedDirEnrichmentCertificate = {
   algorithm: typeof RELATED_DIR_ENRICHMENT_ALGORITHM;
   certified_at: string;
   dc_content_hash: string | null;
-  /** Audit: Fact→DIR linked set (does NOT imply Unit→DIR). */
   linked_dir_ids: string[];
-  /** Why non-empty bindings were unavailable, when applicable. */
   missing_authority: string | null;
   bindings: RelatedDirEnrichmentBinding[];
 };
@@ -109,13 +109,47 @@ export function canonicalProgramUnitDirEdgeRef(edge: {
   return `program_unit_dir_edge:${edge.unit_id}:${edge.dir_id}:${edge.association_basis}`;
 }
 
-function page02ScienceUnits(
+/** Full-set binding ref for a Slot Plan unit (dirs sorted, joined with +). */
+export function canonicalProgramUnitSlotBindingRef(input: {
+  slot_id: string;
+  requirement_id: string;
+  unit_id: string;
+  dir_ids: readonly string[];
+}): string {
+  const dirs = [...input.dir_ids].map((d) => d.trim()).filter(Boolean).sort();
+  return `program_unit_slot_v1:${input.slot_id}:${input.requirement_id}:${input.unit_id}:${dirs.join("+")}`;
+}
+
+export function parseProgramUnitSlotBindingRef(source_ref: string): {
+  slot_id: string;
+  requirement_id: string;
+  unit_id: string;
+  dir_ids: string[];
+} | null {
+  const m =
+    /^program_unit_slot_v1:([^:]+):([^:]+):([^:]+):(.+)$/.exec(
+      source_ref.trim(),
+    );
+  if (!m) return null;
+  return {
+    slot_id: m[1]!,
+    requirement_id: m[2]!,
+    unit_id: m[3]!,
+    dir_ids: m[4]!
+      .split("+")
+      .map((d) => d.trim())
+      .filter(Boolean),
+  };
+}
+
+function page02BindableUnits(
   units: readonly BookJudgmentUnit[],
 ): BookJudgmentUnit[] {
-  // Pool filter only — never proof of DIR semantics.
   return units.filter(
     (u) =>
-      (u.track === "science" || u.track === "convergence") &&
+      (u.track === "science" ||
+        u.track === "convergence" ||
+        u.track === "destiny") &&
       u.serves_face.includes("02"),
   );
 }
@@ -133,10 +167,6 @@ function emptyBinding(
   };
 }
 
-/**
- * Canonical linked DIR set for enrichment certificates.
- * Shared by enricher + certificate validator (exact set match required).
- */
 export function computeLinkedDirIdsForRelatedDirEnrichment(
   dc: DecisionContext,
 ): string[] {
@@ -162,24 +192,34 @@ export function computeLinkedDirIdsForRelatedDirEnrichment(
     .sort((a, b) => a.localeCompare(b));
 }
 
+type ResolvedUnitBinding = {
+  unit_id: string;
+  dir_ids: string[];
+  source_ref: string;
+  association_basis: (typeof RELATED_DIR_ASSOCIATION_BASES)[number];
+  slot_id?: string;
+  requirement_id?: string;
+  source_version?: string;
+  source_hash?: string;
+  reasons: string[];
+};
+
 /**
- * Resolve authority edges into unique unit→DIR maps.
- * Ambiguous DIR (claimed by ≥2 units without a distinct exclusive edge proof)
- * → neither unit receives that DIR (fail-closed).
+ * Resolve edges → per-unit DIR sets.
+ * - program_owned_unit_slot: multi-DIR + shared DIR across units allowed
+ * - program_authority_edge (synthetic): single DIR, exclusive (test harness)
  */
 function resolveAuthorityAssignments(input: {
   edges: readonly ProgramUnitDirAuthorityEdge[];
   unitIds: ReadonlySet<string>;
   linkedDirIds: ReadonlySet<string>;
   dirsById: ReturnType<typeof activeDirsById>;
+  dc_content_hash: string | null;
 }): {
-  byUnit: Map<string, { dir_id: string; edge: ProgramUnitDirAuthorityEdge }>;
+  byUnit: Map<string, ResolvedUnitBinding>;
   rejected: Map<string, string[]>;
 } {
-  const byUnit = new Map<
-    string,
-    { dir_id: string; edge: ProgramUnitDirAuthorityEdge }
-  >();
+  const byUnit = new Map<string, ResolvedUnitBinding>();
   const rejected = new Map<string, string[]>();
   const pushReject = (unitId: string, reason: string) => {
     const list = rejected.get(unitId) ?? [];
@@ -187,13 +227,14 @@ function resolveAuthorityAssignments(input: {
     rejected.set(unitId, list);
   };
 
-  // First pass: validate edges individually (no ordinal pairing).
   type ValidEdge = {
     unit_id: string;
     dir_id: string;
     edge: ProgramUnitDirAuthorityEdge;
   };
-  const valid: ValidEdge[] = [];
+  const slotEdges: ValidEdge[] = [];
+  const syntheticEdges: ValidEdge[] = [];
+
   for (const edge of input.edges) {
     const unit_id = edge.unit_id.trim();
     const dir_id = edge.dir_id.trim();
@@ -210,58 +251,148 @@ function resolveAuthorityAssignments(input: {
       pushReject(unit_id, `reject_dir_not_linked:${dir_id}`);
       continue;
     }
-    if (edge.association_basis !== "program_authority_edge") {
-      pushReject(unit_id, `reject_unknown_basis:${edge.association_basis}`);
-      continue;
-    }
-    const expectedRef = canonicalProgramUnitDirEdgeRef({
-      unit_id,
-      dir_id,
-      association_basis: edge.association_basis,
-    });
-    if (edge.source_ref.trim() !== expectedRef) {
-      pushReject(unit_id, `reject_source_ref_mismatch:${edge.source_ref}`);
-      continue;
-    }
-    valid.push({ unit_id, dir_id, edge });
-  }
 
-  // DIR → units: illegal multi-claim without multi-grant basis → clear all.
-  const dirToUnits = new Map<string, string[]>();
-  for (const row of valid) {
-    const list = dirToUnits.get(row.dir_id) ?? [];
-    list.push(row.unit_id);
-    dirToUnits.set(row.dir_id, list);
-  }
-  const blockedDirs = new Set<string>();
-  for (const [dirId, units] of dirToUnits) {
-    const uniqueUnits = [...new Set(units)];
-    if (uniqueUnits.length > 1) {
-      blockedDirs.add(dirId);
-      for (const uid of uniqueUnits) {
+    if (edge.association_basis === "program_owned_unit_slot") {
+      if (
+        edge.dc_content_hash !== undefined &&
+        edge.dc_content_hash !== input.dc_content_hash
+      ) {
         pushReject(
-          uid,
-          `reject_illegal_multi_claim_dir:${dirId}`,
+          unit_id,
+          `reject_edge_dc_hash_mismatch:${String(edge.dc_content_hash)}`,
         );
+        continue;
       }
-    }
-  }
-
-  // Unit → at most one DIR; conflicting edges for same unit → empty.
-  const unitToDirs = new Map<string, ValidEdge[]>();
-  for (const row of valid) {
-    if (blockedDirs.has(row.dir_id)) continue;
-    const list = unitToDirs.get(row.unit_id) ?? [];
-    list.push(row);
-    unitToDirs.set(row.unit_id, list);
-  }
-  for (const [unitId, rows] of unitToDirs) {
-    const uniqueDirs = [...new Set(rows.map((r) => r.dir_id))];
-    if (uniqueDirs.length !== 1) {
-      pushReject(unitId, `reject_ambiguous_unit_dirs:${uniqueDirs.join(",")}`);
+      const slot_id = (edge.slot_id ?? "").trim();
+      const requirement_id = (edge.requirement_id ?? "").trim();
+      if (!slot_id || !requirement_id) {
+        pushReject(unit_id, "reject_slot_edge_missing_ids");
+        continue;
+      }
+      slotEdges.push({ unit_id, dir_id, edge });
       continue;
     }
-    byUnit.set(unitId, { dir_id: uniqueDirs[0]!, edge: rows[0]!.edge });
+
+    if (edge.association_basis === "program_authority_edge") {
+      const expectedRef = canonicalProgramUnitDirEdgeRef({
+        unit_id,
+        dir_id,
+        association_basis: edge.association_basis,
+      });
+      if (edge.source_ref.trim() !== expectedRef) {
+        pushReject(unit_id, `reject_source_ref_mismatch:${edge.source_ref}`);
+        continue;
+      }
+      syntheticEdges.push({ unit_id, dir_id, edge });
+      continue;
+    }
+
+    pushReject(unit_id, `reject_unknown_basis:${edge.association_basis}`);
+  }
+
+  // Slot edges: group by unit; shared DIR across units OK; multi-DIR OK.
+  const slotByUnit = new Map<string, ValidEdge[]>();
+  for (const row of slotEdges) {
+    const list = slotByUnit.get(row.unit_id) ?? [];
+    list.push(row);
+    slotByUnit.set(row.unit_id, list);
+  }
+  for (const [unitId, rows] of slotByUnit) {
+    const first = rows[0]!.edge;
+    const edgeRef = first.source_ref.trim();
+    const parsed = parseProgramUnitSlotBindingRef(edgeRef);
+    if (
+      !parsed ||
+      parsed.unit_id !== unitId ||
+      parsed.slot_id !== (first.slot_id ?? "").trim() ||
+      parsed.requirement_id !== (first.requirement_id ?? "").trim()
+    ) {
+      pushReject(unitId, `reject_slot_source_ref_mismatch:${edgeRef}`);
+      continue;
+    }
+    if (rows.some((r) => r.edge.source_ref.trim() !== edgeRef)) {
+      pushReject(unitId, "reject_slot_source_ref_inconsistent");
+      continue;
+    }
+    // Accepted dirs = intersection of edge dirs with linked∩active and with ref set.
+    const refDirSet = new Set(parsed.dir_ids);
+    const dir_ids = [
+      ...new Set(
+        rows
+          .map((r) => r.dir_id)
+          .filter((d) => refDirSet.has(d)),
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+    if (!dir_ids.length) {
+      pushReject(unitId, "reject_slot_no_linked_dirs");
+      continue;
+    }
+    // Re-validate ref encodes a superset (SSOT full set) of accepted dirs.
+    const expectedFull = canonicalProgramUnitSlotBindingRef({
+      slot_id: parsed.slot_id,
+      requirement_id: parsed.requirement_id,
+      unit_id: unitId,
+      dir_ids: parsed.dir_ids,
+    });
+    if (edgeRef !== expectedFull) {
+      pushReject(unitId, `reject_slot_source_ref_canonical:${edgeRef}`);
+      continue;
+    }
+    byUnit.set(unitId, {
+      unit_id: unitId,
+      dir_ids,
+      source_ref: edgeRef,
+      association_basis: "program_owned_unit_slot",
+      slot_id: first.slot_id,
+      requirement_id: first.requirement_id,
+      source_version: first.source_version,
+      source_hash: first.source_hash,
+      reasons: [
+        "algorithm:program_unit_dir_authority_v1",
+        "basis:program_owned_unit_slot",
+        ...dir_ids.map((d) => `accept:${d}`),
+      ],
+    });
+  }
+
+  // Synthetic exclusive single-DIR (tests)
+  const synthByUnit = new Map<string, ValidEdge[]>();
+  for (const row of syntheticEdges) {
+    const list = synthByUnit.get(row.unit_id) ?? [];
+    list.push(row);
+    synthByUnit.set(row.unit_id, list);
+  }
+  const synthDirOwners = new Map<string, string>();
+  for (const [unitId, rows] of synthByUnit) {
+    if (byUnit.has(unitId)) {
+      pushReject(unitId, "reject_synthetic_conflicts_with_slot");
+      continue;
+    }
+    const dirs = [...new Set(rows.map((r) => r.dir_id))];
+    if (dirs.length !== 1) {
+      pushReject(unitId, `reject_ambiguous_unit_dirs:${dirs.join(",")}`);
+      continue;
+    }
+    const dirId = dirs[0]!;
+    const prior = synthDirOwners.get(dirId);
+    if (prior && prior !== unitId) {
+      pushReject(unitId, `reject_illegal_multi_claim_dir:${dirId}`);
+      pushReject(prior, `reject_illegal_multi_claim_dir:${dirId}`);
+      byUnit.delete(prior);
+      continue;
+    }
+    synthDirOwners.set(dirId, unitId);
+    byUnit.set(unitId, {
+      unit_id: unitId,
+      dir_ids: [dirId],
+      source_ref: rows[0]!.edge.source_ref,
+      association_basis: "program_authority_edge",
+      reasons: [
+        "algorithm:program_unit_dir_authority_v1",
+        "basis:program_authority_edge",
+        `accept:${dirId}`,
+      ],
+    });
   }
 
   return { byUnit, rejected };
@@ -269,18 +400,13 @@ function resolveAuthorityAssignments(input: {
 
 /**
  * Enrich pack units with program-certified related_dir_ids + pack certificate.
- * Idempotent. Without DC or without authority edges → empty dirs + documented gap.
- *
- * `authority_edges` is a SYNTHETIC / future-seed resolver input only.
- * Production BookJudgment generate + Face02 production MUST omit it.
- * Hand-built edges are not proof of real Unit→DIR provenance.
  */
 export function enrichBookJudgmentRelatedDirIds(input: {
   pack: BookJudgmentPack;
   dc: DecisionContext | null | undefined;
   /**
-   * SYNTHETIC / future-seed only. Production callers must omit.
-   * Never derived from model text, pack mirrors, or ordinal slots.
+   * Internal edges from Slot Plan (production) or SYNTHETIC tests.
+   * Face02 must rebuild from pack.page02_unit_slot_plan — never caller-arbitrary.
    */
   authority_edges?: readonly ProgramUnitDirAuthorityEdge[];
 }): {
@@ -293,7 +419,7 @@ export function enrichBookJudgmentRelatedDirIds(input: {
     next.related_dir_ids = [];
     return next;
   });
-  const scienceUnits = page02ScienceUnits(units);
+  const bindable = page02BindableUnits(units);
   const edges = input.authority_edges ?? [];
 
   if (!input.dc) {
@@ -304,7 +430,7 @@ export function enrichBookJudgmentRelatedDirIds(input: {
       dc_content_hash: null,
       linked_dir_ids: [],
       missing_authority: "no_dc",
-      bindings: scienceUnits.map((u) =>
+      bindings: bindable.map((u) =>
         emptyBinding(u.id, ["no_dc", "missing_unit_dir_provenance"]),
       ),
     };
@@ -321,42 +447,42 @@ export function enrichBookJudgmentRelatedDirIds(input: {
   const linked_dir_ids = computeLinkedDirIdsForRelatedDirEnrichment(input.dc);
   const linkedSet = new Set(linked_dir_ids);
   const dirsById = activeDirsById(input.dc);
-  const unitIds = new Set(scienceUnits.map((u) => u.id));
+  const unitIds = new Set(bindable.map((u) => u.id));
+  const dc_content_hash = input.dc.content_hash ?? null;
 
   const { byUnit, rejected } = resolveAuthorityAssignments({
     edges,
     unitIds,
     linkedDirIds: linkedSet,
     dirsById,
+    dc_content_hash,
   });
 
   const bindings: RelatedDirEnrichmentBinding[] = [];
-  for (const unit of scienceUnits) {
+  for (const unit of bindable) {
     const reasons: string[] = ["algorithm:program_unit_dir_authority_v1"];
-    const rejectReasons = rejected.get(unit.id) ?? [];
-    reasons.push(...rejectReasons);
-
+    reasons.push(...(rejected.get(unit.id) ?? []));
     const assigned = byUnit.get(unit.id);
-    if (!assigned) {
+    if (!assigned || !assigned.dir_ids.length) {
       reasons.push("missing_unit_dir_provenance");
-      if (!edges.length) {
-        reasons.push("no_program_authority_edges");
-      }
+      if (!edges.length) reasons.push("no_program_authority_edges");
       bindings.push(emptyBinding(unit.id, reasons));
       continue;
     }
-
-    reasons.push(`accept:${assigned.dir_id}`);
-    reasons.push(`source_ref:${assigned.edge.source_ref}`);
+    reasons.push(...assigned.reasons.filter((r) => !r.startsWith("algorithm:")));
     bindings.push({
       unit_id: unit.id,
-      related_dir_ids: [assigned.dir_id],
-      source_ref: assigned.edge.source_ref,
-      association_basis: assigned.edge.association_basis,
+      related_dir_ids: [...assigned.dir_ids],
+      source_ref: assigned.source_ref,
+      association_basis: assigned.association_basis,
+      slot_id: assigned.slot_id,
+      requirement_id: assigned.requirement_id,
+      source_version: assigned.source_version,
+      source_hash: assigned.source_hash,
       reasons,
     });
     const target = units.find((u) => u.id === unit.id);
-    if (target) target.related_dir_ids = [assigned.dir_id];
+    if (target) target.related_dir_ids = [...assigned.dir_ids];
   }
 
   const anyBound = bindings.some((b) => b.related_dir_ids.length > 0);
@@ -364,7 +490,7 @@ export function enrichBookJudgmentRelatedDirIds(input: {
     version: RELATED_DIR_ENRICHMENT_VERSION,
     algorithm: RELATED_DIR_ENRICHMENT_ALGORITHM,
     certified_at,
-    dc_content_hash: input.dc.content_hash ?? null,
+    dc_content_hash,
     linked_dir_ids,
     missing_authority: anyBound
       ? null
