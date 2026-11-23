@@ -73,3 +73,13 @@ export {
   type RelatedDirEnrichmentCertificate,
   type RelatedDirAssociationBasis,
 } from "./related-dir-enrichment";
+export {
+  tryBuildProgramOwnedUnitSlotPlan,
+  programOwnedUnitSlotPlanCanAuthorize,
+  collectPage02DdrDirObligationSet,
+  PROGRAM_OWNED_UNIT_SLOT_PLAN_VERSION,
+  type ProgramOwnedUnitSlot,
+  type ProgramOwnedUnitSlotPlan,
+  type ProgramOwnedUnitSlotPlanOk,
+  type ProgramOwnedUnitSlotPlanUnavailable,
+} from "./program-owned-unit-slots";

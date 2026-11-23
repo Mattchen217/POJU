@@ -46,6 +46,10 @@ import {
   formatQuotaTableForPrompt,
 } from "./quota-from-blueprint";
 import { enrichBookJudgmentRelatedDirIds } from "./related-dir-enrichment";
+import {
+  tryBuildProgramOwnedUnitSlotPlan,
+  programOwnedUnitSlotPlanCanAuthorize,
+} from "./program-owned-unit-slots";
 
 const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmentPack）。
 只输出 JSON，不要 markdown。
@@ -777,9 +781,20 @@ export async function runBookJudgmentPackGenerate(input: {
     declared_pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
     science_tags_used: stringList(shot.parsed, "science_tags_used"),
   });
+  // R5: probe Program-Owned Unit Slot Plan. Today always unavailable —
+  // missing exclusive 1-slot→1-DIR SSOT. Do NOT invent from DDR DIR sets.
+  // See `.cursor/docs/Page02-Unit-DIR-slot-plan-缺口-R5.md`.
+  const slotAttempt = tryBuildProgramOwnedUnitSlotPlan({
+    dc: input.decision_context_snapshot ?? null,
+    blueprint: null,
+  });
+  if (programOwnedUnitSlotPlanCanAuthorize(slotAttempt)) {
+    // Reserved: map plan.slots → ProgramUnitDirAuthorityEdge when SSOT exists.
+    // Until then this branch is unreachable in production.
+  }
+
   // Program Claim–DIR enrichment (never model anchors). Idempotent.
-  // R4: no generation-time Unit→DIR edges exist — omit authority_edges (empty cert).
-  // See `.cursor/docs/Page02-Unit-DIR-provenance-缺口-R4.md`.
+  // No exclusive Slot Plan ⇒ omit authority_edges (empty cert). R4+R5.
   const enriched = enrichBookJudgmentRelatedDirIds({
     pack: draft,
     dc: input.decision_context_snapshot ?? null,

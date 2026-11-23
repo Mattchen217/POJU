@@ -38,6 +38,11 @@ import {
   MISSING_UNIT_DIR_AUTHORITY_REF,
   type ProgramUnitDirAuthorityEdge,
 } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import {
+  tryBuildProgramOwnedUnitSlotPlan,
+  programOwnedUnitSlotPlanCanAuthorize,
+  collectPage02DdrDirObligationSet,
+} from "@/lib/llm/pro/delivery/book-judgment/program-owned-unit-slots";
 import { validateRelatedDirEnrichmentCertificate } from "@/lib/llm/pro/delivery/decision-report-v2/page02/credible-fact-claim";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
@@ -1739,6 +1744,95 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
 
   console.log(
     "R4 gap locks PASS — no production Unit→DIR provenance (investigation only)",
+  );
+}
+
+// --- R5 Program-Owned Unit Slot Plan: stop at missing exclusive SSOT ---
+// Must NOT invent slot→DIR from page-level DDR DIR sets.
+{
+  const gapDoc = resolvePath(".cursor/docs/Page02-Unit-DIR-slot-plan-缺口-R5.md");
+  assert.equal(existsSync(gapDoc), true, "R5 gap SSOT doc must exist");
+  const gapText = readFileSync(gapDoc, "utf8");
+  assert.ok(gapText.includes("missing_exclusive_slot_dir_ssot") || gapText.includes("独占"));
+  assert.ok(gapText.includes("不得") || gapText.includes("未建立非空"));
+
+  // N / core: tryBuild refuses inventorship even when page-02 DIR obligations exist
+  {
+    const attempt = tryBuildProgramOwnedUnitSlotPlan({ dc, blueprint: null });
+    assert.equal(attempt.ok, false);
+    if (attempt.ok) throw new Error("unreachable");
+    assert.equal(attempt.reason, "missing_exclusive_slot_dir_ssot");
+    assert.equal(programOwnedUnitSlotPlanCanAuthorize(attempt), false);
+    const obligations = collectPage02DdrDirObligationSet();
+    assert.ok(obligations.length >= 3, "page-02 DDR DIR set exists as obligations");
+    assert.deepEqual(attempt.page02_dir_obligation_set, obligations);
+    // Obligation set must NOT become non-empty enrich edges
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    assert.equal(certificate.missing_authority, "no_program_unit_dir_edges");
+    assert.ok(certificate.bindings.every((b) => b.related_dir_ids.length === 0));
+  }
+  console.log("R5-N PASS — no exclusive SSOT ⇒ no Slot Plan / empty bindings");
+
+  // H: model anchors / related_dir_ids still cannot authorize (production)
+  {
+    const pack = makePack({ bazi: true, ziwei: false });
+    for (const u of pack.units) {
+      if (u.track === "science") {
+        u.anchors = ["DIR_STATUS_QUO", "dir:DIR-STATUS-QUO"];
+        u.declared_related_dir_ids = collectPage02DdrDirObligationSet().slice(0, 2);
+        u.related_dir_ids = collectPage02DdrDirObligationSet().slice(0, 1);
+      }
+    }
+    const built = buildFace02ProductionContext({
+      report_id: "r5_no_fake_slot_from_anchors",
+      locale: "en",
+      dc,
+      pack,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(built.ok, true);
+    if (!built.ok) throw new Error(built.reason);
+    assert.equal(built.ctx.credible_fact_claim_keys.size, 0);
+  }
+  console.log("R5-H PASS — anchors cannot mint Slot Plan authority");
+
+  // M: pre-injected cert wiped (production entry)
+  {
+    const pre = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: syntheticSemanticEdges,
+    }).pack;
+    const built = buildFace02ProductionContext({
+      report_id: "r5_wipe",
+      locale: "en",
+      dc,
+      pack: pre,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(built.ok, true);
+    if (!built.ok) throw new Error(built.reason);
+    assert.equal(built.ctx.credible_fact_claim_keys.size, 0);
+  }
+  console.log("R5-M PASS — pre-injected cert cannot bypass production");
+
+  // A–G deferred: cannot assert legal slot→unit without exclusive SSOT.
+  // Document that positive slot tests are intentionally unavailable.
+  assert.ok(
+    gapText.includes("1:1") || gapText.includes("独占"),
+    "gap doc must state 1:1 SSOT requirement for future YES",
+  );
+  console.log(
+    "R5-A–G DEFERRED — no legal Slot Plan SSOT (refuse forged allocator)",
+  );
+
+  console.log(
+    "R5 stop PASS — Program-Owned Unit Slots blocked on missing exclusive SSOT",
   );
 }
 
