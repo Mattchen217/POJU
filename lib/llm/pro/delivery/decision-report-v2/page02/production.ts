@@ -31,11 +31,13 @@ import { isFace01V2 } from "../page01/legacy-adapter";
 import type { Face01V2 } from "../schemas";
 import {
   buildCrediblePage02FactClaimPairs,
+  buildTrustedClaimDirBindings,
   certifyClaimDirBindings,
   type CredibleFactClaimPair,
+  type TrustedClaimDirBinding,
 } from "./credible-fact-claim";
 
-export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23c" as const;
+export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23d" as const;
 export const FACE02_SCHEMA_VERSION = "face02-v2" as const;
 
 export type Face02ProductionContext = {
@@ -60,6 +62,8 @@ export type Face02ProductionContext = {
    */
   credible_fact_claim_pairs: CredibleFactClaimPair[];
   credible_fact_claim_keys: Set<string>;
+  /** Program-certified Claim→DIR trust root (not model anchors). */
+  trusted_claim_dir_bindings: Map<string, TrustedClaimDirBinding>;
 };
 
 export type Face02ProductionBuildFail = {
@@ -198,16 +202,22 @@ export function buildFace02ProductionContext(input: {
     .slice(0, 12);
 
   const restricted = restrictRegistryToPage02Slice({ seeded, slice });
-  // Program-certify claim.related_dir_ids from DC structure (no text search).
-  certifyClaimDirBindings({
-    registry: restricted.registry,
+  // Trust root: program unit.related_dir_ids ∩ linked DC dirs (never model anchors).
+  const trustedBindings = buildTrustedClaimDirBindings({
+    pack: input.pack,
     dc: input.dc,
     fact_selection: seeded.fact_selection,
+    registry: restricted.registry,
+  });
+  certifyClaimDirBindings({
+    registry: restricted.registry,
+    trustedBindings,
   });
   const credible = buildCrediblePage02FactClaimPairs({
     registry: restricted.registry,
     fact_selection: seeded.fact_selection,
     dc: input.dc,
+    trustedBindings,
   });
   slice = {
     ...restricted.slice,
@@ -263,6 +273,7 @@ export function buildFace02ProductionContext(input: {
       page01_core_judgment: page01_core,
       credible_fact_claim_pairs: credible.pairs,
       credible_fact_claim_keys: credible.pairKeys,
+      trusted_claim_dir_bindings: trustedBindings,
     },
   };
 }

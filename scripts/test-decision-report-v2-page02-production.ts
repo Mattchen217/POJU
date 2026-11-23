@@ -24,8 +24,11 @@ import {
   buildFace01ProductionContext,
   validateFace01ProductionOutput,
   buildCrediblePage02FactClaimPairs,
+  buildTrustedClaimDirBindings,
   certifyClaimDirBindings,
   structuredLinkedDirsForFact,
+  parseModelDirSuggestions,
+  resolveRoleToUniqueDir,
   assembleFace02ClaimOwnershipSlots,
 } from "@/lib/llm/pro/delivery/decision-report-v2";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
@@ -176,8 +179,11 @@ function makePack(opts: {
     id: "u_science_02",
     track: "science",
     claim: "Eight-month runway supports staged explore-without-resign.",
-    // Structured DIR/role anchors — program seeds claim.related_dir_ids per claim.
-    anchors: ["hard_constraint", "DIR_RUNWAY"],
+    // Model-style anchors may forge DIR tokens — ignored for trust root.
+    anchors: ["runway_buffer", "DIR_OFFER"],
+    // Program-certified DIR binding (fixture / ops) — sole trust root.
+    related_dir_ids: ["DIR_RUNWAY"],
+    declared_related_dir_ids: ["DIR_OFFER"],
     serves_face: ["02"],
     term_ids: [],
     source_domain: "science",
@@ -186,7 +192,9 @@ function makePack(opts: {
     id: "u_science_offer_02",
     track: "science",
     claim: "Offer cash figure remains an estimate until term sheet hardens.",
-    anchors: ["job_offer", "DIR_OFFER"],
+    anchors: ["offer_terms", "DIR_RUNWAY"],
+    related_dir_ids: ["DIR_OFFER"],
+    declared_related_dir_ids: ["DIR_RUNWAY"],
     serves_face: ["02"],
     term_ids: [],
     source_domain: "science",
@@ -763,25 +771,26 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   console.log("L PASS — no Page04 bottleneck");
 }
 
-// --- Structured association negatives ---
+// --- Structured association negatives + trusted DIR binding ---
 {
-  // body_text contains fact_id but no DIR binding on destiny claim
+  const trusted = ctx.trusted_claim_dir_bindings;
+
+  // body_text contains fact_id but destiny has no trusted DIR
   const destiny = ctx.registry.claims[claimId]!;
   destiny.body_text = `${destiny.body_text} fact_runway DIR_RUNWAY`;
   const pairs = buildCrediblePage02FactClaimPairs({
     registry: ctx.registry,
     fact_selection: ctx.fact_selection,
     dc,
+    trustedBindings: trusted,
   });
   assert.ok(
     !pairs.pairKeys.has(`${claimId}::${factId}`),
     "text marker must NOT create pair",
   );
-  // restore
   certifyClaimDirBindings({
     registry: ctx.registry,
-    dc,
-    fact_selection: ctx.fact_selection,
+    trustedBindings: trusted,
   });
 
   assert.equal(
@@ -804,7 +813,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     "destiny claim + runway fact rejected without DIR pair",
   );
 
-  // candidate fact cannot pair even with dirs
+  // candidate fact cannot pair even with trusted dirs
   const candPairs = buildCrediblePage02FactClaimPairs({
     registry: ctx.registry,
     fact_selection: {
@@ -816,20 +825,42 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
       ),
     },
     dc,
+    trustedBindings: trusted,
   });
   assert.ok(!candPairs.pairKeys.has(`${sciClaimId}::${unverifiedFactId}`));
+  assert.ok(!candPairs.pairKeys.has(`${offerClaimId}::${unverifiedFactId}`));
 
-  // wrong DIR: clear science dirs
+  // Mutating claim.related_dir_ids mirror must NOT create pairs (trust root is map)
   const sci = ctx.registry.claims[sciClaimId]!;
   const prevDirs = [...(sci.related_dir_ids ?? [])];
   sci.related_dir_ids = ["DIR_DOES_NOT_MATCH"];
-  const wrong = buildCrediblePage02FactClaimPairs({
+  const fromMirror = buildCrediblePage02FactClaimPairs({
     registry: ctx.registry,
     fact_selection: ctx.fact_selection,
     dc,
+    trustedBindings: trusted,
   });
-  assert.ok(!wrong.pairKeys.has(`${sciClaimId}::${factId}`));
+  assert.ok(
+    fromMirror.pairKeys.has(`${sciClaimId}::${factId}`),
+    "pairs still come from trustedBindings, not mutated mirror",
+  );
   sci.related_dir_ids = prevDirs;
+
+  // Empty trusted binding → no pair even if mirror looks full
+  const emptyTrusted = new Map(trusted);
+  emptyTrusted.set(sciClaimId, {
+    claim_id: sciClaimId,
+    unit_id: "u_science_02",
+    related_dir_ids: [],
+    reasons: ["cleared"],
+  });
+  const cleared = buildCrediblePage02FactClaimPairs({
+    registry: ctx.registry,
+    fact_selection: ctx.fact_selection,
+    dc,
+    trustedBindings: emptyTrusted,
+  });
+  assert.ok(!cleared.pairKeys.has(`${sciClaimId}::${factId}`));
 
   const dirs = structuredLinkedDirsForFact(
     dc.reality_facts!.find((f) => f.fact_id === factId)!,
@@ -837,8 +868,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   );
   assert.deepEqual(dirs, ["DIR_RUNWAY"]);
 
-  // Cross-claim bulk grant must not happen: two reality_analysis claims,
-  // two DIRs, two facts — each claim only owns its own DIR/fact.
+  // D: Cross-claim isolation
   assert.ok(
     !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
   );
@@ -862,6 +892,100 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     false,
     "offer claim citing runway fact must fail (cross-claim)",
   );
+
+  // A: model forged DIR anchor / declared — program related_dir_ids wins
+  {
+    const forgedPack = makePack({ bazi: true, ziwei: false });
+    const sciUnit = forgedPack.units.find((u) => u.id === "u_science_02")!;
+    sciUnit.anchors = ["DIR_OFFER", "dir:DIR_OFFER"];
+    sciUnit.declared_related_dir_ids = ["DIR_OFFER"];
+    sciUnit.related_dir_ids = ["DIR_RUNWAY"];
+    const forgedCtx = buildFace02ProductionContext({
+      report_id: "forge_dir_anchor",
+      locale: "en",
+      dc,
+      pack: forgedPack,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(forgedCtx.ok, true);
+    if (!forgedCtx.ok) throw new Error(forgedCtx.reason);
+    const bind = forgedCtx.ctx.trusted_claim_dir_bindings.get("claim_u_science_02");
+    assert.deepEqual(bind?.related_dir_ids, ["DIR_RUNWAY"]);
+    assert.ok(
+      forgedCtx.ctx.credible_fact_claim_keys.has(
+        "claim_u_science_02::fact_runway",
+      ),
+    );
+    assert.ok(
+      !forgedCtx.ctx.credible_fact_claim_keys.has(
+        "claim_u_science_02::fact_salary_guess",
+      ),
+      "forged DIR_OFFER must not create offer pair",
+    );
+  }
+
+  // B: ambiguous role → no unique DIR grant from suggestions
+  {
+    const dirsById = new Map(dc.dirs!.map((d) => [d.dir_id, d]));
+    // Inject a second DIR that also requires hard_constraint
+    const ambiguousDirs = new Map(dirsById);
+    ambiguousDirs.set("DIR_RUNWAY_ALT", {
+      ...dc.dirs!.find((d) => d.dir_id === "DIR_RUNWAY")!,
+      dir_id: "DIR_RUNWAY_ALT",
+      required_fact_roles: ["hard_constraint"],
+    });
+    assert.equal(
+      resolveRoleToUniqueDir("hard_constraint", ambiguousDirs),
+      null,
+      "ambiguous role must not unique-resolve",
+    );
+    const parsed = parseModelDirSuggestions(
+      ["hard_constraint", "role:hard_constraint"],
+      ambiguousDirs,
+    );
+    assert.equal(parsed.suggested_dir_ids.length, 0);
+    assert.ok(parsed.rejected_tokens.length >= 1);
+  }
+
+  // C: nonexistent / inactive DIR suggestions
+  {
+    const dirsById = new Map(dc.dirs!.map((d) => [d.dir_id, d]));
+    const parsed = parseModelDirSuggestions(
+      ["DIR_DOES_NOT_EXIST", "dir:INACTIVE_X"],
+      dirsById,
+    );
+    assert.deepEqual(parsed.suggested_dir_ids, []);
+  }
+
+  // E: anchors look valid but no program related_dir_ids → no pairs
+  {
+    const emptyPack = makePack({ bazi: true, ziwei: false });
+    for (const u of emptyPack.units) {
+      if (u.track === "science") {
+        u.related_dir_ids = [];
+        u.anchors = ["DIR_RUNWAY", "DIR_OFFER", "hard_constraint"];
+        u.declared_related_dir_ids = ["DIR_RUNWAY"];
+      }
+    }
+    const emptyCtx = buildFace02ProductionContext({
+      report_id: "no_program_dirs",
+      locale: "en",
+      dc,
+      pack: emptyPack,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(emptyCtx.ok, true);
+    if (!emptyCtx.ok) throw new Error(emptyCtx.reason);
+    assert.equal(emptyCtx.ctx.credible_fact_claim_pairs.length, 0);
+    assert.deepEqual(
+      emptyCtx.ctx.trusted_claim_dir_bindings.get("claim_u_science_02")
+        ?.related_dir_ids,
+      [],
+    );
+  }
+
   console.log("structured-association negatives PASS");
 }
 

@@ -75,6 +75,18 @@ export const BookJudgmentUnitSchema = z.object({
   declared_source_domain: BookJudgmentSourceDomainSchema.optional(),
   /** Model-declared source_version (audit only). */
   declared_source_version: z.string().trim().max(128).optional(),
+  /**
+   * Program-certified DIR ids for Page02 Claim↔Fact credibility.
+   * Never accept raw model output here — fixtures/ops/enrich only.
+   */
+  related_dir_ids: z.array(z.string().trim().min(1).max(80)).max(16).optional(),
+  /**
+   * Model-suggested DIR ids / role tokens (audit only; never trust root).
+   */
+  declared_related_dir_ids: z
+    .array(z.string().trim().min(1).max(80))
+    .max(16)
+    .optional(),
 });
 export type BookJudgmentUnit = z.infer<typeof BookJudgmentUnitSchema>;
 
@@ -519,5 +531,9 @@ export function softRepairFaceDualTrack(
     term_ids: [...(u.term_ids ?? [])],
     ...(u.source_domain ? { source_domain: u.source_domain } : {}),
     ...(u.source_version ? { source_version: u.source_version } : {}),
+    ...(u.related_dir_ids ? { related_dir_ids: [...u.related_dir_ids] } : {}),
+    ...(u.declared_related_dir_ids
+      ? { declared_related_dir_ids: [...u.declared_related_dir_ids] }
+      : {}),
   }));
 }

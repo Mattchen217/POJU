@@ -176,6 +176,7 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     // Model output is DECLARATION only — coerce into declared_* fields.
     // Certified term_ids / source_domain / source_version are written later by
     // enrichUnitsWithProvenance from structured cites + real CFP/ZFP.
+    // related_dir_ids is NEVER taken from model — Page02 trust root is program-only.
     const declared_term_ids = Array.isArray(row.term_ids)
       ? row.term_ids
           .map((x) => String(x).trim())
@@ -196,6 +197,22 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     const declared_source_version = String(row.source_version ?? "")
       .trim()
       .slice(0, 128);
+    // Audit-only DIR suggestions from model related_dir_ids / anchors tokens.
+    const declared_related_dir_ids = [
+      ...(Array.isArray(row.related_dir_ids)
+        ? row.related_dir_ids.map((x) => String(x).trim()).filter(Boolean)
+        : []),
+      ...(Array.isArray(row.declared_related_dir_ids)
+        ? row.declared_related_dir_ids
+            .map((x) => String(x).trim())
+            .filter(Boolean)
+        : []),
+      ...anchors.filter((a) =>
+        /^(dir:|role:)/i.test(a) || /^DIR[_-]/i.test(a) || /^dir[_-]/i.test(a),
+      ),
+    ]
+      .filter(Boolean)
+      .slice(0, 16);
     units.push({
       id,
       track: track as BookJudgmentUnit["track"],
@@ -205,12 +222,17 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
       anchors: anchors as [string, ...string[]],
       ...(caveat ? { caveat: caveat.slice(0, 240) } : {}),
       term_ids: [],
+      // Program-certified DIR bindings stay empty at coerce — never model trust root.
+      related_dir_ids: [],
       ...(declared_term_ids.length ? { declared_term_ids } : {}),
       ...(declared_source_domain
         ? { declared_source_domain }
         : {}),
       ...(declared_source_version
         ? { declared_source_version }
+        : {}),
+      ...(declared_related_dir_ids.length
+        ? { declared_related_dir_ids }
         : {}),
     });
   }

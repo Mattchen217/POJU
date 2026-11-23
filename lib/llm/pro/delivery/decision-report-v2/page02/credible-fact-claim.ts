@@ -1,14 +1,15 @@
 /**
- * Read-only credible (claim_id, fact_id) pairs from DC structured fields only.
+ * Trusted Claim↔DIR↔Fact association for Page02.
  *
- * Chain: linked RealityFact.related_dir_ids ∩ active DIR (with role match)
- *      → program-certified claim.related_dir_ids
+ * Trust root = program-certified bindings (BookJudgmentUnit.related_dir_ids ∩
+ * DC linked structured dirs). Never trust model anchors / body_text /
+ * explanation / declared_* as authority.
  *
- * Never uses claim.body_text / evidence.explanation substring matching.
  * Never mutates supports_claim_ids to force validation pass.
  */
 
 import type { DecisionContext, DIR, RealityFact } from "@/lib/poju/decision-context/types";
+import type { BookJudgmentPack, BookJudgmentUnit } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { EvidenceRegistry, ReportClaim } from "../types";
 import type { FactSelectionResult } from "../fact-relevance";
 import { factEvidenceIdFor } from "./fact-id";
@@ -21,11 +22,19 @@ export type CredibleFactClaimPair = {
   reasons: string[];
 };
 
+/** Program-certified per-claim DIR binding — sole trust root for pairs. */
+export type TrustedClaimDirBinding = {
+  claim_id: string;
+  unit_id: string;
+  related_dir_ids: string[];
+  reasons: string[];
+};
+
 export function crediblePairKey(claimId: string, factId: string): string {
   return `${claimId}::${factId}`;
 }
 
-function activeDirsById(dc: DecisionContext): Map<string, DIR> {
+export function activeDirsById(dc: DecisionContext): Map<string, DIR> {
   const map = new Map<string, DIR>();
   for (const d of dc.dirs ?? []) {
     if (d.id_lifecycle !== "active") continue;
@@ -56,96 +65,213 @@ export function structuredLinkedDirsForFact(
   return out;
 }
 
-/**
- * Per-claim DIR candidates from pack unit anchors (structured tokens only).
- * Accepts exact active dir_id, `dir:<dir_id>`, or an exact required_fact_role
- * that appears on an active DIR. Never parses free-text body/explanation.
- */
-export function resolveStructuredDirsFromAnchors(
-  anchors: readonly string[] | undefined,
-  dirsById: ReadonlyMap<string, DIR>,
-): string[] {
-  if (!anchors?.length) return [];
-  const out: string[] = [];
-  const seen = new Set<string>();
-  const push = (dirId: string) => {
-    const t = dirId.trim();
-    if (!t || seen.has(t) || !dirsById.has(t)) return;
-    seen.add(t);
-    out.push(t);
-  };
-
-  for (const raw of anchors) {
-    const a = String(raw ?? "").trim();
-    if (!a) continue;
-    if (dirsById.has(a)) {
-      push(a);
-      continue;
-    }
-    const dirPref = /^dir:(.+)$/i.exec(a);
-    if (dirPref?.[1]) {
-      push(dirPref[1].trim());
-      continue;
-    }
-    const rolePref = /^role:(.+)$/i.exec(a);
-    const role = (rolePref?.[1] ?? a).trim();
-    if (!role) continue;
-    for (const dir of dirsById.values()) {
-      if ((dir.required_fact_roles ?? []).includes(role)) {
-        push(dir.dir_id);
-      }
+/** Linked-fact DIR set from fact selection (structured only). */
+export function linkedStructuredDirIds(input: {
+  dc: DecisionContext;
+  fact_selection: FactSelectionResult;
+}): Set<string> {
+  const dirsById = activeDirsById(input.dc);
+  const out = new Set<string>();
+  for (const row of input.fact_selection.selected) {
+    if (row.kind !== "linked") continue;
+    for (const d of structuredLinkedDirsForFact(row.source, dirsById)) {
+      out.add(d);
     }
   }
   return out;
 }
 
 /**
- * Program-certify claim.related_dir_ids per claim (no bulk cross-claim grant).
- *
- * - reality_analysis: keep only dirs already seeded on the claim that are
- *   also present among linked-fact structured dirs.
- * - all other claim types: [].
- * Does not read claim.body_text or evidence.explanation.
- * Does not assign the union of all linked DIRs to every reality_analysis claim.
+ * Role → DIR only when exactly one active DIR in the allowed set requires that
+ * role. Ambiguous (0 or ≥2) → null (fail-closed, no auto multi-grant).
  */
-export function certifyClaimDirBindings(input: {
-  registry: EvidenceRegistry;
+export function resolveRoleToUniqueDir(
+  role: string,
+  dirsById: ReadonlyMap<string, DIR>,
+  allowedDirIds?: ReadonlySet<string>,
+): string | null {
+  const r = role.trim();
+  if (!r) return null;
+  const matches: string[] = [];
+  for (const dir of dirsById.values()) {
+    if (allowedDirIds && !allowedDirIds.has(dir.dir_id)) continue;
+    if ((dir.required_fact_roles ?? []).includes(r)) {
+      matches.push(dir.dir_id);
+    }
+  }
+  if (matches.length !== 1) return null;
+  return matches[0]!;
+}
+
+/**
+ * Parse model suggestion tokens (anchors / declared_*) into DIR id suggestions.
+ * Audit / negative-test helper only — NEVER a trust root for granting.
+ * Ambiguous roles yield no DIR (fail-closed).
+ */
+export function parseModelDirSuggestions(
+  tokens: readonly string[] | undefined,
+  dirsById: ReadonlyMap<string, DIR>,
+  allowedDirIds?: ReadonlySet<string>,
+): { suggested_dir_ids: string[]; rejected_tokens: string[] } {
+  const suggested: string[] = [];
+  const rejected: string[] = [];
+  const seen = new Set<string>();
+  if (!tokens?.length) return { suggested_dir_ids: suggested, rejected_tokens: rejected };
+
+  const allow = (id: string): boolean => {
+    if (!dirsById.has(id)) return false;
+    if (allowedDirIds && !allowedDirIds.has(id)) return false;
+    return true;
+  };
+
+  for (const raw of tokens) {
+    const a = String(raw ?? "").trim();
+    if (!a) continue;
+    if (dirsById.has(a)) {
+      if (allow(a) && !seen.has(a)) {
+        seen.add(a);
+        suggested.push(a);
+      } else {
+        rejected.push(a);
+      }
+      continue;
+    }
+    const dirPref = /^dir:(.+)$/i.exec(a);
+    if (dirPref?.[1]) {
+      const id = dirPref[1].trim();
+      if (allow(id) && !seen.has(id)) {
+        seen.add(id);
+        suggested.push(id);
+      } else {
+        rejected.push(a);
+      }
+      continue;
+    }
+    const rolePref = /^role:(.+)$/i.exec(a);
+    const role = (rolePref?.[1] ?? a).trim();
+    const unique = resolveRoleToUniqueDir(role, dirsById, allowedDirIds);
+    if (unique && !seen.has(unique)) {
+      seen.add(unique);
+      suggested.push(unique);
+    } else {
+      rejected.push(a);
+    }
+  }
+  return { suggested_dir_ids: suggested, rejected_tokens: rejected };
+}
+
+/** @deprecated Name kept for tests — suggestions only, not trust root. */
+export function resolveStructuredDirsFromAnchors(
+  anchors: readonly string[] | undefined,
+  dirsById: ReadonlyMap<string, DIR>,
+): string[] {
+  return parseModelDirSuggestions(anchors, dirsById).suggested_dir_ids;
+}
+
+function unitIdFromClaimId(claimId: string): string | null {
+  if (!claimId.startsWith("claim_")) return null;
+  const id = claimId.slice("claim_".length).trim();
+  return id || null;
+}
+
+/**
+ * Build trusted per-claim DIR bindings from program unit.related_dir_ids only.
+ * Model anchors / declared_related_dir_ids never grant dirs.
+ */
+export function buildTrustedClaimDirBindings(input: {
+  pack: BookJudgmentPack | null | undefined;
   dc: DecisionContext;
   fact_selection: FactSelectionResult;
-}): void {
+  registry: EvidenceRegistry;
+}): Map<string, TrustedClaimDirBinding> {
+  const out = new Map<string, TrustedClaimDirBinding>();
   const dirsById = activeDirsById(input.dc);
-  const linkedDirs = new Set<string>();
-
-  for (const row of input.fact_selection.selected) {
-    if (row.kind !== "linked") continue;
-    for (const d of structuredLinkedDirsForFact(row.source, dirsById)) {
-      linkedDirs.add(d);
-    }
+  const linkedDirs = linkedStructuredDirIds(input);
+  const unitsById = new Map<string, BookJudgmentUnit>();
+  for (const u of input.pack?.units ?? []) {
+    unitsById.set(u.id, u);
   }
 
   for (const claim of Object.values(input.registry.claims)) {
-    if (claim.claim_type !== "reality_analysis") {
+    if (claim.claim_type !== "reality_analysis") continue;
+    const unitId = unitIdFromClaimId(claim.claim_id);
+    if (!unitId) continue;
+    const unit = unitsById.get(unitId);
+    if (!unit) continue;
+    // Science/convergence only — still require program related_dir_ids, not track alone.
+    if (unit.track !== "science" && unit.track !== "convergence") continue;
+
+    const programDirs = (unit.related_dir_ids ?? [])
+      .map((d) => d.trim())
+      .filter(Boolean);
+    const certified: string[] = [];
+    const reasons: string[] = ["source:unit.related_dir_ids"];
+    for (const dirId of programDirs) {
+      if (!dirsById.has(dirId)) {
+        reasons.push(`reject_inactive_or_missing:${dirId}`);
+        continue;
+      }
+      if (!linkedDirs.has(dirId)) {
+        reasons.push(`reject_not_linked:${dirId}`);
+        continue;
+      }
+      certified.push(dirId);
+      reasons.push(`accept:${dirId}`);
+    }
+
+    // Model suggestions are audit-only: never expand certified set.
+    const suggestions = parseModelDirSuggestions(
+      [
+        ...(unit.declared_related_dir_ids ?? []),
+        ...(unit.anchors ?? []),
+      ],
+      dirsById,
+      linkedDirs,
+    );
+    for (const s of suggestions.suggested_dir_ids) {
+      if (!certified.includes(s)) {
+        reasons.push(`ignore_model_suggestion:${s}`);
+      }
+    }
+
+    out.set(claim.claim_id, {
+      claim_id: claim.claim_id,
+      unit_id: unitId,
+      related_dir_ids: certified,
+      reasons,
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Mirror trusted bindings onto claim.related_dir_ids (display/slice only).
+ * Trust root remains TrustedClaimDirBinding map.
+ */
+export function certifyClaimDirBindings(input: {
+  registry: EvidenceRegistry;
+  trustedBindings: ReadonlyMap<string, TrustedClaimDirBinding>;
+}): void {
+  for (const claim of Object.values(input.registry.claims)) {
+    const trusted = input.trustedBindings.get(claim.claim_id);
+    if (!trusted || claim.claim_type !== "reality_analysis") {
       claim.related_dir_ids = [];
       continue;
     }
-    const seeded = (claim.related_dir_ids ?? [])
-      .map((d) => d.trim())
-      .filter(Boolean);
-    // Per-claim isolation: only retain this claim's own seeded dirs ∩ linked.
-    claim.related_dir_ids = seeded.filter(
-      (d) => linkedDirs.has(d) && dirsById.has(d),
-    );
+    claim.related_dir_ids = [...trusted.related_dir_ids];
   }
 }
 
 /**
- * Build selective credible pairs from program-certified claim.related_dir_ids
- * intersecting structured linked-fact dirs. Candidate facts never pair.
+ * Credible pairs from trusted bindings ∩ linked fact dirs.
+ * Does not read claim.related_dir_ids as authority (mirror only).
  */
 export function buildCrediblePage02FactClaimPairs(input: {
   registry: EvidenceRegistry;
   fact_selection: FactSelectionResult;
   dc: DecisionContext;
+  trustedBindings: ReadonlyMap<string, TrustedClaimDirBinding>;
 }): {
   pairs: CredibleFactClaimPair[];
   pairKeys: Set<string>;
@@ -164,30 +290,27 @@ export function buildCrediblePage02FactClaimPairs(input: {
     if (!factDirs.length) continue;
     const factDirSet = new Set(factDirs);
 
-    for (const claim of Object.values(input.registry.claims)) {
-      const claimDirs = (claim.related_dir_ids ?? [])
-        .map((d) => d.trim())
-        .filter(Boolean);
-      if (!claimDirs.length) continue;
+    for (const [claimId, binding] of input.trustedBindings) {
+      if (!input.registry.claims[claimId]) continue;
+      if (!binding.related_dir_ids.length) continue;
 
-      const overlap = claimDirs.filter((d) => factDirSet.has(d));
+      const overlap = binding.related_dir_ids.filter((d) => factDirSet.has(d));
       if (!overlap.length) continue;
-
-      // Every overlapping dir must still resolve in DC.
       if (overlap.some((d) => !dirsById.has(d))) continue;
 
-      const key = crediblePairKey(claim.claim_id, factId);
+      const key = crediblePairKey(claimId, factId);
       if (pairKeys.has(key)) continue;
       pairKeys.add(key);
       pairs.push({
-        claim_id: claim.claim_id,
+        claim_id: claimId,
         fact_id: factId,
         evidence_id,
         related_dir_ids: overlap,
         reasons: [
           `selection:${row.kind}`,
           `dir_overlap:${overlap.join(",")}`,
-          ...row.reasons.slice(0, 4),
+          ...binding.reasons.slice(0, 4),
+          ...row.reasons.slice(0, 2),
         ],
       });
     }
