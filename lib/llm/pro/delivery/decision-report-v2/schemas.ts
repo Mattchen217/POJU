@@ -236,6 +236,14 @@ export const Face02V2Schema = z.object({
   page_title: z.string().trim().max(56).optional().default(""),
   page_subtitle: z.string().trim().max(80).optional().default(""),
   page_summary: NonEmpty.max(360),
+  /**
+   * Structured DC fact refs for page_summary when it asserts user reality.
+   * Optional / empty when the summary makes no concrete DC-fact claim.
+   */
+  page_summary_reality_fact_ids: z
+    .array(NonEmpty.max(120))
+    .max(8)
+    .default([]),
   /** A · 与本题相关的个人结构（无可用个人域时允许空，禁止伪造） */
   relevant_personal_factors: z
     .array(
@@ -251,6 +259,8 @@ export const Face02V2Schema = z.object({
           "science",
           "convergence",
         ]),
+        /** Optional DC fact refs when the factor asserts user reality. */
+        reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
       }),
     )
     .min(0)
@@ -274,6 +284,8 @@ export const Face02V2Schema = z.object({
     text: NonEmpty.max(960),
     claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
     evidence_ids: z.array(NonEmpty.max(80)).min(1).max(12),
+    /** Optional DC fact refs when the explanation asserts user reality. */
+    reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
     /** Short pointer to what Page01 judgment is being explained — not a full restatement. */
     page01_judgment_ref: z.string().trim().max(240).optional().default(""),
   }),

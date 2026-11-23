@@ -23,6 +23,10 @@ import {
   projectLegacyFace02ForDisplay,
   seedEvidenceRegistryForFace02,
   collectFace02RealizedEvidenceIds,
+  buildFace01ProductionContext,
+  validateFace01ProductionOutput,
+  resolveCanonicalPage02FactId,
+  buildPage02FactIdContext,
 } from "@/lib/llm/pro/delivery/decision-report-v2";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
@@ -415,6 +419,31 @@ const personalEv =
   ctx.slice.evidence_registry.evidence[0]!.evidence_id;
 const factId = ctx.slice.reality_context.facts[0]!.fact_id;
 
+const sciClaimId =
+  Object.values(ctx.registry.claims).find((c) => {
+    const evs = c.evidence_ids
+      .map((id) => ctx.registry.evidence[id])
+      .filter(Boolean);
+    return (
+      evs.length > 0 &&
+      evs.every(
+        (e) =>
+          e!.source_type === "reality_mechanism" ||
+          e!.source_type === "reality_fact",
+      ) &&
+      !c.evidence_ids.includes(personalEv)
+    );
+  })?.claim_id ||
+  Object.keys(ctx.registry.claims).find((c) => c !== claimId)!;
+
+const mechEvId = Object.values(ctx.registry.evidence).find(
+  (e) => e.source_type === "reality_mechanism",
+)!.evidence_id;
+
+const unverifiedFactId =
+  ctx.slice.reality_context.facts.find((f) => f.status === "unverified")
+    ?.fact_id || "fact_salary_guess";
+
 function validPage02(extra?: Partial<Record<string, unknown>>) {
   return {
     page: "02",
@@ -422,6 +451,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     schema_version: "face02-v2",
     page_summary:
       "Your preference for a stable cash floor explains why a staged explore fits this decision window.",
+    page_summary_reality_fact_ids: [factId],
     relevant_personal_factors: [
       {
         factor_id: "f1",
@@ -430,11 +460,12 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         claim_ids: [claimId],
         evidence_ids: [personalEv],
         source_domain: "bazi",
+        reality_fact_ids: [],
       },
     ],
     personal_reality_interplay: [
       {
-        text: "With about eight months runway confirmed, that preference can support exploring without resigning cold.",
+        text: "With about eight months runway available, that preference can support exploring without resigning cold.",
         personal_evidence_ids: [personalEv],
         reality_fact_ids: [factId],
         mechanism_evidence_ids: [],
@@ -446,6 +477,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
       text: "The judgment favors staged explore because your structure prioritizes a protected base and the confirmed runway makes that workable now.",
       claim_ids: [claimId],
       evidence_ids: [personalEv],
+      reality_fact_ids: [factId],
       page01_judgment_ref: "staged explore",
     },
     explanation_boundary: {
@@ -1080,8 +1112,510 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   console.log("integrity-L PASS — hypothesis notes distinct from confirmed");
 }
 
-// --- N: glossary from Face01+Face02 production meta (assembly path) ---
+// --- Provenance: missing evidence source_version ---
 {
+  const mutated = structuredClone(ctx);
+  const ev = mutated.registry.evidence[personalEv]!;
+  ev.source_version = null;
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(bad.ok, false, "missing source_version must reject");
+  assert.ok(
+    !bad.ok &&
+      bad.issues.some((i) => i.code === "evidence_version_missing"),
+    "expect evidence_version_missing",
+  );
+  console.log("provenance-missing-version PASS");
+}
+
+// --- Provenance: wrong evidence source_version ---
+{
+  const mutated = structuredClone(ctx);
+  mutated.registry.evidence[personalEv]!.source_version = "stale_cfp_old";
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(bad.ok, false, "wrong source_version must reject");
+  assert.ok(
+    !bad.ok &&
+      bad.issues.some((i) => i.code === "evidence_version_mismatch"),
+  );
+  console.log("provenance-wrong-version PASS");
+}
+
+// --- Provenance: missing source_domain ---
+{
+  const mutated = structuredClone(ctx);
+  mutated.registry.evidence[personalEv]!.source_domain = null;
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(bad.ok, false, "missing source_domain must reject");
+  assert.ok(
+    !bad.ok &&
+      bad.issues.some(
+        (i) =>
+          i.code === "evidence_domain_missing" ||
+          i.code === "evidence_domain_mismatch",
+      ),
+  );
+  console.log("provenance-missing-domain PASS");
+}
+
+// --- Provenance: unavailable personal domain ---
+{
+  const mutated = structuredClone(ctx);
+  mutated.available_domains = [];
+  mutated.domain_versions = {};
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(bad.ok, false, "unavailable domain must reject");
+  console.log("provenance-unavailable-domain PASS");
+}
+
+// --- Provenance: stale personal via explanation_boundary ---
+{
+  const mutated = structuredClone(ctx);
+  mutated.registry.evidence[personalEv]!.source_version = "stale_boundary";
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02({
+      relevant_personal_factors: [],
+      personal_reality_interplay: [],
+      why_judgment_fits: {
+        text: "Judgment fits via mechanism runway pacing under protected base preference.",
+        claim_ids: [sciClaimId],
+        evidence_ids: [mechEvId],
+        reality_fact_ids: [],
+        page01_judgment_ref: "staged explore",
+      },
+      explanation_boundary: {
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["Offer terms may still shift"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(bad.ok, false, "stale personal via boundary");
+  console.log("provenance-stale-boundary PASS");
+}
+
+// --- Provenance: stale personal via personal_reality_interplay ---
+{
+  const mutated = structuredClone(ctx);
+  mutated.registry.evidence[personalEv]!.source_version = "stale_interplay";
+  const bad = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(bad.ok, false, "stale personal via interplay");
+  console.log("provenance-stale-interplay PASS");
+}
+
+// --- Canonical fact ID A–E ---
+{
+  const factCtx = buildPage02FactIdContext({
+    factIds: ctx.factStatusById.keys(),
+  });
+  const aliasUnverified = `ev_fact_${unverifiedFactId}`;
+  assert.equal(
+    resolveCanonicalPage02FactId(aliasUnverified, factCtx).ok,
+    true,
+  );
+  const badConfirmedAlias = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: ["Promoted via alias"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [aliasUnverified],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    badConfirmedAlias.ok,
+    false,
+    "A: ev_fact_<unverified> cannot enter confirmed_fact_ids",
+  );
+
+  const badUnknown = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: ["Unknown"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: ["ev_fact_fact_totally_unknown_zz"],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badUnknown.ok, false, "B: unknown alias rejected");
+
+  const badInterplayAlias = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "The salary estimate is a confirmed fact and definitely true.",
+          personal_evidence_ids: [personalEv],
+          reality_fact_ids: [aliasUnverified],
+          mechanism_evidence_ids: [],
+          claim_ids: [claimId],
+          conditionality: "Treats estimate as confirmed fact.",
+        },
+      ],
+      page_summary:
+        "Your preference for a stable cash floor explains why a staged explore fits. The salary estimate is a confirmed fact and definitely true.",
+      page_summary_reality_fact_ids: [aliasUnverified],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    badInterplayAlias.ok,
+    false,
+    "C: alias cannot bypass status in interplay/summary",
+  );
+
+  const badHyp = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: ["Relabel confirmed as hypothesis"],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [factId],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    badHyp.ok,
+    false,
+    "D: confirmed cannot be relabeled hypothesis",
+  );
+
+  const badPromote = validateFace02ProductionOutput({
+    raw: validPage02({
+      why_judgment_fits: {
+        text: `The judgment fits and the salary content is as confirmed / definitely true: ${ctx.factContentById.get(unverifiedFactId)}`,
+        claim_ids: [claimId],
+        evidence_ids: [personalEv],
+        reality_fact_ids: [`ev_fact_${unverifiedFactId}`],
+        page01_judgment_ref: "staged explore",
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    badPromote.ok,
+    false,
+    "E: candidate/unverified cannot promote via alias",
+  );
+  console.log("canonical-fact-id A–E PASS");
+}
+
+// --- Ownership negatives ---
+{
+  assert.ok(sciClaimId && sciClaimId !== claimId, "need distinct science claim");
+  const badFactor = validateFace02ProductionOutput({
+    raw: validPage02({
+      relevant_personal_factors: [
+        {
+          factor_id: "f1",
+          title: "Cash-floor preference",
+          text: "You tend to protect a stable base before stretching into uncertainty.",
+          claim_ids: [sciClaimId],
+          evidence_ids: [personalEv],
+          source_domain: "bazi",
+          reality_fact_ids: [],
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badFactor.ok, false, "factor unrelated claim");
+
+  const badInterplayPersonal = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "Runway supports staged explore.",
+          personal_evidence_ids: [personalEv],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [],
+          claim_ids: [sciClaimId],
+          conditionality: "While runway holds.",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badInterplayPersonal.ok, false, "interplay personal unrelated");
+
+  const badMech = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "Runway supports staged explore with mechanism pacing.",
+          personal_evidence_ids: [personalEv],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [mechEvId],
+          claim_ids: [claimId],
+          conditionality: "While runway holds.",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badMech.ok, false, "mechanism unrelated to destiny claim");
+
+  const badFactClaim = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "Runway supports staged explore.",
+          personal_evidence_ids: [personalEv],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [],
+          claim_ids: [sciClaimId],
+          conditionality: "While runway holds.",
+        },
+      ],
+      why_judgment_fits: {
+        text: "Judgment fits via science runway pacing.",
+        claim_ids: [sciClaimId],
+        evidence_ids: [mechEvId],
+        reality_fact_ids: [],
+        page01_judgment_ref: "",
+      },
+      relevant_personal_factors: [],
+      explanation_boundary: {
+        personal_analysis_basis: [],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badFactClaim.ok, false, "reality fact unrelated claim");
+
+  // Mutate so personalEv is not owned by any claim
+  const mutated = structuredClone(ctx);
+  for (const claim of Object.values(mutated.registry.claims)) {
+    claim.evidence_ids = claim.evidence_ids.filter((id) => id !== personalEv);
+  }
+  const pev = mutated.registry.evidence[personalEv]!;
+  pev.supports_claim_ids = [];
+  pev.limits_claim_ids = [];
+  const badBoundaryOrphan = validateFace02ProductionOutput({
+    raw: validPage02({
+      relevant_personal_factors: [],
+      personal_reality_interplay: [],
+      why_judgment_fits: {
+        text: "Judgment fits via science runway pacing under conditions.",
+        claim_ids: [sciClaimId],
+        evidence_ids: [mechEvId],
+        reality_fact_ids: [],
+        page01_judgment_ref: "staged explore",
+      },
+      explanation_boundary: {
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx: mutated,
+  });
+  assert.equal(
+    badBoundaryOrphan.ok,
+    false,
+    "boundary personal evidence unrelated to all claims",
+  );
+  console.log("ownership negatives PASS");
+}
+
+// --- Structured fact ref evasion across fields ---
+{
+  const moveToSummary = validateFace02ProductionOutput({
+    raw: validPage02({
+      page_summary: `The salary figure is a confirmed fact and definitely true: ${ctx.factContentById.get(unverifiedFactId)}`,
+      page_summary_reality_fact_ids: [unverifiedFactId],
+      explanation_boundary: {
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: ["Confirmed runway fact"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    moveToSummary.ok,
+    false,
+    "cannot evade status by moving claim to page_summary",
+  );
+
+  const moveToWhy = validateFace02ProductionOutput({
+    raw: validPage02({
+      why_judgment_fits: {
+        text: `Fits, and this estimate is a confirmed fact and definitely true: ${ctx.factContentById.get(unverifiedFactId)}`,
+        claim_ids: [claimId],
+        evidence_ids: [personalEv],
+        reality_fact_ids: [unverifiedFactId],
+        page01_judgment_ref: "staged explore",
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    moveToWhy.ok,
+    false,
+    "cannot evade status by moving claim to why_judgment_fits",
+  );
+  console.log("structured-fact-ref evasion PASS");
+}
+
+// --- N: real Face01+Face02 production metadata → Assemble helper ---
+{
+  const face01Built = buildFace01ProductionContext({
+    report_id: "job_face01_for_glossary",
+    locale: "en",
+    dc,
+    pack: packFull,
+    chart_fact_pack: "日主甲木…",
+  });
+  assert.equal(face01Built.ok, true, "N face01 build");
+  if (!face01Built.ok) throw new Error(face01Built.reason);
+  const f01Claim =
+    face01Built.ctx.slice.report_analysis.key_claims[0]?.claim_id ||
+    Object.keys(face01Built.ctx.registry.claims)[0]!;
+  const f01Ev =
+    face01Built.ctx.slice.evidence_registry.evidence.find((e) =>
+      (e.term_ids ?? []).includes("day_master"),
+    )?.evidence_id ||
+    face01Built.ctx.slice.evidence_registry.evidence.find(
+      (e) => e.source_type === "personal_reading",
+    )?.evidence_id ||
+    face01Built.ctx.page02PlannedEvidenceIds[0]!;
+  const f01Fact = face01Built.ctx.slice.reality_context.facts[0]!.fact_id;
+  const face01Raw = {
+    page: "01",
+    face: "01",
+    schema_version: "face01-v2",
+    core_judgment: {
+      text: "Keep the job cash floor while exploring the offer in a bounded window.",
+      claim_ids: [f01Claim],
+    },
+    why_this_path: [
+      {
+        text: "Runway and optionality both stay intact under a staged path.",
+        claim_ids: [f01Claim],
+        evidence_ids: [f01Ev],
+        target_page: "02",
+        target_evidence_ids: [
+          face01Built.ctx.page02PlannedEvidenceIds[0] || f01Ev,
+        ],
+      },
+    ],
+    recommendation_conditions: [
+      {
+        condition: "Personal runway remains near the confirmed window.",
+        status: "satisfied",
+        source_ids: [f01Fact],
+      },
+      {
+        condition: "Partner equity terms stay unknown and must be clarified.",
+        status: "unconfirmed",
+        source_ids: ["fact_salary_guess"],
+      },
+    ],
+    not_recommended: [
+      {
+        option: "Resign immediately for the offer.",
+        reason: "Burns the cash floor before terms are clear.",
+        cost_or_conflict: "Loss of runway buffer.",
+        claim_ids: [f01Claim],
+        evidence_ids: [f01Ev],
+      },
+    ],
+    applicability_boundary: {
+      current_basis: ["Confirmed runway and open equity conflict."],
+      invalidation_conditions: [
+        "Runway collapses or equity terms lock unfavorably.",
+      ],
+      page02_evidence_ids: [
+        face01Built.ctx.page02PlannedEvidenceIds[0] || f01Ev,
+      ],
+      page08_review_refs: [],
+    },
+  };
+  const face01 = validateFace01ProductionOutput({
+    raw: face01Raw,
+    locale: "en",
+    ctx: face01Built.ctx,
+  });
+  assert.equal(
+    face01.ok,
+    true,
+    JSON.stringify(face01.ok ? null : face01.issues),
+  );
+  if (!face01.ok) throw new Error("N face01 validate");
+
   const face02 = validateFace02ProductionOutput({
     raw: validPage02(),
     locale: "en",
@@ -1089,13 +1623,27 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   });
   assert.equal(face02.ok, true);
   if (!face02.ok) throw new Error("N face02");
-  const face01Cited = ["day_master"];
+
+  // Same helper Lab Assemble uses (runLabStepV3 assemble branch).
+  const face01Cited = face01.cited_term_ids;
   const face02Cited = face02.cited_term_ids;
+  const productionMeta = {
+    face01: { cited_term_ids: face01Cited },
+    face02: { cited_term_ids: face02Cited },
+  };
   const glossary = assembleGlossaryAppendixFromEvidence({
     locale: "en",
-    evidenceTermIdLists: [face01Cited, face02Cited],
+    evidenceTermIdLists: [
+      productionMeta.face01.cited_term_ids,
+      productionMeta.face02.cited_term_ids,
+    ],
   });
-  const expected = [...new Set([...face01Cited, ...face02Cited])];
+  const expected = [
+    ...new Set([
+      ...productionMeta.face01.cited_term_ids,
+      ...productionMeta.face02.cited_term_ids,
+    ]),
+  ];
   if (expected.length === 0) {
     assert.equal(glossary.include, false);
   } else {
@@ -1106,20 +1654,22 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     !glossary.term_ids.includes("unused_allowlist_term_xyz"),
     "unused allowlist term must not enter",
   );
+  assert.ok(
+    !face01Cited.includes("totally_fake_term_xyz") &&
+      !face02Cited.includes("totally_fake_term_xyz"),
+    "model-declared fake term not in certified cited lists",
+  );
   const emptyGlossary = assembleGlossaryAppendixFromEvidence({
     locale: "en",
     evidenceTermIdLists: [[], []],
   });
   assert.equal(emptyGlossary.include, false);
   assert.equal(emptyGlossary.page, null);
-  // Arbitrary model-declared term cannot enter via page body term_ids field alone
-  assert.ok(
-    !face02Cited.includes("totally_fake_term_xyz"),
-    "model-declared fake term not in cited list",
-  );
   const order = readingOrderAfterAssembly({ glossary });
   assert.ok(order.includes("02"));
-  console.log("N PASS — glossary from Face01+Face02 certified cited terms only");
+  console.log(
+    "N PASS — glossary from certified Face01+Face02 production cited_term_ids via Assemble helper",
+  );
 }
 
 // --- UI/PDF parity: hypothesis_notes rendered ---

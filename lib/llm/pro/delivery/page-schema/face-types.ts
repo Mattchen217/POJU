@@ -266,6 +266,7 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
         ...base,
         schema_version: "face02-v2",
         page_summary: "",
+        page_summary_reality_fact_ids: [],
         relevant_personal_factors: [
           {
             factor_id: "",
@@ -274,6 +275,7 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
             claim_ids: [""],
             evidence_ids: [""],
             source_domain: "convergence",
+            reality_fact_ids: [],
           },
         ],
         personal_reality_interplay: [
@@ -290,6 +292,7 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
           text: "",
           claim_ids: [""],
           evidence_ids: [""],
+          reality_fact_ids: [],
           page01_judgment_ref: "",
         },
         explanation_boundary: {

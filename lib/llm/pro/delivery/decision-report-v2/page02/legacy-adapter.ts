@@ -44,6 +44,7 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
     page_title: leg.page_title,
     page_subtitle: leg.page_subtitle,
     page_summary: leg.convergence.slice(0, 360),
+    page_summary_reality_fact_ids: [],
     relevant_personal_factors: [
       {
         factor_id: "legacy_destiny",
@@ -52,6 +53,7 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
         claim_ids: ["legacy_claim"],
         evidence_ids: ["legacy_ev"],
         source_domain: "convergence",
+        reality_fact_ids: [],
       },
     ],
     personal_reality_interplay: [
@@ -68,6 +70,7 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
       text: leg.convergence.slice(0, 960),
       claim_ids: ["legacy_claim"],
       evidence_ids: ["legacy_ev"],
+      reality_fact_ids: [],
       page01_judgment_ref: "",
     },
     explanation_boundary: {

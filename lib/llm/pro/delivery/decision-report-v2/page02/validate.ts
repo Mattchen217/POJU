@@ -1,6 +1,6 @@
 /**
- * Face02 validation — schema + evidence role/provenance + body compliance.
- * Fail-closed: ID existence alone is not enough — type/domain/claim ownership required.
+ * Face02 validation — schema + evidence role/provenance + claim ownership +
+ * canonical DC fact status. Fail-closed: ID existence alone is never enough.
  */
 
 import { Face02V2Schema, type Face02V2 } from "../schemas";
@@ -15,6 +15,12 @@ import {
 } from "../evidence-registry";
 import type { EvidenceRegistry, ReportEvidence } from "../types";
 import { face02BodyTextBlob } from "./body-blob";
+import {
+  buildPage02FactIdContext,
+  factEvidenceIdFor,
+  resolveCanonicalPage02FactId,
+  type Page02FactIdContext,
+} from "./fact-id";
 
 export type Face02Issue =
   | BodyComplianceIssue
@@ -32,7 +38,7 @@ const SCARE_FATE_RE =
   /必死|注定失败|无可挽回|永远没有机会|一定会毁灭|宿命已定|inevitable\s+doom|you\s+will\s+definitely\s+fail/i;
 
 const PAGE04_BOTTLENECK_RE =
-  /核心卡点|真正瓶颈|若硬顶|forced\s+through|bottleneck_name|关键障碍诊断/i;
+  /核心卡点|真正瓶颈|若硬顶|forced\s+through|bottleneck_name|核心障碍诊断/i;
 
 const PAGE05_06_RE =
   /路径排序|首选路径完整|次选方案对比|七日内行动甘特|verification_experiment|near_step_principle/i;
@@ -43,7 +49,7 @@ const HYPOTHESIS_AS_FACT_RE =
 const CONFIRM_UPGRADE_RE =
   /已确认|已经确认|confirmed\s+fact|definitely\s+true|已经证实该事实|确凿事实|as\s+confirmed/i;
 
-function evidenceSupportsClaim(
+export function evidenceSupportsClaim(
   registry: EvidenceRegistry,
   claimId: string,
   evidenceId: string,
@@ -85,6 +91,172 @@ function requireEvidenceRole(
   return ev;
 }
 
+/**
+ * Strict personal-reading provenance: domain available + both versions
+ * non-empty + exact equality. Missing either side is a reject.
+ */
+export function assertPersonalReadingProvenance(
+  issues: Face02Issue[],
+  ev: ReportEvidence,
+  path: string,
+  availableDomains: ReadonlySet<string>,
+  domainVersions: { bazi?: string; ziwei?: string },
+): void {
+  const domain = (ev.source_domain ?? "").toLowerCase().trim();
+  if (!domain) {
+    issues.push({
+      code: "evidence_domain_missing",
+      detail: `${path} 个人依据「${ev.evidence_id}」缺少可信 source_domain`,
+      path,
+    });
+    return;
+  }
+  if (domain !== "bazi" && domain !== "ziwei") {
+    issues.push({
+      code: "evidence_domain_mismatch",
+      detail: `${path} 个人依据「${ev.evidence_id}」可信域=${ev.source_domain}，须为 bazi/ziwei`,
+      path,
+    });
+    return;
+  }
+  if (!availableDomains.has(domain)) {
+    issues.push({
+      code: "personal_domain_unavailable",
+      detail: `${path} 个人依据「${ev.evidence_id}」域 ${domain} 当前不可用`,
+      path,
+    });
+    return;
+  }
+  const expectedRaw =
+    domain === "bazi" ? domainVersions.bazi : domainVersions.ziwei;
+  const expected = (expectedRaw ?? "").trim();
+  if (!expected) {
+    issues.push({
+      code: "evidence_version_missing",
+      detail: `${path} 个人域 ${domain} 缺少 profile source_version`,
+      path,
+    });
+    return;
+  }
+  const got = (ev.source_version ?? "").trim();
+  if (!got) {
+    issues.push({
+      code: "evidence_version_missing",
+      detail: `${path} 个人依据「${ev.evidence_id}」缺少 source_version`,
+      path,
+    });
+    return;
+  }
+  if (got !== expected) {
+    issues.push({
+      code: "evidence_version_mismatch",
+      detail: `${path} 证据「${ev.evidence_id}」version=${got} ≠ profile ${expected}`,
+      path,
+    });
+  }
+}
+
+function assertEvidenceOwnedByClaims(
+  issues: Face02Issue[],
+  registry: EvidenceRegistry,
+  claimIds: readonly string[],
+  evidenceId: string,
+  path: string,
+): void {
+  if (!registry.evidence[evidenceId]) return;
+  const owned = claimIds.some((cid) =>
+    evidenceSupportsClaim(registry, cid, evidenceId),
+  );
+  if (!owned) {
+    issues.push({
+      code: "claim_evidence_orphan",
+      detail: `${path} 证据「${evidenceId}」与所列 claim_ids 无归属关系`,
+      path,
+    });
+  }
+}
+
+function assertEvidenceOwnedByAnyPage02Claim(
+  issues: Face02Issue[],
+  registry: EvidenceRegistry,
+  evidenceId: string,
+  path: string,
+): void {
+  if (!registry.evidence[evidenceId]) return;
+  const owned = Object.keys(registry.claims).some((cid) =>
+    evidenceSupportsClaim(registry, cid, evidenceId),
+  );
+  if (!owned) {
+    issues.push({
+      code: "claim_evidence_orphan",
+      detail: `${path} 证据「${evidenceId}」未关联任何 Page02 claim`,
+      path,
+    });
+  }
+}
+
+type FactStatusMode = "any" | "require_confirmed" | "reject_confirmed";
+
+function resolveAndCheckFactId(
+  issues: Face02Issue[],
+  inputId: string,
+  path: string,
+  factCtx: Page02FactIdContext,
+  factStatusById: ReadonlyMap<string, string> | undefined,
+  mode: FactStatusMode,
+  opts?: { confirmLanguage?: boolean; textPath?: string },
+): string | null {
+  const resolved = resolveCanonicalPage02FactId(inputId, factCtx);
+  if (!resolved.ok) {
+    issues.push({
+      code:
+        resolved.reason === "ambiguous"
+          ? "fact_id_ambiguous"
+          : "missing_fact_id",
+      detail: `${path} ${resolved.detail}`,
+      path,
+    });
+    return null;
+  }
+  const status = factStatusById?.get(resolved.fact_id);
+  if (status === undefined) {
+    issues.push({
+      code: "fact_status_unresolved",
+      detail: `${path}「${inputId}」解析为「${resolved.fact_id}」但无原始 status（禁止别名跳过）`,
+      path,
+    });
+    return null;
+  }
+  if (mode === "require_confirmed" && status !== "confirmed") {
+    issues.push({
+      code: "fact_status_upgrade",
+      detail: `${path}「${resolved.fact_id}」原始 status=${status}，不得列入已确认依据`,
+      path,
+    });
+    return null;
+  }
+  if (mode === "reject_confirmed" && status === "confirmed") {
+    issues.push({
+      code: "hypothesis_confirmed_collision",
+      detail: `${path}「${resolved.fact_id}」是 confirmed，不得标为假设`,
+      path,
+    });
+    return null;
+  }
+  if (
+    opts?.confirmLanguage &&
+    status !== "confirmed" &&
+    mode === "any"
+  ) {
+    issues.push({
+      code: "fact_status_upgrade",
+      detail: `${opts.textPath ?? path} 将 ${status} 事实「${resolved.fact_id}」表述为已确认`,
+      path: opts.textPath ?? path,
+    });
+  }
+  return resolved.fact_id;
+}
+
 function scanStatusUpgradeInText(
   issues: Face02Issue[],
   text: string,
@@ -92,13 +264,13 @@ function scanStatusUpgradeInText(
   factStatusById: ReadonlyMap<string, string> | undefined,
   factContentById: ReadonlyMap<string, string> | undefined,
 ): void {
+  // Secondary defense only — structured fact refs are the primary integrity mechanism.
   if (!text.trim() || !factStatusById || !factContentById) return;
   if (!CONFIRM_UPGRADE_RE.test(text)) return;
   for (const [factId, status] of factStatusById) {
     if (status === "confirmed") continue;
     const content = (factContentById.get(factId) ?? "").trim();
     if (content.length < 12) continue;
-    // Unique-ish fragment of the fact statement appears alongside confirmation language.
     const fragment = content.slice(0, Math.min(24, content.length));
     if (text.includes(fragment) || text.includes(factId)) {
       issues.push({
@@ -108,6 +280,79 @@ function scanStatusUpgradeInText(
       });
     }
   }
+}
+
+function buildFactIdContext(input: {
+  knownFactIds?: ReadonlySet<string>;
+  factStatusById?: ReadonlyMap<string, string>;
+}): Page02FactIdContext {
+  const raw = new Set<string>();
+  if (input.factStatusById) {
+    for (const id of input.factStatusById.keys()) raw.add(id);
+  }
+  if (input.knownFactIds) {
+    for (const id of input.knownFactIds) {
+      if (id.startsWith("ev_fact_")) {
+        const candidate = id.slice("ev_fact_".length);
+        if (candidate) raw.add(candidate);
+      } else {
+        raw.add(id);
+      }
+    }
+  }
+  return buildPage02FactIdContext({ factIds: raw });
+}
+
+/**
+ * Rewrite Face02 fact-id slots to canonical raw DC fact_ids (no ev_fact_ aliases).
+ */
+export function normalizeFace02FactIds(
+  page: Face02V2,
+  factCtx: Page02FactIdContext,
+): Face02V2 {
+  const canon = (ids: readonly string[]): string[] => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const id of ids) {
+      const r = resolveCanonicalPage02FactId(id, factCtx);
+      if (!r.ok) {
+        if (!seen.has(id)) {
+          seen.add(id);
+          out.push(id);
+        }
+        continue;
+      }
+      if (seen.has(r.fact_id)) continue;
+      seen.add(r.fact_id);
+      out.push(r.fact_id);
+    }
+    return out;
+  };
+  return {
+    ...page,
+    page_summary_reality_fact_ids: canon(page.page_summary_reality_fact_ids ?? []),
+    relevant_personal_factors: page.relevant_personal_factors.map((f) => ({
+      ...f,
+      reality_fact_ids: canon(f.reality_fact_ids ?? []),
+    })),
+    personal_reality_interplay: page.personal_reality_interplay.map((r) => ({
+      ...r,
+      reality_fact_ids: canon(r.reality_fact_ids),
+    })),
+    why_judgment_fits: {
+      ...page.why_judgment_fits,
+      reality_fact_ids: canon(page.why_judgment_fits.reality_fact_ids ?? []),
+    },
+    explanation_boundary: {
+      ...page.explanation_boundary,
+      confirmed_fact_ids: canon(
+        page.explanation_boundary.confirmed_fact_ids ?? [],
+      ),
+      hypothesis_fact_ids: canon(
+        page.explanation_boundary.hypothesis_fact_ids ?? [],
+      ),
+    },
+  };
 }
 
 export function validateFace02Output(input: {
@@ -194,8 +439,28 @@ export function validateFace02Output(input: {
   const hasPersonalDomain =
     domains.has("bazi") || domains.has("ziwei") || domains.has("personal");
   const domainVersions = input.domain_versions ?? {};
+  const factCtx = buildFactIdContext({
+    knownFactIds: input.knownFactIds,
+    factStatusById: input.factStatusById,
+  });
 
-  // --- relevant_personal_factors: strict domain + role ---
+  // --- page_summary structured fact refs ---
+  {
+    const summaryConfirm = CONFIRM_UPGRADE_RE.test(page.page_summary);
+    for (const fid of page.page_summary_reality_fact_ids ?? []) {
+      resolveAndCheckFactId(
+        issues,
+        fid,
+        "page_summary_reality_fact_ids",
+        factCtx,
+        input.factStatusById,
+        "any",
+        { confirmLanguage: summaryConfirm, textPath: "page_summary" },
+      );
+    }
+  }
+
+  // --- relevant_personal_factors ---
   for (const [i, factor] of page.relevant_personal_factors.entries()) {
     const basePath = `relevant_personal_factors[${i}]`;
     issues.push(...assertClaimIdsExist(input.registry, factor.claim_ids));
@@ -233,21 +498,13 @@ export function validateFace02Output(input: {
             path: basePath,
           });
         }
-        const expectedVer =
-          factor.source_domain === "bazi"
-            ? domainVersions.bazi
-            : domainVersions.ziwei;
-        if (
-          expectedVer &&
-          ev.source_version &&
-          ev.source_version !== expectedVer
-        ) {
-          issues.push({
-            code: "evidence_version_mismatch",
-            detail: `${basePath} 证据「${eid}」version=${ev.source_version} ≠ profile ${expectedVer}`,
-            path: basePath,
-          });
-        }
+        assertPersonalReadingProvenance(
+          issues,
+          ev,
+          basePath,
+          domains,
+          domainVersions,
+        );
       } else if (factor.source_domain === "science") {
         if (ev.source_type === "personal_reading") {
           issues.push({
@@ -273,7 +530,6 @@ export function validateFace02Output(input: {
           });
         }
       } else if (factor.source_domain === "convergence") {
-        // Must still pass role checks — no bypass.
         if (
           ev.source_type !== "personal_reading" &&
           ev.source_type !== "reality_mechanism"
@@ -284,18 +540,47 @@ export function validateFace02Output(input: {
             path: basePath,
           });
         }
-        if (
-          ev.source_type === "personal_reading" &&
-          ev.source_domain &&
-          !domains.has(String(ev.source_domain).toLowerCase())
-        ) {
-          issues.push({
-            code: "personal_domain_unavailable",
-            detail: `${basePath} convergence 引用不可用个人域证据「${eid}」`,
-            path: basePath,
-          });
+        if (ev.source_type === "personal_reading") {
+          assertPersonalReadingProvenance(
+            issues,
+            ev,
+            `${basePath}.convergence`,
+            domains,
+            domainVersions,
+          );
         }
       }
+
+      assertEvidenceOwnedByClaims(
+        issues,
+        input.registry,
+        factor.claim_ids,
+        eid,
+        basePath,
+      );
+    }
+
+    const factorConfirm = CONFIRM_UPGRADE_RE.test(
+      `${factor.title}\n${factor.text}`,
+    );
+    for (const fid of factor.reality_fact_ids ?? []) {
+      const canonical = resolveAndCheckFactId(
+        issues,
+        fid,
+        `${basePath}.reality_fact_ids`,
+        factCtx,
+        input.factStatusById,
+        "any",
+        { confirmLanguage: factorConfirm, textPath: basePath },
+      );
+      if (!canonical) continue;
+      assertEvidenceOwnedByClaims(
+        issues,
+        input.registry,
+        factor.claim_ids,
+        factEvidenceIdFor(canonical),
+        `${basePath}.reality_fact_ids`,
+      );
     }
   }
 
@@ -311,56 +596,75 @@ export function validateFace02Output(input: {
     }
   }
 
-  // --- personal_reality_interplay: role-separated slots ---
+  // --- personal_reality_interplay ---
   for (const [i, row] of page.personal_reality_interplay.entries()) {
     const basePath = `personal_reality_interplay[${i}]`;
     issues.push(...assertClaimIdsExist(input.registry, row.claim_ids));
 
     for (const eid of row.personal_evidence_ids) {
-      requireEvidenceRole(
+      const ev = requireEvidenceRole(
         issues,
         input.registry,
         eid,
         "personal_reading",
         `${basePath}.personal_evidence_ids`,
       );
+      if (ev) {
+        assertPersonalReadingProvenance(
+          issues,
+          ev,
+          `${basePath}.personal_evidence_ids`,
+          domains,
+          domainVersions,
+        );
+        assertEvidenceOwnedByClaims(
+          issues,
+          input.registry,
+          row.claim_ids,
+          eid,
+          `${basePath}.personal_evidence_ids`,
+        );
+      }
     }
     for (const eid of row.mechanism_evidence_ids ?? []) {
-      requireEvidenceRole(
+      const ev = requireEvidenceRole(
         issues,
         input.registry,
         eid,
         "reality_mechanism",
         `${basePath}.mechanism_evidence_ids`,
       );
+      if (ev) {
+        assertEvidenceOwnedByClaims(
+          issues,
+          input.registry,
+          row.claim_ids,
+          eid,
+          `${basePath}.mechanism_evidence_ids`,
+        );
+      }
     }
 
     const interplayText = `${row.text}\n${row.conditionality}`;
+    const interplayConfirm = CONFIRM_UPGRADE_RE.test(interplayText);
     for (const fid of row.reality_fact_ids) {
-      const known =
-        input.knownFactIds?.has(fid) ||
-        input.knownFactIds?.has(`ev_fact_${fid}`) ||
-        Boolean(input.factStatusById?.has(fid));
-      if (!known) {
-        issues.push({
-          code: "missing_fact_id",
-          detail: `${basePath} reality_fact_id「${fid}」不在 Page02 slice`,
-          path: basePath,
-        });
-        continue;
-      }
-      const status = input.factStatusById?.get(fid);
-      if (
-        status &&
-        status !== "confirmed" &&
-        CONFIRM_UPGRADE_RE.test(interplayText)
-      ) {
-        issues.push({
-          code: "fact_status_upgrade",
-          detail: `${basePath} 将 ${status} 事实「${fid}」表述为已确认`,
-          path: basePath,
-        });
-      }
+      const canonical = resolveAndCheckFactId(
+        issues,
+        fid,
+        `${basePath}.reality_fact_ids`,
+        factCtx,
+        input.factStatusById,
+        "any",
+        { confirmLanguage: interplayConfirm, textPath: basePath },
+      );
+      if (!canonical) continue;
+      assertEvidenceOwnedByClaims(
+        issues,
+        input.registry,
+        row.claim_ids,
+        factEvidenceIdFor(canonical),
+        `${basePath}.reality_fact_ids`,
+      );
     }
 
     scanStatusUpgradeInText(
@@ -372,7 +676,7 @@ export function validateFace02Output(input: {
     );
   }
 
-  // --- why_judgment_fits: claim↔evidence ownership ---
+  // --- why_judgment_fits ---
   issues.push(
     ...assertClaimIdsExist(input.registry, page.why_judgment_fits.claim_ids),
   );
@@ -383,29 +687,73 @@ export function validateFace02Output(input: {
     ),
   );
   for (const eid of page.why_judgment_fits.evidence_ids) {
-    if (!input.registry.evidence[eid]) continue;
-    const owned = page.why_judgment_fits.claim_ids.some((cid) =>
-      evidenceSupportsClaim(input.registry, cid, eid),
+    const ev = input.registry.evidence[eid];
+    if (!ev) continue;
+    assertEvidenceOwnedByClaims(
+      issues,
+      input.registry,
+      page.why_judgment_fits.claim_ids,
+      eid,
+      "why_judgment_fits",
     );
-    if (!owned) {
-      issues.push({
-        code: "claim_evidence_orphan",
-        detail: `why_judgment_fits 证据「${eid}」与所列 claim_ids 无归属关系`,
-        path: "why_judgment_fits",
-      });
+    if (ev.source_type === "personal_reading") {
+      assertPersonalReadingProvenance(
+        issues,
+        ev,
+        "why_judgment_fits.evidence_ids",
+        domains,
+        domainVersions,
+      );
+    }
+  }
+  {
+    const whyConfirm = CONFIRM_UPGRADE_RE.test(page.why_judgment_fits.text);
+    for (const fid of page.why_judgment_fits.reality_fact_ids ?? []) {
+      const canonical = resolveAndCheckFactId(
+        issues,
+        fid,
+        "why_judgment_fits.reality_fact_ids",
+        factCtx,
+        input.factStatusById,
+        "any",
+        { confirmLanguage: whyConfirm, textPath: "why_judgment_fits.text" },
+      );
+      if (!canonical) continue;
+      assertEvidenceOwnedByClaims(
+        issues,
+        input.registry,
+        page.why_judgment_fits.claim_ids,
+        factEvidenceIdFor(canonical),
+        "why_judgment_fits.reality_fact_ids",
+      );
     }
   }
 
-  // --- explanation_boundary: structured refs + empty-ok ---
+  // --- explanation_boundary ---
   const boundary = page.explanation_boundary;
   for (const eid of boundary.personal_analysis_evidence_ids ?? []) {
-    requireEvidenceRole(
+    const ev = requireEvidenceRole(
       issues,
       input.registry,
       eid,
       "personal_reading",
       "explanation_boundary.personal_analysis_evidence_ids",
     );
+    if (ev) {
+      assertPersonalReadingProvenance(
+        issues,
+        ev,
+        "explanation_boundary.personal_analysis_evidence_ids",
+        domains,
+        domainVersions,
+      );
+      assertEvidenceOwnedByAnyPage02Claim(
+        issues,
+        input.registry,
+        eid,
+        "explanation_boundary.personal_analysis_evidence_ids",
+      );
+    }
   }
   if (
     (boundary.personal_analysis_basis?.length ?? 0) > 0 &&
@@ -430,26 +778,21 @@ export function validateFace02Output(input: {
   }
 
   for (const fid of boundary.confirmed_fact_ids ?? []) {
-    const known =
-      input.knownFactIds?.has(fid) ||
-      input.knownFactIds?.has(`ev_fact_${fid}`) ||
-      Boolean(input.factStatusById?.has(fid));
-    if (!known) {
-      issues.push({
-        code: "missing_fact_id",
-        detail: `confirmed_fact_ids「${fid}」不在 Page02 slice`,
-        path: "explanation_boundary.confirmed_fact_ids",
-      });
-      continue;
-    }
-    const status = input.factStatusById?.get(fid);
-    if (status && status !== "confirmed") {
-      issues.push({
-        code: "fact_status_upgrade",
-        detail: `confirmed_fact_ids「${fid}」原始 status=${status}，不得列入已确认依据`,
-        path: "explanation_boundary.confirmed_fact_ids",
-      });
-    }
+    const canonical = resolveAndCheckFactId(
+      issues,
+      fid,
+      "explanation_boundary.confirmed_fact_ids",
+      factCtx,
+      input.factStatusById,
+      "require_confirmed",
+    );
+    if (!canonical) continue;
+    assertEvidenceOwnedByAnyPage02Claim(
+      issues,
+      input.registry,
+      factEvidenceIdFor(canonical),
+      "explanation_boundary.confirmed_fact_ids",
+    );
   }
   if (
     (boundary.confirmed_fact_basis?.length ?? 0) > 0 &&
@@ -478,29 +821,24 @@ export function validateFace02Output(input: {
   }
 
   for (const fid of boundary.hypothesis_fact_ids ?? []) {
-    const known =
-      input.knownFactIds?.has(fid) ||
-      input.knownFactIds?.has(`ev_fact_${fid}`) ||
-      Boolean(input.factStatusById?.has(fid));
-    if (!known) {
-      issues.push({
-        code: "missing_fact_id",
-        detail: `hypothesis_fact_ids「${fid}」不在 Page02 slice`,
-        path: "explanation_boundary.hypothesis_fact_ids",
-      });
-      continue;
-    }
-    const status = input.factStatusById?.get(fid);
-    if (status === "confirmed") {
-      issues.push({
-        code: "hypothesis_confirmed_collision",
-        detail: `hypothesis_fact_ids「${fid}」是 confirmed，不得标为假设`,
-        path: "explanation_boundary.hypothesis_fact_ids",
-      });
-    }
+    const canonical = resolveAndCheckFactId(
+      issues,
+      fid,
+      "explanation_boundary.hypothesis_fact_ids",
+      factCtx,
+      input.factStatusById,
+      "reject_confirmed",
+    );
+    if (!canonical) continue;
+    assertEvidenceOwnedByAnyPage02Claim(
+      issues,
+      input.registry,
+      factEvidenceIdFor(canonical),
+      "explanation_boundary.hypothesis_fact_ids",
+    );
   }
 
-  // Status upgrade across all visible fields
+  // Secondary text heuristic across visible fields
   const visiblePaths: Array<{ text: string; path: string }> = [
     { text: page.page_summary, path: "page_summary" },
     ...page.relevant_personal_factors.map((f, i) => ({
@@ -538,7 +876,6 @@ export function validateFace02Output(input: {
     );
   }
 
-  // At least one explanatory cite when registry has evidence.
   const registryEvCount = Object.keys(input.registry.evidence).length;
   const cited = new Set([
     ...page.relevant_personal_factors.flatMap((f) => f.evidence_ids),
@@ -553,5 +890,8 @@ export function validateFace02Output(input: {
   }
 
   if (issues.length) return { ok: false, issues };
-  return { ok: true, page };
+  return {
+    ok: true,
+    page: normalizeFace02FactIds(page, factCtx),
+  };
 }

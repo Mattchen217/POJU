@@ -21,6 +21,7 @@ export * from "./page02/validate";
 export * from "./page02/legacy-adapter";
 export * from "./page02/production";
 export * from "./page02/body-blob";
+export * from "./page02/fact-id";
 export * from "./registry-from-sources";
 export * from "./fact-relevance";
 export * from "./personal-domains";
