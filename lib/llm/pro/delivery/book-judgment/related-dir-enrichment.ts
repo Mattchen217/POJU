@@ -132,7 +132,13 @@ function emptyBinding(
   };
 }
 
-function collectLinkedDirIds(dc: DecisionContext): string[] {
+/**
+ * Canonical linked DIR set for enrichment certificates.
+ * Shared by enricher + certificate validator (exact set match required).
+ */
+export function computeLinkedDirIdsForRelatedDirEnrichment(
+  dc: DecisionContext,
+): string[] {
   const fact_selection = selectRealityFactsForPage01({
     dc,
     maxFacts: 24,
@@ -263,13 +269,17 @@ function resolveAuthorityAssignments(input: {
 /**
  * Enrich pack units with program-certified related_dir_ids + pack certificate.
  * Idempotent. Without DC or without authority edges → empty dirs + documented gap.
+ *
+ * `authority_edges` is a SYNTHETIC / future-seed resolver input only.
+ * Production BookJudgment generate + Face02 production MUST omit it.
+ * Hand-built edges are not proof of real Unit→DIR provenance.
  */
 export function enrichBookJudgmentRelatedDirIds(input: {
   pack: BookJudgmentPack;
   dc: DecisionContext | null | undefined;
   /**
-   * Program-proven unit→DIR edges only. Production must omit / pass [].
-   * Never derived from model text or ordinal slots.
+   * SYNTHETIC / future-seed only. Production callers must omit.
+   * Never derived from model text, pack mirrors, or ordinal slots.
    */
   authority_edges?: readonly ProgramUnitDirAuthorityEdge[];
 }): {
@@ -307,7 +317,7 @@ export function enrichBookJudgmentRelatedDirIds(input: {
     };
   }
 
-  const linked_dir_ids = collectLinkedDirIds(input.dc);
+  const linked_dir_ids = computeLinkedDirIdsForRelatedDirEnrichment(input.dc);
   const linkedSet = new Set(linked_dir_ids);
   const dirsById = activeDirsById(input.dc);
   const unitIds = new Set(scienceUnits.map((u) => u.id));

@@ -14,6 +14,8 @@ import {
   RELATED_DIR_ENRICHMENT_VERSION,
   MISSING_UNIT_DIR_AUTHORITY_REF,
   isAllowedAssociationBasis,
+  canonicalProgramUnitDirEdgeRef,
+  computeLinkedDirIdsForRelatedDirEnrichment,
   type RelatedDirEnrichmentCertificate,
   type RelatedDirEnrichmentBinding,
 } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
@@ -195,8 +197,23 @@ export type CertificateValidationOk = {
   bindingsByUnit: Map<string, RelatedDirEnrichmentBinding>;
 };
 
+function isPage02ScienceOrConvergenceUnit(unit: BookJudgmentUnit): boolean {
+  return (
+    (unit.track === "science" || unit.track === "convergence") &&
+    unit.serves_face.includes("02")
+  );
+}
+
+function sortedUniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+}
+
 /**
  * Full certificate gate — version/algorithm presence alone is insufficient.
+ * Non-empty bindings require exact canonical source_ref(unit, dir, basis).
+ * A matching string shape is not proof of real business provenance.
  */
 export function validateRelatedDirEnrichmentCertificate(input: {
   pack: BookJudgmentPack;
@@ -234,9 +251,26 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       );
     }
   }
+
+  const expectedLinked = computeLinkedDirIdsForRelatedDirEnrichment(input.dc);
   if (!Array.isArray(c.linked_dir_ids)) {
     reasons.push("reject:missing_linked_dir_ids");
+  } else {
+    const rawLinked = c.linked_dir_ids.map((d) => String(d).trim()).filter(Boolean);
+    if (rawLinked.length !== new Set(rawLinked).size) {
+      reasons.push("reject:duplicate_linked_dir_ids");
+    }
+    const certLinked = sortedUniqueStrings(rawLinked);
+    if (
+      certLinked.length !== expectedLinked.length ||
+      certLinked.some((id, i) => id !== expectedLinked[i])
+    ) {
+      reasons.push(
+        `reject:linked_dir_ids_mismatch:cert=${certLinked.join(",")}:dc=${expectedLinked.join(",")}`,
+      );
+    }
   }
+
   if (!("missing_authority" in c)) {
     reasons.push("reject:missing_missing_authority_field");
   } else if (
@@ -244,7 +278,13 @@ export function validateRelatedDirEnrichmentCertificate(input: {
     typeof c.missing_authority !== "string"
   ) {
     reasons.push("reject:bad_missing_authority_type");
+  } else if (
+    typeof c.missing_authority === "string" &&
+    !c.missing_authority.trim()
+  ) {
+    reasons.push("reject:empty_missing_authority_string");
   }
+
   if (!Array.isArray(c.bindings)) {
     reasons.push("reject:missing_bindings");
     return { ok: false, reasons };
@@ -254,10 +294,11 @@ export function validateRelatedDirEnrichmentCertificate(input: {
   for (const u of input.pack.units) unitsById.set(u.id, u);
 
   const dirsById = activeDirsById(input.dc);
-  const linkedDirs = linkedStructuredDirIds(input);
+  const linkedDirs = new Set(expectedLinked);
   const seenUnits = new Set<string>();
   const dirOwners = new Map<string, string>();
   const bindingsByUnit = new Map<string, RelatedDirEnrichmentBinding>();
+  let nonemptyBindingCount = 0;
 
   for (const raw of c.bindings) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -276,8 +317,13 @@ export function validateRelatedDirEnrichmentCertificate(input: {
     }
     seenUnits.add(unit_id);
 
-    if (!unitsById.has(unit_id)) {
+    const unit = unitsById.get(unit_id);
+    if (!unit) {
       reasons.push(`reject:unknown_unit:${unit_id}`);
+      continue;
+    }
+    if (!isPage02ScienceOrConvergenceUnit(unit)) {
+      reasons.push(`reject:unit_not_page02_science:${unit_id}`);
       continue;
     }
 
@@ -293,12 +339,17 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       );
       continue;
     }
-    const association_basis = b.association_basis as RelatedDirEnrichmentBinding["association_basis"];
+    const association_basis =
+      b.association_basis as RelatedDirEnrichmentBinding["association_basis"];
     const rawDirs = Array.isArray(b.related_dir_ids)
       ? b.related_dir_ids.map((d) => String(d).trim()).filter(Boolean)
       : null;
     if (!rawDirs) {
       reasons.push(`reject:bad_related_dir_ids:${unit_id}`);
+      continue;
+    }
+    if (rawDirs.length !== new Set(rawDirs).size) {
+      reasons.push(`reject:duplicate_dir_in_binding:${unit_id}`);
       continue;
     }
     const bindingReasons = Array.isArray(b.reasons)
@@ -310,8 +361,8 @@ export function validateRelatedDirEnrichmentCertificate(input: {
         reasons.push(`reject:empty_dirs_non_none_basis:${unit_id}`);
         continue;
       }
-      if (!source_ref.startsWith("missing:")) {
-        reasons.push(`reject:empty_dirs_non_missing_ref:${unit_id}`);
+      if (source_ref !== MISSING_UNIT_DIR_AUTHORITY_REF) {
+        reasons.push(`reject:empty_dirs_bad_source_ref:${unit_id}`);
         continue;
       }
       bindingsByUnit.set(unit_id, {
@@ -324,11 +375,7 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       continue;
     }
 
-    // Non-empty: require real authority, not missing:* placeholder.
-    if (source_ref === MISSING_UNIT_DIR_AUTHORITY_REF || source_ref.startsWith("missing:")) {
-      reasons.push(`reject:nonempty_with_missing_ref:${unit_id}`);
-      continue;
-    }
+    // Non-empty: singleton DIR + exact canonical source_ref (shape ≠ provenance proof).
     if (association_basis === "none") {
       reasons.push(`reject:nonempty_with_none_basis:${unit_id}`);
       continue;
@@ -337,43 +384,63 @@ export function validateRelatedDirEnrichmentCertificate(input: {
       reasons.push(`reject:unsupported_basis:${unit_id}:${association_basis}`);
       continue;
     }
-
-    const certified: string[] = [];
-    let dirFail = false;
-    for (const dirId of rawDirs) {
-      if (!dirsById.has(dirId)) {
-        reasons.push(`reject_inactive_or_missing:${dirId}`);
-        dirFail = true;
-        continue;
-      }
-      if (!linkedDirs.has(dirId)) {
-        reasons.push(`reject_not_linked:${dirId}`);
-        dirFail = true;
-        continue;
-      }
-      const priorOwner = dirOwners.get(dirId);
-      if (priorOwner && priorOwner !== unit_id) {
-        reasons.push(
-          `reject:illegal_multi_claim_dir:${dirId}:units=${priorOwner},${unit_id}`,
-        );
-        dirFail = true;
-        continue;
-      }
-      dirOwners.set(dirId, unit_id);
-      certified.push(dirId);
-    }
-    if (dirFail || certified.length !== rawDirs.length) {
-      // Any invalid DIR in a non-empty binding voids the whole certificate.
+    if (rawDirs.length !== 1) {
+      reasons.push(
+        `reject:nonempty_must_be_singleton_dir:${unit_id}:n=${rawDirs.length}`,
+      );
       continue;
     }
+    const dirId = rawDirs[0]!;
+    const expectedRef = canonicalProgramUnitDirEdgeRef({
+      unit_id,
+      dir_id: dirId,
+      association_basis,
+    });
+    if (source_ref !== expectedRef) {
+      reasons.push(
+        `reject:source_ref_mismatch:${unit_id}:got=${source_ref}:expected=${expectedRef}`,
+      );
+      continue;
+    }
+    if (!dirsById.has(dirId)) {
+      reasons.push(`reject_inactive_or_missing:${dirId}`);
+      continue;
+    }
+    if (!linkedDirs.has(dirId)) {
+      reasons.push(`reject_not_linked:${dirId}`);
+      continue;
+    }
+    const priorOwner = dirOwners.get(dirId);
+    if (priorOwner && priorOwner !== unit_id) {
+      reasons.push(
+        `reject:illegal_multi_claim_dir:${dirId}:units=${priorOwner},${unit_id}`,
+      );
+      continue;
+    }
+    dirOwners.set(dirId, unit_id);
+    nonemptyBindingCount += 1;
 
     bindingsByUnit.set(unit_id, {
       unit_id,
-      related_dir_ids: certified,
+      related_dir_ids: [dirId],
       source_ref,
       association_basis,
       reasons: bindingReasons,
     });
+  }
+
+  // missing_authority must agree with binding occupancy.
+  if (!reasons.some((r) => r.startsWith("reject:bad_missing_authority") || r === "reject:missing_missing_authority_field" || r === "reject:empty_missing_authority_string")) {
+    const ma = c.missing_authority;
+    if (nonemptyBindingCount > 0) {
+      if (ma !== null) {
+        reasons.push(
+          `reject:missing_authority_with_nonempty_bindings:${String(ma)}`,
+        );
+      }
+    } else if (ma === null) {
+      reasons.push("reject:missing_authority_null_while_all_empty");
+    }
   }
 
   if (reasons.length) {

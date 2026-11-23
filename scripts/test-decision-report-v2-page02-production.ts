@@ -35,6 +35,7 @@ import {
   enrichBookJudgmentRelatedDirIds,
   canonicalProgramUnitDirEdgeRef,
   RELATED_DIR_ENRICHMENT_ALGORITHM,
+  MISSING_UNIT_DIR_AUTHORITY_REF,
   type ProgramUnitDirAuthorityEdge,
 } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
 import { validateRelatedDirEnrichmentCertificate } from "@/lib/llm/pro/delivery/decision-report-v2/page02/credible-fact-claim";
@@ -44,8 +45,13 @@ import { resolve as resolvePath } from "node:path";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+import type { Face02ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page02/production";
 
-function programEdge(
+/**
+ * SYNTHETIC edge builder for resolver unit tests only.
+ * NOT a production Unit→DIR authority source.
+ */
+function syntheticProgramEdge(
   unit_id: string,
   dir_id: string,
 ): ProgramUnitDirAuthorityEdge {
@@ -59,6 +65,44 @@ function programEdge(
       dir_id,
       association_basis,
     }),
+  };
+}
+
+/**
+ * SYNTHETIC overlay: exercise enrich→binding→pair plumbing with hand-built edges.
+ * Does NOT go through the production entry; production never accepts edges.
+ */
+function overlaySyntheticAuthority(
+  base: Face02ProductionContext,
+  pack: BookJudgmentPack,
+  edges: readonly ProgramUnitDirAuthorityEdge[],
+): Face02ProductionContext {
+  const { pack: enriched } = enrichBookJudgmentRelatedDirIds({
+    pack,
+    dc,
+    authority_edges: edges,
+  });
+  const trusted = buildTrustedClaimDirBindings({
+    pack: enriched,
+    dc,
+    fact_selection: base.fact_selection,
+    registry: base.registry,
+  });
+  certifyClaimDirBindings({
+    registry: base.registry,
+    trustedBindings: trusted,
+  });
+  const credible = buildCrediblePage02FactClaimPairs({
+    registry: base.registry,
+    fact_selection: base.fact_selection,
+    dc,
+    trustedBindings: trusted,
+  });
+  return {
+    ...base,
+    trusted_claim_dir_bindings: trusted,
+    credible_fact_claim_pairs: credible.pairs,
+    credible_fact_claim_keys: credible.pairKeys,
   };
 }
 
@@ -416,31 +460,38 @@ for (const claim of Object.values(ctx.registry.claims)) {
 }
 console.log("structured-pair baseline PASS (empty without authority)");
 
-/** Semantic edges opposite of ID-sort ordinal (u_science_02 < offer; DIR_OFFER < RUNWAY). */
-const semanticAuthorityEdges: ProgramUnitDirAuthorityEdge[] = [
-  programEdge("u_science_02", "DIR_RUNWAY"),
-  programEdge("u_science_offer_02", "DIR_OFFER"),
+/**
+ * SYNTHETIC edges (anti-ordinal). Resolver unit harness only —
+ * NOT production Unit→DIR provenance.
+ */
+const syntheticSemanticEdges: ProgramUnitDirAuthorityEdge[] = [
+  syntheticProgramEdge("u_science_02", "DIR_RUNWAY"),
+  syntheticProgramEdge("u_science_offer_02", "DIR_OFFER"),
 ];
 
-const builtWithAuthority = buildFace02ProductionContext({
-  report_id: "job_face02_with_authority",
+// Fresh production ctx so SYNTHETIC overlay does not mutate shared `ctx` registry.
+const builtForSynthetic = buildFace02ProductionContext({
+  report_id: "job_face02_synthetic_overlay_base",
   locale: "en",
   dc,
   pack: makePack({ bazi: true, ziwei: false }),
   chart_fact_pack: "日主甲木…",
   page01: page01Schema,
-  related_dir_authority_edges: semanticAuthorityEdges,
 });
-assert.equal(builtWithAuthority.ok, true);
-if (!builtWithAuthority.ok) throw new Error(builtWithAuthority.reason);
-const ctxAuth = builtWithAuthority.ctx;
+assert.equal(builtForSynthetic.ok, true);
+if (!builtForSynthetic.ok) throw new Error(builtForSynthetic.reason);
+const ctxAuth = overlaySyntheticAuthority(
+  builtForSynthetic.ctx,
+  makePack({ bazi: true, ziwei: false }),
+  syntheticSemanticEdges,
+);
 assert.ok(
   ctxAuth.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
-  "authority: science_02 → DIR_RUNWAY → runway (NOT ordinal OFFER)",
+  "SYNTHETIC resolver: science_02 → DIR_RUNWAY → runway",
 );
 assert.ok(
   ctxAuth.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
-  "authority: offer → DIR_OFFER → salary guess",
+  "SYNTHETIC resolver: offer → DIR_OFFER → salary guess",
 );
 assert.ok(
   !ctxAuth.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
@@ -450,7 +501,9 @@ assert.ok(
   !ctxAuth.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
   "no ordinal cross-pair",
 );
-console.log("authority-edge semantic pairs PASS");
+console.log(
+  "SYNTHETIC resolver semantic pairs PASS (not production authority)",
+);
 
 function validPage02(extra?: Partial<Record<string, unknown>>) {
   // Default happy path: no reality_fact units — production has no Unit→DIR authority.
@@ -855,7 +908,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { certificate } = enrichBookJudgmentRelatedDirIds({
       pack: raw,
       dc,
-      authority_edges: semanticAuthorityEdges,
+      authority_edges: syntheticSemanticEdges,
     });
     const byUnit = new Map(
       certificate.bindings.map((b) => [b.unit_id, b.related_dir_ids]),
@@ -879,7 +932,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { certificate } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
-      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
     });
     const offerBind = certificate.bindings.find(
       (b) => b.unit_id === "u_science_offer_02",
@@ -900,8 +953,8 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
       authority_edges: [
-        programEdge("u_science_02", "DIR_RUNWAY"),
-        programEdge("u_science_offer_02", "DIR_RUNWAY"),
+        syntheticProgramEdge("u_science_02", "DIR_RUNWAY"),
+        syntheticProgramEdge("u_science_offer_02", "DIR_RUNWAY"),
       ],
     });
     for (const b of certificate.bindings) {
@@ -951,7 +1004,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { pack } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
-      authority_edges: semanticAuthorityEdges,
+      authority_edges: syntheticSemanticEdges,
     });
     const forged = structuredClone(pack);
     forged.related_dir_enrichment!.bindings.push({
@@ -987,7 +1040,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { pack } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
-      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
     });
     const forged = structuredClone(pack);
     const b = forged.related_dir_enrichment!.bindings.find(
@@ -1027,7 +1080,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { pack } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
-      authority_edges: semanticAuthorityEdges,
+      authority_edges: syntheticSemanticEdges,
     });
     const dcTampered = { ...dc, content_hash: "hash_tampered_other" };
     const seeded = seedEvidenceRegistryForFace02({
@@ -1058,7 +1111,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { pack } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
-      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
     });
     const forged = structuredClone(pack);
     const dup = {
@@ -1089,7 +1142,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     const { pack } = enrichBookJudgmentRelatedDirIds({
       pack: makePack({ bazi: true, ziwei: false }),
       dc,
-      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
     });
     const forged = structuredClone(pack);
     const b = forged.related_dir_enrichment!.bindings.find(
@@ -1330,7 +1383,248 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     assert.ok(v.reasons.some((r) => r.includes("reject:bad_algorithm")));
   }
 
-  console.log("structured-association negatives A–K PASS");
+  console.log("structured-association negatives A–K PASS (SYNTHETIC resolver notes)");
+}
+
+// --- R3 certificate validation closure A–J ---
+{
+  function seededFor(pack: BookJudgmentPack) {
+    return seedEvidenceRegistryForFace02({
+      dc,
+      pack,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+  }
+
+  function validatePack(pack: BookJudgmentPack) {
+    const seeded = seededFor(pack);
+    return validateRelatedDirEnrichmentCertificate({
+      pack,
+      dc,
+      fact_selection: seeded.fact_selection,
+      enrich: pack.related_dir_enrichment,
+    });
+  }
+
+  // A: source_ref mismatches unit/DIR
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.source_ref = canonicalProgramUnitDirEdgeRef({
+      unit_id: "u_science_02",
+      dir_id: "DIR_OFFER",
+      association_basis: "program_authority_edge",
+    });
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:source_ref_mismatch")));
+  }
+  console.log("R3-A PASS — source_ref unit/DIR mismatch");
+
+  // B: arbitrary nonempty source_ref string
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.source_ref = "looks_authoritative_but_arbitrary";
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:source_ref_mismatch")));
+  }
+  console.log("R3-B PASS — arbitrary source_ref rejected");
+
+  // C: linked_dir_ids ≠ current DC linked set
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    const forged = structuredClone(pack);
+    forged.related_dir_enrichment!.linked_dir_ids = ["DIR_NOT_FROM_DC"];
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:linked_dir_ids_mismatch")));
+  }
+  console.log("R3-C PASS — linked_dir_ids mismatch");
+
+  // D: duplicate DIR inside one binding
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.related_dir_ids = ["DIR_RUNWAY", "DIR_RUNWAY"];
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(
+      v.reasons.some(
+        (r) =>
+          r.includes("reject:duplicate_dir_in_binding") ||
+          r.includes("reject:nonempty_must_be_singleton_dir"),
+      ),
+    );
+  }
+  console.log("R3-D PASS — duplicate DIR in binding");
+
+  // E: missing_authority set while nonempty binding present
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    forged.related_dir_enrichment!.missing_authority = "no_program_unit_dir_edges";
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(
+      v.reasons.some((r) =>
+        r.includes("reject:missing_authority_with_nonempty_bindings"),
+      ),
+    );
+  }
+  console.log("R3-E PASS — missing_authority vs nonempty contradiction");
+
+  // F: empty binding with non-none basis
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.association_basis = "program_authority_edge";
+    b.source_ref = MISSING_UNIT_DIR_AUTHORITY_REF;
+    b.related_dir_ids = [];
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:empty_dirs_non_none_basis")));
+  }
+  console.log("R3-F PASS — empty + non-none basis");
+
+  // G: nonempty binding with none basis
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [syntheticProgramEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.association_basis = "none";
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:nonempty_with_none_basis")));
+  }
+  console.log("R3-G PASS — nonempty + none basis");
+
+  // H: non Page02 science/convergence unit in certificate
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    const forged = structuredClone(pack);
+    forged.related_dir_enrichment!.bindings.push({
+      unit_id: "u_destiny_02",
+      related_dir_ids: [],
+      source_ref: MISSING_UNIT_DIR_AUTHORITY_REF,
+      association_basis: "none",
+      reasons: ["forged_destiny"],
+    });
+    const v = validatePack(forged);
+    assert.equal(v.ok, false);
+    assert.ok(
+      v.reasons.some((r) => r.includes("reject:unit_not_page02_science")),
+    );
+  }
+  console.log("R3-H PASS — non Page02 science unit rejected");
+
+  // I: hand-built edges cannot authorize via production entry
+  {
+    const pre = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: syntheticSemanticEdges,
+    }).pack;
+    assert.ok(
+      pre.related_dir_enrichment!.bindings.some(
+        (b) => b.related_dir_ids.length > 0,
+      ),
+      "precondition: SYNTHETIC enrich can bind",
+    );
+    const prod = buildFace02ProductionContext({
+      report_id: "r3_prod_blocks_edges",
+      locale: "en",
+      dc,
+      pack: pre,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(prod.ok, true);
+    if (!prod.ok) throw new Error(prod.reason);
+    assert.equal(
+      prod.ctx.credible_fact_claim_keys.size,
+      0,
+      "production entry must wipe pre-enriched SYNTHETIC bindings",
+    );
+    for (const b of prod.ctx.trusted_claim_dir_bindings.values()) {
+      assert.deepEqual(b.related_dir_ids, []);
+    }
+    // Production API must not expose an edges knob.
+    assert.equal(
+      "related_dir_authority_edges" in (buildFace02ProductionContext as object),
+      false,
+    );
+  }
+  console.log("R3-I PASS — production entry blocks hand-built edges");
+
+  // J: production with no real authority → all bindings empty
+  {
+    assert.equal(ctx.credible_fact_claim_keys.size, 0);
+    for (const b of ctx.trusted_claim_dir_bindings.values()) {
+      assert.deepEqual(b.related_dir_ids, []);
+    }
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    assert.ok(certificate.missing_authority);
+    assert.ok(certificate.bindings.every((b) => b.related_dir_ids.length === 0));
+    assert.ok(
+      certificate.bindings.every(
+        (b) =>
+          b.source_ref === MISSING_UNIT_DIR_AUTHORITY_REF &&
+          b.association_basis === "none",
+      ),
+    );
+  }
+  console.log("R3-J PASS — production empty without real authority");
+
+  console.log("R3 certificate validation closure A–J PASS");
 }
 
 // Non-confirmed reality_fact in summary without hypothesis boundary → reject

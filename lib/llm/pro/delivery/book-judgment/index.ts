@@ -60,6 +60,7 @@ export {
 } from "./generate";
 export {
   enrichBookJudgmentRelatedDirIds,
+  computeLinkedDirIdsForRelatedDirEnrichment,
   isRelatedDirEnrichmentCertificate,
   isAllowedAssociationBasis,
   canonicalProgramUnitDirEdgeRef,
