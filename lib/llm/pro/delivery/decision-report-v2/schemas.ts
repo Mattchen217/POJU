@@ -517,6 +517,7 @@ export const Face04ContentUnitSchema = z.discriminatedUnion("kind", [
     text: NonEmpty.max(720),
     claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
     evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
   }),
   z.object({
     unit_id: NonEmpty.max(80),
@@ -524,6 +525,7 @@ export const Face04ContentUnitSchema = z.discriminatedUnion("kind", [
     text: NonEmpty.max(720),
     claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
     evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
   }),
   z.object({
     unit_id: NonEmpty.max(80),
@@ -531,6 +533,7 @@ export const Face04ContentUnitSchema = z.discriminatedUnion("kind", [
     text: NonEmpty.max(1200),
     claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
     evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
   }),
 ]);
 

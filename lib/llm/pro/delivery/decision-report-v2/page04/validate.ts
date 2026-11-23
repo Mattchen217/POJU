@@ -114,18 +114,18 @@ export function validateFace04Output(input: {
           continue;
         }
         const status = input.factStatusById?.get(fid);
-        if (
-          status &&
-          status !== "confirmed" &&
-          unit.kind === "manifestation"
-        ) {
-          // Manifestation may cite non-confirmed facts only with conditional framing;
-          // hard rule: never list them later as confirmed_fact_ids (checked below).
-          // If unit text claims confirmation while status isn't confirmed — flag.
-          if (/已确认|confirmed\s+fact|definitely\s+true/i.test(unit.text)) {
+        // All kinds that cite reality facts (bottleneck_label / manifestation /
+        // force_through_cost / leverage_point / evidence_note) — never upgrade
+        // unverified|unknown|declined|not_applicable|conflict into confirmed prose.
+        if (status && status !== "confirmed") {
+          if (
+            /已确认|确认为|confirmed\s+fact|is\s+confirmed|definitely\s+true/i.test(
+              unit.text,
+            )
+          ) {
             issues.push({
               code: "fact_status_upgrade",
-              detail: `unit ${unit.unit_id} treats fact ${fid} (${status}) as confirmed`,
+              detail: `unit ${unit.unit_id} (${unit.kind}) treats fact ${fid} (${status}) as confirmed`,
               path: unit.unit_id,
             });
           }

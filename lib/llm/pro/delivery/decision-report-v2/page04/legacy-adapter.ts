@@ -73,6 +73,7 @@ export function projectLegacyFace04ForDisplay(data: unknown): Face04V2 | null {
         text: (force || "（历史稿未提供硬顶成本说明）").slice(0, 720),
         claim_ids: ["legacy_claim_04"],
         evidence_ids: [],
+        related_reality_fact_ids: [],
       },
       {
         unit_id: "legacy_leverage",
@@ -80,6 +81,7 @@ export function projectLegacyFace04ForDisplay(data: unknown): Face04V2 | null {
         text: "（历史稿无独立撬动点字段；请结合依据折叠阅读）",
         claim_ids: ["legacy_claim_04"],
         evidence_ids: [],
+        related_reality_fact_ids: [],
       },
       {
         unit_id: "legacy_evidence",
@@ -87,6 +89,7 @@ export function projectLegacyFace04ForDisplay(data: unknown): Face04V2 | null {
         text: leg.evidence_fold.slice(0, 1200),
         claim_ids: ["legacy_claim_04"],
         evidence_ids: ["legacy_ev_04"],
+        related_reality_fact_ids: [],
       },
     ],
     bottleneck_naming_unit_ids: ["legacy_name"],

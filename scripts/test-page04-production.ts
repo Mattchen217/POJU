@@ -125,6 +125,24 @@ const dc: DecisionContext = {
       source_turn_id: "t3",
       user_confirmed: false,
     },
+    {
+      fact_id: "fact_unknown",
+      statement: "Partner stake share unknown.",
+      status: "unknown",
+      verification_level: "none",
+      source_stage: "collecting",
+      source_turn_id: "t4",
+      user_confirmed: false,
+    },
+    {
+      fact_id: "fact_na",
+      statement: "Visa timeline not applicable to this case.",
+      status: "not_applicable",
+      verification_level: "none",
+      source_stage: "collecting",
+      source_turn_id: "t5",
+      user_confirmed: false,
+    },
   ],
   dirs: [],
   conflicts: [
@@ -604,6 +622,8 @@ async function main() {
     for (const badId of [
       "fact_salary_guess",
       "fact_declined",
+      "fact_unknown",
+      "fact_na",
     ] as const) {
       const upgrade = validateFace04Output({
         raw: validFace04Raw({
@@ -626,6 +646,75 @@ async function main() {
           upgrade.issues.some(
             (i) => i.code === "confirmed_fact_status_mismatch",
           ),
+      );
+    }
+
+    // Fact-status upgrade prose must be rejected on every unit kind that can cite facts
+    // (not only manifestation).
+    const nonConfirmedFacts = [
+      "fact_salary_guess",
+      "fact_declined",
+      "fact_unknown",
+      "fact_na",
+    ] as const;
+    const unitKindsToGuard = [
+      {
+        kind: "bottleneck_label",
+        unit_id: "u_name",
+        text: "Cash-floor panic is a confirmed fact under offer pressure.",
+      },
+      {
+        kind: "force_through_cost",
+        unit_id: "u_force",
+        text: "Forcing through is confirmed fact cost when salary guess is treated as settled.",
+      },
+      {
+        kind: "leverage_point",
+        unit_id: "u_lev",
+        text: "Leverage rests on the confirmed fact of partner stake share.",
+      },
+      {
+        kind: "evidence_note",
+        unit_id: "u_ev",
+        text: "Evidence note treats the declined equity detail as a confirmed fact.",
+      },
+    ] as const;
+    for (let i = 0; i < unitKindsToGuard.length; i++) {
+      const row = unitKindsToGuard[i]!;
+      const factId = nonConfirmedFacts[i]!;
+      const units = (
+        validFace04Raw().content_units as Array<Record<string, unknown>>
+      ).map((u) =>
+        u.unit_id === row.unit_id
+          ? {
+              ...u,
+              kind: row.kind,
+              text: row.text,
+              related_reality_fact_ids: [factId],
+            }
+          : u,
+      );
+      const upgradedKind = validateFace04Output({
+        raw: validFace04Raw({ content_units: units }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: ctx.knownFactIds,
+        factStatusById: ctx.factStatusById,
+      });
+      assert.equal(
+        upgradedKind.ok,
+        false,
+        `expected fact_status_upgrade for ${row.kind} citing ${factId}`,
+      );
+      assert.ok(
+        upgradedKind.ok === false &&
+          upgradedKind.issues.some(
+            (iss) =>
+              iss.code === "fact_status_upgrade" &&
+              String(iss.detail).includes(row.kind) &&
+              String(iss.detail).includes(factId),
+          ),
+        `missing fact_status_upgrade for ${row.kind}`,
       );
     }
 
