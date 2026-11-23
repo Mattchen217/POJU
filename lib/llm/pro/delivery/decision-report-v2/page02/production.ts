@@ -24,54 +24,15 @@ import {
   type Page02FeedSlice,
 } from "./slice";
 import { validateFace02Output, type Face02Issue } from "./validate";
-import type { EvidenceRegistry, ReportClaim } from "../types";
+import type { EvidenceRegistry } from "../types";
 import { faceFillShapeSkeleton } from "@/lib/llm/pro/delivery/page-schema/face-types";
 import { collectFace02RealizedEvidenceIds } from "./body-blob";
 import { isFace01V2 } from "../page01/legacy-adapter";
 import type { Face01V2 } from "../schemas";
-
-/**
- * Link selected reality-fact evidence onto Page02 claims.
- * Prefer claims that already carry personal readings; when none exist
- * (no personal domain), fall back to all Page02 claims so confirmed-fact
- * ownership still works without synthetic claims. Science-only claims stay
- * unlinked while personal claims exist — unrelated claim/fact pairs fail.
- */
-export function linkPage02RealityFactsToOwningClaims(
-  registry: EvidenceRegistry,
-): void {
-  const factEvs = Object.values(registry.evidence).filter(
-    (e) => e.source_type === "reality_fact",
-  );
-  if (!factEvs.length) return;
-
-  const claimOwnsPersonal = (claim: ReportClaim): boolean => {
-    if (
-      claim.claim_type === "personal_interpretation" ||
-      claim.claim_type === "recommendation"
-    ) {
-      return true;
-    }
-    return claim.evidence_ids.some(
-      (id) => registry.evidence[id]?.source_type === "personal_reading",
-    );
-  };
-
-  const allClaims = Object.values(registry.claims);
-  const personalClaims = allClaims.filter(claimOwnsPersonal);
-  const targets = personalClaims.length > 0 ? personalClaims : allClaims;
-
-  for (const claim of targets) {
-    for (const fe of factEvs) {
-      if (!claim.evidence_ids.includes(fe.evidence_id)) {
-        claim.evidence_ids.push(fe.evidence_id);
-      }
-      if (!fe.supports_claim_ids.includes(claim.claim_id)) {
-        fe.supports_claim_ids.push(claim.claim_id);
-      }
-    }
-  }
-}
+import {
+  buildCrediblePage02FactClaimPairs,
+  type CredibleFactClaimPair,
+} from "./credible-fact-claim";
 
 export const FACE02_PROMPT_VERSION = "face02-v2-prod-2026-11-22" as const;
 export const FACE02_SCHEMA_VERSION = "face02-v2" as const;
@@ -92,6 +53,12 @@ export type Face02ProductionContext = {
   profile_version: string;
   domain_versions: { bazi?: string; ziwei?: string };
   page01_core_judgment: string | null;
+  /**
+   * Read-only DC-credible (claim, fact) pairs. Never written into
+   * claim.evidence_ids / evidence.supports_claim_ids.
+   */
+  credible_fact_claim_pairs: CredibleFactClaimPair[];
+  credible_fact_claim_keys: Set<string>;
 };
 
 export type Face02ProductionBuildFail = {
@@ -230,21 +197,14 @@ export function buildFace02ProductionContext(input: {
     .slice(0, 12);
 
   const restricted = restrictRegistryToPage02Slice({ seeded, slice });
-  linkPage02RealityFactsToOwningClaims(restricted.registry);
+  // Do NOT mutate registry fact↔claim links. Credible pairs are read-only.
+  const credible = buildCrediblePage02FactClaimPairs({
+    registry: restricted.registry,
+    fact_selection: seeded.fact_selection,
+  });
   slice = {
     ...restricted.slice,
     page01_judgment_context: slice.page01_judgment_context,
-    evidence_registry: {
-      ...restricted.slice.evidence_registry,
-      evidence: restricted.slice.evidence_registry.evidence.map((e) => {
-        const live = restricted.registry.evidence[e.evidence_id];
-        if (!live) return e;
-        return {
-          ...e,
-          supports_claim_ids: [...live.supports_claim_ids],
-        };
-      }),
-    },
   };
 
   const oversized = page02SliceLooksOversized(slice);
@@ -293,6 +253,8 @@ export function buildFace02ProductionContext(input: {
       profile_version: domains.profile_version,
       domain_versions: domains.domain_versions,
       page01_core_judgment: page01_core,
+      credible_fact_claim_pairs: credible.pairs,
+      credible_fact_claim_keys: credible.pairKeys,
     },
   };
 }
@@ -334,6 +296,7 @@ export function validateFace02ProductionOutput(input: {
     available_domains: input.ctx.available_domains,
     domain_versions: input.ctx.domain_versions,
     page01_core_judgment: input.ctx.page01_core_judgment,
+    credibleFactClaimKeys: input.ctx.credible_fact_claim_keys,
   });
   if (!result.ok) {
     return {

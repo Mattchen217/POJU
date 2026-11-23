@@ -266,6 +266,7 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
         ...base,
         schema_version: "face02-v2",
         page_summary: "",
+        page_summary_claim_ids: [""],
         page_summary_reality_fact_ids: [],
         relevant_personal_factors: [
           {
@@ -296,6 +297,7 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
           page01_judgment_ref: "",
         },
         explanation_boundary: {
+          claim_ids: [""],
           personal_analysis_basis: [],
           confirmed_fact_basis: [],
           hypothesis_notes: [],

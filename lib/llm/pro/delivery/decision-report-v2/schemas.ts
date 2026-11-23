@@ -236,14 +236,14 @@ export const Face02V2Schema = z.object({
   page_title: z.string().trim().max(56).optional().default(""),
   page_subtitle: z.string().trim().max(80).optional().default(""),
   page_summary: NonEmpty.max(360),
+  /** Claims this summary explains — required structured association. */
+  page_summary_claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
   /**
-   * Structured DC fact refs for page_summary when it asserts user reality.
-   * Optional / empty when the summary makes no concrete DC-fact claim.
+   * Structured DC fact refs for page_summary.
+   * Field must be present: [] = explicit “no DC fact asserted”; omitted = schema fail.
+   * Do not rely on defaults to treat missing as empty.
    */
-  page_summary_reality_fact_ids: z
-    .array(NonEmpty.max(120))
-    .max(8)
-    .default([]),
+  page_summary_reality_fact_ids: z.array(NonEmpty.max(120)).max(8),
   /** A · 与本题相关的个人结构（无可用个人域时允许空，禁止伪造） */
   relevant_personal_factors: z
     .array(
@@ -259,8 +259,8 @@ export const Face02V2Schema = z.object({
           "science",
           "convergence",
         ]),
-        /** Optional DC fact refs when the factor asserts user reality. */
-        reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
+        /** Required key; [] = explicit no DC-fact claim in this factor. */
+        reality_fact_ids: z.array(NonEmpty.max(120)).max(8),
       }),
     )
     .min(0)
@@ -284,25 +284,24 @@ export const Face02V2Schema = z.object({
     text: NonEmpty.max(960),
     claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
     evidence_ids: z.array(NonEmpty.max(80)).min(1).max(12),
-    /** Optional DC fact refs when the explanation asserts user reality. */
-    reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
+    /** Required key; [] = explicit no DC-fact claim in this section. */
+    reality_fact_ids: z.array(NonEmpty.max(120)).max(8),
     /** Short pointer to what Page01 judgment is being explained — not a full restatement. */
     page01_judgment_ref: z.string().trim().max(240).optional().default(""),
   }),
   explanation_boundary: z.object({
+    /** Claims this boundary explains — ownership is against these ids only. */
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
     /** Empty when no certified personal evidence exists — do not invent. */
     personal_analysis_basis: z.array(NonEmpty.max(240)).max(6).default([]),
     /** Empty when no confirmed DC facts exist — do not invent. */
     confirmed_fact_basis: z.array(NonEmpty.max(240)).max(6).default([]),
     hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
     uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(6),
-    /** Structured refs — validated against restricted Page02 registry/slice. */
-    personal_analysis_evidence_ids: z
-      .array(NonEmpty.max(80))
-      .max(12)
-      .default([]),
-    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
-    hypothesis_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    /** Structured refs — must belong to boundary.claim_ids (not any Page02 claim). */
+    personal_analysis_evidence_ids: z.array(NonEmpty.max(80)).max(12),
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12),
+    hypothesis_fact_ids: z.array(NonEmpty.max(120)).max(12),
   }),
   /** Explicit reading order of content blocks. */
   reading_order: z

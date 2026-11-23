@@ -44,6 +44,7 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
     page_title: leg.page_title,
     page_subtitle: leg.page_subtitle,
     page_summary: leg.convergence.slice(0, 360),
+    page_summary_claim_ids: ["legacy_claim"],
     page_summary_reality_fact_ids: [],
     relevant_personal_factors: [
       {
@@ -74,6 +75,7 @@ export function projectLegacyFace02ForDisplay(data: unknown): Face02V2 | null {
       page01_judgment_ref: "",
     },
     explanation_boundary: {
+      claim_ids: ["legacy_claim"],
       personal_analysis_basis: ["历史稿个人层投影"],
       confirmed_fact_basis: ["历史稿未拆分事实状态"],
       hypothesis_notes: ["历史稿未区分假设与事实"],

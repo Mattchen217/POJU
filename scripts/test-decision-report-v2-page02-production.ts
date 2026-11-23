@@ -176,8 +176,10 @@ function makePack(opts: {
   units.push({
     id: "u_science_02",
     track: "science",
-    claim: "Eight-month runway supports staged explore-without-resign.",
-    anchors: ["runway_months"],
+    // Explicit structured markers (fact_id / DIR) enable selective credible pairs.
+    claim:
+      "Eight-month runway supports staged explore-without-resign. fact_runway DIR_RUNWAY",
+    anchors: ["runway_months", "fact_runway"],
     serves_face: ["02"],
     term_ids: [],
     source_domain: "science",
@@ -348,38 +350,46 @@ const page01Schema = {
   assert.equal(built.ok, true, "D build");
   if (!built.ok) throw new Error(built.reason);
   assert.deepEqual(built.ctx.available_domains, []);
+  const dClaim =
+    Object.keys(built.ctx.registry.claims)[0] || "claim_missing";
+  const dEv =
+    Object.keys(built.ctx.registry.evidence)[0] || "missing";
   const invented = validateFace02ProductionOutput({
     raw: {
       page: "02",
       face: "02",
       schema_version: "face02-v2",
       page_summary: "Judgment fits because of personal chart destiny.",
+      page_summary_claim_ids: [dClaim],
+      page_summary_reality_fact_ids: [],
       relevant_personal_factors: [
         {
           factor_id: "fake",
           title: "Forged",
           text: "Invented bazi factor",
-          claim_ids: Object.keys(built.ctx.registry.claims).slice(0, 1).length
-            ? [Object.keys(built.ctx.registry.claims)[0]!]
-            : ["claim_missing"],
-          evidence_ids: Object.keys(built.ctx.registry.evidence).slice(0, 1).length
-            ? [Object.keys(built.ctx.registry.evidence)[0]!]
-            : ["missing"],
+          claim_ids: [dClaim],
+          evidence_ids: [dEv],
           source_domain: "bazi",
+          reality_fact_ids: [],
         },
       ],
       personal_reality_interplay: [],
       why_judgment_fits: {
         text: "Reality runway supports staged explore.",
-        claim_ids: Object.keys(built.ctx.registry.claims).slice(0, 1),
-        evidence_ids: Object.keys(built.ctx.registry.evidence).slice(0, 1),
+        claim_ids: [dClaim],
+        evidence_ids: [dEv],
+        reality_fact_ids: [],
         page01_judgment_ref: "",
       },
       explanation_boundary: {
+        claim_ids: [dClaim],
         personal_analysis_basis: ["none"],
         confirmed_fact_basis: ["runway"],
         hypothesis_notes: [],
         uncertainty_notes: ["limited personal data"],
+        personal_analysis_evidence_ids: [],
+        confirmed_fact_ids: [],
+        hypothesis_fact_ids: [],
       },
       reading_order: [
         "page_summary",
@@ -426,11 +436,7 @@ const sciClaimId =
       .filter(Boolean);
     return (
       evs.length > 0 &&
-      evs.every(
-        (e) =>
-          e!.source_type === "reality_mechanism" ||
-          e!.source_type === "reality_fact",
-      ) &&
+      evs.every((e) => e!.source_type === "reality_mechanism") &&
       !c.evidence_ids.includes(personalEv)
     );
   })?.claim_id ||
@@ -444,6 +450,23 @@ const unverifiedFactId =
   ctx.slice.reality_context.facts.find((f) => f.status === "unverified")
     ?.fact_id || "fact_salary_guess";
 
+// Destiny claim must NOT auto-own runway; science claim must via structured marker.
+assert.ok(
+  !ctx.credible_fact_claim_keys.has(`${claimId}::${factId}`),
+  "destiny claim must not auto-own runway fact",
+);
+assert.ok(
+  ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
+  "science claim must credibly own runway fact via marker",
+);
+// Registry must remain unmutated (no bulk fact supports).
+for (const claim of Object.values(ctx.registry.claims)) {
+  assert.ok(
+    !claim.evidence_ids.some((id) => id.startsWith("ev_fact_")),
+    "production must not append ev_fact_* onto claim.evidence_ids",
+  );
+}
+
 function validPage02(extra?: Partial<Record<string, unknown>>) {
   return {
     page: "02",
@@ -451,7 +474,8 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     schema_version: "face02-v2",
     page_summary:
       "Your preference for a stable cash floor explains why a staged explore fits this decision window.",
-    page_summary_reality_fact_ids: [factId],
+    page_summary_claim_ids: [claimId, sciClaimId],
+    page_summary_reality_fact_ids: [],
     relevant_personal_factors: [
       {
         factor_id: "f1",
@@ -469,22 +493,23 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         personal_evidence_ids: [personalEv],
         reality_fact_ids: [factId],
         mechanism_evidence_ids: [],
-        claim_ids: [claimId],
+        claim_ids: [claimId, sciClaimId],
         conditionality: "Holds while runway stays above six months.",
       },
     ],
     why_judgment_fits: {
-      text: "The judgment favors staged explore because your structure prioritizes a protected base and the confirmed runway makes that workable now.",
-      claim_ids: [claimId],
+      text: "The judgment favors staged explore because your structure prioritizes a protected base and the runway condition makes that workable now.",
+      claim_ids: [claimId, sciClaimId],
       evidence_ids: [personalEv],
       reality_fact_ids: [factId],
       page01_judgment_ref: "staged explore",
     },
     explanation_boundary: {
+      claim_ids: [claimId, sciClaimId],
       personal_analysis_basis: [
         "Certified personal reading on cash-floor preference",
       ],
-      confirmed_fact_basis: ["Confirmed runway fact"],
+      confirmed_fact_basis: ["Confirmed runway support for pacing"],
       hypothesis_notes: ["Salary figure remains an estimate"],
       uncertainty_notes: ["Offer terms may still shift"],
       personal_analysis_evidence_ids: [personalEv],
@@ -889,6 +914,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   const badIds = validateFace02ProductionOutput({
     raw: validPage02({
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [
           "Certified personal reading on cash-floor preference",
         ],
@@ -944,15 +970,19 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
       schema_version: "face02-v2",
       page_summary:
         "The staged explore direction fits the confirmed runway conditions for this decision.",
+      page_summary_claim_ids: [sciClaim],
+      page_summary_reality_fact_ids: [confFact],
       relevant_personal_factors: [],
       personal_reality_interplay: [],
       why_judgment_fits: {
         text: "Judgment fits because confirmed runway supports staged explore without resigning cold.",
         claim_ids: [sciClaim],
         evidence_ids: [sciEv],
+        reality_fact_ids: [confFact],
         page01_judgment_ref: "staged explore",
       },
       explanation_boundary: {
+       claim_ids: [sciClaim],
         personal_analysis_basis: [],
         confirmed_fact_basis: ["Confirmed runway supports pacing."],
         hypothesis_notes: [],
@@ -1003,6 +1033,13 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     builtNc.ctx.slice.evidence_registry.evidence.find(
       (e) => e.source_type === "personal_reading",
     )?.evidence_id!;
+  const sciNc =
+    Object.values(builtNc.ctx.registry.claims).find((c) =>
+      c.evidence_ids.some(
+        (id) =>
+          builtNc.ctx.registry.evidence[id]?.source_type === "reality_mechanism",
+      ),
+    )?.claim_id || cId;
   const ok = validateFace02ProductionOutput({
     raw: {
       page: "02",
@@ -1010,6 +1047,8 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
       schema_version: "face02-v2",
       page_summary:
         "Personal preference for a stable base still frames how options feel, with uncertainty retained.",
+      page_summary_claim_ids: [cId],
+      page_summary_reality_fact_ids: [],
       relevant_personal_factors: [
         {
           factor_id: "f1",
@@ -1018,6 +1057,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
           claim_ids: [cId],
           evidence_ids: [pEv],
           source_domain: "bazi",
+          reality_fact_ids: [],
         },
       ],
       personal_reality_interplay: [],
@@ -1025,9 +1065,11 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         text: "The judgment still tracks the protected-base preference while facts stay provisional.",
         claim_ids: [cId],
         evidence_ids: [pEv],
+        reality_fact_ids: [],
         page01_judgment_ref: "staged explore",
       },
       explanation_boundary: {
+       claim_ids: [cId],
         personal_analysis_basis: ["Certified personal reading"],
         confirmed_fact_basis: [],
         hypothesis_notes: ["Runway figure remains an estimate"],
@@ -1052,6 +1094,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     raw: {
       ...(ok.ok ? ok.page : {}),
       explanation_boundary: {
+       claim_ids: [sciNc],
         personal_analysis_basis: ["Certified personal reading"],
         confirmed_fact_basis: ["Invented confirmed runway"],
         hypothesis_notes: [],
@@ -1087,10 +1130,11 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   const ok = validateFace02ProductionOutput({
     raw: validPage02({
       explanation_boundary: {
+       claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [
           "Certified personal reading on cash-floor preference",
         ],
-        confirmed_fact_basis: ["Confirmed runway fact"],
+        confirmed_fact_basis: ["Confirmed runway support for pacing"],
         hypothesis_notes: ["Partner equity split remains a working hypothesis"],
         uncertainty_notes: ["Offer terms may still shift"],
         personal_analysis_evidence_ids: [personalEv],
@@ -1199,6 +1243,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         page01_judgment_ref: "staged explore",
       },
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: ["Certified personal reading"],
         confirmed_fact_basis: ["Confirmed runway fact"],
         hypothesis_notes: [],
@@ -1241,6 +1286,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   const badConfirmedAlias = validateFace02ProductionOutput({
     raw: validPage02({
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [
           "Certified personal reading on cash-floor preference",
         ],
@@ -1264,6 +1310,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   const badUnknown = validateFace02ProductionOutput({
     raw: validPage02({
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [
           "Certified personal reading on cash-floor preference",
         ],
@@ -1308,6 +1355,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   const badHyp = validateFace02ProductionOutput({
     raw: validPage02({
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [
           "Certified personal reading on cash-floor preference",
         ],
@@ -1428,6 +1476,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
       },
       relevant_personal_factors: [],
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [],
         confirmed_fact_basis: ["Confirmed runway fact"],
         hypothesis_notes: [],
@@ -1462,6 +1511,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         page01_judgment_ref: "staged explore",
       },
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: ["Certified personal reading"],
         confirmed_fact_basis: ["Confirmed runway fact"],
         hypothesis_notes: [],
@@ -1489,6 +1539,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
       page_summary: `The salary figure is a confirmed fact and definitely true: ${ctx.factContentById.get(unverifiedFactId)}`,
       page_summary_reality_fact_ids: [unverifiedFactId],
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: [
           "Certified personal reading on cash-floor preference",
         ],
@@ -1672,11 +1723,229 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
   );
 }
 
+// --- Reverse A: production path must NOT bulk-authorize facts onto all personal claims ---
+{
+  assert.ok(
+    !ctx.credible_fact_claim_keys.has(`${claimId}::${factId}`),
+    "A: destiny claim must not receive runway via bulk link",
+  );
+  assert.ok(
+    ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
+    "A: only science claim with structured marker owns runway",
+  );
+  for (const ev of Object.values(ctx.registry.evidence)) {
+    if (ev.source_type !== "reality_fact") continue;
+    for (const cid of ev.supports_claim_ids) {
+      assert.ok(
+        ctx.credible_fact_claim_keys.has(`${cid}::${ev.source_id}`),
+        `A: registry supports_claim_ids must not invent bulk pairs (${cid})`,
+      );
+    }
+  }
+  const badUnrelated = validateFace02ProductionOutput({
+    raw: validPage02({
+      personal_reality_interplay: [
+        {
+          text: "With about eight months runway available under protected base preference.",
+          personal_evidence_ids: [personalEv],
+          reality_fact_ids: [factId],
+          mechanism_evidence_ids: [],
+          claim_ids: [claimId],
+          conditionality: "Destiny-only claim cannot own runway fact.",
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badUnrelated.ok, false, "A: unrelated destiny claim+fact rejected");
+  console.log("reverse-A PASS — no bulk fact authorization; selective credible pairs only");
+}
+
+// --- Reverse B: structured fact ref omission ---
+{
+  const factContent = ctx.factContentById.get(factId)!;
+  const omitSummary = validateFace02ProductionOutput({
+    raw: validPage02({
+      page_summary: `Staged explore fits. ${factContent}`,
+      page_summary_reality_fact_ids: [],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(omitSummary.ok, false, "B: page_summary omits fact refs");
+
+  const omitFactor = validateFace02ProductionOutput({
+    raw: validPage02({
+      relevant_personal_factors: [
+        {
+          factor_id: "f1",
+          title: "Cash-floor preference",
+          text: `You protect a base. ${factContent}`,
+          claim_ids: [claimId, sciClaimId],
+          evidence_ids: [personalEv],
+          source_domain: "bazi",
+          reality_fact_ids: [],
+        },
+      ],
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(omitFactor.ok, false, "B: factor omits fact refs");
+
+  const omitWhy = validateFace02ProductionOutput({
+    raw: validPage02({
+      why_judgment_fits: {
+        text: `Judgment fits with this reality: ${factContent}`,
+        claim_ids: [claimId, sciClaimId],
+        evidence_ids: [personalEv],
+        reality_fact_ids: [],
+        page01_judgment_ref: "staged explore",
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(omitWhy.ok, false, "B: why omits fact refs");
+
+  const omitBoundary = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
+        personal_analysis_basis: [
+          "Certified personal reading on cash-floor preference",
+        ],
+        confirmed_fact_basis: [factContent],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(omitBoundary.ok, false, "B: boundary omits fact refs");
+
+  const purePersonal = validateFace02ProductionOutput({
+    raw: validPage02({
+      page_summary:
+        "Your preference for a stable cash floor explains why staged explore fits.",
+      page_summary_reality_fact_ids: [],
+      relevant_personal_factors: [
+        {
+          factor_id: "f1",
+          title: "Cash-floor preference",
+          text: "You tend to protect a stable base before stretching into uncertainty.",
+          claim_ids: [claimId],
+          evidence_ids: [personalEv],
+          source_domain: "bazi",
+          reality_fact_ids: [],
+        },
+      ],
+      personal_reality_interplay: [],
+      why_judgment_fits: {
+        text: "The judgment favors staged explore because your structure prioritizes a protected base.",
+        claim_ids: [claimId],
+        evidence_ids: [personalEv],
+        reality_fact_ids: [],
+        page01_judgment_ref: "staged explore",
+      },
+      explanation_boundary: {
+        claim_ids: [claimId],
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: [],
+        hypothesis_notes: [],
+        uncertainty_notes: ["No DC fact asserted in this pure personal explanation"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    purePersonal.ok,
+    true,
+    JSON.stringify(purePersonal.ok ? null : purePersonal.issues),
+  );
+  console.log("reverse-B PASS — omitted fact refs rejected; pure personal empty refs ok");
+}
+
+// --- Reverse C: boundary wrong ownership ---
+{
+  const badPersonal = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        claim_ids: [sciClaimId],
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: ["Confirmed runway support for pacing"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badPersonal.ok, false, "C: personal evidence on unrelated boundary claim");
+
+  const badConfirmed = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        claim_ids: [claimId],
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: ["Confirmed runway support for pacing"],
+        hypothesis_notes: [],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [factId],
+        hypothesis_fact_ids: [],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badConfirmed.ok, false, "C: confirmed fact on unrelated destiny-only claim");
+
+  const badHyp = validateFace02ProductionOutput({
+    raw: validPage02({
+      explanation_boundary: {
+        claim_ids: [claimId],
+        personal_analysis_basis: ["Certified personal reading"],
+        confirmed_fact_basis: [],
+        hypothesis_notes: ["Salary remains provisional"],
+        uncertainty_notes: ["x"],
+        personal_analysis_evidence_ids: [personalEv],
+        confirmed_fact_ids: [],
+        hypothesis_fact_ids: [unverifiedFactId],
+      },
+    }),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(badHyp.ok, false, "C: hypothesis fact on unrelated claim");
+
+  const okBound = validateFace02ProductionOutput({
+    raw: validPage02(),
+    locale: "en",
+    ctx,
+  });
+  assert.equal(okBound.ok, true, "C: correct boundary ownership passes");
+  console.log("reverse-C PASS — boundary wrong ownership rejected");
+}
+
 // --- UI/PDF parity: hypothesis_notes rendered ---
 {
   const ok = validateFace02ProductionOutput({
     raw: validPage02({
       explanation_boundary: {
+        claim_ids: [claimId, sciClaimId],
         personal_analysis_basis: ["Certified personal reading"],
         confirmed_fact_basis: ["Confirmed runway fact"],
         hypothesis_notes: ["UNIQUE_HYPOTHESIS_NOTE_FOR_PDF_TEST"],
