@@ -69,3 +69,13 @@ export {
   type Page02ArchitectureBuildOk,
   type Page02ArchitectureBuildFail,
 } from "./production-path";
+
+export {
+  page02SectionTitle,
+  resolvePage02ReadingOrder,
+  resolvePage02SectionUnitTexts,
+  resolvePage02SectionGapLines,
+  assemblePage02SectionsForDisplay,
+  assemblePage02PdfArgumentBodies,
+  type Page02AssembledSection,
+} from "./section-assembly";

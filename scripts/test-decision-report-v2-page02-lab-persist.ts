@@ -228,7 +228,121 @@ async function main() {
     const lab = await buildLabReadyForFace02Body();
     const art = lab.artifacts.by_page["02"]!;
     assert.equal(art.page_schema, undefined);
-    console.log("ok lab-persist offline (no schema written without live call)");
+
+    // Architecture persist/reload contract (no LLM): store canonical Face02V2
+    // with architecture fields via Lab store, reload, then Reader/PDF consume.
+    assert.equal(offlineCtx.ok, true);
+    if (!offlineCtx.ok) throw new Error(offlineCtx.reason);
+    const {
+      attachPage02ArchitectureToPage,
+      validatePage02CanonicalPage,
+      assemblePage02SectionsForDisplay,
+      assemblePage02PdfArgumentBodies,
+    } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/page02/architecture"
+    );
+    const { pageSchemaToArgumentBodies } = await import(
+      "@/lib/llm/pro/delivery/page-schema/render"
+    );
+    const fixturePage = {
+      page: "02",
+      face: "02",
+      schema_version: "face02-v2",
+      locale: "en",
+      content_units: [
+        {
+          unit_id: "u_summary",
+          kind: "conditional_explanation",
+          text: "Lab persist architecture summary.",
+          claim_ids: ["claim_u_sci_lab"],
+          evidence_ids: [],
+          related_reality_fact_unit_ids: [],
+        },
+        {
+          unit_id: "u_why",
+          kind: "conditional_explanation",
+          text: "Lab persist architecture why-fit.",
+          claim_ids: ["claim_u_sci_lab"],
+          evidence_ids: [],
+          related_reality_fact_unit_ids: [],
+        },
+      ],
+      page_summary_unit_ids: ["u_summary"],
+      relevant_personal_factor_unit_ids: [],
+      personal_reality_interplay_unit_ids: [],
+      why_judgment_fits_unit_ids: ["u_why"],
+      explanation_boundary: {
+        claim_ids: ["claim_u_sci_lab"],
+        personal_unit_ids: [],
+        confirmed_fact_unit_ids: [],
+        hypothesis_unit_ids: [],
+        uncertainty_notes: ["Persisted gap note"],
+      },
+      reading_order: [
+        "page_summary",
+        "relevant_personal_factors",
+        "personal_reality_interplay",
+        "why_judgment_fits",
+        "explanation_boundary",
+      ],
+    };
+    const attached = attachPage02ArchitectureToPage(
+      fixturePage as never,
+      {
+        ...offlineCtx.ctx.architecture,
+        generation_status: "generated_with_gaps",
+        generation_metadata: {
+          ...offlineCtx.ctx.architecture.generation_metadata,
+          llm_invoked: false,
+        },
+      },
+    );
+    lab.artifacts.by_page["02"] = {
+      ...lab.artifacts.by_page["02"],
+      page_schema: attached as never,
+      page_schema_pre_polish: structuredClone(attached) as never,
+    };
+    await saveDeliveryLab(lab);
+    const reloaded = await loadDeliveryLab(lab.lab_id);
+    assert.ok(reloaded);
+    const stored = reloaded!.artifacts.by_page["02"]?.page_schema as
+      | Record<string, unknown>
+      | undefined;
+    assert.ok(stored);
+    const validated = validatePage02CanonicalPage(stored);
+    assert.equal(validated.ok, true, "reloaded page must pass Face02 schema");
+    if (!validated.ok) throw new Error(validated.detail);
+    assert.ok(
+      Array.isArray(validated.page.missing_inputs) &&
+        validated.page.missing_inputs!.length >= 0,
+    );
+    assert.ok(Array.isArray(validated.page.input_manifest));
+    assert.ok(Array.isArray(validated.page.sections));
+    assert.equal(
+      validated.page.generation_status,
+      "generated_with_gaps",
+    );
+    const readerSections = assemblePage02SectionsForDisplay(
+      validated.page,
+      "en",
+    );
+    const pdfBodies = assemblePage02PdfArgumentBodies(validated.page, "en");
+    const renderBodies = pageSchemaToArgumentBodies(validated.page as never);
+    assert.equal(readerSections.length, pdfBodies.length);
+    assert.equal(readerSections.length, renderBodies.length);
+    for (let i = 0; i < readerSections.length; i++) {
+      const title = readerSections[i]!.title;
+      assert.ok(
+        pdfBodies[i]!.body.includes(`### ${title}`),
+        `pdfBodies[${i}] must use Reader title`,
+      );
+      assert.ok(
+        renderBodies[i]!.body.includes(`### ${title}`),
+        `pageSchemaToArgumentBodies[${i}] must use same assembly title`,
+      );
+    }
+    console.log("ARCH_PERSIST_RELOAD_OK");
+    console.log("ok lab-persist offline (architecture store/reload + Reader/PDF)");
     return;
   }
 

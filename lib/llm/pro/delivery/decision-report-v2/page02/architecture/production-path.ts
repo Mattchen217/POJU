@@ -158,7 +158,8 @@ export function buildPage02ArchitectureEnvelope(
 }
 
 /**
- * Full architecture production build — wires existing Face02 context + gap envelope.
+ * Thin wrapper over the UNIQUE production entry: buildFace02ProductionContext.
+ * Does NOT re-assemble architecture — consumes ctx.architecture only.
  * Does not invoke the model.
  */
 export function buildPage02ArchitectureProduction(input: {
@@ -199,47 +200,21 @@ export function buildPage02ArchitectureProduction(input: {
   }
 
   const ok = built as Face02ProductionBuildOk;
-  const snap: Page02ArchitectureInputSnapshot = {
-    report_id: input.report_id,
-    locale: input.locale,
-    dc: input.dc,
-    pack: input.pack ?? null,
-    page01_core_judgment: ok.ctx.page01_core_judgment,
-    available_domains: ok.ctx.available_domains,
-    approved_reading_count: ok.ctx.slice.personal_analysis.approved_readings.length,
-    registry_claim_count: Object.keys(ok.ctx.registry.claims).length,
-  };
-
-  const envelope = buildPage02ArchitectureEnvelope(snap, {
-    has_generated_page: false,
-    structure_ok: true,
-    llm_invoked: false,
-  });
-
+  const envelope = ok.ctx.architecture;
   const architecture_prompt_bundle = buildPage02ArchitecturePromptBundle({
     input_manifest: envelope.input_manifest,
     missing_inputs: envelope.missing_inputs,
     generation_status: envelope.generation_status,
   });
 
-  const blocking = envelope.generation_status === "blocked_on_required_inputs";
-  const may_invoke_llm = !blocking;
-
-  const system = [ok.ctx.system, "", architecture_prompt_bundle].join("\n");
-  const user = ok.ctx.user;
-
   return {
     ok: true,
     envelope,
-    ctx: {
-      ...ok.ctx,
-      system,
-      user,
-    },
+    ctx: ok.ctx,
     architecture_prompt_bundle,
-    system,
-    user,
-    may_invoke_llm,
+    system: ok.ctx.system,
+    user: ok.ctx.user,
+    may_invoke_llm: ok.ctx.may_invoke_llm,
   };
 }
 

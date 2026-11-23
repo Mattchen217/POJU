@@ -647,6 +647,30 @@ export async function runContentBodyGenerate(input: {
         face02_meta: { validation_issues: [{ detail: built.detail ?? built.reason }] },
       };
     }
+    // Architecture gate: required inputs missing → do NOT call the model.
+    if (!built.ctx.may_invoke_llm) {
+      const blocking = built.ctx.architecture.missing_inputs.filter(
+        (g) => g.handling === "defer_generation",
+      );
+      return {
+        ok: false,
+        reason: "face02_blocked_on_required_inputs",
+        tokens_used: 0,
+        face02_meta: {
+          prompt_version: built.ctx.prompt_version,
+          slice_summary: {
+            ...face02SliceSummary(built.ctx),
+            blocked: true,
+            blocking_gaps: blocking.map((g) => g.gap_id),
+          },
+          validation_issues: [
+            {
+              detail: `may_invoke_llm=false; generation_status=${built.ctx.architecture.generation_status}; gaps=${blocking.map((g) => g.field_id).join(",")}`,
+            },
+          ],
+        },
+      };
+    }
     face02Ctx = built.ctx;
   }
   const pageSlice = formatPageSliceFeed({

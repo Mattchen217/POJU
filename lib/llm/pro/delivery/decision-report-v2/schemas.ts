@@ -285,6 +285,12 @@ export const Face02V2Schema = z.object({
   page: z.literal("02"),
   face: z.literal("02"),
   schema_version: z.literal("face02-v2").default("face02-v2"),
+  /**
+   * Report locale stamped at production/attach time — Reader UI may override
+   * display locale; PDF `pageSchemaToArgumentBodies` reads this so titles/order
+   * match the same section-assembly SSOT (no hard-coded zh-only table).
+   */
+  locale: DecisionReportLocaleSchema.optional(),
   page_title: z.string().trim().max(56).optional().default(""),
   page_subtitle: z.string().trim().max(80).optional().default(""),
   /** Validated content units — sole body authority for V2 generation. */

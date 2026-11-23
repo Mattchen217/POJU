@@ -20,9 +20,14 @@ import {
   validatePage02CanonicalPage,
   page02TaskInterface,
   buildPage02ArchitecturePromptBundle,
+  assemblePage02SectionsForDisplay,
+  assemblePage02PdfArgumentBodies,
+  page02InputContractsForSection,
+  PAGE02_SECTION_IDS as SECTION_IDS,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page02/architecture";
 import { buildFace02ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page02/production";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
+import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { Face02V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
@@ -32,7 +37,10 @@ console.log("=== Page02 Batch1 architecture (no LLM quality claims) ===");
 assert.equal(PAGE02_SECTION_IDS.length, 5);
 assert.equal(PAGE02_SECTION_DEFINITIONS.length, 5);
 assert.equal(PAGE02_SECTION_CONTENT_SPECS.length, 5);
-assert.ok(PAGE02_INPUT_FIELD_CONTRACTS.length >= 8);
+assert.ok(
+  PAGE02_INPUT_FIELD_CONTRACTS.length >= 15,
+  "expanded per-section input contracts",
+);
 assert.equal(PAGE02_MODEL_TASKS.length, 2);
 assert.deepEqual(
   [...PAGE02_GAP_STATUSES].sort(),
@@ -402,7 +410,158 @@ const page01 = {
   console.log("H PASS — prompt templates cover all sections");
 }
 
-console.log("=== Page02 Batch1 architecture tests done (structure only) ===");
-console.log(
-  "SCOPE_NOTE: these tests prove architecture/data path — not model content accuracy or real-user E2E.",
-);
+// I: unique architecture entry — wrapper must equal production ctx.architecture
+{
+  const a = buildFace02ProductionContext({
+    report_id: "unique_entry",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01,
+  });
+  const b = buildPage02ArchitectureProduction({
+    report_id: "unique_entry",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01,
+  });
+  assert.equal(a.ok, true);
+  assert.equal(b.ok, true);
+  if (!a.ok || !b.ok) throw new Error("build fail");
+  assert.deepEqual(
+    a.ctx.architecture.missing_inputs.map((g) => g.gap_id).sort(),
+    b.envelope.missing_inputs.map((g) => g.gap_id).sort(),
+  );
+  assert.equal(a.ctx.may_invoke_llm, b.may_invoke_llm);
+  console.log("I PASS — single architecture assembly entry (no duplicate logic)");
+}
+
+// J–L moved into async main below for content-body await.
+
+async function runAsyncClosureChecks() {
+  // J: content-body hard-blocks LLM when may_invoke_llm=false
+  {
+    const blocked = await runContentBodyGenerate({
+      key: "02",
+      finalize: { "02": { core_conclusion: "" } } as never,
+      locale: "en",
+      session_id: "arch_block_llm",
+      report_id: "arch_block_llm",
+      decision_context_snapshot: {
+        ...dc,
+        definition: { ...dc.definition!, decision_question: "" },
+      } as DecisionContext,
+      book_judgment_pack: pack,
+      chart_fact_pack: "日主甲木…",
+      page01_schema: null,
+      dispatch_attempt: 1,
+    });
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.reason, "face02_blocked_on_required_inputs");
+    assert.equal(blocked.tokens_used, 0);
+    console.log("J PASS — content-body enforces may_invoke_llm (no LLM call)");
+  }
+
+  // K: Reader + PDF share section assembly order/titles
+  {
+    const built = buildFace02ProductionContext({
+      report_id: "reader_pdf",
+      locale: "zh",
+      dc,
+      pack,
+      chart_fact_pack: "日主甲木…",
+      page01,
+    });
+    assert.equal(built.ok, true);
+    if (!built.ok) throw new Error(built.reason);
+    const page = attachPage02ArchitectureToPage(
+      {
+        page: "02",
+        face: "02",
+        schema_version: "face02-v2",
+        content_units: [
+          {
+            unit_id: "u_summary",
+            kind: "conditional_explanation",
+            text: "摘要正文",
+            claim_ids: ["claim_u_science_02"],
+            evidence_ids: [],
+            related_reality_fact_unit_ids: [],
+          },
+          {
+            unit_id: "u_why",
+            kind: "conditional_explanation",
+            text: "适合解释",
+            claim_ids: ["claim_u_science_02"],
+            evidence_ids: [],
+            related_reality_fact_unit_ids: [],
+          },
+        ],
+        page_summary_unit_ids: ["u_summary"],
+        relevant_personal_factor_unit_ids: [],
+        personal_reality_interplay_unit_ids: [],
+        why_judgment_fits_unit_ids: ["u_why"],
+        explanation_boundary: {
+          claim_ids: ["claim_u_science_02"],
+          personal_unit_ids: [],
+          confirmed_fact_unit_ids: [],
+          hypothesis_unit_ids: [],
+          uncertainty_notes: ["边界说明"],
+        },
+        reading_order: [...PAGE02_SECTION_IDS],
+      } as Face02V2,
+      built.ctx.architecture,
+    );
+    const reader = assemblePage02SectionsForDisplay(page, "zh");
+    const pdf = assemblePage02PdfArgumentBodies(page, "zh");
+    assert.deepEqual(
+      reader.map((s) => s.section_id),
+      [...PAGE02_SECTION_IDS],
+    );
+    assert.equal(reader[0]?.title, "本页摘要");
+    assert.ok(pdf[0]?.body.startsWith("### 本页摘要"));
+    assert.equal(reader.length, pdf.length);
+    for (let i = 0; i < reader.length; i++) {
+      assert.ok(pdf[i]!.body.includes(`### ${reader[i]!.title}`));
+    }
+    console.log("K PASS — Reader/PDF shared section assembly");
+  }
+
+  // L: every section has ≥1 input contract
+  {
+    for (const id of SECTION_IDS) {
+      assert.ok(
+        page02InputContractsForSection(id).length >= 1,
+        `section ${id} needs input contracts`,
+      );
+    }
+    assert.ok(
+      PAGE02_INPUT_FIELD_CONTRACTS.some(
+        (c) => c.field_id === "personal_readings_payload",
+      ),
+    );
+    assert.ok(
+      PAGE02_INPUT_FIELD_CONTRACTS.some(
+        (c) => c.field_id === "confirmed_reality_facts_payload",
+      ),
+    );
+    console.log(
+      "L PASS — per-section input contracts complete enough for DI2 hints",
+    );
+  }
+}
+
+runAsyncClosureChecks()
+  .then(() => {
+    console.log("=== Page02 Batch1 architecture tests done (structure only) ===");
+    console.log(
+      "SCOPE_NOTE: these tests prove architecture/data path — not model content accuracy or real-user E2E.",
+    );
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

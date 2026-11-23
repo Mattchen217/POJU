@@ -5,6 +5,8 @@
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryArgument } from "@/lib/llm/pro/delivery/delivery-schema";
+import { assemblePage02PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page02/architecture/section-assembly";
+import type { Face02V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
   type DeliveryPageData,
@@ -162,94 +164,22 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       break;
     }
     case "02": {
-      // Titles from PAGE02_SECTION_DEFINITIONS — same SSOT as Reader.
-      const PAGE02_PDF_TITLES = {
-        page_summary: "本页摘要",
-        relevant_personal_factors: "与本题相关的个人结构",
-        personal_reality_interplay: "个人与现实的交汇",
-        why_judgment_fits: "为何适合本题判断",
-        explanation_boundary: "解释边界",
-      } as const;
-      const units = Array.isArray(p.content_units) ? p.content_units : [];
-      const byId = new Map<string, { kind?: string; text?: unknown; title?: unknown }>();
-      for (const u of units) {
-        if (!u || typeof u !== "object") continue;
-        const row = u as { unit_id?: unknown; kind?: string; text?: unknown; title?: unknown };
-        const id = String(row.unit_id ?? "").trim();
-        if (id) byId.set(id, row);
+      // Reader + PDF share assemblePage02PdfArgumentBodies (section SSOT).
+      // Locale comes from stamped Face02V2.locale (production attach); legacy
+      // pages without locale keep zh so titles stay stable for historical PDFs.
+      if (Array.isArray(p.content_units) && p.content_units.length) {
+        const locale = String(
+          (p as { locale?: unknown }).locale ?? "zh",
+        );
+        for (const arg of assemblePage02PdfArgumentBodies(
+          p as unknown as Face02V2,
+          locale,
+        )) {
+          out.push(arg);
+        }
+        break;
       }
-      const textsFor = (ids: unknown): string[] => {
-        if (!Array.isArray(ids)) return [];
-        return ids
-          .map((id) => {
-            const u = byId.get(String(id));
-            if (!u) return "";
-            const title = String(u.title ?? "").trim();
-            const text = String(u.text ?? "").trim();
-            return [title, text].filter(Boolean).join(" — ");
-          })
-          .filter(Boolean);
-      };
-      // Surface program missing_inputs in PDF so gaps are not silently dropped.
-      const gapNotes = Array.isArray(p.missing_inputs)
-        ? (p.missing_inputs as Array<{ status?: unknown; field_id?: unknown; affects_content?: unknown }>)
-            .map((g) => {
-              const status = String(g.status ?? "").trim();
-              const field = String(g.field_id ?? "").trim();
-              const affects = String(g.affects_content ?? "").trim();
-              if (!status || !field) return "";
-              return `[${status}] ${field}${affects ? `: ${affects}` : ""}`;
-            })
-            .filter(Boolean)
-        : [];
-      if (byId.size) {
-        for (const t of textsFor(p.page_summary_unit_ids)) {
-          const arg = push(PAGE02_PDF_TITLES.page_summary, t);
-          if (arg) out.push(arg);
-        }
-        for (const t of textsFor(p.relevant_personal_factor_unit_ids)) {
-          const arg = push(PAGE02_PDF_TITLES.relevant_personal_factors, t);
-          if (arg) out.push(arg);
-        }
-        for (const t of textsFor(p.personal_reality_interplay_unit_ids)) {
-          const arg = push(PAGE02_PDF_TITLES.personal_reality_interplay, t);
-          if (arg) out.push(arg);
-        }
-        for (const t of textsFor(p.why_judgment_fits_unit_ids)) {
-          const arg = push(PAGE02_PDF_TITLES.why_judgment_fits, t);
-          if (arg) out.push(arg);
-        }
-        const boundary = p.explanation_boundary as
-          | {
-              personal_unit_ids?: unknown;
-              confirmed_fact_unit_ids?: unknown;
-              hypothesis_unit_ids?: unknown;
-              uncertainty_notes?: unknown;
-            }
-          | undefined;
-        if (boundary) {
-          const parts: string[] = [];
-          const personal = textsFor(boundary.personal_unit_ids);
-          if (personal.length) parts.push(`个人分析依据：\n${personal.join("\n")}`);
-          const confirmed = textsFor(boundary.confirmed_fact_unit_ids);
-          if (confirmed.length) parts.push(`已确认事实：\n${confirmed.join("\n")}`);
-          const hypotheses = textsFor(boundary.hypothesis_unit_ids);
-          if (hypotheses.length) {
-            parts.push(`解释性假设（非已确认事实）：\n${hypotheses.join("\n")}`);
-          }
-          const uncertainty = Array.isArray(boundary.uncertainty_notes)
-            ? boundary.uncertainty_notes.map((x) => String(x)).filter(Boolean)
-            : [];
-          if (uncertainty.length) {
-            parts.push(`不确定性：\n${uncertainty.join("\n")}`);
-          }
-          if (gapNotes.length) {
-            parts.push(`数据缺口（不可当作已确认事实）：\n${gapNotes.join("\n")}`);
-          }
-          const arg = push(PAGE02_PDF_TITLES.explanation_boundary, parts.join("\n\n"));
-          if (arg) out.push(arg);
-        }
-      } else if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
+      if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
         add("本页摘要", "page_summary");
       } else {
         add("命理理由", "destiny_reason");

@@ -1,5 +1,6 @@
 /**
  * Page02 per-section input field contracts (architecture SSOT).
+ * Each field is traceable for later DI2 collection — presence alone is not enough.
  */
 
 import type { Page02SectionId } from "./sections";
@@ -25,7 +26,6 @@ export type Page02InputFieldContract = {
   source_path: string;
   required: boolean;
   allow_empty: boolean;
-  /** When field is absent/empty. */
   missing_handling:
     | "omit_dependent_units"
     | "block_page_generation"
@@ -33,6 +33,8 @@ export type Page02InputFieldContract = {
     | "use_empty_section_display";
   affects_content: string;
   follow_up_collect_hint: string;
+  /** Cross-section / cross-page dependency note. */
+  depends_on?: readonly string[];
 };
 
 export type Page02InputManifestEntry = {
@@ -40,13 +42,13 @@ export type Page02InputManifestEntry = {
   section_id: Page02SectionId;
   source_kind: Page02InputSourceKind;
   present: boolean;
-  /** Collection / integrity status at assemble time. */
   collection_status: Page02GapStatus | "ready";
   value_summary: string | null;
 };
 
 export const PAGE02_INPUT_FIELD_CONTRACTS: readonly Page02InputFieldContract[] =
   [
+    // --- page_summary ---
     {
       field_id: "page01_core_judgment",
       section_id: "page_summary",
@@ -59,6 +61,21 @@ export const PAGE02_INPUT_FIELD_CONTRACTS: readonly Page02InputFieldContract[] =
       missing_handling: "block_page_generation",
       affects_content: "page_summary + why_judgment_fits framing",
       follow_up_collect_hint: "Ensure Page01 is generated and approved first.",
+      depends_on: ["report_locale"],
+    },
+    {
+      field_id: "page01_why_paths",
+      section_id: "page_summary",
+      meaning: "Page01 why_this_path summaries for alignment context only.",
+      data_type: "object[]",
+      source_kind: "analytical_result",
+      source_path: "page01.why_this_path[]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "omit_dependent_units",
+      affects_content: "page_summary framing depth",
+      follow_up_collect_hint: "Generated with Page01; not user-collected.",
+      depends_on: ["page01_core_judgment"],
     },
     {
       field_id: "decision_question",
@@ -74,73 +91,20 @@ export const PAGE02_INPUT_FIELD_CONTRACTS: readonly Page02InputFieldContract[] =
       follow_up_collect_hint: "Collect a clear decision question in intake.",
     },
     {
-      field_id: "personal_readings_available",
-      section_id: "relevant_personal_factors",
-      meaning: "Whether certified personal readings exist for this topic.",
-      data_type: "boolean",
-      source_kind: "personal_analysis",
-      source_path: "slice.personal_analysis.approved_readings",
-      required: false,
-      allow_empty: true,
-      missing_handling: "use_empty_section_display",
-      affects_content: "relevant_personal_factors units",
-      follow_up_collect_hint:
-        "Optional: ensure chart packs / readings are available; do not invent.",
-    },
-    {
-      field_id: "confirmed_reality_facts",
-      section_id: "personal_reality_interplay",
-      meaning: "DC reality facts with status=confirmed usable on Page02.",
-      data_type: "object[]",
-      source_kind: "reality_context",
-      source_path: "dc.reality_facts[status=confirmed]",
-      required: false,
-      allow_empty: true,
-      missing_handling: "omit_dependent_units",
-      affects_content: "reality_fact units and confirmed boundary lists",
-      follow_up_collect_hint:
-        "Collect and confirm key reality facts before claiming confirmed basis.",
-    },
-    {
-      field_id: "unverified_reality_facts",
-      section_id: "explanation_boundary",
-      meaning: "DC facts present but unverified — must not be upgraded.",
-      data_type: "object[]",
-      source_kind: "reality_context",
-      source_path: "dc.reality_facts[status=unverified]",
-      required: false,
-      allow_empty: true,
-      missing_handling: "gap_note_only",
-      affects_content: "hypothesis / uncertainty notes only",
-      follow_up_collect_hint: "Verify or clarify unverified facts in intake.",
-    },
-    {
-      field_id: "open_conflicts",
-      section_id: "explanation_boundary",
-      meaning: "Unresolved DC conflicts that bound explanations.",
-      data_type: "object[]",
-      source_kind: "reality_context",
-      source_path: "dc.conflicts[state!=clarified]",
-      required: false,
-      allow_empty: true,
-      missing_handling: "gap_note_only",
-      affects_content: "uncertainty_notes and conditional language",
-      follow_up_collect_hint: "Clarify conflicting statements in intake.",
-    },
-    {
-      field_id: "evidence_registry_claims",
-      section_id: "why_judgment_fits",
-      meaning: "Page02-slice evidence registry claims the model may cite.",
-      data_type: "object[]",
-      source_kind: "derived_data",
-      source_path: "registry.claims[page02_slice]",
+      field_id: "report_locale",
+      section_id: "page_summary",
+      meaning: "Output locale for vernacular body.",
+      data_type: "string",
+      source_kind: "system_metadata",
+      source_path: "report.locale",
       required: true,
       allow_empty: false,
       missing_handling: "block_page_generation",
-      affects_content: "all claim_ids on content_units",
-      follow_up_collect_hint:
-        "Ensure BookJudgment / registry seeding produced Page02 claims.",
+      affects_content: "all user-facing text",
+      follow_up_collect_hint: "Set report locale before generation.",
     },
+
+    // --- relevant_personal_factors ---
     {
       field_id: "available_personal_domains",
       section_id: "relevant_personal_factors",
@@ -155,17 +119,190 @@ export const PAGE02_INPUT_FIELD_CONTRACTS: readonly Page02InputFieldContract[] =
       follow_up_collect_hint: "Optional chart availability; never invent domains.",
     },
     {
-      field_id: "report_locale",
-      section_id: "page_summary",
-      meaning: "Output locale for vernacular body.",
+      field_id: "personal_profile_version",
+      section_id: "relevant_personal_factors",
+      meaning: "Version/hash of personal analysis profile used (CFP/ZFP provenance).",
       data_type: "string",
-      source_kind: "system_metadata",
-      source_path: "report.locale",
+      source_kind: "personal_analysis",
+      source_path: "production.profile_version | pack.cfp_hash/zfp_hash",
+      required: false,
+      allow_empty: true,
+      missing_handling: "gap_note_only",
+      affects_content: "provenance notes on personal_interpretation units",
+      follow_up_collect_hint:
+        "Ensure chart fact packs are computed so profile_version is stamped.",
+      depends_on: ["available_personal_domains"],
+    },
+    {
+      field_id: "personal_readings_payload",
+      section_id: "relevant_personal_factors",
+      meaning:
+        "Approved personal reading objects (id, domain, excerpt) — not a boolean flag.",
+      data_type: "object[]",
+      source_kind: "personal_analysis",
+      source_path: "slice.personal_analysis.approved_readings[]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "use_empty_section_display",
+      affects_content: "relevant_personal_factors personal_interpretation units",
+      follow_up_collect_hint:
+        "Need reading_id + domain + short certified excerpt; do not invent readings.",
+      depends_on: ["available_personal_domains", "personal_profile_version"],
+    },
+    {
+      field_id: "book_judgment_destiny_units",
+      section_id: "relevant_personal_factors",
+      meaning: "BookJudgment destiny/convergence units serving face 02.",
+      data_type: "object[]",
+      source_kind: "analytical_result",
+      source_path: "pack.units[track=destiny|convergence & serves_face=02]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "omit_dependent_units",
+      affects_content: "personal claim seeds for section B",
+      follow_up_collect_hint: "Produced by BookJudgment pack step before Page02 body.",
+      depends_on: ["personal_readings_payload"],
+    },
+
+    // --- personal_reality_interplay ---
+    {
+      field_id: "confirmed_reality_facts_payload",
+      section_id: "personal_reality_interplay",
+      meaning:
+        "Confirmed DC facts with statement, status, verification_level, source, related_dir_ids.",
+      data_type: "object[]",
+      source_kind: "reality_context",
+      source_path: "dc.reality_facts[status=confirmed]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "omit_dependent_units",
+      affects_content: "reality_fact units and confirmed boundary lists",
+      follow_up_collect_hint:
+        "Collect fact statement + roles; user confirm before status=confirmed.",
+    },
+    {
+      field_id: "reality_mechanism_inputs",
+      section_id: "personal_reality_interplay",
+      meaning:
+        "Inputs for reality_mechanism units: constraints, fact roles, linked science claims.",
+      data_type: "object[]",
+      source_kind: "reality_context",
+      source_path: "dc.constraints[] + registry.evidence[source_type=reality_mechanism]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "omit_dependent_units",
+      affects_content: "reality_mechanism units in interplay / why-fit",
+      follow_up_collect_hint:
+        "Collect hard/soft constraints and mechanism-relevant roles; never invent.",
+      depends_on: ["confirmed_reality_facts_payload"],
+    },
+    {
+      field_id: "book_judgment_science_units",
+      section_id: "personal_reality_interplay",
+      meaning: "BookJudgment science units serving face 02 (mechanism seeds).",
+      data_type: "object[]",
+      source_kind: "analytical_result",
+      source_path: "pack.units[track=science & serves_face=02]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "omit_dependent_units",
+      affects_content: "science claim seeds for interplay",
+      follow_up_collect_hint: "Produced by BookJudgment pack step before Page02 body.",
+    },
+
+    // --- why_judgment_fits ---
+    {
+      field_id: "evidence_registry_claims",
+      section_id: "why_judgment_fits",
+      meaning: "Page02-slice evidence registry claims the model may cite.",
+      data_type: "object[]",
+      source_kind: "derived_data",
+      source_path: "registry.claims[page02_slice]",
       required: true,
       allow_empty: false,
       missing_handling: "block_page_generation",
-      affects_content: "all user-facing text",
-      follow_up_collect_hint: "Set report locale before generation.",
+      affects_content: "all claim_ids on content_units",
+      follow_up_collect_hint:
+        "Ensure BookJudgment / registry seeding produced Page02 claims.",
+      depends_on: ["page01_core_judgment", "decision_question"],
+    },
+    {
+      field_id: "page01_recommendation_conditions",
+      section_id: "why_judgment_fits",
+      meaning:
+        "Page01 recommendation_conditions (status + source_ids) that Page02 may explain conditionally.",
+      data_type: "object[]",
+      source_kind: "analytical_result",
+      source_path: "page01.recommendation_conditions[]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "omit_dependent_units",
+      affects_content: "conditional_explanation units tied to Page01 conditions",
+      follow_up_collect_hint:
+        "Generated with Page01; clarify unconfirmed condition source_ids in intake.",
+      depends_on: ["page01_core_judgment"],
+    },
+    {
+      field_id: "conditional_explanation_deps",
+      section_id: "why_judgment_fits",
+      meaning:
+        "Condition dependencies: which confirmed/unverified facts or Page01 conditions bound fit language.",
+      data_type: "object[]",
+      source_kind: "derived_data",
+      source_path: "derived from confirmed/unverified facts + page01 conditions",
+      required: false,
+      allow_empty: true,
+      missing_handling: "gap_note_only",
+      affects_content: "conditional_explanation related_reality_fact_unit_ids",
+      follow_up_collect_hint:
+        "Clarify which conditions must hold for the judgment fit to remain valid.",
+      depends_on: [
+        "confirmed_reality_facts_payload",
+        "page01_recommendation_conditions",
+      ],
+    },
+
+    // --- explanation_boundary ---
+    {
+      field_id: "unverified_reality_facts_payload",
+      section_id: "explanation_boundary",
+      meaning:
+        "Unverified DC facts with statement/status/verification_level — must not upgrade.",
+      data_type: "object[]",
+      source_kind: "reality_context",
+      source_path: "dc.reality_facts[status=unverified]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "gap_note_only",
+      affects_content: "hypothesis_unit_ids / uncertainty_notes",
+      follow_up_collect_hint: "Verify or clarify unverified facts in intake.",
+    },
+    {
+      field_id: "declined_or_unknown_facts",
+      section_id: "explanation_boundary",
+      meaning: "DC facts with declined/unknown/not_applicable status.",
+      data_type: "object[]",
+      source_kind: "reality_context",
+      source_path: "dc.reality_facts[status in declined|unknown|not_applicable]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "gap_note_only",
+      affects_content: "boundary gap notes; omit as confirmed",
+      follow_up_collect_hint:
+        "Respect declined; clarify unknown; mark N/A explicitly when applicable.",
+    },
+    {
+      field_id: "open_conflicts",
+      section_id: "explanation_boundary",
+      meaning: "Unresolved DC conflicts that bound explanations.",
+      data_type: "object[]",
+      source_kind: "reality_context",
+      source_path: "dc.conflicts[state!=clarified]",
+      required: false,
+      allow_empty: true,
+      missing_handling: "gap_note_only",
+      affects_content: "uncertainty_notes and conditional language",
+      follow_up_collect_hint: "Clarify conflicting statements in intake.",
     },
   ] as const;
 

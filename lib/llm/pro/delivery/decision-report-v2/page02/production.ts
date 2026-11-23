@@ -265,6 +265,17 @@ export function buildFace02ProductionContext(input: {
   });
 
   const shape = faceFillShapeSkeleton("02");
+  const page01Conditions =
+    isFace01V2(input.page01)
+      ? (input.page01 as Face01V2).recommendation_conditions.map((c) => ({
+          condition: c.condition,
+          status: c.status,
+          source_ids: c.source_ids,
+        }))
+      : [];
+  const mechEvidenceCount = Object.values(restricted.registry.evidence).filter(
+    (e) => e.source_type === "reality_mechanism",
+  ).length;
   const architecture = buildPage02ArchitectureEnvelope(
     {
       report_id: input.report_id,
@@ -272,9 +283,18 @@ export function buildFace02ProductionContext(input: {
       dc: input.dc,
       pack,
       page01_core_judgment: page01_core,
+      page01_why_paths: why_paths,
+      page01_conditions: page01Conditions,
       available_domains: domains.available_domains,
+      profile_version: domains.profile_version,
+      approved_readings: slice.personal_analysis.approved_readings.map((r) => ({
+        reading_id: r.reading_id,
+        domain: r.scope,
+        excerpt: (r.interpretation ?? "").slice(0, 120),
+      })),
       approved_reading_count: slice.personal_analysis.approved_readings.length,
       registry_claim_count: Object.keys(restricted.registry.claims).length,
+      reality_mechanism_evidence_count: mechEvidenceCount,
     },
     { has_generated_page: false, structure_ok: true, llm_invoked: false },
   );
@@ -374,6 +394,20 @@ export function validateFace02ProductionOutput(input: {
       reason: "face02_validation_failed",
     };
   }
+  // Hard fail if production invoked LLM despite may_invoke_llm=false.
+  if (!input.ctx.may_invoke_llm) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "architecture_blocked_invoke",
+          detail:
+            "Face02 LLM output rejected: may_invoke_llm=false (required inputs missing).",
+        },
+      ],
+      reason: "face02_blocked_on_required_inputs",
+    };
+  }
   // Attach architecture envelope onto canonical page (program-owned; not model).
   const envelope: Page02ArchitectureEnvelope = {
     ...input.ctx.architecture,
@@ -387,7 +421,20 @@ export function validateFace02ProductionOutput(input: {
       built_at: new Date().toISOString(),
     },
   };
-  const page = attachPage02ArchitectureToPage(result.page, envelope);
+  const attached = attachPage02ArchitectureToPage(result.page, envelope);
+  const localeBucket = (input.locale || "en").toLowerCase().slice(0, 2);
+  const stampedLocale =
+    localeBucket === "zh" ||
+    localeBucket === "en" ||
+    localeBucket === "es" ||
+    localeBucket === "fr" ||
+    localeBucket === "de"
+      ? (localeBucket as Face02V2["locale"])
+      : ("en" as Face02V2["locale"]);
+  const page: Face02V2 = {
+    ...attached,
+    locale: attached.locale ?? stampedLocale,
+  };
   return {
     ok: true,
     page,

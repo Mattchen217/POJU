@@ -2420,8 +2420,10 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     resolvePath("components/poju/delivery-pages/faces/Face02PageSlots.tsx"),
     "utf8",
   );
-  assert.ok(uiSrc.includes("content_units") || uiSrc.includes("resolveFace02Units"));
-  assert.ok(uiSrc.includes("hypothesis_unit_ids") || uiSrc.includes("解释性假设"));
+  // Reader must consume section-assembly SSOT (shared with PDF), not a third title/order table.
+  assert.ok(uiSrc.includes("assemblePage02SectionsForDisplay"));
+  assert.ok(uiSrc.includes("section-assembly"));
+  assert.ok(uiSrc.includes("data-section-id") || uiSrc.includes("s.section_id"));
   console.log("UI/PDF parity PASS");
 }
 
