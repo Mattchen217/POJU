@@ -8,6 +8,9 @@ import type { DeliveryArgument } from "@/lib/llm/pro/delivery/delivery-schema";
 import { assemblePage02PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page02/architecture/section-assembly";
 import { projectLegacyFace02ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
 import type { Face02V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
+import { assemblePage04PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page04/architecture/section-assembly";
+import { projectLegacyFace04ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page04/legacy-adapter";
+import type { Face04V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
   type DeliveryPageData,
@@ -189,12 +192,29 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       }
       break;
     }
-    case "04":
-      add("卡点命名", "bottleneck_name");
-      add("表现", "manifestation");
-      add("若硬顶", "if_force_through");
-      add("依据折叠", "evidence_fold");
+    case "04": {
+      // Same path as Reader: content_units OR projectLegacyFace04ForDisplay → section-assembly.
+      let canonical04: Face04V2 | null = null;
+      if (Array.isArray(p.content_units) && p.content_units.length) {
+        canonical04 = p as unknown as Face04V2;
+      } else {
+        canonical04 = projectLegacyFace04ForDisplay(p);
+      }
+      if (!canonical04) {
+        throw new Error(
+          "face04_pdf_legacy_project_failed: historical/incomplete Face04 could not be projected for PDF assembly",
+        );
+      }
+      const locale04 = String(
+        (canonical04 as { locale?: unknown }).locale ??
+          (p as { locale?: unknown }).locale ??
+          "zh",
+      );
+      for (const arg of assemblePage04PdfArgumentBodies(canonical04, locale04)) {
+        out.push(arg);
+      }
       break;
+    }
     case "05":
       add("首选", "first_choice");
       add("次选", "second_choice");

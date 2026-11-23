@@ -489,6 +489,225 @@ export const Face02LegacySchema = z.object({
 
 export type Face02Legacy = z.infer<typeof Face02LegacySchema>;
 
+/**
+ * Face04 content units — Core Bottleneck V2 authority.
+ * Distinct kinds from Face02; do not reuse Face02 unit kinds.
+ */
+export const Face04ContentUnitSchema = z.discriminatedUnion("kind", [
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("bottleneck_label"),
+    text: NonEmpty.max(240),
+    title: z.string().trim().max(120).optional().default(""),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("manifestation"),
+    text: NonEmpty.max(960),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("force_through_cost"),
+    text: NonEmpty.max(720),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("leverage_point"),
+    text: NonEmpty.max(720),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("evidence_note"),
+    text: NonEmpty.max(1200),
+    claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+  }),
+]);
+
+export type Face04ContentUnit = z.infer<typeof Face04ContentUnitSchema>;
+
+const Page04SectionIdEnum = z.enum([
+  "bottleneck_naming",
+  "manifestation",
+  "force_through_cost",
+  "leverage_point",
+  "evidence_boundary",
+]);
+
+/** Face 04 — 真正卡住你的是什么 (structured content units · Batch 1). */
+export const Face04V2Schema = z.object({
+  page: z.literal("04"),
+  face: z.literal("04"),
+  schema_version: z.literal("face04-v2").default("face04-v2"),
+  locale: DecisionReportLocaleSchema.optional(),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  content_units: z.array(Face04ContentUnitSchema).min(1).max(24),
+  bottleneck_naming_unit_ids: z.array(NonEmpty.max(80)).min(1).max(6),
+  manifestation_unit_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  force_through_cost_unit_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  leverage_point_unit_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  page01_judgment_ref: z.string().trim().max(240).optional().default(""),
+  evidence_boundary: z.object({
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(12),
+    evidence_note_unit_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+    uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(8),
+  }),
+  reading_order: z
+    .array(Page04SectionIdEnum)
+    .min(3)
+    .max(5)
+    .default([
+      "bottleneck_naming",
+      "manifestation",
+      "force_through_cost",
+      "leverage_point",
+      "evidence_boundary",
+    ])
+    .superRefine((order, ctx) => {
+      const seen = new Set<string>();
+      for (const id of order) {
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `duplicate reading_order section_id: ${id}`,
+          });
+          return;
+        }
+        seen.add(id);
+      }
+      for (const required of [
+        "bottleneck_naming",
+        "manifestation",
+        "force_through_cost",
+        "leverage_point",
+        "evidence_boundary",
+      ] as const) {
+        if (!seen.has(required)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `reading_order missing required section: ${required}`,
+          });
+        }
+      }
+    }),
+  generation_status: z
+    .enum([
+      "blocked_on_required_inputs",
+      "ready_for_generation",
+      "generated_with_gaps",
+      "generated_complete",
+      "failed_structure",
+      "incomplete",
+    ])
+    .optional(),
+  input_manifest: z
+    .array(
+      z.object({
+        field_id: NonEmpty.max(80),
+        section_id: Page04SectionIdEnum,
+        source_kind: z.enum([
+          "personal_analysis",
+          "reality_context",
+          "analytical_result",
+          "system_metadata",
+          "derived_data",
+        ]),
+        present: z.boolean(),
+        collection_status: z.enum([
+          "ready",
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        value_summary: z.string().trim().max(240).nullable(),
+      }),
+    )
+    .max(40)
+    .optional(),
+  missing_inputs: z
+    .array(
+      z.object({
+        gap_id: NonEmpty.max(120),
+        page_id: z.literal("04"),
+        section_id: Page04SectionIdEnum,
+        field_id: NonEmpty.max(120),
+        status: z.enum([
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        why_needed: NonEmpty.max(400),
+        affects_content: NonEmpty.max(400),
+        follow_up_collect_hint: NonEmpty.max(400),
+        handling: z.enum([
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ]),
+      }),
+    )
+    .max(48)
+    .optional(),
+  sections: z
+    .array(
+      z.object({
+        section_id: Page04SectionIdEnum,
+        segment_letter: NonEmpty.max(4),
+        title_zh: NonEmpty.max(80),
+        title_en: NonEmpty.max(80),
+        required: z.boolean(),
+        reading_rank: z.number().int().min(1).max(8),
+        information_level: NonEmpty.max(32),
+      }),
+    )
+    .max(8)
+    .optional(),
+  generation_metadata: z
+    .object({
+      task_id: NonEmpty.max(80),
+      prompt_bundle_chars: z.number().int().min(0),
+      built_at: NonEmpty.max(64),
+      llm_invoked: z.boolean(),
+    })
+    .optional(),
+});
+
+export type Face04V2 = z.infer<typeof Face04V2Schema>;
+
+/** Legacy Face 04 (pre Face04V2) — historical open. */
+export const Face04LegacySchema = z.object({
+  page: z.literal("04"),
+  face: z.literal("04"),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  bottleneck_name: NonEmpty.max(160),
+  manifestation: NonEmpty.max(960),
+  if_force_through: z.string().trim().max(720).optional().default(""),
+  evidence_fold: NonEmpty.max(1200),
+});
+
+export type Face04Legacy = z.infer<typeof Face04LegacySchema>;
+
 /** Legacy Face 01 (pre Batch 0) — retained for historical report open. */
 export const Face01LegacySchema = z.object({
   page: z.literal("01"),

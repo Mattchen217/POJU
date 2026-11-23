@@ -25,9 +25,11 @@ import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-loca
 import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 import { Face01PageSlots } from "@/components/poju/delivery-pages/faces/Face01PageSlots";
 import { Face02PageSlots } from "@/components/poju/delivery-pages/faces/Face02PageSlots";
+import { Face04PageSlots } from "@/components/poju/delivery-pages/faces/Face04PageSlots";
 import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
 import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
 import { isFace02V2, isFace02Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
+import { isFace04V2, isFace04Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page04/legacy-adapter";
 import {
   isGlossaryAppendixPage,
   isLegacyChartAppendixPage,
@@ -236,6 +238,9 @@ export function FacePageSlots({
   }
   if (id === "02" && (isFace02V2(page) || isFace02Legacy(page))) {
     return <Face02PageSlots page={page as never} locale={locale} />;
+  }
+  if (id === "04" && (isFace04V2(page) || isFace04Legacy(page))) {
+    return <Face04PageSlots page={page as never} locale={locale} />;
   }
   if (
     id === "03" &&

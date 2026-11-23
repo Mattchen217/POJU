@@ -19,12 +19,16 @@ import {
   Face02V2Schema,
   Face03ChartLegacySchema,
   Face03GlossarySchema,
+  Face04V2Schema,
+  Face04LegacySchema,
   type Face01Legacy,
   type Face01V2,
   type Face02Legacy,
   type Face02V2,
   type Face03ChartLegacy,
   type Face03Glossary,
+  type Face04V2,
+  type Face04Legacy,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 const NonEmpty = z.string().trim().min(1);
@@ -47,17 +51,12 @@ export const Face02ParseSchema = z.union([Face02V2Schema, Face02LegacySchema]);
 export type Face02 = Face02V2 | Face02Legacy;
 export { Face02LegacySchema, type Face02Legacy };
 
-/** 04 · 真正卡点 · dualTrack=fold */
-export const Face04Schema = z.object({
-  page: z.literal("04"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("04"),
-  bottleneck_name: NonEmpty.max(160),
-  manifestation: NonEmpty.max(960),
-  if_force_through: z.string().trim().max(720).optional().default(""),
-  evidence_fold: NonEmpty.max(1200),
-});
-export type Face04 = z.infer<typeof Face04Schema>;
+/** 04 · 真正卡点 · dualTrack=fold · schema_version face04-v2 */
+export const Face04Schema = Face04V2Schema;
+/** Historical open: accept legacy bottleneck_name shape without rewriting storage. */
+export const Face04ParseSchema = z.union([Face04V2Schema, Face04LegacySchema]);
+export type Face04 = Face04V2 | Face04Legacy;
+export { Face04V2Schema, Face04LegacySchema, type Face04V2, type Face04Legacy };
 
 /** Product Stage 4 P5 — conditional recommendation caveats + evidence ids. */
 const Face05Stage4Extras = {
@@ -146,7 +145,7 @@ export { Face03ChartLegacySchema, type Face03ChartLegacy };
 export const FACE_PAGE_SCHEMAS = {
   "01": Face01Schema,
   "02": Face02ParseSchema,
-  "04": Face04Schema,
+  "04": Face04ParseSchema,
   "05": Face05Schema,
   "06": Face06Schema,
   "07": Face07Schema,

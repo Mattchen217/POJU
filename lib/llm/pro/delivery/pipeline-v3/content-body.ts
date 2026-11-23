@@ -45,6 +45,11 @@ import {
   validateFace02ProductionOutput,
   type Face02ProductionContext,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page02/production";
+import {
+  buildFace04ProductionContext,
+  face04SliceSummary,
+  type Face04ProductionContext,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page04/production";
 import type {
   Face01V2,
   Face02V2,
@@ -73,6 +78,12 @@ export type ContentBodyOk = {
     cited_term_ids?: string[];
     realized_evidence_ids?: string[];
   };
+  face04_meta?: {
+    prompt_version: string;
+    schema_version: string;
+    slice_summary: Record<string, unknown>;
+    validation: "passed" | "passed_after_repair";
+  };
 };
 
 export type ContentBodyFail = {
@@ -87,6 +98,11 @@ export type ContentBodyFail = {
     validation_issues?: unknown[];
   };
   face02_meta?: {
+    prompt_version?: string;
+    slice_summary?: Record<string, unknown>;
+    validation_issues?: unknown[];
+  };
+  face04_meta?: {
     prompt_version?: string;
     slice_summary?: Record<string, unknown>;
     validation_issues?: unknown[];
@@ -598,8 +614,10 @@ export async function runContentBodyGenerate(input: {
   book_judgment_pack?: BookJudgmentPack | null;
   /** Stable report/job id for Face01/02 slice. */
   report_id?: string | null;
-  /** Optional Page01 schema — alignment context for Face02 only. */
+  /** Optional Page01 schema — alignment context for Face02/Face04. */
   page01_schema?: unknown;
+  /** Optional Page02 schema — foundation grounding for Face04. */
+  page02_schema?: unknown;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body", {
@@ -610,6 +628,7 @@ export async function runContentBodyGenerate(input: {
 
   let face01Ctx: Face01ProductionContext | null = null;
   let face02Ctx: Face02ProductionContext | null = null;
+  let face04Ctx: Face04ProductionContext | null = null;
   if (input.key === "01") {
     const built = buildFace01ProductionContext({
       report_id: input.report_id?.trim() || input.session_id || "report_face01",
@@ -672,6 +691,51 @@ export async function runContentBodyGenerate(input: {
       };
     }
     face02Ctx = built.ctx;
+  }
+  if (input.key === "04") {
+    const built = buildFace04ProductionContext({
+      report_id: input.report_id?.trim() || input.session_id || "report_face04",
+      locale: input.locale,
+      dc: input.decision_context_snapshot ?? null,
+      pack: input.book_judgment_pack ?? null,
+      chart_fact_pack: input.chart_fact_pack ?? null,
+      page01: input.page01_schema ?? null,
+      page02: input.page02_schema ?? null,
+    });
+    if (!built.ok) {
+      return {
+        ok: false,
+        reason: built.reason,
+        tokens_used: 0,
+        face04_meta: {
+          validation_issues: [{ detail: built.detail ?? built.reason }],
+        },
+      };
+    }
+    if (!built.ctx.may_invoke_llm) {
+      const blocking = built.ctx.architecture.missing_inputs.filter(
+        (g) => g.handling === "defer_generation",
+      );
+      return {
+        ok: false,
+        reason: "face04_blocked_on_required_inputs",
+        tokens_used: 0,
+        face04_meta: {
+          prompt_version: built.ctx.prompt_version,
+          slice_summary: {
+            ...face04SliceSummary(built.ctx),
+            blocked: true,
+            blocking_gaps: blocking.map((g) => g.gap_id),
+          },
+          validation_issues: [
+            {
+              detail: `may_invoke_llm=false; generation_status=${built.ctx.architecture.generation_status}; gaps=${blocking.map((g) => g.field_id).join(",")}`,
+            },
+          ],
+        },
+      };
+    }
+    face04Ctx = built.ctx;
   }
   const pageSlice = formatPageSliceFeed({
     key: input.key,
@@ -745,8 +809,8 @@ export async function runContentBodyGenerate(input: {
   const zfpOmitted =
     !input.ziwei_fact_pack ||
     !(input.ziwei_fact_pack.patternHits?.length > 0);
-  // Face01/02 V2: prompt is the production slice pair; do not mash DC/legacy feed into user.
-  const faceV2Ctx = face01Ctx || face02Ctx;
+  // Face01/02/04 V2: prompt is the production slice pair; do not mash DC/legacy feed into user.
+  const faceV2Ctx = face01Ctx || face02Ctx || face04Ctx;
   const effectiveUserFeed = faceV2Ctx ? "" : userFeed;
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
@@ -766,6 +830,9 @@ export async function runContentBodyGenerate(input: {
       : null,
     face02_production: face02Ctx
       ? { system: face02Ctx.system, user: face02Ctx.user }
+      : null,
+    face04_production: face04Ctx
+      ? { system: face04Ctx.system, user: face04Ctx.user }
       : null,
   });
 

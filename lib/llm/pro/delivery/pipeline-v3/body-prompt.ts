@@ -405,6 +405,11 @@ export function buildV3BodyPrompt(input: {
    * When set, replaces generic buildFacePromptPair for key=02.
    */
   face02_production?: { system: string; user: string } | null;
+  /**
+   * Face 04 V2 production prompts (Core Bottleneck architecture Batch 1).
+   * When set, replaces generic buildFacePromptPair for key=04.
+   */
+  face04_production?: { system: string; user: string } | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
 
@@ -421,6 +426,14 @@ export function buildV3BodyPrompt(input: {
     return {
       system: `${BODY_SYSTEM_FACE}\n\n${input.face02_production.system}`,
       user: input.face02_production.user,
+    };
+  }
+
+  // Face 04 production path — Core Bottleneck architecture prompt.
+  if (faceId === "04" && input.face04_production?.system && input.face04_production?.user) {
+    return {
+      system: `${BODY_SYSTEM_FACE}\n\n${input.face04_production.system}`,
+      user: input.face04_production.user,
     };
   }
 
