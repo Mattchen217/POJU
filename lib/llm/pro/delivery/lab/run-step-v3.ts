@@ -2325,12 +2325,15 @@ async function executeV3(
         error: "missing_judgment_plan",
       };
     }
-    // Face 01/02 V2 production path needs DC (+ optional pack for registry); not the old judgment plan.
+    // Face 01/02/05 V2 production path needs DC (+ optional pack for registry); not the old judgment plan.
+    // Face04 V2 Lab wiring is unchanged here (accepted separately); Face05 reads stored Face04V2.
     const face01V2Path =
       page === "01" && Boolean(lab.source.decision_context_snapshot);
     const face02V2Path =
       page === "02" && Boolean(lab.source.decision_context_snapshot);
-    const faceV2Path = face01V2Path || face02V2Path;
+    const face05V2Path =
+      page === "05" && Boolean(lab.source.decision_context_snapshot);
+    const faceV2Path = face01V2Path || face02V2Path || face05V2Path;
     if (faceBody && page !== "03" && !plan?.units?.length && !faceV2Path) {
       return {
         input_payload: { key: page },
@@ -2346,12 +2349,20 @@ async function executeV3(
         error: bookPack ? "missing_book_judgment_slice" : "missing_judgment_plan",
       };
     }
-    if ((page === "01" || page === "02") && !lab.source.decision_context_snapshot) {
-      const pipeline = page === "01" ? "face01_v2" : "face02_v2";
+    if (
+      (page === "01" || page === "02" || page === "05") &&
+      !lab.source.decision_context_snapshot
+    ) {
+      const pipeline =
+        page === "01" ? "face01_v2" : page === "02" ? "face02_v2" : "face05_v2";
       const rule =
         page === "01"
           ? "face01_missing_decision_context"
-          : "face02_missing_decision_context";
+          : page === "02"
+            ? "face02_missing_decision_context"
+            : "face05_missing_decision_context";
+      const label =
+        page === "01" ? "Face01" : page === "02" ? "Face02" : "Face05";
       return {
         input_payload: { key: page, pipeline },
         raw_model_output: null,
@@ -2359,7 +2370,7 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: rule,
-          detail: `${page === "01" ? "Face01" : "Face02"} V2 生产路径需要冻结 Decision Context；禁止旧正文 fallback。`,
+          detail: `${label} V2 生产路径需要冻结 Decision Context；禁止旧正文 fallback。`,
         },
         output_to_next_stage: null,
         error: rule,
@@ -2419,8 +2430,16 @@ async function executeV3(
         ? bookPack ?? artifactPack
         : null,
       report_id: session_id,
-      page01_schema: face02V2Path
-        ? lab.artifacts.by_page["01" as DeliverySegmentKey]?.page_schema ?? null
+      page01_schema:
+        face02V2Path || face05V2Path
+          ? lab.artifacts.by_page["01" as DeliverySegmentKey]?.page_schema ??
+            null
+          : null,
+      page02_schema: face05V2Path
+        ? lab.artifacts.by_page["02" as DeliverySegmentKey]?.page_schema ?? null
+        : null,
+      page04_schema: face05V2Path
+        ? lab.artifacts.by_page["04" as DeliverySegmentKey]?.page_schema ?? null
         : null,
     });
     if (!body.ok) {
@@ -2441,12 +2460,22 @@ async function executeV3(
         faceV2Path &&
         (body.reason.startsWith("face01_") ||
           body.reason.startsWith("face02_") ||
+          body.reason.startsWith("face05_") ||
           body.reason === "scare_redline");
       const pipelineLabel = face01V2Path
         ? "face01_v2"
         : face02V2Path
           ? "face02_v2"
-          : "v3";
+          : face05V2Path
+            ? "face05_v2"
+            : "v3";
+      const faceLabel = face01V2Path
+        ? "Face01"
+        : face02V2Path
+          ? "Face02"
+          : face05V2Path
+            ? "Face05"
+            : "Face";
       return {
         input_payload: {
           key: page,
@@ -2463,6 +2492,12 @@ async function executeV3(
             null,
           face01_meta: body.face01_meta ?? null,
           face02_meta: body.face02_meta ?? null,
+          face05_meta: body.face05_meta ?? null,
+          page04_schema_present: face05V2Path
+            ? Boolean(
+                lab.artifacts.by_page["04" as DeliverySegmentKey]?.page_schema,
+              )
+            : null,
         },
         raw_model_output: body.last_raw_text
           ? { _raw_text: body.last_raw_text }
@@ -2473,7 +2508,9 @@ async function executeV3(
               ? "runContentBodyGenerate_face01_v2"
               : face02V2Path
                 ? "runContentBodyGenerate_face02_v2"
-                : "runContentBodyGenerate",
+                : face05V2Path
+                  ? "runContentBodyGenerate_face05_v2"
+                  : "runContentBodyGenerate",
             detail: body.reason,
           },
         ],
@@ -2481,7 +2518,7 @@ async function executeV3(
           passed: false,
           failed_rule: body.reason,
           detail: faceV2ValidationFail
-            ? `${face01V2Path ? "Face01" : "Face02"} V2 校验失败（含一次定向修复已用尽）· 禁止旧正文 fallback · 改生成侧后重跑。`
+            ? `${faceLabel} V2 校验失败（含一次定向修复已用尽）· 禁止旧正文 fallback · 改生成侧后重跑。`
             : body.reason === "scare_redline"
               ? "恐吓红线命中。改成带条件的明确主推后重跑本步。"
               : escapeArmedBody
@@ -2526,14 +2563,22 @@ async function executeV3(
         ).page02_realized_evidence_ids = realized;
       }
     }
+    if (face05V2Path && body.face05_meta) {
+      (art as { face05_production_meta?: unknown }).face05_production_meta =
+        body.face05_meta;
+    }
     const realityBlob = v3BodyRealityBlob(opts);
     /** 六页均有润色步：正文只硬拦事实/门槛；表面类 defer 到 polish（Skip 时回退 full）。 */
     const deferSurfaceToPolish = true;
-    // Face01/02 V2 already ran schema+evidence+body compliance; skip legacy substance gates.
+    // Face01/02/05 V2 already ran schema+evidence+body compliance; skip legacy substance gates.
     const bodyGate = faceV2Path
       ? {
           passed: true as const,
-          detail: face01V2Path ? "face01_v2_validated" : "face02_v2_validated",
+          detail: face01V2Path
+            ? "face01_v2_validated"
+            : face02V2Path
+              ? "face02_v2_validated"
+              : "face05_v2_validated",
         }
       : gateBodyCategoryB({
           key: page,
@@ -2702,9 +2747,11 @@ async function executeV3(
           ? "face01_v2"
           : face02V2Path
             ? "face02_v2"
-            : packBlock
-              ? "book_judgment_pack"
-              : "v3",
+            : face05V2Path
+              ? "face05_v2"
+              : packBlock
+                ? "book_judgment_pack"
+                : "v3",
         phase: "content_body",
         book_judgment_slice: Boolean(packBlock) && !faceV2Path,
         per_page_judgment: false,
@@ -2715,9 +2762,11 @@ async function executeV3(
           ? "face01_v2_schema_evidence_body"
           : face02V2Path
             ? "face02_v2_schema_evidence_body"
-            : deferSurfaceToPolish
-              ? "substance_only_surface_at_polish"
-              : "shape_only_human",
+            : face05V2Path
+              ? "face05_v2_schema_paths_evidence"
+              : deferSurfaceToPolish
+                ? "substance_only_surface_at_polish"
+                : "shape_only_human",
         surface_deferred: faceV2Path ? null : surfaceDeferred,
         acceptance_retry_used: acceptanceArmedBody,
         decision_context_feed_present: Boolean(dcFeed),
@@ -2728,6 +2777,12 @@ async function executeV3(
           null,
         face01_meta: body.face01_meta ?? null,
         face02_meta: body.face02_meta ?? null,
+        face05_meta: body.face05_meta ?? null,
+        page04_schema_present: face05V2Path
+          ? Boolean(
+              lab.artifacts.by_page["04" as DeliverySegmentKey]?.page_schema,
+            )
+          : null,
         prompt_chars: {
           system: body.call_trace.system.length,
           user: body.call_trace.user.length,
@@ -2742,12 +2797,16 @@ async function executeV3(
             ? "runContentBodyGenerate_face01_v2"
             : face02V2Path
               ? "runContentBodyGenerate_face02_v2"
-              : "runContentBodyGenerate",
+              : face05V2Path
+                ? "runContentBodyGenerate_face05_v2"
+                : "runContentBodyGenerate",
           detail: face01V2Path
             ? body.face01_meta?.validation ?? "validated"
             : face02V2Path
               ? body.face02_meta?.validation ?? "validated"
-              : "parse_only",
+              : face05V2Path
+                ? body.face05_meta?.validation ?? "validated"
+                : "parse_only",
         },
         ...(face01V2Path
           ? [
@@ -2772,6 +2831,18 @@ async function executeV3(
                 detail: String(
                   body.face02_meta?.realized_evidence_ids?.length ?? 0,
                 ),
+              },
+            ]
+          : []),
+        ...(face05V2Path
+          ? [
+              {
+                action: "validateFace05ProductionOutput",
+                detail: "schema+paths+refs+fact_status",
+              },
+              {
+                action: "passUpstreamPageSchemas",
+                detail: "page01+page02+page04",
               },
             ]
           : []),

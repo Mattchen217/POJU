@@ -14,6 +14,7 @@ import {
   parseFace05JsonStrict,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page05/production";
 import { validateFace05Output } from "@/lib/llm/pro/delivery/decision-report-v2/page05/validate";
+import { assertFace05PathIdIntegrity } from "@/lib/llm/pro/delivery/decision-report-v2/page05/path-units";
 import {
   assemblePage05SectionsForDisplay,
   assemblePage05PdfArgumentBodies,
@@ -27,6 +28,9 @@ import {
   loadDeliveryLab,
   saveDeliveryLab,
 } from "@/lib/llm/pro/delivery/lab/store";
+import { initLabStepsV3, labStepDefsV3 } from "@/lib/llm/pro/delivery/lab/types-v3";
+import { runLabStepV3 } from "@/lib/llm/pro/delivery/lab/run-step-v3";
+import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { CallLLMResult } from "@/lib/llm/router";
@@ -371,6 +375,123 @@ function baseGenerateInput() {
     page04_schema: page04,
     dispatch_attempt: 1,
   };
+}
+
+function face05IntegrityCtx() {
+  const built = buildFace05ProductionContext({
+    report_id: "prod05_integrity",
+    locale: "en",
+    dc,
+    pack,
+    page01,
+    page02,
+    page04,
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) throw new Error(built.reason);
+  return built.ctx;
+}
+
+function rejectPathIntegrity(
+  mutate: (base: Record<string, unknown>) => Record<string, unknown>,
+  label: string,
+  expectSubstring: string,
+) {
+  const base = validFace05Raw();
+  const raw = mutate(structuredClone(base));
+  const ctx = face05IntegrityCtx();
+  const viaValidate = validateFace05Output({
+    raw,
+    locale: "en",
+    registry: ctx.registry,
+    knownFactIds: ctx.knownFactIds,
+    factStatusById: ctx.factStatusById,
+    knownPage01Refs: ctx.knownPage01Refs,
+    knownPage02Refs: ctx.knownPage02Refs,
+    knownPage04Refs: ctx.knownPage04Refs,
+  });
+  assert.equal(viaValidate.ok, false, `${label}: validateFace05Output must fail`);
+  if (viaValidate.ok) throw new Error("unreachable");
+  assert.ok(
+    viaValidate.issues.some((i) => i.detail.includes(expectSubstring)),
+    `${label}: expected issue containing ${expectSubstring}; got ${viaValidate.issues.map((i) => i.detail).join(" | ")}`,
+  );
+  const viaProd = validateFace05ProductionOutput({ raw, locale: "en", ctx });
+  assert.equal(viaProd.ok, false, `${label}: production validator`);
+  const viaCanonical = validatePage05CanonicalPage(raw);
+  assert.equal(viaCanonical.ok, false, `${label}: canonical page`);
+}
+
+async function buildLabReadyForFace05Body(opts?: {
+  includePage04?: boolean;
+}): Promise<DeliveryLabSession> {
+  process.env.BOOK_JUDGMENT_PACK = "0";
+  const includePage04 = opts?.includePage04 !== false;
+
+  const lab = await createDeliveryLab({
+    ops_user: "lab_prod_05_wiring",
+    source: {
+      locale: "en",
+      original_question: "Should I leave for the startup offer?",
+      desired_outcome: "Preserve runway",
+      base_analysis: "{}",
+      session_id: `sess_lab05_wire_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+      decision_context_snapshot: dc,
+    },
+    mode: "delivery_only",
+  });
+  lab.pipeline = "v3_three_step";
+  lab.steps = initLabStepsV3();
+  lab.artifacts.by_page = lab.artifacts.by_page ?? {};
+  lab.artifacts.by_page["01"] = {
+    page_schema: page01 as never,
+    page_schema_pre_polish: structuredClone(page01),
+  };
+  lab.artifacts.by_page["02"] = {
+    page_schema: page02 as never,
+    page_schema_pre_polish: structuredClone(page02),
+  };
+  if (includePage04) {
+    lab.artifacts.by_page["04"] = {
+      page_schema: page04 as never,
+      page_schema_pre_polish: structuredClone(page04),
+    };
+  }
+  lab.artifacts.by_page["05"] = lab.artifacts.by_page["05"] ?? {};
+  lab.artifacts.prealloc = {
+    by_page: {},
+    pool_source: "chart_fact_pack",
+    chart_fact_pack: "dayMaster:甲\nyongJi:木",
+  } as never;
+  lab.artifacts.book_judgment_pack = pack;
+
+  const defs = labStepDefsV3();
+  const bodyIdx = defs.findIndex((d) => d.step_key === "05.content.body");
+  assert.ok(bodyIdx >= 0, "05.content.body exists");
+  for (let i = 0; i < bodyIdx; i++) {
+    const key = defs[i]!.step_key;
+    lab.steps[key] = {
+      step_key: key,
+      status: "approved",
+      attempts: [
+        {
+          attempt_number: 1,
+          timestamp: new Date().toISOString(),
+          duration_ms: 1,
+          input_payload: {},
+          raw_model_output: null,
+          processing_actions: [],
+          gate_verdict: { passed: true, detail: "seed_approved" },
+          output_to_next_stage: null,
+        },
+      ],
+      approved_attempt: 0,
+    };
+  }
+  lab.cursor_index = bodyIdx;
+  lab.approved_order = defs.slice(0, bodyIdx).map((d) => d.step_key);
+  await saveDeliveryLab(lab);
+  return lab;
 }
 
 async function main() {
@@ -771,6 +892,253 @@ async function main() {
     );
     assert.ok(ui.includes("assemblePage05SectionsForDisplay"));
     console.log("LEGACY/READER PASS");
+  }
+
+  // R1 reverse integrity A–G (bidirectional list + comparison 1:1)
+  {
+    const units = () =>
+      validFace05Raw().path_units as Array<Record<string, unknown>>;
+    const rows = () =>
+      (validFace05Raw().path_comparison as { rows: Array<Record<string, unknown>> })
+        .rows;
+
+    // A: path_unit not in any role list
+    rejectPathIntegrity(
+      (raw) => {
+        const orphan = {
+          ...units()[0]!,
+          path_id: "path_orphan",
+          path_role: "alternative",
+          title: "Orphan path never classified",
+          description: "Present in path_units but missing from all role lists.",
+        };
+        return {
+          ...raw,
+          path_units: [...units(), orphan],
+          path_comparison: {
+            rows: [
+              ...rows(),
+              {
+                path_id: "path_orphan",
+                benefit: "b",
+                cost: "c",
+                risk: "r",
+                resource_requirement: "res",
+                reversibility: "High",
+                prerequisites: "none",
+              },
+            ],
+          },
+        };
+      },
+      "A",
+      "not referenced by preferred/alternative/cautious",
+    );
+    console.log("R1-A PASS — unlisted path_unit rejected");
+
+    // B: same path_id in preferred and alternative
+    rejectPathIntegrity(
+      (raw) => ({
+        ...raw,
+        preferred_path_ids: ["path_staged"],
+        alternative_path_ids: ["path_hold", "path_staged"],
+      }),
+      "B",
+      "appears in both",
+    );
+    console.log("R1-B PASS — cross-list duplicate rejected");
+
+    // C: path_role=alternative placed in preferred
+    rejectPathIntegrity(
+      (raw) => ({
+        ...raw,
+        preferred_path_ids: ["path_hold"],
+        alternative_path_ids: ["path_staged"],
+      }),
+      "C",
+      "requires preferred role",
+    );
+    console.log("R1-C PASS — role/list mismatch rejected");
+
+    // D: path missing comparison row (3 units, only 2 comparison rows)
+    rejectPathIntegrity(
+      (raw) => {
+        const extra = {
+          ...units()[1]!,
+          path_id: "path_extra",
+          path_role: "alternative",
+          title: "Extra alternative without comparison",
+          description: "Listed as alternative but omitted from comparison table.",
+        };
+        return {
+          ...raw,
+          path_units: [...units(), extra],
+          alternative_path_ids: ["path_hold", "path_extra"],
+          // rows stay at staged+hold only → path_extra missing comparison
+        };
+      },
+      "D",
+      "missing path_comparison.rows",
+    );
+    console.log("R1-D PASS — missing comparison row rejected");
+
+    // E: duplicate comparison path_id
+    rejectPathIntegrity(
+      (raw) => ({
+        ...raw,
+        path_comparison: {
+          rows: [rows()[0]!, { ...rows()[0]! }],
+        },
+      }),
+      "E",
+      "path_comparison duplicate path_id",
+    );
+    console.log("R1-E PASS — duplicate comparison path_id rejected");
+
+    // F: comparison references unknown path_id
+    rejectPathIntegrity(
+      (raw) => ({
+        ...raw,
+        path_comparison: {
+          rows: [
+            rows()[0]!,
+            { ...rows()[1]!, path_id: "path_missing_compare" },
+          ],
+        },
+      }),
+      "F",
+      "path_comparison unknown path_id",
+    );
+    console.log("R1-F PASS — unknown comparison path_id rejected");
+
+    // G: full bidirectional integrity passes all three validators
+    {
+      const ctx = face05IntegrityCtx();
+      const raw = validFace05Raw();
+      const viaValidate = validateFace05Output({
+        raw,
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: ctx.knownFactIds,
+        factStatusById: ctx.factStatusById,
+        knownPage01Refs: ctx.knownPage01Refs,
+        knownPage02Refs: ctx.knownPage02Refs,
+        knownPage04Refs: ctx.knownPage04Refs,
+      });
+      assert.equal(viaValidate.ok, true);
+      if (!viaValidate.ok) throw new Error("G validate failed");
+      assert.deepEqual(assertFace05PathIdIntegrity(viaValidate.page), []);
+      const viaProd = validateFace05ProductionOutput({
+        raw,
+        locale: "en",
+        ctx,
+      });
+      assert.equal(viaProd.ok, true);
+      const viaCanonical = validatePage05CanonicalPage(raw);
+      assert.equal(viaCanonical.ok, true);
+      console.log("R1-G PASS — complete path+comparison integrity accepted");
+    }
+  }
+
+  // R1-H: real Lab production entry wires Page01/02/04 into Face05 prompt
+  {
+    let invokeCount = 0;
+    let capturedUser = "";
+    setContentBodyTestInvokeForTests(async (_sys, usr) => {
+      invokeCount += 1;
+      capturedUser = usr;
+      return stubResult(JSON.stringify(validFace05Raw()));
+    });
+    try {
+      const lab0 = await buildLabReadyForFace05Body({ includePage04: true });
+      const current = await loadDeliveryLab(lab0.lab_id);
+      assert.ok(current);
+      const run = await runLabStepV3(current!, "05.content.body", {
+        polish_locale: "en",
+      });
+      assert.equal(run.ok, true, `H lab step failed: ${run.ok ? "" : run.reason}`);
+      assert.equal(invokeCount, 1, "H must invoke LLM once through Lab entry");
+      assert.ok(
+        capturedUser.includes("## Production payload"),
+        "H prompt must include production payload",
+      );
+      assert.ok(
+        capturedUser.includes("Cash-floor panic under offer pressure."),
+        "H must include Page04 content_units text via Lab page04_schema",
+      );
+      assert.ok(
+        capturedUser.includes("u_name"),
+        "H must include Page04 unit_id",
+      );
+      assert.ok(
+        capturedUser.includes("evidence_boundary") ||
+          capturedUser.includes("\"confirmed_fact_ids\""),
+        "H must include Page04 evidence_boundary fields",
+      );
+      assert.ok(
+        capturedUser.includes("fact_runway"),
+        "H Page04 evidence_boundary confirmed facts must reach prompt",
+      );
+      assert.ok(
+        capturedUser.includes("p02_u1"),
+        "H must include Page02 content via Lab page02_schema",
+      );
+      assert.ok(
+        capturedUser.includes("Prefer a staged explore path"),
+        "H must include Page01 core_judgment via Lab page01_schema",
+      );
+      const payload = run.attempt?.input_payload as
+        | { pipeline?: string; page04_schema_present?: boolean }
+        | undefined;
+      assert.equal(payload?.pipeline, "face05_v2");
+      assert.equal(payload?.page04_schema_present, true);
+      const reloaded = await loadDeliveryLab(lab0.lab_id);
+      const stored = reloaded!.artifacts.by_page["05"]?.page_schema;
+      const validated = validatePage05CanonicalPage(stored);
+      assert.equal(validated.ok, true);
+      console.log(
+        "R1-H PASS — Lab runLabStepV3(05.content.body) passes Page01/02/04 V2",
+      );
+    } finally {
+      setContentBodyTestInvokeForTests(null);
+    }
+  }
+
+  // R1-I: Lab entry missing Page04 blocks before model call
+  {
+    let invokeCount = 0;
+    setContentBodyTestInvokeForTests(async () => {
+      invokeCount += 1;
+      return stubResult(JSON.stringify(validFace05Raw()));
+    });
+    try {
+      const lab0 = await buildLabReadyForFace05Body({ includePage04: false });
+      assert.equal(
+        lab0.artifacts.by_page["04"]?.page_schema,
+        undefined,
+        "I fixture must omit Page04",
+      );
+      const current = await loadDeliveryLab(lab0.lab_id);
+      assert.ok(current);
+      const run = await runLabStepV3(current!, "05.content.body", {
+        polish_locale: "en",
+      });
+      assert.equal(run.ok, false);
+      assert.equal(run.reason, "face05_blocked_on_required_inputs");
+      assert.equal(invokeCount, 0, "I must not invoke LLM");
+      assert.equal(run.attempt?.tokens_used ?? 0, 0);
+      const reloaded = await loadDeliveryLab(lab0.lab_id);
+      assert.equal(
+        reloaded!.artifacts.by_page["05"]?.page_schema,
+        undefined,
+        "I must not persist Face05 when Page04 missing",
+      );
+      console.log(
+        "R1-I PASS — Lab missing Page04 blocks pre-LLM with tokens_used=0",
+      );
+    } finally {
+      setContentBodyTestInvokeForTests(null);
+    }
   }
 
   console.log("ok page05 production closure");
