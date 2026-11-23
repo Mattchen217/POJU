@@ -2333,7 +2333,10 @@ async function executeV3(
       page === "02" && Boolean(lab.source.decision_context_snapshot);
     const face05V2Path =
       page === "05" && Boolean(lab.source.decision_context_snapshot);
-    const faceV2Path = face01V2Path || face02V2Path || face05V2Path;
+    const face06V2Path =
+      page === "06" && Boolean(lab.source.decision_context_snapshot);
+    const faceV2Path =
+      face01V2Path || face02V2Path || face05V2Path || face06V2Path;
     if (faceBody && page !== "03" && !plan?.units?.length && !faceV2Path) {
       return {
         input_payload: { key: page },
@@ -2350,19 +2353,33 @@ async function executeV3(
       };
     }
     if (
-      (page === "01" || page === "02" || page === "05") &&
+      (page === "01" || page === "02" || page === "05" || page === "06") &&
       !lab.source.decision_context_snapshot
     ) {
       const pipeline =
-        page === "01" ? "face01_v2" : page === "02" ? "face02_v2" : "face05_v2";
+        page === "01"
+          ? "face01_v2"
+          : page === "02"
+            ? "face02_v2"
+            : page === "06"
+              ? "face06_v2"
+              : "face05_v2";
       const rule =
         page === "01"
           ? "face01_missing_decision_context"
           : page === "02"
             ? "face02_missing_decision_context"
-            : "face05_missing_decision_context";
+            : page === "06"
+              ? "face06_missing_decision_context"
+              : "face05_missing_decision_context";
       const label =
-        page === "01" ? "Face01" : page === "02" ? "Face02" : "Face05";
+        page === "01"
+          ? "Face01"
+          : page === "02"
+            ? "Face02"
+            : page === "06"
+              ? "Face06"
+              : "Face05";
       return {
         input_payload: { key: page, pipeline },
         raw_model_output: null,
@@ -2431,15 +2448,18 @@ async function executeV3(
         : null,
       report_id: session_id,
       page01_schema:
-        face02V2Path || face05V2Path
+        face02V2Path || face05V2Path || face06V2Path
           ? lab.artifacts.by_page["01" as DeliverySegmentKey]?.page_schema ??
             null
           : null,
-      page02_schema: face05V2Path
+      page02_schema: face05V2Path || face06V2Path
         ? lab.artifacts.by_page["02" as DeliverySegmentKey]?.page_schema ?? null
         : null,
-      page04_schema: face05V2Path
+      page04_schema: face05V2Path || face06V2Path
         ? lab.artifacts.by_page["04" as DeliverySegmentKey]?.page_schema ?? null
+        : null,
+      page05_schema: face06V2Path
+        ? lab.artifacts.by_page["05" as DeliverySegmentKey]?.page_schema ?? null
         : null,
     });
     if (!body.ok) {
@@ -2461,6 +2481,7 @@ async function executeV3(
         (body.reason.startsWith("face01_") ||
           body.reason.startsWith("face02_") ||
           body.reason.startsWith("face05_") ||
+          body.reason.startsWith("face06_") ||
           body.reason === "scare_redline");
       const pipelineLabel = face01V2Path
         ? "face01_v2"
@@ -2468,14 +2489,18 @@ async function executeV3(
           ? "face02_v2"
           : face05V2Path
             ? "face05_v2"
-            : "v3";
+            : face06V2Path
+              ? "face06_v2"
+              : "v3";
       const faceLabel = face01V2Path
         ? "Face01"
         : face02V2Path
           ? "Face02"
           : face05V2Path
             ? "Face05"
-            : "Face";
+            : face06V2Path
+              ? "Face06"
+              : "Face";
       return {
         input_payload: {
           key: page,
@@ -2493,9 +2518,15 @@ async function executeV3(
           face01_meta: body.face01_meta ?? null,
           face02_meta: body.face02_meta ?? null,
           face05_meta: body.face05_meta ?? null,
+          face06_meta: body.face06_meta ?? null,
           page04_schema_present: face05V2Path
             ? Boolean(
                 lab.artifacts.by_page["04" as DeliverySegmentKey]?.page_schema,
+              )
+            : null,
+          page05_schema_present: face06V2Path
+            ? Boolean(
+                lab.artifacts.by_page["05" as DeliverySegmentKey]?.page_schema,
               )
             : null,
         },
@@ -2510,7 +2541,9 @@ async function executeV3(
                 ? "runContentBodyGenerate_face02_v2"
                 : face05V2Path
                   ? "runContentBodyGenerate_face05_v2"
-                  : "runContentBodyGenerate",
+                  : face06V2Path
+                    ? "runContentBodyGenerate_face06_v2"
+                    : "runContentBodyGenerate",
             detail: body.reason,
           },
         ],
@@ -2567,6 +2600,10 @@ async function executeV3(
       (art as { face05_production_meta?: unknown }).face05_production_meta =
         body.face05_meta;
     }
+    if (face06V2Path && body.face06_meta) {
+      (art as { face06_production_meta?: unknown }).face06_production_meta =
+        body.face06_meta;
+    }
     const realityBlob = v3BodyRealityBlob(opts);
     /** 六页均有润色步：正文只硬拦事实/门槛；表面类 defer 到 polish（Skip 时回退 full）。 */
     const deferSurfaceToPolish = true;
@@ -2578,7 +2615,9 @@ async function executeV3(
             ? "face01_v2_validated"
             : face02V2Path
               ? "face02_v2_validated"
-              : "face05_v2_validated",
+              : face06V2Path
+                ? "face06_v2_validated"
+                : "face05_v2_validated",
         }
       : gateBodyCategoryB({
           key: page,
@@ -2749,9 +2788,11 @@ async function executeV3(
             ? "face02_v2"
             : face05V2Path
               ? "face05_v2"
-              : packBlock
-                ? "book_judgment_pack"
-                : "v3",
+              : face06V2Path
+                ? "face06_v2"
+                : packBlock
+                  ? "book_judgment_pack"
+                  : "v3",
         phase: "content_body",
         book_judgment_slice: Boolean(packBlock) && !faceV2Path,
         per_page_judgment: false,
@@ -2764,9 +2805,11 @@ async function executeV3(
             ? "face02_v2_schema_evidence_body"
             : face05V2Path
               ? "face05_v2_schema_paths_evidence"
-              : deferSurfaceToPolish
-                ? "substance_only_surface_at_polish"
-                : "shape_only_human",
+              : face06V2Path
+                ? "face06_v2_schema_execution_evidence"
+                : deferSurfaceToPolish
+                  ? "substance_only_surface_at_polish"
+                  : "shape_only_human",
         surface_deferred: faceV2Path ? null : surfaceDeferred,
         acceptance_retry_used: acceptanceArmedBody,
         decision_context_feed_present: Boolean(dcFeed),
@@ -2778,9 +2821,15 @@ async function executeV3(
         face01_meta: body.face01_meta ?? null,
         face02_meta: body.face02_meta ?? null,
         face05_meta: body.face05_meta ?? null,
+        face06_meta: body.face06_meta ?? null,
         page04_schema_present: face05V2Path
           ? Boolean(
               lab.artifacts.by_page["04" as DeliverySegmentKey]?.page_schema,
+            )
+          : null,
+        page05_schema_present: face06V2Path
+          ? Boolean(
+              lab.artifacts.by_page["05" as DeliverySegmentKey]?.page_schema,
             )
           : null,
         prompt_chars: {
@@ -2799,14 +2848,18 @@ async function executeV3(
               ? "runContentBodyGenerate_face02_v2"
               : face05V2Path
                 ? "runContentBodyGenerate_face05_v2"
-                : "runContentBodyGenerate",
+                : face06V2Path
+                  ? "runContentBodyGenerate_face06_v2"
+                  : "runContentBodyGenerate",
           detail: face01V2Path
             ? body.face01_meta?.validation ?? "validated"
             : face02V2Path
               ? body.face02_meta?.validation ?? "validated"
               : face05V2Path
                 ? body.face05_meta?.validation ?? "validated"
-                : "parse_only",
+                : face06V2Path
+                  ? body.face06_meta?.validation ?? "validated"
+                  : "parse_only",
         },
         ...(face01V2Path
           ? [
@@ -2843,6 +2896,22 @@ async function executeV3(
               {
                 action: "passUpstreamPageSchemas",
                 detail: "page01+page02+page04",
+              },
+            ]
+          : []),
+        ...(face06V2Path
+          ? [
+              {
+                action: "validateFace06ProductionOutput",
+                detail: "schema+paths+refs+facts+personal_units",
+              },
+              {
+                action: "passUpstreamPageSchemas",
+                detail: "page01+page02+page04+page05",
+              },
+              {
+                action: "persistFace06ProductionMeta",
+                detail: body.face06_meta?.validation ?? "validated",
               },
             ]
           : []),
@@ -2886,7 +2955,9 @@ async function executeV3(
           ? `Face01 V2 已落库 · ${body.face01_meta?.validation ?? "validated"} · Page02 引用延后装配 · 禁止旧正文 fallback`
           : face02V2Path
             ? `Face02 V2 已落库 · ${body.face02_meta?.validation ?? "validated"} · realized evidence 已写入 · 禁止旧正文 fallback`
-            : deferSurfaceToPolish
+            : face06V2Path
+              ? `Face06 V2 已落库 · ${body.face06_meta?.validation ?? "validated"} · 策略执行与验证 · 禁止旧正文 fallback`
+              : deferSurfaceToPolish
               ? surfaceDeferred
                 ? `正文已落库 · 事实/门槛过 · 表面类（${surfaceDeferred}）留给润色步清 · 请 gate 人审真准价值`
                 : acceptanceArmedBody

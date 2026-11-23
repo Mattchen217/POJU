@@ -1,5 +1,5 @@
 /**
- * Decision Report V2 — Batch 0 public foundation + Page 01 + Page 02 + Page 04.
+ * Decision Report V2 — Batch 0 public foundation + Page 01 + Page 02 + Page 04 + Page 06.
  */
 
 export * from "./types";
@@ -52,6 +52,45 @@ export {
   normalizePage04ReadingOrder,
   page04TaskInterface,
 } from "./page04/architecture";
+export {
+  buildFace06ProductionContext,
+  validateFace06ProductionOutput,
+  parseFace06JsonStrict,
+  face06SliceSummary,
+  knownPage05PathIdsFromFace,
+} from "./page06/production";
+export { validateFace06Output } from "./page06/validate";
+export { assertFace06PathIntegrity } from "./page06/path-integrity";
+export {
+  isFace06V2,
+  isFace06Legacy,
+  projectLegacyFace06ForDisplay,
+} from "./page06/legacy-adapter";
+export {
+  PAGE06_SECTION_IDS,
+  PAGE06_SECTION_DEFINITIONS,
+  PAGE06_INPUT_FIELD_CONTRACTS,
+  PAGE06_SECTION_CONTENT_SPECS,
+  PAGE06_MODEL_TASKS,
+  PAGE06_GAP_STATUSES,
+  PAGE06_ARCHITECTURE_PROMPT_VERSION,
+  PAGE06_FIELD_ASSEMBLERS,
+  PAGE06_UPSTREAM_CONTRACT,
+  PAGE06_DOWNSTREAM_CONTRACT,
+  PAGE06_STABLE_OUTPUT_FIELDS_FOR_DOWNSTREAM,
+  buildPage06ArchitectureProduction,
+  buildPage06ArchitectureEnvelope,
+  attachPage06ArchitectureToPage,
+  validatePage06CanonicalPage,
+  assemblePage06SectionsForDisplay,
+  assemblePage06PdfArgumentBodies,
+  assemblePage06InputManifest,
+  buildPage06MissingInputs,
+  buildPage06ArchitecturePromptBundle,
+  normalizePage06ReadingOrder,
+  page06TaskInterface,
+  assertPage06InputAssemblyCoverage,
+} from "./page06/architecture";
 export * from "./registry-from-sources";
 export * from "./fact-relevance";
 export * from "./personal-domains";

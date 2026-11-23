@@ -948,6 +948,306 @@ export const Face05LegacySchema = z.object({
 
 export type Face05Legacy = z.infer<typeof Face05LegacySchema>;
 
+/** Face 06 verification experiment — legacy flat shape (7 questions). */
+export const Face06VerificationExperimentSchema = z.object({
+  hypothesis: NonEmpty.max(480),
+  action: NonEmpty.max(480),
+  observe: NonEmpty.max(480),
+  window: NonEmpty.max(240),
+  success_criteria: NonEmpty.max(480),
+  if_fail: NonEmpty.max(480),
+  defer_costs: NonEmpty.max(480),
+});
+
+export type Face06VerificationExperiment = z.infer<
+  typeof Face06VerificationExperimentSchema
+>;
+
+const Page06SectionIdEnum = z.enum([
+  "first_step",
+  "execution_actions",
+  "validation_experiments",
+  "personal_execution_adjustments",
+  "phase_rhythm",
+  "resource_boundaries",
+  "evidence_boundary",
+]);
+
+const Page06RefIds = z.array(NonEmpty.max(80)).max(8).default([]);
+const Page06FactIds = z.array(NonEmpty.max(120)).max(8).default([]);
+
+/** Face 06 — 策略执行与验证 (Strategy Execution & Validation · Batch 1). */
+export const Face06V2Schema = z.object({
+  page: z.literal("06"),
+  face: z.literal("06"),
+  schema_version: z.literal("face06-v2").default("face06-v2"),
+  locale: DecisionReportLocaleSchema.optional(),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  primary_path_id: NonEmpty.max(80),
+  fallback_path_ids: z.array(NonEmpty.max(80)).max(4).default([]),
+  first_step: z.object({
+    action_id: NonEmpty.max(80),
+    path_id: NonEmpty.max(80),
+    what: NonEmpty.max(720),
+    why_now: NonEmpty.max(480),
+    required_resources: z.array(NonEmpty.max(240)).max(8).default([]),
+    expected_observable_result: NonEmpty.max(480),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: Page06RefIds,
+    reality_fact_ids: Page06FactIds,
+  }),
+  execution_actions: z
+    .array(
+      z.object({
+        action_id: NonEmpty.max(80),
+        path_id: NonEmpty.max(80),
+        sequence: z.number().int().min(1).max(24),
+        action: NonEmpty.max(720),
+        rationale: NonEmpty.max(480),
+        resources: z.array(NonEmpty.max(240)).max(8).default([]),
+        dependencies: z.array(NonEmpty.max(240)).max(8).default([]),
+        observable_result: NonEmpty.max(480),
+        guardrails: z.array(NonEmpty.max(240)).max(8).default([]),
+        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        evidence_ids: Page06RefIds,
+        reality_fact_ids: Page06FactIds,
+      }),
+    )
+    .min(1)
+    .max(12),
+  validation_experiments: z
+    .array(
+      z.object({
+        experiment_id: NonEmpty.max(80),
+        path_id: NonEmpty.max(80),
+        hypothesis: NonEmpty.max(480),
+        action: NonEmpty.max(480),
+        observe: NonEmpty.max(480),
+        window: NonEmpty.max(240),
+        success_criteria: NonEmpty.max(480),
+        if_fail: NonEmpty.max(480),
+        defer_costs: NonEmpty.max(480),
+        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        evidence_ids: Page06RefIds,
+        reality_fact_ids: Page06FactIds,
+      }),
+    )
+    .max(8)
+    .default([]),
+  /** Required by validator when validation_experiments is empty. */
+  experiments_absent_note: z.string().trim().max(480).optional().default(""),
+  personal_execution_adjustments: z
+    .array(
+      z.object({
+        adjustment_id: NonEmpty.max(80),
+        path_id: NonEmpty.max(80),
+        adjustment: NonEmpty.max(720),
+        supporting_personal_unit_refs: z
+          .array(NonEmpty.max(120))
+          .max(8)
+          .default([]),
+        supporting_reality_fact_ids: Page06FactIds,
+        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        evidence_ids: Page06RefIds,
+      }),
+    )
+    .max(8)
+    .default([]),
+  resource_boundaries: z.object({
+    time: NonEmpty.max(320),
+    money: NonEmpty.max(320),
+    people: NonEmpty.max(320),
+    energy: NonEmpty.max(320),
+    other: z.array(NonEmpty.max(240)).max(8).default([]),
+    unknown_or_missing: z.array(NonEmpty.max(240)).max(8).default([]),
+  }),
+  phase_rhythm: z.object({
+    phases: z
+      .array(
+        z.object({
+          phase_id: NonEmpty.max(80),
+          goal: NonEmpty.max(480),
+          enter_triggers: z.array(NonEmpty.max(240)).max(8).default([]),
+          exit_triggers: z.array(NonEmpty.max(240)).max(8).default([]),
+        }),
+      )
+      .min(1)
+      .max(6),
+    notes: z.string().trim().max(720).optional().default(""),
+  }),
+  monitoring_contract: z.object({
+    path_id: NonEmpty.max(80),
+    action_ids: z.array(NonEmpty.max(80)).max(12).default([]),
+    experiment_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    observe_signals: z.array(NonEmpty.max(240)).min(1).max(8),
+    red_flags: z.array(NonEmpty.max(240)).max(8).default([]),
+    review_questions: z.array(NonEmpty.max(240)).max(8).default([]),
+    continue_triggers: z.array(NonEmpty.max(240)).max(8).default([]),
+    adjust_triggers: z.array(NonEmpty.max(240)).max(8).default([]),
+    stop_triggers: z.array(NonEmpty.max(240)).min(1).max(8),
+    rerun_triggers: z.array(NonEmpty.max(240)).max(8).default([]),
+    resource_guardrails: z.array(NonEmpty.max(240)).max(8).default([]),
+    defer_costs: z.array(NonEmpty.max(240)).max(8).default([]),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: Page06RefIds,
+    reality_fact_ids: Page06FactIds,
+  }),
+  evidence_boundary: z.object({
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(12),
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+    uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(8),
+    experiments_absent_note: z.string().trim().max(480).optional().default(""),
+  }),
+  reading_order: z
+    .array(Page06SectionIdEnum)
+    .min(3)
+    .max(7)
+    .default([
+      "first_step",
+      "execution_actions",
+      "validation_experiments",
+      "personal_execution_adjustments",
+      "phase_rhythm",
+      "resource_boundaries",
+      "evidence_boundary",
+    ])
+    .superRefine((order, ctx) => {
+      const seen = new Set<string>();
+      for (const id of order) {
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `duplicate reading_order section_id: ${id}`,
+          });
+          return;
+        }
+        seen.add(id);
+      }
+      for (const required of [
+        "first_step",
+        "execution_actions",
+        "validation_experiments",
+        "personal_execution_adjustments",
+        "phase_rhythm",
+        "resource_boundaries",
+        "evidence_boundary",
+      ] as const) {
+        if (!seen.has(required)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `reading_order missing required section: ${required}`,
+          });
+        }
+      }
+    }),
+  generation_status: z
+    .enum([
+      "blocked_on_required_inputs",
+      "ready_for_generation",
+      "generated_with_gaps",
+      "generated_complete",
+      "failed_structure",
+      "incomplete",
+    ])
+    .optional(),
+  input_manifest: z
+    .array(
+      z.object({
+        field_id: NonEmpty.max(80),
+        section_id: Page06SectionIdEnum,
+        source_kind: z.enum([
+          "personal_analysis",
+          "reality_context",
+          "analytical_result",
+          "system_metadata",
+          "derived_data",
+        ]),
+        present: z.boolean(),
+        collection_status: z.enum([
+          "ready",
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        value_summary: z.string().trim().max(320).nullable(),
+      }),
+    )
+    .max(48)
+    .optional(),
+  missing_inputs: z
+    .array(
+      z.object({
+        gap_id: NonEmpty.max(80),
+        page_id: z.literal("06"),
+        section_id: Page06SectionIdEnum,
+        field_id: NonEmpty.max(80),
+        status: z.enum([
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        why_needed: NonEmpty.max(320),
+        affects_content: NonEmpty.max(320),
+        follow_up_collect_hint: NonEmpty.max(320),
+        handling: z.enum([
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ]),
+      }),
+    )
+    .max(48)
+    .optional(),
+  sections: z
+    .array(
+      z.object({
+        section_id: Page06SectionIdEnum,
+        segment_letter: z.enum(["A", "B", "C", "D", "E", "F", "G"]),
+        title_zh: NonEmpty.max(80),
+        title_en: NonEmpty.max(80),
+        required: z.boolean(),
+        reading_rank: z.number().int().min(1).max(8),
+        information_level: NonEmpty.max(40),
+      }),
+    )
+    .max(8)
+    .optional(),
+  generation_metadata: z
+    .object({
+      task_id: NonEmpty.max(80),
+      prompt_bundle_chars: z.number().int().min(0),
+      built_at: NonEmpty.max(64),
+      llm_invoked: z.boolean(),
+    })
+    .optional(),
+});
+
+export type Face06V2 = z.infer<typeof Face06V2Schema>;
+
+/** Legacy Face 06 (pre Face06V2) — historical open. */
+export const Face06LegacySchema = z.object({
+  page: z.literal("06"),
+  face: z.literal("06"),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  near_step_principle: NonEmpty.max(960),
+  stage_climate: NonEmpty.max(720),
+  self_retune: NonEmpty.max(720),
+  rhythm_note: NonEmpty.max(480),
+  verification_experiment: Face06VerificationExperimentSchema.optional(),
+});
+
+export type Face06Legacy = z.infer<typeof Face06LegacySchema>;
+
 /** Legacy Face 01 (pre Batch 0) — retained for historical report open. */
 export const Face01LegacySchema = z.object({
   page: z.literal("01"),

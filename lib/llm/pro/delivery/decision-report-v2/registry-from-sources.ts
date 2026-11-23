@@ -100,7 +100,7 @@ function seedEvidenceRegistryForFace(input: {
   bazi_available?: boolean;
   ziwei_available?: boolean;
   /** Which face units/claims to materialize. */
-  face_id: "01" | "02" | "04" | "05";
+  face_id: "01" | "02" | "04" | "05" | "06";
 }): RegistrySeedResult {
   const maxFacts = input.maxFacts ?? 16;
   const registry = emptyEvidenceRegistry();
@@ -353,6 +353,19 @@ export function seedEvidenceRegistryForFace05(input: {
   ziwei_available?: boolean;
 }): RegistrySeedResult {
   return seedEvidenceRegistryForFace({ ...input, face_id: "05" });
+}
+
+/** Page06 registry — only serves_face includes 06; reuses same seeder mechanics. */
+export function seedEvidenceRegistryForFace06(input: {
+  dc: DecisionContext | null | undefined;
+  pack: BookJudgmentPack | null | undefined;
+  maxFacts?: number;
+  chart_fact_pack?: string | null;
+  ziwei_fact_pack?: ZiweiFactPack | null;
+  bazi_available?: boolean;
+  ziwei_available?: boolean;
+}): RegistrySeedResult {
+  return seedEvidenceRegistryForFace({ ...input, face_id: "06" });
 }
 
 /**

@@ -23,6 +23,9 @@ import {
   Face04LegacySchema,
   Face05V2Schema,
   Face05LegacySchema,
+  Face06V2Schema,
+  Face06LegacySchema,
+  Face06VerificationExperimentSchema,
   type Face01Legacy,
   type Face01V2,
   type Face02Legacy,
@@ -33,6 +36,8 @@ import {
   type Face04Legacy,
   type Face05V2,
   type Face05Legacy,
+  type Face06V2,
+  type Face06Legacy,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 const NonEmpty = z.string().trim().min(1);
@@ -69,30 +74,18 @@ export const Face05ParseSchema = z.union([Face05V2Schema, Face05LegacySchema]);
 export type Face05 = Face05V2 | Face05Legacy;
 export { Face05V2Schema, Face05LegacySchema, type Face05V2, type Face05Legacy };
 
-/** Product Stage 4 P6 — verification experiment (7 questions). */
-export const Face06VerificationExperimentSchema = z.object({
-  hypothesis: NonEmpty.max(480),
-  action: NonEmpty.max(480),
-  observe: NonEmpty.max(480),
-  window: NonEmpty.max(240),
-  success_criteria: NonEmpty.max(480),
-  if_fail: NonEmpty.max(480),
-  defer_costs: NonEmpty.max(480),
-});
-
-/** 06 · 怎么落地 · dualTrack=reality · Product Stage 4 P6 */
-export const Face06Schema = z.object({
-  page: z.literal("06"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("06"),
-  near_step_principle: NonEmpty.max(960),
-  stage_climate: NonEmpty.max(720),
-  self_retune: NonEmpty.max(720),
-  rhythm_note: NonEmpty.max(480),
-  /** Stage 4: structured verification experiment (optional for legacy Lab fills). */
-  verification_experiment: Face06VerificationExperimentSchema.optional(),
-});
-export type Face06 = z.infer<typeof Face06Schema>;
+/** 06 · 策略执行与验证 · dualTrack=reality · schema_version face06-v2 */
+export const Face06Schema = Face06LegacySchema;
+/** Historical open: accept legacy near-step shape and Face06V2. */
+export const Face06ParseSchema = z.union([Face06V2Schema, Face06LegacySchema]);
+export type Face06 = Face06V2 | Face06Legacy;
+export {
+  Face06V2Schema,
+  Face06LegacySchema,
+  Face06VerificationExperimentSchema,
+  type Face06V2,
+  type Face06Legacy,
+};
 
 /** 07 · 场域与关系 · dualTrack=abc · topic-gated */
 export const Face07Schema = z.object({
@@ -136,7 +129,7 @@ export const FACE_PAGE_SCHEMAS = {
   "02": Face02ParseSchema,
   "04": Face04ParseSchema,
   "05": Face05ParseSchema,
-  "06": Face06Schema,
+  "06": Face06ParseSchema,
   "07": Face07Schema,
   "08": Face08Schema,
   "03": Face03Schema,

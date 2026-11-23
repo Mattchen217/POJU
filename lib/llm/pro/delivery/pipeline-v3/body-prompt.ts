@@ -415,6 +415,11 @@ export function buildV3BodyPrompt(input: {
    * When set, replaces generic buildFacePromptPair for key=05.
    */
   face05_production?: { system: string; user: string } | null;
+  /**
+   * Face 06 V2 production prompts (Strategy Execution architecture Batch 1).
+   * When set, replaces generic buildFacePromptPair for key=06.
+   */
+  face06_production?: { system: string; user: string } | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
 
@@ -447,6 +452,14 @@ export function buildV3BodyPrompt(input: {
     return {
       system: `${BODY_SYSTEM_FACE}\n\n${input.face05_production.system}`,
       user: input.face05_production.user,
+    };
+  }
+
+  // Face 06 production path — Strategy Execution architecture prompt.
+  if (faceId === "06" && input.face06_production?.system && input.face06_production?.user) {
+    return {
+      system: `${BODY_SYSTEM_FACE}\n\n${input.face06_production.system}`,
+      user: input.face06_production.user,
     };
   }
 

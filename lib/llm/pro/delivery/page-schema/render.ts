@@ -12,9 +12,12 @@ import { assemblePage04PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision
 import { projectLegacyFace04ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page04/legacy-adapter";
 import { projectLegacyFace05ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page05/legacy-adapter";
 import { assemblePage05PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page05/architecture/section-assembly";
+import { projectLegacyFace06ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page06/legacy-adapter";
+import { assemblePage06PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page06/architecture/section-assembly";
 import type {
   Face04V2,
   Face05V2,
+  Face06V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
@@ -242,12 +245,32 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       }
       break;
     }
-    case "06":
-      add("近步原则", "near_step_principle");
-      add("阶段气候", "stage_climate");
-      add("自我调频", "self_retune");
-      add("节奏提醒", "rhythm_note");
+    case "06": {
+      let canonical06: Face06V2 | null = null;
+      const step = p.first_step;
+      if (
+        p.schema_version === "face06-v2" ||
+        (step && typeof step === "object")
+      ) {
+        canonical06 = p as unknown as Face06V2;
+      } else {
+        canonical06 = projectLegacyFace06ForDisplay(p);
+      }
+      if (!canonical06) {
+        throw new Error(
+          "face06_pdf_legacy_project_failed: historical/incomplete Face06 could not be projected for PDF assembly",
+        );
+      }
+      const locale06 = String(
+        (canonical06 as { locale?: unknown }).locale ??
+          (p as { locale?: unknown }).locale ??
+          "zh",
+      );
+      for (const arg of assemblePage06PdfArgumentBodies(canonical06, locale06)) {
+        out.push(arg);
+      }
       break;
+    }
     case "07":
       add("场域判断", "field_judgment");
       add("关系/互动", "relation_interaction");
