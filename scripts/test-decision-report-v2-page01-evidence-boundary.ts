@@ -307,6 +307,7 @@ const seeded = seedEvidenceRegistryForFace01({
   dc: baseDc(),
   pack,
   chart_fact_pack: "日主甲木 dayMaster:甲",
+  ziwei_fact_pack: { patternHits: [{ name: "x" }] } as never,
   bazi_available: true,
   ziwei_available: true,
 });

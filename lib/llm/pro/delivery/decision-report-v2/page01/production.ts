@@ -86,6 +86,7 @@ export function buildFace01ProductionContext(input: {
     pack: input.pack,
     maxFacts: 16,
     chart_fact_pack: input.chart_fact_pack,
+    ziwei_fact_pack: input.ziwei_fact_pack,
     bazi_available: domains.bazi_available,
     ziwei_available: domains.ziwei_available,
   });

@@ -90,7 +90,16 @@ export const BookJudgmentPackSchema = z.object({
   created_at: z.string().trim().min(1),
   units: z.array(BookJudgmentUnitSchema).min(1).max(120),
   by_face: z.record(z.string(), z.array(z.string().trim().min(1))),
+  /**
+   * Program-certified hit refs actually used in unit.claim and present in real ZFP.
+   * Never trust raw model pattern_hits_used here.
+   */
   pattern_hits_used: z.array(z.string().trim().min(1).max(80)).default([]),
+  /** Model-declared pattern_hits_used (audit only). */
+  declared_pattern_hits_used: z
+    .array(z.string().trim().min(1).max(80))
+    .max(40)
+    .optional(),
   science_tags_used: z.array(z.string().trim().min(1).max(80)).default([]),
 });
 

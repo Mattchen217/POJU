@@ -14,7 +14,9 @@ import {
   selectRealityFactsForPage01,
   type FactSelectionResult,
 } from "./fact-relevance";
+import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import {
+  canonicalPatternHitRefSet,
   detectAvailableCfpKeys,
   resolveUnitTermProvenance,
   type PersonalSourceDomain,
@@ -95,6 +97,8 @@ export function seedEvidenceRegistryForFace01(input: {
   /** Max facts retained for page 01 after relevance ranking. */
   maxFacts?: number;
   chart_fact_pack?: string | null;
+  /** Real ZFP — hit allowlist is re-derived here; never trust pack.pattern_hits_used alone. */
+  ziwei_fact_pack?: ZiweiFactPack | null;
   bazi_available?: boolean;
   ziwei_available?: boolean;
 }): RegistrySeedResult {
@@ -136,6 +140,10 @@ export function seedEvidenceRegistryForFace01(input: {
   const cfpKeys = detectAvailableCfpKeys(input.chart_fact_pack);
   const cfp_hash = pack?.cfp_hash ?? null;
   const zfp_hash = pack?.zfp_hash ?? null;
+  // Re-derive from real ZFP every seed — ignore pack.pattern_hits_used as authority.
+  const actual_pattern_hit_refs = canonicalPatternHitRefSet(
+    input.ziwei_fact_pack,
+  );
 
   const units = pack?.units ?? [];
   const face01Units = units.filter((u) => u.serves_face.includes("01"));
@@ -163,7 +171,7 @@ export function seedEvidenceRegistryForFace01(input: {
     };
     const prov = resolveUnitTermProvenance({
       unit: probe,
-      pack,
+      actual_pattern_hit_refs,
       availableCfpKeys: cfpKeys,
       bazi_available,
       ziwei_available,

@@ -19,13 +19,14 @@ import {
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { scareRedlineSnippet } from "@/lib/llm/compliance/audit-output";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
-import { patternHitRefsForPrompt } from "@/lib/ziwei/soft-zfp-labels";
 import { sanitizeZiweiLeaksInPromptText } from "@/lib/ziwei/sanitize-prompt-ziwei-leaks";
 import { formatBookJudgmentFullBookPageFeed } from "@/lib/llm/pro/delivery/page-slice-feed";
 import { formatDecisionContextSliceForPage } from "@/lib/poju/decision-context/dc-page-feed";
 import { formatGlobalSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
 import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
 import {
+  canonicalPatternHitRefsFromZiwei,
+  certifyPatternHitsUsed,
   detectAvailableCfpKeys,
   resolveUnitTermProvenance,
 } from "@/lib/llm/pro/delivery/decision-report-v2/term-provenance";
@@ -125,9 +126,14 @@ export type BookJudgmentGenerateFail = {
 /** One-shot generate outcome (Ok | Fail). Restored after DegradeCarry/result-union removal. */
 export type BookJudgmentGenerateResult = BookJudgmentGenerateOk | BookJudgmentGenerateFail;
 
-function patternHitsFromZiwei(ziwei: ZiweiFactPack | null | undefined): string[] {
-  // Phase 10: never feed classical 格名 into judgment prompts — hit_id:level only.
-  return patternHitRefsForPrompt(ziwei?.patternHits ?? []);
+/**
+ * Unique trusted hit source for prompts + certification.
+ * Alias of canonical refs from real ziwei.patternHits.
+ */
+export function patternHitsFromZiwei(
+  ziwei: ZiweiFactPack | null | undefined,
+): string[] {
+  return canonicalPatternHitRefsFromZiwei(ziwei);
 }
 
 function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
@@ -220,8 +226,8 @@ function stringList(raw: unknown, key: string): string[] {
 
 /**
  * Program-certify provenance onto units.
- * Model declarations (declared_*) are preserved for audit; final term_ids /
- * source_domain / source_version are ONLY program-certified values.
+ * Hit allowlist MUST come from real ZFP (actual_pattern_hit_refs), never from
+ * model pattern_hits_used.
  */
 function enrichUnitsWithProvenance(input: {
   units: BookJudgmentUnit[];
@@ -229,7 +235,8 @@ function enrichUnitsWithProvenance(input: {
   ziwei: ZiweiFactPack | null;
   cfp_hash: string;
   zfp_hash: string | null;
-  pattern_hits_used: string[];
+  /** Canonical refs from patternHitsFromZiwei / real ZFP only. */
+  actual_pattern_hit_refs: readonly string[];
 }): BookJudgmentUnit[] {
   const bazi_available = input.chartText.trim().length > 0;
   const ziwei_available =
@@ -237,16 +244,11 @@ function enrichUnitsWithProvenance(input: {
     Array.isArray(input.ziwei.patternHits) &&
     input.ziwei.patternHits.length > 0;
   const cfpKeys = detectAvailableCfpKeys(input.chartText);
-  const packStub = {
-    pattern_hits_used: input.pattern_hits_used,
-  } as BookJudgmentPack;
+  const hitAllowlist = new Set(input.actual_pattern_hit_refs);
 
   return input.units.map((unit) => {
-    // Resolve against declared fields (model) + structured cites in claim/anchors.
     const probe: BookJudgmentUnit = {
       ...unit,
-      // Feed declarations into resolve as unit.term_ids so rejected[] is populated;
-      // resolve never treats them as certified authority.
       term_ids: unit.declared_term_ids?.length
         ? unit.declared_term_ids
         : unit.term_ids ?? [],
@@ -255,7 +257,7 @@ function enrichUnitsWithProvenance(input: {
     };
     const prov = resolveUnitTermProvenance({
       unit: probe,
-      pack: packStub,
+      actual_pattern_hit_refs: hitAllowlist,
       availableCfpKeys: cfpKeys,
       bazi_available,
       ziwei_available,
@@ -299,6 +301,29 @@ function enrichUnitsWithProvenance(input: {
   });
 }
 
+/**
+ * Production certification path without an LLM call — used by generate + tests.
+ * Model declared_pattern_hits_used is audit-only; hits certified from real ZFP.
+ */
+export function buildCertifiedBookJudgmentPackDraft(input: {
+  locale: string;
+  question_id?: string;
+  thesis_ref?: string;
+  chartText: string;
+  ziwei: ZiweiFactPack | null;
+  shot_mode?: BookJudgmentShotMode;
+  units: BookJudgmentUnit[];
+  /** Model-declared pattern_hits_used (audit only). */
+  declared_pattern_hits_used: string[];
+  science_tags_used?: string[];
+}): BookJudgmentPack {
+  return buildPackDraft({
+    ...input,
+    shot_mode: input.shot_mode ?? "one",
+    science_tags_used: input.science_tags_used ?? [],
+  });
+}
+
 function buildPackDraft(input: {
   locale: string;
   question_id?: string;
@@ -307,25 +332,34 @@ function buildPackDraft(input: {
   ziwei: ZiweiFactPack | null;
   shot_mode: BookJudgmentShotMode;
   units: BookJudgmentUnit[];
-  pattern_hits_used: string[];
+  /** Model-declared pattern_hits_used (audit only). */
+  declared_pattern_hits_used: string[];
   science_tags_used: string[];
 }): BookJudgmentPack {
+  // Real ZFP presence only — never invent from model hit declarations.
   const zfpOmitted = !input.ziwei || !(input.ziwei.patternHits?.length > 0);
-  const hits = zfpOmitted
+  const actual_pattern_hit_refs = zfpOmitted
     ? []
-    : input.pattern_hits_used.length
-      ? input.pattern_hits_used
-      : patternHitsFromZiwei(input.ziwei).slice(0, 12);
+    : patternHitsFromZiwei(input.ziwei);
   const cfp_hash = hashChartFactPackText(input.chartText);
   const zfp_hash = hashZiweiFactPack(input.ziwei);
+
+  // Certify units against real allowlist BEFORE finalizing pattern_hits_used.
   const units = enrichUnitsWithProvenance({
     units: input.units,
     chartText: input.chartText,
     ziwei: input.ziwei,
     cfp_hash,
     zfp_hash,
-    pattern_hits_used: hits,
+    actual_pattern_hit_refs,
   });
+
+  const hitCert = certifyPatternHitsUsed({
+    declared: input.declared_pattern_hits_used,
+    units,
+    canonical_refs: actual_pattern_hit_refs,
+  });
+
   return {
     version: BOOK_JUDGMENT_PACK_VERSION,
     locale: input.locale || "zh",
@@ -338,7 +372,10 @@ function buildPackDraft(input: {
     created_at: new Date().toISOString(),
     units,
     by_face: indexBookJudgmentByFace(units),
-    pattern_hits_used: hits,
+    pattern_hits_used: hitCert.pattern_hits_used,
+    ...(hitCert.declared_pattern_hits_used.length
+      ? { declared_pattern_hits_used: hitCert.declared_pattern_hits_used }
+      : {}),
     science_tags_used: input.science_tags_used,
   };
 }
@@ -714,7 +751,7 @@ export async function runBookJudgmentPackGenerate(input: {
     ziwei,
     shot_mode: "one",
     units,
-    pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
+    declared_pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
     science_tags_used: stringList(shot.parsed, "science_tags_used"),
   });
   const classicalNames = (ziwei?.patternHits ?? [])
