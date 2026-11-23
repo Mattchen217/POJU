@@ -2249,10 +2249,15 @@ async function executeV3(
       };
     }
     const packOn = isBookJudgmentPackEnabled();
-    let bookPack = packOn
-      ? ((lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined) ??
-        null)
-      : null;
+    const artifactPack =
+      (lab.artifacts.book_judgment_pack as BookJudgmentPack | null | undefined) ??
+      null;
+    let bookPack = packOn ? artifactPack : null;
+    /**
+     * Face01 V2 registry seeding may use a Lab-attached pack even when
+     * BOOK_JUDGMENT_PACK=0 (quota freeze off). Do not invent units; only reuse
+     * an explicit artifact pack. Quota gate still applies only when packOn.
+     */
     if (bookPack && packOn) {
       const quotaBody = buildBookJudgmentQuotaFromBlueprint();
       const classicalBody = ((lab.artifacts.ziwei_fact_pack as { patternHits?: { name?: string }[] } | null | undefined)?.patternHits ?? [])
@@ -2395,7 +2400,9 @@ async function executeV3(
       decision_context_snapshot: face01V2Path
         ? lab.source.decision_context_snapshot ?? null
         : null,
-      book_judgment_pack: face01V2Path ? bookPack : null,
+      book_judgment_pack: face01V2Path
+        ? bookPack ?? artifactPack
+        : null,
       report_id: session_id,
     });
     if (!body.ok) {

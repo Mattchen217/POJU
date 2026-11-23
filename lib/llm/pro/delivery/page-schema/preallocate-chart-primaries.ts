@@ -612,7 +612,7 @@ export function preallocPreferByPath(
   map: ChartPrimaryPreallocMap,
   key: DeliverySegmentKey,
 ): Record<string, string> {
-  const page = map.by_page[key] ?? {};
+  const page = map.by_page?.[key] ?? {};
   const out: Record<string, string> = {};
   for (const [path, value] of Object.entries(page)) {
     const lead = preallocTermsForPath(value)[0];
@@ -626,7 +626,7 @@ export function preallocTermGroups(
   map: ChartPrimaryPreallocMap,
   key: DeliverySegmentKey,
 ): Record<string, string[]> {
-  const page = map.by_page[key] ?? {};
+  const page = map.by_page?.[key] ?? {};
   const out: Record<string, string[]> = {};
   for (const [path, value] of Object.entries(page)) {
     const terms = preallocTermsForPath(value);

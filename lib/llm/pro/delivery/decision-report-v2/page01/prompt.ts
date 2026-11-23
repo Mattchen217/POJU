@@ -13,11 +13,16 @@ export const FACE01_TASK_PROMPT = `任务：生成个人决策报告第 01 页�
 
 你将收到：
 - decision：本题问题、目标和决策边界；
-- reality_context：DC 现实事实、状态、验证程度和冲突；
-- personal_analysis：本题相关的本地个人资料和已审核批断；
+- reality_context：DC 现实事实（每条含 selection_kind=linked|candidate；status/verification 不得升级）、冲突；
+- personal_analysis：本题相关的本地个人资料和已审核批断（含 domain_versions）；
 - report_analysis：报告级综合分析和候选路径；
-- evidence_registry：已经验证的主张与依据单元；
+- evidence_registry：已经验证的主张与依据单元（term_ids 仅来自真实个人来源）；
 - page_requirements：本页字段和规则。
+
+关于 selection_kind：
+- linked：有结构化 DIR/role/conflict/constraint 关联；
+- candidate：暂无直接关联的有限候选；不得把 candidate 当作已确认相关事实；
+- 核心推荐不得仅依赖 candidate 事实。
 
 请完成以下工作：
 

@@ -154,9 +154,12 @@ const pack: BookJudgmentPack = {
     {
       id: "u_destiny_01",
       track: "destiny",
-      claim: "Keep cash floor while testing optionality.",
-      anchors: ["day_master"],
+      claim: "Keep cash floor while testing optionality. cfp:dayMaster",
+      anchors: ["cfp:dayMaster"],
       serves_face: ["01", "02"],
+      term_ids: ["day_master"],
+      source_domain: "bazi",
+      source_version: "cfp_abc",
     },
     {
       id: "u_science_01",
@@ -164,13 +167,18 @@ const pack: BookJudgmentPack = {
       claim: "Eight-month runway supports staged explore.",
       anchors: ["runway"],
       serves_face: ["01", "02"],
+      term_ids: [],
+      source_domain: "science",
     },
     {
       id: "u_page02_only",
       track: "destiny",
-      claim: "Palace detail for page 02.",
-      anchors: ["palace"],
+      claim: "Palace detail for page 02. hit:jia_yin:strong",
+      anchors: ["hit:jia_yin:strong"],
       serves_face: ["02"],
+      term_ids: ["pattern"],
+      source_domain: "ziwei",
+      source_version: "zfp_xyz",
     },
     {
       id: "u_unrelated_08",
@@ -185,7 +193,7 @@ const pack: BookJudgmentPack = {
     "02": ["u_destiny_01", "u_science_01", "u_page02_only"],
     "08": ["u_unrelated_08"],
   },
-  pattern_hits_used: [],
+  pattern_hits_used: ["hit:jia_yin:strong"],
   science_tags_used: [],
 } as BookJudgmentPack;
 
@@ -295,7 +303,13 @@ for (const id of ctx.knownFactIds) {
 }
 
 // Seeded-but-filtered unrelated_08 must not be in restricted registry
-const seeded = seedEvidenceRegistryForFace01({ dc: baseDc(), pack });
+const seeded = seedEvidenceRegistryForFace01({
+  dc: baseDc(),
+  pack,
+  chart_fact_pack: "日主甲木 dayMaster:甲",
+  bazi_available: true,
+  ziwei_available: true,
+});
 assert.ok(
   !Object.keys(seeded.registry.evidence).includes("u_unrelated_08") ||
     !ctx.registry.evidence["u_unrelated_08"],

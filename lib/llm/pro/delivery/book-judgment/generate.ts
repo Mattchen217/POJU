@@ -25,6 +25,10 @@ import { formatBookJudgmentFullBookPageFeed } from "@/lib/llm/pro/delivery/page-
 import { formatDecisionContextSliceForPage } from "@/lib/poju/decision-context/dc-page-feed";
 import { formatGlobalSegmentFeedDuties } from "@/lib/llm/pro/delivery/page-segment-feed-duties";
 import { formatZiweiTraditionalClosedSetForEvidence } from "@/lib/ziwei/traditional-closed-set-for-evidence";
+import {
+  detectAvailableCfpKeys,
+  resolveUnitTermProvenance,
+} from "@/lib/llm/pro/delivery/decision-report-v2/term-provenance";
 import { hashChartFactPackText, hashZiweiFactPack } from "./hash";
 import {
   BOOK_FACE_IDS,
@@ -84,9 +88,12 @@ const JSON_SHAPE = `输出 JSON：
       "track": "destiny"|"science"|"convergence",
       "serves_face": ["01"] | ["02"] | … | ["08"],  // 全书分脸，非仅 02
       "serves_segment": "A"|"B"|"C"|"D"|"E",
-      "claim": "短句",
-      "anchors": ["机制句或 closed hit 旁证"],
-      "caveat": "可选"
+      "claim": "短句（destiny 若用紫微 hit，须含 hit:<id>:<level> 结构化引用）",
+      "anchors": ["机制句或 closed hit 旁证；可用 cfp:dayMaster / hit:<id>:<level>"],
+      "caveat": "可选",
+      "term_ids": ["仅本 unit 实际用到的 SSOT slug；可空；禁灌全表"],
+      "source_domain": "bazi"|"ziwei"|"science"|"convergence"|"unavailable",
+      "source_version": "可选 · cfp_hash 或 zfp_hash"
     }
   ],
   "pattern_hits_used": ["hit:<id>:<level>…"],
@@ -160,14 +167,35 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     )
       ? (segRaw as BookJudgmentSegmentId)
       : undefined;
+    const term_ids = Array.isArray(row.term_ids)
+      ? row.term_ids
+          .map((x) => String(x).trim())
+          .filter(Boolean)
+          .slice(0, 16)
+      : [];
+    const domainRaw = String(row.source_domain ?? "").trim();
+    const domainOk = new Set([
+      "bazi",
+      "ziwei",
+      "science",
+      "convergence",
+      "unavailable",
+    ]);
+    const source_domain = domainOk.has(domainRaw)
+      ? (domainRaw as NonNullable<BookJudgmentUnit["source_domain"]>)
+      : undefined;
+    const source_version = String(row.source_version ?? "").trim().slice(0, 128);
     units.push({
       id,
-      track,
+      track: track as BookJudgmentUnit["track"],
       serves_face: serves as BookJudgmentUnit["serves_face"],
       ...(serves_segment ? { serves_segment } : {}),
       claim: claim.slice(0, 400),
       anchors: anchors as [string, ...string[]],
       ...(caveat ? { caveat: caveat.slice(0, 240) } : {}),
+      term_ids,
+      ...(source_domain ? { source_domain } : {}),
+      ...(source_version ? { source_version } : {}),
     });
   }
   return units.length ? units : null;
@@ -178,6 +206,68 @@ function stringList(raw: unknown, key: string): string[] {
   const v = (raw as Record<string, unknown>)[key];
   if (!Array.isArray(v)) return [];
   return v.map((x) => String(x).trim()).filter(Boolean).slice(0, 40);
+}
+
+/**
+ * Attach explicit provenance fields from structured cites + track.
+ * Never invent term_ids from classical prose or dump the full glossary.
+ */
+function enrichUnitsWithProvenance(input: {
+  units: BookJudgmentUnit[];
+  chartText: string;
+  ziwei: ZiweiFactPack | null;
+  cfp_hash: string;
+  zfp_hash: string | null;
+  pattern_hits_used: string[];
+}): BookJudgmentUnit[] {
+  const bazi_available = input.chartText.trim().length > 0;
+  const ziwei_available =
+    input.ziwei != null &&
+    Array.isArray(input.ziwei.patternHits) &&
+    input.ziwei.patternHits.length > 0;
+  const cfpKeys = detectAvailableCfpKeys(input.chartText);
+  const packStub = {
+    pattern_hits_used: input.pattern_hits_used,
+  } as BookJudgmentPack;
+
+  return input.units.map((unit) => {
+    // Prefer model-declared domain/terms when present; fill only gaps from structured cites.
+    const prov = resolveUnitTermProvenance({
+      unit,
+      pack: packStub,
+      availableCfpKeys: cfpKeys,
+      bazi_available,
+      ziwei_available,
+      cfp_hash: input.cfp_hash,
+      zfp_hash: input.zfp_hash,
+    });
+
+    const term_ids =
+      (unit.term_ids?.length ?? 0) > 0
+        ? unit.term_ids
+        : prov.term_ids;
+
+    let source_domain = unit.source_domain;
+    if (!source_domain) {
+      if (unit.track === "science") source_domain = "science";
+      else if (unit.track === "convergence") source_domain = "convergence";
+      else if (prov.source_domain !== "unavailable") {
+        source_domain = prov.source_domain;
+      }
+    }
+
+    const source_version =
+      unit.source_version?.trim() ||
+      prov.source_version ||
+      undefined;
+
+    return {
+      ...unit,
+      term_ids: term_ids ?? [],
+      ...(source_domain ? { source_domain } : {}),
+      ...(source_version ? { source_version } : {}),
+    };
+  });
 }
 
 function buildPackDraft(input: {
@@ -197,18 +287,28 @@ function buildPackDraft(input: {
     : input.pattern_hits_used.length
       ? input.pattern_hits_used
       : patternHitsFromZiwei(input.ziwei).slice(0, 12);
+  const cfp_hash = hashChartFactPackText(input.chartText);
+  const zfp_hash = hashZiweiFactPack(input.ziwei);
+  const units = enrichUnitsWithProvenance({
+    units: input.units,
+    chartText: input.chartText,
+    ziwei: input.ziwei,
+    cfp_hash,
+    zfp_hash,
+    pattern_hits_used: hits,
+  });
   return {
     version: BOOK_JUDGMENT_PACK_VERSION,
     locale: input.locale || "zh",
     ...(input.question_id ? { question_id: input.question_id } : {}),
     ...(input.thesis_ref ? { thesis_ref: input.thesis_ref } : {}),
-    cfp_hash: hashChartFactPackText(input.chartText),
-    zfp_hash: hashZiweiFactPack(input.ziwei),
+    cfp_hash,
+    zfp_hash,
     zfpOmitted,
     shot_mode: input.shot_mode,
     created_at: new Date().toISOString(),
-    units: input.units,
-    by_face: indexBookJudgmentByFace(input.units),
+    units,
+    by_face: indexBookJudgmentByFace(units),
     pattern_hits_used: hits,
     science_tags_used: input.science_tags_used,
   };

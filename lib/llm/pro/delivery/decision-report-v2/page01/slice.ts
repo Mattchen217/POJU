@@ -16,18 +16,28 @@ import type {
 } from "../types";
 import { normalizeReportLocale } from "../body-compliance";
 
+/** Page01-only fact row: DC fact + selection metadata (does not mutate DC). */
+export type Page01SliceFact = DecisionReportRealityFact & {
+  /** Structured relevance to this decision — never upgrades status/verification. */
+  selection_kind: "linked" | "candidate";
+  selection_reasons?: string[];
+};
+
 export type Page01FeedSlice = {
   report_id: string;
   locale: DecisionReportLocale;
   decision: DecisionReportInput["decision"];
   reality_context: {
-    facts: DecisionReportRealityFact[];
+    facts: Page01SliceFact[];
     conflicts: unknown[];
     hypotheses: unknown[];
   };
   personal_analysis: {
     profile_version: string;
+    /** Legacy single stamp. */
     available_domains: string[];
+    /** Per-domain version map (bazi/ziwei hashes). */
+    domain_versions?: { bazi?: string; ziwei?: string };
     relevant_anchors: PersonalAnalysisAnchor[];
     approved_readings: ApprovedReading[];
   };
@@ -122,15 +132,33 @@ export function sliceForPage01(input: {
   /** Optional: only keep these fact ids (topic filter). Empty = keep all non-invented. */
   relevantFactIds?: ReadonlySet<string>;
   relevantReadingIds?: ReadonlySet<string>;
+  /**
+   * Per-fact selection metadata from fact-relevance (linked|candidate).
+   * Required for model-visible classification; defaults to candidate if missing.
+   */
+  factSelectionById?: ReadonlyMap<
+    string,
+    { kind: "linked" | "candidate"; reasons: string[] }
+  >;
+  domain_versions?: { bazi?: string; ziwei?: string };
 }): Page01FeedSlice {
   const { report, registry } = input;
 
-  const facts = report.reality_context.facts.filter((f) => {
-    if (input.relevantFactIds && input.relevantFactIds.size > 0) {
-      return input.relevantFactIds.has(f.fact_id);
-    }
-    return true;
-  });
+  const facts: Page01SliceFact[] = report.reality_context.facts
+    .filter((f) => {
+      if (input.relevantFactIds && input.relevantFactIds.size > 0) {
+        return input.relevantFactIds.has(f.fact_id);
+      }
+      return true;
+    })
+    .map((f) => {
+      const meta = input.factSelectionById?.get(f.fact_id);
+      return {
+        ...f,
+        selection_kind: meta?.kind ?? "candidate",
+        selection_reasons: meta?.reasons ?? ["unspecified"],
+      };
+    });
 
   const readings = report.personal_analysis.approved_readings.filter((r) => {
     if (input.relevantReadingIds && input.relevantReadingIds.size > 0) {
@@ -203,6 +231,9 @@ export function sliceForPage01(input: {
     personal_analysis: {
       profile_version: report.personal_analysis.profile_version,
       available_domains: report.personal_analysis.available_domains,
+      ...(input.domain_versions
+        ? { domain_versions: input.domain_versions }
+        : {}),
       relevant_anchors: anchors,
       approved_readings: readings,
     },

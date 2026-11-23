@@ -173,10 +173,13 @@ const pack: BookJudgmentPack = {
     {
       id: "u_destiny_01",
       track: "destiny",
-      claim: "Current cycle favors keeping a stable cash floor while testing optionality.",
-      anchors: ["day_master_strength"],
+      claim: "Current cycle favors keeping a stable cash floor while testing optionality. cfp:dayMaster",
+      anchors: ["cfp:dayMaster"],
       serves_face: ["01", "02"],
       caveat: "Not a timing guarantee.",
+      term_ids: ["day_master"],
+      source_domain: "bazi",
+      source_version: "cfp_test",
     },
     {
       id: "u_science_01",
@@ -184,13 +187,18 @@ const pack: BookJudgmentPack = {
       claim: "Eight-month runway supports a staged explore-without-resign path.",
       anchors: ["runway_months"],
       serves_face: ["01", "02"],
+      term_ids: [],
+      source_domain: "science",
     },
     {
       id: "u_page02_only",
       track: "destiny",
-      claim: "Detailed palace tension belongs on page 02.",
-      anchors: ["palace_bridge"],
+      claim: "Detailed palace tension belongs on page 02. cfp:dayMaster",
+      anchors: ["cfp:dayMaster"],
       serves_face: ["02"],
+      term_ids: ["day_master"],
+      source_domain: "bazi",
+      source_version: "cfp_test",
     },
     {
       id: "u_unrelated_08",
@@ -226,6 +234,15 @@ assert.ok(ctx.system.includes("决策") || ctx.system.length > 40);
 assert.ok(ctx.user.includes("Page01FeedSlice") || ctx.user.includes("reality"));
 assert.equal(page01SliceLooksOversized(ctx.slice).length, 0);
 assert.deepEqual(ctx.available_domains, ["bazi"]);
+assert.ok(ctx.domain_versions.bazi);
+assert.ok(
+  ctx.slice.reality_context.facts.every(
+    (f) => f.selection_kind === "linked" || f.selection_kind === "candidate",
+  ),
+  "facts carry selection_kind",
+);
+const destinyEv = ctx.registry.evidence["u_destiny_01"];
+assert.ok(destinyEv?.term_ids.includes("day_master"), "destiny term provenance");
 assert.deepEqual(
   [...new Set(ctx.slice.evidence_registry.evidence.map((e) => e.evidence_id))].sort(),
   Object.keys(ctx.registry.evidence).sort(),

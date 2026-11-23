@@ -1,5 +1,5 @@
 /**
- * Derive Page 01 available_domains from real chart/ziwei presence.
+ * Derive Page 01 available_domains + per-domain version stamps from real sources.
  * BookJudgmentPack alone must not imply both domains.
  */
 
@@ -8,9 +8,15 @@ import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 
 export type PersonalDomainAvailability = {
   available_domains: string[];
+  /** Legacy single stamp (prefer bazi hash when both). */
   profile_version: string;
   bazi_available: boolean;
   ziwei_available: boolean;
+  /** Per-domain version mapping — both retained when both available. */
+  domain_versions: {
+    bazi?: string;
+    ziwei?: string;
+  };
 };
 
 /**
@@ -60,11 +66,21 @@ export function resolveAvailablePersonalDomains(input: {
   if (bazi_available) available_domains.push("bazi");
   if (ziwei_available) available_domains.push("ziwei");
 
+  const domain_versions: { bazi?: string; ziwei?: string } = {};
+  if (bazi_available) {
+    domain_versions.bazi =
+      pack?.cfp_hash?.trim() ||
+      (chartText ? `chart:${chartText.length}` : "chart_present");
+  }
+  if (ziwei_available) {
+    domain_versions.ziwei =
+      pack?.zfp_hash?.trim() ||
+      (ziweiFromZfp ? "ziwei_pack_present" : "ziwei_present");
+  }
+
   const profile_version =
-    (bazi_available && pack?.cfp_hash?.trim()) ||
-    (ziwei_available && pack?.zfp_hash?.trim()) ||
-    (bazi_available ? "chart_present" : "") ||
-    (ziwei_available ? "ziwei_present" : "") ||
+    domain_versions.bazi ||
+    domain_versions.ziwei ||
     "unavailable";
 
   return {
@@ -72,5 +88,6 @@ export function resolveAvailablePersonalDomains(input: {
     profile_version,
     bazi_available,
     ziwei_available,
+    domain_versions,
   };
 }

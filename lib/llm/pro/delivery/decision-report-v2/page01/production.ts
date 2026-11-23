@@ -45,6 +45,7 @@ export type Face01ProductionContext = {
   fact_selection: FactSelectionResult;
   available_domains: string[];
   profile_version: string;
+  domain_versions: { bazi?: string; ziwei?: string };
 };
 
 export type Face01ProductionBuildFail = {
@@ -84,6 +85,9 @@ export function buildFace01ProductionContext(input: {
     dc: input.dc,
     pack: input.pack,
     maxFacts: 16,
+    chart_fact_pack: input.chart_fact_pack,
+    bazi_available: domains.bazi_available,
+    ziwei_available: domains.ziwei_available,
   });
 
   const report = buildDecisionReportInput({
@@ -109,6 +113,7 @@ export function buildFace01ProductionContext(input: {
             .map((r) => r.fact.fact_id),
           excluded_ids: seeded.fact_selection.excluded_fact_ids,
         },
+        domain_versions: domains.domain_versions,
       },
       candidate_paths: [],
       key_claims: seeded.key_claims.slice(0, 8),
@@ -128,12 +133,20 @@ export function buildFace01ProductionContext(input: {
   const relevantReadingIds = new Set(
     seeded.readings.map((r) => r.reading_id),
   );
+  const factSelectionById = new Map(
+    seeded.fact_selection.selected.map((r) => [
+      r.fact.fact_id,
+      { kind: r.kind, reasons: r.reasons },
+    ]),
+  );
 
   let slice = sliceForPage01({
     report,
     registry: seeded.registry,
     relevantFactIds,
     relevantReadingIds,
+    factSelectionById,
+    domain_versions: domains.domain_versions,
   });
 
   // Drop evidence not needed for page 01 / planned 02 cites.
@@ -193,6 +206,7 @@ export function buildFace01ProductionContext(input: {
       fact_selection: seeded.fact_selection,
       available_domains: domains.available_domains,
       profile_version: domains.profile_version,
+      domain_versions: domains.domain_versions,
     },
   };
 }
@@ -314,6 +328,13 @@ export function face01SliceSummary(ctx: Face01ProductionContext): Record<string,
       excluded: ctx.fact_selection.excluded_fact_ids.length,
     },
     question: ctx.slice.decision.question.slice(0, 160),
+    domain_versions: ctx.domain_versions,
+    fact_kinds: {
+      linked: ctx.fact_selection.selected.filter((r) => r.kind === "linked")
+        .length,
+      candidate: ctx.fact_selection.selected.filter((r) => r.kind === "candidate")
+        .length,
+    },
   };
 }
 

@@ -30,6 +30,17 @@ export type BookJudgmentShotMode = z.infer<typeof BookJudgmentShotModeSchema>;
 export const BookJudgmentSegmentIdSchema = z.enum(["A", "B", "C", "D", "E"]);
 export type BookJudgmentSegmentId = z.infer<typeof BookJudgmentSegmentIdSchema>;
 
+export const BookJudgmentSourceDomainSchema = z.enum([
+  "bazi",
+  "ziwei",
+  "science",
+  "convergence",
+  "unavailable",
+]);
+export type BookJudgmentSourceDomain = z.infer<
+  typeof BookJudgmentSourceDomainSchema
+>;
+
 export const BookJudgmentUnitSchema = z.object({
   id: z.string().trim().min(1).max(64),
   track: BookJudgmentTrackSchema,
@@ -39,6 +50,15 @@ export const BookJudgmentUnitSchema = z.object({
   claim: z.string().trim().min(1).max(400),
   anchors: z.array(z.string().trim().min(1).max(120)).min(1).max(8),
   caveat: z.string().trim().max(240).optional(),
+  /**
+   * SSOT term_ids actually used by this unit (optional for legacy packs).
+   * Must be explicit — never auto-filled from full glossary.
+   */
+  term_ids: z.array(z.string().trim().min(1).max(80)).max(16).default([]),
+  /** Real personal/science domain for this unit (optional for legacy). */
+  source_domain: BookJudgmentSourceDomainSchema.optional(),
+  /** cfp_hash / zfp_hash / other version stamp for this unit's sources. */
+  source_version: z.string().trim().max(128).optional(),
 });
 export type BookJudgmentUnit = z.infer<typeof BookJudgmentUnitSchema>;
 
@@ -471,5 +491,8 @@ export function softRepairFaceDualTrack(
     ...u,
     serves_face: [...u.serves_face] as BookJudgmentUnit["serves_face"],
     anchors: [...u.anchors],
+    term_ids: [...(u.term_ids ?? [])],
+    ...(u.source_domain ? { source_domain: u.source_domain } : {}),
+    ...(u.source_version ? { source_version: u.source_version } : {}),
   }));
 }

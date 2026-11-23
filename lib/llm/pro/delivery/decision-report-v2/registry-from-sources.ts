@@ -14,6 +14,11 @@ import {
   selectRealityFactsForPage01,
   type FactSelectionResult,
 } from "./fact-relevance";
+import {
+  detectAvailableCfpKeys,
+  resolveUnitTermProvenance,
+  type PersonalSourceDomain,
+} from "./term-provenance";
 import type {
   ApprovedReading,
   DecisionReportRealityFact,
@@ -35,25 +40,44 @@ export type RegistrySeedResult = {
   fact_selection: FactSelectionResult;
 };
 
-function unitToReading(unit: BookJudgmentUnit): ApprovedReading {
+function unitToReading(
+  unit: BookJudgmentUnit,
+  term_ids: string[],
+): ApprovedReading {
   return {
     reading_id: `reading_${unit.id}`,
-    anchor_ids: unit.anchors.map((a, i) => `anchor_${unit.id}_${i}`),
-    term_ids: [],
+    anchor_ids: unit.anchors.map((_, i) => `anchor_${unit.id}_${i}`),
+    term_ids,
     interpretation: unit.claim,
     scope: unit.serves_face.join(","),
     confidence_status: "pack_approved",
   };
 }
 
-function unitToAnchors(unit: BookJudgmentUnit): PersonalAnalysisAnchor[] {
+function unitToAnchors(input: {
+  unit: BookJudgmentUnit;
+  source_domain: PersonalSourceDomain;
+  term_ids: string[];
+  source_version: string | null;
+}): PersonalAnalysisAnchor[] {
+  const { unit, source_domain, term_ids, source_version } = input;
+  if (unit.track === "destiny" && source_domain === "unavailable") {
+    return [];
+  }
   return unit.anchors.map((a, i) => ({
     anchor_id: `anchor_${unit.id}_${i}`,
-    source_domain: unit.track === "destiny" ? "bazi_ziwei" : "science",
+    source_domain,
     source_reference: a,
-    internal_anchor: { pack_unit_id: unit.id, anchor: a },
+    term_id: term_ids[Math.min(i, Math.max(0, term_ids.length - 1))],
+    internal_anchor: {
+      pack_unit_id: unit.id,
+      anchor: a,
+      source_version,
+      term_ids,
+    },
     approved_interpretation: unit.claim,
-    availability_status: "available",
+    availability_status:
+      source_domain === "unavailable" ? "unavailable" : "available",
   }));
 }
 
@@ -66,6 +90,9 @@ export function seedEvidenceRegistryForFace01(input: {
   pack: BookJudgmentPack | null | undefined;
   /** Max facts retained for page 01 after relevance ranking. */
   maxFacts?: number;
+  chart_fact_pack?: string | null;
+  bazi_available?: boolean;
+  ziwei_available?: boolean;
 }): RegistrySeedResult {
   const maxFacts = input.maxFacts ?? 16;
   const registry = emptyEvidenceRegistry();
@@ -99,7 +126,14 @@ export function seedEvidenceRegistryForFace01(input: {
     });
   }
 
-  const units = input.pack?.units ?? [];
+  const pack = input.pack ?? null;
+  const bazi_available = input.bazi_available === true;
+  const ziwei_available = input.ziwei_available === true;
+  const cfpKeys = detectAvailableCfpKeys(input.chart_fact_pack);
+  const cfp_hash = pack?.cfp_hash ?? null;
+  const zfp_hash = pack?.zfp_hash ?? null;
+
+  const units = pack?.units ?? [];
   const face01Units = units.filter((u) => u.serves_face.includes("01"));
   const face02Units = units.filter((u) => u.serves_face.includes("02"));
   const relevantUnits = [
@@ -113,9 +147,33 @@ export function seedEvidenceRegistryForFace01(input: {
   const page02PlannedEvidenceIds: string[] = [];
 
   for (const unit of relevantUnits) {
-    const reading = unitToReading(unit);
+    const prov = resolveUnitTermProvenance({
+      unit,
+      pack,
+      availableCfpKeys: cfpKeys,
+      bazi_available,
+      ziwei_available,
+      cfp_hash,
+      zfp_hash,
+    });
+
+    // Destiny with no usable domain → skip personal reading/anchors (do not invent).
+    if (unit.track === "destiny" && prov.source_domain === "unavailable") {
+      if (unit.serves_face.includes("02")) {
+        // Still register a mechanism-less planned id? No — unavailable means no fake evidence.
+      }
+      continue;
+    }
+
+    const reading = unitToReading(unit, prov.term_ids);
+    const unitAnchors = unitToAnchors({
+      unit,
+      source_domain: prov.source_domain,
+      term_ids: prov.term_ids,
+      source_version: prov.source_version,
+    });
     readings.push(reading);
-    anchors.push(...unitToAnchors(unit));
+    anchors.push(...unitAnchors);
     const readingMap = new Map(readings.map((r) => [r.reading_id, r]));
 
     const sourceType =
@@ -131,7 +189,7 @@ export function seedEvidenceRegistryForFace01(input: {
       source_type: sourceType,
       source_id:
         sourceType === "personal_reading" ? reading.reading_id : `mech_${unit.id}`,
-      term_ids: [],
+      term_ids: prov.term_ids,
       explanation: unit.caveat
         ? `${unit.claim}（边界：${unit.caveat}）`
         : unit.claim,
@@ -214,7 +272,6 @@ export function restrictRegistryToPage01Slice(input: {
     input.slice.personal_analysis.approved_readings.map((r) => r.reading_id),
   );
 
-  // Claims: only those listed on slice that still have ≥1 kept evidence (or optional empty).
   const keepClaimIds = new Set<string>();
   for (const claimId of input.slice.evidence_registry.claim_ids) {
     const claim = input.seeded.registry.claims[claimId];
@@ -225,7 +282,6 @@ export function restrictRegistryToPage01Slice(input: {
     }
     keepClaimIds.add(claimId);
   }
-  // Also keep claims referenced by key_claims in slice when evidence survives.
   for (const c of input.slice.report_analysis.key_claims) {
     const claim = input.seeded.registry.claims[c.claim_id];
     if (!claim) continue;
@@ -244,7 +300,6 @@ export function restrictRegistryToPage01Slice(input: {
     const full = input.seeded.registry.evidence[evRow.evidence_id];
     if (!full) continue;
 
-    // Source must resolve in the final slice.
     if (full.source_type === "reality_fact" && !keepFactIds.has(full.source_id)) {
       continue;
     }
@@ -257,14 +312,19 @@ export function restrictRegistryToPage01Slice(input: {
 
     const supports = full.supports_claim_ids.filter((id) => keepClaimIds.has(id));
     const limits = full.limits_claim_ids.filter((id) => keepClaimIds.has(id));
+    // Prefer slice term_ids (already filtered) when present.
+    const term_ids =
+      Array.isArray(evRow.term_ids) && evRow.term_ids.length
+        ? evRow.term_ids
+        : full.term_ids;
     registry.evidence[full.evidence_id] = {
       ...full,
+      term_ids,
       supports_claim_ids: supports,
       limits_claim_ids: limits,
     };
   }
 
-  // Drop evidence that failed source checks from keep set.
   const finalEvIds = new Set(Object.keys(registry.evidence));
 
   for (const claimId of keepClaimIds) {
@@ -278,7 +338,6 @@ export function restrictRegistryToPage01Slice(input: {
   }
 
   const finalClaimIds = Object.keys(registry.claims);
-  // Re-scrub evidence claim links against final claims.
   for (const id of Object.keys(registry.evidence)) {
     const ev = registry.evidence[id]!;
     ev.supports_claim_ids = ev.supports_claim_ids.filter((c) =>
@@ -303,9 +362,12 @@ export function restrictRegistryToPage01Slice(input: {
     ...input.slice,
     evidence_registry: {
       claim_ids: finalClaimIds.slice(0, 12),
-      evidence: input.slice.evidence_registry.evidence.filter((e) =>
-        finalEvIds.has(e.evidence_id),
-      ),
+      evidence: input.slice.evidence_registry.evidence
+        .filter((e) => finalEvIds.has(e.evidence_id))
+        .map((e) => ({
+          ...e,
+          term_ids: registry.evidence[e.evidence_id]?.term_ids ?? e.term_ids,
+        })),
     },
     report_analysis: {
       ...input.slice.report_analysis,
