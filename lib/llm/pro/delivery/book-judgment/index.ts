@@ -58,3 +58,11 @@ export {
   type BookJudgmentGenerateFail,
   type BookJudgmentGenerateOk,
 } from "./generate";
+export {
+  enrichBookJudgmentRelatedDirIds,
+  isRelatedDirEnrichmentCertificate,
+  RELATED_DIR_ENRICHMENT_ALGORITHM,
+  RELATED_DIR_ENRICHMENT_VERSION,
+  type RelatedDirEnrichmentBinding,
+  type RelatedDirEnrichmentCertificate,
+} from "./related-dir-enrichment";

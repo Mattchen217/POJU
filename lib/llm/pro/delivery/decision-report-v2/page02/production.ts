@@ -6,6 +6,7 @@
  */
 
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
+import { enrichBookJudgmentRelatedDirIds } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { Face02V2Schema, type Face02V2 } from "../schemas";
@@ -37,7 +38,7 @@ import {
   type TrustedClaimDirBinding,
 } from "./credible-fact-claim";
 
-export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23d" as const;
+export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23e" as const;
 export const FACE02_SCHEMA_VERSION = "face02-v2" as const;
 
 export type Face02ProductionContext = {
@@ -93,8 +94,16 @@ export function buildFace02ProductionContext(input: {
     return { ok: false, reason: "face02_missing_decision_context" };
   }
 
+  // Program Claim–DIR enrich first (certificate = trust root; never model anchors).
+  const pack = input.pack
+    ? enrichBookJudgmentRelatedDirIds({
+        pack: input.pack,
+        dc: input.dc,
+      }).pack
+    : null;
+
   const domains = resolveAvailablePersonalDomains({
-    pack: input.pack,
+    pack,
     chart_fact_pack: input.chart_fact_pack,
     ziwei_fact_pack: input.ziwei_fact_pack,
     bazi_available: input.bazi_available,
@@ -103,7 +112,7 @@ export function buildFace02ProductionContext(input: {
 
   const seeded = seedEvidenceRegistryForFace02({
     dc: input.dc,
-    pack: input.pack,
+    pack,
     maxFacts: 16,
     chart_fact_pack: input.chart_fact_pack,
     ziwei_fact_pack: input.ziwei_fact_pack,
@@ -202,9 +211,8 @@ export function buildFace02ProductionContext(input: {
     .slice(0, 12);
 
   const restricted = restrictRegistryToPage02Slice({ seeded, slice });
-  // Trust root: program unit.related_dir_ids ∩ linked DC dirs (never model anchors).
   const trustedBindings = buildTrustedClaimDirBindings({
-    pack: input.pack,
+    pack,
     dc: input.dc,
     fact_selection: seeded.fact_selection,
     registry: restricted.registry,

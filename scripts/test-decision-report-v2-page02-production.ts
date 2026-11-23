@@ -31,6 +31,7 @@ import {
   resolveRoleToUniqueDir,
   assembleFace02ClaimOwnershipSlots,
 } from "@/lib/llm/pro/delivery/decision-report-v2";
+import { enrichBookJudgmentRelatedDirIds } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
 import { resolve as resolvePath } from "node:path";
@@ -179,10 +180,8 @@ function makePack(opts: {
     id: "u_science_02",
     track: "science",
     claim: "Eight-month runway supports staged explore-without-resign.",
-    // Model-style anchors may forge DIR tokens — ignored for trust root.
+    // Model forged DIR tokens — enrich ignores these.
     anchors: ["runway_buffer", "DIR_OFFER"],
-    // Program-certified DIR binding (fixture / ops) — sole trust root.
-    related_dir_ids: ["DIR_RUNWAY"],
     declared_related_dir_ids: ["DIR_OFFER"],
     serves_face: ["02"],
     term_ids: [],
@@ -193,7 +192,6 @@ function makePack(opts: {
     track: "science",
     claim: "Offer cash figure remains an estimate until term sheet hardens.",
     anchors: ["offer_terms", "DIR_RUNWAY"],
-    related_dir_ids: ["DIR_OFFER"],
     declared_related_dir_ids: ["DIR_RUNWAY"],
     serves_face: ["02"],
     term_ids: [],
@@ -355,43 +353,55 @@ const personalEv =
   ctx.slice.evidence_registry.evidence.find(
     (e) => e.source_type === "personal_reading",
   )?.evidence_id!;
-const mechEvId = Object.values(ctx.registry.evidence).find(
-  (e) => e.source_type === "reality_mechanism",
-)!.evidence_id;
+const mechEvId =
+  Object.values(ctx.registry.evidence).find(
+    (e) =>
+      e.source_type === "reality_mechanism" &&
+      e.supports_claim_ids.includes(sciClaimId),
+  )?.evidence_id ??
+  Object.values(ctx.registry.evidence).find(
+    (e) => e.source_type === "reality_mechanism",
+  )!.evidence_id;
 const factId = "fact_runway";
 const factEv = `ev_fact_${factId}`;
 const unverifiedFactId = "fact_salary_guess";
 const unverifiedFactEv = `ev_fact_${unverifiedFactId}`;
 
-// Structured pairs: per-claim DIR isolation (no bulk cross-claim grant).
+// Exclusive slot enrich: sorted units [u_science_02, u_science_offer_02]
+// × sorted linked dirs [DIR_OFFER, DIR_RUNWAY] → 1:1, no bulk grant.
+assert.ok(ctx.slice.report_analysis /* pack enrich ran via production */);
 assert.ok(
   !ctx.credible_fact_claim_keys.has(`${claimId}::${factId}`),
   "destiny must not own runway without DIR binding",
 );
-assert.ok(
-  ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
-  "runway science claim owns runway via DIR_RUNWAY",
-);
 assert.ok(offerClaimId, "offer science claim seeded");
 assert.ok(
-  ctx.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
-  "offer claim owns salary-guess via DIR_OFFER",
+  ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
+  "u_science_02 exclusive slot → DIR_OFFER → salary guess",
 );
 assert.ok(
-  !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
-  "runway claim must NOT own offer fact",
+  ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
+  "u_science_offer_02 exclusive slot → DIR_RUNWAY → runway",
 );
 assert.ok(
-  !ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
-  "offer claim must NOT own runway fact",
+  !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
+  "no cross-claim: science_02 must NOT own runway",
+);
+assert.ok(
+  !ctx.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
+  "no cross-claim: offer claim must NOT own salary guess",
 );
 assert.deepEqual(
   [...(ctx.registry.claims[sciClaimId]?.related_dir_ids ?? [])].sort(),
-  ["DIR_RUNWAY"],
+  ["DIR_OFFER"],
 );
 assert.deepEqual(
   [...(ctx.registry.claims[offerClaimId]?.related_dir_ids ?? [])].sort(),
-  ["DIR_OFFER"],
+  ["DIR_RUNWAY"],
+);
+assert.ok(
+  ctx.trusted_claim_dir_bindings.size >= 2,
+  "trusted bindings present from enrich certificate",
 );
 for (const claim of Object.values(ctx.registry.claims)) {
   assert.ok(
@@ -428,7 +438,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         unit_id: "u_fact_runway",
         kind: "reality_fact",
         text: "Available runway supports exploring without resigning cold while the buffer holds.",
-        claim_ids: [sciClaimId],
+        claim_ids: [offerClaimId],
         evidence_ids: [factEv],
         fact_ids: [factId],
       },
@@ -436,7 +446,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         unit_id: "u_why",
         kind: "conditional_explanation",
         text: "The judgment favors staged explore because structure prioritizes a protected base and the runway condition makes that workable now.",
-        claim_ids: [claimId, sciClaimId],
+        claim_ids: [claimId, offerClaimId],
         evidence_ids: [personalEv],
         related_reality_fact_unit_ids: ["u_fact_runway"],
       },
@@ -455,7 +465,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     why_judgment_fits_unit_ids: ["u_why"],
     page01_judgment_ref: "staged explore",
     explanation_boundary: {
-      claim_ids: [claimId, sciClaimId],
+      claim_ids: [claimId, sciClaimId, offerClaimId],
       personal_unit_ids: ["u_personal"],
       confirmed_fact_unit_ids: ["u_fact_runway"],
       hypothesis_unit_ids: ["u_hyp"],
@@ -841,7 +851,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     trustedBindings: trusted,
   });
   assert.ok(
-    fromMirror.pairKeys.has(`${sciClaimId}::${factId}`),
+    fromMirror.pairKeys.has(`${sciClaimId}::${unverifiedFactId}`),
     "pairs still come from trustedBindings, not mutated mirror",
   );
   sci.related_dir_ids = prevDirs;
@@ -860,7 +870,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     dc,
     trustedBindings: emptyTrusted,
   });
-  assert.ok(!cleared.pairKeys.has(`${sciClaimId}::${factId}`));
+  assert.ok(!cleared.pairKeys.has(`${sciClaimId}::${unverifiedFactId}`));
 
   const dirs = structuredLinkedDirsForFact(
     dc.reality_facts!.find((f) => f.fact_id === factId)!,
@@ -868,11 +878,13 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   );
   assert.deepEqual(dirs, ["DIR_RUNWAY"]);
 
-  // D: Cross-claim isolation
+  // D: Cross-claim isolation — sci owns offer fact; offer owns runway
+  assert.ok(ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`));
+  assert.ok(ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`));
+  assert.ok(!ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`));
   assert.ok(
-    !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
+    !ctx.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
   );
-  assert.ok(!ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`));
   assert.equal(
     validateFace02ProductionOutput({
       raw: validPage02({
@@ -880,7 +892,8 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
           ...(validPage02().content_units as unknown[]).map((u) => {
             const row = u as { unit_id?: string; claim_ids?: string[] };
             if (row.unit_id === "u_fact_runway") {
-              return { ...row, claim_ids: [offerClaimId] };
+              // Wrong owner: sciClaimId does not own runway
+              return { ...row, claim_ids: [sciClaimId] };
             }
             return u;
           }),
@@ -890,15 +903,16 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
       ctx,
     }).ok,
     false,
-    "offer claim citing runway fact must fail (cross-claim)",
+    "sci claim citing runway fact must fail (cross-claim)",
   );
 
-  // A: model forged DIR anchor / declared — program related_dir_ids wins
+  // A: model forged anchors / manual unit.related_dir_ids — enrich certificate wins
   {
     const forgedPack = makePack({ bazi: true, ziwei: false });
     const sciUnit = forgedPack.units.find((u) => u.id === "u_science_02")!;
-    sciUnit.anchors = ["DIR_OFFER", "dir:DIR_OFFER"];
-    sciUnit.declared_related_dir_ids = ["DIR_OFFER"];
+    sciUnit.anchors = ["DIR_RUNWAY", "dir:DIR_RUNWAY"];
+    sciUnit.declared_related_dir_ids = ["DIR_RUNWAY"];
+    // Manual field pretends RUNWAY, but enrich exclusive slot assigns OFFER first.
     sciUnit.related_dir_ids = ["DIR_RUNWAY"];
     const forgedCtx = buildFace02ProductionContext({
       report_id: "forge_dir_anchor",
@@ -910,18 +924,20 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     });
     assert.equal(forgedCtx.ok, true);
     if (!forgedCtx.ok) throw new Error(forgedCtx.reason);
-    const bind = forgedCtx.ctx.trusted_claim_dir_bindings.get("claim_u_science_02");
-    assert.deepEqual(bind?.related_dir_ids, ["DIR_RUNWAY"]);
+    const bind = forgedCtx.ctx.trusted_claim_dir_bindings.get(
+      "claim_u_science_02",
+    );
+    assert.deepEqual(bind?.related_dir_ids, ["DIR_OFFER"]);
     assert.ok(
       forgedCtx.ctx.credible_fact_claim_keys.has(
-        "claim_u_science_02::fact_runway",
+        "claim_u_science_02::fact_salary_guess",
       ),
     );
     assert.ok(
       !forgedCtx.ctx.credible_fact_claim_keys.has(
-        "claim_u_science_02::fact_salary_guess",
+        "claim_u_science_02::fact_runway",
       ),
-      "forged DIR_OFFER must not create offer pair",
+      "model/manual DIR_RUNWAY must not override enrich slot",
     );
   }
 
@@ -958,32 +974,56 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     assert.deepEqual(parsed.suggested_dir_ids, []);
   }
 
-  // E: anchors look valid but no program related_dir_ids → no pairs
+  // E: bare unit.related_dir_ids without enrichment certificate → no pairs
   {
-    const emptyPack = makePack({ bazi: true, ziwei: false });
-    for (const u of emptyPack.units) {
+    const barePack = makePack({ bazi: true, ziwei: false });
+    for (const u of barePack.units) {
       if (u.track === "science") {
-        u.related_dir_ids = [];
-        u.anchors = ["DIR_RUNWAY", "DIR_OFFER", "hard_constraint"];
+        u.related_dir_ids = ["DIR_RUNWAY", "DIR_OFFER"];
+        u.anchors = ["DIR_RUNWAY"];
         u.declared_related_dir_ids = ["DIR_RUNWAY"];
       }
     }
-    const emptyCtx = buildFace02ProductionContext({
-      report_id: "no_program_dirs",
-      locale: "en",
+    delete (barePack as { related_dir_enrichment?: unknown })
+      .related_dir_enrichment;
+    const seededBare = seedEvidenceRegistryForFace02({
       dc,
-      pack: emptyPack,
+      pack: barePack,
       chart_fact_pack: "日主甲木…",
-      page01: page01Schema,
+      bazi_available: true,
     });
-    assert.equal(emptyCtx.ok, true);
-    if (!emptyCtx.ok) throw new Error(emptyCtx.reason);
-    assert.equal(emptyCtx.ctx.credible_fact_claim_pairs.length, 0);
-    assert.deepEqual(
-      emptyCtx.ctx.trusted_claim_dir_bindings.get("claim_u_science_02")
-        ?.related_dir_ids,
-      [],
+    const bareTrusted = buildTrustedClaimDirBindings({
+      pack: barePack,
+      dc,
+      fact_selection: seededBare.fact_selection,
+      registry: seededBare.registry,
+    });
+    const barePairs = buildCrediblePage02FactClaimPairs({
+      registry: seededBare.registry,
+      fact_selection: seededBare.fact_selection,
+      dc,
+      trustedBindings: bareTrusted,
+    });
+    assert.equal(barePairs.pairs.length, 0);
+    assert.ok(
+      [...bareTrusted.values()].every((b) => b.related_dir_ids.length === 0),
     );
+  }
+
+  // Enrich produces certificate + exclusive slots (production path)
+  {
+    const raw = makePack({ bazi: true, ziwei: false });
+    const { pack: enriched, certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: raw,
+      dc,
+    });
+    assert.equal(certificate.algorithm, "exclusive_linked_dir_slots_v1");
+    assert.ok(enriched.related_dir_enrichment);
+    const assigned = certificate.bindings
+      .filter((b) => b.related_dir_ids.length)
+      .map((b) => b.related_dir_ids[0]!);
+    assert.equal(new Set(assigned).size, assigned.length, "exclusive slots");
+    assert.ok(assigned.length >= 1);
   }
 
   console.log("structured-association negatives PASS");
@@ -998,7 +1038,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
         unit_id: "u_fact_salary",
         kind: "reality_fact",
         text: "Cash figure is still an estimate pending hardened terms.",
-        claim_ids: [offerClaimId],
+        claim_ids: [sciClaimId],
         evidence_ids: [unverifiedFactEv],
         fact_ids: [unverifiedFactId],
       },

@@ -45,6 +45,7 @@ import {
   buildBookJudgmentQuotaFromBlueprint,
   formatQuotaTableForPrompt,
 } from "./quota-from-blueprint";
+import { enrichBookJudgmentRelatedDirIds } from "./related-dir-enrichment";
 
 const PACK_SYSTEM = `你是交付报告「全书批断包」写手（BookJudgmentPack）。
 只输出 JSON，不要 markdown。
@@ -776,10 +777,15 @@ export async function runBookJudgmentPackGenerate(input: {
     declared_pattern_hits_used: stringList(shot.parsed, "pattern_hits_used"),
     science_tags_used: stringList(shot.parsed, "science_tags_used"),
   });
+  // Program Claim–DIR enrichment (never model anchors). Idempotent.
+  const enriched = enrichBookJudgmentRelatedDirIds({
+    pack: draft,
+    dc: input.decision_context_snapshot ?? null,
+  }).pack;
   const classicalNames = (ziwei?.patternHits ?? [])
     .map((h) => (h.name ?? "").trim())
     .filter(Boolean);
-  const validated = validateBookJudgmentPack(draft, quota, {
+  const validated = validateBookJudgmentPack(enriched, quota, {
     classical_pattern_names: classicalNames,
   });
   if (!validated.ok) {
@@ -787,7 +793,7 @@ export async function runBookJudgmentPackGenerate(input: {
       ok: false,
       reason: validated.reason,
       detail: validated.detail,
-      draft_pack: draft,
+      draft_pack: enriched,
       tokens_used,
       last_raw_text: shot.text.slice(0, 12_000),
       call_trace: shot.call_trace,

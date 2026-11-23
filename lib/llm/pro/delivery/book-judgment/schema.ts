@@ -76,8 +76,8 @@ export const BookJudgmentUnitSchema = z.object({
   /** Model-declared source_version (audit only). */
   declared_source_version: z.string().trim().max(128).optional(),
   /**
-   * Program-certified DIR ids for Page02 Claim↔Fact credibility.
-   * Never accept raw model output here — fixtures/ops/enrich only.
+   * Mirror of program related_dir_enrichment for this unit (Page02).
+   * Not a trust root by itself — pack.related_dir_enrichment is authority.
    */
   related_dir_ids: z.array(z.string().trim().min(1).max(80)).max(16).optional(),
   /**
@@ -89,6 +89,23 @@ export const BookJudgmentUnitSchema = z.object({
     .optional(),
 });
 export type BookJudgmentUnit = z.infer<typeof BookJudgmentUnitSchema>;
+
+export const RelatedDirEnrichmentCertificateSchema = z.object({
+  version: z.literal(1),
+  algorithm: z.literal("exclusive_linked_dir_slots_v1"),
+  certified_at: z.string().trim().min(1),
+  dc_content_hash: z.string().trim().max(128).nullable(),
+  linked_dir_ids: z.array(z.string().trim().min(1).max(80)).max(64),
+  bindings: z
+    .array(
+      z.object({
+        unit_id: z.string().trim().min(1).max(64),
+        related_dir_ids: z.array(z.string().trim().min(1).max(80)).max(16),
+        reasons: z.array(z.string().trim().min(1).max(160)).max(24),
+      }),
+    )
+    .max(120),
+});
 
 export const BookJudgmentPackSchema = z.object({
   version: z.literal(BOOK_JUDGMENT_PACK_VERSION),
@@ -113,6 +130,11 @@ export const BookJudgmentPackSchema = z.object({
     .max(40)
     .optional(),
   science_tags_used: z.array(z.string().trim().min(1).max(80)).default([]),
+  /**
+   * Program Claim–DIR enrichment certificate — Page02 trust root.
+   * Absent/invalid ⇒ Page02 must not treat unit.related_dir_ids as certified.
+   */
+  related_dir_enrichment: RelatedDirEnrichmentCertificateSchema.optional(),
 });
 
 export type BookJudgmentPack = z.infer<typeof BookJudgmentPackSchema>;

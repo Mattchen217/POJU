@@ -175,8 +175,8 @@ function unitIdFromClaimId(claimId: string): string | null {
 }
 
 /**
- * Build trusted per-claim DIR bindings from program unit.related_dir_ids only.
- * Model anchors / declared_related_dir_ids never grant dirs.
+ * Build trusted per-claim DIR bindings from pack.related_dir_enrichment only.
+ * Bare unit.related_dir_ids / model anchors are never the trust root.
  */
 export function buildTrustedClaimDirBindings(input: {
   pack: BookJudgmentPack | null | undefined;
@@ -187,9 +187,29 @@ export function buildTrustedClaimDirBindings(input: {
   const out = new Map<string, TrustedClaimDirBinding>();
   const dirsById = activeDirsById(input.dc);
   const linkedDirs = linkedStructuredDirIds(input);
+  const enrich = input.pack?.related_dir_enrichment;
+  const certOk =
+    enrich &&
+    enrich.version === 1 &&
+    enrich.algorithm === "exclusive_linked_dir_slots_v1" &&
+    Array.isArray(enrich.bindings);
+
   const unitsById = new Map<string, BookJudgmentUnit>();
   for (const u of input.pack?.units ?? []) {
     unitsById.set(u.id, u);
+  }
+
+  const bindingByUnit = new Map<
+    string,
+    { related_dir_ids: string[]; reasons: string[] }
+  >();
+  if (certOk) {
+    for (const b of enrich.bindings) {
+      bindingByUnit.set(b.unit_id, {
+        related_dir_ids: [...(b.related_dir_ids ?? [])],
+        reasons: [...(b.reasons ?? [])],
+      });
+    }
   }
 
   for (const claim of Object.values(input.registry.claims)) {
@@ -198,15 +218,40 @@ export function buildTrustedClaimDirBindings(input: {
     if (!unitId) continue;
     const unit = unitsById.get(unitId);
     if (!unit) continue;
-    // Science/convergence only — still require program related_dir_ids, not track alone.
     if (unit.track !== "science" && unit.track !== "convergence") continue;
 
-    const programDirs = (unit.related_dir_ids ?? [])
-      .map((d) => d.trim())
-      .filter(Boolean);
+    const reasons: string[] = [];
+    if (!certOk) {
+      reasons.push("reject:missing_related_dir_enrichment_certificate");
+      // Even if unit.related_dir_ids is populated, ignore without certificate.
+      if ((unit.related_dir_ids ?? []).length) {
+        reasons.push("ignore_uncertified_unit_related_dir_ids");
+      }
+      out.set(claim.claim_id, {
+        claim_id: claim.claim_id,
+        unit_id: unitId,
+        related_dir_ids: [],
+        reasons,
+      });
+      continue;
+    }
+
+    const fromCert = bindingByUnit.get(unitId);
+    reasons.push("source:related_dir_enrichment");
+    if (!fromCert) {
+      reasons.push("no_certificate_binding_for_unit");
+      out.set(claim.claim_id, {
+        claim_id: claim.claim_id,
+        unit_id: unitId,
+        related_dir_ids: [],
+        reasons,
+      });
+      continue;
+    }
+    reasons.push(...fromCert.reasons.slice(0, 8));
+
     const certified: string[] = [];
-    const reasons: string[] = ["source:unit.related_dir_ids"];
-    for (const dirId of programDirs) {
+    for (const dirId of fromCert.related_dir_ids.map((d) => d.trim()).filter(Boolean)) {
       if (!dirsById.has(dirId)) {
         reasons.push(`reject_inactive_or_missing:${dirId}`);
         continue;
@@ -219,7 +264,7 @@ export function buildTrustedClaimDirBindings(input: {
       reasons.push(`accept:${dirId}`);
     }
 
-    // Model suggestions are audit-only: never expand certified set.
+    // Model suggestions never expand.
     const suggestions = parseModelDirSuggestions(
       [
         ...(unit.declared_related_dir_ids ?? []),
