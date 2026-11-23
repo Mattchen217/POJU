@@ -288,6 +288,12 @@ export function validateFace02BodyCompliance(
   page: {
     page_title?: string;
     page_subtitle?: string;
+    content_units?: Array<{ unit_id?: string; text?: string; title?: string }>;
+    page01_judgment_ref?: string;
+    explanation_boundary?: {
+      uncertainty_notes?: string[];
+    };
+    /** Legacy free-text shape (historical open only). */
     page_summary?: string;
     relevant_personal_factors?: Array<{ title?: string; text?: string }>;
     personal_reality_interplay?: Array<{
@@ -295,12 +301,6 @@ export function validateFace02BodyCompliance(
       conditionality?: string;
     }>;
     why_judgment_fits?: { text?: string; page01_judgment_ref?: string };
-    explanation_boundary?: {
-      personal_analysis_basis?: string[];
-      confirmed_fact_basis?: string[];
-      hypothesis_notes?: string[];
-      uncertainty_notes?: string[];
-    };
   },
   localeInput: string,
 ): BodyComplianceResult {
@@ -312,6 +312,19 @@ export function validateFace02BodyCompliance(
 
   check(page.page_title, "page_title");
   check(page.page_subtitle, "page_subtitle");
+  if (Array.isArray(page.content_units) && page.content_units.length) {
+    page.content_units.forEach((u, i) => {
+      const id = u.unit_id ?? String(i);
+      check(u.title, `content_units[${id}].title`);
+      check(u.text, `content_units[${id}].text`);
+    });
+    check(page.page01_judgment_ref, "page01_judgment_ref");
+    page.explanation_boundary?.uncertainty_notes?.forEach((t, i) =>
+      check(t, `explanation_boundary.uncertainty_notes[${i}]`),
+    );
+    return { ok: issues.length === 0, issues };
+  }
+
   check(page.page_summary, "page_summary");
   page.relevant_personal_factors?.forEach((row, i) => {
     check(row.title, `relevant_personal_factors[${i}].title`);
@@ -325,15 +338,6 @@ export function validateFace02BodyCompliance(
   check(
     page.why_judgment_fits?.page01_judgment_ref,
     "why_judgment_fits.page01_judgment_ref",
-  );
-  page.explanation_boundary?.personal_analysis_basis?.forEach((t, i) =>
-    check(t, `explanation_boundary.personal_analysis_basis[${i}]`),
-  );
-  page.explanation_boundary?.confirmed_fact_basis?.forEach((t, i) =>
-    check(t, `explanation_boundary.confirmed_fact_basis[${i}]`),
-  );
-  page.explanation_boundary?.hypothesis_notes?.forEach((t, i) =>
-    check(t, `explanation_boundary.hypothesis_notes[${i}]`),
   );
   page.explanation_boundary?.uncertainty_notes?.forEach((t, i) =>
     check(t, `explanation_boundary.uncertainty_notes[${i}]`),

@@ -1,5 +1,5 @@
 /**
- * Face 02 dedicated prompt — why this judgment fits you.
+ * Face 02 dedicated prompt — structured content units.
  */
 
 import { DECISION_REPORT_V2_SYSTEM_PROMPT } from "../system-prompt";
@@ -12,45 +12,66 @@ export const FACE02_TASK_PROMPT = `任务：生成个人决策报告第 02 页�
 本页只解释：Page01 的判断为何与「此人 + 当前处境」相关。
 不是再次发布结论，不是路径比较，不是卡点诊断，不是行动方案。
 
+你必须输出【结构化 content_units】，不要输出无法归属的大段自由事实陈述。
+
+content_units.kind 只能是：
+- personal_interpretation：个人结构解释（须引用 personal_reading evidence + source_domain）
+- reality_fact：现实事实单元（须含 canonical fact_ids + 对应 ev_fact_* evidence_ids；claim 须与程序可信 DIR 关联一致）
+- reality_mechanism：外部机制解释（须引用 reality_mechanism evidence）
+- conditional_explanation：条件性说明；若涉及现实事实，必须在 related_reality_fact_unit_ids 指向已声明的 reality_fact unit，禁止在本 unit 内偷偷陈述未引用的 DC 事实
+
+硬约束（每个 unit）：
+- claim_ids：至少 1 个，且必须来自 evidence_registry.claims
+- evidence_ids：personal / reality_fact / reality_mechanism 至少 1 个；须与 registry 归属一致
+- 不得留空 claim_ids / fact_ids（reality_fact）
+
+页面各段只引用 unit_id 装配：
+- page_summary_unit_ids
+- relevant_personal_factor_unit_ids
+- personal_reality_interplay_unit_ids
+- why_judgment_fits_unit_ids
+- explanation_boundary.personal_unit_ids / confirmed_fact_unit_ids / hypothesis_unit_ids
+
 你将收到：
-- decision：本题问题与目标；
-- reality_context：DC 现实事实（selection_kind=linked|candidate；status/verification 不得升级）；
-- personal_analysis：本题相关的已认证个人批断与锚点（含 domain_versions）；无可用域时可能为空；
-- page01_judgment_context：仅供对齐的 Page01 判断摘要（不是个人分析来源，不得整段复读为正文）；
-- evidence_registry：本页 slice 内可引用的 evidence_id / claim_id（不得引用之外的 id）；
-- page_requirements：本页字段规则。
+- decision / reality_context / personal_analysis / page01_judgment_context
+- evidence_registry（仅可引用其中的 id）
+- credible_fact_claim_pairs（程序认证的 fact↔claim；reality_fact 只能用这些对）
+- page_requirements
 
-请完成：
-
-1. 识别真正需要解释的、与本题相关的个人因素（无则留空，禁止伪造）。
-2. 只从本页 evidence_registry 选择依据；term_ids 已由程序认证，不得自造。
-3. 建立个人结构与现实处境之间的解释关系（条件、边界、代价）。
-4. 说明这些关联如何支撑 Page01 判断，而不重述完整结论/首选路径。
-5. 明确区分：个人分析依据 / 用户确认事实 / 解释性假设 / 外部机制证据。
-6. 不得把传统分析写成已被现代科学验证的事实。
-7. 不得展开 Page04 核心卡点诊断、Page05 路径排序、Page06 行动安排。
-8. 不得复制 Page01 结论段落作为本页主要正文。
-9. 正文零命理专名、零软译术语、零 term_id；不得用 Markdown。
-10. 只输出符合 Face02V2 JSON schema 的 JSON。
-
-写作要求：
-- 直接、具体、自然；
-- 解释条件与适用边界；
-- 不恐吓、不定命、不预测确定未来；
-- 不为凑结构制造无依据内容。`;
+规则：
+1. 无可用个人域时不得伪造 personal_interpretation（bazi/ziwei）。
+2. 不得升级 DC 事实状态；confirmed_fact_unit_ids 只能指向 status=confirmed 的 reality_fact units。
+3. hypothesis_unit_ids 不得指向 confirmed 事实。
+4. 正文零命理专名、零软译、零 term_id；不得用 Markdown。
+5. 不得复制 Page01 结论；不得侵入 Page04/05/06。
+6. 只输出符合 Face02V2 JSON schema 的 JSON。`;
 
 export function buildFace02PromptPair(input: {
   slice: Page02FeedSlice;
   termAllowlist: readonly TermAllowlistEntry[];
   jsonSchemaHint: string;
+  /** Program-certified pairs — feed to model as read-only constraint. */
+  credibleFactClaimPairs?: ReadonlyArray<{
+    claim_id: string;
+    fact_id: string;
+    evidence_id: string;
+    related_dir_ids: string[];
+  }>;
 }): { system: string; user: string } {
   const system = [
     DECISION_REPORT_V2_SYSTEM_PROMPT,
     "",
     FACE02_TASK_PROMPT,
     "",
-    "输出必须符合 Face02 JSON schema（schema_version=face02-v2）。",
+    "输出必须符合 Face02 JSON schema（schema_version=face02-v2 · content_units 权威）。",
   ].join("\n");
+
+  const pairs = (input.credibleFactClaimPairs ?? []).map((p) => ({
+    claim_id: p.claim_id,
+    fact_id: p.fact_id,
+    evidence_id: p.evidence_id,
+    related_dir_ids: p.related_dir_ids,
+  }));
 
   const user = [
     `locale: ${input.slice.locale}`,
@@ -74,26 +95,24 @@ export function buildFace02PromptPair(input: {
     "## evidence_registry (ids you may cite — Page02 slice only)",
     JSON.stringify(input.slice.evidence_registry, null, 2),
     "",
+    "## credible_fact_claim_pairs (program-certified; reality_fact must use these)",
+    JSON.stringify(pairs, null, 2),
+    "",
     formatTermAllowlistForPrompt(input.termAllowlist),
     "",
     "## page_requirements",
     [
-      "- page_summary + page_summary_claim_ids + page_summary_reality_fact_ids (field required; use [] only when no DC fact is asserted)",
-      "- Whenever text asserts a concrete DC reality fact, the matching canonical fact_id MUST appear in that block's reality_fact_ids — omitting refs fails",
-      "- relevant_personal_factors: claim_ids + evidence_ids + source_domain + reality_fact_ids (required key; [] if pure personal with no DC fact)",
-      "- personal_reality_interplay: personal_evidence_ids + reality_fact_ids + claim_ids; every evidence/fact must belong to listed claims via registry ownership or DC-credible fact↔claim pairs",
-      "- why_judgment_fits: claim_ids + evidence_ids + reality_fact_ids (required key); optional short page01_judgment_ref; no full restatement",
-      "- explanation_boundary.claim_ids: the ONLY claims boundary evidence/facts may belong to (not any Page02 claim)",
-      "- explanation_boundary: personal_analysis_basis/confirmed_fact_basis may be EMPTY when no matching evidence; still emit personal_analysis_evidence_ids/confirmed_fact_ids/hypothesis_fact_ids arrays (use [])",
-      "- confirmed_fact_ids: only DC facts with original status=confirmed and credible for boundary.claim_ids",
-      "- hypothesis_fact_ids: never include original status=confirmed; must be credible for boundary.claim_ids",
-      "- Do not invent fact↔claim links; program never auto-assigns all facts to all personal claims",
-      "- reading_order: content block order",
-      "- Body: vernacular only; no traditional jargon; no soft labels; no term_id",
-      "- Do not invent probability scores, destiny forecasts, or fake KPIs",
-      "- Do not upgrade unverified/unknown/hypothesis/candidate facts to confirmed in ANY visible field",
+      "- content_units: required array of discriminated units (personal_interpretation | reality_fact | reality_mechanism | conditional_explanation)",
+      "- EVERY unit.claim_ids: min 1 id from evidence_registry.claims (never empty)",
+      "- reality_fact units: fact_ids = canonical raw DC ids; evidence_ids must include matching ev_fact_* records; (claim_id, fact_id) must appear in credible_fact_claim_pairs",
+      "- Section assembly uses unit_id lists only — do not rely on free-text page_summary fields",
+      "- explanation_boundary.claim_ids must intersect the claim_ids of referenced boundary units",
+      "- confirmed_fact_unit_ids: only reality_fact units whose DC status is confirmed",
+      "- hypothesis_unit_ids: must not reference confirmed facts",
+      "- uncertainty_notes: non-authoritative; never change DC status",
+      "- Body vernacular only; no traditional jargon; no soft labels; no term_id",
+      "- Do not invent probability scores or destiny forecasts",
       "- Do not diagnose Page04 bottlenecks or prescribe Page06 actions",
-      "- evidence_registry.source_domain/source_version are program-certified — both must exist and match profile versions for personal_reading",
     ].join("\n"),
     "",
     "## JSON shape",

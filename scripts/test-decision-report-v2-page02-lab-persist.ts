@@ -64,7 +64,7 @@ const dc = {
       statement: "Personal runway is about 8 months.",
       status: "confirmed",
       verification_level: "user_asserted",
-      roles: ["cash_runway"],
+      fact_roles: ["cash_runway"],
       related_dir_ids: ["dir_main"],
     },
   ],

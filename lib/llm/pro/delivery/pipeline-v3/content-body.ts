@@ -204,14 +204,18 @@ function coerceFaceLoose(
       } as DeliveryPageData;
     }
     case "02": {
-      // Face02 v2 structured shape. Legacy four-field rejected for new books.
-      const summary = str(root.page_summary);
-      const whyFits = root.why_judgment_fits;
+      // Face02 v2 content_units authority. Free-text page_summary rejected for new books.
+      const units = root.content_units;
+      const summaryIds = root.page_summary_unit_ids;
+      const whyIds = root.why_judgment_fits_unit_ids;
       const boundary = root.explanation_boundary;
       if (
-        !summary ||
-        !whyFits ||
-        typeof whyFits !== "object" ||
+        !Array.isArray(units) ||
+        units.length < 1 ||
+        !Array.isArray(summaryIds) ||
+        summaryIds.length < 1 ||
+        !Array.isArray(whyIds) ||
+        whyIds.length < 1 ||
         !boundary ||
         typeof boundary !== "object"
       ) {
@@ -222,14 +226,20 @@ function coerceFaceLoose(
         page: "02",
         face: "02",
         schema_version: "face02-v2",
-        page_summary: summary,
-        relevant_personal_factors: Array.isArray(root.relevant_personal_factors)
-          ? root.relevant_personal_factors
+        content_units: units,
+        page_summary_unit_ids: summaryIds,
+        relevant_personal_factor_unit_ids: Array.isArray(
+          root.relevant_personal_factor_unit_ids,
+        )
+          ? root.relevant_personal_factor_unit_ids
           : [],
-        personal_reality_interplay: Array.isArray(root.personal_reality_interplay)
-          ? root.personal_reality_interplay
+        personal_reality_interplay_unit_ids: Array.isArray(
+          root.personal_reality_interplay_unit_ids,
+        )
+          ? root.personal_reality_interplay_unit_ids
           : [],
-        why_judgment_fits: whyFits,
+        why_judgment_fits_unit_ids: whyIds,
+        page01_judgment_ref: str(root.page01_judgment_ref),
         explanation_boundary: boundary,
         reading_order: Array.isArray(root.reading_order)
           ? root.reading_order
@@ -240,7 +250,7 @@ function coerceFaceLoose(
               "why_judgment_fits",
               "explanation_boundary",
             ],
-      } as DeliveryPageData;
+      } as unknown as DeliveryPageData;
     }
     case "04": {
       const bottleneck_name = str(root.bottleneck_name);

@@ -228,82 +228,79 @@ export const Face01V2Schema = z.object({
 
 export type Face01V2 = z.infer<typeof Face01V2Schema>;
 
-/** Face 02 — 为什么这个判断适合你 (SoT 2026-11-22). */
+/**
+ * Face02 content units — sole V2 authority for reader/PDF body.
+ * Free-text section prose is not an authority source for new generation.
+ */
+export const Face02ContentUnitSchema = z.discriminatedUnion("kind", [
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("personal_interpretation"),
+    text: NonEmpty.max(720),
+    title: z.string().trim().max(120).optional().default(""),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    source_domain: z.enum(["bazi", "ziwei", "science", "convergence"]),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("reality_fact"),
+    text: NonEmpty.max(720),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    /** Must be reality_fact evidence ids (typically ev_fact_<fact_id>). */
+    evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    /** Canonical raw DC fact ids. */
+    fact_ids: z.array(NonEmpty.max(120)).min(1).max(8),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("reality_mechanism"),
+    text: NonEmpty.max(720),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  }),
+  z.object({
+    unit_id: NonEmpty.max(80),
+    kind: z.literal("conditional_explanation"),
+    text: NonEmpty.max(720),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).max(8),
+    /**
+     * If this unit discusses DC reality, point at validated reality_fact units.
+     * Do not embed unverified free-text facts here.
+     */
+    related_reality_fact_unit_ids: z.array(NonEmpty.max(80)).max(8),
+  }),
+]);
+
+export type Face02ContentUnit = z.infer<typeof Face02ContentUnitSchema>;
+
+/** Face 02 — 为什么这个判断适合你 (structured content units · 2026-11-23). */
 export const Face02V2Schema = z.object({
   page: z.literal("02"),
   face: z.literal("02"),
   schema_version: z.literal("face02-v2").default("face02-v2"),
   page_title: z.string().trim().max(56).optional().default(""),
   page_subtitle: z.string().trim().max(80).optional().default(""),
-  page_summary: NonEmpty.max(360),
-  /** Claims this summary explains — required structured association. */
-  page_summary_claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-  /**
-   * Structured DC fact refs for page_summary.
-   * Field must be present: [] = explicit “no DC fact asserted”; omitted = schema fail.
-   * Do not rely on defaults to treat missing as empty.
-   */
-  page_summary_reality_fact_ids: z.array(NonEmpty.max(120)).max(8),
-  /** A · 与本题相关的个人结构（无可用个人域时允许空，禁止伪造） */
-  relevant_personal_factors: z
-    .array(
-      z.object({
-        factor_id: NonEmpty.max(80),
-        title: NonEmpty.max(120),
-        text: NonEmpty.max(720),
-        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        source_domain: z.enum([
-          "bazi",
-          "ziwei",
-          "science",
-          "convergence",
-        ]),
-        /** Required key; [] = explicit no DC-fact claim in this factor. */
-        reality_fact_ids: z.array(NonEmpty.max(120)).max(8),
-      }),
-    )
-    .min(0)
-    .max(4),
-  /** B · 个人结构与现实处境交汇（无个人依据时允许空） */
-  personal_reality_interplay: z
-    .array(
-      z.object({
-        text: NonEmpty.max(720),
-        personal_evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        reality_fact_ids: z.array(NonEmpty.max(120)).min(1).max(8),
-        mechanism_evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        conditionality: NonEmpty.max(360),
-      }),
-    )
-    .min(0)
-    .max(4),
-  /** C · 对本题判断的解释（非再发结论） */
-  why_judgment_fits: z.object({
-    text: NonEmpty.max(960),
-    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-    evidence_ids: z.array(NonEmpty.max(80)).min(1).max(12),
-    /** Required key; [] = explicit no DC-fact claim in this section. */
-    reality_fact_ids: z.array(NonEmpty.max(120)).max(8),
-    /** Short pointer to what Page01 judgment is being explained — not a full restatement. */
-    page01_judgment_ref: z.string().trim().max(240).optional().default(""),
-  }),
+  /** Validated content units — sole body authority for V2 generation. */
+  content_units: z.array(Face02ContentUnitSchema).min(1).max(24),
+  /** Section assembly: ordered unit_ids into reading slots. */
+  page_summary_unit_ids: z.array(NonEmpty.max(80)).min(1).max(6),
+  relevant_personal_factor_unit_ids: z.array(NonEmpty.max(80)).max(8),
+  personal_reality_interplay_unit_ids: z.array(NonEmpty.max(80)).max(8),
+  why_judgment_fits_unit_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  page01_judgment_ref: z.string().trim().max(240).optional().default(""),
   explanation_boundary: z.object({
-    /** Claims this boundary explains — ownership is against these ids only. */
     claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-    /** Empty when no certified personal evidence exists — do not invent. */
-    personal_analysis_basis: z.array(NonEmpty.max(240)).max(6).default([]),
-    /** Empty when no confirmed DC facts exist — do not invent. */
-    confirmed_fact_basis: z.array(NonEmpty.max(240)).max(6).default([]),
-    hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+    /** personal_interpretation unit ids (empty when no personal domain). */
+    personal_unit_ids: z.array(NonEmpty.max(80)).max(8),
+    /** reality_fact units whose DC status is confirmed. */
+    confirmed_fact_unit_ids: z.array(NonEmpty.max(80)).max(8),
+    /** Units that state hypotheses (not confirmed DC facts). */
+    hypothesis_unit_ids: z.array(NonEmpty.max(80)).max(8),
+    /** Non-authoritative uncertainty notes — must not alter DC status. */
     uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(6),
-    /** Structured refs — must belong to boundary.claim_ids (not any Page02 claim). */
-    personal_analysis_evidence_ids: z.array(NonEmpty.max(80)).max(12),
-    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12),
-    hypothesis_fact_ids: z.array(NonEmpty.max(120)).max(12),
   }),
-  /** Explicit reading order of content blocks. */
   reading_order: z
     .array(
       z.enum([

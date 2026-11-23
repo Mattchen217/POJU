@@ -1,13 +1,15 @@
 /**
- * Read-only credible (claim_id, fact_id) pairs from DC structure.
- * Never mutates registry claim.evidence_ids or evidence.supports_claim_ids.
+ * Read-only credible (claim_id, fact_id) pairs from DC structured fields only.
  *
- * A linked DC fact is credible for a claim only when the claim's own body /
- * unit evidence text contains an explicit structured marker for that fact
- * (fact_id or one of the fact's related_dir_ids). Candidate facts never pair.
+ * Chain: linked RealityFact.related_dir_ids ∩ active DIR (with role match)
+ *      → program-certified claim.related_dir_ids
+ *
+ * Never uses claim.body_text / evidence.explanation substring matching.
+ * Never mutates supports_claim_ids to force validation pass.
  */
 
-import type { EvidenceRegistry } from "../types";
+import type { DecisionContext, DIR, RealityFact } from "@/lib/poju/decision-context/types";
+import type { EvidenceRegistry, ReportClaim } from "../types";
 import type { FactSelectionResult } from "../fact-relevance";
 import { factEvidenceIdFor } from "./fact-id";
 
@@ -15,6 +17,7 @@ export type CredibleFactClaimPair = {
   claim_id: string;
   fact_id: string;
   evidence_id: string;
+  related_dir_ids: string[];
   reasons: string[];
 };
 
@@ -22,18 +25,83 @@ export function crediblePairKey(claimId: string, factId: string): string {
   return `${claimId}::${factId}`;
 }
 
+function activeDirsById(dc: DecisionContext): Map<string, DIR> {
+  const map = new Map<string, DIR>();
+  for (const d of dc.dirs ?? []) {
+    if (d.id_lifecycle !== "active") continue;
+    map.set(d.dir_id, d);
+  }
+  return map;
+}
+
 /**
- * Build selective credible pairs. Unrelated claims stay unpaired.
+ * Structured dirs for a linked DC fact: related_dir_ids that exist as active
+ * DIRs and share at least one required_fact_role with the fact's fact_roles.
+ */
+export function structuredLinkedDirsForFact(
+  fact: RealityFact,
+  dirsById: ReadonlyMap<string, DIR>,
+): string[] {
+  const roles = new Set((fact.fact_roles ?? []).map((r) => r.trim()).filter(Boolean));
+  const out: string[] = [];
+  for (const raw of fact.related_dir_ids ?? []) {
+    const dirId = raw.trim();
+    if (!dirId) continue;
+    const dir = dirsById.get(dirId);
+    if (!dir) continue;
+    const dirRoles = dir.required_fact_roles ?? [];
+    if (!dirRoles.some((r) => roles.has(r))) continue;
+    out.push(dirId);
+  }
+  return out;
+}
+
+/**
+ * Program-certify claim.related_dir_ids from DC structure.
+ * - reality_analysis claims receive the union of structured dirs from linked facts.
+ * - all other claim types get [].
+ * Does not read claim.body_text or evidence.explanation.
+ */
+export function certifyClaimDirBindings(input: {
+  registry: EvidenceRegistry;
+  dc: DecisionContext;
+  fact_selection: FactSelectionResult;
+}): void {
+  const dirsById = activeDirsById(input.dc);
+  const linkedDirs = new Set<string>();
+
+  for (const row of input.fact_selection.selected) {
+    if (row.kind !== "linked") continue;
+    for (const d of structuredLinkedDirsForFact(row.source, dirsById)) {
+      linkedDirs.add(d);
+    }
+  }
+
+  const certified = [...linkedDirs];
+  for (const claim of Object.values(input.registry.claims)) {
+    if (claim.claim_type === "reality_analysis") {
+      claim.related_dir_ids = [...certified];
+    } else {
+      claim.related_dir_ids = [];
+    }
+  }
+}
+
+/**
+ * Build selective credible pairs from program-certified claim.related_dir_ids
+ * intersecting structured linked-fact dirs. Candidate facts never pair.
  */
 export function buildCrediblePage02FactClaimPairs(input: {
   registry: EvidenceRegistry;
   fact_selection: FactSelectionResult;
+  dc: DecisionContext;
 }): {
   pairs: CredibleFactClaimPair[];
   pairKeys: Set<string>;
 } {
   const pairs: CredibleFactClaimPair[] = [];
   const pairKeys = new Set<string>();
+  const dirsById = activeDirsById(input.dc);
 
   for (const row of input.fact_selection.selected) {
     if (row.kind !== "linked") continue;
@@ -41,26 +109,21 @@ export function buildCrediblePage02FactClaimPairs(input: {
     const evidence_id = factEvidenceIdFor(factId);
     if (!input.registry.evidence[evidence_id]) continue;
 
-    const markers = new Set<string>();
-    markers.add(factId.toLowerCase());
-    for (const d of row.source.related_dir_ids ?? []) {
-      const t = d.trim().toLowerCase();
-      if (t) markers.add(t);
-    }
+    const factDirs = structuredLinkedDirsForFact(row.source, dirsById);
+    if (!factDirs.length) continue;
+    const factDirSet = new Set(factDirs);
 
     for (const claim of Object.values(input.registry.claims)) {
-      const blobParts = [claim.body_text];
-      for (const eid of claim.evidence_ids) {
-        const ev = input.registry.evidence[eid];
-        if (!ev || ev.source_type === "reality_fact") continue;
-        blobParts.push(ev.explanation ?? "");
-      }
-      const blob = blobParts.join("\n").toLowerCase();
-      const hitMarkers: string[] = [];
-      for (const m of markers) {
-        if (m.length >= 3 && blob.includes(m)) hitMarkers.push(m);
-      }
-      if (!hitMarkers.length) continue;
+      const claimDirs = (claim.related_dir_ids ?? [])
+        .map((d) => d.trim())
+        .filter(Boolean);
+      if (!claimDirs.length) continue;
+
+      const overlap = claimDirs.filter((d) => factDirSet.has(d));
+      if (!overlap.length) continue;
+
+      // Every overlapping dir must still resolve in DC.
+      if (overlap.some((d) => !dirsById.has(d))) continue;
 
       const key = crediblePairKey(claim.claim_id, factId);
       if (pairKeys.has(key)) continue;
@@ -69,10 +132,11 @@ export function buildCrediblePage02FactClaimPairs(input: {
         claim_id: claim.claim_id,
         fact_id: factId,
         evidence_id,
+        related_dir_ids: overlap,
         reasons: [
           `selection:${row.kind}`,
+          `dir_overlap:${overlap.join(",")}`,
           ...row.reasons.slice(0, 4),
-          `marker:${hitMarkers.join(",")}`,
         ],
       });
     }
@@ -90,10 +154,7 @@ export function claimOwnsFactCredibly(
   return pairKeys.has(crediblePairKey(claimId, factId));
 }
 
-/**
- * Detect DC facts whose content (or id) is materially present in text.
- * Used to reject omitted structured reality_fact_ids — not a status authority.
- */
+/** Auxiliary only — never the primary integrity mechanism. */
 export function detectAssertedFactIdsInText(
   text: string,
   factContentById: ReadonlyMap<string, string> | undefined,
@@ -114,4 +175,8 @@ export function detectAssertedFactIdsInText(
     }
   }
   return out;
+}
+
+export function claimHasProgramDirs(claim: ReportClaim | undefined): boolean {
+  return Boolean(claim?.related_dir_ids?.some((d) => d.trim()));
 }

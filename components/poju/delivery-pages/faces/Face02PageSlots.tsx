@@ -1,6 +1,5 @@
 /**
- * Face 02 reader UI — 为什么这个判断适合你 (Page02 V2).
- * Historical destiny_reason shape projects via legacy adapter.
+ * Face 02 reader UI — content_units assembly (Page02 V2).
  */
 
 "use client";
@@ -12,6 +11,10 @@ import {
   isFace02V2,
   projectLegacyFace02ForDisplay,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
+import {
+  face02UnitDisplayText,
+  resolveFace02Units,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page02/content-units";
 import { faceSegmentLabel } from "@/lib/llm/pro/delivery/face-segment-locale";
 import type { Face02V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
@@ -43,9 +46,43 @@ function Section({
 }
 
 function resolvePage(page: Face02 | Record<string, unknown>): Face02V2 | null {
-  if (isFace02V2(page)) return page;
+  if (isFace02V2(page) && Array.isArray((page as Face02V2).content_units)) {
+    return page as Face02V2;
+  }
   if (isFace02Legacy(page)) return projectLegacyFace02ForDisplay(page);
   return projectLegacyFace02ForDisplay(page);
+}
+
+function UnitList({
+  page,
+  unitIds,
+  emptyZh,
+  emptyEn,
+  locale,
+}: {
+  page: Face02V2;
+  unitIds: readonly string[];
+  emptyZh: string;
+  emptyEn: string;
+  locale: string;
+}) {
+  const units = resolveFace02Units(page, unitIds);
+  if (!units.length) {
+    return (
+      <p className="dps-face-prose">
+        {localeBucket(locale) === "zh" ? emptyZh : emptyEn}
+      </p>
+    );
+  }
+  return (
+    <ul className="dps-face-list">
+      {units.map((u) => (
+        <li key={u.unit_id}>
+          <div className="dps-face-prose">{face02UnitDisplayText(u)}</div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function Face02PageSlots({
@@ -81,55 +118,46 @@ export function Face02PageSlots({
   const blocks: Record<string, ReactNode> = {
     page_summary: (
       <Section key="summary" title={faceSegmentLabel("02", "A", locale)}>
-        <p className="dps-face-prose">{data.page_summary}</p>
+        <UnitList
+          page={data}
+          unitIds={data.page_summary_unit_ids}
+          emptyZh="（无摘要）"
+          emptyEn="(No summary)"
+          locale={locale}
+        />
       </Section>
     ),
     relevant_personal_factors: (
       <Section key="factors" title={faceSegmentLabel("02", "B", locale)}>
-        {data.relevant_personal_factors.length === 0 ? (
-          <p className="dps-face-prose">
-            {localeBucket(locale) === "zh"
-              ? "本题暂无可用的个人结构依据。"
-              : "No personal-structure evidence is available for this decision."}
-          </p>
-        ) : (
-          <ul className="dps-face-list">
-            {data.relevant_personal_factors.map((row) => (
-              <li key={row.factor_id}>
-                <strong>{row.title}</strong>
-                <div className="dps-face-prose">{row.text}</div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <UnitList
+          page={data}
+          unitIds={data.relevant_personal_factor_unit_ids}
+          emptyZh="本题暂无可用的个人结构依据。"
+          emptyEn="No personal-structure evidence is available for this decision."
+          locale={locale}
+        />
       </Section>
     ),
     personal_reality_interplay: (
       <Section key="interplay" title={faceSegmentLabel("02", "C", locale)}>
-        {data.personal_reality_interplay.length === 0 ? (
-          <p className="dps-face-prose">
-            {localeBucket(locale) === "zh"
-              ? "本题暂无个人与现实交汇的可认证说明。"
-              : "No certified personal–reality interplay is available."}
-          </p>
-        ) : (
-          <ul className="dps-face-list">
-            {data.personal_reality_interplay.map((row, i) => (
-              <li key={i}>
-                <div className="dps-face-prose">{row.text}</div>
-                <div className="dps-face-prose dps-face02-condition">
-                  {localeBucket(locale) === "zh" ? "条件/边界：" : "Condition: "}
-                  {row.conditionality}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <UnitList
+          page={data}
+          unitIds={data.personal_reality_interplay_unit_ids}
+          emptyZh="本题暂无个人与现实交汇的可认证说明。"
+          emptyEn="No certified personal–reality interplay is available."
+          locale={locale}
+        />
       </Section>
     ),
     why_judgment_fits: (
       <Section key="why" title={faceSegmentLabel("02", "D", locale)}>
-        <p className="dps-face-prose">{data.why_judgment_fits.text}</p>
+        <UnitList
+          page={data}
+          unitIds={data.why_judgment_fits_unit_ids}
+          emptyZh="（无解释）"
+          emptyEn="(No explanation)"
+          locale={locale}
+        />
       </Section>
     ),
     explanation_boundary: (
@@ -137,52 +165,35 @@ export function Face02PageSlots({
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh" ? "个人分析依据" : "Personal analysis basis"}
         </p>
-        {(data.explanation_boundary.personal_analysis_basis?.length ?? 0) ===
-        0 ? (
-          <p className="dps-face-prose">
-            {localeBucket(locale) === "zh"
-              ? "（本题无可用个人分析依据）"
-              : "(No personal-analysis basis for this decision)"}
-          </p>
-        ) : (
-          <ul className="dps-face-list">
-            {data.explanation_boundary.personal_analysis_basis.map((t, i) => (
-              <li key={`p-${i}`}>{t}</li>
-            ))}
-          </ul>
-        )}
+        <UnitList
+          page={data}
+          unitIds={data.explanation_boundary.personal_unit_ids}
+          emptyZh="（本题无可用个人分析依据）"
+          emptyEn="(No personal-analysis basis for this decision)"
+          locale={locale}
+        />
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh" ? "已确认事实依据" : "Confirmed fact basis"}
         </p>
-        {(data.explanation_boundary.confirmed_fact_basis?.length ?? 0) === 0 ? (
-          <p className="dps-face-prose">
-            {localeBucket(locale) === "zh"
-              ? "（本题无已确认事实可列）"
-              : "(No confirmed facts to list)"}
-          </p>
-        ) : (
-          <ul className="dps-face-list">
-            {data.explanation_boundary.confirmed_fact_basis.map((t, i) => (
-              <li key={`f-${i}`}>{t}</li>
-            ))}
-          </ul>
-        )}
+        <UnitList
+          page={data}
+          unitIds={data.explanation_boundary.confirmed_fact_unit_ids}
+          emptyZh="（本题无已确认事实可列）"
+          emptyEn="(No confirmed facts to list)"
+          locale={locale}
+        />
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh"
             ? "解释性假设（非已确认事实）"
             : "Explanatory hypotheses (not confirmed facts)"}
         </p>
-        {(data.explanation_boundary.hypothesis_notes?.length ?? 0) === 0 ? (
-          <p className="dps-face-prose">
-            {localeBucket(locale) === "zh" ? "（无额外假设说明）" : "(No hypothesis notes)"}
-          </p>
-        ) : (
-          <ul className="dps-face-list">
-            {data.explanation_boundary.hypothesis_notes.map((t, i) => (
-              <li key={`h-${i}`}>{t}</li>
-            ))}
-          </ul>
-        )}
+        <UnitList
+          page={data}
+          unitIds={data.explanation_boundary.hypothesis_unit_ids}
+          emptyZh="（无额外假设说明）"
+          emptyEn="(No hypothesis notes)"
+          locale={locale}
+        />
         <p className="dps-face-prose">
           {localeBucket(locale) === "zh" ? "不确定性" : "Uncertainty"}
         </p>

@@ -31,10 +31,11 @@ import { isFace01V2 } from "../page01/legacy-adapter";
 import type { Face01V2 } from "../schemas";
 import {
   buildCrediblePage02FactClaimPairs,
+  certifyClaimDirBindings,
   type CredibleFactClaimPair,
 } from "./credible-fact-claim";
 
-export const FACE02_PROMPT_VERSION = "face02-v2-prod-2026-11-22" as const;
+export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23b" as const;
 export const FACE02_SCHEMA_VERSION = "face02-v2" as const;
 
 export type Face02ProductionContext = {
@@ -197,10 +198,16 @@ export function buildFace02ProductionContext(input: {
     .slice(0, 12);
 
   const restricted = restrictRegistryToPage02Slice({ seeded, slice });
-  // Do NOT mutate registry fact↔claim links. Credible pairs are read-only.
+  // Program-certify claim.related_dir_ids from DC structure (no text search).
+  certifyClaimDirBindings({
+    registry: restricted.registry,
+    dc: input.dc,
+    fact_selection: seeded.fact_selection,
+  });
   const credible = buildCrediblePage02FactClaimPairs({
     registry: restricted.registry,
     fact_selection: seeded.fact_selection,
+    dc: input.dc,
   });
   slice = {
     ...restricted.slice,
@@ -226,6 +233,7 @@ export function buildFace02ProductionContext(input: {
     slice,
     termAllowlist: allowlist,
     jsonSchemaHint: JSON.stringify(shape, null, 2),
+    credibleFactClaimPairs: credible.pairs,
   });
 
   const factStatusById = new Map<string, string>();

@@ -162,64 +162,58 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       break;
     }
     case "02": {
-      if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
-        add("本页摘要", "page_summary");
-        const factors = Array.isArray(p.relevant_personal_factors)
-          ? p.relevant_personal_factors
-          : [];
-        for (const row of factors) {
-          if (!row || typeof row !== "object") continue;
-          const r = row as { title?: unknown; text?: unknown };
-          const text = [r.title, r.text]
-            .map((x) => String(x ?? "").trim())
-            .filter(Boolean)
-            .join(" — ");
-          const arg = push("与本题相关的个人结构", text);
+      const units = Array.isArray(p.content_units) ? p.content_units : [];
+      const byId = new Map<string, { kind?: string; text?: unknown; title?: unknown }>();
+      for (const u of units) {
+        if (!u || typeof u !== "object") continue;
+        const row = u as { unit_id?: unknown; kind?: string; text?: unknown; title?: unknown };
+        const id = String(row.unit_id ?? "").trim();
+        if (id) byId.set(id, row);
+      }
+      const textsFor = (ids: unknown): string[] => {
+        if (!Array.isArray(ids)) return [];
+        return ids
+          .map((id) => {
+            const u = byId.get(String(id));
+            if (!u) return "";
+            const title = String(u.title ?? "").trim();
+            const text = String(u.text ?? "").trim();
+            return [title, text].filter(Boolean).join(" — ");
+          })
+          .filter(Boolean);
+      };
+      if (byId.size) {
+        for (const t of textsFor(p.page_summary_unit_ids)) {
+          const arg = push("本页摘要", t);
           if (arg) out.push(arg);
         }
-        const interplay = Array.isArray(p.personal_reality_interplay)
-          ? p.personal_reality_interplay
-          : [];
-        for (const row of interplay) {
-          if (!row || typeof row !== "object") continue;
-          const r = row as { text?: unknown; conditionality?: unknown };
-          const text = [r.text, r.conditionality]
-            .map((x) => String(x ?? "").trim())
-            .filter(Boolean)
-            .join("\n");
-          const arg = push("个人与现实的交汇", text);
+        for (const t of textsFor(p.relevant_personal_factor_unit_ids)) {
+          const arg = push("与本题相关的个人结构", t);
           if (arg) out.push(arg);
         }
-        const why = p.why_judgment_fits as { text?: unknown } | undefined;
-        if (why?.text) {
-          const arg = push("为何适合本题判断", String(why.text));
+        for (const t of textsFor(p.personal_reality_interplay_unit_ids)) {
+          const arg = push("个人与现实的交汇", t);
+          if (arg) out.push(arg);
+        }
+        for (const t of textsFor(p.why_judgment_fits_unit_ids)) {
+          const arg = push("为何适合本题判断", t);
           if (arg) out.push(arg);
         }
         const boundary = p.explanation_boundary as
           | {
-              personal_analysis_basis?: unknown;
-              confirmed_fact_basis?: unknown;
-              hypothesis_notes?: unknown;
+              personal_unit_ids?: unknown;
+              confirmed_fact_unit_ids?: unknown;
+              hypothesis_unit_ids?: unknown;
               uncertainty_notes?: unknown;
             }
           | undefined;
         if (boundary) {
           const parts: string[] = [];
-          const personal = Array.isArray(boundary.personal_analysis_basis)
-            ? boundary.personal_analysis_basis.map((x) => String(x)).filter(Boolean)
-            : [];
-          if (personal.length) {
-            parts.push(`个人分析依据：\n${personal.join("\n")}`);
-          }
-          const confirmed = Array.isArray(boundary.confirmed_fact_basis)
-            ? boundary.confirmed_fact_basis.map((x) => String(x)).filter(Boolean)
-            : [];
-          if (confirmed.length) {
-            parts.push(`已确认事实：\n${confirmed.join("\n")}`);
-          }
-          const hypotheses = Array.isArray(boundary.hypothesis_notes)
-            ? boundary.hypothesis_notes.map((x) => String(x)).filter(Boolean)
-            : [];
+          const personal = textsFor(boundary.personal_unit_ids);
+          if (personal.length) parts.push(`个人分析依据：\n${personal.join("\n")}`);
+          const confirmed = textsFor(boundary.confirmed_fact_unit_ids);
+          if (confirmed.length) parts.push(`已确认事实：\n${confirmed.join("\n")}`);
+          const hypotheses = textsFor(boundary.hypothesis_unit_ids);
           if (hypotheses.length) {
             parts.push(`解释性假设（非已确认事实）：\n${hypotheses.join("\n")}`);
           }
@@ -232,6 +226,8 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
           const arg = push("解释边界", parts.join("\n\n"));
           if (arg) out.push(arg);
         }
+      } else if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
+        add("本页摘要", "page_summary");
       } else {
         add("命理理由", "destiny_reason");
         add("科学机制", "science_mechanism");

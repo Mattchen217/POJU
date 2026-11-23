@@ -49,6 +49,12 @@ export type ReportClaim = {
   evidence_ids: string[];
   evidence_requirement: EvidenceRequirement;
   limitation?: string;
+  /**
+   * Program-certified DIR bindings for Page02 fact↔claim credibility.
+   * Never model-authored; empty unless production certification attached dirs
+   * from DC RealityFact.related_dir_ids ∩ active DIR records.
+   */
+  related_dir_ids?: string[];
 };
 
 export type ReportEvidence = {
