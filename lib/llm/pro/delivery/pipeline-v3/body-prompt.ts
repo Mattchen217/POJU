@@ -400,6 +400,11 @@ export function buildV3BodyPrompt(input: {
    * When set, replaces generic buildFacePromptPair for key=01.
    */
   face01_production?: { system: string; user: string } | null;
+  /**
+   * Face 02 V2 production prompts.
+   * When set, replaces generic buildFacePromptPair for key=02.
+   */
+  face02_production?: { system: string; user: string } | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
 
@@ -408,6 +413,14 @@ export function buildV3BodyPrompt(input: {
     return {
       system: `${BODY_SYSTEM_FACE}\n\n${input.face01_production.system}`,
       user: input.face01_production.user,
+    };
+  }
+
+  // Face 02 production path — structured Page02FeedSlice prompt.
+  if (faceId === "02" && input.face02_production?.system && input.face02_production?.user) {
+    return {
+      system: `${BODY_SYSTEM_FACE}\n\n${input.face02_production.system}`,
+      user: input.face02_production.user,
     };
   }
 

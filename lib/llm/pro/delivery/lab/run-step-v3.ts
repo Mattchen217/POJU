@@ -745,8 +745,7 @@ async function executeV3(
       status: "ok",
     };
     if (isFace01V2(face01Schema)) {
-      // Page 02 V2 evidence realization is not shipped yet → deferred (no fake Page02).
-      // When realized ids are later persisted on artifacts, switch to orphan fail-closed.
+      // Page02 V2 persists realized evidence ids on artifacts after body success.
       const realizedRaw = (
         lab.artifacts as {
           page02_realized_evidence_ids?: string[] | null;
@@ -796,6 +795,14 @@ async function executeV3(
     )?.face01_production_meta;
     if (face01Meta?.cited_term_ids?.length) {
       evidenceTermLists.push(face01Meta.cited_term_ids);
+    }
+    const face02Meta = (
+      lab.artifacts.by_page["02" as DeliverySegmentKey] as
+        | { face02_production_meta?: { cited_term_ids?: string[] } }
+        | undefined
+    )?.face02_production_meta;
+    if (face02Meta?.cited_term_ids?.length) {
+      evidenceTermLists.push(face02Meta.cited_term_ids);
     }
     const storedTerms = (
       lab.artifacts as { evidence_term_id_lists?: string[][] }
@@ -2318,10 +2325,13 @@ async function executeV3(
         error: "missing_judgment_plan",
       };
     }
-    // Face 01 V2 production path needs DC (+ optional pack for registry); not the old judgment plan.
+    // Face 01/02 V2 production path needs DC (+ optional pack for registry); not the old judgment plan.
     const face01V2Path =
       page === "01" && Boolean(lab.source.decision_context_snapshot);
-    if (faceBody && page !== "03" && !plan?.units?.length && !face01V2Path) {
+    const face02V2Path =
+      page === "02" && Boolean(lab.source.decision_context_snapshot);
+    const faceV2Path = face01V2Path || face02V2Path;
+    if (faceBody && page !== "03" && !plan?.units?.length && !faceV2Path) {
       return {
         input_payload: { key: page },
         raw_model_output: null,
@@ -2336,18 +2346,23 @@ async function executeV3(
         error: bookPack ? "missing_book_judgment_slice" : "missing_judgment_plan",
       };
     }
-    if (page === "01" && !lab.source.decision_context_snapshot) {
+    if ((page === "01" || page === "02") && !lab.source.decision_context_snapshot) {
+      const pipeline = page === "01" ? "face01_v2" : "face02_v2";
+      const rule =
+        page === "01"
+          ? "face01_missing_decision_context"
+          : "face02_missing_decision_context";
       return {
-        input_payload: { key: page, pipeline: "face01_v2" },
+        input_payload: { key: page, pipeline },
         raw_model_output: null,
         processing_actions: [],
         gate_verdict: {
           passed: false,
-          failed_rule: "face01_missing_decision_context",
-          detail: "Face01 V2 生产路径需要冻结 Decision Context；禁止旧正文 fallback。",
+          failed_rule: rule,
+          detail: `${page === "01" ? "Face01" : "Face02"} V2 生产路径需要冻结 Decision Context；禁止旧正文 fallback。`,
         },
         output_to_next_stage: null,
-        error: "face01_missing_decision_context",
+        error: rule,
       };
     }
     const finalize = labSyntheticFinalize(lab);
@@ -2357,7 +2372,7 @@ async function executeV3(
     const escapeArmedBody = v3EscapeArmed(art, "body");
     const acceptanceArmedBody = v3AcceptanceArmed(art, "body");
     const topic = lab.artifacts.topic_gate_07?.topic ?? null;
-    const dcFeed = face01V2Path
+    const dcFeed = faceV2Path
       ? null
       : lab.source.decision_context_snapshot
         ? formatDecisionContextSliceForPage(lab.source.decision_context_snapshot, page) ||
@@ -2371,8 +2386,8 @@ async function executeV3(
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       thinking_effort: "high",
       dispatch_attempt: escapeArmedBody ? 2 : 1,
-      deep_evidence_plan: face01V2Path ? null : plan,
-      book_judgment_pack_block: face01V2Path ? null : packBlock,
+      deep_evidence_plan: faceV2Path ? null : plan,
+      book_judgment_pack_block: faceV2Path ? null : packBlock,
       action_brief: action_brief ?? null,
       chart_thesis_block: opts.chart_thesis_block,
       chart_fact_pack: preallocArt?.chart_fact_pack,
@@ -2393,17 +2408,20 @@ async function executeV3(
       topic,
       pivot_chart_path: lab.source.pivot_chart_path ?? null,
       partner_bazi: lab.source.partner_bazi ?? null,
-      acceptance_corrective: face01V2Path
+      acceptance_corrective: faceV2Path
         ? null
         : v3AcceptanceCorrective(art, "body"),
       decision_context_feed: dcFeed,
-      decision_context_snapshot: face01V2Path
+      decision_context_snapshot: faceV2Path
         ? lab.source.decision_context_snapshot ?? null
         : null,
-      book_judgment_pack: face01V2Path
+      book_judgment_pack: faceV2Path
         ? bookPack ?? artifactPack
         : null,
       report_id: session_id,
+      page01_schema: face02V2Path
+        ? lab.artifacts.by_page["01" as DeliverySegmentKey]?.page_schema ?? null
+        : null,
     });
     if (!body.ok) {
       if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {
@@ -2419,14 +2437,20 @@ async function executeV3(
       }
       if (escapeArmedBody) setV3Escape(art, "body", false);
       if (acceptanceArmedBody) clearV3Acceptance(art, "body");
-      const face01ValidationFail =
-        face01V2Path &&
+      const faceV2ValidationFail =
+        faceV2Path &&
         (body.reason.startsWith("face01_") ||
+          body.reason.startsWith("face02_") ||
           body.reason === "scare_redline");
+      const pipelineLabel = face01V2Path
+        ? "face01_v2"
+        : face02V2Path
+          ? "face02_v2"
+          : "v3";
       return {
         input_payload: {
           key: page,
-          pipeline: face01V2Path ? "face01_v2" : "v3",
+          pipeline: pipelineLabel,
           phase: "body",
           has_call_trace: Boolean(body.call_trace),
           provider_escape_used: escapeArmedBody,
@@ -2438,6 +2462,7 @@ async function executeV3(
             lab.source.decision_context_snapshot?.content_hash ??
             null,
           face01_meta: body.face01_meta ?? null,
+          face02_meta: body.face02_meta ?? null,
         },
         raw_model_output: body.last_raw_text
           ? { _raw_text: body.last_raw_text }
@@ -2446,15 +2471,17 @@ async function executeV3(
           {
             action: face01V2Path
               ? "runContentBodyGenerate_face01_v2"
-              : "runContentBodyGenerate",
+              : face02V2Path
+                ? "runContentBodyGenerate_face02_v2"
+                : "runContentBodyGenerate",
             detail: body.reason,
           },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: body.reason,
-          detail: face01ValidationFail
-            ? "Face01 V2 校验失败（含一次定向修复已用尽）· 禁止旧正文 fallback · 改生成侧后重跑。"
+          detail: faceV2ValidationFail
+            ? `${face01V2Path ? "Face01" : "Face02"} V2 校验失败（含一次定向修复已用尽）· 禁止旧正文 fallback · 改生成侧后重跑。`
             : body.reason === "scare_redline"
               ? "恐吓红线命中。改成带条件的明确主推后重跑本步。"
               : escapeArmedBody
@@ -2489,12 +2516,25 @@ async function executeV3(
       (art as { face01_production_meta?: unknown }).face01_production_meta =
         body.face01_meta;
     }
+    if (face02V2Path && body.face02_meta) {
+      (art as { face02_production_meta?: unknown }).face02_production_meta =
+        body.face02_meta;
+      const realized = body.face02_meta.realized_evidence_ids;
+      if (Array.isArray(realized)) {
+        (
+          lab.artifacts as { page02_realized_evidence_ids?: string[] }
+        ).page02_realized_evidence_ids = realized;
+      }
+    }
     const realityBlob = v3BodyRealityBlob(opts);
     /** 六页均有润色步：正文只硬拦事实/门槛；表面类 defer 到 polish（Skip 时回退 full）。 */
     const deferSurfaceToPolish = true;
-    // Face01 V2 already ran schema+evidence+body compliance; skip legacy substance gates.
-    const bodyGate = face01V2Path
-      ? { passed: true as const, detail: "face01_v2_validated" }
+    // Face01/02 V2 already ran schema+evidence+body compliance; skip legacy substance gates.
+    const bodyGate = faceV2Path
+      ? {
+          passed: true as const,
+          detail: face01V2Path ? "face01_v2_validated" : "face02_v2_validated",
+        }
       : gateBodyCategoryB({
           key: page,
           page_schema: bodyPage,
@@ -2504,10 +2544,10 @@ async function executeV3(
           pivot_chart_path: lab.source.pivot_chart_path ?? null,
         });
     const packUnits =
-      bookPack && isFaceDeliveryKey(page) && !face01V2Path
+      bookPack && isFaceDeliveryKey(page) && !faceV2Path
         ? unitsForFace(bookPack, page)
         : [];
-    const packBodyGate = face01V2Path
+    const packBodyGate = faceV2Path
       ? null
       : gateBookJudgmentBodyConsume({
           key: page,
@@ -2516,7 +2556,7 @@ async function executeV3(
           question: opts.question_expectation ?? null,
         });
     const surfacePreview =
-      face01V2Path || !deferSurfaceToPolish
+      faceV2Path || !deferSurfaceToPolish
         ? null
         : gateBodyCategoryB({
             key: page,
@@ -2660,21 +2700,25 @@ async function executeV3(
         key: page,
         pipeline: face01V2Path
           ? "face01_v2"
-          : packBlock
-            ? "book_judgment_pack"
-            : "v3",
+          : face02V2Path
+            ? "face02_v2"
+            : packBlock
+              ? "book_judgment_pack"
+              : "v3",
         phase: "content_body",
-        book_judgment_slice: Boolean(packBlock) && !face01V2Path,
+        book_judgment_slice: Boolean(packBlock) && !faceV2Path,
         per_page_judgment: false,
-        pack_unit_ids: face01V2Path
+        pack_unit_ids: faceV2Path
           ? []
           : packPlan?.units.map((u) => u.calc_cite ?? u.path) ?? [],
         quality_gates: face01V2Path
           ? "face01_v2_schema_evidence_body"
-          : deferSurfaceToPolish
-            ? "substance_only_surface_at_polish"
-            : "shape_only_human",
-        surface_deferred: face01V2Path ? null : surfaceDeferred,
+          : face02V2Path
+            ? "face02_v2_schema_evidence_body"
+            : deferSurfaceToPolish
+              ? "substance_only_surface_at_polish"
+              : "shape_only_human",
+        surface_deferred: faceV2Path ? null : surfaceDeferred,
         acceptance_retry_used: acceptanceArmedBody,
         decision_context_feed_present: Boolean(dcFeed),
         decision_context_binding: lab.source.decision_context_binding ?? null,
@@ -2683,6 +2727,7 @@ async function executeV3(
           lab.source.decision_context_snapshot?.content_hash ??
           null,
         face01_meta: body.face01_meta ?? null,
+        face02_meta: body.face02_meta ?? null,
         prompt_chars: {
           system: body.call_trace.system.length,
           user: body.call_trace.user.length,
@@ -2695,10 +2740,14 @@ async function executeV3(
         {
           action: face01V2Path
             ? "runContentBodyGenerate_face01_v2"
-            : "runContentBodyGenerate",
+            : face02V2Path
+              ? "runContentBodyGenerate_face02_v2"
+              : "runContentBodyGenerate",
           detail: face01V2Path
             ? body.face01_meta?.validation ?? "validated"
-            : "parse_only",
+            : face02V2Path
+              ? body.face02_meta?.validation ?? "validated"
+              : "parse_only",
         },
         ...(face01V2Path
           ? [
@@ -2712,7 +2761,21 @@ async function executeV3(
               },
             ]
           : []),
-        ...(!face01V2Path && packBlock
+        ...(face02V2Path
+          ? [
+              {
+                action: "validateFace02ProductionOutput",
+                detail: "schema+evidence+body_compliance",
+              },
+              {
+                action: "persistPage02RealizedEvidenceIds",
+                detail: String(
+                  body.face02_meta?.realized_evidence_ids?.length ?? 0,
+                ),
+              },
+            ]
+          : []),
+        ...(!faceV2Path && packBlock
           ? [
               {
                 action: "sliceBookJudgmentForFace",
@@ -2720,7 +2783,7 @@ async function executeV3(
               },
             ]
           : []),
-        ...(!face01V2Path
+        ...(!faceV2Path
           ? [
               {
                 action: "gateBodyCategoryB",
@@ -2750,13 +2813,15 @@ async function executeV3(
         passed: true,
         detail: face01V2Path
           ? `Face01 V2 已落库 · ${body.face01_meta?.validation ?? "validated"} · Page02 引用延后装配 · 禁止旧正文 fallback`
-          : deferSurfaceToPolish
-            ? surfaceDeferred
-              ? `正文已落库 · 事实/门槛过 · 表面类（${surfaceDeferred}）留给润色步清 · 请 gate 人审真准价值`
-              : acceptanceArmedBody
-                ? "正文已落库 · 验收第2枪过 · 表面已干净 · 请 gate 人审真准价值后进润色"
-                : "正文已落库 · 事实/门槛过 · 表面已干净 · 请 gate 人审真准价值后进润色"
-            : "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
+          : face02V2Path
+            ? `Face02 V2 已落库 · ${body.face02_meta?.validation ?? "validated"} · realized evidence 已写入 · 禁止旧正文 fallback`
+            : deferSurfaceToPolish
+              ? surfaceDeferred
+                ? `正文已落库 · 事实/门槛过 · 表面类（${surfaceDeferred}）留给润色步清 · 请 gate 人审真准价值`
+                : acceptanceArmedBody
+                  ? "正文已落库 · 验收第2枪过 · 表面已干净 · 请 gate 人审真准价值后进润色"
+                  : "正文已落库 · 事实/门槛过 · 表面已干净 · 请 gate 人审真准价值后进润色"
+              : "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
       },
       output_to_next_stage: bodyPage,
       tokens_used: body.tokens_used,

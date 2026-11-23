@@ -282,3 +282,62 @@ export function validateFace01BodyCompliance(
 
   return { ok: issues.length === 0, issues };
 }
+
+/** Validate Face02 body-visible fields (no soft labels / jargon / markers). */
+export function validateFace02BodyCompliance(
+  page: {
+    page_title?: string;
+    page_subtitle?: string;
+    page_summary?: string;
+    relevant_personal_factors?: Array<{ title?: string; text?: string }>;
+    personal_reality_interplay?: Array<{
+      text?: string;
+      conditionality?: string;
+    }>;
+    why_judgment_fits?: { text?: string; page01_judgment_ref?: string };
+    explanation_boundary?: {
+      personal_analysis_basis?: string[];
+      confirmed_fact_basis?: string[];
+      hypothesis_notes?: string[];
+      uncertainty_notes?: string[];
+    };
+  },
+  localeInput: string,
+): BodyComplianceResult {
+  const issues: BodyComplianceIssue[] = [];
+  const check = (text: string | undefined, path: string) => {
+    if (!text) return;
+    issues.push(...scanBodyTextCompliance(text, localeInput, path));
+  };
+
+  check(page.page_title, "page_title");
+  check(page.page_subtitle, "page_subtitle");
+  check(page.page_summary, "page_summary");
+  page.relevant_personal_factors?.forEach((row, i) => {
+    check(row.title, `relevant_personal_factors[${i}].title`);
+    check(row.text, `relevant_personal_factors[${i}].text`);
+  });
+  page.personal_reality_interplay?.forEach((row, i) => {
+    check(row.text, `personal_reality_interplay[${i}].text`);
+    check(row.conditionality, `personal_reality_interplay[${i}].conditionality`);
+  });
+  check(page.why_judgment_fits?.text, "why_judgment_fits.text");
+  check(
+    page.why_judgment_fits?.page01_judgment_ref,
+    "why_judgment_fits.page01_judgment_ref",
+  );
+  page.explanation_boundary?.personal_analysis_basis?.forEach((t, i) =>
+    check(t, `explanation_boundary.personal_analysis_basis[${i}]`),
+  );
+  page.explanation_boundary?.confirmed_fact_basis?.forEach((t, i) =>
+    check(t, `explanation_boundary.confirmed_fact_basis[${i}]`),
+  );
+  page.explanation_boundary?.hypothesis_notes?.forEach((t, i) =>
+    check(t, `explanation_boundary.hypothesis_notes[${i}]`),
+  );
+  page.explanation_boundary?.uncertainty_notes?.forEach((t, i) =>
+    check(t, `explanation_boundary.uncertainty_notes[${i}]`),
+  );
+
+  return { ok: issues.length === 0, issues };
+}

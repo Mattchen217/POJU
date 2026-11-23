@@ -24,8 +24,10 @@ import { faceSegmentLabel } from "@/lib/llm/pro/delivery/face-segment-locale";
 import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
 import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/reader-evidence-prose";
 import { Face01PageSlots } from "@/components/poju/delivery-pages/faces/Face01PageSlots";
+import { Face02PageSlots } from "@/components/poju/delivery-pages/faces/Face02PageSlots";
 import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
 import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
+import { isFace02V2, isFace02Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
 import {
   isGlossaryAppendixPage,
   isLegacyChartAppendixPage,
@@ -231,6 +233,9 @@ export function FacePageSlots({
 
   if (id === "01" && (isFace01V2(page) || isFace01Legacy(page))) {
     return <Face01PageSlots page={page as never} locale={locale} />;
+  }
+  if (id === "02" && (isFace02V2(page) || isFace02Legacy(page))) {
+    return <Face02PageSlots page={page as never} locale={locale} />;
   }
   if (
     id === "03" &&

@@ -15,10 +15,14 @@ import {
 import {
   Face01LegacySchema,
   Face01V2Schema,
+  Face02LegacySchema,
+  Face02V2Schema,
   Face03ChartLegacySchema,
   Face03GlossarySchema,
   type Face01Legacy,
   type Face01V2,
+  type Face02Legacy,
+  type Face02V2,
   type Face03ChartLegacy,
   type Face03Glossary,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
@@ -36,18 +40,12 @@ export const Face01Schema = Face01V2Schema;
 export type Face01 = Face01V2;
 export { Face01LegacySchema, type Face01Legacy };
 
-/** 02 · 为何如此 · dualTrack=abc */
-export const Face02Schema = z.object({
-  page: z.literal("02"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("02"),
-  destiny_reason: NonEmpty.max(1200),
-  science_mechanism: NonEmpty.max(1200),
-  convergence: NonEmpty.max(720),
-  /** Short checkable anchors; ≤6 lines preferred. */
-  verifiable_anchors: z.array(NonEmpty.max(160)).min(1).max(8),
-});
-export type Face02 = z.infer<typeof Face02Schema>;
+/** 02 · 为什么这个判断适合你 · dualTrack=abc · schema_version face02-v2 */
+export const Face02Schema = Face02V2Schema;
+/** Historical open: accept legacy destiny_reason shape without rewriting storage. */
+export const Face02ParseSchema = z.union([Face02V2Schema, Face02LegacySchema]);
+export type Face02 = Face02V2 | Face02Legacy;
+export { Face02LegacySchema, type Face02Legacy };
 
 /** 04 · 真正卡点 · dualTrack=fold */
 export const Face04Schema = z.object({
@@ -147,7 +145,7 @@ export { Face03ChartLegacySchema, type Face03ChartLegacy };
 
 export const FACE_PAGE_SCHEMAS = {
   "01": Face01Schema,
-  "02": Face02Schema,
+  "02": Face02ParseSchema,
   "04": Face04Schema,
   "05": Face05Schema,
   "06": Face06Schema,
@@ -183,10 +181,11 @@ export const FACE_SEGMENT_FIELDS: Record<
     { key: "applicability_boundary", segmentId: "E" },
   ],
   "02": [
-    { key: "destiny_reason", segmentId: "A" },
-    { key: "science_mechanism", segmentId: "B" },
-    { key: "convergence", segmentId: "C" },
-    { key: "verifiable_anchors", segmentId: "D" },
+    { key: "page_summary", segmentId: "A" },
+    { key: "relevant_personal_factors", segmentId: "B" },
+    { key: "personal_reality_interplay", segmentId: "C" },
+    { key: "why_judgment_fits", segmentId: "D" },
+    { key: "explanation_boundary", segmentId: "E" },
   ],
   "04": [
     { key: "bottleneck_name", segmentId: "A" },
@@ -265,10 +264,47 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
     case "02":
       return {
         ...base,
-        destiny_reason: "",
-        science_mechanism: "",
-        convergence: "",
-        verifiable_anchors: [""],
+        schema_version: "face02-v2",
+        page_summary: "",
+        relevant_personal_factors: [
+          {
+            factor_id: "",
+            title: "",
+            text: "",
+            claim_ids: [""],
+            evidence_ids: [""],
+            source_domain: "convergence",
+          },
+        ],
+        personal_reality_interplay: [
+          {
+            text: "",
+            personal_evidence_ids: [""],
+            reality_fact_ids: [""],
+            mechanism_evidence_ids: [],
+            claim_ids: [""],
+            conditionality: "",
+          },
+        ],
+        why_judgment_fits: {
+          text: "",
+          claim_ids: [""],
+          evidence_ids: [""],
+          page01_judgment_ref: "",
+        },
+        explanation_boundary: {
+          personal_analysis_basis: [""],
+          confirmed_fact_basis: [""],
+          hypothesis_notes: [],
+          uncertainty_notes: [""],
+        },
+        reading_order: [
+          "page_summary",
+          "relevant_personal_factors",
+          "personal_reality_interplay",
+          "why_judgment_fits",
+          "explanation_boundary",
+        ],
       };
     case "04":
       return {

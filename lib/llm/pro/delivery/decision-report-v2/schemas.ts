@@ -224,6 +224,99 @@ export const Face01V2Schema = z.object({
 
 export type Face01V2 = z.infer<typeof Face01V2Schema>;
 
+/** Face 02 — 为什么这个判断适合你 (SoT 2026-11-22). */
+export const Face02V2Schema = z.object({
+  page: z.literal("02"),
+  face: z.literal("02"),
+  schema_version: z.literal("face02-v2").default("face02-v2"),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  page_summary: NonEmpty.max(360),
+  /** A · 与本题相关的个人结构（无可用个人域时允许空，禁止伪造） */
+  relevant_personal_factors: z
+    .array(
+      z.object({
+        factor_id: NonEmpty.max(80),
+        title: NonEmpty.max(120),
+        text: NonEmpty.max(720),
+        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        source_domain: z.enum([
+          "bazi",
+          "ziwei",
+          "science",
+          "convergence",
+        ]),
+      }),
+    )
+    .min(0)
+    .max(4),
+  /** B · 个人结构与现实处境交汇（无个人依据时允许空） */
+  personal_reality_interplay: z
+    .array(
+      z.object({
+        text: NonEmpty.max(720),
+        personal_evidence_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        reality_fact_ids: z.array(NonEmpty.max(120)).min(1).max(8),
+        mechanism_evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        conditionality: NonEmpty.max(360),
+      }),
+    )
+    .min(0)
+    .max(4),
+  /** C · 对本题判断的解释（非再发结论） */
+  why_judgment_fits: z.object({
+    text: NonEmpty.max(960),
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+    evidence_ids: z.array(NonEmpty.max(80)).min(1).max(12),
+    /** Short pointer to what Page01 judgment is being explained — not a full restatement. */
+    page01_judgment_ref: z.string().trim().max(240).optional().default(""),
+  }),
+  explanation_boundary: z.object({
+    personal_analysis_basis: z.array(NonEmpty.max(240)).min(1).max(6),
+    confirmed_fact_basis: z.array(NonEmpty.max(240)).min(1).max(6),
+    hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+    uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(6),
+  }),
+  /** Explicit reading order of content blocks. */
+  reading_order: z
+    .array(
+      z.enum([
+        "page_summary",
+        "relevant_personal_factors",
+        "personal_reality_interplay",
+        "why_judgment_fits",
+        "explanation_boundary",
+      ]),
+    )
+    .min(3)
+    .max(5)
+    .default([
+      "page_summary",
+      "relevant_personal_factors",
+      "personal_reality_interplay",
+      "why_judgment_fits",
+      "explanation_boundary",
+    ]),
+});
+
+export type Face02V2 = z.infer<typeof Face02V2Schema>;
+
+/** Legacy Face 02 (pre Page02 V2) — retained for historical report open. */
+export const Face02LegacySchema = z.object({
+  page: z.literal("02"),
+  face: z.literal("02"),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  destiny_reason: NonEmpty.max(1200),
+  science_mechanism: NonEmpty.max(1200),
+  convergence: NonEmpty.max(720),
+  verifiable_anchors: z.array(NonEmpty.max(160)).min(1).max(8),
+});
+
+export type Face02Legacy = z.infer<typeof Face02LegacySchema>;
+
 /** Legacy Face 01 (pre Batch 0) — retained for historical report open. */
 export const Face01LegacySchema = z.object({
   page: z.literal("01"),

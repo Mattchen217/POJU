@@ -161,12 +161,73 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       }
       break;
     }
-    case "02":
-      add("命理理由", "destiny_reason");
-      add("科学机制", "science_mechanism");
-      add("汇合", "convergence");
-      add("可核对锚", "verifiable_anchors");
+    case "02": {
+      if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
+        add("本页摘要", "page_summary");
+        const factors = Array.isArray(p.relevant_personal_factors)
+          ? p.relevant_personal_factors
+          : [];
+        for (const row of factors) {
+          if (!row || typeof row !== "object") continue;
+          const r = row as { title?: unknown; text?: unknown };
+          const text = [r.title, r.text]
+            .map((x) => String(x ?? "").trim())
+            .filter(Boolean)
+            .join(" — ");
+          const arg = push("与本题相关的个人结构", text);
+          if (arg) out.push(arg);
+        }
+        const interplay = Array.isArray(p.personal_reality_interplay)
+          ? p.personal_reality_interplay
+          : [];
+        for (const row of interplay) {
+          if (!row || typeof row !== "object") continue;
+          const r = row as { text?: unknown; conditionality?: unknown };
+          const text = [r.text, r.conditionality]
+            .map((x) => String(x ?? "").trim())
+            .filter(Boolean)
+            .join("\n");
+          const arg = push("个人与现实的交汇", text);
+          if (arg) out.push(arg);
+        }
+        const why = p.why_judgment_fits as { text?: unknown } | undefined;
+        if (why?.text) {
+          const arg = push("为何适合本题判断", String(why.text));
+          if (arg) out.push(arg);
+        }
+        const boundary = p.explanation_boundary as
+          | {
+              personal_analysis_basis?: unknown;
+              confirmed_fact_basis?: unknown;
+              uncertainty_notes?: unknown;
+            }
+          | undefined;
+        if (boundary) {
+          const text = [
+            ...(Array.isArray(boundary.personal_analysis_basis)
+              ? boundary.personal_analysis_basis
+              : []),
+            ...(Array.isArray(boundary.confirmed_fact_basis)
+              ? boundary.confirmed_fact_basis
+              : []),
+            ...(Array.isArray(boundary.uncertainty_notes)
+              ? boundary.uncertainty_notes
+              : []),
+          ]
+            .map((x) => String(x ?? "").trim())
+            .filter(Boolean)
+            .join("\n");
+          const arg = push("解释边界", text);
+          if (arg) out.push(arg);
+        }
+      } else {
+        add("命理理由", "destiny_reason");
+        add("科学机制", "science_mechanism");
+        add("汇合", "convergence");
+        add("可核对锚", "verifiable_anchors");
+      }
       break;
+    }
     case "04":
       add("卡点命名", "bottleneck_name");
       add("表现", "manifestation");

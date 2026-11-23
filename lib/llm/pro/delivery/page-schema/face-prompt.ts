@@ -16,7 +16,7 @@ import type { PageSliceResult } from "@/lib/llm/pro/delivery/slice-for-page";
 
 const FACE_EXTRA_SYSTEM: Record<DecisionPageId, string> = {
   "01": "Face01-v2：core_judgment 1–3 句 + why_this_path≤3 + recommendation_conditions 2–4（含 status）+ not_recommended 1–2 + applicability_boundary；每条承重判断须 claim_ids/evidence_ids；指向 02 的 target_evidence_ids 必须真实存在。正文零命理专名、零软译术语。有 Formal Decision Context 时：主推必须与冻结 DC confirmed facts/constraints 一致，不得把 hypothesis 写成已确认事实。",
-  "02": "A+B+C 必出（只解释为何如此）；A=结构/精力白话（由 CFP+ZFP 共担推得；相关才用，禁贴纸；正文禁专名与软投影）；交汇禁手段处方；D≤6 行可核对锚（此处才允许传统/软）；禁十二宫全列。",
+  "02": "解释为何 Page01 判断适合此人+处境。B=相关个人结构（有则用）；C=个人与现实交汇；D=对判断的解释（非再发结论）；E=边界。正文禁专名与软投影；禁卡点诊断/路径排序/行动处方。",
   "04": "卡点命名清楚；C 写成本不写灾祸；D 依据可折。",
   "05": "Product Stage4 P5：路径 2–4 条（可含隐藏/组合/分阶段/可逆/低成本试验路径，勿机械凑三个传统选项）；每条写清依据、成本、前置、风险、可逆性、退出；首选必须条件式推荐；填写 recommendation_conditions（未知/冲突如何改排序）与 evidence_trace；D 切轨/停止必出；缺数据≠不可行；禁把 Hypothesis 当事实；禁空泛「平衡」。",
   "06": "Product Stage4 P6：必须填写 verification_experiment 七字段（hypothesis/action/observe/window/success_criteria/if_fail/defer_costs）；优先低成本可逆验证；近步仍是动作类型+完成样貌，不是 to-do/30天勾选清单；禁虚构 KPI/成功概率；禁流日择日假日历。",

@@ -24,7 +24,15 @@ export const BOOK_BODY_MEANS_PRESCRIPTION_RULE = "gate_body_means_prescription";
 const BODY_MEANS_SCAN_FIELDS: Partial<
   Record<DecisionPageId, readonly string[]>
 > = {
-  "02": ["destiny_reason", "science_mechanism", "convergence"],
+  "02": [
+    "destiny_reason",
+    "science_mechanism",
+    "convergence",
+    "page_summary",
+    "relevant_personal_factors",
+    "personal_reality_interplay",
+    "why_judgment_fits",
+  ],
   "04": ["bottleneck_name", "manifestation", "if_force_through", "evidence_fold"],
   "07": ["field_judgment", "relation_interaction", "evidence_fold"],
 };
@@ -64,11 +72,30 @@ function evidenceBlob(faceId: DecisionPageId, page: Record<string, unknown>): st
   switch (faceId) {
     case "01":
       return face01EvidenceCiteBlob(page);
-    case "02":
-      // D only — A/B/C vernacular must not be the cite surface (Lab Face 02 #7).
+    case "02": {
+      // V2: evidence ids live on structured rows; legacy: D anchors only.
+      if (page.schema_version === "face02-v2" || page.why_judgment_fits) {
+        const ids: string[] = [];
+        const factors = Array.isArray(page.relevant_personal_factors)
+          ? page.relevant_personal_factors
+          : [];
+        for (const row of factors) {
+          if (row && typeof row === "object" && Array.isArray((row as { evidence_ids?: unknown }).evidence_ids)) {
+            ids.push(
+              ...((row as { evidence_ids: unknown[] }).evidence_ids.map(String)),
+            );
+          }
+        }
+        const why = page.why_judgment_fits as { evidence_ids?: unknown[] } | undefined;
+        if (Array.isArray(why?.evidence_ids)) {
+          ids.push(...why!.evidence_ids!.map(String));
+        }
+        return ids.join("\n");
+      }
       return Array.isArray(page.verifiable_anchors)
         ? page.verifiable_anchors.map((x) => String(x ?? "")).join("\n")
         : "";
+    }
     case "04":
     case "07":
       return String(page.evidence_fold ?? "");
@@ -85,6 +112,9 @@ function claimBlob(faceId: DecisionPageId, page: Record<string, unknown>): strin
     case "01":
       return face01BodyTextBlob(page);
     case "02":
+      if (page.schema_version === "face02-v2" || page.why_judgment_fits) {
+        return faceVisibleBlob("02", page);
+      }
       return [
         String(page.destiny_reason ?? ""),
         String(page.science_mechanism ?? ""),

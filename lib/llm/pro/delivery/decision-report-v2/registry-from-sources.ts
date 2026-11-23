@@ -91,16 +91,16 @@ function unitToAnchors(input: {
  * Build registry for Face 01 generation.
  * Facts are selected by structured DC relevance (not confirmed-first dump).
  */
-export function seedEvidenceRegistryForFace01(input: {
+function seedEvidenceRegistryForFace(input: {
   dc: DecisionContext | null | undefined;
   pack: BookJudgmentPack | null | undefined;
-  /** Max facts retained for page 01 after relevance ranking. */
   maxFacts?: number;
   chart_fact_pack?: string | null;
-  /** Real ZFP — hit allowlist is re-derived here; never trust pack.pattern_hits_used alone. */
   ziwei_fact_pack?: ZiweiFactPack | null;
   bazi_available?: boolean;
   ziwei_available?: boolean;
+  /** Which face units/claims to materialize. */
+  face_id: "01" | "02";
 }): RegistrySeedResult {
   const maxFacts = input.maxFacts ?? 16;
   const registry = emptyEvidenceRegistry();
@@ -146,12 +146,17 @@ export function seedEvidenceRegistryForFace01(input: {
   );
 
   const units = pack?.units ?? [];
-  const face01Units = units.filter((u) => u.serves_face.includes("01"));
+  const faceId = input.face_id;
+  const primaryUnits = units.filter((u) => u.serves_face.includes(faceId));
+  // Page01 may also keep a thin set of face-02 planned units for cite targets.
   const face02Units = units.filter((u) => u.serves_face.includes("02"));
-  const relevantUnits = [
-    ...face01Units,
-    ...face02Units.filter((u) => !face01Units.some((a) => a.id === u.id)),
-  ].slice(0, 24);
+  const relevantUnits =
+    faceId === "01"
+      ? [
+          ...primaryUnits,
+          ...face02Units.filter((u) => !primaryUnits.some((a) => a.id === u.id)),
+        ].slice(0, 24)
+      : primaryUnits.slice(0, 24);
 
   const readings: ApprovedReading[] = [];
   const anchors: PersonalAnalysisAnchor[] = [];
@@ -228,11 +233,11 @@ export function seedEvidenceRegistryForFace01(input: {
       page02PlannedEvidenceIds.push(evidence_id);
     }
 
-    if (unit.serves_face.includes("01")) {
+    if (unit.serves_face.includes(faceId)) {
       const claim_id = `claim_${unit.id}`;
       const claim: ReportClaim = {
         claim_id,
-        page_id: "01",
+        page_id: faceId,
         segment_id: unit.serves_segment ?? "A",
         body_text: unit.claim,
         claim_type:
@@ -269,6 +274,31 @@ export function seedEvidenceRegistryForFace01(input: {
     page02PlannedEvidenceIds: [...new Set(page02PlannedEvidenceIds)],
     fact_selection,
   };
+}
+
+export function seedEvidenceRegistryForFace01(input: {
+  dc: DecisionContext | null | undefined;
+  pack: BookJudgmentPack | null | undefined;
+  maxFacts?: number;
+  chart_fact_pack?: string | null;
+  ziwei_fact_pack?: ZiweiFactPack | null;
+  bazi_available?: boolean;
+  ziwei_available?: boolean;
+}): RegistrySeedResult {
+  return seedEvidenceRegistryForFace({ ...input, face_id: "01" });
+}
+
+/** Page02 registry — only serves_face includes 02; re-certifies CFP/ZFP. */
+export function seedEvidenceRegistryForFace02(input: {
+  dc: DecisionContext | null | undefined;
+  pack: BookJudgmentPack | null | undefined;
+  maxFacts?: number;
+  chart_fact_pack?: string | null;
+  ziwei_fact_pack?: ZiweiFactPack | null;
+  bazi_available?: boolean;
+  ziwei_available?: boolean;
+}): RegistrySeedResult {
+  return seedEvidenceRegistryForFace({ ...input, face_id: "02" });
 }
 
 /**
@@ -400,4 +430,20 @@ export function restrictRegistryToPage01Slice(input: {
   };
 
   return { registry, knownFactIds, page02PlannedEvidenceIds, slice };
+}
+
+/**
+ * Build a registry that exactly mirrors the final Page02 model slice.
+ * Same restriction mechanics as Page01 — separate entry for callers.
+ */
+export function restrictRegistryToPage02Slice(input: {
+  seeded: RegistrySeedResult;
+  slice: Page01FeedSlice;
+}): {
+  registry: EvidenceRegistry;
+  knownFactIds: Set<string>;
+  page02PlannedEvidenceIds: string[];
+  slice: Page01FeedSlice;
+} {
+  return restrictRegistryToPage01Slice(input);
 }

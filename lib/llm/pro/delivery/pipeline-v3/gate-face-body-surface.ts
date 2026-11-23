@@ -19,6 +19,7 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 import { POJU_TERMS } from "@/lib/glossary/pojulife-terms";
 import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 import { face01BodyTextBlob } from "@/lib/llm/pro/delivery/decision-report-v2/page01/body-blob";
+import { face02BodyTextBlob } from "@/lib/llm/pro/delivery/decision-report-v2/page02/body-blob";
 
 export const FACE_BODY_SURFACE_RULE_ID = "gate_face_body_visible_soft_or_destiny";
 
@@ -180,6 +181,10 @@ export function faceVisibleBodyBlob(
       : null;
   if (faceId === "01") {
     return face01BodyTextBlob(p);
+  }
+  if (faceId === "02") {
+    const blob = face02BodyTextBlob(p);
+    if (blob.trim()) return blob;
   }
   if (faceId) {
     for (const { key: field } of FACE_SEGMENT_FIELDS[faceId]) {

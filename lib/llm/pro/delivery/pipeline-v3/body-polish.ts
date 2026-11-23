@@ -660,11 +660,30 @@ export function gateFace01PolishThickness(input: {
 }
 
 function face02AbcBlob(page: DeliveryPageData): string {
-  const p = page as {
-    destiny_reason?: string;
-    science_mechanism?: string;
-    convergence?: string;
-  };
+  const p = page as Record<string, unknown>;
+  if (p.schema_version === "face02-v2" || p.why_judgment_fits) {
+    const why = p.why_judgment_fits as { text?: string } | undefined;
+    const factors = Array.isArray(p.relevant_personal_factors)
+      ? p.relevant_personal_factors
+      : [];
+    const interplay = Array.isArray(p.personal_reality_interplay)
+      ? p.personal_reality_interplay
+      : [];
+    return [
+      String(p.page_summary ?? ""),
+      ...factors.map((row) => {
+        if (!row || typeof row !== "object") return "";
+        const r = row as { title?: string; text?: string };
+        return `${r.title ?? ""} ${r.text ?? ""}`;
+      }),
+      ...interplay.map((row) => {
+        if (!row || typeof row !== "object") return "";
+        const r = row as { text?: string; conditionality?: string };
+        return `${r.text ?? ""} ${r.conditionality ?? ""}`;
+      }),
+      String(why?.text ?? ""),
+    ].join("\n");
+  }
   return [
     String(p.destiny_reason ?? ""),
     String(p.science_mechanism ?? ""),
