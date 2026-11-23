@@ -26,6 +26,11 @@ import { mergeReaderEvidenceProse } from "@/lib/llm/pro/delivery/page-schema/rea
 import { Face01PageSlots } from "@/components/poju/delivery-pages/faces/Face01PageSlots";
 import { Face02PageSlots } from "@/components/poju/delivery-pages/faces/Face02PageSlots";
 import { Face04PageSlots } from "@/components/poju/delivery-pages/faces/Face04PageSlots";
+import { Face05PageSlots } from "@/components/poju/delivery-pages/faces/Face05PageSlots";
+import {
+  isFace05Legacy,
+  isFace05V2,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page05/legacy-adapter";
 import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
 import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
 import { isFace02V2, isFace02Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
@@ -241,6 +246,9 @@ export function FacePageSlots({
   }
   if (id === "04" && (isFace04V2(page) || isFace04Legacy(page))) {
     return <Face04PageSlots page={page as never} locale={locale} />;
+  }
+  if (id === "05" && (isFace05V2(page) || isFace05Legacy(page))) {
+    return <Face05PageSlots page={page as never} locale={locale} />;
   }
   if (
     id === "03" &&

@@ -711,6 +711,243 @@ export const Face04LegacySchema = z.object({
 
 export type Face04Legacy = z.infer<typeof Face04LegacySchema>;
 
+/** Face 05 path unit — Feasible Paths & Strategy Comparison (Batch 1). */
+export const Face05PathRoleSchema = z.enum([
+  "preferred",
+  "alternative",
+  "cautious",
+]);
+
+export const Face05PathUnitSchema = z.object({
+  path_id: NonEmpty.max(80),
+  path_role: Face05PathRoleSchema,
+  title: NonEmpty.max(160),
+  description: NonEmpty.max(960),
+  recommendation_reason: NonEmpty.max(720),
+  prerequisites: z.array(NonEmpty.max(240)).max(8).default([]),
+  required_resources: z.array(NonEmpty.max(240)).max(8).default([]),
+  expected_benefits: z.array(NonEmpty.max(240)).max(8).default([]),
+  costs: z.array(NonEmpty.max(240)).max(8).default([]),
+  risks: z.array(NonEmpty.max(240)).max(8).default([]),
+  reversibility: NonEmpty.max(320),
+  success_signals: z.array(NonEmpty.max(240)).min(1).max(8),
+  reconsideration_conditions: z.array(NonEmpty.max(240)).max(8).default([]),
+  claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+  related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
+  supporting_page01_refs: z.array(NonEmpty.max(120)).max(8).default([]),
+  supporting_page02_refs: z.array(NonEmpty.max(120)).max(8).default([]),
+  supporting_page04_refs: z.array(NonEmpty.max(120)).max(8).default([]),
+});
+
+export type Face05PathUnit = z.infer<typeof Face05PathUnitSchema>;
+
+export const Face05PathComparisonRowSchema = z.object({
+  path_id: NonEmpty.max(80),
+  benefit: NonEmpty.max(320),
+  cost: NonEmpty.max(320),
+  risk: NonEmpty.max(320),
+  resource_requirement: NonEmpty.max(320),
+  reversibility: NonEmpty.max(320),
+  prerequisites: NonEmpty.max(320),
+});
+
+export const Face05SwitchActionSchema = z.enum([
+  "switch",
+  "stop",
+  "pause",
+  "redefine",
+]);
+
+export const Face05SwitchingRuleSchema = z.object({
+  rule_id: NonEmpty.max(80),
+  source_path_id: NonEmpty.max(80),
+  trigger_condition: NonEmpty.max(480),
+  action: Face05SwitchActionSchema,
+  target_path_id: z.string().trim().max(80).nullable().optional().default(null),
+  rationale: NonEmpty.max(480),
+  claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+  evidence_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+  related_reality_fact_ids: z.array(NonEmpty.max(120)).max(8).default([]),
+});
+
+const Page05SectionIdEnum = z.enum([
+  "preferred_path",
+  "alternative_path",
+  "cautious_path",
+  "switching_exit",
+  "path_comparison",
+]);
+
+/** Face 05 — 可行路径与策略比较 (structured paths · Batch 1). */
+export const Face05V2Schema = z.object({
+  page: z.literal("05"),
+  face: z.literal("05"),
+  schema_version: z.literal("face05-v2").default("face05-v2"),
+  locale: DecisionReportLocaleSchema.optional(),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  path_units: z.array(Face05PathUnitSchema).min(2).max(4),
+  preferred_path_ids: z.array(NonEmpty.max(80)).min(1).max(2),
+  alternative_path_ids: z.array(NonEmpty.max(80)).max(3).default([]),
+  cautious_path_ids: z.array(NonEmpty.max(80)).max(2).default([]),
+  path_comparison: z.object({
+    rows: z.array(Face05PathComparisonRowSchema).min(2).max(4),
+  }),
+  switching_rules: z.array(Face05SwitchingRuleSchema).min(1).max(12),
+  evidence_boundary: z.object({
+    claim_ids: z.array(NonEmpty.max(80)).min(1).max(12),
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+    uncertainty_notes: z.array(NonEmpty.max(240)).min(1).max(8),
+    cautious_absent_note: z.string().trim().max(320).optional().default(""),
+  }),
+  reading_order: z
+    .array(Page05SectionIdEnum)
+    .min(3)
+    .max(5)
+    .default([
+      "preferred_path",
+      "alternative_path",
+      "cautious_path",
+      "switching_exit",
+      "path_comparison",
+    ])
+    .superRefine((order, ctx) => {
+      const seen = new Set<string>();
+      for (const id of order) {
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `duplicate reading_order section_id: ${id}`,
+          });
+          return;
+        }
+        seen.add(id);
+      }
+      for (const required of [
+        "preferred_path",
+        "alternative_path",
+        "cautious_path",
+        "switching_exit",
+        "path_comparison",
+      ] as const) {
+        if (!seen.has(required)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `reading_order missing required section: ${required}`,
+          });
+        }
+      }
+    }),
+  generation_status: z
+    .enum([
+      "blocked_on_required_inputs",
+      "ready_for_generation",
+      "generated_with_gaps",
+      "generated_complete",
+      "failed_structure",
+      "incomplete",
+    ])
+    .optional(),
+  input_manifest: z
+    .array(
+      z.object({
+        field_id: NonEmpty.max(80),
+        section_id: Page05SectionIdEnum,
+        source_kind: z.enum([
+          "personal_analysis",
+          "reality_context",
+          "analytical_result",
+          "system_metadata",
+          "derived_data",
+        ]),
+        present: z.boolean(),
+        collection_status: z.enum([
+          "ready",
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        value_summary: z.string().trim().max(320).nullable(),
+      }),
+    )
+    .max(48)
+    .optional(),
+  missing_inputs: z
+    .array(
+      z.object({
+        gap_id: NonEmpty.max(80),
+        page_id: z.literal("05"),
+        section_id: Page05SectionIdEnum,
+        field_id: NonEmpty.max(80),
+        status: z.enum([
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        why_needed: NonEmpty.max(320),
+        affects_content: NonEmpty.max(320),
+        follow_up_collect_hint: NonEmpty.max(320),
+        handling: z.enum([
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ]),
+      }),
+    )
+    .max(48)
+    .optional(),
+  sections: z
+    .array(
+      z.object({
+        section_id: Page05SectionIdEnum,
+        segment_letter: z.enum(["A", "B", "C", "D", "E"]),
+        title_zh: NonEmpty.max(80),
+        title_en: NonEmpty.max(80),
+        required: z.boolean(),
+        reading_rank: z.number().int().min(1).max(8),
+        information_level: NonEmpty.max(40),
+      }),
+    )
+    .max(8)
+    .optional(),
+  generation_metadata: z
+    .object({
+      task_id: NonEmpty.max(80),
+      prompt_bundle_chars: z.number().int().min(0),
+      built_at: NonEmpty.max(64),
+      llm_invoked: z.boolean(),
+    })
+    .optional(),
+});
+
+export type Face05V2 = z.infer<typeof Face05V2Schema>;
+
+/** Legacy Face 05 (pre Face05V2) — historical open. */
+export const Face05LegacySchema = z.object({
+  page: z.literal("05"),
+  face: z.literal("05"),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  first_choice: NonEmpty.max(720),
+  second_choice: NonEmpty.max(720),
+  caution_choice: NonEmpty.max(720),
+  switch_or_stop: NonEmpty.max(720),
+  contrast: z.string().trim().max(320).optional().default(""),
+  recommendation_conditions: z.string().trim().max(960).optional().default(""),
+  evidence_trace: z.array(NonEmpty.max(120)).max(12).optional().default([]),
+});
+
+export type Face05Legacy = z.infer<typeof Face05LegacySchema>;
+
 /** Legacy Face 01 (pre Batch 0) — retained for historical report open. */
 export const Face01LegacySchema = z.object({
   page: z.literal("01"),

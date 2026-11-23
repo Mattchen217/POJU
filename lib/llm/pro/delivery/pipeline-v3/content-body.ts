@@ -53,10 +53,19 @@ import {
   validateFace04ProductionOutput,
   type Face04ProductionContext,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page04/production";
+import {
+  buildFace05ProductionContext,
+  buildFace05RepairUserMessage,
+  face05SliceSummary,
+  parseFace05JsonStrict,
+  validateFace05ProductionOutput,
+  type Face05ProductionContext,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page05/production";
 import type {
   Face01V2,
   Face02V2,
   Face04V2,
+  Face05V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import type { CallLLMResult } from "@/lib/llm/router";
 
@@ -107,6 +116,12 @@ export type ContentBodyOk = {
     slice_summary: Record<string, unknown>;
     validation: "passed" | "passed_after_repair";
   };
+  face05_meta?: {
+    prompt_version: string;
+    schema_version: string;
+    slice_summary: Record<string, unknown>;
+    validation: "passed" | "passed_after_repair";
+  };
 };
 
 export type ContentBodyFail = {
@@ -126,6 +141,11 @@ export type ContentBodyFail = {
     validation_issues?: unknown[];
   };
   face04_meta?: {
+    prompt_version?: string;
+    slice_summary?: Record<string, unknown>;
+    validation_issues?: unknown[];
+  };
+  face05_meta?: {
     prompt_version?: string;
     slice_summary?: Record<string, unknown>;
     validation_issues?: unknown[];
@@ -637,10 +657,12 @@ export async function runContentBodyGenerate(input: {
   book_judgment_pack?: BookJudgmentPack | null;
   /** Stable report/job id for Face01/02 slice. */
   report_id?: string | null;
-  /** Optional Page01 schema — alignment context for Face02/Face04. */
+  /** Optional Page01 schema — alignment context for Face02/Face04/Face05. */
   page01_schema?: unknown;
-  /** Optional Page02 schema — foundation grounding for Face04. */
+  /** Optional Page02 schema — foundation grounding for Face04/Face05. */
   page02_schema?: unknown;
+  /** Optional Page04 schema — bottleneck grounding for Face05. */
+  page04_schema?: unknown;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body", {
@@ -652,6 +674,7 @@ export async function runContentBodyGenerate(input: {
   let face01Ctx: Face01ProductionContext | null = null;
   let face02Ctx: Face02ProductionContext | null = null;
   let face04Ctx: Face04ProductionContext | null = null;
+  let face05Ctx: Face05ProductionContext | null = null;
   if (input.key === "01") {
     const built = buildFace01ProductionContext({
       report_id: input.report_id?.trim() || input.session_id || "report_face01",
@@ -760,6 +783,52 @@ export async function runContentBodyGenerate(input: {
     }
     face04Ctx = built.ctx;
   }
+  if (input.key === "05") {
+    const built = buildFace05ProductionContext({
+      report_id: input.report_id?.trim() || input.session_id || "report_face05",
+      locale: input.locale,
+      dc: input.decision_context_snapshot ?? null,
+      pack: input.book_judgment_pack ?? null,
+      chart_fact_pack: input.chart_fact_pack ?? null,
+      page01: input.page01_schema ?? null,
+      page02: input.page02_schema ?? null,
+      page04: input.page04_schema ?? null,
+    });
+    if (!built.ok) {
+      return {
+        ok: false,
+        reason: built.reason,
+        tokens_used: 0,
+        face05_meta: {
+          validation_issues: [{ detail: built.detail ?? built.reason }],
+        },
+      };
+    }
+    if (!built.ctx.may_invoke_llm) {
+      const blocking = built.ctx.architecture.missing_inputs.filter(
+        (g) => g.handling === "defer_generation",
+      );
+      return {
+        ok: false,
+        reason: "face05_blocked_on_required_inputs",
+        tokens_used: 0,
+        face05_meta: {
+          prompt_version: built.ctx.prompt_version,
+          slice_summary: {
+            ...face05SliceSummary(built.ctx),
+            blocked: true,
+            blocking_gaps: blocking.map((g) => g.gap_id),
+          },
+          validation_issues: [
+            {
+              detail: `may_invoke_llm=false; generation_status=${built.ctx.architecture.generation_status}; gaps=${blocking.map((g) => g.field_id).join(",")}`,
+            },
+          ],
+        },
+      };
+    }
+    face05Ctx = built.ctx;
+  }
   const pageSlice = formatPageSliceFeed({
     key: input.key,
     chartText: feed.thesis_factpack ? input.chart_fact_pack : null,
@@ -832,8 +901,8 @@ export async function runContentBodyGenerate(input: {
   const zfpOmitted =
     !input.ziwei_fact_pack ||
     !(input.ziwei_fact_pack.patternHits?.length > 0);
-  // Face01/02/04 V2: prompt is the production slice pair; do not mash DC/legacy feed into user.
-  const faceV2Ctx = face01Ctx || face02Ctx || face04Ctx;
+  // Face01/02/04/05 V2: prompt is the production slice pair; do not mash DC/legacy feed into user.
+  const faceV2Ctx = face01Ctx || face02Ctx || face04Ctx || face05Ctx;
   const effectiveUserFeed = faceV2Ctx ? "" : userFeed;
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
@@ -857,6 +926,9 @@ export async function runContentBodyGenerate(input: {
     face04_production: face04Ctx
       ? { system: face04Ctx.system, user: face04Ctx.user }
       : null,
+    face05_production: face05Ctx
+      ? { system: face05Ctx.system, user: face05Ctx.user }
+      : null,
   });
 
   let tokens_used = 0;
@@ -874,7 +946,9 @@ export async function runContentBodyGenerate(input: {
         ? "content_body_v3_face02"
         : face04Ctx
           ? "content_body_v3_face04"
-          : "content_body_v3";
+          : face05Ctx
+            ? "content_body_v3_face05"
+            : "content_body_v3";
 
     const invoke = async (sys: string, usr: string) => {
       if (contentBodyTestInvoke) {
@@ -917,6 +991,7 @@ export async function runContentBodyGenerate(input: {
             face01Ctx?.user ||
             face02Ctx?.user ||
             face04Ctx?.user ||
+            face05Ctx?.user ||
             "",
           raw_text: text,
           result,
@@ -930,6 +1005,9 @@ export async function runContentBodyGenerate(input: {
         face04_meta: face04Ctx
           ? { prompt_version: face04Ctx.prompt_version, slice_summary: face04SliceSummary(face04Ctx) }
           : undefined,
+        face05_meta: face05Ctx
+          ? { prompt_version: face05Ctx.prompt_version, slice_summary: face05SliceSummary(face05Ctx) }
+          : undefined,
       };
     }
     const baseTrace = {
@@ -941,6 +1019,7 @@ export async function runContentBodyGenerate(input: {
         face01Ctx?.user ||
         face02Ctx?.user ||
         face04Ctx?.user ||
+        face05Ctx?.user ||
         "",
       result,
     };
@@ -1394,6 +1473,139 @@ export async function runContentBodyGenerate(input: {
       );
     }
 
+    // --- Face 05 V2: strict JSON → schema → paths/refs/facts → attach ---
+    if (face05Ctx) {
+      const finalizeFace05 = async (
+        rawText: string,
+        parsedIn: unknown,
+        validationTag: "passed" | "passed_after_repair",
+        repairTrace?: LabCallTrace,
+      ): Promise<ContentBodyOk | ContentBodyFail> => {
+        const validated = validateFace05ProductionOutput({
+          raw: parsedIn,
+          locale: input.locale,
+          ctx: face05Ctx!,
+        });
+        if (!validated.ok) {
+          return {
+            ok: false,
+            reason: validated.reason,
+            tokens_used,
+            last_raw_text: rawText.slice(0, 12_000),
+            call_trace: repairTrace ??
+              buildLabCallTrace({
+                ...baseTrace,
+                raw_text: rawText,
+                parsed: parsedIn,
+              }),
+            face05_meta: {
+              prompt_version: face05Ctx!.prompt_version,
+              slice_summary: face05SliceSummary(face05Ctx!),
+              validation_issues: validated.issues,
+            },
+          };
+        }
+        const page = validated.page as unknown as DeliveryPageData;
+        return {
+          ok: true,
+          page,
+          tokens_used,
+          last_raw_text: rawText.slice(0, 12_000),
+          call_trace: repairTrace ??
+            buildLabCallTrace({
+              ...baseTrace,
+              raw_text: rawText,
+              parsed: page,
+            }),
+          face05_meta: {
+            prompt_version: face05Ctx!.prompt_version,
+            schema_version: face05Ctx!.schema_version,
+            slice_summary: face05SliceSummary(face05Ctx!),
+            validation: validationTag,
+          },
+        };
+      };
+
+      const parsed05 = parseFace05JsonStrict(text);
+      if (parsed05 == null) {
+        return {
+          ok: false,
+          reason: "face05_json_not_strict",
+          tokens_used,
+          last_raw_text: text.slice(0, 12_000),
+          call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
+          face05_meta: {
+            prompt_version: face05Ctx.prompt_version,
+            slice_summary: face05SliceSummary(face05Ctx),
+          },
+        };
+      }
+
+      const first05 = await finalizeFace05(text, parsed05, "passed");
+      if (first05.ok) return first05;
+
+      const repairUser05 = buildFace05RepairUserMessage({
+        previousUser: user,
+        previousRaw: text,
+        issues:
+          (first05.face05_meta?.validation_issues as
+            | import("@/lib/llm/pro/delivery/decision-report-v2/page05/validate").Face05Issue[]
+            | undefined) ?? [
+            { code: "face05_validation_failed", detail: first05.reason },
+          ],
+      });
+      const repairResult05 = await invoke(system, repairUser05);
+      tokens_used += repairResult05.meta.tokens_used;
+      const repairText05 = repairResult05.content?.trim() ?? "";
+      if (scareRedlineSnippet(repairText05)) {
+        return {
+          ok: false,
+          reason: "scare_redline",
+          tokens_used,
+          last_raw_text: repairText05.slice(0, 12_000),
+          call_trace: buildLabCallTrace({
+            ...baseTrace,
+            raw_text: repairText05,
+            result: repairResult05,
+          }),
+          face05_meta: {
+            prompt_version: face05Ctx.prompt_version,
+            slice_summary: face05SliceSummary(face05Ctx),
+          },
+        };
+      }
+      const repairParsed05 = parseFace05JsonStrict(repairText05);
+      if (repairParsed05 == null) {
+        return {
+          ok: false,
+          reason: "face05_repair_json_not_strict",
+          tokens_used,
+          last_raw_text: repairText05.slice(0, 12_000),
+          call_trace: buildLabCallTrace({
+            ...baseTrace,
+            raw_text: repairText05,
+            result: repairResult05,
+          }),
+          face05_meta: {
+            prompt_version: face05Ctx.prompt_version,
+            slice_summary: face05SliceSummary(face05Ctx),
+            validation_issues: first05.face05_meta?.validation_issues,
+          },
+        };
+      }
+      return finalizeFace05(
+        repairText05,
+        repairParsed05,
+        "passed_after_repair",
+        buildLabCallTrace({
+          ...baseTrace,
+          raw_text: repairText05,
+          result: repairResult05,
+          parsed: repairParsed05,
+        }),
+      );
+    }
+
     let parsed: unknown;
     try {
       parsed = extractJson(text);
@@ -1447,7 +1659,9 @@ export async function runContentBodyGenerate(input: {
             ? "content_body_v3_face02"
             : face04Ctx
               ? "content_body_v3_face04"
-              : "content_body_v3",
+              : face05Ctx
+                ? "content_body_v3_face05"
+                : "content_body_v3",
         system,
         user,
         user_feed:
@@ -1455,6 +1669,7 @@ export async function runContentBodyGenerate(input: {
           face01Ctx?.user ||
           face02Ctx?.user ||
           face04Ctx?.user ||
+          face05Ctx?.user ||
           "",
         raw_text: null,
       }),
@@ -1463,4 +1678,4 @@ export async function runContentBodyGenerate(input: {
 }
 
 /** Type-only re-export for callers. */
-export type { Face01V2, Face02V2, Face04V2 };
+export type { Face01V2, Face02V2, Face04V2, Face05V2 };

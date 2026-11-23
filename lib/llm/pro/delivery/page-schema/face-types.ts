@@ -21,6 +21,8 @@ import {
   Face03GlossarySchema,
   Face04V2Schema,
   Face04LegacySchema,
+  Face05V2Schema,
+  Face05LegacySchema,
   type Face01Legacy,
   type Face01V2,
   type Face02Legacy,
@@ -29,6 +31,8 @@ import {
   type Face03Glossary,
   type Face04V2,
   type Face04Legacy,
+  type Face05V2,
+  type Face05Legacy,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 const NonEmpty = z.string().trim().min(1);
@@ -58,27 +62,12 @@ export const Face04ParseSchema = z.union([Face04V2Schema, Face04LegacySchema]);
 export type Face04 = Face04V2 | Face04Legacy;
 export { Face04V2Schema, Face04LegacySchema, type Face04V2, type Face04Legacy };
 
-/** Product Stage 4 P5 — conditional recommendation caveats + evidence ids. */
-const Face05Stage4Extras = {
-  /** Unknowns / conflicts that may change ranking (required when DC has P5-critical gaps). */
-  recommendation_conditions: z.string().trim().max(960).optional().default(""),
-  /** Trace ids: fact:… / hypothesis:… / dir:… / conflict:… */
-  evidence_trace: z.array(NonEmpty.max(120)).max(12).optional().default([]),
-};
-
-/** 05 · 路径排序 · dualTrack=fold · Product Stage 4 P5 */
-export const Face05Schema = z.object({
-  page: z.literal("05"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("05"),
-  first_choice: NonEmpty.max(720),
-  second_choice: NonEmpty.max(720),
-  caution_choice: NonEmpty.max(720),
-  switch_or_stop: NonEmpty.max(720),
-  contrast: z.string().trim().max(320).optional().default(""),
-  ...Face05Stage4Extras,
-});
-export type Face05 = z.infer<typeof Face05Schema>;
+/** 05 · 可行路径与策略比较 · dualTrack=fold · schema_version face05-v2 */
+export const Face05Schema = Face05V2Schema;
+/** Historical open: accept legacy flat first/second/caution shape. */
+export const Face05ParseSchema = z.union([Face05V2Schema, Face05LegacySchema]);
+export type Face05 = Face05V2 | Face05Legacy;
+export { Face05V2Schema, Face05LegacySchema, type Face05V2, type Face05Legacy };
 
 /** Product Stage 4 P6 — verification experiment (7 questions). */
 export const Face06VerificationExperimentSchema = z.object({
@@ -146,7 +135,7 @@ export const FACE_PAGE_SCHEMAS = {
   "01": Face01Schema,
   "02": Face02ParseSchema,
   "04": Face04ParseSchema,
-  "05": Face05Schema,
+  "05": Face05ParseSchema,
   "06": Face06Schema,
   "07": Face07Schema,
   "08": Face08Schema,
@@ -193,11 +182,11 @@ export const FACE_SEGMENT_FIELDS: Record<
     { key: "evidence_fold", segmentId: "D" },
   ],
   "05": [
-    { key: "first_choice", segmentId: "A" },
-    { key: "second_choice", segmentId: "B" },
-    { key: "caution_choice", segmentId: "C" },
-    { key: "switch_or_stop", segmentId: "D" },
-    { key: "contrast", segmentId: "E" },
+    { key: "preferred_path", segmentId: "A" },
+    { key: "alternative_path", segmentId: "B" },
+    { key: "cautious_path", segmentId: "C" },
+    { key: "switching_exit", segmentId: "D" },
+    { key: "path_comparison", segmentId: "E" },
   ],
   "06": [
     { key: "near_step_principle", segmentId: "A" },
@@ -322,13 +311,27 @@ export function faceFillShapeSkeleton(pageId: DecisionPageId): Record<string, un
     case "05":
       return {
         ...base,
-        first_choice: "",
-        second_choice: "",
-        caution_choice: "",
-        switch_or_stop: "",
-        contrast: "",
-        recommendation_conditions: "",
-        evidence_trace: [],
+        schema_version: "face05-v2",
+        path_units: [],
+        preferred_path_ids: [""],
+        alternative_path_ids: [""],
+        cautious_path_ids: [],
+        path_comparison: { rows: [] },
+        switching_rules: [],
+        evidence_boundary: {
+          claim_ids: [""],
+          confirmed_fact_ids: [],
+          hypothesis_notes: [],
+          uncertainty_notes: [""],
+          cautious_absent_note: "",
+        },
+        reading_order: [
+          "preferred_path",
+          "alternative_path",
+          "cautious_path",
+          "switching_exit",
+          "path_comparison",
+        ],
       };
     case "06":
       return {

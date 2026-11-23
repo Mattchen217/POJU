@@ -10,7 +10,12 @@ import { projectLegacyFace02ForDisplay } from "@/lib/llm/pro/delivery/decision-r
 import type { Face02V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import { assemblePage04PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page04/architecture/section-assembly";
 import { projectLegacyFace04ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page04/legacy-adapter";
-import type { Face04V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
+import { projectLegacyFace05ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page05/legacy-adapter";
+import { assemblePage05PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page05/architecture/section-assembly";
+import type {
+  Face04V2,
+  Face05V2,
+} from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
   type DeliveryPageData,
@@ -215,13 +220,28 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       }
       break;
     }
-    case "05":
-      add("首选", "first_choice");
-      add("次选", "second_choice");
-      add("慎选", "caution_choice");
-      add("切轨/停止", "switch_or_stop");
-      add("对照", "contrast");
+    case "05": {
+      let canonical05: Face05V2 | null = null;
+      if (Array.isArray(p.path_units) && p.path_units.length) {
+        canonical05 = p as unknown as Face05V2;
+      } else {
+        canonical05 = projectLegacyFace05ForDisplay(p);
+      }
+      if (!canonical05) {
+        throw new Error(
+          "face05_pdf_legacy_project_failed: historical/incomplete Face05 could not be projected for PDF assembly",
+        );
+      }
+      const locale05 = String(
+        (canonical05 as { locale?: unknown }).locale ??
+          (p as { locale?: unknown }).locale ??
+          "zh",
+      );
+      for (const arg of assemblePage05PdfArgumentBodies(canonical05, locale05)) {
+        out.push(arg);
+      }
       break;
+    }
     case "06":
       add("近步原则", "near_step_principle");
       add("阶段气候", "stage_climate");
