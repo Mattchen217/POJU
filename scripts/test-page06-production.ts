@@ -902,6 +902,17 @@ async function main() {
     rejectIntegrity(
       (raw) => ({
         ...raw,
+        monitoring_contract: {
+          ...(raw.monitoring_contract as object),
+          path_id: "path_unknown_monitor",
+        },
+      }),
+      "L-monitor-path",
+      "monitoring_contract path_id not in page05 all_path_ids",
+    );
+    rejectIntegrity(
+      (raw) => ({
+        ...raw,
         validation_experiments: [],
         experiments_absent_note: "",
         evidence_boundary: {

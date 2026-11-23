@@ -72,6 +72,18 @@ export function assertFace06PathIntegrity(
   const experimentIds = new Set(
     page.validation_experiments.map((e) => e.experiment_id),
   );
+  checkPath("monitoring_contract", page.monitoring_contract.path_id);
+  if (page.monitoring_contract.path_id !== page.primary_path_id) {
+    const relatedPaths = new Set<string>([
+      ...page.execution_actions.map((a) => a.path_id),
+      ...page.validation_experiments.map((e) => e.path_id),
+    ]);
+    if (!relatedPaths.has(page.monitoring_contract.path_id)) {
+      issues.push(
+        `monitoring_contract.path_id must equal primary_path_id or match a related action/experiment path: ${page.monitoring_contract.path_id}`,
+      );
+    }
+  }
   for (const id of page.monitoring_contract.action_ids ?? []) {
     if (!actionIds.has(id)) {
       issues.push(
