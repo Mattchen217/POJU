@@ -6,7 +6,10 @@
  */
 
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
-import { enrichBookJudgmentRelatedDirIds } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import {
+  enrichBookJudgmentRelatedDirIds,
+  type ProgramUnitDirAuthorityEdge,
+} from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { Face02V2Schema, type Face02V2 } from "../schemas";
@@ -89,6 +92,11 @@ export function buildFace02ProductionContext(input: {
   ziwei_available?: boolean;
   /** Optional Page01 schema for alignment context only. */
   page01?: unknown;
+  /**
+   * Program-proven Unit→DIR edges only. Production callers omit this.
+   * Never derived from model text or ordinal slots.
+   */
+  related_dir_authority_edges?: readonly ProgramUnitDirAuthorityEdge[];
 }): Face02ProductionBuildOk | Face02ProductionBuildFail {
   if (!input.dc) {
     return { ok: false, reason: "face02_missing_decision_context" };
@@ -99,6 +107,7 @@ export function buildFace02ProductionContext(input: {
     ? enrichBookJudgmentRelatedDirIds({
         pack: input.pack,
         dc: input.dc,
+        authority_edges: input.related_dir_authority_edges,
       }).pack
     : null;
 

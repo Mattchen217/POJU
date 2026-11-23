@@ -31,13 +31,36 @@ import {
   resolveRoleToUniqueDir,
   assembleFace02ClaimOwnershipSlots,
 } from "@/lib/llm/pro/delivery/decision-report-v2";
-import { enrichBookJudgmentRelatedDirIds } from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import {
+  enrichBookJudgmentRelatedDirIds,
+  canonicalProgramUnitDirEdgeRef,
+  RELATED_DIR_ENRICHMENT_ALGORITHM,
+  type ProgramUnitDirAuthorityEdge,
+} from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
+import { validateRelatedDirEnrichmentCertificate } from "@/lib/llm/pro/delivery/decision-report-v2/page02/credible-fact-claim";
 import { buildV3BodyPrompt } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
 import { resolve as resolvePath } from "node:path";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+
+function programEdge(
+  unit_id: string,
+  dir_id: string,
+): ProgramUnitDirAuthorityEdge {
+  const association_basis = "program_authority_edge" as const;
+  return {
+    unit_id,
+    dir_id,
+    association_basis,
+    source_ref: canonicalProgramUnitDirEdgeRef({
+      unit_id,
+      dir_id,
+      association_basis,
+    }),
+  };
+}
 
 console.log("=== Decision Report V2 Page02 production path (content units) ===");
 
@@ -367,51 +390,70 @@ const factEv = `ev_fact_${factId}`;
 const unverifiedFactId = "fact_salary_guess";
 const unverifiedFactEv = `ev_fact_${unverifiedFactId}`;
 
-// Exclusive slot enrich: sorted units [u_science_02, u_science_offer_02]
-// × sorted linked dirs [DIR_OFFER, DIR_RUNWAY] → 1:1, no bulk grant.
+// Production enrich has no Unit→DIR authority edges → empty trusted dirs / pairs.
 assert.ok(ctx.slice.report_analysis /* pack enrich ran via production */);
+assert.ok(offerClaimId, "offer science claim seeded");
+assert.equal(
+  ctx.credible_fact_claim_keys.size,
+  0,
+  "no authority edges ⇒ no credible Claim–Fact pairs",
+);
+for (const bind of ctx.trusted_claim_dir_bindings.values()) {
+  assert.deepEqual(bind.related_dir_ids, []);
+}
 assert.ok(
   !ctx.credible_fact_claim_keys.has(`${claimId}::${factId}`),
   "destiny must not own runway without DIR binding",
-);
-assert.ok(offerClaimId, "offer science claim seeded");
-assert.ok(
-  ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
-  "u_science_02 exclusive slot → DIR_OFFER → salary guess",
-);
-assert.ok(
-  ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
-  "u_science_offer_02 exclusive slot → DIR_RUNWAY → runway",
-);
-assert.ok(
-  !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
-  "no cross-claim: science_02 must NOT own runway",
-);
-assert.ok(
-  !ctx.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
-  "no cross-claim: offer claim must NOT own salary guess",
-);
-assert.deepEqual(
-  [...(ctx.registry.claims[sciClaimId]?.related_dir_ids ?? [])].sort(),
-  ["DIR_OFFER"],
-);
-assert.deepEqual(
-  [...(ctx.registry.claims[offerClaimId]?.related_dir_ids ?? [])].sort(),
-  ["DIR_RUNWAY"],
-);
-assert.ok(
-  ctx.trusted_claim_dir_bindings.size >= 2,
-  "trusted bindings present from enrich certificate",
 );
 for (const claim of Object.values(ctx.registry.claims)) {
   assert.ok(
     !claim.evidence_ids.some((id) => id.startsWith("ev_fact_")),
     "no bulk ev_fact on claim.evidence_ids",
   );
+  if (claim.claim_type === "reality_analysis") {
+    assert.deepEqual(claim.related_dir_ids ?? [], []);
+  }
 }
-console.log("structured-pair baseline PASS");
+console.log("structured-pair baseline PASS (empty without authority)");
+
+/** Semantic edges opposite of ID-sort ordinal (u_science_02 < offer; DIR_OFFER < RUNWAY). */
+const semanticAuthorityEdges: ProgramUnitDirAuthorityEdge[] = [
+  programEdge("u_science_02", "DIR_RUNWAY"),
+  programEdge("u_science_offer_02", "DIR_OFFER"),
+];
+
+const builtWithAuthority = buildFace02ProductionContext({
+  report_id: "job_face02_with_authority",
+  locale: "en",
+  dc,
+  pack: makePack({ bazi: true, ziwei: false }),
+  chart_fact_pack: "日主甲木…",
+  page01: page01Schema,
+  related_dir_authority_edges: semanticAuthorityEdges,
+});
+assert.equal(builtWithAuthority.ok, true);
+if (!builtWithAuthority.ok) throw new Error(builtWithAuthority.reason);
+const ctxAuth = builtWithAuthority.ctx;
+assert.ok(
+  ctxAuth.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
+  "authority: science_02 → DIR_RUNWAY → runway (NOT ordinal OFFER)",
+);
+assert.ok(
+  ctxAuth.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
+  "authority: offer → DIR_OFFER → salary guess",
+);
+assert.ok(
+  !ctxAuth.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
+  "no ordinal cross-pair",
+);
+assert.ok(
+  !ctxAuth.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
+  "no ordinal cross-pair",
+);
+console.log("authority-edge semantic pairs PASS");
 
 function validPage02(extra?: Partial<Record<string, unknown>>) {
+  // Default happy path: no reality_fact units — production has no Unit→DIR authority.
   return {
     page: "02",
     face: "02",
@@ -423,7 +465,7 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         text: "Your preference for a stable cash floor explains why a staged explore fits this decision window.",
         claim_ids: [claimId],
         evidence_ids: [personalEv],
-        related_reality_fact_unit_ids: ["u_fact_runway"],
+        related_reality_fact_unit_ids: [],
       },
       {
         unit_id: "u_personal",
@@ -435,20 +477,12 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
         source_domain: "bazi",
       },
       {
-        unit_id: "u_fact_runway",
-        kind: "reality_fact",
-        text: "Available runway supports exploring without resigning cold while the buffer holds.",
-        claim_ids: [offerClaimId],
-        evidence_ids: [factEv],
-        fact_ids: [factId],
-      },
-      {
         unit_id: "u_why",
         kind: "conditional_explanation",
         text: "The judgment favors staged explore because structure prioritizes a protected base and the runway condition makes that workable now.",
         claim_ids: [claimId, offerClaimId],
         evidence_ids: [personalEv],
-        related_reality_fact_unit_ids: ["u_fact_runway"],
+        related_reality_fact_unit_ids: [],
       },
       {
         unit_id: "u_hyp",
@@ -461,13 +495,13 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     ],
     page_summary_unit_ids: ["u_summary"],
     relevant_personal_factor_unit_ids: ["u_personal"],
-    personal_reality_interplay_unit_ids: ["u_personal", "u_fact_runway"],
+    personal_reality_interplay_unit_ids: ["u_personal"],
     why_judgment_fits_unit_ids: ["u_why"],
     page01_judgment_ref: "staged explore",
     explanation_boundary: {
       claim_ids: [claimId, sciClaimId, offerClaimId],
       personal_unit_ids: ["u_personal"],
-      confirmed_fact_unit_ids: ["u_fact_runway"],
+      confirmed_fact_unit_ids: [],
       hypothesis_unit_ids: ["u_hyp"],
       uncertainty_notes: ["Offer terms may still shift"],
     },
@@ -480,6 +514,31 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
     ],
     ...extra,
   };
+}
+
+function validPage02WithFacts(extra?: Partial<Record<string, unknown>>) {
+  return validPage02({
+    content_units: [
+      ...(validPage02().content_units as unknown[]),
+      {
+        unit_id: "u_fact_runway",
+        kind: "reality_fact",
+        text: "Available runway supports exploring without resigning cold while the buffer holds.",
+        claim_ids: [sciClaimId],
+        evidence_ids: [factEv],
+        fact_ids: [factId],
+      },
+    ],
+    personal_reality_interplay_unit_ids: ["u_personal", "u_fact_runway"],
+    explanation_boundary: {
+      claim_ids: [claimId, sciClaimId, offerClaimId],
+      personal_unit_ids: ["u_personal"],
+      confirmed_fact_unit_ids: ["u_fact_runway"],
+      hypothesis_unit_ids: ["u_hyp"],
+      uncertainty_notes: ["Offer terms may still shift"],
+    },
+    ...extra,
+  });
 }
 
 // Happy path
@@ -668,15 +727,13 @@ function validPage02(extra?: Partial<Record<string, unknown>>) {
 }
 console.log("H PASS — (unmapped hit covered in prior suite pattern)");
 
-// I status upgrade in reality_fact unit
+// I status upgrade in reality_fact unit (requires authority for ownership gate)
 {
   assert.equal(
     validateFace02ProductionOutput({
-      raw: validPage02({
+      raw: validPage02WithFacts({
         content_units: [
-          ...(validPage02().content_units as unknown[]).filter(
-            (u) => (u as { unit_id?: string }).unit_id !== "u_fact_runway",
-          ),
+          ...(validPage02().content_units as unknown[]),
           {
             unit_id: "u_fact_bad",
             kind: "reality_fact",
@@ -696,7 +753,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
         },
       }),
       locale: "en",
-      ctx,
+      ctx: ctxAuth,
     }).ok,
     false,
   );
@@ -781,138 +838,91 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   console.log("L PASS — no Page04 bottleneck");
 }
 
-// --- Structured association negatives + trusted DIR binding ---
+// --- R2 Claim–DIR semantic negatives A–K ---
 {
-  const trusted = ctx.trusted_claim_dir_bindings;
-
-  // body_text contains fact_id but destiny has no trusted DIR
-  const destiny = ctx.registry.claims[claimId]!;
-  destiny.body_text = `${destiny.body_text} fact_runway DIR_RUNWAY`;
-  const pairs = buildCrediblePage02FactClaimPairs({
-    registry: ctx.registry,
-    fact_selection: ctx.fact_selection,
-    dc,
-    trustedBindings: trusted,
-  });
-  assert.ok(
-    !pairs.pairKeys.has(`${claimId}::${factId}`),
-    "text marker must NOT create pair",
-  );
-  certifyClaimDirBindings({
-    registry: ctx.registry,
-    trustedBindings: trusted,
-  });
-
-  assert.equal(
-    validateFace02ProductionOutput({
-      raw: validPage02({
-        content_units: [
-          ...(validPage02().content_units as unknown[]).map((u) => {
-            const row = u as { unit_id?: string; claim_ids?: string[] };
-            if (row.unit_id === "u_fact_runway") {
-              return { ...row, claim_ids: [claimId] };
-            }
-            return u;
-          }),
-        ],
-      }),
-      locale: "en",
-      ctx,
-    }).ok,
-    false,
-    "destiny claim + runway fact rejected without DIR pair",
-  );
-
-  // candidate fact cannot pair even with trusted dirs
-  const candPairs = buildCrediblePage02FactClaimPairs({
-    registry: ctx.registry,
-    fact_selection: {
-      ...ctx.fact_selection,
-      selected: ctx.fact_selection.selected.map((r) =>
-        r.fact.fact_id === unverifiedFactId
-          ? { ...r, kind: "candidate" as const }
-          : r,
-      ),
-    },
-    dc,
-    trustedBindings: trusted,
-  });
-  assert.ok(!candPairs.pairKeys.has(`${sciClaimId}::${unverifiedFactId}`));
-  assert.ok(!candPairs.pairKeys.has(`${offerClaimId}::${unverifiedFactId}`));
-
-  // Mutating claim.related_dir_ids mirror must NOT create pairs (trust root is map)
-  const sci = ctx.registry.claims[sciClaimId]!;
-  const prevDirs = [...(sci.related_dir_ids ?? [])];
-  sci.related_dir_ids = ["DIR_DOES_NOT_MATCH"];
-  const fromMirror = buildCrediblePage02FactClaimPairs({
-    registry: ctx.registry,
-    fact_selection: ctx.fact_selection,
-    dc,
-    trustedBindings: trusted,
-  });
-  assert.ok(
-    fromMirror.pairKeys.has(`${sciClaimId}::${unverifiedFactId}`),
-    "pairs still come from trustedBindings, not mutated mirror",
-  );
-  sci.related_dir_ids = prevDirs;
-
-  // Empty trusted binding → no pair even if mirror looks full
-  const emptyTrusted = new Map(trusted);
-  emptyTrusted.set(sciClaimId, {
-    claim_id: sciClaimId,
-    unit_id: "u_science_02",
-    related_dir_ids: [],
-    reasons: ["cleared"],
-  });
-  const cleared = buildCrediblePage02FactClaimPairs({
-    registry: ctx.registry,
-    fact_selection: ctx.fact_selection,
-    dc,
-    trustedBindings: emptyTrusted,
-  });
-  assert.ok(!cleared.pairKeys.has(`${sciClaimId}::${unverifiedFactId}`));
-
   const dirs = structuredLinkedDirsForFact(
     dc.reality_facts!.find((f) => f.fact_id === factId)!,
     new Map(dc.dirs!.map((d) => [d.dir_id, d])),
   );
   assert.deepEqual(dirs, ["DIR_RUNWAY"]);
 
-  // D: Cross-claim isolation — sci owns offer fact; offer owns runway
-  assert.ok(ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`));
-  assert.ok(ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`));
-  assert.ok(!ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`));
-  assert.ok(
-    !ctx.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
-  );
-  assert.equal(
-    validateFace02ProductionOutput({
-      raw: validPage02({
-        content_units: [
-          ...(validPage02().content_units as unknown[]).map((u) => {
-            const row = u as { unit_id?: string; claim_ids?: string[] };
-            if (row.unit_id === "u_fact_runway") {
-              // Wrong owner: sciClaimId does not own runway
-              return { ...row, claim_ids: [sciClaimId] };
-            }
-            return u;
-          }),
-        ],
-      }),
-      locale: "en",
-      ctx,
-    }).ok,
-    false,
-    "sci claim citing runway fact must fail (cross-claim)",
-  );
+  // A: ID sort opposite of true association — must not ordinal-mismatch
+  {
+    const raw = makePack({ bazi: true, ziwei: false });
+    // Unit ids sort: u_science_02 < u_science_offer_02
+    // DIR ids sort: DIR_OFFER < DIR_RUNWAY
+    // True authority (anti-ordinal): science_02→RUNWAY, offer→OFFER
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: raw,
+      dc,
+      authority_edges: semanticAuthorityEdges,
+    });
+    const byUnit = new Map(
+      certificate.bindings.map((b) => [b.unit_id, b.related_dir_ids]),
+    );
+    assert.deepEqual(byUnit.get("u_science_02"), ["DIR_RUNWAY"]);
+    assert.deepEqual(byUnit.get("u_science_offer_02"), ["DIR_OFFER"]);
+    assert.ok(
+      ctxAuth.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
+    );
+    assert.ok(
+      !ctxAuth.credible_fact_claim_keys.has(
+        `${sciClaimId}::${unverifiedFactId}`,
+      ),
+      "must NOT assign OFFER via sort position",
+    );
+  }
+  console.log("A PASS — anti-ordinal semantic edges");
 
-  // A: model forged anchors / manual unit.related_dir_ids — enrich certificate wins
+  // B: unit with no program authority stays empty
+  {
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const offerBind = certificate.bindings.find(
+      (b) => b.unit_id === "u_science_offer_02",
+    );
+    assert.deepEqual(offerBind?.related_dir_ids, []);
+    assert.equal(offerBind?.association_basis, "none");
+    assert.ok(
+      (offerBind?.reasons ?? []).some((r) =>
+        r.includes("missing_unit_dir_provenance"),
+      ),
+    );
+  }
+  console.log("B PASS — unbound unit stays empty");
+
+  // C: two units same DIR without multi-grant basis → neither authorized
+  {
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [
+        programEdge("u_science_02", "DIR_RUNWAY"),
+        programEdge("u_science_offer_02", "DIR_RUNWAY"),
+      ],
+    });
+    for (const b of certificate.bindings) {
+      assert.deepEqual(b.related_dir_ids, []);
+    }
+    assert.ok(
+      certificate.bindings.some((b) =>
+        (b.reasons ?? []).some((r) =>
+          r.includes("reject_illegal_multi_claim_dir"),
+        ),
+      ),
+    );
+  }
+  console.log("C PASS — illegal multi-claim DIR rejected");
+
+  // D: model anchors / declared_* pointing at real DIR must NOT authorize
   {
     const forgedPack = makePack({ bazi: true, ziwei: false });
     const sciUnit = forgedPack.units.find((u) => u.id === "u_science_02")!;
     sciUnit.anchors = ["DIR_RUNWAY", "dir:DIR_RUNWAY"];
     sciUnit.declared_related_dir_ids = ["DIR_RUNWAY"];
-    // Manual field pretends RUNWAY, but enrich exclusive slot assigns OFFER first.
     sciUnit.related_dir_ids = ["DIR_RUNWAY"];
     const forgedCtx = buildFace02ProductionContext({
       report_id: "forge_dir_anchor",
@@ -921,60 +931,346 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
       pack: forgedPack,
       chart_fact_pack: "日主甲木…",
       page01: page01Schema,
+      // no authority edges
     });
     assert.equal(forgedCtx.ok, true);
     if (!forgedCtx.ok) throw new Error(forgedCtx.reason);
     const bind = forgedCtx.ctx.trusted_claim_dir_bindings.get(
       "claim_u_science_02",
     );
-    assert.deepEqual(bind?.related_dir_ids, ["DIR_OFFER"]);
+    assert.deepEqual(bind?.related_dir_ids, []);
+    assert.equal(forgedCtx.ctx.credible_fact_claim_keys.size, 0);
     assert.ok(
-      forgedCtx.ctx.credible_fact_claim_keys.has(
-        "claim_u_science_02::fact_salary_guess",
-      ),
-    );
-    assert.ok(
-      !forgedCtx.ctx.credible_fact_claim_keys.has(
-        "claim_u_science_02::fact_runway",
-      ),
-      "model/manual DIR_RUNWAY must not override enrich slot",
+      (bind?.reasons ?? []).some((r) => r.includes("ignore_model_suggestion")),
     );
   }
+  console.log("D PASS — model suggestions ignored");
 
-  // B: ambiguous role → no unique DIR grant from suggestions
+  // E: forged unit id in certificate → reject
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: semanticAuthorityEdges,
+    });
+    const forged = structuredClone(pack);
+    forged.related_dir_enrichment!.bindings.push({
+      unit_id: "u_does_not_exist",
+      related_dir_ids: ["DIR_RUNWAY"],
+      source_ref: canonicalProgramUnitDirEdgeRef({
+        unit_id: "u_does_not_exist",
+        dir_id: "DIR_RUNWAY",
+        association_basis: "program_authority_edge",
+      }),
+      association_basis: "program_authority_edge",
+      reasons: ["forged"],
+    });
+    const seeded = seedEvidenceRegistryForFace02({
+      dc,
+      pack: forged,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc,
+      fact_selection: seeded.fact_selection,
+      enrich: forged.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:unknown_unit")));
+  }
+  console.log("E PASS — forged unit rejected");
+
+  // F: forged DIR id in certificate → reject
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.related_dir_ids = ["DIR_FAKE_NOT_IN_DC"];
+    b.source_ref = canonicalProgramUnitDirEdgeRef({
+      unit_id: "u_science_02",
+      dir_id: "DIR_FAKE_NOT_IN_DC",
+      association_basis: "program_authority_edge",
+    });
+    const seeded = seedEvidenceRegistryForFace02({
+      dc,
+      pack: forged,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc,
+      fact_selection: seeded.fact_selection,
+      enrich: forged.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(
+      v.reasons.some(
+        (r) =>
+          r.includes("reject_inactive_or_missing") ||
+          r.includes("reject_not_linked"),
+      ),
+    );
+  }
+  console.log("F PASS — forged DIR rejected");
+
+  // G: DC content hash change invalidates old certificate
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: semanticAuthorityEdges,
+    });
+    const dcTampered = { ...dc, content_hash: "hash_tampered_other" };
+    const seeded = seedEvidenceRegistryForFace02({
+      dc: dcTampered,
+      pack,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const trusted = buildTrustedClaimDirBindings({
+      pack,
+      dc: dcTampered,
+      fact_selection: seeded.fact_selection,
+      registry: seeded.registry,
+    });
+    assert.ok(
+      [...trusted.values()].every((b) => b.related_dir_ids.length === 0),
+    );
+    assert.ok(
+      [...trusted.values()].some((b) =>
+        b.reasons.some((r) => r.includes("dc_content_hash_mismatch")),
+      ),
+    );
+  }
+  console.log("G PASS — hash mismatch fail-closed");
+
+  // H: duplicate unit binding → reject
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const dup = {
+      ...forged.related_dir_enrichment!.bindings.find(
+        (x) => x.unit_id === "u_science_02",
+      )!,
+    };
+    forged.related_dir_enrichment!.bindings.push(dup);
+    const seeded = seedEvidenceRegistryForFace02({
+      dc,
+      pack: forged,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc,
+      fact_selection: seeded.fact_selection,
+      enrich: forged.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:duplicate_unit_binding")));
+  }
+  console.log("H PASS — duplicate unit binding rejected");
+
+  // I: inactive DIR in certificate → reject
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: [programEdge("u_science_02", "DIR_RUNWAY")],
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.related_dir_ids = ["DIR_INACTIVE"];
+    b.source_ref = canonicalProgramUnitDirEdgeRef({
+      unit_id: "u_science_02",
+      dir_id: "DIR_INACTIVE",
+      association_basis: "program_authority_edge",
+    });
+    const dcWithInactive = {
+      ...dc,
+      dirs: [
+        ...(dc.dirs ?? []),
+        {
+          dir_id: "DIR_INACTIVE",
+          need: "x",
+          why: "y",
+          required_fact_roles: ["hard_constraint"],
+          current_state: "known",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          id_lifecycle: "retired",
+        },
+      ],
+    } as unknown as DecisionContext;
+    const seeded = seedEvidenceRegistryForFace02({
+      dc: dcWithInactive,
+      pack: forged,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: forged,
+      dc: dcWithInactive,
+      fact_selection: seeded.fact_selection,
+      enrich: forged.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject_inactive_or_missing")));
+  }
+  console.log("I PASS — inactive DIR rejected");
+
+  // J: linked DIRs exist but no unit↔DIR authority → empty bindings
+  {
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      // no edges
+    });
+    assert.equal(certificate.algorithm, RELATED_DIR_ENRICHMENT_ALGORITHM);
+    assert.ok((certificate.linked_dir_ids ?? []).length >= 1);
+    assert.ok(certificate.missing_authority);
+    assert.ok(
+      certificate.bindings.every((b) => b.related_dir_ids.length === 0),
+    );
+    assert.equal(ctx.credible_fact_claim_keys.size, 0);
+  }
+  console.log("J PASS — linked DIR alone does not bind units");
+
+  // K: cross-claim isolation under semantic authority
+  {
+    assert.ok(ctxAuth.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`));
+    assert.ok(
+      ctxAuth.credible_fact_claim_keys.has(
+        `${offerClaimId}::${unverifiedFactId}`,
+      ),
+    );
+    assert.ok(
+      !ctxAuth.credible_fact_claim_keys.has(
+        `${sciClaimId}::${unverifiedFactId}`,
+      ),
+    );
+    assert.ok(
+      !ctxAuth.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
+    );
+    // offer claim must not inherit science_02's runway fact
+    assert.equal(
+      validateFace02ProductionOutput({
+        raw: validPage02WithFacts({
+          content_units: [
+            ...(validPage02().content_units as unknown[]),
+            {
+              unit_id: "u_fact_runway",
+              kind: "reality_fact",
+              text: "Available runway supports exploring without resigning cold while the buffer holds.",
+              claim_ids: [offerClaimId],
+              evidence_ids: [factEv],
+              fact_ids: [factId],
+            },
+          ],
+          personal_reality_interplay_unit_ids: ["u_personal", "u_fact_runway"],
+          explanation_boundary: {
+            claim_ids: [claimId, sciClaimId, offerClaimId],
+            personal_unit_ids: ["u_personal"],
+            confirmed_fact_unit_ids: ["u_fact_runway"],
+            hypothesis_unit_ids: ["u_hyp"],
+            uncertainty_notes: ["Offer terms may still shift"],
+          },
+        }),
+        locale: "en",
+        ctx: ctxAuth,
+      }).ok,
+      false,
+      "offer claim must not inherit science runway ownership",
+    );
+    // correct owner passes
+    assert.equal(
+      validateFace02ProductionOutput({
+        raw: validPage02WithFacts(),
+        locale: "en",
+        ctx: ctxAuth,
+      }).ok,
+      true,
+    );
+  }
+  console.log("K PASS — cross-claim isolation");
+
+  // Extra: candidate fact never pairs; mirror mutation never creates pairs
+  {
+    const trusted = ctxAuth.trusted_claim_dir_bindings;
+    const candPairs = buildCrediblePage02FactClaimPairs({
+      registry: ctxAuth.registry,
+      fact_selection: {
+        ...ctxAuth.fact_selection,
+        selected: ctxAuth.fact_selection.selected.map((r) =>
+          r.fact.fact_id === unverifiedFactId
+            ? { ...r, kind: "candidate" as const }
+            : r,
+        ),
+      },
+      dc,
+      trustedBindings: trusted,
+    });
+    assert.ok(!candPairs.pairKeys.has(`${offerClaimId}::${unverifiedFactId}`));
+
+    const offer = ctxAuth.registry.claims[offerClaimId]!;
+    const prev = [...(offer.related_dir_ids ?? [])];
+    offer.related_dir_ids = ["DIR_RUNWAY"];
+    const fromMirror = buildCrediblePage02FactClaimPairs({
+      registry: ctxAuth.registry,
+      fact_selection: ctxAuth.fact_selection,
+      dc,
+      trustedBindings: trusted,
+    });
+    assert.ok(
+      fromMirror.pairKeys.has(`${offerClaimId}::${unverifiedFactId}`),
+      "pairs follow trustedBindings, not mutated mirror",
+    );
+    assert.ok(!fromMirror.pairKeys.has(`${offerClaimId}::${factId}`));
+    offer.related_dir_ids = prev;
+  }
+
+  // Ambiguous role suggestions still fail-closed
   {
     const dirsById = new Map(dc.dirs!.map((d) => [d.dir_id, d]));
-    // Inject a second DIR that also requires hard_constraint
     const ambiguousDirs = new Map(dirsById);
     ambiguousDirs.set("DIR_RUNWAY_ALT", {
       ...dc.dirs!.find((d) => d.dir_id === "DIR_RUNWAY")!,
       dir_id: "DIR_RUNWAY_ALT",
       required_fact_roles: ["hard_constraint"],
     });
+    assert.equal(resolveRoleToUniqueDir("hard_constraint", ambiguousDirs), null);
     assert.equal(
-      resolveRoleToUniqueDir("hard_constraint", ambiguousDirs),
-      null,
-      "ambiguous role must not unique-resolve",
+      parseModelDirSuggestions(
+        ["hard_constraint", "role:hard_constraint"],
+        ambiguousDirs,
+      ).suggested_dir_ids.length,
+      0,
     );
-    const parsed = parseModelDirSuggestions(
-      ["hard_constraint", "role:hard_constraint"],
-      ambiguousDirs,
+    assert.deepEqual(
+      parseModelDirSuggestions(
+        ["DIR_DOES_NOT_EXIST", "dir:INACTIVE_X"],
+        dirsById,
+      ).suggested_dir_ids,
+      [],
     );
-    assert.equal(parsed.suggested_dir_ids.length, 0);
-    assert.ok(parsed.rejected_tokens.length >= 1);
   }
 
-  // C: nonexistent / inactive DIR suggestions
-  {
-    const dirsById = new Map(dc.dirs!.map((d) => [d.dir_id, d]));
-    const parsed = parseModelDirSuggestions(
-      ["DIR_DOES_NOT_EXIST", "dir:INACTIVE_X"],
-      dirsById,
-    );
-    assert.deepEqual(parsed.suggested_dir_ids, []);
-  }
-
-  // E: bare unit.related_dir_ids without enrichment certificate → no pairs
+  // Bare unit.related_dir_ids without certificate → empty
   {
     const barePack = makePack({ bazi: true, ziwei: false });
     for (const u of barePack.units) {
@@ -998,47 +1294,55 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
       fact_selection: seededBare.fact_selection,
       registry: seededBare.registry,
     });
-    const barePairs = buildCrediblePage02FactClaimPairs({
-      registry: seededBare.registry,
-      fact_selection: seededBare.fact_selection,
-      dc,
-      trustedBindings: bareTrusted,
-    });
-    assert.equal(barePairs.pairs.length, 0);
-    assert.ok(
-      [...bareTrusted.values()].every((b) => b.related_dir_ids.length === 0),
+    assert.equal(
+      buildCrediblePage02FactClaimPairs({
+        registry: seededBare.registry,
+        fact_selection: seededBare.fact_selection,
+        dc,
+        trustedBindings: bareTrusted,
+      }).pairs.length,
+      0,
     );
   }
 
-  // Enrich produces certificate + exclusive slots (production path)
+  // Reject legacy ordinal algorithm certificate
   {
-    const raw = makePack({ bazi: true, ziwei: false });
-    const { pack: enriched, certificate } = enrichBookJudgmentRelatedDirIds({
-      pack: raw,
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
       dc,
     });
-    assert.equal(certificate.algorithm, "exclusive_linked_dir_slots_v1");
-    assert.ok(enriched.related_dir_enrichment);
-    const assigned = certificate.bindings
-      .filter((b) => b.related_dir_ids.length)
-      .map((b) => b.related_dir_ids[0]!);
-    assert.equal(new Set(assigned).size, assigned.length, "exclusive slots");
-    assert.ok(assigned.length >= 1);
+    const legacy = structuredClone(pack);
+    (legacy.related_dir_enrichment as { algorithm: string }).algorithm =
+      "exclusive_linked_dir_slots_v1";
+    const seeded = seedEvidenceRegistryForFace02({
+      dc,
+      pack: legacy,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const v = validateRelatedDirEnrichmentCertificate({
+      pack: legacy,
+      dc,
+      fact_selection: seeded.fact_selection,
+      enrich: legacy.related_dir_enrichment,
+    });
+    assert.equal(v.ok, false);
+    assert.ok(v.reasons.some((r) => r.includes("reject:bad_algorithm")));
   }
 
-  console.log("structured-association negatives PASS");
+  console.log("structured-association negatives A–K PASS");
 }
 
 // Non-confirmed reality_fact in summary without hypothesis boundary → reject
 {
-  const page = validPage02({
+  const page = validPage02WithFacts({
     content_units: [
-      ...(validPage02().content_units as unknown[]),
+      ...(validPage02WithFacts().content_units as unknown[]),
       {
         unit_id: "u_fact_salary",
         kind: "reality_fact",
         text: "Cash figure is still an estimate pending hardened terms.",
-        claim_ids: [sciClaimId],
+        claim_ids: [offerClaimId],
         evidence_ids: [unverifiedFactEv],
         fact_ids: [unverifiedFactId],
       },
@@ -1055,7 +1359,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   const omitted = validateFace02ProductionOutput({
     raw: page,
     locale: "en",
-    ctx,
+    ctx: ctxAuth,
   });
   assert.equal(omitted.ok, false, "non-confirmed fact omitted from hypothesis");
   assert.ok(
@@ -1073,7 +1377,7 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
       },
     },
     locale: "en",
-    ctx,
+    ctx: ctxAuth,
   });
   assert.equal(
     fixed.ok,

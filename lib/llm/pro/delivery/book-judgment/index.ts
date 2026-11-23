@@ -61,8 +61,14 @@ export {
 export {
   enrichBookJudgmentRelatedDirIds,
   isRelatedDirEnrichmentCertificate,
+  isAllowedAssociationBasis,
+  canonicalProgramUnitDirEdgeRef,
   RELATED_DIR_ENRICHMENT_ALGORITHM,
   RELATED_DIR_ENRICHMENT_VERSION,
+  RELATED_DIR_ASSOCIATION_BASES,
+  MISSING_UNIT_DIR_AUTHORITY_REF,
+  type ProgramUnitDirAuthorityEdge,
   type RelatedDirEnrichmentBinding,
   type RelatedDirEnrichmentCertificate,
+  type RelatedDirAssociationBasis,
 } from "./related-dir-enrichment";

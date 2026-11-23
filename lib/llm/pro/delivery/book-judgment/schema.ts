@@ -92,15 +92,21 @@ export type BookJudgmentUnit = z.infer<typeof BookJudgmentUnitSchema>;
 
 export const RelatedDirEnrichmentCertificateSchema = z.object({
   version: z.literal(1),
-  algorithm: z.literal("exclusive_linked_dir_slots_v1"),
+  algorithm: z.literal("program_unit_dir_authority_v1"),
   certified_at: z.string().trim().min(1),
   dc_content_hash: z.string().trim().max(128).nullable(),
+  /** Audit: Fact→DIR linked set — never implies Unit→DIR by itself. */
   linked_dir_ids: z.array(z.string().trim().min(1).max(80)).max(64),
+  /** Present when no unit received a proven DIR binding. */
+  missing_authority: z.string().trim().min(1).max(160).nullable(),
   bindings: z
     .array(
       z.object({
         unit_id: z.string().trim().min(1).max(64),
         related_dir_ids: z.array(z.string().trim().min(1).max(80)).max(16),
+        /** Canonical authority ref; missing:* when unbound. */
+        source_ref: z.string().trim().min(1).max(240),
+        association_basis: z.enum(["none", "program_authority_edge"]),
         reasons: z.array(z.string().trim().min(1).max(160)).max(24),
       }),
     )

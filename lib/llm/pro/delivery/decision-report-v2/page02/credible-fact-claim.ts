@@ -1,15 +1,22 @@
 /**
  * Trusted Claim↔DIR↔Fact association for Page02.
  *
- * Trust root = program-certified bindings (BookJudgmentUnit.related_dir_ids ∩
- * DC linked structured dirs). Never trust model anchors / body_text /
- * explanation / declared_* as authority.
+ * Trust root = pack.related_dir_enrichment certificate after full validation.
+ * Bare unit.related_dir_ids / model anchors / declared_* are never authority.
  *
  * Never mutates supports_claim_ids to force validation pass.
  */
 
 import type { DecisionContext, DIR, RealityFact } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack, BookJudgmentUnit } from "@/lib/llm/pro/delivery/book-judgment/schema";
+import {
+  RELATED_DIR_ENRICHMENT_ALGORITHM,
+  RELATED_DIR_ENRICHMENT_VERSION,
+  MISSING_UNIT_DIR_AUTHORITY_REF,
+  isAllowedAssociationBasis,
+  type RelatedDirEnrichmentCertificate,
+  type RelatedDirEnrichmentBinding,
+} from "@/lib/llm/pro/delivery/book-judgment/related-dir-enrichment";
 import type { EvidenceRegistry, ReportClaim } from "../types";
 import type { FactSelectionResult } from "../fact-relevance";
 import { factEvidenceIdFor } from "./fact-id";
@@ -28,6 +35,8 @@ export type TrustedClaimDirBinding = {
   unit_id: string;
   related_dir_ids: string[];
   reasons: string[];
+  source_ref?: string;
+  association_basis?: string;
 };
 
 export function crediblePairKey(claimId: string, factId: string): string {
@@ -174,8 +183,212 @@ function unitIdFromClaimId(claimId: string): string | null {
   return id || null;
 }
 
+export type CertificateValidationFail = {
+  ok: false;
+  reasons: string[];
+};
+
+export type CertificateValidationOk = {
+  ok: true;
+  certificate: RelatedDirEnrichmentCertificate;
+  /** unit_id → validated binding (dirs already filtered to active∩linked). */
+  bindingsByUnit: Map<string, RelatedDirEnrichmentBinding>;
+};
+
 /**
- * Build trusted per-claim DIR bindings from pack.related_dir_enrichment only.
+ * Full certificate gate — version/algorithm presence alone is insufficient.
+ */
+export function validateRelatedDirEnrichmentCertificate(input: {
+  pack: BookJudgmentPack;
+  dc: DecisionContext;
+  fact_selection: FactSelectionResult;
+  enrich: unknown;
+}): CertificateValidationOk | CertificateValidationFail {
+  const reasons: string[] = [];
+  const enrich = input.enrich;
+  if (!enrich || typeof enrich !== "object" || Array.isArray(enrich)) {
+    return { ok: false, reasons: ["reject:missing_related_dir_enrichment_certificate"] };
+  }
+  const c = enrich as Record<string, unknown>;
+
+  if (c.version !== RELATED_DIR_ENRICHMENT_VERSION) {
+    reasons.push(`reject:bad_version:${String(c.version)}`);
+  }
+  if (c.algorithm !== RELATED_DIR_ENRICHMENT_ALGORITHM) {
+    reasons.push(`reject:bad_algorithm:${String(c.algorithm)}`);
+  }
+  if (typeof c.certified_at !== "string" || !c.certified_at.trim()) {
+    reasons.push("reject:missing_certified_at");
+  }
+  if (!("dc_content_hash" in c)) {
+    reasons.push("reject:missing_dc_content_hash_field");
+  } else {
+    const certHash =
+      c.dc_content_hash === null || c.dc_content_hash === undefined
+        ? null
+        : String(c.dc_content_hash);
+    const dcHash = input.dc.content_hash ?? null;
+    if (certHash !== dcHash) {
+      reasons.push(
+        `reject:dc_content_hash_mismatch:cert=${certHash ?? "null"}:dc=${dcHash ?? "null"}`,
+      );
+    }
+  }
+  if (!Array.isArray(c.linked_dir_ids)) {
+    reasons.push("reject:missing_linked_dir_ids");
+  }
+  if (!("missing_authority" in c)) {
+    reasons.push("reject:missing_missing_authority_field");
+  } else if (
+    c.missing_authority !== null &&
+    typeof c.missing_authority !== "string"
+  ) {
+    reasons.push("reject:bad_missing_authority_type");
+  }
+  if (!Array.isArray(c.bindings)) {
+    reasons.push("reject:missing_bindings");
+    return { ok: false, reasons };
+  }
+
+  const unitsById = new Map<string, BookJudgmentUnit>();
+  for (const u of input.pack.units) unitsById.set(u.id, u);
+
+  const dirsById = activeDirsById(input.dc);
+  const linkedDirs = linkedStructuredDirIds(input);
+  const seenUnits = new Set<string>();
+  const dirOwners = new Map<string, string>();
+  const bindingsByUnit = new Map<string, RelatedDirEnrichmentBinding>();
+
+  for (const raw of c.bindings) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      reasons.push("reject:malformed_binding");
+      continue;
+    }
+    const b = raw as Record<string, unknown>;
+    const unit_id = typeof b.unit_id === "string" ? b.unit_id.trim() : "";
+    if (!unit_id) {
+      reasons.push("reject:binding_missing_unit_id");
+      continue;
+    }
+    if (seenUnits.has(unit_id)) {
+      reasons.push(`reject:duplicate_unit_binding:${unit_id}`);
+      continue;
+    }
+    seenUnits.add(unit_id);
+
+    if (!unitsById.has(unit_id)) {
+      reasons.push(`reject:unknown_unit:${unit_id}`);
+      continue;
+    }
+
+    const source_ref =
+      typeof b.source_ref === "string" ? b.source_ref.trim() : "";
+    if (!source_ref) {
+      reasons.push(`reject:missing_source_ref:${unit_id}`);
+      continue;
+    }
+    if (!isAllowedAssociationBasis(b.association_basis)) {
+      reasons.push(
+        `reject:bad_association_basis:${unit_id}:${String(b.association_basis)}`,
+      );
+      continue;
+    }
+    const association_basis = b.association_basis as RelatedDirEnrichmentBinding["association_basis"];
+    const rawDirs = Array.isArray(b.related_dir_ids)
+      ? b.related_dir_ids.map((d) => String(d).trim()).filter(Boolean)
+      : null;
+    if (!rawDirs) {
+      reasons.push(`reject:bad_related_dir_ids:${unit_id}`);
+      continue;
+    }
+    const bindingReasons = Array.isArray(b.reasons)
+      ? b.reasons.map((r) => String(r)).filter(Boolean)
+      : [];
+
+    if (rawDirs.length === 0) {
+      if (association_basis !== "none") {
+        reasons.push(`reject:empty_dirs_non_none_basis:${unit_id}`);
+        continue;
+      }
+      if (!source_ref.startsWith("missing:")) {
+        reasons.push(`reject:empty_dirs_non_missing_ref:${unit_id}`);
+        continue;
+      }
+      bindingsByUnit.set(unit_id, {
+        unit_id,
+        related_dir_ids: [],
+        source_ref,
+        association_basis,
+        reasons: bindingReasons,
+      });
+      continue;
+    }
+
+    // Non-empty: require real authority, not missing:* placeholder.
+    if (source_ref === MISSING_UNIT_DIR_AUTHORITY_REF || source_ref.startsWith("missing:")) {
+      reasons.push(`reject:nonempty_with_missing_ref:${unit_id}`);
+      continue;
+    }
+    if (association_basis === "none") {
+      reasons.push(`reject:nonempty_with_none_basis:${unit_id}`);
+      continue;
+    }
+    if (association_basis !== "program_authority_edge") {
+      reasons.push(`reject:unsupported_basis:${unit_id}:${association_basis}`);
+      continue;
+    }
+
+    const certified: string[] = [];
+    let dirFail = false;
+    for (const dirId of rawDirs) {
+      if (!dirsById.has(dirId)) {
+        reasons.push(`reject_inactive_or_missing:${dirId}`);
+        dirFail = true;
+        continue;
+      }
+      if (!linkedDirs.has(dirId)) {
+        reasons.push(`reject_not_linked:${dirId}`);
+        dirFail = true;
+        continue;
+      }
+      const priorOwner = dirOwners.get(dirId);
+      if (priorOwner && priorOwner !== unit_id) {
+        reasons.push(
+          `reject:illegal_multi_claim_dir:${dirId}:units=${priorOwner},${unit_id}`,
+        );
+        dirFail = true;
+        continue;
+      }
+      dirOwners.set(dirId, unit_id);
+      certified.push(dirId);
+    }
+    if (dirFail || certified.length !== rawDirs.length) {
+      // Any invalid DIR in a non-empty binding voids the whole certificate.
+      continue;
+    }
+
+    bindingsByUnit.set(unit_id, {
+      unit_id,
+      related_dir_ids: certified,
+      source_ref,
+      association_basis,
+      reasons: bindingReasons,
+    });
+  }
+
+  if (reasons.length) {
+    return { ok: false, reasons };
+  }
+
+  return {
+    ok: true,
+    certificate: enrich as RelatedDirEnrichmentCertificate,
+    bindingsByUnit,
+  };
+}
+
+/**
+ * Build trusted per-claim DIR bindings from validated pack.related_dir_enrichment only.
  * Bare unit.related_dir_ids / model anchors are never the trust root.
  */
 export function buildTrustedClaimDirBindings(input: {
@@ -187,30 +400,21 @@ export function buildTrustedClaimDirBindings(input: {
   const out = new Map<string, TrustedClaimDirBinding>();
   const dirsById = activeDirsById(input.dc);
   const linkedDirs = linkedStructuredDirIds(input);
-  const enrich = input.pack?.related_dir_enrichment;
-  const certOk =
-    enrich &&
-    enrich.version === 1 &&
-    enrich.algorithm === "exclusive_linked_dir_slots_v1" &&
-    Array.isArray(enrich.bindings);
 
   const unitsById = new Map<string, BookJudgmentUnit>();
   for (const u of input.pack?.units ?? []) {
     unitsById.set(u.id, u);
   }
 
-  const bindingByUnit = new Map<
-    string,
-    { related_dir_ids: string[]; reasons: string[] }
-  >();
-  if (certOk) {
-    for (const b of enrich.bindings) {
-      bindingByUnit.set(b.unit_id, {
-        related_dir_ids: [...(b.related_dir_ids ?? [])],
-        reasons: [...(b.reasons ?? [])],
-      });
-    }
-  }
+  const validated =
+    input.pack != null
+      ? validateRelatedDirEnrichmentCertificate({
+          pack: input.pack,
+          dc: input.dc,
+          fact_selection: input.fact_selection,
+          enrich: input.pack.related_dir_enrichment,
+        })
+      : ({ ok: false, reasons: ["reject:missing_pack"] } as const);
 
   for (const claim of Object.values(input.registry.claims)) {
     if (claim.claim_type !== "reality_analysis") continue;
@@ -221,9 +425,9 @@ export function buildTrustedClaimDirBindings(input: {
     if (unit.track !== "science" && unit.track !== "convergence") continue;
 
     const reasons: string[] = [];
-    if (!certOk) {
-      reasons.push("reject:missing_related_dir_enrichment_certificate");
-      // Even if unit.related_dir_ids is populated, ignore without certificate.
+    if (!validated.ok) {
+      reasons.push("reject:invalid_related_dir_enrichment_certificate");
+      reasons.push(...validated.reasons.slice(0, 8));
       if ((unit.related_dir_ids ?? []).length) {
         reasons.push("ignore_uncertified_unit_related_dir_ids");
       }
@@ -236,7 +440,7 @@ export function buildTrustedClaimDirBindings(input: {
       continue;
     }
 
-    const fromCert = bindingByUnit.get(unitId);
+    const fromCert = validated.bindingsByUnit.get(unitId);
     reasons.push("source:related_dir_enrichment");
     if (!fromCert) {
       reasons.push("no_certificate_binding_for_unit");
@@ -245,13 +449,16 @@ export function buildTrustedClaimDirBindings(input: {
         unit_id: unitId,
         related_dir_ids: [],
         reasons,
+        source_ref: MISSING_UNIT_DIR_AUTHORITY_REF,
+        association_basis: "none",
       });
       continue;
     }
     reasons.push(...fromCert.reasons.slice(0, 8));
 
+    // Re-check active∩linked (defense in depth after cert validation).
     const certified: string[] = [];
-    for (const dirId of fromCert.related_dir_ids.map((d) => d.trim()).filter(Boolean)) {
+    for (const dirId of fromCert.related_dir_ids) {
       if (!dirsById.has(dirId)) {
         reasons.push(`reject_inactive_or_missing:${dirId}`);
         continue;
@@ -264,7 +471,6 @@ export function buildTrustedClaimDirBindings(input: {
       reasons.push(`accept:${dirId}`);
     }
 
-    // Model suggestions never expand.
     const suggestions = parseModelDirSuggestions(
       [
         ...(unit.declared_related_dir_ids ?? []),
@@ -284,6 +490,8 @@ export function buildTrustedClaimDirBindings(input: {
       unit_id: unitId,
       related_dir_ids: certified,
       reasons,
+      source_ref: fromCert.source_ref,
+      association_basis: fromCert.association_basis,
     });
   }
 
