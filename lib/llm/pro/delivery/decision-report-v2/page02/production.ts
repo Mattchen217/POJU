@@ -35,7 +35,7 @@ import {
   type CredibleFactClaimPair,
 } from "./credible-fact-claim";
 
-export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23b" as const;
+export const FACE02_PROMPT_VERSION = "face02-v2-units-2026-11-23c" as const;
 export const FACE02_SCHEMA_VERSION = "face02-v2" as const;
 
 export type Face02ProductionContext = {

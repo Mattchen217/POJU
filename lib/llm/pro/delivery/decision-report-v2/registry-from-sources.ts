@@ -30,6 +30,7 @@ import type {
   ReportEvidence,
 } from "./types";
 import type { Page01FeedSlice } from "./page01/slice";
+import { resolveStructuredDirsFromAnchors } from "./page02/credible-fact-claim";
 
 export type RegistrySeedResult = {
   registry: EvidenceRegistry;
@@ -259,20 +260,35 @@ function seedEvidenceRegistryForFace(input: {
 
     if (unit.serves_face.includes(faceId)) {
       const claim_id = `claim_${unit.id}`;
+      const claimType =
+        unit.track === "destiny"
+          ? ("personal_interpretation" as const)
+          : unit.track === "science"
+            ? ("reality_analysis" as const)
+            : ("recommendation" as const);
+      // Page02 only: per-claim DIR seeds from structured anchors (not bulk).
+      let related_dir_ids: string[] | undefined;
+      if (faceId === "02" && claimType === "reality_analysis" && input.dc) {
+        const dirsById = new Map(
+          (input.dc.dirs ?? [])
+            .filter((d) => d.id_lifecycle === "active")
+            .map((d) => [d.dir_id, d]),
+        );
+        related_dir_ids = resolveStructuredDirsFromAnchors(
+          unit.anchors,
+          dirsById,
+        );
+      }
       const claim: ReportClaim = {
         claim_id,
         page_id: faceId,
         segment_id: unit.serves_segment ?? "A",
         body_text: unit.claim,
-        claim_type:
-          unit.track === "destiny"
-            ? "personal_interpretation"
-            : unit.track === "science"
-              ? "reality_analysis"
-              : "recommendation",
+        claim_type: claimType,
         evidence_ids: [evidence_id],
         evidence_requirement: "required",
         limitation: unit.caveat,
+        ...(related_dir_ids ? { related_dir_ids } : {}),
       };
       registerClaim(registry, claim);
       key_claims.push(claim);

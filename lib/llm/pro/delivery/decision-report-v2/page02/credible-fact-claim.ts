@@ -57,10 +57,56 @@ export function structuredLinkedDirsForFact(
 }
 
 /**
- * Program-certify claim.related_dir_ids from DC structure.
- * - reality_analysis claims receive the union of structured dirs from linked facts.
- * - all other claim types get [].
+ * Per-claim DIR candidates from pack unit anchors (structured tokens only).
+ * Accepts exact active dir_id, `dir:<dir_id>`, or an exact required_fact_role
+ * that appears on an active DIR. Never parses free-text body/explanation.
+ */
+export function resolveStructuredDirsFromAnchors(
+  anchors: readonly string[] | undefined,
+  dirsById: ReadonlyMap<string, DIR>,
+): string[] {
+  if (!anchors?.length) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (dirId: string) => {
+    const t = dirId.trim();
+    if (!t || seen.has(t) || !dirsById.has(t)) return;
+    seen.add(t);
+    out.push(t);
+  };
+
+  for (const raw of anchors) {
+    const a = String(raw ?? "").trim();
+    if (!a) continue;
+    if (dirsById.has(a)) {
+      push(a);
+      continue;
+    }
+    const dirPref = /^dir:(.+)$/i.exec(a);
+    if (dirPref?.[1]) {
+      push(dirPref[1].trim());
+      continue;
+    }
+    const rolePref = /^role:(.+)$/i.exec(a);
+    const role = (rolePref?.[1] ?? a).trim();
+    if (!role) continue;
+    for (const dir of dirsById.values()) {
+      if ((dir.required_fact_roles ?? []).includes(role)) {
+        push(dir.dir_id);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Program-certify claim.related_dir_ids per claim (no bulk cross-claim grant).
+ *
+ * - reality_analysis: keep only dirs already seeded on the claim that are
+ *   also present among linked-fact structured dirs.
+ * - all other claim types: [].
  * Does not read claim.body_text or evidence.explanation.
+ * Does not assign the union of all linked DIRs to every reality_analysis claim.
  */
 export function certifyClaimDirBindings(input: {
   registry: EvidenceRegistry;
@@ -77,13 +123,18 @@ export function certifyClaimDirBindings(input: {
     }
   }
 
-  const certified = [...linkedDirs];
   for (const claim of Object.values(input.registry.claims)) {
-    if (claim.claim_type === "reality_analysis") {
-      claim.related_dir_ids = [...certified];
-    } else {
+    if (claim.claim_type !== "reality_analysis") {
       claim.related_dir_ids = [];
+      continue;
     }
+    const seeded = (claim.related_dir_ids ?? [])
+      .map((d) => d.trim())
+      .filter(Boolean);
+    // Per-claim isolation: only retain this claim's own seeded dirs ∩ linked.
+    claim.related_dir_ids = seeded.filter(
+      (d) => linkedDirs.has(d) && dirsById.has(d),
+    );
   }
 }
 

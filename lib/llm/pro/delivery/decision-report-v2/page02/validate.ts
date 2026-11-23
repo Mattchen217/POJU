@@ -716,6 +716,95 @@ export function validateFace02Output(input: {
     }
   }
 
+  // Boundary status completeness: every body-used reality_fact unit must be
+  // classified into confirmed XOR hypothesis by per-fact DC status.
+  const bodyReferencedUnitIds = new Set<string>([
+    ...page.page_summary_unit_ids,
+    ...page.relevant_personal_factor_unit_ids,
+    ...page.personal_reality_interplay_unit_ids,
+    ...page.why_judgment_fits_unit_ids,
+    ...boundary.personal_unit_ids,
+    ...boundary.confirmed_fact_unit_ids,
+    ...boundary.hypothesis_unit_ids,
+  ]);
+  const confirmedSet = new Set(boundary.confirmed_fact_unit_ids);
+  const hypothesisSet = new Set(boundary.hypothesis_unit_ids);
+  for (const u of page.content_units) {
+    if (u.kind !== "reality_fact") continue;
+    if (!bodyReferencedUnitIds.has(u.unit_id)) continue;
+
+    const statuses: string[] = [];
+    for (const fid of u.fact_ids) {
+      const resolved = resolveCanonicalPage02FactId(fid, factCtx);
+      if (!resolved.ok) {
+        issues.push({
+          code: "reality_fact_id_unresolved",
+          detail: `reality_fact unit「${u.unit_id}」fact_id「${fid}」无法解析`,
+          path: `content_units[${u.unit_id}]`,
+        });
+        continue;
+      }
+      const status = input.factStatusById?.get(resolved.fact_id) ?? "unknown";
+      statuses.push(status);
+    }
+    if (!statuses.length) continue;
+
+    const allConfirmed = statuses.every((s) => s === "confirmed");
+    const anyConfirmed = statuses.some((s) => s === "confirmed");
+    const allNonConfirmed = statuses.every((s) => s !== "confirmed");
+
+    if (anyConfirmed && !allConfirmed) {
+      issues.push({
+        code: "reality_fact_status_mixed",
+        detail: `reality_fact unit「${u.unit_id}」混有 confirmed 与非 confirmed 事实，须拆分`,
+        path: `content_units[${u.unit_id}]`,
+      });
+      continue;
+    }
+
+    const inConfirmed = confirmedSet.has(u.unit_id);
+    const inHypothesis = hypothesisSet.has(u.unit_id);
+    if (inConfirmed && inHypothesis) {
+      issues.push({
+        code: "boundary_fact_status_overlap",
+        detail: `reality_fact unit「${u.unit_id}」不得同时出现在 confirmed 与 hypothesis`,
+        path: "explanation_boundary",
+      });
+    }
+
+    if (allConfirmed) {
+      if (!inConfirmed) {
+        issues.push({
+          code: "confirmed_fact_boundary_omitted",
+          detail: `confirmed reality_fact unit「${u.unit_id}」须进入 confirmed_fact_unit_ids`,
+          path: "explanation_boundary.confirmed_fact_unit_ids",
+        });
+      }
+      if (inHypothesis) {
+        issues.push({
+          code: "hypothesis_confirmed_collision",
+          detail: `confirmed reality_fact unit「${u.unit_id}」不得进入 hypothesis_unit_ids`,
+          path: "explanation_boundary.hypothesis_unit_ids",
+        });
+      }
+    } else if (allNonConfirmed) {
+      if (!inHypothesis) {
+        issues.push({
+          code: "hypothesis_fact_boundary_omitted",
+          detail: `非 confirmed reality_fact unit「${u.unit_id}」须进入 hypothesis_unit_ids`,
+          path: "explanation_boundary.hypothesis_unit_ids",
+        });
+      }
+      if (inConfirmed) {
+        issues.push({
+          code: "fact_status_upgrade",
+          detail: `非 confirmed reality_fact unit「${u.unit_id}」不得进入 confirmed_fact_unit_ids`,
+          path: "explanation_boundary.confirmed_fact_unit_ids",
+        });
+      }
+    }
+  }
+
   // Auxiliary: copy-paste of DC fact text outside reality_fact units
   const realityFactUnitTexts = new Set(
     page.content_units

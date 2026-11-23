@@ -71,6 +71,11 @@ export const ReportClaimSchema = z.object({
   evidence_ids: z.array(NonEmpty.max(80)).max(24),
   evidence_requirement: EvidenceRequirementSchema,
   limitation: z.string().trim().max(480).optional(),
+  /**
+   * Program-certified DIR bindings (Page02). Optional; never model-authored
+   * as a trusted association without certification.
+   */
+  related_dir_ids: z.array(NonEmpty.max(80)).max(24).optional(),
 });
 
 export const ReportEvidenceSchema = z.object({

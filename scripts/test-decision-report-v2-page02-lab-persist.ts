@@ -85,7 +85,7 @@ const pack: BookJudgmentPack = {
       id: "u_sci_lab",
       track: "science",
       claim: "Eight-month runway supports a staged explore-without-resign path.",
-      anchors: ["runway_buffer"],
+      anchors: ["cash_runway", "dir_main"],
       serves_face: ["01", "02"],
       term_ids: [],
       source_domain: "science",

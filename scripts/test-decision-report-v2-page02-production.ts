@@ -176,7 +176,17 @@ function makePack(opts: {
     id: "u_science_02",
     track: "science",
     claim: "Eight-month runway supports staged explore-without-resign.",
-    anchors: ["runway_months"],
+    // Structured DIR/role anchors — program seeds claim.related_dir_ids per claim.
+    anchors: ["hard_constraint", "DIR_RUNWAY"],
+    serves_face: ["02"],
+    term_ids: [],
+    source_domain: "science",
+  } as never);
+  units.push({
+    id: "u_science_offer_02",
+    track: "science",
+    claim: "Offer cash figure remains an estimate until term sheet hardens.",
+    anchors: ["job_offer", "DIR_OFFER"],
     serves_face: ["02"],
     term_ids: [],
     source_domain: "science",
@@ -323,8 +333,16 @@ const claimId =
   )?.claim_id || Object.keys(ctx.registry.claims)[0]!;
 const sciClaimId =
   Object.values(ctx.registry.claims).find(
+    (c) => c.claim_id === "claim_u_science_02",
+  )?.claim_id ||
+  Object.values(ctx.registry.claims).find(
     (c) => c.claim_type === "reality_analysis",
-  )?.claim_id || Object.keys(ctx.registry.claims).find((c) => c !== claimId)!;
+  )?.claim_id ||
+  Object.keys(ctx.registry.claims).find((c) => c !== claimId)!;
+const offerClaimId =
+  Object.values(ctx.registry.claims).find(
+    (c) => c.claim_id === "claim_u_science_offer_02",
+  )?.claim_id || "";
 const personalEv =
   ctx.slice.evidence_registry.evidence.find(
     (e) => e.source_type === "personal_reading",
@@ -335,15 +353,37 @@ const mechEvId = Object.values(ctx.registry.evidence).find(
 const factId = "fact_runway";
 const factEv = `ev_fact_${factId}`;
 const unverifiedFactId = "fact_salary_guess";
+const unverifiedFactEv = `ev_fact_${unverifiedFactId}`;
 
-// Structured pairs: science owns runway; destiny does not (no DIR binding).
+// Structured pairs: per-claim DIR isolation (no bulk cross-claim grant).
 assert.ok(
   !ctx.credible_fact_claim_keys.has(`${claimId}::${factId}`),
   "destiny must not own runway without DIR binding",
 );
 assert.ok(
   ctx.credible_fact_claim_keys.has(`${sciClaimId}::${factId}`),
-  "science claim owns runway via DIR_RUNWAY",
+  "runway science claim owns runway via DIR_RUNWAY",
+);
+assert.ok(offerClaimId, "offer science claim seeded");
+assert.ok(
+  ctx.credible_fact_claim_keys.has(`${offerClaimId}::${unverifiedFactId}`),
+  "offer claim owns salary-guess via DIR_OFFER",
+);
+assert.ok(
+  !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
+  "runway claim must NOT own offer fact",
+);
+assert.ok(
+  !ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`),
+  "offer claim must NOT own runway fact",
+);
+assert.deepEqual(
+  [...(ctx.registry.claims[sciClaimId]?.related_dir_ids ?? [])].sort(),
+  ["DIR_RUNWAY"],
+);
+assert.deepEqual(
+  [...(ctx.registry.claims[offerClaimId]?.related_dir_ids ?? [])].sort(),
+  ["DIR_OFFER"],
 );
 for (const claim of Object.values(ctx.registry.claims)) {
   assert.ok(
@@ -796,7 +836,87 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
     new Map(dc.dirs!.map((d) => [d.dir_id, d])),
   );
   assert.deepEqual(dirs, ["DIR_RUNWAY"]);
+
+  // Cross-claim bulk grant must not happen: two reality_analysis claims,
+  // two DIRs, two facts — each claim only owns its own DIR/fact.
+  assert.ok(
+    !ctx.credible_fact_claim_keys.has(`${sciClaimId}::${unverifiedFactId}`),
+  );
+  assert.ok(!ctx.credible_fact_claim_keys.has(`${offerClaimId}::${factId}`));
+  assert.equal(
+    validateFace02ProductionOutput({
+      raw: validPage02({
+        content_units: [
+          ...(validPage02().content_units as unknown[]).map((u) => {
+            const row = u as { unit_id?: string; claim_ids?: string[] };
+            if (row.unit_id === "u_fact_runway") {
+              return { ...row, claim_ids: [offerClaimId] };
+            }
+            return u;
+          }),
+        ],
+      }),
+      locale: "en",
+      ctx,
+    }).ok,
+    false,
+    "offer claim citing runway fact must fail (cross-claim)",
+  );
   console.log("structured-association negatives PASS");
+}
+
+// Non-confirmed reality_fact in summary without hypothesis boundary → reject
+{
+  const page = validPage02({
+    content_units: [
+      ...(validPage02().content_units as unknown[]),
+      {
+        unit_id: "u_fact_salary",
+        kind: "reality_fact",
+        text: "Cash figure is still an estimate pending hardened terms.",
+        claim_ids: [offerClaimId],
+        evidence_ids: [unverifiedFactEv],
+        fact_ids: [unverifiedFactId],
+      },
+    ],
+    page_summary_unit_ids: ["u_summary", "u_fact_salary"],
+    explanation_boundary: {
+      claim_ids: [claimId, sciClaimId, offerClaimId],
+      personal_unit_ids: ["u_personal"],
+      confirmed_fact_unit_ids: ["u_fact_runway"],
+      hypothesis_unit_ids: ["u_hyp"],
+      uncertainty_notes: ["Offer terms may still shift"],
+    },
+  });
+  const omitted = validateFace02ProductionOutput({
+    raw: page,
+    locale: "en",
+    ctx,
+  });
+  assert.equal(omitted.ok, false, "non-confirmed fact omitted from hypothesis");
+  assert.ok(
+    !omitted.ok &&
+      omitted.issues.some((i) => i.code === "hypothesis_fact_boundary_omitted"),
+  );
+
+  const fixed = validateFace02ProductionOutput({
+    raw: {
+      ...page,
+      explanation_boundary: {
+        ...(page as { explanation_boundary: Record<string, unknown> })
+          .explanation_boundary,
+        hypothesis_unit_ids: ["u_hyp", "u_fact_salary"],
+      },
+    },
+    locale: "en",
+    ctx,
+  });
+  assert.equal(
+    fixed.ok,
+    true,
+    JSON.stringify(fixed.ok ? null : fixed.issues),
+  );
+  console.log("hypothesis-boundary completeness PASS");
 }
 
 // Free-text masquerade / synonym without reality_fact unit
