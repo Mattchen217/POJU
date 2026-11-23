@@ -1,6 +1,6 @@
 /**
- * Face04 validation — schema + unit integrity + registry claim/evidence existence.
- * Fail-closed. Does not mint associations.
+ * Face04 validation — schema + unit integrity + registry + fact status.
+ * Fail-closed. Does not mint associations. No legacy_ bypass for new generation.
  */
 
 import { Face04V2Schema, type Face04V2 } from "../schemas";
@@ -24,7 +24,10 @@ export function validateFace04Output(input: {
   registry: EvidenceRegistry;
   knownFactIds?: ReadonlySet<string>;
   factStatusById?: ReadonlyMap<string, string>;
+  /** When true (default for production), reject legacy_* claim/evidence ids. */
+  reject_legacy_ids?: boolean;
 }): Face04ValidationResult {
+  const rejectLegacy = input.reject_legacy_ids !== false;
   const issues: Face04Issue[] = [];
   const patched =
     input.raw && typeof input.raw === "object"
@@ -57,59 +60,144 @@ export function validateFace04Output(input: {
 
   const claimSet = new Set(Object.keys(input.registry.claims));
   const evidenceSet = new Set(Object.keys(input.registry.evidence));
+
+  const checkClaim = (cid: string, path: string) => {
+    if (rejectLegacy && cid.startsWith("legacy_")) {
+      issues.push({
+        code: "legacy_id_forbidden",
+        detail: `${path} cites legacy claim_id=${cid} (not allowed in new production)`,
+        path,
+      });
+      return;
+    }
+    if (!claimSet.has(cid)) {
+      issues.push({
+        code: "unknown_claim_id",
+        detail: `${path} cites unknown claim_id=${cid}`,
+        path,
+      });
+    }
+  };
+  const checkEvidence = (eid: string, path: string) => {
+    if (rejectLegacy && eid.startsWith("legacy_")) {
+      issues.push({
+        code: "legacy_id_forbidden",
+        detail: `${path} cites legacy evidence_id=${eid} (not allowed in new production)`,
+        path,
+      });
+      return;
+    }
+    if (!evidenceSet.has(eid)) {
+      issues.push({
+        code: "unknown_evidence_id",
+        detail: `${path} cites unknown evidence_id=${eid}`,
+        path,
+      });
+    }
+  };
+
   for (const unit of page.content_units) {
-    for (const cid of unit.claim_ids) {
-      if (!claimSet.has(cid) && !cid.startsWith("legacy_")) {
-        issues.push({
-          code: "unknown_claim_id",
-          detail: `unit ${unit.unit_id} cites unknown claim_id=${cid}`,
-          path: unit.unit_id,
-        });
-      }
-    }
-    for (const eid of unit.evidence_ids ?? []) {
-      if (!evidenceSet.has(eid) && !eid.startsWith("legacy_")) {
-        issues.push({
-          code: "unknown_evidence_id",
-          detail: `unit ${unit.unit_id} cites unknown evidence_id=${eid}`,
-          path: unit.unit_id,
-        });
-      }
-    }
+    for (const cid of unit.claim_ids) checkClaim(cid, unit.unit_id);
+    for (const eid of unit.evidence_ids ?? []) checkEvidence(eid, unit.unit_id);
+
     if (
       "related_reality_fact_ids" in unit &&
-      Array.isArray(unit.related_reality_fact_ids) &&
-      input.knownFactIds
+      Array.isArray(unit.related_reality_fact_ids)
     ) {
       for (const fid of unit.related_reality_fact_ids) {
-        if (!input.knownFactIds.has(fid)) {
+        if (input.knownFactIds && !input.knownFactIds.has(fid)) {
           issues.push({
             code: "unknown_fact_id",
             detail: `unit ${unit.unit_id} cites unknown fact_id=${fid}`,
             path: unit.unit_id,
           });
+          continue;
+        }
+        const status = input.factStatusById?.get(fid);
+        if (
+          status &&
+          status !== "confirmed" &&
+          unit.kind === "manifestation"
+        ) {
+          // Manifestation may cite non-confirmed facts only with conditional framing;
+          // hard rule: never list them later as confirmed_fact_ids (checked below).
+          // If unit text claims confirmation while status isn't confirmed — flag.
+          if (/已确认|confirmed\s+fact|definitely\s+true/i.test(unit.text)) {
+            issues.push({
+              code: "fact_status_upgrade",
+              detail: `unit ${unit.unit_id} treats fact ${fid} (${status}) as confirmed`,
+              path: unit.unit_id,
+            });
+          }
         }
       }
     }
   }
 
-  // Kind must match section allowlists (structural).
-  for (const id of page.bottleneck_naming_unit_ids) {
-    const u = page.content_units.find((x) => x.unit_id === id);
-    if (u && u.kind !== "bottleneck_label") {
+  for (const cid of page.evidence_boundary.claim_ids) {
+    checkClaim(cid, "evidence_boundary.claim_ids");
+  }
+
+  for (const fid of page.evidence_boundary.confirmed_fact_ids) {
+    if (input.knownFactIds && !input.knownFactIds.has(fid)) {
       issues.push({
-        code: "section_kind_mismatch",
-        detail: `bottleneck_naming requires bottleneck_label, got ${u.kind}`,
+        code: "unknown_confirmed_fact_id",
+        detail: `evidence_boundary.confirmed_fact_ids cites unknown fact_id=${fid}`,
+        path: "evidence_boundary.confirmed_fact_ids",
+      });
+      continue;
+    }
+    const status = input.factStatusById?.get(fid);
+    if (status !== "confirmed") {
+      issues.push({
+        code: "confirmed_fact_status_mismatch",
+        detail: `evidence_boundary.confirmed_fact_ids includes ${fid} with status=${status ?? "missing"} (must be confirmed)`,
+        path: "evidence_boundary.confirmed_fact_ids",
       });
     }
   }
-  for (const id of page.manifestation_unit_ids) {
-    const u = page.content_units.find((x) => x.unit_id === id);
-    if (u && u.kind !== "manifestation") {
-      issues.push({
-        code: "section_kind_mismatch",
-        detail: `manifestation section requires manifestation kind, got ${u.kind}`,
-      });
+
+  const kindChecks: Array<{
+    ids: readonly string[];
+    kind: string;
+    section: string;
+  }> = [
+    {
+      ids: page.bottleneck_naming_unit_ids,
+      kind: "bottleneck_label",
+      section: "bottleneck_naming",
+    },
+    {
+      ids: page.manifestation_unit_ids,
+      kind: "manifestation",
+      section: "manifestation",
+    },
+    {
+      ids: page.force_through_cost_unit_ids,
+      kind: "force_through_cost",
+      section: "force_through_cost",
+    },
+    {
+      ids: page.leverage_point_unit_ids,
+      kind: "leverage_point",
+      section: "leverage_point",
+    },
+    {
+      ids: page.evidence_boundary.evidence_note_unit_ids,
+      kind: "evidence_note",
+      section: "evidence_boundary",
+    },
+  ];
+  for (const row of kindChecks) {
+    for (const id of row.ids) {
+      const u = page.content_units.find((x) => x.unit_id === id);
+      if (u && u.kind !== row.kind) {
+        issues.push({
+          code: "section_kind_mismatch",
+          detail: `${row.section} requires ${row.kind}, got ${u.kind} for ${id}`,
+          path: id,
+        });
+      }
     }
   }
 
