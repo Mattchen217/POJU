@@ -10,6 +10,10 @@ import {
   registerClaim,
   registerEvidence,
 } from "./evidence-registry";
+import {
+  selectRealityFactsForPage01,
+  type FactSelectionResult,
+} from "./fact-relevance";
 import type {
   ApprovedReading,
   DecisionReportRealityFact,
@@ -18,7 +22,7 @@ import type {
   ReportClaim,
   ReportEvidence,
 } from "./types";
-import { realityFactsFromDecisionContext } from "./page01/slice";
+import type { Page01FeedSlice } from "./page01/slice";
 
 export type RegistrySeedResult = {
   registry: EvidenceRegistry;
@@ -28,6 +32,7 @@ export type RegistrySeedResult = {
   key_claims: ReportClaim[];
   knownFactIds: Set<string>;
   page02PlannedEvidenceIds: string[];
+  fact_selection: FactSelectionResult;
 };
 
 function unitToReading(unit: BookJudgmentUnit): ApprovedReading {
@@ -54,24 +59,26 @@ function unitToAnchors(unit: BookJudgmentUnit): PersonalAnalysisAnchor[] {
 
 /**
  * Build registry for Face 01 generation.
- * - DC facts → reality_fact evidence (id = fact_id prefixed ev_fact_)
- * - Pack units serving 01/02 → claims + evidence (evidence_id = pack unit id)
- * Page 02 planned evidence = pack units that serve face 02.
+ * Facts are selected by structured DC relevance (not confirmed-first dump).
  */
 export function seedEvidenceRegistryForFace01(input: {
   dc: DecisionContext | null | undefined;
   pack: BookJudgmentPack | null | undefined;
-  /** Max confirmed + non-confirmed facts retained for page 01. */
+  /** Max facts retained for page 01 after relevance ranking. */
   maxFacts?: number;
 }): RegistrySeedResult {
   const maxFacts = input.maxFacts ?? 16;
   const registry = emptyEvidenceRegistry();
-  const allFacts = input.dc ? realityFactsFromDecisionContext(input.dc) : [];
 
-  // Prefer confirmed first, then keep status diversity without dumping whole DC.
-  const confirmed = allFacts.filter((f) => f.status === "confirmed");
-  const rest = allFacts.filter((f) => f.status !== "confirmed");
-  const facts = [...confirmed, ...rest].slice(0, maxFacts);
+  const fact_selection = input.dc
+    ? selectRealityFactsForPage01({ dc: input.dc, maxFacts })
+    : {
+        selected: [],
+        excluded_fact_ids: [],
+        sparse_structured_links: true,
+      };
+
+  const facts = fact_selection.selected.map((r) => r.fact);
   const factMap = new Map(facts.map((f) => [f.fact_id, f]));
   const knownFactIds = new Set(facts.map((f) => f.fact_id));
 
@@ -131,8 +138,6 @@ export function seedEvidenceRegistryForFace01(input: {
       supports_claim_ids: [],
       limits_claim_ids: [],
     };
-    // For reality_mechanism, skip fact/reading checks by registering with empty maps
-    // after personal_reading path handled.
     if (sourceType === "personal_reading") {
       registerEvidence(registry, ev, { facts: factMap, readings: readingMap });
     } else {
@@ -169,7 +174,6 @@ export function seedEvidenceRegistryForFace01(input: {
     }
   }
 
-  // Ensure every fact evidence is also a known source_id for conditions.
   for (const f of facts) {
     knownFactIds.add(f.fact_id);
     knownFactIds.add(`ev_fact_${f.fact_id}`);
@@ -183,5 +187,133 @@ export function seedEvidenceRegistryForFace01(input: {
     key_claims,
     knownFactIds,
     page02PlannedEvidenceIds: [...new Set(page02PlannedEvidenceIds)],
+    fact_selection,
   };
+}
+
+/**
+ * Build a registry that exactly mirrors the final Page01 model slice.
+ * Validator must use this — never the pre-filter seeded registry.
+ */
+export function restrictRegistryToPage01Slice(input: {
+  seeded: RegistrySeedResult;
+  slice: Page01FeedSlice;
+}): {
+  registry: EvidenceRegistry;
+  knownFactIds: Set<string>;
+  page02PlannedEvidenceIds: string[];
+  slice: Page01FeedSlice;
+} {
+  const keepEvIds = new Set(
+    input.slice.evidence_registry.evidence.map((e) => e.evidence_id),
+  );
+  const keepFactIds = new Set(
+    input.slice.reality_context.facts.map((f) => f.fact_id),
+  );
+  const keepReadingIds = new Set(
+    input.slice.personal_analysis.approved_readings.map((r) => r.reading_id),
+  );
+
+  // Claims: only those listed on slice that still have ≥1 kept evidence (or optional empty).
+  const keepClaimIds = new Set<string>();
+  for (const claimId of input.slice.evidence_registry.claim_ids) {
+    const claim = input.seeded.registry.claims[claimId];
+    if (!claim) continue;
+    const evidence_ids = claim.evidence_ids.filter((id) => keepEvIds.has(id));
+    if (claim.evidence_requirement === "required" && evidence_ids.length === 0) {
+      continue;
+    }
+    keepClaimIds.add(claimId);
+  }
+  // Also keep claims referenced by key_claims in slice when evidence survives.
+  for (const c of input.slice.report_analysis.key_claims) {
+    const claim = input.seeded.registry.claims[c.claim_id];
+    if (!claim) continue;
+    const evidence_ids = (c.evidence_ids?.length ? c.evidence_ids : claim.evidence_ids).filter(
+      (id) => keepEvIds.has(id),
+    );
+    if (evidence_ids.length === 0 && claim.evidence_requirement === "required") {
+      continue;
+    }
+    keepClaimIds.add(c.claim_id);
+  }
+
+  const registry = emptyEvidenceRegistry();
+
+  for (const evRow of input.slice.evidence_registry.evidence) {
+    const full = input.seeded.registry.evidence[evRow.evidence_id];
+    if (!full) continue;
+
+    // Source must resolve in the final slice.
+    if (full.source_type === "reality_fact" && !keepFactIds.has(full.source_id)) {
+      continue;
+    }
+    if (
+      full.source_type === "personal_reading" &&
+      !keepReadingIds.has(full.source_id)
+    ) {
+      continue;
+    }
+
+    const supports = full.supports_claim_ids.filter((id) => keepClaimIds.has(id));
+    const limits = full.limits_claim_ids.filter((id) => keepClaimIds.has(id));
+    registry.evidence[full.evidence_id] = {
+      ...full,
+      supports_claim_ids: supports,
+      limits_claim_ids: limits,
+    };
+  }
+
+  // Drop evidence that failed source checks from keep set.
+  const finalEvIds = new Set(Object.keys(registry.evidence));
+
+  for (const claimId of keepClaimIds) {
+    const claim = input.seeded.registry.claims[claimId];
+    if (!claim) continue;
+    const evidence_ids = claim.evidence_ids.filter((id) => finalEvIds.has(id));
+    if (claim.evidence_requirement === "required" && evidence_ids.length === 0) {
+      continue;
+    }
+    registry.claims[claimId] = { ...claim, evidence_ids };
+  }
+
+  const finalClaimIds = Object.keys(registry.claims);
+  // Re-scrub evidence claim links against final claims.
+  for (const id of Object.keys(registry.evidence)) {
+    const ev = registry.evidence[id]!;
+    ev.supports_claim_ids = ev.supports_claim_ids.filter((c) =>
+      finalClaimIds.includes(c),
+    );
+    ev.limits_claim_ids = ev.limits_claim_ids.filter((c) =>
+      finalClaimIds.includes(c),
+    );
+  }
+
+  const knownFactIds = new Set<string>();
+  for (const f of input.slice.reality_context.facts) {
+    knownFactIds.add(f.fact_id);
+    knownFactIds.add(`ev_fact_${f.fact_id}`);
+  }
+
+  const page02PlannedEvidenceIds = input.seeded.page02PlannedEvidenceIds.filter(
+    (id) => finalEvIds.has(id),
+  );
+
+  const slice: Page01FeedSlice = {
+    ...input.slice,
+    evidence_registry: {
+      claim_ids: finalClaimIds.slice(0, 12),
+      evidence: input.slice.evidence_registry.evidence.filter((e) =>
+        finalEvIds.has(e.evidence_id),
+      ),
+    },
+    report_analysis: {
+      ...input.slice.report_analysis,
+      key_claims: input.slice.report_analysis.key_claims.filter((c) =>
+        finalClaimIds.includes(c.claim_id),
+      ),
+    },
+  };
+
+  return { registry, knownFactIds, page02PlannedEvidenceIds, slice };
 }

@@ -54,49 +54,108 @@ loadEnvLocal();
 const dc: DecisionContext = {
   context_id: "dc_face01_prod_test",
   version: 1,
-  status: "frozen",
+  status: "final",
   content_hash: "hash_face01_prod",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   definition: {
     decision_question: "Should I leave the job for a startup offer this quarter?",
     concrete_event: "Received startup offer with equity cliff.",
     desired_outcome: "Preserve runway and optionality without burning bridges.",
+    stakes: "Career and cash floor",
+    goal_priorities: ["runway"],
+    unacceptable_outcomes: ["resign cold"],
   },
-  constraints: [],
+  constraints: [
+    {
+      constraint_id: "c_runway",
+      statement: "Keep at least 6 months runway.",
+      category: "financial",
+      status: "confirmed",
+      verification_level: "user_asserted",
+      source_stage: "collecting",
+      source_turn_id: "t1",
+      rigidity: "hard",
+      user_confirmed: true,
+      related_dir_ids: ["DIR_RUNWAY"],
+    },
+  ],
   reality_facts: [
     {
       fact_id: "fact_runway",
       statement: "Personal runway is about 8 months.",
       status: "confirmed",
       verification_level: "user_asserted",
+      source_stage: "collecting",
       source_turn_id: "t1",
+      user_confirmed: true,
+      fact_roles: ["hard_constraint"],
+      related_dir_ids: ["DIR_RUNWAY"],
     },
     {
       fact_id: "fact_salary_guess",
       statement: "Maybe total cash is around 120k.",
       status: "unverified",
       verification_level: "user_estimate",
+      source_stage: "collecting",
       source_turn_id: "t2",
+      user_confirmed: false,
+      fact_roles: ["job_offer"],
+      related_dir_ids: ["DIR_OFFER"],
     },
     {
       fact_id: "fact_partner_unknown",
       statement: "Partner equity split unknown.",
       status: "unknown",
       verification_level: "none",
+      source_stage: "collecting",
       source_turn_id: "t3",
+      user_confirmed: false,
+      fact_roles: ["option"],
+      related_dir_ids: ["DIR_OFFER"],
     },
     {
       fact_id: "fact_noise_hobby",
       statement: "Likes hiking on weekends.",
       status: "confirmed",
       verification_level: "user_asserted",
+      source_stage: "collecting",
       source_turn_id: "t4",
+      user_confirmed: true,
+    },
+  ],
+  dirs: [
+    {
+      dir_id: "DIR_RUNWAY",
+      need: "Runway",
+      why: "Cash floor",
+      required_fact_roles: ["hard_constraint"],
+      current_state: "known",
+      partial_satisfaction: false,
+      agenda_item_ids: [],
+      id_lifecycle: "active",
+    },
+    {
+      dir_id: "DIR_OFFER",
+      need: "Offer",
+      why: "Terms",
+      required_fact_roles: ["job_offer", "option"],
+      current_state: "known",
+      partial_satisfaction: true,
+      agenda_item_ids: [],
+      id_lifecycle: "active",
     },
   ],
   conflicts: [
     {
       conflict_id: "c1",
       conflict_field: "equity",
+      fact_ids: ["fact_partner_unknown", "fact_salary_guess"],
+      statements_snapshot: [],
+      source_refs: [],
       state: "open",
+      resolution: null,
+      user_confirmation: false,
     },
   ],
   hypotheses: [],
@@ -104,7 +163,12 @@ const dc: DecisionContext = {
 
 const pack: BookJudgmentPack = {
   version: 1,
+  locale: "en",
   cfp_hash: "cfp_test",
+  zfp_hash: null,
+  zfpOmitted: true,
+  shot_mode: "one",
+  created_at: "2026-01-01T00:00:00Z",
   units: [
     {
       id: "u_destiny_01",
@@ -136,6 +200,13 @@ const pack: BookJudgmentPack = {
       serves_face: ["08"],
     },
   ],
+  by_face: {
+    "01": ["u_destiny_01", "u_science_01"],
+    "02": ["u_destiny_01", "u_science_01", "u_page02_only"],
+    "08": ["u_unrelated_08"],
+  },
+  pattern_hits_used: [],
+  science_tags_used: [],
 } as unknown as BookJudgmentPack;
 
 // --- Production context / slice ---
@@ -144,6 +215,7 @@ const built = buildFace01ProductionContext({
   locale: "en",
   dc,
   pack,
+  chart_fact_pack: "日主甲木…",
 });
 assert.equal(built.ok, true, "buildFace01ProductionContext");
 if (!built.ok) throw new Error(built.reason);
@@ -153,6 +225,12 @@ assert.equal(ctx.schema_version, FACE01_SCHEMA_VERSION);
 assert.ok(ctx.system.includes("决策") || ctx.system.length > 40);
 assert.ok(ctx.user.includes("Page01FeedSlice") || ctx.user.includes("reality"));
 assert.equal(page01SliceLooksOversized(ctx.slice).length, 0);
+assert.deepEqual(ctx.available_domains, ["bazi"]);
+assert.deepEqual(
+  [...new Set(ctx.slice.evidence_registry.evidence.map((e) => e.evidence_id))].sort(),
+  Object.keys(ctx.registry.evidence).sort(),
+  "restricted registry matches slice",
+);
 
 // Irrelevant face-08 unit must not enter slice evidence
 assert.ok(
@@ -383,29 +461,78 @@ async function maybeLiveModel() {
   const { runContentBodyGenerate } = await import(
     "@/lib/llm/pro/delivery/pipeline-v3/content-body"
   );
-  const result = await runContentBodyGenerate({
-    key: "01",
-    finalize: {} as never,
-    locale: "en",
-    session_id: "face01_live_test",
-    report_id: "face01_live_test",
-    decision_context_snapshot: dc,
-    book_judgment_pack: pack,
-    thinking_effort: "medium",
-  });
+  const { isV3LabTransportSupplyFail } = await import(
+    "@/lib/llm/pro/delivery/dispatch/provider-escape"
+  );
+
+  const invoke = (dispatch_attempt: number) =>
+    runContentBodyGenerate({
+      key: "01",
+      finalize: {} as never,
+      locale: "en",
+      session_id: "face01_live_test",
+      report_id: "face01_live_test",
+      decision_context_snapshot: dc,
+      book_judgment_pack: pack,
+      chart_fact_pack: "日主甲木…",
+      thinking_effort: "medium",
+      dispatch_attempt,
+    });
+
+  let result = await invoke(1);
+  let repairUsed = false;
+  if (!result.ok && isV3LabTransportSupplyFail(result.reason)) {
+    console.log("live_face01_attempt1_supply_fail", { reason: result.reason });
+    result = await invoke(2);
+  }
+  if (result.ok && result.face01_meta?.validation === "passed_after_repair") {
+    repairUsed = true;
+  }
+
+  const redactedMeta = result.face01_meta
+    ? {
+        prompt_version: result.face01_meta.prompt_version,
+        schema_version: result.ok
+          ? result.face01_meta.schema_version
+          : undefined,
+        slice_summary: result.face01_meta.slice_summary,
+        validation: result.ok ? result.face01_meta.validation : undefined,
+        validation_issues: result.ok
+          ? undefined
+          : (result.face01_meta.validation_issues as Array<{ code?: string; detail?: string }> | undefined)
+              ?.slice(0, 8)
+              .map((i) => ({
+                code: i.code,
+                detail: String(i.detail ?? "").slice(0, 160),
+              })),
+      }
+    : undefined;
+
   console.log("live_face01", {
     ok: result.ok,
     reason: result.ok ? undefined : result.reason,
-    meta: result.face01_meta,
+    meta: redactedMeta,
     is_v2: result.ok ? isFace01V2(result.page) : false,
+    repair_used: repairUsed,
+    provider_meta: result.call_trace?.meta
+      ? {
+          model: result.call_trace.meta.actual_model,
+          request_id: result.call_trace.meta.generation_id,
+          finish_reason: result.call_trace.meta.finish_reason,
+          tokens_used: result.call_trace.meta.tokens_used,
+        }
+      : undefined,
+    raw_chars: result.last_raw_text?.length ?? 0,
   });
   if (!result.ok) {
-    // Provider / routing infra — do not claim production model path verified.
     console.log(`REAL_MODEL_CALL_FAILED:${result.reason}`);
     return;
   }
   assert.ok(isFace01V2(result.page));
-  console.log("REAL_MODEL_CALL_OK");
+  assert.equal((result.page as { schema_version?: string }).schema_version, "face01-v2");
+  console.log(
+    repairUsed ? "REAL_MODEL_CALL_OK_AFTER_REPAIR" : "REAL_MODEL_CALL_OK",
+  );
 }
 
 maybeLiveModel()

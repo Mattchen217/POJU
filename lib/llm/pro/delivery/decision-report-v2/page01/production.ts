@@ -1,13 +1,22 @@
 /**
  * Face 01 production orchestration — used by content-body / Lab.
  * Prompt pair + validation + one targeted repair prompt.
+ *
+ * Invariant: ctx.registry / knownFactIds / page02PlannedEvidenceIds
+ * are exactly the IDs present in the final model slice (no dual-standard).
  */
 
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
+import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
 import { Face01V2Schema, type Face01V2 } from "../schemas";
 import { buildTermAllowlist } from "../term-allowlist";
-import { seedEvidenceRegistryForFace01 } from "../registry-from-sources";
+import {
+  restrictRegistryToPage01Slice,
+  seedEvidenceRegistryForFace01,
+} from "../registry-from-sources";
+import { resolveAvailablePersonalDomains } from "../personal-domains";
+import type { FactSelectionResult } from "../fact-relevance";
 import { buildFace01PromptPair } from "./prompt";
 import {
   buildDecisionReportInput,
@@ -24,6 +33,7 @@ export const FACE01_SCHEMA_VERSION = "face01-v2" as const;
 
 export type Face01ProductionContext = {
   slice: Page01FeedSlice;
+  /** Restricted registry — identical ID universe to slice. */
   registry: EvidenceRegistry;
   knownFactIds: Set<string>;
   page02PlannedEvidenceIds: string[];
@@ -32,6 +42,9 @@ export type Face01ProductionContext = {
   schema_version: typeof FACE01_SCHEMA_VERSION;
   system: string;
   user: string;
+  fact_selection: FactSelectionResult;
+  available_domains: string[];
+  profile_version: string;
 };
 
 export type Face01ProductionBuildFail = {
@@ -50,32 +63,52 @@ export function buildFace01ProductionContext(input: {
   locale: string;
   dc: DecisionContext | null | undefined;
   pack: BookJudgmentPack | null | undefined;
+  chart_fact_pack?: string | null;
+  ziwei_fact_pack?: ZiweiFactPack | null;
+  bazi_available?: boolean;
+  ziwei_available?: boolean;
 }): Face01ProductionBuildOk | Face01ProductionBuildFail {
   if (!input.dc) {
     return { ok: false, reason: "face01_missing_decision_context" };
   }
+
+  const domains = resolveAvailablePersonalDomains({
+    pack: input.pack,
+    chart_fact_pack: input.chart_fact_pack,
+    ziwei_fact_pack: input.ziwei_fact_pack,
+    bazi_available: input.bazi_available,
+    ziwei_available: input.ziwei_available,
+  });
+
   const seeded = seedEvidenceRegistryForFace01({
     dc: input.dc,
     pack: input.pack,
     maxFacts: 16,
   });
-  if (!seeded.key_claims.length && !seeded.page02PlannedEvidenceIds.length) {
-    // Still allow generate with DC-only if pack thin — model must stay provisional.
-  }
 
   const report = buildDecisionReportInput({
     report_id: input.report_id,
     locale: input.locale,
     dc: input.dc,
     personal_analysis: {
-      profile_version: input.pack?.cfp_hash ?? "dc",
-      available_domains: ["bazi", "ziwei"].filter(Boolean),
+      profile_version: domains.profile_version,
+      available_domains: domains.available_domains,
       relevant_anchors: seeded.anchors.slice(0, 20),
       approved_readings: seeded.readings.slice(0, 16),
     },
     report_analysis: {
       decision_synthesis: {
         preferred_from_pack: seeded.key_claims.slice(0, 3).map((c) => c.claim_id),
+        fact_selection: {
+          sparse_structured_links: seeded.fact_selection.sparse_structured_links,
+          linked_ids: seeded.fact_selection.selected
+            .filter((r) => r.kind === "linked")
+            .map((r) => r.fact.fact_id),
+          candidate_ids: seeded.fact_selection.selected
+            .filter((r) => r.kind === "candidate")
+            .map((r) => r.fact.fact_id),
+          excluded_ids: seeded.fact_selection.excluded_fact_ids,
+        },
       },
       candidate_paths: [],
       key_claims: seeded.key_claims.slice(0, 8),
@@ -90,13 +123,13 @@ export function buildFace01ProductionContext(input: {
     },
   });
 
-  // Only facts/readings that survived seed (already capped).
+  // Facts already relevance-selected in seed — pass those ids only.
   const relevantFactIds = new Set(seeded.facts.map((f) => f.fact_id));
   const relevantReadingIds = new Set(
     seeded.readings.map((r) => r.reading_id),
   );
 
-  const slice = sliceForPage01({
+  let slice = sliceForPage01({
     report,
     registry: seeded.registry,
     relevantFactIds,
@@ -107,6 +140,7 @@ export function buildFace01ProductionContext(input: {
   const keepEv = new Set([
     ...Object.values(seeded.registry.evidence)
       .filter((e) => e.source_type === "reality_fact")
+      .filter((e) => relevantFactIds.has(e.source_id))
       .map((e) => e.evidence_id),
     ...seeded.page02PlannedEvidenceIds,
     ...seeded.key_claims.flatMap((c) => c.evidence_ids),
@@ -114,10 +148,14 @@ export function buildFace01ProductionContext(input: {
   slice.evidence_registry.evidence = slice.evidence_registry.evidence.filter(
     (e) => keepEv.has(e.evidence_id),
   );
-  slice.evidence_registry.claim_ids = Object.keys(seeded.registry.claims).slice(
-    0,
-    12,
-  );
+  slice.evidence_registry.claim_ids = seeded.key_claims
+    .map((c) => c.claim_id)
+    .filter((id) => seeded.registry.claims[id] != null)
+    .slice(0, 12);
+
+  // Final restricted registry == model input universe.
+  const restricted = restrictRegistryToPage01Slice({ seeded, slice });
+  slice = restricted.slice;
 
   const oversized = page01SliceLooksOversized(slice);
   if (oversized.length) {
@@ -144,14 +182,17 @@ export function buildFace01ProductionContext(input: {
     ok: true,
     ctx: {
       slice,
-      registry: seeded.registry,
-      knownFactIds: seeded.knownFactIds,
-      page02PlannedEvidenceIds: seeded.page02PlannedEvidenceIds,
+      registry: restricted.registry,
+      knownFactIds: restricted.knownFactIds,
+      page02PlannedEvidenceIds: restricted.page02PlannedEvidenceIds,
       termAllowlistSize: allowlist.length,
       prompt_version: FACE01_PROMPT_VERSION,
       schema_version: FACE01_SCHEMA_VERSION,
       system,
       user,
+      fact_selection: seeded.fact_selection,
+      available_domains: domains.available_domains,
+      profile_version: domains.profile_version,
     },
   };
 }
@@ -186,8 +227,7 @@ export function validateFace01ProductionOutput(input: {
 }):
   | { ok: true; page: Face01V2; cited_term_ids: string[] }
   | { ok: false; issues: Face01Issue[]; reason: string } {
-  // During body generate, page 02 content is not yet assembled — allow planned ids
-  // that exist in registry (seeded from pack). requirePage02Targets checks registry.
+  // Must use restricted ctx.registry only (same IDs as model slice).
   const result = validateFace01Output({
     raw: input.raw,
     locale: input.locale,
@@ -243,7 +283,6 @@ export function buildFace01RepairUserMessage(input: {
 export function parseFace01JsonStrict(rawText: string): unknown | null {
   const trimmed = rawText.trim();
   if (!trimmed) return null;
-  // Reject markdown fences — fail closed (caller may strip once for repair only).
   if (/^```/.test(trimmed)) return null;
   try {
     return JSON.parse(trimmed) as unknown;
@@ -264,9 +303,18 @@ export function face01SliceSummary(ctx: Face01ProductionContext): Record<string,
     evidence_count: ctx.slice.evidence_registry.evidence.length,
     page02_planned: ctx.page02PlannedEvidenceIds.length,
     term_allowlist: ctx.termAllowlistSize,
+    available_domains: ctx.available_domains,
+    profile_version: ctx.profile_version,
+    fact_selection: {
+      sparse: ctx.fact_selection.sparse_structured_links,
+      linked: ctx.fact_selection.selected.filter((r) => r.kind === "linked")
+        .length,
+      candidate: ctx.fact_selection.selected.filter((r) => r.kind === "candidate")
+        .length,
+      excluded: ctx.fact_selection.excluded_fact_ids.length,
+    },
     question: ctx.slice.decision.question.slice(0, 160),
   };
 }
 
-/** Re-export schema for callers that need zod without circular imports. */
 export { Face01V2Schema };

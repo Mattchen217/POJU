@@ -16,4 +16,6 @@ export * from "./page01/validate";
 export * from "./page01/legacy-adapter";
 export * from "./page01/production";
 export * from "./registry-from-sources";
+export * from "./fact-relevance";
+export * from "./personal-domains";
 export * from "./assembly";

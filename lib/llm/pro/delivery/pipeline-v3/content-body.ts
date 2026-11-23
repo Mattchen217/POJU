@@ -557,6 +557,8 @@ export async function runContentBodyGenerate(input: {
       locale: input.locale,
       dc: input.decision_context_snapshot ?? null,
       pack: input.book_judgment_pack ?? null,
+      chart_fact_pack: input.chart_fact_pack ?? null,
+      ziwei_fact_pack: input.ziwei_fact_pack ?? null,
     });
     if (!built.ok) {
       return {
