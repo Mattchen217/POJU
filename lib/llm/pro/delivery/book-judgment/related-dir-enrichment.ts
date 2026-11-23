@@ -7,9 +7,9 @@
  *   BookJudgment unit_id → active linked DIR
  * with a canonical source_ref + association_basis.
  *
- * Production callers pass no authority_edges. Today no generation-time
- * Unit→DIR provenance exists (Fact→DIR on DC is not Unit→DIR). Enrichment
- * therefore writes an empty-binding certificate that documents the gap.
+ * R4 investigation (`.cursor/docs/Page02-Unit-DIR-provenance-缺口-R4.md`):
+ * Production generate has NO per-unit Unit→DIR provenance. Callers must omit
+ * authority_edges. Fact→DIR on DC is not Unit→DIR. Empty certificate is correct.
  *
  * Forbidden as proof (never used to invent edges):
  * - model anchors / declared_related_dir_ids / claim / explanation
@@ -17,6 +17,7 @@
  * - unit-id sort / DIR-id sort / ordinal or round-robin assignment
  * - “same page / same face” co-membership
  * - DIR count ≈ unit count
+ * - synthetic / hand-built edges via production entry
  */
 
 import type { DecisionContext } from "@/lib/poju/decision-context/types";

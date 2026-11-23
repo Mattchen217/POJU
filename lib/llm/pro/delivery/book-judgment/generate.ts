@@ -778,6 +778,8 @@ export async function runBookJudgmentPackGenerate(input: {
     science_tags_used: stringList(shot.parsed, "science_tags_used"),
   });
   // Program Claim–DIR enrichment (never model anchors). Idempotent.
+  // R4: no generation-time Unit→DIR edges exist — omit authority_edges (empty cert).
+  // See `.cursor/docs/Page02-Unit-DIR-provenance-缺口-R4.md`.
   const enriched = enrichBookJudgmentRelatedDirIds({
     pack: draft,
     dc: input.decision_context_snapshot ?? null,

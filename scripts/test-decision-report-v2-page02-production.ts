@@ -1627,6 +1627,121 @@ console.log("H PASS — (unmapped hit covered in prior suite pattern)");
   console.log("R3 certificate validation closure A–J PASS");
 }
 
+// --- R4 generation-time provenance gap locks ---
+// Investigation SSOT: `.cursor/docs/Page02-Unit-DIR-provenance-缺口-R4.md`
+// R4 does NOT claim production Unit→DIR capability — only locks the empty path.
+{
+  const gapDoc = resolvePath(
+    ".cursor/docs/Page02-Unit-DIR-provenance-缺口-R4.md",
+  );
+  assert.equal(existsSync(gapDoc), true, "R4 gap SSOT doc must exist");
+  const gapText = readFileSync(gapDoc, "utf8");
+  assert.ok(gapText.includes("program Unit→DIR authority edge"));
+  assert.ok(gapText.includes("能力未完成") || gapText.includes("未验收"));
+
+  // 1–2: no real generation-time source ⇒ empty trusted dirs / pairs
+  assert.equal(ctx.credible_fact_claim_keys.size, 0);
+  for (const b of ctx.trusted_claim_dir_bindings.values()) {
+    assert.deepEqual(b.related_dir_ids, []);
+  }
+
+  // 6: model-forged source_ref on certificate cannot authorize
+  {
+    const { pack } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    const forged = structuredClone(pack);
+    const b = forged.related_dir_enrichment!.bindings.find(
+      (x) => x.unit_id === "u_science_02",
+    )!;
+    b.related_dir_ids = ["DIR_RUNWAY"];
+    b.association_basis = "program_authority_edge";
+    b.source_ref = "model_says_so:u_science_02:DIR_RUNWAY";
+    forged.related_dir_enrichment!.missing_authority = null;
+    const seeded = seedEvidenceRegistryForFace02({
+      dc,
+      pack: forged,
+      chart_fact_pack: "日主甲木…",
+      bazi_available: true,
+    });
+    const trusted = buildTrustedClaimDirBindings({
+      pack: forged,
+      dc,
+      fact_selection: seeded.fact_selection,
+      registry: seeded.registry,
+    });
+    assert.ok(
+      [...trusted.values()].every((t) => t.related_dir_ids.length === 0),
+    );
+  }
+
+  // 7: model anchors pointing at real DIR lose to empty program authority
+  {
+    const pack = makePack({ bazi: true, ziwei: false });
+    const sci = pack.units.find((u) => u.id === "u_science_02")!;
+    sci.anchors = ["DIR_RUNWAY", "dir:DIR_RUNWAY"];
+    sci.declared_related_dir_ids = ["DIR_RUNWAY"];
+    sci.related_dir_ids = ["DIR_RUNWAY"];
+    const built = buildFace02ProductionContext({
+      report_id: "r4_anchors_lose",
+      locale: "en",
+      dc,
+      pack,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(built.ok, true);
+    if (!built.ok) throw new Error(built.reason);
+    assert.deepEqual(
+      built.ctx.trusted_claim_dir_bindings.get("claim_u_science_02")
+        ?.related_dir_ids,
+      [],
+    );
+    assert.equal(built.ctx.credible_fact_claim_keys.size, 0);
+  }
+
+  // 8: pre-injected non-empty cert cannot bypass production entry
+  {
+    const pre = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+      authority_edges: syntheticSemanticEdges,
+    }).pack;
+    const built = buildFace02ProductionContext({
+      report_id: "r4_wipe_preinject",
+      locale: "en",
+      dc,
+      pack: pre,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Schema,
+    });
+    assert.equal(built.ok, true);
+    if (!built.ok) throw new Error(built.reason);
+    assert.equal(built.ctx.credible_fact_claim_keys.size, 0);
+  }
+
+  // 9: enrich without edges always documents missing generation-time authority
+  {
+    const { certificate } = enrichBookJudgmentRelatedDirIds({
+      pack: makePack({ bazi: true, ziwei: false }),
+      dc,
+    });
+    assert.equal(certificate.missing_authority, "no_program_unit_dir_edges");
+    assert.ok(
+      certificate.linked_dir_ids.length >= 1,
+      "Fact→DIR may exist while Unit→DIR stays empty",
+    );
+    assert.ok(
+      certificate.bindings.every((b) => b.related_dir_ids.length === 0),
+    );
+  }
+
+  console.log(
+    "R4 gap locks PASS — no production Unit→DIR provenance (investigation only)",
+  );
+}
+
 // Non-confirmed reality_fact in summary without hypothesis boundary → reject
 {
   const page = validPage02WithFacts({
