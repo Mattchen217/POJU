@@ -51,14 +51,30 @@ export const BookJudgmentUnitSchema = z.object({
   anchors: z.array(z.string().trim().min(1).max(120)).min(1).max(8),
   caveat: z.string().trim().max(240).optional(),
   /**
-   * SSOT term_ids actually used by this unit (optional for legacy packs).
-   * Must be explicit — never auto-filled from full glossary.
+   * Program-certified SSOT term_ids for this unit (optional for legacy packs).
+   * After generate/enrich: ONLY structured-cite + CFP/ZFP certified IDs.
+   * Never trust raw model output here; see declared_term_ids for audit.
    */
   term_ids: z.array(z.string().trim().min(1).max(80)).max(16).default([]),
-  /** Real personal/science domain for this unit (optional for legacy). */
+  /**
+   * Program-certified personal/science domain (optional for legacy).
+   * Authority = structured cites + availability — never model self-label.
+   */
   source_domain: BookJudgmentSourceDomainSchema.optional(),
-  /** cfp_hash / zfp_hash / other version stamp for this unit's sources. */
+  /**
+   * Program-certified cfp_hash / zfp_hash for this unit's sources.
+   * Never accept model-authored version stamps as authority.
+   */
   source_version: z.string().trim().max(128).optional(),
+  /** Model-declared term_ids (audit only; never authoritative). */
+  declared_term_ids: z
+    .array(z.string().trim().min(1).max(80))
+    .max(16)
+    .optional(),
+  /** Model-declared source_domain (audit only). */
+  declared_source_domain: BookJudgmentSourceDomainSchema.optional(),
+  /** Model-declared source_version (audit only). */
+  declared_source_version: z.string().trim().max(128).optional(),
 });
 export type BookJudgmentUnit = z.infer<typeof BookJudgmentUnitSchema>;
 

@@ -1,11 +1,12 @@
 /**
  * Term ID provenance for Face01 / BookJudgment units.
  *
- * Rules:
- * - term_ids must come from explicit unit fields or structured cites (hit:/cfp:),
- *   never from natural-language guessing or full glossary dump.
- * - Only SSOT-resolvable term_ids are kept.
- * - Legacy units with empty term_ids stay empty.
+ * Authority model:
+ * - Model-declared term_ids / source_domain / source_version are DECLARATIONS only.
+ * - Certified term_ids come ONLY from structured cites (hit:/cfp:) + real CFP/ZFP availability.
+ * - SSOT membership alone never certifies a term.
+ * - Never invent from natural-language claim/anchors or dump the full glossary.
+ * - Legacy empty term_ids stay empty (no auto-fill).
  */
 
 import type { BookJudgmentPack, BookJudgmentUnit } from "@/lib/llm/pro/delivery/book-judgment/schema";
@@ -16,9 +17,19 @@ export const CFP_KEY_TO_TERM_IDS: Readonly<Record<string, readonly string[]>> = 
   dayMaster: ["day_master"],
   yongJi: ["yong_shen", "favorable_element", "unfavorable_element"],
   dayunNow: ["decade"],
-  shishenHit: [], // ten-god specifics require explicit unit.term_ids
+  shishenHit: [], // no accurate closed mapping without further structure
   pathTags: [],
   conflictAnchors: [],
+};
+
+/**
+ * Accurate hit_id → SSOT slug map.
+ * Only exact, intentional mappings — never a generic "pattern" fallback.
+ * Hit ids from ZFP are usually content hashes; they certify a term only when
+ * the hit_id itself is an SSOT slug (or listed here).
+ */
+export const HIT_ID_TO_TERM_IDS: Readonly<Record<string, readonly string[]>> = {
+  // Intentionally sparse: add only verified hit_id → slug pairs.
 };
 
 export type PersonalSourceDomain =
@@ -29,11 +40,39 @@ export type PersonalSourceDomain =
   | "unavailable";
 
 export type TermProvenanceRecord = {
-  term_id: string;
-  /** Structured cite that justified this term (hit:… / cfp:… / unit.term_ids). */
+  /** Certified SSOT term_id; null when hit is real but has no accurate mapping. */
+  term_id: string | null;
+  /** Structured cite that justified this record (hit:… / cfp:…). */
   source_cite: string;
   source_domain: PersonalSourceDomain;
+  /** Always a real pack hash when domain is bazi/ziwei. */
   source_version: string | null;
+  /** Preserved hit level when cite is hit:<id>:<level>. */
+  hit_level?: string | null;
+  certification: "certified" | "hit_unmapped";
+};
+
+export type ProvenanceRejection = {
+  kind: "declared_term" | "declared_domain" | "declared_version" | "hit" | "cfp";
+  value: string;
+  reason: string;
+};
+
+export type UnitTermProvenanceResult = {
+  /** Program-certified term_ids only. */
+  term_ids: string[];
+  records: TermProvenanceRecord[];
+  /** Program-certified domain (never model-authored). */
+  source_domain: PersonalSourceDomain;
+  /** Program-certified version hash (never model-authored). */
+  source_version: string | null;
+  /** Model declarations (audit only). */
+  declared: {
+    term_ids: string[];
+    source_domain: string | null;
+    source_version: string | null;
+  };
+  rejected: ProvenanceRejection[];
 };
 
 function uniq(ids: readonly string[]): string[] {
@@ -62,17 +101,41 @@ export function extractStructuredCitesFromUnit(unit: BookJudgmentUnit): string[]
   return [...new Set(cites)];
 }
 
-function packAllowsHit(pack: BookJudgmentPack | null | undefined, hitId: string): boolean {
+function packAllowsHit(
+  pack: BookJudgmentPack | null | undefined,
+  hitId: string,
+  level: string,
+): boolean {
   if (!pack?.pattern_hits_used?.length) return false;
+  const want = `hit:${hitId}:${level}`.toLowerCase();
   return pack.pattern_hits_used.some((h) => {
     const t = h.trim().toLowerCase();
-    return t === hitId || t.startsWith(`hit:${hitId}:`) || t.includes(`:${hitId}:`);
+    if (t === want) return true;
+    // Allow hit:<id>:<level> prefix match when pack lists the same id+level.
+    if (t.startsWith(`hit:${hitId}:`) && t.endsWith(`:${level}`)) return true;
+    return false;
   });
 }
 
 /**
- * Resolve term_ids for one unit from explicit fields + structured cites.
- * `availableCfpKeys` limits which cfp: mappings are legal for this report.
+ * Resolve accurate SSOT term_ids for a pattern hit_id.
+ * Returns [] when no accurate mapping exists (do NOT fall back to "pattern").
+ */
+export function resolveHitIdToTermIds(hitId: string): string[] {
+  const id = hitId.trim().toLowerCase();
+  if (!id) return [];
+  const mapped = HIT_ID_TO_TERM_IDS[id];
+  if (mapped?.length) {
+    return uniq(mapped.filter((t) => Boolean(pojuTermBySlug(t))));
+  }
+  // Exact slug match only — hit_id must itself be the SSOT slug.
+  if (pojuTermBySlug(id)) return [id];
+  return [];
+}
+
+/**
+ * Certify term_ids + domain + version for one unit from structured cites + real availability.
+ * Model-declared fields are recorded then discarded as authority.
  */
 export function resolveUnitTermProvenance(input: {
   unit: BookJudgmentUnit;
@@ -82,163 +145,268 @@ export function resolveUnitTermProvenance(input: {
   ziwei_available: boolean;
   cfp_hash?: string | null;
   zfp_hash?: string | null;
-}): {
-  term_ids: string[];
-  records: TermProvenanceRecord[];
-  source_domain: PersonalSourceDomain;
-  source_version: string | null;
-} {
+}): UnitTermProvenanceResult {
   const unit = input.unit;
   const records: TermProvenanceRecord[] = [];
+  const rejected: ProvenanceRejection[] = [];
 
-  const explicitDomain = unit.source_domain ?? null;
-  const hadExplicitPersonalDomain =
-    explicitDomain === "bazi" || explicitDomain === "ziwei";
+  const declared_term_ids = [...(unit.term_ids ?? [])];
+  const declared_source_domain = unit.source_domain?.trim() || null;
+  const declared_source_version = unit.source_version?.trim() || null;
 
-  let source_domain: PersonalSourceDomain =
-    explicitDomain ??
-    (unit.track === "science"
-      ? "science"
-      : unit.track === "convergence"
-        ? "convergence"
-        : "unavailable");
-
-  // Respect availability — never keep a domain that is not actually present.
-  if (source_domain === "bazi" && !input.bazi_available) {
-    source_domain = "unavailable";
+  // --- Track-based non-destiny domains (never traditional). ---
+  if (unit.track === "science" || unit.track === "convergence") {
+    const source_domain: PersonalSourceDomain =
+      unit.track === "science" ? "science" : "convergence";
+    // Model may declare personal domains on science units — reject as authority.
+    if (
+      declared_source_domain &&
+      declared_source_domain !== source_domain &&
+      (declared_source_domain === "bazi" || declared_source_domain === "ziwei")
+    ) {
+      rejected.push({
+        kind: "declared_domain",
+        value: declared_source_domain,
+        reason: "science_or_convergence_cannot_use_personal_domain",
+      });
+    }
+    for (const tid of declared_term_ids) {
+      rejected.push({
+        kind: "declared_term",
+        value: tid,
+        reason: "model_declared_term_not_certified_without_structured_cite",
+      });
+    }
+    if (declared_source_version) {
+      rejected.push({
+        kind: "declared_version",
+        value: declared_source_version,
+        reason: "model_declared_version_ignored",
+      });
+    }
+    return {
+      term_ids: [],
+      records: [],
+      source_domain,
+      source_version: null,
+      declared: {
+        term_ids: declared_term_ids,
+        source_domain: declared_source_domain,
+        source_version: declared_source_version,
+      },
+      rejected,
+    };
   }
-  if (source_domain === "ziwei" && !input.ziwei_available) {
-    source_domain = "unavailable";
-  }
 
-  // Explicit domain was declared but clamped unavailable → stay unavailable.
-  // Do not rematch to the other personal domain.
-  const explicitDomainUnavailable =
-    hadExplicitPersonalDomain && source_domain === "unavailable";
-
-  // Explicit term_ids on unit (new packs) — still must be SSOT.
-  // Keep the unit's declared domain on the record; availability filter drops later.
-  for (const tid of unit.term_ids ?? []) {
-    if (!pojuTermBySlug(tid)) continue;
-    const recordDomain: PersonalSourceDomain = explicitDomainUnavailable
-      ? "unavailable"
-      : source_domain;
-    records.push({
-      term_id: tid,
-      source_cite: `unit.term_ids:${tid}`,
-      source_domain: recordDomain,
-      source_version:
-        unit.source_version?.trim() ||
-        (recordDomain === "ziwei"
-          ? input.zfp_hash ?? null
-          : recordDomain === "bazi"
-            ? input.cfp_hash ?? null
-            : null),
-    });
-  }
-
-  // Structured cites — not NLP.
+  // --- Destiny: certify only from structured cites. ---
   const cites = extractStructuredCitesFromUnit(unit);
   let sawHit = false;
   let sawCfp = false;
+
   for (const cite of cites) {
     if (cite.startsWith("hit:")) {
-      const hitId = cite.split(":")[1] ?? "";
-      if (!hitId || !packAllowsHit(input.pack, hitId)) continue;
-      if (!input.ziwei_available) continue;
-      // Explicit bazi unit must not absorb ziwei hit cites.
-      if (explicitDomain === "bazi") continue;
+      const parts = cite.split(":");
+      const hitId = parts[1] ?? "";
+      const level = parts[2] ?? "";
+      if (!hitId || !level) {
+        rejected.push({
+          kind: "hit",
+          value: cite,
+          reason: "malformed_hit_cite",
+        });
+        continue;
+      }
+      if (!packAllowsHit(input.pack, hitId, level)) {
+        rejected.push({
+          kind: "hit",
+          value: cite,
+          reason: "hit_not_in_pattern_hits_used",
+        });
+        continue;
+      }
+      if (!input.ziwei_available) {
+        rejected.push({
+          kind: "hit",
+          value: cite,
+          reason: "ziwei_domain_unavailable",
+        });
+        continue;
+      }
       sawHit = true;
-      const termId = pojuTermBySlug(hitId)
-        ? hitId
-        : pojuTermBySlug("pattern")
-          ? "pattern"
-          : null;
-      if (!termId) continue;
-      records.push({
-        term_id: termId,
-        source_cite: cite,
-        source_domain: "ziwei",
-        source_version: input.zfp_hash ?? null,
-      });
+      const mapped = resolveHitIdToTermIds(hitId);
+      if (mapped.length === 0) {
+        records.push({
+          term_id: null,
+          source_cite: cite,
+          source_domain: "ziwei",
+          source_version: input.zfp_hash ?? null,
+          hit_level: level,
+          certification: "hit_unmapped",
+        });
+      } else {
+        for (const termId of mapped) {
+          records.push({
+            term_id: termId,
+            source_cite: cite,
+            source_domain: "ziwei",
+            source_version: input.zfp_hash ?? null,
+            hit_level: level,
+            certification: "certified",
+          });
+        }
+      }
     } else if (cite.startsWith("cfp:")) {
       const key = cite.slice(4);
-      if (input.availableCfpKeys && !input.availableCfpKeys.has(key)) continue;
-      if (!input.bazi_available) continue;
-      // Explicit ziwei unit must not absorb bazi cfp cites.
-      if (explicitDomain === "ziwei") continue;
+      if (input.availableCfpKeys && !input.availableCfpKeys.has(key)) {
+        rejected.push({
+          kind: "cfp",
+          value: cite,
+          reason: "cfp_key_not_in_chart_fact_pack",
+        });
+        continue;
+      }
+      if (!input.bazi_available) {
+        rejected.push({
+          kind: "cfp",
+          value: cite,
+          reason: "bazi_domain_unavailable",
+        });
+        continue;
+      }
+      const mapped = CFP_KEY_TO_TERM_IDS[key] ?? [];
+      if (!mapped.length) {
+        rejected.push({
+          kind: "cfp",
+          value: cite,
+          reason: "cfp_key_has_no_accurate_term_mapping",
+        });
+        continue;
+      }
       sawCfp = true;
-      for (const termId of CFP_KEY_TO_TERM_IDS[key] ?? []) {
+      for (const termId of mapped) {
         if (!pojuTermBySlug(termId)) continue;
         records.push({
           term_id: termId,
           source_cite: cite,
           source_domain: "bazi",
           source_version: input.cfp_hash ?? null,
+          certification: "certified",
         });
       }
     }
   }
 
-  if (
-    unit.track === "destiny" &&
-    source_domain === "unavailable" &&
-    !explicitDomainUnavailable
-  ) {
-    // Infer only when the unit never declared a personal domain.
-    if (sawHit && input.ziwei_available) source_domain = "ziwei";
-    else if (sawCfp && input.bazi_available) source_domain = "bazi";
-    else if (
-      input.bazi_available &&
-      !input.ziwei_available &&
-      (sawCfp || (unit.term_ids?.length ?? 0) > 0)
-    ) {
-      // Single-domain pack + legacy unit without source_domain: allow bazi only
-      // when there is an explicit term or cfp cite — never from track alone.
-      source_domain = sawCfp ? "bazi" : "unavailable";
-    } else if (
-      input.ziwei_available &&
-      !input.bazi_available &&
-      (sawHit || (unit.term_ids?.length ?? 0) > 0)
-    ) {
-      source_domain = sawHit ? "ziwei" : "unavailable";
-    }
-    // Both available with no structured cite / explicit domain → stay unavailable.
+  // Domain authority: structured cites only. Dual personal cites → unavailable.
+  let source_domain: PersonalSourceDomain = "unavailable";
+  if (sawHit && sawCfp) {
+    source_domain = "unavailable";
+    rejected.push({
+      kind: "declared_domain",
+      value: "bazi+ziwei",
+      reason: "destiny_unit_cannot_carry_both_personal_domains",
+    });
+  } else if (sawHit && input.ziwei_available) {
+    source_domain = "ziwei";
+  } else if (sawCfp && input.bazi_available) {
+    source_domain = "bazi";
   }
 
-  // Drop personal terms when domain unavailable, or when record domain mismatches.
-  const filtered =
-    source_domain === "unavailable" && unit.track === "destiny"
-      ? []
-      : records.filter((r) => {
-          if (r.source_domain === "unavailable") return false;
-          if (r.source_domain === "bazi" && !input.bazi_available) return false;
-          if (r.source_domain === "ziwei" && !input.ziwei_available) return false;
-          // One unit → one personal domain.
-          if (
-            (source_domain === "bazi" || source_domain === "ziwei") &&
-            (r.source_domain === "bazi" || r.source_domain === "ziwei") &&
-            r.source_domain !== source_domain
-          ) {
-            return false;
-          }
-          return true;
-        });
+  // Model-declared domain: never authority; reject when it disagrees.
+  if (declared_source_domain) {
+    if (
+      declared_source_domain !== source_domain &&
+      !(source_domain === "unavailable" && declared_source_domain === "unavailable")
+    ) {
+      rejected.push({
+        kind: "declared_domain",
+        value: declared_source_domain,
+        reason:
+          source_domain === "unavailable"
+            ? "model_domain_ignored_program_unavailable"
+            : `model_domain_overridden_by_program:${source_domain}`,
+      });
+    }
+  }
 
-  const term_ids = uniq(filtered.map((r) => r.term_id));
-  const source_version =
-    unit.source_version?.trim() ||
-    (source_domain === "ziwei"
+  // Model-declared version: never authority.
+  const program_version =
+    source_domain === "ziwei"
       ? input.zfp_hash ?? null
       : source_domain === "bazi"
         ? input.cfp_hash ?? null
-        : null);
+        : null;
+  if (declared_source_version) {
+    if (declared_source_version !== program_version) {
+      rejected.push({
+        kind: "declared_version",
+        value: declared_source_version,
+        reason: program_version
+          ? `model_version_overridden_by_program:${program_version}`
+          : "model_version_ignored_no_program_hash",
+      });
+    }
+  }
+
+  // Model-declared terms: certify only if identical term already derived from cites.
+  const certifiedFromCites = new Set(
+    records
+      .filter((r) => r.certification === "certified" && r.term_id)
+      .map((r) => r.term_id as string),
+  );
+  for (const tid of declared_term_ids) {
+    if (!pojuTermBySlug(tid)) {
+      rejected.push({
+        kind: "declared_term",
+        value: tid,
+        reason: "not_in_ssot",
+      });
+      continue;
+    }
+    if (!certifiedFromCites.has(tid)) {
+      rejected.push({
+        kind: "declared_term",
+        value: tid,
+        reason: "ssot_alone_insufficient_no_structured_cite",
+      });
+    }
+    // If already certified via cite, declaration is redundant — no reject noise.
+  }
+
+  // Destiny unavailable → drop all personal terms / records.
+  if (source_domain === "unavailable") {
+    return {
+      term_ids: [],
+      records: [],
+      source_domain: "unavailable",
+      source_version: null,
+      declared: {
+        term_ids: declared_term_ids,
+        source_domain: declared_source_domain,
+        source_version: declared_source_version,
+      },
+      rejected,
+    };
+  }
+
+  // Keep records for the certified domain only (hits keep unmapped records).
+  const filtered = records.filter((r) => r.source_domain === source_domain);
+  const term_ids = uniq(
+    filtered
+      .filter((r) => r.certification === "certified" && r.term_id)
+      .map((r) => r.term_id as string),
+  );
 
   return {
     term_ids,
-    records: filtered.filter((r) => term_ids.includes(r.term_id)),
+    records: filtered,
     source_domain,
-    source_version,
+    source_version: program_version,
+    declared: {
+      term_ids: declared_term_ids,
+      source_domain: declared_source_domain,
+      source_version: declared_source_version,
+    },
+    rejected,
   };
 }
 

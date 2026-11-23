@@ -68,7 +68,11 @@ function unitToAnchors(input: {
     anchor_id: `anchor_${unit.id}_${i}`,
     source_domain,
     source_reference: a,
-    term_id: term_ids[Math.min(i, Math.max(0, term_ids.length - 1))],
+    ...(term_ids.length
+      ? {
+          term_id: term_ids[Math.min(i, Math.max(0, term_ids.length - 1))],
+        }
+      : {}),
     internal_anchor: {
       pack_unit_id: unit.id,
       anchor: a,
@@ -147,8 +151,18 @@ export function seedEvidenceRegistryForFace01(input: {
   const page02PlannedEvidenceIds: string[] = [];
 
   for (const unit of relevantUnits) {
+    // Prefer declared_* as the model-declaration probe; never treat stored
+    // certified term_ids as authority without re-deriving from structured cites.
+    const probe: BookJudgmentUnit = {
+      ...unit,
+      term_ids: unit.declared_term_ids?.length
+        ? unit.declared_term_ids
+        : [],
+      source_domain: unit.declared_source_domain ?? unit.source_domain,
+      source_version: unit.declared_source_version ?? unit.source_version,
+    };
     const prov = resolveUnitTermProvenance({
-      unit,
+      unit: probe,
       pack,
       availableCfpKeys: cfpKeys,
       bazi_available,

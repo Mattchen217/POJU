@@ -91,9 +91,9 @@ const JSON_SHAPE = `输出 JSON：
       "claim": "短句（destiny 若用紫微 hit，须含 hit:<id>:<level> 结构化引用）",
       "anchors": ["机制句或 closed hit 旁证；可用 cfp:dayMaster / hit:<id>:<level>"],
       "caveat": "可选",
-      "term_ids": ["仅本 unit 实际用到的 SSOT slug；可空；禁灌全表"],
-      "source_domain": "bazi"|"ziwei"|"science"|"convergence"|"unavailable",
-      "source_version": "可选 · cfp_hash 或 zfp_hash"
+      "term_ids": ["声明用 · 程序将按 cfp:/hit: 结构化引用重认证；禁灌全表"],
+      "source_domain": "声明用 · 程序按结构化引用来源重判",
+      "source_version": "声明用 · 程序以真实 cfp_hash/zfp_hash 为准"
     }
   ],
   "pattern_hits_used": ["hit:<id>:<level>…"],
@@ -167,7 +167,10 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
     )
       ? (segRaw as BookJudgmentSegmentId)
       : undefined;
-    const term_ids = Array.isArray(row.term_ids)
+    // Model output is DECLARATION only — coerce into declared_* fields.
+    // Certified term_ids / source_domain / source_version are written later by
+    // enrichUnitsWithProvenance from structured cites + real CFP/ZFP.
+    const declared_term_ids = Array.isArray(row.term_ids)
       ? row.term_ids
           .map((x) => String(x).trim())
           .filter(Boolean)
@@ -181,10 +184,12 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
       "convergence",
       "unavailable",
     ]);
-    const source_domain = domainOk.has(domainRaw)
-      ? (domainRaw as NonNullable<BookJudgmentUnit["source_domain"]>)
+    const declared_source_domain = domainOk.has(domainRaw)
+      ? (domainRaw as NonNullable<BookJudgmentUnit["declared_source_domain"]>)
       : undefined;
-    const source_version = String(row.source_version ?? "").trim().slice(0, 128);
+    const declared_source_version = String(row.source_version ?? "")
+      .trim()
+      .slice(0, 128);
     units.push({
       id,
       track: track as BookJudgmentUnit["track"],
@@ -193,9 +198,14 @@ function coerceUnits(raw: unknown): BookJudgmentUnit[] | null {
       claim: claim.slice(0, 400),
       anchors: anchors as [string, ...string[]],
       ...(caveat ? { caveat: caveat.slice(0, 240) } : {}),
-      term_ids,
-      ...(source_domain ? { source_domain } : {}),
-      ...(source_version ? { source_version } : {}),
+      term_ids: [],
+      ...(declared_term_ids.length ? { declared_term_ids } : {}),
+      ...(declared_source_domain
+        ? { declared_source_domain }
+        : {}),
+      ...(declared_source_version
+        ? { declared_source_version }
+        : {}),
     });
   }
   return units.length ? units : null;
@@ -209,8 +219,9 @@ function stringList(raw: unknown, key: string): string[] {
 }
 
 /**
- * Attach explicit provenance fields from structured cites + track.
- * Never invent term_ids from classical prose or dump the full glossary.
+ * Program-certify provenance onto units.
+ * Model declarations (declared_*) are preserved for audit; final term_ids /
+ * source_domain / source_version are ONLY program-certified values.
  */
 function enrichUnitsWithProvenance(input: {
   units: BookJudgmentUnit[];
@@ -231,9 +242,19 @@ function enrichUnitsWithProvenance(input: {
   } as BookJudgmentPack;
 
   return input.units.map((unit) => {
-    // Prefer model-declared domain/terms when present; fill only gaps from structured cites.
+    // Resolve against declared fields (model) + structured cites in claim/anchors.
+    const probe: BookJudgmentUnit = {
+      ...unit,
+      // Feed declarations into resolve as unit.term_ids so rejected[] is populated;
+      // resolve never treats them as certified authority.
+      term_ids: unit.declared_term_ids?.length
+        ? unit.declared_term_ids
+        : unit.term_ids ?? [],
+      source_domain: unit.declared_source_domain ?? unit.source_domain,
+      source_version: unit.declared_source_version ?? unit.source_version,
+    };
     const prov = resolveUnitTermProvenance({
-      unit,
+      unit: probe,
       pack: packStub,
       availableCfpKeys: cfpKeys,
       bazi_available,
@@ -242,31 +263,39 @@ function enrichUnitsWithProvenance(input: {
       zfp_hash: input.zfp_hash,
     });
 
-    const term_ids =
-      (unit.term_ids?.length ?? 0) > 0
-        ? unit.term_ids
-        : prov.term_ids;
-
-    let source_domain = unit.source_domain;
-    if (!source_domain) {
-      if (unit.track === "science") source_domain = "science";
-      else if (unit.track === "convergence") source_domain = "convergence";
-      else if (prov.source_domain !== "unavailable") {
-        source_domain = prov.source_domain;
-      }
-    }
-
-    const source_version =
-      unit.source_version?.trim() ||
-      prov.source_version ||
+    const declared_term_ids =
+      unit.declared_term_ids?.length
+        ? unit.declared_term_ids
+        : prov.declared.term_ids;
+    const declared_source_domain =
+      unit.declared_source_domain ??
+      (prov.declared.source_domain as BookJudgmentUnit["declared_source_domain"]) ??
+      undefined;
+    const declared_source_version =
+      unit.declared_source_version ??
+      prov.declared.source_version ??
       undefined;
 
-    return {
+    const certified: BookJudgmentUnit = {
       ...unit,
-      term_ids: term_ids ?? [],
-      ...(source_domain ? { source_domain } : {}),
-      ...(source_version ? { source_version } : {}),
+      term_ids: prov.term_ids,
+      source_domain: prov.source_domain,
     };
+    if (prov.source_version) {
+      certified.source_version = prov.source_version;
+    } else {
+      delete certified.source_version;
+    }
+    if (declared_term_ids.length) {
+      certified.declared_term_ids = declared_term_ids;
+    }
+    if (declared_source_domain) {
+      certified.declared_source_domain = declared_source_domain;
+    }
+    if (declared_source_version) {
+      certified.declared_source_version = declared_source_version;
+    }
+    return certified;
   });
 }
 
