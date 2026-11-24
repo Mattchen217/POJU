@@ -33,12 +33,19 @@ export type ReportPageDefinition = {
   optional_upstream: readonly ReportPageId[];
   output_schema_version: string;
   prompt_version: string;
+  /** Independent per-page validator stamp (not a global report version). */
+  validator_version: string;
+  /** Independent per-page production contract stamp. */
+  production_version: string;
   /** Page07 is conditionally enabled; others are unconditional. */
   conditional: boolean;
   /** Whether a model generation call is expected when the page is applicable. */
   model_generation: boolean;
-  /** Production code / contract version stamped into fingerprints. */
-  production_version: string;
+  /**
+   * Shared-input keys this page's production context actually consumes.
+   * Fingerprints hash only these keys from the page-specific slice.
+   */
+  shared_input_keys: readonly ReportSharedInputKey[];
   notes?: string;
 };
 
@@ -79,6 +86,15 @@ export const REPORT_UPSTREAM_SATISFYING_OUTCOMES = [
 export type ReportUpstreamSatisfyingOutcome =
   (typeof REPORT_UPSTREAM_SATISFYING_OUTCOMES)[number];
 
+export const REPORT_PAGE07_APPLICABILITY_STATUSES = [
+  "applicable",
+  "not_applicable",
+  "insufficient_information",
+] as const;
+
+export type ReportPage07ApplicabilityStatus =
+  (typeof REPORT_PAGE07_APPLICABILITY_STATUSES)[number];
+
 export type ReportPageRuntimeState = {
   page_id: ReportPageId;
   outcome: ReportPageOutcome;
@@ -86,12 +102,8 @@ export type ReportPageRuntimeState = {
   output_fingerprint?: string | null;
   /** Last input fingerprint used for the recorded outcome. */
   input_fingerprint?: string | null;
-  /** Page07 applicability when known. */
-  applicability_status?:
-    | "applicable"
-    | "not_applicable"
-    | "insufficient_information"
-    | null;
+  /** Page07 applicability when known (gate result). */
+  applicability_status?: ReportPage07ApplicabilityStatus | null;
 };
 
 export type ReportBlockedReason = {
@@ -100,25 +112,42 @@ export type ReportBlockedReason = {
   detail: string;
 };
 
+/**
+ * Ready resolution with explicit Page07 gate vs model-generation semantics.
+ * `ready_pages` is NOT used — Batch 2 must not treat gate-ready as LLM-ready.
+ */
 export type ReportReadyResolution = {
   graph_version: typeof REPORT_ORCHESTRATION_GRAPH_VERSION;
-  ready_pages: ReportPageId[];
+  /**
+   * Pages whose upstream is satisfied and that may receive a model generation task.
+   * Page07 appears here only when applicability_status === "applicable".
+   */
+  ready_model_generations: ReportPageId[];
+  /**
+   * Conditional pages (Page07) whose upstream is satisfied and that may run
+   * the applicability gate — not an LLM call.
+   */
+  ready_applicability_gates: ReportPageId[];
   blocked: ReportBlockedReason[];
   ready_derived: ReportDerivedNodeId[];
   blocked_derived: ReportBlockedReason[];
 };
 
 /**
- * Shared immutable inputs for fingerprints.
- * Only fields a page actually consumes are hashed for that page.
+ * Page-specific shared input slice fingerprints.
+ * Callers must supply fingerprints of the data each page's production context
+ * actually consumes (face-filtered DC / pack / readings / registry), not the
+ * whole-job bag.
  */
-export type ReportSharedInputSnapshot = {
+export type ReportPageSharedInputSlice = {
   locale: string;
-  dc_snapshot_fingerprint: string;
-  personal_computation_fingerprint: string;
-  approved_readings_fingerprint: string;
-  evidence_registry_fingerprint: string;
+  dc_slice_fingerprint: string;
+  personal_computation_slice_fingerprint: string;
+  approved_readings_slice_fingerprint: string;
+  evidence_registry_slice_fingerprint: string;
 };
+
+export type ReportSharedInputKey = keyof ReportPageSharedInputSlice;
 
 /**
  * Per-page upstream output fingerprints (canonical page results).
@@ -130,20 +159,22 @@ export type ReportUpstreamOutputFingerprints = Partial<
 
 export type ReportPageFingerprintInput = {
   page_id: ReportPageId;
-  shared: ReportSharedInputSnapshot;
+  /** Already page-filtered shared input slice. */
+  shared_slice: ReportPageSharedInputSlice;
   /** Only the upstream pages this page requires (and optional when present). */
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   /**
-   * Page07 applicability terminal when fingerprinting Page08 (or Page07 itself
-   * after the gate). Other pages ignore this.
+   * Required for Page07 and Page08. Must be an explicit applicability status —
+   * null / undefined is rejected (fail closed).
    */
-  page07_applicability_status?:
-    | "applicable"
-    | "not_applicable"
-    | "insufficient_information"
-    | null;
-  /** Validator / production stamp — defaults to registry production_version. */
+  page07_applicability_status?: ReportPage07ApplicabilityStatus | null;
+  /**
+   * Optional override for tests. Defaults to the page's registry validator_version.
+   * Must never be a global stamp applied to every page.
+   */
   validator_version?: string;
+  /** Optional override for tests. Defaults to registry production_version. */
+  production_version?: string;
 };
 
 export type ReportPageFingerprintResult = {
@@ -152,6 +183,22 @@ export type ReportPageFingerprintResult = {
   /** Deterministic canonical payload that was hashed (for tests / debug). */
   canonical_payload: Record<string, unknown>;
 };
+
+export type ReportFingerprintFailure = {
+  ok: false;
+  page_id: ReportPageId;
+  code: string;
+  detail: string;
+};
+
+export type ReportFingerprintSuccess = {
+  ok: true;
+  result: ReportPageFingerprintResult;
+};
+
+export type ReportFingerprintComputeResult =
+  | ReportFingerprintSuccess
+  | ReportFingerprintFailure;
 
 export type ReportGraphValidationIssue = {
   code: string;

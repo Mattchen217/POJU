@@ -1,5 +1,6 @@
 /**
  * Ready / blocked resolution against the report DAG — Batch 1 SSOT.
+ * Distinguishes Page07 applicability-gate ready from model-generation ready.
  * Does not publish tasks or call models.
  */
 
@@ -36,6 +37,17 @@ function stateMap(
   return map;
 }
 
+const IN_FLIGHT_OR_SETTLED: ReadonlySet<ReportPageOutcome> = new Set([
+  "completed",
+  "skipped_not_applicable",
+  "insufficient_information",
+  "queued",
+  "running",
+  "validating",
+  "repair_queued",
+  "cancelled",
+]);
+
 export function missingRequiredUpstream(
   pageId: ReportPageId,
   states: readonly ReportPageRuntimeState[],
@@ -52,74 +64,137 @@ export function missingRequiredUpstream(
   return missing;
 }
 
+function selfOutcome(
+  pageId: ReportPageId,
+  states: readonly ReportPageRuntimeState[],
+): ReportPageOutcome {
+  return stateMap(states).get(pageId)?.outcome ?? "pending";
+}
+
 /**
- * A page is ready to dispatch when:
- * - it is not already in a terminal/in-flight outcome that should not re-run
- * - every required upstream has a satisfying terminal outcome
- *
- * Batch 1 does not auto-requeue completed pages; callers pass pending/stale/failed.
+ * Non-conditional page: upstream satisfied and not already settled/in-flight.
+ * Page07 must use gate / model-generation helpers instead.
+ */
+export function isUnconditionalPageModelReady(
+  pageId: ReportPageId,
+  states: readonly ReportPageRuntimeState[],
+): boolean {
+  const def = reportPageDefinition(pageId);
+  if (def.conditional) return false;
+  if (IN_FLIGHT_OR_SETTLED.has(selfOutcome(pageId, states))) return false;
+  return missingRequiredUpstream(pageId, states).length === 0;
+}
+
+/**
+ * Page07: upstream satisfied, applicability not yet decided → run gate (no LLM).
+ */
+export function isPage07ApplicabilityGateReady(
+  states: readonly ReportPageRuntimeState[],
+): boolean {
+  const map = stateMap(states);
+  const self = map.get("07");
+  const outcome = self?.outcome ?? "pending";
+  if (IN_FLIGHT_OR_SETTLED.has(outcome)) return false;
+  if (self?.applicability_status) return false;
+  return missingRequiredUpstream("07", states).length === 0;
+}
+
+/**
+ * Page07: applicability === applicable and page not yet settled → model task.
+ */
+export function isPage07ModelGenerationReady(
+  states: readonly ReportPageRuntimeState[],
+): boolean {
+  const map = stateMap(states);
+  const self = map.get("07");
+  const outcome = self?.outcome ?? "pending";
+  if (IN_FLIGHT_OR_SETTLED.has(outcome)) return false;
+  if (self?.applicability_status !== "applicable") return false;
+  return missingRequiredUpstream("07", states).length === 0;
+}
+
+/**
+ * @deprecated Prefer isUnconditionalPageModelReady / isPage07* helpers.
+ * Kept for callers that mean "may start next work unit" — for Page07 this means
+ * gate OR model depending on applicability, never treating gate as LLM.
  */
 export function isPageReadyToDispatch(
   pageId: ReportPageId,
   states: readonly ReportPageRuntimeState[],
 ): boolean {
-  const map = stateMap(states);
-  const self = map.get(pageId);
-  const selfOutcome = self?.outcome ?? "pending";
-  if (
-    selfOutcome === "completed" ||
-    selfOutcome === "skipped_not_applicable" ||
-    selfOutcome === "insufficient_information" ||
-    selfOutcome === "queued" ||
-    selfOutcome === "running" ||
-    selfOutcome === "validating" ||
-    selfOutcome === "repair_queued" ||
-    selfOutcome === "cancelled"
-  ) {
-    return false;
+  if (pageId === "07") {
+    return (
+      isPage07ApplicabilityGateReady(states) ||
+      isPage07ModelGenerationReady(states)
+    );
   }
-  // pending | ready | failed | stale → may dispatch when upstream satisfied
-  return missingRequiredUpstream(pageId, states).length === 0;
+  return isUnconditionalPageModelReady(pageId, states);
 }
 
 export function resolveReadyPages(
   states: readonly ReportPageRuntimeState[],
 ): {
-  ready_pages: ReportPageId[];
+  ready_model_generations: ReportPageId[];
+  ready_applicability_gates: ReportPageId[];
   blocked: ReportBlockedReason[];
 } {
-  const ready_pages: ReportPageId[] = [];
+  const ready_model_generations: ReportPageId[] = [];
+  const ready_applicability_gates: ReportPageId[] = [];
   const blocked: ReportBlockedReason[] = [];
+  const map = stateMap(states);
+
   for (const page of REPORT_PAGE_REGISTRY) {
-    if (isPageReadyToDispatch(page.page_id, states)) {
-      ready_pages.push(page.page_id);
+    const pageId = page.page_id;
+    const outcome = map.get(pageId)?.outcome ?? "pending";
+
+    if (pageId === "07") {
+      if (isPage07ApplicabilityGateReady(states)) {
+        ready_applicability_gates.push("07");
+        continue;
+      }
+      if (isPage07ModelGenerationReady(states)) {
+        ready_model_generations.push("07");
+        continue;
+      }
+      if (IN_FLIGHT_OR_SETTLED.has(outcome)) continue;
+      // applicability decided as not_applicable / insufficient but outcome not
+      // yet written as terminal — not model-ready; surface as blocked detail.
+      const app = map.get("07")?.applicability_status;
+      if (app === "not_applicable" || app === "insufficient_information") {
+        blocked.push({
+          page_id: "07",
+          missing_upstream: [],
+          detail: `page07 applicability=${app}; await terminal settlement (no model generation)`,
+        });
+        continue;
+      }
+      const missing = missingRequiredUpstream("07", states);
+      if (missing.length) {
+        blocked.push({
+          page_id: "07",
+          missing_upstream: missing,
+          detail: `waiting on ${missing.join(", ")} before applicability gate`,
+        });
+      }
       continue;
     }
-    const map = stateMap(states);
-    const self = map.get(page.page_id);
-    const selfOutcome = self?.outcome ?? "pending";
-    if (
-      selfOutcome === "completed" ||
-      selfOutcome === "skipped_not_applicable" ||
-      selfOutcome === "insufficient_information" ||
-      selfOutcome === "queued" ||
-      selfOutcome === "running" ||
-      selfOutcome === "validating" ||
-      selfOutcome === "repair_queued" ||
-      selfOutcome === "cancelled"
-    ) {
+
+    if (isUnconditionalPageModelReady(pageId, states)) {
+      ready_model_generations.push(pageId);
       continue;
     }
-    const missing = missingRequiredUpstream(page.page_id, states);
+    if (IN_FLIGHT_OR_SETTLED.has(outcome)) continue;
+    const missing = missingRequiredUpstream(pageId, states);
     if (missing.length) {
       blocked.push({
-        page_id: page.page_id,
+        page_id: pageId,
         missing_upstream: missing,
         detail: `waiting on ${missing.join(", ")}`,
       });
     }
   }
-  return { ready_pages, blocked };
+
+  return { ready_model_generations, ready_applicability_gates, blocked };
 }
 
 export function isDerivedNodeReady(
@@ -172,7 +247,8 @@ export function resolveReportReadyState(
   const derived = resolveReadyDerived(states);
   return {
     graph_version: REPORT_ORCHESTRATION_GRAPH_VERSION,
-    ready_pages: pages.ready_pages,
+    ready_model_generations: pages.ready_model_generations,
+    ready_applicability_gates: pages.ready_applicability_gates,
     blocked: pages.blocked,
     ready_derived: derived.ready_derived,
     blocked_derived: derived.blocked_derived,
