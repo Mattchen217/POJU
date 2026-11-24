@@ -461,8 +461,11 @@ export function validateFace07Output(input: {
 
   /**
    * Units that treat a participant's behavior as settled.
-   * Driven by participant.verification_status + unit cited confirmed facts —
-   * not keyword-only. Confirmed identity does not authorize unconfirmed behavior.
+   * Identity (related_fact_ids / verification_status) never proves behavior.
+   * Assertive behavior requires an independent confirmed reality fact on this
+   * unit that names this participant and is not that participant's identity
+   * binding. Another participant's confirmed fact cannot sponsor this one.
+   * Fail-closed when attribution is unclear — no model-reported supporting_fact_id.
    */
   const scanParticipantProse = (
     participantIds: readonly string[],
@@ -471,9 +474,30 @@ export function validateFace07Output(input: {
     realityFactIds: readonly string[],
   ) => {
     if (!textHasAssertiveClaim(text)) return;
-    const unitHasConfirmedFact = realityFactIds.some((fid) =>
-      isConfirmedDcStatus(resolveFactStatus(fid)),
-    );
+
+    const confirmedBehaviorFactSupportsParticipant = (
+      fid: string,
+      participantId: string,
+      displayLabel: string,
+      identityFactIds: ReadonlySet<string>,
+    ): boolean => {
+      if (identityFactIds.has(fid)) return false;
+      if (!isConfirmedDcStatus(resolveFactStatus(fid))) return false;
+      const statement = (input.factContentById?.get(fid) ?? "").trim();
+      if (!statement) return false;
+      const label = displayLabel.trim().toLowerCase();
+      if (!label || !statement.toLowerCase().includes(label)) return false;
+      // Must not be another listed participant's exclusive identity binding.
+      for (const otherId of participantIds) {
+        if (otherId === participantId) continue;
+        if (isSelfParticipantId(otherId)) continue;
+        const other = participantById.get(otherId);
+        if (!other) continue;
+        if ((other.related_fact_ids ?? []).includes(fid)) return false;
+      }
+      return true;
+    };
+
     for (const id of participantIds) {
       const participant = participantById.get(id);
       if (!participant) continue;
@@ -486,12 +510,20 @@ export function validateFace07Output(input: {
         });
         continue;
       }
-      // Identity may be confirmed, but assertive behavior still needs a confirmed
-      // reality fact on this unit. A confirmed binding cannot cover unverified behavior.
-      if (!unitHasConfirmedFact) {
+
+      const identityFactIds = new Set(participant.related_fact_ids ?? []);
+      const behaviorSupports = realityFactIds.filter((fid) =>
+        confirmedBehaviorFactSupportsParticipant(
+          fid,
+          id,
+          participant.display_label,
+          identityFactIds,
+        ),
+      );
+      if (behaviorSupports.length < 1) {
         issues.push({
           code: "unconfirmed_participant_behavior",
-          detail: `${path} asserts settled behavior for confirmed participant ${id} without a confirmed reality fact on the unit`,
+          detail: `${path} asserts settled behavior for participant ${id} without an independent confirmed behavior fact on the unit`,
           path,
         });
       }

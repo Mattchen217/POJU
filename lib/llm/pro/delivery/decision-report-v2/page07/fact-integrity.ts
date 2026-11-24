@@ -1,8 +1,9 @@
 /**
  * Page07 fact citation stance + participant verification/role integrity.
  * Fail-closed. Structural stance is required; keyword hedges alone do not launder.
- * R3: sentence-level assertive / conditional / uncertain checks; no cross-sentence
- * frame sponsorship; no Map last-write-wins stance ambiguity.
+ * R3/R4: sentence-level assertive / conditional / uncertain checks; Chinese
+ * sentence boundaries without requiring whitespace; no token-overlap attribution;
+ * no cross-sentence frame sponsorship.
  */
 
 export const PAGE07_REALITY_CITATION_STANCES = [
@@ -65,64 +66,6 @@ const UNCERTAINTY_FRAME =
 
 const TRAILING_HEDGE =
   /(?:仍需确认|尚未验证|仍不确定|still\s+needs?\s+(?:confirm|verification)|remains?\s+unverified|this\s+(?:is|remains)\s+unverified|not\s+yet\s+confirmed)\s*[。.!！]?$/i;
-
-const TOKEN_STOP = new Set([
-  "the",
-  "a",
-  "an",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "to",
-  "of",
-  "and",
-  "or",
-  "in",
-  "on",
-  "for",
-  "with",
-  "that",
-  "this",
-  "it",
-  "as",
-  "at",
-  "by",
-  "from",
-  "we",
-  "our",
-  "user",
-  "might",
-  "may",
-  "can",
-  "will",
-  "has",
-  "have",
-  "had",
-  "been",
-  "可能",
-  "或许",
-  "也许",
-  "的",
-  "了",
-  "在",
-  "是",
-  "与",
-  "和",
-  "或",
-  "把",
-  "被",
-  "对",
-  "就",
-  "都",
-  "也",
-  "还",
-  "有",
-  "会",
-  "将",
-  "已经",
-]);
 
 export function isConfirmedDcStatus(status: string | undefined): boolean {
   return status === "confirmed";
@@ -219,40 +162,61 @@ export function roleSupportedByFactBlob(
   return pattern.test(factBlob);
 }
 
+/**
+ * Split on sentence terminators without requiring whitespace after Chinese
+ * punctuation. Avoids splitting decimals (3.14). Preserves order.
+ */
 export function splitIntoSentences(text: string): string[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
-  return trimmed
-    .split(/(?<=[。.!?！？])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
 
-export function contentTokens(text: string): Set<string> {
-  const raw = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-  return new Set(
-    raw.filter((t) => t.length >= 2 && !TOKEN_STOP.has(t)),
-  );
-}
+  const out: string[] = [];
+  let start = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    const ch = trimmed[i]!;
+    if (ch === "。" || ch === "！" || ch === "？") {
+      const piece = trimmed.slice(start, i + 1).trim();
+      if (piece) out.push(piece);
+      start = i + 1;
+      continue;
+    }
+    if (ch !== "." && ch !== "!" && ch !== "?") continue;
 
-/**
- * Sentence ↔ fact relevance. Multi-fact units require ≥2 content-token overlap
- * so a confirmed-fact sentence cannot sponsor a non-confirmed fact.
- */
-export function sentenceRelevantToFact(
-  sentence: string,
-  factStatement: string,
-  opts?: { multiFactUnit?: boolean },
-): boolean {
-  const factToks = contentTokens(factStatement);
-  const sentToks = contentTokens(sentence);
-  if (!factToks.size || !sentToks.size) return false;
-  let overlap = 0;
-  for (const t of sentToks) {
-    if (factToks.has(t)) overlap += 1;
+    // Decimal: digit.digit — not a sentence boundary.
+    if (
+      ch === "." &&
+      i > 0 &&
+      /\d/.test(trimmed[i - 1]!) &&
+      i + 1 < trimmed.length &&
+      /\d/.test(trimmed[i + 1]!)
+    ) {
+      continue;
+    }
+
+    const next = i + 1 < trimmed.length ? trimmed[i + 1]! : "";
+    let split = false;
+    if (ch === "!" || ch === "?") {
+      split =
+        next === "" ||
+        /\s/.test(next) ||
+        /[A-Za-z\u4e00-\u9fff]/.test(next);
+    } else {
+      // Period: end, whitespace, CJK, or capital letter starting next sentence
+      // (with or without space). Lowercase continuation (e.g. abbreviations) kept.
+      split =
+        next === "" ||
+        /\s/.test(next) ||
+        /[\u4e00-\u9fff]/.test(next) ||
+        /[A-Z]/.test(next);
+    }
+    if (!split) continue;
+    const piece = trimmed.slice(start, i + 1).trim();
+    if (piece) out.push(piece);
+    start = i + 1;
   }
-  const need = opts?.multiFactUnit ? 2 : 1;
-  return overlap >= need;
+  const tail = trimmed.slice(start).trim();
+  if (tail) out.push(tail);
+  return out;
 }
 
 export function textHasConditionalFrame(text: string): boolean {
@@ -295,16 +259,19 @@ function sentenceHasRequiredFrame(
 
 /**
  * When citing a non-confirmed fact with conditional/uncertain stance,
- * stance framing must attach to the same sentence as any assertive claim
- * about that fact. Cross-sentence if/uncertainty cannot sponsor a bare assert.
- * Fail-closed when relevance or stance reflection cannot be established.
+ * stance framing must attach to the same sentence as any assertive claim.
+ * Cross-sentence if/uncertainty cannot sponsor a bare assert.
+ *
+ * R4: no token-overlap attribution. Every sentence is checked. In multi-fact
+ * units, a bare assertive sentence cannot be ignored just because overlap
+ * failed — confirmed neighbors must not launder non-confirmed cites.
  */
 export function nonConfirmedCitationTextOk(input: {
   stance: Page07RealityCitationStance;
   text: string;
-  /** DC fact statement used for sentence↔fact relevance. */
+  /** DC fact statement — required so status/statement pairing stays fail-closed. */
   factStatement?: string;
-  /** All reality_fact_ids on the same unit (for multi-fact relevance threshold). */
+  /** All reality_fact_ids on the same unit (informational; not used to skip checks). */
   unitFactIds?: readonly string[];
 }): { ok: true } | { ok: false; reason: string } {
   if (input.stance === "as_confirmed") {
@@ -324,19 +291,9 @@ export function nonConfirmedCitationTextOk(input: {
     return { ok: false, reason: "empty_citation_text" };
   }
 
-  const multiFactUnit = (input.unitFactIds?.length ?? 0) > 1;
-  const related = multiFactUnit
-    ? sentences.filter((s) =>
-        sentenceRelevantToFact(s, factStatement, { multiFactUnit: true }),
-      )
-    : sentences;
-
-  if (!related.length) {
-    // Cannot tell whether stance is reflected for this fact → fail closed.
-    return { ok: false, reason: "fact_stance_unrecognizable" };
-  }
-
-  for (const sentence of related) {
+  // Conservative: check every sentence. Do not skip via token overlap.
+  void input.unitFactIds;
+  for (const sentence of sentences) {
     if (
       textHasAssertiveClaim(sentence) &&
       !sentenceHasRequiredFrame(sentence, input.stance)
@@ -352,11 +309,11 @@ export function nonConfirmedCitationTextOk(input: {
   }
 
   if (input.stance === "as_conditional") {
-    if (!related.some((s) => textHasConditionalFrame(s))) {
+    if (!sentences.some((s) => textHasConditionalFrame(s))) {
       return { ok: false, reason: "missing_fact_related_conditional" };
     }
   } else if (input.stance === "as_uncertain") {
-    if (!related.some((s) => textHasUncertaintyFrame(s))) {
+    if (!sentences.some((s) => textHasUncertaintyFrame(s))) {
       return { ok: false, reason: "missing_fact_related_uncertainty" };
     }
   }

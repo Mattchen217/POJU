@@ -19,6 +19,7 @@ import {
   synthesizeFace07StatusPage,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/production";
 import { validateFace07Output } from "@/lib/llm/pro/delivery/decision-report-v2/page07/validate";
+import { splitIntoSentences } from "@/lib/llm/pro/delivery/decision-report-v2/page07/fact-integrity";
 import {
   assemblePage07PdfArgumentBodies,
   assemblePage07SectionsForDisplay,
@@ -1670,6 +1671,465 @@ async function main() {
         mixedBind.issues.some(
           (i) => i.code === "participant_verification_status_mismatch",
         ),
+      );
+    }
+
+    // ── R4: sentence boundaries + conservative multi-fact + behavior facts ──
+    {
+      const zhNoSpace = splitIntoSentences(
+        "如果审批通过，Alex可能参与。Alex将承担一半搬迁成本。",
+      );
+      assert.equal(zhNoSpace.length, 2, zhNoSpace.join(" | "));
+      assert.ok(zhNoSpace[0]!.includes("如果审批通过"));
+      assert.ok(zhNoSpace[1]!.includes("将承担"));
+
+      const enSpaced = splitIntoSentences(
+        "If approval is granted, Alex may contribute. Alex will cover half regardless.",
+      );
+      assert.equal(enSpaced.length, 2, enSpaced.join(" | "));
+
+      const mixedLang = splitIntoSentences(
+        "If approval holds, keep it conditional.Alex将承担一半搬迁成本。",
+      );
+      assert.ok(mixedLang.length >= 2, mixedLang.join(" | "));
+      assert.ok(mixedLang.some((s) => /将承担/.test(s)));
+
+      const decimalSafe = splitIntoSentences(
+        "Keep the 3.14 deposit estimate unverified. Alex may cover half.",
+      );
+      assert.equal(decimalSafe.length, 2, decimalSafe.join(" | "));
+      assert.ok(decimalSafe[0]!.includes("3.14"));
+    }
+
+    {
+      const factGuessZh = "fact_r4_guess_zh";
+      const vZh = {
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, factGuessZh]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [factGuessZh, "unverified"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [factGuessZh, "Alex可能承担一半搬迁成本"],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [factGuessZh, "none"],
+        ]),
+      };
+
+      const zhCondThenAssert = validateFace07Output({
+        ...vZh,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: [factGuessZh],
+              reality_fact_stances: [
+                { fact_id: factGuessZh, stance: "as_conditional" },
+              ],
+              text: "如果审批通过，Alex可能参与。Alex将承担一半搬迁成本。",
+            },
+          ],
+        }),
+      });
+      assert.equal(zhCondThenAssert.ok, false);
+      if (zhCondThenAssert.ok) throw new Error("unreachable");
+      assert.ok(
+        zhCondThenAssert.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes(factGuessZh),
+        ),
+        zhCondThenAssert.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+
+      const zhUncertThenAssert = validateFace07Output({
+        ...vZh,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: [factGuessZh],
+              reality_fact_stances: [
+                { fact_id: factGuessZh, stance: "as_uncertain" },
+              ],
+              text: "搬迁成本分担仍未确认。Alex将承担一半搬迁成本。",
+            },
+          ],
+        }),
+      });
+      assert.equal(zhUncertThenAssert.ok, false);
+      if (zhUncertThenAssert.ok) throw new Error("unreachable");
+      assert.ok(
+        zhUncertThenAssert.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes(factGuessZh),
+        ),
+      );
+
+      const zhSynonymAssert = validateFace07Output({
+        ...vZh,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: ["fact_alex", factGuessZh],
+              reality_fact_stances: [
+                { fact_id: "fact_alex", stance: "as_confirmed" },
+                { fact_id: factGuessZh, stance: "as_uncertain" },
+              ],
+              text: "合伙书面拆分已确认。Alex将承担一半搬迁成本。",
+            },
+          ],
+        }),
+      });
+      assert.equal(zhSynonymAssert.ok, false);
+      if (zhSynonymAssert.ok) throw new Error("unreachable");
+      assert.ok(
+        zhSynonymAssert.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes(factGuessZh),
+        ),
+      );
+
+      const confirmedFirst = validateFace07Output({
+        ...baseV,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: ["fact_alex", "fact_guess"],
+              reality_fact_stances: [
+                { fact_id: "fact_alex", stance: "as_confirmed" },
+                { fact_id: "fact_guess", stance: "as_uncertain" },
+              ],
+              text: "The partnership split is written. Alex pays half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(confirmedFirst.ok, false);
+      if (confirmedFirst.ok) throw new Error("unreachable");
+      assert.ok(
+        confirmedFirst.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes("fact_guess"),
+        ),
+      );
+
+      const unverifiedFirst = validateFace07Output({
+        ...baseV,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: ["fact_guess", "fact_alex"],
+              reality_fact_stances: [
+                { fact_id: "fact_guess", stance: "as_uncertain" },
+                { fact_id: "fact_alex", stance: "as_confirmed" },
+              ],
+              text: "Alex pays half of the relocation cost. The partnership split is written.",
+            },
+          ],
+        }),
+      });
+      assert.equal(unverifiedFirst.ok, false);
+      if (unverifiedFirst.ok) throw new Error("unreachable");
+      assert.ok(
+        unverifiedFirst.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes("fact_guess"),
+        ),
+      );
+
+      const mixedEnZh = validateFace07Output({
+        ...vZh,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: ["fact_alex", factGuessZh],
+              reality_fact_stances: [
+                { fact_id: "fact_alex", stance: "as_confirmed" },
+                { fact_id: factGuessZh, stance: "as_conditional" },
+              ],
+              text: "If the partnership split holds, keep relocation gated.Alex将承担一半搬迁成本。",
+            },
+          ],
+        }),
+      });
+      assert.equal(mixedEnZh.ok, false);
+      if (mixedEnZh.ok) throw new Error("unreachable");
+      assert.ok(
+        mixedEnZh.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes(factGuessZh),
+        ),
+      );
+
+      const uncertainAllowed = validateFace07Output({
+        ...baseV,
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: ["fact_alex", "fact_guess"],
+              reality_fact_stances: [
+                { fact_id: "fact_alex", stance: "as_confirmed" },
+                { fact_id: "fact_guess", stance: "as_uncertain" },
+              ],
+              text: "Keep the written split. Alex may cover half the move cost; that share remains unverified.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        uncertainAllowed.ok,
+        true,
+        uncertainAllowed.ok
+          ? ""
+          : uncertainAllowed.issues.map((i) => i.detail).join(" | "),
+      );
+    }
+
+    {
+      const idFact = "fact_r4_id";
+      const behUnver = "fact_r4_beh_u";
+      const behConf = "fact_r4_beh_c";
+      const otherIdFact = "fact_r4_other_id";
+
+      const confIdUnverBeh = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([
+          ...ctx.knownFactIds,
+          idFact,
+          behUnver,
+        ]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [behUnver, "unverified"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is named as a partner in the written split."],
+          [behUnver, "Alex might cover half the move cost."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [behUnver, "none"],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [idFact, behUnver],
+              reality_fact_stances: [
+                { fact_id: idFact, stance: "as_confirmed" },
+                { fact_id: behUnver, stance: "as_uncertain" },
+              ],
+              text: "Alex pays half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(confIdUnverBeh.ok, false);
+      if (confIdUnverBeh.ok) throw new Error("unreachable");
+      assert.ok(
+        confIdUnverBeh.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+        confIdUnverBeh.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+      assert.ok(
+        confIdUnverBeh.issues.some(
+          (i) =>
+            i.code === "fact_status_upgrade" && i.detail.includes(behUnver),
+        ),
+      );
+
+      const aFactForB = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, otherIdFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [otherIdFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is named as a partner in the written split."],
+          [otherIdFact, "Jordan is named as a partner in the written split."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [otherIdFact, "independently_verified"],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+            {
+              participant_id: "p_jordan",
+              display_label: "Jordan",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [otherIdFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex", "p_jordan"],
+              reality_fact_ids: [idFact],
+              reality_fact_stances: [
+                { fact_id: idFact, stance: "as_confirmed" },
+              ],
+              text: "Jordan pays half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(aFactForB.ok, false);
+      if (aFactForB.ok) throw new Error("unreachable");
+      assert.ok(
+        aFactForB.issues.some(
+          (i) =>
+            i.code === "unconfirmed_participant_behavior" &&
+            i.detail.includes("p_jordan"),
+        ),
+        aFactForB.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+
+      const unclearSupport = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is named as a partner in the written split."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [idFact],
+              reality_fact_stances: [
+                { fact_id: idFact, stance: "as_confirmed" },
+              ],
+              text: "Alex pays half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(unclearSupport.ok, false);
+      if (unclearSupport.ok) throw new Error("unreachable");
+      assert.ok(
+        unclearSupport.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+      );
+
+      const independentBehOk = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, behConf]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [behConf, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is named as a partner in the written split."],
+          [
+            behConf,
+            "Alex has agreed in writing to cover half the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [behConf, "independently_verified"],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [behConf],
+              reality_fact_stances: [
+                { fact_id: behConf, stance: "as_confirmed" },
+              ],
+              text: "Alex has agreed to cover half the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        independentBehOk.ok,
+        true,
+        independentBehOk.ok
+          ? ""
+          : independentBehOk.issues.map((i) => i.detail).join(" | "),
       );
     }
 
