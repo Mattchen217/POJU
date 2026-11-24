@@ -1,5 +1,6 @@
 /**
- * Decision Report V2 — Batch 0 public foundation + Page 01 + Page 02 + Page 04 + Page 06 + Page 07.
+ * Decision Report V2 — Batch 0 public foundation + Page 01 + Page 02 + Page 04 + Page 06 + Page 07 + Page 08
+ * + orchestration Batch 1 (DAG SSOT only).
  */
 
 export * from "./types";
@@ -177,3 +178,24 @@ export * from "./fact-relevance";
 export * from "./personal-domains";
 export * from "./term-provenance";
 export * from "./assembly";
+export {
+  REPORT_ORCHESTRATION_GRAPH_VERSION,
+  REPORT_PAGE_IDS,
+  REPORT_PAGE_REGISTRY,
+  REPORT_DERIVED_NODE_REGISTRY,
+  REPORT_PAGE_PRODUCTION_VERSION,
+  buildReportDependencyGraph,
+  validateReportDependencyGraph,
+  requiredUpstreamOf,
+  transitiveUpstreamOf,
+  downstreamDependentsOf,
+  assertPage01Page02Independent,
+  computePageInputFingerprint,
+  computeAllPageInputFingerprints,
+  selectUpstreamFingerprintsForPage,
+  resolveReportReadyState,
+  initialPendingPageStates,
+  isPageReadyToDispatch,
+  reportPageDefinition,
+  isReportPageId,
+} from "./orchestration";
