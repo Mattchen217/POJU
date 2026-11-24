@@ -604,12 +604,17 @@ export function extractBehaviorAnchor(
 }
 
 /**
- * Same concrete behavior only when:
+ * Same concrete behavior only when the fact directionally covers the sentence:
  * - action classes match;
- * - at least one specific object concept overlaps;
- * - domain-level specifics do not conflict (relocation ≠ rent even if both
- *   share deposit / cost descriptors);
+ * - every specific object concept in the sentence is present on the fact
+ *   (intersection alone is not enough — extra sentence objects must not ride
+ *   along on a shared concept);
+ * - every domain-specific concept in the sentence is likewise covered by the
+ *   fact's domain specifics;
  * - generic descriptors alone never authorize a match.
+ *
+ * Fact may be broader than the sentence (fact: relocation+rent, sentence:
+ * relocation only → allow). Sentence may not introduce unsupported objects.
  */
 export function behaviorAnchorsMatch(
   factAnchor: Page07BehaviorAnchor | null,
@@ -624,11 +629,9 @@ export function behaviorAnchorsMatch(
     return false;
   }
 
-  const sharedSpecific = new Set<string>();
   for (const c of sentenceAnchor.specificObjectConcepts) {
-    if (factAnchor.specificObjectConcepts.has(c)) sharedSpecific.add(c);
+    if (!factAnchor.specificObjectConcepts.has(c)) return false;
   }
-  if (!sharedSpecific.size) return false;
 
   const factDomains = new Set(
     [...factAnchor.specificObjectConcepts].filter((c) =>
@@ -640,15 +643,8 @@ export function behaviorAnchorsMatch(
       BEHAVIOR_DOMAIN_SPECIFICS.has(c),
     ),
   );
-  if (factDomains.size && sentDomains.size) {
-    let domainShared = false;
-    for (const d of sentDomains) {
-      if (factDomains.has(d)) {
-        domainShared = true;
-        break;
-      }
-    }
-    if (!domainShared) return false;
+  for (const d of sentDomains) {
+    if (!factDomains.has(d)) return false;
   }
 
   // Generics are ignored for authorization (informational only).
