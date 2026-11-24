@@ -79,7 +79,8 @@ export const PAGE06_INPUT_FIELD_CONTRACTS: readonly Page06InputFieldContract[] =
         "Page05 V2 paths. Preferred paths must already exist; Page06 does not invent paths.",
       data_type: "object",
       source_kind: "analytical_result",
-      source_path: "page05 Face05V2 preferred_path_ids + path_units",
+      source_path:
+        "page05 Face05V2 preferred_path_ids + path_units + path_comparison + switching_rules",
       required: true,
       allow_empty: false,
       missing_handling: "block_page_generation",

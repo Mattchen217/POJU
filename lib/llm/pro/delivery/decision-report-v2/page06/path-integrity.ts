@@ -68,33 +68,41 @@ export function assertFace06PathIntegrity(
     noteDup("adjustment_id", adj.adjustment_id, seenAdj);
   }
 
-  const actionIds = new Set(page.execution_actions.map((a) => a.action_id));
-  const experimentIds = new Set(
-    page.validation_experiments.map((e) => e.experiment_id),
+  const actionById = new Map(
+    page.execution_actions.map((a) => [a.action_id, a] as const),
   );
+  const experimentById = new Map(
+    page.validation_experiments.map((e) => [e.experiment_id, e] as const),
+  );
+
   checkPath("monitoring_contract", page.monitoring_contract.path_id);
-  if (page.monitoring_contract.path_id !== page.primary_path_id) {
-    const relatedPaths = new Set<string>([
-      ...page.execution_actions.map((a) => a.path_id),
-      ...page.validation_experiments.map((e) => e.path_id),
-    ]);
-    if (!relatedPaths.has(page.monitoring_contract.path_id)) {
-      issues.push(
-        `monitoring_contract.path_id must equal primary_path_id or match a related action/experiment path: ${page.monitoring_contract.path_id}`,
-      );
-    }
-  }
+  const monitorPath = page.monitoring_contract.path_id;
+
   for (const id of page.monitoring_contract.action_ids ?? []) {
-    if (!actionIds.has(id)) {
+    const action = actionById.get(id);
+    if (!action) {
       issues.push(
         `monitoring action_ids not subset of execution_actions: ${id}`,
+      );
+      continue;
+    }
+    if (action.path_id !== monitorPath) {
+      issues.push(
+        `monitoring action ${id} path_id=${action.path_id} must equal monitoring_contract.path_id=${monitorPath}`,
       );
     }
   }
   for (const id of page.monitoring_contract.experiment_ids ?? []) {
-    if (!experimentIds.has(id)) {
+    const exp = experimentById.get(id);
+    if (!exp) {
       issues.push(
         `monitoring experiment_ids not subset of validation_experiments: ${id}`,
+      );
+      continue;
+    }
+    if (exp.path_id !== monitorPath) {
+      issues.push(
+        `monitoring experiment ${id} path_id=${exp.path_id} must equal monitoring_contract.path_id=${monitorPath}`,
       );
     }
   }

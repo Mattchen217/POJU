@@ -34,7 +34,8 @@ export function validateFace06Output(input: {
   knownFactIds?: ReadonlySet<string>;
   factStatusById?: ReadonlyMap<string, string>;
   page05Paths: Face06Page05PathSets;
-  knownPersonalUnitRefs?: ReadonlySet<string>;
+  /** Only Face02 kind=personal_interpretation unit_ids. */
+  knownPersonalInterpretationUnitRefs?: ReadonlySet<string>;
   reject_legacy_ids?: boolean;
 }): Face06ValidationResult {
   const rejectLegacy = input.reject_legacy_ids !== false;
@@ -175,12 +176,12 @@ export function validateFace06Output(input: {
         path: adj.adjustment_id,
       });
     }
-    if (input.knownPersonalUnitRefs) {
+    if (input.knownPersonalInterpretationUnitRefs) {
       for (const ref of personal) {
-        if (!input.knownPersonalUnitRefs.has(ref)) {
+        if (!input.knownPersonalInterpretationUnitRefs.has(ref)) {
           issues.push({
-            code: "unknown_personal_unit_ref",
-            detail: `${adj.adjustment_id} cites unknown personal unit ref=${ref}`,
+            code: "unknown_personal_interpretation_unit_ref",
+            detail: `${adj.adjustment_id} cites non-personal_interpretation unit ref=${ref}`,
             path: adj.adjustment_id,
           });
         }

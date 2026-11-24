@@ -23,6 +23,7 @@ export type Face06ProductionPayload = {
     cautious_path_ids: string[];
     all_path_ids: string[];
     path_units: unknown[] | null;
+    path_comparison: { rows: unknown[] } | null;
     switching_rules: unknown[] | null;
   };
   reality: {
@@ -58,13 +59,16 @@ export function buildFace06PromptPair(input: {
     "Page06 duty: execute paths Page05 already chose. primary_path_id is a preferred path; fallback_path_ids are alternatives.",
     "Write a first step, ordered execution actions, optional validation experiments, personal adjustments, phase rhythm, resource boundaries, and a monitoring contract.",
     "Do NOT invent path_ids. Do NOT restate Page05 comparison or Page01 conclusion as the body.",
+    "page05.path_comparison is Page05's already-decided strategy boundary (cost/risk/resources/reversibility/prerequisites). Use it only to keep execution inside those bounds — do NOT re-rank paths, invent a second comparison table, scores, or probabilities.",
     "Do NOT restate full Page02 foundation or regenerate Page04 bottleneck essay.",
     "Do NOT emit Page07 field essay or a Page08 monitoring essay. Page08 is a future consumer of the monitoring contract fields only.",
     "Do NOT invent user reality facts or upgrade unverified/declined/unknown/conflict to confirmed.",
     "Do NOT mint claim/evidence ids outside the program registry in ## Production payload.",
     "Do NOT invent scores, success percentages, or unsourced numeric rankings.",
     "Do NOT fabricate validation experiments to pad counts — use experiments_absent_note when none.",
-    "Personal execution adjustments must cite supporting_personal_unit_refs and/or supporting_reality_fact_ids that exist in this payload.",
+    "supporting_personal_unit_refs may cite ONLY Face02 content_units with kind=personal_interpretation (ids present in this payload). Do NOT use reality_fact / reality_mechanism / conditional_explanation unit ids there.",
+    "supporting_reality_fact_ids must cite real DC fact ids from this payload.",
+    "monitoring_contract.path_id must match every referenced action/experiment path_id — no mixed-path monitoring contracts.",
     "Vernacular body only — no raw metaphysics proper nouns.",
     `Locale: ${input.locale}`,
   ].join("\n");
@@ -78,7 +82,8 @@ export function buildFace06PromptPair(input: {
     "primary_path_id must be one of page05.preferred_path_ids.",
     "fallback_path_ids must be a subset of page05.alternative_path_ids.",
     "Every action, experiment, and adjustment path_id must be in page05.all_path_ids.",
-    "Personal adjustment refs must point at page02 unit ids, approved reading ids, or reality fact ids in this payload.",
+    "Read page05.path_comparison.rows as frozen Page05 context — inherit cost/risk/resource/reversibility boundaries; do not rewrite comparison conclusions.",
+    "Personal adjustment supporting_personal_unit_refs must be Face02 personal_interpretation unit_ids from page02.content_units; supporting_reality_fact_ids must be DC fact ids.",
     "Do NOT invent facts to fill missing_inputs.",
     "",
     "```json",

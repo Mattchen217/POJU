@@ -45,7 +45,8 @@ export type Face06ProductionContext = {
   factStatusById: Map<string, string>;
   factContentById: Map<string, string>;
   knownPage05PathIds: Face06Page05PathSets;
-  knownPersonalUnitRefs: Set<string>;
+  /** Face02 content_units with kind === personal_interpretation only. */
+  knownPersonalInterpretationUnitRefs: Set<string>;
   available_domains: readonly string[];
   domain_versions: { bazi?: string; ziwei?: string };
   profile_version: string | null;
@@ -117,6 +118,7 @@ export function knownPage05PathIdsFromFace(
   present: boolean;
   cautious_path_ids: string[];
   path_units: unknown[] | null;
+  path_comparison: { rows: unknown[] } | null;
   switching_rules: unknown[] | null;
 } {
   if (!isFace05V2(page05)) {
@@ -127,6 +129,7 @@ export function knownPage05PathIdsFromFace(
       cautious_path_ids: [],
       all_path_ids: [],
       path_units: null,
+      path_comparison: null,
       switching_rules: null,
     };
   }
@@ -160,6 +163,23 @@ export function knownPage05PathIdsFromFace(
         reconsideration_conditions: u.reconsideration_conditions ?? [],
       }))
     : null;
+  // Full Face05 comparison rows — never invent; null when absent.
+  const path_comparison =
+    p.path_comparison &&
+    Array.isArray(p.path_comparison.rows) &&
+    p.path_comparison.rows.length > 0
+      ? {
+          rows: p.path_comparison.rows.map((row) => ({
+            path_id: row.path_id,
+            benefit: row.benefit,
+            cost: row.cost,
+            risk: row.risk,
+            resource_requirement: row.resource_requirement,
+            reversibility: row.reversibility,
+            prerequisites: row.prerequisites,
+          })),
+        }
+      : null;
   const switching_rules = Array.isArray(p.switching_rules)
     ? p.switching_rules.map((r) => ({
         rule_id: r.rule_id,
@@ -177,6 +197,7 @@ export function knownPage05PathIdsFromFace(
     cautious_path_ids,
     all_path_ids,
     path_units,
+    path_comparison,
     switching_rules,
   };
 }
@@ -235,7 +256,7 @@ export function buildFace06ProductionContext(input: {
   let page02_count = 0;
   let page02_units: unknown[] | null = null;
   let page02_boundary: unknown | null = null;
-  const personalRefs = new Set<string>();
+  const knownPersonalInterpretationUnitRefs = new Set<string>();
   if (isFace02V2(input.page02)) {
     const p02 = input.page02 as Face02V2;
     page02_has =
@@ -244,7 +265,12 @@ export function buildFace06ProductionContext(input: {
     page02_units = page02_has ? [...p02.content_units] : null;
     page02_boundary = p02.explanation_boundary ?? null;
     for (const u of p02.content_units ?? []) {
-      if (u.unit_id) personalRefs.add(u.unit_id);
+      if (
+        u.unit_id &&
+        (u as { kind?: string }).kind === "personal_interpretation"
+      ) {
+        knownPersonalInterpretationUnitRefs.add(u.unit_id);
+      }
     }
   }
 
@@ -318,7 +344,6 @@ export function buildFace06ProductionContext(input: {
     domain: (r.scope || "convergence").split(",")[0] || "convergence",
     excerpt: r.interpretation,
   }));
-  for (const r of personal_readings) personalRefs.add(r.reading_id);
 
   const snap = {
     report_id: input.report_id,
@@ -396,6 +421,7 @@ export function buildFace06ProductionContext(input: {
       cautious_path_ids: page05Paths.cautious_path_ids,
       all_path_ids: [...page05Paths.all_path_ids],
       path_units: page05Paths.path_units,
+      path_comparison: page05Paths.path_comparison,
       switching_rules: page05Paths.switching_rules,
     },
     reality: {
@@ -475,7 +501,7 @@ export function buildFace06ProductionContext(input: {
       factStatusById,
       factContentById,
       knownPage05PathIds,
-      knownPersonalUnitRefs: personalRefs,
+      knownPersonalInterpretationUnitRefs,
       available_domains: domains.available_domains,
       domain_versions: domains.domain_versions,
       profile_version: domains.profile_version,
@@ -501,7 +527,8 @@ export function validateFace06ProductionOutput(input: {
     knownFactIds: input.ctx.knownFactIds,
     factStatusById: input.ctx.factStatusById,
     page05Paths: input.ctx.knownPage05PathIds,
-    knownPersonalUnitRefs: input.ctx.knownPersonalUnitRefs,
+    knownPersonalInterpretationUnitRefs:
+      input.ctx.knownPersonalInterpretationUnitRefs,
     reject_legacy_ids: true,
   });
   if (!result.ok) {

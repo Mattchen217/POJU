@@ -199,12 +199,36 @@ const page02 = {
   schema_version: "face02-v2",
   content_units: [
     {
-      unit_id: "p02_u1",
-      kind: "mechanism",
+      unit_id: "p02_personal",
+      kind: "personal_interpretation",
       text: "Cash-floor anxiety amplifies under offer deadlines.",
+      title: "",
       claim_ids: ["claim_u_exec_06"],
       evidence_ids: ["u_exec_06"],
-      related_dir_ids: [],
+      source_domain: "science",
+    },
+    {
+      unit_id: "p02_reality_fact",
+      kind: "reality_fact",
+      text: "Runway about 8 months is the stated cash floor.",
+      claim_ids: ["claim_u_exec_06"],
+      evidence_ids: ["u_exec_06"],
+      fact_ids: ["fact_runway"],
+    },
+    {
+      unit_id: "p02_mechanism",
+      kind: "reality_mechanism",
+      text: "Offer deadlines compress the decision window.",
+      claim_ids: ["claim_u_exec_06"],
+      evidence_ids: ["u_exec_06"],
+    },
+    {
+      unit_id: "p02_conditional",
+      kind: "conditional_explanation",
+      text: "If salary stays unverified, hold clarity before leave talk.",
+      claim_ids: ["claim_u_exec_06"],
+      evidence_ids: ["u_exec_06"],
+      related_reality_fact_unit_ids: ["p02_reality_fact"],
     },
   ],
   explanation_boundary: {
@@ -268,6 +292,28 @@ const page05 = {
       reconsideration_conditions: [],
     },
   ],
+  path_comparison: {
+    rows: [
+      {
+        path_id: "path_staged",
+        benefit: "Keeps runway while exploring",
+        cost: "Negotiation effort",
+        risk: "Offer window risk",
+        resource_requirement: "Bandwidth",
+        reversibility: "High — can pause without resigning",
+        prerequisites: "Runway holds",
+      },
+      {
+        path_id: "path_hold",
+        benefit: "Clarifies unknowns first",
+        cost: "Time delay",
+        risk: "Cooling relationship",
+        resource_requirement: "Calendar buffer",
+        reversibility: "High",
+        prerequisites: "Delay is acceptable",
+      },
+    ],
+  },
   switching_rules: [
     {
       rule_id: "sw_to_hold",
@@ -357,7 +403,7 @@ function validFace06Raw(overrides?: Record<string, unknown>): Record<string, unk
         adjustment_id: "adj_cash",
         path_id: "path_staged",
         adjustment: "Slow the leave conversation when cash-floor anxiety spikes.",
-        supporting_personal_unit_refs: ["p02_u1"],
+        supporting_personal_unit_refs: ["p02_personal"],
         supporting_reality_fact_ids: ["fact_runway"],
         claim_ids: ["claim_u_exec_06"],
         evidence_ids: ["u_exec_06"],
@@ -459,7 +505,8 @@ function rejectIntegrity(
     knownFactIds: ctx.knownFactIds,
     factStatusById: ctx.factStatusById,
     page05Paths: ctx.knownPage05PathIds,
-    knownPersonalUnitRefs: ctx.knownPersonalUnitRefs,
+    knownPersonalInterpretationUnitRefs:
+      ctx.knownPersonalInterpretationUnitRefs,
   });
   assert.equal(viaValidate.ok, false, `${label}: validateFace06Output must fail`);
   if (viaValidate.ok) throw new Error("unreachable");
@@ -470,7 +517,11 @@ function rejectIntegrity(
   const viaProd = validateFace06ProductionOutput({ raw, locale: "en", ctx });
   assert.equal(viaProd.ok, false, `${label}: production validator`);
   const viaCanonical = validatePage06CanonicalPage(raw, ctx.knownPage05PathIds);
-  if (expectSubstring.includes("claim") || expectSubstring.includes("fact") || expectSubstring.includes("personal")) {
+  if (
+    expectSubstring.includes("claim") ||
+    expectSubstring.includes("fact") ||
+    expectSubstring.includes("personal")
+  ) {
     return;
   }
   assert.equal(viaCanonical.ok, false, `${label}: canonical page`);
@@ -572,10 +623,33 @@ async function main() {
     assert.ok(built.ctx.user.includes("path_staged"));
     assert.ok(built.ctx.user.includes("path_hold"));
     assert.ok(built.ctx.user.includes("fact_runway"));
-    assert.ok(built.ctx.user.includes("p02_u1"));
+    assert.ok(built.ctx.user.includes("p02_personal"));
     assert.ok(built.ctx.user.includes("claim_u_exec_06"));
     assert.equal(Object.keys(built.ctx.registry.claims).length, 1);
-    assert.ok(built.ctx.knownPersonalUnitRefs.has("p02_u1"));
+    assert.ok(
+      built.ctx.knownPersonalInterpretationUnitRefs.has("p02_personal"),
+    );
+    assert.equal(
+      built.ctx.knownPersonalInterpretationUnitRefs.has("p02_reality_fact"),
+      false,
+    );
+    assert.equal(
+      built.ctx.knownPersonalInterpretationUnitRefs.has("p02_mechanism"),
+      false,
+    );
+    assert.equal(
+      built.ctx.knownPersonalInterpretationUnitRefs.has("p02_conditional"),
+      false,
+    );
+    assert.ok(built.ctx.production_payload.page05.path_comparison);
+    assert.equal(
+      built.ctx.production_payload.page05.path_comparison?.rows.length,
+      2,
+    );
+    assert.ok(
+      built.ctx.user.includes("Keeps runway while exploring"),
+    );
+    assert.ok(built.ctx.user.includes("Clarifies unknowns first"));
     console.log("PAYLOAD/REGISTRY PASS");
   }
 
@@ -734,7 +808,7 @@ async function main() {
       knownFactIds: ctx.knownFactIds,
       factStatusById: ctx.factStatusById,
       page05Paths: ctx.knownPage05PathIds,
-      knownPersonalUnitRefs: ctx.knownPersonalUnitRefs,
+      knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
     });
     assert.equal(badClaim.ok, false);
     if (!badClaim.ok) {
@@ -752,7 +826,7 @@ async function main() {
       knownFactIds: ctx.knownFactIds,
       factStatusById: ctx.factStatusById,
       page05Paths: ctx.knownPage05PathIds,
-      knownPersonalUnitRefs: ctx.knownPersonalUnitRefs,
+      knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
     });
     assert.equal(badEv.ok, false);
     if (!badEv.ok) {
@@ -776,7 +850,7 @@ async function main() {
       knownFactIds: ctx.knownFactIds,
       factStatusById: ctx.factStatusById,
       page05Paths: ctx.knownPage05PathIds,
-      knownPersonalUnitRefs: ctx.knownPersonalUnitRefs,
+      knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
     });
     assert.equal(badFact.ok, false);
     if (!badFact.ok) {
@@ -794,7 +868,7 @@ async function main() {
       knownFactIds: ctx.knownFactIds,
       factStatusById: ctx.factStatusById,
       page05Paths: ctx.knownPage05PathIds,
-      knownPersonalUnitRefs: ctx.knownPersonalUnitRefs,
+      knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
     });
     assert.equal(score.ok, false);
     if (!score.ok) {
@@ -804,7 +878,7 @@ async function main() {
     console.log("F PASS — confirmed facts + score ban");
   }
 
-  // G personal adjustments
+  // G personal adjustments — personal_interpretation only
   {
     rejectIntegrity(
       (raw) => ({
@@ -836,9 +910,96 @@ async function main() {
         ],
       }),
       "G-missing-ref",
-      "unknown personal unit ref",
+      "non-personal_interpretation unit ref",
     );
-    console.log("G PASS — personal adjustment refs");
+    for (const [label, unitId] of [
+      ["G-reality-fact", "p02_reality_fact"],
+      ["G-mechanism", "p02_mechanism"],
+      ["G-conditional", "p02_conditional"],
+    ] as const) {
+      rejectIntegrity(
+        (raw) => ({
+          ...raw,
+          personal_execution_adjustments: [
+            {
+              ...(
+                raw.personal_execution_adjustments as Array<
+                  Record<string, unknown>
+                >
+              )[0],
+              supporting_personal_unit_refs: [unitId],
+              supporting_reality_fact_ids: [],
+            },
+          ],
+        }),
+        label,
+        "non-personal_interpretation unit ref",
+      );
+    }
+    // personal_interpretation allowed; reality fact id allowed on fact slot
+    {
+      const ctx = face06IntegrityCtx();
+      const ok = validateFace06Output({
+        raw: validFace06Raw(),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: ctx.knownFactIds,
+        factStatusById: ctx.factStatusById,
+        page05Paths: ctx.knownPage05PathIds,
+        knownPersonalInterpretationUnitRefs:
+          ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(ok.ok, true, ok.ok ? "" : ok.issues.map((i) => i.detail).join(" | "));
+      const factOnly = validateFace06Output({
+        raw: validFace06Raw({
+          personal_execution_adjustments: [
+            {
+              ...(
+                validFace06Raw()
+                  .personal_execution_adjustments as Array<
+                  Record<string, unknown>
+                >
+              )[0],
+              supporting_personal_unit_refs: [],
+              supporting_reality_fact_ids: ["fact_runway"],
+            },
+          ],
+        }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: ctx.knownFactIds,
+        factStatusById: ctx.factStatusById,
+        page05Paths: ctx.knownPage05PathIds,
+        knownPersonalInterpretationUnitRefs:
+          ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(factOnly.ok, true);
+      const badFactId = validateFace06Output({
+        raw: validFace06Raw({
+          personal_execution_adjustments: [
+            {
+              ...(
+                validFace06Raw()
+                  .personal_execution_adjustments as Array<
+                  Record<string, unknown>
+                >
+              )[0],
+              supporting_personal_unit_refs: [],
+              supporting_reality_fact_ids: ["fact_missing_zzz"],
+            },
+          ],
+        }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: ctx.knownFactIds,
+        factStatusById: ctx.factStatusById,
+        page05Paths: ctx.knownPage05PathIds,
+        knownPersonalInterpretationUnitRefs:
+          ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(badFactId.ok, false);
+    }
+    console.log("G PASS — personal_interpretation type + reality fact slots");
   }
 
   // H–L path integrity
@@ -910,6 +1071,82 @@ async function main() {
       "L-monitor-path",
       "monitoring_contract path_id not in page05 all_path_ids",
     );
+    // primary monitoring + alternative action
+    rejectIntegrity(
+      (raw) => ({
+        ...raw,
+        execution_actions: [
+          ...(raw.execution_actions as Array<Record<string, unknown>>),
+          {
+            action_id: "act_alt_hold",
+            path_id: "path_hold",
+            sequence: 9,
+            action: "Pause leave talk and clarify equity first.",
+            rationale: "Fallback outline only.",
+            resources: ["time"],
+            dependencies: [],
+            observable_result: "Hold posture is explicit.",
+            guardrails: ["Do not resign"],
+            claim_ids: ["claim_u_exec_06"],
+            evidence_ids: ["u_exec_06"],
+            reality_fact_ids: ["fact_runway"],
+          },
+        ],
+        monitoring_contract: {
+          ...(raw.monitoring_contract as object),
+          path_id: "path_staged",
+          action_ids: ["act_alt_hold"],
+          experiment_ids: [],
+        },
+      }),
+      "L-monitor-primary-alt-action",
+      "must equal monitoring_contract.path_id",
+    );
+    // alternative monitoring + primary experiment
+    rejectIntegrity(
+      (raw) => ({
+        ...raw,
+        monitoring_contract: {
+          ...(raw.monitoring_contract as object),
+          path_id: "path_hold",
+          action_ids: [],
+          experiment_ids: ["exp_window"],
+        },
+      }),
+      "L-monitor-alt-primary-exp",
+      "must equal monitoring_contract.path_id",
+    );
+    // mixed paths in one monitoring contract
+    rejectIntegrity(
+      (raw) => ({
+        ...raw,
+        execution_actions: [
+          ...(raw.execution_actions as Array<Record<string, unknown>>),
+          {
+            action_id: "act_alt_hold2",
+            path_id: "path_hold",
+            sequence: 10,
+            action: "Clarify salary before any leave talk.",
+            rationale: "Fallback outline.",
+            resources: ["time"],
+            dependencies: [],
+            observable_result: "Salary ask is scheduled.",
+            guardrails: ["No resign"],
+            claim_ids: ["claim_u_exec_06"],
+            evidence_ids: ["u_exec_06"],
+            reality_fact_ids: ["fact_runway"],
+          },
+        ],
+        monitoring_contract: {
+          ...(raw.monitoring_contract as object),
+          path_id: "path_staged",
+          action_ids: ["act_terms", "act_alt_hold2"],
+          experiment_ids: ["exp_window"],
+        },
+      }),
+      "L-monitor-mixed",
+      "must equal monitoring_contract.path_id",
+    );
     rejectIntegrity(
       (raw) => ({
         ...raw,
@@ -927,7 +1164,30 @@ async function main() {
       "L-absent",
       "experiments empty requires experiments_absent_note",
     );
-    console.log("H–L PASS — path integrity");
+    // consistent monitoring path + actions/experiments passes
+    {
+      const ctx = face06IntegrityCtx();
+      const { assertFace06PathIntegrity } = await import(
+        "@/lib/llm/pro/delivery/decision-report-v2/page06/path-integrity"
+      );
+      const ok = validateFace06Output({
+        raw: validFace06Raw(),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: ctx.knownFactIds,
+        factStatusById: ctx.factStatusById,
+        page05Paths: ctx.knownPage05PathIds,
+        knownPersonalInterpretationUnitRefs:
+          ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(ok.ok, true);
+      if (!ok.ok) throw new Error("unreachable");
+      assert.deepEqual(
+        assertFace06PathIntegrity(ok.page, ctx.knownPage05PathIds),
+        [],
+      );
+    }
+    console.log("H–L PASS — path integrity + monitoring path binding");
   }
 
   // M legacy reader/pdf
@@ -995,9 +1255,19 @@ async function main() {
       assert.ok(capturedUser.includes("## Production payload"));
       assert.ok(capturedUser.includes("path_staged"));
       assert.ok(capturedUser.includes("path_hold"));
-      assert.ok(capturedUser.includes("p02_u1"));
+      assert.ok(capturedUser.includes("p02_personal"));
       assert.ok(capturedUser.includes("Cash-floor panic under offer pressure."));
       assert.ok(capturedUser.includes("Prefer a staged explore path"));
+      // R1.1 — full Page05 path_comparison rows reach Lab production payload
+      assert.ok(capturedUser.includes("path_comparison"));
+      assert.ok(capturedUser.includes("Keeps runway while exploring"));
+      assert.ok(capturedUser.includes("Negotiation effort"));
+      assert.ok(capturedUser.includes("Clarifies unknowns first"));
+      assert.ok(capturedUser.includes("Cooling relationship"));
+      assert.ok(
+        capturedUser.includes('"path_id": "path_staged"') ||
+          capturedUser.includes('"path_id":"path_staged"'),
+      );
       const payload = run.attempt?.input_payload as
         | { pipeline?: string; page05_schema_present?: boolean }
         | undefined;
@@ -1011,7 +1281,9 @@ async function main() {
       assert.equal(meta?.validation, "passed");
       const validated = validatePage06CanonicalPage(stored, page05Paths);
       assert.equal(validated.ok, true, validated.ok ? "" : validated.detail);
-      console.log("O PASS — Lab runLabStepV3(06.content.body) wires Page01/02/04/05");
+      console.log(
+        "O PASS — Lab wires Page01/02/04/05 including path_comparison rows",
+      );
     } finally {
       setContentBodyTestInvokeForTests(null);
     }

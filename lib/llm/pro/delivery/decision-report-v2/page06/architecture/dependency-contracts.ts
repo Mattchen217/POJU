@@ -9,6 +9,7 @@ export const PAGE06_UPSTREAM_CONTRACT = {
     "alternative_path_ids (fallback pool)",
     "path_id / path_role / description",
     "prerequisites / required_resources / risks / success_signals",
+    "path_comparison.rows (frozen cost/risk/resource/reversibility context — do not re-rank)",
     "switching_rules (failure / stop / switch triggers)",
   ],
   page01: [
@@ -21,7 +22,7 @@ export const PAGE06_UPSTREAM_CONTRACT = {
   page02: [
     "content_units",
     "explanation_boundary",
-    "personal units usable as supporting_personal_unit_refs",
+    "personal_interpretation unit_ids only for supporting_personal_unit_refs",
   ],
   page04: [
     "bottleneck naming / manifestation / force-through / leverage / evidence_boundary",
