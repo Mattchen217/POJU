@@ -131,6 +131,15 @@ const dc: DecisionContext = {
       source_turn_id: "t3",
       user_confirmed: false,
     },
+    {
+      fact_id: "fact_unknown_offer",
+      statement: "Unknown whether a counter-offer exists.",
+      status: "unknown",
+      verification_level: "none",
+      source_stage: "collecting",
+      source_turn_id: "t4",
+      user_confirmed: false,
+    },
   ],
   dirs: [],
   conflicts: [],
@@ -1206,6 +1215,296 @@ async function main() {
       setContentBodyTestInvokeForTests(null);
     }
     console.log("R1-J ok — repair second failure does not save a success page");
+  }
+
+  // ── R2: explicit confirmation prose vs non-confirmed cites ──
+  {
+    const bad = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_unverified" },
+      ];
+      risks[0]!.risk_description = "已确认你的收入低于当前生活成本。";
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected R2-A reject");
+    assert.ok(
+      checked.issues.some(
+        (i) => i.code === "explicit_confirmation_on_non_confirmed_fact",
+      ),
+    );
+    console.log("R2-A ok — unverified + as_unverified + 已确认 prose rejected");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_estimated" },
+      ];
+      risks[0]!.risk_description = "已经证实现金只有十二万，不足以支撑探索窗口。";
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected R2-B reject");
+    assert.ok(
+      checked.issues.some(
+        (i) => i.code === "explicit_confirmation_on_non_confirmed_fact",
+      ),
+    );
+    console.log("R2-B ok — user_estimate + as_estimated + 已经证实 prose rejected");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const signals = base.observation_signals as Array<Record<string, unknown>>;
+      signals[0]!.related_fact_ids = ["fact_unknown_offer"];
+      signals[0]!.reality_fact_stances = [
+        { fact_id: "fact_unknown_offer", stance: "as_unknown" },
+      ];
+      signals[0]!.what_to_observe =
+        "Treat the counter-offer as a confirmed fact before widening the explore.";
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected R2-C reject");
+    assert.ok(
+      checked.issues.some(
+        (i) => i.code === "explicit_confirmation_on_non_confirmed_fact",
+      ),
+    );
+    console.log("R2-C ok — unknown + as_unknown + confirmed fact prose rejected");
+  }
+
+  {
+    const okCase = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = ["fact_runway"];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_runway", stance: "as_confirmed" },
+      ];
+      risks[0]!.risk_description =
+        "已确认 runway 约八个月，这是当前探索窗口的现金底线。";
+      return base;
+    });
+    const checked = checkFace08(okCase, ready);
+    assert.equal(
+      checked.ok,
+      true,
+      checked.ok ? "" : checked.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+    );
+    console.log("R2-D ok — confirmed + as_confirmed + 已确认 prose allowed");
+  }
+
+  {
+    const okCase = validFace08((base) => {
+      const triggers = base.triggers as Array<Record<string, unknown>>;
+      triggers[0]!.related_fact_ids = ["fact_salary_guess"];
+      triggers[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_conditional" },
+      ];
+      triggers[0]!.trigger_status = "conditional";
+      triggers[0]!.trigger_condition =
+        "如果后续核实薪资估计低于现金底线，则暂停探索。";
+      triggers[0]!.required_evidence_ids = [];
+      return base;
+    });
+    const checked = checkFace08(okCase, ready);
+    assert.equal(
+      checked.ok,
+      true,
+      checked.ok ? "" : checked.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+    );
+    console.log("R2-E ok — unverified + as_conditional + 如果后续核实 allowed");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = ["fact_runway", "fact_salary_guess"];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_runway", stance: "as_confirmed" },
+        { fact_id: "fact_salary_guess", stance: "as_estimated" },
+      ];
+      risks[0]!.risk_description =
+        "已确认 runway 与薪资都支持继续探索，不必再核实。";
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected R2-F conservative reject");
+    assert.ok(
+      checked.issues.some(
+        (i) => i.code === "explicit_confirmation_on_non_confirmed_fact",
+      ),
+    );
+    console.log("R2-F ok — mixed confirmed+unverified with 已确认 prose conservatively rejected");
+  }
+
+  {
+    // R1 stance suite still green (spot-check the six classes via re-run of key cases).
+    const stanceCases: Array<{
+      label: string;
+      patch: (base: Record<string, unknown>) => Record<string, unknown>;
+      expectOk: boolean;
+    }> = [
+      {
+        label: "unverified→as_confirmed",
+        expectOk: false,
+        patch: (base) => {
+          const risks = base.risks as Array<Record<string, unknown>>;
+          risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+          risks[0]!.reality_fact_stances = [
+            { fact_id: "fact_salary_guess", stance: "as_confirmed" },
+          ];
+          return base;
+        },
+      },
+      {
+        label: "estimate→independently_verified",
+        expectOk: false,
+        patch: (base) => {
+          const risks = base.risks as Array<Record<string, unknown>>;
+          risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+          risks[0]!.reality_fact_stances = [
+            { fact_id: "fact_salary_guess", stance: "as_independently_verified" },
+          ];
+          return base;
+        },
+      },
+      {
+        label: "declined in confirmed_fact_ids",
+        expectOk: false,
+        patch: (base) => {
+          const boundary = base.evidence_boundary as Record<string, unknown>;
+          boundary.confirmed_fact_ids = ["fact_declined"];
+          return base;
+        },
+      },
+      {
+        label: "trigger unverified without conditional",
+        expectOk: false,
+        patch: (base) => {
+          const triggers = base.triggers as Array<Record<string, unknown>>;
+          triggers[0]!.related_fact_ids = ["fact_salary_guess"];
+          triggers[0]!.reality_fact_stances = [
+            { fact_id: "fact_salary_guess", stance: "as_confirmed" },
+          ];
+          triggers[0]!.trigger_status = "defined";
+          return base;
+        },
+      },
+      {
+        label: "conditional trigger ok",
+        expectOk: true,
+        patch: (base) => {
+          const triggers = base.triggers as Array<Record<string, unknown>>;
+          triggers[0]!.related_fact_ids = ["fact_salary_guess"];
+          triggers[0]!.reality_fact_stances = [
+            { fact_id: "fact_salary_guess", stance: "as_conditional" },
+          ];
+          triggers[0]!.trigger_status = "conditional";
+          triggers[0]!.trigger_condition =
+            "如果后续核实薪资估计，再决定是否暂停。";
+          triggers[0]!.required_evidence_ids = [];
+          return base;
+        },
+      },
+      {
+        label: "orphan as_confirmed stance",
+        expectOk: false,
+        patch: (base) => {
+          const risks = base.risks as Array<Record<string, unknown>>;
+          risks[0]!.reality_fact_ids = [];
+          risks[0]!.reality_fact_stances = [
+            { fact_id: "fact_runway", stance: "as_confirmed" },
+          ];
+          return base;
+        },
+      },
+    ];
+    for (const c of stanceCases) {
+      const checked = checkFace08(validFace08(c.patch), ready);
+      assert.equal(
+        checked.ok,
+        c.expectOk,
+        `R2-G ${c.label}: ${checked.ok ? "ok" : checked.issues.map((i) => i.code).join(",")}`,
+      );
+    }
+    console.log("R2-G ok — R1 six stance/status reverse cases still pass");
+  }
+
+  {
+    let invokeCount = 0;
+    setContentBodyTestInvokeForTests(async () => {
+      invokeCount += 1;
+      if (invokeCount === 1) {
+        return stubResult(
+          JSON.stringify(
+            validFace08((base) => {
+              const risks = base.risks as Array<Record<string, unknown>>;
+              risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+              risks[0]!.reality_fact_stances = [
+                { fact_id: "fact_salary_guess", stance: "as_estimated" },
+              ];
+              risks[0]!.risk_description = "已确认薪资不足以支撑探索。";
+              return base;
+            }),
+          ),
+        );
+      }
+      return stubResult(JSON.stringify(validFace08()));
+    });
+    try {
+      const result = await runContentBodyGenerate(generateInput());
+      assert.equal(result.ok, true, result.ok ? "" : result.reason);
+      if (!result.ok) throw new Error(result.reason);
+      assert.equal(invokeCount, 2);
+      assert.equal(result.face08_meta?.validation, "passed_after_repair");
+      const page = result.page as Face08V2;
+      assert.equal(page.risks[0]?.reality_fact_ids?.[0], "fact_runway");
+      assert.equal(page.risks[0]?.reality_fact_stances?.[0]?.stance, "as_confirmed");
+    } finally {
+      setContentBodyTestInvokeForTests(null);
+    }
+    console.log("R2-H ok — repair success re-runs stance + prose contradiction checks");
+  }
+
+  {
+    let invokeCount = 0;
+    setContentBodyTestInvokeForTests(async () => {
+      invokeCount += 1;
+      return stubResult(
+        JSON.stringify(
+          validFace08((base) => {
+            const risks = base.risks as Array<Record<string, unknown>>;
+            risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+            risks[0]!.reality_fact_stances = [
+              { fact_id: "fact_salary_guess", stance: "as_estimated" },
+            ];
+            risks[0]!.risk_description = "已确认薪资不足以支撑探索。";
+            return base;
+          }),
+        ),
+      );
+    });
+    try {
+      const result = await runContentBodyGenerate(generateInput());
+      assert.equal(result.ok, false);
+      if (result.ok) throw new Error("expected repair fail");
+      assert.equal(result.reason, "face08_validation_failed");
+      assert.equal(invokeCount, 2);
+      assert.equal((result as { page?: unknown }).page, undefined);
+    } finally {
+      setContentBodyTestInvokeForTests(null);
+    }
+    console.log("R2-I ok — repair second failure does not save a success page");
   }
 
   console.log("ok page08 production closure");

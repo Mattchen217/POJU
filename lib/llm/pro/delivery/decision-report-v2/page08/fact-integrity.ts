@@ -23,6 +23,13 @@ export type Page08FactStanceEntry = {
 const SCORE_OR_PROBABILITY =
   /\b\d{1,3}\s*分\b|\b\d{1,3}\s*%\b|success\s*rate|成功概率|胜率|评分\s*\d|probability\s+of\s+success/i;
 
+/**
+ * Explicit confirmation wording only — auxiliary prose guard.
+ * Does not claim full NLU. Avoid bare "confirm/核实" so conditional phrasing stays allowed.
+ */
+const EXPLICIT_CONFIRMATION_PROSE =
+  /已确认|确认为|已经证实|已经确认|confirmed\s+fact|is\s+confirmed|definitely\s+true/i;
+
 const DATE_TOKEN =
   /20\d{2}[-/.年]\d{1,2}(?:[-/.月]\d{1,2}日?)?|\d{1,2}月\d{1,2}日/g;
 
@@ -41,6 +48,11 @@ const NON_CONFIRMED_OK_STANCES = new Set<string>([
 
 export function textHasScoreOrProbability(text: string): boolean {
   return SCORE_OR_PROBABILITY.test(text);
+}
+
+/** Auxiliary: true only for explicit confirmation phrasing, not soft conditionals. */
+export function textHasExplicitConfirmationProse(text: string): boolean {
+  return EXPLICIT_CONFIRMATION_PROSE.test(text);
 }
 
 export function isConfirmedFactStatus(status: string | undefined): boolean {
@@ -402,5 +414,43 @@ export function issuesForCitedFactsInProse(input: {
       path: input.path,
     });
   }
+  return issues;
+}
+
+/**
+ * Auxiliary contradiction guard (not a substitute for structured stances):
+ * if this content unit cites any non-confirmed DC fact and its own prose uses
+ * explicit confirmation wording, fail-closed.
+ *
+ * Scope is limited to this unit's reality_fact_ids — never mix other units.
+ */
+export function issuesForExplicitConfirmationContradiction(input: {
+  path: string;
+  text: string;
+  factIds: readonly string[];
+  stances?: readonly Page08FactStanceEntry[];
+  factStatusById?: ReadonlyMap<string, string>;
+}): Page08FactIssue[] {
+  const issues: Page08FactIssue[] = [];
+  if (!input.factIds.length) return issues;
+  if (!textHasExplicitConfirmationProse(input.text)) return issues;
+
+  const nonConfirmed: string[] = [];
+  for (const fid of input.factIds) {
+    const status = input.factStatusById?.get(fid);
+    if (status && status !== "confirmed") {
+      nonConfirmed.push(`${fid}(${status})`);
+    }
+  }
+  if (!nonConfirmed.length) return issues;
+
+  // stances are accepted for call-site completeness; contradiction is prose vs DC status.
+  void input.stances;
+
+  issues.push({
+    code: "explicit_confirmation_on_non_confirmed_fact",
+    detail: `${input.path} uses explicit confirmation prose while citing non-confirmed fact(s): ${nonConfirmed.join(", ")}`,
+    path: input.path,
+  });
   return issues;
 }
