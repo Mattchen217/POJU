@@ -1248,6 +1248,271 @@ export const Face06LegacySchema = z.object({
 
 export type Face06Legacy = z.infer<typeof Face06LegacySchema>;
 
+const Page07SectionIdEnum = z.enum([
+  "field_judgment",
+  "relationship_interaction",
+  "evidence_boundary",
+  "alignment_with_main",
+]);
+
+const Page07RefIds = z.array(NonEmpty.max(80)).max(8).default([]);
+const Page07FactIds = z.array(NonEmpty.max(120)).max(8).default([]);
+
+const Page07ApplicabilityStatusSchema = z.enum([
+  "applicable",
+  "not_applicable",
+  "insufficient_information",
+]);
+
+const Page07VerificationStatusSchema = z.enum([
+  "confirmed",
+  "unverified",
+  "unknown",
+  "user_stated",
+  "missing",
+]);
+
+/**
+ * Face 07 — 场域与关系 (Field & Relationship · Batch 1).
+ * Conditionally enabled. Skip / insufficient shapes keep units empty.
+ */
+export const Face07V2Schema = z.object({
+  page: z.literal("07"),
+  face: z.literal("07"),
+  schema_version: z.literal("face07-v2").default("face07-v2"),
+  locale: DecisionReportLocaleSchema.optional(),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  applicability_status: Page07ApplicabilityStatusSchema,
+  applicability_reason: NonEmpty.max(720),
+  skip_note: z.string().trim().max(720).optional().default(""),
+  participants: z
+    .array(
+      z.object({
+        participant_id: NonEmpty.max(80),
+        display_label: NonEmpty.max(80),
+        role: NonEmpty.max(80),
+        source: NonEmpty.max(80),
+        verification_status: Page07VerificationStatusSchema,
+        related_fact_ids: Page07FactIds,
+        notes: z.string().trim().max(320).optional().default(""),
+      }),
+    )
+    .max(12)
+    .default([]),
+  field_units: z
+    .array(
+      z.object({
+        unit_id: NonEmpty.max(80),
+        kind: z.enum([
+          "field_resource",
+          "field_constraint",
+          "field_entry_exit",
+        ]),
+        text: NonEmpty.max(960),
+        claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        evidence_ids: Page07RefIds,
+        reality_fact_ids: Page07FactIds,
+        participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        dir_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        supporting_personal_unit_refs: z
+          .array(NonEmpty.max(120))
+          .max(8)
+          .default([]),
+      }),
+    )
+    .max(12)
+    .default([]),
+  relationship_units: z
+    .array(
+      z.object({
+        unit_id: NonEmpty.max(80),
+        kind: z.enum([
+          "power_interest",
+          "communication",
+          "commitment_conflict",
+          "collaboration",
+        ]),
+        text: NonEmpty.max(960),
+        claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        evidence_ids: Page07RefIds,
+        reality_fact_ids: Page07FactIds,
+        participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        uncertainty_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+        supporting_personal_unit_refs: z
+          .array(NonEmpty.max(120))
+          .max(8)
+          .default([]),
+      }),
+    )
+    .max(12)
+    .default([]),
+  evidence_boundary: z.object({
+    claim_ids: z.array(NonEmpty.max(80)).max(12).default([]),
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    hypothesis_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+    uncertainty_notes: z.array(NonEmpty.max(240)).max(8).default([]),
+    third_party_data_limits: z.array(NonEmpty.max(320)).max(8).default([]),
+    supporting_personal_unit_refs: z
+      .array(NonEmpty.max(120))
+      .max(8)
+      .default([]),
+  }),
+  alignment_with_main: z.object({
+    changes_page01_recommendation: z.boolean(),
+    changes_page05_path_order: z.boolean(),
+    effect_on_page06_execution: z.string().trim().max(720).default(""),
+    summary: z.string().trim().max(960).default(""),
+    claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    evidence_ids: Page07RefIds,
+    related_page05_path_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+    related_page06_action_ids: z.array(NonEmpty.max(80)).max(12).default([]),
+  }),
+  reading_order: z
+    .array(Page07SectionIdEnum)
+    .min(4)
+    .max(4)
+    .default([
+      "field_judgment",
+      "relationship_interaction",
+      "evidence_boundary",
+      "alignment_with_main",
+    ])
+    .superRefine((order, ctx) => {
+      const seen = new Set<string>();
+      for (const id of order) {
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `duplicate reading_order section_id: ${id}`,
+          });
+          return;
+        }
+        seen.add(id);
+      }
+      for (const required of [
+        "field_judgment",
+        "relationship_interaction",
+        "evidence_boundary",
+        "alignment_with_main",
+      ] as const) {
+        if (!seen.has(required)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `reading_order missing required section: ${required}`,
+          });
+        }
+      }
+    }),
+  /** Program flag. Model must not set this true without an authorized profile. */
+  authorized_partner_profile: z.boolean().optional().default(false),
+  generation_status: z
+    .enum([
+      "blocked_on_required_inputs",
+      "ready_for_generation",
+      "generated_with_gaps",
+      "generated_complete",
+      "failed_structure",
+      "incomplete",
+      "skipped_not_applicable",
+      "insufficient_information",
+    ])
+    .optional(),
+  input_manifest: z
+    .array(
+      z.object({
+        field_id: NonEmpty.max(80),
+        section_id: Page07SectionIdEnum,
+        source_kind: z.enum([
+          "personal_analysis",
+          "reality_context",
+          "analytical_result",
+          "system_metadata",
+          "derived_data",
+        ]),
+        present: z.boolean(),
+        collection_status: z.enum([
+          "ready",
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        value_summary: z.string().trim().max(320).nullable(),
+      }),
+    )
+    .max(48)
+    .optional(),
+  missing_inputs: z
+    .array(
+      z.object({
+        gap_id: NonEmpty.max(80),
+        page_id: z.literal("07"),
+        section_id: Page07SectionIdEnum,
+        field_id: NonEmpty.max(80),
+        status: z.enum([
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        why_needed: NonEmpty.max(320),
+        affects_content: NonEmpty.max(320),
+        follow_up_collect_hint: NonEmpty.max(320),
+        handling: z.enum([
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ]),
+      }),
+    )
+    .max(48)
+    .optional(),
+  sections: z
+    .array(
+      z.object({
+        section_id: Page07SectionIdEnum,
+        segment_letter: z.enum(["A", "B", "C", "D"]),
+        title_zh: NonEmpty.max(80),
+        title_en: NonEmpty.max(80),
+        required: z.boolean(),
+        reading_rank: z.number().int().min(1).max(8),
+        information_level: NonEmpty.max(40),
+      }),
+    )
+    .max(8)
+    .optional(),
+  generation_metadata: z
+    .object({
+      task_id: NonEmpty.max(80),
+      prompt_bundle_chars: z.number().int().min(0),
+      built_at: NonEmpty.max(64),
+      llm_invoked: z.boolean(),
+    })
+    .optional(),
+});
+
+export type Face07V2 = z.infer<typeof Face07V2Schema>;
+
+/** Legacy Face 07 flat slots — historical open. */
+export const Face07LegacySchema = z.object({
+  page: z.literal("07"),
+  face: z.literal("07"),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  field_judgment: NonEmpty.max(960),
+  relation_interaction: NonEmpty.max(960),
+  evidence_fold: NonEmpty.max(1200),
+  align_with_01_05: z.string().trim().max(480).optional().default(""),
+});
+
+export type Face07Legacy = z.infer<typeof Face07LegacySchema>;
+
 /** Legacy Face 01 (pre Batch 0) — retained for historical report open. */
 export const Face01LegacySchema = z.object({
   page: z.literal("01"),

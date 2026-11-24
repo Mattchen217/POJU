@@ -1,5 +1,5 @@
 /**
- * Decision Report V2 — Batch 0 public foundation + Page 01 + Page 02 + Page 04 + Page 06.
+ * Decision Report V2 — Batch 0 public foundation + Page 01 + Page 02 + Page 04 + Page 06 + Page 07.
  */
 
 export * from "./types";
@@ -91,6 +91,47 @@ export {
   page06TaskInterface,
   assertPage06InputAssemblyCoverage,
 } from "./page06/architecture";
+export {
+  buildFace07ProductionContext,
+  validateFace07ProductionOutput,
+  parseFace07JsonStrict,
+  face07SliceSummary,
+  synthesizeFace07StatusPage,
+  knownPage06ActionIdsFromFace,
+} from "./page07/production";
+export { validateFace07Output } from "./page07/validate";
+export { assertFace07PathIntegrity } from "./page07/path-integrity";
+export { evaluatePage07Applicability } from "./page07/applicability";
+export {
+  isFace07V2,
+  isFace07Legacy,
+  projectLegacyFace07ForDisplay,
+} from "./page07/legacy-adapter";
+export {
+  PAGE07_SECTION_IDS,
+  PAGE07_SECTION_DEFINITIONS,
+  PAGE07_INPUT_FIELD_CONTRACTS,
+  PAGE07_SECTION_CONTENT_SPECS,
+  PAGE07_MODEL_TASKS,
+  PAGE07_GAP_STATUSES,
+  PAGE07_ARCHITECTURE_PROMPT_VERSION,
+  PAGE07_FIELD_ASSEMBLERS,
+  PAGE07_UPSTREAM_CONTRACT,
+  PAGE07_DOWNSTREAM_CONTRACT,
+  PAGE07_STABLE_OUTPUT_FIELDS_FOR_DOWNSTREAM,
+  buildPage07ArchitectureProduction,
+  buildPage07ArchitectureEnvelope,
+  attachPage07ArchitectureToPage,
+  validatePage07CanonicalPage,
+  assemblePage07SectionsForDisplay,
+  assemblePage07PdfArgumentBodies,
+  assemblePage07InputManifest,
+  buildPage07MissingInputs,
+  buildPage07ArchitecturePromptBundle,
+  normalizePage07ReadingOrder,
+  page07TaskInterface,
+  assertPage07InputAssemblyCoverage,
+} from "./page07/architecture";
 export * from "./registry-from-sources";
 export * from "./fact-relevance";
 export * from "./personal-domains";

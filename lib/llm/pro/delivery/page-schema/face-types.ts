@@ -26,6 +26,8 @@ import {
   Face06V2Schema,
   Face06LegacySchema,
   Face06VerificationExperimentSchema,
+  Face07V2Schema,
+  Face07LegacySchema,
   type Face01Legacy,
   type Face01V2,
   type Face02Legacy,
@@ -38,6 +40,8 @@ import {
   type Face05Legacy,
   type Face06V2,
   type Face06Legacy,
+  type Face07V2,
+  type Face07Legacy,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 const NonEmpty = z.string().trim().min(1);
@@ -87,17 +91,17 @@ export {
   type Face06Legacy,
 };
 
-/** 07 · 场域与关系 · dualTrack=abc · topic-gated */
-export const Face07Schema = z.object({
-  page: z.literal("07"),
-  ...FaceChromeSchema.shape,
-  face: z.literal("07"),
-  field_judgment: NonEmpty.max(960),
-  relation_interaction: NonEmpty.max(960),
-  evidence_fold: NonEmpty.max(1200),
-  align_with_01_05: z.string().trim().max(480).optional().default(""),
-});
-export type Face07 = z.infer<typeof Face07Schema>;
+/** 07 · 场域与关系 · dualTrack=abc · topic-gated · schema_version face07-v2 */
+export const Face07Schema = Face07LegacySchema;
+/** Historical open: accept legacy flat slots and Face07V2 (including structured skip). */
+export const Face07ParseSchema = z.union([Face07V2Schema, Face07LegacySchema]);
+export type Face07 = Face07V2 | Face07Legacy;
+export {
+  Face07V2Schema,
+  Face07LegacySchema,
+  type Face07V2,
+  type Face07Legacy,
+};
 
 /** 08 · 自检清单 · dualTrack=reality · Product Stage 4 P8 */
 export const Face08Schema = z.object({
@@ -130,7 +134,7 @@ export const FACE_PAGE_SCHEMAS = {
   "04": Face04ParseSchema,
   "05": Face05ParseSchema,
   "06": Face06ParseSchema,
-  "07": Face07Schema,
+  "07": Face07ParseSchema,
   "08": Face08Schema,
   "03": Face03Schema,
 } as const;

@@ -69,12 +69,22 @@ import {
   validateFace06ProductionOutput,
   type Face06ProductionContext,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page06/production";
+import {
+  buildFace07ProductionContext,
+  buildFace07RepairUserMessage,
+  face07SliceSummary,
+  parseFace07JsonStrict,
+  synthesizeFace07StatusPage,
+  validateFace07ProductionOutput,
+  type Face07ProductionContext,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page07/production";
 import type {
   Face01V2,
   Face02V2,
   Face04V2,
   Face05V2,
   Face06V2,
+  Face07V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import type { CallLLMResult } from "@/lib/llm/router";
 
@@ -137,6 +147,12 @@ export type ContentBodyOk = {
     slice_summary: Record<string, unknown>;
     validation: "passed" | "passed_after_repair";
   };
+  face07_meta?: {
+    prompt_version: string;
+    schema_version: string;
+    slice_summary: Record<string, unknown>;
+    validation: "passed" | "passed_after_repair" | "skipped_not_applicable";
+  };
 };
 
 export type ContentBodyFail = {
@@ -169,6 +185,12 @@ export type ContentBodyFail = {
     prompt_version?: string;
     slice_summary?: Record<string, unknown>;
     validation_issues?: unknown[];
+  };
+  face07_meta?: {
+    prompt_version?: string;
+    slice_summary?: Record<string, unknown>;
+    validation_issues?: unknown[];
+    structured_status?: unknown;
   };
 };
 
@@ -683,8 +705,10 @@ export async function runContentBodyGenerate(input: {
   page02_schema?: unknown;
   /** Optional Page04 schema — bottleneck grounding for Face05/Face06. */
   page04_schema?: unknown;
-  /** Optional Page05 schema — path binding for Face06. */
+  /** Optional Page05 schema — path binding for Face06 / Face07. */
   page05_schema?: unknown;
+  /** Optional Page06 schema — execution binding for Face07. */
+  page06_schema?: unknown;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body", {
@@ -698,6 +722,7 @@ export async function runContentBodyGenerate(input: {
   let face04Ctx: Face04ProductionContext | null = null;
   let face05Ctx: Face05ProductionContext | null = null;
   let face06Ctx: Face06ProductionContext | null = null;
+  let face07Ctx: Face07ProductionContext | null = null;
   if (input.key === "01") {
     const built = buildFace01ProductionContext({
       report_id: input.report_id?.trim() || input.session_id || "report_face01",
@@ -899,6 +924,130 @@ export async function runContentBodyGenerate(input: {
     }
     face06Ctx = built.ctx;
   }
+  if (input.key === "07") {
+    const built = buildFace07ProductionContext({
+      report_id: input.report_id?.trim() || input.session_id || "report_face07",
+      locale: input.locale,
+      dc: input.decision_context_snapshot ?? null,
+      pack: input.book_judgment_pack ?? null,
+      chart_fact_pack: input.chart_fact_pack ?? null,
+      page01: input.page01_schema ?? null,
+      page02: input.page02_schema ?? null,
+      page04: input.page04_schema ?? null,
+      page05: input.page05_schema ?? null,
+      page06: input.page06_schema ?? null,
+      authorized_partner_profile: input.partner_bazi === "present",
+    });
+    if (!built.ok) {
+      return {
+        ok: false,
+        reason: built.reason,
+        tokens_used: 0,
+        face07_meta: {
+          validation_issues: [{ detail: built.detail ?? built.reason }],
+        },
+      };
+    }
+    if (built.ctx.applicability.status === "not_applicable") {
+      const skip = synthesizeFace07StatusPage({
+        locale: input.locale,
+        applicability: built.ctx.applicability,
+        architecture: built.ctx.architecture,
+      });
+      const validated = validateFace07ProductionOutput({
+        raw: skip,
+        locale: input.locale,
+        ctx: built.ctx,
+      });
+      if (!validated.ok) {
+        return {
+          ok: false,
+          reason: validated.reason,
+          tokens_used: 0,
+          face07_meta: {
+            prompt_version: built.ctx.prompt_version,
+            slice_summary: face07SliceSummary(built.ctx),
+            validation_issues: validated.issues,
+          },
+        };
+      }
+      const page = validated.page as unknown as DeliveryPageData;
+      return {
+        ok: true,
+        page,
+        tokens_used: 0,
+        call_trace: {
+          phase: "content_body_v3_face07_skip",
+          system: built.ctx.system,
+          user: built.ctx.user,
+          reasoning: null,
+          raw_text: null,
+          parsed: page,
+          meta: {
+            actual_model: "none",
+            tokens_used: 0,
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            finish_reason: "skipped_not_applicable",
+            usage_written: true,
+          },
+        },
+        face07_meta: {
+          prompt_version: built.ctx.prompt_version,
+          schema_version: built.ctx.schema_version,
+          slice_summary: face07SliceSummary(built.ctx),
+          validation: "skipped_not_applicable",
+        },
+      };
+    }
+    if (built.ctx.applicability.status === "insufficient_information") {
+      const structured = synthesizeFace07StatusPage({
+        locale: input.locale,
+        applicability: built.ctx.applicability,
+        architecture: built.ctx.architecture,
+      });
+      return {
+        ok: false,
+        reason: "face07_insufficient_information",
+        tokens_used: 0,
+        face07_meta: {
+          prompt_version: built.ctx.prompt_version,
+          slice_summary: {
+            ...face07SliceSummary(built.ctx),
+            blocked: true,
+          },
+          structured_status: structured,
+          validation_issues: [
+            { detail: built.ctx.applicability.reason },
+          ],
+        },
+      };
+    }
+    if (!built.ctx.may_invoke_llm) {
+      const blocking = built.ctx.architecture.missing_inputs.filter(
+        (g) => g.handling === "defer_generation",
+      );
+      return {
+        ok: false,
+        reason: "face07_blocked_on_required_inputs",
+        tokens_used: 0,
+        face07_meta: {
+          prompt_version: built.ctx.prompt_version,
+          slice_summary: {
+            ...face07SliceSummary(built.ctx),
+            blocked: true,
+            blocking_gaps: blocking.map((g) => g.gap_id),
+          },
+          validation_issues: [
+            {
+              detail: `may_invoke_llm=false; generation_status=${built.ctx.architecture.generation_status}; gaps=${blocking.map((g) => g.field_id).join(",")}`,
+            },
+          ],
+        },
+      };
+    }
+    face07Ctx = built.ctx;
+  }
   const pageSlice = formatPageSliceFeed({
     key: input.key,
     chartText: feed.thesis_factpack ? input.chart_fact_pack : null,
@@ -972,7 +1121,8 @@ export async function runContentBodyGenerate(input: {
     !input.ziwei_fact_pack ||
     !(input.ziwei_fact_pack.patternHits?.length > 0);
   // Face01/02/04/05/06 V2: prompt is the production slice pair; do not mash DC/legacy feed into user.
-  const faceV2Ctx = face01Ctx || face02Ctx || face04Ctx || face05Ctx || face06Ctx;
+  const faceV2Ctx =
+    face01Ctx || face02Ctx || face04Ctx || face05Ctx || face06Ctx || face07Ctx;
   const effectiveUserFeed = faceV2Ctx ? "" : userFeed;
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
@@ -1002,6 +1152,9 @@ export async function runContentBodyGenerate(input: {
     face06_production: face06Ctx
       ? { system: face06Ctx.system, user: face06Ctx.user }
       : null,
+    face07_production: face07Ctx
+      ? { system: face07Ctx.system, user: face07Ctx.user }
+      : null,
   });
 
   let tokens_used = 0;
@@ -1023,7 +1176,9 @@ export async function runContentBodyGenerate(input: {
             ? "content_body_v3_face05"
             : face06Ctx
               ? "content_body_v3_face06"
-              : "content_body_v3";
+              : face07Ctx
+                ? "content_body_v3_face07"
+                : "content_body_v3";
 
     const invoke = async (sys: string, usr: string) => {
       if (contentBodyTestInvoke) {
@@ -1068,6 +1223,7 @@ export async function runContentBodyGenerate(input: {
             face04Ctx?.user ||
             face05Ctx?.user ||
             face06Ctx?.user ||
+            face07Ctx?.user ||
             "",
           raw_text: text,
           result,
@@ -1087,6 +1243,9 @@ export async function runContentBodyGenerate(input: {
         face06_meta: face06Ctx
           ? { prompt_version: face06Ctx.prompt_version, slice_summary: face06SliceSummary(face06Ctx) }
           : undefined,
+        face07_meta: face07Ctx
+          ? { prompt_version: face07Ctx.prompt_version, slice_summary: face07SliceSummary(face07Ctx) }
+          : undefined,
       };
     }
     const baseTrace = {
@@ -1100,6 +1259,7 @@ export async function runContentBodyGenerate(input: {
         face04Ctx?.user ||
         face05Ctx?.user ||
         face06Ctx?.user ||
+        face07Ctx?.user ||
         "",
       result,
     };
@@ -1819,6 +1979,137 @@ export async function runContentBodyGenerate(input: {
       );
     }
 
+    // --- Face 07 V2: strict JSON → schema → participants/refs → attach ---
+    if (face07Ctx) {
+      const finalizeFace07 = async (
+        rawText: string,
+        parsedIn: unknown,
+        validationTag: "passed" | "passed_after_repair",
+        repairTrace?: LabCallTrace,
+      ): Promise<ContentBodyOk | ContentBodyFail> => {
+        const validated = validateFace07ProductionOutput({
+          raw: parsedIn,
+          locale: input.locale,
+          ctx: face07Ctx!,
+        });
+        if (!validated.ok) {
+          return {
+            ok: false,
+            reason: validated.reason,
+            tokens_used,
+            last_raw_text: rawText.slice(0, 12_000),
+            call_trace: repairTrace ??
+              buildLabCallTrace({
+                ...baseTrace,
+                raw_text: rawText,
+                parsed: parsedIn,
+              }),
+            face07_meta: {
+              prompt_version: face07Ctx!.prompt_version,
+              slice_summary: face07SliceSummary(face07Ctx!),
+              validation_issues: validated.issues,
+            },
+          };
+        }
+        const page = validated.page as unknown as DeliveryPageData;
+        return {
+          ok: true,
+          page,
+          tokens_used,
+          last_raw_text: rawText.slice(0, 12_000),
+          call_trace: repairTrace ??
+            buildLabCallTrace({
+              ...baseTrace,
+              raw_text: rawText,
+              parsed: page,
+            }),
+          face07_meta: {
+            prompt_version: face07Ctx!.prompt_version,
+            schema_version: face07Ctx!.schema_version,
+            slice_summary: face07SliceSummary(face07Ctx!),
+            validation: validationTag,
+          },
+        };
+      };
+
+      const parsed07 = parseFace07JsonStrict(text);
+      if (parsed07 == null) {
+        return {
+          ok: false,
+          reason: "face07_json_not_strict",
+          tokens_used,
+          last_raw_text: text.slice(0, 12_000),
+          call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
+          face07_meta: {
+            prompt_version: face07Ctx.prompt_version,
+            slice_summary: face07SliceSummary(face07Ctx),
+          },
+        };
+      }
+      const first07 = await finalizeFace07(text, parsed07, "passed");
+      if (first07.ok) return first07;
+      const repairUser07 = buildFace07RepairUserMessage({
+        previousUser: user,
+        previousRaw: text,
+        issues:
+          (first07.face07_meta?.validation_issues as
+            | import("@/lib/llm/pro/delivery/decision-report-v2/page07/validate").Face07Issue[]
+            | undefined) ?? [
+            { code: "face07_validation_failed", detail: first07.reason },
+          ],
+      });
+      const repairResult07 = await invoke(system, repairUser07);
+      tokens_used += repairResult07.meta.tokens_used;
+      const repairText07 = repairResult07.content?.trim() ?? "";
+      if (scareRedlineSnippet(repairText07)) {
+        return {
+          ok: false,
+          reason: "scare_redline",
+          tokens_used,
+          last_raw_text: repairText07.slice(0, 12_000),
+          call_trace: buildLabCallTrace({
+            ...baseTrace,
+            raw_text: repairText07,
+            result: repairResult07,
+          }),
+          face07_meta: {
+            prompt_version: face07Ctx.prompt_version,
+            slice_summary: face07SliceSummary(face07Ctx),
+          },
+        };
+      }
+      const repairParsed07 = parseFace07JsonStrict(repairText07);
+      if (repairParsed07 == null) {
+        return {
+          ok: false,
+          reason: "face07_repair_json_not_strict",
+          tokens_used,
+          last_raw_text: repairText07.slice(0, 12_000),
+          call_trace: buildLabCallTrace({
+            ...baseTrace,
+            raw_text: repairText07,
+            result: repairResult07,
+          }),
+          face07_meta: {
+            prompt_version: face07Ctx.prompt_version,
+            slice_summary: face07SliceSummary(face07Ctx),
+            validation_issues: first07.face07_meta?.validation_issues,
+          },
+        };
+      }
+      return finalizeFace07(
+        repairText07,
+        repairParsed07,
+        "passed_after_repair",
+        buildLabCallTrace({
+          ...baseTrace,
+          raw_text: repairText07,
+          result: repairResult07,
+          parsed: repairParsed07,
+        }),
+      );
+    }
+
     let parsed: unknown;
     try {
       parsed = extractJson(text);
@@ -1876,7 +2167,9 @@ export async function runContentBodyGenerate(input: {
                 ? "content_body_v3_face05"
                 : face06Ctx
                   ? "content_body_v3_face06"
-                  : "content_body_v3",
+                  : face07Ctx
+                    ? "content_body_v3_face07"
+                    : "content_body_v3",
         system,
         user,
         user_feed:
@@ -1886,6 +2179,7 @@ export async function runContentBodyGenerate(input: {
           face04Ctx?.user ||
           face05Ctx?.user ||
           face06Ctx?.user ||
+          face07Ctx?.user ||
           "",
         raw_text: null,
       }),
@@ -1894,4 +2188,4 @@ export async function runContentBodyGenerate(input: {
 }
 
 /** Type-only re-export for callers. */
-export type { Face01V2, Face02V2, Face04V2, Face05V2, Face06V2 };
+export type { Face01V2, Face02V2, Face04V2, Face05V2, Face06V2, Face07V2 };

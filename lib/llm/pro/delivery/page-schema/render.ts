@@ -14,10 +14,13 @@ import { projectLegacyFace05ForDisplay } from "@/lib/llm/pro/delivery/decision-r
 import { assemblePage05PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page05/architecture/section-assembly";
 import { projectLegacyFace06ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page06/legacy-adapter";
 import { assemblePage06PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page06/architecture/section-assembly";
+import { projectLegacyFace07ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
+import { assemblePage07PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page07/architecture/section-assembly";
 import type {
   Face04V2,
   Face05V2,
   Face06V2,
+  Face07V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
@@ -271,12 +274,31 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       }
       break;
     }
-    case "07":
-      add("场域判断", "field_judgment");
-      add("关系/互动", "relation_interaction");
-      add("依据折叠", "evidence_fold");
-      add("与 01/05 对齐", "align_with_01_05");
+    case "07": {
+      let canonical07: Face07V2 | null = null;
+      if (
+        p.schema_version === "face07-v2" ||
+        typeof p.applicability_status === "string"
+      ) {
+        canonical07 = p as unknown as Face07V2;
+      } else {
+        canonical07 = projectLegacyFace07ForDisplay(p);
+      }
+      if (!canonical07) {
+        throw new Error(
+          "face07_pdf_legacy_project_failed: historical/incomplete Face07 could not be projected for PDF assembly",
+        );
+      }
+      const locale07 = String(
+        (canonical07 as { locale?: unknown }).locale ??
+          (p as { locale?: unknown }).locale ??
+          "zh",
+      );
+      for (const arg of assemblePage07PdfArgumentBodies(canonical07, locale07)) {
+        out.push(arg);
+      }
       break;
+    }
     case "08":
       add("红灯信号", "red_lights");
       add("复盘问句", "review_questions");

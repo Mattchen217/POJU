@@ -28,6 +28,7 @@ import { Face02PageSlots } from "@/components/poju/delivery-pages/faces/Face02Pa
 import { Face04PageSlots } from "@/components/poju/delivery-pages/faces/Face04PageSlots";
 import { Face05PageSlots } from "@/components/poju/delivery-pages/faces/Face05PageSlots";
 import { Face06PageSlots } from "@/components/poju/delivery-pages/faces/Face06PageSlots";
+import { Face07PageSlots } from "@/components/poju/delivery-pages/faces/Face07PageSlots";
 import {
   isFace05Legacy,
   isFace05V2,
@@ -36,6 +37,10 @@ import {
   isFace06Legacy,
   isFace06V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page06/legacy-adapter";
+import {
+  isFace07Legacy,
+  isFace07V2,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
 import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
 import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
 import { isFace02V2, isFace02Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
@@ -257,6 +262,9 @@ export function FacePageSlots({
   }
   if (id === "06" && (isFace06V2(page) || isFace06Legacy(page))) {
     return <Face06PageSlots page={page as never} locale={locale} />;
+  }
+  if (id === "07" && (isFace07V2(page) || isFace07Legacy(page))) {
+    return <Face07PageSlots page={page as never} locale={locale} />;
   }
   if (
     id === "03" &&
