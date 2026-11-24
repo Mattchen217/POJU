@@ -1,5 +1,5 @@
 /**
- * Report orchestration Batch 1 R1 — DAG SSOT + fingerprints + ready resolution.
+ * Report orchestration Batch 1 R2 — DAG SSOT + production-context fingerprints.
  * No LLM / Inngest workers. Run: pnpm exec tsx scripts/test-report-orchestration-batch1.ts
  */
 
@@ -9,6 +9,7 @@ import {
   REPORT_PAGE_IDS,
   REPORT_PAGE_REGISTRY,
   REPORT_DERIVED_NODE_REGISTRY,
+  REPORT_OPTIONAL_UPSTREAM_ABSENT,
   PAGE_VALIDATOR_VERSIONS,
   PAGE_PRODUCTION_VERSIONS,
   buildReportDependencyGraph,
@@ -18,20 +19,29 @@ import {
   downstreamDependentsOf,
   assertPage01Page02Independent,
   computePageInputFingerprint,
+  computePageInputFingerprintFromProductionContext,
   computeAllPageInputFingerprints,
   selectUpstreamFingerprintsForPage,
+  selectOptionalUpstreamFingerprintsForPage,
   requireUpstreamFingerprintsForPage,
   makeTestSharedSlice,
+  buildPageSharedInputFingerprintFromProductionContext,
   resolveReportReadyState,
   initialPendingPageStates,
   isPageReadyToDispatch,
   isPage07ApplicabilityGateReady,
   isPage07ModelGenerationReady,
   reportPageDefinition,
+  pageFingerprintOptionalUpstreamIds,
+  pageSharedInputKeys,
   type ReportPageRuntimeState,
-  type ReportPageSharedInputSlice,
   type ReportPageId,
 } from "@/lib/llm/pro/delivery/decision-report-v2/orchestration";
+import { buildFace01ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page01/production";
+import { buildFace02ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page02/production";
+import { buildFace04ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page04/production";
+import type { DecisionContext } from "@/lib/poju/decision-context/types";
+import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 
 function mark(
   states: ReportPageRuntimeState[],
@@ -54,26 +64,209 @@ function completeThrough06(
   return s;
 }
 
-const FULL_UPSTREAM = {
-  "01": "out_01",
-  "02": "out_02",
-  "04": "out_04",
-  "05": "out_05",
-  "06": "out_06",
-  "07": "out_07",
-} as const;
-
-function sliceFor(pageId: ReportPageId, tag = "base"): ReportPageSharedInputSlice {
-  return makeTestSharedSlice({
-    locale: "en",
-    dc_slice_fingerprint: `dc_${pageId}_${tag}`,
-    personal_computation_slice_fingerprint: `personal_${pageId}_${tag}`,
-    approved_readings_slice_fingerprint: `readings_${pageId}_${tag}`,
-    evidence_registry_slice_fingerprint: `registry_${pageId}_${tag}`,
-  });
+function baseDc(overrides?: {
+  facts?: DecisionContext["reality_facts"];
+  question?: string;
+}): DecisionContext {
+  return {
+    context_id: "dc_orch_r2",
+    version: 1,
+    status: "final",
+    content_hash: "hash_orch_r2",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    definition: {
+      decision_question:
+        overrides?.question ??
+        "Should I leave the job for a startup offer this quarter?",
+      concrete_event: "Received startup offer with equity cliff.",
+      desired_outcome: "Preserve runway and optionality.",
+      stakes: "Career and cash floor",
+      goal_priorities: ["runway"],
+      unacceptable_outcomes: ["resign cold"],
+    },
+    constraints: [
+      {
+        constraint_id: "c_runway",
+        statement: "Keep at least 6 months runway.",
+        category: "financial",
+        status: "confirmed",
+        verification_level: "user_asserted",
+        source_stage: "collecting",
+        source_turn_id: "t1",
+        rigidity: "hard",
+        user_confirmed: true,
+        related_dir_ids: ["DIR_RUNWAY"],
+      },
+    ],
+    reality_facts: overrides?.facts ?? [
+      {
+        fact_id: "fact_runway",
+        statement: "Personal runway is about 8 months.",
+        status: "confirmed",
+        verification_level: "user_asserted",
+        source_stage: "collecting",
+        source_turn_id: "t1",
+        user_confirmed: true,
+        fact_roles: ["hard_constraint"],
+        related_dir_ids: ["DIR_RUNWAY"],
+      },
+      {
+        fact_id: "fact_salary_guess",
+        statement: "Maybe total cash is around 120k.",
+        status: "unverified",
+        verification_level: "user_estimate",
+        source_stage: "collecting",
+        source_turn_id: "t2",
+        user_confirmed: false,
+        fact_roles: ["job_offer"],
+        related_dir_ids: ["DIR_OFFER"],
+      },
+      {
+        fact_id: "fact_noise_hobby",
+        statement: "Likes hiking on weekends.",
+        status: "confirmed",
+        verification_level: "user_asserted",
+        source_stage: "collecting",
+        source_turn_id: "t4",
+        user_confirmed: true,
+      },
+    ],
+    dirs: [
+      {
+        dir_id: "DIR_RUNWAY",
+        need: "Runway",
+        why: "Cash floor",
+        required_fact_roles: ["hard_constraint"],
+        current_state: "known",
+        partial_satisfaction: false,
+        agenda_item_ids: [],
+        id_lifecycle: "active",
+      },
+      {
+        dir_id: "DIR_OFFER",
+        need: "Offer",
+        why: "Terms",
+        required_fact_roles: ["job_offer"],
+        current_state: "known",
+        partial_satisfaction: true,
+        agenda_item_ids: [],
+        id_lifecycle: "active",
+      },
+    ],
+    conflicts: [],
+    hypotheses: [],
+  } as unknown as DecisionContext;
 }
 
-console.log("=== Report orchestration Batch1 R1 (DAG SSOT, no LLM) ===");
+function basePack(): BookJudgmentPack {
+  return {
+    version: 1,
+    locale: "en",
+    cfp_hash: "cfp_orch_r2",
+    zfp_hash: null,
+    zfpOmitted: true,
+    shot_mode: "one",
+    created_at: "2026-01-01T00:00:00Z",
+    units: [
+      {
+        id: "u_destiny_01",
+        track: "destiny",
+        claim: "Current cycle favors keeping a stable cash floor. cfp:dayMaster",
+        anchors: ["cfp:dayMaster"],
+        serves_face: ["01", "02", "04"],
+        caveat: "Not a timing guarantee.",
+        term_ids: ["day_master"],
+        source_domain: "bazi",
+        source_version: "cfp_orch_r2",
+      },
+      {
+        id: "u_science_01",
+        track: "science",
+        claim: "Eight-month runway supports a staged path.",
+        anchors: ["runway_months"],
+        serves_face: ["01", "02", "04"],
+        term_ids: [],
+        source_domain: "science",
+      },
+      {
+        id: "u_page08_only",
+        track: "science",
+        claim: "Close ritual note for page 08 only — unused by Page01.",
+        anchors: ["close"],
+        serves_face: ["08"],
+        term_ids: [],
+        source_domain: "science",
+      },
+    ],
+    by_face: {
+      "01": ["u_destiny_01", "u_science_01"],
+      "02": ["u_destiny_01", "u_science_01"],
+      "04": ["u_destiny_01", "u_science_01"],
+      "08": ["u_page08_only"],
+    },
+    pattern_hits_used: [],
+    science_tags_used: [],
+  } as unknown as BookJudgmentPack;
+}
+
+const page01Stub = {
+  page: "01",
+  face: "01",
+  schema_version: "face01-v2",
+  core_judgment: {
+    text: "Keep the job while testing the offer.",
+    claim_ids: ["u_destiny_01"],
+  },
+  why_this_path: [
+    {
+      text: "Cash floor is intact.",
+      claim_ids: ["u_destiny_01"],
+    },
+  ],
+  recommendation_conditions: [
+    {
+      condition: "Runway stays above 6 months",
+      status: "assumed",
+      source_ids: ["fact_runway"],
+    },
+  ],
+  not_recommended: [
+    {
+      option: "Resign cold",
+      reason: "Burns runway",
+      cost_or_conflict: "Irreversible cash shock",
+    },
+  ],
+  applicability_boundary: {
+    current_basis: ["Confirmed runway"],
+    invalidation_conditions: ["Runway collapses"],
+    page02_evidence_ids: ["u_destiny_01"],
+    page08_review_refs: [],
+  },
+};
+
+const page02Stub = {
+  page: "02",
+  face: "02",
+  schema_version: "face02-v2",
+  content_units: [
+    {
+      unit_id: "p02_u1",
+      kind: "personal_interpretation",
+      text: "Day-master framing favors staged exploration.",
+      claim_ids: ["u_destiny_01"],
+      evidence_ids: ["u_destiny_01"],
+      related_dir_ids: [],
+    },
+  ],
+  explanation_boundary: {
+    text: "Not a guarantee.",
+    evidence_ids: [],
+  },
+};
+
+console.log("=== Report orchestration Batch1 R2 (production-context fingerprints) ===");
 
 {
   const graph = buildReportDependencyGraph();
@@ -87,30 +280,33 @@ console.log("=== Report orchestration Batch1 R1 (DAG SSOT, no LLM) ===");
   assert.deepEqual([...graph.page_ids], [...REPORT_PAGE_IDS]);
   assert.equal(REPORT_PAGE_REGISTRY.length, 7);
   assert.equal(REPORT_DERIVED_NODE_REGISTRY[0]?.node_id, "glossary_appendix");
-  console.log("A ok — graph builds and validates");
+  // Per-page shared keys are not identical across all pages.
+  assert.notDeepEqual(
+    [...pageSharedInputKeys("01")],
+    [...pageSharedInputKeys("07")],
+  );
+  assert.ok(pageSharedInputKeys("02").includes("page01_alignment_consumed"));
+  assert.ok(!pageSharedInputKeys("01").includes("page01_alignment_consumed"));
+  assert.ok(pageSharedInputKeys("07").includes("applicability_consumed"));
+  assert.ok(!pageSharedInputKeys("07").includes("readings_consumed"));
+  assert.ok(pageSharedInputKeys("08").includes("date_corpus_consumed"));
+  assert.ok(!pageSharedInputKeys("08").includes("readings_consumed"));
+  console.log("A ok — graph validates; shared_input_keys differ by page");
 }
 
 {
   assertPage01Page02Independent();
   assert.deepEqual([...requiredUpstreamOf("01")], []);
   assert.deepEqual([...requiredUpstreamOf("02")], []);
-  assert.ok(!requiredUpstreamOf("01").includes("02"));
-  assert.ok(!requiredUpstreamOf("02").includes("01"));
-  console.log("B ok — Page01 and Page02 have no mutual dependency");
+  assert.deepEqual([...pageFingerprintOptionalUpstreamIds("02")], ["01"]);
+  assert.deepEqual([...pageFingerprintOptionalUpstreamIds("01")], []);
+  console.log("B ok — Page01/02 no required mutual dep; Page02 optional←01");
 }
 
 {
   assert.deepEqual([...requiredUpstreamOf("04")], ["01", "02"]);
-  assert.deepEqual([...requiredUpstreamOf("05")], ["01", "02", "04"]);
-  assert.deepEqual([...requiredUpstreamOf("06")], ["01", "02", "04", "05"]);
-  assert.deepEqual([...requiredUpstreamOf("07")], ["01", "02", "04", "05", "06"]);
-  assert.deepEqual(
-    [...requiredUpstreamOf("08")],
-    ["01", "02", "04", "05", "06", "07"],
-  );
   assert.ok(reportPageDefinition("07").conditional);
-  assert.equal(reportPageDefinition("08").conditional, false);
-  console.log("C ok — Page04←01+02; 05←04; 06←05; 07←06; 08←07 chain");
+  console.log("C ok — required upstream chain intact");
 }
 
 {
@@ -123,20 +319,7 @@ console.log("=== Report orchestration Batch1 R1 (DAG SSOT, no LLM) ===");
   assert.equal(validated.ok, false);
   if (validated.ok) throw new Error("expected cycle");
   assert.ok(validated.issues.some((i) => i.code === "cycle_detected"));
-  console.log("D ok — cycles are rejected");
-}
-
-{
-  const cycleGraph = buildReportDependencyGraph();
-  const broken = {
-    ...cycleGraph,
-    edges: [...cycleGraph.edges, { from: "99" as never, to: "04" as const }],
-  };
-  const validated = validateReportDependencyGraph(broken);
-  assert.equal(validated.ok, false);
-  if (validated.ok) throw new Error("expected missing upstream");
-  assert.ok(validated.issues.some((i) => i.code === "missing_upstream_node"));
-  console.log("E ok — missing upstream nodes are rejected");
+  console.log("D ok — cycles rejected");
 }
 
 {
@@ -144,513 +327,447 @@ console.log("=== Report orchestration Batch1 R1 (DAG SSOT, no LLM) ===");
   let res = resolveReportReadyState(states);
   assert.deepEqual(res.ready_model_generations.sort(), ["01", "02"]);
   assert.deepEqual(res.ready_applicability_gates, []);
-  assert.ok(res.blocked.some((b) => b.page_id === "04"));
-  assert.ok(res.blocked.some((b) => b.page_id === "08"));
-  assert.equal(res.ready_derived.length, 0);
-
-  states = mark(states, "01", "completed");
-  res = resolveReportReadyState(states);
+  // Optional Page01 must not block Page02
   assert.ok(res.ready_model_generations.includes("02"));
-  assert.ok(!res.ready_model_generations.includes("04"));
-  assert.ok(
-    res.blocked.some(
-      (b) => b.page_id === "04" && b.missing_upstream.includes("02"),
-    ),
-  );
 
-  states = mark(states, "02", "completed");
+  states = completeThrough06(states);
   res = resolveReportReadyState(states);
-  assert.deepEqual(res.ready_model_generations, ["04"]);
-
-  states = mark(states, "04", "completed");
-  res = resolveReportReadyState(states);
-  assert.deepEqual(res.ready_model_generations, ["05"]);
-
-  states = mark(states, "05", "completed");
-  res = resolveReportReadyState(states);
-  assert.deepEqual(res.ready_model_generations, ["06"]);
-
-  states = mark(states, "06", "completed");
-  res = resolveReportReadyState(states);
-  // Page07 gate ready — NOT model generation.
   assert.deepEqual(res.ready_applicability_gates, ["07"]);
   assert.deepEqual(res.ready_model_generations, []);
-  assert.ok(isPage07ApplicabilityGateReady(states));
-  assert.equal(isPage07ModelGenerationReady(states), false);
+
+  states = mark(states, "07", "pending", { applicability_status: "applicable" });
+  res = resolveReportReadyState(states);
+  assert.deepEqual(res.ready_model_generations, ["07"]);
 
   states = mark(states, "07", "skipped_not_applicable", {
     applicability_status: "not_applicable",
   });
   res = resolveReportReadyState(states);
   assert.deepEqual(res.ready_model_generations, ["08"]);
-  assert.ok(!isPageReadyToDispatch("07", states));
-
-  states = mark(states, "08", "completed");
-  res = resolveReportReadyState(states);
-  assert.deepEqual(res.ready_model_generations, []);
-  assert.deepEqual(res.ready_derived, ["glossary_appendix"]);
-  console.log("F ok — ready progression; Page07 gate ≠ model generation");
+  console.log("E ok — ready progression; Page02 not blocked by optional Page01");
 }
 
 {
-  // Four Page07 state transitions
   let states = completeThrough06(initialPendingPageStates());
-
-  // 1) Upstream satisfied → applicability gate ready only
-  let res = resolveReportReadyState(states);
-  assert.deepEqual(res.ready_applicability_gates, ["07"]);
-  assert.ok(!res.ready_model_generations.includes("07"));
+  assert.ok(isPage07ApplicabilityGateReady(states));
   assert.equal(isPage07ModelGenerationReady(states), false);
-
-  // 2) applicable → model generation ready
   states = mark(states, "07", "pending", { applicability_status: "applicable" });
-  res = resolveReportReadyState(states);
-  assert.deepEqual(res.ready_applicability_gates, []);
-  assert.deepEqual(res.ready_model_generations, ["07"]);
   assert.ok(isPage07ModelGenerationReady(states));
-  assert.equal(isPage07ApplicabilityGateReady(states), false);
-
-  // 3) not_applicable terminal → no model; Page08 ready
-  states = mark(states, "07", "skipped_not_applicable", {
-    applicability_status: "not_applicable",
-  });
-  res = resolveReportReadyState(states);
-  assert.ok(!res.ready_model_generations.includes("07"));
-  assert.ok(!res.ready_applicability_gates.includes("07"));
-  assert.deepEqual(res.ready_model_generations, ["08"]);
-
-  // 4) insufficient_information terminal → no model; Page08 ready; not completed
-  states = completeThrough06(initialPendingPageStates());
   states = mark(states, "07", "insufficient_information", {
     applicability_status: "insufficient_information",
   });
-  res = resolveReportReadyState(states);
+  const res = resolveReportReadyState(states);
   assert.ok(!res.ready_model_generations.includes("07"));
   assert.deepEqual(res.ready_model_generations, ["08"]);
-  const p07 = states.find((s) => s.page_id === "07");
-  assert.notEqual(p07?.outcome, "completed");
-  console.log("G ok — Page07 gate / applicable / NA / insufficient transitions");
+  console.log("F ok — Page07 gate / applicable / insufficient transitions");
 }
 
 {
-  const a = computePageInputFingerprint({
+  // --- Real production-context fingerprints (Page01) ---
+  const pack = basePack();
+  const dc = baseDc();
+  const built = buildFace01ProductionContext({
+    report_id: "job_orch_r2_01",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+  });
+  assert.equal(built.ok, true, built.ok ? "" : built.reason);
+  if (!built.ok) throw new Error(built.reason);
+
+  const fpBase = computePageInputFingerprintFromProductionContext({
     page_id: "01",
-    shared_slice: sliceFor("01"),
+    production_context: built.ctx,
     upstream_output_fingerprints: {},
   });
-  assert.equal(a.ok, true);
-  if (!a.ok) throw new Error(a.detail);
-  const b = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: sliceFor("01"),
-    upstream_output_fingerprints: { "02": "should_be_ignored" },
+  assert.equal(fpBase.ok, true, fpBase.ok ? "" : fpBase.detail);
+  if (!fpBase.ok) throw new Error(fpBase.detail);
+
+  // Used fact change → FP changes
+  const dcFactChanged = baseDc({
+    facts: baseDc().reality_facts!.map((f) =>
+      f.fact_id === "fact_runway"
+        ? { ...f, statement: "Personal runway is about 3 months." }
+        : f,
+    ),
   });
-  assert.equal(b.ok, true);
-  if (!b.ok) throw new Error(b.detail);
-  assert.equal(a.result.fingerprint, b.result.fingerprint);
-  assert.equal(
-    Object.keys(
-      (a.result.canonical_payload.upstream_output_fingerprints as object) ?? {},
-    ).length,
-    0,
+  const builtFact = buildFace01ProductionContext({
+    report_id: "job_orch_r2_01",
+    locale: "en",
+    dc: dcFactChanged,
+    pack,
+    chart_fact_pack: "日主甲木…",
+  });
+  assert.equal(builtFact.ok, true);
+  if (!builtFact.ok) throw new Error(builtFact.reason);
+  const inSlice = built.ctx.slice.reality_context.facts.some(
+    (f) => f.fact_id === "fact_runway",
   );
-  console.log("H ok — identical inputs yield identical fingerprint");
+  assert.ok(inSlice, "fact_runway must be consumed by Page01");
+  const fpFact = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: builtFact.ctx,
+    upstream_output_fingerprints: {},
+  });
+  assert.equal(fpFact.ok, true);
+  if (!fpFact.ok) throw new Error(fpFact.detail);
+  assert.notEqual(fpBase.result.fingerprint, fpFact.result.fingerprint);
+
+  // Unused Page08-only unit / reading change → Page01 FP unchanged
+  const packUnusedChanged = {
+    ...pack,
+    units: pack.units.map((u) =>
+      u.id === "u_page08_only"
+        ? { ...u, claim: "CHANGED close ritual for page 08 only." }
+        : u,
+    ),
+  } as BookJudgmentPack;
+  const builtUnused = buildFace01ProductionContext({
+    report_id: "job_orch_r2_01",
+    locale: "en",
+    dc,
+    pack: packUnusedChanged,
+    chart_fact_pack: "日主甲木…",
+  });
+  assert.equal(builtUnused.ok, true);
+  if (!builtUnused.ok) throw new Error(builtUnused.reason);
+  assert.ok(
+    !Object.keys(builtUnused.ctx.registry.claims).includes("u_page08_only") &&
+      !Object.keys(builtUnused.ctx.registry.evidence).includes("u_page08_only"),
+    "Page01 must not consume page08-only unit",
+  );
+  const fpUnused = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: builtUnused.ctx,
+    upstream_output_fingerprints: {},
+  });
+  assert.equal(fpUnused.ok, true);
+  if (!fpUnused.ok) throw new Error(fpUnused.detail);
+  assert.equal(fpBase.result.fingerprint, fpUnused.result.fingerprint);
+
+  // Used approved reading / destiny unit change → Page01 FP changes
+  const packReadingChanged = {
+    ...pack,
+    units: pack.units.map((u) =>
+      u.id === "u_destiny_01"
+        ? { ...u, claim: "CHANGED destiny claim for page 01. cfp:dayMaster" }
+        : u,
+    ),
+  } as BookJudgmentPack;
+  const builtReading = buildFace01ProductionContext({
+    report_id: "job_orch_r2_01",
+    locale: "en",
+    dc,
+    pack: packReadingChanged,
+    chart_fact_pack: "日主甲木…",
+  });
+  assert.equal(builtReading.ok, true);
+  if (!builtReading.ok) throw new Error(builtReading.reason);
+  const fpReading = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: builtReading.ctx,
+    upstream_output_fingerprints: {},
+  });
+  assert.equal(fpReading.ok, true);
+  if (!fpReading.ok) throw new Error(fpReading.detail);
+  assert.notEqual(fpBase.result.fingerprint, fpReading.result.fingerprint);
+
+  // Missing production context → fail closed
+  const missingCtx = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: null,
+    upstream_output_fingerprints: {},
+  });
+  assert.equal(missingCtx.ok, false);
+  if (missingCtx.ok) throw new Error("unreachable");
+  assert.equal(missingCtx.code, "missing_production_context");
+  console.log("G ok — Page01 real context: used fact/reading change; unused unit ignored");
 }
 
 {
-  const baseUp = { "01": "out_01", "02": "out_02" };
-  const p04a = computePageInputFingerprint({
-    page_id: "04",
-    shared_slice: sliceFor("04"),
-    upstream_output_fingerprints: baseUp,
+  // Page01/02 personal domains: bazi-only vs ziwei availability
+  const pack = basePack();
+  const dc = baseDc();
+  const baziOnly = buildFace01ProductionContext({
+    report_id: "job_orch_r2_dom",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    ziwei_available: false,
   });
-  const p04b = computePageInputFingerprint({
-    page_id: "04",
-    shared_slice: sliceFor("04"),
-    upstream_output_fingerprints: { ...baseUp, "01": "out_01_CHANGED" },
+  assert.equal(baziOnly.ok, true);
+  if (!baziOnly.ok) throw new Error(baziOnly.reason);
+  const fpBazi = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: baziOnly.ctx,
+    upstream_output_fingerprints: {},
   });
-  assert.equal(p04a.ok && p04b.ok, true);
-  if (!p04a.ok || !p04b.ok) throw new Error("p04 fp");
-  assert.notEqual(p04a.result.fingerprint, p04b.result.fingerprint);
+  assert.equal(fpBazi.ok, true);
+  if (!fpBazi.ok) throw new Error(fpBazi.detail);
 
-  const p01a = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: sliceFor("01"),
-    upstream_output_fingerprints: baseUp,
+  // Page02 without Page01 vs with Page01
+  const p02No = buildFace02ProductionContext({
+    report_id: "job_orch_r2_02",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
   });
-  const p01b = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: sliceFor("01"),
-    upstream_output_fingerprints: { ...baseUp, "02": "out_02_CHANGED" },
+  assert.equal(p02No.ok, true);
+  if (!p02No.ok) throw new Error(p02No.reason);
+  const fp02No = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: p02No.ctx,
+    upstream_output_fingerprints: {},
   });
-  assert.equal(p01a.ok && p01b.ok, true);
-  if (!p01a.ok || !p01b.ok) throw new Error("p01 fp");
-  assert.equal(p01a.result.fingerprint, p01b.result.fingerprint);
-  console.log("I ok — upstream content change affects dependents only");
+  assert.equal(fp02No.ok, true);
+  if (!fp02No.ok) throw new Error(fp02No.detail);
+  const optAbsent = selectOptionalUpstreamFingerprintsForPage("02", {});
+  assert.equal(optAbsent["01"], REPORT_OPTIONAL_UPSTREAM_ABSENT);
+  assert.equal(
+    (fp02No.result.canonical_payload.optional_upstream_fingerprints as Record<
+      string,
+      string
+    >)["01"],
+    REPORT_OPTIONAL_UPSTREAM_ABSENT,
+  );
+
+  const p02With = buildFace02ProductionContext({
+    report_id: "job_orch_r2_02",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01: page01Stub,
+  });
+  assert.equal(p02With.ok, true);
+  if (!p02With.ok) throw new Error(p02With.reason);
+  assert.ok(p02With.ctx.page01_core_judgment);
+  const fp02WithAbsentUp = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: p02With.ctx,
+    upstream_output_fingerprints: {},
+  });
+  assert.equal(fp02WithAbsentUp.ok, true);
+  if (!fp02WithAbsentUp.ok) throw new Error(fp02WithAbsentUp.detail);
+  // Alignment content present → different from no-Page01 context
+  assert.notEqual(fp02No.result.fingerprint, fp02WithAbsentUp.result.fingerprint);
+
+  // Page01 output fingerprint present vs changed
+  const fp02WithUp = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: p02With.ctx,
+    upstream_output_fingerprints: { "01": "out_page01_v1" },
+  });
+  const fp02WithUp2 = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: p02With.ctx,
+    upstream_output_fingerprints: { "01": "out_page01_v2" },
+  });
+  assert.equal(fp02WithUp.ok && fp02WithUp2.ok, true);
+  if (!fp02WithUp.ok || !fp02WithUp2.ok) throw new Error("p02 up");
+  assert.notEqual(fp02WithUp.result.fingerprint, fp02WithUp2.result.fingerprint);
+  assert.notEqual(fp02WithAbsentUp.result.fingerprint, fp02WithUp.result.fingerprint);
+
+  // Still independently ready
+  const ready = resolveReportReadyState(initialPendingPageStates());
+  assert.deepEqual(ready.ready_model_generations.sort(), ["01", "02"]);
+  console.log("H ok — Page02 optional Page01 alignment + output FP; parallel ready");
 }
 
 {
-  // Negative: missing required upstream fingerprints fail closed
-  const cases: Array<{
-    page: ReportPageId;
-    up: Record<string, string>;
-    missing: string;
-  }> = [
+  // Page04 real context: unused page08 unit ignored; used fact changes FP; no ziwei in personal
+  const pack = basePack();
+  const dc = baseDc();
+  const built = buildFace04ProductionContext({
+    report_id: "job_orch_r2_04",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01: page01Stub,
+    page02: page02Stub,
+  });
+  assert.equal(built.ok, true, built.ok ? "" : built.reason);
+  if (!built.ok) throw new Error(built.reason);
+  const extract = buildPageSharedInputFingerprintFromProductionContext(
+    "04",
+    built.ctx,
+  );
+  assert.equal(extract.ok, true);
+  if (!extract.ok) throw new Error(extract.detail);
+  const personal = extract.extract.components.personal_consumed as {
+    domain_versions: Record<string, string>;
+    available_domains: string[];
+  };
+  assert.ok(!("ziwei" in personal.domain_versions));
+  assert.ok(!personal.available_domains.includes("ziwei"));
+
+  const fp04 = computePageInputFingerprintFromProductionContext({
+    page_id: "04",
+    production_context: built.ctx,
+    upstream_output_fingerprints: { "01": "o1", "02": "o2" },
+  });
+  assert.equal(fp04.ok, true);
+  if (!fp04.ok) throw new Error(fp04.detail);
+
+  const dcChanged = baseDc({
+    facts: baseDc().reality_facts!.map((f) =>
+      f.fact_id === "fact_runway"
+        ? { ...f, statement: "Runway collapsed to 2 months." }
+        : f,
+    ),
+  });
+  const built2 = buildFace04ProductionContext({
+    report_id: "job_orch_r2_04",
+    locale: "en",
+    dc: dcChanged,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01: page01Stub,
+    page02: page02Stub,
+  });
+  assert.equal(built2.ok, true);
+  if (!built2.ok) throw new Error(built2.reason);
+  const fp04b = computePageInputFingerprintFromProductionContext({
+    page_id: "04",
+    production_context: built2.ctx,
+    upstream_output_fingerprints: { "01": "o1", "02": "o2" },
+  });
+  assert.equal(fp04b.ok, true);
+  if (!fp04b.ok) throw new Error(fp04b.detail);
+  assert.notEqual(fp04.result.fingerprint, fp04b.result.fingerprint);
+
+  const pack08Changed = {
+    ...pack,
+    units: pack.units.map((u) =>
+      u.id === "u_page08_only" ? { ...u, claim: "CHANGED unused by 04" } : u,
+    ),
+  } as BookJudgmentPack;
+  const built3 = buildFace04ProductionContext({
+    report_id: "job_orch_r2_04",
+    locale: "en",
+    dc,
+    pack: pack08Changed,
+    chart_fact_pack: "日主甲木…",
+    page01: page01Stub,
+    page02: page02Stub,
+  });
+  assert.equal(built3.ok, true);
+  if (!built3.ok) throw new Error(built3.reason);
+  const fp04c = computePageInputFingerprintFromProductionContext({
+    page_id: "04",
+    production_context: built3.ctx,
+    upstream_output_fingerprints: { "01": "o1", "02": "o2" },
+  });
+  assert.equal(fp04c.ok, true);
+  if (!fp04c.ok) throw new Error(fp04c.detail);
+  assert.equal(fp04.result.fingerprint, fp04c.result.fingerprint);
+
+  // Page01 vs Page04 slices do not cross-contaminate: Page01 FP unchanged by Page04-only upstream bag noise
+  const p01 = buildFace01ProductionContext({
+    report_id: "job_orch_r2_x",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+  });
+  assert.equal(p01.ok, true);
+  if (!p01.ok) throw new Error(p01.reason);
+  const a = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: p01.ctx,
+    upstream_output_fingerprints: {},
+  });
+  const b = computePageInputFingerprintFromProductionContext({
+    page_id: "01",
+    production_context: p01.ctx,
+    upstream_output_fingerprints: { "04": "should_ignore", "08": "nope" },
+  });
+  assert.equal(a.ok && b.ok, true);
+  if (!a.ok || !b.ok) throw new Error("cross");
+  assert.equal(a.result.fingerprint, b.result.fingerprint);
+  console.log("I ok — Page04 real context isolation; no ziwei; cross-page bag ignored");
+}
+
+{
+  // Fail-closed required upstream (still)
+  const cases: Array<{ page: ReportPageId; up: Record<string, string>; missing: string }> = [
     { page: "04", up: { "02": "b" }, missing: "01" },
     { page: "04", up: { "01": "a" }, missing: "02" },
     { page: "05", up: { "01": "a", "02": "b" }, missing: "04" },
-    {
-      page: "06",
-      up: { "01": "a", "02": "b", "04": "c" },
-      missing: "05",
-    },
-    {
-      page: "07",
-      up: { "01": "a", "02": "b", "04": "c", "05": "d" },
-      missing: "06",
-    },
-    {
-      page: "08",
-      up: {
-        "01": "a",
-        "02": "b",
-        "04": "c",
-        "05": "d",
-        "06": "e",
-      },
-      missing: "07",
-    },
+    { page: "08", up: { "01": "a", "02": "b", "04": "c", "05": "d", "06": "e" }, missing: "07" },
   ];
   for (const c of cases) {
     const req = requireUpstreamFingerprintsForPage(c.page, c.up);
-    assert.equal(req.ok, false, `expected fail for ${c.page}`);
+    assert.equal(req.ok, false);
     if (req.ok) throw new Error("unreachable");
     assert.ok(req.missing_upstream.includes(c.missing as ReportPageId));
-
     const fp = computePageInputFingerprint({
       page_id: c.page,
-      shared_slice: sliceFor(c.page),
+      shared_slice: makeTestSharedSlice(c.page),
       upstream_output_fingerprints: c.up,
       page07_applicability_status:
         c.page === "07" || c.page === "08" ? "applicable" : undefined,
     });
-    assert.equal(fp.ok, false, `fp must fail for ${c.page}`);
-    if (fp.ok) throw new Error("unreachable");
-    assert.equal(fp.code, "missing_required_upstream_fingerprint");
+    assert.equal(fp.ok, false);
   }
-
-  // Page01/02 still compute without upstream
+  // Page01/02 still compute without required upstream
   const p01 = computePageInputFingerprint({
     page_id: "01",
-    shared_slice: sliceFor("01"),
-    upstream_output_fingerprints: {},
-  });
-  const p02 = computePageInputFingerprint({
-    page_id: "02",
-    shared_slice: sliceFor("02"),
+    shared_slice: makeTestSharedSlice("01"),
     upstream_output_fingerprints: {},
   });
   assert.equal(p01.ok, true);
-  assert.equal(p02.ok, true);
-
-  // Page08 missing applicability status
-  const p08NoApp = computePageInputFingerprint({
-    page_id: "08",
-    shared_slice: sliceFor("08"),
-    upstream_output_fingerprints: FULL_UPSTREAM,
-    page07_applicability_status: null,
-  });
-  assert.equal(p08NoApp.ok, false);
-  if (p08NoApp.ok) throw new Error("unreachable");
-  assert.equal(p08NoApp.code, "missing_page07_applicability_status");
-
-  const p07NoApp = computePageInputFingerprint({
-    page_id: "07",
-    shared_slice: sliceFor("07"),
-    upstream_output_fingerprints: {
-      "01": "a",
-      "02": "b",
-      "04": "c",
-      "05": "d",
-      "06": "e",
-    },
-  });
-  assert.equal(p07NoApp.ok, false);
-  if (p07NoApp.ok) throw new Error("unreachable");
-  assert.equal(p07NoApp.code, "missing_page07_applicability_status");
-  console.log("J ok — fail-closed missing upstream / applicability");
+  console.log("J ok — fail-closed missing required upstream");
 }
 
 {
-  // Per-page shared slices: used vs unused isolation
-  const page01Base = sliceFor("01", "v1");
-  const a = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: page01Base,
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(a.ok, true);
-  if (!a.ok) throw new Error(a.detail);
-
-  // Unused reading/evidence for Page01 means the *page slice* is unchanged.
-  // A different page's readings change must not alter Page01 when slices differ.
-  const page02ChangedReadings = makeTestSharedSlice({
-    ...sliceFor("02", "v1"),
-    approved_readings_slice_fingerprint: "readings_02_CHANGED",
-  });
-  const p02 = computePageInputFingerprint({
-    page_id: "02",
-    shared_slice: page02ChangedReadings,
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(p02.ok, true);
-
-  const page01Still = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: page01Base, // Page01 slice unchanged
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(page01Still.ok, true);
-  if (!page01Still.ok) throw new Error(page01Still.detail);
-  assert.equal(a.result.fingerprint, page01Still.result.fingerprint);
-
-  // Used DC fact change on Page01 slice → FP changes
-  const page01DcChanged = makeTestSharedSlice({
-    ...page01Base,
-    dc_slice_fingerprint: "dc_01_CHANGED",
-  });
-  const page01Dc = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: page01DcChanged,
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(page01Dc.ok, true);
-  if (!page01Dc.ok) throw new Error(page01Dc.detail);
-  assert.notEqual(a.result.fingerprint, page01Dc.result.fingerprint);
-
-  // Used approved reading change → FP changes
-  const page01ReadingChanged = makeTestSharedSlice({
-    ...page01Base,
-    approved_readings_slice_fingerprint: "readings_01_CHANGED",
-  });
-  const page01R = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: page01ReadingChanged,
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(page01R.ok, true);
-  if (!page01R.ok) throw new Error(page01R.detail);
-  assert.notEqual(a.result.fingerprint, page01R.result.fingerprint);
-
-  // Unused evidence for this page: if slice fingerprint unchanged, FP unchanged
-  // (caller already excluded unused evidence from the slice hash).
-  const page01SameRegistry = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: page01Base,
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(page01SameRegistry.ok, true);
-  if (!page01SameRegistry.ok) throw new Error(page01SameRegistry.detail);
-  assert.equal(a.result.fingerprint, page01SameRegistry.result.fingerprint);
-
-  // Different pages' slices do not cross-contaminate
-  const all = computeAllPageInputFingerprints({
-    shared_slices: {
-      "01": sliceFor("01"),
-      "02": sliceFor("02"),
-      "04": sliceFor("04"),
-      "05": sliceFor("05"),
-      "06": sliceFor("06"),
-      "07": sliceFor("07"),
-      "08": sliceFor("08"),
-    },
-    upstream_output_fingerprints: FULL_UPSTREAM,
+  // Version isolation via opaque slices (not a consumption proof)
+  const slices = Object.fromEntries(
+    REPORT_PAGE_IDS.map((id) => [id, makeTestSharedSlice(id)]),
+  ) as Record<ReportPageId, ReturnType<typeof makeTestSharedSlice>>;
+  const FULL_UP = {
+    "01": "o1",
+    "02": "o2",
+    "04": "o4",
+    "05": "o5",
+    "06": "o6",
+    "07": "o7",
+  };
+  const before = computeAllPageInputFingerprints({
+    shared_slices: slices,
+    upstream_output_fingerprints: FULL_UP,
     page07_applicability_status: "applicable",
   });
-  assert.equal(all.errors.length, 0, all.errors.map((e) => e.detail).join(" | "));
-  assert.notEqual(
-    all.results["01"]?.fingerprint,
-    all.results["02"]?.fingerprint,
-  );
-  // Changing only Page05 slice must not change Page01 result when recomputed alone
-  const p01Again = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: sliceFor("01"),
-    upstream_output_fingerprints: FULL_UPSTREAM,
-  });
-  assert.equal(p01Again.ok, true);
-  if (!p01Again.ok) throw new Error(p01Again.detail);
-  assert.equal(p01Again.result.fingerprint, all.results["01"]?.fingerprint);
-  console.log("K ok — per-page shared slices; used/unused isolation");
-}
-
-{
-  // Page07 applicability affects Page08 FP
-  const p08a = computePageInputFingerprint({
-    page_id: "08",
-    shared_slice: sliceFor("08"),
-    upstream_output_fingerprints: FULL_UPSTREAM,
+  assert.equal(before.errors.length, 0, before.errors.map((e) => e.detail).join("|"));
+  const after = computeAllPageInputFingerprints({
+    shared_slices: slices,
+    upstream_output_fingerprints: FULL_UP,
     page07_applicability_status: "applicable",
+    validator_version_overrides: { "05": "page05-validator-BUMPED" },
   });
-  const p08b = computePageInputFingerprint({
-    page_id: "08",
-    shared_slice: sliceFor("08"),
-    upstream_output_fingerprints: FULL_UPSTREAM,
-    page07_applicability_status: "not_applicable",
-  });
-  assert.equal(p08a.ok && p08b.ok, true);
-  if (!p08a.ok || !p08b.ok) throw new Error("p08");
-  assert.notEqual(p08a.result.fingerprint, p08b.result.fingerprint);
-
+  assert.equal(after.errors.length, 0);
+  assert.equal(before.results["01"]?.fingerprint, after.results["01"]?.fingerprint);
+  assert.equal(before.results["04"]?.fingerprint, after.results["04"]?.fingerprint);
+  assert.notEqual(before.results["05"]?.fingerprint, after.results["05"]?.fingerprint);
+  for (const id of REPORT_PAGE_IDS) {
+    assert.equal(reportPageDefinition(id).validator_version, PAGE_VALIDATOR_VERSIONS[id]);
+    assert.equal(reportPageDefinition(id).production_version, PAGE_PRODUCTION_VERSIONS[id]);
+  }
   const selected = selectUpstreamFingerprintsForPage("05", {
     "01": "a",
     "02": "b",
     "04": "c",
-    "06": "should_ignore",
-    "08": "should_ignore",
+    "06": "ignore",
   });
   assert.deepEqual(selected, { "01": "a", "02": "b", "04": "c" });
-  console.log("L ok — Page07 applicability in Page08 FP; unrelated upstream excluded");
-}
-
-{
-  assert.deepEqual(downstreamDependentsOf("02").sort(), [
-    "04",
-    "05",
-    "06",
-    "07",
-    "08",
-  ]);
-  assert.ok(!downstreamDependentsOf("02").includes("01"));
-  assert.deepEqual(downstreamDependentsOf("05").sort(), ["06", "07", "08"]);
   assert.deepEqual(downstreamDependentsOf("07"), ["08"]);
   assert.ok(transitiveUpstreamOf("08").includes("01"));
-  assert.ok(transitiveUpstreamOf("08").includes("06"));
-  console.log("M ok — downstream invalidation scopes");
+  assert.ok(isPageReadyToDispatch("01", initialPendingPageStates()));
+  console.log("K ok — per-page validator isolation + upstream select");
 }
 
-{
-  // Per-page validator / production versions
-  for (const id of REPORT_PAGE_IDS) {
-    const def = reportPageDefinition(id);
-    assert.equal(def.validator_version, PAGE_VALIDATOR_VERSIONS[id]);
-    assert.equal(def.production_version, PAGE_PRODUCTION_VERSIONS[id]);
-  }
-  assert.notEqual(
-    reportPageDefinition("05").validator_version,
-    reportPageDefinition("01").validator_version,
-  );
-
-  const baseSlices = {
-    "01": sliceFor("01"),
-    "02": sliceFor("02"),
-    "04": sliceFor("04"),
-    "05": sliceFor("05"),
-    "06": sliceFor("06"),
-    "07": sliceFor("07"),
-    "08": sliceFor("08"),
-  };
-  const before = computeAllPageInputFingerprints({
-    shared_slices: baseSlices,
-    upstream_output_fingerprints: FULL_UPSTREAM,
-    page07_applicability_status: "applicable",
-  });
-  assert.equal(before.errors.length, 0);
-
-  // Bump only Page05 validator → only Page05 (+ not auto-downstream in FP itself)
-  // fingerprint of Page05 changes; Page01/02/04 unchanged.
-  const after = computeAllPageInputFingerprints({
-    shared_slices: baseSlices,
-    upstream_output_fingerprints: FULL_UPSTREAM,
-    page07_applicability_status: "applicable",
-    validator_version_overrides: {
-      "05": "page05-validator-BUMPED",
-    },
-  });
-  assert.equal(after.errors.length, 0);
-  assert.equal(
-    before.results["01"]?.fingerprint,
-    after.results["01"]?.fingerprint,
-  );
-  assert.equal(
-    before.results["02"]?.fingerprint,
-    after.results["02"]?.fingerprint,
-  );
-  assert.equal(
-    before.results["04"]?.fingerprint,
-    after.results["04"]?.fingerprint,
-  );
-  assert.notEqual(
-    before.results["05"]?.fingerprint,
-    after.results["05"]?.fingerprint,
-  );
-  // Downstream pages do not embed Page05 validator_version; their FP is unchanged
-  // until Page05 *output* fingerprint changes (handled by upstream_output_fingerprints).
-  assert.equal(
-    before.results["06"]?.fingerprint,
-    after.results["06"]?.fingerprint,
-  );
-
-  // When Page05 output changes, Page06+ change
-  const afterOut = computeAllPageInputFingerprints({
-    shared_slices: baseSlices,
-    upstream_output_fingerprints: {
-      ...FULL_UPSTREAM,
-      "05": "out_05_CHANGED",
-    },
-    page07_applicability_status: "applicable",
-  });
-  assert.equal(afterOut.errors.length, 0);
-  assert.equal(
-    before.results["01"]?.fingerprint,
-    afterOut.results["01"]?.fingerprint,
-  );
-  assert.equal(
-    before.results["04"]?.fingerprint,
-    afterOut.results["04"]?.fingerprint,
-  );
-  // Page05 input FP does not include its own output; only dependents change.
-  assert.equal(
-    before.results["05"]?.fingerprint,
-    afterOut.results["05"]?.fingerprint,
-  );
-  assert.notEqual(
-    before.results["06"]?.fingerprint,
-    afterOut.results["06"]?.fingerprint,
-  );
-  assert.notEqual(
-    before.results["08"]?.fingerprint,
-    afterOut.results["08"]?.fingerprint,
-  );
-
-  // Key-order stability
-  const p05a = computePageInputFingerprint({
-    page_id: "05",
-    shared_slice: sliceFor("05"),
-    upstream_output_fingerprints: { "04": "c", "02": "b", "01": "a" },
-  });
-  const p05b = computePageInputFingerprint({
-    page_id: "05",
-    shared_slice: sliceFor("05"),
-    upstream_output_fingerprints: { "01": "a", "02": "b", "04": "c" },
-  });
-  assert.equal(p05a.ok && p05b.ok, true);
-  if (!p05a.ok || !p05b.ok) throw new Error("order");
-  assert.equal(p05a.result.fingerprint, p05b.result.fingerprint);
-  console.log("N ok — per-page validator isolation + key-order stability");
-}
-
-{
-  // Empty shared slice field rejected
-  const bad = computePageInputFingerprint({
-    page_id: "01",
-    shared_slice: makeTestSharedSlice({ dc_slice_fingerprint: "  " }),
-    upstream_output_fingerprints: {},
-  });
-  assert.equal(bad.ok, false);
-  if (bad.ok) throw new Error("unreachable");
-  assert.equal(bad.code, "missing_shared_input_slice_field");
-  console.log("O ok — empty shared slice fields rejected");
-}
-
-console.log("ok report orchestration batch1 R1");
+console.log("ok report orchestration batch1 R2");

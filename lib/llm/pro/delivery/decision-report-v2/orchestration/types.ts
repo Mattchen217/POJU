@@ -25,6 +25,26 @@ export type ReportDerivedNodeId = (typeof REPORT_DERIVED_NODE_IDS)[number];
 
 export type ReportGraphNodeId = ReportPageId | ReportDerivedNodeId;
 
+/**
+ * Consumption dimensions hashed from a real production context.
+ * Pages declare a subset via ReportPageDefinition.shared_input_keys —
+ * not every page inherits the same bag.
+ */
+export const REPORT_SHARED_INPUT_KEYS = [
+  "locale",
+  "dc_consumed",
+  "personal_consumed",
+  "readings_consumed",
+  "registry_consumed",
+  "decision_consumed",
+  "page01_alignment_consumed",
+  "upstream_payload_alignment_consumed",
+  "applicability_consumed",
+  "date_corpus_consumed",
+] as const;
+
+export type ReportSharedInputKey = (typeof REPORT_SHARED_INPUT_KEYS)[number];
+
 export type ReportPageDefinition = {
   page_id: ReportPageId;
   /** Page ids that must reach a satisfying terminal before this page may run. */
@@ -134,20 +154,13 @@ export type ReportReadyResolution = {
 };
 
 /**
- * Page-specific shared input slice fingerprints.
- * Callers must supply fingerprints of the data each page's production context
- * actually consumes (face-filtered DC / pack / readings / registry), not the
- * whole-job bag.
+ * Page-specific shared input slice fingerprints derived from a real
+ * production context by buildPageSharedInputFingerprintFromProductionContext.
+ * Only keys declared in the page registry are required / hashed.
  */
 export type ReportPageSharedInputSlice = {
   locale: string;
-  dc_slice_fingerprint: string;
-  personal_computation_slice_fingerprint: string;
-  approved_readings_slice_fingerprint: string;
-  evidence_registry_slice_fingerprint: string;
-};
-
-export type ReportSharedInputKey = keyof ReportPageSharedInputSlice;
+} & Partial<Record<Exclude<ReportSharedInputKey, "locale">, string>>;
 
 /**
  * Per-page upstream output fingerprints (canonical page results).
@@ -157,11 +170,17 @@ export type ReportUpstreamOutputFingerprints = Partial<
   Record<ReportPageId, string>
 >;
 
+/** Sentinel recorded for optional upstream that was not supplied. */
+export const REPORT_OPTIONAL_UPSTREAM_ABSENT = "absent" as const;
+
 export type ReportPageFingerprintInput = {
   page_id: ReportPageId;
-  /** Already page-filtered shared input slice. */
+  /**
+   * Page-filtered shared input slice — must come from a production-context
+   * adapter in production paths (not opaque test strings).
+   */
   shared_slice: ReportPageSharedInputSlice;
-  /** Only the upstream pages this page requires (and optional when present). */
+  /** Required + optional upstream page output fingerprints. */
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   /**
    * Required for Page07 and Page08. Must be an explicit applicability status —

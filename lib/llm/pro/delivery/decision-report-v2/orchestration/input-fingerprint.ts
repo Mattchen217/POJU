@@ -1,16 +1,24 @@
 /**
  * Deterministic per-page input fingerprints — Batch 1 SSOT.
  * Uses sorted-key canonical JSON + SHA-256. Fail closed on incomplete inputs.
+ *
+ * Production paths: computePageInputFingerprintFromProductionContext().
  */
 
 import { canonicalJson } from "@/lib/poju/decision-context/normalize";
 import { sha256Hex } from "@/lib/sha256";
 import {
+  pageFingerprintOptionalUpstreamIds,
   pageFingerprintUpstreamIds,
   reportPageDefinition,
 } from "./page-registry";
+import {
+  applicabilityFromProductionContext,
+  buildPageSharedInputFingerprintFromProductionContext,
+} from "./production-context-fingerprint";
 import { selectSharedSliceForPage } from "./shared-input-adapter";
 import {
+  REPORT_OPTIONAL_UPSTREAM_ABSENT,
   REPORT_ORCHESTRATION_GRAPH_VERSION,
   REPORT_PAGE07_APPLICABILITY_STATUSES,
   REPORT_PAGE_IDS,
@@ -44,7 +52,7 @@ function isExplicitApplicability(
 }
 
 /**
- * Pick only the upstream fingerprints this page is allowed to consume.
+ * Pick only the required upstream fingerprints this page is allowed to consume.
  * Does NOT fail on missing required upstream — use requireUpstreamFingerprintsForPage.
  */
 export function selectUpstreamFingerprintsForPage(
@@ -57,6 +65,24 @@ export function selectUpstreamFingerprintsForPage(
     if (!allowed.has(id)) continue;
     const fp = all[id];
     if (isNonEmptyFingerprint(fp)) out[id] = fp.trim();
+  }
+  return out;
+}
+
+/**
+ * Optional upstream: present fingerprint or explicit "absent".
+ * Never fails closed when optional is missing.
+ */
+export function selectOptionalUpstreamFingerprintsForPage(
+  pageId: ReportPageId,
+  all: ReportUpstreamOutputFingerprints,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const id of pageFingerprintOptionalUpstreamIds(pageId)) {
+    const fp = all[id];
+    out[id] = isNonEmptyFingerprint(fp)
+      ? fp.trim()
+      : REPORT_OPTIONAL_UPSTREAM_ABSENT;
   }
   return out;
 }
@@ -92,7 +118,6 @@ export function requireUpstreamFingerprintsForPage(
     }
     upstream[id] = fp.trim();
   }
-  // Ignore unrelated keys even if present.
   if (missing.length) {
     return {
       ok: false,
@@ -150,6 +175,11 @@ export function buildPageInputFingerprintPayload(
     }
   }
 
+  const optionalUpstream = selectOptionalUpstreamFingerprintsForPage(
+    input.page_id,
+    input.upstream_output_fingerprints,
+  );
+
   const payload: Record<string, unknown> = {
     graph_version: REPORT_ORCHESTRATION_GRAPH_VERSION,
     page_id: input.page_id,
@@ -161,6 +191,7 @@ export function buildPageInputFingerprintPayload(
     model_generation: def.model_generation,
     shared: sharedSel.slice,
     upstream_output_fingerprints: upReq.upstream,
+    optional_upstream_fingerprints: optionalUpstream,
   };
   if (input.page_id === "07" || input.page_id === "08") {
     payload.page07_applicability_status = input.page07_applicability_status;
@@ -191,16 +222,60 @@ export function computePageInputFingerprint(
 }
 
 /**
+ * Canonical production path:
+ * real FaceXXProductionContext → consumed slice → page input fingerprint.
+ */
+export function computePageInputFingerprintFromProductionContext(input: {
+  page_id: ReportPageId;
+  production_context: unknown;
+  upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
+  page07_applicability_status?: ReportPage07ApplicabilityStatus | null;
+  validator_version?: string;
+  production_version?: string;
+}): ReportFingerprintComputeResult {
+  const extracted = buildPageSharedInputFingerprintFromProductionContext(
+    input.page_id,
+    input.production_context,
+  );
+  if (!extracted.ok) {
+    return {
+      ok: false,
+      page_id: extracted.page_id,
+      code: extracted.code,
+      detail: extracted.detail,
+    };
+  }
+
+  let applicability = input.page07_applicability_status;
+  if (
+    (input.page_id === "07" || input.page_id === "08") &&
+    !isExplicitApplicability(applicability)
+  ) {
+    applicability = applicabilityFromProductionContext(
+      input.page_id,
+      input.production_context,
+    );
+  }
+
+  return computePageInputFingerprint({
+    page_id: input.page_id,
+    shared_slice: extracted.extract.shared_slice,
+    upstream_output_fingerprints: input.upstream_output_fingerprints,
+    page07_applicability_status: applicability,
+    validator_version: input.validator_version,
+    production_version: input.production_version,
+  });
+}
+
+/**
  * Compute fingerprints for pages that have complete inputs.
  * Pages with missing required upstream / applicability / shared fields are reported in errors
  * and omitted from results (fail closed — no partial fake fingerprint).
  */
 export function computeAllPageInputFingerprints(input: {
-  /** Per-page shared slices — must not be a single whole-job bag reused blindly. */
   shared_slices: Partial<Record<ReportPageId, ReportPageSharedInputSlice>>;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   page07_applicability_status?: ReportPage07ApplicabilityStatus | null;
-  /** Optional per-page validator overrides (tests / staged bumps). */
   validator_version_overrides?: Partial<Record<ReportPageId, string>>;
   production_version_overrides?: Partial<Record<ReportPageId, string>>;
 }): {

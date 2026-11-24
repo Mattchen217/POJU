@@ -1,11 +1,12 @@
 /**
- * Per-page shared-input fingerprint adapters.
+ * Per-page shared-input selection / validation.
  *
- * Aligns with buildFaceXXProductionContext consumption:
- * - Each face seeds its own registry (serves_face filter) and relevance-selected facts/readings.
- * - Page01/02 personal slice may include ziwei; Page04–08 builders pass ziwei=null.
- * - Callers must pre-hash the *filtered* slice for the target page.
- * - This module never hashes a whole-job registry/readings bag into every page.
+ * Production paths MUST obtain slices via
+ * buildPageSharedInputFingerprintFromProductionContext() — this module only
+ * validates that a slice contains the page's declared keys.
+ *
+ * makeTestSharedSlice() is a unit-test helper for version/upstream isolation
+ * tests only; it is NOT a production input source.
  */
 
 import { pageSharedInputKeys, reportPageDefinition } from "./page-registry";
@@ -72,18 +73,23 @@ export function pageSharedInputConsumptionNotes(pageId: ReportPageId): string {
   return reportPageDefinition(pageId).notes ?? "";
 }
 
-/** Stable empty-ish helper for tests that need a complete valid slice. */
+/**
+ * Unit-test helper ONLY — fills declared keys with opaque strings.
+ * Must not be used as a stand-in for production-context adapters when
+ * proving real consumption isolation.
+ */
 export function makeTestSharedSlice(
-  overrides: Partial<ReportPageSharedInputSlice> = {},
+  pageId: ReportPageId,
+  overrides: Partial<Record<ReportSharedInputKey, string>> = {},
 ): ReportPageSharedInputSlice {
-  return {
+  const keys = pageSharedInputKeys(pageId);
+  const out: ReportPageSharedInputSlice = {
     locale: overrides.locale ?? "en",
-    dc_slice_fingerprint: overrides.dc_slice_fingerprint ?? "dc_slice_default",
-    personal_computation_slice_fingerprint:
-      overrides.personal_computation_slice_fingerprint ?? "personal_slice_default",
-    approved_readings_slice_fingerprint:
-      overrides.approved_readings_slice_fingerprint ?? "readings_slice_default",
-    evidence_registry_slice_fingerprint:
-      overrides.evidence_registry_slice_fingerprint ?? "registry_slice_default",
   };
+  for (const key of keys) {
+    if (key === "locale") continue;
+    out[key] =
+      overrides[key] ?? `test_${pageId}_${key}_opaque_not_production`;
+  }
+  return out;
 }

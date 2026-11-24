@@ -10,6 +10,8 @@ export {
   REPORT_PAGE_OUTCOMES,
   REPORT_UPSTREAM_SATISFYING_OUTCOMES,
   REPORT_PAGE07_APPLICABILITY_STATUSES,
+  REPORT_SHARED_INPUT_KEYS,
+  REPORT_OPTIONAL_UPSTREAM_ABSENT,
   type ReportPageId,
   type ReportDerivedNodeId,
   type ReportGraphNodeId,
@@ -41,6 +43,7 @@ export {
   reportPageDefinition,
   isReportPageId,
   pageFingerprintUpstreamIds,
+  pageFingerprintOptionalUpstreamIds,
   pageSharedInputKeys,
 } from "./page-registry";
 
@@ -57,9 +60,11 @@ export {
 export {
   hashCanonicalPayload,
   selectUpstreamFingerprintsForPage,
+  selectOptionalUpstreamFingerprintsForPage,
   requireUpstreamFingerprintsForPage,
   buildPageInputFingerprintPayload,
   computePageInputFingerprint,
+  computePageInputFingerprintFromProductionContext,
   computeAllPageInputFingerprints,
 } from "./input-fingerprint";
 
@@ -68,6 +73,20 @@ export {
   pageSharedInputConsumptionNotes,
   makeTestSharedSlice,
 } from "./shared-input-adapter";
+
+export {
+  buildPageSharedInputFingerprintFromProductionContext,
+  extractConsumedInputFromFace01,
+  extractConsumedInputFromFace02,
+  extractConsumedInputFromFace04,
+  extractConsumedInputFromFace05,
+  extractConsumedInputFromFace06,
+  extractConsumedInputFromFace07,
+  extractConsumedInputFromFace08,
+  applicabilityFromProductionContext,
+  type ReportPageConsumedInputExtract,
+  type ProductionContextFingerprintResult,
+} from "./production-context-fingerprint";
 
 export {
   missingRequiredUpstream,

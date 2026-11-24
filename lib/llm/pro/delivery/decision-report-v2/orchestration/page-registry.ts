@@ -22,22 +22,6 @@ import {
   type ReportSharedInputKey,
 } from "./types";
 
-/**
- * Shared keys every Face production context consumes after face-specific
- * filtering (see buildFaceXXProductionContext + seedEvidenceRegistryForFaceXX).
- *
- * Page01/02 personal_computation_slice includes ziwei when available;
- * Page04–08 builders pass ziwei_fact_pack: null — their personal slice excludes ziwei.
- * Callers must hash the *filtered* slice for each page, not the whole-job bag.
- */
-const STANDARD_SHARED_INPUT_KEYS = [
-  "locale",
-  "dc_slice_fingerprint",
-  "personal_computation_slice_fingerprint",
-  "approved_readings_slice_fingerprint",
-  "evidence_registry_slice_fingerprint",
-] as const satisfies readonly ReportSharedInputKey[];
-
 /** @deprecated Prefer per-page production_version on each registry entry. */
 export const REPORT_PAGE_PRODUCTION_VERSION =
   "report-page-prod-2026-11-24" as const;
@@ -67,6 +51,57 @@ export const PAGE_VALIDATOR_VERSIONS = {
   "08": "page08-validator-2026-11-24",
 } as const satisfies Record<ReportPageId, string>;
 
+/** Page01 feed-slice consumption (face01-filtered). */
+const PAGE01_SHARED_KEYS = [
+  "locale",
+  "dc_consumed",
+  "personal_consumed",
+  "readings_consumed",
+  "registry_consumed",
+  "decision_consumed",
+] as const satisfies readonly ReportSharedInputKey[];
+
+/** Page02 = Page01-like + optional Page01 alignment content. */
+const PAGE02_SHARED_KEYS = [
+  "locale",
+  "dc_consumed",
+  "personal_consumed",
+  "readings_consumed",
+  "registry_consumed",
+  "decision_consumed",
+  "page01_alignment_consumed",
+] as const satisfies readonly ReportSharedInputKey[];
+
+/** Pages 04–06: production_payload reality/readings/registry/units + upstream alignment. */
+const PAGE04_06_SHARED_KEYS = [
+  "locale",
+  "dc_consumed",
+  "personal_consumed",
+  "readings_consumed",
+  "registry_consumed",
+  "upstream_payload_alignment_consumed",
+] as const satisfies readonly ReportSharedInputKey[];
+
+/** Page07: no personal_readings in payload; adds applicability. */
+const PAGE07_SHARED_KEYS = [
+  "locale",
+  "dc_consumed",
+  "personal_consumed",
+  "registry_consumed",
+  "upstream_payload_alignment_consumed",
+  "applicability_consumed",
+] as const satisfies readonly ReportSharedInputKey[];
+
+/** Page08: no personal_readings; adds dateCorpus used by validators. */
+const PAGE08_SHARED_KEYS = [
+  "locale",
+  "dc_consumed",
+  "personal_consumed",
+  "registry_consumed",
+  "upstream_payload_alignment_consumed",
+  "date_corpus_consumed",
+] as const satisfies readonly ReportSharedInputKey[];
+
 /**
  * Required upstream page edges from accepted Batch 1 contracts + instruction DAG.
  * Shared DC / personal / registry inputs are NOT page edges — they live in fingerprints.
@@ -82,24 +117,23 @@ export const REPORT_PAGE_REGISTRY: readonly ReportPageDefinition[] = [
     production_version: PAGE_PRODUCTION_VERSIONS["01"],
     conditional: false,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
+    shared_input_keys: PAGE01_SHARED_KEYS,
     notes:
-      "Independent start from shared immutable inputs. Must not wait on Page02. " +
-      "Consumes face01-filtered DC facts, pack/chart/ziwei domains, seeded readings, face01 registry.",
+      "Independent start. Consumes face01-filtered DC facts/conflicts, pack/chart/ziwei domains, seeded readings, face01 registry.",
   },
   {
     page_id: "02",
     required_upstream: [],
-    optional_upstream: [],
+    optional_upstream: ["01"],
     output_schema_version: FACE02_SCHEMA_VERSION,
     prompt_version: FACE02_PROMPT_VERSION,
     validator_version: PAGE_VALIDATOR_VERSIONS["02"],
     production_version: PAGE_PRODUCTION_VERSIONS["02"],
     conditional: false,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
+    shared_input_keys: PAGE02_SHARED_KEYS,
     notes: `Independent start parallel with Page01. Architecture bundle=${PAGE02_ARCHITECTURE_PROMPT_VERSION}. ` +
-      "Consumes face02-filtered DC/pack/readings/registry (ziwei when available). Optional page01 alignment is not fingerprinted.",
+      "Optional Page01 alignment (core_judgment / why_paths / conditions) is fingerprinted; absence is recorded as absent and does not block ready.",
   },
   {
     page_id: "04",
@@ -111,9 +145,9 @@ export const REPORT_PAGE_REGISTRY: readonly ReportPageDefinition[] = [
     production_version: PAGE_PRODUCTION_VERSIONS["04"],
     conditional: false,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
+    shared_input_keys: PAGE04_06_SHARED_KEYS,
     notes:
-      "Waits for Page01 and Page02. Consumes face04-restricted registry claims/evidence; no ziwei pack.",
+      "Waits for Page01 and Page02. Consumes face04 production_payload (reality, face04 units, readings, restricted registry). No ziwei pack.",
   },
   {
     page_id: "05",
@@ -125,8 +159,8 @@ export const REPORT_PAGE_REGISTRY: readonly ReportPageDefinition[] = [
     production_version: PAGE_PRODUCTION_VERSIONS["05"],
     conditional: false,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
-    notes: "Waits for Page04. Consumes face05-restricted registry slice.",
+    shared_input_keys: PAGE04_06_SHARED_KEYS,
+    notes: "Waits for Page04. Consumes face05-restricted production_payload.",
   },
   {
     page_id: "06",
@@ -138,8 +172,8 @@ export const REPORT_PAGE_REGISTRY: readonly ReportPageDefinition[] = [
     production_version: PAGE_PRODUCTION_VERSIONS["06"],
     conditional: false,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
-    notes: "Waits for Page05. Consumes face06-restricted registry slice.",
+    shared_input_keys: PAGE04_06_SHARED_KEYS,
+    notes: "Waits for Page05. Consumes face06-restricted production_payload.",
   },
   {
     page_id: "07",
@@ -151,10 +185,10 @@ export const REPORT_PAGE_REGISTRY: readonly ReportPageDefinition[] = [
     production_version: PAGE_PRODUCTION_VERSIONS["07"],
     conditional: true,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
+    shared_input_keys: PAGE07_SHARED_KEYS,
     notes:
       "Conditional. Upstream-ready → applicability gate only. Model generation only when applicable. " +
-      "Consumes face07-restricted registry + DC applicability inputs.",
+      "Consumes face07 production_payload + applicability result (no personal_readings field).",
   },
   {
     page_id: "08",
@@ -166,10 +200,9 @@ export const REPORT_PAGE_REGISTRY: readonly ReportPageDefinition[] = [
     production_version: PAGE_PRODUCTION_VERSIONS["08"],
     conditional: false,
     model_generation: true,
-    shared_input_keys: STANDARD_SHARED_INPUT_KEYS,
+    shared_input_keys: PAGE08_SHARED_KEYS,
     notes:
-      "Requires Page07 terminal status (completed | not_applicable | insufficient_information). " +
-      "Consumes face08-restricted registry slice.",
+      "Requires Page07 terminal status. Consumes face08 production_payload + dateCorpus (no personal_readings).",
   },
 ] as const;
 
@@ -206,6 +239,13 @@ export function pageFingerprintUpstreamIds(
   pageId: ReportPageId,
 ): readonly ReportPageId[] {
   return reportPageDefinition(pageId).required_upstream;
+}
+
+/** Optional upstream pages recorded as present fingerprint or "absent". */
+export function pageFingerprintOptionalUpstreamIds(
+  pageId: ReportPageId,
+): readonly ReportPageId[] {
+  return reportPageDefinition(pageId).optional_upstream;
 }
 
 /** Shared-input keys this page hashes. */
