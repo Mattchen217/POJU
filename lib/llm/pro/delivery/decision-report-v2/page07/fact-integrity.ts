@@ -443,10 +443,13 @@ const BEHAVIOR_ACTION_CLASS: Readonly<Record<string, string>> = {
   投资: "invest",
 };
 
-/** Synonym groups for obligation / expense objects (deterministic). */
-const BEHAVIOR_OBJECT_SYNONYM_GROUPS: readonly (readonly string[])[] = [
+/**
+ * Specific object anchors — identify which concrete obligation is meant.
+ * These may synonym-fold (relocation↔moving) but must NOT collapse across
+ * distinct obligations (relocation ≠ rent ≠ salary).
+ */
+const BEHAVIOR_SPECIFIC_OBJECT_GROUPS: readonly (readonly string[])[] = [
   ["relocation", "relocating", "moving", "move"],
-  ["cost", "costs", "expense", "expenses"],
   ["rent", "rental", "rents"],
   ["deposit", "deposits"],
   ["salary", "salaries", "wage", "wages", "payroll"],
@@ -455,9 +458,43 @@ const BEHAVIOR_OBJECT_SYNONYM_GROUPS: readonly (readonly string[])[] = [
   ["schedule", "schedules", "timing"],
 ];
 
-const BEHAVIOR_OBJECT_CONCEPT: ReadonlyMap<string, string> = (() => {
+/**
+ * Domain-level specifics that conflict when both sides name different domains
+ * (e.g. relocation deposit vs rent deposit share "deposit" but conflict).
+ */
+const BEHAVIOR_DOMAIN_SPECIFICS: ReadonlySet<string> = new Set([
+  "relocation",
+  "rent",
+  "salary",
+  "employee",
+  "apartment",
+]);
+
+/**
+ * Generic descriptors — never sufficient alone for a match.
+ * cost/expenses must not launder rent vs relocation.
+ */
+const BEHAVIOR_GENERIC_OBJECT_GROUPS: readonly (readonly string[])[] = [
+  ["cost", "costs", "expense", "expenses"],
+  ["payment", "payments"],
+  ["amount", "amounts"],
+  ["money"],
+  ["fee", "fees"],
+  ["charge", "charges"],
+];
+
+const BEHAVIOR_SPECIFIC_CONCEPT: ReadonlyMap<string, string> = (() => {
   const m = new Map<string, string>();
-  for (const group of BEHAVIOR_OBJECT_SYNONYM_GROUPS) {
+  for (const group of BEHAVIOR_SPECIFIC_OBJECT_GROUPS) {
+    const concept = group[0]!;
+    for (const t of group) m.set(t, concept);
+  }
+  return m;
+})();
+
+const BEHAVIOR_GENERIC_CONCEPT: ReadonlyMap<string, string> = (() => {
+  const m = new Map<string, string>();
+  for (const group of BEHAVIOR_GENERIC_OBJECT_GROUPS) {
     const concept = group[0]!;
     for (const t of group) m.set(t, concept);
   }
@@ -466,8 +503,10 @@ const BEHAVIOR_OBJECT_CONCEPT: ReadonlyMap<string, string> = (() => {
 
 export type Page07BehaviorAnchor = {
   actionClass: string;
-  /** Normalized object concepts (synonym-collapsed). Empty ⇒ unresolvable. */
-  objectConcepts: ReadonlySet<string>;
+  /** Concrete obligation anchors (synonym-collapsed). Required for a match. */
+  specificObjectConcepts: ReadonlySet<string>;
+  /** Soft descriptors (cost/expense/…). Never sufficient alone. */
+  genericObjectDescriptors: ReadonlySet<string>;
 };
 
 export function factHasBehaviorEvidenceRole(
@@ -494,17 +533,25 @@ function isQuantityOrBareNumber(token: string): boolean {
   return false;
 }
 
-function normalizeObjectConcept(token: string): string | null {
+function classifyObjectToken(
+  token: string,
+): { kind: "specific" | "generic"; concept: string } | null {
   if (token.length < 2) return null;
   if (BEHAVIOR_TOKEN_STOP.has(token)) return null;
   if (isQuantityOrBareNumber(token)) return null;
   if (BEHAVIOR_ACTION_CLASS[token]) return null;
-  return BEHAVIOR_OBJECT_CONCEPT.get(token) ?? token;
+  const specific = BEHAVIOR_SPECIFIC_CONCEPT.get(token);
+  if (specific) return { kind: "specific", concept: specific };
+  const generic = BEHAVIOR_GENERIC_CONCEPT.get(token);
+  if (generic) return { kind: "generic", concept: generic };
+  // Unknown content word after the verb: treat as specific (fail-closed identity).
+  return { kind: "specific", concept: token };
 }
 
 /**
  * Deterministic action + object anchor for a behavior claim.
- * Fail-closed: missing action class or empty object concepts ⇒ null.
+ * Fail-closed: missing action class or no specific object concept ⇒ null.
+ * Generic-only phrases ("cover the cost") are unresolvable.
  */
 export function extractBehaviorAnchor(
   text: string,
@@ -517,45 +564,52 @@ export function extractBehaviorAnchor(
   );
   if (!tokens.length) return null;
 
-  let actionIdx = -1;
   let actionClass: string | null = null;
+  let lastActionIdx = -1;
   for (let i = 0; i < tokens.length; i++) {
     const cls = BEHAVIOR_ACTION_CLASS[tokens[i]!];
     if (cls) {
-      actionIdx = i;
+      lastActionIdx = i;
       actionClass = cls;
-      // Prefer the main verb after "agreed to …" when present.
-      // Keep scanning so later action wins if earlier token was incidental.
     }
   }
-  if (!actionClass || actionIdx < 0) return null;
+  if (!actionClass || lastActionIdx < 0) return null;
 
-  // Object lexemes: prefer tokens after the (last) action verb.
-  let lastActionIdx = actionIdx;
-  for (let i = 0; i < tokens.length; i++) {
-    if (BEHAVIOR_ACTION_CLASS[tokens[i]!]) lastActionIdx = i;
-  }
-  const objectConcepts = new Set<string>();
-  for (let i = lastActionIdx + 1; i < tokens.length; i++) {
-    const concept = normalizeObjectConcept(tokens[i]!);
-    if (concept) objectConcepts.add(concept);
-  }
-  // If nothing after the verb, try remaining non-action tokens (fail closed if empty).
-  if (!objectConcepts.size) {
-    for (let i = 0; i < tokens.length; i++) {
+  const collect = (fromIdx: number, skipActionOnly: boolean) => {
+    const specific = new Set<string>();
+    const generic = new Set<string>();
+    for (let i = fromIdx; i < tokens.length; i++) {
+      if (skipActionOnly && BEHAVIOR_ACTION_CLASS[tokens[i]!]) continue;
       if (i === lastActionIdx) continue;
-      if (BEHAVIOR_ACTION_CLASS[tokens[i]!]) continue;
-      const concept = normalizeObjectConcept(tokens[i]!);
-      if (concept) objectConcepts.add(concept);
+      const classified = classifyObjectToken(tokens[i]!);
+      if (!classified) continue;
+      if (classified.kind === "specific") specific.add(classified.concept);
+      else generic.add(classified.concept);
     }
+    return { specific, generic };
+  };
+
+  // Prefer tokens after the last action verb.
+  let { specific, generic } = collect(lastActionIdx + 1, false);
+  if (!specific.size && !generic.size) {
+    ({ specific, generic } = collect(0, true));
   }
-  if (!objectConcepts.size) return null;
-  return { actionClass, objectConcepts };
+  // Generic-only / empty specific ⇒ cannot identify the obligation.
+  if (!specific.size) return null;
+  return {
+    actionClass,
+    specificObjectConcepts: specific,
+    genericObjectDescriptors: generic,
+  };
 }
 
 /**
- * Same concrete behavior only when action classes match AND at least one
- * object concept overlaps. Generic action + quantity alone never matches.
+ * Same concrete behavior only when:
+ * - action classes match;
+ * - at least one specific object concept overlaps;
+ * - domain-level specifics do not conflict (relocation ≠ rent even if both
+ *   share deposit / cost descriptors);
+ * - generic descriptors alone never authorize a match.
  */
 export function behaviorAnchorsMatch(
   factAnchor: Page07BehaviorAnchor | null,
@@ -563,20 +617,51 @@ export function behaviorAnchorsMatch(
 ): boolean {
   if (!factAnchor || !sentenceAnchor) return false;
   if (factAnchor.actionClass !== sentenceAnchor.actionClass) return false;
-  if (!factAnchor.objectConcepts.size || !sentenceAnchor.objectConcepts.size) {
+  if (
+    !factAnchor.specificObjectConcepts.size ||
+    !sentenceAnchor.specificObjectConcepts.size
+  ) {
     return false;
   }
-  for (const c of sentenceAnchor.objectConcepts) {
-    if (factAnchor.objectConcepts.has(c)) return true;
+
+  const sharedSpecific = new Set<string>();
+  for (const c of sentenceAnchor.specificObjectConcepts) {
+    if (factAnchor.specificObjectConcepts.has(c)) sharedSpecific.add(c);
   }
-  return false;
+  if (!sharedSpecific.size) return false;
+
+  const factDomains = new Set(
+    [...factAnchor.specificObjectConcepts].filter((c) =>
+      BEHAVIOR_DOMAIN_SPECIFICS.has(c),
+    ),
+  );
+  const sentDomains = new Set(
+    [...sentenceAnchor.specificObjectConcepts].filter((c) =>
+      BEHAVIOR_DOMAIN_SPECIFICS.has(c),
+    ),
+  );
+  if (factDomains.size && sentDomains.size) {
+    let domainShared = false;
+    for (const d of sentDomains) {
+      if (factDomains.has(d)) {
+        domainShared = true;
+        break;
+      }
+    }
+    if (!domainShared) return false;
+  }
+
+  // Generics are ignored for authorization (informational only).
+  void factAnchor.genericObjectDescriptors;
+  void sentenceAnchor.genericObjectDescriptors;
+  return true;
 }
 
 /**
  * One confirmed DC fact may support ONE assertive behavior sentence when:
  * - fact_roles include a Page07 behavior-evidence allowlist role;
  * - statement itself is an assertive behavior claim naming the participant;
- * - action class + object concepts match the sentence (not bare token overlap).
+ * - action class + specific object identity match (generics never suffice).
  */
 export function behaviorFactSupportsSentence(input: {
   factStatement: string;

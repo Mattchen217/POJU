@@ -3326,6 +3326,176 @@ async function main() {
       );
     }
 
+    // ── R8: specific object identity (generics never suffice) ──
+    {
+      const idFact = "fact_r8_id";
+      const rejectBeh = (
+        label: string,
+        factId: string,
+        factStatement: string,
+        unitText: string,
+      ) => {
+        const result = validateFace07Output({
+          ...baseV,
+          knownFactIds: new Set([...ctx.knownFactIds, idFact, factId]),
+          factStatusById: new Map([
+            ...ctx.factStatusById,
+            [idFact, "confirmed"],
+            [factId, "confirmed"],
+          ]),
+          factContentById: new Map([
+            ...ctx.factContentById,
+            [idFact, "Alex is my business partner."],
+            [factId, factStatement],
+          ]),
+          factVerificationLevelById: new Map([
+            ...ctx.factVerificationLevelById,
+            [idFact, "independently_verified"],
+            [factId, "independently_verified"],
+          ]),
+          factRolesById: new Map([
+            ...ctx.factRolesById,
+            [idFact, ["stakeholder"]],
+            [factId, ["third_party_commitment"]],
+          ]),
+          raw: validFace07({
+            participants: [
+              (validFace07().participants as object[])[0],
+              {
+                participant_id: "p_alex",
+                display_label: "Alex",
+                role: "partner",
+                source: "dc_fact",
+                verification_status: "confirmed",
+                related_fact_ids: [idFact],
+                notes: "",
+              },
+            ],
+            relationship_units: [
+              {
+                ...(validFace07().relationship_units as object[])[0],
+                participant_ids: ["p_alex"],
+                reality_fact_ids: [factId],
+                reality_fact_stances: [
+                  { fact_id: factId, stance: "as_confirmed" },
+                ],
+                text: unitText,
+              },
+            ],
+          }),
+        });
+        assert.equal(result.ok, false, label);
+        if (result.ok) throw new Error("unreachable");
+        assert.ok(
+          result.issues.some(
+            (i) => i.code === "unconfirmed_participant_behavior",
+          ),
+          `${label}: ${result.issues.map((i) => `${i.code}:${i.detail}`).join(" | ")}`,
+        );
+      };
+
+      // A. relocation cost ≠ rent expenses (shared generic cost/expense).
+      rejectBeh(
+        "R8-A relocation cost ≠ rent expenses",
+        "fact_r8_a",
+        "Alex has agreed to cover the relocation cost.",
+        "Alex will cover the rent expenses.",
+      );
+
+      // B. relocation expenses ≠ salary expenses.
+      rejectBeh(
+        "R8-B relocation expenses ≠ salary expenses",
+        "fact_r8_b",
+        "Alex has agreed to pay the relocation expenses.",
+        "Alex will pay the employee salary expenses.",
+      );
+
+      // C. relocation deposit ≠ rent deposit (shared deposit, conflicting domain).
+      rejectBeh(
+        "R8-C relocation deposit ≠ rent deposit",
+        "fact_r8_c",
+        "Alex has agreed to pay the relocation deposit.",
+        "Alex will pay the rent deposit.",
+      );
+
+      // D. Generic-only objects — fail closed.
+      rejectBeh(
+        "R8-D cover the cost ≠ cover the expense",
+        "fact_r8_d",
+        "Alex has agreed to cover the cost.",
+        "Alex will cover the expense.",
+      );
+
+      // E. Same specific object, reasonable paraphrase — allow.
+      const sameSpecific = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, "fact_r8_e"]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          ["fact_r8_e", "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [
+            "fact_r8_e",
+            "Alex has agreed to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          ["fact_r8_e", "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          ["fact_r8_e", ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: ["fact_r8_e"],
+              reality_fact_stances: [
+                { fact_id: "fact_r8_e", stance: "as_confirmed" },
+              ],
+              text: "Alex will pay 50% of the moving expenses.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        sameSpecific.ok,
+        true,
+        sameSpecific.ok
+          ? ""
+          : sameSpecific.issues.map((i) => i.detail).join(" | "),
+      );
+
+      // F. Different specific + shared generic "costs".
+      rejectBeh(
+        "R8-F relocation costs ≠ rent costs",
+        "fact_r8_f",
+        "Alex has agreed to cover the relocation costs.",
+        "Alex will cover the rent costs.",
+      );
+    }
+
     console.log("F PASS — participants, evidence, page boundary");
   }
 
