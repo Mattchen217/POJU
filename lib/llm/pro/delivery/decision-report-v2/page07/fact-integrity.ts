@@ -1,6 +1,8 @@
 /**
  * Page07 fact citation stance + participant verification/role integrity.
  * Fail-closed. Structural stance is required; keyword hedges alone do not launder.
+ * R3: sentence-level assertive / conditional / uncertain checks; no cross-sentence
+ * frame sponsorship; no Map last-write-wins stance ambiguity.
  */
 
 export const PAGE07_REALITY_CITATION_STANCES = [
@@ -48,14 +50,79 @@ export const PAGE07_ROLE_SUPPORT_PATTERNS: Readonly<
   colleague: /(?:colleague|coworker|co-worker|同事)/i,
 };
 
+/**
+ * Deterministic / settled third-party identity, behavior, commitment, resource,
+ * or outcome claims — ZH + EN. Ordinary present tense is included.
+ */
 const ASSERTIVE_CLAIM =
-  /将承担|将负责|会承担|一定会|已经承担|已经确认对方|确认为|is\s+responsible|will\s+(?:cover|pay|handle|bear|take|fund)|covers\s+half|shall\s+(?:cover|pay|bear)|definitely\s+(?:true|covers|pays)|already\s+confirmed|confirmed\s+fact/i;
+  /(?:(?:将|会|已经)?(?:承担|负责|支付|覆盖|出资)|已经决定|已经确认|确认为|属于|拥有|已经完成|正在执行|(?:^|[\s，,：:])[A-Za-z\u4e00-\u9fff][A-Za-z\u4e00-\u9fff\s·]{0,24}是)|(?:\b(?:pays|covers|bears|funds|handles|owns|belongs)\b|\b(?:is|are)\s+(?:paying|covering|bearing|funding|handling|responsible|confirmed|the\s+(?:partner|boss|spouse|investor|advisor|owner))\b|\bwill\s+(?:cover|pay|handle|bear|take|fund|own)\b|\bhas\s+(?:agreed|decided|confirmed|paid|covered|funded|completed)\b|\bshall\s+(?:cover|pay|bear|fund)\b|\bdefinitely\s+(?:true|covers|pays|confirmed)\b|\balready\s+confirmed\b|\bconfirmed\s+fact\b)/i;
 
 const CONDITIONAL_FRAME =
-  /如果|若该|若对方|假如|目前尚未|尚未验证|仍未确认|仍不确定|仍是未验证|conditional\s+on|if\s+the\b|if\s+.*\b(?:holds|confirms|is\s+verified|estimate)|unless\b|remains?\s+unverified|not\s+yet\s+(?:verified|confirmed)|still\s+unverified|estimate\s+holds|should\s+.*\bconfirm/i;
+  /如果|若该|若对方|假如|在[^。.!！？]{0,24}前提|取决于|conditional\s+on|if\s+the\b|if\s+.*\b(?:holds|confirms|is\s+verified|estimate|granted|approved|receives?|approval)|unless\b|should\s+.*\bconfirm|provided\s+that\b|only\s+if\b/i;
+
+const UNCERTAINTY_FRAME =
+  /可能|或许|也许|尚未验证|仍未确认|仍不确定|仍是未验证|未验证|不确定|估计|据说|据称|might\b|may\b|maybe\b|possibly\b|allegedly\b|reportedly\b|unverified|uncertain|estimate\b|remains?\s+unverified|not\s+yet\s+(?:verified|confirmed)|still\s+unverified|without\s+confirmation|treat\s+(?:as|the)\s+unknown|as\s+unknown\b/i;
 
 const TRAILING_HEDGE =
   /(?:仍需确认|尚未验证|仍不确定|still\s+needs?\s+(?:confirm|verification)|remains?\s+unverified|this\s+(?:is|remains)\s+unverified|not\s+yet\s+confirmed)\s*[。.!！]?$/i;
+
+const TOKEN_STOP = new Set([
+  "the",
+  "a",
+  "an",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "to",
+  "of",
+  "and",
+  "or",
+  "in",
+  "on",
+  "for",
+  "with",
+  "that",
+  "this",
+  "it",
+  "as",
+  "at",
+  "by",
+  "from",
+  "we",
+  "our",
+  "user",
+  "might",
+  "may",
+  "can",
+  "will",
+  "has",
+  "have",
+  "had",
+  "been",
+  "可能",
+  "或许",
+  "也许",
+  "的",
+  "了",
+  "在",
+  "是",
+  "与",
+  "和",
+  "或",
+  "把",
+  "被",
+  "对",
+  "就",
+  "都",
+  "也",
+  "还",
+  "有",
+  "会",
+  "将",
+  "已经",
+]);
 
 export function isConfirmedDcStatus(status: string | undefined): boolean {
   return status === "confirmed";
@@ -152,8 +219,48 @@ export function roleSupportedByFactBlob(
   return pattern.test(factBlob);
 }
 
+export function splitIntoSentences(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(/(?<=[。.!?！？])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function contentTokens(text: string): Set<string> {
+  const raw = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return new Set(
+    raw.filter((t) => t.length >= 2 && !TOKEN_STOP.has(t)),
+  );
+}
+
+/**
+ * Sentence ↔ fact relevance. Multi-fact units require ≥2 content-token overlap
+ * so a confirmed-fact sentence cannot sponsor a non-confirmed fact.
+ */
+export function sentenceRelevantToFact(
+  sentence: string,
+  factStatement: string,
+  opts?: { multiFactUnit?: boolean },
+): boolean {
+  const factToks = contentTokens(factStatement);
+  const sentToks = contentTokens(sentence);
+  if (!factToks.size || !sentToks.size) return false;
+  let overlap = 0;
+  for (const t of sentToks) {
+    if (factToks.has(t)) overlap += 1;
+  }
+  const need = opts?.multiFactUnit ? 2 : 1;
+  return overlap >= need;
+}
+
 export function textHasConditionalFrame(text: string): boolean {
   return CONDITIONAL_FRAME.test(text);
+}
+
+export function textHasUncertaintyFrame(text: string): boolean {
+  return UNCERTAINTY_FRAME.test(text);
 }
 
 export function textHasAssertiveClaim(text: string): boolean {
@@ -166,7 +273,7 @@ export function textHasAssertiveClaim(text: string): boolean {
 export function textIsTrailingHedgeLaunder(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
-  const parts = trimmed.split(/(?<=[。.!?！？])\s+/).filter((p) => p.trim());
+  const parts = splitIntoSentences(trimmed);
   if (parts.length < 2) {
     // Single sentence ending with hedge after assertive mid-clause
     if (!TRAILING_HEDGE.test(trimmed)) return false;
@@ -178,14 +285,27 @@ export function textIsTrailingHedgeLaunder(text: string): boolean {
   return TRAILING_HEDGE.test(last) && textHasAssertiveClaim(body);
 }
 
+function sentenceHasRequiredFrame(
+  sentence: string,
+  stance: Exclude<Page07RealityCitationStance, "as_confirmed">,
+): boolean {
+  if (stance === "as_conditional") return textHasConditionalFrame(sentence);
+  return textHasUncertaintyFrame(sentence);
+}
+
 /**
  * When citing a non-confirmed fact with conditional/uncertain stance,
- * the unit text must keep uncertainty (frame OR no assertive claim),
- * and must not launder via a trailing hedge alone.
+ * stance framing must attach to the same sentence as any assertive claim
+ * about that fact. Cross-sentence if/uncertainty cannot sponsor a bare assert.
+ * Fail-closed when relevance or stance reflection cannot be established.
  */
 export function nonConfirmedCitationTextOk(input: {
   stance: Page07RealityCitationStance;
   text: string;
+  /** DC fact statement used for sentence↔fact relevance. */
+  factStatement?: string;
+  /** All reality_fact_ids on the same unit (for multi-fact relevance threshold). */
+  unitFactIds?: readonly string[];
 }): { ok: true } | { ok: false; reason: string } {
   if (input.stance === "as_confirmed") {
     return { ok: false, reason: "as_confirmed_on_nonconfirmed" };
@@ -193,8 +313,53 @@ export function nonConfirmedCitationTextOk(input: {
   if (textIsTrailingHedgeLaunder(input.text)) {
     return { ok: false, reason: "trailing_hedge_launder" };
   }
-  if (textHasAssertiveClaim(input.text) && !textHasConditionalFrame(input.text)) {
-    return { ok: false, reason: "assertive_without_conditional_frame" };
+
+  const factStatement = (input.factStatement ?? "").trim();
+  if (!factStatement) {
+    return { ok: false, reason: "fact_statement_unresolvable" };
   }
+
+  const sentences = splitIntoSentences(input.text);
+  if (!sentences.length) {
+    return { ok: false, reason: "empty_citation_text" };
+  }
+
+  const multiFactUnit = (input.unitFactIds?.length ?? 0) > 1;
+  const related = multiFactUnit
+    ? sentences.filter((s) =>
+        sentenceRelevantToFact(s, factStatement, { multiFactUnit: true }),
+      )
+    : sentences;
+
+  if (!related.length) {
+    // Cannot tell whether stance is reflected for this fact → fail closed.
+    return { ok: false, reason: "fact_stance_unrecognizable" };
+  }
+
+  for (const sentence of related) {
+    if (
+      textHasAssertiveClaim(sentence) &&
+      !sentenceHasRequiredFrame(sentence, input.stance)
+    ) {
+      return {
+        ok: false,
+        reason:
+          input.stance === "as_conditional"
+            ? "assertive_without_same_sentence_conditional"
+            : "assertive_without_same_sentence_uncertainty",
+      };
+    }
+  }
+
+  if (input.stance === "as_conditional") {
+    if (!related.some((s) => textHasConditionalFrame(s))) {
+      return { ok: false, reason: "missing_fact_related_conditional" };
+    }
+  } else if (input.stance === "as_uncertain") {
+    if (!related.some((s) => textHasUncertaintyFrame(s))) {
+      return { ok: false, reason: "missing_fact_related_uncertainty" };
+    }
+  }
+
   return { ok: true };
 }

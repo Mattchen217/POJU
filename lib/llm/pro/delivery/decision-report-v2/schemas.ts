@@ -1280,7 +1280,59 @@ const Page07RealityFactStanceSchema = z.object({
 const Page07RealityFactStances = z
   .array(Page07RealityFactStanceSchema)
   .max(8)
-  .default([]);
+  .default([])
+  .superRefine((stances, ctx) => {
+    const seen = new Set<string>();
+    for (let i = 0; i < stances.length; i++) {
+      const fid = stances[i]!.fact_id;
+      if (seen.has(fid)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate_reality_fact_stance:${fid}`,
+          path: [i, "fact_id"],
+        });
+      }
+      seen.add(fid);
+    }
+  });
+
+/** Enforce reality_fact_ids ↔ reality_fact_stances strict 1:1 at schema layer. */
+function refinePage07FactStancePairing<
+  T extends {
+    reality_fact_ids: string[];
+    reality_fact_stances: { fact_id: string; stance: string }[];
+  },
+>(unit: T, ctx: z.RefinementCtx) {
+  const ids = unit.reality_fact_ids ?? [];
+  const stances = unit.reality_fact_stances ?? [];
+  const idSet = new Set(ids);
+  if (idSet.size !== ids.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "duplicate_reality_fact_id",
+      path: ["reality_fact_ids"],
+    });
+  }
+  const stanceIds = new Set(stances.map((s) => s.fact_id));
+  for (const fid of idSet) {
+    if (!stanceIds.has(fid)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `missing_reality_fact_stance:${fid}`,
+        path: ["reality_fact_stances"],
+      });
+    }
+  }
+  for (const s of stances) {
+    if (!idSet.has(s.fact_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `orphan_reality_fact_stance:${s.fact_id}`,
+        path: ["reality_fact_stances"],
+      });
+    }
+  }
+}
 
 /**
  * Face 07 — 场域与关系 (Field & Relationship · Batch 1).
@@ -1312,54 +1364,58 @@ export const Face07V2Schema = z.object({
     .default([]),
   field_units: z
     .array(
-      z.object({
-        unit_id: NonEmpty.max(80),
-        kind: z.enum([
-          "field_resource",
-          "field_constraint",
-          "field_entry_exit",
-        ]),
-        text: NonEmpty.max(960),
-        claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        evidence_ids: Page07RefIds,
-        reality_fact_ids: Page07FactIds,
-        /**
-         * One stance per cited reality_fact_id.
-         * Non-confirmed DC facts may only use as_conditional | as_uncertain.
-         */
-        reality_fact_stances: Page07RealityFactStances,
-        participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        dir_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        supporting_personal_unit_refs: z
-          .array(NonEmpty.max(120))
-          .max(8)
-          .default([]),
-      }),
+      z
+        .object({
+          unit_id: NonEmpty.max(80),
+          kind: z.enum([
+            "field_resource",
+            "field_constraint",
+            "field_entry_exit",
+          ]),
+          text: NonEmpty.max(960),
+          claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+          evidence_ids: Page07RefIds,
+          reality_fact_ids: Page07FactIds,
+          /**
+           * One stance per cited reality_fact_id.
+           * Non-confirmed DC facts may only use as_conditional | as_uncertain.
+           */
+          reality_fact_stances: Page07RealityFactStances,
+          participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+          dir_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+          supporting_personal_unit_refs: z
+            .array(NonEmpty.max(120))
+            .max(8)
+            .default([]),
+        })
+        .superRefine(refinePage07FactStancePairing),
     )
     .max(12)
     .default([]),
   relationship_units: z
     .array(
-      z.object({
-        unit_id: NonEmpty.max(80),
-        kind: z.enum([
-          "power_interest",
-          "communication",
-          "commitment_conflict",
-          "collaboration",
-        ]),
-        text: NonEmpty.max(960),
-        claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        evidence_ids: Page07RefIds,
-        reality_fact_ids: Page07FactIds,
-        reality_fact_stances: Page07RealityFactStances,
-        participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        uncertainty_notes: z.array(NonEmpty.max(240)).max(6).default([]),
-        supporting_personal_unit_refs: z
-          .array(NonEmpty.max(120))
-          .max(8)
-          .default([]),
-      }),
+      z
+        .object({
+          unit_id: NonEmpty.max(80),
+          kind: z.enum([
+            "power_interest",
+            "communication",
+            "commitment_conflict",
+            "collaboration",
+          ]),
+          text: NonEmpty.max(960),
+          claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+          evidence_ids: Page07RefIds,
+          reality_fact_ids: Page07FactIds,
+          reality_fact_stances: Page07RealityFactStances,
+          participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+          uncertainty_notes: z.array(NonEmpty.max(240)).max(6).default([]),
+          supporting_personal_unit_refs: z
+            .array(NonEmpty.max(120))
+            .max(8)
+            .default([]),
+        })
+        .superRefine(refinePage07FactStancePairing),
     )
     .max(12)
     .default([]),

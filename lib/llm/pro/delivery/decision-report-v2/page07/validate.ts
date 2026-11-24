@@ -17,6 +17,7 @@ import {
   nonConfirmedCitationTextOk,
   roleIsNeutral,
   roleSupportedByFactBlob,
+  textHasAssertiveClaim,
   verificationIsWithinMax,
   weakestMaxVerification,
   type Page07ParticipantVerificationStatus,
@@ -148,6 +149,7 @@ export function validateFace07Output(input: {
 
   /**
    * Structured reality-fact cite check (per fact, fail-closed on missing status).
+   * reality_fact_ids ↔ reality_fact_stances must be strict 1:1 (no dupes / orphans).
    * Stance table is required; CONFIRMED keywords alone are not the gate.
    */
   const checkRealityFactCites = (
@@ -156,8 +158,30 @@ export function validateFace07Output(input: {
     path: string,
     citingText: string,
   ) => {
-    const stanceById = new Map(stances.map((s) => [s.fact_id, s.stance] as const));
+    const seenFactIds = new Set<string>();
+    for (const fid of factIds) {
+      if (seenFactIds.has(fid)) {
+        issues.push({
+          code: "duplicate_reality_fact_id",
+          detail: `${path} lists reality_fact_id=${fid} more than once`,
+          path,
+        });
+      }
+      seenFactIds.add(fid);
+    }
+
+    const seenStanceIds = new Set<string>();
+    let hasDuplicateStance = false;
     for (const s of stances) {
+      if (seenStanceIds.has(s.fact_id)) {
+        hasDuplicateStance = true;
+        issues.push({
+          code: "duplicate_reality_fact_stance",
+          detail: `${path} has duplicate reality_fact_stances entry for ${s.fact_id}`,
+          path,
+        });
+      }
+      seenStanceIds.add(s.fact_id);
       if (!factIds.includes(s.fact_id)) {
         issues.push({
           code: "orphan_reality_fact_stance",
@@ -166,6 +190,22 @@ export function validateFace07Output(input: {
         });
       }
     }
+
+    // Do not let Map last-write-wins change validation when duplicates exist.
+    if (hasDuplicateStance) {
+      for (const fid of factIds) {
+        if (!seenStanceIds.has(fid)) {
+          issues.push({
+            code: "missing_reality_fact_stance",
+            detail: `${path} cites fact_id=${fid} without reality_fact_stances entry`,
+            path,
+          });
+        }
+      }
+      return;
+    }
+
+    const stanceById = new Map(stances.map((s) => [s.fact_id, s.stance] as const));
     for (const fid of factIds) {
       if (input.knownFactIds && !input.knownFactIds.has(fid)) {
         issues.push({
@@ -206,9 +246,12 @@ export function validateFace07Output(input: {
         });
         continue;
       }
+      const factStatement = input.factContentById?.get(fid) ?? "";
       const textOk = nonConfirmedCitationTextOk({
         stance,
         text: citingText,
+        factStatement,
+        unitFactIds: factIds,
       });
       if (!textOk.ok) {
         issues.push({
@@ -417,33 +460,41 @@ export function validateFace07Output(input: {
   };
 
   /**
-   * Units that treat a non-confirmed participant as settled identity/behavior.
-   * Driven by participant.verification_status vs DC — not keyword-only.
+   * Units that treat a participant's behavior as settled.
+   * Driven by participant.verification_status + unit cited confirmed facts —
+   * not keyword-only. Confirmed identity does not authorize unconfirmed behavior.
    */
   const scanParticipantProse = (
     participantIds: readonly string[],
     text: string,
     path: string,
+    realityFactIds: readonly string[],
   ) => {
-    const assertive =
-      /将承担|将负责|会承担|is\s+responsible|will\s+(?:cover|pay|handle|bear)|definitely|already\s+confirmed|confirmed\s+fact/i.test(
-        text,
-      );
-    if (!assertive) return;
+    if (!textHasAssertiveClaim(text)) return;
+    const unitHasConfirmedFact = realityFactIds.some((fid) =>
+      isConfirmedDcStatus(resolveFactStatus(fid)),
+    );
     for (const id of participantIds) {
       const participant = participantById.get(id);
       if (!participant) continue;
       if (isSelfParticipantId(id)) continue;
-      if (participant.verification_status === "confirmed") {
-        // confirmed participant still cannot assert unconfirmed behavior without
-        // confirmed facts on the unit — handled by checkRealityFactCites.
+      if (participant.verification_status !== "confirmed") {
+        issues.push({
+          code: "unverified_participant_treated_as_confirmed",
+          detail: `${path} asserts settled behavior for participant ${id} (${participant.verification_status})`,
+          path,
+        });
         continue;
       }
-      issues.push({
-        code: "unverified_participant_treated_as_confirmed",
-        detail: `${path} asserts settled behavior for participant ${id} (${participant.verification_status})`,
-        path,
-      });
+      // Identity may be confirmed, but assertive behavior still needs a confirmed
+      // reality fact on this unit. A confirmed binding cannot cover unverified behavior.
+      if (!unitHasConfirmedFact) {
+        issues.push({
+          code: "unconfirmed_participant_behavior",
+          detail: `${path} asserts settled behavior for confirmed participant ${id} without a confirmed reality fact on the unit`,
+          path,
+        });
+      }
     }
   };
 
@@ -472,7 +523,12 @@ export function validateFace07Output(input: {
       unit.unit_id,
     );
     scanScore(unit.unit_id, unit.text);
-    scanParticipantProse(unit.participant_ids, unit.text, unit.unit_id);
+    scanParticipantProse(
+      unit.participant_ids,
+      unit.text,
+      unit.unit_id,
+      unit.reality_fact_ids ?? [],
+    );
   }
 
   for (const unit of page.relationship_units) {
@@ -499,7 +555,12 @@ export function validateFace07Output(input: {
       unit.unit_id,
     );
     scanScore(unit.unit_id, unitText);
-    scanParticipantProse(unit.participant_ids, unit.text, unit.unit_id);
+    scanParticipantProse(
+      unit.participant_ids,
+      unit.text,
+      unit.unit_id,
+      unit.reality_fact_ids ?? [],
+    );
   }
 
   const boundary = page.evidence_boundary;
