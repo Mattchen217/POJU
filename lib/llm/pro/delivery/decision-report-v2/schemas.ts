@@ -1272,6 +1272,16 @@ const Page07VerificationStatusSchema = z.enum([
   "missing",
 ]);
 
+/** Per-fact citation stance — required for every reality_fact_ids entry. */
+const Page07RealityFactStanceSchema = z.object({
+  fact_id: NonEmpty.max(120),
+  stance: z.enum(["as_confirmed", "as_conditional", "as_uncertain"]),
+});
+const Page07RealityFactStances = z
+  .array(Page07RealityFactStanceSchema)
+  .max(8)
+  .default([]);
+
 /**
  * Face 07 — 场域与关系 (Field & Relationship · Batch 1).
  * Conditionally enabled. Skip / insufficient shapes keep units empty.
@@ -1313,6 +1323,11 @@ export const Face07V2Schema = z.object({
         claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
         evidence_ids: Page07RefIds,
         reality_fact_ids: Page07FactIds,
+        /**
+         * One stance per cited reality_fact_id.
+         * Non-confirmed DC facts may only use as_conditional | as_uncertain.
+         */
+        reality_fact_stances: Page07RealityFactStances,
         participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
         dir_ids: z.array(NonEmpty.max(80)).max(8).default([]),
         supporting_personal_unit_refs: z
@@ -1337,6 +1352,7 @@ export const Face07V2Schema = z.object({
         claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
         evidence_ids: Page07RefIds,
         reality_fact_ids: Page07FactIds,
+        reality_fact_stances: Page07RealityFactStances,
         participant_ids: z.array(NonEmpty.max(80)).max(8).default([]),
         uncertainty_notes: z.array(NonEmpty.max(240)).max(6).default([]),
         supporting_personal_unit_refs: z
