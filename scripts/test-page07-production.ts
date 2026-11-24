@@ -3105,7 +3105,7 @@ async function main() {
         crossOk.ok ? "" : crossOk.issues.map((i) => i.detail).join(" | "),
       );
 
-      // E. Broad single-token overlap (rent vs relocation pay) → reject.
+      // E. Same action+quantity, different object (cover/half≠rent vs relocation).
       const weakOverlap = validateFace07Output({
         ...baseV,
         knownFactIds: new Set([...ctx.knownFactIds, idFact, rentFact]),
@@ -3117,7 +3117,10 @@ async function main() {
         factContentById: new Map([
           ...ctx.factContentById,
           [idFact, "Alex is my business partner."],
-          [rentFact, "Alex has agreed to handle the apartment rent schedule."],
+          [
+            rentFact,
+            "Alex has agreed to cover half of the relocation cost.",
+          ],
         ]),
         factVerificationLevelById: new Map([
           ...ctx.factVerificationLevelById,
@@ -3150,7 +3153,7 @@ async function main() {
               reality_fact_stances: [
                 { fact_id: rentFact, stance: "as_confirmed" },
               ],
-              text: "Alex will cover half of the relocation cost.",
+              text: "Alex will cover half of the rent.",
             },
           ],
         }),
@@ -3162,6 +3165,164 @@ async function main() {
           (i) => i.code === "unconfirmed_participant_behavior",
         ),
         weakOverlap.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+    }
+
+    // ── R7: action/object behavior matching (no cover+half laundering) ──
+    {
+      const idFact = "fact_r7_id";
+      const relocFact = "fact_r7_reloc";
+      const depositFact = "fact_r7_deposit";
+      const rentFact = "fact_r7_rent";
+
+      const rejectBeh = (
+        label: string,
+        factId: string,
+        factStatement: string,
+        unitText: string,
+      ) => {
+        const result = validateFace07Output({
+          ...baseV,
+          knownFactIds: new Set([...ctx.knownFactIds, idFact, factId]),
+          factStatusById: new Map([
+            ...ctx.factStatusById,
+            [idFact, "confirmed"],
+            [factId, "confirmed"],
+          ]),
+          factContentById: new Map([
+            ...ctx.factContentById,
+            [idFact, "Alex is my business partner."],
+            [factId, factStatement],
+          ]),
+          factVerificationLevelById: new Map([
+            ...ctx.factVerificationLevelById,
+            [idFact, "independently_verified"],
+            [factId, "independently_verified"],
+          ]),
+          factRolesById: new Map([
+            ...ctx.factRolesById,
+            [idFact, ["stakeholder"]],
+            [factId, ["third_party_commitment"]],
+          ]),
+          raw: validFace07({
+            participants: [
+              (validFace07().participants as object[])[0],
+              {
+                participant_id: "p_alex",
+                display_label: "Alex",
+                role: "partner",
+                source: "dc_fact",
+                verification_status: "confirmed",
+                related_fact_ids: [idFact],
+                notes: "",
+              },
+            ],
+            relationship_units: [
+              {
+                ...(validFace07().relationship_units as object[])[0],
+                participant_ids: ["p_alex"],
+                reality_fact_ids: [factId],
+                reality_fact_stances: [
+                  { fact_id: factId, stance: "as_confirmed" },
+                ],
+                text: unitText,
+              },
+            ],
+          }),
+        });
+        assert.equal(result.ok, false, label);
+        if (result.ok) throw new Error("unreachable");
+        assert.ok(
+          result.issues.some(
+            (i) => i.code === "unconfirmed_participant_behavior",
+          ),
+          `${label}: ${result.issues.map((i) => `${i.code}:${i.detail}`).join(" | ")}`,
+        );
+      };
+
+      // A / D. Same action+quantity, different object (relocation vs rent).
+      rejectBeh(
+        "R7-A/D cover half relocation ≠ cover half rent",
+        relocFact,
+        "Alex has agreed to cover half of the relocation cost.",
+        "Alex will cover half of the rent.",
+      );
+
+      // B. Same action, different obligation.
+      rejectBeh(
+        "R7-B pay deposit ≠ pay salaries",
+        depositFact,
+        "Alex has agreed to pay the relocation deposit.",
+        "Alex will pay the employee salaries.",
+      );
+
+      // C. Only broad action verb shared (pay).
+      rejectBeh(
+        "R7-C pay rent ≠ pay relocation deposit",
+        rentFact,
+        "Alex has agreed to pay the rent.",
+        "Alex will pay the relocation deposit.",
+      );
+
+      // E. Reasonable paraphrase of the same obligation — allow if anchors match.
+      const paraphrase = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, relocFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [relocFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [
+            relocFact,
+            "Alex has agreed to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [relocFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [relocFact, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [relocFact],
+              reality_fact_stances: [
+                { fact_id: relocFact, stance: "as_confirmed" },
+              ],
+              text: "Alex will pay 50% of the moving expenses.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        paraphrase.ok,
+        true,
+        paraphrase.ok
+          ? ""
+          : paraphrase.issues.map((i) => i.detail).join(" | "),
       );
     }
 

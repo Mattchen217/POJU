@@ -368,6 +368,10 @@ const BEHAVIOR_TOKEN_STOP = new Set([
   "might",
   "writing",
   "written",
+  "agreed",
+  "agree",
+  "decided",
+  "decide",
   "的",
   "了",
   "在",
@@ -376,6 +380,95 @@ const BEHAVIOR_TOKEN_STOP = new Set([
   "和",
   "或",
 ]);
+
+/** Quantity / ratio / amount modifiers — never count as behavior objects. */
+const BEHAVIOR_QUANTITY_MODIFIERS = new Set([
+  "half",
+  "quarter",
+  "percent",
+  "percentage",
+  "pct",
+  "all",
+  "full",
+  "entire",
+  "some",
+  "any",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "ten",
+  "fifty",
+  "hundred",
+  "thousand",
+]);
+
+/**
+ * Compatible payment / coverage action class. hire / invest stay separate.
+ * Broad verbs alone never prove object identity.
+ */
+const BEHAVIOR_ACTION_CLASS: Readonly<Record<string, string>> = {
+  cover: "pay_cover",
+  covers: "pay_cover",
+  covering: "pay_cover",
+  pay: "pay_cover",
+  pays: "pay_cover",
+  paying: "pay_cover",
+  paid: "pay_cover",
+  bear: "pay_cover",
+  bears: "pay_cover",
+  bearing: "pay_cover",
+  fund: "pay_cover",
+  funds: "pay_cover",
+  funding: "pay_cover",
+  funded: "pay_cover",
+  handle: "pay_cover",
+  handles: "pay_cover",
+  handling: "pay_cover",
+  承担: "pay_cover",
+  支付: "pay_cover",
+  覆盖: "pay_cover",
+  出资: "pay_cover",
+  hire: "hire",
+  hires: "hire",
+  hiring: "hire",
+  hired: "hire",
+  雇佣: "hire",
+  招聘: "hire",
+  invest: "invest",
+  invests: "invest",
+  investing: "invest",
+  invested: "invest",
+  投资: "invest",
+};
+
+/** Synonym groups for obligation / expense objects (deterministic). */
+const BEHAVIOR_OBJECT_SYNONYM_GROUPS: readonly (readonly string[])[] = [
+  ["relocation", "relocating", "moving", "move"],
+  ["cost", "costs", "expense", "expenses"],
+  ["rent", "rental", "rents"],
+  ["deposit", "deposits"],
+  ["salary", "salaries", "wage", "wages", "payroll"],
+  ["employee", "employees", "staff", "worker", "workers"],
+  ["apartment", "flat", "housing"],
+  ["schedule", "schedules", "timing"],
+];
+
+const BEHAVIOR_OBJECT_CONCEPT: ReadonlyMap<string, string> = (() => {
+  const m = new Map<string, string>();
+  for (const group of BEHAVIOR_OBJECT_SYNONYM_GROUPS) {
+    const concept = group[0]!;
+    for (const t of group) m.set(t, concept);
+  }
+  return m;
+})();
+
+export type Page07BehaviorAnchor = {
+  actionClass: string;
+  /** Normalized object concepts (synonym-collapsed). Empty ⇒ unresolvable. */
+  objectConcepts: ReadonlySet<string>;
+};
 
 export function factHasBehaviorEvidenceRole(
   roles: readonly string[] | undefined,
@@ -390,26 +483,100 @@ export function factHasBehaviorEvidenceRole(
   return false;
 }
 
-function behaviorContentTokens(text: string, displayLabel: string): Set<string> {
+function tokenizeBehaviorLexemes(text: string): string[] {
+  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+}
+
+function isQuantityOrBareNumber(token: string): boolean {
+  if (BEHAVIOR_QUANTITY_MODIFIERS.has(token)) return true;
+  if (/^\d+$/.test(token)) return true;
+  if (/^\d+%$/.test(token)) return true;
+  return false;
+}
+
+function normalizeObjectConcept(token: string): string | null {
+  if (token.length < 2) return null;
+  if (BEHAVIOR_TOKEN_STOP.has(token)) return null;
+  if (isQuantityOrBareNumber(token)) return null;
+  if (BEHAVIOR_ACTION_CLASS[token]) return null;
+  return BEHAVIOR_OBJECT_CONCEPT.get(token) ?? token;
+}
+
+/**
+ * Deterministic action + object anchor for a behavior claim.
+ * Fail-closed: missing action class or empty object concepts ⇒ null.
+ */
+export function extractBehaviorAnchor(
+  text: string,
+  displayLabel: string,
+): Page07BehaviorAnchor | null {
   const label = displayLabel.trim().toLowerCase();
-  const raw = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-  return new Set(
-    raw.filter(
-      (t) =>
-        t.length >= 2 &&
-        !BEHAVIOR_TOKEN_STOP.has(t) &&
-        t !== label &&
-        !label.split(/\s+/).includes(t),
-    ),
+  const labelParts = new Set(label.split(/\s+/).filter(Boolean));
+  const tokens = tokenizeBehaviorLexemes(text).filter(
+    (t) => t !== label && !labelParts.has(t),
   );
+  if (!tokens.length) return null;
+
+  let actionIdx = -1;
+  let actionClass: string | null = null;
+  for (let i = 0; i < tokens.length; i++) {
+    const cls = BEHAVIOR_ACTION_CLASS[tokens[i]!];
+    if (cls) {
+      actionIdx = i;
+      actionClass = cls;
+      // Prefer the main verb after "agreed to …" when present.
+      // Keep scanning so later action wins if earlier token was incidental.
+    }
+  }
+  if (!actionClass || actionIdx < 0) return null;
+
+  // Object lexemes: prefer tokens after the (last) action verb.
+  let lastActionIdx = actionIdx;
+  for (let i = 0; i < tokens.length; i++) {
+    if (BEHAVIOR_ACTION_CLASS[tokens[i]!]) lastActionIdx = i;
+  }
+  const objectConcepts = new Set<string>();
+  for (let i = lastActionIdx + 1; i < tokens.length; i++) {
+    const concept = normalizeObjectConcept(tokens[i]!);
+    if (concept) objectConcepts.add(concept);
+  }
+  // If nothing after the verb, try remaining non-action tokens (fail closed if empty).
+  if (!objectConcepts.size) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (i === lastActionIdx) continue;
+      if (BEHAVIOR_ACTION_CLASS[tokens[i]!]) continue;
+      const concept = normalizeObjectConcept(tokens[i]!);
+      if (concept) objectConcepts.add(concept);
+    }
+  }
+  if (!objectConcepts.size) return null;
+  return { actionClass, objectConcepts };
+}
+
+/**
+ * Same concrete behavior only when action classes match AND at least one
+ * object concept overlaps. Generic action + quantity alone never matches.
+ */
+export function behaviorAnchorsMatch(
+  factAnchor: Page07BehaviorAnchor | null,
+  sentenceAnchor: Page07BehaviorAnchor | null,
+): boolean {
+  if (!factAnchor || !sentenceAnchor) return false;
+  if (factAnchor.actionClass !== sentenceAnchor.actionClass) return false;
+  if (!factAnchor.objectConcepts.size || !sentenceAnchor.objectConcepts.size) {
+    return false;
+  }
+  for (const c of sentenceAnchor.objectConcepts) {
+    if (factAnchor.objectConcepts.has(c)) return true;
+  }
+  return false;
 }
 
 /**
  * One confirmed DC fact may support ONE assertive behavior sentence when:
  * - fact_roles include a Page07 behavior-evidence allowlist role;
  * - statement itself is an assertive behavior claim naming the participant;
- * - that single sentence shares ≥2 non-name content tokens with the fact
- *   (same behavior, not merely the same person).
+ * - action class + object concepts match the sentence (not bare token overlap).
  */
 export function behaviorFactSupportsSentence(input: {
   factStatement: string;
@@ -430,14 +597,10 @@ export function behaviorFactSupportsSentence(input: {
   ) {
     return false;
   }
-  const factToks = behaviorContentTokens(statement, input.displayLabel);
-  if (factToks.size < 1) return false;
-  const sentToks = behaviorContentTokens(sentence, input.displayLabel);
-  let overlap = 0;
-  for (const t of sentToks) {
-    if (factToks.has(t)) overlap += 1;
-  }
-  return overlap >= 2;
+  return behaviorAnchorsMatch(
+    extractBehaviorAnchor(statement, input.displayLabel),
+    extractBehaviorAnchor(sentence, input.displayLabel),
+  );
 }
 
 /**
