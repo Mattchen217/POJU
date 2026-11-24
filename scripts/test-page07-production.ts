@@ -2167,13 +2167,28 @@ async function main() {
       assert.ok(eg[0]!.toLowerCase().startsWith("e.g."));
       assert.ok(eg[1]!.startsWith("Another option"));
 
+      // R6: trailing p.m. period is a real sentence boundary.
       const pm = splitIntoSentences(
         "The meeting is at 3.14 p.m. Alex may join.",
       );
-      assert.equal(pm.length, 1, pm.join(" | "));
-      assert.ok(pm[0]!.includes("3.14"));
-      assert.ok(pm[0]!.includes("p.m."));
-      assert.ok(pm[0]!.includes("Alex may join"));
+      assert.equal(pm.length, 2, pm.join(" | "));
+      assert.equal(pm[0], "The meeting is at 3.14 p.m.");
+      assert.equal(pm[1], "Alex may join.");
+
+      const pmNext = splitIntoSentences(
+        "The meeting is at 3.14 p.m. The next step is pending.",
+      );
+      assert.equal(pmNext.length, 2, pmNext.join(" | "));
+      assert.equal(pmNext[0], "The meeting is at 3.14 p.m.");
+      assert.equal(pmNext[1], "The next step is pending.");
+
+      const pmOnly = splitIntoSentences("The meeting is at 3.14 p.m.");
+      assert.equal(pmOnly.length, 1, pmOnly.join(" | "));
+      assert.equal(pmOnly[0], "The meeting is at 3.14 p.m.");
+
+      const drOne = splitIntoSentences("Dr. Alex will join the meeting.");
+      assert.equal(drOne.length, 1, drOne.join(" | "));
+      assert.equal(drOne[0], "Dr. Alex will join the meeting.");
 
       const url = splitIntoSentences(
         "See https://example.com/path for details. The next step is pending.",
@@ -2698,6 +2713,456 @@ async function main() {
           `missing fact_status_upgrade for ${status}`,
         );
       }
+    }
+
+    // ── R6: per-sentence behavior evidence (no cross-sentence laundering) ──
+    {
+      const idFact = "fact_r6_id";
+      const coverFact = "fact_r6_cover";
+      const hireFact = "fact_r6_hire";
+      const rentFact = "fact_r6_rent";
+      const jordanId = "fact_r6_jordan_id";
+      const jordanBeh = "fact_r6_jordan_beh";
+
+      // A. One supported + one unsupported behavior sentence → reject.
+      const oneOfTwo = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, coverFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [coverFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [
+            coverFact,
+            "Alex has agreed in writing to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [coverFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [coverFact, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [coverFact],
+              reality_fact_stances: [
+                { fact_id: coverFact, stance: "as_confirmed" },
+              ],
+              text: "Alex has agreed to cover half of the relocation cost. Alex will invest $50,000.",
+            },
+          ],
+        }),
+      });
+      assert.equal(oneOfTwo.ok, false);
+      if (oneOfTwo.ok) throw new Error("unreachable");
+      assert.ok(
+        oneOfTwo.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+        oneOfTwo.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+
+      // B. Two unsupported behaviors + unrelated behavior fact → reject.
+      const noneSupported = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, coverFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [coverFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [
+            coverFact,
+            "Alex has agreed in writing to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [coverFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [coverFact, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [coverFact],
+              reality_fact_stances: [
+                { fact_id: coverFact, stance: "as_confirmed" },
+              ],
+              text: "Alex will invest $50,000. Alex will hire three employees.",
+            },
+          ],
+        }),
+      });
+      assert.equal(noneSupported.ok, false);
+      if (noneSupported.ok) throw new Error("unreachable");
+      assert.ok(
+        noneSupported.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+      );
+
+      // C. Two behaviors with two independent evidence facts → allow.
+      const bothSupported = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([
+          ...ctx.knownFactIds,
+          idFact,
+          coverFact,
+          hireFact,
+        ]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [coverFact, "confirmed"],
+          [hireFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [
+            coverFact,
+            "Alex has agreed to cover half of the relocation cost.",
+          ],
+          [hireFact, "Alex has agreed to hire three employees."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [coverFact, "independently_verified"],
+          [hireFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [coverFact, ["third_party_commitment"]],
+          [hireFact, ["third_party_action"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [coverFact, hireFact],
+              reality_fact_stances: [
+                { fact_id: coverFact, stance: "as_confirmed" },
+                { fact_id: hireFact, stance: "as_confirmed" },
+              ],
+              text: "Alex has agreed to cover half of the relocation cost. Alex has agreed to hire three employees.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        bothSupported.ok,
+        true,
+        bothSupported.ok
+          ? ""
+          : bothSupported.issues.map((i) => i.detail).join(" | "),
+      );
+
+      // D. Multi-participant isolation.
+      const crossReject = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([
+          ...ctx.knownFactIds,
+          idFact,
+          jordanId,
+          coverFact,
+          jordanBeh,
+        ]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [jordanId, "confirmed"],
+          [coverFact, "confirmed"],
+          [jordanBeh, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [jordanId, "Jordan is named as a partner in the written split."],
+          [
+            coverFact,
+            "Alex has agreed to cover half of the relocation cost.",
+          ],
+          [
+            jordanBeh,
+            "Jordan has agreed to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [jordanId, "independently_verified"],
+          [coverFact, "independently_verified"],
+          [jordanBeh, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [jordanId, ["stakeholder"]],
+          [coverFact, ["third_party_commitment"]],
+          [jordanBeh, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+            {
+              participant_id: "p_jordan",
+              display_label: "Jordan",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [jordanId],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex", "p_jordan"],
+              reality_fact_ids: [coverFact],
+              reality_fact_stances: [
+                { fact_id: coverFact, stance: "as_confirmed" },
+              ],
+              text: "Jordan has agreed to cover half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(crossReject.ok, false);
+      if (crossReject.ok) throw new Error("unreachable");
+      assert.ok(
+        crossReject.issues.some(
+          (i) =>
+            i.code === "unconfirmed_participant_behavior" &&
+            i.detail.includes("p_jordan"),
+        ),
+      );
+
+      const crossOk = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([
+          ...ctx.knownFactIds,
+          idFact,
+          jordanId,
+          coverFact,
+          jordanBeh,
+        ]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [jordanId, "confirmed"],
+          [coverFact, "confirmed"],
+          [jordanBeh, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [jordanId, "Jordan is named as a partner in the written split."],
+          [
+            coverFact,
+            "Alex has agreed to cover half of the relocation cost.",
+          ],
+          [
+            jordanBeh,
+            "Jordan has agreed to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [jordanId, "independently_verified"],
+          [coverFact, "independently_verified"],
+          [jordanBeh, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [jordanId, ["stakeholder"]],
+          [coverFact, ["third_party_commitment"]],
+          [jordanBeh, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+            {
+              participant_id: "p_jordan",
+              display_label: "Jordan",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [jordanId],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [coverFact],
+              reality_fact_stances: [
+                { fact_id: coverFact, stance: "as_confirmed" },
+              ],
+              text: "Alex has agreed to cover half of the relocation cost.",
+            },
+          ],
+          // Separate unit for Jordan with Jordan's own fact — via second relationship? 
+          // Keep single Jordan unit by overriding field_units as well for isolation OK path.
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              participant_ids: ["p_jordan"],
+              reality_fact_ids: [jordanBeh],
+              reality_fact_stances: [
+                { fact_id: jordanBeh, stance: "as_confirmed" },
+              ],
+              text: "Jordan has agreed to cover half of the relocation cost.",
+              supporting_personal_unit_refs: [],
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        crossOk.ok,
+        true,
+        crossOk.ok ? "" : crossOk.issues.map((i) => i.detail).join(" | "),
+      );
+
+      // E. Broad single-token overlap (rent vs relocation pay) → reject.
+      const weakOverlap = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, rentFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [rentFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [rentFact, "Alex has agreed to handle the apartment rent schedule."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [rentFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [rentFact, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [rentFact],
+              reality_fact_stances: [
+                { fact_id: rentFact, stance: "as_confirmed" },
+              ],
+              text: "Alex will cover half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(weakOverlap.ok, false);
+      if (weakOverlap.ok) throw new Error("unreachable");
+      assert.ok(
+        weakOverlap.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+        weakOverlap.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
     }
 
     console.log("F PASS — participants, evidence, page boundary");

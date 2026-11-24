@@ -12,7 +12,7 @@ import {
   type Face07UpstreamRefs,
 } from "./path-integrity";
 import {
-  confirmedFactSupportsParticipantBehavior,
+  allParticipantBehaviorSentencesSupported,
   isConfirmedDcStatus,
   maxParticipantVerificationForFact,
   nonConfirmedCitationTextOk,
@@ -464,12 +464,10 @@ export function validateFace07Output(input: {
 
   /**
    * Units that treat a participant's behavior as settled.
-   * Identity (related_fact_ids / verification_status) never proves behavior.
-   * Assertive behavior requires an independent confirmed DC fact on this unit
-   * with a Page07 behavior-evidence fact_role allowlist entry, assertive
-   * statement content naming this participant, and ≥2 shared non-name behavior
-   * tokens with the unit prose. Unrelated confirmed facts (location, job,
-   * relationship) cannot sponsor behavior. Fail-closed — no model-reported
+   * Identity never proves behavior. Every assertive behavior sentence about a
+   * participant must be independently matched to a confirmed DC behavior-evidence
+   * fact on this unit (allowlisted fact_roles + content overlap). One supported
+   * sentence must not launder another. Fail-closed — no model-reported
    * supporting_fact_id.
    */
   const scanParticipantProse = (
@@ -480,15 +478,13 @@ export function validateFace07Output(input: {
   ) => {
     if (!textHasAssertiveClaim(text)) return;
 
-    const confirmedBehaviorFactSupportsParticipant = (
+    const isUsableBehaviorCandidate = (
       fid: string,
       participantId: string,
-      displayLabel: string,
       identityFactIds: ReadonlySet<string>,
     ): boolean => {
       if (identityFactIds.has(fid)) return false;
       if (!isConfirmedDcStatus(resolveFactStatus(fid))) return false;
-      // Must not be another listed participant's exclusive identity binding.
       for (const otherId of participantIds) {
         if (otherId === participantId) continue;
         if (isSelfParticipantId(otherId)) continue;
@@ -496,14 +492,7 @@ export function validateFace07Output(input: {
         if (!other) continue;
         if ((other.related_fact_ids ?? []).includes(fid)) return false;
       }
-      const statement = (input.factContentById?.get(fid) ?? "").trim();
-      const roles = input.factRolesById?.get(fid) ?? [];
-      return confirmedFactSupportsParticipantBehavior({
-        factStatement: statement,
-        factRoles: roles,
-        displayLabel,
-        unitText: text,
-      });
+      return true;
     };
 
     for (const id of participantIds) {
@@ -520,18 +509,23 @@ export function validateFace07Output(input: {
       }
 
       const identityFactIds = new Set(participant.related_fact_ids ?? []);
-      const behaviorSupports = realityFactIds.filter((fid) =>
-        confirmedBehaviorFactSupportsParticipant(
-          fid,
-          id,
-          participant.display_label,
-          identityFactIds,
-        ),
-      );
-      if (behaviorSupports.length < 1) {
+      const candidateFacts = realityFactIds
+        .filter((fid) => isUsableBehaviorCandidate(fid, id, identityFactIds))
+        .map((fid) => ({
+          statement: input.factContentById?.get(fid) ?? "",
+          roles: input.factRolesById?.get(fid) ?? [],
+        }));
+
+      if (
+        !allParticipantBehaviorSentencesSupported({
+          displayLabel: participant.display_label,
+          unitText: text,
+          candidateFacts,
+        })
+      ) {
         issues.push({
           code: "unconfirmed_participant_behavior",
-          detail: `${path} asserts settled behavior for participant ${id} without an independent confirmed behavior fact on the unit`,
+          detail: `${path} asserts settled behavior for participant ${id} without per-sentence confirmed behavior-fact support`,
           path,
         });
       }

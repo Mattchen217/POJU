@@ -56,7 +56,7 @@ export const PAGE07_ROLE_SUPPORT_PATTERNS: Readonly<
  * or outcome claims — ZH + EN. Ordinary present tense is included.
  */
 const ASSERTIVE_CLAIM =
-  /(?:(?:将|会|已经)?(?:承担|负责|支付|覆盖|出资|投资)|已经决定|已经确认|确认为|属于|拥有|已经完成|正在执行|(?:^|[\s，,：:])[A-Za-z\u4e00-\u9fff][A-Za-z\u4e00-\u9fff\s·]{0,24}是)|(?:\b(?:pays|covers|bears|funds|handles|owns|belongs|invests)\b|\b(?:is|are)\s+(?:paying|covering|bearing|funding|handling|investing|responsible|confirmed|the\s+(?:partner|boss|spouse|investor|advisor|owner))\b|\bwill\s+(?:cover|pay|handle|bear|take|fund|own|invest)\b|\bhas\s+(?:agreed|decided|confirmed|paid|covered|funded|completed|invested)\b|\bshall\s+(?:cover|pay|bear|fund|invest)\b|\bdefinitely\s+(?:true|covers|pays|confirmed)\b|\balready\s+confirmed\b|\bconfirmed\s+fact\b)/i;
+  /(?:(?:将|会|已经)?(?:承担|负责|支付|覆盖|出资|投资|雇佣|招聘)|已经决定|已经确认|确认为|属于|拥有|已经完成|正在执行|(?:^|[\s，,：:])[A-Za-z\u4e00-\u9fff][A-Za-z\u4e00-\u9fff\s·]{0,24}是)|(?:\b(?:pays|covers|bears|funds|handles|owns|belongs|invests|hires)\b|\b(?:is|are)\s+(?:paying|covering|bearing|funding|handling|investing|hiring|responsible|confirmed|the\s+(?:partner|boss|spouse|investor|advisor|owner))\b|\bwill\s+(?:cover|pay|handle|bear|take|fund|own|invest|hire)\b|\bhas\s+(?:agreed|decided|confirmed|paid|covered|funded|completed|invested|hired)\b|\bshall\s+(?:cover|pay|bear|fund|invest|hire)\b|\bdefinitely\s+(?:true|covers|pays|confirmed)\b|\balready\s+confirmed\b|\bconfirmed\s+fact\b)/i;
 
 const CONDITIONAL_FRAME =
   /如果|若该|若对方|假如|在[^。.!！？]{0,24}前提|取决于|conditional\s+on|if\s+the\b|if\s+.*\b(?:holds|confirms|is\s+verified|estimate|granted|approved|receives?|approval)|unless\b|should\s+.*\bconfirm|provided\s+that\b|only\s+if\b/i;
@@ -218,10 +218,19 @@ export function isProtectedPeriod(text: string, index: number): boolean {
   }
 
   const leftLower = leftIncludingPeriod.toLowerCase();
-  // e.g. / i.e.
+  // e.g. / i.e. — protect both internal and trailing abbrev periods so
+  // "e.g. Alex" stays one clause until a later real boundary.
   if (/(?:^|[^a-z])(?:e\.g|i\.e)\.$/i.test(leftIncludingPeriod)) return true;
-  // a.m. / p.m.
-  if (/(?:^|[^a-z])(?:[ap]\.m)\.$/i.test(leftIncludingPeriod)) return true;
+  // a.m. / p.m. — protect ONLY the internal period ("p." before "m").
+  // The trailing period after "m" is a candidate sentence boundary so that
+  // "3.14 p.m. Alex may join." becomes two sentences.
+  if (
+    /[ap]\.$/i.test(text.slice(Math.max(0, index - 1), index + 1)) &&
+    index + 1 < text.length &&
+    /m/i.test(text[index + 1]!)
+  ) {
+    return true;
+  }
   // Title abbreviations: Dr. Mr. Mrs. ...
   const abbrevMatch = leftLower.match(/([a-z]+)\.$/);
   if (abbrevMatch && PERIOD_ABBREVIATIONS.has(abbrevMatch[1]!)) return true;
@@ -396,11 +405,79 @@ function behaviorContentTokens(text: string, displayLabel: string): Set<string> 
 }
 
 /**
- * Confirmed DC fact may support a participant's assertive behavior only when:
+ * One confirmed DC fact may support ONE assertive behavior sentence when:
  * - fact_roles include a Page07 behavior-evidence allowlist role;
  * - statement itself is an assertive behavior claim naming the participant;
- * - unit assertive prose about that participant shares ≥2 non-name content tokens
- *   with the fact statement (same behavior, not merely the same person).
+ * - that single sentence shares ≥2 non-name content tokens with the fact
+ *   (same behavior, not merely the same person).
+ */
+export function behaviorFactSupportsSentence(input: {
+  factStatement: string;
+  factRoles: readonly string[] | undefined;
+  displayLabel: string;
+  sentence: string;
+}): boolean {
+  if (!factHasBehaviorEvidenceRole(input.factRoles)) return false;
+  const statement = input.factStatement.trim();
+  if (!statement || !textHasAssertiveClaim(statement)) return false;
+  const label = input.displayLabel.trim().toLowerCase();
+  if (!label || !statement.toLowerCase().includes(label)) return false;
+  const sentence = input.sentence.trim();
+  if (
+    !sentence ||
+    !textHasAssertiveClaim(sentence) ||
+    !sentence.toLowerCase().includes(label)
+  ) {
+    return false;
+  }
+  const factToks = behaviorContentTokens(statement, input.displayLabel);
+  if (factToks.size < 1) return false;
+  const sentToks = behaviorContentTokens(sentence, input.displayLabel);
+  let overlap = 0;
+  for (const t of sentToks) {
+    if (factToks.has(t)) overlap += 1;
+  }
+  return overlap >= 2;
+}
+
+/**
+ * Every assertive behavior sentence about the participant must be independently
+ * supported by at least one qualifying confirmed behavior fact. One matched
+ * sentence must not launder another unsupported sentence in the same unit.
+ */
+export function allParticipantBehaviorSentencesSupported(input: {
+  displayLabel: string;
+  unitText: string;
+  candidateFacts: readonly {
+    statement: string;
+    roles: readonly string[] | undefined;
+  }[];
+}): boolean {
+  const label = input.displayLabel.trim().toLowerCase();
+  if (!label) return false;
+  const assertiveAbout = splitIntoSentences(input.unitText).filter(
+    (s) => textHasAssertiveClaim(s) && s.toLowerCase().includes(label),
+  );
+  // No assertive sentence about this participant → nothing to support.
+  if (!assertiveAbout.length) return true;
+
+  for (const sentence of assertiveAbout) {
+    const supported = input.candidateFacts.some((fact) =>
+      behaviorFactSupportsSentence({
+        factStatement: fact.statement,
+        factRoles: fact.roles,
+        displayLabel: input.displayLabel,
+        sentence,
+      }),
+    );
+    if (!supported) return false;
+  }
+  return true;
+}
+
+/**
+ * @deprecated Prefer allParticipantBehaviorSentencesSupported (per-sentence).
+ * Kept as a thin wrapper for call sites that still pass a single fact + unit.
  */
 export function confirmedFactSupportsParticipantBehavior(input: {
   factStatement: string;
@@ -408,28 +485,13 @@ export function confirmedFactSupportsParticipantBehavior(input: {
   displayLabel: string;
   unitText: string;
 }): boolean {
-  if (!factHasBehaviorEvidenceRole(input.factRoles)) return false;
-  const statement = input.factStatement.trim();
-  if (!statement || !textHasAssertiveClaim(statement)) return false;
-  const label = input.displayLabel.trim().toLowerCase();
-  if (!label || !statement.toLowerCase().includes(label)) return false;
-
-  const assertiveAbout = splitIntoSentences(input.unitText).filter(
-    (s) => textHasAssertiveClaim(s) && s.toLowerCase().includes(label),
-  );
-  if (!assertiveAbout.length) return false;
-
-  const factToks = behaviorContentTokens(statement, input.displayLabel);
-  if (factToks.size < 1) return false;
-  for (const sent of assertiveAbout) {
-    const sentToks = behaviorContentTokens(sent, input.displayLabel);
-    let overlap = 0;
-    for (const t of sentToks) {
-      if (factToks.has(t)) overlap += 1;
-    }
-    if (overlap >= 2) return true;
-  }
-  return false;
+  return allParticipantBehaviorSentencesSupported({
+    displayLabel: input.displayLabel,
+    unitText: input.unitText,
+    candidateFacts: [
+      { statement: input.factStatement, roles: input.factRoles },
+    ],
+  });
 }
 
 export function textHasConditionalFrame(text: string): boolean {
