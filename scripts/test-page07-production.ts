@@ -19,7 +19,10 @@ import {
   synthesizeFace07StatusPage,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/production";
 import { validateFace07Output } from "@/lib/llm/pro/delivery/decision-report-v2/page07/validate";
-import { splitIntoSentences } from "@/lib/llm/pro/delivery/decision-report-v2/page07/fact-integrity";
+import {
+  PAGE07_BEHAVIOR_EVIDENCE_FACT_ROLES,
+  splitIntoSentences,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page07/fact-integrity";
 import {
   assemblePage07PdfArgumentBodies,
   assemblePage07SectionsForDisplay,
@@ -637,6 +640,7 @@ async function main() {
       factStatusById: ctx.factStatusById,
       factContentById: ctx.factContentById,
       factVerificationLevelById: ctx.factVerificationLevelById,
+      factRolesById: ctx.factRolesById,
       upstream: ctx.upstream,
       knownDirIds: ctx.knownDirIds,
       knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
@@ -2098,6 +2102,11 @@ async function main() {
           [idFact, "independently_verified"],
           [behConf, "independently_verified"],
         ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [behConf, ["third_party_commitment"]],
+        ]),
         raw: validFace07({
           participants: [
             (validFace07().participants as object[])[0],
@@ -2131,6 +2140,564 @@ async function main() {
           ? ""
           : independentBehOk.issues.map((i) => i.detail).join(" | "),
       );
+    }
+
+    // ── R5: abbrev/URL sentence boundaries + behavior-evidence contract ──
+    {
+      assert.ok(PAGE07_BEHAVIOR_EVIDENCE_FACT_ROLES.has("third_party_commitment"));
+
+      const dr = splitIntoSentences(
+        "Dr. Alex will join. Alex may participate.",
+      );
+      assert.equal(dr.length, 2, dr.join(" | "));
+      assert.equal(dr[0], "Dr. Alex will join.");
+      assert.equal(dr[1], "Alex may participate.");
+
+      const us = splitIntoSentences(
+        "U.S. policy applies. The decision remains open.",
+      );
+      assert.equal(us.length, 2, us.join(" | "));
+      assert.ok(us[0]!.startsWith("U.S. policy"));
+      assert.ok(us[1]!.startsWith("The decision"));
+
+      const eg = splitIntoSentences(
+        "e.g. Alex may participate. Another option remains.",
+      );
+      assert.equal(eg.length, 2, eg.join(" | "));
+      assert.ok(eg[0]!.toLowerCase().startsWith("e.g."));
+      assert.ok(eg[1]!.startsWith("Another option"));
+
+      const pm = splitIntoSentences(
+        "The meeting is at 3.14 p.m. Alex may join.",
+      );
+      assert.equal(pm.length, 1, pm.join(" | "));
+      assert.ok(pm[0]!.includes("3.14"));
+      assert.ok(pm[0]!.includes("p.m."));
+      assert.ok(pm[0]!.includes("Alex may join"));
+
+      const url = splitIntoSentences(
+        "See https://example.com/path for details. The next step is pending.",
+      );
+      assert.equal(url.length, 2, url.join(" | "));
+      assert.ok(url[0]!.includes("https://example.com/path"));
+      assert.ok(url[1]!.startsWith("The next step"));
+
+      const email = splitIntoSentences(
+        "contact@example.com is the address. The response is pending.",
+      );
+      assert.equal(email.length, 2, email.join(" | "));
+      assert.ok(email[0]!.includes("contact@example.com"));
+      assert.ok(email[1]!.startsWith("The response"));
+
+      const zh = splitIntoSentences(
+        "如果审批通过，Alex可能参与。Alex将承担一半搬迁成本。",
+      );
+      assert.equal(zh.length, 2, zh.join(" | "));
+      assert.ok(zh[1]!.includes("将承担"));
+
+      const en = splitIntoSentences(
+        "If approval is granted, Alex may contribute. Alex will cover half regardless.",
+      );
+      assert.equal(en.length, 2, en.join(" | "));
+
+      const mixedNoSpace = splitIntoSentences(
+        "If approval holds, keep it conditional.Alex将承担一半搬迁成本。",
+      );
+      assert.ok(mixedNoSpace.length >= 2, mixedNoSpace.join(" | "));
+      assert.ok(mixedNoSpace.some((s) => /将承担/.test(s)));
+
+      // Real boundary after abbreviation must still split.
+      const afterDr = splitIntoSentences(
+        "Dr. Alex will join the meeting. The next step remains open.",
+      );
+      assert.equal(afterDr.length, 2, afterDr.join(" | "));
+      assert.ok(afterDr[0]!.startsWith("Dr. Alex"));
+      assert.ok(afterDr[1]!.startsWith("The next step"));
+    }
+
+    {
+      const idFact = "fact_r5_id";
+      const locFact = "fact_r5_loc";
+      const jobFact = "fact_r5_job";
+      const relFact = "fact_r5_rel";
+      const behFact = "fact_r5_beh";
+      const behAlex = "fact_r5_beh_alex";
+      const behJordan = "fact_r5_beh_jordan";
+      const behUnver = "fact_r5_beh_u";
+
+      // A. Unrelated confirmed location fact cannot support pay behavior.
+      const unrelatedLoc = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, locFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [locFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [locFact, "Alex lives in Boston."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [locFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [locFact, ["status_quo"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [locFact],
+              reality_fact_stances: [
+                { fact_id: locFact, stance: "as_confirmed" },
+              ],
+              text: "Alex will pay half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(unrelatedLoc.ok, false);
+      if (unrelatedLoc.ok) throw new Error("unreachable");
+      assert.ok(
+        unrelatedLoc.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+        unrelatedLoc.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+
+      // B. Unrelated job fact cannot support invest behavior.
+      const unrelatedJob = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, jobFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [jobFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [jobFact, "Alex works as a project manager."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [jobFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [jobFact, ["job_offer"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [jobFact],
+              reality_fact_stances: [
+                { fact_id: jobFact, stance: "as_confirmed" },
+              ],
+              text: "Alex will invest $50,000.",
+            },
+          ],
+        }),
+      });
+      assert.equal(unrelatedJob.ok, false);
+      if (unrelatedJob.ok) throw new Error("unreachable");
+      assert.ok(
+        unrelatedJob.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+      );
+
+      // C. Relationship identity fact cannot support relocate agreement.
+      const unrelatedRel = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, relFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [relFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [relFact, "Alex is the user's partner."],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [relFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [relFact, ["stakeholder"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [relFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [relFact],
+              reality_fact_stances: [
+                { fact_id: relFact, stance: "as_confirmed" },
+              ],
+              text: "Alex has agreed to relocate.",
+            },
+          ],
+        }),
+      });
+      assert.equal(unrelatedRel.ok, false);
+      if (unrelatedRel.ok) throw new Error("unreachable");
+      assert.ok(
+        unrelatedRel.issues.some(
+          (i) => i.code === "unconfirmed_participant_behavior",
+        ),
+      );
+
+      // D. True independent behavior fact with allowlisted role — allow.
+      const trueBeh = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([...ctx.knownFactIds, idFact, behFact]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [behFact, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [
+            behFact,
+            "Alex has agreed in writing to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [behFact, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [behFact, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex"],
+              reality_fact_ids: [behFact],
+              reality_fact_stances: [
+                { fact_id: behFact, stance: "as_confirmed" },
+              ],
+              text: "Alex has agreed to cover half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        trueBeh.ok,
+        true,
+        trueBeh.ok ? "" : trueBeh.issues.map((i) => i.detail).join(" | "),
+      );
+
+      // E. Multi-participant isolation — Alex fact cannot support Jordan.
+      const crossPart = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([
+          ...ctx.knownFactIds,
+          idFact,
+          relFact,
+          behAlex,
+          behJordan,
+        ]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [relFact, "confirmed"],
+          [behAlex, "confirmed"],
+          [behJordan, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [relFact, "Jordan is named as a partner in the written split."],
+          [
+            behAlex,
+            "Alex has agreed in writing to cover half of the relocation cost.",
+          ],
+          [
+            behJordan,
+            "Jordan has agreed in writing to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [relFact, "independently_verified"],
+          [behAlex, "independently_verified"],
+          [behJordan, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [relFact, ["stakeholder"]],
+          [behAlex, ["third_party_commitment"]],
+          [behJordan, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+            {
+              participant_id: "p_jordan",
+              display_label: "Jordan",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [relFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_alex", "p_jordan"],
+              reality_fact_ids: [behAlex],
+              reality_fact_stances: [
+                { fact_id: behAlex, stance: "as_confirmed" },
+              ],
+              text: "Jordan has agreed to cover half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(crossPart.ok, false);
+      if (crossPart.ok) throw new Error("unreachable");
+      assert.ok(
+        crossPart.issues.some(
+          (i) =>
+            i.code === "unconfirmed_participant_behavior" &&
+            i.detail.includes("p_jordan"),
+        ),
+        crossPart.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+      );
+
+      const crossPartOk = validateFace07Output({
+        ...baseV,
+        knownFactIds: new Set([
+          ...ctx.knownFactIds,
+          idFact,
+          relFact,
+          behJordan,
+        ]),
+        factStatusById: new Map([
+          ...ctx.factStatusById,
+          [idFact, "confirmed"],
+          [relFact, "confirmed"],
+          [behJordan, "confirmed"],
+        ]),
+        factContentById: new Map([
+          ...ctx.factContentById,
+          [idFact, "Alex is my business partner."],
+          [relFact, "Jordan is named as a partner in the written split."],
+          [
+            behJordan,
+            "Jordan has agreed in writing to cover half of the relocation cost.",
+          ],
+        ]),
+        factVerificationLevelById: new Map([
+          ...ctx.factVerificationLevelById,
+          [idFact, "independently_verified"],
+          [relFact, "independently_verified"],
+          [behJordan, "independently_verified"],
+        ]),
+        factRolesById: new Map([
+          ...ctx.factRolesById,
+          [idFact, ["stakeholder"]],
+          [relFact, ["stakeholder"]],
+          [behJordan, ["third_party_commitment"]],
+        ]),
+        raw: validFace07({
+          participants: [
+            (validFace07().participants as object[])[0],
+            {
+              participant_id: "p_alex",
+              display_label: "Alex",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [idFact],
+              notes: "",
+            },
+            {
+              participant_id: "p_jordan",
+              display_label: "Jordan",
+              role: "partner",
+              source: "dc_fact",
+              verification_status: "confirmed",
+              related_fact_ids: [relFact],
+              notes: "",
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              participant_ids: ["p_jordan"],
+              reality_fact_ids: [behJordan],
+              reality_fact_stances: [
+                { fact_id: behJordan, stance: "as_confirmed" },
+              ],
+              text: "Jordan has agreed to cover half of the relocation cost.",
+            },
+          ],
+        }),
+      });
+      assert.equal(
+        crossPartOk.ok,
+        true,
+        crossPartOk.ok
+          ? ""
+          : crossPartOk.issues.map((i) => i.detail).join(" | "),
+      );
+
+      // F. Non-confirmed behavior text cannot be confirmed behavior evidence.
+      for (const status of [
+        "unverified",
+        "unknown",
+        "declined",
+        "not_applicable",
+      ] as const) {
+        const nonConf = validateFace07Output({
+          ...baseV,
+          knownFactIds: new Set([...ctx.knownFactIds, idFact, behUnver]),
+          factStatusById: new Map([
+            ...ctx.factStatusById,
+            [idFact, "confirmed"],
+            [behUnver, status],
+          ]),
+          factContentById: new Map([
+            ...ctx.factContentById,
+            [idFact, "Alex is my business partner."],
+            [
+              behUnver,
+              "Alex has agreed in writing to cover half of the relocation cost.",
+            ],
+          ]),
+          factVerificationLevelById: new Map([
+            ...ctx.factVerificationLevelById,
+            [idFact, "independently_verified"],
+            [behUnver, "none"],
+          ]),
+          factRolesById: new Map([
+            ...ctx.factRolesById,
+            [idFact, ["stakeholder"]],
+            [behUnver, ["third_party_commitment"]],
+          ]),
+          raw: validFace07({
+            participants: [
+              (validFace07().participants as object[])[0],
+              {
+                participant_id: "p_alex",
+                display_label: "Alex",
+                role: "partner",
+                source: "dc_fact",
+                verification_status: "confirmed",
+                related_fact_ids: [idFact],
+                notes: "",
+              },
+            ],
+            relationship_units: [
+              {
+                ...(validFace07().relationship_units as object[])[0],
+                participant_ids: ["p_alex"],
+                reality_fact_ids: [behUnver],
+                reality_fact_stances: [
+                  { fact_id: behUnver, stance: "as_uncertain" },
+                ],
+                text: "Alex has agreed to cover half of the relocation cost.",
+              },
+            ],
+          }),
+        });
+        assert.equal(nonConf.ok, false, `non-confirmed behavior ${status}`);
+        if (nonConf.ok) throw new Error("unreachable");
+        assert.ok(
+          nonConf.issues.some(
+            (i) => i.code === "unconfirmed_participant_behavior",
+          ),
+          `missing unconfirmed_participant_behavior for ${status}`,
+        );
+        assert.ok(
+          nonConf.issues.some(
+            (i) =>
+              i.code === "fact_status_upgrade" && i.detail.includes(behUnver),
+          ),
+          `missing fact_status_upgrade for ${status}`,
+        );
+      }
     }
 
     console.log("F PASS — participants, evidence, page boundary");

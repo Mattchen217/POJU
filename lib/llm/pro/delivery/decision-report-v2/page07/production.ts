@@ -54,6 +54,8 @@ export type Face07ProductionContext = {
   factStatusById: Map<string, string>;
   factContentById: Map<string, string>;
   factVerificationLevelById: Map<string, string>;
+  /** DC fact_roles by fact_id — Page07 behavior-evidence allowlist source. */
+  factRolesById: Map<string, string[]>;
   knownDirIds: Set<string>;
   upstream: Face07UpstreamRefs;
   knownPersonalInterpretationUnitRefs: Set<string>;
@@ -479,10 +481,12 @@ export function buildFace07ProductionContext(input: {
   const factStatusById = new Map<string, string>();
   const factContentById = new Map<string, string>();
   const factVerificationLevelById = new Map<string, string>();
+  const factRolesById = new Map<string, string[]>();
   for (const f of facts) {
     factStatusById.set(f.fact_id, f.status);
     factContentById.set(f.fact_id, f.statement ?? "");
     factVerificationLevelById.set(f.fact_id, f.verification_level ?? "none");
+    factRolesById.set(f.fact_id, [...(f.fact_roles ?? [])]);
   }
 
   return {
@@ -497,6 +501,7 @@ export function buildFace07ProductionContext(input: {
       factStatusById,
       factContentById,
       factVerificationLevelById,
+      factRolesById,
       knownDirIds: new Set((input.dc.dirs ?? []).map((d) => d.dir_id)),
       upstream: {
         page05_all_path_ids: page05Paths.all_path_ids,
@@ -531,6 +536,7 @@ export function validateFace07ProductionOutput(input: {
     factStatusById: input.ctx.factStatusById,
     factContentById: input.ctx.factContentById,
     factVerificationLevelById: input.ctx.factVerificationLevelById,
+    factRolesById: input.ctx.factRolesById,
     upstream: input.ctx.upstream,
     knownDirIds: input.ctx.knownDirIds,
     knownPersonalInterpretationUnitRefs:

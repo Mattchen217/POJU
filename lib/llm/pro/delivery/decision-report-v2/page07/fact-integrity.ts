@@ -56,7 +56,7 @@ export const PAGE07_ROLE_SUPPORT_PATTERNS: Readonly<
  * or outcome claims — ZH + EN. Ordinary present tense is included.
  */
 const ASSERTIVE_CLAIM =
-  /(?:(?:将|会|已经)?(?:承担|负责|支付|覆盖|出资)|已经决定|已经确认|确认为|属于|拥有|已经完成|正在执行|(?:^|[\s，,：:])[A-Za-z\u4e00-\u9fff][A-Za-z\u4e00-\u9fff\s·]{0,24}是)|(?:\b(?:pays|covers|bears|funds|handles|owns|belongs)\b|\b(?:is|are)\s+(?:paying|covering|bearing|funding|handling|responsible|confirmed|the\s+(?:partner|boss|spouse|investor|advisor|owner))\b|\bwill\s+(?:cover|pay|handle|bear|take|fund|own)\b|\bhas\s+(?:agreed|decided|confirmed|paid|covered|funded|completed)\b|\bshall\s+(?:cover|pay|bear|fund)\b|\bdefinitely\s+(?:true|covers|pays|confirmed)\b|\balready\s+confirmed\b|\bconfirmed\s+fact\b)/i;
+  /(?:(?:将|会|已经)?(?:承担|负责|支付|覆盖|出资|投资)|已经决定|已经确认|确认为|属于|拥有|已经完成|正在执行|(?:^|[\s，,：:])[A-Za-z\u4e00-\u9fff][A-Za-z\u4e00-\u9fff\s·]{0,24}是)|(?:\b(?:pays|covers|bears|funds|handles|owns|belongs|invests)\b|\b(?:is|are)\s+(?:paying|covering|bearing|funding|handling|investing|responsible|confirmed|the\s+(?:partner|boss|spouse|investor|advisor|owner))\b|\bwill\s+(?:cover|pay|handle|bear|take|fund|own|invest)\b|\bhas\s+(?:agreed|decided|confirmed|paid|covered|funded|completed|invested)\b|\bshall\s+(?:cover|pay|bear|fund|invest)\b|\bdefinitely\s+(?:true|covers|pays|confirmed)\b|\balready\s+confirmed\b|\bconfirmed\s+fact\b)/i;
 
 const CONDITIONAL_FRAME =
   /如果|若该|若对方|假如|在[^。.!！？]{0,24}前提|取决于|conditional\s+on|if\s+the\b|if\s+.*\b(?:holds|confirms|is\s+verified|estimate|granted|approved|receives?|approval)|unless\b|should\s+.*\bconfirm|provided\s+that\b|only\s+if\b/i;
@@ -162,9 +162,95 @@ export function roleSupportedByFactBlob(
   return pattern.test(factBlob);
 }
 
+/** Title / Latin abbreviations that end with a period (case-insensitive). */
+const PERIOD_ABBREVIATIONS = new Set([
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "prof",
+  "sr",
+  "jr",
+  "vs",
+  "etc",
+  "approx",
+  "dept",
+  "est",
+  "vol",
+  "fig",
+  "no",
+]);
+
+/**
+ * True when the period at `index` is inside a protected token (abbrev, initials,
+ * a.m./p.m., URL, email, domain) and must not end a sentence.
+ */
+export function isProtectedPeriod(text: string, index: number): boolean {
+  if (text[index] !== ".") return false;
+
+  // Decimal: digit.digit
+  if (
+    index > 0 &&
+    /\d/.test(text[index - 1]!) &&
+    index + 1 < text.length &&
+    /\d/.test(text[index + 1]!)
+  ) {
+    return true;
+  }
+
+  let tokenStart = index;
+  while (tokenStart > 0 && !/\s/.test(text[tokenStart - 1]!)) tokenStart -= 1;
+  let tokenEnd = index + 1;
+  while (tokenEnd < text.length && !/\s/.test(text[tokenEnd]!)) tokenEnd += 1;
+  const token = text.slice(tokenStart, tokenEnd);
+  const leftIncludingPeriod = text.slice(tokenStart, index + 1);
+
+  // URL / email / domain: period mid-token is never a sentence boundary.
+  if (
+    /@/.test(token) ||
+    /^https?:\/\//i.test(token) ||
+    /^www\./i.test(token) ||
+    /\.[a-z0-9-]+(\/|:|\?|#|$)/i.test(token)
+  ) {
+    if (index < tokenEnd - 1) return true;
+    // Trailing period glued to URL/email ("https://example.com.") — treat as
+    // sentence end only when followed by whitespace/EOF; mid-token already protected.
+  }
+
+  const leftLower = leftIncludingPeriod.toLowerCase();
+  // e.g. / i.e.
+  if (/(?:^|[^a-z])(?:e\.g|i\.e)\.$/i.test(leftIncludingPeriod)) return true;
+  // a.m. / p.m.
+  if (/(?:^|[^a-z])(?:[ap]\.m)\.$/i.test(leftIncludingPeriod)) return true;
+  // Title abbreviations: Dr. Mr. Mrs. ...
+  const abbrevMatch = leftLower.match(/([a-z]+)\.$/);
+  if (abbrevMatch && PERIOD_ABBREVIATIONS.has(abbrevMatch[1]!)) return true;
+
+  // Dotted acronyms: U.S. / U.K. — never treat internal or trailing acronym
+  // periods as sentence boundaries (real boundary comes later).
+  if (/^(?:[A-Z]\.){2,}$/.test(token) || /^(?:[A-Z]\.){2,}$/.test(leftIncludingPeriod)) {
+    return true;
+  }
+  // Initials: "U." awaiting more letters ("U.S"), or "A. Smith".
+  if (/[A-Z]\.$/.test(text.slice(Math.max(0, index - 1), index + 1))) {
+    const next = index + 1 < text.length ? text[index + 1]! : "";
+    if (/[A-Z]/.test(next)) return true;
+    if (/\s/.test(next) && /^[A-Z]\.$/.test(leftIncludingPeriod)) return true;
+  }
+
+  return false;
+}
+
+function nextNonWhitespace(text: string, from: number): string {
+  let j = from;
+  while (j < text.length && /\s/.test(text[j]!)) j += 1;
+  return j < text.length ? text[j]! : "";
+}
+
 /**
  * Split on sentence terminators without requiring whitespace after Chinese
- * punctuation. Avoids splitting decimals (3.14). Preserves order.
+ * punctuation. Protects decimals, abbreviations, initials, URLs, and emails.
+ * Preserves order; never emits empty sentences.
  */
 export function splitIntoSentences(text: string): string[] {
   const trimmed = text.trim();
@@ -182,16 +268,7 @@ export function splitIntoSentences(text: string): string[] {
     }
     if (ch !== "." && ch !== "!" && ch !== "?") continue;
 
-    // Decimal: digit.digit — not a sentence boundary.
-    if (
-      ch === "." &&
-      i > 0 &&
-      /\d/.test(trimmed[i - 1]!) &&
-      i + 1 < trimmed.length &&
-      /\d/.test(trimmed[i + 1]!)
-    ) {
-      continue;
-    }
+    if (ch === "." && isProtectedPeriod(trimmed, i)) continue;
 
     const next = i + 1 < trimmed.length ? trimmed[i + 1]! : "";
     let split = false;
@@ -201,13 +278,22 @@ export function splitIntoSentences(text: string): string[] {
         /\s/.test(next) ||
         /[A-Za-z\u4e00-\u9fff]/.test(next);
     } else {
-      // Period: end, whitespace, CJK, or capital letter starting next sentence
-      // (with or without space). Lowercase continuation (e.g. abbreviations) kept.
-      split =
-        next === "" ||
-        /\s/.test(next) ||
-        /[\u4e00-\u9fff]/.test(next) ||
-        /[A-Z]/.test(next);
+      // Period is a candidate only when unprotected. Do NOT treat
+      // "period + uppercase" alone as sufficient — peek past whitespace:
+      // lowercase ⇒ abbreviation/acronym continuation; uppercase/CJK ⇒ boundary.
+      const peek = nextNonWhitespace(trimmed, i + 1);
+      if (peek === "") {
+        split = true;
+      } else if (/[\u4e00-\u9fff]/.test(peek)) {
+        split = true;
+      } else if (/[A-Z0-9]/.test(peek)) {
+        split = true;
+      } else if (/[a-z]/.test(peek)) {
+        split = false;
+      } else if (!/\s/.test(next) && /[A-Za-z\u4e00-\u9fff]/.test(next)) {
+        // "end.Alex" / "end.中文" without space
+        split = true;
+      }
     }
     if (!split) continue;
     const piece = trimmed.slice(start, i + 1).trim();
@@ -217,6 +303,133 @@ export function splitIntoSentences(text: string): string[] {
   const tail = trimmed.slice(start).trim();
   if (tail) out.push(tail);
   return out;
+}
+
+/**
+ * Program-side allowlist: DC fact_roles that may qualify as Page07 third-party
+ * behavior evidence. Identity / location / job / relationship roles are excluded.
+ * Namespaced tags `…/role/<code>` are accepted when <code> is on the allowlist.
+ */
+export const PAGE07_BEHAVIOR_EVIDENCE_FACT_ROLES: ReadonlySet<string> = new Set([
+  "third_party_commitment",
+  "third_party_action",
+  "resource_commitment",
+  "written_agreement",
+  "party_obligation",
+]);
+
+const BEHAVIOR_TOKEN_STOP = new Set([
+  "the",
+  "a",
+  "an",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "to",
+  "of",
+  "and",
+  "or",
+  "in",
+  "on",
+  "for",
+  "with",
+  "that",
+  "this",
+  "it",
+  "as",
+  "at",
+  "by",
+  "from",
+  "we",
+  "our",
+  "user",
+  "users",
+  "my",
+  "his",
+  "her",
+  "their",
+  "has",
+  "have",
+  "had",
+  "will",
+  "can",
+  "may",
+  "might",
+  "writing",
+  "written",
+  "的",
+  "了",
+  "在",
+  "是",
+  "与",
+  "和",
+  "或",
+]);
+
+export function factHasBehaviorEvidenceRole(
+  roles: readonly string[] | undefined,
+): boolean {
+  for (const raw of roles ?? []) {
+    const role = raw.trim();
+    if (!role) continue;
+    if (PAGE07_BEHAVIOR_EVIDENCE_FACT_ROLES.has(role)) return true;
+    const m = role.match(/\/role\/([^/]+)$/);
+    if (m && PAGE07_BEHAVIOR_EVIDENCE_FACT_ROLES.has(m[1]!)) return true;
+  }
+  return false;
+}
+
+function behaviorContentTokens(text: string, displayLabel: string): Set<string> {
+  const label = displayLabel.trim().toLowerCase();
+  const raw = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return new Set(
+    raw.filter(
+      (t) =>
+        t.length >= 2 &&
+        !BEHAVIOR_TOKEN_STOP.has(t) &&
+        t !== label &&
+        !label.split(/\s+/).includes(t),
+    ),
+  );
+}
+
+/**
+ * Confirmed DC fact may support a participant's assertive behavior only when:
+ * - fact_roles include a Page07 behavior-evidence allowlist role;
+ * - statement itself is an assertive behavior claim naming the participant;
+ * - unit assertive prose about that participant shares ≥2 non-name content tokens
+ *   with the fact statement (same behavior, not merely the same person).
+ */
+export function confirmedFactSupportsParticipantBehavior(input: {
+  factStatement: string;
+  factRoles: readonly string[] | undefined;
+  displayLabel: string;
+  unitText: string;
+}): boolean {
+  if (!factHasBehaviorEvidenceRole(input.factRoles)) return false;
+  const statement = input.factStatement.trim();
+  if (!statement || !textHasAssertiveClaim(statement)) return false;
+  const label = input.displayLabel.trim().toLowerCase();
+  if (!label || !statement.toLowerCase().includes(label)) return false;
+
+  const assertiveAbout = splitIntoSentences(input.unitText).filter(
+    (s) => textHasAssertiveClaim(s) && s.toLowerCase().includes(label),
+  );
+  if (!assertiveAbout.length) return false;
+
+  const factToks = behaviorContentTokens(statement, input.displayLabel);
+  if (factToks.size < 1) return false;
+  for (const sent of assertiveAbout) {
+    const sentToks = behaviorContentTokens(sent, input.displayLabel);
+    let overlap = 0;
+    for (const t of sentToks) {
+      if (factToks.has(t)) overlap += 1;
+    }
+    if (overlap >= 2) return true;
+  }
+  return false;
 }
 
 export function textHasConditionalFrame(text: string): boolean {

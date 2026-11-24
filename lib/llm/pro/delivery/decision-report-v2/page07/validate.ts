@@ -12,6 +12,7 @@ import {
   type Face07UpstreamRefs,
 } from "./path-integrity";
 import {
+  confirmedFactSupportsParticipantBehavior,
   isConfirmedDcStatus,
   maxParticipantVerificationForFact,
   nonConfirmedCitationTextOk,
@@ -51,6 +52,8 @@ export function validateFace07Output(input: {
   factContentById?: ReadonlyMap<string, string>;
   /** DC verification_level by fact_id — used for participant verification caps. */
   factVerificationLevelById?: ReadonlyMap<string, string>;
+  /** DC fact_roles by fact_id — used for behavior-evidence allowlist. */
+  factRolesById?: ReadonlyMap<string, readonly string[]>;
   upstream: Face07UpstreamRefs;
   knownDirIds?: ReadonlySet<string>;
   knownPersonalInterpretationUnitRefs?: ReadonlySet<string>;
@@ -462,10 +465,12 @@ export function validateFace07Output(input: {
   /**
    * Units that treat a participant's behavior as settled.
    * Identity (related_fact_ids / verification_status) never proves behavior.
-   * Assertive behavior requires an independent confirmed reality fact on this
-   * unit that names this participant and is not that participant's identity
-   * binding. Another participant's confirmed fact cannot sponsor this one.
-   * Fail-closed when attribution is unclear — no model-reported supporting_fact_id.
+   * Assertive behavior requires an independent confirmed DC fact on this unit
+   * with a Page07 behavior-evidence fact_role allowlist entry, assertive
+   * statement content naming this participant, and ≥2 shared non-name behavior
+   * tokens with the unit prose. Unrelated confirmed facts (location, job,
+   * relationship) cannot sponsor behavior. Fail-closed — no model-reported
+   * supporting_fact_id.
    */
   const scanParticipantProse = (
     participantIds: readonly string[],
@@ -483,10 +488,6 @@ export function validateFace07Output(input: {
     ): boolean => {
       if (identityFactIds.has(fid)) return false;
       if (!isConfirmedDcStatus(resolveFactStatus(fid))) return false;
-      const statement = (input.factContentById?.get(fid) ?? "").trim();
-      if (!statement) return false;
-      const label = displayLabel.trim().toLowerCase();
-      if (!label || !statement.toLowerCase().includes(label)) return false;
       // Must not be another listed participant's exclusive identity binding.
       for (const otherId of participantIds) {
         if (otherId === participantId) continue;
@@ -495,7 +496,14 @@ export function validateFace07Output(input: {
         if (!other) continue;
         if ((other.related_fact_ids ?? []).includes(fid)) return false;
       }
-      return true;
+      const statement = (input.factContentById?.get(fid) ?? "").trim();
+      const roles = input.factRolesById?.get(fid) ?? [];
+      return confirmedFactSupportsParticipantBehavior({
+        factStatement: statement,
+        factRoles: roles,
+        displayLabel,
+        unitText: text,
+      });
     };
 
     for (const id of participantIds) {
