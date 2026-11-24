@@ -79,6 +79,7 @@ export function projectLegacyFace08ForDisplay(data: unknown): Face08V2 | null {
       related_path_ids: [],
       related_action_ids: [],
       reality_fact_ids: [],
+      reality_fact_stances: [],
       claim_ids: ["legacy_claim_08"],
       evidence_ids: ["legacy_ev_08"],
     })),
@@ -94,6 +95,7 @@ export function projectLegacyFace08ForDisplay(data: unknown): Face08V2 | null {
         baseline_status: "no_basis" as const,
         threshold_status: "not_defined" as const,
         related_fact_ids: [],
+        reality_fact_stances: [],
       })),
       ...metrics.slice(0, 2).map((text, index) => ({
         signal_id: `legacy_metric_08_${index}`,
@@ -106,6 +108,7 @@ export function projectLegacyFace08ForDisplay(data: unknown): Face08V2 | null {
         baseline_status: "no_basis" as const,
         threshold_status: "not_defined" as const,
         related_fact_ids: [],
+        reality_fact_stances: [],
       })),
     ],
     triggers: [
@@ -114,11 +117,13 @@ export function projectLegacyFace08ForDisplay(data: unknown): Face08V2 | null {
         related_risk_ids: [riskId],
         related_signal_ids: [signalId],
         trigger_condition: when.slice(0, 480),
-        trigger_status: "pending_confirmation",
+        trigger_status: "pending_confirmation" as const,
         decision_response: mapDecision(data.review_decision),
         required_evidence_ids: ["legacy_ev_08"],
         related_path_ids: [],
         related_action_ids: [],
+        related_fact_ids: [],
+        reality_fact_stances: [],
       },
     ],
     reassessment_conditions: [
@@ -127,6 +132,7 @@ export function projectLegacyFace08ForDisplay(data: unknown): Face08V2 | null {
         condition: when.slice(0, 480),
         change_type: "legacy_review",
         related_fact_ids: [],
+        reality_fact_stances: [],
         related_claim_ids: ["legacy_claim_08"],
         affected_path_ids: [],
         expected_review_scope:

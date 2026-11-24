@@ -61,7 +61,7 @@ export function buildFace06PromptPair(input: {
     "Do NOT invent path_ids. Do NOT restate Page05 comparison or Page01 conclusion as the body.",
     "page05.path_comparison is Page05's already-decided strategy boundary (cost/risk/resources/reversibility/prerequisites). Use it only to keep execution inside those bounds — do NOT re-rank paths, invent a second comparison table, scores, or probabilities.",
     "Do NOT restate full Page02 foundation or regenerate Page04 bottleneck essay.",
-    "Do NOT emit Page07 field essay or a Page08 monitoring essay. Page08 is a future consumer of the monitoring contract fields only.",
+    "Do NOT emit Page07 field essay or a Page08 monitoring essay. Page08 actively consumes monitoring_contract fields; keep them structured here.",
     "Do NOT invent user reality facts or upgrade unverified/declined/unknown/conflict to confirmed.",
     "Do NOT mint claim/evidence ids outside the program registry in ## Production payload.",
     "Do NOT invent scores, success percentages, or unsourced numeric rankings.",

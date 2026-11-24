@@ -141,7 +141,7 @@ export const PAGE06_SECTION_CONTENT_SPECS: readonly Page06SectionContentSpec[] =
       user_should_understand:
         "What is confirmed, what is still open, and which signals mean continue, adjust, stop, or rerun.",
       content_boundary:
-        "monitoring_contract action_ids and experiment_ids must point at actions and experiments on this page. Page08 is a future consumer, not a second essay.",
+        "monitoring_contract action_ids and experiment_ids must point at actions and experiments on this page. Page08 consumes this contract; do not write a second monitoring essay here.",
       language_style: "Boundary notes plus observable triggers.",
       length_guidance: "One monitoring contract plus uncertainty notes.",
       must_include: [

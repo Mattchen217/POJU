@@ -604,7 +604,8 @@ async function buildLabReadyForFace06Body(opts?: {
 async function main() {
   console.log("=== Page06 production closure (stubbed LLM) ===");
   assertPage06InputAssemblyCoverage();
-  assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.status, "future");
+  assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.status, "active");
+  assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.implemented, true);
 
   {
     const built = buildFace06ProductionContext({

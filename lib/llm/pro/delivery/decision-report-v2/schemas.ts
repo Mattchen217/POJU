@@ -1637,9 +1637,84 @@ const Page08DecisionResponseSchema = z.enum([
 ]);
 
 /**
+ * Structured fact stance for Page08 — every cited reality fact must declare
+ * how it is used. Validator checks stance against DC status + verification_level.
+ * Do not rely on prose keywords alone.
+ */
+const Page08FactStanceSchema = z.object({
+  fact_id: NonEmpty.max(120),
+  stance: z.enum([
+    "as_confirmed",
+    "as_user_asserted",
+    "as_estimated",
+    "as_unverified",
+    "as_conditional",
+    "as_unknown",
+    "as_independently_verified",
+  ]),
+});
+const Page08FactStances = z
+  .array(Page08FactStanceSchema)
+  .max(12)
+  .default([])
+  .superRefine((stances, ctx) => {
+    const seen = new Set<string>();
+    for (let i = 0; i < stances.length; i++) {
+      const fid = stances[i]!.fact_id;
+      if (seen.has(fid)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate_reality_fact_stance:${fid}`,
+          path: [i, "fact_id"],
+        });
+      }
+      seen.add(fid);
+    }
+  });
+
+/** Enforce fact id list ↔ reality_fact_stances strict 1:1. */
+function refinePage08FactStancePairing(
+  ids: readonly string[],
+  stances: readonly { fact_id: string; stance: string }[],
+  idPath: (string | number)[],
+  stancePath: (string | number)[],
+  ctx: z.RefinementCtx,
+) {
+  const idSet = new Set(ids);
+  if (idSet.size !== ids.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "duplicate_reality_fact_id",
+      path: idPath,
+    });
+  }
+  const stanceIds = new Set(stances.map((s) => s.fact_id));
+  for (const fid of idSet) {
+    if (!stanceIds.has(fid)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `missing_reality_fact_stance:${fid}`,
+        path: stancePath,
+      });
+    }
+  }
+  for (const s of stances) {
+    if (!idSet.has(s.fact_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `orphan_reality_fact_stance:${s.fact_id}`,
+        path: stancePath,
+      });
+    }
+  }
+}
+
+/**
  * Face 08 V2 — risk monitoring and decision review.
  * Observes signals already grounded in Page01–07 and DC facts.
  * Does not rewrite those pages or invent facts, scores, or dates.
+ * Empty risks / signals / triggers are legal when monitoring basis is insufficient;
+ * use evidence_boundary + missing_inputs instead of inventing filler items.
  */
 export const Face08V2Schema = z.object({
   page: z.literal("08"),
@@ -1650,65 +1725,110 @@ export const Face08V2Schema = z.object({
   page_subtitle: z.string().trim().max(80).optional().default(""),
   risks: z
     .array(
-      z.object({
-        risk_id: NonEmpty.max(80),
-        risk_title: NonEmpty.max(120),
-        risk_description: NonEmpty.max(960),
-        risk_category: Page08RiskCategorySchema,
-        current_status: Page08RiskStatusSchema,
-        related_path_ids: Page08PathIds,
-        related_action_ids: Page08ActionIds,
-        reality_fact_ids: Page08FactIds,
-        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        evidence_ids: Page08RefIds,
-      }),
+      z
+        .object({
+          risk_id: NonEmpty.max(80),
+          risk_title: NonEmpty.max(120),
+          risk_description: NonEmpty.max(960),
+          risk_category: Page08RiskCategorySchema,
+          current_status: Page08RiskStatusSchema,
+          related_path_ids: Page08PathIds,
+          related_action_ids: Page08ActionIds,
+          reality_fact_ids: Page08FactIds,
+          reality_fact_stances: Page08FactStances,
+          claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+          evidence_ids: Page08RefIds,
+        })
+        .superRefine((unit, ctx) => {
+          refinePage08FactStancePairing(
+            unit.reality_fact_ids ?? [],
+            unit.reality_fact_stances ?? [],
+            ["reality_fact_ids"],
+            ["reality_fact_stances"],
+            ctx,
+          );
+        }),
     )
-    .min(1)
-    .max(12),
+    .max(12)
+    .default([]),
   observation_signals: z
     .array(
-      z.object({
-        signal_id: NonEmpty.max(80),
-        related_risk_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        signal_name: NonEmpty.max(120),
-        what_to_observe: NonEmpty.max(480),
-        observation_source: NonEmpty.max(240),
-        observation_method: NonEmpty.max(240),
-        observation_window: NonEmpty.max(240),
-        baseline_status: Page08BaselineStatusSchema,
-        threshold_status: Page08ThresholdStatusSchema,
-        related_fact_ids: Page08FactIds,
-      }),
+      z
+        .object({
+          signal_id: NonEmpty.max(80),
+          related_risk_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+          signal_name: NonEmpty.max(120),
+          what_to_observe: NonEmpty.max(480),
+          observation_source: NonEmpty.max(240),
+          observation_method: NonEmpty.max(240),
+          observation_window: NonEmpty.max(240),
+          baseline_status: Page08BaselineStatusSchema,
+          threshold_status: Page08ThresholdStatusSchema,
+          related_fact_ids: Page08FactIds,
+          reality_fact_stances: Page08FactStances,
+        })
+        .superRefine((unit, ctx) => {
+          refinePage08FactStancePairing(
+            unit.related_fact_ids ?? [],
+            unit.reality_fact_stances ?? [],
+            ["related_fact_ids"],
+            ["reality_fact_stances"],
+            ctx,
+          );
+        }),
     )
-    .min(1)
-    .max(12),
+    .max(12)
+    .default([]),
   triggers: z
     .array(
-      z.object({
-        trigger_id: NonEmpty.max(80),
-        related_risk_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        related_signal_ids: z.array(NonEmpty.max(80)).min(1).max(8),
-        trigger_condition: NonEmpty.max(480),
-        trigger_status: Page08TriggerStatusSchema,
-        decision_response: Page08DecisionResponseSchema,
-        required_evidence_ids: Page08RefIds,
-        related_path_ids: Page08PathIds,
-        related_action_ids: Page08ActionIds,
-      }),
+      z
+        .object({
+          trigger_id: NonEmpty.max(80),
+          related_risk_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+          related_signal_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+          trigger_condition: NonEmpty.max(480),
+          trigger_status: Page08TriggerStatusSchema,
+          decision_response: Page08DecisionResponseSchema,
+          required_evidence_ids: Page08RefIds,
+          related_path_ids: Page08PathIds,
+          related_action_ids: Page08ActionIds,
+          related_fact_ids: Page08FactIds,
+          reality_fact_stances: Page08FactStances,
+        })
+        .superRefine((unit, ctx) => {
+          refinePage08FactStancePairing(
+            unit.related_fact_ids ?? [],
+            unit.reality_fact_stances ?? [],
+            ["related_fact_ids"],
+            ["reality_fact_stances"],
+            ctx,
+          );
+        }),
     )
-    .min(1)
-    .max(12),
+    .max(12)
+    .default([]),
   reassessment_conditions: z
     .array(
-      z.object({
-        reassessment_id: NonEmpty.max(80),
-        condition: NonEmpty.max(480),
-        change_type: NonEmpty.max(80),
-        related_fact_ids: Page08FactIds,
-        related_claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
-        affected_path_ids: Page08PathIds,
-        expected_review_scope: NonEmpty.max(480),
-      }),
+      z
+        .object({
+          reassessment_id: NonEmpty.max(80),
+          condition: NonEmpty.max(480),
+          change_type: NonEmpty.max(80),
+          related_fact_ids: Page08FactIds,
+          reality_fact_stances: Page08FactStances,
+          related_claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+          affected_path_ids: Page08PathIds,
+          expected_review_scope: NonEmpty.max(480),
+        })
+        .superRefine((unit, ctx) => {
+          refinePage08FactStancePairing(
+            unit.related_fact_ids ?? [],
+            unit.reality_fact_stances ?? [],
+            ["related_fact_ids"],
+            ["reality_fact_stances"],
+            ctx,
+          );
+        }),
     )
     .max(8)
     .default([]),

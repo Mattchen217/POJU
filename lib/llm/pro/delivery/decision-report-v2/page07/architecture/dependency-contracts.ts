@@ -1,6 +1,7 @@
 /**
  * Page07 upstream/downstream contracts — record only (Batch 1).
- * Page07 is conditionally enabled. No Page08 implementation here.
+ * Page07 is conditionally enabled. Page08 is an active consumer of the
+ * applicability / participant / alignment handoff fields listed below.
  */
 
 export const PAGE07_UPSTREAM_CONTRACT = {
@@ -36,11 +37,15 @@ export const PAGE07_UPSTREAM_CONTRACT = {
   ],
 } as const;
 
+/**
+ * Active Page08 consumer contract.
+ * Page08 Batch 1 reads these fields; it does not rewrite Page07.
+ */
 export const PAGE07_DOWNSTREAM_CONTRACT = {
   page08: {
-    status: "future" as const,
+    status: "active" as const,
     implemented: true as const,
-    note: "Page08 Batch 1 consumes this handoff.",
+    note: "Page08 Batch 1 actively consumes this Page07 handoff.",
     fields: [
       "applicability_status",
       "participant_ids",

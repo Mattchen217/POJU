@@ -51,7 +51,9 @@ console.log("=== Page08 Batch1 architecture (no LLM quality claims) ===");
     assert.ok(PAGE08_UPSTREAM_CONTRACT[key].length > 0, key);
   }
   assert.equal(PAGE08_DOWNSTREAM_CONTRACT.none.status, "terminal");
+  assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.status, "active");
   assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.implemented, true);
+  assert.equal(PAGE07_DOWNSTREAM_CONTRACT.page08.status, "active");
   assert.equal(PAGE07_DOWNSTREAM_CONTRACT.page08.implemented, true);
   assert.equal(PAGE08_MODEL_TASKS.length, 2);
   assert.equal(page08TaskInterface("page08_monitoring_generate")?.on_failure, "single_repair_then_fail");
@@ -352,6 +354,15 @@ function build(extra: { page07?: unknown; page06?: unknown; locale?: string; dc?
   for (const spec of PAGE08_SECTION_CONTENT_SPECS) {
     assert.ok(PAGE08_SECTION_IDS.includes(spec.section_id));
   }
+  assert.ok(
+    PAGE08_SECTION_CONTENT_SPECS.find((s) => s.section_id === "risks")
+      ?.length_guidance.includes("0–8"),
+  );
+  assert.ok(
+    PAGE08_SECTION_CONTENT_SPECS.find((s) => s.section_id === "triggers")
+      ?.must_not_include.join(" ")
+      .includes("Filler triggers"),
+  );
   console.log("H ok — content specs");
 }
 

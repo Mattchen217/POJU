@@ -1,6 +1,7 @@
 /**
  * Page06 upstream/downstream contracts — record only (Batch 1).
- * No DAG / scheduler / Page08 implementation in this batch.
+ * No DAG / scheduler in this batch. Page08 is an active consumer of the
+ * monitoring_contract handoff fields listed below.
  */
 
 export const PAGE06_UPSTREAM_CONTRACT = {
@@ -41,14 +42,14 @@ export const PAGE06_UPSTREAM_CONTRACT = {
 } as const;
 
 /**
- * Future Page08 consumer contract.
- * Page08 is not implemented in this batch — fields are the stable handoff only.
+ * Active Page08 consumer contract.
+ * Page08 Batch 1 reads these stable handoff fields; it does not rewrite Page06.
  */
 export const PAGE06_DOWNSTREAM_CONTRACT = {
   page08: {
-    status: "future" as const,
+    status: "active" as const,
     implemented: true as const,
-    note: "Page08 Batch 1 consumes this handoff.",
+    note: "Page08 Batch 1 actively consumes this monitoring_contract handoff.",
     fields: [
       "path_id",
       "action_ids",

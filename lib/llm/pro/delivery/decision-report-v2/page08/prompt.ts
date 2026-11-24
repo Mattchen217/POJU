@@ -80,10 +80,15 @@ export function buildFace08PromptPair(input: {
     "Do NOT rewrite Page01, Page05, or Page06. Do NOT invent a new path, action, or main recommendation.",
     "Do NOT invent user reality facts, scores, probabilities, or calendar dates.",
     "Do NOT upgrade unverified, declined, or unknown facts to confirmed.",
+    "Do NOT upgrade user_estimate or user_asserted to independently_verified.",
     "confirmed_fact_ids may list only facts whose payload status is confirmed.",
     "unverified_fact_ids may list only facts whose payload status is unverified.",
+    "Every cited reality fact needs a matching reality_fact_stances entry {fact_id, stance}.",
+    "stance must match DC status/verification_level: as_confirmed only for status=confirmed; as_independently_verified only when verification_level=independently_verified; as_estimated only for user_estimate; as_unverified for status=unverified; as_conditional for conditional framing; as_unknown for unknown|declined|not_applicable.",
+    "risks, observation_signals, and triggers MAY be empty arrays when the payload lacks enough basis. Explain insufficiency in evidence_boundary.monitoring_limitations / unresolved_questions. Do NOT invent filler risks, signals, or triggers.",
     "Every observation signal must cite related_risk_ids that you also output.",
     "Every trigger must cite related_risk_ids and related_signal_ids that you also output.",
+    "If a trigger cites non-confirmed facts, set trigger_status=conditional (or pending_confirmation) and use as_conditional / as_unverified / as_estimated stance — never as_confirmed.",
     "related_path_ids and affected_path_ids must be a subset of page05.all_path_ids.",
     "related_action_ids must be a subset of page06.action_ids.",
     "Cite ONLY claim_ids and evidence_ids listed under registry.",
@@ -99,9 +104,10 @@ export function buildFace08PromptPair(input: {
 
   const user = [
     "## Production payload (program-assembled; authoritative; read-only)",
-    "Fact status fields are authoritative. Do not change them.",
+    "Fact status and verification_level fields are authoritative. Do not change them.",
     "Cite ONLY claim_ids and evidence_ids listed under registry.",
     "Do NOT invent facts, paths, actions, scores, or dates to fill missing_inputs.",
+    "Empty risks/signals/triggers are allowed when monitoring basis is insufficient.",
     "",
     "```json",
     JSON.stringify(input.production_payload, null, 2),
@@ -111,7 +117,7 @@ export function buildFace08PromptPair(input: {
     "",
     "## Output",
     "Return Face08V2 JSON with risks, observation_signals, triggers, reassessment_conditions, and evidence_boundary.",
-    "decision_response must be continue, adjust, pause, stop, or reassess.",
+    "Include reality_fact_stances for every cited fact. decision_response must be continue, adjust, pause, stop, or reassess.",
   ].join("\n");
 
   return { system, user };

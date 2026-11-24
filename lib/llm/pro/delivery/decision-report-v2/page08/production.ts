@@ -51,6 +51,7 @@ export type Face08ProductionContext = {
   registry: EvidenceRegistry;
   knownFactIds: Set<string>;
   factStatusById: Map<string, string>;
+  factVerificationLevelById: Map<string, string>;
   upstream: Face08UpstreamRefs;
   dateCorpus: string;
   architecture: Page08ArchitectureEnvelope;
@@ -453,7 +454,11 @@ export function buildFace08ProductionContext(input: {
   });
 
   const factStatusById = new Map<string, string>();
-  for (const f of facts) factStatusById.set(f.fact_id, f.status);
+  const factVerificationLevelById = new Map<string, string>();
+  for (const f of facts) {
+    factStatusById.set(f.fact_id, f.status);
+    factVerificationLevelById.set(f.fact_id, f.verification_level);
+  }
 
   const upstream: Face08UpstreamRefs = {
     page05_all_path_ids: page05Paths.all_path_ids,
@@ -479,6 +484,7 @@ export function buildFace08ProductionContext(input: {
       registry: restrictedRegistry,
       knownFactIds: new Set(facts.map((f) => f.fact_id)),
       factStatusById,
+      factVerificationLevelById,
       upstream,
       dateCorpus,
       architecture,
@@ -515,6 +521,7 @@ export function validateFace08ProductionOutput(input: {
     registry: input.ctx.registry,
     knownFactIds: input.ctx.knownFactIds,
     factStatusById: input.ctx.factStatusById,
+    factVerificationLevelById: input.ctx.factVerificationLevelById,
     upstream: input.ctx.upstream,
     dateCorpus: input.ctx.dateCorpus,
     reject_legacy_ids: true,
@@ -567,6 +574,8 @@ export function buildFace08RepairUserMessage(input: {
     "上一稿未通过程序校验。请只修正下列问题后重新输出完整 JSON（仍须符合 Face08V2 schema）。",
     "不得新增输入中不存在的 fact_id / evidence_id / claim_id / path_id / action_id。",
     "不得把未核实事实写成已确认。不得编造评分、概率或日期。",
+    "每个 reality_fact_ids / related_fact_ids 必须有配对的 reality_fact_stances，且 stance 必须与 DC status / verification_level 一致。",
+    "risks / observation_signals / triggers 可以为空；依据不足时用 evidence_boundary.monitoring_limitations 说明，不得编造填充项。",
     "信号必须指向已输出的风险。触发必须指向已输出的风险和信号。",
     "决策回应只能是 continue、adjust、pause、stop、reassess。",
     "不得改写 Page01 / Page05 / Page06。",

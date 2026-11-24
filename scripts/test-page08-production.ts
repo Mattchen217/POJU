@@ -321,6 +321,9 @@ function validFace08(patch?: (base: Record<string, unknown>) => Record<string, u
         related_path_ids: ["path_staged"],
         related_action_ids: ["act_first"],
         reality_fact_ids: ["fact_runway"],
+        reality_fact_stances: [
+          { fact_id: "fact_runway", stance: "as_confirmed" },
+        ],
         claim_ids: ["claim_u_mon_08"],
         evidence_ids: ["u_mon_08"],
       },
@@ -337,6 +340,9 @@ function validFace08(patch?: (base: Record<string, unknown>) => Record<string, u
         baseline_status: "needs_baseline",
         threshold_status: "defined",
         related_fact_ids: ["fact_runway"],
+        reality_fact_stances: [
+          { fact_id: "fact_runway", stance: "as_confirmed" },
+        ],
       },
     ],
     triggers: [
@@ -350,6 +356,10 @@ function validFace08(patch?: (base: Record<string, unknown>) => Record<string, u
         required_evidence_ids: ["u_mon_08"],
         related_path_ids: ["path_staged"],
         related_action_ids: ["act_first"],
+        related_fact_ids: ["fact_runway"],
+        reality_fact_stances: [
+          { fact_id: "fact_runway", stance: "as_confirmed" },
+        ],
       },
     ],
     reassessment_conditions: [
@@ -358,6 +368,9 @@ function validFace08(patch?: (base: Record<string, unknown>) => Record<string, u
         condition: "Reassess if the confirmed runway statement itself changes.",
         change_type: "fact_change",
         related_fact_ids: ["fact_runway"],
+        reality_fact_stances: [
+          { fact_id: "fact_runway", stance: "as_confirmed" },
+        ],
         related_claim_ids: ["claim_u_mon_08"],
         affected_path_ids: ["path_staged"],
         expected_review_scope: "Review the existing staged path only.",
@@ -374,6 +387,45 @@ function validFace08(patch?: (base: Record<string, unknown>) => Record<string, u
     },
   };
   return patch ? patch(structuredClone(base)) : base;
+}
+
+function emptyMonitoringFace08() {
+  return validFace08((base) => {
+    base.risks = [];
+    base.observation_signals = [];
+    base.triggers = [];
+    base.reassessment_conditions = [];
+    base.evidence_boundary = {
+      confirmed_fact_ids: [],
+      unverified_fact_ids: ["fact_salary_guess"],
+      related_claim_ids: ["claim_u_mon_08"],
+      related_evidence_ids: ["u_mon_08"],
+      unresolved_questions: [
+        "No grounded monitoring trigger can be stated from the current facts alone.",
+      ],
+      monitoring_limitations: [
+        "Insufficient confirmed basis to emit risks, observation signals, or triggers.",
+      ],
+      reassessment_limitations: ["No reassessment rule was grounded in confirmed facts."],
+    };
+    return base;
+  });
+}
+
+function checkFace08(
+  raw: unknown,
+  ctx: ReturnType<typeof ctxOf>,
+) {
+  return validateFace08Output({
+    raw,
+    locale: "en",
+    registry: ctx.registry,
+    knownFactIds: ctx.knownFactIds,
+    factStatusById: ctx.factStatusById,
+    factVerificationLevelById: ctx.factVerificationLevelById,
+    upstream: ctx.upstream,
+    dateCorpus: ctx.dateCorpus,
+  });
 }
 
 function ctxOf(page07Schema: unknown = page07("applicable")) {
@@ -626,15 +678,7 @@ async function main() {
       risks[0]!.claim_ids = ["claim_not_in_registry"];
       return base;
     });
-    const checked = validateFace08Output({
-      raw: bad,
-      locale: "en",
-      registry: ready.registry,
-      knownFactIds: ready.knownFactIds,
-      factStatusById: ready.factStatusById,
-      upstream: ready.upstream,
-      dateCorpus: ready.dateCorpus,
-    });
+    const checked = checkFace08(bad, ready);
     assert.equal(checked.ok, false);
     if (checked.ok) throw new Error("expected claim fail");
     assert.ok(checked.issues.some((i) => i.code === "unknown_claim_id"));
@@ -660,15 +704,7 @@ async function main() {
       boundary.confirmed_fact_ids = ["fact_salary_guess"];
       return base;
     });
-    const checked = validateFace08Output({
-      raw: bad,
-      locale: "en",
-      registry: ready.registry,
-      knownFactIds: ready.knownFactIds,
-      factStatusById: ready.factStatusById,
-      upstream: ready.upstream,
-      dateCorpus: ready.dateCorpus,
-    });
+    const checked = checkFace08(bad, ready);
     assert.equal(checked.ok, false);
     if (checked.ok) throw new Error("expected confirmed fail");
     assert.ok(checked.issues.some((i) => i.detail.includes("non-confirmed")));
@@ -681,15 +717,7 @@ async function main() {
       risks[0]!.risk_description = "成功概率 80% if you resign this week.";
       return base;
     });
-    const checked = validateFace08Output({
-      raw: bad,
-      locale: "en",
-      registry: ready.registry,
-      knownFactIds: ready.knownFactIds,
-      factStatusById: ready.factStatusById,
-      upstream: ready.upstream,
-      dateCorpus: ready.dateCorpus,
-    });
+    const checked = checkFace08(bad, ready);
     assert.equal(checked.ok, false);
     if (checked.ok) throw new Error("expected score fail");
     assert.ok(checked.issues.some((i) => i.code === "invented_score_or_probability"));
@@ -952,6 +980,232 @@ async function main() {
       setContentBodyTestInvokeForTests(null);
     }
     console.log("V ok — Lab wires Page01-07 and blocks when Page06 is missing");
+  }
+
+  // ── R1: empty monitoring + structured fact stances ──
+  {
+    const empty = emptyMonitoringFace08();
+    const checked = checkFace08(empty, ready);
+    assert.equal(checked.ok, true, checked.ok ? "" : checked.issues.map((i) => i.detail).join(" | "));
+    if (!checked.ok) throw new Error("empty monitoring should pass");
+    assert.equal(checked.page.risks.length, 0);
+    assert.equal(checked.page.observation_signals.length, 0);
+    assert.equal(checked.page.triggers.length, 0);
+    const sections = assemblePage08SectionsForDisplay(checked.page, "en");
+    assert.equal(sections.length, 5);
+    assert.equal(sections[0]!.texts.length, 0);
+    assert.equal(sections[1]!.texts.length, 0);
+    assert.equal(sections[2]!.texts.length, 0);
+    const pdf = assemblePage08PdfArgumentBodies(checked.page, "en");
+    assert.equal(pdf.length, 5);
+    assert.ok(pdf[0]!.body.includes(sections[0]!.empty_display));
+    assert.ok(!pdf[0]!.body.includes("risk_runway"));
+    console.log("R1-A ok — empty risks/signals/triggers allowed; Reader/PDF do not invent items");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      base.observation_signals = [];
+      return base;
+    });
+    const canon = validatePage08CanonicalPage(bad, ready.upstream);
+    assert.equal(canon.ok, false);
+    if (canon.ok) throw new Error("expected dangling trigger");
+    assert.match(canon.detail, /trigger cites unknown signal/);
+    console.log("R1-B ok — trigger without signals is rejected");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_confirmed" },
+      ];
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected unverified→confirmed reject");
+    assert.ok(
+      checked.issues.some(
+        (i) =>
+          i.code === "fact_stance_status_mismatch" ||
+          i.detail.includes("as_confirmed"),
+      ),
+    );
+    console.log("R1-C ok — unverified fact declared as_confirmed is rejected");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_independently_verified" },
+      ];
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected estimate upgrade reject");
+    assert.ok(
+      checked.issues.some(
+        (i) =>
+          i.code === "fact_verification_upgrade" ||
+          i.code === "fact_stance_status_mismatch",
+      ),
+    );
+    console.log("R1-D ok — user_estimate declared as_independently_verified is rejected");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const boundary = base.evidence_boundary as Record<string, unknown>;
+      boundary.confirmed_fact_ids = ["fact_declined"];
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected declined in confirmed reject");
+    assert.ok(checked.issues.some((i) => i.code === "confirmed_fact_not_confirmed"));
+    console.log("R1-E ok — declined fact in confirmed_fact_ids is rejected");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const triggers = base.triggers as Array<Record<string, unknown>>;
+      triggers[0]!.related_fact_ids = ["fact_salary_guess"];
+      triggers[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_confirmed" },
+      ];
+      triggers[0]!.trigger_status = "defined";
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected trigger unverified reject");
+    assert.ok(
+      checked.issues.some(
+        (i) =>
+          i.code === "fact_stance_status_mismatch" ||
+          i.code === "trigger_non_confirmed_requires_conditional" ||
+          i.code === "trigger_fact_stance_required",
+      ),
+    );
+    console.log("R1-F ok — trigger citing unverified without conditional stance is rejected");
+  }
+
+  {
+    const okCase = validFace08((base) => {
+      const triggers = base.triggers as Array<Record<string, unknown>>;
+      triggers[0]!.related_fact_ids = ["fact_salary_guess"];
+      triggers[0]!.reality_fact_stances = [
+        { fact_id: "fact_salary_guess", stance: "as_conditional" },
+      ];
+      triggers[0]!.trigger_status = "conditional";
+      triggers[0]!.trigger_condition =
+        "If the salary estimate later confirms below the cash floor, pause the explore.";
+      triggers[0]!.required_evidence_ids = [];
+      return base;
+    });
+    const checked = checkFace08(okCase, ready);
+    assert.equal(
+      checked.ok,
+      true,
+      checked.ok ? "" : checked.issues.map((i) => `${i.code}:${i.detail}`).join(" | "),
+    );
+    console.log("R1-G ok — conditional trigger citing unverified fact is allowed");
+  }
+
+  {
+    const bad = validFace08((base) => {
+      const risks = base.risks as Array<Record<string, unknown>>;
+      risks[0]!.reality_fact_ids = [];
+      risks[0]!.reality_fact_stances = [
+        { fact_id: "fact_runway", stance: "as_confirmed" },
+      ];
+      return base;
+    });
+    const checked = checkFace08(bad, ready);
+    assert.equal(checked.ok, false);
+    if (checked.ok) throw new Error("expected orphan confirmed stance reject");
+    assert.ok(
+      checked.issues.some(
+        (i) =>
+          i.code === "gate_face_zod_fail" ||
+          i.detail.includes("orphan_reality_fact_stance"),
+      ),
+    );
+    console.log("R1-H ok — as_confirmed stance without matching fact id list is rejected");
+  }
+
+  {
+    let invokeCount = 0;
+    setContentBodyTestInvokeForTests(async () => {
+      invokeCount += 1;
+      if (invokeCount === 1) {
+        return stubResult(
+          JSON.stringify(
+            validFace08((base) => {
+              const risks = base.risks as Array<Record<string, unknown>>;
+              risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+              risks[0]!.reality_fact_stances = [
+                { fact_id: "fact_salary_guess", stance: "as_confirmed" },
+              ];
+              return base;
+            }),
+          ),
+        );
+      }
+      return stubResult(JSON.stringify(validFace08()));
+    });
+    try {
+      const result = await runContentBodyGenerate(generateInput());
+      assert.equal(result.ok, true, result.ok ? "" : result.reason);
+      if (!result.ok) throw new Error(result.reason);
+      assert.equal(invokeCount, 2);
+      assert.equal(result.face08_meta?.validation, "passed_after_repair");
+      const page = result.page as Face08V2;
+      assert.equal(page.risks[0]?.reality_fact_stances?.[0]?.stance, "as_confirmed");
+      assert.equal(page.risks[0]?.reality_fact_ids?.[0], "fact_runway");
+    } finally {
+      setContentBodyTestInvokeForTests(null);
+    }
+    console.log("R1-I ok — repair success re-runs full stance/reference validation");
+  }
+
+  {
+    let invokeCount = 0;
+    setContentBodyTestInvokeForTests(async () => {
+      invokeCount += 1;
+      return stubResult(
+        JSON.stringify(
+          validFace08((base) => {
+            const risks = base.risks as Array<Record<string, unknown>>;
+            risks[0]!.reality_fact_ids = ["fact_salary_guess"];
+            risks[0]!.reality_fact_stances = [
+              { fact_id: "fact_salary_guess", stance: "as_confirmed" },
+            ];
+            return base;
+          }),
+        ),
+      );
+    });
+    try {
+      const result = await runContentBodyGenerate(generateInput());
+      assert.equal(result.ok, false);
+      if (result.ok) throw new Error("expected repair fail");
+      assert.equal(result.reason, "face08_validation_failed");
+      assert.equal(invokeCount, 2);
+      assert.equal(
+        (result as { page?: unknown }).page,
+        undefined,
+      );
+    } finally {
+      setContentBodyTestInvokeForTests(null);
+    }
+    console.log("R1-J ok — repair second failure does not save a success page");
   }
 
   console.log("ok page08 production closure");

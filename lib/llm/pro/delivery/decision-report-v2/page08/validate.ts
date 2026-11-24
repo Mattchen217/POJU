@@ -1,6 +1,6 @@
 /**
  * Face08 validation — schema + unique ids + signal/trigger links +
- * path/action subsets + registry + fact status + score/date bans.
+ * path/action subsets + registry + structured fact stances + score/date bans.
  * Fail-closed. No legacy_ bypass for new generation.
  */
 
@@ -13,8 +13,11 @@ import {
 import {
   issuesForCitedFactsInProse,
   issuesForConfirmedFactIds,
+  issuesForFactStanceList,
+  issuesForTriggerFactPolicy,
   issuesForUnverifiedFactIds,
   type Page08FactIssue,
+  type Page08FactStanceEntry,
 } from "./fact-integrity";
 import type { EvidenceRegistry } from "../types";
 
@@ -34,6 +37,7 @@ export function validateFace08Output(input: {
   registry: EvidenceRegistry;
   knownFactIds?: ReadonlySet<string>;
   factStatusById?: ReadonlyMap<string, string>;
+  factVerificationLevelById?: ReadonlyMap<string, string>;
   upstream: Face08UpstreamRefs;
   dateCorpus?: string;
   reject_legacy_ids?: boolean;
@@ -73,7 +77,11 @@ export function validateFace08Output(input: {
   const evidenceSet = new Set(Object.keys(input.registry.evidence));
   const corpus = input.dateCorpus ?? "";
 
-  const checkIdToken = (id: string, path: string, kind: "claim" | "evidence" | "other") => {
+  const checkIdToken = (
+    id: string,
+    path: string,
+    kind: "claim" | "evidence" | "other",
+  ) => {
     if (rejectLegacy && id.startsWith("legacy_")) {
       issues.push({
         code: "legacy_id_forbidden",
@@ -102,14 +110,30 @@ export function validateFace08Output(input: {
     for (const item of found) issues.push(item);
   };
 
-  const scan = (path: string, text: string, factIds: readonly string[]) => {
+  const checkStances = (
+    path: string,
+    factIds: readonly string[],
+    stances: readonly Page08FactStanceEntry[],
+    opts?: { requireNonConfirmedStance?: boolean },
+  ) => {
+    pushFact(
+      issuesForFactStanceList({
+        path,
+        factIds,
+        stances,
+        knownFactIds: input.knownFactIds,
+        factStatusById: input.factStatusById,
+        factVerificationLevelById: input.factVerificationLevelById,
+        requireNonConfirmedStance: opts?.requireNonConfirmedStance,
+      }),
+    );
+  };
+
+  const scanProse = (path: string, text: string) => {
     pushFact(
       issuesForCitedFactsInProse({
         path,
         text,
-        factIds,
-        factStatusById: input.factStatusById,
-        knownFactIds: input.knownFactIds,
         dateCorpus: corpus,
       }),
     );
@@ -121,16 +145,27 @@ export function validateFace08Output(input: {
     for (const eid of risk.evidence_ids ?? []) {
       checkIdToken(eid, risk.risk_id, "evidence");
     }
-    scan(
+    checkStances(
+      risk.risk_id,
+      risk.reality_fact_ids ?? [],
+      risk.reality_fact_stances ?? [],
+      { requireNonConfirmedStance: true },
+    );
+    scanProse(
       risk.risk_id,
       `${risk.risk_title} ${risk.risk_description}`,
-      risk.reality_fact_ids ?? [],
     );
   }
 
   for (const signal of page.observation_signals) {
     checkIdToken(signal.signal_id, signal.signal_id, "other");
-    scan(
+    checkStances(
+      signal.signal_id,
+      signal.related_fact_ids ?? [],
+      signal.reality_fact_stances ?? [],
+      { requireNonConfirmedStance: true },
+    );
+    scanProse(
       signal.signal_id,
       [
         signal.signal_name,
@@ -139,7 +174,6 @@ export function validateFace08Output(input: {
         signal.observation_method,
         signal.observation_window,
       ].join(" "),
-      signal.related_fact_ids ?? [],
     );
   }
 
@@ -158,7 +192,21 @@ export function validateFace08Output(input: {
         path: trigger.trigger_id,
       });
     }
-    scan(trigger.trigger_id, trigger.trigger_condition, []);
+    const factIds = trigger.related_fact_ids ?? [];
+    const stances = trigger.reality_fact_stances ?? [];
+    checkStances(trigger.trigger_id, factIds, stances, {
+      requireNonConfirmedStance: true,
+    });
+    pushFact(
+      issuesForTriggerFactPolicy({
+        path: trigger.trigger_id,
+        triggerStatus: trigger.trigger_status,
+        factIds,
+        stances,
+        factStatusById: input.factStatusById,
+      }),
+    );
+    scanProse(trigger.trigger_id, trigger.trigger_condition);
   }
 
   for (const item of page.reassessment_conditions) {
@@ -166,10 +214,15 @@ export function validateFace08Output(input: {
     for (const cid of item.related_claim_ids ?? []) {
       checkIdToken(cid, item.reassessment_id, "claim");
     }
-    scan(
+    checkStances(
+      item.reassessment_id,
+      item.related_fact_ids ?? [],
+      item.reality_fact_stances ?? [],
+      { requireNonConfirmedStance: true },
+    );
+    scanProse(
       item.reassessment_id,
       `${item.condition} ${item.change_type} ${item.expected_review_scope}`,
-      item.related_fact_ids ?? [],
     );
   }
 
@@ -206,14 +259,13 @@ export function validateFace08Output(input: {
       });
     }
   }
-  scan(
+  scanProse(
     "evidence_boundary",
     [
       ...(boundary.unresolved_questions ?? []),
       ...(boundary.monitoring_limitations ?? []),
       ...(boundary.reassessment_limitations ?? []),
     ].join(" "),
-    [],
   );
 
   if (issues.length) return { ok: false, issues };
