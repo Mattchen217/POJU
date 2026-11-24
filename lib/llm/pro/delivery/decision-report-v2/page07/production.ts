@@ -2,6 +2,8 @@
  * Face 07 production orchestration — used by content-body / Lab.
  * UNIQUE entry: buildFace07ProductionContext.
  * Applicability is decided here, before any LLM call.
+ * authorized_partner_profile is program-supplied only (never model-asserted).
+ * Canonical self participant id is "self" (see path-integrity).
  */
 
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";

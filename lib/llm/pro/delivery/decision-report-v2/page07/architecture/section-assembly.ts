@@ -3,6 +3,7 @@
  */
 
 import type { Face07V2 } from "../../schemas";
+import { isFace07NotApplicableOmit } from "../report-inclusion";
 import {
   normalizePage07ReadingOrder,
   page07SectionById,
@@ -115,6 +116,9 @@ export function assemblePage07SectionsForDisplay(
   page: Face07V2,
   locale?: string,
 ): Page07AssembledSection[] {
+  // not_applicable is omitted at report orchestration; keep assembly empty if called.
+  if (isFace07NotApplicableOmit(page)) return [];
+
   const displayLocale = locale || page.locale || "en";
   const zh = localeBucket(displayLocale) === "zh";
   const order = resolvePage07ReadingOrder(page);
@@ -139,6 +143,9 @@ export function assemblePage07PdfArgumentBodies(
   page: Face07V2,
   locale = "zh",
 ): Array<{ body: string }> {
+  // SoT 2.1: not_applicable → no PDF content blocks (no blank page).
+  if (isFace07NotApplicableOmit(page)) return [];
+
   const sections = assemblePage07SectionsForDisplay(page, locale);
   const out: Array<{ body: string }> = [];
   for (const s of sections) {

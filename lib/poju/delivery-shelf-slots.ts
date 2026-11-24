@@ -25,6 +25,7 @@ import {
 } from "@/lib/poju/delivery-book-pages";
 import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
 import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
+import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
 
 /** Default reader order. 07 is absent until a topic asks for it. 03 only when glossary/legacy present. */
 export const DELIVERY_SHELF_SLOT_IDS = [
@@ -186,12 +187,9 @@ export function buildDeliveryShelfSlots(
       break;
     }
   }
-  const order = deliveryShelfSlotIds(topic, { includeAppendix03: hasAppendix03 });
-  const slots: DeliveryShelfSlotState[] = order.map((slotId) => ({
-    kind: "empty" as const,
-    slotId,
-    pageNumber: deliveryProsePageNumber(slotId, order),
-  }));
+  let order = [
+    ...deliveryShelfSlotIds(topic, { includeAppendix03: hasAppendix03 }),
+  ] as DeliveryShelfSlotId[];
   const buckets = new Map<DeliveryShelfSlotId, DeliveryBookPage[]>();
 
   for (const page of pages) {
@@ -208,6 +206,26 @@ export function buildDeliveryShelfSlots(
       buckets.set(extra, list);
     }
   }
+
+  // Face07 V2 not_applicable → omit from shelf entirely (SoT 2.1).
+  // Detect from page_schema fence in bucketed markdown before slot materialization.
+  if (order.includes("07")) {
+    const grouped07 = buckets.get("07") ?? [];
+    const omit07 = grouped07.some((page) => {
+      const schema = extractPageSchemaFromMarkdown(page.body);
+      return schema != null && isFace07NotApplicableOmit(schema);
+    });
+    if (omit07) {
+      buckets.delete("07");
+      order = order.filter((id) => id !== "07");
+    }
+  }
+
+  const slots: DeliveryShelfSlotState[] = order.map((slotId) => ({
+    kind: "empty" as const,
+    slotId,
+    pageNumber: deliveryProsePageNumber(slotId, order),
+  }));
 
   for (let i = 0; i < slots.length; i++) {
     const slotId = order[i]!;
@@ -232,20 +250,23 @@ export function buildDeliveryShelfSlots(
 
   const page07 = composePage07Markdown({ topic, question: opts.question });
   if (page07 && order.includes("07")) {
-    const idx = order.indexOf("07");
-    const current = slots[idx];
-    if (current && current.kind !== "ready") {
-      slots[idx] = {
-        kind: "ready",
-        slotId: "07",
-        pageNumber: deliveryProsePageNumber("07", order),
-        page: {
-          id: "07",
-          title: proseShelfTitle("07", page07, opts.locale),
-          body: page07,
-          dualLayer: true,
-        },
-      };
+    const schema07 = extractPageSchemaFromMarkdown(page07);
+    if (!(schema07 && isFace07NotApplicableOmit(schema07))) {
+      const idx = order.indexOf("07");
+      const current = slots[idx];
+      if (current && current.kind !== "ready") {
+        slots[idx] = {
+          kind: "ready",
+          slotId: "07",
+          pageNumber: deliveryProsePageNumber("07", order),
+          page: {
+            id: "07",
+            title: proseShelfTitle("07", page07, opts.locale),
+            body: page07,
+            dualLayer: true,
+          },
+        };
+      }
     }
   }
 

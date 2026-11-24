@@ -7,6 +7,7 @@ import { Face07V2Schema, type Face07V2 } from "../schemas";
 import { normalizePage07ReadingOrder } from "./architecture/sections";
 import {
   assertFace07PathIntegrity,
+  CANONICAL_SELF_PARTICIPANT_ID,
   isSelfParticipantId,
   type Face07UpstreamRefs,
 } from "./path-integrity";
@@ -26,10 +27,22 @@ const SCORE_OR_PROBABILITY =
   /\b\d{1,3}\s*分\b|\b\d{1,3}\s*%\b|success\s*rate|成功概率|胜率|评分\s*\d|合婚\s*\d/i;
 
 const CONFIRMED_PROSE =
-  /已确认|确认为|confirmed\s+fact|is\s+confirmed|definitely\s+true/i;
+  /已确认|确认为|confirmed\s+fact|is\s+confirmed|definitely\s+true|already\s+confirmed/i;
 
+/** Auxiliary multilingual ban — not a substitute for participant provenance. */
 const THIRD_PARTY_PERSONALITY =
-  /性格|人格|命盘|对方天生/;
+  /性格|人格|命盘|对方天生|personality|character\s+traits?|innate\s+nature|their\s+true\s+nature|natal\s+chart|partner'?s?\s+personality/i;
+
+const NON_CONFIRMED_FACT_STATUSES = new Set([
+  "unknown",
+  "unverified",
+  "declined",
+  "not_applicable",
+  "conflict",
+  "user_estimate",
+  "user_asserted",
+  "hypothesis",
+]);
 
 export function validateFace07Output(input: {
   raw: unknown;
@@ -130,15 +143,59 @@ export function validateFace07Output(input: {
       });
     }
   };
-  const checkFact = (fid: string, path: string) => {
+
+  /**
+   * Reality-fact cite check: ID must exist in DC, and non-confirmed facts
+   * must not be upgraded to confirmed prose via the citing unit text.
+   */
+  const checkRealityFactCite = (
+    fid: string,
+    path: string,
+    citingText?: string,
+  ) => {
     if (input.knownFactIds && !input.knownFactIds.has(fid)) {
       issues.push({
         code: "unknown_fact_id",
         detail: `${path} cites unknown fact_id=${fid}`,
         path,
       });
+      return;
+    }
+    const status = input.factStatusById?.get(fid);
+    if (!status) return;
+    if (status === "confirmed") return;
+    if (
+      citingText &&
+      (NON_CONFIRMED_FACT_STATUSES.has(status) || status !== "confirmed") &&
+      CONFIRMED_PROSE.test(citingText)
+    ) {
+      issues.push({
+        code: "fact_status_upgrade",
+        detail: `${path} treats fact ${fid} (${status}) as confirmed`,
+        path,
+      });
     }
   };
+
+  const checkConfirmedFactId = (fid: string, path: string) => {
+    if (input.knownFactIds && !input.knownFactIds.has(fid)) {
+      issues.push({
+        code: "unknown_confirmed_fact_id",
+        detail: `${path} cites unknown fact_id=${fid}`,
+        path,
+      });
+      return;
+    }
+    const status = input.factStatusById?.get(fid);
+    if (status !== "confirmed") {
+      issues.push({
+        code: "confirmed_fact_status_mismatch",
+        detail: `${path} includes ${fid} with status=${status ?? "missing"} (must be confirmed)`,
+        path,
+      });
+    }
+  };
+
   const checkDir = (dirId: string, path: string) => {
     if (input.knownDirIds && !input.knownDirIds.has(dirId)) {
       issues.push({
@@ -167,31 +224,91 @@ export function validateFace07Output(input: {
   };
 
   for (const participant of page.participants) {
-    const hasFacts = (participant.related_fact_ids ?? []).length > 0;
-    const hasVerification =
-      participant.source.trim().length > 0 &&
-      participant.verification_status !== "missing" &&
-      participant.verification_status !== "unknown";
-    if (!hasFacts && !hasVerification) {
+    const pid = participant.participant_id;
+    const isSelf = isSelfParticipantId(pid);
+    const roleClaimsSelf = participant.role.trim().toLowerCase() === "self";
+
+    // role:"self" cannot launder a non-canonical participant_id.
+    if (!isSelf && roleClaimsSelf) {
       issues.push({
-        code: "participant_missing_grounding",
-        detail: `${participant.participant_id} needs related_fact_ids or a source verification_status`,
-        path: participant.participant_id,
+        code: "forged_self_participant",
+        detail: `${pid} claims role=self but participant_id is not canonical ${CANONICAL_SELF_PARTICIPANT_ID}`,
+        path: pid,
       });
     }
-    for (const fid of participant.related_fact_ids ?? []) {
-      checkFact(fid, participant.participant_id);
+    if (isSelf && !roleClaimsSelf) {
+      issues.push({
+        code: "canonical_self_role_mismatch",
+        detail: `${CANONICAL_SELF_PARTICIPANT_ID} must use role=self`,
+        path: pid,
+      });
     }
-    if (!isSelfParticipantId(participant.participant_id) && participant.role !== "self") {
-      const blob = (participant.related_fact_ids ?? [])
-        .map((id) => input.factContentById?.get(id) ?? "")
-        .join(" ");
-      const label = participant.display_label.trim();
-      if (!label || !blob.toLowerCase().includes(label.toLowerCase())) {
+
+    const relatedFacts = participant.related_fact_ids ?? [];
+    for (const fid of relatedFacts) {
+      // Participants may cite non-confirmed facts for identity grounding, but
+      // must not upgrade them via confirmed_fact_ids (checked separately).
+      checkRealityFactCite(fid, `${pid}.related_fact_ids`);
+    }
+
+    if (!isSelf) {
+      // Non-self must bind ≥1 real DC fact — model-only source/status is not provenance.
+      if (relatedFacts.length < 1) {
         issues.push({
-          code: "invented_third_party",
-          detail: `${participant.participant_id} display_label is not present in a cited fact statement`,
-          path: participant.participant_id,
+          code: "third_party_missing_fact_binding",
+          detail: `${pid} (non-self) must bind at least one real DC fact_id`,
+          path: pid,
+        });
+      } else {
+        const blob = relatedFacts
+          .map((id) => input.factContentById?.get(id) ?? "")
+          .join(" ");
+        const label = participant.display_label.trim();
+        if (!label || !blob.toLowerCase().includes(label.toLowerCase())) {
+          issues.push({
+            code: "invented_third_party",
+            detail: `${pid} display_label is not present in a cited fact statement`,
+            path: pid,
+          });
+        }
+        // Role label (partner/spouse/boss/…) should also be grounded when non-generic.
+        const role = participant.role.trim().toLowerCase();
+        if (
+          role &&
+          role !== "other" &&
+          role !== "party" &&
+          role !== "third_party" &&
+          !blob.toLowerCase().includes(role) &&
+          // Allow common English role synonyms when statement uses a related noun.
+          !(
+            (role === "partner" && /partner|partnership|co-?signer/i.test(blob)) ||
+            (role === "spouse" && /spouse|husband|wife|married/i.test(blob)) ||
+            (role === "boss" && /boss|manager|supervisor|employer/i.test(blob))
+          )
+        ) {
+          // Soft: only flag when role is a concrete identity claim with no support.
+          // Keep as invented_third_party_role so tests can assert.
+          if (!/partner|spouse|boss|colleague|family|advisor|investor/i.test(blob)) {
+            issues.push({
+              code: "third_party_role_ungrounded",
+              detail: `${pid} role=${participant.role} is not supported by cited fact statements`,
+              path: pid,
+            });
+          }
+        }
+      }
+
+      // Model-filled source / verification_status alone never count as provenance.
+      if (
+        relatedFacts.length < 1 &&
+        (participant.source.trim().length > 0 ||
+          participant.verification_status === "user_stated" ||
+          participant.verification_status === "confirmed")
+      ) {
+        issues.push({
+          code: "forged_participant_provenance",
+          detail: `${pid} relies on model-filled source/verification_status without real fact binding`,
+          path: pid,
         });
       }
     }
@@ -254,7 +371,9 @@ export function validateFace07Output(input: {
     }
     for (const cid of unit.claim_ids) checkClaim(cid, unit.unit_id);
     for (const eid of unit.evidence_ids ?? []) checkEvidence(eid, unit.unit_id);
-    for (const fid of unit.reality_fact_ids ?? []) checkFact(fid, unit.unit_id);
+    for (const fid of unit.reality_fact_ids ?? []) {
+      checkRealityFactCite(fid, unit.unit_id, unit.text);
+    }
     for (const did of unit.dir_ids ?? []) checkDir(did, unit.unit_id);
     checkPersonalRefs(
       unit.supporting_personal_unit_refs ?? [],
@@ -275,13 +394,16 @@ export function validateFace07Output(input: {
     }
     for (const cid of unit.claim_ids) checkClaim(cid, unit.unit_id);
     for (const eid of unit.evidence_ids ?? []) checkEvidence(eid, unit.unit_id);
-    for (const fid of unit.reality_fact_ids ?? []) checkFact(fid, unit.unit_id);
+    const unitText = `${unit.text} ${(unit.uncertainty_notes ?? []).join(" ")}`;
+    for (const fid of unit.reality_fact_ids ?? []) {
+      checkRealityFactCite(fid, unit.unit_id, unit.text);
+    }
     checkPersonalRefs(
       unit.supporting_personal_unit_refs ?? [],
       unit.participant_ids,
       unit.unit_id,
     );
-    scanScore(unit.unit_id, `${unit.text} ${(unit.uncertainty_notes ?? []).join(" ")}`);
+    scanScore(unit.unit_id, unitText);
     scanParticipantProse(
       unit.participant_ids,
       unit.text,
@@ -307,26 +429,11 @@ export function validateFace07Output(input: {
   for (const cid of boundary.claim_ids) checkClaim(cid, "evidence_boundary.claim_ids");
   checkPersonalRefs(
     boundary.supporting_personal_unit_refs ?? [],
-    ["self"],
+    [CANONICAL_SELF_PARTICIPANT_ID],
     "evidence_boundary",
   );
   for (const fid of boundary.confirmed_fact_ids) {
-    if (input.knownFactIds && !input.knownFactIds.has(fid)) {
-      issues.push({
-        code: "unknown_confirmed_fact_id",
-        detail: `evidence_boundary.confirmed_fact_ids cites unknown fact_id=${fid}`,
-        path: "evidence_boundary.confirmed_fact_ids",
-      });
-      continue;
-    }
-    const status = input.factStatusById?.get(fid);
-    if (status !== "confirmed") {
-      issues.push({
-        code: "confirmed_fact_status_mismatch",
-        detail: `evidence_boundary.confirmed_fact_ids includes ${fid} with status=${status ?? "missing"}`,
-        path: "evidence_boundary.confirmed_fact_ids",
-      });
-    }
+    checkConfirmedFactId(fid, "evidence_boundary.confirmed_fact_ids");
   }
   scanScore(
     "evidence_boundary",

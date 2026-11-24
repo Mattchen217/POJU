@@ -1,10 +1,12 @@
 /**
  * Face 07 reader UI — field and relationship assembly (Page07 V2).
  * Section titles/order/gaps come from section-assembly SSOT (shared with PDF).
+ * not_applicable → omit entire page (null); do not render skip banners or sections.
  */
 
 "use client";
 
+import type { ReactElement } from "react";
 import type { Face07 } from "@/lib/llm/pro/delivery/page-schema/face-types";
 import {
   isFace07Legacy,
@@ -12,6 +14,7 @@ import {
   projectLegacyFace07ForDisplay,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
 import { assemblePage07SectionsForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page07/architecture/section-assembly";
+import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
 import type { Face07V2 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 function localeBucket(locale: string): string {
@@ -37,7 +40,12 @@ export function Face07PageSlots({
 }: {
   page: Face07 | Record<string, unknown>;
   locale: string;
-}) {
+}): ReactElement | null {
+  // SoT 2.1: not_applicable → omit whole page (no container / title / sections / skip tip).
+  if (isFace07NotApplicableOmit(page)) {
+    return null;
+  }
+
   const data = resolvePage(page);
   if (!data) {
     return (
@@ -51,9 +59,13 @@ export function Face07PageSlots({
     );
   }
 
+  // Double-check after projection (legacy never maps to not_applicable).
+  if (isFace07NotApplicableOmit(data)) {
+    return null;
+  }
+
   const status = data.generation_status;
   const applicability = data.applicability_status;
-  const skipped = applicability === "not_applicable";
   const insufficient = applicability === "insufficient_information";
   const incomplete =
     status === "blocked_on_required_inputs" ||
@@ -72,15 +84,7 @@ export function Face07PageSlots({
       data-generation-status={status ?? "unknown"}
       data-applicability={applicability}
       data-page-incomplete={incomplete ? "1" : "0"}
-      data-page-skipped={skipped ? "1" : "0"}
     >
-      {skipped ? (
-        <p className="dps-face-prose" data-status-banner="1">
-          {zh
-            ? "本题与场域或关系无关，本页已跳过，不另造判断。"
-            : "This decision is not about a field or relationship. The page is skipped."}
-        </p>
-      ) : null}
       {insufficient ? (
         <p className="dps-face-prose" data-status-banner="1">
           {zh

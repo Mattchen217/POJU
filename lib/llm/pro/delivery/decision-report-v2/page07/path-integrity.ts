@@ -9,10 +9,15 @@ export type Face07UpstreamRefs = {
   page06_action_ids: readonly string[];
 };
 
-const SELF_IDS = new Set(["self", "user", "me"]);
+/** Program-canonical self participant id. Models must not invent aliases via role. */
+export const CANONICAL_SELF_PARTICIPANT_ID = "self";
 
+/**
+ * True only for the program-canonical self id.
+ * role:"self" on any other participant_id is a forgery and must be rejected elsewhere.
+ */
 export function isSelfParticipantId(participantId: string): boolean {
-  return SELF_IDS.has(participantId.trim().toLowerCase());
+  return participantId.trim().toLowerCase() === CANONICAL_SELF_PARTICIPANT_ID;
 }
 
 export function assertFace07PathIntegrity(

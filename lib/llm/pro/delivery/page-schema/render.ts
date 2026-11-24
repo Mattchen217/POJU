@@ -16,6 +16,7 @@ import { projectLegacyFace06ForDisplay } from "@/lib/llm/pro/delivery/decision-r
 import { assemblePage06PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page06/architecture/section-assembly";
 import { projectLegacyFace07ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
 import { assemblePage07PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page07/architecture/section-assembly";
+import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
 import type {
   Face04V2,
   Face05V2,
@@ -275,6 +276,10 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       break;
     }
     case "07": {
+      // Report orchestration: not_applicable → zero PDF blocks (omit page).
+      if (isFace07NotApplicableOmit(p)) {
+        break;
+      }
       let canonical07: Face07V2 | null = null;
       if (
         p.schema_version === "face07-v2" ||
@@ -288,6 +293,9 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
         throw new Error(
           "face07_pdf_legacy_project_failed: historical/incomplete Face07 could not be projected for PDF assembly",
         );
+      }
+      if (isFace07NotApplicableOmit(canonical07)) {
+        break;
       }
       const locale07 = String(
         (canonical07 as { locale?: unknown }).locale ??

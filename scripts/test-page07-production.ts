@@ -28,8 +28,17 @@ import {
   isFace07Legacy,
   projectLegacyFace07ForDisplay,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
+import {
+  includePage07InUserFacingOrder,
+  isFace07NotApplicableOmit,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
+import { readingOrderAfterAssembly } from "@/lib/llm/pro/delivery/decision-report-v2/assembly";
 import { pageSchemaToArgumentBodies } from "@/lib/llm/pro/delivery/page-schema/render";
 import { Face07PageSlots } from "@/components/poju/delivery-pages/faces/Face07PageSlots";
+import {
+  buildDeliveryShelfSlots,
+  sequentialDeliveryProseReady,
+} from "@/lib/poju/delivery-shelf-slots";
 import {
   createDeliveryLab,
   loadDeliveryLab,
@@ -372,7 +381,7 @@ function validFace07(overrides?: Record<string, unknown>) {
       confirmed_fact_ids: ["fact_alex"],
       hypothesis_notes: ["Move cost share is only an estimate."],
       uncertainty_notes: ["No authorized profile of Alex is available."],
-      third_party_data_limits: ["Alex is not given a personality reading."],
+      third_party_data_limits: ["No authorized partner profile; third-party motive analysis is withheld."],
       supporting_personal_unit_refs: ["p02_personal"],
     },
     alignment_with_main: {
@@ -616,6 +625,206 @@ async function main() {
     assert.equal(badFact.ok, false);
     if (badFact.ok) throw new Error("unreachable");
     assert.ok(badFact.issues.some((i) => i.code === "confirmed_fact_status_mismatch"));
+
+    // Fact-status upgrade: even when the fact ID exists, non-confirmed cites
+    // must not be written as confirmed prose (field + relationship + confirmed_fact_ids).
+    for (const status of ["unknown", "unverified", "declined", "not_applicable"] as const) {
+      const factId = `fact_${status}`;
+      const known = new Set([...ctx.knownFactIds, factId]);
+      const statuses = new Map(ctx.factStatusById);
+      statuses.set(factId, status);
+      const contents = new Map(ctx.factContentById);
+      contents.set(factId, `Statement for ${status} fact about Alex.`);
+
+      const upgradeField = validateFace07Output({
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: [factId],
+              text: `It is confirmed that Alex already covers half the move cost (${status}).`,
+            },
+          ],
+        }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: known,
+        factStatusById: statuses,
+        factContentById: contents,
+        upstream: ctx.upstream,
+        knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(upgradeField.ok, false, `field upgrade for ${status}`);
+      if (upgradeField.ok) throw new Error("unreachable");
+      assert.ok(
+        upgradeField.issues.some((i) => i.code === "fact_status_upgrade"),
+        `missing fact_status_upgrade for field ${status}`,
+      );
+
+      const upgradeRel = validateFace07Output({
+        raw: validFace07({
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              reality_fact_ids: [factId],
+              text: `Confirmed fact: Alex definitely covers half the move (${status}).`,
+            },
+          ],
+        }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: known,
+        factStatusById: statuses,
+        factContentById: contents,
+        upstream: ctx.upstream,
+        knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(upgradeRel.ok, false, `relationship upgrade for ${status}`);
+      if (upgradeRel.ok) throw new Error("unreachable");
+      assert.ok(
+        upgradeRel.issues.some((i) => i.code === "fact_status_upgrade"),
+        `missing fact_status_upgrade for relationship ${status}`,
+      );
+
+      const intoConfirmed = validateFace07Output({
+        raw: validFace07({
+          evidence_boundary: {
+            ...(validFace07().evidence_boundary as object),
+            confirmed_fact_ids: [factId],
+          },
+        }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: known,
+        factStatusById: statuses,
+        factContentById: contents,
+        upstream: ctx.upstream,
+      });
+      assert.equal(intoConfirmed.ok, false, `confirmed_fact_ids for ${status}`);
+      if (intoConfirmed.ok) throw new Error("unreachable");
+      assert.ok(
+        intoConfirmed.issues.some((i) => i.code === "confirmed_fact_status_mismatch"),
+        `missing confirmed_fact_status_mismatch for ${status}`,
+      );
+
+      const conditionalOk = validateFace07Output({
+        raw: validFace07({
+          field_units: [
+            {
+              ...(validFace07().field_units as object[])[0],
+              reality_fact_ids: [factId],
+              text: `If the ${status} estimate holds, keep the move conditional on a written split.`,
+            },
+          ],
+          relationship_units: [
+            {
+              ...(validFace07().relationship_units as object[])[0],
+              reality_fact_ids: ["fact_alex"],
+            },
+          ],
+        }),
+        locale: "en",
+        registry: ctx.registry,
+        knownFactIds: known,
+        factStatusById: statuses,
+        factContentById: contents,
+        upstream: ctx.upstream,
+        knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
+      });
+      assert.equal(
+        conditionalOk.ok,
+        true,
+        conditionalOk.ok
+          ? ""
+          : conditionalOk.issues.map((i) => i.detail).join(" | "),
+      );
+    }
+
+    // Participant provenance / forged self
+    const forgedSelf = validateFace07Output({
+      raw: validFace07({
+        participants: [
+          {
+            participant_id: "p_fake",
+            display_label: "Alex",
+            role: "self",
+            source: "user_stated",
+            verification_status: "user_stated",
+            related_fact_ids: [],
+            notes: "",
+          },
+        ],
+      }),
+      locale: "en",
+      registry: ctx.registry,
+      knownFactIds: ctx.knownFactIds,
+      factStatusById: ctx.factStatusById,
+      factContentById: ctx.factContentById,
+      upstream: ctx.upstream,
+    });
+    assert.equal(forgedSelf.ok, false);
+    if (forgedSelf.ok) throw new Error("unreachable");
+    assert.ok(forgedSelf.issues.some((i) => i.code === "forged_self_participant"));
+    assert.ok(
+      forgedSelf.issues.some((i) => i.code === "third_party_missing_fact_binding"),
+    );
+
+    const noFactThird = validateFace07Output({
+      raw: validFace07({
+        participants: [
+          (validFace07().participants as object[])[0],
+          {
+            participant_id: "p_boss",
+            display_label: "Sam",
+            role: "boss",
+            source: "model_said_so",
+            verification_status: "user_stated",
+            related_fact_ids: [],
+            notes: "",
+          },
+        ],
+      }),
+      locale: "en",
+      registry: ctx.registry,
+      knownFactIds: ctx.knownFactIds,
+      factStatusById: ctx.factStatusById,
+      factContentById: ctx.factContentById,
+      upstream: ctx.upstream,
+    });
+    assert.equal(noFactThird.ok, false);
+    if (noFactThird.ok) throw new Error("unreachable");
+    assert.ok(
+      noFactThird.issues.some((i) => i.code === "third_party_missing_fact_binding"),
+    );
+    assert.ok(
+      noFactThird.issues.some((i) => i.code === "forged_participant_provenance"),
+    );
+
+    const personalityEn = validateFace07Output({
+      raw: validFace07({
+        relationship_units: [
+          {
+            ...(validFace07().relationship_units as object[])[0],
+            text: "Alex's personality makes this partnership unreliable.",
+          },
+        ],
+      }),
+      locale: "en",
+      registry: ctx.registry,
+      knownFactIds: ctx.knownFactIds,
+      factStatusById: ctx.factStatusById,
+      factContentById: ctx.factContentById,
+      upstream: ctx.upstream,
+      knownPersonalInterpretationUnitRefs: ctx.knownPersonalInterpretationUnitRefs,
+      authorizedPartnerProfile: false,
+    });
+    assert.equal(personalityEn.ok, false);
+    if (personalityEn.ok) throw new Error("unreachable");
+    assert.ok(
+      personalityEn.issues.some(
+        (i) => i.code === "third_party_personality_without_profile",
+      ),
+    );
 
     const scored = validateFace07Output({
       raw: validFace07({
@@ -876,27 +1085,126 @@ async function main() {
     assert.ok(html.includes("data-applicability=\"applicable\""));
     assert.ok(html.includes("data-section=\"field_judgment\""));
     assert.ok(html.includes("written split"));
+
+    // not_applicable → omit Reader node + PDF blocks (no skip banner / blank page).
+    const skipPage = synthesizeFace07StatusPage({
+      locale: "en",
+      applicability: ctxOf(dcSolo).applicability,
+    });
+    assert.equal(skipPage.applicability_status, "not_applicable");
+    assert.equal(isFace07NotApplicableOmit(skipPage), true);
+    assert.equal(includePage07InUserFacingOrder(skipPage), false);
     const skipHtml = renderToStaticMarkup(
-      createElement(Face07PageSlots, {
-        page: synthesizeFace07StatusPage({
-          locale: "en",
-          applicability: ctxOf(dcSolo).applicability,
-        }),
-        locale: "en",
-      }),
+      createElement(Face07PageSlots, { page: skipPage, locale: "en" }),
     );
-    assert.ok(skipHtml.includes("data-page-skipped=\"1\""));
+    assert.equal(skipHtml, "");
+    assert.ok(!skipHtml.includes("data-face=\"07\""));
+    assert.ok(!skipHtml.includes("skipped"));
+    const skipPdf = assemblePage07PdfArgumentBodies(skipPage, "en");
+    assert.equal(skipPdf.length, 0);
+    const skipViaRender = pageSchemaToArgumentBodies(skipPage as never);
+    assert.equal(skipViaRender.length, 0);
+    assert.equal(assemblePage07SectionsForDisplay(skipPage, "en").length, 0);
+
+    // insufficient_information is NOT treated as normal not_applicable omit flag
+    // for the same product reason — production fails closed; inclusion helper returns false
+    // but isFace07NotApplicableOmit stays false.
+    const insufficientPage = synthesizeFace07StatusPage({
+      locale: "en",
+      applicability: {
+        status: "insufficient_information",
+        reason: "Question is too thin to judge field/relationship.",
+        signals: { topic_match: false, fact_match: false, constraint_match: false },
+      },
+    });
+    assert.equal(insufficientPage.applicability_status, "insufficient_information");
+    assert.equal(isFace07NotApplicableOmit(insufficientPage), false);
+    assert.equal(includePage07InUserFacingOrder(insufficientPage), false);
+
+    // Report reading order: omit 07 → 08 follows 06; glossary stays last.
+    const orderOmit07 = readingOrderAfterAssembly({
+      page07Schema: skipPage,
+      glossary: {
+        include: true,
+        page: {
+          page: "03",
+          face: "03",
+          kind: "glossary_appendix",
+          reading_note: "Terms used in this report.",
+          term_ids: ["t1"],
+        } as never,
+        term_ids: ["t1"],
+      },
+    });
+    assert.deepEqual(orderOmit07, ["01", "02", "04", "05", "06", "08", "03"]);
+    assert.ok(!orderOmit07.includes("07"));
+    assert.equal(orderOmit07[orderOmit07.length - 1], "03");
+    assert.equal(orderOmit07[orderOmit07.indexOf("08") - 1], "06");
+
+    const orderWith07 = readingOrderAfterAssembly({
+      page07Schema: validated.page,
+      glossary: { include: false, page: null, term_ids: [] },
+    });
+    assert.ok(orderWith07.includes("07"));
+    assert.equal(orderWith07[orderWith07.indexOf("08") - 1], "07");
+
+    // Shelf: not_applicable page_schema must not create a ready Page07 slot.
+    const fence = [
+      "```poju-page-schema",
+      JSON.stringify({ version: 1, page: skipPage }),
+      "```",
+    ].join("\n");
+    const glossaryFence = [
+      "```poju-page-schema",
+      JSON.stringify({
+        version: 1,
+        page: {
+          page: "03",
+          face: "03",
+          kind: "glossary_appendix",
+          reading_note: "n",
+          term_ids: ["t1"],
+        },
+      }),
+      "```",
+    ].join("\n");
+    const book = [
+      "## 01\n\nBrief",
+      "## 02\n\nWhy",
+      "## 04\n\nBottleneck",
+      "## 05\n\nPaths",
+      "## 06\n\nActions",
+      `## 07\n\n${fence}`,
+      "## 08\n\nClose",
+      `## 03\n\n${glossaryFence}`,
+    ].join("\n\n");
+    const shelf = buildDeliveryShelfSlots(book, {
+      locale: "en",
+      complete: true,
+      topic: "partnership",
+      question: applicableQuestion,
+    });
+    const ready = sequentialDeliveryProseReady(shelf);
+    assert.ok(!ready.some((s) => s.slotId === "07"), "shelf must omit not_applicable 07");
+    const ids = ready.map((s) => s.slotId);
+    const i08 = ids.indexOf("08");
+    assert.ok(i08 > 0);
+    assert.notEqual(ids[i08 - 1], "07");
+    assert.equal(ids[ids.length - 1], "03");
+
     const slotsSrc = readFileSync(
       resolvePath("components/poju/delivery-pages/faces/Face07PageSlots.tsx"),
       "utf8",
     );
     assert.ok(slotsSrc.includes("assemblePage07SectionsForDisplay"));
+    assert.ok(slotsSrc.includes("isFace07NotApplicableOmit"));
     const routerSrc = readFileSync(
       resolvePath("components/poju/delivery-pages/faces/FacePageSlots.tsx"),
       "utf8",
     );
     assert.ok(routerSrc.includes("Face07PageSlots"));
-    console.log("K PASS — Reader and PDF");
+    assert.ok(routerSrc.includes("isFace07NotApplicableOmit"));
+    console.log("K PASS — Reader and PDF omit not_applicable");
   }
 
   console.log("ok page07 production closure");

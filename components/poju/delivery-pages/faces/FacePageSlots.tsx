@@ -41,6 +41,7 @@ import {
   isFace07Legacy,
   isFace07V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
+import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
 import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
 import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
 import { isFace02V2, isFace02Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page02/legacy-adapter";
@@ -264,6 +265,8 @@ export function FacePageSlots({
     return <Face06PageSlots page={page as never} locale={locale} />;
   }
   if (id === "07" && (isFace07V2(page) || isFace07Legacy(page))) {
+    // Report orchestration: not_applicable Face07 is omitted (no Reader node).
+    if (isFace07NotApplicableOmit(page)) return null;
     return <Face07PageSlots page={page as never} locale={locale} />;
   }
   if (
