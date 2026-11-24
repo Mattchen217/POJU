@@ -132,6 +132,46 @@ export {
   page07TaskInterface,
   assertPage07InputAssemblyCoverage,
 } from "./page07/architecture";
+export {
+  buildFace08ProductionContext,
+  validateFace08ProductionOutput,
+  parseFace08JsonStrict,
+  face08SliceSummary,
+  buildFace08RepairUserMessage,
+  readPage07ForFace08,
+} from "./page08/production";
+export { validateFace08Output } from "./page08/validate";
+export { assertFace08PathIntegrity } from "./page08/path-integrity";
+export {
+  isFace08V2,
+  isFace08Legacy,
+  projectLegacyFace08ForDisplay,
+} from "./page08/legacy-adapter";
+export {
+  PAGE08_SECTION_IDS,
+  PAGE08_SECTION_DEFINITIONS,
+  PAGE08_INPUT_FIELD_CONTRACTS,
+  PAGE08_SECTION_CONTENT_SPECS,
+  PAGE08_MODEL_TASKS,
+  PAGE08_GAP_STATUSES,
+  PAGE08_ARCHITECTURE_PROMPT_VERSION,
+  PAGE08_FIELD_ASSEMBLERS,
+  PAGE08_UPSTREAM_CONTRACT,
+  PAGE08_DOWNSTREAM_CONTRACT,
+  PAGE08_STABLE_OUTPUT_FIELDS_FOR_DOWNSTREAM,
+  buildPage08ArchitectureProduction,
+  buildPage08ArchitectureEnvelope,
+  attachPage08ArchitectureToPage,
+  validatePage08CanonicalPage,
+  assemblePage08SectionsForDisplay,
+  assemblePage08PdfArgumentBodies,
+  assemblePage08InputManifest,
+  buildPage08MissingInputs,
+  buildPage08ArchitecturePromptBundle,
+  normalizePage08ReadingOrder,
+  page08TaskInterface,
+  assertPage08InputAssemblyCoverage,
+} from "./page08/architecture";
 export * from "./registry-from-sources";
 export * from "./fact-relevance";
 export * from "./personal-domains";

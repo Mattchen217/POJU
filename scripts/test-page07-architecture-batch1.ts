@@ -75,7 +75,7 @@ function dc(partial: {
   for (const key of ["page01", "page02", "page04", "page05", "page06", "decision_context"] as const) {
     assert.ok(PAGE07_UPSTREAM_CONTRACT[key].length > 0, key);
   }
-  assert.equal(PAGE07_DOWNSTREAM_CONTRACT.page08.implemented, false);
+  assert.equal(PAGE07_DOWNSTREAM_CONTRACT.page08.implemented, true);
   for (const field of [
     "applicability_status",
     "participants",

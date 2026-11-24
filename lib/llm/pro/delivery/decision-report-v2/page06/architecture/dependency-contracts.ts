@@ -47,8 +47,8 @@ export const PAGE06_UPSTREAM_CONTRACT = {
 export const PAGE06_DOWNSTREAM_CONTRACT = {
   page08: {
     status: "future" as const,
-    implemented: false as const,
-    note: "Future consumer contract. Do not implement Page08 in Batch 1.",
+    implemented: true as const,
+    note: "Page08 Batch 1 consumes this handoff.",
     fields: [
       "path_id",
       "action_ids",

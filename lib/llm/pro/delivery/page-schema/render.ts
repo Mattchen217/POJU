@@ -17,11 +17,14 @@ import { assemblePage06PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision
 import { projectLegacyFace07ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
 import { assemblePage07PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page07/architecture/section-assembly";
 import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
+import { projectLegacyFace08ForDisplay } from "@/lib/llm/pro/delivery/decision-report-v2/page08/legacy-adapter";
+import { assemblePage08PdfArgumentBodies } from "@/lib/llm/pro/delivery/decision-report-v2/page08/architecture/section-assembly";
 import type {
   Face04V2,
   Face05V2,
   Face06V2,
   Face07V2,
+  Face08V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import {
   DELIVERY_PAGE_SCHEMA_VERSION,
@@ -307,11 +310,31 @@ function faceArgumentBodies(page: DeliveryPageData): DeliveryArgument[] | null {
       }
       break;
     }
-    case "08":
-      add("红灯信号", "red_lights");
-      add("复盘问句", "review_questions");
-      add("何时重跑本题", "when_to_rerun");
+    case "08": {
+      let canonical08: Face08V2 | null = null;
+      if (
+        p.schema_version === "face08-v2" ||
+        Array.isArray((p as { risks?: unknown }).risks)
+      ) {
+        canonical08 = p as unknown as Face08V2;
+      } else {
+        canonical08 = projectLegacyFace08ForDisplay(p);
+      }
+      if (!canonical08) {
+        throw new Error(
+          "face08_pdf_legacy_project_failed: historical/incomplete Face08 could not be projected for PDF assembly",
+        );
+      }
+      const locale08 = String(
+        (canonical08 as { locale?: unknown }).locale ??
+          (p as { locale?: unknown }).locale ??
+          "zh",
+      );
+      for (const arg of assemblePage08PdfArgumentBodies(canonical08, locale08)) {
+        out.push(arg);
+      }
       break;
+    }
     case "03":
       if (p.kind === "glossary_appendix") {
         add("阅读说明", "reading_note");

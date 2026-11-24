@@ -425,6 +425,11 @@ export function buildV3BodyPrompt(input: {
    * When set, replaces generic buildFacePromptPair for key=07.
    */
   face07_production?: { system: string; user: string } | null;
+  /**
+   * Face 08 V2 production prompts (Risk Monitoring & Decision Review).
+   * When set, replaces generic buildFacePromptPair for key=08.
+   */
+  face08_production?: { system: string; user: string } | null;
 }): { system: string; user: string } {
   const faceId = isFaceDeliveryKey(input.key) ? (input.key as DecisionPageId) : null;
 
@@ -473,6 +478,14 @@ export function buildV3BodyPrompt(input: {
     return {
       system: `${BODY_SYSTEM_FACE}\n\n${input.face07_production.system}`,
       user: input.face07_production.user,
+    };
+  }
+
+  // Face 08 production path — Risk Monitoring & Decision Review architecture prompt.
+  if (faceId === "08" && input.face08_production?.system && input.face08_production?.user) {
+    return {
+      system: `${BODY_SYSTEM_FACE}\n\n${input.face08_production.system}`,
+      user: input.face08_production.user,
     };
   }
 

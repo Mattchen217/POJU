@@ -29,6 +29,7 @@ import { Face04PageSlots } from "@/components/poju/delivery-pages/faces/Face04Pa
 import { Face05PageSlots } from "@/components/poju/delivery-pages/faces/Face05PageSlots";
 import { Face06PageSlots } from "@/components/poju/delivery-pages/faces/Face06PageSlots";
 import { Face07PageSlots } from "@/components/poju/delivery-pages/faces/Face07PageSlots";
+import { Face08PageSlots } from "@/components/poju/delivery-pages/faces/Face08PageSlots";
 import {
   isFace05Legacy,
   isFace05V2,
@@ -41,6 +42,10 @@ import {
   isFace07Legacy,
   isFace07V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/legacy-adapter";
+import {
+  isFace08Legacy,
+  isFace08V2,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page08/legacy-adapter";
 import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
 import { Face03GlossarySlots } from "@/components/poju/delivery-pages/faces/Face03GlossarySlots";
 import { isFace01V2, isFace01Legacy } from "@/lib/llm/pro/delivery/decision-report-v2/page01/legacy-adapter";
@@ -268,6 +273,9 @@ export function FacePageSlots({
     // Report orchestration: not_applicable Face07 is omitted (no Reader node).
     if (isFace07NotApplicableOmit(page)) return null;
     return <Face07PageSlots page={page as never} locale={locale} />;
+  }
+  if (id === "08" && (isFace08V2(page) || isFace08Legacy(page))) {
+    return <Face08PageSlots page={page as never} locale={locale} />;
   }
   if (
     id === "03" &&

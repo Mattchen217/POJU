@@ -28,6 +28,7 @@ import {
   Face06VerificationExperimentSchema,
   Face07V2Schema,
   Face07LegacySchema,
+  Face08V2Schema,
   type Face01Legacy,
   type Face01V2,
   type Face02Legacy,
@@ -42,6 +43,7 @@ import {
   type Face06Legacy,
   type Face07V2,
   type Face07Legacy,
+  type Face08V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 
 const NonEmpty = z.string().trim().min(1);
@@ -103,8 +105,8 @@ export {
   type Face07Legacy,
 };
 
-/** 08 · 自检清单 · dualTrack=reality · Product Stage 4 P8 */
-export const Face08Schema = z.object({
+/** 08 · 风险监测与决策复盘 · dualTrack=reality · schema_version face08-v2 */
+export const Face08LegacySchema = z.object({
   page: z.literal("08"),
   ...FaceChromeSchema.shape,
   face: z.literal("08"),
@@ -118,7 +120,13 @@ export const Face08Schema = z.object({
     .optional(),
   review_decision_rationale: z.string().trim().max(720).optional().default(""),
 });
-export type Face08 = z.infer<typeof Face08Schema>;
+export type Face08Legacy = z.infer<typeof Face08LegacySchema>;
+/** Historical name kept for callers that still parse the flat self-check shape. */
+export const Face08Schema = Face08LegacySchema;
+/** Historical open: accept legacy red-light shape and Face08V2. */
+export const Face08ParseSchema = z.union([Face08V2Schema, Face08LegacySchema]);
+export type Face08 = Face08V2 | Face08Legacy;
+export { Face08V2Schema, type Face08V2 };
 
 /**
  * 03 · 本报告术语索引（glossary appendix）· dualTrack=appendix
@@ -135,7 +143,7 @@ export const FACE_PAGE_SCHEMAS = {
   "05": Face05ParseSchema,
   "06": Face06ParseSchema,
   "07": Face07ParseSchema,
-  "08": Face08Schema,
+  "08": Face08ParseSchema,
   "03": Face03Schema,
 } as const;
 

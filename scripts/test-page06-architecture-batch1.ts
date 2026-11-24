@@ -45,7 +45,7 @@ console.log("=== Page06 Batch1 architecture (no LLM quality claims) ===");
   assert.ok(PAGE06_UPSTREAM_CONTRACT.decision_context.length > 0);
   assert.ok(PAGE06_UPSTREAM_CONTRACT.personal_readings_registry.length > 0);
   assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.status, "future");
-  assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.implemented, false);
+  assert.equal(PAGE06_DOWNSTREAM_CONTRACT.page08.implemented, true);
   for (const field of [
     "path_id",
     "action_ids",

@@ -1585,6 +1585,271 @@ export const Face07LegacySchema = z.object({
 
 export type Face07Legacy = z.infer<typeof Face07LegacySchema>;
 
+const Page08SectionIdEnum = z.enum([
+  "risks",
+  "observation_signals",
+  "triggers",
+  "reassessment_conditions",
+  "evidence_boundary",
+]);
+
+const Page08RefIds = z.array(NonEmpty.max(80)).max(12).default([]);
+const Page08FactIds = z.array(NonEmpty.max(120)).max(12).default([]);
+const Page08PathIds = z.array(NonEmpty.max(80)).max(8).default([]);
+const Page08ActionIds = z.array(NonEmpty.max(80)).max(12).default([]);
+
+const Page08RiskCategorySchema = z.enum([
+  "execution_risk",
+  "resource_risk",
+  "external_dependency",
+  "relationship_risk",
+  "assumption_risk",
+  "information_risk",
+]);
+
+const Page08RiskStatusSchema = z.enum([
+  "active",
+  "potential",
+  "unverified",
+  "resolved",
+]);
+
+const Page08BaselineStatusSchema = z.enum([
+  "has_baseline",
+  "needs_baseline",
+  "no_basis",
+]);
+
+const Page08ThresholdStatusSchema = z.enum(["defined", "not_defined"]);
+
+const Page08TriggerStatusSchema = z.enum([
+  "defined",
+  "pending_confirmation",
+  "conditional",
+]);
+
+const Page08DecisionResponseSchema = z.enum([
+  "continue",
+  "adjust",
+  "pause",
+  "stop",
+  "reassess",
+]);
+
+/**
+ * Face 08 V2 — risk monitoring and decision review.
+ * Observes signals already grounded in Page01–07 and DC facts.
+ * Does not rewrite those pages or invent facts, scores, or dates.
+ */
+export const Face08V2Schema = z.object({
+  page: z.literal("08"),
+  face: z.literal("08"),
+  schema_version: z.literal("face08-v2").default("face08-v2"),
+  locale: DecisionReportLocaleSchema.optional(),
+  page_title: z.string().trim().max(56).optional().default(""),
+  page_subtitle: z.string().trim().max(80).optional().default(""),
+  risks: z
+    .array(
+      z.object({
+        risk_id: NonEmpty.max(80),
+        risk_title: NonEmpty.max(120),
+        risk_description: NonEmpty.max(960),
+        risk_category: Page08RiskCategorySchema,
+        current_status: Page08RiskStatusSchema,
+        related_path_ids: Page08PathIds,
+        related_action_ids: Page08ActionIds,
+        reality_fact_ids: Page08FactIds,
+        claim_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        evidence_ids: Page08RefIds,
+      }),
+    )
+    .min(1)
+    .max(12),
+  observation_signals: z
+    .array(
+      z.object({
+        signal_id: NonEmpty.max(80),
+        related_risk_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        signal_name: NonEmpty.max(120),
+        what_to_observe: NonEmpty.max(480),
+        observation_source: NonEmpty.max(240),
+        observation_method: NonEmpty.max(240),
+        observation_window: NonEmpty.max(240),
+        baseline_status: Page08BaselineStatusSchema,
+        threshold_status: Page08ThresholdStatusSchema,
+        related_fact_ids: Page08FactIds,
+      }),
+    )
+    .min(1)
+    .max(12),
+  triggers: z
+    .array(
+      z.object({
+        trigger_id: NonEmpty.max(80),
+        related_risk_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        related_signal_ids: z.array(NonEmpty.max(80)).min(1).max(8),
+        trigger_condition: NonEmpty.max(480),
+        trigger_status: Page08TriggerStatusSchema,
+        decision_response: Page08DecisionResponseSchema,
+        required_evidence_ids: Page08RefIds,
+        related_path_ids: Page08PathIds,
+        related_action_ids: Page08ActionIds,
+      }),
+    )
+    .min(1)
+    .max(12),
+  reassessment_conditions: z
+    .array(
+      z.object({
+        reassessment_id: NonEmpty.max(80),
+        condition: NonEmpty.max(480),
+        change_type: NonEmpty.max(80),
+        related_fact_ids: Page08FactIds,
+        related_claim_ids: z.array(NonEmpty.max(80)).max(8).default([]),
+        affected_path_ids: Page08PathIds,
+        expected_review_scope: NonEmpty.max(480),
+      }),
+    )
+    .max(8)
+    .default([]),
+  evidence_boundary: z.object({
+    confirmed_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    unverified_fact_ids: z.array(NonEmpty.max(120)).max(12).default([]),
+    related_claim_ids: z.array(NonEmpty.max(80)).min(1).max(12),
+    related_evidence_ids: Page08RefIds,
+    unresolved_questions: z.array(NonEmpty.max(240)).max(8).default([]),
+    monitoring_limitations: z.array(NonEmpty.max(320)).min(1).max(8),
+    reassessment_limitations: z.array(NonEmpty.max(320)).max(8).default([]),
+  }),
+  reading_order: z
+    .array(Page08SectionIdEnum)
+    .min(5)
+    .max(5)
+    .default([
+      "risks",
+      "observation_signals",
+      "triggers",
+      "reassessment_conditions",
+      "evidence_boundary",
+    ])
+    .superRefine((order, ctx) => {
+      const seen = new Set<string>();
+      for (const id of order) {
+        if (seen.has(id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `duplicate reading_order section_id: ${id}`,
+          });
+          return;
+        }
+        seen.add(id);
+      }
+      for (const required of [
+        "risks",
+        "observation_signals",
+        "triggers",
+        "reassessment_conditions",
+        "evidence_boundary",
+      ] as const) {
+        if (!seen.has(required)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `reading_order missing required section: ${required}`,
+          });
+        }
+      }
+    }),
+  generation_status: z
+    .enum([
+      "blocked_on_required_inputs",
+      "ready_for_generation",
+      "generated_with_gaps",
+      "generated_complete",
+      "failed_structure",
+      "incomplete",
+    ])
+    .optional(),
+  input_manifest: z
+    .array(
+      z.object({
+        field_id: NonEmpty.max(80),
+        section_id: Page08SectionIdEnum,
+        source_kind: z.enum([
+          "personal_analysis",
+          "reality_context",
+          "analytical_result",
+          "system_metadata",
+          "derived_data",
+        ]),
+        present: z.boolean(),
+        collection_status: z.enum([
+          "ready",
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        value_summary: z.string().trim().max(320).nullable(),
+      }),
+    )
+    .max(48)
+    .optional(),
+  missing_inputs: z
+    .array(
+      z.object({
+        gap_id: NonEmpty.max(80),
+        page_id: z.literal("08"),
+        section_id: Page08SectionIdEnum,
+        field_id: NonEmpty.max(80),
+        status: z.enum([
+          "missing",
+          "unknown",
+          "conflict",
+          "unverified",
+          "declined",
+          "not_applicable",
+        ]),
+        why_needed: NonEmpty.max(320),
+        affects_content: NonEmpty.max(320),
+        follow_up_collect_hint: NonEmpty.max(320),
+        handling: z.enum([
+          "omit_section_content",
+          "defer_generation",
+          "generate_conditional_only",
+          "show_gap_note_only",
+        ]),
+      }),
+    )
+    .max(48)
+    .optional(),
+  sections: z
+    .array(
+      z.object({
+        section_id: Page08SectionIdEnum,
+        segment_letter: z.enum(["A", "B", "C", "D", "E"]),
+        title_zh: NonEmpty.max(80),
+        title_en: NonEmpty.max(80),
+        required: z.boolean(),
+        reading_rank: z.number().int().min(1).max(8),
+        information_level: NonEmpty.max(40),
+      }),
+    )
+    .max(8)
+    .optional(),
+  generation_metadata: z
+    .object({
+      task_id: NonEmpty.max(80),
+      prompt_bundle_chars: z.number().int().min(0),
+      built_at: NonEmpty.max(64),
+      llm_invoked: z.boolean(),
+    })
+    .optional(),
+});
+
+export type Face08V2 = z.infer<typeof Face08V2Schema>;
+
 /** Legacy Face 01 (pre Batch 0) — retained for historical report open. */
 export const Face01LegacySchema = z.object({
   page: z.literal("01"),

@@ -78,6 +78,14 @@ import {
   validateFace07ProductionOutput,
   type Face07ProductionContext,
 } from "@/lib/llm/pro/delivery/decision-report-v2/page07/production";
+import {
+  buildFace08ProductionContext,
+  buildFace08RepairUserMessage,
+  face08SliceSummary,
+  parseFace08JsonStrict,
+  validateFace08ProductionOutput,
+  type Face08ProductionContext,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page08/production";
 import type {
   Face01V2,
   Face02V2,
@@ -85,6 +93,7 @@ import type {
   Face05V2,
   Face06V2,
   Face07V2,
+  Face08V2,
 } from "@/lib/llm/pro/delivery/decision-report-v2/schemas";
 import type { CallLLMResult } from "@/lib/llm/router";
 
@@ -153,6 +162,12 @@ export type ContentBodyOk = {
     slice_summary: Record<string, unknown>;
     validation: "passed" | "passed_after_repair" | "skipped_not_applicable";
   };
+  face08_meta?: {
+    prompt_version: string;
+    schema_version: string;
+    slice_summary: Record<string, unknown>;
+    validation: "passed" | "passed_after_repair";
+  };
 };
 
 export type ContentBodyFail = {
@@ -191,6 +206,11 @@ export type ContentBodyFail = {
     slice_summary?: Record<string, unknown>;
     validation_issues?: unknown[];
     structured_status?: unknown;
+  };
+  face08_meta?: {
+    prompt_version?: string;
+    slice_summary?: Record<string, unknown>;
+    validation_issues?: unknown[];
   };
 };
 
@@ -707,8 +727,10 @@ export async function runContentBodyGenerate(input: {
   page04_schema?: unknown;
   /** Optional Page05 schema — path binding for Face06 / Face07. */
   page05_schema?: unknown;
-  /** Optional Page06 schema — execution binding for Face07. */
+  /** Optional Page06 schema — execution binding for Face07 / Face08. */
   page06_schema?: unknown;
+  /** Optional Page07 schema — field context for Face08. Missing is a gap, not a block. */
+  page07_schema?: unknown;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body", {
@@ -723,6 +745,7 @@ export async function runContentBodyGenerate(input: {
   let face05Ctx: Face05ProductionContext | null = null;
   let face06Ctx: Face06ProductionContext | null = null;
   let face07Ctx: Face07ProductionContext | null = null;
+  let face08Ctx: Face08ProductionContext | null = null;
   if (input.key === "01") {
     const built = buildFace01ProductionContext({
       report_id: input.report_id?.trim() || input.session_id || "report_face01",
@@ -1048,6 +1071,55 @@ export async function runContentBodyGenerate(input: {
     }
     face07Ctx = built.ctx;
   }
+  if (input.key === "08") {
+    const built = buildFace08ProductionContext({
+      report_id: input.report_id?.trim() || input.session_id || "report_face08",
+      locale: input.locale,
+      dc: input.decision_context_snapshot ?? null,
+      pack: input.book_judgment_pack ?? null,
+      chart_fact_pack: input.chart_fact_pack ?? null,
+      page01: input.page01_schema ?? null,
+      page02: input.page02_schema ?? null,
+      page04: input.page04_schema ?? null,
+      page05: input.page05_schema ?? null,
+      page06: input.page06_schema ?? null,
+      page07: input.page07_schema ?? null,
+    });
+    if (!built.ok) {
+      return {
+        ok: false,
+        reason: built.reason,
+        tokens_used: 0,
+        face08_meta: {
+          validation_issues: [{ detail: built.detail ?? built.reason }],
+        },
+      };
+    }
+    if (!built.ctx.may_invoke_llm) {
+      const blocking = built.ctx.architecture.missing_inputs.filter(
+        (g) => g.handling === "defer_generation",
+      );
+      return {
+        ok: false,
+        reason: "face08_blocked_on_required_inputs",
+        tokens_used: 0,
+        face08_meta: {
+          prompt_version: built.ctx.prompt_version,
+          slice_summary: {
+            ...face08SliceSummary(built.ctx),
+            blocked: true,
+            blocking_gaps: blocking.map((g) => g.gap_id),
+          },
+          validation_issues: [
+            {
+              detail: `may_invoke_llm=false; generation_status=${built.ctx.architecture.generation_status}; gaps=${blocking.map((g) => g.field_id).join(",")}`,
+            },
+          ],
+        },
+      };
+    }
+    face08Ctx = built.ctx;
+  }
   const pageSlice = formatPageSliceFeed({
     key: input.key,
     chartText: feed.thesis_factpack ? input.chart_fact_pack : null,
@@ -1122,7 +1194,7 @@ export async function runContentBodyGenerate(input: {
     !(input.ziwei_fact_pack.patternHits?.length > 0);
   // Face01/02/04/05/06 V2: prompt is the production slice pair; do not mash DC/legacy feed into user.
   const faceV2Ctx =
-    face01Ctx || face02Ctx || face04Ctx || face05Ctx || face06Ctx || face07Ctx;
+    face01Ctx || face02Ctx || face04Ctx || face05Ctx || face06Ctx || face07Ctx || face08Ctx;
   const effectiveUserFeed = faceV2Ctx ? "" : userFeed;
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
@@ -1155,6 +1227,9 @@ export async function runContentBodyGenerate(input: {
     face07_production: face07Ctx
       ? { system: face07Ctx.system, user: face07Ctx.user }
       : null,
+    face08_production: face08Ctx
+      ? { system: face08Ctx.system, user: face08Ctx.user }
+      : null,
   });
 
   let tokens_used = 0;
@@ -1178,7 +1253,9 @@ export async function runContentBodyGenerate(input: {
               ? "content_body_v3_face06"
               : face07Ctx
                 ? "content_body_v3_face07"
-                : "content_body_v3";
+                : face08Ctx
+                  ? "content_body_v3_face08"
+                  : "content_body_v3";
 
     const invoke = async (sys: string, usr: string) => {
       if (contentBodyTestInvoke) {
@@ -1224,6 +1301,7 @@ export async function runContentBodyGenerate(input: {
             face05Ctx?.user ||
             face06Ctx?.user ||
             face07Ctx?.user ||
+            face08Ctx?.user ||
             "",
           raw_text: text,
           result,
@@ -1246,6 +1324,9 @@ export async function runContentBodyGenerate(input: {
         face07_meta: face07Ctx
           ? { prompt_version: face07Ctx.prompt_version, slice_summary: face07SliceSummary(face07Ctx) }
           : undefined,
+        face08_meta: face08Ctx
+          ? { prompt_version: face08Ctx.prompt_version, slice_summary: face08SliceSummary(face08Ctx) }
+          : undefined,
       };
     }
     const baseTrace = {
@@ -1260,6 +1341,7 @@ export async function runContentBodyGenerate(input: {
         face05Ctx?.user ||
         face06Ctx?.user ||
         face07Ctx?.user ||
+        face08Ctx?.user ||
         "",
       result,
     };
@@ -2110,6 +2192,137 @@ export async function runContentBodyGenerate(input: {
       );
     }
 
+    // --- Face 08 V2: strict JSON → schema → refs → attach ---
+    if (face08Ctx) {
+      const finalizeFace08 = async (
+        rawText: string,
+        parsedIn: unknown,
+        validationTag: "passed" | "passed_after_repair",
+        repairTrace?: LabCallTrace,
+      ): Promise<ContentBodyOk | ContentBodyFail> => {
+        const validated = validateFace08ProductionOutput({
+          raw: parsedIn,
+          locale: input.locale,
+          ctx: face08Ctx!,
+        });
+        if (!validated.ok) {
+          return {
+            ok: false,
+            reason: validated.reason,
+            tokens_used,
+            last_raw_text: rawText.slice(0, 12_000),
+            call_trace: repairTrace ??
+              buildLabCallTrace({
+                ...baseTrace,
+                raw_text: rawText,
+                parsed: parsedIn,
+              }),
+            face08_meta: {
+              prompt_version: face08Ctx!.prompt_version,
+              slice_summary: face08SliceSummary(face08Ctx!),
+              validation_issues: validated.issues,
+            },
+          };
+        }
+        const page = validated.page as unknown as DeliveryPageData;
+        return {
+          ok: true,
+          page,
+          tokens_used,
+          last_raw_text: rawText.slice(0, 12_000),
+          call_trace: repairTrace ??
+            buildLabCallTrace({
+              ...baseTrace,
+              raw_text: rawText,
+              parsed: page,
+            }),
+          face08_meta: {
+            prompt_version: face08Ctx!.prompt_version,
+            schema_version: face08Ctx!.schema_version,
+            slice_summary: face08SliceSummary(face08Ctx!),
+            validation: validationTag,
+          },
+        };
+      };
+
+      const parsed08 = parseFace08JsonStrict(text);
+      if (parsed08 == null) {
+        return {
+          ok: false,
+          reason: "face08_json_not_strict",
+          tokens_used,
+          last_raw_text: text.slice(0, 12_000),
+          call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
+          face08_meta: {
+            prompt_version: face08Ctx.prompt_version,
+            slice_summary: face08SliceSummary(face08Ctx),
+          },
+        };
+      }
+      const first08 = await finalizeFace08(text, parsed08, "passed");
+      if (first08.ok) return first08;
+      const repairUser08 = buildFace08RepairUserMessage({
+        previousUser: user,
+        previousRaw: text,
+        issues:
+          (first08.face08_meta?.validation_issues as
+            | import("@/lib/llm/pro/delivery/decision-report-v2/page08/validate").Face08Issue[]
+            | undefined) ?? [
+            { code: "face08_validation_failed", detail: first08.reason },
+          ],
+      });
+      const repairResult08 = await invoke(system, repairUser08);
+      tokens_used += repairResult08.meta.tokens_used;
+      const repairText08 = repairResult08.content?.trim() ?? "";
+      if (scareRedlineSnippet(repairText08)) {
+        return {
+          ok: false,
+          reason: "scare_redline",
+          tokens_used,
+          last_raw_text: repairText08.slice(0, 12_000),
+          call_trace: buildLabCallTrace({
+            ...baseTrace,
+            raw_text: repairText08,
+            result: repairResult08,
+          }),
+          face08_meta: {
+            prompt_version: face08Ctx.prompt_version,
+            slice_summary: face08SliceSummary(face08Ctx),
+          },
+        };
+      }
+      const repairParsed08 = parseFace08JsonStrict(repairText08);
+      if (repairParsed08 == null) {
+        return {
+          ok: false,
+          reason: "face08_repair_json_not_strict",
+          tokens_used,
+          last_raw_text: repairText08.slice(0, 12_000),
+          call_trace: buildLabCallTrace({
+            ...baseTrace,
+            raw_text: repairText08,
+            result: repairResult08,
+          }),
+          face08_meta: {
+            prompt_version: face08Ctx.prompt_version,
+            slice_summary: face08SliceSummary(face08Ctx),
+            validation_issues: first08.face08_meta?.validation_issues,
+          },
+        };
+      }
+      return finalizeFace08(
+        repairText08,
+        repairParsed08,
+        "passed_after_repair",
+        buildLabCallTrace({
+          ...baseTrace,
+          raw_text: repairText08,
+          result: repairResult08,
+          parsed: repairParsed08,
+        }),
+      );
+    }
+
     let parsed: unknown;
     try {
       parsed = extractJson(text);
@@ -2169,7 +2382,9 @@ export async function runContentBodyGenerate(input: {
                   ? "content_body_v3_face06"
                   : face07Ctx
                     ? "content_body_v3_face07"
-                    : "content_body_v3",
+                    : face08Ctx
+                      ? "content_body_v3_face08"
+                      : "content_body_v3",
         system,
         user,
         user_feed:
@@ -2180,6 +2395,7 @@ export async function runContentBodyGenerate(input: {
           face05Ctx?.user ||
           face06Ctx?.user ||
           face07Ctx?.user ||
+          face08Ctx?.user ||
           "",
         raw_text: null,
       }),
@@ -2188,4 +2404,4 @@ export async function runContentBodyGenerate(input: {
 }
 
 /** Type-only re-export for callers. */
-export type { Face01V2, Face02V2, Face04V2, Face05V2, Face06V2, Face07V2 };
+export type { Face01V2, Face02V2, Face04V2, Face05V2, Face06V2, Face07V2, Face08V2 };
