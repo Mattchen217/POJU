@@ -210,3 +210,14 @@ export {
   isReportPageId,
   pageFingerprintOptionalUpstreamIds,
 } from "./orchestration";
+export {
+  startReportBatch2Production,
+  runReportBatch2OrchestratorTick,
+  isReportBatch2InngestConfigured,
+  REPORT_BATCH2_EVENTS,
+  setBatch2ModelInvokeForTests,
+  setReportBatch2EventSenderForTests,
+  resetBatch2JobStoreForTests,
+  type ReportBatch2JobRecord,
+  type ReportBatch2JobInputs,
+} from "./batch2";
