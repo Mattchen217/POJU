@@ -267,6 +267,13 @@ async function main(): Promise<void> {
 
     setReportBatch2EventSenderForTests(runtimeSender);
     resetBatch2InvocationRecords();
+    // cleanup() above clears the model mock — restore before draining workers.
+    // Unit C: retryable generate failures throw; without a mock, drain aborts.
+    setBatch2ModelInvokeForTests(async (input) => ({
+      content: "{ broken-json",
+      tokens_used: 1,
+      model_call_id: `mc_${input.page_id}_${input.call_kind}_${input.invocation_id.slice(0, 8)}`,
+    }));
     setBatch2ModelDelayMsForTests(60);
     await sendViaRuntime(genPayloads);
     await runtimeSender.drain();

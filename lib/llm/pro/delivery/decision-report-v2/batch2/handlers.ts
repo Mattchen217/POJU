@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { NonRetriableError } from "inngest";
 
 import {
   buildOrchestratePayload,
@@ -15,7 +16,24 @@ import type {
   ReportBatch2GenerateEventData,
   ReportBatch2OrchestrateEventData,
   ReportBatch2RepairEventData,
+  ReportBatch2WorkerResult,
 } from "./types";
+
+/**
+ * Map Worker failed result → Inngest semantics.
+ * - retryable: throw Error (platform retries; Claim must already be released)
+ * - terminal: NonRetriableError (no infinite retry; state already persisted)
+ */
+export function throwForBatch2WorkerFailure(
+  kind: "generate" | "repair",
+  result: Extract<ReportBatch2WorkerResult, { status: "failed" }>,
+): never {
+  const msg = `batch2_${kind}_failed:${result.code}:${result.detail}`;
+  if (result.retryable === true) {
+    throw new Error(msg);
+  }
+  throw new NonRetriableError(msg);
+}
 
 async function maybeContinueOrchestration(
   report_id: string,
@@ -79,12 +97,25 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
     return { ok: true, status: "deferred", continued: false };
   }
 
-  const terminal =
-    result.status === "completed" ||
-    result.status === "failed" ||
-    result.status === "skipped";
-  if (terminal) {
-    await maybeContinueOrchestration(data.report_id, data.generation_id, data.locale);
+  if (result.status === "failed") {
+    // Unit C: do not swallow retryable failures as successful Function results.
+    if (result.retryable === true) {
+      throwForBatch2WorkerFailure("generate", result);
+    }
+    await maybeContinueOrchestration(
+      data.report_id,
+      data.generation_id,
+      data.locale,
+    );
+    throwForBatch2WorkerFailure("generate", result);
+  }
+
+  if (result.status === "completed" || result.status === "skipped") {
+    await maybeContinueOrchestration(
+      data.report_id,
+      data.generation_id,
+      data.locale,
+    );
     return { ok: true, status: result.status, continued: true };
   }
 
@@ -103,9 +134,21 @@ export async function handleRepairEvent(data: ReportBatch2RepairEventData): Prom
     worker_id: "report-page-repair",
   });
 
+  if (result.status === "failed") {
+    if (result.retryable === true) {
+      throwForBatch2WorkerFailure("repair", result);
+    }
+    await maybeContinueOrchestration(
+      data.report_id,
+      data.generation_id,
+      data.locale,
+    );
+    throwForBatch2WorkerFailure("repair", result);
+  }
+
   await maybeContinueOrchestration(data.report_id, data.generation_id, data.locale);
   return {
-    ok: result.status !== "failed" || "code" in result,
+    ok: true,
     status: result.status,
     continued: true,
   };

@@ -174,6 +174,7 @@ export async function runReportPageRepairOnce(input: {
           status: "failed",
           code: released.code,
           detail: `fail_release_failed: ${released.detail} (repair=${code}: ${detail})`,
+          retryable: false,
         };
       }
     }
@@ -182,9 +183,15 @@ export async function runReportPageRepairOnce(input: {
     job.status = "failed";
     const saved = await saveJob(job);
     if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
+      return {
+        status: "failed",
+        code: saved.code,
+        detail: saved.detail,
+        retryable: false,
+      };
     }
-    return { status: "failed", code, detail };
+    // Unit B terminal failure — Pending cleared; do not Inngest-retry this Attempt.
+    return { status: "failed", code, detail, retryable: false };
   }
 
   try {

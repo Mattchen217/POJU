@@ -124,10 +124,30 @@ export type ReportBatch2RecoverEventData = {
 };
 
 export type ReportBatch2WorkerResult =
-  | { status: "completed" | "failed" | "skipped" | "queued" }
+  | { status: "completed" | "skipped" | "queued" }
   | { status: "needs_repair" }
   | { status: "deferred"; code: string; detail: string }
-  | { status: "failed"; code: string; detail: string };
+  | {
+      status: "failed";
+      code: string;
+      detail: string;
+      /** When true, Inngest handlers must throw so platform retries. */
+      retryable?: boolean;
+    };
+
+/** Codes that should trigger Inngest retry after Batch3 Claim is released. */
+export function isBatch2RetryableFailureCode(code: string): boolean {
+  switch (code) {
+    case "model_invoke_error":
+    case "post_process_error":
+    case "kv_unavailable":
+    case "kv_write_failed":
+    case "kv_read_failed":
+      return true;
+    default:
+      return false;
+  }
+}
 
 export type ReportBatch2ApplicabilityResult =
   | {

@@ -65,6 +65,7 @@ import {
   computePageInputFingerprintForJob,
 } from "./page-prep";
 import type { ReportBatch2GenerateEventData, ReportBatch2WorkerResult } from "./types";
+import { isBatch2RetryableFailureCode } from "./types";
 
 const IN_FLIGHT = new Set([
   "queued",
@@ -78,6 +79,15 @@ const IN_FLIGHT = new Set([
   "cancelled",
 ]);
 
+/** Unit C test hook: throw after model returns (Claim held) to exercise fail-release. */
+let afterGenerateModelHookForTests: (() => void) | null = null;
+
+export function setAfterGenerateModelHookForTests(
+  fn: (() => void) | null,
+): void {
+  afterGenerateModelHookForTests = fn;
+}
+
 export async function runReportPageGenerateOnce(input: {
   event: ReportBatch2GenerateEventData;
   invocation_id: string;
@@ -87,10 +97,10 @@ export async function runReportPageGenerateOnce(input: {
   if (!loaded.ok) {
     return { status: "failed", code: loaded.code, detail: loaded.detail };
   }
-  const job = loaded.value;
-  if (!job) {
+  if (!loaded.value) {
     return { status: "failed", code: "job_not_found", detail: "batch2 job missing" };
   }
+  const job = loaded.value;
 
   const page_id = input.event.page_id;
   const state = job.page_states.find((s) => s.page_id === page_id);
@@ -264,6 +274,55 @@ export async function runReportPageGenerateOnce(input: {
   let model_call_id: string | null = null;
   let rawText = "";
 
+  async function failGenerateAfterClaim(
+    code: string,
+    detail: string,
+    opts: { terminal_batch2: boolean },
+  ): Promise<ReportBatch2WorkerResult> {
+    // Unit C: sync Batch3 before returning — never leave Claim permanently held.
+    if (batch3Attempt && typeof epoch === "number") {
+      const { failAndReleasePageClaim } = await import(
+        "../batch3/claim-page-execution"
+      );
+      const released = await failAndReleasePageClaim({
+        report_id: input.event.report_id,
+        generation_id: input.event.generation_id,
+        generation_epoch: epoch,
+        page_id,
+        task_key: batch3Attempt.task_key,
+        attempt_id: batch3Attempt.attempt_id,
+        detail: `${code}: ${detail}`,
+      });
+      if (!released.ok) {
+        return {
+          status: "failed",
+          code: released.code,
+          detail: `fail_release_failed: ${released.detail} (generate=${code}: ${detail})`,
+          retryable: false,
+        };
+      }
+    }
+    if (opts.terminal_batch2) {
+      updatePageState(job, page_id, { outcome: "failed" });
+      job.status = "failed";
+      const saved = await saveJob(job);
+      if (!saved.ok) {
+        return {
+          status: "failed",
+          code: saved.code,
+          detail: saved.detail,
+          retryable: isBatch2RetryableFailureCode(saved.code),
+        };
+      }
+    }
+    return {
+      status: "failed",
+      code,
+      detail,
+      retryable: isBatch2RetryableFailureCode(code),
+    };
+  }
+
   try {
     const model = await invoke({
       page_id,
@@ -284,17 +343,12 @@ export async function runReportPageGenerateOnce(input: {
       started_at,
       ended_at: new Date().toISOString(),
     });
-    updatePageState(job, page_id, { outcome: "failed" });
-    job.status = "failed";
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
-    }
-    return {
-      status: "failed",
-      code: "model_invoke_error",
-      detail: err instanceof Error ? err.message : String(err),
-    };
+    // Retryable: release Claim but keep Batch2 running so Inngest retry can re-claim.
+    return failGenerateAfterClaim(
+      "model_invoke_error",
+      err instanceof Error ? err.message : String(err),
+      { terminal_batch2: false },
+    );
   }
 
   appendInvocationLog(job, {
@@ -307,14 +361,22 @@ export async function runReportPageGenerateOnce(input: {
     ended_at: new Date().toISOString(),
   });
 
+  try {
+    afterGenerateModelHookForTests?.();
+  } catch (err) {
+    return failGenerateAfterClaim(
+      "post_process_error",
+      err instanceof Error ? err.message : String(err),
+      { terminal_batch2: false },
+    );
+  }
+
   if (scareRedlineSnippet(rawText)) {
-    updatePageState(job, page_id, { outcome: "failed" });
-    job.status = "failed";
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
-    }
-    return { status: "failed", code: "scare_redline", detail: "model output failed compliance" };
+    return failGenerateAfterClaim(
+      "scare_redline",
+      "model output failed compliance",
+      { terminal_batch2: true },
+    );
   }
 
   const parsed = parsePageJson(page_id, rawText);
@@ -400,7 +462,10 @@ export async function runReportPageGenerateOnce(input: {
       },
     });
     if (!committed.ok) {
-      return { status: "failed", code: committed.code, detail: committed.detail };
+      return failGenerateAfterClaim(committed.code, committed.detail, {
+        // Structural / identity failures are terminal; KV blips may retry.
+        terminal_batch2: !isBatch2RetryableFailureCode(committed.code),
+      });
     }
     return { status: "completed" };
   }

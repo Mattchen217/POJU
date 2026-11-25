@@ -188,7 +188,9 @@ export function createBatch2HandlerAdapterEventSender(): {
       while (Date.now() < deadline) {
         if (pendingInvocations.length > 0) {
           const batch = pendingInvocations.splice(0);
-          await Promise.all(batch);
+          // Unit C: handlers may throw (retryable Error / NonRetriableError).
+          // Drain must still await siblings — same as Inngest isolating Function runs.
+          await Promise.allSettled(batch);
           quietMs = 0;
           continue;
         }
