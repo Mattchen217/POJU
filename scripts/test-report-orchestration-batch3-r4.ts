@@ -628,8 +628,7 @@ async function main(): Promise<void> {
     );
     setMergeBeforeFinalizationClaimHookForTests(null);
 
-    // Successful claim then invalidation — claim remains; old sealed snapshot was
-    // bound atomically. Direct claimFinalization after invalidation must fail.
+    // Claim first → Invalidation must be finalization_locked; fences unchanged.
     await cleanup();
     const report_id4 = "rpt_b3r4_toc4";
     const gen4 = await boot(report_id4, "g_toc4");
@@ -640,6 +639,7 @@ async function main(): Promise<void> {
       "skipped_not_applicable",
     );
     const bindings: FinalizationPageBinding[] = [];
+    const fenceRevs = new Map<string, number>();
     for (const page_id of REPORT_PAGE_IDS) {
       const fence = await readPageFence(
         report_id4,
@@ -647,6 +647,7 @@ async function main(): Promise<void> {
         page_id,
       );
       assert.ok(fence.ok && fence.value?.status === "committed");
+      fenceRevs.set(page_id, fence.value!.validity_rev);
       const auth = await readAuthorityPageOutput(
         report_id4,
         gen4.generation_id,
@@ -675,72 +676,154 @@ async function main(): Promise<void> {
     });
     assert.equal(claimed.ok, true, JSON.stringify(claimed));
 
-    await invalidateFromPage({
+    const locked = await invalidateFromPage({
       report_id: report_id4,
       generation_id: gen4.generation_id,
       generation_epoch: gen4.generation_epoch,
       source_page_id: "01",
       reason: "after_claim",
     });
+    assert.equal(locked.ok, false, JSON.stringify(locked));
+    assert.equal(locked.ok ? "" : locked.code, "finalization_locked");
+
+    for (const page_id of REPORT_PAGE_IDS) {
+      const fence = await readPageFence(
+        report_id4,
+        gen4.generation_id,
+        page_id,
+      );
+      assert.ok(fence.ok && fence.value);
+      assert.equal(fence.value!.status, "committed");
+      assert.equal(fence.value!.validity_rev, fenceRevs.get(page_id));
+    }
     const still = await readFinalizationClaim(
       report_id4,
       gen4.generation_id,
     );
     assert.ok(still.ok && still.value?.status === "claimed");
 
-    // New claim with pre-invalidation revs must fail (fences changed)
-    const again = await claimFinalization({
-      report_id: report_id4,
-      generation_id: gen4.generation_id,
-      generation_epoch: gen4.generation_epoch,
-      claim_id: randomUUID(),
-      pages: bindings,
+    // Reverse: Invalidation first → old Finalization bindings refuse.
+    await cleanup();
+    const report_id4b = "rpt_b3r4_toc4b";
+    const gen4b = await boot(report_id4b, "g_toc4b");
+    await commitAllPages(
+      report_id4b,
+      gen4b.generation_id,
+      gen4b.generation_epoch,
+      "skipped_not_applicable",
+    );
+    const bindingsB: FinalizationPageBinding[] = [];
+    for (const page_id of REPORT_PAGE_IDS) {
+      const fence = await readPageFence(
+        report_id4b,
+        gen4b.generation_id,
+        page_id,
+      );
+      assert.ok(fence.ok && fence.value?.status === "committed");
+      const auth = await readAuthorityPageOutput(
+        report_id4b,
+        gen4b.generation_id,
+        page_id,
+      );
+      assert.ok(auth.ok && auth.value);
+      bindingsB.push({
+        page_id,
+        generation_id: gen4b.generation_id,
+        generation_epoch: gen4b.generation_epoch,
+        validity_rev: fence.value!.validity_rev,
+        attempt_id: fence.value!.attempt_id!,
+        task_key: fence.value!.task_key!,
+        output_fingerprint: fence.value!.output_fingerprint!,
+        input_fingerprint: fence.value!.input_fingerprint!,
+        sealed_output: auth.value!.output,
+        outcome: page_id === "07" ? "skipped_not_applicable" : "completed",
+      });
+    }
+    const invFirst = await invalidateFromPage({
+      report_id: report_id4b,
+      generation_id: gen4b.generation_id,
+      generation_epoch: gen4b.generation_epoch,
+      source_page_id: "01",
+      reason: "before_claim",
     });
-    // Existing claim with same bindings → idempotent; different claim_id but same
-    // bindings returns idempotent. Force different rev expectation:
-    const staleBindings = bindings.map((b) =>
-      b.page_id === "01"
-        ? { ...b, validity_rev: b.validity_rev } // fence now higher — still same claim exists
-        : b,
+    assert.equal(invFirst.ok, true, JSON.stringify(invFirst));
+    const fence01 = await readPageFence(
+      report_id4b,
+      gen4b.generation_id,
+      "01",
     );
-    // Delete claim to re-test against invalidated fences
-    await durableKv().del(
-      `report-batch3:${report_id4}:${gen4.generation_id}:finalization`,
-    );
+    assert.ok(fence01.ok && fence01.value?.status === "stale");
     const afterInv = await claimFinalization({
-      report_id: report_id4,
-      generation_id: gen4.generation_id,
-      generation_epoch: gen4.generation_epoch,
+      report_id: report_id4b,
+      generation_id: gen4b.generation_id,
+      generation_epoch: gen4b.generation_epoch,
       claim_id: randomUUID(),
-      pages: staleBindings,
+      pages: bindingsB,
     });
     assert.equal(afterInv.ok, false, JSON.stringify(afterInv));
     assert.equal(afterInv.ok ? "" : afterInv.code, "stale_page");
+    const noClaim = await readFinalizationClaim(
+      report_id4b,
+      gen4b.generation_id,
+    );
+    assert.ok(noClaim.ok && noClaim.value == null);
 
     // Superseded generation refuses
+    await cleanup();
+    const report_id5 = "rpt_b3r4_toc5";
+    const genOld = await boot(report_id5, "g_toc5_old");
+    await commitAllPages(
+      report_id5,
+      genOld.generation_id,
+      genOld.generation_epoch,
+      "skipped_not_applicable",
+    );
+    const bindings5: FinalizationPageBinding[] = [];
+    for (const page_id of REPORT_PAGE_IDS) {
+      const fence = await readPageFence(
+        report_id5,
+        genOld.generation_id,
+        page_id,
+      );
+      assert.ok(fence.ok && fence.value);
+      const auth = await readAuthorityPageOutput(
+        report_id5,
+        genOld.generation_id,
+        page_id,
+      );
+      assert.ok(auth.ok && auth.value);
+      bindings5.push({
+        page_id,
+        generation_id: genOld.generation_id,
+        generation_epoch: genOld.generation_epoch,
+        validity_rev: fence.value!.validity_rev,
+        attempt_id: fence.value!.attempt_id!,
+        task_key: fence.value!.task_key!,
+        output_fingerprint: fence.value!.output_fingerprint!,
+        input_fingerprint: fence.value!.input_fingerprint!,
+        sealed_output: auth.value!.output,
+        outcome: page_id === "07" ? "skipped_not_applicable" : "completed",
+      });
+    }
     const gen5 = await allocateGeneration({
-      report_id: report_id4,
+      report_id: report_id5,
       locale: "en",
-      generation_id: "g_toc5",
+      generation_id: "g_toc5_new",
     });
     assert.ok(gen5.ok);
     if (!gen5.ok) throw new Error("g5");
-    await activateGeneration({ record: gen5.value, job_id: report_id4 });
-    await durableKv().del(
-      `report-batch3:${report_id4}:${gen4.generation_id}:finalization`,
-    );
-    // Restore page01 fence for claim attempt under old gen (active is new)
+    await activateGeneration({ record: gen5.value, job_id: report_id5 });
     const superRefuse = await claimFinalization({
-      report_id: report_id4,
-      generation_id: gen4.generation_id,
-      generation_epoch: gen4.generation_epoch,
+      report_id: report_id5,
+      generation_id: genOld.generation_id,
+      generation_epoch: genOld.generation_epoch,
       claim_id: randomUUID(),
-      pages: bindings,
+      pages: bindings5,
     });
     assert.equal(superRefuse.ok, false);
     assert.equal(superRefuse.ok ? "" : superRefuse.code, "stale_generation");
 
-    console.log("R4-C ok — finalization claim vs invalidation TOCTOU");
+    console.log("R4-C ok — finalization/invalidation mutual exclusion");
   }
 
   // --- D. Page07 terminals + recovery no re-LLM for replayed page ---

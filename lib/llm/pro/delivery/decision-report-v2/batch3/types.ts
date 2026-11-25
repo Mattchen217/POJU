@@ -142,6 +142,7 @@ export type Batch3FailCode =
   | "not_found"
   | "generation_terminal"
   | "stale_page"
+  | "finalization_locked"
   | "limit_reached"
   | "job_missing";
 
